@@ -8,7 +8,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/spf13/pflag"
@@ -27,9 +27,9 @@ func versionPrinter() {
 
 func getInput(fileName string) (input []byte, err error) {
 	if fileName != "" {
-		return ioutil.ReadFile(fileName)
+		return os.ReadFile(fileName)
 	}
-	return ioutil.ReadAll(os.Stdin)
+	return io.ReadAll(os.Stdin)
 }
 
 //

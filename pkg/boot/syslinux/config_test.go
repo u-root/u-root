@@ -6,7 +6,7 @@ package syslinux
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,7 +46,7 @@ func TestConfigs(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimRight(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			want, err := ioutil.ReadFile(test)
+			want, err := os.ReadFile(test)
 			if err != nil {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}

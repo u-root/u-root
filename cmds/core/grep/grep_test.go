@@ -6,8 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -30,12 +28,6 @@ func TestGrep(t *testing.T) {
 		{"hix\n", "", 0, []string{"-i", "hox"}},
 		{"HiX\n", "HiX\n", 0, []string{"-i", "hix"}},
 	}
-
-	tmpDir, err := ioutil.TempDir("", "TestGrep")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
 
 	for _, v := range tab {
 		c := testutil.Command(t, v.a...)

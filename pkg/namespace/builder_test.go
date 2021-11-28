@@ -7,7 +7,6 @@ package namespace
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -58,7 +57,7 @@ func TestBuilder_buildNS(t *testing.T) {
 		wantErr    bool
 		inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 	}{}
-	files, err := ioutil.ReadDir("testdata")
+	files, err := os.ReadDir("testdata")
 	if err != nil {
 		log.Fatal(err)
 	}

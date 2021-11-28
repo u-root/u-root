@@ -19,7 +19,7 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -50,7 +50,7 @@ func readInput() string {
 	// Read unicode string from input
 	fileContents := []string{}
 	for _, f := range from {
-		bytes, err := ioutil.ReadAll(f)
+		bytes, err := io.ReadAll(f)
 		if err != nil {
 			log.Fatal(err)
 		}

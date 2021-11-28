@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -135,14 +134,21 @@ func printError(t *testing.T, testname string, execStmt string, out interface{},
 }
 
 func findFile(dir string, filename string) (os.FileInfo, error) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 	for _, file := range files {
-		if file.Name() == filename {
-			return file, nil
+		if file.Name() != filename {
+			continue
 		}
+
+		fi, err := file.Info()
+		if err != nil {
+			return nil, err
+		}
+
+		return fi, nil
 	}
 	return nil, nil
 }
@@ -155,11 +161,7 @@ func removeCreatedFiles(tmpDir string) {
 
 func TestMkdirErrors(t *testing.T) {
 	// Set Up
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	syscall.Umask(umaskDefault)
 
 	// Error Tests
@@ -186,11 +188,7 @@ func TestMkdirErrors(t *testing.T) {
 
 func TestMkdirRegular(t *testing.T) {
 	// Set Up
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	syscall.Umask(umaskDefault)
 
 	// Regular Tests
@@ -220,11 +218,7 @@ func TestMkdirRegular(t *testing.T) {
 
 func TestMkdirPermission(t *testing.T) {
 	// Set Up
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	syscall.Umask(umaskDefault)
 
 	// Permission Tests

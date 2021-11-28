@@ -5,7 +5,6 @@
 package lockfile
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,11 +27,7 @@ func TestTryLock(t *testing.T) {
 	p2 := testProcess(t)
 	defer p2.Kill()
 
-	dir, err := ioutil.TempDir("", "lockfile-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	l := &Lockfile{
 		path: filepath.Join(dir, "test1"),
@@ -67,11 +62,7 @@ func TestLockFileRemoval(t *testing.T) {
 	p := testProcess(t)
 	defer p.Kill()
 
-	dir, err := ioutil.TempDir("", "lockfile-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	l := &Lockfile{
 		path: filepath.Join(dir, "test2"),
@@ -102,11 +93,7 @@ func testDeadProcess(t *testing.T) {
 	p2 := testProcess(t)
 	defer p2.Kill()
 
-	dir, err := ioutil.TempDir("", "lockfile-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	l := &Lockfile{
 		path: filepath.Join(dir, "test3"),

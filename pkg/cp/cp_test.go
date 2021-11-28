@@ -5,7 +5,6 @@
 package cp_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,11 +23,7 @@ func copyAndTest(t *testing.T, o cp.Options, src, dst string) {
 }
 
 func TestSimpleCopy(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "u-root-pkg-cp-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Copy a directory.
 	origd := filepath.Join(tmpDir, "directory")
@@ -41,7 +36,7 @@ func TestSimpleCopy(t *testing.T) {
 
 	// Copy a file.
 	origf := filepath.Join(tmpDir, "normal-file")
-	if err := ioutil.WriteFile(origf, []byte("F is for fire that burns down the whole town"), 0o766); err != nil {
+	if err := os.WriteFile(origf, []byte("F is for fire that burns down the whole town"), 0o766); err != nil {
 		t.Fatal(err)
 	}
 

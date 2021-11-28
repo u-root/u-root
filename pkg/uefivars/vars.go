@@ -10,7 +10,6 @@ package uefivars
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	fp "path/filepath"
@@ -35,7 +34,7 @@ func ReadVar(uuid, name string) (e EfiVar, err error) {
 	path := fp.Join(EfiVarDir, name+"-"+uuid, "data")
 	e.UUID = uuid
 	e.Name = name
-	e.Data, err = ioutil.ReadFile(path)
+	e.Data, err = os.ReadFile(path)
 	return
 }
 

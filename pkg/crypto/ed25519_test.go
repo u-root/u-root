@@ -5,7 +5,6 @@
 package crypto
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -59,7 +58,7 @@ func TestSignVerifyData(t *testing.T) {
 	publicKey, err := LoadPublicKeyFromFile(publicKeyPEMFile)
 	require.NoError(t, err)
 
-	testData, err := ioutil.ReadFile(testDataFile)
+	testData, err := os.ReadFile(testDataFile)
 	require.NoError(t, err)
 
 	signature := ed25519.Sign(privateKey, testData)
@@ -71,10 +70,10 @@ func TestGoodSignature(t *testing.T) {
 	publicKey, err := LoadPublicKeyFromFile(publicKeyPEMFile)
 	require.NoError(t, err)
 
-	testData, err := ioutil.ReadFile(testDataFile)
+	testData, err := os.ReadFile(testDataFile)
 	require.NoError(t, err)
 
-	signatureGood, err := ioutil.ReadFile(signatureGoodFile)
+	signatureGood, err := os.ReadFile(signatureGoodFile)
 	require.NoError(t, err)
 
 	verified := ed25519.Verify(publicKey, testData, signatureGood)
@@ -85,10 +84,10 @@ func TestBadSignature(t *testing.T) {
 	publicKey, err := LoadPublicKeyFromFile(publicKeyPEMFile)
 	require.NoError(t, err)
 
-	testData, err := ioutil.ReadFile(testDataFile)
+	testData, err := os.ReadFile(testDataFile)
 	require.NoError(t, err)
 
-	signatureBad, err := ioutil.ReadFile(signatureBadFile)
+	signatureBad, err := os.ReadFile(signatureBadFile)
 	require.NoError(t, err)
 
 	verified := ed25519.Verify(publicKey, testData, signatureBad)
@@ -96,21 +95,15 @@ func TestBadSignature(t *testing.T) {
 }
 
 func TestGenerateKeys(t *testing.T) {
-	// FIXME: move this to testing.TempDir once we require >= Go 1.15
-	tmpdir, err := ioutil.TempDir("", "generate-keys")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
-	err = GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
+	err := GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
 	require.NoError(t, err)
 }
 
 func TestGenerateUnprotectedKeys(t *testing.T) {
-	// FIXME: move this to testing.TempDir once we require >= Go 1.15
-	tmpdir, err := ioutil.TempDir("", "generate-keys")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
-	err = GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
+	err := GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
 	require.NoError(t, err)
 }

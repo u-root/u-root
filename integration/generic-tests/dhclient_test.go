@@ -9,7 +9,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -31,15 +30,11 @@ func TestDhclientQEMU4(t *testing.T) {
 	}
 
 	// Create the file to download
-	dir, err := ioutil.TempDir("", "dhclient-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	want := "conteeent"
 	foobarFile := filepath.Join(dir, "foobar")
-	if err := ioutil.WriteFile(foobarFile, []byte(want), 0o644); err != nil {
+	if err := os.WriteFile(foobarFile, []byte(want), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

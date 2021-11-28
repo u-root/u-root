@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -100,7 +99,7 @@ func (c cgroupname) Create(s, name string) {
 func (c cgroupname) Attach(s, name string, pid int) {
 	t := filepath.Join(string(c), s, name, "tasks")
 	b := []byte(fmt.Sprintf("%v", pid))
-	if err := ioutil.WriteFile(t, b, 0o600); err != nil {
+	if err := os.WriteFile(t, b, 0o600); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -195,7 +194,7 @@ func makeConsole(base, console string, unprivileged bool) {
 		// In unprivileged uses, we can't mknod /dev/console, however,
 		// we can just create a file /dev/console and use bind mount on file.
 		if _, err := os.Stat(nn); err != nil {
-			ioutil.WriteFile(nn, []byte{}, 0o600) // best effort, ignore error
+			os.WriteFile(nn, []byte{}, 0o600) // best effort, ignore error
 		}
 	} else {
 		if err := syscall.Mknod(nn, mode, dev); err != nil {

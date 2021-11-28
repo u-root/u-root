@@ -10,7 +10,7 @@ package boot
 import (
 	"archive/zip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -56,7 +56,7 @@ func TestFuzzInputs(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			data, err := ioutil.ReadAll(f)
+			data, err := io.ReadAll(f)
 			if err != nil {
 				t.Error(err)
 			}

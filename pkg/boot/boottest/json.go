@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -99,7 +98,7 @@ func ToJSONFile(imgs []boot.OSImage, filename string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, enc, 0o644)
+	return os.WriteFile(filename, enc, 0o644)
 }
 
 // ImagesToJSONLike spits out a json-convertible reproducible representation of

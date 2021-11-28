@@ -5,7 +5,7 @@
 package bzimage
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -15,7 +15,7 @@ var badmagic = []byte("hi there")
 
 func TestUnmarshal(t *testing.T) {
 	Debug = t.Logf
-	image, err := ioutil.ReadFile("testdata/bzImage")
+	image, err := os.ReadFile("testdata/bzImage")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestUnmarshal(t *testing.T) {
 
 func TestMarshal(t *testing.T) {
 	Debug = t.Logf
-	image, err := ioutil.ReadFile("testdata/bzImage")
+	image, err := os.ReadFile("testdata/bzImage")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestBadMagic(t *testing.T) {
 func TestAddInitRAMFS(t *testing.T) {
 	t.Logf("TestAddInitRAMFS")
 	Debug = t.Logf
-	initramfsimage, err := ioutil.ReadFile("testdata/bzimage-64kurandominitramfs")
+	initramfsimage, err := os.ReadFile("testdata/bzimage-64kurandominitramfs")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestAddInitRAMFS(t *testing.T) {
 	// qemu-system-x86_64 -serial stdio -kernel /tmp/x
 	// I mainly left this here as a memo.
 	if true {
-		if err := ioutil.WriteFile("/tmp/x", d, 0o644); err != nil {
+		if err := os.WriteFile("/tmp/x", d, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -150,7 +150,7 @@ func TestAddInitRAMFS(t *testing.T) {
 
 func TestHeaderString(t *testing.T) {
 	Debug = t.Logf
-	initramfsimage, err := ioutil.ReadFile("testdata/bzImage")
+	initramfsimage, err := os.ReadFile("testdata/bzImage")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestHeaderString(t *testing.T) {
 
 func TestExtract(t *testing.T) {
 	Debug = t.Logf
-	initramfsimage, err := ioutil.ReadFile("testdata/bzImage")
+	initramfsimage, err := os.ReadFile("testdata/bzImage")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestExtract(t *testing.T) {
 
 func TestELF(t *testing.T) {
 	Debug = t.Logf
-	initramfsimage, err := ioutil.ReadFile("testdata/bzImage")
+	initramfsimage, err := os.ReadFile("testdata/bzImage")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestInitRAMFS(t *testing.T) {
 	Debug = t.Logf
 	cpio.Debug = t.Logf
 	for _, bz := range []string{"testdata/bzImage", "testdata/bzimage-64kurandominitramfs"} {
-		initramfsimage, err := ioutil.ReadFile(bz)
+		initramfsimage, err := os.ReadFile(bz)
 		if err != nil {
 			t.Fatal(err)
 		}

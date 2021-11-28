@@ -5,7 +5,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -38,17 +38,13 @@ ff02::2 ip6-allrouters
 		{name: "hosts.sha1", val: []byte("3f397a3b3a7450075da91b078afa35b794cf6088  hosts"), o: "SHA1\n"},
 	}
 
-	tmpDir, err := ioutil.TempDir("", "validatetest")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "hosts"), data, 0o444); err != nil {
+	tmpDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmpDir, "hosts"), data, 0o444); err != nil {
 		t.Fatalf("Can't set up data file: %v", err)
 	}
 
 	for _, v := range tests {
-		if err := ioutil.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0o444); err != nil {
+		if err := os.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0o444); err != nil {
 			t.Fatalf("Can't set up hash file: %v", err)
 		}
 
@@ -65,11 +61,11 @@ ff02::2 ip6-allrouters
 		if err := c.Start(); err != nil {
 			t.Fatalf("Can't start %v: %v", c, err)
 		}
-		e, err := ioutil.ReadAll(ep)
+		e, err := io.ReadAll(ep)
 		if err != nil {
 			t.Fatalf("Can't get stderr of %v: %v", c, err)
 		}
-		o, err := ioutil.ReadAll(op)
+		o, err := io.ReadAll(op)
 		if err != nil {
 			t.Fatalf("Can't get sdout of %v: %v", c, err)
 		}

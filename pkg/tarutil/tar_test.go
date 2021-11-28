@@ -5,7 +5,6 @@
 package tarutil
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,11 +13,7 @@ import (
 )
 
 func extractAndCompare(t *testing.T, tarFile string, files []struct{ name, body string }) {
-	tmpDir, err := ioutil.TempDir("", "tartest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Extract tar to tmpDir.
 	f, err := os.Open(tarFile)
@@ -31,7 +26,7 @@ func extractAndCompare(t *testing.T, tarFile string, files []struct{ name, body 
 	}
 
 	for _, f := range files {
-		body, err := ioutil.ReadFile(filepath.Join(tmpDir, f.name))
+		body, err := os.ReadFile(filepath.Join(tmpDir, f.name))
 		if err != nil {
 			t.Errorf("could not read %s: %v", f.name, err)
 			continue
@@ -54,11 +49,7 @@ func TestExtractDir(t *testing.T) {
 }
 
 func TestCreateTarSingleFile(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "tartest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create the tar file.
 	filename := filepath.Join(tmpDir, "test.tar")
@@ -89,11 +80,7 @@ test0/dir/b.txt
 }
 
 func TestCreateTarMultFiles(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "tartest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create the tar file.
 	filename := filepath.Join(tmpDir, "test.tar")
@@ -135,16 +122,12 @@ func TestCreateTarProcfsFile(t *testing.T) {
 		t.Skipf("/proc/version is only on linux, but GOOS=%s", runtime.GOOS)
 	}
 
-	tmpDir, err := ioutil.TempDir("", "tartest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// /proc/version won't change during the test. The size according to
 	// stat should also be 0.
 	procfsFile := "/proc/version"
-	contents, err := ioutil.ReadFile(procfsFile)
+	contents, err := os.ReadFile(procfsFile)
 	if err != nil {
 		t.Fatal(err)
 	}

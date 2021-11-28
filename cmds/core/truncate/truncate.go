@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -69,7 +68,7 @@ func main() {
 		var final int64
 		st, err := os.Stat(fname)
 		if os.IsNotExist(err) && !*create {
-			if err = ioutil.WriteFile(fname, []byte{}, 0o644); err != nil {
+			if err = os.WriteFile(fname, []byte{}, 0o644); err != nil {
 				log.Fatalf("truncate: ERROR: %v\n", err)
 			}
 			if st, err = os.Stat(fname); err != nil {

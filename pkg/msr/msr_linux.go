@@ -8,7 +8,6 @@ package msr
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -76,7 +75,7 @@ func parseCPUs(s string) (CPUs, error) {
 // AllCPUs searches for actual present CPUs instead of relying on the glob.
 // This is more accurate than what's presented in /dev/cpu/*/msr
 func AllCPUs() (CPUs, error) {
-	v, err := ioutil.ReadFile("/sys/devices/system/cpu/present")
+	v, err := os.ReadFile("/sys/devices/system/cpu/present")
 	if err != nil {
 		return nil, err
 	}

@@ -7,8 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -26,12 +24,6 @@ func run(c *exec.Cmd) (string, string, error) {
 }
 
 func TestKillProcess(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "KillTest")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	cmd := exec.Command("sleep", "10")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start test process: %v", err)
@@ -71,12 +63,6 @@ func TestBadInvocations(t *testing.T) {
 		{a: []string{"--signal", "a"}, err: "a is not a valid signal\n"},
 		{a: []string{"-1", "a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
 	}
-
-	tmpDir, err := ioutil.TempDir("", "KillTest")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
 
 	for _, v := range tab {
 		_, e, err := run(testutil.Command(t, v.a...))

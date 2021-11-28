@@ -15,7 +15,6 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	fp "path/filepath"
@@ -38,7 +37,7 @@ func main() {
 	if *m {
 		// actually mount FS, locate file
 		exe := fp.Base(os.Args[0])
-		tmp, err := ioutil.TempDir("", exe)
+		tmp, err := os.MkdirTemp("", exe)
 		if err != nil {
 			log.Fatalf("creating temp dir: %s", err)
 		}

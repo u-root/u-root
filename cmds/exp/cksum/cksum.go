@@ -7,7 +7,7 @@ package main
 import (
 	"fmt"
 	"hash/crc32"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/spf13/pflag"
@@ -48,9 +48,9 @@ func versionPrinter() {
 
 func getInput(fileName string) (input []byte, err error) {
 	if fileName != "" {
-		return ioutil.ReadFile(fileName)
+		return os.ReadFile(fileName)
 	}
-	return ioutil.ReadAll(os.Stdin)
+	return io.ReadAll(os.Stdin)
 }
 
 func appendLengthToData(data []byte) []byte {

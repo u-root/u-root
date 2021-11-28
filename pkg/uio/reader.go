@@ -7,7 +7,6 @@ package uio
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"reflect"
@@ -27,7 +26,7 @@ func ReadAll(r io.ReaderAt) ([]byte, error) {
 	if imra, ok := r.(inMemReaderAt); ok {
 		return imra.Bytes(), nil
 	}
-	return ioutil.ReadAll(Reader(r))
+	return io.ReadAll(Reader(r))
 }
 
 // Reader generates a Reader from a ReaderAt.

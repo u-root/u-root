@@ -5,7 +5,6 @@
 package upath
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,10 +12,7 @@ import (
 )
 
 func TestSymlink(t *testing.T) {
-	td, err := ioutil.TempDir("", "testsymlink")
-	if err != nil {
-		t.Fatal(err)
-	}
+	td := t.TempDir()
 	for _, n := range []string{"bin", "buildbin"} {
 		p := filepath.Join(td, n)
 		if err := os.Mkdir(p, 0o777); err != nil {
@@ -50,7 +46,7 @@ func TestSymlink(t *testing.T) {
 	}
 	// test to make sure a plain file gives a reasonable result.
 	ic := filepath.Join(td, "x")
-	if err := ioutil.WriteFile(ic, nil, 0o666); err != nil {
+	if err := os.WriteFile(ic, nil, 0o666); err != nil {
 		t.Fatalf("WriteFile %v: got %v, want nil", ic, err)
 	}
 	v := ResolveUntilLastSymlink(ic)

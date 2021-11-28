@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -325,14 +324,10 @@ func TestInFile(t *testing.T) {
 func setupDatafile(t *testing.T, name string) (string, func()) {
 	t.Helper()
 
-	testDir, err := ioutil.TempDir("", "dd")
-	if err != nil {
-		t.Fatalf("could not create test dd directory %v", err)
-	}
+	testDir := t.TempDir()
 	dataFilePath := filepath.Join(testDir, name)
 
-	err = ioutil.WriteFile(dataFilePath, []byte("ABCDEFG"), 0o644)
-	if err != nil {
+	if err := os.WriteFile(dataFilePath, []byte("ABCDEFG"), 0o644); err != nil {
 		t.Errorf("unable to mockup file: %v", err)
 	}
 
@@ -658,17 +653,13 @@ func TestFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write in and out file to temporary dir.
-			tmpDir, err := ioutil.TempDir("", "dd-test")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 			inFile := filepath.Join(tmpDir, "inFile")
 			outFile := filepath.Join(tmpDir, "outFile")
-			if err := ioutil.WriteFile(inFile, tt.inFile, 0o666); err != nil {
+			if err := os.WriteFile(inFile, tt.inFile, 0o666); err != nil {
 				t.Error(err)
 			}
-			if err := ioutil.WriteFile(outFile, tt.outFile, 0o666); err != nil {
+			if err := os.WriteFile(outFile, tt.outFile, 0o666); err != nil {
 				t.Error(err)
 			}
 
@@ -676,7 +667,7 @@ func TestFiles(t *testing.T) {
 			if err := testutil.Command(t, args...).Run(); err != nil {
 				t.Error(err)
 			}
-			got, err := ioutil.ReadFile(filepath.Join(tmpDir, "outFile"))
+			got, err := os.ReadFile(filepath.Join(tmpDir, "outFile"))
 			if err != nil {
 				t.Error(err)
 			}

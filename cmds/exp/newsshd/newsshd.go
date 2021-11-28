@@ -7,7 +7,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -69,7 +68,7 @@ func main() {
 	publicKeyOption := func(ctx ssh.Context, key ssh.PublicKey) bool {
 		// Glob the users's home directory for all the
 		// possible keys?
-		data, err := ioutil.ReadFile(*pubKeyFile)
+		data, err := os.ReadFile(*pubKeyFile)
 		if err != nil {
 			fmt.Print(err)
 			return false

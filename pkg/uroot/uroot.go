@@ -11,7 +11,6 @@ package uroot
 import (
 	"debug/elf"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -242,7 +241,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	// Add each build mode's commands to the archive.
 	for _, cmds := range opts.Commands {
-		builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
+		builderTmpDir, err := os.MkdirTemp(opts.TempDir, "builder")
 		if err != nil {
 			return err
 		}

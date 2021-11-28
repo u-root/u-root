@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,7 +77,7 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 	if !ok {
 		return fmt.Errorf("archive does not contain %s, but should", v.Path)
 	}
-	tf, err := ioutil.TempFile("", "u-root-temp-bb-")
+	tf, err := os.CreateTemp("", "u-root-temp-bb-")
 	if err != nil {
 		return err
 	}
@@ -126,23 +125,19 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 }
 
 func TestUrootCmdline(t *testing.T) {
-	samplef, err := ioutil.TempFile("", "u-root-test-")
+	samplef, err := os.CreateTemp("", "u-root-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	samplef.Close()
 	defer os.RemoveAll(samplef.Name())
-	sampledir, err := ioutil.TempDir("", "u-root-test-dir-")
-	if err != nil {
+	sampledir := t.TempDir()
+	if err = os.WriteFile(filepath.Join(sampledir, "foo"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err = ioutil.WriteFile(filepath.Join(sampledir, "foo"), nil, 0o644); err != nil {
+	if err = os.WriteFile(filepath.Join(sampledir, "bar"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err = ioutil.WriteFile(filepath.Join(sampledir, "bar"), nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(sampledir)
 
 	for _, tt := range []struct {
 		name       string
@@ -307,22 +302,17 @@ func TestUrootCmdline(t *testing.T) {
 }
 
 func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
-	f, err := ioutil.TempFile("", "u-root-")
+	f, err := os.CreateTemp("", "u-root-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Use the u-root command outside of the $GOPATH tree to make sure it
 	// still works.
-	dir, err := ioutil.TempDir("", "build-")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	arg := append([]string{"-o", f.Name()}, args...)
 	c := testutil.Command(t, arg...)
 	t.Logf("Commandline: %v", arg)
 	c.Env = append(c.Env, env...)
-	c.Dir = dir
+	c.Dir = t.TempDir()
 	if out, err := c.CombinedOutput(); err != want {
 		t.Fatalf("Error: %v\nOutput:\n%s", err, out)
 	} else if err != nil {

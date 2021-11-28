@@ -8,7 +8,6 @@
 package boot
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	fp "path/filepath"
@@ -51,7 +50,7 @@ func (r *HddResolver) Resolve(basePath string) (string, error) {
 	}
 	var err error
 	if len(basePath) == 0 {
-		basePath, err = ioutil.TempDir("", "uefiPath")
+		basePath, err = os.MkdirTemp("", "uefiPath")
 		if err != nil {
 			return "", err
 		}

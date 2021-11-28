@@ -5,7 +5,6 @@
 package uio
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,9 +18,9 @@ func readAndCheck(t *testing.T, want, tmpfileP string) {
 		t.Errorf("ReadIntoFile(%v, %s) = %v, want no error", r, tmpfileP, err)
 	}
 
-	got, err := ioutil.ReadFile(tmpfileP)
+	got, err := os.ReadFile(tmpfileP)
 	if err != nil {
-		t.Fatalf("ioutil.ReadFile(%s) = %v, want no error", tmpfileP, err)
+		t.Fatalf("os.ReadFile(%s) = %v, want no error", tmpfileP, err)
 	}
 	if want != string(got) {
 		t.Errorf("got: %v, want %s", string(got), want)
@@ -31,11 +30,7 @@ func readAndCheck(t *testing.T, want, tmpfileP string) {
 func TestReadIntoFile(t *testing.T) {
 	want := "I am the wanted"
 
-	dir, err := ioutil.TempDir("", "uio-reader-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	// Write to a file already exist.
 	p := filepath.Join(dir, "uio-out")

@@ -10,8 +10,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -41,7 +41,7 @@ func uptime(contents string) (*time.Time, error) {
 }
 
 func main() {
-	procUptimeOutput, err := ioutil.ReadFile("/proc/uptime")
+	procUptimeOutput, err := os.ReadFile("/proc/uptime")
 	if err != nil {
 		log.Fatalf("error reading /proc/uptime: %v \n", err)
 	}
@@ -49,7 +49,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	procLoadAvgOutput, err := ioutil.ReadFile("/proc/loadavg")
+	procLoadAvgOutput, err := os.ReadFile("/proc/loadavg")
 	if err != nil {
 		log.Fatalf("error reading /proc/loadavg: %v \n", err)
 	}

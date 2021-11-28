@@ -5,7 +5,6 @@
 package vpd
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -57,7 +56,7 @@ type Reader struct {
 // bytes. The `readOnly` flag specifies whether the variable is read-only or
 // read-write.
 func (r *Reader) Get(key string, readOnly bool) ([]byte, error) {
-	buf, err := ioutil.ReadFile(path.Join(r.getBaseDir(readOnly), key))
+	buf, err := os.ReadFile(path.Join(r.getBaseDir(readOnly), key))
 	if err != nil {
 		return []byte{}, err
 	}
@@ -73,7 +72,7 @@ func (r *Reader) Get(key string, readOnly bool) ([]byte, error) {
 func (r *Reader) Set(key string, value []byte, readOnly bool) error {
 	// NOTE this is not implemented yet in the kernel interface, and will always
 	// return a permission denied error
-	return ioutil.WriteFile(path.Join(r.getBaseDir(readOnly), key), value, 0o644)
+	return os.WriteFile(path.Join(r.getBaseDir(readOnly), key), value, 0o644)
 }
 
 // GetAll reads all the VPD variables and returns a map contaiing each

@@ -7,7 +7,6 @@ package initramfs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -28,7 +27,7 @@ func (da DirArchiver) Reader(io.ReaderAt) Reader {
 func (da DirArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 	if len(path) == 0 {
 		var err error
-		path, err = ioutil.TempDir("", "u-root")
+		path, err = os.MkdirTemp("", "u-root")
 		if err != nil {
 			return nil, err
 		}

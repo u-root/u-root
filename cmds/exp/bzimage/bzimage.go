@@ -15,7 +15,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -88,7 +87,7 @@ func main() {
 		fallthrough
 	case "copy", "initramfs", "extract", "cfg":
 		var err error
-		image, err = ioutil.ReadFile(a[1])
+		image, err = os.ReadFile(a[1])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -114,11 +113,11 @@ func main() {
 			log.Printf("%s", br.Header.Diff(&br2.Header))
 			log.Fatalf("there is no hope")
 		}
-		if err := ioutil.WriteFile(a[2], o, 0o666); err != nil {
+		if err := os.WriteFile(a[2], o, 0o666); err != nil {
 			log.Fatalf("Writing %v: %v", a[2], err)
 		}
 	case "diff":
-		b2, err := ioutil.ReadFile(a[2])
+		b2, err := os.ReadFile(a[2])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -155,7 +154,7 @@ func main() {
 				fmt.Printf("Warning: %s is nil", v.n)
 				continue
 			}
-			if err := ioutil.WriteFile(v.n, v.b, 0o666); err != nil {
+			if err := os.WriteFile(v.n, v.b, 0o666); err != nil {
 				log.Fatalf("Writing %v: %v", v, err)
 			}
 		}
@@ -169,7 +168,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if err := ioutil.WriteFile(a[3], b, 0o644); err != nil {
+		if err := os.WriteFile(a[3], b, 0o644); err != nil {
 			log.Fatal(err)
 		}
 	case "ver":

@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,11 +21,7 @@ import (
 // If no errors returns, it's okay
 func TestPsExecution(t *testing.T) {
 	t.Logf("TestPsExecution")
-	d, err := ioutil.TempDir("", "ps")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// defer os.Rmdirall(d)
+	d := t.TempDir()
 	tests := []struct {
 		n     string
 		pid   string
@@ -97,7 +92,7 @@ Uid:	110	110	110	110
 		for n, f := range tt.files {
 			procf := filepath.Join(pd, n)
 			t.Logf("Write %v", procf)
-			if err := ioutil.WriteFile(procf, []byte(f), 0o666); err != nil {
+			if err := os.WriteFile(procf, []byte(f), 0o666); err != nil {
 				t.Fatal(err)
 			}
 		}

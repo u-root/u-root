@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -83,7 +82,7 @@ func TestLoad(t *testing.T) {
 
 	var keys []*openpgp.Entity
 	for _, k := range keyFiles {
-		b, err := ioutil.ReadFile(filepath.Join("testdata", k))
+		b, err := os.ReadFile(filepath.Join("testdata", k))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -216,7 +215,7 @@ func TestReadSignedImage(t *testing.T) {
 
 	var keys []*openpgp.Entity
 	for _, k := range keyFiles {
-		b, err := ioutil.ReadFile(filepath.Join("testdata", k))
+		b, err := os.ReadFile(filepath.Join("testdata", k))
 		if err != nil {
 			t.Fatal(err)
 		}

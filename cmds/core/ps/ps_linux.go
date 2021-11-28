@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -217,7 +216,7 @@ func getAllStatNames(globs []string) ([]string, error) {
 }
 
 func file(s string) (string, error) {
-	b, err := ioutil.ReadFile(s)
+	b, err := os.ReadFile(s)
 	return string(b), err
 }
 

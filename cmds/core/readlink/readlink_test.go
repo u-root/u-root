@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,11 +22,7 @@ type test struct {
 }
 
 func TestReadlink(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Creating here to utilize path in tests
 	testDir := filepath.Join(tmpDir, "readLinkDir")
@@ -90,28 +85,23 @@ func TestReadlink(t *testing.T) {
 		},
 	}
 	// Createfiles.
-	_, err = os.Create("f1")
-	if err != nil {
+	if _, err := os.Create("f1"); err != nil {
 		t.Error(err)
 	}
 
-	_, err = os.Create("f2")
-	if err != nil {
+	if _, err := os.Create("f2"); err != nil {
 		t.Error(err)
 	}
 
 	// Create symlinks
 	f1Symlink := filepath.Join(testDir, "f1symlink")
-	err = os.Symlink("f1", f1Symlink)
-	if err != nil {
+	if err := os.Symlink("f1", f1Symlink); err != nil {
 		t.Error(err)
 	}
 
 	// Multiple links
 	multiLinks := filepath.Join(testDir, "multilinks")
-	err = os.Symlink(f1Symlink, multiLinks)
-
-	if err != nil {
+	if err := os.Symlink(f1Symlink, multiLinks); err != nil {
 		t.Error(err)
 	}
 

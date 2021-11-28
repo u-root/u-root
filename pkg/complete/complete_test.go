@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -52,11 +51,7 @@ func TestSimple(t *testing.T) {
 
 // TestFile tests the file completer
 func TestFile(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestComplete")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	var (
 		hinames  = []string{"hi", "hil", "hit"}
@@ -74,7 +69,7 @@ func TestFile(t *testing.T) {
 	)
 
 	for _, n := range allnames {
-		if err := ioutil.WriteFile(filepath.Join(tempDir, n), []byte{}, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(tempDir, n), []byte{}, 0o600); err != nil {
 			t.Fatal(err)
 		}
 		t.Logf("Wrote %v", filepath.Join(tempDir, n))
@@ -118,11 +113,7 @@ func TestFile(t *testing.T) {
 // of a simple completer and another multicompleter, which in turn has two
 // file completers. It also tests the Path completer.
 func TestMulti(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestComplete")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	var (
 		hinames  = []string{"hi", "hil", "hit"}
@@ -146,10 +137,10 @@ func TestMulti(t *testing.T) {
 		}
 	}
 	for _, n := range allnames {
-		if err := ioutil.WriteFile(filepath.Join(tempDir, "bin", "a"+n), []byte{}, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(tempDir, "bin", "a"+n), []byte{}, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(tempDir, "sbin", "b"+n), []byte{}, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(tempDir, "sbin", "b"+n), []byte{}, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -268,7 +259,7 @@ func TestLineReader(t *testing.T) {
 		var out []byte
 		go func(o string, r io.Reader) {
 			var err error
-			out, err = ioutil.ReadAll(r)
+			out, err = io.ReadAll(r)
 			if err != nil {
 				t.Errorf("reading console io.Pipe: got %v, want nil", err)
 			}

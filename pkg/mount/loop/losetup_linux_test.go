@@ -5,7 +5,6 @@
 package loop
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -47,10 +46,7 @@ func TestFindDevice(t *testing.T) {
 func TestSetFile(t *testing.T) {
 	skipIfNotRoot(t)
 
-	tmpDir, err := ioutil.TempDir("", "u-root-losetup-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tmpDir := t.TempDir()
 	testdisk := filepath.Join(tmpDir, "testdisk")
 	if err := cp.Copy("./testdata/pristine-vfat-disk", testdisk); err != nil {
 		t.Fatal(err)
@@ -71,7 +67,7 @@ func TestSetFile(t *testing.T) {
 	}
 	defer mp.Unmount(0) //nolint:errcheck
 
-	if err := ioutil.WriteFile("/tmp/disk/foobar", []byte("Are you feeling it now Mr Krabs"), 0o755); err != nil {
+	if err := os.WriteFile("/tmp/disk/foobar", []byte("Are you feeling it now Mr Krabs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -36,7 +36,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -299,7 +298,7 @@ func newStreamSectionReader(r io.Reader, offset int64, n int64) io.Reader {
 // Read implements io.Reader.
 func (s *sectionReader) Read(p []byte) (int, error) {
 	if s.offset == 0 && s.base != 0 {
-		if n, err := io.CopyN(ioutil.Discard, s.Reader, s.base); err != nil {
+		if n, err := io.CopyN(io.Discard, s.Reader, s.base); err != nil {
 			return 0, err
 		} else if n != s.base {
 			// Can't happen.

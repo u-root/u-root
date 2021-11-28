@@ -8,7 +8,6 @@ package mount
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -159,7 +158,7 @@ func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
 
 	// Create temporary directory if one does not already exist.
 	if p.tmpDir == "" {
-		tmpDir, err := ioutil.TempDir("", "u-root-mounts")
+		tmpDir, err := os.MkdirTemp("", "u-root-mounts")
 		if err != nil {
 			return nil, fmt.Errorf("cannot create tmpdir: %v", err)
 		}

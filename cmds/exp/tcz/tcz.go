@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -185,14 +184,14 @@ func installPackage(tczName string, deps map[string]bool) error {
 		debug("Fetched dep ok!\n")
 	} else {
 		debug("No dep file found\n")
-		if err := ioutil.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0o444)); err != nil {
+		if err := os.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0o444)); err != nil {
 			debug("Tried to write Blank file %v, failed %v\n", depName, err)
 		}
 		return nil
 	}
 	// read deps file
 	depFullPath := filepath.Join(tczLocalPackageDir, depName)
-	deplist, err := ioutil.ReadFile(depFullPath)
+	deplist, err := os.ReadFile(depFullPath)
 	if err != nil {
 		l.Fatalf("Fetched dep file %v but can't read it? %v", depName, err)
 	}
@@ -220,7 +219,7 @@ func installPackage(tczName string, deps map[string]bool) error {
 	if string(deplist) == realDepList {
 		return nil
 	}
-	if err := ioutil.WriteFile(depFullPath, []byte(realDepList), os.FileMode(0o444)); err != nil {
+	if err := os.WriteFile(depFullPath, []byte(realDepList), os.FileMode(0o444)); err != nil {
 		debug("Tried to write deplist file %v, failed %v\n", depName, err)
 		return err
 	}

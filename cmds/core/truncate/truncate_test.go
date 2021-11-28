@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -144,25 +143,21 @@ var truncateTests = []struct {
 
 // TestTruncate implements a table-driven test.
 func TestTruncate(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "truncate")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	for i, test := range truncateTests {
 		targetFile := filepath.Join(tmpDir, fmt.Sprintf("target%d", i))
 		refFile := filepath.Join(tmpDir, fmt.Sprintf("ref%d", i))
 		if test.genTargetFile {
 			data := make([]byte, test.initTargetSize)
-			if err := ioutil.WriteFile(targetFile, data, 0o600); err != nil {
+			if err := os.WriteFile(targetFile, data, 0o600); err != nil {
 				t.Errorf("Failed to create test file %s: %v", targetFile, err)
 				continue
 			}
 		}
 		if test.genRefFile {
 			data := make([]byte, test.initRefSize)
-			if err := ioutil.WriteFile(refFile, data, 0o600); err != nil {
+			if err := os.WriteFile(refFile, data, 0o600); err != nil {
 				t.Errorf("Failed to create test file %s: %v", targetFile, err)
 				continue
 			}
