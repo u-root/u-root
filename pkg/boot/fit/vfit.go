@@ -30,22 +30,20 @@ import (
 	"golang.org/x/crypto/openpgp"
 )
 
-var (
-	algs = map[string]crypto.Hash{
-		"MD4":       crypto.MD4,
-		"MD5":       crypto.MD5,
-		"SHA1":      crypto.SHA1,
-		"SHA224":    crypto.SHA224,
-		"SHA256":    crypto.SHA256,
-		"SHA384":    crypto.SHA384,
-		"SHA512":    crypto.SHA512,
-		"RIPEMD160": crypto.RIPEMD160,
-		"SHA3_224":  crypto.SHA3_224,
-		"SHA3_256":  crypto.SHA3_256,
-		"SHA3_384":  crypto.SHA3_384,
-		"SHA3_512":  crypto.SHA3_512,
-	}
-)
+var algs = map[string]crypto.Hash{
+	"MD4":       crypto.MD4,
+	"MD5":       crypto.MD5,
+	"SHA1":      crypto.SHA1,
+	"SHA224":    crypto.SHA224,
+	"SHA256":    crypto.SHA256,
+	"SHA384":    crypto.SHA384,
+	"SHA512":    crypto.SHA512,
+	"RIPEMD160": crypto.RIPEMD160,
+	"SHA3_224":  crypto.SHA3_224,
+	"SHA3_256":  crypto.SHA3_256,
+	"SHA3_384":  crypto.SHA3_384,
+	"SHA3_512":  crypto.SHA3_512,
+}
 
 // Signature defines an extendable interface for verifying images using
 // varying signing methods.

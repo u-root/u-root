@@ -16,7 +16,7 @@ import (
 // GrepTest is a table-driven which spawns grep with a variety of options and inputs.
 // We need to look at any output data, as well as exit status for things like the -q switch.
 func TestGrep(t *testing.T) {
-	var tab = []struct {
+	tab := []struct {
 		i string
 		o string
 		s int

@@ -63,7 +63,7 @@ type MEI struct {
 // See `HECIGuids` in this package.
 func OpenMEI(meiPath string, guid ClientGUID) (*MEI, error) {
 	var m MEI
-	fd, err := syscall.Open(meiPath, os.O_RDWR, 0755)
+	fd, err := syscall.Open(meiPath, os.O_RDWR, 0o755)
 	if err != nil {
 		return nil, err
 	}

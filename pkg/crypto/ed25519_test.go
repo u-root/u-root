@@ -29,10 +29,8 @@ const (
 	signatureBadFile string = "tests/verify_rsa_pkcs15_sha256.signature2"
 )
 
-var (
-	// password is a PEM encrypted passphrase
-	password = []byte{'k', 'e', 'i', 'n', 's'}
-)
+// password is a PEM encrypted passphrase
+var password = []byte{'k', 'e', 'i', 'n', 's'}
 
 func TestLoadDERPublicKey(t *testing.T) {
 	_, err := LoadPublicKeyFromFile(publicKeyDERFile)

@@ -21,10 +21,8 @@ const (
 	magicLen  = 6
 )
 
-var (
-	// Newc is the newc CPIO record format.
-	Newc RecordFormat = newc{magic: newcMagic}
-)
+// Newc is the newc CPIO record format.
+var Newc RecordFormat = newc{magic: newcMagic}
 
 type header struct {
 	Ino        uint32

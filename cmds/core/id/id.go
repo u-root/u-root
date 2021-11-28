@@ -168,10 +168,8 @@ func IDCommand(u User) {
 	var groupOutput []string
 
 	for gid, name := range u.Groups() {
-
 		if !flags.groups {
 			groupOutput = append(groupOutput, fmt.Sprintf("%d(%s)", gid, name))
-
 		} else {
 			if flags.name {
 				groupOutput = append(groupOutput, fmt.Sprintf("%s ", name))
@@ -193,7 +191,6 @@ func main() {
 	flag.Parse()
 	if !correctFlags(flags.groups, flags.group, flags.user) {
 		log.Fatalf("id: cannot print \"only\" of more than one choice")
-
 	}
 	if flags.name && !(flags.groups || flags.group || flags.user) {
 		log.Fatalf("id: cannot print only names in default format")

@@ -155,14 +155,14 @@ func TestTruncate(t *testing.T) {
 		refFile := filepath.Join(tmpDir, fmt.Sprintf("ref%d", i))
 		if test.genTargetFile {
 			data := make([]byte, test.initTargetSize)
-			if err := ioutil.WriteFile(targetFile, data, 0600); err != nil {
+			if err := ioutil.WriteFile(targetFile, data, 0o600); err != nil {
 				t.Errorf("Failed to create test file %s: %v", targetFile, err)
 				continue
 			}
 		}
 		if test.genRefFile {
 			data := make([]byte, test.initRefSize)
-			if err := ioutil.WriteFile(refFile, data, 0600); err != nil {
+			if err := ioutil.WriteFile(refFile, data, 0o600); err != nil {
 				t.Errorf("Failed to create test file %s: %v", targetFile, err)
 				continue
 			}

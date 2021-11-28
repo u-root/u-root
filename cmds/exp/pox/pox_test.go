@@ -14,9 +14,7 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var (
-	uskip = len("2018/08/10 21:20:42 ")
-)
+var uskip = len("2018/08/10 21:20:42 ")
 
 func TestSimple(t *testing.T) {
 	if os.Getuid() != 0 {
@@ -29,7 +27,7 @@ func TestSimple(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	f := filepath.Join(tmpDir, "x.tcz")
-	var tests = []struct {
+	tests := []struct {
 		args   []string
 		name   string
 		status int

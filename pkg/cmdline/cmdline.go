@@ -79,7 +79,6 @@ func parse(cmdlineReader io.Reader) CmdLine {
 
 //
 func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
-
 	lastQuote := rune(0)
 	quotedFieldsCheck := func(c rune) bool {
 		switch {
@@ -120,12 +119,10 @@ func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedV
 		// Call the user handler
 		handler(flag, key, canonicalKey, value, trimmedValue)
 	}
-
 }
 
 // parseToMap turns a space-separated kernel commandline into a map
 func parseToMap(input string) map[string]string {
-
 	flagMap := make(map[string]string)
 	doParse(input, func(flag, key, canonicalKey, value, trimmedValue string) {
 		// We store the value twice, once with dash, once with underscores

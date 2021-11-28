@@ -26,8 +26,8 @@ func TestPsExecution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//defer os.Rmdirall(d)
-	var tests = []struct {
+	// defer os.Rmdirall(d)
+	tests := []struct {
 		n     string
 		pid   string
 		files map[string]string
@@ -35,43 +35,55 @@ func TestPsExecution(t *testing.T) {
 		err   error
 	}{
 		{n: "missing files", pid: "1", files: map[string]string{"stat": "bad status file"}},
-		{n: "one process", pid: "1", files: map[string]string{"stat": "bad status file",
-			"status": `Name:	systemd
+		{
+			n: "one process", pid: "1", files: map[string]string{
+				"stat": "bad status file",
+				"status": `Name:	systemd
 TracerPid:	0
 Uid:	0	0	0	0
 Gid:	0	0	0	0
 FDSize:	128
 `,
-			"cmdline": "/sbin/init"},
+				"cmdline": "/sbin/init",
+			},
 			o: "PID PGRP SID TTY    STAT        TIME  COMMAND \n1     ?    file    00:00:00   status \n",
 		},
 		// Fix things up
-		{n: "correct pid 1", pid: "1", files: map[string]string{"stat": "1 (systemd) S 0 1 1 0 -1 4194560 82923 51272244 88 3457 153 671 103226 39563 20 0 1 0 2 230821888 2325 18446744073709551615 1 1 0 0 0 0 671173123 4096 1260 0 0 0 17 1 0 0 69 0 0 0 0 0 0 0 0 0 0",
-			"status": `Name:	systemd
+		{
+			n: "correct pid 1", pid: "1", files: map[string]string{
+				"stat": "1 (systemd) S 0 1 1 0 -1 4194560 82923 51272244 88 3457 153 671 103226 39563 20 0 1 0 2 230821888 2325 18446744073709551615 1 1 0 0 0 0 671173123 4096 1260 0 0 0 17 1 0 0 69 0 0 0 0 0 0 0 0 0 0",
+				"status": `Name:	systemd
 TracerPid:	0
 Uid:	0	0	0	0
 Gid:	0	0	0	0
 FDSize:	128
 `,
-			"cmdline": "/sbin/init"},
+				"cmdline": "/sbin/init",
+			},
 			o: "PID PGRP SID TTY    STAT         TIME  COMMAND \n1 1 1 ?    S        00:00:08  systemd \n",
 		},
-		{n: "second process", pid: "1996", files: map[string]string{"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		{
+			n: "second process", pid: "1996", files: map[string]string{
+				"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
 
-			"status": `Name:	dnsmasq
+				"status": `Name:	dnsmasq
 Umask:	0022
 Uid:	110	110	110	110
 `,
-			"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000"},
+				"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000",
+			},
 			o: " PID PGRP  SID TTY    STAT         TIME  COMMAND \n   1    1    1 ?    S        00:00:08  systemd \n1996 1995 1995 ?    S        00:00:00  dnsmasq \n",
 		},
-		{n: "nethost process", pid: "srv/1996", files: map[string]string{"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
+		{
+			n: "nethost process", pid: "srv/1996", files: map[string]string{
+				"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
 
-			"status": `Name:	dnsmasq
+				"status": `Name:	dnsmasq
 Umask:	0022
 Uid:	110	110	110	110
 `,
-			"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000"},
+				"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000",
+			},
 			o: "     PID     PGRP      SID TTY    STAT         TIME  COMMAND \n       1        1        1 ?    S        00:00:08  systemd \n    1996     1995     1995 ?    S        00:00:00  dnsmasq \nsrv/1996     1995     1995 ?    S        00:00:00  dnsmasq \n",
 		},
 	}
@@ -79,13 +91,13 @@ Uid:	110	110	110	110
 	for _, tt := range tests {
 		pd := filepath.Join(d, tt.pid)
 		t.Logf("Create %v", pd)
-		if err := os.MkdirAll(pd, 0777); err != nil {
+		if err := os.MkdirAll(pd, 0o777); err != nil {
 			t.Fatalf("Make proc dir: %v", err)
 		}
 		for n, f := range tt.files {
 			procf := filepath.Join(pd, n)
 			t.Logf("Write %v", procf)
-			if err := ioutil.WriteFile(procf, []byte(f), 0666); err != nil {
+			if err := ioutil.WriteFile(procf, []byte(f), 0o666); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -101,12 +113,11 @@ Uid:	110	110	110	110
 			t.Errorf("%v: got %v, want %v", tt.n, err, tt.err)
 		}
 	}
-
 }
 
 // Test Parsing of stat
 func TestParse(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name string
 		p    *Process
 		out  string
@@ -178,7 +189,8 @@ Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,000
 Mems_allowed_list:	0
 voluntary_ctxt_switches:	10168
 nonvoluntary_ctxt_switches:	3746
-`},
+`,
+			},
 			err: nil,
 		},
 	}

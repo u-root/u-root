@@ -242,11 +242,11 @@ func TestLn(t *testing.T) {
 			t.Logf("Creating: %v (dir: %v)", f.name, f.dir)
 			p := filepath.Join(f.name)
 			if f.dir {
-				if err := os.Mkdir(p, 0750); err != nil && err == os.ErrExist {
+				if err := os.Mkdir(p, 0o750); err != nil && err == os.ErrExist {
 					t.Skipf("Creation of dir %q fails: %v", p, err)
 				}
 			} else {
-				if err := ioutil.WriteFile(p, []byte{'.'}, 0640); err != nil {
+				if err := ioutil.WriteFile(p, []byte{'.'}, 0o640); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -267,7 +267,6 @@ func TestLn(t *testing.T) {
 				t.Logf("%q -> %q (hardlink)", expected.name, expected.linksTo)
 				testHardLink(expected.name, expected.linksTo, t)
 			}
-
 		}
 
 		// backing to testDir folder

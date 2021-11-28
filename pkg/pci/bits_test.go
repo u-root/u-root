@@ -7,7 +7,7 @@ package pci
 import "testing"
 
 func TestControlBits(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		c Control
 		w string
 	}{
@@ -24,11 +24,10 @@ func TestControlBits(t *testing.T) {
 			t.Errorf("Control bits for %#x: got \n%q\n, want \n%q", tt.c, s, tt.w)
 		}
 	}
-
 }
 
 func TestStatusBits(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		c Status
 		w string
 	}{
@@ -44,11 +43,10 @@ func TestStatusBits(t *testing.T) {
 			t.Errorf("Control bits for %#x: got \n%q, want \n%q", tt.c, s, tt.w)
 		}
 	}
-
 }
 
 func TestBAR(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		bar string
 		res string
 		err string
@@ -81,5 +79,4 @@ func TestBAR(t *testing.T) {
 			t.Errorf("BAR %s: got \n%q, want \n%q", tt.bar, s, tt.res)
 		}
 	}
-
 }

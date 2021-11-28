@@ -23,7 +23,7 @@ import (
 	"github.com/u-root/u-root/pkg/uefivars/boot"
 )
 
-//must run as root, as efi vars are not accessible otherwise
+// must run as root, as efi vars are not accessible otherwise
 func main() {
 	m := flag.Bool("m", false, "Mount FS containing boot file, print path.")
 	flag.Parse()
@@ -36,7 +36,7 @@ func main() {
 		log.Fatalf("Unable to read var... are you root?")
 	}
 	if *m {
-		//actually mount FS, locate file
+		// actually mount FS, locate file
 		exe := fp.Base(os.Args[0])
 		tmp, err := ioutil.TempDir("", exe)
 		if err != nil {
@@ -56,7 +56,7 @@ func main() {
 		log.Printf("file corresponding to CurrentBoot var can be found at %s\n", path)
 		log.Printf("you will need to unmount the filesystem, remove temp dir, etc when done.\n")
 	} else {
-		//just print out elements in variable
+		// just print out elements in variable
 		log.Printf("%s", bv)
 		for _, element := range bv.FilePathList {
 			res, err := element.Resolver()

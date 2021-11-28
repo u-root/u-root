@@ -19,19 +19,19 @@ import (
 )
 
 type EfiPathSegmentResolver interface {
-	//Returns description, does not require cleanup
+	// Returns description, does not require cleanup
 	String() string
 
-	//Mount fs, etc. You must call Cleanup() eventually.
+	// Mount fs, etc. You must call Cleanup() eventually.
 	Resolve(suggestedBasePath string) (string, error)
 
-	//For devices, returns BlockDev. Returns nil otherwise.
+	// For devices, returns BlockDev. Returns nil otherwise.
 	BlockInfo() *block.BlockDev
 
-	//For mounted devices, returns MountPoint. Returns nil otherwise.
+	// For mounted devices, returns MountPoint. Returns nil otherwise.
 	MntPoint() *mount.MountPoint
 
-	//Unmount fs, free resources, etc
+	// Unmount fs, free resources, etc
 	Cleanup() error
 }
 
@@ -62,7 +62,7 @@ func (r *HddResolver) Resolve(basePath string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			err = os.MkdirAll(basePath, 0755)
+			err = os.MkdirAll(basePath, 0o755)
 			if err != nil {
 				return "", err
 			}

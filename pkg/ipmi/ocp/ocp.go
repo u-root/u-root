@@ -85,7 +85,7 @@ func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
 func SendOemIpmiDimmInfo(i *ipmi.IPMI, info []DimmInfo) error {
 	for index := 0; index < len(info); index++ {
 		for param := 1; param <= 6; param++ {
-			//If DIMM is not present, only send the information of DIMM location
+			// If DIMM is not present, only send the information of DIMM location
 			if info[index].DIMMPresent != 0x01 && param >= 2 {
 				continue
 			}

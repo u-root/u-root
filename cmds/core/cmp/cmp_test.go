@@ -12,9 +12,8 @@ import (
 )
 
 func TestEmit(t *testing.T) {
-
-	var buf = []byte("hello\nthis is a test\n")
-	var buf2 = []byte("hello\nthiz is a text")
+	buf := []byte("hello\nthis is a test\n")
+	buf2 := []byte("hello\nthiz is a text")
 
 	c1 := make(chan byte, 8192)
 	c2 := make(chan byte, 8192)
@@ -36,5 +35,4 @@ func TestEmit(t *testing.T) {
 	if err != io.EOF {
 		t.Errorf("%v", err)
 	}
-
 }

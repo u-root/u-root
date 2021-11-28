@@ -26,25 +26,25 @@ var hiFileContent = []byte("hi")
 
 var old = makeIt{
 	n: "old.txt",
-	m: 0777,
+	m: 0o777,
 	c: []byte("old"),
 }
 
 var new = makeIt{
 	n: "new.txt",
-	m: 0777,
+	m: 0o777,
 	c: []byte("new"),
 }
 
 var tests = []makeIt{
 	{
 		n: "hi1.txt",
-		m: 0666,
+		m: 0o666,
 		c: hiFileContent,
 	},
 	{
 		n: "hi2.txt",
-		m: 0777,
+		m: 0o777,
 		c: hiFileContent,
 	},
 	old,
@@ -58,12 +58,12 @@ func setup() (string, error) {
 	}
 
 	tmpdir := filepath.Join(d, "hi.sub.dir")
-	if err := os.Mkdir(tmpdir, 0777); err != nil {
+	if err := os.Mkdir(tmpdir, 0o777); err != nil {
 		return "", err
 	}
 
-	for _, t := range tests {
-		if err := ioutil.WriteFile(filepath.Join(d, t.n), []byte(t.c), t.m); err != nil {
+	for _, tt := range tests {
+		if err := ioutil.WriteFile(filepath.Join(d, tt.n), tt.c, tt.m); err != nil {
 			return "", err
 		}
 	}

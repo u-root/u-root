@@ -85,5 +85,4 @@ func osInitGo() *initCmds {
 			libinit.Command("/bin/sh", ctty),
 		},
 	}
-
 }

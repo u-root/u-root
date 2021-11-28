@@ -58,6 +58,7 @@ func TestFFSHeaderUnmarshalBinaryFailForSize(t *testing.T) {
 		t.Fatalf("Should be '%s', but get '%v'", want, err)
 	}
 }
+
 func TestUnmarshalBinaryFailForSize(t *testing.T) {
 	var fvh EFIFirmwareVolumeHeader
 	err := fvh.UnmarshalBinary([]byte{0x0})
@@ -68,7 +69,7 @@ func TestUnmarshalBinaryFailForSize(t *testing.T) {
 }
 
 func TestIncorrectFVHSignature(t *testing.T) {
-	var dat = []byte{
+	dat := []byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x78, 0xe5, 0x8c, 0x8c, 0x3d, 0x8a, 0x1c, 0x4f,

@@ -86,7 +86,8 @@ func OnePCI(dir string) (*PCI, error) {
 			Index: i,
 			Base:  b,
 			Lim:   l,
-			Attr:  a}
+			Attr:  a,
+		}
 		switch i {
 		case 13:
 			pci.IO = nb
@@ -137,7 +138,7 @@ func NewBusReader(globs ...string) (BusReader, error) {
 		exp = append(exp, gg...)
 	}
 	// uniq
-	var u = map[string]struct{}{}
+	u := map[string]struct{}{}
 	for _, e := range exp {
 		u[e] = struct{}{}
 	}

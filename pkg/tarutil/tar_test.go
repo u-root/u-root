@@ -44,7 +44,7 @@ func extractAndCompare(t *testing.T, tarFile string, files []struct{ name, body 
 }
 
 func TestExtractDir(t *testing.T) {
-	var files = []struct {
+	files := []struct {
 		name, body string
 	}{
 		{"a.txt", "hello\n"},
@@ -168,7 +168,7 @@ func TestCreateTarProcfsFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var expected = []struct {
+	expected := []struct {
 		name, body string
 	}{
 		{procfsFile, string(contents)},

@@ -28,22 +28,22 @@ off val
 526 (2 bytes, little endian) + 0x200 -> start of null-terminated version string
 */
 
-const kverMax = 1024 //arbitrary
+const kverMax = 1024 // arbitrary
 
 var (
-	//ErrBootSig is returned when the boot sig is missing.
+	// ErrBootSig is returned when the boot sig is missing.
 	ErrBootSig = errors.New("missing 0x55AA boot sig")
-	//ErrBadSig is returned when the kernel header sig is missing.
+	// ErrBadSig is returned when the kernel header sig is missing.
 	ErrBadSig = errors.New("missing kernel header sig")
-	//ErrBadOff is returned if the version string offset is null.
+	// ErrBadOff is returned if the version string offset is null.
 	ErrBadOff = errors.New("null version string offset")
-	//ErrParse is returned on a parse error.
+	// ErrParse is returned on a parse error.
 	ErrParse = errors.New("parse error")
 )
 
 // KVer reads the kernel version string. See also: (*BZImage)Kver()
 func KVer(k io.ReadSeeker) (string, error) {
-	var buf = make([]byte, kverMax)
+	buf := make([]byte, kverMax)
 	_, err := k.Seek(0, io.SeekStart)
 	if err != nil {
 		return "", err
@@ -91,7 +91,7 @@ func (bz *BzImage) KVer() (string, error) {
 	return nullterm(bz.BootCode[bcoffs:end]), nil
 }
 
-//read c string from buffer
+// read c string from buffer
 func nullterm(buf []byte) string {
 	var i int
 	var b byte
@@ -110,15 +110,15 @@ func nullterm(buf []byte) string {
 //   release             (builder)         version
 //maj.min.patch-localver                #buildnum SMP buildtime
 type KInfo struct {
-	Release, Version string //uname -r, uname -v respectfully
-	Builder          string //user@hostname in parenthesis, shown by `file` but not `uname`
+	Release, Version string // uname -r, uname -v respectfully
+	Builder          string // user@hostname in parenthesis, shown by `file` but not `uname`
 
-	//the following are extracted from Release and Version
+	// the following are extracted from Release and Version
 
 	BuildNum        uint64    //#nnn in Version, 300 in example above
-	BuildTime       time.Time //from Version
-	Maj, Min, Patch uint64    //from Release
-	LocalVer        string    //from Release
+	BuildTime       time.Time // from Version
+	Maj, Min, Patch uint64    // from Release
+	LocalVer        string    // from Release
 }
 
 // Equal compares two KInfo structs and returns
@@ -142,24 +142,24 @@ const layout = "Mon Jan 2 15:04:05 MST 2006"
 func ParseDesc(desc string) (KInfo, error) {
 	var ki KInfo
 
-	//first split at #
+	// first split at #
 	split := strings.Split(desc, "#")
 	if len(split) != 2 {
 		return KInfo{}, fmt.Errorf("%w: %s: wrong number of '#' chars", ErrParse, desc)
 	}
 	ki.Version = "#" + split[1]
 
-	//now split first part into release and builder
+	// now split first part into release and builder
 	elements := strings.SplitN(split[0], " ", 2)
 	if len(elements) > 2 {
 		return KInfo{}, fmt.Errorf("%w: %s: wrong number of spaces in release/builder", ErrParse, desc)
 	}
 	ki.Release = elements[0]
 	if len(elements) == 2 {
-		//not sure if this is _always_ present
+		// not sure if this is _always_ present
 		ki.Builder = strings.Trim(elements[1], " ()")
 	}
-	//split build number off version
+	// split build number off version
 	elements = strings.SplitN(split[1], " ", 2)
 	if len(elements) != 2 {
 		return KInfo{}, fmt.Errorf("%w: %s: wrong number of spaces in build/version", ErrParse, desc)
@@ -169,9 +169,9 @@ func ParseDesc(desc string) (KInfo, error) {
 		return KInfo{}, fmt.Errorf("%s: bad uint %s: %w", desc, elements[0], err)
 	}
 	ki.BuildNum = i
-	//remove SMP if present
+	// remove SMP if present
 	t := strings.TrimSpace(strings.TrimPrefix(elements[1], "SMP"))
-	//parse remainder as time, using reference time
+	// parse remainder as time, using reference time
 	ki.BuildTime, err = time.Parse(layout, t)
 	if err != nil {
 		return KInfo{}, fmt.Errorf("%s: bad time %s: %w", desc, t, err)

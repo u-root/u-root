@@ -71,7 +71,7 @@ func sortWithFiles(t *testing.T, tt test, tmpDir string,
 	inPaths := make([]string, len(inFiles))
 	for i, inFile := range inFiles {
 		inPaths[i] = filepath.Join(tmpDir, inFile)
-		if err := ioutil.WriteFile(inPaths[i], []byte(tt.in), 0600); err != nil {
+		if err := ioutil.WriteFile(inPaths[i], []byte(tt.in), 0o600); err != nil {
 			t.Error(err)
 			return
 		}
@@ -132,14 +132,20 @@ func TestMultipleFileInputs(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	tt := test{[]string{}, "a\nb\nc\n",
-		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n"}
+	tt := test{
+		[]string{},
+		"a\nb\nc\n",
+		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n",
+	}
 	sortWithFiles(t, tt, tmpDir,
 		[]string{"in1", "in2", "in3", "in4"}, "out")
 
 	// Run the test again without newline terminators.
-	tt = test{[]string{}, "a\nb\nc",
-		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n"}
+	tt = test{
+		[]string{},
+		"a\nb\nc",
+		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n",
+	}
 	sortWithFiles(t, tt, tmpDir,
 		[]string{"in1", "in2", "in3", "in4"}, "out")
 }

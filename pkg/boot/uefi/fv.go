@@ -37,11 +37,13 @@ type EFIFFSFileHeader struct {
 	State          uint8
 }
 
-const EFIFFSAttribLargeFile uint8 = 0x01
-const EFICommonSectionHeaderSize int = 4
-const EFICommonSectionHeader2Size int = 8
-const EFIFFSFileHeaderSize int = 24
-const EFIFFSFileHeader2Size int = 32
+const (
+	EFIFFSAttribLargeFile       uint8 = 0x01
+	EFICommonSectionHeaderSize  int   = 4
+	EFICommonSectionHeader2Size int   = 8
+	EFIFFSFileHeaderSize        int   = 24
+	EFIFFSFileHeader2Size       int   = 32
+)
 
 const (
 	EFISectionTypePE32    uint8 = 0x10

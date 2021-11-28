@@ -151,11 +151,11 @@ func TestCpRecursive(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	srcDir := filepath.Join(tempDir, "src")
-	if err := os.Mkdir(srcDir, 0755); err != nil {
+	if err := os.Mkdir(srcDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	dstDir := filepath.Join(tempDir, "dst-exists")
-	if err := os.Mkdir(dstDir, 0755); err != nil {
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -205,7 +205,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	dstTest := filepath.Join(tempDir, "destination")
-	if err := os.Mkdir(dstTest, 0755); err != nil {
+	if err := os.Mkdir(dstTest, 0o755); err != nil {
 		t.Fatalf("Failed on build directory %v: %v", dstTest, err)
 	}
 

@@ -78,7 +78,6 @@ func downloadFile(filepath string, url string) error {
 	log.Printf("Downloading file %s from %s\n", filepath, url)
 
 	headResp, err := http.Head(url)
-
 	if err != nil {
 		return err
 	}

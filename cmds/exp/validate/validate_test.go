@@ -24,7 +24,7 @@ type file struct {
 }
 
 func TestValidate(t *testing.T) {
-	var data = []byte(`127.0.0.1	localhost
+	data := []byte(`127.0.0.1	localhost
 127.0.1.1	akaros
 192.168.28.16	ak
 192.168.28.131	uroot
@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
 `)
-	var tests = []file{
+	tests := []file{
 		{name: "hosts.sha1", val: []byte("3f397a3b3a7450075da91b078afa35b794cf6088  hosts"), o: "SHA1\n"},
 	}
 
@@ -43,12 +43,12 @@ ff02::2 ip6-allrouters
 		t.Fatal("TempDir failed: ", err)
 	}
 	defer os.RemoveAll(tmpDir)
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "hosts"), data, 0444); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(tmpDir, "hosts"), data, 0o444); err != nil {
 		t.Fatalf("Can't set up data file: %v", err)
 	}
 
 	for _, v := range tests {
-		if err := ioutil.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0444); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(tmpDir, v.name), v.val, 0o444); err != nil {
 			t.Fatalf("Can't set up hash file: %v", err)
 		}
 

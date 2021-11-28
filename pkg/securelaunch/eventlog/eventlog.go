@@ -25,12 +25,12 @@ type EventLog struct {
 
 const (
 	eventLogFile        = "/sys/kernel/security/slaunch/eventlog"
-	defaultEventLogFile = "eventlog.txt" //only used if user doesn't provide any
+	defaultEventLogFile = "eventlog.txt" // only used if user doesn't provide any
 )
 
 // Add writes event logs to sysfs file.
 func Add(b []byte) error {
-	fd, err := os.OpenFile(eventLogFile, os.O_WRONLY, 0644)
+	fd, err := os.OpenFile(eventLogFile, os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}

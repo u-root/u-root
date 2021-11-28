@@ -110,7 +110,7 @@ func MoveMount(oldPath string, newPath string) error {
 // If the target directories already exist, they must be empty.
 // This function skips missing mounts.
 func addSpecialMounts(newRoot string) error {
-	var mounts = []string{"/dev", "/proc", "/sys", "/run"}
+	mounts := []string{"/dev", "/proc", "/sys", "/run"}
 
 	for _, mount := range mounts {
 		path := filepath.Join(newRoot, mount)
@@ -129,7 +129,7 @@ func addSpecialMounts(newRoot string) error {
 			continue
 		}
 		// Make sure the target dir exists.
-		if err := os.MkdirAll(path, 0755); err != nil {
+		if err := os.MkdirAll(path, 0o755); err != nil {
 			return err
 		}
 		if err := MoveMount(mount, path); err != nil {

@@ -58,7 +58,7 @@ func TestInvocationErrors(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	devpath := filepath.Join(tmpDir, "testdev")
-	var tests = []test{
+	tests := []test{
 		{args: []string{devpath}, expects: "mknod: usage: mknod path type [major minor]\n"},
 		{args: []string{""}, expects: "mknod: usage: mknod path type [major minor]\n"},
 		{args: []string{devpath, "p", "254", "3"}, expects: "mknod: device type p requires no other arguments\n"},

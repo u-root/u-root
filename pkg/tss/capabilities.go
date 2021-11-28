@@ -16,7 +16,6 @@ import (
 )
 
 func readTPM12Information(rwc io.ReadWriter) (TPMInfo, error) {
-
 	manufacturerRaw, err := tpm1.GetManufacturer(rwc)
 	if err != nil {
 		return TPMInfo{}, err

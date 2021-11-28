@@ -36,7 +36,7 @@ func TestLargeDevNumber(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 	file := filepath.Join(tmpDir, "large_node")
-	if err := unix.Mknod(file, 0660|unix.S_IFBLK, 0x12345678); err != nil {
+	if err := unix.Mknod(file, 0o660|unix.S_IFBLK, 0x12345678); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(file)

@@ -99,7 +99,7 @@ func ToJSONFile(imgs []boot.OSImage, filename string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, enc, 0644)
+	return ioutil.WriteFile(filename, enc, 0o644)
 }
 
 // ImagesToJSONLike spits out a json-convertible reproducible representation of

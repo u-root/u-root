@@ -26,12 +26,10 @@ import (
 	"pack.ag/tftp"
 )
 
-var (
-	// ErrNoSuchScheme is returned by Schemes.Fetch and
-	// Schemes.LazyFetch if there is no registered FileScheme
-	// implementation for the given URL scheme.
-	ErrNoSuchScheme = errors.New("no such scheme")
-)
+// ErrNoSuchScheme is returned by Schemes.Fetch and
+// Schemes.LazyFetch if there is no registered FileScheme
+// implementation for the given URL scheme.
+var ErrNoSuchScheme = errors.New("no such scheme")
 
 // File is a reference to a file fetched through this library.
 type File interface {
@@ -63,7 +61,6 @@ type FileScheme interface {
 	// It may do so by fetching `u` and placing it in a buffer, or by
 	// returning an io.ReaderAt that fetchs the file.
 	Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error)
-
 	FetchWithoutCache(ctx context.Context, u *url.URL) (io.Reader, error)
 }
 

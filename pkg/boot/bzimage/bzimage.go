@@ -50,7 +50,7 @@ var (
 	}
 	// String of unknown meaning.
 	// The build script has this value:
-	//initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
+	// initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
 	// The resultant bzd has this value:
 	initRAMFStag = [4]byte{0xf8, 0x85, 0x21, 0x01}
 
@@ -418,7 +418,7 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
 	}
 	if b.KernelBase != b2.KernelBase {
-		//NOTE: this is hardcoded to 0x100000
+		// NOTE: this is hardcoded to 0x100000
 		s = s + fmt.Sprintf("b KernelBase is %#x; b2 KernelBase is %#x", b.KernelBase, b2.KernelBase)
 	}
 	if b.KernelOffset != b2.KernelOffset {
@@ -473,7 +473,7 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 			return -1, -1, err
 		}
 		cur = x
-		var r = bytes.NewReader(dat[cur:])
+		r := bytes.NewReader(dat[cur:])
 		rr := archiver.Reader(r)
 		Debug("r.Len is %v", r.Len())
 		var found bool
@@ -529,13 +529,13 @@ func (b *BzImage) ReadConfig() (string, error) {
 		return "", ErrCfgNotFound
 	}
 	i += 8
-	mb := 1024 * 1024 //read only 1 mb; arbitrary
+	mb := 1024 * 1024 // read only 1 mb; arbitrary
 	buf := bytes.NewReader(b.KernelCode[i : i+mb])
 	gz, err := gzip.NewReader(buf)
 	if err != nil {
 		return "", err
 	}
-	//make it stop at end of stream, since we don't know the actual size
+	// make it stop at end of stream, since we don't know the actual size
 	gz.Multistream(false)
 	cfg, err := ioutil.ReadAll(gz)
 	if err != nil {

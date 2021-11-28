@@ -29,7 +29,7 @@ type FileCollector struct {
  */
 func NewFileCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New Files Collector initialized\n")
-	var fc = new(FileCollector)
+	fc := new(FileCollector)
 	err := json.Unmarshal(config, &fc)
 	if err != nil {
 		return nil, err

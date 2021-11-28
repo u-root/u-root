@@ -14,8 +14,7 @@ import (
 )
 
 // Termios is used to manipulate the control channel of a kernel.
-type Termios struct {
-}
+type Termios struct{}
 
 // Winsize holds the window size information, it is modeled on unix.Winsize.
 type Winsize struct {
@@ -46,7 +45,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 
 // NewTTYS returns a new TTYIO.
 func NewTTYS(port string) (*TTYIO, error) {
-	f, err := os.OpenFile(filepath.Join("/dev", port), os.O_RDWR, 0620)
+	f, err := os.OpenFile(filepath.Join("/dev", port), os.O_RDWR, 0o620)
 	if err != nil {
 		return nil, err
 	}

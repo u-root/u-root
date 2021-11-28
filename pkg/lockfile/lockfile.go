@@ -57,9 +57,7 @@ var (
 	ErrProcessDead = errors.New("lockfile points to invalid PID")
 )
 
-var (
-	errUnlocked = errors.New("file is unlocked")
-)
+var errUnlocked = errors.New("file is unlocked")
 
 // Lockfile is a process-based file lock.
 type Lockfile struct {

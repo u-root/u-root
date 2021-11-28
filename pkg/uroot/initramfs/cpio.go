@@ -24,7 +24,7 @@ func (ca CPIOArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 	if len(path) == 0 {
 		return nil, fmt.Errorf("path is required")
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return nil, err
 	}

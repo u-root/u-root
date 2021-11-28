@@ -138,7 +138,7 @@ func (o OSEndpoint) Load() error {
 		fmt.Printf("Commandline: %s\n", o.Commandline)
 	} else {
 		tmpPath := "/tmp/" + strings.ReplaceAll(o.Name, " ", "") + "/"
-		err := os.Mkdir(tmpPath, 0666)
+		err := os.Mkdir(tmpPath, 0o666)
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func indexOf(element string, data []string) int {
 			return k
 		}
 	}
-	return -1 //not found.
+	return -1 // not found.
 }
 
 // remove element from array

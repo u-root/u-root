@@ -36,7 +36,7 @@ func TestAddNetbootEntryFull(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.MkdirAll(path.Join(dir, "rw"), 0700)
+	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
 	err = cli([]string{
 		"add",
@@ -61,7 +61,7 @@ func TestAddLocalbootEntryFull(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.MkdirAll(path.Join(dir, "rw"), 0700)
+	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
 	err = cli([]string{
 		"add",

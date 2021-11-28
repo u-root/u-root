@@ -24,43 +24,53 @@ type test struct {
 var stringsTests = []test{
 	{
 		"empty",
-		[]string{}, "", "",
+		[]string{},
+		"", "",
 	},
 	{
 		"sequences are too short",
-		[]string{}, "\n\na\nab\n\nabc\nabc\xff\n01\n", "",
+		[]string{},
+		"\n\na\nab\n\nabc\nabc\xff\n01\n", "",
 	},
 	{
 		"entire string is too short",
-		[]string{}, "abc", "",
+		[]string{},
+		"abc", "",
 	},
 	{
 		"entire string just fits perfectly",
-		[]string{}, "abcd", "abcd\n",
+		[]string{},
+		"abcd", "abcd\n",
 	},
 	{
 		"entire string is printable",
-		[]string{}, "abcdefghijklmnopqrstuvwxyz", "abcdefghijklmnopqrstuvwxyz\n",
+		[]string{},
+		"abcdefghijklmnopqrstuvwxyz", "abcdefghijklmnopqrstuvwxyz\n",
 	},
 	{
 		"terminating newline",
-		[]string{}, "abcdefghijklmnopqrstuvwxyz\n", "abcdefghijklmnopqrstuvwxyz\n",
+		[]string{},
+		"abcdefghijklmnopqrstuvwxyz\n", "abcdefghijklmnopqrstuvwxyz\n",
 	},
 	{
 		"mix of printable and non-printable sequences",
-		[]string{}, "\n\na123456\nab\n\nabc\nabcde\xff\n01\n", "a123456\nabcde\n",
+		[]string{},
+		"\n\na123456\nab\n\nabc\nabcde\xff\n01\n", "a123456\nabcde\n",
 	},
 	{
 		"spaces are printable",
-		[]string{}, " abcdefghijklm nopqrstuvwxyz ", " abcdefghijklm nopqrstuvwxyz \n",
+		[]string{},
+		" abcdefghijklm nopqrstuvwxyz ", " abcdefghijklm nopqrstuvwxyz \n",
 	},
 	{
 		"shorter value of n",
-		[]string{"--n", "1"}, "\n\na\nab\n\nabc\nabc\xff\n01\n", "a\nab\nabc\nabc\n01\n",
+		[]string{"--n", "1"},
+		"\n\na\nab\n\nabc\nabc\xff\n01\n", "a\nab\nabc\nabc\n01\n",
 	},
 	{
 		"larger value of n",
-		[]string{"--n", "6"}, "\n\na123456\nab\n\nabc\nabcde\xff\n01\n", "a123456\n",
+		[]string{"--n", "6"},
+		"\n\na123456\nab\n\nabc\nabcde\xff\n01\n", "a123456\n",
 	},
 }
 

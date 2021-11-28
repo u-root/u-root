@@ -41,7 +41,7 @@ var (
 		"imaxbel": {word: I, mask: syscall.IMAXBEL},
 		"iutf8":   {word: I, mask: syscall.IUTF8},
 
-		//Outputprocessing
+		// Outputprocessing
 		"opost":  {word: O, mask: syscall.OPOST},
 		"onlcr":  {word: O, mask: syscall.ONLCR},
 		"ocrnl":  {word: O, mask: syscall.OCRNL},
@@ -50,7 +50,7 @@ var (
 		"ofill":  {word: O, mask: syscall.OFILL},
 		"ofdel":  {word: O, mask: syscall.OFDEL},
 
-		//Localprocessing
+		// Localprocessing
 		"isig":    {word: L, mask: syscall.ISIG},
 		"icanon":  {word: L, mask: syscall.ICANON},
 		"echo":    {word: L, mask: syscall.ECHO},
@@ -66,7 +66,7 @@ var (
 		"pendin":  {word: L, mask: syscall.PENDIN},
 		"iexten":  {word: L, mask: syscall.IEXTEN},
 
-		//Controlprocessing
+		// Controlprocessing
 
 		"cstopb": {word: C, mask: syscall.CSTOPB},
 		"cread":  {word: C, mask: syscall.CREAD},

@@ -37,12 +37,12 @@ const (
 	LOOP_CTL_REMOVE   = 0x4C81
 	LOOP_CTL_GET_FREE = 0x4C82
 	SYS_ioctl         = 16
-	dirMode           = 0755
+	dirMode           = 0o755
 	tinyCoreRoot      = "/TinyCorePackages/tcloop"
 )
 
-//http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
-//The .dep is the name + .dep
+// http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
+// The .dep is the name + .dep
 
 var (
 	l                  = log.New(os.Stdout, "tcz: ", 0)
@@ -94,7 +94,7 @@ func clonetree(tree string) error {
 				debug("Mkdir of %s failed: %v", path[lt:], err)
 				// TODO: EEXIST should not be an error. Ignore
 				// err for now. FIXME.
-				//return err
+				// return err
 			}
 			return nil
 		}
@@ -185,7 +185,7 @@ func installPackage(tczName string, deps map[string]bool) error {
 		debug("Fetched dep ok!\n")
 	} else {
 		debug("No dep file found\n")
-		if err := ioutil.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0444)); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(tczLocalPackageDir, depName), []byte{}, os.FileMode(0o444)); err != nil {
 			debug("Tried to write Blank file %v, failed %v\n", depName, err)
 		}
 		return nil
@@ -220,12 +220,11 @@ func installPackage(tczName string, deps map[string]bool) error {
 	if string(deplist) == realDepList {
 		return nil
 	}
-	if err := ioutil.WriteFile(depFullPath, []byte(realDepList), os.FileMode(0444)); err != nil {
+	if err := ioutil.WriteFile(depFullPath, []byte(realDepList), os.FileMode(0o444)); err != nil {
 		debug("Tried to write deplist file %v, failed %v\n", depName, err)
 		return err
 	}
 	return nil
-
 }
 
 func setupPackages(tczName string, deps map[string]bool) error {
@@ -283,7 +282,6 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		}
 	}
 	return nil
-
 }
 
 func usage() string {

@@ -116,7 +116,7 @@ func writeBuildStats(stats buildStats, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(*statsOutputPath, data, 0644); err != nil {
+	if err := ioutil.WriteFile(*statsOutputPath, data, 0o644); err != nil {
 		return err
 	}
 	return nil
@@ -248,7 +248,7 @@ func Main() error {
 		}
 		defer os.RemoveAll(tempDir)
 	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(tempDir, 0755); err != nil {
+		if err := os.MkdirAll(tempDir, 0o755); err != nil {
 			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
 		}
 	}

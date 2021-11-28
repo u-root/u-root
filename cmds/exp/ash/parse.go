@@ -58,7 +58,6 @@ func pushback(b *bufio.Reader) {
 
 func one(b *bufio.Reader) byte {
 	c, err := b.ReadByte()
-	//fmt.Printf("one '%v' %v\n", c, err)
 	if err == io.EOF {
 		return 0
 	}
@@ -82,7 +81,6 @@ func tok(b *bufio.Reader) (string, string) {
 	var tokType, arg string
 	c := next(b)
 
-	//fmt.Printf("TOK %v", c)
 	switch c {
 	case 0:
 		return "EOF", ""
@@ -117,26 +115,21 @@ func tok(b *bufio.Reader) (string, string) {
 	case ' ', '\t':
 		return "white", string(c)
 	case '\n':
-		//fmt.Printf("NEWLINE\n")
 		return "EOL", ""
 	case '|', '&':
-		//fmt.Printf("LINK %v\n", c)
 		// peek ahead. We need the literal, so don't use next()
 		nc := one(b)
 		if nc == c {
-			//fmt.Printf("LINK %v\n", string(c)+string(c))
 			return "LINK", string(c) + string(c)
 		}
 		pushback(b)
 		if c == '&' {
-			//fmt.Printf("BG\n")
 			tokType = "BG"
 			if nc == 0 {
 				tokType = "EOL"
 			}
 			return "BG", tokType
 		}
-		//fmt.Printf("LINK %v\n", string(c))
 		return "LINK", string(c)
 	default:
 		for {
@@ -152,7 +145,6 @@ func tok(b *bufio.Reader) (string, string) {
 		}
 
 	}
-
 }
 
 // get an ARG. It has to work.
@@ -171,6 +163,7 @@ func getArg(b *bufio.Reader, what string) string {
 		return s
 	}
 }
+
 func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 	t, s := tok(b)
 	if s == "\n" || t == "EOF" || t == "EOL" {
@@ -203,7 +196,6 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 		// LINK and BG are similar save that LINK requires another command. If we don't get one, well.
 		case "LINK":
 			c.link = s
-			//fmt.Printf("LINK %v %v\n", c, s)
 			return c, t
 		case "BG":
 			c.bg = true
@@ -218,8 +210,8 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 		t, s = tok(b)
 	}
 }
+
 func parse(b *bufio.Reader) (*Command, string) {
-	//fmt.Printf("%v %v\n", t, s)
 	c := newCommand()
 	return parsestring(b, c)
 }
@@ -236,7 +228,6 @@ func parsecommands(b *bufio.Reader) ([]*Command, string) {
 		if c == nil {
 			return cmds, t
 		}
-		//fmt.Printf("cmd  %v\n", *c)
 		cmds = append(cmds, c)
 		if t == "EOF" || t == "EOL" {
 			return cmds, t
