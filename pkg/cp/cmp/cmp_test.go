@@ -20,90 +20,90 @@ func TestCMP(t *testing.T) {
 
 	err := os.Mkdir(dirPath, 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath, err)
 	}
 	defer os.RemoveAll(dirPath)
 
 	err = os.Mkdir(dirPath+"one", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"one", err)
 	}
 	defer os.RemoveAll(dirPath + "one")
 
 	err = os.Mkdir(dirPath+"two", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"two", err)
 	}
 	defer os.RemoveAll(dirPath + "two")
 
 	err = os.Mkdir(dirPath+"three", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"three", err)
 	}
 	defer os.RemoveAll(dirPath + "three")
 
 	err = os.Mkdir(dirPath+"four", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"four", err)
 	}
 	defer os.RemoveAll(dirPath + "four")
 
 	err = os.Mkdir(dirPath+"five", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"five", err)
 	}
 	defer os.RemoveAll(dirPath + "five")
 
 	err = os.Mkdir(dirPath+"six", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"six", err)
 	}
 	defer os.RemoveAll(dirPath + "six")
 
 	err = os.Mkdir(dirPath+"five/"+"seven", 0700)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", dirPath+"five/"+"seven", err)
 	}
 	defer os.RemoveAll(dirPath + "five/" + "seven")
 
 	tmpFile1, err := ioutil.TempFile(dirPath+"one", "file1")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", tmpFile1.Name(), err)
 	}
 	defer tmpFile1.Close()
 
 	tmpFile2, err := ioutil.TempFile(dirPath+"one", "file2")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", tmpFile2.Name(), err)
 	}
 	defer tmpFile2.Close()
 
 	tmpFile3, err := ioutil.TempFile(dirPath+"one", "file3")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", tmpFile3.Name(), err)
 	}
 	defer tmpFile3.Close()
 
 	tmpFile4, err := ioutil.TempFile(dirPath+"five", "file4")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to create %s: %v", tmpFile4.Name(), err)
 	}
 	defer tmpFile4.Close()
 
 	if err := ioutil.WriteFile(tmpFile1.Name(), []byte("F is for fire that burns down the whole town"), 0766); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to write to %s: %v", tmpFile1.Name(), err)
 	}
 
 	if err := ioutil.WriteFile(tmpFile2.Name(), []byte("F is for fire that burns down the whole town"), 0766); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to write to %s: %v", tmpFile2.Name(), err)
 	}
 
 	if err := ioutil.WriteFile(tmpFile3.Name(), []byte("nwot elohw eht nwod snrub taht erif rof si F"), 0766); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to write to %s: %v", tmpFile3.Name(), err)
 	}
 
 	if err := ioutil.WriteFile(tmpFile4.Name(), []byte("nwot elohw eht nwod snrub taht erif rof si F"), 0766); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to write to %s: %v", tmpFile4.Name(), err)
 	}
 
 	// Tests start here
