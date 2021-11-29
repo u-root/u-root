@@ -12,8 +12,6 @@ import (
 	"log"
 	"net"
 	"os"
-
-	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 const usage = "netcat [go-style network address]"
@@ -25,7 +23,11 @@ var (
 )
 
 func init() {
-	util.Usage(usage)
+	defUsage := flag.Usage
+	flag.Usage = func() {
+		os.Args[0] = usage
+		defUsage()
+	}
 }
 
 func main() {
