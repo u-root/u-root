@@ -232,17 +232,14 @@ func TestRead(t *testing.T) {
 		},
 	}
 
-	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
-	if err != nil {
-		t.Errorf("unable to mockup file: %v", err)
-	}
-	defer os.Remove("datafile")
+	p, cleanup := setupDatafile(t, "datafile")
+	defer cleanup()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buffer := make([]byte, len(tt.expected))
 
-			file, err := os.Open("datafile")
+			file, err := os.Open(p)
 			if err != nil {
 				t.Errorf("Unable to open mock file: %v", err)
 			}
@@ -314,20 +311,34 @@ func TestInFile(t *testing.T) {
 		},
 	}
 
-	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
-	if err != nil {
-		t.Errorf("unable to mockup file: %v", err)
-	}
-	defer os.Remove("datafile")
+	p, cleanup := setupDatafile(t, "datafile")
+	defer cleanup()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = inFile(tt.filename, tt.outputBytes, tt.seek, tt.count)
+			_, err := inFile(p, tt.outputBytes, tt.seek, tt.count)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
 		})
 	}
+}
+
+func setupDatafile(t *testing.T, name string) (string, func()) {
+	t.Helper()
+
+	testDir, err := ioutil.TempDir("", "dd")
+	if err != nil {
+		t.Fatalf("could not create test dd directory %v", err)
+	}
+	dataFilePath := filepath.Join(testDir, name)
+
+	err = ioutil.WriteFile(dataFilePath, []byte("ABCDEFG"), 0644)
+	if err != nil {
+		t.Errorf("unable to mockup file: %v", err)
+	}
+
+	return dataFilePath, func() { os.Remove(dataFilePath) }
 }
 
 func TestOutFile(t *testing.T) {
@@ -381,15 +392,12 @@ func TestOutFile(t *testing.T) {
 		},
 	}
 
-	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
-	if err != nil {
-		t.Errorf("unable to mockup file: %v", err)
-	}
-	defer os.Remove("datafile")
+	p, cleanup := setupDatafile(t, "datafile")
+	defer cleanup()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = outFile(tt.filename, tt.outputBytes, tt.seek, tt.flags)
+			_, err := outFile(p, tt.outputBytes, tt.seek, tt.flags)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
