@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,23 +28,17 @@ func TestLargeDevNumber(t *testing.T) {
 	}
 
 	// Make a temporary directory.
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	file := filepath.Join(tmpDir, "large_node")
 
 	// Run "mknod large_node b 1110 74616".
-	err = testutil.Command(t, file, "b", "1110", "74616").Run()
-	if err != nil {
+	if err := testutil.Command(t, file, "b", "1110", "74616").Run(); err != nil {
 		t.Fatal(err)
 	}
 
 	// Check the device number.
 	var s unix.Stat_t
-	err = unix.Stat(file, &s)
-	if err != nil {
+	if err := unix.Stat(file, &s); err != nil {
 		t.Fatal(err)
 	}
 	if s.Rdev != 0x12345678 {

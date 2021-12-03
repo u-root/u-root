@@ -5,7 +5,6 @@
 package gzip
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -89,8 +88,7 @@ func TestFile_CheckPath(t *testing.T) {
 		},
 	}
 
-	tempDir := os.TempDir()
-	defer os.Remove(tempDir)
+	tempDir := t.TempDir()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -250,12 +248,11 @@ func TestFile_Cleanup(t *testing.T) {
 		},
 	}
 
-	tempDir := os.TempDir()
-	defer os.Remove(tempDir)
+	tempDir := t.TempDir()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, err := ioutil.TempFile(tempDir, "cleanup-test")
+			path, err := os.CreateTemp(tempDir, "cleanup-test")
 			if err != nil {
 				t.Errorf("File.Cleanup() error can't create temp file: %v", err)
 			}
@@ -279,9 +276,8 @@ func TestFile_Cleanup(t *testing.T) {
 }
 
 func TestFile_Process(t *testing.T) {
-	tempDir := os.TempDir()
-	defer os.Remove(tempDir)
-	path, err := ioutil.TempFile(tempDir, "process-test")
+	tempDir := t.TempDir()
+	path, err := os.CreateTemp(tempDir, "process-test")
 	if err != nil {
 		t.Fatalf("File.Process() error can't create temp file: %v", err)
 	}

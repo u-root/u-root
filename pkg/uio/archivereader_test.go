@@ -7,7 +7,6 @@ package uio
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"strings"
 	"testing"
@@ -41,7 +40,7 @@ func TestArchiveReaderPreReadShort(t *testing.T) {
 	if err != nil {
 		t.Errorf("newArchiveReader(bytes.NewReader([]byte(%s))) returned err: %v, want nil", dataStr, err)
 	}
-	got, err := ioutil.ReadAll(ar)
+	got, err := io.ReadAll(ar)
 	if err != nil {
 		t.Errorf("got error reading archive reader: %v, want nil", err)
 	}
@@ -54,7 +53,7 @@ func TestArchiveReaderPreReadShort(t *testing.T) {
 	if err != ErrPreReadError {
 		t.Errorf("newArchiveReader(bytes.NewReader([]byte(%s))) returned err: %v, want %v", dataStr, err, ErrPreReadError)
 	}
-	got, err = ioutil.ReadAll(ar)
+	got, err = io.ReadAll(ar)
 	if err != nil {
 		t.Errorf("got error reading archive reader: %v, want nil", err)
 	}

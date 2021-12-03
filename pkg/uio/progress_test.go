@@ -6,12 +6,12 @@ package uio
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 )
 
 func TestProgressReadCloser(t *testing.T) {
-	input := ioutil.NopCloser(bytes.NewBufferString("01234567890123456789"))
+	input := io.NopCloser(bytes.NewBufferString("01234567890123456789"))
 	stdout := &bytes.Buffer{}
 	prc := ProgressReadCloser{
 		RC:       input,
@@ -44,7 +44,7 @@ func TestProgressReadCloser(t *testing.T) {
 	}
 
 	// Read until EOF
-	output, err := ioutil.ReadAll(&prc)
+	output, err := io.ReadAll(&prc)
 	if err != nil {
 		t.Errorf("got %v, expected nil error", err)
 	}

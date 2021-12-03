@@ -65,6 +65,7 @@ type memoryRange struct {
 	Size  uint64
 	Mtype uint32
 }
+
 type memoryEntry struct {
 	Record
 	Maps []memoryRange
@@ -101,6 +102,7 @@ type timeStampTableEntry struct {
 	Record
 	TimeStampTable uint32
 }
+
 type serialEntry struct {
 	Record
 	Type     uint32
@@ -116,10 +118,12 @@ type memconsoleEntry struct {
 	Cursor  uint32
 	Data    string
 }
+
 type forwardEntry struct {
 	Record
 	Forward uint64
 }
+
 type framebufferEntry struct {
 	Record
 	PhysicalAddress  uint64

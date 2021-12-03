@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/u-root/u-root/pkg/uio"
@@ -21,10 +20,8 @@ const (
 	magicLen  = 6
 )
 
-var (
-	// Newc is the newc CPIO record format.
-	Newc RecordFormat = newc{magic: newcMagic}
-)
+// Newc is the newc CPIO record format.
+var Newc RecordFormat = newc{magic: newcMagic}
 
 type header struct {
 	Ino        uint32
@@ -201,7 +198,7 @@ func (r *discarder) ReadAt(p []byte, off int64) (int, error) {
 		return 0, fmt.Errorf("negative seek on discarder not allowed")
 	}
 	if off != r.pos {
-		i, err := io.Copy(ioutil.Discard, io.LimitReader(r.r, off-r.pos))
+		i, err := io.Copy(io.Discard, io.LimitReader(r.r, off-r.pos))
 		if err != nil || i != off-r.pos {
 			return 0, err
 		}

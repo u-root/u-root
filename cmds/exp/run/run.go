@@ -92,5 +92,4 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		log.Printf("%v\n", err)
 	}
-
 }

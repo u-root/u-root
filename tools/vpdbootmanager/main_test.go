@@ -6,8 +6,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"testing"
@@ -32,13 +30,10 @@ func TestNoAction(t *testing.T) {
 }
 
 func TestAddNetbootEntryFull(t *testing.T) {
-	dir, err := ioutil.TempDir("", "vpdbootmanager")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.MkdirAll(path.Join(dir, "rw"), 0700)
+	dir := t.TempDir()
+	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
-	err = cli([]string{
+	err := cli([]string{
 		"add",
 		"netboot",
 		"dhcpv6",
@@ -47,7 +42,7 @@ func TestAddNetbootEntryFull(t *testing.T) {
 		dir,
 	})
 	require.NoError(t, err)
-	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
+	file, err := os.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
 	var out systembooter.NetBooter
 	err = json.Unmarshal([]byte(file), &out)
@@ -57,13 +52,10 @@ func TestAddNetbootEntryFull(t *testing.T) {
 }
 
 func TestAddLocalbootEntryFull(t *testing.T) {
-	dir, err := ioutil.TempDir("", "vpdbootmanager")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.MkdirAll(path.Join(dir, "rw"), 0700)
+	dir := t.TempDir()
+	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
-	err = cli([]string{
+	err := cli([]string{
 		"add",
 		"localboot",
 		"grub",
@@ -71,7 +63,7 @@ func TestAddLocalbootEntryFull(t *testing.T) {
 		dir,
 	})
 	require.NoError(t, err)
-	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
+	file, err := os.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
 	var out systembooter.NetBooter
 	err = json.Unmarshal([]byte(file), &out)

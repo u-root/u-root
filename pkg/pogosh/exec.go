@@ -111,7 +111,7 @@ func searchPath(env string, cmdName string) (string, error) {
 
 		fi, err := os.Stat(path)
 		// TODO: could the permission check be more strick?
-		if err == nil && fi.Mode().IsRegular() && fi.Mode()&0111 != 0 {
+		if err == nil && fi.Mode().IsRegular() && fi.Mode()&0o111 != 0 {
 			return path, nil
 		}
 	}
@@ -173,7 +173,6 @@ func recursiveExpansion(s *State, word string) string {
 			}
 		case word[i:i+2] == "${":
 			for j := i; j < len(word); j++ {
-
 			}
 		default:
 			word = parameterExpansion(s, word)
@@ -239,7 +238,7 @@ func (c *simpleCommand) exec(s *State) {
 		switch string(redirect.ioOp) {
 		case "<":
 			// Redirect input
-			f, err := os.OpenFile(string(redirect.filename), os.O_RDONLY, 0666)
+			f, err := os.OpenFile(string(redirect.filename), os.O_RDONLY, 0o666)
 			defer f.Close()
 			if err != nil {
 				panic(err)
@@ -255,7 +254,7 @@ func (c *simpleCommand) exec(s *State) {
 			// TODO: closing files with -
 		case ">":
 			// Redirect output
-			f, err := os.OpenFile(string(redirect.filename), os.O_CREATE|os.O_WRONLY, 0666)
+			f, err := os.OpenFile(string(redirect.filename), os.O_CREATE|os.O_WRONLY, 0o666)
 			defer f.Close()
 			if err != nil {
 				panic(err)
@@ -271,7 +270,7 @@ func (c *simpleCommand) exec(s *State) {
 			// TODO: closing files with -
 		case ">>":
 			// Appending redirected output
-			f, err := os.OpenFile(string(redirect.filename), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+			f, err := os.OpenFile(string(redirect.filename), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 			defer f.Close()
 			if err != nil {
 				panic(err)
@@ -279,7 +278,7 @@ func (c *simpleCommand) exec(s *State) {
 			cmd.Files[1] = f
 		case "<>":
 			// Open file descriptor for reading and writing
-			f, err := os.OpenFile(string(redirect.filename), os.O_CREATE|os.O_RDWR, 0666)
+			f, err := os.OpenFile(string(redirect.filename), os.O_CREATE|os.O_RDWR, 0o666)
 			defer f.Close()
 			if err != nil {
 				panic(err)

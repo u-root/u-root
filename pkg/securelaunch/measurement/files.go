@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/u-root/u-root/pkg/mount"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
@@ -29,7 +29,7 @@ type FileCollector struct {
  */
 func NewFileCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New Files Collector initialized\n")
-	var fc = new(FileCollector)
+	fc := new(FileCollector)
 	err := json.Unmarshal(config, &fc)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func HashFile(inputVal string) error {
 	slaunch.Debug("File Collector: Reading file=%s", mntFilePath)
 
 	slaunch.Debug("File Collector: fileP=%s\n", mntFilePath)
-	d, err := ioutil.ReadFile(mntFilePath)
+	d, err := os.ReadFile(mntFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read target file: filePath=%s, inputVal=%s, err=%v",
 			mntFilePath, inputVal, err)

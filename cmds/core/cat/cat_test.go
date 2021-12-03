@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,14 +18,11 @@ import (
 // setup writes a set of files, putting 1 byte in each file.
 func setup(t *testing.T, data []byte) (string, error) {
 	t.Logf(":: Creating simulation data. ")
-	dir, err := ioutil.TempDir("", "cat.dir")
-	if err != nil {
-		return "", err
-	}
+	dir := t.TempDir()
 
 	for i, d := range data {
 		n := fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i)
-		if err := ioutil.WriteFile(n, []byte{d}, 0666); err != nil {
+		if err := os.WriteFile(n, []byte{d}, 0o666); err != nil {
 			return "", err
 		}
 	}
@@ -45,17 +41,88 @@ func TestCat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup has failed, %v", err)
 	}
+
+	for i := range someData {
+		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
+	}
+	var out bytes.Buffer
+	if err := run(files, nil, &out); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(out.Bytes(), someData) {
+		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
+	}
+}
+
+func TestCatPipe(t *testing.T) {
+	var inputbuf bytes.Buffer
+	teststring := "testdata"
+	fmt.Fprintf(&inputbuf, "%s", teststring)
+
+	var out bytes.Buffer
+
+	if err := cat(&inputbuf, &out); err != nil {
+		t.Error(err)
+	}
+	if out.String() != teststring {
+		t.Errorf("CatPipe: Want %q Got: %q", teststring, out.String())
+	}
+}
+
+func TestRunFiles(t *testing.T) {
+	var files []string
+	someData := []byte{'l', 2, 3, 4, 'd'}
+
+	dir, err := setup(t, someData)
+	if err != nil {
+		t.Fatalf("setup has failed, %v", err)
+	}
 	defer os.RemoveAll(dir)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
 	}
 
-	var b bytes.Buffer
-	if err := cat(&b, files); err != nil {
-		t.Fatal(err)
+	var out bytes.Buffer
+	if err := run(files, nil, &out); err != nil {
+		t.Error(err)
 	}
-	if !reflect.DeepEqual(b.Bytes(), someData) {
-		t.Fatalf("Reading files failed: got %v, want %v", b.Bytes(), someData)
+	if !reflect.DeepEqual(out.Bytes(), someData) {
+		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
+	}
+}
+
+func TestRunFilesError(t *testing.T) {
+	var files []string
+	someData := []byte{'l', 2, 3, 4, 'd'}
+
+	dir, err := setup(t, someData)
+	if err != nil {
+		t.Fatalf("setup has failed, %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	for i := range someData {
+		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
+	}
+	filenotexist := "testdata/doesnotexist.txt"
+	files = append(files, filenotexist)
+	var in, out bytes.Buffer
+	if err := run(files, &in, &out); err == nil {
+		t.Error("function run succeeded but should have failed")
+	}
+}
+
+func TestRunNoArgs(t *testing.T) {
+	var in, out bytes.Buffer
+	inputdata := "teststring"
+	fmt.Fprintf(&in, "%s", inputdata)
+	args := make([]string, 0)
+	if err := run(args, &in, &out); err != nil {
+		t.Error(err)
+	}
+	if out.String() != inputdata {
+		t.Errorf("Want: %q Got: %q", inputdata, out.String())
 	}
 }

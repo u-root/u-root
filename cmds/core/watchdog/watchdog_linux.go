@@ -28,9 +28,7 @@ import (
 	"github.com/u-root/u-root/pkg/watchdog"
 )
 
-var (
-	dev = flag.String("dev", "/dev/watchdog", "device")
-)
+var dev = flag.String("dev", "/dev/watchdog", "device")
 
 func usage() {
 	flag.Usage()

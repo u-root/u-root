@@ -12,7 +12,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -118,7 +117,7 @@ func openRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
 
 func openWrite(c *Command, w io.Writer, fd int) (io.Writer, error) {
 	if c.fdmap[fd] != "" {
-		f, err := os.OpenFile(c.fdmap[fd], os.O_CREATE|os.O_WRONLY, 0666)
+		f, err := os.OpenFile(c.fdmap[fd], os.O_CREATE|os.O_WRONLY, 0o666)
 		c.files[fd] = f
 		return f, err
 	}
@@ -134,7 +133,7 @@ func doArgs(cmds []*Command) error {
 				if !path.IsAbs(v.val) {
 					e = filepath.Join(envDir, e)
 				}
-				b, err := ioutil.ReadFile(e)
+				b, err := os.ReadFile(e)
 				if err != nil {
 					return err
 				}

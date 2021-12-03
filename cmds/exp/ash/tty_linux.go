@@ -58,5 +58,4 @@ func foreground() {
 			log.Printf("rush pid %v: Can't set foreground to %v: %v", os.Getpid(), ttypgrp, errno)
 		}
 	}
-
 }

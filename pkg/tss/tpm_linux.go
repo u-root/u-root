@@ -6,7 +6,6 @@ package tss
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +21,7 @@ const (
 func probeSystemTPMs() ([]probedTPM, error) {
 	var tpms []probedTPM
 
-	tpmDevs, err := ioutil.ReadDir(tpmRoot)
+	tpmDevs, err := os.ReadDir(tpmRoot)
 	if os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
@@ -71,7 +70,7 @@ func newTPM(pTPM probedTPM) (*TPM, error) {
 		// If the TPM has a kernel-provided resource manager, we should
 		// use that instead of communicating directly.
 		devPath := filepath.Join("/dev", filepath.Base(pTPM.Path))
-		f, err := ioutil.ReadDir(filepath.Join(pTPM.Path, "device", "tpmrm"))
+		f, err := os.ReadDir(filepath.Join(pTPM.Path, "device", "tpmrm"))
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return nil, err
@@ -98,5 +97,5 @@ func newTPM(pTPM probedTPM) (*TPM, error) {
 // MeasurementLog reads the TCPA eventlog in binary format
 // from the Linux kernel
 func (t *TPM) MeasurementLog() ([]byte, error) {
-	return ioutil.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
+	return os.ReadFile("/sys/kernel/security/tpm0/binary_bios_measurements")
 }

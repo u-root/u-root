@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultMode = 0660 | unix.S_IFIFO
+	defaultMode = 0o660 | unix.S_IFIFO
 	cmd         = "mkfifo [-m] NAME..."
 )
 

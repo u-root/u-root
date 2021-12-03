@@ -17,9 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var (
-	logPrefixLength = len("2009/11/10 23:00:00 ")
-)
+var logPrefixLength = len("2009/11/10 23:00:00 ")
 
 type test struct {
 	opt []string
@@ -37,7 +35,7 @@ func run(c *exec.Cmd) (string, string, error) {
 
 // Test incorrect invocation of id
 func TestInvocation(t *testing.T) {
-	var tests = []test{
+	tests := []test{
 		{opt: []string{"-n"}, out: "id: cannot print only names in default format\n"},
 		{opt: []string{"-G", "-g"}, out: "id: cannot print \"only\" of more than one choice\n"},
 		{opt: []string{"-G", "-u"}, out: "id: cannot print \"only\" of more than one choice\n"},

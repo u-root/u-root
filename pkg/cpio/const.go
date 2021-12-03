@@ -34,16 +34,16 @@ const (
 
 // Unix mode_t bits.
 const (
-	modeTypeMask    = 0170000
-	modeSocket      = 0140000
-	modeSymlink     = 0120000
-	modeFile        = 0100000
-	modeBlock       = 0060000
-	modeDir         = 0040000
-	modeChar        = 0020000
-	modeFIFO        = 0010000
-	modeSUID        = 0004000
-	modeSGID        = 0002000
-	modeSticky      = 0001000
-	modePermissions = 0000777
+	modeTypeMask    = 0o170000
+	modeSocket      = 0o140000
+	modeSymlink     = 0o120000
+	modeFile        = 0o100000
+	modeBlock       = 0o060000
+	modeDir         = 0o040000
+	modeChar        = 0o020000
+	modeFIFO        = 0o010000
+	modeSUID        = 0o004000
+	modeSGID        = 0o002000
+	modeSticky      = 0o001000
+	modePermissions = 0o000777
 )

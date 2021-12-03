@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -71,7 +70,7 @@ func FileInit(f *os.File, opts string, flags uintptr) error {
 		}
 	}
 
-	img, err := ioutil.ReadAll(r)
+	img, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}

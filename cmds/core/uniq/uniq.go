@@ -39,12 +39,14 @@ import (
 	"os"
 )
 
-var uniques = flag.Bool("u", false, "print unique lines")
-var duplicates = flag.Bool("d", false, "print one copy of duplicated lines")
-var count = flag.Bool("c", false, "prefix a repetition count and a tab for each output line")
+var (
+	uniques    = flag.Bool("u", false, "print unique lines")
+	duplicates = flag.Bool("d", false, "print one copy of duplicated lines")
+	count      = flag.Bool("c", false, "prefix a repetition count and a tab for each output line")
+)
 
-//var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
-//var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
+// var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
+// var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
 
 func uniq(f *os.File) {
 	br := bufio.NewReader(f)
