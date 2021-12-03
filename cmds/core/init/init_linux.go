@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -63,7 +62,7 @@ func osInitGo() *initCmds {
 	// We also allow passing args to uinit via a flags file in
 	// /etc/uinit.flags.
 	args := cmdline.GetUinitArgs()
-	if contents, err := ioutil.ReadFile("/etc/uinit.flags"); err == nil {
+	if contents, err := os.ReadFile("/etc/uinit.flags"); err == nil {
 		args = append(args, uflag.FileToArgv(string(contents))...)
 	}
 	uinitArgs := libinit.WithArguments(args...)
@@ -85,5 +84,4 @@ func osInitGo() *initCmds {
 			libinit.Command("/bin/sh", ctty),
 		},
 	}
-
 }

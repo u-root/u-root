@@ -26,9 +26,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var (
-	n = flag.Int("n", 4, "the minimum string length")
-)
+var n = flag.Int("n", 4, "the minimum string length")
 
 func asciiIsPrint(char byte) bool {
 	return char >= 32 && char <= 126

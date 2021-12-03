@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"reflect"
 	"strings"
@@ -50,7 +50,7 @@ var (
 	}
 	// String of unknown meaning.
 	// The build script has this value:
-	//initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
+	// initRAMFStag = [4]byte{0250, 0362, 0156, 0x01}
 	// The resultant bzd has this value:
 	initRAMFStag = [4]byte{0xf8, 0x85, 0x21, 0x01}
 
@@ -238,7 +238,7 @@ func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 		return nil, err
 	}
 
-	dat, err := ioutil.ReadAll(stdout)
+	dat, err := io.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 	// You can enable this if you have a nasty bug from xz.
 	// Just be aware that xz ALWAYS errors out even when nothing is wrong.
 	if false {
-		if e, err := ioutil.ReadAll(stderr); err != nil || len(e) > 0 {
+		if e, err := io.ReadAll(stderr); err != nil || len(e) > 0 {
 			Debug("xz stderr: '%s', %v", string(e), err)
 		}
 	}
@@ -267,7 +267,7 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 		return nil, err
 	}
 
-	dat, err := ioutil.ReadAll(stdout)
+	dat, err := io.ReadAll(stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func Equal(a, b []byte) error {
 
 // AddInitRAMFS adds an initramfs to the BzImage.
 func (b *BzImage) AddInitRAMFS(name string) error {
-	u, err := ioutil.ReadFile(name)
+	u, err := os.ReadFile(name)
 	if err != nil {
 		return err
 	}
@@ -418,7 +418,7 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
 	}
 	if b.KernelBase != b2.KernelBase {
-		//NOTE: this is hardcoded to 0x100000
+		// NOTE: this is hardcoded to 0x100000
 		s = s + fmt.Sprintf("b KernelBase is %#x; b2 KernelBase is %#x", b.KernelBase, b2.KernelBase)
 	}
 	if b.KernelOffset != b2.KernelOffset {
@@ -447,7 +447,7 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 	var prog *elf.Prog
 	for _, p := range f.Progs {
 		if p.Flags&(elf.PF_X|elf.PF_W|elf.PF_R) == elf.PF_X|elf.PF_W|elf.PF_R {
-			dat, err = ioutil.ReadAll(p.Open())
+			dat, err = io.ReadAll(p.Open())
 			if err != nil {
 				return -1, -1, err
 			}
@@ -473,7 +473,7 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 			return -1, -1, err
 		}
 		cur = x
-		var r = bytes.NewReader(dat[cur:])
+		r := bytes.NewReader(dat[cur:])
 		rr := archiver.Reader(r)
 		Debug("r.Len is %v", r.Len())
 		var found bool
@@ -529,15 +529,15 @@ func (b *BzImage) ReadConfig() (string, error) {
 		return "", ErrCfgNotFound
 	}
 	i += 8
-	mb := 1024 * 1024 //read only 1 mb; arbitrary
+	mb := 1024 * 1024 // read only 1 mb; arbitrary
 	buf := bytes.NewReader(b.KernelCode[i : i+mb])
 	gz, err := gzip.NewReader(buf)
 	if err != nil {
 		return "", err
 	}
-	//make it stop at end of stream, since we don't know the actual size
+	// make it stop at end of stream, since we don't know the actual size
 	gz.Multistream(false)
-	cfg, err := ioutil.ReadAll(gz)
+	cfg, err := io.ReadAll(gz)
 	if err != nil {
 		return "", err
 	}

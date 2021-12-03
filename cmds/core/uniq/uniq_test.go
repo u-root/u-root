@@ -6,8 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -33,12 +31,6 @@ func TestUniq(t *testing.T) {
 			{input2, "ron\n\n", 0, []string{"-d"}},
 		}
 	)
-
-	tmpDir, err := ioutil.TempDir("", "UniqTest")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
 
 	for _, v := range tab {
 		c := testutil.Command(t, v.a...)

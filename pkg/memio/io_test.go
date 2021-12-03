@@ -6,7 +6,6 @@ package memio
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -54,7 +53,7 @@ var tests = []struct {
 func TestIO(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile("", "io_test")
+			tmpFile, err := os.CreateTemp("", "io_test")
 			if err != nil {
 				t.Fatal(err)
 			}

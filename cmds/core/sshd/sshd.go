@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -21,12 +20,12 @@ import (
 // The ssh package does not define these things so we will
 type (
 	ptyReq struct {
-		TERM   string //TERM environment variable value (e.g., vt100)
+		TERM   string // TERM environment variable value (e.g., vt100)
 		Col    uint32
 		Row    uint32
 		Xpixel uint32
 		Ypixel uint32
-		Modes  string //encoded terminal modes
+		Modes  string // encoded terminal modes
 	}
 	execReq struct {
 		Command string
@@ -183,7 +182,7 @@ func main() {
 	// Public key authentication is done by comparing
 	// the public key of a received connection
 	// with the entries in the authorized_keys file.
-	authorizedKeysBytes, err := ioutil.ReadFile(*keys)
+	authorizedKeysBytes, err := os.ReadFile(*keys)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -216,7 +215,7 @@ func main() {
 		},
 	}
 
-	privateBytes, err := ioutil.ReadFile(*privkey)
+	privateBytes, err := os.ReadFile(*privkey)
 	if err != nil {
 		log.Fatal(err)
 	}

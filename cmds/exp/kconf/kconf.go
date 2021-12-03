@@ -13,7 +13,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -42,7 +41,7 @@ func main() {
 
 	var cfgIn io.Reader
 	if len(*k) > 0 {
-		image, err := ioutil.ReadFile(*k)
+		image, err := os.ReadFile(*k)
 		if err != nil {
 			log.Fatal(err)
 		}

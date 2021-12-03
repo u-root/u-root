@@ -18,12 +18,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	flag "github.com/spf13/pflag"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 )
 
 var (

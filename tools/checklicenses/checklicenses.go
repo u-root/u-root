@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -92,7 +92,7 @@ func main() {
 	if *configFile == "" {
 		log.Fatal("Config file name cannot be empty")
 	}
-	buf, err := ioutil.ReadFile(*configFile)
+	buf, err := os.ReadFile(*configFile)
 	if err != nil {
 		log.Fatalf("Failed to read file %s: %v", *configFile, err)
 	}
@@ -151,7 +151,7 @@ func main() {
 			log.Fatalln("cannot open", file, err)
 		}
 		defer r.Close()
-		contents, err := ioutil.ReadAll(r)
+		contents, err := io.ReadAll(r)
 		if err != nil {
 			log.Fatalln("cannot read", file, err)
 		}

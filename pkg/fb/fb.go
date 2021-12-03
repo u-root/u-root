@@ -7,7 +7,6 @@ package fb
 import (
 	"fmt"
 	"image"
-	"io/ioutil"
 	"os"
 
 	"github.com/orangecms/go-framebuffer/framebuffer"
@@ -42,7 +41,6 @@ func DrawOnBufAt(
 // height in pixels, the stride, and the bytes per pixel
 func FbInit() (int, int, int, int, error) {
 	fbo, err := framebuffer.Init(fbdev)
-
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -62,7 +60,7 @@ func DrawImageAt(img image.Image, posx int, posy int) error {
 	}
 	buf := make([]byte, width*height*bpp)
 	DrawOnBufAt(buf, img, posx, posy, stride, bpp)
-	err = ioutil.WriteFile(fbdev, buf, 0600)
+	err = os.WriteFile(fbdev, buf, 0o600)
 	if err != nil {
 		return fmt.Errorf("Error writing to framebuffer: %v", err)
 	}
@@ -103,7 +101,7 @@ func DrawScaledImageAt(img image.Image, posx int, posy int, factor int) error {
 	}
 	buf := make([]byte, width*height*bpp)
 	DrawScaledOnBufAt(buf, img, posx, posy, factor, stride, bpp)
-	err = ioutil.WriteFile(fbdev, buf, 0600)
+	err = os.WriteFile(fbdev, buf, 0o600)
 	if err != nil {
 		return fmt.Errorf("Error writing to framebuffer: %v", err)
 	}

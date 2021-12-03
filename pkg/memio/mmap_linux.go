@@ -11,9 +11,7 @@ import (
 	"unsafe"
 )
 
-var (
-	pageSize = int64(syscall.Getpagesize())
-)
+var pageSize = int64(syscall.Getpagesize())
 
 // mmap aligns the address and maps multiple pages when needed.
 func mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, offset int64, err error) {

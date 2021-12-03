@@ -69,7 +69,7 @@ func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uin
 	var err error
 	octval, err = strconv.ParseUint(modeString, 8, 32)
 	if err == nil {
-		if octval > 0777 {
+		if octval > 0o777 {
 			log.Fatalf("Invalid octal value %0o. Value should be less than or equal to 0777.", octval)
 		}
 		// a fully described octal mode was supplied, signal that with a special value for mask
@@ -102,10 +102,10 @@ func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uin
 	}
 
 	// m[2] is [-+=]
-	var operator = m[2]
+	operator := m[2]
 
 	// Use a mask so that we do not overwrite permissions for a user/group that was not specified
-	mask = 0777
+	mask = 0o777
 
 	// For "-", invert octvalDigit before applying the mask
 	if operator == "-" {
@@ -115,20 +115,20 @@ func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uin
 	// m[1] is [ugoa]+
 	if strings.Contains(m[1], "o") || strings.Contains(m[1], "a") {
 		octval += octvalDigit
-		mask = mask & 0770
+		mask = mask & 0o770
 	}
 	if strings.Contains(m[1], "g") || strings.Contains(m[1], "a") {
 		octval += octvalDigit << 3
-		mask = mask & 0707
+		mask = mask & 0o707
 	}
 	if strings.Contains(m[1], "u") || strings.Contains(m[1], "a") {
 		octval += octvalDigit << 6
-		mask = mask & 0077
+		mask = mask & 0o077
 	}
 
 	// For "+" the mask is superfluous, reset it
 	if operator == "+" {
-		mask = 0777
+		mask = 0o777
 	}
 
 	// The mode is fully described, signal that with a special value for mask
@@ -161,7 +161,6 @@ func main() {
 		fi, err := os.Stat(reference)
 		if err != nil {
 			log.Fatalf("bad reference file: %v", err)
-
 		}
 		mask = special
 		mode = fi.Mode()

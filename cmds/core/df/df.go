@@ -24,9 +24,9 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
+	"os"
 	"syscall"
 )
 
@@ -66,7 +66,7 @@ type mountinfomap map[string]Mount
 // mountinfo returns a map of mounts representing
 // the data in /proc/mounts
 func mountinfo() (mountinfomap, error) {
-	buf, err := ioutil.ReadFile(procmountsFile)
+	buf, err := os.ReadFile(procmountsFile)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func SetUnits() {
 func df() {
 	SetUnits()
 	mounts, _ := mountinfo()
-	var blocksize = "1K"
+	blocksize := "1K"
 	if *inMB {
 		blocksize = "1M"
 	}

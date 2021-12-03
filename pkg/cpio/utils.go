@@ -43,7 +43,7 @@ func Symlink(name string, target string) Record {
 		ReaderAt: strings.NewReader(target),
 		Info: Info{
 			FileSize: uint64(len(target)),
-			Mode:     S_IFLNK | 0777,
+			Mode:     S_IFLNK | 0o777,
 			Name:     name,
 		},
 	}

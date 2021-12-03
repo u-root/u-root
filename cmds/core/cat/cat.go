@@ -22,9 +22,7 @@ import (
 	"os"
 )
 
-var (
-	_ = flag.Bool("u", false, "ignored")
-)
+var _ = flag.Bool("u", false, "ignored")
 
 func cat(reader io.Reader, writer io.Writer) error {
 	if _, err := io.Copy(writer, reader); err != nil {

@@ -110,7 +110,7 @@ func TestParse(t *testing.T) {
 					flag:    REPL | AFTER,
 					args:    []string{"/srv/slashn", "/n"},
 				},
-				//authentication
+				// authentication
 				cmd{
 					syscall: MOUNT,
 					flag:    REPL | AFTER,

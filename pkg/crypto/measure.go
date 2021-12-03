@@ -5,8 +5,8 @@
 package crypto
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 
 	tss "github.com/u-root/u-root/pkg/tss"
 )
@@ -45,7 +45,7 @@ func TryMeasureFiles(files ...string) error {
 	}
 	for _, file := range files {
 		log.Printf("Measuring file: %v", file)
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}

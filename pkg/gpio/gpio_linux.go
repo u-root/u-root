@@ -8,7 +8,6 @@ package gpio
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,7 +42,7 @@ func (v Value) String() string {
 
 func readInt(filename string) (int, error) {
 	// Get base offset (the first GPIO managed by this chip)
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read integer out of %s: %v", filename, err)
 	}
@@ -67,7 +66,7 @@ func GetPinID(controller string, pin uint) (int, error) {
 
 	for _, c := range controllers {
 		// Get label (name of the controller)
-		buf, err := ioutil.ReadFile(filepath.Join(c, "label"))
+		buf, err := os.ReadFile(filepath.Join(c, "label"))
 		if err != nil {
 			return 0, fmt.Errorf("failed to read label of %s: %v", c, err)
 		}
@@ -118,7 +117,7 @@ func SetOutputValue(pin int, val Value) error {
 // unsuccessful, it returns a value of Low and the associated error.
 func ReadValue(pin int) (Value, error) {
 	path := filepath.Join(gpioPath, fmt.Sprintf("gpio%d", pin), "value")
-	buf, err := ioutil.ReadFile(path)
+	buf, err := os.ReadFile(path)
 	if err != nil {
 		return Low, fmt.Errorf("failed to read value of gpio %d: %v", pin, err)
 	}

@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"golang.org/x/crypto/openpgp"
@@ -136,7 +135,7 @@ func (f *File) Name() string {
 // If the signature does not exist or does not match the keyring, both the file
 // and a signature error will be returned.
 func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +213,7 @@ func OpenHashedFile512(path string, wantSHA512Hash []byte) (*File, error) {
 }
 
 func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

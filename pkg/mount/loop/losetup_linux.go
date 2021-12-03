@@ -32,7 +32,7 @@ const (
 
 // FindDevice finds an unused loop device and returns its /dev/loopN path.
 func FindDevice() (string, error) {
-	cfd, err := os.OpenFile("/dev/loop-control", os.O_RDWR, 0644)
+	cfd, err := os.OpenFile("/dev/loop-control", os.O_RDWR, 0o644)
 	if err != nil {
 		return "", err
 	}
@@ -76,17 +76,17 @@ func SetFD(lfd, ffd int) error {
 // SetFile associates loop device "devicename" with regular file "filename"
 func SetFile(devicename, filename string) error {
 	mode := os.O_RDWR
-	file, err := os.OpenFile(filename, mode, 0644)
+	file, err := os.OpenFile(filename, mode, 0o644)
 	if err != nil {
 		mode = os.O_RDONLY
-		file, err = os.OpenFile(filename, mode, 0644)
+		file, err = os.OpenFile(filename, mode, 0o644)
 		if err != nil {
 			return err
 		}
 	}
 	defer file.Close()
 
-	device, err := os.OpenFile(devicename, mode, 0644)
+	device, err := os.OpenFile(devicename, mode, 0o644)
 	if err != nil {
 		return err
 	}

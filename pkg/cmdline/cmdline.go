@@ -13,7 +13,6 @@ package cmdline
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -64,7 +63,7 @@ func FullCmdLine() string {
 
 // parse returns the current command line, trimmed
 func parse(cmdlineReader io.Reader) CmdLine {
-	raw, err := ioutil.ReadAll(cmdlineReader)
+	raw, err := io.ReadAll(cmdlineReader)
 	line := CmdLine{}
 	if err != nil {
 		log.Printf("Can't read command line: %v", err)
@@ -79,7 +78,6 @@ func parse(cmdlineReader io.Reader) CmdLine {
 
 //
 func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
-
 	lastQuote := rune(0)
 	quotedFieldsCheck := func(c rune) bool {
 		switch {
@@ -120,12 +118,10 @@ func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedV
 		// Call the user handler
 		handler(flag, key, canonicalKey, value, trimmedValue)
 	}
-
 }
 
 // parseToMap turns a space-separated kernel commandline into a map
 func parseToMap(input string) map[string]string {
-
 	flagMap := make(map[string]string)
 	doParse(input, func(flag, key, canonicalKey, value, trimmedValue string) {
 		// We store the value twice, once with dash, once with underscores

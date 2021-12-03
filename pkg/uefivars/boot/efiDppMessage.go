@@ -16,38 +16,38 @@ type EfiDppMsgSubType EfiDevPathProtoSubType
 
 const (
 	DppMsgTypeATAPI      EfiDppMsgSubType = iota + 1
-	DppMsgTypeSCSI                        //2
-	DppMsgTypeFibreCh                     //3
-	DppMsgTypeFirewire                    //4
-	DppMsgTypeUSB                         //5
-	DppMsgTypeIIO                         //6
-	_                                     //7
-	_                                     //8
-	DppMsgTypeInfiniband                  //9
-	DppMsgTypeVendor                      //10 //uart flow control, sas are subtypes
-	DppMsgTypeMAC                         //11
-	DppMsgTypeIP4                         //12
-	DppMsgTypeIP6                         //13
-	DppMsgTypeUART                        //14
-	DppMsgTypeUSBClass                    //15
-	DppMsgTypeUSBWWID                     //16
-	DppMsgTypeDevLU                       //17
-	DppMsgTypeSATA                        //18
-	DppMsgTypeISCSI                       //19
-	DppMsgTypeVLAN                        //20
-	_                                     //21
-	DppMsgTypeSASEx                       //22
-	DppMsgTypeNVME                        //23
-	DppMsgTypeURI                         //24
-	DppMsgTypeUFS                         //25
-	DppMsgTypeSD                          //26
-	DppMsgTypeBT                          //27
-	DppMsgTypeWiFi                        //28
-	DppMsgTypeeMMC                        //29
-	DppMsgTypeBLE                         //30
-	DppMsgTypeDNS                         //31
-	DppMsgTypeNVDIMM                      //32
-	DppMsgTypeRest                        //documented as 32, likely 33
+	DppMsgTypeSCSI                        // 2
+	DppMsgTypeFibreCh                     // 3
+	DppMsgTypeFirewire                    // 4
+	DppMsgTypeUSB                         // 5
+	DppMsgTypeIIO                         // 6
+	_                                     // 7
+	_                                     // 8
+	DppMsgTypeInfiniband                  // 9
+	DppMsgTypeVendor                      // 10 //uart flow control, sas are subtypes
+	DppMsgTypeMAC                         // 11
+	DppMsgTypeIP4                         // 12
+	DppMsgTypeIP6                         // 13
+	DppMsgTypeUART                        // 14
+	DppMsgTypeUSBClass                    // 15
+	DppMsgTypeUSBWWID                     // 16
+	DppMsgTypeDevLU                       // 17
+	DppMsgTypeSATA                        // 18
+	DppMsgTypeISCSI                       // 19
+	DppMsgTypeVLAN                        // 20
+	_                                     // 21
+	DppMsgTypeSASEx                       // 22
+	DppMsgTypeNVME                        // 23
+	DppMsgTypeURI                         // 24
+	DppMsgTypeUFS                         // 25
+	DppMsgTypeSD                          // 26
+	DppMsgTypeBT                          // 27
+	DppMsgTypeWiFi                        // 28
+	DppMsgTypeeMMC                        // 29
+	DppMsgTypeBLE                         // 30
+	DppMsgTypeDNS                         // 31
+	DppMsgTypeNVDIMM                      // 32
+	DppMsgTypeRest                        // documented as 32, likely 33
 )
 
 var efiDppMsgSubTypeStrings = map[EfiDppMsgSubType]string{
@@ -135,8 +135,8 @@ func (e *DppMsgATAPI) Resolver() (EfiPathSegmentResolver, error) {
 // pg 300
 type DppMsgMAC struct {
 	Hdr    EfiDevicePathProtocolHdr
-	Mac    [32]byte //0-padded
-	IfType uint8    //RFC3232; seems ethernet is 6
+	Mac    [32]byte // 0-padded
+	IfType uint8    // RFC3232; seems ethernet is 6
 }
 
 // ParseDppMsgMAC parses input into a DppMsgMAC.
@@ -146,7 +146,7 @@ func ParseDppMsgMAC(h EfiDevicePathProtocolHdr, b []byte) (*DppMsgMAC, error) {
 	}
 	mac := &DppMsgMAC{
 		Hdr: h,
-		//Mac:    b[:32],
+		// Mac:    b[:32],
 		IfType: b[32],
 	}
 	copy(mac.Mac[:], b[:32])

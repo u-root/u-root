@@ -13,7 +13,7 @@ import (
 	"unicode/utf16"
 )
 
-//func ParseDppMediaHdd(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaHDD, error)
+// func ParseDppMediaHdd(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaHDD, error)
 func TestParseDppMediaHdd(t *testing.T) {
 	in := []byte{
 		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -41,10 +41,10 @@ func TestParseDppMediaHdd(t *testing.T) {
 	}
 }
 
-//func ParseDppMediaFilePath(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaFilePath, error)
+// func ParseDppMediaFilePath(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaFilePath, error)
 func TestParseDppMediaFilePath(t *testing.T) {
 	str := `blah\blah\blah.efi`
-	//convert to utf16 ([]uint16)
+	// convert to utf16 ([]uint16)
 	u16 := utf16.Encode([]rune(str))
 	//...and then to []byte
 	var in []byte
@@ -72,7 +72,7 @@ func TestParseDppMediaFilePath(t *testing.T) {
 	}
 }
 
-//func ParseDppMediaPIWGFV(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaPIWGFV, error)
+// func ParseDppMediaPIWGFV(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaPIWGFV, error)
 func TestParseDppMediaPIWGFV(t *testing.T) {
 	in := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
 	hdr := EfiDevicePathProtocolHdr{
@@ -96,7 +96,7 @@ func TestParseDppMediaPIWGFV(t *testing.T) {
 	}
 }
 
-//func ParseDppMediaPIWGFF(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaPIWGFF, error)
+// func ParseDppMediaPIWGFF(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaPIWGFF, error)
 func TestParseDppMediaPIWGFF(t *testing.T) {
 	in := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
 	hdr := EfiDevicePathProtocolHdr{

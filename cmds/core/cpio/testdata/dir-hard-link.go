@@ -22,8 +22,8 @@ func main() {
 	}
 	rw := archiver.Writer(os.Stdout)
 	for _, rec := range []cpio.Record{
-		cpio.Directory("directory1", 0755),
-		cpio.Directory("directory2", 0755),
+		cpio.Directory("directory1", 0o755),
+		cpio.Directory("directory2", 0o755),
 	} {
 		rec.UID = uint64(os.Getuid())
 		rec.GID = uint64(os.Getgid())

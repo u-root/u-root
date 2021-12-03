@@ -41,7 +41,6 @@ func TestCmdlineQuote(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("cmdlineQuote = %#v, want %#v", got, tt.want)
 			}
-
 		})
 	}
 }

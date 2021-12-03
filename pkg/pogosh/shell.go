@@ -7,7 +7,7 @@ package pogosh
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // Run executes the given fragment of shell.
@@ -64,7 +64,7 @@ func (s *State) Run(script string) (exitCode int, err error) {
 
 // RunFile is a convenient wrapper around Run.
 func (s *State) RunFile(filename string) (int, error) {
-	script, err := ioutil.ReadFile(filename)
+	script, err := os.ReadFile(filename)
 	if err != nil {
 		return 0, err
 	}

@@ -15,9 +15,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-var (
-	outputFile = flag.String("o", "initramfs.cpio", "Initramfs output file")
-)
+var outputFile = flag.String("o", "initramfs.cpio", "Initramfs output file")
 
 func main() {
 	flag.Parse()

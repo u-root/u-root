@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,14 +18,11 @@ import (
 // setup writes a set of files, putting 1 byte in each file.
 func setup(t *testing.T, data []byte) (string, error) {
 	t.Logf(":: Creating simulation data. ")
-	dir, err := ioutil.TempDir("", "cat.dir")
-	if err != nil {
-		return "", err
-	}
+	dir := t.TempDir()
 
 	for i, d := range data {
 		n := fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i)
-		if err := ioutil.WriteFile(n, []byte{d}, 0666); err != nil {
+		if err := os.WriteFile(n, []byte{d}, 0o666); err != nil {
 			return "", err
 		}
 	}
@@ -45,7 +41,6 @@ func TestCat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup has failed, %v", err)
 	}
-	defer os.RemoveAll(dir)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))

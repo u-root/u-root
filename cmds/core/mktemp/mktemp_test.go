@@ -21,8 +21,7 @@ type test struct {
 }
 
 func TestMkTemp(t *testing.T) {
-
-	var tests = []test{
+	tests := []test{
 		{
 			flags:      []string{},
 			out:        "/tmp/",

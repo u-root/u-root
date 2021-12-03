@@ -7,7 +7,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"syscall"
@@ -27,7 +26,7 @@ const (
 		// making newpid work will be more tricky,
 		// since none of my CLs to fix go runtime for
 		// it ever got in.
-		//syscall.CLONE_NEWPID |
+		// syscall.CLONE_NEWPID |
 		syscall.CLONE_NEWUTS |
 		0
 )
@@ -66,7 +65,7 @@ func main() {
 	u := unix.Umask(0)
 	defer unix.Umask(u)
 
-	tempDir, err := ioutil.TempDir("", "u-root")
+	tempDir, err := os.MkdirTemp("", "u-root")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -147,5 +146,4 @@ func main() {
 	if err := cmd.Wait(); err != nil {
 		log.Fatal(err)
 	}
-
 }

@@ -90,7 +90,7 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 }
 
 func indicator(fi ls.FileInfo) string {
-	if fi.Mode.IsRegular() && fi.Mode&0111 != 0 {
+	if fi.Mode.IsRegular() && fi.Mode&0o111 != 0 {
 		return "*"
 	}
 	if fi.Mode&os.ModeDir != 0 {

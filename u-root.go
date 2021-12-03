@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -95,7 +94,7 @@ type buildStats struct {
 
 func writeBuildStats(stats buildStats, path string) error {
 	var allStats []buildStats
-	if data, err := ioutil.ReadFile(*statsOutputPath); err == nil {
+	if data, err := os.ReadFile(*statsOutputPath); err == nil {
 		json.Unmarshal(data, &allStats)
 	}
 	found := false
@@ -116,7 +115,7 @@ func writeBuildStats(stats buildStats, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(*statsOutputPath, data, 0644); err != nil {
+	if err := os.WriteFile(*statsOutputPath, data, 0o644); err != nil {
 		return err
 	}
 	return nil
@@ -242,13 +241,13 @@ func Main() error {
 	tempDir := *tmpDir
 	if tempDir == "" {
 		var err error
-		tempDir, err = ioutil.TempDir("", "u-root")
+		tempDir, err = os.MkdirTemp("", "u-root")
 		if err != nil {
 			return err
 		}
 		defer os.RemoveAll(tempDir)
 	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(tempDir, 0755); err != nil {
+		if err := os.MkdirAll(tempDir, 0o755); err != nil {
 			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
 		}
 	}

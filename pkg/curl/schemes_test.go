@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -203,7 +202,7 @@ func TestFetchWithoutCache(t *testing.T) {
 			}
 
 			// Read the entire file.
-			content, err := ioutil.ReadAll(r)
+			content, err := io.ReadAll(r)
 			if err != nil {
 				t.Errorf("bytes.Buffer read returned an error? %v", err)
 			}
@@ -219,7 +218,6 @@ func TestFetchWithoutCache(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestFetch(t *testing.T) {
@@ -250,7 +248,7 @@ func TestFetch(t *testing.T) {
 			}
 
 			// Read the entire file.
-			content, err := ioutil.ReadAll(uio.Reader(r))
+			content, err := io.ReadAll(uio.Reader(r))
 			if err != nil {
 				t.Errorf("bytes.Buffer read returned an error? %v", err)
 			}
@@ -298,7 +296,7 @@ func TestLazyFetch(t *testing.T) {
 			}
 
 			// Read the entire file.
-			content, err := ioutil.ReadAll(uio.Reader(r))
+			content, err := io.ReadAll(uio.Reader(r))
 			if uErr, ok := err.(*URLError); ok && uErr.Err != tt.err {
 				t.Errorf("ReadAll() = %v, want %v", uErr.Err, tt.err)
 			} else if !ok && err != tt.err {
@@ -335,9 +333,9 @@ func TestHttpFetches(t *testing.T) {
 	if err != nil {
 		t.Errorf("Fetch(context.Background(), %s) = %v, want no error", fURL, err)
 	}
-	got, err := ioutil.ReadAll(io.NewSectionReader(fetchFile, 0, int64(len(c))))
+	got, err := io.ReadAll(io.NewSectionReader(fetchFile, 0, int64(len(c))))
 	if err != nil {
-		t.Errorf("ioutil.ReadAll(%v) = %v, want no error", fetchFile, err)
+		t.Errorf("io.ReadAll(%v) = %v, want no error", fetchFile, err)
 	}
 	if string(got) != c {
 		t.Errorf("got %s, want %s", got, c)
@@ -348,9 +346,9 @@ func TestHttpFetches(t *testing.T) {
 	if err != nil {
 		t.Errorf("FetchWithoutCache(context.Background(), %s) = %v, want no error", fURL, err)
 	}
-	got, err = ioutil.ReadAll(fetchFileNoCache)
+	got, err = io.ReadAll(fetchFileNoCache)
 	if err != nil {
-		t.Errorf("ioutil.ReadAll(%s) = %v, want no error", fetchFileNoCache, err)
+		t.Errorf("io.ReadAll(%s) = %v, want no error", fetchFileNoCache, err)
 	}
 	if string(got) != c {
 		t.Errorf("got %s, want %s", got, c)

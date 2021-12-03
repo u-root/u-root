@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -20,10 +19,12 @@ import (
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
-var kexecLoad = kexec.Load
-var kexecParseMemoryMap = kexec.ParseMemoryMap
-var getRSDP = acpi.GetRSDP
-var getSMBIOSBase = smbios.SMBIOSBase
+var (
+	kexecLoad           = kexec.Load
+	kexecParseMemoryMap = kexec.ParseMemoryMap
+	getRSDP             = acpi.GetRSDP
+	getSMBIOSBase       = smbios.SMBIOSBase
+)
 
 // SerialPortConfig defines debug port configuration
 // This struct will be used to initialize SERIAL_PORT_INFO
@@ -68,7 +69,7 @@ type FVImage struct {
 func checkFVAndGetEntryPoint(name string) (uintptr, error) {
 	// Parse entire firmware volume to find SEC's PE32. Since payload will
 	// be only few MBs, it should be fine to load entire image for parsing.
-	dat, err := ioutil.ReadFile(name)
+	dat, err := os.ReadFile(name)
 	if err != nil {
 		return 0, err
 	}
@@ -106,7 +107,7 @@ const uefiPayloadConfigSize = 0x10000
 // Load loads fimware volume payload and boot the the payload
 func (fv *FVImage) Load(verbose bool) error {
 	// Install payload
-	dat, err := ioutil.ReadFile(fv.name)
+	dat, err := os.ReadFile(fv.name)
 	if err != nil {
 		return err
 	}

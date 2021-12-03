@@ -6,9 +6,7 @@ package main
 
 import "golang.org/x/sys/unix"
 
-var (
-	fileSystemUID, fileSystemGID int
-)
+var fileSystemUID, fileSystemGID int
 
 func dropPrivs() error {
 	uid := unix.Getuid()
@@ -36,6 +34,6 @@ func restorePrivs() {
 
 func preMount() error {
 	// I guess this umask is the thing to do.
-	unix.Umask(033)
+	unix.Umask(0o33)
 	return nil
 }
