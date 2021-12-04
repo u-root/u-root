@@ -12,7 +12,6 @@ const venDevFmt = "%04x"
 // readable labels for both the vendor and device. It returns the input ID value if
 // if label is not found in the ids map.
 func Lookup(ids map[uint16]Vendor, vendor uint16, device uint16) (string, string) {
-
 	if v, ok := ids[vendor]; ok {
 		if d, ok := v.Devices[device]; ok {
 			return v.Name, string(d)

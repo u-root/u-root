@@ -6,10 +6,8 @@ package main
 
 import (
 	"bytes"
-
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"syscall"
@@ -31,7 +29,7 @@ func genAPU2(n string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out = bytes.NewBuffer([]byte("package main\nvar apu2 = []seg {\n"))
+	out := bytes.NewBuffer([]byte("package main\nvar apu2 = []seg {\n"))
 	for _, m := range []struct {
 		offset int64
 		size   int64
@@ -73,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := ioutil.WriteFile("apu2.go", []byte(s), 0644); err != nil {
+		if err := os.WriteFile("apu2.go", []byte(s), 0o644); err != nil {
 			log.Fatal(err)
 		}
 		os.Exit(0)

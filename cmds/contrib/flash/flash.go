@@ -38,7 +38,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -54,8 +53,10 @@ type programmer interface {
 	Close() error
 }
 
-type programmerParams map[string]string
-type programmerInit func(programmerParams) (programmer, error)
+type (
+	programmerParams map[string]string
+	programmerInit   func(programmerParams) (programmer, error)
+)
 
 // supportedProgrammers is populated by the other files in this package.
 var supportedProgrammers = map[string]programmerInit{}
@@ -158,7 +159,7 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		if _, err := io.ReadFull(f, buf); err != nil {
 			return err
 		}
-		if leftover, err := io.Copy(ioutil.Discard, f); err != nil {
+		if leftover, err := io.Copy(io.Discard, f); err != nil {
 			return err
 		} else if leftover != 0 {
 			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), int64(len(buf))+leftover)

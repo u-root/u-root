@@ -65,7 +65,6 @@ func TestUserSpecString(t *testing.T) {
 	if str != input {
 		t.Errorf("Unexpected error with input: %s, String method returned: %s", input, str)
 	}
-
 }
 
 func testGroupSet(input string, expected []uint32) error {
@@ -127,5 +126,4 @@ func TestGroupsSet(t *testing.T) {
 	if err = testGroupSet(input, expected); err == nil {
 		t.Errorf("Expected error on input: %s, got: %v", input, groups.groups)
 	}
-
 }

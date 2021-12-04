@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-//func ParseDppMsgATAPI(h EfiDevicePathProtocolHdr, b []byte) (*DppMsgATAPI, error)
+// func ParseDppMsgATAPI(h EfiDevicePathProtocolHdr, b []byte) (*DppMsgATAPI, error)
 func TestParseDppMsgATAPI(t *testing.T) {
 	in := []byte{0, 1, 2, 3}
 	hdr := EfiDevicePathProtocolHdr{
@@ -35,7 +35,7 @@ func TestParseDppMsgATAPI(t *testing.T) {
 	}
 }
 
-//func ParseDppMsgMAC(h EfiDevicePathProtocolHdr, b []byte) (*DppMsgMAC, error)
+// func ParseDppMsgMAC(h EfiDevicePathProtocolHdr, b []byte) (*DppMsgMAC, error)
 func TestParseDppMsgMAC(t *testing.T) {
 	in := []byte{
 		0x00, 0x26, 0xfd, 0x00, 0x26, 0xfd, 0x00, 0x00,

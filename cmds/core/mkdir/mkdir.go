@@ -23,10 +23,10 @@ import (
 
 const (
 	cmd                 = "mkdir [-m mode] [-v] [-p] <directory> [more directories]"
-	defaultCreationMode = 0777
-	stickyBit           = 01000
-	sgidBit             = 02000
-	suidBit             = 04000
+	defaultCreationMode = 0o777
+	stickyBit           = 0o1000
+	sgidBit             = 0o2000
+	suidBit             = 0o4000
 )
 
 var (
@@ -62,7 +62,7 @@ func main() {
 		m = defaultCreationMode
 	} else {
 		m, err = strconv.ParseUint(*mode, 8, 32)
-		if err != nil || m > 07777 {
+		if err != nil || m > 0o7777 {
 			log.Fatalf("invalid mode '%s'", *mode)
 		}
 	}

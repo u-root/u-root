@@ -5,7 +5,6 @@
 package vpd
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -22,7 +21,7 @@ func handler(c <-chan os.Signal) {
 // Set RW_VPD key-value via flashrom and vpd executables, delete set to false would set or add the key,
 // delete set to true would delete an existing key.
 func FlashromRWVpdSet(key string, value []byte, delete bool) error {
-	file, err := ioutil.TempFile("/tmp", "rwvpd*.bin")
+	file, err := os.CreateTemp("/tmp", "rwvpd*.bin")
 	if err != nil {
 		return err
 	}
@@ -68,7 +67,7 @@ func FlashromRWVpdSet(key string, value []byte, delete bool) error {
 
 // ClearRwVpd re-format RW_VPD via flashrom and vpd executables
 func ClearRwVpd() error {
-	file, err := ioutil.TempFile("/tmp", "rwvpd*.bin")
+	file, err := os.CreateTemp("/tmp", "rwvpd*.bin")
 	if err != nil {
 		return err
 	}

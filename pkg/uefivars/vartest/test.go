@@ -12,14 +12,13 @@ package vartest
 import (
 	"archive/zip"
 	"io"
-	"io/ioutil"
 	"os"
 	fp "path/filepath"
 )
 
 // Extracts testdata zip for use as efivars in tests. Used in uefivars and subpackages.
 func SetupVarZip(path string) (efiVarDir string, cleanup func(), err error) {
-	efiVarDir, err = ioutil.TempDir("", "gotest-uefivars")
+	efiVarDir, err = os.MkdirTemp("", "gotest-uefivars")
 	if err != nil {
 		return
 	}

@@ -209,7 +209,7 @@ func (p *packet) genCommandDataBlock() {
 }
 
 func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8) *packet {
-	var p = &packet{}
+	p := &packet{}
 	// These are invariant across all uses of SGDisk.
 	p.interfaceID = 'S'
 	p.cmdLen = uint8(len(p.command))

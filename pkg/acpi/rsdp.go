@@ -11,9 +11,7 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
-var (
-	defaultRSDP = []byte("RSDP PTR U-ROOT\x02")
-)
+var defaultRSDP = []byte("RSDP PTR U-ROOT\x02")
 
 // RSDP is the v2 version of the ACPI RSDP struct.
 type RSDP struct {

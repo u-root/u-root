@@ -9,7 +9,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -17,7 +16,7 @@ import (
 )
 
 func getInput() (input []byte, err error) {
-	return ioutil.ReadAll(os.Stdin)
+	return io.ReadAll(os.Stdin)
 }
 
 func helpPrinter() {

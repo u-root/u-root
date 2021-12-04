@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,46 +28,41 @@ func run(c *exec.Cmd) (string, string, error) {
 
 func TestChmodSimple(t *testing.T) {
 	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodSimple")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	f, err := ioutil.TempFile(tempDir, "BLAH1")
+	f, err := os.CreateTemp(t.TempDir(), "BLAH1")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
 	defer f.Close()
 
 	for k, v := range map[string]fileModeTrans{
-		"0777":       {before: 0000, after: 0777},
-		"0644":       {before: 0777, after: 0644},
-		"u-rwx":      {before: 0777, after: 0077},
-		"g-rx":       {before: 0777, after: 0727},
-		"a-xr":       {before: 0222, after: 0222},
-		"a-xw":       {before: 0666, after: 0444},
-		"u-xw":       {before: 0666, after: 0466},
-		"a=":         {before: 0777, after: 0000},
-		"u=":         {before: 0777, after: 0077},
-		"u-":         {before: 0777, after: 0777},
-		"o+":         {before: 0700, after: 0700},
-		"g=rx":       {before: 0777, after: 0757},
-		"u=rx":       {before: 0077, after: 0577},
-		"o=rx":       {before: 0077, after: 0075},
-		"u=xw":       {before: 0742, after: 0342},
-		"a-rwx":      {before: 0777, after: 0000},
-		"a-rx":       {before: 0777, after: 0222},
-		"a-x":        {before: 0777, after: 0666},
-		"o+rwx":      {before: 0000, after: 0007},
-		"a+rwx":      {before: 0000, after: 0777},
-		"a+xrw":      {before: 0000, after: 0777},
-		"a+xxxxxxxx": {before: 0000, after: 0111},
-		"o+xxxxx":    {before: 0000, after: 0001},
-		"a+rx":       {before: 0000, after: 0555},
-		"a+r":        {before: 0111, after: 0555},
-		"a=rwx":      {before: 0000, after: 0777},
-		"a=rx":       {before: 0000, after: 0555}} {
+		"0777":       {before: 0o000, after: 0o777},
+		"0644":       {before: 0o777, after: 0o644},
+		"u-rwx":      {before: 0o777, after: 0o077},
+		"g-rx":       {before: 0o777, after: 0o727},
+		"a-xr":       {before: 0o222, after: 0o222},
+		"a-xw":       {before: 0o666, after: 0o444},
+		"u-xw":       {before: 0o666, after: 0o466},
+		"a=":         {before: 0o777, after: 0o000},
+		"u=":         {before: 0o777, after: 0o077},
+		"u-":         {before: 0o777, after: 0o777},
+		"o+":         {before: 0o700, after: 0o700},
+		"g=rx":       {before: 0o777, after: 0o757},
+		"u=rx":       {before: 0o077, after: 0o577},
+		"o=rx":       {before: 0o077, after: 0o075},
+		"u=xw":       {before: 0o742, after: 0o342},
+		"a-rwx":      {before: 0o777, after: 0o000},
+		"a-rx":       {before: 0o777, after: 0o222},
+		"a-x":        {before: 0o777, after: 0o666},
+		"o+rwx":      {before: 0o000, after: 0o007},
+		"a+rwx":      {before: 0o000, after: 0o777},
+		"a+xrw":      {before: 0o000, after: 0o777},
+		"a+xxxxxxxx": {before: 0o000, after: 0o111},
+		"o+xxxxx":    {before: 0o000, after: 0o001},
+		"a+rx":       {before: 0o000, after: 0o555},
+		"a+r":        {before: 0o111, after: 0o555},
+		"a=rwx":      {before: 0o000, after: 0o777},
+		"a=rx":       {before: 0o000, after: 0o555},
+	} {
 		// Set up the 'before' state
 		err := os.Chmod(f.Name(), v.before)
 		if err != nil {
@@ -99,14 +93,11 @@ func checkPath(t *testing.T, path string, instruction string, v fileModeTrans) {
 
 func TestChmodRecursive(t *testing.T) {
 	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodRecursive")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	var targetDirectories []string
-	for _, dir := range []string{"L1_A", "L1_B", "L1_C",
+	for _, dir := range []string{
+		"L1_A", "L1_B", "L1_C",
 		filepath.Join("L1_A", "L2_A"),
 		filepath.Join("L1_A", "L2_B"),
 		filepath.Join("L1_A", "L2_C"),
@@ -118,7 +109,7 @@ func TestChmodRecursive(t *testing.T) {
 		filepath.Join("L1_C", "L2_C"),
 	} {
 		dir = filepath.Join(tempDir, dir)
-		err := os.Mkdir(dir, os.FileMode(0700))
+		err := os.Mkdir(dir, os.FileMode(0o700))
 		if err != nil {
 			t.Fatalf("cannot create test directory: %v", err)
 		}
@@ -126,14 +117,15 @@ func TestChmodRecursive(t *testing.T) {
 	}
 
 	for k, v := range map[string]fileModeTrans{
-		"0707":      {before: 0755, after: 0707},
-		"0770":      {before: 0755, after: 0770},
-		"o-rwx":     {before: 0777, after: 0770},
-		"g-rx":      {before: 0777, after: 0727},
-		"a=rrrrrwx": {before: 0777, after: 0777},
-		"a+w":       {before: 0700, after: 0722},
-		"g+xr":      {before: 0700, after: 0750},
-		"a=rx":      {before: 0777, after: 0555}} {
+		"0707":      {before: 0o755, after: 0o707},
+		"0770":      {before: 0o755, after: 0o770},
+		"o-rwx":     {before: 0o777, after: 0o770},
+		"g-rx":      {before: 0o777, after: 0o727},
+		"a=rrrrrwx": {before: 0o777, after: 0o777},
+		"a+w":       {before: 0o700, after: 0o722},
+		"g+xr":      {before: 0o700, after: 0o750},
+		"a=rx":      {before: 0o777, after: 0o555},
+	} {
 
 		// Set up the 'before' state
 		for _, dir := range targetDirectories {
@@ -145,8 +137,7 @@ func TestChmodRecursive(t *testing.T) {
 
 		// Set permissions using chmod.
 		c := testutil.Command(t, "-R", k, tempDir)
-		err = c.Run()
-		if err != nil {
+		if err := c.Run(); err != nil {
 			t.Fatalf("setting permissions failed: %v", err)
 		}
 
@@ -159,25 +150,21 @@ func TestChmodRecursive(t *testing.T) {
 
 func TestChmodReference(t *testing.T) {
 	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodReference")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
-	sourceFile, err := ioutil.TempFile(tempDir, "BLAH1")
+	sourceFile, err := os.CreateTemp(tempDir, "BLAH1")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
 	defer sourceFile.Close()
 
-	targetFile, err := ioutil.TempFile(tempDir, "BLAH2")
+	targetFile, err := os.CreateTemp(tempDir, "BLAH2")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
 	defer targetFile.Close()
 
-	for _, perm := range []os.FileMode{0777, 0644} {
+	for _, perm := range []os.FileMode{0o777, 0o644} {
 		err = os.Chmod(sourceFile.Name(), perm)
 		if err != nil {
 			t.Fatalf("chmod(%q) failed: %v", sourceFile.Name(), err)
@@ -206,13 +193,7 @@ func TestChmodReference(t *testing.T) {
 }
 
 func TestInvocationErrors(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestInvocationErrors")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	f, err := ioutil.TempFile(tempDir, "BLAH1")
+	f, err := os.CreateTemp(t.TempDir(), "BLAH1")
 	if err != nil {
 		t.Fatalf("cannot create temporary file: %v", err)
 	}
@@ -224,7 +205,6 @@ func TestInvocationErrors(t *testing.T) {
 		skipTo   int
 		skipFrom int
 	}{
-
 		{
 			args:     []string{f.Name()},
 			want:     "Usage",

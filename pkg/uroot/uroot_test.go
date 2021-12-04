@@ -6,7 +6,6 @@ package uroot
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -170,15 +169,11 @@ func TestResolvePackagePaths(t *testing.T) {
 }
 
 func TestCreateInitramfs(t *testing.T) {
-	dir, err := ioutil.TempDir("", "foo")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	syscall.Umask(0)
 
 	tmp777 := filepath.Join(dir, "tmp777")
-	if err := os.MkdirAll(tmp777, 0777); err != nil {
+	if err := os.MkdirAll(tmp777, 0o777); err != nil {
 		t.Error(err)
 	}
 
@@ -258,7 +253,7 @@ func TestCreateInitramfs(t *testing.T) {
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
 			},
-			want: "could not create symlink from \"init\" to \"foobar\": command or path \"foobar\" not included in u-root build: specify -initcmd=\"\" to ignore this error and build without an init",
+			want: "could not create symlink from \"init\" to \"foobar\": command or path \"foobar\" not included in u-root build: specify -initcmd=\"\" to ignore this error and build without an init (or, did you specify a list, and are you missing github.com/u-root/u-root/cmds/core/init?)",
 			validators: []itest.ArchiveValidator{
 				itest.IsEmpty{},
 			},

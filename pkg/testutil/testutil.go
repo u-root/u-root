@@ -6,7 +6,6 @@ package testutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -124,7 +123,7 @@ func run(m *testing.M, mainFn func()) int {
 		// build the command.
 		//
 		// This is NOT build-system-independent, and hence the fallback.
-		tmpDir, err := ioutil.TempDir("", "uroot-build")
+		tmpDir, err := os.MkdirTemp("", "uroot-build")
 		if err != nil {
 			log.Fatal(err)
 		}

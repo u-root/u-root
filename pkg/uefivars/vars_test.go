@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-//func AllVars() EfiVars
+// func AllVars() EfiVars
 func TestAllVars(t *testing.T) {
 	n := 32
 	vars := AllVars()
@@ -20,7 +20,7 @@ func TestAllVars(t *testing.T) {
 	}
 }
 
-//func DecodeUTF16(b []byte) (string, error)
+// func DecodeUTF16(b []byte) (string, error)
 func TestDecodeUTF16(t *testing.T) {
 	want := "TEST"
 	got, err := DecodeUTF16([]byte{84, 0, 69, 0, 83, 0, 84, 0})
@@ -32,7 +32,7 @@ func TestDecodeUTF16(t *testing.T) {
 	}
 }
 
-//func (vars EfiVars) Filter(filt VarFilter) EfiVars
+// func (vars EfiVars) Filter(filt VarFilter) EfiVars
 func TestFilter(t *testing.T) {
 	filt := func(_, _ string) bool { return true }
 	v := AllVars()

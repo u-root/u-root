@@ -7,7 +7,6 @@ package pci
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,10 +64,9 @@ func (p *PCI) SetVendorDeviceName() {
 // ReadConfig reads the config space.
 func (p *PCI) ReadConfig() error {
 	dev := filepath.Join(p.FullPath, "config")
-	c, err := ioutil.ReadFile(dev)
+	c, err := os.ReadFile(dev)
 	if err != nil {
 		return err
-
 	}
 	p.Config = c
 	p.Control = Control(binary.LittleEndian.Uint16(c[4:6]))
@@ -136,13 +134,13 @@ func (p *PCI) WriteConfigRegister(offset, size int64, val uint64) error {
 	case 64:
 		err = binary.Write(w, binary.LittleEndian, &val)
 	case 32:
-		var v = uint32(val)
+		v := uint32(val)
 		err = binary.Write(w, binary.LittleEndian, &v)
 	case 16:
-		var v = uint16(val)
+		v := uint16(val)
 		err = binary.Write(w, binary.LittleEndian, &v)
 	case 8:
-		var v = uint8(val)
+		v := uint8(val)
 		err = binary.Write(w, binary.LittleEndian, &v)
 	}
 	return err

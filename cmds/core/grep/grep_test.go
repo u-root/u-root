@@ -6,8 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -16,7 +14,7 @@ import (
 // GrepTest is a table-driven which spawns grep with a variety of options and inputs.
 // We need to look at any output data, as well as exit status for things like the -q switch.
 func TestGrep(t *testing.T) {
-	var tab = []struct {
+	tab := []struct {
 		i string
 		o string
 		s int
@@ -30,12 +28,6 @@ func TestGrep(t *testing.T) {
 		{"hix\n", "", 0, []string{"-i", "hox"}},
 		{"HiX\n", "HiX\n", 0, []string{"-i", "hix"}},
 	}
-
-	tmpDir, err := ioutil.TempDir("", "TestGrep")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
 
 	for _, v := range tab {
 		c := testutil.Command(t, v.a...)

@@ -34,7 +34,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -57,9 +56,7 @@ var (
 	ErrProcessDead = errors.New("lockfile points to invalid PID")
 )
 
-var (
-	errUnlocked = errors.New("file is unlocked")
-)
+var errUnlocked = errors.New("file is unlocked")
 
 // Lockfile is a process-based file lock.
 type Lockfile struct {
@@ -82,7 +79,7 @@ func New(path string) *Lockfile {
 
 func (l *Lockfile) pidfile() (string, error) {
 	dir, base := filepath.Split(l.path)
-	pidfile, err := ioutil.TempFile(dir, fmt.Sprintf("%s-", base))
+	pidfile, err := os.CreateTemp(dir, fmt.Sprintf("%s-", base))
 	if err != nil {
 		return "", err
 	}
@@ -142,7 +139,7 @@ func (l *Lockfile) Lock() error {
 }
 
 func (l *Lockfile) checkLockfile() error {
-	owningPid, err := ioutil.ReadFile(l.path)
+	owningPid, err := os.ReadFile(l.path)
 	if os.IsNotExist(err) {
 		return errUnlocked
 	} else if err != nil {

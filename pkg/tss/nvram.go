@@ -15,7 +15,7 @@ import (
 )
 
 func nvRead12(rwc io.ReadWriteCloser, index, offset, len uint32, auth string) ([]byte, error) {
-	var ownAuth [20]byte //owner well known
+	var ownAuth [20]byte // owner well known
 	if auth != "" {
 		ownAuth = sha1.Sum([]byte(auth))
 	}

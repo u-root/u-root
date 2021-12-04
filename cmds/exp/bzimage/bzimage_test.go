@@ -5,8 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -48,10 +46,11 @@ var (
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			ExtRamdiskImage:     00,
-			ExtRamdiskSize:      00,
-			ExtCmdlinePtr:       00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			ExtRamdiskImage:     0x00,
+			ExtRamdiskSize:      0x00,
+			ExtCmdlinePtr:       0x00,
 			SetupSects:          0x1e,
 			RootFlags:           0x01,
 			Syssize:             0xb51d,
@@ -108,19 +107,13 @@ var (
 )
 
 func TestSimple(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "bzImage")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	var tests = []struct {
+	tests := []struct {
 		args            []string
 		name            string
 		status          int
 		out             string
-		skip            int  //leading chars to skip in output when comparing
-		outputContinues bool //if true, only compare 'out' len of bytes; flags produce extra output.
+		skip            int  // leading chars to skip in output when comparing
+		outputContinues bool // if true, only compare 'out' len of bytes; flags produce extra output.
 	}{
 		{
 			args:   []string{"initramfs", "bzImage", "init.cpio", "zz/zz/zz"},
@@ -137,7 +130,7 @@ func TestSimple(t *testing.T) {
 			skip:   uskip,
 		},
 		{
-			args:   []string{"initramfs", "bzImage", "/dev/null", filepath.Join(tmpDir, "zz")},
+			args:   []string{"initramfs", "bzImage", "/dev/null", filepath.Join(t.TempDir(), "zz")},
 			name:   "correct initramfs test",
 			status: 0,
 			out:    "",

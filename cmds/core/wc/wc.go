@@ -53,11 +53,13 @@ import (
 	"unicode/utf8"
 )
 
-var lines = flag.Bool("l", false, "count lines")
-var words = flag.Bool("w", false, "count words")
-var runes = flag.Bool("r", false, "count runes")
-var broken = flag.Bool("b", false, "count broken")
-var chars = flag.Bool("c", false, "count bytes (include partial UTF)")
+var (
+	lines  = flag.Bool("l", false, "count lines")
+	words  = flag.Bool("w", false, "count words")
+	runes  = flag.Bool("r", false, "count runes")
+	broken = flag.Bool("b", false, "count broken")
+	chars  = flag.Bool("c", false, "count bytes (include partial UTF)")
+)
 
 type cnt struct {
 	nline, nword, nrune, nbadr, nchar int64

@@ -35,7 +35,7 @@ type DmiCollector struct {
  */
 func NewDmiCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New DMI Collector initialized")
-	var dc = new(DmiCollector)
+	dc := new(DmiCollector)
 	err := json.Unmarshal(config, &dc)
 	if err != nil {
 		return nil, err

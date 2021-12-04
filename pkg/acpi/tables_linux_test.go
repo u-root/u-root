@@ -33,5 +33,4 @@ func TestTable(t *testing.T) {
 	if !reflect.DeepEqual(tg, tt) {
 		t.Fatalf("Getting table via GetTable and %q: got different(%s, %s), want same", m, tg, tt)
 	}
-
 }

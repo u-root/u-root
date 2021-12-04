@@ -70,15 +70,13 @@ type multiboot struct {
 	loadedModules modules
 }
 
-var (
-	rangeTypes = map[kexec.RangeType]uint32{
-		kexec.RangeRAM:      1,
-		kexec.RangeDefault:  2,
-		kexec.RangeACPI:     3,
-		kexec.RangeNVS:      4,
-		kexec.RangeReserved: 2,
-	}
-)
+var rangeTypes = map[kexec.RangeType]uint32{
+	kexec.RangeRAM:      1,
+	kexec.RangeDefault:  2,
+	kexec.RangeACPI:     3,
+	kexec.RangeNVS:      4,
+	kexec.RangeReserved: 2,
+}
 
 var sizeofMemoryMap = uint(binary.Size(MemoryMap{}))
 

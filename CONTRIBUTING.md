@@ -96,6 +96,127 @@ Every commit in your pull request needs to be able to build and pass the CI test
 
 If the pull request closes an issue please note it as: `"Fixes #NNN"`.
 
+## Unit Testing Guidelines
+
+### Unit Test Checks
+
+* The "testify" package should not be used.
+* The "cmp" package is allowed.
+* Unit tests in Go should follow the guidelines in this tutorial: https://go.dev/doc/tutorial/add-a-test
+  * In particular, the test error should be in the form `Function(...) = ...; want ...`.
+
+For example:
+
+```
+if msg != "" || err == nil {
+	t.Fatalf(`Hello("") = %q, %v, want "", error`, msg, err)
+}
+```
+
+* Tests should do all filesystem changes under a temporary directory, either
+  created with `ioutil.TempDir` or `testing.T.TempDir`.
+
+### Mocking Dependencies
+
+* Special mocking packages should not be used.
+* Prefer to test the real thing where possible.
+* Mocking is sometimes necessary. For example:
+   * Operations as root.
+   * Interacting with special hardware (ex: USB, SPI, PCIe)
+   * Modifying machine state (ex: reboot, kexec)
+   * Tests which would otherwise be flaky (ex: `time.Sleep`, networking)
+* Consider writing an integration test if the program can not be easily run
+  directly.
+   * Integration tests let you run the command under qemu, which lets you test
+     operations with, e.g., virtual hardware.
+  * `pkg/mount` contains an example of an integration test run under QEMU.
+* Prefer to mock using existing interfaces. For example: `io.Reader`, `fs.FS`
+* Avoid mocking using global state. Instead, consider using one of the
+  following "dependency injection" idioms:
+
+1. Mocking functions:
+
+```
+// The exported function has a meaningful API.
+func SetMemAddr(addr, val uint) error {
+	return setMemAddr(addr, val, "/dev/mem")
+}
+
+// The internal function is called from the unit test. The test can set a
+// different `file` argument.
+func setMemAddr(addr, val uint, file string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	...
+}
+```
+
+2. Mocking objects:
+
+```
+// SPI interface for the underlying calls to the SPI driver.
+type SPI interface {
+	Transfer(transfers []spidev.Transfer) error
+}
+
+// Flash provides operations for SPI flash chips.
+type Flash struct {
+	// spi is the underlying SPI device.
+	spi SPI
+
+  // other fields ...
+}
+
+// New creates a new flash device from a SPI interface.
+func New(spi SPI) (*Flash, error) {
+	f := &Flash{
+		spi: spi,
+	}
+
+  // initialize other fields ...
+
+  return f
+}
+```
+
+In the above example, the `flash.New` function takes a `SPI` device which can
+be mocked out as follows:
+
+```
+f, err := flash.New(spimock.New())
+...
+```
+
+The `spimock.New()` function returns an implementation of SPI which mocks the
+underlying SPI driver. The `Flash` object can be tested without hardware
+dependencies.
+
+### Package main
+
+The main function often includes things difficult to test. For example:
+
+1. Process-ending functions such as `log.Fatal` and `os.Exit`. These functions
+   also kill the unit test process.
+2. Accessing global state such as `os.Args`, `os.Stdin` and `os.Stdout`. It is
+   hard to mock out global state cleanly and safely.
+
+The guideline for testing is to factor out everything "difficult" into a
+two-line `main` function which remain untested. For example:
+
+```
+func run(args []string, stdin io.Reader, stdout io.Writer) error {
+	...
+}
+
+func main() {
+	if err := run(os.Args[1:], os.Stdin, os.Stdout); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+}
+```
+
 ## Code Reviews
 
 Look at the area of code you're modifying, its history, and consider

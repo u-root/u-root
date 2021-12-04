@@ -504,5 +504,4 @@ func (c *parser) append(ctx context.Context, config string) error {
 		}
 	}
 	return nil
-
 }

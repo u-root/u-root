@@ -9,8 +9,7 @@ import (
 )
 
 func TestLookup(t *testing.T) {
-
-	var idLookupTests = []*PCI{
+	idLookupTests := []*PCI{
 		{Vendor: 0x1055, Device: 0xe420, VendorName: "Efar Microsystems", DeviceName: "LAN9420/LAN9420i"},
 		{Vendor: 0x8086, Device: 0x1237, VendorName: "Intel Corporation", DeviceName: "440FX - 82441FX PMC [Natoma]"},
 		{Vendor: 0x8086, Device: 0x7000, VendorName: "Intel Corporation", DeviceName: "82371SB PIIX3 ISA [Natoma/Triton II]"},
@@ -36,5 +35,4 @@ func TestLookup(t *testing.T) {
 			}
 		}
 	})
-
 }

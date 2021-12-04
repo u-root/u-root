@@ -7,7 +7,6 @@ package initramfs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -19,23 +18,14 @@ import (
 )
 
 func TestFilesAddFileNoFollow(t *testing.T) {
-	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
+	regularFile, err := os.CreateTemp("", "archive-files-add-file")
 	if err != nil {
 		t.Error(err)
 	}
 	defer os.RemoveAll(regularFile.Name())
 
-	dir, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir)
-
-	dir2, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir2)
+	dir := t.TempDir()
+	dir2 := t.TempDir()
 
 	os.Create(filepath.Join(dir, "foo2"))
 	os.Symlink(filepath.Join(dir, "foo2"), filepath.Join(dir2, "foo3"))
@@ -92,29 +82,15 @@ func TestFilesAddFileNoFollow(t *testing.T) {
 }
 
 func TestFilesAddFile(t *testing.T) {
-	regularFile, err := ioutil.TempFile("", "archive-files-add-file")
+	regularFile, err := os.CreateTemp("", "archive-files-add-file")
 	if err != nil {
 		t.Error(err)
 	}
 	defer os.RemoveAll(regularFile.Name())
 
-	dir, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir)
-
-	dir2, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir2)
-
-	dir3, err := ioutil.TempDir("", "archive-add-files")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir3)
+	dir := t.TempDir()
+	dir2 := t.TempDir()
+	dir3 := t.TempDir()
 
 	os.Create(filepath.Join(dir, "foo"))
 	os.Create(filepath.Join(dir, "foo2"))
@@ -388,13 +364,13 @@ func TestFilesfillInParent(t *testing.T) {
 		{
 			af: &Files{
 				Records: map[string]cpio.Record{
-					"foo/bar": cpio.Directory("foo/bar", 0777),
+					"foo/bar": cpio.Directory("foo/bar", 0o777),
 				},
 			},
 			result: &Files{
 				Records: map[string]cpio.Record{
-					"foo/bar": cpio.Directory("foo/bar", 0777),
-					"foo":     cpio.Directory("foo", 0755),
+					"foo/bar": cpio.Directory("foo/bar", 0o777),
+					"foo":     cpio.Directory("foo", 0o755),
 				},
 			},
 		},
@@ -404,7 +380,7 @@ func TestFilesfillInParent(t *testing.T) {
 					"baz/baz/baz": "/somewhere",
 				},
 				Records: map[string]cpio.Record{
-					"foo/bar": cpio.Directory("foo/bar", 0777),
+					"foo/bar": cpio.Directory("foo/bar", 0o777),
 				},
 			},
 			result: &Files{
@@ -412,10 +388,10 @@ func TestFilesfillInParent(t *testing.T) {
 					"baz/baz/baz": "/somewhere",
 				},
 				Records: map[string]cpio.Record{
-					"foo/bar": cpio.Directory("foo/bar", 0777),
-					"foo":     cpio.Directory("foo", 0755),
-					"baz":     cpio.Directory("baz", 0755),
-					"baz/baz": cpio.Directory("baz/baz", 0755),
+					"foo/bar": cpio.Directory("foo/bar", 0o777),
+					"foo":     cpio.Directory("foo", 0o755),
+					"baz":     cpio.Directory("baz", 0o755),
+					"baz/baz": cpio.Directory("baz/baz", 0o755),
 				},
 			},
 		},
@@ -508,14 +484,14 @@ func TestOptsWrite(t *testing.T) {
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.Directory("etc", 0777),
-					cpio.Directory("etc/nginx", 0777),
+					cpio.Directory("etc", 0o777),
+					cpio.Directory("etc/nginx", 0o777),
 				},
 			},
 			want: Records{
 				"foo":       cpio.Symlink("foo", "elsewhere"),
-				"etc":       cpio.Directory("etc", 0777),
-				"etc/nginx": cpio.Directory("etc/nginx", 0777),
+				"etc":       cpio.Directory("etc", 0o777),
+				"etc/nginx": cpio.Directory("etc/nginx", 0o777),
 			},
 		},
 		{
@@ -530,7 +506,7 @@ func TestOptsWrite(t *testing.T) {
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.Directory("etc", 0777),
+					cpio.Directory("etc", 0o777),
 				},
 			},
 			want: Records{
@@ -550,8 +526,8 @@ func TestOptsWrite(t *testing.T) {
 				Records: make(Records),
 			},
 			want: Records{
-				"foo":         cpio.Directory("foo", 0755),
-				"foo/bar":     cpio.Directory("foo/bar", 0755),
+				"foo":         cpio.Directory("foo", 0o755),
+				"foo/bar":     cpio.Directory("foo/bar", 0o755),
 				"foo/bar/baz": cpio.Symlink("foo/bar/baz", "elsewhere"),
 			},
 		},
@@ -560,7 +536,7 @@ func TestOptsWrite(t *testing.T) {
 			opts: &Opts{
 				Files: &Files{
 					Records: map[string]cpio.Record{
-						"foo/bar":     cpio.Directory("foo/bar", 0444),
+						"foo/bar":     cpio.Directory("foo/bar", 0o444),
 						"foo/bar/baz": cpio.Symlink("foo/bar/baz", "elsewhere"),
 					},
 				},
@@ -569,8 +545,8 @@ func TestOptsWrite(t *testing.T) {
 				Records: make(Records),
 			},
 			want: Records{
-				"foo":         cpio.Directory("foo", 0755),
-				"foo/bar":     cpio.Directory("foo/bar", 0444),
+				"foo":         cpio.Directory("foo", 0o755),
+				"foo/bar":     cpio.Directory("foo/bar", 0o444),
 				"foo/bar/baz": cpio.Symlink("foo/bar/baz", "elsewhere"),
 			},
 		},
@@ -580,22 +556,22 @@ func TestOptsWrite(t *testing.T) {
 				Files: &Files{
 					Records: map[string]cpio.Record{
 						"foo/bar": cpio.Symlink("foo/bar", "elsewhere"),
-						"exists":  cpio.Directory("exists", 0777),
+						"exists":  cpio.Directory("exists", 0o777),
 					},
 				},
 			},
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.Directory("etc", 0755),
-					cpio.Directory("foo", 0444),
+					cpio.Directory("etc", 0o755),
+					cpio.Directory("foo", 0o444),
 					cpio.Directory("exists", 0),
 				},
 			},
 			want: Records{
-				"etc":     cpio.Directory("etc", 0755),
-				"exists":  cpio.Directory("exists", 0777),
-				"foo":     cpio.Directory("foo", 0444),
+				"etc":     cpio.Directory("etc", 0o755),
+				"exists":  cpio.Directory("exists", 0o777),
+				"foo":     cpio.Directory("foo", 0o444),
 				"foo/bar": cpio.Symlink("foo/bar", "elsewhere"),
 			},
 		},
@@ -609,11 +585,11 @@ func TestOptsWrite(t *testing.T) {
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.StaticFile("init", "boo", 0555),
+					cpio.StaticFile("init", "boo", 0o555),
 				},
 			},
 			want: Records{
-				"init": cpio.StaticFile("init", "boo", 0555),
+				"init": cpio.StaticFile("init", "boo", 0o555),
 			},
 		},
 		{
@@ -621,19 +597,19 @@ func TestOptsWrite(t *testing.T) {
 			opts: &Opts{
 				Files: &Files{
 					Records: map[string]cpio.Record{
-						"init": cpio.StaticFile("init", "bar", 0444),
+						"init": cpio.StaticFile("init", "bar", 0o444),
 					},
 				},
 			},
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.StaticFile("init", "boo", 0555),
+					cpio.StaticFile("init", "boo", 0o555),
 				},
 			},
 			want: Records{
-				"init":  cpio.StaticFile("init", "bar", 0444),
-				"inito": cpio.StaticFile("inito", "boo", 0555),
+				"init":  cpio.StaticFile("init", "bar", 0o444),
+				"inito": cpio.StaticFile("inito", "boo", 0o555),
 			},
 		},
 		{
@@ -647,11 +623,11 @@ func TestOptsWrite(t *testing.T) {
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.StaticFile("init", "boo", 0555),
+					cpio.StaticFile("init", "boo", 0o555),
 				},
 			},
 			want: Records{
-				"init": cpio.StaticFile("init", "boo", 0555),
+				"init": cpio.StaticFile("init", "boo", 0o555),
 			},
 		},
 		{
@@ -659,7 +635,7 @@ func TestOptsWrite(t *testing.T) {
 			opts: &Opts{
 				Files: &Files{
 					Records: map[string]cpio.Record{
-						"init": cpio.StaticFile("init", "huh", 0111),
+						"init": cpio.StaticFile("init", "huh", 0o111),
 					},
 				},
 				UseExistingInit: true,
@@ -667,12 +643,12 @@ func TestOptsWrite(t *testing.T) {
 			ma: &MockArchiver{
 				Records: make(Records),
 				BaseArchive: []cpio.Record{
-					cpio.StaticFile("init", "boo", 0555),
+					cpio.StaticFile("init", "boo", 0o555),
 				},
 			},
 			want: Records{
-				"init":  cpio.StaticFile("init", "boo", 0555),
-				"inito": cpio.StaticFile("inito", "huh", 0111),
+				"init":  cpio.StaticFile("init", "boo", 0o555),
+				"inito": cpio.StaticFile("inito", "huh", 0o111),
 			},
 		},
 	} {

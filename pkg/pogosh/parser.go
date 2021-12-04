@@ -128,27 +128,23 @@ func parseCommand(s *State, t *tokenizer) command {
 //                   | until_clause
 //                   ;
 func parseCompoundCommand(s *State, t *tokenizer) {
-
 }
 
 // subshell          : '(' compound_list ')
 //                   ;
 func parseSubshell(s *State, t *tokenizer) {
-
 }
 
 // compound_list     : LineBreak term
 //                   | LineBreak term separator
 //                   ;
 func parseCompoundList(s *State, t *tokenizer) {
-
 }
 
 // term              : term separator '&&'
 //                   | '&&'
 //                   ;
 func parseTerm(s *State, t *tokenizer) {
-
 }
 
 // for_clause        : 'for' name do_group
@@ -157,20 +153,17 @@ func parseTerm(s *State, t *tokenizer) {
 //                   | 'for' name LineBreak in wordlist sequential_sep do_group
 //                   ;
 func parseForClause(s *State, t *tokenizer) {
-
 }
 
 // in                : 'in'
 //                   ;
 func parseIn(s *State, t *tokenizer) {
-
 }
 
 // wordlist          : wordlist WORD
 //                   | WORD
 //                   ;
 func parseWordList(s *State, t *tokenizer) {
-
 }
 
 // case_clause       : 'case' WORD LineBreak 'in' LineBreak case_list 'esac'
@@ -178,21 +171,18 @@ func parseWordList(s *State, t *tokenizer) {
 //                   | 'case' WORD LineBreak 'in' LineBreak 'esac'
 //                   ;
 func parseCaseClause(s *State, t *tokenizer) {
-
 }
 
 // case_list_ns      : case_list case_item_ns
 //                   | case_item_ns
 //                   ;
 func parseCaseListNS(s *State, t *tokenizer) {
-
 }
 
 // case_list         : case_list case_item
 //                   | case_item
 //                   ;
 func parseCaseList(s *State, t *tokenizer) {
-
 }
 
 // case_item_ns      : pattern ')' LineBreak
@@ -201,7 +191,6 @@ func parseCaseList(s *State, t *tokenizer) {
 //                   | '(' pattern ')' compound_list
 //                   ;
 func parseCaseItemNS(s *State, t *tokenizer) {
-
 }
 
 // case_item         : pattern ')' ';;' LineBreak
@@ -210,20 +199,17 @@ func parseCaseItemNS(s *State, t *tokenizer) {
 //                   | '(' pattern ')' ';;' compound_list
 //                   ;
 func parseCaseItem(s *State, t *tokenizer) {
-
 }
 
 // pattern           : WORD
 //                   | pattern '|' WORD
 //                   ;
 func parsePattern(s *State, t *tokenizer) {
-
 }
 
 // if_clause         : 'if' compound_list 'then' compound_list else_part 'fi'
 //                   | 'if' compound_list 'then' compound_list 'fi'
 func parseIfClause(s *State, t *tokenizer) {
-
 }
 
 // else_part         : 'elif' compound_list 'then' compound_list
@@ -231,50 +217,42 @@ func parseIfClause(s *State, t *tokenizer) {
 //                   | 'else' compound_list
 //                   ;
 func parseElsePart(s *State, t *tokenizer) {
-
 }
 
 // while_clause      : 'while' compound_list do_group
 //                   ;
 func parseWhileClause(s *State, t *tokenizer) {
-
 }
 
 // until_clause      : 'until' compound_list do_group
 //                   ;
 func parseUntilClause(s *State, t *tokenizer) {
-
 }
 
 // function_definition : fname '(' ')' LineBreak function_body
 //                   ;
 func parseFunctionDefinition(s *State, t *tokenizer) {
-
 }
 
 // function_body     : compound_command
 //                   | compound_command redirect_list
 //                   ;
 func parseFunctionBody(s *State, t *tokenizer) {
-
 }
 
 // fname             : NAME
 //                   ;
 func parseFName(s *State, t *tokenizer) {
-
 }
 
 // brace_group       : '{' compound_list '}'
 //                   ;
 func parseBraceGroup(s *State, t *tokenizer) {
-
 }
 
 // do_group          : 'do' compound_list 'done'
 //                   ;
 func parseDoGroup(s *State, t *tokenizer) {
-
 }
 
 // SimpleCommand ::= CmdPrefix SimpleCommand2 | CmdName CmdSuffix
@@ -333,7 +311,6 @@ func parseCmdSuffix(s *State, t *tokenizer, cmd *simpleCommand) {
 //                   | redirect_list io_redirect
 //                   ;
 func parseRedirectList(s *State, t *tokenizer) {
-
 }
 
 // IORedirect ::= IORedirect2 | IO_NUMBER IORedirect2
@@ -367,13 +344,11 @@ func parseFilename(s *State, t *tokenizer) []byte {
 //                   | DLESSDASH here_end
 //                   ;
 func parseIOHere(s *State, t *tokenizer) {
-
 }
 
 // here_end          : WORD
 //                   ;
 func parseHereEnd(s *State, t *tokenizer) {
-
 }
 
 // NewLineList ::= NEWLINE NewLineList | NEWLINE
@@ -409,12 +384,10 @@ func parseSeparatorOp(s *State, t *tokenizer) {
 //                   | NewLineList
 //                   ;
 func parseSeparator(s *State, t *tokenizer) {
-
 }
 
 // sequential_sep    : ';' LineBreak
 //                   | NewLineList
 //                   ;
 func parseSequentialSep(s *State, t *tokenizer) {
-
 }

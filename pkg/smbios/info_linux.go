@@ -6,7 +6,7 @@ package smbios
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -16,11 +16,11 @@ func FromSysfs() (*Info, error) {
 }
 
 func fromSysfs(sysfsPath string) (*Info, error) {
-	entry, err := ioutil.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
+	entry, err := os.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 	if err != nil {
 		return nil, fmt.Errorf("error reading SMBIOS entry data: %v", err)
 	}
-	data, err := ioutil.ReadFile(filepath.Join(sysfsPath, "DMI"))
+	data, err := os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 	if err != nil {
 		return nil, fmt.Errorf("error reading DMI data: %v", err)
 	}
