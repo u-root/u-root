@@ -9,7 +9,6 @@ package cmp
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -38,7 +37,7 @@ func isEqualFile(fpath1, fpath2 string) error {
 }
 
 func readDirNames(path string) ([]string, error) {
-	entries, err := ioutil.ReadDir(path)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +79,7 @@ func IsEqualTree(o cp.Options, src, dst string) error {
 		if err != nil {
 			return err
 		}
-		// ioutil.ReadDir guarantees these are sorted.
+		// os.ReadDir guarantees these are sorted.
 		if !reflect.DeepEqual(srcEntries, dstEntries) {
 			return fmt.Errorf("directory contents did not match:\n%q had %v\n%q had %v", src, srcEntries, dst, dstEntries)
 		}

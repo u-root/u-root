@@ -7,7 +7,6 @@ package securelaunch
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -52,7 +51,6 @@ var Debug = func(string, ...interface{}) {}
 //
 // defFileName is default dst file name, only used if user doesn't provide one.
 func WriteToFile(data []byte, dst, defFileName string) (string, error) {
-
 	// make sure dst is an absolute file path
 	if !filepath.IsAbs(dst) {
 		return "", fmt.Errorf("dst =%s Not an absolute path ", dst)
@@ -68,7 +66,7 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 	}
 
 	Debug("WriteToFile: target=%s", target)
-	err = ioutil.WriteFile(target, data, 0644)
+	err = os.WriteFile(target, data, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("failed to write date to file =%s, err=%v", target, err)
 	}
@@ -79,7 +77,6 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 // persist writes data to targetPath.
 // targetPath is of form sda:/boot/cpuid.txt
 func persist(data []byte, targetPath string, defaultFile string) error {
-
 	filePath, r := GetMountedFilePath(targetPath, 0) // 0 is flag for rw mount option
 	if r != nil {
 		return fmt.Errorf("persist: err: input %s could NOT be located, err=%v", targetPath, r)
@@ -163,7 +160,6 @@ func deleteEntryMountCache(key string) {
 }
 
 func setMountCache(key string, val mountCacheData) {
-
 	mountCache.mu.Lock()
 	mountCache.m[key] = val
 	mountCache.mu.Unlock()
@@ -175,7 +171,6 @@ func setMountCache(key string, val mountCacheData) {
 // and clears an entry in cache if result is found with different
 // flags, otherwise returns the cached entry or nil.
 func getMountCacheData(key string, flags uintptr) (string, error) {
-
 	Debug("mountCache: Lookup with key %s", key)
 	cachedData, ok := mountCache.m[key]
 	if ok {
@@ -202,7 +197,6 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 // MountDevice looks up mountCache map. if no entry is found, it
 // mounts a device and updates cache, otherwise returns mountPath.
 func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
-
 	devName := device.Name
 
 	Debug("MountDevice: Checking cache first for %s", devName)
@@ -214,7 +208,7 @@ func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
 	Debug("MountDevice: cache lookup failed for %s", devName)
 
 	Debug("MountDevice: Attempting to mount %s with flags %d", devName, flags)
-	mountPath, err := ioutil.TempDir("/tmp", "slaunch-")
+	mountPath, err := os.MkdirTemp("/tmp", "slaunch-")
 	if err != nil {
 		return "", fmt.Errorf("failed to create tmp mount directory: %v", err)
 	}

@@ -6,15 +6,13 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestWc(t *testing.T) {
-	var tab = []struct {
+	tab := []struct {
 		i string
 		o string
 		s int
@@ -24,12 +22,6 @@ func TestWc(t *testing.T) {
 		{"lines\nlines\n", "2\n", 0, []string{"-l"}},
 		{"count chars\n", "12\n", 0, []string{"-c"}},
 	}
-
-	tmpDir, err := ioutil.TempDir("", "TestWc")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
 
 	for _, v := range tab {
 		c := testutil.Command(t, v.a...)

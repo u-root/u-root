@@ -11,7 +11,7 @@ import (
 )
 
 func TestParseCPUs(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		input  string
 		cpus   CPUs
@@ -110,7 +110,7 @@ func TestParseCPUs(t *testing.T) {
 }
 
 func TestCPUsString(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		cpus   CPUs
 		output string

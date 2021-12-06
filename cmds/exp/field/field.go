@@ -35,18 +35,18 @@ type frange struct {
 	end   int
 }
 
-const lastField = 0x7FFFFFFF
-const cmd = "field [ -E | -e ] [ -F regexp ] [ -0 | -O delimiter ] <field list> [file...]"
-
-var (
-	flags struct {
-		nuloutsep     bool
-		preserveEmpty bool
-		discardEmpty  bool
-		insep         string
-		outsep        string
-	}
+const (
+	lastField = 0x7FFFFFFF
+	cmd       = "field [ -E | -e ] [ -F regexp ] [ -0 | -O delimiter ] <field list> [file...]"
 )
+
+var flags struct {
+	nuloutsep     bool
+	preserveEmpty bool
+	discardEmpty  bool
+	insep         string
+	outsep        string
+}
 
 func init() {
 	defUsage := flag.Usage

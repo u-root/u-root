@@ -16,11 +16,9 @@ import (
 	"os/exec"
 )
 
-var (
-	// DeviceTreePaths is the virtual fs path for accessing device-tree
-	// through Linux
-	DeviceTreePaths = []string{"/sys/firmware/fdt", "/proc/device-tree"}
-)
+// DeviceTreePaths is the virtual fs path for accessing device-tree
+// through Linux
+var DeviceTreePaths = []string{"/sys/firmware/fdt", "/proc/device-tree"}
 
 // KexecBin uses kexec-tools binary and runtime architecture detection
 // to execute abritary files.

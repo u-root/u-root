@@ -25,7 +25,6 @@ func TestDateNoFlags(t *testing.T) {
 	if d != dTest {
 		t.Errorf("Mismatched dates; want %v, got %v\n", d, dTest)
 	}
-
 }
 
 // using u flag
@@ -74,7 +73,7 @@ func TestDateMapExamples(t *testing.T) {
 		example string // correct example
 	}
 
-	var tests = []dateTest{
+	tests := []dateTest{
 		{
 			"%a %b %e %H:%M:%S %Z %Y",
 			"Tue Jun 26 09:58:10 PDT 1990",

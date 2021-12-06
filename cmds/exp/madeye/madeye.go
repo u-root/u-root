@@ -33,7 +33,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -90,7 +89,7 @@ func file(archiver cpio.RecordFormat, n string, f io.ReaderAt) ([]cpio.Record, e
 		// TODO: make this use os constants, not unix constants.
 		switch rec.Mode & unix.S_IFMT {
 		case unix.S_IFLNK:
-			content, err := ioutil.ReadAll(uio.Reader(rec))
+			content, err := io.ReadAll(uio.Reader(rec))
 			if err != nil {
 				return nil, err
 			}

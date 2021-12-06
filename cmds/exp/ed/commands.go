@@ -240,7 +240,7 @@ func cmdWrite(ctx *Context) (e error) {
 	if ctx.cmd[ctx.cmdOffset] == 'W' {
 		oFlag = os.O_APPEND
 	}
-	if f, e = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|oFlag, 0666); e != nil {
+	if f, e = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|oFlag, 0o666); e != nil {
 		return e
 	}
 	defer f.Close()
@@ -409,7 +409,7 @@ func cmdMove(ctx *Context) (e error) {
 		r[0] += delt
 		r[1] += delt
 	} else if dest > r[1] {
-		//NOP
+		// NOP
 	} else {
 		return fmt.Errorf("cannot move lines to within their own range")
 	}
@@ -456,10 +456,12 @@ func cmdPrompt(ctx *Context) (e error) {
 	return
 }
 
-var rxSanitize = regexp.MustCompile(`\\.`)
-var rxBackrefSanitize = regexp.MustCompile(`\\\\`)
-var rxBackref = regexp.MustCompile(`\\([0-9]+)|&`)
-var rxSubArgs = regexp.MustCompile(`g|l|n|p|\d+`)
+var (
+	rxSanitize        = regexp.MustCompile(`\\.`)
+	rxBackrefSanitize = regexp.MustCompile(`\\\\`)
+	rxBackref         = regexp.MustCompile(`\\([0-9]+)|&`)
+	rxSubArgs         = regexp.MustCompile(`g|l|n|p|\d+`)
+)
 
 // FIXME: this is probably more convoluted than it needs to be
 func cmdSub(ctx *Context) (e error) {
@@ -503,7 +505,7 @@ func cmdSub(ctx *Context) (e error) {
 	arg := cmd[idx[1]+1:]
 
 	// arg processing
-	var count = 1
+	count := 1
 	var printP, printL, printN, global bool
 
 	parsedArgs := rxSubArgs.FindAllStringSubmatch(arg, -1)
@@ -559,8 +561,8 @@ func cmdSub(ctx *Context) (e error) {
 		oLin := 0
 		for _, m := range matches {
 			nMatch++
-			//fRep := rep
-			//offset := 0
+			// fRep := rep
+			// offset := 0
 
 			// Fill backrefs
 			oRep := 0

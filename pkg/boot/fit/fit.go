@@ -67,7 +67,7 @@ func ParseConfig(r io.ReadSeeker) ([]Image, error) {
 	cn, _ := configs.ListChildNodes()
 
 	for _, n := range cn {
-		var i = Image{name: n, Root: fdt, ConfigOverride: n}
+		i := Image{name: n, Root: fdt, ConfigOverride: n}
 
 		kn, in, err := i.LoadConfig()
 

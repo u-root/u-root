@@ -25,11 +25,12 @@ package main
 
 import (
 	"fmt"
-	flag "github.com/spf13/pflag"
 	"io"
 	"log"
 	"os"
 	"sort"
+
+	flag "github.com/spf13/pflag"
 )
 
 var (
@@ -211,7 +212,6 @@ func ps(pT *ProcessTable, w io.Writer) error {
 	}
 
 	return nil
-
 }
 
 func usage() {

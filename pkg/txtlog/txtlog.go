@@ -183,7 +183,7 @@ func readTPM2Log(firmware FirmwareType) (*PCRLog, error) {
 }
 
 func getTaggedEvent(eventData []byte) (*string, error) {
-	var eventReader = bytes.NewReader(eventData)
+	eventReader := bytes.NewReader(eventData)
 	var taggedEvent TCGPCClientTaggedEvent
 
 	if err := binary.Read(eventReader, binary.LittleEndian, &taggedEvent.taggedEventID); err != nil {
@@ -204,7 +204,7 @@ func getTaggedEvent(eventData []byte) (*string, error) {
 }
 
 func getHandoffTablePointers(eventData []byte) (*string, error) {
-	var eventReader = bytes.NewReader(eventData)
+	eventReader := bytes.NewReader(eventData)
 	var handoffTablePointers EFIHandoffTablePointers
 
 	if err := binary.Read(eventReader, binary.LittleEndian, &handoffTablePointers.numberOfTables); err != nil {
@@ -247,7 +247,7 @@ func getHandoffTablePointers(eventData []byte) (*string, error) {
 }
 
 func getPlatformFirmwareBlob(eventData []byte) (*string, error) {
-	var eventReader = bytes.NewReader(eventData)
+	eventReader := bytes.NewReader(eventData)
 	var platformFirmwareBlob EFIPlatformFirmwareBlob
 
 	if err := binary.Read(eventReader, binary.LittleEndian, &platformFirmwareBlob.blobBase); err != nil {
@@ -263,7 +263,7 @@ func getPlatformFirmwareBlob(eventData []byte) (*string, error) {
 }
 
 func getGPTEventString(eventData []byte) (*string, error) {
-	var eventReader = bytes.NewReader(eventData)
+	eventReader := bytes.NewReader(eventData)
 	var gptEvent EFIGptData
 
 	if err := binary.Read(eventReader, binary.LittleEndian, &gptEvent.uefiPartitionHeader.Signature); err != nil {
@@ -310,7 +310,7 @@ func getGPTEventString(eventData []byte) (*string, error) {
 }
 
 func getImageLoadEventString(eventData []byte) (*string, error) {
-	var eventReader = bytes.NewReader(eventData)
+	eventReader := bytes.NewReader(eventData)
 	var imageLoadEvent EFIImageLoadEvent
 
 	if err := binary.Read(eventReader, binary.LittleEndian, &imageLoadEvent.imageLocationInMemory); err != nil {
@@ -338,7 +338,7 @@ func getImageLoadEventString(eventData []byte) (*string, error) {
 }
 
 func getVariableDataString(eventData []byte) (*string, error) {
-	var eventReader = bytes.NewReader(eventData)
+	eventReader := bytes.NewReader(eventData)
 	var variableData EFIVariableData
 
 	if err := binary.Read(eventReader, binary.LittleEndian, &variableData.variableName.blockA); err != nil {

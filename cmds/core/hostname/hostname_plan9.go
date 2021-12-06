@@ -7,8 +7,8 @@
 
 package main
 
-import "io/ioutil"
+import "os"
 
 func Sethostname(n string) error {
-	return ioutil.WriteFile("#c/sysname", []byte(n), 0644)
+	return os.WriteFile("#c/sysname", []byte(n), 0o644)
 }

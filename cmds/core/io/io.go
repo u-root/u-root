@@ -36,11 +36,13 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
-type cmdFunc func(addr int64, data memio.UintN) error
-type cmd struct {
-	f                 cmdFunc
-	addrBits, valBits int
-}
+type (
+	cmdFunc func(addr int64, data memio.UintN) error
+	cmd     struct {
+		f                 cmdFunc
+		addrBits, valBits int
+	}
+)
 
 var (
 	readCmds  = map[string]*cmd{}

@@ -7,7 +7,6 @@ package namespace
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -48,18 +47,17 @@ func newTestBuilder(name string) func(t minimock.Tester) *Builder {
 }
 func mockNSBuilder(t minimock.Tester) args { return args{&noopNS{}} }
 func TestBuilder_buildNS(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		init    func(t minimock.Tester) *Builder
-		inspect func(r *Builder, t *testing.T) //inspects *Builder after execution of buildNS
+		inspect func(r *Builder, t *testing.T) // inspects *Builder after execution of buildNS
 
 		args func(t minimock.Tester) args
 
 		wantErr    bool
-		inspectErr func(err error, t *testing.T) //use for more precise error evaluation
+		inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 	}{}
-	files, err := ioutil.ReadDir("testdata")
+	files, err := os.ReadDir("testdata")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,12 +65,12 @@ func TestBuilder_buildNS(t *testing.T) {
 		tests = append(tests, struct {
 			name    string
 			init    func(t minimock.Tester) *Builder
-			inspect func(r *Builder, t *testing.T) //inspects *Builder after execution of buildNS
+			inspect func(r *Builder, t *testing.T) // inspects *Builder after execution of buildNS
 
 			args func(t minimock.Tester) args
 
 			wantErr    bool
-			inspectErr func(err error, t *testing.T) //use for more precise error evaluation
+			inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 		}{
 			name:    file.Name(),
 			init:    newTestBuilder(file.Name()),
@@ -102,7 +100,6 @@ func TestBuilder_buildNS(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-
 		})
 	}
 }

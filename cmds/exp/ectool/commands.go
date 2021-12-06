@@ -1515,6 +1515,7 @@ const (
 
 	ecLedIDCount
 )
+
 const (
 	/* LED control flags */
 	ecLedFlagsQuery = (1 << iota) /* Query LED capability only */
@@ -1941,8 +1942,10 @@ type ecResponsePort80LastBoot struct {
  * Version 1 separates the CPU thermal limits from the fan control.
  */
 
-const ecCmdThermalSetThreshold = 0x50
-const ecCmdThermalGetThreshold = 0x51
+const (
+	ecCmdThermalSetThreshold = 0x50
+	ecCmdThermalGetThreshold = 0x51
+)
 
 /* TYPE */
 /* The version 0 structs are opaque. You have to know what they are for
@@ -2303,17 +2306,21 @@ type ecResponseHostEventMask struct {
 }
 
 /* These all use ecResponseHostEventMask */
-const ecCmdHostEventGetB = 0x87
-const ecCmdHostEventGetSmiMask = 0x88
-const ecCmdHostEventGetSciMask = 0x89
-const ecCmdHostEventGetWakeMask = 0x8d
+const (
+	ecCmdHostEventGetB        = 0x87
+	ecCmdHostEventGetSmiMask  = 0x88
+	ecCmdHostEventGetSciMask  = 0x89
+	ecCmdHostEventGetWakeMask = 0x8d
+)
 
 /* These all use ecParamsHostEventMask */
-const ecCmdHostEventSetSmiMask = 0x8a
-const ecCmdHostEventSetSciMask = 0x8b
-const ecCmdHostEventClear = 0x8c
-const ecCmdHostEventSetWakeMask = 0x8e
-const ecCmdHostEventClearB = 0x8f
+const (
+	ecCmdHostEventSetSmiMask  = 0x8a
+	ecCmdHostEventSetSciMask  = 0x8b
+	ecCmdHostEventClear       = 0x8c
+	ecCmdHostEventSetWakeMask = 0x8e
+	ecCmdHostEventClearB      = 0x8f
+)
 
 /*****************************************************************************/
 /* Switch commands */
@@ -2589,8 +2596,10 @@ const ecI2cFlagRead = (1 << 15)
 /* Mask for address */
 const ecI2cAddrMask = 0x3ff
 
-const ecI2cStatusNak = (1 << 0)     /* Transfer was not acknowledged */
-const ecI2cStatusTimeout = (1 << 1) /* Timeout during transfer */
+const (
+	ecI2cStatusNak     = (1 << 0) /* Transfer was not acknowledged */
+	ecI2cStatusTimeout = (1 << 1) /* Timeout during transfer */
+)
 
 /* Any error */
 const ecI2cStatusError = (ecI2cStatusNak | ecI2cStatusTimeout)
@@ -2864,9 +2873,11 @@ const (
 	ecSbFwUpdateMax                        = 0x7
 )
 
-const sbFwUpdateCmdWriteBlockSize = 32
-const sbFwUpdateCmdStatusSize = 2
-const sbFwUpdateCmdInfoSize = 8
+const (
+	sbFwUpdateCmdWriteBlockSize = 32
+	sbFwUpdateCmdStatusSize     = 2
+	sbFwUpdateCmdInfoSize       = 8
+)
 
 /* TYPE */
 type ecSbFwUpdateHeader struct {
@@ -2910,9 +2921,11 @@ type ecParamsEnteringMode struct {
 	vbootMode int
 }
 
-const vbootModeNormal = 0
-const vbootModeDeveloper = 1
-const vbootModeRecovery = 2
+const (
+	vbootModeNormal    = 0
+	vbootModeDeveloper = 1
+	vbootModeRecovery  = 2
+)
 
 /*****************************************************************************/
 /* System commands */
@@ -3021,9 +3034,12 @@ type ecParamsPdStatus struct {
 }
 
 /* Status of PD being sent back to EC */
-const pdStatusHostEvent = (1 << 0)     /* Forward host event to AP */
-const pdStatusInRw = (1 << 1)          /* Running RW image */
-const pdStatusJumpedToImage = (1 << 2) /* Current image was jumped to */
+const (
+	pdStatusHostEvent     = (1 << 0) /* Forward host event to AP */
+	pdStatusInRw          = (1 << 1) /* Running RW image */
+	pdStatusJumpedToImage = (1 << 2) /* Current image was jumped to */
+)
+
 /* TYPE */
 type ecResponsePdStatus struct {
 	status           uint32 /* PD MCU status */
@@ -3035,9 +3051,11 @@ type ecResponsePdStatus struct {
 const ecCmdPdHostEventStatus = 0x104
 
 /* PD MCU host event status bits */
-const pdEventUpdateDevice = (1 << 0)
-const pdEventPowerChange = (1 << 1)
-const pdEventIdentityReceived = (1 << 2)
+const (
+	pdEventUpdateDevice     = (1 << 0)
+	pdEventPowerChange      = (1 << 1)
+	pdEventIdentityReceived = (1 << 2)
+)
 
 /* TYPE */
 type ecResponseHostEventStatus struct {
@@ -3234,11 +3252,12 @@ type ecResponsePdLog struct {
 }
 
 /* The timestamp is the microsecond counter shifted to get about a ms. */
-const pdLogTimestampShift = 10 /* 1 LSB = 1024us */
-
-const pdLogSizeMask = 0x1F
-const pdLogPortMask = 0xE0
-const pdLogPortShift = 5
+const (
+	pdLogTimestampShift = 10 /* 1 LSB = 1024us */
+	pdLogSizeMask       = 0x1F
+	pdLogPortMask       = 0xE0
+	pdLogPortShift      = 5
+)
 
 func pdLogPortSize(port, size uint8) uint8 {
 	return (port << pdLogPortShift) | (size & pdLogSizeMask)
@@ -3247,32 +3266,39 @@ func pdLogPortSize(port, size uint8) uint8 {
 func pdLogPort(sizePort uint8) uint8 {
 	return sizePort >> pdLogPortShift
 }
+
 func pdLogSize(sizePort uint8) uint8 {
 	return sizePort & pdLogSizeMask
 }
 
 /* PD event log : entry types */
 /* PD MCU events */
-const pdEventMcuBase = 0x00
-const pdEventMcuCharge = (pdEventMcuBase + 0)
-const pdEventMcuConnect = (pdEventMcuBase + 1)
+const (
+	pdEventMcuBase    = 0x00
+	pdEventMcuCharge  = (pdEventMcuBase + 0)
+	pdEventMcuConnect = (pdEventMcuBase + 1)
+)
 
 /* Reserved for custom board event */
 const pdEventMcuBoardCustom = (pdEventMcuBase + 2)
 
 /* PD generic accessory events */
-const pdEventAccBase = 0x20
-const pdEventAccRwFail = (pdEventAccBase + 0)
-const pdEventAccRwErase = (pdEventAccBase + 1)
+const (
+	pdEventAccBase    = 0x20
+	pdEventAccRwFail  = (pdEventAccBase + 0)
+	pdEventAccRwErase = (pdEventAccBase + 1)
+)
 
 /* PD power supply events */
 const pdEventPsBase = 0x40
 const pdEventPsFault = (pdEventPsBase + 0)
 
 /* PD video dongles events */
-const pdEventVideoBase = 0x60
-const pdEventVideoDpMode = (pdEventVideoBase + 0)
-const pdEventVideoCodec = (pdEventVideoBase + 1)
+const (
+	pdEventVideoBase   = 0x60
+	pdEventVideoDpMode = (pdEventVideoBase + 0)
+	pdEventVideoCodec  = (pdEventVideoBase + 1)
+)
 
 /* Returned in the "type" field, when there is no entry available */
 const pdEventNoEntry = 0xFF
@@ -3301,10 +3327,12 @@ const chargeFlagsRoleMask = (7 << 0)
 /*
  * pdEventPsFault data field flags definition :
  */
-const psFaultOcp = 1
-const psFaultFastOcp = 2
-const psFaultOvp = 3
-const psFaultDisch = 4
+const (
+	psFaultOcp     = 1
+	psFaultFastOcp = 2
+	psFaultOvp     = 3
+	psFaultDisch   = 4
+)
 
 /* TYPE */
 /*
@@ -3416,9 +3444,11 @@ func ecCmdPassthruMax(n uint) uint {
  * switch to the new names soon, as the old names may not be carried forward
  * forever.
  */
-const ecHostParamSize = ecProto2MaxParamSize
-const ecLpcAddrOldParam = ecHostCmdRegion1
-const ecOldParamSize = ecHostCmdRegionSize
+const (
+	ecHostParamSize   = ecProto2MaxParamSize
+	ecLpcAddrOldParam = ecHostCmdRegion1
+	ecOldParamSize    = ecHostCmdRegionSize
+)
 
 func ecVerMask(version uint8) uint8 {
 	/* Command version mask */

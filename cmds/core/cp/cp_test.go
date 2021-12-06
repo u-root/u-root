@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -38,7 +37,7 @@ func resetFlags() {
 
 // randomFile create a random file with random content
 func randomFile(fpath, prefix string) (*os.File, error) {
-	f, err := ioutil.TempFile(fpath, prefix)
+	f, err := os.CreateTemp(fpath, prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func randomFile(fpath, prefix string) (*os.File, error) {
 func createFilesTree(root string, maxDepth, depth int) error {
 	// create more one dir if don't achieve the maxDepth
 	if depth < maxDepth {
-		newDir, err := ioutil.TempDir(root, fmt.Sprintf("cpdir_%d_", depth))
+		newDir, err := os.MkdirTemp(root, fmt.Sprintf("cpdir_%d_", depth))
 		if err != nil {
 			return err
 		}
@@ -80,11 +79,7 @@ func createFilesTree(root string, maxDepth, depth int) error {
 // TestCpsSimple make a simple test for copy file-to-file
 // cmd-line equivalent: cp file file-copy
 func TestCpSimple(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestCpSimple")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	f, err := randomFile(tempDir, "src-")
 	if err != nil {
@@ -109,17 +104,8 @@ func TestCpSrcDirectory(t *testing.T) {
 	flags.recursive = false
 	defer resetFlags()
 
-	tempDir, err := ioutil.TempDir("", "TestCpSrcDirectory")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	tempDirTwo, err := ioutil.TempDir("", "TestCpSrcDirectoryTwo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDirTwo)
+	tempDir := t.TempDir()
+	tempDirTwo := t.TempDir()
 
 	// capture log output to verify
 	var logBytes bytes.Buffer
@@ -144,22 +130,18 @@ func TestCpRecursive(t *testing.T) {
 	flags.recursive = true
 	defer resetFlags()
 
-	tempDir, err := ioutil.TempDir("", "TestCpRecursive")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	srcDir := filepath.Join(tempDir, "src")
-	if err := os.Mkdir(srcDir, 0755); err != nil {
+	if err := os.Mkdir(srcDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	dstDir := filepath.Join(tempDir, "dst-exists")
-	if err := os.Mkdir(dstDir, 0755); err != nil {
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	if err = createFilesTree(srcDir, maxDirDepth, 0); err != nil {
+	if err := createFilesTree(srcDir, maxDirDepth, 0); err != nil {
 		t.Fatalf("cannot create files tree on directory %q: %v", srcDir, err)
 	}
 
@@ -198,25 +180,19 @@ func TestCpRecursive(t *testing.T) {
 func TestCpRecursiveMultiple(t *testing.T) {
 	flags.recursive = true
 	defer resetFlags()
-	tempDir, err := ioutil.TempDir("", "TestCpRecursiveMultiple")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	dstTest := filepath.Join(tempDir, "destination")
-	if err := os.Mkdir(dstTest, 0755); err != nil {
+	if err := os.Mkdir(dstTest, 0o755); err != nil {
 		t.Fatalf("Failed on build directory %v: %v", dstTest, err)
 	}
 
 	// create multiple random directories sources
 	srcDirs := []string{}
 	for i := 0; i < maxDirDepth; i++ {
-		srcTest, err := ioutil.TempDir(tempDir, "src-")
-		if err != nil {
-			t.Fatalf("Failed on build directory %v: %v\n", srcTest, err)
-		}
-		if err = createFilesTree(srcTest, maxDirDepth, 0); err != nil {
+		srcTest := t.TempDir()
+
+		if err := createFilesTree(srcTest, maxDirDepth, 0); err != nil {
 			t.Fatalf("cannot create files tree on directory %v: %v", srcTest, err)
 		}
 
@@ -247,11 +223,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 // using -P don't follow symlinks, create other symlink
 // cmd-line equivalent: $ cp -P symlink symlink-copy
 func TestCpSymlink(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestCpSymlink")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	f, err := randomFile(tempDir, "src-")
 	if err != nil {

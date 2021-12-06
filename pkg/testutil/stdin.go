@@ -14,7 +14,7 @@ type FakeStdin struct {
 
 // NewFakeStdin creates new FakeStdin value with given answers.
 func NewFakeStdin(answers ...string) *FakeStdin {
-	var fs = FakeStdin{answers: make([]string, len(answers))}
+	fs := FakeStdin{answers: make([]string, len(answers))}
 	for i, a := range answers {
 		fs.answers[i] = a + "\n"
 	}

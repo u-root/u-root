@@ -7,7 +7,6 @@ package initramfs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -28,7 +27,7 @@ func (da DirArchiver) Reader(io.ReaderAt) Reader {
 func (da DirArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 	if len(path) == 0 {
 		var err error
-		path, err = ioutil.TempDir("", "u-root")
+		path, err = os.MkdirTemp("", "u-root")
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +35,7 @@ func (da DirArchiver) OpenWriter(l ulog.Logger, path string) (Writer, error) {
 		if _, err := os.Stat(path); os.IsExist(err) {
 			return nil, fmt.Errorf("path %q already exists", path)
 		}
-		if err := os.MkdirAll(path, 0755); err != nil {
+		if err := os.MkdirAll(path, 0o755); err != nil {
 			return nil, err
 		}
 	}

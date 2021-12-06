@@ -106,7 +106,6 @@ func String(t Table) string {
 		t.OEMRevision(),
 		t.CreatorID(),
 		t.CreatorRevision())
-
 }
 
 // WriteTables writes one or more tables to an io.Writer.

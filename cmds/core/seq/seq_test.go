@@ -45,7 +45,7 @@ func testseq(tests []test, t *testing.T) {
 
 // test default behavior without flags
 func TestSeqDefault(t *testing.T) {
-	var tests = []test{
+	tests := []test{
 		{
 			[]string{"1", "3"},
 			"1\n2\n3\n",
@@ -63,7 +63,7 @@ func TestSeqDefault(t *testing.T) {
 func TestSeqWidthEqual(t *testing.T) {
 	flags.widthEqual = true
 	defer resetFlags()
-	var tests = []test{
+	tests := []test{
 		{
 			[]string{"8", "10"},
 			"08\n09\n10\n",
@@ -81,7 +81,7 @@ func TestSeqCustomFormat(t *testing.T) {
 	flags.format = "%.2f"
 	flags.widthEqual = true
 	defer resetFlags()
-	var tests = []test{
+	tests := []test{
 		{
 			[]string{"8", "10"},
 			"08.00\n09.00\n10.00\n",
@@ -98,7 +98,7 @@ func TestSeqCustomFormat(t *testing.T) {
 func TestSeqSeparator(t *testing.T) {
 	flags.separator = "->"
 	defer resetFlags()
-	var tests = []test{
+	tests := []test{
 		{
 			[]string{"8", "10"},
 			"8->9->10\n",
@@ -110,5 +110,4 @@ func TestSeqSeparator(t *testing.T) {
 	}
 
 	testseq(tests, t)
-
 }

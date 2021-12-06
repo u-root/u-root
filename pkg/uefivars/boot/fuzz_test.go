@@ -10,7 +10,7 @@ package boot
 import (
 	"archive/zip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -32,12 +32,12 @@ func TestFuzzInputs(t *testing.T) {
 		// it is very low value, essentially inflating the coverage numbers.
 		t.Skip("this test will inflate coverage")
 	}
-	//restore log behavior at end
+	// restore log behavior at end
 	logOut := log.Writer()
 	defer log.SetOutput(logOut)
 
-	//no logging output for this test, to increase speed
-	null, err := os.OpenFile("/dev/null", os.O_WRONLY, 0200)
+	// no logging output for this test, to increase speed
+	null, err := os.OpenFile("/dev/null", os.O_WRONLY, 0o200)
 	if err != nil {
 		panic(err)
 	}
@@ -56,11 +56,11 @@ func TestFuzzInputs(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			data, err := ioutil.ReadAll(f)
+			data, err := io.ReadAll(f)
 			if err != nil {
 				t.Error(err)
 			}
-			//ignore any errors - just catch crashes
+			// ignore any errors - just catch crashes
 			list, err := ParseFilePathList(data)
 			if err != nil {
 				return

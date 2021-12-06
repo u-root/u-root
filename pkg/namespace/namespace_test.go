@@ -27,6 +27,7 @@ func checkArgs(t minimock.Tester, args arg, mod Modifier) error {
 	assert.Equal(t, args.flag, call.flag, "flags are not equal")
 	return nil
 }
+
 func TestOPS_NewNS(t *testing.T) {
 	type args struct {
 		ns Namespace
@@ -35,12 +36,12 @@ func TestOPS_NewNS(t *testing.T) {
 	tests := []struct {
 		name    string
 		init    func(t minimock.Tester) File
-		inspect func(r File, t *testing.T) //inspects OPS after execution of NewNS
+		inspect func(r File, t *testing.T) // inspects OPS after execution of NewNS
 
 		args func(t minimock.Tester) args
 
 		wantErr    bool
-		inspectErr func(err error, t *testing.T) //use for more precise error evaluation
+		inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 	}{
 		{
 			name: "simple",
@@ -88,7 +89,6 @@ func TestOPS_NewNS(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-
 		})
 	}
 }

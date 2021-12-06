@@ -10,7 +10,6 @@ import (
 )
 
 func TestCmdline(t *testing.T) {
-
 	exampleCmdLine := `BOOT_IMAGE=/vmlinuz-4.11.2 ro ` +
 		`test-flag test2-flag=8 ` +
 		`uroot.initflags="systemd test-flag=3  test2-flag runlevel=2" ` +
@@ -70,7 +69,6 @@ func TestCmdline(t *testing.T) {
 	if initFlagMap = GetInitFlagMap(); len(initFlagMap) != 0 {
 		t.Errorf("initFlagMap should be empty, is actually %v", initFlagMap)
 	}
-
 }
 
 func TestCmdlineModules(t *testing.T) {

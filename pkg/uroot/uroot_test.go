@@ -6,7 +6,6 @@ package uroot
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -170,15 +169,11 @@ func TestResolvePackagePaths(t *testing.T) {
 }
 
 func TestCreateInitramfs(t *testing.T) {
-	dir, err := ioutil.TempDir("", "foo")
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 	syscall.Umask(0)
 
 	tmp777 := filepath.Join(dir, "tmp777")
-	if err := os.MkdirAll(tmp777, 0777); err != nil {
+	if err := os.MkdirAll(tmp777, 0o777); err != nil {
 		t.Error(err)
 	}
 

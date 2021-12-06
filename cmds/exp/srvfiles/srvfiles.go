@@ -36,7 +36,6 @@ var cacheHeaders = []string{
 
 func maxAgeHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		for _, v := range cacheHeaders {
 			if r.Header.Get(v) != "" {
 				r.Header.Del(v)

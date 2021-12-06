@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -14,22 +13,15 @@ import (
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var (
-	uskip = len("2018/08/10 21:20:42 ")
-)
+var uskip = len("2018/08/10 21:20:42 ")
 
 func TestSimple(t *testing.T) {
 	if os.Getuid() != 0 {
 		t.Skip("Must be root for this test")
 	}
 
-	tmpDir, err := ioutil.TempDir("", "pox")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-	f := filepath.Join(tmpDir, "x.tcz")
-	var tests = []struct {
+	f := filepath.Join(t.TempDir(), "x.tcz")
+	tests := []struct {
 		args   []string
 		name   string
 		status int

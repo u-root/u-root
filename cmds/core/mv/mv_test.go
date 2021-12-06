@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -26,44 +25,41 @@ var hiFileContent = []byte("hi")
 
 var old = makeIt{
 	n: "old.txt",
-	m: 0777,
+	m: 0o777,
 	c: []byte("old"),
 }
 
 var new = makeIt{
 	n: "new.txt",
-	m: 0777,
+	m: 0o777,
 	c: []byte("new"),
 }
 
 var tests = []makeIt{
 	{
 		n: "hi1.txt",
-		m: 0666,
+		m: 0o666,
 		c: hiFileContent,
 	},
 	{
 		n: "hi2.txt",
-		m: 0777,
+		m: 0o777,
 		c: hiFileContent,
 	},
 	old,
 	new,
 }
 
-func setup() (string, error) {
-	d, err := ioutil.TempDir(os.TempDir(), "hi.dir")
-	if err != nil {
-		return "", err
-	}
+func setup(t *testing.T) (string, error) {
+	d := t.TempDir()
 
 	tmpdir := filepath.Join(d, "hi.sub.dir")
-	if err := os.Mkdir(tmpdir, 0777); err != nil {
+	if err := os.Mkdir(tmpdir, 0o777); err != nil {
 		return "", err
 	}
 
-	for _, t := range tests {
-		if err := ioutil.WriteFile(filepath.Join(d, t.n), []byte(t.c), t.m); err != nil {
+	for _, tt := range tests {
+		if err := os.WriteFile(filepath.Join(d, tt.n), tt.c, tt.m); err != nil {
 			return "", err
 		}
 	}
@@ -80,7 +76,7 @@ func getInode(file string) (uint64, error) {
 }
 
 func TestMv(t *testing.T) {
-	d, err := setup()
+	d, err := setup(t)
 	if err != nil {
 		t.Fatal("err")
 	}
@@ -102,7 +98,7 @@ func TestMv(t *testing.T) {
 
 		t.Logf("Verify renamed file integrity...")
 		{
-			content, err := ioutil.ReadFile(filepath.Join(d, "hi4.txt"))
+			content, err := os.ReadFile(filepath.Join(d, "hi4.txt"))
 			if err != nil {
 				t.Error(err)
 			}
@@ -145,7 +141,7 @@ func TestMv(t *testing.T) {
 
 		t.Logf("Verify moved files into directory file integrity...")
 		{
-			content, err := ioutil.ReadFile(filepath.Join(dsub, "hi4.txt"))
+			content, err := os.ReadFile(filepath.Join(dsub, "hi4.txt"))
 			if err != nil {
 				t.Error(err)
 			}
@@ -177,7 +173,7 @@ func TestMv(t *testing.T) {
 
 func TestMvUpdate(t *testing.T) {
 	*update = true
-	d, err := setup()
+	d, err := setup(t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -204,7 +200,7 @@ func TestMvUpdate(t *testing.T) {
 		if err = testutil.IsExitCode(err, 0); err != nil {
 			t.Error(err)
 		}
-		newContent, err := ioutil.ReadFile(filepath.Join(d, new.n))
+		newContent, err := os.ReadFile(filepath.Join(d, new.n))
 		if err != nil {
 			t.Error(err)
 		}
@@ -221,7 +217,7 @@ func TestMvUpdate(t *testing.T) {
 		if err = testutil.IsExitCode(err, 0); err != nil {
 			t.Error(err)
 		}
-		newContent, err := ioutil.ReadFile(filepath.Join(d, old.n))
+		newContent, err := os.ReadFile(filepath.Join(d, old.n))
 		if err != nil {
 			t.Error(err)
 		}
@@ -236,7 +232,7 @@ func TestMvUpdate(t *testing.T) {
 
 func TestMvNoClobber(t *testing.T) {
 	*noClobber = true
-	d, err := setup()
+	d, err := setup(t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -251,7 +247,7 @@ func TestMvNoClobber(t *testing.T) {
 		if err = testutil.IsExitCode(err, 0); err != nil {
 			t.Error(err)
 		}
-		newContent, err := ioutil.ReadFile(filepath.Join(d, new.n))
+		newContent, err := os.ReadFile(filepath.Join(d, new.n))
 		if err != nil {
 			t.Error(err)
 		}
@@ -268,7 +264,7 @@ func TestMvNoClobber(t *testing.T) {
 		if err = testutil.IsExitCode(err, 0); err != nil {
 			t.Error(err)
 		}
-		newContent, err := ioutil.ReadFile(filepath.Join(d, "hi3.txt"))
+		newContent, err := os.ReadFile(filepath.Join(d, "hi3.txt"))
 		if err != nil {
 			t.Error(err)
 		}

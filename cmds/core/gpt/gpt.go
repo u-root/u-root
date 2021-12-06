@@ -26,9 +26,7 @@ import (
 
 const cmd = "gpt [options] file"
 
-var (
-	write = flag.Bool("w", false, "Write GPT to file")
-)
+var write = flag.Bool("w", false, "Write GPT to file")
 
 func init() {
 	defUsage := flag.Usage
@@ -58,7 +56,7 @@ func main() {
 
 	switch *write {
 	case true:
-		var p = &gpt.PartitionTable{}
+		p := &gpt.PartitionTable{}
 		if err := json.NewDecoder(os.Stdin).Decode(&p); err != nil {
 			log.Fatalf("Reading in JSON: %v", err)
 		}

@@ -14,8 +14,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/ipmi"
@@ -31,9 +31,7 @@ const (
 	sysfsPath = "/sys/firmware/dmi/tables"
 )
 
-var (
-	retries = flag.Int("num_retries", 2, "Number of times to retry transferring SMBIOS tables")
-)
+var retries = flag.Int("num_retries", 2, "Number of times to retry transferring SMBIOS tables")
 
 func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr error) {
 	sessionID, err := h.BlobOpen(id, blobs.BMC_BLOB_OPEN_FLAG_WRITE)
@@ -76,7 +74,7 @@ func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr 
 }
 
 func getSmbiosData() ([]uint8, error) {
-	tables, err := ioutil.ReadFile(filepath.Join(sysfsPath, "DMI"))
+	tables, err := os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 	if err != nil {
 		return nil, fmt.Errorf("error reading DMI data: %v", err)
 	}

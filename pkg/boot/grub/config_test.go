@@ -6,7 +6,7 @@ package grub
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,7 +20,7 @@ import (
 // The pool is pre-populated so that Mount is never called.
 func fakeDevices() (block.BlockDevices, *mount.Pool, error) {
 	// For some reason, Glob("testdata_new/*/") does not work here.
-	files, err := ioutil.ReadDir("testdata_new")
+	files, err := os.ReadDir("testdata_new")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -35,7 +35,7 @@ func fakeDevices() (block.BlockDevices, *mount.Pool, error) {
 	mountPool := &mount.Pool{}
 	for _, dir := range dirs {
 		// TODO: Also add LABEL to BlockDev
-		fsUUID, _ := ioutil.ReadFile(filepath.Join(dir, "UUID"))
+		fsUUID, _ := os.ReadFile(filepath.Join(dir, "UUID"))
 		devices = append(devices, &block.BlockDev{
 			Name:   dir,
 			FSType: "test",
@@ -86,7 +86,7 @@ func TestConfigs(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimRight(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			want, err := ioutil.ReadFile(test)
+			want, err := os.ReadFile(test)
 			if err != nil {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}

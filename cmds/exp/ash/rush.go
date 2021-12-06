@@ -12,7 +12,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -137,7 +136,7 @@ func doArgs(cmds []*Command) error {
 				if !path.IsAbs(v.val) {
 					e = filepath.Join(envDir, e)
 				}
-				b, err := ioutil.ReadFile(e)
+				b, err := os.ReadFile(e)
 				if err != nil {
 					return err
 				}
