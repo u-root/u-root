@@ -5,278 +5,175 @@
 package main
 
 import (
-	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
-	"time"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type makeIt struct {
-	n string      // name
-	m os.FileMode // mode
-	c []byte      // content
-}
-
-var hiFileContent = []byte("hi")
-
-var old = makeIt{
-	n: "old.txt",
-	m: 0o777,
-	c: []byte("old"),
-}
-
-var new = makeIt{
-	n: "new.txt",
-	m: 0o777,
-	c: []byte("new"),
-}
-
-var tests = []makeIt{
-	{
-		n: "hi1.txt",
-		m: 0o666,
-		c: hiFileContent,
-	},
-	{
-		n: "hi2.txt",
-		m: 0o777,
-		c: hiFileContent,
-	},
-	old,
-	new,
-}
-
-func setup(t *testing.T) (string, error) {
-	d := t.TempDir()
-
-	tmpdir := filepath.Join(d, "hi.sub.dir")
-	if err := os.Mkdir(tmpdir, 0o777); err != nil {
+// Setup func to setup testfiles
+func setup() (string, error) {
+	d, err := os.MkdirTemp(os.TempDir(), "hi.dir")
+	if err != nil {
 		return "", err
 	}
-
-	for _, tt := range tests {
-		if err := os.WriteFile(filepath.Join(d, tt.n), tt.c, tt.m); err != nil {
+	for _, tt := range []struct {
+		name    string      // name
+		mode    os.FileMode // mode
+		content []byte      // content
+	}{
+		{
+			name:    "hi1.txt",
+			mode:    0o666,
+			content: []byte("hi"),
+		},
+		{
+			name:    "hi2.txt",
+			mode:    0o777,
+			content: []byte("hi"),
+		},
+		{
+			name:    "old.txt",
+			mode:    0o777,
+			content: []byte("old"),
+		},
+		{
+			name:    "new.txt",
+			mode:    0o777,
+			content: []byte("new"),
+		},
+	} {
+		if err := os.WriteFile(filepath.Join(d, tt.name), tt.content, tt.mode); err != nil {
 			return "", err
 		}
 	}
-
 	return d, nil
 }
 
-func getInode(file string) (uint64, error) {
-	var stat syscall.Stat_t
-	if err := syscall.Stat(file, &stat); err != nil {
-		return 0, err
+// Test move func
+func TestMove(t *testing.T) {
+	d, err := setup()
+	if err != nil {
+		t.Errorf("File setup failed: %v", err)
 	}
-	return stat.Ino, nil
+	defer os.RemoveAll(d)
+
+	for _, tt := range []struct {
+		name  string
+		files []string
+		want  error
+	}{
+		{
+			name:  "Is a directory",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1.txt")},
+			want:  fmt.Errorf("not a directory: %s", filepath.Join(d, "hi1.txt")),
+		},
+		{
+			name:  "Is not a directory",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt"), "d"},
+			want:  fmt.Errorf("not a directory: %s", "d"),
+		},
+		{
+			name:  "mv logFatalf err",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt")},
+			want:  fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+		},
+	} {
+		*update = true
+		t.Run(tt.name, func(t *testing.T) {
+			if got := move(tt.files); got != nil {
+				if got.Error() != tt.want.Error() {
+					t.Errorf("move() = '%v', want: '%v'", got, tt.want)
+				}
+			}
+		})
+	}
+
 }
 
+// Test mv func
 func TestMv(t *testing.T) {
-	d, err := setup(t)
+	d, err := setup()
 	if err != nil {
-		t.Fatal("err")
+		t.Errorf("File setup failed: %v", err)
 	}
 	defer os.RemoveAll(d)
 
-	t.Logf("Renaming file...")
-	{
-		originalInode, err := getInode(filepath.Join(d, "hi1.txt"))
-		if err != nil {
-			t.Error(err)
-		}
-
-		files := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi4.txt")}
-		res := testutil.Command(t, files...)
-		_, err = res.CombinedOutput()
-		if err = testutil.IsExitCode(err, 0); err != nil {
-			t.Error(err)
-		}
-
-		t.Logf("Verify renamed file integrity...")
+	for _, tt := range []struct {
+		name  string
+		files []string
+		want  error
+	}{
 		{
-			content, err := os.ReadFile(filepath.Join(d, "hi4.txt"))
-			if err != nil {
-				t.Error(err)
-			}
-
-			if !bytes.Equal(hiFileContent, content) {
-				t.Errorf("Expected file content to equal %s, got %s", hiFileContent, content)
-			}
-
-			movedInode, err := getInode(filepath.Join(d, "hi4.txt"))
-			if err != nil {
-				t.Error(err)
-			}
-
-			if originalInode != movedInode {
-				t.Errorf("Expected inode to equal. Expected %d, got %d", originalInode, movedInode)
-			}
-		}
-	}
-
-	dsub := filepath.Join(d, "hi.sub.dir")
-
-	t.Logf("Moving files to directory...")
-	{
-		originalInode, err := getInode(filepath.Join(d, "hi2.txt"))
-		if err != nil {
-			t.Error(err)
-		}
-
-		originalInodeFour, err := getInode(filepath.Join(d, "hi4.txt"))
-		if err != nil {
-			t.Error(err)
-		}
-
-		files := []string{filepath.Join(d, "hi2.txt"), filepath.Join(d, "hi4.txt"), dsub}
-		res := testutil.Command(t, files...)
-		_, err = res.CombinedOutput()
-		if err = testutil.IsExitCode(err, 0); err != nil {
-			t.Error(err)
-		}
-
-		t.Logf("Verify moved files into directory file integrity...")
+			name:  "len(files) > 2",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), d},
+			want:  fmt.Errorf(""),
+		},
 		{
-			content, err := os.ReadFile(filepath.Join(dsub, "hi4.txt"))
-			if err != nil {
-				t.Error(err)
+			name:  "len(files) > 2 && d does not exist",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), "d"},
+			want:  fmt.Errorf("lstat %s: no such file or directory", filepath.Join("d", "hi1.txt")),
+		},
+		{
+			name:  "len(files) = 2",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt")},
+			want:  fmt.Errorf(""),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := mv(tt.files, false); got != nil {
+				if got.Error() != tt.want.Error() {
+					t.Errorf("mv() = '%v', want: '%v'", got, tt.want)
+				}
 			}
 
-			if !bytes.Equal(hiFileContent, content) {
-				t.Errorf("Expected file content to equal %s, got %s", hiFileContent, content)
-			}
-
-			movedInode, err := getInode(filepath.Join(dsub, "hi2.txt"))
-			if err != nil {
-				t.Error(err)
-			}
-
-			movedInodeFour, err := getInode(filepath.Join(dsub, "hi4.txt"))
-			if err != nil {
-				t.Error(err)
-			}
-
-			if originalInode != movedInode {
-				t.Errorf("Expected inode to equal. Expected %d, got %d", originalInode, movedInode)
-			}
-
-			if originalInodeFour != movedInodeFour {
-				t.Errorf("Expected inode to equal. Expected %d, got %d", originalInodeFour, movedInodeFour)
-			}
-		}
+		})
 	}
 }
 
-func TestMvUpdate(t *testing.T) {
-	*update = true
-	d, err := setup(t)
+// Test moveFile func
+func TestMoveFile(t *testing.T) {
+	d, err := setup()
 	if err != nil {
-		t.Error(err)
+		t.Errorf("File setup failed: %v", err)
 	}
 	defer os.RemoveAll(d)
-	t.Logf("Testing mv -u...")
 
-	// Ensure that the newer file actually has a newer timestamp
-	currentTime := time.Now().Local()
-	oldTime := currentTime.Add(-10 * time.Second)
-	err = os.Chtimes(filepath.Join(d, old.n), oldTime, oldTime)
-	if err != nil {
-		t.Error(err)
-	}
-	err = os.Chtimes(filepath.Join(d, new.n), currentTime, currentTime)
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Check that it doesn't downgrade files with -u switch
-	{
-		files := []string{"-u", filepath.Join(d, old.n), filepath.Join(d, new.n)}
-		res := testutil.Command(t, files...)
-		_, err = res.CombinedOutput()
-		if err = testutil.IsExitCode(err, 0); err != nil {
-			t.Error(err)
-		}
-		newContent, err := os.ReadFile(filepath.Join(d, new.n))
-		if err != nil {
-			t.Error(err)
-		}
-		if bytes.Equal(newContent, old.c) {
-			t.Error("Newer file was overwritten by older file. Should not happen with -u.")
-		}
+	var testTable = []struct {
+		name string
+		src  string
+		dst  string
+		want error
+	}{
+		{
+			name: "first file in update path does not exist",
+			src:  filepath.Join(d, "hi3.txt"),
+			dst:  filepath.Join(d, "hi2.txt"),
+			want: fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+		},
+		{
+			name: "second file in update path does not exist",
+			src:  filepath.Join(d, "hi2.txt"),
+			dst:  filepath.Join(d, "hi3.txt"),
+			want: fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+		},
 	}
 
-	// Check that it does update files with -u switch
-	{
-		files := []string{"-u", filepath.Join(d, new.n), filepath.Join(d, old.n)}
-		res := testutil.Command(t, files...)
-		_, err = res.CombinedOutput()
-		if err = testutil.IsExitCode(err, 0); err != nil {
-			t.Error(err)
-		}
-		newContent, err := os.ReadFile(filepath.Join(d, old.n))
-		if err != nil {
-			t.Error(err)
-		}
-		if !bytes.Equal(newContent, new.c) {
-			t.Error("Older file was not overwritten by newer file. Should happen with -u.")
-		}
-		if _, err := os.Lstat(filepath.Join(d, old.n)); err != nil {
-			t.Error("The new file shouldn't be there anymore.")
-		}
+	for _, tt := range testTable {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := moveFile(tt.src, tt.dst); got != nil {
+				if got.Error() != tt.want.Error() {
+					t.Errorf("moveFile() = '%v', want: '%v'", got, tt.want)
+				}
+			}
+		})
 	}
-}
 
-func TestMvNoClobber(t *testing.T) {
 	*noClobber = true
-	d, err := setup(t)
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(d)
-	t.Logf("Testing mv -n...")
-
-	// Check that it doesn't override files with -n switch
-	{
-		files := []string{"-n", filepath.Join(d, old.n), filepath.Join(d, new.n)}
-		res := testutil.Command(t, files...)
-		_, err = res.CombinedOutput()
-		if err = testutil.IsExitCode(err, 0); err != nil {
-			t.Error(err)
+	*update = false
+	t.Run("test for noClobber", func(t *testing.T) {
+		if err := moveFile(testTable[0].src, testTable[0].dst); err != nil {
+			t.Errorf("Expected err: %v, got: %v", err, testTable[0].want)
 		}
-		newContent, err := os.ReadFile(filepath.Join(d, new.n))
-		if err != nil {
-			t.Error(err)
-		}
-		if bytes.Equal(newContent, old.c) {
-			t.Error("File was overwritten. Should not happen with -u.")
-		}
-	}
-
-	// Check that it does mv files with -u switch
-	{
-		files := []string{"-n", filepath.Join(d, new.n), filepath.Join(d, "hi3.txt")}
-		res := testutil.Command(t, files...)
-		_, err = res.CombinedOutput()
-		if err = testutil.IsExitCode(err, 0); err != nil {
-			t.Error(err)
-		}
-		newContent, err := os.ReadFile(filepath.Join(d, "hi3.txt"))
-		if err != nil {
-			t.Error(err)
-		}
-		if !bytes.Equal(newContent, new.c) {
-			t.Error("File was not moved. Should happen with -u.")
-		}
-		if _, err := os.Lstat(filepath.Join(d, old.n)); err != nil {
-			t.Error("File was copied but not moved.")
-		}
-	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
+	})
 }
