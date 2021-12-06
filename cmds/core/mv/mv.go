@@ -18,18 +18,19 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
+
+var usage = "mv [ARGS] source target [ARGS] source ... directory"
 
 var (
 	update    = flag.Bool("u", false, "move only when the SOURCE file is newer than the destination file or when the destination file is missing")
 	noClobber = flag.Bool("n", false, "do not overwrite an existing file")
 )
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [ARGS] source target\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "       %s [ARGS] source ... directory\n", os.Args[0])
-	flag.PrintDefaults()
-	os.Exit(1)
+func init() {
+	util.Usage(usage)
 }
 
 func moveFile(source string, dest string) error {
@@ -84,25 +85,25 @@ func mv(files []string, todir bool) error {
 	return nil
 }
 
-func main() {
+func move(files []string) error {
 	var todir bool
-	flag.Parse()
-
-	if flag.NArg() < 2 {
-		usage()
-	}
-
-	files := flag.Args()
 	dest := files[len(files)-1]
 	if destdir, err := os.Lstat(dest); err == nil {
 		todir = destdir.IsDir()
 	}
-	if flag.NArg() > 2 && !todir {
-		fmt.Printf("Not a directory: %s\n", dest)
+	if len(files) > 2 && !todir {
+		return fmt.Errorf("not a directory: %s", dest)
+	}
+	return mv(files, todir)
+}
+
+func main() {
+	flag.Parse()
+	if flag.NArg() < 2 {
+		flag.Usage()
 		os.Exit(1)
 	}
-
-	if err := mv(files, todir); err != nil {
-		log.Fatalf("%v", err)
+	if err := move(flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }
