@@ -7,6 +7,7 @@ package uzip
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,6 +27,9 @@ func TestFromZip(t *testing.T) {
 	}
 	if len(z) == 0 {
 		t.Errorf("len(%v) == %d, want not 0", z, len(z))
+	}
+	if len(z) < 1 {
+		t.Errorf("no content read from file %q", f)
 	}
 
 	out := filepath.Join(tmpDir, "unziped")
@@ -59,33 +63,37 @@ func TestFromZip(t *testing.T) {
 		t.Fatalf(`os.ReadFile("testdata/testFolder/subFolder/file4") = _, %v, want nil`, err)
 	}
 
-	if _, err := os.Stat(f1); err != nil {
-		t.Errorf(`os.Stat(%q) =_, %v, want nil`, f1, err)
+	var x []byte
+
+	x, err = ioutil.ReadFile(f1)
+	if err != nil {
+		t.Errorf("open file: %q failed with: %q", f1, err)
 	}
-	if _, err = os.Stat(f2); err != nil {
-		t.Errorf(`os.Stat(%q) = _, %v, want nil`, f2, err)
+	if !bytes.Equal(x, f1Expected) {
+		t.Errorf("file %q and file %q are not equal", f1, "testdata/testFolder/file1")
 	}
-	if _, err := os.Stat(f3); err != nil {
-		t.Errorf(`os.Stat(%q) = _, %v, want nil`, f3, err)
+	x, err = ioutil.ReadFile(f2)
+	if err != nil {
+		t.Errorf("open file: %q failed with: %q", f2, err)
 	}
-	if _, err := os.Stat(f4); err != nil {
-		t.Errorf(`os.Stat(%q) = _, %v, want nil`, f4, err)
+	if !bytes.Equal(x, f2Expected) {
+		t.Errorf("file %q and file %q are not equal", f2, "testdata/testFolder/file2")
 	}
 
-	if x, err := os.ReadFile(f1); err != nil || !bytes.Equal(x, f1Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f1, x, err, f1Expected)
+	x, err = ioutil.ReadFile(f3)
+	if err != nil {
+		t.Errorf("open file: %q failed with: %q", f3, err)
+	}
+	if !bytes.Equal(x, f3Expected) {
+		t.Errorf("file %q and file %q are not equal", f3, "testdata/testFolder/file3")
 	}
 
-	if x, err := os.ReadFile(f2); err != nil || !bytes.Equal(x, f2Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f2, x, err, f2Expected)
+	x, err = ioutil.ReadFile(f4)
+	if err != nil {
+		t.Errorf("open file: %q failed with: %q", f4, err)
 	}
-
-	if x, err := os.ReadFile(f3); err != nil || !bytes.Equal(x, f3Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f3, x, err, f3Expected)
-	}
-
-	if x, err := os.ReadFile(f4); err != nil || !bytes.Equal(x, f4Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f4, x, err, f4Expected)
+	if !bytes.Equal(x, f4Expected) {
+		t.Errorf("file %q and file %q are not equal", f4, "testdata/testFolder/file4")
 	}
 }
 
