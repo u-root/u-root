@@ -13,7 +13,7 @@ require (
 	github.com/google/go-cmp v0.5.2
 	github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
-	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
+	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
 	github.com/insomniacslk/dhcp v0.0.0-20210817203519-d82598001386
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/klauspost/pgzip v1.2.4
@@ -28,7 +28,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/u-root/gobusybox/src v0.0.0-20210529132627-adc854ea4425
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7 // indirect
+	github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
@@ -43,21 +43,24 @@ require (
 )
 
 require (
-	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
-	github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c // indirect
+	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
+	github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c
+	github.com/klauspost/compress v1.10.6
+	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
+	github.com/mdlayher/netlink v1.1.1
+	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
+	github.com/pmezard/go-difflib v1.0.0
+	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
+	golang.org/x/mod v0.4.2
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
+	google.golang.org/grpc v1.29.1
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+)
+
+require (
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
-	github.com/klauspost/compress v1.10.6 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
-	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7 // indirect
-	github.com/mdlayher/netlink v1.1.1 // indirect
-	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/grpc v1.29.1 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
 
 retract (
