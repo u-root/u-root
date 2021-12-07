@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,19 +21,15 @@ type test struct {
 }
 
 func TestMkfifo(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// used later in testing
 	testDir := filepath.Join(tmpDir, "mkfifoDir")
-	if err := os.Mkdir(testDir, 0700); err != nil {
+	if err := os.Mkdir(testDir, 0o700); err != nil {
 		t.Error(err)
 	}
 
-	var tests = []test{
+	tests := []test{
 		{
 			name:   "no path or mode, error",
 			flags:  []string{},
@@ -65,7 +60,6 @@ func TestMkfifo(t *testing.T) {
 
 		for _, path := range tt.flags {
 			testFile, err := os.Stat(path)
-
 			if err != nil {
 				t.Errorf("Unable to stat file %s", path)
 			}

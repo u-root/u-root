@@ -20,9 +20,7 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
-var (
-	slDebug = flag.Bool("d", false, "enable debug logs")
-)
+var slDebug = flag.Bool("d", false, "enable debug logs")
 
 func checkDebugFlag() {
 	/*

@@ -21,7 +21,6 @@ package main
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -71,7 +70,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	switch fs.Args()[0] {
 	case "raw":
 		// Create transfer from stdin.
-		tx, err := ioutil.ReadAll(input)
+		tx, err := io.ReadAll(input)
 		if err != nil {
 			return err
 		}

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,22 +79,18 @@ f2
 }
 
 func TestLs(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create an empty directory.
 	testDir := filepath.Join(tmpDir, "testDir")
-	os.Mkdir(testDir, 0700)
+	os.Mkdir(testDir, 0o700)
 
 	// Create some files.
 	os.Create(filepath.Join(testDir, "f1"))
 	os.Create(filepath.Join(testDir, "f2"))
 	os.Create(filepath.Join(testDir, "f3\nline 2"))
 	os.Create(filepath.Join(testDir, ".f4"))
-	os.Mkdir(filepath.Join(testDir, "d1"), 0740)
+	os.Mkdir(filepath.Join(testDir, "d1"), 0o740)
 	os.Create(filepath.Join(testDir, "d1/f4"))
 
 	// Table-driven testing
@@ -113,7 +108,7 @@ func TestLs(t *testing.T) {
 }
 
 func TestIndicator(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		lsInfo ls.FileInfo
 		symbol string
 	}{

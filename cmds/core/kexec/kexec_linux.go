@@ -134,7 +134,6 @@ func main() {
 				for _, n := range strings.Fields(opts.initramfs) {
 					files = append(files, uio.NewLazyFile(n))
 				}
-
 			}
 			var i io.ReaderAt
 			if len(files) > 0 {

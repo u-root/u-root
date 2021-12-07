@@ -20,11 +20,9 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
-var (
-	// ErrNotIpxeScript is returned when the config file is not an
-	// ipxe script.
-	ErrNotIpxeScript = errors.New("config file is not ipxe as it does not start with #!ipxe")
-)
+// ErrNotIpxeScript is returned when the config file is not an
+// ipxe script.
+var ErrNotIpxeScript = errors.New("config file is not ipxe as it does not start with #!ipxe")
 
 // parser encapsulates a parsed ipxe configuration file.
 //

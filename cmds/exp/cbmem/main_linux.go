@@ -77,7 +77,6 @@ func init() {
 		fmt.Fprintf(os.Stderr, "%s]\n\n%s", ushort, ulong)
 		os.Exit(1)
 	}
-
 }
 
 // parseCBtable looks for a coreboot table in the range address, address + size - 1
@@ -226,7 +225,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 
 				// "Nobody knew consoles could be so hard."
 			case LB_TAG_CBMEM_CONSOLE:
-				var c = &memconsoleEntry{Record: rec}
+				c := &memconsoleEntry{Record: rec}
 				debug("    Found cbmem console(%#x), %d byte record.\n", rec, c.Size)
 				if err := readOne(r, &c.Address, j); err != nil {
 					return nil, found, err
@@ -252,7 +251,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				}
 				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
 				debug("CSize is %#x, and Cursor is at %#x", c.CSize, c.Cursor)
-				//p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
+				// p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
 				sz := int(c.Size)
 
 				cr, err = newOffsetReader(f, cbcons, sz)
@@ -438,8 +437,6 @@ func main() {
 		DumpMem(f, cbmem, hexdump, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
-		//fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)
 		fmt.Printf("%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])
 	}
-
 }

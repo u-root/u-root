@@ -17,7 +17,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -65,7 +64,7 @@ func loopSetup(filename string) (loopDevice string, err error) {
 func getSupportedFilesystem(originFS string) ([]string, bool, error) {
 	var known bool
 	var err error
-	fs, err := ioutil.ReadFile("/proc/filesystems")
+	fs, err := os.ReadFile("/proc/filesystems")
 	if err != nil {
 		return nil, known, err
 	}
@@ -82,7 +81,6 @@ func getSupportedFilesystem(originFS string) ([]string, bool, error) {
 		returnValue = append(returnValue, n[last])
 	}
 	return returnValue, known, err
-
 }
 
 func informIfUnknownFS(originFS string) {
@@ -100,7 +98,7 @@ func main() {
 	if len(os.Args) == 1 {
 		n := []string{"/proc/self/mounts", "/proc/mounts", "/etc/mtab"}
 		for _, p := range n {
-			if b, err := ioutil.ReadFile(p); err == nil {
+			if b, err := os.ReadFile(p); err == nil {
 				fmt.Print(string(b))
 				os.Exit(0)
 			}

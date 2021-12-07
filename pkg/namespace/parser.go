@@ -37,7 +37,6 @@ func Parse(r io.Reader) (File, error) {
 			continue
 		}
 		cmd, err := ParseLine(scanner.Text())
-
 		if err != nil {
 			return nil, err
 		}

@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -29,13 +28,11 @@ import (
 	"github.com/u-root/u-root/pkg/pci"
 )
 
-var (
-	format = map[int]string{
-		32: "%08x:%08x",
-		16: "%08x:%04x",
-		8:  "%08x:%02x",
-	}
-)
+var format = map[int]string{
+	32: "%08x:%08x",
+	16: "%08x:%04x",
+	8:  "%08x:%02x",
+}
 
 // maybe we need a better syntax than the standard pcitools?
 func registers(d pci.Devices, cmds ...string) {
@@ -137,7 +134,7 @@ func main() {
 
 	var d pci.Devices
 	if len(*readJSON) != 0 {
-		b, err := ioutil.ReadFile(*readJSON)
+		b, err := os.ReadFile(*readJSON)
 		if err != nil {
 			log.Fatal(err)
 		}

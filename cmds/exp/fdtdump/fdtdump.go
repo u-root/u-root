@@ -21,9 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/dt"
 )
 
-var (
-	asJSON = flag.Bool("json", false, "Print json with base64 encoded values.")
-)
+var asJSON = flag.Bool("json", false, "Print json with base64 encoded values.")
 
 func main() {
 	flag.Parse()

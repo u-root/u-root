@@ -20,12 +20,12 @@ const (
 	ancient  = "2.6.24.111 #606 Mon Apr 14 00:06:11 CEST 2014"
 )
 
-//func KVer(k io.ReadSeeker) (string, error)
+// func KVer(k io.ReadSeeker) (string, error)
 func TestKVer(t *testing.T) {
 	items := []bufItem{
-		{510, []byte{0x55, 0xaa}}, //boot sig
-		{514, []byte("HdrS")},     //kernel header
-		{526, []byte{0x58, 0x30}}, //add 0x200 for offset of null-terminated string
+		{510, []byte{0x55, 0xaa}}, // boot sig
+		{514, []byte("HdrS")},     // kernel header
+		{526, []byte{0x58, 0x30}}, // add 0x200 for offset of null-terminated string
 		{12870, []byte("string starting.. " + normboot + "\000 end of str")},
 	}
 	f, err := sparseBuf(items)
@@ -46,27 +46,27 @@ type bufItem struct {
 	data []byte
 }
 
-//return buffer filled with random data, except for listed items
+// return buffer filled with random data, except for listed items
 func sparseBuf(items []bufItem) (io.ReadSeeker, error) {
-	//figure out where last byte will fall
+	// figure out where last byte will fall
 	var last int
 	for _, i := range items {
 		if len(i.data)+i.off > last {
 			last = len(i.data) + i.off
 		}
 	}
-	//make buffer a bit oversize
+	// make buffer a bit oversize
 	buf := make([]byte, last+64)
-	//write random data
+	// write random data
 	rand.Read(buf)
-	//then write items
+	// then write items
 	for _, i := range items {
 		copy(buf[i.off:], i.data)
 	}
 	return bytes.NewReader(buf), nil
 }
 
-//func ParseDesc(desc string) KInfo
+// func ParseDesc(desc string) KInfo
 func TestParseDesc(t *testing.T) {
 	tmust := func(tm time.Time, err error) time.Time {
 		if err != nil {
@@ -86,7 +86,7 @@ func TestParseDesc(t *testing.T) {
 				Version:   "#300 SMP Fri Jan 25 16:32:19 UTC 2019",
 				Builder:   "user@host",
 				BuildNum:  300,
-				BuildTime: tmust(time.Parse(time.RFC3339, "2019-01-25T16:32:19Z")), //equivalent
+				BuildTime: tmust(time.Parse(time.RFC3339, "2019-01-25T16:32:19Z")), // equivalent
 				Maj:       4,
 				Min:       19,
 				Patch:     16,
@@ -101,7 +101,7 @@ func TestParseDesc(t *testing.T) {
 				Version:   "#606 Mon Apr 14 00:06:11 CEST 2014",
 				Builder:   "",
 				BuildNum:  606,
-				BuildTime: tmust(time.Parse(time.RFC3339, "2014-04-14T00:06:11Z")), //equivalent
+				BuildTime: tmust(time.Parse(time.RFC3339, "2014-04-14T00:06:11Z")), // equivalent
 				Maj:       2,
 				Min:       6,
 				Patch:     24,

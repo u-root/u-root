@@ -34,7 +34,6 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -113,7 +112,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 	if err := os.RemoveAll(bbDir); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(bbDir, 0755); err != nil {
+	if err := os.MkdirAll(bbDir, 0o755); err != nil {
 		return err
 	}
 
@@ -498,7 +497,7 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 // Rewrite rewrites p into destDir as a bb package using bbImportPath for the
 // bb implementation.
 func (p *Package) Rewrite(destDir, bbImportPath string) error {
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return err
 	}
 
@@ -599,7 +598,7 @@ func writeGoFile(path string, code []byte) error {
 		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
 	}
 
-	if err := ioutil.WriteFile(path, code, 0644); err != nil {
+	if err := os.WriteFile(path, code, 0o644); err != nil {
 		return fmt.Errorf("error writing Go file to %q: %v", path, err)
 	}
 	return nil

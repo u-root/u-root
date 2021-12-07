@@ -6,7 +6,6 @@ package mount_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -394,11 +393,7 @@ func TestTryMount(t *testing.T) {
 
 	prefix := getDevicePrefix()
 
-	d, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
 	sda1 := filepath.Join(d, prefix+"a1")
 	deva1 := fmt.Sprintf("/dev/%sa1", prefix)
@@ -507,10 +502,7 @@ func TestMountPool(t *testing.T) {
 func TestIsTmpRamfs(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
-	testRoot, err := ioutil.TempDir("", "testtmpfs")
-	if err != nil {
-		t.Fatalf("Failed to create tmp dir: %v", err)
-	}
+	testRoot := t.TempDir()
 
 	// Is a tmpfs.
 	tmpfsMount := filepath.Join(testRoot, "tmpfs")

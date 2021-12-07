@@ -44,7 +44,7 @@ func init() {
 }
 
 func main() {
-	var fileTypes = map[string]os.FileMode{
+	fileTypes := map[string]os.FileMode{
 		"f":         0,
 		"file":      0,
 		"d":         os.ModeDir,

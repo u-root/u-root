@@ -208,8 +208,8 @@ func sockAddr(t Task, addr Addr, length uint32) string {
 
 		return fmt.Sprintf("%#x {Family: %s, Addr: %#02x, Port: %d}", addr, familyStr, []byte(fa.Addr), fa.Port)
 	case unix.AF_NETLINK:
-		//sa, err := netlink.ExtractSockAddr(b)
-		//if err != nil {
+		// sa, err := netlink.ExtractSockAddr(b)
+		// if err != nil {
 		return fmt.Sprintf("%#x {Family: %s, error extracting address: %v}", addr, familyStr, err)
 		//}
 		//return fmt.Sprintf("%#x {Family: %s, PortID: %d, Groups: %d}", addr, familyStr, sa.PortID, sa.Groups)

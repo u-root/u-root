@@ -65,6 +65,7 @@ const (
 	LB_TAG_OPTION_DEFAULTS   = 0x00cb
 	LB_TAG_OPTION_CHECKSUM   = 0x00cc
 )
+
 const (
 	LB_MEM_RAM                   = 1
 	LB_MEM_RESERVED              = 2  // Don't use this memory region

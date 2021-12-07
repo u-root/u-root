@@ -7,7 +7,6 @@ package spidev
 import (
 	"encoding/binary"
 	"errors"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
@@ -103,7 +102,7 @@ func TestOpenError(t *testing.T) {
 
 // TestGetters tests the functions which return values like Mode, SpeedHz, ...
 func TestGetters(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", "")
+	tmpFile, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("Could not create temporary file: %v", err)
 	}
@@ -181,7 +180,7 @@ func TestGetters(t *testing.T) {
 
 // TestSetters tests the functions which set values like SetMode, SetSpeedHz, ...
 func TestSetters(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", "")
+	tmpFile, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("Could not create temporary file: %v", err)
 	}
@@ -393,7 +392,7 @@ func TestTransfer(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile("", "")
+			tmpFile, err := os.CreateTemp("", "")
 			if err != nil {
 				t.Fatalf("Could not create temporary file: %v", err)
 			}

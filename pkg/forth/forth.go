@@ -307,7 +307,7 @@ func newword(f Forth) {
 	if f.Length() < int(n) {
 		panic(fmt.Sprintf("newword %s: stack is %d elements, need %d", s, f.Length(), n))
 	}
-	var c = make([]Cell, n)
+	c := make([]Cell, n)
 	for i := n; i > 0; i-- {
 		c[i-1] = f.Pop()
 	}

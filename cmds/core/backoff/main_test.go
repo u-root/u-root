@@ -39,7 +39,6 @@ func TestRun(t *testing.T) {
 					gotErrorString,
 					wantErrorString)
 			}
-
 		})
 	}
 }

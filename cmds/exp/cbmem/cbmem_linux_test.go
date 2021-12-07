@@ -9,14 +9,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func TestNotFound(t *testing.T) {
 	var err error
-	f, err := ioutil.TempFile("", "cbmemNotFound")
+	f, err := os.CreateTemp("", "cbmemNotFound")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +53,7 @@ func genFile(f *os.File, p func(string, ...interface{}), s []seg) error {
 
 func TestAPU2(t *testing.T) {
 	var err error
-	f, err := ioutil.TempFile("", "cbmemAPU2")
+	f, err := os.CreateTemp("", "cbmemAPU2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +74,7 @@ func TestAPU2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reading coreboot table: got %v, want nil", err)
 	}
-	var b = &bytes.Buffer{}
+	b := &bytes.Buffer{}
 	DumpMem(f, c, false, b)
 	t.Logf("%s", b.String())
 	o := b.String()
@@ -95,7 +94,7 @@ func TestAPU2(t *testing.T) {
 	}
 	// You can use this to generate new test data. It's a timesaver.
 	if false {
-		ioutil.WriteFile("json", j, 0666)
+		os.WriteFile("json", j, 0o666)
 	}
 	if string(j) != apu2JSON {
 		t.Errorf("APU2 JSON: got %s, want %s", j, apu2JSON)
@@ -104,7 +103,7 @@ func TestAPU2(t *testing.T) {
 
 func TestAPU2CBMemWrap(t *testing.T) {
 	var err error
-	f, err := ioutil.TempFile("", "cbmemWRAPAPU2")
+	f, err := os.CreateTemp("", "cbmemWRAPAPU2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +139,7 @@ func TestAPU2CBMemWrap(t *testing.T) {
 
 func TestAPU2CBBadCursor(t *testing.T) {
 	var err error
-	f, err := ioutil.TempFile("", "cbmemWRAPAPU2")
+	f, err := os.CreateTemp("", "cbmemWRAPAPU2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +174,7 @@ func TestAPU2CBBadCursor(t *testing.T) {
 
 func TestAPU2CBBadPtr(t *testing.T) {
 	var err error
-	f, err := ioutil.TempFile("", "cbmemWRAPAPU2")
+	f, err := os.CreateTemp("", "cbmemWRAPAPU2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +212,7 @@ func TestIO(t *testing.T) {
 }
 
 func TestOffsetReader(t *testing.T) {
-	memFile, err := ioutil.TempFile("", "cbmemAPU2")
+	memFile, err := os.CreateTemp("", "cbmemAPU2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +262,7 @@ func TestOffsetReader(t *testing.T) {
 }
 
 func TestTimeStampsAPU2(t *testing.T) {
-	f, err := ioutil.TempFile("", "cbmemAPU2")
+	f, err := os.CreateTemp("", "cbmemAPU2")
 	if err != nil {
 		t.Fatal(err)
 	}

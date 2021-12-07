@@ -25,7 +25,7 @@ const (
 	Kernel    boottype = 5
 )
 
-//Offsets and magic values.
+// Offsets and magic values.
 const (
 	RamdiskStartMask = 0x07FF
 	Prompt           = 0x8000
@@ -73,8 +73,10 @@ type EDDInfo struct {
 	EDDDeviceParams       [EDDDeviceParamSize]uint8
 }
 
-type e820type uint32
-type boottype uint8
+type (
+	e820type uint32
+	boottype uint8
+)
 
 // E820Entry is one e820 entry.
 type E820Entry struct {
@@ -177,11 +179,11 @@ type LinuxParams struct {
 	Pages         uint16    `offset:"0x32"`
 	_             [12]uint8 `offset:"0x34"` //-- 0x3f reserved for future expansion
 
-	//struct apmbiosinfo apmbiosinfo;
+	// struct apmbiosinfo apmbiosinfo;
 	Apmbiosinfo [0x40]uint8 `offset:"0x40"`
-	//struct driveinfostruct driveinfo;
+	// struct driveinfostruct driveinfo;
 	Driveinfo [0x20]uint8 `offset:"0x80"`
-	//struct sysdesctable sysdesctable;
+	// struct sysdesctable sysdesctable;
 	Sysdesctable        [0x140]uint8 `offset:"0xa0"`
 	Altmemk             uint32       `offset:"0x1e0"`
 	_                   [4]uint8     `offset:"0x1e4"`
@@ -243,7 +245,7 @@ var (
 		EtherBoot: "etherboot",
 		Kernel:    "kernel (kexec)",
 	}
-	//E820 contains strings describing e820types.
+	// E820 contains strings describing e820types.
 	E820 = map[e820type]string{
 		RAM:      "RAM",
 		Reserved: "Reserved",

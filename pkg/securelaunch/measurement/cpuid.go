@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultCPUIDFile = "cpuid.txt" //only used if user doesn't provide any
+	defaultCPUIDFile = "cpuid.txt" // only used if user doesn't provide any
 )
 
 /* describes the "cpuid" portion of policy file */
@@ -33,7 +33,7 @@ type CPUIDCollector struct {
  */
 func NewCPUIDCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New CPUID Collector initialized\n")
-	var fc = new(CPUIDCollector)
+	fc := new(CPUIDCollector)
 	err := json.Unmarshal(config, &fc)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,6 @@ func measureCPUIDFile() ([]byte, error) {
  * 3. also keeps a copy of the result on disk at location provided in policy file.
  */
 func (s *CPUIDCollector) Collect() error {
-
 	d, err := measureCPUIDFile()
 	if err != nil {
 		log.Printf("CPUID Collector: err = %v", err)

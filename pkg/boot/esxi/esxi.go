@@ -30,7 +30,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -125,7 +124,7 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 //
 // device will be mounted at mountPoint.
 func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
-	mountPoint, err := ioutil.TempDir("", "esxi-mount-")
+	mountPoint, err := os.MkdirTemp("", "esxi-mount-")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -165,7 +164,7 @@ func mountPartition(parentdev string, partition int) (*options, *mount.MountPoin
 		return nil, nil, err
 	}
 	base := filepath.Base(dev)
-	mountPoint, err := ioutil.TempDir("", fmt.Sprintf("%s-", base))
+	mountPoint, err := os.MkdirTemp("", fmt.Sprintf("%s-", base))
 	if err != nil {
 		return nil, nil, err
 	}

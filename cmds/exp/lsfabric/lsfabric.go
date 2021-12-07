@@ -40,8 +40,10 @@ const (
 	UNKNOWN instanceType = 0xb
 )
 
-type nodeID uint8
-type fabricID uint8
+type (
+	nodeID   uint8
+	fabricID uint8
+)
 
 const (
 	// BROAD is our way of saying "broadcast address"
@@ -274,7 +276,7 @@ func new(n uint8) (*DataFabric, error) {
 			Enabled:      enabled,
 			FabricID:     fabricID, // but see below. I am liking Some and None ...
 		})
-		//result.components.push(FabricComponent { instance_id, instance_type, enabled, fabric_id: if fabric_id != 0 || result.components.len() == 0 { Some(fabric_id) } else { None } }).unwrap();
+		// result.components.push(FabricComponent { instance_id, instance_type, enabled, fabric_id: if fabric_id != 0 || result.components.len() == 0 { Some(fabric_id) } else { None } }).unwrap();
 
 	}
 

@@ -7,7 +7,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -95,7 +94,7 @@ func main() {
 		log.Fatal(err)
 	}
 	for _, i := range globs {
-		if b, err := ioutil.ReadFile(i); err != nil {
+		if b, err := os.ReadFile(i); err != nil {
 			log.Fatal(err)
 		} else {
 			if _, ok := filemap[i]; ok {
@@ -105,7 +104,7 @@ func main() {
 		}
 	}
 
-	if b, err := ioutil.ReadFile("/proc/mounts"); err == nil && false {
+	if b, err := os.ReadFile("/proc/mounts"); err == nil && false {
 		log.Printf("m %v\n", string(b))
 	}
 	// we'd like to do this here, but it seems it doesn't end
@@ -120,7 +119,7 @@ func main() {
 		}
 	}
 	if *debug {
-		if b, err := ioutil.ReadFile("/proc/mounts"); err == nil {
+		if b, err := os.ReadFile("/proc/mounts"); err == nil {
 			log.Printf("Reading /proc/mount:m %v\n", b)
 		}
 	}
@@ -138,7 +137,7 @@ func main() {
 	}
 	// write the new elvishPath
 	for i, v := range filemap {
-		if err = ioutil.WriteFile(i, v, 0600); err != nil {
+		if err = os.WriteFile(i, v, 0o600); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -149,7 +148,7 @@ func main() {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	// TODO: figure out why we get EPERM when we use this.
-	//cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
+	// cmd.SysProcAttr = &syscall.SysProcAttr{Setctty: true, Setsid: true,}
 	if *debug {
 		log.Printf("Run %v", cmd)
 	}

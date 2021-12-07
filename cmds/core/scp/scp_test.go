@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -18,7 +17,7 @@ func TestScpSource(t *testing.T) {
 	var w bytes.Buffer
 	var r bytes.Buffer
 
-	tf, err := ioutil.TempFile("", "TestScpSource")
+	tf, err := os.CreateTemp("", "TestScpSource")
 	if err != nil {
 		t.Fatalf("creating temp file: %v", err)
 	}
@@ -41,7 +40,7 @@ func TestScpSink(t *testing.T) {
 	var w bytes.Buffer
 	var r bytes.Buffer
 
-	tf, err := ioutil.TempFile("", "TestScpSink")
+	tf, err := os.CreateTemp("", "TestScpSink")
 	if err != nil {
 		t.Fatalf("creating temp file: %v", err)
 	}

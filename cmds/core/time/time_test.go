@@ -27,7 +27,7 @@ func run(c *exec.Cmd) (string, string, error) {
 }
 
 func TestTime(t *testing.T) {
-	var tests = []test{
+	tests := []test{
 		{args: []string{}, r: "real 0.000.*\nuser 0.000.*\nsys 0.000", exitok: true},
 		{args: []string{"date"}, r: "real [0-9][0-9]*.*\nuser [0-9][0-9]*.*\nsys [0-9][0-9]*.*", exitok: true},
 		{args: []string{"deadbeef"}, r: ".*exec.*deadbeef.*executable file not found .*", exitok: false},

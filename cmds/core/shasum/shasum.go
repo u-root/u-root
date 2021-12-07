@@ -8,14 +8,13 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/spf13/pflag"
 )
 
 func helpPrinter() {
-
 	fmt.Printf("Usage:\nshasum -a <algorithm> <File Name>\n")
 	pflag.PrintDefaults()
 	os.Exit(0)
@@ -27,11 +26,10 @@ func versionPrinter() {
 }
 
 func getInput(fileName string) (input []byte, err error) {
-
 	if fileName != "" {
-		return ioutil.ReadFile(fileName)
+		return os.ReadFile(fileName)
 	}
-	return ioutil.ReadAll(os.Stdin)
+	return io.ReadAll(os.Stdin)
 }
 
 //
@@ -53,7 +51,6 @@ func shaPrinter(algorithm int, data []byte) string {
 }
 
 func main() {
-
 	var (
 		algorithm int
 		help      bool

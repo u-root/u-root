@@ -33,7 +33,6 @@ func usage() {
 }
 
 func moveFile(source string, dest string) error {
-
 	if *noClobber {
 		_, err := os.Lstat(dest)
 		if !os.IsNotExist(err) {

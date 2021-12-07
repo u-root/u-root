@@ -65,5 +65,4 @@ func TestGetPinID(t *testing.T) {
 	if _, err := GetPinID("gpio-mockup-A", 12); err == nil {
 		t.Errorf("GetPinID(gpio-mockup-A, 12) = nil, but wanted error")
 	}
-
 }

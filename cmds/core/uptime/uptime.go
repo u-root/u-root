@@ -10,8 +10,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -41,7 +41,7 @@ func uptime(contents string) (*time.Time, error) {
 }
 
 func main() {
-	procUptimeOutput, err := ioutil.ReadFile("/proc/uptime")
+	procUptimeOutput, err := os.ReadFile("/proc/uptime")
 	if err != nil {
 		log.Fatalf("error reading /proc/uptime: %v \n", err)
 	}
@@ -49,7 +49,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	procLoadAvgOutput, err := ioutil.ReadFile("/proc/loadavg")
+	procLoadAvgOutput, err := os.ReadFile("/proc/loadavg")
 	if err != nil {
 		log.Fatalf("error reading /proc/loadavg: %v \n", err)
 	}
@@ -57,6 +57,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//Subtracted one from time.Day() because time.Add(Duration) starts counting at 1 day instead of zero days.
+	// Subtracted one from time.Day() because time.Add(Duration) starts counting at 1 day instead of zero days.
 	fmt.Printf(" %s up %d days, %d hours , %d min ,loadaverage: %s \n", time.Now().Format("15:04:05"), (uptimeTime.Day() - 1), uptimeTime.Hour(), uptimeTime.Minute(), loadAverage)
 }

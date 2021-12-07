@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-//Devices contains a slice of one or more PCI devices
+// Devices contains a slice of one or more PCI devices
 type Devices []*PCI
 
 // Print prints information to an io.Writer
@@ -69,7 +69,6 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				if _, err := fmt.Fprintf(o, "\tInterrupt: pin %X routed to IRQ %X\n", 9+pci.IRQPin, pci.IRQLine); err != nil {
 					return err
 				}
-
 			}
 			if !pci.Bridge {
 				for _, b := range pci.BARS {
@@ -77,7 +76,6 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 						return err
 					}
 				}
-
 			}
 			extraNL = true
 		}

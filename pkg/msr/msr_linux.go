@@ -8,7 +8,6 @@ package msr
 import (
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -71,13 +70,12 @@ func parseCPUs(s string) (CPUs, error) {
 		}
 	}
 	return cpus, nil
-
 }
 
 // AllCPUs searches for actual present CPUs instead of relying on the glob.
 // This is more accurate than what's presented in /dev/cpu/*/msr
 func AllCPUs() (CPUs, error) {
-	v, err := ioutil.ReadFile("/sys/devices/system/cpu/present")
+	v, err := os.ReadFile("/sys/devices/system/cpu/present")
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +139,7 @@ func (c CPUs) String() string {
 }
 
 func (c CPUs) paths() []string {
-	var p = make([]string, len(c))
+	p := make([]string, len(c))
 
 	for i, v := range c {
 		p[i] = filepath.Join("/dev/cpu", strconv.Itoa(int(v)), "msr")
@@ -152,7 +150,7 @@ func (c CPUs) paths() []string {
 // Read reads an MSR from a set of CPUs.
 func (m MSR) Read(c CPUs) ([]uint64, []error) {
 	var hadErr bool
-	var regs = make([]uint64, len(c))
+	regs := make([]uint64, len(c))
 
 	paths := c.paths()
 	f, errs := openAll(paths, os.O_RDONLY)
@@ -306,7 +304,6 @@ func Locked() error {
 		return fmt.Errorf("%s: %v", vendor, allerrors)
 	}
 	return nil
-
 }
 
 func openAll(m []string, o int) ([]*os.File, []error) {

@@ -9,7 +9,7 @@ import "syscall"
 func sysInfo(n string, sys *syscall.Dir) Info {
 	// Similar to how the standard library converts Plan 9 Dir to os.FileInfo:
 	// https://github.com/golang/go/blob/go1.16beta1/src/os/stat_plan9.go#L14
-	mode := sys.Mode & 0777
+	mode := sys.Mode & 0o777
 	if sys.Mode&syscall.DMDIR != 0 {
 		mode |= modeDir
 	} else {

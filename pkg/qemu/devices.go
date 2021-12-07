@@ -223,7 +223,7 @@ func (p P9Directory) KArgs() []string {
 		}
 	}
 	return []string{
-		//seen as an env var by the init process
+		// seen as an env var by the init process
 		"UROOT_USE_9P=1",
 	}
 }
