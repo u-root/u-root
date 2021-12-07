@@ -187,11 +187,11 @@ func gobusyboxMain() error {
 		var errGopath *gbb.ErrGopathBuild
 		var errGomod *gbb.ErrModuleBuild
 		if errors.As(err, &errGopath) {
-			return fmt.Errorf("Preserving bb generated source directory at %s due to error. To reproduce build, `cd %s` and `GO111MODULE=off GOPATH=%s go build`.", tmpDir, errGopath.CmdDir, errGopath.GOPATH)
+			return fmt.Errorf("preserving bb generated source directory at %s due to error. To reproduce build, `cd %s` and `GO111MODULE=off GOPATH=%s go build`", tmpDir, errGopath.CmdDir, errGopath.GOPATH)
 		} else if errors.As(err, &errGomod) {
-			return fmt.Errorf("Preserving bb generated source directory at %s due to error. To debug build, `cd %s` and use `go build` to build, or `go mod [why|tidy|graph]` to debug dependencies, or `go list -m all` to list all dependency versions.", tmpDir, errGomod.CmdDir)
+			return fmt.Errorf("preserving bb generated source directory at %s due to error. To debug build, `cd %s` and use `go build` to build, or `go mod [why|tidy|graph]` to debug dependencies, or `go list -m all` to list all dependency versions", tmpDir, errGomod.CmdDir)
 		} else {
-			return fmt.Errorf("Preserving bb generated source directory at %s due to error.", tmpDir)
+			return fmt.Errorf("preserving bb generated source directory at %s due to error", tmpDir)
 		}
 	}
 	// Only remove temp dir if there was no error.
