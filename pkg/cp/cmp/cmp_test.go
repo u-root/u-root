@@ -16,94 +16,29 @@ import (
 
 func TestCMP(t *testing.T) {
 	// Creating all tmp dirs and files for testing purpose
-	dirPath := "/tmp/u-root-pkg-cmp/"
-
-	err := os.Mkdir(dirPath, 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath, err)
-	}
+	dirPath := os.TempDir()
 	defer os.RemoveAll(dirPath)
 
-	err = os.Mkdir(dirPath+"one", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"one", err)
-	}
-	defer os.RemoveAll(dirPath + "one")
-
-	err = os.Mkdir(dirPath+"two", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"two", err)
-	}
-	defer os.RemoveAll(dirPath + "two")
-
-	err = os.Mkdir(dirPath+"three", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"three", err)
-	}
-	defer os.RemoveAll(dirPath + "three")
-
-	err = os.Mkdir(dirPath+"four", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"four", err)
-	}
-	defer os.RemoveAll(dirPath + "four")
-
-	err = os.Mkdir(dirPath+"five", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"five", err)
-	}
-	defer os.RemoveAll(dirPath + "five")
-
-	err = os.Mkdir(dirPath+"six", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"six", err)
-	}
-	defer os.RemoveAll(dirPath + "six")
-
-	err = os.Mkdir(dirPath+"five/"+"seven", 0700)
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", dirPath+"five/"+"seven", err)
-	}
-	defer os.RemoveAll(dirPath + "five/" + "seven")
-
-	tmpFile1, err := ioutil.TempFile(dirPath+"one", "file1")
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", tmpFile1.Name(), err)
-	}
-	defer tmpFile1.Close()
-
-	tmpFile2, err := ioutil.TempFile(dirPath+"one", "file2")
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", tmpFile2.Name(), err)
-	}
-	defer tmpFile2.Close()
-
-	tmpFile3, err := ioutil.TempFile(dirPath+"one", "file3")
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", tmpFile3.Name(), err)
-	}
-	defer tmpFile3.Close()
-
-	tmpFile4, err := ioutil.TempFile(dirPath+"five", "file4")
-	if err != nil {
-		t.Fatalf("Failed to create %s: %v", tmpFile4.Name(), err)
-	}
-	defer tmpFile4.Close()
-
-	if err := ioutil.WriteFile(tmpFile1.Name(), []byte("F is for fire that burns down the whole town"), 0766); err != nil {
-		t.Fatalf("Failed to write to %s: %v", tmpFile1.Name(), err)
-	}
-
-	if err := ioutil.WriteFile(tmpFile2.Name(), []byte("F is for fire that burns down the whole town"), 0766); err != nil {
-		t.Fatalf("Failed to write to %s: %v", tmpFile2.Name(), err)
-	}
-
-	if err := ioutil.WriteFile(tmpFile3.Name(), []byte("nwot elohw eht nwod snrub taht erif rof si F"), 0766); err != nil {
-		t.Fatalf("Failed to write to %s: %v", tmpFile3.Name(), err)
-	}
-
-	if err := ioutil.WriteFile(tmpFile4.Name(), []byte("nwot elohw eht nwod snrub taht erif rof si F"), 0766); err != nil {
-		t.Fatalf("Failed to write to %s: %v", tmpFile4.Name(), err)
+	for i := 1; i < 7; i++ {
+		if err := os.Mkdir(filepath.Join(dirPath, fmt.Sprint(i)), 0700); err != nil {
+			t.Fatalf("Failed to create %s: %v", filepath.Join(dirPath, fmt.Sprint(i)), err)
+		}
+		if i == 5 {
+			if err := os.Mkdir(filepath.Join(dirPath, fmt.Sprint(i), "7"), 0700); err != nil {
+				t.Fatalf("Failed to create %s: %v", filepath.Join(dirPath, fmt.Sprint(i), "7"), err)
+			}
+		}
+		for j := 1; j < 5; j++ {
+			if j < 3 {
+				if err := ioutil.WriteFile(filepath.Join(dirPath, fmt.Sprint(i), fmt.Sprint(j)), []byte("F is for fire that burns down the whole town"), 0766); err != nil {
+					t.Fatalf("Failed to write to %s: %v", filepath.Join(dirPath, fmt.Sprint(i), fmt.Sprint(j)), err)
+				}
+			} else {
+				if err := ioutil.WriteFile(filepath.Join(dirPath, fmt.Sprint(i), fmt.Sprint(j)), []byte("nwot elohw eht nwod snrub taht erif rof si F"), 0766); err != nil {
+					t.Fatalf("Failed to write to %s: %v", filepath.Join(dirPath, fmt.Sprint(i), fmt.Sprint(j)), err)
+				}
+			}
+		}
 	}
 
 	// Tests start here
@@ -117,22 +52,22 @@ func TestCMP(t *testing.T) {
 		err   string
 	}{
 		{
-			name:  "file1 does not exist",
-			file1: "file1",
-			file2: tmpFile2.Name(),
-			err:   "open file1: no such file or directory",
+			name:  "1 does not exist",
+			file1: "1",
+			file2: filepath.Join(dirPath, "1", "2"),
+			err:   "open 1: no such file or directory",
 		},
 		{
-			name:  "file2 does not exist",
-			file1: tmpFile1.Name(),
-			file2: "file2",
-			err:   "open file2: no such file or directory",
+			name:  "2 does not exist",
+			file1: filepath.Join(dirPath, "1", "1"),
+			file2: "2",
+			err:   "open 2: no such file or directory",
 		},
 		{
 			name:  "files are not equal",
-			file1: tmpFile1.Name(),
-			file2: tmpFile3.Name(),
-			err:   fmt.Sprintf("%q and %q do not have equal content", tmpFile1.Name(), tmpFile3.Name()),
+			file1: filepath.Join(dirPath, "1", "1"),
+			file2: filepath.Join(dirPath, "1", "3"),
+			err:   fmt.Sprintf("%q and %q do not have equal content", filepath.Join(dirPath, "1", "1"), filepath.Join(dirPath, "1", "3")),
 		},
 	}
 
@@ -144,7 +79,7 @@ func TestCMP(t *testing.T) {
 				t.Errorf("Test %s: got: (%s), want: (%s)", tt.name, err.Error(), tt.err)
 			}
 		}
-		err = isEqualFile(tmpFile1.Name(), tmpFile2.Name())
+		err := isEqualFile(filepath.Join(dirPath, "1", "1"), filepath.Join(dirPath, "1", "2"))
 		if err != nil {
 			t.Errorf("got: (%s), want: (%s)", err.Error(), "")
 		}
@@ -152,11 +87,12 @@ func TestCMP(t *testing.T) {
 
 	// Testing readDirNames
 	t.Run("Test readDirNames", func(t *testing.T) {
-		names, err := readDirNames(dirPath + "one")
-		if len(names) != 3 || names[0] != filepath.Base(tmpFile1.Name()) || names[1] != filepath.Base(tmpFile2.Name()) ||
-			names[2] != filepath.Base(tmpFile3.Name()) || err != nil {
-			t.Errorf("file amount: %d, files: %v, files created %s, %s, %s",
-				len(names), names, filepath.Base(tmpFile1.Name()), filepath.Base(tmpFile2.Name()), filepath.Base(tmpFile3.Name()))
+		names, err := readDirNames(filepath.Join(dirPath, "1"))
+		if len(names) != 4 || names[0] != filepath.Base(filepath.Join(dirPath, "1", "1")) || names[1] != filepath.Base(filepath.Join(dirPath, "1", "2")) ||
+			names[2] != filepath.Base(filepath.Join(dirPath, "1", "3")) || err != nil {
+			t.Errorf("file amount: %d, files: %v, files created %s, %s, %s, %s",
+				len(names), names, filepath.Base(filepath.Join(dirPath, "1", "1")), filepath.Base(filepath.Join(dirPath, "1", "2")),
+				filepath.Base(filepath.Join(dirPath, "1", "3")), filepath.Base(filepath.Join(dirPath, "1", "4")))
 		}
 		_, err = readDirNames("dir")
 		if err.Error() != "open dir: no such file or directory" {
@@ -167,8 +103,8 @@ func TestCMP(t *testing.T) {
 	// Default option var
 	equalTreeOpts := cp.Default
 
-	// Testing stats and the IsEqualTree two dirs equal
-	t.Run("Test stats and the IsEqualTree two dirs equal", func(t *testing.T) {
+	// Testing stats and the IsEqualTree 2 dirs equal
+	t.Run("Test stats and the IsEqualTree 2 dirs equal", func(t *testing.T) {
 		// Struct for testing isEqualTree
 		var testTable2 = []struct {
 			name string
@@ -178,20 +114,20 @@ func TestCMP(t *testing.T) {
 		}{
 			{
 				name: "stat src err",
-				src:  tmpFile1.Name(),
+				src:  filepath.Join(dirPath, "1", "1"),
 				dst:  "",
 				err:  "stat : no such file or directory",
 			},
 			{
 				name: "stat dst err",
 				src:  "",
-				dst:  tmpFile2.Name(),
+				dst:  filepath.Join(dirPath, "1", "2"),
 				err:  "stat : no such file or directory",
 			},
 			{
-				name: "two dirs are equal",
-				src:  dirPath + "four",
-				dst:  dirPath + "six",
+				name: "2 dirs are equal",
+				src:  filepath.Join(dirPath, "4"),
+				dst:  filepath.Join(dirPath, "6"),
 				err:  "<nil>",
 			},
 		}
@@ -207,41 +143,41 @@ func TestCMP(t *testing.T) {
 
 	// Testing IsEqualTree for case dir
 	t.Run("Test IsEqualTree for case dir", func(t *testing.T) {
-		// Test case that two dirs are equal
-		err := IsEqualTree(equalTreeOpts, dirPath+"four", dirPath+"six")
+		// Test case that 2 dirs are equal
+		err := IsEqualTree(equalTreeOpts, filepath.Join(dirPath, "4"), filepath.Join(dirPath, "6"))
 		if fmt.Sprintf("%v", err) != "<nil>" {
-			t.Errorf("Test %s: got: (%s), want: (%s)\n", "two dirs are equal", err, "<nil>")
+			t.Errorf("Test %s: got: (%s), want: (%s)\n", "2 dirs are equal", err, "<nil>")
 		}
 
 		// Faking readDirNames function
 		oReadDirName := readDirName
 		defer func() { readDirName = oReadDirName }()
 		readDirName = func(path string) ([]string, error) {
-			if path == dirPath+"one" {
+			if path == filepath.Join(dirPath, "1") {
 				return nil, fmt.Errorf("error in readDirNames")
 			}
-			if path == dirPath+"1" {
+			if path == filepath.Join(dirPath, "1") {
 				return nil, fmt.Errorf("error in readDirNames")
 			}
 			var basename = []string{"test1", "test2"}
-			if path == dirPath+"three" {
+			if path == filepath.Join(dirPath, "3") {
 				basename[0] = "test3"
 			}
 			return basename, nil
 		}
 
 		// retrieve sm and dm for err checking
-		sm, dm, _, err := stats(equalTreeOpts, dirPath+"one", tmpFile2.Name())
+		sm, dm, _, err := stats(equalTreeOpts, filepath.Join(dirPath, "1"), filepath.Join(dirPath, "1", "2"))
 		if err != nil {
 			t.Errorf("err is: %v", err)
 		}
 
 		// retrive srcEntries and dstEntries
-		srcEntries, err := readDirName(dirPath + "three")
+		srcEntries, err := readDirName(filepath.Join(dirPath, "3"))
 		if err != nil {
 			t.Errorf("err is: %v", err)
 		}
-		dstEntries, err := readDirName(dirPath + "four")
+		dstEntries, err := readDirName(filepath.Join(dirPath, "4"))
 		if err != nil {
 			t.Errorf("err is: %v", err)
 		}
@@ -254,33 +190,33 @@ func TestCMP(t *testing.T) {
 			err  string
 		}{
 			{
-				name: "mismatched mode, one dir one file",
-				src:  dirPath + "one",
-				dst:  tmpFile2.Name(),
-				err:  fmt.Sprintf("mismatched mode: %q has mode %s while %q has mode %s", dirPath+"one", sm, tmpFile2.Name(), dm),
+				name: "mismatched mode, 1 dir 1 file",
+				src:  filepath.Join(dirPath, "1"),
+				dst:  filepath.Join(dirPath, "1", "2"),
+				err:  fmt.Sprintf("mismatched mode: %q has mode %s while %q has mode %s", filepath.Join(dirPath, "1"), sm, filepath.Join(dirPath, "1", "2"), dm),
 			},
 			{
 				name: "err in first readDirName",
-				src:  dirPath + "one",
-				dst:  dirPath + "three",
+				src:  filepath.Join(dirPath, "1"),
+				dst:  filepath.Join(dirPath, "3"),
 				err:  "error in readDirNames",
 			},
 			{
 				name: "err in second readDirName",
-				src:  dirPath + "three",
-				dst:  dirPath + "one",
+				src:  filepath.Join(dirPath, "3"),
+				dst:  filepath.Join(dirPath, "1"),
 				err:  "error in readDirNames",
 			},
 			{
 				name: "directory content is different",
-				src:  dirPath + "three",
-				dst:  dirPath + "four",
-				err:  fmt.Sprintf("directory contents did not match:\n%q had %v\n%q had %v", dirPath+"three", srcEntries, dirPath+"four", dstEntries),
+				src:  filepath.Join(dirPath, "3"),
+				dst:  filepath.Join(dirPath, "4"),
+				err:  fmt.Sprintf("directory contents did not match:\n%q had %v\n%q had %v", filepath.Join(dirPath, "3"), srcEntries, filepath.Join(dirPath, "4"), dstEntries),
 			},
 			{
 				name: "tree content is different",
-				src:  dirPath + "four",
-				dst:  dirPath + "five",
+				src:  filepath.Join(dirPath, "4"),
+				dst:  filepath.Join(dirPath, "5"),
 				err:  "could not get the stat for src or dst",
 			},
 		}
@@ -297,28 +233,28 @@ func TestCMP(t *testing.T) {
 	// Symlink
 	// Creating Symlinks and adapt the opts symlink value
 	equalTreeOpts.NoFollowSymlinks = true
-	err = os.Symlink(tmpFile1.Name(), filepath.Join(dirPath+"one", "symlink1"))
+	err := os.Symlink(filepath.Join(dirPath, "1", "1"), filepath.Join(dirPath, "1", "symlink1"))
 	if err != nil {
 		t.Errorf("err while creating a symlink")
 	}
-	err = os.Symlink(tmpFile2.Name(), filepath.Join(dirPath+"one", "symlink2"))
+	err = os.Symlink(filepath.Join(dirPath, "1", "2"), filepath.Join(dirPath, "1", "symlink2"))
 	if err != nil {
 		t.Errorf("err while creating a symlink")
 	}
-	err = os.Symlink(tmpFile3.Name(), filepath.Join(dirPath+"one", "symlink3"))
+	err = os.Symlink(filepath.Join(dirPath, "1", "3"), filepath.Join(dirPath, "1", "symlink3"))
 	if err != nil {
 		t.Errorf("err while creating a symlink")
 	}
-	err = os.Symlink(tmpFile1.Name(), filepath.Join(dirPath+"one", "symlink4"))
+	err = os.Symlink(filepath.Join(dirPath, "1", "1"), filepath.Join(dirPath, "1", "symlink4"))
 	if err != nil {
 		t.Errorf("got: (%s), want: (%s)", err.Error(), "")
 	}
 
-	srcTarget, err := readLink(dirPath + "one" + "/symlink3")
+	srcTarget, err := readLink(filepath.Join(dirPath, "1", "symlink3"))
 	if err != nil {
 		t.Errorf("err is: %v", err)
 	}
-	dstTarget, err := readLink(dirPath + "one" + "/symlink4")
+	dstTarget, err := readLink(filepath.Join(dirPath, "1", "symlink4"))
 	if err != nil {
 		t.Errorf("err is: %v", err)
 	}
@@ -331,15 +267,15 @@ func TestCMP(t *testing.T) {
 	}{
 		{
 			name: "symlinks are not equal",
-			src:  dirPath + "one" + "/symlink3",
-			dst:  dirPath + "one" + "/symlink4",
-			err: fmt.Sprintf("target mismatch: symlink %q had target %q, while %q had target %q", dirPath+"one"+"/symlink3",
-				srcTarget, dirPath+"one"+"/symlink4", dstTarget),
+			src:  filepath.Join(dirPath, "1", "symlink3"),
+			dst:  filepath.Join(dirPath, "1", "symlink4"),
+			err: fmt.Sprintf("target mismatch: symlink %q had target %q, while %q had target %q", filepath.Join(dirPath, "1", "symlink3"),
+				srcTarget, filepath.Join(dirPath, "1", "symlink4"), dstTarget),
 		},
 		{
 			name: "symlinks are equal",
-			src:  dirPath + "one" + "/symlink3",
-			dst:  dirPath + "one" + "/symlink3",
+			src:  filepath.Join(dirPath, "1", "symlink3"),
+			dst:  filepath.Join(dirPath, "1", "symlink3"),
 			err:  "<nil>",
 		},
 	}
@@ -359,9 +295,9 @@ func TestCMP(t *testing.T) {
 	oReadLink := readLink
 	defer func() { readLink = oReadLink }()
 	readLink = func(name string) (string, error) {
-		if name == dirPath+"one"+"/symlink1" {
+		if name == filepath.Join(dirPath, "1", "symlink1") {
 			return "", fmt.Errorf("error in readlink")
-		} else if name == dirPath+"one"+"/symlink2" {
+		} else if name == filepath.Join(dirPath, "1", "/symlink2") {
 			return "", fmt.Errorf("error in readlink")
 		}
 		return "test", nil
@@ -375,14 +311,14 @@ func TestCMP(t *testing.T) {
 	}{
 		{
 			name: "first read link err",
-			src:  dirPath + "one" + "/symlink1",
-			dst:  dirPath + "one" + "/symlink2",
+			src:  filepath.Join(dirPath, "1", "symlink1"),
+			dst:  filepath.Join(dirPath, "1", "symlink2"),
 			err:  "error in readlink",
 		},
 		{
 			name: "second read link err",
-			src:  dirPath + "one" + "/symlink3",
-			dst:  dirPath + "one" + "/symlink2",
+			src:  filepath.Join(dirPath, "1", "symlink3"),
+			dst:  filepath.Join(dirPath, "1", "symlink2"),
 			err:  "error in readlink",
 		},
 	}
@@ -400,7 +336,7 @@ func TestCMP(t *testing.T) {
 
 	// Testing  IsEqualTree case regular file
 	t.Run("Test IsEqualTree case regular file", func(t *testing.T) {
-		err = IsEqualTree(equalTreeOpts, tmpFile4.Name(), tmpFile4.Name())
+		err = IsEqualTree(equalTreeOpts, filepath.Join(dirPath, "5", "4"), filepath.Join(dirPath, "5", "4"))
 		if err != nil {
 			t.Errorf("err is: %v", err)
 		}
