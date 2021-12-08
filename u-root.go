@@ -93,7 +93,7 @@ func init() {
 	tags = flag.String("tags", "", "Comma separated list of build tags")
 
 	// Flags for the gobusybox, which we hope to move to, since it works with modules.
-	usegobusybox = flag.Bool("gobusybox", false, "Use the new gobusybox package to build u-root")
+	usegobusybox = flag.Bool("gobusybox", os.Getenv("GO111MODULE") != "off", "Use the new gobusybox package to build u-root")
 	genDir = flag.String("gen-dir", "", "Directory to generate source in")
 
 }
@@ -169,12 +169,15 @@ func gobusyboxMain() error {
 	if tmpDir == "" {
 		tdir, err := ioutil.TempDir("", "bb-")
 		if err != nil {
-			log.Fatalf("Could not create busybox source directory: %v", err)
+			return fmt.Errorf("Could not create busybox source directory: %v", err)
 		}
 		tmpDir = tdir
 		remove = true
 	}
 
+	if len(flag.Args()) == 0 {
+		return fmt.Errorf("commands must be provided, as a path or glob, e.g., u-root cmds/core/* cmds/exp/rush")
+	}
 	opts := &gbb.Opts{
 		Env:          env,
 		GenSrcDir:    tmpDir,
