@@ -16,7 +16,10 @@ import (
 
 func TestCMP(t *testing.T) {
 	// Creating all tmp dirs and files for testing purpose
-	dirPath := os.TempDir()
+	dirPath, err := os.MkdirTemp("", "cmp_test")
+	if err != nil {
+		t.Fatalf("Failed to create tmp dir: %v", err)
+	}
 	defer os.RemoveAll(dirPath)
 
 	for i := 1; i < 7; i++ {
@@ -233,7 +236,7 @@ func TestCMP(t *testing.T) {
 	// Symlink
 	// Creating Symlinks and adapt the opts symlink value
 	equalTreeOpts.NoFollowSymlinks = true
-	err := os.Symlink(filepath.Join(dirPath, "1", "1"), filepath.Join(dirPath, "1", "symlink1"))
+	err = os.Symlink(filepath.Join(dirPath, "1", "1"), filepath.Join(dirPath, "1", "symlink1"))
 	if err != nil {
 		t.Errorf("err while creating a symlink")
 	}
