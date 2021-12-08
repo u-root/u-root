@@ -16,7 +16,7 @@ import (
 
 func TestCMP(t *testing.T) {
 	// Creating all tmp dirs and files for testing purpose
-	dirPath, err := os.MkdirTemp("", "cmp_test")
+	dirPath, err := ioutil.TempDir("", "cmp_test")
 	if err != nil {
 		t.Fatalf("Failed to create tmp dir: %v", err)
 	}
