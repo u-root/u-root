@@ -36,9 +36,6 @@ func isEqualFile(fpath1, fpath2 string) error {
 	return nil
 }
 
-// For testing purpose
-var readDirName = readDirNames
-
 func readDirNames(path string) ([]string, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -57,9 +54,6 @@ func stat(o cp.Options, path string) (os.FileInfo, error) {
 	}
 	return os.Stat(path)
 }
-
-// For testing purpose
-var readLink = os.Readlink
 
 // stats creating the source and the destination filemodes and returns it
 func stats(o cp.Options, src, dst string) (sm, dm os.FileMode, srcInfo os.FileInfo, err error) {
@@ -90,11 +84,11 @@ func IsEqualTree(o cp.Options, src, dst string) error {
 
 	switch {
 	case srcInfo.Mode().IsDir():
-		srcEntries, err := readDirName(src)
+		srcEntries, err := readDirNames(src)
 		if err != nil {
 			return err
 		}
-		dstEntries, err := readDirName(dst)
+		dstEntries, err := readDirNames(dst)
 		if err != nil {
 			return err
 		}
@@ -113,11 +107,11 @@ func IsEqualTree(o cp.Options, src, dst string) error {
 		return isEqualFile(src, dst)
 
 	case srcInfo.Mode()&os.ModeSymlink == os.ModeSymlink:
-		srcTarget, err := readLink(src)
+		srcTarget, err := os.Readlink(src)
 		if err != nil {
 			return err
 		}
-		dstTarget, err := readLink(dst)
+		dstTarget, err := os.Readlink(dst)
 		if err != nil {
 			return err
 		}

@@ -152,23 +152,6 @@ func TestCMP(t *testing.T) {
 			t.Errorf("Test %s: got: (%s), want: (%s)\n", "2 dirs are equal", err, "<nil>")
 		}
 
-		// Faking readDirNames function
-		oReadDirName := readDirName
-		defer func() { readDirName = oReadDirName }()
-		readDirName = func(path string) ([]string, error) {
-			if path == filepath.Join(dirPath, "1") {
-				return nil, fmt.Errorf("error in readDirNames")
-			}
-			if path == filepath.Join(dirPath, "1") {
-				return nil, fmt.Errorf("error in readDirNames")
-			}
-			var basename = []string{"test1", "test2"}
-			if path == filepath.Join(dirPath, "3") {
-				basename[0] = "test3"
-			}
-			return basename, nil
-		}
-
 		// retrieve sm and dm for err checking
 		sm, dm, _, err := stats(equalTreeOpts, filepath.Join(dirPath, "1"), filepath.Join(dirPath, "1", "2"))
 		if err != nil {
@@ -176,11 +159,11 @@ func TestCMP(t *testing.T) {
 		}
 
 		// retrive srcEntries and dstEntries
-		srcEntries, err := readDirName(filepath.Join(dirPath, "3"))
+		srcEntries, err := readDirNames(filepath.Join(dirPath, "3"))
 		if err != nil {
 			t.Errorf("err is: %v", err)
 		}
-		dstEntries, err := readDirName(filepath.Join(dirPath, "4"))
+		dstEntries, err := readDirNames(filepath.Join(dirPath, "4"))
 		if err != nil {
 			t.Errorf("err is: %v", err)
 		}
@@ -253,11 +236,11 @@ func TestCMP(t *testing.T) {
 		t.Errorf("got: (%s), want: (%s)", err.Error(), "")
 	}
 
-	srcTarget, err := readLink(filepath.Join(dirPath, "1", "symlink3"))
+	srcTarget, err := os.Readlink(filepath.Join(dirPath, "1", "symlink3"))
 	if err != nil {
 		t.Errorf("err is: %v", err)
 	}
-	dstTarget, err := readLink(filepath.Join(dirPath, "1", "symlink4"))
+	dstTarget, err := os.Readlink(filepath.Join(dirPath, "1", "symlink4"))
 	if err != nil {
 		t.Errorf("err is: %v", err)
 	}
@@ -293,18 +276,6 @@ func TestCMP(t *testing.T) {
 			}
 		}
 	})
-
-	// Fake the readLink func
-	oReadLink := readLink
-	defer func() { readLink = oReadLink }()
-	readLink = func(name string) (string, error) {
-		if name == filepath.Join(dirPath, "1", "symlink1") {
-			return "", fmt.Errorf("error in readlink")
-		} else if name == filepath.Join(dirPath, "1", "/symlink2") {
-			return "", fmt.Errorf("error in readlink")
-		}
-		return "test", nil
-	}
 
 	var testTable5 = []struct {
 		name string
