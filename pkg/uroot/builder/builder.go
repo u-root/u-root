@@ -9,6 +9,8 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
+// These two exported variables begin life empty and are filled in
+// as external code "fills in the blanks."
 var (
 	BusyBox = BBBuilder{}
 	Binary  = BinaryBuilder{}
