@@ -8,6 +8,52 @@ on:
 
 jobs:
 
+  linters:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - name: Install golangci-lint
+      run: |
+        cd ..
+        go get golang.org/x/lint/golint
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.30.0
+    - name: Install ineffassign
+      run: (cd .. && go get github.com/gordonklaus/ineffassign)
+    - name: Check vendored dependencies
+      run: |
+        go mod tidy
+        go mod verify
+        go mod vendor -v
+        git status
+        if [[ -n "$(git status --porcelain vendor)" ]]; then
+          echo 'vendor/ is out-of-date: run `go mod tidy && go mod vendor` and then check in the changes'
+          echo 'If `go mod tidy && go mod vendor` results in no changes, make sure you are using the latest relase of Go'
+          git status --porcelain vendor
+          exit 1
+        fi
+    - name: gofmt
+      run: test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
+    - name: golangci-lint
+      run: |
+        golangci-lint run ./... --disable-all --enable=golint \
+          --skip-dirs=pkg/uroot/test \
+          --skip-dirs=cmds/core/elvish \
+          --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
+            --exclude="don't use underscores" \
+          --exclude="don't use ALL_CAPS" \
+          --exclude="comment on exported (function|type|const|method|var) (\w|_|\.)+ should be of the form" \
+          --exclude="package comment should be of the form" \
+          --exclude="(function|type|const|method|var|type field|struct field) (\w|_|\.)+ should be (\w|_|\.)+" \
+          --exclude="stutter" \
+          --exclude="which can be annoying to use"
+    - name: ineffassign
+      run: ineffassign .
+
   build:
     runs-on: ubuntu-latest
 
@@ -23,4 +69,4 @@ jobs:
       run: go build -mod=mod -v ./...
 
     - name: Test
-      run: go test -mod=mod -v ./...
+      run: "CGO_ENABLED=0 go env && CGO_ENABLED=0 go test -mod=mod  ./pkg/uroot/..."

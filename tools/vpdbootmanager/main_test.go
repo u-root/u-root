@@ -14,22 +14,22 @@ import (
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 )
 
-func TestInvalidCommand(t *testing.T) {
+func testInvalidCommand(t *testing.T) {
 	err := cli([]string{"unknown"})
 	require.Equal(t, "Unrecognized action", err.Error())
 }
 
-func TestNoEntryType(t *testing.T) {
+func testNoEntryType(t *testing.T) {
 	err := cli([]string{"add", "localboot"})
 	require.Equal(t, "you need to provide method", err.Error())
 }
 
-func TestNoAction(t *testing.T) {
+func testNoAction(t *testing.T) {
 	err := cli([]string{})
 	require.Equal(t, "you need to provide action", err.Error())
 }
 
-func TestAddNetbootEntryFull(t *testing.T) {
+func testAddNetbootEntryFull(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
@@ -51,7 +51,7 @@ func TestAddNetbootEntryFull(t *testing.T) {
 	require.Equal(t, "aa:bb:cc:dd:ee:ff", out.MAC)
 }
 
-func TestAddLocalbootEntryFull(t *testing.T) {
+func testAddLocalbootEntryFull(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
