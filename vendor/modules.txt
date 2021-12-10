@@ -41,7 +41,7 @@ github.com/google/goexpect
 # github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
 ## explicit
 github.com/google/goterm/term
-# github.com/insomniacslk/dhcp v0.0.0-20210817203519-d82598001386
+# github.com/insomniacslk/dhcp v0.0.0-20211209223715-7d93572ebe8e
 ## explicit; go 1.13
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4

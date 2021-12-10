@@ -69,7 +69,7 @@ func (mo MessageOptions) OneIANA() *OptIANA {
 
 // IATA returns all Identity Association for Temporary Address options.
 func (mo MessageOptions) IATA() []*OptIATA {
-	opts := mo.Get(OptionIANA)
+	opts := mo.Get(OptionIATA)
 	var iatas []*OptIATA
 	for _, o := range opts {
 		iatas = append(iatas, o.(*OptIATA))
