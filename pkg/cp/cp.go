@@ -131,11 +131,8 @@ func copyFile(src, dst string, srcInfo os.FileInfo) error {
 	}
 }
 
-// For testing purpose
-var open = os.Open
-
 func copyRegularFile(src, dst string, srcfi os.FileInfo) error {
-	srcf, err := open(src)
+	srcf, err := os.Open(src)
 	if err != nil {
 		return err
 	}
