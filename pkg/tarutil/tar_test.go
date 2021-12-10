@@ -143,7 +143,15 @@ func TestCreateTarProcfsFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := CreateTar(f, []string{"/proc", procfsFile}, &Opts{NoRecursion: true}); err != nil {
+
+	opts := &Opts{
+		NoRecursion: true,
+		// We want the path names in the tar archive to be relative to
+		// root. We cannot store absolute paths in the tar file because
+		// it will fail the zipslip check on extraction.
+		ChangeDirectory: "/",
+	}
+	if err := CreateTar(f, []string{"proc", "proc/version"}, opts); err != nil {
 		f.Close()
 		t.Fatal(err)
 	}
