@@ -6,21 +6,16 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 	"time"
 
-	gbb "github.com/u-root/gobusybox/src/pkg/bb"
-	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -67,7 +62,7 @@ func init() {
 		sh = "elvish"
 	}
 
-	build = flag.String("build", "bb", "u-root build format (e.g. bb or binary).")
+	build = flag.String("build", "gbb", "u-root build format (e.g. bb or binary).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
@@ -93,7 +88,6 @@ func init() {
 	tags = flag.String("tags", "", "Comma separated list of build tags")
 
 	// Flags for the gobusybox, which we hope to move to, since it works with modules.
-	usegobusybox = flag.Bool("gobusybox", os.Getenv("GO111MODULE") != "off", "Use the new gobusybox package to build u-root")
 	genDir = flag.String("gen-dir", "", "Directory to generate source in")
 
 }
@@ -148,73 +142,11 @@ func generateLabel() string {
 	return fmt.Sprintf("%s-%s-%s-%s", *build, env.GOOS, env.GOARCH, strings.Join(baseCmds, "_"))
 }
 
-func gobusyboxMain() error {
-	bopts := &gbbgolang.BuildOpts{}
-	bopts.RegisterFlags(flag.CommandLine)
-
-	o, err := filepath.Abs(*outputPath)
-	if err != nil {
-		return err
-	}
-
-	env := gbbgolang.Default()
-	if env.CgoEnabled {
-		log.Printf("Disabling CGO for u-root...")
-		env.CgoEnabled = false
-	}
-	log.Printf("Build environment: %s", env)
-
-	tmpDir := *genDir
-	remove := false
-	if tmpDir == "" {
-		tdir, err := ioutil.TempDir("", "bb-")
-		if err != nil {
-			return fmt.Errorf("Could not create busybox source directory: %v", err)
-		}
-		tmpDir = tdir
-		remove = true
-	}
-
-	if len(flag.Args()) == 0 {
-		return fmt.Errorf("commands must be provided, as a path or glob, e.g., u-root cmds/core/* cmds/exp/rush")
-	}
-	opts := &gbb.Opts{
-		Env:          env,
-		GenSrcDir:    tmpDir,
-		CommandPaths: flag.Args(),
-		BinaryPath:   o,
-		GoBuildOpts:  bopts,
-	}
-	if err := gbb.BuildBusybox(opts); err != nil {
-		log.Print(err)
-		var errGopath *gbb.ErrGopathBuild
-		var errGomod *gbb.ErrModuleBuild
-		if errors.As(err, &errGopath) {
-			return fmt.Errorf("preserving bb generated source directory at %s due to error. To reproduce build, `cd %s` and `GO111MODULE=off GOPATH=%s go build`", tmpDir, errGopath.CmdDir, errGopath.GOPATH)
-		} else if errors.As(err, &errGomod) {
-			return fmt.Errorf("preserving bb generated source directory at %s due to error. To debug build, `cd %s` and use `go build` to build, or `go mod [why|tidy|graph]` to debug dependencies, or `go list -m all` to list all dependency versions", tmpDir, errGomod.CmdDir)
-		} else {
-			return fmt.Errorf("preserving bb generated source directory at %s due to error", tmpDir)
-		}
-	}
-	// Only remove temp dir if there was no error.
-	if remove {
-		os.RemoveAll(tmpDir)
-	}
-	return nil
-}
-
 func main() {
 	flag.Parse()
 
 	start := time.Now()
 
-	if *usegobusybox {
-		if err := gobusyboxMain(); err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
 	// Main is in a separate functions so defers run on return.
 	if err := Main(); err != nil {
 		log.Fatal(err)
@@ -336,6 +268,9 @@ func Main() error {
 		switch *build {
 		case "bb":
 			b = builder.BBBuilder{ShellBang: *shellbang}
+		case "gbb":
+			log.Printf("NOTE: building with the new gobusybox; to get old behavior, use -build=bb")
+			b = builder.GBBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
 		case "source":
