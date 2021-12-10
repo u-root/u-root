@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,22 +11,22 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-func TestBBBuild(t *testing.T) {
+func TestGBBBuild(t *testing.T) {
 	dir := t.TempDir()
 
 	opts := Opts{
 		Env: golang.Default(),
 		Packages: []string{
-			"github.com/u-root/u-root/pkg/uroot/test/foo",
-			"github.com/u-root/u-root/cmds/core/elvish",
+			"../test/foo",
+			"../../../cmds/core/elvish",
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",
 	}
 	af := initramfs.NewFiles()
-	var bbb BBBuilder
-	if err := bbb.Build(af, opts); err != nil {
-		t.Error(err)
+	var gbb GBBBuilder
+	if err := gbb.Build(af, opts); err != nil {
+		t.Fatalf("Build(%v, %v); %v != nil", af, opts, err)
 	}
 
 	mustContain := []string{
