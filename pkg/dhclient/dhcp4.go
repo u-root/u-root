@@ -180,10 +180,10 @@ func (p *Packet4) Boot() (*url.URL, error) {
 		u.Path = bootFileName
 		if len(p.P.ServerHostName) == 0 {
 			server := p.P.ServerIdentifier()
-			if server != nil {
-				u.Host = server.String()
-			} else if !p.P.ServerIPAddr.Equal(net.IPv4zero) {
+			if !p.P.ServerIPAddr.Equal(net.IPv4zero) {
 				u.Host = p.P.ServerIPAddr.String()
+			} else if server != nil {
+				u.Host = server.String()
 			} else {
 				return nil, ErrNoServerHostName
 			}

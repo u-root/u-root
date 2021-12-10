@@ -7,8 +7,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -33,13 +31,6 @@ var tests = []struct {
 }
 
 func testRush(t *testing.T) {
-	// Create temp directory
-	tmpDir, err := ioutil.TempDir("", "TestExit")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	// Table-driven testing
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {

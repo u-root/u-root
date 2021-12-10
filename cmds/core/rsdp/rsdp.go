@@ -29,9 +29,7 @@ import (
 	"github.com/u-root/u-root/pkg/acpi"
 )
 
-var (
-	cmdUsage = "Usage: rsdp"
-)
+var cmdUsage = "Usage: rsdp"
 
 func usage() {
 	log.Fatalf(cmdUsage)

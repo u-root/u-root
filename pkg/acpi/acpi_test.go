@@ -35,20 +35,19 @@ func TestTabWrite(t *testing.T) {
 	if ttab == nil {
 		ttab = tabs[0]
 	}
-	var b = &bytes.Buffer{}
+	b := &bytes.Buffer{}
 	if err := WriteTables(b, ttab); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(b.Bytes(), ttab.Data()) {
 		t.Fatalf("Written table does not match")
 	}
-
 }
 
 // TestAddr tests the decoding of those stupid "use this 64-bit if set else 32 things"
 // that permeate ACPI
 func TestAddr(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		n   string
 		dat []byte
 		a64 int64

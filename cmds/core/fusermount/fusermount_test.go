@@ -10,7 +10,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -25,13 +24,9 @@ import (
 // I give up. We're breaking something in circleci and I'm not sure
 // what. This is fine when run from the commandline.
 func testArgs(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "TestFusermount")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	tdir := filepath.Join(tmpDir, "a/b/c")
-	if err := os.MkdirAll(tdir, 0777); err != nil {
+	if err := os.MkdirAll(tdir, 0o777); err != nil {
 		t.Fatal(err)
 	}
 	ldir := filepath.Join(tmpDir, "d")
@@ -39,7 +34,7 @@ func testArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var tab = []struct {
+	tab := []struct {
 		n            string
 		o            string
 		e            int
@@ -103,11 +98,7 @@ func TestMount(t *testing.T) {
 	readFile := os.NewFile(uintptr(fds[1]), "fusermount-parent-reads")
 	defer readFile.Close()
 
-	tmpDir, err := ioutil.TempDir("", "TestFusermount")
-	if err != nil {
-		t.Fatal("TempDir failed: ", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	fc, err := net.FileConn(readFile)
 	if err != nil {
@@ -161,6 +152,7 @@ func TestMount(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestMain(m *testing.M) {
 	testutil.Run(m, main)
 }

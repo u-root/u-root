@@ -12,7 +12,7 @@ func Prefix(s []string) string {
 	if len(s) == 0 {
 		return ""
 	}
-	var a = s[0]
+	a := s[0]
 	for _, h := range s {
 		if len(h) < len(a) {
 			a = h
@@ -27,7 +27,6 @@ func Prefix(s []string) string {
 				done = false
 				break
 			}
-
 		}
 	}
 	return a

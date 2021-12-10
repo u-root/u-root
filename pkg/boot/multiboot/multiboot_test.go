@@ -114,7 +114,6 @@ func TestParseHeader(t *testing.T) {
 					t.Errorf("parseHeader() got %+v, want %+v", got.mandatory, want.mandatory)
 				}
 			}
-
 		})
 	}
 }

@@ -44,7 +44,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 
 // NewTTYS returns a new TTYIO.
 func NewTTYS(port string) (*TTYIO, error) {
-	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0620)
+	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0o620)
 	if err != nil {
 		return nil, err
 	}

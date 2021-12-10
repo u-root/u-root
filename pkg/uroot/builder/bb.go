@@ -71,7 +71,7 @@ func (b BBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		// Or add a #! file if b.ShellBang is set ...
 		if b.ShellBang {
 			b := path.Base(pkg)
-			if err := af.AddRecord(cpio.StaticFile(filepath.Join(opts.BinaryDir, b), "#!/bbin/bb #!"+b+"\n", 0755)); err != nil {
+			if err := af.AddRecord(cpio.StaticFile(filepath.Join(opts.BinaryDir, b), "#!/bbin/bb #!"+b+"\n", 0o755)); err != nil {
 				return err
 			}
 		} else if err := af.AddRecord(cpio.Symlink(filepath.Join(opts.BinaryDir, path.Base(pkg)), "bb")); err != nil {

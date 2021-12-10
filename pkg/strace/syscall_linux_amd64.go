@@ -357,7 +357,8 @@ func (s *SyscallEvent) FillArgs() {
 		{uintptr(s.Regs.Rdx)},
 		{uintptr(s.Regs.R10)},
 		{uintptr(s.Regs.R8)},
-		{uintptr(s.Regs.R9)}}
+		{uintptr(s.Regs.R9)},
+	}
 	s.Sysno = int(uint32(s.Regs.Orig_rax))
 }
 

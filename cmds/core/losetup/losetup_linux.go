@@ -21,9 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/mount/loop"
 )
 
-var (
-	detach = flag.Bool("d", false, "Detach the device")
-)
+var detach = flag.Bool("d", false, "Detach the device")
 
 func main() {
 	var (
@@ -65,5 +63,4 @@ func main() {
 	}
 
 	log.Printf("Attached %s to %s", devicename, filename)
-
 }

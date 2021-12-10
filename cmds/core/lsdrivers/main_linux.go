@@ -17,7 +17,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,12 +29,12 @@ var unused = flag.Bool("u", false, "Show unused drivers")
 // file in driverpath. This indicates that it is real hardware.
 // If the path has any sort of error, return false.
 func hasDevices(driverpath string) bool {
-	files, err := ioutil.ReadDir(driverpath)
+	files, err := os.ReadDir(driverpath)
 	if err != nil {
 		return false
 	}
 	for _, file := range files {
-		if file.Mode()&os.ModeSymlink != 0 {
+		if file.Type()&os.ModeSymlink != 0 {
 			return true
 		}
 	}
@@ -44,14 +43,14 @@ func hasDevices(driverpath string) bool {
 
 func lsdrivers(bus string, unused bool) ([]string, error) {
 	var d []string
-	files, err := ioutil.ReadDir(bus)
+	files, err := os.ReadDir(bus)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, f := range files {
 		n := filepath.Join(bus, f.Name(), "drivers")
-		drivers, err := ioutil.ReadDir(n)
+		drivers, err := os.ReadDir(n)
 		// In some cases the directory does not exist.
 		if err != nil {
 			continue
@@ -65,6 +64,7 @@ func lsdrivers(bus string, unused bool) ([]string, error) {
 	}
 	return d, nil
 }
+
 func main() {
 	flag.Parse()
 	drivers, err := lsdrivers("/sys/bus", *unused)

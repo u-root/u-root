@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const defaultPerms = 0660
+const defaultPerms = 0o660
 
 func parseDevices(args []string, devtype string) (int, error) {
 	if len(args) != 4 {

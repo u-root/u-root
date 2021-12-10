@@ -23,19 +23,17 @@ var (
 	// NB: When adding flags, update resetFlags in dmidecode_test.
 )
 
-var (
-	typeGroups = map[string][]uint8{
-		"bios":      {0, 13},
-		"system":    {1, 12, 15, 23, 32},
-		"baseboard": {2, 10, 41},
-		"chassis":   {3},
-		"processor": {4},
-		"memory":    {5, 6, 16, 17},
-		"cache":     {7},
-		"connector": {8},
-		"slot":      {9},
-	}
-)
+var typeGroups = map[string][]uint8{
+	"bios":      {0, 13},
+	"system":    {1, 12, 15, 23, 32},
+	"baseboard": {2, 10, 41},
+	"chassis":   {3},
+	"processor": {4},
+	"memory":    {5, 6, 16, 17},
+	"cache":     {7},
+	"connector": {8},
+	"slot":      {9},
+}
 
 type dmiDecodeError struct {
 	error
@@ -76,7 +74,7 @@ func dumpBin(textOut io.Writer, entryData, tableData []byte, fileName string) *d
 		e64.StructTableAddr = 0x20
 		edata, _ = e64.MarshalBinary()
 	}
-	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		return &dmiDecodeError{code: 1, error: fmt.Errorf("error opening file for writing: %v", err)}
 	}

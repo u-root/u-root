@@ -10,9 +10,7 @@ import (
 	"fmt"
 )
 
-var (
-	sdtLen = 36
-)
+var sdtLen = 36
 
 // SDT contains information about tables. It does not differentiate 32- vs 64-bit
 // tables.

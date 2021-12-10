@@ -103,7 +103,6 @@ func TestNew(t *testing.T) {
 	} else if err != nil {
 		t.Errorf("TestNew: want nil, got %v", err)
 	}
-
 }
 
 func TestRaw(t *testing.T) {
@@ -158,7 +157,6 @@ func TestString(t *testing.T) {
 		}
 
 	}
-
 }
 
 func TestSet(t *testing.T) {
@@ -249,5 +247,4 @@ func TestSet(t *testing.T) {
 			t.Errorf("Setting %q: got nil, want err", set)
 		}
 	}
-
 }

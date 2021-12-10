@@ -12,15 +12,13 @@ import (
 	"strings"
 )
 
-var (
-	commands = []string{
-		"/bbin/date",
-		"/bbin/dhclient -ipv6=false",
-		"/bbin/ip a",
-		"/bbin/elvish",
-		"/bbin/shutdown halt",
-	}
-)
+var commands = []string{
+	"/bbin/date",
+	"/bbin/dhclient -ipv6=false",
+	"/bbin/ip a",
+	"/bbin/elvish",
+	"/bbin/shutdown halt",
+}
 
 func main() {
 	for _, line := range commands {

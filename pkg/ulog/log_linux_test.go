@@ -27,5 +27,4 @@ func TestKernelLog(t *testing.T) {
 	if got := string(b[:n]); strings.Contains(got, want) {
 		t.Errorf("kernel log read = %v (len %d), want it to include %v", got, n, want)
 	}
-
 }

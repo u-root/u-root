@@ -53,7 +53,7 @@ func main() {
 	files := make([]*os.File, 0, flag.NArg())
 	writers := make([]io.Writer, 0, flag.NArg()+1)
 	for _, fname := range flag.Args() {
-		f, err := os.OpenFile(fname, oflags, 0666)
+		f, err := os.OpenFile(fname, oflags, 0o666)
 		if err != nil {
 			log.Fatalf("%s: error opening %s: %v", name, fname, err)
 		}

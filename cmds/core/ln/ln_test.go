@@ -7,10 +7,8 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -30,13 +28,6 @@ type test struct {
 	results []result // expected results
 	files   []create // previous files for testing
 	cmdline string   // cmdline ln equivalent
-}
-
-// prepareTestName prepares a custom testname for creating file/folder
-// using a cmdline, for that remove chars  whose conflicts with unix paths
-func prepareTestName(cmdline string) string {
-	d := strings.Replace(cmdline, " ", "_", -1)
-	return strings.Replace(d, "/", "|", -1)
 }
 
 // loadTests loads the main table driven tests
@@ -143,15 +134,6 @@ func loadTests() []test {
 	}
 }
 
-// newDir create a temp dir
-func newDir(testName string, t *testing.T) (name string) {
-	name, err := ioutil.TempDir("", "Go_"+testName)
-	if err != nil {
-		t.Fatalf("TempDir %s: %s", testName, err)
-	}
-	return
-}
-
 // testHardLink test if hardlink creation was successful
 // 'target' and 'linkName' must exists
 // linkName -> target
@@ -223,8 +205,7 @@ func testSymlink(linkName, linksTo string, t *testing.T) {
 // tabDriven tests (see loadTests())
 func TestLn(t *testing.T) {
 	tabDriven := loadTests()
-	testDir := newDir("TestLnGeneric", t)
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	// executing ln on isolated testDir
 	if err := os.Chdir(testDir); err != nil {
@@ -233,7 +214,7 @@ func TestLn(t *testing.T) {
 	defer os.Chdir("..") // after defer to go back to the original root
 
 	for caseNum, testCase := range tabDriven {
-		d := newDir(prepareTestName(testCase.cmdline), t)
+		d := t.TempDir()
 		if err := os.Chdir(d); err != nil {
 			t.Fatalf("Changing directory for %q fails: %v", d, err)
 		}
@@ -242,11 +223,11 @@ func TestLn(t *testing.T) {
 			t.Logf("Creating: %v (dir: %v)", f.name, f.dir)
 			p := filepath.Join(f.name)
 			if f.dir {
-				if err := os.Mkdir(p, 0750); err != nil && err == os.ErrExist {
+				if err := os.Mkdir(p, 0o750); err != nil && err == os.ErrExist {
 					t.Skipf("Creation of dir %q fails: %v", p, err)
 				}
 			} else {
-				if err := ioutil.WriteFile(p, []byte{'.'}, 0640); err != nil {
+				if err := os.WriteFile(p, []byte{'.'}, 0o640); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -267,7 +248,6 @@ func TestLn(t *testing.T) {
 				t.Logf("%q -> %q (hardlink)", expected.name, expected.linksTo)
 				testHardLink(expected.name, expected.linksTo, t)
 			}
-
 		}
 
 		// backing to testDir folder

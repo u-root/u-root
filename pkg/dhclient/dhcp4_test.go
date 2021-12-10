@@ -74,7 +74,7 @@ func TestBoot(t *testing.T) {
 			),
 			want: &url.URL{
 				Scheme: "tftp",
-				Host:   "10.0.0.3",
+				Host:   "10.0.0.2",
 				Path:   "pxelinux.0",
 			},
 		},

@@ -6,7 +6,6 @@ package rng
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -70,7 +69,7 @@ func setAvailableTRNG() error {
 		selectedRNG   string
 	)
 
-	availableFileData, err := ioutil.ReadFile(HwRandomAvailableFile)
+	availableFileData, err := os.ReadFile(HwRandomAvailableFile)
 	if err != nil {
 		return err
 	}
@@ -89,12 +88,12 @@ func setAvailableTRNG() error {
 		return errors.New("no TRNG found on platform")
 	}
 
-	if err = ioutil.WriteFile(HwRandomCurrentFile, []byte(selectedRNG), 0644); err != nil {
+	if err = os.WriteFile(HwRandomCurrentFile, []byte(selectedRNG), 0o644); err != nil {
 		return err
 	}
 
 	// Check if the correct TRNG was successful written
-	currentFileData, err := ioutil.ReadFile(HwRandomCurrentFile)
+	currentFileData, err := os.ReadFile(HwRandomCurrentFile)
 	if err != nil {
 		return err
 	}
@@ -132,7 +131,7 @@ func UpdateLinuxRandomness(recoverer recovery.Recoverer) error {
 		for {
 			time.Sleep(EntropyFeedTime)
 
-			randomEntropyAvailableData, err := ioutil.ReadFile(RandomEntropyAvailableFile)
+			randomEntropyAvailableData, err := os.ReadFile(RandomEntropyAvailableFile)
 			if err != nil {
 				recoverer.Recover("Can't read entropy pool size")
 			}
@@ -147,7 +146,7 @@ func UpdateLinuxRandomness(recoverer recovery.Recoverer) error {
 				continue
 			}
 
-			var random = make([]byte, EntropyBlockSize)
+			random := make([]byte, EntropyBlockSize)
 			length, err := hwRng.Read(random)
 			if err != nil {
 				recoverer.Recover("Can't open the hardware random device")

@@ -5,8 +5,6 @@
 package builder
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/golang"
@@ -14,11 +12,7 @@ import (
 )
 
 func TestBBBuild(t *testing.T) {
-	dir, err := ioutil.TempDir("", "u-root")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	opts := Opts{
 		Env: golang.Default(),
@@ -35,7 +29,7 @@ func TestBBBuild(t *testing.T) {
 		t.Error(err)
 	}
 
-	var mustContain = []string{
+	mustContain := []string{
 		"bbin/elvish",
 		"bbin/foo",
 	}
@@ -44,5 +38,4 @@ func TestBBBuild(t *testing.T) {
 			t.Errorf("expected files to include %q; archive: %v", name, af)
 		}
 	}
-
 }

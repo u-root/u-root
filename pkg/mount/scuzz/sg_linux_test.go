@@ -109,41 +109,41 @@ func TestUnlock(t *testing.T) {
 	// yields this header and data to ioctl(fd, SECURITY_UNLOCK, ...)
 	// The 'want' data is derived from a modified version of hdparm (github.com/rminnich/hdparmm)
 	// which prints the ioctl parameters as initialized go structs.
-	var (
-		want = &packet{
-			packetHeader: packetHeader{
-				interfaceID:       'S',
-				direction:         -2,
-				cmdLen:            16,
-				maxStatusBlockLen: 32,
-				iovCount:          0,
-				dataLen:           512,
-				data:              0,
-				cdb:               0,
-				sb:                0,
-				timeout:           15000,
-				flags:             0,
-				packID:            0,
-				usrPtr:            0,
-				status:            0,
-				maskedStatus:      0,
-				msgStatus:         0,
-				sbLen:             0,
-				hostStatus:        0,
-				driverStatus:      0,
-				resID:             0,
-				duration:          0,
-				info:              0,
-			},
-			command: commandDataBlock{0x85, 0xb, 0x6, 00, 00, 00, 0x1, 00, 00, 00, 00, 00, 00, 0x40, 0xf2, 00},
-			block: dataBlock{
-				0x00, 0x01, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34,
-				0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
-				0x31, 0x32,
-			},
-		}
-		//sb statusBlock
-	)
+
+	want := &packet{
+		packetHeader: packetHeader{
+			interfaceID:       'S',
+			direction:         -2,
+			cmdLen:            16,
+			maxStatusBlockLen: 32,
+			iovCount:          0,
+			dataLen:           512,
+			data:              0,
+			cdb:               0,
+			sb:                0,
+			timeout:           15000,
+			flags:             0,
+			packID:            0,
+			usrPtr:            0,
+			status:            0,
+			maskedStatus:      0,
+			msgStatus:         0,
+			sbLen:             0,
+			hostStatus:        0,
+			driverStatus:      0,
+			resID:             0,
+			duration:          0,
+			info:              0,
+		},
+		command: commandDataBlock{0x85, 0xb, 0x6, 0o0, 0o0, 0o0, 0x1, 0o0, 0o0, 0o0, 0o0, 0o0, 0o0, 0x40, 0xf2, 0o0},
+		block: dataBlock{
+			0x00, 0x01, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34,
+			0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
+			0x31, 0x32,
+		},
+	}
+	// sb statusBlock
+
 	d := &SGDisk{dev: 0x40, Timeout: DefaultTimeout}
 	p := d.unlockPacket("12345678901234567890123456789012", true)
 	check(t, p, want)
@@ -153,37 +153,37 @@ func TestIdentify(t *testing.T) {
 	Debug = t.Logf
 	// The 'want' data is derived from a modified version of hdparm (github.com/rminnich/hdparmm)
 	// which prints the ioctl parameters as initialized go structs.
-	var (
-		want = &packet{
-			packetHeader: packetHeader{
-				interfaceID:       'S',
-				direction:         -3,
-				cmdLen:            16,
-				maxStatusBlockLen: 32,
-				iovCount:          0,
-				dataLen:           512,
-				data:              0,
-				cdb:               0,
-				sb:                0,
-				timeout:           15000,
-				flags:             0,
-				packID:            0,
-				usrPtr:            0,
-				status:            0,
-				maskedStatus:      0,
-				msgStatus:         0,
-				sbLen:             0,
-				hostStatus:        0,
-				driverStatus:      0,
-				resID:             0,
-				duration:          0,
-				info:              0,
-			},
-			command: commandDataBlock{0x85, 0x08, 0x0e, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0xec, 0x00},
-		}
-		// TODO: check status block. Requires a qemu device that supports these operations.
-		//sb = statusBlock{0x70, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	)
+
+	want := &packet{
+		packetHeader: packetHeader{
+			interfaceID:       'S',
+			direction:         -3,
+			cmdLen:            16,
+			maxStatusBlockLen: 32,
+			iovCount:          0,
+			dataLen:           512,
+			data:              0,
+			cdb:               0,
+			sb:                0,
+			timeout:           15000,
+			flags:             0,
+			packID:            0,
+			usrPtr:            0,
+			status:            0,
+			maskedStatus:      0,
+			msgStatus:         0,
+			sbLen:             0,
+			hostStatus:        0,
+			driverStatus:      0,
+			resID:             0,
+			duration:          0,
+			info:              0,
+		},
+		command: commandDataBlock{0x85, 0x08, 0x0e, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0xec, 0x00},
+	}
+	// TODO: check status block. Requires a qemu device that supports these operations.
+	// sb = statusBlock{0x70, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+
 	p := (&SGDisk{dev: 0x40, Timeout: DefaultTimeout}).identifyPacket()
 	check(t, p, want)
 }

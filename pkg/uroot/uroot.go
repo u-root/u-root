@@ -11,7 +11,6 @@ package uroot
 import (
 	"debug/elf"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -44,31 +43,31 @@ func DefaultRamfs() *cpio.Archive {
 	switch golang.Default().GOOS {
 	case "linux":
 		return cpio.ArchiveFromRecords([]cpio.Record{
-			cpio.Directory("bin", 0755),
-			cpio.Directory("dev", 0755),
-			cpio.Directory("env", 0755),
-			cpio.Directory("etc", 0755),
-			cpio.Directory("lib64", 0755),
-			cpio.Directory("proc", 0755),
-			cpio.Directory("sys", 0755),
-			cpio.Directory("tcz", 0755),
-			cpio.Directory("tmp", 0777),
-			cpio.Directory("ubin", 0755),
-			cpio.Directory("usr", 0755),
-			cpio.Directory("usr/lib", 0755),
-			cpio.Directory("var/log", 0777),
-			cpio.CharDev("dev/console", 0600, 5, 1),
-			cpio.CharDev("dev/tty", 0666, 5, 0),
-			cpio.CharDev("dev/null", 0666, 1, 3),
-			cpio.CharDev("dev/port", 0640, 1, 4),
-			cpio.CharDev("dev/urandom", 0666, 1, 9),
-			cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
-			cpio.StaticFile("etc/localtime", gmt0, 0644),
+			cpio.Directory("bin", 0o755),
+			cpio.Directory("dev", 0o755),
+			cpio.Directory("env", 0o755),
+			cpio.Directory("etc", 0o755),
+			cpio.Directory("lib64", 0o755),
+			cpio.Directory("proc", 0o755),
+			cpio.Directory("sys", 0o755),
+			cpio.Directory("tcz", 0o755),
+			cpio.Directory("tmp", 0o777),
+			cpio.Directory("ubin", 0o755),
+			cpio.Directory("usr", 0o755),
+			cpio.Directory("usr/lib", 0o755),
+			cpio.Directory("var/log", 0o777),
+			cpio.CharDev("dev/console", 0o600, 5, 1),
+			cpio.CharDev("dev/tty", 0o666, 5, 0),
+			cpio.CharDev("dev/null", 0o666, 1, 3),
+			cpio.CharDev("dev/port", 0o640, 1, 4),
+			cpio.CharDev("dev/urandom", 0o666, 1, 9),
+			cpio.StaticFile("etc/resolv.conf", nameserver, 0o644),
+			cpio.StaticFile("etc/localtime", gmt0, 0o644),
 		})
 	default:
 		return cpio.ArchiveFromRecords([]cpio.Record{
-			cpio.Directory("ubin", 0755),
-			cpio.Directory("bbin", 0755),
+			cpio.Directory("ubin", 0o755),
+			cpio.Directory("bbin", 0o755),
 		})
 	}
 }
@@ -242,7 +241,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	// Add each build mode's commands to the archive.
 	for _, cmds := range opts.Commands {
-		builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
+		builderTmpDir, err := os.MkdirTemp(opts.TempDir, "builder")
 		if err != nil {
 			return err
 		}
@@ -275,7 +274,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
 	}
 	if len(opts.UinitArgs) > 0 {
-		if err := archive.AddRecord(cpio.StaticFile("etc/uinit.flags", uflag.ArgvToFile(opts.UinitArgs), 0444)); err != nil {
+		if err := archive.AddRecord(cpio.StaticFile("etc/uinit.flags", uflag.ArgvToFile(opts.UinitArgs), 0o444)); err != nil {
 			return fmt.Errorf("%v: could not add uinit arguments from UinitArgs (-uinitcmd) to initramfs", err)
 		}
 	}

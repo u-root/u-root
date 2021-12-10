@@ -84,7 +84,6 @@ type LongStringer struct {
 
 // FileString implements Stringer.FileString.
 func (ls LongStringer) FileString(fi FileInfo) string {
-
 	var size string
 	if ls.Human {
 		size = humanize.Bytes(uint64(fi.Size))

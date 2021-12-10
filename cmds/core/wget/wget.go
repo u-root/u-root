@@ -34,9 +34,7 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-var (
-	outPath = flag.String("O", "", "output file")
-)
+var outPath = flag.String("O", "", "output file")
 
 func usage() {
 	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])

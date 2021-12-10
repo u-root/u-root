@@ -102,7 +102,7 @@ func New() *MockSPI {
 // does not exist, it will be created. Ideally, the file's size should match
 // FlashSize.
 func NewFromFile(filename string) (*MockSPI, error) {
-	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		return nil, err
 	}

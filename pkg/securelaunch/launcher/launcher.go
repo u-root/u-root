@@ -26,7 +26,6 @@ type Launcher struct {
 // MeasureKernel calls file collector in measurement pkg that
 // hashes kernel, initrd files and even store these hashes in tpm pcrs.
 func (l *Launcher) MeasureKernel() error {
-
 	kernel := l.Params["kernel"]
 	initrd := l.Params["initrd"]
 
@@ -57,7 +56,6 @@ func (l *Launcher) MeasureKernel() error {
  * - if kexec fails
  */
 func (l *Launcher) Boot() error {
-
 	if l.Type != "kexec" {
 		log.Printf("launcher: Unsupported launcher type. Exiting.")
 		return fmt.Errorf("launcher: Unsupported launcher type. Exiting")

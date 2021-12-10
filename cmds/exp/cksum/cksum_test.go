@@ -11,7 +11,7 @@ import (
 )
 
 func TestCksum(t *testing.T) {
-	var testMatrix = []struct {
+	testMatrix := []struct {
 		data  []byte
 		cksum uint32
 	}{

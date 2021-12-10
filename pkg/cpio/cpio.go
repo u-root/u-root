@@ -137,7 +137,7 @@ func Format(name string) (RecordFormat, error) {
 }
 
 func modeFromLinux(mode uint64) os.FileMode {
-	m := os.FileMode(mode & 0777)
+	m := os.FileMode(mode & 0o777)
 	switch mode & S_IFMT {
 	case S_IFBLK:
 		m |= os.ModeDevice

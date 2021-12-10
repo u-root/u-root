@@ -34,12 +34,12 @@ const (
 // gcovFilter filters on all files ending with a gcda or gcno extension.
 func gcovFilter(hdr *tar.Header) bool {
 	if hdr.Typeflag == tar.TypeDir {
-		hdr.Mode = 0770
+		hdr.Mode = 0o770
 		return true
 	}
 	if (filepath.Ext(hdr.Name) == ".gcda" && hdr.Typeflag == tar.TypeReg) ||
 		(filepath.Ext(hdr.Name) == ".gcno" && hdr.Typeflag == tar.TypeSymlink) {
-		hdr.Mode = 0660
+		hdr.Mode = 0o660
 		return true
 	}
 	return false

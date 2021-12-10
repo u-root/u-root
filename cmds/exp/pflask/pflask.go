@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -17,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
 	"unsafe"
 
 	// "github.com/u-root/u-root/pkg/termios"
@@ -93,7 +91,7 @@ func (c cgroupname) Validate(s string) {
 }
 
 func (c cgroupname) Create(s, name string) {
-	if err := os.MkdirAll(filepath.Join(string(c), s, name), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(string(c), s, name), 0o755); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -101,7 +99,7 @@ func (c cgroupname) Create(s, name string) {
 func (c cgroupname) Attach(s, name string, pid int) {
 	t := filepath.Join(string(c), s, name, "tasks")
 	b := []byte(fmt.Sprintf("%v", pid))
-	if err := ioutil.WriteFile(t, b, 0600); err != nil {
+	if err := os.WriteFile(t, b, 0o600); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -130,7 +128,6 @@ type mount struct {
 // Add adds a mount to the global mountlist. Don't know if we need it, but we might for additional volumes?
 func Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
 	mounts = append(mounts, mount{src: src, dst: dst, mtype: mtype, flags: flags, opts: opts, dir: dir})
-
 }
 
 // One mounts one mountpoint, using base as a prefix for the destination.
@@ -139,7 +136,7 @@ func Add(src, dst, mtype, opts string, flags uintptr, dir bool) {
 func (m *mount) One(base string) {
 	dst := filepath.Join(base, m.dst)
 	if m.dir {
-		if err := os.MkdirAll(dst, 0755); err != nil {
+		if err := os.MkdirAll(dst, 0o755); err != nil {
 			log.Fatalf("One: mkdirall %v: %v", m.dst, err)
 		}
 	}
@@ -179,7 +176,7 @@ func modedev(st os.FileInfo) (uint32, int) {
 // makeConsole sets the right modes for the real console, then creates
 // a /dev/console in the chroot.
 func makeConsole(base, console string, unprivileged bool) {
-	if err := os.Chmod(console, 0600); err != nil {
+	if err := os.Chmod(console, 0o600); err != nil {
 		log.Printf("%v", err)
 	}
 	if err := os.Chown(console, 0, 0); err != nil {
@@ -197,7 +194,7 @@ func makeConsole(base, console string, unprivileged bool) {
 		// In unprivileged uses, we can't mknod /dev/console, however,
 		// we can just create a file /dev/console and use bind mount on file.
 		if _, err := os.Stat(nn); err != nil {
-			ioutil.WriteFile(nn, []byte{}, 0600) // best effort, ignore error
+			os.WriteFile(nn, []byte{}, 0o600) // best effort, ignore error
 		}
 	} else {
 		if err := syscall.Mknod(nn, mode, dev); err != nil {
@@ -210,7 +207,6 @@ func makeConsole(base, console string, unprivileged bool) {
 		log.Fatalf("Mount :%s: on :%s: flags %v: %v",
 			console, nn, syscall.MS_BIND, err)
 	}
-
 }
 
 // copyNodes makes copies of needed nodes in the chroot.
@@ -221,7 +217,8 @@ func copyNodes(base string) {
 		"/dev/null",
 		"/dev/zero",
 		"/dev/random",
-		"/dev/urandom"}
+		"/dev/urandom",
+	}
 
 	for _, n := range nodes {
 		st, err := os.Stat(n)
@@ -328,8 +325,8 @@ func main() {
 		if syscall.Geteuid() != 0 {
 			c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
 			// Interesting. Won't build statically?
-			//c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
-			//c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
+			// c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
+			// c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
 		}
 
 		c.Stdin = os.Stdin
@@ -358,7 +355,7 @@ func main() {
 	}
 
 	a = flag.Args()
-	//log.Printf("greetings %v\n", a)
+	// log.Printf("greetings %v\n", a)
 	a = a[:len(a)-1]
 
 	controlPTY, processTTY, sname, err := ptsopen()
@@ -384,11 +381,11 @@ func main() {
 
 	makeConsole(*chroot, sname, unprivileged)
 
-	//umask(0022);
+	// umask(0022);
 
 	/* TODO: drop capabilities */
 
-	//do_user(user);
+	// do_user(user);
 
 	e := make(map[string]string)
 	if *keepenv {

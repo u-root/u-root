@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -106,7 +105,7 @@ func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 		// but it at least proves the files are still downloading.
 		progress := func(r io.Reader) io.Reader {
 			return &uio.ProgressReadCloser{
-				RC:       ioutil.NopCloser(r),
+				RC:       io.NopCloser(r),
 				Symbol:   ".",
 				Interval: 5 * 1024 * 1024,
 				W:        os.Stdout,
@@ -115,7 +114,7 @@ func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 		rdr = progress(rdr)
 	}
 
-	f, err := ioutil.TempFile("", "kexec-image")
+	f, err := os.CreateTemp("", "kexec-image")
 	if err != nil {
 		return nil, err
 	}

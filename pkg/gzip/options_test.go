@@ -62,6 +62,7 @@ func TestOptions_ParseArgs(t *testing.T) {
 		})
 	}
 }
+
 func TestOptions_validate(t *testing.T) {
 	type fields struct {
 		Blocksize  int

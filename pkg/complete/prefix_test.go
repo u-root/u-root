@@ -9,7 +9,7 @@ import (
 )
 
 func TestPrefix(t *testing.T) {
-	var tests = []string{
+	tests := []string{
 		"/etc/hosts.allow",
 		"/etc/hosts.deny",
 		"/etc/hosts",
@@ -20,7 +20,7 @@ func TestPrefix(t *testing.T) {
 		"",
 	}
 
-	var testsout = []string{
+	testsout := []string{
 		"/etc/hosts.allow",
 		"/etc/hosts.",
 		"/etc/hosts",

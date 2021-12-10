@@ -10,7 +10,6 @@ package uefivars
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	fp "path/filepath"
@@ -19,7 +18,7 @@ import (
 	"unicode/utf8"
 )
 
-//http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
+// http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
 
 // EfiVarDir is the sysfs /sys/firmware/efi/vars directory, which can be overridden for testing.
 var EfiVarDir = "/sys/firmware/efi/vars"
@@ -35,7 +34,7 @@ func ReadVar(uuid, name string) (e EfiVar, err error) {
 	path := fp.Join(EfiVarDir, name+"-"+uuid, "data")
 	e.UUID = uuid
 	e.Name = name
-	e.Data, err = ioutil.ReadFile(path)
+	e.Data, err = os.ReadFile(path)
 	return
 }
 

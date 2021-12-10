@@ -14,7 +14,6 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -73,7 +72,7 @@ var wg sync.WaitGroup
 
 // Return a list of command names.
 func getCmdNames() ([]string, error) {
-	files, err := ioutil.ReadDir(os.ExpandEnv(cmdsPath))
+	files, err := os.ReadDir(os.ExpandEnv(cmdsPath))
 	if err != nil {
 		return nil, err
 	}

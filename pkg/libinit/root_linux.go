@@ -101,43 +101,43 @@ func (c cpdir) String() string {
 var (
 	// These have to be created / mounted first, so that the logging works correctly.
 	preNamespace = []creator{
-		dir{Name: "/dev", Mode: 0777},
+		dir{Name: "/dev", Mode: 0o777},
 
 		// Kernel must be compiled with CONFIG_DEVTMPFS.
 		mount{Source: "devtmpfs", Target: "/dev", FSType: "devtmpfs"},
 	}
 	namespace = []creator{
-		dir{Name: "/buildbin", Mode: 0777},
-		dir{Name: "/ubin", Mode: 0777},
-		dir{Name: "/tmp", Mode: 0777},
-		dir{Name: "/env", Mode: 0777},
-		dir{Name: "/tcz", Mode: 0777},
-		dir{Name: "/lib", Mode: 0777},
-		dir{Name: "/usr/lib", Mode: 0777},
-		dir{Name: "/var/log", Mode: 0777},
-		dir{Name: "/go/pkg/linux_amd64", Mode: 0777},
+		dir{Name: "/buildbin", Mode: 0o777},
+		dir{Name: "/ubin", Mode: 0o777},
+		dir{Name: "/tmp", Mode: 0o777},
+		dir{Name: "/env", Mode: 0o777},
+		dir{Name: "/tcz", Mode: 0o777},
+		dir{Name: "/lib", Mode: 0o777},
+		dir{Name: "/usr/lib", Mode: 0o777},
+		dir{Name: "/var/log", Mode: 0o777},
+		dir{Name: "/go/pkg/linux_amd64", Mode: 0o777},
 
-		dir{Name: "/etc", Mode: 0777},
+		dir{Name: "/etc", Mode: 0o777},
 
-		dir{Name: "/proc", Mode: 0555},
+		dir{Name: "/proc", Mode: 0o555},
 		mount{Source: "proc", Target: "/proc", FSType: "proc"},
 		mount{Source: "tmpfs", Target: "/tmp", FSType: "tmpfs"},
 
-		dev{Name: "/dev/tty", Mode: syscall.S_IFCHR | 0666, Dev: 0x0500},
-		dev{Name: "/dev/urandom", Mode: syscall.S_IFCHR | 0444, Dev: 0x0109},
-		dev{Name: "/dev/port", Mode: syscall.S_IFCHR | 0640, Dev: 0x0104},
+		dev{Name: "/dev/tty", Mode: syscall.S_IFCHR | 0o666, Dev: 0x0500},
+		dev{Name: "/dev/urandom", Mode: syscall.S_IFCHR | 0o444, Dev: 0x0109},
+		dev{Name: "/dev/port", Mode: syscall.S_IFCHR | 0o640, Dev: 0x0104},
 
-		dir{Name: "/dev/pts", Mode: 0777},
+		dir{Name: "/dev/pts", Mode: 0o777},
 		mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		// Note: if we mount /dev/pts with "newinstance", we *must* make "/dev/ptmx" a symlink to "/dev/pts/ptmx"
 		symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
 		// Note: shm is required at least for Chrome. If you don't mount
 		// it chrome throws a bogus "out of memory" error, not the more
 		// useful "I can't open /dev/shm/whatever". SAD!
-		dir{Name: "/dev/shm", Mode: 0777},
+		dir{Name: "/dev/shm", Mode: 0o777},
 		mount{Source: "tmpfs", Target: "/dev/shm", FSType: "tmpfs"},
 
-		dir{Name: "/sys", Mode: 0555},
+		dir{Name: "/sys", Mode: 0o555},
 		mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
 
@@ -149,16 +149,16 @@ var (
 	// LinuxBoot/NERF. Some users use u-root for container stuff.
 	cgroupsnamespace = []creator{
 		mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
-		dir{Name: "/sys/fs/cgroup/memory", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/freezer", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/devices", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/cpu,cpuacct", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/blkio", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/cpuset", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/pids", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/net_cls,net_prio", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/hugetlb", Mode: 0555},
-		dir{Name: "/sys/fs/cgroup/perf_event", Mode: 0555},
+		dir{Name: "/sys/fs/cgroup/memory", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/freezer", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/devices", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/cpu,cpuacct", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/blkio", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/cpuset", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/pids", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/net_cls,net_prio", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/hugetlb", Mode: 0o555},
+		dir{Name: "/sys/fs/cgroup/perf_event", Mode: 0o555},
 		symlink{NewPath: "/sys/fs/cgroup/cpu", Target: "/sys/fs/cgroup/cpu,cpuacct"},
 		symlink{NewPath: "/sys/fs/cgroup/cpuacct", Target: "/sys/fs/cgroup/cpu,cpuacct"},
 		symlink{NewPath: "/sys/fs/cgroup/net_cls", Target: "/sys/fs/cgroup/net_cls,net_prio"},
@@ -233,12 +233,10 @@ func CreateRootfs() {
 	}
 }
 
-var (
-	excludedMods = map[string]bool{
-		"idpf":     true,
-		"idpf_imc": true,
-	}
-)
+var excludedMods = map[string]bool{
+	"idpf":     true,
+	"idpf_imc": true,
+}
 
 // InstallAllModules installs kernel modules (.ko files) from /lib/modules.
 // Useful for modules that need to be loaded for boot (ie a network

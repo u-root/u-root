@@ -134,7 +134,7 @@ loop:
 				return nil, err
 			}
 		case DppTypeEnd:
-			//should be last item on list
+			// should be last item on list
 			reachedEnd = true
 			st := EfiDppEndSubType(h.ProtoSubType)
 			if st != DppETypeEndEntire {
@@ -215,11 +215,11 @@ type EfiDevicePathProtocolHdr struct {
 type EfiDevPathProtoType uint8
 
 const (
-	DppTypeHw        EfiDevPathProtoType = iota + 1 //0x01, pg 288
-	DppTypeACPI                                     //0x02, pg 290
-	DppTypeMessaging                                //0x03, pg 293
-	DppTypeMedia                                    //0x04, pg 319
-	DppTypeBBS                                      //0x05, pg 287
+	DppTypeHw        EfiDevPathProtoType = iota + 1 // 0x01, pg 288
+	DppTypeACPI                                     // 0x02, pg 290
+	DppTypeMessaging                                // 0x03, pg 293
+	DppTypeMedia                                    // 0x04, pg 319
+	DppTypeBBS                                      // 0x05, pg 287
 	DppTypeEnd       EfiDevPathProtoType = 0x7f
 )
 
@@ -247,8 +247,8 @@ type EfiDevPathProtoSubType uint8
 type EfiDppEndSubType EfiDevPathProtoSubType
 
 const (
-	//DppTypeEnd, pg 287-288
-	DppETypeEndStartNew EfiDppEndSubType = 0x01 //only for DppTypeHw?
+	// DppTypeEnd, pg 287-288
+	DppETypeEndStartNew EfiDppEndSubType = 0x01 // only for DppTypeHw?
 	DppETypeEndEntire   EfiDppEndSubType = 0xff
 )
 

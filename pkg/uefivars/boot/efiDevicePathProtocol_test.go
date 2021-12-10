@@ -26,7 +26,7 @@ var boot7 = []byte{
 	0x49, 0x00, 0x00, 0x00, 0x7f, 0xff, 0x04, 0x00, 0x00, 0x00, 0x42, 0x4f,
 }
 
-//func ParseFilePathList(in []byte) (EfiDevicePathProtocolList, error)
+// func ParseFilePathList(in []byte) (EfiDevicePathProtocolList, error)
 func TestParseFilePathList(t *testing.T) {
 	// When this test runs, you will see log entries like
 	// "Skipping loop0: open /dev/loop0: permission denied"
@@ -39,7 +39,7 @@ func TestParseFilePathList(t *testing.T) {
 	}
 	b := BootVar(e)
 
-	//same as efibootmgr output, except using forward slashes
+	// same as efibootmgr output, except using forward slashes
 	wantpath := "HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI)"
 	gotpath := b.FilePathList.String()
 	if gotpath != wantpath {

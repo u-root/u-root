@@ -19,7 +19,7 @@ import (
 var debug = flag.Bool("d", false, "Turn on forth package debugging using log.Printf")
 
 func main() {
-	var b = make([]byte, 512)
+	b := make([]byte, 512)
 	flag.Parse()
 	if *debug {
 		forth.Debug = log.Printf

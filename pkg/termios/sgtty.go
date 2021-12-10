@@ -28,7 +28,7 @@ func GTTY(fd int) (*TTY, error) {
 		return nil, err
 	}
 
-	var t = TTY{Opts: make(map[string]bool), CC: make(map[string]uint8)}
+	t := TTY{Opts: make(map[string]bool), CC: make(map[string]uint8)}
 	for n, b := range boolFields {
 		val := uint32(reflect.ValueOf(term).Elem().Field(b.word).Uint()) & b.mask
 		t.Opts[n] = val != 0

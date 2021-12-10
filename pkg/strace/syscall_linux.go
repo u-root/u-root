@@ -304,7 +304,6 @@ func (i *SyscallInfo) printEnter(t Task, args SyscallArguments) string {
 	default:
 		return fmt.Sprintf("%s E %s(%s, %s, %s, %s, %s, %s, ...)", t.Name(), i.name, o[0], o[1], o[2], o[3], o[4], o[5])
 	}
-
 }
 
 func SysCallEnter(t Task, s *SyscallEvent) string {

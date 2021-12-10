@@ -6,7 +6,6 @@ package main
 
 import (
 	"encoding/hex"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -230,7 +229,7 @@ func ScanGrubConfigs(devices block.BlockDevices, basedir string) []jsonboot.Boot
 			return nil
 		}
 		log.Printf("Parsing %s", currentPath)
-		data, err := ioutil.ReadFile(currentPath)
+		data, err := os.ReadFile(currentPath)
 		if err != nil {
 			return err
 		}

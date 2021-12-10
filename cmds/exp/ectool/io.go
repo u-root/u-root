@@ -15,12 +15,12 @@ type ioport interface {
 	Outs(ioaddr, []uint8) (int, error)
 	// For later, at some point, we may go with this.
 	// Not yet.
-	//Out(ioaddr, interface{}) (int, error)
+	// Out(ioaddr, interface{}) (int, error)
 	Inb(ioaddr) (uint8, error)
 	Inw(ioaddr) (uint16, error)
 	Inl(ioaddr) (uint32, error)
 	Ins(ioaddr, int) ([]uint8, error)
-	//In(ioaddr, interface{}) (int, error)
+	// In(ioaddr, interface{}) (int, error)
 }
 
 type debugf func(string, ...interface{})
