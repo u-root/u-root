@@ -38,7 +38,7 @@ github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 ## explicit
 github.com/google/goexpect
-# github.com/google/goterm v0.0.0-20190703233501-fc88cf888a3f
+# github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
 ## explicit
 github.com/google/goterm/term
 # github.com/insomniacslk/dhcp v0.0.0-20210817203519-d82598001386
@@ -119,11 +119,19 @@ github.com/spf13/pflag
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
+# github.com/u-root/gobusybox/src v0.0.0-20210529132627-adc854ea4425
+## explicit; go 1.13
+github.com/u-root/gobusybox/src/pkg/bb
+github.com/u-root/gobusybox/src/pkg/bb/bbinternal
+github.com/u-root/gobusybox/src/pkg/bb/findpkg
+github.com/u-root/gobusybox/src/pkg/golang
+github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/uio v0.0.0-20210528114334-82958018845c
+# github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7
 ## explicit; go 1.15
+github.com/u-root/uio/cp
 github.com/u-root/uio/rand
 github.com/u-root/uio/ubinary
 github.com/u-root/uio/uio
@@ -167,6 +175,8 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 # golang.org/x/mod v0.4.2
 ## explicit; go 1.12
+golang.org/x/mod/internal/lazyregexp
+golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
@@ -206,6 +216,10 @@ golang.org/x/text/unicode/norm
 # golang.org/x/tools v0.1.1
 ## explicit; go 1.17
 golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/gcimporter
+golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/go/packages
 golang.org/x/tools/imports
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
@@ -215,6 +229,8 @@ golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
+golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 ## explicit; go 1.11
 golang.org/x/xerrors

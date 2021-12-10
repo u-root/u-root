@@ -1,11 +1,18 @@
 # Releases
 
-A new release happens every 6 weeks:
+Note: All release >=1.0.0 have been bumped down from vX.0.0 to v0.X.0. This was
+done to avoid the +incompatible suffix from Go modules. The u-root API is
+currently unstable and may change slighly between releases.
 
-- 1st day on the first month of each quarter
-- 15th day of the second month of each quarter
+## v0.8.0 (2021-11-29)
 
-## v6.0.0 (2019-08-14)
+*no release notes available*
+
+## v0.7.0, formerly v7.0.0 (2020-08-30)
+
+*no release notes available*
+
+## v0.6.0, formerly v6.0.0 (2019-08-14)
 
 - Bug fixes:
   - Ensure that cpio does not create corrupt archives
@@ -22,7 +29,7 @@ A new release happens every 6 weeks:
   - Linux 4.17
   - Golang 1.12
 
-## V5.0.0 (2019-07-09)
+## v0.5.0, formerly V5.0.0 (2019-07-09)
 
 - Renamed commands
   - core commands are in core
@@ -32,7 +39,7 @@ A new release happens every 6 weeks:
   - it needed its own space
 - Welcome systemboot!
 
-## v4.0.0 (2019-01-26)
+## v0.4.0, formerly v4.0.0 (2019-01-26)
 
 - Multiboot as a kexec target -- Thank you Max!
   - Use with kexec, also see the new module argument
@@ -68,8 +75,7 @@ A new release happens every 6 weeks:
   - Linux 4.17
   - Golang 1.11
 
-
-## v3.0.0 (2018-11-21)
+## v0.3.0, formerly v3.0.0 (2018-11-21)
 
 - Reduced size of shell by 20%
 - Improved QEMU-based integration tests
@@ -82,8 +88,7 @@ A new release happens every 6 weeks:
   - Linux 4.17
   - Golang 1.11
 
-
-## v2.0.0 (2018-10-01)
+## v0.2.0, formerly v2.0.0 (2018-10-01)
 
 - Large improvements to readability of GoDocs
 - New commands:
@@ -104,8 +109,7 @@ A new release happens every 6 weeks:
   - Linux 4.17
   - Golang 1.11
 
-
-## v1.0.0 (2018-08-15)
+## v0.1.0, formerly v1.0.0 (2018-08-15)
 
 - Initial release
 - Tested with:
