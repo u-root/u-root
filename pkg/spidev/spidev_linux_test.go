@@ -65,13 +65,13 @@ func (s *mockSpidev) syscall(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 ui
 		s.transfers = make([]iocTransfer, size/binary.Size(iocTransfer{}))
 
 		// Re-create the slice from the array.
-		defer runtime.KeepAlive(a3)
-		sh := &reflect.SliceHeader{
-			Data: uintptr(a3),
-			Len:  len(s.transfers),
-			Cap:  len(s.transfers),
-		}
-		transfers := *(*[]iocTransfer)(unsafe.Pointer(sh))
+		transfers := make([]iocTransfer, 0, 0)
+		sh := (*reflect.SliceHeader)(unsafe.Pointer(&transfers))
+		sh.Data = uintptr(a3)
+		sh.Len = len(s.transfers)
+		sh.Cap = len(s.transfers)
+		// Make sure the original string s is not freed up until this point.
+		runtime.KeepAlive(a3)
 
 		// Copy to another slice since the GC will clean it up once the
 		// references disappear.
