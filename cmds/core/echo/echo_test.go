@@ -36,6 +36,7 @@ func TestEcho(t *testing.T) {
 
 	for _, v := range tests {
 		*noNewline = v.f.noNewline
+		*interpretEscapes = v.f.interpretEscapes
 		if err := echo(&buf, v.s); err != nil {
 			t.Errorf("%s", err)
 		}
