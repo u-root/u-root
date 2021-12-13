@@ -62,20 +62,16 @@ func (s *mockSpidev) syscall(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 ui
 		if size%binary.Size(iocTransfer{}) != 0 {
 			return 0, 0, unix.EINVAL
 		}
-		s.transfers = make([]iocTransfer, size/binary.Size(iocTransfer{}))
 
-		// Re-create the slice from the array.
-		transfers := make([]iocTransfer, 0, 0)
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(&transfers))
+		// Re-create the slice from the pointer.
+		s.transfers = make([]iocTransfer, 0, 0)
+		sh := (*reflect.SliceHeader)(unsafe.Pointer(&s.transfers))
 		sh.Data = uintptr(a3)
-		sh.Len = len(s.transfers)
-		sh.Cap = len(s.transfers)
-		// Make sure the original string s is not freed up until this point.
-		runtime.KeepAlive(a3)
+		sh.Len = size / binary.Size(iocTransfer{})
+		sh.Cap = size / binary.Size(iocTransfer{})
 
-		// Copy to another slice since the GC will clean it up once the
-		// references disappear.
-		copy(s.transfers, transfers)
+		// Make sure the original pointer is not freed up until this point.
+		runtime.KeepAlive(a3)
 
 		// Replace all the non-zero address with 0xdeadbeef because the
 		// pointer addresses might change during the test.
