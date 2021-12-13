@@ -5,6 +5,7 @@
 package builder
 
 import (
+	"os"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/golang"
@@ -12,8 +13,11 @@ import (
 )
 
 func TestBBBuild(t *testing.T) {
+	// Only run this test when we are not using modules.
+	if os.Getenv("GO111MODULE") != "off" {
+		t.Skipf("Skipping non-modular test")
+	}
 	dir := t.TempDir()
-
 	opts := Opts{
 		Env: golang.Default(),
 		Packages: []string{
