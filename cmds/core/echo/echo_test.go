@@ -9,6 +9,11 @@ import (
 	"testing"
 )
 
+type flags struct {
+	noNewline        bool
+	interpretEscapes bool
+}
+
 func TestEcho(t *testing.T) {
 	type test struct {
 		s string
@@ -26,10 +31,12 @@ func TestEcho(t *testing.T) {
 		{s: "simple\\x56 test7", r: "simpleV test7", f: flags{true, true}},
 		{s: "simple\\x56 \\0113test7", r: "simpleV Ktest7", f: flags{true, true}},
 		{s: "\\\\8", r: "\\8", f: flags{true, true}},
+		{s: "", r: "", f: flags{true, true}},
 	}
 
 	for _, v := range tests {
-		if err := echo(v.f, &buf, v.s); err != nil {
+		*noNewline = v.f.noNewline
+		if err := echo(&buf, v.s); err != nil {
 			t.Errorf("%s", err)
 		}
 		if buf.String() != v.r {
