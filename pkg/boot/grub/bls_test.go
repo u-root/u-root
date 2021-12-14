@@ -6,9 +6,18 @@ package grub
 
 import (
 	"bytes"
+	"context"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/curl"
+	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/mount/block"
 )
 
 // This test is specifically for the problems reported in issue 2203
@@ -31,5 +40,66 @@ boot_success=0
 	}}
 	if diff := cmp.Diff(wantEnv, gotEnv); diff != "" {
 		t.Errorf("ParseEnvFile(%q) diff(-want, +got) = \n%s", file, diff)
+	}
+}
+
+// This is a slightly different set of tests for the issue. It is done this way to avoid bleeding
+// constraints into the other tests, or have other tests bleed into this test.
+func TestBLSGrubTests(t *testing.T) {
+	files, err := filepath.Glob("testdata/*bls*.cfg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Running BLS test with %q, *update is %v", files, *update)
+	for _, file := range files {
+		name := strings.TrimSuffix(filepath.Base(file), ".cfg")
+		t.Run(name, func(t *testing.T) {
+			golden := strings.TrimSuffix(file, ".cfg") + ".out"
+			var out []byte
+			if *update {
+				cmd := exec.Command("./testdata/bash_wrapper.sh", os.Args[0], file)
+				cmd.Env = append(os.Environ(), "BE_ECHO=1")
+				out, err = cmd.Output()
+				t.Logf("%s\n", out)
+				if err != nil {
+					t.Fatalf("process ran with err %v", err)
+				}
+			} else {
+				out, err = os.ReadFile(golden)
+				if err != nil {
+					t.Fatalf("error loading file `%s`, %v", golden, err)
+				}
+			}
+			// parse with our parser and compare
+			var b bytes.Buffer
+			wd := &url.URL{
+				Scheme: "file",
+				Path:   "./testdata",
+			}
+			mountPool := &mount.Pool{}
+			c := newParser(wd, block.BlockDevices{}, mountPool, curl.DefaultSchemes)
+			c.W = &b
+
+			script, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatalf("error loading file `%s`, %v", file, err)
+			}
+			err = c.append(context.Background(), string(script))
+			if err != nil {
+				t.Fatalf("error parsing file `%s`, %v", file, err)
+			}
+
+			if b.String() != string(out) {
+				t.Fatalf("wrong script parsing output got `%s` want `%s`", b.String(), string(out))
+			}
+			// update/create golden file on success
+			if *update {
+				err := os.WriteFile(golden, out, 0o644)
+				if err != nil {
+					t.Fatalf("error writing file `%s`, %v", file, err)
+				}
+			}
+		})
+
 	}
 }
