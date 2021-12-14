@@ -9,7 +9,6 @@ import (
 	"context"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -56,20 +55,6 @@ func TestBLSGrubTests(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			golden := strings.TrimSuffix(file, ".cfg") + ".out"
 			var out []byte
-			if *update {
-				cmd := exec.Command("./testdata/bash_wrapper.sh", os.Args[0], file)
-				cmd.Env = append(os.Environ(), "BE_ECHO=1")
-				out, err = cmd.Output()
-				t.Logf("%s\n", out)
-				if err != nil {
-					t.Fatalf("process ran with err %v", err)
-				}
-			} else {
-				out, err = os.ReadFile(golden)
-				if err != nil {
-					t.Fatalf("error loading file `%s`, %v", golden, err)
-				}
-			}
 			// parse with our parser and compare
 			var b bytes.Buffer
 			wd := &url.URL{
