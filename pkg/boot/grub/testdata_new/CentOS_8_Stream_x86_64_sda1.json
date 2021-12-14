@@ -1,0 +1,26 @@
+[
+   {
+    "cmdline": "root=UUID=53cfb120-9300-4afd-9ba7-a60a7277c252 ro crashkernel=auto net.ifnames=0 console=ttyS1,57600n8 nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_8_Stream_x86_64_sda2/boot/initramfs-0-rescue-3370cc3add884b58835edcc89eeb00a0.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_8_Stream_x86_64_sda2/boot/vmlinuz-0-rescue-3370cc3add884b58835edcc89eeb00a0"
+    },
+    "name": "CentOS Stream (0-rescue-3370cc3add884b58835edcc89eeb00a0) 8",
+    "rank": "0"
+  },
+  {
+    "cmdline": "root=UUID=53cfb120-9300-4afd-9ba7-a60a7277c252 ro crashkernel=auto net.ifnames=0 console=ttyS1,57600n8 nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata_new/CentOS_8_Stream_x86_64_sda2/boot/initramfs-5.14.1.img"
+    },
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_8_Stream_x86_64_sda2/boot/vmlinuz-5.14.1"
+    },
+    "name": "CentOS Stream (5.14.1) 8",
+    "rank": "0"
+  }
+]
