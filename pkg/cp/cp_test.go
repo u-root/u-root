@@ -2,54 +2,144 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package cp_test
+package cp
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/cp"
-	"github.com/u-root/u-root/pkg/cp/cmp"
+	"golang.org/x/sys/unix"
 )
 
-func copyAndTest(t *testing.T, o cp.Options, src, dst string) {
-	if err := o.Copy(src, dst); err != nil {
-		t.Fatalf("Copy(%q -> %q) = %v, want %v", src, dst, err, nil)
+var (
+	testdata = []byte("This is a test string")
+)
+
+func TestCopySimple(t *testing.T) {
+	tmpdirDst, err := os.MkdirTemp("", "dst-directory")
+	if err != nil {
+		t.Errorf("failed to create tmp directorty: %q", err)
 	}
-	if err := cmp.IsEqualTree(o, src, dst); err != nil {
-		t.Fatalf("Expected %q and %q to be same, got %v", src, dst, err)
+	defer os.RemoveAll(tmpdirDst)
+
+	tmpdirSrc, err := os.MkdirTemp("", "src-directory")
+	if err != nil {
+		t.Errorf("failed to create tmp src directorty: %q", err)
 	}
-}
+	defer os.RemoveAll(tmpdirSrc)
 
-func TestSimpleCopy(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Copy a directory.
-	origd := filepath.Join(tmpDir, "directory")
-	if err := os.Mkdir(origd, 0o744); err != nil {
-		t.Fatal(err)
-	}
-
-	copyAndTest(t, cp.Default, origd, filepath.Join(tmpDir, "directory-copied"))
-	copyAndTest(t, cp.NoFollowSymlinks, origd, filepath.Join(tmpDir, "directory-copied-2"))
-
-	// Copy a file.
-	origf := filepath.Join(tmpDir, "normal-file")
-	if err := os.WriteFile(origf, []byte("F is for fire that burns down the whole town"), 0o766); err != nil {
-		t.Fatal(err)
-	}
-
-	copyAndTest(t, cp.Default, origf, filepath.Join(tmpDir, "normal-file-copied"))
-	copyAndTest(t, cp.NoFollowSymlinks, origf, filepath.Join(tmpDir, "normal-file-copied-2"))
-
-	// Copy a symlink.
-	origs := filepath.Join(tmpDir, "foobar")
-	// foobar -> normal-file
-	if err := os.Symlink(origf, origs); err != nil {
-		t.Fatal(err)
+	srcfiles := make([]*os.File, 2)
+	dstfiles := make([]*os.File, 2)
+	for iterator := range srcfiles {
+		srcfiles[iterator], err = os.CreateTemp(tmpdirSrc, "file-to-copy"+fmt.Sprintf("%d", iterator))
+		if err != nil {
+			t.Errorf("failed to create temp file: %q", err)
+		}
+		if _, err = srcfiles[iterator].Write(testdata); err != nil {
+			t.Errorf("failed to write testdata to file")
+		}
+		dstfiles[iterator], err = os.CreateTemp(tmpdirDst, "file-to-copy"+fmt.Sprintf("%d", iterator))
+		if err != nil {
+			t.Errorf("failed to create temp file: %q", err)
+		}
 	}
 
-	copyAndTest(t, cp.Default, origf, filepath.Join(tmpDir, "foobar-copied"))
-	copyAndTest(t, cp.NoFollowSymlinks, origf, filepath.Join(tmpDir, "foobar-copied-just-symlink"))
+	sl := filepath.Join(tmpdirDst, "test-symlink")
+	if err := os.Symlink(srcfiles[1].Name(), sl); err != nil {
+		t.Errorf("creating symlink failed")
+	}
+
+	for _, tt := range []struct {
+		name    string
+		srcfile string
+		dstfile string
+		opt     Options
+		wantErr error
+	}{
+		{
+			name:    "Success",
+			srcfile: srcfiles[0].Name(),
+			dstfile: dstfiles[0].Name(),
+			opt:     Default,
+		},
+		{
+			name:    "SrcDstDirctoriesSuccess",
+			srcfile: tmpdirSrc,
+			dstfile: tmpdirDst,
+		},
+		{
+			name:    "SrcNotExist",
+			srcfile: "file-does-not-exist",
+			dstfile: dstfiles[0].Name(),
+			wantErr: fs.ErrNotExist,
+		},
+		{
+			name:    "DstIsDirectory",
+			srcfile: srcfiles[0].Name(),
+			dstfile: tmpdirDst,
+			wantErr: unix.EISDIR,
+		},
+		{
+			name:    "CopySymlink",
+			srcfile: sl,
+			dstfile: dstfiles[1].Name(),
+			opt: Options{
+				NoFollowSymlinks: false,
+			},
+		},
+		{
+			name:    "CopySymlinkFollow",
+			srcfile: sl,
+			dstfile: filepath.Join(tmpdirDst, "followed-symlink"),
+			opt: Options{
+				NoFollowSymlinks: true,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := Copy(tt.srcfile, tt.dstfile)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
+			}
+		})
+		//After every test with NoFollowSymlink we have to delete the created symlink
+		if strings.Contains(tt.dstfile, "symlink") {
+			os.Remove(tt.dstfile)
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.opt.Copy(tt.srcfile, tt.dstfile); !errors.Is(err, tt.wantErr) {
+				t.Errorf("%q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
+			}
+		})
+		//After every test with NoFollowSymlink we have to delete the created symlink
+		if strings.Contains(tt.dstfile, "symlink") {
+			os.Remove(tt.dstfile)
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.opt.CopyTree(tt.srcfile, tt.dstfile); !errors.Is(err, tt.wantErr) {
+				t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
+			}
+		})
+		//After every test with NoFollowSymlink we have to delete the created symlink
+		if strings.Contains(tt.dstfile, "symlink") {
+			os.Remove(tt.dstfile)
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			if err := CopyTree(tt.srcfile, tt.dstfile); !errors.Is(err, tt.wantErr) {
+				t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
+			}
+		})
+		//After every test with NoFollowSymlink we have to delete the created symlink
+		if strings.Contains(tt.dstfile, "symlink") {
+			os.Remove(tt.dstfile)
+		}
+	}
 }
