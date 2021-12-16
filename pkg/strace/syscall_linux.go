@@ -306,6 +306,7 @@ func (i *SyscallInfo) printEnter(t Task, args SyscallArguments) string {
 	}
 }
 
+// SysCallEnter is called each time a system call enter event happens.
 func SysCallEnter(t Task, s *SyscallEvent) string {
 	i := defaultSyscallInfo(s.Sysno)
 	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
@@ -314,6 +315,7 @@ func SysCallEnter(t Task, s *SyscallEvent) string {
 	return i.printEnter(t, s.Args)
 }
 
+// SysCallExit is called each time a system call exit event happens.
 func SysCallExit(t Task, s *SyscallEvent) string {
 	i := defaultSyscallInfo(s.Sysno)
 	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
