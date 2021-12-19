@@ -63,6 +63,7 @@ require (
 retract (
 	v7.0.0+incompatible
 	v6.0.0+incompatible
+	v6.0.1+incompatible
 	v5.0.0+incompatible
 	v4.0.0+incompatible
 	v3.0.0+incompatible
