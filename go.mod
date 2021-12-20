@@ -61,11 +61,18 @@ require (
 )
 
 retract (
-	v7.0.0+incompatible
+	// Published v7 too early (before migrating to go modules)
+	[v7.0.0+incompatible, v7.0.1]
+	// Published v6 too early (before migrating to go modules)
 	v6.0.0+incompatible
+	// Published v5 too early (before migrating to go modules)
 	v5.0.0+incompatible
+	// Published v4 too early (before migrating to go modules)
 	v4.0.0+incompatible
+	// Published v3 too early (before migrating to go modules)
 	v3.0.0+incompatible
+	// Published v2 too early (before migrating to go modules)
 	v2.0.0+incompatible
+	// Published v1 too early (before migrating to go modules)
 	v1.0.0
 )
