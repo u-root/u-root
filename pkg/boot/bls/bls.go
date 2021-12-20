@@ -28,6 +28,7 @@ import (
 
 const (
 	blsEntriesDir = "loader/entries"
+	blsEntriesDir2 = "boot/loader/entries"
 	// Set a higher default rank for BLS. It should be booted prior to the
 	// other local images.
 	blsDefaultRank = 1
@@ -47,8 +48,13 @@ func ScanBLSEntries(log ulog.Logger, fsRoot string) ([]boot.OSImage, error) {
 	entriesDir := filepath.Join(fsRoot, blsEntriesDir)
 
 	files, err := filepath.Glob(filepath.Join(entriesDir, "*.conf"))
-	if err != nil {
-		return nil, fmt.Errorf("no BootLoaderSpec entries found: %w", err)
+	if err != nil || len(files) == 0 {
+		// Try blsEntriesDir2
+		entriesDir = filepath.Join(fsRoot, blsEntriesDir2)
+		files, err = filepath.Glob(filepath.Join(entriesDir, "*.conf"))
+		if err != nil || len(files) == 0 {
+			return nil, fmt.Errorf("no BootLoaderSpec entries found: %w", err)
+		}
 	}
 
 	// loader.conf is not in the real spec; it's an implementation detail
