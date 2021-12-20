@@ -469,7 +469,7 @@ func (m *fakeMounter) Mount(path string, flags uintptr) (*mount.MountPoint, erro
 	m.count++
 	return &mount.MountPoint{
 		Path:   path,
-		Device: m.name,
+		Device: filepath.Join("/dev", m.name),
 		Flags:  flags,
 	}, nil
 }

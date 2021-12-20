@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	blsEntriesDir = "loader/entries"
+	blsEntriesDir  = "loader/entries"
 	blsEntriesDir2 = "boot/loader/entries"
 	// Set a higher default rank for BLS. It should be booted prior to the
 	// other local images.
