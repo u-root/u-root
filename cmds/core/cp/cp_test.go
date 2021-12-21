@@ -7,9 +7,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"log"
+	"io"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -19,6 +22,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -29,11 +33,11 @@ const (
 
 // resetFlags is used to reset the cp flags to default
 func resetFlags() {
-	flags.recursive = false
-	flags.ask = false
-	flags.force = false
-	flags.verbose = false
-	flags.noFollowSymlinks = false
+	f.recursive = false
+	f.ask = false
+	f.force = false
+	f.verbose = false
+	f.noFollowSymlinks = false
 }
 
 // randomFile create a random file with random content
@@ -77,32 +81,130 @@ func createFilesTree(root string, maxDepth, depth int) error {
 	return nil
 }
 
-// TestCpsSimple make a simple test for copy file-to-file
-// cmd-line equivalent: cp file file-copy
-func TestCpSimple(t *testing.T) {
-	tempDir := t.TempDir()
-
-	f, err := randomFile(tempDir, "src-")
+func TestRunSimple(t *testing.T) {
+	tmpDir := t.TempDir()
+	file1, err := randomFile(tmpDir, "src-")
 	if err != nil {
-		t.Fatalf("cannot create a random file: %v", err)
+		t.Errorf("failed to create tmp dir: %q", err)
 	}
-	defer f.Close()
 
-	srcf := f.Name()
-	dstf := filepath.Join(tempDir, "destination")
+	for _, tt := range []struct {
+		name    string
+		flag    flags
+		args    []string
+		input   string
+		wantErr error
+	}{
+		{
+			name: "NoFlags-Success-",
+			args: []string{file1.Name(), filepath.Join(tmpDir, "destination")},
+		},
+		{
+			name: "AskYes-Success-",
+			args: []string{file1.Name(), filepath.Join(tmpDir, "destination")},
+			flag: flags{
+				ask: true,
+			},
+			input: "yes\n",
+		},
+		{
+			name: "AskYes-Fail1-",
+			args: []string{file1.Name(), filepath.Join(tmpDir, "destination")},
+			flag: flags{
+				ask: true,
+			},
+			input:   "yes",
+			wantErr: io.EOF,
+		},
+		{
+			name: "AskYes-Fail2-",
+			args: []string{file1.Name(), filepath.Join(tmpDir, "destination")},
+			flag: flags{
+				ask: true,
+			},
+			input:   "no\n",
+			wantErr: cp.ErrSkip,
+		},
+		{
+			name: "Verbose",
+			args: []string{file1.Name(), filepath.Join(tmpDir, "destination")},
+			flag: flags{
+				verbose: true,
+			},
+			wantErr: cp.ErrSkip,
+		},
+		{
+			name:    "SameFile-NoFlags",
+			args:    []string{file1.Name(), file1.Name()},
+			wantErr: cp.ErrSkip,
+		},
+		{
+			name:    "NoFlags-Fail-SrcNotExist",
+			args:    []string{"src", filepath.Join(tmpDir, "destination")},
+			wantErr: fs.ErrNotExist,
+		},
+		{
+			name:    "NoFlags-Fail-DstcNotExist",
+			args:    []string{file1.Name(), "dst"},
+			wantErr: fs.ErrNotExist,
+		},
+		{
+			name:    "NoFlags-ToManyArgs-",
+			args:    []string{file1.Name(), "dst", "src"},
+			wantErr: unix.ENOTDIR,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			var inBuf bytes.Buffer
+			fmt.Fprintf(&inBuf, "%s", tt.input)
+			in := bufio.NewReader(&inBuf)
+			if err := run(tt.args, tt.flag, &out, in); err != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("%q failed. Error Got: %q, Error Want:%q", tt.name, err.Error(), tt.wantErr)
+				}
+				return
+			}
 
-	if err := cpArgs([]string{srcf, dstf}); err != nil {
-		t.Fatalf("copy(%q -> %q) = %v, want nil", srcf, dstf, err)
-	}
-	if err := IsEqualTree(cp.Default, srcf, dstf); err != nil {
-		t.Fatalf("copy(%q -> %q): file trees not equal: %v", srcf, dstf, err)
+			if err := IsEqualTree(cp.Default, tt.args[0], tt.args[1]); err != nil {
+				t.Errorf("%q failed at: IsEqualTree failed with: %q", tt.name, err)
+			}
+		})
+
+		t.Run(tt.name+"PreCallBack", func(t *testing.T) {
+			var out bytes.Buffer
+			var inBuf bytes.Buffer
+			fmt.Fprintf(&inBuf, "%s", tt.input)
+			in := bufio.NewReader(&inBuf)
+			f := setupPreCallback(tt.flag.recursive, tt.flag.ask, tt.flag.force, &out, *in)
+			srcfi, err := os.Stat(tt.args[0])
+			// If the src file does not exist, there is no point in continue, but it is not an error so the say.
+			// Also we catch that error in the previous test
+			if errors.Is(err, fs.ErrNotExist) {
+				return
+			}
+			if err := f(tt.args[0], tt.args[1], srcfi); errors.Is(err, cp.ErrSkip) {
+				t.Log(err)
+			}
+		})
+
+		t.Run(tt.name+"PostCallBack", func(t *testing.T) {
+			var out bytes.Buffer
+			f := setupPostCallback(tt.flag.verbose, &out)
+			f(tt.args[0], tt.args[1])
+			if tt.flag.verbose {
+				if out.String() != fmt.Sprintf("%q -> %q\n", tt.args[0], tt.args[1]) {
+					t.Errorf("PostCallback failed. Want: %q, Got: %q", fmt.Sprintf("%q -> %q\n", tt.args[0], tt.args[1]), out.String())
+				}
+			}
+		})
 	}
 }
 
 // TestCpSrcDirectory tests copying source to destination without recursive
 // cmd-line equivalent: cp ~/dir ~/dir2
 func TestCpSrcDirectory(t *testing.T) {
-	flags.recursive = false
+	var f flags
 	defer resetFlags()
 
 	tempDir := t.TempDir()
@@ -110,9 +212,9 @@ func TestCpSrcDirectory(t *testing.T) {
 
 	// capture log output to verify
 	var logBytes bytes.Buffer
-	log.SetOutput(&logBytes)
+	var in bufio.Reader
 
-	if err := cpArgs([]string{tempDir, tempDirTwo}); err != nil {
+	if err := run([]string{tempDir, tempDirTwo}, f, &logBytes, &in); err != nil {
 		t.Fatalf("copy(%q -> %q) = %v, want nil", tempDir, tempDirTwo, err)
 	}
 
@@ -128,7 +230,8 @@ func TestCpSrcDirectory(t *testing.T) {
 // whose src-dir and dst-dir already exists
 // cmd-line equivalent: $ cp -R src-dir/ dst-dir/
 func TestCpRecursive(t *testing.T) {
-	flags.recursive = true
+	var f flags
+	f.recursive = true
 	defer resetFlags()
 
 	tempDir := t.TempDir()
@@ -147,7 +250,9 @@ func TestCpRecursive(t *testing.T) {
 	}
 
 	t.Run("existing-dst-dir", func(t *testing.T) {
-		if err := cpArgs([]string{srcDir, dstDir}); err != nil {
+		var out bytes.Buffer
+		var in bufio.Reader
+		if err := run([]string{srcDir, dstDir}, f, &out, &in); err != nil {
 			t.Fatalf("cp(%q -> %q) = %v, want nil", srcDir, dstDir, err)
 		}
 		// Because dstDir already existed, a new dir was created inside it.
@@ -158,8 +263,10 @@ func TestCpRecursive(t *testing.T) {
 	})
 
 	t.Run("non-existing-dst-dir", func(t *testing.T) {
+		var out bytes.Buffer
+		var in bufio.Reader
 		notExistDstDir := filepath.Join(tempDir, "dst-does-not-exist")
-		if err := cpArgs([]string{srcDir, notExistDstDir}); err != nil {
+		if err := run([]string{srcDir, notExistDstDir}, f, &out, &in); err != nil {
 			t.Fatalf("cp(%q -> %q) = %v, want nil", srcDir, notExistDstDir, err)
 		}
 
@@ -179,7 +286,8 @@ func TestCpRecursive(t *testing.T) {
 // ..	dir2/
 // ..   dir3/
 func TestCpRecursiveMultiple(t *testing.T) {
-	flags.recursive = true
+	var f flags
+	f.recursive = true
 	defer resetFlags()
 	tempDir := t.TempDir()
 
@@ -200,15 +308,16 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		srcDirs = append(srcDirs, srcTest)
 
 	}
-
+	var out bytes.Buffer
+	var in bufio.Reader
 	args := srcDirs
 	args = append(args, dstTest)
-	if err := cpArgs(args); err != nil {
+	if err := run(args, f, &out, &in); err != nil {
 		t.Fatalf("cp %q exit with error: %v", args, err)
 	}
 	// Make sure we can do it twice.
-	flags.force = true
-	if err := cpArgs(args); err != nil {
+	f.force = true
+	if err := run(args, f, &out, &in); err != nil {
 		t.Fatalf("cp %q exit with error: %v", args, err)
 	}
 	for _, src := range srcDirs {
@@ -242,10 +351,13 @@ func TestCpSymlink(t *testing.T) {
 
 	t.Run("no-follow-symlink", func(t *testing.T) {
 		defer resetFlags()
-		flags.noFollowSymlinks = true
+		var out bytes.Buffer
+		var in bufio.Reader
+		var f flags
+		f.noFollowSymlinks = true
 
 		dst := filepath.Join(tempDir, "dst-no-follow")
-		if err := cpArgs([]string{newName, dst}); err != nil {
+		if err := run([]string{newName, dst}, f, &out, &in); err != nil {
 			t.Fatalf("cp(%q -> %q) = %v, want nil", newName, dst, err)
 		}
 		if err := IsEqualTree(cp.NoFollowSymlinks, newName, dst); err != nil {
@@ -255,10 +367,13 @@ func TestCpSymlink(t *testing.T) {
 
 	t.Run("follow-symlink", func(t *testing.T) {
 		defer resetFlags()
-		flags.noFollowSymlinks = false
+		var out bytes.Buffer
+		var in bufio.Reader
+		var f flags
+		f.noFollowSymlinks = false
 
 		dst := filepath.Join(tempDir, "dst-follow")
-		if err := cpArgs([]string{newName, dst}); err != nil {
+		if err := run([]string{newName, dst}, f, &out, &in); err != nil {
 			t.Fatalf("cp(%q -> %q) = %v, want nil", newName, dst, err)
 		}
 		if err := IsEqualTree(cp.Default, newName, dst); err != nil {
