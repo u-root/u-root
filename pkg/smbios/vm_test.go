@@ -92,6 +92,21 @@ func TestGetProcessorInfo(t *testing.T) {
 	}
 }
 
+func TestGetSystemSlots(t *testing.T) {
+
+	testutil.SkipIfNotRoot(t)
+
+	info, err := FromSysfs()
+	if err != nil {
+		t.Errorf("FromSysfs as a requirement failed.")
+	}
+
+	systemslots, err := info.GetSystemSlots()
+	if err != nil || systemslots == nil {
+		t.Errorf("GetSystemSlots() = %q, '%v'", systemslots, err)
+	}
+}
+
 func TestGetMemoryDevices(t *testing.T) {
 
 	testutil.SkipIfNotRoot(t)

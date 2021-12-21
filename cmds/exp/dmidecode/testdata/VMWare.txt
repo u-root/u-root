@@ -8287,7 +8287,7 @@ Unsupported
 		PS/2 Mouse
 
 Handle 0x0198, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 98 01 01 03 04 02 03 00 00 02 00 FF 00 FF
 		FF
@@ -8295,7 +8295,7 @@ Unsupported
 		ISA Slot J8
 
 Handle 0x0199, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 99 01 01 03 04 02 03 00 00 02 00 FF 00 FF
 		FF
@@ -8303,7 +8303,7 @@ Unsupported
 		ISA Slot J9
 
 Handle 0x019A, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 9A 01 01 03 04 02 03 00 00 02 00 FF 00 FF
 		FF
@@ -8311,7 +8311,7 @@ Unsupported
 		ISA Slot J10
 
 Handle 0x019B, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 9B 01 01 06 05 04 04 01 00 06 00 00 00 00
 		78
@@ -8319,7 +8319,7 @@ Unsupported
 		PCI Slot J11
 
 Handle 0x019C, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 9C 01 01 06 05 04 04 02 00 06 00 00 00 00
 		80
@@ -8327,7 +8327,7 @@ Unsupported
 		PCI Slot J12
 
 Handle 0x019D, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 9D 01 01 06 05 04 04 03 00 06 00 00 00 00
 		88
@@ -8335,7 +8335,7 @@ Unsupported
 		PCI Slot J13
 
 Handle 0x019E, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 9E 01 01 06 05 03 04 04 00 06 00 00 00 00
 		90

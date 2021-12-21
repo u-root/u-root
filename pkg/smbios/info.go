@@ -156,6 +156,19 @@ func (i *Info) GetCacheInfo() ([]*CacheInfo, error) {
 	return res, nil
 }
 
+// GetSystemSlots returns all the System Slots (type 9) tables present.
+func (i *Info) GetSystemSlots() ([]*SystemSlots, error) {
+	var res []*SystemSlots
+	for _, t := range i.GetTablesByType(TableTypeSystemSlots) {
+		ss, err := ParseSystemSlots(t)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, ss)
+	}
+	return res, nil
+}
+
 // GetMemoryDevices returns all the Memory Device (type 17) tables present.
 func (i *Info) GetMemoryDevices() ([]*MemoryDevice, error) {
 	var res []*MemoryDevice

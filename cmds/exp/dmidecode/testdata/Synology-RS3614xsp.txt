@@ -254,7 +254,7 @@ Unsupported
 		J1G6 - AC JACK
 
 Handle 0x001C, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 1C 00 01 A5 0D 04 04 00 00 0C 01 00 00 00
 		08
@@ -262,7 +262,7 @@ Unsupported
 		J6B2
 
 Handle 0x001D, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 1D 00 01 A5 08 04 03 01 00 0C 01 00 00 00
 		E3
@@ -270,7 +270,7 @@ Unsupported
 		J6B1
 
 Handle 0x001E, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 1E 00 01 A5 08 04 03 02 00 0C 01 00 00 00
 		E4
@@ -278,7 +278,7 @@ Unsupported
 		J6D1
 
 Handle 0x001F, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 1F 00 01 A5 08 04 03 03 00 0C 01 00 00 00
 		E5
@@ -286,7 +286,7 @@ Unsupported
 		J7B1
 
 Handle 0x0020, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 20 00 01 A5 08 04 03 04 00 0C 01 00 00 00
 		E6
