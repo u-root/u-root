@@ -8,11 +8,14 @@ package ocp
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/u-root/u-root/pkg/pci"
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
@@ -22,6 +25,7 @@ const (
 
 	_FB_OEM_SET_PROC_INFO       ipmi.Command = 0x10
 	_FB_OEM_SET_DIMM_INFO       ipmi.Command = 0x12
+	_FB_OEM_SET_BOOT_DRIVE_INFO ipmi.Command = 0x14
 	_FB_OEM_SET_BIOS_BOOT_ORDER ipmi.Command = 0x52
 	_FB_OEM_GET_BIOS_BOOT_ORDER ipmi.Command = 0x53
 	_FB_OEM_SET_POST_END        ipmi.Command = 0x74
@@ -56,6 +60,15 @@ type DimmInfo struct {
 	ModuleSerialNumber      uint32
 	ModuleManufacturerIDLSB uint8
 	ModuleManufacturerIDMSB uint8
+}
+
+type BootDriveInfo struct {
+	ManufacturerID    [3]uint8
+	ControlType       uint8
+	DriveNumber       uint8
+	ParameterSelector uint8
+	VendorID          uint16
+	DeviceID          uint16
 }
 
 // OENMap maps OEM names to a 3 byte OEM number.
@@ -101,6 +114,25 @@ func SendOemIpmiDimmInfo(i *ipmi.IPMI, info []DimmInfo) error {
 		}
 	}
 
+	return nil
+}
+
+func SendOemIpmiBootDriveInfo(i *ipmi.IPMI, info *BootDriveInfo) error {
+	var data []byte
+	buf := &bytes.Buffer{}
+	err := binary.Write(buf, binary.LittleEndian, *info)
+
+	if err != nil {
+		return err
+	}
+
+	data = make([]byte, 10)
+	copy(data, buf.Bytes())
+
+	_, err = i.SendRecv(_IPMI_FB_OEM_NET_FUNCTION2, _FB_OEM_SET_BOOT_DRIVE_INFO, data)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -284,6 +316,53 @@ func GetOemIpmiDimmInfo(si *smbios.Info) ([]DimmInfo, error) {
 	}
 
 	return info, nil
+}
+
+// Read type 9 from SMBIOS tables and look for SlotDesignation which contains string 'Boot_Drive',
+// and get bus and device number from the matched table to read the Device ID and Vendor ID of
+// the boot drive for sending the IPMI OEM command.
+// This requires the BDF number is correctly set in the type 9 table.
+func GetOemIpmiBootDriveInfo(si *smbios.Info) (*BootDriveInfo, error) {
+	t1, err := si.GetSystemInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	t9, err := si.GetSystemSlots()
+	if err != nil {
+		return nil, err
+	}
+
+	const systemPath = "/sys/bus/pci/devices/"
+	const bootDriveName = "Boot_Drive"
+	var info BootDriveInfo
+
+	if boardManufacturerID, ok := OENMap[t1.Manufacturer]; ok == true {
+		info.ManufacturerID = boardManufacturerID
+	}
+
+	for index := 0; index < len(t9); index++ {
+		if strings.Contains(t9[index].SlotDesignation, bootDriveName) == false {
+			continue
+		}
+
+		deviceNumber := t9[index].DeviceFunctionNumber >> 3
+		devicePath := fmt.Sprintf("%04d:%02x:%02x.0",
+			t9[index].SegmentGroupNumber, t9[index].BusNumber, deviceNumber)
+		p, err := pci.OnePCI(filepath.Join(systemPath, devicePath))
+		if err != nil {
+			return nil, err
+		}
+
+		info.VendorID = p.Vendor
+		info.DeviceID = p.Device
+		info.ControlType = 0
+		info.DriveNumber = 0
+		info.ParameterSelector = 2
+		// There will only be one Boot_Drive
+		return &info, nil
+	}
+	return nil, nil
 }
 
 func SetOemIpmiPostEnd(i *ipmi.IPMI) error {
