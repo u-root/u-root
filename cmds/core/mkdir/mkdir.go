@@ -19,6 +19,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 const (
@@ -36,21 +38,11 @@ var (
 )
 
 func init() {
-	// Usage Definition
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
+	util.Usage(cmd)
 }
 
-func main() {
+func mkdir(args []string) error {
 	f := os.Mkdir
-	flag.Parse()
-	if len(flag.Args()) < 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
 	if *mkall {
 		f = os.MkdirAll
 	}
@@ -63,7 +55,7 @@ func main() {
 	} else {
 		m, err = strconv.ParseUint(*mode, 8, 32)
 		if err != nil || m > 0o7777 {
-			log.Fatalf("invalid mode '%s'", *mode)
+			return fmt.Errorf("invalid mode %q", *mode)
 		}
 	}
 	createMode := os.FileMode(m)
@@ -77,7 +69,7 @@ func main() {
 		createMode |= os.ModeSetuid
 	}
 
-	for _, name := range flag.Args() {
+	for _, name := range args {
 		if err := f(name, createMode); err != nil {
 			log.Printf("%v: %v\n", name, err)
 			continue
@@ -88,5 +80,17 @@ func main() {
 		if *mode != "" {
 			os.Chmod(name, createMode)
 		}
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if len(flag.Args()) < 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+	if err := mkdir(flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }
