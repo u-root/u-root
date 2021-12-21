@@ -724,7 +724,7 @@ Unsupported
 		J202 - LPC HDR
 
 Handle 0x0041, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 41 00 01 14 0A 03 03 00 00 0C 01 00 00 00
 		0A
@@ -732,7 +732,7 @@ Unsupported
 		U1
 
 Handle 0x0042, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 42 00 01 A9 0B 03 03 01 00 0C 01 00 00 00
 		0B
@@ -740,7 +740,7 @@ Unsupported
 		PCIE1
 
 Handle 0x0043, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 43 00 01 AA 0D 04 03 02 00 0C 01 00 00 00
 		19
@@ -748,7 +748,7 @@ Unsupported
 		PCIE3
 
 Handle 0x0044, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 44 00 01 A6 08 03 03 03 00 0C 01 00 00 02
 		18
@@ -756,7 +756,7 @@ Unsupported
 		PCIE4
 
 Handle 0x0045, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 45 00 01 A8 0A 04 03 04 00 0C 01 00 00 02
 		20
@@ -764,7 +764,7 @@ Unsupported
 		PCIE6
 
 Handle 0x0046, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 46 00 01 14 08 04 03 05 00 0C 01 00 00 02
 		08
@@ -772,7 +772,7 @@ Unsupported
 		J47
 
 Handle 0x0047, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 47 00 01 14 0A 03 03 06 00 0C 01 00 00 40
 		09
@@ -780,7 +780,7 @@ Unsupported
 		U3600
 
 Handle 0x0048, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 48 00 01 14 0A 04 03 07 00 0C 01 00 00 40
 		0A
@@ -788,7 +788,7 @@ Unsupported
 		U3601
 
 Handle 0x0049, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 49 00 01 A9 0B 03 03 08 00 0C 01 00 00 40
 		0B
@@ -796,7 +796,7 @@ Unsupported
 		PCIE5
 
 Handle 0x004A, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 4A 00 01 AA 0D 03 03 09 00 0C 01 00 00 40
 		19

@@ -353,7 +353,7 @@ Handle 0x001F, DMI type 126, 9 bytes
 Inactive
 
 Handle 0x0020, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 20 00 01 01 01 03 01 00 00 00 02 00 00 00
 		00
@@ -361,7 +361,7 @@ Unsupported
 		Media Card Slot
 
 Handle 0x0021, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 21 00 01 01 01 03 01 00 00 00 00 00 00 00
 		00

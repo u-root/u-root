@@ -343,7 +343,7 @@ Handle 0x0024, DMI type 126, 9 bytes
 Inactive
 
 Handle 0x0025, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 25 00 01 A5 08 03 01 00 00 00 02 FF 00 FF
 		FF
@@ -351,7 +351,7 @@ Unsupported
 		ExpressCard Slot
 
 Handle 0x0026, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 26 00 01 01 01 03 01 04 00 00 02 FF 00 FF
 		FF
@@ -359,7 +359,7 @@ Unsupported
 		Media Card Slot
 
 Handle 0x0027, DMI type 9, 17 bytes
-Unsupported
+System Slots
 	Header and Data:
 		09 11 27 00 01 01 01 03 01 04 00 00 02 FF 00 FF
 		FF
