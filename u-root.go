@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -43,7 +44,6 @@ var (
 	useExistingInit                         *bool
 	noCommands                              *bool
 	extraFiles                              multiFlag
-	noStrip                                 *bool
 	statsOutputPath                         *string
 	statsLabel                              *string
 	shellbang                               *bool
@@ -79,7 +79,6 @@ func init() {
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 
-	noStrip = flag.Bool("no-strip", false, "Build unstripped binaries")
 	shellbang = flag.Bool("shellbang", false, "Use #! instead of symlinks for busybox")
 
 	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
@@ -143,12 +142,17 @@ func generateLabel() string {
 }
 
 func main() {
+	gbbOpts := &gbbgolang.BuildOpts{}
+	gbbOpts.RegisterFlags(flag.CommandLine)
+
+	// Register an alias for -go-no-strip for backwards compatibility.
+	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
 	flag.Parse()
 
 	start := time.Now()
 
 	// Main is in a separate functions so defers run on return.
-	if err := Main(); err != nil {
+	if err := Main(gbbOpts); err != nil {
 		log.Fatal(err)
 	}
 
@@ -190,7 +194,7 @@ func isRecommendedVersion(v string) bool {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main() error {
+func Main(buildOpts *gbbgolang.BuildOpts) error {
 	env := golang.Default()
 	env.BuildTags = strings.Split(*tags, ",")
 	if env.CgoEnabled {
@@ -315,7 +319,7 @@ func Main() error {
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
-		NoStrip:         *noStrip,
+		BuildOpts:       buildOpts,
 	}
 	uinitArgs := shlex.Argv(*uinitCmd)
 	if len(uinitArgs) > 0 {
