@@ -238,7 +238,7 @@ golang.org/x/xerrors/internal
 # google.golang.org/grpc v1.29.1
 ## explicit; go 1.11
 google.golang.org/grpc/codes
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
