@@ -50,9 +50,12 @@ func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		return fmt.Errorf("opts.TempDir is empty")
 	}
 	bbPath := filepath.Join(opts.TempDir, "bb")
-	env := golang.Default()
-	if env.CgoEnabled {
-		env.CgoEnabled = false
+
+	// gobusybox has its own copy of the golang package, but Environ stayed
+	// (mostly) the same.
+	env := golang.Environ{
+		Context:     opts.Env.Context,
+		GO111MODULE: os.Getenv("GO111MODULE"),
 	}
 
 	if len(opts.BinaryDir) == 0 {
