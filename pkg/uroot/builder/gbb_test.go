@@ -7,6 +7,7 @@ package builder
 import (
 	"testing"
 
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -22,6 +23,7 @@ func TestGBBBuild(t *testing.T) {
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",
+		BuildOpts: &gbbgolang.BuildOpts{},
 	}
 	af := initramfs.NewFiles()
 	var gbb GBBBuilder

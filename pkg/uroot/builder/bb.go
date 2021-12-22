@@ -32,7 +32,6 @@ var skip = map[string]struct{}{
 // See bb/README.md for a detailed explanation of the implementation of busybox
 // mode.
 type BBBuilder struct {
-
 	// ShellBang means generate #! files instead of symlinks.
 	// ShellBang are more portable and just as efficient.
 	ShellBang bool
@@ -49,7 +48,11 @@ func (BBBuilder) DefaultBinaryDir() string {
 func (b BBBuilder) Build(af *initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
-	if err := bb.BuildBusybox(opts.Env, opts.Packages, opts.NoStrip, bbPath); err != nil {
+	noStrip := false
+	if opts.BuildOpts != nil {
+		noStrip = opts.BuildOpts.NoStrip
+	}
+	if err := bb.BuildBusybox(opts.Env, opts.Packages, noStrip, bbPath); err != nil {
 		return err
 	}
 

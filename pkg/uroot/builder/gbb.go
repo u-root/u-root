@@ -6,7 +6,6 @@ package builder
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -67,9 +66,8 @@ func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		GenSrcDir:    opts.TempDir,
 		CommandPaths: opts.Packages,
 		BinaryPath:   bbPath,
-		GoBuildOpts:  &golang.BuildOpts{},
+		GoBuildOpts:  opts.BuildOpts,
 	}
-	bopts.GoBuildOpts.RegisterFlags(flag.CommandLine)
 
 	if err := bb.BuildBusybox(bopts); err != nil {
 		var errGopath *bb.ErrGopathBuild

@@ -5,6 +5,7 @@
 package builder
 
 import (
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -18,6 +19,10 @@ var (
 type Opts struct {
 	// Env is the Go compiler environment.
 	Env golang.Environ
+
+	// Build options for building go binaries. Ultimate this holds all the
+	// args that end up being passed to `go build`.
+	BuildOpts *gbbgolang.BuildOpts
 
 	// Packages are the Go packages to compile.
 	//
@@ -36,9 +41,6 @@ type Opts struct {
 	//
 	// BinaryDir must be specified.
 	BinaryDir string
-
-	// NoStrip builds unstripped binaries.
-	NoStrip bool
 }
 
 // Builder builds Go packages and adds the binaries to an initramfs.
