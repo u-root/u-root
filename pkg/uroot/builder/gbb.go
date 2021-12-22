@@ -55,8 +55,6 @@ func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		env.CgoEnabled = false
 	}
 
-	remove := false
-
 	if len(opts.BinaryDir) == 0 {
 		return fmt.Errorf("must specify binary directory")
 	}
@@ -80,10 +78,6 @@ func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		} else {
 			return fmt.Errorf("preserving bb generated source directory at %s due to error", opts.TempDir)
 		}
-	}
-	// Only remove temp dir if there was no error.
-	if remove {
-		os.RemoveAll(opts.TempDir)
 	}
 
 	if err := af.AddFile(bbPath, "/bbin/bb"); err != nil {
