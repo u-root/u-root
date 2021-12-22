@@ -81,7 +81,7 @@ func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
 		}
 	}
 
-	if err := af.AddFile(bbPath, "/bbin/bb"); err != nil {
+	if err := af.AddFile(bbPath, "bbin/bb"); err != nil {
 		return err
 	}
 
