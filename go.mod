@@ -26,7 +26,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/u-root/gobusybox/src v0.0.0-20210529132627-adc854ea4425
+	github.com/u-root/gobusybox/src v0.0.0-20211222103642-826963454f94
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7 // indirect
 	github.com/ulikunitz/xz v0.5.8
