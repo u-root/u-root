@@ -200,10 +200,25 @@ func BuildBusybox(opts *Opts) (nerr error) {
 		return fmt.Errorf("failed to write main.go: %v", err)
 	}
 
-	// Compile bb.
+	// Get ready to compile bb.
 	if opts.Env.GO111MODULE == "off" || numNoModule > 0 {
 		opts.Env.GOPATH = tmpDir
+	} else {
+		// Run go mod tidy in order to get the go.sum file
+		// sorted. This likely requires people to be online.
+		//
+		// Sorting a go.sum file seems to be required now in order to
+		// get builds to work. Sorting is only necessary when we merge
+		// more than one go.sum file (i.e. we are compiling commands
+		// from more than one module, e.g. u-root and u-bmc).
+		cmd := opts.Env.GoCmd("mod", "tidy")
+		cmd.Dir = bbDir
+		if o, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("running `go mod tidy` on the generated busybox main package failed (%v): %s", err, o)
+		}
 	}
+
+	// Compile bb.
 	if err := opts.Env.BuildDir(bbDir, opts.BinaryPath, opts.GoBuildOpts); err != nil {
 		if opts.Env.GO111MODULE == "off" || numNoModule > 0 {
 			return &ErrGopathBuild{
