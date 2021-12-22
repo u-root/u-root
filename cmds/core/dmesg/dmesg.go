@@ -15,43 +15,46 @@
 package main
 
 import (
-	"flag"
+	"fmt"
+	"io"
 	"log"
 	"os"
 
+	flag "github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
 )
 
 var (
-	clear     bool
-	readClear bool
+	clear     = flag.Bool("clear", false, "Clear the log")
+	readClear = flag.BoolP("read-clear", "c", false, "Clear the log after printing")
 )
 
-func init() {
-	flag.BoolVar(&clear, "clear", false, "Clear the log")
-	flag.BoolVar(&readClear, "read-clear", false, "Clear the log after printing")
-	flag.BoolVar(&readClear, "c", false, "Clear the log after printing")
-}
-
-func main() {
-	flag.Parse()
-	if clear && readClear {
-		log.Fatalf("cannot specify both -clear and -read-clear")
+func dmesg(writer io.Writer) error {
+	if *clear && *readClear {
+		return fmt.Errorf("cannot specify both -clear and -read-clear")
 	}
 
 	level := unix.SYSLOG_ACTION_READ_ALL
-	if clear {
+	if *clear {
 		level = unix.SYSLOG_ACTION_CLEAR
 	}
-	if readClear {
+	if *readClear {
 		level = unix.SYSLOG_ACTION_READ_CLEAR
 	}
 
 	b := make([]byte, 256*1024)
 	amt, err := unix.Klogctl(level, b)
 	if err != nil {
-		log.Fatalf("syslog failed: %v", err)
+		return fmt.Errorf("syslog failed: %v", err)
 	}
 
-	os.Stdout.Write(b[:amt])
+	writer.Write(b[:amt])
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := dmesg(os.Stdout); err != nil {
+		log.Fatal(err)
+	}
 }
