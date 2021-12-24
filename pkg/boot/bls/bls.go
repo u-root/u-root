@@ -186,6 +186,9 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 
 		// options may appear more than once.
 		case "options":
+			if strings.Contains(val, "$kernelopts") {
+				return nil, fmt.Errorf("$kernelopts is not supported yet")
+			}
 			cmdlines = append(cmdlines, val)
 		}
 	}
