@@ -1,14 +1,13 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package systembooter
 
 import (
+	"bytes"
 	"errors"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestGetBooterForNetBooter(t *testing.T) {
@@ -17,9 +16,15 @@ func TestGetBooterForNetBooter(t *testing.T) {
 		Config: []byte(`{"type": "netboot", "method": "dhcpv6", "mac": "aa:bb:cc:dd:ee:ff"}`),
 	}
 	booter := GetBooterFor(validConfig)
-	require.NotNil(t, booter)
-	require.Equal(t, booter.TypeName(), "netboot")
-	require.NotNil(t, booter.(*NetBooter))
+	if booter == nil {
+		t.Fatalf(`GetBooterFor(validConfig) = %v, want not nil`, booter)
+	}
+	if booter.TypeName() != "netboot" {
+		t.Errorf(`GetBooterFor(validConfig).TypeName() = %q, want "netboot"`, booter.TypeName())
+	}
+	if booter.(*NetBooter) == nil {
+		t.Errorf(`booter.(*NetBooter) = %v, want not nil`, booter.(*NetBooter))
+	}
 }
 
 func TestGetBooterForNullBooter(t *testing.T) {
@@ -28,10 +33,18 @@ func TestGetBooterForNullBooter(t *testing.T) {
 		Config: []byte(`{"type": "null"}`),
 	}
 	booter := GetBooterFor(validConfig)
-	require.NotNil(t, booter)
-	require.Equal(t, booter.TypeName(), "null")
-	require.NotNil(t, booter.(*NullBooter))
-	require.Nil(t, booter.Boot(true))
+	if booter == nil {
+		t.Fatalf(`GetBooterFor(validConfig) = %v, want not nil`, booter)
+	}
+	if booter.TypeName() != "null" {
+		t.Errorf(`GetBooterFor(validConfig).TypeName() = %q, want "null"`, booter.TypeName())
+	}
+	if booter.(*NullBooter) == nil {
+		t.Errorf(`booter.(*NetBooter) = %v, want not nil`, booter.(*NetBooter))
+	}
+	if booter.Boot(true) != nil {
+		t.Errorf(`booter.Boot(true) = %v, want nil`, booter.Boot(true))
+	}
 }
 
 func TestGetBooterForInvalidBooter(t *testing.T) {
@@ -40,11 +53,20 @@ func TestGetBooterForInvalidBooter(t *testing.T) {
 		Config: []byte(`{"type": "invalid"`),
 	}
 	booter := GetBooterFor(invalidConfig)
-	require.NotNil(t, booter)
+
+	if booter == nil {
+		t.Fatalf(`GetBooterFor(invalidConfig) = %v, want not nil`, booter)
+	}
 	// an invalid config returns always a NullBooter
-	require.Equal(t, booter.TypeName(), "null")
-	require.NotNil(t, booter.(*NullBooter))
-	require.Nil(t, booter.Boot(true))
+	if booter.TypeName() != "null" {
+		t.Errorf(`GetBooterFor(invalidConfig).TypeName() = %q, want "null"`, booter.TypeName())
+	}
+	if booter.(*NullBooter) == nil {
+		t.Errorf(`booter.(*NetBooter) = %v, want not nil`, booter.(*NetBooter))
+	}
+	if booter.Boot(true) != nil {
+		t.Errorf(`booter.Boot(true) = %v, want nil`, booter.Boot(true))
+	}
 }
 
 func TestGetBootEntries(t *testing.T) {
@@ -65,11 +87,21 @@ func TestGetBootEntries(t *testing.T) {
 		}
 	}
 	entries := GetBootEntries()
-	require.Equal(t, len(entries), 2)
-	require.Equal(t, "Boot0000", entries[0].Name)
-	require.Equal(t, bootConfig0000, entries[0].Config)
-	require.Equal(t, "Boot0001", entries[1].Name)
-	require.Equal(t, bootConfig0001, entries[1].Config)
+	if len(entries) != 2 {
+		t.Errorf(`len(entries) = %d, want "2"`, len(entries))
+	}
+	if entries[0].Name != "Boot0000" {
+		t.Errorf(`entries[0].Name = %q, want "Boot0000"`, entries[0].Name)
+	}
+	if !bytes.Equal(entries[0].Config, bootConfig0000) {
+		t.Errorf(`entries[0].Config = %v, want %v`, entries[0].Config, bootConfig0000)
+	}
+	if entries[1].Name != "Boot0001" {
+		t.Errorf(`entries[1].Name = %q, want "Boot0001"`, entries[1].Name)
+	}
+	if !bytes.Equal(entries[1].Config, bootConfig0001) {
+		t.Errorf(`entries[1].Config = %v, want %v`, entries[1].Config, bootConfig0001)
+	}
 }
 
 func TestGetBootEntriesOnlyRO(t *testing.T) {
@@ -82,5 +114,7 @@ func TestGetBootEntriesOnlyRO(t *testing.T) {
 		return []byte(`{"type": "netboot", "method": "dhcpv6", "mac": "aa:bb:cc:dd:ee:ff"}`), nil
 	}
 	entries := GetBootEntries()
-	require.Equal(t, len(entries), 1)
+	if len(entries) != 1 {
+		t.Errorf(`len(entries) = %d, want "1"`, len(entries))
+	}
 }

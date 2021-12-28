@@ -1,4 +1,4 @@
-// Copyright 2020 the u-root Authors. All rights reserved
+// Copyright 2020-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/stretchr/testify/assert"
 )
 
 type args struct {
@@ -25,17 +24,17 @@ func newTestBuilder(name string) func(t minimock.Tester) *Builder {
 	return func(t minimock.Tester) *Builder {
 		wd, err := os.Getwd()
 		if err != nil {
-			t.Error(err)
+			t.Errorf(`os.Getwd() = _, %v, want nil`, err)
 			return nil
 		}
 		f, err := os.Open("testdata/" + name)
 		if err != nil {
-			t.Error(err)
+			t.Errorf(`os.Open("testdata/" + name) = _, %v, want nil`, err)
 			return nil
 		}
 		file, err := Parse(f)
 		if err != nil {
-			t.Error(err)
+			t.Errorf(`Parse(f) = _, %v, want nil`, err)
 			return nil
 		}
 		return &Builder{
@@ -94,11 +93,11 @@ func TestBuilder_buildNS(t *testing.T) {
 			}
 
 			if tt.wantErr {
-				if assert.Error(t, err) && tt.inspectErr != nil {
+				if err != nil && tt.inspectErr != nil {
 					tt.inspectErr(err, t)
 				}
-			} else {
-				assert.NoError(t, err)
+			} else if err != nil {
+				t.Errorf(`receiver.buildNS(%v) = %v, want nil`, tArgs.ns, err)
 			}
 		})
 	}
