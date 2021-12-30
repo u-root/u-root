@@ -39,7 +39,7 @@ func (BinaryBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error 
 		wg.Add(1)
 		go func(p string) {
 			defer wg.Done()
-			result <- opts.Env.Build(
+			result <- opts.Env.BuildDir(
 				p,
 				filepath.Join(opts.TempDir, opts.BinaryDir, filepath.Base(p)),
 				golang.BuildOpts{NoStrip: noStrip})

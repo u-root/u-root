@@ -81,8 +81,8 @@ func getBBLock(bblock string) (*lockfile.Lockfile, error) {
 
 // BuildBusybox builds a busybox of the given Go packages.
 //
-// pkgs is a list of Go import paths. If nil is returned, binaryPath will hold
-// the busybox-style binary.
+// pkgs is a list of absolute directory paths containing Go packages. If nil is
+// returned, binaryPath will hold the busybox-style binary.
 func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath string) error {
 	urootPkg, err := env.Package("github.com/u-root/u-root")
 	if err != nil {
