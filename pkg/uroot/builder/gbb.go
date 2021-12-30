@@ -70,7 +70,7 @@ func (b GBBBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 		GoBuildOpts:  opts.BuildOpts,
 	}
 
-	if err := bb.BuildBusybox(bopts); err != nil {
+	if err := bb.BuildBusybox(l, bopts); err != nil {
 		// Print the actual error. This may contain a suggestion for
 		// what to do, actually.
 		l.Printf("Gobusybox error: %v", err)

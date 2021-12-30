@@ -164,6 +164,8 @@ github.com/u-root/gobusybox/src v0.0.0-20211230020429-616031b4761b h1:u9tTESwDqZ
 github.com/u-root/gobusybox/src v0.0.0-20211230020429-616031b4761b/go.mod h1:GlxAKinWMNShbNp8BI+zRr/hUdwNogaNWrnpbh1mOuI=
 github.com/u-root/gobusybox/src v0.0.0-20211230055336-ea7475b50b69 h1:/xDdx5g6c5NtDJmJB/WA1nLOLhKYUO890xmcZNnCWnY=
 github.com/u-root/gobusybox/src v0.0.0-20211230055336-ea7475b50b69/go.mod h1:GlxAKinWMNShbNp8BI+zRr/hUdwNogaNWrnpbh1mOuI=
+github.com/u-root/gobusybox/src v0.0.0-20211230213009-8219da9f3533 h1:1Eyr2AV4wembvJVO/Ew5Mxy3v7+7YCYSpkLbi/suuXw=
+github.com/u-root/gobusybox/src v0.0.0-20211230213009-8219da9f3533/go.mod h1:GlxAKinWMNShbNp8BI+zRr/hUdwNogaNWrnpbh1mOuI=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eVd21MOEatnh2pfAAwZaEPSIEEsjctQ=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
 github.com/u-root/uio v0.0.0-20210528114334-82958018845c/go.mod h1:LpEX5FO/cB+WF4TYGY1V5qktpaZLkKkSegbr0V4eYXA=
