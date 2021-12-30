@@ -96,6 +96,10 @@ type Opts struct {
 	//
 	// If this is done with GO111MODULE=on,
 	AllowMixedMode bool
+
+	// Generate the tree but don't build it. This is useful for systems
+	// like Tamago which have their own way of building.
+	GenerateOnly bool
 }
 
 // BuildBusybox builds a busybox of many Go commands. opts contains both the
@@ -132,6 +136,9 @@ func BuildBusybox(opts *Opts) (nerr error) {
 		}
 		tmpDir = absDir
 	} else {
+		if opts.GenerateOnly {
+			return fmt.Errorf("GenerateOnly switch requires that the GenSrcDir directory be supplied")
+		}
 		var err error
 		tmpDir, err = ioutil.TempDir("", "bb-")
 		if err != nil {
@@ -216,6 +223,10 @@ func BuildBusybox(opts *Opts) (nerr error) {
 		if o, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("running `go mod tidy` on the generated busybox main package failed (%v): %s", err, o)
 		}
+	}
+
+	if opts.GenerateOnly {
+		return nil
 	}
 
 	// Compile bb.
@@ -373,15 +384,16 @@ func localModules(pkgDir, bbDir string, mainPkgs []*bbinternal.Package) (map[str
 		provenance string
 	}
 	localModules := make(map[string]*localModule)
-	// Find all top-level modules.
+
+	// These are all modules that the user requested to compile commands
+	// from. They are assumed to be local directories.
 	for _, p := range mainPkgs {
 		if p.Pkg.Module != nil {
 			if _, ok := localModules[p.Pkg.Module.Path]; !ok {
 				localModules[p.Pkg.Module.Path] = &localModule{
 					m:          p.Pkg.Module,
-					provenance: fmt.Sprintf("your request to compile %s from %s", p.Pkg.Module.Path, p.Pkg.Module.Dir),
+					provenance: fmt.Sprintf("your request to compile %s", p.Pkg.PkgPath),
 				}
-
 				if err := copyGoMod(p.Pkg.Module); err != nil {
 					return nil, fmt.Errorf("failed to copy go.mod for %s: %v", p.Pkg.Module.Path, err)
 				}
@@ -389,6 +401,8 @@ func localModules(pkgDir, bbDir string, mainPkgs []*bbinternal.Package) (map[str
 		}
 	}
 
+	// This finds all modules that are `replace`d in go.mod files of the
+	// commands.
 	for _, p := range mainPkgs {
 		replacedModules := locallyReplacedModules(p.Pkg)
 		for modPath, module := range replacedModules {
@@ -396,7 +410,21 @@ func localModules(pkgDir, bbDir string, mainPkgs []*bbinternal.Package) (map[str
 				// Is this module different from one that a
 				// previous definition provided?
 				//
-				// This only looks for 2 conflicting *local* module definitions.
+				// This can happen if:
+				// - there are 2 modules that have conflicting
+				//   replace directives:
+				//     replace u-root => ../foo
+				//     replace u-root => ../bar
+				//
+				// - there is a module that has a replace
+				//   directive that doesn't match the directory
+				//   the user requested commands from, e.g.
+				//     ./makebb ~/u-root/cmds/core/ip ~/cpu/cmds/cpu
+				//   but cpu/go.mod has
+				//     replace u-root => ../foobar (which is not ~/u-root!)
+				//
+				// TODO: write a pretty log message for the
+				// user with a suggestion of what to do.
 				if original.m.Dir != module.Dir {
 					return nil, fmt.Errorf("two conflicting versions of module %s have been requested; one from %s, the other from %s's go.mod",
 						modPath, original.provenance, p.Pkg.Module.Path)
@@ -414,20 +442,45 @@ func localModules(pkgDir, bbDir string, mainPkgs []*bbinternal.Package) (map[str
 		}
 	}
 
-	// Look for conflicts between remote and local modules.
+	// Look for versioning conflicts between all modules.
 	//
-	// E.g. if u-bmc depends on u-root, but we are also compiling u-root locally.
+	// Go through the entire dependency graph of every command the user
+	// requested. Every dependency has a version through go.mod files, and
+	// that version number may conflict with either a replace directive or
+	// the fact that the user requested to compile a command from the
+	// dependency module.
+	//
+	// E.g. if u-bmc depends on u-root @ v0.8.0, but we are also compiling
+	// u-root from a local directory, those are conflicting requirements.
 	var conflict bool
+
+	// seen is a map of user-requested-command-module =>
+	// local-dependency-module combination that a warning has already been
+	// printed about.
+	seen := map[string]map[string]struct{}{}
+
 	for _, mainPkg := range mainPkgs {
+		// Initialize the inner seen map.
+		if mainPkg.Pkg.Module != nil {
+			if _, ok := seen[mainPkg.Pkg.Module.Path]; !ok {
+				seen[mainPkg.Pkg.Module.Path] = map[string]struct{}{}
+			}
+		}
+
+		// Visit visits all packages in the dependency graph of the named package.
 		packages.Visit([]*packages.Package{mainPkg.Pkg}, nil, func(p *packages.Package) {
 			if p.Module == nil {
 				return
 			}
+			if _, ok := seen[mainPkg.Pkg.Module.Path][p.Module.Path]; ok {
+				return
+			}
+
 			if l, ok := localModules[p.Module.Path]; ok && l.m.Dir != p.Module.Dir {
 				fmt.Fprintln(os.Stderr, "")
 				log.Printf("Conflicting module dependencies on %s:", p.Module.Path)
-				log.Printf("  %s uses %s", mainPkg.Pkg.Module.Path, moduleIdentifier(p.Module))
-				log.Printf("  %s uses %s", l.provenance, moduleIdentifier(l.m))
+				log.Printf("  module %s depends on it @ %s", mainPkg.Pkg.Module.Path, moduleVersionIdentifier(p.Module))
+				log.Printf("  %s depends on it @ %s", l.provenance, moduleVersionIdentifier(l.m))
 				replacePath, err := filepath.Rel(mainPkg.Pkg.Module.Dir, l.m.Dir)
 				if err != nil {
 					replacePath = l.m.Dir
@@ -436,6 +489,9 @@ func localModules(pkgDir, bbDir string, mainPkgs []*bbinternal.Package) (map[str
 				log.Printf("%s: add `replace %s => %s` to %s", term.Bold("Suggestion to resolve"), p.Module.Path, replacePath, mainPkg.Pkg.Module.GoMod)
 				fmt.Fprintln(os.Stderr, "")
 				conflict = true
+
+				// Don't print this particular warning combo again.
+				seen[mainPkg.Pkg.Module.Path][p.Module.Path] = struct{}{}
 			}
 		})
 	}
@@ -450,10 +506,17 @@ func localModules(pkgDir, bbDir string, mainPkgs []*bbinternal.Package) (map[str
 	return modules, nil
 }
 
-func moduleIdentifier(m *packages.Module) string {
+func moduleVersionIdentifier(m *packages.Module) string {
+	// This module was one of the commands requested by the user, and hence was a local directory.
+	if m.Version == "" {
+		return fmt.Sprintf("directory %s", m.Dir)
+	}
+
+	// This module was replaced by some dependency to a local directory.
 	if m.Replace != nil && isReplacedModuleLocal(m.Replace) {
 		return fmt.Sprintf("directory %s", m.Replace.Path)
 	}
+
 	return fmt.Sprintf("version %s", m.Version)
 }
 

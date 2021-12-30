@@ -119,7 +119,7 @@ github.com/spf13/pflag
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/u-root/gobusybox/src v0.0.0-20211222103642-826963454f94
+# github.com/u-root/gobusybox/src v0.0.0-20211230055336-ea7475b50b69
 ## explicit; go 1.13
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
