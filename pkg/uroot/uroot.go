@@ -234,11 +234,11 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	// Expand commands.
 	for index, cmds := range opts.Commands {
-		importPaths, err := ResolvePackagePaths(logger, opts.Env, cmds.Packages)
+		directoryPaths, err := ResolvePackagePaths(logger, opts.Env, cmds.Packages)
 		if err != nil {
 			return err
 		}
-		opts.Commands[index].Packages = importPaths
+		opts.Commands[index].Packages = directoryPaths
 	}
 
 	// Make sure this isn't a nil pointer
@@ -332,32 +332,42 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 	return nil
 }
 
-// resolvePackagePath finds import paths for a single import path or directory string
-func resolvePackagePath(logger ulog.Logger, env golang.Environ, pkg string) ([]string, error) {
+// resolvePackagePath finds import paths for a single import path or directory string.
+//
+// In order of resolution:
+//
+//   ./foobar
+//   ./foobar/glob*
+//   github.com/u-root/u-root/cmds/core/ip
+//   github.com/u-root/u-root/cmds/core/g*lob
+func resolvePackagePath(logger ulog.Logger, env golang.Environ, input string) ([]string, error) {
 	// Search the current working directory, as well GOROOT and GOPATHs
 	prefixes := append([]string{""}, env.SrcDirs()...)
+
 	// Resolve file system paths to package import paths.
 	for _, prefix := range prefixes {
-		path := filepath.Join(prefix, pkg)
+		path := filepath.Join(prefix, input)
 		matches, err := filepath.Glob(path)
 		if len(matches) == 0 || err != nil {
 			continue
 		}
 
-		var importPaths []string
+		var directories []string
 		for _, match := range matches {
-
 			// Only match directories for building.
 			// Skip anything that is not a directory
 			fileInfo, _ := os.Stat(match)
 			if !fileInfo.IsDir() {
 				continue
 			}
+			absPath, _ := filepath.Abs(match)
 
-			p, err := env.PackageByPath(match)
-			if err != nil {
+			if _, err := env.PackageByPath(match); err != nil {
 				logger.Printf("Skipping package %q: %v", match, err)
-			} else if p.ImportPath == "." {
+			} else {
+				directories = append(directories, absPath)
+			}
+			/*} else if p.ImportPath == "." {
 				// TODO: I do not completely understand why
 				// this is triggered. This is only an issue
 				// while this function is run inside the
@@ -365,16 +375,18 @@ func resolvePackagePath(logger ulog.Logger, env golang.Environ, pkg string) ([]s
 				importPaths = append(importPaths, pkg)
 			} else {
 				importPaths = append(importPaths, p.ImportPath)
-			}
+			}*/
 		}
-		return importPaths, nil
+		return directories, nil
 	}
 
 	// No file import paths found. Check if pkg still resolves as a package name.
-	if _, err := env.Package(pkg); err != nil {
-		return nil, fmt.Errorf("%q is neither package or path/glob: %v", pkg, err)
+	pkg, err := env.Package(input)
+	if err != nil {
+		return nil, fmt.Errorf("%q is neither package or path/glob: %v", input, err)
 	}
-	return []string{pkg}, nil
+	absDir, _ := filepath.Abs(pkg.Dir)
+	return []string{absDir}, nil
 }
 
 func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
@@ -398,7 +410,7 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 }
 
 // ResolvePackagePaths takes a list of Go package import paths and directories
-// and turns them into exclusively import paths.
+// and turns them into exclusively absolute directory paths.
 //
 // Currently allowed formats:
 //
@@ -414,10 +426,10 @@ func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) 
 	var includes []string
 	excludes := map[string]bool{}
 	for _, pkg := range pkgs {
-		isExclude := false
-		if strings.HasPrefix(pkg, "-") {
+		isExclude := strings.HasPrefix(pkg, "-")
+
+		if isExclude {
 			pkg = pkg[1:]
-			isExclude = true
 		}
 		paths, err := resolvePackagePath(logger, env, pkg)
 		if err != nil {
