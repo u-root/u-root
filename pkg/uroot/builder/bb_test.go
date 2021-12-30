@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
@@ -29,7 +30,7 @@ func TestBBBuild(t *testing.T) {
 	}
 	af := initramfs.NewFiles()
 	var bbb BBBuilder
-	if err := bbb.Build(af, opts); err != nil {
+	if err := bbb.Build(ulogtest.Logger{t}, af, opts); err != nil {
 		t.Error(err)
 	}
 

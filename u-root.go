@@ -153,7 +153,7 @@ func main() {
 
 	// Main is in a separate functions so defers run on return.
 	if err := Main(gbbOpts); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Build error: %v", err)
 	}
 
 	elapsed := time.Now().Sub(start)

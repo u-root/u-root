@@ -14,6 +14,7 @@ import (
 	"github.com/u-root/gobusybox/src/pkg/bb"
 	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
@@ -43,7 +44,7 @@ func (GBBBuilder) DefaultBinaryDir() string {
 }
 
 // Build is an implementation of Builder.Build for a busybox-like initramfs.
-func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
+func (b GBBBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	if len(opts.TempDir) == 0 {
 		return fmt.Errorf("opts.TempDir is empty")
@@ -70,6 +71,16 @@ func (b GBBBuilder) Build(af *initramfs.Files, opts Opts) error {
 	}
 
 	if err := bb.BuildBusybox(bopts); err != nil {
+		// Print the actual error. This may contain a suggestion for
+		// what to do, actually.
+		l.Printf("Gobusybox error: %v", err)
+
+		// Return some instructions for the user; this is printed last in the u-root tool.
+		//
+		// TODO: yeah, this isn't a good way to do error handling. The
+		// error should be the thing that's returned, I just wanted
+		// that to be printed first, and the instructions for what to
+		// do about it to be last.
 		var errGopath *bb.ErrGopathBuild
 		var errGomod *bb.ErrModuleBuild
 		if errors.As(err, &errGopath) {
