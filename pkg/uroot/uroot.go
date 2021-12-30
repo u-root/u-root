@@ -256,7 +256,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
 		}
-		if err := cmds.Builder.Build(files, bOpts); err != nil {
+		if err := cmds.Builder.Build(logger, files, bOpts); err != nil {
 			return fmt.Errorf("error building: %v", err)
 		}
 	}

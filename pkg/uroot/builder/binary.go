@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
@@ -25,7 +26,7 @@ func (BinaryBuilder) DefaultBinaryDir() string {
 }
 
 // Build implements Builder.Build.
-func (BinaryBuilder) Build(af *initramfs.Files, opts Opts) error {
+func (BinaryBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
 

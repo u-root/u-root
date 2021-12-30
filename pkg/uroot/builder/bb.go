@@ -11,6 +11,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/bb"
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
@@ -45,7 +46,7 @@ func (BBBuilder) DefaultBinaryDir() string {
 }
 
 // Build is an implementation of Builder.Build for a busybox-like initramfs.
-func (b BBBuilder) Build(af *initramfs.Files, opts Opts) error {
+func (b BBBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	// Build the busybox binary.
 	bbPath := filepath.Join(opts.TempDir, "bb")
 	noStrip := false
