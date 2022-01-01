@@ -351,7 +351,7 @@ func main() {
 	// If you make it /, strange things are bound to happen.
 	// if that is too limiting we'll have to change this.
 	if *chroot == "" {
-		log.Fatalf("you are required to set the chroot via --chroot")
+		log.Fatalf("you are required to set the chroot via -chroot")
 	}
 
 	a = flag.Args()
