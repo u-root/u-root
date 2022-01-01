@@ -336,7 +336,14 @@ func main() {
 		//	log.Fatalf("Can't get termios on fd 1: %v", err)
 		//}
 		if err := c.Run(); err != nil {
-			log.Printf(err.Error())
+			log.Printf("Could not run:\n   %v\n    %v\n", c, err.Error())
+			if strings.Contains(err.Error(), "invalid argument") {
+				log.Println("Ensure that your kernel is configured for CGROUPs and NS.")
+				log.Println("The following are needed: IPC, PID, USER, UTS")
+			}
+			if strings.Contains(err.Error(), "device or resource busy") {
+				log.Println("No clue...")
+			}
 		}
 		//if err := termios.SetTermios(1, t); err != nil {
 		//	log.Printf("Can't reset termios on fd1: %v", err)
