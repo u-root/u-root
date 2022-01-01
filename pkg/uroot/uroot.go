@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ldd"
@@ -215,8 +216,9 @@ type Opts struct {
 	// This must be specified to have a default shell.
 	DefaultShell string
 
-	// NoStrip builds unstripped binaries.
-	NoStrip bool
+	// Build options for building go binaries. Ultimate this holds all the
+	// args that end up being passed to `go build`.
+	BuildOpts *gbbgolang.BuildOpts
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
@@ -249,12 +251,12 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		// Build packages.
 		bOpts := builder.Opts{
 			Env:       opts.Env,
+			BuildOpts: opts.BuildOpts,
 			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
-			NoStrip:   opts.NoStrip,
 		}
-		if err := cmds.Builder.Build(files, bOpts); err != nil {
+		if err := cmds.Builder.Build(logger, files, bOpts); err != nil {
 			return fmt.Errorf("error building: %v", err)
 		}
 	}

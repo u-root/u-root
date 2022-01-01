@@ -119,7 +119,7 @@ github.com/spf13/pflag
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/u-root/gobusybox/src v0.0.0-20210529132627-adc854ea4425
+# github.com/u-root/gobusybox/src v0.0.0-20211230232531-fcf634c39c0e
 ## explicit; go 1.13
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
@@ -135,6 +135,7 @@ github.com/u-root/uio/cp
 github.com/u-root/uio/rand
 github.com/u-root/uio/ubinary
 github.com/u-root/uio/uio
+github.com/u-root/uio/ulog
 # github.com/ulikunitz/xz v0.5.8
 ## explicit; go 1.12
 github.com/ulikunitz/xz
@@ -238,7 +239,7 @@ golang.org/x/xerrors/internal
 # google.golang.org/grpc v1.29.1
 ## explicit; go 1.11
 google.golang.org/grpc/codes
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
