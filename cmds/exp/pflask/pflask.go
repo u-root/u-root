@@ -324,9 +324,8 @@ func main() {
 
 		if syscall.Geteuid() != 0 {
 			c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
-			// Interesting. Won't build statically?
-			// c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
-			// c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
+			c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
+			c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
 		}
 
 		c.Stdin = os.Stdin
