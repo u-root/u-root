@@ -327,17 +327,31 @@ func main() {
 		if euid != 0 {
 			a[len(a)-1] = "#u"
 		}
+		if *debug {
+			testc := exec.Command("/bbin/echo", "    ===== cmd test")
+			testc.Stdout = os.Stdout
+			testc.Run()
+			testc = exec.Command("/bbin/ls", a[0])
+			testc.Stdout = os.Stdout
+			testc.SysProcAttr = &syscall.SysProcAttr{Cloneflags: 0}
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUTS
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWIPC
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWPID
+			if err := testc.Run(); err != nil {
+				log.Printf("Could not run:\n   %v\n    %v\n", testc, err.Error())
+			}
+		}
 		// spawn ourselves with the right unsharing settings.
 		c := exec.Command(a[0], a[1:]...)
 		c.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID}
-		//		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 
 		if euid != 0 {
 			c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
 			c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
 			c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
 		}
-
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
