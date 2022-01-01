@@ -353,6 +353,9 @@ func main() {
 	if *chroot == "" {
 		log.Fatalf("you are required to set the chroot via -chroot")
 	}
+	if *chroot == "/" {
+		log.Println("[WARN]: chroot set to /: strange things are bound to happen")
+	}
 
 	a = flag.Args()
 	// log.Printf("greetings %v\n", a)
