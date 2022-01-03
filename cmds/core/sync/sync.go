@@ -40,7 +40,7 @@ func init() {
 
 func doSyscall(syscallNum uintptr) {
 	for _, fileName := range flag.Args() {
-		f, err := os.OpenFile(fileName, syscall.O_RDONLY|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0644)
+		f, err := os.OpenFile(fileName, syscall.O_RDONLY|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0o644)
 		if err != nil {
 			log.Fatal(err)
 		}

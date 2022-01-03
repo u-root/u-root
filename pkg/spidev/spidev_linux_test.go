@@ -7,7 +7,6 @@ package spidev
 import (
 	"encoding/binary"
 	"errors"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"runtime"
@@ -63,20 +62,16 @@ func (s *mockSpidev) syscall(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 ui
 		if size%binary.Size(iocTransfer{}) != 0 {
 			return 0, 0, unix.EINVAL
 		}
-		s.transfers = make([]iocTransfer, size/binary.Size(iocTransfer{}))
 
-		// Re-create the slice from the array.
-		defer runtime.KeepAlive(a3)
-		sh := &reflect.SliceHeader{
-			Data: uintptr(a3),
-			Len:  len(s.transfers),
-			Cap:  len(s.transfers),
-		}
-		transfers := *(*[]iocTransfer)(unsafe.Pointer(sh))
+		// Re-create the slice from the pointer.
+		s.transfers = make([]iocTransfer, 0, 0)
+		sh := (*reflect.SliceHeader)(unsafe.Pointer(&s.transfers))
+		sh.Data = uintptr(a3)
+		sh.Len = size / binary.Size(iocTransfer{})
+		sh.Cap = size / binary.Size(iocTransfer{})
 
-		// Copy to another slice since the GC will clean it up once the
-		// references disappear.
-		copy(s.transfers, transfers)
+		// Make sure the original pointer is not freed up until this point.
+		runtime.KeepAlive(a3)
 
 		// Replace all the non-zero address with 0xdeadbeef because the
 		// pointer addresses might change during the test.
@@ -103,7 +98,7 @@ func TestOpenError(t *testing.T) {
 
 // TestGetters tests the functions which return values like Mode, SpeedHz, ...
 func TestGetters(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", "")
+	tmpFile, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("Could not create temporary file: %v", err)
 	}
@@ -181,7 +176,7 @@ func TestGetters(t *testing.T) {
 
 // TestSetters tests the functions which set values like SetMode, SetSpeedHz, ...
 func TestSetters(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", "")
+	tmpFile, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("Could not create temporary file: %v", err)
 	}
@@ -393,7 +388,7 @@ func TestTransfer(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpFile, err := ioutil.TempFile("", "")
+			tmpFile, err := os.CreateTemp("", "")
 			if err != nil {
 				t.Fatalf("Could not create temporary file: %v", err)
 			}

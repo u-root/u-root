@@ -28,7 +28,7 @@ type StorageCollector struct {
  */
 func NewStorageCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New Storage Collector initialized\n")
-	var sc = new(StorageCollector)
+	sc := new(StorageCollector)
 	err := json.Unmarshal(config, &sc)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,6 @@ func NewStorageCollector(config []byte) (Collector, error) {
  * - error if Reading the block device fails.
  */
 func measureStorageDevice(blkDevicePath string) error {
-
 	log.Printf("Storage Collector: Measuring block device %s\n", blkDevicePath)
 	file, err := os.Open(blkDevicePath)
 	if err != nil {
@@ -64,7 +63,6 @@ func measureStorageDevice(blkDevicePath string) error {
  * package which further hashes this buffer and extends pcr.
  */
 func (s *StorageCollector) Collect() error {
-
 	for _, inputVal := range s.Paths {
 		device, e := slaunch.GetStorageDevice(inputVal) // inputVal is blkDevicePath e.g UUID or sda
 		if e != nil {

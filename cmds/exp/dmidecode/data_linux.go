@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -20,7 +20,7 @@ func getData(textOut io.Writer, dumpFile, sysfsPath string) ([]byte, []byte, err
 	var entry, data []byte
 	if dumpFile != "" {
 		fmt.Fprintf(textOut, "Reading SMBIOS/DMI data from file %s.\n", dumpFile)
-		data, err = ioutil.ReadFile(dumpFile)
+		data, err = os.ReadFile(dumpFile)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error reading dump: %v", err)
 		}
@@ -31,11 +31,11 @@ func getData(textOut io.Writer, dumpFile, sysfsPath string) ([]byte, []byte, err
 		data = data[32:]
 	} else {
 		fmt.Fprintf(textOut, "Reading SMBIOS/DMI data from sysfs.\n")
-		entry, err = ioutil.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
+		entry, err = os.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error reading DMI data: %v", err)
 		}
-		data, err = ioutil.ReadFile(filepath.Join(sysfsPath, "DMI"))
+		data, err = os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 		if err != nil {
 			return nil, nil, fmt.Errorf("error reading DMI data: %v", err)
 		}

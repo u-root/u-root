@@ -26,9 +26,7 @@ var emergencyShellBanner = `
 **************************************************************************
 `
 
-var (
-	doEmergencyShell = flag.Bool("shell", false, "Run emergency shell if checks fail")
-)
+var doEmergencyShell = flag.Bool("shell", false, "Run emergency shell if checks fail")
 
 func checkInterface(ifname string) error {
 	checklist := []checker.Check{
@@ -42,7 +40,8 @@ func checkInterface(ifname string) error {
 			Name:        fmt.Sprintf("%s link speed", ifname),
 			Run:         checker.LinkSpeed(ifname, 400000),
 			Remediate:   nil,
-			StopOnError: false},
+			StopOnError: false,
+		},
 		{
 			Name:        fmt.Sprintf("%s link autoneg", ifname),
 			Run:         checker.LinkAutoneg(ifname, true),

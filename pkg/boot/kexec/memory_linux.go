@@ -9,7 +9,6 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -566,7 +565,7 @@ func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 		}
 		dir := path.Dir(name)
 
-		b, err := ioutil.ReadFile(name)
+		b, err := os.ReadFile(name)
 		if err != nil {
 			return fmt.Errorf("error reading file %q: %v", name, err)
 		}

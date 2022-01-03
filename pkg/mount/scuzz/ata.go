@@ -30,7 +30,7 @@ const (
 	//	ataStatErr  uint8 = (1 << 0)  nolint:golint,unused
 
 	//	read  uint8 = 0  nolint:golint,unused
-	//ataTo int32 = 1
+	// ataTo int32 = 1
 
 	// ioPIO indicates we are doing programmed IO
 	//	ioPIO = 0  nolint:golint,unused
@@ -99,7 +99,7 @@ func (b dataBlock) toWordBlock() (wordBlock, error) {
 // other than "Obsolete", "Retired", "Must be zero" or "Must be one".
 // We follow the practice of existing code of not naming them either.
 func (w wordBlock) mustLBA() error {
-	var check = []struct {
+	check := []struct {
 		off  int
 		mask uint16
 		bit  uint16

@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "findpkg",
+    srcs = ["bb.go"],
+    importpath = "github.com/u-root/gobusybox/src/pkg/bb/findpkg",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/pkg/bb/bbinternal",
+        "//src/pkg/golang",
+        "@com_github_u_root_uio//ulog",
+        "@org_golang_x_sys//unix",
+        "@org_golang_x_tools//go/packages",
+    ],
+)
+
+go_test(
+    name = "findpkg_test",
+    srcs = ["bb_test.go"],
+    embed = [":findpkg"],
+)

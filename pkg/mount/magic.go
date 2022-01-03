@@ -57,7 +57,7 @@ var (
 	EFIVARFS    = []byte{0xde, 0x5e, 0x81, 0xe4}
 	EFS         = []byte{0x41, 0x4A, 0x53}
 	// EXFAT seems to be a samsung file system.
-	//EXFAT       = []byte{0x53, 0xef}
+	// EXFAT       = []byte{0x53, 0xef}
 	F2FS      = []byte{0xF2, 0xF5, 0x20, 0x10}
 	FUSE      = []byte{0x65, 0x73, 0x55, 0x46}
 	FUTEXFS   = []byte{0xBA, 0xD1, 0xDE, 0xA}
@@ -173,10 +173,10 @@ var unknownMagics = []magic{
 
 // FindMagics finds all the magics matching a magic number.
 func FindMagics(blk []byte) []magic {
-	var b = bytes.NewReader(blk)
-	var matches = []magic{}
+	b := bytes.NewReader(blk)
+	matches := []magic{}
 	for _, v := range magics {
-		var mag = make([]byte, len(v.magic))
+		mag := make([]byte, len(v.magic))
 		if n, err := b.ReadAt(mag, v.off); err != nil || n < len(mag) {
 			continue
 		}
@@ -201,7 +201,7 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		return "", 0, err
 	}
 	defer f.Close()
-	var block = make([]byte, blocksize)
+	block := make([]byte, blocksize)
 	if _, err := io.ReadAtLeast(f, block, len(block)); err != nil {
 		return "", 0, fmt.Errorf("no suitable filesystem for %q: %v", n, err)
 	}

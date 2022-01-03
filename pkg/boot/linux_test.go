@@ -7,7 +7,7 @@ package boot
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,11 +19,7 @@ import (
 )
 
 func TestLinuxLabel(t *testing.T) {
-	dir, err := ioutil.TempDir("", "foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	osKernel, err := os.Create(filepath.Join(dir, "kernel"))
 	if err != nil {
@@ -115,7 +111,7 @@ func TestCopyToFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(f.Name())
-	got, err := ioutil.ReadAll(f)
+	got, err := io.ReadAll(f)
 	if err != nil {
 		t.Fatal(err)
 	}

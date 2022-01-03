@@ -6,8 +6,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"testing"
@@ -16,29 +14,26 @@ import (
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 )
 
-func TestInvalidCommand(t *testing.T) {
+func testInvalidCommand(t *testing.T) {
 	err := cli([]string{"unknown"})
 	require.Equal(t, "Unrecognized action", err.Error())
 }
 
-func TestNoEntryType(t *testing.T) {
+func testNoEntryType(t *testing.T) {
 	err := cli([]string{"add", "localboot"})
 	require.Equal(t, "you need to provide method", err.Error())
 }
 
-func TestNoAction(t *testing.T) {
+func testNoAction(t *testing.T) {
 	err := cli([]string{})
 	require.Equal(t, "you need to provide action", err.Error())
 }
 
-func TestAddNetbootEntryFull(t *testing.T) {
-	dir, err := ioutil.TempDir("", "vpdbootmanager")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.MkdirAll(path.Join(dir, "rw"), 0700)
+func testAddNetbootEntryFull(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
-	err = cli([]string{
+	err := cli([]string{
 		"add",
 		"netboot",
 		"dhcpv6",
@@ -47,7 +42,7 @@ func TestAddNetbootEntryFull(t *testing.T) {
 		dir,
 	})
 	require.NoError(t, err)
-	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
+	file, err := os.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
 	var out systembooter.NetBooter
 	err = json.Unmarshal([]byte(file), &out)
@@ -56,14 +51,11 @@ func TestAddNetbootEntryFull(t *testing.T) {
 	require.Equal(t, "aa:bb:cc:dd:ee:ff", out.MAC)
 }
 
-func TestAddLocalbootEntryFull(t *testing.T) {
-	dir, err := ioutil.TempDir("", "vpdbootmanager")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.MkdirAll(path.Join(dir, "rw"), 0700)
+func testAddLocalbootEntryFull(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(path.Join(dir, "rw"), 0o700)
 	defer os.RemoveAll(dir)
-	err = cli([]string{
+	err := cli([]string{
 		"add",
 		"localboot",
 		"grub",
@@ -71,7 +63,7 @@ func TestAddLocalbootEntryFull(t *testing.T) {
 		dir,
 	})
 	require.NoError(t, err)
-	file, err := ioutil.ReadFile(path.Join(dir, "rw", "Boot0001"))
+	file, err := os.ReadFile(path.Join(dir, "rw", "Boot0001"))
 	require.NoError(t, err)
 	var out systembooter.NetBooter
 	err = json.Unmarshal([]byte(file), &out)

@@ -10,7 +10,7 @@ import (
 )
 
 func TestFindVendor(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		id VendorID
 		v  VendorName
 		e  error
@@ -35,7 +35,7 @@ func TestFindVendor(t *testing.T) {
 }
 
 func TestFindDevice(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		v  VendorName
 		id ChipID
 		d  ChipName

@@ -11,6 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -209,36 +210,42 @@ func date(t time.Time, z *time.Location) string {
 	return t.In(z).Format(time.UnixDate)
 }
 
-func main() {
-	flag.Parse()
-
+func run(args []string, univ bool, ref string, w io.Writer) error {
 	t := time.Now()
 	z := time.Local
-	if flags.universal {
+	if univ {
 		z = time.UTC
 	}
-	if flags.reference != "" {
-		stat, err := os.Stat(flags.reference)
+	if ref != "" {
+		stat, err := os.Stat(ref)
 		if err != nil {
-			log.Fatalf("Unable to gather stats of file %v", flags.reference)
+			return fmt.Errorf("unable to gather stats of file %v", ref)
 		}
 		t = stat.ModTime()
 	}
 
-	a := flag.Args()
-	switch len(a) {
+	switch len(args) {
 	case 0:
-		fmt.Printf("%v\n", date(t, z))
+		fmt.Fprintf(w, "%v\n", date(t, z))
 	case 1:
-		a0 := a[0]
+		a0 := args[0]
 		if strings.HasPrefix(a0, "+") {
-			fmt.Printf("%v\n", dateMap(t, z, a0[1:]))
+			fmt.Fprintf(w, "%v\n", dateMap(t, z, a0[1:]))
 		} else {
-			if err := setDate(a[0], z); err != nil {
-				log.Fatalf("%v: %v", a0, err)
+			if err := setDate(args[0], z); err != nil {
+				return fmt.Errorf("%v: %v", a0, err)
 			}
 		}
 	default:
 		flag.Usage()
+		return nil
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := run(flag.Args(), flags.universal, flags.reference, os.Stdout); err != nil {
+		log.Fatalf("date: %v", err)
 	}
 }

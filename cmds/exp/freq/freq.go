@@ -32,11 +32,13 @@ import (
 	"unicode/utf8"
 )
 
-var utf = flag.Bool("r", false, "treat input as UTF-8")
-var dec = flag.Bool("d", false, "print decimal value")
-var hex = flag.Bool("x", false, "print hexadecimal value")
-var oct = flag.Bool("o", false, "print octal value")
-var chr = flag.Bool("c", false, "print character/rune")
+var (
+	utf = flag.Bool("r", false, "treat input as UTF-8")
+	dec = flag.Bool("d", false, "print decimal value")
+	hex = flag.Bool("x", false, "print hexadecimal value")
+	oct = flag.Bool("o", false, "print octal value")
+	chr = flag.Bool("c", false, "print character/rune")
+)
 
 var freq [utf8.MaxRune + 1]uint64
 

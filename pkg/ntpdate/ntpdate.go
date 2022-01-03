@@ -69,8 +69,7 @@ type timeGetterSetter interface {
 	SetRTCTime(time.Time) error
 }
 
-type realGetterSetter struct {
-}
+type realGetterSetter struct{}
 
 func (*realGetterSetter) GetTime(servers []string) (time.Time, string, error) {
 	return getTime(servers)

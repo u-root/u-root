@@ -55,7 +55,7 @@ const (
 	// SEL device Commands
 	BMC_GET_SEL_INFO Command = 0x40
 
-	//LAN Device Commands
+	// LAN Device Commands
 	BMC_GET_LAN_CONFIG Command = 0x02
 
 	IPM_WATCHDOG_NO_ACTION    = 0x00
@@ -379,7 +379,6 @@ func (e *Event) marshall() ([]byte, error) {
 // LogSystemEvent adds an SEL (System Event Log) entry.
 func (i *IPMI) LogSystemEvent(e *Event) error {
 	data, err := e.marshall()
-
 	if err != nil {
 		return err
 	}
@@ -446,7 +445,6 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 
 func (i *IPMI) GetDeviceID() (*DevID, error) {
 	data, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_DEVICE_ID, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +479,6 @@ func (i *IPMI) EnableSEL() (bool, error) {
 	}
 
 	data, err := i.getGlobalEnables()
-
 	if err != nil {
 		return false, err
 	}

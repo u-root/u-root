@@ -39,7 +39,7 @@ func (e EfiDppACPISubType) String() string {
 // DppAcpiDevPath is an acpi device path.
 type DppAcpiDevPath struct {
 	Hdr      EfiDevicePathProtocolHdr
-	HID, UID []byte //both length 4; not sure of endianness
+	HID, UID []byte // both length 4; not sure of endianness
 }
 
 var _ EfiDevicePathProtocol = (*DppAcpiDevPath)(nil)
@@ -72,7 +72,7 @@ func (e *DppAcpiDevPath) Resolver() (EfiPathSegmentResolver, error) { return nil
 // DppAcpiExDevPath is an expanded dpp acpi device path.
 type DppAcpiExDevPath struct {
 	Hdr                    EfiDevicePathProtocolHdr
-	HID, UID, CID          []byte //all length 4; not sure of endianness
+	HID, UID, CID          []byte // all length 4; not sure of endianness
 	HIDSTR, UIDSTR, CIDSTR string
 }
 

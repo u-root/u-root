@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -20,6 +21,8 @@ import (
 )
 
 const individualTestTimeout = 25 * time.Second
+
+var coverProfile = flag.String("coverprofile", "", "Filename to write coverage data to")
 
 func walkTests(testRoot string, fn func(string, string)) error {
 	return filepath.Walk(testRoot, func(path string, info os.FileInfo, err error) error {
@@ -37,7 +40,37 @@ func walkTests(testRoot string, fn func(string, string)) error {
 	})
 }
 
+// AppendFile takes two filepaths and concatenates the files at those.
+func AppendFile(srcFile, targetFile string) error {
+	cov, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+	defer cov.Close()
+
+	out, err := os.OpenFile(targetFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(out, cov); err != nil {
+		if err := out.Close(); err != nil {
+			return err
+		}
+		return fmt.Errorf("error appending %s to %s: %v", srcFile, targetFile, err)
+	}
+
+	return out.Close()
+}
+
+// runTest mounts a vfat or 9pfs volume and runs the tests within.
 func runTest() error {
+	flag.Parse()
+
+	if err := os.MkdirAll("/testdata", 0755); err != nil {
+		log.Fatalf("Couldn't create testdata directory: %v", err)
+	}
+
 	cleanup, err := common.MountSharedDir()
 	if err != nil {
 		return err
@@ -56,7 +89,13 @@ func runTest() error {
 			return
 		}
 
-		cmd := exec.CommandContext(ctx, path, "-test.v", "-test.timeout", individualTestTimeout.String())
+		args := []string{"-test.v"}
+		coverFile := filepath.Join(filepath.Dir(path), "coverage.txt")
+		if len(*coverProfile) > 0 {
+			args = append(args, "-test.coverprofile", coverFile)
+		}
+
+		cmd := exec.CommandContext(ctx, path, args...)
 		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
 
 		// Write to stdout for humans, write to w for the JSON converter.
@@ -69,7 +108,7 @@ func runTest() error {
 		// relative directory.
 		cmd.Dir = filepath.Dir(path)
 		if err := cmd.Start(); err != nil {
-			log.Printf("Failed to start %v: %v", path, err)
+			log.Printf("Failed to start %q: %v", path, err)
 			return
 		}
 
@@ -90,13 +129,20 @@ func runTest() error {
 		}
 
 		// Close the pipe so test2json will quit.
-		w.Close()
-		j.Wait()
+		if err := w.Close(); err != nil {
+			log.Printf("Failed to close pipe: %v", err)
+		}
+		if err := j.Wait(); err != nil {
+			log.Printf("Failed to stop test2json: %v", err)
+		}
+
+		if err := AppendFile(coverFile, *coverProfile); err != nil {
+			log.Printf("Could not append to cover file: %v", err)
+		}
 	})
 	return nil
 }
 
-// Mount a vfat volume and run the tests within.
 func main() {
 	if err := runTest(); err != nil {
 		log.Printf("Tests failed: %v", err)

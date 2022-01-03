@@ -16,8 +16,7 @@ type Booter interface {
 
 // NullBooter is a booter that does nothing. It is used when no other booter
 // has been found.
-type NullBooter struct {
-}
+type NullBooter struct{}
 
 // TypeName returns the name of the booter type
 func (nb *NullBooter) TypeName() string {

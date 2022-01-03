@@ -20,8 +20,7 @@ type test struct {
 }
 
 func TestBasename(t *testing.T) {
-
-	var tests = []test{
+	tests := []test{
 		{
 			flags:      []string{"foo.h", ".h"},
 			out:        "foo\n",

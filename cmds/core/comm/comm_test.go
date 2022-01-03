@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,18 +54,14 @@ var commTests = []struct {
 
 // TestComm implements a table-drivent test.
 func TestComm(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "comm")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	for _, test := range commTests {
 		// Write inputs into the two files
 		var files [2]string
 		for i, contents := range []string{test.in1, test.in2} {
 			files[i] = filepath.Join(tmpDir, fmt.Sprintf("txt%d", i))
-			if err := ioutil.WriteFile(files[i], []byte(contents), 0600); err != nil {
+			if err := os.WriteFile(files[i], []byte(contents), 0o600); err != nil {
 				t.Fatalf("Failed to create test file %d: %v", i, err)
 			}
 		}

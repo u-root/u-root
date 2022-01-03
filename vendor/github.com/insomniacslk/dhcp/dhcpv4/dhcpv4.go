@@ -232,22 +232,13 @@ func NewInform(hwaddr net.HardwareAddr, localIP net.IP, modifiers ...Modifier) (
 
 // NewRequestFromOffer builds a DHCPv4 request from an offer.
 func NewRequestFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
-	// find server IP address
-	serverIP := offer.ServerIdentifier()
-	if serverIP == nil {
-		if offer.ServerIPAddr == nil || offer.ServerIPAddr.IsUnspecified() {
-			return nil, fmt.Errorf("missing Server IP Address in DHCP Offer")
-		}
-		serverIP = offer.ServerIPAddr
-	}
-
 	return New(PrependModifiers(modifiers,
 		WithReply(offer),
 		WithMessageType(MessageTypeRequest),
-		WithServerIP(serverIP),
 		WithClientIP(offer.ClientIPAddr),
 		WithOption(OptRequestedIPAddress(offer.YourIPAddr)),
-		WithOption(OptServerIdentifier(serverIP)),
+		// This is usually the server IP.
+		WithOptionCopied(offer, OptionServerIdentifier),
 		WithRequestedOptions(
 			OptionSubnetMask,
 			OptionRouter,

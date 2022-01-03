@@ -15,14 +15,14 @@ import (
 
 var getter *Getter
 
-func TestNewgetter(t *testing.T) {
+func testNewgetter(t *testing.T) {
 	g := NewGetter()
 	require.NotNil(t, g)
 	require.NotNil(t, g.R)
 	require.NotNil(t, g.Out)
 }
 
-func TestGetOne(t *testing.T) {
+func testGetOne(t *testing.T) {
 	var buf bytes.Buffer
 	getter := NewGetter()
 	getter.Out = &buf
@@ -34,7 +34,7 @@ func TestGetOne(t *testing.T) {
 	assert.Equal(t, "firmware_version(RO) => 1.2.3\n\nfirmware_version(RW) => 3.2.1\n\n", out)
 }
 
-func TestGetAll(t *testing.T) {
+func testGetAll(t *testing.T) {
 	var buf bytes.Buffer
 	getter := NewGetter()
 	getter.Out = &buf

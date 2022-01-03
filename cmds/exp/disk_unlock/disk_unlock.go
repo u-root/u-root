@@ -270,5 +270,4 @@ TryAllHSS:
 	}
 
 	verboseLog(fmt.Sprintf("Found these %s unlocked partitions: %v", *disk, parts))
-
 }

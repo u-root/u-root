@@ -11,12 +11,12 @@ package uroot
 import (
 	"debug/elf"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ldd"
@@ -44,31 +44,31 @@ func DefaultRamfs() *cpio.Archive {
 	switch golang.Default().GOOS {
 	case "linux":
 		return cpio.ArchiveFromRecords([]cpio.Record{
-			cpio.Directory("bin", 0755),
-			cpio.Directory("dev", 0755),
-			cpio.Directory("env", 0755),
-			cpio.Directory("etc", 0755),
-			cpio.Directory("lib64", 0755),
-			cpio.Directory("proc", 0755),
-			cpio.Directory("sys", 0755),
-			cpio.Directory("tcz", 0755),
-			cpio.Directory("tmp", 0777),
-			cpio.Directory("ubin", 0755),
-			cpio.Directory("usr", 0755),
-			cpio.Directory("usr/lib", 0755),
-			cpio.Directory("var/log", 0777),
-			cpio.CharDev("dev/console", 0600, 5, 1),
-			cpio.CharDev("dev/tty", 0666, 5, 0),
-			cpio.CharDev("dev/null", 0666, 1, 3),
-			cpio.CharDev("dev/port", 0640, 1, 4),
-			cpio.CharDev("dev/urandom", 0666, 1, 9),
-			cpio.StaticFile("etc/resolv.conf", nameserver, 0644),
-			cpio.StaticFile("etc/localtime", gmt0, 0644),
+			cpio.Directory("bin", 0o755),
+			cpio.Directory("dev", 0o755),
+			cpio.Directory("env", 0o755),
+			cpio.Directory("etc", 0o755),
+			cpio.Directory("lib64", 0o755),
+			cpio.Directory("proc", 0o755),
+			cpio.Directory("sys", 0o755),
+			cpio.Directory("tcz", 0o755),
+			cpio.Directory("tmp", 0o777),
+			cpio.Directory("ubin", 0o755),
+			cpio.Directory("usr", 0o755),
+			cpio.Directory("usr/lib", 0o755),
+			cpio.Directory("var/log", 0o777),
+			cpio.CharDev("dev/console", 0o600, 5, 1),
+			cpio.CharDev("dev/tty", 0o666, 5, 0),
+			cpio.CharDev("dev/null", 0o666, 1, 3),
+			cpio.CharDev("dev/port", 0o640, 1, 4),
+			cpio.CharDev("dev/urandom", 0o666, 1, 9),
+			cpio.StaticFile("etc/resolv.conf", nameserver, 0o644),
+			cpio.StaticFile("etc/localtime", gmt0, 0o644),
 		})
 	default:
 		return cpio.ArchiveFromRecords([]cpio.Record{
-			cpio.Directory("ubin", 0755),
-			cpio.Directory("bbin", 0755),
+			cpio.Directory("ubin", 0o755),
+			cpio.Directory("bbin", 0o755),
 		})
 	}
 }
@@ -216,8 +216,9 @@ type Opts struct {
 	// This must be specified to have a default shell.
 	DefaultShell string
 
-	// NoStrip builds unstripped binaries.
-	NoStrip bool
+	// Build options for building go binaries. Ultimate this holds all the
+	// args that end up being passed to `go build`.
+	BuildOpts *gbbgolang.BuildOpts
 }
 
 // CreateInitramfs creates an initramfs built to opts' specifications.
@@ -242,7 +243,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	// Add each build mode's commands to the archive.
 	for _, cmds := range opts.Commands {
-		builderTmpDir, err := ioutil.TempDir(opts.TempDir, "builder")
+		builderTmpDir, err := os.MkdirTemp(opts.TempDir, "builder")
 		if err != nil {
 			return err
 		}
@@ -250,12 +251,12 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		// Build packages.
 		bOpts := builder.Opts{
 			Env:       opts.Env,
+			BuildOpts: opts.BuildOpts,
 			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
-			NoStrip:   opts.NoStrip,
 		}
-		if err := cmds.Builder.Build(files, bOpts); err != nil {
+		if err := cmds.Builder.Build(logger, files, bOpts); err != nil {
 			return fmt.Errorf("error building: %v", err)
 		}
 	}
@@ -275,12 +276,12 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
 	}
 	if len(opts.UinitArgs) > 0 {
-		if err := archive.AddRecord(cpio.StaticFile("etc/uinit.flags", uflag.ArgvToFile(opts.UinitArgs), 0444)); err != nil {
+		if err := archive.AddRecord(cpio.StaticFile("etc/uinit.flags", uflag.ArgvToFile(opts.UinitArgs), 0o444)); err != nil {
 			return fmt.Errorf("%v: could not add uinit arguments from UinitArgs (-uinitcmd) to initramfs", err)
 		}
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.InitCmd, "init"); err != nil {
-		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init", err)
+		return fmt.Errorf("%v: specify -initcmd=\"\" to ignore this error and build without an init (or, did you specify a list, and are you missing github.com/u-root/u-root/cmds/core/init?)", err)
 	}
 	if err := opts.addSymlinkTo(logger, archive, opts.DefaultShell, "bin/sh"); err != nil {
 		return fmt.Errorf("%v: specify -defaultsh=\"\" to ignore this error and build without a shell", err)

@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -57,7 +56,6 @@ func TestNewChunkedBuffer(t *testing.T) {
 					len(newIntermediateBuffer.data), newIntermediateBuffer.outChunk, newIntermediateBuffer.flags,
 					tt.BufferSize, tt.outChunkSize, tt.flags)
 			}
-
 		})
 	}
 }
@@ -232,17 +230,14 @@ func TestRead(t *testing.T) {
 		},
 	}
 
-	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
-	if err != nil {
-		t.Errorf("unable to mockup file: %v", err)
-	}
-	defer os.Remove("datafile")
+	p, cleanup := setupDatafile(t, "datafile")
+	defer cleanup()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buffer := make([]byte, len(tt.expected))
 
-			file, err := os.Open("datafile")
+			file, err := os.Open(p)
 			if err != nil {
 				t.Errorf("Unable to open mock file: %v", err)
 			}
@@ -258,7 +253,6 @@ func TestRead(t *testing.T) {
 			if !reflect.DeepEqual(buffer, tt.expected) {
 				t.Errorf("Got: %v - Want: %v", buffer, tt.expected)
 			}
-
 		})
 	}
 }
@@ -314,20 +308,30 @@ func TestInFile(t *testing.T) {
 		},
 	}
 
-	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
-	if err != nil {
-		t.Errorf("unable to mockup file: %v", err)
-	}
-	defer os.Remove("datafile")
+	p, cleanup := setupDatafile(t, "datafile")
+	defer cleanup()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = inFile(tt.filename, tt.outputBytes, tt.seek, tt.count)
+			_, err := inFile(p, tt.outputBytes, tt.seek, tt.count)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
 		})
 	}
+}
+
+func setupDatafile(t *testing.T, name string) (string, func()) {
+	t.Helper()
+
+	testDir := t.TempDir()
+	dataFilePath := filepath.Join(testDir, name)
+
+	if err := os.WriteFile(dataFilePath, []byte("ABCDEFG"), 0o644); err != nil {
+		t.Errorf("unable to mockup file: %v", err)
+	}
+
+	return dataFilePath, func() { os.Remove(dataFilePath) }
 }
 
 func TestOutFile(t *testing.T) {
@@ -381,15 +385,12 @@ func TestOutFile(t *testing.T) {
 		},
 	}
 
-	err := ioutil.WriteFile("datafile", []byte("ABCDEFG"), 0644)
-	if err != nil {
-		t.Errorf("unable to mockup file: %v", err)
-	}
-	defer os.Remove("datafile")
+	p, cleanup := setupDatafile(t, "datafile")
+	defer cleanup()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err = outFile(tt.filename, tt.outputBytes, tt.seek, tt.flags)
+			_, err := outFile(p, tt.outputBytes, tt.seek, tt.flags)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
@@ -433,7 +434,7 @@ func TestConvertArgs(t *testing.T) {
 
 // TestDd implements a table-driven test.
 func TestDd(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name    string
 		flags   []string
 		stdin   string
@@ -441,7 +442,6 @@ func TestDd(t *testing.T) {
 		count   int64
 		compare func(io.Reader, []byte, int64) error
 	}{
-
 		{
 			name:    "Simple copying from input to output",
 			flags:   []string{},
@@ -589,7 +589,7 @@ func byteCount(i io.Reader, o []byte, n int64) error {
 
 // TestFiles uses `if` and `of` arguments.
 func TestFiles(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		flags    []string
 		inFile   []byte
@@ -653,17 +653,13 @@ func TestFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write in and out file to temporary dir.
-			tmpDir, err := ioutil.TempDir("", "dd-test")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(tmpDir)
+			tmpDir := t.TempDir()
 			inFile := filepath.Join(tmpDir, "inFile")
 			outFile := filepath.Join(tmpDir, "outFile")
-			if err := ioutil.WriteFile(inFile, tt.inFile, 0666); err != nil {
+			if err := os.WriteFile(inFile, tt.inFile, 0o666); err != nil {
 				t.Error(err)
 			}
-			if err := ioutil.WriteFile(outFile, tt.outFile, 0666); err != nil {
+			if err := os.WriteFile(outFile, tt.outFile, 0o666); err != nil {
 				t.Error(err)
 			}
 
@@ -671,7 +667,7 @@ func TestFiles(t *testing.T) {
 			if err := testutil.Command(t, args...).Run(); err != nil {
 				t.Error(err)
 			}
-			got, err := ioutil.ReadFile(filepath.Join(tmpDir, "outFile"))
+			got, err := os.ReadFile(filepath.Join(tmpDir, "outFile"))
 			if err != nil {
 				t.Error(err)
 			}

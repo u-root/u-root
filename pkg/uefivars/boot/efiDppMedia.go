@@ -22,16 +22,16 @@ import (
 type EfiDppMediaSubType EfiDevPathProtoSubType
 
 const (
-	//DppTypeMedia, pg 319 +
-	DppMTypeHdd      EfiDppMediaSubType = iota + 1 //0x01
-	DppMTypeCd                                     //0x02
-	DppMTypeVendor                                 //0x03
-	DppMTypeFilePath                               //0x04 //p321
-	DppMTypeMedia                                  //0x05 //media protocol i.e. filesystem format??
-	DppMTypePIWGFF                                 //0x06
-	DppMTypePIWGFV                                 //0x07
-	DppMTypeRelOff                                 //0x08
-	DppMTypeRAM                                    //0x09
+	// DppTypeMedia, pg 319 +
+	DppMTypeHdd      EfiDppMediaSubType = iota + 1 // 0x01
+	DppMTypeCd                                     // 0x02
+	DppMTypeVendor                                 // 0x03
+	DppMTypeFilePath                               // 0x04 //p321
+	DppMTypeMedia                                  // 0x05 //media protocol i.e. filesystem format??
+	DppMTypePIWGFF                                 // 0x06
+	DppMTypePIWGFV                                 // 0x07
+	DppMTypeRelOff                                 // 0x08
+	DppMTypeRAM                                    // 0x09
 )
 
 var efiDppMediaSubTypeStrings = map[EfiDppMediaSubType]string{
@@ -57,12 +57,12 @@ func (e EfiDppMediaSubType) String() string {
 type DppMediaHDD struct {
 	Hdr EfiDevicePathProtocolHdr
 
-	PartNum   uint32             //index into partition table for MBR or GPT; 0 indicates entire disk
-	PartStart uint64             //starting LBA. only used for MBR?
-	PartSize  uint64             //size in LB's. only used for MBR?
-	PartSig   uefivars.MixedGUID //format determined by SigType below. unused bytes must be 0x0.
-	PartFmt   uint8              //0x01 for MBR, 0x02 for GPT
-	SigType   uint8              //0x00 - none; 0x01 - 32bit MBR sig (@ 0x1b8); 0x02 - GUID
+	PartNum   uint32             // index into partition table for MBR or GPT; 0 indicates entire disk
+	PartStart uint64             // starting LBA. only used for MBR?
+	PartSize  uint64             // size in LB's. only used for MBR?
+	PartSig   uefivars.MixedGUID // format determined by SigType below. unused bytes must be 0x0.
+	PartFmt   uint8              // 0x01 for MBR, 0x02 for GPT
+	SigType   uint8              // 0x00 - none; 0x01 - 32bit MBR sig (@ 0x1b8); 0x02 - GUID
 }
 
 var _ EfiDevicePathProtocol = (*DppMediaHDD)(nil)
@@ -77,7 +77,7 @@ func ParseDppMediaHdd(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaHDD, error
 		PartNum:   binary.LittleEndian.Uint32(b[:4]),
 		PartStart: binary.LittleEndian.Uint64(b[4:12]),
 		PartSize:  binary.LittleEndian.Uint64(b[12:20]),
-		//PartSig:   b[20:36], //cannot assign slice to array
+		// PartSig:   b[20:36], //cannot assign slice to array
 		PartFmt: b[36],
 		SigType: b[37],
 	}
@@ -125,7 +125,7 @@ func (e *DppMediaHDD) Resolver() (EfiPathSegmentResolver, error) {
 	return &HddResolver{BlockDev: blocks[0]}, nil
 }
 
-//return the partition table type as a string
+// return the partition table type as a string
 func (e *DppMediaHDD) pttype() string {
 	switch e.PartFmt {
 	case 1:
@@ -137,12 +137,12 @@ func (e *DppMediaHDD) pttype() string {
 	}
 }
 
-//return the signature as a string
+// return the signature as a string
 func (e *DppMediaHDD) sig() string {
 	switch e.SigType {
-	case 1: //32-bit MBR sig
+	case 1: // 32-bit MBR sig
 		return fmt.Sprintf("%x", binary.LittleEndian.Uint32(e.PartSig[:4]))
-	case 2: //GUID
+	case 2: // GUID
 		return e.PartSig.ToStdEnc().String()
 	default:
 		return "(NO SIG)"
@@ -155,7 +155,7 @@ func (e *DppMediaHDD) sig() string {
 type DppMediaFilePath struct {
 	Hdr EfiDevicePathProtocolHdr
 
-	PathNameDecoded string //stored as utf16
+	PathNameDecoded string // stored as utf16
 }
 
 var _ EfiDevicePathProtocol = (*DppMediaFilePath)(nil)
@@ -168,7 +168,7 @@ func ParseDppMediaFilePath(h EfiDevicePathProtocolHdr, b []byte) (*DppMediaFileP
 	if err != nil {
 		return nil, err
 	}
-	//remove null termination byte, replace windows slashes
+	// remove null termination byte, replace windows slashes
 	path = strings.TrimSuffix(path, "\000")
 	path = strings.Replace(path, "\\", string(os.PathSeparator), -1)
 	fp := &DppMediaFilePath{
@@ -196,7 +196,7 @@ func (e *DppMediaFilePath) Resolver() (EfiPathSegmentResolver, error) {
 	return &pr, nil
 }
 
-//struct in EfiDevicePathProtocol for DppMTypePIWGFV
+// struct in EfiDevicePathProtocol for DppMTypePIWGFV
 type DppMediaPIWGFV struct {
 	Hdr EfiDevicePathProtocolHdr
 	Fv  []byte
@@ -234,7 +234,7 @@ func (e *DppMediaPIWGFV) Resolver() (EfiPathSegmentResolver, error) {
 	return nil, ErrUnimpl
 }
 
-//struct in EfiDevicePathProtocol for DppMTypePIWGFF
+// struct in EfiDevicePathProtocol for DppMTypePIWGFF
 type DppMediaPIWGFF struct {
 	Hdr EfiDevicePathProtocolHdr
 	Ff  []byte

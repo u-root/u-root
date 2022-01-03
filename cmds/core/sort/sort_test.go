@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,12 +41,6 @@ var sortTests = []test{
 
 // sort < in > out
 func TestSortWithPipes(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	// Table-driven testing
 	for _, tt := range sortTests {
 		cmd := testutil.Command(t, tt.flags...)
@@ -71,7 +64,7 @@ func sortWithFiles(t *testing.T, tt test, tmpDir string,
 	inPaths := make([]string, len(inFiles))
 	for i, inFile := range inFiles {
 		inPaths[i] = filepath.Join(tmpDir, inFile)
-		if err := ioutil.WriteFile(inPaths[i], []byte(tt.in), 0600); err != nil {
+		if err := os.WriteFile(inPaths[i], []byte(tt.in), 0o600); err != nil {
 			t.Error(err)
 			return
 		}
@@ -85,7 +78,7 @@ func sortWithFiles(t *testing.T, tt test, tmpDir string,
 		return
 	}
 
-	out, err = ioutil.ReadFile(outPath)
+	out, err = os.ReadFile(outPath)
 	if err != nil {
 		t.Errorf("Cannot open out file: %v", err)
 		return
@@ -98,11 +91,7 @@ func sortWithFiles(t *testing.T, tt test, tmpDir string,
 
 // sort -o in out
 func TestSortWithFiles(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Table-driven testing
 	for _, tt := range sortTests {
@@ -112,11 +101,7 @@ func TestSortWithFiles(t *testing.T) {
 
 // sort -o file file
 func TestInplaceSort(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Table-driven testing
 	for _, tt := range sortTests {
@@ -126,20 +111,22 @@ func TestInplaceSort(t *testing.T) {
 
 // sort -o out in1 in2 in3 in4
 func TestMultipleFileInputs(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
-	tt := test{[]string{}, "a\nb\nc\n",
-		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n"}
+	tt := test{
+		[]string{},
+		"a\nb\nc\n",
+		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n",
+	}
 	sortWithFiles(t, tt, tmpDir,
 		[]string{"in1", "in2", "in3", "in4"}, "out")
 
 	// Run the test again without newline terminators.
-	tt = test{[]string{}, "a\nb\nc",
-		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n"}
+	tt = test{
+		[]string{},
+		"a\nb\nc",
+		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n",
+	}
 	sortWithFiles(t, tt, tmpDir,
 		[]string{"in1", "in2", "in3", "in4"}, "out")
 }

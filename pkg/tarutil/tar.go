@@ -244,11 +244,11 @@ func VerboseLogFilter(hdr *tar.Header) bool {
 // It also sets appropriate permissions.
 func SafeFilter(hdr *tar.Header) bool {
 	if hdr.Typeflag == tar.TypeDir {
-		hdr.Mode = 0770
+		hdr.Mode = 0o770
 		return true
 	}
 	if hdr.Typeflag == tar.TypeReg {
-		hdr.Mode = 0660
+		hdr.Mode = 0o660
 		return true
 	}
 	return false

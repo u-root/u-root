@@ -9,9 +9,7 @@ import (
 	"time"
 )
 
-var (
-	testTime = time.Date(0001, 1, 15, 5, 35, 49, 0, time.UTC)
-)
+var testTime = time.Date(0o001, 1, 15, 5, 35, 49, 0, time.UTC)
 
 func invalidDurationError(d string) string {
 	_, err := time.ParseDuration(d)
@@ -19,7 +17,7 @@ func invalidDurationError(d string) string {
 }
 
 func TestUptime(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		input  string
 		uptime *time.Time
@@ -65,7 +63,7 @@ func TestUptime(t *testing.T) {
 }
 
 func TestLoadAverage(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name        string
 		input       string
 		loadAverage string

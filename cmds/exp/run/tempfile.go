@@ -56,7 +56,7 @@ func TempFile(dir, format string) (f *os.File, err error) {
 	for i := 0; i < 10000; i++ {
 		name := fmt.Sprintf(format, nextSuffix())
 		name = filepath.Join(dir, name)
-		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)
 		if os.IsExist(err) {
 			if nconflict++; nconflict > 10 {
 				rand = reseed()

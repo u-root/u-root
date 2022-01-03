@@ -15,7 +15,7 @@ import (
 // almost nothing else we can assume exists, e.g. /lib/libc.so
 // is a different name on almost every *ix* system.
 func lddOne(name string) ([]string, error) {
-	var libMap = make(map[string]bool)
+	libMap := make(map[string]bool)
 	n, err := Ldd([]string{name})
 	if err != nil {
 		return nil, fmt.Errorf("Ldd on %v: want nil, got %v", name, err)

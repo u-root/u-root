@@ -10,7 +10,6 @@ package cpio
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -116,7 +115,7 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 	// to create files in these directories, we have to make them at least
 	// mode 755.
 	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("CreateFileInRoot %q: %v", f.Name, err)
 		}
 	}
@@ -126,7 +125,7 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		return fmt.Errorf("%q: type %v: cannot create IPC endpoints", f.Name, m)
 
 	case os.ModeSymlink:
-		content, err := ioutil.ReadAll(uio.Reader(f))
+		content, err := io.ReadAll(uio.Reader(f))
 		if err != nil {
 			return err
 		}

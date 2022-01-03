@@ -29,7 +29,8 @@ func (r *RTC) Read() (time.Time, error) {
 
 // Set implements Set for the Linux RTC
 func (r *RTC) Set(tu time.Time) error {
-	rt := unix.RTCTime{Sec: int32(tu.Second()),
+	rt := unix.RTCTime{
+		Sec:   int32(tu.Second()),
 		Min:   int32(tu.Minute()),
 		Hour:  int32(tu.Hour()),
 		Mday:  int32(tu.Day()),
@@ -37,7 +38,8 @@ func (r *RTC) Set(tu time.Time) error {
 		Year:  int32(tu.Year() - 1900),
 		Wday:  int32(0),
 		Yday:  int32(0),
-		Isdst: int32(0)}
+		Isdst: int32(0),
+	}
 
 	return unix.IoctlSetRTCTime(int(r.file.Fd()), &rt)
 }
