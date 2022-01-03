@@ -16,10 +16,14 @@
 //     must not be specified.
 package main
 
-import "log"
+import (
+	"flag"
+	"log"
+)
 
 func main() {
-	if err := mknod(); err != nil {
+	flag.Parse()
+	if err := mknod(flag.Args()); err != nil {
 		log.Fatalf("mknod: %v", err)
 	}
 }
