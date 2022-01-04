@@ -30,41 +30,40 @@ func TestSync(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		input      []string
-		expErr     error
+		want       error
 		data       bool
 		filesystem bool
 	}{
 		{
-			name:   "data flag",
-			input:  []string{file1.Name(), file2.Name()},
-			expErr: nil,
-			data:   true,
+			name:  "data flag",
+			input: []string{file1.Name(), file2.Name()},
+			want:  nil,
+			data:  true,
 		},
 		{
-			name:   "data flag with wrong path",
-			input:  []string{"file1"},
-			expErr: fmt.Errorf("open file1: no such file or directory"),
-			data:   true,
+			name:  "data flag with wrong path",
+			input: []string{"file1"},
+			want:  fmt.Errorf("open file1: no such file or directory"),
+			data:  true,
 		},
 		{
 			name:       "filesystem flag",
 			input:      []string{file1.Name(), file2.Name()},
-			expErr:     nil,
+			want:       nil,
 			filesystem: true,
 		},
 		{
-			name:   "default",
-			input:  []string{file1.Name(), file2.Name()},
-			expErr: nil,
+			name:  "default",
+			input: []string{file1.Name(), file2.Name()},
+			want:  nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			*data = tt.data
 			*filesystem = tt.filesystem
-			err := sync(tt.input)
-			if err != nil {
-				if tt.expErr.Error() != err.Error() {
-					t.Errorf("Expected error: %v, got: %v", tt.expErr, err)
+			if got := sync(tt.input); got != nil {
+				if tt.want.Error() != got.Error() {
+					t.Errorf("sync() = '%v', want: '%v'", got, tt.want)
 				}
 			}
 		})
