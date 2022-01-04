@@ -14,7 +14,9 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"io/fs"
 	"log"
 	"os"
 	"syscall"
@@ -41,7 +43,7 @@ func doSyscall(syscallNum uintptr, args []string) error {
 			return err
 		}
 		_, _, err = syscall.Syscall(syscallNum, uintptr(f.Fd()), 0, 0)
-		if err.Error() != "errno 0" {
+		if errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		f.Close()
@@ -52,11 +54,9 @@ func doSyscall(syscallNum uintptr, args []string) error {
 func sync(args []string) error {
 	switch {
 	case *data:
-		err := doSyscall(unix.SYS_FDATASYNC, args)
-		return err
+		return doSyscall(unix.SYS_FDATASYNC, args)
 	case *filesystem:
-		err := doSyscall(unix.SYS_SYNCFS, args)
-		return err
+		return doSyscall(unix.SYS_SYNCFS, args)
 	default:
 		syscall.Sync()
 		return nil
