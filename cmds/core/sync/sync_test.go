@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestSync(t *testing.T) {
-	//testutil.SkipIfNotRoot(t)
+	testutil.SkipIfNotRoot(t)
 	d, err := os.MkdirTemp(os.TempDir(), "sync")
 	if err != nil {
 		t.Errorf("Failed to create tmp folder: %v", err)
