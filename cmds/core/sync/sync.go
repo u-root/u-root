@@ -14,9 +14,7 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"io/fs"
 	"log"
 	"os"
 	"syscall"
@@ -42,8 +40,7 @@ func doSyscall(syscallNum uintptr, args []string) error {
 		if err != nil {
 			return err
 		}
-		_, _, err = syscall.Syscall(syscallNum, uintptr(f.Fd()), 0, 0)
-		if errors.Is(err, fs.ErrNotExist) {
+		if _, _, err = syscall.Syscall(syscallNum, uintptr(f.Fd()), 0, 0); err.(syscall.Errno) != 0 {
 			return err
 		}
 		f.Close()
