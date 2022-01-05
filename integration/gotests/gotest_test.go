@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -101,6 +102,11 @@ func TestGoTest(t *testing.T) {
 				//
 				//     disk = make([]byte, 0x100000000)
 				qemu.ArbitraryArgs{"-m", "6G"},
+			},
+		},
+		BuildOpts: uroot.Opts{
+			ExtraFiles: []string{
+				"/etc/group",
 			},
 		},
 	}
