@@ -7,6 +7,7 @@ package builder
 import (
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
@@ -50,7 +51,7 @@ type Opts struct {
 type Builder interface {
 	// Build uses the given options to build Go packages and adds its files
 	// to be included in the initramfs to the given ArchiveFiles.
-	Build(*initramfs.Files, Opts) error
+	Build(ulog.Logger, *initramfs.Files, Opts) error
 
 	// DefaultBinaryDir is the initramfs' default directory for binaries
 	// built using this builder.

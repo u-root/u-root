@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//src/pkg/bb/bbinternal",
         "//src/pkg/golang",
+        "@com_github_u_root_uio//ulog",
         "@org_golang_x_sys//unix",
         "@org_golang_x_tools//go/packages",
     ],

@@ -19,6 +19,7 @@ import (
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -145,6 +146,8 @@ func main() {
 	gbbOpts := &gbbgolang.BuildOpts{}
 	gbbOpts.RegisterFlags(flag.CommandLine)
 
+	l := log.New(os.Stderr, "", log.Ltime)
+
 	// Register an alias for -go-no-strip for backwards compatibility.
 	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
 	flag.Parse()
@@ -152,8 +155,8 @@ func main() {
 	start := time.Now()
 
 	// Main is in a separate functions so defers run on return.
-	if err := Main(gbbOpts); err != nil {
-		log.Fatal(err)
+	if err := Main(l, gbbOpts); err != nil {
+		l.Fatalf("Build error: %v", err)
 	}
 
 	elapsed := time.Now().Sub(start)
@@ -167,13 +170,13 @@ func main() {
 		stats.Label = generateLabel()
 	}
 	if stat, err := os.Stat(*outputPath); err == nil && stat.ModTime().After(start) {
-		log.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
+		l.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
 		stats.OutputSize = stat.Size()
 		if *statsOutputPath != "" {
 			if err := writeBuildStats(stats, *statsOutputPath); err == nil {
-				log.Printf("Wrote stats to %q (label %q)", *statsOutputPath, stats.Label)
+				l.Printf("Wrote stats to %q (label %q)", *statsOutputPath, stats.Label)
 			} else {
-				log.Printf("Failed to write stats to %s: %v", *statsOutputPath, err)
+				l.Printf("Failed to write stats to %s: %v", *statsOutputPath, err)
 			}
 		}
 	}
@@ -194,25 +197,25 @@ func isRecommendedVersion(v string) bool {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main(buildOpts *gbbgolang.BuildOpts) error {
+func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	env := golang.Default()
 	env.BuildTags = strings.Split(*tags, ",")
 	if env.CgoEnabled {
-		log.Printf("Disabling CGO for u-root...")
+		l.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
 	}
-	log.Printf("Build environment: %s", env)
+	l.Printf("Build environment: %s", env)
 	if env.GOOS != "linux" {
-		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+		l.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
 	v, err := env.Version()
 	if err != nil {
-		log.Printf("Could not get environment's Go version, using runtime's version: %v", err)
+		l.Printf("Could not get environment's Go version, using runtime's version: %v", err)
 		v = runtime.Version()
 	}
 	if !isRecommendedVersion(v) {
-		log.Printf(`WARNING: You are not using one of the recommended Go versions (have = %s, recommended = %v).
+		l.Printf(`WARNING: You are not using one of the recommended Go versions (have = %s, recommended = %v).
 			Some packages may not compile.
 			Go to https://golang.org/doc/install to find out how to install a newer version of Go,
 			or use https://godoc.org/golang.org/dl/%s to install an additional version of Go.`,
@@ -224,7 +227,6 @@ func Main(buildOpts *gbbgolang.BuildOpts) error {
 		return err
 	}
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Open the target initramfs file.
 	if *outputPath == "" {
 		if len(env.GOOS) == 0 && len(env.GOARCH) == 0 {
@@ -232,7 +234,7 @@ func Main(buildOpts *gbbgolang.BuildOpts) error {
 		}
 		*outputPath = fmt.Sprintf("/tmp/initramfs.%s_%s.cpio", env.GOOS, env.GOARCH)
 	}
-	w, err := archiver.OpenWriter(logger, *outputPath)
+	w, err := archiver.OpenWriter(l, *outputPath)
 	if err != nil {
 		return err
 	}
@@ -273,7 +275,7 @@ func Main(buildOpts *gbbgolang.BuildOpts) error {
 		case "bb":
 			b = builder.BBBuilder{ShellBang: *shellbang}
 		case "gbb":
-			log.Printf("NOTE: building with the new gobusybox; to get old behavior, use -build=bb")
+			l.Printf("NOTE: building with the new gobusybox; to get old behavior, use -build=bb")
 			b = builder.GBBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
@@ -328,5 +330,5 @@ func Main(buildOpts *gbbgolang.BuildOpts) error {
 	if len(uinitArgs) > 1 {
 		opts.UinitArgs = uinitArgs[1:]
 	}
-	return uroot.CreateInitramfs(logger, opts)
+	return uroot.CreateInitramfs(l, opts)
 }
