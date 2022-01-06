@@ -11,6 +11,7 @@ import (
 
 type RTC struct {
 	file *os.File
+	syscalls
 }
 
 // OpenRTC opens an RTC. It will typically only work on Linux, but since it
@@ -28,11 +29,10 @@ func OpenRTC() (*RTC, error) {
 	// deeper RTC problem, and should probably halt further efforts.
 	// If all opens fail, and we drop out of the loop, then there is
 	// no device.
-
 	for _, dev := range devs {
 		f, err := os.Open(dev)
 		if err == nil {
-			return &RTC{f}, err
+			return &RTC{f, realSyscalls{}}, err
 		}
 		if !os.IsNotExist(err) {
 			return nil, err
