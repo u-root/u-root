@@ -15,10 +15,6 @@ import (
 	"strings"
 )
 
-const (
-	pciPath = "/sys/bus/pci/devices"
-)
-
 type bus struct {
 	Devices []string
 }
@@ -126,6 +122,16 @@ func BaseLimType(bar string) (uint64, uint64, uint64, error) {
 // If it can't glob in pciPath/g then it returns an error.
 // For convenience, we use * as the glob if none are supplied.
 func NewBusReader(globs ...string) (BusReader, error) {
+	// NewBusReader returns a BusReader, given a ...glob to match PCI devices against.
+	// If it can't glob in pciPath/g then it returns an error.
+	const (
+		pciPath = "/sys/bus/pci/devices"
+	)
+	// For convenience, we use * as the glob if none are supplied.
+	return newBusReader(pciPath, globs...)
+}
+
+func newBusReader(pciPath string, globs ...string) (BusReader, error) {
 	if len(globs) == 0 {
 		globs = []string{"*"}
 	}

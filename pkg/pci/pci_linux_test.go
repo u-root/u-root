@@ -11,6 +11,24 @@ import (
 	"testing"
 )
 
+func TestNewBusReaderBadBaseGlob(t *testing.T) {
+	_, err := newBusReader("[")
+	if err == nil {
+		t.Fatalf(`newBusReader("[") = nil, not glob error`)
+	}
+}
+
+func TestNewBusReaderBadBase(t *testing.T) {
+	n, err := newBusReader("nothingtoseeheremovealongXXX")
+	if err != nil {
+		t.Fatalf(`newBusReader("nothingtoseeheremovealongXXX") = %v, not nil`, err)
+	}
+	if n == nil {
+		t.Fatalf(`newBusReader("nothingtoseeheremovealongXXX") = returns nil, not a BusReader`)
+	}
+	// Other busreader functions are tested elsewhere
+}
+
 func TestNewBusReaderNoGlob(t *testing.T) {
 	n, err := NewBusReader()
 	if err != nil {
@@ -109,6 +127,26 @@ func TestBusReadConfig(t *testing.T) {
 	}
 	if !fullread && err == nil {
 		log.Fatalf("Doing a full config read as ! root: got nil, want %v", os.ErrPermission)
+	}
+}
+
+// TestBusReset. Dangerous.
+func TestBusReset(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skipf("Skipping bus reset test, as we are root")
+	}
+
+	r, err := NewBusReader()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	d, err := r.Read()
+	if err != nil {
+		log.Fatalf("Read: %v", err)
+	}
+	if err := d.Reset(); err == nil {
+		log.Fatalf("d.Reset(): nil != permission denied")
 	}
 }
 

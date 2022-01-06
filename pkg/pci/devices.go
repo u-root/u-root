@@ -9,7 +9,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // Devices contains a slice of one or more PCI devices
@@ -133,6 +135,22 @@ func (d Devices) WriteConfigRegister(offset, size int64, val uint64) error {
 		if err := p.WriteConfigRegister(offset, size, val); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// Reset makes a best-effort attempt to reset devices.
+func (d Devices) Reset() error {
+	var e []error
+	for _, p := range d {
+		reset := filepath.Join(p.FullPath, "reset")
+		// This is purely best effort.
+		if err := ioutil.WriteFile(reset, []byte("1\n"), 0); err != nil {
+			e = append(e, err)
+		}
+	}
+	if len(e) > 0 {
+		return fmt.Errorf("%v", e)
 	}
 	return nil
 }
