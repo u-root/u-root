@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -42,12 +43,10 @@ func testPkgs(t *testing.T) []string {
 	blocklist := []string{
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/dd",
-		"github.com/u-root/u-root/cmds/core/elvish/eval",
-		"github.com/u-root/u-root/cmds/core/elvish/edit/tty",
 		"github.com/u-root/u-root/cmds/core/fusermount",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
-		"github.com/u-root/u-root/cmds/exp/rush",
+		"github.com/u-root/u-root/cmds/exp/gosh",
 		"github.com/u-root/u-root/cmds/exp/pox",
 		"github.com/u-root/u-root/pkg/crypto",
 		"github.com/u-root/u-root/pkg/tarutil",
@@ -103,6 +102,11 @@ func TestGoTest(t *testing.T) {
 				//
 				//     disk = make([]byte, 0x100000000)
 				qemu.ArbitraryArgs{"-m", "6G"},
+			},
+		},
+		BuildOpts: uroot.Opts{
+			ExtraFiles: []string{
+				"/etc/group",
 			},
 		},
 	}
