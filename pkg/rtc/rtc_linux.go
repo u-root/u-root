@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
+
 package rtc
 
 import (
@@ -10,9 +12,24 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type syscalls interface {
+	ioctlGetRTCTime(int) (*unix.RTCTime, error)
+	ioctlSetRTCTime(int, *unix.RTCTime) error
+}
+
+type realSyscalls struct{}
+
+func (sc realSyscalls) ioctlGetRTCTime(fd int) (*unix.RTCTime, error) {
+	return unix.IoctlGetRTCTime(fd)
+}
+
+func (sc realSyscalls) ioctlSetRTCTime(fd int, time *unix.RTCTime) error {
+	return unix.IoctlSetRTCTime(fd, time)
+}
+
 // Read implements Read for the Linux RTC
 func (r *RTC) Read() (time.Time, error) {
-	rt, err := unix.IoctlGetRTCTime(int(r.file.Fd()))
+	rt, err := r.ioctlGetRTCTime(int(r.file.Fd()))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -41,5 +58,5 @@ func (r *RTC) Set(tu time.Time) error {
 		Isdst: int32(0),
 	}
 
-	return unix.IoctlSetRTCTime(int(r.file.Fd()), &rt)
+	return r.ioctlSetRTCTime(int(r.file.Fd()), &rt)
 }
