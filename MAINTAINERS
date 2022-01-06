@@ -1,0 +1,8 @@
+# Maintainers should review changes promptly (within 1 month).
+# Github will auto-assign the below maintainers to a pull request.
+
+"cmds/exp/pox/**":
+  - rminnich
+
+"cmds/contrib/spidev/**":
+  - rjoleary
