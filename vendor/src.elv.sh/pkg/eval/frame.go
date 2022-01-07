@@ -23,6 +23,7 @@ type Frame struct {
 	srcMeta parse.Source
 
 	local, up *Ns
+	defers    *[]func(*Frame) Exception
 
 	intCh <-chan struct{}
 	ports []*Port
@@ -55,7 +56,7 @@ func (fm *Frame) PrepareEval(src parse.Source, r diag.Ranger, ns *Ns) (*Ns, func
 		traceback = fm.addTraceback(r)
 	}
 	newFm := &Frame{
-		fm.Evaler, src, local, new(Ns), fm.intCh, fm.ports, traceback, fm.background}
+		fm.Evaler, src, local, new(Ns), nil, fm.intCh, fm.ports, traceback, fm.background}
 	op, err := compile(newFm.Evaler.Builtin().static(), local.static(), tree, fm.ErrorFile())
 	if err != nil {
 		return nil, nil, err
@@ -153,9 +154,9 @@ func linesToChan(r io.Reader, ch chan<- interface{}) {
 	}
 }
 
-// fork returns a modified copy of ec. The ports are forked, and the name is
+// Fork returns a modified copy of fm. The ports are forked, and the name is
 // changed to the given value. Other fields are copied shallowly.
-func (fm *Frame) fork(name string) *Frame {
+func (fm *Frame) Fork(name string) *Frame {
 	newPorts := make([]*Port, len(fm.ports))
 	for i, p := range fm.ports {
 		if p != nil {
@@ -164,7 +165,7 @@ func (fm *Frame) fork(name string) *Frame {
 	}
 	return &Frame{
 		fm.Evaler, fm.srcMeta,
-		fm.local, fm.up,
+		fm.local, fm.up, fm.defers,
 		fm.intCh, newPorts,
 		fm.traceback, fm.background,
 	}
@@ -172,7 +173,7 @@ func (fm *Frame) fork(name string) *Frame {
 
 // A shorthand for forking a frame and setting the output port.
 func (fm *Frame) forkWithOutput(name string, p *Port) *Frame {
-	newFm := fm.fork(name)
+	newFm := fm.Fork(name)
 	newFm.ports[1] = p
 	return newFm
 }
@@ -240,4 +241,21 @@ func (fm *Frame) Deprecate(msg string, ctx *diag.Context, minLevel int) {
 		err := diag.Error{Type: "deprecation", Message: msg, Context: *ctx}
 		fm.ErrorFile().WriteString(err.Show("") + "\n")
 	}
+}
+
+func (fm *Frame) addDefer(f func(*Frame) Exception) {
+	*fm.defers = append(*fm.defers, f)
+}
+
+func (fm *Frame) runDefers() Exception {
+	var exc Exception
+	defers := *fm.defers
+	for i := len(defers) - 1; i >= 0; i-- {
+		exc2 := defers[i](fm)
+		// TODO: Combine exc and exc2 if both are not nil
+		if exc2 != nil && exc == nil {
+			exc = exc2
+		}
+	}
+	return exc
 }

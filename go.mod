@@ -31,14 +31,14 @@ require (
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
 	golang.org/x/term v0.0.0-20210916214954-140adaaadfaf
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.1
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.4.1
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
-	src.elv.sh v0.16.3
+	src.elv.sh v0.16.0-rc1.0.20220116211855-fda62502ad7f
 )
 
 require (
@@ -48,7 +48,7 @@ require (
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/klauspost/compress v1.10.6 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7 // indirect
