@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,68 +11,83 @@ import (
 	"path"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 )
 
-// Turn these off until testify dies.
-
-func testParseNetboot(t *testing.T) {
+func TestParseNetboot(t *testing.T) {
 	b, _, err := parseNetbootFlags("dhcpv4", "aa:bb:cc:dd:ee:ff", []string{})
-	require.NoError(t, err)
-	require.Equal(t, "netboot", b.Type)
-	require.Equal(t, "dhcpv4", b.Method)
-	require.Equal(t, "aa:bb:cc:dd:ee:ff", b.MAC)
-	require.Nil(t, b.OverrideURL)
-	require.Nil(t, b.Retries)
+	if err != nil {
+		t.Errorf(`parseNetbootFlags("dhcpv4", "aa:bb:cc:dd:ee:ff", []string{}) = _, _, %v, want nil`, err)
+	}
+
+	if b.Type != "netboot" || b.Method != "dhcpv4" || b.MAC != "aa:bb:cc:dd:ee:ff" || b.OverrideURL != nil || b.Retries != nil {
+		t.Errorf(`b.Type, b.Method, b.MAC, b.OverrideURL, b.Retries = %q, %q, %q, %v, %v, want "netboot, "dpcpv4", "aa:bb:cc:dd:ee:ff", nil, nil`,
+			b.Type, b.Method, b.MAC, b.OverrideURL, b.Retries)
+	}
 }
 
-func testParseNetbootWithFlags(t *testing.T) {
-	b, vpdDir, err := parseNetbootFlags("dhcpv4", "aa:bb:cc:dd:ee:ff", []string{
+func TestParseNetbootWithFlags(t *testing.T) {
+	flags := []string{
 		"-override-url",
 		"http://url",
 		"-retries",
 		"1",
 		"-vpd-dir",
 		"test",
-	})
-	require.NoError(t, err)
-	require.Equal(t, "http://url", *b.OverrideURL)
-	require.Equal(t, 1, *b.Retries)
-	require.Equal(t, "test", vpdDir)
+	}
+
+	b, vpdDir, err := parseNetbootFlags("dhcpv4", "aa:bb:cc:dd:ee:ff", flags)
+	if err != nil {
+		t.Errorf(`parseNetbootFlags("dhcpv4", "aa:bb:cc:dd:ee:ff", %v) = _, _, %v, want nil`, flags, err)
+	}
+
+	if *b.OverrideURL != "http://url" || *b.Retries != 1 || vpdDir != "test" {
+		t.Errorf(`*b.OverrideURL, *b.Retries, vpdDir = %q, %d, %q, want "http://url", 1, "test"`, *b.OverrideURL, *b.Retries, vpdDir)
+	}
 }
 
-func testParseLocalboot(t *testing.T) {
+func TestParseLocalboot(t *testing.T) {
 	b, _, err := parseLocalbootFlags("grub", []string{})
-	require.NoError(t, err)
-	require.Equal(t, "grub", b.Method)
+	if err != nil {
+		t.Errorf(`parseLocalbootFlags("grub", []string{}) = _, _, %v, want nil`, err)
+	}
+	if b.Method != "grub" {
+		t.Errorf(`b.Method = %q, want "grub"`, b.Method)
+	}
 
-	b, _, err = parseLocalbootFlags("path", []string{
+	flags := []string{
 		"device",
 		"path",
-	})
-	require.NoError(t, err)
-	require.Equal(t, "path", b.Method)
-	require.Equal(t, "device", b.DeviceGUID)
-	require.Equal(t, "path", b.Kernel)
+	}
+	b, _, err = parseLocalbootFlags("path", flags)
+	if err != nil {
+		t.Errorf(`parseLocalbootFlags("grub", %v) = _, _, %v, want nil`, flags, err)
+	}
+	if b.Method != "path" || b.DeviceGUID != "device" || b.Kernel != "path" {
+		t.Errorf(`b.Method, b.DeviceGUID, b.Kernel = %q, %q, %q`, b.Method, b.DeviceGUID, b.Kernel)
+	}
 }
 
-func testParseLocalbootWithFlags(t *testing.T) {
-	b, vpdDir, err := parseLocalbootFlags("grub", []string{
+func TestParseLocalbootWithFlags(t *testing.T) {
+	flags := []string{
 		"-kernel-args",
 		"kernel-argument-test",
 		"-ramfs",
 		"ramfs-test",
 		"-vpd-dir",
 		"test",
-	})
-	require.NoError(t, err)
-	require.Equal(t, "grub", b.Method)
-	require.Equal(t, "kernel-argument-test", b.KernelArgs)
-	require.Equal(t, "ramfs-test", b.Initramfs)
-	require.Equal(t, "test", vpdDir)
+	}
+	b, vpdDir, err := parseLocalbootFlags("grub", flags)
+	if err != nil {
+		t.Errorf(`parseLocalbootFlags("grub", %v) = _, _, %v, want nil`, flags, err)
+	}
 
-	b, vpdDir, err = parseLocalbootFlags("path", []string{
+	if b.Method != "grub" || b.KernelArgs != "kernel-argument-test" || b.Initramfs != "ramfs-test" || vpdDir != "test" {
+		t.Errorf(`b.Method, b.KernelArgs, b.Initramfs, vpdDir = %q, %q, %q, %q, want "grub", "kernel-argument-test", "ramfs-test", "test"`,
+			b.Method, b.KernelArgs, b.Initramfs, vpdDir)
+	}
+
+	flags = []string{
 		"device",
 		"path",
 		"-kernel-args",
@@ -81,83 +96,123 @@ func testParseLocalbootWithFlags(t *testing.T) {
 		"ramfs-test",
 		"-vpd-dir",
 		"test",
-	})
-	require.NoError(t, err)
-	require.Equal(t, "path", b.Method)
-	require.Equal(t, "device", b.DeviceGUID)
-	require.Equal(t, "path", b.Kernel)
-	require.Equal(t, "kernel-argument-test", b.KernelArgs)
-	require.Equal(t, "ramfs-test", b.Initramfs)
-	require.Equal(t, "test", vpdDir)
+	}
+	b, vpdDir, err = parseLocalbootFlags("path", flags)
+	if err != nil {
+		t.Errorf(`parseLocalbootFlags("path", %v) = _, _, %v, want nil`, flags, err)
+	}
+	if b.Method != "path" || b.DeviceGUID != "device" || b.Kernel != "path" || b.KernelArgs != "kernel-argument-test" ||
+		b.Initramfs != "ramfs-test" || vpdDir != "test" {
+		t.Errorf(`b.Method, b.DeviceGUID, b.Kernel, b.KernelArgs, b.Initramfs, vpdDir = %q, %q, %q, %q, %q, %q, want "path", "device", "path", "kernel-argument-test", "ramfs-test", "test"`,
+			b.Method, b.DeviceGUID, b.Kernel, b.KernelArgs, b.Initramfs, vpdDir)
+	}
 }
 
-func testFailGracefullyMissingArg(t *testing.T) {
+func TestFailGracefullyMissingArg(t *testing.T) {
 	err := add("localboot", []string{})
-	require.Equal(t, "you need to provide method", err.Error())
+	if err.Error() != "you need to provide method" {
+		t.Error("error message should be: you need to provide method")
+	}
 
 	err = add("localboot", []string{"path"})
-	require.Equal(t, "you need to pass DeviceGUID and Kernel path", err.Error())
+	if err.Error() != "you need to pass DeviceGUID and Kernel path" {
+		t.Error("error message should be: you need to pass DeviceGUID and Kernel path")
+	}
 
 	err = add("localboot", []string{"path", "device"})
-	require.Equal(t, "you need to pass DeviceGUID and Kernel path", err.Error())
+	if err.Error() != "you need to pass DeviceGUID and Kernel path" {
+		t.Error("error message should be: you need to pass DeviceGUID and Kernel path")
+	}
 
 	err = add("netboot", []string{})
-	require.Equal(t, "you need to pass method and MAC address", err.Error())
+	if err.Error() != "you need to pass method and MAC address" {
+		t.Error("error message should be: you need to pass method and MAC address")
+	}
 
 	err = add("netboot", []string{"dhcpv6"})
-	require.Equal(t, "you need to pass method and MAC address", err.Error())
+	if err.Error() != "you need to pass method and MAC address" {
+		t.Error("error message should be: you need to pass method and MAC address")
+	}
 }
 
-func testFailGracefullyBadMACAddress(t *testing.T) {
+func TestFailGracefullyBadMACAddress(t *testing.T) {
 	err := add("netboot", []string{"dhcpv6", "test"})
-	require.Equal(t, "address test: invalid MAC address", err.Error())
+	if err.Error() != "address test: invalid MAC address" {
+		t.Errorf(`err.Error() = %q, want "error message should be: address test: invalid MAC address"`, err.Error())
+	}
 }
 
-func testFailGracefullyBadNetworkType(t *testing.T) {
+func TestFailGracefullyBadNetworkType(t *testing.T) {
 	err := add("netboot", []string{"not-valid", "test"})
-	require.Equal(t, "method needs to be either dhcpv4 or dhcpv6", err.Error())
+	if err.Error() != "method needs to be either dhcpv4 or dhcpv6" {
+		t.Errorf(`err.Error() = %q, want "error message should be: method needs to be either dhcpv4 or dhcpv6"`, err.Error())
+	}
 }
 
-func testFailGracefullyBadLocalbootType(t *testing.T) {
+func TestFailGracefullyBadLocalbootType(t *testing.T) {
 	err := add("localboot", []string{"not-valid"})
-	require.Equal(t, "method needs to be grub or path", err.Error())
+	if err.Error() != "method needs to be grub or path" {
+		t.Errorf(`err.Error() = %q, want "error message: method needs to be grub or path"`, err.Error())
+	}
 }
 
-func testFailGracefullyUnknownEntryType(t *testing.T) {
+func TestFailGracefullyUnknownEntryType(t *testing.T) {
 	err := add("test", []string{})
-	require.Equal(t, "unknown entry type", err.Error())
+	if err.Error() != "unknown entry type" {
+		t.Errorf(`err.Error() = %q, want "unknown entry type"`, err.Error())
+	}
 }
 
-func testAddBootEntry(t *testing.T) {
+func TestAddBootEntry(t *testing.T) {
 	vpdDir := t.TempDir()
-	os.MkdirAll(path.Join(vpdDir, "rw"), 0o700)
+	if err := os.MkdirAll(path.Join(vpdDir, "rw"), 0o700); err != nil {
+		t.Errorf(`os.MkdirAll(path.Join(%q, "rw"), 0o700) = %v, want nil`, vpdDir, err)
+	}
 	defer os.RemoveAll(vpdDir)
-	err := addBootEntry(&systembooter.LocalBooter{
+	if err := addBootEntry(&systembooter.LocalBooter{
 		Method: "grub",
-	}, vpdDir)
-	require.NoError(t, err)
+	}, vpdDir); err != nil {
+		t.Errorf(`addBootEntry(&systembooter.LocalBooter{"grub"}, %q) = %v, want nil`, vpdDir, err)
+	}
+
 	file, err := os.ReadFile(path.Join(vpdDir, "rw", "Boot0001"))
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`os.ReadFile(path.Join(%q, "rw", "Boot0001") = %v, want nil`, vpdDir, err)
+	}
 	var out systembooter.LocalBooter
-	err = json.Unmarshal([]byte(file), &out)
-	require.NoError(t, err)
-	require.Equal(t, "grub", out.Method)
+	if err = json.Unmarshal([]byte(file), &out); err != nil {
+		t.Errorf(`json.Unmarshal([]byte(%v), %v) = %v, want nil`, file, &out, err)
+	}
+
+	if out.Method != "grub" {
+		t.Errorf(`out.Method = %q, want grub`, out.Method)
+	}
 }
 
-func testAddBootEntryMultiple(t *testing.T) {
+func TestAddBootEntryMultiple(t *testing.T) {
 	vpdDir := t.TempDir()
-	os.MkdirAll(path.Join(vpdDir, "rw"), 0o700)
+	err := os.MkdirAll(path.Join(vpdDir, "rw"), 0o700)
+	if err != nil {
+		t.Errorf(`os.MkdirAll(path.Join(%q, "rw"), 0o700) = %v, want nil`, vpdDir, err)
+	}
 	defer os.RemoveAll(vpdDir)
+
 	for i := 1; i < 5; i++ {
-		err := addBootEntry(&systembooter.LocalBooter{
+		if err := addBootEntry(&systembooter.LocalBooter{
 			Method: "grub",
-		}, vpdDir)
-		require.NoError(t, err)
+		}, vpdDir); err != nil {
+			t.Errorf(`addBootEntry(&systembooter.LocalBooter{Method: "grub"}, %q) = %v, want nil`, vpdDir, err)
+		}
 		file, err := os.ReadFile(path.Join(vpdDir, "rw", fmt.Sprintf("Boot%04d", i)))
-		require.NoError(t, err)
+		if err != nil {
+			t.Errorf(`os.ReadFile(path.Join(%q, "rw", fmt.Sprintf("Boot%04d", i))) = %v, want nil`, vpdDir, i, err)
+		}
 		var out systembooter.LocalBooter
-		err = json.Unmarshal([]byte(file), &out)
-		require.NoError(t, err)
-		require.Equal(t, "grub", out.Method)
+		if err := json.Unmarshal([]byte(file), &out); err != nil {
+			t.Errorf(`json.Unmarshal([]byte(%q), %v) = %v, want nil`, file, &out, err)
+		}
+		if out.Method != "grub" {
+			t.Errorf(`out.Method = %q, want grub`, out.Method)
+		}
 	}
 }

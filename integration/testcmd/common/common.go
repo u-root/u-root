@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/tarutil"
@@ -78,8 +79,11 @@ func collectKernelCoverage(filename string) error {
 	if err != nil {
 		return err
 	}
-	if err := tarutil.CreateTar(f, []string{gcovDir}, &tarutil.Opts{
+	if err := tarutil.CreateTar(f, []string{strings.TrimLeft(gcovDir, "/")}, &tarutil.Opts{
 		Filters: []tarutil.Filter{gcovFilter},
+		// Make sure the files are not stored absolute; otherwise, they
+		// become difficult to extract safely.
+		ChangeDirectory: "/",
 	}); err != nil {
 		f.Close()
 		return err
