@@ -28,7 +28,7 @@ var typeCbMap = map[string]func(os.FileMode) bool{
 }
 
 const (
-	// noMatchOK indicates that the "nomatch-ok" glob index modifer was
+	// noMatchOK indicates that the "nomatch-ok" glob index modifier was
 	// present.
 	noMatchOK globFlag = 1 << iota
 )
@@ -62,6 +62,8 @@ var runeMatchers = map[string]func(rune) bool{
 	"title":   unicode.IsTitle,
 	"upper":   unicode.IsUpper,
 }
+
+func (gp globPattern) Kind() string { return "glob-pattern" }
 
 func (gp globPattern) Index(k interface{}) (interface{}, error) {
 	modifierv, ok := k.(string)
@@ -122,7 +124,7 @@ func (gp globPattern) Index(k interface{}) (interface{}, error) {
 				return nil, badRangeExpr
 			}
 		} else {
-			return nil, fmt.Errorf("unknown modifier %s", vals.Repr(modifierv, vals.NoPretty))
+			return nil, fmt.Errorf("unknown modifier %s", vals.ReprPlain(modifierv))
 		}
 		err := gp.addMatcher(matcher)
 		return gp, err

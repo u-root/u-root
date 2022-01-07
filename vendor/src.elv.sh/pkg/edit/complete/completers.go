@@ -76,8 +76,10 @@ func completeCommand(n parse.Node, cfg Config) (*context, []RawItem, error) {
 			return generateForEmpty(n.Range().To)
 		case is(parent, aPrimary):
 			ptype := parent.(*parse.Primary).Type
-			if ptype == parse.OutputCapture || ptype == parse.ExceptionCapture {
-				// Case 3: At the beginning of output or exception capture.
+			if ptype == parse.OutputCapture || ptype == parse.ExceptionCapture || ptype == parse.Lambda {
+				// Case 3: At the beginning of output, exception capture or lambda.
+				//
+				// TODO: Don't trigger after "{|".
 				return generateForEmpty(n.Range().To)
 			}
 		}
@@ -112,7 +114,7 @@ func completeIndex(n parse.Node, cfg Config) (*context, []RawItem, error) {
 		if is(parent(n), aIndexing) {
 			// We are just after an opening bracket.
 			indexing := parent(n).(*parse.Indexing)
-			if len(indexing.Indicies) == 1 {
+			if len(indexing.Indices) == 1 {
 				if indexee := ev.PurelyEvalPrimary(indexing.Head); indexee != nil {
 					return generateForEmpty(indexee, n.Range().To)
 				}
@@ -123,7 +125,7 @@ func completeIndex(n parse.Node, cfg Config) (*context, []RawItem, error) {
 			if is(parent(array), aIndexing) {
 				// We are after an existing index and spaces.
 				indexing := parent(array).(*parse.Indexing)
-				if len(indexing.Indicies) == 1 {
+				if len(indexing.Indices) == 1 {
 					if indexee := ev.PurelyEvalPrimary(indexing.Head); indexee != nil {
 						return generateForEmpty(indexee, n.Range().To)
 					}
@@ -141,7 +143,7 @@ func completeIndex(n parse.Node, cfg Config) (*context, []RawItem, error) {
 				if is(parent(array), aIndexing) {
 					// We are just after an incomplete index.
 					indexing := parent(array).(*parse.Indexing)
-					if len(indexing.Indicies) == 1 {
+					if len(indexing.Indices) == 1 {
 						if indexee := ev.PurelyEvalPrimary(indexing.Head); indexee != nil {
 							ctx := &context{
 								"index", seed, primary.Type, compound.Range()}

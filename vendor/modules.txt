@@ -85,7 +85,7 @@ github.com/kr/pty
 # github.com/mattn/go-colorable v0.1.7
 ## explicit; go 1.13
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.12
+# github.com/mattn/go-isatty v0.0.14
 ## explicit; go 1.12
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.9
@@ -206,7 +206,7 @@ golang.org/x/net/ipv6
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20211019181941-9d821ace8654
+# golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -272,13 +272,13 @@ mvdan.cc/sh/v3/syntax
 ## explicit
 pack.ag/tftp
 pack.ag/tftp/netascii
-# src.elv.sh v0.16.3
-## explicit; go 1.15
+# src.elv.sh v0.16.0-rc1.0.20220116211855-fda62502ad7f
+## explicit; go 1.16
 src.elv.sh/pkg/buildinfo
 src.elv.sh/pkg/cli
 src.elv.sh/pkg/cli/histutil
 src.elv.sh/pkg/cli/lscolors
-src.elv.sh/pkg/cli/mode
+src.elv.sh/pkg/cli/modes
 src.elv.sh/pkg/cli/prompt
 src.elv.sh/pkg/cli/term
 src.elv.sh/pkg/cli/tk
@@ -291,22 +291,25 @@ src.elv.sh/pkg/edit/highlight
 src.elv.sh/pkg/env
 src.elv.sh/pkg/eval
 src.elv.sh/pkg/eval/errs
-src.elv.sh/pkg/eval/mods/bundled
-src.elv.sh/pkg/eval/mods/daemon
-src.elv.sh/pkg/eval/mods/file
-src.elv.sh/pkg/eval/mods/math
-src.elv.sh/pkg/eval/mods/path
-src.elv.sh/pkg/eval/mods/platform
-src.elv.sh/pkg/eval/mods/re
-src.elv.sh/pkg/eval/mods/store
-src.elv.sh/pkg/eval/mods/str
-src.elv.sh/pkg/eval/mods/unix
 src.elv.sh/pkg/eval/vals
 src.elv.sh/pkg/eval/vars
 src.elv.sh/pkg/fsutil
 src.elv.sh/pkg/getopt
 src.elv.sh/pkg/glob
 src.elv.sh/pkg/logutil
+src.elv.sh/pkg/mods
+src.elv.sh/pkg/mods/daemon
+src.elv.sh/pkg/mods/epm
+src.elv.sh/pkg/mods/file
+src.elv.sh/pkg/mods/flag
+src.elv.sh/pkg/mods/math
+src.elv.sh/pkg/mods/path
+src.elv.sh/pkg/mods/platform
+src.elv.sh/pkg/mods/re
+src.elv.sh/pkg/mods/readlinebinding
+src.elv.sh/pkg/mods/store
+src.elv.sh/pkg/mods/str
+src.elv.sh/pkg/mods/unix
 src.elv.sh/pkg/parse
 src.elv.sh/pkg/parse/cmpd
 src.elv.sh/pkg/parse/parseutil
@@ -318,8 +321,9 @@ src.elv.sh/pkg/shell
 src.elv.sh/pkg/store/storedefs
 src.elv.sh/pkg/strutil
 src.elv.sh/pkg/sys
+src.elv.sh/pkg/sys/eunix
+src.elv.sh/pkg/sys/ewindows
 src.elv.sh/pkg/testutil
-src.elv.sh/pkg/tt
 src.elv.sh/pkg/ui
 src.elv.sh/pkg/wcwidth
 # golang.org/x/tools => github.com/u-root/tools v0.1.9-0.20220120203125-f542f3b69e66

@@ -5,7 +5,7 @@ import (
 
 	"src.elv.sh/pkg/cli"
 	"src.elv.sh/pkg/cli/histutil"
-	"src.elv.sh/pkg/cli/mode"
+	"src.elv.sh/pkg/cli/modes"
 	"src.elv.sh/pkg/cli/tk"
 	"src.elv.sh/pkg/eval"
 )
@@ -41,43 +41,44 @@ func initHistWalk(ed *Editor, ev *eval.Evaler, hs *histStore, nb eval.NsBuilder)
 	bindings := newMapBindings(ed, ev, bindingVar)
 	app := ed.app
 	nb.AddNs("history",
-		eval.NsBuilder{
-			"binding": bindingVar,
-		}.AddGoFns("<edit:history>", map[string]interface{}{
-			"start": func() { notifyError(app, histwalkStart(app, hs, bindings)) },
-			"up":    func() { notifyError(app, histwalkDo(app, mode.Histwalk.Prev)) },
+		eval.BuildNsNamed("edit:history").
+			AddVar("binding", bindingVar).
+			AddGoFns(map[string]interface{}{
+				"start": func() { notifyError(app, histwalkStart(app, hs, bindings)) },
+				"up":    func() { notifyError(app, histwalkDo(app, modes.Histwalk.Prev)) },
 
-			"down": func() { notifyError(app, histwalkDo(app, mode.Histwalk.Next)) },
-			"down-or-quit": func() {
-				err := histwalkDo(app, mode.Histwalk.Next)
-				if err == histutil.ErrEndOfHistory {
-					app.SetAddon(nil, false)
-				} else {
-					notifyError(app, err)
-				}
-			},
-			// TODO: Remove these builtins in favor of two universal accept and
-			// close builtins
-			"accept": func() { app.SetAddon(nil, true) },
+				"down": func() { notifyError(app, histwalkDo(app, modes.Histwalk.Next)) },
+				"down-or-quit": func() {
+					err := histwalkDo(app, modes.Histwalk.Next)
+					if err == histutil.ErrEndOfHistory {
+						app.PopAddon()
+					} else {
+						notifyError(app, err)
+					}
+				},
 
-			"fast-forward": hs.FastForward,
-		}).Ns())
+				"fast-forward": hs.FastForward,
+			}))
 }
 
 func histwalkStart(app cli.App, hs *histStore, bindings tk.Bindings) error {
-	buf := app.CodeArea().CopyState().Buffer
-	w, err := mode.NewHistwalk(app, mode.HistwalkSpec{
+	codeArea, ok := focusedCodeArea(app)
+	if !ok {
+		return nil
+	}
+	buf := codeArea.CopyState().Buffer
+	w, err := modes.NewHistwalk(app, modes.HistwalkSpec{
 		Bindings: bindings, Store: hs, Prefix: buf.Content[:buf.Dot]})
 	if w != nil {
-		app.SetAddon(w, false)
+		app.PushAddon(w)
 	}
 	return err
 }
 
 var errNotInHistoryMode = errors.New("not in history mode")
 
-func histwalkDo(app cli.App, f func(mode.Histwalk) error) error {
-	w, ok := app.CopyState().Addon.(mode.Histwalk)
+func histwalkDo(app cli.App, f func(modes.Histwalk) error) error {
+	w, ok := app.ActiveWidget().(modes.Histwalk)
 	if !ok {
 		return errNotInHistoryMode
 	}
@@ -86,6 +87,6 @@ func histwalkDo(app cli.App, f func(mode.Histwalk) error) error {
 
 func notifyError(app cli.App, err error) {
 	if err != nil {
-		app.Notify(err.Error())
+		app.Notify(modes.ErrorText(err))
 	}
 }

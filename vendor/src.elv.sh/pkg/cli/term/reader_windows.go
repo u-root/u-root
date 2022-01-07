@@ -8,7 +8,8 @@ import (
 	"sync"
 
 	"golang.org/x/sys/windows"
-	"src.elv.sh/pkg/sys"
+
+	"src.elv.sh/pkg/sys/ewindows"
 	"src.elv.sh/pkg/ui"
 )
 
@@ -37,7 +38,7 @@ func (r *reader) ReadEvent() (Event, error) {
 	defer r.mutex.Unlock()
 	handles := []windows.Handle{r.console, r.stopEvent}
 	for {
-		triggered, _, err := sys.WaitForMultipleObjects(handles, false, sys.INFINITE)
+		triggered, _, err := ewindows.WaitForMultipleObjects(handles, false, ewindows.INFINITE)
 		if err != nil {
 			return nil, err
 		}
@@ -45,8 +46,8 @@ func (r *reader) ReadEvent() (Event, error) {
 			return nil, ErrStopped
 		}
 
-		var buf [1]sys.InputRecord
-		nr, err := sys.ReadConsoleInput(r.console, buf[:])
+		var buf [1]ewindows.InputRecord
+		nr, err := ewindows.ReadConsoleInput(r.console, buf[:])
 		if nr == 0 {
 			return nil, io.ErrNoProgress
 		}
@@ -108,11 +109,11 @@ const (
 	shift     = 0x10
 )
 
-// Converts the native sys.InputEvent type to a suitable Event type. It returns
+// Converts the native ewindows.InputEvent type to a suitable Event type. It returns
 // nil if the event should be ignored.
-func convertEvent(event sys.InputEvent) Event {
+func convertEvent(event ewindows.InputEvent) Event {
 	switch event := event.(type) {
-	case *sys.KeyEvent:
+	case *ewindows.KeyEvent:
 		if event.BKeyDown == 0 {
 			// Ignore keyup events.
 			return nil
@@ -139,7 +140,7 @@ func convertEvent(event sys.InputEvent) Event {
 				// together, the UChar field seems to be always 0; so if we are
 				// here, we can actually be sure that it's AltGr.
 				//
-				// Some characters require AltGr+Shift to intput, such as the
+				// Some characters require AltGr+Shift to input, such as the
 				// upper-case sharp S on a German keyboard.
 				return KeyEvent(ui.Key{Rune: r})
 			}
@@ -157,8 +158,6 @@ func convertEvent(event sys.InputEvent) Event {
 			return nil
 		}
 		return KeyEvent(ui.Key{Rune: r, Mod: mod})
-	//case *sys.MouseEvent:
-	//case *sys.WindowBufferSizeEvent:
 	default:
 		// Other events are ignored.
 		return nil

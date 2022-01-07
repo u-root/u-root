@@ -16,11 +16,12 @@ import (
 	"src.elv.sh/pkg/diag"
 	"src.elv.sh/pkg/edit"
 	"src.elv.sh/pkg/eval"
-	daemonmod "src.elv.sh/pkg/eval/mods/daemon"
-	"src.elv.sh/pkg/eval/mods/store"
+	"src.elv.sh/pkg/mods/daemon"
+	"src.elv.sh/pkg/mods/store"
 	"src.elv.sh/pkg/parse"
 	"src.elv.sh/pkg/strutil"
 	"src.elv.sh/pkg/sys"
+	"src.elv.sh/pkg/ui"
 )
 
 // InteractiveRescueShell determines whether a panic results in a rescue shell
@@ -48,6 +49,7 @@ func interact(ev *eval.Evaler, fds [3]*os.File, cfg *interactCfg) {
 		defer handlePanic()
 	}
 
+	var daemonClient daemondefs.Client
 	if cfg.ActivateDaemon != nil && cfg.SpawnConfig != nil {
 		// TODO(xiaq): Connect to daemon and install daemon module
 		// asynchronously.
@@ -63,18 +65,20 @@ func interact(ev *eval.Evaler, fds [3]*os.File, cfg *interactCfg) {
 					"warning: failed to close connection to daemon:", err)
 			}
 		}()
+		daemonClient = cl
 		// Even if error is not nil, we install daemon-related functionalities
 		// anyway. Daemon may eventually come online and become functional.
-		ev.SetDaemonClient(cl)
+		ev.AddBeforeExit(func() { cl.Close() })
 		ev.AddModule("store", store.Ns(cl))
-		ev.AddModule("daemon", daemonmod.Ns(cl))
+		ev.AddModule("daemon", daemon.Ns(cl))
 	}
 
 	// Build Editor.
 	var ed editor
 	if sys.IsATTY(fds[0]) {
-		newed := edit.NewEditor(cli.NewTTY(fds[0], fds[2]), ev, ev.DaemonClient())
-		ev.AddBuiltin(eval.NsBuilder{}.AddNs("edit", newed.Ns()).Ns())
+		newed := edit.NewEditor(cli.NewTTY(fds[0], fds[2]), ev, daemonClient)
+		ev.ExtendBuiltin(eval.BuildNs().AddNs("edit", newed))
+		ev.BgJobNotify = func(s string) { newed.Notify(ui.T(s)) }
 		ed = newed
 	} else {
 		ed = newMinEditor(fds[0], fds[2])
@@ -147,7 +151,7 @@ func handlePanic() {
 	}
 }
 
-func sourceRC(fds [3]*os.File, ev *eval.Evaler, ed eval.Editor, rcPath string) error {
+func sourceRC(fds [3]*os.File, ev *eval.Evaler, ed editor, rcPath string) error {
 	absPath, err := filepath.Abs(rcPath)
 	if err != nil {
 		return fmt.Errorf("cannot get full path of rc.elv: %v", err)

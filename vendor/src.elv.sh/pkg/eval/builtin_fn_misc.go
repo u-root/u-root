@@ -5,14 +5,15 @@ package eval
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net"
+	"os"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"src.elv.sh/pkg/diag"
+	"src.elv.sh/pkg/eval/errs"
 	"src.elv.sh/pkg/eval/vals"
 	"src.elv.sh/pkg/parse"
 )
@@ -30,8 +31,9 @@ func init() {
 		"kind-of":    kindOf,
 		"constantly": constantly,
 
+		// Introspection
+		"call":    call,
 		"resolve": resolve,
-
 		"eval":    eval,
 		"use-mod": useMod,
 
@@ -109,25 +111,26 @@ func kindOf(fm *Frame, args ...interface{}) error {
 // Examples:
 //
 // ```elvish-transcript
-// ~> f=(constantly lorem ipsum)
+// ~> var f = (constantly lorem ipsum)
 // ~> $f
 // ▶ lorem
 // ▶ ipsum
 // ```
 //
-// The above example is actually equivalent to simply `f = []{ put lorem ipsum }`;
+// The above example is equivalent to simply `var f = { put lorem ipsum }`;
 // it is most useful when the argument is **not** a literal value, e.g.
 //
 // ```elvish-transcript
-// ~> f = (constantly (uname))
+// ~> var f = (constantly (uname))
 // ~> $f
 // ▶ Darwin
 // ~> $f
 // ▶ Darwin
 // ```
 //
-// The above code only calls `uname` once, while if you do `f = []{ put (uname) }`,
-// every time you invoke `$f`, `uname` will be called.
+// The above code only calls `uname` once when defining `$f`. In contrast, if
+// `$f` is defined as `var f = { put (uname) }`, every time you invoke `$f`,
+// `uname` will be called.
 //
 // Etymology: [Clojure](https://clojuredocs.org/clojure.core/constantly).
 
@@ -146,6 +149,43 @@ func constantly(args ...interface{}) Callable {
 			return nil
 		},
 	)
+}
+
+//elvdoc:fn call
+//
+// ```elvish
+// call $fn $args $opts
+// ```
+//
+// Calls `$fn` with `$args` as the arguments, and `$opts` as the option. Useful
+// for calling a function with dynamic option keys.
+//
+// Example:
+//
+// ```elvish-transcript
+// ~> var f = {|a &k1=v1 &k2=v2| put $a $k1 $k2 }
+// ~> call $f [foo] [&k1=bar]
+// ▶ foo
+// ▶ bar
+// ▶ v2
+// ```
+
+func call(fm *Frame, fn Callable, argsVal vals.List, optsVal vals.Map) error {
+	args := make([]interface{}, 0, argsVal.Len())
+	for it := argsVal.Iterator(); it.HasElem(); it.Next() {
+		args = append(args, it.Elem())
+	}
+	opts := make(map[string]interface{}, optsVal.Len())
+	for it := optsVal.Iterator(); it.HasElem(); it.Next() {
+		k, v := it.Elem()
+		ks, ok := k.(string)
+		if !ok {
+			return errs.BadValue{What: "option key",
+				Valid: "string", Actual: vals.Kind(k)}
+		}
+		opts[ks] = v
+	}
+	return fn.Call(fm.Fork("-call"), args, opts)
 }
 
 //elvdoc:fn resolve
@@ -207,10 +247,10 @@ func resolve(fm *Frame, head string) string {
 // ```elvish-transcript
 // ~> eval 'put x'
 // ▶ x
-// ~> x = foo
+// ~> var x = foo
 // ~> eval 'put $x'
 // ▶ foo
-// ~> ns = (ns [&x=bar])
+// ~> var ns = (ns [&x=bar])
 // ~> eval &ns=$ns 'put $x'
 // ▶ bar
 // ```
@@ -218,8 +258,8 @@ func resolve(fm *Frame, head string) string {
 // Examples that modify existing variables:
 //
 // ```elvish-transcript
-// ~> y = foo
-// ~> eval 'y = bar'
+// ~> var y = foo
+// ~> eval 'set y = bar'
 // ~> put $y
 // ▶ bar
 // ```
@@ -227,14 +267,29 @@ func resolve(fm *Frame, head string) string {
 // Examples that creates new variables and uses the callback to access it:
 //
 // ```elvish-transcript
-// ~> eval 'z = lorem'
+// ~> eval 'var z = lorem'
 // ~> put $z
 // compilation error: variable $z not found
 // [ttz 2], line 1: put $z
-// ~> saved-ns = $nil
-// ~> eval &on-end=[ns]{ saved-ns = $ns } 'z = lorem'
+// ~> var saved-ns = $nil
+// ~> eval &on-end={|ns| set saved-ns = $ns } 'var z = lorem'
 // ~> put $saved-ns[z]
 // ▶ lorem
+// ```
+//
+// Note that when using variables from an outer scope, only those
+// that have been referenced are captured as upvalues (see [closure
+// semantics](language.html#closure-semantics)) and thus accessible to `eval`:
+//
+// ```elvish-transcript
+// ~> var a b
+// ~> fn f {|code| nop $a; eval $code }
+// ~> f 'echo $a'
+// $nil
+// ~> f 'echo $b'
+// Exception: compilation error: variable $b not found
+// [eval 2], line 1: echo $b
+// Traceback: [... omitted ...]
 // ```
 
 type evalOpts struct {
@@ -254,7 +309,7 @@ func eval(fm *Frame, opts evalOpts, code string) error {
 	// nil as the second argument.
 	newNs, exc := fm.Eval(src, nil, ns)
 	if opts.OnEnd != nil {
-		newFm := fm.fork("on-end callback of eval")
+		newFm := fm.Fork("on-end callback of eval")
 		errCb := opts.OnEnd.Call(newFm, []interface{}{newNs}, NoOpts)
 		if exc == nil {
 			return errCb
@@ -290,7 +345,7 @@ func nextEvalCount() int {
 // Examples:
 //
 // ```elvish-transcript
-// ~> echo 'x = value' > a.elv
+// ~> echo 'var x = value' > a.elv
 // ~> put (use-mod ./a)[x]
 // ▶ value
 // ```
@@ -300,7 +355,7 @@ func useMod(fm *Frame, spec string) (*Ns, error) {
 }
 
 func readFileUTF8(fname string) (string, error) {
-	bytes, err := ioutil.ReadFile(fname)
+	bytes, err := os.ReadFile(fname)
 	if err != nil {
 		return "", err
 	}
@@ -376,7 +431,7 @@ var TimeAfter = func(fm *Frame, d time.Duration) <-chan time.Time {
 // contexts that might be executing in parallel as a consequence of a command
 // such as [`peach`](#peach).
 //
-// A duration can be a simple [number](../language.html#number) (with optional
+// A duration can be a simple [number](language.html#number) (with optional
 // fractional value) without an explicit unit suffix, with an implicit unit of
 // seconds.
 //
@@ -458,11 +513,11 @@ func sleep(fm *Frame, duration interface{}) error {
 // 1.006060647s
 // ~> time { sleep 0.01 }
 // 1.288977ms
-// ~> t = ''
-// ~> time &on-end=[x]{ t = $x } { sleep 1 }
+// ~> var t = ''
+// ~> time &on-end={|x| set t = $x } { sleep 1 }
 // ~> put $t
 // ▶ (float64 1.000925004)
-// ~> time &on-end=[x]{ t = $x } { sleep 0.01 }
+// ~> time &on-end={|x| set t = $x } { sleep 0.01 }
 // ~> put $t
 // ▶ (float64 0.011030208)
 // ```
@@ -478,7 +533,7 @@ func timeCmd(fm *Frame, opts timeOpt, f Callable) error {
 
 	dt := t1.Sub(t0)
 	if opts.OnEnd != nil {
-		newFm := fm.fork("on-end callback of time")
+		newFm := fm.Fork("on-end callback of time")
 		errCb := opts.OnEnd.Call(newFm, []interface{}{dt.Seconds()}, NoOpts)
 		if err == nil {
 			err = errCb

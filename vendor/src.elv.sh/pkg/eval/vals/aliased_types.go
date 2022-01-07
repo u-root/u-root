@@ -20,7 +20,16 @@ var EmptyList = vector.Empty
 func MakeList(vs ...interface{}) vector.Vector {
 	vec := vector.Empty
 	for _, v := range vs {
-		vec = vec.Cons(v)
+		vec = vec.Conj(v)
+	}
+	return vec
+}
+
+// MakeListFromStrings creates a new List from strings.
+func MakeListFromStrings(ss ...string) vector.Vector {
+	vec := vector.Empty
+	for _, s := range ss {
+		vec = vec.Conj(s)
 	}
 	return vec
 }
@@ -35,7 +44,7 @@ var EmptyMap = hashmap.New(Equal, Hash)
 // panics if the number of arguments is odd.
 func MakeMap(a ...interface{}) hashmap.Map {
 	if len(a)%2 == 1 {
-		panic("Odd number of arguments to MakeMap")
+		panic("odd number of arguments to MakeMap")
 	}
 	m := EmptyMap
 	for i := 0; i < len(a); i += 2 {

@@ -76,6 +76,7 @@ jobs:
 
   race:
     <<: *golang-template
+    resource_class: large
     environment:
       - CGO_ENABLED: 1
       - GO111MODULE: "off"
