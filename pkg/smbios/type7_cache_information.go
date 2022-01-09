@@ -31,6 +31,10 @@ type CacheInfo struct {
 
 // ParseCacheInfo parses a generic Table into CacheInfo.
 func ParseCacheInfo(t *Table) (*CacheInfo, error) {
+	return parseCacheInfo(parseStruct, t)
+}
+
+func parseCacheInfo(parseFn parseStructure, t *Table) (*CacheInfo, error) {
 	if t.Type != TableTypeCacheInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -38,7 +42,7 @@ func ParseCacheInfo(t *Table) (*CacheInfo, error) {
 		return nil, errors.New("required fields missing")
 	}
 	ci := &CacheInfo{Table: *t}
-	_, err := parseStruct(t, 0 /* off */, false /* complete */, ci)
+	_, err := parseFn(t, 0 /* off */, false /* complete */, ci)
 	if err != nil {
 		return nil, err
 	}
