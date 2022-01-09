@@ -21,7 +21,7 @@ func TestSMBIOSBaseEFI(t *testing.T) {
 	var want int64 = 0x12345678
 
 	if base != want {
-		t.Errorf("SMBIOSBase() get 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSBase(): 0x%x, want 0x%x", base, want)
 	}
 }
 
@@ -49,7 +49,7 @@ func TestSMBIOSBaseLegacy(t *testing.T) {
 	var want int64 = 0xf0007
 
 	if base != want {
-		t.Errorf("SMBIOSBase() get 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSBase(): 0x%x, want 0x%x", base, want)
 	}
 }
 
@@ -65,6 +65,6 @@ func TestSMBIOSBaseNotFound(t *testing.T) {
 	want := "could not find _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
 
 	if err.Error() != want {
-		t.Fatalf("want %s, get '%v'", want, err)
+		t.Errorf("SMBIOSBase(): '%v', want %s", err, want)
 	}
 }
