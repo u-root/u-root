@@ -54,8 +54,7 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 		// Soft error. Useful when a permissions are insufficient to
 		// stat one of the files.
 		if err != nil {
-			log.Printf("%s: %v\n", path, err)
-			return nil
+			return err
 		}
 
 		fi := ls.FromOSFileInfo(path, osfi)
@@ -143,9 +142,10 @@ func indicator(fi ls.FileInfo) string {
 	return ""
 }
 
-func main() {
-	flag.Parse()
-
+func list(names []string) error {
+	if len(names) == 0 {
+		names = []string{"."}
+	}
 	// Write output in tabular form.
 	w := &tabwriter.Writer{}
 	w.Init(os.Stdout, 0, 0, 1, ' ', 0)
@@ -158,19 +158,20 @@ func main() {
 	if *long {
 		s = ls.LongStringer{Human: *human, Name: s}
 	}
-
-	// Array of names to list.
-	names := flag.Args()
-	if len(names) == 0 {
-		names = []string{"."}
-	}
-
 	// Is a name a directory? If so, list it in its own section.
 	prefix := len(names) > 1
 	for _, d := range names {
 		if err := listName(s, d, w, prefix); err != nil {
-			log.Printf("error while listing %#v: %v", d, err)
+			return fmt.Errorf("error while listing %q: %v", d, err)
 		}
 		w.Flush()
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := list(flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }
