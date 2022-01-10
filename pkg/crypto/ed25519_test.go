@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,7 +9,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -32,78 +31,103 @@ const (
 var password = []byte{'k', 'e', 'i', 'n', 's'}
 
 func TestLoadDERPublicKey(t *testing.T) {
-	_, err := LoadPublicKeyFromFile(publicKeyDERFile)
-	require.Error(t, err)
+	if _, err := LoadPublicKeyFromFile(publicKeyDERFile); err == nil {
+		t.Errorf(`LoadPublicKeyFromFile(publicKeyDERFile) = _, %v, want not nil`, err)
+	}
 }
 
 func TestLoadPEMPublicKey(t *testing.T) {
-	_, err := LoadPublicKeyFromFile(publicKeyPEMFile)
-	require.NoError(t, err)
+	if _, err := LoadPublicKeyFromFile(publicKeyPEMFile); err != nil {
+		t.Errorf(`LoadPublicKeyFromFile(publicKeyPEMFile) = _, %v, want nil`, err)
+	}
 }
 
 func TestLoadPEMPrivateKey(t *testing.T) {
-	_, err := LoadPrivateKeyFromFile(privateKeyPEMFile, password)
-	require.NoError(t, err)
+	if _, err := LoadPrivateKeyFromFile(privateKeyPEMFile, password); err != nil {
+		t.Errorf(`LoadPublicKeyFromFile(privateKeyPEMFile) = _, %v, want nil`, err)
+	}
 }
 
 func TestLoadBadPEMPrivateKey(t *testing.T) {
-	_, err := LoadPrivateKeyFromFile(privateKeyPEMFile, []byte{})
-	require.Error(t, err)
+	if _, err := LoadPrivateKeyFromFile(privateKeyPEMFile, []byte{}); err == nil {
+		t.Errorf(`LoadPrivateKeyFromFile(privateKeyPEMFile, []byte{}) = _, %v, want not nil`, err)
+	}
 }
 
 func TestSignVerifyData(t *testing.T) {
 	privateKey, err := LoadPrivateKeyFromFile(privateKeyPEMFile, password)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`LoadPrivateKeyFromFile(privateKeyPEMFile, password) = _, %v, want nil`, err)
+	}
 
 	publicKey, err := LoadPublicKeyFromFile(publicKeyPEMFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`LoadPublicKeyFromFile(publicKeyPEMFile) = _, %v, want nil`, err)
+	}
 
 	testData, err := os.ReadFile(testDataFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`os.ReadFile(testDataFile) = _, %v, want nil`, err)
+	}
 
 	signature := ed25519.Sign(privateKey, testData)
-	verified := ed25519.Verify(publicKey, testData, signature)
-	require.Equal(t, true, verified)
+	if verified := ed25519.Verify(publicKey, testData, signature); !verified {
+		t.Errorf(`ed25519.Verify(publicKey, testData, signature) = %t, want "true"`, verified)
+	}
 }
 
 func TestGoodSignature(t *testing.T) {
 	publicKey, err := LoadPublicKeyFromFile(publicKeyPEMFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`LoadPublicKeyFromFile(publicKeyPEMFile) = _, %v, want nil`, err)
+	}
 
 	testData, err := os.ReadFile(testDataFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`os.ReadFile(testDataFile) = _, %v, want nil`, err)
+	}
 
 	signatureGood, err := os.ReadFile(signatureGoodFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`os.ReadFile(signatureGoodFile) = _, %v, want nil`, err)
+	}
 
-	verified := ed25519.Verify(publicKey, testData, signatureGood)
-	require.Equal(t, true, verified)
+	if verified := ed25519.Verify(publicKey, testData, signatureGood); !verified {
+		t.Errorf(`ed25519.Verify(publicKey, testData, signatureGood) = %t, want "true"`, verified)
+	}
 }
 
 func TestBadSignature(t *testing.T) {
 	publicKey, err := LoadPublicKeyFromFile(publicKeyPEMFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`LoadPublicKeyFromFile(publicKeyPEMFile) = _, %v, want nil`, err)
+	}
 
 	testData, err := os.ReadFile(testDataFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`os.ReadFile(testDataFile) = _, %v, want nil`, err)
+	}
 
 	signatureBad, err := os.ReadFile(signatureBadFile)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf(`os.ReadFile(signatureBadFile) = _, %v, want nil`, err)
+	}
 
-	verified := ed25519.Verify(publicKey, testData, signatureBad)
-	require.Equal(t, false, verified)
+	if verified := ed25519.Verify(publicKey, testData, signatureBad); verified {
+		t.Errorf(`ed25519.Verify(publicKey, testData, signatureBad) = %t, want "false"`, verified)
+	}
 }
 
 func TestGenerateKeys(t *testing.T) {
 	tmpdir := t.TempDir()
-
-	err := GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
-	require.NoError(t, err)
+	if err := GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")); err != nil {
+		t.Errorf(`GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")) = %v, want nil`, err)
+	}
 }
 
 func TestGenerateUnprotectedKeys(t *testing.T) {
 	tmpdir := t.TempDir()
-
-	err := GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem"))
-	require.NoError(t, err)
+	if err := GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")); err != nil {
+		t.Errorf(`GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")) = %v, want nil`, err)
+	}
 }

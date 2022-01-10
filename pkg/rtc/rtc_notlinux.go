@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !linux
-// +build !linux
 
 package rtc
 
@@ -12,9 +11,13 @@ import (
 	"time"
 )
 
+type syscalls interface{}
+
+type realSyscalls struct{}
+
 // Read implements Read for RTC, returning time.Now()
 func (r *RTC) Read() (time.Time, error) {
-	return time.Time{}, errors.New("not supported")
+	return time.Now(), nil
 }
 
 // Set returns an error for RTC
