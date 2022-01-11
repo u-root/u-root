@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"testing"
@@ -24,6 +25,11 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	// TODO: support arm
 	if TestArch() != "amd64" && TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", TestArch())
+	}
+
+	vmCoverProfile, ok := os.LookupEnv("UROOT_QEMU_COVERPROFILE")
+	if !ok {
+		t.Log("QEMU test coverage is not collected unless UROOT_QEMU_COVERPROFILE is set")
 	}
 
 	if o == nil {
@@ -48,6 +54,17 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
 	testDir := filepath.Join(o.TmpDir, "tests")
+
+	if len(vmCoverProfile) > 0 {
+		f, err := os.Create(filepath.Join(o.TmpDir, "coverage.profile"))
+		if err != nil {
+			t.Fatalf("Could not create coverage file %v", err)
+		}
+		if err := f.Close(); err != nil {
+			t.Fatalf("Could not close coverage.profile: %v", err)
+		}
+	}
+
 	for _, pkg := range pkgs {
 		pkgDir := filepath.Join(testDir, pkg)
 		if err := os.MkdirAll(pkgDir, 0o755); err != nil {
@@ -56,12 +73,18 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 
 		testFile := filepath.Join(pkgDir, fmt.Sprintf("%s.test", path.Base(pkg)))
 
-		cmd := env.GoCmd("test",
+		args := []string{
+			"test",
 			"-gcflags=all=-l",
 			"-ldflags", "-s -w",
 			"-c", pkg,
 			"-o", testFile,
-		)
+		}
+		if len(vmCoverProfile) > 0 {
+			args = append(args, "-covermode=atomic")
+		}
+
+		cmd := exec.Command("go", args...)
 		if stderr, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("could not build %s: %v\n%s", pkg, err, string(stderr))
 		}
@@ -102,12 +125,37 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		serial = append(serial, o.QEMUOpts.SerialOutput)
 	}
 	o.QEMUOpts.SerialOutput = uio.MultiWriteCloser(serial...)
+	if len(vmCoverProfile) > 0 {
+		o.QEMUOpts.KernelArgs += " uroot.uinitargs=-coverprofile=/testdata/coverage.profile"
+	}
 
 	q, cleanup := QEMUTest(t, o)
 	defer cleanup()
 
 	if err := q.Expect("TESTS PASSED MARKER"); err != nil {
 		t.Errorf("Waiting for 'TESTS PASSED MARKER' signal: %v", err)
+	}
+
+	if len(vmCoverProfile) > 0 {
+		cov, err := os.Open(filepath.Join(o.TmpDir, "coverage.profile"))
+		if err != nil {
+			t.Fatalf("No coverage file shared from VM: %v", err)
+		}
+
+		out, err := os.OpenFile(vmCoverProfile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+		if err != nil {
+			t.Fatalf("Could not open vmcoverageprofile: %v", err)
+		}
+
+		if _, err := io.Copy(out, cov); err != nil {
+			t.Fatalf("Error copying coverage: %s", err)
+		}
+		if err := out.Close(); err != nil {
+			t.Fatalf("Could not close vmcoverageprofile: %v", err)
+		}
+		if err := cov.Close(); err != nil {
+			t.Fatalf("Could not close coverage.profile: %v", err)
+		}
 	}
 
 	// TODO: check that tc.Tests == tests

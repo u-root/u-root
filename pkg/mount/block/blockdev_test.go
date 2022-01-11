@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/u-root/u-root/pkg/pci"
 	"github.com/u-root/u-root/pkg/testutil"
 )
@@ -18,8 +17,9 @@ import (
 // entry is checked and nil returned
 func TestFindMountPointNotExists(t *testing.T) {
 	LinuxMountsPath = "testdata/mounts"
-	_, err := GetMountpointByDevice("/dev/mapper/sys-oldxxxxxx")
-	require.Error(t, err)
+	if _, err := GetMountpointByDevice("/dev/mapper/sys-oldxxxxxx"); err == nil {
+		t.Errorf(`GetMountpointByDevice("/dev/mapper/sys-oldxxxxxx") = _, %v, want not nil`, err)
+	}
 }
 
 // TestFindMountPointValid check for valid output of
@@ -27,8 +27,12 @@ func TestFindMountPointNotExists(t *testing.T) {
 func TestFindMountPointValid(t *testing.T) {
 	LinuxMountsPath = "testdata/mounts"
 	mountpoint, err := GetMountpointByDevice("/dev/mapper/sys-old")
-	require.NoError(t, err)
-	require.Equal(t, *mountpoint, "/media/usb")
+	if err != nil {
+		t.Errorf(`GetMountpointByDevice("/dev/mapper/sys-old") = _, %v, want not nil`, err)
+	}
+	if *mountpoint != "/media/usb" {
+		t.Errorf(`*mountpoint = %q, want "/media/usb"`, *mountpoint)
+	}
 }
 
 func TestParsePCIBlockList(t *testing.T) {
@@ -93,7 +97,7 @@ func TestParsePCIBlockList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			devices, err := parsePCIBlockList(tt.blockString)
 			if e := testutil.CheckError(err, tt.errStr); e != nil {
-				t.Error(e)
+				t.Errorf(`testutil.CheckError(%v, %q) = %v, want nil`, err, tt.errStr, e)
 			}
 			if !reflect.DeepEqual(devices, tt.want) {
 				// Need to do this because stringer does not print device and vendor
@@ -105,7 +109,7 @@ func TestParsePCIBlockList(t *testing.T) {
 				for _, d := range tt.want {
 					s = fmt.Sprintf("%s{Vendor: %v, Device %v}\n", s, d.Vendor, d.Device)
 				}
-				t.Error(s)
+				t.Errorf("reflect.DeepEqual(%v, %v) = false, want true", devices, tt.want)
 			}
 		})
 	}
@@ -182,7 +186,7 @@ func TestComposePartName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := composePartName(tt.devName, tt.partNo)
 			if got != tt.want {
-				t.Errorf("Compose partition name - got: %s, want: %s", got, tt.want)
+				t.Errorf("composePartName(%q, %d) = %q, want %q", tt.devName, tt.partNo, got, tt.want)
 			}
 		})
 	}

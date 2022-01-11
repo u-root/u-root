@@ -20,6 +20,7 @@ import (
 
 	"github.com/u-root/gobusybox/src/pkg/bb/bbinternal"
 	"github.com/u-root/gobusybox/src/pkg/golang"
+	"github.com/u-root/uio/ulog"
 )
 
 // modules returns a list of module directories => directories of packages
@@ -60,7 +61,7 @@ func modules(filesystemPaths []string) (map[string][]string, []string) {
 //
 // Namely, PWD determines which go.mod to use. We want each
 // package to use its own go.mod, if it has one.
-func loadFSPackages(env golang.Environ, filesystemPaths []string) ([]*packages.Package, error) {
+func loadFSPackages(l ulog.Logger, env golang.Environ, filesystemPaths []string) ([]*packages.Package, error) {
 	var absPaths []string
 	for _, fsPath := range filesystemPaths {
 		absPath, err := filepath.Abs(fsPath)
@@ -86,7 +87,7 @@ func loadFSPackages(env golang.Environ, filesystemPaths []string) ([]*packages.P
 			return nil, fmt.Errorf("could not find packages in module %s: %v", moduleDir, err)
 		}
 		for _, pkg := range pkgs {
-			allps = addPkg(allps, pkg)
+			allps = addPkg(l, allps, pkg)
 		}
 	}
 
@@ -98,21 +99,21 @@ func loadFSPackages(env golang.Environ, filesystemPaths []string) ([]*packages.P
 			return nil, fmt.Errorf("could not find packages: %v", err)
 		}
 		for _, p := range vendoredPkgs {
-			allps = addPkg(allps, p)
+			allps = addPkg(l, allps, p)
 		}
 	}
 	return allps, nil
 }
 
-func addPkg(plist []*packages.Package, p *packages.Package) []*packages.Package {
+func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) []*packages.Package {
 	if len(p.Errors) > 0 {
 		// TODO(chrisko): should we return an error here instead of warn?
-		log.Printf("Skipping package %v for errors:", p)
+		l.Printf("Skipping package %v for errors:", p)
 		packages.PrintErrors([]*packages.Package{p})
 	} else if len(p.GoFiles) == 0 {
-		log.Printf("Skipping package %v because it has no Go files", p)
+		l.Printf("Skipping package %v because it has no Go files", p)
 	} else if p.Name != "main" {
-		log.Printf("Skipping package %v because it is not a command (must be `package main`)", p)
+		l.Printf("Skipping package %v because it is not a command (must be `package main`)", p)
 	} else {
 		plist = append(plist, p)
 	}
@@ -122,7 +123,7 @@ func addPkg(plist []*packages.Package, p *packages.Package) []*packages.Package 
 // NewPackages collects package metadata about all named packages.
 //
 // names can either be directory paths or Go import paths.
-func NewPackages(env golang.Environ, names ...string) ([]*bbinternal.Package, error) {
+func NewPackages(l ulog.Logger, env golang.Environ, names ...string) ([]*bbinternal.Package, error) {
 	var goImportPaths []string
 	var filesystemPaths []string
 
@@ -143,11 +144,11 @@ func NewPackages(env golang.Environ, names ...string) ([]*bbinternal.Package, er
 			return nil, fmt.Errorf("failed to load package %v: %v", goImportPaths, err)
 		}
 		for _, p := range importPkgs {
-			ps = addPkg(ps, p)
+			ps = addPkg(l, ps, p)
 		}
 	}
 
-	pkgs, err := loadFSPackages(env, filesystemPaths)
+	pkgs, err := loadFSPackages(l, env, filesystemPaths)
 	if err != nil {
 		return nil, fmt.Errorf("could not load packages from file system: %v", err)
 	}

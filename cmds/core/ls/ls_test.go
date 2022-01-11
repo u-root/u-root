@@ -75,6 +75,13 @@ f2
 d1
 f2
 `,
+	}, {
+		flags: []string{"-S"},
+		out: `f2
+d1
+f1
+f3?line 2
+`,
 	},
 }
 
@@ -83,15 +90,26 @@ func TestLs(t *testing.T) {
 
 	// Create an empty directory.
 	testDir := filepath.Join(tmpDir, "testDir")
-	os.Mkdir(testDir, 0o700)
+	if err := os.Mkdir(testDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
 
-	// Create some files.
-	os.Create(filepath.Join(testDir, "f1"))
-	os.Create(filepath.Join(testDir, "f2"))
-	os.Create(filepath.Join(testDir, "f3\nline 2"))
-	os.Create(filepath.Join(testDir, ".f4"))
-	os.Mkdir(filepath.Join(testDir, "d1"), 0o740)
-	os.Create(filepath.Join(testDir, "d1/f4"))
+	if err := os.Mkdir(filepath.Join(testDir, "d1"), 0o740); err != nil {
+		t.Fatal(err)
+	}
+	for _, filename := range []string{"f1", "f3\nline 2", ".f4", "d1/f4"} {
+		if _, err := os.Create(filepath.Join(testDir, filename)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	f2, err := os.Create(filepath.Join(testDir, "f2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f2.Write(make([]byte, 10000)); err != nil {
+		t.Fatal(err)
+	}
 
 	// Table-driven testing
 	for _, tt := range tests {

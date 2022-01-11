@@ -16,6 +16,7 @@ go_library(
         "//src/pkg/golang",
         "@com_github_google_goterm//term",
         "@com_github_u_root_uio//cp",
+        "@com_github_u_root_uio//ulog",
         "@org_golang_x_mod//modfile",
         "@org_golang_x_tools//go/ast/astutil",
         "@org_golang_x_tools//go/packages",
