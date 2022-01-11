@@ -107,6 +107,7 @@ func TestGoTest(t *testing.T) {
 		BuildOpts: uroot.Opts{
 			ExtraFiles: []string{
 				"/etc/group",
+				"/etc/passwd",
 			},
 		},
 	}
