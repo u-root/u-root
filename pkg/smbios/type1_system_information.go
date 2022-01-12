@@ -28,6 +28,10 @@ type SystemInfo struct {
 
 // ParseSystemInfo parses a generic Table into SystemInfo.
 func ParseSystemInfo(t *Table) (*SystemInfo, error) {
+	return parseSystemInfo(parseStruct, t)
+}
+
+func parseSystemInfo(parseFn parseStructure, t *Table) (*SystemInfo, error) {
 	if t.Type != TableTypeSystemInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -35,7 +39,7 @@ func ParseSystemInfo(t *Table) (*SystemInfo, error) {
 		return nil, errors.New("required fields missing")
 	}
 	si := &SystemInfo{Table: *t}
-	if _, err := parseStruct(t, 0 /* off */, false /* complete */, si); err != nil {
+	if _, err := parseFn(t, 0 /* off */, false /* complete */, si); err != nil {
 		return nil, err
 	}
 	return si, nil

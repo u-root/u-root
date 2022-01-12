@@ -44,6 +44,10 @@ type ChassisContainedElement struct {
 
 // ParseChassisInfo parses a generic Table into ChassisInfo.
 func ParseChassisInfo(t *Table) (*ChassisInfo, error) {
+	return parseChassisInfo(parseStruct, t)
+}
+
+func parseChassisInfo(parseFn parseStructure, t *Table) (*ChassisInfo, error) {
 	if t.Type != TableTypeChassisInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -51,7 +55,7 @@ func ParseChassisInfo(t *Table) (*ChassisInfo, error) {
 		return nil, errors.New("required fields missing")
 	}
 	si := &ChassisInfo{Table: *t}
-	off, err := parseStruct(t, 0 /* off */, false /* complete */, si)
+	off, err := parseFn(t, 0 /* off */, false /* complete */, si)
 	if err != nil {
 		return nil, err
 	}

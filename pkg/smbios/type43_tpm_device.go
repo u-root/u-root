@@ -27,6 +27,10 @@ type TPMDevice struct {
 
 // NewTPMDevice parses a generic Table into TPMDevice.
 func NewTPMDevice(t *Table) (*TPMDevice, error) {
+	return newTPMDevice(parseStruct, t)
+}
+
+func newTPMDevice(parseFn parseStructure, t *Table) (*TPMDevice, error) {
 	if t.Type != TableTypeTPMDevice {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -34,7 +38,7 @@ func NewTPMDevice(t *Table) (*TPMDevice, error) {
 		return nil, errors.New("required fields missing")
 	}
 	di := &TPMDevice{Table: *t}
-	if _, err := parseStruct(t, 0 /* off */, false /* complete */, di); err != nil {
+	if _, err := parseFn(t, 0 /* off */, false /* complete */, di); err != nil {
 		return nil, err
 	}
 	vid, _ := di.GetBytesAt(4, 4)
