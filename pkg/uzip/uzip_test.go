@@ -100,7 +100,7 @@ func TestFromZip(t *testing.T) {
 func TestFromZipNoValidFile(t *testing.T) {
 	f, err := ioutil.TempFile("", "testfile-")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("TestFromZipNoValidFile failed: %q", err)
 	}
 	defer f.Close()
 	if err := FromZip(f.Name(), "someDir"); err == nil {
@@ -111,43 +111,43 @@ func TestFromZipNoValidFile(t *testing.T) {
 func TestAppendZip(t *testing.T) {
 	_, err := os.Create("appendTest.zip")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("TestAppendZip failed: %q", err)
 	}
 	defer os.Remove("appendTest.zip")
 
 	if err := AppendZip("testdata/testFolder", "appendTest.zip", "Test append zip"); err != nil {
-		t.Error(err)
+		t.Errorf("TestAppendZip failed: %q", err)
 	}
 }
 
 func TestAppendZipNoDir1(t *testing.T) {
 	if err := AppendZip("doesNotExist", "alsoNotExist", "Whythough"); err == nil {
-		t.Error("AppendZip succeeded but shouldn't")
+		t.Error("TestAppendZipNoDir1 failed but shouldn't")
 	}
 }
 
 func TestAppendZipNoDir2(t *testing.T) {
 	f, err := ioutil.TempFile("", "testfile")
 	if err != nil {
-		t.Errorf("creating testfile failed: %v", err)
+		t.Errorf("TestAppendZipNoDir2 failed: %v", err)
 	}
 	defer f.Close()
 	if err := AppendZip(f.Name(), f.Name(), "no comment"); err == nil {
-		t.Error("AppendZip succeeded but shouldn't")
+		t.Error("TestAppendZipNoDir2 failed but shouldn't")
 	}
 }
 
 func TestComment(t *testing.T) {
 	comment, err := Comment("test.zip")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("TestComment failed: %q", err)
 	}
 	fmt.Println(comment)
 }
 
 func TestToZip(t *testing.T) {
 	if err := ToZip(".", "testfile.zip", "test comment"); err != nil {
-		t.Error(err)
+		t.Errorf("TestToZip failed: %q", err)
 	}
 	defer os.Remove("testfile.zip")
 }
@@ -155,7 +155,7 @@ func TestToZip(t *testing.T) {
 func TestToZipInvalidDir(t *testing.T) {
 	f, err := ioutil.TempFile("", "testfile-")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("TestToZipInvalidDir failed: %q", err)
 	}
 	defer f.Close()
 	if err := ToZip(f.Name(), "invalid", "no need"); err == nil {
