@@ -30,6 +30,10 @@ type BaseboardInfo struct {
 
 // ParseBaseboardInfo parses a generic Table into BaseboardInfo.
 func ParseBaseboardInfo(t *Table) (*BaseboardInfo, error) {
+	return parseBaseboardInfo(parseStruct, t)
+}
+
+func parseBaseboardInfo(parseFn parseStructure, t *Table) (*BaseboardInfo, error) {
 	if t.Type != TableTypeBaseboardInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -38,7 +42,7 @@ func ParseBaseboardInfo(t *Table) (*BaseboardInfo, error) {
 		return nil, errors.New("required fields missing")
 	}
 	bi := &BaseboardInfo{Table: *t}
-	off, err := parseStruct(t, 0 /* off */, false /* complete */, bi)
+	off, err := parseFn(t, 0 /* off */, false /* complete */, bi)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +76,7 @@ func (bi *BaseboardInfo) String() string {
 		fmt.Sprintf("Contained Object Handles: %d", bi.NumberOfContainedObjectHandles),
 	}
 	for _, h := range bi.ContainedObjectHandles {
-		lines = append(lines, fmt.Sprintf("0x%04X", h))
+		lines = append(lines, fmt.Sprintf("\t0x%04X", h))
 	}
 	return strings.Join(lines, "\n\t")
 }

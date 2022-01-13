@@ -35,7 +35,7 @@ func TestSMBIOSLegacyNotFound(t *testing.T) {
 
 	want := "could not find _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
 	if err.Error() != want {
-		t.Fatalf("want %s, get '%v'", want, err)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", err, want)
 	}
 }
 
@@ -49,7 +49,7 @@ func TestSMBIOSLegacyMemIoReadError(t *testing.T) {
 
 	want := "MEMIOREAD_ERROR"
 	if err.Error() != want {
-		t.Fatalf("want %s, get '%v'", want, err)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", err, want)
 	}
 }
 
@@ -59,19 +59,19 @@ func TestSMBIOSLegacySMBIOS(t *testing.T) {
 	memioRead = mockMemioRead
 	base, size, err := SMBIOSBaseLegacy()
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("SMBIOSBaseLegacy(): %v", err)
 	}
 
 	var want int64 = 0xf0007
 
 	if base != want {
-		t.Errorf("SMBIOSLegacy() get 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", base, want)
 	}
 
 	var wantSize int64 = 0x1f
 
 	if size != wantSize {
-		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x", size, wantSize)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", size, wantSize)
 	}
 }
 
@@ -87,13 +87,13 @@ func TestSMBIOSLegacySMBIOS3(t *testing.T) {
 	var want int64 = 0xf0009
 
 	if base != want {
-		t.Errorf("SMBIOSLegacy() get base 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", base, want)
 	}
 
 	var wantSize int64 = 0x18
 
 	if size != wantSize {
-		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x", size, wantSize)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", size, wantSize)
 	}
 }
 
@@ -112,6 +112,6 @@ func TestSMBIOSLegacyQEMU(t *testing.T) {
 	}
 
 	if size != smbios2HeaderSize && size != smbios3HeaderSize {
-		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x or 0x%x ", size, smbios2HeaderSize, smbios3HeaderSize)
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v' or '%v'", size, smbios2HeaderSize, smbios3HeaderSize)
 	}
 }

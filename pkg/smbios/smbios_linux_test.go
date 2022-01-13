@@ -18,10 +18,10 @@ func TestSMBIOSEFISMBIOS2(t *testing.T) {
 	var want int64 = 0x12345678
 
 	if base != want {
-		t.Errorf("SMBIOSEFI() get 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSBaseEFI(): 0x%x, want 0x%x", base, want)
 	}
 	if size != smbios2HeaderSize {
-		t.Errorf("SMBIOSLegacy() get size 0x%x, want 0x%x ", size, smbios2HeaderSize)
+		t.Errorf("SMBIOSBaseEFI(): 0x%x, want 0x%x ", size, smbios2HeaderSize)
 	}
 }
 
@@ -35,10 +35,10 @@ func TestSMBIOSEFISMBIOS3(t *testing.T) {
 	var want int64 = 0x12345678
 
 	if base != want {
-		t.Errorf("SMBIOSEFI() get 0x%x, want 0x%x", base, want)
+		t.Errorf("SMBIOSBaseEFI(): 0x%x, want 0x%x", base, want)
 	}
 	if size != smbios3HeaderSize {
-		t.Errorf("SMBIOSEFI() get size 0x%x, want 0x%x ", size, smbios3HeaderSize)
+		t.Errorf("SMBIOSBaseEFI(): 0x%x, want 0x%x ", size, smbios3HeaderSize)
 	}
 }
 
@@ -46,7 +46,7 @@ func TestSMBIOSEFINotFound(t *testing.T) {
 	systabPath = "testdata/systab_NOT_FOUND"
 	_, _, err := SMBIOSBaseEFI()
 	if err == nil {
-		t.Fatal("systab should be not found")
+		t.Errorf("SMBIOSBaseEFI(): nil , want error")
 	}
 }
 
@@ -54,6 +54,6 @@ func TestSMBIOSEFIInvalid(t *testing.T) {
 	systabPath = "testdata/invalid_systab"
 	_, _, err := SMBIOSBaseEFI()
 	if err == nil {
-		t.Fatal("systab should be invalid")
+		t.Errorf("SMBIOSBaseEFI(): nil , want error")
 	}
 }
