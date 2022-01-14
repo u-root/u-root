@@ -11,7 +11,7 @@ import (
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func TestIntegration(t *testing.T) {
+func TestIntegrationIPMI(t *testing.T) {
 	o := &vmtest.Options{
 		QEMUOpts: qemu.Options{
 			Devices: []qemu.Device{

@@ -167,7 +167,7 @@ func TestDev(t *testing.T) {
 	}
 }
 
-func TestGetDev(t *testing.T) {
+func TestNewDev(t *testing.T) {
 	df, err := ioutil.TempFile("", "ipmi_dummy_file-")
 	if err != nil {
 		t.Error(err)
