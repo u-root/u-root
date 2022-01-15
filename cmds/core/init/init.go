@@ -26,7 +26,7 @@ type initCmds struct {
 }
 
 var (
-	verbose = flag.Bool("v", false, "print all build commands")
+	verbose = flag.Bool("v", false, "Enable libinit debugging (includes showing commands that are run)")
 	test    = flag.Bool("test", false, "Test mode: don't try to set control tty")
 	debug   = func(string, ...interface{}) {}
 )

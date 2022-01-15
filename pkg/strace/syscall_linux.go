@@ -117,7 +117,7 @@ func stat(t Task, addr Addr) string {
 	if _, err := t.Read(addr, &stat); err != nil {
 		return fmt.Sprintf("%#x (error decoding stat: %s)", addr, err)
 	}
-	return fmt.Sprintf("%#x {dev=%d, ino=%d, mode=%s, nlink=%d, uid=%d, gid=%d, rdev=%d, size=%d, blksize=%d, blocks=%d, atime=%s, mtime=%s, ctime=%s}", addr, stat.Dev, stat.Ino, fileMode(stat.Mode), stat.Nlink, stat.Uid, stat.Gid, stat.Rdev, stat.Size, stat.Blksize, stat.Blocks, time.Unix(int64(stat.Atim.Sec), int64(stat.Atim.Nsec)), time.Unix(int64(stat.Mtim.Sec), int64(stat.Mtim.Nsec)), time.Unix(int64(stat.Ctim.Sec), int64(stat.Ctim.Nsec)))
+	return fmt.Sprintf("%#x {dev=%d, ino=%d, mode=%s, nlink=%d, uid=%d, gid=%d, rdev=%d, size=%d, blksize=%d, blocks=%d, atime=%s, mtime=%s, ctime=%s}", addr, stat.Dev, stat.Ino, fileMode(stat.Mode), stat.Nlink, stat.Uid, stat.Gid, stat.Rdev, stat.Size, stat.Blksize, stat.Blocks, time.Unix(stat.Atim.Unix()), time.Unix(stat.Mtim.Unix()), time.Unix(stat.Ctim.Unix()))
 }
 
 func itimerval(t Task, addr Addr) string {
@@ -306,6 +306,7 @@ func (i *SyscallInfo) printEnter(t Task, args SyscallArguments) string {
 	}
 }
 
+// SysCallEnter is called each time a system call enter event happens.
 func SysCallEnter(t Task, s *SyscallEvent) string {
 	i := defaultSyscallInfo(s.Sysno)
 	if v, ok := syscalls[uintptr(s.Sysno)]; ok {
@@ -314,6 +315,7 @@ func SysCallEnter(t Task, s *SyscallEvent) string {
 	return i.printEnter(t, s.Args)
 }
 
+// SysCallExit is called each time a system call exit event happens.
 func SysCallExit(t Task, s *SyscallEvent) string {
 	i := defaultSyscallInfo(s.Sysno)
 	if v, ok := syscalls[uintptr(s.Sysno)]; ok {

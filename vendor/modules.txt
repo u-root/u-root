@@ -4,10 +4,18 @@ github.com/anmitsu/go-shlex
 # github.com/beevik/ntp v0.3.0
 ## explicit
 github.com/beevik/ntp
+# github.com/c-bata/go-prompt v0.2.6
+## explicit; go 1.14
+github.com/c-bata/go-prompt
+github.com/c-bata/go-prompt/completer
+github.com/c-bata/go-prompt/internal/bisect
+github.com/c-bata/go-prompt/internal/debug
+github.com/c-bata/go-prompt/internal/strings
+github.com/c-bata/go-prompt/internal/term
 # github.com/cenkalti/backoff/v4 v4.0.2
 ## explicit; go 1.12
 github.com/cenkalti/backoff/v4
-# github.com/creack/pty v1.1.11
+# github.com/creack/pty v1.1.15
 ## explicit; go 1.13
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
@@ -22,7 +30,7 @@ github.com/gliderlabs/ssh
 # github.com/gojuno/minimock/v3 v3.0.8
 ## explicit; go 1.13
 github.com/gojuno/minimock/v3
-# github.com/google/go-cmp v0.5.2
+# github.com/google/go-cmp v0.5.6
 ## explicit; go 1.8
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
@@ -74,9 +82,18 @@ github.com/klauspost/pgzip
 # github.com/kr/pty v1.1.8
 ## explicit; go 1.12
 github.com/kr/pty
+# github.com/mattn/go-colorable v0.1.7
+## explicit; go 1.13
+github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 ## explicit; go 1.12
 github.com/mattn/go-isatty
+# github.com/mattn/go-runewidth v0.0.9
+## explicit; go 1.9
+github.com/mattn/go-runewidth
+# github.com/mattn/go-tty v0.0.3
+## explicit; go 1.14
+github.com/mattn/go-tty
 # github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
 ## explicit; go 1.12
 github.com/mdlayher/ethernet
@@ -100,6 +117,9 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/pkg/term v1.2.0-beta.2
+## explicit; go 1.14
+github.com/pkg/term/termios
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
@@ -115,10 +135,6 @@ github.com/safchain/ethtool
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.6.1
-## explicit; go 1.13
-github.com/stretchr/testify/assert
-github.com/stretchr/testify/require
 # github.com/u-root/gobusybox/src v0.0.0-20211230232531-fcf634c39c0e
 ## explicit; go 1.13
 github.com/u-root/gobusybox/src/pkg/bb
@@ -187,7 +203,10 @@ golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sys v0.0.0-20210820121016-41cdb8703e55
+# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+## explicit
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.0.0-20210925032602-92d5a993a665
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -195,8 +214,8 @@ golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.0.0-20210317153231-de623e64d2a6
-## explicit; go 1.11
+# golang.org/x/term v0.0.0-20210916214954-140adaaadfaf
+## explicit; go 1.17
 golang.org/x/term
 # golang.org/x/text v0.3.3
 ## explicit; go 1.11
@@ -242,9 +261,12 @@ google.golang.org/grpc/codes
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
-## explicit
-gopkg.in/yaml.v3
+# mvdan.cc/sh/v3 v3.4.1
+## explicit; go 1.16
+mvdan.cc/sh/v3/expand
+mvdan.cc/sh/v3/interp
+mvdan.cc/sh/v3/pattern
+mvdan.cc/sh/v3/syntax
 # pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 ## explicit
 pack.ag/tftp

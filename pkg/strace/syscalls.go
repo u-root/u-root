@@ -14,7 +14,10 @@
 
 package strace
 
-import "fmt"
+import (
+	"fmt"
+	"syscall"
+)
 
 // FormatSpecifier values describe how an individual syscall argument should be
 // formatted.
@@ -195,3 +198,31 @@ func makeSyscallInfo(name string, f ...FormatSpecifier) SyscallInfo {
 
 // SyscallMap maps syscalls into names and printing formats.
 type SyscallMap map[uintptr]SyscallInfo
+
+var mapNames = map[string]uintptr{}
+
+// ByName returns a system call number, given a name.
+// It uses a map that is filled in dynamically.
+func ByName(name string) (uintptr, error) {
+	n, ok := mapNames[name]
+	if ok {
+		return n, nil
+	}
+
+	for k, v := range syscalls {
+		if v.name == name {
+			mapNames[name] = k
+			return k, nil
+		}
+	}
+	return 0, fmt.Errorf("%s:not found", name)
+}
+
+// ByNumber returns a system call name given a number.
+func ByNumber(sysno uintptr) (string, error) {
+	s, ok := syscalls[sysno]
+	if !ok {
+		return "", syscall.ENOENT
+	}
+	return s.name, nil
+}

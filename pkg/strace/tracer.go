@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// strace traces Linux process events.
+// Package strace traces Linux process events.
 //
 // An straced process will emit events for syscalls, signals, exits, and new
 // children.

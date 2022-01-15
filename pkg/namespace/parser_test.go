@@ -1,4 +1,4 @@
-// Copyright 2020 the u-root Authors. All rights reserved
+// Copyright 2020-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,10 +7,8 @@ package namespace
 import (
 	"io"
 	"os"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -199,10 +197,16 @@ func TestParse(t *testing.T) {
 
 			got1, err := Parse(tArgs.r)
 
-			assert.Equal(t, tt.want1, got1)
+			// assert.Equal(t, tt.want1, got1)
+			if !reflect.DeepEqual(tt.want1, got1) {
+				t.Errorf(`Parse(%v) = %v, _ , want %v`, tArgs.r, got1, tt.want1)
+			}
 
 			if tt.wantErr {
-				require.Error(t, err)
+				if err == nil {
+					t.Errorf(`Parse(%v) = _, %v, want not nil`, tArgs.r, err)
+
+				}
 				if tt.inspectErr != nil {
 					tt.inspectErr(err, t)
 				}
@@ -315,10 +319,14 @@ func Test_parseLine(t *testing.T) {
 
 			got1, err := ParseLine(tArgs.line)
 
-			assert.Equal(t, tt.want1, got1)
+			if !reflect.DeepEqual(tt.want1, got1) {
+				t.Errorf(`ParseLine(%v) = %v, _ , want %v`, tArgs.line, got1, tt.want1)
+			}
 
 			if tt.wantErr {
-				require.Error(t, err)
+				if err == nil {
+					t.Errorf(`ParseLine(%v) = _, %v, want not nil`, tArgs.line, err)
+				}
 				if tt.inspectErr != nil {
 					tt.inspectErr(err, t)
 				}
