@@ -9,6 +9,9 @@ const (
 	smbios3HeaderSize = 0x18
 )
 
+// We need this for testing
+type parseStructure func(t *Table, off int, complete bool, sp interface{}) (int, error)
+
 // SMBIOSBase returns SMBIOS Table's base pointer.
 func SMBIOSBase() (int64, int64, error) {
 	base, size, err := SMBIOSBaseEFI()
