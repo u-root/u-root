@@ -15,11 +15,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"syscall"
 
+	"github.com/u-root/u-root/pkg/uroot/util"
 	"golang.org/x/sys/unix"
 )
 
@@ -28,39 +28,41 @@ var (
 	filesystem = flag.Bool("filesystem", false, "commit filesystem caches to disk")
 )
 
-func init() {
-	flag.BoolVar(data, "d", false, "")
-	flag.BoolVar(filesystem, "f", false, "")
+var usage = "Usage: %s [OPTION] [FILE]...\n"
 
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [OPTION] [FILE]...\n", os.Args[0])
-		flag.PrintDefaults()
-	}
+func init() {
+	util.Usage(usage)
 }
 
-func doSyscall(syscallNum uintptr) {
-	for _, fileName := range flag.Args() {
+func doSyscall(syscallNum uintptr, args []string) error {
+	for _, fileName := range args {
 		f, err := os.OpenFile(fileName, syscall.O_RDONLY|syscall.O_NOCTTY|syscall.O_CLOEXEC, 0o644)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		_, _, err = syscall.Syscall(syscallNum, uintptr(f.Fd()), 0, 0)
-		if err != nil {
-			log.Fatal(err)
+		if _, _, err = syscall.Syscall(syscallNum, uintptr(f.Fd()), 0, 0); err.(syscall.Errno) != 0 {
+			return err
 		}
 		f.Close()
+	}
+	return nil
+}
+
+func sync(args []string) error {
+	switch {
+	case *data:
+		return doSyscall(unix.SYS_FDATASYNC, args)
+	case *filesystem:
+		return doSyscall(unix.SYS_SYNCFS, args)
+	default:
+		syscall.Sync()
+		return nil
 	}
 }
 
 func main() {
 	flag.Parse()
-	switch {
-	case *data:
-		doSyscall(unix.SYS_FDATASYNC)
-	case *filesystem:
-		doSyscall(unix.SYS_SYNCFS)
-	default:
-		syscall.Sync()
-		os.Exit(0)
+	if err := sync(flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }

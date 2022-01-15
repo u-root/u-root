@@ -7,8 +7,6 @@ package progress
 import (
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestProgressBegin(t *testing.T) {
@@ -38,7 +36,7 @@ func TestProgressBegin(t *testing.T) {
 			p := Begin(tt.mode, &someVariable)
 
 			if p == nil {
-				t.Errorf("%s failed - struct is nil", tt.name)
+				t.Errorf(`Begin(%q, %v) = %v, want not nil`, tt.mode, &someVariable, p)
 			}
 
 			time.Sleep(tt.wait * time.Second)
@@ -78,7 +76,9 @@ func TestProgressEnd(t *testing.T) {
 			someVariable := int64(1)
 			p := Begin(tt.mode, &someVariable)
 
-			require.NotNil(t, p, "Progress Structure is nil")
+			if p == nil {
+				t.Fatal("Progress Structure is nil")
+			}
 
 			time.Sleep(tt.wait * time.Second)
 
@@ -89,7 +89,7 @@ func TestProgressEnd(t *testing.T) {
 
 			p.endTimeMutex.Lock()
 			if p.end.IsZero() {
-				t.Errorf("start: %v but end is %v", p.start, p.end)
+				t.Errorf(`Begin(%q, %v).end.IsZero() = %t, want false`, tt.mode, &someVariable, p.end.IsZero())
 			}
 			p.endTimeMutex.Unlock()
 		})

@@ -96,9 +96,25 @@ const (
 	OptionTempPanic Option = 0x0004
 )
 
+type syscalls interface {
+	unixSyscall(uintptr, uintptr, uintptr, unsafe.Pointer) (uintptr, uintptr, unix.Errno)
+	unixIoctlGetUint32(int, uint) (uint32, error)
+}
+
 // Watchdog holds the descriptor of an open watchdog driver.
 type Watchdog struct {
-	f *os.File
+	*os.File
+	syscalls
+}
+
+type realSyscalls struct{}
+
+func (r *realSyscalls) unixSyscall(trap, a1, a2 uintptr, a3 unsafe.Pointer) (uintptr, uintptr, unix.Errno) {
+	return unix.Syscall(trap, a1, a2, uintptr(a3))
+}
+
+func (r *realSyscalls) unixIoctlGetUint32(fd int, req uint) (uint32, error) {
+	return unix.IoctlGetUint32(fd, req)
 }
 
 // Open arms the watchdog.
@@ -107,28 +123,32 @@ func Open(dev string) (*Watchdog, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Watchdog{f: f}, nil
+	return &Watchdog{
+			File:     f,
+			syscalls: &realSyscalls{},
+		},
+		nil
 }
 
 // Close closes the device without disarming the watchdog.
 func (w *Watchdog) Close() error {
-	return w.f.Close()
+	return w.File.Close()
 }
 
 // MagicClose disarms the watchdog. However if the kernel is compiled with
 // CONFIG_WATCHDOG_NOWAYOUT=y, there may be no way to disarm the watchdog.
 func (w *Watchdog) MagicClose() error {
-	if _, err := w.f.Write([]byte("V")); err != nil {
-		w.f.Close()
+	if _, err := w.File.Write([]byte("V")); err != nil {
+		w.File.Close()
 		return err
 	}
-	return w.f.Close()
+	return w.File.Close()
 }
 
 // Support returns the WatchdogInfo struct.
 func (w *Watchdog) Support() (*unix.WatchdogInfo, error) {
 	var wi unix.WatchdogInfo
-	if _, _, err := unix.Syscall(unix.SYS_IOCTL, w.f.Fd(), wdiocGetSupport, uintptr(unsafe.Pointer(&wi))); err != 0 {
+	if _, _, err := w.unixSyscall(unix.SYS_IOCTL, w.File.Fd(), wdiocGetSupport, unsafe.Pointer(&wi)); err != 0 {
 		return nil, err
 	}
 	return &wi, nil
@@ -136,7 +156,7 @@ func (w *Watchdog) Support() (*unix.WatchdogInfo, error) {
 
 // Status returns the current status.
 func (w *Watchdog) Status() (Status, error) {
-	flags, err := unix.IoctlGetUint32(int(w.f.Fd()), wdiocGetStatus)
+	flags, err := w.unixIoctlGetUint32(int(w.File.Fd()), wdiocGetStatus)
 	if err != nil {
 		return StatusUnknown, err
 	}
@@ -145,7 +165,7 @@ func (w *Watchdog) Status() (Status, error) {
 
 // BootStatus returns the status at the last reboot.
 func (w *Watchdog) BootStatus() (Status, error) {
-	flags, err := unix.IoctlGetUint32(int(w.f.Fd()), wdiocGetBootStatus)
+	flags, err := w.unixIoctlGetUint32(int(w.File.Fd()), wdiocGetBootStatus)
 	if err != nil {
 		return StatusUnknown, err
 	}
@@ -154,7 +174,7 @@ func (w *Watchdog) BootStatus() (Status, error) {
 
 // SetOptions can be used to control some aspects of the cards operation.
 func (w *Watchdog) SetOptions(options Option) error {
-	if _, _, err := unix.Syscall(unix.SYS_IOCTL, w.f.Fd(), wdiocSetOptions, uintptr(unsafe.Pointer(&options))); err != 0 {
+	if _, _, err := w.unixSyscall(unix.SYS_IOCTL, w.File.Fd(), wdiocSetOptions, unsafe.Pointer(&options)); err != 0 {
 		return err
 	}
 	return nil
@@ -162,7 +182,7 @@ func (w *Watchdog) SetOptions(options Option) error {
 
 // KeepAlive pets the watchdog.
 func (w *Watchdog) KeepAlive() error {
-	_, err := w.f.WriteString("1")
+	_, err := w.File.WriteString("1")
 	return err
 }
 
@@ -170,11 +190,11 @@ func (w *Watchdog) KeepAlive() error {
 // timeout gets set to the wrong value. timeout must be a multiple of seconds;
 // otherwise, an error is returned.
 func (w *Watchdog) SetTimeout(timeout time.Duration) error {
-	timeoutSecs := timeout / time.Second
-	if _, _, err := unix.Syscall(unix.SYS_IOCTL, w.f.Fd(), wdiocSetTimeout, uintptr(unsafe.Pointer(&timeout))); err != 0 {
+	to := timeout / time.Second
+	if _, _, err := w.unixSyscall(unix.SYS_IOCTL, w.File.Fd(), wdiocSetTimeout, unsafe.Pointer(&timeout)); err != 0 {
 		return err
 	}
-	gotTimeout := timeoutSecs * time.Second
+	gotTimeout := to * time.Second
 	if gotTimeout != timeout {
 		return fmt.Errorf("Watchdog timeout set to %v, wanted %v", gotTimeout, timeout)
 	}
@@ -183,7 +203,7 @@ func (w *Watchdog) SetTimeout(timeout time.Duration) error {
 
 // Timeout returns the current watchdog timeout.
 func (w *Watchdog) Timeout() (time.Duration, error) {
-	timeout, err := unix.IoctlGetUint32(int(w.f.Fd()), wdiocGetTimeout)
+	timeout, err := w.unixIoctlGetUint32(int(w.File.Fd()), wdiocGetTimeout)
 	if err != nil {
 		return 0, err
 	}
@@ -194,11 +214,11 @@ func (w *Watchdog) Timeout() (time.Duration, error) {
 // duration before triggering the preaction (such as an NMI, interrupt, ...).
 // timeout must be a multiple of seconds; otherwise, an error is returned.
 func (w *Watchdog) SetPreTimeout(timeout time.Duration) error {
-	timeoutSecs := timeout / time.Second
-	if _, _, err := unix.Syscall(unix.SYS_IOCTL, w.f.Fd(), wdiocSetPreTimeout, uintptr(unsafe.Pointer(&timeout))); err != 0 {
+	to := timeout / time.Second
+	if _, _, err := w.unixSyscall(unix.SYS_IOCTL, w.File.Fd(), wdiocSetPreTimeout, unsafe.Pointer(&timeout)); err != 0 {
 		return err
 	}
-	gotTimeout := timeoutSecs * time.Second
+	gotTimeout := to * time.Second
 	if gotTimeout != timeout {
 		return fmt.Errorf("Watchdog pretimeout set to %v, wanted %v", gotTimeout, timeout)
 	}
@@ -207,7 +227,7 @@ func (w *Watchdog) SetPreTimeout(timeout time.Duration) error {
 
 // PreTimeout returns the current watchdog pretimeout.
 func (w *Watchdog) PreTimeout() (time.Duration, error) {
-	timeout, err := unix.IoctlGetUint32(int(w.f.Fd()), wdiocGetPreTimeout)
+	timeout, err := w.unixIoctlGetUint32(int(w.File.Fd()), wdiocGetPreTimeout)
 	if err != nil {
 		return 0, err
 	}
@@ -216,7 +236,7 @@ func (w *Watchdog) PreTimeout() (time.Duration, error) {
 
 // TimeLeft returns the duration before the reboot (to the nearest second).
 func (w *Watchdog) TimeLeft() (time.Duration, error) {
-	left, err := unix.IoctlGetUint32(int(w.f.Fd()), wdiocGetTimeLeft)
+	left, err := w.unixIoctlGetUint32(int(w.File.Fd()), wdiocGetTimeLeft)
 	if err != nil {
 		return 0, err
 	}

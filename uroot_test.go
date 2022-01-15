@@ -196,14 +196,13 @@ func testUrootCmdline(t *testing.T) {
 			name: "make sure dead code gets eliminated",
 			args: []string{
 				// Build the world + test symbols, unstripped.
-				// Change default shell to ash/rush until a solution for upstream elvish is found
-				"-defaultsh=/bin/ash", "-build=bb", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
+				// Change default shell to gosh for this test as elvish uses the reflect package
+				"-defaultsh=/bbin/gosh", "-build=bb", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
 				// These are known to disable DCE and need to be exluded.
 				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
 				// so these can be removed once we no longer support Go < 1.15.
 				"-github.com/u-root/u-root/cmds/exp/builtin",
 				"-github.com/u-root/u-root/cmds/exp/run",
-				// TODO(MDr164): Find a solution for upstream elvish
 				"-github.com/u-root/u-root/cmds/core/elvish",
 			},
 			err: nil,
