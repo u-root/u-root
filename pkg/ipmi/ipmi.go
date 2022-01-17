@@ -31,10 +31,6 @@ var (
 	timeout = time.Second * 10
 )
 
-func fdSet(fd uintptr, p *syscall.FdSet) {
-	p.Bits[fd/64] |= 1 << (uint(fd) % 64)
-}
-
 func ioctlSetReq(fd, name uintptr, req *req) error {
 	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(req)))
 	runtime.KeepAlive(req)
