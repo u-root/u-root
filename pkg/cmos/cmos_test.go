@@ -61,24 +61,24 @@ func TestCMOS(t *testing.T) {
 			tmpDir := t.TempDir()
 			f, err := os.CreateTemp(tmpDir, "testfile-")
 			if err != nil {
-				t.Errorf("%q failed creating tmp file: %q", tt.name, err)
+				t.Errorf(`os.CreateTemp(tmpDir, "testfile-") = f, %q, not f, nil`, err)
 			}
 			data := make([]byte, 10000)
 			if _, err := f.Write(data); err != nil {
-				t.Errorf("%q failed writing to file: %q with: %q", tt.name, f.Name(), err)
+				t.Errorf(`f.Write(data) = _, %q, not _, nil`, err)
 			}
 			var in, out bytes.Buffer
 			c := newMock(tt.err, &in, &out, f)
 			// Set internal function to dummy but save old state for reset later
 			if err := c.Write(tt.addr, tt.writeData); err != nil {
 				if !strings.Contains(err.Error(), tt.err) {
-					t.Error(err)
+					t.Errorf(`c.Write(tt.addr, tt.writeData) = %q, not nil`, err)
 				}
 			}
 			err = c.Read(tt.addr, tt.readData)
 			if err != nil {
 				if !strings.Contains(err.Error(), tt.err) {
-					t.Error(err)
+					t.Errorf(`c.Read(tt.addr, tt.readData) = %q, not nil`, err)
 				}
 			}
 			// We can only progress if error is nil.
@@ -86,7 +86,7 @@ func TestCMOS(t *testing.T) {
 				got := in.String()
 				want := tt.writeData.String()
 				if got != want {
-					t.Errorf("Got %s, want %s", got, want)
+					t.Errorf("%s, not %s", want, got)
 				}
 			}
 		})
@@ -97,6 +97,6 @@ func TestCMOS(t *testing.T) {
 func TestNew(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	if _, err := New(); err != nil {
-		t.Errorf("TestNewCMOS failed: %q", err)
+		t.Errorf(`New() = %q, not nil`, err)
 	}
 }
