@@ -161,13 +161,13 @@ func TestRunSimple(t *testing.T) {
 			in := bufio.NewReader(&inBuf)
 			if err := run(tt.args, tt.flag, &out, in); err != nil {
 				if !errors.Is(err, tt.wantErr) {
-					t.Errorf("%q failed. Error Got: %q, Error Want:%q", tt.name, err.Error(), tt.wantErr)
+					t.Errorf(`run(tt.args, tt.flag, &out, in) = %q, not %q`, err.Error(), tt.wantErr)
 				}
 				return
 			}
 
 			if err := IsEqualTree(cp.Default, tt.args[0], tt.args[1]); err != nil {
-				t.Errorf("%q failed at: IsEqualTree failed with: %q", tt.name, err)
+				t.Errorf(`EqualTree(cp.Default, tt.args[0], tt.args[1]) = %q, not nil`, err)
 			}
 		})
 
@@ -183,8 +183,8 @@ func TestRunSimple(t *testing.T) {
 			if errors.Is(err, fs.ErrNotExist) {
 				return
 			}
-			if err := f(tt.args[0], tt.args[1], srcfi); errors.Is(err, cp.ErrSkip) {
-				t.Log(err)
+			if err := f(tt.args[0], tt.args[1], srcfi); !errors.Is(err, cp.ErrSkip) {
+				t.Logf(`preCallback(tt.args[0], tt.args[1], srcfi) = %q, not cp.ErrSkip`, err)
 			}
 		})
 
@@ -194,7 +194,7 @@ func TestRunSimple(t *testing.T) {
 			f(tt.args[0], tt.args[1])
 			if tt.flag.verbose {
 				if out.String() != fmt.Sprintf("%q -> %q\n", tt.args[0], tt.args[1]) {
-					t.Errorf("PostCallback failed. Want: %q, Got: %q", fmt.Sprintf("%q -> %q\n", tt.args[0], tt.args[1]), out.String())
+					t.Errorf("postCallback(tt.args[0], tt.args[1]) = %q, not %q", out.String(), fmt.Sprintf("%q -> %q\n", tt.args[0], tt.args[1]))
 				}
 			}
 		})
@@ -215,13 +215,13 @@ func TestCpSrcDirectory(t *testing.T) {
 	var in bufio.Reader
 
 	if err := run([]string{tempDir, tempDirTwo}, f, &logBytes, &in); err != nil {
-		t.Fatalf("copy(%q -> %q) = %v, want nil", tempDir, tempDirTwo, err)
+		t.Fatalf(`run([]string{tempDir, tempDirTwo}, f, &logBytes, &in) = %q, not nil`, err)
 	}
 
 	outString := fmt.Sprintf("cp: -r not specified, omitting directory %s", tempDir)
 	capturedString := logBytes.String()
 	if !strings.Contains(capturedString, outString) {
-		t.Fatalf("copy(%q -> %q) = %v, want %v", tempDir, tempDirTwo, capturedString, outString)
+		t.Fatal("strings.Contains(capturedString, outString) = false, not true")
 	}
 }
 
@@ -238,27 +238,27 @@ func TestCpRecursive(t *testing.T) {
 
 	srcDir := filepath.Join(tempDir, "src")
 	if err := os.Mkdir(srcDir, 0o755); err != nil {
-		t.Fatal(err)
+		t.Fatalf(`os.Mkdir(srcDir, 0o755) = %q, not nil`, err)
 	}
 	dstDir := filepath.Join(tempDir, "dst-exists")
 	if err := os.Mkdir(dstDir, 0o755); err != nil {
-		t.Fatal(err)
+		t.Fatalf(`os.Mkdir(dstDir, 0o755) = %q, not nil`, err)
 	}
 
 	if err := createFilesTree(srcDir, maxDirDepth, 0); err != nil {
-		t.Fatalf("cannot create files tree on directory %q: %v", srcDir, err)
+		t.Fatalf(`createFilesTree(srcDir, maxDirDepth, 0) = %q, not nil`, err)
 	}
 
 	t.Run("existing-dst-dir", func(t *testing.T) {
 		var out bytes.Buffer
 		var in bufio.Reader
 		if err := run([]string{srcDir, dstDir}, f, &out, &in); err != nil {
-			t.Fatalf("cp(%q -> %q) = %v, want nil", srcDir, dstDir, err)
+			t.Fatalf(`run([]string{srcDir, dstDir}, f, &out, &in) = %q, not nil`, err)
 		}
 		// Because dstDir already existed, a new dir was created inside it.
 		realDestination := filepath.Join(dstDir, filepath.Base(srcDir))
 		if err := IsEqualTree(cp.Default, srcDir, realDestination); err != nil {
-			t.Fatalf("copy(%q -> %q): file trees not equal: %v", srcDir, realDestination, err)
+			t.Fatalf(`IsEqualTree(cp.Default, srcDir, realDestination) = %q, not nil`, err)
 		}
 	})
 
@@ -267,11 +267,11 @@ func TestCpRecursive(t *testing.T) {
 		var in bufio.Reader
 		notExistDstDir := filepath.Join(tempDir, "dst-does-not-exist")
 		if err := run([]string{srcDir, notExistDstDir}, f, &out, &in); err != nil {
-			t.Fatalf("cp(%q -> %q) = %v, want nil", srcDir, notExistDstDir, err)
+			t.Fatalf(`run([]string{srcDir, notExistDstDir}, f, &out, &in) = %q, not nil`, err)
 		}
 
 		if err := IsEqualTree(cp.Default, srcDir, notExistDstDir); err != nil {
-			t.Fatalf("copy(%q -> %q): file trees not equal: %v", srcDir, notExistDstDir, err)
+			t.Fatalf(`IsEqualTree(cp.Default, srcDir, notExistDstDir) = %q, not nil`, err)
 		}
 	})
 }
@@ -293,7 +293,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 
 	dstTest := filepath.Join(tempDir, "destination")
 	if err := os.Mkdir(dstTest, 0o755); err != nil {
-		t.Fatalf("Failed on build directory %v: %v", dstTest, err)
+		t.Fatalf(`os.Mkdir(dstTest, 0o755) = %q, not nil`, err)
 	}
 
 	// create multiple random directories sources
@@ -302,7 +302,7 @@ func TestCpRecursiveMultiple(t *testing.T) {
 		srcTest := t.TempDir()
 
 		if err := createFilesTree(srcTest, maxDirDepth, 0); err != nil {
-			t.Fatalf("cannot create files tree on directory %v: %v", srcTest, err)
+			t.Fatalf(`createFilesTree(srcTest, maxDirDepth, 0) = %q, not nil`, err)
 		}
 
 		srcDirs = append(srcDirs, srcTest)
@@ -313,19 +313,19 @@ func TestCpRecursiveMultiple(t *testing.T) {
 	args := srcDirs
 	args = append(args, dstTest)
 	if err := run(args, f, &out, &in); err != nil {
-		t.Fatalf("cp %q exit with error: %v", args, err)
+		t.Fatalf(`run(args, f, &out, &in) = %q, not nil`, err)
 	}
 	// Make sure we can do it twice.
 	f.force = true
 	if err := run(args, f, &out, &in); err != nil {
-		t.Fatalf("cp %q exit with error: %v", args, err)
+		t.Fatalf(`run(args, f, &out, &in) = %q, not nil`, err)
 	}
 	for _, src := range srcDirs {
 		_, srcFile := filepath.Split(src)
 
 		dst := filepath.Join(dstTest, srcFile)
 		if err := IsEqualTree(cp.Default, src, dst); err != nil {
-			t.Fatalf("The copy %q -> %q failed: %v", src, dst, err)
+			t.Fatalf(`IsEqualTree(cp.Default, src, dst) = %q, not nil`, err)
 		}
 	}
 }
@@ -337,7 +337,7 @@ func TestCpSymlink(t *testing.T) {
 
 	f, err := randomFile(tempDir, "src-")
 	if err != nil {
-		t.Fatalf("cannot create a random file: %v", err)
+		t.Fatalf(`randomFile(tempDir, "src-") = %q, not nil`, err)
 	}
 	defer f.Close()
 
@@ -346,7 +346,7 @@ func TestCpSymlink(t *testing.T) {
 
 	newName := filepath.Join(tempDir, srcFname+"_link")
 	if err := os.Symlink(srcFname, newName); err != nil {
-		t.Fatalf("cannot create a link %q with target %q: %v", newName, srcFname, err)
+		t.Fatalf(`os.Symlink(srcFname, newName) = %q, not nil`, err)
 	}
 
 	t.Run("no-follow-symlink", func(t *testing.T) {
@@ -358,10 +358,10 @@ func TestCpSymlink(t *testing.T) {
 
 		dst := filepath.Join(tempDir, "dst-no-follow")
 		if err := run([]string{newName, dst}, f, &out, &in); err != nil {
-			t.Fatalf("cp(%q -> %q) = %v, want nil", newName, dst, err)
+			t.Fatalf(`run([]string{newName, dst}, f, &out, &in) = %q, not nil`, err)
 		}
 		if err := IsEqualTree(cp.NoFollowSymlinks, newName, dst); err != nil {
-			t.Fatalf("The copy %q -> %q failed: %v", newName, dst, err)
+			t.Fatalf(`IsEqualTree(cp.NoFollowSymlinks, newName, dst) =%q, not nil`, err)
 		}
 	})
 
@@ -374,10 +374,10 @@ func TestCpSymlink(t *testing.T) {
 
 		dst := filepath.Join(tempDir, "dst-follow")
 		if err := run([]string{newName, dst}, f, &out, &in); err != nil {
-			t.Fatalf("cp(%q -> %q) = %v, want nil", newName, dst, err)
+			t.Fatalf(`run([]string{newName, dst}, f, &out, &in) =%q, not nil`, err)
 		}
 		if err := IsEqualTree(cp.Default, newName, dst); err != nil {
-			t.Fatalf("The copy %q -> %q failed: %v", newName, dst, err)
+			t.Fatalf(`IsEqualTree(cp.Default, newName, dst) = %q, not nil`, err)
 		}
 	})
 }
