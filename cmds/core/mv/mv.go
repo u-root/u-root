@@ -22,16 +22,12 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-var usage = "mv [ARGS] source target [ARGS] source ... directory"
+const usage = "mv [ARGS] source target [ARGS] source ... directory"
 
 var (
 	update    = flag.Bool("u", false, "move only when the SOURCE file is newer than the destination file or when the destination file is missing")
 	noClobber = flag.Bool("n", false, "do not overwrite an existing file")
 )
-
-func init() {
-	util.Usage(usage)
-}
 
 func moveFile(source string, dest string) error {
 	if *noClobber {
@@ -98,6 +94,7 @@ func move(files []string) error {
 }
 
 func main() {
+	util.Usage(usage)
 	flag.Parse()
 	if flag.NArg() < 2 {
 		flag.Usage()

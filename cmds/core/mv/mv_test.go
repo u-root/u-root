@@ -11,12 +11,8 @@ import (
 	"testing"
 )
 
-// Setup func to setup testfiles
-func setup() (string, error) {
-	d, err := os.MkdirTemp(os.TempDir(), "hi.dir")
-	if err != nil {
-		return "", err
-	}
+func setup(t *testing.T) (string, error) {
+	d := t.TempDir()
 	for _, tt := range []struct {
 		name    string      // name
 		mode    os.FileMode // mode
@@ -50,9 +46,8 @@ func setup() (string, error) {
 	return d, nil
 }
 
-// Test move func
 func TestMove(t *testing.T) {
-	d, err := setup()
+	d, err := setup(t)
 	if err != nil {
 		t.Errorf("File setup failed: %v", err)
 	}
@@ -91,9 +86,8 @@ func TestMove(t *testing.T) {
 
 }
 
-// Test mv func
 func TestMv(t *testing.T) {
-	d, err := setup()
+	d, err := setup(t)
 	if err != nil {
 		t.Errorf("File setup failed: %v", err)
 	}
@@ -131,9 +125,8 @@ func TestMv(t *testing.T) {
 	}
 }
 
-// Test moveFile func
 func TestMoveFile(t *testing.T) {
-	d, err := setup()
+	d, err := setup(t)
 	if err != nil {
 		t.Errorf("File setup failed: %v", err)
 	}
