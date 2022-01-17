@@ -150,7 +150,7 @@ func TestDev(t *testing.T) {
 		t.Run("SendRequest"+tt.name, func(t *testing.T) {
 			if err := d.SendRequest(tt.req); err != nil {
 				if !strings.Contains(err.Error(), tt.wantSendErr.Error()) {
-					t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantSendErr, err)
+					t.Errorf("d.SendRequest(tt.req) = %q, not %q", err, tt.wantSendErr)
 				}
 			}
 		})
@@ -159,7 +159,7 @@ func TestDev(t *testing.T) {
 			buf := make([]byte, 1)
 			if _, err := d.ReceiveResponse(0, tt.resp, buf); err != nil {
 				if !strings.Contains(err.Error(), tt.wantRecvErr.Error()) {
-					t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantRecvErr, err)
+					t.Errorf("d.ReceiveResponse(0, tt.resp, buf) = _, %q, not _, %q", err, tt.wantRecvErr)
 				}
 			}
 		})
@@ -170,7 +170,7 @@ func TestDev(t *testing.T) {
 func TestNewDev(t *testing.T) {
 	df, err := ioutil.TempFile("", "ipmi_dummy_file-")
 	if err != nil {
-		t.Error(err)
+		t.Errorf(`ioutil.TempFile("", "ipmi_dummy_file-") = df, %q, not df, nil`, err)
 	}
 	defer os.RemoveAll(df.Name())
 	_ = newDev(df)
