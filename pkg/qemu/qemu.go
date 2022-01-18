@@ -59,6 +59,9 @@ type Options struct {
 	// Extra kernel command-line arguments.
 	KernelArgs string
 
+	// SMBIOS-specific parameters
+	SMBIOSArgs string
+
 	// Where to send serial output.
 	SerialOutput io.WriteCloser
 
@@ -133,6 +136,10 @@ func (o *Options) Cmdline() ([]string, error) {
 	}
 	if len(o.Initramfs) != 0 {
 		args = append(args, "-initrd", o.Initramfs)
+	}
+
+	if len(o.SMBIOSArgs) != 0 {
+		args = append(args, "-smbios", o.SMBIOSArgs)
 	}
 
 	for _, dev := range o.Devices {
