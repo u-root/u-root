@@ -70,6 +70,7 @@ func TestFromZip(t *testing.T) {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f1, err)
 	}
 	if !bytes.Equal(x, f1Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f1Expected[:30])
 		t.Errorf("file %q and file %q are not equal", f1, "testdata/testFolder/file1")
 	}
 	x, err = ioutil.ReadFile(f2)
@@ -77,6 +78,7 @@ func TestFromZip(t *testing.T) {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f2, err)
 	}
 	if !bytes.Equal(x, f2Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f2Expected[:30])
 		t.Errorf("file %q and file %q are not equal", f2, "testdata/testFolder/file2")
 	}
 
@@ -85,6 +87,7 @@ func TestFromZip(t *testing.T) {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f3, err)
 	}
 	if !bytes.Equal(x, f3Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f3Expected[:30])
 		t.Errorf("file %q and file %q are not equal", f3, "testdata/testFolder/file3")
 	}
 
@@ -93,7 +96,8 @@ func TestFromZip(t *testing.T) {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f4, err)
 	}
 	if !bytes.Equal(x, f4Expected) {
-		t.Errorf("file %q and file %q are not equal", f4, "testdata/testFolder/file4")
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f4Expected[:30])
+		t.Errorf("file %q and file %q are not equal\n", f4, "testdata/testFolder/file4")
 	}
 }
 
