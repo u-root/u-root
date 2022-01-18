@@ -58,6 +58,7 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/mount/block",
 		"github.com/u-root/u-root/pkg/mount/loop",
 		"github.com/u-root/u-root/pkg/ipmi",
+		"github.com/u-root/u-root/pkg/smbios",
 
 		// Missing xzcat in VM.
 		"github.com/u-root/u-root/cmds/exp/bzimage",
