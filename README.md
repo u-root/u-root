@@ -27,19 +27,28 @@ u-root embodies four different projects.
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
 
-## :warning: Go Modules are Broken :warning:
+## :warning: Go Modules are a Work In Progress :warning:
 
-u-root itself builds fine with modules. When adding commands to your busybox
-which are outside u-root, make sure to `export GO111MODULE=off` both when
-`get`ing the command (so that the command is found under `$GOPATH/src` and when
-running the `u-root` command (so that you can run the u-root command from any
-directory).
+You can use u-root with the experimental work-in-progress `-build=gbb` mode that
+supports modules, or you can use u-root with the old non-module-supporting
+`-build=bb` which will exist for a while longer for backwards compatibility.
+
+When using the new module-supporting `-build=gbb` mode, **we still expect that
+u-root is in the expected location of `$GOPATH/src/github.com/u-root/u-root`**.
+This is a limitation that will be fixed soon.
+
+When using the old `bb` build mode, you must use `GO111MODULE=off` to go get and
+build u-root. When adding commands to your busybox which are outside u-root,
+make sure to `export GO111MODULE=off` both when `get`ing the command (so that
+the command is found under `$GOPATH/src` and when running the `u-root` command
+(so that you can run the u-root command from any directory).
 
 For example:
 
 ```
+GO111MODULE=off go get github.com/u-root/u-root
 GO111MODULE=off go get github.com/nsf/godit
-GO111MODULE=off u-root all github.com/nsf/godit
+GO111MODULE=off u-root -build=bb all github.com/nsf/godit
 ```
 
 # Usage
@@ -50,7 +59,7 @@ correctly.
 Download and install u-root:
 
 ```shell
-go get github.com/u-root/u-root
+GO111MODULE=off go get github.com/u-root/u-root
 ```
 
 You can now use the u-root command to build an initramfs. Here are some
