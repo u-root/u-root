@@ -16,11 +16,11 @@ import (
 
 // Version identifies the version of Elvish. On development commits, it
 // identifies the next release.
-const Version = "0.16.3"
+const Version = "0.18.0"
 
 // VersionSuffix is appended to Version to build the full version string. It is public so it can be
 // overridden when building Elvish; see PACKAGING.md for details.
-var VersionSuffix = ""
+var VersionSuffix = "-dev.unknown"
 
 // Reproducible identifies whether the build is reproducible. This can be
 // overridden when building Elvish; see PACKAGING.md for details.
@@ -47,8 +47,6 @@ var Value = Type{
 
 type program struct{}
 
-func (program) ShouldRun(f *prog.Flags) bool { return f.Version || f.BuildInfo }
-
 func (program) Run(fds [3]*os.File, f *prog.Flags, _ []string) error {
 	switch {
 	case f.BuildInfo:
@@ -66,7 +64,7 @@ func (program) Run(fds [3]*os.File, f *prog.Flags, _ []string) error {
 			fmt.Fprintln(fds[1], Value.Version)
 		}
 	default:
-		panic("should not run buildinfo")
+		return prog.ErrNotSuitable
 	}
 	return nil
 }

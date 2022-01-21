@@ -132,7 +132,7 @@ func Comment(file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	z.Close()
+	defer z.Close()
 	return z.Comment, nil
 }
 

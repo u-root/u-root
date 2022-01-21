@@ -15,44 +15,45 @@ import (
 	"src.elv.sh/pkg/persistent/hash"
 )
 
-// A user-defined function in Elvish code. Each closure has its unique identity.
-type closure struct {
+// Closure is a function defined with Elvish code. Each Closure has its unique
+// identity.
+type Closure struct {
 	ArgNames []string
 	// The index of the rest argument. -1 if there is no rest argument.
 	RestArg     int
 	OptNames    []string
 	OptDefaults []interface{}
-	Op          effectOp
-	NewLocal    []string
-	Captured    *Ns
 	SrcMeta     parse.Source
 	DefRange    diag.Ranging
+	op          effectOp
+	newLocal    []staticVarInfo
+	captured    *Ns
 }
 
-var _ Callable = &closure{}
+var _ Callable = &Closure{}
 
 // Kind returns "fn".
-func (*closure) Kind() string {
+func (*Closure) Kind() string {
 	return "fn"
 }
 
 // Equal compares by address.
-func (c *closure) Equal(rhs interface{}) bool {
+func (c *Closure) Equal(rhs interface{}) bool {
 	return c == rhs
 }
 
 // Hash returns the hash of the address of the closure.
-func (c *closure) Hash() uint32 {
+func (c *Closure) Hash() uint32 {
 	return hash.Pointer(unsafe.Pointer(c))
 }
 
 // Repr returns an opaque representation "<closure 0x23333333>".
-func (c *closure) Repr(int) string {
+func (c *Closure) Repr(int) string {
 	return fmt.Sprintf("<closure %p>", c)
 }
 
 // Call calls a closure.
-func (c *closure) Call(fm *Frame, args []interface{}, opts map[string]interface{}) error {
+func (c *Closure) Call(fm *Frame, args []interface{}, opts map[string]interface{}) error {
 	// Check number of arguments.
 	if c.RestArg != -1 {
 		if len(args) < len(c.ArgNames)-1 {
@@ -93,14 +94,14 @@ func (c *closure) Call(fm *Frame, args []interface{}, opts map[string]interface{
 	// and ports can be problematic.
 
 	// Make upvalue namespace and capture variables.
-	fm.up = c.Captured
+	fm.up = c.captured
 
 	// Populate local scope with arguments, options, and newly created locals.
-	localSize := len(c.ArgNames) + len(c.OptNames) + len(c.NewLocal)
-	local := &Ns{make([]vars.Var, localSize), make([]string, localSize), make([]bool, localSize)}
+	localSize := len(c.ArgNames) + len(c.OptNames) + len(c.newLocal)
+	local := &Ns{make([]vars.Var, localSize), make([]staticVarInfo, localSize)}
 
 	for i, name := range c.ArgNames {
-		local.names[i] = name
+		local.infos[i] = staticVarInfo{name, false, false}
 	}
 	if c.RestArg == -1 {
 		for i := range c.ArgNames {
@@ -124,30 +125,43 @@ func (c *closure) Call(fm *Frame, args []interface{}, opts map[string]interface{
 		if !ok {
 			v = c.OptDefaults[i]
 		}
-		local.names[offset+i] = name
+		local.infos[offset+i] = staticVarInfo{name, false, false}
 		local.slots[offset+i] = vars.FromInit(v)
 	}
 
 	offset += len(c.OptNames)
-	for i, name := range c.NewLocal {
-		local.names[offset+i] = name
-		local.slots[offset+i] = MakeVarFromName(name)
+	for i, info := range c.newLocal {
+		local.infos[offset+i] = info
+		// TODO: Take info.readOnly into account too when creating variable
+		local.slots[offset+i] = MakeVarFromName(info.name)
 	}
 
 	fm.local = local
 	fm.srcMeta = c.SrcMeta
-	return c.Op.exec(fm)
+	fm.defers = new([]func(*Frame) Exception)
+	exc := c.op.exec(fm)
+	excDefer := fm.runDefers()
+	// TODO: Combine exc and excDefer if both are not nil
+	if excDefer != nil && exc == nil {
+		exc = excDefer
+	}
+	return exc
 }
+
+var (
+	fnDefault = NewGoFn("nop~", nop)
+	nsDefault = &Ns{}
+)
 
 // MakeVarFromName creates a Var with a suitable type constraint inferred from
 // the name.
 func MakeVarFromName(name string) vars.Var {
 	switch {
 	case strings.HasSuffix(name, FnSuffix):
-		val := NewGoFn("nop~", nop)
+		val := fnDefault
 		return vars.FromPtr(&val)
 	case strings.HasSuffix(name, NsSuffix):
-		val := (*Ns)(nil)
+		val := nsDefault
 		return vars.FromPtr(&val)
 	default:
 		return vars.FromInit(nil)
@@ -167,15 +181,15 @@ func (er UnsupportedOptionsError) Error() string {
 	return fmt.Sprintf("unsupported options: %s", strings.Join(er.Options, ", "))
 }
 
-func (c *closure) Fields() vals.StructMap { return closureFields{c} }
+func (c *Closure) Fields() vals.StructMap { return closureFields{c} }
 
-type closureFields struct{ c *closure }
+type closureFields struct{ c *Closure }
 
 func (closureFields) IsStructMap() {}
 
-func (cf closureFields) ArgNames() vals.List { return listOfStrings(cf.c.ArgNames) }
+func (cf closureFields) ArgNames() vals.List { return vals.MakeListFromStrings(cf.c.ArgNames...) }
 func (cf closureFields) RestArg() string     { return strconv.Itoa(cf.c.RestArg) }
-func (cf closureFields) OptNames() vals.List { return listOfStrings(cf.c.OptNames) }
+func (cf closureFields) OptNames() vals.List { return vals.MakeListFromStrings(cf.c.OptNames...) }
 func (cf closureFields) Src() parse.Source   { return cf.c.SrcMeta }
 
 func (cf closureFields) OptDefaults() vals.List {
@@ -183,18 +197,10 @@ func (cf closureFields) OptDefaults() vals.List {
 }
 
 func (cf closureFields) Body() string {
-	r := cf.c.Op.(diag.Ranger).Range()
+	r := cf.c.op.(diag.Ranger).Range()
 	return cf.c.SrcMeta.Code[r.From:r.To]
 }
 
 func (cf closureFields) Def() string {
 	return cf.c.SrcMeta.Code[cf.c.DefRange.From:cf.c.DefRange.To]
-}
-
-func listOfStrings(ss []string) vals.List {
-	list := vals.EmptyList
-	for _, s := range ss {
-		list = list.Cons(s)
-	}
-	return list
 }
