@@ -26,8 +26,8 @@ func TestMountKexec(t *testing.T) {
 
 	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		TestCmds: []string{
-			"CMDLINE = (cat /proc/cmdline)",
-			"SUFFIX = $CMDLINE[-7:]",
+			"var CMDLINE = (cat /proc/cmdline)",
+			"var SUFFIX = $CMDLINE[-7..]",
 			"echo SAW $SUFFIX",
 			"kexec -i /testdata/initramfs.cpio -c $CMDLINE' KEXEC=Y' /testdata/kernel",
 		},

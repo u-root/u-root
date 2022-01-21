@@ -410,6 +410,12 @@ func WritePkg(p *packages.Package, destDir string) error {
 		}
 	}
 
+	for _, fp := range p.EmbedFiles {
+		if err := cp.Copy(fp, filepath.Join(destDir, filepath.Base(fp))); err != nil {
+			return fmt.Errorf("copy failed: %v", err)
+		}
+	}
+
 	return writeFiles(destDir, p.Fset, p.Syntax)
 }
 

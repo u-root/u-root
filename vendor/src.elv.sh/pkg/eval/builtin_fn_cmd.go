@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -35,7 +34,7 @@ func init() {
 // Construct a callable value for the external program `$program`. Example:
 //
 // ```elvish-transcript
-// ~> x = (external man)
+// ~> var x = (external man)
 // ~> $x ls # opens the manpage for ls
 // ```
 //
@@ -113,11 +112,7 @@ func exit(fm *Frame, codes ...int) error {
 }
 
 func preExit(fm *Frame) {
-	daemon := fm.Evaler.DaemonClient()
-	if daemon != nil {
-		err := daemon.Close()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
+	for _, hook := range fm.Evaler.BeforeExit {
+		hook()
 	}
 }

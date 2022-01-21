@@ -72,7 +72,7 @@ func (op *pipelineOp) exec(fm *Frame) Exception {
 	}
 
 	if op.bg {
-		fm = fm.fork("background job" + op.source)
+		fm = fm.Fork("background job" + op.source)
 		fm.intCh = nil
 		fm.background = true
 		fm.Evaler.addNumBgJobs(1)
@@ -88,7 +88,7 @@ func (op *pipelineOp) exec(fm *Frame) Exception {
 
 	// For each form, create a dedicated evalCtx and run asynchronously
 	for i, formOp := range op.subops {
-		newFm := fm.fork("[form op]")
+		newFm := fm.Fork("[form op]")
 		inputIsPipe := i > 0
 		outputIsPipe := i < nforms-1
 		if inputIsPipe {
@@ -116,12 +116,10 @@ func (op *pipelineOp) exec(fm *Frame) Exception {
 				// Store in input port for ease of retrieval later
 				sendStop: sendStop, sendError: sendError, readerGone: readerGone}
 		}
-		thisOp := formOp
-		thisExc := &excs[i]
-		go func() {
-			exc := thisOp.exec(newFm)
+		f := func(formOp effectOp, pexc *Exception) {
+			exc := formOp.exec(newFm)
 			if exc != nil && !(outputIsPipe && isReaderGone(exc)) {
-				*thisExc = exc
+				*pexc = exc
 			}
 			if inputIsPipe {
 				input := newFm.ports[0]
@@ -131,7 +129,12 @@ func (op *pipelineOp) exec(fm *Frame) Exception {
 			}
 			newFm.Close()
 			wg.Done()
-		}()
+		}
+		if i == nforms-1 && !op.bg {
+			f(formOp, &excs[i])
+		} else {
+			go f(formOp, &excs[i])
+		}
 	}
 
 	if op.bg {
@@ -139,13 +142,15 @@ func (op *pipelineOp) exec(fm *Frame) Exception {
 		go func() {
 			wg.Wait()
 			fm.Evaler.addNumBgJobs(-1)
-			msg := "job " + op.source + " finished"
-			err := MakePipelineError(excs)
-			if err != nil {
-				msg += ", errors = " + err.Error()
-			}
-			if fm.Evaler.getNotifyBgJobSuccess() || err != nil {
-				fm.ErrorFile().WriteString(msg + "\n")
+			if notify := fm.Evaler.BgJobNotify; notify != nil {
+				msg := "job " + op.source + " finished"
+				err := MakePipelineError(excs)
+				if err != nil {
+					msg += ", errors = " + err.Error()
+				}
+				if fm.Evaler.getNotifyBgJobSuccess() || err != nil {
+					notify(msg)
+				}
 			}
 		}()
 		return nil
@@ -163,13 +168,17 @@ func (cp *compiler) formOp(n *parse.Form) effectOp {
 	var tempLValues []lvalue
 	var assignmentOps []effectOp
 	if len(n.Assignments) > 0 {
-		assignmentOps = cp.assignmentOps(n.Assignments)
 		if n.Head == nil {
 			cp.errorpf(n, `using the syntax of temporary assignment for non-temporary assignment is no longer supported; use "var" or "set" instead`)
 			return nopOp{}
+		} else {
+			as := n.Assignments
+			cp.deprecate(diag.MixedRanging(as[0], as[len(as)-1]),
+				`the legacy temporary assignment syntax is deprecated; use "tmp" instead`, 18)
 		}
+		assignmentOps = cp.assignmentOps(n.Assignments)
 		for _, a := range n.Assignments {
-			lvalues := cp.parseIndexingLValue(a.Left)
+			lvalues := cp.parseIndexingLValue(a.Left, setLValue|newLValue)
 			tempLValues = append(tempLValues, lvalues.lvalues...)
 		}
 		logger.Println("temporary assignment of", len(n.Assignments), "pairs")
@@ -196,36 +205,16 @@ func (cp *compiler) formBody(n *parse.Form) formBody {
 		}
 	}
 
-	// Determine if the form is a legacy assignment form, by looking for an
-	// argument whose source is a literal "=".
-	for i, arg := range n.Args {
-		if parse.SourceText(arg) == "=" {
-			lhsNodes := make([]*parse.Compound, i+1)
-			lhsNodes[0] = n.Head
-			copy(lhsNodes[1:], n.Args[:i])
-			lhs := cp.parseCompoundLValues(lhsNodes)
-
-			rhsOps := cp.compoundOps(n.Args[i+1:])
-			var rhsRange diag.Ranging
-			if len(rhsOps) > 0 {
-				rhsRange = diag.MixedRanging(rhsOps[0], rhsOps[len(rhsOps)-1])
-			} else {
-				rhsRange = diag.PointRanging(n.Range().To)
-			}
-			rhs := seqValuesOp{rhsRange, rhsOps}
-
-			return formBody{assignOp: &assignOp{n.Range(), lhs, rhs}}
-		}
-	}
-
 	var headOp valuesOp
 	if head, ok := cmpd.StringLiteral(n.Head); ok {
 		// Head is a literal string: resolve to function or external (special
 		// commands are already handled above).
 		if _, fnRef := resolveCmdHeadInternally(cp, head, n.Head); fnRef != nil {
 			headOp = variableOp{n.Head.Range(), false, head + FnSuffix, fnRef}
-		} else {
+		} else if cp.currentPragma().unknownCommandIsExternal || fsutil.DontSearch(head) {
 			headOp = literalValues(n.Head, NewExternalCmd(head))
+		} else {
+			cp.errorpf(n.Head, "unknown command disallowed by current pragma")
 		}
 	} else {
 		// Head is not a literal string: evaluate as a normal expression.
@@ -397,7 +386,7 @@ func evalForCommand(fm *Frame, op valuesOp, what string) (Callable, error) {
 	return nil, fm.errorp(op, errs.BadValue{
 		What:   what,
 		Valid:  "callable or string containing slash",
-		Actual: vals.Kind(value)})
+		Actual: vals.ReprPlain(value)})
 }
 
 func allTrue(vs []interface{}) bool {
@@ -410,9 +399,9 @@ func allTrue(vs []interface{}) bool {
 }
 
 func (cp *compiler) assignmentOp(n *parse.Assignment) effectOp {
-	lhs := cp.parseIndexingLValue(n.Left)
+	lhs := cp.parseIndexingLValue(n.Left, setLValue|newLValue)
 	rhs := cp.compoundOp(n.Right)
-	return &assignOp{n.Range(), lhs, rhs}
+	return &assignOp{n.Range(), lhs, rhs, false}
 }
 
 func (cp *compiler) assignmentOps(ns []*parse.Assignment) []effectOp {
@@ -471,9 +460,9 @@ type redirOp struct {
 	flag    int
 }
 
-type invalidFD struct{ fd int }
+type InvalidFD struct{ FD int }
 
-func (err invalidFD) Error() string { return fmt.Sprintf("invalid fd: %d", err.fd) }
+func (err InvalidFD) Error() string { return fmt.Sprintf("invalid fd: %d", err.FD) }
 
 func (op *redirOp) exec(fm *Frame) Exception {
 	var dst int
@@ -511,7 +500,7 @@ func (op *redirOp) exec(fm *Frame) Exception {
 				// Ensure that writing to value output throws an exception
 				sendStop: closedSendStop, sendError: &ErrNoValueOutput}
 		case src >= len(fm.ports) || fm.ports[src] == nil:
-			return fm.errorp(op, invalidFD{src})
+			return fm.errorp(op, InvalidFD{FD: src})
 		default:
 			fm.ports[dst] = fm.ports[src].fork()
 		}
@@ -525,7 +514,7 @@ func (op *redirOp) exec(fm *Frame) Exception {
 	case string:
 		f, err := os.OpenFile(src, op.flag, defaultFileRedirPerm)
 		if err != nil {
-			return fm.errorpf(op, "failed to open file %s: %s", vals.Repr(src, vals.NoPretty), err)
+			return fm.errorpf(op, "failed to open file %s: %s", vals.ReprPlain(src), err)
 		}
 		fm.ports[dst] = fileRedirPort(op.mode, f, true)
 	case vals.File:
@@ -601,7 +590,7 @@ func evalForFd(fm *Frame, op valuesOp, closeOK bool, what string) (int, error) {
 		valid = "fd name or number or '-'"
 	}
 	return -1, fm.errorp(op, errs.BadValue{
-		What: what, Valid: valid, Actual: vals.Repr(value, vals.NoPretty)})
+		What: what, Valid: valid, Actual: vals.ReprPlain(value)})
 }
 
 type seqOp struct{ subops []effectOp }
