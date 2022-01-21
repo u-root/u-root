@@ -3,7 +3,7 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v4.5.0
+      - image: uroottest/test-image-amd64:v4.6.0
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -76,6 +76,7 @@ jobs:
 
   race:
     <<: *golang-template
+    resource_class: large
     environment:
       - CGO_ENABLED: 1
       - GO111MODULE: "off"

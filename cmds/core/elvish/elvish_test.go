@@ -1,4 +1,4 @@
-// Copyright 2021 the u-root Authors. All rights reserved
+// Copyright 2021-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,7 +6,7 @@ package main
 
 import (
 	"os"
-	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"src.elv.sh/pkg/prog"
@@ -15,73 +15,62 @@ import (
 func TestElvish(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
+		args   []string
 		status int
 	}{
 		{
 			name:   "success",
+			args:   []string{""},
 			status: 0,
 		},
 		{
 			name:   "failure",
-			status: 1,
+			args:   []string{"foo", "bar"},
+			status: 2,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if os.Getenv("TEST_ELVISH") == "1" {
-				sh = func(fds [3]*os.File, args []string, programs ...prog.Program) int {
-					return tt.status
-				}
-				main()
-				return
+			tmp := t.TempDir()
+			inFile, err := os.Create(filepath.Join(tmp, "inFile"))
+			if err != nil {
+				t.Errorf("Failed to create file: %v", err)
 			}
-			cmd := exec.Command(os.Args[0], "-test.run=TestElvish")
-			cmd.Env = append(cmd.Env, "TEST_ELVISH=1")
-			err := cmd.Run()
-			e, ok := err.(*exec.ExitError)
-			if ok && !e.Success() && tt.name == "success" {
-				t.Errorf("expected exit code 0, got %d", e.ExitCode())
+			outFile, err := os.Create(filepath.Join(tmp, "outFile"))
+			if err != nil {
+				t.Errorf("Failed to create file: %v", err)
 			}
-			if ok && e.Success() && tt.name == "failure" {
-				t.Error("expected exit code !0 but got 0")
+
+			if result := run(inFile, outFile, outFile, tt.args); result != tt.status {
+				t.Errorf("Want: %d, Got: %d", tt.status, result)
 			}
 		})
 	}
 }
 
-func TestShouldRun(t *testing.T) {
+func TestDaemonStub(t *testing.T) {
 	for _, tt := range []struct {
-		name   string
-		daemon bool
+		name    string
+		daemon  bool
+		wantErr error
 	}{
 		{
-			name:   "nodaemon",
-			daemon: false,
+			name:    "nodaemon",
+			daemon:  false,
+			wantErr: prog.ErrNotSuitable,
 		},
 		{
-			name:   "daemon",
-			daemon: true,
+			name:    "daemon",
+			daemon:  true,
+			wantErr: ErrNotSupported,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &prog.Flags{
-				Daemon: tt.daemon,
-			}
 			d := daemonStub{}
-			result := d.ShouldRun(f)
-			if tt.name == "nodaemon" && result {
-				t.Error("expected false, got true")
-			}
-			if tt.name == "daemon" && !result {
-				t.Error("expected true, got false")
+			if err := d.Run([3]*os.File{}, &prog.Flags{Daemon: tt.daemon}, []string{}); err != nil {
+				if err != tt.wantErr {
+					t.Errorf("Want: %q, Got: %v", tt.wantErr, err)
+				}
 			}
 		})
-	}
-}
-
-func TestRun(t *testing.T) {
-	d := daemonStub{}
-	err := d.Run([3]*os.File{}, &prog.Flags{}, []string{})
-	if err == nil {
-		t.Error("expected error, got nil")
 	}
 }

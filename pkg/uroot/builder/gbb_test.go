@@ -28,7 +28,7 @@ func TestGBBBuild(t *testing.T) {
 	}
 	af := initramfs.NewFiles()
 	var gbb GBBBuilder
-	if err := gbb.Build(ulogtest.Logger{t}, af, opts); err != nil {
+	if err := gbb.Build(ulogtest.Logger{TB: t}, af, opts); err != nil {
 		t.Fatalf("Build(%v, %v); %v != nil", af, opts, err)
 	}
 
