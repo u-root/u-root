@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
 
@@ -22,7 +20,8 @@ import (
 func init() {
 	addBuiltinFns(map[string]interface{}{
 		// Value output
-		"put": put,
+		"put":    put,
+		"repeat": repeat,
 
 		// Bytes input
 		"read-upto": readUpto,
@@ -55,13 +54,6 @@ func init() {
 		"to-lines":      toLines,
 		"to-json":       toJSON,
 		"to-terminated": toTerminated,
-
-		// File and pipe
-		"fopen":   fopen,
-		"fclose":  fclose,
-		"pipe":    pipe,
-		"prclose": prclose,
-		"pwclose": pwclose,
 	})
 }
 
@@ -85,6 +77,9 @@ func init() {
 // ▶ <closure 0xc4202607e0>
 // ```
 //
+// **Note**: It is almost never necessary to use `put (...)` - just write the
+// `...` part. For example, `put (eq a b)` is the equivalent to just `eq a b`.
+//
 // Etymology: Various languages, in particular
 // [C](https://manpages.debian.org/stretch/manpages-dev/puts.3.en.html) and
 // [Ruby](https://ruby-doc.org/core-2.2.2/IO.html#method-i-puts) as `puts`.
@@ -93,6 +88,36 @@ func put(fm *Frame, args ...interface{}) error {
 	out := fm.ValueOutput()
 	for _, a := range args {
 		err := out.Put(a)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//elvdoc:fn repeat
+//
+// ```elvish
+// repeat $n $value
+// ```
+//
+// Output `$value` for `$n` times. Example:
+//
+// ```elvish-transcript
+// ~> repeat 0 lorem
+// ~> repeat 4 NAN
+// ▶ NAN
+// ▶ NAN
+// ▶ NAN
+// ▶ NAN
+// ```
+//
+// Etymology: [Clojure](https://clojuredocs.org/clojure.core/repeat).
+
+func repeat(fm *Frame, n int, v interface{}) error {
+	out := fm.ValueOutput()
+	for i := 0; i < n; i++ {
+		err := out.Put(v)
 		if err != nil {
 			return err
 		}
@@ -227,10 +252,13 @@ func print(fm *Frame, opts printOpts, args ...interface{}) error {
 // printf $template $value...
 // ```
 //
-// Prints values to the byte stream according to a template.
+// Prints values to the byte stream according to a template. If you need to inject the output into
+// the value stream use this pattern: `printf .... | slurp`. That ensures that any newlines in the
+// output of `printf` do not cause its output to be broken into multiple values, thus eliminating
+// the newlines, which will occur if you do `put (printf ....)`.
 //
-// Like [`print`](#print), this command does not add an implicit newline; use
-// an explicit `"\n"` in the formatting template instead.
+// Like [`print`](#print), this command does not add an implicit newline; include an explicit `"\n"`
+// in the formatting template instead. For example, `printf "%.1f\n" (/ 10.0 3)`.
 //
 // See Go's [`fmt`](https://golang.org/pkg/fmt/#hdr-Printing) package for
 // details about the formatting verbs and the various flags that modify the
@@ -317,11 +345,11 @@ func (f formatter) Format(state fmt.State, r rune) {
 		writeFmt(state, 's', vals.ToString(wrapped))
 	case 'q':
 		// TODO: Support using the precision flag to specify indentation.
-		writeFmt(state, 's', vals.Repr(wrapped, vals.NoPretty))
+		writeFmt(state, 's', vals.ReprPlain(wrapped))
 	case 'v':
 		var s string
 		if state.Flag('#') {
-			s = vals.Repr(wrapped, vals.NoPretty)
+			s = vals.ReprPlain(wrapped)
 		} else {
 			s = vals.ToString(wrapped)
 		}
@@ -475,7 +503,7 @@ func repr(fm *Frame, args ...interface{}) error {
 				return err
 			}
 		}
-		_, err := out.WriteString(vals.Repr(arg, vals.NoPretty))
+		_, err := out.WriteString(vals.ReprPlain(arg))
 		if err != nil {
 			return err
 		}
@@ -499,10 +527,10 @@ func repr(fm *Frame, args ...interface{}) error {
 // Example:
 //
 // ```elvish-transcript
-// ~> e = ?(fail lorem-ipsum)
+// ~> var e = ?(fail lorem-ipsum)
 // ~> show $e
 // Exception: lorem-ipsum
-// [tty 3], line 1: e = ?(fail lorem-ipsum)
+// [tty 3], line 1: var e = ?(fail lorem-ipsum)
 // ```
 
 func show(fm *Frame, v diag.Shower) error {
@@ -606,7 +634,7 @@ func (blackholeWriter) Write(p []byte) (int, error) { return len(p), nil }
 // [`File::Slurp`](http://search.cpan.org/~uri/File-Slurp-9999.19/lib/File/Slurp.pm).
 
 func slurp(fm *Frame) (string, error) {
-	b, err := ioutil.ReadAll(fm.InputFile())
+	b, err := io.ReadAll(fm.InputFile())
 	return string(b), err
 }
 
@@ -725,7 +753,7 @@ func fromJSONInterface(v interface{}) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			vec = vec.Cons(converted)
+			vec = vec.Conj(converted)
 		}
 		return vec, nil
 	case map[string]interface{}:
@@ -796,11 +824,11 @@ func fromTerminated(fm *Frame, terminator string) error {
 //elvdoc:fn to-lines
 //
 // ```elvish
-// to-lines $input?
+// to-lines $inputs?
 // ```
 //
-// Writes each value input to a separate line in the byte output. Byte input is
-// ignored.
+// Writes each [value input](#value-inputs) to a separate line in the byte
+// output. Byte input is ignored.
 //
 // ```elvish-transcript
 // ~> put a b | to-lines
@@ -833,12 +861,14 @@ func toLines(fm *Frame, inputs Inputs) error {
 //elvdoc:fn to-terminated
 //
 // ```elvish
-// to-terminated $terminator $input?
+// to-terminated $terminator $inputs?
 // ```
 //
-// Writes each value input to the byte output with the specified terminator character. Byte input is
-// ignored.  This behavior is useful, for example, when feeding output into a program that accepts
-// NUL terminated lines to avoid ambiguities if the values contains newline characters.
+// Writes each [value input](#value-inputs) to the byte output with the
+// specified terminator character. Byte input is ignored. This behavior is
+// useful, for example, when feeding output into a program that accepts NUL
+// terminated lines to avoid ambiguities if the values contains newline
+// characters.
 //
 // The `$terminator` must be a single ASCII character such as `"\x00"` (NUL).
 //
@@ -897,122 +927,4 @@ func toJSON(fm *Frame, inputs Inputs) error {
 		errEncode = encoder.Encode(v)
 	})
 	return errEncode
-}
-
-//elvdoc:fn fopen
-//
-// ```elvish
-// fopen $filename
-// ```
-//
-// Open a file. Currently, `fopen` only supports opening a file for reading. File
-// must be closed with `fclose` explicitly. Example:
-//
-// ```elvish-transcript
-// ~> cat a.txt
-// This is
-// a file.
-// ~> f = (fopen a.txt)
-// ~> cat < $f
-// This is
-// a file.
-// ~> fclose $f
-// ```
-//
-// This function is deprecated; use [file:open](./file.html#open) instead.
-//
-// @cf fclose
-
-func fopen(name string) (vals.File, error) {
-	// TODO support opening files for writing etc as well.
-	return os.Open(name)
-}
-
-//elvdoc:fn fclose
-//
-// ```elvish
-// fclose $file
-// ```
-//
-// Close a file opened with `fopen`.
-//
-// This function is deprecated; use [file:close](./file.html#close) instead.
-//
-// @cf fopen
-
-func fclose(f vals.File) error {
-	return f.Close()
-}
-
-//elvdoc:fn pipe
-//
-// ```elvish
-// pipe
-// ```
-//
-// Create a new Unix pipe that can be used in redirections.
-//
-// A pipe contains both the read FD and the write FD. When redirecting command
-// input to a pipe with `<`, the read FD is used. When redirecting command output
-// to a pipe with `>`, the write FD is used. It is not supported to redirect both
-// input and output with `<>` to a pipe.
-//
-// Pipes have an OS-dependent buffer, so writing to a pipe without an active reader
-// does not necessarily block. Pipes **must** be explicitly closed with `prclose`
-// and `pwclose`.
-//
-// Putting values into pipes will cause those values to be discarded.
-//
-// Examples (assuming the pipe has a large enough buffer):
-//
-// ```elvish-transcript
-// ~> p = (pipe)
-// ~> echo 'lorem ipsum' > $p
-// ~> head -n1 < $p
-// lorem ipsum
-// ~> put 'lorem ipsum' > $p
-// ~> head -n1 < $p
-// # blocks
-// # $p should be closed with prclose and pwclose afterwards
-// ```
-//
-// This function is deprecated; use [file:pipe](./file.html#pipe) instead.
-//
-// @cf prclose pwclose
-
-func pipe() (vals.Pipe, error) {
-	r, w, err := os.Pipe()
-	return vals.NewPipe(r, w), err
-}
-
-//elvdoc:fn prclose
-//
-// ```elvish
-// prclose $pipe
-// ```
-//
-// Close the read end of a pipe.
-//
-// This function is deprecated; use [file:prclose](./file.html#prclose) instead.
-//
-// @cf pwclose pipe
-
-func prclose(p vals.Pipe) error {
-	return p.ReadEnd.Close()
-}
-
-//elvdoc:fn pwclose
-//
-// ```elvish
-// pwclose $pipe
-// ```
-//
-// Close the write end of a pipe.
-//
-// This function is deprecated; use [file:pwclose](./file.html#pwclose) instead.
-//
-// @cf prclose pipe
-
-func pwclose(p vals.Pipe) error {
-	return p.WriteEnd.Close()
 }

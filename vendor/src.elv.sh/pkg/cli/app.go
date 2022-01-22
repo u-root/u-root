@@ -4,12 +4,14 @@ package cli
 import (
 	"io"
 	"os"
+	"sort"
 	"sync"
 	"syscall"
 
 	"src.elv.sh/pkg/cli/term"
 	"src.elv.sh/pkg/cli/tk"
 	"src.elv.sh/pkg/sys"
+	"src.elv.sh/pkg/ui"
 )
 
 // App represents a CLI app.
@@ -22,14 +24,22 @@ type App interface {
 	MutateState(f func(*State))
 	// CopyState returns a copy of the a state.
 	CopyState() State
-	// CodeArea returns the codearea widget of the app.
-	CodeArea() tk.CodeArea
-	// SetAddon sets the current addon to the given widget. If there is an
-	// existing addon, it is closed first. If the existing addon implements
-	// interface{ Close(bool) }, the Close method is called with the accept
-	// argument. To close the current addon without setting a new one, call
-	// SetAddon(nil, accept).
-	SetAddon(w tk.Widget, accept bool)
+
+	// PushAddon pushes a widget to the addon stack.
+	PushAddon(w tk.Widget)
+	// PopAddon pops the last widget from the addon stack. If the widget
+	// implements interface{ Dismiss() }, the Dismiss method is called
+	// first. This method does nothing if the addon stack is empty.
+	PopAddon()
+
+	// ActiveWidget returns the currently active widget. If the addon stack is
+	// non-empty, it returns the last addon. Otherwise it returns the main code
+	// area widget.
+	ActiveWidget() tk.Widget
+	// FocusedWidget returns the currently focused widget. It is searched like
+	// ActiveWidget, but skips widgets that implement interface{ Focus() bool }
+	// and return false when .Focus() is called.
+	FocusedWidget() tk.Widget
 
 	// CommitEOF causes the main loop to exit with EOF. If this method is called
 	// when an event is being handled, the main loop will exit after the handler
@@ -47,7 +57,7 @@ type App interface {
 	// regardless of whether the App is active or not.
 	RedrawFull()
 	// Notify adds a note and requests a redraw.
-	Notify(note string)
+	Notify(note ui.Text)
 }
 
 type app struct {
@@ -73,14 +83,10 @@ type app struct {
 // State represents mutable state of an App.
 type State struct {
 	// Notes that have been added since the last redraw.
-	Notes []string
-	// An addon widget. When non-nil, it is shown under the codearea widget and
-	// terminal events are handled by it.
-	//
-	// The cursor is placed on the addon by default. If the addon widget
-	// implements interface{ Focus() bool }, the Focus method is called to
-	// determine that instead.
-	Addon tk.Widget
+	Notes []ui.Text
+	// The addon stack. All widgets are shown under the codearea widget. The
+	// last widget handles terminal events.
+	Addons []tk.Widget
 }
 
 // NewApp creates a new App from the given specification.
@@ -148,24 +154,53 @@ func (a *app) MutateState(f func(*State)) {
 func (a *app) CopyState() State {
 	a.StateMutex.RLock()
 	defer a.StateMutex.RUnlock()
-	return a.State
+	return State{
+		append([]ui.Text(nil), a.State.Notes...),
+		append([]tk.Widget(nil), a.State.Addons...),
+	}
 }
 
-func (a *app) CodeArea() tk.CodeArea {
+type dismisser interface {
+	Dismiss()
+}
+
+func (a *app) PushAddon(w tk.Widget) {
+	a.StateMutex.Lock()
+	defer a.StateMutex.Unlock()
+	a.State.Addons = append(a.State.Addons, w)
+}
+
+func (a *app) PopAddon() {
+	a.StateMutex.Lock()
+	defer a.StateMutex.Unlock()
+	if len(a.State.Addons) == 0 {
+		return
+	}
+	if d, ok := a.State.Addons[len(a.State.Addons)-1].(dismisser); ok {
+		d.Dismiss()
+	}
+	a.State.Addons = a.State.Addons[:len(a.State.Addons)-1]
+}
+
+func (a *app) ActiveWidget() tk.Widget {
+	a.StateMutex.Lock()
+	defer a.StateMutex.Unlock()
+	if len(a.State.Addons) > 0 {
+		return a.State.Addons[len(a.State.Addons)-1]
+	}
 	return a.codeArea
 }
 
-type closer interface {
-	Close(bool)
-}
-
-func (a *app) SetAddon(w tk.Widget, accept bool) {
+func (a *app) FocusedWidget() tk.Widget {
 	a.StateMutex.Lock()
 	defer a.StateMutex.Unlock()
-	if c, ok := a.State.Addon.(closer); ok {
-		c.Close(accept)
+	addons := a.State.Addons
+	for i := len(addons) - 1; i >= 0; i-- {
+		if hasFocus(addons[i]) {
+			return addons[i]
+		}
 	}
-	a.State.Addon = w
+	return a.codeArea
 }
 
 func (a *app) resetAllStates() {
@@ -187,12 +222,7 @@ func (a *app) handle(e event) {
 			a.RedrawFull()
 		}
 	case term.Event:
-		var target tk.Widget
-		if listing := a.CopyState().Addon; listing != nil {
-			target = listing
-		} else {
-			target = a.codeArea
-		}
+		target := a.ActiveWidget()
 		handled := target.Handle(e)
 		if !handled {
 			a.GlobalBindings.Handle(target, e)
@@ -216,11 +246,12 @@ func (a *app) redraw(flag redrawFlag) {
 		height = maxHeight
 	}
 
-	var notes []string
-	var addon tk.Renderer
+	var notes []ui.Text
+	var addons []tk.Widget
 	a.MutateState(func(s *State) {
-		notes, addon = s.Notes, s.Addon
+		notes = s.Notes
 		s.Notes = nil
+		addons = append([]tk.Widget(nil), s.Addons...)
 	})
 
 	bufNotes := renderNotes(notes, width)
@@ -230,7 +261,7 @@ func (a *app) redraw(flag redrawFlag) {
 		if hideRPrompt {
 			a.codeArea.MutateState(func(s *tk.CodeAreaState) { s.HideRPrompt = true })
 		}
-		bufMain := renderApp(a.codeArea, nil /* addon */, width, height)
+		bufMain := renderApp([]tk.Widget{a.codeArea /* no addon */}, width, height)
 		if hideRPrompt {
 			a.codeArea.MutateState(func(s *tk.CodeAreaState) { s.HideRPrompt = false })
 		}
@@ -240,14 +271,14 @@ func (a *app) redraw(flag redrawFlag) {
 		a.TTY.UpdateBuffer(bufNotes, bufMain, flag&fullRedraw != 0)
 		a.TTY.ResetBuffer()
 	} else {
-		bufMain := renderApp(a.codeArea, addon, width, height)
+		bufMain := renderApp(append([]tk.Widget{a.codeArea}, addons...), width, height)
 		a.TTY.UpdateBuffer(bufNotes, bufMain, flag&fullRedraw != 0)
 	}
 }
 
 // Renders notes. This does not respect height so that overflow notes end up in
 // the scrollback buffer.
-func renderNotes(notes []string, width int) *term.Buffer {
+func renderNotes(notes []ui.Text, width int) *term.Buffer {
 	if len(notes) == 0 {
 		return nil
 	}
@@ -256,27 +287,106 @@ func renderNotes(notes []string, width int) *term.Buffer {
 		if i > 0 {
 			bb.Newline()
 		}
-		bb.Write(note)
+		bb.WriteStyled(note)
 	}
 	return bb.Buffer()
 }
 
-type focuser interface {
-	Focus() bool
-}
-
 // Renders the codearea, and uses the rest of the height for the listing.
-func renderApp(codeArea, addon tk.Renderer, width, height int) *term.Buffer {
-	buf := codeArea.Render(width, height)
-	if addon != nil && len(buf.Lines) < height {
-		bufListing := addon.Render(width, height-len(buf.Lines))
-		focus := true
-		if focuser, ok := addon.(focuser); ok {
-			focus = focuser.Focus()
+func renderApp(widgets []tk.Widget, width, height int) *term.Buffer {
+	heights, focus := distributeHeight(widgets, width, height)
+	var buf *term.Buffer
+	for i, w := range widgets {
+		if heights[i] == 0 {
+			continue
 		}
-		buf.Extend(bufListing, focus)
+		buf2 := w.Render(width, heights[i])
+		if buf == nil {
+			buf = buf2
+		} else {
+			buf.Extend(buf2, i == focus)
+		}
 	}
 	return buf
+}
+
+// Distributes the height among all the widgets. Returns the height for each
+// widget, and the index of the widget currently focused.
+func distributeHeight(widgets []tk.Widget, width, height int) ([]int, int) {
+	var focus int
+	for i, w := range widgets {
+		if hasFocus(w) {
+			focus = i
+		}
+	}
+	n := len(widgets)
+	heights := make([]int, n)
+	if height <= n {
+		// Not enough (or just enough) height to render every widget with a
+		// height of 1.
+		remain := height
+		// Start from the focused widget, and extend downwards as much as
+		// possible.
+		for i := focus; i < n && remain > 0; i++ {
+			heights[i] = 1
+			remain--
+		}
+		// If there is still space remaining, start from the focused widget
+		// again, and extend upwards as much as possible.
+		for i := focus - 1; i >= 0 && remain > 0; i-- {
+			heights[i] = 1
+			remain--
+		}
+		return heights, focus
+	}
+
+	maxHeights := make([]int, n)
+	for i, w := range widgets {
+		maxHeights[i] = w.MaxHeight(width, height)
+	}
+
+	// The algorithm below achieves the following goals:
+	//
+	// 1. If maxHeights[u] > maxHeights[v], heights[u] >= heights[v];
+	//
+	// 2. While achieving goal 1, have as many widgets u s.t. heights[u] ==
+	//    maxHeights[u].
+	//
+	// This is done by allocating the height among the widgets following an
+	// non-decreasing order of maxHeights. At each step:
+	//
+	// - If it's possible to allocate maxHeights[u] to all remaining widgets,
+	//   then allocate maxHeights[u] to widget u;
+	//
+	// - If not, allocate the remaining budget evenly - rounding down at each
+	//   step, so the widgets with smaller maxHeights gets smaller heights.
+
+	indices := make([]int, n)
+	for i := range indices {
+		indices[i] = i
+	}
+	sort.Slice(indices, func(i, j int) bool {
+		return maxHeights[indices[i]] < maxHeights[indices[j]]
+	})
+
+	remain := height
+	for rank, idx := range indices {
+		if remain >= maxHeights[idx] {
+			heights[idx] = maxHeights[idx]
+		} else {
+			heights[idx] = remain / (n - rank)
+		}
+		remain -= heights[idx]
+	}
+
+	return heights, focus
+}
+
+func hasFocus(w interface{}) bool {
+	if f, ok := w.(interface{ Focus() bool }); ok {
+		return f.Focus()
+	}
+	return true
 }
 
 func (a *app) ReadCode() (string, error) {
@@ -382,7 +492,7 @@ func (a *app) CommitCode() {
 	a.loop.Return(code, nil)
 }
 
-func (a *app) Notify(note string) {
+func (a *app) Notify(note ui.Text) {
 	a.MutateState(func(s *State) { s.Notes = append(s.Notes, note) })
 	a.Redraw()
 }

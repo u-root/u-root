@@ -26,6 +26,7 @@ import (
 	"golang.org/x/tools/go/gcexportdata"
 	"golang.org/x/tools/internal/gocommand"
 	"golang.org/x/tools/internal/packagesinternal"
+	"golang.org/x/tools/internal/typeparams"
 	"golang.org/x/tools/internal/typesinternal"
 )
 
@@ -45,7 +46,7 @@ const (
 	// NeedName adds Name and PkgPath.
 	NeedName LoadMode = 1 << iota
 
-	// NeedFiles adds GoFiles and OtherFiles.
+	// NeedFiles adds GoFiles, OtherFiles, EmbedFiles, and EmbedPatterns.
 	NeedFiles
 
 	// NeedCompiledGoFiles adds CompiledGoFiles.
@@ -295,6 +296,14 @@ type Package struct {
 	// including assembly, C, C++, Fortran, Objective-C, SWIG, and so on.
 	OtherFiles []string
 
+	// EmbedFiles lists the absolute file paths of the package's files
+	// embedded with go:embed.
+	EmbedFiles []string
+
+	// EmbedPatterns lists the absolute file patterns of the package's
+	// files embedded with go:embed.
+	EmbedPatterns []string
+
 	// IgnoredFiles lists source files that are not part of the package
 	// using the current build configuration but that might be part of
 	// the package using other build configurations.
@@ -327,6 +336,9 @@ type Package struct {
 	// The NeedSyntax LoadMode bit populates this field for packages matching the patterns.
 	// If NeedDeps and NeedImports are also set, this field will also be populated
 	// for dependencies.
+	//
+	// Syntax is kept in the same order as CompiledGoFiles, with the caveat that nils are
+	// removed.  If parsing returned nil, Syntax may be shorter than CompiledGoFiles.
 	Syntax []*ast.File
 
 	// TypesInfo provides type information about the package's syntax trees.
@@ -427,6 +439,8 @@ type flatPackage struct {
 	GoFiles         []string          `json:",omitempty"`
 	CompiledGoFiles []string          `json:",omitempty"`
 	OtherFiles      []string          `json:",omitempty"`
+	EmbedFiles      []string          `json:",omitempty"`
+	EmbedPatterns   []string          `json:",omitempty"`
 	IgnoredFiles    []string          `json:",omitempty"`
 	ExportFile      string            `json:",omitempty"`
 	Imports         map[string]string `json:",omitempty"`
@@ -450,6 +464,8 @@ func (p *Package) MarshalJSON() ([]byte, error) {
 		GoFiles:         p.GoFiles,
 		CompiledGoFiles: p.CompiledGoFiles,
 		OtherFiles:      p.OtherFiles,
+		EmbedFiles:      p.EmbedFiles,
+		EmbedPatterns:   p.EmbedPatterns,
 		IgnoredFiles:    p.IgnoredFiles,
 		ExportFile:      p.ExportFile,
 	}
@@ -477,6 +493,8 @@ func (p *Package) UnmarshalJSON(b []byte) error {
 		GoFiles:         flat.GoFiles,
 		CompiledGoFiles: flat.CompiledGoFiles,
 		OtherFiles:      flat.OtherFiles,
+		EmbedFiles:      flat.EmbedFiles,
+		EmbedPatterns:   flat.EmbedPatterns,
 		ExportFile:      flat.ExportFile,
 	}
 	if len(flat.Imports) > 0 {
@@ -746,6 +764,8 @@ func (ld *loader) refine(roots []string, list ...*Package) ([]*Package, error) {
 		if ld.requestedMode&NeedFiles == 0 {
 			ld.pkgs[i].GoFiles = nil
 			ld.pkgs[i].OtherFiles = nil
+			ld.pkgs[i].EmbedFiles = nil
+			ld.pkgs[i].EmbedPatterns = nil
 			ld.pkgs[i].IgnoredFiles = nil
 		}
 		if ld.requestedMode&NeedCompiledGoFiles == 0 {
@@ -910,6 +930,7 @@ func (ld *loader) loadPackage(lpkg *loaderPackage) {
 		Scopes:     make(map[ast.Node]*types.Scope),
 		Selections: make(map[*ast.SelectorExpr]*types.Selection),
 	}
+	typeparams.InitInstanceInfo(lpkg.TypesInfo)
 	lpkg.TypesSizes = ld.sizes
 
 	importer := importerFunc(func(path string) (*types.Package, error) {

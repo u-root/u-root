@@ -1,11 +1,11 @@
-// Copyright 2021 the u-root Authors. All rights reserved
+// Copyright 2021-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"src.elv.sh/pkg/buildinfo"
@@ -13,19 +13,21 @@ import (
 	"src.elv.sh/pkg/shell"
 )
 
-// For testing purposes
-var sh = prog.Run
+var ErrNotSupported = errors.New("daemon mode is not supported in this build")
 
 func main() {
-	os.Exit(sh([3]*os.File{os.Stdin, os.Stdout, os.Stderr}, os.Args, buildinfo.Program, daemonStub{}, shell.Program{}))
+	os.Exit(run(os.Stdin, os.Stdout, os.Stderr, os.Args))
+}
+
+func run(stdin, stdout, stderr *os.File, args []string) int {
+	return prog.Run([3]*os.File{stdin, stdout, stderr}, args, prog.Composite(buildinfo.Program, daemonStub{}, shell.Program{ActivateDaemon: nil}))
 }
 
 type daemonStub struct{}
 
-func (daemonStub) ShouldRun(f *prog.Flags) bool {
-	return f.Daemon
-}
-
 func (daemonStub) Run(fds [3]*os.File, f *prog.Flags, args []string) error {
-	return fmt.Errorf("daemon mode not supported in this build")
+	if f.Daemon {
+		return ErrNotSupported
+	}
+	return prog.ErrNotSuitable
 }

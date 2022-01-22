@@ -4,7 +4,6 @@ import (
 	"sort"
 	"strings"
 
-	"src.elv.sh/pkg/eval"
 	"src.elv.sh/pkg/parse"
 )
 
@@ -130,8 +129,8 @@ func emitRegionsInForm(n *parse.Form, f func(parse.Node, regionKind, string)) {
 	// accepted).
 	head := sourceText(n.Head)
 	switch head {
-	case "var", "set":
-		emitRegionsInVarSet(n, f)
+	case "var", "set", "tmp":
+		emitRegionsInAssign(n, f)
 	case "if":
 		emitRegionsInIf(n, f)
 	case "for":
@@ -139,24 +138,12 @@ func emitRegionsInForm(n *parse.Form, f func(parse.Node, regionKind, string)) {
 	case "try":
 		emitRegionsInTry(n, f)
 	}
-	if !eval.IsBuiltinSpecial[head] {
-		for i, arg := range n.Args {
-			if parse.SourceText(arg) == "=" {
-				// Highlight left hands of legacy assignment form.
-				emitVariableRegion(n.Head, f)
-				for j := 0; j < i; j++ {
-					emitVariableRegion(n.Args[j], f)
-				}
-				return
-			}
-		}
-	}
 	if isBarewordCompound(n.Head) {
 		f(n.Head, semanticRegion, commandRegion)
 	}
 }
 
-func emitRegionsInVarSet(n *parse.Form, f func(parse.Node, regionKind, string)) {
+func emitRegionsInAssign(n *parse.Form, f func(parse.Node, regionKind, string)) {
 	// Highlight all LHS, and = as a keyword.
 	for _, arg := range n.Args {
 		if parse.SourceText(arg) == "=" {
@@ -176,7 +163,7 @@ func emitVariableRegion(n *parse.Compound, f func(parse.Node, regionKind, string
 }
 
 func isBarewordCompound(n *parse.Compound) bool {
-	return len(n.Indexings) == 1 && len(n.Indexings[0].Indicies) == 0 && n.Indexings[0].Head.Type == parse.Bareword
+	return len(n.Indexings) == 1 && len(n.Indexings[0].Indices) == 0 && n.Indexings[0].Head.Type == parse.Bareword
 }
 
 func emitRegionsInIf(n *parse.Form, f func(parse.Node, regionKind, string)) {
