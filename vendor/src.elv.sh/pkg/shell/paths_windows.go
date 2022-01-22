@@ -17,20 +17,20 @@ func newRCPath() (string, error) {
 	return filepath.Join(d, "elvish", "rc.elv"), nil
 }
 
-func newLibPaths() ([]string, string, error) {
+func newLibPaths() ([]string, error) {
 	local, err := localAppData()
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	localLib := filepath.Join(local, "elvish", "lib")
 
 	roaming, err := roamingAppData()
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	roamingLib := filepath.Join(roaming, "elvish", "lib")
 
-	return []string{roamingLib, localLib}, localLib, nil
+	return []string{roamingLib, localLib}, nil
 }
 
 func newDBPath() (string, error) {

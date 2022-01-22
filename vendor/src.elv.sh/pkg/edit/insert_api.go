@@ -5,7 +5,6 @@ import (
 	"src.elv.sh/pkg/eval"
 	"src.elv.sh/pkg/eval/vals"
 	"src.elv.sh/pkg/eval/vars"
-	"src.elv.sh/pkg/persistent/hashmap"
 )
 
 //elvdoc:var abbr
@@ -21,8 +20,8 @@ import (
 // Examples:
 //
 // ```elvish
-// edit:abbr['||'] = '| less'
-// edit:abbr['>dn'] = '2>/dev/null'
+// set edit:abbr['||'] = '| less'
+// set edit:abbr['>dn'] = '2>/dev/null'
 // ```
 //
 // With the definitions above, typing `||` anywhere expands to `| less`, and
@@ -55,7 +54,7 @@ import (
 // As an example, with the following configuration:
 //
 // ```elvish
-// edit:small-word-abbr['gcm'] = 'git checkout master'
+// set edit:small-word-abbr['gcm'] = 'git checkout master'
 // ```
 //
 // In the following scenarios, the `gcm` abbreviation is expanded:
@@ -82,7 +81,7 @@ import (
 // example, with the following configuration:
 //
 // ```elvish
-// edit:small-word-abbr['>dn'] = ' 2>/dev/null'
+// set edit:small-word-abbr['>dn'] = ' 2>/dev/null'
 // ```
 //
 // The abbreviation `>dn` starts with a punctuation character, and ends with an
@@ -93,11 +92,11 @@ import (
 // Some extra examples of small-word abbreviations:
 //
 // ```elvish
-// edit:small-word-abbr['gcp'] = 'git cherry-pick -x'
-// edit:small-word-abbr['ll'] = 'ls -ltr'
+// set edit:small-word-abbr['gcp'] = 'git cherry-pick -x'
+// set edit:small-word-abbr['ll'] = 'ls -ltr'
 // ```
 //
-// If both a [simple abbreviation](#editabbr) and a small-word abbreviation can
+// If both a [simple abbreviation](#edit:abbr) and a small-word abbreviation can
 // be expanded, the simple abbreviation has priority.
 //
 // @cf edit:abbr
@@ -121,18 +120,17 @@ func initInsertAPI(appSpec *cli.AppSpec, nt notifier, ev *eval.Evaler, nb eval.N
 		quotePaste.Set(!quotePaste.Get().(bool))
 	}
 
-	nb.Add("abbr", abbrVar)
-	nb.Add("small-word-abbr", SmallWordAbbrVar)
-	nb.AddGoFn("<edit>", "toggle-quote-paste", toggleQuotePaste)
-	nb.AddNs("insert", eval.NsBuilder{
-		"binding":     bindingVar,
-		"quote-paste": quotePaste,
-	}.Ns())
+	nb.AddVar("abbr", abbrVar)
+	nb.AddVar("small-word-abbr", SmallWordAbbrVar)
+	nb.AddGoFn("toggle-quote-paste", toggleQuotePaste)
+	nb.AddNs("insert", eval.BuildNs().
+		AddVar("binding", bindingVar).
+		AddVar("quote-paste", quotePaste))
 }
 
 func makeMapIterator(mv vars.PtrVar) func(func(a, b string)) {
 	return func(f func(a, b string)) {
-		for it := mv.GetRaw().(hashmap.Map).Iterator(); it.HasElem(); it.Next() {
+		for it := mv.GetRaw().(vals.Map).Iterator(); it.HasElem(); it.Next() {
 			k, v := it.Elem()
 			ks, kok := k.(string)
 			vs, vok := v.(string)

@@ -12,22 +12,38 @@ import (
 )
 
 const (
-	cmosRegPort  = 0x70
-	cmosDataPort = 0x71
+	regPort  = 0x70
+	dataPort = 0x71
 )
 
+type Chip struct {
+	memio.PortReadWriter
+}
+
 // Read reads a register reg from CMOS into data.
-func Read(reg memio.Uint8, data memio.UintN) error {
-	if err := memio.Out(cmosRegPort, &reg); err != nil {
+func (c *Chip) Read(reg memio.Uint8, data memio.UintN) error {
+	if err := c.PortReadWriter.Out(regPort, &reg); err != nil {
 		return err
 	}
-	return memio.In(cmosDataPort, data)
+	return c.PortReadWriter.In(dataPort, data)
 }
 
 // Write writes value data into CMOS register reg.
-func Write(reg memio.Uint8, data memio.UintN) error {
-	if err := memio.Out(cmosRegPort, &reg); err != nil {
+func (c *Chip) Write(reg memio.Uint8, data memio.UintN) error {
+	if err := c.PortReadWriter.Out(regPort, &reg); err != nil {
 		return err
 	}
-	return memio.Out(cmosDataPort, data)
+	return c.PortReadWriter.Out(dataPort, data)
+}
+
+// GetCMOS() returns the struct to call Read and Write functions for CMOS
+// associated with the correct functions of memio.In and memio.Out
+func New() (*Chip, error) {
+	pr, err := memio.NewPort()
+	if err != nil {
+		return nil, err
+	}
+	return &Chip{
+		PortReadWriter: pr,
+	}, nil
 }
