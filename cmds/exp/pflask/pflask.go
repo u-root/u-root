@@ -41,6 +41,7 @@ func ptsopen() (controlPTY, processTTY *os.File, ttyname string, err error) {
 		return
 	}
 
+	v("OpenFile %v %x\n", ttyname, os.O_RDWR|syscall.O_NOCTTY)
 	t, err := os.OpenFile(ttyname, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		return
@@ -281,6 +282,7 @@ var (
 	chdir   = flag.String("chdir", "/", "where to chrdir to in the chroot")
 	console = flag.String("console", "/dev/console", "where the console is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
+	debug   = flag.Bool("d", false, "Enable debug logs")
 	env     = flag.String("env", "", "other environment variables")
 	user    = flag.String("user", "root" /*user.User.Username*/, "User name")
 	root    = &mount{"", "/", "", "", syscall.MS_SLAVE | syscall.MS_REC, false, false}
@@ -294,12 +296,18 @@ var (
 		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true, false},
 		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true, false},
 	}
+	v = func(string, ...interface{}) {}
 )
 
 func main() {
 	flag.Parse()
+	if *debug {
+		v = log.Printf
+	}
+	v("pflask: Let's go!")
 
 	if len(flag.Args()) < 1 {
+		v("pflask: no args given")
 		os.Exit(1)
 	}
 
@@ -314,21 +322,36 @@ func main() {
 	a := os.Args
 	if a[len(a)-1][0] != '#' {
 		a = append(a, "#")
-		if syscall.Geteuid() != 0 {
+		euid := syscall.Geteuid()
+		v("Running as user %v\n", euid)
+		if euid != 0 {
 			a[len(a)-1] = "#u"
+		}
+		if *debug {
+			testc := exec.Command("/bbin/echo", "    ===== cmd test")
+			testc.Stdout = os.Stdout
+			testc.Run()
+			testc = exec.Command("/bbin/ls", a[0])
+			testc.Stdout = os.Stdout
+			testc.SysProcAttr = &syscall.SysProcAttr{Cloneflags: 0}
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUTS
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWIPC
+			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWPID
+			if err := testc.Run(); err != nil {
+				log.Printf("Could not run:\n   %v\n    %v\n", testc, err.Error())
+			}
 		}
 		// spawn ourselves with the right unsharing settings.
 		c := exec.Command(a[0], a[1:]...)
 		c.SysProcAttr = &syscall.SysProcAttr{Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWUTS | syscall.CLONE_NEWIPC | syscall.CLONE_NEWPID}
-		//		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
+		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 
-		if syscall.Geteuid() != 0 {
+		if euid != 0 {
 			c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
-			// Interesting. Won't build statically?
-			// c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
-			// c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
+			c.SysProcAttr.UidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getuid(), Size: 1}}
+			c.SysProcAttr.GidMappings = []syscall.SysProcIDMap{{ContainerID: 0, HostID: syscall.Getgid(), Size: 1}}
 		}
-
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
@@ -336,8 +359,16 @@ func main() {
 		//if err != nil {
 		//	log.Fatalf("Can't get termios on fd 1: %v", err)
 		//}
+		v("pflask: respawning...")
 		if err := c.Run(); err != nil {
-			log.Printf(err.Error())
+			log.Printf("Could not run:\n   %v\n    %v\n", c, err.Error())
+			if strings.Contains(err.Error(), "invalid argument") {
+				log.Println("Ensure that your kernel is configured for CGROUPs and NS.")
+				log.Println("The following are needed: IPC, PID, USER, UTS")
+			}
+			if strings.Contains(err.Error(), "device or resource busy") {
+				log.Println("No clue...")
+			}
 		}
 		//if err := termios.SetTermios(1, t); err != nil {
 		//	log.Printf("Can't reset termios on fd1: %v", err)
@@ -347,17 +378,21 @@ func main() {
 
 	unprivileged := a[len(a)-1] == "#u"
 
-	// unlike pflask, we require that you set a chroot.
+	// unlike the original pflask, we require that you set a chroot.
 	// If you make it /, strange things are bound to happen.
 	// if that is too limiting we'll have to change this.
 	if *chroot == "" {
-		log.Fatalf("you are required to set the chroot via --chroot")
+		log.Fatalf("you are required to set the chroot via -chroot")
+	}
+	if *chroot == "/" {
+		log.Println("[WARN]: chroot set to /: strange things are bound to happen")
 	}
 
 	a = flag.Args()
-	// log.Printf("greetings %v\n", a)
+	v("greetings %v\n", a)
 	a = a[:len(a)-1]
 
+	v("pflask: ptsopen")
 	controlPTY, processTTY, sname, err := ptsopen()
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -369,16 +404,21 @@ func main() {
 	// how else to do it. This may require we set some things up first,
 	// esp. the network. But, it's all fun and games until someone loses
 	// an eye.
+	v("MountAll")
 	MountAll(*chroot, unprivileged)
 
 	if !unprivileged {
+		v("copyNodes")
 		copyNodes(*chroot)
 	}
 
+	v("makePtmx")
 	makePtmx(*chroot)
 
+	v("makeSymlinks")
 	makeSymlinks(*chroot)
 
+	v("makeConsole")
 	makeConsole(*chroot, sname, unprivileged)
 
 	// umask(0022);
@@ -419,15 +459,20 @@ func main() {
 		for k, v := range e {
 			envs = append(envs, k+"="+v)
 		}
+		v("envs\n  %v\n", e)
+		v("-- chroot --")
 		if err := syscall.Chroot(*chroot); err != nil {
 			log.Fatal(err)
 		}
+		v("--- chdir --")
 		if err := syscall.Chdir(*chdir); err != nil {
 			log.Fatal(err)
 		}
+		v("---- exec --")
 		log.Fatal(syscall.Exec(a[0], a[1:], envs))
 	}
 
+	v("exec.Command")
 	c := exec.Command(a[0], a[1:]...)
 	c.Env = nil
 	for k, v := range e {

@@ -206,10 +206,10 @@ func (cp *compiler) arrayOps(ns []*parse.Array) []valuesOp {
 }
 
 func (cp *compiler) indexingOp(n *parse.Indexing) valuesOp {
-	if len(n.Indicies) == 0 {
+	if len(n.Indices) == 0 {
 		return cp.primaryOp(n.Head)
 	}
-	return &indexingOp{n.Range(), cp.primaryOp(n.Head), cp.arrayOps(n.Indicies)}
+	return &indexingOp{n.Range(), cp.primaryOp(n.Head), cp.arrayOps(n.Indices)}
 }
 
 func (cp *compiler) indexingOps(ns []*parse.Indexing) []valuesOp {
@@ -333,7 +333,7 @@ func (op listOp) exec(fm *Frame) ([]interface{}, Exception) {
 			return nil, exc
 		}
 		for _, moreValue := range moreValues {
-			list = list.Cons(moreValue)
+			list = list.Conj(moreValue)
 		}
 	}
 	return []interface{}{list}, nil
@@ -424,9 +424,9 @@ func (cp *compiler) lambda(n *parse.Primary) valuesOp {
 	for _, optName := range optNames {
 		local.add(optName)
 	}
-	scopeSizeInit := len(local.names)
+	scopeSizeInit := len(local.infos)
 	chunkOp := cp.chunkOp(n.Chunk)
-	newLocal := local.names[scopeSizeInit:]
+	newLocal := local.infos[scopeSizeInit:]
 	cp.popScope()
 
 	return &lambdaOp{n.Range(), argNames, restArg, optNames, optDefaultOps, newLocal, capture, chunkOp, cp.srcMeta}
@@ -438,7 +438,7 @@ type lambdaOp struct {
 	restArg       int
 	optNames      []string
 	optDefaultOps []valuesOp
-	newLocal      []string
+	newLocal      []staticVarInfo
 	capture       *staticUpNs
 	subop         effectOp
 	srcMeta       parse.Source
@@ -446,14 +446,15 @@ type lambdaOp struct {
 
 func (op *lambdaOp) exec(fm *Frame) ([]interface{}, Exception) {
 	capture := &Ns{
-		make([]vars.Var, len(op.capture.names)),
-		op.capture.names,
-		make([]bool, len(op.capture.names))}
-	for i := range op.capture.names {
-		if op.capture.local[i] {
-			capture.slots[i] = fm.local.slots[op.capture.index[i]]
+		make([]vars.Var, len(op.capture.infos)),
+		make([]staticVarInfo, len(op.capture.infos))}
+	for i, info := range op.capture.infos {
+		if info.local {
+			capture.slots[i] = fm.local.slots[info.index]
+			capture.infos[i] = fm.local.infos[info.index]
 		} else {
-			capture.slots[i] = fm.up.slots[op.capture.index[i]]
+			capture.slots[i] = fm.up.slots[info.index]
+			capture.infos[i] = fm.up.infos[info.index]
 		}
 	}
 	optDefaults := make([]interface{}, len(op.optDefaultOps))
@@ -464,7 +465,7 @@ func (op *lambdaOp) exec(fm *Frame) ([]interface{}, Exception) {
 		}
 		optDefaults[i] = defaultValue
 	}
-	return []interface{}{&closure{op.argNames, op.restArg, op.optNames, optDefaults, op.subop, op.newLocal, capture, op.srcMeta, op.Range()}}, nil
+	return []interface{}{&Closure{op.argNames, op.restArg, op.optNames, optDefaults, op.srcMeta, op.Range(), op.subop, op.newLocal, capture}}, nil
 }
 
 type mapOp struct {

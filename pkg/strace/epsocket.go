@@ -27,6 +27,7 @@ import (
 // network node. Or, in the case of unix endpoints, it may represent a path.
 type Address string
 
+// FullAddress is the network address and port
 type FullAddress struct {
 	// Addr is the network address.
 	Addr Address

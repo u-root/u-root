@@ -26,13 +26,20 @@ type lvalue struct {
 	ends     []int
 }
 
-func (cp *compiler) parseCompoundLValues(ns []*parse.Compound) lvaluesGroup {
+type lvalueFlag uint
+
+const (
+	setLValue lvalueFlag = 1 << iota
+	newLValue
+)
+
+func (cp *compiler) parseCompoundLValues(ns []*parse.Compound, f lvalueFlag) lvaluesGroup {
 	g := lvaluesGroup{nil, -1}
 	for _, n := range ns {
 		if len(n.Indexings) != 1 {
 			cp.errorpf(n, "lvalue may not be composite expressions")
 		}
-		more := cp.parseIndexingLValue(n.Indexings[0])
+		more := cp.parseIndexingLValue(n.Indexings[0], f)
 		if more.rest == -1 {
 			g.lvalues = append(g.lvalues, more.lvalues...)
 		} else if g.rest != -1 {
@@ -45,13 +52,13 @@ func (cp *compiler) parseCompoundLValues(ns []*parse.Compound) lvaluesGroup {
 	return g
 }
 
-func (cp *compiler) parseIndexingLValue(n *parse.Indexing) lvaluesGroup {
+func (cp *compiler) parseIndexingLValue(n *parse.Indexing, f lvalueFlag) lvaluesGroup {
 	if n.Head.Type == parse.Braced {
 		// Braced list of lvalues may not have indices.
-		if len(n.Indicies) > 0 {
+		if len(n.Indices) > 0 {
 			cp.errorpf(n, "braced list may not have indices when used as lvalue")
 		}
-		return cp.parseCompoundLValues(n.Head.Braced)
+		return cp.parseCompoundLValues(n.Head.Braced, f)
 	}
 	// A basic lvalue.
 	if !parse.ValidLHSVariable(n.Head, true) {
@@ -59,33 +66,38 @@ func (cp *compiler) parseIndexingLValue(n *parse.Indexing) lvaluesGroup {
 	}
 	varUse := n.Head.Value
 	sigil, qname := SplitSigil(varUse)
+
 	var ref *varRef
-	if len(n.Indicies) == 0 {
-		ref = resolveVarRef(cp, qname, nil)
-		if ref == nil {
-			segs := SplitQNameSegs(qname)
-			if len(segs) == 1 {
-				// Unqualified name - implicit local
-				ref = &varRef{localScope, cp.thisScope().addInner(segs[0]), nil}
-			} else if len(segs) == 2 && (segs[0] == "local:" || segs[0] == ":") {
-				// Qualified local name
-				ref = &varRef{localScope, cp.thisScope().addInner(segs[1]), nil}
-			} else {
-				cp.errorpf(n, "cannot create variable $%s; new variables can only be created in the local scope", qname)
-			}
-		}
-	} else {
+	if f&setLValue != 0 {
 		ref = resolveVarRef(cp, qname, n)
-		if ref == nil {
+		if ref != nil && len(ref.subNames) == 0 && ref.info.readOnly {
+			cp.errorpf(n, "variable $%s is read-only", qname)
+		}
+	}
+	if ref == nil {
+		if f&newLValue == 0 {
 			cp.errorpf(n, "cannot find variable $%s", qname)
 		}
+		if len(n.Indices) > 0 {
+			cp.errorpf(n, "name for new variable must not have indices")
+		}
+		segs := SplitQNameSegs(qname)
+		if len(segs) == 1 {
+			// Unqualified name - implicit local
+			name := segs[0]
+			ref = &varRef{localScope,
+				staticVarInfo{name, false, false}, cp.thisScope().add(name), nil}
+		} else {
+			cp.errorpf(n, "cannot create variable $%s; new variables can only be created in the local scope", qname)
+		}
 	}
-	ends := make([]int, len(n.Indicies)+1)
+
+	ends := make([]int, len(n.Indices)+1)
 	ends[0] = n.Head.Range().To
-	for i, idx := range n.Indicies {
+	for i, idx := range n.Indices {
 		ends[i+1] = idx.Range().To
 	}
-	lv := lvalue{n.Range(), ref, cp.arrayOps(n.Indicies), ends}
+	lv := lvalue{n.Range(), ref, cp.arrayOps(n.Indices), ends}
 	restIndex := -1
 	if sigil == "@" {
 		restIndex = 0
@@ -96,8 +108,9 @@ func (cp *compiler) parseIndexingLValue(n *parse.Indexing) lvaluesGroup {
 
 type assignOp struct {
 	diag.Ranging
-	lhs lvaluesGroup
-	rhs valuesOp
+	lhs  lvaluesGroup
+	rhs  valuesOp
+	temp bool
 }
 
 func (op *assignOp) exec(fm *Frame) Exception {
@@ -105,7 +118,7 @@ func (op *assignOp) exec(fm *Frame) Exception {
 	for i, lvalue := range op.lhs.lvalues {
 		variable, err := derefLValue(fm, lvalue)
 		if err != nil {
-			return fm.errorp(op, err)
+			return fm.errorp(op.lhs.lvalues[i], err)
 		}
 		variables[i] = variable
 	}
@@ -115,15 +128,16 @@ func (op *assignOp) exec(fm *Frame) Exception {
 		return exc
 	}
 
-	if op.lhs.rest == -1 {
+	rest, temp := op.lhs.rest, op.temp
+	if rest == -1 {
 		if len(variables) != len(values) {
 			return fm.errorp(op, errs.ArityMismatch{What: "assignment right-hand-side",
 				ValidLow: len(variables), ValidHigh: len(variables), Actual: len(values)})
 		}
 		for i, variable := range variables {
-			err := variable.Set(values[i])
-			if err != nil {
-				return fm.errorp(op.lhs.lvalues[i], err)
+			exc := set(fm, op.lhs.lvalues[i], temp, variable, values[i])
+			if exc != nil {
+				return exc
 			}
 		}
 	} else {
@@ -131,24 +145,47 @@ func (op *assignOp) exec(fm *Frame) Exception {
 			return fm.errorp(op, errs.ArityMismatch{What: "assignment right-hand-side",
 				ValidLow: len(variables) - 1, ValidHigh: -1, Actual: len(values)})
 		}
-		rest := op.lhs.rest
 		for i := 0; i < rest; i++ {
-			err := variables[i].Set(values[i])
-			if err != nil {
-				return fm.errorp(op.lhs.lvalues[i], err)
+			exc := set(fm, op.lhs.lvalues[i], temp, variables[i], values[i])
+			if exc != nil {
+				return exc
 			}
 		}
 		restOff := len(values) - len(variables)
-		err := variables[rest].Set(vals.MakeList(values[rest : rest+restOff+1]...))
-		if err != nil {
-			return fm.errorp(op.lhs.lvalues[rest], err)
+		exc := set(fm, op.lhs.lvalues[rest], temp,
+			variables[rest], vals.MakeList(values[rest:rest+restOff+1]...))
+		if exc != nil {
+			return exc
 		}
 		for i := rest + 1; i < len(variables); i++ {
-			err := variables[i].Set(values[i+restOff])
-			if err != nil {
-				return fm.errorp(op.lhs.lvalues[i], err)
+			exc := set(fm, op.lhs.lvalues[i], temp, variables[i], values[i+restOff])
+			if exc != nil {
+				return exc
 			}
 		}
+	}
+	return nil
+}
+
+func set(fm *Frame, r diag.Ranger, temp bool, variable vars.Var, value interface{}) Exception {
+	if temp {
+		saved := variable.Get()
+		err := variable.Set(value)
+		if err != nil {
+			return fm.errorp(r, err)
+		}
+		fm.addDefer(func(fm *Frame) Exception {
+			err := variable.Set(saved)
+			if err != nil {
+				return fm.errorpf(r, "restore variable: %w", err)
+			}
+			return nil
+		})
+		return nil
+	}
+	err := variable.Set(value)
+	if err != nil {
+		return fm.errorp(r, err)
 	}
 	return nil
 }

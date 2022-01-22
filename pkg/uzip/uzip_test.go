@@ -6,6 +6,8 @@ package uzip
 
 import (
 	"bytes"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,24 +18,27 @@ func TestFromZip(t *testing.T) {
 
 	f := filepath.Join(tmpDir, "test.zip")
 	if err := ToZip("testdata/testFolder", f, ""); err != nil {
-		t.Fatalf(`ToZip("testdata/testFolder", %q, "") = %v, want nil`, f, err)
+		t.Fatalf(`ToZip("testdata/testFolder", %q, "") = %q, not nil`, f, err)
 	}
 
 	z, err := os.ReadFile(f)
 	if err != nil {
-		t.Fatalf(`os.ReadFile(%q) = %v, want nil`, f, err)
+		t.Fatalf(`os.ReadFile(%q) = %q, not nil`, f, err)
 	}
 	if len(z) == 0 {
-		t.Errorf("len(%v) == %d, want not 0", z, len(z))
+		t.Errorf("len(z) = 0 , want > 0")
+	}
+	if len(z) < 1 {
+		t.Errorf(`len(z) < 1, not > 0`)
 	}
 
 	out := filepath.Join(tmpDir, "unziped")
 	if err := os.MkdirAll(out, os.ModePerm); err != nil {
-		t.Fatalf(`os.MkdirAll(%q, %v)  = %v, want nil`, out, os.ModePerm, err)
+		t.Fatalf(`os.MkdirAll(%q, %v)  = %q, not nil`, out, os.ModePerm, err)
 	}
 
 	if err := FromZip(f, out); err != nil {
-		t.Fatalf(`FromZip(%q, %q) = %v, want nil`, f, out, err)
+		t.Fatalf(`FromZip(%q, %q) = %q, not nil`, f, out, err)
 	}
 
 	f1 := filepath.Join(out, "file1")
@@ -43,47 +48,121 @@ func TestFromZip(t *testing.T) {
 
 	f1Expected, err := os.ReadFile("testdata/testFolder/file1")
 	if err != nil {
-		t.Fatalf(`os.ReadFile("testdata/testFolder/file1") = _, %v, want nil`, err)
+		t.Fatalf(`os.ReadFile("testdata/testFolder/file1") = _, %q, not _, nil`, err)
 	}
 	f2Expected, err := os.ReadFile("testdata/testFolder/file2")
 	if err != nil {
-		t.Fatalf(`os.ReadFile("testdata/testFolder/file2") = _, %v, want nil`, err)
+		t.Fatalf(`os.ReadFile("testdata/testFolder/file2") = _, %q, not _, nil`, err)
 	}
 	f3Expected, err := os.ReadFile("testdata/testFolder/subFolder/file3")
 	if err != nil {
-		t.Fatalf(`os.ReadFile("testdata/testFolder/subFolder/file3") = _, %v, want nil`, err)
+		t.Fatalf(`os.ReadFile("testdata/testFolder/subFolder/file3") = _, %q, not _, nil`, err)
 	}
 	f4Expected, err := os.ReadFile("testdata/testFolder/subFolder/file4")
 	if err != nil {
-		t.Fatalf(`os.ReadFile("testdata/testFolder/subFolder/file4") = _, %v, want nil`, err)
+		t.Fatalf(`os.ReadFile("testdata/testFolder/subFolder/file4") = _, %q, not _, nil`, err)
 	}
 
-	if _, err := os.Stat(f1); err != nil {
-		t.Errorf(`os.Stat(%q) =_, %v, want nil`, f1, err)
+	var x []byte
+
+	x, err = ioutil.ReadFile(f1)
+	if err != nil {
+		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f1, err)
 	}
-	if _, err = os.Stat(f2); err != nil {
-		t.Errorf(`os.Stat(%q) = _, %v, want nil`, f2, err)
+	if !bytes.Equal(x, f1Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f1Expected[:30])
+		t.Errorf("file %q and file %q are not equal", f1, "testdata/testFolder/file1")
 	}
-	if _, err := os.Stat(f3); err != nil {
-		t.Errorf(`os.Stat(%q) = _, %v, want nil`, f3, err)
+	x, err = ioutil.ReadFile(f2)
+	if err != nil {
+		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f2, err)
 	}
-	if _, err := os.Stat(f4); err != nil {
-		t.Errorf(`os.Stat(%q) = _, %v, want nil`, f4, err)
+	if !bytes.Equal(x, f2Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f2Expected[:30])
+		t.Errorf("file %q and file %q are not equal", f2, "testdata/testFolder/file2")
 	}
 
-	if x, err := os.ReadFile(f1); err != nil || !bytes.Equal(x, f1Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f1, x, err, f1Expected)
+	x, err = ioutil.ReadFile(f3)
+	if err != nil {
+		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f3, err)
+	}
+	if !bytes.Equal(x, f3Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f3Expected[:30])
+		t.Errorf("file %q and file %q are not equal", f3, "testdata/testFolder/file3")
 	}
 
-	if x, err := os.ReadFile(f2); err != nil || !bytes.Equal(x, f2Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f2, x, err, f2Expected)
+	x, err = ioutil.ReadFile(f4)
+	if err != nil {
+		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f4, err)
 	}
-
-	if x, err := os.ReadFile(f3); err != nil || !bytes.Equal(x, f3Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f3, x, err, f3Expected)
+	if !bytes.Equal(x, f4Expected) {
+		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f4Expected[:30])
+		t.Errorf("file %q and file %q are not equal\n", f4, "testdata/testFolder/file4")
 	}
+}
 
-	if x, err := os.ReadFile(f4); err != nil || !bytes.Equal(x, f4Expected) {
-		t.Errorf(`os.ReadFile(%q) = %v, %v, want %v, nil`, f4, x, err, f4Expected)
+func TestFromZipNoValidFile(t *testing.T) {
+	f, err := ioutil.TempFile("", "testfile-")
+	if err != nil {
+		t.Errorf(`ioutil.TempFile("", "testfile-") = %q, not nil`, err)
+	}
+	defer f.Close()
+	if err := FromZip(f.Name(), "someDir"); err == nil {
+		t.Errorf(`FromZip(f.Name(), "someDir") = %q, not nil`, err)
+	}
+}
+
+func TestAppendZip(t *testing.T) {
+	_, err := os.Create("appendTest.zip")
+	if err != nil {
+		t.Errorf(`os.Create("appendTest.zip") = %q, not nil`, err)
+	}
+	defer os.Remove("appendTest.zip")
+
+	if err := AppendZip("testdata/testFolder", "appendTest.zip", "Test append zip"); err != nil {
+		t.Errorf(`AppendZip("testdata/testFolder", "appendTest.zip", "Test append zip") = %q, not nil`, err)
+	}
+}
+
+func TestAppendZipNoDir1(t *testing.T) {
+	if err := AppendZip("doesNotExist", "alsoNotExist", "Whythough"); err == nil {
+		t.Errorf(`AppendZip("doesNotExist", "alsoNotExist", "Whythough") = %q, not nil`, err)
+	}
+}
+
+func TestAppendZipNoDir2(t *testing.T) {
+	f, err := ioutil.TempFile("", "testfile")
+	if err != nil {
+		t.Errorf(`ioutil.TempFile("", "testfile") = _, %q, not _, nil`, err)
+	}
+	defer f.Close()
+	if err := AppendZip(f.Name(), f.Name(), "no comment"); err == nil {
+		t.Errorf(`AppendZip(f.Name(), f.Name(), "no comment") = %q, not nil`, err)
+	}
+}
+
+func TestComment(t *testing.T) {
+	comment, err := Comment("test.zip")
+	if err != nil {
+		t.Errorf(`Comment("test.zip") = %q, not nil`, err)
+	}
+	fmt.Println(comment)
+}
+
+func TestToZip(t *testing.T) {
+	if err := ToZip(".", "testfile.zip", "test comment"); err != nil {
+		t.Errorf(`ToZip(".", "testfile.zip", "test comment") = %q, not nil`, err)
+	}
+	defer os.Remove("testfile.zip")
+}
+
+func TestToZipInvalidDir(t *testing.T) {
+	f, err := ioutil.TempFile("", "testfile-")
+	if err != nil {
+		t.Errorf(`ioutil.TempFile("", "testfile-") = %q, not nil`, err)
+	}
+	defer f.Close()
+	if err := ToZip(f.Name(), "invalid", "no need"); err == nil {
+		t.Errorf(`ToZip(f.Name(), "invalid", "no need") = %q, not nil`, err)
 	}
 }

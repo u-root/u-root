@@ -105,3 +105,12 @@ CONFIG_ISCSI_TCP=y
 # NBD (Network Block Device) support: will automatically re-read partitions when
 # iSCSI disk is mounted.
 CONFIG_BLK_DEV_NBD=y
+
+# Add ipmi protocol for integration tests of pkg/ipmi
+CONFIG_IPMI=y
+CONFIG_IPMI_DEVICE_INTERFACE=y
+CONFIG_IPMI_WATCHDOG=y
+CONFIG_IPMI_SI=y
+
+# Add DMI/SMBIOS support
+CONFIG_DMI_SYSFS=y

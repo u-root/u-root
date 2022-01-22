@@ -5,13 +5,12 @@ import (
 
 	"src.elv.sh/pkg/cli"
 	"src.elv.sh/pkg/cli/histutil"
-	"src.elv.sh/pkg/cli/mode"
+	"src.elv.sh/pkg/cli/modes"
 	"src.elv.sh/pkg/cli/tk"
 	"src.elv.sh/pkg/edit/filter"
 	"src.elv.sh/pkg/eval"
 	"src.elv.sh/pkg/eval/vals"
 	"src.elv.sh/pkg/eval/vars"
-	"src.elv.sh/pkg/persistent/hashmap"
 	"src.elv.sh/pkg/store/storedefs"
 )
 
@@ -19,31 +18,27 @@ func initListings(ed *Editor, ev *eval.Evaler, st storedefs.Store, histStore his
 	bindingVar := newBindingVar(emptyBindingsMap)
 	app := ed.app
 	nb.AddNs("listing",
-		eval.NsBuilder{
-			"binding": bindingVar,
-		}.AddGoFns("<edit:listing>:", map[string]interface{}{
-			"accept":       func() { listingAccept(app) },
-			"accept-close": func() { listingAcceptClose(app) },
-			"up":           func() { listingUp(app) },
-			"down":         func() { listingDown(app) },
-			"up-cycle":     func() { listingUpCycle(app) },
-			"down-cycle":   func() { listingDownCycle(app) },
-			"page-up":      func() { listingPageUp(app) },
-			"page-down":    func() { listingPageDown(app) },
-			"start-custom": func(fm *eval.Frame, opts customListingOpts, items interface{}) {
-				listingStartCustom(ed, fm, opts, items)
-			},
-			/*
-				"toggle-filtering": cli.ListingToggleFiltering,
-			*/
-		}).Ns())
+		eval.BuildNsNamed("edit:listing").
+			AddVar("binding", bindingVar).
+			AddGoFns(map[string]interface{}{
+				"accept":     func() { listingAccept(app) },
+				"up":         func() { listingUp(app) },
+				"down":       func() { listingDown(app) },
+				"up-cycle":   func() { listingUpCycle(app) },
+				"down-cycle": func() { listingDownCycle(app) },
+				"page-up":    func() { listingPageUp(app) },
+				"page-down":  func() { listingPageDown(app) },
+				"start-custom": func(fm *eval.Frame, opts customListingOpts, items interface{}) {
+					listingStartCustom(ed, fm, opts, items)
+				},
+			}))
 
 	initHistlist(ed, ev, histStore, bindingVar, nb)
 	initLastcmd(ed, ev, histStore, bindingVar, nb)
 	initLocation(ed, ev, st, bindingVar, nb)
 }
 
-var filterSpec = mode.FilterSpec{
+var filterSpec = modes.FilterSpec{
 	Maker: func(f string) func(string) bool {
 		q, _ := filter.Compile(f)
 		if q == nil {
@@ -59,40 +54,40 @@ func initHistlist(ed *Editor, ev *eval.Evaler, histStore histutil.Store, commonB
 	bindings := newMapBindings(ed, ev, bindingVar, commonBindingVar)
 	dedup := newBoolVar(true)
 	nb.AddNs("histlist",
-		eval.NsBuilder{
-			"binding": bindingVar,
-		}.AddGoFns("<edit:histlist>", map[string]interface{}{
-			"start": func() {
-				w, err := mode.NewHistlist(ed.app, mode.HistlistSpec{
-					Bindings: bindings,
-					AllCmds:  histStore.AllCmds,
-					Dedup: func() bool {
-						return dedup.Get().(bool)
-					},
-					Filter: filterSpec,
-				})
-				startMode(ed.app, w, err)
-			},
-			"toggle-dedup": func() {
-				dedup.Set(!dedup.Get().(bool))
-				listingRefilter(ed.app)
-				ed.app.Redraw()
-			},
-		}).Ns())
+		eval.BuildNsNamed("edit:histlist").
+			AddVar("binding", bindingVar).
+			AddGoFns(map[string]interface{}{
+				"start": func() {
+					w, err := modes.NewHistlist(ed.app, modes.HistlistSpec{
+						Bindings: bindings,
+						AllCmds:  histStore.AllCmds,
+						Dedup: func() bool {
+							return dedup.Get().(bool)
+						},
+						Filter: filterSpec,
+					})
+					startMode(ed.app, w, err)
+				},
+				"toggle-dedup": func() {
+					dedup.Set(!dedup.Get().(bool))
+					listingRefilter(ed.app)
+					ed.app.Redraw()
+				},
+			}))
 }
 
 func initLastcmd(ed *Editor, ev *eval.Evaler, histStore histutil.Store, commonBindingVar vars.PtrVar, nb eval.NsBuilder) {
 	bindingVar := newBindingVar(emptyBindingsMap)
 	bindings := newMapBindings(ed, ev, bindingVar, commonBindingVar)
 	nb.AddNs("lastcmd",
-		eval.NsBuilder{
-			"binding": bindingVar,
-		}.AddGoFn("<edit:lastcmd>", "start", func() {
-			// TODO: Specify wordifier
-			w, err := mode.NewLastcmd(ed.app, mode.LastcmdSpec{
-				Bindings: bindings, Store: histStore})
-			startMode(ed.app, w, err)
-		}).Ns())
+		eval.BuildNsNamed("edit:lastcmd").
+			AddVar("binding", bindingVar).
+			AddGoFn("start", func() {
+				// TODO: Specify wordifier
+				w, err := modes.NewLastcmd(ed.app, modes.LastcmdSpec{
+					Bindings: bindings, Store: histStore})
+				startMode(ed.app, w, err)
+			}))
 }
 
 func initLocation(ed *Editor, ev *eval.Evaler, st storedefs.Store, commonBindingVar vars.PtrVar, nb eval.NsBuilder) {
@@ -102,35 +97,39 @@ func initLocation(ed *Editor, ev *eval.Evaler, st storedefs.Store, commonBinding
 	workspacesVar := newMapVar(vals.EmptyMap)
 
 	bindings := newMapBindings(ed, ev, bindingVar, commonBindingVar)
-	workspaceIterator := mode.LocationWSIterator(
+	workspaceIterator := modes.LocationWSIterator(
 		adaptToIterateStringPair(workspacesVar))
 
 	nb.AddNs("location",
-		eval.NsBuilder{
-			"binding":    bindingVar,
-			"hidden":     hiddenVar,
-			"pinned":     pinnedVar,
-			"workspaces": workspacesVar,
-		}.AddGoFn("<edit:location>", "start", func() {
-			w, err := mode.NewLocation(ed.app, mode.LocationSpec{
-				Bindings: bindings, Store: dirStore{ev, st},
-				IteratePinned:     adaptToIterateString(pinnedVar),
-				IterateHidden:     adaptToIterateString(hiddenVar),
-				IterateWorkspaces: workspaceIterator,
-				Filter:            filterSpec,
-			})
-			startMode(ed.app, w, err)
-		}).Ns())
+		eval.BuildNsNamed("edit:location").
+			AddVars(map[string]vars.Var{
+				"binding":    bindingVar,
+				"hidden":     hiddenVar,
+				"pinned":     pinnedVar,
+				"workspaces": workspacesVar,
+			}).
+			AddGoFn("start", func() {
+				w, err := modes.NewLocation(ed.app, modes.LocationSpec{
+					Bindings: bindings, Store: dirStore{ev, st},
+					IteratePinned:     adaptToIterateString(pinnedVar),
+					IterateHidden:     adaptToIterateString(hiddenVar),
+					IterateWorkspaces: workspaceIterator,
+					Filter:            filterSpec,
+				})
+				startMode(ed.app, w, err)
+			}))
 	ev.AddAfterChdir(func(string) {
 		wd, err := os.Getwd()
 		if err != nil {
 			// TODO(xiaq): Surface the error.
 			return
 		}
-		st.AddDir(wd, 1)
-		kind, root := workspaceIterator.Parse(wd)
-		if kind != "" {
-			st.AddDir(kind+wd[len(root):], 1)
+		if st != nil {
+			st.AddDir(wd, 1)
+			kind, root := workspaceIterator.Parse(wd)
+			if kind != "" {
+				st.AddDir(kind+wd[len(root):], 1)
+			}
 		}
 	})
 }
@@ -140,20 +139,9 @@ func initLocation(ed *Editor, ev *eval.Evaler, st storedefs.Store, commonBinding
 // Accepts the current selected listing item.
 
 func listingAccept(app cli.App) {
-	w, ok := app.CopyState().Addon.(tk.ComboBox)
-	if !ok {
-		return
+	if w, ok := activeComboBox(app); ok {
+		w.ListBox().Accept()
 	}
-	w.ListBox().Accept()
-}
-
-//elvdoc:fn listing:accept-close
-//
-// Accepts the current selected listing item and closes the listing.
-
-func listingAcceptClose(app cli.App) {
-	listingAccept(app)
-	closeMode(app)
 }
 
 //elvdoc:fn listing:up
@@ -207,19 +195,15 @@ func listingLeft(app cli.App) { listingSelect(app, tk.Left) }
 func listingRight(app cli.App) { listingSelect(app, tk.Right) }
 
 func listingSelect(app cli.App, f func(tk.ListBoxState) int) {
-	w, ok := app.CopyState().Addon.(tk.ComboBox)
-	if !ok {
-		return
+	if w, ok := activeComboBox(app); ok {
+		w.ListBox().Select(f)
 	}
-	w.ListBox().Select(f)
 }
 
 func listingRefilter(app cli.App) {
-	w, ok := app.CopyState().Addon.(tk.ComboBox)
-	if !ok {
-		return
+	if w, ok := activeComboBox(app); ok {
+		w.Refilter()
 	}
-	w.Refilter()
 }
 
 //elvdoc:var location:hidden
@@ -246,7 +230,7 @@ func adaptToIterateString(variable vars.Var) func(func(string)) {
 
 func adaptToIterateStringPair(variable vars.Var) func(func(string, string) bool) {
 	return func(f func(a, b string) bool) {
-		m := variable.Get().(hashmap.Map)
+		m := variable.Get().(vals.Map)
 		for it := m.Iterator(); it.HasElem(); it.Next() {
 			k, v := it.Elem()
 			ks, kok := k.(string)
@@ -281,10 +265,15 @@ func (d dirStore) Getwd() (string, error) {
 
 func startMode(app cli.App, w tk.Widget, err error) {
 	if w != nil {
-		app.SetAddon(w, false)
+		app.PushAddon(w)
 		app.Redraw()
 	}
 	if err != nil {
-		app.Notify(err.Error())
+		app.Notify(modes.ErrorText(err))
 	}
+}
+
+func activeComboBox(app cli.App) (tk.ComboBox, bool) {
+	w, ok := app.ActiveWidget().(tk.ComboBox)
+	return w, ok
 }

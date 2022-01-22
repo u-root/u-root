@@ -48,7 +48,7 @@ func gcovFilter(hdr *tar.Header) bool {
 // CollectKernelCoverage saves the kernel coverage report to a tar file.
 func CollectKernelCoverage() {
 	if err := collectKernelCoverage(kernelCoverageFile); err != nil {
-		log.Printf("Falied to collect kernel coverage: %v", err)
+		log.Printf("Failed to collect kernel coverage: %v", err)
 	}
 }
 

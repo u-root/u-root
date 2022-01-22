@@ -13,7 +13,7 @@ import (
 //elvdoc:var after-command
 //
 // A list of functions to call after each interactive command completes. There is one pre-defined
-// function used to populate the [`$edit:command-duration`](./edit.html#editcommand-duration)
+// function used to populate the [`$edit:command-duration`](./edit.html#edit:command-duration)
 // variable. Each function is called with a single [map](https://elv.sh/ref/language.html#map)
 // argument containing the following keys:
 //
@@ -32,7 +32,7 @@ import (
 //
 // Duration, in seconds, of the most recent interactive command. This can be useful in your prompt
 // to provide feedback on how long a command took to run. The initial value of this variable is the
-// time to evaluate your `~/.elvish/rc.elv` script before printing the first prompt.
+// time to evaluate your [`rc.elv`](command.html#rc-file) before printing the first prompt.
 //
 // @cf edit:after-command
 
@@ -40,10 +40,10 @@ func initRepl(ed *Editor, ev *eval.Evaler, nb eval.NsBuilder) {
 	var commandDuration float64
 	// TODO: Ensure that this variable can only be written from the Elvish code
 	// in elv_init.go.
-	nb.Add("command-duration", vars.FromPtr(&commandDuration))
+	nb.AddVar("command-duration", vars.FromPtr(&commandDuration))
 
 	afterCommandHook := newListVar(vals.EmptyList)
-	nb["after-command"] = afterCommandHook
+	nb.AddVar("after-command", afterCommandHook)
 	ed.AfterCommand = append(ed.AfterCommand,
 		func(src parse.Source, duration float64, err error) {
 			m := vals.MakeMap("src", src, "duration", duration, "error", err)
