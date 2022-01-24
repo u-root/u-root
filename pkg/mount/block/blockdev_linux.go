@@ -604,26 +604,6 @@ func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
 	return partitions
 }
 
-// filterUsingSymlink resolves the given symlink and filters out all block
-// devices which do not match the resolved symlink. The intended purpose is to
-// filter using a symlink like "/dev/disk/by-partlabel/UBUNTU".
-func (b BlockDevices) filterUsingSymlink(symlink string) (BlockDevices, error) {
-	newBlockDevices := make(BlockDevices, 0, 1)
-	devPath, err := filepath.EvalSymlinks(symlink)
-	if os.IsNotExist(err) {
-		// UUID does not exist so filter everything.
-		return newBlockDevices, nil
-	} else if err != nil {
-		return nil, err
-	}
-	for _, device := range b {
-		if filepath.Join("/dev", device.Name) == devPath {
-			newBlockDevices = append(newBlockDevices, device)
-		}
-	}
-	return newBlockDevices, nil
-}
-
 // parsePCIBlockList parses a string in the format vendor:device,vendor:device
 // and returns a list of PCI devices containing the vendor and device pairs to block.
 func parsePCIBlockList(blockList string) (pci.Devices, error) {
