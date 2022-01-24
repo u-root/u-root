@@ -31,6 +31,16 @@ var (
 
 	// Debug function to override for verbose logging.
 	Debug = func(string, ...interface{}) {}
+
+	// SystemPartitionGUID is the GUID of EFI system partitions
+	// EFI System partitions have GUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B
+	SystemPartitionGUID = gpt.Guid([...]byte{
+		0x28, 0x73, 0x2a, 0xc1,
+		0x1f, 0xf8,
+		0xd2, 0x11,
+		0xba, 0x4b,
+		0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
+	})
 )
 
 // BlockDev maps a device name to a BlockStat structure for a given block device
@@ -213,48 +223,6 @@ func (b *BlockDev) PCIInfo() (*pci.PCI, error) {
 	return pci.OnePCI(p)
 }
 
-// SystemPartitionGUID is the GUID of EFI system partitions
-// EFI System partitions have GUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B
-var SystemPartitionGUID = gpt.Guid([...]byte{
-	0x28, 0x73, 0x2a, 0xc1,
-	0x1f, 0xf8,
-	0xd2, 0x11,
-	0xba, 0x4b,
-	0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
-})
-
-// GetBlockDevices iterates over /sys/class/block entries and returns a list of
-// BlockDev objects, or an error if any
-func GetBlockDevices() (BlockDevices, error) {
-	var blockdevs []*BlockDev
-	var devnames []string
-
-	root := "/sys/class/block"
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-		if rel == "." {
-			return nil
-		}
-		devnames = append(devnames, rel)
-		dev, err := Device(rel)
-		if err != nil {
-			return err
-		}
-		blockdevs = append(blockdevs, dev)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return blockdevs, nil
-}
-
 func getFSUUID(devpath string) (string, error) {
 	file, err := os.Open(devpath)
 	if err != nil {
@@ -418,6 +386,79 @@ func tryXFS(file io.ReaderAt) (string, error) {
 // BlockDevices is a list of block devices.
 type BlockDevices []*BlockDev
 
+// GetBlockDevices iterates over /sys/class/block entries and returns a list of
+// BlockDev objects, or an error if any
+func GetBlockDevices() (BlockDevices, error) {
+	var blockdevs []*BlockDev
+	var devnames []string
+
+	root := "/sys/class/block"
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		devnames = append(devnames, rel)
+		dev, err := Device(rel)
+		if err != nil {
+			return err
+		}
+		blockdevs = append(blockdevs, dev)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return blockdevs, nil
+}
+
+// FilterName returns a list of BlockDev objects whose underlying
+// block device has a Name with the given Name
+func (b BlockDevices) FilterName(name string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
+		if device.Name == name {
+			partitions = append(partitions, device)
+		}
+	}
+	return partitions
+}
+
+// FilterNames filters block devices by the given list of device names (e.g.
+// /dev/sda1 sda2 /sys/class/block/sda3).
+func (b BlockDevices) FilterNames(names ...string) BlockDevices {
+	m := make(map[string]struct{})
+	for _, n := range names {
+		m[filepath.Base(n)] = struct{}{}
+	}
+
+	var devices BlockDevices
+	for _, device := range b {
+		if _, ok := m[device.Name]; ok {
+			devices = append(devices, device)
+		}
+	}
+	return devices
+}
+
+// FilterFSUUID returns a list of BlockDev objects whose underlying block
+// device has a filesystem with the given FSUUID.
+func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
+		if device.FsUUID == fsuuid {
+			partitions = append(partitions, device)
+		}
+	}
+	return partitions
+}
+
 // FilterZeroSize attempts to find block devices that have at least one block
 // of content.
 //
@@ -434,17 +475,24 @@ func (b BlockDevices) FilterZeroSize() BlockDevices {
 	return nb
 }
 
-// composePartName returns the partition name described by the parent devName
-// and partNo counting from 1. It is assumed that device names ending in a
-// number like nvme0n1 have partitions named like nvme0n1p1, nvme0n1p2, ...
-// and devices ending in a letter like sda have partitions named like
-//  sda1, sda2, ...
-func composePartName(devName string, partNo int) string {
-	r := []rune(devName[len(devName)-1:])
-	if unicode.IsDigit(r[0]) {
-		return fmt.Sprintf("%sp%d", devName, partNo)
+// FilterHavingPartitions returns BlockDevices with have the specified
+// partitions. (e.g. f(1, 2) {sda, sda1, sda2, sdb} -> {sda})
+func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
+	devices := make(BlockDevices, 0)
+	for _, device := range b {
+		hasParts := true
+		for _, part := range parts {
+			if _, err := os.Stat(filepath.Join("/sys/class/block",
+				composePartName(device.Name, part))); err != nil {
+				hasParts = false
+				break
+			}
+		}
+		if hasParts {
+			devices = append(devices, device)
+		}
 	}
-	return fmt.Sprintf("%s%d", devName, partNo)
+	return devices
 }
 
 // FilterPartID returns partitions with the given partition ID GUID.
@@ -487,26 +535,6 @@ func (b BlockDevices) FilterPartType(guid string) BlockDevices {
 	return b.FilterNames(names...)
 }
 
-// FilterHavingPartitions returns BlockDevices with have the specified
-// partitions. (e.g. f(1, 2) {sda, sda1, sda2, sdb} -> {sda})
-func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
-	devices := make(BlockDevices, 0)
-	for _, device := range b {
-		hasParts := true
-		for _, part := range parts {
-			if _, err := os.Stat(filepath.Join("/sys/class/block",
-				composePartName(device.Name, part))); err != nil {
-				hasParts = false
-				break
-			}
-		}
-		if hasParts {
-			devices = append(devices, device)
-		}
-	}
-	return devices
-}
-
 // FilterPartLabel returns a list of BlockDev objects whose underlying block
 // device has the given partition label. The name comparison is case-insensitive.
 func (b BlockDevices) FilterPartLabel(label string) BlockDevices {
@@ -526,95 +554,6 @@ func (b BlockDevices) FilterPartLabel(label string) BlockDevices {
 		}
 	}
 	return b.FilterNames(names...)
-}
-
-// FilterNames filters block devices by the given list of device names (e.g.
-// /dev/sda1 sda2 /sys/class/block/sda3).
-func (b BlockDevices) FilterNames(names ...string) BlockDevices {
-	m := make(map[string]struct{})
-	for _, n := range names {
-		m[filepath.Base(n)] = struct{}{}
-	}
-
-	var devices BlockDevices
-	for _, device := range b {
-		if _, ok := m[device.Name]; ok {
-			devices = append(devices, device)
-		}
-	}
-	return devices
-}
-
-// FilterFSUUID returns a list of BlockDev objects whose underlying block
-// device has a filesystem with the given FSUUID.
-func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
-	partitions := make(BlockDevices, 0)
-	for _, device := range b {
-		if device.FsUUID == fsuuid {
-			partitions = append(partitions, device)
-		}
-	}
-	return partitions
-}
-
-// filterUsingSymlink resolves the given symlink and filters out all block
-// devices which do not match the resolved symlink. The intended purpose is to
-// filter using a symlink like "/dev/disk/by-partlabel/UBUNTU".
-func (b BlockDevices) filterUsingSymlink(symlink string) (BlockDevices, error) {
-	newBlockDevices := make(BlockDevices, 0, 1)
-	devPath, err := filepath.EvalSymlinks(symlink)
-	if os.IsNotExist(err) {
-		// UUID does not exist so filter everything.
-		return newBlockDevices, nil
-	} else if err != nil {
-		return nil, err
-	}
-	for _, device := range b {
-		if filepath.Join("/dev", device.Name) == devPath {
-			newBlockDevices = append(newBlockDevices, device)
-		}
-	}
-	return newBlockDevices, nil
-}
-
-// FilterName returns a list of BlockDev objects whose underlying
-// block device has a Name with the given Name
-func (b BlockDevices) FilterName(name string) BlockDevices {
-	partitions := make(BlockDevices, 0)
-	for _, device := range b {
-		if device.Name == name {
-			partitions = append(partitions, device)
-		}
-	}
-	return partitions
-}
-
-// parsePCIBlockList parses a string in the format vendor:device,vendor:device
-// and returns a list of PCI devices containing the vendor and device pairs to block.
-func parsePCIBlockList(blockList string) (pci.Devices, error) {
-	pciList := pci.Devices{}
-	bL := strings.Split(blockList, ",")
-	for _, b := range bL {
-		p := strings.Split(b, ":")
-		if len(p) != 2 {
-			return nil, fmt.Errorf("BlockList needs to be of format vendor1:device1,vendor2:device2...! got %v", blockList)
-		}
-		// Check that values are hex and convert them to sysfs formats
-		// This accepts 0xABCD and turns it into 0xabcd
-		// abcd also turns into 0xabcd
-		v, err := strconv.ParseUint(strings.TrimPrefix(p[0], "0x"), 16, 16)
-		if err != nil {
-			return nil, fmt.Errorf("BlockList needs to contain a hex vendor ID, got %v, err %v", p[0], err)
-		}
-
-		d, err := strconv.ParseUint(strings.TrimPrefix(p[1], "0x"), 16, 16)
-		if err != nil {
-			return nil, fmt.Errorf("BlockList needs to contain a hex device ID, got %v, err %v", p[1], err)
-		}
-
-		pciList = append(pciList, &pci.PCI{Vendor: uint16(v), Device: uint16(d)})
-	}
-	return pciList, nil
 }
 
 // FilterBlockPCIString parses a string in the format vendor:device,vendor:device
@@ -663,6 +602,67 @@ func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
 		}
 	}
 	return partitions
+}
+
+// filterUsingSymlink resolves the given symlink and filters out all block
+// devices which do not match the resolved symlink. The intended purpose is to
+// filter using a symlink like "/dev/disk/by-partlabel/UBUNTU".
+func (b BlockDevices) filterUsingSymlink(symlink string) (BlockDevices, error) {
+	newBlockDevices := make(BlockDevices, 0, 1)
+	devPath, err := filepath.EvalSymlinks(symlink)
+	if os.IsNotExist(err) {
+		// UUID does not exist so filter everything.
+		return newBlockDevices, nil
+	} else if err != nil {
+		return nil, err
+	}
+	for _, device := range b {
+		if filepath.Join("/dev", device.Name) == devPath {
+			newBlockDevices = append(newBlockDevices, device)
+		}
+	}
+	return newBlockDevices, nil
+}
+
+// parsePCIBlockList parses a string in the format vendor:device,vendor:device
+// and returns a list of PCI devices containing the vendor and device pairs to block.
+func parsePCIBlockList(blockList string) (pci.Devices, error) {
+	pciList := pci.Devices{}
+	bL := strings.Split(blockList, ",")
+	for _, b := range bL {
+		p := strings.Split(b, ":")
+		if len(p) != 2 {
+			return nil, fmt.Errorf("BlockList needs to be of format vendor1:device1,vendor2:device2...! got %v", blockList)
+		}
+		// Check that values are hex and convert them to sysfs formats
+		// This accepts 0xABCD and turns it into 0xabcd
+		// abcd also turns into 0xabcd
+		v, err := strconv.ParseUint(strings.TrimPrefix(p[0], "0x"), 16, 16)
+		if err != nil {
+			return nil, fmt.Errorf("BlockList needs to contain a hex vendor ID, got %v, err %v", p[0], err)
+		}
+
+		d, err := strconv.ParseUint(strings.TrimPrefix(p[1], "0x"), 16, 16)
+		if err != nil {
+			return nil, fmt.Errorf("BlockList needs to contain a hex device ID, got %v, err %v", p[1], err)
+		}
+
+		pciList = append(pciList, &pci.PCI{Vendor: uint16(v), Device: uint16(d)})
+	}
+	return pciList, nil
+}
+
+// composePartName returns the partition name described by the parent devName
+// and partNo counting from 1. It is assumed that device names ending in a
+// number like nvme0n1 have partitions named like nvme0n1p1, nvme0n1p2, ...
+// and devices ending in a letter like sda have partitions named like
+//  sda1, sda2, ...
+func composePartName(devName string, partNo int) string {
+	r := []rune(devName[len(devName)-1:])
+	if unicode.IsDigit(r[0]) {
+		return fmt.Sprintf("%sp%d", devName, partNo)
+	}
+	return fmt.Sprintf("%s%d", devName, partNo)
 }
 
 // GetMountpointByDevice gets the mountpoint by given
