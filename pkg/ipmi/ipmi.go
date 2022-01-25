@@ -221,12 +221,38 @@ func (i *IPMI) GetDeviceID() (*DevID, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	buf := bytes.NewReader(data[1:])
 	mcInfo := DevID{}
 
-	if err := binary.Read(buf, binary.LittleEndian, &mcInfo); err != nil {
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.DeviceID); err != nil {
 		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.DeviceRevision); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.FwRev1); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.FwRev2); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.IpmiVersion); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.AdtlDeviceSupport); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.ManufacturerID); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.ProductID); err != nil {
+		return nil, err
+	}
+	// In some cases we have 11 bytes, in others we may have 15 bytes. Carefully parsing the struct is important here.
+	if buf.Len() > 0 {
+		if err := binary.Read(buf, binary.LittleEndian, &mcInfo.AuxFwRev); err != nil {
+			return nil, err
+		}
 	}
 
 	return &mcInfo, nil
