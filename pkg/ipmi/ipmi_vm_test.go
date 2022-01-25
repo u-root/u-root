@@ -5,6 +5,7 @@
 package ipmi
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -38,8 +39,12 @@ func TestWatchdogRunningQemu(t *testing.T) {
 	}
 	defer i.Close()
 
-	if _, err := i.WatchdogRunning(); err != nil {
-		t.Errorf(`i.WatchdogRunning() = nil, not %q`, err)
+	ret, err := i.WatchdogRunning()
+	if err != nil {
+		t.Errorf(`i.WatchdogRunning() = _, not %q`, err)
+	}
+	if !ret {
+		t.Errorf(`i.WatchdogRunning() = true, not %v`, ret)
 	}
 }
 func TestShutoffWatchdogQemu(t *testing.T) {
@@ -62,9 +67,39 @@ func TestGetDeviceIDQemu(t *testing.T) {
 	}
 	defer i.Close()
 
-	if _, err := i.GetDeviceID(); err != nil {
+	id, err := i.GetDeviceID()
+	if err != nil {
 		t.Errorf(`i.GetDeviceID() = nil, not %q`, err)
 	}
+	if id.DeviceID != 0x20 {
+		t.Errorf("DeviceID: %q, want: %q", id.DeviceID, 0x1)
+	}
+	if id.DeviceRevision != 0x0 {
+		t.Errorf("DeviceRevision: %q, want: %q", id.DeviceRevision, 0x0)
+	}
+	if id.FwRev1 != 0x0 {
+		t.Errorf("FwRev1: %q, want: %q", id.FwRev1, 0x0)
+	}
+	if id.FwRev2 != 0x0 {
+		t.Errorf("FwRev2: %q, want: %q", id.FwRev2, 0x0)
+	}
+	if id.IpmiVersion != 0x2 {
+		t.Errorf("IpmiVersion: %q, want: %q", id.IpmiVersion, 0x2)
+	}
+	/*
+		This field is differs on every call, I can't figure out why
+
+		if id.AdtlDeviceSupport != 0xa {
+			t.Errorf("AdtlDeviceSupport: %q, want: %q", id.AdtlDeviceSupport, 0xa)
+		}
+	*/
+	if !bytes.Equal(id.ManufacturerID[:], []byte{0x0, 0x0, 0x0}) {
+		t.Errorf("ManufacturerID: %q, want: %q", id.ManufacturerID, []byte{0x0, 0x0, 0x0})
+	}
+	if !bytes.Equal(id.ProductID[:], []byte{0x0, 0x0}) {
+		t.Errorf("ProductID: %q, want: %q", id.ProductID, []byte{0x0, 0x0})
+	}
+
 }
 func TestEnableSELQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
@@ -74,8 +109,12 @@ func TestEnableSELQemu(t *testing.T) {
 	}
 	defer i.Close()
 
-	if _, err := i.EnableSEL(); err != nil {
+	ret, err := i.EnableSEL()
+	if err != nil {
 		t.Errorf(`i.EnableSEL() = nil, not %q`, err)
+	}
+	if !ret {
+		t.Errorf(`i.EnableSEL() = true, not %v`, ret)
 	}
 }
 
@@ -87,9 +126,23 @@ func TestGetSELInfoQemu(t *testing.T) {
 	}
 	defer i.Close()
 
-	if _, err := i.GetSELInfo(); err != nil {
+	info, err := i.GetSELInfo()
+	if err != nil {
 		t.Errorf(`i.GetSELInfo() = nil, not %q`, err)
 	}
+	if info.Version != 0x51 {
+		t.Errorf(`Version = %q, not %q`, info.Version, 0x51)
+	}
+	if info.Entries != 0x0 {
+		t.Errorf(`Version = %q, not %q`, info.Entries, 0x0)
+	}
+	if info.FreeSpace != 0x800 {
+		t.Errorf(`Version = %q, not %q`, info.FreeSpace, 0x800)
+	}
+	if info.OpSupport != 0x2 {
+		t.Errorf(`Version = %q, not %q`, info.Version, 0x2)
+	}
+
 }
 func TestGetLanConfigQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
@@ -112,6 +165,7 @@ func TestRawCmdQemu(t *testing.T) {
 	}
 	defer i.Close()
 
+	// WatchdogRunning configuration
 	data := []byte{0x6, 0x1}
 	if _, err := i.RawCmd(data); err != nil {
 		t.Errorf(`i.RawCmd(data) = nil, not %q`, err)
