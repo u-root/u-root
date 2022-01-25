@@ -51,7 +51,7 @@ func TestVM(t *testing.T) {
 			},
 		},
 	}
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/mount"}, o)
+	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/mount/block"}, o)
 }
 
 func TestGPT(t *testing.T) {
