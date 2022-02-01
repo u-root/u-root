@@ -49,7 +49,7 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVarP(&o.syscall, "syscall", "", "file", "Select which syscall to use, kexecload for kexec_load syscall, and fileload for file load. Default: fileload")
+	flag.StringVarP(&o.syscall, "syscall", "", "file", "Select which syscall to use, kexecload for kexecload syscall, and fileload for file load. Default: fileload")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
@@ -66,6 +66,10 @@ func registerFlags() *options {
 func main() {
 	opts := registerFlags()
 	flag.Parse()
+
+	if opts.debug {
+		kexec.Debug = log.Printf
+	}
 
 	if (!opts.exec && flag.NArg() == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
@@ -94,16 +98,16 @@ func main() {
 
 	if opts.load {
 		kernelpath := flag.Arg(0)
-		mbkernel, err := os.Open(kernelpath)
+		kernel, err := os.Open(kernelpath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer mbkernel.Close()
+		defer kernel.Close()
 		var image boot.OSImage
-		if err := multiboot.Probe(mbkernel); err == nil {
+		if err := multiboot.Probe(kernel); err == nil {
 			image = &boot.MultibootImage{
 				Modules: multiboot.LazyOpenModules(opts.modules),
-				Kernel:  mbkernel,
+				Kernel:  kernel,
 				Cmdline: newCmdline,
 			}
 		} else {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"debug/elf"
 	"fmt"
-	"log"
 )
 
 func alignUpUint64(v, align uint64) uint64 {
@@ -40,7 +39,7 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 			entryVal -= section.Addr
 		}
 	}
-	log.Printf("entry section identified as: %v", entrySection)
+	Debug("entry section identified as: %v", entrySection)
 
 	/* Find memory footprint of relocatable objects  */
 	var bufAlign, bssAlign, bufsz, bsssz uint64 = 1, 1, 0, 0
@@ -71,7 +70,7 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 	if (bufsz & (bsssz - 1)) != 0 {
 		bssPad = bssAlign - (bufsz & (bssAlign - 1))
 	}
-	log.Printf("bssPad: %d", bssPad)
+	Debug("bssPad: %d", bssPad)
 
 	/* Allocate for relocatable objects. */
 	buf := make([]byte, bufsz)
@@ -88,7 +87,7 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 	}
 	kmem.Segments.Insert(NewSegment(buf, phyRange))
 
-	log.Printf("Added segment for relocatable objects at: %v", phyRange)
+	Debug("Added segment for relocatable objects at: %v", phyRange)
 
 	/* Update addresses for SHF_ALLOC sections. */
 	dataAddr := uint64(phyRange.Start)
@@ -158,7 +157,7 @@ func ElfRelSetSymbol(e *elf.File, name string) error {
 	if err != nil {
 		return fmt.Errorf("ElfRelFindSymbol(%v, %s): %v", e, name, err)
 	}
-	log.Printf("found symbol %s: %v", name, *sym)
+	Debug("found symbol %s: %v", name, *sym)
 
 	return nil
 }

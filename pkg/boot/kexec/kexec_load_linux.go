@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"syscall"
 	"unsafe"
 
@@ -89,7 +88,7 @@ func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
 // LoadBzImage loads the given kernel file as to-be-kexeced kernel with
 // the given ramfs file and cmdline string.
 func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
-	bzimage.Debug = log.Printf
+	bzimage.Debug = Debug
 
 	/* A collection of vars used for processing the kernel for kexec */
 
@@ -112,40 +111,40 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 
 	var regs32 Entry32Regs
 
-	log.Printf("Start LoadBzImage...")
-	log.Printf("Try decompressing kernel...")
+	Debug("Start LoadBzImage...")
+	Debug("Try decompressing kernel...")
 	kb, err := uio.ReadAll(util.TryGzipFilter(kernel))
 	if err != nil {
 		return err
 	}
-	log.Printf("Try parsing bzImage...")
+	Debug("Try parsing bzImage...")
 	if err := b.UnmarshalBinary(kb); err != nil {
 		return err
 	}
-	log.Printf("Done parsing bzImage.")
+	Debug("Done parsing bzImage.")
 
 	if len(b.KernelCode) < 1024 {
 		return fmt.Errorf("kernel code size smaller than 1024 bytes: %d", len(b.KernelCode))
 	}
 
 	// TODO(10000TB): add initramfs by a io.ReaderAt.
-	//log.Printf("Try adding initramfs...")
+	//Debug("Try adding initramfs...")
 	//if err := b.AddInitRAMFS(ramfs.Name()); err != nil {
 	//	return err
 	//}
 
-	log.Printf("Try get ELF from bzImage...")
+	Debug("Try get ELF from bzImage...")
 	kelf, err := b.ELF()
 	if err != nil {
 		return err
 	}
-	log.Printf("Done.")
+	Debug("Done.")
 	kernelEntry := uintptr(kelf.Entry)
-	log.Printf("kernelEntry: %v", kernelEntry)
+	Debug("kernelEntry: %v", kernelEntry)
 
 	// Prepare segments.
 	kmem = &Memory{}
-	log.Printf("Try parsing memory map...")
+	Debug("Try parsing memory map...")
 	// TODO(10000TB): refactor this call into initialization of
 	// kexec.Memory, as it does not depend on specific boot.
 	if err := kmem.ParseMemoryMap(); err != nil {
@@ -155,10 +154,10 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	var relocatableKernel bool
 	if b.Header.Protocolversion >= 0x0205 {
 		relocatableKernel = b.Header.RelocatableKernel != 0
-		log.Printf("bzImage is relocatable")
+		Debug("bzImage is relocatable")
 	}
 
-	log.Printf("Loading purgatory...")
+	Debug("Loading purgatory...")
 
 	/* Load the trampoline.
 	 *
@@ -184,7 +183,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return errors.New("real mode executing is not supported currently")
 	}
 
-	log.Printf("purgatory entry: %v", purgatoryEntry)
+	Debug("purgatory entry: %v", purgatoryEntry)
 
 	/* The argument/parameter segment */
 
@@ -213,7 +212,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	 * Currently, only protected mode is implemented. So only copy setup header.
 	 */
 	realMode = getLinuxParamHeader(&b) // No real mode is executing.
-	log.Printf("got setup header: %v", realMode)
+	Debug("got setup header: %v", realMode)
 
 	// No support for kexec on crash.
 
@@ -251,7 +250,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return fmt.Errorf("boot protocol version: %v is currently not supported", b.Header.Protocolversion)
 	}
 
-	log.Printf("Loaded real mode data and cmdline at: %v", setupRange)
+	Debug("Loaded real mode data and cmdline at: %v", setupRange)
 
 	/* Verify purgatory loads higher than the parameters. */
 	// TODO(10000TB): if rel_addr < setupRange.Start then return error.
@@ -283,7 +282,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", b.Header.Protocolversion)
 	}
 
-	log.Printf("Loaded 32bit kernel at %v", mainKernelRange)
+	Debug("Loaded 32bit kernel at %v", mainKernelRange)
 
 	/* Tell current kernel what is going on.
 	 */
@@ -310,13 +309,13 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	 */
 	if err = ElfRelSetSymbol(kelf, "entry32_regs" /*&info->rhdr, "entry32_regs", &regs32, sizeof(regs32) */); err != nil {
 		//return fmt.Errorf("set elf rel symbol for entry32_regs: %v", err)
-		log.Printf("set elf rel symbol for entry32_regs: %v", err)
+		Debug("set elf rel symbol for entry32_regs: %v", err)
 	}
 	cmdLineEnd := int(setupRange.Start) + int(kernel16SizeNeeded) + len(cmdline) - 1
-	log.Printf("cmdLineEnd: %v", cmdLineEnd)
+	Debug("cmdLineEnd: %v", cmdLineEnd)
 	if err = ElfRelSetSymbol(kelf, "cmdline_end" /* &info->rhdr, "cmdline_end", &cmdline_end, sizeof(unsigned long) */); err != nil {
 		//return fmt.Errorf("set elf rel symbol for cmdline_end: %v", err)
-		log.Printf("set elf rel symbol for cmdline_end: %v", err)
+		Debug("set elf rel symbol for cmdline_end: %v", err)
 	}
 
 	if err = SetupLinuxSystemParameters(realMode); err != nil {
