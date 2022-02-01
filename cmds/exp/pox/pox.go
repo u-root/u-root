@@ -322,7 +322,7 @@ func extraMounts(mountList string) error {
 	return nil
 }
 
-func pox() error {
+func pox(args ...string) error {
 	// If the current executable is a zip file, extract and run.
 	// Sneakily re-write os.Args to include a "-rzf" before flag parsing.
 	// The zip comment contains the executable path once extracted.
@@ -342,7 +342,6 @@ func pox() error {
 		}, os.Args[1:]...)
 	}
 
-	flag.Parse()
 	if *verbose {
 		v = log.Printf
 	}
@@ -356,18 +355,19 @@ func pox() error {
 		return fmt.Errorf(usage)
 	}
 	if *create {
-		if err := poxCreate(flag.Args()...); err != nil {
+		if err := poxCreate(args...); err != nil {
 			return err
 		}
 	}
 	if *run {
-		return poxRun(flag.Args()...)
+		return poxRun(args...)
 	}
 	return nil
 }
 
 func main() {
-	if err := pox(); err != nil {
+	flag.Parse()
+	if err := pox(flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }
