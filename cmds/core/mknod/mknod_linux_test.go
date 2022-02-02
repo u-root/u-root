@@ -7,6 +7,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -22,26 +23,92 @@ import (
 //     = mkdev(0x456, 0x12378)
 //     = (0x12378 & 0xff) | (0x456 << 8) | ((0x12378 & ~0xff) << 12)
 //     = 0x12345678
-func TestLargeDevNumber(t *testing.T) {
-	if uid := os.Getuid(); uid != 0 {
-		t.Skipf("test requires root, your uid is %d", uid)
-	}
 
-	// Make a temporary directory.
-	tmpDir := t.TempDir()
-	file := filepath.Join(tmpDir, "large_node")
-
-	// Run "mknod large_node b 1110 74616".
-	if err := testutil.Command(t, file, "b", "1110", "74616").Run(); err != nil {
-		t.Fatal(err)
+func TestMknod(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+	d, err := os.MkdirTemp(os.TempDir(), "mk.nod")
+	if err != nil {
+		t.Errorf("failed to create tmp folder: %v", err)
 	}
+	defer os.RemoveAll(d)
 
-	// Check the device number.
-	var s unix.Stat_t
-	if err := unix.Stat(file, &s); err != nil {
-		t.Fatal(err)
-	}
-	if s.Rdev != 0x12345678 {
-		t.Fatalf("expected the device number to be 0x12345678, got %#x", s.Rdev)
+	// Creating testtable and run tests
+	for _, tt := range []struct {
+		name  string
+		input []string
+		want  string
+	}{
+		{
+			name:  "no flag",
+			input: []string{filepath.Join(d, "testdev")},
+			want:  "usage:",
+		},
+		{
+			name:  "no path, no flag",
+			input: []string{},
+			want:  "usage:",
+		},
+		{
+			name:  "p flag with arguments",
+			input: []string{filepath.Join(d, "testdev"), "p", "254", "3"},
+			want:  "device type p",
+		},
+		{
+			name:  "p flag",
+			input: []string{filepath.Join(d, "testdev"), "p"},
+			want:  "device type p",
+		},
+		{
+			name:  "b flag with only one argument",
+			input: []string{filepath.Join(d, "testdev"), "b", "254"},
+			want:  "usage:",
+		},
+		{
+			name:  "b flag with both arguments",
+			input: []string{filepath.Join(d, "testdev1"), "b", "1", "254"},
+			want:  "mode 61b0:",
+		},
+		{
+			name:  "b flag with large node",
+			input: []string{filepath.Join(d, "large_node"), "b", "1110", "74616"},
+			want:  "mode 61b0:",
+		},
+		{
+			name:  "c flag without an argument",
+			input: []string{filepath.Join(d, "testdev"), "c"},
+			want:  "device type c",
+		},
+		{
+			name:  "c flag with both arguments",
+			input: []string{filepath.Join(d, "testdev2"), "c", "254", "1"},
+			want:  "mode 21b0:",
+		},
+		{
+			name:  "b flag without arguments",
+			input: []string{filepath.Join(d, "testdev"), "b"},
+			want:  "device type b",
+		},
+		{
+			name:  "invalid flag",
+			input: []string{filepath.Join(d, "testdev"), "k"},
+			want:  "device type not recognized:",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := mknod(tt.input); got != nil {
+				if !strings.Contains(got.Error(), tt.want) {
+					t.Errorf("mknod() = '%v', want to contain: '%v'", got, tt.want)
+				}
+			} else if tt.name == "b flag with large node" {
+				// Check the device number.
+				var s unix.Stat_t
+				if err := unix.Stat(filepath.Join(d, "large_node"), &s); err != nil {
+					t.Fatal(err)
+				}
+				if s.Rdev != 0x12345678 {
+					t.Fatalf("expected the device number to be 0x12345678, got %#x", s.Rdev)
+				}
+			}
+		})
 	}
 }
