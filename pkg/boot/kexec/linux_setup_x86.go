@@ -27,9 +27,12 @@ func SetupLinuxBootloaderParameters(lph *LinuxParamHeader, kmem *Memory, ramfs i
 	}
 
 	/* Load the initrd if we have one */
-	ramfsBytes, err := uio.ReadAll(ramfs)
-	if err != nil {
-		return fmt.Errorf("read ramfs: %v", err)
+	var ramfsBytes []byte
+	if ramfs != nil {
+		r, err := uio.ReadAll(ramfs)
+		if err == nil {
+			ramfsBytes = r
+		}
 	}
 	if len(ramfsBytes) > 0 { // TODO(10000TB): more sanity checks ?
 		ramfsRange, err := kmem.AddPhysSegment(
