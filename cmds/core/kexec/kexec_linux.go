@@ -36,15 +36,16 @@ import (
 )
 
 type options struct {
-	syscall      string
-	cmdline      string
-	reuseCmdline bool
-	initramfs    string
-	load         bool
-	exec         bool
-	debug        bool
-	extra        string
-	modules      []string
+	syscall        string
+	cmdline        string
+	reuseCmdline   bool
+	initramfs      string
+	load           bool
+	exec           bool
+	debug          bool
+	extra          string
+	debugPurgatory bool
+	modules        []string
 }
 
 func registerFlags() *options {
@@ -60,6 +61,9 @@ func registerFlags() *options {
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
+
+	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
+	flag.BoolVar(&o.debugPurgatory, "debug-purgatory", false, "Use the purgatory attached to this program, not the one in the package")
 	return o
 }
 
@@ -96,6 +100,9 @@ func main() {
 		}
 	}
 
+	if opts.debugPurgatory {
+		kexec.Purgatory = Purgatory
+	}
 	if opts.load {
 		kernelpath := flag.Arg(0)
 		kernel, err := os.Open(kernelpath)

@@ -11,23 +11,51 @@ func alignUpUint64(v, align uint64) uint64 {
 }
 
 // RelocateAndLoad does ...
-func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, flags uint32) (entry uintptr, err error) {
+func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, flags uint32) (uintptr, error) {
 	elfFile, err := elf.NewFile(bytes.NewReader(elfBuf))
 	if err != nil {
-		return uintptr(0), fmt.Errorf("parse elf file from elf buffer: %v", err)
+		return 0, fmt.Errorf("parse elf file from elf buffer: %v", err)
+	}
+
+	Debug("Elf file: %#v, %d Progs", elfFile, len(elfFile.Progs))
+	// There is a better case.
+	// The file might be a simpler format, containing segments. In fact
+	// in the best case it contains one. If so, short circuit and
+	// handle that case here.
+	if len(elfFile.Progs) > 0 {
+		// for now, we're stupid. How do you get this kind of ELF?
+		// ld -N -e entry64 -Ttext=0x3000 -o x purgatory/purgatory.ro
+		// I mean, let's face it, 0x3000 is hardcoded every damn where.
+		// We don't need to do the relocation in kexec, if it can be
+		// done before.
+		if len(elfFile.Progs) != 2 {
+			return 0, fmt.Errorf("parse elf file: can only handle files with Segments if there just two, not %d", len(elfFile.Progs))
+		}
+		p := elfFile.Progs[0]
+		b := make([]byte, p.Memsz)
+		if _, err := p.ReadAt(b[:p.Filesz], 0); err != nil {
+			return 0, err
+		}
+		entry := elfFile.Entry
+		phyRange, err := kmem.ReservePhys(uint(len(b)), RangeFromInterval(uintptr(p.Vaddr), uintptr(p.Vaddr+uint64(len(b)))))
+		if err != nil {
+			return uintptr(entry), fmt.Errorf("reserve phys ram of size %d between range(%d, %d): %v", len(b), min, max, err)
+		}
+		kmem.Segments.Insert(NewSegment(b, phyRange))
+		return uintptr(entry), nil
 	}
 
 	if len(elfFile.Sections) == 0 {
-		return uintptr(0), fmt.Errorf("empty sections")
+		return 0, fmt.Errorf("empty sections")
 	}
 
 	if elfFile.Type != elf.ET_REL {
-		return entry, fmt.Errorf("the elf is not a relocatable")
+		return 0, fmt.Errorf("the elf is not a relocatable")
 	}
 
 	/* Find which section the entry is in */
 	var entrySection *elf.Section
-	var entryVal uint64
+	entry := uintptr(elfFile.Entry)
 	for _, section := range elfFile.Sections {
 		if (section.Flags&elf.SHF_ALLOC) == 0 || (section.Flags&elf.SHF_EXECINSTR) == 0 {
 			// Does not occupy mem or contains no instructions.
@@ -36,7 +64,7 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 		if section.Addr <= elfFile.Entry && (section.Addr+section.Size) > elfFile.Entry {
 			entrySection = section
 			/* Make entry section relative */
-			entryVal -= section.Addr
+			entry -= uintptr(section.Addr)
 		}
 	}
 	Debug("entry section identified as: %v", entrySection)
@@ -75,13 +103,7 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 	/* Allocate for relocatable objects. */
 	buf := make([]byte, bufsz)
 	memsz := bufsz + bssPad + bsssz // Allocate additional ram for bss.
-	phyRange, err := kmem.ReservePhys(
-		uint(memsz),
-		RangeFromInterval(
-			uintptr(min),
-			uintptr(max),
-		),
-	)
+	phyRange, err := kmem.ReservePhys(uint(memsz), RangeFromInterval(uintptr(min), uintptr(max)))
 	if err != nil {
 		return entry, fmt.Errorf("reserve phys ram of size %d between range(%d, %d): %v", memsz, min, max, err)
 	}
@@ -119,11 +141,15 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 
 	if entrySection != nil {
 		entry += uintptr(entrySection.Addr)
+		Debug("entrySection is %#x: entry was %#x, adjust %#x bytes to %#x", entrySection, elfFile.Entry, entrySection.Addr, entry)
 		elfFile.Entry = uint64(entry)
+	} else {
+		Debug("No entry section was found, so entry remains at %#x", entry)
 	}
 
 	entry = uintptr(elfFile.Entry)
 
+	Debug("entry is %#x", entry)
 	return uintptr(entry), nil
 }
 
