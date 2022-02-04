@@ -50,7 +50,7 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVarP(&o.syscall, "syscall", "", "file", "Select which syscall to use, kexecload for kexecload syscall, and fileload for file load. Default: fileload")
+	flag.StringVarP(&o.syscall, "syscall", "", "kexecload", "Select which syscall to use, kexecload for kexecload syscall, and fileload for file load. Default: fileload")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
@@ -59,11 +59,11 @@ func registerFlags() *options {
 	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
-	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
+	flag.BoolVarP(&o.debug, "debug", "d", true, "Print debug info")
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
-	flag.BoolVar(&o.debugPurgatory, "debug-purgatory", false, "Use the purgatory attached to this program, not the one in the package")
+	flag.BoolVar(&o.debugPurgatory, "debug-purgatory", true, "Use the purgatory attached to this program, not the one in the package")
 	return o
 }
 
