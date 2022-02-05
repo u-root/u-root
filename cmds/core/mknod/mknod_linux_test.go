@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
 	"golang.org/x/sys/unix"
 )
 
@@ -25,7 +24,6 @@ import (
 //     = 0x12345678
 
 func TestMknod(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
 	d, err := os.MkdirTemp(os.TempDir(), "mk.nod")
 	if err != nil {
 		t.Errorf("failed to create tmp folder: %v", err)
