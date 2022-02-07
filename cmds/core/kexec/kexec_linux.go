@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:generate go run purgatories.go
+
 // kexec executes a new kernel over the running kernel (u-root).
 //
 // Synopsis:
@@ -36,16 +38,16 @@ import (
 )
 
 type options struct {
-	syscall        string
-	cmdline        string
-	reuseCmdline   bool
-	initramfs      string
-	load           bool
-	exec           bool
-	debug          bool
-	extra          string
-	debugPurgatory bool
-	modules        []string
+	syscall      string
+	cmdline      string
+	reuseCmdline bool
+	initramfs    string
+	load         bool
+	exec         bool
+	debug        bool
+	extra        string
+	purgatory    string
+	modules      []string
 }
 
 func registerFlags() *options {
@@ -63,7 +65,7 @@ func registerFlags() *options {
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
-	flag.BoolVar(&o.debugPurgatory, "debug-purgatory", true, "Use the purgatory attached to this program, not the one in the package")
+	flag.StringVarP(&o.purgatory, "purgatory", "p", "to32bit_3000", "pick a purgatory, use help to get a list")
 	return o
 }
 
@@ -100,8 +102,8 @@ func main() {
 		}
 	}
 
-	if opts.debugPurgatory {
-		kexec.Purgatory = Purgatory
+	if err := kexec.SelectPurgator(opts.purgatory); err != nil {
+		log.Fatal(err)
 	}
 	if opts.load {
 		kernelpath := flag.Arg(0)

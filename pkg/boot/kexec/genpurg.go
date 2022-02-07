@@ -36,30 +36,39 @@ func main() {
 			log.Fatalf("%v", err)
 		}
 
-		defer os.RemoveAll(d)
+		//defer os.RemoveAll(d)
 		src := filepath.Join(d, asm.name) + ".S"
-		dst := filepath.Join(d, asm.name) + ".."
+		dst := filepath.Join(d, asm.name) + ".o"
+		out := filepath.Join(d, asm.name) + ".out"
 		if err := ioutil.WriteFile(src, []byte(asm.code), 0666); err != nil {
 			log.Fatal(err)
 		}
 
-		if out, err := exec.Command(asm.args[0], append(asm.args[1:], "-nostdinc", "-nostdlib", "-o", dst, src)...).CombinedOutput(); err != nil {
+		if out, err := exec.Command(asm.cc[0], append(asm.cc[1:], "-nostdinc", "-nostdlib", "-o", dst, src)...).CombinedOutput(); err != nil {
 			log.Printf("%s, %s: %v, %v", src, asm.code, string(out), err)
 			continue
 		}
-		code, err := ioutil.ReadFile(dst)
+		if out, err := exec.Command(asm.ld[0], append(asm.ld[1:], "-nostdinc", "-nostdlib", "-o", out, dst)...).CombinedOutput(); err != nil {
+			log.Printf("%s, %s: %v, %v", dst, asm.code, string(out), err)
+			continue
+
+		}
+		code, err := ioutil.ReadFile(out)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if len(code) == 0 {
+			log.Fatalf("%s: no output: dir %v", asm.name, d)
 		}
 		codehex := "\t[]byte{\n"
 		var i int
 		for i < len(code) {
 			codehex += "\t"
-			for _, c := range code[i : i+16] {
-				codehex = codehex + fmt.Sprintf("%#02x, ", c)
+			for j := 0; j < 16 && i < len(code); j++ {
+				codehex = codehex + fmt.Sprintf("%#02x, ", code[i])
+				i++
 			}
 			codehex += "\n"
-			i += len(code[i : i+16])
 		}
 		codehex += "\n},\t\n"
 

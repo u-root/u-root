@@ -28,10 +28,13 @@ func RelocateAndLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, f
 		// I mean, let's face it, 0x3000 is hardcoded every damn where.
 		// We don't need to do the relocation in kexec, if it can be
 		// done before.
-		if len(elfFile.Progs) != 2 {
-			return 0, fmt.Errorf("parse elf file: can only handle files with Segments if there just two, not %d", len(elfFile.Progs))
+		if len(elfFile.Progs) > 2 {
+			return 0, fmt.Errorf("parse elf file: can only handle files with Segments if there just one or two, not %d", len(elfFile.Progs))
 		}
 		p := elfFile.Progs[0]
+		// the package really wants things page-sized, and rather than
+		// deal with all the bugs that arise from that, just keep it happy.
+		p.Memsz = uint64(alignUp(uint(p.Memsz)))
 		b := make([]byte, p.Memsz)
 		if _, err := p.ReadAt(b[:p.Filesz], 0); err != nil {
 			return 0, err
