@@ -7,74 +7,78 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
+	"strings"
 	"testing"
-	"time"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-// Run the command, with the optional args, and return a string
-// for stdout, stderr, and an error.
-func run(c *exec.Cmd) (string, string, error) {
-	var o, e bytes.Buffer
-	c.Stdout, c.Stderr = &o, &e
-	err := c.Run()
-	return o.String(), e.String(), err
-}
-
 func TestKillProcess(t *testing.T) {
-	cmd := exec.Command("sleep", "10")
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("Failed to start test process: %v", err)
-	}
-
-	// from the orignal. hokey .1 second wait for the process to start. Racy.
-	time.Sleep(100 * time.Millisecond)
-
-	if _, _, err := run(testutil.Command(t, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err != nil {
-		t.Errorf("Could not spawn first kill: %v", err)
-	}
-
-	if err := cmd.Wait(); err == nil {
-		t.Errorf("Test process succeeded, but expected to fail")
-	}
-
-	// now this is a little weird. We're going to try to kill it again.
-	// Arguably, this should be done in another test, but finding a process
-	// you just "know" does not exist is tricky. What PID do you use?
-	// So we just kill the one we just killed; it should get an error.
-	// If not, something's wrong.
-	if _, _, err := run(testutil.Command(t, "-9", fmt.Sprintf("%d", cmd.Process.Pid))); err == nil {
-		t.Fatalf("Second kill: got nil, want error")
-	}
-}
-
-func TestBadInvocations(t *testing.T) {
-	tab := []struct {
-		a   []string
-		err string
+	for _, tt := range []struct {
+		name string
+		args []string
+		want string
 	}{
-		{a: []string{"-1w34"}, err: "1w34 is not a valid signal\n"},
-		{a: []string{"-s"}, err: eUsage + "\n"},
-		{a: []string{"-s", "a"}, err: "a is not a valid signal\n"},
-		{a: []string{"a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
-		{a: []string{"--signal"}, err: eUsage + "\n"},
-		{a: []string{"--signal", "a"}, err: "a is not a valid signal\n"},
-		{a: []string{"-1", "a"}, err: "Some processes could not be killed: [a: arguments must be process or job IDS]\n"},
+		{
+			name: "not enough args",
+			args: []string{"kill"},
+			want: fmt.Sprintf("%s\n", eUsage),
+		},
+		{
+			name: "list signal names with too much args",
+			args: []string{"kill", "-l", "10"},
+			want: fmt.Sprintf("%s\n", eUsage),
+		},
+		{
+			name: "list signal names",
+			args: []string{"kill", "-l"},
+			want: fmt.Sprintf("%s\n", siglist()),
+		},
+		{
+			name: "kill pid 2",
+			args: []string{"kill", "2"},
+			want: "",
+		},
+		{
+			name: "kill signal without signal and pid",
+			args: []string{"kill", "-s"},
+			want: fmt.Sprintf("%s\n", eUsage),
+		},
+		{
+			name: "kill signal with signal but without pid",
+			args: []string{"kill", "--signal", "50"},
+			want: fmt.Sprintf("%s\n", eUsage),
+		},
+		{
+			name: "kill signal with signal and pid",
+			args: []string{"kill", "--signal", "50", "2"},
+			want: "",
+		},
+		{
+			name: "kill signal with signal and wrong pid",
+			args: []string{"kill", "--signal", "50", "9999"},
+			want: "some processes could not be killed",
+		},
+		{
+			name: "signal is invalid",
+			args: []string{"kill", "--signal", "a"},
+			want: "is not a valid signal",
+		},
+		{
+			name: "signal is invalid",
+			args: []string{"kill", "-1", "a"},
+			want: "some processes could not be killed: [a: arguments must be process or job IDS]",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			if err := killProcess(buf, tt.args...); err != nil {
+				if !strings.Contains(err.Error(), tt.want) {
+					t.Errorf("killProcess() = %q, want to contain: %q", err.Error(), tt.want)
+				}
+			} else {
+				if buf.String() != tt.want {
+					t.Errorf("killProcess() = %q, want: %q", buf.String(), tt.want)
+				}
+			}
+		})
 	}
-
-	for _, v := range tab {
-		_, e, err := run(testutil.Command(t, v.a...))
-		if e != v.err {
-			t.Errorf("Kill for '%v' failed: got '%s', want '%s'", v.a, e, v.err)
-		}
-		if err == nil {
-			t.Errorf("Kill for '%v' failed: got nil, want err", v.a)
-		}
-	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

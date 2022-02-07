@@ -50,9 +50,9 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 					h, f string
 					b, l uint64
 				}{
-					{"\n\tI/O behind bridge: ", "%#08x-%#08x [size=%#x]", pci.IO.Base, pci.IO.Lim},
-					{"\n\tMemory behind bridge: ", "%#08x-%#08x [size=%#x]", pci.Mem.Base, pci.Mem.Lim},
-					{"\n\tPrefetchable memory behind bridge: ", "%#08x-%#08x [size=%#x]", pci.PrefMem.Base, pci.PrefMem.Lim},
+					{h: "\n\tI/O behind bridge: ", f: "%#08x-%#08x [size=%#x]", b: pci.IO.Base, l: pci.IO.Lim},
+					{h: "\n\tMemory behind bridge: ", f: "%#08x-%#08x [size=%#x]", b: pci.Mem.Base, l: pci.Mem.Lim},
+					{h: "\n\tPrefetchable memory behind bridge: ", f: "%#08x-%#08x [size=%#x]", b: pci.PrefMem.Base, l: pci.PrefMem.Lim},
 				} {
 					s := e.h + " [disabled]"
 					if e.b != 0 {

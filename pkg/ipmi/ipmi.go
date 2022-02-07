@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,40 +13,24 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
-	"runtime"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/vtolstov/go-ioctl"
-	"golang.org/x/sys/unix"
 )
 
 var (
-	_IPMICTL_RECEIVE_MSG_TRUNC = ioctl.IOWR(_IPMI_IOC_MAGIC, 11, uintptr(unsafe.Sizeof(recv{})))
-	_IPMICTL_SEND_COMMAND      = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(req{})))
+	_IPMICTL_RECEIVE_MSG_TRUNC = ioctl.IOWR(_IPMI_IOC_MAGIC, 11, uintptr(unsafe.Sizeof(response{})))
+	_IPMICTL_SEND_COMMAND      = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(request{})))
 
 	timeout = time.Second * 10
 )
 
-func ioctlSetReq(fd, name uintptr, req *req) error {
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(req)))
-	runtime.KeepAlive(req)
-	if err != 0 {
-		return err
-	}
-	return nil
-}
-
-func ioctlGetRecv(fd, name uintptr, recv *recv) error {
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, fd, name, uintptr(unsafe.Pointer(recv)))
-	runtime.KeepAlive(recv)
-	if err != 0 {
-		return err
-	}
-	return nil
+// IPMI represents access to the IPMI interface.
+type IPMI struct {
+	*dev
 }
 
 // SendRecv sends the IPMI message, receives the response, and returns the
@@ -73,7 +57,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		addrType: _IPMI_SYSTEM_INTERFACE_ADDR_TYPE,
 		channel:  _IPMI_BMC_CHANNEL,
 	}
-	req := &req{
+	req := &request{
 		addr:    addr,
 		addrLen: uint32(unsafe.Sizeof(addr)),
 		msgid:   rand.Int63(),
@@ -82,7 +66,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 
 	// Send request.
 	for {
-		switch err := ioctlSetReq(i.Fd(), _IPMICTL_SEND_COMMAND, req); {
+		switch err := i.dev.SendRequest(req); {
 		case err == syscall.EINTR:
 			continue
 		case err != nil:
@@ -96,51 +80,13 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		Data:    unsafe.Pointer(&buf[0]),
 		DataLen: _IPMI_BUF_SIZE,
 	}
-	recv := &recv{
+	recv := &response{
 		addr:    req.addr,
 		addrLen: req.addrLen,
 		msg:     recvMsg,
 	}
 
-	// This will be passed to the RawConn Read function. Until readMsg returns
-	// true, Read blocks and retries until the connection is ready for reading.
-	var result []byte
-	var rerr error
-	readMsg := func(fd uintptr) bool {
-		if err := ioctlGetRecv(fd, _IPMICTL_RECEIVE_MSG_TRUNC, recv); err != nil {
-			rerr = fmt.Errorf("ioctlGetRecv failed with %v", err)
-			return false
-		}
-
-		if recv.msgid != req.msgid {
-			log.Printf("Received wrong message. Trying again.")
-			return false
-		}
-
-		if recv.msg.DataLen >= _IPMI_BUF_SIZE {
-			rerr = fmt.Errorf("data length received too large: %d > %d", recv.msg.DataLen, _IPMI_BUF_SIZE)
-		} else if buf[0] != 0 {
-			rerr = fmt.Errorf("invalid response, expected first byte of response to be 0, got: %v", buf[0])
-		} else {
-			result = buf[:recv.msg.DataLen:recv.msg.DataLen]
-			rerr = nil
-		}
-		return true
-	}
-
-	// Read response.
-	conn, err := i.File.SyscallConn()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file rawconn: %v", err)
-	}
-	if err := i.File.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-		return nil, fmt.Errorf("failed to set read deadline: %v", err)
-	}
-	if err := conn.Read(readMsg); err != nil {
-		return nil, fmt.Errorf("failed to read rawconn: %v", err)
-	}
-
-	return result, rerr
+	return i.dev.ReceiveResponse(req.msgid, recv, buf)
 }
 
 func (i *IPMI) WatchdogRunning() (bool, error) {
@@ -241,7 +187,7 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 	len := len(version)
 
 	if len == 0 {
-		return fmt.Errorf("Version length is 0")
+		return fmt.Errorf("version length is 0")
 	} else if len > strlenMax {
 		len = strlenMax
 	}
@@ -275,12 +221,38 @@ func (i *IPMI) GetDeviceID() (*DevID, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	buf := bytes.NewReader(data[1:])
 	mcInfo := DevID{}
 
-	if err := binary.Read(buf, binary.LittleEndian, &mcInfo); err != nil {
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.DeviceID); err != nil {
 		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.DeviceRevision); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.FwRev1); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.FwRev2); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.IpmiVersion); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.AdtlDeviceSupport); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.ManufacturerID); err != nil {
+		return nil, err
+	}
+	if err := binary.Read(buf, binary.LittleEndian, &mcInfo.ProductID); err != nil {
+		return nil, err
+	}
+	// In some cases we have 11 bytes, in others we may have 15 bytes. Carefully parsing the struct is important here.
+	if buf.Len() > 0 {
+		if err := binary.Read(buf, binary.LittleEndian, &mcInfo.AuxFwRev); err != nil {
+			return nil, err
+		}
 	}
 
 	return &mcInfo, nil
@@ -362,7 +334,7 @@ func (i *IPMI) GetLanConfig(channel byte, param byte) ([]byte, error) {
 
 func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 	if len(param) < 2 {
-		return nil, errors.New("Not enough parameters given")
+		return nil, errors.New("not enough parameters given")
 	}
 
 	msg := Msg{
@@ -376,4 +348,9 @@ func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 	msg.DataLen = uint16(len(param) - 2)
 
 	return i.RawSendRecv(msg)
+}
+
+// Close closes the file attached to ipmi
+func (i *IPMI) Close() error {
+	return i.dev.Close()
 }
