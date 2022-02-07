@@ -23,12 +23,19 @@ const (
 	DEFAULT_BZIMAGE_ADDR_MAX uint = 0x37FFFFFF
 )
 
+type purgatory struct {
+	name    string
+	hexdump string
+	code    []byte
+}
+
 var (
 	// Debug is called to print out verbose debug info.
 	//
 	// Set this to appropriate output stream for display
 	// of useful debug info.
-	Debug = func(string, ...interface{}) {}
+	Debug        = func(string, ...interface{}) {}
+	curPurgatory = linuxPurgatory
 )
 
 // Load loads the given segments into memory to be executed on a kexec-reboot.
@@ -176,7 +183,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	// to real mode executing.
 
 	if relocatableKernel {
-		if purgatoryEntry, err = RelocateAndLoad(kmem, Purgatory, 0x3000, 0x7fffffff, -1, 0); err != nil {
+		if purgatoryEntry, err = RelocateAndLoad(kmem, curPurgatory.code, 0x3000, 0x7fffffff, -1, 0); err != nil {
 			return err
 		}
 	} else {
@@ -327,5 +334,20 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return fmt.Errorf("Kexec Load(%v, %v, %d) = %v", purgatoryEntry, kmem.Segments, 0, err)
 	}
 
+	return nil
+}
+
+// SelectPurgatory picks a purgatory, returning an error if none is found
+func SelectPurgator(name string) error {
+	p, ok := purgatories[name]
+	if !ok {
+		var s []string
+		for i := range purgatories {
+			s = append(s, i)
+		}
+		return fmt.Errorf("%s: no such purgatory, try one of %v", name, s)
+
+	}
+	curPurgatory = p
 	return nil
 }
