@@ -15,6 +15,84 @@ var asms = []asm{
 		cc:   []string{"x86_64-linux-gnu-gcc", "-c", "-nostdlib", "-nostdinc", "-static"},
 		ld:   []string{"ld", "-N", "-e entry64", "-Ttext=0x3000"},
 		code: `
+# This code does its best to be PIC. As in, PIC by code, not by linker.
+# assumptions:
+# we have 8 bytes of stack to do ONE call 
+# we are in shared space -- code and data in dram
+# we are in long mode
+1: jmp 1b
+# get a stack in low memory.
+jmp 1f
+.align 128
+1:
+call 1f
+1:
+popq %rax
+andl $0xfffffff0, %eax
+movl %eax, %esp
+movl $gdt, %eax
+jmp 1f
+# recursive gdt. 
+	.balign 16
+gdt:	/* 0x00 unusable segment 
+	 * 0x08 unused
+	 * so use them as the gdt ptr
+	 */
+	.word	gdt_end - gdt - 1
+	.quad	gdt
+	.word	0, 0, 0
+			
+	/* Documented linux kernel segments */
+	/* 0x10 4GB flat code segment */
+	.word	0xFFFF, 0x0000, 0x9A00, 0x00CF
+	/* 0x18 4GB flat data segment */
+	.word	0xFFFF, 0x0000, 0x9200, 0x00CF
+gdt_end:
+# NOTE: NOT PIC
+to32indir:
+	.long to32
+	.long 0x10
+
+1: 
+	lgdt	gdt(%rip)
+	ljmp	*to32indir(%rip)
+to32:
+	.code32
+
+	.equ	CR0_PG,        0x80000000
+	/* Disable paging */
+	movl	%cr0, %eax
+	andl	$~CR0_PG, %eax
+	movl	%eax, %cr0
+
+	/* Disable long mode */
+	.equ	MSR_K6_EFER,   0xC0000080
+	movl	$MSR_K6_EFER, %ecx
+	rdmsr
+	.equ	EFER_LME,      0x00000100
+	andl	$~EFER_LME, %eax
+	wrmsr
+
+	/* Disable PAE */
+	xorl	%eax, %eax
+	movl	%eax, %cr4
+
+	/* load the data segments */
+	movl	$0x18, %eax	/* data segment */
+	movl	%eax, %ds
+	movl	%eax, %es
+	movl	%eax, %ss
+	movl	%eax, %fs
+	movl	%eax, %gs
+
+1: jmp 1b
+`,
+	},
+	{
+		name: "loop_3000",
+		cc:   []string{"x86_64-linux-gnu-gcc", "-c", "-nostdlib", "-nostdinc", "-static"},
+		ld:   []string{"ld", "-N", "-e entry64", "-Ttext=0x3000"},
+		code: `
 1: jmp 1b
 `,
 	},
