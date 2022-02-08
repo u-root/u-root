@@ -6,9 +6,11 @@ package kexec
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"syscall"
 	"unsafe"
 
@@ -29,13 +31,15 @@ type purgatory struct {
 	code    []byte
 }
 
+const defaultPurgatory = "to32bit_3000"
+
 var (
 	// Debug is called to print out verbose debug info.
 	//
 	// Set this to appropriate output stream for display
 	// of useful debug info.
-	Debug        = func(string, ...interface{}) {}
-	curPurgatory = linuxPurgatory
+	Debug        = log.Printf // func(string, ...interface{}) {}
+	curPurgatory = purgatories[defaultPurgatory]
 )
 
 // Load loads the given segments into memory to be executed on a kexec-reboot.
@@ -182,11 +186,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	// In protected mode, kernel need be relocatable, or it will need to fall
 	// to real mode executing.
 
-	if relocatableKernel {
-		if purgatoryEntry, err = RelocateAndLoad(kmem, curPurgatory.code, 0x3000, 0x7fffffff, -1, 0); err != nil {
-			return err
-		}
-	} else {
+	if !relocatableKernel {
 		return errors.New("real mode executing is not supported currently")
 	}
 
@@ -300,33 +300,30 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	/*
 	 * Initialize the 32bit start information.
 	 */
-	regs32.Eax = 0                        /* Unused */
-	regs32.Ebx = 0                        /* 0 == boot not AP processor start */
-	regs32.Ecx = 0                        /* Unused */
-	regs32.Edx = 0                        /* Unused */
-	regs32.Esi = uint32(setupRange.Start) /* kernel parameters */
-	regs32.Edi = 0                        /* unused */
+	regs32.Eax = 0 /* Unused */
+	regs32.Ebx = 0 /* 0 == boot not AP processor start */
+	regs32.Ecx = 0 /* Unused */
+	regs32.Edx = 0 /* Unused */
+	regs32.Edi = 0 /* unused */
 	// TODO(10000TB): Add support.
 	// regs32.esp = elf_rel_get_addr(&info->rhdr, "stack_end"); /* stack, unused */
-	regs32.Ebp = 0                             /* unused */
+	regs32.Ebp = 0 /* unused */
+
+	// actual parameters ...
+	regs32.Esi = uint32(setupRange.Start)      /* kernel parameters */
 	regs32.Eip = uint32(mainKernelRange.Start) /* kernel entry point */
 
-	/*
-	 * Initialize the 16bit start information.
-	 */
-	if err = ElfRelSetSymbol(kelf, "entry32_regs" /*&info->rhdr, "entry32_regs", &regs32, sizeof(regs32) */); err != nil {
-		//return fmt.Errorf("set elf rel symbol for entry32_regs: %v", err)
-		Debug("set elf rel symbol for entry32_regs: %v", err)
-	}
 	cmdLineEnd := int(setupRange.Start) + int(kernel16SizeNeeded) + len(cmdline) - 1
 	Debug("cmdLineEnd: %v", cmdLineEnd)
-	if err = ElfRelSetSymbol(kelf, "cmdline_end" /* &info->rhdr, "cmdline_end", &cmdline_end, sizeof(unsigned long) */); err != nil {
-		//return fmt.Errorf("set elf rel symbol for cmdline_end: %v", err)
-		Debug("set elf rel symbol for cmdline_end: %v", err)
-	}
 
 	if err = SetupLinuxSystemParameters(realMode); err != nil {
 		return fmt.Errorf("setup linux system params: %v", err)
+	}
+
+	binary.LittleEndian.PutUint64(curPurgatory.code[8:], uint64(mainKernelRange.Start))
+	binary.LittleEndian.PutUint64(curPurgatory.code[16:], uint64(setupRange.Start))
+	if purgatoryEntry, err = ELFLoad(kmem, curPurgatory.code, 0x3000, 0x7fffffff, -1, 0); err != nil {
+		return err
 	}
 
 	/* Load it */

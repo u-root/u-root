@@ -21,8 +21,10 @@ var asms = []asm{
 # we are in shared space -- code and data in dram
 # we are in long mode
 1: jmp 1b
-# get a stack in low memory.
 jmp 1f
+# save space for seven arguments
+.align 8
+# get a stack in low memory.
 .align 128
 1:
 call 1f
@@ -86,6 +88,11 @@ to32:
 	movl	%eax, %gs
 
 1: jmp 1b
+.data
+.globl entry32_regs
+entry32_regs: .long 0
+.globl cmdline_end
+cmdline_end: .long 0
 `,
 	},
 	{

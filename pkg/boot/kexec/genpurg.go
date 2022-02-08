@@ -26,7 +26,7 @@ func main() {
 		}
 	}()
 
-	if _, err := fmt.Fprintf(f, "package kexec\nvar purgatories = map[string]*purgatory {\n\t\"default\": linuxPurgatory,\n"); err != nil {
+	if _, err := fmt.Fprintf(f, "package kexec\nvar purgatories = map[string]*purgatory {\n"); err != nil {
 		log.Fatal(err)
 	}
 	for _, asm := range asms {
