@@ -56,12 +56,12 @@ func emit(rs io.ReadSeeker, c chan byte, offset int64) error {
 	}
 }
 
-func openFile(name string) (*os.File, error) {
+func readFileOrStdin(stdin *os.File, name string) (*os.File, error) {
 	var f *os.File
 	var err error
 
 	if name == "-" {
-		f = os.Stdin
+		f = stdin
 	} else {
 		f, err = os.Open(name)
 	}
@@ -69,54 +69,45 @@ func openFile(name string) (*os.File, error) {
 	return f, err
 }
 
-// cmp is defined to fail with exit code 2
-func failf(format string, a ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, a...)
-	os.Exit(2)
-}
-
-func main() {
-	flag.Parse()
+func cmp(w io.Writer, args ...string) error {
 	var offset [2]int64
 	var f *os.File
 	var err error
-
-	fnames := flag.Args()
 
 	cmpUnits := unit.DefaultUnits
 
 	off, err := unit.NewUnit(cmpUnits)
 	if err != nil {
-		failf("Could not create unit based on mapping: %v\n", err)
+		return fmt.Errorf("could not create unit based on mapping: %v", err)
 	}
 
 	var v *unit.Value
-	switch len(fnames) {
+	switch len(args) {
 	case 2:
 	case 3:
-		if v, err = off.ValueFromString(fnames[2]); err != nil {
-			failf("bad offset1: %s: %v\n", fnames[2], err)
+		if v, err = off.ValueFromString(args[2]); err != nil {
+			return fmt.Errorf("bad offset1: %s: %v", args[2], err)
 		}
 		offset[0] = v.Value
 	case 4:
-		if v, err = off.ValueFromString(fnames[2]); err != nil {
-			failf("bad offset1: %s: %v\n", fnames[2], err)
+		if v, err = off.ValueFromString(args[2]); err != nil {
+			return fmt.Errorf("bad offset1: %s: %v", args[2], err)
 		}
 		offset[0] = v.Value
 
-		if v, err = off.ValueFromString(fnames[3]); err != nil {
-			failf("bad offset2: %s: %v\n", fnames[3], err)
+		if v, err = off.ValueFromString(args[3]); err != nil {
+			return fmt.Errorf("bad offset2: %s: %v", args[3], err)
 		}
 		offset[1] = v.Value
 	default:
-		failf("expected two filenames (and one to two optional offsets), got %d", len(fnames))
+		return fmt.Errorf("expected two filenames (and one to two optional offsets), got %d", len(args))
 	}
 
 	c := make([]chan byte, 2)
 
 	for i := 0; i < 2; i++ {
-		if f, err = openFile(fnames[i]); err != nil {
-			failf("Failed to open %s: %v", fnames[i], err)
+		if f, err = readFileOrStdin(os.Stdin, args[i]); err != nil {
+			return fmt.Errorf("failed to open %s: %v", args[i], err)
 		}
 		c[i] = make(chan byte, 8192)
 		go emit(f, c[i], offset[i])
@@ -130,26 +121,22 @@ func main() {
 
 		if b1 != b2 {
 			if *silent {
-				os.Exit(1)
+				return nil
 			}
 			if *line {
-				fmt.Fprintf(os.Stderr, "%s %s differ: char %d line %d\n", fnames[0], fnames[1], charno, lineno)
-				os.Exit(1)
+				return fmt.Errorf("%s %s differ: char %d line %d", args[0], args[1], charno, lineno)
 			}
 			if *long {
 				if b1 == '\u0000' {
-					fmt.Fprintf(os.Stderr, "EOF on %s\n", fnames[0])
-					os.Exit(1)
+					return fmt.Errorf("EOF on %s", args[0])
 				}
 				if b2 == '\u0000' {
-					fmt.Fprintf(os.Stderr, "EOF on %s\n", fnames[1])
-					os.Exit(1)
+					return fmt.Errorf("EOF on %s", args[1])
 				}
-				fmt.Fprintf(os.Stderr, "%8d %#.2o %#.2o\n", charno, b1, b2)
+				fmt.Fprintf(w, "%8d %#.2o %#.2o\n", charno, b1, b2)
 				goto skip
 			}
-			fmt.Fprintf(os.Stderr, "%s %s differ: char %d\n", fnames[0], fnames[1], charno)
-			os.Exit(1)
+			return fmt.Errorf("%s %s differ: char %d", args[0], args[1], charno)
 		}
 	skip:
 		charno++
@@ -157,7 +144,15 @@ func main() {
 			lineno++
 		}
 		if b1 == '\u0000' && b2 == '\u0000' {
-			os.Exit(0)
+			return nil
 		}
+	}
+}
+
+// cmp is defined to fail with exit code 2
+func main() {
+	flag.Parse()
+	if err := cmp(os.Stderr, flag.Args()...); err != nil {
+		os.Exit(2)
 	}
 }
