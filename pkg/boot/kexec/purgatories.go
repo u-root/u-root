@@ -20,11 +20,16 @@ var asms = []asm{
 # we have 8 bytes of stack to do ONE call 
 # we are in shared space -- code and data in dram
 # we are in long mode
-1: jmp 1b
+# in case of emergency, break glass.
+// 1: jmp 1b
 jmp 1f
-# save space for seven arguments
 .align 8
-# get a stack in low memory.
+dat:
+# This can be useful for being sure things are where we think they are,
+# and ensuring we are storing correctly.
+.long 0xdeadcafe, 0x12345678
+.long 0xcafe5555, 0xabcdefaa
+# save space for two arguments and stack
 .align 128
 1:
 call 1f
@@ -86,6 +91,10 @@ to32:
 	movl	%eax, %ss
 	movl	%eax, %fs
 	movl	%eax, %gs
+	movl 	dat, %eax
+	1: jmp 1b
+	jmp *%eax
+	
 
 1: jmp 1b
 .data

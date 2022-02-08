@@ -3,6 +3,7 @@ package kexec
 import (
 	"bytes"
 	"debug/elf"
+	"encoding/binary"
 	"fmt"
 	"log"
 )
@@ -11,8 +12,8 @@ func alignUpUint64(v, align uint64) uint64 {
 	return (v + align) &^ align
 }
 
-// ELFLoad loads an elf file at the desired address.
-func ELFLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, flags uint32) (uintptr, error) {
+// PurgeLoad loads an elf file at the desired address.
+func PurgeLoad(kmem *Memory, elfBuf []byte, start, param uintptr) (uintptr, error) {
 	elfFile, err := elf.NewFile(bytes.NewReader(elfBuf))
 	if err != nil {
 		return 0, fmt.Errorf("parse elf file from elf buffer: %v", err)
@@ -31,7 +32,13 @@ func ELFLoad(kmem *Memory, elfBuf []byte, min uint, max uint, end int, flags uin
 		return 0, err
 	}
 	entry := elfFile.Entry
-	phyRange, err := kmem.ReservePhys(uint(len(b)), RangeFromInterval(uintptr(p.Vaddr), uintptr(p.Vaddr+uint64(len(b)))))
+	Debug("Start is %#x, param is %#x", start, param)
+	binary.LittleEndian.PutUint64(b[8:], uint64(start))
+	binary.LittleEndian.PutUint64(b[16:], uint64(param))
+	min := uintptr(p.Vaddr)
+	max := uintptr(p.Vaddr + uint64(len(b)))
+
+	phyRange, err := kmem.ReservePhys(uint(len(b)), RangeFromInterval(min, max))
 	if err != nil {
 		return uintptr(entry), fmt.Errorf("reserve phys ram of size %d between range(%d, %d): %v", len(b), min, max, err)
 	}

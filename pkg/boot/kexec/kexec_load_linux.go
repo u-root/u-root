@@ -6,7 +6,6 @@ package kexec
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -233,8 +232,8 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		setupRange, err = kmem.AddPhysSegment(
 			realMode.ToBytes(),
 			RangeFromInterval(
-				uintptr(0x3000),
-				uintptr(640*1024),
+				uintptr(0x90000),
+				uintptr(64*1024),
 			),
 			// TODO(10000TB): evaluate if we need to provide  option to
 			// reserve from end.
@@ -320,9 +319,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return fmt.Errorf("setup linux system params: %v", err)
 	}
 
-	binary.LittleEndian.PutUint64(curPurgatory.code[8:], uint64(mainKernelRange.Start))
-	binary.LittleEndian.PutUint64(curPurgatory.code[16:], uint64(setupRange.Start))
-	if purgatoryEntry, err = ELFLoad(kmem, curPurgatory.code, 0x3000, 0x7fffffff, -1, 0); err != nil {
+	if purgatoryEntry, err = PurgeLoad(kmem, curPurgatory.code, mainKernelRange.Start, setupRange.Start); err != nil {
 		return err
 	}
 
