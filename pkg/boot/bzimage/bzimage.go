@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"reflect"
@@ -227,19 +226,6 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 	Debug("Kernel is %d bytes", len(d))
 	Debug("Some kernel data: %#02x %#02x", d[:32], d[len(d)-8:])
-
-	r := bytes.NewReader(d)
-	gzipR, err := gzip.NewReader(r)
-	if err != nil {
-		Debug("Failed to create a new gzip reader: %v", err)
-	}
-	data, err := ioutil.ReadAll(gzipR)
-	if err != nil {
-		Debug("Failed to unpack compressed kernelCode: %v", err)
-		return []byte{}, err
-	}
-	Debug("Uncompressed kernel is %d bytes", len(data))
-	return data, nil
 
 	stdout, err := c.StdoutPipe()
 	if err != nil {

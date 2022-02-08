@@ -119,8 +119,6 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 
 	var kernel16SizeNeeded uint
 
-	var regs32 Entry32Regs
-
 	Debug("Start LoadBzImage...")
 	Debug("Try decompressing kernel...")
 	kb, err := uio.ReadAll(util.TryGzipFilter(kernel))
@@ -199,7 +197,8 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		kernel16SizeNeeded = 4096
 	}
 
-	if err := kmem.LoadElfSegments(bytes.NewReader(b.KernelCode)); err != nil {
+	ep, err := kmem.LoadElfSegments(bytes.NewReader(b.KernelCode))
+	if err != nil {
 		return err
 	}
 
@@ -263,7 +262,6 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 
 	/* Main kernel segment.
 	 */
-	var mainKernelRange Range
 	if b.Header.Protocolversion >= 0x0205 && relocatableKernel {
 		// kernelAlign := b.Header.KernelAlignment
 		//
@@ -274,12 +272,6 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 			kernel32MaxAddr = uint(b.Header.InitrdAddrMax)
 		}
 
-		mainKernelRange, err = kmem.AddPhysSegment(
-			// TODO(10000TB): kernel align + reserve from
-			// end: [Range.End-memsz+1, Range.end)
-			b.KernelCode,
-			RangeFromInterval(0x100000, uintptr(kernel32MaxAddr)),
-		)
 		if err != nil {
 			return fmt.Errorf("load main kexec segment: %v", err)
 		}
@@ -288,29 +280,11 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", b.Header.Protocolversion)
 	}
 
-	Debug("Loaded 32bit kernel at %v", mainKernelRange)
-
 	/* Tell current kernel what is going on.
 	 */
 	if err = SetupLinuxBootloaderParameters(realMode, kmem, ramfs, kernel16SizeNeeded, uint(setupRange.Start), cmdline); err != nil {
 		return fmt.Errorf("setup linux bootloader params: %v", err)
 	}
-
-	/*
-	 * Initialize the 32bit start information.
-	 */
-	regs32.Eax = 0 /* Unused */
-	regs32.Ebx = 0 /* 0 == boot not AP processor start */
-	regs32.Ecx = 0 /* Unused */
-	regs32.Edx = 0 /* Unused */
-	regs32.Edi = 0 /* unused */
-	// TODO(10000TB): Add support.
-	// regs32.esp = elf_rel_get_addr(&info->rhdr, "stack_end"); /* stack, unused */
-	regs32.Ebp = 0 /* unused */
-
-	// actual parameters ...
-	regs32.Esi = uint32(setupRange.Start)      /* kernel parameters */
-	regs32.Eip = uint32(mainKernelRange.Start) /* kernel entry point */
 
 	cmdLineEnd := int(setupRange.Start) + int(kernel16SizeNeeded) + len(cmdline) - 1
 	Debug("cmdLineEnd: %v", cmdLineEnd)
@@ -319,7 +293,8 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return fmt.Errorf("setup linux system params: %v", err)
 	}
 
-	if purgatoryEntry, err = PurgeLoad(kmem, curPurgatory.code, mainKernelRange.Start, setupRange.Start); err != nil {
+	log.Printf("elf is %v, ep is %#x; should we use that? ", ep, ep.Entry)
+	if purgatoryEntry, err = PurgeLoad(kmem, curPurgatory.code, kernelEntry, setupRange.Start); err != nil {
 		return err
 	}
 

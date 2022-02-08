@@ -484,10 +484,10 @@ type Memory struct {
 }
 
 // LoadElfSegments loads loadable ELF segments.
-func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
+func (m *Memory) LoadElfSegments(r io.ReaderAt) (*elf.File, error) {
 	f, err := elf.NewFile(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, p := range f.Progs {
@@ -503,10 +503,10 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 			d = make([]byte, p.Filesz)
 			n, err := r.ReadAt(d, int64(p.Off))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if n < len(d) {
-				return fmt.Errorf("not all data of the segment was read")
+				return nil, fmt.Errorf("not all data of the segment was read")
 			}
 		}
 		// TODO(hugelgupf): check if this is within availableRAM??
@@ -514,9 +514,10 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) error {
 			Start: uintptr(p.Paddr),
 			Size:  uint(p.Memsz),
 		})
+		Debug("Added segment at %#x for %#x bytes", p.Paddr, p.Memsz)
 		m.Segments.Insert(s)
 	}
-	return nil
+	return f, nil
 }
 
 // ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
