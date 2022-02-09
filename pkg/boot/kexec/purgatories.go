@@ -22,14 +22,16 @@ var asms = []asm{
 # we are in long mode
 # in case of emergency, break glass.
 // 1: jmp 1b
+
 jmp 1f
+# save space for two arguments and stack
 .align 8
-dat:
+entry: .long 0
+params: .long 0
 # This can be useful for being sure things are where we think they are,
 # and ensuring we are storing correctly.
 .long 0xdeadcafe, 0x12345678
 .long 0xcafe5555, 0xabcdefaa
-# save space for two arguments and stack
 .align 128
 1:
 call 1f
@@ -91,7 +93,8 @@ to32:
 	movl	%eax, %ss
 	movl	%eax, %fs
 	movl	%eax, %gs
-	movl 	dat, %eax
+	movl 	entry, %eax
+	movl 	params, %esi
 	1: jmp 1b
 	jmp *%eax
 	
@@ -111,7 +114,12 @@ cmdline_end: .long 0
 		code: `
 jmp 1f
 .align 8
-dat:
+// Known to Go.
+entry: .long 0x87654321
+.long 0xcafecafe
+params: .long 0xab5aab5a
+.long 0xbeeffeed
+// end Known to Go
 # This can be useful for being sure things are where we think they are,
 # and ensuring we are storing correctly.
 .long 0xdeadcafe, 0x12345678
@@ -270,7 +278,8 @@ movl %eax, %esp
 	/* Goodbye */
 	inb(0x3da)
 	outb(0x20, 0x3c0)
-	movq 	dat, %rax
+	movq 	entry, %rax
+	movq 	params, %rsi
 	1: jmp 1b
 	jmp *%rax
 	

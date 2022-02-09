@@ -29,13 +29,13 @@ func main() {
 	if _, err := fmt.Fprintf(f, "package kexec\nvar purgatories = map[string]*purgatory {\n"); err != nil {
 		log.Fatal(err)
 	}
+	d, err := ioutil.TempDir("", "kexecgen")
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
 	for _, asm := range asms {
 		// assemble, then create the hexdump of the elf.
-		d, err := ioutil.TempDir("", "kexecgen")
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-
 		//defer os.RemoveAll(d)
 		src := filepath.Join(d, asm.name) + ".S"
 		dst := filepath.Join(d, asm.name) + ".o"
