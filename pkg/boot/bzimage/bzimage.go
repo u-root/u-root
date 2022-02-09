@@ -39,10 +39,10 @@ var (
 	// these are the magics, along with the command to run
 	// it as a pipe.
 	magics = []*magic{
-		{[]byte("\037\213\010"), exec.Command("zcat")},
+		{[]byte("\037\213\010"), exec.Command("gzip", "-cd")},
 		{[]byte("\3757zXZ\000"), exec.Command("xzcat")},
 		{[]byte("BZh"), exec.Command("bzcat")},
-		{[]byte("\135\000\000\000"), exec.Command("lzcat")},
+		{[]byte("\135\000\000\000"), exec.Command("gzip", "-cd")},
 		{[]byte("\211\114\132"), exec.Command("lzop", "-c", "-d")},
 		// Is this just lz? Assume so.
 		{[]byte("\002!L\030"), exec.Command("lzcat")},
