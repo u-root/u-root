@@ -14,7 +14,6 @@ import (
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/boot/bzimage"
-	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
 )
@@ -121,7 +120,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 
 	Debug("Start LoadBzImage...")
 	Debug("Try decompressing kernel...")
-	kb, err := uio.ReadAll(util.TryGzipFilter(kernel))
+	kb, err := uio.ReadAll(kernel)
 	if err != nil {
 		return err
 	}
