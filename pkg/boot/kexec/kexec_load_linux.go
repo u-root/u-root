@@ -121,11 +121,6 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	if err := lp.UnmarshalBinary(bp); err != nil {
 		return fmt.Errorf("Unmarshaling header: %w", err)
 	}
-	linuxParam, err := lp.MarshalBinary()
-	if err != nil {
-		return fmt.Errorf("Re-marshaling header: %w", err)
-	}
-
 	Debug("Start LoadBzImage...")
 	Debug("Try decompressing kernel...")
 	kb, err := uio.ReadAll(kernel)
@@ -211,6 +206,8 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 			return fmt.Errorf("Adding initramfs segment: %v", err)
 		}
 		Debug("Added %d byte initramfs at %s", len(b), ramfsRange)
+		lp.Initrdstart = uint32(ramfsRange.Start)
+		lp.Initrdsize = uint32(ramfsRange.Size)
 	}
 	// TODO(10000TB): Insert cmdline.
 	// cmdlineLen := len(cmdline) + 1
@@ -235,34 +232,34 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	// The kernel is a bzImage kernel if the protocol >= 2.00 and the 0x01
 	// bit (LOAD_HIGH) in the loadflags field is set
 	// TODO(10000TB): check on loadflags.
-	if b.Header.Protocolversion >= 0x0200 {
-		// TODO(10000TB): Free mem hole start end aligns by
-		// max(16, pagesize).
-		setupRange, err = kmem.AddPhysSegment(
-			linuxParam,
-			RangeFromInterval(
-				uintptr(0x90000),
-				uintptr(len(linuxParam)),
-			),
-			// TODO(10000TB): evaluate if we need to provide  option to
-			// reserve from end.
-			//
-			// Our go code defaults to pick up a mem block of requested
-			// size from beginning, e.g.
-			//
-			//   [Range.Start, Range.Start+memsz)
-			//
-			// Kexec userspace use the range from end, e.g.
-			//
-			//   [Range.end-memsz+1, Range.end)
-			//
-		)
-		if err != nil {
-			return fmt.Errorf("add real mode data and cmdline: %v", err)
-		}
-	} else {
-		// TODO(10000TB): add support.
-		return fmt.Errorf("boot protocol version: %v is currently not supported", b.Header.Protocolversion)
+	linuxParam, err := lp.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("Re-marshaling header: %w", err)
+	}
+
+	// TODO(10000TB): Free mem hole start end aligns by
+	// max(16, pagesize).
+	setupRange, err = kmem.AddPhysSegment(
+		linuxParam,
+		RangeFromInterval(
+			uintptr(0x90000),
+			uintptr(len(linuxParam)),
+		),
+		// TODO(10000TB): evaluate if we need to provide  option to
+		// reserve from end.
+		//
+		// Our go code defaults to pick up a mem block of requested
+		// size from beginning, e.g.
+		//
+		//   [Range.Start, Range.Start+memsz)
+		//
+		// Kexec userspace use the range from end, e.g.
+		//
+		//   [Range.end-memsz+1, Range.end)
+		//
+	)
+	if err != nil {
+		return fmt.Errorf("add real mode data and cmdline: %v", err)
 	}
 
 	Debug("Loaded real mode data and cmdline at: %v", setupRange)
