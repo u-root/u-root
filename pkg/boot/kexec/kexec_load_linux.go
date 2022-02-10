@@ -113,12 +113,18 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	// ranges.
 	var kmem *Memory
 
-	linuxParam, err := ioutil.ReadFile("/sys/kernel/boot_params/data")
+	bp, err := ioutil.ReadFile("/sys/kernel/boot_params/data")
 	if err != nil {
 		return fmt.Errorf("Reading boot_param data: %w", err)
 	}
-
-	Debug("Getting existing parameters")
+	var lp = &bzimage.LinuxParams{}
+	if err := lp.UnmarshalBinary(bp); err != nil {
+		return fmt.Errorf("Unmarshaling header: %w", err)
+	}
+	linuxParam, err := lp.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("Re-marshaling header: %w", err)
+	}
 
 	Debug("Start LoadBzImage...")
 	Debug("Try decompressing kernel...")
