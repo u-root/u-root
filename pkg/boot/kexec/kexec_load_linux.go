@@ -98,7 +98,7 @@ func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
 
 // LoadBzImage loads the given kernel file as to-be-kexeced kernel with
 // the given ramfs file and cmdline string.
-func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
+func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	bzimage.Debug = Debug
 
 	/* A collection of vars used for processing the kernel for kexec */
@@ -195,6 +195,17 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		return err
 	}
 
+	var ramfsRange Range
+	if ramfs != nil {
+		b, err := ioutil.ReadAll(ramfs)
+		if err != nil {
+			return fmt.Errorf("unable to read initramfs: %w", err)
+		}
+		if ramfsRange, err = kmem.AddKexecSegment(b); err != nil {
+			return fmt.Errorf("Adding initramfs segment: %v", err)
+		}
+		Debug("Added %d byte initramfs at %s", len(b), ramfsRange)
+	}
 	// TODO(10000TB): Insert cmdline.
 	// cmdlineLen := len(cmdline) + 1
 	// cmdlineR, err := kmem.FindSpace(cmdlineLen)
