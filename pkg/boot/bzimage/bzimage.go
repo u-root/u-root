@@ -26,6 +26,8 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
+const minBootParamLen = 616
+
 type magic struct {
 	signature []byte
 	c         *exec.Cmd
@@ -363,15 +365,53 @@ func (b *BzImage) AddInitRAMFS(name string) error {
 	return nil
 }
 
-// MakeLinuxHeader marshals a LinuxHeader into a []byte.
-func MakeLinuxHeader(h *LinuxHeader) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, h)
+// MarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxHeader) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := binary.Write(&buf, binary.LittleEndian, h)
 	return buf.Bytes(), err
+}
+
+// UnmarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxHeader) UnmarshalBinary(b []byte) error {
+	return binary.Read(bytes.NewBuffer(b), binary.LittleEndian, h)
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxParams) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := binary.Write(&buf, binary.LittleEndian, h)
+	return buf.Bytes(), err
+}
+
+// UnmarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxParams) UnmarshalBinary(b []byte) error {
+	return binary.Read(bytes.NewBuffer(b), binary.LittleEndian, h)
 }
 
 // Show stringifies a LinuxHeader into a []string.
 func (h *LinuxHeader) Show() []string {
+	var s []string
+
+	val := reflect.ValueOf(*h)
+	for i := 0; i < val.NumField(); i++ {
+		v := val.Field(i)
+		k := reflect.ValueOf(v).Kind()
+		n := val.Type().Field(i).Name
+		switch k {
+		case reflect.Slice:
+			s = append(s, fmt.Sprintf("%s:%#02x", n, v))
+		case reflect.Bool:
+			s = append(s, fmt.Sprintf("%s:%v", n, v))
+		default:
+			s = append(s, fmt.Sprintf("%s:%#02x", n, v))
+		}
+	}
+	return s
+}
+
+// Show stringifies a LinuxParams into a []string.
+func (h *LinuxParams) Show() []string {
 	var s []string
 
 	val := reflect.ValueOf(*h)
@@ -433,6 +473,11 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 
 // String stringifies a LinuxHeader into comma-separated parts
 func (h *LinuxHeader) String() string {
+	return strings.Join(h.Show(), ",")
+}
+
+// String stringifies a LinuxParams into comma-separated parts
+func (h *LinuxParams) String() string {
 	return strings.Join(h.Show(), ",")
 }
 
