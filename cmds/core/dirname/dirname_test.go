@@ -6,50 +6,50 @@ package main
 
 import (
 	"bytes"
+	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
-
-type test struct {
-	args []string
-	out  string
-	err  string
-}
-
-var dirnameTests = []test{
-	// For no args it seems we have to print an error.
-	// It should be missing operand[s] but that's not the standard.
-	{args: []string{}, err: "dirname: missing operand\n"},
-	{args: []string{""}, out: ".\n"},
-	{args: []string{"/this/that"}, out: "/this\n"},
-	{args: []string{"/this/that", "/other"}, out: "/this\n/\n"},
-	{args: []string{"/this/that", "/other thing/space"}, out: "/this\n/other thing\n"},
-}
 
 func TestDirName(t *testing.T) {
 	// Table-driven testing
-	for _, tt := range dirnameTests {
-		c := testutil.Command(t, tt.args...)
-		stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
-		c.Stdout, c.Stderr = stdout, stderr
-		err := c.Run()
-		if err != nil && tt.err == "" {
-			t.Errorf("Test %v: got %q, want nil", tt.args, err)
-			continue
-		}
+	for _, tt := range []struct {
+		name    string
+		dirname string
+		args    []string
+		out     string
+		wantErr string
+	}{
+		{
+			name:    "WrongUsage",
+			args:    []string{},
+			wantErr: "dirname: missing operand",
+		},
+		{
+			name:    "/this/that",
+			dirname: "/this/that",
+			out:     "/this\n",
+		},
+		{
+			name:    "/this/that_/other",
+			dirname: "/this/that",
+			args:    []string{"/other"},
+			out:     "/this\n/\n",
+		},
+		{
+			name:    "/this/that_/other thing/space",
+			dirname: "/this/that",
+			args:    []string{"/other thing/space"},
+			out:     "/this\n/other thing\n",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := runDirname(&buf, &tt.dirname, tt.args); err != nil {
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("runDirname(%v, &buf)=%q, want nil", tt.args, err)
+				}
 
-		t.Logf("RUN: %v: got %q, %q", tt.args, stdout, stderr)
-		if stdout.String() != tt.out {
-			t.Errorf("%v: stdout got %q, wants %q", tt.args, stdout.String(), tt.out)
-		}
-		if err != nil && stderr.String() != "" && stderr.String()[len("yyyy/mm/dd hh:mm:ss "):] != tt.err {
-			t.Errorf("%v: stderr got %q, wants %q", tt.args, stderr.String(), tt.err)
-		}
-
+			}
+		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
