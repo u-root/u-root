@@ -95,7 +95,7 @@ to32:
 	movl	%eax, %gs
 	movl 	entry, %eax
 	movl 	params, %esi
-	1: jmp 1b
+	# in case of emergency, uncomment this. 1: jmp 1b
 	jmp *%eax
 	
 
@@ -280,7 +280,7 @@ movl %eax, %esp
 	outb(0x20, 0x3c0)
 	movq 	entry, %rax
 	movq 	params, %rsi
-	1: jmp 1b
+	# in case of emergency, uncomment this. 1: jmp 1b
 	jmp *%rax
 	
 

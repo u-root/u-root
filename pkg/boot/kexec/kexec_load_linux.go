@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"syscall"
 	"unsafe"
@@ -21,6 +22,7 @@ import (
 const (
 	DEFAULT_INITRD_ADDR_MAX  uint = 0x37FFFFFF
 	DEFAULT_BZIMAGE_ADDR_MAX uint = 0x37FFFFFF
+	bootParams                    = "/sys/kernel/boot_params/data"
 )
 
 type purgatory struct {
@@ -110,13 +112,13 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	// It has routines to work with physical memory
 	// ranges.
 	var kmem *Memory
-	// realMode holds setup code.
-	//
-	// If not executing in real mode, it will be just
-	// be setup header.
-	var realMode *LinuxParamHeader
 
-	var kernel16SizeNeeded uint
+	linuxParam, err := ioutil.ReadFile("/sys/kernel/boot_params/data")
+	if err != nil {
+		return fmt.Errorf("Reading boot_param data: %w", err)
+	}
+
+	Debug("Getting existing parameters")
 
 	Debug("Start LoadBzImage...")
 	Debug("Try decompressing kernel...")
@@ -188,14 +190,6 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 
 	Debug("purgatory entry: %v", purgatoryEntry)
 
-	/* The argument/parameter segment */
-
-	// Assume executing protected mode.
-	kernel16SizeNeeded = uint(b.KernelOffset) // Kernel16 size.
-	if kernel16SizeNeeded < 4096 {
-		kernel16SizeNeeded = 4096
-	}
-
 	ep, err := kmem.LoadElfSegments(bytes.NewReader(b.KernelCode))
 	if err != nil {
 		return err
@@ -215,7 +209,7 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 	 *
 	 * Currently, only protected mode is implemented. So only copy setup header.
 	 */
-	realMode = getLinuxParamHeader(&b) // No real mode is executing.
+	realMode := getLinuxParamHeader(&b) // No real mode is executing.
 	Debug("got setup header: %v", realMode)
 
 	// No support for kexec on crash.
@@ -228,10 +222,10 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		// TODO(10000TB): Free mem hole start end aligns by
 		// max(16, pagesize).
 		setupRange, err = kmem.AddPhysSegment(
-			realMode.ToBytes(),
+			linuxParam,
 			RangeFromInterval(
 				uintptr(0x90000),
-				uintptr(64*1024),
+				uintptr(len(linuxParam)),
 			),
 			// TODO(10000TB): evaluate if we need to provide  option to
 			// reserve from end.
@@ -278,15 +272,6 @@ func KexecLoad(kernel, ramfs io.ReaderAt, cmdline string) error {
 		// TODO(10000TB): Impl support for earlier boot protocols.
 		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", b.Header.Protocolversion)
 	}
-
-	/* Tell current kernel what is going on.
-	 */
-	if err = SetupLinuxBootloaderParameters(realMode, kmem, ramfs, kernel16SizeNeeded, uint(setupRange.Start), cmdline); err != nil {
-		return fmt.Errorf("setup linux bootloader params: %v", err)
-	}
-
-	cmdLineEnd := int(setupRange.Start) + int(kernel16SizeNeeded) + len(cmdline) - 1
-	Debug("cmdLineEnd: %v", cmdLineEnd)
 
 	if err = SetupLinuxSystemParameters(realMode); err != nil {
 		return fmt.Errorf("setup linux system params: %v", err)
