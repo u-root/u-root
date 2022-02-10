@@ -11,32 +11,39 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 )
 
-func usage() {
-	log.Fatal("Usage: basename NAME [SUFFIX]")
+const (
+	usageString = "Usage: basename NAME [SUFFIX]"
+)
+
+func usage(w io.Writer) {
+	fmt.Fprintf(w, "%s", usageString)
 }
 
-func main() {
-	flag.Parse()
-
-	args := flag.Args()
+func runBasename(w io.Writer, args []string) {
 	switch len(args) {
 	case 2:
 		fileName := filepath.Base(args[0])
 		if fileName != args[1] {
 			fileName = strings.TrimSuffix(fileName, args[1])
 		}
-		fmt.Println(fileName)
+		fmt.Fprintf(w, "%s\n", fileName)
 	case 1:
 		fileName := filepath.Base(args[0])
-		fmt.Println(fileName)
+		fmt.Fprintf(w, "%s\n", fileName)
 	default:
-		usage()
+		usage(w)
 	}
+}
+
+func main() {
+	flag.Parse()
+	runBasename(os.Stdout, flag.Args())
 }
