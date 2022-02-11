@@ -5,23 +5,20 @@
 package bb
 
 import (
-	"os/exec"
-	"path/filepath"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/golang"
 )
 
-// Turn this off until we are done moving to modules.
-func testPackageRewriteFile(t *testing.T) {
-	bin := filepath.Join(t.TempDir(), "foo")
-	if err := BuildBusybox(golang.Default(), []string{"github.com/u-root/u-root/pkg/uroot/test/foo"}, false, bin); err != nil {
-		t.Fatal(err)
-	}
+func TestPackageRewriteFile(t *testing.T) {
+	// TODO: re-enable this after we are done moving to modules.
+	//
+	//bin := filepath.Join(t.TempDir(), "foo")
+	//if err := BuildBusybox(golang.Default(), []string{"github.com/u-root/u-root/pkg/uroot/test/foo"}, false, bin); err != nil {
+	//	t.Fatal(err)
+	//}
 
-	cmd := exec.Command(bin)
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("foo failed: %v %v", string(o), err)
-	}
+	//cmd := exec.Command(bin)
+	//o, err := cmd.CombinedOutput()
+	//if err != nil {
+	//	t.Fatalf("foo failed: %v %v", string(o), err)
+	//}
 }
