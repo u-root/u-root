@@ -162,9 +162,16 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	}
 
 	var relocatableKernel bool
-	if b.Header.Protocolversion >= 0x0205 {
-		relocatableKernel = b.Header.RelocatableKernel != 0
-		Debug("bzImage is relocatable")
+	if b.Header.Protocolversion < 0x0205 {
+		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", b.Header.Protocolversion)
+	}
+	relocatableKernel = b.Header.RelocatableKernel != 0
+	// Only protected mode is currently supported.
+	// In protected mode, kernel need be relocatable, or it will need to fall
+	// to real mode executing.
+
+	if !relocatableKernel {
+		return errors.New("non-relocateable Kernels are not supported")
 	}
 
 	Debug("Loading purgatory...")
@@ -180,14 +187,6 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	 */
 
 	var purgatoryEntry uintptr
-
-	// Only protected mode is currently supported.
-	// In protected mode, kernel need be relocatable, or it will need to fall
-	// to real mode executing.
-
-	if !relocatableKernel {
-		return errors.New("real mode executing is not supported currently")
-	}
 
 	Debug("purgatory entry: %v", purgatoryEntry)
 
@@ -218,15 +217,6 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 	// and insert it into segments list to be loaded ?
 	//
 	// kernelCmdlineLen := 0
-
-	/* Setup segment.
-	 *
-	 * Currently, only protected mode is implemented. So only copy setup header.
-	 */
-	realMode := getLinuxParamHeader(&b) // No real mode is executing.
-	Debug("got setup header: %v", realMode)
-
-	// No support for kexec on crash.
 
 	var setupRange Range
 	// The kernel is a bzImage kernel if the protocol >= 2.00 and the 0x01
@@ -269,26 +259,10 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 
 	/* Main kernel segment.
 	 */
-	if b.Header.Protocolversion >= 0x0205 && relocatableKernel {
-		// kernelAlign := b.Header.KernelAlignment
-		//
-		// TODO(10000TB): apply kernel alignment.
-		kernel32MaxAddr := DEFAULT_BZIMAGE_ADDR_MAX
+	kernel32MaxAddr := DEFAULT_BZIMAGE_ADDR_MAX
 
-		if kernel32MaxAddr > uint(b.Header.InitrdAddrMax) {
-			kernel32MaxAddr = uint(b.Header.InitrdAddrMax)
-		}
-
-		if err != nil {
-			return fmt.Errorf("load main kexec segment: %v", err)
-		}
-	} else {
-		// TODO(10000TB): Impl support for earlier boot protocols.
-		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", b.Header.Protocolversion)
-	}
-
-	if err = SetupLinuxSystemParameters(realMode); err != nil {
-		return fmt.Errorf("setup linux system params: %v", err)
+	if kernel32MaxAddr > uint(b.Header.InitrdAddrMax) {
+		kernel32MaxAddr = uint(b.Header.InitrdAddrMax)
 	}
 
 	log.Printf("elf is %v, ep is %#x; should we use that? ", ep, ep.Entry)
