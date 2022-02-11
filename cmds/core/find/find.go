@@ -38,8 +38,7 @@ type flags struct {
 }
 
 var (
-	fargs = flags{}
-
+	fargs     = flags{}
 	fileTypes = map[string]os.FileMode{
 		"f":         0,
 		"file":      0,
@@ -59,6 +58,7 @@ func init() {
 func runFind(out io.Writer, errOut io.Writer, fargs flags, arg []string) error {
 	if len(arg) != 1 {
 		flag.Usage()
+		return nil
 	}
 	root := arg[0]
 
@@ -74,7 +74,7 @@ func runFind(out io.Writer, errOut io.Writer, fargs flags, arg []string) error {
 			for key := range fileTypes {
 				keys = append(keys, key)
 			}
-			log.Fatalf("%v is not a valid file type\n valid types are %v", fargs.filetype, strings.Join(keys, ","))
+			return fmt.Errorf("%v is not a valid file type\n valid types are %v", fargs.filetype, strings.Join(keys, ","))
 		}
 		mode |= intType
 		mask |= os.ModeType
