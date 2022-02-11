@@ -137,12 +137,6 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 		return fmt.Errorf("kernel code size smaller than 1024 bytes: %d", len(b.KernelCode))
 	}
 
-	// TODO(10000TB): add initramfs by a io.ReaderAt.
-	//Debug("Try adding initramfs...")
-	//if err := b.AddInitRAMFS(ramfs.Name()); err != nil {
-	//	return err
-	//}
-
 	Debug("Try get ELF from bzImage...")
 	kelf, err := b.ELF()
 	if err != nil {
