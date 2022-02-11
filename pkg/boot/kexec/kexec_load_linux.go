@@ -176,22 +176,7 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 
 	Debug("Loading purgatory...")
 
-	/* Load the trampoline.
-	 *
-	 * This must load at a higher address than the argument/parameter
-	 * segment or the kernel will stomp it's gdt.
-	 *
-	 * x86_64 purgatory code has got relocations type R_X86_64_32S
-	 * that means purgatory got to be loaded within first 2G otherwise
-	 * overflow takes place while applying relocations.
-	 */
-
-	var purgatoryEntry uintptr
-
-	Debug("purgatory entry: %v", purgatoryEntry)
-
-	ep, err := kmem.LoadElfSegments(bytes.NewReader(b.KernelCode))
-	if err != nil {
+	if _, err := kmem.LoadElfSegments(bytes.NewReader(b.KernelCode)); err != nil {
 		return err
 	}
 
@@ -259,16 +244,11 @@ func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
 
 	/* Main kernel segment.
 	 */
-	kernel32MaxAddr := DEFAULT_BZIMAGE_ADDR_MAX
-
-	if kernel32MaxAddr > uint(b.Header.InitrdAddrMax) {
-		kernel32MaxAddr = uint(b.Header.InitrdAddrMax)
-	}
-
-	log.Printf("elf is %v, ep is %#x; should we use that? ", ep, ep.Entry)
+	var purgatoryEntry uintptr
 	if purgatoryEntry, err = PurgeLoad(kmem, curPurgatory.code, kernelEntry, setupRange.Start); err != nil {
 		return err
 	}
+	Debug("purgatory entry: %v", purgatoryEntry)
 
 	/* Load it */
 	if err = Load(purgatoryEntry, kmem.Segments, 0); err != nil {
