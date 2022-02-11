@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"syscall"
 	"unsafe"
 
@@ -96,9 +96,17 @@ func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
 	return nil
 }
 
-// LoadBzImage loads the given kernel file as to-be-kexeced kernel with
-// the given ramfs file and cmdline string.
-func KexecLoad(kernel io.ReaderAt, ramfs io.Reader, cmdline string) error {
+// KexecLoad loads the given kernel file as to-be-kexeced kernel with
+// the given ramfs file and cmdline string. It uses the kexec "classic"
+// system call, i.e. memory segments + entry point.
+// Arguably, the args should be io.ReaderAt and io.Reader, but we match
+//the existing Load function. If you *do* decided to make these io.Reader,
+// beware of the code that formerly passed a *os.File, and then checked
+// to see if the ramfs (io.Reader) was != nil
+// that won't work, see when-nil-isnt-equal-to-nil for why.
+// Comparison to nil in general is not a great practice, but one fix
+// at a time.
+func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	bzimage.Debug = Debug
 
 	/* A collection of vars used for processing the kernel for kexec */
