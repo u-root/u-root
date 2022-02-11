@@ -65,7 +65,7 @@ func registerFlags() *options {
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
-	flag.StringVarP(&o.purgatory, "purgatory", "p", "to32bit_3000", "pick a purgatory, use help to get a list")
+	flag.StringVarP(&o.purgatory, "purgatory", "p", "default", "pick a purgatory, use '-p xyz' to get a list")
 	return o
 }
 

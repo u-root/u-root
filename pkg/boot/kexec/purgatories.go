@@ -107,8 +107,9 @@ entry32_regs: .long 0
 cmdline_end: .long 0
 `,
 	},
+	// This is the default purgatory, a simple from-64 to-64 trampoline
 	{
-		name: "to64",
+		name: "default",
 		cc:   []string{"x86_64-linux-gnu-gcc", "-c", "-nostdlib", "-nostdinc", "-static"},
 		ld:   []string{"ld", "-N", "-e entry64", "-Ttext=0x3000"},
 		code: `
@@ -280,7 +281,8 @@ movl %eax, %esp
 	outb(0x20, 0x3c0)
 	movq 	entry, %rax
 	movq 	params, %rsi
-	# in case of emergency, uncomment this. 1: jmp 1b
+	# in case of emergency, uncomment this.
+	# 1: jmp 1b
 	jmp *%rax
 	
 
