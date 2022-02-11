@@ -22,7 +22,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-var notabCompletion = flag.Bool("notabcomp", false, "Disable tab completion.")
+var tabCompletion = flag.Bool("tabcomp", false, "Enable tab completion.")
 
 type input interface {
 	Input(prefix string, completer prompt.Completer, opts ...prompt.Option) string
@@ -40,13 +40,17 @@ type shell struct {
 
 func main() {
 	flag.Parse()
+
 	sh := shell{
 		input: inputPrompt{},
 	}
+
 	err := sh.runAll(flag.NArg())
+
 	if e, ok := interp.IsExitStatus(err); ok {
 		os.Exit(int(e))
 	}
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -62,15 +66,21 @@ func (s shell) runAll(narg int) error {
 	if narg > 0 {
 		return s.run(r, strings.NewReader(strings.Join(flag.Args(), " ")), "")
 	}
+
 	if narg == 0 {
 		if term.IsTerminal(int(os.Stdin.Fd())) {
-			if !*notabCompletion {
+			if *tabCompletion {
 				return s.runInteractiveTabCompletion(r, os.Stdout)
 			}
+
+			fmt.Println("Do get tabcompletion run 'gosh -tabcomp'\nThis will only work with a working framebuffer for now")
+
 			return s.runInteractive(r, os.Stdin, os.Stdout)
 		}
+
 		return s.run(r, os.Stdin, "")
 	}
+
 	return nil
 }
 
@@ -79,17 +89,23 @@ func (s shell) run(r *interp.Runner, reader io.Reader, name string) error {
 	if err != nil {
 		return err
 	}
+
 	r.Reset()
+
 	return r.Run(context.Background(), prog)
 }
 
 func (s shell) runInteractive(r *interp.Runner, stdin io.Reader, stdout io.Writer) error {
 	parser := syntax.NewParser()
+
 	fmt.Fprintf(stdout, "$ ")
+
 	var runErr error
+
 	if err := parser.Interactive(stdin, func(stmts []*syntax.Stmt) bool {
 		if parser.Incomplete() {
 			fmt.Fprintf(stdout, "> ")
+
 			return true
 		}
 		for _, stmt := range stmts {
@@ -99,38 +115,60 @@ func (s shell) runInteractive(r *interp.Runner, stdin io.Reader, stdout io.Write
 			}
 		}
 		fmt.Fprintf(stdout, "$ ")
+
 		return true
 	}); err != nil {
 		return err
 	}
+
 	return runErr
 }
 
 func (s shell) runInteractiveTabCompletion(r *interp.Runner, stdout io.Writer) error {
 	parser := syntax.NewParser()
+
 	if s.input == nil {
 		s.input = inputPrompt{}
 	}
+
 	var runErr error
+
+	// TODO(MDr164): Has a tendency to panic when no framebuffer is available.
+	defer func() {
+		if err := recover(); err != nil {
+			runErr = fmt.Errorf("failed to initialize tabcompletion, falling back to no tabcompletion")
+		}
+	}()
+
 	for {
+		if runErr != nil {
+			break
+		}
+
 		in := s.Input(
 			"$ ",
 			completerFunc,
 			prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
 		)
+
 		if in == "exit" {
 			break
 		}
+
 		if err := parser.Stmts(strings.NewReader(in), func(stmt *syntax.Stmt) bool {
 			if parser.Incomplete() {
 				fmt.Fprintf(stdout, "> ")
+
 				return true
 			}
+
 			runErr = r.Run(context.Background(), stmt)
+
 			return !r.Exited()
 		}); err != nil {
 			return err
 		}
 	}
+
 	return runErr
 }

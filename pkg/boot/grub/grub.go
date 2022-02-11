@@ -27,12 +27,14 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/bls"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 var probeGrubFiles = []string{
@@ -111,6 +113,19 @@ func ParseLocalConfig(ctx context.Context, diskDir string, devices block.BlockDe
 	return nil, fmt.Errorf("no valid grub config found")
 }
 
+func grubScanBLSEntries(mountPool *mount.Pool, variables map[string]string) ([]boot.OSImage, error) {
+	var images []boot.OSImage
+	// Scan each mounted partition for BLS entries
+	for _, m := range mountPool.MountPoints {
+		imgs, _ := bls.ScanBLSEntries(ulog.Null, m.Path, variables)
+		images = append(images, imgs...)
+	}
+	if len(images) == 0 {
+		return nil, fmt.Errorf("no valid BLS entry found")
+	}
+	return images, nil
+}
+
 // ParseConfigFile parses a grub configuration as specified in
 // https://www.gnu.org/software/grub/manual/grub/
 //
@@ -136,6 +151,11 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, roo
 	}
 
 	var images []boot.OSImage
+	if p.blscfgFound {
+		if imgs, err := grubScanBLSEntries(p.mountPool, p.variables); err == nil {
+			images = append(images, imgs...)
+		}
+	}
 	for _, label := range p.labelOrder {
 		if img, ok := p.linuxEntries[label]; ok {
 			if _, ok := seenLinux[img]; !ok {
@@ -178,6 +198,9 @@ type parser struct {
 	devices   block.BlockDevices
 	mountPool *mount.Pool
 	schemes   curl.Schemes
+
+	// blscfgFound is set to true when blscfg is found
+	blscfgFound bool
 }
 
 // newParser returns a new grub parser using `root` and schemes `s`.
@@ -201,9 +224,10 @@ func newParser(root *url.URL, devices block.BlockDevices, mountPool *mount.Pool,
 		variables: map[string]string{
 			"root": root.String(),
 		},
-		devices:   devices,
-		mountPool: mountPool,
-		schemes:   s,
+		devices:     devices,
+		mountPool:   mountPool,
+		schemes:     s,
+		blscfgFound: false,
 	}
 }
 
@@ -306,6 +330,11 @@ func (c *parser) append(ctx context.Context, config string) error {
 			continue
 		}
 		directive := strings.ToLower(kv[0])
+		// blscfg len(kv) is 1 so need to be checked here
+		if directive == "blscfg" {
+			c.blscfgFound = true
+		}
+
 		// Used by tests (allow no parameters here)
 		if c.W != nil && directive == "echo" {
 			fmt.Fprintf(c.W, "echo:%#v\n", kv[1:])
