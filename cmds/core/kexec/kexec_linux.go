@@ -38,7 +38,7 @@ import (
 )
 
 type options struct {
-	syscall      string
+	loadSyscall  bool
 	cmdline      string
 	reuseCmdline bool
 	initramfs    string
@@ -52,7 +52,7 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.StringVarP(&o.syscall, "syscall", "", "kexecload", "Select which syscall to use, kexecload for kexecload syscall, and fileload for file load. Default: fileload")
+	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", true, "Use the kexec load syscall (not file_load)")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
@@ -156,10 +156,10 @@ func main() {
 			}
 
 			image = &boot.LinuxImage{
-				Kernel:  uio.NewLazyFile(kernelpath),
-				Initrd:  i,
-				Cmdline: newCmdline,
-				Syscall: opts.syscall,
+				Kernel:      uio.NewLazyFile(kernelpath),
+				Initrd:      i,
+				Cmdline:     newCmdline,
+				LoadSyscall: opts.loadSyscall,
 			}
 		}
 		if err := image.Load(opts.debug); err != nil {
