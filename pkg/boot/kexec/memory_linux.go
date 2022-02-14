@@ -484,13 +484,13 @@ type Memory struct {
 }
 
 // LoadElfSegments loads loadable ELF segments.
-func (m *Memory) LoadElfSegments(r io.ReaderAt) (*elf.File, error) {
-	f, err := elf.NewFile(r)
+func (m *Memory) LoadElfSegments(r io.ReaderAt) (Object, error) {
+	f, err := objectNewFile(r)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, p := range f.Progs {
+	for _, p := range f.Progs() {
 		if p.Type != elf.PT_LOAD {
 			continue
 		}
