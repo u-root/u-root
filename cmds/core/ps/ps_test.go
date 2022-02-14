@@ -8,122 +8,85 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-	"os"
-	"path/filepath"
-	"reflect"
+	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-// Simple Test trying execute the ps
-// If no errors returns, it's okay
-func TestPsExecution(t *testing.T) {
-	t.Logf("TestPsExecution")
-	d := t.TempDir()
-	tests := []struct {
-		n     string
-		pid   string
-		files map[string]string
-		o     string
-		err   error
+func TestPs(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		args    []string
+		all     bool
+		every   bool
+		x       bool
+		nSidTty bool
+		aux     bool
+		want    []string
+		wantErr string
 	}{
-		{n: "missing files", pid: "1", files: map[string]string{"stat": "bad status file"}},
 		{
-			n: "one process", pid: "1", files: map[string]string{
-				"stat": "bad status file",
-				"status": `Name:	systemd
-TracerPid:	0
-Uid:	0	0	0	0
-Gid:	0	0	0	0
-FDSize:	128
-`,
-				"cmdline": "/sbin/init",
-			},
-			o: "PID PGRP SID TTY    STAT        TIME  COMMAND \n1     ?    file    00:00:00   status \n",
-		},
-		// Fix things up
-		{
-			n: "correct pid 1", pid: "1", files: map[string]string{
-				"stat": "1 (systemd) S 0 1 1 0 -1 4194560 82923 51272244 88 3457 153 671 103226 39563 20 0 1 0 2 230821888 2325 18446744073709551615 1 1 0 0 0 0 671173123 4096 1260 0 0 0 17 1 0 0 69 0 0 0 0 0 0 0 0 0 0",
-				"status": `Name:	systemd
-TracerPid:	0
-Uid:	0	0	0	0
-Gid:	0	0	0	0
-FDSize:	128
-`,
-				"cmdline": "/sbin/init",
-			},
-			o: "PID PGRP SID TTY    STAT         TIME  COMMAND \n1 1 1 ?    S        00:00:08  systemd \n",
+			name: "aux",
+			args: []string{"aux"},
+			x:    true,
+			want: []string{"PID", "PGRP", "SID", "TTY", "STAT", "TIME", "COMMAND"},
 		},
 		{
-			n: "second process", pid: "1996", files: map[string]string{
-				"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
+			name: "flag x",
+			x:    true,
+			want: []string{"PID", "TTY", "STAT", "TIME", "COMMAND"},
+		},
+		{
+			name: "switch case 2 default case",
+			x:    false,
+			want: []string{"PID", "TTY", "TIME", "CMD"},
+		},
+		{
+			name: "usage()",
+			args: []string{"test"},
+			x:    true,
+			want: []string{},
+		},
+		{
+			name:    "flag nSidTty",
+			nSidTty: true,
+			want:    []string{"PID", "TTY", "TIME", "CMD"},
+		},
+	} {
+		*all = tt.all
+		*every = tt.every
+		*x = tt.x
+		*nSidTty = tt.nSidTty
+		aux = tt.aux
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			if err := ps(buf, tt.args...); err != nil {
+				t.Errorf("ps() = %q, want: %q", err.Error(), tt.wantErr)
+			} else {
+				for _, want := range tt.want {
+					if !strings.Contains(buf.String(), want) {
+						t.Errorf("ps() = %q, want to contain: %q", buf.String(), tt.want)
+					}
+				}
 
-				"status": `Name:	dnsmasq
-Umask:	0022
-Uid:	110	110	110	110
-`,
-				"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000",
-			},
-			o: " PID PGRP  SID TTY    STAT         TIME  COMMAND \n   1    1    1 ?    S        00:00:08  systemd \n1996 1995 1995 ?    S        00:00:00  dnsmasq \n",
-		},
-		{
-			n: "nethost process", pid: "srv/1996", files: map[string]string{
-				"stat": "1996 (dnsmasq) S 1 1995 1995 0 -1 4194624 64 0 0 0 1 10 0 0 20 0 1 0 1208 51163136 91 18446744073709551615 1 1 0 0 0 0 0 4096 92675 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0",
-
-				"status": `Name:	dnsmasq
-Umask:	0022
-Uid:	110	110	110	110
-`,
-				"cmdline": "/usr/sbin/dnsmasq\000--conf-file=/var/lib/libvirt/dnsmasq/default.conf\000--leasefile-ro\000--dhcp-script=/usr/lib/libvirt/libvirt_leaseshelper\000",
-			},
-			o: "     PID     PGRP      SID TTY    STAT         TIME  COMMAND \n       1        1        1 ?    S        00:00:08  systemd \n    1996     1995     1995 ?    S        00:00:00  dnsmasq \nsrv/1996     1995     1995 ?    S        00:00:00  dnsmasq \n",
-		},
-	}
-
-	for _, tt := range tests {
-		pd := filepath.Join(d, tt.pid)
-		t.Logf("Create %v", pd)
-		if err := os.MkdirAll(pd, 0o777); err != nil {
-			t.Fatalf("Make proc dir: %v", err)
-		}
-		for n, f := range tt.files {
-			procf := filepath.Join(pd, n)
-			t.Logf("Write %v", procf)
-			if err := os.WriteFile(procf, []byte(f), 0o666); err != nil {
-				t.Fatal(err)
 			}
-		}
-		c := testutil.Command(t, "aux")
-		psp := fmt.Sprintf("UROOT_PSPATH=%s:%s", d, filepath.Join(d, "srv"))
-		c.Env = append(c.Env, psp)
-		o, err := c.CombinedOutput()
-		t.Logf("%s: %s %v", tt.n, string(o), err)
-		if string(o) != tt.o {
-			t.Errorf("%v: got %q, want %q", tt.n, string(o), tt.o)
-		}
-		if !reflect.DeepEqual(err, tt.err) {
-			t.Errorf("%v: got %v, want %v", tt.n, err, tt.err)
-		}
+		})
 	}
 }
 
 // Test Parsing of stat
 func TestParse(t *testing.T) {
-	tests := []struct {
+	for _, tt := range []struct {
 		name string
 		p    *Process
 		out  string
-		err  error
+		err  string
 	}{
 		{
 			name: "no status file",
 			p: &Process{
 				stat: "1 (systemd) S 0 1 1 0 -1 4194560 45535 23809816 88 2870 76 378 35944 9972 20 0 1 0 2 230821888 2325 18446744073709551615 1 1 0 0 0 0 671173123 4096 1260 0 0 0 17 2 0 0 69 0 0 0 0 0 0 0 0 0 0",
 			},
-			err: fmt.Errorf("no Uid string in "),
+			err: "no Uid string in ",
 		},
 		{
 			name: "Valid output",
@@ -141,7 +104,7 @@ TracerPid:	0
 Uid:	0	0	0	0
 Gid:	0	0	0	0
 FDSize:	128
-Groups:	 
+Groups:
 NStgid:	1
 NSpid:	1
 NSpgid:	1
@@ -186,39 +149,16 @@ voluntary_ctxt_switches:	10168
 nonvoluntary_ctxt_switches:	3746
 `,
 			},
-			err: nil,
+			err: "",
 		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.p.Parse(); err != nil {
+				if err.Error() != tt.err {
+					t.Errorf("Parse() = %q, want: %q", err, tt.err)
+				}
+			}
+		})
 	}
 
-	flags.all = true
-	for _, tt := range tests {
-		t.Logf("%v", tt.name)
-		err := tt.p.Parse()
-		if !reflect.DeepEqual(err, tt.err) {
-			t.Errorf("Check %v: got %v, want %v", tt.p.stat, err, tt.err)
-			continue
-		}
-		if err != nil {
-			continue
-		}
-		pT := NewProcessTable()
-		pT.table = []*Process{tt.p}
-		pT.mProc = tt.p
-		var b bytes.Buffer
-		err = ps(pT, &b)
-		t.Logf("ps out is %s", b.String())
-		if !reflect.DeepEqual(err, tt.err) {
-			t.Errorf("%v: got %v, want %v", pT, err, tt.err)
-			continue
-		}
-		if b.String() != tt.out {
-			t.Errorf("%s: got %q, want %q", tt.p.stat, b.String(), tt.out)
-			continue
-		}
-
-	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

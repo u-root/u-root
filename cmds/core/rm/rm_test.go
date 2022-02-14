@@ -2,220 +2,144 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//  created by Manoel Vilela (manoel_vilela@engineer.com)
-
 package main
 
 import (
+	"bytes"
+	"log"
 	"os"
-	"path"
-	"syscall"
+	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type file struct {
-	name   string
-	delete bool
+func setup(t *testing.T) string {
+	d := t.TempDir()
+	fbody := []byte("Go is cool!")
+	for _, f := range []struct {
+		name  string
+		mode  os.FileMode
+		isdir bool
+	}{
+		{
+			name:  "hi",
+			mode:  0o755,
+			isdir: true,
+		},
+		{
+			name: "hi/one.txt",
+			mode: 0o666,
+		},
+		{
+			name: "hi/two.txt",
+			mode: 0o777,
+		},
+		{
+			name: "go.txt",
+			mode: 0o555,
+		},
+	} {
+		var (
+			err      error
+			filepath = filepath.Join(d, f.name)
+		)
+		if f.isdir {
+			err = os.Mkdir(filepath, f.mode)
+		} else {
+			err = os.WriteFile(filepath, fbody, f.mode)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return d
 }
 
-type rmTestCase struct {
-	name  string
-	files []file
-	i     bool
-	r     bool
-	f     bool
-	err   func(error) bool
-	stdin *testutil.FakeStdin
-}
+func TestRm(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		file        string
+		interactive bool
+		iString     string
+		verbose     bool
+		recursive   bool
+		force       bool
+		want        string
+	}{
+		{
+			name: "no args",
+			file: "",
+			want: "",
+		},
+		{
+			name: "rm one file",
+			file: "go.txt",
+			want: "",
+		},
+		{
+			name:    "rm one file verbose",
+			file:    "go.txt",
+			verbose: true,
+			want:    "",
+		},
+		{
+			name: "fail to rm one file",
+			file: "go",
+			want: "no such file or directory",
+		},
+		{
+			name:  "fail to rm one file forced to trigger continue",
+			file:  "go",
+			force: true,
+			want:  "",
+		},
+		{
+			name:        "rm one file interactive",
+			file:        "go",
+			interactive: true,
+			iString:     "y\n",
+			want:        "",
+		},
+		{
+			name:        "rm one file interactive continue triggered",
+			file:        "go",
+			interactive: true,
+			iString:     "\n",
+			want:        "",
+		},
+		{
+			name:      "rm dir recursivly",
+			file:      "hi",
+			recursive: true,
+		},
+		{
+			name: "rm dir not recursivly",
+			file: "hi",
+			want: "directory not empty",
+		},
+	} {
+		d := setup(t)
 
-func TestRemove(t *testing.T) {
-	var (
-		no       = testutil.NewFakeStdin("no")
-		fbody    = []byte("Go is cool!")
-		tmpFiles = []struct {
-			name  string
-			mode  os.FileMode
-			isdir bool
-		}{
-			{
-				name:  "hi",
-				mode:  0o755,
-				isdir: true,
-			},
-			{
-				name: "hi/one.txt",
-				mode: 0o666,
-			},
-			{
-				name: "hi/two.txt",
-				mode: 0o777,
-			},
-			{
-				name: "go.txt",
-				mode: 0o555,
-			},
-		}
-		nilerr    = func(err error) bool { return err == nil }
-		testCases = []rmTestCase{
-			{
-				name: "no flags",
-				files: []file{
-					{"hi/one.txt", true},
-					{"hi/two.txt", true},
-					{"go.txt", true},
-				},
-				err:   nilerr,
-				stdin: no,
-			},
-			{
-				name: "-i",
-				files: []file{
-					{"hi/one.txt", true},
-					{"hi/two.txt", false},
-					{"go.txt", true},
-				},
-				i:     true,
-				err:   nilerr,
-				stdin: testutil.NewFakeStdin("y", "no", "yes"),
-			},
-			{
-				name: "nonexistent with no flags",
-				files: []file{
-					{"hi/one.txt", true},
-					{"hi/two.doc", true}, // does not exist
-					{"go.txt", false},
-				},
-				err:   os.IsNotExist,
-				stdin: no,
-			},
-			{
-				name:  "directory with no flags",
-				files: []file{{"hi", false}},
-				err:   pathError(syscall.ENOTEMPTY),
-				stdin: no,
-			},
-			{
-				name:  "directory with -f",
-				files: []file{{"hi", false}},
-				f:     true,
-				err:   pathError(syscall.ENOTEMPTY),
-				stdin: no,
-			},
-			{
-				name:  "directory with -rf",
-				files: []file{{"hi", true}},
-				r:     true,
-				f:     true,
-				err:   nilerr,
-				stdin: no,
-			},
-			{
-				name:  "directory with -r",
-				files: []file{{"hi", true}},
-				r:     true,
-				err:   nilerr,
-				stdin: no,
-			},
-			{
-				name: "directory and file with -r",
-				files: []file{
-					{"hi", true},
-					{"go.txt", true},
-				},
-				r:     true,
-				err:   nilerr,
-				stdin: no,
-			},
-			{
-				name: "-f",
-				files: []file{
-					{"hi/one.doc", true}, // does not exist
-					{"hi/two.txt", true},
-					{"go.doc", true}, // does  not exist
-				},
-				f:     true,
-				err:   nilerr,
-				stdin: no,
-			},
-			{
-				name: "-i -f",
-				files: []file{
-					{"hi/one.txt", true}, // does not exist
-					{"hi/two.txt", true},
-					{"go.txt", true}, // does  not exist
-				},
-				f:     true,
-				i:     true,
-				err:   nilerr,
-				stdin: no,
-			},
-		}
-	)
+		t.Run(tt.name, func(t *testing.T) {
+			var file []string
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			d := t.TempDir()
+			*interactive = tt.interactive
+			*verbose = tt.verbose
+			*recursive = tt.recursive
+			*force = tt.force
 
-			for _, f := range tmpFiles {
-				var (
-					err      error
-					filepath = path.Join(d, f.name)
-				)
-				if f.isdir {
-					err = os.Mkdir(filepath, f.mode)
-				} else {
-					err = os.WriteFile(filepath, fbody, f.mode)
-				}
-				if err != nil {
-					t.Fatal(err)
+			buf := &bytes.Buffer{}
+			log.SetOutput(buf)
+			buf.WriteString(tt.iString)
+
+			if tt.file != "" {
+				file = []string{filepath.Join(d, tt.file)}
+			}
+			if err := rm(buf, file); err != nil {
+				if !strings.Contains(err.Error(), tt.want) {
+					t.Errorf("rm() = %q, want to contain: %q", err.Error(), tt.want)
 				}
 			}
-			testRemove(t, d, tc)
 		})
-	}
-}
-
-func testRemove(t *testing.T, dir string, tc rmTestCase) {
-	files := make([]string, len(tc.files))
-	for i, f := range tc.files {
-		files[i] = path.Join(dir, f.name)
-	}
-
-	flags.v = true
-	flags.r = tc.r
-	flags.f = tc.f
-	flags.i = tc.i
-
-	if err := rm(tc.stdin, files); !tc.err(err) {
-		t.Error(err)
-	}
-
-	if flags.i && tc.stdin.Count() == 0 {
-		t.Error("Expected reading from stdin")
-	} else if !flags.i && tc.stdin.Count() > 0 {
-		t.Errorf("Did not expect reading %d times from stdin", tc.stdin.Count())
-	}
-	if tc.stdin.Overflowed() {
-		t.Error("Read from stdin too many times")
-	}
-
-	for i, f := range tc.files {
-		_, err := os.Stat(path.Join(dir, f.name))
-		if tc.files[i].delete != os.IsNotExist(err) {
-			t.Errorf("File %q deleted: %t, expected: %t",
-				f.name, os.IsNotExist(err), tc.files[i].delete)
-		}
-	}
-}
-
-func pathError(errno syscall.Errno) func(error) bool {
-	return func(err error) bool {
-		pe, ok := err.(*os.PathError)
-		if !ok {
-			return false
-		}
-		return pe.Err == errno
 	}
 }

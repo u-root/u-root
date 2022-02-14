@@ -48,6 +48,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -87,7 +88,6 @@ func invalidCount(p []byte) (n int64) {
 
 func count(in io.Reader, fname string) (c cnt) {
 	b := bufio.NewReaderSize(in, 8192)
-
 	counted := false
 	for !counted {
 		line, err := b.ReadBytes('\n')
@@ -110,7 +110,7 @@ func count(in io.Reader, fname string) (c cnt) {
 	return
 }
 
-func report(c cnt, fname string) {
+func report(w io.Writer, c cnt, fname string) {
 	fields := []string{}
 	if *lines {
 		fields = append(fields, fmt.Sprintf("%d", c.nline))
@@ -131,29 +131,26 @@ func report(c cnt, fname string) {
 		fields = append(fields, fname)
 	}
 
-	fmt.Println(strings.Join(fields, " "))
+	fmt.Fprintln(w, strings.Join(fields, " "))
 }
 
-func main() {
+func runwc(w io.Writer, r io.Reader, args ...string) error {
 	var totals cnt
-
-	flag.Parse()
-
 	if !(*lines || *words || *runes || *broken || *chars) {
 		*lines, *words, *chars = true, true, true
 	}
 
-	if flag.NArg() == 0 {
-		cnt := count(os.Stdin, "")
-		report(cnt, "")
-		return
+	if len(args) == 0 {
+		cnt := count(r, "")
+		report(w, cnt, "")
+		return nil
 	}
 
-	for _, v := range flag.Args() {
+	for _, v := range args {
 		f, err := os.Open(v)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error opening %s: %v\n", v, err)
-			os.Exit(1)
+			return err
 		}
 		cnt := count(f, v)
 		totals.nline += cnt.nline
@@ -161,9 +158,17 @@ func main() {
 		totals.nrune += cnt.nrune
 		totals.nbadr += cnt.nbadr
 		totals.nchar += cnt.nchar
-		report(cnt, v)
+		report(w, cnt, v)
 	}
-	if flag.NArg() > 1 {
-		report(totals, "total")
+	if len(args) > 1 {
+		report(w, totals, "total")
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := runwc(os.Stdout, os.Stdin, flag.Args()...); err != nil {
+		log.Fatal(err)
 	}
 }

@@ -17,47 +17,40 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var (
-	flags struct {
-		r bool
-		v bool
-		i bool
-		f bool
-	}
-	cmd = "rm [-Rrvif] file..."
+	interactive = flag.Bool("i", false, "Interactive mode.")
+	verbose     = flag.Bool("v", false, "Verbose mode.")
+	recursive   = flag.Bool("r", false, "equivalent to -R")
+	r           = flag.Bool("R", false, "Recursive, remove hierarchies")
+	force       = flag.Bool("f", false, "Force, ignore nonexistent files and never prompt")
 )
 
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
-	flag.BoolVarP(&flags.i, "interactive", "i", false, "Interactive mode.")
-	flag.BoolVarP(&flags.v, "verbose", "v", false, "Verbose mode.")
-	flag.BoolVarP(&flags.r, "recursive", "r", false, "remove hierarchies")
-	flag.BoolVarP(&flags.r, "RECURSIVE", "R", false, "remove hierarchies")
-	flag.BoolVarP(&flags.f, "force", "f", false, "Ignore nonexistent files and never prompt")
-}
+const usage = "rm [-Rrvif] file..."
 
 func rm(stdin io.Reader, files []string) error {
+	if len(files) < 1 {
+		flag.Usage()
+		return nil
+	}
 	f := os.Remove
-	if flags.r {
+	if *recursive || *r {
 		f = os.RemoveAll
 	}
 
-	if flags.f {
-		flags.i = false
+	if *force {
+		*interactive = false
 	}
 
 	workingPath, err := os.Getwd()
@@ -67,7 +60,7 @@ func rm(stdin io.Reader, files []string) error {
 
 	input := bufio.NewReader(stdin)
 	for _, file := range files {
-		if flags.i {
+		if *interactive {
 			fmt.Printf("rm: remove '%v'? ", file)
 			answer, err := input.ReadString('\n')
 			if err != nil || strings.ToLower(answer)[0] != 'y' {
@@ -76,13 +69,13 @@ func rm(stdin io.Reader, files []string) error {
 		}
 
 		if err := f(file); err != nil {
-			if flags.f && os.IsNotExist(err) {
+			if *force && os.IsNotExist(err) {
 				continue
 			}
 			return err
 		}
 
-		if flags.v {
+		if *verbose {
 			toRemove := file
 			if !path.IsAbs(file) {
 				toRemove = filepath.Join(workingPath, file)
@@ -94,14 +87,9 @@ func rm(stdin io.Reader, files []string) error {
 }
 
 func main() {
+	util.Usage(usage)
 	flag.Parse()
-	if flag.NArg() < 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
-
 	if err := rm(os.Stdin, flag.Args()); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }

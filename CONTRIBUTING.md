@@ -199,6 +199,63 @@ The `spimock.New()` function returns an implementation of SPI which mocks the
 underlying SPI driver. The `Flash` object can be tested without hardware
 dependencies.
 
+### VM Tests using QEMU
+For code reading or manipulating hardware, it can be reasonable not to mock out syscalls etc. but to run tests in a virtual environment.
+In case you need to test against certain hardware, you can use a QEMU environment via `pkg/vmtest`. In your package, put the setup and corresponding tests in `vm_test.go`. 
+
+**IMPORTANT Notes**
+* Add `!race` build tag to your `vm_test.go`
+* Setup QEMU inside a usual test function
+* Make sure the tests assuming this setup are skipped in non-VM test run
+* Add your package to `blocklist` in `integration/gotests/gotest_test.go` making sure the test doesn't run in the project wide integration tests without the proper QEMU setup.
+
+See below or `pkg/mount/block` for examples.
+```
+//go:build !race
+// +build !race
+
+package foo
+
+import (
+	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/vmtest"
+)
+
+// VM setup:
+//
+//  Describe your setup
+
+func TestVM(t *testing.T) {
+	o := &vmtest.Options{
+		QEMUOpts: qemu.Options{
+			Devices: []qemu.Device{
+				// Configure QEMU here
+				qemu.ArbitraryArgs{...},
+			},
+		},
+	}
+	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/foo"}, o)
+}
+
+func TestFooRunInQEMU1(t *testing.T) {
+  if os.Getuid != 0 {
+    t.Skip("Skipping since we are not root")
+  }
+  // ...
+}
+
+func TestFooRunInQEMU2(t *testing.T) {
+  if os.Getuid != 0 {
+    t.Skip("Skipping since we are not root")
+  }
+  // ...
+}
+
+// ...
+
+```
+
 ### Package main
 
 The main function often includes things difficult to test. For example:
@@ -225,8 +282,8 @@ func main() {
 }
 ```
 
-### VM Tests using QEMU
-For a package *foo*, put your unit tests inside `foo_test.go`. To test integration with other parts without mocking, write integration test in a file `integration_test.go`. In case you need to test against certain hardware, you can use a QEMU environment via `pkg/vmtest`. Put the setup and corresponding tests in `vm_test.go`
+### Integration Tests
+To test integration with other code/packages without mocking, write integration test in a file `integration_test.go`.
 
 ## Code Reviews
 

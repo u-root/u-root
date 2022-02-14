@@ -43,7 +43,7 @@ func fakeDevices() (block.BlockDevices, *mount.Pool, error) {
 		})
 		mountPool.Add(&mount.MountPoint{
 			Path:   dir,
-			Device: dir,
+			Device: filepath.Join("/dev", dir),
 			FSType: "test",
 		})
 	}

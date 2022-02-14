@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -26,6 +27,15 @@ import (
 
 	flag "github.com/pborman/getopt/v2"
 	"github.com/u-root/u-root/pkg/pci"
+)
+
+var (
+	numbers   = flag.Bool('n', "Show numeric IDs")
+	devs      = flag.StringLong("select", 's', "*", "Devices to match")
+	dumpJSON  = flag.BoolLong("json", 'j', "Dump the bus in JSON")
+	verbosity = flag.Counter('v', "verbosity")
+	hexdump   = flag.Counter('x', "hexdump the config space")
+	readJSON  = flag.StringLong("JSON", 'J', "", "Read JSON in instead of /sys")
 )
 
 var format = map[int]string{
@@ -106,18 +116,9 @@ func registers(d pci.Devices, cmds ...string) {
 	}
 }
 
-func main() {
+func pciExecution(w io.Writer, args ...string) error {
 	var dumpSize int
-	numbers := flag.Bool('n', "Show numeric IDs")
-	devs := flag.StringLong("select", 's', "*", "Devices to match")
-	j := flag.BoolLong("json", 'j', "Dump the bus in JSON")
-	v := flag.Counter('v', "verbosity")
-	x := flag.Counter('x', "hexdump the config space")
-	readJSON := flag.StringLong("JSON", 'J', "", "Read JSON in instead of /sys")
-
-	flag.Parse()
-
-	switch *x {
+	switch *hexdump {
 	case 4:
 		dumpSize = 4096
 	case 3:
@@ -129,40 +130,48 @@ func main() {
 	}
 	r, err := pci.NewBusReader(strings.Split(*devs, ",")...)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return err
 	}
 
 	var d pci.Devices
 	if len(*readJSON) != 0 {
 		b, err := os.ReadFile(*readJSON)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if err := json.Unmarshal(b, &d); err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 	} else {
 		if d, err = r.Read(); err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
-	if !*numbers || *j {
+	if !*numbers || *dumpJSON {
 		d.SetVendorDeviceName()
 	}
-	if len(flag.Args()) > 0 {
-		registers(d, flag.Args()...)
+	if len(args) > 0 {
+		registers(d, args...)
 	}
-	if *j {
+	if *dumpJSON {
 		o, err := json.MarshalIndent(d, "", "\t")
 		if err != nil {
-			log.Fatalf("%v", err)
+			return err
 		}
 		fmt.Printf("%s", string(o))
-		os.Exit(0)
+		return nil
 	}
-	if err := d.Print(os.Stdout, *v, dumpSize); err != nil {
+	if err := d.Print(w, *verbosity, dumpSize); err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := pciExecution(os.Stdout, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -24,12 +24,15 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-const cmd = "comm [-123h] file1 file2"
+const usage = "comm: comm [-123h] file1 file2"
 
 var (
 	s1   = flag.Bool("1", false, "suppress printing of column 1")
@@ -38,17 +41,8 @@ var (
 	help = flag.Bool("h", false, "print this help message and exit")
 )
 
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
-}
-
-func reader(f *os.File, c chan string) {
-	b := bufio.NewReader(f)
-
+func reader(r io.Reader, c chan string) {
+	b := bufio.NewReader(r)
 	for {
 		s, err := b.ReadString('\n')
 		c <- strings.TrimRight(s, "\r\n")
@@ -93,25 +87,24 @@ func outer(c1, c2 chan string, c chan out) {
 	close(c)
 }
 
-func main() {
-	flag.Parse()
-	if flag.NArg() != 2 || *help {
+func comm(w io.Writer, args ...string) error {
+	if len(args) != 2 || *help {
 		flag.Usage()
-		os.Exit(1)
+		return nil
 	}
 
 	c1 := make(chan string, 100)
 	c2 := make(chan string, 100)
 	c := make(chan out, 100)
 
-	f1, err := os.Open(flag.Args()[0])
+	f1, err := os.Open(args[0])
 	if err != nil {
-		log.Fatalf("Can't open %s: %v", flag.Args()[0], err)
+		return fmt.Errorf("can't open %s: %v", args[0], err)
 	}
 
-	f2, err := os.Open(flag.Args()[1])
+	f2, err := os.Open(args[1])
 	if err != nil {
-		log.Fatalf("Can't open %s: %v", flag.Args()[1], err)
+		return fmt.Errorf("can't open %s: %v", args[1], err)
 	}
 	go reader(f1, c1)
 	go reader(f2, c2)
@@ -136,7 +129,16 @@ func main() {
 			line += out.s3
 		}
 		if line != "\t\t" {
-			fmt.Println(strings.TrimRight(line, "\t")) // the unix comm utility does this
+			fmt.Fprintln(w, strings.TrimRight(line, "\t")) // the unix comm utility does this
 		}
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	util.Usage(usage)
+	if err := comm(os.Stdout, flag.Args()...); err != nil {
+		log.Fatal(err)
 	}
 }

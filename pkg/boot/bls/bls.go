@@ -16,6 +16,7 @@ package bls
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,7 +28,8 @@ import (
 )
 
 const (
-	blsEntriesDir = "loader/entries"
+	blsEntriesDir  = "loader/entries"
+	blsEntriesDir2 = "boot/loader/entries"
 	// Set a higher default rank for BLS. It should be booted prior to the
 	// other local images.
 	blsDefaultRank = 1
@@ -42,13 +44,19 @@ func cutConf(s string) string {
 
 // ScanBLSEntries scans the filesystem root for valid BLS entries.
 // This function skips over invalid or unreadable entries in an effort
-// to return everything that is bootable.
-func ScanBLSEntries(log ulog.Logger, fsRoot string) ([]boot.OSImage, error) {
+// to return everything that is bootable. map variables is the parsed result
+// from Grub parser that should be used by BLS parser, pass nil if there's none.
+func ScanBLSEntries(log ulog.Logger, fsRoot string, variables map[string]string) ([]boot.OSImage, error) {
 	entriesDir := filepath.Join(fsRoot, blsEntriesDir)
 
 	files, err := filepath.Glob(filepath.Join(entriesDir, "*.conf"))
-	if err != nil {
-		return nil, fmt.Errorf("no BootLoaderSpec entries found: %w", err)
+	if err != nil || len(files) == 0 {
+		// Try blsEntriesDir2
+		entriesDir = filepath.Join(fsRoot, blsEntriesDir2)
+		files, err = filepath.Glob(filepath.Join(entriesDir, "*.conf"))
+		if err != nil || len(files) == 0 {
+			return nil, fmt.Errorf("no BootLoaderSpec entries found: %w", err)
+		}
 	}
 
 	// loader.conf is not in the real spec; it's an implementation detail
@@ -66,7 +74,7 @@ func ScanBLSEntries(log ulog.Logger, fsRoot string) ([]boot.OSImage, error) {
 	for _, f := range files {
 		identifier := cutConf(filepath.Base(f))
 
-		img, err := parseBLSEntry(f, fsRoot)
+		img, err := parseBLSEntry(f, fsRoot, variables)
 		if err != nil {
 			log.Printf("BootLoaderSpec skipping entry %s: %v", f, err)
 			continue
@@ -151,10 +159,23 @@ func filePath(fsRoot, value string) string {
 	return filepath.Join(fsRoot, value)
 }
 
-func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error) {
+func getGrubvalue(variables map[string]string, key string) (string, error) {
+	if variables == nil {
+		// Only return error for nil variables map.
+		return "", fmt.Errorf("variables map is nil")
+	}
+	if val, ok := variables[key]; ok && len(val) > 0 {
+		return val, nil
+	}
+	return "", nil
+}
+
+func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string]string) (boot.OSImage, error) {
 	linux := &boot.LinuxImage{}
 
 	var cmdlines []string
+	var tokens []string
+	var value string
 	for key, val := range vals {
 		switch key {
 		case "linux":
@@ -165,8 +186,10 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 			linux.Kernel = f
 
 		// TODO: initrd may be specified more than once.
+		// TODO: For now only process the first token, the rest are ignored, e.g. '$tuned_initrd'.
 		case "initrd":
-			f, err := os.Open(filePath(fsRoot, val))
+			tokens = strings.Split(val, " ")
+			f, err := os.Open(filePath(fsRoot, tokens[0]))
 			if err != nil {
 				return nil, err
 			}
@@ -180,7 +203,34 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 
 		// options may appear more than once.
 		case "options":
-			cmdlines = append(cmdlines, val)
+			tokens = strings.Split(val, " ")
+			var err error
+			for _, w := range tokens {
+				switch w {
+				// TODO: GRUB/BLS parser should also get kernelopts from grubenv file
+				case "$kernelopts":
+					if value, err = getGrubvalue(variables, "kernelopts"); err != nil {
+						return nil, fmt.Errorf("variables map is nil for $kernelopts")
+					}
+					if value == "" {
+						// If it's not found, fallback to look for default_kernelopts
+						log.Printf("kernelopts is empty, look for default_kernelopts\n")
+						if value, err = getGrubvalue(variables, "default_kernelopts"); value == "" {
+							return nil, fmt.Errorf("No valid kernelopts is found")
+						}
+					}
+					cmdlines = append(cmdlines, value)
+					break
+				case "$tuned_params":
+					if value, err = getGrubvalue(variables, "tuned_params"); err != nil {
+						return nil, fmt.Errorf("variables map is nil for $tuned_params")
+					}
+					cmdlines = append(cmdlines, value)
+					break
+				default:
+					cmdlines = append(cmdlines, w)
+				}
+			}
 		}
 	}
 
@@ -212,7 +262,7 @@ func parseLinuxImage(vals map[string]string, fsRoot string) (boot.OSImage, error
 // parseBLSEntry takes a Type #1 BLS entry and the directory of entries, and
 // returns a LinuxImage.
 // An error is returned if the syntax is wrong or required keys are missing.
-func parseBLSEntry(entryPath, fsRoot string) (boot.OSImage, error) {
+func parseBLSEntry(entryPath, fsRoot string, variables map[string]string) (boot.OSImage, error) {
 	vals, err := parseConf(entryPath)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config in %s: %w", entryPath, err)
@@ -221,7 +271,7 @@ func parseBLSEntry(entryPath, fsRoot string) (boot.OSImage, error) {
 	var img boot.OSImage
 	err = fmt.Errorf("neither linux, efi, nor multiboot present in BootLoaderSpec config")
 	if _, ok := vals["linux"]; ok {
-		img, err = parseLinuxImage(vals, fsRoot)
+		img, err = parseLinuxImage(vals, fsRoot, variables)
 	} else if _, ok := vals["multiboot"]; ok {
 		err = fmt.Errorf("multiboot not yet supported")
 	} else if _, ok := vals["efi"]; ok {
