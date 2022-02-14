@@ -8,129 +8,81 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type test struct {
-	flags []string
-	in    string
-	out   string
-}
-
-var sortTests = []test{
-	// empty
-	{[]string{}, "", ""},
-	// already sorted, in == out
-	{[]string{}, "a\nb\nc\n", "a\nb\nc\n"},
-	// sort letters
-	{[]string{}, "c\na\nb\n", "a\nb\nc\n"},
-	// sort lexicographic
-	{[]string{}, "abc \nab\na bc\n", "a bc\nab\nabc \n"},
-	// sort without terminating newline
-	{[]string{}, "a\nb\nc", "a\nb\nc\n"},
-	// sort with utf-8 characters
-	{[]string{}, "γ\nα\nβ\n", "α\nβ\nγ\n"},
-	// reverse sort
-	{[]string{"-r"}, "c\na\nb\n", "c\nb\na\n"},
-	// reverse sort without terminating newline
-	{[]string{"-r"}, "a\nb\nc", "c\nb\na\n"},
-}
-
-// sort < in > out
-func TestSortWithPipes(t *testing.T) {
-	// Table-driven testing
-	for _, tt := range sortTests {
-		cmd := testutil.Command(t, tt.flags...)
-		cmd.Stdin = strings.NewReader(tt.in)
-		var out bytes.Buffer
-		cmd.Stdout = &out
-		if err := cmd.Run(); err != nil {
-			t.Errorf("sort(%#v): %v", tt.in, err)
-		}
-		if out.String() != tt.out {
-			t.Errorf("sort(%#v) = %#v; want %#v", tt.in,
-				out.String(), tt.out)
-		}
-	}
-}
-
-// Helper function to create input files, run sort and compare the output.
-func sortWithFiles(t *testing.T, tt test, tmpDir string,
-	inFiles []string, outFile string) {
-	// Create input files
-	inPaths := make([]string, len(inFiles))
-	for i, inFile := range inFiles {
-		inPaths[i] = filepath.Join(tmpDir, inFile)
-		if err := os.WriteFile(inPaths[i], []byte(tt.in), 0o600); err != nil {
-			t.Error(err)
-			return
-		}
-	}
-	outPath := filepath.Join(tmpDir, outFile)
-
-	args := append(append(tt.flags, "-o", outPath), inPaths...)
-	out, err := testutil.Command(t, args...).CombinedOutput()
+func TestSort(t *testing.T) {
+	tmpDir := t.TempDir()
+	file1, err := os.Create(filepath.Join(tmpDir, "file1"))
 	if err != nil {
-		t.Errorf("sort %s: %v\n%s", strings.Join(args, " "), err, out)
-		return
+		t.Errorf("Failed to create tmp file1: %v", err)
 	}
-
-	out, err = os.ReadFile(outPath)
+	if _, err := file1.WriteString("α\nβ\nγ"); err != nil {
+		t.Errorf("failed to write into file1: %v", err)
+	}
+	file2, err := os.Create(filepath.Join(tmpDir, "file2"))
 	if err != nil {
-		t.Errorf("Cannot open out file: %v", err)
-		return
+		t.Errorf("Failed to create tmp file2: %v", err)
 	}
-	if string(out) != tt.out {
-		t.Errorf("sort %s = %#v; want %#v", strings.Join(args, " "),
-			string(out), tt.out)
+	if _, err := file2.WriteString("a\nd\nc\n"); err != nil {
+		t.Errorf("failed to write into file1: %v", err)
 	}
-}
-
-// sort -o in out
-func TestSortWithFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Table-driven testing
-	for _, tt := range sortTests {
-		sortWithFiles(t, tt, tmpDir, []string{"in"}, "out")
+	for _, tt := range []struct {
+		name       string
+		args       []string
+		reverse    bool
+		outputFile string
+		want       string
+		wantErr    string
+	}{
+		{
+			name: "empty input",
+			args: []string{},
+			want: "",
+		},
+		{
+			name: "input from 2 files",
+			args: []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
+			want: "a\nc\nd\nα\nβ\nγ\n",
+		},
+		{
+			name:    "reversed = true",
+			args:    []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
+			reverse: true,
+			want:    "γ\nβ\nα\nd\nc\na\n",
+		},
+		{
+			name:       "outputfile set",
+			args:       []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
+			outputFile: filepath.Join(tmpDir, "outputfile"),
+			want:       "a\nc\nd\nα\nβ\nγ\n",
+		},
+	} {
+		*reverse = tt.reverse
+		*outputFile = tt.outputFile
+		t.Run(tt.name, func(t *testing.T) {
+			buf := &bytes.Buffer{}
+			f, err := os.Create(filepath.Join(tmpDir, "file"))
+			if err != nil {
+				t.Errorf("failed to create tmp file: %v", err)
+			}
+			if got := readInput(buf, f, tt.args...); got != nil {
+				if got.Error() != tt.wantErr {
+					t.Errorf("readInput() = %q, want: %q", got.Error(), tt.wantErr)
+				}
+			} else if tt.name == "outputfile set" {
+				sort, err := os.ReadFile(filepath.Join(tmpDir, "outputfile"))
+				if err != nil {
+					t.Errorf("Failed to read file: %v", err)
+				}
+				if string(sort) != tt.want {
+					t.Errorf("readInput() = %q, want: %q", string(sort), tt.want)
+				}
+			} else {
+				if buf.String() != tt.want {
+					t.Errorf("readInput() = %q, want: %q", buf.String(), tt.want)
+				}
+			}
+		})
 	}
-}
-
-// sort -o file file
-func TestInplaceSort(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Table-driven testing
-	for _, tt := range sortTests {
-		sortWithFiles(t, tt, tmpDir, []string{"file"}, "file")
-	}
-}
-
-// sort -o out in1 in2 in3 in4
-func TestMultipleFileInputs(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	tt := test{
-		[]string{},
-		"a\nb\nc\n",
-		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n",
-	}
-	sortWithFiles(t, tt, tmpDir,
-		[]string{"in1", "in2", "in3", "in4"}, "out")
-
-	// Run the test again without newline terminators.
-	tt = test{
-		[]string{},
-		"a\nb\nc",
-		"a\na\na\na\nb\nb\nb\nb\nc\nc\nc\nc\n",
-	}
-	sortWithFiles(t, tt, tmpDir,
-		[]string{"in1", "in2", "in3", "in4"}, "out")
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
