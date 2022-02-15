@@ -5,31 +5,27 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"crypto/sha256"
 	"fmt"
+	"hash"
 	"io"
+	"log"
 	"os"
 
 	"github.com/spf13/pflag"
 )
 
+var (
+	algorithm = pflag.IntP("algorithmhttps://github.com/u-root/u-root/pull/2319", "a", 1, "SHA algorithm, valid args are 1 and 256")
+	help      = pflag.BoolP("help", "h", false, "Show this help and exit")
+)
+var usage = "Usage:\nshasum -a <algorithm> <File Name>"
+
 func helpPrinter() {
-	fmt.Printf("Usage:\nshasum -a <algorithm> <File Name>\n")
+	fmt.Println(usage)
 	pflag.PrintDefaults()
-	os.Exit(0)
-}
-
-func versionPrinter() {
-	fmt.Println("shasum utility, URoot Version.")
-	os.Exit(0)
-}
-
-func getInput(fileName string) (input []byte, err error) {
-	if fileName != "" {
-		return os.ReadFile(fileName)
-	}
-	return io.ReadAll(os.Stdin)
 }
 
 //
@@ -37,51 +33,53 @@ func getInput(fileName string) (input []byte, err error) {
 // value of algorithm is expected to be 1 for SHA1
 // and 256 for SHA256
 //
-func shaPrinter(algorithm int, data []byte) string {
-	var sha string
-	if algorithm == 256 {
-		sha = fmt.Sprintf("%x", sha256.Sum256(data))
-	} else if algorithm == 1 {
-		sha = fmt.Sprintf("%x", sha1.Sum(data))
-	} else {
-		fmt.Fprintf(os.Stderr, "Invalid algorithm")
-		return ""
+func shaGenerator(w io.Writer, r io.Reader, algo int) ([]byte, error) {
+	var h hash.Hash
+	switch algo {
+	case 1:
+		h = sha1.New()
+	case 256:
+		h = sha256.New()
+	default:
+		return nil, fmt.Errorf("invalid algorithm, only 1 or 256 are valid")
 	}
-	return sha
+	if _, err := io.Copy(h, r); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
+}
+
+func shasum(w io.Writer, r io.Reader, args ...string) error {
+	if *help {
+		helpPrinter()
+		return nil
+	}
+	var hashbytes []byte
+	var err error
+	if len(args) == 0 {
+		buf := bufio.NewReader(r)
+		if hashbytes, err = shaGenerator(w, buf, *algorithm); err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "%x -\n", hashbytes)
+
+	} else {
+		file, err := os.Open(args[0])
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		if hashbytes, err = shaGenerator(w, file, *algorithm); err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "%x %s\n", hashbytes, args[0])
+	}
+	return nil
 }
 
 func main() {
-	var (
-		algorithm int
-		help      bool
-		version   bool
-	)
-	cliArgs := ""
-	pflag.IntVarP(&algorithm, "algorithm", "a", 1, "SHA algorithm, valid args are 1 and 256")
-	pflag.BoolVarP(&help, "help", "h", false, "Show this help and exit")
-	pflag.BoolVarP(&version, "version", "v", false, "Print Version")
 	pflag.Parse()
-
-	if help {
-		helpPrinter()
+	if err := shasum(os.Stdout, os.Stdin, pflag.Args()...); err != nil {
+		log.Fatal(err)
 	}
-
-	if version {
-		versionPrinter()
-	}
-	if len(pflag.Args()) == 1 {
-		cliArgs = pflag.Args()[0]
-	}
-	input, err := getInput(cliArgs)
-	if err != nil {
-		fmt.Println("Error getting input.")
-		os.Exit(-1)
-	}
-	fmt.Printf("%s ", shaPrinter(algorithm, input))
-	if cliArgs == "" {
-		fmt.Printf(" -\n")
-	} else {
-		fmt.Printf(" %s\n", cliArgs)
-	}
-	os.Exit(0)
 }
