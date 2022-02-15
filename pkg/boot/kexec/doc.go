@@ -11,11 +11,11 @@
 // several purgatories. Callers may set the purgatory to use at runtime.
 //
 // There two major ways to use kexec: kexec_load and kexec_file_load.
-// The latter is easy: give the kernel a bzimage (86) OR an image (ARM*)
+// The latter is easy: give the kernel a bzimage (86) OR an Image (ARM*)
 // and let it do its work.
 //
 // Sadly, in many cases, kexec_file_load will not work, because the 32-bit
-// part of the kernel does critical startup.
+// part of the kernel (maybe?) and/or the purgatory (??) do critical startup.
 // Hence, the kexec_load classic system call has become increasingly important.
 //
 // kexec_load is conceptually simple to use: give the kernel some segments,
@@ -33,25 +33,30 @@
 // from one kernel to the next, and vanishes.
 //
 // The purgatory has a few main responsibilities:
-// o copy the new kernel over top of the old kernel
+// o (optionally) copy the new kernel over top of the old kernel
 // o do any special device setup that neither kernel can manage (mainly console)
 // o run a SHA256 over the kernel
-// o communicate arguments to the new kernel
-// o run anywhere, because memory is precious
+// o communicate arguments to the new kernel (on x86, assembly linux params at 0x90000)
 // o be able to return to the caller if things go wrong
+// o run anywhere, because we may be booting a 16-bit kernel
 //
 // That last item is the one that causes a lot of trouble. In 2000, systems with 16 MiB
-// were still common, and finding a place to put the purgatory required that it
+// were still common, Linux kernels had to load at 0x100000, memtest86 had to load in the
+// low 640k, and finding a place to put the purgatory required that it
 // be a position independent program. Rather than being written as such, it was instead
-// compiled as a relocatable ELF, the relocation being done at kexec time.
+// compiled as a relocatable ELF, the relocation being done at kexec time. I.e.,
+// kexec includes a link step.
 //
 // Because processors have changed a lot since 2000, when kexec was first written, these
 // old assumptions are worth re-examining.
 //
 // First, systems that use kexec come with at least 1 GiB of memory nowadays. Further,
-// newer kernels always avoid using the low 1MiB, since buggy BIOSes might corrupt memory. What
-// this tells us is that we can always get space in the low 1MiB for the purgatory, and in fact
-// we can assume that memory is available at 0x3000. That means we can link the purgatory to
+// newer kernels always avoid using the low 1MiB, since buggy BIOSes might corrupt memory.
+// Finally, nobody cares about booting 16-bit kernels any more -- even memtest86 runs
+// as a Linux binary.
+// Hence: we can always get space in the low 1MiB for the purgatory, and in fact
+// we can assume that memory is available at 0x3000. The low 640K must alway be there.
+// That means we can link the purgatory to
 // run at a fixed place -- since most kexec users load it at a fixed place anyway.
 //
 // Second, with relocatable kernels, the copy function is no longer needed.
