@@ -20,7 +20,6 @@ import (
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/boot/align"
-	"github.com/u-root/u-root/pkg/boot/linux"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -479,8 +478,8 @@ type Memory struct {
 }
 
 // LoadElfSegments loads loadable ELF segments.
-func (m *Memory) LoadElfSegments(r io.ReaderAt) (linux.Object, error) {
-	f, err := linux.ObjectNewFile(r)
+func (m *Memory) LoadElfSegments(r io.ReaderAt) (Object, error) {
+	f, err := ObjectNewFile(r)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +508,6 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) (linux.Object, error) {
 			Start: uintptr(p.Paddr),
 			Size:  uint(p.Memsz),
 		})
-		Debug("Added segment at %#x for %#x bytes", p.Paddr, p.Memsz)
 		m.Segments.Insert(s)
 	}
 	return f, nil

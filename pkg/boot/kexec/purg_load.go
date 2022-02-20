@@ -37,7 +37,6 @@ func PurgeLoad(kmem *Memory, elfBuf []byte, start, param uintptr) (uintptr, erro
 		return 0, err
 	}
 	entry := uintptr(elfFile.Entry)
-	Debug("Start is %#x, param is %#x", start, param)
 
 	binary.LittleEndian.PutUint64(b[8:], uint64(start))
 	binary.LittleEndian.PutUint64(b[16:], uint64(param))

@@ -36,6 +36,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cpio"
@@ -79,7 +80,7 @@ func main() {
 	flag.Parse()
 
 	if opts.debug {
-		kexec.Debug = log.Printf
+		linux.Debug = log.Printf
 	}
 
 	if (!opts.exec && flag.NArg() == 0) || flag.NArg() > 1 {
@@ -107,7 +108,7 @@ func main() {
 		}
 	}
 
-	if err := kexec.SelectPurgator(opts.purgatory); err != nil {
+	if err := linux.SelectPurgatory(opts.purgatory); err != nil {
 		log.Fatal(err)
 	}
 	if opts.load {
