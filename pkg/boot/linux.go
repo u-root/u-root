@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
@@ -169,7 +170,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 	}
 
 	if li.LoadSyscall {
-		return kexec.KexecLoad(k, i, li.Cmdline)
+		return linux.KexecLoad(k, i, li.Cmdline)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }
