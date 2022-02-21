@@ -14,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/bzimage"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -23,15 +24,12 @@ const (
 	bootParams                    = "/sys/kernel/boot_params/data"
 )
 
-const defaultPurgatory = "default"
-
 var (
 	// Debug is called to print out verbose debug info.
 	//
 	// Set this to appropriate output stream for display
 	// of useful debug info.
-	Debug        = log.Printf // func(string, ...interface{}) {}
-	curPurgatory = Purgatories[defaultPurgatory]
+	Debug = log.Printf // func(string, ...interface{}) {}
 )
 
 // KexecLoad loads a bzImage-formated Linux kernel file as the to-be-kexeced
@@ -179,7 +177,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	// TODO(10000TB): if rel_addr < setupRange.Start then return error.
 
 	// Load purgatory.
-	purgatoryEntry, err := kexec.PurgeLoad(kmem, curPurgatory.Code, kernelEntry, setupRange.Start)
+	purgatoryEntry, err := purgatory.Load(kmem, kernelEntry, setupRange.Start)
 	if err != nil {
 		return err
 	}
@@ -189,20 +187,5 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	if err := kexec.Load(purgatoryEntry, kmem.Segments, 0); err != nil {
 		return fmt.Errorf("Linux kexec: %w", err)
 	}
-	return nil
-}
-
-// SelectPurgatory picks a purgatory, returning an error if none is found
-func SelectPurgatory(name string) error {
-	p, ok := Purgatories[name]
-	if !ok {
-		var s []string
-		for i := range Purgatories {
-			s = append(s, i)
-		}
-		return fmt.Errorf("%s: no such purgatory, try one of %v", name, s)
-
-	}
-	curPurgatory = p
 	return nil
 }
