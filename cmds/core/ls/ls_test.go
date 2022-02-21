@@ -169,7 +169,8 @@ func TestList(t *testing.T) {
 
 		// Running the tests
 		t.Run(tt.name, func(t *testing.T) {
-			if got := list(tt.input); got != nil {
+			var buf bytes.Buffer
+			if got := list(&buf, tt.input); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("list() = '%v', want: '%v'", got, tt.want)
 				}
