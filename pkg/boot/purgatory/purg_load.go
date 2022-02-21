@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate go run purgatories.go
+//go:generate go run genpurg.go purgatories.go
 
 // Package purgatory provides several purgatories for use with kexec_load
 // system call.

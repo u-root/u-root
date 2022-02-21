@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-//go:generate go run genpurg.go purgatories.go
-
 // The linux package loads bzImage-based Linux kernels using the kexec_load
 // system call.
 //
