@@ -34,17 +34,18 @@ var (
 	curPurgatory = Purgatories[defaultPurgatory]
 )
 
-// KexecLoad loads the given kernel file as to-be-kexeced kernel with
-// the given ramfs file and cmdline string. It uses the kexec "classic"
-// system call, i.e. memory segments + entry point.
+// KexecLoad loads a bzImage-formated Linux kernel file as the to-be-kexeced
+// kernel with the given ramfs file and cmdline string.
+//
+// It uses the kexec_load system call.
 func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	bzimage.Debug = Debug
 
 	// A collection of vars used for processing the kernel for kexec
 	var err error
-	// b is the deserialized bzImage from the kernel
+	// bzimage is the deserialized bzImage from the kernel
 	// io.ReaderAt.
-	var b bzimage.BzImage
+	var bzimg bzimage.BzImage
 	// kmem is a struct holding kexec segments.
 	//
 	// It has routines to work with physical memory
@@ -63,28 +64,23 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	if err := lp.UnmarshalBinary(bp); err != nil {
 		return fmt.Errorf("unmarshaling header: %w", err)
 	}
-	Debug("Start LoadBzImage...")
-	Debug("Try decompressing kernel...")
+
 	kb, err := uio.ReadAll(kernel)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading Linux kernel into memory: %w", err)
 	}
-	Debug("Try parsing bzImage...")
-	if err := b.UnmarshalBinary(kb); err != nil {
-		return err
-	}
-	Debug("Done parsing bzImage.")
-
-	if len(b.KernelCode) < 1024 {
-		return fmt.Errorf("kernel code size smaller than 1024 bytes: %d", len(b.KernelCode))
+	if err := bzimg.UnmarshalBinary(kb); err != nil {
+		return fmt.Errorf("parsing bzImage Linux kernel: %w", err)
 	}
 
-	Debug("Try get ELF from bzImage...")
-	kelf, err := b.ELF()
+	if len(bzimg.KernelCode) < 1024 {
+		return fmt.Errorf("kernel code size smaller than 1024 bytes: %d", len(bzimg.KernelCode))
+	}
+
+	kelf, err := bzimg.ELF()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting ELF from bzImage: %w", err)
 	}
-	Debug("Done.")
 	kernelEntry := uintptr(kelf.Entry)
 	Debug("kernelEntry: %v", kernelEntry)
 
@@ -98,31 +94,30 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	}
 
 	var relocatableKernel bool
-	if b.Header.Protocolversion < 0x0205 {
-		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", b.Header.Protocolversion)
+	if bzimg.Header.Protocolversion < 0x0205 {
+		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", bzimg.Header.Protocolversion)
 	}
-	relocatableKernel = b.Header.RelocatableKernel != 0
+	relocatableKernel = bzimg.Header.RelocatableKernel != 0
 	// Only protected mode is currently supported.
 	// In protected mode, kernel need be relocatable, or it will need to fall
 	// to real mode executing.
 	if !relocatableKernel {
 		return errors.New("non-relocateable Kernels are not supported")
 	}
-	Debug("Loading purgatory...")
-	if _, err := kmem.LoadElfSegments(bytes.NewReader(b.KernelCode)); err != nil {
-		return err
+	if _, err := kmem.LoadElfSegments(bytes.NewReader(bzimg.KernelCode)); err != nil {
+		return fmt.Errorf("loading kernel ELF segments: %w", err)
 	}
 
 	var ramfsRange kexec.Range
 	if ramfs != nil {
-		b, err := ioutil.ReadAll(ramfs)
+		ramfsContents, err := ioutil.ReadAll(ramfs)
 		if err != nil {
 			return fmt.Errorf("unable to read initramfs: %w", err)
 		}
-		if ramfsRange, err = kmem.AddKexecSegment(b); err != nil {
-			return fmt.Errorf("add initramfs segment: %v", err)
+		if ramfsRange, err = kmem.AddKexecSegment(ramfsContents); err != nil {
+			return fmt.Errorf("add initramfs segment: %w", err)
 		}
-		Debug("Added %d byte initramfs at %s", len(b), ramfsRange)
+		Debug("Added %d byte initramfs at %s", len(ramfsContents), ramfsRange)
 		lp.Initrdstart = uint32(ramfsRange.Start)
 		lp.Initrdsize = uint32(ramfsRange.Size)
 	}
@@ -140,9 +135,8 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 		lp.CmdLineSize = uint32(cmdlineRange.Size) // 2.06+
 	}
 
-	var setupRange kexec.Range
 	// The kernel is a bzImage kernel if the protocol >= 2.00 and the 0x01
-	// bit (LOAD_HIGH) in the loadflags field is set
+	// bit (LOAD_HIGH) in the loadflags field is set.
 	// TODO(10000TB): check on loadflags.
 	linuxParam, err := lp.MarshalBinary()
 	if err != nil {
@@ -154,7 +148,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	//
 	// Push alignment logic to kexec memory functions, e.g. a similar
 	// function to FindSpace.
-	setupRange, err = kmem.AddPhysSegment(
+	setupRange, err := kmem.AddPhysSegment(
 		linuxParam,
 		kexec.RangeFromInterval(
 			uintptr(0x90000),
@@ -182,18 +176,17 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	// Verify purgatory loads higher than the parameters.
 	// TODO(10000TB): if rel_addr < setupRange.Start then return error.
 
-	// Main kernel segment
-	var purgatoryEntry uintptr
-	if purgatoryEntry, err = kexec.PurgeLoad(kmem, curPurgatory.Code, kernelEntry, setupRange.Start); err != nil {
+	// Load purgatory.
+	purgatoryEntry, err := kexec.PurgeLoad(kmem, curPurgatory.Code, kernelEntry, setupRange.Start)
+	if err != nil {
 		return err
 	}
 	Debug("purgatory entry: %v", purgatoryEntry)
 
-	// Load it
-	if err = kexec.Load(purgatoryEntry, kmem.Segments, 0); err != nil {
-		return fmt.Errorf("kexec Load(%v, %v, %d) = %v", purgatoryEntry, kmem.Segments, 0, err)
+	// Load it.
+	if err := kexec.Load(purgatoryEntry, kmem.Segments, 0); err != nil {
+		return fmt.Errorf("Linux kexec: %w", err)
 	}
-
 	return nil
 }
 
