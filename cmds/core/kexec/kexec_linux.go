@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate go run purgatories.go
-
 // kexec executes a new kernel over the running kernel (u-root).
 //
 // Synopsis:
