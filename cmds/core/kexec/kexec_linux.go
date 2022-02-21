@@ -38,6 +38,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
+	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uio"
@@ -58,7 +59,7 @@ type options struct {
 
 func registerFlags() *options {
 	o := &options{}
-	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec load syscall (not file_load)")
+	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec_load syscall (not kexec_file_load)")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
 	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
@@ -71,7 +72,7 @@ func registerFlags() *options {
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
-	flag.StringVarP(&o.purgatory, "purgatory", "p", "default", "pick a purgatory, use '-p xyz' to get a list")
+	flag.StringVarP(&o.purgatory, "purgatory", "p", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list")
 	return o
 }
 
@@ -81,6 +82,7 @@ func main() {
 
 	if opts.debug {
 		linux.Debug = log.Printf
+		purgatory.Debug = log.Printf
 	}
 
 	if (!opts.exec && flag.NArg() == 0) || flag.NArg() > 1 {
@@ -108,7 +110,7 @@ func main() {
 		}
 	}
 
-	if err := linux.SelectPurgatory(opts.purgatory); err != nil {
+	if err := purgatory.Select(opts.purgatory); err != nil {
 		log.Fatal(err)
 	}
 	if opts.load {

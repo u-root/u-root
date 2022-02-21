@@ -29,7 +29,7 @@ func main() {
 		}
 	}()
 
-	if _, err := fmt.Fprintf(f, "package linux\nvar Purgatories = map[string]*Purgatory {\n"); err != nil {
+	if _, err := fmt.Fprintf(f, "package purgatory\nvar Purgatories = map[string]*Purgatory {\n"); err != nil {
 		log.Fatal(err)
 	}
 	d, err := ioutil.TempDir("", "kexecgen")
