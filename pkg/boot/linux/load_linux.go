@@ -126,7 +126,9 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 	if len(cmdline) > 0 {
 		var cmdlineRange kexec.Range
 		Debug("Add cmdline: %s", cmdline)
-		cmdlineBytes := []byte(cmdline)
+
+		// Cmdline must be null-terminated.
+		cmdlineBytes := []byte(cmdline + "\x00")
 		if cmdlineRange, err = kmem.AddKexecSegment(cmdlineBytes); err != nil {
 			return fmt.Errorf("add cmdline segment: %v", err)
 		}
