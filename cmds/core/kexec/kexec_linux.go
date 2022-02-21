@@ -23,7 +23,6 @@
 //      --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
 //  -p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
 //      --reuse-cmdline        Use the kernel command line from running system
-
 package main
 
 import (
