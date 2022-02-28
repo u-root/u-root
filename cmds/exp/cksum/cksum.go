@@ -8,9 +8,15 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"log"
 	"os"
 
 	"github.com/spf13/pflag"
+)
+
+var (
+	help    = pflag.BoolP("help", "h", false, "Show this help and exit")
+	version = pflag.BoolP("version", "v", false, "Print Version")
 )
 
 func reverse(x uint32) uint32 {
@@ -35,22 +41,22 @@ func reverseBytes(b []byte) []byte {
 	return b
 }
 
-func helpPrinter() {
-	fmt.Printf("Usage:\ncksum <File Name>\n")
+func helpPrinter(w io.Writer) error {
+	fmt.Fprintf(w, "Usage:\ncksum <File Name>\n")
 	pflag.PrintDefaults()
-	os.Exit(0)
+	return nil
 }
 
-func versionPrinter() {
-	fmt.Println("cksum utility, URoot Version.")
-	os.Exit(0)
+func versionPrinter(w io.Writer) error {
+	fmt.Fprintln(w, "cksum utility, URoot Version.")
+	return nil
 }
 
-func getInput(fileName string) (input []byte, err error) {
+func getInput(r io.Reader, fileName string) (input []byte, err error) {
 	if fileName != "" {
 		return os.ReadFile(fileName)
 	}
-	return io.ReadAll(os.Stdin)
+	return io.ReadAll(r)
 }
 
 func appendLengthToData(data []byte) []byte {
@@ -66,29 +72,28 @@ func calculateCksum(data []byte) uint32 {
 	return reverse(crc32.Update(0xffffffff, crc32.MakeTable(0xEDB88320), reverseBytes(appendLengthToData(data))))
 }
 
-func main() {
-	var (
-		help    bool
-		version bool
-	)
+func cksum(w io.Writer, r io.Reader, args ...string) error {
 	cliArgs := ""
-	pflag.BoolVarP(&help, "help", "h", false, "Show this help and exit")
-	pflag.BoolVarP(&version, "version", "v", false, "Print Version")
-	pflag.Parse()
-
-	if help {
-		helpPrinter()
+	if *help {
+		return helpPrinter(w)
 	}
-
-	if version {
-		versionPrinter()
+	if *version {
+		return versionPrinter(w)
 	}
-	if len(os.Args) >= 2 {
-		cliArgs = os.Args[1]
+	if len(args) >= 2 {
+		cliArgs = args[1]
 	}
-	input, err := getInput(cliArgs)
+	input, err := getInput(r, cliArgs)
 	if err != nil {
-		return
+		return err
 	}
-	fmt.Println(calculateCksum(input), len(input), cliArgs)
+	fmt.Fprintln(w, calculateCksum(input), len(input), cliArgs)
+	return nil
+}
+
+func main() {
+	pflag.Parse()
+	if err := cksum(os.Stdout, os.Stdin, os.Args...); err != nil {
+		log.Fatal(err)
+	}
 }
