@@ -149,7 +149,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				LB_TAG_PLATFORM_BLOB_VERSION:
 				s, err := bufio.NewReader(io.NewSectionReader(r, j, 65536)).ReadString(0)
 				if err != nil {
-					log.Fatalf("Trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
 				}
 				cbmem.StringVars[n] = s[:len(s)-1]
 			case LB_TAG_SERIAL:
@@ -210,11 +210,11 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				cbmem.MainBoard.Record = rec
 				v, err := bufio.NewReader(io.NewSectionReader(r, j+2, 65536)).ReadString(0)
 				if err != nil {
-					log.Fatalf("Trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
 				}
 				p, err := bufio.NewReader(io.NewSectionReader(r, j+2+int64(len(v)), 65536)).ReadString(0)
 				if err != nil {
-					log.Fatalf("Trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
 				}
 				cbmem.MainBoard.Vendor = v[:len(v)-1]
 				cbmem.MainBoard.PartNumber = p[:len(p)-1]
@@ -369,14 +369,11 @@ func DumpMem(f *os.File, cbmem *CBmem, hexdump bool, w io.Writer) error {
 	return nil
 }
 
-//go:generate go run gen/gen.go -apu2
-
-func main() {
+func cbMem(w io.Writer) error {
 	var err error
-	flag.Parse()
 	if version {
-		fmt.Println("cbmem in Go, including JSON output")
-		os.Exit(0)
+		fmt.Fprintln(w, "cbmem in Go, including JSON output")
+		return err
 	}
 	if verbose {
 		debug = log.Printf
@@ -384,33 +381,37 @@ func main() {
 
 	f, err := os.Open(*mem)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var cbmem *CBmem
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
-		if cbmem, found, err = parseCBtable(f, addr, 0x10000); found {
+		cbmem, found, err = parseCBtable(f, addr, 0x10000)
+		if err != nil {
+			return err
+		}
+		if found {
 			break
 		}
 	}
 	if err != nil {
-		log.Fatalf("Reading coreboot table: %v", err)
+		return fmt.Errorf("reading coreboot table: %v", err)
 	}
 	if !found {
-		log.Fatalf("No coreboot table found")
+		return fmt.Errorf("no coreboot table found")
 	}
 
 	if timestamps {
 		ts := cbmem.TimeStamps
 
 		// Format in tab-separated columns with a tab stop of 8.
-		w := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
+		tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
 		freq := uint64(ts.TickFreqMHZ)
 		debug("ts %#x freq %#x stamps %#x\n", ts, freq, ts.TS)
 		prev := ts.TS[0].EntryStamp
 		p := message.NewPrinter(language.English)
-		p.Fprintf(w, "%d entries total:\n\n", len(ts.TS))
+		p.Fprintf(tw, "%d entries total:\n\n", len(ts.TS))
 		for _, t := range ts.TS {
 			n, ok := TimeStampNames[t.EntryID]
 			if !ok {
@@ -418,18 +419,18 @@ func main() {
 			}
 			cur := t.EntryStamp
 			debug("cur %#x cur / freq %#x", cur, cur/freq)
-			p.Fprintf(w, "\t%d:%s\t%d (%d)\n", t.EntryID, n, cur/freq, (cur-prev)/freq)
+			p.Fprintf(tw, "\t%d:%s\t%d (%d)\n", t.EntryID, n, cur/freq, (cur-prev)/freq)
 			prev = cur
 
 		}
-		w.Flush()
+		tw.Flush()
 	}
 	if dumpJSON {
 		b, err := json.MarshalIndent(cbmem, "", "\t")
 		if err != nil {
-			log.Fatalf("json marshal: %v", err)
+			return fmt.Errorf("json marshal: %v", err)
 		}
-		fmt.Printf("%s\n", b)
+		fmt.Fprintf(w, "%s\n", b)
 	}
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
@@ -437,6 +438,16 @@ func main() {
 		DumpMem(f, cbmem, hexdump, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
-		fmt.Printf("%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])
+		fmt.Fprintf(w, "%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])
+	}
+	return err
+}
+
+//go:generate go run gen/gen.go -apu2
+
+func main() {
+	flag.Parse()
+	if err := cbMem(os.Stdout); err != nil {
+		log.Fatal(err)
 	}
 }
