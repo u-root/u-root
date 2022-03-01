@@ -17,7 +17,7 @@ import (
 func newPortMock(f *os.File) (PortReadWriter, error) {
 	memPort := NewMemIOPort(f)
 	return &LinuxPort{
-		MemIOReadWriteCloser: memPort,
+		ReadWriteCloser: memPort,
 	}, nil
 }
 
