@@ -13,6 +13,10 @@ import (
 	"syscall"
 )
 
+// ArchPort is used for architectural access to a port, instead of file system
+// level access. On the x86, this means direct, in-line in[bwl]/out[bwl]
+// instructions, requiring an iopl system call. On other architectures,
+// it may require special mmap setup.
 type ArchPort struct{}
 
 var ioplError struct {
@@ -75,6 +79,7 @@ func (a *ArchPort) Out(addr uint16, data UintN) error {
 	return nil
 }
 
+// Close implements close
 func (a *ArchPort) Close() error {
 	return nil
 }
