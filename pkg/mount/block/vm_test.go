@@ -54,7 +54,7 @@ func TestVM(t *testing.T) {
 	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/mount/block"}, o)
 }
 
-func TestGPT(t *testing.T) {
+func TestBlockDevGPTTable(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	devpath := fmt.Sprintf("/dev/%sc", getDevicePrefix())
@@ -87,7 +87,7 @@ func TestGPT(t *testing.T) {
 	}
 }
 
-func TestBlockDevices(t *testing.T) {
+func TestBlockDevicesMISC(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	prefix := getDevicePrefix()
@@ -177,7 +177,7 @@ func TestBlockDevices(t *testing.T) {
 	}
 }
 
-func TestFilterHavingPartitions(t *testing.T) {
+func TestBlockDevicesFilterHavingPartitions(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	prefix := getDevicePrefix()
@@ -218,7 +218,7 @@ func TestFilterHavingPartitions(t *testing.T) {
 	}
 }
 
-func TestFilterPartID(t *testing.T) {
+func TestBlockDevicesFilterPartID(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	devname := fmt.Sprintf("%sc2", getDevicePrefix())
@@ -259,7 +259,7 @@ func TestFilterPartID(t *testing.T) {
 	}
 }
 
-func TestFilterPartType(t *testing.T) {
+func TestBlockDevicesFilterPartType(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	prefix := getDevicePrefix()
@@ -306,7 +306,7 @@ func TestFilterPartType(t *testing.T) {
 	}
 }
 
-func TestFilterBlockPCIString(t *testing.T) {
+func TestBlockDevicesFilterBlockPCIString(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	prefix := getDevicePrefix()
@@ -356,7 +356,7 @@ func TestFilterBlockPCIString(t *testing.T) {
 	}
 }
 
-func TestFilterBlockPCI(t *testing.T) {
+func TestBlockDevicesFilterBlockPCI(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 
 	prefix := getDevicePrefix()

@@ -15,7 +15,7 @@ import (
 
 // TestFindMountPointNotExists checks that non existent
 // entry is checked and nil returned
-func TestFindMountPointNotExists(t *testing.T) {
+func TestGetMountpointByDeviceNotExists(t *testing.T) {
 	LinuxMountsPath = "testdata/mounts"
 	if _, err := GetMountpointByDevice("/dev/mapper/sys-oldxxxxxx"); err == nil {
 		t.Errorf(`GetMountpointByDevice("/dev/mapper/sys-oldxxxxxx") = _, %v, want not nil`, err)
@@ -24,7 +24,7 @@ func TestFindMountPointNotExists(t *testing.T) {
 
 // TestFindMountPointValid check for valid output of
 // test mountpoint.
-func TestFindMountPointValid(t *testing.T) {
+func TestGetMountpointByDeviceValid(t *testing.T) {
 	LinuxMountsPath = "testdata/mounts"
 	mountpoint, err := GetMountpointByDevice("/dev/mapper/sys-old")
 	if err != nil {
