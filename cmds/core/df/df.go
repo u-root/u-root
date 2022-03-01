@@ -22,21 +22,32 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
 	"syscall"
 )
 
+type flags struct {
+	k bool
+	m bool
+}
+
 var (
-	inKB  = flag.Bool("k", false, "Express the values in kilobytes (default)")
-	inMB  = flag.Bool("m", false, "Express the values in megabytes")
+	fargs = flags{}
 	units uint64
+
+	errKMExclusiv = errors.New("options -k and -m are mutually exclusive")
 )
 
-const procmountsFile = "/proc/mounts"
+func init() {
+	flag.BoolVar(&fargs.k, "k", false, "Express the values in kilobytes (default)")
+	flag.BoolVar(&fargs.m, "m", false, "Express the values in megabytes")
+}
 
 const (
 	// B is Bytes
@@ -45,6 +56,8 @@ const (
 	KB = 1024 * B
 	// MB is megabytes
 	MB = 1024 * KB
+
+	procmountsFile = "/proc/mounts"
 )
 
 // Mount is a structure used to contain mount point data
@@ -91,7 +104,9 @@ func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 		mnt.MountPoint = string(kv[1])
 		mnt.FileSystemType = string(kv[2])
 		mnt.Flags = string(kv[3])
-		DiskUsage(&mnt)
+		if err := DiskUsage(&mnt); err != nil {
+			return nil, err
+		}
 		if mnt.Blocks == 0 {
 			continue
 		} else {
@@ -103,11 +118,10 @@ func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 
 // DiskUsage calculates the usage statistics of a mount point
 // note: arm7 Bsize is int32; all others are int64
-func DiskUsage(mnt *Mount) {
+func DiskUsage(mnt *Mount) error {
 	fs := syscall.Statfs_t{}
-	err := syscall.Statfs(mnt.MountPoint, &fs)
-	if err != nil {
-		return
+	if err := syscall.Statfs(mnt.MountPoint, &fs); err != nil {
+		return err
 	}
 	mnt.Blocks = fs.Blocks * uint64(fs.Bsize) / units
 	mnt.Bsize = int64(fs.Bsize)
@@ -116,31 +130,42 @@ func DiskUsage(mnt *Mount) {
 	mnt.Used = (fs.Blocks - fs.Bfree) * uint64(fs.Bsize) / units
 	pct := float64((fs.Blocks - fs.Bfree)) * 100 / float64(fs.Blocks)
 	mnt.PCT = uint8(math.Ceil(pct))
+	return nil
 }
 
 // SetUnits takes the command line flags and configures
 // the correct units used to calculate display values
-func SetUnits() {
-	if *inKB && *inMB {
-		log.Fatal("options -k and -m are mutually exclusive")
+func SetUnits(inKB, inMB bool) error {
+	if inKB && inMB {
+		return errKMExclusiv
 	}
-	if *inMB {
+	if inMB {
 		units = MB
 	} else {
 		units = KB
 	}
+	return nil
 }
 
-func df() {
-	SetUnits()
-	mounts, _ := mountinfo()
+func df(w io.Writer, fargs flags, args []string) error {
+	if len(args) > 0 {
+		flag.Usage()
+		return nil
+	}
+	if err := SetUnits(fargs.k, fargs.m); err != nil {
+		return err
+	}
+	mounts, err := mountinfo()
+	if err != nil {
+		return fmt.Errorf("mountinfo()=_,%q, want: _,nil", err)
+	}
 	blocksize := "1K"
-	if *inMB {
+	if fargs.m {
 		blocksize = "1M"
 	}
-	fmt.Printf("Filesystem           Type         %v-blocks       Used    Available  Use%% Mounted on\n", blocksize)
+	fmt.Fprintf(w, "Filesystem           Type         %v-blocks       Used    Available  Use%% Mounted on\n", blocksize)
 	for _, mnt := range mounts {
-		fmt.Printf("%-20v %-9v %12v %10v %12v %4v%% %-13v\n",
+		fmt.Fprintf(w, "%-20v %-9v %12v %10v %12v %4v%% %-13v\n",
 			mnt.Device,
 			mnt.FileSystemType,
 			mnt.Blocks,
@@ -149,9 +174,12 @@ func df() {
 			mnt.PCT,
 			mnt.MountPoint)
 	}
+	return nil
 }
 
 func main() {
 	flag.Parse()
-	df()
+	if err := df(os.Stdout, fargs, flag.Args()); err != nil {
+		log.Fatal(err)
+	}
 }

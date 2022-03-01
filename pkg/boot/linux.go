@@ -22,10 +22,11 @@ import (
 type LinuxImage struct {
 	Name string
 
-	Kernel   io.ReaderAt
-	Initrd   io.ReaderAt
-	Cmdline  string
-	BootRank int
+	Kernel      io.ReaderAt
+	Initrd      io.ReaderAt
+	Cmdline     string
+	BootRank    int
+	LoadSyscall bool
 }
 
 var _ OSImage = &LinuxImage{}
@@ -165,6 +166,10 @@ func (li *LinuxImage) Load(verbose bool) error {
 			log.Printf("Initrd: %s", i.Name())
 		}
 		log.Printf("Command line: %s", li.Cmdline)
+	}
+
+	if li.LoadSyscall {
+		return kexec.KexecLoad(k, i, li.Cmdline)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }
