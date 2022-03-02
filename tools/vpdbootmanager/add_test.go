@@ -168,7 +168,7 @@ func TestAddBootEntry(t *testing.T) {
 	if err := os.MkdirAll(path.Join(vpdDir, "rw"), 0o700); err != nil {
 		t.Errorf(`os.MkdirAll(path.Join(%q, "rw"), 0o700) = %v, want nil`, vpdDir, err)
 	}
-	defer os.RemoveAll(vpdDir)
+
 	if err := addBootEntry(&systembooter.LocalBooter{
 		Method: "grub",
 	}, vpdDir); err != nil {
@@ -195,7 +195,6 @@ func TestAddBootEntryMultiple(t *testing.T) {
 	if err != nil {
 		t.Errorf(`os.MkdirAll(path.Join(%q, "rw"), 0o700) = %v, want nil`, vpdDir, err)
 	}
-	defer os.RemoveAll(vpdDir)
 
 	for i := 1; i < 5; i++ {
 		if err := addBootEntry(&systembooter.LocalBooter{

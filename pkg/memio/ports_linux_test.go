@@ -131,7 +131,6 @@ func TestNewPortSucceed(t *testing.T) {
 	if _, err := file.Write(fdata); err != nil {
 		t.Errorf("TestPortDev failed: %q", err)
 	}
-	defer os.RemoveAll(tmpDir)
 
 	linuxPath = file.Name()
 	defer func() { linuxPath = "/dev/port" }()

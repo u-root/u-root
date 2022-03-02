@@ -14,11 +14,7 @@ import (
 
 func TestHexdump(t *testing.T) {
 	// Creating file and write content into it for testing purposes
-	d, err := os.MkdirTemp(os.TempDir(), "hexdump.dir")
-	if err != nil {
-		t.Errorf("failed to create tmp folder: %v", err)
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 	f, err := os.Create(filepath.Join(d, "testfile"))
 	if err != nil {
 		t.Errorf("failed to create tmp file: %v", err)
