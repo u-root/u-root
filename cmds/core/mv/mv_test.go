@@ -51,7 +51,6 @@ func TestMove(t *testing.T) {
 	if err != nil {
 		t.Errorf("File setup failed: %v", err)
 	}
-	defer os.RemoveAll(d)
 
 	for _, tt := range []struct {
 		name  string
@@ -91,7 +90,6 @@ func TestMv(t *testing.T) {
 	if err != nil {
 		t.Errorf("File setup failed: %v", err)
 	}
-	defer os.RemoveAll(d)
 
 	for _, tt := range []struct {
 		name  string
@@ -130,7 +128,6 @@ func TestMoveFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("File setup failed: %v", err)
 	}
-	defer os.RemoveAll(d)
 
 	var testTable = []struct {
 		name string

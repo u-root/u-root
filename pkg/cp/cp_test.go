@@ -21,17 +21,9 @@ var (
 )
 
 func TestCopySimple(t *testing.T) {
-	tmpdirDst, err := os.MkdirTemp("", "dst-directory")
-	if err != nil {
-		t.Errorf("failed to create tmp directorty: %q", err)
-	}
-	defer os.RemoveAll(tmpdirDst)
-
-	tmpdirSrc, err := os.MkdirTemp("", "src-directory")
-	if err != nil {
-		t.Errorf("failed to create tmp src directorty: %q", err)
-	}
-	defer os.RemoveAll(tmpdirSrc)
+	var err error
+	tmpdirDst := t.TempDir()
+	tmpdirSrc := t.TempDir()
 
 	srcfiles := make([]*os.File, 2)
 	dstfiles := make([]*os.File, 2)

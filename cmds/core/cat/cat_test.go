@@ -78,7 +78,6 @@ func TestRunFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup has failed, %v", err)
 	}
-	defer os.RemoveAll(dir)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
@@ -101,7 +100,6 @@ func TestRunFilesError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setup has failed, %v", err)
 	}
-	defer os.RemoveAll(dir)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
