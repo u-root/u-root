@@ -54,7 +54,10 @@ GO111MODULE=off u-root -build=bb all github.com/nsf/godit
 # Usage
 
 Make sure your Go version is >=1.17. Make sure your `GOPATH` is set up
-correctly.
+correctly. By default, it will be `$HOME/go`.
+
+**Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
+need to add `$GOPATH/bin` to your `$PATH`.**
 
 Download and install u-root:
 
