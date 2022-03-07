@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,7 +30,6 @@ func TestListNameLinux(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	// Create a directory
 	d := t.TempDir()
-	defer os.RemoveAll(d)
 	if err := unix.Mknod(filepath.Join(d, "large_node"), 0o660|unix.S_IFBLK, 0x12345678); err != nil {
 		t.Fatalf("err in unix.Mknod: %v", err)
 	}

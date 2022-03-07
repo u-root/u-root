@@ -16,9 +16,12 @@ var (
 	linuxPath = "/dev/port"
 )
 
+// LinuxPort implements ReadWriteCloser for Linux devices.
 type LinuxPort struct {
-	MemIOReadWriteCloser
+	ReadWriteCloser
 }
+
+var _ PortReadWriter = &LinuxPort{}
 
 // In reads data from the x86 port at address addr. Data must be Uint8, Uint16,
 // Uint32, but not Uint64.
@@ -26,7 +29,7 @@ func (p *LinuxPort) In(addr uint16, data UintN) error {
 	if _, ok := data.(*Uint8); !ok {
 		return fmt.Errorf("/dev/port data must be 8 bits on Linux")
 	}
-	return p.MemIOReadWriteCloser.Read(data, int64(addr))
+	return p.ReadWriteCloser.Read(data, int64(addr))
 }
 
 // Out writes data to the x86 port at address addr. data must be Uint8, Uint16
@@ -35,16 +38,17 @@ func (p *LinuxPort) Out(addr uint16, data UintN) error {
 	if _, ok := data.(*Uint8); !ok {
 		return fmt.Errorf("/dev/port data must be 8 bits on Linux")
 	}
-	return p.MemIOReadWriteCloser.Write(data, int64(addr))
+	return p.ReadWriteCloser.Write(data, int64(addr))
 
 }
 
+// Close implements Close.
 func (p *LinuxPort) Close() error {
-	return p.MemIOReadWriteCloser.Close()
+	return p.ReadWriteCloser.Close()
 }
 
 // NewPort returns a new instance of LinuxPort for read/write operations on /dev/port
-func NewPort() (PortReadWriter, error) {
+func NewPort() (*LinuxPort, error) {
 	var _ PortReadWriter = &LinuxPort{}
 	f, err := os.OpenFile(linuxPath, os.O_RDWR, 0)
 	if err != nil {
@@ -52,7 +56,7 @@ func NewPort() (PortReadWriter, error) {
 	}
 	memPort := NewMemIOPort(f)
 	return &LinuxPort{
-		MemIOReadWriteCloser: memPort,
+		ReadWriteCloser: memPort,
 	}, nil
 }
 

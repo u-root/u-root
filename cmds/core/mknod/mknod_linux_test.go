@@ -5,7 +5,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,11 +23,7 @@ import (
 //     = 0x12345678
 
 func TestMknod(t *testing.T) {
-	d, err := os.MkdirTemp(os.TempDir(), "mk.nod")
-	if err != nil {
-		t.Errorf("failed to create tmp folder: %v", err)
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
 	// Creating testtable and run tests
 	for _, tt := range []struct {

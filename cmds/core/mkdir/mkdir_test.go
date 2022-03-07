@@ -21,11 +21,7 @@ type flags struct {
 }
 
 func TestMkdir(t *testing.T) {
-	d, err := os.MkdirTemp(os.TempDir(), "mk.dir")
-	if err != nil {
-		t.Errorf("failed to create tmp folder")
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 	for _, tt := range []struct {
 		name      string
 		flags     flags
