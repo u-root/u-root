@@ -17,7 +17,7 @@ import (
 func newPortMock(f *os.File) (PortReadWriter, error) {
 	memPort := NewMemIOPort(f)
 	return &LinuxPort{
-		MemIOReadWriteCloser: memPort,
+		ReadWriteCloser: memPort,
 	}, nil
 }
 
@@ -131,7 +131,6 @@ func TestNewPortSucceed(t *testing.T) {
 	if _, err := file.Write(fdata); err != nil {
 		t.Errorf("TestPortDev failed: %q", err)
 	}
-	defer os.RemoveAll(tmpDir)
 
 	linuxPath = file.Name()
 	defer func() { linuxPath = "/dev/port" }()

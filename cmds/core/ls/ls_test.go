@@ -31,7 +31,6 @@ func TestListName(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(tmpDir, "d1"), 0777); err != nil {
 		t.Fatalf("err in os.Mkdir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
 	// Create some files.
 	files := []string{"f1", "f2", "f3\nline 2", ".f4", "d1/f4"}
 	for _, file := range files {
@@ -140,10 +139,6 @@ func TestListName(t *testing.T) {
 
 // Test list func
 func TestList(t *testing.T) {
-	// Create some directorys.
-	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
-
 	// Creating test table
 	for _, tt := range []struct {
 		name   string
