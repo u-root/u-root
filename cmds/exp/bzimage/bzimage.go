@@ -15,12 +15,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot/bzimage"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 var argcounts = map[string]int{
@@ -33,7 +35,7 @@ var argcounts = map[string]int{
 	"cfg":       2,
 }
 
-const cmdUsage = `Performs various operations on kernel images. Usage:
+const usage = `Performs various operations on kernel images. Usage:
 bzimage copy <in> <out>
 	Create a copy of <in> at <out>, parsing structures.
 bzimage diff <image> <image>
@@ -57,143 +59,144 @@ var (
 	jsonOut = flag.BoolP("json", "j", false, "json output ('ver' subcommand only)")
 )
 
-func usage() {
-	fmt.Fprintln(os.Stderr, cmdUsage)
-	flag.PrintDefaults()
-	os.Exit(1)
-}
-
-func main() {
-	flag.Usage = usage
-	flag.Parse()
-
+func run(w io.Writer, args ...string) error {
 	if *debug {
 		bzimage.Debug = log.Printf
 	}
-	a := flag.Args()
-	if len(a) < 2 {
-		usage()
+	if len(args) < 2 {
+		flag.Usage()
+		return nil
 	}
-	n, ok := argcounts[a[0]]
-	if !ok || len(a) != n {
-		usage()
+	n, ok := argcounts[args[0]]
+	if !ok || len(args) != n {
+		flag.Usage()
+		return nil
 	}
 
 	br := &bzimage.BzImage{}
 	var image []byte
-	switch a[0] {
+	switch args[0] {
 	case "diff", "dump", "ver":
 		br.NoDecompress = true
 		fallthrough
 	case "copy", "initramfs", "extract", "cfg":
 		var err error
-		image, err = os.ReadFile(a[1])
+		image, err = os.ReadFile(args[1])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if err = br.UnmarshalBinary(image); err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
-	switch a[0] {
+	switch args[0] {
 	case "copy":
 		o, err := br.MarshalBinary()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if len(image) != len(o) {
 			log.Printf("copy: input len is %d, output len is %d, they have to match", len(image), len(o))
 			var br2 bzimage.BzImage
 			if err = br2.UnmarshalBinary(o); err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Printf("Input: %s\n", strings.Join(br.Header.Show(), "\n\t"))
-			fmt.Printf("Output: %s\n", strings.Join(br2.Header.Show(), "\n\t"))
+			fmt.Fprintf(w, "Input: %s\n", strings.Join(br.Header.Show(), "\n\t"))
+			fmt.Fprintf(w, "Output: %s\n", strings.Join(br2.Header.Show(), "\n\t"))
 			log.Printf("%s", br.Header.Diff(&br2.Header))
-			log.Fatalf("there is no hope")
+			return fmt.Errorf("there is no hope")
 		}
-		if err := os.WriteFile(a[2], o, 0o666); err != nil {
-			log.Fatalf("Writing %v: %v", a[2], err)
+		if err := os.WriteFile(args[2], o, 0o666); err != nil {
+			return fmt.Errorf("writing %v: %v", args[2], err)
 		}
 	case "diff":
-		b2, err := os.ReadFile(a[2])
+		b2, err := os.ReadFile(args[2])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		br2 := &bzimage.BzImage{}
 		if err = br2.UnmarshalBinary(b2); err != nil {
-			log.Fatal(err)
+			return err
 		}
-		fmt.Printf("%s", br.Header.Diff(&br2.Header))
+		fmt.Fprintf(w, "%s", br.Header.Diff(&br2.Header))
 	case "dump":
-		fmt.Printf("%s\n", strings.Join(br.Header.Show(), "\n"))
+		fmt.Fprintf(w, "%s\n", strings.Join(br.Header.Show(), "\n"))
 	case "extract":
 		bzimage.Debug = log.Printf
 		var i []byte
 		s, e, err := br.InitRAMFS()
 		if err != nil {
-			fmt.Printf("Warning: could not extract initramfs: %v", err)
+			fmt.Fprintf(w, "Warning: could not extract initramfs: %v", err)
 		} else {
 			i = br.KernelCode[s:e]
 		}
 		// Need to add a trailer record to i
-		fmt.Printf("ramfs is %d bytes", len(i))
+		fmt.Fprintf(w, "ramfs is %d bytes", len(i))
 
 		for _, v := range []struct {
 			n string
 			b []byte
 		}{
-			{a[2] + ".boot", br.BootCode},
-			{a[2] + ".head", br.HeadCode},
-			{a[2] + ".kern", br.KernelCode},
-			{a[2] + ".tail", br.TailCode},
-			{a[2] + ".ramfs", i},
+			{args[2] + ".boot", br.BootCode},
+			{args[2] + ".head", br.HeadCode},
+			{args[2] + ".kern", br.KernelCode},
+			{args[2] + ".tail", br.TailCode},
+			{args[2] + ".ramfs", i},
 		} {
 			if v.b == nil {
-				fmt.Printf("Warning: %s is nil", v.n)
+				fmt.Fprintf(w, "Warning: %s is nil", v.n)
 				continue
 			}
 			if err := os.WriteFile(v.n, v.b, 0o666); err != nil {
-				log.Fatalf("Writing %v: %v", v, err)
+				return fmt.Errorf("writing %v: %v", v, err)
 			}
 		}
 	case "initramfs":
-		if err := br.AddInitRAMFS(a[2]); err != nil {
-			log.Fatal(err)
+		if err := br.AddInitRAMFS(args[2]); err != nil {
+			return err
 		}
 
 		b, err := br.MarshalBinary()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
-		if err := os.WriteFile(a[3], b, 0o644); err != nil {
-			log.Fatal(err)
+		if err := os.WriteFile(args[3], b, 0o644); err != nil {
+			return err
 		}
 	case "ver":
 		v, err := br.KVer()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		if *jsonOut {
 			info, err := bzimage.ParseDesc(v)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			j, err := json.MarshalIndent(info, "", "    ")
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Println(string(j))
+			fmt.Fprintln(w, string(j))
 		} else {
-			fmt.Println(v)
+			fmt.Fprintln(w, v)
 		}
 	case "cfg":
 		cfg, err := br.ReadConfig()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		fmt.Printf("%s\n", cfg)
+		fmt.Fprintf(w, "%s\n", cfg)
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	util.Usage(usage)
+	if err := run(os.Stdout, flag.Args()...); err != nil {
+		log.Fatal(err)
 	}
 }
