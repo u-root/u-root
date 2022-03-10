@@ -11,5 +11,14 @@
 //     Command line arguments are ignored.
 package main
 
+import "log"
+
+func runTrue() error {
+	return nil
+}
+
 func main() {
+	if err := runTrue(); err != nil {
+		log.Fatal(err)
+	}
 }

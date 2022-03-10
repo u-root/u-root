@@ -6,18 +6,11 @@ package main
 
 import (
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 // Ensure 0 is returned.
 func TestTrue(t *testing.T) {
-	out, err := testutil.Command(t).CombinedOutput()
-	if err != nil || len(out) != 0 {
-		t.Fatal("Expected no output and no error")
+	if err := runTrue(); err != nil {
+		t.Errorf("runTrue():=%q, want nil", err)
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
