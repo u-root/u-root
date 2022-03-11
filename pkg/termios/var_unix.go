@@ -15,7 +15,7 @@ import (
 
 // Termios is a struct for Termios operations.
 type Termios struct {
-	*unix.Termios
+	unix.Termios
 }
 
 type bit struct {

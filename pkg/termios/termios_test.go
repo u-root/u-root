@@ -105,6 +105,23 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestChangeTermios(t *testing.T) {
+	tty, err := New()
+	if os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
+		t.Fatalf("TestRaw new: want nil, got %v", err)
+	}
+	term, err := tty.Get()
+	if err != nil {
+		t.Fatalf("TestRaw get: want nil, got %v", err)
+	}
+	raw := MakeRaw(term)
+	if reflect.DeepEqual(raw, term) {
+		t.Fatalf("reflect.DeepEqual(%v, %v): true != false", term, raw)
+	}
+}
+
 func TestRaw(t *testing.T) {
 	// TestRaw no longer works in CircleCi, Restrict to only VM tests.
 	testutil.SkipIfNotRoot(t)

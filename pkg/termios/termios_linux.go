@@ -57,7 +57,7 @@ func GetTermios(fd uintptr) (*Termios, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Termios{Termios: t}, nil
+	return &Termios{Termios: *t}, nil
 }
 
 // Get terms a Termios from a TTYIO.
@@ -67,7 +67,7 @@ func (t *TTYIO) Get() (*Termios, error) {
 
 // SetTermios sets tty parameters for an fd from a Termios.
 func SetTermios(fd uintptr, ti *Termios) error {
-	return unix.IoctlSetTermios(int(fd), unix.TCSETS, ti.Termios)
+	return unix.IoctlSetTermios(int(fd), unix.TCSETS, &ti.Termios)
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
