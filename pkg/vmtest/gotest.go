@@ -50,6 +50,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	env.CgoEnabled = false
 	env.GOARCH = TestArch()
 	o.BuildOpts.Env = env
+	o.BuildOpts.UrootSource = filepath.Join(env.GOPATH, "src/github.com/u-root/u-root")
 
 	// Statically build tests and add them to the temporary directory.
 	var tests []string

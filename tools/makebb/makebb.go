@@ -18,8 +18,9 @@ import (
 )
 
 var (
-	outputPath = flag.String("o", "bb", "Path to busybox binary")
-	showCmds   = flag.Bool("c", false, "Show commands -- useful in scripts")
+	outputPath  = flag.String("o", "bb", "Path to busybox binary")
+	urootSource = flag.String("u", "", "Path to u-root source directory")
+	showCmds    = flag.Bool("c", false, "Show commands -- useful in scripts")
 )
 
 func main() {
@@ -36,9 +37,12 @@ func main() {
 
 	pkgs := flag.Args()
 	if len(pkgs) == 0 {
+		if len(*urootSource) == 0 {
+			l.Fatal("Specify at least one source path or set the -u flag")
+		}
 		pkgs = []string{"github.com/u-root/u-root/cmds/*/*"}
 	}
-	pkgs, err := uroot.ResolvePackagePaths(l, env, pkgs)
+	pkgs, err := uroot.ResolvePackagePaths(l, env, *urootSource, pkgs)
 	if err != nil {
 		l.Fatal(err)
 	}

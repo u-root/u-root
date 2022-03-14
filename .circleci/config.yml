@@ -110,7 +110,7 @@ jobs:
       - checkout
       - run:
           name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -build=bb -files /tmp/usr minimal
+          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -uroot-source=./ -build=bb -files /tmp/usr minimal
   check_templates:
     <<: *golang-template
     steps:
@@ -119,7 +119,7 @@ jobs:
           name: Ensure that every template builds for a variety of options.
           command: |
                   go build .
-                  goruncmd="./u-root -stats-output-path=/tmp/stats.json"
+                  goruncmd="./u-root -stats-output-path=/tmp/stats.json -uroot-source=./"
                   $goruncmd -build=bb minimal
                   $goruncmd -build=bb core
                   $goruncmd -build=bb coreboot-app

@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -52,6 +53,8 @@ var (
 	// For the new gobusybox support
 	usegobusybox *bool
 	genDir       *string
+	// For the new "filepath only" logic
+	urootSourceDir *string
 )
 
 func init() {
@@ -63,7 +66,7 @@ func init() {
 		sh = "elvish"
 	}
 
-	build = flag.String("build", "gbb", "u-root build format (e.g. bb or binary).")
+	build = flag.String("build", "gbb", "u-root build format (e.g. bb/gbb or binary).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
@@ -90,6 +93,8 @@ func init() {
 	// Flags for the gobusybox, which we hope to move to, since it works with modules.
 	genDir = flag.String("gen-dir", "", "Directory to generate source in")
 
+	// Flag for the new filepath only mode. This will be required to find the u-root commands and make templates work
+	urootSourceDir = flag.String("uroot-source", "", "Path to the locally checked out u-root source tree in case commands from there are desired.")
 }
 
 type buildStats struct {
@@ -272,10 +277,8 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	if !*noCommands {
 		var b builder.Builder
 		switch *build {
-		case "bb":
-			b = builder.BBBuilder{ShellBang: *shellbang}
-		case "gbb":
-			l.Printf("NOTE: building with the new gobusybox; to get old behavior, use -build=bb")
+		case "bb", "gbb":
+			l.Printf("NOTE: building with the new gobusybox; to get the old behavior check out version XXX") // TODO(MDr164): Find consensus on a "legacy" version
 			b = builder.GBBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
@@ -287,20 +290,36 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 
 		// Resolve globs into package imports.
 		//
-		// Currently allowed formats:
-		//   Go package imports; e.g. github.com/u-root/u-root/cmds/ls (must be in $GOPATH)
+		// Currently allowed format:
 		//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
+		//   u-root templates; e.g. all, core, minimal (requires uroot-source)
+		//   Import paths of u-root commands; e.g. github.com/u-root/u-root/cmds/* (requires uroot-source)
 		var pkgs []string
 		for _, a := range flag.Args() {
 			p, ok := templates[a]
 			if !ok {
+				if !validateArg(a) {
+					l.Printf("%q is not a valid path", a)
+					continue
+				}
 				pkgs = append(pkgs, a)
 				continue
+			}
+			if *urootSourceDir != "" {
+				for _, pkg := range p {
+					pkgs = append(pkgs, filepath.Join(*urootSourceDir, pkg))
+				}
+			} else {
+				return fmt.Errorf("specify the path to uroots source directory with -uroot-source when using templates")
 			}
 			pkgs = append(pkgs, p...)
 		}
 		if len(pkgs) == 0 {
-			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
+			if *urootSourceDir != "" {
+				pkgs = []string{filepath.Join(*urootSourceDir, "cmds/core/*")}
+			} else {
+				return fmt.Errorf("specify either the path to uroots source with -uroot-source or the path to at least one Golang command source")
+			}
 		}
 
 		// The command-line tool only allows specifying one build mode
@@ -314,6 +333,7 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	opts := uroot.Opts{
 		Env:             env,
 		Commands:        c,
+		UrootSource:     *urootSourceDir,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,
@@ -331,4 +351,38 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 		opts.UinitArgs = uinitArgs[1:]
 	}
 	return uroot.CreateInitramfs(l, opts)
+}
+
+func validateArg(arg string) bool {
+	if !checkPrefix(arg) {
+		if strings.Contains(arg, "*") {
+			paths, err := filepath.Glob(arg)
+			if err != nil {
+				return false
+			}
+			for _, path := range paths {
+				if !validateArg(path) {
+					return false
+				}
+			}
+		}
+		if info, err := os.Stat(arg); err != nil {
+			return false
+		} else if !info.IsDir() {
+			return false
+		}
+	}
+
+	return true
+}
+
+func checkPrefix(arg string) bool {
+	prefixes := []string{".", "/", "-", "cmds", "github.com/u-root/u-root"}
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(arg, prefix) {
+			return true
+		}
+	}
+
+	return false
 }

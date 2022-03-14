@@ -143,6 +143,11 @@ type Opts struct {
 	//   }
 	Commands []Commands
 
+	// UrootSource is the filesystem path to the locally checked out
+	// u-root source tree. This is needed to resolve templates or
+	// import paths of u-root commands.
+	UrootSource string
+
 	// TempDir is a temporary directory for builders to store files in.
 	TempDir string
 
@@ -234,11 +239,16 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	// Expand commands.
 	for index, cmds := range opts.Commands {
-		directoryPaths, err := ResolvePackagePaths(logger, opts.Env, cmds.Packages)
+		directoryPaths, err := ResolvePackagePaths(logger, opts.Env, opts.UrootSource, cmds.Packages)
 		if err != nil {
 			return err
 		}
 		opts.Commands[index].Packages = directoryPaths
+	}
+
+	// Make sure this isn't a nil pointer
+	if opts.BuildOpts == nil {
+		opts.BuildOpts = &gbbgolang.BuildOpts{}
 	}
 
 	// Add each build mode's commands to the archive.
@@ -333,11 +343,18 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 //
 //   ./foobar
 //   ./foobar/glob*
-//   github.com/u-root/u-root/cmds/core/ip
-//   github.com/u-root/u-root/cmds/core/g*lob
-func resolvePackagePath(logger ulog.Logger, env golang.Environ, input string) ([]string, error) {
-	// Search the current working directory, as well GOROOT and GOPATHs
-	prefixes := append([]string{""}, env.SrcDirs()...)
+//   UROOT_PATH/cmds/core/ip
+//   UROOT_PATH/cmds/core/g*lob
+func resolvePackagePath(logger ulog.Logger, env golang.Environ, urootSource string, input string) ([]string, error) {
+	// In case the input is a u-root import path we strip the prefix here
+	// so that it can get readded with a proper filepath.
+	input = strings.TrimPrefix(input, "github.com/u-root/u-root/")
+
+	// Search the current working directory, as well as the uroot source path if specified
+	prefixes := []string{""}
+	if len(urootSource) != 0 {
+		prefixes = append(prefixes, urootSource)
+	}
 
 	// Resolve file system paths to package import paths.
 	for _, prefix := range prefixes {
@@ -362,15 +379,6 @@ func resolvePackagePath(logger ulog.Logger, env golang.Environ, input string) ([
 			} else {
 				directories = append(directories, absPath)
 			}
-			/*} else if p.ImportPath == "." {
-				// TODO: I do not completely understand why
-				// this is triggered. This is only an issue
-				// while this function is run inside the
-				// process of a "go test".
-				importPaths = append(importPaths, pkg)
-			} else {
-				importPaths = append(importPaths, p.ImportPath)
-			}*/
 		}
 		return directories, nil
 	}
@@ -404,20 +412,20 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 	return "", fmt.Errorf("command or path %q not included in u-root build", cmd)
 }
 
-// ResolvePackagePaths takes a list of Go package import paths and directories
+// ResolvePackagePaths takes a list of u-root command paths and directories
 // and turns them into exclusively absolute directory paths.
 //
 // Currently allowed formats:
 //
-//   - package imports; e.g. github.com/u-root/u-root/cmds/ls
-//   - globs of package imports, e.g. github.com/u-root/u-root/cmds/*
 //   - paths to package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   - globs of paths to package directories; e.g. ./cmds/*
+//   - u-root package paths; e.g. cmds/core/ls or github.com/u-root/u-root/cmds/core/ls
+//   - globs of u-root package paths, e.g. cmds/* or github.com/u-root/u-root/cmds/*
 //   - if an entry starts with "-" it excludes the matching package(s)
 //
 // Directories may be relative or absolute, with or without globs.
 // Globs are resolved using filepath.Glob.
-func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) ([]string, error) {
+func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, urootSource string, pkgs []string) ([]string, error) {
 	var includes []string
 	excludes := map[string]bool{}
 	for _, pkg := range pkgs {
@@ -426,7 +434,7 @@ func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, pkgs []string) 
 		if isExclude {
 			pkg = pkg[1:]
 		}
-		paths, err := resolvePackagePath(logger, env, pkg)
+		paths, err := resolvePackagePath(logger, env, urootSource, pkg)
 		if err != nil {
 			return nil, err
 		}

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	BusyBox = BBBuilder{}
+	BusyBox = GBBBuilder{}
 	Binary  = BinaryBuilder{}
 )
 
