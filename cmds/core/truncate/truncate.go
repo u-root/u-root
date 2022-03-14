@@ -42,15 +42,15 @@ func init() {
 func truncate(args ...string) error {
 	if !size.IsSet && *rfile == "" {
 		flag.Usage()
-		return fmt.Errorf("truncate: ERROR: You need to specify size via -s <number> or -r <rfile>")
+		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
 	if size.IsSet && *rfile != "" {
 		flag.Usage()
-		return fmt.Errorf("truncate: ERROR: You need to specify size via -s <number> or -r <rfile>")
+		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
 	if len(args) == 0 {
 		flag.Usage()
-		return fmt.Errorf("truncate: ERROR: You need to specify one or more files as argument")
+		return fmt.Errorf("you need to specify one or more files as argument")
 	}
 
 	for _, fname := range args {
@@ -59,15 +59,15 @@ func truncate(args ...string) error {
 		st, err := os.Stat(fname)
 		if os.IsNotExist(err) && !*create {
 			if err = os.WriteFile(fname, []byte{}, 0o644); err != nil {
-				return fmt.Errorf("truncate: ERROR: %v", err)
+				return fmt.Errorf("%v", err)
 			}
 			if st, err = os.Stat(fname); err != nil {
-				return fmt.Errorf("truncate: ERROR: could not stat newly created file: %v", err)
+				return fmt.Errorf("could not stat newly created file: %v", err)
 			}
 		}
 		if *rfile != "" {
 			if st, err = os.Stat(*rfile); err != nil {
-				return fmt.Errorf("truncate: ERROR: could not stat reference file: %v", err)
+				return fmt.Errorf("could not stat reference file: %v", err)
 			}
 			final = st.Size()
 		} else if size.IsSet {

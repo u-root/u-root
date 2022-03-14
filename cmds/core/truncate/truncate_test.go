@@ -25,7 +25,7 @@ func TestTruncate(t *testing.T) {
 	}{
 		{
 			name: "!size.IsSet && *rfile == \"\"",
-			want: "truncate: ERROR: You need to specify size via -s <number> or -r <rfile>",
+			want: "you need to specify size via -s <number> or -r <rfile>",
 		},
 		{
 			name: "size.IsSet && *rfile == \"\"",
@@ -33,19 +33,19 @@ func TestTruncate(t *testing.T) {
 				IsSet: true,
 			},
 			rfile: "testfile",
-			want:  "truncate: ERROR: You need to specify size via -s <number> or -r <rfile>",
+			want:  "you need to specify size via -s <number> or -r <rfile>",
 		},
 		{
 			name:  "len(args) == 0",
 			rfile: "testfile",
-			want:  "truncate: ERROR: You need to specify one or more files as argument",
+			want:  "you need to specify one or more files as argument",
 		},
 		{
 			name:   "create non existing file with err in rfile path",
 			create: false,
 			rfile:  "testfile",
 			args:   []string{filepath.Join(tmpdir, "file1")},
-			want:   "truncate: ERROR: could not stat reference file: stat testfile: no such file or directory",
+			want:   "could not stat reference file: stat testfile: no such file or directory",
 		},
 		{
 			name:   "create non existing file without err in rfile path",
