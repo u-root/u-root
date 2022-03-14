@@ -5,18 +5,18 @@
 package libinit
 
 import (
+	"golang.org/x/sys/plan9"
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
 )
 
 // WaitOrphans waits for all remaining processes on the system to exit.
 func WaitOrphans() uint {
 	var numReaped uint
 	for {
-		var w syscall.Waitmsg
-		err := syscall.Await(&w)
+		var w plan9.Waitmsg
+		err := plan9.Await(&w)
 		if err != nil {
 			break
 		}
@@ -30,7 +30,7 @@ func WaitOrphans() uint {
 func WithRforkFlags(flags uintptr) CommandModifier {
 	return func(c *exec.Cmd) {
 		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
+			c.SysProcAttr = &plan9.Rfork{}
 		}
 		c.SysProcAttr.Rfork = int(flags)
 	}
@@ -41,7 +41,7 @@ func init() {
 }
 
 func plan9Default(c *exec.Cmd) {
-	c.SysProcAttr = &syscall.SysProcAttr{}
+	c.SysProcAttr = &plan9.Rfork{}
 }
 
 // FIX ME: make it not linux-specific
@@ -66,8 +66,8 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		}
 
 		for {
-			var w syscall.Waitmsg
-			if err := syscall.Await(&w); err != nil {
+			var w plan9.Waitmsg
+			if err := plan9.Await(&w); err != nil {
 				debug("Error from Await: %v", err)
 				break
 			}
