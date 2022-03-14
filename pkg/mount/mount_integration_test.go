@@ -24,7 +24,7 @@ func TestIntegration(t *testing.T) {
 				qemu.ArbitraryArgs{"-hdc", "testdata/gptdisk"},
 				qemu.ArbitraryArgs{"-drive", "file=testdata/gptdisk2,if=none,id=NVME1"},
 				// use-intel-id uses the vendor=0x8086 and device=0x5845 ids for NVME
-				qemu.ArbitraryArgs{"-device", "nvme,drive=NVME1,serial=nvme-1,use-intel-id"},
+				qemu.ArbitraryArgs{"-device", "nvme,drive=NVME1,serial=nvme-1,use-intel-id=true"},
 			},
 		},
 	}
