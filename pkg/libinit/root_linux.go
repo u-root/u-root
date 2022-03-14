@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cp"
@@ -62,7 +61,7 @@ type dev struct {
 
 func (d dev) create() error {
 	os.Remove(d.Name)
-	return syscall.Mknod(d.Name, d.Mode, d.Dev)
+	return unix.Mknod(d.Name, d.Mode, d.Dev)
 }
 
 func (d dev) String() string {
@@ -78,7 +77,7 @@ type mount struct {
 }
 
 func (m mount) create() error {
-	return syscall.Mount(m.Source, m.Target, m.FSType, m.Flags, m.Opts)
+	return unix.Mount(m.Source, m.Target, m.FSType, m.Flags, m.Opts)
 }
 
 func (m mount) String() string {
@@ -123,9 +122,9 @@ var (
 		mount{Source: "proc", Target: "/proc", FSType: "proc"},
 		mount{Source: "tmpfs", Target: "/tmp", FSType: "tmpfs"},
 
-		dev{Name: "/dev/tty", Mode: syscall.S_IFCHR | 0o666, Dev: 0x0500},
-		dev{Name: "/dev/urandom", Mode: syscall.S_IFCHR | 0o444, Dev: 0x0109},
-		dev{Name: "/dev/port", Mode: syscall.S_IFCHR | 0o640, Dev: 0x0104},
+		dev{Name: "/dev/tty", Mode: unix.S_IFCHR | 0o666, Dev: 0x0500},
+		dev{Name: "/dev/urandom", Mode: unix.S_IFCHR | 0o444, Dev: 0x0109},
+		dev{Name: "/dev/port", Mode: unix.S_IFCHR | 0o640, Dev: 0x0104},
 
 		dir{Name: "/dev/pts", Mode: 0o777},
 		mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
