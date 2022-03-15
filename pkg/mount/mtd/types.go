@@ -24,6 +24,8 @@ type Flasher interface {
 	SyncWrite() error
 	// Close implements io.Close for a flash device.
 	Close() error
+	// Name returns the name of the flash device
+	Name() string
 }
 
 // VendorName is the manufacturers name

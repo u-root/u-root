@@ -47,6 +47,6 @@ func (m *Dev) Close() error {
 }
 
 // DevName returns the name of the flash device.
-func (m *Dev) DevName() string {
+func (m *Dev) Name() string {
 	return m.devName
 }
