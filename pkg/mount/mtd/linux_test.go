@@ -30,7 +30,7 @@ func TestOpen(t *testing.T) {
 	}
 	defer m.Close()
 
-	if _, err := m.QueueWrite([]byte(testString), 0); err != nil {
+	if _, err := m.QueueWriteAt([]byte(testString), 0); err != nil {
 		t.Errorf("m.QueueWrite([]byte(testString), 0)=-,%q, want _,nil", err)
 	}
 	buf := make([]byte, 26)
