@@ -37,8 +37,8 @@ func checkDebugFlag() {
 	}
 }
 
-// main parses platform policy file, and based on the inputs performs measurements and then
-// launches a target kernel.
+// main parses platform policy file, and based on the inputs performs
+// measurements and then launches a target kernel.
 //
 // Steps followed by uinit:
 // 1. if debug flag is set, enable logging.
@@ -116,7 +116,8 @@ func unmountAndExit() {
 	os.Exit(1)
 }
 
-// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi drives.
+// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi
+// drives.
 func scanIscsiDrives() error {
 	val, ok := cmdline.Flag("netroot")
 	if !ok {

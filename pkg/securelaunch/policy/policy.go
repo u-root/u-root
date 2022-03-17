@@ -21,11 +21,9 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/measurement"
 )
 
-/*
- * Policy describes the TPM measurements to take and the OS to boot.
- *
- * The policy is stored as a JSON file.
- */
+// Policy describes the policy used to drive the security engine.
+//
+// The policy is stored as a JSON file.
 type Policy struct {
 	DefaultAction string
 	Collectors    []measurement.Collector
@@ -33,17 +31,14 @@ type Policy struct {
 	EventLog      eventlog.EventLog
 }
 
-/*
- * scanKernelCmdLine scans the kernel cmdline
- * for 'sl_policy' flag. when set, this flag provides location of
- * of policy file on disk enabling the function to return policy file as
- * a byte slice.
- *
- * format of sl_policy flag is as follows
- * sl_policy=<block device identifier>:<path>
- * e.g sda:/boot/securelaunch.policy
- * e.g 4qccd342-12zr-4e99-9ze7-1234cb1234c4:/foo/securelaunch.policy
- */
+// scanKernelCmdLine scans the kernel cmdline for the 'sl_policy' flag.
+// When set it provides location of the policy file on disk. It reads it and
+// returns the policy file as a byte slice.
+//
+// The format of sl_policy flag is as follows:
+// sl_policy=<block device identifier>:<path>
+// e.g., sda:/boot/securelaunch.policy
+// e.g., 4qccd342-12zr-4e99-9ze7-1234cb1234c4:/foo/securelaunch.policy
 func scanKernelCmdLine() []byte {
 	slaunch.Debug("scanKernelCmdLine: scanning kernel cmd line for *sl_policy* flag")
 	val, ok := cmdline.Flag("sl_policy")
@@ -68,16 +63,14 @@ func scanKernelCmdLine() []byte {
 	return d
 }
 
-/*
- *  scanBlockDevice scans an already mounted block device inside directories
- *	"/", "/efi" and "/boot" for policy file and if found, returns the policy byte as a byte slice.
- *
- *	e.g: if you mount /dev/sda1 on /tmp/sda1,
- *	then mountPath would be /tmp/sda1
- *	and searchPath would be /tmp/sda1/securelaunch.policy,
- * /tmp/sda1/efi/securelaunch.policy and /tmp/sda1/boot/securelaunch.policy
- *	respectively for each iteration of loop over SearchRoots slice.
- */
+// scanBlockDevice scans for the policy file on already mounted block devices.
+// It looks in the "/", "/efi", and "/boot" directories. If found, it returns
+// the policy file as a byte slice.
+//
+//	e.g., if /dev/sda1 is mounted on /tmp/sda1, then mountPath would be
+// /tmp/sda1 and searchPath would be /tmp/sda1/securelaunch.policy,
+// /tmp/sda1/efi/securelaunch.policy, and /tmp/sda1/boot/securelaunch.policy
+// respectively for each iteration of loop over SearchRoots slice.
 func scanBlockDevice(mountPath string) []byte {
 	log.Printf("scanBlockDevice")
 	// scan for securelaunch.policy under /, /efi, or /boot
@@ -102,19 +95,9 @@ func scanBlockDevice(mountPath string) []byte {
 	return nil
 }
 
-/*
- * locate searches for policy file on the kernel cmdline.
- * if not found on cmdline, it looks for policy file on each block device
- * under "/", "efi" and "/boot" directories.
- *
- * Steps:
- * 1. Check if kernel param sl_policy is set,
- * 		parse the string
- * 2. Iterate through each local block device,
- *	- mount the block device
- *	- scan for securelaunch.policy under /, /efi, or /boot
- * 3  Read in policy file
- */
+// locate searches for the policy file on the kernel cmdline.
+// If it's not found on cmdline, it looks for the policy file on each block
+// device in the "/", "efi", and "/boot" directories.
 func locate() ([]byte, error) {
 	d := scanKernelCmdLine()
 	if d != nil {
@@ -150,11 +133,8 @@ func locate() ([]byte, error) {
 	return nil, errors.New("policy file not found anywhere")
 }
 
-/*
- * parse accepts a JSON file as input, parses
- * it into a well defined Policy structure (parse) and
- * returns a pointer to Policy structure.
- */
+// parse accepts a JSON file as input, parses it into a well defined Policy
+// structure and returns a pointer to the Policy structure.
 func parse(pf []byte) (*Policy, error) {
 	p := &Policy{}
 	var parse struct {
@@ -202,14 +182,11 @@ func measure(b []byte) error {
 	return measurement.HashBytes(b, eventDesc)
 }
 
-/*
- * Get locates and parses the policy file.
- *
- * The file is located by the following priority:
- *
- *  (1) kernel cmdline "sl_policy" argument.
- *  (2) a file on any partition on any disk called "securelaunch.policy"
- */
+// Get locates and parses the policy file.
+//
+// The file is located by the following priority:
+//  1. the kernel cmdline `sl_policy` argument.
+//  2. a file on any partition on any disk called "securelaunch.policy".
 func Get() (*Policy, error) {
 	b, err := locate()
 	if err != nil {
