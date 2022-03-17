@@ -22,11 +22,9 @@ import (
 
 var slDebug = flag.Bool("d", false, "enable debug logs")
 
+// checkDebugFlag checks if `uroot.uinitargs=-d` is set on the kernel cmdline.
+// If it is set, slaunch.Debug is set to log.Printf.
 func checkDebugFlag() {
-	/*
-	 * check if uroot.uinitargs=-d is set in kernel cmdline.
-	 * if set, slaunch.Debug is set to log.Printf.
-	 */
 	flag.Parse()
 
 	if flag.NArg() > 1 {
@@ -39,16 +37,14 @@ func checkDebugFlag() {
 	}
 }
 
-/*
- * main parses platform policy file, and based on the inputs,
- * performs measurements and then launches a target kernel.
- *
- * steps followed by sluinit:
- * 1. if debug flag is set, enable logging.
- * 2. gets the TPM handle
- * 3. Gets secure launch policy file entered by user.
- * 4. calls collectors to collect measurements(hashes) a.k.a evidence.
- */
+// main parses platform policy file, and based on the inputs performs measurements and then
+// launches a target kernel.
+//
+// Steps followed by uinit:
+// 1. if debug flag is set, enable logging.
+// 2. gets the TPM handle
+// 3. Gets secure launch policy file entered by user.
+// 4. calls collectors to collect measurements(hashes) a.k.a evidence.
 func main() {
 	checkDebugFlag()
 
@@ -111,15 +107,16 @@ func main() {
 }
 
 // unmountAndExit is called on error and unmounts all devices.
-// sluinit ends here.
 func unmountAndExit() {
 	slaunch.UnmountAll()
-	time.Sleep(5 * time.Second) // let queued up debug statements get printed
+
+	// Let queued up debug statements get printed.
+	time.Sleep(5 * time.Second)
+
 	os.Exit(1)
 }
 
-// scanIscsiDrives calls dhcleint to parse cmdline and
-// iscsinl to mount iscsi drives.
+// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi drives.
 func scanIscsiDrives() error {
 	val, ok := cmdline.Flag("netroot")
 	if !ok {
