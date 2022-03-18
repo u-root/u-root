@@ -23,16 +23,28 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 // flags
 var (
-	fSuppress = flag.Bool("s", false, "suppress counts")
-	fPrompt   = flag.String("p", "*", "specify a command prompt")
+	fsuppress bool
+	fprompt   string
+	usage     = "Usage: ed [-s] [-p <prompt>] [file]\n"
 )
+
+func init() {
+	flag.BoolVar(&fsuppress, "s", false, "suppress counts")
+	flag.StringVar(&fprompt, "p", "*", "specify a command prompt")
+	util.Usage(usage)
+}
 
 // current FileBuffer
 var buffer *FileBuffer
@@ -48,10 +60,11 @@ var state struct {
 	lastSub  string
 }
 
-// Parse input and run command
-func run(cmd string) (e error) {
+// Parse input and execute command
+func execute(cmd string, output io.Writer) (e error) {
 	ctx := &Context{
 		cmd: cmd,
+		out: output,
 	}
 	if ctx.addrs, ctx.cmdOffset, e = buffer.ResolveAddrs(cmd); e != nil {
 		return
@@ -72,63 +85,69 @@ func run(cmd string) (e error) {
 	return
 }
 
-// Entry point
-func main() {
+func runEd(in io.Reader, out io.Writer, suppress bool, prompt, file string) error {
 	var e error
-	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [-s] [-p <prompt>] [file]\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "p" {
-			state.prompt = true
-		}
-	})
-	args := flag.Args()
-	if len(args) > 1 { // we only accept one additional argument
-		flag.Usage()
-		os.Exit(1)
+	if len(prompt) > 0 {
+		state.prompt = true
 	}
 	buffer = NewFileBuffer(nil)
-	if len(args) == 1 { // we were given a file name
-		state.fileName = args[0]
+	if file != "" { // we were given a file name
+		state.fileName = file
 		// try to read in the file
-		if _, e = os.Stat(state.fileName); os.IsNotExist(e) && !*fSuppress {
+		if _, e = os.Stat(state.fileName); os.IsNotExist(e) && !suppress {
 			fmt.Fprintf(os.Stderr, "%s: No such file or directory", state.fileName)
 			// this is not fatal, we just start with an empty buffer
 		} else {
 			if buffer, e = FileToBuffer(state.fileName); e != nil {
-				fmt.Fprintln(os.Stderr, e)
-				os.Exit(1)
+				return e
 			}
-			if !*fSuppress {
+			if !suppress {
 				fmt.Println(buffer.Size())
 			}
 		}
 	}
 	state.winSize = 22 // we don't actually support getting the real window size
-	inScan := bufio.NewScanner(os.Stdin)
+	inScan := bufio.NewScanner(in)
 	if state.prompt {
-		fmt.Printf("%s", *fPrompt)
+		fmt.Fprintf(out, "%s", prompt)
 	}
 	for inScan.Scan() {
 		cmd := inScan.Text()
-		e = run(cmd)
+		e = execute(cmd, out)
 		if e != nil {
 			state.lastErr = e
-			if !*fSuppress && state.printErr {
-				fmt.Println(e)
+			if !suppress && state.printErr {
+				fmt.Fprintf(out, "%s\n", e)
 			} else {
-				fmt.Println("?")
+				fmt.Fprintf(out, "?\n")
+			}
+			if errors.Is(e, errExit) {
+				return nil
 			}
 		}
 		if state.prompt {
-			fmt.Printf("%s", *fPrompt)
+			fmt.Printf("%s", prompt)
 		}
 	}
 	if inScan.Err() != nil {
-		fmt.Fprintf(os.Stderr, "error reading stdin: %v", inScan.Err())
+		return fmt.Errorf("error reading stdin: %v", inScan.Err())
+	}
+	return nil
+}
+
+// Entry point
+func main() {
+	flag.Parse()
+	file := ""
+	switch len(flag.Args()) {
+	case 0:
+	case 1:
+		file = flag.Args()[0]
+	default:
+		flag.Usage()
 		os.Exit(1)
+	}
+	if err := runEd(os.Stdin, os.Stdout, fsuppress, fprompt, file); err != nil {
+		log.Fatal(err)
 	}
 }
