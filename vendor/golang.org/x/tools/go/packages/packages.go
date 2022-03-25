@@ -46,7 +46,7 @@ const (
 	// NeedName adds Name and PkgPath.
 	NeedName LoadMode = 1 << iota
 
-	// NeedFiles adds GoFiles, OtherFiles, EmbedFiles, and EmbedPatterns.
+	// NeedFiles adds GoFiles and OtherFiles.
 	NeedFiles
 
 	// NeedCompiledGoFiles adds CompiledGoFiles.
@@ -80,6 +80,12 @@ const (
 
 	// NeedModule adds Module.
 	NeedModule
+
+	// NeedEmbedFiles adds EmbedFiles.
+	NeedEmbedFiles
+
+	// NeedEmbedPatterns adds EmbedPatterns.
+	NeedEmbedPatterns
 )
 
 const (
@@ -764,9 +770,13 @@ func (ld *loader) refine(roots []string, list ...*Package) ([]*Package, error) {
 		if ld.requestedMode&NeedFiles == 0 {
 			ld.pkgs[i].GoFiles = nil
 			ld.pkgs[i].OtherFiles = nil
-			ld.pkgs[i].EmbedFiles = nil
-			ld.pkgs[i].EmbedPatterns = nil
 			ld.pkgs[i].IgnoredFiles = nil
+		}
+		if ld.requestedMode&NeedEmbedFiles == 0 {
+			ld.pkgs[i].EmbedFiles = nil
+		}
+		if ld.requestedMode&NeedEmbedPatterns == 0 {
+			ld.pkgs[i].EmbedPatterns = nil
 		}
 		if ld.requestedMode&NeedCompiledGoFiles == 0 {
 			ld.pkgs[i].CompiledGoFiles = nil
