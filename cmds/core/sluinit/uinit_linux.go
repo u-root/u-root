@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/u-root/iscsinl"
@@ -51,6 +53,9 @@ func checkDebugFlag() {
 // 3. Gets secure launch policy file entered by user.
 // 4. calls collectors to collect measurements(hashes) a.k.a evidence.
 func main() {
+	// Ignore ctrl+c
+	signal.Ignore(syscall.SIGINT)
+
 	checkDebugFlag()
 
 	err := scanIscsiDrives()
