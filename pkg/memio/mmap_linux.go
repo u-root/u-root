@@ -30,6 +30,7 @@ func (c *calls) Munmap(mem []byte) error {
 	return syscall.Munmap(mem)
 }
 
+// MMap is a struct containing an os.File and an interface to system calls to manage mapped files.
 type MMap struct {
 	*os.File
 	syscalls
@@ -44,7 +45,7 @@ func (m *MMap) mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, o
 	return
 }
 
-// Read reads data from physical memory at address addr. On x86 platforms,
+// ReadAt reads data from physical memory at address addr. On x86 platforms,
 // this uses the seek+read syscalls. On arm platforms, this uses mmap.
 func (m *MMap) ReadAt(addr int64, data UintN) error {
 	mem, offset, err := m.mmap(m.File, addr, data.Size(), syscall.PROT_READ)
@@ -61,7 +62,7 @@ func (m *MMap) ReadAt(addr int64, data UintN) error {
 	return nil
 }
 
-// Write writes data to physical memory at address addr. On x86 platforms, this
+// WriteAt writes data to physical memory at address addr. On x86 platforms, this
 // uses the seek+read syscalls. On arm platforms, this uses mmap.
 func (m *MMap) WriteAt(addr int64, data UintN) error {
 	mem, offset, err := m.mmap(m.File, addr, data.Size(), syscall.PROT_WRITE)
@@ -75,10 +76,12 @@ func (m *MMap) WriteAt(addr int64, data UintN) error {
 	return data.write(unsafe.Pointer(&mem[offset]))
 }
 
+// Close implements Close.
 func (m *MMap) Close() error {
 	return m.File.Close()
 }
 
+// NewMMap returns an Mmap for a file (usually a device) passed as a string.
 func NewMMap(path string) (*MMap, error) {
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {

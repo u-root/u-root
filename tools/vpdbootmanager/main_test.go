@@ -36,7 +36,7 @@ func TestAddNetbootEntryFull(t *testing.T) {
 	if err := os.MkdirAll(path.Join(dir, "rw"), 0o700); err != nil {
 		t.Errorf(`os.MkdirAll(path.Join(%q, "rw"), 0o700) = %v, want nil`, dir, err)
 	}
-	defer os.RemoveAll(dir)
+
 	args := []string{
 		"add",
 		"netboot",
@@ -66,7 +66,7 @@ func TestAddLocalbootEntryFull(t *testing.T) {
 	if err := os.MkdirAll(path.Join(dir, "rw"), 0o700); err != nil {
 		t.Errorf(`os.MkdirAll(path.Join(%q, "rw"), 0o700) = %v, want nil`, dir, err)
 	}
-	defer os.RemoveAll(dir)
+
 	args := []string{
 		"add",
 		"localboot",

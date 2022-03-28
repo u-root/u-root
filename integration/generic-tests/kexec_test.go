@@ -8,10 +8,12 @@
 package integration
 
 import (
+	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -33,6 +35,46 @@ func TestMountKexec(t *testing.T) {
 		},
 		QEMUOpts: qemu.Options{
 			Timeout: 20 * time.Second,
+			Devices: []qemu.Device{
+				qemu.ArbitraryArgs{"-m", "8192"},
+			},
+		},
+	})
+	defer cleanup()
+
+	if err := q.Expect("SAW KEXEC=Y"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestMountKexecLoad is same as TestMountKexec except it test calling
+// kexec_load syscall than file load.
+func TestMountKexecLoad(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" {
+		t.Skipf("test not supported on %s", vmtest.TestArch())
+	}
+
+	gzipP, err := exec.LookPath("gzip")
+	if err != nil {
+		t.Skipf("no gzip found, skip it as it won't be able to de-compress kernel")
+	}
+
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		BuildOpts: uroot.Opts{
+			ExtraFiles: []string{gzipP},
+		},
+		TestCmds: []string{
+			"var CMDLINE = (cat /proc/cmdline)",
+			"var SUFFIX = $CMDLINE[-7..]",
+			"echo SAW $SUFFIX",
+			"kexec -i /testdata/initramfs.cpio --loadsyscall -c $CMDLINE' KEXEC=Y' /testdata/kernel",
+		},
+		QEMUOpts: qemu.Options{
+			Timeout: 20 * time.Second,
+			Devices: []qemu.Device{
+				qemu.ArbitraryArgs{"-m", "8192"},
+			},
 		},
 	})
 	defer cleanup()

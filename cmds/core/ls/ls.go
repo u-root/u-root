@@ -142,14 +142,14 @@ func indicator(fi ls.FileInfo) string {
 	return ""
 }
 
-func list(names []string) error {
+func list(w io.Writer, names []string) error {
 	if len(names) == 0 {
 		names = []string{"."}
 	}
 	// Write output in tabular form.
-	w := &tabwriter.Writer{}
-	w.Init(os.Stdout, 0, 0, 1, ' ', 0)
-	defer w.Flush()
+	tw := &tabwriter.Writer{}
+	tw.Init(w, 0, 0, 1, ' ', 0)
+	defer tw.Flush()
 
 	var s ls.Stringer = ls.NameStringer{}
 	if *quoted {
@@ -161,17 +161,17 @@ func list(names []string) error {
 	// Is a name a directory? If so, list it in its own section.
 	prefix := len(names) > 1
 	for _, d := range names {
-		if err := listName(s, d, w, prefix); err != nil {
+		if err := listName(s, d, tw, prefix); err != nil {
 			return fmt.Errorf("error while listing %q: %v", d, err)
 		}
-		w.Flush()
+		tw.Flush()
 	}
 	return nil
 }
 
 func main() {
 	flag.Parse()
-	if err := list(flag.Args()); err != nil {
+	if err := list(os.Stdout, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }

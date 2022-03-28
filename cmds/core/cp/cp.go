@@ -28,7 +28,6 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/cp"
-	"golang.org/x/sys/unix"
 )
 
 type flags struct {
@@ -125,7 +124,7 @@ func run(args []string, f flags, w io.Writer, i *bufio.Reader) error {
 		todir = toStat.IsDir()
 	}
 	if len(args) > 2 && !todir {
-		return unix.ENOTDIR
+		return eNotDir
 	}
 
 	opts := cp.Options{

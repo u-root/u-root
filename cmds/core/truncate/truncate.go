@@ -18,13 +18,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/rck/unit"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-const cmd = "truncate [-c] -s size file..."
+const usage = "truncate [-c] -s size file..."
 
 var (
 	create = flag.Bool("c", false, "Do not create files.")
@@ -34,50 +36,38 @@ var (
 
 func init() {
 	flag.Var(size, "s", "Size in bytes, prefixes +/- are allowed")
-
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
+	util.Usage(usage)
 }
 
-func usageAndExit() {
-	flag.Usage()
-	os.Exit(1)
-}
-
-func main() {
-	flag.Parse()
-
+func truncate(args ...string) error {
 	if !size.IsSet && *rfile == "" {
-		log.Println("truncate: ERROR: You need to specify size via -s <number> or -r <rfile>.")
-		usageAndExit()
+		flag.Usage()
+		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
 	if size.IsSet && *rfile != "" {
-		log.Println("truncate: ERROR: You need to specify size via -s <number> or -r <rfile>.")
-		usageAndExit()
+		flag.Usage()
+		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
-	if flag.NArg() == 0 {
-		log.Println("truncate: ERROR: You need to specify one or more files as argument.")
-		usageAndExit()
+	if len(args) == 0 {
+		flag.Usage()
+		return fmt.Errorf("you need to specify one or more files as argument")
 	}
 
-	for _, fname := range flag.Args() {
+	for _, fname := range args {
 
 		var final int64
 		st, err := os.Stat(fname)
 		if os.IsNotExist(err) && !*create {
 			if err = os.WriteFile(fname, []byte{}, 0o644); err != nil {
-				log.Fatalf("truncate: ERROR: %v\n", err)
+				return fmt.Errorf("%v", err)
 			}
 			if st, err = os.Stat(fname); err != nil {
-				log.Fatalf("truncate: ERROR: could not stat newly created file: %v\n", err)
+				return fmt.Errorf("could not stat newly created file: %v", err)
 			}
 		}
 		if *rfile != "" {
 			if st, err = os.Stat(*rfile); err != nil {
-				log.Fatalf("truncate: ERROR: could not stat reference file: %v\n", err)
+				return fmt.Errorf("could not stat reference file: %v", err)
 			}
 			final = st.Size()
 		} else if size.IsSet {
@@ -92,5 +82,13 @@ func main() {
 
 		// intentionally ignore, like GNU truncate
 		os.Truncate(fname, final)
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := truncate(flag.Args()...); err != nil {
+		log.Fatal(err)
 	}
 }

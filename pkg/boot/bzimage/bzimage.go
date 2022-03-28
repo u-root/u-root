@@ -26,6 +26,8 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
+const minBootParamLen = 616
+
 type magic struct {
 	signature []byte
 	c         *exec.Cmd
@@ -36,13 +38,16 @@ type magic struct {
 const MSDOS = "MZ"
 
 var (
-	// these are the magics, along with the command to run
-	// it as a pipe.
+	// TODO(10000TB): remove dependency on cmds / programs.
+	//
+	// These are the magics, along with the command to run
+	// it as a pipe. They need be the actual command than a
+	// shell script, which won't work in u-root.
 	magics = []*magic{
-		{[]byte("\037\213\010"), exec.Command("zcat")},
+		{[]byte("\037\213\010"), exec.Command("gzip", "-cd")},
 		{[]byte("\3757zXZ\000"), exec.Command("xzcat")},
 		{[]byte("BZh"), exec.Command("bzcat")},
-		{[]byte("\135\000\000\000"), exec.Command("lzcat")},
+		{[]byte("\135\000\000\000"), exec.Command("gzip", "-cd")},
 		{[]byte("\211\114\132"), exec.Command("lzop", "-c", "-d")},
 		// Is this just lz? Assume so.
 		{[]byte("\002!L\030"), exec.Command("lzcat")},
@@ -132,10 +137,9 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.HeadCode); err != nil {
 		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
-	// Now size up the kernel code. Is it just PayloadSize?
 	b.compressed = make([]byte, b.Header.PayloadSize)
 	if _, err := r.Read(b.compressed); err != nil {
-		return fmt.Errorf("can't read HeadCode: %v", err)
+		return fmt.Errorf("can't read KernelCode: %v", err)
 	}
 	if b.NoDecompress {
 		Debug("skipping code decompress")
@@ -146,6 +150,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 			return err
 		}
 		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
+		Debug("KernelCode size: %d", len(b.KernelCode))
 	}
 	b.TailCode = make([]byte, r.Len())
 	if _, err := r.Read(b.TailCode); err != nil {
@@ -225,6 +230,7 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 func unpack(d []byte, c exec.Cmd) ([]byte, error) {
 	Debug("Kernel is %d bytes", len(d))
 	Debug("Some kernel data: %#02x %#02x", d[:32], d[len(d)-8:])
+
 	stdout, err := c.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -281,9 +287,11 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 
 // ELF extracts the KernelCode.
 func (b *BzImage) ELF() (*elf.File, error) {
+	Debug("getting ELF...")
 	if b.NoDecompress || b.KernelCode == nil {
 		return nil, ErrKCodeMissing
 	}
+	Debug("creating a elf NewFile...")
 	e, err := elf.NewFile(bytes.NewReader(b.KernelCode))
 	if err != nil {
 		return nil, err
@@ -359,11 +367,28 @@ func (b *BzImage) AddInitRAMFS(name string) error {
 	return nil
 }
 
-// MakeLinuxHeader marshals a LinuxHeader into a []byte.
-func MakeLinuxHeader(h *LinuxHeader) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, h)
+// MarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxHeader) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := binary.Write(&buf, binary.LittleEndian, h)
 	return buf.Bytes(), err
+}
+
+// UnmarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxHeader) UnmarshalBinary(b []byte) error {
+	return binary.Read(bytes.NewBuffer(b), binary.LittleEndian, h)
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxParams) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := binary.Write(&buf, binary.LittleEndian, h)
+	return buf.Bytes(), err
+}
+
+// UnmarshalBinary implements encoding.BinaryMarshaler
+func (h *LinuxParams) UnmarshalBinary(b []byte) error {
+	return binary.Read(bytes.NewBuffer(b), binary.LittleEndian, h)
 }
 
 // Show stringifies a LinuxHeader into a []string.
@@ -376,8 +401,25 @@ func (h *LinuxHeader) Show() []string {
 		k := reflect.ValueOf(v).Kind()
 		n := val.Type().Field(i).Name
 		switch k {
-		case reflect.Slice:
+		case reflect.Bool:
+			s = append(s, fmt.Sprintf("%s:%v", n, v))
+		default:
 			s = append(s, fmt.Sprintf("%s:%#02x", n, v))
+		}
+	}
+	return s
+}
+
+// Show stringifies a LinuxParams into a []string.
+func (h *LinuxParams) Show() []string {
+	var s []string
+
+	val := reflect.ValueOf(*h)
+	for i := 0; i < val.NumField(); i++ {
+		v := val.Field(i)
+		k := reflect.ValueOf(v).Kind()
+		n := val.Type().Field(i).Name
+		switch k {
 		case reflect.Bool:
 			s = append(s, fmt.Sprintf("%s:%v", n, v))
 		default:
@@ -429,6 +471,11 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 
 // String stringifies a LinuxHeader into comma-separated parts
 func (h *LinuxHeader) String() string {
+	return strings.Join(h.Show(), ",")
+}
+
+// String stringifies a LinuxParams into comma-separated parts
+func (h *LinuxParams) String() string {
 	return strings.Join(h.Show(), ",")
 }
 

@@ -19,10 +19,12 @@ const (
 )
 
 type Plan9Port struct {
-	iol MemIOReadWriteCloser
-	iow MemIOReadWriteCloser
-	iob MemIOReadWriteCloser
+	iol ReadWriteCloser
+	iow ReadWriteCloser
+	iob ReadWriteCloser
 }
+
+var _ PortReadWriter = &Plan9Port{}
 
 // In reads data from the x86 port at address addr. Data must be Uint8, Uint16,
 // Uint32, but not Uint64.
@@ -62,7 +64,7 @@ func (p *Plan9Port) Close() error {
 	return p.iob.Close()
 }
 
-func NewPort() (Port, error) {
+func NewPort() (*Plan9Port, error) {
 	f1, err := os.OpenFile(p9pathIOL, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
@@ -75,21 +77,9 @@ func NewPort() (Port, error) {
 	if err != nil {
 		return nil, err
 	}
-	iolMem, err := NewMemIOPort(f1)
-	if err != nil {
-		return nil, err
-	}
-	iowMem, err := NewMemIOPort(f2)
-	if err != nil {
-		return nil, err
-	}
-	iobMem, err := NewMemIOPort(f3)
-	if err != nil {
-		return nil, err
-	}
 	return &Plan9Port{
-		iol: iolMem,
-		iow: iowMem,
-		iob: iobMem,
+		iol: NewMemIOPort(f1),
+		iow: NewMemIOPort(f2),
+		iob: NewMemIOPort(f3),
 	}, nil
 }

@@ -266,7 +266,7 @@ func (bt ByTime) Less(i, j int) bool { return int64(bt[i].EntryStamp) < int64(bt
 
 func (c *CBmem) readTimeStamps(f *os.File) (*TimeStamps, error) {
 	if c.TimeStampsTable.Addr == 0 {
-		return nil, fmt.Errorf("No time stamps")
+		return nil, fmt.Errorf("no time stamps")
 	}
 	var t TSHeader
 	a := int64(c.TimeStampsTable.Addr)

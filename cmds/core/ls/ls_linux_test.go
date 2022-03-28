@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,7 +30,6 @@ func TestListNameLinux(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	// Create a directory
 	d := t.TempDir()
-	defer os.RemoveAll(d)
 	if err := unix.Mknod(filepath.Join(d, "large_node"), 0o660|unix.S_IFBLK, 0x12345678); err != nil {
 		t.Fatalf("err in unix.Mknod: %v", err)
 	}
@@ -39,21 +37,17 @@ func TestListNameLinux(t *testing.T) {
 	// Setting the flags
 	*long = true
 	// Running the tests
-	t.Run("ls with large node", func(t *testing.T) {
-		// Write output in buffer.
-		var buf bytes.Buffer
-		var s ls.Stringer = ls.NameStringer{}
-		if *quoted {
-			s = ls.QuotedStringer{}
-		}
-		if *long {
-			s = ls.LongStringer{Human: *human, Name: s}
-		}
-		_ = listName(s, d, &buf, false)
-		if !strings.Contains(buf.String(), "1110, 74616") {
-			t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
-		}
-
-	})
-
+	// Write output in buffer.
+	var buf bytes.Buffer
+	var s ls.Stringer = ls.NameStringer{}
+	if *quoted {
+		s = ls.QuotedStringer{}
+	}
+	if *long {
+		s = ls.LongStringer{Human: *human, Name: s}
+	}
+	_ = listName(s, d, &buf, false)
+	if !strings.Contains(buf.String(), "1110, 74616") {
+		t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
+	}
 }
