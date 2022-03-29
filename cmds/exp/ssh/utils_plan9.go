@@ -1,3 +1,7 @@
+// Copyright 2022 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build plan9
 // +build plan9
 
@@ -39,8 +43,8 @@ func cooked() (err error) {
 	return
 }
 
-// ReadPassword prompts the user for a password.
-func ReadPassword() (string, error) {
+// readPassword prompts the user for a password.
+func readPassword() (string, error) {
 	fmt.Print("Password: ")
 	raw()
 	cons, err := os.OpenFile("/dev/cons", os.O_RDWR, 0755)
@@ -65,8 +69,8 @@ func ReadPassword() (string, error) {
 	return string(pw), nil
 }
 
-// GetSize reads the size of the terminal window.
-func GetSize() (width, height int, err error) {
+// getSize reads the size of the terminal window.
+func getSize() (width, height int, err error) {
 	// If we're running vt, there are environment variables to read.
 	// If not, we'll just say 80x24
 	width, height = 80, 24

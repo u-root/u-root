@@ -1,3 +1,19 @@
+// Copyright 2022 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// SSH client.
+//
+// Synopsis:
+//     ssh OPTIONS [DEST]
+//
+// Description:
+//     Connects to the specified destination.
+//
+// Options:
+//
+// Destination format:
+//     [user@]hostname or ssh://[user@]hostname[:port]
 package main
 
 import (
@@ -26,7 +42,7 @@ func main() {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
-			ssh.PasswordCallback(ReadPassword),
+			ssh.PasswordCallback(readPassword),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
@@ -55,7 +71,7 @@ func main() {
 		log.Fatalf("failed to set raw mode: %v", err)
 	}
 	// Try to figure out the terminal size
-	width, height, err := GetSize()
+	width, height, err := getSize()
 	if err != nil {
 		log.Fatalf("failed to get terminal size: %v", err)
 	}
