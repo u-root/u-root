@@ -1,3 +1,7 @@
+// Copyright 2022 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 //go:build linux
 // +build linux
 
@@ -23,14 +27,14 @@ func raw() (err error) {
 	return
 }
 
-// ReadPassword prompts the user for a password.
-func ReadPassword() (string, error) {
+// readPassword prompts the user for a password.
+func readPassword() (string, error) {
 	fmt.Print("Password: ")
 	b, err := term.ReadPassword(int(os.Stdin.Fd()))
 	return string(b), err
 }
 
-// GetSize reads the size of the terminal.
-func GetSize() (width, height int, err error) {
+// getSize reads the size of the terminal.
+func getSize() (width, height int, err error) {
 	return term.GetSize(int(os.Stdin.Fd()))
 }
