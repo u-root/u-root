@@ -17,11 +17,11 @@ type d struct {
 }
 
 var tests = []d{
-	d{"example.org", "", "example.org", "22"},
-	d{"foo@example.org", "foo", "example.org", "22"},
-	d{"foo@example.org", "foo", "example.org", "22"},
-	d{"ssh://192.168.0.2:23", "", "192.168.0.2", "23"},
-	d{"ssh://x@example.org", "x", "example.org", "22"},
+	{"example.org", "", "example.org", "22"},
+	{"foo@example.org", "foo", "example.org", "22"},
+	{"foo@example.org", "foo", "example.org", "22"},
+	{"ssh://192.168.0.2:23", "", "192.168.0.2", "23"},
+	{"ssh://x@example.org", "x", "example.org", "22"},
 }
 
 func TestParseDest(t *testing.T) {
