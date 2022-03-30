@@ -41,8 +41,7 @@ const usage = "rm [-Rrvif] file..."
 
 func rm(stdin io.Reader, files []string) error {
 	if len(files) < 1 {
-		flag.Usage()
-		return nil
+		return fmt.Errorf("%v", usage)
 	}
 	f := os.Remove
 	if *recursive || *r {
