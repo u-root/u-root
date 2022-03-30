@@ -11,10 +11,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
-var consctl *os.File
+var (
+	defaultKeyFile    = filepath.Join(os.Getenv("HOME"), "lib/ssh/id_rsa")
+	defaultConfigFile = filepath.Join(os.Getenv("HOME"), "lib/ssh/config")
+
+	consctl *os.File
+)
 
 func init() {
 	// We have to hold consctl open so we can mess with raw mode.
