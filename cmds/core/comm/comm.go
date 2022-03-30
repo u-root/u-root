@@ -22,23 +22,23 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
-
-	"github.com/u-root/u-root/pkg/uroot/util"
 )
-
-const usage = "comm: comm [-123h] file1 file2"
 
 var (
 	s1   = flag.Bool("1", false, "suppress printing of column 1")
 	s2   = flag.Bool("2", false, "suppress printing of column 2")
 	s3   = flag.Bool("3", false, "suppress printing of column 3")
 	help = flag.Bool("h", false, "print this help message and exit")
+
+	// ErrUsage is the error for incorrect usage.
+	ErrUsage = errors.New("comm: comm [-123h] file1 file2")
 )
 
 func reader(r io.Reader, c chan string) {
@@ -89,8 +89,7 @@ func outer(c1, c2 chan string, c chan out) {
 
 func comm(w io.Writer, args ...string) error {
 	if len(args) != 2 || *help {
-		flag.Usage()
-		return nil
+		return ErrUsage
 	}
 
 	c1 := make(chan string, 100)
@@ -137,8 +136,11 @@ func comm(w io.Writer, args ...string) error {
 
 func main() {
 	flag.Parse()
-	util.Usage(usage)
 	if err := comm(os.Stdout, flag.Args()...); err != nil {
+		if err == ErrUsage {
+			log.Println(err.Error())
+			flag.Usage()
+		}
 		log.Fatal(err)
 	}
 }

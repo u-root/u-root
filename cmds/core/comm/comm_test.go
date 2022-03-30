@@ -27,11 +27,13 @@ func TestComm(t *testing.T) {
 		{
 			name: "only one arguement",
 			args: []string{"onearg"},
+			want: ErrUsage.Error(),
 		},
 		{
 			name: "help flag",
 			args: []string{"firstarg", "secondarg"},
 			help: true,
+			want: ErrUsage.Error(),
 		},
 		{
 			name: "first file failed to open",
