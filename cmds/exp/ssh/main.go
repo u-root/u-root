@@ -19,18 +19,48 @@ package main
 import (
 	"errors"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	guser "os/user"
+	"path/filepath"
 	"strings"
 
+	config "github.com/kevinburke/ssh_config"
+	sshconfig "github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
 )
 
+var (
+	debug      = flag.Bool("d", false, "enable debug prints")
+	keyFile    = flag.String("i", "", "key file")
+	configFile = flag.String("F", defaultConfigFile, "config file")
+
+	v = func(string, ...interface{}) {}
+
+	// ssh config file
+	cfg *sshconfig.Config
+)
+
+// loadConfig loads the SSH config file
+func loadConfig(path string) (err error) {
+	var f *os.File
+	if f, err = os.Open(path); err != nil {
+		return
+	}
+	cfg, err = config.Decode(f)
+	return
+}
+
 func main() {
 	flag.Parse()
+	if *debug {
+		v = log.Printf
+	}
 	defer cleanup()
+
+	loadConfig(*configFile)
 
 	// Parse out the destination
 	user, host, port, err := parseDest(flag.Arg(0))
@@ -40,12 +70,24 @@ func main() {
 
 	// Connect to ssh server
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PasswordCallback(readPassword),
-		},
+		User:            user,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
+	// Figure out if there's a keyfile or not
+	kf := getKeyFile(host, *keyFile)
+	key, err := ioutil.ReadFile(kf)
+	if err == nil {
+		// The key exists
+		signer, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			log.Fatalf("ParsePrivateKey %v: %v", kf, err)
+		}
+		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+	} else if err != nil && *keyFile != "" {
+		log.Fatalf("Could not read user-specified keyfile %v: %v", kf, err)
+	}
+	config.Auth = append(config.Auth, ssh.PasswordCallback(readPassword))
+
 	conn, err := ssh.Dial("tcp", net.JoinHostPort(host, port), config)
 	if err != nil {
 		log.Fatalf("unable to connect: %v", err)
@@ -120,4 +162,25 @@ func parseDest(input string) (user, host, port string, err error) {
 		err = errors.New("No host specified")
 	}
 	return
+}
+
+// getKeyFile picks a keyfile if none has been set.
+// It will use sshconfig, else use a default.
+func getKeyFile(host, kf string) string {
+	v("getKeyFile for %q", kf)
+	if len(kf) == 0 {
+		var err error
+		kf, err = cfg.Get(host, "IdentityFile")
+		v("key file from config is %q", kf)
+		if len(kf) == 0 || err != nil {
+			kf = defaultKeyFile
+		}
+	}
+	// The kf will always be non-zero at this point.
+	if strings.HasPrefix(kf, "~") {
+		kf = filepath.Join(os.Getenv("HOME"), kf[1:])
+	}
+	v("getKeyFile returns %q", kf)
+	// this is a tad annoying, but the config package doesn't handle ~.
+	return kf
 }

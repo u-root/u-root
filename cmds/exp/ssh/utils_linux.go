@@ -10,15 +10,23 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/term"
 )
 
-var oldState *term.State
+var (
+	defaultKeyFile    = filepath.Join(os.Getenv("HOME"), ".ssh/id_rsa")
+	defaultConfigFile = filepath.Join(os.Getenv("HOME"), ".ssh/config")
+
+	oldState *term.State
+)
 
 // cleanup returns the terminal to its original state
 func cleanup() {
-	term.Restore(int(os.Stdin.Fd()), oldState)
+	if oldState != nil {
+		term.Restore(int(os.Stdin.Fd()), oldState)
+	}
 }
 
 // raw puts the terminal into raw mode
