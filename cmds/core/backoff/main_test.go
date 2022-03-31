@@ -5,64 +5,40 @@
 package main
 
 import (
-	"errors"
-	"fmt"
+	"bytes"
+	"regexp"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
-func TestRun(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		timeout string
-		cmd     string
-		args    []string
-		wantErr error
-	}{
-		{
-			name:    "no cmd and no arguments",
-			timeout: "15s",
-			cmd:     "",
-			args:    []string{"", ""},
-			wantErr: errors.New("no command passed"),
-		},
-		{
-			name:    "call echo function",
-			timeout: "5s",
-			cmd:     "echo",
-			args:    []string{"hi"},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			gotErr := runit(tt.timeout, tt.cmd, tt.args...)
-			if gotErrorString, wantErrorString := fmt.Sprint(gotErr), fmt.Sprint(tt.wantErr); gotErrorString != wantErrorString {
-				t.Errorf("runit() got err %q; want err %q",
-					gotErrorString,
-					wantErrorString)
-			}
-		})
-	}
-}
-
-/*
 // TestOK for now just runs a simple successful test with 0 args or more than one arg.
 func TestOK(t *testing.T) {
-	var tests = []test{
-		{args: []string{}, stdout: "", exitok: true},
+	var tests = []struct {
+		args   []string
+		stdout string
+		stderr string
+		exitok bool
+	}{
+		{args: []string{}, stdout: "", exitok: false},
 		{args: []string{"date"}, stdout: ".*", exitok: true},
 		{args: []string{"-t", "wh", "date"}, stdout: ".*", stderr: ".*invalid.*duration.*wh", exitok: false},
 		{args: []string{"echo", "hi"}, stdout: ".*hi", exitok: true},
+		{args: []string{"-t", "3s", "false"}, exitok: false},
 	}
 
 	for _, v := range tests {
 		c := testutil.Command(t, v.args...)
-		stdout, stderr, err := run(c)
+		stdout, stderr := &bytes.Buffer{}, &bytes.Buffer{}
+		c.Stdout, c.Stderr = stdout, stderr
+		err := c.Run()
 		if (err != nil) && v.exitok {
 			t.Errorf("%v: got %v, want nil", v, err)
 		}
 		if (err == nil) && !v.exitok {
 			t.Errorf("%v: got nil, want err", v)
 		}
-		m, err := regexp.MatchString(v.stderr, stderr)
+		m, err := regexp.MatchString(v.stderr, stderr.String())
 		if err != nil {
 			t.Errorf("stderr: %v: got %v, want nil", v, err)
 		} else {
@@ -71,48 +47,17 @@ func TestOK(t *testing.T) {
 			}
 		}
 
-		m, err = regexp.MatchString(v.stdout, stdout)
+		m, err = regexp.MatchString(v.stdout, stdout.String())
 		if err != nil {
 			t.Errorf("stdout: %v: got %v, want nil", v, err)
-			continue
 		}
 		if !m {
-			t.Errorf("%v: regexp.MatchString(%s, %s) false, wanted match", v, v.stdout, stderr)
+			t.Errorf("%v: regexp.MatchString(%s, %s) false, wanted match", v, v.stdout, stderr.String())
 		}
 	}
 }
-func TestTO(t *testing.T) {
-	// The integration test dies after 25s, so do shit for 6s
-	var tests = []test{
-		{args: []string{"-t", "6s", "false"}, stdout: ".*", stderr: ".*exit.*status.*1", exitok: false},
-	}
 
-	for _, v := range tests {
-		c := testutil.Command(t, v.args...)
-		stdout, stderr, err := run(c)
-		if (err != nil) && v.exitok {
-			t.Errorf("%v: got %v, want nil", v, err)
-		}
-		if (err == nil) && !v.exitok {
-			t.Errorf("%v: got nil, want err", v)
-		}
-		m, err := regexp.MatchString(v.stderr, stderr)
-		if err != nil {
-			t.Errorf("stderr: %v: got %v, want nil", v, err)
-		} else {
-			if !m {
-				t.Errorf("%v: regexp.MatchString(%s, %s) false, wanted match", v, v.stderr, stderr)
-			}
-		}
-
-		m, err = regexp.MatchString(v.stdout, stdout)
-		if err != nil {
-			t.Errorf("stdout: %v: got %v, want nil", v, err)
-			continue
-		}
-		if !m {
-			t.Errorf("%v: regexp.MatchString(%s, %s) false, wanted match", v, v.stdout, stdout)
-		}
-	}
+// If you really like fork-bombing your machine, remove these lines :-)
+func TestMain(m *testing.M) {
+	testutil.Run(m, main)
 }
-*/
