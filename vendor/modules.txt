@@ -73,6 +73,9 @@ github.com/jsimonetti/rtnetlink/internal/unix
 github.com/jsimonetti/rtnetlink/rtnl
 # github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff
 ## explicit
+# github.com/kevinburke/ssh_config v1.1.0
+## explicit
+github.com/kevinburke/ssh_config
 # github.com/klauspost/compress v1.10.6
 ## explicit; go 1.13
 github.com/klauspost/compress/flate
