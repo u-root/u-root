@@ -12,9 +12,13 @@ import (
 	"github.com/cenkalti/backoff/v4"
 )
 
+var (
+	ErrNoCmd = fmt.Errorf("no command passed")
+)
+
 func runit(timeout string, c string, a ...string) error {
 	if c == "" {
-		return fmt.Errorf("no command passed")
+		return ErrNoCmd
 	}
 	b := backoff.NewExponentialBackOff()
 	if len(timeout) != 0 {

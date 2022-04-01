@@ -6,11 +6,59 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
+
+func TestRunIt(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		timeout string
+		cmd     string
+		args    []string
+		wantErr error
+	}{
+		{
+			name:    "_date",
+			timeout: "3s",
+			cmd:     "date",
+		},
+		{
+			name:    "noCmd",
+			timeout: "3s",
+			cmd:     "",
+			wantErr: ErrNoCmd,
+		},
+		{
+			name:    "echo",
+			timeout: "3s",
+			cmd:     "echo",
+			args:    []string{"hi"},
+		},
+		{
+			name:    "echo_missing_unit",
+			timeout: "3",
+			cmd:     "echo",
+			args:    []string{"hi"},
+			wantErr: fmt.Errorf("time: missing unit in duration \"3\""),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := runit(tt.timeout, tt.cmd, tt.args...); !errors.Is(err, tt.wantErr) {
+				if err != nil {
+					if !strings.Contains(err.Error(), tt.wantErr.Error()) {
+						t.Errorf("runit(%s, %s, %s)= %q, want %q", tt.timeout, tt.cmd, tt.args, err, tt.wantErr)
+					}
+				}
+			}
+		})
+	}
+}
 
 // TestOK for now just runs a simple successful test with 0 args or more than one arg.
 func TestOK(t *testing.T) {
