@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -23,26 +24,26 @@ var (
 )
 
 // cleanup returns the terminal to its original state
-func cleanup() {
+func cleanup(in *os.File) {
 	if oldState != nil {
-		term.Restore(int(os.Stdin.Fd()), oldState)
+		term.Restore(int(in.Fd()), oldState)
 	}
 }
 
 // raw puts the terminal into raw mode
-func raw() (err error) {
-	oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
+func raw(in *os.File) (err error) {
+	oldState, err = term.MakeRaw(int(in.Fd()))
 	return
 }
 
 // readPassword prompts the user for a password.
-func readPassword() (string, error) {
-	fmt.Print("Password: ")
-	b, err := term.ReadPassword(int(os.Stdin.Fd()))
+func readPassword(in *os.File, out io.Writer) (string, error) {
+	fmt.Fprintf(out, "Password: ")
+	b, err := term.ReadPassword(int(in.Fd()))
 	return string(b), err
 }
 
 // getSize reads the size of the terminal.
-func getSize() (width, height int, err error) {
-	return term.GetSize(int(os.Stdin.Fd()))
+func getSize(in *os.File) (width, height int, err error) {
+	return term.GetSize(int(in.Fd()))
 }
