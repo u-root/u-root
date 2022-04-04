@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	defaultKeyFile    = filepath.Join(os.Getenv("HOME"), "lib/ssh/id_rsa")
-	defaultConfigFile = filepath.Join(os.Getenv("HOME"), "lib/ssh/config")
+	defaultKeyFile    = filepath.Join(os.Getenv("home"), "lib/ssh/id_rsa")
+	defaultConfigFile = filepath.Join(os.Getenv("home"), "lib/ssh/config")
 
 	consctl *os.File
 )
@@ -72,6 +72,8 @@ func readPassword() (string, error) {
 		pw = append(pw, x[0])
 	}
 	cooked()
+	// output a newline so things look nice
+	fmt.Println()
 	return string(pw), nil
 }
 
