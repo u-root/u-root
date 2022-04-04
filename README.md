@@ -27,73 +27,70 @@ u-root embodies four different projects.
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
 
-## :warning: Go Modules are a Work In Progress :warning:
+## :warning: Go Path is deprecated in favor of filesystem paths :warning:
 
-You can use u-root with the experimental work-in-progress `-build=gbb` mode that
-supports modules, or you can use u-root with the old non-module-supporting
-`-build=bb` which will exist for a while longer for backwards compatibility.
+Since Go added modules in v1.11 it got increasingly difficult to determine
+where the source code actually ends up on the filesystem which caused a lot
+of confusion and breakages.
 
-When using the new module-supporting `-build=gbb` mode, **we still expect that
-u-root is in the expected location of `$GOPATH/src/github.com/u-root/u-root`**.
-This is a limitation that will be fixed soon.
+The new behavior of u-root is therefore to only accept absolute or relative
+filesystem paths for Go programs which should be added into the BusyBox.
+One exception are templates like `core` or shortcuts to u-root commands
+like `cmds/core/ls`. For those to still work we added a new flag called `-uroot-source`
+which expects the filesystem path of a local copy of the u-root repository.
+If you're invoking `u-root` inside the repository for example, it would look
+like `./u-root -uroot-source ./`
 
-When using the old `bb` build mode, you must use `GO111MODULE=off` to go get and
-build u-root. When adding commands to your busybox which are outside u-root,
-make sure to `export GO111MODULE=off` both when `get`ing the command (so that
-the command is found under `$GOPATH/src` and when running the `u-root` command
-(so that you can run the u-root command from any directory).
 
-For example:
-
-```
-GO111MODULE=off go get github.com/u-root/u-root
-GO111MODULE=off go get github.com/nsf/godit
-GO111MODULE=off u-root -build=bb all github.com/nsf/godit
-```
 
 # Usage
 
-Make sure your Go version is >=1.17. Make sure your `GOPATH` is set up
-correctly. By default, it will be `$HOME/go`.
+Make sure your Go version is >=1.17.
+
+Download and install u-root either via git:
+
+```shell
+git clone https://github.com/u-root/u-root
+cd u-root
+go build
+```
+
+The resulting binary will the be placed where `go build` was invoked
+
+Or install directly with go:
+
+```shell
+go install github.com/u-root/u-root
+```
 
 **Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
 need to add `$GOPATH/bin` to your `$PATH`.**
 
-Download and install u-root:
-
-```shell
-GO111MODULE=off go get github.com/u-root/u-root
-```
-
 You can now use the u-root command to build an initramfs. Here are some
-examples:
+examples with $UROOT_PATH being the path to where the u-root sources are on the disk:
 
 ```shell
 # Build an initramfs of all the Go cmds in ./cmds/core/... (default)
-u-root
+u-root -uroot-source $UROOT_PATH
 
 # Generate an archive with bootloaders
 #
 # core and boot are templates that expand to sets of commands
-u-root core boot
+u-root -uroot-source $UROOT_PATH core boot
 
 # Generate an archive with only these given commands
-u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
 
 # Generate an archive with all of the core tools with some exceptions
-u-root core -cmds/core/{ls,losetup}
+u-root -uroot-source $UROOT_PATH core -cmds/core/{ls,losetup}
 
 # Generate an archive with a tool outside of u-root
-u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
+git clone https://github.com/u-root/cpu
+u-root ./cmds/core/{init,ls,elvish} ./cpu/cmds/cpud
 ```
 
 The default set of packages included is all packages in
-`github.com/u-root/u-root/cmds/core/...`.
-
-In addition to using paths to specify Go source packages to include, you may
-also use Go package import paths (e.g. `golang.org/x/tools/imports`) to include
-commands. Only the `main` package and its dependencies in those source
-directories will be included. For example:
+`https://github.com/u-root/u-root/cmds/core/...`.
 
 You can build the initramfs built by u-root into the kernel via the
 `CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an
@@ -356,7 +353,7 @@ image using u-root/systemboot and coreboot can be found in the
 You can build systemboot like this:
 
 ```shell
-u-root -build=bb -uinitcmd=systemboot core github.com/u-root/u-root/cmds/boot/{systemboot,localboot,fbnetboot}
+u-root -uroot-source $UROOT_PATH -uinitcmd=systemboot core ./cmds/boot/{systemboot,localboot,fbnetboot}
 ```
 
 ## Compression
@@ -416,7 +413,7 @@ assuming your kernel is configured to work that way.
 
 u-root can create an initramfs in two different modes, specified by `-build`:
 
-*   `bb` mode: One busybox-like binary comprising all the Go tools you ask to
+*   `bb`/`gbb` mode: One busybox-like binary comprising all the Go tools you ask to
     include. See [here for how it works](pkg/bb/README.md).
 
     In this mode, u-root copies and rewrites the source of the tools you asked
