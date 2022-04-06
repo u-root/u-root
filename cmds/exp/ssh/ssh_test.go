@@ -5,11 +5,17 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	guser "os/user"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -69,4 +75,45 @@ func TestBadArgs(t *testing.T) {
 	if err := run([]string{"sshtest"}, os.Stdin, io.Discard, io.Discard); err != ErrInvalidArgs {
 		t.Fatalf(`run(["sshtest"], ...) = %v, want %v`, err, ErrInvalidArgs)
 	}
+}
+
+// This attempts to connect to git@github.com and run a command. It will fail but that's ok.
+func TestSshCommand(t *testing.T) {
+	kf := genPrivKey(t)
+	if err := run([]string{"sshtest", "-i", kf, "git@github.com", "pwd"}, os.Stdin, io.Discard, io.Discard); err == nil || !strings.Contains(err.Error(), "unable to connect") {
+		t.Fatalf(`run(["sshtest"], ...) = %v, want "...unable to connect..."`, err)
+	}
+}
+
+// This attempts to connect to git@github.com and start a shell. It will fail but that's ok.
+func TestSshShell(t *testing.T) {
+	kf := genPrivKey(t)
+	if err := run([]string{"sshtest", "-i", kf, "git@github.com"}, os.Stdin, io.Discard, io.Discard); err == nil || !strings.Contains(err.Error(), "unable to connect") {
+		t.Fatalf(`run(["sshtest"], ...) = %v, want "...unable to connect..."`, err)
+	}
+}
+
+// returns the path containing a private key
+func genPrivKey(t *testing.T) string {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Trying to throw off simple-minded scanners looking for key files
+	x := "PRIVATE"
+	block := &pem.Block{
+		Type:  "RSA " + x + " KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(priv),
+	}
+
+	dir := t.TempDir()
+	kf := filepath.Join(dir, "kf")
+	f, err := os.OpenFile(kf, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := pem.Encode(f, block); err != nil {
+		log.Fatal(err)
+	}
+	return kf
 }
