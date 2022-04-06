@@ -410,8 +410,31 @@ func WritePkg(p *packages.Package, destDir string) error {
 		}
 	}
 
+	// This is true for Go command definitely.
+	//
+	// Don't know about blaze and bazel. TBD.
+	pkgDir := filepath.Dir(p.GoFiles[0])
+
 	for _, fp := range p.EmbedFiles {
-		if err := cp.Copy(fp, filepath.Join(destDir, filepath.Base(fp))); err != nil {
+		// pkg.go.dev/embed documentation: "The patterns are
+		// interpreted relative to the package directory containing the
+		// source file. The path separator is a forward slash, even on
+		// Windows systems. Patterns may not contain ‘.’ or ‘..’ or
+		// empty path elements, nor may they begin or end with a
+		// slash."
+		//
+		// This is not necessarily true for bazel embedsrcs files, but
+		// let's not worry about that for now.
+		//
+		// This means that the file must be a descendant of the package
+		// directory and we can assume that all EmbedFiles share a base
+		// path.
+		relPath, err := filepath.Rel(pkgDir, fp)
+		if err != nil {
+			return err
+		}
+		os.MkdirAll(filepath.Join(destDir, filepath.Dir(relPath)), 0755)
+		if err := cp.Copy(fp, filepath.Join(destDir, relPath)); err != nil {
 			return fmt.Errorf("copy failed: %v", err)
 		}
 	}
