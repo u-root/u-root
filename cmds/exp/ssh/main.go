@@ -32,6 +32,7 @@ import (
 	config "github.com/kevinburke/ssh_config"
 	sshconfig "github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 )
 
 var (
@@ -120,10 +121,12 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 		return fmt.Errorf("Could not read user-specified keyfile %v: %v", kf, err)
 	}
 	v("Config: %+v\n", config)
-	pwReader := func() (string, error) {
-		return readPassword(stdin, stdout)
+	if term.IsTerminal(int(stdin.Fd())) {
+		pwReader := func() (string, error) {
+			return readPassword(stdin, stdout)
+		}
+		config.Auth = append(config.Auth, ssh.PasswordCallback(pwReader))
 	}
-	config.Auth = append(config.Auth, ssh.PasswordCallback(pwReader))
 
 	// Now connect to the server
 	conn, err := ssh.Dial("tcp", net.JoinHostPort(host, port), config)
@@ -153,19 +156,22 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 			ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
 			ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
 		}
-		if err := raw(stdin); err != nil {
-			return fmt.Errorf("failed to set raw mode: %v", err)
+		if term.IsTerminal(int(stdin.Fd())) {
+			if err := raw(stdin); err != nil {
+				// throw a notice but continue
+				log.Printf("failed to set raw mode: %v", err)
+				err = nil
+			}
+			// Try to figure out the terminal size
+			width, height, err := getSize(stdin)
+			if err != nil {
+				return fmt.Errorf("failed to get terminal size: %v", err)
+			}
+			// Request pseudo terminal - "xterm" for now, may make this adjustable later.
+			if err := session.RequestPty("xterm", height, width, modes); err != nil {
+				log.Print("request for pseudo terminal failed: ", err)
+			}
 		}
-		// Try to figure out the terminal size
-		width, height, err := getSize(stdin)
-		if err != nil {
-			return fmt.Errorf("failed to get terminal size: %v", err)
-		}
-		// Request pseudo terminal - "xterm" for now, may make this adjustable later.
-		if err := session.RequestPty("xterm", height, width, modes); err != nil {
-			log.Print("request for pseudo terminal failed: ", err)
-		}
-
 		// Start shell on remote system
 		if err := session.Shell(); err != nil {
 			log.Fatal("failed to start shell: ", err)
