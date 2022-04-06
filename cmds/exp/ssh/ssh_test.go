@@ -70,10 +70,10 @@ func TestGetKeyFile(t *testing.T) {
 }
 
 // Test what happens if we pass invalid command-line arguments... should
-// return ErrInvalidArgs
+// return errInvalidArgs
 func TestBadArgs(t *testing.T) {
-	if err := run([]string{"sshtest"}, os.Stdin, io.Discard, io.Discard); err != ErrInvalidArgs {
-		t.Fatalf(`run(["sshtest"], ...) = %v, want %v`, err, ErrInvalidArgs)
+	if err := run([]string{"sshtest"}, os.Stdin, io.Discard, io.Discard); err != errInvalidArgs {
+		t.Fatalf(`run(["sshtest"], ...) = %v, want %v`, err, errInvalidArgs)
 	}
 }
 

@@ -47,7 +47,7 @@ var (
 	// ssh config file
 	cfg *sshconfig.Config
 
-	ErrInvalidArgs = errors.New("Invalid command-line arguments")
+	errInvalidArgs = errors.New("Invalid command-line arguments")
 )
 
 // loadConfig loads the SSH config file
@@ -88,7 +88,7 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 	} else {
 		fmt.Fprintf(stderr, "usage: %v [flags] [user@]dest[:port] [command]\n", osArgs[0])
 		flags.PrintDefaults()
-		return ErrInvalidArgs
+		return errInvalidArgs
 	}
 
 	// Read the config file (if any)
