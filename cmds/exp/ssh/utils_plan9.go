@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,8 +17,8 @@ import (
 )
 
 var (
-	defaultKeyFile    = filepath.Join(os.Getenv("HOME"), "lib/ssh/id_rsa")
-	defaultConfigFile = filepath.Join(os.Getenv("HOME"), "lib/ssh/config")
+	defaultKeyFile    = filepath.Join(os.Getenv("home"), "lib/ssh/id_rsa")
+	defaultConfigFile = filepath.Join(os.Getenv("home"), "lib/ssh/config")
 
 	consctl *os.File
 )
@@ -32,13 +33,13 @@ func init() {
 }
 
 // cleanup turns raw mode back off and closes consctl
-func cleanup() {
+func cleanup(in *os.File) {
 	consctl.Write([]byte("rawoff"))
 	consctl.Close()
 }
 
 // raw enters raw mode
-func raw() (err error) {
+func raw(in *os.File) (err error) {
 	_, err = consctl.Write([]byte("rawon"))
 	return
 }
@@ -50,9 +51,9 @@ func cooked() (err error) {
 }
 
 // readPassword prompts the user for a password.
-func readPassword() (string, error) {
-	fmt.Print("Password: ")
-	raw()
+func readPassword(in *os.File, out io.Writer) (string, error) {
+	fmt.Fprintf(out, "Password: ")
+	raw(in)
 	cons, err := os.OpenFile("/dev/cons", os.O_RDWR, 0755)
 	if err != nil {
 		return "", err
@@ -72,11 +73,13 @@ func readPassword() (string, error) {
 		pw = append(pw, x[0])
 	}
 	cooked()
+	// output a newline so things look nice
+	fmt.Fprintf(out, "\n")
 	return string(pw), nil
 }
 
 // getSize reads the size of the terminal window.
-func getSize() (width, height int, err error) {
+func getSize(in *os.File) (width, height int, err error) {
 	// If we're running vt, there are environment variables to read.
 	// If not, we'll just say 80x24
 	width, height = 80, 24
