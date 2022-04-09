@@ -14,7 +14,6 @@ import (
 type TCGVendorID uint32
 
 func (id TCGVendorID) String() string {
-
 	s, ok := vendors[id]
 	if !ok {
 		return fmt.Sprintf("unknown TPM vendor (%d)", id)

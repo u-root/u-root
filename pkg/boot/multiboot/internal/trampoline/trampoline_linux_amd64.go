@@ -22,16 +22,20 @@ const (
 	trampolineMagic = "u-root-mb-magic"
 )
 
-func start()
-func end()
-func info()
-func magic()
-func entry()
-
-// funcPC gives the program counter of the given function.
+// In Go 1.17+, Go references to assembly functions resolve to an ABIInternal
+// wrapper function rather than the function itself. We must reference from
+// assembly to get the ABI0 (i.e., primary) address (this way of doing things
+// will work for both 1.17+ and versions prior to 1.17). Note for posterity:
+// runtime.funcPC (used previously) is going away in 1.18+.
 //
-//go:linkname funcPC runtime.funcPC
-func funcPC(f interface{}) uintptr
+// Each of the functions below of form 'addrOfXXX' return the starting PC
+// of the assembl routine XXX.
+
+func addrOfStart() uintptr
+func addrOfEnd() uintptr
+func addrOfInfo() uintptr
+func addrOfMagic() uintptr
+func addrOfEntry() uintptr
 
 // Setup scans file for trampoline code and sets
 // values for multiboot info address and kernel entry point.
@@ -51,8 +55,8 @@ func extract(path string) (uintptr, []byte, error) {
 	// potentially non-contiguous trampoline. Rather than locating start
 	// and end, we should locate start,boot,farjump{32,64},gdt,info,entry
 	// individually and return one potentially really big trampoline slice.
-	tbegin := funcPC(start)
-	tend := funcPC(end)
+	tbegin := addrOfStart()
+	tend := addrOfEnd()
 	if tend <= tbegin {
 		return 0, nil, io.ErrUnexpectedEOF
 	}
@@ -81,11 +85,11 @@ func ptrToSlice(ptr uintptr, size int) []byte {
 // All 3 are determined by pretending they are functions, and finding their PC
 // within our own address space.
 func patch(trampolineStart uintptr, trampoline []byte, magicVal, infoAddr, entryPoint uintptr) ([]byte, error) {
-	replace := func(start uintptr, d []byte, f func(), val uint32) error {
+	replace := func(start uintptr, d []byte, fPC uintptr, val uint32) error {
 		buf := make([]byte, 4)
 		ubinary.NativeEndian.PutUint32(buf, val)
 
-		offset := funcPC(f) - start
+		offset := fPC - start
 		if int(offset+4) > len(d) {
 			return io.ErrUnexpectedEOF
 		}
@@ -93,13 +97,13 @@ func patch(trampolineStart uintptr, trampoline []byte, magicVal, infoAddr, entry
 		return nil
 	}
 
-	if err := replace(trampolineStart, trampoline, info, uint32(infoAddr)); err != nil {
+	if err := replace(trampolineStart, trampoline, addrOfInfo(), uint32(infoAddr)); err != nil {
 		return nil, err
 	}
-	if err := replace(trampolineStart, trampoline, entry, uint32(entryPoint)); err != nil {
+	if err := replace(trampolineStart, trampoline, addrOfEntry(), uint32(entryPoint)); err != nil {
 		return nil, err
 	}
-	if err := replace(trampolineStart, trampoline, magic, uint32(magicVal)); err != nil {
+	if err := replace(trampolineStart, trampoline, addrOfMagic(), uint32(magicVal)); err != nil {
 		return nil, err
 	}
 	return trampoline, nil

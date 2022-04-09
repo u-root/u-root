@@ -28,14 +28,14 @@ func parseStruct(t *Table, off int, complete bool, sp interface{}) (int, error) 
 		sv = reflect.Indirect(reflect.ValueOf(sp)) // must be a pointer to struct then, dereference it
 	}
 	svtn := sv.Type().Name()
-	//fmt.Printf("t %s\n", svtn)
+	// fmt.Printf("t %s\n", svtn)
 	i := 0
 	for ; i < sv.NumField() && off < t.Len(); i++ {
 		f := sv.Type().Field(i)
 		fv := sv.Field(i)
 		ft := fv.Type()
 		tags := f.Tag.Get(fieldTagKey)
-		//fmt.Printf("XX %02Xh f %s t %s k %s %s\n", off, f.Name, f.Type.Name(), fv.Kind(), tags)
+		// fmt.Printf("XX %02Xh f %s t %s k %s %s\n", off, f.Name, f.Type.Name(), fv.Kind(), tags)
 		// Check tags first
 		ignore := false
 		for _, tag := range strings.Split(tags, ",") {

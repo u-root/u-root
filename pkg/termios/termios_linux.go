@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
 // +build !plan9
 
 package termios
@@ -16,6 +17,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// TTYIO contains state needed for controlling ttys.
+// On many systems, but not all, this is just an os.File
 type TTYIO struct {
 	f *os.File
 }
@@ -41,7 +44,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 
 // NewTTYS returns a new TTYIO.
 func NewTTYS(port string) (*TTYIO, error) {
-	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0620)
+	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0o620)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +57,7 @@ func GetTermios(fd uintptr) (*Termios, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Termios{Termios: t}, nil
+	return &Termios{Termios: *t}, nil
 }
 
 // Get terms a Termios from a TTYIO.
@@ -64,7 +67,7 @@ func (t *TTYIO) Get() (*Termios, error) {
 
 // SetTermios sets tty parameters for an fd from a Termios.
 func SetTermios(fd uintptr, ti *Termios) error {
-	return unix.IoctlSetTermios(int(fd), unix.TCSETS, ti.Termios)
+	return unix.IoctlSetTermios(int(fd), unix.TCSETS, &ti.Termios)
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.

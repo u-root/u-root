@@ -11,10 +11,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -87,7 +87,7 @@ func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 		rc.WriteString(strings.Join(sl, " "))
 		rc.WriteString("\n")
 	}
-	return ioutil.WriteFile("/etc/resolv.conf", rc.Bytes(), 0644)
+	return os.WriteFile("/etc/resolv.conf", rc.Bytes(), 0o644)
 }
 
 // Lease is a network configuration obtained by DHCP.

@@ -116,7 +116,6 @@ func (c Environ) Env() []string {
 		cgo = 1
 	}
 	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
-	env = append(env, "GO111MODULE=off")
 	return env
 }
 
@@ -148,7 +147,6 @@ func (c Environ) Build(importPath string, binaryPath string, opts BuildOpts) err
 func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) error {
 	args := []string{
 		"build",
-		"-a", // Force rebuilding of packages.
 		"-o", binaryPath,
 		"-installsuffix", "uroot",
 		"-gcflags=all=-l", // Disable "function inlining" to get a smaller binary
@@ -157,7 +155,7 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts BuildOpts) err
 		args = append(args, `-ldflags=-s -w`) // Strip all symbols.
 	}
 	if len(c.BuildTags) > 0 {
-		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
+		args = append(args, []string{"-tags", strings.Join(c.BuildTags, ",")}...)
 	}
 	if opts.ExtraArgs != nil {
 		args = append(args, opts.ExtraArgs...)

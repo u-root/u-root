@@ -20,7 +20,7 @@ var vendors = []vendor{
 	{names: []VendorName{"PMC", "Chingis Technology Corporation"}, id: 0x7F9D},
 	{names: []VendorName{"NANTRONICS"}, id: 0x7F7F7F7F7F7FD5},
 	{names: []VendorName{"MACRONIX", "MX", "Generalplus"}, id: 0xC2},
-	//ISSI Integrated Silicon Solutions, disjoint overlap with PMC
+	// ISSI Integrated Silicon Solutions, disjoint overlap with PMC
 	{names: []VendorName{"ISSI"}, id: 0xD5},
 	{names: []VendorName{"INTEL"}, id: 0x89},
 	{names: []VendorName{"IMT", "Integrated Memory Technologies"}, id: 0x7F1F},

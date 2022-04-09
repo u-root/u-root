@@ -32,6 +32,10 @@ type BIOSInfo struct {
 
 // ParseBIOSInfo parses a generic Table into BIOSInfo.
 func ParseBIOSInfo(t *Table) (*BIOSInfo, error) {
+	return parseBIOSInfo(parseStruct, t)
+}
+
+func parseBIOSInfo(parsingFunction parseStructure, t *Table) (*BIOSInfo, error) {
 	if t.Type != TableTypeBIOSInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -39,7 +43,7 @@ func ParseBIOSInfo(t *Table) (*BIOSInfo, error) {
 		return nil, errors.New("required fields missing")
 	}
 	bi := &BIOSInfo{Table: *t}
-	if _, err := parseStruct(t, 0 /* off */, false /* complete */, bi); err != nil {
+	if _, err := parsingFunction(t, 0 /* off */, false /* complete */, bi); err != nil {
 		return nil, err
 	}
 	return bi, nil

@@ -18,12 +18,14 @@ type Flasher interface {
 	// ReadAt implements io.ReadAt for a flash device.
 	ReadAt([]byte, int64) (int, error)
 	// QueueWrite queues a sequence of writes into a flash device.
-	QueueWrite([]byte, int64) (int, error)
+	QueueWriteAt([]byte, int64) (int, error)
 	// SyncWrite assembles the queued writes and figures out a reasonable
 	// plan for actually writing the part.
 	SyncWrite() error
 	// Close implements io.Close for a flash device.
 	Close() error
+	// Name returns the name of the flash device
+	Name() string
 }
 
 // VendorName is the manufacturers name

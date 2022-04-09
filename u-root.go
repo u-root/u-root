@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -17,8 +16,10 @@ import (
 	"strings"
 	"time"
 
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -42,13 +43,15 @@ var (
 	uinitCmd, initCmd                       *string
 	defaultShell                            *string
 	useExistingInit                         *bool
-	fourbins                                *bool
 	noCommands                              *bool
 	extraFiles                              multiFlag
-	noStrip                                 *bool
 	statsOutputPath                         *string
 	statsLabel                              *string
 	shellbang                               *bool
+	tags                                    *string
+	// For the new gobusybox support
+	usegobusybox *bool
+	genDir       *string
 )
 
 func init() {
@@ -60,8 +63,7 @@ func init() {
 		sh = "elvish"
 	}
 
-	fourbins = flag.Bool("fourbins", false, "build installcommand on boot, no ahead of time, so we have only four binares")
-	build = flag.String("build", "bb", "u-root build format (e.g. bb or source).")
+	build = flag.String("build", "gbb", "u-root build format (e.g. bb or binary).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
@@ -78,12 +80,16 @@ func init() {
 
 	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
 
-	noStrip = flag.Bool("no-strip", false, "Build unstripped binaries")
 	shellbang = flag.Bool("shellbang", false, "Use #! instead of symlinks for busybox")
 
 	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
-
 	statsLabel = flag.String("stats-label", "", "Use this statsLabel when writing stats")
+
+	tags = flag.String("tags", "", "Comma separated list of build tags")
+
+	// Flags for the gobusybox, which we hope to move to, since it works with modules.
+	genDir = flag.String("gen-dir", "", "Directory to generate source in")
+
 }
 
 type buildStats struct {
@@ -95,7 +101,7 @@ type buildStats struct {
 
 func writeBuildStats(stats buildStats, path string) error {
 	var allStats []buildStats
-	if data, err := ioutil.ReadFile(*statsOutputPath); err == nil {
+	if data, err := os.ReadFile(*statsOutputPath); err == nil {
 		json.Unmarshal(data, &allStats)
 	}
 	found := false
@@ -116,7 +122,7 @@ func writeBuildStats(stats buildStats, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(*statsOutputPath, data, 0644); err != nil {
+	if err := os.WriteFile(*statsOutputPath, data, 0o644); err != nil {
 		return err
 	}
 	return nil
@@ -137,13 +143,20 @@ func generateLabel() string {
 }
 
 func main() {
+	gbbOpts := &gbbgolang.BuildOpts{}
+	gbbOpts.RegisterFlags(flag.CommandLine)
+
+	l := log.New(os.Stderr, "", log.Ltime)
+
+	// Register an alias for -go-no-strip for backwards compatibility.
+	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
 	flag.Parse()
 
 	start := time.Now()
 
 	// Main is in a separate functions so defers run on return.
-	if err := Main(); err != nil {
-		log.Fatal(err)
+	if err := Main(l, gbbOpts); err != nil {
+		l.Fatalf("Build error: %v", err)
 	}
 
 	elapsed := time.Now().Sub(start)
@@ -157,22 +170,20 @@ func main() {
 		stats.Label = generateLabel()
 	}
 	if stat, err := os.Stat(*outputPath); err == nil && stat.ModTime().After(start) {
-		log.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
+		l.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
 		stats.OutputSize = stat.Size()
 		if *statsOutputPath != "" {
 			if err := writeBuildStats(stats, *statsOutputPath); err == nil {
-				log.Printf("Wrote stats to %q (label %q)", *statsOutputPath, stats.Label)
+				l.Printf("Wrote stats to %q (label %q)", *statsOutputPath, stats.Label)
 			} else {
-				log.Printf("Failed to write stats to %s: %v", *statsOutputPath, err)
+				l.Printf("Failed to write stats to %s: %v", *statsOutputPath, err)
 			}
 		}
 	}
 }
 
 var recommendedVersions = []string{
-	"go1.13",
-	"go1.14",
-	"go1.15",
+	"go1.17",
 }
 
 func isRecommendedVersion(v string) bool {
@@ -186,27 +197,25 @@ func isRecommendedVersion(v string) bool {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main() error {
+func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	env := golang.Default()
-	if *fourbins && env.GOROOT == "" {
-		log.Fatalf("You have to set GOROOT for fourbins to work")
-	}
+	env.BuildTags = strings.Split(*tags, ",")
 	if env.CgoEnabled {
-		log.Printf("Disabling CGO for u-root...")
+		l.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
 	}
-	log.Printf("Build environment: %s", env)
+	l.Printf("Build environment: %s", env)
 	if env.GOOS != "linux" {
-		log.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+		l.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
 
 	v, err := env.Version()
 	if err != nil {
-		log.Printf("Could not get environment's Go version, using runtime's version: %v", err)
+		l.Printf("Could not get environment's Go version, using runtime's version: %v", err)
 		v = runtime.Version()
 	}
 	if !isRecommendedVersion(v) {
-		log.Printf(`WARNING: You are not using one of the recommended Go versions (have = %s, recommended = %v).
+		l.Printf(`WARNING: You are not using one of the recommended Go versions (have = %s, recommended = %v).
 			Some packages may not compile.
 			Go to https://golang.org/doc/install to find out how to install a newer version of Go,
 			or use https://godoc.org/golang.org/dl/%s to install an additional version of Go.`,
@@ -218,7 +227,6 @@ func Main() error {
 		return err
 	}
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
 	// Open the target initramfs file.
 	if *outputPath == "" {
 		if len(env.GOOS) == 0 && len(env.GOARCH) == 0 {
@@ -226,7 +234,7 @@ func Main() error {
 		}
 		*outputPath = fmt.Sprintf("/tmp/initramfs.%s_%s.cpio", env.GOOS, env.GOARCH)
 	}
-	w, err := archiver.OpenWriter(logger, *outputPath)
+	w, err := archiver.OpenWriter(l, *outputPath)
 	if err != nil {
 		return err
 	}
@@ -246,13 +254,13 @@ func Main() error {
 	tempDir := *tmpDir
 	if tempDir == "" {
 		var err error
-		tempDir, err = ioutil.TempDir("", "u-root")
+		tempDir, err = os.MkdirTemp("", "u-root")
 		if err != nil {
 			return err
 		}
 		defer os.RemoveAll(tempDir)
 	} else if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(tempDir, 0755); err != nil {
+		if err := os.MkdirAll(tempDir, 0o755); err != nil {
 			return fmt.Errorf("temporary directory %q did not exist; tried to mkdir but failed: %v", tempDir, err)
 		}
 	}
@@ -266,12 +274,13 @@ func Main() error {
 		switch *build {
 		case "bb":
 			b = builder.BBBuilder{ShellBang: *shellbang}
+		case "gbb":
+			l.Printf("NOTE: building with the new gobusybox; to get old behavior, use -build=bb")
+			b = builder.GBBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
 		case "source":
-			b = builder.SourceBuilder{
-				FourBins: *fourbins,
-			}
+			return fmt.Errorf("source mode has been deprecated")
 		default:
 			return fmt.Errorf("could not find builder %q", *build)
 		}
@@ -294,10 +303,6 @@ func Main() error {
 			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
 		}
 
-		if *fourbins && *build == "source" {
-			initCommand = "/go/bin/go"
-		}
-
 		// The command-line tool only allows specifying one build mode
 		// right now.
 		c = append(c, uroot.Commands{
@@ -316,7 +321,7 @@ func Main() error {
 		UseExistingInit: *useExistingInit,
 		InitCmd:         initCommand,
 		DefaultShell:    *defaultShell,
-		NoStrip:         *noStrip,
+		BuildOpts:       buildOpts,
 	}
 	uinitArgs := shlex.Argv(*uinitCmd)
 	if len(uinitArgs) > 0 {
@@ -325,5 +330,5 @@ func Main() error {
 	if len(uinitArgs) > 1 {
 		opts.UinitArgs = uinitArgs[1:]
 	}
-	return uroot.CreateInitramfs(logger, opts)
+	return uroot.CreateInitramfs(l, opts)
 }

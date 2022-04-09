@@ -25,7 +25,7 @@ func init() {
 	KernelLog.Reinit()
 }
 
-// KLog is a logger to the kernel syslog buffer.
+// KLog is a logger to the kernel sysloBg buffer.
 type KLog struct {
 	// FD for /dev/kmsg if it was openable.
 	*os.File

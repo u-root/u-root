@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -111,7 +110,7 @@ func (p *Process) readStat(s string) error {
 	p.Time = p.getTime()
 	p.Ctty = p.getCtty()
 	p.Cmd = strings.TrimSuffix(strings.TrimPrefix(p.Cmd, "("), ")")
-	if flags.x && p.cmdline != "" {
+	if *x && p.cmdline != "" {
 		p.Cmd = p.cmdline
 	}
 
@@ -167,7 +166,6 @@ func (p Process) GetUID() (int, error) {
 	}
 
 	return -1, fmt.Errorf("no Uid string in %s", p.status)
-
 }
 
 // Get total time stat formated hh:mm:ss
@@ -218,7 +216,7 @@ func getAllStatNames(globs []string) ([]string, error) {
 }
 
 func file(s string) (string, error) {
-	b, err := ioutil.ReadFile(s)
+	b, err := os.ReadFile(s)
 	return string(b), err
 }
 
@@ -227,7 +225,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 	for _, stat := range statFileNames {
 		p := &Process{}
 
-		//log.Printf("Check %s", stat)
+		// log.Printf("Check %s", stat)
 		// ps is a snapshot in time of /proc. Hence we want to grab
 		// all the files we need in as close to an instant in time as
 		// we can.
@@ -248,7 +246,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 		if err != nil {
 			continue
 		}
-		if flags.x {
+		if *x {
 			p.cmdline, err = file(filepath.Join(d, "cmdline"))
 			if err != nil {
 				continue
@@ -257,7 +255,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 		// if filepath.Base is *not* proc, then use it, else
 		// it's just the directory containing the pid.
 		proot := filepath.Dir(d)
-		//log.Printf("procdir %v d %v proot %v", procdir, d, proot)
+		// log.Printf("procdir %v d %v proot %v", procdir, d, proot)
 		if proot != procdir {
 			pid = filepath.Join(filepath.Base(proot), pid)
 		}
@@ -266,7 +264,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 			return err
 		}
 		p.Pid = pid
-		//log.Printf("stat is %v p is %v", stat,p)
+		// log.Printf("stat is %v p is %v", stat,p)
 		if p.Pidno == os.Getpid() {
 			pT.mProc = p
 		}

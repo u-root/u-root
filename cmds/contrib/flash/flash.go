@@ -1,0 +1,178 @@
+// Copyright 2021 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// flash reads and writes to a flash chip.
+//
+// Synopsis:
+//     flash -p PROGRAMMER[:parameter[,parameter[...]]] [-r FILE|-w FILE]
+//
+// Options:
+//     -p PROGRAMMER: Specify the programmer with zero or more parameters (see
+//                    below).
+//     -r FILE: Read flash data into the file.
+//     -w FILE: Write the file to the flash chip. First, the flash chip is read
+//              and then diffed against the file. The differing blocks are
+//              erased and written. Finally, the contents are verified.
+//
+// Programmers:
+//     dummy
+//       Virtual flash programmer for testing in a memory buffer.
+//
+//       dummy:image=image.rom
+//         File to memmap for the memory buffer.
+//
+//     linux_spi:dev=/dev/spidev0.0
+//       Use Linux's spidev driver. This is only supported on Linux. The dev
+//       parameter is required.
+//
+//       linux_spi:dev=/dev/spidev0.0,spispeed=5000
+//         Set the SPI controller's speed. The frequency is in kilohertz.
+//
+// Description:
+//     flash is u-root's implementation of flashrom. It has a very limited
+//     feature set and depends on the the flash chip implementing the SFDP.
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"sort"
+	"strings"
+
+	flag "github.com/spf13/pflag"
+)
+
+type programmer interface {
+	io.ReaderAt
+	io.WriterAt
+	Size() int64
+	Close() error
+}
+
+type (
+	programmerParams map[string]string
+	programmerInit   func(programmerParams) (programmer, error)
+)
+
+// supportedProgrammers is populated by the other files in this package.
+var supportedProgrammers = map[string]programmerInit{}
+
+func parseProgrammerParams(arg string) (string, map[string]string) {
+	params := map[string]string{}
+
+	colon := strings.IndexByte(arg, ':')
+	if colon == -1 {
+		return arg, params
+	}
+	for _, p := range strings.Split(arg[colon+1:], ",") {
+		equal := strings.IndexByte(p, '=')
+		if equal == -1 {
+			params[p] = ""
+			continue
+		}
+		params[p[:equal]] = p[equal+1:]
+	}
+	return arg[:colon], params
+}
+
+func run(args []string, supportedProgrammers map[string]programmerInit) (reterr error) {
+	// Make a human readable list of supported programmers.
+	programmerList := []string{}
+	for k := range supportedProgrammers {
+		programmerList = append(programmerList, k)
+	}
+	sort.Strings(programmerList)
+
+	// Parse args.
+	fs := flag.NewFlagSet("flash", flag.ContinueOnError)
+	var (
+		p = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
+		r = fs.StringP("read", "r", "", "read flash data into the file")
+		w = fs.StringP("write", "w", "", "write the file to flash")
+	)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 0 {
+		flag.Usage()
+		return errors.New("unexpected positional arguments")
+	}
+
+	if *p == "" {
+		return errors.New("-p needs to be set")
+	}
+
+	if *r == "" && *w == "" {
+		return errors.New("either -r or -w need to be set")
+	}
+	if *r != "" && *w != "" {
+		return errors.New("both -r and -w cannot be set")
+	}
+
+	programmerName, params := parseProgrammerParams(*p)
+	init, ok := supportedProgrammers[programmerName]
+	if !ok {
+		return fmt.Errorf("unrecognized programmer %q", programmerName)
+	}
+
+	programmer, err := init(params)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err := programmer.Close()
+		if reterr == nil {
+			reterr = err
+		}
+	}()
+
+	// Create a buffer to hold the contents of the image.
+	buf := make([]byte, programmer.Size())
+
+	if *r != "" {
+		f, err := os.Create(*r)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err := f.Close()
+			if reterr == nil {
+				reterr = err
+			}
+		}()
+		if _, err := programmer.ReadAt(buf, 0); err != nil {
+			return err
+		}
+		if _, err := f.Write(buf); err != nil {
+			return err
+		}
+	} else if *w != "" {
+		f, err := os.Open(*w)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if _, err := io.ReadFull(f, buf); err != nil {
+			return err
+		}
+		if leftover, err := io.Copy(io.Discard, f); err != nil {
+			return err
+		} else if leftover != 0 {
+			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), int64(len(buf))+leftover)
+		}
+
+		return errors.New("write not yet supported")
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(os.Args[1:], supportedProgrammers); err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+}

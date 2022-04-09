@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build amd64 && linux
 // +build amd64,linux
 
 // The System Management Network (SMN, try to say it fast)
@@ -30,7 +31,7 @@ io ws index value # write value to system management network on newer AMD CPUs.
 }
 
 func do(addr int64, data memio.UintN, op func(int64, memio.UintN) error) error {
-	var a = newInt(uint64(addr), 32)
+	a := newInt(uint64(addr), 32)
 	if err := memio.Write(pcibase+0xb8, a); err != nil {
 		return err
 	}

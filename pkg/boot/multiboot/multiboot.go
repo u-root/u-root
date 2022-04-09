@@ -70,15 +70,13 @@ type multiboot struct {
 	loadedModules modules
 }
 
-var (
-	rangeTypes = map[kexec.RangeType]uint32{
-		kexec.RangeRAM:      1,
-		kexec.RangeDefault:  2,
-		kexec.RangeACPI:     3,
-		kexec.RangeNVS:      4,
-		kexec.RangeReserved: 2,
-	}
-)
+var rangeTypes = map[kexec.RangeType]uint32{
+	kexec.RangeRAM:      1,
+	kexec.RangeDefault:  2,
+	kexec.RangeACPI:     3,
+	kexec.RangeNVS:      4,
+	kexec.RangeReserved: 2,
+}
 
 var sizeofMemoryMap = uint(binary.Size(MemoryMap{}))
 
@@ -274,7 +272,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	log.Printf("Kernel entry point at %#x", kernelEntry)
 
 	log.Printf("Parsing ELF segments")
-	if err := m.mem.LoadElfSegments(m.kernel); err != nil {
+	if _, err := m.mem.LoadElfSegments(m.kernel); err != nil {
 		return fmt.Errorf("error loading ELF segments: %v", err)
 	}
 

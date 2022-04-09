@@ -20,9 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
@@ -98,7 +98,7 @@ func ToJSONFile(imgs []boot.OSImage, filename string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, enc, 0644)
+	return os.WriteFile(filename, enc, 0o644)
 }
 
 // ImagesToJSONLike spits out a json-convertible reproducible representation of
@@ -131,6 +131,7 @@ func LinuxImageToJSON(li *boot.LinuxImage) map[string]interface{} {
 	m["image_type"] = "linux"
 	m["name"] = li.Name
 	m["cmdline"] = li.Cmdline
+	m["rank"] = strconv.Itoa(li.BootRank)
 	if li.Kernel != nil {
 		m["kernel"] = module(li.Kernel)
 	}
@@ -149,6 +150,7 @@ func MultibootImageToJSON(mi *boot.MultibootImage) map[string]interface{} {
 	m["image_type"] = "multiboot"
 	m["name"] = mi.Name
 	m["cmdline"] = mi.Cmdline
+	m["rank"] = strconv.Itoa(mi.BootRank)
 	if mi.Kernel != nil {
 		m["kernel"] = module(mi.Kernel)
 	}

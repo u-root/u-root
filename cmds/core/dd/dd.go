@@ -36,16 +36,15 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/rck/unit"
+	"github.com/u-root/u-root/pkg/progress"
 )
 
 var (
@@ -197,6 +196,10 @@ func (bp bufferPool) Destroy() {
 }
 
 func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, flags int) error {
+	if inBufSize == 0 {
+		return fmt.Errorf("inBufSize is not allowed to be zero")
+	}
+
 	// Make the channels deep enough to hold a total of 1GiB of data.
 	depth := (1024 * 1024 * 1024) / inBufSize
 	// But keep it reasonable!
@@ -295,7 +298,7 @@ func newStreamSectionReader(r io.Reader, offset int64, n int64) io.Reader {
 // Read implements io.Reader.
 func (s *sectionReader) Read(p []byte) (int, error) {
 	if s.offset == 0 && s.base != 0 {
-		if n, err := io.CopyN(ioutil.Discard, s.Reader, s.base); err != nil {
+		if n, err := io.CopyN(io.Discard, s.Reader, s.base); err != nil {
 			return 0, err
 		} else if n != s.base {
 			// Can't happen.
@@ -350,7 +353,7 @@ func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, 
 		out = os.Stdout
 	} else {
 		perm := os.O_CREATE | os.O_WRONLY | (flags & allowedFlags)
-		if out, err = os.OpenFile(name, perm, 0666); err != nil {
+		if out, err = os.OpenFile(name, perm, 0o666); err != nil {
 			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
 		}
 	}
@@ -360,70 +363,6 @@ func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, 
 		}
 	}
 	return out, nil
-}
-
-type progressData struct {
-	mode     string // one of: none, xfer, progress
-	start    time.Time
-	variable *int64 // must be aligned for atomic operations
-	quit     chan struct{}
-}
-
-func progressBegin(mode string, variable *int64) (ProgressData *progressData) {
-	p := &progressData{
-		mode:     mode,
-		start:    time.Now(),
-		variable: variable,
-	}
-	if p.mode == "progress" {
-		p.print()
-		// Print progress in a separate goroutine.
-		p.quit = make(chan struct{}, 1)
-		go func() {
-			ticker := time.NewTicker(1 * time.Second)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ticker.C:
-					p.print()
-				case <-p.quit:
-					return
-				}
-			}
-		}()
-	}
-	return p
-}
-
-func (p *progressData) end() {
-	if p.mode == "progress" {
-		// Properly synchronize goroutine.
-		p.quit <- struct{}{}
-		p.quit <- struct{}{}
-	}
-	if p.mode == "progress" || p.mode == "xfer" {
-		// Print grand total.
-		p.print()
-		fmt.Fprint(os.Stderr, "\n")
-	}
-}
-
-// With "status=progress", this is called from 3 places:
-// - Once at the beginning to appear responsive
-// - Every 1s afterwards
-// - Once at the end so the final value is accurate
-func (p *progressData) print() {
-	elapse := time.Since(p.start)
-	n := atomic.LoadInt64(p.variable)
-	d := float64(n)
-	const mib = 1024 * 1024
-	const mb = 1000 * 1000
-	// The ANSI escape may be undesirable to some eyes.
-	if p.mode == "progress" {
-		os.Stderr.Write([]byte("\033[2K\r"))
-	}
-	fmt.Fprintf(os.Stderr, "%d bytes (%.3f MB, %.3f MiB) copied, %.3f s, %.3f MB/s",
-		n, d/mb, d/mib, elapse.Seconds(), float64(d)/elapse.Seconds()/mb)
 }
 
 func usage() {
@@ -491,7 +430,7 @@ func main() {
 	if *status != "none" && *status != "xfer" && *status != "progress" {
 		usage()
 	}
-	progress := progressBegin(*status, &bytesWritten)
+	progress := progress.Begin(*status, &bytesWritten)
 
 	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
 	if bs.IsSet {
@@ -511,5 +450,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	progress.end()
+	progress.End()
 }

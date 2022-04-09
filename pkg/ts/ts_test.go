@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
@@ -147,7 +146,7 @@ func BenchmarkPrependTime(b *testing.B) {
 	data := strings.Repeat(line, (b.N+len(line))/len(line))[:b.N]
 	pt := New(bytes.NewBufferString(data))
 	b.ResetTimer()
-	if _, err := io.Copy(ioutil.Discard, pt); err != nil {
+	if _, err := io.Copy(io.Discard, pt); err != nil {
 		b.Fatal(err)
 	}
 }

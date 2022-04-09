@@ -5,13 +5,14 @@
 package builder
 
 import (
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
 var (
 	BusyBox = BBBuilder{}
-	Source  = SourceBuilder{}
 	Binary  = BinaryBuilder{}
 )
 
@@ -19,6 +20,10 @@ var (
 type Opts struct {
 	// Env is the Go compiler environment.
 	Env golang.Environ
+
+	// Build options for building go binaries. Ultimate this holds all the
+	// args that end up being passed to `go build`.
+	BuildOpts *gbbgolang.BuildOpts
 
 	// Packages are the Go packages to compile.
 	//
@@ -37,9 +42,6 @@ type Opts struct {
 	//
 	// BinaryDir must be specified.
 	BinaryDir string
-
-	// NoStrip builds unstripped binaries.
-	NoStrip bool
 }
 
 // Builder builds Go packages and adds the binaries to an initramfs.
@@ -49,7 +51,7 @@ type Opts struct {
 type Builder interface {
 	// Build uses the given options to build Go packages and adds its files
 	// to be included in the initramfs to the given ArchiveFiles.
-	Build(*initramfs.Files, Opts) error
+	Build(ulog.Logger, *initramfs.Files, Opts) error
 
 	// DefaultBinaryDir is the initramfs' default directory for binaries
 	// built using this builder.

@@ -26,7 +26,7 @@ type initCmds struct {
 }
 
 var (
-	verbose = flag.Bool("v", false, "print all build commands")
+	verbose = flag.Bool("v", false, "Enable libinit debugging (includes showing commands that are run)")
 	test    = flag.Bool("test", false, "Test mode: don't try to set control tty")
 	debug   = func(string, ...interface{}) {}
 )
@@ -61,11 +61,6 @@ func main() {
 	// It returns an initCmds struct derived from kernel-specific information
 	// to be used in the rest of init.
 	ic := osInitGo()
-
-	// Start background build.
-	if isBgBuildEnabled() {
-		go startBgBuild()
-	}
 
 	cmdCount := libinit.RunCommands(debug, ic.cmds...)
 	if cmdCount == 0 {

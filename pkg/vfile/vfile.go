@@ -9,16 +9,18 @@ package vfile
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/packet"
 )
 
 // ErrUnsigned is returned for a file that failed signature verification.
@@ -71,6 +73,39 @@ func GetKeyRing(keyPath string) (openpgp.KeyRing, error) {
 	return ring, nil
 }
 
+// GetRSAKeysFromRing iterates a PGP Keyring and extracts all rsa.PublicKey.
+// An error is returned iff the keyring is not found or no RSA public keys were
+// found on it.
+func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
+	el, ok := ring.(openpgp.EntityList)
+	if !ok {
+		return nil, fmt.Errorf("failed to assert KeyRing as EntityList to read RSA keys")
+	}
+
+	var rsaKeys []*rsa.PublicKey
+	for _, entity := range el {
+		// Extract Primary Key
+		if entity.PrimaryKey != nil {
+			pk := (packet.PublicKey)(*entity.PrimaryKey)
+			if rsaKey, ok := pk.PublicKey.(*rsa.PublicKey); ok {
+				rsaKeys = append(rsaKeys, rsaKey)
+			}
+		}
+		// Extract any subkeys
+		for _, subkey := range entity.Subkeys {
+			pk := (packet.PublicKey)(*subkey.PublicKey)
+			if rsaKey, ok := pk.PublicKey.(*rsa.PublicKey); ok {
+				rsaKeys = append(rsaKeys, rsaKey)
+			}
+		}
+	}
+
+	if len(rsaKeys) == 0 {
+		return nil, fmt.Errorf("no RSA public keys found on keyring")
+	}
+	return rsaKeys, nil
+}
+
 // OpenSignedSigFile calls OpenSignedFile expecting the signature to be in path.sig.
 //
 // E.g. if path is /foo/bar, the signature is expected to be in /foo/bar.sig.
@@ -100,7 +135,7 @@ func (f *File) Name() string {
 // If the signature does not exist or does not match the keyring, both the file
 // and a signature error will be returned.
 func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +213,7 @@ func OpenHashedFile512(path string, wantSHA512Hash []byte) (*File, error) {
 }
 
 func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -213,4 +248,45 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
 		}
 	}
 	return f, nil
+}
+
+// CheckHashedContent verifies a calculated hash against an expected hash array.
+//
+// WARNING! Unlike many Go functions, this may return both the file and an
+// error in case the expected hash does not match the contents.
+//
+// If the contents match, the contents are returned with no error.
+func CheckHashedContent(b *bytes.Reader, wantHash []byte, h hash.Hash) (*bytes.Reader, error) {
+	if len(wantHash) == 0 {
+		return b, ErrInvalidHash{
+			Err: ErrNoExpectedHash,
+		}
+	}
+
+	got, err := CalculateHash(b, h)
+	if err != nil {
+		return b, err
+	}
+
+	if subtle.ConstantTimeCompare(wantHash, got) == 0 {
+		return b, ErrInvalidHash{
+			Err: ErrHashMismatch{
+				Got:  got,
+				Want: wantHash,
+			},
+		}
+	}
+	return b, nil
+}
+
+// CalculateHash computes the hash of the input data b given a hash function.
+func CalculateHash(b *bytes.Reader, h hash.Hash) ([]byte, error) {
+	// Hash the file.
+	if _, err := io.Copy(h, b); err != nil {
+		return nil, ErrInvalidHash{
+			Err: err,
+		}
+	}
+
+	return h.Sum(nil), nil
 }

@@ -7,7 +7,7 @@ package boot
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,11 +19,7 @@ import (
 )
 
 func TestLinuxLabel(t *testing.T) {
-	dir, err := ioutil.TempDir("", "foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	osKernel, err := os.Create(filepath.Join(dir, "kernel"))
 	if err != nil {
@@ -107,18 +103,28 @@ func TestLinuxLabel(t *testing.T) {
 }
 
 func TestCopyToFile(t *testing.T) {
-	buf := bytes.NewBufferString("abcdefg hijklmnop")
+	want := "abcdefg hijklmnop"
+	buf := bytes.NewReader([]byte(want))
 
-	f, err := copyToFile(buf)
+	f, err := copyToFileIfNotRegular(buf, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(f.Name())
-	got, err := ioutil.ReadAll(f)
+	got, err := io.ReadAll(f)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(got) != "abcdefg hijklmnop" {
-		t.Errorf("got %s, expected %s", string(got), "abcdefg hijklmnop")
+	if string(got) != want {
+		t.Errorf("got %s, expected %s", string(got), want)
+	}
+}
+
+func TestLinuxRank(t *testing.T) {
+	testRank := 2
+	img := &LinuxImage{BootRank: testRank}
+	l := img.Rank()
+	if l != testRank {
+		t.Fatalf("Expected Image rank %d, got %d", testRank, l)
 	}
 }

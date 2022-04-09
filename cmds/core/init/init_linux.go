@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -28,6 +27,13 @@ func quiet() {
 }
 
 func osInitGo() *initCmds {
+	// Backwards compatibility for the transition from uroot.nohwrng to
+	// UROOT_NOHWRNG=1 on kernel commandline.
+	if cmdline.ContainsFlag("uroot.nohwrng") {
+		os.Setenv("UROOT_NOHWRNG", "1")
+		log.Printf("Deprecation warning: use UROOT_NOHWRNG=1 on kernel cmdline instead of uroot.nohwrng")
+	}
+
 	// Turn off job control when test mode is on.
 	ctty := libinit.WithTTYControl(!*test)
 
@@ -56,7 +62,7 @@ func osInitGo() *initCmds {
 	// We also allow passing args to uinit via a flags file in
 	// /etc/uinit.flags.
 	args := cmdline.GetUinitArgs()
-	if contents, err := ioutil.ReadFile("/etc/uinit.flags"); err == nil {
+	if contents, err := os.ReadFile("/etc/uinit.flags"); err == nil {
 		args = append(args, uflag.FileToArgv(string(contents))...)
 	}
 	uinitArgs := libinit.WithArguments(args...)
@@ -78,5 +84,4 @@ func osInitGo() *initCmds {
 			libinit.Command("/bin/sh", ctty),
 		},
 	}
-
 }

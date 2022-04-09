@@ -2,41 +2,34 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
+
 package rtc
 
 import (
-	"errors"
-	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
 
-type RTC struct {
-	file *os.File
+type syscalls interface {
+	ioctlGetRTCTime(int) (*unix.RTCTime, error)
+	ioctlSetRTCTime(int, *unix.RTCTime) error
 }
 
-func OpenRTC() (*RTC, error) {
-	devs := []string{
-		"/dev/rtc",
-		"/dev/rtc0",
-		"/dev/misc/rtc0",
-	}
+type realSyscalls struct{}
 
-	for _, dev := range devs {
-		f, err := os.Open(dev)
-		if err == nil {
-			return &RTC{f}, err
-		} else if !os.IsNotExist(err) {
-			return nil, err
-		}
-	}
-
-	return nil, errors.New("no RTC device found")
+func (sc realSyscalls) ioctlGetRTCTime(fd int) (*unix.RTCTime, error) {
+	return unix.IoctlGetRTCTime(fd)
 }
 
+func (sc realSyscalls) ioctlSetRTCTime(fd int, time *unix.RTCTime) error {
+	return unix.IoctlSetRTCTime(fd, time)
+}
+
+// Read implements Read for the Linux RTC
 func (r *RTC) Read() (time.Time, error) {
-	rt, err := unix.IoctlGetRTCTime(int(r.file.Fd()))
+	rt, err := r.ioctlGetRTCTime(int(r.file.Fd()))
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -51,8 +44,10 @@ func (r *RTC) Read() (time.Time, error) {
 		time.UTC), nil
 }
 
+// Set implements Set for the Linux RTC
 func (r *RTC) Set(tu time.Time) error {
-	rt := unix.RTCTime{Sec: int32(tu.Second()),
+	rt := unix.RTCTime{
+		Sec:   int32(tu.Second()),
 		Min:   int32(tu.Minute()),
 		Hour:  int32(tu.Hour()),
 		Mday:  int32(tu.Day()),
@@ -60,7 +55,8 @@ func (r *RTC) Set(tu time.Time) error {
 		Year:  int32(tu.Year() - 1900),
 		Wday:  int32(0),
 		Yday:  int32(0),
-		Isdst: int32(0)}
+		Isdst: int32(0),
+	}
 
-	return unix.IoctlSetRTCTime(int(r.file.Fd()), &rt)
+	return r.ioctlSetRTCTime(int(r.file.Fd()), &rt)
 }

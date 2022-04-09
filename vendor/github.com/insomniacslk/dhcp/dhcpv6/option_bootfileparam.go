@@ -3,7 +3,7 @@ package dhcpv6
 import (
 	"fmt"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // OptBootFileParam returns a BootfileParam option as defined in RFC 5970

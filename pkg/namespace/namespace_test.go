@@ -1,17 +1,18 @@
-// Copyright 2020 the u-root Authors. All rights reserved
+// Copyright 2020-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package namespace
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/stretchr/testify/assert"
 )
 
 type arg struct {
@@ -22,11 +23,20 @@ type arg struct {
 
 func checkArgs(t minimock.Tester, args arg, mod Modifier) error {
 	call := mod.(*cmd)
-	assert.EqualValues(t, args.call, call.syscall, "call number are not equal")
-	assert.EqualValues(t, args.args, call.args, "args are not equal")
-	assert.Equal(t, args.flag, call.flag, "flags are not equal")
+	if args.call != call.syscall {
+		return fmt.Errorf("call number are not equal")
+	}
+	if !reflect.DeepEqual(args.args, call.args) {
+		return fmt.Errorf("args are not equal")
+	}
+	if args.flag != call.flag {
+		t.Error("flags are not equal")
+		t.Errorf(`args.flag = %v, want %v`, args.flag, call.flag)
+	}
+
 	return nil
 }
+
 func TestOPS_NewNS(t *testing.T) {
 	type args struct {
 		ns Namespace
@@ -35,12 +45,12 @@ func TestOPS_NewNS(t *testing.T) {
 	tests := []struct {
 		name    string
 		init    func(t minimock.Tester) File
-		inspect func(r File, t *testing.T) //inspects OPS after execution of NewNS
+		inspect func(r File, t *testing.T) // inspects OPS after execution of NewNS
 
 		args func(t minimock.Tester) args
 
 		wantErr    bool
-		inspectErr func(err error, t *testing.T) //use for more precise error evaluation
+		inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 	}{
 		{
 			name: "simple",
@@ -82,13 +92,12 @@ func TestOPS_NewNS(t *testing.T) {
 
 			mc.Finish()
 			if tt.wantErr {
-				if assert.Error(t, err) && tt.inspectErr != nil {
+				if err != nil && tt.inspectErr != nil {
 					tt.inspectErr(err, t)
 				}
-			} else {
-				assert.NoError(t, err)
+			} else if err != nil {
+				t.Errorf(`b.buildNS(%v) = %v, want nil`, &mock, err)
 			}
-
 		})
 	}
 }

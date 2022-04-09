@@ -5,12 +5,12 @@
 package main
 
 import (
-	"io/ioutil"
-	"os"
+	"bytes"
 	"path/filepath"
-	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/ls"
 	"github.com/u-root/u-root/pkg/testutil"
 	"golang.org/x/sys/unix"
 )
@@ -24,30 +24,30 @@ import (
 //     = mkdev(0x456, 0x12378)
 //     = (0x12378 & 0xff) | (0x456 << 8) | ((0x12378 & ~0xff) << 12)
 //     = 0x12345678
-func TestLargeDevNumber(t *testing.T) {
-	if uid := os.Getuid(); uid != 0 {
-		t.Skipf("test requires root, your uid is %d", uid)
+
+// Test listName func
+func TestListNameLinux(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+	// Create a directory
+	d := t.TempDir()
+	if err := unix.Mknod(filepath.Join(d, "large_node"), 0o660|unix.S_IFBLK, 0x12345678); err != nil {
+		t.Fatalf("err in unix.Mknod: %v", err)
 	}
 
-	// Make the node.
-	tmpDir, err := ioutil.TempDir("", "ls")
-	if err != nil {
-		t.Fatal(err)
+	// Setting the flags
+	*long = true
+	// Running the tests
+	// Write output in buffer.
+	var buf bytes.Buffer
+	var s ls.Stringer = ls.NameStringer{}
+	if *quoted {
+		s = ls.QuotedStringer{}
 	}
-	defer os.RemoveAll(tmpDir)
-	file := filepath.Join(tmpDir, "large_node")
-	if err := unix.Mknod(file, 0660|unix.S_IFBLK, 0x12345678); err != nil {
-		t.Fatal(err)
+	if *long {
+		s = ls.LongStringer{Human: *human, Name: s}
 	}
-	defer os.Remove(file)
-
-	// Run "ls -l large_node".
-	out, err := testutil.Command(t, "-l", file).Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	expected := regexp.MustCompile(`^\S+ \S+ \S+ 1110, 74616`)
-	if !expected.Match(out) {
-		t.Fatal("expected device number (1110, 74616), got:\n" + string(out))
+	_ = listName(s, d, &buf, false)
+	if !strings.Contains(buf.String(), "1110, 74616") {
+		t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
 	}
 }

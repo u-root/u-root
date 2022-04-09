@@ -10,7 +10,7 @@ import (
 
 	"github.com/insomniacslk/dhcp/iana"
 	"github.com/insomniacslk/dhcp/rfc1035label"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 var (

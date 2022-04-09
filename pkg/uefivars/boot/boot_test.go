@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-//func ReadBootVar(num uint16) (b BootVar)
+// func ReadBootVar(num uint16) (b BootVar)
 func TestReadBootVar(t *testing.T) {
 	var n uint16
 	var strs []string
@@ -45,7 +45,7 @@ func TestReadBootVar(t *testing.T) {
 	}
 }
 
-//func AllBootEntryVars() (list []BootEntryVar)
+// func AllBootEntryVars() (list []BootEntryVar)
 func TestAllBootEntryVars(t *testing.T) {
 	bevs := AllBootEntryVars()
 	if len(bevs) != 11 {
@@ -56,7 +56,7 @@ func TestAllBootEntryVars(t *testing.T) {
 	}
 }
 
-//func AllBootVars() (list EfiVars)
+// func AllBootVars() (list EfiVars)
 func TestAllBootVars(t *testing.T) {
 	n := 14
 	bvs := AllBootVars()
@@ -67,7 +67,7 @@ func TestAllBootVars(t *testing.T) {
 	if len(be) != n-3 {
 		t.Errorf("expected %d entries, got %d", n-3, len(be))
 	}
-	//find boot vars that are not boot entries
+	// find boot vars that are not boot entries
 	nbe := bvs.Filter(uefivars.NotFilter(BootEntryFilter))
 	want := []string{"BootCurrent", "BootOptionSupport", "BootOrder"}
 	if len(nbe) != len(want) {
@@ -81,7 +81,7 @@ func TestAllBootVars(t *testing.T) {
 	}
 }
 
-//func ReadCurrentBootVar() (b *BootEntryVar)
+// func ReadCurrentBootVar() (b *BootEntryVar)
 func TestReadCurrentBootVar(t *testing.T) {
 	v, err := ReadCurrentBootVar()
 	if err != nil {
@@ -99,7 +99,7 @@ func TestReadCurrentBootVar(t *testing.T) {
 	}
 }
 
-//func BootCurrent(vars uefivars.EfiVars) *BootCurrentVar
+// func BootCurrent(vars uefivars.EfiVars) *BootCurrentVar
 func TestBootCurrent(t *testing.T) {
 	bc := BootCurrent(AllBootVars())
 	if bc == nil {

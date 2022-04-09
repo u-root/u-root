@@ -24,7 +24,7 @@ const (
 // BootEntryVar is a boot entry. It will have the name BootXXXX where XXXX is
 // hexadecimal.
 type BootEntryVar struct {
-	Number uint16 //from the var name
+	Number uint16 // from the var name
 	EfiLoadOption
 }
 
@@ -77,7 +77,7 @@ func (b BootEntryVar) String() string {
 // BootCurrent, BootOptionSupport, BootNext, BootOrder, etc do not count as
 // boot entries.
 func AllBootEntryVars() BootEntryVars {
-	//BootEntries() is somewhat redundant, but parses the vars into BootEntryVar{}
+	// BootEntries() is somewhat redundant, but parses the vars into BootEntryVar{}
 	return BootEntries(uefivars.ReadVars(BootEntryFilter))
 }
 
@@ -107,7 +107,7 @@ func BootEntryFilter(uuid, name string) bool {
 		return false
 	}
 	// Boot entries begin with BootXXXX-, where XXXX is hex.
-	//First, check for the dash.
+	// First, check for the dash.
 	if len(name) != 8 {
 		return false
 	}
@@ -127,7 +127,7 @@ func BootVar(v uefivars.EfiVar) (b *BootEntryVar) {
 	b.Attributes = binary.LittleEndian.Uint32(v.Data[:4])
 	b.FilePathListLength = binary.LittleEndian.Uint16(v.Data[4:6])
 
-	//Description is null-terminated utf16
+	// Description is null-terminated utf16
 	var i uint16
 	for i = 6; ; i += 2 {
 		if v.Data[i] == 0 {

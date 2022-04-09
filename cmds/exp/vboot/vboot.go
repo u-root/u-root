@@ -8,7 +8,6 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -60,7 +59,7 @@ func main() {
 	files := make(map[string][]byte)
 
 	for _, element := range paths {
-		data, err := ioutil.ReadFile(element)
+		data, err := os.ReadFile(element)
 		if err != nil {
 			die(err)
 		} else {

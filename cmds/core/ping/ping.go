@@ -26,14 +26,17 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
+
+const usage = "ping [-V] [-6] [-c count] [-i interval] [-s packetsize] [-w deadline] [-a audible] destination"
 
 var (
 	net6       = flag.Bool("6", false, "use ipv4 (means ip4:icmp) or 6 (ip6:ipv6-icmp)")
 	packetSize = flag.Int("s", 64, "Data size")
 	iter       = flag.Uint64("c", 0, "# iterations")
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
-	version    = flag.Bool("V", false, "version")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
 	audible    = flag.Bool("a", false, "Audible rings a bell when a packet is received")
 )
@@ -50,22 +53,14 @@ const (
 	ICMP6_ECHO_REPLY_HEADER_IPV6_OFFSET = 40
 )
 
-func usage() {
-	fmt.Fprintf(os.Stdout, "ping [-V] [-c count] [-i interval] [-s packetsize] [-w deadline] destination\n")
-	os.Exit(0)
+type Ping struct {
+	dial func(string, string) (net.Conn, error)
 }
 
-func showversion() {
-	fmt.Fprintf(os.Stdout, "ping utility, Uroot version\n")
-	os.Exit(0)
-}
-
-func optwithoutparam() {
-	if *version {
-		showversion()
+func New() *Ping {
+	return &Ping{
+		dial: net.Dial,
 	}
-	// if we reach this point, invalid or help (-h) gets the same result
-	usage()
 }
 
 func cksum(bs []byte) uint16 {
@@ -87,15 +82,15 @@ func cksum(bs []byte) uint16 {
 	return ^uint16(sum)
 }
 
-func ping1(net6 bool, host string, i uint64, waitFor time.Duration) (string, error) {
+func (p *Ping) ping1(net6 bool, host string, i uint64, waitFor time.Duration) (string, error) {
 	netname := "ip4:icmp"
 	// todo: just figure out if it's an ip6 address and go from there.
 	if net6 {
 		netname = "ip6:ipv6-icmp"
 	}
-	c, derr := net.Dial(netname, host)
-	if derr != nil {
-		return "", fmt.Errorf("net.Dial(%v %v) failed: %v", netname, host, derr)
+	c, err := p.dial(netname, host)
+	if err != nil {
+		return "", fmt.Errorf("net.Dial(%v %v) failed: %v", netname, host, err)
 	}
 	defer c.Close()
 
@@ -126,9 +121,9 @@ func ping1(net6 bool, host string, i uint64, waitFor time.Duration) (string, err
 	c.SetDeadline(time.Now().Add(waitFor))
 	rmsg := make([]byte, *packetSize+256)
 	before := time.Now()
-	amt, rerr := c.Read(rmsg[:])
-	if rerr != nil {
-		return "", fmt.Errorf("read failed: %v", rerr)
+	amt, err := c.Read(rmsg[:])
+	if err != nil {
+		return "", fmt.Errorf("read failed: %v", err)
 	}
 	latency := time.Since(before)
 	if !net6 {
@@ -160,32 +155,39 @@ func ping1(net6 bool, host string, i uint64, waitFor time.Duration) (string, err
 	return fmt.Sprintf("%d bytes from %v: icmp_seq=%v, time=%v", amt, host, i, latency), nil
 }
 
-func main() {
-	flag.Parse()
-
-	// options without parameters (right now just: -hV)
-	if flag.NArg() < 1 {
-		optwithoutparam()
-	}
+func ping(host string) error {
 	if *packetSize < 8 {
-		log.Fatalf("packet size too small (must be >= 8): %v", *packetSize)
+		return fmt.Errorf("packet size too small (must be >= 8): %v", *packetSize)
 	}
 
 	interval := time.Duration(*intv)
-	host := flag.Args()[0]
-
+	p := New()
 	// ping needs to run forever, except if '*iter' is not zero
 	waitFor := time.Duration(*wtf) * time.Millisecond
-	var i uint64
-	for i = 1; *iter == 0 || i <= *iter; i++ {
-		msg, err := ping1(*net6, host, i, waitFor)
+	for i := uint64(0); i <= *iter; i++ {
+		msg, err := p.ping1(*net6, host, i+1, waitFor)
 		if err != nil {
-			log.Fatalf("ping failed: %v", err)
+			return fmt.Errorf("ping failed: %v", err)
 		}
 		if *audible {
 			msg = "\a" + msg
 		}
 		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)
+	}
+	return nil
+}
+
+func main() {
+	util.Usage(usage)
+	flag.Parse()
+	// options without parameters (right now just: -hV)
+	if flag.NArg() != 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+	host := flag.Args()[0]
+	if err := ping(host); err != nil {
+		log.Fatal(err)
 	}
 }

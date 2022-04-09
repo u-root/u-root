@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !race
 // +build !race
 
 package integration
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/vmtest"
 )
 
@@ -41,12 +43,12 @@ func testPkgs(t *testing.T) []string {
 	blocklist := []string{
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/dd",
-		"github.com/u-root/u-root/cmds/core/elvish/eval",
-		"github.com/u-root/u-root/cmds/core/elvish/edit/tty",
 		"github.com/u-root/u-root/cmds/core/fusermount",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
-		"github.com/u-root/u-root/cmds/exp/rush",
+		// Some of TestEdCommands do not exit properly and end up left running. No idea how to fix this yet.
+		"github.com/u-root/u-root/cmds/exp/ed",
+		"github.com/u-root/u-root/cmds/exp/gosh",
 		"github.com/u-root/u-root/cmds/exp/pox",
 		"github.com/u-root/u-root/pkg/crypto",
 		"github.com/u-root/u-root/pkg/tarutil",
@@ -55,19 +57,22 @@ func testPkgs(t *testing.T) []string {
 		// These have special configuration.
 		"github.com/u-root/u-root/pkg/gpio",
 		"github.com/u-root/u-root/pkg/mount",
+		"github.com/u-root/u-root/pkg/mount/block",
 		"github.com/u-root/u-root/pkg/mount/loop",
+		"github.com/u-root/u-root/pkg/ipmi",
+		"github.com/u-root/u-root/pkg/smbios",
 
 		// Missing xzcat in VM.
 		"github.com/u-root/u-root/cmds/exp/bzimage",
 		"github.com/u-root/u-root/pkg/boot/bzimage",
 
-		// Missing /dev/mem and /sys/firmware/efi
-		"github.com/u-root/u-root/pkg/boot/acpi",
-
 		// No Go compiler in VM.
 		"github.com/u-root/u-root/pkg/bb",
 		"github.com/u-root/u-root/pkg/uroot",
 		"github.com/u-root/u-root/pkg/uroot/builder",
+
+		// ??
+		"github.com/u-root/u-root/pkg/tss",
 	}
 	if vmtest.TestArch() == "arm64" {
 		blocklist = append(
@@ -94,6 +99,21 @@ func TestGoTest(t *testing.T) {
 	o := &vmtest.Options{
 		QEMUOpts: qemu.Options{
 			Timeout: 120 * time.Second,
+			Devices: []qemu.Device{
+				// Bump this up so that some unit tests can happily
+				// and questionably pre-claim large bytes slices.
+				//
+				// e.g. pkg/mount/gpt/gpt_test.go need to claim 4.29G
+				//
+				//     disk = make([]byte, 0x100000000)
+				qemu.ArbitraryArgs{"-m", "6G"},
+			},
+		},
+		BuildOpts: uroot.Opts{
+			ExtraFiles: []string{
+				"/etc/group",
+				"/etc/passwd",
+			},
 		},
 	}
 	vmtest.GolangTest(t, pkgs, o)

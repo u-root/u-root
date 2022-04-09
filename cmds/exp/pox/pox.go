@@ -88,7 +88,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -135,11 +134,11 @@ This can also be passed in with the POX_EXTRA variable.
 // When chrooting, programs often want to access various system directories:
 var chrootMounts = []mp{
 	// mount --bind /sys /chroot/sys
-	{"/sys", "/sys", "", mount.MS_BIND, "", 0555},
+	{"/sys", "/sys", "", mount.MS_BIND, "", 0o555},
 	// mount -t proc /proc /chroot/proc
-	{"/proc", "/proc", "proc", 0, "", 0555},
+	{"/proc", "/proc", "proc", 0, "", 0o555},
 	// mount --bind /dev /chroot/dev
-	{"/dev", "/dev", "", mount.MS_BIND, "", 0755}}
+	{"/dev", "/dev", "", mount.MS_BIND, "", 0o755}}
 
 func poxCreate(bin ...string) error {
 	if len(bin) == 0 {
@@ -161,7 +160,7 @@ func poxCreate(bin ...string) error {
 	sort.Strings(names)
 	// Now we need to make a template file hierarchy and put
 	// the stuff we want in there.
-	dir, err := ioutil.TempDir("", "pox")
+	dir, err := os.MkdirTemp("", "pox")
 	if err != nil {
 		return err
 	}
@@ -185,7 +184,7 @@ func poxCreate(bin ...string) error {
 		f = strings.TrimPrefix(f, pwd)
 		dfile := filepath.Join(dir, f)
 		d := filepath.Dir(dfile)
-		if err := os.MkdirAll(d, 0755); err != nil {
+		if err := os.MkdirAll(d, 0o755); err != nil {
 			in.Close()
 			return err
 		}
@@ -247,7 +246,7 @@ func poxRun(args ...string) error {
 	if len(args) == 0 {
 		return fmt.Errorf(usage)
 	}
-	dir, err := ioutil.TempDir("", "pox")
+	dir, err := os.MkdirTemp("", "pox")
 	if err != nil {
 		return err
 	}
@@ -307,7 +306,7 @@ func extraMounts(mountList string) error {
 	v("Extra mounts: %q", mountList)
 	// We have to specify the extra directories and do the create here b/c it is a squashfs. Sorry.
 	for _, e := range strings.Split(mountList, ",") {
-		m := mp{flags: mount.MS_BIND, perm: 0755}
+		m := mp{flags: mount.MS_BIND, perm: 0o755}
 		mp := strings.Split(e, ":")
 		switch len(mp) {
 		case 1:
@@ -323,7 +322,7 @@ func extraMounts(mountList string) error {
 	return nil
 }
 
-func pox() error {
+func pox(args ...string) error {
 	// If the current executable is a zip file, extract and run.
 	// Sneakily re-write os.Args to include a "-rzf" before flag parsing.
 	// The zip comment contains the executable path once extracted.
@@ -343,7 +342,6 @@ func pox() error {
 		}, os.Args[1:]...)
 	}
 
-	flag.Parse()
 	if *verbose {
 		v = log.Printf
 	}
@@ -357,18 +355,19 @@ func pox() error {
 		return fmt.Errorf(usage)
 	}
 	if *create {
-		if err := poxCreate(flag.Args()...); err != nil {
+		if err := poxCreate(args...); err != nil {
 			return err
 		}
 	}
 	if *run {
-		return poxRun(flag.Args()...)
+		return poxRun(args...)
 	}
 	return nil
 }
 
 func main() {
-	if err := pox(); err != nil {
+	flag.Parse()
+	if err := pox(flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }

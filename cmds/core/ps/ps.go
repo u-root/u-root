@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
+// +build !plan9
+
 // Print process information.
 //
 // Synopsis:
@@ -22,34 +25,34 @@ package main
 
 import (
 	"fmt"
-	flag "github.com/spf13/pflag"
 	"io"
 	"log"
 	"os"
 	"sort"
+
+	flag "github.com/spf13/pflag"
 )
 
 var (
-	flags struct {
-		all     bool
-		nSidTty bool
-		x       bool
-		aux     bool
-	}
-	cmd  = "ps [-Aaex] [aux]"
-	eUID = os.Geteuid()
+	all     = flag.BoolP("All", "A", false, "Select all processes.  Identical to -e.")
+	every   = flag.BoolP("every", "e", false, "Select all processes.  Identical to -A.")
+	x       = flag.BoolP("bsd", "x", false, "BSD-Like style, with STAT Column and long CommandLine")
+	nSidTty = flag.BoolP("nSIDTTY", "a", false, "Print all process except whose are session leaders or unlinked with terminal")
+	aux     = false
 )
 
-func init() {
+var (
+	psUsage = "ps: ps [flags] [aux]"
+	eUID    = os.Geteuid()
+)
+
+func usage() {
 	defUsage := flag.Usage
 	flag.Usage = func() {
-		os.Args[0] = cmd
+		os.Args[0] = psUsage
 		defUsage()
 	}
-	flag.BoolVarP(&flags.all, "All", "A", false, "Select all processes.  Identical to -e.")
-	flag.BoolVarP(&flags.all, "every", "e", false, "Select all processes.  Identical to -A.")
-	flag.BoolVarP(&flags.x, "bsd", "x", false, "BSD-Like style, with STAT Column and long CommandLine")
-	flag.BoolVarP(&flags.nSidTty, "nSIDTTY", "a", false, "Print all process except whose are session leaders or unlinked with terminal")
+	flag.Usage()
 }
 
 // ProcessTable holds all the information needed for ps
@@ -158,18 +161,35 @@ func (pT *ProcessTable) PrepareString() {
 }
 
 // For now, just read /proc/pid/stat and dump its brains.
-func ps(pT *ProcessTable, w io.Writer) error {
-	if len(pT.table) == 0 {
+func ps(w io.Writer, args ...string) error {
+	// The original ps was designed before many flag conventions existed.
+	// It had switches not needing a -. Try to emulate that.
+	// It's pretty awful, however :-)
+	for _, a := range args {
+		switch a {
+		case "aux":
+			*all, *every, aux = true, true, true
+		default:
+			usage()
+			return nil
+		}
+	}
+	pT := NewProcessTable()
+	if err := pT.LoadTable(); err != nil {
+		return err
+	}
+
+	if pT.Len() == 0 {
 		return nil
 	}
 	// sorting ProcessTable by PID
 	sort.Sort(pT)
 
 	switch {
-	case flags.aux:
+	case aux:
 		pT.headers = []string{"PID", "PGRP", "SID", "TTY", "STAT", "TIME", "COMMAND"}
 		pT.fields = []string{"Pid", "Pgrp", "Sid", "Ctty", "State", "Time", "Cmd"}
-	case flags.x:
+	case *x:
 		pT.headers = []string{"PID", "TTY", "STAT", "TIME", "COMMAND"}
 		pT.fields = []string{"Pid", "Ctty", "State", "Time", "Cmd"}
 	default:
@@ -181,19 +201,19 @@ func ps(pT *ProcessTable, w io.Writer) error {
 	pT.PrintHeader(w)
 	for index, p := range pT.table {
 		switch {
-		case flags.nSidTty:
+		case *nSidTty:
 			// no session leaders and no unlinked terminals
 			if p.Sid == p.Pid || p.Ctty == "?" {
 				continue
 			}
 
-		case flags.x:
+		case *x:
 			// print only process with same eUID of caller
 			if eUID != p.uid {
 				continue
 			}
 
-		case flags.all:
+		case *all || *every:
 			// pass, print all
 
 		default:
@@ -208,35 +228,11 @@ func ps(pT *ProcessTable, w io.Writer) error {
 	}
 
 	return nil
-
-}
-
-func usage() {
-	log.Printf("Uage: ps [flags] [aux]")
-	flag.Usage()
-	os.Exit(1)
 }
 
 func main() {
 	flag.Parse()
-	// The original ps was designed before many flag conventions existed.
-	// It had switchwes not needing a -. Try to emulate that.
-	// It's pretty awful, however :-)
-	for _, a := range flag.Args() {
-		switch a {
-		case "aux":
-			flags.all, flags.aux = true, true
-		default:
-			usage()
-		}
-	}
-	pT := NewProcessTable()
-	if err := pT.LoadTable(); err != nil {
-		log.Fatal(err)
-	}
-
-	err := ps(pT, os.Stderr)
-	if err != nil {
+	if err := ps(os.Stdout, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -7,10 +7,10 @@ package dt
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -21,7 +21,7 @@ func TestRead(t *testing.T) {
 	}
 	defer f.Close()
 
-	jsonData, err := ioutil.ReadFile("testdata/fdt.json")
+	jsonData, err := os.ReadFile("testdata/fdt.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,6 +107,30 @@ func TestFindNode(t *testing.T) {
 		t.Fatalf("Finding psci in %s: got false, want true", fdt)
 	}
 	t.Logf("Got the node: %s", n)
+}
+
+func TestFindAllNode(t *testing.T) {
+	f, err := os.Open("testdata/fdt.dtb")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fdt, err := ReadFDT(f)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const expectedVirtNodes = 32
+	nodes, err := fdt.Root().FindAll(func(n *Node) bool {
+		return strings.HasPrefix(n.Name, "virtio_mmio")
+	})
+	if err != nil {
+		t.Fatalf("Finding all virtio_mmio in %s: got err %v, want nil", fdt, err)
+	}
+
+	if len(nodes) != expectedVirtNodes {
+		t.Fatalf("Finding all virtio_mmio in %s: got returned %d nodes, want %d", fdt, len(nodes), expectedVirtNodes)
+	}
 }
 
 func TestFindProperty(t *testing.T) {

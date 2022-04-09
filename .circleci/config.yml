@@ -3,7 +3,7 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.13
+      - image: uroottest/test-image-amd64:v4.6.0
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
@@ -15,15 +15,18 @@ templates:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Triple all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 3
+      # x5 all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 5
       - GO111MODULE: "off"
     steps:
       - checkout
       - run:
           name: Test integration
-          command: go test -a -v -timeout 15m -ldflags '-s' ./integration/...
+          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout 15m -ldflags '-s' ./integration/...
           no_output_timeout: 15m
+      - run:
+          name: Upload integration coverage
+          command: bash <(curl -s https://codecov.io/bash)
 
   beefy-template: &beefy-template
     <<: *golang-template
@@ -33,103 +36,35 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - clean-code
-      - test:
-          requires:
-            - clean-code
-      - test-build:
-          requires:
-            - clean-code
-      - test-integration-amd64:
-          requires:
-            - clean-code
-      - test-integration-arm:
-          requires:
-            - clean-code
-      - test-integration-arm64:
-          requires:
-            - clean-code
-      - race:
-          requires:
-            - clean-code
-      - compile_cmds:
-          requires:
-            - clean-code
-      - check_templates:
-          requires:
-            - clean-code
-      - check_licenses:
-          requires:
-            - clean-code
+      - test
+      - test-build
+      - test-integration-amd64
+      - test-integration-arm
+      - test-integration-arm64
+      - race
+      - compile_cmds
+      - check_templates
+      - check_licenses
 
 jobs:
-  clean-code:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Install golangci-lint
-          command: |
-            cd ..
-            go get golang.org/x/lint/golint
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.30.0
-      - run:
-          name: Install ineffassign
-          command: (cd .. && go get github.com/gordonklaus/ineffassign)
-      - run:
-          name: Check vendored dependencies
-          environment:
-            - GO111MODULE: "auto"
-          command: |
-            go mod tidy
-            go mod verify
-            go mod vendor -v
-            git status
-            if [[ -n "$(git status --porcelain vendor)" ]]; then
-              echo 'vendor/ is out-of-date: run `go mod tidy && go mod vendor` and then check in the changes'
-              echo 'If `go mod tidy && go mod vendor` results in no changes, make sure you are using the latest relase of Go'
-              git status --porcelain vendor
-              exit 1
-            fi
-      - run:
-          name: vet
-          command: |
-            go vet -composites=false ./cmds/... ./pkg/... ./
-      - run:
-          name: gofmt
-          command: |
-            test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
-      - run:
-          name: golangci-lint
-          command: |
-              golangci-lint run ./... --disable-all --enable=golint \
-                --skip-dirs=pkg/uroot/test \
-                --skip-dirs=cmds/core/elvish \
-                --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
-                --exclude="don't use underscores" \
-                --exclude="don't use ALL_CAPS" \
-                --exclude="comment on exported (function|type|const|method|var) (\w|_|\.)+ should be of the form" \
-                --exclude="package comment should be of the form" \
-                --exclude="(function|type|const|method|var|type field|struct field) (\w|_|\.)+ should be (\w|_|\.)+" \
-                --exclude="stutter" \
-                --exclude="which can be annoying to use"
-      - run:
-          name: ineffassign
-          command: ineffassign .
   test:
     <<: *golang-template
+    <<: *beefy-template
     steps:
       - checkout
       - run:
-          name: Test all
-          command: go test -a -timeout 15m -ldflags '-s' ./cmds/... ./pkg/...
+          name: Test Packages
+          command: go test -v -a -timeout 15m -ldflags '-s' -coverprofile=coverage_pkg.txt -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
+
       - run:
           name: Test coverage
-          command: go test -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=15m -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+
       - run:
           name: Upload coverage
           command: bash <(curl -s https://codecov.io/bash)
+
   test-build:
     <<: *beefy-template
     steps:
@@ -138,8 +73,10 @@ jobs:
           name: Test u-root build
           command: go test -a -timeout 15m .
           no_output_timeout: 15m
+
   race:
     <<: *golang-template
+    resource_class: large
     environment:
       - CGO_ENABLED: 1
       - GO111MODULE: "off"
@@ -191,7 +128,6 @@ jobs:
                   # Fails because of dups. Is this supposed to work?
                   #$goruncmd -build=bb all core
                   #$goruncmd all core
-                  go run u-root.go templates.go -fourbins minimal
                   GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
                   cat /tmp/stats.json
       - store_artifacts:
@@ -201,13 +137,13 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v3.2.12
+      - image: uroottest/test-image-amd64:v4.4.0
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v3.0.4
+      - image: uroottest/test-image-arm:v4.4.0
   test-integration-arm64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm64:v0.0.2
+      - image: uroottest/test-image-arm64:v4.4.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root

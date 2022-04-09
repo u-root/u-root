@@ -16,11 +16,14 @@ import (
 	"strings"
 )
 
+var errExit = fmt.Errorf("exit")
+
 // A Context is passed to an invoked command
 type Context struct {
 	cmd       string // full command string
 	cmdOffset int    // start of the command after address resolution
 	addrs     []int  // resolved addresses
+	out       io.Writer
 }
 
 // A Command can be run with a Context and returns an error
@@ -79,8 +82,7 @@ func cmdQuit(ctx *Context) (e error) {
 	if ctx.cmd[ctx.cmdOffset] == 'q' && buffer.Dirty() {
 		return fmt.Errorf("warning: file modified")
 	}
-	os.Exit(0)
-	return
+	return errExit
 }
 
 func cmdPrint(ctx *Context) (e error) {
@@ -90,13 +92,13 @@ func cmdPrint(ctx *Context) (e error) {
 	}
 	for l := r[0]; l <= r[1]; l++ {
 		if ctx.cmd[ctx.cmdOffset] == 'n' {
-			fmt.Printf("%d\t", l+1)
+			fmt.Fprintf(ctx.out, "%d\t", l+1)
 		}
 		line := buffer.GetMust(l, true)
 		if ctx.cmd[ctx.cmdOffset] == 'l' {
 			line += "$" // TODO: the man pages describes more escaping, but it's not clear what GNU ed actually does.
 		}
-		fmt.Printf("%s\n", line)
+		fmt.Fprintf(ctx.out, "%s\n", line)
 	}
 	return
 }
@@ -124,7 +126,7 @@ func cmdScroll(ctx *Context) (e error) {
 		return
 	}
 	for _, l := range ls {
-		fmt.Println(l)
+		fmt.Fprintf(ctx.out, "%s\n", l)
 	}
 	return
 }
@@ -132,7 +134,7 @@ func cmdScroll(ctx *Context) (e error) {
 func cmdErr(ctx *Context) (e error) {
 	if ctx.cmd[ctx.cmdOffset] == 'h' {
 		if state.lastErr != nil {
-			fmt.Println(state.lastErr)
+			fmt.Fprintf(ctx.out, "%s\n", state.lastErr)
 			return
 		}
 	}
@@ -240,7 +242,7 @@ func cmdWrite(ctx *Context) (e error) {
 	if ctx.cmd[ctx.cmdOffset] == 'W' {
 		oFlag = os.O_APPEND
 	}
-	if f, e = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|oFlag, 0666); e != nil {
+	if f, e = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|oFlag, 0o666); e != nil {
 		return e
 	}
 	defer f.Close()
@@ -311,7 +313,7 @@ func cmdEdit(ctx *Context) (e error) {
 		}
 		fh = s.Stdout.(io.Reader)
 	} else { // filename
-		if _, e = os.Stat(filename); os.IsNotExist(e) && !*fSuppress {
+		if _, e = os.Stat(filename); os.IsNotExist(e) && !fsuppress {
 			return fmt.Errorf("%s: No such file or directory", filename)
 			// this is not fatal, we just start with an empty buffer
 		}
@@ -330,8 +332,8 @@ func cmdEdit(ctx *Context) (e error) {
 	} else {
 		e = buffer.Read(addr, fh)
 	}
-	if !*fSuppress {
-		fmt.Println(buffer.Size())
+	if !fsuppress {
+		fmt.Fprintf(ctx.out, "%d\n", buffer.Size())
 	}
 	return
 }
@@ -343,14 +345,14 @@ func cmdFile(ctx *Context) (e error) {
 		state.fileName = newFile
 		return
 	}
-	fmt.Println(state.fileName)
+	fmt.Fprintf(ctx.out, "%s\n", state.fileName)
 	return
 }
 
 func cmdLine(ctx *Context) (e error) {
 	addr, e := buffer.AddrValue(ctx.addrs)
 	if e == nil {
-		fmt.Println(addr + 1)
+		fmt.Fprintf(ctx.out, "%d\n", addr+1)
 	}
 	return
 }
@@ -409,7 +411,7 @@ func cmdMove(ctx *Context) (e error) {
 		r[0] += delt
 		r[1] += delt
 	} else if dest > r[1] {
-		//NOP
+		// NOP
 	} else {
 		return fmt.Errorf("cannot move lines to within their own range")
 	}
@@ -450,16 +452,18 @@ func cmdPaste(ctx *Context) (e error) {
 func cmdPrompt(ctx *Context) (e error) {
 	if state.prompt {
 		state.prompt = false
-	} else if len(*fPrompt) > 0 {
+	} else if len(fprompt) > 0 {
 		state.prompt = true
 	}
 	return
 }
 
-var rxSanitize = regexp.MustCompile(`\\.`)
-var rxBackrefSanitize = regexp.MustCompile(`\\\\`)
-var rxBackref = regexp.MustCompile(`\\([0-9]+)|&`)
-var rxSubArgs = regexp.MustCompile(`g|l|n|p|\d+`)
+var (
+	rxSanitize        = regexp.MustCompile(`\\.`)
+	rxBackrefSanitize = regexp.MustCompile(`\\\\`)
+	rxBackref         = regexp.MustCompile(`\\([0-9]+)|&`)
+	rxSubArgs         = regexp.MustCompile(`g|l|n|p|\d+`)
+)
 
 // FIXME: this is probably more convoluted than it needs to be
 func cmdSub(ctx *Context) (e error) {
@@ -480,7 +484,7 @@ func cmdSub(ctx *Context) (e error) {
 	case 'm':
 		fallthrough
 	case 'g':
-		return fmt.Errorf("Invalid pattern delimiter")
+		return fmt.Errorf("invalid pattern delimiter")
 	}
 	// we replace escapes and their escaped characters with spaces to keep indexing
 	sane := rxSanitize.ReplaceAllString(cmd, "  ")
@@ -503,7 +507,7 @@ func cmdSub(ctx *Context) (e error) {
 	arg := cmd[idx[1]+1:]
 
 	// arg processing
-	var count = 1
+	count := 1
 	var printP, printL, printN, global bool
 
 	parsedArgs := rxSubArgs.FindAllStringSubmatch(arg, -1)
@@ -559,8 +563,8 @@ func cmdSub(ctx *Context) (e error) {
 		oLin := 0
 		for _, m := range matches {
 			nMatch++
-			//fRep := rep
-			//offset := 0
+			// fRep := rep
+			// offset := 0
 
 			// Fill backrefs
 			oRep := 0
@@ -600,13 +604,13 @@ func cmdSub(ctx *Context) (e error) {
 		e = fmt.Errorf("no match")
 	} else {
 		if printP {
-			fmt.Println(last)
+			fmt.Fprintf(ctx.out, "%s\n", last)
 		}
 		if printL {
-			fmt.Println(last + "$")
+			fmt.Fprintf(ctx.out, "%s$\n", last)
 		}
 		if printN {
-			fmt.Printf("%d\t%s\n", lastN+1, last)
+			fmt.Fprintf(ctx.out, "%d\t%s\n", lastN+1, last)
 		}
 	}
 	return
@@ -618,7 +622,7 @@ func cmdUndo(ctx *Context) (e error) {
 }
 
 func cmdDump(ctx *Context) (e error) {
-	fmt.Printf("%v\n", buffer)
+	fmt.Fprintf(ctx.out, "%v\n", buffer)
 	return
 }
 
@@ -628,13 +632,13 @@ func cmdCommand(ctx *Context) (e error) {
 	s := System{
 		Cmd:    ctx.cmd[ctx.cmdOffset+1:],
 		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
+		Stdout: ctx.out,
 		Stderr: os.Stderr,
 	}
 	e = s.Run()
 	if e != nil {
 		return
 	}
-	fmt.Println("!")
+	fmt.Fprintf(ctx.out, "!")
 	return
 }

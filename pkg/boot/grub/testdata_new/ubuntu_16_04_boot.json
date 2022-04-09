@@ -8,7 +8,8 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-42-generic.efi.signed"
     },
-    "name": "Ubuntu"
+    "name": "Ubuntu",
+    "rank": "0"
   },
   {
     "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff",
@@ -19,7 +20,8 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-42-generic.efi.signed"
     },
-    "name": "Ubuntu, with Linux 4.10.0-42-generic"
+    "name": "Ubuntu, with Linux 4.10.0-42-generic",
+    "rank": "0"
   },
   {
     "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff init=/sbin/upstart",
@@ -30,7 +32,8 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-42-generic.efi.signed"
     },
-    "name": "Ubuntu, with Linux 4.10.0-42-generic (upstart)"
+    "name": "Ubuntu, with Linux 4.10.0-42-generic (upstart)",
+    "rank": "0"
   },
   {
     "cmdline": "root=/dev/mapper/ubuntu--vg-root ro recovery nomodeset",
@@ -41,7 +44,8 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-42-generic.efi.signed"
     },
-    "name": "Ubuntu, with Linux 4.10.0-42-generic (recovery mode)"
+    "name": "Ubuntu, with Linux 4.10.0-42-generic (recovery mode)",
+    "rank": "0"
   },
   {
     "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff",
@@ -52,7 +56,8 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-40-generic.efi.signed"
     },
-    "name": "Ubuntu, with Linux 4.10.0-40-generic"
+    "name": "Ubuntu, with Linux 4.10.0-40-generic",
+    "rank": "0"
   },
   {
     "cmdline": "root=/dev/mapper/ubuntu--vg-root ro quiet splash $vt_handoff init=/sbin/upstart",
@@ -63,7 +68,8 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-40-generic.efi.signed"
     },
-    "name": "Ubuntu, with Linux 4.10.0-40-generic (upstart)"
+    "name": "Ubuntu, with Linux 4.10.0-40-generic (upstart)",
+    "rank": "0"
   },
   {
     "cmdline": "root=/dev/mapper/ubuntu--vg-root ro recovery nomodeset",
@@ -74,6 +80,7 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-40-generic.efi.signed"
     },
-    "name": "Ubuntu, with Linux 4.10.0-40-generic (recovery mode)"
+    "name": "Ubuntu, with Linux 4.10.0-40-generic (recovery mode)",
+    "rank": "0"
   }
 ]

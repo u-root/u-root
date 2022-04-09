@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/u-root/u-root/pkg/memio"
@@ -51,7 +50,7 @@ func NewRaw(b []byte) ([]Table, error) {
 
 // RawFromFile reads from an io.Reader and returns a []Table and error if any.
 func RawFromFile(r io.Reader) ([]Table, error) {
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

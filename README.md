@@ -1,11 +1,11 @@
 # u-root
 
-[![Build Status](https://circleci.com/gh/u-root/u-root/tree/master.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/master)
-[![codecov](https://codecov.io/gh/u-root/u-root/branch/master/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
+[![Build Status](https://circleci.com/gh/u-root/u-root/tree/main.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/main)
+[![codecov](https://codecov.io/gh/u-root/u-root/branch/main/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
 [![Slack](https://slack.osfw.dev/badge.svg)](https://slack.osfw.dev)
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/main/LICENSE)
 
 # Description
 
@@ -27,17 +27,42 @@ u-root embodies four different projects.
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
 
+## :warning: Go Modules are a Work In Progress :warning:
+
+You can use u-root with the experimental work-in-progress `-build=gbb` mode that
+supports modules, or you can use u-root with the old non-module-supporting
+`-build=bb` which will exist for a while longer for backwards compatibility.
+
+When using the new module-supporting `-build=gbb` mode, **we still expect that
+u-root is in the expected location of `$GOPATH/src/github.com/u-root/u-root`**.
+This is a limitation that will be fixed soon.
+
+When using the old `bb` build mode, you must use `GO111MODULE=off` to go get and
+build u-root. When adding commands to your busybox which are outside u-root,
+make sure to `export GO111MODULE=off` both when `get`ing the command (so that
+the command is found under `$GOPATH/src` and when running the `u-root` command
+(so that you can run the u-root command from any directory).
+
+For example:
+
+```
+GO111MODULE=off go get github.com/u-root/u-root
+GO111MODULE=off go get github.com/nsf/godit
+GO111MODULE=off u-root -build=bb all github.com/nsf/godit
+```
+
 # Usage
 
-Make sure your Go version is >=1.13. Make sure your `GOPATH` is set up
-correctly.
-While u-root uses Go modules, it still vendors dependencies and builds with
-`GO111MODULE=off`.
+Make sure your Go version is >=1.17. Make sure your `GOPATH` is set up
+correctly. By default, it will be `$HOME/go`.
+
+**Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
+need to add `$GOPATH/bin` to your `$PATH`.**
 
 Download and install u-root:
 
 ```shell
-go get github.com/u-root/u-root
+GO111MODULE=off go get github.com/u-root/u-root
 ```
 
 You can now use the u-root command to build an initramfs. Here are some
@@ -56,7 +81,7 @@ u-root core boot
 u-root cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
 
 # Generate an archive with all of the core tools with some exceptions
-u-root core -cmds/core/{installcommand,losetup}
+u-root core -cmds/core/{ls,losetup}
 
 # Generate an archive with a tool outside of u-root
 u-root cmds/core/{init,ls,elvish} github.com/u-root/cpu/cmds/cpud
@@ -138,6 +163,33 @@ qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nogr
 # Go Gopher
 # ~/>
 ```
+Passing command line arguments like above is equivalent to passing the arguments to uinit via a flags file in `/etc/uinit.flags`, see [Extra Files](#extra-files).
+
+Additionally, you can pass arguments to uinit via the `uroot.uinitargs` kernel parameters, for example:
+
+```bash
+u-root -uinitcmd="echo Gopher" ./cmds/core/{init,echo,elvish}
+
+cpio -ivt < /tmp/initramfs.linux_amd64.cpio
+# ...
+# lrwxrwxrwx   0 root     root           12 Dec 31  1969 bin/uinit -> ../bbin/echo
+# lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/init
+
+qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0 uroot.uinitargs=Go"
+# ...
+# [    0.848021] Freeing unused kernel memory: 896K
+# 2020/05/01 04:04:39 Welcome to u-root!
+#                              _
+#   _   _      _ __ ___   ___ | |_
+#  | | | |____| '__/ _ \ / _ \| __|
+#  | |_| |____| | | (_) | (_) | |_
+#   \__,_|    |_|  \___/ \___/ \__|
+#
+# Go Gopher
+# ~/>
+```
+Note the order of the passed arguments in the above example.
+
 
 The command you name must be present in the command set. The following will *not
 work*:
@@ -362,21 +414,16 @@ assuming your kernel is configured to work that way.
 
 ## Build Modes
 
-u-root can create an initramfs in two different modes:
+u-root can create an initramfs in two different modes, specified by `-build`:
 
-*   source mode includes Go toolchain binaries + simple shell + Go source files
-    in the initramfs archive. Tools are compiled from source on the fly by the
-    shell.
-
-    When you try to run a command that is not built, it is compiled first and
-    stored in tmpfs. From that point on, when you run the command, you get the
-    one in tmpfs. Don't worry: the Go compiler is pretty fast.
-
-*   bb mode: One busybox-like binary comprising all the Go tools you ask to
+*   `bb` mode: One busybox-like binary comprising all the Go tools you ask to
     include. See [here for how it works](pkg/bb/README.md).
 
     In this mode, u-root copies and rewrites the source of the tools you asked
     to include to be able to compile everything into one busybox-like binary.
+
+*   `binary` mode: each specified binary is compiled separately and all binaries
+    are added to the initramfs.
 
 ## Updating Dependencies
 

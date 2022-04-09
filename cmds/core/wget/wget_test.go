@@ -1,4 +1,4 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2017-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,10 +9,10 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -40,59 +40,61 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var tests = []struct {
+	name    string
 	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
 	url     string   // in
 	content string   // out
 	retCode int      // out
 }{
 	{
-		// basic
+		name:    "basic",
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/200",
 		content: content,
 		retCode: 0,
-	}, {
-		// ipv4
+	},
+	{
+		name:    "ipv4",
 		flags:   []string{},
 		url:     "http://127.0.0.1:%[1]d/200",
 		content: content,
 		retCode: 0,
-	}, /*{ TODO: travis does not support ipv6
-		// ipv6
-		flags:   []string{},
-		url:     "http://[::1]:%[1]d/200",
-		content:  content,
-		retCode: 0,
-	},*/{
-		// redirect
+	},
+	// TODO: CircleCI does not support ipv6
+	// {
+	// 	name:    "ipv6",
+	// 	flags:   []string{},
+	// 	url:     "http://[::1]:%[1]d/200",
+	// 	content: content,
+	// 	retCode: 0,
+	// },
+	{
+		name:    "redirect",
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/302",
 		content: "",
 		retCode: 0,
-	}, {
-		// 4xx error
+	},
+	{
+		name:    "4xx error",
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/404",
 		content: "",
 		retCode: 1,
-	}, {
-		// 5xx error
+	},
+	{
+		name:    "5xx error",
 		flags:   []string{},
 		url:     "http://localhost:%[1]d/500",
 		content: "",
 		retCode: 1,
-	}, {
-		// no server
+	},
+	{
+		name:    "no server",
 		flags:   []string{},
 		url:     "http://localhost:%[2]d/200",
 		content: "",
 		retCode: 1,
-	}, {
-		// output file
-		flags:   []string{"-O", "/dev/null"},
-		url:     "http://localhost:%[1]d/200",
-		content: "",
-		retCode: 0,
 	},
 }
 
@@ -121,27 +123,37 @@ func TestWget(t *testing.T) {
 		log.Fatal(http.Serve(l, h))
 	}()
 
-	for i, tt := range tests {
-		args := append(tt.flags, fmt.Sprintf(tt.url, port, unusedPort))
-		output, err := testutil.Command(t, args...).CombinedOutput()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Change the working directory to a temporary directory, so we can
+			// delete the temporary files after the test runs.
+			tmpDir := t.TempDir()
 
-		// Check return code.
-		if err := testutil.IsExitCode(err, tt.retCode); err != nil {
-			t.Errorf("exit code: %v, output: %s", err, string(output))
-		}
-
-		if tt.content != "" {
 			fileName := filepath.Base(tt.url)
-			content, err := ioutil.ReadFile(fileName)
-			if err != nil {
-				t.Errorf("%d. File %s was not created: %v", i, fileName, err)
+
+			args := append(tt.flags,
+				"-O", filepath.Join(tmpDir, fileName),
+				fmt.Sprintf(tt.url, port, unusedPort))
+			cmd := testutil.Command(t, args...)
+			output, err := cmd.CombinedOutput()
+
+			// Check return code.
+			if err := testutil.IsExitCode(err, tt.retCode); err != nil {
+				t.Errorf("exit code: %v, output: %s", err, string(output))
 			}
 
-			// Check content.
-			if string(content) != tt.content {
-				t.Errorf("%d. Want:\n%#v\nGot:\n%#v", i, tt.content, string(content))
+			if tt.content != "" {
+				content, err := os.ReadFile(filepath.Join(tmpDir, fileName))
+				if err != nil {
+					t.Errorf("File %s was not created: %v", fileName, err)
+				}
+
+				// Check content.
+				if string(content) != tt.content {
+					t.Errorf("Want:\n%#v\nGot:\n%#v", tt.content, string(content))
+				}
 			}
-		}
+		})
 	}
 }
 

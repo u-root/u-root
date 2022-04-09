@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+//go:build gofuzz
 // +build gofuzz
 
 package boot
@@ -26,15 +27,15 @@ go-fuzz -bin=./boot-fuzz.zip -workdir=fuzz
 var tmpdir = "/tmp/fuzz-resolve-workdir"
 
 func init() {
-	//divert logging - greatly increases exec speed
-	null, err := os.OpenFile("/dev/null", os.O_WRONLY, 0200)
+	// divert logging - greatly increases exec speed
+	null, err := os.OpenFile("/dev/null", os.O_WRONLY, 0o200)
 	if err != nil {
 		panic(err)
 	}
 	log.SetOutput(null)
 	log.SetFlags(0)
 
-	err = os.MkdirAll(tmpdir, 0755)
+	err = os.MkdirAll(tmpdir, 0o755)
 	if err != nil {
 		panic(err)
 	}

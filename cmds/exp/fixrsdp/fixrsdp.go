@@ -1,4 +1,4 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -15,9 +15,8 @@ import (
 	"bytes"
 	"log"
 	"os"
-	"syscall"
 
-	"github.com/u-root/u-root/pkg/boot/acpi"
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/ebda"
 )
 
@@ -33,7 +32,7 @@ func main() {
 
 	base := r.RSDPAddr()
 	// Check if ACPI rsdp is already in low memory
-	if base >= 0xe0000 && base+uint64(rLen) < 0xffff0 {
+	if base >= 0xe0000 && base+int64(rLen) < 0xffff0 {
 		log.Printf("RSDP is already in low memory at %#X, no need to fix.", base)
 		return
 	}
@@ -44,12 +43,6 @@ func main() {
 		log.Fatal(err)
 	}
 	defer f.Close()
-
-	fd := int(f.Fd())
-	if err = syscall.Flock(fd, syscall.LOCK_EX); err != nil {
-		log.Fatalf("File lock of /dev/mem failed: %v", err)
-	}
-	defer syscall.Flock(fd, syscall.LOCK_UN)
 
 	e, err := ebda.ReadEBDA(f)
 	if err != nil {

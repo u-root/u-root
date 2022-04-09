@@ -266,7 +266,7 @@ func (bt ByTime) Less(i, j int) bool { return int64(bt[i].EntryStamp) < int64(bt
 
 func (c *CBmem) readTimeStamps(f *os.File) (*TimeStamps, error) {
 	if c.TimeStampsTable.Addr == 0 {
-		return nil, fmt.Errorf("No time stamps")
+		return nil, fmt.Errorf("no time stamps")
 	}
 	var t TSHeader
 	a := int64(c.TimeStampsTable.Addr)
@@ -278,7 +278,7 @@ func (c *CBmem) readTimeStamps(f *os.File) (*TimeStamps, error) {
 		return nil, fmt.Errorf("failed to read TSTable: %v", err)
 	}
 	a += int64(unsafe.Sizeof(t))
-	var stamps = make([]TS, t.NumEntries)
+	stamps := make([]TS, t.NumEntries)
 	ts := &TimeStamps{TS: []TS{{EntryID: 0, EntryStamp: t.BaseTime}}, TSHeader: t}
 	if r, err = newOffsetReader(f, a, len(stamps)*int(unsafe.Sizeof(stamps[0]))); err != nil {
 		return nil, fmt.Errorf("newOffsetReader for %d timestamps: %v", t.NumEntries, err)

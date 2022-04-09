@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"text/tabwriter"
 
 	flag "github.com/spf13/pflag"
@@ -37,31 +38,68 @@ var (
 	quoted    = flag.BoolP("quote-name", "Q", false, "quoted")
 	recurse   = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
 	classify  = flag.BoolP("classify", "F", false, "append indicator (one of */=>@|) to entries")
+	size      = flag.BoolP("size", "S", false, "sort by size")
 )
 
 func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
-	return filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
+	type file struct {
+		path string
+		osfi os.FileInfo
+		lsfi ls.FileInfo
+	}
+
+	var files []file
+
+	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
 		// Soft error. Useful when a permissions are insufficient to
 		// stat one of the files.
 		if err != nil {
-			log.Printf("%s: %v\n", path, err)
-			return nil
+			return err
 		}
 
 		fi := ls.FromOSFileInfo(path, osfi)
 
+		if !*recurse && path == d && *directory {
+			files = append(files, file{
+				path: path,
+				osfi: osfi,
+				lsfi: fi,
+			})
+			return filepath.SkipDir
+		}
+
+		files = append(files, file{
+			path: path,
+			osfi: osfi,
+			lsfi: fi,
+		})
+
+		if path != d && fi.Mode.IsDir() && !*recurse {
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+
+	if *size {
+		sort.SliceStable(files, func(i, j int) bool {
+			return files[i].lsfi.Size > files[j].lsfi.Size
+		})
+	}
+
+	for _, f := range files {
 		if *recurse {
 			// Mimic find command
-			fi.Name = path
-		} else if path == d {
+			f.lsfi.Name = f.path
+		} else if f.path == d {
 			if *directory {
-				fmt.Fprintln(w, stringer.FileString(fi))
-				return filepath.SkipDir
+				fmt.Fprintln(w, stringer.FileString(f.lsfi))
+				continue
 			}
 
 			// Starting directory is a dot when non-recursive
-			if osfi.IsDir() {
-				fi.Name = "."
+			if f.osfi.IsDir() {
+				f.lsfi.Name = "."
 				if prefix {
 					if *quoted {
 						fmt.Fprintf(w, "%q:\n", d)
@@ -73,24 +111,20 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 		}
 
 		// Hide .files unless -a was given
-		if *all || fi.Name[0] != '.' {
+		if *all || f.lsfi.Name[0] != '.' {
 			// Print the file in the proper format.
 			if *classify {
-				fi.Name = fi.Name + indicator(fi)
+				f.lsfi.Name = f.lsfi.Name + indicator(f.lsfi)
 			}
-			fmt.Fprintln(w, stringer.FileString(fi))
+			fmt.Fprintln(w, stringer.FileString(f.lsfi))
 		}
+	}
 
-		// Skip directories when non-recursive.
-		if path != d && fi.Mode.IsDir() && !*recurse {
-			return filepath.SkipDir
-		}
-		return nil
-	})
+	return nil
 }
 
 func indicator(fi ls.FileInfo) string {
-	if fi.Mode.IsRegular() && fi.Mode&0111 != 0 {
+	if fi.Mode.IsRegular() && fi.Mode&0o111 != 0 {
 		return "*"
 	}
 	if fi.Mode&os.ModeDir != 0 {
@@ -108,13 +142,14 @@ func indicator(fi ls.FileInfo) string {
 	return ""
 }
 
-func main() {
-	flag.Parse()
-
+func list(w io.Writer, names []string) error {
+	if len(names) == 0 {
+		names = []string{"."}
+	}
 	// Write output in tabular form.
-	w := &tabwriter.Writer{}
-	w.Init(os.Stdout, 0, 0, 1, ' ', 0)
-	defer w.Flush()
+	tw := &tabwriter.Writer{}
+	tw.Init(w, 0, 0, 1, ' ', 0)
+	defer tw.Flush()
 
 	var s ls.Stringer = ls.NameStringer{}
 	if *quoted {
@@ -123,19 +158,20 @@ func main() {
 	if *long {
 		s = ls.LongStringer{Human: *human, Name: s}
 	}
-
-	// Array of names to list.
-	names := flag.Args()
-	if len(names) == 0 {
-		names = []string{"."}
-	}
-
 	// Is a name a directory? If so, list it in its own section.
 	prefix := len(names) > 1
 	for _, d := range names {
-		if err := listName(s, d, w, prefix); err != nil {
-			log.Printf("error while listing %#v: %v", d, err)
+		if err := listName(s, d, tw, prefix); err != nil {
+			return fmt.Errorf("error while listing %q: %v", d, err)
 		}
-		w.Flush()
+		tw.Flush()
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := list(os.Stdout, flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }

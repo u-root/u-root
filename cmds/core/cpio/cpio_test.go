@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,13 +25,9 @@ type dirEnt struct {
 func TestCpio(t *testing.T) {
 	debug = t.Logf
 	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "TestCpio")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
-	var targets = []dirEnt{
+	targets := []dirEnt{
 		{Name: "file1", Type: "file", Content: "Hello World"},
 		{Name: "file2", Type: "file", Content: ""},
 		{Name: "directory1", Type: "dir"},
@@ -44,10 +39,10 @@ func TestCpio(t *testing.T) {
 		}...)
 	}
 	for _, ent := range targets {
-		var name = filepath.Join(tempDir, ent.Name)
+		name := filepath.Join(tempDir, ent.Name)
 		switch ent.Type {
 		case "dir":
-			err := os.Mkdir(name, os.FileMode(0700))
+			err := os.Mkdir(name, os.FileMode(0o700))
 			if err != nil {
 				t.Fatalf("cannot create test directory: %v", err)
 			}
@@ -76,7 +71,8 @@ func TestCpio(t *testing.T) {
 	// the FileInfo for each target. This needs to happen in a second
 	// pass because of the link count.
 	for key, ent := range targets {
-		var name = filepath.Join(tempDir, ent.Name)
+		var err error
+		name := filepath.Join(tempDir, ent.Name)
 		targets[key].FileInfo, err = os.Stat(name)
 		if err != nil {
 			t.Fatalf("cannot stat temporary dirent: %v", err)
@@ -99,7 +95,7 @@ func TestCpio(t *testing.T) {
 
 	// Cpio can't read from a non-seekable input (e.g. a pipe) in input mode.
 	// Write the archive to a file instead.
-	archiveFile, err := ioutil.TempFile("", "archive.cpio")
+	archiveFile, err := os.CreateTemp("", "archive.cpio")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,10 +107,7 @@ func TestCpio(t *testing.T) {
 	}
 
 	// Extract to a new directory
-	tempExtractDir, err := ioutil.TempDir(tempDir, "extract")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
+	tempExtractDir := t.TempDir()
 
 	c = testutil.Command(t, "-v", "i")
 	c.Dir = tempExtractDir
@@ -126,7 +119,7 @@ func TestCpio(t *testing.T) {
 	}
 
 	for _, ent := range targets {
-		var name = filepath.Join(tempExtractDir, ent.Name)
+		name := filepath.Join(tempExtractDir, ent.Name)
 		newFileInfo, err := os.Stat(name)
 		if err != nil {
 			t.Error(err)
@@ -135,7 +128,7 @@ func TestCpio(t *testing.T) {
 		checkFileInfo(t, &ent, newFileInfo)
 
 		if ent.Type != "dir" {
-			content, err := ioutil.ReadFile(name)
+			content, err := os.ReadFile(name)
 			if err != nil {
 				t.Error(err)
 			}
@@ -147,11 +140,7 @@ func TestCpio(t *testing.T) {
 }
 
 func TestDirectoryHardLink(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestCpio")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Open an archive containing two directories with the same inode (0).
 	// We're trying to test if having the same inode will trigger a hard link.

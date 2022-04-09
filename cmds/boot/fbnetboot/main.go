@@ -10,7 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -28,6 +28,7 @@ import (
 	"github.com/insomniacslk/dhcp/netboot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/crypto"
+	"github.com/u-root/u-root/pkg/ntpdate"
 )
 
 var (
@@ -42,11 +43,15 @@ var (
 	dhcpRetries        = flag.Int("retries", 3, "Number of times a DHCP request is retried")
 	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
 	caCertFile         = flag.String("cacerts", "/etc/cacerts.pem", "CA cert file")
+	ntpEnable          = flag.Bool("ntp", true, "Set system time via NTP")
+	ntpConfig          = flag.String("ntp-config", ntpdate.DefaultNTPConfig, "NTP config to use when NTP is enabled")
+	ntpServers         = flag.String("ntp-servers", ntpServerDHCP, fmt.Sprintf("Comma-separated list of NTP servers to query for time. %q expands to list of NTP servers received in the DHCP lease, if any.", ntpServerDHCP))
 	skipCertVerify     = flag.Bool("skip-cert-verify", false, "Don't authenticate https certs")
 	doFix              = flag.Bool("fix", false, "Try to run fixmynetboot if netboot fails")
 )
 
 const (
+	ntpServerDHCP      = "DHCP"
 	interfaceUpTimeout = 10 * time.Second
 	maxHTTPAttempts    = 3
 	retryInterval      = time.Second
@@ -162,6 +167,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	)
 	if *skipDHCP {
 		log.Print("Skipping DHCP")
+		bootconf = &netboot.BootConf{}
 	} else {
 		// send a netboot request via DHCP
 		bootconf, err = dhcp(ifname)
@@ -193,6 +199,32 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		return errors.New("DHCP: no valid scheme found in URL")
 	}
 
+	if *ntpEnable {
+		var servers []string
+		for _, s := range strings.Split(*ntpServers, ",") {
+			if len(s) == 0 {
+				continue
+			}
+			if s == ntpServerDHCP {
+				for _, ip := range bootconf.NTPServers {
+					servers = append(servers, ip.String())
+				}
+			} else {
+				servers = append(servers, s)
+			}
+		}
+		log.Printf("NTP: Servers: %v, config: %s", servers, *ntpConfig)
+		if server, offset, err := ntpdate.SetTime(servers, *ntpConfig, "" /* fallback */, false /* setRTC */); err == nil {
+			plus := ""
+			if offset > 0 {
+				plus = "+"
+			}
+			log.Printf("NTP: adjust time server %s offset %s%f sec", server, plus, offset)
+		} else {
+			log.Printf("NTP: error setting time: %v", err)
+		}
+	}
+
 	client, err := getClientForBootfile(bootconf.BootfileURL)
 	if err != nil {
 		return fmt.Errorf("DHCP: cannot get client for %s: %v", bootconf.BootfileURL, err)
@@ -221,7 +253,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code is not 200 OK: %d", resp.StatusCode)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("DHCP: cannot read boot file from the network: %v", err)
 	}
@@ -238,7 +270,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	if filename == "." || filename == "" {
 		return fmt.Errorf("invalid empty file name extracted from file path %s", u.Path)
 	}
-	if err = ioutil.WriteFile(filename, body, 0400); err != nil {
+	if err = os.WriteFile(filename, body, 0o400); err != nil {
 		return fmt.Errorf("DHCP: cannot write to file %s: %v", filename, err)
 	}
 	debug("DHCP: saved boot file to %s", filename)
@@ -283,7 +315,7 @@ func loadCaCerts() (*x509.CertPool, error) {
 		debug("certs: rootCAs == nil")
 		rootCAs = x509.NewCertPool()
 	}
-	caCerts, err := ioutil.ReadFile(*caCertFile)
+	caCerts, err := os.ReadFile(*caCertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not find cert file '%v' - %v", *caCertFile, err)
 	}
@@ -295,7 +327,6 @@ func loadCaCerts() (*x509.CertPool, error) {
 		debug("CA certs appended from PEM")
 	}
 	return rootCAs, nil
-
 }
 
 func getClientForBootfile(bootfile string) (*http.Client, error) {
@@ -344,6 +375,9 @@ func dhcp6(ifname string) (*netboot.BootConf, error) {
 	if *userClass != "" {
 		modifiers = append(modifiers, dhcpv6.WithUserClass([]byte(*userClass)))
 	}
+	if *ntpEnable && strings.Contains(*ntpServers, ntpServerDHCP) {
+		modifiers = append(modifiers, dhcpv6.WithRequestedOptions(dhcpv6.OptionNTPServer))
+	}
 	conversation, err := netboot.RequestNetbootv6(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	for _, m := range conversation {
 		debug(m.Summary())
@@ -359,6 +393,9 @@ func dhcp4(ifname string) (*netboot.BootConf, error) {
 	var modifiers []dhcpv4.Modifier
 	if *userClass != "" {
 		modifiers = append(modifiers, dhcpv4.WithUserClass(*userClass, false))
+	}
+	if *ntpEnable && strings.Contains(*ntpServers, ntpServerDHCP) {
+		modifiers = append(modifiers, dhcpv4.WithRequestedOptions(dhcpv4.OptionNTPServers))
 	}
 	conversation, err := netboot.RequestNetbootv4(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	for _, m := range conversation {

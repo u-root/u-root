@@ -39,15 +39,17 @@ import (
 	"os"
 )
 
-var uniques = flag.Bool("u", false, "print unique lines")
-var duplicates = flag.Bool("d", false, "print one copy of duplicated lines")
-var count = flag.Bool("c", false, "prefix a repetition count and a tab for each output line")
+var (
+	uniques    = flag.Bool("u", false, "print unique lines")
+	duplicates = flag.Bool("d", false, "print one copy of duplicated lines")
+	count      = flag.Bool("c", false, "prefix a repetition count and a tab for each output line")
+)
 
-//var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
-//var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
+// var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
+// var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
 
-func uniq(f *os.File) {
-	br := bufio.NewReader(f)
+func uniq(r io.Reader, w io.Writer) {
+	br := bufio.NewReader(r)
 
 	var err error
 	var oline, line []byte
@@ -58,7 +60,7 @@ func uniq(f *os.File) {
 		if err == io.EOF {
 			isLast = true
 		} else if err != nil {
-			log.Printf("Can't read the %v line of %v file: %v", line, f, err)
+			log.Printf("Can't read the %v line of %v file: %v", line, r, err)
 		}
 		if oline == nil {
 			oline = line
@@ -66,7 +68,7 @@ func uniq(f *os.File) {
 		}
 		if !bytes.Equal(line, oline) {
 			if *count {
-				fmt.Printf("%d\t%s", cnt, oline)
+				fmt.Fprintf(w, "%d\t%s", cnt, oline)
 				goto skip
 			}
 			if cnt > 1 && *uniques {
@@ -75,7 +77,7 @@ func uniq(f *os.File) {
 			if cnt == 1 && *duplicates {
 				goto skip
 			}
-			fmt.Printf("%s", oline)
+			fmt.Fprintf(w, "%s", oline)
 		skip:
 			oline = line
 			cnt = 1
@@ -92,23 +94,27 @@ func uniq(f *os.File) {
 	if cnt == 1 && *duplicates {
 		return
 	}
-	fmt.Printf("%s", line)
+	fmt.Fprintf(w, "%s", line)
 }
-
-func main() {
-	flag.Parse()
-
-	if flag.NArg() > 0 {
-		for _, fn := range flag.Args() {
+func runUniq(w io.Writer, args ...string) error {
+	if len(args) > 0 {
+		for _, fn := range args {
 			f, err := os.Open(fn)
 			if err != nil {
 				log.Printf("open %s: %v\n", fn, err)
-				os.Exit(1)
+				return err
 			}
-			uniq(f)
+			uniq(f, w)
 			f.Close()
 		}
 	} else {
-		uniq(os.Stdin)
+		uniq(os.Stdin, w)
+	}
+	return nil
+}
+func main() {
+	flag.Parse()
+	if err := runUniq(os.Stdout, flag.Args()...); err != nil {
+		log.Fatal(err)
 	}
 }

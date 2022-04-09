@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package fit provides tools to read and verify FIT kernel images
+// See https://doc.coreboot.org/lib/payloads/fit.html
 package fit
 
 import (
@@ -12,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/dt"
+	"golang.org/x/crypto/openpgp"
 )
 
 // Image is a Flattened Image Tree implementation for OSImage.
@@ -29,6 +32,10 @@ type Image struct {
 	ConfigOverride string
 	// SkipInitRAMFS skips the search for an ramdisk entry in the config
 	SkipInitRAMFS bool
+	// BootRank ranks the priority of the images in boot menu
+	BootRank int
+	// KeyRing is the optional set of public keys used to validate images at Load
+	KeyRing openpgp.KeyRing
 }
 
 var _ = boot.OSImage(&Image{})
@@ -60,7 +67,7 @@ func ParseConfig(r io.ReadSeeker) ([]Image, error) {
 	cn, _ := configs.ListChildNodes()
 
 	for _, n := range cn {
-		var i = Image{name: n, Root: fdt, ConfigOverride: n}
+		i := Image{name: n, Root: fdt, ConfigOverride: n}
 
 		kn, in, err := i.LoadConfig()
 
@@ -90,6 +97,11 @@ func (i *Image) Label() string {
 	return fmt.Sprintf("%s (kernel: %s)", i.name, i.Kernel)
 }
 
+// Rank returns an Image Rank.
+func (i *Image) Rank() int {
+	return i.BootRank
+}
+
 // Edit edits the Image cmdline using a func.
 func (i *Image) Edit(f func(s string) string) {
 	i.Cmdline = f(i.Cmdline)
@@ -105,24 +117,38 @@ var loadImage = loadLinuxImage
 
 // Load loads an image and reboots
 func (i *Image) Load(verbose bool) error {
-	w := i.Root.Root().Walk("images").Walk(i.Kernel)
-	b, err := w.Property("data").AsBytes()
-	if err != nil {
-		return err
-	}
-
 	image := &boot.LinuxImage{
-		Kernel:  bytes.NewReader(b),
 		Cmdline: i.Cmdline,
 	}
 
-	if len(i.InitRAMFS) != 0 {
-		w := i.Root.Root().Walk("images").Walk(i.InitRAMFS)
-		b, err := w.Property("data").AsBytes()
+	if i.KeyRing != nil {
+		kr, err := i.ReadSignedImage(i.Kernel, i.KeyRing)
 		if err != nil {
 			return err
 		}
-		image.Initrd = bytes.NewReader(b)
+		image.Kernel = kr
+	} else {
+		kr, err := i.ReadImage(i.Kernel)
+		if err != nil {
+			return err
+		}
+		image.Kernel = kr
+	}
+
+	if len(i.InitRAMFS) != 0 {
+		if i.KeyRing != nil {
+			ir, err := i.ReadSignedImage(i.InitRAMFS, i.KeyRing)
+			if err != nil {
+				return err
+			}
+			image.Initrd = ir
+		} else {
+			ir, err := i.ReadImage(i.InitRAMFS)
+			if err != nil {
+				return err
+			}
+			image.Initrd = ir
+		}
 	}
 
 	if err := loadImage(image, verbose); err != nil {
@@ -130,6 +156,16 @@ func (i *Image) Load(verbose bool) error {
 	}
 
 	return nil
+}
+
+// ReadImage reads an image node from an FDT and returns the `data` contents.
+func (i *Image) ReadImage(image string) (*bytes.Reader, error) {
+	root := i.Root.Root().Walk("images").Walk(image)
+	b, err := root.Property("data").AsBytes()
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(b), nil
 }
 
 // GetConfigName finds the name of the default configuration or returns the

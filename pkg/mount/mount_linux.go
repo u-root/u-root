@@ -8,7 +8,6 @@ package mount
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -77,7 +76,7 @@ func (mp *MountPoint) Unmount(flags uintptr) error {
 // specific file system.
 func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 	// Create the mount point if it doesn't already exist.
-	if err := os.MkdirAll(path, 0666); err != nil {
+	if err := os.MkdirAll(path, 0o666); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +117,7 @@ func TryMount(device, path, data string, flags uintptr) (*MountPoint, error) {
 // currently open files can continue to be used. When all references to files
 // from this file system are gone, the file system will actually be unmounted.
 func Unmount(path string, force, lazy bool) error {
-	var flags = unix.UMOUNT_NOFOLLOW
+	flags := unix.UMOUNT_NOFOLLOW
 	if len(path) == 0 {
 		return errors.New("path cannot be empty")
 	}
@@ -152,14 +151,14 @@ type Pool struct {
 // determine whether it has already been mounted.
 func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
 	for _, m := range p.MountPoints {
-		if m.Device == mounter.DevName() {
+		if m.Device == filepath.Join("/dev", mounter.DevName()) {
 			return m, nil
 		}
 	}
 
 	// Create temporary directory if one does not already exist.
 	if p.tmpDir == "" {
-		tmpDir, err := ioutil.TempDir("", "u-root-mounts")
+		tmpDir, err := os.MkdirTemp("", "u-root-mounts")
 		if err != nil {
 			return nil, fmt.Errorf("cannot create tmpdir: %v", err)
 		}
@@ -167,14 +166,14 @@ func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
 	}
 
 	path := filepath.Join(p.tmpDir, mounter.DevName())
-	os.MkdirAll(path, 0777)
+	os.MkdirAll(path, 0o777)
 	m, err := mounter.Mount(path, flags)
 	if err != nil {
 		// unix.Rmdir is used (instead of os.RemoveAll) because it
 		// fails when the directory is non-empty. It would be a bit
 		// dangerous to use os.RemoveAll because it could accidentally
 		// delete everything in a mount.
-		unix.Rmdir(p.tmpDir)
+		unix.Rmdir(path)
 		return nil, err
 	}
 	p.MountPoints = append(p.MountPoints, m)
@@ -196,9 +195,9 @@ func (p *Pool) UnmountAll(flags uintptr) error {
 	for _, m := range p.MountPoints {
 		if err := m.Unmount(flags); err != nil {
 			if returnErr == nil {
-				returnErr = err
+				returnErr = fmt.Errorf("(Unmount) %s", err.Error())
 			} else {
-				returnErr = fmt.Errorf("%w; %s", returnErr, err.Error())
+				returnErr = fmt.Errorf("%w; (Unmount) %s", returnErr, err.Error())
 			}
 		}
 
@@ -210,7 +209,13 @@ func (p *Pool) UnmountAll(flags uintptr) error {
 	}
 
 	if returnErr == nil && p.tmpDir != "" {
-		returnErr = unix.Rmdir(p.tmpDir)
+		if err := unix.Rmdir(p.tmpDir); err != nil {
+			if returnErr == nil {
+				returnErr = fmt.Errorf("(Rmdir) %s", err.Error())
+			} else {
+				returnErr = fmt.Errorf("%w; (Rmdir) %s", returnErr, err.Error())
+			}
+		}
 		p.tmpDir = ""
 	}
 

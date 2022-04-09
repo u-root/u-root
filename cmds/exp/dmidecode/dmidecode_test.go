@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,13 +39,13 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 		return
 	}
 	actualOut := out.Bytes()
-	expectedOut, err := ioutil.ReadFile(expectedOutFile)
+	expectedOut, err := os.ReadFile(expectedOutFile)
 	if err != nil {
 		t.Errorf("%+v %+v %+v: failed to load %s: %v", dumpFile, args, expectedOutFile, expectedOutFile, err)
 		return
 	}
-	if bytes.Compare(actualOut, expectedOut) != 0 {
-		ioutil.WriteFile(actualOutFile, actualOut, 0644)
+	if !bytes.Equal(actualOut, expectedOut) {
+		os.WriteFile(actualOutFile, actualOut, 0o644)
 		t.Errorf("%+v %+v %+v: output mismatch, see %s", dumpFile, args, expectedOutFile, actualOutFile)
 		diffOut, _ := exec.Command("diff", "-u", expectedOutFile, actualOutFile).CombinedOutput()
 		t.Errorf("%+v %+v %+v: diff:\n%s", dumpFile, args, expectedOutFile, string(diffOut))
@@ -70,7 +69,7 @@ func TestDMIDecodeTypeFilters(t *testing.T) {
 }
 
 func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {
-	tmpfile, err := ioutil.TempFile("", "dmidecode")
+	tmpfile, err := os.CreateTemp("", "dmidecode")
 	if err != nil {
 		t.Fatalf("error creating temp file: %v", err)
 	}
@@ -85,11 +84,11 @@ func testDumpBin(t *testing.T, entryData, expectedOutData []byte) {
 	); err != nil {
 		t.Fatalf("failed to dump bin: %v", err)
 	}
-	outData, err := ioutil.ReadFile(tmpfile.Name())
+	outData, err := os.ReadFile(tmpfile.Name())
 	if err != nil {
 		t.Fatalf("failed to read output: %v", err)
 	}
-	if bytes.Compare(outData, expectedOutData) != 0 {
+	if !bytes.Equal(outData, expectedOutData) {
 		t.Fatalf("binary data mismatch,\nexpected:\n  %s\ngot:\n  %s", hex.EncodeToString(expectedOutData), hex.EncodeToString(outData))
 	}
 }

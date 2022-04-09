@@ -9,32 +9,113 @@ import (
 )
 
 func TestLookup(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		pci            PCI
+		VendorNameWant string
+		DeviceNameWant string
+	}{
+		{
+			name: "Lookup Using ID 1055 Device e420",
+			pci: PCI{
+				Vendor: 0x1055,
+				Device: 0xe420,
+			},
+			VendorNameWant: "Efar Microsystems",
+			DeviceNameWant: "LAN9420/LAN9420i",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 1237",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x1237,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "440FX - 82441FX PMC [Natoma]",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 7000",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x7000,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "82371SB PIIX3 ISA [Natoma/Triton II]",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 7111",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x7111,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "82371AB/EB/MB PIIX4 IDE",
+		},
+		{
+			name: "Lookup Using ID 80ee Device beef",
+			pci: PCI{
+				Vendor: 0x80ee,
+				Device: 0xbeef,
+			},
+			VendorNameWant: "InnoTek Systemberatung GmbH",
+			DeviceNameWant: "VirtualBox Graphics Adapter",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 100e",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x100e,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "82540EM Gigabit Ethernet Controller",
+		},
+		{
+			name: "Lookup Using ID 80ee Device cafe",
+			pci: PCI{
+				Vendor: 0x80ee,
+				Device: 0xcafe,
+			},
+			VendorNameWant: "InnoTek Systemberatung GmbH",
+			DeviceNameWant: "VirtualBox Guest Service",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 2415",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x2415,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "82801AA AC'97 Audio Controller",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 7113",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x7113,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "82371AB/EB/MB PIIX4 ACPI",
+		},
+		{
+			name: "Lookup Using ID 8086 Device 100f",
+			pci: PCI{
+				Vendor: 0x8086,
+				Device: 0x100f,
+			},
+			VendorNameWant: "Intel Corporation",
+			DeviceNameWant: "82545EM Gigabit Ethernet Controller (Copper)",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.pci.SetVendorDeviceName()
+			VendorNameGot, DeviceNameGot := tt.pci.VendorName, tt.pci.DeviceName
+			if VendorNameGot != tt.VendorNameWant {
+				t.Errorf("Vendor mismatch, got: '%s', want: '%s'\n", VendorNameGot, tt.VendorNameWant)
+			}
+			if DeviceNameGot != tt.DeviceNameWant {
+				t.Errorf("Device mismatch, got: '%s', want: '%s'\n", DeviceNameGot, tt.DeviceNameWant)
+			}
 
-	var idLookupTests = []*PCI{
-		{Vendor: "1055", Device: "e420", VendorName: "Efar Microsystems", DeviceName: "LAN9420/LAN9420i"},
-		{Vendor: "8086", Device: "1237", VendorName: "Intel Corporation", DeviceName: "440FX - 82441FX PMC [Natoma]"},
-		{Vendor: "8086", Device: "7000", VendorName: "Intel Corporation", DeviceName: "82371SB PIIX3 ISA [Natoma/Triton II]"},
-		{Vendor: "8086", Device: "7111", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 IDE"},
-		{Vendor: "80ee", Device: "beef", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Graphics Adapter"},
-		{Vendor: "8086", Device: "100e", VendorName: "Intel Corporation", DeviceName: "82540EM Gigabit Ethernet Controller"},
-		{Vendor: "80ee", Device: "cafe", VendorName: "InnoTek Systemberatung GmbH", DeviceName: "VirtualBox Guest Service"},
-		{Vendor: "8086", Device: "2415", VendorName: "Intel Corporation", DeviceName: "82801AA AC'97 Audio Controller"},
-		{Vendor: "8086", Device: "7113", VendorName: "Intel Corporation", DeviceName: "82371AB/EB/MB PIIX4 ACPI"},
-		{Vendor: "8086", Device: "100f", VendorName: "Intel Corporation", DeviceName: "82545EM Gigabit Ethernet Controller (Copper)"},
+		})
 	}
-
-	t.Run("Lookup Using IDs", func(t *testing.T) {
-		for _, tt := range idLookupTests {
-			tp := tt
-			tp.SetVendorDeviceName()
-			v, d := tp.VendorName, tp.DeviceName
-			if v != tt.VendorName {
-				t.Errorf("Vendor mismatch, found %s, expected %s\n", v, tt.VendorName)
-			}
-			if d != tt.DeviceName {
-				t.Errorf("Device mismatch, found %s, expected %s\n", d, tt.DeviceName)
-			}
-		}
-	})
-
 }

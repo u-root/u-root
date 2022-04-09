@@ -9,12 +9,20 @@ import (
 	"os"
 )
 
-const usage = `Usage:
+func getUsage(progname string) string {
+	return fmt.Sprintf(`Usage:
 %s add [netboot [dhcpv6|dhcpv4] [MAC] | localboot [grub|path [Device GUID] [Kernel Path]]]
+%s get [variable name]
+%s set [variable name] [variable value]
+%s delete [variable name]
 
 Ex.
 add localboot grub
 add netboot dhcpv6 AA:BB:CC:DD:EE:FF
+get
+get firmware_version
+set systemboot_log_level 6
+delete systemboot_log_level
 
 Flags for netboot:
 
@@ -30,11 +38,12 @@ Global flags:
 
 -vpd-dir - VPD dir to use
 
-`
+`, progname, progname, progname, progname)
+}
 
 func main() {
 	if err := cli(os.Args[1:]); err != nil {
-		fmt.Printf(usage, os.Args[0])
+		fmt.Println(getUsage(os.Args[0]))
 		fmt.Printf("Error: %s\n\n", err)
 		os.Exit(1)
 	}
@@ -42,11 +51,34 @@ func main() {
 
 func cli(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("You need to provide action")
+		return fmt.Errorf("you need to provide action")
 	}
 	switch args[0] {
 	case "add":
 		return add(args[1], args[2:])
+	case "get":
+		varname := ""
+		if len(args) > 1 {
+			varname = args[1]
+		}
+		getter := NewGetter()
+		return getter.Print(varname)
+	case "set":
+		if len(args) == 3 {
+			err := set(args[1], args[2])
+			if err == nil {
+				fmt.Println("Successfully set, it will take effect after reboot")
+			}
+			return err
+		}
+	case "delete":
+		if len(args) == 2 {
+			err := delete(args[1])
+			if err == nil {
+				fmt.Println("Successfully deleted, it will take effect after reboot")
+			}
+			return err
+		}
 	}
 	return fmt.Errorf("Unrecognized action")
 }

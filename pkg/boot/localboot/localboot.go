@@ -7,6 +7,7 @@ package localboot
 
 import (
 	"context"
+	"sort"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bls"
@@ -18,9 +19,16 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
+// Sort the image in descending order by rank
+type byRank []boot.OSImage
+
+func (a byRank) Less(i, j int) bool { return a[i].Rank() > a[j].Rank() }
+func (a byRank) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byRank) Len() int           { return len(a) }
+
 // parse treats device as a block device with a file system.
 func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mountDir string, mountPool *mount.Pool) []boot.OSImage {
-	imgs, err := bls.ScanBLSEntries(l, mountDir)
+	imgs, err := bls.ScanBLSEntries(l, mountDir, nil)
 	if err != nil {
 		l.Printf("No systemd-boot BootLoaderSpec configs found on %s, trying another format...: %v", device, err)
 	}
@@ -89,5 +97,7 @@ func Localboot(l ulog.Logger, blockDevs block.BlockDevices, mp *mount.Pool) ([]b
 			images = append(images, imgs...)
 		}
 	}
+
+	sort.Sort(byRank(images))
 	return images, nil
 }

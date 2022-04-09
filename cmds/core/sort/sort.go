@@ -19,7 +19,7 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -31,28 +31,28 @@ var (
 	outputFile = flag.String("o", "", "Output file")
 )
 
-func readInput() string {
+func readInput(w io.Writer, f *os.File, args ...string) error {
 	// Input files
 	from := []*os.File{}
-	if flag.NArg() > 0 {
-		for _, v := range flag.Args() {
+	if len(args) > 0 {
+		for _, v := range args {
 			if f, err := os.Open(v); err == nil {
 				from = append(from, f)
 				defer f.Close()
 			} else {
-				log.Fatal(err)
+				return err
 			}
 		}
 	} else {
-		from = []*os.File{os.Stdin}
+		from = []*os.File{f}
 	}
 
 	// Read unicode string from input
 	fileContents := []string{}
 	for _, f := range from {
-		bytes, err := ioutil.ReadAll(f)
+		bytes, err := io.ReadAll(f)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		s := string(bytes)
 		fileContents = append(fileContents, s)
@@ -62,7 +62,10 @@ func readInput() string {
 			fileContents = append(fileContents, "\n")
 		}
 	}
-	return strings.Join(fileContents, "")
+	if err := writeOutput(w, sortAlgorithm(strings.Join(fileContents, ""))); err != nil {
+		return err
+	}
+	return nil
 }
 
 func sortAlgorithm(s string) string {
@@ -81,23 +84,23 @@ func sortAlgorithm(s string) string {
 	return strings.Join(lines, "\n") + "\n" // append newline terminator
 }
 
-func writeOutput(s string) {
-	to := os.Stdout
+func writeOutput(w io.Writer, s string) error {
+	to := w
 	if *outputFile != "" {
 		if f, err := os.Create(*outputFile); err == nil {
 			to = f
 			defer f.Close()
 		} else {
-			log.Fatal(err)
+			return err
 		}
 	}
 	to.Write([]byte(s))
+	return nil
 }
 
 func main() {
 	flag.Parse()
-
-	// Input files must be closed before writing to output files to solve
-	// the situtation in which the output file is the same as an input.
-	writeOutput(sortAlgorithm(readInput()))
+	if err := readInput(os.Stdout, os.Stdin, flag.Args()...); err != nil {
+		log.Fatal(err)
+	}
 }

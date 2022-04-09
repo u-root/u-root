@@ -39,7 +39,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 
 // NewTTYS returns a new TTYIO.
 func NewTTYS(port string) (*TTYIO, error) {
-	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0620)
+	f, err := os.OpenFile(filepath.Join("/dev", port), unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0o620)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func GetTermios(fd uintptr) (*Termios, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Termios{Termios: t}, nil
+	return &Termios{Termios: *t}, nil
 }
 
 // Get terms a Termios from a TTYIO.
@@ -62,7 +62,7 @@ func (t *TTYIO) Get() (*Termios, error) {
 
 // SetTermios sets tty parameters for an fd from a Termios.
 func SetTermios(fd uintptr, ti *Termios) error {
-	return unix.IoctlSetTermios(int(fd), unix.TIOCSETA, ti.Termios)
+	return unix.IoctlSetTermios(int(fd), unix.TIOCSETA, &ti.Termios)
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
@@ -154,7 +154,7 @@ func MakeSerialDefault(term *Termios) *Termios {
 	t.Cc[unix.VMIN] = 1
 	/* no timeout (reads block forever) */
 	t.Cc[unix.VTIME] = 0
-	//t.Line = 0
+	// t.Line = 0
 
 	return &t
 }

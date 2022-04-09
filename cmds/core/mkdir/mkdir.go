@@ -19,38 +19,30 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 const (
 	cmd                 = "mkdir [-m mode] [-v] [-p] <directory> [more directories]"
-	DefaultCreationMode = 0777
-	StickyBit           = 01000
-	SgidBit             = 02000
-	SuidBit             = 04000
+	defaultCreationMode = 0o777
+	stickyBit           = 0o1000
+	sgidBit             = 0o2000
+	suidBit             = 0o4000
 )
 
 var (
 	mode    = flag.String("m", "", "Directory mode")
 	mkall   = flag.Bool("p", false, "Make all needed directories in the path")
 	verbose = flag.Bool("v", false, "Print each directory as it is made")
-	f       = os.Mkdir
 )
 
 func init() {
-	// Usage Definition
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
+	util.Usage(cmd)
 }
 
-func main() {
-	flag.Parse()
-	if len(flag.Args()) < 1 {
-		flag.Usage()
-		os.Exit(1)
-	}
+func mkdir(args []string) error {
+	f := os.Mkdir
 	if *mkall {
 		f = os.MkdirAll
 	}
@@ -59,25 +51,25 @@ func main() {
 	var m uint64
 	var err error
 	if *mode == "" {
-		m = DefaultCreationMode
+		m = defaultCreationMode
 	} else {
 		m, err = strconv.ParseUint(*mode, 8, 32)
-		if err != nil || m > 07777 {
-			log.Fatalf("invalid mode '%s'", *mode)
+		if err != nil || m > 0o7777 {
+			return fmt.Errorf("invalid mode %q", *mode)
 		}
 	}
 	createMode := os.FileMode(m)
-	if m&StickyBit != 0 {
+	if m&stickyBit != 0 {
 		createMode |= os.ModeSticky
 	}
-	if m&SgidBit != 0 {
+	if m&sgidBit != 0 {
 		createMode |= os.ModeSetgid
 	}
-	if m&SuidBit != 0 {
+	if m&suidBit != 0 {
 		createMode |= os.ModeSetuid
 	}
 
-	for _, name := range flag.Args() {
+	for _, name := range args {
 		if err := f(name, createMode); err != nil {
 			log.Printf("%v: %v\n", name, err)
 			continue
@@ -88,5 +80,17 @@ func main() {
 		if *mode != "" {
 			os.Chmod(name, createMode)
 		}
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if len(flag.Args()) < 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+	if err := mkdir(flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }

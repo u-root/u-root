@@ -5,12 +5,14 @@
 package mtd
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
 
 func TestFindVendor(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		id VendorID
 		v  VendorName
 		e  error
@@ -35,7 +37,7 @@ func TestFindVendor(t *testing.T) {
 }
 
 func TestFindDevice(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		v  VendorName
 		id ChipID
 		d  ChipName
@@ -65,5 +67,76 @@ func TestFindDevice(t *testing.T) {
 			t.Errorf("(%q, %#x): got (%q) want (%q)", tt.v, tt.id, d, tt.d)
 		}
 
+	}
+}
+
+func TestChipFromVIDID(t *testing.T) {
+	for _, tt := range []struct {
+		vid            VendorID
+		vname          VendorName
+		cid            ChipID
+		wantChipName   ChipName
+		wantChipString string
+		wantError      error
+	}{
+		{
+			vid:            0xBA,
+			vname:          "ZETTADEVICE",
+			cid:            0x2012,
+			wantChipName:   "ZD25D20",
+			wantChipString: "ZETTADEVICE/ZD25D20: 0 pages, 0 pagesize, 0x0 bytes",
+		},
+		{
+			vid:          0xDA,
+			vname:        "WINBOND",
+			cid:          0x7E1D01,
+			wantChipName: "W29GL032CHL",
+			wantChipString: "WINBOND/W29GL032CHL: 0 pages, 0 pagesize, 0x0 bytes, remarks: 	/* Uniform Sectors, WP protects Top OR Bottom sector */",
+		},
+		{
+			vid:       0xAA,
+			vname:     "InvalidVendor",
+			cid:       0x2012,
+			wantError: fmt.Errorf("not a known vendor"),
+		},
+	} {
+		t.Run("Lookup ChipFromVIDDID: "+fmt.Sprintf("VID:CID %d:%d", tt.vid, tt.cid), func(t *testing.T) {
+			chip, err := ChipFromVIDDID(tt.vid, tt.cid)
+			if !errors.Is(err, tt.wantError) {
+				if !strings.Contains(err.Error(), tt.wantError.Error()) {
+					t.Errorf("ChipFromVIDDID(tt.vid, tt.cid)=chip, %q, want chip, %q", err, tt.wantError)
+				}
+			}
+			if err != nil {
+				return
+			}
+			if chip.Name() != tt.wantChipName {
+				t.Errorf("chip.Name() = %s, want %s", chip.Name(), tt.wantChipName)
+			}
+			if chip.String() != tt.wantChipString {
+				t.Errorf("chip.String()=%s, want %s", chip.String(), tt.wantChipString)
+			}
+			if chip.ID() != tt.cid {
+				t.Errorf("chip.ID()= %x, want %x", chip.ID(), tt.cid)
+			}
+
+		})
+		t.Run("Lookup VendorFromName: "+string(tt.vname), func(t *testing.T) {
+			vendor, err := VendorFromName(tt.vname)
+			if !errors.Is(err, tt.wantError) {
+				if !strings.Contains(err.Error(), tt.wantError.Error()) {
+					t.Errorf("VendorFromName(tt.vname)=vendor, %q, want vendor, %q", err, tt.wantError)
+				}
+			}
+			if err != nil {
+				return
+			}
+			if vendor.Name() != tt.vname {
+				t.Errorf("Vendor name does not match up.")
+			}
+			if vendor.ID() != tt.vid {
+				t.Errorf("vendor.ID()= %x, want %x", vendor.ID(), tt.vid)
+			}
+		})
 	}
 }

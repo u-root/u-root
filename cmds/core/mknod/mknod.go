@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
+// +build !plan9
+
 // Unmount a filesystem at the specified path.
 //
 // Synopsis:
@@ -13,10 +16,14 @@
 //     must not be specified.
 package main
 
-import "log"
+import (
+	"flag"
+	"log"
+)
 
 func main() {
-	if err := mknod(); err != nil {
+	flag.Parse()
+	if err := mknod(flag.Args()); err != nil {
 		log.Fatalf("mknod: %v", err)
 	}
 }

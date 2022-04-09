@@ -7,7 +7,6 @@ package vmtest
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -75,7 +74,20 @@ type Options struct {
 
 	// Use virtual vfat rather than 9pfs
 	UseVVFAT bool
+
+	// By default, if your kernel has CONFIG_DEBUG_FS=y and
+	// CONFIG_GCOV_KERNEL=y enabled, the kernel's coverage will be
+	// collected and saved to:
+	//   u-root/integration/coverage/{{testname}}/{{instance}}/kernel_coverage.tar
+	NoKernelCoverage bool
 }
+
+// Tests are run from u-root/integration/{gotests,generic-tests}/
+const coveragePath = "../coverage"
+
+// Keeps track of the number of instances per test so we do not overlap
+// coverage reports.
+var instance = map[string]int{}
 
 func last(s string) string {
 	l := strings.Split(s, ".")
@@ -154,8 +166,35 @@ func SkipWithoutQEMU(t *testing.T) {
 	}
 }
 
+func saveCoverage(t *testing.T, path string) error {
+	// Coverage may not have been collected, for example if the kernel is
+	// not built with CONFIG_GCOV_KERNEL.
+	if fi, err := os.Stat(path); os.IsNotExist(err) || (err != nil && !fi.Mode().IsRegular()) {
+		return nil
+	}
+
+	// Move coverage to common directory.
+	uniqueCoveragePath := filepath.Join(coveragePath, t.Name(), fmt.Sprintf("%d", instance[t.Name()]))
+	instance[t.Name()]++
+	if err := os.MkdirAll(uniqueCoveragePath, 0o770); err != nil {
+		return err
+	}
+	if err := os.Rename(path, filepath.Join(uniqueCoveragePath, filepath.Base(path))); err != nil {
+		return err
+	}
+	return nil
+}
+
 func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	SkipWithoutQEMU(t)
+
+	// Delete any previous coverage data.
+	if _, ok := instance[t.Name()]; !ok {
+		testCoveragePath := filepath.Join(coveragePath, t.Name())
+		if err := os.RemoveAll(testCoveragePath); err != nil && !os.IsNotExist(err) {
+			t.Logf("Error erasing previous coverage: %v", err)
+		}
+	}
 
 	if len(o.Name) == 0 {
 		o.Name = callerName(2)
@@ -169,7 +208,7 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 
 	// Create or reuse a temporary directory. This is exposed to the VM.
 	if o.TmpDir == "" {
-		tmpDir, err := ioutil.TempDir("", "uroot-integration")
+		tmpDir, err := os.MkdirTemp("", "uroot-integration")
 		if err != nil {
 			t.Fatalf("Failed to create temp dir: %v", err)
 		}
@@ -188,6 +227,12 @@ func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 
 	return vm, func() {
 		vm.Close()
+		if !o.NoKernelCoverage {
+			if err := saveCoverage(t, filepath.Join(o.TmpDir, "kernel_coverage.tar")); err != nil {
+				t.Logf("Error saving kernel coverage: %v", err)
+			}
+		}
+
 		t.Logf("QEMU command line to reproduce %s:\n%s", o.Name, vm.CmdlineQuoted())
 		if t.Failed() {
 			t.Log("Keeping temp dir: ", o.TmpDir)
@@ -216,8 +261,8 @@ func QEMU(o *Options) (*qemu.Options, error) {
 	if len(o.TestCmds) > 0 {
 		testFile := filepath.Join(o.TmpDir, "test.elv")
 
-		if err := ioutil.WriteFile(
-			testFile, []byte(strings.Join(o.TestCmds, "\n")), 0777); err != nil {
+		if err := os.WriteFile(
+			testFile, []byte(strings.Join(o.TestCmds, "\n")), 0o777); err != nil {
 			return nil, err
 		}
 	}
@@ -254,6 +299,10 @@ func QEMU(o *Options) (*qemu.Options, error) {
 		dir = qemu.P9Directory{Dir: o.TmpDir, Arch: TestArch()}
 	}
 	o.QEMUOpts.Devices = append(o.QEMUOpts.Devices, qemu.VirtioRandom{}, dir)
+
+	if o.NoKernelCoverage {
+		o.QEMUOpts.KernelArgs += " UROOT_NO_KERNEL_COVERAGE=1"
+	}
 
 	return &o.QEMUOpts, nil
 }
@@ -322,7 +371,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 		o.DefaultShell = "elvish"
 	}
 	if len(o.TempDir) == 0 {
-		tempDir, err := ioutil.TempDir("", "initramfs-tempdir")
+		tempDir, err := os.MkdirTemp("", "initramfs-tempdir")
 		if err != nil {
 			return "", fmt.Errorf("Failed to create temp dir: %v", err)
 		}
@@ -332,7 +381,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 
 	// Create an output file if one was not provided.
 	if len(outputFile) == 0 {
-		f, err := ioutil.TempFile("", "initramfs.cpio")
+		f, err := os.CreateTemp("", "initramfs.cpio")
 		if err != nil {
 			return "", fmt.Errorf("failed to create output file: %v", err)
 		}

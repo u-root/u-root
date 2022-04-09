@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 // fusermount is a very limited replacement for the C fusermount.  It
@@ -49,9 +50,7 @@ var (
 	mpt     string
 )
 
-var (
-	help = "usage: fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>"
-)
+const help = "usage: fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>"
 
 func usage() {
 	log.Fatalf(help)
@@ -126,9 +125,9 @@ func getCommFD() (int, error) {
 }
 
 func doMount(fd int) error {
-	var flags = uintptr(unix.MS_NODEV | unix.MS_NOSUID)
+	flags := uintptr(unix.MS_NODEV | unix.MS_NOSUID)
 	// From the kernel:
-	//if (!d->fd_present || !d->rootmode_present ||
+	// if (!d->fd_present || !d->rootmode_present ||
 	//	!d->user_id_present || !d->group_id_present)
 	//		return 0;
 	// Yeah. You get EINVAL if any one of these is not set.

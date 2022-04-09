@@ -1,0 +1,117 @@
+# If you copy this to your Linux directory, run
+#   make olddefconfig
+# to fill in the blanks.
+#
+# This is not intended to be a minimal Linux configuration, but perhaps it comes
+# close to listing requirements for certain things.
+
+# Minimal kernel config needed for Go
+CONFIG_64BIT=y
+CONFIG_BINFMT_ELF=y
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_DEVTMPFS=y
+CONFIG_TMPFS=y
+CONFIG_EARLY_PRINTK=y
+CONFIG_EPOLL=y
+CONFIG_FUTEX=y
+CONFIG_PRINTK=y
+CONFIG_PROC_FS=y
+
+# Serial port output
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+CONFIG_TTY=y
+
+# Block devices
+CONFIG_BLOCK=y
+CONFIG_ATA=y
+CONFIG_SATA_AHCI=y
+CONFIG_BLK_DEV_NVME=y
+CONFIG_BLK_DEV_SD=y
+# Allows using -hda when running QEMU
+CONFIG_ATA_PIIX=y
+
+# vfat+ext4 filesystem
+CONFIG_MSDOS_FS=y
+CONFIG_VFAT_FS=y
+CONFIG_FAT_DEFAULT_CODEPAGE=437
+CONFIG_FAT_DEFAULT_IOCHARSET="iso8859-1"
+CONFIG_NLS=y
+CONFIG_NLS_CODEPAGE_437=y
+CONFIG_NLS_ISO8859_1=y
+CONFIG_EXT4_FS=y
+
+# Loop device for tcz
+CONFIG_BLK_DEV_LOOP=y
+CONFIG_MISC_FILESYSTEMS=y
+CONFIG_SQUASHFS=y
+
+# Add /dev/port for io command
+CONFIG_PCI=y
+CONFIG_DEVPORT=y
+
+# For the kernel doing the kexec'ing
+CONFIG_CRYPTO=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_KEXEC=y
+CONFIG_KEXEC_FILE=y
+
+# For the kernel being kexec'ed
+CONFIG_RELOCATABLE=y
+
+# Add EFI support
+CONFIG_EFI=y
+
+# Frame buffer graphics support
+CONFIG_FB_SIMPLE=y
+CONFIG_FB=y
+CONFIG_X86_SYSFB=y
+
+# Virtio Networking + random + storage
+CONFIG_VIRTIO_PCI=y
+CONFIG_HW_RANDOM_VIRTIO=y
+CONFIG_CRYPTO_DEV_VIRTIO=y
+CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_SCSI=y
+CONFIG_VIRTIO_NET=y
+
+# Networking
+CONFIG_NET=y
+CONFIG_INET=y
+CONFIG_PACKET=y
+CONFIG_UNIX=y
+CONFIG_IPV6=y
+CONFIG_NET_CORE=y
+CONFIG_NETDEVICES=y
+CONFIG_ETHERNET=y
+CONFIG_E1000=y
+
+# 9P net filesystem
+CONFIG_NET_9P=y
+CONFIG_NET_9P_VIRTIO=y
+CONFIG_9P_FS=y
+
+# GPIO test - mock GPIO libraries
+CONFIG_GPIOLIB=y
+CONFIG_GPIO_MOCKUP=y
+CONFIG_GPIO_SYSFS=y
+
+# Compressed initramfs
+CONFIG_KERNEL_GZIP=y
+
+# iSCSI initiator support
+CONFIG_ISCSI_TCP=y
+
+# NBD (Network Block Device) support: will automatically re-read partitions when
+# iSCSI disk is mounted.
+CONFIG_BLK_DEV_NBD=y
+
+# Add ipmi protocol for integration tests of pkg/ipmi
+CONFIG_IPMI=y
+CONFIG_IPMI_HANDLER=y
+CONFIG_IPMI_DEVICE_INTERFACE=y
+CONFIG_IPMI_WATCHDOG=y
+CONFIG_IPMI_SI=y
+
+# Add DMI/SMBIOS support
+CONFIG_DMI_SYSFS=y

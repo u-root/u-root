@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
 // +build !plan9
 
 // Package termios implements basic termios operations including getting
@@ -16,58 +17,16 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
-func TestNew(t *testing.T) {
-	if _, err := New(); os.IsNotExist(err) {
-		t.Skipf("No /dev/tty here.")
-	} else if err != nil {
-		t.Errorf("TestNew: want nil, got %v", err)
-	}
-
-}
-
-func TestRaw(t *testing.T) {
-	// TestRaw no longer works in CircleCi, Restrict to only VM tests.
-	testutil.SkipIfNotRoot(t)
-	tty, err := New()
-	if os.IsNotExist(err) {
-		t.Skipf("No /dev/tty here.")
-	} else if err != nil {
-		t.Fatalf("TestRaw new: want nil, got %v", err)
-	}
-	term, err := tty.Get()
-	if err != nil {
-		t.Fatalf("TestRaw get: want nil, got %v", err)
-	}
-
-	n, err := tty.Raw()
-	if err != nil {
-		t.Fatalf("TestRaw raw: want nil, got %v", err)
-	}
-	if !reflect.DeepEqual(term, n) {
-		t.Fatalf("TestRaw: New(%v) and Raw(%v) should be equal, are not", t, n)
-	}
-	if err := tty.Set(n); err != nil {
-		t.Fatalf("TestRaw restore mode: want nil, got %v", err)
-	}
-	n, err = tty.Get()
-	if err != nil {
-		t.Fatalf("TestRaw second call to New(): want nil, got %v", err)
-	}
-	if !reflect.DeepEqual(term, n) {
-		t.Fatalf("TestRaw: After Raw restore: New(%v) and check(%v) should be equal, are not", term, n)
-	}
-}
-
-// Test proper unmarshaling and consistent, repeatable output from String()
-func TestString(t *testing.T) {
+var (
 	// This JSON is from a real device.
-	j := `{
+	j = `{
 	"Ispeed": 0,
 	"Ospeed": 0,
 	"Row": 72,
@@ -135,7 +94,69 @@ func TestString(t *testing.T) {
 		"tostop": false
 	}
 }`
-	s := `speed:0 rows:72 cols:238 brkint:1 clocal:0 cread:1 cstopb:0 echo:1 echoctl:1 echoe:1 echok:1 echoke:1 echonl:0 echoprt:0 eof:0x04 eol2:0xff eol:0xff erase:0x7f flusho:0 hupcl:0 icanon:1 icrnl:1 iexten:1 ignbrk:0 igncr:0 ignpar:1 imaxbel:1 inlcr:0 inpck:0 intr:0x03 isig:1 istrip:0 iuclc:0 iutf8:1 ixany:0 ixoff:0 ixon:1 kill:0x15 lnext:0x16 min:0x00 noflsh:0 ocrnl:0 ofdel:0 ofill:0 olcuc:0 onlcr:1 onlret:0 onocr:0 opost:1 parenb:0 parmrk:0 parodd:0 pendin:1 quit:0x1c start:0x11 stop:0x13 susp:0x1a time:0x03 tostop:0 werase:0x17 xcase:0`
+	s = `speed:0 rows:72 cols:238 eof:0x04 eol2:0xff eol:0xff erase:0x7f intr:0x03 kill:0x15 lnext:0x16 min:0x00 quit:0x1c start:0x11 stop:0x13 susp:0x1a time:0x03 werase:0x17 brkint cread echo echoctl echoe echok echoke icanon icrnl iexten ignpar imaxbel isig iutf8 ixon onlcr opost pendin ~clocal ~cstopb ~echonl ~echoprt ~flusho ~hupcl ~ignbrk ~igncr ~inlcr ~inpck ~istrip ~iuclc ~ixany ~ixoff ~noflsh ~ocrnl ~ofdel ~ofill ~olcuc ~onlret ~onocr ~parenb ~parmrk ~parodd ~tostop ~xcase`
+)
+
+func TestNew(t *testing.T) {
+	if _, err := New(); os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
+		t.Errorf("TestNew: want nil, got %v", err)
+	}
+}
+
+func TestChangeTermios(t *testing.T) {
+	tty, err := New()
+	if os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
+		t.Fatalf("TestRaw new: want nil, got %v", err)
+	}
+	term, err := tty.Get()
+	if err != nil {
+		t.Fatalf("TestRaw get: want nil, got %v", err)
+	}
+	raw := MakeRaw(term)
+	if reflect.DeepEqual(raw, term) {
+		t.Fatalf("reflect.DeepEqual(%v, %v): true != false", term, raw)
+	}
+}
+
+func TestRaw(t *testing.T) {
+	// TestRaw no longer works in CircleCi, Restrict to only VM tests.
+	testutil.SkipIfNotRoot(t)
+	tty, err := New()
+	if os.IsNotExist(err) {
+		t.Skipf("No /dev/tty here.")
+	} else if err != nil {
+		t.Fatalf("TestRaw new: want nil, got %v", err)
+	}
+	term, err := tty.Get()
+	if err != nil {
+		t.Fatalf("TestRaw get: want nil, got %v", err)
+	}
+
+	n, err := tty.Raw()
+	if err != nil {
+		t.Fatalf("TestRaw raw: want nil, got %v", err)
+	}
+	if !reflect.DeepEqual(term, n) {
+		t.Fatalf("TestRaw: New(%v) and Raw(%v) should be equal, are not", t, n)
+	}
+	if err := tty.Set(n); err != nil {
+		t.Fatalf("TestRaw restore mode: want nil, got %v", err)
+	}
+	n, err = tty.Get()
+	if err != nil {
+		t.Fatalf("TestRaw second call to New(): want nil, got %v", err)
+	}
+	if !reflect.DeepEqual(term, n) {
+		t.Fatalf("TestRaw: After Raw restore: New(%v) and check(%v) should be equal, are not", term, n)
+	}
+}
+
+// Test proper unmarshaling and consistent, repeatable output from String()
+func TestString(t *testing.T) {
 	g := &TTY{}
 	if err := json.Unmarshal([]byte(j), g); err != nil {
 		t.Fatalf("stty load: %v", err)
@@ -153,5 +174,94 @@ func TestString(t *testing.T) {
 		}
 
 	}
+}
 
+func TestSet(t *testing.T) {
+	g := &TTY{}
+	if err := json.Unmarshal([]byte(j), g); err != nil {
+		t.Fatalf("load from JSON: got %v, want nil", err)
+	}
+	sets := [][]string{
+		{"speed", "0"},
+		{"rows", "72"},
+		{"cols", "238"},
+		{"brkint"},
+		{"~clocal"},
+		{"cread"},
+		{"~cstopb"},
+		{"echo"},
+		{"echoctl"},
+		{"echoe"},
+		{"echok"},
+		{"echoke"},
+		{"~echonl"},
+		{"~echoprt"},
+		{"eof", "0x04"},
+		{"eol2", "0xff"},
+		{"eol", "0xff"},
+		{"erase", "0x7f"},
+		{"~flusho"},
+		{"~hupcl"},
+		{"icanon"},
+		{"icrnl"},
+		{"iexten"},
+		{"~ignbrk"},
+		{"~igncr"},
+		{"ignpar"},
+		{"imaxbel"},
+		{"~inlcr"},
+		{"~inpck"},
+		{"intr", "0x03"},
+		{"isig"},
+		{"~istrip"},
+		{"iutf8"},
+		{"~ixany"},
+		{"~ixoff"},
+		{"ixon"},
+		{"kill", "0x15"},
+		{"lnext", "0x16"},
+		{"min", "0x00"},
+		{"~noflsh"},
+		{"~ocrnl"},
+		{"~ofdel"},
+		{"~ofill"},
+		{"onlcr"},
+		{"~onlret"},
+		{"~onocr"},
+		{"opost"},
+		{"~parenb"},
+		{"~parmrk"},
+		{"~parodd"},
+		{"pendin"},
+		{"quit", "0x1c"},
+		{"start", "0x11"},
+		{"stop", "0x13"},
+		{"susp", "0x1a"},
+		{"time", "0x03"},
+		{"~tostop"},
+		{"werase", "0x17"},
+	}
+
+	if runtime.GOOS == "linux" {
+		sets = append(sets, []string{"~iuclc"}, []string{"~olcuc"}, []string{"~xcase"})
+	}
+	for _, set := range sets {
+		if err := g.SetOpts(set); err != nil {
+			t.Errorf("Setting %q: got %v, want nil", set, err)
+		}
+	}
+	bad := [][]string{
+		{"hi", "1"},
+		{"rows"},
+		{"rows", "z"},
+		{"erase"},
+		{"erase", "z"},
+		{"hi"},
+		{"~hi"},
+	}
+	for _, set := range bad {
+		if err := g.SetOpts(set); err == nil {
+			t.Errorf("Setting %q: got nil, want err", set)
+		}
+	}
 }

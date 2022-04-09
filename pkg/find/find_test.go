@@ -6,7 +6,6 @@ package find
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,7 +21,7 @@ func TestSimple(t *testing.T) {
 		names []string
 	}
 
-	var testCases = []tests{
+	testCases := []tests{
 		{
 			name: "basic find",
 			opts: nil,
@@ -53,7 +52,7 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name:  "file by mode",
-			opts:  WithModeMatch(0444, os.ModePerm),
+			opts:  WithModeMatch(0o444, os.ModePerm),
 			names: []string{"/root/xyz/0777"},
 		},
 		{
@@ -62,21 +61,17 @@ func TestSimple(t *testing.T) {
 			names: []string{"/root/xyz/file"},
 		},
 	}
-	d, err := ioutil.TempDir(os.TempDir(), "u-root.cmds.find")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(d)
+	d := t.TempDir()
 
 	// Make sure files are actually created with the permissions we ask for.
 	syscall.Umask(0)
-	if err := os.MkdirAll(filepath.Join(d, "root/xyz"), 0775); err != nil {
+	if err := os.MkdirAll(filepath.Join(d, "root/xyz"), 0o775); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(d, "root/xyz/file"), nil, 0664); err != nil {
+	if err := os.WriteFile(filepath.Join(d, "root/xyz/file"), nil, 0o664); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(d, "root/xyz/0777"), nil, 0444); err != nil {
+	if err := os.WriteFile(filepath.Join(d, "root/xyz/0777"), nil, 0o444); err != nil {
 		t.Fatal(err)
 	}
 

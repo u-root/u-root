@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/u-root/u-root/pkg/golang"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
@@ -25,9 +26,14 @@ func (BinaryBuilder) DefaultBinaryDir() string {
 }
 
 // Build implements Builder.Build.
-func (BinaryBuilder) Build(af *initramfs.Files, opts Opts) error {
+func (BinaryBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	result := make(chan error, len(opts.Packages))
 	var wg sync.WaitGroup
+
+	noStrip := false
+	if opts.BuildOpts != nil {
+		noStrip = opts.BuildOpts.NoStrip
+	}
 
 	for _, pkg := range opts.Packages {
 		wg.Add(1)
@@ -36,7 +42,7 @@ func (BinaryBuilder) Build(af *initramfs.Files, opts Opts) error {
 			result <- opts.Env.Build(
 				p,
 				filepath.Join(opts.TempDir, opts.BinaryDir, filepath.Base(p)),
-				golang.BuildOpts{NoStrip: opts.NoStrip})
+				golang.BuildOpts{NoStrip: noStrip})
 		}(pkg)
 	}
 

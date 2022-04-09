@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -21,7 +21,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/url"
@@ -32,9 +34,7 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-var (
-	outPath = flag.String("O", "", "output file")
-)
+var outPath = flag.String("O", "", "output file")
 
 func usage() {
 	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
@@ -42,7 +42,7 @@ func usage() {
 	os.Exit(2)
 }
 
-func main() {
+func run() (reterr error) {
 	log.SetPrefix("wget: ")
 
 	if flag.Parse(); flag.NArg() != 1 {
@@ -51,12 +51,12 @@ func main() {
 
 	argURL := flag.Arg(0)
 	if argURL == "" {
-		log.Fatalln("Empty URL")
+		return errors.New("Empty URL")
 	}
 
 	url, err := url.Parse(argURL)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	if *outPath == "" {
@@ -78,16 +78,27 @@ func main() {
 
 	readerAt, err := schemes.Fetch(context.Background(), url)
 	if err != nil {
-		log.Fatalf("Failed to download %v: %v", argURL, err)
+		return fmt.Errorf("Failed to download %v: %v", argURL, err)
 	}
 
 	w, err := os.Create(*outPath)
 	if err != nil {
-		log.Fatalf("Failed to create output file %q: %v", *outPath, err)
+		return fmt.Errorf("Failed to create output file %q: %v", *outPath, err)
 	}
-	defer w.Close()
+	defer func() {
+		if err := w.Close(); reterr == nil {
+			reterr = err
+		}
+	}()
 
 	if _, err := io.Copy(w, uio.Reader(readerAt)); err != nil {
-		log.Fatalf("Failed to read response data: %v", err)
+		return fmt.Errorf("Failed to read response data: %v", err)
+	}
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
 	}
 }

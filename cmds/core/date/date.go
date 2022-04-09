@@ -11,6 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -18,6 +19,16 @@ import (
 	"strings"
 	"time"
 )
+
+type Clock interface {
+	Now() time.Time
+}
+
+type RealClock struct{}
+
+func (r RealClock) Now() time.Time {
+	return time.Now()
+}
 
 var (
 	// default format map from format.go on time lib
@@ -167,13 +178,13 @@ func ints(s string, i ...*int) error {
 // YY and SS. For these values, we use
 // time.Now(). For the timezone, we use whatever
 // one we are in, or UTC if desired.
-func getTime(z *time.Location, s string) (t time.Time, err error) {
+func getTime(z *time.Location, s string, clocksource Clock) (t time.Time, err error) {
 	var MM, DD, hh, mm int
 	// CC is the year / 100, not the "century".
 	// i.e. for 2001, CC is 20, not 21.
-	YY := time.Now().Year() % 100
-	CC := time.Now().Year() / 100
-	SS := time.Now().Second()
+	YY := clocksource.Now().Year() % 100
+	CC := clocksource.Now().Year() / 100
+	SS := clocksource.Now().Second()
 	if err = ints(s, &MM, &DD, &hh, &mm); err != nil {
 		return
 	}
@@ -209,36 +220,43 @@ func date(t time.Time, z *time.Location) string {
 	return t.In(z).Format(time.UnixDate)
 }
 
-func main() {
-	flag.Parse()
-
-	t := time.Now()
+func run(args []string, univ bool, ref string, clocksource Clock, w io.Writer) error {
+	t := clocksource.Now()
 	z := time.Local
-	if flags.universal {
+	if univ {
 		z = time.UTC
 	}
-	if flags.reference != "" {
-		stat, err := os.Stat(flags.reference)
+	if ref != "" {
+		stat, err := os.Stat(ref)
 		if err != nil {
-			log.Fatalf("Unable to gather stats of file %v", flags.reference)
+			return fmt.Errorf("unable to gather stats of file %v", ref)
 		}
 		t = stat.ModTime()
 	}
 
-	a := flag.Args()
-	switch len(a) {
+	switch len(args) {
 	case 0:
-		fmt.Printf("%v\n", date(t, z))
+		fmt.Fprintf(w, "%v\n", date(t, z))
 	case 1:
-		a0 := a[0]
+		a0 := args[0]
 		if strings.HasPrefix(a0, "+") {
-			fmt.Printf("%v\n", dateMap(t, z, a0[1:]))
+			fmt.Fprintf(w, "%v\n", dateMap(t, z, a0[1:]))
 		} else {
-			if err := setDate(a[0], z); err != nil {
-				log.Fatalf("%v: %v", a0, err)
+			if err := setDate(args[0], z, clocksource); err != nil {
+				return fmt.Errorf("%v: %v", a0, err)
 			}
 		}
 	default:
 		flag.Usage()
+		return nil
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	rc := RealClock{}
+	if err := run(flag.Args(), flags.universal, flags.reference, rc, os.Stdout); err != nil {
+		log.Fatalf("date: %v", err)
 	}
 }

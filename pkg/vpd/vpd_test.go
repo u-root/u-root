@@ -1,46 +1,52 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package vpd
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestGetReadOnly(t *testing.T) {
-	VpdDir = "./tests"
-	value, err := Get("key1", true)
-	require.NoError(t, err)
-	require.Equal(t, value, []byte("value1\n"))
+	r := NewReader()
+	r.VpdDir = "./tests"
+	value, err := r.Get("key1", true)
+	if err != nil || !bytes.Equal(value, []byte("value1\n")) {
+		t.Errorf(`r.Get("key1", true) = %v, %v, want nil, %v`, value, err, []byte("value1\n"))
+	}
 }
 
 func TestGetReadWrite(t *testing.T) {
-	VpdDir = "./tests"
-	value, err := Get("mysecretpassword", false)
-	require.NoError(t, err)
-	require.Equal(t, value, []byte("passw0rd\n"))
+	r := NewReader()
+	r.VpdDir = "./tests"
+	value, err := r.Get("mysecretpassword", false)
+	if err != nil || !bytes.Equal(value, []byte("passw0rd\n")) {
+		t.Errorf(`r.Get("mysecretpassword", false) = %v, %v, want nil, %v`, value, err, []byte("passwor0rd\n"))
+	}
 }
 
 func TestGetReadBinary(t *testing.T) {
-	VpdDir = "./tests"
-	value, err := Get("binary1", true)
-	require.NoError(t, err)
-	require.Equal(t, value, []byte("some\x00binary\ndata"))
+	r := NewReader()
+	r.VpdDir = "./tests"
+	value, err := r.Get("binary1", true)
+	if err != nil || !bytes.Equal(value, []byte("some\x00binary\ndata")) {
+		t.Errorf(`r.Get("binary1", true) = %v, %v, want nil, %v`, value, err, []byte("some\x00binary\ndata"))
+	}
 }
 
 func TestGetAllReadOnly(t *testing.T) {
-	VpdDir = "./tests"
+	r := NewReader()
+	r.VpdDir = "./tests"
 	expected := map[string][]byte{
 		"binary1": []byte("some\x00binary\ndata"),
 		"key1":    []byte("value1\n"),
 	}
-	vpdMap, err := GetAll(true)
-	require.NoError(t, err)
-	if !reflect.DeepEqual(vpdMap, expected) {
+	vpdMap, err := r.GetAll(true)
+	if err != nil || !reflect.DeepEqual(vpdMap, expected) {
+		t.Errorf(`r.GetAll(true) = %v, %v, want nil, %v`, vpdMap, err, expected)
 		t.FailNow()
 	}
 }

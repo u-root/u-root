@@ -13,13 +13,34 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-type flags struct {
-	noNewline, interpretEscapes bool
-}
+var (
+	usage = `echo:
+  If -e is in effect, the following sequences are recognized:
+    \\     backslash
+    \a     alert (BEL)
+    \b     backspace
+    \c     produce no further output
+    \e     escape
+    \f     form feed
+    \n     new line
+    \r     carriage return
+    \t     horizontal tab
+    \v     vertical tab
+    \0NNN  byte with octal value NNN (1 to 3 digits)
+    \xHH   byte with hexadecimal value HH (1 to 2 digits)`
+)
+var (
+	noNewline                 = flag.Bool("n", false, "suppress newline")
+	interpretEscapes          = flag.Bool("e", true, "enable interpretation of backslash escapes (default)")
+	interpretBackslashEscapes = flag.Bool("E", false, "disable interpretation of backslash escapes")
+)
 
 func escapeString(s string) (string, error) {
 	if len(s) < 1 {
@@ -35,23 +56,23 @@ func escapeString(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return s, nil
 }
 
-func echo(f flags, w io.Writer, s ...string) error {
+func echo(w io.Writer, s ...string) error {
 	var err error
+	if *interpretBackslashEscapes {
+		*interpretEscapes = false
+	}
 	line := strings.Join(s, " ")
-	if f.interpretEscapes {
+	if *interpretEscapes {
 		line, err = escapeString(line)
 		if err != nil {
 			return err
 		}
-
 	}
-
 	format := "%s"
-	if !f.noNewline {
+	if !*noNewline {
 		format += "\n"
 	}
 	_, err = fmt.Fprintf(w, format, line)
@@ -60,42 +81,12 @@ func echo(f flags, w io.Writer, s ...string) error {
 }
 
 func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		defUsage()
-		fmt.Println(`
-  If -e is in effect, the following sequences are recognized:
-    \\     backslash
-    \a     alert (BEL)
-    \b     backspace
-    \c     produce no further output
-    \e     escape
-    \f     form feed
-    \n     new line
-    \r     carriage return
-    \t     horizontal tab
-    \v     vertical tab
-    \0NNN  byte with octal value NNN (1 to 3 digits)
-    \xHH   byte with hexadecimal value HH (1 to 2 digits)`)
-	}
+	util.Usage(usage)
 }
 
 func main() {
-	var (
-		f flags
-		E bool
-	)
-	flag.BoolVar(&f.noNewline, "n", false, "suppress newline")
-	flag.BoolVar(&f.interpretEscapes, "e", true, "enable interpretation of backslash escapes (default)")
-	flag.BoolVar(&E, "E", false, "disable interpretation of backslash escapes")
 	flag.Parse()
-	if E {
-		f.interpretEscapes = false
-	}
-
-	err := echo(f, os.Stdout, flag.Args()...)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
-		os.Exit(1)
+	if err := echo(os.Stdout, flag.Args()...); err != nil {
+		log.Fatalf("%v", err)
 	}
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !race
 // +build !race
 
 package gpt
@@ -46,7 +47,7 @@ func InstallGPT() {
 }
 
 func TestGPTTable(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		mangle int
 		msg    string
 	}{
@@ -63,7 +64,6 @@ func TestGPTTable(t *testing.T) {
 		InstallGPT()
 		if test.mangle > -1 {
 			disk[BlockSize+test.mangle] = 0xff
-
 		}
 		r := bytes.NewReader(disk)
 		g, err := Table(r, BlockSize)
@@ -87,7 +87,6 @@ func TestGPTTable(t *testing.T) {
 			continue
 		}
 	}
-
 }
 
 // TestGPTTtables tests whether we can match the primary and backup
@@ -96,7 +95,7 @@ func TestGPTTable(t *testing.T) {
 // This test verifies that they match and that therefore we
 // are able to read the backup table and test that it is ok.
 func TestGPTTables(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		mangle int
 		what   string
 	}{
@@ -158,7 +157,6 @@ func TestEqualHeader(t *testing.T) {
 	if err.Error() != equalHeaderError {
 		t.Fatalf("TestEqualHeader: got %v, want %v", err.Error(), equalHeaderError)
 	}
-
 }
 
 func TestEqualParts(t *testing.T) {
@@ -190,7 +188,6 @@ func TestEqualParts(t *testing.T) {
 	if err = EqualParts(p.Primary, p.Backup); err == nil {
 		t.Errorf("TestEqualParts: Checking number of parts: got nil, want 'Primary Number of partitions (127) differs from Backup (128)'")
 	}
-
 }
 
 type iodisk []byte
@@ -207,7 +204,7 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reading partitions: got %v, want nil", err)
 	}
-	var targ = make(iodisk, len(disk))
+	targ := make(iodisk, len(disk))
 
 	if err := Write(&targ, p); err != nil {
 		t.Fatalf("Writing: got %v, want nil", err)

@@ -5,87 +5,128 @@
 package main
 
 import (
-	"os"
-	"os/exec"
-	"syscall"
+	"strings"
 	"testing"
-	"time"
-
-	"golang.org/x/sys/unix"
 )
 
-var tests = []struct {
-	args    []string
-	retCode int
-}{
-	{[]string{"halt"}, 2},
-	{[]string{"-h"}, 2},
-	// No args means halt.
-	{[]string{}, 2},
-	{[]string{"reboot"}, 3},
-	{[]string{"-r"}, 3},
-	{[]string{"suspend"}, 4},
-	{[]string{"-s"}, 4},
-	// good times, bad times
-	{[]string{"halt", "police"}, 1},
-	// Yep, it's legal.
-	// We can't put any non-zero times in these tests, it causes
-	// the integration tests to fail ...
-	{[]string{"halt", "+-0"}, 2},
-	{[]string{"halt", "+0"}, 2},
-	{[]string{"halt", "+2"}, 2},
-	{[]string{"halt", "now"}, 2},
-	{[]string{"halt", "2006-01-02T15:04:05Z"}, 2},
-	{[]string{"halt", "2006-01-02T15:04:05Z07:00"}, 1},
-	{[]string{"halt", "2006-o1-02T15:04:05Z07:00"}, 1},
-	// Get the message out
-	{[]string{"halt", "now", "is", "the", "time"}, 2},
-}
-
 func TestShutdown(t *testing.T) {
-	for i, tt := range tests {
-		var retCode int
-		c := exec.Command(os.Args[0], append([]string{"-test.run=TestHelperProcess", "--"}, tt.args...)...)
-		c.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
-		o, err := c.CombinedOutput()
-		t.Logf("out %s", o)
-		if err != nil {
-			exitErr, ok := err.(*exec.ExitError)
-			if !ok {
-				t.Errorf("%d. Error running shutdown: %v", i, err)
-				continue
+	for _, tt := range []struct {
+		name    string
+		args    []string
+		dryrun  bool
+		want    uint
+		wantErr string
+	}{
+		{
+			name:   "halt",
+			args:   []string{},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:   "halt +-0",
+			args:   []string{"halt", "+-0"},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:   "halt +0",
+			args:   []string{"halt", "+0"},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:    "halt +a",
+			args:    []string{"halt", "+a"},
+			dryrun:  true,
+			wantErr: "invalid duration",
+		},
+		{
+			name:   "halt +1",
+			args:   []string{"halt", "+1"},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:   "halt now",
+			args:   []string{"halt", "now"},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:   "halt specific date",
+			args:   []string{"halt", "2006-01-02T15:04:05Z"},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:    "halt specific date",
+			args:    []string{"halt", "2006-01-02T15:04:05Z07:00"},
+			dryrun:  true,
+			want:    1126301404,
+			wantErr: "extra text",
+		},
+		{
+			name:    "halt specific date",
+			args:    []string{"halt", "2006-o1-02T15:04:05Z07:00"},
+			dryrun:  true,
+			want:    1126301404,
+			wantErr: "cannot parse",
+		},
+		{
+			name:    "halt police",
+			args:    []string{"halt", "police"},
+			dryrun:  true,
+			wantErr: "cannot parse",
+		},
+		{
+			name:   "-h",
+			args:   []string{"-h"},
+			dryrun: true,
+			want:   1126301404,
+		},
+		{
+			name:   "empty string = halt",
+			args:   []string{""},
+			dryrun: true,
+			want:   0,
+		},
+		{
+			name:   "reboot",
+			args:   []string{"reboot"},
+			dryrun: true,
+			want:   19088743,
+		},
+		{
+			name:   "-r",
+			args:   []string{"-r"},
+			dryrun: true,
+			want:   19088743,
+		},
+		{
+			name:   "suspend",
+			args:   []string{"suspend"},
+			dryrun: true,
+			want:   3489725666,
+		},
+		{
+			name:   "-s",
+			args:   []string{"-s"},
+			dryrun: true,
+			want:   3489725666,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := shutdown(tt.args, tt.dryrun)
+			if err != nil {
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("shutdown() = %q, want to contain: %q", err.Error(), tt.wantErr)
+				}
+			} else {
+				if got != tt.want {
+					t.Errorf("shutdown() = '%d', want: '%d'", got, tt.want)
+				}
 			}
-			retCode = exitErr.Sys().(syscall.WaitStatus).ExitStatus()
-		}
-		if retCode != tt.retCode {
-			t.Errorf("%v. Want: %d; Got: %d", tt, tt.retCode, retCode)
-		}
+		})
 	}
-}
-
-func TestHelperProcess(t *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		t.Logf("just a helper")
-		return
-	}
-
-	reboot = func(i int) error {
-		xval := 1
-		switch uint32(i) {
-		case unix.LINUX_REBOOT_CMD_POWER_OFF:
-			xval = 2
-		case unix.LINUX_REBOOT_CMD_RESTART:
-			xval = 3
-		case unix.LINUX_REBOOT_CMD_SW_SUSPEND:
-			xval = 4
-		}
-
-		t.Logf("Exit with %#x", i)
-		os.Exit(xval)
-		return nil
-	}
-
-	delay = func(_ time.Duration) {}
-	os.Args = append([]string{"shutdown"}, os.Args[3:]...)
-	main()
 }

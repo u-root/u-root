@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build plan9
 // +build plan9
 
 // Mount mounts servename on old, with an optional keypattern spec
@@ -27,7 +28,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -37,7 +37,7 @@ import (
 func main() {
 	if len(os.Args) == 1 {
 		n := fmt.Sprintf("/proc/%d/ns", os.Getpid())
-		if b, err := ioutil.ReadFile(n); err == nil {
+		if b, err := os.ReadFile(n); err == nil {
 			fmt.Print(string(b))
 			os.Exit(0)
 		}

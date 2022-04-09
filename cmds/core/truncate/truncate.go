@@ -9,6 +9,7 @@
 //
 // Options:
 //     -s: size in bytes
+//     -r: reference file for size
 //     -c: do not create any files
 //
 // Author:
@@ -17,67 +18,75 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/rck/unit"
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-const cmd = "truncate [-c] -s size file..."
+const usage = "truncate [-c] -s size file..."
 
 var (
 	create = flag.Bool("c", false, "Do not create files.")
 	size   = unit.MustNewUnit(unit.DefaultUnits).MustNewValue(1, unit.None)
+	rfile  = flag.String("r", "", "Reference file for size")
 )
 
 func init() {
 	flag.Var(size, "s", "Size in bytes, prefixes +/- are allowed")
-
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
+	util.Usage(usage)
 }
 
-func usageAndExit() {
-	flag.Usage()
-	os.Exit(1)
-}
-
-func main() {
-	flag.Parse()
-
-	if !size.IsSet {
-		log.Println("truncate: ERROR: You need to specify -s <number>.")
-		usageAndExit()
+func truncate(args ...string) error {
+	if !size.IsSet && *rfile == "" {
+		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
-	if flag.NArg() == 0 {
-		log.Println("truncate: ERROR: You need to specify one or more files as argument.")
-		usageAndExit()
+	if size.IsSet && *rfile != "" {
+		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
+	}
+	if len(args) == 0 {
+		return fmt.Errorf("you need to specify one or more files as argument")
 	}
 
-	for _, fname := range flag.Args() {
+	for _, fname := range args {
+
+		var final int64
 		st, err := os.Stat(fname)
 		if os.IsNotExist(err) && !*create {
-			if err = ioutil.WriteFile(fname, []byte{}, 0644); err != nil {
-				log.Fatalf("truncate: ERROR: %v\n", err)
+			if err = os.WriteFile(fname, []byte{}, 0o644); err != nil {
+				return fmt.Errorf("%v", err)
 			}
 			if st, err = os.Stat(fname); err != nil {
-				log.Fatalf("truncate: ERROR: could not stat newly created file: %v\n", err)
+				return fmt.Errorf("could not stat newly created file: %v", err)
 			}
 		}
-
-		final := size.Value // base case
-		if size.ExplicitSign != unit.None {
-			final += st.Size() // in case of '-', size.Value is already negative
-		}
-		if final < 0 {
-			final = 0
+		if *rfile != "" {
+			if st, err = os.Stat(*rfile); err != nil {
+				return fmt.Errorf("could not stat reference file: %v", err)
+			}
+			final = st.Size()
+		} else if size.IsSet {
+			final = size.Value // base case
+			if size.ExplicitSign != unit.None {
+				final += st.Size() // in case of '-', size.Value is already negative
+			}
+			if final < 0 {
+				final = 0
+			}
 		}
 
 		// intentionally ignore, like GNU truncate
 		os.Truncate(fname, final)
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := truncate(flag.Args()...); err != nil {
+		flag.Usage()
+		log.Fatal(err)
 	}
 }

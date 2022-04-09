@@ -8,22 +8,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/util"
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 // LinuxImage implements OSImage for a Linux kernel + initramfs.
 type LinuxImage struct {
 	Name string
 
-	Kernel  io.ReaderAt
-	Initrd  io.ReaderAt
-	Cmdline string
+	Kernel      io.ReaderAt
+	Initrd      io.ReaderAt
+	Cmdline     string
+	BootRank    int
+	LoadSyscall bool
 }
 
 var _ OSImage = &LinuxImage{}
@@ -51,18 +54,73 @@ func (li *LinuxImage) Label() string {
 	return fmt.Sprintf("Linux(kernel=%s initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
 }
 
+// Rank for the boot menu order
+func (li *LinuxImage) Rank() int {
+	return li.BootRank
+}
+
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
 	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline)
 }
 
-func copyToFile(r io.Reader) (*os.File, error) {
-	f, err := ioutil.TempFile("", "kexec-image")
+// copyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
+// necessary. It skips copying when source file is a regular file under
+// tmpfs or ramfs, and it is not opened for writing.
+//
+// Copy is necessary for other cases, such as when the reader is an io.File
+// but not sufficient for kexec, as os.File could be a socket, a pipe or
+// some other strange thing. Also kexec_file_load will fail (similar to
+// execve) if anything has the file opened for writing. That's unfortunately
+// something we can't guarantee here - unless we make a copy of the file
+// and dump it somewhere.
+func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
+	// If source is a regular file in tmpfs, simply re-use that than copy.
+	//
+	// The assumption (bad?) is original local file was opened as a type
+	// conforming to os.File. We then can derive file descriptor, and the
+	// name.
+	if f, ok := r.(*os.File); ok {
+		if fi, err := f.Stat(); err == nil && fi.Mode().IsRegular() {
+			if r, _ := mount.IsTmpRamfs(f.Name()); r {
+				// Check if original file is opened for write. Perform copy to
+				// get a read only version in that case, than directly return
+				// as kexec load would fail on a file opened for write.
+				wr := unix.O_RDWR | unix.O_WRONLY
+				if am, err := unix.FcntlInt(f.Fd(), unix.F_GETFL, 0); err == nil && am&wr == 0 {
+					return f, nil
+				}
+				// Original file is either opened for write, or it failed to
+				// check (possibly, current kernel is too old and not supporting
+				// the sys call cmd)
+			}
+			// Original file is neither on a tmpfs, nor a ramfs.
+		}
+		// Not a regular file, or could not confirm it is a regular file.
+	}
+
+	rdr := uio.Reader(r)
+
+	if verbose {
+		// In verbose mode, print a dot every 5MiB. It is not pretty,
+		// but it at least proves the files are still downloading.
+		progress := func(r io.Reader) io.Reader {
+			return &uio.ProgressReadCloser{
+				RC:       io.NopCloser(r),
+				Symbol:   ".",
+				Interval: 5 * 1024 * 1024,
+				W:        os.Stdout,
+			}
+		}
+		rdr = progress(rdr)
+	}
+
+	f, err := os.CreateTemp("", "kexec-image")
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	if _, err := io.Copy(f, r); err != nil {
+	if _, err := io.Copy(f, rdr); err != nil {
 		return nil, err
 	}
 	if err := f.Sync(); err != nil {
@@ -87,29 +145,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 		return errors.New("LinuxImage.Kernel must be non-nil")
 	}
 
-	kernel, initrd := uio.Reader(util.TryGzipFilter(li.Kernel)), uio.Reader(li.Initrd)
-	if verbose {
-		// In verbose mode, print a dot every 5MiB. It is not pretty,
-		// but it at least proves the files are still downloading.
-		progress := func(r io.Reader) io.Reader {
-			return &uio.ProgressReadCloser{
-				RC:       ioutil.NopCloser(r),
-				Symbol:   ".",
-				Interval: 5 * 1024 * 1024,
-				W:        os.Stdout,
-			}
-		}
-		kernel = progress(kernel)
-		initrd = progress(initrd)
-	}
-
-	// It seams inefficient to always copy, in particular when the reader
-	// is an io.File but that's not sufficient, os.File could be a socket,
-	// a pipe or some other strange thing. Also kexec_file_load will fail
-	// (similar to execve) if anything as the file opened for writing.
-	// That's unfortunately something we can't guarantee here - unless we
-	// make a copy of the file and dump it somewhere.
-	k, err := copyToFile(kernel)
+	k, err := copyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), verbose)
 	if err != nil {
 		return err
 	}
@@ -117,7 +153,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = copyToFile(initrd)
+		i, err = copyToFileIfNotRegular(li.Initrd, verbose)
 		if err != nil {
 			return err
 		}
@@ -130,6 +166,10 @@ func (li *LinuxImage) Load(verbose bool) error {
 			log.Printf("Initrd: %s", i.Name())
 		}
 		log.Printf("Command line: %s", li.Cmdline)
+	}
+
+	if li.LoadSyscall {
+		return kexec.KexecLoad(k, i, li.Cmdline)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
+// +build !plan9
+
 // pci: show pci bus vendor ids and other info
 //
 // Description:
@@ -14,25 +17,32 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
+	flag "github.com/pborman/getopt/v2"
 	"github.com/u-root/u-root/pkg/pci"
 )
 
 var (
-	numbers    = flag.Bool("n", false, "Show numeric IDs")
-	dumpConfig = flag.Bool("c", false, "Dump config space")
-	devs       = flag.String("s", "*", "Devices to match")
-	format     = map[int]string{
-		32: "%08x:%08x",
-		16: "%08x:%04x",
-		8:  "%08x:%02x",
-	}
+	numbers   = flag.Bool('n', "Show numeric IDs")
+	devs      = flag.StringLong("select", 's', "*", "Devices to match")
+	dumpJSON  = flag.BoolLong("json", 'j', "Dump the bus in JSON")
+	verbosity = flag.Counter('v', "verbosity")
+	hexdump   = flag.Counter('x', "hexdump the config space")
+	readJSON  = flag.StringLong("JSON", 'J', "", "Read JSON in instead of /sys")
 )
+
+var format = map[int]string{
+	32: "%08x:%08x",
+	16: "%08x:%04x",
+	8:  "%08x:%02x",
+}
 
 // maybe we need a better syntax than the standard pcitools?
 func registers(d pci.Devices, cmds ...string) {
@@ -105,26 +115,63 @@ func registers(d pci.Devices, cmds ...string) {
 
 	}
 }
-func main() {
-	flag.Parse()
+
+func pciExecution(w io.Writer, args ...string) error {
+	var dumpSize int
+	switch *hexdump {
+	case 4:
+		dumpSize = 4096
+	case 3:
+		dumpSize = 256
+	case 2: // lspci disallows this value
+		dumpSize = 256
+	case 1:
+		dumpSize = 64
+	}
 	r, err := pci.NewBusReader(strings.Split(*devs, ",")...)
 	if err != nil {
-		log.Fatalf("%v", err)
+		return err
 	}
 
-	d, err := r.Read()
-	if err != nil {
-		log.Fatalf("Read: %v", err)
+	var d pci.Devices
+	if len(*readJSON) != 0 {
+		b, err := os.ReadFile(*readJSON)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(b, &d); err != nil {
+			return err
+		}
+
+	} else {
+		if d, err = r.Read(); err != nil {
+			return err
+		}
 	}
 
-	if !*numbers {
+	if !*numbers || *dumpJSON {
 		d.SetVendorDeviceName()
 	}
-	if len(flag.Args()) > 0 {
-		registers(d, flag.Args()...)
+	if len(args) > 0 {
+		registers(d, args...)
 	}
-	if *dumpConfig {
-		d.ReadConfig()
+	if *dumpJSON {
+		o, err := json.MarshalIndent(d, "", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s", string(o))
+		return nil
 	}
-	fmt.Print(d)
+	if err := d.Print(w, *verbosity, dumpSize); err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := pciExecution(os.Stdout, flag.Args()...); err != nil {
+		log.Fatal(err)
+	}
 }

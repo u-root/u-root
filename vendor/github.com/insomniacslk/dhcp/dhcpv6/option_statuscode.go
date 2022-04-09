@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/insomniacslk/dhcp/iana"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // OptStatusCode represents a DHCPv6 Status Code option

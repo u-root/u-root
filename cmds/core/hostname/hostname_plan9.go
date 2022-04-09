@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build plan9
 // +build plan9
 
 package main
 
-import "io/ioutil"
+import "os"
 
 func Sethostname(n string) error {
-	return ioutil.WriteFile("#c/sysname", []byte(n), 0644)
+	return os.WriteFile("#c/sysname", []byte(n), 0o644)
 }

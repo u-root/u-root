@@ -5,24 +5,83 @@
 package main
 
 import (
-	"os"
+	"bytes"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestDmesg(t *testing.T) {
-	if uid := os.Getuid(); uid != 0 {
-		t.Skipf("test requires root on CircleCI, your uid is %d", uid)
+	testutil.SkipIfNotRoot(t)
+	for _, tt := range []struct {
+		name      string
+		buf       *bytes.Buffer
+		bufIn     byte
+		clear     bool
+		readClear bool
+		want      error
+	}{
+		{
+			name:      "both flags set",
+			buf:       &bytes.Buffer{},
+			clear:     true,
+			readClear: true,
+			want:      fmt.Errorf("cannot specify both -clear and -read-clear"),
+		},
+		{
+			name:      "both flags unset and buffer has content",
+			buf:       &bytes.Buffer{},
+			bufIn:     0xEE,
+			clear:     false,
+			readClear: false,
+			want:      fmt.Errorf(""),
+		},
+		{
+			name:      "clear log",
+			buf:       &bytes.Buffer{},
+			bufIn:     0x41,
+			clear:     true,
+			readClear: false,
+			want:      fmt.Errorf(""),
+		},
+		{
+			name:      "clear log after printing",
+			buf:       &bytes.Buffer{},
+			bufIn:     0x41,
+			clear:     false,
+			readClear: true,
+			want:      fmt.Errorf(""),
+		},
+		{
+			name:      "clear log after printing and buffer has content",
+			buf:       &bytes.Buffer{},
+			bufIn:     0xEE,
+			clear:     false,
+			readClear: true,
+			want:      fmt.Errorf(""),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			*clear = tt.clear
+			*readClear = tt.readClear
+			buf := &bytes.Buffer{}
+			tt.buf.Write([]byte{tt.bufIn})
+			buf.Write([]byte{tt.bufIn})
+			if got := dmesg(tt.buf); got != nil {
+				if got.Error() != tt.want.Error() {
+					t.Errorf("dmesg() = '%v', want: '%v'", got, tt.want)
+				}
+			} else {
+				if tt.buf.String() != "A" && *clear {
+					t.Errorf("System log should be cleared")
+				} else if !strings.Contains(tt.buf.String(), buf.String()) && *readClear {
+					t.Errorf("System log should contain %s", buf.String())
+				} else if tt.buf.String() == "" && (!*clear && !*readClear) {
+					t.Errorf("System log should not be cleared")
+				}
+			}
+		})
 	}
-
-	cmd := testutil.Command(t)
-	out, err := cmd.Output()
-	if err != nil || len(out) == 0 {
-		t.Fatal(err)
-	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

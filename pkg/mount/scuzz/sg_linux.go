@@ -120,9 +120,15 @@ type packet struct {
 	word    wordBlock
 }
 
+type diskFile interface {
+	Close() error
+	Name() string
+	Fd() uintptr
+}
+
 // SGDisk implements a Disk using the Linux SG device
 type SGDisk struct {
-	f      *os.File
+	f      diskFile
 	dev    uint8
 	packID uint32
 
@@ -138,6 +144,10 @@ func NewSGDisk(n string, opt ...SGDiskOpt) (*SGDisk, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewSGDiskFromFile(f, opt...)
+}
+
+func NewSGDiskFromFile(f diskFile, opt ...SGDiskOpt) (*SGDisk, error) {
 	s := &SGDisk{f: f, Timeout: DefaultTimeout}
 	if _, err := s.Identify(); err != nil {
 		return nil, err
@@ -199,7 +209,7 @@ func (p *packet) genCommandDataBlock() {
 }
 
 func (s *SGDisk) newPacket(cmd Cmd, direction direction, ataType uint8) *packet {
-	var p = &packet{}
+	p := &packet{}
 	// These are invariant across all uses of SGDisk.
 	p.interfaceID = 'S'
 	p.cmdLen = uint8(len(p.command))

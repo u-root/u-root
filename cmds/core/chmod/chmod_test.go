@@ -5,296 +5,252 @@
 package main
 
 import (
-	"bytes"
-	"io/ioutil"
+	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-type fileModeTrans struct {
-	before os.FileMode
-	after  os.FileMode
-}
-
-func run(c *exec.Cmd) (string, string, error) {
-	var o, e bytes.Buffer
-	c.Stdout, c.Stderr = &o, &e
-	err := c.Run()
-	return o.String(), e.String(), err
-}
-
-func TestChmodSimple(t *testing.T) {
-	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodSimple")
+func TestChmod(t *testing.T) {
+	f, err := os.Create(filepath.Join(t.TempDir(), "tmpfile"))
 	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
+		t.Errorf("Failed to create tmp file, %v", err)
 	}
-	defer os.RemoveAll(tempDir)
-
-	f, err := ioutil.TempFile(tempDir, "BLAH1")
-	if err != nil {
-		t.Fatalf("cannot create temporary file: %v", err)
-	}
-	defer f.Close()
-
-	for k, v := range map[string]fileModeTrans{
-		"0777":       {before: 0000, after: 0777},
-		"0644":       {before: 0777, after: 0644},
-		"u-rwx":      {before: 0777, after: 0077},
-		"g-rx":       {before: 0777, after: 0727},
-		"a-xr":       {before: 0222, after: 0222},
-		"a-xw":       {before: 0666, after: 0444},
-		"u-xw":       {before: 0666, after: 0466},
-		"a=":         {before: 0777, after: 0000},
-		"u=":         {before: 0777, after: 0077},
-		"u-":         {before: 0777, after: 0777},
-		"o+":         {before: 0700, after: 0700},
-		"g=rx":       {before: 0777, after: 0757},
-		"u=rx":       {before: 0077, after: 0577},
-		"o=rx":       {before: 0077, after: 0075},
-		"u=xw":       {before: 0742, after: 0342},
-		"a-rwx":      {before: 0777, after: 0000},
-		"a-rx":       {before: 0777, after: 0222},
-		"a-x":        {before: 0777, after: 0666},
-		"o+rwx":      {before: 0000, after: 0007},
-		"a+rwx":      {before: 0000, after: 0777},
-		"a+xrw":      {before: 0000, after: 0777},
-		"a+xxxxxxxx": {before: 0000, after: 0111},
-		"o+xxxxx":    {before: 0000, after: 0001},
-		"a+rx":       {before: 0000, after: 0555},
-		"a+r":        {before: 0111, after: 0555},
-		"a=rwx":      {before: 0000, after: 0777},
-		"a=rx":       {before: 0000, after: 0555}} {
-		// Set up the 'before' state
-		err := os.Chmod(f.Name(), v.before)
-		if err != nil {
-			t.Fatalf("chmod(%q) failed: %v", f.Name(), err)
-		}
-
-		// Set permissions using chmod.
-		c := testutil.Command(t, k, f.Name())
-		err = c.Run()
-		if err != nil {
-			t.Fatalf("setting permissions failed: %v", err)
-		}
-
-		// Check that it worked.
-		checkPath(t, f.Name(), k, v)
-	}
-}
-
-func checkPath(t *testing.T, path string, instruction string, v fileModeTrans) {
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("stat(%q) failed: %v", path, err)
-	}
-	if got := info.Mode().Perm(); got != v.after {
-		t.Errorf("Wrong file permissions on %q: executed %s, before %0o, got %0o, want %0o", path, instruction, v.before, got, v.after)
-	}
-}
-
-func TestChmodRecursive(t *testing.T) {
-	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodRecursive")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	var targetDirectories []string
-	for _, dir := range []string{"L1_A", "L1_B", "L1_C",
-		filepath.Join("L1_A", "L2_A"),
-		filepath.Join("L1_A", "L2_B"),
-		filepath.Join("L1_A", "L2_C"),
-		filepath.Join("L1_B", "L2_A"),
-		filepath.Join("L1_B", "L2_B"),
-		filepath.Join("L1_B", "L2_C"),
-		filepath.Join("L1_C", "L2_A"),
-		filepath.Join("L1_C", "L2_B"),
-		filepath.Join("L1_C", "L2_C"),
-	} {
-		dir = filepath.Join(tempDir, dir)
-		err := os.Mkdir(dir, os.FileMode(0700))
-		if err != nil {
-			t.Fatalf("cannot create test directory: %v", err)
-		}
-		targetDirectories = append(targetDirectories, dir)
-	}
-
-	for k, v := range map[string]fileModeTrans{
-		"0707":      {before: 0755, after: 0707},
-		"0770":      {before: 0755, after: 0770},
-		"o-rwx":     {before: 0777, after: 0770},
-		"g-rx":      {before: 0777, after: 0727},
-		"a=rrrrrwx": {before: 0777, after: 0777},
-		"a+w":       {before: 0700, after: 0722},
-		"g+xr":      {before: 0700, after: 0750},
-		"a=rx":      {before: 0777, after: 0555}} {
-
-		// Set up the 'before' state
-		for _, dir := range targetDirectories {
-			err := os.Chmod(dir, v.before)
-			if err != nil {
-				t.Fatalf("chmod(%q) failed: %v", dir, err)
-			}
-		}
-
-		// Set permissions using chmod.
-		c := testutil.Command(t, "-R", k, tempDir)
-		err = c.Run()
-		if err != nil {
-			t.Fatalf("setting permissions failed: %v", err)
-		}
-
-		// Check that it worked.
-		for _, dir := range targetDirectories {
-			checkPath(t, dir, k, v)
-		}
-	}
-}
-
-func TestChmodReference(t *testing.T) {
-	// Temporary directories.
-	tempDir, err := ioutil.TempDir("", "TestChmodReference")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	sourceFile, err := ioutil.TempFile(tempDir, "BLAH1")
-	if err != nil {
-		t.Fatalf("cannot create temporary file: %v", err)
-	}
-	defer sourceFile.Close()
-
-	targetFile, err := ioutil.TempFile(tempDir, "BLAH2")
-	if err != nil {
-		t.Fatalf("cannot create temporary file: %v", err)
-	}
-	defer targetFile.Close()
-
-	for _, perm := range []os.FileMode{0777, 0644} {
-		err = os.Chmod(sourceFile.Name(), perm)
-		if err != nil {
-			t.Fatalf("chmod(%q) failed: %v", sourceFile.Name(), err)
-		}
-
-		// Set target file permissions using chmod.
-		c := testutil.Command(t,
-			"--reference",
-			sourceFile.Name(),
-			targetFile.Name())
-		err = c.Run()
-		if err != nil {
-			t.Fatalf("setting permissions failed: %v", err)
-		}
-
-		// Check that it worked.
-		info, err := os.Stat(targetFile.Name())
-		if err != nil {
-			t.Fatalf("stat(%q) failed: %v", targetFile.Name(), err)
-		}
-		if got := info.Mode().Perm(); got != perm {
-			t.Fatalf("Wrong file permissions on file %q: got %0o, want %0o",
-				targetFile.Name(), got, perm)
-		}
-	}
-}
-
-func TestInvocationErrors(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "TestInvocationErrors")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	f, err := ioutil.TempFile(tempDir, "BLAH1")
-	if err != nil {
-		t.Fatalf("cannot create temporary file: %v", err)
-	}
-	defer f.Close()
-
-	for _, v := range []struct {
-		args     []string
-		want     string
-		skipTo   int
-		skipFrom int
+	for _, tt := range []struct {
+		name       string
+		args       []string
+		recursive  bool
+		reference  string
+		modeBefore os.FileMode
+		modeAfter  os.FileMode
+		want       string
 	}{
-
 		{
-			args:     []string{f.Name()},
-			want:     "Usage",
-			skipTo:   0,
-			skipFrom: len("Usage"),
+			name: "len(args) < 1",
 		},
 		{
-			args:     []string{""},
-			want:     "Usage",
-			skipTo:   0,
-			skipFrom: len("Usage"),
+			name: "len(args) < 2 && *reference",
+			args: []string{"arg"},
 		},
 		{
-			args:     []string{"01777", f.Name()},
-			want:     "Invalid octal value 1777. Value should be less than or equal to 0777.\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name: "file does not exist",
+			args: []string{"g-rx", "filedoesnotexist"},
+			want: "stat filedoesnotexist: no such file or directory",
 		},
 		{
-			args:     []string{"0abas", f.Name()},
-			want:     "Unable to decode mode \"0abas\". Please use an octal value or a valid mode string.\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name: "Value should be less than or equal to 0777",
+			args: []string{"7777", f.Name()},
+			want: fmt.Sprintf("invalid octal value %0o. Value should be less than or equal to 0777", 0o7777),
 		},
 		{
-			args:     []string{"0777", "blah1234"},
-			want:     "chmod blah1234: no such file or directory\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name:       "mode 0777 correct",
+			args:       []string{"0777", f.Name()},
+			modeBefore: 0x000,
+			modeAfter:  0o777,
 		},
 		{
-			args:     []string{"a=9rwx", f.Name()},
-			want:     "Unable to decode mode \"a=9rwx\". Please use an octal value or a valid mode string.\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name:       "mode 0644 correct",
+			args:       []string{"0644", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o644,
 		},
 		{
-			args:     []string{"+r", f.Name()},
-			want:     "Unable to decode mode \"+r\". Please use an octal value or a valid mode string.\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name: "unable to decode mode",
+			args: []string{"a=9rwx", f.Name()},
+			want: fmt.Sprintf("unable to decode mode %q. Please use an octal value or a valid mode string", "a=9rwx"),
 		},
 		{
-			args:     []string{"a%rwx", f.Name()},
-			want:     "Unable to decode mode \"a%rwx\". Please use an octal value or a valid mode string.\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name:       "mode u-rwx correct",
+			args:       []string{"u-rwx", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o077,
 		},
 		{
-			args:     []string{"b=rwx", f.Name()},
-			want:     "Unable to decode mode \"b=rwx\". Please use an octal value or a valid mode string.\n",
-			skipTo:   20,
-			skipFrom: -1,
+			name:       "mode g-rx correct",
+			args:       []string{"g-rx", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o727,
+		},
+		{
+			name:       "mode a-xr correct",
+			args:       []string{"a-xr", f.Name()},
+			modeBefore: 0o222,
+			modeAfter:  0o222,
+		},
+		{
+			name:       "mode a-xw correct",
+			args:       []string{"a-xw", f.Name()},
+			modeBefore: 0o666,
+			modeAfter:  0o444,
+		},
+		{
+			name:       "mode u-xw correct",
+			args:       []string{"u-xw", f.Name()},
+			modeBefore: 0o666,
+			modeAfter:  0o466,
+		},
+		{
+			name:       "mode a= correct",
+			args:       []string{"a=", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o000,
+		},
+		{
+			name:       "mode u= correct",
+			args:       []string{"u=", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o077,
+		},
+		{
+			name:       "mode u- correct",
+			args:       []string{"u-", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o777,
+		},
+		{
+			name:       "mode o+ correct",
+			args:       []string{"o+", f.Name()},
+			modeBefore: 0o700,
+			modeAfter:  0o700,
+		},
+		{
+			name:       "mode g=rx correct",
+			args:       []string{"g=rx", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o757,
+		},
+		{
+			name:       "mode u=rx correct",
+			args:       []string{"u=rx", f.Name()},
+			modeBefore: 0o077,
+			modeAfter:  0o577,
+		},
+		{
+			name:       "mode o=rx correct",
+			args:       []string{"o=rx", f.Name()},
+			modeBefore: 0o077,
+			modeAfter:  0o075,
+		},
+		{
+			name:       "mode u=xw correct",
+			args:       []string{"u=xw", f.Name()},
+			modeBefore: 0o742,
+			modeAfter:  0o342,
+		},
+		{
+			name:       "mode a-rwx correct",
+			args:       []string{"a-rwx", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o000,
+		},
+		{
+			name:       "mode a-rx correct",
+			args:       []string{"a-rx", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o222,
+		},
+		{
+			name:       "mode a-x correct",
+			args:       []string{"a-x", f.Name()},
+			modeBefore: 0o777,
+			modeAfter:  0o666,
+		},
+		{
+			name:       "mode o+rwx correct",
+			args:       []string{"o+rwx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o007,
+		},
+		{
+			name:       "mode a+rwx correct",
+			args:       []string{"a+rwx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o777,
+		},
+		{
+			name:       "mode a+xrw correct",
+			args:       []string{"a+xrw", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o777,
+		},
+		{
+			name:       "mode a+xxxxxxxx correct",
+			args:       []string{"a+xxxxxxxx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o111,
+		},
+		{
+			name:       "mode o+xxxxx correct",
+			args:       []string{"o+xxxxx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o001,
+		},
+		{
+			name:       "mode a+rx correct",
+			args:       []string{"a+rx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o555,
+		},
+		{
+			name:       "mode a+r correct",
+			args:       []string{"a+r", f.Name()},
+			modeBefore: 0o111,
+			modeAfter:  0o555,
+		},
+		{
+			name:       "mode a=rwx correct",
+			args:       []string{"a=rwx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o777,
+		},
+		{
+			name:       "mode a=rx correct",
+			args:       []string{"a=rx", f.Name()},
+			modeBefore: 0o000,
+			modeAfter:  0o555,
+		},
+		{
+			name:      "bad reference file",
+			args:      []string{"a=rx", f.Name()},
+			reference: "filedoesnotexist",
+			want:      "bad reference file: stat filedoesnotexist: no such file or directory",
+		},
+		{
+			name:       "correct reference file",
+			args:       []string{f.Name()},
+			modeBefore: 0o222,
+			modeAfter:  0o222,
+			reference:  f.Name(),
+		},
+		{
+			name:      "bad filepath",
+			args:      []string{"a=rx", "pathdoes not exist"},
+			recursive: true,
+			want:      "chmod pathdoes not exist: no such file or directory",
+		},
+		{
+			name:       "correct path filepath",
+			args:       []string{"0777", f.Name()},
+			recursive:  true,
+			modeBefore: 0o777,
+			modeAfter:  0o777,
+			want:       "chmod pathdoes not exist: no such file or directory",
 		},
 	} {
-		cmd := testutil.Command(t, v.args...)
-		_, stderr, err := run(cmd)
-		if v.skipFrom == -1 {
-			v.skipFrom = len(stderr)
-		}
-		// Ignore the date and time because we're using Log.Fatalf
-		if got := stderr[v.skipTo:v.skipFrom]; got != v.want {
-			t.Errorf("Chmod for %q failed: got %q, want %q", v.args, got, v.want)
-		}
-		if err == nil {
-			t.Errorf("Chmod for %q failed: got nil want err", v.args)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			*recursive = tt.recursive
+			*reference = tt.reference
+			os.Chmod(f.Name(), tt.modeBefore)
+			mode, got := chmod(tt.args...)
+			if got != nil {
+				if got.Error() != tt.want {
+					t.Errorf("chmod() = %q, want: %q", got.Error(), tt.want)
+				}
+			} else {
+				if mode != tt.modeAfter {
+					t.Errorf("chmod() = %v, want: %v", mode, tt.modeAfter)
+				}
+			}
+		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

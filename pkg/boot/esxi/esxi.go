@@ -30,7 +30,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -99,10 +98,12 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 		err5, err6 error
 	)
 	if opts5 != nil {
-		img5, err5 = getBootImage(*opts5, device, 5, fmt.Sprintf("%s%d", device, 5))
+		name, _ := partNo(device, 5)
+		img5, err5 = getBootImage(*opts5, device, 5, name)
 	}
 	if opts6 != nil {
-		img6, err6 = getBootImage(*opts6, device, 6, fmt.Sprintf("%s%d", device, 6))
+		name, _ := partNo(device, 6)
+		img6, err6 = getBootImage(*opts6, device, 6, name)
 	}
 	if img5 == nil && img6 == nil {
 		return nil, fmt.Errorf("could not read boot configs on partition 5 (%v) or partition 6 (%v)", err5, err6)
@@ -123,7 +124,7 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 //
 // device will be mounted at mountPoint.
 func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
-	mountPoint, err := ioutil.TempDir("", "esxi-mount-")
+	mountPoint, err := os.MkdirTemp("", "esxi-mount-")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -163,7 +164,7 @@ func mountPartition(parentdev string, partition int) (*options, *mount.MountPoin
 		return nil, nil, err
 	}
 	base := filepath.Base(dev)
-	mountPoint, err := ioutil.TempDir("", fmt.Sprintf("%s-", base))
+	mountPoint, err := os.MkdirTemp("", fmt.Sprintf("%s-", base))
 	if err != nil {
 		return nil, nil, err
 	}

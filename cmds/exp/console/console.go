@@ -48,7 +48,6 @@ func main() {
 	}
 
 	in, out, err := console(*serial)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +64,7 @@ func main() {
 	go io.Copy(out, p.Ptm)
 
 	go func() {
-		var data = make([]byte, 1)
+		data := make([]byte, 1)
 		for {
 			if _, err := in.Read(data); err != nil {
 				fmt.Printf("kid stdin: done\n")

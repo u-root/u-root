@@ -1,4 +1,4 @@
-// Copyright 2020 the u-root Authors. All rights reserved
+// Copyright 2020-2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,7 +7,6 @@ package namespace
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock/v3"
-	"github.com/stretchr/testify/assert"
 )
 
 type args struct {
@@ -26,17 +24,17 @@ func newTestBuilder(name string) func(t minimock.Tester) *Builder {
 	return func(t minimock.Tester) *Builder {
 		wd, err := os.Getwd()
 		if err != nil {
-			t.Error(err)
+			t.Errorf(`os.Getwd() = _, %v, want nil`, err)
 			return nil
 		}
 		f, err := os.Open("testdata/" + name)
 		if err != nil {
-			t.Error(err)
+			t.Errorf(`os.Open("testdata/" + name) = _, %v, want nil`, err)
 			return nil
 		}
 		file, err := Parse(f)
 		if err != nil {
-			t.Error(err)
+			t.Errorf(`Parse(f) = _, %v, want nil`, err)
 			return nil
 		}
 		return &Builder{
@@ -48,18 +46,17 @@ func newTestBuilder(name string) func(t minimock.Tester) *Builder {
 }
 func mockNSBuilder(t minimock.Tester) args { return args{&noopNS{}} }
 func TestBuilder_buildNS(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		init    func(t minimock.Tester) *Builder
-		inspect func(r *Builder, t *testing.T) //inspects *Builder after execution of buildNS
+		inspect func(r *Builder, t *testing.T) // inspects *Builder after execution of buildNS
 
 		args func(t minimock.Tester) args
 
 		wantErr    bool
-		inspectErr func(err error, t *testing.T) //use for more precise error evaluation
+		inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 	}{}
-	files, err := ioutil.ReadDir("testdata")
+	files, err := os.ReadDir("testdata")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,12 +64,12 @@ func TestBuilder_buildNS(t *testing.T) {
 		tests = append(tests, struct {
 			name    string
 			init    func(t minimock.Tester) *Builder
-			inspect func(r *Builder, t *testing.T) //inspects *Builder after execution of buildNS
+			inspect func(r *Builder, t *testing.T) // inspects *Builder after execution of buildNS
 
 			args func(t minimock.Tester) args
 
 			wantErr    bool
-			inspectErr func(err error, t *testing.T) //use for more precise error evaluation
+			inspectErr func(err error, t *testing.T) // use for more precise error evaluation
 		}{
 			name:    file.Name(),
 			init:    newTestBuilder(file.Name()),
@@ -96,13 +93,12 @@ func TestBuilder_buildNS(t *testing.T) {
 			}
 
 			if tt.wantErr {
-				if assert.Error(t, err) && tt.inspectErr != nil {
+				if err != nil && tt.inspectErr != nil {
 					tt.inspectErr(err, t)
 				}
-			} else {
-				assert.NoError(t, err)
+			} else if err != nil {
+				t.Errorf(`receiver.buildNS(%v) = %v, want nil`, tArgs.ns, err)
 			}
-
 		})
 	}
 }

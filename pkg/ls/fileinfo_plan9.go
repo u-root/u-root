@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build plan9
 // +build plan9
 
 package ls
@@ -83,7 +84,6 @@ type LongStringer struct {
 
 // FileString implements Stringer.FileString.
 func (ls LongStringer) FileString(fi FileInfo) string {
-
 	var size string
 	if ls.Human {
 		size = humanize.Bytes(uint64(fi.Size))

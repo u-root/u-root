@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -19,7 +18,7 @@ func readGzip(r io.Reader) ([]byte, error) {
 		return nil, err
 	}
 	defer z.Close()
-	return ioutil.ReadAll(z)
+	return io.ReadAll(z)
 }
 
 // TryGzipFilter tries to read from an io.ReaderAt to see if it is a Gzip. If it is not, the

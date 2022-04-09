@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// This tag may be temporary. It depends on how much
+// u-root does with the packages it uses.
+
+//go:build !plan9
+// +build !plan9
+
 // stty is an stty command in Go.
 // It follows many of the conventions of standard stty.
 // However, it can produce JSON output, for later use, and can
@@ -52,7 +58,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -61,7 +66,6 @@ import (
 
 func main() {
 	t, err := termios.GTTY(0)
-
 	if err != nil {
 		log.Fatalf("termios.GTTY: %v", err)
 	}
@@ -75,7 +79,6 @@ func main() {
 		fmt.Printf("%v\n", t.String())
 	case "dump":
 		b, err := json.MarshalIndent(t, "", "\t")
-
 		if err != nil {
 			log.Fatalf("json marshal: %v", err)
 		}
@@ -84,7 +87,7 @@ func main() {
 		if len(os.Args) != 3 {
 			log.Fatalf("arg count")
 		}
-		b, err := ioutil.ReadFile(os.Args[2])
+		b, err := os.ReadFile(os.Args[2])
 		if err != nil {
 			log.Fatalf("stty load: %v", err)
 		}

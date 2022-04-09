@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 package main
@@ -35,8 +36,11 @@ var _ io.ReaderAt = &offsetReader{}
 // that absolute address is used unchanged.
 func (o *offsetReader) ReadAt(b []byte, i int64) (int, error) {
 	// This is the line that makes it "not a section reader".
+	debug("readat %#x base %#x %d bytes....", i, o.base, len(b))
 	i -= o.base
+	debug("\treadat %d bytes at %#x", len(b), i)
 	n, err := o.r.ReadAt(b, i)
+	debug("\t... i %#x n %d err %v", i, n, err)
 	if err != nil && err != io.EOF {
 		return n, fmt.Errorf("Reading at #%x for %d bytes: %v", i, len(b), err)
 	}
@@ -44,13 +48,19 @@ func (o *offsetReader) ReadAt(b []byte, i int64) (int, error) {
 }
 
 func mapit(f *os.File, addr int64, sz int) (io.ReaderAt, error) {
+	if addr+int64(size) > int64(0xffffffff) {
+		return nil, fmt.Errorf("cbmem tables can only be in 32-bit space and (%#x-%#x is outside it", addr, addr+int64(sz))
+	}
 	ba := (addr >> 12) << 12
 	basz := sz + int(addr-ba)
+	debug("Map %#x %#x", ba, basz)
+	// we are limited to 32 bits.
 	b, err := syscall.Mmap(int(f.Fd()), ba, basz, syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		return nil, fmt.Errorf("mmap %d bytes at %#x: %v", sz, addr, err)
 	}
 	off := int(addr - ba)
+	debug("new reader b len %d off %d off + size %d", len(b), off, off+sz)
 	return bytes.NewReader(b[off : off+sz]), nil
 }
 

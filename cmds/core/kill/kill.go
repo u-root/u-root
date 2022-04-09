@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
+// +build !plan9
+
 // Kill kills processes.
 //
 // Synopsis:
@@ -19,27 +22,27 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 )
 
 const eUsage = "Usage: kill -l | kill [<-s | --signal | -> <signame|signum>] pid [pid...]"
 
-func usage() {
-	die(eUsage)
+func usage(w io.Writer) {
+	fmt.Fprintf(w, "%s\n", eUsage)
 }
 
-func die(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg, args...)
-	fmt.Fprintf(os.Stderr, "\n")
-	os.Exit(1)
-}
-
-func main() {
-	op := os.Args[1]
-	pids := os.Args[2:]
+func killProcess(w io.Writer, args ...string) error {
+	if len(args) < 2 {
+		usage(w)
+		return nil
+	}
+	op := args[1]
+	pids := args[2:]
 	if op[0] != '-' {
 		op = defaultSignal
-		pids = os.Args[1:]
+		pids = args[1:]
 	}
 	// sadly, we can not use flag. Well, we could,
 	// it would be pretty cheap to just put in every
@@ -52,11 +55,12 @@ func main() {
 	// since signals on those systems are arbitrary strings.
 
 	if op[0:2] == "-l" {
-		if len(os.Args) > 2 {
-			usage()
+		if len(args) > 2 {
+			usage(w)
+			return nil
 		}
-		fmt.Print(siglist())
-		os.Exit(1)
+		fmt.Fprintf(w, "%s\n", siglist())
+		return nil
 	}
 
 	// N.B. Be careful if you want to change this. It has to continue to work if
@@ -64,24 +68,33 @@ func main() {
 	// has to start with a -, or might be preceded by -s or --string.
 
 	if op == "-s" || op == "--signal" {
-		if len(os.Args) < 3 {
-			usage()
+		if len(args) < 3 {
+			usage(w)
+			return nil
 		}
-		op = os.Args[2]
-		pids = os.Args[3:]
+		op = args[2]
+		pids = args[3:]
 	} else {
 		op = op[1:]
 	}
 
 	s, ok := signums[op]
 	if !ok {
-		die("%v is not a valid signal", op)
+		return fmt.Errorf("%v is not a valid signal", op)
 	}
 
 	if len(pids) < 1 {
-		usage()
+		usage(w)
+		return nil
 	}
 	if err := kill(s, pids...); err != nil {
-		die("Some processes could not be killed: %v", err)
+		return fmt.Errorf("some processes could not be killed: %v", err)
+	}
+	return nil
+}
+
+func main() {
+	if err := killProcess(os.Stdout, os.Args...); err != nil {
+		log.Fatal(err)
 	}
 }

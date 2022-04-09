@@ -405,8 +405,10 @@ func gencsum(b []byte) byte {
 	return ^csum + 1
 }
 
-const lengthOffset = 4
-const checksumOffset = 9
+const (
+	lengthOffset   = 4
+	checksumOffset = 9
+)
 
 func fixACPIHeader(b []byte) []byte {
 	binary.LittleEndian.PutUint16(b[lengthOffset:], uint16(len(b)))

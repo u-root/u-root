@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !plan9
 // +build !plan9
 
 package main
@@ -12,8 +13,8 @@ import (
 	"time"
 )
 
-func setDate(d string, z *time.Location) error {
-	t, err := getTime(z, d)
+func setDate(d string, z *time.Location, clocksource Clock) error {
+	t, err := getTime(z, d, clocksource)
 	if err != nil {
 		log.Fatalf("%v: %v", d, err)
 	}

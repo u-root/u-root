@@ -77,7 +77,6 @@ func init() {
 		fmt.Fprintf(os.Stderr, "%s]\n\n%s", ushort, ulong)
 		os.Exit(1)
 	}
-
 }
 
 // parseCBtable looks for a coreboot table in the range address, address + size - 1
@@ -150,7 +149,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				LB_TAG_PLATFORM_BLOB_VERSION:
 				s, err := bufio.NewReader(io.NewSectionReader(r, j, 65536)).ReadString(0)
 				if err != nil {
-					log.Fatalf("Trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
 				}
 				cbmem.StringVars[n] = s[:len(s)-1]
 			case LB_TAG_SERIAL:
@@ -211,11 +210,11 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				cbmem.MainBoard.Record = rec
 				v, err := bufio.NewReader(io.NewSectionReader(r, j+2, 65536)).ReadString(0)
 				if err != nil {
-					log.Fatalf("Trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
 				}
 				p, err := bufio.NewReader(io.NewSectionReader(r, j+2+int64(len(v)), 65536)).ReadString(0)
 				if err != nil {
-					log.Fatalf("Trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
 				}
 				cbmem.MainBoard.Vendor = v[:len(v)-1]
 				cbmem.MainBoard.PartNumber = p[:len(p)-1]
@@ -226,7 +225,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 
 				// "Nobody knew consoles could be so hard."
 			case LB_TAG_CBMEM_CONSOLE:
-				var c = &memconsoleEntry{Record: rec}
+				c := &memconsoleEntry{Record: rec}
 				debug("    Found cbmem console(%#x), %d byte record.\n", rec, c.Size)
 				if err := readOne(r, &c.Address, j); err != nil {
 					return nil, found, err
@@ -238,38 +237,57 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				// u32 cursor;
 				// u8  body[0];
 				// The cbmem size is a guess.
-				cr, err := newOffsetReader(f, cbcons, 1048576)
+				cr, err := newOffsetReader(f, cbcons, 8)
 				if err != nil {
 					return nil, found, err
 				}
-
 				if err := readOne(cr, &c.Size, cbcons); err != nil {
 					return nil, found, err
 				}
+
 				cbcons += int64(reflect.TypeOf(c.Size).Size())
 				if err := readOne(cr, &c.Cursor, cbcons); err != nil {
 					return nil, found, err
 				}
 				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
 				debug("CSize is %#x, and Cursor is at %#x", c.CSize, c.Cursor)
-				//p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
-				curse := c.Cursor & CBMC_CURSOR_MASK
-				sz := c.Size
-				if (c.Cursor&CBMC_OVERFLOW) == 0 && curse < c.Size {
-					sz = curse
-				}
+				// p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
+				sz := int(c.Size)
 
-				debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
-				data := make([]byte, sz)
-				if err := readOne(cr, data, cbcons); err != nil {
+				cr, err = newOffsetReader(f, cbcons, sz)
+				if err != nil {
 					return nil, found, err
 				}
-				if (c.Cursor & CBMC_OVERFLOW) != 0 {
+
+				curse := int(c.Cursor & CBMC_CURSOR_MASK)
+				data := make([]byte, sz)
+				// This one is easy. Read from 0 to the cursor.
+				if c.Cursor&CBMC_OVERFLOW == 0 {
+					if curse < int(c.Size) {
+						sz = curse
+						data = data[:sz]
+					}
+
+					debug("CSize is %d, and Cursor is at %d", c.CSize, c.Cursor)
+
+					if n, err := cr.ReadAt(data, cbcons); err != nil || n != len(data) {
+						return nil, found, err
+					}
+				} else {
+					debug("CSize is %#x, and Cursor is at %#x", curse, sz)
+					// This should not happen, but that means that it WILL happen
+					// some day ...
 					if curse > sz {
-						log.Printf("cursor is %d, and size is %d: things could be bad", curse, sz)
 						curse = 0
 					}
-					data = append(data[curse:], data[:curse]...)
+					off := cbcons + int64(curse)
+					if n, err := cr.ReadAt(data[:curse], off); err != nil || n != len(data[:curse]) {
+						return nil, found, err
+					}
+					if n, err := cr.ReadAt(data[curse:], cbcons); err != nil || n != len(data[curse:]) {
+						debug("2nd read: %v", err)
+						return nil, found, err
+					}
 				}
 
 				c.Data = string(data)
@@ -286,11 +304,11 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				if n, ok := tagNames[rec.Tag]; ok {
 					debug("Ignoring record %v", n)
 					cbmem.Ignored = append(cbmem.Ignored, n)
-					break
+					j = start + int64(rec.Size)
+					continue
 				}
 				log.Printf("Unknown tag record %v %#x", rec, rec.Tag)
 				cbmem.Unknown = append(cbmem.Unknown, rec.Tag)
-				break
 
 			}
 			j = start + int64(rec.Size)
@@ -351,14 +369,11 @@ func DumpMem(f *os.File, cbmem *CBmem, hexdump bool, w io.Writer) error {
 	return nil
 }
 
-//go:generate go run gen/gen.go -apu2
-
-func main() {
+func cbMem(w io.Writer) error {
 	var err error
-	flag.Parse()
 	if version {
-		fmt.Println("cbmem in Go, including JSON output")
-		os.Exit(0)
+		fmt.Fprintln(w, "cbmem in Go, including JSON output")
+		return err
 	}
 	if verbose {
 		debug = log.Printf
@@ -366,33 +381,37 @@ func main() {
 
 	f, err := os.Open(*mem)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var cbmem *CBmem
 	var found bool
 	for _, addr := range []int64{0, 0xf0000} {
-		if cbmem, found, err = parseCBtable(f, addr, 0x10000); found {
+		cbmem, found, err = parseCBtable(f, addr, 0x10000)
+		if err != nil {
+			return err
+		}
+		if found {
 			break
 		}
 	}
 	if err != nil {
-		log.Fatalf("Reading coreboot table: %v", err)
+		return fmt.Errorf("reading coreboot table: %v", err)
 	}
 	if !found {
-		log.Fatalf("No coreboot table found")
+		return fmt.Errorf("no coreboot table found")
 	}
 
 	if timestamps {
 		ts := cbmem.TimeStamps
 
 		// Format in tab-separated columns with a tab stop of 8.
-		w := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
+		tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
 		freq := uint64(ts.TickFreqMHZ)
 		debug("ts %#x freq %#x stamps %#x\n", ts, freq, ts.TS)
 		prev := ts.TS[0].EntryStamp
 		p := message.NewPrinter(language.English)
-		p.Fprintf(w, "%d entries total:\n\n", len(ts.TS))
+		p.Fprintf(tw, "%d entries total:\n\n", len(ts.TS))
 		for _, t := range ts.TS {
 			n, ok := TimeStampNames[t.EntryID]
 			if !ok {
@@ -400,18 +419,18 @@ func main() {
 			}
 			cur := t.EntryStamp
 			debug("cur %#x cur / freq %#x", cur, cur/freq)
-			p.Fprintf(w, "\t%d:%s\t%d (%d)\n", t.EntryID, n, cur/freq, (cur-prev)/freq)
+			p.Fprintf(tw, "\t%d:%s\t%d (%d)\n", t.EntryID, n, cur/freq, (cur-prev)/freq)
 			prev = cur
 
 		}
-		w.Flush()
+		tw.Flush()
 	}
 	if dumpJSON {
 		b, err := json.MarshalIndent(cbmem, "", "\t")
 		if err != nil {
-			log.Fatalf("json marshal: %v", err)
+			return fmt.Errorf("json marshal: %v", err)
 		}
-		fmt.Printf("%s\n", b)
+		fmt.Fprintf(w, "%s\n", b)
 	}
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
@@ -419,8 +438,16 @@ func main() {
 		DumpMem(f, cbmem, hexdump, os.Stdout)
 	}
 	if console && cbmem.MemConsole != nil {
-		//fmt.Printf("Console is %d bytes and cursor is at %d\n", len(cbmem.MemConsole.Data), cbmem.MemConsole.Cursor)
-		fmt.Printf("%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])
+		fmt.Fprintf(w, "%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])
 	}
+	return err
+}
 
+//go:generate go run gen/gen.go -apu2
+
+func main() {
+	flag.Parse()
+	if err := cbMem(os.Stdout); err != nil {
+		log.Fatal(err)
+	}
 }

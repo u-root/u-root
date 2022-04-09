@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 package main
@@ -38,7 +39,7 @@ type TimeStamps struct {
 	TS []TS
 }
 
-// Header is the comment cbmem header.
+// Header is the common cbmem header.
 type Header struct {
 	Signature    [4]uint8
 	HeaderSz     uint32
@@ -64,6 +65,7 @@ type memoryRange struct {
 	Size  uint64
 	Mtype uint32
 }
+
 type memoryEntry struct {
 	Record
 	Maps []memoryRange
@@ -100,6 +102,7 @@ type timeStampTableEntry struct {
 	Record
 	TimeStampTable uint32
 }
+
 type serialEntry struct {
 	Record
 	Type     uint32
@@ -115,10 +118,12 @@ type memconsoleEntry struct {
 	Cursor  uint32
 	Data    string
 }
+
 type forwardEntry struct {
 	Record
 	Forward uint64
 }
+
 type framebufferEntry struct {
 	Record
 	PhysicalAddress  uint64

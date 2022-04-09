@@ -7,6 +7,7 @@ package cpio
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/ls"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 // A Recorder is a structure that contains variables used to calculate
@@ -73,14 +75,20 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		return err
 	}
 
-	f.Name = filepath.Clean(filepath.Join(rootDir, f.Name))
+	f.Name, err = upath.SafeFilepathJoin(rootDir, f.Name)
+	if err != nil {
+		// The behavior is to skip files which are unsafe due to
+		// zipslip, but continue extracting everything else.
+		log.Printf("Warning: Skipping file %q due to: %v", f.Name, err)
+		return nil
+	}
 	dir := filepath.Dir(f.Name)
 	// The problem: many cpio archives do not specify the directories and
 	// hence the permissions. They just specify the whole path.  In order
 	// to create files in these directories, we have to make them at least
 	// mode 755.
 	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("CreateFileInRoot %q: %v", f.Name, err)
 		}
 	}

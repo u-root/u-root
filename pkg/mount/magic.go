@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 package mount
@@ -11,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 const blocksize = 65536
@@ -23,10 +26,15 @@ var (
 	EXT3     = []byte{0x53, 0xef}
 	EXT4     = []byte{0x53, 0xef}
 	ISOFS    = []byte{1, 'C', 'D', '0', '0', '1'}
-	MSDOS    = []byte{0xeb, 0x3c}
 	SQUASHFS = []byte{'h', 's', 'q', 's'}
-	VFAT     = []byte{0xeb, 0x58}
 	XFS      = []byte{'X', 'F', 'S', 'B'}
+	// There's no fixed magic number for the different FAT varieties
+	// Usually they start with 0xEB but it's not mandatory.
+	// Therefore we just list a few examples that we have seen in the wild.
+	MSDOS = []byte{0xeb, 0x3c}
+	VFAT  = []byte{0xeb, 0x58}
+	// QEMU virtual VFAT
+	VVFAT = []byte{0xeb, 0x3e}
 
 	AAFS        = []byte{0x5a, 0x3c, 0x69, 0xf0}
 	ADFS        = []byte{0xad, 0xf5}
@@ -49,7 +57,7 @@ var (
 	EFIVARFS    = []byte{0xde, 0x5e, 0x81, 0xe4}
 	EFS         = []byte{0x41, 0x4A, 0x53}
 	// EXFAT seems to be a samsung file system.
-	//EXFAT       = []byte{0x53, 0xef}
+	// EXFAT       = []byte{0x53, 0xef}
 	F2FS      = []byte{0xF2, 0xF5, 0x20, 0x10}
 	FUSE      = []byte{0x65, 0x73, 0x55, 0x46}
 	FUTEXFS   = []byte{0xBA, 0xD1, 0xDE, 0xA}
@@ -119,6 +127,7 @@ var magics = []magic{
 	{magic: SQUASHFS, name: "squashfs", flags: MS_RDONLY, off: 0},
 	{magic: ISOFS, name: "iso9660", flags: MS_RDONLY, off: 32768},
 	{magic: VFAT, name: "vfat", off: 0},
+	{magic: VVFAT, name: "vfat", off: 0},
 	{magic: XFS, name: "xfs", off: 0},
 }
 
@@ -164,10 +173,10 @@ var unknownMagics = []magic{
 
 // FindMagics finds all the magics matching a magic number.
 func FindMagics(blk []byte) []magic {
-	var b = bytes.NewReader(blk)
-	var matches = []magic{}
+	b := bytes.NewReader(blk)
+	matches := []magic{}
 	for _, v := range magics {
-		var mag = make([]byte, len(v.magic))
+		mag := make([]byte, len(v.magic))
 		if n, err := b.ReadAt(mag, v.off); err != nil || n < len(mag) {
 			continue
 		}
@@ -192,7 +201,7 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		return "", 0, err
 	}
 	defer f.Close()
-	var block = make([]byte, blocksize)
+	block := make([]byte, blocksize)
 	if _, err := io.ReadAtLeast(f, block, len(block)); err != nil {
 		return "", 0, fmt.Errorf("no suitable filesystem for %q: %v", n, err)
 	}
@@ -208,4 +217,16 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		}
 	}
 	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", n, magics)
+}
+
+// IsTmpRamfs tells if the file path given is under a tmpfs or ramfs.
+func IsTmpRamfs(path string) (bool, error) {
+	var s unix.Statfs_t
+	if err := unix.Statfs(path, &s); err != nil {
+		return false, err
+	}
+	// Force it to be int64 so that unix.RAMFS_MAGIC won't overflow on an
+	// int32, which is the type for Type on some platforms.
+	t := int64(s.Type)
+	return t == unix.TMPFS_MAGIC || t == unix.RAMFS_MAGIC, nil
 }

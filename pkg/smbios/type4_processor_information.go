@@ -45,6 +45,10 @@ type ProcessorInfo struct {
 
 // ParseProcessorInfo parses a generic Table into ProcessorInfo.
 func ParseProcessorInfo(t *Table) (*ProcessorInfo, error) {
+	return parseProcessorInfo(parseStruct, t)
+}
+
+func parseProcessorInfo(parseFn parseStructure, t *Table) (*ProcessorInfo, error) {
 	if t.Type != TableTypeProcessorInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
 	}
@@ -52,7 +56,7 @@ func ParseProcessorInfo(t *Table) (*ProcessorInfo, error) {
 		return nil, errors.New("required fields missing")
 	}
 	pi := &ProcessorInfo{Table: *t}
-	_, err := parseStruct(t, 0 /* off */, false /* complete */, pi)
+	_, err := parseFn(t, 0 /* off */, false /* complete */, pi)
 	if err != nil {
 		return nil, err
 	}

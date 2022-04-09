@@ -55,7 +55,7 @@ const VpdBmcBootOrderOverride = "bmc_bootorder_override"
 var bmcBootOverride bool
 
 // Product list for running IPMI OEM commands
-var productList = [3]string{"Tioga Pass", "Mono Lake", "Delta Lake"}
+var productList = [5]string{"Tioga Pass", "Mono Lake", "Delta Lake", "Crater Lake", "S9S"}
 
 var selRecorded bool
 
@@ -92,7 +92,7 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 		if err = cmosClear(); err != nil {
 			return err
 		}
-		if err = ocp.ClearRwVpd(); err != nil {
+		if err = vpd.ClearRwVpd(); err != nil {
 			return err
 		}
 

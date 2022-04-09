@@ -26,8 +26,8 @@ import (
 
 	"github.com/insomniacslk/dhcp/iana"
 	"github.com/insomniacslk/dhcp/rfc1035label"
-	"github.com/u-root/u-root/pkg/rand"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/rand"
+	"github.com/u-root/uio/uio"
 )
 
 const (
@@ -134,8 +134,7 @@ func GenerateTransactionID() (TransactionID, error) {
 
 // New creates a new DHCPv4 structure and fill it up with default values. It
 // won't be a valid DHCPv4 message so you will need to adjust its fields.
-// See also NewDiscovery, NewOffer, NewRequest, NewAcknowledge, NewInform and
-// NewRelease .
+// See also NewDiscovery, NewRequest, NewAcknowledge, NewInform and NewRelease.
 func New(modifiers ...Modifier) (*DHCPv4, error) {
 	xid, err := GenerateTransactionID()
 	if err != nil {
@@ -233,22 +232,13 @@ func NewInform(hwaddr net.HardwareAddr, localIP net.IP, modifiers ...Modifier) (
 
 // NewRequestFromOffer builds a DHCPv4 request from an offer.
 func NewRequestFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
-	// find server IP address
-	serverIP := offer.ServerIdentifier()
-	if serverIP == nil {
-		if offer.ServerIPAddr == nil || offer.ServerIPAddr.IsUnspecified() {
-			return nil, fmt.Errorf("missing Server IP Address in DHCP Offer")
-		}
-		serverIP = offer.ServerIPAddr
-	}
-
 	return New(PrependModifiers(modifiers,
 		WithReply(offer),
 		WithMessageType(MessageTypeRequest),
-		WithServerIP(serverIP),
 		WithClientIP(offer.ClientIPAddr),
 		WithOption(OptRequestedIPAddress(offer.YourIPAddr)),
-		WithOption(OptServerIdentifier(serverIP)),
+		// This is usually the server IP.
+		WithOptionCopied(offer, OptionServerIdentifier),
 		WithRequestedOptions(
 			OptionSubnetMask,
 			OptionRouter,

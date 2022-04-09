@@ -34,7 +34,6 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -113,7 +112,7 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 	if err := os.RemoveAll(bbDir); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(bbDir, 0755); err != nil {
+	if err := os.MkdirAll(bbDir, 0o755); err != nil {
 		return err
 	}
 
@@ -146,8 +145,12 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 		seenPackages[basePkg] = true
 
 		// TODO: use bbDir to derive import path below or vice versa.
-		if err := RewritePackage(env, pkg, "github.com/u-root/u-root/pkg/bb/bbmain", importer); err != nil {
+		ok, err := RewritePackage(env, pkg, "github.com/u-root/u-root/pkg/bb/bbmain", importer)
+		if err != nil {
 			return err
+		}
+		if !ok {
+			continue
 		}
 
 		bbPackages = append(bbPackages, path.Join(pkg, ".bb"))
@@ -272,7 +275,7 @@ func ParseAST(files []string) (*token.FileSet, *ast.Package, error) {
 
 	// Did we parse anything?
 	if len(p.Files) == 0 {
-		return nil, nil, fmt.Errorf("no valid `main` package files found in %v", files)
+		return nil, nil, nil
 	}
 	return fset, p, nil
 }
@@ -289,23 +292,26 @@ func SrcFiles(p *build.Package) []string {
 // RewritePackage rewrites pkgPath to be bb-mode compatible, where destDir is
 // the file system destination of the written files and bbImportPath is the Go
 // import path of the bb package to register with.
-func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer types.Importer) error {
+func RewritePackage(env golang.Environ, pkgPath, bbImportPath string, importer types.Importer) (bool, error) {
 	buildp, err := env.Package(pkgPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	p, err := NewPackage(filepath.Base(buildp.Dir), buildp.ImportPath, SrcFiles(buildp), importer)
 	if err != nil {
-		return err
+		return false, err
+	}
+	if p == nil {
+		return false, nil
 	}
 	dest := filepath.Join(buildp.Dir, ".bb")
 	// If .bb directory already exists, delete it. This will prevent stale
 	// files from being included in the build.
 	if err := os.RemoveAll(dest); err != nil {
-		return fmt.Errorf("error removing stale directory %q: %v", dest, err)
+		return false, fmt.Errorf("error removing stale directory %q: %v", dest, err)
 	}
-	return p.Rewrite(dest, bbImportPath)
+	return true, p.Rewrite(dest, bbImportPath)
 }
 
 // NewPackage gathers AST, type, and token information about a command.
@@ -315,6 +321,10 @@ func NewPackage(name string, pkgPath string, srcFiles []string, importer types.I
 	fset, astp, err := ParseAST(srcFiles)
 	if err != nil {
 		return nil, err
+	}
+
+	if fset == nil {
+		return nil, nil
 	}
 
 	p := &Package{
@@ -487,7 +497,7 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 // Rewrite rewrites p into destDir as a bb package using bbImportPath for the
 // bb implementation.
 func (p *Package) Rewrite(destDir, bbImportPath string) error {
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return err
 	}
 
@@ -588,7 +598,7 @@ func writeGoFile(path string, code []byte) error {
 		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
 	}
 
-	if err := ioutil.WriteFile(path, code, 0644); err != nil {
+	if err := os.WriteFile(path, code, 0o644); err != nil {
 		return fmt.Errorf("error writing Go file to %q: %v", path, err)
 	}
 	return nil

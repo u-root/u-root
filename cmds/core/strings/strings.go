@@ -19,6 +19,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -26,9 +27,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var (
-	n = flag.Int("n", 4, "the minimum string length")
-)
+var n = flag.Int("n", 4, "the minimum string length")
 
 func asciiIsPrint(char byte) bool {
 	return char >= 32 && char <= 126
@@ -77,9 +76,12 @@ func stringsFile(file string, w io.Writer) error {
 	return stringsIO(rb, w)
 }
 
-func strings(files []string, w io.Writer) error {
+func strings(w io.Writer, r io.Reader, files ...string) error {
+	if *n < 1 {
+		return fmt.Errorf("strings: invalid minimum string length %v", *n)
+	}
 	if len(files) == 0 {
-		rb := bufio.NewReader(os.Stdin)
+		rb := bufio.NewReader(r)
 		if err := stringsIO(rb, w); err != nil {
 			return err
 		}
@@ -94,16 +96,7 @@ func strings(files []string, w io.Writer) error {
 
 func main() {
 	flag.Parse()
-
-	if *n < 1 {
-		log.Fatalf("strings: invalid minimum string length %v", *n)
-	}
-
-	// Buffer reduces number of syscalls.
-	wb := bufio.NewWriter(os.Stdout)
-	defer wb.Flush()
-
-	if err := strings(flag.Args(), wb); err != nil {
+	if err := strings(os.Stdout, os.Stdin, flag.Args()...); err != nil {
 		log.Fatalf("strings: %v", err)
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
 	"os"
 
 	"golang.org/x/crypto/ed25519"
@@ -23,14 +22,14 @@ var (
 	// PEMCipher is the PEM encryption algorithm
 	PEMCipher = x509.PEMCipherAES256
 	// PubKeyFilePermissions are the public key file perms
-	PubKeyFilePermissions os.FileMode = 0644
+	PubKeyFilePermissions os.FileMode = 0o644
 	// PrivKeyFilePermissions are the private key file perms
-	PrivKeyFilePermissions os.FileMode = 0600
+	PrivKeyFilePermissions os.FileMode = 0o600
 )
 
 // LoadPublicKeyFromFile loads PEM formatted ED25519 public key from file.
 func LoadPublicKeyFromFile(publicKeyPath string) ([]byte, error) {
-	x509PEM, err := ioutil.ReadFile(publicKeyPath)
+	x509PEM, err := os.ReadFile(publicKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +51,7 @@ func LoadPublicKeyFromFile(publicKeyPath string) ([]byte, error) {
 
 // LoadPrivateKeyFromFile loads PEM formatted ED25519 private key from file.
 func LoadPrivateKeyFromFile(privateKeyPath string, password []byte) ([]byte, error) {
-	x509PEM, err := ioutil.ReadFile(privateKeyPath)
+	x509PEM, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -88,12 +87,12 @@ func GeneratED25519Key(password []byte, privateKeyFilePath string, publicKeyFile
 		return err
 	}
 
-	var privBlock = &pem.Block{
+	privBlock := &pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: privKey,
 	}
 
-	var pubBlock = &pem.Block{
+	pubBlock := &pem.Block{
 		Type:  "PUBLIC KEY",
 		Bytes: pubKey,
 	}
@@ -109,9 +108,9 @@ func GeneratED25519Key(password []byte, privateKeyFilePath string, publicKeyFile
 		privateKey = pem.EncodeToMemory(privBlock)
 	}
 
-	if err := ioutil.WriteFile(privateKeyFilePath, privateKey, PrivKeyFilePermissions); err != nil {
+	if err := os.WriteFile(privateKeyFilePath, privateKey, PrivKeyFilePermissions); err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(publicKeyFilePath, pem.EncodeToMemory(pubBlock), PubKeyFilePermissions)
+	return os.WriteFile(publicKeyFilePath, pem.EncodeToMemory(pubBlock), PubKeyFilePermissions)
 }

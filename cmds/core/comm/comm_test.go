@@ -5,82 +5,121 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var commTests = []struct {
-	flags []string
-	in1   string
-	in2   string
-	out   string
-}{
-	{
-		// Empty files
-		flags: []string{},
-		in1:   "",
-		in2:   "",
-		out:   "",
-	}, {
-		// Equal files
-		flags: []string{},
-		in1:   "Line1\nlIne2\nline2\nline3",
-		in2:   "Line1\nlIne2\nline2\nline3",
-		out:   "\t\tLine1\n\t\tlIne2\n\t\tline2\n\t\tline3\n",
-	}, {
-		// Empty file 1
-		flags: []string{},
-		in1:   "",
-		in2:   "Line1\nlIne2\n",
-		out:   "\tLine1\n\tlIne2\n",
-	}, {
-		// Empty file 2
-		flags: []string{},
-		in1:   "Line1\nlIne2\n",
-		in2:   "",
-		out:   "Line1\nlIne2\n",
-	}, {
-		// Mix of matchine lines
-		flags: []string{},
-		in1:   "1\n3\n5\n",
-		in2:   "2\n3\n4\n",
-		out:   "1\n\t2\n\t\t3\n\t4\n5\n",
-	},
-}
-
-// TestComm implements a table-drivent test.
 func TestComm(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "comm")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	for _, test := range commTests {
-		// Write inputs into the two files
-		var files [2]string
-		for i, contents := range []string{test.in1, test.in2} {
-			files[i] = filepath.Join(tmpDir, fmt.Sprintf("txt%d", i))
-			if err := ioutil.WriteFile(files[i], []byte(contents), 0600); err != nil {
-				t.Fatalf("Failed to create test file %d: %v", i, err)
+	tmpdir := t.TempDir()
+	for _, tt := range []struct {
+		name  string
+		args  []string
+		file1 string
+		file2 string
+		s1    bool
+		s2    bool
+		s3    bool
+		help  bool
+		want  string
+	}{
+		{
+			name: "only one arguement",
+			args: []string{"onearg"},
+			want: ErrUsage.Error(),
+		},
+		{
+			name: "help flag",
+			args: []string{"firstarg", "secondarg"},
+			help: true,
+			want: ErrUsage.Error(),
+		},
+		{
+			name: "first file failed to open",
+			args: []string{"firstarg", "secondarg"},
+			want: "can't open firstarg: open firstarg: no such file or directory",
+		},
+		{
+			name: "second file failed to open",
+			args: []string{filepath.Join(tmpdir, "file1"), "secondarg"},
+			want: "can't open secondarg: open secondarg: no such file or directory",
+		},
+		{
+			name:  "comm case s1 > s2",
+			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1: "line1\nline2\nline3\n",
+			file2: "line1\nline2\nline4\n",
+			want:  "\t\tline1\n\t\tline2\nline3\n\tline4\n",
+		},
+		{
+			name:  "comm case s1 < s2",
+			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1: "line1\nline2\nline4\n",
+			file2: "line1\nline2\nline3\n",
+			want:  "\t\tline1\n\t\tline2\n\tline3\nline4\n",
+		},
+		{
+			name:  "comm flag s1 true",
+			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1: "line1\nline2\nline4\n",
+			file2: "line1\nline2\nline3\n",
+			s1:    true,
+			want:  "\t\tline1\n\t\tline2\n\tline3\n",
+		},
+		{
+			name:  "comm flag s2 true",
+			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1: "line1\nline2\nline4\n",
+			file2: "line1\nline2\nline3\n",
+			s2:    true,
+			want:  "\t\tline1\n\t\tline2\nline4\n",
+		},
+		{
+			name:  "comm flag s3 true",
+			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1: "line1\nline2\nline4\n",
+			file2: "line1\nline2\nline3\n",
+			s3:    true,
+			want:  "\tline3\nline4\n",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create files
+			file1, err := os.Create(filepath.Join(tmpdir, "file1"))
+			if err != nil {
+				t.Errorf("failed to create file1: %v", err)
 			}
-		}
+			file2, err := os.Create(filepath.Join(tmpdir, "file2"))
+			if err != nil {
+				t.Errorf("failed to create file2: %v", err)
+			}
+			// Write data in file that should be compared
+			_, err = file1.WriteString(tt.file1)
+			if err != nil {
+				t.Errorf("failed to write to file1: %v", err)
+			}
+			_, err = file2.WriteString(tt.file2)
+			if err != nil {
+				t.Errorf("failed to write to file2: %v", err)
+			}
 
-		cmd := testutil.Command(t, append(test.flags, files[0], files[1])...)
+			// Setting flags
+			*s1 = tt.s1
+			*s2 = tt.s2
+			*s3 = tt.s3
+			*help = tt.help
 
-		if output, err := cmd.CombinedOutput(); err != nil {
-			t.Errorf("Comm exited with error: %v; output:\n%s", err, string(output))
-		} else if string(output) != test.out {
-			t.Errorf("Fail: want\n %#v\n got\n %#v", test.out, string(output))
-		}
+			buf := &bytes.Buffer{}
+			if got := comm(buf, tt.args...); got != nil {
+				if got.Error() != tt.want {
+					t.Errorf("comm() = %q, want: %q", got.Error(), tt.want)
+				}
+			} else {
+				if buf.String() != tt.want {
+					t.Errorf("comm() = %q, want: %q", buf.String(), tt.want)
+				}
+			}
+		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

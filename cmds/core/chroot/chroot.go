@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !windows !plan9
+//go:build !windows && !plan9
 
 package main
 
@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -23,6 +24,8 @@ type userSpec struct {
 	uid uint32
 	gid uint32
 }
+
+var defaults = "  -g value\n  	specify supplementary group ids as g1,g2,..,gN\n  -s	Use this option to not changethe working directory to / after changing the root directory to newroot, i.e., inside the chroot. This option is only permitted when newroot is the old / directory.\n  -u value\n    	specify user and group (ID only) as USER:GROUP (default 1000:1000)"
 
 func (u *userSpec) Set(s string) error {
 	var err error
@@ -126,14 +129,6 @@ func parseCommand(args []string) []string {
 	return []string{"/bin/sh", "-i"}
 }
 
-func parseRoot(args []string) (root string, err error) {
-	if len(args) < 1 {
-		return "", fmt.Errorf("missing operand")
-	}
-
-	return filepath.Abs(args[0])
-}
-
 func isRoot(dir string) (bool, error) {
 	realPath, err := filepath.EvalSymlinks(dir)
 	if err != nil {
@@ -149,39 +144,35 @@ func isRoot(dir string) (bool, error) {
 	return false, nil
 }
 
-func main() {
+func chroot(w io.Writer, args ...string) (err error) {
 	var (
 		newRoot   string
 		isOldroot bool
-		err       error
 	)
-
-	flag.Parse()
-
-	if flag.NFlag() == 0 && flag.NArg() == 0 {
-		flag.PrintDefaults()
-		os.Exit(1)
+	if len(args) == 0 {
+		fmt.Fprint(w, defaults)
+		return nil
 	}
 
-	newRoot, err = parseRoot(flag.Args())
+	newRoot, err = filepath.Abs(args[0])
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	isOldroot, err = isRoot(newRoot)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if !skipchdirFlag {
 		err = os.Chdir(newRoot)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else if !isOldroot {
-		log.Fatal("The -s option is only permitted when newroot is the old / directory")
+		return fmt.Errorf("the -s option is only permitted when newroot is the old / directory")
 	}
 
-	argv := parseCommand(flag.Args())
+	argv := parseCommand(args)
 
 	cmd := exec.Command(argv[0], argv[1:]...)
 
@@ -196,6 +187,14 @@ func main() {
 	}
 
 	if err = cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := chroot(os.Stdout, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -12,7 +12,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 // Opts contains options for creating and extracting tar files.
@@ -26,6 +27,10 @@ type Opts struct {
 	// to include all sub-directories. Set to true to prevent this
 	// behavior.
 	NoRecursion bool
+
+	// Change to this directory before any operations. This is equivalent
+	// to "tar -C DIR".
+	ChangeDirectory string
 }
 
 // passesFilters returns true if the given file passes all filters, false otherwise.
@@ -39,8 +44,7 @@ func passesFilters(hdr *tar.Header, filters []Filter) bool {
 }
 
 // applyToArchive applies function f to all files in the given archive
-func applyToArchive(
-	tarFile io.Reader, f func(tr *tar.Reader, hdr *tar.Header) error) error {
+func applyToArchive(tarFile io.Reader, f func(tr *tar.Reader, hdr *tar.Header) error) error {
 	tr := tar.NewReader(tarFile)
 	for {
 		hdr, err := tr.Next()
@@ -71,6 +75,11 @@ func ExtractDir(tarFile io.Reader, dir string, opts *Opts) error {
 		opts = &Opts{}
 	}
 
+	// Simulate a "cd" to another directory.
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(opts.ChangeDirectory, dir)
+	}
+
 	fi, err := os.Stat(dir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(dir, os.ModePerm); err != nil {
@@ -95,7 +104,20 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 	}
 
 	tw := tar.NewWriter(tarFile)
-	for _, file := range files {
+	for _, bFile := range files {
+		// Simulate a "cd" to another directory. There are 3 parts to
+		// the file path:
+		// a) The path passed to ChangeDirectory
+		// b) The path passed in files
+		// c) The path in the current walk
+		// I prefixed corresponding a/b/c onto the variable name as an
+		// aid. For example abFile is the filepath of a+b.
+		abFile := filepath.Join(opts.ChangeDirectory, bFile)
+		if filepath.IsAbs(bFile) {
+			// "cd" does nothing if the file is absolute.
+			abFile = bFile
+		}
+
 		walk := filepath.Walk
 		if opts.NoRecursion {
 			// This "walk" function does not recurse.
@@ -105,20 +127,33 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 			}
 		}
 
-		err := walk(file, func(path string, info os.FileInfo, err error) error {
+		err := walk(abFile, func(abcPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			symlink := ""
-			if info.Mode()&os.ModeSymlink != 0 {
-				// TODO: symlinks
-				return fmt.Errorf("symlinks not yet supported: %q", path)
+
+			// The record should not contain the ChangeDirectory
+			// path, so we need to derive bc from abc.
+			bcPath, err := filepath.Rel(opts.ChangeDirectory, abcPath)
+			if err != nil {
+				return err
+			}
+			if filepath.IsAbs(bFile) {
+				// "cd" does nothing if the file is absolute.
+				bcPath = abcPath
+			}
+
+			var symlink string
+			if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+				if symlink, err = os.Readlink(abcPath); err != nil {
+					return err
+				}
 			}
 			hdr, err := tar.FileInfoHeader(info, symlink)
 			if err != nil {
 				return err
 			}
-			hdr.Name = path
+			hdr.Name = bcPath
 			if !passesFilters(hdr, opts.Filters) {
 				return nil
 			}
@@ -128,7 +163,7 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 					return err
 				}
 			default:
-				f, err := os.Open(path)
+				f, err := os.Open(abcPath)
 				if err != nil {
 					return err
 				}
@@ -169,9 +204,12 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 
 func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
 	fi := hdr.FileInfo()
-	path := filepath.Clean(filepath.Join(rootDir, hdr.Name))
-	if !strings.HasPrefix(path, filepath.Clean(rootDir)) {
-		return fmt.Errorf("file outside root directory: %q", path)
+	path, err := upath.SafeFilepathJoin(rootDir, hdr.Name)
+	if err != nil {
+		// The behavior is to skip files which are unsafe due to
+		// zipslip, but continue extracting everything else.
+		log.Printf("Warning: Skipping file %q due to: %v", hdr.Name, err)
+		return nil
 	}
 
 	switch fi.Mode() & os.ModeType {
@@ -243,11 +281,11 @@ func VerboseLogFilter(hdr *tar.Header) bool {
 // It also sets appropriate permissions.
 func SafeFilter(hdr *tar.Header) bool {
 	if hdr.Typeflag == tar.TypeDir {
-		hdr.Mode = 0770
+		hdr.Mode = 0o770
 		return true
 	}
 	if hdr.Typeflag == tar.TypeReg {
-		hdr.Mode = 0660
+		hdr.Mode = 0o660
 		return true
 	}
 	return false

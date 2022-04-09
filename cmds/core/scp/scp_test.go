@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -18,7 +17,7 @@ func TestScpSource(t *testing.T) {
 	var w bytes.Buffer
 	var r bytes.Buffer
 
-	tf, err := ioutil.TempFile("", "TestScpSource")
+	tf, err := os.CreateTemp("", "TestScpSource")
 	if err != nil {
 		t.Fatalf("creating temp file: %v", err)
 	}
@@ -41,13 +40,13 @@ func TestScpSink(t *testing.T) {
 	var w bytes.Buffer
 	var r bytes.Buffer
 
-	tf, err := ioutil.TempFile("", "TestScpSink")
+	tf, err := os.CreateTemp("", "TestScpSink")
 	if err != nil {
 		t.Fatalf("creating temp file: %v", err)
 	}
 	defer os.Remove(tf.Name())
 
-	r.Write([]byte(fmt.Sprintf("C0600 18 test\ntest-file-contents")))
+	r.Write([]byte("C0600 18 test\ntest-file-contents"))
 	// Post IO-copy success status
 	r.Write([]byte{0})
 

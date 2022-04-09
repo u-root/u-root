@@ -5,8 +5,9 @@
 package bls
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,13 +28,35 @@ var blsEntries = []struct {
 	},
 }
 
+// Enable this temporarily to generate new configs. Double-check them by hand.
+func DISABLEDTestGenerateConfigs(t *testing.T) {
+	tests, err := filepath.Glob("testdata/*.json")
+	if err != nil {
+		t.Error("Failed to find test config files:", err)
+	}
+
+	for _, test := range tests {
+		configPath := strings.TrimRight(test, ".json")
+		t.Run(configPath, func(t *testing.T) {
+			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil)
+			if err != nil {
+				t.Fatalf("Failed to parse %s: %v", test, err)
+			}
+
+			if err := boottest.ToJSONFile(imgs, test); err != nil {
+				t.Errorf("failed to generate file: %v", err)
+			}
+		})
+	}
+}
+
 func TestParseBLSEntries(t *testing.T) {
 	fsRoot := "./testdata/madeup"
 	dir := filepath.Join(fsRoot, "loader/entries")
 
 	for _, tt := range blsEntries {
 		t.Run(tt.entry, func(t *testing.T) {
-			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), fsRoot)
+			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), fsRoot, nil)
 			if err != nil {
 				if tt.err == "" {
 					t.Fatalf("Got error %v", err)
@@ -61,12 +84,12 @@ func TestScanBLSEntries(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimRight(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			want, err := ioutil.ReadFile(test)
+			want, err := os.ReadFile(test)
 			if err != nil {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}
 
-			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath)
+			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -78,24 +101,34 @@ func TestScanBLSEntries(t *testing.T) {
 	}
 }
 
-// Enable this temporarily to generate new configs. Double-check them by hand.
-func DISABLEDTestGenerateConfigs(t *testing.T) {
-	tests, err := filepath.Glob("testdata/*.json")
-	if err != nil {
-		t.Error("Failed to find test config files:", err)
-	}
+func TestSetBLSRank(t *testing.T) {
+	fsRoot := "./testdata/madeup"
+	dir := filepath.Join(fsRoot, "loader/entries")
+	testRank := 2
+	originRank := os.Getenv("BLS_BOOT_RANK")
+	os.Setenv("BLS_BOOT_RANK", strconv.Itoa(testRank))
 
-	for _, test := range tests {
-		configPath := strings.TrimRight(test, ".json")
-		t.Run(configPath, func(t *testing.T) {
-			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath)
+	for _, tt := range blsEntries {
+		t.Run(tt.entry, func(t *testing.T) {
+			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), fsRoot, nil)
 			if err != nil {
-				t.Fatalf("Failed to parse %s: %v", test, err)
+				if tt.err == "" {
+					t.Fatalf("Got error %v", err)
+				}
+				if !strings.Contains(err.Error(), tt.err) {
+					t.Fatalf("Got error %v, expected error to contain %s", err, tt.err)
+				}
+				return
+			}
+			if tt.err != "" {
+				t.Fatalf("Expected error %s, got no error", tt.err)
 			}
 
-			if err := boottest.ToJSONFile(imgs, test); err != nil {
-				t.Errorf("failed to generate file: %v", err)
+			if image.Rank() != testRank {
+				t.Errorf("Expected rank %d, got %d", testRank, image.Rank())
 			}
 		})
 	}
+
+	os.Setenv("BLS_BOOT_RANK", originRank)
 }
