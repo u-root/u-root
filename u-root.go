@@ -310,7 +310,7 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 					pkgs = append(pkgs, filepath.Join(*urootSourceDir, pkg))
 				}
 			} else {
-				return fmt.Errorf("specify the path to uroots source directory with -uroot-source when using templates")
+				return fmt.Errorf("specify the path to u-root's source directory with -uroot-source when using templates")
 			}
 			pkgs = append(pkgs, p...)
 		}
@@ -318,7 +318,7 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 			if *urootSourceDir != "" {
 				pkgs = []string{filepath.Join(*urootSourceDir, "cmds/core/*")}
 			} else {
-				return fmt.Errorf("specify either the path to uroots source with -uroot-source or the path to at least one Golang command source")
+				return fmt.Errorf("specify either the path to u-root's source with -uroot-source or the path to at least one Golang command")
 			}
 		}
 
