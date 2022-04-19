@@ -19,7 +19,7 @@ import (
 
 var (
 	outputPath  = flag.String("o", "bb", "Path to busybox binary")
-	urootSource = flag.String("u", "", "Path to u-root source directory")
+	urootSource = flag.String("u", "./", "Path to u-root source directory")
 	showCmds    = flag.Bool("c", false, "Show commands -- useful in scripts")
 )
 

@@ -94,7 +94,7 @@ func init() {
 	genDir = flag.String("gen-dir", "", "Directory to generate source in")
 
 	// Flag for the new filepath only mode. This will be required to find the u-root commands and make templates work
-	urootSourceDir = flag.String("uroot-source", "", "Path to the locally checked out u-root source tree in case commands from there are desired.")
+	urootSourceDir = flag.String("uroot-source", "./", "Path to the locally checked out u-root source tree in case commands from there are desired.")
 }
 
 type buildStats struct {

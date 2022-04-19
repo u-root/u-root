@@ -67,22 +67,27 @@ go install github.com/u-root/u-root
 need to add `$GOPATH/bin` to your `$PATH`.**
 
 You can now use the u-root command to build an initramfs. Here are some
-examples with $UROOT_PATH being the path to where the u-root sources are on the disk:
+examples with $UROOT_PATH being the path to where the u-root sources are on the disk
+(explicitly specifiying this is only necessary if not runnig u-root inside the root of the repository):
 
 ```shell
 # Build an initramfs of all the Go cmds in ./cmds/core/... (default)
+u-root
+
+# Build an initramfs of all the Go cmds in ./cmds/core/...
+# But running the command outside of the repository root
 u-root -uroot-source $UROOT_PATH
 
 # Generate an archive with bootloaders
 #
 # core and boot are templates that expand to sets of commands
-u-root -uroot-source $UROOT_PATH core boot
+u-root core boot
 
 # Generate an archive with only these given commands
 u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
 
 # Generate an archive with all of the core tools with some exceptions
-u-root -uroot-source $UROOT_PATH core -cmds/core/{ls,losetup}
+u-root core -cmds/core/{ls,losetup}
 
 # Generate an archive with a tool outside of u-root
 git clone https://github.com/u-root/cpu
@@ -353,7 +358,7 @@ image using u-root/systemboot and coreboot can be found in the
 You can build systemboot like this:
 
 ```shell
-u-root -uroot-source $UROOT_PATH -uinitcmd=systemboot core ./cmds/boot/{systemboot,localboot,fbnetboot}
+u-root -uinitcmd=systemboot core ./cmds/boot/{systemboot,localboot,fbnetboot}
 ```
 
 ## Compression
