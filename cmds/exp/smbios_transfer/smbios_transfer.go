@@ -79,7 +79,13 @@ func getSmbiosData() ([]uint8, error) {
 		return nil, fmt.Errorf("error reading DMI data: %v", err)
 	}
 
-	return tables, nil
+	entryPoint, err := os.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
+	if err != nil {
+		return nil, fmt.Errorf("error reading smbios_entry_point data: %v", err)
+	}
+
+	data := append(tables, entryPoint...)
+	return data, nil
 }
 
 func transferSmbiosData() error {
