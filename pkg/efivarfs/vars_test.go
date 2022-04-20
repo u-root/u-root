@@ -93,14 +93,14 @@ func TestSimpleWriteVariable(t *testing.T) {
 		name    string
 		varName string
 		attrs   VariableAttributes
-		data    bytes.Buffer
+		data    *bytes.Buffer
 		wantErr error
 	}{
 		{
 			name:    "no efivarfs",
 			varName: "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
 			attrs:   0,
-			data:    bytes.Buffer{},
+			data:    &bytes.Buffer{},
 			wantErr: ErrFsNotMounted,
 		},
 	} {
