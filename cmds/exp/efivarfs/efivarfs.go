@@ -83,7 +83,7 @@ func run(list bool, read, delete, write, content string) error {
 		if !strings.ContainsAny(write, "-") {
 			write = write + "-" + guid.New().String()
 		}
-		if err = efivarfs.SimpleWriteVariable(write, 7, *bytes.NewBuffer(b)); err != nil {
+		if err = efivarfs.SimpleWriteVariable(write, 7, bytes.NewBuffer(b)); err != nil {
 			return fmt.Errorf("write failed: %v", err)
 		}
 	}
