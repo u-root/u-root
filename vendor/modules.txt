@@ -49,6 +49,9 @@ github.com/google/goexpect
 # github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
 ## explicit
 github.com/google/goterm/term
+# github.com/google/uuid v1.3.0
+## explicit
+github.com/google/uuid
 # github.com/insomniacslk/dhcp v0.0.0-20211209223715-7d93572ebe8e
 ## explicit; go 1.13
 github.com/insomniacslk/dhcp/dhcpv4
@@ -73,6 +76,9 @@ github.com/jsimonetti/rtnetlink/internal/unix
 github.com/jsimonetti/rtnetlink/rtnl
 # github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff
 ## explicit
+# github.com/kevinburke/ssh_config v1.1.0
+## explicit
+github.com/kevinburke/ssh_config
 # github.com/klauspost/compress v1.10.6
 ## explicit; go 1.13
 github.com/klauspost/compress/flate
@@ -254,7 +260,7 @@ golang.org/x/tools/internal/typesinternal
 ## explicit; go 1.11
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/grpc v1.29.1
+# google.golang.org/grpc v1.27.1
 ## explicit; go 1.11
 google.golang.org/grpc/codes
 # gopkg.in/yaml.v2 v2.2.8

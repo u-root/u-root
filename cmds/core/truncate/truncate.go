@@ -41,15 +41,12 @@ func init() {
 
 func truncate(args ...string) error {
 	if !size.IsSet && *rfile == "" {
-		flag.Usage()
 		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
 	if size.IsSet && *rfile != "" {
-		flag.Usage()
 		return fmt.Errorf("you need to specify size via -s <number> or -r <rfile>")
 	}
 	if len(args) == 0 {
-		flag.Usage()
 		return fmt.Errorf("you need to specify one or more files as argument")
 	}
 
@@ -89,6 +86,7 @@ func truncate(args ...string) error {
 func main() {
 	flag.Parse()
 	if err := truncate(flag.Args()...); err != nil {
+		flag.Usage()
 		log.Fatal(err)
 	}
 }
