@@ -21,15 +21,16 @@ import (
 // TODO use a proper parser for grub config (see grub.go)
 
 var (
-	flagBaseMountPoint = flag.String("m", "/mnt", "Base mount point where to mount partitions")
-	flagDryRun         = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
-	flagDebug          = flag.Bool("d", false, "Print debug output")
-	flagConfigIdx      = flag.Int("config", -1, "Specify the index of the configuration to boot. The order is determined by the menu entries in the Grub config")
-	flagGrubMode       = flag.Bool("grub", false, "Use GRUB mode, i.e. look for valid Grub/Grub2 configuration in default locations to boot a kernel. GRUB mode ignores -kernel/-initramfs/-cmdline")
-	flagKernelPath     = flag.String("kernel", "", "Specify the path of the kernel to execute. If using -grub, this argument is ignored")
-	flagInitramfsPath  = flag.String("initramfs", "", "Specify the path of the initramfs to load. If using -grub, this argument is ignored")
-	flagKernelCmdline  = flag.String("cmdline", "", "Specify the kernel command line. If using -grub, this argument is ignored")
-	flagDeviceGUID     = flag.String("guid", "", "GUID of the device where the kernel (and optionally initramfs) are located. Ignored if -grub is set or if -kernel is not specified")
+	flagBaseMountPoint    = flag.String("m", "/mnt", "Base mount point where to mount partitions")
+	flagDryRun            = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
+	flagDebug             = flag.Bool("d", false, "Print debug output")
+	flagConfigIdx         = flag.Int("config", -1, "Specify the index of the configuration to boot. The order is determined by the menu entries in the Grub config")
+	flagGrubMode          = flag.Bool("grub", false, "Use GRUB mode, i.e. look for valid Grub/Grub2 configuration in default locations to boot a kernel. GRUB mode ignores -kernel/-initramfs/-cmdline")
+	flagKernelPath        = flag.String("kernel", "", "Specify the path of the kernel to execute. If using -grub, this argument is ignored")
+	flagInitramfsPath     = flag.String("initramfs", "", "Specify the path of the initramfs to load. If using -grub, this argument is ignored")
+	flagKernelCmdline     = flag.String("cmdline", "", "Specify the kernel command line. If using -grub, this argument is ignored")
+	flagDeviceGUID        = flag.String("guid", "", "GUID of the partition where the kernel (and optionally initramfs) are located. Ignored if -grub is set or if -kernel is not specified")
+	flagBlockDeviceFSUUID = flag.String("fsuuid", "", "FS_UUID of the device where the kernel (and optionally initramfs) are located. Ignored if -grub is set or if -kernel is not specified")
 )
 
 var debug = func(string, ...interface{}) {}
@@ -40,7 +41,7 @@ var debug = func(string, ...interface{}) {}
 // If more than one partition is found with the given GUID, the first that is
 // found is used.
 // This function returns a mount.Mountpoint object, or an error if any.
-func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*mount.MountPoint, error) {
+func mountByGUID(devices block.BlockDevices, guid string, baseMountpoint string) (*mount.MountPoint, error) {
 	log.Printf("Looking for partition with GUID %s", guid)
 	partitions := devices.FilterPartType(guid)
 	if len(partitions) == 0 {
@@ -53,6 +54,27 @@ func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*moun
 
 	mountpath := filepath.Join(baseMountpoint, partitions[0].Name)
 	return partitions[0].Mount(mountpath, mount.MS_RDONLY)
+}
+
+// mountByFSUUID looks for a block device with the given FS_UUID, and tries to mount it
+// in a subdirectory under the specified mount point. The subdirectory has the
+// same name of the device (e.g. /your/base/mountpoint/sda).
+// If more than one block device is found with the given FS_UUID, the first that is
+// found is used.
+// This function returns a mount.Mountpoint object, or an error if any.
+func mountByFSUUID(devices block.BlockDevices, fsuuid string, baseMountpoint string) (*mount.MountPoint, error) {
+	log.Printf("Looking for block device with FS_UUID %s", fsuuid)
+	blockDevices := devices.FilterFSUUID(fsuuid)
+	if len(blockDevices) == 0 {
+		return nil, fmt.Errorf("no block device with FS_UUID %s", fsuuid)
+	}
+	log.Printf("Block devices with FS_UUID %s: %+v", fsuuid, blockDevices)
+	if len(blockDevices) > 1 {
+		log.Printf("Warning: more than one block device found with the given FS_UUID. Using the first one")
+	}
+
+	mountpath := filepath.Join(baseMountpoint, blockDevices[0].Name)
+	return blockDevices[0].Mount(mountpath, mount.MS_RDONLY)
 }
 
 // BootGrubMode tries to boot a kernel in GRUB mode. GRUB mode means:
@@ -72,9 +94,21 @@ func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*moun
 // instead.
 // The fourth parameter, `dryrun`, will not boot the found configurations if set
 // to true.
-func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string, dryrun bool, configIdx int) error {
+func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string, fsuuid string, dryrun bool, configIdx int) error {
 	var mounted []*mount.MountPoint
-	if guid == "" {
+	if guid != "" {
+		mount, err := mountByGUID(devices, guid, baseMountpoint)
+		if err != nil {
+			return err
+		}
+		mounted = append(mounted, mount)
+	} else if fsuuid != "" {
+		mount, err := mountByFSUUID(devices, fsuuid, baseMountpoint)
+		if err != nil {
+			return err
+		}
+		mounted = append(mounted, mount)
+	} else {
 		// try mounting all the available devices, with all the supported file
 		// systems
 		debug("trying to mount all the available block devices with all the supported file system types")
@@ -86,12 +120,6 @@ func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string
 				mounted = append(mounted, mountpoint)
 			}
 		}
-	} else {
-		mount, err := mountByGUID(devices, guid, baseMountpoint)
-		if err != nil {
-			return err
-		}
-		mounted = append(mounted, mount)
 	}
 
 	log.Printf("mounted: %+v", mounted)
@@ -167,14 +195,31 @@ func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string
 // The third parameter, `guid`, is the partition GUID to look for.
 // The fourth parameter, `dryrun`, will not boot the found configurations if set
 // to true.
-func BootPathMode(devices block.BlockDevices, baseMountpoint string, guid string, dryrun bool) error {
-	mount, err := mountByGUID(devices, guid, baseMountpoint)
-	if err != nil {
-		return err
+func BootPathMode(devices block.BlockDevices, baseMountpoint string, guid string, fsuuid string, dryrun bool) error {
+	var mountpoint *mount.MountPoint
+	var err error
+	if guid != "" {
+		if mountpoint, err = mountByGUID(devices, guid, baseMountpoint); err != nil {
+			return err
+		}
+	} else if fsuuid != "" {
+		if mountpoint, err = mountByFSUUID(devices, fsuuid, baseMountpoint); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Either guid or fsuuid must be provided")
 	}
 
-	fullKernelPath := path.Join(mount.Path, *flagKernelPath)
-	fullInitramfsPath := path.Join(mount.Path, *flagInitramfsPath)
+	log.Printf("mounted: %+v", mountpoint)
+	defer func() {
+		// clean up
+		if err := mountpoint.Unmount(mount.MNT_DETACH); err != nil {
+			debug("Failed to unmount %v: %v", mountpoint, err)
+		}
+	}()
+
+	fullKernelPath := path.Join(mountpoint.Path, *flagKernelPath)
+	fullInitramfsPath := path.Join(mountpoint.Path, *flagInitramfsPath)
 	cfg := jsonboot.BootConfig{
 		Kernel:     fullKernelPath,
 		Initramfs:  fullInitramfsPath,
@@ -196,6 +241,11 @@ func main() {
 	if *flagGrubMode && *flagKernelPath != "" {
 		log.Fatal("Options -grub and -kernel are mutually exclusive")
 	}
+
+	if *flagBlockDeviceFSUUID != "" && *flagDeviceGUID != "" {
+		log.Fatal("Options -fsuuid and -guid are mutually exclusive")
+	}
+
 	if *flagDebug {
 		debug = log.Printf
 	}
@@ -226,11 +276,11 @@ func main() {
 	// TODO boot from EFI system partitions.
 
 	if *flagGrubMode {
-		if err := BootGrubMode(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagDryRun, *flagConfigIdx); err != nil {
+		if err := BootGrubMode(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagBlockDeviceFSUUID, *flagDryRun, *flagConfigIdx); err != nil {
 			log.Fatal(err)
 		}
 	} else if *flagKernelPath != "" {
-		if err := BootPathMode(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagDryRun); err != nil {
+		if err := BootPathMode(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagBlockDeviceFSUUID, *flagDryRun); err != nil {
 			log.Fatal(err)
 		}
 	} else {
