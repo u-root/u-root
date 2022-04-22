@@ -110,7 +110,7 @@ jobs:
       - checkout
       - run:
           name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -uroot-source=./ -build=bb -files /tmp/usr minimal
+          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -files /tmp/usr minimal
   check_templates:
     <<: *golang-template
     steps:
@@ -119,14 +119,14 @@ jobs:
           name: Ensure that every template builds for a variety of options.
           command: |
                   go build .
-                  goruncmd="./u-root -stats-output-path=/tmp/stats.json -uroot-source=./"
-                  $goruncmd -build=bb minimal
-                  $goruncmd -build=bb core
-                  $goruncmd -build=bb coreboot-app
-                  $goruncmd -build=bb all
-                  $goruncmd -build=bb world
+                  goruncmd="./u-root -stats-output-path=/tmp/stats.json"
+                  $goruncmd minimal
+                  $goruncmd core
+                  $goruncmd coreboot-app
+                  $goruncmd all
+                  $goruncmd world
                   # Fails because of dups. Is this supposed to work?
-                  #$goruncmd -build=bb all core
+                  #$goruncmd all core
                   #$goruncmd all core
                   GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
                   cat /tmp/stats.json
