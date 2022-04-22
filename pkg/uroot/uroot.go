@@ -347,7 +347,7 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 //   UROOT_PATH/cmds/core/g*lob
 func resolvePackagePath(logger ulog.Logger, env golang.Environ, urootSource string, input string) ([]string, error) {
 	// In case the input is a u-root import path we strip the prefix here
-	// so that it can get readded with a proper filepath.
+	// so that it can get re-added with a proper filepath.
 	input = strings.TrimPrefix(input, "github.com/u-root/u-root/")
 
 	// Search the current working directory, as well as the uroot source path if specified

@@ -30,9 +30,8 @@ var skipModules = !(os.Getenv("GO111MODULE") == "off")
 // Finish implements initramfs.Writer.Finish.
 func (inMemArchive) Finish() error { return nil }
 
-// Turn this off until AFTER we are done moving to modules
-func testResolvePackagePaths(t *testing.T) {
-	t.Skip() // TODO
+func TestResolvePackagePaths(t *testing.T) {
+	t.Skip() // Turn this off until AFTER we are done moving to modules
 	defaultEnv := golang.Default()
 	gopath1, err := filepath.Abs("test/gopath1")
 	if err != nil {
@@ -182,8 +181,8 @@ func testResolvePackagePaths(t *testing.T) {
 	}
 }
 
-// Re enable this once we are done moving to modules.
-func testCreateInitramfs(t *testing.T) {
+func TestCreateInitramfs(t *testing.T) {
+	t.Skip() // Re-enable this once we are done moving to modules.
 	dir := t.TempDir()
 	syscall.Umask(0)
 
