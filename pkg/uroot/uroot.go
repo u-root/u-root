@@ -339,12 +339,12 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 
 // resolvePackagePath finds import paths for a single import path or directory string.
 //
-// In order of resolution:
+// Possible options are:
 //
 //   ./foobar
 //   ./foobar/glob*
-//   UROOT_PATH/cmds/core/ip
-//   UROOT_PATH/cmds/core/g*lob
+//   UROOT_SOURCE/cmds/core/ip
+//   UROOT_SOURCE/cmds/core/g*lob
 func resolvePackagePath(logger ulog.Logger, env golang.Environ, urootSource string, input string) ([]string, error) {
 	// In case the input is a u-root import path we strip the prefix here
 	// so that it can get re-added with a proper filepath.
