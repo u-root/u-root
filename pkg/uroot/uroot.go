@@ -251,8 +251,10 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		opts.BuildOpts = &gbbgolang.BuildOpts{}
 	}
 
+	fmt.Println("DEBUG MARKER BEFORE FAIL")
+
 	// Add each build mode's commands to the archive.
-	for _, cmds := range opts.Commands {
+	for i, cmds := range opts.Commands {
 		builderTmpDir, err := os.MkdirTemp(opts.TempDir, "builder")
 		if err != nil {
 			return err
@@ -266,10 +268,16 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 			TempDir:   builderTmpDir,
 			BinaryDir: cmds.TargetDir(),
 		}
+
+		fmt.Printf("DEBUG MARKER %d FOR %#v\n", i, bOpts) // The printed out values look fine to me...
+
 		if err := cmds.Builder.Build(logger, files, bOpts); err != nil {
+			fmt.Printf("DEBUG ERROR %d.1 with %#v\n", i, err) // This is never printed, so it times out inside gbb
 			return fmt.Errorf("error building: %v", err)
 		}
 	}
+
+	fmt.Println("DEBUG MARKER AFTER FAIL")
 
 	// Open the target initramfs file.
 	archive := &initramfs.Opts{
@@ -281,7 +289,6 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 	if err := ParseExtraFiles(logger, archive.Files, opts.ExtraFiles, !opts.SkipLDD); err != nil {
 		return err
 	}
-
 	if err := opts.addSymlinkTo(logger, archive, opts.UinitCmd, "bin/uinit"); err != nil {
 		return fmt.Errorf("%v: specify -uinitcmd=\"\" to ignore this error and build without a uinit", err)
 	}

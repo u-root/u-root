@@ -190,11 +190,17 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) er
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")
 
+	fmt.Printf("GBB DEBUG MARKER 0\n")
+	fmt.Printf("%#v\n", args)
+
 	cmd := c.GoCmd(args...)
 	cmd.Dir = dirPath
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error building go package in %q: %v, %v", dirPath, string(o), err)
 	}
+
+	fmt.Printf("GBB DEBUG MARKER 1\n")
+
 	return nil
 }

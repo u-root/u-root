@@ -232,6 +232,8 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 		return nil
 	}
 
+	fmt.Printf("GBB DEBUG MARKER BEFORE FAIL\n")
+
 	// Compile bb.
 	if err := opts.Env.BuildDir(bbDir, opts.BinaryPath, opts.GoBuildOpts); err != nil {
 		if opts.Env.GO111MODULE == "off" || numNoModule > 0 {
@@ -247,6 +249,7 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -371,13 +374,19 @@ func copyLocalGoMods(pkgDir, bbDir string, modules map[string]*packages.Module) 
 		if err != nil {
 			return err
 		}
-		defer gosumf.Close()
+
 		f, err := os.OpenFile(filepath.Join(bbDir, "go.sum"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
-		_, err = io.Copy(f, gosumf)
+
+		if _, err := io.Copy(f, gosumf); err != nil {
+			return err
+		}
+
+		gosumf.Close()
+		f.Close()
+
 		return err
 	}
 

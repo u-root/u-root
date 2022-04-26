@@ -2,6 +2,8 @@ module github.com/u-root/u-root
 
 go 1.17
 
+replace github.com/u-root/gobusybox/src => github.com/MDr164/gobusybox/src v0.0.0-20220523153008-44039c964bb9
+
 require (
 	github.com/beevik/ntp v0.3.0
 	github.com/c-bata/go-prompt v0.2.6

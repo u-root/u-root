@@ -7,9 +7,8 @@ templates:
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - CGO_ENABLED: 0
-      # Triple all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 3
-      - GO111MODULE: "off"
+      # x5 all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 5
 
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
@@ -17,7 +16,6 @@ templates:
       - CGO_ENABLED: 0
       # x5 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 5
-      - GO111MODULE: "off"
     steps:
       - checkout
       - run:
@@ -54,12 +52,12 @@ jobs:
       - checkout
       - run:
           name: Test Packages
-          command: go test -v -a -timeout 15m -ldflags '-s' -coverprofile=coverage_pkg.txt -covermode=atomic -coverpkg=./pkg/... ./pkg/...
+          command: go test -v -a -failfast -timeout=15m -ldflags='-s' -coverprofile=coverage_pkg.txt -covermode=set -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
 
       - run:
           name: Test coverage
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=15m -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -failfast -timeout=15m -coverprofile=coverage.txt -covermode=set -cover ./cmds/... ./pkg/...
 
       - run:
           name: Upload coverage
@@ -71,15 +69,13 @@ jobs:
       - checkout
       - run:
           name: Test u-root build
-          command: go test -a -timeout 15m .
+          command: go test -a -timeout=15m .
           no_output_timeout: 15m
 
   race:
-    <<: *golang-template
-    resource_class: large
+    <<: *beefy-template
     environment:
       - CGO_ENABLED: 1
-      - GO111MODULE: "off"
     steps:
       - checkout
       - run:
