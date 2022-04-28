@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/linux"
@@ -28,6 +29,7 @@ type LinuxImage struct {
 	Cmdline     string
 	BootRank    int
 	LoadSyscall bool
+	DeviceTree  io.ReaderAt
 }
 
 var _ OSImage = &LinuxImage{}
@@ -52,7 +54,23 @@ func (li *LinuxImage) Label() string {
 	if len(li.Name) > 0 {
 		return li.Name
 	}
-	return fmt.Sprintf("Linux(kernel=%s initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
+	labelInfo := []string{
+		fmt.Sprintf("kernel=%s", stringer(li.Kernel)),
+	}
+	if li.Initrd != nil {
+		labelInfo = append(
+			labelInfo,
+			fmt.Sprintf("initrd=%s", stringer(li.Initrd)),
+		)
+	}
+	if li.DeviceTree != nil {
+		labelInfo = append(
+			labelInfo,
+			fmt.Sprintf("dtb=%s", stringer(li.DeviceTree)),
+		)
+	}
+
+	return fmt.Sprintf("Linux(%s)", strings.Join(labelInfo, " "))
 }
 
 // Rank for the boot menu order
@@ -62,7 +80,10 @@ func (li *LinuxImage) Rank() int {
 
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
-	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline)
+	return fmt.Sprintf(
+		"LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n  Dtb: %s\n)\n",
+		li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline, stringer(li.DeviceTree),
+	)
 }
 
 // copyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
@@ -152,6 +173,15 @@ func (li *LinuxImage) Load(verbose bool) error {
 	}
 	defer k.Close()
 
+	// Append device-tree file to the end of initrd
+	if li.DeviceTree != nil {
+		if li.Initrd != nil {
+			li.Initrd = CatInitrds(li.Initrd, li.DeviceTree)
+		} else {
+			li.Initrd = li.DeviceTree
+		}
+	}
+
 	var i *os.File
 	if li.Initrd != nil {
 		i, err = copyToFileIfNotRegular(li.Initrd, verbose)
@@ -167,6 +197,9 @@ func (li *LinuxImage) Load(verbose bool) error {
 			log.Printf("Initrd: %s", i.Name())
 		}
 		log.Printf("Command line: %s", li.Cmdline)
+		if li.DeviceTree != nil {
+			log.Print("Device tree loaded: true")
+		}
 	}
 
 	if li.LoadSyscall {
