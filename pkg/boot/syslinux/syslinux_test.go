@@ -42,6 +42,7 @@ func TestParseGeneral(t *testing.T) {
 	initrd2 := "initrd2"
 	xengz := "xengz"
 	mboot := "mboot.c32"
+	boardDTB := "board.dtb"
 
 	newMockScheme := func() *curl.MockScheme {
 		fs := curl.NewMockScheme("tftp")
@@ -51,6 +52,7 @@ func TestParseGeneral(t *testing.T) {
 		fs.Add("1.2.3.4", "/foobar/pxefiles/global_initrd", globalInitrd)
 		fs.Add("1.2.3.4", "/foobar/pxefiles/initrd1", initrd1)
 		fs.Add("1.2.3.4", "/foobar/pxefiles/initrd2", initrd2)
+		fs.Add("1.2.3.4", "/foobar/pxefiles/board.dtb", boardDTB)
 		fs.Add("1.2.3.4", "/foobar/xen.gz", xengz)
 		fs.Add("1.2.3.4", "/foobar/mboot.c32", mboot)
 
@@ -533,6 +535,27 @@ func TestParseGeneral(t *testing.T) {
 				&boot.MultibootImage{
 					Name:   "mbootnomodules",
 					Kernel: strings.NewReader(xengz),
+				},
+			},
+		},
+		{
+			desc: "simple config with all required file and fdt",
+			configFiles: map[string]string{
+				"/foobar/pxelinux.cfg/default": `
+					default foo
+					label foo
+					kernel ./pxefiles/kernel1
+					initrd ./pxefiles/global_initrd
+					append foo=bar
+					fdt ./pxefiles/board.dtb`,
+			},
+			want: []boot.OSImage{
+				&boot.LinuxImage{
+					Name:       "foo",
+					Kernel:     strings.NewReader(kernel1),
+					Initrd:     strings.NewReader(globalInitrd),
+					DeviceTree: strings.NewReader(boardDTB),
+					Cmdline:    "foo=bar",
 				},
 			},
 		},

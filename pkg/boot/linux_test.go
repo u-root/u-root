@@ -92,6 +92,32 @@ func TestLinuxLabel(t *testing.T) {
 			},
 			want: "Linux(kernel=/boot/foobar initrd=/boot/initrd1,/boot/initrd2)",
 		},
+		{
+			desc: "no initrd",
+			img: &LinuxImage{
+				Kernel:     &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				Initrd:     nil,
+				DeviceTree: nil,
+			},
+			want: "Linux(kernel=/boot/foobar)",
+		},
+		{
+			desc: "dtb file",
+			img: &LinuxImage{
+				Kernel:     &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				Initrd:     &vfile.File{Reader: nil, FileName: "/boot/initrd"},
+				DeviceTree: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+			},
+			want: "Linux(kernel=/boot/foobar initrd=/boot/initrd dtb=/boot/board.dtb)",
+		},
+		{
+			desc: "dtb file, no initrd",
+			img: &LinuxImage{
+				Kernel:     &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				DeviceTree: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+			},
+			want: "Linux(kernel=/boot/foobar dtb=/boot/board.dtb)",
+		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			got := tt.img.Label()

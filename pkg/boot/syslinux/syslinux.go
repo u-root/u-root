@@ -381,6 +381,21 @@ func (c *parser) append(ctx context.Context, config string) error {
 				e.Initrd = boot.CatInitrds(initrds...)
 			}
 
+		case "fdt":
+			// TODO: fdtdir support
+			//
+			// The logic in u-boot is quite obscure and replies on soc/board names to select the right dtb file.
+			// https://gitlab.com/u-boot/u-boot/-/blob/master/boot/pxe_utils.c#L634
+			// Can be implemented based on data in /proc/device-tree/compatible
+
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				dtb, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.DeviceTree = dtb
+			}
+
 		case "append":
 			switch c.scope {
 			case scopeGlobal:
