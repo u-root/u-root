@@ -7,6 +7,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestShutdown(t *testing.T) {
@@ -21,19 +23,19 @@ func TestShutdown(t *testing.T) {
 			name:   "halt",
 			args:   []string{},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:   "halt +-0",
 			args:   []string{"halt", "+-0"},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:   "halt +0",
 			args:   []string{"halt", "+0"},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:    "halt +a",
@@ -45,32 +47,32 @@ func TestShutdown(t *testing.T) {
 			name:   "halt +1",
 			args:   []string{"halt", "+1"},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:   "halt now",
 			args:   []string{"halt", "now"},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:   "halt specific date",
 			args:   []string{"halt", "2006-01-02T15:04:05Z"},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:    "halt specific date",
 			args:    []string{"halt", "2006-01-02T15:04:05Z07:00"},
 			dryrun:  true,
-			want:    1126301404,
+			want:    unix.LINUX_REBOOT_CMD_POWER_OFF,
 			wantErr: "extra text",
 		},
 		{
 			name:    "halt specific date",
 			args:    []string{"halt", "2006-o1-02T15:04:05Z07:00"},
 			dryrun:  true,
-			want:    1126301404,
+			want:    unix.LINUX_REBOOT_CMD_POWER_OFF,
 			wantErr: "cannot parse",
 		},
 		{
@@ -83,7 +85,7 @@ func TestShutdown(t *testing.T) {
 			name:   "-h",
 			args:   []string{"-h"},
 			dryrun: true,
-			want:   1126301404,
+			want:   unix.LINUX_REBOOT_CMD_POWER_OFF,
 		},
 		{
 			name:   "empty string = halt",
@@ -95,29 +97,29 @@ func TestShutdown(t *testing.T) {
 			name:   "reboot",
 			args:   []string{"reboot"},
 			dryrun: true,
-			want:   19088743,
+			want:   unix.LINUX_REBOOT_CMD_RESTART,
 		},
 		{
 			name:   "-r",
 			args:   []string{"-r"},
 			dryrun: true,
-			want:   19088743,
+			want:   unix.LINUX_REBOOT_CMD_RESTART,
 		},
 		{
 			name:   "suspend",
 			args:   []string{"suspend"},
 			dryrun: true,
-			want:   3489725666,
+			want:   unix.LINUX_REBOOT_CMD_SW_SUSPEND,
 		},
 		{
 			name:   "-s",
 			args:   []string{"-s"},
 			dryrun: true,
-			want:   3489725666,
+			want:   unix.LINUX_REBOOT_CMD_SW_SUSPEND,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := shutdown(tt.args, tt.dryrun)
+			got, err := shutdown(tt.dryrun, tt.args...)
 			if err != nil {
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("shutdown() = %q, want to contain: %q", err.Error(), tt.wantErr)
