@@ -134,12 +134,8 @@ func (v *efivarfs) set(desc VariableDescriptor, attrs VariableAttributes, data [
 	if err := binary.Write(&buf, binary.LittleEndian, attrs); err != nil {
 		return err
 	}
-	for len(data)%8 != 0 {
-		data = append(data, 0)
-	}
-	size, _ := buf.Write(data)
-	if (size-4)%8 == 0 {
-		return fmt.Errorf("data misaligned")
+	if _, err := buf.Write(data); err != nil {
+		return err
 	}
 	if _, err := buf.WriteTo(write); err != nil {
 		return err
