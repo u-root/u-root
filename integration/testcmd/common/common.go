@@ -69,7 +69,11 @@ func collectKernelCoverage(filename string) error {
 	}
 
 	// Mount debugfs.
-	if err := unix.Mount("debugfs", "/sys/kernel/debug", "debugfs", 0, ""); err != nil {
+	dfs := "/sys/kernel/debug"
+	if err := os.MkdirAll(dfs, 0o666); err != nil {
+		return fmt.Errorf("os.MkdirAll(%v): %v != nil", dfs, err)
+	}
+	if err := unix.Mount("debugfs", dfs, "debugfs", 0, ""); err != nil {
 		return fmt.Errorf("failed to mount debugfs: %v", err)
 	}
 
@@ -107,6 +111,11 @@ func MountSharedDir() (func(), error) {
 		mp  *mount.MountPoint
 		err error
 	)
+
+	if err := os.MkdirAll(sharedDir, 0o644); err != nil {
+		return nil, err
+	}
+
 	if os.Getenv(envUse9P) == "1" {
 		mp, err = mount.Mount("tmpdir", sharedDir, "9p", fmt.Sprintf("9P2000.L,msize=%d", msize9P), 0)
 	} else {
