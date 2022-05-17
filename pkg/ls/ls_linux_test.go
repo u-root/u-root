@@ -16,6 +16,7 @@ import (
 )
 
 const lsregex string = "^([rwxSTstdcb\\-lp?]{10})\\s+(\\d+)?\\s?(\\S+)\\s+(\\S+)\\s+([0-9,]+)?\\s+(\\d+)?(\\D+)?(\\d{1,2}\\D\\d{1,2}\\D\\d{1,2})?(\\D{4})?([\\D|\\d]*)"
+const tDelta time.Duration = 1 * time.Second
 
 func TestFileInfo(t *testing.T) {
 	u, err := user.Current()
@@ -93,7 +94,7 @@ func TestFileInfo(t *testing.T) {
 				t.Errorf("%q failed by Size. Got: %q, Want: %q", tt.name, tt.size, fi.Size)
 			}
 
-			if fi.MTime.In(time.UTC).Format(time.UnixDate) != tt.mTime.In(time.UTC).Format(time.UnixDate) {
+			if dt := tt.mTime.Sub(fi.MTime); dt < -tDelta || dt > tDelta {
 				t.Errorf("%q failed by MTime. Got: %q, Want: %q", tt.name, tt.mTime, fi.MTime)
 			}
 

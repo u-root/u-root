@@ -28,7 +28,7 @@ func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 	}
 
 	if err := unix.KexecFileLoad(int(kernel.Fd()), ramfsfd, cmdline, flags); err != nil {
-		return fmt.Errorf("sys_kexec(%d, %d, %s, %x) = %v", kernel.Fd(), ramfsfd, cmdline, flags, err)
+		return fmt.Errorf("SYS_kexec_file_load(%d, %d, %s, %x) = %v", kernel.Fd(), ramfsfd, cmdline, flags, err)
 	}
 	return nil
 }
