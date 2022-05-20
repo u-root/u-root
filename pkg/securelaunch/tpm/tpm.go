@@ -25,7 +25,7 @@ var (
 	tpmHandle *tss.TPM
 )
 
-// marshalPcrEvent writes structure fields piecemeal to buffer.
+// marshalPcrEvent writes structure fields piecemeal to a buffer.
 func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
 	const baseTypeTXT = 0x400                       // TXT specification base event value for DRTM values
 	const slaunchType = uint32(baseTypeTXT + 0x102) // Secure Launch event log entry type.
@@ -81,9 +81,7 @@ func sendEventToSysfs(pcr uint32, h []byte, eventDesc []byte) {
 	}
 }
 
-/*
- * hashReader calculates the sha256 sum of an io reader.
- */
+// hashReader calculates the sha256 sum of an io reader.
 func hashReader(f io.Reader) []byte {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -93,10 +91,7 @@ func hashReader(f io.Reader) []byte {
 	return h.Sum(nil)
 }
 
-/*
- * New sets up a tpm device handle
- * that can be used for storing hashes.
- */
+// New sets up a TPM device handle that can be used for storing hashes.
 func New() error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
@@ -107,9 +102,7 @@ func New() error {
 	return nil
 }
 
-/*
- * Close ends connection to a tpm device handle
- */
+// Close closes the connection of a TPM device handle.
 func Close() {
 	if tpmHandle != nil {
 		tpmHandle.Close()
@@ -117,12 +110,7 @@ func Close() {
 	}
 }
 
-/*
- * readPCR reads pcr#x, where x is provided by 'pcr' arg and returns
- * the result in a byte slice.
- * 'tpmHandle' is the tpm device that owns the 'pcr'.
- * err is returned if read fails.
- */
+// readPCR reads the given PCR and returns the result in a byte slice.
 func readPCR(pcr uint32) ([]byte, error) {
 	if tpmHandle == nil {
 		return nil, errors.New("tpmHandle is nil")
@@ -135,13 +123,7 @@ func readPCR(pcr uint32) ([]byte, error) {
 	return val, nil
 }
 
-/*
- * extendPCR writes the measurements passed as 'hash' arg to pcr#x,
- * where x is provided by 'pcr' arg.
- *
- * pcr is owned by 'tpm2Handle', a tpm device handle.
- * err is returned if write to pcr fails.
- */
+// extendPCR extends the given PCR with the given hash.
 func extendPCR(pcr uint32, hash []byte) error {
 	if tpmHandle == nil {
 		return errors.New("tpmHandle is nil")
@@ -150,15 +132,12 @@ func extendPCR(pcr uint32, hash []byte) error {
 	return tpmHandle.Extend(hash, pcr)
 }
 
-/*
- * ExtendPCRDebug extends a PCR with the contents of a byte slice
- * and notifies the kernel of this measurement by sending event via sysfs.
- *
- * In debug mode, it prints
- * 1. old pcr value before the hash is written to pcr
- * 2. new pcr values after hash is written to pcr
- * 3. compares old and new pcr values and prints error if they are not
- */
+// ExtendPCRDebug extends a PCR with the contents of a byte slice and notifies
+// the kernel of this measurement by sending an event via sysfs.
+//
+// In debug mode, it prints:
+//   1. The old PCR value before the hash is extended to the PCR
+//   2. The new PCR value after the hash is extended to the PCR
 func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	oldPCRValue, err := readPCR(pcr)
 	if err != nil {

@@ -74,10 +74,16 @@ func (mp *MountPoint) Unmount(flags uintptr) error {
 // dev is the device to mount (this is often the path of a block device, name
 // of a file, or a placeholder string). data usually contains arguments for the
 // specific file system.
-func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
-	// Create the mount point if it doesn't already exist.
-	if err := os.MkdirAll(path, 0o666); err != nil {
-		return nil, err
+//
+// opts is usually empty, but if you want, e.g., to pre-create the mountpoint,
+// you can call Mount with a mkdirall, e.g.
+// mount.Mount("none", dst, fstype, "", 0,
+//		func() error { return os.MkdirAll(dst, 0o666)})
+func Mount(dev, path, fsType, data string, flags uintptr, opts ...func() error) (*MountPoint, error) {
+	for _, f := range opts {
+		if err := f(); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := unix.Mount(dev, path, fsType, flags, data); err != nil {
@@ -98,13 +104,13 @@ func Mount(dev, path, fsType, data string, flags uintptr) (*MountPoint, error) {
 
 // TryMount tries to mount a device on the given mountpoint, trying in order
 // the supported block device file systems on the system.
-func TryMount(device, path, data string, flags uintptr) (*MountPoint, error) {
+func TryMount(device, path, data string, flags uintptr, opts ...func() error) (*MountPoint, error) {
 	fstype, extraflags, err := FSFromBlock(device)
 	if err != nil {
 		return nil, err
 	}
 
-	return Mount(device, path, fstype, data, flags|extraflags)
+	return Mount(device, path, fstype, data, flags|extraflags, opts...)
 }
 
 // Unmount detaches any file system mounted at path.

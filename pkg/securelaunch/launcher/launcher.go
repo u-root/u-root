@@ -17,14 +17,14 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-/* describes the "launcher" section of policy file */
+// Launcher describes the "launcher" section of policy file.
 type Launcher struct {
 	Type   string            `json:"type"`
 	Params map[string]string `json:"params"`
 }
 
-// MeasureKernel calls file collector in measurement pkg that
-// hashes kernel, initrd files and even store these hashes in tpm pcrs.
+// MeasureKernel hashes the kernel and initrd files and extends those
+// measurements into a TPM PCR.
 func (l *Launcher) MeasureKernel() error {
 	kernel := l.Params["kernel"]
 	initrd := l.Params["initrd"]
@@ -41,20 +41,19 @@ func (l *Launcher) MeasureKernel() error {
 	return nil
 }
 
-/*
- * Boot boots the target kernel based on information provided
- * in the "launcher" section of policy file.
- *
- * Summary of steps:
- * - extracts the kernel, initrd and cmdline from the "launcher" section of policy file.
- * - measures the kernel and initrd file into the tpmDev (tpm device).
- * - mounts the disks where the kernel and initrd file are located.
- * - uses kexec to boot into the target kernel.
- * returns error
- * - if measurement of kernel and initrd fails
- * - if mount fails
- * - if kexec fails
- */
+// Boot boots the target kernel based on information provided in the "launcher"
+// section of the policy file.
+//
+// Summary of steps:
+// - extract the kernel, initrd and cmdline from the "launcher" section of policy file.
+// - measure the kernel and initrd file into the tpmDev (tpm device).
+// - mount the disks where the kernel and initrd file are located.
+// - kexec to boot into the target kernel.
+//
+// returns error
+// - if measurement of kernel and initrd fails
+// - if mount fails
+// - if kexec fails
 func (l *Launcher) Boot() error {
 	if l.Type != "kexec" {
 		log.Printf("launcher: Unsupported launcher type. Exiting.")
