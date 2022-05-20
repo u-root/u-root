@@ -124,8 +124,7 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 	return nil
 }
 
-// Turn this off until we make the full switch to modules.
-func testUrootCmdline(t *testing.T) {
+func TestUrootCmdline(t *testing.T) {
 	samplef, err := os.CreateTemp("", "u-root-test-")
 	if err != nil {
 		t.Fatal(err)
@@ -140,24 +139,58 @@ func testUrootCmdline(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, tt := range []struct {
+	type testCase struct {
 		name       string
 		env        []string
 		args       []string
 		err        error
 		validators []itest.ArchiveValidator
-	}{
+	}
+
+	noCmdTests := []testCase{
 		{
 			name: "include one extra file",
 			args: []string{"-nocmd", "-files=/bin/bash"},
+			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
 			},
 		},
 		{
+			name: "fix usage of an absolute path",
+			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
+			env:  []string{"GO111MODULE=off"},
+			err:  nil,
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"/bin/foo"},
+				itest.HasFile{"/bin/bar"},
+			},
+		},
+		{
+			name: "include multiple extra files",
+			args: []string{"-nocmd", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
+			env:  []string{"GO111MODULE=off"},
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"bin/bash"},
+				itest.HasFile{"bin/ls"},
+				itest.HasFile{samplef.Name()},
+			},
+		},
+		{
+			name: "include one extra file with rename",
+			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
+			env:  []string{"GO111MODULE=off"},
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"bin/bush"},
+			},
+		},
+	}
+
+	bareTests := []testCase{
+		{
 			name: "uinitcmd",
-			args: []string{"-build=bb", "-uinitcmd=echo foobar fuzz", "-defaultsh=", "github.com/u-root/u-root/cmds/core/init", "github.com/u-root/u-root/cmds/core/echo"},
+			args: []string{"-uinitcmd=echo foobar fuzz", "-defaultsh=", "github.com/u-root/u-root/cmds/core/init", "github.com/u-root/u-root/cmds/core/echo"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasRecord{cpio.Symlink("bin/uinit", "../bbin/echo")},
@@ -168,41 +201,13 @@ func testUrootCmdline(t *testing.T) {
 			},
 		},
 		{
-			name: "fix usage of an absolute path",
-			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
-			err:  nil,
-			validators: []itest.ArchiveValidator{
-				itest.HasFile{"/bin/foo"},
-				itest.HasFile{"/bin/bar"},
-			},
-		},
-		{
-			name: "include multiple extra files",
-			args: []string{"-nocmd", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
-			validators: []itest.ArchiveValidator{
-				itest.HasFile{"bin/bash"},
-				itest.HasFile{"bin/ls"},
-				itest.HasFile{samplef.Name()},
-			},
-		},
-		{
-			name: "include one extra file with rename",
-			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
-			validators: []itest.ArchiveValidator{
-				itest.HasFile{"bin/bush"},
-			},
-		},
-		{
-			name: "make sure dead code gets eliminated",
+			name: "dead_code_elimination",
 			args: []string{
 				// Build the world + test symbols, unstripped.
 				// Change default shell to gosh for this test as elvish uses the reflect package
-				"-defaultsh=/bbin/gosh", "-build=bb", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
+				"-defaultsh=/bbin/gosh", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
 				// These are known to disable DCE and need to be exluded.
-				// The reason is https://github.com/golang/go/issues/36021 and is fixed in Go 1.15,
-				// so these can be removed once we no longer support Go < 1.15.
-				"-github.com/u-root/u-root/cmds/exp/builtin",
-				"-github.com/u-root/u-root/cmds/exp/run",
+				// elvish uses reflect.Value.Call and is expected to not use DCE.
 				"-github.com/u-root/u-root/cmds/core/elvish",
 			},
 			err: nil,
@@ -211,60 +216,76 @@ func testUrootCmdline(t *testing.T) {
 			},
 		},
 		{
-			name: "hosted bb mode",
-			args: append([]string{"-build=bb", "-base=/dev/null", "-defaultsh=", "-initcmd="}, twocmds...),
+			name: "hosted mode",
+			args: append([]string{"-base=/dev/null", "-defaultsh=", "-initcmd="}, twocmds...),
 		},
 		{
-			name: "AMD64 bb build",
+			name: "AMD64 build",
 			env:  []string{"GOARCH=amd64"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "MIPS bb build",
+			name: "MIPS build",
 			env:  []string{"GOARCH=mips"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "MIPSLE bb build",
+			name: "MIPSLE build",
 			env:  []string{"GOARCH=mipsle"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "MIPS64 bb build",
+			name: "MIPS64 build",
 			env:  []string{"GOARCH=mips64"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "MIPS64LE bb build",
+			name: "MIPS64LE build",
 			env:  []string{"GOARCH=mips64le"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "ARM7 bb build",
+			name: "ARM7 build",
 			env:  []string{"GOARCH=arm", "GOARM=7"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "ARM64 bb build",
+			name: "ARM64 build",
 			env:  []string{"GOARCH=arm64"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "386 (32 bit) bb build",
+			name: "386 (32 bit) build",
 			env:  []string{"GOARCH=386"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "Power 64bit bb build",
+			name: "Power 64bit build",
 			env:  []string{"GOARCH=ppc64le"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
 		{
-			name: "RISCV 64bit bb build",
+			name: "RISCV 64bit build",
 			env:  []string{"GOARCH=riscv64"},
-			args: []string{"-build=bb", "all"},
+			args: []string{"all"},
 		},
-	} {
+	}
+	var bbTests []testCase
+	for _, test := range bareTests {
+		bbTest := test
+		bbTest.name = bbTest.name + " bb"
+		bbTest.args = append([]string{"-build=bb"}, bbTest.args...)
+		bbTest.env = append(bbTest.env, "GO111MODULE=off")
+
+		gbbTest := test
+		gbbTest.name = gbbTest.name + " gbb"
+		gbbTest.args = append([]string{"-build=gbb"}, gbbTest.args...)
+		gbbTest.env = append(gbbTest.env, "GO111MODULE=on")
+
+		bbTests = append(bbTests, gbbTest, bbTest)
+	}
+
+	for _, tt := range append(noCmdTests, bbTests...) {
 		t.Run(tt.name, func(t *testing.T) {
 			delFiles := true
 			f, sum1 := buildIt(t, tt.args, tt.env, tt.err)
@@ -310,9 +331,8 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
 	// still works.
 	arg := append([]string{"-o", f.Name()}, args...)
 	c := testutil.Command(t, arg...)
-	t.Logf("Commandline: %v", arg)
+	t.Logf("Commandline: %v u-root %v", strings.Join(env, " "), strings.Join(arg, " "))
 	c.Env = append(c.Env, env...)
-	c.Dir = t.TempDir()
 	if out, err := c.CombinedOutput(); err != want {
 		t.Fatalf("Error: %v\nOutput:\n%s", err, out)
 	} else if err != nil {

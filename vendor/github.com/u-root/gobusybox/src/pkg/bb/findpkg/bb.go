@@ -228,7 +228,7 @@ func loadFSPkgs(env golang.Environ, dir string, importDirs ...string) ([]*packag
 
 func loadPkgs(env golang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
 	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedImports | packages.NeedFiles | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedCompiledGoFiles | packages.NeedModule,
+		Mode: packages.NeedName | packages.NeedImports | packages.NeedFiles | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedCompiledGoFiles | packages.NeedModule | packages.NeedEmbedFiles,
 		Env:  append(os.Environ(), env.Env()...),
 		Dir:  dir,
 	}

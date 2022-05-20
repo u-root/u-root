@@ -20,6 +20,16 @@ import (
 	"time"
 )
 
+type Clock interface {
+	Now() time.Time
+}
+
+type RealClock struct{}
+
+func (r RealClock) Now() time.Time {
+	return time.Now()
+}
+
 var (
 	// default format map from format.go on time lib
 	// Help to make format of date with posix compliant
@@ -168,13 +178,13 @@ func ints(s string, i ...*int) error {
 // YY and SS. For these values, we use
 // time.Now(). For the timezone, we use whatever
 // one we are in, or UTC if desired.
-func getTime(z *time.Location, s string) (t time.Time, err error) {
+func getTime(z *time.Location, s string, clocksource Clock) (t time.Time, err error) {
 	var MM, DD, hh, mm int
 	// CC is the year / 100, not the "century".
 	// i.e. for 2001, CC is 20, not 21.
-	YY := time.Now().Year() % 100
-	CC := time.Now().Year() / 100
-	SS := time.Now().Second()
+	YY := clocksource.Now().Year() % 100
+	CC := clocksource.Now().Year() / 100
+	SS := clocksource.Now().Second()
 	if err = ints(s, &MM, &DD, &hh, &mm); err != nil {
 		return
 	}
@@ -210,8 +220,8 @@ func date(t time.Time, z *time.Location) string {
 	return t.In(z).Format(time.UnixDate)
 }
 
-func run(args []string, univ bool, ref string, w io.Writer) error {
-	t := time.Now()
+func run(args []string, univ bool, ref string, clocksource Clock, w io.Writer) error {
+	t := clocksource.Now()
 	z := time.Local
 	if univ {
 		z = time.UTC
@@ -232,7 +242,7 @@ func run(args []string, univ bool, ref string, w io.Writer) error {
 		if strings.HasPrefix(a0, "+") {
 			fmt.Fprintf(w, "%v\n", dateMap(t, z, a0[1:]))
 		} else {
-			if err := setDate(args[0], z); err != nil {
+			if err := setDate(args[0], z, clocksource); err != nil {
 				return fmt.Errorf("%v: %v", a0, err)
 			}
 		}
@@ -245,7 +255,8 @@ func run(args []string, univ bool, ref string, w io.Writer) error {
 
 func main() {
 	flag.Parse()
-	if err := run(flag.Args(), flags.universal, flags.reference, os.Stdout); err != nil {
+	rc := RealClock{}
+	if err := run(flag.Args(), flags.universal, flags.reference, rc, os.Stdout); err != nil {
 		log.Fatalf("date: %v", err)
 	}
 }

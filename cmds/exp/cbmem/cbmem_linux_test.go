@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -285,5 +286,75 @@ func TestTimeStampsAPU2(t *testing.T) {
 	}
 	if c.TimeStampsTable.Addr != 0 {
 		t.Fatalf("TimeStampsTable: got %#x, want 0", c.TimeStampsTable)
+	}
+}
+
+func TestCbmem(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		mem        string
+		version    bool
+		verbose    bool
+		timestamps bool
+		dumpJSON   bool
+		list       bool
+		console    bool
+		want       string
+	}{
+		{
+			name:    "version true",
+			version: true,
+			want:    "cbmem in Go, including JSON output\n",
+		},
+		{
+			name:    "verbose true",
+			verbose: true,
+		},
+		{
+			name:     "dumpJSON true",
+			dumpJSON: true,
+			want:     "{\n\t\"Memory\": {\n\t\t\"Tag\": 1,\n\t\t\"Size\": 108,\n\t\t\"Maps\": [\n\t\t\t{\n\t\t\t\t\"Start\": 0,\n\t\t\t\t\"Size\": 4096,\n\t\t\t\t\"Mtype\": 16\n\t\t\t},\n\t\t\t{\n\t\t\t\t\"Start\": 4096,\n\t\t\t\t\"Size\": 651264,\n\t\t\t\t\"Mtype\": 1\n\t\t\t},\n\t\t\t{\n\t\t\t\t\"Start\": 786432,\n\t\t\t\t\"Size\": 2012143616,\n\t\t\t\t\"Mtype\": 1\n\t\t\t},\n\t\t\t{\n\t\t\t\t\"Start\": 2012930048,\n\t\t\t\t\"Size\": 335872,\n\t\t\t\t\"Mtype\": 16\n\t\t\t}\n\t\t]\n\t},\n\t\"MemConsole\": {\n\t\t\"Tag\": 23,\n\t\t\"Size\": 131064,\n\t\t\"Address\": 2013130752,\n\t\t\"CSize\": 0,\n\t\t\"Cursor\": 240,\n\t\t\"Data\": \"PCEngines apu2\\r\\ncoreboot build 20170228\\r\\n2032 MB DRAM\\r\\n\\r\\n\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\"\n\t},\n\t\"Consoles\": [\n\t\t\"\"\n\t],\n\t\"TimeStampsTable\": {\n\t\t\"Tag\": 0,\n\t\t\"Size\": 0,\n\t\t\"Addr\": 0\n\t},\n\t\"TimeStamps\": null,\n\t\"UART\": [\n\t\t{\n\t\t\t\"Tag\": 15,\n\t\t\t\"Size\": 20,\n\t\t\t\"Type\": 1,\n\t\t\t\"BaseAddr\": 1016,\n\t\t\t\"Baud\": 115200,\n\t\t\t\"RegWidth\": 16\n\t\t}\n\t],\n\t\"MainBoard\": {\n\t\t\"Tag\": 3,\n\t\t\"Size\": 40,\n\t\t\"Vendor\": \"PC Engines\",\n\t\t\"PartNumber\": \"PCEngines apu2\"\n\t},\n\t\"Hwrpb\": {\n\t\t\"Tag\": 0,\n\t\t\"Size\": 0,\n\t\t\"HwrPB\": 0\n\t},\n\t\"CBMemory\": null,\n\t\"BoardID\": {\n\t\t\"Tag\": 37,\n\t\t\"Size\": 16,\n\t\t\"BoardID\": 2012962816\n\t},\n\t\"StringVars\": {\n\t\t\"LB_TAG_BUILD\": \"Tue Feb 28 22:34:13 UTC 2017\",\n\t\t\"LB_TAG_COMPILE_BY\": \"root\",\n\t\t\"LB_TAG_COMPILE_DOMAIN\": \"\",\n\t\t\"LB_TAG_COMPILE_HOST\": \"3aa919ff57dc\",\n\t\t\"LB_TAG_COMPILE_TIME\": \"22:34:13\",\n\t\t\"LB_TAG_EXTRA_VERSION\": \"-4.0.7\",\n\t\t\"LB_TAG_VERSION\": \"8b10004\"\n\t},\n\t\"BootMediaParams\": {\n\t\t\"Tag\": 0,\n\t\t\"Size\": 0,\n\t\t\"FMAPOffset\": 0,\n\t\t\"CBFSOffset\": 0,\n\t\t\"CBFSSize\": 0,\n\t\t\"BootMediaSize\": 0\n\t},\n\t\"VersionTimeStamp\": 38,\n\t\"Unknown\": null,\n\t\"Ignored\": null\n}\n",
+		},
+		{
+			name: "list true",
+			list: true,
+		},
+		{
+			name:    "console true",
+			console: true,
+			want:    "PCEngines apu2\r\ncoreboot build 20170228\r\n2032 MB DRAM\r\n\r\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Create(filepath.Join(t.TempDir(), "cbmemAPU2"))
+			if err != nil {
+				t.Errorf("could not gen file: %v", err)
+			}
+			defer f.Close()
+			if err := genFile(f, t.Logf, apu2); err != nil {
+				t.Errorf("could not gen file: %v", err)
+			}
+
+			*mem = f.Name()
+			version = tt.version
+			verbose = tt.verbose
+			timestamps = tt.timestamps
+			dumpJSON = tt.dumpJSON
+			list = tt.list
+			console = tt.console
+
+			buf := &bytes.Buffer{}
+
+			got := cbMem(buf)
+			if got != nil {
+				if got.Error() != tt.want {
+					t.Errorf("cbmem() = %q, want: %q", got.Error(), tt.want)
+				}
+			} else {
+				if buf.String() != tt.want {
+					t.Errorf("cbmem() = %q, want: %q", buf.String(), tt.want)
+				}
+			}
+		})
 	}
 }

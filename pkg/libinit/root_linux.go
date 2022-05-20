@@ -139,6 +139,7 @@ var (
 		dir{Name: "/sys", Mode: 0o555},
 		mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
+		mount{Source: "efivarfs", Target: "/sys/firmware/efi/efivars", FSType: "efivarfs"},
 
 		cpdir{Source: "/etc", Target: "/tmp/etc"},
 		mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},
