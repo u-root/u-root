@@ -46,10 +46,8 @@ var StorageBlkDevices block.BlockDevices
 // kernel cmdline is checked in sluinit.
 var Debug = func(string, ...interface{}) {}
 
-// WriteToFile writes a byte slice to a target file on an
-// already mounted disk and returns the target file path.
-//
-// defFileName is default dst file name, only used if user doesn't provide one.
+// WriteToFile writes a byte slice to a file on an already mounted disk and
+// returns the file path written to.
 func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 	// make sure dst is an absolute file path
 	if !filepath.IsAbs(dst) {
@@ -222,8 +220,9 @@ func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
 	return mountPath, nil
 }
 
-// GetMountedFilePath returns a file path corresponding to a <device_identifier>:<path> user input format.
-// <device_identifier> may be a Linux block device identifier like sda or a FS UUID.
+// GetMountedFilePath returns the file path corresponding to the given
+// <device_identifier>:<path>.
+// <device_identifier> is a Linux block device identifier (e.g, sda or UUID).
 func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	s := strings.Split(inputVal, ":")
 	if len(s) != 2 {
@@ -242,11 +241,11 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 		return "", fmt.Errorf("failed to mount %s , flags=%v, err=%v", devName, flags, err)
 	}
 
-	fPath := filepath.Join(mountPath, s[1]) // mountPath=/tmp/path/to/target/file if /dev/sda mounted on /tmp
+	fPath := filepath.Join(mountPath, s[1])
 	return fPath, nil
 }
 
-// UnmountAll loops detaches any mounted device from the file heirarchy.
+// UnmountAll unmounts all mounted devices from the file heirarchy.
 func UnmountAll() {
 	Debug("UnmountAll: %d devices need to be unmounted", len(mountCache.m))
 	for key, mountCacheData := range mountCache.m {
@@ -262,9 +261,9 @@ func UnmountAll() {
 	}
 }
 
-// GetBlkInfo calls storage package to get information on all block devices.
-// The information is stored in a global variable 'StorageBlkDevices'
-// If the global variable is already non-zero, we skip the call to storage package.
+// GetBlkInfo gets information on all block devices and stores it in the
+// global variable 'StorageBlkDevices'. If it is called more than once, the
+// subsequent calls just return.
 //
 // In debug mode, it also prints names and UUIDs for all devices.
 func GetBlkInfo() error {

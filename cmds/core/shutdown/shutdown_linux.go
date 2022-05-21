@@ -26,11 +26,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
+
+const usageMessage = "shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]"
 
 var (
 	opcodes = map[string]uint{
@@ -41,48 +42,58 @@ var (
 		"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
 		"-s":      unix.LINUX_REBOOT_CMD_SW_SUSPEND,
 	}
-	reboot = unix.Reboot
-	delay  = time.Sleep
 )
 
-func usage() {
-	log.Fatalf("shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]")
-}
-
-func main() {
-	a := os.Args
-	if len(a) == 1 {
-		a = append(a, "halt")
+// shutdown calls unix.Reboot, with the type of shutdown defined in args, currently
+// halt, reboot, or suspend. A time may be specified as "now",
+// a future time parseable by time.ParseDuration, or in
+// RFC3339 format. If dryrun is chosen, shutdown returns the opcode it
+// would have used and an error, if any.
+func shutdown(dryrun bool, args ...string) (uint, error) {
+	if len(args) == 0 {
+		args = append(args, "halt")
 	}
-	op, ok := opcodes[a[1]]
+	op, ok := opcodes[args[0]]
 	if !ok {
-		usage()
+		return 0, fmt.Errorf(usageMessage)
 	}
-	if len(a) < 3 {
-		a = append(a, "now")
+	if len(args) < 2 {
+		args = append(args, "now")
 	}
 	when := time.Now()
+
 	switch {
-	case a[2] == "now":
-	case a[2][0] == '+':
-		m, err := time.ParseDuration(a[2][1:] + "m")
+	case args[1] == "now":
+
+	case args[1][0] == '+':
+		m, err := time.ParseDuration(args[1][1:] + "m")
 		if err != nil {
-			log.Fatal(err)
+			return 0, err
 		}
 		when = when.Add(m)
 	default:
-		t, err := time.Parse(time.RFC3339, a[2])
+		t, err := time.Parse(time.RFC3339, args[1])
 		if err != nil {
-			log.Fatal(err)
+			return 0, err
 		}
 		when = t
 	}
 
-	delay(when.Sub(time.Now()))
-	if len(a) > 2 {
-		fmt.Println(strings.Join(a[3:], " "))
+	// TODO: broadcast args[2:]... via wall or a similar mechanism.
+	if !dryrun {
+		time.Sleep(time.Until(when))
 	}
-	if err := reboot(int(op)); err != nil {
+	if !dryrun {
+		if err := unix.Reboot(int(op)); err != nil {
+			return 0, err
+		}
+	}
+
+	return op, nil
+}
+
+func main() {
+	if _, err := shutdown(false, os.Args[1:]...); err != nil {
 		log.Fatal(err)
 	}
 }

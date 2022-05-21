@@ -4,7 +4,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,25 +12,29 @@ import (
 	"github.com/cenkalti/backoff/v4"
 )
 
+var (
+	ErrNoCmd = fmt.Errorf("no command passed")
+)
+
 func runit(timeout string, c string, a ...string) error {
 	if c == "" {
-		return fmt.Errorf("no command passed")
+		return ErrNoCmd
 	}
-	ctx := context.Background()
+	b := backoff.NewExponentialBackOff()
 	if len(timeout) != 0 {
 		d, err := time.ParseDuration(timeout)
 		if err != nil {
 			return err
 		}
-		cx, cancel := context.WithTimeout(context.Background(), d)
-		defer cancel()
-		ctx = cx
+		v("Set timeout to %v", d)
+		b.MaxElapsedTime = d
 	}
-	b := backoff.WithContext(backoff.NewExponentialBackOff(), ctx)
 	f := func() error {
 		cmd := exec.Command(c, a...)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		return cmd.Run()
+		err := cmd.Run()
+		v("%q %q:%v", c, a, err)
+		return err
 	}
 
 	return backoff.Retry(f, b)

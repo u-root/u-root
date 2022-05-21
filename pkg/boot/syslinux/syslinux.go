@@ -31,16 +31,17 @@ func probeIsolinuxFiles() []string {
 	files := make([]string, 0, 10)
 	// search order from the syslinux wiki
 	// http://wiki.syslinux.org/wiki/index.php?title=Config
-	// TODO: do we want to handle extlinux too ?
 	dirs := []string{
 		"boot/isolinux",
 		"isolinux",
 		"boot/syslinux",
+		"extlinux",
 		"syslinux",
 		"",
 	}
 	confs := []string{
 		"isolinux.cfg",
+		"extlinux.conf",
 		"syslinux.cfg",
 	}
 	for _, dir := range dirs {

@@ -236,7 +236,8 @@ func TestRun(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if err := run(tt.arg, tt.univ, tt.fileref, &buf); err != nil {
+			rc := RealClock{}
+			if err := run(tt.arg, tt.univ, tt.fileref, rc, &buf); err != nil {
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("%q failed: %q", tt.name, err)
 				}
@@ -252,6 +253,14 @@ func TestRun(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeClock struct {
+	time.Time
+}
+
+func (f fakeClock) Now() time.Time {
+	return f.Time
 }
 
 func TestGetTime(t *testing.T) {
@@ -276,7 +285,7 @@ func TestGetTime(t *testing.T) {
 			wantDay:   22,
 			wantHour:  4,
 			wantMin:   05,
-			wantSec:   time.Now().Second(),
+			wantSec:   0,
 			location:  time.Local,
 		},
 		{
@@ -287,7 +296,7 @@ func TestGetTime(t *testing.T) {
 			wantDay:   22,
 			wantHour:  4,
 			wantMin:   05,
-			wantSec:   time.Now().Second(),
+			wantSec:   0,
 			location:  time.Local,
 		},
 		{
@@ -309,7 +318,7 @@ func TestGetTime(t *testing.T) {
 			wantDay:   22,
 			wantHour:  4,
 			wantMin:   5,
-			wantSec:   time.Now().Second(),
+			wantSec:   0,
 			location:  time.Local,
 		},
 		{
@@ -342,15 +351,16 @@ func TestGetTime(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			testTime, err := getTime(tt.location, tt.time)
+			fc := fakeClock{}
+			fc.Time = time.Date(tt.wantYear, time.Month(tt.wantMonth), tt.wantDay, tt.wantHour, tt.wantMin, tt.wantSec, tt.wantNsec, tt.location)
+			testTime, err := getTime(tt.location, tt.time, fc)
 			if err != nil {
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("%q failed. Got: %q, Want: %q", tt.name, err, tt.wantErr)
 				}
 			}
-			compareTime := time.Date(tt.wantYear, time.Month(tt.wantMonth), tt.wantDay, tt.wantHour, tt.wantMin, tt.wantSec, tt.wantNsec, tt.location).String()
-			if err == nil && !strings.Contains(compareTime, testTime.String()) {
-				t.Errorf("test %q failed. Got: %q, Want: %q", tt.name, testTime, compareTime)
+			if err == nil && !strings.Contains(fc.Time.String(), testTime.String()) {
+				t.Errorf("test %q failed. Got: %q, Want: %q", tt.name, testTime, fc.Time.String())
 			}
 		})
 	}

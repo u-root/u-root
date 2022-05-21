@@ -73,7 +73,7 @@ func (s shell) runAll(narg int) error {
 				return s.runInteractiveTabCompletion(r, os.Stdout)
 			}
 
-			fmt.Println("Do get tabcompletion run 'gosh -tabcomp'\nThis will only work with a working framebuffer for now")
+			fmt.Println("To get tab completion run 'gosh -tabcomp'.\nTab completion will only work with a working framebuffer.")
 
 			return s.runInteractive(r, os.Stdin, os.Stdout)
 		}

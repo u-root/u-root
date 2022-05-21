@@ -69,7 +69,7 @@ func TestRm(t *testing.T) {
 		{
 			name: "no args",
 			file: "",
-			want: "",
+			want: usage,
 		},
 		{
 			name: "rm one file",

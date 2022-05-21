@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate go run purgatories.go
-
 // kexec executes a new kernel over the running kernel (u-root).
 //
 // Synopsis:
@@ -25,7 +23,6 @@
 //      --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
 //  -p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
 //      --reuse-cmdline        Use the kernel command line from running system
-
 package main
 
 import (

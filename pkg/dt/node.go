@@ -59,8 +59,8 @@ func (n *Node) Walk(f func(*Node) error) error {
 	if err := f(n); err != nil {
 		return err
 	}
-	for _, child := range n.Children {
-		if err := child.Walk(f); err != nil {
+	for idx := range n.Children {
+		if err := n.Children[idx].Walk(f); err != nil {
 			return err
 		}
 	}
@@ -72,8 +72,8 @@ func (n *Node) Find(f func(*Node) bool) (*Node, bool) {
 	if ok := f(n); ok {
 		return n, ok
 	}
-	for _, child := range n.Children {
-		if nn, ok := child.Find(f); ok {
+	for idx := range n.Children {
+		if nn, ok := n.Children[idx].Find(f); ok {
 			return nn, ok
 		}
 	}
@@ -87,8 +87,8 @@ func (n *Node) FindAll(f func(*Node) bool) ([]*Node, bool) {
 		nodes = append(nodes, n)
 	}
 
-	for _, child := range n.Children {
-		if matching, ok := child.FindAll(f); ok {
+	for idx := range n.Children {
+		if matching, ok := n.Children[idx].FindAll(f); ok {
 			nodes = append(nodes, matching...)
 		}
 	}
@@ -107,9 +107,9 @@ func (n *Node) NodeByName(name string) (*Node, bool) {
 
 // LookProperty finds a property by name.
 func (n *Node) LookProperty(name string) (*Property, bool) {
-	for _, p := range n.Properties {
-		if p.Name == name {
-			return &p, true
+	for idx := range n.Properties {
+		if n.Properties[idx].Name == name {
+			return &n.Properties[idx], true
 		}
 	}
 	return nil, false

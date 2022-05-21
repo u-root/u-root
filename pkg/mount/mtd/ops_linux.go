@@ -27,7 +27,7 @@ func NewDev(n string) (Flasher, error) {
 }
 
 // QueueWrite adds a []byte to the pending write queue.
-func (m *Dev) QueueWrite(b []byte, off int64) (int, error) {
+func (m *Dev) QueueWriteAt(b []byte, off int64) (int, error) {
 	return m.File.WriteAt(b, off)
 }
 
@@ -47,6 +47,6 @@ func (m *Dev) Close() error {
 }
 
 // DevName returns the name of the flash device.
-func (m *Dev) DevName() string {
+func (m *Dev) Name() string {
 	return m.devName
 }

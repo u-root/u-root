@@ -22,17 +22,16 @@ type fieldCluster struct {
 	Fields []string `json:"fields"`
 }
 
-/* describes the "dmi" portion of policy file */
+// DmiCollector describes the "dmi" portion of policy file.
 type DmiCollector struct {
 	Type     string         `json:"type"`
 	Clusters []fieldCluster `json:"events"`
 }
 
-/*
- * NewDmiCollector extracts the "dmi" portion from the policy file.
- * initializes a new DmiCollector structure.
- * returns error if unmarshalling of DmiCollector fails
- */
+// NewDmiCollector extracts the "dmi" portion from the policy file and
+// initializes a new DmiCollector structure.
+//
+// It returns an error if unmarshalling of DmiCollector fails.
 func NewDmiCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New DMI Collector initialized")
 	dc := new(DmiCollector)
@@ -43,11 +42,8 @@ func NewDmiCollector(config []byte) (Collector, error) {
 	return dc, nil
 }
 
-/*
- * below look up table is from man dmidecode.
- * used to lookup the dmi type parsed from policy file.
- * e.g if policy file contains BIOS, this table would return 0.
- */
+// Lookup table to convert a string to a DMI type.
+// (taken from the dmidecode man page)
 var typeTable = map[string]uint8{
 	"bios":                             0,
 	"system":                           1,
@@ -93,7 +89,8 @@ var typeTable = map[string]uint8{
 	"onboard device":                   41,
 }
 
-// parseTypeFilter looks up type in typeTable and sets the corresponding entry in map to true.
+// parseTypeFilter looks up the DMI types and sets the corresponding entries
+// in a map to true.
 func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 	types := map[smbios.TableType]bool{}
 	for _, ts := range typeStrings {
@@ -104,12 +101,10 @@ func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 	return types, nil
 }
 
-/*
- * Collect satisfies collector interface. It calls
- * 1. smbios package to get all smbios data,
- * 2. then, filters smbios data based on type provided in policy file, and
- * 3. the filtered data is then measured into the tpm device.
- */
+// Collect gets all smbios data, filters is based on the types provided in the
+// policy file, then measures the filtered data into the TPM.
+//
+// It satisfies the Collector interface.
 func (s *DmiCollector) Collect() error {
 	slaunch.Debug("DMI Collector: Entering ")
 	if s.Type != "dmi" {
