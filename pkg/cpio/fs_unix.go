@@ -208,13 +208,14 @@ type Recorder struct {
 // If not, we get a new inumber for it and save the inode away.
 // This eliminates two of the messier parts of creating reproducible
 // output streams.
+// The second return value indicates whether it is a hardlink or not.
 func (r *Recorder) inode(i Info) (Info, bool) {
 	d := devInode{dev: i.Dev, ino: i.Ino}
 	i.Dev = 0
 
 	if d, ok := r.inodeMap[d]; ok {
 		i.Ino = d.Ino
-		return i, true
+		return i, d.Name != i.Name
 	}
 
 	i.Ino = r.inumber

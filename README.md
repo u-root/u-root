@@ -269,9 +269,9 @@ sufficient to use an existing one. Usually you can find one in `/boot`.
 If you quickly need to obtain a kernel, for example, when you are on a non-Linux
 system, you can assemble a URL to download one through Arch Linux's
 [iPXE menu file](https://www.archlinux.org/releng/netboot/archlinux.ipxe). It
-would download from `${mirrorurl}iso/${release}/arch/boot/x86_64/vmlinuz`, so
+would download from `${mirrorurl}iso/${release}/arch/boot/x86_64/vmlinuz-linux`, so
 just search for a mirror URL you prefer and a release version, for example,
-`http://mirror.rackspace.com/archlinux/iso/2019.10.01/arch/boot/x86_64/vmlinuz`.
+`http://mirror.rackspace.com/archlinux/iso/2022.05.01/arch/boot/x86_64/vmlinuz-linux`.
 
 ### Framebuffer
 

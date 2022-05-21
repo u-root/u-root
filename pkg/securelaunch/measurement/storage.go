@@ -15,17 +15,16 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
-/* describes the "storage" portion of policy file */
+// StorageCollector describes the "storage" portion of the policy file.
 type StorageCollector struct {
 	Type  string   `json:"type"`
 	Paths []string `json:"paths"`
 }
 
-/*
- * NewStorageCollector extracts the "storage" portion from the policy file.
- * initializes a new StorageCollector structure.
- * returns error if unmarshalling of StorageCollector fails
- */
+// NewStorageCollector extracts the "storage" portion from the policy file and
+// initializes a new StorageCollector structure.
+//
+// It returns an error if unmarshalling of StorageCollector fails.
 func NewStorageCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New Storage Collector initialized\n")
 	sc := new(StorageCollector)
@@ -36,15 +35,10 @@ func NewStorageCollector(config []byte) (Collector, error) {
 	return sc, nil
 }
 
-/*
- * measureStorageDevice reads the disk path input by user,
- * and then extends the pcr with it.
- *
- * Hashing of buffer is handled by tpm package.
- * - blkDevicePath - string e.g /dev/sda
- * returns
- * - error if Reading the block device fails.
- */
+// measureStorageDevice reads the given disk path and measures it into the TPM.
+//
+// blkDevicePath is a string to a block device (e.g., /dev/sda).
+// It returns and error if Reading the block device fails.
 func measureStorageDevice(blkDevicePath string) error {
 	log.Printf("Storage Collector: Measuring block device %s\n", blkDevicePath)
 	file, err := os.Open(blkDevicePath)
@@ -56,12 +50,10 @@ func measureStorageDevice(blkDevicePath string) error {
 	return tpm.ExtendPCRDebug(pcr, file, eventDesc)
 }
 
-/*
- * Collect satisfies Collector Interface. It loops over all storage paths provided
- * by user and calls measureStorageDevice for each storage path. storage path is of
- * form /dev/sda. measureStorageDevice in turn calls tpm
- * package which further hashes this buffer and extends pcr.
- */
+// Collect loops over the given storage paths and for each storage path calls
+// measureStorageDevice(), which measures a storage device into the TPM.
+//
+// It satisfies the Collector interface.
 func (s *StorageCollector) Collect() error {
 	for _, inputVal := range s.Paths {
 		device, e := slaunch.GetStorageDevice(inputVal) // inputVal is blkDevicePath e.g UUID or sda
