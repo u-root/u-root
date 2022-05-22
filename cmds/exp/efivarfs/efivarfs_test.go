@@ -5,9 +5,10 @@
 package main
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ func TestRun(t *testing.T) {
 		delete  string
 		write   string
 		content string
-		wantErr string
+		wantErr error
 	}{
 		{
 			name: "list no efivarfs",
@@ -29,7 +30,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			list:    true,
-			wantErr: "no efivarfs",
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name: "read no efivarfs",
@@ -38,7 +39,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			read:    "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			wantErr: "no efivarfs",
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name: "delete no efivarfs",
@@ -47,7 +48,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			delete:  "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			wantErr: "no efivarfs",
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name: "write malformed var",
@@ -56,7 +57,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			write:   "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350000",
-			wantErr: "var name malformed",
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name: "write no content",
@@ -66,7 +67,7 @@ func TestRun(t *testing.T) {
 			},
 			write:   "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
 			content: "/bogus",
-			wantErr: "failed to read file",
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name:  "write no guid no efivarfs",
@@ -83,14 +84,15 @@ func TestRun(t *testing.T) {
 				}
 				return s
 			},
-			wantErr: "no efivarfs",
+			wantErr: os.ErrPermission,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.content = tt.setup(t.TempDir(), t)
 			if err := run(tt.list, tt.read, tt.delete, tt.write, tt.content); err != nil {
-				if !strings.Contains(err.Error(), tt.wantErr) {
-					t.Errorf("Want: %q, Got: %v", tt.wantErr, err)
+				t.Logf("Try: %v, err %v", tt, err)
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("Got: %v(%T), Want: %v(%T)", err, err, tt.wantErr, tt.wantErr)
 				}
 			}
 		})

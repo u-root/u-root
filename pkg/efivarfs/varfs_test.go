@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -95,7 +96,7 @@ func TestGet(t *testing.T) {
 			attr:    0,
 			data:    nil,
 			setup:   func(path string, t *testing.T) { t.Helper() },
-			wantErr: ErrVarNotExist,
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name: "no permission",
@@ -118,7 +119,7 @@ func TestGet(t *testing.T) {
 					t.Errorf("Failed to close file: %v", err)
 				}
 			},
-			wantErr: ErrVarPermission,
+			wantErr: fs.ErrPermission,
 		},
 		{
 			name: "var empty",
@@ -137,7 +138,7 @@ func TestGet(t *testing.T) {
 					t.Errorf("Failed to close file: %v", err)
 				}
 			},
-			wantErr: ErrVarNotExist,
+			wantErr: fs.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -226,7 +227,7 @@ func TestSet(t *testing.T) {
 					t.Errorf("Failed to close file: %v", err)
 				}
 			},
-			wantErr: ErrVarPermission,
+			wantErr: fs.ErrPermission,
 		},
 		{
 			name: "var exists",
@@ -330,7 +331,7 @@ func TestRemove(t *testing.T) {
 					t.Errorf("Failed to close file: %v", err)
 				}
 			},
-			wantErr: ErrVarPermission,
+			wantErr: fs.ErrPermission,
 		},
 		{
 			name: "var not exist",
@@ -342,7 +343,7 @@ func TestRemove(t *testing.T) {
 				}(),
 			},
 			setup:   func(path string, t *testing.T) { t.Helper() },
-			wantErr: ErrVarNotExist,
+			wantErr: fs.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -458,7 +459,7 @@ func TestList(t *testing.T) {
 					t.Errorf("Failed changing permissions: %v", err)
 				}
 			},
-			wantErr: ErrVarPermission,
+			wantErr: fs.ErrPermission,
 		},
 		{
 			name: "no dir",
@@ -471,7 +472,7 @@ func TestList(t *testing.T) {
 			},
 			dir:     "/bogus",
 			setup:   func(path string, t *testing.T) { t.Helper() },
-			wantErr: ErrVarNotExist,
+			wantErr: fs.ErrNotExist,
 		},
 		{
 			name: "malformed vars",

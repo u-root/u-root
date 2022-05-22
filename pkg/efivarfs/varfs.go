@@ -7,9 +7,9 @@ package efivarfs
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,17 +26,10 @@ var EfiVarFs = "/sys/firmware/efi/efivars/"
 
 var (
 	// ErrFsNotMounted is caused if no vailed efivarfs magic is found
-	ErrFsNotMounted = errors.New("no efivarfs magic found, is it mounted?")
+	ErrFsNotMounted = fmt.Errorf("%w:no efivarfs magic found, is it mounted?", fs.ErrNotExist)
 
 	// ErrVarsUnavailable is caused by not having a valid backend
-	ErrVarsUnavailable = errors.New("no variable backend is available")
-
-	// ErrVarNotExist is caused by accessing a non-existing variable
-	ErrVarNotExist = errors.New("variable does not exist")
-
-	// ErrVarPermission is caused by not haven the right permissions either
-	// because of not being root or xattrs not allowing changes
-	ErrVarPermission = errors.New("permission denied")
+	ErrVarsUnavailable = fmt.Errorf("%v:no variable backend is available", fs.ErrNotExist)
 )
 
 // efivarfs represents the real efivarfs of the Linux kernel
@@ -68,9 +61,9 @@ func (v *efivarfs) get(desc VariableDescriptor) (VariableAttributes, []byte, err
 	f, err := os.OpenFile(path, os.O_RDONLY, 0)
 	switch {
 	case os.IsNotExist(err):
-		return 0, nil, ErrVarNotExist
+		return 0, nil, fs.ErrNotExist
 	case os.IsPermission(err):
-		return 0, nil, ErrVarPermission
+		return 0, nil, fs.ErrPermission
 	case err != nil:
 		return 0, nil, err
 	}
@@ -79,7 +72,7 @@ func (v *efivarfs) get(desc VariableDescriptor) (VariableAttributes, []byte, err
 	var attrs VariableAttributes
 	if err := binary.Read(f, binary.LittleEndian, &attrs); err != nil {
 		if err == io.EOF {
-			return 0, nil, ErrVarNotExist
+			return 0, nil, fs.ErrNotExist
 		}
 		return 0, nil, err
 	}
@@ -103,7 +96,7 @@ func (v *efivarfs) set(desc VariableDescriptor, attrs VariableAttributes, data [
 	switch {
 	case os.IsNotExist(err):
 	case os.IsPermission(err):
-		return ErrVarPermission
+		return fs.ErrPermission
 	case err != nil:
 		return err
 	default:
@@ -112,7 +105,7 @@ func (v *efivarfs) set(desc VariableDescriptor, attrs VariableAttributes, data [
 		restoreImmutable, err := makeMutable(read)
 		switch {
 		case os.IsPermission(err):
-			return ErrVarPermission
+			return fs.ErrPermission
 		case err != nil:
 			return err
 		}
@@ -122,9 +115,9 @@ func (v *efivarfs) set(desc VariableDescriptor, attrs VariableAttributes, data [
 	write, err := os.OpenFile(path, flags, 0644)
 	switch {
 	case os.IsNotExist(err):
-		return ErrVarNotExist
+		return fs.ErrNotExist
 	case os.IsPermission(err):
-		return ErrVarPermission
+		return fs.ErrPermission
 	case err != nil:
 		return err
 	}
@@ -149,16 +142,16 @@ func (v *efivarfs) remove(desc VariableDescriptor) error {
 	f, err := os.OpenFile(path, os.O_WRONLY, 0)
 	switch {
 	case os.IsNotExist(err):
-		return ErrVarNotExist
+		return fs.ErrNotExist
 	case os.IsPermission(err):
-		return ErrVarPermission
+		return fs.ErrPermission
 	case err != nil:
 		return err
 	default:
 		_, err := makeMutable(f)
 		switch {
 		case os.IsPermission(err):
-			return ErrVarPermission
+			return fs.ErrPermission
 		case err != nil:
 			return err
 		default:
@@ -174,9 +167,9 @@ func (v *efivarfs) list() ([]VariableDescriptor, error) {
 	f, err := os.OpenFile(EfiVarFs, os.O_RDONLY, 0)
 	switch {
 	case os.IsNotExist(err):
-		return nil, ErrVarNotExist
+		return nil, fs.ErrNotExist
 	case os.IsPermission(err):
-		return nil, ErrVarPermission
+		return nil, fs.ErrPermission
 	case err != nil:
 		return nil, err
 	}
