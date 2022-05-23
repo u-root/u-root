@@ -36,7 +36,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		configPath := strings.TrimRight(test, ".json")
+		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
 			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil)
 			if err != nil {
@@ -82,7 +82,7 @@ func TestScanBLSEntries(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		configPath := strings.TrimRight(test, ".json")
+		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
 			want, err := os.ReadFile(test)
 			if err != nil {
