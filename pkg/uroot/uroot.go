@@ -241,6 +241,11 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		opts.Commands[index].Packages = importPaths
 	}
 
+	// Make sure this isn't a nil pointer
+	if opts.BuildOpts == nil {
+		opts.BuildOpts = &gbbgolang.BuildOpts{}
+	}
+
 	// Add each build mode's commands to the archive.
 	for _, cmds := range opts.Commands {
 		builderTmpDir, err := os.MkdirTemp(opts.TempDir, "builder")
