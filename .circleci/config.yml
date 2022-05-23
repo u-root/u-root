@@ -80,7 +80,7 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race ./cmds/... ./pkg/...
+          command: GOMAXPROCS=1 go test -race ./cmds/... ./pkg/...
 
   compile_cmds:
     <<: *golang-template
