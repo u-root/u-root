@@ -57,7 +57,7 @@ jobs:
 
       - run:
           name: Test coverage
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -failfast -timeout=15m -coverprofile=coverage.txt -covermode=set -cover ./cmds/... ./pkg/...
+          command: GOMAXPROCS=1 UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -failfast -timeout=15m -coverprofile=coverage.txt -covermode=set -cover ./cmds/... ./pkg/...
 
       - run:
           name: Upload coverage
