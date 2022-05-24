@@ -8,7 +8,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 // WaitOrphans waits for all remaining processes on the system to exit.
@@ -16,10 +17,10 @@ func WaitOrphans() uint {
 	var numReaped uint
 	for {
 		var (
-			s syscall.WaitStatus
-			r syscall.Rusage
+			s unix.WaitStatus
+			r unix.Rusage
 		)
-		p, err := syscall.Wait4(-1, &s, 0, &r)
+		p, err := unix.Wait4(-1, &s, 0, &r)
 		if p == -1 {
 			break
 		}
@@ -33,7 +34,7 @@ func WaitOrphans() uint {
 func WithTTYControl(ctty bool) CommandModifier {
 	return func(c *exec.Cmd) {
 		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
+			c.SysProcAttr = &unix.SysProcAttr{}
 		}
 		c.SysProcAttr.Setctty = ctty
 		c.SysProcAttr.Setsid = ctty
@@ -44,7 +45,7 @@ func WithTTYControl(ctty bool) CommandModifier {
 func WithCloneFlags(flags uintptr) CommandModifier {
 	return func(c *exec.Cmd) {
 		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
+			c.SysProcAttr = &unix.SysProcAttr{}
 		}
 		c.SysProcAttr.Cloneflags = flags
 	}
@@ -55,7 +56,7 @@ func init() {
 }
 
 func linuxDefault(c *exec.Cmd) {
-	c.SysProcAttr = &syscall.SysProcAttr{
+	c.SysProcAttr = &unix.SysProcAttr{
 		Setctty: true,
 		Setsid:  true,
 	}
@@ -83,9 +84,9 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		}
 
 		for {
-			var s syscall.WaitStatus
-			var r syscall.Rusage
-			if p, err := syscall.Wait4(-1, &s, 0, &r); p == cmd.Process.Pid {
+			var s unix.WaitStatus
+			var r unix.Rusage
+			if p, err := unix.Wait4(-1, &s, 0, &r); p == cmd.Process.Pid {
 				debug("Shell exited, exit status %d", s.ExitStatus())
 				break
 			} else if p != -1 {

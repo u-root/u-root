@@ -26,11 +26,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
+
+const usageMessage = "shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]"
 
 var (
 	opcodes = map[string]uint{
@@ -43,25 +44,26 @@ var (
 	}
 )
 
-func usage() {
-	fmt.Println("shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]")
-}
-
-func shutdown(args []string, dryrun bool) (uint, error) {
+// shutdown calls unix.Reboot, with the type of shutdown defined in args, currently
+// halt, reboot, or suspend. A time may be specified as "now",
+// a future time parseable by time.ParseDuration, or in
+// RFC3339 format. If dryrun is chosen, shutdown returns the opcode it
+// would have used and an error, if any.
+func shutdown(dryrun bool, args ...string) (uint, error) {
 	if len(args) == 0 {
 		args = append(args, "halt")
 	}
 	op, ok := opcodes[args[0]]
 	if !ok {
-		usage()
-		return 0, nil
+		return 0, fmt.Errorf(usageMessage)
 	}
-	if len(args) < 3 {
+	if len(args) < 2 {
 		args = append(args, "now")
 	}
 	when := time.Now()
+
 	switch {
-	case args[0] == "now":
+	case args[1] == "now":
 
 	case args[1][0] == '+':
 		m, err := time.ParseDuration(args[1][1:] + "m")
@@ -77,11 +79,9 @@ func shutdown(args []string, dryrun bool) (uint, error) {
 		when = t
 	}
 
+	// TODO: broadcast args[2:]... via wall or a similar mechanism.
 	if !dryrun {
 		time.Sleep(time.Until(when))
-	}
-	if len(args) > 2 {
-		fmt.Println(strings.Join(args[2:], " "))
 	}
 	if !dryrun {
 		if err := unix.Reboot(int(op)); err != nil {
@@ -93,7 +93,7 @@ func shutdown(args []string, dryrun bool) (uint, error) {
 }
 
 func main() {
-	if _, err := shutdown(os.Args[1:], false); err != nil {
+	if _, err := shutdown(false, os.Args[1:]...); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -10,19 +10,11 @@ import (
 	"fmt"
 )
 
-/*
- * pcr number where all measurements taken by securelaunch pkg
- * will be stored.
- */
-const (
-	pcr = uint32(22)
-)
+// PCR number to extend all measurements taken by the securelaunch package.
+const pcr = uint32(22)
 
-/*
- * all collectors (storage, dmi, cpuid, files) should satisfy this
- * collectors get information and store the hash of that information in pcr
- * owned by the tpm device.
- */
+// All collectors (e.g., cpuid, dmi, etc.) should satisfy this interface.
+// Collectors collect data and extend its hash into a PCR.
 type Collector interface {
 	Collect() error
 }
@@ -34,12 +26,11 @@ var supportedCollectors = map[string]func([]byte) (Collector, error){
 	"cpuid":   NewCPUIDCollector,
 }
 
-/*
- * GetCollector calls the appropriate init handlers for a particular
- * collector JSON object argument and returns a new Collector Interface.
- * - error is returned if unmarshalling fails or an unsupported collector is
- * passed as an argument.
- */
+// GetCollector calls the appropriate init handlers for a particular
+// collector JSON object argument and returns a new Collector Interface.
+//
+// An error is returned if unmarshalling fails or an unsupported collector is
+// passed as an argument.
 func GetCollector(config []byte) (Collector, error) {
 	var header struct {
 		Type string `json:"type"`

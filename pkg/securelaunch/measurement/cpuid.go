@@ -16,21 +16,18 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
-const (
-	defaultCPUIDFile = "cpuid.txt" // only used if user doesn't provide any
-)
+const defaultCPUIDFile = "cpuid.txt"
 
-/* describes the "cpuid" portion of policy file */
+// CPUIDCollector describes the "cpuid" portion of the policy file.
 type CPUIDCollector struct {
 	Type     string `json:"type"`
 	Location string `json:"location"`
 }
 
-/*
- * NewCPUIDCollector extracts the "cpuid" portion from the policy file,
- * initializes a new CPUIDCollector structure and returns error
- * if unmarshalling of CPUIDCollector fails
- */
+// NewCPUIDCollector extracts the "cpuid" portion from the policy file and
+// initializes a new CPUIDCollector structure.
+//
+// An error is returned if unmarshalling of CPUIDCollector fails.
 func NewCPUIDCollector(config []byte) (Collector, error) {
 	slaunch.Debug("New CPUID Collector initialized\n")
 	fc := new(CPUIDCollector)
@@ -41,10 +38,10 @@ func NewCPUIDCollector(config []byte) (Collector, error) {
 	return fc, nil
 }
 
-/*
- * getCPUIDInfo used a string builder to store data obtained from intel-go/cpuid package.
- * returns a byte slice of the string built via string builder.
- */
+// getCPUIDInfo uses a string builder to store data obtained from the
+// intel-go/cpuid package.
+//
+// It returns a byte slice of the string built.
 func getCPUIDInfo() []byte {
 	var w strings.Builder
 	fmt.Fprintf(&w, "VendorString:           %s\n", cpuid.VendorIdentificatorString)
@@ -105,9 +102,8 @@ func getCPUIDInfo() []byte {
 	return []byte(w.String())
 }
 
-/*
- * measureCPUIDFile stores the CPUIDInfo obtained from cpuid package
- * into the tpm device */
+// measureCPUIDFile extends the CPUIDInfo obtained from the cpuid package into
+// a TPM PCR.
 func measureCPUIDFile() ([]byte, error) {
 	d := getCPUIDInfo() // return strings builder
 	eventDesc := "CPUID Collector: Measured CPUID Info"
@@ -118,12 +114,9 @@ func measureCPUIDFile() ([]byte, error) {
 	return d, nil
 }
 
-/*
- * Collect satisfies collector interface. It calls various functions to
- * 1. get the cpuid info from cpuid package
- * 2. stores hash of the result in the tpm device.
- * 3. also keeps a copy of the result on disk at location provided in policy file.
- */
+// Collect gets the cpuid and extends it into the TPM and stores a copy on disk.
+//
+// It satisfies the Collector interface.
 func (s *CPUIDCollector) Collect() error {
 	d, err := measureCPUIDFile()
 	if err != nil {
