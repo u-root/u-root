@@ -282,7 +282,7 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 		var b builder.Builder
 		switch *build {
 		case "bb", "gbb":
-			l.Printf("NOTE: building with the new gobusybox; to get the old behavior check out version XXX") // TODO(MDr164): Find consensus on a "legacy" version
+			l.Printf("NOTE: building with the new gobusybox; to get the old behavior check out commit e415592")
 			b = builder.GBBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
