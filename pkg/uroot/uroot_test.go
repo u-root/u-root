@@ -168,7 +168,7 @@ func testResolvePackagePaths(t *testing.T) {
 			t.Logf("Skipping this test as it breaks with modules")
 		}
 		t.Run(fmt.Sprintf("%q", tc.in), func(t *testing.T) {
-			out, err := ResolvePackagePaths(l, tc.env, tc.in)
+			out, err := ResolvePackagePaths(l, tc.env, "", tc.in)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("ResolvePackagePaths(%#v, %v) err != nil is %v, want %v\nerr is %v",
 					tc.env, tc.in, err != nil, tc.wantErr, err)
