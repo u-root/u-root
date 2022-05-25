@@ -6,10 +6,10 @@ templates:
       - image: uroottest/test-image-amd64:v4.6.0
     working_directory: /go/src/github.com/u-root/u-root
     environment:
+      - UROOT_SOURCE: /go/src/github.com/u-root/u-root
       - CGO_ENABLED: 0
       # Triple all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 3
-      - GO111MODULE: "off"
 
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
@@ -17,12 +17,11 @@ templates:
       - CGO_ENABLED: 0
       # x5 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 5
-      - GO111MODULE: "off"
     steps:
       - checkout
       - run:
           name: Test integration
-          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout 15m -ldflags '-s' ./integration/...
+          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
       - run:
           name: Upload integration coverage
@@ -112,7 +111,7 @@ jobs:
       - checkout
       - run:
           name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -build=bb -files /tmp/usr minimal
+          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go -files /tmp/usr minimal
 
   check_templates:
     <<: *golang-template
@@ -123,13 +122,13 @@ jobs:
           command: |
                   go build .
                   goruncmd="./u-root -stats-output-path=/tmp/stats.json"
-                  $goruncmd -build=bb minimal
-                  $goruncmd -build=bb core
-                  $goruncmd -build=bb coreboot-app
-                  $goruncmd -build=bb all
-                  $goruncmd -build=bb world
+                  $goruncmd minimal
+                  $goruncmd core
+                  $goruncmd coreboot-app
+                  $goruncmd all
+                  $goruncmd world
                   # Fails because of dups. Is this supposed to work?
-                  #$goruncmd -build=bb all core
+                  #$goruncmd all core
                   #$goruncmd all core
                   GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
                   cat /tmp/stats.json
