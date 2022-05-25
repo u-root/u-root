@@ -86,13 +86,13 @@ func (b *BlockDev) DevName() string {
 }
 
 // Mount implements mount.Mounter.
-func (b *BlockDev) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+func (b *BlockDev) Mount(path string, flags uintptr, opts ...func() error) (*mount.MountPoint, error) {
 	devpath := filepath.Join("/dev", b.Name)
 	if len(b.FSType) > 0 {
-		return mount.Mount(devpath, path, b.FSType, "", flags)
+		return mount.Mount(devpath, path, b.FSType, "", flags, opts...)
 	}
 
-	return mount.TryMount(devpath, path, "", flags)
+	return mount.TryMount(devpath, path, "", flags, opts...)
 }
 
 // GPTTable tries to read a GPT table from the block device described by the
