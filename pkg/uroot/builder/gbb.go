@@ -18,6 +18,11 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
+// Commands to skip building in bb mode.
+var skip = map[string]struct{}{
+	"bb": {},
+}
+
 // GBBBuilder is an implementation of Builder that compiles many Go commands
 // into one busybox-style binary.
 //

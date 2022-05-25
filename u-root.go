@@ -63,7 +63,7 @@ func init() {
 		sh = "elvish"
 	}
 
-	build = flag.String("build", "gbb", "u-root build format (e.g. bb or binary).")
+	build = flag.String("build", "gbb", "u-root build format (e.g. bb/gbb or binary).")
 	format = flag.String("format", "cpio", "Archival format.")
 
 	tmpDir = flag.String("tmpdir", "", "Temporary directory to put binaries in.")
@@ -272,10 +272,8 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	if !*noCommands {
 		var b builder.Builder
 		switch *build {
-		case "bb":
-			b = builder.BBBuilder{ShellBang: *shellbang}
-		case "gbb":
-			l.Printf("NOTE: building with the new gobusybox; to get old behavior, use -build=bb")
+		case "bb", "gbb":
+			l.Printf("NOTE: building with the new gobusybox; to get the old behavior check out version XXX") // TODO(MDr164): Find consensus on a "legacy" version
 			b = builder.GBBBuilder{ShellBang: *shellbang}
 		case "binary":
 			b = builder.BinaryBuilder{}
