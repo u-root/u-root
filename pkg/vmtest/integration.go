@@ -339,6 +339,7 @@ func CreateTestInitramfs(dontSetEnv bool, o uroot.Opts, uinit, outputFile string
 		env.CgoEnabled = false
 		env.GOARCH = TestArch()
 		o.Env = env
+		o.UrootSource = filepath.Join(env.GOPATH, "src/github.com/u-root/u-root")
 	}
 
 	logger := log.New(os.Stderr, "", 0)
