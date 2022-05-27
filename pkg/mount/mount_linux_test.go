@@ -109,7 +109,7 @@ func (m *fakeMounter) DevName() string {
 	return m.name
 }
 
-func (m *fakeMounter) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
+func (m *fakeMounter) Mount(path string, flags uintptr, opts ...func() error) (*mount.MountPoint, error) {
 	m.count++
 	return &mount.MountPoint{
 		Path:   path,

@@ -40,7 +40,7 @@ type Mounter interface {
 	// DevName returns the name of the device.
 	DevName() string
 	// Mount attaches the device at path.
-	Mount(path string, flags uintptr) (*MountPoint, error)
+	Mount(path string, flags uintptr, opts ...func() error) (*MountPoint, error)
 }
 
 // MountPoint represents a mounted file system.
