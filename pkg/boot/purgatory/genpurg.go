@@ -29,7 +29,10 @@ func main() {
 		}
 	}()
 
-	if _, err := fmt.Fprintf(f, "package linux\nvar Purgatories = map[string]*Purgatory {\n"); err != nil {
+	if _, err := fmt.Fprintf(f, "// Copyright 2022 the u-root Authors. All rights reserved\n// Use of this source code is governed by a BSD-style\n// license that can be found in the LICENSE file.\n\n"); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := fmt.Fprintf(f, "package purgatory\nvar Purgatories = map[string]*Purgatory {\n"); err != nil {
 		log.Fatal(err)
 	}
 	d, err := ioutil.TempDir("", "kexecgen")
@@ -51,10 +54,9 @@ func main() {
 			log.Printf("%s, %s: %v, %v", src, asm.code, string(out), err)
 			continue
 		}
-		if out, err := exec.Command(asm.ld[0], append(asm.ld[1:], "-nostdinc", "-nostdlib", "-o", out, dst)...).CombinedOutput(); err != nil {
+		if out, err := exec.Command(asm.ld[0], append(asm.ld[1:], "-nostdlib", "-o", out, dst)...).CombinedOutput(); err != nil {
 			log.Printf("%s, %s: %v, %v", dst, asm.code, string(out), err)
 			continue
-
 		}
 		code, err := ioutil.ReadFile(out)
 		if err != nil {
