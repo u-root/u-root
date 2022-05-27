@@ -14,6 +14,7 @@ templates:
   integration-template: &integration-template
     working_directory: /go/src/github.com/u-root/u-root
     environment:
+      - UROOT_SOURCE: /go/src/github.com/u-root/u-root
       - CGO_ENABLED: 0
       # x5 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 5
@@ -21,7 +22,7 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m -ldflags='-s' -failfast ./integration/...
+          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
       - run:
           name: Upload integration coverage
@@ -54,12 +55,12 @@ jobs:
       - checkout
       - run:
           name: Test Packages
-          command: go test -v -a -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt -covermode=atomic -coverpkg=./pkg/... ./pkg/...
+          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root go test -v -a -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
 
       - run:
           name: Test coverage
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=20m -failfast -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
+          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=20m -failfast -coverprofile=coverage.txt -covermode=atomic -cover ./cmds/... ./pkg/...
 
       - run:
           name: Upload coverage
@@ -83,7 +84,7 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: go test -race -timeout=15m -failfast ./cmds/... ./pkg/...
+          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root go test -race -timeout=15m -failfast ./cmds/... ./pkg/...
 
   compile_cmds:
     <<: *golang-template
@@ -147,8 +148,22 @@ jobs:
     docker:
       - image: uroottest/test-image-arm:v4.4.0
 
+  # This arch needs a different working dir, so don't use integration-template
   test-integration-arm64:
-    <<: *integration-template
     docker:
       - image: uroottest/test-image-arm64:v4.4.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
+    environment:
+      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
+      - CGO_ENABLED: 0
+      # x5 all timeouts for QEMU VM tests since they run without KVM.
+      - UROOT_QEMU_TIMEOUT_X: 5
+    steps:
+      - checkout
+      - run:
+          name: Test integration
+          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m -ldflags='-s' -failfast ./integration/...
+          no_output_timeout: 15m
+      - run:
+          name: Upload integration coverage
+          command: bash <(curl -s https://codecov.io/bash)
