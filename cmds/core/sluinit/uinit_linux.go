@@ -23,6 +23,15 @@ import (
 
 var slDebug = flag.Bool("d", false, "enable debug logs")
 
+// step keeps track of the current step (e.g., parse policy, measure).
+var step = 1
+
+// printStep prints a message for the next step.
+func printStep(msg string) {
+	slaunch.Debug("******** Step %d: %s ********", step, msg)
+	step++
+}
+
 // checkDebugFlag checks if `uroot.uinitargs=-d` is set on the kernel cmdline.
 // If it is set, slaunch.Debug is set to log.Printf.
 func checkDebugFlag() {
@@ -131,7 +140,7 @@ func main() {
 
 	checkDebugFlag()
 
-	slaunch.Debug("******** Step 1: Initialization ********")
+	printStep("Initialization")
 	// Check if an iSCSI drive was specified and if so, mount it.
 	if iscsiSpecified() {
 		if err := scanIscsiDrives(); err != nil {
@@ -143,20 +152,20 @@ func main() {
 		exit(fmt.Errorf("failed to get TPM device: %w", err))
 	}
 
-	slaunch.Debug("******** Step 2: Locate and parse SL policy ********")
+	printStep("Locate and parse SL policy")
 	p, err := policy.Get()
 	if err != nil {
 		exit(fmt.Errorf("failed to parse policy file: %w", err))
 	}
 	slaunch.Debug("Policy file successfully parsed")
 
-	slaunch.Debug("******** Step 3: Parse event logs *********")
+	printStep("Parse event logs")
 	if err := p.EventLog.Parse(); err != nil {
 		exit(fmt.Errorf("failed to parse event logs: %w", err))
 	}
 	slaunch.Debug("Event logs successfully parsed")
 
-	slaunch.Debug("******** Step 4: Collect evidence ********")
+	printStep("Collect evidence")
 	for _, collector := range p.Collectors {
 		slaunch.Debug("Collector: %v", collector)
 		if err := collector.Collect(); err != nil {
@@ -165,25 +174,25 @@ func main() {
 	}
 	slaunch.Debug("Collectors completed")
 
-	slaunch.Debug("******** Step 5: Measure target kernel and initrd ********")
+	printStep("Measure target kernel and initrd")
 	if err := p.Launcher.MeasureKernel(); err != nil {
 		exit(fmt.Errorf("failed to measure kernel and initrd: %w", err))
 	}
 	slaunch.Debug("Kernel and initrd successfully measured")
 
-	slaunch.Debug("******** Step 6: Dump logs to disk *******")
+	printStep("Dump logs to disk")
 	if err := slaunch.ClearPersistQueue(); err != nil {
 		exit(fmt.Errorf("failed to dump logs to disk: %w", err))
 	}
 	slaunch.Debug("Logs successfully dumped to disk")
 
-	slaunch.Debug("******** Step 7: Unmount all ********")
+	printStep("Unmount all")
 	if err := slaunch.UnmountAll(); err != nil {
 		exit(fmt.Errorf("failed to unmount all devices: %w", err))
 	}
 	slaunch.Debug("Devices successfully unmounted")
 
-	slaunch.Debug("******** Step 8: Boot system ********")
+	printStep("Boot system")
 	if err := p.Launcher.Boot(); err != nil {
 		exit(fmt.Errorf("failed to boot system: %w", err))
 	}

@@ -79,7 +79,7 @@ func (l *Launcher) Boot() error {
 		return e
 	}
 
-	slaunch.Debug("********Step 7: kexec called  ********")
+	slaunch.Debug("Calling kexec")
 	image := &boot.LinuxImage{
 		Kernel:  uio.NewLazyFile(k),
 		Initrd:  uio.NewLazyFile(i),
