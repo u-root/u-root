@@ -180,9 +180,8 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 		}
 		Debug("mountCache: need to mount the same device with different flags")
 		Debug("mountCache: Unmounting %s first", cachedMountPath)
-		if e := mount.Unmount(cachedMountPath, true, false); e != nil {
-			log.Printf("Unmount failed for %s. PANIC", cachedMountPath)
-			panic(e)
+		if err := mount.Unmount(cachedMountPath, true, false); err != nil {
+			return "", fmt.Errorf("failed to unmount '%s': %w", cachedMountPath, err)
 		}
 		Debug("mountCache: unmount successfull. lets delete entry in map")
 		deleteEntryMountCache(key)
@@ -246,19 +245,20 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 }
 
 // UnmountAll unmounts all mounted devices from the file heirarchy.
-func UnmountAll() {
+func UnmountAll() error {
 	Debug("UnmountAll: %d devices need to be unmounted", len(mountCache.m))
 	for key, mountCacheData := range mountCache.m {
 		cachedMountPath := mountCacheData.mountPath
 		Debug("UnmountAll: Unmounting %s", cachedMountPath)
-		if e := mount.Unmount(cachedMountPath, true, false); e != nil {
-			log.Printf("Unmount failed for %s. PANIC", cachedMountPath)
-			panic(e)
+		if err := mount.Unmount(cachedMountPath, true, false); err != nil {
+			return fmt.Errorf("failed to unmount '%s': %w", cachedMountPath, err)
 		}
 		Debug("UnmountAll: Unmounted %s", cachedMountPath)
 		deleteEntryMountCache(key)
 		Debug("UnmountAll: Deleted key %s from cache", key)
 	}
+
+	return nil
 }
 
 // GetBlkInfo gets information on all block devices and stores it in the
