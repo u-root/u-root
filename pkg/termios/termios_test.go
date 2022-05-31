@@ -15,10 +15,12 @@ package termios
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/testutil"
@@ -98,7 +100,7 @@ var (
 )
 
 func TestNew(t *testing.T) {
-	if _, err := New(); os.IsNotExist(err) {
+	if _, err := New(); os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("No /dev/tty here.")
 	} else if err != nil {
 		t.Errorf("TestNew: want nil, got %v", err)
@@ -107,7 +109,7 @@ func TestNew(t *testing.T) {
 
 func TestChangeTermios(t *testing.T) {
 	tty, err := New()
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("No /dev/tty here.")
 	} else if err != nil {
 		t.Fatalf("TestRaw new: want nil, got %v", err)
@@ -126,7 +128,7 @@ func TestRaw(t *testing.T) {
 	// TestRaw no longer works in CircleCi, Restrict to only VM tests.
 	testutil.SkipIfNotRoot(t)
 	tty, err := New()
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("No /dev/tty here.")
 	} else if err != nil {
 		t.Fatalf("TestRaw new: want nil, got %v", err)

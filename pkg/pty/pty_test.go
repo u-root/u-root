@@ -11,8 +11,10 @@ package pty
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
+	"syscall"
 	"testing"
 )
 
@@ -26,7 +28,7 @@ func TestNew(t *testing.T) {
 
 func TestRunRestoreTTYMode(t *testing.T) {
 	p, err := New()
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("Failed to allocate /dev/pts device")
 	} else if err != nil {
 		t.Fatalf("TestStart New pty: want nil, got %v", err)
