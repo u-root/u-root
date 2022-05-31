@@ -52,7 +52,7 @@ func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*moun
 	}
 
 	mountpath := filepath.Join(baseMountpoint, partitions[0].Name)
-	return partitions[0].Mount(mountpath, mount.MS_RDONLY)
+	return partitions[0].Mount(mountpath, mount.MS_RDONLY, func() error { return os.MkdirAll(mountpath, 0o666) })
 }
 
 // BootGrubMode tries to boot a kernel in GRUB mode. GRUB mode means:
@@ -80,7 +80,7 @@ func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string
 		debug("trying to mount all the available block devices with all the supported file system types")
 		for _, dev := range devices {
 			mountpath := filepath.Join(baseMountpoint, dev.Name)
-			if mountpoint, err := dev.Mount(mountpath, mount.MS_RDONLY); err != nil {
+			if mountpoint, err := dev.Mount(mountpath, mount.MS_RDONLY, func() error { return os.MkdirAll(mountpath, 0o666) }); err != nil {
 				debug("Failed to mount %s on %s: %v", dev, mountpath, err)
 			} else {
 				mounted = append(mounted, mountpoint)
