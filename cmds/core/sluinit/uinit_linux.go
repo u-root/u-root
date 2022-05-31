@@ -5,7 +5,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -44,6 +43,52 @@ func checkDebugFlag() {
 	}
 }
 
+// iscsiSpecified checks if iscsi has been set on the kernel command line.
+func iscsiSpecified() bool {
+	return cmdline.ContainsFlag("netroot") && cmdline.ContainsFlag("rd.iscsi.initator")
+}
+
+// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi
+// drives.
+func scanIscsiDrives() error {
+	uri, ok := cmdline.Flag("netroot")
+	if !ok {
+		return fmt.Errorf("could not get `netroot` argument")
+	}
+	slaunch.Debug("scanIscsiDrives: netroot flag is set: '%s'", uri)
+
+	initiator, ok := cmdline.Flag("rd.iscsi.initiator")
+	if !ok {
+		return fmt.Errorf("could not get `rd.iscsi.initiator` argument")
+	}
+	slaunch.Debug("scanIscsiDrives: rd.iscsi.initiator flag is set: '%s'", initiator)
+
+	target, volume, err := dhclient.ParseISCSIURI(uri)
+	if err != nil {
+		return fmt.Errorf("dhclient iSCSI parser failed: %w", err)
+	}
+
+	slaunch.Debug("scanIscsiDrives: resolved target: '%s'", target)
+	slaunch.Debug("scanIscsiDrives: resolved volume: '%s'", volume)
+
+	devices, err := iscsinl.MountIscsi(
+		iscsinl.WithInitiator(initiator),
+		iscsinl.WithTarget(target.String(), volume),
+		iscsinl.WithCmdsMax(128),
+		iscsinl.WithQueueDepth(16),
+		iscsinl.WithScheduler("noop"),
+	)
+	if err != nil {
+		return fmt.Errorf("could not mount iSCSI drive: %w", err)
+	}
+
+	for i := range devices {
+		slaunch.Debug("scanIscsiDrives: iSCSI drive mounted at '%s'", devices[i])
+	}
+
+	return nil
+}
+
 // main parses platform policy file, and based on the inputs performs
 // measurements and then launches a target kernel.
 //
@@ -58,9 +103,12 @@ func main() {
 
 	checkDebugFlag()
 
-	err := scanIscsiDrives()
-	if err != nil {
-		log.Printf("NO ISCSI DRIVES found, err=[%v]", err)
+	// Check if an iSCSI drive was specified and if so, mount it.
+	if iscsiSpecified() {
+		if err := scanIscsiDrives(); err != nil {
+			log.Printf("failed to mount iSCSI drive, err=%v", err)
+			return
+		}
 	}
 
 	defer unmountAndExit() // called only on error, on success we kexec
@@ -124,44 +172,4 @@ func unmountAndExit() {
 	time.Sleep(5 * time.Second)
 
 	os.Exit(1)
-}
-
-// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi
-// drives.
-func scanIscsiDrives() error {
-	val, ok := cmdline.Flag("netroot")
-	if !ok {
-		return errors.New("netroot flag is not set")
-	}
-	slaunch.Debug("netroot flag is set with val=%s", val)
-
-	target, volume, err := dhclient.ParseISCSIURI(val)
-	if err != nil {
-		return fmt.Errorf("dhclient ISCSI parser failed err=%v", err)
-	}
-
-	slaunch.Debug("resolved ip:port=%s", target)
-	slaunch.Debug("resolved vol=%v", volume)
-
-	slaunch.Debug("Scanning kernel cmd line for *rd.iscsi.initiator* flag")
-	initiatorName, ok := cmdline.Flag("rd.iscsi.initiator")
-	if !ok {
-		return errors.New("rd.iscsi.initiator flag is not set")
-	}
-
-	devices, err := iscsinl.MountIscsi(
-		iscsinl.WithInitiator(initiatorName),
-		iscsinl.WithTarget(target.String(), volume),
-		iscsinl.WithCmdsMax(128),
-		iscsinl.WithQueueDepth(16),
-		iscsinl.WithScheduler("noop"),
-	)
-	if err != nil {
-		return err
-	}
-
-	for i := range devices {
-		slaunch.Debug("Mounted at dev %v", devices[i])
-	}
-	return nil
 }
