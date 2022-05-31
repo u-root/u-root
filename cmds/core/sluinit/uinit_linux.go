@@ -89,6 +89,29 @@ func scanIscsiDrives() error {
 	return nil
 }
 
+// exit loops forever trying to reboot the system.
+func exit(mainErr error) {
+	// Print the error.
+	fmt.Fprintf(os.Stderr, "ERROR: Failed to boot: %v\n", mainErr)
+
+	// Umount anything that might be mounted.
+	slaunch.UnmountAll()
+
+	// Close the connection to the TPM if it was opened.
+	tpm.Close()
+
+	// Loop trying to reboot the system.
+	for {
+		// Wait 5 seconds.
+		time.Sleep(5 * time.Second)
+
+		// Try to reboot the system.
+		if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Failed to reboot: %v\n", err)
+		}
+	}
+}
+
 // main parses platform policy file, and based on the inputs performs
 // measurements and then launches a target kernel.
 //
@@ -103,73 +126,60 @@ func main() {
 
 	checkDebugFlag()
 
+	slaunch.Debug("******** Step 1: Initialization ********")
 	// Check if an iSCSI drive was specified and if so, mount it.
 	if iscsiSpecified() {
 		if err := scanIscsiDrives(); err != nil {
-			log.Printf("failed to mount iSCSI drive, err=%v", err)
-			return
+			exit(fmt.Errorf("failed to mount iSCSI drive: %w", err))
 		}
 	}
 
-	defer unmountAndExit() // called only on error, on success we kexec
-	slaunch.Debug("********Step 1: init completed. starting main ********")
 	if err := tpm.New(); err != nil {
-		log.Printf("tpm.New() failed. err=%v", err)
-		return
+		exit(fmt.Errorf("failed to get TPM device: %w", err))
 	}
-	defer tpm.Close()
 
-	slaunch.Debug("********Step 2: locate and parse SL Policy ********")
+	slaunch.Debug("******** Step 2: Locate and parse SL policy ********")
 	p, err := policy.Get()
 	if err != nil {
-		log.Printf("failed to get policy err=%v", err)
-		return
+		exit(fmt.Errorf("failed to parse policy file: %w", err))
 	}
-	slaunch.Debug("policy file successfully parsed")
+	slaunch.Debug("Policy file successfully parsed")
 
-	slaunch.Debug("********Step 3: Collecting Evidence ********")
-	for _, c := range p.Collectors {
-		slaunch.Debug("Input Collector: %v", c)
-		if e := c.Collect(); e != nil {
-			log.Printf("Collector %v failed, err = %v", c, e)
+	slaunch.Debug("******** Step 3: Collect evidence ********")
+	for _, collector := range p.Collectors {
+		slaunch.Debug("Collector: %v", collector)
+		if err := collector.Collect(); err != nil {
+			log.Printf("Collector '%v' failed: %v", collector, err)
 		}
 	}
 	slaunch.Debug("Collectors completed")
 
-	slaunch.Debug("********Step 4: Measuring target kernel, initrd ********")
+	slaunch.Debug("******** Step 4: Measure target kernel and initrd ********")
 	if err := p.Launcher.MeasureKernel(); err != nil {
-		log.Printf("Launcher.MeasureKernel failed err=%v", err)
-		return
+		exit(fmt.Errorf("failed to measure kernel and initrd: %w", err))
 	}
+	slaunch.Debug("Kernel and initrd successfully measured")
 
-	slaunch.Debug("********Step 5: Parse eventlogs *********")
+	slaunch.Debug("******** Step 5: Parse event logs *********")
 	if err := p.EventLog.Parse(); err != nil {
-		log.Printf("EventLog.Parse() failed err=%v", err)
-		return
+		exit(fmt.Errorf("failed to parse event logs: %w", err))
 	}
+	slaunch.Debug("Event logs successfully parsed")
 
-	slaunch.Debug("*****Step 6: Dump logs to disk *******")
+	slaunch.Debug("******** Step 6: Dump logs to disk *******")
 	if err := slaunch.ClearPersistQueue(); err != nil {
-		log.Printf("ClearPersistQueue failed err=%v", err)
-		return
+		exit(fmt.Errorf("failed to dump logs to disk: %w", err))
 	}
+	slaunch.Debug("Logs successfully dumped to disk")
 
-	slaunch.Debug("********Step *: Unmount all ********")
-	slaunch.UnmountAll()
+	slaunch.Debug("******** Step 7: Unmount all ********")
+	if err := slaunch.UnmountAll(); err != nil {
+		exit(fmt.Errorf("failed to unmount all devices: %w", err))
+	}
+	slaunch.Debug("Devices successfully unmounted")
 
-	slaunch.Debug("********Step 7: Launcher called to Boot ********")
+	slaunch.Debug("******** Step 8: Boot system ********")
 	if err := p.Launcher.Boot(); err != nil {
-		log.Printf("Boot failed. err=%s", err)
-		return
+		exit(fmt.Errorf("failed to boot system: %w", err))
 	}
-}
-
-// unmountAndExit is called on error and unmounts all devices.
-func unmountAndExit() {
-	slaunch.UnmountAll()
-
-	// Let queued up debug statements get printed.
-	time.Sleep(5 * time.Second)
-
-	os.Exit(1)
 }
