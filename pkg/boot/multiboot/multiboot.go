@@ -186,7 +186,7 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 	if err := m.load(debug, ibft); err != nil {
 		return err
 	}
-	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
+	if err := kexec.Load(uint64(m.entryPoint), m.mem.Segments, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
 	}
 	return nil
@@ -292,7 +292,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 			Start: 0x80000,
 			Size:  0x80000,
 		}
-		r, err := m.mem.ReservePhys(uint(len(ibuf)), allowedRange)
+		r, err := m.mem.ReservePhys(uint64(len(ibuf)), allowedRange)
 		if err != nil {
 			return fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
 		}
@@ -347,19 +347,19 @@ func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
 		return 0, err
 	}
 
-	r, err := m.mem.FindSpace(infoSize)
+	r, err := m.mem.FindSpace(uint64(infoSize), uint64(os.Getpagesize()))
 	if err != nil {
 		return 0, err
 	}
 
-	d, err := iw.marshal(r.Start)
+	d, err := iw.marshal(uintptr(r.Start))
 	if err != nil {
 		return 0, err
 	}
 	m.info = iw.info
 
 	m.mem.Segments.Insert(kexec.NewSegment(d, r))
-	return r.Start, nil
+	return uintptr(r.Start), nil
 }
 
 // addInfo collects and adds esxBootInfo (without L!) into the segments.
@@ -389,18 +389,18 @@ func (*esxBootInfoHeader) addInfo(m *multiboot) (addr uintptr, err error) {
 	// string + null-terminator
 	cmdlineLen := len(m.cmdLine) + 1
 
-	memRange, err := m.mem.FindSpace(uint(len(b) + cmdlineLen))
+	memRange, err := m.mem.FindSpace(uint64(len(b)+cmdlineLen), uint(os.Getpagesize()))
 	if err != nil {
 		return 0, err
 	}
-	mi.cmdline = uint64(memRange.Start + uintptr(len(b)))
+	mi.cmdline = memRange.Start + uint64(len(b))
 
 	// Re-marshal, now that the cmdline is set.
 	b = mi.marshal()
 	b = append(b, []byte(m.cmdLine)...)
 	b = append(b, 0)
 	m.mem.Segments.Insert(kexec.NewSegment(b, memRange))
-	return memRange.Start, nil
+	return uintptr(memRange.Start), nil
 }
 
 func (m multiboot) memoryMap() memoryMaps {
@@ -434,7 +434,7 @@ func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	return r.Start, uint(len(mmap)) * sizeofMemoryMap, nil
+	return uintptr(r.Start), uint(len(mmap)) * sizeofMemoryMap, nil
 }
 
 func (m multiboot) memoryBoundaries() (lower, upper uint32) {
@@ -512,5 +512,5 @@ func (m *multiboot) addTrampoline(magic, infoAddr, kernelEntry uintptr) (entry u
 	if err != nil {
 		return 0, err
 	}
-	return r.Start, nil
+	return uintptr(r.Start), nil
 }

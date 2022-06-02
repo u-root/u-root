@@ -67,7 +67,7 @@ func (m *multiboot) addMultibootModules() (uintptr, error) {
 	if err != nil {
 		return 0, err
 	}
-	return modRange.Start, nil
+	return uintptr(modRange.Start), nil
 }
 
 // loadModules loads module files.

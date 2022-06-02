@@ -28,6 +28,8 @@ type LinuxImage struct {
 	Cmdline     string
 	BootRank    int
 	LoadSyscall bool
+
+	KexecOpts linux.KexecOptions
 }
 
 var _ OSImage = &LinuxImage{}
@@ -170,7 +172,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 	}
 
 	if li.LoadSyscall {
-		return linux.KexecLoad(k, i, li.Cmdline)
+		return linux.KexecLoad(k, i, li.Cmdline, li.KexecOptions)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

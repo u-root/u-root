@@ -20,6 +20,7 @@ import (
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/boot/align"
+	"github.com/u-root/u-root/pkg/dt"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -513,6 +514,80 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) (Object, error) {
 	return f, nil
 }
 
+// ParseMemoryMap reads firmware provided memory map from an FDT.
+func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
+	var phys MemoryMap
+	addMemory := func(n *dt.Node) error {
+		// log.Printf("addMemory: found node %s", n.Name);
+		p, found := n.LookProperty("device_type")
+		if !found {
+			return nil
+		}
+		t, err := p.AsString()
+		// log.Printf("addMemory: node %s type %s", n.Name, t)
+		if err != nil || t != "memory" {
+			return nil
+		}
+		// log.Printf("addMemory: tying to add node %s", n.Name)
+		p, found = n.LookProperty("reg")
+		if found {
+			r, err := p.AsRegion()
+			if err != nil {
+				return err
+			}
+			// log.Printf("addMemory: adding node %s %#x %#x", n.Name, r.Start, r.Size);
+			phys = append(phys, TypedRange{
+				Range: Range{Start: r.Start, Size: r.Size},
+				Type:  RangeRAM,
+			})
+		}
+		return nil
+	}
+	err := fdt.RootNode.Walk(addMemory)
+	if err != nil {
+		return err
+	}
+
+	reserveMemory := func(n *dt.Node) error {
+		// log.Printf("resvMemory: start node %s", n.Name)
+		p, found := n.LookProperty("reg")
+		if found {
+			r, err := p.AsRegion()
+			if err != nil {
+				return err
+			}
+			// log.Printf("resvMemory: adding node %s %#x %#x", n.Name, r.Start, r.Size);
+
+			phys.Insert(TypedRange{
+				Range: Range{Start: r.Start, Size: r.Size},
+				Type:  RangeReserved,
+			})
+		}
+		return nil
+	}
+	resv, found := fdt.NodeByName("reserved-memory")
+	if found {
+		err := resv.Walk(reserveMemory)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, r := range fdt.ReserveEntries {
+		// log.Printf("reserveEntries: adding %#x %#x", r.Address, r.Size);
+		phys.Insert(TypedRange{
+			Range: Range{Start: r.Address, Size: r.Size},
+			Type:  RangeReserved,
+		})
+	}
+
+	for _, r := range phys {
+		log.Printf("memmap: 0x%016x 0x%016x %s", r.Start, r.Size, r.Type)
+	}
+	m.Phys = phys
+	return nil
+}
+
 // ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
 func (m *Memory) ParseMemoryMap() error {
 	p, err := ParseMemoryMap()
@@ -624,9 +699,14 @@ const M1 = 1 << 20
 
 // FindSpace returns pointer to the physical memory, where array of size sz can
 // be stored during next AddKexecSegment call.
-func (m Memory) FindSpace(sz uint) (Range, error) {
+//
+// If alignSizeBytes is zero, align up by page size.
+func (m Memory) FindSpace(sz uint, alignSizeBytes uint) (Range, error) {
+	if alignSizeBytes == 0 {
+		alignSizeBytes = uint(os.Getpagesize())
+	}
 	// Allocate full pages.
-	sz = align.AlignUpPageSize(sz)
+	sz = align.AlignUpBySize(sz, alignSizeBytes)
 
 	// Don't use memory below 1M, just in case.
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
@@ -662,10 +742,35 @@ func (m *Memory) AddPhysSegment(d []byte, limit Range) (Range, error) {
 
 // AddKexecSegment adds d to a new kexec segment
 func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
-	r, err := m.FindSpace(uint(len(d)))
+	r, err := m.FindSpace(uint(len(d)), uint(os.Getpagesize()))
 	if err != nil {
 		return Range{}, err
 	}
+	m.Segments.Insert(NewSegment(d, r))
+	return r, nil
+}
+
+// AddKexecSegment adds d to a new kexec segment, but allows asking for extra space
+// and set alignment size.
+//
+// If sz is greater thatn length of len(d), physical address will be
+// offseted by sz - len(d) from the start of the available range. Default
+// to this behavior to begin with, we can also introduce an offset to fine
+// control where to place the segment, when we actually need it.
+func (m *Memory) AddKexecSegmentExplicit(d []byte, sz uint, alignSizeBytes uint) (Range, error) {
+	if sz < uint(len(d)) {
+		return Range{}, fmt.Errorf("length of d is more than size requested")
+	}
+	r, err := m.FindSpace(sz, alignSizeBytes)
+	if err != nil {
+		return Range{}, err
+	}
+	// Offset the placement to the end of the range.
+	//
+	// This is used when we need apply text_offset. In that case,
+	// caller request extra size in bytes by text_offset, than the
+	// size of buf.
+	r.Start += sz - len(d)
 	m.Segments.Insert(NewSegment(d, r))
 	return r, nil
 }
