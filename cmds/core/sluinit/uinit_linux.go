@@ -94,6 +94,11 @@ func exit(mainErr error) {
 	// Print the error.
 	fmt.Fprintf(os.Stderr, "ERROR: Failed to boot: %v\n", mainErr)
 
+	// Dump any logs, if possible. This can help figure out what went wrong.
+	if err := dumpLogs(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Could not dump logs: %v\n", err)
+	}
+
 	// Umount anything that might be mounted.
 	slaunch.UnmountAll()
 
@@ -145,7 +150,13 @@ func main() {
 	}
 	slaunch.Debug("Policy file successfully parsed")
 
-	slaunch.Debug("******** Step 3: Collect evidence ********")
+	slaunch.Debug("******** Step 3: Parse event logs *********")
+	if err := p.EventLog.Parse(); err != nil {
+		exit(fmt.Errorf("failed to parse event logs: %w", err))
+	}
+	slaunch.Debug("Event logs successfully parsed")
+
+	slaunch.Debug("******** Step 4: Collect evidence ********")
 	for _, collector := range p.Collectors {
 		slaunch.Debug("Collector: %v", collector)
 		if err := collector.Collect(); err != nil {
@@ -154,17 +165,11 @@ func main() {
 	}
 	slaunch.Debug("Collectors completed")
 
-	slaunch.Debug("******** Step 4: Measure target kernel and initrd ********")
+	slaunch.Debug("******** Step 5: Measure target kernel and initrd ********")
 	if err := p.Launcher.MeasureKernel(); err != nil {
 		exit(fmt.Errorf("failed to measure kernel and initrd: %w", err))
 	}
 	slaunch.Debug("Kernel and initrd successfully measured")
-
-	slaunch.Debug("******** Step 5: Parse event logs *********")
-	if err := p.EventLog.Parse(); err != nil {
-		exit(fmt.Errorf("failed to parse event logs: %w", err))
-	}
-	slaunch.Debug("Event logs successfully parsed")
 
 	slaunch.Debug("******** Step 6: Dump logs to disk *******")
 	if err := slaunch.ClearPersistQueue(); err != nil {
