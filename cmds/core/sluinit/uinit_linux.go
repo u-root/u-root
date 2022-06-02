@@ -98,6 +98,119 @@ func scanIscsiDrives() error {
 	return nil
 }
 
+// initialize sets up the environment.
+func initialize() error {
+	printStep("Initialization")
+
+	// Check if an iSCSI drive was specified and if so, mount it.
+	if iscsiSpecified() {
+		if err := scanIscsiDrives(); err != nil {
+			return fmt.Errorf("failed to mount iSCSI drive: %w", err)
+		}
+	}
+
+	if err := tpm.New(); err != nil {
+		return fmt.Errorf("failed to get TPM device: %w", err)
+	}
+
+	slaunch.Debug("Initialization successfully completed")
+
+	return nil
+}
+
+// parsePolicy parses and gets the policy file.
+func parsePolicy() (*policy.Policy, error) {
+	printStep("Locate and parse SL policy")
+
+	p, err := policy.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse policy file: %w", err)
+	}
+
+	slaunch.Debug("Policy file successfully parsed")
+
+	return p, nil
+}
+
+// collectMeasurements runs any measurements specified in the policy file.
+func collectMeasurements(p *policy.Policy) error {
+	printStep("Collect evidence")
+
+	for _, collector := range p.Collectors {
+		slaunch.Debug("Input Collector: %v", collector)
+		if err := collector.Collect(); err != nil {
+			log.Printf("Collector %v failed: %v", collector, err)
+		}
+	}
+
+	slaunch.Debug("Collectors completed")
+
+	return nil
+}
+
+// measureFiles measures the kernel and initrd.
+func measureFiles(p *policy.Policy) error {
+	printStep("Measure target kernel and initrd")
+
+	if err := p.Launcher.MeasureKernel(); err != nil {
+		return fmt.Errorf("failed to measure target kernel and initrd: %w", err)
+	}
+
+	slaunch.Debug("Kernel and initrd successfully measured")
+
+	return nil
+}
+
+// parseEventLog parses the TPM event log.
+func parseEventLog(p *policy.Policy) error {
+	printStep("Parse event log")
+
+	if err := p.EventLog.Parse(); err != nil {
+		return fmt.Errorf("failed to parse event log: %w", err)
+	}
+
+	slaunch.Debug("Event log successfully parsed")
+
+	return nil
+}
+
+// dumpLogs writes out any pending logs to a file on disk.
+func dumpLogs() error {
+	printStep("Dump logs to disk")
+
+	if err := slaunch.ClearPersistQueue(); err != nil {
+		return fmt.Errorf("failed to clear persist queue: %w", err)
+	}
+
+	slaunch.Debug("Logs successfully dumped to disk")
+
+	return nil
+}
+
+// unmountAll unmounts all mount points.
+func unmountAll() error {
+	printStep("Unmount all")
+
+	if err := slaunch.UnmountAll(); err != nil {
+		return fmt.Errorf("failed to unmount all devices: %w", err)
+	}
+
+	slaunch.Debug("Devices successfully unmounted")
+
+	return nil
+}
+
+// bootTarget boots the target kernel/initrd.
+func bootTarget(p *policy.Policy) error {
+	printStep("Boot target")
+
+	if err := p.Launcher.Boot(); err != nil {
+		return fmt.Errorf("failed to boot target: %w", err)
+	}
+
+	return nil
+}
+
 // exit loops forever trying to reboot the system.
 func exit(mainErr error) {
 	// Print the error.
@@ -140,60 +253,36 @@ func main() {
 
 	checkDebugFlag()
 
-	printStep("Initialization")
-	// Check if an iSCSI drive was specified and if so, mount it.
-	if iscsiSpecified() {
-		if err := scanIscsiDrives(); err != nil {
-			exit(fmt.Errorf("failed to mount iSCSI drive: %w", err))
-		}
+	if err := initialize(); err != nil {
+		exit(err)
 	}
 
-	if err := tpm.New(); err != nil {
-		exit(fmt.Errorf("failed to get TPM device: %w", err))
-	}
-
-	printStep("Locate and parse SL policy")
-	p, err := policy.Get()
+	p, err := parsePolicy()
 	if err != nil {
-		exit(fmt.Errorf("failed to parse policy file: %w", err))
+		exit(err)
 	}
-	slaunch.Debug("Policy file successfully parsed")
 
-	printStep("Parse event logs")
-	if err := p.EventLog.Parse(); err != nil {
-		exit(fmt.Errorf("failed to parse event logs: %w", err))
+	if err := parseEventLog(p); err != nil {
+		exit(err)
 	}
-	slaunch.Debug("Event logs successfully parsed")
 
-	printStep("Collect evidence")
-	for _, collector := range p.Collectors {
-		slaunch.Debug("Collector: %v", collector)
-		if err := collector.Collect(); err != nil {
-			log.Printf("Collector '%v' failed: %v", collector, err)
-		}
+	if err := collectMeasurements(p); err != nil {
+		exit(err)
 	}
-	slaunch.Debug("Collectors completed")
 
-	printStep("Measure target kernel and initrd")
-	if err := p.Launcher.MeasureKernel(); err != nil {
-		exit(fmt.Errorf("failed to measure kernel and initrd: %w", err))
+	if err := measureFiles(p); err != nil {
+		exit(err)
 	}
-	slaunch.Debug("Kernel and initrd successfully measured")
 
-	printStep("Dump logs to disk")
-	if err := slaunch.ClearPersistQueue(); err != nil {
-		exit(fmt.Errorf("failed to dump logs to disk: %w", err))
+	if err := dumpLogs(); err != nil {
+		exit(err)
 	}
-	slaunch.Debug("Logs successfully dumped to disk")
 
-	printStep("Unmount all")
-	if err := slaunch.UnmountAll(); err != nil {
-		exit(fmt.Errorf("failed to unmount all devices: %w", err))
+	if err := unmountAll(); err != nil {
+		exit(err)
 	}
-	slaunch.Debug("Devices successfully unmounted")
 
-	printStep("Boot system")
-	if err := p.Launcher.Boot(); err != nil {
-		exit(fmt.Errorf("failed to boot system: %w", err))
+	if err := bootTarget(p); err != nil {
+		exit(err)
 	}
 }
