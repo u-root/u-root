@@ -57,8 +57,8 @@ func (l *Loop) DevName() string {
 
 // Mount mounts the provided source file, with type fstype, and flags and data options
 // (which are usually 0 and ""), using the allocated loop device.
-func (l *Loop) Mount(path string, flags uintptr) (*mount.MountPoint, error) {
-	return mount.Mount(l.Dev, path, l.FSType, l.Data, flags)
+func (l *Loop) Mount(path string, flags uintptr, opts ...func() error) (*mount.MountPoint, error) {
+	return mount.Mount(l.Dev, path, l.FSType, l.Data, flags, opts...)
 }
 
 // Free frees the loop device.
