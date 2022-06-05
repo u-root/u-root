@@ -41,13 +41,13 @@ var (
 	size      = flag.BoolP("size", "S", false, "sort by size")
 )
 
-func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
-	type file struct {
-		path string
-		osfi os.FileInfo
-		lsfi ls.FileInfo
-	}
+type file struct {
+	path string
+	osfi os.FileInfo
+	lsfi ls.FileInfo
+}
 
+func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 	var files []file
 
 	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
@@ -110,14 +110,7 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 			}
 		}
 
-		// Hide .files unless -a was given
-		if *all || f.lsfi.Name[0] != '.' {
-			// Print the file in the proper format.
-			if *classify {
-				f.lsfi.Name = f.lsfi.Name + indicator(f.lsfi)
-			}
-			fmt.Fprintln(w, stringer.FileString(f.lsfi))
-		}
+		printFile(w, stringer, f)
 	}
 
 	return nil
