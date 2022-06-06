@@ -172,7 +172,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 	}
 
 	if li.LoadSyscall {
-		return linux.KexecLoad(k, i, li.Cmdline, li.KexecOptions)
+		return linux.KexecLoad(k, i, li.Cmdline, li.KexecOpts)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

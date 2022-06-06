@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	kernelAlignSize = math.Pow(2, 21) // 2 MB.
+	kernelAlignSize = uint(math.Pow(2, 21)) // 2 MB.
 )
 
 func mmap(f *os.File) (data []byte, ummap func() error, err error) {
@@ -78,12 +78,13 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	var kernelBuf []byte
 	if opts.MmapKernel {
 		Debug("Mmapping kernel to virtual buffer...")
-		kernelBuf, ummap, err := mmap(kernel)
+		var cleanup func() error
+		kernelBuf, cleanup, err = mmap(kernel)
 		if err != nil {
 			return fmt.Errorf("mmap kernel: %v", err)
 		}
 		defer func() {
-			if err = ummap(); err != nil {
+			if err = cleanup(); err != nil {
 				Debug("Ummap kernel failed: %v", err)
 			}
 		}()
@@ -100,7 +101,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 		return fmt.Errorf("parse arm64 Image from bytes: %v", err)
 	}
 
-	if kernelRange, err = kmem.AddKexecSegmentExplicit(kernelBuf, kImage.Header.ImageSize+kImage.Header.TextOffset, kernelAlignSize); err != nil {
+	if kernelRange, err = kmem.AddKexecSegmentExplicit(kernelBuf, uint(kImage.Header.ImageSize+kImage.Header.TextOffset), kernelAlignSize); err != nil {
 		return fmt.Errorf("add kernel segment: %v", err)
 	}
 
@@ -110,13 +111,14 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	if ramfs != nil {
 		if opts.MmapRamfs {
 			Debug("Mmap ramfs file to virtual buffer...")
-			ramfsBuf, ummap, err := mmap(ramfs)
+			var cleanup func() error
+			ramfsBuf, cleanup, err = mmap(ramfs)
 			if err != nil {
 				return fmt.Errorf("mmap ramfs: %v", err)
 			}
 			defer func() {
-				if err = ummap(); err != nil {
-					return Debug("Ummap ramfs failed: %v", err)
+				if err = cleanup(); err != nil {
+					Debug("Ummap ramfs failed: %v", err)
 				}
 			}()
 		} else {
@@ -129,15 +131,15 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	}
 
 	// NOTE(10000TB): This need be placed after kernel by convention.
-	if ramfsRange, err = kmem.AddKexecSegment(rb); err != nil {
+	if ramfsRange, err = kmem.AddKexecSegment(ramfsBuf); err != nil {
 		return fmt.Errorf("add initramfs segment: %v", err)
 	}
 	Debug("Added %d byte initramfs at %s", len(ramfsBuf), ramfsRange)
 
 	ramfsStart := make([]byte, 8)
-	binary.BigEndian.PutUint64(ramfsAddr, uint64(ramfsRange.Start))
+	binary.BigEndian.PutUint64(ramfsStart, uint64(ramfsRange.Start))
 	chosen.UpdateProperty("linux,initrd-start", ramfsStart)
-	ramfsEnd = make([]byte, 8)
+	ramfsEnd := make([]byte, 8)
 	binary.BigEndian.PutUint64(ramfsEnd, uint64(ramfsRange.Start)+uint64(ramfsRange.Size))
 	chosen.UpdateProperty("linux,initrd-end", ramfsEnd)
 
@@ -206,7 +208,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 
 	/* Load it */
 	entry := trampolineRange.Start
-	if err = Load(entry, kmem.Segments, 0); err != nil {
+	if err = kexec.Load(entry, kmem.Segments, 0); err != nil {
 		return fmt.Errorf("Linux kexec Load(%v, %v, %d) = %v", entry, kmem.Segments, 0, err)
 	}
 	return nil

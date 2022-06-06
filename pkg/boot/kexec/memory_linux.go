@@ -537,7 +537,7 @@ func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
 			}
 			// log.Printf("addMemory: adding node %s %#x %#x", n.Name, r.Start, r.Size);
 			phys = append(phys, TypedRange{
-				Range: Range{Start: r.Start, Size: r.Size},
+				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
 				Type:  RangeRAM,
 			})
 		}
@@ -559,7 +559,7 @@ func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
 			// log.Printf("resvMemory: adding node %s %#x %#x", n.Name, r.Start, r.Size);
 
 			phys.Insert(TypedRange{
-				Range: Range{Start: r.Start, Size: r.Size},
+				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
 				Type:  RangeReserved,
 			})
 		}
@@ -576,7 +576,7 @@ func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
 	for _, r := range fdt.ReserveEntries {
 		// log.Printf("reserveEntries: adding %#x %#x", r.Address, r.Size);
 		phys.Insert(TypedRange{
-			Range: Range{Start: r.Address, Size: r.Size},
+			Range: Range{Start: uintptr(r.Address), Size: uint(r.Size)},
 			Type:  RangeReserved,
 		})
 	}
@@ -770,7 +770,7 @@ func (m *Memory) AddKexecSegmentExplicit(d []byte, sz uint, alignSizeBytes uint)
 	// This is used when we need apply text_offset. In that case,
 	// caller request extra size in bytes by text_offset, than the
 	// size of buf.
-	r.Start += sz - len(d)
+	r.Start = uintptr(uint(r.Start) + sz - uint(len(d)))
 	m.Segments.Insert(NewSegment(d, r))
 	return r, nil
 }

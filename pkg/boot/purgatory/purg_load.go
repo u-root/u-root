@@ -91,10 +91,10 @@ func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 	binary.LittleEndian.PutUint64(b[16:], uint64(rsi))
 
 	// TODO: Shouldn't the purgatories be relocatable?
-	min := p.Vaddr
-	max := p.Vaddr + uint64(len(b))
+	min := uintptr(p.Vaddr)
+	max := uintptr(p.Vaddr + uint64(len(b)))
 
-	phyRange, err := kmem.ReservePhys(uint64(len(b)), kexec.RangeFromInterval(min, max))
+	phyRange, err := kmem.ReservePhys(uint(len(b)), kexec.RangeFromInterval(min, max))
 	if err != nil {
 		return 0, fmt.Errorf("purgatory: reserve phys ram of size %d between range(%d, %d): %v", len(b), min, max, err)
 	}

@@ -4,12 +4,10 @@
 
 package linux
 
-import "log"
-
 var (
 	// Debug is called to print out verbose debug info.
 	//
 	// Set this to appropriate output stream for display
 	// of useful debug info.
-	Debug = log.Printf // func(string, ...interface{}) {}
+	Debug = func(string, ...interface{}) {}
 )
