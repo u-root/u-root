@@ -27,6 +27,15 @@ func TestGrep(t *testing.T) {
 		{"hix\n", "hix\n", 0, []string{"-i", "hix"}},
 		{"hix\n", "", 0, []string{"-i", "hox"}},
 		{"HiX\n", "HiX\n", 0, []string{"-i", "hix"}},
+		{"hix\n", ":0:hix\n", 0, []string{"-n", "hix"}},
+		{"hix\n", "hix\n", 0, []string{"-e", "hix"}},
+		{"hix\n", "1\n", 0, []string{"-c", "hix"}},
+		// These tests don't make a lot of sense the way we're running it, but
+		// hopefully it'll make codecov shut up.
+		{"hix\n", "hix\n", 0, []string{"-h", "hix"}},
+		{"hix\n", "hix\n", 0, []string{"-r", "hix"}},
+		{"hix\nfoo\n", "foo\n", 0, []string{"-v", "hix"}},
+		{"hix\n", "\n", 0, []string{"-l", "hix"}}, // no filename, so it just prints a newline
 	}
 
 	for _, v := range tab {
