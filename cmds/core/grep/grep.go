@@ -45,7 +45,7 @@ type oneGrep struct {
 var (
 	expr            = flag.StringP("regexp", "e", "", "Pattern to match")
 	headers         = flag.BoolP("no-filename", "h", false, "Suppress file name prefixes on output")
-	match           = flag.BoolP("invert-match", "v", true, "Print only non-matching lines")
+	invert          = flag.BoolP("invert-match", "v", false, "Print only non-matching lines")
 	recursive       = flag.BoolP("recursive", "r", false, "recursive")
 	noshowmatch     = flag.BoolP("files-with-matches", "l", false, "list only files")
 	count           = flag.BoolP("count", "c", false, "Just show counts")
@@ -73,7 +73,7 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 	for {
 		if i, err := r.ReadString('\n'); err == nil {
 			m := re.Match([]byte(i))
-			if m == *match {
+			if m == !*invert {
 				res <- &grepResult{re.Match([]byte(i)), f, &i, lineNum}
 				if *noshowmatch {
 					break
@@ -90,7 +90,7 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 
 func printmatch(r *grepResult) {
 	var prefix string
-	if r.match == *match {
+	if r.match == !*invert {
 		matchCount++
 	}
 	if *count {
@@ -107,7 +107,7 @@ func printmatch(r *grepResult) {
 	if *number {
 		prefix = fmt.Sprintf(":%d:", r.lineNum)
 	}
-	if r.match == *match {
+	if r.match == !*invert {
 		fmt.Printf("%v%v", prefix, *r.line)
 	}
 }
