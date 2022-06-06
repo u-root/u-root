@@ -153,8 +153,16 @@ func collectMeasurements(p *policy.Policy) error {
 func measureFiles(p *policy.Policy) error {
 	printStep("Measure target kernel and initrd")
 
-	if err := p.Launcher.MeasureKernel(); err != nil {
-		return fmt.Errorf("failed to measure target kernel and initrd: %w", err)
+	if p.Launcher.Params["kernel"] != "" {
+		if err := p.Launcher.MeasureKernel(); err != nil {
+			return fmt.Errorf("failed to measure target kernel: %w", err)
+		}
+	}
+
+	if p.Launcher.Params["initrd"] != "" {
+		if err := p.Launcher.MeasureInitrd(); err != nil {
+			return fmt.Errorf("failed to measure target initrd: %w", err)
+		}
 	}
 
 	slaunch.Debug("Kernel and initrd successfully measured")
