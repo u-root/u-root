@@ -68,10 +68,5 @@ func ParseFromBytes(data []byte) (*Image, error) {
 		return img, fmt.Errorf("invalid Image endianess, expected little")
 	}
 
-	// TODO(10000TB): remove this check, and add support.
-	if img.Header.Flags&0x4 != 1 {
-		return img, fmt.Errorf("invalid kernel physical placement bit, want anywhere in physical memory")
-	}
-
 	return img, nil
 }
