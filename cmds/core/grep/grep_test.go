@@ -15,10 +15,10 @@ import (
 // We need to look at any output data, as well as exit status for things like the -q switch.
 func TestGrep(t *testing.T) {
 	tab := []struct {
-		i string
-		o string
-		s int
-		a []string
+		input  string
+		output string
+		status int
+		args   []string
 	}{
 		// BEWARE: the IO package seems to want this to be newline terminated.
 		// If you just use hix with no newline the test will fail. Yuck.
@@ -30,15 +30,15 @@ func TestGrep(t *testing.T) {
 	}
 
 	for _, v := range tab {
-		c := testutil.Command(t, v.a...)
-		c.Stdin = bytes.NewReader([]byte(v.i))
+		c := testutil.Command(t, v.args...)
+		c.Stdin = bytes.NewReader([]byte(v.input))
 		o, err := c.CombinedOutput()
-		if err := testutil.IsExitCode(err, v.s); err != nil {
+		if err := testutil.IsExitCode(err, v.status); err != nil {
 			t.Error(err)
 			continue
 		}
-		if string(o) != v.o {
-			t.Errorf("Grep %v != %v: want '%v', got '%v'", v.a, v.i, v.o, string(o))
+		if string(o) != v.output {
+			t.Errorf("grep %v != %v: want '%v', got '%v'", v.args, v.input, v.output, string(o))
 			continue
 		}
 	}

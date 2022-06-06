@@ -16,19 +16,21 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 )
 
 type grepResult struct {
-	match bool
-	c     *grepCommand
-	line  *string
+	match   bool
+	c       *grepCommand
+	line    *string
+	lineNum int
 }
 
 type grepCommand struct {
@@ -41,11 +43,14 @@ type oneGrep struct {
 }
 
 var (
-	match           = flag.Bool("v", true, "Print only non-matching lines")
-	recursive       = flag.Bool("r", false, "recursive")
-	noshowmatch     = flag.Bool("l", false, "list only files")
-	count           = flag.Bool("c", false, "Just show counts")
-	caseinsensitive = flag.Bool("i", false, "case-insensitive matching")
+	expr            = flag.StringP("regexp", "e", "", "Pattern to match")
+	headers         = flag.BoolP("no-filename", "h", false, "Suppress file name prefixes on output")
+	match           = flag.BoolP("invert-match", "v", true, "Print only non-matching lines")
+	recursive       = flag.BoolP("recursive", "r", false, "recursive")
+	noshowmatch     = flag.BoolP("files-with-matches", "l", false, "list only files")
+	count           = flag.BoolP("count", "c", false, "Just show counts")
+	caseinsensitive = flag.BoolP("ignore-case", "i", false, "case-insensitive matching")
+	number          = flag.BoolP("line-number", "n", false, "Show line numbers")
 	showname        bool
 	allGrep         = make(chan *oneGrep)
 	nGrep           int
@@ -61,15 +66,15 @@ var (
 // If we are only looking for a match, we exit as soon as the condition is met.
 // "match" means result of re.Match == match flag.
 func grep(f *grepCommand, re *regexp.Regexp) {
-	nGrep++
 	r := bufio.NewReader(f)
 	res := make(chan *grepResult, 1)
 	allGrep <- &oneGrep{res}
+	var lineNum int
 	for {
 		if i, err := r.ReadString('\n'); err == nil {
 			m := re.Match([]byte(i))
 			if m == *match {
-				res <- &grepResult{re.Match([]byte(i)), f, &i}
+				res <- &grepResult{re.Match([]byte(i)), f, &i, lineNum}
 				if *noshowmatch {
 					break
 				}
@@ -77,6 +82,7 @@ func grep(f *grepCommand, re *regexp.Regexp) {
 		} else {
 			break
 		}
+		lineNum++
 	}
 	close(res)
 	f.Close()
@@ -95,7 +101,11 @@ func printmatch(r *grepResult) {
 		prefix = ":"
 	}
 	if *noshowmatch {
+		fmt.Printf("\n")
 		return
+	}
+	if *number {
+		prefix = fmt.Sprintf(":%d:", r.lineNum)
 	}
 	if r.match == *match {
 		fmt.Printf("%v%v", prefix, *r.line)
@@ -106,6 +116,10 @@ func main() {
 	r := ".*"
 	flag.Parse()
 	a := flag.Args()
+	if *expr != "" {
+		// they used the -e flag
+		a = append([]string{*expr}, a...)
+	}
 	if len(a) > 0 {
 		r = a[0]
 	}
@@ -115,13 +129,15 @@ func main() {
 	re := regexp.MustCompile(r)
 	// very special case, just stdin ...
 	if len(a) < 2 {
+		nGrep++
 		go grep(&grepCommand{"<stdin>", os.Stdin}, re)
 	} else {
-		showname = len(a[1:]) > 1
+		showname = (len(a[1:]) > 1 || *recursive) && !*headers
 		// generate a chan of file names, bounded by the size of the chan. This in turn
 		// throttles the opens.
 		treenames := make(chan string, 128)
 		go func() {
+			defer close(treenames)
 			for _, v := range a[1:] {
 				// we could parallelize the open part but people might want
 				// things to be in order. I don't care but who knows.
@@ -146,7 +162,6 @@ func main() {
 					return nil
 				})
 			}
-			close(treenames)
 		}()
 
 		files := make(chan *grepCommand)
@@ -166,21 +181,24 @@ func main() {
 		// bug: file name order is not preserved here. Darn.
 
 		for f := range files {
+			nGrep++
 			go grep(f, re)
 		}
 	}
 
-	for c := range allGrep {
-		for r := range c.c {
-			// exit on first match.
-			if *quiet {
-				os.Exit(0)
+	if nGrep > 0 {
+		for c := range allGrep {
+			for r := range c.c {
+				// exit on first match.
+				if *quiet {
+					os.Exit(0)
+				}
+				printmatch(r)
 			}
-			printmatch(r)
-		}
-		nGrep--
-		if nGrep == 0 {
-			break
+			nGrep--
+			if nGrep == 0 {
+				break
+			}
 		}
 	}
 	if *quiet {
