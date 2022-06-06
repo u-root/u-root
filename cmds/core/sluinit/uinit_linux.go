@@ -149,9 +149,13 @@ func collectMeasurements(p *policy.Policy) error {
 	return nil
 }
 
-// measureFiles measures the kernel and initrd.
+// measureFiles measures relevant files (e.g., policy, kernel, initrd).
 func measureFiles(p *policy.Policy) error {
-	printStep("Measure target kernel and initrd")
+	printStep("Measure files")
+
+	if err := policy.Measure(); err != nil {
+		return fmt.Errorf("failed to measure policy file: %w", err)
+	}
 
 	if p.Launcher.Params["kernel"] != "" {
 		if err := p.Launcher.MeasureKernel(); err != nil {
@@ -165,7 +169,7 @@ func measureFiles(p *policy.Policy) error {
 		}
 	}
 
-	slaunch.Debug("Kernel and initrd successfully measured")
+	slaunch.Debug("Files successfully measured")
 
 	return nil
 }
