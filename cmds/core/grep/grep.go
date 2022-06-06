@@ -44,7 +44,6 @@ var (
 	match           = flag.Bool("v", true, "Print only non-matching lines")
 	recursive       = flag.Bool("r", false, "recursive")
 	noshowmatch     = flag.Bool("l", false, "list only files")
-	quiet           = flag.Bool("q", false, "Don't print matches; exit on first match")
 	count           = flag.Bool("c", false, "Just show counts")
 	caseinsensitive = flag.Bool("i", false, "case-insensitive matching")
 	showname        bool
