@@ -15,9 +15,9 @@ import (
 )
 
 // Parse takes a namespace file and returns a collection
-// of operations that build a name space in plan9.
+// of operations that build a name space in Plan 9.
 //
-// think oci runtime spec, but don't think too much cause the json
+// Think oci runtime spec, but don't think too much cause the JSON
 // will make your head hurt.
 //
 // http://man.cat-v.org/plan_9/1/ns
@@ -48,7 +48,9 @@ func Parse(r io.Reader) (File, error) {
 	return cmds, nil
 }
 
-// ParseFlags parses flags as mount, bind would.
+// ParseFlags parses flags as mount, bind would. Supports -a, -b, -c,
+// -q, and -C, although the -q flag is not yet implemented. Other flags
+// are silently ignored.
 // Not using the os.Flag package here as that would break the
 // name space description files.
 // https://9p.io/magic/man2html/6/namespace
@@ -79,9 +81,13 @@ func ParseFlags(args []string) (mountflag, []string) {
 	return flag, args
 }
 
-// ParseArgs could be used to parse os.Args
-// to unify all commangs under a namespace.Main()
-// it isn't.
+// ParseArgs parses os.Args (not flag.Args()!) to return a
+// namespace.Modifier which is appropriate for the given
+// command. The command is taken from args[0]; the following
+// commands are supported: bind, mount, unmount, clear, cd, ., import.
+//
+// After extracting the command, ParseArgs will call ParseFlags to extract
+// appropriate bind/mount flags, if any.
 func ParseArgs(args []string) (Modifier, error) {
 	arg := args[0]
 	args = args[1:]
@@ -116,9 +122,7 @@ func ParseArgs(args []string) (Modifier, error) {
 	return c, nil
 }
 
-// ParseLine could be used to parse os.Args
-// to unify all commangs under a namespace.Main()
-// it isn't.
+// ParseLine breaks a string into arguments and passes them to ParseArgs.
 func ParseLine(line string) (Modifier, error) {
 	return ParseArgs(strings.Fields(line))
 }
