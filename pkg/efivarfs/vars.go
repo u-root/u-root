@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package efivarfs allows interaction with efivarfs of the
+// linux kernel.
 package efivarfs
 
 import (
@@ -13,25 +15,25 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// VariableAttributes uint32 identifying the variables attributes
+// VariableAttributes is an uint32 identifying the variables attributes.
 type VariableAttributes uint32
 
 const (
-	// Variable is non volatile
+	// AttributeNonVolatile indicates a variable is non volatile.
 	AttributeNonVolatile VariableAttributes = 0x00000001
-	// Variable is accessible during boot service
+	// AttributeBootserviceAccess indicates a variable is accessible during boot service.
 	AttributeBootserviceAccess VariableAttributes = 0x00000002
-	//Variable is accessible during runtime
+	// AttributeRuntimeAccess indicates a variable is accessible during runtime.
 	AttributeRuntimeAccess VariableAttributes = 0x00000004
-	// Variable holds hardware error records
+	// AttributeHardwareErrorRecord indicates a variable holds hardware error records.
 	AttributeHardwareErrorRecord VariableAttributes = 0x00000008
-	// Variable needs authentication before write access
+	// AttributeAuthenticatedWriteAccess indicates a variable needs authentication before write access.
 	AttributeAuthenticatedWriteAccess VariableAttributes = 0x00000010
-	// Variable needs time based authentication before write access
+	// AttributeTimeBasedAuthenticatedWriteAccess indicates a variable needs time based authentication before write access.
 	AttributeTimeBasedAuthenticatedWriteAccess VariableAttributes = 0x00000020
-	// Data written to this variable is appended
+	// AttributeAppendWrite indicates data written to this variable is appended.
 	AttributeAppendWrite VariableAttributes = 0x00000040
-	// Variable uses the new authentication format
+	// AttributeEnhancedAuthenticatedAccess indicate a variable uses the new authentication format.
 	AttributeEnhancedAuthenticatedAccess VariableAttributes = 0x00000080
 )
 
@@ -82,7 +84,7 @@ func WriteVariable(desc VariableDescriptor, attrs VariableAttributes, data []byt
 
 // SimpleWriteVariable is like WriteVariables but takes the combined name and guid string
 // of the form name-guid and returns a bytes.Buffer instead of a []byte.
-func SimpleWriteVariable(v string, attrs VariableAttributes, data bytes.Buffer) error {
+func SimpleWriteVariable(v string, attrs VariableAttributes, data *bytes.Buffer) error {
 	e, err := probeAndReturn()
 	if err != nil {
 		return err
