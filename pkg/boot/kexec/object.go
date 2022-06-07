@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/u-root/u-root/pkg/boot/align"
+	"github.com/u-root/u-root/pkg/align"
 )
 
 // Object is an object file, specific to kexec uses.
@@ -71,7 +71,7 @@ func (e *aout9Object) Progs() []*elf.Prog {
 				Type:   elf.PT_LOAD,
 				Flags:  elf.PF_W | elf.PF_R,
 				Filesz: uint64(e.f.Sections[1].Size),
-				Paddr:  uint64(align.AlignUpPageSize(uint(e.f.LoadAddress + uint64(e.f.Sections[0].Size)))),
+				Paddr:  uint64(align.UpPage(uint(e.f.LoadAddress + uint64(e.f.Sections[0].Size)))),
 			},
 			ReaderAt: e.f.Sections[1].ReaderAt,
 		},

@@ -19,7 +19,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/u-root/u-root/pkg/boot/align"
+	"github.com/u-root/u-root/pkg/align"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -315,7 +315,7 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
 			newSegs[i].Buf.Size = newSegs[i].Phys.Size
 		}
-		newSegs[i].Phys.Size = align.AlignUpPageSize(newSegs[i].Phys.Size)
+		newSegs[i].Phys.Size = align.UpPage(newSegs[i].Phys.Size)
 	}
 	return newSegs, nil
 }
@@ -626,7 +626,7 @@ const M1 = 1 << 20
 // be stored during next AddKexecSegment call.
 func (m Memory) FindSpace(sz uint) (Range, error) {
 	// Allocate full pages.
-	sz = align.AlignUpPageSize(sz)
+	sz = align.UpPage(sz)
 
 	// Don't use memory below 1M, just in case.
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
@@ -635,7 +635,7 @@ func (m Memory) FindSpace(sz uint) (Range, error) {
 // ReservePhys reserves page-aligned sz bytes in the physical memmap within
 // the given limit address range.
 func (m *Memory) ReservePhys(sz uint, limit Range) (Range, error) {
-	sz = align.AlignUpPageSize(sz)
+	sz = align.UpPage(sz)
 
 	r, err := m.AvailableRAM().FindSpaceIn(sz, limit)
 	if err != nil {
@@ -692,7 +692,7 @@ func (m Memory) AvailableRAM() Ranges {
 	// Only return Ranges starting at an aligned size.
 	var alignedRanges Ranges
 	for _, r := range ram {
-		alignedStart := align.AlignUpPageSizePtr(r.Start)
+		alignedStart := uintptr(align.UpPage(uint(r.Start)))
 		if alignedStart < r.End() {
 			alignedRanges = append(alignedRanges, Range{
 				Start: alignedStart,

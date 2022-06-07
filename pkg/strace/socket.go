@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/strace/internal/abi"
 	"github.com/u-root/u-root/pkg/strace/internal/binary"
 	"github.com/u-root/u-root/pkg/ubinary"
@@ -75,13 +76,13 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 
 		if skipData {
 			strs = append(strs, fmt.Sprintf("{level=%s, type=%s, length=%d}", level, typ, h.Length))
-			i += alignUp(length, uint(width))
+			i += int(align.Up(uint(length), uint(width)))
 			continue
 		}
 
 		switch h.Type {
 		case unix.SCM_RIGHTS:
-			rightsSize := alignDown(length, abi.SizeOfControlMessageRight)
+			rightsSize := int(align.Down(uint(length), abi.SizeOfControlMessageRight))
 
 			numRights := rightsSize / abi.SizeOfControlMessageRight
 			fds := make(abi.ControlMessageRights, numRights)
@@ -150,7 +151,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 		default:
 			panic("unreachable")
 		}
-		i += alignUp(length, uint(width))
+		i += int(align.Up(uint(length), uint(width)))
 	}
 
 	return fmt.Sprintf("%#x %s", addr, strings.Join(strs, ", "))

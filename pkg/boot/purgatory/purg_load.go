@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/u-root/u-root/pkg/boot/align"
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
@@ -79,7 +79,7 @@ func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 
 	// the package really wants things page-sized, and rather than
 	// deal with all the bugs that arise from that, just keep it happy.
-	p.Memsz = uint64(align.AlignUpPageSize(uint(p.Memsz)))
+	p.Memsz = uint64(align.UpPage(uint(p.Memsz)))
 	b := make([]byte, p.Memsz)
 	if _, err := p.ReadAt(b[:p.Filesz], 0); err != nil {
 		return 0, err
