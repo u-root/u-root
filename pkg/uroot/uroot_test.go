@@ -23,16 +23,15 @@ type inMemArchive struct {
 	*cpio.Archive
 }
 
-// if GO111MODULES is not "off", i.e. we are probably using
-// modules, there are tests we need to skip.
-var skipModules = !(os.Getenv("GO111MODULE") == "off")
-
 // Finish implements initramfs.Writer.Finish.
 func (inMemArchive) Finish() error { return nil }
 
-// Turn this off until AFTER we are done moving to modules
-func testResolvePackagePaths(t *testing.T) {
+func TestResolvePackagePaths(t *testing.T) {
 	defaultEnv := golang.Default()
+	urootpath, err := filepath.Abs("../../")
+	if err != nil {
+		t.Fatalf("failure to set up test: %v", err)
+	}
 	gopath1, err := filepath.Abs("test/gopath1")
 	if err != nil {
 		t.Fatalf("failure to set up test: %v", err)
@@ -60,7 +59,6 @@ func testResolvePackagePaths(t *testing.T) {
 		in       []string
 		expected []string
 		wantErr  bool
-		skip     bool
 	}{
 		// Nonexistent Package
 		{
@@ -71,73 +69,69 @@ func testResolvePackagePaths(t *testing.T) {
 		},
 		// Single go package import
 		{
-			env: defaultEnv,
-			in:  []string{"github.com/u-root/u-root/cmds/core/ls"},
-			// We expect the full URL format because that's the path in our default GOPATH
-			expected: []string{"github.com/u-root/u-root/cmds/core/ls"},
+			env:      defaultEnv,
+			in:       []string{"github.com/u-root/u-root/cmds/core/ls"},
+			expected: []string{filepath.Join(urootpath, "cmds/core/ls")},
 			wantErr:  false,
 		},
 		// Single package directory relative to working dir
 		{
 			env:      defaultEnv,
 			in:       []string{"test/gopath1/src/foo"},
-			expected: []string{"github.com/u-root/u-root/pkg/uroot/test/gopath1/src/foo"},
-			wantErr:  skipModules,
+			expected: []string{filepath.Join(urootpath, "/pkg/uroot/test/gopath1/src/foo")},
+			wantErr:  false,
 		},
 		// Single package directory with absolute path
 		{
 			env:      defaultEnv,
 			in:       []string{foopath},
-			expected: []string{"github.com/u-root/u-root/pkg/uroot/test/gopath1/src/foo"},
+			expected: []string{filepath.Join(urootpath, "pkg/uroot/test/gopath1/src/foo")},
 			wantErr:  false,
-			skip:     skipModules,
 		},
 		// Single package directory relative to GOPATH
 		{
-			env: gopath1Env,
-			in:  []string{"foo"},
-			expected: []string{
-				"foo",
-			},
-			wantErr: false,
+			env:      gopath1Env,
+			in:       []string{filepath.Join(gopath1, "src/foo")},
+			expected: []string{filepath.Join(urootpath, "pkg/uroot/test/gopath1/src/foo")},
+			wantErr:  false,
 		},
 		// Package directory glob
 		{
 			env: defaultEnv,
 			in:  []string{"test/gopath2/src/mypkg*"},
 			expected: []string{
-				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkga",
-				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkgb",
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkga"),
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkgb"),
 			},
 			wantErr: false,
-			skip:    skipModules,
 		},
 		// GOPATH glob
 		{
 			env: gopath2Env,
-			in:  []string{"mypkg*"},
+			in:  []string{filepath.Join(gopath2, "src/mypkg*")},
 			expected: []string{
-				"mypkga",
-				"mypkgb",
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkga"),
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkgb"),
 			},
 			wantErr: false,
 		},
 		// Single ambiguous package - exists in both GOROOT and GOPATH
-		{
-			env: gopath1Env,
-			in:  []string{"os"},
-			expected: []string{
-				"os",
-			},
-			wantErr: false,
-		},
+		// This test doesn't work anymore with file paths
+		// {
+		// 	env: gopath1Env,
+		// 	in:  []string{"os"},
+		// 	expected: []string{
+		// 		"os",
+		// 	},
+		// 	wantErr: false,
+		// },
 		// Packages from different gopaths
 		{
 			env: everythingEnv,
-			in:  []string{"foo", "mypkga"},
+			in:  []string{filepath.Join(gopath1, "src/foo"), filepath.Join(gopath2, "src/mypkga")},
 			expected: []string{
-				"foo",
-				"mypkga",
+				filepath.Join(urootpath, "pkg/uroot/test/gopath1/src/foo"),
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkga"),
 			},
 			wantErr: false,
 		},
@@ -147,28 +141,23 @@ func testResolvePackagePaths(t *testing.T) {
 			in:  []string{"test/gopath2/src/mypkga", "test/gopath2/src/mypkga"},
 			// TODO: This returns the package twice. Is this preferred?
 			expected: []string{
-				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkga",
-				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkga",
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkga"),
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkga"),
 			},
 			wantErr: false,
-			skip:    skipModules,
 		},
 		// Excludes
 		{
 			env: defaultEnv,
 			in:  []string{"test/gopath2/src/*", "-test/gopath2/src/mypkga"},
 			expected: []string{
-				"github.com/u-root/u-root/pkg/uroot/test/gopath2/src/mypkgb",
+				filepath.Join(urootpath, "pkg/uroot/test/gopath2/src/mypkgb"),
 			},
 			wantErr: false,
-			skip:    skipModules,
 		},
 	} {
-		if tc.skip {
-			t.Logf("Skipping this test as it breaks with modules")
-		}
 		t.Run(fmt.Sprintf("%q", tc.in), func(t *testing.T) {
-			out, err := ResolvePackagePaths(l, tc.env, tc.in)
+			out, err := ResolvePackagePaths(l, tc.env, urootpath, tc.in)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("ResolvePackagePaths(%#v, %v) err != nil is %v, want %v\nerr is %v",
 					tc.env, tc.in, err != nil, tc.wantErr, err)
@@ -181,10 +170,14 @@ func testResolvePackagePaths(t *testing.T) {
 	}
 }
 
-// Re enable this once we are done moving to modules.
-func testCreateInitramfs(t *testing.T) {
+func TestCreateInitramfs(t *testing.T) {
 	dir := t.TempDir()
 	syscall.Umask(0)
+
+	urootpath, err := filepath.Abs("../../")
+	if err != nil {
+		t.Fatalf("failure to set up test: %v", err)
+	}
 
 	tmp777 := filepath.Join(dir, "tmp777")
 	if err := os.MkdirAll(tmp777, 0o777); err != nil {
@@ -209,6 +202,7 @@ func testCreateInitramfs(t *testing.T) {
 				UseExistingInit: false,
 				InitCmd:         "init",
 				DefaultShell:    "ls",
+				UrootSource:     urootpath,
 				Commands: []Commands{
 					{
 						Builder: builder.BusyBox,
@@ -254,6 +248,11 @@ func testCreateInitramfs(t *testing.T) {
 		{
 			name: "init specified, but not in commands",
 			opts: Opts{
+				Env:          golang.Default(),
+				TempDir:      dir,
+				DefaultShell: "zoocar",
+				InitCmd:      "foobar",
+				UrootSource:  urootpath,
 				Commands: []Commands{
 					{
 						Builder: builder.Binary,
@@ -262,10 +261,6 @@ func testCreateInitramfs(t *testing.T) {
 						},
 					},
 				},
-				Env:          golang.Default(),
-				TempDir:      dir,
-				DefaultShell: "zoocar",
-				InitCmd:      "foobar",
 			},
 			want: "could not create symlink from \"init\" to \"foobar\": command or path \"foobar\" not included in u-root build: specify -initcmd=\"\" to ignore this error and build without an init (or, did you specify a list, and are you missing github.com/u-root/u-root/cmds/core/init?)",
 			validators: []itest.ArchiveValidator{
@@ -293,6 +288,7 @@ func testCreateInitramfs(t *testing.T) {
 				UseExistingInit: false,
 				InitCmd:         "init",
 				DefaultShell:    "ls",
+				UrootSource:     urootpath,
 				Commands: []Commands{
 					{
 						Builder: builder.BusyBox,
