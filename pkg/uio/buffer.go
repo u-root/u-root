@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/ubinary"
 )
 
@@ -366,6 +367,6 @@ func (l *Lexer) Write(p []byte) (int, error) {
 
 // Align appends bytes to align the length of the buffer to be divisible by n.
 func (l *Lexer) Align(n int) {
-	pad := ((l.Len() + n - 1) &^ (n - 1)) - l.Len()
+	pad := int(align.Up(uint(l.Len()), uint(n))) - l.Len()
 	l.Append(pad)
 }

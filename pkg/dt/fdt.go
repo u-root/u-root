@@ -14,6 +14,7 @@ import (
 	"io"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -297,14 +298,6 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 	}
 }
 
-func align4(x int) uint32 {
-	return uint32((x + 0x3) &^ 0x3)
-}
-
-func align16(x int) uint32 {
-	return uint32((x + 0xf) &^ 0xf)
-}
-
 // Write marshals the FDT to an io.Writer and returns the size.
 func (fdt *FDT) Write(f io.Writer) (int, error) {
 	// Create string block and offset map.
@@ -325,15 +318,15 @@ func (fdt *FDT) Write(f io.Writer) (int, error) {
 	fdt.Header.SizeDtStrings = uint32(len(strs))
 	fdt.Header.SizeDtStruct = 4
 	fdt.RootNode.Walk(func(n *Node) error {
-		fdt.Header.SizeDtStruct += 8 + align4(len(n.Name)+1)
+		fdt.Header.SizeDtStruct += 8 + uint32(align.Up(uint(len(n.Name)+1), 4))
 		for _, p := range n.Properties {
-			fdt.Header.SizeDtStruct += 12 + align4(len(p.Value))
+			fdt.Header.SizeDtStruct += 12 + uint32(align.Up(uint(len(p.Value)), 4))
 		}
 		return nil
 	})
-	fdt.Header.OffMemRsvmap = align16(int(unsafe.Sizeof(fdt.Header)))
+	fdt.Header.OffMemRsvmap = uint32(align.Up(uint(unsafe.Sizeof(fdt.Header)), 16))
 	fdt.Header.OffDtStruct = fdt.Header.OffMemRsvmap +
-		align4((len(fdt.ReserveEntries)+1)*int(unsafe.Sizeof(ReserveEntry{})))
+		uint32(align.Up((uint(len(fdt.ReserveEntries)+1))*uint(unsafe.Sizeof(ReserveEntry{})), 4))
 	fdt.Header.OffDtStrings = fdt.Header.OffDtStruct + fdt.Header.SizeDtStruct
 	fdt.Header.TotalSize = fdt.Header.OffDtStrings + fdt.Header.SizeDtStrings
 

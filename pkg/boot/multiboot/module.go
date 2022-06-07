@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -104,15 +105,9 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 	return loaded, buf.Bytes(), nil
 }
 
-func pageAlign(val uint32) uint32 {
-	mask := uint32(os.Getpagesize() - 1)
-	return (val + mask) &^ mask
-}
-
 // pageAlignBuf pads buf to a page boundary.
 func pageAlignBuf(buf *bytes.Buffer) error {
-	mask := (os.Getpagesize() - 1)
-	size := (buf.Len() + mask) &^ mask
+	size := int(align.UpPage(uint(buf.Len())))
 	_, err := buf.Write(bytes.Repeat([]byte{0}, size-buf.Len()))
 	return err
 }
@@ -169,7 +164,7 @@ func (m modules) elems() []elem {
 			ranges: []esxBootInfoModuleRange{
 				{
 					startPageNum: uint64(mm.Start / uint32(os.Getpagesize())),
-					numPages:     pageAlign(mm.End-mm.Start) / uint32(os.Getpagesize()),
+					numPages:     uint32(align.UpPage(uint(mm.End-mm.Start))) / uint32(os.Getpagesize()),
 				},
 			},
 		})
