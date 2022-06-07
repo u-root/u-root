@@ -1,0 +1,266 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  linters:
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Check vendored dependencies
+      run: |
+        go mod tidy
+        go mod verify
+        go mod vendor -v
+        git status
+        if [[ -n "$(git status --porcelain vendor)" ]]; then
+          echo 'vendor/ is out-of-date: run `go mod tidy && go mod vendor` and then check in the changes'
+          echo 'If `go mod tidy && go mod vendor` results in no changes, make sure you are using the latest relase of Go'
+          git status --porcelain vendor
+          exit 1
+        fi
+
+    - name: Golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: v1.46
+
+  check-licenses:
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Check Licenses
+      run: go run tools/checklicenses/checklicenses.go -c tools/checklicenses/config.json
+
+  build:
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Build
+      run: go build -v ./...
+
+  test:
+    needs:
+      - build
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    env:
+      UROOT_SOURCE: ${{ github.workspace }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Run tests
+      run: go test -v -timeout=15m -failfast ./...
+
+    - name: Check for Symlink Regression
+      run: |
+        mkdir /tmp/usr
+        ln -s /tmp/usr/x /tmp/usr/y
+        go build
+        ./u-root -files /tmp/usr minimal
+
+  race:
+    needs:
+      - test
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    env:
+      UROOT_SOURCE: ${{ github.workspace }}
+      GOMAXPROCS: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Run race condition tests
+        run: go test -race -timeout=15m -failfast ./...
+
+  coverage:
+    needs:
+      - test
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    env:
+      UROOT_SOURCE: ${{ github.workspace }}
+      GOMAXPROCS: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Run coverage tests
+        run: go test -cover -coverprofile=coverage.txt -timeout=15m -failfast ./...
+
+      # Currently CircleCI uploads to Codecov as well,
+      # if both CIs upload data it seems to prefer the one
+      # with less coverage as this coverage.txt does not 
+      # include vmtests and gets preferred.
+      # Re-enable once vmtests run.
+      #
+      # - name: Upload report to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     files: ./coverage.txt
+      #     fail_ci_if_error: true
+
+  #
+  # Enable once new docker images are prepared
+  #
+  # integration-amd64:
+  #   needs:
+  #     - build
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: uroottest/test-image-amd64:latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+
+  #     - name: Integration Test
+  #       run: go test -v -timeout=15m -failfast -ldflags='-s -w' ./integration/...
+  #       env:
+  #         UROOT_QEMU_COVERPROFILE: coverage.txt
+
+  #     - name: Upload report to Codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         files: ./coverage.txt
+  #         fail_ci_if_error: true
+
+  # integration-arm64:
+  #   needs:
+  #     - build
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: uroottest/test-image-arm64:latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         path: /go/src/github.com/u-root/u-root
+
+  #     - name: Integration Test
+  #       run: go test -v -timeout=15m -failfast -ldflags='-s -w' ./integration/...
+  #       env:
+  #         UROOT_QEMU_COVERPROFILE: coverage.txt
+
+  #     - name: Upload report to Codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         files: ./coverage.txt
+  #         fail_ci_if_error: true
+
+  # integration-arm32:
+  #   needs:
+  #     - build
+  #   runs-on: ubuntu-latest
+  #   container:
+  #     image: uroottest/test-image-arm:latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         path: /go/src/github.com/u-root/u-root
+
+  #     - name: Integration Test
+  #       run: go test -v -timeout=15m -failfast -ldflags='-s -w' ./integration/...
+  #       env:
+  #         UROOT_QEMU_COVERPROFILE: coverage.txt
+
+  #     - name: Upload report to Codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         files: ./coverage.txt
+  #         fail_ci_if_error: true
+
+  check-templates:
+    needs:
+      - build
+    strategy:
+      matrix:
+        go-version: [ 1.17, 1.18 ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check every Template
+        run: |
+          go build .
+          goruncmd="./u-root -uroot-source=$GITHUB_WORKSPACE -stats-output-path=/tmp/stats.json"
+          $goruncmd minimal
+          $goruncmd core
+          $goruncmd coreboot-app
+          $goruncmd all
+          $goruncmd world
+          #$goruncmd all core # Fails because of dups. Is this supposed to work?
+          GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
+          cat /tmp/stats.json
+
+      - name: Upload Stats
+        uses: actions/upload-artifact@v3
+        with:
+          name: template-stats-${{ github.sha }}
+          path: /tmp/stats.json
+
