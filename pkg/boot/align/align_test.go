@@ -1,7 +1,6 @@
 // Copyright 2015-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
 package align
 
 import (
@@ -9,34 +8,55 @@ import (
 )
 
 func TestAlignUpPageSize(t *testing.T) {
-	pageMask = 0x03 // 4 - 1.
 	for _, tt := range []struct {
-		name string
-		val  uint
-		want uint
+		name      string
+		val       uint
+		alignSize uint
+		want      uint
 	}{
 		{
-			name: "below",
-			val:  uint(0x02),
-			want: uint(0x04),
+			name:      "below",
+			val:       uint(0x02),
+			alignSize: uint(0x04),
+			want:      uint(0x04),
 		},
 		{
-			name: "equal",
-			val:  uint(0x04),
-			want: uint(0x04),
+			name:      "equal",
+			val:       uint(0x04),
+			alignSize: uint(0x04),
+			want:      uint(0x04),
 		},
 		{
-			name: "next",
-			val:  uint(0x05),
-			want: uint(0x08),
+			name:      "next",
+			val:       uint(0x05),
+			alignSize: uint(0x04),
+			want:      uint(0x08),
+		},
+		{
+			name:      "different alignSize, already aligned",
+			val:       uint(0x08),
+			alignSize: uint(0x08),
+			want:      uint(0x08),
+		},
+		{
+			name:      "different alignSize, below",
+			val:       uint(0x07),
+			alignSize: uint(0x08),
+			want:      uint(0x08),
+		},
+		{
+			name:      "different alignSize, next",
+			val:       uint(0x09),
+			alignSize: uint(0x08),
+			want:      uint(0x10),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AlignUpPageSize(tt.val)
+			pageSize = tt.alignSize
+			got := AlignUpBySize(tt.val, tt.alignSize)
 			if got != tt.want {
-				t.Errorf("AlignUpPageSize(%#02x) = %#02x, want: %#02x", tt.val, got, tt.want)
+				t.Errorf("AlignUpBySize(%#02x, %#02x) = %#02x, want: %#02x", tt.val, tt.alignSize, got, tt.want)
 			}
 		})
 	}
-
 }
