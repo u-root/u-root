@@ -45,6 +45,14 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		o.TmpDir = tmpDir
 	}
 
+	if o.BuildOpts.UrootSource == "" {
+		sourcePath, ok := os.LookupEnv("UROOT_SOURCE")
+		if !ok {
+			t.Fatal("This test needs UROOT_SOURCE set to the absolute path of the checked out u-root source")
+		}
+		o.BuildOpts.UrootSource = sourcePath
+	}
+
 	// Set up u-root build options.
 	env := golang.Default()
 	env.CgoEnabled = false
