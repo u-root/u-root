@@ -37,6 +37,10 @@ func TestTableTypeString(t *testing.T) {
 			want:      "Cache Information",
 		},
 		{
+			tableType: TableTypeSystemSlots,
+			want:      "System Slots",
+		},
+		{
 			tableType: TableTypeMemoryDevice,
 			want:      "Memory Device",
 		},

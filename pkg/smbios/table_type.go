@@ -20,6 +20,7 @@ const (
 	TableTypeChassisInfo    TableType = 3
 	TableTypeProcessorInfo  TableType = 4
 	TableTypeCacheInfo      TableType = 7
+	TableTypeSystemSlots    TableType = 9
 	TableTypeMemoryDevice   TableType = 17
 	TableTypeIPMIDeviceInfo TableType = 38
 	TableTypeTPMDevice      TableType = 43
@@ -41,6 +42,8 @@ func (t TableType) String() string {
 		return "Processor Information"
 	case TableTypeCacheInfo:
 		return "Cache Information"
+	case TableTypeSystemSlots:
+		return "System Slots"
 	case TableTypeMemoryDevice:
 		return "Memory Device"
 	case TableTypeIPMIDeviceInfo:
@@ -74,6 +77,8 @@ func ParseTypedTable(t *Table) (fmt.Stringer, error) {
 		return ParseProcessorInfo(t)
 	case TableTypeCacheInfo: // 7
 		return ParseCacheInfo(t)
+	case TableTypeSystemSlots: // 9
+		return ParseSystemSlots(t)
 	case TableTypeMemoryDevice: // 17
 		return NewMemoryDevice(t)
 	case TableTypeIPMIDeviceInfo: // 38

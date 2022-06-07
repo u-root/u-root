@@ -178,6 +178,21 @@ func runIPMICommands() {
 				log.Printf("Failed to get the information of Processors: %v.", err)
 			}
 
+			BootDriveInfo, err := ocp.GetOemIpmiBootDriveInfo(si)
+			if err == nil {
+				if BootDriveInfo != nil {
+					if err = ocp.SendOemIpmiBootDriveInfo(i, BootDriveInfo); err == nil {
+						log.Printf("Send the information of boot drive to BMC.")
+					} else {
+						log.Printf("Failed to send the information of boot drive to BMC: %v.", err)
+					}
+				} else {
+					log.Printf("The information of boot drive is not found.")
+				}
+			} else {
+				log.Printf("Failed to get the information of boot drive: %v.", err)
+			}
+
 			if err = ocp.SetOemIpmiPostEnd(i); err == nil {
 				log.Printf("Send IPMI POST end to BMC")
 			} else {
