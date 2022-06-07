@@ -27,9 +27,7 @@ type Opts struct {
 
 	// Packages are the Go packages to compile.
 	//
-	// Only an explicit list of Go import paths is accepted.
-	//
-	// E.g. cmd/go or github.com/u-root/u-root/cmds/ls.
+	// Only an explicit list of absolute directory paths is accepted.
 	Packages []string
 
 	// TempDir is a temporary directory where the compilation mode compiled

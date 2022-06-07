@@ -4,8 +4,8 @@
 
 package main
 
-import "flag"
+import flag "github.com/spf13/pflag"
 
 var (
-	quiet = flag.Bool("s", false, "Don't print matches; exit on first match")
+	quiet = flag.BoolP("silent", "s", false, "Don't print matches; exit on first match")
 )
