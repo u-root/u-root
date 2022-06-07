@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build (linux && arm64) || (linux && riscv64)
-// +build linux,arm64 linux,riscv64
+//go:build linux && arm64
+// +build linux,arm64
 
 package linux
 
@@ -199,9 +199,9 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	trampoline[3] = 0xaa1f03e2 // mov x2, xzr
 	trampoline[4] = 0xaa1f03e3 // mov x3, xzr
 	// Branch register / Jump to instruction from x4.
-	trampoline[5] = 0xd61f0080 // br  x4
+	trampoline[6] = 0xd61f0080 // br  x4
 
-	trampoline[6] = 0xd4100000 // brk #0 (breakpoint)
+	trampoline[5] = 0xd4100000 // brk #0 (breakpoint)
 
 	//trampoline[6] = uint32(kernelEntry & 0xffffffff)
 	//trampoline[7] = uint32(kernelEntry >> 32)
