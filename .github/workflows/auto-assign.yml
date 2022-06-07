@@ -1,12 +1,15 @@
 name: "Auto Assign"
+
 on:
-  - pull_request
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  assign_reviewer:
+  assign-reviewer:
     runs-on: ubuntu-latest
     steps:
-      - uses: shufo/auto-assign-reviewer-by-files@v1.1.2
+      - uses: shufo/auto-assign-reviewer-by-files@v1.1.3
         with:
           config: "MAINTAINERS"
           token: ${{ secrets.GITHUB_TOKEN }}
