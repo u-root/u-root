@@ -73,6 +73,7 @@ func testPkgs(t *testing.T) []string {
 
 		// ??
 		"github.com/u-root/u-root/pkg/tss",
+		"github.com/u-root/u-root/pkg/syscallfilter",
 	}
 	if vmtest.TestArch() == "arm64" {
 		blocklist = append(
