@@ -10,9 +10,10 @@ import (
 
 func TestAlignUpPageSize(t *testing.T) {
 	for _, tt := range []struct {
-		name string
-		val  uint
-		want uint
+		name      string
+		val       uint
+		alignSize uint
+		want      uint
 	}{
 		{
 			name:      "below",
@@ -34,27 +35,28 @@ func TestAlignUpPageSize(t *testing.T) {
 		},
 		{
 			name:      "different alignSize, already aligned",
-			val:       uint(0x05),
-			alignSize: uint(0x05),
-			want:      uint(0x05),
+			val:       uint(0x08),
+			alignSize: uint(0x08),
+			want:      uint(0x08),
 		},
 		{
 			name:      "different alignSize, below",
-			val:       uint(0x05),
-			alignSize: uint(0x06),
-			want:      uint(0x06),
+			val:       uint(0x07),
+			alignSize: uint(0x08),
+			want:      uint(0x08),
 		},
 		{
 			name:      "different alignSize, next",
-			val:       uint(0x07),
-			alignSize: uint(0x06),
-			want:      uint(0x12),
+			val:       uint(0x09),
+			alignSize: uint(0x08),
+			want:      uint(0x10),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AlignUpBySize(tt.val)
+			pageSize = tt.alignSize
+			got := AlignUpBySize(tt.val, tt.alignSize)
 			if got != tt.want {
-				t.Errorf("AlignUpPageSize(%#02x) = %#02x, want: %#02x", tt.val, got, tt.want)
+				t.Errorf("AlignUpBySize(%#02x, %#02x) = %#02x, want: %#02x", tt.val, tt.alignSize, got, tt.want)
 			}
 		})
 	}

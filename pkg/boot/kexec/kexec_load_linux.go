@@ -6,6 +6,7 @@ package kexec
 
 import (
 	"fmt"
+	"log"
 	"syscall"
 	"unsafe"
 
@@ -19,11 +20,13 @@ import (
 //
 // Load will align segments to page boundaries and deduplicate overlapping ranges.
 func Load(entry uintptr, segments Segments, flags uint64) error {
+	log.Printf("before align: %+v", segments)
 	segments, err := AlignAndMerge(segments)
 	if err != nil {
 		return fmt.Errorf("could not align segments: %w", err)
 	}
 
+	log.Printf("after align: %+v", segments)
 	if !segments.PhysContains(entry) {
 		return fmt.Errorf("entry point %#v is not contained by any segment", entry)
 	}
@@ -49,6 +52,7 @@ func (e ErrKexec) Error() string {
 // - segments must not overlap
 // - segments must be full pages
 func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
+	log.Printf("Start rawload...")
 	if _, _, errno := unix.Syscall6(
 		unix.SYS_KEXEC_LOAD,
 		entry,

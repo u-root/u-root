@@ -192,9 +192,12 @@ func main() {
 		if err := image.Load(opts.debug); err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("DH: image load finised w/o error")
 	}
 
+	log.Printf("DH: start checking exec")
 	if opts.exec {
+		log.Printf("DH: do exec")
 		if err := kexec.Reboot(); err != nil {
 			log.Fatalf("%v", err)
 		}

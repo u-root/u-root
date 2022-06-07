@@ -172,27 +172,47 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	// big endian if needed per flag.
 	kernelEntry := kernelRange.Start
 	dtbBase := dtbRange.Start
-	var trampoline [10]uint32
+
+	// var trampoline [10]uint32
+	// DEBUG - DELETE
+	var trampoline [11]uint32
+
 	// Instruction encoding per
 	// "Arm Architecture Reference Manual Armv8, for Armv8-A architecture
 	// profile" [ ARM DDI 0487E.a (ID070919) ]
 	//
 	// LDR(literal), load kernel entry from 6 * 4 bytes away up from this
 	// instruction, which is from trampoline[6].
-	trampoline[0] = 0x580000c4 // ldr x4, #0x18 (PC relative: trampoline[6 and 7])
+
+	//trampoline[0] = 0x580000c4 // ldr x4, #0x18 (PC relative: trampoline[6 and 7])
+	// DEBUG - DELETE
+	trampoline[0] = 0x580000e4 // ldr x4, #0x1c (PC relative: trampoline[7 and 8])
+
 	// LDR(literal), load dtb from 7 * 4 bytes away up from this instruction
 	// address, which is trampoline[8].
-	trampoline[1] = 0x580000e0 // ldr x0, #0x20 (PC relative: trampoline[8 and 9])
+	//trampoline[1] = 0x580000e0 // ldr x0, #0x1c (PC relative: trampoline[8 and 9])
+	// DEBUG - DELETE
+	trampoline[1] = 0x58000100 // ldr x0, #20 (PC relative: trampoline[9 and 10])
+
 	// Zero out x1, x2, x3
 	trampoline[2] = 0xaa1f03e1 // mov x1, xzr
 	trampoline[3] = 0xaa1f03e2 // mov x2, xzr
 	trampoline[4] = 0xaa1f03e3 // mov x3, xzr
 	// Branch register / Jump to instruction from x4.
 	trampoline[5] = 0xd61f0080 // br  x4
-	trampoline[6] = uint32(kernelEntry & 0xffffffff)
-	trampoline[7] = uint32(kernelEntry >> 32)
-	trampoline[8] = uint32(dtbBase & 0xffffffff)
-	trampoline[9] = uint32(dtbBase >> 32)
+
+	trampoline[6] = 0xd4100000 // brk #0 (breakpoint)
+
+	//trampoline[6] = uint32(kernelEntry & 0xffffffff)
+	//trampoline[7] = uint32(kernelEntry >> 32)
+	//trampoline[8] = uint32(dtbBase & 0xffffffff)
+	//trampoline[9] = uint32(dtbBase >> 32)
+
+	// DEBUG -DELETE
+	trampoline[7] = uint32(kernelEntry & 0xffffffff)
+	trampoline[8] = uint32(kernelEntry >> 32)
+	trampoline[9] = uint32(dtbBase & 0xffffffff)
+	trampoline[10] = uint32(dtbBase >> 32)
 
 	trampolineBuffer := new(bytes.Buffer)
 	err = binary.Write(trampolineBuffer, binary.LittleEndian, trampoline)
@@ -208,8 +228,12 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 
 	/* Load it */
 	entry := trampolineRange.Start
+	Debug("Entry: %#x", entry)
 	if err = kexec.Load(entry, kmem.Segments, 0); err != nil {
 		return fmt.Errorf("Linux kexec Load(%v, %v, %d) = %v", entry, kmem.Segments, 0, err)
 	}
+
+	Debug("Kexec.Load done")
+
 	return nil
 }
