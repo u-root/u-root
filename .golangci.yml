@@ -1,0 +1,11 @@
+run:
+  skip-dirs:
+    - pkg/uroot/test
+
+# This enables a subset of the default linters
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
