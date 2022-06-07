@@ -1,0 +1,23 @@
+name: FreeBSD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-10.15 # This is required for the FreeBSD VM
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Run commands in FreeBSD VM
+      uses: vmactions/freebsd-vm@v0.1.6
+      with:
+        usesh: true
+        prepare: pkg install -y go
+        run: UROOT_SOURCE=$GITHUB_WORKSPACE go build -v . # TODO(MDr164): We might want to build more than just u-root itself
