@@ -22,7 +22,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		configPath := strings.TrimRight(test, ".json")
+		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
 			imgs, err := ParseLocalConfig(context.Background(), configPath)
 			if err != nil {
@@ -44,7 +44,7 @@ func TestConfigs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		configPath := strings.TrimRight(test, ".json")
+		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
 			want, err := os.ReadFile(test)
 			if err != nil {

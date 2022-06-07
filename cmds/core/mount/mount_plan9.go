@@ -26,7 +26,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -43,8 +42,7 @@ func main() {
 		}
 		log.Fatalf("Could not read %s to get namespace", n)
 	}
-	flag.Parse()
-	mod, err := namespace.ParseArgs(flag.Args())
+	mod, err := namespace.ParseArgs(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
