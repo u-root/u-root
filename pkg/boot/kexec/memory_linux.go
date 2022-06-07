@@ -754,23 +754,21 @@ func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
 // and set alignment size.
 //
 // If sz is greater thatn length of len(d), physical address will be
-// offseted by sz - len(d) from the start of the available range. Default
+// offseted by @offset from the start of the available range. Default
 // to this behavior to begin with, we can also introduce an offset to fine
 // control where to place the segment, when we actually need it.
-func (m *Memory) AddKexecSegmentExplicit(d []byte, sz uint, alignSizeBytes uint) (Range, error) {
+func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes uint) (Range, error) {
 	if sz < uint(len(d)) {
 		return Range{}, fmt.Errorf("length of d is more than size requested")
+	}
+	if offset > sz {
+		return Range{}, fmt.Errorf("offset is larger than size requested")
 	}
 	r, err := m.FindSpace(sz, alignSizeBytes)
 	if err != nil {
 		return Range{}, err
 	}
-	// Offset the placement to the end of the range.
-	//
-	// This is used when we need apply text_offset. In that case,
-	// caller request extra size in bytes by text_offset, than the
-	// size of buf.
-	r.Start = uintptr(uint(r.Start) + sz - uint(len(d)))
+	r.Start = uintptr(uint(r.Start) + offset)
 	m.Segments.Insert(NewSegment(d, r))
 	return r, nil
 }
