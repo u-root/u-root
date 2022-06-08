@@ -114,7 +114,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "include one extra file",
 			args: []string{"-nocmd", "-files=/bin/bash"},
-			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
@@ -123,7 +122,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "fix usage of an absolute path",
 			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
-			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"/bin/foo"},
@@ -133,7 +131,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "include multiple extra files",
 			args: []string{"-nocmd", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
-			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
 				itest.HasFile{"bin/ls"},
@@ -143,7 +140,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "include one extra file with rename",
 			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
-			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bush"},
 			},
