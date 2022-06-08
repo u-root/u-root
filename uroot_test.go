@@ -152,7 +152,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "include one extra file",
 			args: []string{"-nocmd", "-files=/bin/bash"},
-			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
@@ -161,7 +160,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "fix usage of an absolute path",
 			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
-			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"/bin/foo"},
@@ -171,7 +169,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "include multiple extra files",
 			args: []string{"-nocmd", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
-			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
 				itest.HasFile{"bin/ls"},
@@ -181,7 +178,6 @@ func TestUrootCmdline(t *testing.T) {
 		{
 			name: "include one extra file with rename",
 			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
-			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bush"},
 			},
@@ -280,22 +276,8 @@ func TestUrootCmdline(t *testing.T) {
 			args: []string{"all"},
 		},
 	}
-	var bbTests []testCase
-	for _, test := range bareTests {
-		bbTest := test
-		bbTest.name = bbTest.name + " gbb-gopath"
-		bbTest.args = append([]string{"-build=gbb"}, bbTest.args...)
-		bbTest.env = append(bbTest.env, "GO111MODULE=off")
 
-		gbbTest := test
-		gbbTest.name = gbbTest.name + " gbb-gomodule"
-		gbbTest.args = append([]string{"-build=gbb"}, gbbTest.args...)
-		gbbTest.env = append(gbbTest.env, "GO111MODULE=on")
-
-		bbTests = append(bbTests, gbbTest, bbTest)
-	}
-
-	for _, tt := range append(noCmdTests, bbTests...) {
+	for _, tt := range append(noCmdTests, bareTests...) {
 		t.Run(tt.name, func(t *testing.T) {
 			delFiles := true
 			f, sum1 := buildIt(t, tt.args, tt.env, tt.err)
