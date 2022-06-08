@@ -9,10 +9,12 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"strings"
 
 	"github.com/google/go-tpm/legacy/tpm2"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
@@ -169,6 +171,56 @@ func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	if !bytes.Equal(finalPCR, newPCRValue) {
 		return fmt.Errorf("PCRs not equal, got %x, want %x", finalPCR, newPCRValue)
 	}
+
+	return nil
+}
+
+// readPCRs reads the selected PCR values and returns it as a byte slice.
+//
+// If debugging is enabled, it also prints the PCR values out.
+func readPCRs(pcrs []uint32) ([]byte, error) {
+	buffer := new(bytes.Buffer)
+
+	// Print PCR values and write them out.
+	slaunch.Debug("PCR values:")
+	slaunch.Debug("sha256:")
+
+	bytesWritten := 0
+	for _, pcr := range pcrs {
+		digest, err := readPCR(pcr)
+		if err != nil {
+			return nil, fmt.Errorf("could not read PCR%d: %w", pcr, err)
+		}
+
+		slaunch.Debug("  %d: 0x%s", pcr, strings.ToUpper(hex.EncodeToString(digest)))
+
+		n, err := buffer.Write(digest)
+		if err != nil {
+			return nil, fmt.Errorf("could not write PCRs to buffer: %w", err)
+		}
+		bytesWritten += n
+	}
+	slaunch.Debug("%d bytes read successfully", bytesWritten)
+
+	return buffer.Bytes(), nil
+}
+
+// LogPCRs logs the PCR values out to the provided file.
+func LogPCRs(selection []uint32, pcrLogLocation string) error {
+	slaunch.Debug("tpm: LogPCRs: Logging to file '%s'", pcrLogLocation)
+
+	// Read the PCRs.
+	pcrBytes, err := readPCRs(selection)
+	if err != nil {
+		return fmt.Errorf("could not read PCRs: %w", err)
+	}
+
+	// Write the PCR values into the file.
+	if err := slaunch.WriteFile(pcrBytes, pcrLogLocation); err != nil {
+		return fmt.Errorf("could not write PCRs to file '%s': %w", pcrLogLocation, err)
+	}
+
+	slaunch.Debug("tpm: LogPCRs: PCRs successfully logged to file")
 
 	return nil
 }
