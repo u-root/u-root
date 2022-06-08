@@ -24,6 +24,10 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
+// pcrLogFilename holds the name of the file to dump PCR values to. This is
+// used when provisioning the system to seal secrets to the correct values.
+const pcrLogFilename = "securelaunch.dat"
+
 // policyFilename is the filename to use for the policy file.
 const policyFilename = "securelaunch.policy"
 
@@ -131,7 +135,7 @@ func scanIscsiDrives() error {
 }
 
 // initialize sets up the environment.
-func initialize() error {
+func initialize(policyLocation string) error {
 	printStep("Initialization")
 
 	// Check if an iSCSI drive was specified and if so, mount it.
@@ -143,6 +147,14 @@ func initialize() error {
 
 	if err := tpm.New(); err != nil {
 		return fmt.Errorf("failed to get TPM device: %w", err)
+	}
+
+	// Write out all the PCRs values.
+	pcrSelection := []uint32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}
+	pcrLogLocation := policyLocation + "/" + pcrLogFilename
+
+	if err := tpm.LogPCRs(pcrSelection, pcrLogLocation); err != nil {
+		return fmt.Errorf("failed to log PCR values: %w", err)
 	}
 
 	slaunch.Debug("Initialization successfully completed")
@@ -328,7 +340,7 @@ func main() {
 		exit(err)
 	}
 
-	if err := initialize(); err != nil {
+	if err := initialize(policyLocation); err != nil {
 		exit(err)
 	}
 
