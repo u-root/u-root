@@ -6,7 +6,12 @@
 package policy
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
 
@@ -30,14 +35,91 @@ type Policy struct {
 // policyBytes is a byte slice to hold a copy of the policy file in memory.
 var policyBytes []byte
 
-// Load reads the specified policy file.
-func Load(policyLocation string) error {
+// pubkeyBytes is a byte slice to hold a copy of the public key file in memory.
+var pubkeyBytes []byte
+
+// signatureBytes is a byte slice to hold a copy of the signature file in memory.
+var signatureBytes []byte
+
+// Load reads the specified policy file. If pubkey and signature files are
+// also set, then load them as well. Note that the pubkey and signature files
+// need to be set together (i.e., either they are both set or neither is set).
+func Load(policyLocation, pubkeyLocation, signatureLocation string) error {
 	var err error
+
+	if policyLocation == "" {
+		return fmt.Errorf("policy file must be set")
+	}
+
+	if pubkeyLocation != "" && signatureLocation == "" {
+		return fmt.Errorf("signature file must be provided with public key file")
+	}
+
+	if signatureLocation != "" && pubkeyLocation == "" {
+		return fmt.Errorf("public key file must be provided with signature file")
+	}
 
 	policyBytes, err = slaunch.ReadFile(policyLocation)
 	if err != nil {
 		return err
 	}
+
+	if pubkeyLocation != "" && signatureLocation != "" {
+		pubkeyBytes, err = slaunch.ReadFile(pubkeyLocation)
+		if err != nil {
+			return err
+		}
+
+		signatureBytes, err = slaunch.ReadFile(signatureLocation)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Verify verifies the policy file using the public key and signature.
+func Verify() error {
+	if len(policyBytes) == 0 {
+		return fmt.Errorf("policy file not yet loaded or empty")
+	}
+
+	if len(pubkeyBytes) == 0 {
+		return fmt.Errorf("public key file not yet loaded or empty")
+	}
+
+	if len(signatureBytes) == 0 {
+		return fmt.Errorf("signature file not yet loaded or empty")
+	}
+
+	// Decode and parse public key.
+	pubkeyBlock, _ := pem.Decode(pubkeyBytes)
+	if pubkeyBlock == nil || pubkeyBlock.Type != "PUBLIC KEY" {
+		return fmt.Errorf("public key is of the wrong type; Pem Type: %v", pubkeyBlock.Type)
+	}
+
+	pubkeyParsed, err := x509.ParsePKIXPublicKey(pubkeyBlock.Bytes)
+	if err != nil {
+		return fmt.Errorf("unable to parse public key: %w", err)
+	}
+
+	var pubkey *rsa.PublicKey
+	pubkey, ok := pubkeyParsed.(*rsa.PublicKey)
+	if !ok {
+		return fmt.Errorf("unable to get public key: %w", err)
+	}
+
+	// Hash the policy file.
+	hashed := sha256.Sum256(policyBytes)
+
+	// Verify the policy file.
+	err = rsa.VerifyPKCS1v15(pubkey, crypto.SHA256, hashed[:], signatureBytes)
+	if err != nil {
+		return fmt.Errorf("could not verify policy file: %w", err)
+	}
+
+	log.Printf("Policy Verified OK")
 
 	return nil
 }
