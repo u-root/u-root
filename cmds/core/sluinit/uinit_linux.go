@@ -31,6 +31,12 @@ const pcrLogFilename = "securelaunch.dat"
 // policyFilename is the filename to use for the policy file.
 const policyFilename = "securelaunch.policy"
 
+// pubkeyFilename is the filename to use for the policy public key file.
+const pubkeyFilename = "securelaunch.pubkey"
+
+// policyFilename is the filename to use for the policy signature file.
+const signatureFilename = "securelaunch.sig"
+
 // policyLocationFlag holds the name of the flag to specify where to find
 // the securelaunch policy file.
 const policyLocationFlag = "securelaunch_policy"
@@ -162,14 +168,20 @@ func initialize(policyLocation string) error {
 	return nil
 }
 
-// parsePolicy parses and gets the policy file.
-func parsePolicy(policyLocation string) (*policy.Policy, error) {
-	printStep("Locate and parse SL policy")
+// verifyAndParsePolicy loads, verifies, and parses and gets the policy file.
+func verifyAndParsePolicy(policyLocation string) (*policy.Policy, error) {
+	printStep("Verify and parse SL policy")
 
 	policyFileLocation := policyLocation + "/" + policyFilename
+	pubkeyFileLocation := policyLocation + "/" + pubkeyFilename
+	signatureFileLocation := policyLocation + "/" + signatureFilename
 
-	if err := policy.Load(policyFileLocation); err != nil {
+	if err := policy.Load(policyFileLocation, pubkeyFileLocation, signatureFileLocation); err != nil {
 		return nil, fmt.Errorf("failed to load policy file: %w", err)
+	}
+
+	if err := policy.Verify(); err != nil {
+		return nil, fmt.Errorf("failed to verify policy file: %w", err)
 	}
 
 	policy, err := policy.Parse()
@@ -177,7 +189,7 @@ func parsePolicy(policyLocation string) (*policy.Policy, error) {
 		return nil, fmt.Errorf("failed to parse policy file: %w", err)
 	}
 
-	slaunch.Debug("Policy file successfully parsed")
+	slaunch.Debug("Policy file successfully verified and parsed")
 
 	return policy, nil
 }
@@ -344,7 +356,7 @@ func main() {
 		exit(err)
 	}
 
-	p, err := parsePolicy(policyLocation)
+	p, err := verifyAndParsePolicy(policyLocation)
 	if err != nil {
 		exit(err)
 	}
