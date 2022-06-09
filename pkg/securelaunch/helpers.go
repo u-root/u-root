@@ -46,49 +46,72 @@ var StorageBlkDevices block.BlockDevices
 // kernel cmdline is checked in sluinit.
 var Debug = func(string, ...interface{}) {}
 
-// WriteToFile writes a byte slice to a file on an already mounted disk and
-// returns the file path written to.
-func WriteToFile(data []byte, dst, defFileName string) (string, error) {
-	// make sure dst is an absolute file path
-	if !filepath.IsAbs(dst) {
-		return "", fmt.Errorf("dst =%s Not an absolute path ", dst)
-	}
-
-	// target is the full absolute path where []byte will be written to
-	target := dst
-	dstInfo, err := os.Stat(dst)
-	if err == nil && dstInfo.IsDir() {
-		Debug("No file name provided. Adding it now. old target=%s", target)
-		target = filepath.Join(dst, defFileName)
-		Debug("New target=%s", target)
-	}
-
-	Debug("WriteToFile: target=%s", target)
-	err = os.WriteFile(target, data, 0o644)
+// ReadFile reads a file into a byte slice. It mounts the disk if necessary.
+//
+// policyLocation is formatted as `<block device id>:<path>`
+//
+//	e.g., sda1:/boot/securelaunch.policy
+//	e.g., 4qccd342-12zr-4e99-9ze7-1234cb1234c4:/foo.txt
+func ReadFile(fileLocation string) ([]byte, error) {
+	mountedFilePath, err := GetMountedFilePath(fileLocation, mount.MS_RDONLY)
 	if err != nil {
-		return "", fmt.Errorf("failed to write date to file =%s, err=%v", target, err)
+		return nil, err
 	}
-	Debug("WriteToFile: exit w success data written to target=%s", target)
-	return target, nil
+
+	Debug("ReadFile: reading file '%s' (mounted at '%s')", fileLocation, mountedFilePath)
+
+	fileBytes, err := os.ReadFile(mountedFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file '%s' (mounted at '%s')", fileLocation, mountedFilePath)
+	}
+
+	return fileBytes, nil
 }
 
-// persist writes data to targetPath.
-// targetPath is of form sda:/boot/cpuid.txt
-func persist(data []byte, targetPath string, defaultFile string) error {
-	filePath, r := GetMountedFilePath(targetPath, 0) // 0 is flag for rw mount option
-	if r != nil {
-		return fmt.Errorf("persist: err: input %s could NOT be located, err=%v", targetPath, r)
+func WriteFile(data []byte, fileLocation string) error {
+	mountedFilePath, err := GetMountedFilePath(fileLocation, 0) // 0 means RW
+	if err != nil {
+		return err
 	}
 
-	dst := filePath // /tmp/boot-733276578/cpuid
+	Debug("WriteFile: writing file '%s' (mounted at '%s')", fileLocation, mountedFilePath)
 
-	target, err := WriteToFile(data, dst, defaultFile)
+	err = os.WriteFile(mountedFilePath, data, 0o644)
 	if err != nil {
+		return fmt.Errorf("failed to write file '%s': %w", mountedFilePath, err)
+	}
+
+	return nil
+}
+
+// persist writes data to the given targetPath. If targetPath is a directory,
+// then defaultFileName is used as the actual file name.
+//
+// targetPath is formatted as `<block device id>:<path>`
+func persist(data []byte, targetPath string, defaultFileName string) error {
+	mountedFilePath, err := GetMountedFilePath(targetPath, 0) // 0 is flag for rw mount option
+	if err != nil {
+		return fmt.Errorf("failed to locate file '%s' for writing: %w", targetPath, err)
+	}
+
+	// Check if a file name was provided or just the path. If just the path,
+	// add the provided default file name.
+	mountedFilePathInfo, err := os.Stat(mountedFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat file '%s' (mounted at '%s'): %w", targetPath, mountedFilePath, err)
+	}
+	if mountedFilePathInfo.IsDir() {
+		Debug("persist: No file name provided, adding default name '%s'", defaultFileName)
+		targetPath = filepath.Join(targetPath, defaultFileName)
+		Debug("persist: New file path: '%s'", targetPath)
+	}
+
+	// Write the file.
+	if err := WriteFile(data, targetPath); err != nil {
 		log.Printf("persist: err=%s", err)
 		return err
 	}
 
-	Debug("persist: Target File%s", target)
 	return nil
 }
 
