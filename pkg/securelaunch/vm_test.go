@@ -7,6 +7,7 @@
 package securelaunch
 
 import (
+	"bytes"
 	"regexp"
 	"testing"
 	"time"
@@ -96,5 +97,36 @@ func TestMountDevice(t *testing.T) {
 	}
 	if !mounted {
 		t.Skip("Skipping since no suitable block device was found to mount")
+	}
+}
+
+func TestWriteFile(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	tempFile := "sda1:" + "/testfile"
+	dataStr := "Hello World!"
+
+	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
+		t.Fatalf(`WriteFile(dataStr.bytes, tempFile) = %v, not nil`, err)
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	tempFile := "sda1:" + "/testfile"
+	dataStr := "Hello World!"
+
+	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
+		t.Fatalf(`WriteFile(dataStr.bytes, tempFile) = %v, not nil`, err)
+	}
+
+	readBytes, err := ReadFile(tempFile)
+	if err != nil {
+		t.Fatalf(`ReadFile(tempFile) = %v, not nil`, err)
+	}
+
+	if bytes.Compare(readBytes, []byte(dataStr)) != 0 {
+		t.Fatalf(`ReadFile(tempFile) returned %q, not %q`, readBytes, []byte(dataStr))
 	}
 }
