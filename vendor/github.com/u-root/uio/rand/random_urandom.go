@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build aix || darwin || dragonfly || freebsd || nacl || netbsd || openbsd || solaris || linux
 // +build aix darwin dragonfly freebsd nacl netbsd openbsd solaris linux
 
 package rand
@@ -51,7 +52,7 @@ func (r *urandomReader) ReadContext(ctx context.Context, b []byte) (int, error) 
 			return 0, ctx.Err()
 
 		default:
-			if err != nil && err != syscall.EAGAIN && err != syscall.EINTR {
+			if err != syscall.EAGAIN && err != syscall.EINTR {
 				return n, err
 			}
 		}
