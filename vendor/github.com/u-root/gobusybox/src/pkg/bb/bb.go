@@ -488,6 +488,18 @@ func findLocalModules(l ulog.Logger, mainPkgs []*bbinternal.Package) (map[string
 			}
 
 			if lm, ok := localModules[p.Module.Path]; ok && lm.m.Dir != p.Module.Dir {
+				gbbstrict, set := os.LookupEnv("GBB_STRICT")
+				if set == false {
+					l.Printf("GBB_STRICT is not set.")
+				}
+				if gbbstrict != "1" {
+					if p.Module.Version == "" || lm.m.Version == "" || (p.Module.Replace != nil && isReplacedModuleLocal(p.Module.Replace)) || (lm.m.Replace != nil && isReplacedModuleLocal(lm.m.Replace)) {
+						seen[mainPkg.Pkg.Module.Path][p.Module.Path] = struct{}{}
+						l.Printf("[WARNING] %s depends on %s @ %s\n", mainPkg.Pkg.PkgPath, p.Module.Path, moduleVersionIdentifier(p.Module))
+						l.Printf("\tUsing %s @ %s to build it.", lm.m.Path, moduleVersionIdentifier(lm.m))
+						return
+					}
+				}
 				fmt.Fprintln(os.Stderr, "")
 				l.Printf("Conflicting module dependencies on %s:", p.Module.Path)
 				l.Printf("  %s depends on %s @ %s", mainPkg.Pkg.PkgPath, p.Module.Path, moduleVersionIdentifier(p.Module))

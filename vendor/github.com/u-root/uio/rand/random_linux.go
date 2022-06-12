@@ -56,7 +56,7 @@ func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error
 			return 0, ctx.Err()
 
 		default:
-			if err != nil && err != syscall.EAGAIN && err != syscall.EINTR {
+			if err != syscall.EAGAIN && err != syscall.EINTR {
 				return n, err
 			}
 		}

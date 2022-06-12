@@ -116,7 +116,7 @@ github.com/orangecms/go-framebuffer/framebuffer
 # github.com/pborman/getopt/v2 v2.1.0
 ## explicit; go 1.13
 github.com/pborman/getopt/v2
-# github.com/pierrec/lz4/v4 v4.1.11
+# github.com/pierrec/lz4/v4 v4.1.14
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
@@ -141,7 +141,7 @@ github.com/safchain/ethtool
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/u-root/gobusybox/src v0.0.0-20220328034136-d993a0801374
+# github.com/u-root/gobusybox/src v0.0.0-20220611170358-a4a23d8e3f54
 ## explicit; go 1.13
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
@@ -151,7 +151,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7
+# github.com/u-root/uio v0.0.0-20220204230159-dac05f7d2cb4
 ## explicit; go 1.15
 github.com/u-root/uio/cp
 github.com/u-root/uio/rand
@@ -194,7 +194,7 @@ golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
+# golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 ## explicit; go 1.17
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
@@ -210,7 +210,7 @@ golang.org/x/net/ipv6
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
+# golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -237,7 +237,7 @@ golang.org/x/text/message
 golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.1.11-0.20220325154526-54af36eca237
+# golang.org/x/tools v0.1.11
 ## explicit; go 1.17
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
@@ -256,10 +256,8 @@ golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
-# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-## explicit; go 1.11
-golang.org/x/xerrors
-golang.org/x/xerrors/internal
+# golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f
+## explicit; go 1.17
 # google.golang.org/grpc v1.27.1
 ## explicit; go 1.11
 google.golang.org/grpc/codes

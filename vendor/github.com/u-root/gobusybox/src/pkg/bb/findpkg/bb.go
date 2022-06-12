@@ -87,7 +87,7 @@ func loadFSPackages(l ulog.Logger, env golang.Environ, filesystemPaths []string)
 			return nil, fmt.Errorf("could not find packages in module %s: %v", moduleDir, err)
 		}
 		for _, pkg := range pkgs {
-			allps = addPkg(l, allps, pkg)
+			allps, err = addPkg(l, allps, pkg)
 		}
 	}
 
@@ -99,17 +99,16 @@ func loadFSPackages(l ulog.Logger, env golang.Environ, filesystemPaths []string)
 			return nil, fmt.Errorf("could not find packages: %v", err)
 		}
 		for _, p := range vendoredPkgs {
-			allps = addPkg(l, allps, p)
+			allps, err = addPkg(l, allps, p)
 		}
 	}
 	return allps, nil
 }
 
-func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) []*packages.Package {
+func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) ([]*packages.Package, error) {
 	if len(p.Errors) > 0 {
-		// TODO(chrisko): should we return an error here instead of warn?
-		l.Printf("Skipping package %v for errors:", p)
 		packages.PrintErrors([]*packages.Package{p})
+		return plist, fmt.Errorf("failed to add package %v for errors:", p)
 	} else if len(p.GoFiles) == 0 {
 		l.Printf("Skipping package %v because it has no Go files", p)
 	} else if p.Name != "main" {
@@ -117,7 +116,7 @@ func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) []*pa
 	} else {
 		plist = append(plist, p)
 	}
-	return plist
+	return plist, nil
 }
 
 // NewPackages collects package metadata about all named packages.
@@ -144,7 +143,7 @@ func NewPackages(l ulog.Logger, env golang.Environ, names ...string) ([]*bbinter
 			return nil, fmt.Errorf("failed to load package %v: %v", goImportPaths, err)
 		}
 		for _, p := range importPkgs {
-			ps = addPkg(l, ps, p)
+			ps, err = addPkg(l, ps, p)
 		}
 	}
 

@@ -257,13 +257,18 @@ func (p *Package) newImportName(name string, f *ast.File) string {
 	return proposed
 }
 
+// PackageName is teh name of the rewritten Go package.
+func (p *Package) PackageName() string {
+	return "bb" + pnameRegex.ReplaceAllString(p.Name, "")
+}
+
 func (p *Package) rewriteFile(f *ast.File) bool {
 	hasMain := false
 
 	// Change the package name declaration from main to the command's name.
 	// Remove all non-alphanumeric characters except for underscore and ensure
 	// starting with a letter. There are more valid identifiers though.
-	f.Name.Name = "bb" + pnameRegex.ReplaceAllString(p.Name, "")
+	f.Name.Name = p.PackageName()
 
 	// Map of fully qualified package name -> imported alias in the file.
 	importAliases := make(map[string]string)
