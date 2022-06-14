@@ -22,6 +22,13 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
+// policyFilename is the filename to use for the policy file.
+const policyFilename = "securelaunch.policy"
+
+// policyLocationFlag holds the name of the flag to specify where to find
+// the securelaunch policy file.
+const policyLocationFlag = "securelaunch_policy"
+
 var slDebug = flag.Bool("d", false, "enable debug logs")
 
 // step keeps track of the current step (e.g., parse policy, measure).
@@ -31,6 +38,23 @@ var step = 1
 func printStep(msg string) {
 	slaunch.Debug("******** Step %d: %s ********", step, msg)
 	step++
+}
+
+// checkPolicyLocationFlag checks the kernel cmdline for the policyLocationFlag
+// flag. It provides the location of the policy file on disk. If it isn't set,
+// an error is returned.
+//
+// The flag takes an argument formatted as `<block device id>:<path>`
+//
+//	e.g., sda1:/boot/securelaunch.policy
+//	e.g., 4qccd342-12zr-4e99-9ze7-1234cb1234c4:/securelaunch.policy
+func checkPolicyLocationFlag() (string, error) {
+	location, present := cmdline.Flag(policyLocationFlag)
+	if !present {
+		return "", fmt.Errorf("'%s' command line flag is not set", policyLocationFlag)
+	}
+
+	return location, nil
 }
 
 // checkDebugFlag checks if `uroot.uinitargs=-d` is set on the kernel cmdline.
@@ -120,10 +144,12 @@ func initialize() error {
 }
 
 // parsePolicy parses and gets the policy file.
-func parsePolicy() (*policy.Policy, error) {
+func parsePolicy(policyLocation string) (*policy.Policy, error) {
 	printStep("Locate and parse SL policy")
 
-	p, err := policy.Get()
+	policyFileLocation := policyLocation + "/" + policyFilename
+
+	p, err := policy.Get(policyFileLocation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse policy file: %w", err)
 	}
@@ -270,11 +296,16 @@ func main() {
 
 	checkDebugFlag()
 
+	policyLocation, err := checkPolicyLocationFlag()
+	if err != nil {
+		exit(err)
+	}
+
 	if err := initialize(); err != nil {
 		exit(err)
 	}
 
-	p, err := parsePolicy()
+	p, err := parsePolicy(policyLocation)
 	if err != nil {
 		exit(err)
 	}
