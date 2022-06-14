@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
@@ -36,6 +37,14 @@ const (
 	tokenProp      token = 0x3
 	tokenNop       token = 0x4
 	tokenEnd       token = 0x9
+)
+
+var (
+	sysfsFDT = "/sys/firmware/fdt"
+)
+
+var (
+	errLoadFDT = errors.New("load fdt failed after trying all sources")
 )
 
 // FDT contains the parsed contents of a Flattend Device Tree (.dtb).
@@ -70,6 +79,33 @@ type Header struct {
 type ReserveEntry struct {
 	Address uint64
 	Size    uint64
+}
+
+// LoadFDT loads a flattened device tree from current running system.
+//
+// It first tries to load it from given file path, then
+// from /sys/firmware/fdt.
+func LoadFDT(dtbPath string) (*FDT, error) {
+	fdtFile, err := os.Open(dtbPath)
+	if err == nil {
+		defer fdtFile.Close()
+		fdt, err := ReadFDT(fdtFile)
+		if err == nil {
+			return fdt, nil
+		}
+	}
+
+	// Fallback to load fdt from sysfs.
+	sysFDTFile, err := os.Open(sysfsFDT)
+	if err == nil {
+		defer sysFDTFile.Close()
+		fdt, err := ReadFDT(sysFDTFile)
+		if err == nil {
+			return fdt, nil
+		}
+	}
+
+	return nil, errLoadFDT
 }
 
 // ReadFDT reads FDT from an io.ReadSeeker.

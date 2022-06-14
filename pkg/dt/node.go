@@ -7,6 +7,7 @@ package dt
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"unicode"
 )
@@ -46,6 +47,10 @@ var StandardPropertyTypes = map[string]PropertyType{
 	"name":           StringType,           // deprecated
 	"device_tree":    StringType,           // deprecated
 }
+
+var (
+	errPropertyRegionInvalid = errors.New("property value is not <u64x2>")
+)
 
 // Node is one Node in the Device Tree.
 type Node struct {
@@ -113,6 +118,36 @@ func (n *Node) LookProperty(name string) (*Property, bool) {
 		}
 	}
 	return nil, false
+}
+
+// RemoveProperty deletes a property by name.
+func (n *Node) RemoveProperty(name string) bool {
+	for idx := range n.Properties {
+		if n.Properties[idx].Name == name {
+			lastIdx := len(n.Properties) - 1
+			if idx != lastIdx {
+				n.Properties[idx] = n.Properties[lastIdx]
+			}
+			n.Properties = n.Properties[:lastIdx]
+			return true
+		}
+	}
+	return false
+}
+
+// UpdateProperty updates a property in the node, adding it if it does not exist.
+//
+// Returning boolean to indicate if the property was found.
+func (n *Node) UpdateProperty(name string, value []byte) bool {
+	p, found := n.LookProperty(name)
+	if found {
+		p.Value = value
+		return true
+	}
+
+	prop := Property{Name: name, Value: value}
+	n.Properties = append(n.Properties, prop)
+	return false
 }
 
 // Property is a name-value pair. Note the PropertyType of Value is not
@@ -210,11 +245,35 @@ func (p *Property) AsU64() (uint64, error) {
 	return val, err
 }
 
+type Region struct {
+	Start uint64
+	Size  uint64
+}
+
+// AsRegion converts the property to a Region.
+func (p *Property) AsRegion() (*Region, error) {
+	if len(p.Value) != 16 {
+		return nil, errPropertyRegionInvalid
+	}
+	var start, size uint64
+	b := bytes.NewBuffer(p.Value)
+
+	err := binary.Read(b, binary.BigEndian, &start)
+	if err != nil {
+		return nil, err
+	}
+	err = binary.Read(b, binary.BigEndian, &size)
+	if err != nil {
+		return nil, err
+	}
+	return &Region{Start: start, Size: size}, nil
+}
+
 // AsString converts the property to the Go string type. The trailing null
 // character is stripped.
 func (p *Property) AsString() (string, error) {
 	if len(p.Value) == 0 || p.Value[len(p.Value)-1] != 0 {
-		return "", fmt.Errorf("property %q is not <string>", p.Name)
+		return "", fmt.Errorf("property %q is not <string> (0 length or no null)", p.Name)
 	}
 	str := p.Value[:len(p.Value)-1]
 	if !isPrintableASCII(str) {

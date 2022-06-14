@@ -7,12 +7,62 @@ package dt
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestLoadFDT(t *testing.T) {
+	jsonData, err := os.ReadFile("testdata/fdt.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testData := &FDT{}
+	if err := json.Unmarshal(jsonData, testData); err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Load by path given and succeed.
+	fdt, err := LoadFDT("testdata/fdt.dtb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(fdt, testData) {
+		got, err := json.MarshalIndent(fdt, "", "    ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Errorf(`Read("fdt.dtb") = %s \n, want %s`, got, jsonData)
+	}
+
+	nonexistDTB := fmt.Sprintf("testdata/fdt_2022.dtb")
+	if _, err := os.Stat(nonexistDTB); err == nil {
+		t.Fatalf("test file should not exist: %s", nonexistDTB)
+	}
+	// 2. Fallback to read from sys fs, and sys fs reading also failed.
+	sysfsFDT = nonexistDTB
+	fdt, err = LoadFDT(nonexistDTB)
+	if err != errLoadFDT {
+		t.Errorf("LoadFDT(%s) return error %v, want error %v", nonexistDTB, err, errLoadFDT)
+	}
+
+	// 3. Fallback to read from sys fs, and succeed.
+	sysfsFDT = "testdata/fdt.dtb"
+	fdt, err = LoadFDT(nonexistDTB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(fdt, testData) {
+		got, err := json.MarshalIndent(fdt, "", "    ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Errorf(`Read("fdt.dtb") = %s \n, want %s`, got, jsonData)
+	}
+}
 
 func TestRead(t *testing.T) {
 	f, err := os.Open("testdata/fdt.dtb")
