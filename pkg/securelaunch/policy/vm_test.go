@@ -4,10 +4,17 @@
 
 package policy
 
-import "testing"
+import (
+	"testing"
+	"time"
 
-const policy_str = `
-{
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/guest"
+	"github.com/hugelgupf/vmtest/qemu"
+	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+)
+
+const policyStr = `{
     "collectors": [
       {
         "type": "dmi",
@@ -66,10 +73,47 @@ const policy_str = `
 }
 `
 
+// VM setup:
+//
+//  /dev/sda is ./testdata/mbrdisk
+//	  /dev/sda1 is ext4
+//	  /dev/sda2 is vfat
+//	  /dev/sda3 is fat32
+//	  /dev/sda4 is xfs
+//
+//   ARM tests will load drives as virtio-blk devices (/dev/vd*)
+
+func TestVM(t *testing.T) {
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/securelaunch/policy"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(2*time.Minute),
+			// CONFIG_ATA_PIIX is required for this option to work.
+			qemu.ArbitraryArgs("-hda", "../testdata/mbrdisk"),
+
+			// With NVMe devices enabled, kernel crashes when not using q35 machine model.
+			qemu.ArbitraryArgs("-machine", "q35"),
+		)),
+	)
+}
+
 func TestParse(t *testing.T) {
-	policy, err := parse([]byte(policy_str))
+	guest.SkipIfNotInVM(t)
+
+	policyFile := "sda1:" + "/policy"
+
+	if err := slaunch.WriteFile([]byte(policyStr), policyFile); err != nil {
+		t.Fatalf(`WriteFile(policyStr.bytes, tempFile) = %v, not nil`, err)
+	}
+
+	if err := Load(policyFile); err != nil {
+		t.Fatalf("Load() = %v, not nil", err)
+	}
+
+	policy, err := Parse()
 	if err != nil {
-		t.Fatalf("parse() = %v, not nil", err)
+		t.Fatalf("Parse() = %v, not nil", err)
 	}
 	if policy == nil {
 		t.Fatalf("no policy file returned")
