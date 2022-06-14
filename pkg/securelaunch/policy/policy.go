@@ -28,10 +28,26 @@ type Policy struct {
 // policyBytes is a byte slice to hold a copy of the policy file in memory.
 var policyBytes []byte
 
-// parse accepts a JSON file as input, parses it into a well defined Policy
+// Load reads the specified policy file.
+func Load(policyLocation string) error {
+	var err error
+
+	policyBytes, err = slaunch.ReadFile(policyLocation)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Parse accepts a JSON file as input, parses it into a well defined Policy
 // structure and returns a pointer to the Policy structure.
-func parse(pf []byte) (*Policy, error) {
-	p := &Policy{}
+func Parse() (*Policy, error) {
+	if len(policyBytes) == 0 {
+		return nil, fmt.Errorf("policy file not yet loaded or empty")
+	}
+
+	policy := &Policy{}
 	var parse struct {
 		Collectors []json.RawMessage `json:"collectors"`
 		Attestor   json.RawMessage   `json:"attestor"`
@@ -39,34 +55,36 @@ func parse(pf []byte) (*Policy, error) {
 		EventLog   json.RawMessage   `json:"eventlog"`
 	}
 
-	if err := json.Unmarshal(pf, &parse); err != nil {
-		log.Printf("parse SL Policy: Unmarshall error for entire policy file!! err=%v", err)
+	if err := json.Unmarshal(policyBytes, &parse); err != nil {
+		log.Printf("policy: Error unmarshalling policy file: %v", err)
 		return nil, err
 	}
 
-	for _, c := range parse.Collectors {
-		collector, err := measurement.GetCollector(c)
+	for _, collectors := range parse.Collectors {
+		collector, err := measurement.GetCollector(collectors)
 		if err != nil {
-			log.Printf("GetCollector err:c=%s, collector=%v", c, collector)
+			log.Printf("policy: Error GetCollector err:c=%s, collector=%v", collectors, collector)
 			return nil, err
 		}
-		p.Collectors = append(p.Collectors, collector)
+
+		policy.Collectors = append(policy.Collectors, collector)
 	}
 
 	if len(parse.Launcher) > 0 {
-		if err := json.Unmarshal(parse.Launcher, &p.Launcher); err != nil {
-			log.Printf("parse policy: Launcher Unmarshall error=%v!!", err)
+		if err := json.Unmarshal(parse.Launcher, &policy.Launcher); err != nil {
+			log.Printf("policy: Error unmarshalling `launcher` section of policy file: %v", err)
 			return nil, err
 		}
 	}
 
 	if len(parse.EventLog) > 0 {
-		if err := json.Unmarshal(parse.EventLog, &p.EventLog); err != nil {
-			log.Printf("parse policy: EventLog Unmarshall error=%v!!", err)
+		if err := json.Unmarshal(parse.EventLog, &policy.EventLog); err != nil {
+			log.Printf("policy: Error unmarshalling `eventlog` section of policy file: %v", err)
 			return nil, err
 		}
 	}
-	return p, nil
+
+	return policy, nil
 }
 
 // Measure measures the policy file.
@@ -82,22 +100,4 @@ func Measure() error {
 	}
 
 	return nil
-}
-
-// Get reads and parses the specified policy file.
-func Get(policyLocation string) (*Policy, error) {
-	policyBytes, err := slaunch.ReadFile(policyLocation)
-	if err != nil {
-		return nil, err
-	}
-
-	policy, err := parse(policyBytes)
-	if err != nil {
-		return nil, err
-	}
-	if policy == nil {
-		return nil, fmt.Errorf("no policy found")
-	}
-
-	return policy, nil
 }
