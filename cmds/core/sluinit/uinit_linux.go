@@ -150,14 +150,18 @@ func parsePolicy(policyLocation string) (*policy.Policy, error) {
 
 	policyFileLocation := policyLocation + "/" + policyFilename
 
-	p, err := policy.Get(policyFileLocation)
+	if err := policy.Load(policyFileLocation); err != nil {
+		return nil, fmt.Errorf("failed to load policy file: %w", err)
+	}
+
+	policy, err := policy.Parse()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse policy file: %w", err)
 	}
 
 	slaunch.Debug("Policy file successfully parsed")
 
-	return p, nil
+	return policy, nil
 }
 
 // collectMeasurements runs any measurements specified in the policy file.
