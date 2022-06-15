@@ -56,4 +56,4 @@ func GetRSDPEFI() (*RSDP, error) {
 }
 
 // You can change the getters if you wish for testing.
-var rsdpgetters = []func() (*RSDP, error){GetRSDPEFI, GetRSDPEBDA, GetRSDPMem}
+var rsdpgetters = []func() (*RSDP, error){GetRSDPEBDA, GetRSDPMem, GetRSDPEFI}
