@@ -12,7 +12,202 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/dt"
 )
+
+func checkMemoryMap(t *testing.T, got, want MemoryMap) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Errorf("got memory map length %d, want memory map length %d", len(got), len(want))
+	}
+	for idx, r := range got {
+		if r.Type != want[idx].Type {
+			t.Errorf("got memory at index %d type %v, want type  %v", idx, r.Type, want[idx].Type)
+		}
+		if r.Range.Start != want[idx].Start || r.Size != want[idx].Size {
+			t.Errorf("got memory at index %d range %v, want range %v", idx, r.Range, want[idx].Range)
+		}
+	}
+}
+
+func TestParseMemoryMapFromFDT(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		fdt     *dt.FDT
+		wantMap MemoryMap
+		wantErr error
+	}{
+		{
+			"empty",
+			&dt.FDT{RootNode: &dt.Node{Name: "/"}},
+			MemoryMap{},
+			nil,
+		},
+		{
+			"add system memory ok",
+			&dt.FDT{
+				RootNode: &dt.Node{
+					Name: "/",
+					Children: []*dt.Node{
+						{
+							Name: "test memory",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "test memory 2",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "test memory 3",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+					},
+				},
+			},
+			MemoryMap{
+				TypedRange{Range{Start: uintptr(0x0), Size: 0xffffffffffff}, "System RAM"},
+				TypedRange{Range{Start: uintptr(0x1000000000000), Size: 0x1ffffffffffff}, "System RAM"},
+				TypedRange{Range{Start: uintptr(0x3000000000000), Size: 0x2ffffffffffff}, "System RAM"},
+			},
+			nil,
+		},
+		{
+			"add system memory, and reserved memory ok",
+			&dt.FDT{
+				RootNode: &dt.Node{
+					Name: "/",
+					Children: []*dt.Node{
+						{
+							Name: "test memory",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "test memory 2",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "test memory 3",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "reserved-memory",
+							Properties: []dt.Property{
+								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff}},
+							},
+							Children: []*dt.Node{
+								{
+									Name: "reserved mem child node",
+									Properties: []dt.Property{
+										{
+											"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			MemoryMap{
+				TypedRange{Range{Start: uintptr(0x0), Size: 0xffffffff}, "Reserved"},
+				TypedRange{Range{Start: uintptr(0xffffffff), Size: 0xffff00000000}, "System RAM"}, // carve out reserved portion from "reserved-memory".
+				TypedRange{Range{Start: uintptr(0x1000000000000), Size: 0x1ffffffffffff}, "System RAM"},
+				TypedRange{Range{Start: uintptr(0x3000000000000), Size: 0xffffffffff}, "Reserved"},
+				TypedRange{Range{Start: uintptr(0x300ffffffffff), Size: 0x2ff0000000000}, "System RAM"}, // Carve out reserved portion from "reserved mem child node".
+			},
+			nil,
+		},
+		{
+			"add system memory, reserved memory, and reserved entries ok",
+			&dt.FDT{
+				ReserveEntries: []dt.ReserveEntry{
+					{
+						Address: uint64(0x1000000000000),
+						Size:    uint64(0xffff),
+					},
+				},
+				RootNode: &dt.Node{
+					Name: "/",
+					Children: []*dt.Node{
+						{
+							Name: "test memory",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "test memory 2",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "test memory 3",
+							Properties: []dt.Property{
+								{"device_type", append([]byte("memory"), 0)},
+								{"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+							},
+						},
+						{
+							Name: "reserved-memory",
+							Properties: []dt.Property{
+								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff}},
+							},
+							Children: []*dt.Node{
+								{
+									Name: "reserved mem child node",
+									Properties: []dt.Property{
+										{
+											"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			MemoryMap{
+				TypedRange{Range{Start: uintptr(0x0), Size: 0xffffffff}, "Reserved"},
+				TypedRange{Range{Start: uintptr(0xffffffff), Size: 0xffff00000000}, "System RAM"}, // carve out reserved portion from "reserved-memory".
+				TypedRange{Range{Start: uintptr(0x1000000000000), Size: 0xffff}, "Reserved"},
+				TypedRange{Range{Start: uintptr(0x100000000ffff), Size: 0x1ffffffff0000}, "System RAM"}, // carve out reserve entry.
+				TypedRange{Range{Start: uintptr(0x3000000000000), Size: 0xffffffffff}, "Reserved"},
+				TypedRange{Range{Start: uintptr(0x300ffffffffff), Size: 0x2ff0000000000}, "System RAM"}, // Carve out reserved portion from "reserved mem child node".
+			},
+			nil,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			km := &Memory{}
+			err := km.ParseMemoryMapFromFDT(tc.fdt)
+			if err != tc.wantErr {
+				t.Errorf("km.ParseMemoryMapFromFDT returned error %v, want error %v", err, tc.wantErr)
+			}
+			checkMemoryMap(t, km.Phys, tc.wantMap)
+		})
+	}
+}
 
 func TestParseMemoryMap(t *testing.T) {
 	root := t.TempDir()
