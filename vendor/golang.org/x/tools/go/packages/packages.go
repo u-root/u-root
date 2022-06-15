@@ -39,9 +39,6 @@ import (
 // Load may return more information than requested.
 type LoadMode int
 
-// TODO(matloob): When a V2 of go/packages is released, rename NeedExportsFile to
-// NeedExportFile to make it consistent with the Package field it's adding.
-
 const (
 	// NeedName adds Name and PkgPath.
 	NeedName LoadMode = 1 << iota
@@ -59,8 +56,8 @@ const (
 	// NeedDeps adds the fields requested by the LoadMode in the packages in Imports.
 	NeedDeps
 
-	// NeedExportsFile adds ExportFile.
-	NeedExportsFile
+	// NeedExportFile adds ExportFile.
+	NeedExportFile
 
 	// NeedTypes adds Types, Fset, and IllTyped.
 	NeedTypes
@@ -73,6 +70,13 @@ const (
 
 	// NeedTypesSizes adds TypesSizes.
 	NeedTypesSizes
+
+	// needInternalDepsErrors adds the internal deps errors field for use by gopls.
+	needInternalDepsErrors
+
+	// needInternalForTest adds the internal forTest field.
+	// Tests must also be set on the context for this field to be populated.
+	needInternalForTest
 
 	// typecheckCgo enables full support for type checking cgo. Requires Go 1.15+.
 	// Modifies CompiledGoFiles and Types, and has no effect on its own.
@@ -108,6 +112,9 @@ const (
 	// Deprecated: LoadAllSyntax exists for historical compatibility
 	// and should not be used. Please directly specify the needed fields using the Need values.
 	LoadAllSyntax = LoadSyntax | NeedDeps
+
+	// Deprecated: NeedExportsFile is a historical misspelling of NeedExportFile.
+	NeedExportsFile = NeedExportFile
 )
 
 // A Config specifies details about how packages should be loaded.
@@ -403,6 +410,8 @@ func init() {
 		config.(*Config).modFlag = value
 	}
 	packagesinternal.TypecheckCgo = int(typecheckCgo)
+	packagesinternal.DepsErrors = int(needInternalDepsErrors)
+	packagesinternal.ForTest = int(needInternalForTest)
 }
 
 // An Error describes a problem with a package's metadata, syntax, or types.
@@ -634,7 +643,7 @@ func (ld *loader) refine(roots []string, list ...*Package) ([]*Package, error) {
 		needsrc := ((ld.Mode&(NeedSyntax|NeedTypesInfo) != 0 && (rootIndex >= 0 || ld.Mode&NeedDeps != 0)) ||
 			// ... or if we need types and the exportData is invalid. We fall back to (incompletely)
 			// typechecking packages from source if they fail to compile.
-			(ld.Mode&NeedTypes|NeedTypesInfo != 0 && exportDataInvalid)) && pkg.PkgPath != "unsafe"
+			(ld.Mode&(NeedTypes|NeedTypesInfo) != 0 && exportDataInvalid)) && pkg.PkgPath != "unsafe"
 		lpkg := &loaderPackage{
 			Package:   pkg,
 			needtypes: needtypes,
@@ -784,7 +793,7 @@ func (ld *loader) refine(roots []string, list ...*Package) ([]*Package, error) {
 		if ld.requestedMode&NeedImports == 0 {
 			ld.pkgs[i].Imports = nil
 		}
-		if ld.requestedMode&NeedExportsFile == 0 {
+		if ld.requestedMode&NeedExportFile == 0 {
 			ld.pkgs[i].ExportFile = ""
 		}
 		if ld.requestedMode&NeedTypes == 0 {
@@ -1079,7 +1088,6 @@ func (ld *loader) parseFile(filename string) (*ast.File, error) {
 //
 // Because files are scanned in parallel, the token.Pos
 // positions of the resulting ast.Files are not ordered.
-//
 func (ld *loader) parseFiles(filenames []string) ([]*ast.File, []error) {
 	var wg sync.WaitGroup
 	n := len(filenames)
@@ -1123,7 +1131,6 @@ func (ld *loader) parseFiles(filenames []string) ([]*ast.File, []error) {
 
 // sameFile returns true if x and y have the same basename and denote
 // the same file.
-//
 func sameFile(x, y string) bool {
 	if x == y {
 		// It could be the case that y doesn't exist.
@@ -1236,8 +1243,13 @@ func (ld *loader) loadFromExportData(lpkg *loaderPackage) (*types.Package, error
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %v", lpkg.ExportFile, err)
 	}
+	if _, ok := view["go.shape"]; ok {
+		// Account for the pseudopackage "go.shape" that gets
+		// created by generic code.
+		viewLen++
+	}
 	if viewLen != len(view) {
-		log.Fatalf("Unexpected package creation during export data loading")
+		log.Panicf("golang.org/x/tools/go/packages: unexpected new packages during load of %s", lpkg.PkgPath)
 	}
 
 	lpkg.Types = tpkg
@@ -1248,17 +1260,8 @@ func (ld *loader) loadFromExportData(lpkg *loaderPackage) (*types.Package, error
 
 // impliedLoadMode returns loadMode with its dependencies.
 func impliedLoadMode(loadMode LoadMode) LoadMode {
-	if loadMode&NeedTypesInfo != 0 && loadMode&NeedImports == 0 {
-		// If NeedTypesInfo, go/packages needs to do typechecking itself so it can
-		// associate type info with the AST. To do so, we need the export data
-		// for dependencies, which means we need to ask for the direct dependencies.
-		// NeedImports is used to ask for the direct dependencies.
-		loadMode |= NeedImports
-	}
-
-	if loadMode&NeedDeps != 0 && loadMode&NeedImports == 0 {
-		// With NeedDeps we need to load at least direct dependencies.
-		// NeedImports is used to ask for the direct dependencies.
+	if loadMode&(NeedDeps|NeedTypes|NeedTypesInfo) != 0 {
+		// All these things require knowing the import graph.
 		loadMode |= NeedImports
 	}
 
@@ -1266,5 +1269,5 @@ func impliedLoadMode(loadMode LoadMode) LoadMode {
 }
 
 func usesExportData(cfg *Config) bool {
-	return cfg.Mode&NeedExportsFile != 0 || cfg.Mode&NeedTypes != 0 && cfg.Mode&NeedDeps == 0
+	return cfg.Mode&NeedExportFile != 0 || cfg.Mode&NeedTypes != 0 && cfg.Mode&NeedDeps == 0
 }
