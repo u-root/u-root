@@ -3,7 +3,7 @@ version: 2
 templates:
   golang-template: &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v4.6.0
+      - image: uroottest/test-image-amd64:v5.0.0
     working_directory: /go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /go/src/github.com/u-root/u-root
@@ -141,17 +141,17 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v4.4.0
+      - image: uroottest/test-image-amd64:v5.0.0
 
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v4.4.0
+      - image: uroottest/test-image-arm:v5.0.0
 
   # This arch needs a different working dir, so don't use integration-template
   test-integration-arm64:
     docker:
-      - image: uroottest/test-image-arm64:v4.4.0
+      - image: uroottest/test-image-arm64:v5.0.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
