@@ -20,6 +20,7 @@ import (
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
+	"github.com/u-root/u-root/pkg/dt"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -170,6 +171,8 @@ func (rs Ranges) Minus(r Range) Ranges {
 
 // FindSpace finds a continguous piece of sz points within Ranges and returns
 // the Range pointing to it.
+//
+// If alignSizeBytes is zero, align up by page size.
 func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
 	return rs.FindSpaceAbove(sz, 0)
 }
@@ -523,6 +526,73 @@ func (m *Memory) ParseMemoryMap() error {
 	return nil
 }
 
+// ParseMemoryMapFromFDT reads firmware provided memory map from an FDT.
+func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
+	var phys MemoryMap
+	addMemory := func(n *dt.Node) error {
+		p, found := n.LookProperty("device_type")
+		if !found {
+			return nil
+		}
+		t, err := p.AsString()
+		if err != nil || t != "memory" {
+			return nil
+		}
+		p, found = n.LookProperty("reg")
+		if found {
+			r, err := p.AsRegion()
+			if err != nil {
+				return err
+			}
+			phys = append(phys, TypedRange{
+				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
+				Type:  RangeRAM,
+			})
+		}
+		return nil
+	}
+	err := fdt.RootNode.Walk(addMemory)
+	if err != nil {
+		return err
+	}
+
+	reserveMemory := func(n *dt.Node) error {
+		p, found := n.LookProperty("reg")
+		if found {
+			r, err := p.AsRegion()
+			if err != nil {
+				return err
+			}
+
+			phys.Insert(TypedRange{
+				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
+				Type:  RangeReserved,
+			})
+		}
+		return nil
+	}
+	resv, found := fdt.NodeByName("reserved-memory")
+	if found {
+		err := resv.Walk(reserveMemory)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, r := range fdt.ReserveEntries {
+		phys.Insert(TypedRange{
+			Range: Range{Start: uintptr(r.Address), Size: uint(r.Size)},
+			Type:  RangeReserved,
+		})
+	}
+
+	for _, r := range phys {
+		log.Printf("memmap: 0x%016x 0x%016x %s", r.Start, r.Size, r.Type)
+	}
+	m.Phys = phys
+	return nil
+}
+
 var memoryMapRoot = "/sys/firmware/memmap/"
 
 // ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
@@ -624,7 +694,12 @@ const M1 = 1 << 20
 
 // FindSpace returns pointer to the physical memory, where array of size sz can
 // be stored during next AddKexecSegment call.
-func (m Memory) FindSpace(sz uint) (Range, error) {
+//
+// Align up to at least a page size if alignSizeBytes is smaller.
+func (m Memory) FindSpace(sz, alignSizeBytes uint) (Range, error) {
+	if alignSizeBytes == 0 {
+		alignSizeBytes = uint(os.Getpagesize())
+	}
 	// Allocate full pages.
 	sz = align.UpPage(sz)
 
@@ -662,10 +737,28 @@ func (m *Memory) AddPhysSegment(d []byte, limit Range) (Range, error) {
 
 // AddKexecSegment adds d to a new kexec segment
 func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
-	r, err := m.FindSpace(uint(len(d)))
+	r, err := m.FindSpace(uint(len(d)), uint(os.Getpagesize()))
 	if err != nil {
 		return Range{}, err
 	}
+	m.Segments.Insert(NewSegment(d, r))
+	return r, nil
+}
+
+// AddKexecSegmentExplicit adds d to a new kexec segment, but allows asking
+// for extra space, secifying alignment size, and setting text_offset.
+func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes uint) (Range, error) {
+	if sz < uint(len(d)) {
+		return Range{}, fmt.Errorf("length of d is more than size requested")
+	}
+	if offset > sz {
+		return Range{}, fmt.Errorf("offset is larger than size requested")
+	}
+	r, err := m.FindSpace(sz, alignSizeBytes)
+	if err != nil {
+		return Range{}, err
+	}
+	r.Start = uintptr(uint(r.Start) + offset)
 	m.Segments.Insert(NewSegment(d, r))
 	return r, nil
 }

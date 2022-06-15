@@ -347,7 +347,7 @@ func (h *header) addInfo(m *multiboot) (addr uintptr, err error) {
 		return 0, err
 	}
 
-	r, err := m.mem.FindSpace(infoSize)
+	r, err := m.mem.FindSpace(infoSize, uint(os.Getpagesize()))
 	if err != nil {
 		return 0, err
 	}
@@ -389,7 +389,7 @@ func (*esxBootInfoHeader) addInfo(m *multiboot) (addr uintptr, err error) {
 	// string + null-terminator
 	cmdlineLen := len(m.cmdLine) + 1
 
-	memRange, err := m.mem.FindSpace(uint(len(b) + cmdlineLen))
+	memRange, err := m.mem.FindSpace(uint(len(b)+cmdlineLen), uint(os.Getpagesize()))
 	if err != nil {
 		return 0, err
 	}
