@@ -156,8 +156,6 @@ iter:
 		if err != nil {
 			return nil, err
 		}
-		p.Addr = filepath.Base(d)
-		p.FullPath = d
 		for _, f := range filters {
 			if !f(p) {
 				continue iter
