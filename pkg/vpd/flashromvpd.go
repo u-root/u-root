@@ -101,3 +101,47 @@ func ClearRwVpd() error {
 	}
 	return nil
 }
+
+// FlashromVpdDump read and dump all VPD values from RO and RW VPD flash regions directly
+func FlashromVpdDump() error {
+	file, err := os.CreateTemp("/tmp", "rovpd*.bin")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+
+	log.Printf("RO_VPD values:")
+	cmd := exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RO_VPD", "-r", file.Name())
+	if err = cmd.Run(); err != nil {
+		log.Printf("flashrom failed to read RO_VPD: %v", err)
+		return err
+	}
+	cmd = exec.Command("vpd", "-f", file.Name(), "-l")
+	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
+	if err = cmd.Run(); err != nil {
+		log.Printf("vpd failed to print RO_VPD: %v", err)
+		return err
+	}
+
+	os.Remove(file.Name())
+	file, err = os.CreateTemp("/tmp", "rwvpd*.bin")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+
+	log.Printf("RW_VPD values:")
+	cmd = exec.Command("flashrom", "-p", "internal:ich_spi_mode=hwseq", "-c", "Opaque flash chip", "--fmap", "-i", "RW_VPD", "-r", file.Name())
+	if err = cmd.Run(); err != nil {
+		log.Printf("flashrom failed to read RW_VPD: %v", err)
+		return err
+	}
+	cmd = exec.Command("vpd", "-f", file.Name(), "-l")
+	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
+	if err = cmd.Run(); err != nil {
+		log.Printf("vpd failed to print RW_VPD: %v", err)
+		return err
+	}
+
+	return nil
+}

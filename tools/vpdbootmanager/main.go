@@ -15,6 +15,7 @@ func getUsage(progname string) string {
 %s get [variable name]
 %s set [variable name] [variable value]
 %s delete [variable name]
+%s dump
 
 Ex.
 add localboot grub
@@ -38,7 +39,7 @@ Global flags:
 
 -vpd-dir - VPD dir to use
 
-`, progname, progname, progname, progname)
+`, progname, progname, progname, progname, progname)
 }
 
 func main() {
@@ -79,6 +80,8 @@ func cli(args []string) error {
 			}
 			return err
 		}
+	case "dump":
+		return dump()
 	}
 	return fmt.Errorf("Unrecognized action")
 }

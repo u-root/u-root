@@ -154,3 +154,7 @@ func set(key string, value string) error {
 func delete(key string) error {
 	return vpd.FlashromRWVpdSet(key, []byte("dummy"), true)
 }
+
+func dump() error {
+	return vpd.FlashromVpdDump()
+}
