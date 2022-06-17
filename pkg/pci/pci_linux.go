@@ -43,7 +43,10 @@ func readUint(dir, file string, base, bits int) (uint64, error) {
 // OnePCI takes the name of a directory containing linux-style
 // PCI files and returns a filled-in *PCI.
 func OnePCI(dir string) (*PCI, error) {
-	pci := PCI{}
+	pci := PCI{
+		Addr:     filepath.Base(dir),
+		FullPath: dir,
+	}
 	var err error
 	var n uint64
 
