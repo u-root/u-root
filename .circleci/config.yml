@@ -42,14 +42,10 @@ workflows:
   build_and_test:
     jobs:
       - test
-      - test-build
+      - race
       - test-integration-amd64
       - test-integration-arm
       - test-integration-arm64
-      - race
-      - compile_cmds
-      - check_templates
-      - check_licenses
 
 jobs:
   test:
@@ -76,15 +72,6 @@ jobs:
           name: Upload coverage
           command: bash <(curl -s https://codecov.io/bash)
 
-  test-build:
-    <<: *beefy-template
-    steps:
-      - checkout
-      - run:
-          name: Test u-root build
-          command: go test -a -timeout=15m .
-          no_output_timeout: 15m
-
   race:
     <<: *beefy-template
     environment:
@@ -108,48 +95,6 @@ jobs:
             go install -a ./...
             cd ../tools
             go install -a ./...
-
-  check_licenses:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Check licenses
-          command: go run tools/checklicenses/checklicenses.go -c
-            tools/checklicenses/config.json
-
-  check_symlinks:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go
-            -files /tmp/usr minimal
-
-  check_templates:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Ensure that every template builds for a variety of options.
-          command: |
-            go build .
-            goruncmd="./u-root -stats-output-path=/tmp/stats.json"
-            $goruncmd minimal
-            $goruncmd core
-            $goruncmd coreboot-app
-            $goruncmd all
-            $goruncmd world
-            # Fails because of dups. Is this supposed to work?
-            #$goruncmd all core
-            #$goruncmd all core
-            GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
-            cat /tmp/stats.json
-      - store_artifacts:
-          name: Store build stats
-          path: /tmp/stats.json
-          destination: stats.json
 
   test-integration-amd64:
     <<: *integration-template
