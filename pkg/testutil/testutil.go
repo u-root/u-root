@@ -169,3 +169,10 @@ func SkipIfNotRoot(t *testing.T) {
 		t.Skipf("Skipping test since we are not root")
 	}
 }
+
+// SkipInGithubActions will skip the test if it is executed in GitHub actions.
+func SkipInGithubActions(t *testing.T) {
+	if _, found := os.LookupEnv("GITHUB_WORKSPACE"); found {
+		t.Skip("This test is disabled in GitHub action workflows")
+	}
+}

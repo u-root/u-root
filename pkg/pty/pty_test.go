@@ -16,6 +16,8 @@ import (
 	"reflect"
 	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestNew(t *testing.T) {
@@ -27,6 +29,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestRunRestoreTTYMode(t *testing.T) {
+	testutil.SkipInGithubActions(t)
 	p, err := New()
 	if os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("Failed to allocate /dev/pts device")

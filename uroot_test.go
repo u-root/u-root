@@ -88,6 +88,7 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 }
 
 func TestUrootCmdline(t *testing.T) {
+	testutil.SkipInGithubActions(t)
 	samplef, err := os.CreateTemp("", "u-root-test-")
 	if err != nil {
 		t.Fatal(err)
