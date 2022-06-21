@@ -37,7 +37,7 @@ COPY config_linux5.10.0_arm64.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
-    git clone --depth=1 --branch=v5.10 https://github.com/torvalds/linux; \
+    git clone --depth=1 --branch=v5.15 https://github.com/torvalds/linux; \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
@@ -67,11 +67,7 @@ RUN set -eux;                                                          \
     cp qemu/build/aarch64-softmmu/qemu-system-aarch64 .;               \
     rm -rf qemu/
 
-# Generate UEFI file images
-RUN dd if=/dev/zero bs=1M count=64 of=flash0.img;                                   \
-    dd if=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd bs=1M of=flash0.img conv=notrunc;
-
 # Export paths to binaries.
 ENV UROOT_KERNEL /home/circleci/Image
-ENV UROOT_QEMU "/home/circleci/qemu-system-aarch64 -machine virt -cpu cortex-a57 -L /home/circleci/pc-bios -m 1G -pflash /home/circleci/flash0.img"
+ENV UROOT_QEMU "/home/circleci/qemu-system-aarch64 -machine virt -cpu max -m 1G "
 ENV UROOT_TESTARCH arm64

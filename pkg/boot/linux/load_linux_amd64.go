@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/bzimage"
@@ -24,19 +23,11 @@ const (
 	bootParams                    = "/sys/kernel/boot_params/data"
 )
 
-var (
-	// Debug is called to print out verbose debug info.
-	//
-	// Set this to appropriate output stream for display
-	// of useful debug info.
-	Debug = log.Printf // func(string, ...interface{}) {}
-)
-
 // KexecLoad loads a bzImage-formated Linux kernel file as the to-be-kexeced
 // kernel with the given ramfs file and cmdline string.
 //
 // It uses the kexec_load system call.
-func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
+func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error {
 	bzimage.Debug = Debug
 
 	// A collection of vars used for processing the kernel for kexec
@@ -185,7 +176,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string) error {
 
 	// Load it.
 	if err := kexec.Load(purgatoryEntry, kmem.Segments, 0); err != nil {
-		return fmt.Errorf("Linux kexec: %w", err)
+		return fmt.Errorf("kexec load(%v, %v, %d): %w", purgatoryEntry, kmem.Segments, 0, err)
 	}
 	return nil
 }

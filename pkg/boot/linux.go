@@ -30,6 +30,8 @@ type LinuxImage struct {
 	BootRank    int
 	LoadSyscall bool
 	DeviceTree  io.ReaderAt
+
+	KexecOpts linux.KexecOptions
 }
 
 var _ OSImage = &LinuxImage{}
@@ -203,7 +205,7 @@ func (li *LinuxImage) Load(verbose bool) error {
 	}
 
 	if li.LoadSyscall {
-		return linux.KexecLoad(k, i, li.Cmdline)
+		return linux.KexecLoad(k, i, li.Cmdline, li.KexecOpts)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

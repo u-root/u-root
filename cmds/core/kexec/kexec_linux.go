@@ -23,6 +23,7 @@
 //      --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
 //  -p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
 //      --reuse-cmdline        Use the kernel command line from running system
+
 package main
 
 import (
@@ -45,34 +46,40 @@ import (
 )
 
 type options struct {
-	loadSyscall  bool
 	cmdline      string
-	reuseCmdline bool
+	debug        bool
+	dtb          string
+	exec         bool
+	extra        string
 	initramfs    string
 	load         bool
-	exec         bool
-	debug        bool
-	extra        string
-	purgatory    string
+	loadSyscall  bool
+	mmapInitrd   bool
+	mmapKernel   bool
 	modules      []string
+	purgatory    string
+	reuseCmdline bool
 }
 
 func registerFlags() *options {
 	o := &options{}
-	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec_load syscall (not kexec_file_load)")
 	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
 	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
+	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
+	flag.StringVar(&o.dtb, "dtb", "", "FILE used as the flatten device tree blob")
+	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
 	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
-	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
 	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
-	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
-	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
+	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec_load syscall (not kexec_file_load)")
+	flag.BoolVar(&o.mmapInitrd, "mmap-initrd", true, "Mmap initrd file into virtual buffer, other than directly reading it (Only supported in Arm64 classic load mode for now)")
+	flag.BoolVar(&o.mmapKernel, "mmap-kernel", true, "Mmap kernel file into virtual buffer, other than directly reading it (Only supported in Arm64 classi load mode for now)")
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
 	flag.StringVarP(&o.purgatory, "purgatory", "p", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list")
+	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
 	return o
 }
 
@@ -168,6 +175,11 @@ func main() {
 				Initrd:      i,
 				Cmdline:     newCmdline,
 				LoadSyscall: opts.loadSyscall,
+				KexecOpts: linux.KexecOptions{
+					DTB:        opts.dtb,
+					MmapKernel: opts.mmapKernel,
+					MmapRamfs:  opts.mmapInitrd,
+				},
 			}
 		}
 		if err := image.Load(opts.debug); err != nil {

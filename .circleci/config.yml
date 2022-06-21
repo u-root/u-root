@@ -166,7 +166,7 @@ jobs:
   # This arch needs a different working dir, so don't use integration-template
   test-integration-arm64:
     docker:
-      - image: uroottest/test-image-arm64:v5.0.0
+      - image: uroottest/test-image-arm64:v5.1.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
