@@ -28,16 +28,17 @@ type BootEntryVar struct {
 	EfiLoadOption
 }
 
-/* EfiLoadOption defines the data struct used for vars such as BootXXXX.
-As defined in UEFI spec v2.8A:
-    typedef struct _EFI_LOAD_OPTION {
-        UINT32 Attributes;
-        UINT16 FilePathListLength;
-        // CHAR16 Description[];
-        // EFI_DEVICE_PATH_PROTOCOL FilePathList[];
-        // UINT8 OptionalData[];
-    } EFI_LOAD_OPTION;
-*/
+// EfiLoadOption defines the data struct used for vars such as BootXXXX.
+//
+// As defined in UEFI spec v2.8A:
+//
+//	typedef struct _EFI_LOAD_OPTION {
+//	    UINT32 Attributes;
+//	    UINT16 FilePathListLength;
+//	    // CHAR16 Description[];
+//	    // EFI_DEVICE_PATH_PROTOCOL FilePathList[];
+//	    // UINT8 OptionalData[];
+//	} EFI_LOAD_OPTION;
 type EfiLoadOption struct {
 	Attributes         uint32
 	FilePathListLength uint16

@@ -15,56 +15,98 @@ import (
 )
 
 const (
-	ContainerMagic      uint32 = 0x868cf7e6
-	ItemMagic           uint32 = 0xb5781729
-	VersionFlag         uint32 = 0x00010000
-	CRC32Flag           uint32 = 0x00020000
-	NoCRC32Flag         uint32 = 0x4a87e8d6
+	// ContainerMagic is Zircon image header extra magic.
+	ContainerMagic uint32 = 0x868cf7e6
+	// ItemMagic is Ziron image format magic.
+	ItemMagic uint32 = 0xb5781729
+	// VersionFlag is a default version flag that can be used when bootstrapping a Zircon image header.
+	VersionFlag uint32 = 0x00010000
+	// CRC32Flag is a flag to indicate performing CRC32 check.
+	CRC32Flag uint32 = 0x00020000
+	// NoCRC32Flag is a flag to indicate not performing CRC32 check.
+	NoCRC32Flag uint32 = 0x4a87e8d6
+	// ZBITypeKernelPrefix is kernel prefix.
 	ZBITypeKernelPrefix uint32 = 0x004e524b // KRN\0
-	ZBITypeKernelMask   uint32 = 0x00FFFFFF // Mask to compare to the prefix.
+	// ZBITypeKernelMask is mask to extract kernel prefix bits.
+	ZBITypeKernelMask uint32 = 0x00FFFFFF // Mask to compare to the prefix.
 )
 
+// ZBITypeMetadata describes a ZBI type.
 type ZBITypeMetadata struct {
 	Name      string
 	Extention string
 }
+
+// ZBIType is a uint32.
 type ZBIType uint32
 
 const (
-	ZBITypeContainer            ZBIType = 0x544f4f42 // BOOT
-	ZBITypeKernelX64            ZBIType = 0x4c4e524b // KRNL
-	ZBITypeKernelArm64          ZBIType = 0x384e524b // KRN8
-	ZBITypeDiscard              ZBIType = 0x50494b53 // SKIP
-	ZBITypeStorageRamdisk       ZBIType = 0x4b534452 // RDSK
-	ZBITypeStorageBootfs        ZBIType = 0x42534642 // BFSB
-	ZBITypeStorageKernel        ZBIType = 0x5254534b // KSTR
-	ZBITypeStorageBootfsFactory ZBIType = 0x46534642 // BFSF
-	ZBITypeCmdline              ZBIType = 0x4c444d43 // CMDL
-	ZBITypeCrashlog             ZBIType = 0x4d4f4f42 // BOOM
-	ZBITypeNvram                ZBIType = 0x4c4c564e // NVLL
-	ZBITypePlatformID           ZBIType = 0x44494C50 // PLID
-	ZBITypeDrvBoardInfo         ZBIType = 0x4953426D // mBSI
-	ZBITypeCPUConfig            ZBIType = 0x43555043 // CPUC
-	ZBITypeCPUTopology          ZBIType = 0x544F504F // TOPO
-	ZBITypeMemConfig            ZBIType = 0x434D454D // MEMC
-	ZBITypeKernelDriver         ZBIType = 0x5652444B // KDRV
-	ZBITypeAcpiRsdp             ZBIType = 0x50445352 // RSDP
-	ZBITypeSMBios               ZBIType = 0x49424d53 // SMBI
-	ZBITypeEFISystemTable       ZBIType = 0x53494645 // EFIS
-	ZBITypeFramebuffer          ZBIType = 0x42465753 // SWFB
-	ZBITypeImageArgs            ZBIType = 0x47524149 // IARG
-	ZBITypeBootVersion          ZBIType = 0x53525642 // BVRS
-	ZBITypeDrvMacAddress        ZBIType = 0x43414D6D // mMAC
-	ZBITypeDrvPartitionMap      ZBIType = 0x5452506D // mPRT
-	ZBITypeDrvBoardPrivate      ZBIType = 0x524F426D // mBOR
-	ZBITypeHwRebootReason       ZBIType = 0x42525748 // HWRB
-	ZBITypeSerialNumber         ZBIType = 0x4e4c5253 // SRLN
-	ZBITypeBootloaderFile       ZBIType = 0x4C465442 // BTFL
-	ZBITypeDevicetree           ZBIType = 0xd00dfeed
-	ZBITypeSecureEntropy        ZBIType = 0x444e4152 // RAND
+	// ZBITypeContainer represents BOOT type.
+	ZBITypeContainer ZBIType = 0x544f4f42
+	// ZBITypeKernelX64 represents KRNL type, a x86 kernel.
+	ZBITypeKernelX64 ZBIType = 0x4c4e524b // KRNL
+	// ZBITypeKernelArm64 represents KRN8 type, an Arm64 kernel.
+	ZBITypeKernelArm64 ZBIType = 0x384e524b // KRN8
+	// ZBITypeDiscard represents SKIP type.
+	ZBITypeDiscard ZBIType = 0x50494b53
+	// ZBITypeStorageRamdisk represents RDSK type.
+	ZBITypeStorageRamdisk ZBIType = 0x4b534452
+	// ZBITypeStorageBootfs represents BFSB type.
+	ZBITypeStorageBootfs ZBIType = 0x42534642
+	// ZBITypeStorageKernel represents KSTR type.
+	ZBITypeStorageKernel ZBIType = 0x5254534b
+	// ZBITypeStorageBootfsFactory represents BFSF ty
+	ZBITypeStorageBootfsFactory ZBIType = 0x46534642
+	// ZBITypeCmdline represents CMDL type.
+	ZBITypeCmdline ZBIType = 0x4c444d43
+	// ZBITypeCrashlog represents BOOM type.
+	ZBITypeCrashlog ZBIType = 0x4d4f4f42
+	// ZBITypeNvram represents NVLL type.
+	ZBITypeNvram ZBIType = 0x4c4c564e
+	// ZBITypePlatformID represents PLID type.
+	ZBITypePlatformID ZBIType = 0x44494C50
+	// ZBITypeDrvBoardInfo represents mBSI type.
+	ZBITypeDrvBoardInfo ZBIType = 0x4953426D
+	// ZBITypeCPUConfig represents CPUC type.
+	ZBITypeCPUConfig ZBIType = 0x43555043
+	// ZBITypeCPUTopology represents TOPO type.
+	ZBITypeCPUTopology ZBIType = 0x544F504F
+	// ZBITypeMemConfig represents MEMC type.
+	ZBITypeMemConfig ZBIType = 0x434D454D
+	// ZBITypeKernelDriver represents KDRV type.
+	ZBITypeKernelDriver ZBIType = 0x5652444B
+	// ZBITypeAcpiRsdp represents RSDP type.
+	ZBITypeAcpiRsdp ZBIType = 0x50445352
+	// ZBITypeSMBios represents SMBI type.
+	ZBITypeSMBios ZBIType = 0x49424d53
+	// ZBITypeEFISystemTable represents EFIS type.
+	ZBITypeEFISystemTable ZBIType = 0x53494645
+	// ZBITypeFramebuffer represents SWFB type.
+	ZBITypeFramebuffer ZBIType = 0x42465753
+	// ZBITypeImageArgs represents IARG type.
+	ZBITypeImageArgs ZBIType = 0x47524149
+	// ZBITypeBootVersion represents BVRS type.
+	ZBITypeBootVersion ZBIType = 0x53525642
+	// ZBITypeDrvMacAddress represents mMAC type.
+	ZBITypeDrvMacAddress ZBIType = 0x43414D6D
+	// ZBITypeDrvPartitionMap represents mPRT type.
+	ZBITypeDrvPartitionMap ZBIType = 0x5452506D
+	// ZBITypeDrvBoardPrivate represents mBOR type.
+	ZBITypeDrvBoardPrivate ZBIType = 0x524F426D
+	// ZBITypeHwRebootReason represents HWRB type.
+	ZBITypeHwRebootReason ZBIType = 0x42525748
+	// ZBITypeSerialNumber represents SRLN type.
+	ZBITypeSerialNumber ZBIType = 0x4e4c5253
+	// ZBITypeBootloaderFile represents BTFL type.
+	ZBITypeBootloaderFile ZBIType = 0x4C465442
+	// ZBITypeDevicetree represents device tree type.
+	ZBITypeDevicetree ZBIType = 0xd00dfeed
+	// ZBITypeSecureEntropy represents RAND type.
+	ZBITypeSecureEntropy ZBIType = 0x444e4152
 )
 
 var (
+	// ZBITypes is a ZBIType to ZBITypeMetadata mapping.
 	ZBITypes = map[ZBIType]ZBITypeMetadata{
 		ZBITypeContainer:            {Name: "CONTAINER", Extention: ".bin"},
 		ZBITypeKernelX64:            {Name: "KERNEL_X64", Extention: ".bin"},
@@ -100,14 +142,17 @@ var (
 	}
 )
 
+// IsKernel tells if current ZBIType is kernel.
 func (it *ZBIType) IsKernel() bool {
 	return uint32(*it)&ZBITypeKernelMask == ZBITypeKernelPrefix
 }
 
+// IsDriverMetadata tells if current ZBIType contains driver meta data.
 func (it *ZBIType) IsDriverMetadata() bool {
 	return *it&0xFF == 0x6D // 'm'
 }
 
+// ToString return string representation of current ZBIType.
 func (it *ZBIType) ToString() (string, error) {
 	if typeMetadata, ok := ZBITypes[*it]; ok {
 		return typeMetadata.Name, nil
@@ -115,6 +160,7 @@ func (it *ZBIType) ToString() (string, error) {
 	return "", fmt.Errorf("Can't find metadata for %#08x ZBIType", it)
 }
 
+// MarshalJSON returns JSON bytes of current ZBIType.
 func (it *ZBIType) MarshalJSON() ([]byte, error) {
 	name, err := it.ToString()
 	if err != nil {
@@ -124,6 +170,7 @@ func (it *ZBIType) MarshalJSON() ([]byte, error) {
 	return []byte(nameWithQuotes), nil
 }
 
+// Header abstracts a Zircon image header.
 type Header struct {
 	Type      ZBIType
 	Length    uint32
@@ -135,11 +182,13 @@ type Header struct {
 	CRC32     uint32
 }
 
+// BootItem abstracts a bootable item.
 type BootItem struct {
 	Header         Header
 	PayloadAddress uint64
 }
 
+// NewContainerHeader returns a new image header with given image length.
 func NewContainerHeader(length uint32) Header {
 	return Header{
 		Type:      ZBITypeContainer,
@@ -153,6 +202,7 @@ func NewContainerHeader(length uint32) Header {
 	}
 }
 
+// Image abstracts a Zircon image.
 type Image struct {
 	Header    Header
 	BootItems []BootItem
@@ -191,11 +241,13 @@ func (i *Image) readContainerHeader(f io.ReadSeeker) error {
 	return nil
 }
 
+// ZBIKernel abstracts an in-memory kernel entry.
 type ZBIKernel struct {
 	Entry             uint64
 	ReserveMemorySize uint64
 }
 
+// ZirconKernel is the whole contiguous image loaded into memory by the boot loader.
 type ZirconKernel struct {
 	HdrFile    Header
 	HdrKernel  Header
@@ -224,6 +276,7 @@ func (i *Image) readBootItems(f io.ReadSeeker) error {
 	}
 }
 
+// Read parses a Ziron Image from an io.ReadSeeker.
 func Read(f io.ReadSeeker) (*Image, error) {
 	image := &Image{}
 	if err := image.readContainerHeader(f); err != nil {
@@ -236,6 +289,7 @@ func Read(f io.ReadSeeker) (*Image, error) {
 	return image, nil
 }
 
+// Load loads an Image from given path.
 func Load(imagePath string) (*Image, error) {
 	imageFile, err := os.Open(imagePath)
 	defer imageFile.Close()

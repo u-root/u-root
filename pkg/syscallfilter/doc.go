@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// The syscallfilter package supports filtering child process events
+// Package syscallfilter supports filtering child process events
 // by system call or strace event.  Strace events include
 // SyscallEnter, SyscallExit, SignalExit, Exit, SignalStop, and
 // NewChild.  System call events are for an explicit system call, and
@@ -20,9 +20,10 @@
 // only supports setting them up before the process is started.
 //
 // Actions are specified as a triple: event,action,value.
-// For example, if we wish to block any kind of fork, we would specify the action:
+// For example, if we wish to block any kind of fork, we would specify the
+// action:
 //
-// NewChild,error,-1
+//	NewChild,error,-1
 //
 // which would cause a -1 to be returned from any action that causes a
 // new child to be created.  If we wish to block all reads, we

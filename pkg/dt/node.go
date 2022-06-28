@@ -190,13 +190,13 @@ func (p *Property) PredictType() PropertyType {
 // AsType converts a Property to a Go type using one of the AsXYX() functions.
 // The resulting Go type is as follows:
 //
-//     AsType(fdt.EmptyType)            -> fdt.Empty
-//     AsType(fdt.U32Type)              -> uint32
-//     AsType(fdt.U64Type)              -> uint64
-//     AsType(fdt.StringType)           -> string
-//     AsType(fdt.PropEncodedArrayType) -> []byte
-//     AsType(fdt.PHandleType)          -> fdt.PHandle
-//     AsType(fdt.StringListType)       -> []string
+//	AsType(fdt.EmptyType)            -> fdt.Empty
+//	AsType(fdt.U32Type)              -> uint32
+//	AsType(fdt.U64Type)              -> uint64
+//	AsType(fdt.StringType)           -> string
+//	AsType(fdt.PropEncodedArrayType) -> []byte
+//	AsType(fdt.PHandleType)          -> fdt.PHandle
+//	AsType(fdt.StringListType)       -> []string
 func (p *Property) AsType(val PropertyType) (interface{}, error) {
 	switch val {
 	case EmptyType:
@@ -245,6 +245,7 @@ func (p *Property) AsU64() (uint64, error) {
 	return val, err
 }
 
+// Region represents a memory range.
 type Region struct {
 	Start uint64
 	Size  uint64

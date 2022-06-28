@@ -18,9 +18,7 @@ import (
 )
 
 const (
-	DEFAULT_INITRD_ADDR_MAX  uint = 0x37FFFFFF
-	DEFAULT_BZIMAGE_ADDR_MAX uint = 0x37FFFFFF
-	bootParams                    = "/sys/kernel/boot_params/data"
+	bootParams = "/sys/kernel/boot_params/data"
 )
 
 // KexecLoad loads a bzImage-formated Linux kernel file as the to-be-kexeced

@@ -44,7 +44,7 @@ func TestLoadFDT(t *testing.T) {
 	}
 	// 2. Fallback to read from sys fs, and sys fs reading also failed.
 	sysfsFDT = nonexistDTB
-	fdt, err = LoadFDT(nonexistDTB)
+	_, err = LoadFDT(nonexistDTB)
 	if err != errLoadFDT {
 		t.Errorf("LoadFDT(%s) return error %v, want error %v", nonexistDTB, err, errLoadFDT)
 	}
