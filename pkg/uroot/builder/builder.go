@@ -12,8 +12,10 @@ import (
 )
 
 var (
+	// BusyBox is a shared GBBBuilder instance.
 	BusyBox = GBBBuilder{}
-	Binary  = BinaryBuilder{}
+	// Binary is a shared BinaryBuilder instance.
+	Binary = BinaryBuilder{}
 )
 
 // Opts are options passed to the Builder.Build function.

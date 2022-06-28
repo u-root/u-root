@@ -700,8 +700,7 @@ func (m Memory) FindSpace(sz, alignSizeBytes uint) (Range, error) {
 	if alignSizeBytes == 0 {
 		alignSizeBytes = uint(os.Getpagesize())
 	}
-	// Allocate full pages.
-	sz = align.UpPage(sz)
+	sz = align.Up(sz, alignSizeBytes)
 
 	// Don't use memory below 1M, just in case.
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
@@ -769,11 +768,16 @@ func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes ui
 // kexec segments already allocated. RAM segments begin at a page boundary.
 //
 // E.g if page size is 4K and RAM segments are
-//            [{start:0 size:8192} {start:8192 size:8000}]
+//
+//	[{start:0 size:8192} {start:8192 size:8000}]
+//
 // and kexec segments are
-//            [{start:40 size:50} {start:8000 size:2000}]
+//
+//	[{start:40 size:50} {start:8000 size:2000}]
+//
 // result should be
-//            [{start:0 size:40} {start:4096 end:8000 - 4096}]
+//
+//	[{start:0 size:40} {start:4096 end:8000 - 4096}]
 func (m Memory) AvailableRAM() Ranges {
 	ram := m.Phys.FilterByType(RangeRAM)
 

@@ -12,6 +12,7 @@ import (
 	"syscall"
 )
 
+// FileLoad is not implemented for platforms other than amd64, arm64 and riscv64.
 func FileLoad(kernel, ramfs *os.File, cmdline string) error {
 	return syscall.ENOSYS
 }

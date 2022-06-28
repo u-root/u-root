@@ -178,7 +178,6 @@ func (c *Cmd) Run() error {
 // For the error action, the third parameter
 // indicates the error to return. For the log action, the third
 // parameter is currently unused.
-
 func (c *Cmd) AddActions(actions ...string) error {
 	var events []*event
 	for i, a := range actions {
