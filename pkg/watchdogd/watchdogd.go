@@ -190,7 +190,7 @@ func (d *Daemon) DisarmWatchdog() rune {
 		log.Printf("Failed to disarm watchdog: %v", err)
 		return OpResultError
 	}
-	log.Println("Watchdog disarmed.")
+	log.Println("Watchdog disarming request went through (Watchdog will not be disabled if CONFIG_WATCHDOG_NOWAYOUT is enabled).")
 	return OpResultOk
 }
 
