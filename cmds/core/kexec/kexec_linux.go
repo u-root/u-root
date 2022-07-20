@@ -27,7 +27,6 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"log"
 	"os"
@@ -41,7 +40,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -137,28 +135,11 @@ func main() {
 		} else {
 			var files []io.ReaderAt
 			if len(opts.extra) > 0 {
-				b := &bytes.Buffer{}
-				archiver, err := cpio.Format("newc")
+				initrd, err := boot.CreateInitrd(strings.Fields(opts.extra)...)
 				if err != nil {
 					log.Fatal(err)
 				}
-				w := archiver.Writer(b)
-				cr := cpio.NewRecorder()
-				// to deconflict names, we may want to prepend the names with
-				// kexec_extra/ or something.
-				for _, n := range strings.Fields(opts.extra) {
-					rec, err := cr.GetRecord(n)
-					if err != nil {
-						log.Fatalf("Getting record of %q failed: %v", n, err)
-					}
-					if err := w.WriteRecord(rec); err != nil {
-						log.Fatalf("Writing record %q failed: %v", n, err)
-					}
-				}
-				if err := cpio.WriteTrailer(w); err != nil {
-					log.Fatalf("Error writing trailer record: %v", err)
-				}
-				files = append(files, bytes.NewReader(b.Bytes()))
+				files = append(files, initrd)
 			}
 			if opts.initramfs != "" {
 				for _, n := range strings.Fields(opts.initramfs) {
