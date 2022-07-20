@@ -6,9 +6,11 @@ package boot
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -36,4 +38,30 @@ func CatInitrds(initrds ...io.ReaderAt) io.ReaderAt {
 		// Buffer doesn't implement ReadAt, so wrap in NewReader
 		return bytes.NewReader(buf.Bytes()), nil
 	})
+}
+
+// CreateInitrd creates an initrd with the collection of files passed in.
+func CreateInitrd(files ...string) (io.ReaderAt, error) {
+	b := &bytes.Buffer{}
+	archiver, err := cpio.Format("newc")
+	if err != nil {
+		return nil, err
+	}
+	w := archiver.Writer(b)
+	cr := cpio.NewRecorder()
+	// to deconflict names, we may want to prepend the names with
+	// kexec_extra/ or something.
+	for _, n := range files {
+		rec, err := cr.GetRecord(n)
+		if err != nil {
+			return nil, fmt.Errorf("Getting record of %q failed: %v", n, err)
+		}
+		if err := w.WriteRecord(rec); err != nil {
+			return nil, fmt.Errorf("Writing record %q failed: %v", n, err)
+		}
+	}
+	if err := cpio.WriteTrailer(w); err != nil {
+		return nil, fmt.Errorf("Error writing trailer record: %v", err)
+	}
+	return bytes.NewReader(b.Bytes()), nil
 }
