@@ -4,6 +4,11 @@ Note: All release >=1.0.0 have been bumped down from vX.0.0 to v0.X.0. This was
 done to avoid the +incompatible suffix from Go modules. The u-root API is
 currently unstable and may change slighly between releases.
 
+## v0.9.0 (2022-07-27)
+
+- Fixes for CVE-2020-7669, CVE-2020-7666 and CVE-2020-7665
+- Numerous other bug fixes and features
+
 ## v0.8.0 (2021-11-29)
 
 *no release notes available*
