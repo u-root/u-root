@@ -26,7 +26,11 @@ func TestLoadFDT(t *testing.T) {
 	}
 
 	// 1. Load by path given and succeed.
-	fdt, err := LoadFDT("testdata/fdt.dtb")
+	dtb, err := os.Open("testdata/fdt.dtb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fdt, err := LoadFDT(dtb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,14 +48,14 @@ func TestLoadFDT(t *testing.T) {
 	}
 	// 2. Fallback to read from sys fs, and sys fs reading also failed.
 	sysfsFDT = nonexistDTB
-	_, err = LoadFDT(nonexistDTB)
+	_, err = LoadFDT(nil)
 	if err != errLoadFDT {
 		t.Errorf("LoadFDT(%s) return error %v, want error %v", nonexistDTB, err, errLoadFDT)
 	}
 
 	// 3. Fallback to read from sys fs, and succeed.
 	sysfsFDT = "testdata/fdt.dtb"
-	fdt, err = LoadFDT(nonexistDTB)
+	fdt, err = LoadFDT(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
