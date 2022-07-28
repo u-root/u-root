@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
@@ -393,7 +394,10 @@ func (c *parser) append(ctx context.Context, config string) error {
 				if err != nil {
 					return err
 				}
-				e.DeviceTree = dtb
+				if e.KexecOpts == nil {
+					e.KexecOpts = linux.KexecOptions{}
+				}
+				e.KexecOpts.DTB = dtb
 			}
 
 		case "append":

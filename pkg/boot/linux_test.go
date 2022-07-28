@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/vfile"
@@ -95,26 +96,29 @@ func TestLinuxLabel(t *testing.T) {
 		{
 			desc: "no initrd",
 			img: &LinuxImage{
-				Kernel:     &vfile.File{Reader: nil, FileName: "/boot/foobar"},
-				Initrd:     nil,
-				DeviceTree: nil,
+				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				Initrd: nil,
 			},
 			want: "Linux(kernel=/boot/foobar)",
 		},
 		{
 			desc: "dtb file",
 			img: &LinuxImage{
-				Kernel:     &vfile.File{Reader: nil, FileName: "/boot/foobar"},
-				Initrd:     &vfile.File{Reader: nil, FileName: "/boot/initrd"},
-				DeviceTree: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				Initrd: &vfile.File{Reader: nil, FileName: "/boot/initrd"},
+				KexecOpts: linux.KexecOptions{
+					DTB: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+				},
 			},
 			want: "Linux(kernel=/boot/foobar initrd=/boot/initrd dtb=/boot/board.dtb)",
 		},
 		{
 			desc: "dtb file, no initrd",
 			img: &LinuxImage{
-				Kernel:     &vfile.File{Reader: nil, FileName: "/boot/foobar"},
-				DeviceTree: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				KexecOpts: linux.KexecOptions{
+					DTB: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+				},
 			},
 			want: "Linux(kernel=/boot/foobar dtb=/boot/board.dtb)",
 		},

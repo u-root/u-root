@@ -551,11 +551,13 @@ func TestParseGeneral(t *testing.T) {
 			},
 			want: []boot.OSImage{
 				&boot.LinuxImage{
-					Name:       "foo",
-					Kernel:     strings.NewReader(kernel1),
-					Initrd:     strings.NewReader(globalInitrd),
-					DeviceTree: strings.NewReader(boardDTB),
-					Cmdline:    "foo=bar",
+					Name:    "foo",
+					Kernel:  strings.NewReader(kernel1),
+					Initrd:  strings.NewReader(globalInitrd),
+					Cmdline: "foo=bar",
+					KexecOpts: linux.KexecOpts{
+						DTB: strings.NewReader(boardDTB),
+					},
 				},
 			},
 		},
