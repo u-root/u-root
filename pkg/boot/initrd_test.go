@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -106,4 +107,70 @@ func TestCatInitrds(t *testing.T) {
 			t.Errorf("Cat(%v) = name %s, want %s", tt.readers, s, tt.wantName)
 		}
 	}
+}
+
+func TestCreateInitrd(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		files       []file
+		wantContent []string
+	}{
+		{
+			name: "two files",
+			files: []file{
+				{
+					name:    "file1",
+					content: []byte("foo"),
+				},
+				{
+					name:    "file2",
+					content: []byte("bar"),
+				},
+			},
+			wantContent: []string{"foo", "bar", "TRAILER!!!"},
+		},
+		{
+			name: "one file",
+			files: []file{
+				{
+					name:    "file1",
+					content: []byte("foo"),
+				},
+			},
+			wantContent: []string{"foo", "TRAILER!!!"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir, err := os.MkdirTemp("", "testdir")
+			if err != nil {
+				t.Errorf("CreateInitrd(%v): MkdirTemp errored: %v", tt.files, err)
+			}
+			defer os.RemoveAll(dir)
+
+			files := make([]string, len(tt.files))
+			for i, f := range tt.files {
+				tmpFile, err := os.CreateTemp(dir, f.name)
+				if err != nil {
+					t.Errorf("CreateInitrd(%v): CreateTemp errored: %v", tt.files, err)
+				}
+				err = os.WriteFile(tmpFile.Name(), f.content, 0666)
+				if err != nil {
+					t.Errorf("CreateInitrd(%v): Writing to tmpfile errored: %v", tt.files, err)
+				}
+				files[i] = tmpFile.Name()
+			}
+			got, err := CreateInitrd(files...)
+			if err != nil {
+				t.Errorf("CreateInitrd(%v): Creating initrd failed: %v", tt.files, err)
+			}
+
+			s := fmt.Sprintf("%s", got)
+			for _, st := range tt.wantContent {
+				if !strings.Contains(s, st) {
+					t.Errorf("CreateInitrd(%v): Initrd does not contain %s", tt.files, st)
+				}
+			}
+		})
+	}
+
 }
