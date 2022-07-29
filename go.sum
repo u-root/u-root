@@ -187,8 +187,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/twitchtv/twirp v5.8.0+incompatible/go.mod h1:RRJoFSAmTEh2weEqWtpPE3vFK5YBhA6bqp2l1kfCC5A=
-github.com/u-root/gobusybox/src v0.0.0-20220611170358-a4a23d8e3f54 h1:3CIyFkmf+D7JbFYYeeT9UJlGGYDvK4e0mpgAeXFbnSM=
-github.com/u-root/gobusybox/src v0.0.0-20220611170358-a4a23d8e3f54/go.mod h1:xvfGSdbSMKh7LhDFEoyPPrlWdEbqkM16DEEoOsMvRoI=
+github.com/u-root/gobusybox/src v0.0.0-20220728145311-85dc1fd1bc75 h1:pCQLzZyKqQnYn/lTpROHlQJO8LrBQqrHE0gar1TnGOA=
+github.com/u-root/gobusybox/src v0.0.0-20220728145311-85dc1fd1bc75/go.mod h1:xvfGSdbSMKh7LhDFEoyPPrlWdEbqkM16DEEoOsMvRoI=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eVd21MOEatnh2pfAAwZaEPSIEEsjctQ=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
 github.com/u-root/uio v0.0.0-20210528114334-82958018845c/go.mod h1:LpEX5FO/cB+WF4TYGY1V5qktpaZLkKkSegbr0V4eYXA=
