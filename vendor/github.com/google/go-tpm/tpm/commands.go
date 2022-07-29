@@ -103,6 +103,40 @@ func unseal(rw io.ReadWriter, keyHandle tpmutil.Handle, sealed *tpmStoredData, c
 	return outb, &ra1, &ra2, ret, nil
 }
 
+// authorizeMigrationKey authorizes a public key for migrations.
+func authorizeMigrationKey(rw io.ReadWriter, migrationScheme MigrationScheme, migrationKey pubKey, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
+	in := []interface{}{migrationScheme, migrationKey, ca}
+	var ra responseAuth
+	var migrationAuth migrationKeyAuth
+	out := []interface{}{&migrationAuth, &ra}
+	ret, err := submitTPMRequest(rw, tagRQUAuth1Command, ordAuthorizeMigrationKey, in, out)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	authBlob, err := tpmutil.Pack(migrationAuth)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	return authBlob, &ra, ret, nil
+}
+
+// createMigrationBlob migrates a key from the TPM.
+func createMigrationBlob(rw io.ReadWriter, parentHandle tpmutil.Handle, migrationScheme MigrationScheme, migrationKey []byte, encData tpmutil.U32Bytes, ca1 *commandAuth, ca2 *commandAuth) ([]byte, []byte, *responseAuth, *responseAuth, uint32, error) {
+	in := []interface{}{parentHandle, migrationScheme, migrationKey, encData, ca1, ca2}
+	var rand tpmutil.U32Bytes
+	var outData tpmutil.U32Bytes
+	var ra1 responseAuth
+	var ra2 responseAuth
+	out := []interface{}{&rand, &outData, &ra1, &ra2}
+	ret, err := submitTPMRequest(rw, tagRQUAuth2Command, ordCreateMigrationBlob, in, out)
+	if err != nil {
+		return nil, nil, nil, nil, 0, err
+	}
+
+	return rand, outData, &ra1, &ra2, ret, nil
+}
+
 // flushSpecific removes a handle from the TPM. Note that removing a handle
 // doesn't require any authentication.
 func flushSpecific(rw io.ReadWriter, handle tpmutil.Handle, resourceType uint32) error {
@@ -159,7 +193,7 @@ func getCapability(rw io.ReadWriter, cap, subcap uint32) ([]byte, error) {
 }
 
 // nvDefineSpace allocates space in NVRAM
-func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc digest, ca *commandAuth) (*responseAuth, uint32, error) {
+func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc Digest, ca *commandAuth) (*responseAuth, uint32, error) {
 	var ra responseAuth
 	in := []interface{}{nvData, enc}
 	if ca != nil {
@@ -175,7 +209,7 @@ func nvDefineSpace(rw io.ReadWriter, nvData NVDataPublic, enc digest, ca *comman
 }
 
 // nvReadValue reads from the NVRAM
-// If TPM isn't locked, and for some nv permission no authentification is needed.
+// If TPM isn't locked, and for some nv permission no authentication is needed.
 // See TPM-Main-Part-3-Commands-20.4
 func nvReadValue(rw io.ReadWriter, index, offset, len uint32, ca *commandAuth) ([]byte, *responseAuth, uint32, error) {
 	var b tpmutil.U32Bytes
@@ -252,10 +286,10 @@ func nvWriteValueAuth(rw io.ReadWriter, index, offset, len uint32, data []byte, 
 // under, the signature, auth information, and optionally information about the
 // TPM itself. Note that the input to quote2 must be exactly 20 bytes, so it is
 // normally the SHA1 hash of the data.
-func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrSelection, addVersion byte, ca *commandAuth) (*pcrInfoShort, *capVersionInfo, []byte, []byte, *responseAuth, uint32, error) {
+func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrSelection, addVersion byte, ca *commandAuth) (*pcrInfoShort, *CapVersionInfo, []byte, []byte, *responseAuth, uint32, error) {
 	in := []interface{}{keyHandle, hash, pcrs, addVersion, ca}
 	var pcrShort pcrInfoShort
-	var capInfo capVersionInfo
+	var capInfo CapVersionInfo
 	var capBytes tpmutil.U32Bytes
 	var sig tpmutil.U32Bytes
 	var ra responseAuth
@@ -270,13 +304,10 @@ func quote2(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcr
 		return &pcrShort, nil, capBytes, sig, &ra, ret, nil
 	}
 
-	size := binary.Size(capInfo.CapVersionFixed)
-	capInfo.VendorSpecific = make([]byte, len([]byte(capBytes))-size)
-	if _, err := tpmutil.Unpack([]byte(capBytes)[:size], &capInfo.CapVersionFixed); err != nil {
+	err = capInfo.Decode(capBytes)
+	if err != nil {
 		return nil, nil, nil, nil, nil, 0, err
 	}
-
-	copy(capInfo.VendorSpecific, []byte(capBytes)[size:])
 
 	return &pcrShort, &capInfo, capBytes, sig, &ra, ret, nil
 }
@@ -299,7 +330,7 @@ func quote(rw io.ReadWriter, keyHandle tpmutil.Handle, hash [20]byte, pcrs *pcrS
 
 // makeIdentity requests that the TPM create a new AIK. It returns the handle to
 // this new key.
-func makeIdentity(rw io.ReadWriter, encAuth digest, idDigest digest, k *key, ca1 *commandAuth, ca2 *commandAuth) (*key, []byte, *responseAuth, *responseAuth, uint32, error) {
+func makeIdentity(rw io.ReadWriter, encAuth Digest, idDigest Digest, k *key, ca1 *commandAuth, ca2 *commandAuth) (*key, []byte, *responseAuth, *responseAuth, uint32, error) {
 	in := []interface{}{encAuth, idDigest, k, ca1, ca2}
 	var aik key
 	var sig tpmutil.U32Bytes
@@ -363,10 +394,10 @@ func ownerReadInternalPub(rw io.ReadWriter, kh tpmutil.Handle, ca *commandAuth) 
 // that this call can only be made when there is no owner in the TPM. Once an
 // owner is established, the endorsement key can be retrieved using
 // ownerReadInternalPub.
-func readPubEK(rw io.ReadWriter, n nonce) (*pubKey, digest, uint32, error) {
+func readPubEK(rw io.ReadWriter, n Nonce) (*pubKey, Digest, uint32, error) {
 	in := []interface{}{n}
 	var pk pubKey
-	var d digest
+	var d Digest
 	out := []interface{}{&pk, &d}
 	ret, err := submitTPMRequest(rw, tagRQUCommand, ordReadPubEK, in, out)
 	if err != nil {
@@ -408,7 +439,7 @@ func takeOwnership(rw io.ReadWriter, encOwnerAuth tpmutil.U32Bytes, encSRKAuth t
 }
 
 // Creates a wrapped key under the SRK.
-func createWrapKey(rw io.ReadWriter, encUsageAuth digest, encMigrationAuth digest, keyInfo *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
+func createWrapKey(rw io.ReadWriter, encUsageAuth Digest, encMigrationAuth Digest, keyInfo *key, ca *commandAuth) (*key, *responseAuth, uint32, error) {
 	in := []interface{}{khSRK, encUsageAuth, encMigrationAuth, keyInfo, ca}
 	var k key
 	var ra responseAuth
