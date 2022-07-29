@@ -37,7 +37,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
+# github.com/google/go-tpm v0.3.3
 ## explicit; go 1.12
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
