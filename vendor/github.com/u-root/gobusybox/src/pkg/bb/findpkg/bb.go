@@ -88,6 +88,9 @@ func loadFSPackages(l ulog.Logger, env golang.Environ, filesystemPaths []string)
 		}
 		for _, pkg := range pkgs {
 			allps, err = addPkg(l, allps, pkg)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -100,6 +103,9 @@ func loadFSPackages(l ulog.Logger, env golang.Environ, filesystemPaths []string)
 		}
 		for _, p := range vendoredPkgs {
 			allps, err = addPkg(l, allps, p)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return allps, nil
