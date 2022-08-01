@@ -15,8 +15,10 @@
 package tpm
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rsa"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -50,38 +52,99 @@ type pcrInfoLong struct {
 	LocAtRelease     Locality
 	PCRsAtCreation   pcrSelection
 	PCRsAtRelease    pcrSelection
-	DigestAtCreation digest
-	DigestAtRelease  digest
+	DigestAtCreation Digest
+	DigestAtRelease  Digest
 }
 
 // pcrInfoShort stores detailed information about PCRs.
 type pcrInfoShort struct {
 	PCRsAtRelease   pcrSelection
 	LocAtRelease    Locality
-	DigestAtRelease digest
+	DigestAtRelease Digest
 }
 
 type pcrInfo struct {
 	PcrSelection     pcrSelection
-	DigestAtRelease  digest
-	DigestAtCreation digest
+	DigestAtRelease  Digest
+	DigestAtCreation Digest
 }
+
+type capVersionByte byte
 
 // A capVersionInfo contains information about the TPM itself. Note that this
 // is deserialized specially, since it has a variable-length byte array but no
 // length. It is preceded with a length in the response to the Quote2 command.
-type capVersionInfo struct {
-	CapVersionFixed capVersionInfoFixed
-	VendorSpecific  []byte
+
+type capVersion struct {
+	Major    capVersionByte
+	Minor    capVersionByte
+	RevMajor byte
+	RevMinor byte
 }
 
-// A capVersionInfoFixed stores the fixed-length part of capVersionInfo.
-type capVersionInfoFixed struct {
-	Tag       uint16
-	Version   uint32
-	SpecLevel uint16
-	ErrataRev byte
-	VendorID  byte
+// CapVersionInfo implements TPM_CAP_VERSION_INFO from spec. Part 2 - Page 174
+type CapVersionInfo struct {
+	Tag            tpmutil.Tag
+	Version        capVersion
+	SpecLevel      uint16
+	ErrataRev      byte
+	TPMVendorID    [4]byte
+	VendorSpecific tpmutil.U16Bytes
+}
+
+// Decode reads TPM_CAP_VERSION_INFO into CapVersionInfo.
+func (c *CapVersionInfo) Decode(data []byte) error {
+	var cV capVersion
+	buf := bytes.NewReader(data)
+	err := binary.Read(buf, binary.LittleEndian, &c.Tag)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &cV.Major)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &cV.Minor)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &cV.RevMajor)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &cV.RevMinor)
+	if err != nil {
+		return err
+	}
+
+	c.Version = cV
+
+	err = binary.Read(buf, binary.LittleEndian, &c.SpecLevel)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &c.ErrataRev)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(buf, binary.LittleEndian, &c.TPMVendorID)
+	if err != nil {
+		return err
+	}
+	var venspecificLen uint16
+	err = binary.Read(buf, binary.LittleEndian, &venspecificLen)
+	if err != nil {
+		return err
+	}
+	venSpecData := make([]byte, venspecificLen)
+	err = binary.Read(buf, binary.LittleEndian, &venSpecData)
+	if err != nil {
+		return err
+	}
+	c.VendorSpecific = venSpecData
+
+	return nil
+
 }
 
 // PermanentFlags contains persistent TPM properties
@@ -113,7 +176,7 @@ type PermanentFlags struct {
 // See: TPM-Main-Part-2-TPM-Structures_v1.2_rev116_01032011, P.140
 type nvAttributes struct {
 	Tag        uint16
-	Attributes permission
+	Attributes Permission
 }
 
 // NVDataPublic implements the structure of TPM_NV_DATA_PUBLIC
@@ -135,15 +198,13 @@ func CloseKey(rw io.ReadWriter, h tpmutil.Handle) error {
 	return flushSpecific(rw, h, rtKey)
 }
 
-// A nonce is a 20-byte value.
-type nonce [20]byte
-
-const nonceSize uint32 = 20
+// A Nonce is a 20-byte value.
+type Nonce [20]byte
 
 // An oiapResponse is a response to an OIAP command.
 type oiapResponse struct {
 	AuthHandle tpmutil.Handle
-	NonceEven  nonce
+	NonceEven  Nonce
 }
 
 // String returns a string representation of an oiapResponse.
@@ -160,7 +221,7 @@ func (opr *oiapResponse) Close(rw io.ReadWriter) error {
 type osapCommand struct {
 	EntityType  uint16
 	EntityValue tpmutil.Handle
-	OddOSAP     nonce
+	OddOSAP     Nonce
 }
 
 // String returns a string representation of an osapCommand.
@@ -171,8 +232,8 @@ func (opc osapCommand) String() string {
 // An osapResponse is a TPM reply to an osapCommand.
 type osapResponse struct {
 	AuthHandle tpmutil.Handle
-	NonceEven  nonce
-	EvenOSAP   nonce
+	NonceEven  Nonce
+	EvenOSAP   Nonce
 }
 
 // String returns a string representation of an osapResponse.
@@ -186,9 +247,7 @@ func (opr *osapResponse) Close(rw io.ReadWriter) error {
 }
 
 // A Digest is a 20-byte SHA1 value.
-type digest [20]byte
-
-const digestSize uint32 = 20
+type Digest [20]byte
 
 // An AuthValue is a 20-byte value used for authentication.
 type authValue [20]byte
@@ -211,7 +270,7 @@ func (sc sealCommand) String() string {
 // tagRQUAuth2Command use two.
 type commandAuth struct {
 	AuthHandle  tpmutil.Handle
-	NonceOdd    nonce
+	NonceOdd    Nonce
 	ContSession byte
 	Auth        authValue
 }
@@ -223,7 +282,7 @@ func (ca commandAuth) String() string {
 
 // responseAuth contains the auth information returned from a command.
 type responseAuth struct {
-	NonceEven   nonce
+	NonceEven   Nonce
 	ContSession byte
 	Auth        authValue
 }
@@ -260,7 +319,7 @@ type symmetricKeyParams struct {
 type key struct {
 	Version         uint32
 	KeyUsage        uint16
-	KeyFlags        uint32
+	KeyFlags        KeyFlags
 	AuthDataUsage   byte
 	AlgorithmParams keyParams
 	PCRInfo         tpmutil.U32Bytes
@@ -285,6 +344,13 @@ type key12 struct {
 type pubKey struct {
 	AlgorithmParams keyParams
 	Key             tpmutil.U32Bytes
+}
+
+// A migrationKeyAuth represents the target of a migration.
+type migrationKeyAuth struct {
+	MigrationKey    pubKey
+	MigrationScheme MigrationScheme
+	Digest          Digest
 }
 
 // A symKey is a TPM representation of a symmetric key.
@@ -315,10 +381,10 @@ type quoteInfo struct {
 	Fixed [4]byte
 
 	// The CompositeDigest is computed by ComputePCRComposite.
-	CompositeDigest digest
+	CompositeDigest Digest
 
-	// The nonce is either a random nonce or the SHA1 hash of data to sign.
-	Nonce nonce
+	// The Nonce is either a random Nonce or the SHA1 hash of data to sign.
+	Nonce Nonce
 }
 
 // A pcrComposite stores a selection of PCRs with the selected PCR values.
