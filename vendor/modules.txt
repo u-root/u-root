@@ -37,7 +37,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-tpm v0.2.1-0.20200615092505-5d8a91de9ae3
+# github.com/google/go-tpm v0.3.3
 ## explicit; go 1.12
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
@@ -141,7 +141,7 @@ github.com/safchain/ethtool
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/u-root/gobusybox/src v0.0.0-20220611170358-a4a23d8e3f54
+# github.com/u-root/gobusybox/src v0.0.0-20220728145311-85dc1fd1bc75
 ## explicit; go 1.13
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal

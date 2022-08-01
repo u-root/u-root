@@ -19,6 +19,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -31,7 +32,7 @@ import (
 type NVPublic struct {
 	NVIndex    tpmutil.Handle
 	NameAlg    Algorithm
-	Attributes KeyProp
+	Attributes NVAttr
 	AuthPolicy tpmutil.U16Bytes
 	DataSize   uint16
 }
@@ -63,9 +64,14 @@ type Public struct {
 
 	// Exactly one of the following fields should be set
 	// When encoding/decoding, one will be picked based on Type.
-	RSAParameters       *RSAParams
-	ECCParameters       *ECCParams
+
+	// RSAParameters contains both [rsa]parameters and [rsa]unique.
+	RSAParameters *RSAParams
+	// ECCParameters contains both [ecc]parameters and [ecc]unique.
+	ECCParameters *ECCParams
+	// SymCipherParameters contains both [sym]parameters and [sym]unique.
 	SymCipherParameters *SymCipherParams
+	// KeyedHashParameters contains both [keyedHash]parameters and [keyedHash]unique.
 	KeyedHashParameters *KeyedHashParams
 }
 
@@ -141,7 +147,7 @@ func (p Public) Name() (Name, error) {
 // MatchesTemplate checks if the Public area has the same algorithms and
 // parameters as the provided template. Note that this does not necessarily
 // mean that the key was created from this template, as the Unique field is
-// both provided in the template and overriden in the key creation process.
+// both provided in the template and overridden in the key creation process.
 func (p Public) MatchesTemplate(template Public) bool {
 	if p.Type != template.Type ||
 		p.NameAlg != template.NameAlg ||
@@ -188,7 +194,8 @@ func DecodePublic(buf []byte) (Public, error) {
 	return pub, err
 }
 
-// RSAParams represents parameters of an RSA key pair.
+// RSAParams represents parameters of an RSA key pair:
+// both the TPMS_RSA_PARMS and the TPM2B_PUBLIC_KEY_RSA.
 //
 // Symmetric and Sign may be nil, depending on key Attributes in Public.
 //
@@ -258,7 +265,8 @@ func decodeRSAParams(in *bytes.Buffer) (*RSAParams, error) {
 	return &params, nil
 }
 
-// ECCParams represents parameters of an ECC key pair.
+// ECCParams represents parameters of an ECC key pair:
+// both the TPMS_ECC_PARMS and the TPMS_ECC_POINT.
 //
 // Symmetric, Sign and KDF may be nil, depending on key Attributes in Public.
 type ECCParams struct {
@@ -339,7 +347,8 @@ func decodeECCParams(in *bytes.Buffer) (*ECCParams, error) {
 	return &params, nil
 }
 
-// SymCipherParams represents parameters of a symmetric block cipher TPM object.
+// SymCipherParams represents parameters of a symmetric block cipher TPM object:
+// both the TPMS_SYMCIPHER_PARMS and the TPM2B_DIGEST (hash of the key).
 type SymCipherParams struct {
 	Symmetric *SymScheme
 	Unique    tpmutil.U16Bytes
@@ -374,7 +383,8 @@ func decodeSymCipherParams(in *bytes.Buffer) (*SymCipherParams, error) {
 	return &params, nil
 }
 
-// KeyedHashParams represents parameters of a keyed hash TPM object.
+// KeyedHashParams represents parameters of a keyed hash TPM object:
+// both the TPMS_KEYEDHASH_PARMS and the TPM2B_DIGEST (hash of the key).
 type KeyedHashParams struct {
 	Alg    Algorithm
 	Hash   Algorithm
@@ -563,6 +573,27 @@ type Signature struct {
 	ECC *SignatureECC
 }
 
+// Encode serializes a Signature structure in TPM wire format.
+func (s Signature) Encode() ([]byte, error) {
+	head, err := tpmutil.Pack(s.Alg)
+	if err != nil {
+		return nil, fmt.Errorf("encoding Alg: %v", err)
+	}
+	var signature []byte
+	switch s.Alg {
+	case AlgRSASSA, AlgRSAPSS:
+		if signature, err = tpmutil.Pack(s.RSA); err != nil {
+			return nil, fmt.Errorf("encoding RSA: %v", err)
+		}
+	case AlgECDSA:
+		signature, err = tpmutil.Pack(s.ECC.HashAlg, tpmutil.U16Bytes(s.ECC.R.Bytes()), tpmutil.U16Bytes(s.ECC.S.Bytes()))
+		if err != nil {
+			return nil, fmt.Errorf("encoding ECC: %v", err)
+		}
+	}
+	return concat(head, signature)
+}
+
 // DecodeSignature decodes a serialized TPMT_SIGNATURE structure.
 func DecodeSignature(in *bytes.Buffer) (*Signature, error) {
 	var sig Signature
@@ -616,11 +647,6 @@ func (p Private) Encode() ([]byte, error) {
 		return nil, nil
 	}
 	return tpmutil.Pack(p)
-}
-
-type tpmtSigScheme struct {
-	Scheme Algorithm
-	Hash   Algorithm
 }
 
 // AttestationData contains data attested by TPM commands (like Certify).
@@ -678,7 +704,7 @@ func DecodeAttestationData(in []byte) (*AttestationData, error) {
 			return nil, fmt.Errorf("decoding AttestedQuoteInfo: %v", err)
 		}
 	default:
-		return nil, fmt.Errorf("only Certify & Creation attestation structures are supported, got type 0x%x", ad.Type)
+		return nil, fmt.Errorf("only Quote, Certify & Creation attestation structures are supported, got type 0x%x", ad.Type)
 	}
 
 	return &ad, nil
@@ -709,8 +735,12 @@ func (ad AttestationData) Encode() ([]byte, error) {
 		if info, err = ad.AttestedCreationInfo.encode(); err != nil {
 			return nil, fmt.Errorf("encoding AttestedCreationInfo: %v", err)
 		}
+	case TagAttestQuote:
+		if info, err = ad.AttestedQuoteInfo.encode(); err != nil {
+			return nil, fmt.Errorf("encoding AttestedQuoteInfo: %v", err)
+		}
 	default:
-		return nil, fmt.Errorf("only Certify & Creation attestation structures are supported, got type 0x%x", ad.Type)
+		return nil, fmt.Errorf("only Quote, Certify & Creation attestation structures are supported, got type 0x%x", ad.Type)
 	}
 
 	return concat(head, signer, tail, info)
@@ -811,6 +841,20 @@ func decodeQuoteInfo(in *bytes.Buffer) (*QuoteInfo, error) {
 	return &out, nil
 }
 
+func (qi QuoteInfo) encode() ([]byte, error) {
+	sel, err := encodeTPMLPCRSelection(qi.PCRSelection)
+	if err != nil {
+		return nil, fmt.Errorf("encoding PCRSelection: %v", err)
+	}
+
+	digest, err := tpmutil.Pack(qi.PCRDigest)
+	if err != nil {
+		return nil, fmt.Errorf("encoding PCRDigest: %v", err)
+	}
+
+	return concat(sel, digest)
+}
+
 // IDObject represents an encrypted credential bound to a TPM object.
 type IDObject struct {
 	IntegrityHMAC tpmutil.U16Bytes
@@ -831,7 +875,8 @@ type CreationData struct {
 	OutsideInfo         tpmutil.U16Bytes
 }
 
-func (cd *CreationData) encode() ([]byte, error) {
+// EncodeCreationData encodes byte array to TPMS_CREATION_DATA message.
+func (cd *CreationData) EncodeCreationData() ([]byte, error) {
 	sel, err := encodeTPMLPCRSelection(cd.PCRSelection)
 	if err != nil {
 		return nil, fmt.Errorf("encoding PCRSelection: %v", err)
@@ -965,9 +1010,9 @@ func decodeHashValue(in *bytes.Buffer) (*HashValue, error) {
 	if err := tpmutil.UnpackBuf(in, &hv.Alg); err != nil {
 		return nil, fmt.Errorf("decoding Alg: %v", err)
 	}
-	hfn, ok := hashMapping[hv.Alg]
-	if !ok {
-		return nil, fmt.Errorf("hash algorithm not supported: 0x%x", hv.Alg)
+	hfn, err := hv.Alg.Hash()
+	if err != nil {
+		return nil, err
 	}
 	hv.Value = make(tpmutil.U16Bytes, hfn.Size())
 	if _, err := in.Read(hv.Value); err != nil {
@@ -1008,7 +1053,7 @@ type TaggedProperty struct {
 // information.
 type Ticket struct {
 	Type      tpmutil.Tag
-	Hierarchy uint32
+	Hierarchy tpmutil.Handle
 	Digest    tpmutil.U16Bytes
 }
 
@@ -1019,4 +1064,49 @@ type AuthCommand struct {
 	Nonce      tpmutil.U16Bytes
 	Attributes SessionAttributes
 	Auth       tpmutil.U16Bytes
+}
+
+// TPMLDigest represents the TPML_Digest structure
+// It is used to convey a list of digest values.
+// This type is used in TPM2_PolicyOR() and in TPM2_PCR_Read()
+type TPMLDigest struct {
+	Digests []tpmutil.U16Bytes
+}
+
+// Encode converts the TPMLDigest structure into a byte slice
+func (list *TPMLDigest) Encode() ([]byte, error) {
+	res, err := tpmutil.Pack(uint32(len(list.Digests)))
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range list.Digests {
+		b, err := tpmutil.Pack(item)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, b...)
+
+	}
+	return res, nil
+}
+
+// DecodeTPMLDigest decodes a TPML_Digest part of a message.
+func DecodeTPMLDigest(buf []byte) (*TPMLDigest, error) {
+	in := bytes.NewBuffer(buf)
+	var tpmld TPMLDigest
+	var count uint32
+	if err := binary.Read(in, binary.BigEndian, &count); err != nil {
+		return nil, fmt.Errorf("decoding TPML_Digest: %v", err)
+	}
+	for in.Len() > 0 {
+		var hash tpmutil.U16Bytes
+		if err := hash.TPMUnmarshal(in); err != nil {
+			return nil, err
+		}
+		tpmld.Digests = append(tpmld.Digests, hash)
+	}
+	if count != uint32(len(tpmld.Digests)) {
+		return nil, fmt.Errorf("expected size and read size does not match")
+	}
+	return &tpmld, nil
 }

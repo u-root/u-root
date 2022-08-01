@@ -27,6 +27,12 @@ import (
 // device, then it treats it like a normal TPM device, and if the file is a
 // Unix domain socket, then it opens a connection to the socket.
 func OpenTPM(path string) (io.ReadWriteCloser, error) {
+	return openAndStartupTPM(path, false)
+}
+
+// openAndStartupTPM opens the TPM and optionally runs TPM_Startup if needed.
+// This feature is implemented only for testing.
+func openAndStartupTPM(path string, doStartup bool) (io.ReadWriteCloser, error) {
 	rwc, err := tpmutil.OpenTPM(path)
 	if err != nil {
 		return nil, err
@@ -34,9 +40,14 @@ func OpenTPM(path string) (io.ReadWriteCloser, error) {
 
 	// Make sure this is a TPM 1.2
 	_, err = GetManufacturer(rwc)
+	if doStartup && err == tpmError(errInvalidPostInit) {
+		if err = startup(rwc); err == nil {
+			_, err = GetManufacturer(rwc)
+		}
+	}
 	if err != nil {
 		rwc.Close()
-		return nil, fmt.Errorf("open %s: device is not a TPM 1.2", path)
+		return nil, fmt.Errorf("open %s: device is not a TPM 1.2: %v", path, err)
 	}
 	return rwc, nil
 }

@@ -9,6 +9,6 @@ import (
 	"time"
 )
 
-func setDate(d string, z *time.Location) error {
+func setDate(d string, z *time.Location, clocksource Clock) error {
 	return fmt.Errorf("Can not set the date")
 }
