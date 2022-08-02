@@ -13,6 +13,8 @@ import (
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 const (
@@ -190,10 +192,30 @@ func TestEqualParts(t *testing.T) {
 	}
 }
 
-type iodisk []byte
+// writeLog is a history of []byte written to the iodisk. Each write to iodisk creates a new writeLog entry.
+type writeLog [][]byte
 
-func (d *iodisk) WriteAt(b []byte, off int64) (int, error) {
-	copy([]byte(*d)[off:], b)
+// iodisk is a fake disk that is used for testing.
+// Each write is logged into the `writes` map.
+// iodisk implements the WriterAt interface and can be passed to Write() for testing.
+type iodisk struct {
+	bytes []byte
+
+	// mapping of address=>writes.
+	// This is used for verifying that the correct data was written into the correct locations.
+	writes map[int64]writeLog
+}
+
+func newIOdisk(size int) *iodisk {
+	return &iodisk{
+		bytes:  make([]byte, size),
+		writes: make(map[int64]writeLog),
+	}
+}
+
+func (d *iodisk) WriteAt(b []byte, offset int64) (int, error) {
+	copy([]byte(d.bytes)[offset:], b)
+	d.writes[offset] = append(d.writes[offset], b)
 	return len(b), nil
 }
 
@@ -204,17 +226,52 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reading partitions: got %v, want nil", err)
 	}
-	targ := make(iodisk, len(disk))
+	targ := newIOdisk(len(disk))
 
-	if err := Write(&targ, p); err != nil {
+	if err := Write(targ, p); err != nil {
 		t.Fatalf("Writing: got %v, want nil", err)
 	}
-	if n, err := New(bytes.NewReader([]byte(targ))); err != nil {
+	if n, err := New(bytes.NewReader([]byte(targ.bytes))); err != nil {
 		t.Logf("Old GPT: %s", p.Primary)
 		var b bytes.Buffer
 		w := hex.Dumper(&b)
 		io.Copy(w, bytes.NewReader(disk[:4096]))
 		t.Logf("%s\n", b.String())
 		t.Fatalf("Reading back new header: new:%s\n%v", n, err)
+	}
+
+	tests := []struct {
+		desc   string
+		offset int64
+		size   int64
+	}{
+		{
+			desc:   "MBR",
+			offset: 0x00000000,
+			size:   BlockSize,
+		},
+		{
+			desc:   "Primary GPT header",
+			offset: 0x00000200,
+			size:   BlockSize,
+		},
+		{
+			desc:   "Backup GPT header",
+			offset: 0x879f7e00,
+			size:   BlockSize,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			// Verify that there was exactly one write.
+			if count := len(targ.writes[tc.offset]); count != 1 {
+				t.Fatalf("Expected exactly 1 write to address 0x%08x, got %d", tc.offset, count)
+			}
+			// Verify that the contents were exactly as expected.
+			if !cmp.Equal(targ.writes[tc.offset][0], disk[tc.offset:tc.offset+tc.size]) {
+				t.Fatalf("Data written to 0x%08x does not match the source data", tc.offset)
+			}
+		})
 	}
 }
