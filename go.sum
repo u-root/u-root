@@ -165,6 +165,8 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
+github.com/nanmu42/limitio v1.0.0 h1:dpopBYPwUyLOPv+vsGja0iax+dG0SP9paTEmz+Sy7KU=
+github.com/nanmu42/limitio v1.0.0/go.mod h1:8H40zQ7pqxzbwZ9jxsK2hDoE06TH5ziybtApt1io8So=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/opentracing/opentracing-go v1.0.2/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330 h1:zJBTzBuTR7EdFzmCGx0xp0pbOOb82sAh0+YUK4JTDEI=
