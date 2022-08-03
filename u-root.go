@@ -369,6 +369,12 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 }
 
 func validateArg(arg string) bool {
+	// Do the simple thing first: stat the path.
+	// This saves incorrect diagnostics when the
+	// path is a perfectly valid relative path.
+	if _, err := os.Stat(arg); err == nil {
+		return true
+	}
 	if !checkPrefix(arg) {
 		paths, err := filepath.Glob(arg)
 		if err != nil {
