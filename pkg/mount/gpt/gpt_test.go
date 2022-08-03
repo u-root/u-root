@@ -246,7 +246,7 @@ func TestWrite(t *testing.T) {
 		size   int64
 	}{
 		{
-			desc:   "MBR",
+			desc:   "Protective MBR",
 			offset: 0x00000000,
 			size:   BlockSize,
 		},

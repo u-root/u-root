@@ -41,20 +41,20 @@ type (
 	MBR    [BlockSize]byte
 	Header struct {
 		Signature  uint64
-		Revision   uint32    // (for GPT version 1.0 (through at least UEFI version 2.7 (May 2017)), the value is 00h 00h 01h 00h)
-		HeaderSize uint32    // size in little endian (in bytes, usually 5Ch 00h 00h 00h or 92 bytes)
-		CRC        uint32    // CRC32/zlib of header (offset +0 up to header size) in little endian, with this field zeroed during calculation
-		Reserved   uint32    // ; must be zero
-		CurrentLBA uint64    // (location of this header copy)
-		BackupLBA  uint64    // (location of the other header copy)
-		FirstLBA   uint64    // usable LBA for partitions (primary partition table last LBA + 1)
-		LastLBA    uint64    // usable LBA (secondary partition table first LBA - 1)
-		DiskGUID   GUID      // (also referred as UUID on UNIXes)
-		PartStart  uint64    // LBA of array of partition entries (always 2 in primary copy)
-		NPart      uint32    // Number of partition entries in array
-		PartSize   uint32    // Size of a single partition entry (usually 80h or 128)
-		PartCRC    uint32    // CRC32/zlib of partition array in little endian
-		_          [420]byte // Reserved; must be zero.
+		Revision   uint32                       // (for GPT version 1.0 (through at least UEFI version 2.7 (May 2017)), the value is 00h 00h 01h 00h)
+		HeaderSize uint32                       // size in little endian (in bytes, usually 5Ch 00h 00h 00h or 92 bytes)
+		CRC        uint32                       // CRC32/zlib of header (offset +0 up to header size) in little endian, with this field zeroed during calculation
+		Reserved   uint32                       // ; must be zero
+		CurrentLBA uint64                       // (location of this header copy)
+		BackupLBA  uint64                       // (location of the other header copy)
+		FirstLBA   uint64                       // usable LBA for partitions (primary partition table last LBA + 1)
+		LastLBA    uint64                       // usable LBA (secondary partition table first LBA - 1)
+		DiskGUID   GUID                         // (also referred as UUID on UNIXes)
+		PartStart  uint64                       // LBA of array of partition entries (always 2 in primary copy)
+		NPart      uint32                       // Number of partition entries in array
+		PartSize   uint32                       // Size of a single partition entry (usually 80h or 128)
+		PartCRC    uint32                       // CRC32/zlib of partition array in little endian
+		_          [BlockSize - HeaderSize]byte // Reserved; must be zero.
 	}
 )
 
