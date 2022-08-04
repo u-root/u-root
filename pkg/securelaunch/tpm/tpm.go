@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/go-tpm/legacy/tpm2"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/config"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/tss"
 )
@@ -153,8 +154,10 @@ func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	}
 	slaunch.Debug(eventDesc)
 
-	// send event if PCR was successfully extended above.
-	sendEventToSysfs(pcr, hash, []byte(eventDesc))
+	if config.Conf.EventLog {
+		// Send event if PCR was successfully extended above.
+		sendEventToSysfs(pcr, hash, []byte(eventDesc))
+	}
 
 	newPCRValue, err := readPCR(pcr)
 	if err != nil {
