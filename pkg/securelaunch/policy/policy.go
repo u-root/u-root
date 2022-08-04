@@ -11,6 +11,7 @@ import (
 	"log"
 
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/config"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/securelaunch/launcher"
 	"github.com/u-root/u-root/pkg/securelaunch/measurement"
@@ -20,6 +21,7 @@ import (
 //
 // The policy is stored as a JSON file.
 type Policy struct {
+	Config     config.Config
 	Collectors []measurement.Collector
 	Launcher   launcher.Launcher
 	EventLog   eventlog.EventLog
@@ -49,6 +51,7 @@ func Parse() (*Policy, error) {
 
 	policy := &Policy{}
 	var parse struct {
+		Config     json.RawMessage   `json:"config"`
 		Collectors []json.RawMessage `json:"collectors"`
 		Attestor   json.RawMessage   `json:"attestor"`
 		Launcher   json.RawMessage   `json:"launcher"`
@@ -60,14 +63,30 @@ func Parse() (*Policy, error) {
 		return nil, err
 	}
 
-	for _, collectors := range parse.Collectors {
-		collector, err := measurement.GetCollector(collectors)
-		if err != nil {
-			log.Printf("policy: Error GetCollector err:c=%s, collector=%v", collectors, collector)
+	config.Conf = config.New()
+	if len(parse.Config) > 0 {
+		if err := json.Unmarshal(parse.Config, &config.Conf); err != nil {
+			log.Printf("policy: Error unmarshalling `config` section of policy file: %v", err)
 			return nil, err
 		}
 
-		policy.Collectors = append(policy.Collectors, collector)
+		log.Printf("policy: Setting measurement PCR to %d", config.Conf.MeasurementPCR)
+		measurement.SetPCR(uint32(config.Conf.MeasurementPCR))
+	}
+
+	if len(parse.Collectors) > 0 {
+		for _, collectors := range parse.Collectors {
+			collector, err := measurement.GetCollector(collectors)
+			if err != nil {
+				log.Printf("policy: Error GetCollector err:c=%s, collector=%v", collectors, collector)
+				return nil, err
+			}
+
+			policy.Collectors = append(policy.Collectors, collector)
+		}
+	} else {
+		log.Printf("policy: No collectors found, disabling")
+		config.Conf.Collectors = false
 	}
 
 	if len(parse.Launcher) > 0 {
@@ -82,6 +101,9 @@ func Parse() (*Policy, error) {
 			log.Printf("policy: Error unmarshalling `eventlog` section of policy file: %v", err)
 			return nil, err
 		}
+	} else {
+		log.Printf("policy: No eventlog found, disabling")
+		config.Conf.EventLog = false
 	}
 
 	return policy, nil
