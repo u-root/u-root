@@ -18,6 +18,7 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/dhclient"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/config"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
@@ -39,6 +40,11 @@ var step = 1
 func printStep(msg string) {
 	slaunch.Debug("******** Step %d: %s ********", step, msg)
 	step++
+}
+
+// printStepDisabled prints a message for a disabled step.
+func printStepDisabled(msg string) {
+	slaunch.Debug("******** %s disabled in config ********", msg)
 }
 
 // checkPolicyLocationFlag checks the kernel cmdline for the policyLocationFlag
@@ -166,71 +172,87 @@ func parsePolicy(policyLocation string) (*policy.Policy, error) {
 
 // collectMeasurements runs any measurements specified in the policy file.
 func collectMeasurements(p *policy.Policy) error {
-	printStep("Collect evidence")
+	if config.Conf.Collectors {
+		printStep("Collect evidence")
 
-	for _, collector := range p.Collectors {
-		slaunch.Debug("Input Collector: %v", collector)
-		if err := collector.Collect(); err != nil {
-			log.Printf("Collector %v failed: %v", collector, err)
+		for _, collector := range p.Collectors {
+			slaunch.Debug("Input Collector: %v", collector)
+			if err := collector.Collect(); err != nil {
+				log.Printf("Collector %v failed: %v", collector, err)
+			}
 		}
-	}
 
-	slaunch.Debug("Collectors completed")
+		slaunch.Debug("Collectors completed")
+	} else {
+		printStepDisabled("Collect evidence")
+	}
 
 	return nil
 }
 
 // measureFiles measures relevant files (e.g., policy, kernel, initrd).
 func measureFiles(p *policy.Policy) error {
-	printStep("Measure files")
+	if config.Conf.Measurements {
+		printStep("Measure files")
 
-	if err := policy.Measure(); err != nil {
-		return fmt.Errorf("failed to measure policy file: %w", err)
-	}
-
-	if p.Launcher.Params["kernel"] != "" {
-		if err := p.Launcher.MeasureKernel(); err != nil {
-			return fmt.Errorf("failed to measure target kernel: %w", err)
+		if err := policy.Measure(); err != nil {
+			return fmt.Errorf("failed to measure policy file: %w", err)
 		}
-	}
 
-	if p.Launcher.Params["initrd"] != "" {
-		if err := p.Launcher.MeasureInitrd(); err != nil {
-			return fmt.Errorf("failed to measure target initrd: %w", err)
+		if p.Launcher.Params["kernel"] != "" {
+			if err := p.Launcher.MeasureKernel(); err != nil {
+				return fmt.Errorf("failed to measure target kernel: %w", err)
+			}
 		}
-	}
 
-	slaunch.Debug("Files successfully measured")
+		if p.Launcher.Params["initrd"] != "" {
+			if err := p.Launcher.MeasureInitrd(); err != nil {
+				return fmt.Errorf("failed to measure target initrd: %w", err)
+			}
+		}
+
+		slaunch.Debug("Files successfully measured")
+	} else {
+		printStepDisabled("Measure files")
+	}
 
 	return nil
 }
 
 // parseEventLog parses the TPM event log.
 func parseEventLog(p *policy.Policy) error {
-	printStep("Parse event log")
+	if config.Conf.EventLog {
+		printStep("Parse event log")
 
-	if err := p.EventLog.Parse(); err != nil {
-		return fmt.Errorf("failed to parse event log: %w", err)
+		if err := p.EventLog.Parse(); err != nil {
+			return fmt.Errorf("failed to parse event log: %w", err)
+		}
+
+		slaunch.Debug("Event log successfully parsed")
+	} else {
+		printStepDisabled("Parse event log")
 	}
-
-	slaunch.Debug("Event log successfully parsed")
 
 	return nil
 }
 
 // dumpLogs writes out any pending logs to a file on disk.
 func dumpLogs() error {
-	printStep("Dump logs to disk")
+	if config.Conf.Collectors || config.Conf.EventLog {
+		printStep("Dump logs to disk")
 
-	if err := eventlog.ParseEventLog(); err != nil {
-		return fmt.Errorf("failed to parse event log: %w", err)
+		if err := eventlog.ParseEventLog(); err != nil {
+			return fmt.Errorf("failed to parse event log: %w", err)
+		}
+
+		if err := slaunch.ClearPersistQueue(); err != nil {
+			return fmt.Errorf("failed to clear persist queue: %w", err)
+		}
+
+		slaunch.Debug("Logs successfully dumped to disk")
+	} else {
+		printStepDisabled("Dump logs to disk")
 	}
-
-	if err := slaunch.ClearPersistQueue(); err != nil {
-		return fmt.Errorf("failed to clear persist queue: %w", err)
-	}
-
-	slaunch.Debug("Logs successfully dumped to disk")
 
 	return nil
 }
