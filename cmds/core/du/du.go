@@ -23,13 +23,10 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 
 	flag "github.com/spf13/pflag"
-)
-
-const (
-	root = "."
 )
 
 var (
@@ -42,13 +39,9 @@ var (
 	total          = flag.BoolP("total", "c", false, "display grand total")
 )
 
-type FileProperties struct {
-	path     string
-	byteSize int64
-}
-
 func du(w io.Writer, paths []string) {
-	var logOutput []FileProperties
+	fileProperties := make(map[string]int64)
+	dirProperties := make(map[string]int64)
 
 	for _, path := range paths {
 		fileInfo, err := os.Stat(path)
@@ -59,95 +52,91 @@ func du(w io.Writer, paths []string) {
 		}
 
 		if fileInfo.Mode() == fs.ModeSymlink {
-			logOutput = append(logOutput, FileProperties{path, fileInfo.Size()})
+			fileProperties[path] = fileInfo.Size()
 			continue
 		}
 
-		fsys := os.DirFS(path)
-		fileproperties := processFS(w, fsys, path)
+		filePS, dirPS := processPath(w, path)
 
-		if len(*fileproperties) != 0 {
-			logOutput = append(logOutput, *fileproperties...)
-		} else {
+		for path, size := range *filePS {
+			fileProperties[path] = size
 		}
+
+		for path, size := range *dirPS {
+			dirProperties[path] = size
+		}
+
 	}
-	printFileProperties(w, logOutput)
+	//sort
+	//update folder size
+
+	for path, size := range dirProperties {
+		fileProperties[path] = size
+	}
+
+	//sort
+	var sortedFiles []string
+	for fileSize := range fileProperties {
+		sortedFiles = append(sortedFiles, fileSize)
+	}
+	sort.Strings(sortedFiles)
+
+	printFileProperties(w, fileProperties, sortedFiles)
 }
 
-func processFS(w io.Writer, fsys fs.FS, dirPath string) *[]FileProperties {
-	var fileProperties []FileProperties
-	var rootProperties FileProperties
+func processPath(w io.Writer, dirPath string) (*map[string]int64, *map[string]int64) {
+	fileProperties := make(map[string]int64)
+	dirProperties := make(map[string]int64)
 
-	err := fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
-			if d != nil {
-				fmt.Fprintf(w, "failed to read dir %v: %v\n", path, err)
-				return fs.SkipDir
-			} else {
-				fmt.Fprintf(w, "failed to walk directory %v: %v\n", path, err)
-				return err
-			}
-		}
-
-		fileInfo, err := d.Info()
-
-		if err != nil {
-			fmt.Fprintf(w, "failed to access file infos of %v\n", path)
+			fmt.Fprintf(w, "failed to walk file %v: %v\n", path, err)
 			return err
 		}
 
-		if path == root {
-			rootProperties = FileProperties{dirPath, fileInfo.Size()}
+		if info.IsDir() {
+			dirProperties[path] = info.Size() >> 10
 			return nil
 		}
 
-		if d.IsDir() {
-			fileProperties = append(fileProperties, FileProperties{"." + dirPath + "/" + path, fileInfo.Size()})
-			return nil
-		}
-
-		fileProperties = append(fileProperties, FileProperties{"." + dirPath + "/" + path, fileInfo.Size()})
+		fileProperties[path] = info.Size() >> 10
 		return nil
 
 	})
 
 	if err != nil {
-		fmt.Fprintf(w, "failed to walk directory %v\n", dirPath)
-		return nil
+		fmt.Fprintf(w, "failed to walk file %v\n", dirPath)
+		return nil, nil
 	}
 
-	sort.Slice(fileProperties, func(i, j int) bool {
-		return sort.StringsAreSorted([]string{fileProperties[i].path, fileProperties[j].path})
-	})
-
-	fileProperties = append(fileProperties, rootProperties)
-
-	return &fileProperties
+	return &fileProperties, &dirProperties
 }
 
-func printFileProperties(w io.Writer, fileProperties []FileProperties) {
+func printFileProperties(w io.Writer, fileProperties map[string]int64, sortedPaths []string) {
 	var sizes []string
-	var paths []string
 	maxLenghtSizes := 1
 
-	for _, properties := range fileProperties {
-		size := fmt.Sprintf("%d", properties.byteSize)
+	for _, sortedPath := range sortedPaths {
+		size := fmt.Sprintf("%d", fileProperties[sortedPath])
 
 		if len(size) > maxLenghtSizes {
 			maxLenghtSizes = len(size)
 		}
 		sizes = append(sizes, size)
-		paths = append(paths, fmt.Sprintf("%v", properties.path))
 	}
 
-	for idx, _ := range fileProperties {
+	idx := 0
+	for range fileProperties {
 		sizes[idx] = fmt.Sprintf("%*v", maxLenghtSizes, sizes[idx])
-		fmt.Fprintf(w, "%v %v\n", sizes[idx], paths[idx])
+		fmt.Fprintf(w, "%v %v\n", sizes[idx], sortedPaths[idx])
+		idx++
 	}
 
 }
 
 func main() {
 	flag.Parse()
-	du(os.Stdout, flag.Args())
+	// du(os.Stdout, flag.Args())
+	du(os.Stdout, []string{"/home/l1x0r/Pictures"})
+
 }
