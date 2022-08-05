@@ -7,6 +7,7 @@ package securelaunch
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -309,4 +310,22 @@ func GetBlkInfo() error {
 	}
 	Debug("getBlkInfo: noop")
 	return nil
+}
+
+// GetFileBytes reads the given file and returns the contents as a byte slice.
+func GetFileBytes(fileName string) ([]byte, error) {
+	filePath, err := GetMountedFilePath(fileName, mount.MS_RDONLY)
+	if err != nil {
+		log.Printf("GetFileBytes: ERR: Could not get mounted file path '%s': %v", fileName, err)
+		return nil, fmt.Errorf("could not get mounted file path '%s': %w", fileName, err)
+	}
+	Debug("GetFileBytes: file path = '%s'", filePath)
+
+	fileBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Printf("GetFileBytes: ERR: Could not read file '%s': %v", filePath, err)
+		return nil, fmt.Errorf("could not read file '%s': %w", filePath, err)
+	}
+
+	return fileBytes, nil
 }

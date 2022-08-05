@@ -130,3 +130,24 @@ func TestReadFile(t *testing.T) {
 		t.Fatalf(`ReadFile(tempFile) returned %q, not %q`, readBytes, []byte(dataStr))
 	}
 }
+
+func TestGetFileBytes(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	file := "sda1:" + "/file.out"
+	fileStr := "Hello, World!"
+	fileBytes := []byte(fileStr)
+
+	if err := WriteFile(fileBytes, file); err != nil {
+		t.Fatalf(`WriteFile(str, file) = %v, not nil`, err)
+	}
+
+	readBytes, err := GetFileBytes(file)
+	if err != nil {
+		t.Fatalf(`GetFileBytes(file) = %v, not nil`, err)
+	}
+
+	if !bytes.Equal(fileBytes, readBytes) {
+		t.Fatalf(`GetFileBytes(file) got '%v', want '%v'`, readBytes, fileBytes)
+	}
+}
