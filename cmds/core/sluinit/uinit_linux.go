@@ -20,9 +20,13 @@ import (
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/config"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
+	"github.com/u-root/u-root/pkg/securelaunch/launcher"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
+
+// booEntryFlag holds the name of the flag pointing to the boot entry to load.
+const bootEntryFlag = "securelaunch_entry"
 
 // pcrLogFilename holds the name of the file to dump PCR values to. This is
 // used when provisioning the system to seal secrets to the correct values.
@@ -95,6 +99,21 @@ func checkDebugFlag() {
 		slaunch.Debug = log.Printf
 		slaunch.Debug("debug flag is set. Logging Enabled.")
 	}
+}
+
+func parseBootEntryFlag() (string, error) {
+	bootEntry, present := cmdline.Flag(bootEntryFlag)
+	if !present {
+		return "", fmt.Errorf("no boot entry found")
+	}
+
+	if !launcher.IsValidBootEntry(bootEntry) {
+		return "", fmt.Errorf("boot entry contains bad characters: '%s'", bootEntry)
+	}
+
+	slaunch.Debug("boot entry: %s", bootEntry)
+
+	return bootEntry, nil
 }
 
 // iscsiSpecified checks if iscsi has been set on the kernel command line.
@@ -206,6 +225,16 @@ func verifyAndParsePolicy(policyLocation string) (*policy.Policy, error) {
 	return policy, nil
 }
 
+// loadAndVerifyBootEntry loads the specified boot entry and checks the hashes
+// of the kernel and initrd files against the expected values.
+func loadAndVerifyBootEntry(bootEntry string, bootEntries map[string]launcher.BootEntry) error {
+	if err := launcher.MatchBootEntry(bootEntry, bootEntries); err != nil {
+		return fmt.Errorf("could not find matching boot entry or hash checks failed: %w", err)
+	}
+
+	return nil
+}
+
 // collectMeasurements runs any measurements specified in the policy file.
 func collectMeasurements(p *policy.Policy) error {
 	if config.Conf.Collectors {
@@ -235,14 +264,13 @@ func measureFiles(p *policy.Policy) error {
 			return fmt.Errorf("failed to measure policy file: %w", err)
 		}
 
-		if p.Launcher.Params["kernel"] != "" {
-			if err := p.Launcher.MeasureKernel(); err != nil {
-				return fmt.Errorf("failed to measure target kernel: %w", err)
-			}
+		if err := launcher.MeasureKernel(); err != nil {
+			return fmt.Errorf("failed to measure target kernel: %w", err)
 		}
 
-		if p.Launcher.Params["initrd"] != "" {
-			if err := p.Launcher.MeasureInitrd(); err != nil {
+		// It's possible to not have an initrd (e.g., if it's embedded).
+		if launcher.IsInitrdSet() {
+			if err := launcher.MeasureInitrd(); err != nil {
 				return fmt.Errorf("failed to measure target initrd: %w", err)
 			}
 		}
@@ -364,6 +392,11 @@ func main() {
 		exit(err)
 	}
 
+	bootEntry, err := parseBootEntryFlag()
+	if err != nil {
+		exit(err)
+	}
+
 	if err := initialize(policyLocation); err != nil {
 		exit(err)
 	}
@@ -374,6 +407,10 @@ func main() {
 	}
 
 	if err := parseEventLog(p); err != nil {
+		exit(err)
+	}
+
+	if err := loadAndVerifyBootEntry(bootEntry, p.Launcher.BootEntries); err != nil {
 		exit(err)
 	}
 
