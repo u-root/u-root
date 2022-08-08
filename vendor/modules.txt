@@ -110,6 +110,9 @@ github.com/mdlayher/netlink/nlenc
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
 ## explicit; go 1.12
 github.com/mdlayher/raw
+# github.com/nanmu42/limitio v1.0.0
+## explicit; go 1.16
+github.com/nanmu42/limitio
 # github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 ## explicit; go 1.14
 github.com/orangecms/go-framebuffer/framebuffer
