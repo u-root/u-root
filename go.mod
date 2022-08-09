@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/beevik/ntp v0.3.0
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/cenkalti/backoff/v4 v4.0.2
+	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/creack/pty v1.1.15
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.0
