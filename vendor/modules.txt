@@ -12,8 +12,8 @@ github.com/c-bata/go-prompt/internal/bisect
 github.com/c-bata/go-prompt/internal/debug
 github.com/c-bata/go-prompt/internal/strings
 github.com/c-bata/go-prompt/internal/term
-# github.com/cenkalti/backoff/v4 v4.0.2
-## explicit; go 1.12
+# github.com/cenkalti/backoff/v4 v4.1.3
+## explicit; go 1.13
 github.com/cenkalti/backoff/v4
 # github.com/creack/pty v1.1.15
 ## explicit; go 1.13
