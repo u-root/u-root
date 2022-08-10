@@ -282,7 +282,12 @@ func TestUrootCmdline(t *testing.T) {
 		gbbTest.args = append([]string{"-build=gbb"}, gbbTest.args...)
 		gbbTest.env = append(gbbTest.env, "GO111MODULE=on")
 
-		bbTests = append(bbTests, gbbTest, bbTest)
+		gbbNoModuleTest := test
+		gbbNoModuleTest.name = gbbTest.name + " gbbNoModules"
+		gbbNoModuleTest.args = append([]string{"-build=gbb"}, gbbTest.args...)
+		gbbNoModuleTest.env = append(gbbTest.env, "GO111MODULE=off")
+
+		bbTests = append(bbTests, gbbTest, bbTest, gbbNoModuleTest)
 	}
 
 	for _, tt := range append(noCmdTests, bbTests...) {
