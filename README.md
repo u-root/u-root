@@ -435,6 +435,44 @@ go mod tidy
 go mod vendor
 ```
 
+## Building without network access
+
+Go modules require network access. If you need to make a repeatable build with
+no network access, make sure that your code is under `$GOPATH` and the
+environment variable `GO111MODULE` is set to `off`. This is:
+
+1. Pick a location for your off-network build, it can be anywhere and
+the directory does not need to exist ahead of time:
+
+```shell
+export GOPATH=$(mktemp -d)
+
+```
+
+2. Fetch the code, you can use `git`, `go get` or even a release file, just
+make sure that the code ends in: `${GOPATH}/src/github.com/u-root/u-root` E.g:
+
+```shell
+mkdir -p ${GOPATH}/src/github.com/u-root/
+cd ${GOPATH}/src/github.com/u-root/
+git clone https://github.com/u-root/u-root.git
+cd u-root
+```
+
+Or simply:
+
+```shell
+GO111MODULE=off go get github.com/u-root/u-root
+cd $GOPATH/src/github.com/u-root/u-root
+```
+
+3. Build u-root and use it normally:
+
+```shell
+GO111MODULE=off GOPROXY=off go build
+GO111MODULE=off GOPROXY=off ./u-root
+```
+
 # Hardware
 
 If you want to see u-root on real hardware, this
