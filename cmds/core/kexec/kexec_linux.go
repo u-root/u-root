@@ -151,13 +151,20 @@ func main() {
 				i = boot.CatInitrds(files...)
 			}
 
+			var dtb io.ReaderAt
+			if len(opts.dtb) > 0 {
+				dtb, err = os.Open(opts.dtb)
+				if err != nil {
+					log.Fatalf("Failed to open dtb file %s: %v", opts.dtb, err)
+				}
+			}
 			image = &boot.LinuxImage{
 				Kernel:      uio.NewLazyFile(kernelpath),
 				Initrd:      i,
 				Cmdline:     newCmdline,
 				LoadSyscall: opts.loadSyscall,
 				KexecOpts: linux.KexecOptions{
-					DTB:        opts.dtb,
+					DTB:        dtb,
 					MmapKernel: opts.mmapKernel,
 					MmapRamfs:  opts.mmapInitrd,
 				},

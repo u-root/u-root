@@ -4,6 +4,8 @@
 
 package linux
 
+import "io"
+
 // KexecOptions abstract a collection of options to be passed in KexecLoad.
 //
 // Arch agnostic. Each arch knows to just look for options they care about.
@@ -12,7 +14,7 @@ package linux
 // with, we can split when time comes.
 type KexecOptions struct {
 	// DTB is used as the device tree blob, if specified.
-	DTB string
+	DTB io.ReaderAt
 
 	// Mmap kernel and initramfs, so virtual pages are directly mapped
 	// to page cache. Here it is agnostic to whether original kernel and
