@@ -68,17 +68,14 @@ var (
 // unpacking bzimage is a mess, so for now, this is a mess.
 
 // decompressor finds a decompressor by scanning a []byte for a tag.
-// Using Index means we need not worry about silly things like MSDOS
-// headers in UEFI binaries. Like that should ever have existed anyway.
-func findDecompressor(b []byte) (int, *exec.Cmd, error) {
+func findDecompressor(b []byte) (*exec.Cmd, error) {
 	for _, m := range magics {
-		x := bytes.Index(b, m.signature)
-		if x != -1 {
+		if bytes.Index(b, m.signature) == 0 {
 			Debug("decompressor: %s %v", m.c.Path, m.c.Args)
-			return x, m.c, nil
+			return m.c, nil
 		}
 	}
-	return -1, nil, fmt.Errorf("can't find any headers")
+	return nil, fmt.Errorf("can't find any known magic string in compressed bytes")
 }
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -112,6 +109,9 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if b.Header.HeaderMagic != HeaderMagic {
 		return fmt.Errorf("not a bzImage: magic should be %02x, and is %02x", HeaderMagic, b.Header.HeaderMagic)
 	}
+	if b.Header.Protocolversion < 0x0208 {
+		return fmt.Errorf("boot protocol version 0x%04x not supported, version 0x0208 or higher (Kernel 2.6.26) required", b.Header.Protocolversion)
+	}
 	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
 	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
@@ -127,13 +127,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	}
 	Debug("%d bytes of BootCode", len(b.BootCode))
 
-	Debug("Remaining length is %d bytes, PayloadSize %d", r.Len(), b.Header.PayloadSize)
-	x, c, err := findDecompressor(r.Bytes())
-	if err != nil {
-		return err
-	}
-	Debug("xz is at %d", x)
-	b.HeadCode = make([]byte, x)
+	b.HeadCode = make([]byte, b.Header.PayloadOffset)
 	if _, err := r.Read(b.HeadCode); err != nil {
 		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
@@ -141,12 +135,16 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.compressed); err != nil {
 		return fmt.Errorf("can't read KernelCode: %v", err)
 	}
+	decompressor, err := findDecompressor(b.compressed)
+	if err != nil {
+		return err
+	}
 	if b.NoDecompress {
 		Debug("skipping code decompress")
 	} else {
 		var err error
 		Debug("Uncompress %d bytes", len(b.compressed))
-		if b.KernelCode, err = unpack(b.compressed, *c); err != nil {
+		if b.KernelCode, err = unpack(b.compressed, *decompressor); err != nil {
 			return err
 		}
 		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
