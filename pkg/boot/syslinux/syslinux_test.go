@@ -14,6 +14,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 )
@@ -551,11 +552,11 @@ func TestParseGeneral(t *testing.T) {
 			},
 			want: []boot.OSImage{
 				&boot.LinuxImage{
-					Name:       "foo",
-					Kernel:     strings.NewReader(kernel1),
-					Initrd:     strings.NewReader(globalInitrd),
-					DeviceTree: strings.NewReader(boardDTB),
-					Cmdline:    "foo=bar",
+					Name:      "foo",
+					Kernel:    strings.NewReader(kernel1),
+					Initrd:    strings.NewReader(globalInitrd),
+					Cmdline:   "foo=bar",
+					KexecOpts: linux.KexecOptions{},
 				},
 			},
 		},
