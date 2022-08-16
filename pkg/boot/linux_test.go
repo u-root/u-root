@@ -309,12 +309,12 @@ func TestLoadLinuxImage(t *testing.T) {
 			name: "oringnal kernel and initrd are files, skip copying",
 			li: &LinuxImage{
 				Kernel: setupTestFile(t, filepath.Join(testDir, "original_kernel_and_initrd_are_files_skip_copying_bzImage"), "testkernel"),
-				Initrd: setupTestFile(t, filepath.Join("original_kernel_and_initrd_are_files_skip_copying_initramfs"), "testinitrd"),
+				Initrd: setupTestFile(t, filepath.Join(testDir, "original_kernel_and_initrd_are_files_skip_copying_initramfs"), "testinitrd"),
 			},
 			want: wantData{
 				loadedImage: &LoadedLinuxImage{
 					Kernel: setupTestFile(t, filepath.Join(testDir, "original_kernel_and_initrd_are_files_skip_copying_2_bzImage"), "testkernel"),
-					Initrd: setupTestFile(t, filepath.Join("original_kernel_and_initrd_are_files_skip_copying_2_initramfs"), "testinitrd"),
+					Initrd: setupTestFile(t, filepath.Join(testDir, "original_kernel_and_initrd_are_files_skip_copying_2_initramfs"), "testinitrd"),
 				},
 			},
 		},
