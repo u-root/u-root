@@ -205,18 +205,20 @@ func TestInitRAMFS(t *testing.T) {
 	Debug = t.Logf
 	cpio.Debug = t.Logf
 	for _, bz := range []string{"testdata/bzImage", "testdata/bzimage-64kurandominitramfs"} {
-		initramfsimage, err := os.ReadFile(bz)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var b BzImage
-		if err := b.UnmarshalBinary(initramfsimage); err != nil {
-			t.Fatal(err)
-		}
-		s, e, err := b.InitRAMFS()
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("Found %d byte initramfs@%d:%d", e-s, s, e)
+		t.Run(bz, func(t *testing.T) {
+			initramfsimage, err := os.ReadFile(bz)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(initramfsimage); err != nil {
+				t.Fatal(err)
+			}
+			s, e, err := b.InitRAMFS()
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("Found %d byte initramfs@%d:%d", e-s, s, e)
+		})
 	}
 }
