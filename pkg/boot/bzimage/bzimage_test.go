@@ -96,8 +96,9 @@ func TestSupportedVersions(t *testing.T) {
 			copy(newImage[0x0206:], b.Bytes())
 
 			// Try to unmarshal the image with the modified version.
-			if gotErr := ((&BzImage{}).UnmarshalBinary(newImage) != nil); gotErr != tc.wantErr {
-				t.Fatalf("got error: %v, expected error: %t", gotErr, tc.wantErr)
+			err := (&BzImage{}).UnmarshalBinary(newImage)
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("got error: %v, expected error: %t", err, tc.wantErr)
 			}
 		})
 	}
