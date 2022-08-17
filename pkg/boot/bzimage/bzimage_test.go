@@ -29,14 +29,21 @@ var testImages = []testImage{
 
 var badmagic = []byte("hi there")
 
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("error reading %q: %v", path, err)
+	}
+	return data
+}
+
 func TestUnmarshal(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			image, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			image := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
@@ -49,16 +56,13 @@ func TestMarshal(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			image, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			image := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
 			}
 			t.Logf("b header is %s", b.Header.String())
-			image, err = b.MarshalBinary()
+			image, err := b.MarshalBinary()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -127,10 +131,7 @@ func TestBadMagic(t *testing.T) {
 func TestAddInitRAMFS(t *testing.T) {
 	t.Logf("TestAddInitRAMFS")
 	Debug = t.Logf
-	initramfsimage, err := os.ReadFile("testdata/bzimage-64kurandominitramfs")
-	if err != nil {
-		t.Fatal(err)
-	}
+	initramfsimage := mustReadFile(t, "testdata/bzimage-64kurandominitramfs")
 	var b BzImage
 	if err := b.UnmarshalBinary(initramfsimage); err != nil {
 		t.Fatal(err)
@@ -176,10 +177,7 @@ func TestHeaderString(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
@@ -193,10 +191,7 @@ func TestExtract(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
@@ -219,10 +214,7 @@ func TestELF(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
@@ -242,10 +234,7 @@ func TestInitRAMFS(t *testing.T) {
 	cpio.Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
