@@ -17,11 +17,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"os"
 	"os/exec"
 	"reflect"
 	"strings"
+	"unsafe"
 
 	"github.com/u-root/u-root/pkg/cpio"
 )
@@ -112,6 +114,14 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if b.Header.Protocolversion < 0x0208 {
 		return fmt.Errorf("boot protocol version 0x%04x not supported, version 0x0208 or higher (Kernel 2.6.26) required", b.Header.Protocolversion)
 	}
+	// Before doing any processing, check the whole file checksum.
+	// The CRC-32 is calculated over the entire file using the IEEE polynomnial
+	// and then appended to the file. Therefore the checksum of the entire file
+	// will always be 0xffffffff (see https://www.syslinux.org/archives/2019-June/026456.html).
+	// The checksum can also be manually verified by executing `crc32 <filename>`
+	if checksum, expected := crc32.ChecksumIEEE(d), uint32(0xffffffff); checksum != expected {
+		return fmt.Errorf("checksum failed: got 0x%08x, expected 0x%08x", checksum, expected)
+	}
 	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
 	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
@@ -150,10 +160,28 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 		Debug("KernelCode size: %d", len(b.KernelCode))
 	}
-	b.TailCode = make([]byte, r.Len())
+
+	var crcLen = int(unsafe.Sizeof(b.CRC32)) // Length of the CRC in bytes.
+
+	b.TailCode = make([]byte, r.Len()-crcLen) // Read all remaining bytes except the CRC32.
 	if _, err := r.Read(b.TailCode); err != nil {
 		return fmt.Errorf("can't read TailCode: %v", err)
 	}
+
+	if err := binary.Read(r, binary.LittleEndian, &b.CRC32); err != nil {
+		return fmt.Errorf("error reading CRC: %v", err)
+	}
+	Debug("CRC is: 0x%08x", b.CRC32)
+
+	generatedCRC := crc32.ChecksumIEEE(d[0:len(d)-crcLen]) ^ (0xffffffff)
+	Debug("Generated CRC is: 0x%08x", generatedCRC)
+
+	// This check is a bit redundant because we've already checked the CRC32 over the entire file,
+	// however this additional check can't hurt.
+	if b.CRC32 != generatedCRC {
+		return fmt.Errorf("generated CRC (0x%08x) does not match CRC in file (0x%08x)", generatedCRC, b.CRC32)
+	}
+
 	b.KernelBase = uintptr(0x100000)
 	if b.Header.RamdiskImage == 0 {
 		return nil
@@ -215,6 +243,10 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	Debug("Wrote %d bytes of header", w.Len())
+	generatedCRC := crc32.ChecksumIEEE(w.Bytes()) ^ (0xffffffff)
+	if err := binary.Write(&w, binary.LittleEndian, generatedCRC); err != nil {
+		return nil, err
+	}
 	Debug("Finished writing, len is now %d bytes", w.Len())
 
 	return w.Bytes(), nil
@@ -456,6 +488,9 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 	}
 	if len(b.TailCode) != len(b2.TailCode) {
 		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
+	}
+	if b.CRC32 != b2.CRC32 {
+		s = s + fmt.Sprintf("b CRC32 is 0x%08x; b2 CRC32 is 0x%08x", b.CRC32, b2.CRC32)
 	}
 	if b.KernelBase != b2.KernelBase {
 		// NOTE: this is hardcoded to 0x100000

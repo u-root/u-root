@@ -5,8 +5,6 @@
 package bzimage
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"os"
 	"testing"
@@ -51,6 +49,16 @@ func TestUnmarshal(t *testing.T) {
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
 			}
+			// Corrupt a byte in the CRC32 and verify that an error is returned.
+			image[len(image)-1] ^= 0xff
+			if err := b.UnmarshalBinary(image); err == nil {
+				t.Fatalf("UnmarshalBinary did not return an error with corrupted CRC32")
+			}
+			// Restore the corrupted byte.
+			image[len(image)-1] ^= 0xff
+			if err := b.UnmarshalBinary(image); err != nil {
+				t.Fatalf("UnmarshalBinary returned an unexpected error when called repeatedly: %v", err)
+			}
 		})
 	}
 }
@@ -84,19 +92,22 @@ func TestSupportedVersions(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("0x%04x", tc.version), func(t *testing.T) {
-			// Copy the image to ensure that the test does not change the original image.
-			newImage := make([]byte, len(baseImage))
-			copy(newImage, baseImage)
-
-			// Write the desired version, Little-Endian style, into the image.
-			var b bytes.Buffer // satisfies the io.Writer interface used by binary.Write.
-			if err := binary.Write(&b, binary.LittleEndian, tc.version); err != nil {
-				t.Fatalf("failed to convert version to LittleEndian: %v", err)
+			// Unmarshal the base image.
+			var bzImage BzImage
+			if err := bzImage.UnmarshalBinary(baseImage); err != nil {
+				t.Fatalf("failed to unmarshal base image: %v", err)
 			}
-			copy(newImage[0x0206:], b.Bytes())
 
-			// Try to unmarshal the image with the modified version.
-			err := (&BzImage{}).UnmarshalBinary(newImage)
+			bzImage.Header.Protocolversion = tc.version
+
+			// Marshal the image with the test version.
+			modifiedImage, err := bzImage.MarshalBinary()
+			if err != nil {
+				t.Fatalf("failed to marshal image with the new version: %v", err)
+			}
+
+			// Try to unmarshal the image with the test version.
+			err = (&BzImage{}).UnmarshalBinary(modifiedImage)
 			if gotErr := err != nil; gotErr != tc.wantErr {
 				t.Fatalf("got error: %v, expected error: %t", err, tc.wantErr)
 			}
