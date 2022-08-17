@@ -5,6 +5,9 @@
 package bzimage
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
 	"os"
 	"testing"
 
@@ -47,6 +50,54 @@ func TestUnmarshal(t *testing.T) {
 			var b BzImage
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSupportedVersions(t *testing.T) {
+	Debug = t.Logf
+
+	tests := []struct {
+		version uint16
+		wantErr bool
+	}{
+		{
+			version: 0x0207,
+			wantErr: true,
+		},
+		{
+			version: 0x0208,
+			wantErr: false,
+		}, {
+			version: 0x0209,
+			wantErr: false,
+		},
+	}
+
+	baseImage := mustReadFile(t, "testdata/bzImage")
+
+	// Ensure that the base image unmarshals successfully.
+	if err := (&BzImage{}).UnmarshalBinary(baseImage); err != nil {
+		t.Fatalf("unable to unmarshal image: %v", err)
+	}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("0x%04x", tc.version), func(t *testing.T) {
+			// Copy the image to ensure that the test does not change the original image.
+			newImage := make([]byte, len(baseImage))
+			copy(newImage, baseImage)
+
+			// Write the desired version, Little-Endian style, into the image.
+			var b bytes.Buffer // satisfies the io.Writer interface used by binary.Write.
+			if err := binary.Write(&b, binary.LittleEndian, tc.version); err != nil {
+				t.Fatalf("failed to convert version to LittleEndian: %v", err)
+			}
+			copy(newImage[0x0206:], b.Bytes())
+
+			// Try to unmarshal the image with the modified version.
+			if gotErr := ((&BzImage{}).UnmarshalBinary(newImage) != nil); gotErr != tc.wantErr {
+				t.Fatalf("got error: %v, expected error: %t", gotErr, tc.wantErr)
 			}
 		})
 	}
