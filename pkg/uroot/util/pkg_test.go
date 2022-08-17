@@ -4,8 +4,22 @@
 
 package util
 
-import "testing"
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"testing"
+)
 
 func TestTODO(t *testing.T) {
-	// TODO: Write a unit test.
+	b := &bytes.Buffer{}
+	f := func() {
+		fmt.Fprintf(b, "hi %s", os.Args[0])
+	}
+
+	f = Usage(f, "there")
+	f()
+	if b.String() != "hi there" {
+		t.Errorf("f(): Got %q, want %q", b.String(), "hi there")
+	}
 }

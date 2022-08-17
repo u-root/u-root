@@ -25,7 +25,7 @@ var (
 )
 
 func init() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 func main() {

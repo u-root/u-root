@@ -38,7 +38,7 @@ var (
 )
 
 func init() {
-	util.Usage(cmd)
+	flag.Usage = util.Usage(flag.Usage, cmd)
 }
 
 func mkdir(args []string) error {

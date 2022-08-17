@@ -57,7 +57,7 @@ const cmdUsage = "Usage: syscallfilter [-l] [action... --] command [args]"
 
 func main() {
 	// TODO: fill this in from arguments.
-	util.Usage(cmdUsage)
+	flag.Usage = util.Usage(flag.Usage, cmdUsage)
 	flag.Parse()
 
 	// By default, there are no actions, and this becomes just "run a program"
