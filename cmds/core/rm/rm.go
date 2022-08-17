@@ -86,7 +86,7 @@ func rm(stdin io.Reader, files []string) error {
 }
 
 func main() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 	flag.Parse()
 	if err := rm(os.Stdin, flag.Args()); err != nil {
 		log.Fatal(err)

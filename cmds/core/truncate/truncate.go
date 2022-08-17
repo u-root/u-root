@@ -36,7 +36,7 @@ var (
 
 func init() {
 	flag.Var(size, "s", "Size in bytes, prefixes +/- are allowed")
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 func truncate(args ...string) error {

@@ -43,7 +43,7 @@ var (
 func init() {
 	flag.BoolVar(&fsuppress, "s", false, "suppress counts")
 	flag.StringVar(&fprompt, "p", "*", "specify a command prompt")
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 // current FileBuffer

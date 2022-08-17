@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
 const (
@@ -30,6 +32,10 @@ const (
 )
 
 var errBadUsage = errors.New(usage)
+
+func init() {
+	flag.Usage = util.Usage(flag.Usage, usage)
+}
 
 func changeMode(path string, mode os.FileMode, octval uint64, mask uint64) (fs.FileMode, error) {
 	// A special value for mask means the mode is fully described

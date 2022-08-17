@@ -194,7 +194,7 @@ func run(w io.Writer, args ...string) error {
 }
 
 func main() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 	flag.Parse()
 	if err := run(os.Stdout, flag.Args()...); err != nil {
 		log.Fatal(err)

@@ -94,7 +94,7 @@ func move(files []string) error {
 }
 
 func main() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 	flag.Parse()
 	if flag.NArg() < 2 {
 		flag.Usage()
