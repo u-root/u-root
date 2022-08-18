@@ -14,13 +14,13 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot/bzimage"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
@@ -35,7 +35,7 @@ var argcounts = map[string]int{
 	"cfg":       2,
 }
 
-const usage = `Performs various operations on kernel images. Usage:
+const usage = `bzimage:
 bzimage copy <in> <out>
 	Create a copy of <in> at <out>, parsing structures.
 bzimage diff <image> <image>
@@ -52,11 +52,11 @@ bzimage ver <image>
 bzimage cfg <image>
 	Dump embedded config.
 
-flags:`
+flags`
 
 var (
-	debug   = flag.BoolP("debug", "d", false, "enable debug printing")
-	jsonOut = flag.BoolP("json", "j", false, "json output ('ver' subcommand only)")
+	debug   = flag.Bool("d", false, "enable debug printing")
+	jsonOut = flag.Bool("j", false, "json output ('ver' subcommand only)")
 )
 
 func run(w io.Writer, args ...string) error {
@@ -194,8 +194,8 @@ func run(w io.Writer, args ...string) error {
 }
 
 func main() {
-	flag.Parse()
 	util.Usage(usage)
+	flag.Parse()
 	if err := run(os.Stdout, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}

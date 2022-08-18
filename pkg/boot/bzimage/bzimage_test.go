@@ -11,84 +11,108 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
+type testImage struct {
+	name string
+	path string
+}
+
+var testImages = []testImage{
+	{
+		name: "basic bzImage",
+		path: "testdata/bzImage",
+	},
+	{
+		name: "a little larger bzImage, 64k random generated image",
+		path: "testdata/bzimage-64kurandominitramfs",
+	},
+}
+
 var badmagic = []byte("hi there")
 
 func TestUnmarshal(t *testing.T) {
 	Debug = t.Logf
-	image, err := os.ReadFile("testdata/bzImage")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var b BzImage
-	if err := b.UnmarshalBinary(image); err != nil {
-		t.Fatal(err)
+	for _, tc := range testImages {
+		t.Run(tc.name, func(t *testing.T) {
+			image, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(image); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
 func TestMarshal(t *testing.T) {
 	Debug = t.Logf
-	image, err := os.ReadFile("testdata/bzImage")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var b BzImage
-	if err := b.UnmarshalBinary(image); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("b header is %s", b.Header.String())
-	image, err = b.MarshalBinary()
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, tc := range testImages {
+		t.Run(tc.name, func(t *testing.T) {
+			image, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(image); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("b header is %s", b.Header.String())
+			image, err = b.MarshalBinary()
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// now unmarshall back into ourselves.
-	// We can't perfectly recreate the image the kernel built,
-	// but we need to know we are stable.
-	if err := b.UnmarshalBinary(image); err != nil {
-		t.Fatal(err)
-	}
-	d, err := b.MarshalBinary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n BzImage
-	if err := n.UnmarshalBinary(d); err != nil {
-		t.Fatalf("Unmarshalling marshaled image: want nil, got  %v", err)
-	}
+			// now unmarshall back into ourselves.
+			// We can't perfectly recreate the image the kernel built,
+			// but we need to know we are stable.
+			if err := b.UnmarshalBinary(image); err != nil {
+				t.Fatal(err)
+			}
+			d, err := b.MarshalBinary()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var n BzImage
+			if err := n.UnmarshalBinary(d); err != nil {
+				t.Fatalf("Unmarshalling marshaled image: want nil, got  %v", err)
+			}
 
-	t.Logf("DIFF: %v", b.Header.Diff(&n.Header))
-	if d := b.Header.Diff(&n.Header); d != "" {
-		t.Errorf("Headers differ: %s", d)
-	}
-	if len(d) != len(image) {
-		t.Fatalf("Marshal: want %d as output len, got %d; diff is %s", len(image), len(d), b.Diff(&b))
-	}
+			t.Logf("DIFF: %v", b.Header.Diff(&n.Header))
+			if d := b.Header.Diff(&n.Header); d != "" {
+				t.Errorf("Headers differ: %s", d)
+			}
+			if len(d) != len(image) {
+				t.Fatalf("Marshal: want %d as output len, got %d; diff is %s", len(image), len(d), b.Diff(&b))
+			}
 
-	if err := Equal(image, d); err != nil {
-		t.Logf("Check if images are the same: want nil, got %v", err)
-	}
+			if err := Equal(image, d); err != nil {
+				t.Logf("Check if images are the same: want nil, got %v", err)
+			}
 
-	// Corrupt little bits of thing.
-	x := d[0x203]
-	d[0x203] = 1
-	if err := Equal(image, d); err == nil {
-		t.Fatalf("Corrupting marshaled image: got nil, want err")
-	}
-	d[0x203] = x
-	image[0x203] = 1
-	if err := Equal(image, d); err == nil {
-		t.Fatalf("Corrupting original image: got nil, want err")
-	}
-	image[0x203] = x
-	x = d[0x208]
-	d[0x208] = x + 1
-	if err := Equal(image, d); err == nil {
-		t.Fatalf("Corrupting marshaled header: got nil, want err")
-	}
-	d[0x208] = x
-	d[20000] = d[20000] + 1
-	if err := Equal(image, d); err == nil {
-		t.Fatalf("Corrupting marshaled kernel: got nil, want err")
+			// Corrupt little bits of thing.
+			x := d[0x203]
+			d[0x203] = 1
+			if err := Equal(image, d); err == nil {
+				t.Fatalf("Corrupting marshaled image: got nil, want err")
+			}
+			d[0x203] = x
+			image[0x203] = 1
+			if err := Equal(image, d); err == nil {
+				t.Fatalf("Corrupting original image: got nil, want err")
+			}
+			image[0x203] = x
+			x = d[0x208]
+			d[0x208] = x + 1
+			if err := Equal(image, d); err == nil {
+				t.Fatalf("Corrupting marshaled header: got nil, want err")
+			}
+			d[0x208] = x
+			d[20000] = d[20000] + 1
+			if err := Equal(image, d); err == nil {
+				t.Fatalf("Corrupting marshaled kernel: got nil, want err")
+			}
+		})
 	}
 }
 
@@ -150,73 +174,87 @@ func TestAddInitRAMFS(t *testing.T) {
 
 func TestHeaderString(t *testing.T) {
 	Debug = t.Logf
-	initramfsimage, err := os.ReadFile("testdata/bzImage")
-	if err != nil {
-		t.Fatal(err)
+	for _, tc := range testImages {
+		t.Run(tc.name, func(t *testing.T) {
+			initramfsimage, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(initramfsimage); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("%s", b.Header.String())
+		})
 	}
-	var b BzImage
-	if err := b.UnmarshalBinary(initramfsimage); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("%s", b.Header.String())
 }
 
 func TestExtract(t *testing.T) {
 	Debug = t.Logf
-	initramfsimage, err := os.ReadFile("testdata/bzImage")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var b BzImage
-	if err := b.UnmarshalBinary(initramfsimage); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("%s", b.Header.String())
-	// The simplest test: what is extracted should be a valid elf.
-	e, err := b.ELF()
-	if err != nil {
-		t.Fatalf("Extracted bzImage data is an elf: want nil, got %v", err)
-	}
-	t.Logf("Header: %v", e.FileHeader)
-	for i, p := range e.Progs {
-		t.Logf("%d: %v", i, *p)
+	for _, tc := range testImages {
+		t.Run(tc.name, func(t *testing.T) {
+			initramfsimage, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(initramfsimage); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("%s", b.Header.String())
+			// The simplest test: what is extracted should be a valid elf.
+			e, err := b.ELF()
+			if err != nil {
+				t.Fatalf("Extracted bzImage data is an elf: want nil, got %v", err)
+			}
+			t.Logf("Header: %v", e.FileHeader)
+			for i, p := range e.Progs {
+				t.Logf("%d: %v", i, *p)
+			}
+		})
 	}
 }
 
 func TestELF(t *testing.T) {
 	Debug = t.Logf
-	initramfsimage, err := os.ReadFile("testdata/bzImage")
-	if err != nil {
-		t.Fatal(err)
+	for _, tc := range testImages {
+		t.Run(tc.name, func(t *testing.T) {
+			initramfsimage, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(initramfsimage); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("%s", b.Header.String())
+			e, err := b.ELF()
+			if err != nil {
+				t.Fatalf("Extract: want nil, got %v", err)
+			}
+			t.Logf("%v", e.FileHeader)
+		})
 	}
-	var b BzImage
-	if err := b.UnmarshalBinary(initramfsimage); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("%s", b.Header.String())
-	e, err := b.ELF()
-	if err != nil {
-		t.Fatalf("Extract: want nil, got %v", err)
-	}
-	t.Logf("%v", e.FileHeader)
 }
 
 func TestInitRAMFS(t *testing.T) {
 	Debug = t.Logf
 	cpio.Debug = t.Logf
-	for _, bz := range []string{"testdata/bzImage", "testdata/bzimage-64kurandominitramfs"} {
-		initramfsimage, err := os.ReadFile(bz)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var b BzImage
-		if err := b.UnmarshalBinary(initramfsimage); err != nil {
-			t.Fatal(err)
-		}
-		s, e, err := b.InitRAMFS()
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("Found %d byte initramfs@%d:%d", e-s, s, e)
+	for _, tc := range testImages {
+		t.Run(tc.name, func(t *testing.T) {
+			initramfsimage, err := os.ReadFile(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b BzImage
+			if err := b.UnmarshalBinary(initramfsimage); err != nil {
+				t.Fatal(err)
+			}
+			s, e, err := b.InitRAMFS()
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("Found %d byte initramfs@%d:%d", e-s, s, e)
+		})
 	}
 }

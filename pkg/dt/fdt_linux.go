@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"unsafe"
 
@@ -83,13 +84,11 @@ type ReserveEntry struct {
 
 // LoadFDT loads a flattened device tree from current running system.
 //
-// It first tries to load it from given file path, then
-// from /sys/firmware/fdt.
-func LoadFDT(dtbPath string) (*FDT, error) {
-	fdtFile, err := os.Open(dtbPath)
-	if err == nil {
-		defer fdtFile.Close()
-		fdt, err := ReadFDT(fdtFile)
+// It first tries to load it from given io.ReaderAt, then from
+// /sys/firmware/fdt.
+func LoadFDT(dtb io.ReaderAt) (*FDT, error) {
+	if dtb != nil {
+		fdt, err := ReadFDT(io.NewSectionReader(dtb, 0, math.MaxInt64))
 		if err == nil {
 			return fdt, nil
 		}
