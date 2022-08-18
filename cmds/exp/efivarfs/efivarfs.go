@@ -40,7 +40,7 @@ func run(list bool, read, delete, write, content string) error {
 	if list {
 		l, err := efivarfs.SimpleListVariables()
 		if err != nil {
-			return fmt.Errorf("list failed: %v", err)
+			return fmt.Errorf("list failed: %w", err)
 		}
 		for _, s := range l {
 			log.Println(s)
@@ -50,18 +50,18 @@ func run(list bool, read, delete, write, content string) error {
 	if read != "" {
 		attr, data, err := efivarfs.SimpleReadVariable(read)
 		if err != nil {
-			return fmt.Errorf("read failed: %v", err)
+			return fmt.Errorf("read failed: %w", err)
 		}
 		b, err := io.ReadAll(data)
 		if err != nil {
-			return fmt.Errorf("reading buffer failed: %v", err)
+			return fmt.Errorf("reading buffer failed: %w", err)
 		}
 		log.Printf("Name: %s, Attributes: %d, Data: %s", read, attr, b)
 	}
 
 	if delete != "" {
 		if err := efivarfs.SimpleRemoveVariable(delete); err != nil {
-			return fmt.Errorf("delete failed: %v", err)
+			return fmt.Errorf("delete failed: %w", err)
 		}
 	}
 
@@ -69,22 +69,22 @@ func run(list bool, read, delete, write, content string) error {
 		if strings.ContainsAny(write, "-") {
 			v := strings.SplitN(write, "-", 2)
 			if _, err := guid.Parse(v[1]); err != nil {
-				return fmt.Errorf("var name malformed: Must be either Name-GUID or just Name")
+				return fmt.Errorf("%qmalformed: Must be either Name-GUID or just Name:%w", v[1], os.ErrInvalid)
 			}
 		}
 		path, err := filepath.Abs(content)
 		if err != nil {
-			return fmt.Errorf("could not resolve path: %v", err)
+			return fmt.Errorf("could not resolve path: %w", err)
 		}
 		b, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("failed to read file: %v", err)
+			return fmt.Errorf("failed to read file: %w", err)
 		}
 		if !strings.ContainsAny(write, "-") {
 			write = write + "-" + guid.New().String()
 		}
 		if err = efivarfs.SimpleWriteVariable(write, 7, bytes.NewBuffer(b)); err != nil {
-			return fmt.Errorf("write failed: %v", err)
+			return fmt.Errorf("write failed: %w", err)
 		}
 	}
 	return nil

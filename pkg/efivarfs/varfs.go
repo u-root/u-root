@@ -7,7 +7,6 @@ package efivarfs
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,17 +25,17 @@ var EfiVarFs = "/sys/firmware/efi/efivars/"
 
 var (
 	// ErrFsNotMounted is caused if no vailed efivarfs magic is found
-	ErrFsNotMounted = errors.New("no efivarfs magic found, is it mounted?")
+	ErrFsNotMounted = fmt.Errorf("no efivarfs magic found, is it mounted?:%w", os.ErrNotExist)
 
 	// ErrVarsUnavailable is caused by not having a valid backend
-	ErrVarsUnavailable = errors.New("no variable backend is available")
+	ErrVarsUnavailable = fmt.Errorf("no variable backend is available:%w", os.ErrNotExist)
 
 	// ErrVarNotExist is caused by accessing a non-existing variable
-	ErrVarNotExist = errors.New("variable does not exist")
+	ErrVarNotExist = fmt.Errorf("variable does not exist%w", os.ErrNotExist)
 
 	// ErrVarPermission is caused by not haven the right permissions either
 	// because of not being root or xattrs not allowing changes
-	ErrVarPermission = errors.New("permission denied")
+	ErrVarPermission = fmt.Errorf("permission denied:%w", os.ErrPermission)
 )
 
 // efivarfs represents the real efivarfs of the Linux kernel

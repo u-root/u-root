@@ -5,22 +5,23 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
 func TestRun(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		setup   func(path string, t *testing.T) string
-		list    bool
-		read    string
-		delete  string
-		write   string
-		content string
-		wantErr string
+		name     string
+		setup    func(path string, t *testing.T) string
+		list     bool
+		read     string
+		delete   string
+		write    string
+		content  string
+		wantErr  error
+		needRoot bool
 	}{
 		{
 			name: "list no efivarfs",
@@ -29,7 +30,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			list:    true,
-			wantErr: "no efivarfs",
+			wantErr: os.ErrNotExist,
 		},
 		{
 			name: "read no efivarfs",
@@ -38,7 +39,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			read:    "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			wantErr: "no efivarfs",
+			wantErr: os.ErrNotExist,
 		},
 		{
 			name: "delete no efivarfs",
@@ -47,7 +48,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			delete:  "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			wantErr: "no efivarfs",
+			wantErr: os.ErrNotExist,
 		},
 		{
 			name: "write malformed var",
@@ -56,7 +57,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			write:   "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350000",
-			wantErr: "var name malformed",
+			wantErr: os.ErrInvalid,
 		},
 		{
 			name: "write no content",
@@ -64,9 +65,10 @@ func TestRun(t *testing.T) {
 				t.Helper()
 				return ""
 			},
-			write:   "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			content: "/bogus",
-			wantErr: "failed to read file",
+			write:    "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
+			content:  "/bogus",
+			wantErr:  os.ErrNotExist,
+			needRoot: true,
 		},
 		{
 			name:  "write no guid no efivarfs",
@@ -83,14 +85,20 @@ func TestRun(t *testing.T) {
 				}
 				return s
 			},
-			wantErr: "no efivarfs",
+			wantErr:  os.ErrNotExist,
+			needRoot: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.needRoot && os.Getuid() != 0 {
+				t.Logf("Skipping since we are not root")
+				return
+			}
 			tt.content = tt.setup(t.TempDir(), t)
 			if err := run(tt.list, tt.read, tt.delete, tt.write, tt.content); err != nil {
-				if !strings.Contains(err.Error(), tt.wantErr) {
-					t.Errorf("Want: %q, Got: %v", tt.wantErr, err)
+				// Special case:
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("Got: %q, Want: %v", err, tt.wantErr)
 				}
 			}
 		})
