@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/klauspost/pgzip"
 	"github.com/ulikunitz/xz"
 	"golang.org/x/sys/unix"
@@ -44,15 +45,18 @@ func Init(image []byte, opts string) error {
 // syscall is not available and when loading compressed modules.
 func FileInit(f *os.File, opts string, flags uintptr) error {
 	var r io.Reader
-	if strings.HasSuffix(f.Name(), ".xz") {
-		var err error
+	var err error
+	switch filepath.Ext(f.Name()) {
+	case ".xz":
 		if r, err = xz.NewReader(f); err != nil {
 			return err
 		}
-
-	} else if strings.HasSuffix(f.Name(), ".gz") {
-		var err error
+	case ".gz":
 		if r, err = pgzip.NewReader(f); err != nil {
+			return err
+		}
+	case ".zst":
+		if r, err = zstd.NewReader(f); err != nil {
 			return err
 		}
 	}
@@ -234,9 +238,9 @@ func findModPath(name string, m depMap) (string, error) {
 
 	for mp := range m {
 		switch path.Base(mp) {
-		case nameH + ".ko", nameH + ".ko.gz", nameH + ".ko.xz":
+		case nameH + ".ko", nameH + ".ko.gz", nameH + ".ko.xz", nameH + ".ko.zst":
 			return mp, nil
-		case nameU + ".ko", nameU + ".ko.gz", nameU + ".ko.xz":
+		case nameU + ".ko", nameU + ".ko.gz", nameU + ".ko.xz", nameU + ".ko.zst":
 			return mp, nil
 		}
 	}
