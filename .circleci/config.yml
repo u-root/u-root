@@ -19,7 +19,7 @@ templates:
       - UROOT_SOURCE: /go/src/github.com/u-root/u-root
       - CGO_ENABLED: 0
       # x7 all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 7
+      - UROOT_QEMU_TIMEOUT_X: 10
     steps:
       - checkout
       - run:
