@@ -25,7 +25,6 @@ package ldd
 import (
 	"debug/elf"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,11 +79,14 @@ func runinterp(interp, file string) ([]string, error) {
 		return nil, err
 	}
 	for _, p := range strings.Split(string(o), "\n") {
-		f := strings.Split(p, " ")
+		f := strings.Split(strings.TrimSpace(p), " ")
 		if len(f) < 3 {
 			continue
 		}
 		if f[1] != "=>" || len(f[2]) == 0 {
+			continue
+		}
+		if f[0] == f[2] {
 			continue
 		}
 		names = append(names, f[2])
@@ -186,9 +188,9 @@ func Ldd(names []string) ([]*FileInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		for i := range n {
-			if err := follow(n[i], list); err != nil {
-				log.Fatalf("ldd: %v", err)
+		for _, soname := range n {
+			if err := follow(soname, list); err != nil {
+				return nil, err
 			}
 		}
 	}
