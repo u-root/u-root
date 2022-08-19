@@ -206,6 +206,11 @@ func TestAddInitRAMFS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Ensure that we can still unmarshal the image.
+	if err := (&BzImage{}).UnmarshalBinary(d); err != nil {
+		t.Fatalf("unable to unmarshal the marshal'd image: %v", err)
+	}
+
 	// For testing, you can enable this write, and then:
 	// qemu-system-x86_64 -serial stdio -kernel /tmp/x
 	// I mainly left this here as a memo.
@@ -221,19 +226,22 @@ func TestAddInitRAMFS(t *testing.T) {
 	b.KernelCode = append(b.KernelCode, k...)
 	b.KernelCode = append(b.KernelCode, k...)
 
-	_, err = b.MarshalBinary()
-	if err == nil {
+	if _, err = b.MarshalBinary(); err == nil {
 		t.Logf("Overflow test, want %v, got nil", "Marshal: compressed KernelCode too big: was 986532, now 1422388")
 		t.Fatal(err)
 	}
 
 	b.KernelCode = k[:len(k)-len(k)/2]
 
-	_, err = b.MarshalBinary()
-	if err != nil {
+	if _, err = b.MarshalBinary(); err != nil {
 		t.Logf("shrink test, want nil, got %v", err)
 		t.Fatal(err)
 	}
+	// Ensure that we can still unmarshal the image.
+	if err := (&BzImage{}).UnmarshalBinary(d); err != nil {
+		t.Fatalf("unable to unmarshal the marshal'd image: %v", err)
+	}
+
 }
 
 func TestHeaderString(t *testing.T) {
