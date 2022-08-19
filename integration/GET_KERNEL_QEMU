@@ -42,6 +42,15 @@ case $UROOT_TESTARCH in
     export UROOT_QEMU_OPTS=""
     ;;
 
+  "arm")
+    export UROOT_QEMU=qemu-system-arm
+    export UROOT_KERNEL=zImage
+    export UROOT_BIOS=""
+    export UROOT_QEMU_OPTS='-M virt -nographic'
+    export UROOT_QEMU_TIMEOUT_X=10
+
+    ;;
+
   *)
     echo "$UROOT_TESTARCH is not a supported architecture"
     exit 1
