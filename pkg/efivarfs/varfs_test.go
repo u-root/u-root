@@ -530,3 +530,10 @@ func createTestVar(path, varFullName string, t *testing.T) *os.File {
 	}
 	return f
 }
+
+func TestNew(t *testing.T) {
+	// the EFI file system may not be available, but we call New
+	// anyway to at least get some coverage.
+	e, err := New()
+	t.Logf("New(): %v, %v", e, err)
+}

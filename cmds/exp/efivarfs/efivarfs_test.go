@@ -86,7 +86,7 @@ func TestRun(t *testing.T) {
 				return ""
 			},
 			read:    "TestVar",
-			wantErr: os.ErrInvalid,
+			wantErr: efivarfs.ErrBadGUID,
 		},
 		{
 			name: "read good variable",
