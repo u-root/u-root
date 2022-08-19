@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,7 +41,7 @@ func TestPCIExecution(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			*hexdump = tt.hexdump
-			pciExecution(os.Stdout, []string{}...)
+			pciExecution(io.Discard, []string{}...)
 		})
 	}
 	// Cover the rest
@@ -84,7 +85,7 @@ func TestPCIExecution(t *testing.T) {
 			*dumpJSON = tt.dumpJSON
 			*verbosity = tt.verbosity
 			*readJSON = tt.readJSON
-			if got := pciExecution(os.Stdout, tt.args...); got != nil {
+			if got := pciExecution(io.Discard, tt.args...); got != nil {
 				if !strings.Contains(got.Error(), tt.wantErr) {
 					t.Errorf("pciExecution() = %q, should contain: %q", got, tt.wantErr)
 				}
