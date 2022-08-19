@@ -258,11 +258,14 @@ var (
 
 // BzImage represents sections extracted from a kernel.
 type BzImage struct {
-	Header       LinuxHeader
-	BootCode     []byte
-	HeadCode     []byte
-	KernelCode   []byte
-	TailCode     []byte
+	Header     LinuxHeader
+	BootCode   []byte
+	HeadCode   []byte
+	KernelCode []byte
+	TailCode   []byte
+	// This field contains the CRC read from the image while unmarshaling.
+	// This value is *not* used while marshaling the data to binary; a new CRC32 is calculated.
+	CRC32        uint32
 	KernelBase   uintptr
 	KernelOffset uintptr
 	compressed   []byte

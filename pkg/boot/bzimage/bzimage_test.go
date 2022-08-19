@@ -5,6 +5,7 @@
 package bzimage
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -29,17 +30,86 @@ var testImages = []testImage{
 
 var badmagic = []byte("hi there")
 
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("error reading %q: %v", path, err)
+	}
+	return data
+}
+
 func TestUnmarshal(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			image, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			image := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
+			}
+			// Corrupt a byte in the CRC32 and verify that an error is returned.
+			image[len(image)-1] ^= 0xff
+			if err := b.UnmarshalBinary(image); err == nil {
+				t.Fatalf("UnmarshalBinary did not return an error with corrupted CRC32")
+			}
+			// Restore the corrupted byte.
+			image[len(image)-1] ^= 0xff
+			if err := b.UnmarshalBinary(image); err != nil {
+				t.Fatalf("UnmarshalBinary returned an unexpected error when called repeatedly: %v", err)
+			}
+		})
+	}
+}
+
+func TestSupportedVersions(t *testing.T) {
+	Debug = t.Logf
+
+	tests := []struct {
+		version uint16
+		wantErr bool
+	}{
+		{
+			version: 0x0207,
+			wantErr: true,
+		},
+		{
+			version: 0x0208,
+			wantErr: false,
+		}, {
+			version: 0x0209,
+			wantErr: false,
+		},
+	}
+
+	baseImage := mustReadFile(t, "testdata/bzImage")
+
+	// Ensure that the base image unmarshals successfully.
+	if err := (&BzImage{}).UnmarshalBinary(baseImage); err != nil {
+		t.Fatalf("unable to unmarshal image: %v", err)
+	}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("0x%04x", tc.version), func(t *testing.T) {
+			// Unmarshal the base image.
+			var bzImage BzImage
+			if err := bzImage.UnmarshalBinary(baseImage); err != nil {
+				t.Fatalf("failed to unmarshal base image: %v", err)
+			}
+
+			bzImage.Header.Protocolversion = tc.version
+
+			// Marshal the image with the test version.
+			modifiedImage, err := bzImage.MarshalBinary()
+			if err != nil {
+				t.Fatalf("failed to marshal image with the new version: %v", err)
+			}
+
+			// Try to unmarshal the image with the test version.
+			err = (&BzImage{}).UnmarshalBinary(modifiedImage)
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Fatalf("got error: %v, expected error: %t", err, tc.wantErr)
 			}
 		})
 	}
@@ -49,16 +119,13 @@ func TestMarshal(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			image, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			image := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
 			}
 			t.Logf("b header is %s", b.Header.String())
-			image, err = b.MarshalBinary()
+			image, err := b.MarshalBinary()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -127,10 +194,7 @@ func TestBadMagic(t *testing.T) {
 func TestAddInitRAMFS(t *testing.T) {
 	t.Logf("TestAddInitRAMFS")
 	Debug = t.Logf
-	initramfsimage, err := os.ReadFile("testdata/bzimage-64kurandominitramfs")
-	if err != nil {
-		t.Fatal(err)
-	}
+	initramfsimage := mustReadFile(t, "testdata/bzimage-64kurandominitramfs")
 	var b BzImage
 	if err := b.UnmarshalBinary(initramfsimage); err != nil {
 		t.Fatal(err)
@@ -176,10 +240,7 @@ func TestHeaderString(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
@@ -193,10 +254,7 @@ func TestExtract(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
@@ -219,10 +277,7 @@ func TestELF(t *testing.T) {
 	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
@@ -242,10 +297,7 @@ func TestInitRAMFS(t *testing.T) {
 	cpio.Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
-			initramfsimage, err := os.ReadFile(tc.path)
-			if err != nil {
-				t.Fatal(err)
-			}
+			initramfsimage := mustReadFile(t, tc.path)
 			var b BzImage
 			if err := b.UnmarshalBinary(initramfsimage); err != nil {
 				t.Fatal(err)
