@@ -6,6 +6,7 @@
 package libinit
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -233,25 +234,81 @@ func CreateRootfs() {
 	}
 }
 
-var excludedMods = map[string]bool{
-	"idpf":     true,
-	"idpf_imc": true,
+// InitModuleLoader wraps the resources we need for early module loading
+type InitModuleLoader struct {
+	Cmdline      *cmdline.CmdLine
+	Prober       func(name string, modParameters string) error
+	ExcludedMods map[string]bool
 }
 
-// InstallAllModules installs kernel modules (.ko files) from /lib/modules.
-// Useful for modules that need to be loaded for boot (ie a network
-// driver needed for netboot). It skips over blacklisted modules in
-// excludedMods.
-func InstallAllModules() {
-	modulePattern := "/lib/modules/*.ko"
-	if err := InstallModules(modulePattern, excludedMods); err != nil {
-		log.Print(err)
+func (i *InitModuleLoader) IsExcluded(mod string) bool {
+	return i.ExcludedMods[mod]
+}
+
+func (i *InitModuleLoader) LoadModule(mod string) error {
+	flags := i.Cmdline.FlagsForModule(mod)
+	if err := i.Prober(mod, flags); err != nil {
+		return fmt.Errorf("failed to load module: %s", err)
+	}
+	return nil
+}
+
+func NewInitModuleLoader() *InitModuleLoader {
+	return &InitModuleLoader{
+		Cmdline: cmdline.NewCmdLine(),
+		Prober:  kmodule.Probe,
+		ExcludedMods: map[string]bool{
+			"idpf":     true,
+			"idpf_imc": true,
+		},
 	}
 }
 
-// InstallModules installs kernel modules (.ko files) from /lib/modules that
+// InstallAllModules installs kernel modules form the following locations in order:
+// - .ko files from /lib/modules
+// - modules found in .conf files from /lib/modules-load.d/
+// - modules found in the cmdline argument modules_load= separated by ,
+// Useful for modules that need to be loaded for boot (ie a network
+// driver needed for netboot). It skips over blacklisted modules in
+// excludedMods.
+func InstallAllModules() error {
+	loader := NewInitModuleLoader()
+	modulePattern := "/lib/modules/*.ko"
+	if err := InstallModulesFromDir(modulePattern, loader); err != nil {
+		return err
+	}
+	var allModules []string
+	moduleConfPattern := "/lib/modules-load.d/*.conf"
+	modules, err := GetModulesFromConf(moduleConfPattern)
+	if err != nil {
+		return err
+	}
+	allModules = append(allModules, modules...)
+	modules, err = GetModulesFromCmdline(loader)
+	if err != nil {
+		return err
+	}
+	allModules = append(allModules, modules...)
+	InstallModules(loader, allModules)
+	return nil
+}
+
+// InstallModules installs the passed modules using the InitModuleLoader
+func InstallModules(m *InitModuleLoader, modules []string) {
+	for _, moduleName := range modules {
+		if m.IsExcluded(moduleName) {
+			log.Printf("Skipping module %q", moduleName)
+			continue
+		}
+		if err := m.LoadModule(moduleName); err != nil {
+			log.Printf("InstallModulesFromModulesLoad: can't install %q: %v", moduleName, err)
+		}
+	}
+}
+
+// InstallModulesFromDir installs kernel modules (.ko files) from /lib/modules that
 // match the given pattern, skipping those in the exclude list.
-func InstallModules(pattern string, exclude map[string]bool) error {
+func InstallModulesFromDir(pattern string, loader *InitModuleLoader) error {
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return err
@@ -263,24 +320,75 @@ func InstallModules(pattern string, exclude map[string]bool) error {
 	for _, filename := range files {
 		f, err := os.Open(filename)
 		if err != nil {
-			log.Printf("installModules: can't open %q: %v", filename, err)
+			log.Printf("InstallModules: can't open %q: %v", filename, err)
 			continue
 		}
-		// Module flags are passed to the command line in the form modulename.flag=val
+		defer f.Close()
+		// Module flags are passed to the command line in the from modulename.flag=val
 		// And must be passed to FileInit as flag=val to be installed properly
 		moduleName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
-		if _, ok := exclude[moduleName]; ok {
-			log.Printf("Skipping module %s", moduleName)
+		if loader.IsExcluded(moduleName) {
+			log.Printf("Skipping module %q", moduleName)
 			continue
 		}
 
 		flags := cmdline.FlagsForModule(moduleName)
-		err = kmodule.FileInit(f, flags, 0)
-		f.Close()
-		if err != nil {
-			log.Printf("installModules: can't install %q: %v", filename, err)
+		if err = kmodule.FileInit(f, flags, 0); err != nil {
+			log.Printf("InstallModules: can't install %q: %v", filename, err)
 		}
 	}
 
 	return nil
+}
+
+func readModules(f *os.File) []string {
+	scanner := bufio.NewScanner(f)
+	modules := []string{}
+	for scanner.Scan() {
+		i := scanner.Text()
+		i = strings.TrimSpace(i)
+		if i == "" || strings.HasPrefix(i, "#") {
+			continue
+		}
+		modules = append(modules, i)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Println("error on reading:", err)
+	}
+	return modules
+}
+
+// GetModulesFromConf finds kernel modules from .conf files in /lib/modules-load.d/
+func GetModulesFromConf(pattern string) ([]string, error) {
+	var ret []string
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+	for _, filename := range files {
+		f, err := os.Open(filename)
+		if err != nil {
+			log.Printf("InstallModulesFromModulesLoad: can't open %q: %v", filename, err)
+			continue
+		}
+		defer f.Close()
+		modules := readModules(f)
+		ret = append(ret, modules...)
+	}
+	return ret, nil
+}
+
+// GetModulesFromCmdline finds kernel modules from the modules_load kernel parameter
+func GetModulesFromCmdline(m *InitModuleLoader) ([]string, error) {
+	var ret []string
+	modules, present := m.Cmdline.Flag("modules_load")
+	if !present {
+		return nil, nil
+	}
+
+	for _, moduleName := range strings.Split(modules, ",") {
+		moduleName = strings.TrimSpace(moduleName)
+		ret = append(ret, moduleName)
+	}
+	return ret, nil
 }
