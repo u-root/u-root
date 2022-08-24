@@ -42,7 +42,22 @@ func mustReadFile(t *testing.T, path string) []byte {
 
 func TestUnmarshal(t *testing.T) {
 	Debug = t.Logf
-	for _, tc := range testImages {
+
+	compressedTests := []testImage{
+		// These test files have been created using .circleci/images/test-image-amd6/config_linux5.10_x86_64.txt
+		{name: "bzip2", path: "testdata/bzImage-linux5.10-x86_64-bzip2"},
+		{name: "gzip", path: "testdata/bzImage-linux5.10-x86_64-gzip"},
+		{name: "xz", path: "testdata/bzImage-linux5.10-x86_64-xz"},
+		{name: "lz4", path: "testdata/bzImage-linux5.10-x86_64-lz4"},
+		{name: "lzma", path: "testdata/bzImage-linux5.10-x86_64-lzma"},
+		// These tests do not pass because the CirclCI environment does not include the `lzop` and `unzstd` commands.
+		// TODO: Fix the CircleCI environment or (preferably) change these decompressors to use Go packages instead
+		//       of forking and executing a command.
+		//		{name: "lzo", path: "testdata/bzImage-linux5.10-x86_64-lzo"},
+		//		{name: "zstd", path: "testdata/bzImage-linux5.10-x86_64-zstd"},
+	}
+
+	for _, tc := range append(testImages, compressedTests...) {
 		t.Run(tc.name, func(t *testing.T) {
 			image := mustReadFile(t, tc.path)
 			var b BzImage
