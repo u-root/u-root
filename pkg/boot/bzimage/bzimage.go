@@ -30,9 +30,13 @@ import (
 
 const minBootParamLen = 616
 
+// A decompressor is a function which reads compressed bytes via the io.Reader and
+// writes the uncompressed bytes to the io.Writer.
+type decompressor func(w io.Writer, r io.Reader) error
+
 type magic struct {
-	signature []byte
-	c         *exec.Cmd
+	signature    []byte
+	decompressor decompressor
 }
 
 // MSDOS tag used in .efi binaries.
@@ -46,14 +50,24 @@ var (
 	// it as a pipe. They need be the actual command than a
 	// shell script, which won't work in u-root.
 	magics = []*magic{
-		{[]byte("\037\213\010"), exec.Command("gzip", "-cd")},
-		{[]byte("\3757zXZ\000"), exec.Command("xzcat")},
-		{[]byte("BZh"), exec.Command("bzcat")},
-		{[]byte("\135\000\000\000"), exec.Command("gzip", "-cd")},
-		{[]byte("\211\114\132"), exec.Command("lzop", "-c", "-d")},
-		// Is this just lz? Assume so.
-		{[]byte("\002!L\030"), exec.Command("lzcat")},
-		{[]byte("(\265/\375"), exec.Command("unzip", "-c")},
+		// GZIP
+		{[]byte{0x1F, 0x8B}, gunzip},
+		// XZ
+		// It would be nice to use a Go package instead of shelling out to 'unxz'.
+		// https://github.com/ulikunitz/xz fails to decompress the payloads and returns an error: "unsupported filter count"
+		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, stripSize(execer("unxz"))},
+		// LZMA
+		{[]byte{0x5D, 0x00, 0x00}, stripSize(unlzma)},
+		// LZO
+		{[]byte{0x89, 0x4C, 0x5A, 0x4F, 0x00, 0x0D, 0x0A, 0x1A, 0x0A}, stripSize(execer("lzop", "-c", "-d"))},
+		// ZSTD
+		{[]byte{0x28, 0xB5, 0x2F, 0xFD}, stripSize(execer("unzstd"))},
+		// BZIP2
+		{[]byte{0x42, 0x5A, 0x68}, stripSize(unbzip2)},
+		// LZ4 - Note that there are *two* file formats for LZ4 (http://fileformats.archiveteam.org/wiki/LZ4).
+		// The Linux boot process uses the legacy 02 21 4C 18 magic bytes, while newer systems
+		// use 04 22 4D 18
+		{[]byte{0x02, 0x21, 0x4C, 0x18}, stripSize(unlz4)},
 	}
 
 	// Debug is a function used to log debug information. It
@@ -65,14 +79,13 @@ var (
 // unpacking bzimage is a mess, so for now, this is a mess.
 
 // decompressor finds a decompressor by scanning a []byte for a tag.
-func findDecompressor(b []byte) (*exec.Cmd, error) {
+func findDecompressor(b []byte) (decompressor, error) {
 	for _, m := range magics {
 		if bytes.Index(b, m.signature) == 0 {
-			Debug("decompressor: %s %v", m.c.Path, m.c.Args)
-			return m.c, nil
+			return m.decompressor, nil
 		}
 	}
-	return nil, fmt.Errorf("can't find any known magic string in compressed bytes")
+	return nil, fmt.Errorf("can't find any known magic string in compressed bytes (0x%016x)", b[0:16])
 }
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -82,7 +95,7 @@ func findDecompressor(b []byte) (*exec.Cmd, error) {
 // bzImages are almost impossible to modify. They form a sandwich with
 // the compressed kernel code in the middle. It's actually a BLT:
 // MBR and bootparams first 512 bytes
-//    the MBR includes 0xc0 bytes of boot code which is vestigial.
+// the MBR includes 0xc0 bytes of boot code which is vestigial.
 // Then there is "preamble" code which is the kernel decompressor; then the
 // xz compressed kernel; then a library of sorts after the kernel which is called
 // by the early uncompressed kernel code. This is all linked together and forms
@@ -137,32 +150,55 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.HeadCode); err != nil {
 		return fmt.Errorf("can't read HeadCode: %v", err)
 	}
-	// Retrieve the compressed payload. The compressed payload is actually
-	// (compressed bytes) + (4-byte original length). We must strip off the trailing 4 bytes
-	// and use it to verify that the size of the uncompressed bytes is correct.
-	compressedPayloadLen := int(b.Header.PayloadSize) - int(unsafe.Sizeof(b.compressed.uncompressedLength))
-	b.compressed = compressedPayload{
-		payload: make([]byte, compressedPayloadLen),
-	}
-	if _, err := r.Read(b.compressed.payload); err != nil {
+	b.compressed = make([]byte, b.Header.PayloadSize)
+	if _, err := r.Read(b.compressed); err != nil {
 		return fmt.Errorf("can't read KernelCode: %v", err)
 	}
-	if err := binary.Read(r, binary.LittleEndian, &b.compressed.uncompressedLength); err != nil {
-		return fmt.Errorf("can't read the uncompressed length: %v", err)
-	}
-	Debug("Original length of uncompressed kernel is: 0x%08x", b.compressed.uncompressedLength)
-	decompressor, err := findDecompressor(b.compressed.payload)
+	decompressor, err := findDecompressor(b.compressed)
 	if err != nil {
 		return err
 	}
 	if b.NoDecompress {
 		Debug("skipping code decompress")
 	} else {
-		var err error
-		Debug("Uncompress %d bytes", len(b.compressed.payload))
-		if b.KernelCode, err = unpack(b.compressed, *decompressor); err != nil {
-			return err
+		Debug("Uncompress %d bytes", len(b.compressed))
+
+		// The Linux boot process expects that the last 4 bytes of the compressed payload will
+		// contain the size of the uncompressed payload. This works well for gzip, where the
+		// last 4 bytes of the compressed payload contain the uncompressed size. However other
+		// compression formats (bzip2, lzma, xz, lzo, lz4, zstd, etc) do not satisfy this
+		// requirement, so the Makefile tacks on an extra 4 bytes for these compression formats
+		// and expects that the decompression code will ignore them.
+		// The authoritative list of compression formats that have the 4 byte size appended
+		// can be found here: https://github.com/torvalds/linux/blob/master/arch/x86/boot/compressed/Makefile#L132-L145
+		// (look for the entries ending in "_with_size", examples: bzip2_with_size, lzma_with_size.
+
+		// Read the uncompressed length of the payload from the last 4 bytes of the payload.
+		var uncompressedLength uint32
+		last4Bytes := b.compressed[(len(b.compressed) - 4):]
+		if err := binary.Read(bytes.NewBuffer(last4Bytes), binary.LittleEndian, &uncompressedLength); err != nil {
+			return fmt.Errorf("error reading uncompressed kernel size: %v", err)
 		}
+		Debug("Original length of uncompressed kernel is: %d", uncompressedLength)
+
+		// Use the decompressor and write the decompressed payload into b.KernelCode.
+		var buf bytes.Buffer
+		if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err != nil {
+			return fmt.Errorf("error decompressing payload: %v", err)
+		}
+		b.KernelCode = buf.Bytes()
+
+		// Verify that the length of the uncompressed payload matches the size read from the last 4 bytes of the compressed payload.
+		if uint32(len(b.KernelCode)) != uncompressedLength {
+			return fmt.Errorf("decompression failed, got size=%d bytes, expected size=%d bytes", len(b.KernelCode), uncompressedLength)
+		}
+
+		// Verify that the uncompressed payload is an ELF.
+		elfMagic := []byte{0x7F, 0x45, 0x4C, 0x46}
+		if bytes.Index(b.KernelCode, elfMagic) != 0 {
+			return fmt.Errorf("decompressed payload must be an ELF with magic 0x%08x, found 0x%08x", elfMagic, b.KernelCode[0:4])
+		}
+
 		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
 		Debug("KernelCode size: %d", len(b.KernelCode))
 	}
@@ -211,23 +247,23 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(dat) > len(b.compressed.payload) {
-		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d", len(b.compressed.payload), len(dat))
+	if len(dat) > len(b.compressed) {
+		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d", len(b.compressed), len(dat))
 	}
-	Debug("b.compressed len %#x dat len %#x pad it out", len(b.compressed.payload), len(dat))
+	Debug("b.compressed len %#x dat len %#x pad it out", len(b.compressed), len(dat))
 
-	if len(dat) < len(b.compressed.payload) {
+	if len(dat) < len(b.compressed) {
 		// If the new compressed payload fits in the existing compressed payload space then we
 		// can fit the new payload in by putting it at the *end* of the original payload space
 		// and updating `PayloadOffset` and `PayloadSize`. This is safer than placing the new
 		// image at the start and padding with tailing NULLs because there's no guarantee about
 		// how different decompressors will handle the trailing NULLs.
 
-		diff := len(b.compressed.payload) - len(dat)
+		diff := len(b.compressed) - len(dat)
 
 		// Create the new payload with the length of the original payload and copy the new
 		// payload to the end.
-		newPayload := make([]byte, len(b.compressed.payload))
+		newPayload := make([]byte, len(b.compressed))
 		copy(newPayload[diff:], dat)
 
 		// Update the headers with the new payload offset and size.
@@ -238,8 +274,7 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		dat = newPayload
 	}
 
-	b.compressed.uncompressedLength = uint32(len(b.KernelCode))
-	b.compressed.payload = dat
+	b.compressed = dat
 
 	var w bytes.Buffer
 	if err := binary.Write(&w, binary.LittleEndian, &b.Header); err != nil {
@@ -254,12 +289,8 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	Debug("Wrote %d bytes of HeadCode", w.Len())
-	if _, err := w.Write(b.compressed.payload); err != nil {
+	if _, err := w.Write(b.compressed); err != nil {
 		return nil, err
-	}
-	Debug("Wrote %d bytes of Compressed kernel", w.Len())
-	if err := binary.Write(&w, binary.LittleEndian, b.compressed.uncompressedLength); err != nil {
-		return nil, fmt.Errorf("failed to write compressed kernel length: %v", err)
 	}
 	if _, err := w.Write(b.TailCode); err != nil {
 		return nil, err
@@ -274,46 +305,10 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 	return w.Bytes(), nil
 }
 
-// unpack extracts the header code and data from the kernel part
-// of the bzImage. It also uncompresses the kernel.
-// It searches the Kernel []byte for an xz header. Where it begins
-// is never certain. We only do relatively newer images, i.e. we only
-// look for the xz magic.
-func unpack(payload compressedPayload, c exec.Cmd) ([]byte, error) {
-	d := payload.payload
-	Debug("Kernel is %d bytes", len(d))
-	Debug("Some kernel data: %#02x %#02x", d[:32], d[len(d)-8:])
-
-	stdout, err := c.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, err := c.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-	c.Stdin = bytes.NewBuffer(d)
-	if err := c.Start(); err != nil {
-		return nil, err
-	}
-
-	dat, err := io.ReadAll(stdout)
-	if err != nil {
-		return nil, err
-	}
-	if e, err := io.ReadAll(stderr); err != nil || len(e) > 0 {
-		return nil, fmt.Errorf("xz stderr: '%s', %v", string(e), err)
-	}
-	Debug("Uncompressed kernel is %d bytes", len(dat))
-	if len(dat) != int(payload.uncompressedLength) {
-		return nil, fmt.Errorf("uncompressed kernel length is %d bytes, expected %d bytes", len(dat), payload.uncompressedLength)
-	}
-	return dat, nil
-}
-
 // compress compresses a []byte via xz using the dictOps, collecting it from stdout
 func compress(b []byte, dictOps string) ([]byte, error) {
 	Debug("b is %d bytes", len(b))
+	// TODO: Replace this use of `exec` with a proper Go package.
 	c := exec.Command("xz", "--check=crc32", "--x86", dictOps, "--stdout")
 	stdout, err := c.StdoutPipe()
 	if err != nil {
@@ -333,7 +328,21 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 	}
 	Debug("Compressed data is %d bytes, starts with %#02x", len(dat), dat[:32])
 	Debug("Last 16 bytes: %#02x", dat[len(dat)-16:])
-	return dat, nil
+
+	// Append the original, uncompressed size of the payload.
+	// HEAR YE, HEAR YE: The uncompressed size of the payload is appended to the payload because
+	// the Linux boot process expects that the last 4 bytes of teh payload will contain the
+	// uncompressed size. This appending is only required if the compression format does not
+	// already satisfy this requirement. If this function is changed to use GZIP compression in
+	// the future then this code is not required. This code is required for compression formats
+	// such as bzip lzma xz lzo lz4 and zstd. See https://github.com/torvalds/linux/blob/master/arch/x86/boot/compressed/Makefile#L132-L145
+	// for an authoritative list of which file formats require the extra 4 bytes appended (look for
+	// "_with_size").
+	buf := bytes.NewBuffer(dat)
+	if binary.Write(buf, binary.LittleEndian, uint32(len(b))); err != nil {
+		return nil, fmt.Errorf("failed to append the uncompressed size: %v", err)
+	}
+	return buf.Bytes(), nil
 }
 
 // ELF extracts the KernelCode.

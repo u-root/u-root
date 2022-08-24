@@ -256,13 +256,6 @@ var (
 	HeaderMagic = [4]uint8{'H', 'd', 'r', 'S'}
 )
 
-type compressedPayload struct {
-	payload []byte
-	// This field is populated when the bzImage file is unmarshal'd.
-	// This field is automatically generated and populated when marshaling the bzImage to binary.
-	uncompressedLength uint32 // Length of uncompressed payload, in bytes.
-}
-
 // BzImage represents sections extracted from a kernel.
 type BzImage struct {
 	Header     LinuxHeader
@@ -276,7 +269,7 @@ type BzImage struct {
 	KernelBase   uintptr
 	KernelOffset uintptr
 	// This field is not exported to ensure that users of this package only read/modify KernelCode.
-	compressed compressedPayload
+	compressed []byte
 	// Some operations don't need the decompressed code; this speeds them up significantly.
 	NoDecompress bool
 }
