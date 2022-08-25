@@ -313,6 +313,7 @@ const (
 	MemoryDeviceTypeLPDDR3                   MemoryDeviceType = 0x1d // LPDDR3
 	MemoryDeviceTypeLPDDR4                   MemoryDeviceType = 0x1e // LPDDR4
 	MemoryDeviceTypeLogicalNonvolatileDevice MemoryDeviceType = 0x1f // Logical non-volatile device
+	MemoryDeviceTypeDDR5                     MemoryDeviceType = 0x22 // DDR5
 )
 
 func (v MemoryDeviceType) String() string {
@@ -345,6 +346,7 @@ func (v MemoryDeviceType) String() string {
 		MemoryDeviceTypeLPDDR3:                   "LPDDR3",
 		MemoryDeviceTypeLPDDR4:                   "LPDDR4",
 		MemoryDeviceTypeLogicalNonvolatileDevice: "Logical non-volatile device",
+		MemoryDeviceTypeDDR5:                     "DDR5",
 	}
 	if name, ok := names[v]; ok {
 		return name
