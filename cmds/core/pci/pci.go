@@ -160,7 +160,7 @@ func pciExecution(w io.Writer, args ...string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s", string(o))
+		fmt.Fprintf(w, "%s", string(o))
 		return nil
 	}
 	if err := d.Print(w, *verbosity, dumpSize); err != nil {

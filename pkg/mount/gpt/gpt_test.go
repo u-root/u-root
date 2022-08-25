@@ -48,6 +48,8 @@ func InstallGPT() {
 	}
 }
 
+// GPT is GUID Partition Table, so technically, this test name is
+// Test Guid Partition Table Table. :-)
 func TestGPTTable(t *testing.T) {
 	tests := []struct {
 		mangle int
@@ -83,7 +85,6 @@ func TestGPTTable(t *testing.T) {
 			continue
 		}
 
-		t.Logf("New GPT: %s", g)
 		if !reflect.DeepEqual(header, g.Header) {
 			t.Errorf("Check GUID equality from\n%v to\n%v: got false, want true", header, g.Header)
 			continue
