@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script is intended to run, locally, the tests we run at circleci,
+# This script is intended to run the tests we run at circleci,
 # precisely as they are run there.
 #
 # to do so, it:

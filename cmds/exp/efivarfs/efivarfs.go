@@ -78,7 +78,7 @@ func run(out io.Writer, e efivarfs.EFIVar, list bool, read, delete, write, conte
 		if strings.ContainsAny(write, "-") {
 			v := strings.SplitN(write, "-", 2)
 			if _, err := guid.Parse(v[1]); err != nil {
-				return fmt.Errorf("%q malformed: Must be either Name-GUID or just Name:%w", v[1], os.ErrInvalid)
+				return fmt.Errorf("%q malformed: Must be either Name-GUID or just Name: %w", v[1], os.ErrInvalid)
 			}
 		}
 		path, err := filepath.Abs(content)

@@ -15,33 +15,33 @@ import (
 	"github.com/u-root/u-root/pkg/efivarfs"
 )
 
-type failingos struct {
+type failingOS struct {
 	err error
 }
 
-func (f *failingos) Get(desc efivarfs.VariableDescriptor) (efivarfs.VariableAttributes, []byte, error) {
+func (f *failingOS) Get(desc efivarfs.VariableDescriptor) (efivarfs.VariableAttributes, []byte, error) {
 	return efivarfs.VariableAttributes(0), make([]byte, 32), f.err
 }
 
-func (f *failingos) Set(desc efivarfs.VariableDescriptor, attrs efivarfs.VariableAttributes, data []byte) error {
+func (f *failingOS) Set(desc efivarfs.VariableDescriptor, attrs efivarfs.VariableAttributes, data []byte) error {
 	return f.err
 }
 
-func (f *failingos) Remove(desc efivarfs.VariableDescriptor) error {
+func (f *failingOS) Remove(desc efivarfs.VariableDescriptor) error {
 	return f.err
 }
 
-func (f *failingos) List() ([]efivarfs.VariableDescriptor, error) {
+func (f *failingOS) List() ([]efivarfs.VariableDescriptor, error) {
 	return make([]efivarfs.VariableDescriptor, 3), f.err
 }
 
-var _ efivarfs.EFIVar = &failingos{}
+var _ efivarfs.EFIVar = &failingOS{}
 
 var (
-	badfs = &failingos{err: os.ErrNotExist}
-	nofs  = &failingos{err: efivarfs.ErrNoFS}
-	iofs  = &failingos{err: syscall.EIO}
-	okfs  = &failingos{err: nil}
+	badfs = &failingOS{err: os.ErrNotExist}
+	nofs  = &failingOS{err: efivarfs.ErrNoFS}
+	iofs  = &failingOS{err: syscall.EIO}
+	okfs  = &failingOS{err: nil}
 )
 
 // We should not test the actual /sys varfs itself. That is done in the package.
