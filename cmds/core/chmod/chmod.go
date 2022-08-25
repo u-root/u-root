@@ -31,10 +31,6 @@ const (
 
 var errBadUsage = errors.New(usage)
 
-func init() {
-
-}
-
 func changeMode(path string, mode os.FileMode, octval uint64, mask uint64) (fs.FileMode, error) {
 	// A special value for mask means the mode is fully described
 	if mask == special {

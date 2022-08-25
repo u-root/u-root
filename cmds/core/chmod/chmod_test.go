@@ -245,7 +245,6 @@ func TestChmod(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Chmod(f.Name(), tt.modeBefore)
 			mode, err := chmod(tt.recursive, tt.reference, tt.args...)
-			t.Logf("chmod(%v, %q, %q) = %v, want %v", tt.recursive, tt.reference, tt.args, err, tt.err)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("chmod(%v, %q, %q) = %v, want %v", tt.recursive, tt.reference, tt.args, err, tt.err)
 				return
@@ -253,7 +252,6 @@ func TestChmod(t *testing.T) {
 			if mode != tt.modeAfter {
 				t.Errorf("chmod(%v, %q, %q) = mode = %o, want %o", tt.recursive, tt.reference, tt.args, mode, tt.modeAfter)
 			}
-
 		})
 	}
 }
