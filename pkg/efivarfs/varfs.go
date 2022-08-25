@@ -18,53 +18,75 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// EfiVarFs is the path to the efivarfs mount point
-//
-// Note: This has to be a var instead of const because of
-// our unit tests.
-var EfiVarFs = "/sys/firmware/efi/efivars/"
+// DefaultVarFS is the path to the efivarfs mount point
+const DefaultVarFS = "/sys/firmware/efi/efivars/"
 
 var (
-	// ErrFsNotMounted is caused if no vailed efivarfs magic is found
-	ErrFsNotMounted = errors.New("no efivarfs magic found, is it mounted?")
-
 	// ErrVarsUnavailable is caused by not having a valid backend
-	ErrVarsUnavailable = errors.New("no variable backend is available")
+	ErrVarsUnavailable = fmt.Errorf("no variable backend is available:%w", os.ErrNotExist)
 
 	// ErrVarNotExist is caused by accessing a non-existing variable
-	ErrVarNotExist = errors.New("variable does not exist")
+	ErrVarNotExist = os.ErrNotExist
 
 	// ErrVarPermission is caused by not haven the right permissions either
 	// because of not being root or xattrs not allowing changes
-	ErrVarPermission = errors.New("permission denied")
+	ErrVarPermission = os.ErrPermission
+
+	// ErrNoFS is returned when the file system is not available for some
+	// reason.
+	ErrNoFS = errors.New("varfs not available")
 )
 
-// efivarfs represents the real efivarfs of the Linux kernel
-// and has the relevant methods like get, set and remove, which
-// will operate on the actual efi variables inside the Linux
-// efivarfs backend.
-type efivarfs struct{}
-
-// probeAndReturn will probe for the efivarfs filesystem
-// magic value on the expected mountpoint inside the sysfs.
-// If the correct magic value was found it will return
-// the a pointer to an efivarfs struct on which regular
-// operations can be done. Otherwise it will return an
-// error of type ErrFsNotMounted.
-func probeAndReturn() (*efivarfs, error) {
-	var stat unix.Statfs_t
-	if err := unix.Statfs(EfiVarFs, &stat); err != nil {
-		return nil, fmt.Errorf("statfs error occured: %w", ErrFsNotMounted)
-	}
-	if uint(stat.Type) != uint(unix.EFIVARFS_MAGIC) {
-		return nil, fmt.Errorf("wrong fs type: %w", ErrFsNotMounted)
-	}
-	return &efivarfs{}, nil
+// EFIVar is the interface for EFI variables. Note that it need not use a file system,
+// but typically does.
+type EFIVar interface {
+	Get(desc VariableDescriptor) (VariableAttributes, []byte, error)
+	List() ([]VariableDescriptor, error)
+	Remove(desc VariableDescriptor) error
+	Set(desc VariableDescriptor, attrs VariableAttributes, data []byte) error
 }
 
-// get reads the contents of an efivar if it exists and has the necessary permission
-func (v *efivarfs) get(desc VariableDescriptor) (VariableAttributes, []byte, error) {
-	path := filepath.Join(EfiVarFs, fmt.Sprintf("%s-%s", desc.Name, desc.GUID.String()))
+// EFIVarFS implements EFIVar
+type EFIVarFS struct {
+	path string
+}
+
+var _ EFIVar = &EFIVarFS{}
+
+// NewPath returns an EFIVarFS given a path.
+func NewPath(p string) (*EFIVarFS, error) {
+	e := &EFIVarFS{path: p}
+	if err := e.probe(); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+// New returns an EFIVarFS using the default path.
+func New() (*EFIVarFS, error) {
+	return NewPath(DefaultVarFS)
+}
+
+// probe will probe for the EFIVarFS filesystem
+// magic value on the expected mountpoint inside the sysfs.
+// If the correct magic value was found it will return
+// the a pointer to an EFIVarFS struct on which regular
+// operations can be done. Otherwise it will return an
+// error of type ErrFsNotMounted.
+func (v *EFIVarFS) probe() error {
+	var stat unix.Statfs_t
+	if err := unix.Statfs(v.path, &stat); err != nil {
+		return fmt.Errorf("%w: not mounted", ErrNoFS)
+	}
+	if uint(stat.Type) != uint(unix.EFIVARFS_MAGIC) {
+		return fmt.Errorf("%w: wrong magic", ErrNoFS)
+	}
+	return nil
+}
+
+// Get reads the contents of an efivar if it exists and has the necessary permission
+func (v *EFIVarFS) Get(desc VariableDescriptor) (VariableAttributes, []byte, error) {
+	path := filepath.Join(v.path, fmt.Sprintf("%s-%s", desc.Name, desc.GUID.String()))
 	f, err := os.OpenFile(path, os.O_RDONLY, 0)
 	switch {
 	case os.IsNotExist(err):
@@ -91,9 +113,9 @@ func (v *efivarfs) get(desc VariableDescriptor) (VariableAttributes, []byte, err
 	return attrs, data, nil
 }
 
-// set modifies a given efivar with the provided contents
-func (v *efivarfs) set(desc VariableDescriptor, attrs VariableAttributes, data []byte) error {
-	path := filepath.Join(EfiVarFs, fmt.Sprintf("%s-%s", desc.Name, desc.GUID.String()))
+// Set modifies a given efivar with the provided contents
+func (v *EFIVarFS) Set(desc VariableDescriptor, attrs VariableAttributes, data []byte) error {
+	path := filepath.Join(v.path, fmt.Sprintf("%s-%s", desc.Name, desc.GUID.String()))
 	flags := os.O_WRONLY | os.O_CREATE
 	if attrs&AttributeAppendWrite != 0 {
 		flags |= os.O_APPEND
@@ -143,9 +165,9 @@ func (v *efivarfs) set(desc VariableDescriptor, attrs VariableAttributes, data [
 	return nil
 }
 
-// remove makes the specified EFI var mutable and then deletes it
-func (v *efivarfs) remove(desc VariableDescriptor) error {
-	path := filepath.Join(EfiVarFs, fmt.Sprintf("%s-%s", desc.Name, desc.GUID.String()))
+// Remove makes the specified EFI var mutable and then deletes it
+func (v *EFIVarFS) Remove(desc VariableDescriptor) error {
+	path := filepath.Join(v.path, fmt.Sprintf("%s-%s", desc.Name, desc.GUID.String()))
 	f, err := os.OpenFile(path, os.O_WRONLY, 0)
 	switch {
 	case os.IsNotExist(err):
@@ -168,10 +190,11 @@ func (v *efivarfs) remove(desc VariableDescriptor) error {
 	return os.Remove(path)
 }
 
-// list returns the VariableDescriptor for each efivar in the system
-func (v *efivarfs) list() ([]VariableDescriptor, error) {
+// List returns the VariableDescriptor for each efivar in the system
+// TODO: why can't list implement
+func (v *EFIVarFS) List() ([]VariableDescriptor, error) {
 	const guidLength = 36
-	f, err := os.OpenFile(EfiVarFs, os.O_RDONLY, 0)
+	f, err := os.OpenFile(v.path, os.O_RDONLY, 0)
 	switch {
 	case os.IsNotExist(err):
 		return nil, ErrVarNotExist

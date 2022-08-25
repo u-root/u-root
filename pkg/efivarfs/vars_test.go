@@ -7,203 +7,182 @@ package efivarfs
 import (
 	"bytes"
 	"errors"
+	"os"
 	"testing"
 
 	guid "github.com/google/uuid"
 )
 
-func TestReadVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		vd      VariableDescriptor
-		wantErr error
-	}{
-		{
-			name: "no efivarfs",
-			vd: VariableDescriptor{
-				Name: "TestVar",
-				GUID: func() *guid.UUID {
-					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
-				}(),
-			},
-			wantErr: ErrFsNotMounted,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, _, err := ReadVariable(tt.vd); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+type fake struct {
+	err error
+}
+
+func (f *fake) Get(desc VariableDescriptor) (VariableAttributes, []byte, error) {
+	return VariableAttributes(0), make([]byte, 32), f.err
+}
+
+func (f *fake) Set(desc VariableDescriptor, attrs VariableAttributes, data []byte) error {
+	return f.err
+}
+
+func (f *fake) Remove(desc VariableDescriptor) error {
+	return f.err
+}
+
+var fakeGUID = guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
+
+func (f *fake) List() ([]VariableDescriptor, error) {
+
+	return []VariableDescriptor{
+		{Name: "fake", GUID: &fakeGUID},
+	}, f.err
+}
+
+var _ EFIVar = &fake{}
+
+func TestReadVariableErrNoFS(t *testing.T) {
+	if _, err := NewPath("/tmp"); !errors.Is(err, ErrNoFS) {
+		t.Fatalf(`NewPath("/tmp"): %s != %v`, err, ErrNoFS)
 	}
 }
 
 func TestSimpleReadVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		varName string
-		wantErr error
+	var tests = []struct {
+		name   string
+		val    string
+		err    error
+		efivar EFIVar
 	}{
 		{
-			name:    "no efivarfs",
-			varName: "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			wantErr: ErrFsNotMounted,
+			name:   "bad variable no -",
+			val:    "xy",
+			err:    ErrBadGUID,
+			efivar: &fake{},
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, _, err := SimpleReadVariable(tt.varName); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+		{
+			name:   "bad variable",
+			val:    "xy-b-c",
+			err:    ErrBadGUID,
+			efivar: &fake{},
+		},
+		{
+			name:   "good variable, bad get",
+			val:    "WriteOnceStatus-4b3082a3-80c6-4d7e-9cd0-583917265df1",
+			err:    os.ErrPermission,
+			efivar: &fake{err: os.ErrPermission},
+		},
+		{
+			name:   "good variable, good get",
+			val:    "WriteOnceStatus-4b3082a3-80c6-4d7e-9cd0-583917265df1",
+			err:    nil,
+			efivar: &fake{},
+		},
 	}
-}
 
-func TestWriteVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		vd      VariableDescriptor
-		attrs   VariableAttributes
-		data    []byte
-		wantErr error
-	}{
-		{
-			name: "no efivarfs",
-			vd: VariableDescriptor{
-				Name: "TestVar",
-				GUID: func() *guid.UUID {
-					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
-				}(),
-			},
-			attrs:   0,
-			data:    nil,
-			wantErr: ErrFsNotMounted,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := WriteVariable(tt.vd, tt.attrs, tt.data); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+	for _, tt := range tests {
+		_, _, err := SimpleReadVariable(tt.efivar, tt.val)
+		if !errors.Is(err, tt.err) {
+			t.Errorf("SimpleReadVariable(tt.efivar, %s): %v != %v", tt.val, err, tt.err)
+		}
 	}
+
 }
 
 func TestSimpleWriteVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		varName string
-		attrs   VariableAttributes
-		data    *bytes.Buffer
-		wantErr error
+	var tests = []struct {
+		name   string
+		val    string
+		err    error
+		efivar EFIVar
 	}{
 		{
-			name:    "no efivarfs",
-			varName: "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			attrs:   0,
-			data:    &bytes.Buffer{},
-			wantErr: ErrFsNotMounted,
+			name:   "bad variable",
+			val:    "xy-b-c",
+			err:    ErrBadGUID,
+			efivar: &fake{},
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := SimpleWriteVariable(tt.varName, tt.attrs, tt.data); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+		{
+			name:   "good variable, bad set",
+			val:    "WriteOnceStatus-4b3082a3-80c6-4d7e-9cd0-583917265df1",
+			err:    os.ErrPermission,
+			efivar: &fake{err: os.ErrPermission},
+		},
+		{
+			name:   "good variable, good set",
+			val:    "WriteOnceStatus-4b3082a3-80c6-4d7e-9cd0-583917265df1",
+			err:    nil,
+			efivar: &fake{},
+		},
 	}
-}
 
-func TestRemoveVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		vd      VariableDescriptor
-		wantErr error
-	}{
-		{
-			name: "no efivarfs",
-			vd: VariableDescriptor{
-				Name: "TestVar",
-				GUID: func() *guid.UUID {
-					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
-				}(),
-			},
-			wantErr: ErrFsNotMounted,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := RemoveVariable(tt.vd); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+	for _, tt := range tests {
+		err := SimpleWriteVariable(tt.efivar, tt.val, VariableAttributes(0), &bytes.Buffer{})
+		if !errors.Is(err, tt.err) {
+			t.Errorf("SimpleWriteVariable(tt.efivar, %s): %v != %v", tt.val, err, tt.err)
+		}
 	}
+
 }
 
 func TestSimpleRemoveVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		varName string
-		wantErr error
+	var tests = []struct {
+		name   string
+		val    string
+		err    error
+		efivar EFIVar
 	}{
 		{
-			name:    "no efivarfs",
-			varName: "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			wantErr: ErrFsNotMounted,
+			name:   "bad variable",
+			val:    "xy-b-c",
+			err:    ErrBadGUID,
+			efivar: &fake{},
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := SimpleRemoveVariable(tt.varName); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+		{
+			name:   "good variable, bad Remove",
+			val:    "WriteOnceStatus-4b3082a3-80c6-4d7e-9cd0-583917265df1",
+			err:    os.ErrPermission,
+			efivar: &fake{err: os.ErrPermission},
+		},
+		{
+			name:   "good variable, good remove",
+			val:    "WriteOnceStatus-4b3082a3-80c6-4d7e-9cd0-583917265df1",
+			err:    nil,
+			efivar: &fake{},
+		},
 	}
-}
 
-func TestListVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		vd      []VariableDescriptor
-		wantErr error
-	}{
-		{
-			name: "no efivarfs",
-			vd: []VariableDescriptor{
-				{
-					Name: "TestVar",
-					GUID: func() *guid.UUID {
-						g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-						return &g
-					}(),
-				},
-			},
-			wantErr: ErrFsNotMounted,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, err := ListVariables(); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+	for _, tt := range tests {
+		err := SimpleRemoveVariable(tt.efivar, tt.val)
+		if !errors.Is(err, tt.err) {
+			t.Errorf("SimpleRemoveVariable(tt.efivar, %s): %v != %v", tt.val, err, tt.err)
+		}
 	}
+
 }
 
 func TestSimpleListVariable(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		result  []string
-		wantErr error
+	var tests = []struct {
+		name   string
+		err    error
+		efivar EFIVar
 	}{
 		{
-			name: "no efivarfs",
-			result: []string{
-				"TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350",
-			},
-			wantErr: ErrFsNotMounted,
+			name:   "bad List",
+			err:    os.ErrPermission,
+			efivar: &fake{err: os.ErrPermission},
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, err := SimpleListVariables(); !errors.Is(err, tt.wantErr) {
-				t.Errorf("Want: %v, Got: %v", tt.wantErr, err)
-			}
-		})
+		{
+			name:   "good List",
+			err:    nil,
+			efivar: &fake{},
+		},
 	}
+
+	for _, tt := range tests {
+		_, err := SimpleListVariables(tt.efivar)
+		if !errors.Is(err, tt.err) {
+			t.Errorf("SimpleListVariable(tt.efivar): %v != %v", err, tt.err)
+		}
+	}
+
 }
