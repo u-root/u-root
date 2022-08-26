@@ -3,8 +3,9 @@
 // license that can be found in the LICENSE file.
 
 // A parity test can be run:
-//     go test
-//     EXECPATH="wget -O -" go test
+//
+//	go test
+//	EXECPATH="wget -O -" go test
 package main
 
 import (
@@ -98,29 +99,36 @@ var tests = []struct {
 	},
 }
 
-func getFreePort(t *testing.T) int {
+func getListener(t *testing.T) (net.Listener, int) {
+	t.Helper()
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
-		t.Fatalf("Cannot create free port: %v", err)
+		t.Fatalf("error setting up TCP listener: %v", err)
 	}
-	l.Close()
-	return l.Addr().(*net.TCPAddr).Port
+	return l, l.Addr().(*net.TCPAddr).Port
 }
 
 // TestWget implements a table-driven test.
 func TestWget(t *testing.T) {
 	// Start a webserver on a free port.
-	unusedPort := getFreePort(t)
-
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		t.Fatalf("Cannot create free port: %v", err)
-	}
-	port := l.Addr().(*net.TCPAddr).Port
+	l, port := getListener(t)
+	defer l.Close()
+	ul, unusedPort := getListener(t)
+	defer ul.Close()
+	go func() {
+		for {
+			conn, err := ul.Accept()
+			if err != nil {
+				// End of test.
+				return
+			}
+			conn.Close()
+		}
+	}()
 
 	h := handler{}
 	go func() {
-		log.Fatal(http.Serve(l, h))
+		log.Print(http.Serve(l, h))
 	}()
 
 	for _, tt := range tests {
