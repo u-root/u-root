@@ -12,6 +12,7 @@ import (
 	"io"
 	"os/exec"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/pierrec/lz4/v4"
 	"github.com/ulikunitz/xz/lzma"
 )
@@ -107,6 +108,21 @@ func unbzip2(w io.Writer, r io.Reader) error {
 	bzip2Reader := bzip2.NewReader(r)
 
 	if _, err := io.Copy(w, bzip2Reader); err != nil {
+		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+	}
+	return nil
+}
+
+// unzstd reads compressed bytes from the io.Reader and writes the uncompressed bytes to the
+// writer. unzstd satisfies the decompressor interface.
+func unzstd(w io.Writer, r io.Reader) error {
+	zstdReader, err := zstd.NewReader(r)
+	if err != nil {
+		return fmt.Errorf("failed to create new reader: %v", err)
+	}
+	defer zstdReader.Close()
+
+	if _, err := io.Copy(w, zstdReader); err != nil {
 		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
 	}
 	return nil
