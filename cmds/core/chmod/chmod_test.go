@@ -5,9 +5,10 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 )
 
@@ -23,24 +24,28 @@ func TestChmod(t *testing.T) {
 		reference  string
 		modeBefore os.FileMode
 		modeAfter  os.FileMode
-		want       string
+		err        error
 	}{
 		{
 			name: "len(args) < 1",
+			err:  errBadUsage,
 		},
+
 		{
 			name: "len(args) < 2 && *reference",
 			args: []string{"arg"},
+			err:  errBadUsage,
 		},
+
 		{
 			name: "file does not exist",
 			args: []string{"g-rx", "filedoesnotexist"},
-			want: "stat filedoesnotexist: no such file or directory",
+			err:  os.ErrNotExist,
 		},
 		{
 			name: "Value should be less than or equal to 0777",
 			args: []string{"7777", f.Name()},
-			want: fmt.Sprintf("invalid octal value %0o. Value should be less than or equal to 0777", 0o7777),
+			err:  strconv.ErrRange,
 		},
 		{
 			name:       "mode 0777 correct",
@@ -57,7 +62,7 @@ func TestChmod(t *testing.T) {
 		{
 			name: "unable to decode mode",
 			args: []string{"a=9rwx", f.Name()},
-			want: fmt.Sprintf("unable to decode mode %q. Please use an octal value or a valid mode string", "a=9rwx"),
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name:       "mode u-rwx correct",
@@ -213,7 +218,7 @@ func TestChmod(t *testing.T) {
 			name:      "bad reference file",
 			args:      []string{"a=rx", f.Name()},
 			reference: "filedoesnotexist",
-			want:      "bad reference file: stat filedoesnotexist: no such file or directory",
+			err:       os.ErrNotExist,
 		},
 		{
 			name:       "correct reference file",
@@ -226,7 +231,7 @@ func TestChmod(t *testing.T) {
 			name:      "bad filepath",
 			args:      []string{"a=rx", "pathdoes not exist"},
 			recursive: true,
-			want:      "chmod pathdoes not exist: no such file or directory",
+			err:       os.ErrNotExist,
 		},
 		{
 			name:       "correct path filepath",
@@ -234,22 +239,18 @@ func TestChmod(t *testing.T) {
 			recursive:  true,
 			modeBefore: 0o777,
 			modeAfter:  0o777,
-			want:       "chmod pathdoes not exist: no such file or directory",
+			err:        nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			*recursive = tt.recursive
-			*reference = tt.reference
 			os.Chmod(f.Name(), tt.modeBefore)
-			mode, got := chmod(tt.args...)
-			if got != nil {
-				if got.Error() != tt.want {
-					t.Errorf("chmod() = %q, want: %q", got.Error(), tt.want)
-				}
-			} else {
-				if mode != tt.modeAfter {
-					t.Errorf("chmod() = %v, want: %v", mode, tt.modeAfter)
-				}
+			mode, err := chmod(tt.recursive, tt.reference, tt.args...)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("chmod(%v, %q, %q) = %v, want %v", tt.recursive, tt.reference, tt.args, err, tt.err)
+				return
+			}
+			if mode != tt.modeAfter {
+				t.Errorf("chmod(%v, %q, %q) = mode = %o, want %o", tt.recursive, tt.reference, tt.args, mode, tt.modeAfter)
 			}
 		})
 	}

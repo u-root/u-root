@@ -12,6 +12,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -25,41 +26,45 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-const special = 99999
-
-var (
-	recursive = flag.Bool("recursive", false, "do changes recursively")
-	reference = flag.String("reference", "", "use mode from reference file")
+const (
+	special = 99999
+	usage   = "chmod: chmod [mode] filepath"
 )
 
-var usage = "chmod: chmod [mode] filepath"
+var errBadUsage = errors.New(usage)
 
 func init() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 func changeMode(path string, mode os.FileMode, octval uint64, mask uint64) (fs.FileMode, error) {
 	// A special value for mask means the mode is fully described
 	if mask == special {
-		return mode, os.Chmod(path, mode)
+		if err := os.Chmod(path, mode); err != nil {
+			return 0, err
+		}
+		return mode, nil
 	}
 
 	var info os.FileInfo
 	info, err := os.Stat(path)
 	if err != nil {
-		return mode, err
+		return 0, err
 	}
 	mode = info.Mode() & os.FileMode(mask)
 	mode = mode | os.FileMode(octval)
 
-	return mode, os.Chmod(path, mode)
+	if err := os.Chmod(path, mode); err != nil {
+		return 0, err
+	}
+	return mode, nil
 }
 
 func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uint64, err error) {
 	octval, err = strconv.ParseUint(modeString, 8, 32)
 	if err == nil {
 		if octval > 0o777 {
-			return mode, octval, mask, fmt.Errorf("invalid octal value %0o. Value should be less than or equal to 0777", octval)
+			return mode, octval, mask, fmt.Errorf("%w: invalid octal value %0o. Value should be less than or equal to 0777", strconv.ErrRange, octval)
 		}
 		// a fully described octal mode was supplied, signal that with a special value for mask
 		mask = special
@@ -75,7 +80,7 @@ func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uin
 	// `a=` is a valid (but destructive) operation. Do not turn a typo into that.
 	reMode = regexp.MustCompile("^[rwx]*$")
 	if len(m) < 3 || !reMode.MatchString(m[3]) {
-		return mode, octval, mask, fmt.Errorf("unable to decode mode %q. Please use an octal value or a valid mode string", modeString)
+		return mode, octval, mask, fmt.Errorf("%w:unable to decode mode %q. Please use an octal value or a valid mode string", strconv.ErrSyntax, modeString)
 	}
 
 	// m[3] is [rwx]{0,3}
@@ -128,38 +133,40 @@ func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uin
 	return mode, octval, mask, nil
 }
 
-func chmod(args ...string) (mode fs.FileMode, err error) {
+func chmod(recursive bool, reference string, args ...string) (fs.FileMode, error) {
+	var mode os.FileMode
 	if len(args) < 1 {
-		flag.Usage()
-		return mode, err
+		return mode, errBadUsage
 	}
 
-	if len(args) < 2 && *reference == "" {
-		flag.Usage()
-		return mode, err
+	if len(args) < 2 && reference == "" {
+		return mode, errBadUsage
 	}
 
-	var octval, mask uint64
-	var fileList []string
+	var (
+		err          error
+		octval, mask uint64
+		fileList     []string
+	)
 
-	if *reference != "" {
-		fi, err := os.Stat(*reference)
+	if reference != "" {
+		fi, err := os.Stat(reference)
 		if err != nil {
-			return mode, fmt.Errorf("bad reference file: %v", err)
+			return 0, fmt.Errorf("bad reference file: %w", err)
 		}
 		mask = special
 		mode = fi.Mode()
 		fileList = args
 	} else {
-		mode, octval, mask, err = calculateMode(args[0])
-		if err != nil {
+		var err error
+		if mode, octval, mask, err = calculateMode(args[0]); err != nil {
 			return mode, err
 		}
 		fileList = args[1:]
 	}
 
 	for _, name := range fileList {
-		if *recursive {
+		if recursive {
 			err := filepath.Walk(name, func(path string, info os.FileInfo, err error) error {
 				mode, err = changeMode(path, mode, octval, mask)
 				return err
@@ -177,8 +184,12 @@ func chmod(args ...string) (mode fs.FileMode, err error) {
 }
 
 func main() {
+	var (
+		recursive = flag.Bool("recursive", false, "do changes recursively")
+		reference = flag.String("reference", "", "use mode from reference file")
+	)
 	flag.Parse()
-	if _, err := chmod(flag.Args()...); err != nil {
+	if _, err := chmod(*recursive, *reference, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }

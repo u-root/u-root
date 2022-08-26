@@ -179,7 +179,7 @@ func ping(host string) error {
 }
 
 func main() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 	flag.Parse()
 	// options without parameters (right now just: -hV)
 	if flag.NArg() != 1 {

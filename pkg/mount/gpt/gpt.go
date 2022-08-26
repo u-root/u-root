@@ -305,16 +305,18 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 	if err := binary.Write(&b, binary.LittleEndian, &g.Header); err != nil {
 		return err
 	}
-	h = make([]byte, g.HeaderSize)
-	copy(h, b.Bytes())
-	g.CRC = crc32.ChecksumIEEE(h[:])
+
+	var block [BlockSize]byte
+	copy(block[:], b.Bytes())
+	g.CRC = crc32.ChecksumIEEE(block[0:g.HeaderSize])
+
 	b.Reset()
 	if err := binary.Write(&b, binary.LittleEndian, g.CRC); err != nil {
 		return err
 	}
-	copy(h[16:], b.Bytes())
+	copy(block[16:], b.Bytes())
 
-	_, err := w.WriteAt(h, int64(g.CurrentLBA*BlockSize))
+	_, err := w.WriteAt(block[:], int64(g.CurrentLBA*BlockSize))
 	return err
 }
 
