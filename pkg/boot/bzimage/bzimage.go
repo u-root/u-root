@@ -61,7 +61,7 @@ var (
 		// LZO
 		{[]byte{0x89, 0x4C, 0x5A, 0x4F, 0x00, 0x0D, 0x0A, 0x1A, 0x0A}, stripSize(execer("lzop", "-c", "-d"))},
 		// ZSTD
-		{[]byte{0x28, 0xB5, 0x2F, 0xFD}, stripSize(execer("unzstd"))},
+		{[]byte{0x28, 0xB5, 0x2F, 0xFD}, stripSize(unzstd)},
 		// BZIP2
 		{[]byte{0x42, 0x5A, 0x68}, stripSize(unbzip2)},
 		// LZ4 - Note that there are *two* file formats for LZ4 (http://fileformats.archiveteam.org/wiki/LZ4).

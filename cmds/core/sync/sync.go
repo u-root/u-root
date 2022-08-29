@@ -31,7 +31,7 @@ var (
 var usage = "Usage: %s [OPTION] [FILE]...\n"
 
 func init() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 func doSyscall(syscallNum uintptr, args []string) error {

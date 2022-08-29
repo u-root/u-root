@@ -81,7 +81,7 @@ func echo(w io.Writer, s ...string) error {
 }
 
 func init() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 func main() {

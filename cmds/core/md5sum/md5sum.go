@@ -19,7 +19,7 @@ import (
 var usage = "md5sum: md5sum <File Name>"
 
 func init() {
-	util.Usage(usage)
+	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
 func calculateMd5Sum(r io.Reader) ([]byte, error) {
