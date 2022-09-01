@@ -40,7 +40,7 @@ const (
 // VariableDescriptor contains the name and GUID identifying a variable
 type VariableDescriptor struct {
 	Name string
-	GUID *guid.UUID
+	GUID guid.UUID
 }
 
 var (
@@ -75,7 +75,7 @@ func SimpleReadVariable(e EFIVar, v string) (VariableAttributes, *bytes.Reader, 
 	attrs, data, err := ReadVariable(e,
 		VariableDescriptor{
 			Name: vs[0],
-			GUID: g,
+			GUID: *g,
 		},
 	)
 	return attrs, bytes.NewReader(data), err
@@ -96,7 +96,7 @@ func SimpleWriteVariable(e EFIVar, v string, attrs VariableAttributes, data *byt
 	return WriteVariable(e,
 		VariableDescriptor{
 			Name: vs[0],
-			GUID: g,
+			GUID: *g,
 		}, attrs, data.Bytes(),
 	)
 }
@@ -116,7 +116,7 @@ func SimpleRemoveVariable(e EFIVar, v string) error {
 	return RemoveVariable(e,
 		VariableDescriptor{
 			Name: vs[0],
-			GUID: g,
+			GUID: *g,
 		},
 	)
 }

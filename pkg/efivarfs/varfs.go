@@ -237,7 +237,7 @@ func (v *EFIVarFS) List() ([]VariableDescriptor, error) {
 			continue
 		}
 
-		entries = append(entries, VariableDescriptor{Name: name, GUID: &guid})
+		entries = append(entries, VariableDescriptor{Name: name, GUID: guid})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {

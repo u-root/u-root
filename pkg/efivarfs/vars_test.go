@@ -34,7 +34,7 @@ var fakeGUID = guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
 func (f *fake) List() ([]VariableDescriptor, error) {
 
 	return []VariableDescriptor{
-		{Name: "fake", GUID: &fakeGUID},
+		{Name: "fake", GUID: fakeGUID},
 	}, f.err
 }
 
