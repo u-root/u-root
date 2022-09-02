@@ -67,19 +67,10 @@ func follow(l string, names map[string]*FileInfo) error {
 	}
 }
 
-// runinterp runs the interpreter with the --list switch
-// and the file as an argument. For each returned line
-// it looks for => as the second field, indicating a
-// real .so (as opposed to the .vdso or a string like
-// 'not a dynamic executable'.
-func runinterp(interp, file string) ([]string, error) {
+func parseinterp(input string) ([]string, error) {
 	var names []string
-	o, err := exec.Command(interp, "--list", file).Output()
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range strings.Split(string(o), "\n") {
-		f := strings.Split(strings.TrimSpace(p), " ")
+	for _, p := range strings.Split(input, "\n") {
+		f := strings.Fields(p)
 		if len(f) < 3 {
 			continue
 		}
@@ -92,6 +83,19 @@ func runinterp(interp, file string) ([]string, error) {
 		names = append(names, f[2])
 	}
 	return names, nil
+}
+
+// runinterp runs the interpreter with the --list switch
+// and the file as an argument. For each returned line
+// it looks for => as the second field, indicating a
+// real .so (as opposed to the .vdso or a string like
+// 'not a dynamic executable'.
+func runinterp(interp, file string) ([]string, error) {
+	o, err := exec.Command(interp, "--list", file).Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseinterp(string(o))
 }
 
 type FileInfo struct {
