@@ -10,8 +10,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"unicode"
 
 	prompt "github.com/c-bata/go-prompt"
 	"mvdan.cc/sh/v3/interp"
@@ -388,4 +392,100 @@ type testInputPrompt struct {
 
 func (i testInputPrompt) Input(prefix string, completer prompt.Completer, opts ...prompt.Option) string {
 	return i.inputText
+}
+
+// This test is only intended to run in a sandboxed environment.
+// DO NOT run these fuzzing tests on your local system. Executing random commands might mess with your system.
+// The fuzzing test might panic, which is checked against a defined array of expected panic messages. Hence only unexpected panics will fail the test.
+// Additionally the input space is being stripped from special characters that might hinder terminating the shell in time.
+func FuzzRun(f *testing.F) {
+	expectedPanics := []string{
+		"interface conversion",
+		"param expansion",
+		"regexp: Compile",
+		"runtime error",
+		"unexpected arithm expr",
+		"unhandled builtin",
+		"unhandled command node",
+		"unhandled conversion of kind",
+		"unhandled redirect op",
+		"unhandled shopt flag",
+		"unhandled unary test op",
+		"unhandled word part",
+		"variable name must not be empty",
+		"wait with args not handled yet"}
+	re := strings.NewReplacer("\x22", "", "\x24", "", "\x26", "", "\x27", "", "\x28", "", "\x29", "", "\x2A", "", "\x3C", "", "\x3E", "", "\x3F", "", "\x5C", "", "\x7C", "")
+
+	sh := shell{}
+	var buf bytes.Buffer
+	runner, err := interp.New(interp.StdIO(nil, &buf, &buf))
+	if err != nil {
+		f.Fatalf("failed to initialize runner")
+	}
+
+	// get seed corpora
+	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
+	if err != nil {
+		f.Errorf("failed to find seed corpora files: %v", err)
+	}
+
+	for _, seed := range seeds {
+		seedBytes, err := os.ReadFile(seed)
+		if err != nil {
+			f.Errorf("failed to read seed corpora from file %v: %v", seed, err)
+		}
+
+		f.Add(seedBytes)
+	}
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		defer func() {
+			if err := recover(); err != nil {
+				for _, expPanic := range expectedPanics {
+					switch err := err.(type) {
+					case string:
+						if strings.Contains(err, expPanic) {
+							return
+						}
+					case runtime.Error:
+						if strings.Contains(err.Error(), expPanic) {
+							return
+						}
+					case error:
+						if strings.Contains(err.Error(), expPanic) {
+							return
+						}
+					}
+				}
+				t.Fatalf("Unexpected panic: %v", err)
+			}
+		}()
+
+		if len(data) > 32 {
+			return
+		}
+
+		// reduce the input space to a set of printable ASCII chars excluding some special characters
+		for _, v := range data {
+			if v < 0x20 || v > unicode.MaxASCII {
+				return
+			}
+		}
+
+		stringifiedData := re.Replace(string(data))
+		if stringifiedData != string(data) {
+			return
+		}
+
+		if strings.Contains(stringifiedData, "fuzz") {
+			return
+		}
+
+		dirPath := t.TempDir()
+		buf.Reset()
+		runner.Reset()
+		runner.Dir = dirPath
+
+		sh.run(runner, strings.NewReader(stringifiedData), "fuzz")
+	})
 }
