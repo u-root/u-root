@@ -56,9 +56,9 @@ func TestGet(t *testing.T) {
 			name: "get var",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr: AttributeNonVolatile,
@@ -86,9 +86,9 @@ func TestGet(t *testing.T) {
 			name: "not exist",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr:    0,
@@ -125,9 +125,9 @@ func TestGet(t *testing.T) {
 			name: "var empty",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr: 0,
@@ -184,9 +184,9 @@ func TestSet(t *testing.T) {
 			name: "set var",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr:    0,
@@ -198,9 +198,9 @@ func TestSet(t *testing.T) {
 			name: "append write",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr:    AttributeAppendWrite,
@@ -212,9 +212,9 @@ func TestSet(t *testing.T) {
 			name: "no read permission",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr: 0,
@@ -235,9 +235,9 @@ func TestSet(t *testing.T) {
 			name: "var exists",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr: 0,
@@ -255,9 +255,9 @@ func TestSet(t *testing.T) {
 			name: "input data",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			attr:    0,
@@ -301,9 +301,9 @@ func TestRemove(t *testing.T) {
 			name: "remove var",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			setup: func(path string, t *testing.T) {
@@ -318,9 +318,9 @@ func TestRemove(t *testing.T) {
 			name: "no permission",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			setup: func(path string, t *testing.T) {
@@ -339,9 +339,9 @@ func TestRemove(t *testing.T) {
 			name: "var not exist",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			setup:   func(path string, t *testing.T) { t.Helper() },
@@ -384,9 +384,9 @@ func TestList(t *testing.T) {
 			name: "empty var",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			dir: t.TempDir(),
@@ -402,9 +402,9 @@ func TestList(t *testing.T) {
 			name: "var with data",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			dir: t.TempDir(),
@@ -431,9 +431,9 @@ func TestList(t *testing.T) {
 			name: "no regular files",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			dir: t.TempDir(),
@@ -449,9 +449,9 @@ func TestList(t *testing.T) {
 			name: "no permission",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			dir: t.TempDir(),
@@ -467,9 +467,9 @@ func TestList(t *testing.T) {
 			name: "no dir",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			dir:     "/bogus",
@@ -480,9 +480,9 @@ func TestList(t *testing.T) {
 			name: "malformed vars",
 			vd: VariableDescriptor{
 				Name: "TestVar",
-				GUID: func() *guid.UUID {
+				GUID: func() guid.UUID {
 					g := guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
-					return &g
+					return g
 				}(),
 			},
 			dir: t.TempDir(),
