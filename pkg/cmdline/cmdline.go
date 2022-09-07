@@ -11,12 +11,8 @@
 package cmdline
 
 import (
-	"fmt"
 	"io"
-	"log"
-	"os"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/u-root/u-root/pkg/shlex"
@@ -29,54 +25,27 @@ type CmdLine struct {
 	Err   error
 }
 
-var (
-	// procCmdLine package level static variable initialized once
-	once        sync.Once
-	procCmdLine CmdLine
-)
-
-func cmdLineOpener() {
-	cmdlineReader, err := os.Open("/proc/cmdline")
-	if err != nil {
-		errorMsg := fmt.Sprintf("Can't open /proc/cmdline: %v", err)
-		log.Print(errorMsg)
-		procCmdLine = CmdLine{Err: fmt.Errorf(errorMsg)}
-		return
-	}
-
-	procCmdLine = parse(cmdlineReader)
-	cmdlineReader.Close()
-}
-
 // NewCmdLine returns a populated CmdLine struct
-func NewCmdLine() CmdLine {
-	// We use cmdLineReader so tests can inject here
-	once.Do(cmdLineOpener)
-	return procCmdLine
+func NewCmdLine() *CmdLine {
+	return getCmdLine()
 }
 
 // FullCmdLine returns the full, raw cmdline string
 func FullCmdLine() string {
-	once.Do(cmdLineOpener)
-	return procCmdLine.Raw
+	return getCmdLine().Raw
 }
 
 // parse returns the current command line, trimmed
-func parse(cmdlineReader io.Reader) CmdLine {
+func parse(cmdlineReader io.Reader) *CmdLine {
+	var line = &CmdLine{}
 	raw, err := io.ReadAll(cmdlineReader)
-	line := CmdLine{}
-	if err != nil {
-		log.Printf("Can't read command line: %v", err)
-		line.Err = err
-		line.Raw = ""
-	} else {
-		line.Raw = strings.TrimRight(string(raw), "\n")
-		line.AsMap = parseToMap(line.Raw)
-	}
+	line.Err = err
+	// This works because string(nil) is ""
+	line.Raw = strings.TrimRight(string(raw), "\n")
+	line.AsMap = parseToMap(line.Raw)
 	return line
 }
 
-//
 func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
 	lastQuote := rune(0)
 	quotedFieldsCheck := func(c rune) bool {
@@ -134,18 +103,26 @@ func parseToMap(input string) map[string]string {
 }
 
 // ContainsFlag verifies that the kernel cmdline has a flag set
-func ContainsFlag(flag string) bool {
-	once.Do(cmdLineOpener)
-	_, present := Flag(flag)
+func (c *CmdLine) ContainsFlag(flag string) bool {
+	_, present := c.Flag(flag)
 	return present
 }
 
-// Flag returns the a flag, and whether it was set
-func Flag(flag string) (string, bool) {
-	once.Do(cmdLineOpener)
+// ContainsFlag verifies that the kernel cmdline has a flag set
+func ContainsFlag(flag string) bool {
+	return getCmdLine().ContainsFlag(flag)
+}
+
+// Flag returns the value of a flag, and whether it was set
+func (c *CmdLine) Flag(flag string) (string, bool) {
 	canonicalFlag := strings.Replace(flag, "-", "_", -1)
-	value, present := procCmdLine.AsMap[canonicalFlag]
+	value, present := c.AsMap[canonicalFlag]
 	return value, present
+}
+
+// Flag returns the value of a flag, and whether it was set
+func Flag(flag string) (string, bool) {
+	return getCmdLine().Flag(flag)
 }
 
 // getFlagMap gets specified flags as a map
@@ -153,28 +130,37 @@ func getFlagMap(flagName string) map[string]string {
 	return parseToMap(flagName)
 }
 
-// GetInitFlagMap gets the init flags as a map
-func GetInitFlagMap() map[string]string {
-	initflags, _ := Flag("uroot.initflags")
+// GetInitFlagMap gets the uroot init flags as a map
+func (c *CmdLine) GetInitFlagMap() map[string]string {
+	initflags, _ := c.Flag("uroot.initflags")
 	return getFlagMap(initflags)
+}
+
+// GetInitFlagMap gets the uroot init flags as a map
+func GetInitFlagMap() map[string]string {
+	return getCmdLine().GetInitFlagMap()
+}
+
+// GetUinitArgs gets the uinit argvs.
+func (c *CmdLine) GetUinitArgs() []string {
+	uinitargs, _ := getCmdLine().Flag("uroot.uinitargs")
+	return shlex.Argv(uinitargs)
 }
 
 // GetUinitArgs gets the uinit argvs.
 func GetUinitArgs() []string {
-	uinitargs, _ := Flag("uroot.uinitargs")
-	return shlex.Argv(uinitargs)
+	return getCmdLine().GetUinitArgs()
 }
 
 // FlagsForModule gets all flags for a designated module
 // and returns them as a space-seperated string designed to be passed to insmod
 // Note that similarly to flags, module names with - and _ are treated the same.
-func FlagsForModule(name string) string {
-	once.Do(cmdLineOpener)
+func (c *CmdLine) FlagsForModule(name string) string {
 	var ret string
 	flagsAdded := make(map[string]bool) // Ensures duplicate flags aren't both added
 	// Module flags come as moduleName.flag in /proc/cmdline
 	prefix := strings.Replace(name, "-", "_", -1) + "."
-	for flag, val := range procCmdLine.AsMap {
+	for flag, val := range c.AsMap {
 		canonicalFlag := strings.Replace(flag, "-", "_", -1)
 		if !flagsAdded[canonicalFlag] && strings.HasPrefix(canonicalFlag, prefix) {
 			flagsAdded[canonicalFlag] = true
@@ -183,4 +169,11 @@ func FlagsForModule(name string) string {
 		}
 	}
 	return ret
+}
+
+// FlagsForModule gets all flags for a designated module
+// and returns them as a space-seperated string designed to be passed to insmod
+// Note that similarly to flags, module names with - and _ are treated the same.
+func FlagsForModule(name string) string {
+	return getCmdLine().FlagsForModule(name)
 }
