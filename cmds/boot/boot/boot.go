@@ -59,7 +59,7 @@ var (
 // the 'append' and 'reuse' flags
 func updateBootCmdline(cl string) string {
 	f := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
-	return f.Update(cl)
+	return f.Update(cmdline.NewCmdLine(), cl)
 }
 
 func main() {

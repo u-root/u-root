@@ -38,8 +38,8 @@ func removeFilter(input string, variables []string) string {
 
 // Filter represents and kernel commandline filter
 type Filter interface {
-	// Update filters a given space-separated kernel commandline
-	Update(cmdline string) string
+	// Update filters given a space-separated kernel commandline
+	Update(c *CmdLine, cmdline string) string
 }
 
 type updater struct {
@@ -60,13 +60,13 @@ func NewUpdateFilter(appendCmd string, removeVar, reuseVar []string) Filter {
 	}
 }
 
-func (u *updater) Update(cmdline string) string {
+func (u *updater) Update(c *CmdLine, cmdline string) string {
 	acl := ""
 	if len(u.appendCmd) > 0 {
 		acl = " " + u.appendCmd
 	}
 	for _, f := range u.reuseVar {
-		value, present := Flag(f)
+		value, present := c.Flag(f)
 		if present {
 			acl = fmt.Sprintf("%s %s=%s", acl, f, value)
 		}

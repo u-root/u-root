@@ -30,14 +30,7 @@ func TestUpdateFilter(t *testing.T) {
 		`systemd.unified_cgroup_hierarchy=1 cgroup_no_v1=all console=tty0 ` +
 		`console=ttyS0,115200 security=selinux selinux=1 enforcing=0`
 
-	// Do this once, we'll over-write soon
-	once.Do(cmdLineOpener)
-	cmdLineReader := strings.NewReader(exampleCmdLine)
-	procCmdLine = parse(cmdLineReader)
-
-	if procCmdLine.Err != nil {
-		t.Errorf("procCmdLine threw an error: %v", procCmdLine.Err)
-	}
+	c := parse(strings.NewReader(exampleCmdLine))
 
 	toRemove := []string{"console", "earlyconsole"}
 	toReuse := []string{"console", "not-present"}
@@ -47,8 +40,8 @@ func TestUpdateFilter(t *testing.T) {
 	want := `keep=5 keep2 append=me console=ttyS0,115200`
 
 	filter := NewUpdateFilter(toAppend, toRemove, toReuse)
-	got := filter.Update(cl)
+	got := filter.Update(c, cl)
 	if got != want {
-		t.Errorf("Update(%v) = %v, want %v", cl, got, want)
+		t.Errorf("Update(%q) = %q, want %q", cl, got, want)
 	}
 }
