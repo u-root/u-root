@@ -5,18 +5,22 @@
 // Wget reads one file from a url and writes to stdout.
 //
 // Synopsis:
-//     wget URL
+//
+//	wget URL
 //
 // Description:
-//     Returns a non-zero code on failure.
+//
+//	Returns a non-zero code on failure.
 //
 // Notes:
-//     There are a few differences with GNU wget:
-//     - Upon error, the return value is always 1.
-//     - The protocol (http/https) is mandatory.
+//
+//	There are a few differences with GNU wget:
+//	- Upon error, the return value is always 1.
+//	- The protocol (http/https) is mandatory.
 //
 // Example:
-//     wget -O google.txt http://google.com/
+//
+//	wget -O google.txt http://google.com/
 package main
 
 import (
@@ -24,7 +28,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/url"
 	"os"
@@ -76,24 +79,15 @@ func run() (reterr error) {
 		"file":  &curl.LocalFileClient{},
 	}
 
-	readerAt, err := schemes.Fetch(context.Background(), url)
+	reader, err := schemes.FetchWithoutCache(context.Background(), url)
 	if err != nil {
 		return fmt.Errorf("Failed to download %v: %v", argURL, err)
 	}
 
-	w, err := os.Create(*outPath)
-	if err != nil {
-		return fmt.Errorf("Failed to create output file %q: %v", *outPath, err)
+	if err := uio.ReadIntoFile(reader, *outPath); err != nil {
+		return err
 	}
-	defer func() {
-		if err := w.Close(); reterr == nil {
-			reterr = err
-		}
-	}()
 
-	if _, err := io.Copy(w, uio.Reader(readerAt)); err != nil {
-		return fmt.Errorf("Failed to read response data: %v", err)
-	}
 	return nil
 }
 
