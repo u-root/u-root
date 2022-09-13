@@ -7,8 +7,10 @@ package pci
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -134,12 +136,21 @@ func (p *PCI) WriteConfigRegister(offset, size int64, val uint64) error {
 	case 64:
 		err = binary.Write(w, binary.LittleEndian, &val)
 	case 32:
+		if val > math.MaxUint32 {
+			return fmt.Errorf("%x:%w", val, strconv.ErrRange)
+		}
 		v := uint32(val)
 		err = binary.Write(w, binary.LittleEndian, &v)
 	case 16:
+		if val > math.MaxUint16 {
+			return fmt.Errorf("%x:%w", val, strconv.ErrRange)
+		}
 		v := uint16(val)
 		err = binary.Write(w, binary.LittleEndian, &v)
 	case 8:
+		if val > math.MaxUint8 {
+			return fmt.Errorf("%x:%w", val, strconv.ErrRange)
+		}
 		v := uint8(val)
 		err = binary.Write(w, binary.LittleEndian, &v)
 	}
