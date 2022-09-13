@@ -201,11 +201,11 @@ func main() {
 
 	users, err := NewUsers(PasswdFile)
 	if err != nil {
-		log.Printf("id: unable to read %s: %v", PasswdFile, err)
+		log.Printf("id: %v", err)
 	}
 	groups, err := NewGroups(GroupFile)
 	if err != nil {
-		log.Printf("id: unable to read %s: %v", PasswdFile, err)
+		log.Printf("id: %v", err)
 	}
 
 	user, err := NewUser(flag.Arg(0), users, groups)
