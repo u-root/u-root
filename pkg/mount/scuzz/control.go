@@ -35,7 +35,7 @@ var securityStatusStrings = map[DiskSecurityStatus]string{
 type Info struct {
 	NumberSectors           uint64
 	ECCBytes                uint
-	MasterPasswordRev       uint16
+	MasterRevision          uint16 `json:"MasterPasswordRevision"`
 	SecurityStatus          DiskSecurityStatus
 	TrustedComputingSupport uint16
 
