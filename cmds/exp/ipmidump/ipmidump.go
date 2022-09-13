@@ -372,7 +372,7 @@ func sendRawCmd(cmds []string) {
 	data := make([]byte, 0)
 
 	for _, cmd := range cmds {
-		val, err := strconv.ParseInt(cmd, 0, 16)
+		val, err := strconv.ParseInt(cmd, 0, 8)
 		if err != nil {
 			fmt.Printf("Invalid syntax: \"%s\"\n", cmd)
 			return

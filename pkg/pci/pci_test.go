@@ -188,6 +188,36 @@ func TestPCIWriteConfigRegister(t *testing.T) {
 			errWant: "only options are 8, 16, 32, 64",
 		},
 		{
+			name: "More than 32 bits",
+			pci: PCI{
+				FullPath: dir,
+			},
+			offset:  0,
+			size:    32,
+			val:     1 << 33,
+			errWant: "out of range",
+		},
+		{
+			name: "More than 16 bits",
+			pci: PCI{
+				FullPath: dir,
+			},
+			offset:  0,
+			size:    16,
+			val:     1 << 17,
+			errWant: "out of range",
+		},
+		{
+			name: "More than 8 bits",
+			pci: PCI{
+				FullPath: dir,
+			},
+			offset:  0,
+			size:    8,
+			val:     1 << 17,
+			errWant: "out of range",
+		},
+		{
 			name: "config file does not exist",
 			pci: PCI{
 				FullPath: "d",

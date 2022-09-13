@@ -9,8 +9,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"testing"
 
@@ -24,9 +29,26 @@ type test struct {
 	out string
 }
 
+func TestBadFFiles(t *testing.T) {
+	var flags = &flags{}
+
+	d := t.TempDir()
+	n := filepath.Join(d, "nosuchfile")
+	f := filepath.Join(d, "afile")
+	if err := ioutil.WriteFile(f, []byte{}, 0666); err != nil {
+		t.Fatalf("writing %q: want nil, got %v", f, err)
+	}
+	if err := run(io.Discard, "root", flags, n, f); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Using %q for passwd: want %v, got nil", n, os.ErrNotExist)
+	}
+	if err := run(io.Discard, "root", flags, f, n); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("Using %q for group: want %v, got nil", n, os.ErrNotExist)
+	}
+}
+
 // Run the command, with the optional args, and return a string
 // for stdout, stderr, and an error.
-func run(c *exec.Cmd) (string, string, error) {
+func runHelper(c *exec.Cmd) (string, string, error) {
 	var o, e bytes.Buffer
 	c.Stdout, c.Stderr = &o, &e
 	err := c.Run()
@@ -45,7 +67,7 @@ func TestInvocation(t *testing.T) {
 
 	for _, test := range tests {
 		c := testutil.Command(t, test.opt...)
-		_, e, _ := run(c)
+		_, e, _ := runHelper(c)
 
 		// Ignore the date and time because we're using Log.Fatalf
 		if e[logPrefixLength:] != test.out {
@@ -287,4 +309,23 @@ func TestGroups(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	testutil.Run(m, main)
+}
+
+func TestFlags(t *testing.T) {
+	if !correctFlags(true, false, false) {
+		t.Errorf("correctFLags(true, false, false): got ! ok, want ok")
+	}
+	if correctFlags(true, true, false) {
+		t.Errorf("correctFLags(true, true, false): got ! ok, want ok")
+	}
+	var f = &flags{name: true}
+	if err := run(io.Discard, "r", f, "", ""); !errors.Is(err, errNotOnlyNames) {
+		t.Errorf(`run(%v, "", ""): got %v, want %v`, f, err, errNotOnlyNames)
+	}
+
+	f = &flags{real: true}
+	if err := run(io.Discard, "root", f, "", ""); !errors.Is(err, errNotOnlyNamesOrIDs) {
+		t.Errorf(`run(%v, "", ""): got %v, want %v`, f, err, errNotOnlyNamesOrIDs)
+	}
+
 }

@@ -22,25 +22,29 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"syscall"
 )
 
-var (
-	GroupFile  = "/etc/group"
-	PasswdFile = "/etc/passwd"
+type flags struct {
+	group  bool
+	groups bool
+	name   bool
+	user   bool
+	real   bool
+}
 
-	flags struct {
-		group  bool
-		groups bool
-		name   bool
-		user   bool
-		real   bool
-	}
+var (
+	errOnlyOneChoice     = errors.New("id: cannot print \"only\" of more than one choice")
+	errNotOnlyNames      = errors.New("id: cannot print only names in default format")
+	errNotOnlyNamesOrIDs = errors.New("id: cannot print only names or real IDs in default format")
 )
 
 func correctFlags(flags ...bool) bool {
@@ -53,14 +57,7 @@ func correctFlags(flags ...bool) bool {
 	return !(n > 1)
 }
 
-func init() {
-	flag.BoolVar(&flags.group, "g", false, "print only the effective group ID")
-	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
-	flag.BoolVar(&flags.name, "n", false, "print a name instead of a number, for -ugG")
-	flag.BoolVar(&flags.user, "u", false, "print only the effective user ID")
-	flag.BoolVar(&flags.real, "r", false, "print real ID instead of effective ID")
-}
-
+// User contains user information, as from /etc/passwd
 type User struct {
 	name   string
 	uid    int
@@ -68,29 +65,34 @@ type User struct {
 	groups map[int]string
 }
 
+// UID returns the integer UID for a user
 func (u *User) UID() int {
 	return u.uid
 }
 
+// GID returns the integer GID for a user
 func (u *User) GID() int {
 	return u.gid
 }
 
+// Name returns the name for a user
 func (u *User) Name() string {
 	return u.name
 }
 
+// Groups returns all the groups for a user in a map
 func (u *User) Groups() map[int]string {
 	return u.groups
 }
 
+// GIDName returns the group name for a user's UID
 func (u *User) GIDName() string {
 	val := u.Groups()[u.UID()]
 	return val
 }
 
 // NewUser is a factory method for the User type.
-func NewUser(username string, users *Users, groups *Groups) (*User, error) {
+func NewUser(flags *flags, username string, users *Users, groups *Groups) (*User, error) {
 	var groupsNumbers []int
 
 	u := &User{groups: make(map[int]string)}
@@ -139,21 +141,21 @@ func NewUser(username string, users *Users, groups *Groups) (*User, error) {
 }
 
 // IDCommand runs the "id" with the current user's information.
-func IDCommand(u User) {
+func IDCommand(w io.Writer, flags *flags, u User) {
 	if !flags.groups {
 		if flags.user {
 			if flags.name {
-				fmt.Println(u.Name())
+				fmt.Fprintln(w, u.Name())
 				return
 			}
-			fmt.Println(u.UID())
+			fmt.Fprintln(w, u.UID())
 			return
 		} else if flags.group {
 			if flags.name {
-				fmt.Println(u.GIDName())
+				fmt.Fprintln(w, u.GIDName())
 				return
 			}
-			fmt.Println(u.GID())
+			fmt.Fprintln(w, u.GID())
 			return
 		}
 
@@ -184,34 +186,53 @@ func IDCommand(u User) {
 		sep = ""
 	}
 
-	fmt.Println(strings.Join(groupOutput, sep))
+	fmt.Fprintln(w, strings.Join(groupOutput, sep))
+}
+
+func run(w io.Writer, name string, f *flags, passwd, group string) error {
+	if !correctFlags(f.groups, f.group, f.user) {
+		return errOnlyOneChoice
+	}
+	if f.name && !(f.groups || f.group || f.user) {
+		return errNotOnlyNames
+	}
+	if len(name) != 0 && f.real {
+		return errNotOnlyNamesOrIDs
+	}
+
+	users, err := NewUsers(passwd)
+	if err != nil {
+		return fmt.Errorf("id: %w", err)
+	}
+	groups, err := NewGroups(group)
+	if err != nil {
+		return fmt.Errorf("id: %w", err)
+	}
+
+	user, err := NewUser(f, name, users, groups)
+	if err != nil {
+		return fmt.Errorf("id: %w", err)
+	}
+
+	IDCommand(w, f, *user)
+	return nil
 }
 
 func main() {
+	const (
+		GroupFile  = "/etc/group"
+		PasswdFile = "/etc/passwd"
+	)
+	var flags = &flags{}
+	flag.BoolVar(&flags.group, "g", false, "print only the effective group ID")
+	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
+	flag.BoolVar(&flags.name, "n", false, "print a name instead of a number, for -ugG")
+	flag.BoolVar(&flags.user, "u", false, "print only the effective user ID")
+	flag.BoolVar(&flags.real, "r", false, "print real ID instead of effective ID")
+
 	flag.Parse()
-	if !correctFlags(flags.groups, flags.group, flags.user) {
-		log.Fatalf("id: cannot print \"only\" of more than one choice")
-	}
-	if flags.name && !(flags.groups || flags.group || flags.user) {
-		log.Fatalf("id: cannot print only names in default format")
-	}
-	if len(flag.Arg(0)) != 0 && flags.real {
-		log.Fatalf("id: cannot print only names or real IDs in default format")
+	if err := run(os.Stdout, flag.Arg(0), flags, PasswdFile, GroupFile); err != nil {
+		log.Fatalf("%v", err)
 	}
 
-	users, err := NewUsers(PasswdFile)
-	if err != nil {
-		log.Printf("id: unable to read %s: %v", PasswdFile, err)
-	}
-	groups, err := NewGroups(GroupFile)
-	if err != nil {
-		log.Printf("id: unable to read %s: %v", PasswdFile, err)
-	}
-
-	user, err := NewUser(flag.Arg(0), users, groups)
-	if err != nil {
-		log.Fatalf("id: %s", err)
-	}
-
-	IDCommand(*user)
 }
