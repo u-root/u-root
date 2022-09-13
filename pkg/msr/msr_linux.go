@@ -142,7 +142,7 @@ func (c CPUs) paths() []string {
 	p := make([]string, len(c))
 
 	for i, v := range c {
-		p[i] = filepath.Join("/dev/cpu", strconv.Itoa(int(v)), "msr")
+		p[i] = filepath.Join("/dev/cpu", strconv.FormatUint(v, 10), "msr")
 	}
 	return p
 }
