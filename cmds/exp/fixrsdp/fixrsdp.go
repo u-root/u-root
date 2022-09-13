@@ -70,4 +70,13 @@ func main() {
 	if err = ebda.WriteEBDA(e, f); err != nil {
 		log.Fatal(err)
 	}
+        // Verify write, depending on the kernel settings like CONFIG_STRICT_DEVMEM, writes can silently fail. 
+        v, err := ebda.ReadEBDA(f)
+        if err != nil {
+                log.Fatalf("Error reading EBDA: %v", err)
+        }
+        res := bytes.Compare(e.Data,v.Data)
+        if res != 0 {
+                log.Fatal("Write verification failed !")
+        }
 }
