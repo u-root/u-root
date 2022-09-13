@@ -13,7 +13,8 @@ import (
 	"archive/zip"
 	"io"
 	"os"
-	fp "path/filepath"
+
+	"github.com/u-root/u-root/pkg/upath"
 )
 
 // Extracts testdata zip for use as efivars in tests. Used in uefivars and subpackages.
@@ -33,7 +34,10 @@ func SetupVarZip(path string) (efiVarDir string, cleanup func(), err error) {
 	}
 	defer z.Close()
 	for _, zf := range z.File {
-		fname := fp.Join(efiVarDir, zf.Name)
+		var fname string
+		if fname, err = upath.SafeFilepathJoin(efiVarDir, zf.Name); err != nil {
+			return
+		}
 		if zf.FileInfo().IsDir() {
 			err = os.MkdirAll(fname, zf.FileInfo().Mode())
 			if err != nil {
