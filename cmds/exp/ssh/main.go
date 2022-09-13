@@ -5,15 +5,18 @@
 // SSH client.
 //
 // Synopsis:
-//     ssh OPTIONS [DEST]
+//
+//	ssh OPTIONS [DEST]
 //
 // Description:
-//     Connects to the specified destination.
+//
+//	Connects to the specified destination.
 //
 // Options:
 //
 // Destination format:
-//     [user@]hostname or ssh://[user@]hostname[:port]
+//
+//	[user@]hostname or ssh://[user@]hostname[:port]
 package main
 
 import (
@@ -32,6 +35,7 @@ import (
 	config "github.com/kevinburke/ssh_config"
 	sshconfig "github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 	"golang.org/x/term"
 )
 
@@ -70,6 +74,17 @@ func main() {
 	}
 }
 
+func knownHosts() (ssh.HostKeyCallback, error) {
+	etc, err := filepath.Glob("/etc/*/ssh_known_hosts")
+	if err != nil {
+		return nil, err
+	}
+	if home, ok := os.LookupEnv("HOME"); ok {
+		etc = append(etc, filepath.Join(home, ".ssh", "known_hosts"))
+	}
+	return knownhosts.New(etc...)
+}
+
 // we demand that stdin be a proper os.File because we need to be able to put it in raw mode
 func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) error {
 	flags.SetOutput(stderr)
@@ -102,10 +117,14 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 		return fmt.Errorf("destination parse failed: %v", err)
 	}
 
+	cb, err := knownHosts()
+	if err != nil {
+		return fmt.Errorf("known hosts:%v", err)
+	}
 	// Build a client config with appropriate auth methods
 	config := &ssh.ClientConfig{
 		User:            user,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: cb,
 	}
 	// Figure out if there's a keyfile or not
 	kf := getKeyFile(host, *keyFile)
@@ -184,10 +203,11 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 
 // parseDest splits an ssh destination spec into separate user, host, and port fields.
 // Example specs:
-//		ssh://user@host:port
-//		user@host:port
-//		user@host
-//		host
+//
+//	ssh://user@host:port
+//	user@host:port
+//	user@host
+//	host
 func parseDest(input string) (user, host, port string, err error) {
 	// strip off any preceding ssh://
 	input = strings.TrimPrefix(input, "ssh://")
