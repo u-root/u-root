@@ -24,10 +24,7 @@ type dirEnt struct {
 func TestCpio(t *testing.T) {
 	debug = t.Logf
 	// Create a temporary directory
-	tempDir, err := os.MkdirTemp(os.TempDir(), "")
-	if err != nil {
-		t.Fatalf("cannot create temporary directory for creating test files: %v", err)
-	}
+	tempDir := t.TempDir()
 
 	targets := []dirEnt{
 		{Name: "file1", Type: "file", Content: "Hello World"},
@@ -85,8 +82,6 @@ func TestCpio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	defer os.Remove(inputFile.Name())
-	defer inputFile.Close()
 
 	for _, ent := range targets {
 		name := filepath.Join(tempDir, ent.Name)
@@ -104,12 +99,10 @@ func TestCpio(t *testing.T) {
 
 	// Cpio can't read from a non-seekable input (e.g. a pipe) in input mode.
 	// Write the archive to a file instead.
-	archiveFile, err := os.CreateTemp("", "archive.cpio")
+	archiveFile, err := os.CreateTemp(tempDir, "archive.cpio")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(archiveFile.Name())
-	defer archiveFile.Close()
 
 	if _, err := archiveFile.Write(archive.Bytes()); err != nil {
 		t.Fatal(err)
@@ -173,7 +166,7 @@ func TestDirectoryHardLink(t *testing.T) {
 		t.Fatalf("Could not get current working directory: %v", err)
 	}
 	defer os.Chdir(wd)
-	tempExtractDir := os.TempDir()
+	tempExtractDir := t.TempDir()
 	err = os.Chdir(tempExtractDir)
 	if err != nil {
 		t.Fatalf("Change to dir %v failed: %v", tempExtractDir, err)
