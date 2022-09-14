@@ -122,11 +122,11 @@ func (t *TTY) String() string {
 	return s
 }
 
-func intarg(s []string) (int, error) {
+func intarg(s []string, bits int) (int, error) {
 	if len(s) < 2 {
 		return -1, fmt.Errorf("%s requires an arg", s[0])
 	}
-	i, err := strconv.ParseUint(s[1], 0, 0)
+	i, err := strconv.ParseUint(s[1], 0, bits)
 	if err != nil {
 		return -1, fmt.Errorf("%s is not a number", s)
 	}
@@ -142,15 +142,16 @@ func (t *TTY) SetOpts(opts []string) error {
 		o := opts[i]
 		switch o {
 		case "rows":
-			t.Row, err = intarg(opts[i:])
+			t.Row, err = intarg(opts[i:], 16)
 			i++
 			continue
 		case "cols":
-			t.Col, err = intarg(opts[i:])
+			t.Col, err = intarg(opts[i:], 16)
 			i++
 			continue
 		case "speed":
-			t.Ispeed, err = intarg(opts[i:])
+			// 32 may sound crazy but ... baud can be REALLY large
+			t.Ispeed, err = intarg(opts[i:], 32)
 			i++
 			continue
 		}
@@ -158,7 +159,7 @@ func (t *TTY) SetOpts(opts []string) error {
 		// see if it's one of the control char options.
 		if _, ok := cc[opts[i]]; ok {
 			var opt int
-			if opt, err = intarg(opts[i:]); err != nil {
+			if opt, err = intarg(opts[i:], 8); err != nil {
 				return err
 			}
 

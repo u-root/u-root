@@ -72,8 +72,7 @@ func bytesToHuman(bytes uint64) string {
 }
 
 func downloadFile(filepath string, url string) error {
-	// TODO: Should probably not blindly skip TLS checking
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
 
 	log.Printf("Downloading file %s from %s\n", filepath, url)
 

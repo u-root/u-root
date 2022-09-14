@@ -648,7 +648,7 @@ func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 			return nil
 		}
 
-		v, err := strconv.ParseUint(data, 0, 64)
+		v, err := strconv.ParseUint(data, 0, strconv.IntSize)
 		if err != nil {
 			return err
 		}

@@ -210,8 +210,8 @@ func main() {
 		// made to unlock the disk. Reset this with an AC cycle or hardware reset
 		// on the disk.
 		log.Fatalf("Security count expired on disk. Reset the password counter by power cycling the disk.")
-	case info.MasterPasswordRev != skmMPI:
-		log.Fatalf("Disk is locked with unknown master password ID: %X (Do you have skm tools installed?)", info.MasterPasswordRev)
+	case info.MasterRevision != skmMPI:
+		log.Fatalf("Disk is locked with unknown master password ID: %X (Do you have skm tools installed?)", info.MasterRevision)
 	}
 
 	// Try using each HSS to unlock the disk - only 1 should work.

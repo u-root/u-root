@@ -229,7 +229,7 @@ func main() {
 	}
 
 	// Set up HTTP client
-	config := &tls.Config{InsecureSkipVerify: true}
+	config := &tls.Config{InsecureSkipVerify: false}
 	tr := &http.Transport{TLSClientConfig: config}
 	client := &http.Client{Transport: tr}
 
