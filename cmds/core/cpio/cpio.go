@@ -27,6 +27,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -40,38 +41,37 @@ var (
 	debug  = func(string, ...interface{}) {}
 	d      = flag.Bool("v", false, "Debug prints")
 	format = flag.String("H", "newc", "format")
+
+	errInvalidArgs = errors.New("Usage of the command:\ncpio o < name-list [> archive]\ncpio i [< archive]\ncpio p destination-directory < name-list\nOptions: -H format (default: newc) -v Debug prints ")
 )
 
-func usage() {
-	log.Fatalf("Usage: cpio")
+func usage() error {
+	return errInvalidArgs
 }
 
-func main() {
-	flag.Parse()
-	if *d {
+func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string) error {
+	if d {
 		debug = log.Printf
 	}
 
-	a := flag.Args()
-	debug("Args %v", a)
-	if len(a) < 1 {
-		usage()
+	debug("Args %v", args)
+	if len(args) < 1 {
+		return usage()
 	}
-	op := a[0]
+	op := args[0]
 
-	archiver, err := cpio.Format(*format)
+	archiver, err := cpio.Format(format)
 	if err != nil {
-		log.Fatalf("Format %q not supported: %v", *format, err)
+		return fmt.Errorf("Format %q not supported: %w", format, err)
 	}
 
 	switch op {
 	case "i":
 		var inums map[uint64]string
 		inums = make(map[uint64]string)
-
-		rr, err := archiver.NewFileReader(os.Stdin)
+		rr, err := archiver.NewFileReader(stdin)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		for {
 			rec, err := rr.ReadRecord()
@@ -79,7 +79,7 @@ func main() {
 				break
 			}
 			if err != nil {
-				log.Fatalf("error reading records: %v", err)
+				return fmt.Errorf("error reading records: %w", err)
 			}
 			debug("record name %s ino %d\n", rec.Name, rec.Info.Ino)
 
@@ -115,7 +115,7 @@ func main() {
 					err := os.Link(ino, rec.Name)
 					debug("Hard linking %s to %s", ino, rec.Name)
 					if err != nil {
-						log.Fatal(err)
+						return err
 					}
 					continue
 				}
@@ -128,32 +128,31 @@ func main() {
 		}
 
 	case "o":
-		rw := archiver.Writer(os.Stdout)
+		rw := archiver.Writer(stdout)
 		cr := cpio.NewRecorder()
-		scanner := bufio.NewScanner(os.Stdin)
-
+		scanner := bufio.NewScanner(stdin)
 		for scanner.Scan() {
 			name := scanner.Text()
 			rec, err := cr.GetRecord(name)
 			if err != nil {
-				log.Fatalf("Getting record of %q failed: %v", name, err)
+				return fmt.Errorf("Getting record of %q failed: %w", name, err)
 			}
 			if err := rw.WriteRecord(rec); err != nil {
-				log.Fatalf("Writing record %q failed: %v", name, err)
+				return fmt.Errorf("Writing record %q failed: %w", name, err)
 			}
 		}
 
 		if err := scanner.Err(); err != nil {
-			log.Fatalf("Error reading stdin: %v", err)
+			return fmt.Errorf("Error reading stdin: %w", err)
 		}
 		if err := cpio.WriteTrailer(rw); err != nil {
-			log.Fatalf("Error writing trailer record: %v", err)
+			return fmt.Errorf("Error writing trailer record: %w", err)
 		}
 
 	case "t":
-		rr, err := archiver.NewFileReader(os.Stdin)
+		rr, err := archiver.NewFileReader(stdin)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		for {
 			rec, err := rr.ReadRecord()
@@ -161,12 +160,23 @@ func main() {
 				break
 			}
 			if err != nil {
-				log.Fatalf("error reading records: %v", err)
+				return fmt.Errorf("error reading records: %w", err)
 			}
 			fmt.Println(rec)
 		}
 
 	default:
-		usage()
+		return usage()
+	}
+
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	args := flag.Args()
+
+	if err := run(args, os.Stdin, os.Stdout, *d, *format); err != nil {
+		log.Fatalf("cpio: %v", err)
 	}
 }
