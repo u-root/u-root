@@ -41,9 +41,9 @@ type PCI struct {
 	BARS     []BAR  `json:"omitempty"`
 
 	// Type 1
-	Primary     string
-	Secondary   string
-	Subordinate string
+	Primary     uint8
+	Secondary   uint8
+	Subordinate uint8
 	SecLatency  string
 	IO          BAR
 	Mem         BAR
@@ -191,9 +191,9 @@ iter:
 			p.Bridge = true
 		}
 		p.IRQPin = c[IRQPin]
-		p.Primary = fmt.Sprintf("%02x", c[Primary])
-		p.Secondary = fmt.Sprintf("%02x", c[Secondary])
-		p.Subordinate = fmt.Sprintf("%02x", c[Subordinate])
+		p.Primary = c[Primary]
+		p.Secondary = c[Secondary]
+		p.Subordinate = c[Subordinate]
 		p.SecLatency = fmt.Sprintf("%02x", c[SecondaryLatency])
 
 		devices = append(devices, p)

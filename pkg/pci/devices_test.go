@@ -47,7 +47,7 @@ func TestPrint(t *testing.T) {
 	Control: I/O- Memory- DMA- Special- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisInt-
 	Status: INTx- Cap- 66MHz- UDF- FastB2b- ParErr- DEVSEL- DEVSEL=fast <MABORT- >SERR- <PERR-
 	Latency: 0, Cache Line Size: 255 bytes
-	Bus: primary=, secondary=, subordinate=, sec-latency=
+	Bus: primary=00, secondary=00, subordinate=00, sec-latency=
 	I/O behind bridge: 0x00000040-0x00000000 [size=0xffffffffffffffc1]
 	Memory behind bridge:  [disabled]
 	Prefetchable memory behind bridge:  [disabled]
