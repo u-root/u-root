@@ -40,7 +40,7 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				if _, err := fmt.Fprintf(o, ", Cache Line Size: %d bytes", c[CacheLineSize]); err != nil {
 					return err
 				}
-				if _, err := fmt.Fprintf(o, "\n\tBus: primary=%s, secondary=%s, subordinate=%s, sec-latency=%s",
+				if _, err := fmt.Fprintf(o, "\n\tBus: primary=%02x, secondary=%02x, subordinate=%02x, sec-latency=%s",
 					pci.Primary, pci.Secondary, pci.Subordinate, pci.SecLatency); err != nil {
 					return err
 				}
