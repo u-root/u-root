@@ -113,7 +113,7 @@ testing, executing your currently booted kernel:
 > NOTE: these files will be placed in the `$HOME` dir in the initramfs.
 
 ```shell
-u-root -files "$HOME/hello.ko $HOME/hello2.ko"
+u-root -files $HOME/hello.ko -files $HOME/hello2.ko
 qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
