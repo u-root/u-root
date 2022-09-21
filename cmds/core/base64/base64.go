@@ -10,11 +10,13 @@
 // Description:
 //    Encode or decode a file to or from base64 encoding.
 //    -d   decode data (default is to encode)
+//    For stdin, on standard Unix systems, you can use /dev/stdin
 
 package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -22,7 +24,10 @@ import (
 	"os"
 )
 
-var decode = flag.Bool("d", false, "Decode")
+var (
+	decode      = flag.Bool("d", false, "Decode")
+	errBadUsage = errors.New("usage: base64 [-d] [file]")
+)
 
 func do(r io.Reader, w io.Writer, decode bool) error {
 	op := "decoding"
@@ -34,18 +39,26 @@ func do(r io.Reader, w io.Writer, decode bool) error {
 	}
 
 	if _, err := io.Copy(w, r); err != nil {
-		return fmt.Errorf("error %s the data: %v", op, err)
+		return fmt.Errorf("error %s the data: %w", op, err)
 	}
 	return nil
 }
 
-func run(name string, stdin io.Reader, stdout io.Writer, decode bool) error {
-	if name != "-" && len(name) > 0 {
-		f, err := os.Open(name)
+// run runs the base64 command. Why use ...string?
+// makes testing a tad easier (so we don't have an if in main()
+// allows us, should we wish, in future, to go with using
+// names[1] as out. base64 commands are very nonstandard.
+func run(stdin io.Reader, stdout io.Writer, decode bool, names ...string) error {
+	switch len(names) {
+	case 0:
+	case 1:
+		f, err := os.Open(names[0])
 		if err != nil {
 			return err
 		}
 		stdin = f
+	default:
+		return errBadUsage
 	}
 
 	return do(stdin, stdout, decode)
@@ -53,12 +66,7 @@ func run(name string, stdin io.Reader, stdout io.Writer, decode bool) error {
 
 func main() {
 	flag.Parse()
-	var name string
-	if len(flag.Args()) > 1 {
-		name = flag.Args()[0]
-	}
-
-	if err := run(name, os.Stdin, os.Stdout, *decode); err != nil {
+	if err := run(os.Stdin, os.Stdout, *decode, flag.Args()...); err != nil {
 		log.Fatalf("base64: %v", err)
 	}
 }
