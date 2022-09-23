@@ -1,6 +1,8 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+//go:build linux || darwin
 
 // insmod inserts a module into the running Linux kernel.
 //
@@ -38,7 +40,11 @@ func main() {
 	}
 	defer f.Close()
 
-	if err := kmodule.FileInit(f, options, 0); err != nil {
+	l, err := kmodule.New()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err := l.FileInit(f, options, 0); err != nil {
 		log.Fatalf("insmod: could not load %q: %v", filename, err)
 	}
 }
