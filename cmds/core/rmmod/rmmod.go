@@ -1,6 +1,8 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+//go:build linux || darwin
 
 // Remove a module from the Linux kernel
 //
@@ -27,12 +29,15 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalf("rmmod: ERROR: missing module name.\n")
+		log.Fatalln("rmmod: missing module name.")
 	}
-
+	l, err := kmodule.New()
+	if err != nil {
+		log.Fatalln(err)
+	}
 	for _, modname := range os.Args[1:] {
-		if err := kmodule.Delete(modname, syscall.O_NONBLOCK); err != nil {
-			log.Fatalf("rmmod: %v", err)
+		if err := l.Delete(modname, syscall.O_NONBLOCK); err != nil {
+			log.Printf("rmmod %q: %v", modname, err)
 		}
 	}
 }

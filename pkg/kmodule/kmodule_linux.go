@@ -17,9 +17,11 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/klauspost/pgzip"
+	"github.com/u-root/u-root/pkg/uio"
 	"github.com/ulikunitz/xz"
 	"golang.org/x/sys/unix"
 )
@@ -31,19 +33,48 @@ const (
 
 	// Ignore kernel version magic.
 	MODULE_INIT_IGNORE_VERMAGIC = 0x2
+
+	modPath = "/proc/modules"
 )
 
+type LinuxLoader struct {
+	modules string
+	io.ReadCloser
+}
+
 // Init loads the kernel module given by image with the given options.
-func Init(image []byte, opts string) error {
+func (l *LinuxLoader) Init(image []byte, opts string) error {
 	return unix.InitModule(image, opts)
 }
+
+// Read implements io.Reader
+func (l *LinuxLoader) Read(b []byte) (int, error) {
+	return l.ReadCloser.Read(b)
+}
+
+// 	scanner := bufio.NewScanner(file)
+// 	for scanner.Scan() {
+// 		s := strings.Fields(scanner.Text())
+// 		name, size, used, usedBy := s[0], s[1], s[2], s[3]
+// 		final := fmt.Fprintln(b, "%-19s %8s  %s", name, size, used)
+// 		if usedBy != "-" {
+// 			usedBy = usedBy[:len(usedBy)-1]
+// 			final += fmt.Fprintln(b, " %s", usedBy)
+// 		}
+// 	}
+
+// 	if err := scanner.Err(); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 // FileInit loads the kernel module contained by `f` with the given opts and
 // flags. Uncompresses modules with a .xz and .gz suffix before loading.
 //
 // FileInit falls back to init_module(2) via Init when the finit_module(2)
 // syscall is not available and when loading compressed modules.
-func FileInit(f *os.File, opts string, flags uintptr) error {
+func (l *LinuxLoader) FileInit(f *os.File, opts string, flags uintptr) error {
 	var r io.Reader
 	var err error
 	switch filepath.Ext(f.Name()) {
@@ -78,11 +109,24 @@ func FileInit(f *os.File, opts string, flags uintptr) error {
 	if err != nil {
 		return err
 	}
-	return Init(img, opts)
+	return l.Init(img, opts)
+}
+
+// FileInit loads the kernel module contained by `f` with the given opts and
+// flags. Uncompresses modules with a .xz and .gz suffix before loading.
+//
+// FileInit falls back to init_module(2) via Init when the finit_module(2)
+// syscall is not available and when loading compressed modules.
+func FileInit(f *os.File, opts string, flags uintptr) error {
+	l, err := New()
+	if err != nil {
+		return err
+	}
+	return l.FileInit(f, opts, flags)
 }
 
 // Delete removes a kernel module.
-func Delete(name string, flags uintptr) error {
+func (l *LinuxLoader) Delete(name string, flags uintptr) error {
 	return unix.DeleteModule(name, int(flags))
 }
 
@@ -112,21 +156,43 @@ type ProbeOpts struct {
 	IgnoreProcMods bool
 }
 
+// NewPath creates a *LinuxLoader using a given path.
+func NewPath(n string) (*LinuxLoader, error) {
+	return &LinuxLoader{modules: n, ReadCloser: uio.NewLazyOpener(func() (io.Reader, error) {
+		return os.Open(n)
+	})}, nil
+}
+
+// New creates a *LinuxLoader from /proc/modules
+func New() (*LinuxLoader, error) {
+	return NewPath(modPath)
+}
+
+var _ Loader = &LinuxLoader{}
+
+func Probe(name string, modParams string) error {
+	l, err := New()
+	if err != nil {
+		return err
+	}
+	return l.Probe(name, modParams)
+}
+
 // Probe loads the given kernel module and its dependencies.
 // It is calls ProbeOptions with the default ProbeOpts.
-func Probe(name string, modParams string) error {
-	return ProbeOptions(name, modParams, ProbeOpts{})
+func (l *LinuxLoader) Probe(name string, modParams string) error {
+	return l.ProbeOptions(name, modParams, ProbeOpts{})
 }
 
 // ProbeOptions loads the given kernel module and its dependencies.
 // This functions takes ProbeOpts.
-func ProbeOptions(name, modParams string, opts ProbeOpts) error {
-	deps, err := genDeps(opts)
+func (l *LinuxLoader) ProbeOptions(name, modParams string, opts ProbeOpts) error {
+	deps, err := l.genDeps(opts)
 	if err != nil {
 		return fmt.Errorf("could not generate dependency map %v", err)
 	}
 
-	modPath, err := findModPath(name, deps)
+	modPath, err := l.findModPath(name, deps)
 	if err != nil {
 		return fmt.Errorf("could not find module path %q: %v", name, err)
 	}
@@ -139,14 +205,24 @@ func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 
 	dep.state = loading
 	for _, d := range dep.deps {
-		if err := loadDeps(d, deps, opts); err != nil {
+		if err := l.loadDeps(d, deps, opts); err != nil {
 			return err
 		}
 	}
-	return loadModule(modPath, modParams, opts)
+	return l.loadModule(modPath, modParams, opts)
 }
 
-func checkBuiltin(moduleDir string, deps depMap) error {
+// ProbeOptions loads the given kernel module and its dependencies.
+// This functions takes ProbeOpts.
+func ProbeOptions(name, modParams string, opts ProbeOpts) error {
+	l, err := New()
+	if err != nil {
+		return err
+	}
+	return l.ProbeOptions(name, modParams, opts)
+}
+
+func (l *LinuxLoader) checkBuiltin(moduleDir string, deps depMap) error {
 	f, err := os.Open(filepath.Join(moduleDir, "modules.builtin"))
 	if os.IsNotExist(err) {
 		return nil
@@ -168,7 +244,7 @@ func checkBuiltin(moduleDir string, deps depMap) error {
 	return scanner.Err()
 }
 
-func genDeps(opts ProbeOpts) (depMap, error) {
+func (l *LinuxLoader) genDeps(opts ProbeOpts) (depMap, error) {
 	deps := make(depMap)
 	rel := opts.KVer
 
@@ -214,22 +290,24 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 		return nil, err
 	}
 
-	if err = checkBuiltin(moduleDir, deps); err != nil {
+	if err = l.checkBuiltin(moduleDir, deps); err != nil {
 		return nil, err
 	}
 
 	if !opts.IgnoreProcMods {
-		fm, err := os.Open("/proc/modules")
+		fm, err := os.Open(modPath)
 		if err == nil {
 			defer fm.Close()
-			genLoadedMods(fm, deps)
+			if err := l.genLoadedMods(fm, deps); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	return deps, nil
 }
 
-func findModPath(name string, m depMap) (string, error) {
+func (l *LinuxLoader) findModPath(name string, m depMap) (string, error) {
 	// Kernel modules do not have any consistency with use of hyphens and underscores
 	// matching from the module's name to the module's file path. Thus try matching
 	// the provided name using either.
@@ -248,7 +326,7 @@ func findModPath(name string, m depMap) (string, error) {
 	return "", fmt.Errorf("could not find path for module %q", name)
 }
 
-func loadDeps(path string, m depMap, opts ProbeOpts) error {
+func (l *LinuxLoader) loadDeps(path string, m depMap, opts ProbeOpts) error {
 	dependency, ok := m[path]
 	if !ok {
 		return fmt.Errorf("could not find dependency %q", path)
@@ -263,13 +341,13 @@ func loadDeps(path string, m depMap, opts ProbeOpts) error {
 	m[path].state = loading
 
 	for _, dep := range dependency.deps {
-		if err := loadDeps(dep, m, opts); err != nil {
+		if err := l.loadDeps(dep, m, opts); err != nil {
 			return err
 		}
 	}
 
 	// done with dependencies, load module
-	if err := loadModule(path, "", opts); err != nil {
+	if err := l.loadModule(path, "", opts); err != nil {
 		return err
 	}
 	m[path].state = loaded
@@ -277,7 +355,7 @@ func loadDeps(path string, m depMap, opts ProbeOpts) error {
 	return nil
 }
 
-func loadModule(path, modParams string, opts ProbeOpts) error {
+func (l *LinuxLoader) loadModule(path, modParams string, opts ProbeOpts) error {
 	if opts.DryRunCB != nil {
 		opts.DryRunCB(path)
 		return nil
@@ -289,19 +367,19 @@ func loadModule(path, modParams string, opts ProbeOpts) error {
 	}
 	defer f.Close()
 
-	if err := FileInit(f, modParams, 0); err != nil && err != unix.EEXIST {
+	if err := l.FileInit(f, modParams, 0); err != nil && err != unix.EEXIST {
 		return err
 	}
 
 	return nil
 }
 
-func genLoadedMods(r io.Reader, deps depMap) error {
+func (l *LinuxLoader) genLoadedMods(r io.Reader, deps depMap) error {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		arr := strings.Split(scanner.Text(), " ")
 		name := arr[0]
-		modPath, err := findModPath(name, deps)
+		modPath, err := l.findModPath(name, deps)
 		if err != nil {
 			return fmt.Errorf("could not find module path %q: %v", name, err)
 		}
@@ -311,4 +389,27 @@ func genLoadedMods(r io.Reader, deps depMap) error {
 		deps[modPath].state = loaded
 	}
 	return scanner.Err()
+}
+
+// Pretty prints the string from /proc/modules in a pretty format.
+func Pretty(w io.Writer, s string) error {
+	in := "Module\tSize\tUsed by\n"
+	for i, line := range strings.Split(s, "\n") {
+		if len(line) == 0 {
+			continue
+		}
+		f := strings.Fields(line)
+		if len(f) < 4 {
+			in += fmt.Sprintf("Line %d is malformed: %q\n", i, line)
+			continue
+		}
+		// Don't use fmt.Sprintf here; it turns tabs to spaces.
+		in += f[0] + "\t" + f[1] + "\t" + f[2] + "\t" + f[3] + "\n"
+	}
+	tw := tabwriter.NewWriter(w, 0, 8, 0, '\t', 0)
+	if _, err := tw.Write([]byte(in)); err != nil {
+		return err
+	}
+
+	return tw.Flush()
 }
