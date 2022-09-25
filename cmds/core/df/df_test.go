@@ -9,6 +9,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
 	"testing"
 )
 
@@ -20,8 +21,8 @@ func TestRunDF(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "Usage",
-			args: []string{"", ""},
+			name: "No-such-file-or-directory",
+			args: []string{""},
 		},
 		{
 			name: "NoArgs-NoFlags",
@@ -45,6 +46,10 @@ func TestRunDF(t *testing.T) {
 				m: true,
 			},
 			wantErr: errKMExclusiv,
+		},
+		{
+			name: "Dir as argument",
+			args: []string{os.TempDir()},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
