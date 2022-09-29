@@ -7,9 +7,18 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 )
+
+func getUnusedPID() string {
+	cmd := exec.Command("true")
+	cmd.Start()
+	pid := cmd.Process.Pid
+	cmd.Wait()
+	return fmt.Sprintf("%d", pid)
+}
 
 func TestKillProcess(t *testing.T) {
 	for _, tt := range []struct {
@@ -54,7 +63,7 @@ func TestKillProcess(t *testing.T) {
 		},
 		{
 			name: "kill signal with signal and wrong pid",
-			args: []string{"kill", "--signal", "50", "9999"},
+			args: []string{"kill", "--signal", "50", getUnusedPID()},
 			want: "some processes could not be killed",
 		},
 		{
