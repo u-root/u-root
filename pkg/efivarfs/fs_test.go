@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/testutil"
 	"golang.org/x/sys/unix"
 )
 
 func TestFSGoodFile(t *testing.T) {
+	// Temporary folder cleanup can require root.
+	testutil.SkipIfNotRoot(t)
 	d := t.TempDir()
 	f, err := os.Create(filepath.Join(d, "x"))
 	if err != nil {
