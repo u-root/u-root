@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM circleci/golang:1.17
+FROM cimg/go:1.19
 
 # Install dependencies
 RUN sudo apt-get update &&                          \

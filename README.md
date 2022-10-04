@@ -47,7 +47,7 @@ like `./u-root -uroot-source ./`
 
 # Usage
 
-Make sure your Go version is >=1.17.
+Make sure your Go version is >=1.19.
 
 Download and install u-root either via git:
 

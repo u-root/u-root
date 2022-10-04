@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM circleci/golang:1.17
+FROM cimg/go:1.19
 
 # Install dependencies
 RUN sudo apt-get update &&                          \
@@ -73,13 +73,13 @@ RUN set -eux;                                                          \
 
 # Build Multiboot kernel
 RUN set -eux;                                                          \
-    git clone --depth=1 --branch=v1.01                                 \
-           https://github.com/u-root/multiboot-test-kernel;            \
+    git clone --depth=1                                                \
+    https://github.com/u-root/multiboot-test-kernel;                   \
     cd multiboot-test-kernel;                                          \
+    git checkout 1c7e4f4722077dcab308cd1df9818eab011e58c4;             \
     make;                                                              \
     cd ~;                                                              \
-    cp multiboot-test-kernel/kernel ./;                                \
-    gzip -k kernel;                                                    \
+    cp multiboot-test-kernel/kernel.gz ./;                             \
     rm -rf multiboot-test-kernel/
 
 SHELL ["/bin/bash", "-c"]

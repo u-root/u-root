@@ -4,19 +4,19 @@ templates:
   golang-template:
     &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v5.0.0
-    working_directory: /go/src/github.com/u-root/u-root
+      - image: uroottest/test-image-amd64:v5.1.0
+    working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
-      - UROOT_SOURCE: /go/src/github.com/u-root/u-root
+      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
       - CGO_ENABLED: 0
       # x7 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 7
 
   integration-template:
     &integration-template
-    working_directory: /go/src/github.com/u-root/u-root
+    working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
-      - UROOT_SOURCE: /go/src/github.com/u-root/u-root
+      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
       - CGO_ENABLED: 0
       # x7 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 7
@@ -24,7 +24,7 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root
+          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
             UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m
             -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
@@ -60,14 +60,14 @@ jobs:
       - checkout
       - run:
           name: Test Packages
-          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root go test -v -a
+          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -v -a
             -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt
             -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
 
       - run:
           name: Test coverage
-          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root
+          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
             UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=20m
             -failfast -coverprofile=coverage.txt -covermode=atomic -cover
             ./cmds/... ./pkg/...
@@ -94,7 +94,7 @@ jobs:
       - checkout
       - run:
           name: Race detector
-          command: UROOT_SOURCE=/go/src/github.com/u-root/u-root go test -race
+          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -race
             -timeout=15m -failfast ./cmds/... ./pkg/...
 
   compile_cmds:
@@ -154,14 +154,14 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v5.0.0
+      - image: uroottest/test-image-amd64:v5.1.0
     # The resource_class feature allows configuring CPU and RAM resources for each job. Different resource classes are available for different executors. https://circleci.com/docs/2.0/configuration-reference/#resourceclass
     resource_class: large
 
   test-integration-arm:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm:v5.0.0
+      - image: uroottest/test-image-arm:v5.1.0
 
   # This arch needs a different working dir, so don't use integration-template
   test-integration-arm64:
