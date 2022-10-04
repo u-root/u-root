@@ -16,14 +16,14 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: 1.19
     - name: Install golangci-lint
       run: |
         cd ..
-        go get golang.org/x/lint/golint
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.30.0
+        go install golang.org/x/lint/golint@latest
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0
     - name: Install ineffassign
-      run: (cd .. && go get github.com/gordonklaus/ineffassign)
+      run: (cd .. && go install github.com/gordonklaus/ineffassign@latest)
     - name: Check vendored dependencies
       run: |
         go mod tidy
@@ -63,7 +63,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: 1.19
 
     - name: Build
       run: go build -mod=mod -v ./...
@@ -83,7 +83,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: 1.19
 
     - name: Build fail
       id: buildfail

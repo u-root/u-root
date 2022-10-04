@@ -1,6 +1,6 @@
 module github.com/u-root/u-root
 
-go 1.17
+go 1.19
 
 require (
 	github.com/beevik/ntp v0.3.0
