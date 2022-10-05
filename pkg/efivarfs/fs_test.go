@@ -9,13 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
 	"golang.org/x/sys/unix"
 )
 
 func TestFSGoodFile(t *testing.T) {
-	// Temporary folder cleanup can require root.
-	testutil.SkipIfNotRoot(t)
 	d := t.TempDir()
 	f, err := os.Create(filepath.Join(d, "x"))
 	if err != nil {
@@ -41,6 +38,14 @@ func TestFSGoodFile(t *testing.T) {
 	i |= unix.STATX_ATTR_IMMUTABLE
 	if err := setInodeFlags(f, i); err != nil {
 		t.Skipf("Skipping rest of test, unable to set immutable flag")
+	}
+
+	restore()
+	if i, err = getInodeFlags(f); err != nil {
+		t.Fatalf("getInodeFlags after restore(): %v != nil", err)
+	}
+	if i&unix.STATX_ATTR_IMMUTABLE == unix.STATX_ATTR_IMMUTABLE {
+		t.Fatalf("getInodeFlags shows file is still immutable after restore()")
 	}
 }
 
