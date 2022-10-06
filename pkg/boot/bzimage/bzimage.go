@@ -123,14 +123,6 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if b.Header.Protocolversion < 0x0208 {
 		return fmt.Errorf("boot protocol version 0x%04x not supported, version 0x0208 or higher (Kernel 2.6.26) required", b.Header.Protocolversion)
 	}
-	// Before doing any processing, check the whole file checksum.
-	// The CRC-32 is calculated over the entire file using the IEEE polynomnial
-	// and then appended to the file. Therefore the checksum of the entire file
-	// will always be 0xffffffff (see https://www.syslinux.org/archives/2019-June/026456.html).
-	// The checksum can also be manually verified by executing `crc32 <filename>`
-	if checksum, expected := crc32.ChecksumIEEE(d), uint32(0xffffffff); checksum != expected {
-		return fmt.Errorf("checksum failed: got 0x%08x, expected 0x%08x", checksum, expected)
-	}
 	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
 	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
@@ -218,8 +210,9 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	generatedCRC := crc32.ChecksumIEEE(d[0:len(d)-crcLen]) ^ (0xffffffff)
 	Debug("Generated CRC is: 0x%08x", generatedCRC)
 
-	// This check is a bit redundant because we've already checked the CRC32 over the entire file,
-	// however this additional check can't hurt.
+	// This code is broken for signed images. For signed images we must skip the PE Certificate Table when calculating the checksum.
+	// See https://www.syslinux.org/archives/2019-June/026455.html for details.
+	// TODO(abrender): Fix this.
 	if b.CRC32 != generatedCRC {
 		return fmt.Errorf("generated CRC (0x%08x) does not match CRC in file (0x%08x)", generatedCRC, b.CRC32)
 	}
