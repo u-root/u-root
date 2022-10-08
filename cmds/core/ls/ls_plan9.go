@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/ls"
@@ -18,8 +19,12 @@ import (
 var final = flag.BoolP("print-last", "p", false, "Print only the final path element of each file name")
 
 func printFile(w io.Writer, stringer ls.Stringer, f file) {
+	if f.err != nil {
+		fmt.Fprintln(w, f.err)
+		return
+	}
 	// Hide .files unless -a was given
-	if *all || f.lsfi.Name[0] != '.' {
+	if *all || !strings.HasPrefix(f.lsfi.Name, ".") {
 		// Unless they said -p, we always print the full path
 		if !*final {
 			f.lsfi.Name = f.path

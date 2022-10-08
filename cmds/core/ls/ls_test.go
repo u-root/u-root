@@ -6,12 +6,15 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/ls"
+	"golang.org/x/sys/unix"
 )
 
 type ttflags struct {
@@ -143,14 +146,14 @@ func TestList(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
 		input  []string
-		want   error
+		err    error
 		flag   ttflags
 		prefix bool
 	}{
 		{
 			name:  "input empty, quoted = true, long = true",
 			input: []string{},
-			want:  nil,
+			err:   nil,
 			flag: ttflags{
 				quoted: true,
 				long:   true,
@@ -159,7 +162,7 @@ func TestList(t *testing.T) {
 		{
 			name:  "input empty, quoted = true, long = true",
 			input: []string{"dir"},
-			want:  fmt.Errorf("error while listing %v: 'lstat %v: no such file or directory'", "dir", "dir"),
+			err:   os.ErrNotExist,
 		},
 	} {
 
@@ -170,9 +173,9 @@ func TestList(t *testing.T) {
 		// Running the tests
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if got := list(&buf, tt.input); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("list() = '%v', want: '%v'", got, tt.want)
+			if err := list(&buf, tt.input); err != nil {
+				if !errors.Is(err, tt.err) {
+					t.Errorf("list() = '%v', want: '%v'", err, tt.err)
 				}
 			}
 		})
@@ -228,5 +231,48 @@ func TestIndicator(t *testing.T) {
 		if got != test.symbol {
 			t.Errorf("for mode '%b' expected '%q', got '%q'", test.lsInfo.Mode, test.symbol, got)
 		}
+	}
+}
+
+// Make sure if perms fail in a dir, we still list the dir.
+func TestPermHandling(t *testing.T) {
+	d := t.TempDir()
+	for _, v := range []string{"a", "c", "d"} {
+		if err := os.Mkdir(filepath.Join(d, v), 0777); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(d, "b"), 0); err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range []string{"0", "1", "2"} {
+		if err := os.Mkdir(filepath.Join(d, v), 0777); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b := &bytes.Buffer{}
+	if err := listName(ls.NameStringer{}, d, b, false); err != nil {
+		t.Fatalf("listName(ls.NameString{}, %q, w, false): %v != nil", d, err)
+	}
+	// the output varies very widely between kernels and Go versions :-(
+	// Just look for 'permission denied' and more than 6 lines of output ...
+	if !strings.Contains(b.String(), "0\n1\n2\na\nb\nc\nd\n") {
+		t.Errorf("ls %q: output %q did not contain %q", d, b.String(), "0\n1\n2\na\nb\nc\nd\n")
+	}
+}
+
+func TestNotExist(t *testing.T) {
+	d := t.TempDir()
+	b := &bytes.Buffer{}
+	if err := listName(ls.NameStringer{}, filepath.Join(d, "b"), b, false); err != nil {
+		t.Fatalf("listName(ls.NameString{}, %q/b, w, false): nil != %v", d, err)
+	}
+	// yeesh.
+	// errors not consistent and ... the error has this gratuitous 'lstat ' in front
+	// of the filename ...
+	eexist := fmt.Sprintf("%s:%v", filepath.Join(d, "b"), os.ErrNotExist)
+	enoent := fmt.Sprintf("%s: %v", filepath.Join(d, "b"), unix.ENOENT)
+	if !strings.Contains(b.String(), eexist) && !strings.Contains(b.String(), enoent) {
+		t.Fatalf("ls of bad name: %q does not contain %q or %q", b.String(), eexist, enoent)
 	}
 }

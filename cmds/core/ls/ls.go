@@ -18,6 +18,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -41,40 +42,68 @@ var (
 	size      = flag.BoolP("size", "S", false, "sort by size")
 )
 
+// file describes a file, its name, attributes, and the error
+// accessing it, if any.
+//
+// Any such description must take into account the inherently
+// racy nature of a file system. Can a file which exists in one
+// instant vanish in another instant? Yes. Can we get into situations
+// in which ls might never terminate? Yes (seen in HPC systems).
+// If our consumer (ls) is slow enough, and our producer (thousands of
+// compute nodes) is fast enough, an ls can take *hours*.
+//
+// Hence, file must include the path name (since a file can vanish,
+// the stat might then fail, so using the fileinfo will not work)
+// and must include an error (since the file may cease to exist).
+// It is possible, for example, to do
+// ls /a /b /c
+// and between the time the command is typed, some or all of these
+// files might vanish. Users wish to know of this situation:
+// $ ls /a /b /tmp
+// ls: /a: No such file or directory
+// ls: /b: No such file or directory
+// ls: /c: No such file or directory
+// ls is more complex than it appears at first.
+// TODO: do we really need BOTH osfi and lsfi?
+// This may be required on non-unix systems like Plan 9 but it
+// would be nice to make sure.
 type file struct {
 	path string
 	osfi os.FileInfo
 	lsfi ls.FileInfo
+	err  error
 }
 
 func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 	var files []file
 
 	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
-		// Soft error. Useful when a permissions are insufficient to
-		// stat one of the files.
-		if err != nil {
-			return err
+		f := file{
+			path: path,
+			osfi: osfi,
 		}
 
-		fi := ls.FromOSFileInfo(path, osfi)
+		// error handling that matches standard ls is ... a real joy
+		if !errors.Is(err, os.ErrNotExist) {
+			f.lsfi = ls.FromOSFileInfo(path, osfi)
+			if err != nil && path == d {
+				f.err = err
+			}
+		} else {
+			f.err = err
+		}
 
-		if !*recurse && path == d && *directory {
-			files = append(files, file{
-				path: path,
-				osfi: osfi,
-				lsfi: fi,
-			})
+		files = append(files, f)
+
+		if err != nil {
 			return filepath.SkipDir
 		}
 
-		files = append(files, file{
-			path: path,
-			osfi: osfi,
-			lsfi: fi,
-		})
+		if !*recurse && path == d && *directory {
+			return filepath.SkipDir
+		}
 
-		if path != d && fi.Mode.IsDir() && !*recurse {
+		if path != d && f.lsfi.Mode.IsDir() && !*recurse {
 			return filepath.SkipDir
 		}
 
@@ -88,6 +117,10 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 	}
 
 	for _, f := range files {
+		if f.err != nil {
+			printFile(w, stringer, f)
+			continue
+		}
 		if *recurse {
 			// Mimic find command
 			f.lsfi.Name = f.path
@@ -155,7 +188,7 @@ func list(w io.Writer, names []string) error {
 	prefix := len(names) > 1
 	for _, d := range names {
 		if err := listName(s, d, tw, prefix); err != nil {
-			return fmt.Errorf("error while listing %q: %v", d, err)
+			return fmt.Errorf("error while listing %q: %w", d, err)
 		}
 		tw.Flush()
 	}

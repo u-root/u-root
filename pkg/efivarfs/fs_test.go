@@ -39,6 +39,14 @@ func TestFSGoodFile(t *testing.T) {
 	if err := setInodeFlags(f, i); err != nil {
 		t.Skipf("Skipping rest of test, unable to set immutable flag")
 	}
+
+	restore()
+	if i, err = getInodeFlags(f); err != nil {
+		t.Fatalf("getInodeFlags after restore(): %v != nil", err)
+	}
+	if i&unix.STATX_ATTR_IMMUTABLE == unix.STATX_ATTR_IMMUTABLE {
+		t.Fatalf("getInodeFlags shows file is still immutable after restore()")
+	}
 }
 
 func TestFSBadFile(t *testing.T) {
