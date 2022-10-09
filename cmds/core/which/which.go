@@ -5,10 +5,12 @@
 // Which locates a command.
 //
 // Synopsis:
-//     which [-a] [COMMAND]...
+//
+//	which [-a] [COMMAND]...
 //
 // Options:
-//     -a: print all matching pathnames of each argument
+//
+//	-a: print all matching pathnames of each argument
 package main
 
 import (
@@ -40,7 +42,7 @@ func which(writer io.Writer, paths []string, cmds []string, allPaths bool) error
 				return err
 			}
 			if !allPaths {
-				return nil
+				break
 			}
 		}
 	}
