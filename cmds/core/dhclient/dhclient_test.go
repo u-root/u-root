@@ -5,36 +5,53 @@
 package main
 
 import (
+	"bytes"
+	"log"
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/dhcpv6"
 )
 
 var tests = []struct {
-	iface  string
-	isIPv4 string
+	iface  []string
+	isIPv4 bool
 	out    string
+	err    string
 }{
 	{
-		iface:  "nosuchanimal",
-		isIPv4: "-ipv4=true",
-		out:    "no interfaces match nosuchanimal\n",
+		iface:  []string{"nosuchanimal"},
+		isIPv4: true,
+		out:    "",
+		err:    "no interfaces match nosuchanimal",
+	},
+	{
+		iface:  []string{"nosuchanimal1", "nosuchanimaltoo"},
+		isIPv4: true,
+		out:    "",
+		err:    "more than one interface specified",
 	},
 }
 
 func TestDhclient(t *testing.T) {
+	var out = bytes.NewBuffer(nil)
+	log.SetOutput(out)
 	for _, tt := range tests {
-		out, err := testutil.Command(t, tt.isIPv4, tt.iface).CombinedOutput()
-		if err == nil {
-			t.Errorf("%v: got nil, want err", tt)
+		out.Reset()
+		opts := opts{timeout: 15, retry: 5, dryRun: false, verbose: false, vverbose: false, ipv4: tt.isIPv4, ipv6: true, v6Port: dhcpv6.DefaultServerPort, v6Server: "ff02::1:2", v4Port: dhcpv4.ServerPort}
+		err := run(&opts, tt.iface)
+
+		if err != nil && tt.err == "" {
+			t.Errorf("no error expected, got: \n%v", err)
+		} else if err == nil && tt.err != "" {
+			t.Errorf("error \n%v\nexpected, got nil error", tt.err)
+		} else if err != nil && err.Error() != tt.err {
+			t.Errorf("error \n%v\nexpected, got: \n%v", tt.err, err)
 		}
-		if !strings.HasSuffix(string(out), tt.out) {
-			t.Errorf("expected:\n%s\ngot:\n%s", tt.out, string(out))
+
+		if tt.err == "" && !strings.HasSuffix(out.String(), tt.out) {
+			t.Errorf("output expected:\n%s\ngot:\n%s", tt.out, out.String())
 		}
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

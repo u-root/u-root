@@ -21,6 +21,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"time"
@@ -32,7 +33,6 @@ import (
 )
 
 var (
-	ifName   = "^e.*"
 	timeout  = flag.Int("timeout", 15, "Lease timeout in seconds")
 	retry    = flag.Int("retry", 5, "Max number of attempts for DHCP clients to send requests. -1 means infinity")
 	dryRun   = flag.Bool("dry-run", false, "Just make the DHCP requests, but don't configure interfaces")
@@ -47,51 +47,77 @@ var (
 	v4Port = flag.Int("v4-port", dhcpv4.ServerPort, "DHCPv4 server port to send to")
 )
 
-func main() {
-	flag.Parse()
-	if len(flag.Args()) > 1 {
-		log.Fatalf("only one re")
-	}
+type opts struct {
+	timeout  int
+	retry    int
+	dryRun   bool
+	verbose  bool
+	vverbose bool
+	ipv4     bool
+	ipv6     bool
+	v6Port   int
+	v6Server string
+	v4Port   int
+}
 
-	if len(flag.Args()) > 0 {
-		ifName = flag.Args()[0]
+func run(opts *opts, args []string) error {
+	var ifName string
+	switch len(args) {
+	case 0:
+		ifName = "^e.*"
+	case 1:
+		ifName = args[0]
+	default:
+		return fmt.Errorf("more than one interface specified")
 	}
 
 	filteredIfs, err := dhclient.Interfaces(ifName)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	configureAll(filteredIfs)
+	if err := configureAll(filteredIfs, opts); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func configureAll(ifs []netlink.Link) {
-	packetTimeout := time.Duration(*timeout) * time.Second
+func main() {
+	flag.Parse()
+	opts := opts{timeout: *timeout, retry: *retry, dryRun: *dryRun, verbose: *verbose, vverbose: *vverbose, ipv4: *ipv4, ipv6: *ipv6, v6Port: *v6Port, v6Server: *v6Server, v4Port: *v4Port}
+	if err := run(&opts, flag.Args()); err != nil {
+		log.Fatalf("dhclient: %v", err)
+	}
+}
+
+func configureAll(ifs []netlink.Link, opts *opts) error {
+	packetTimeout := time.Duration(opts.timeout) * time.Second
 
 	c := dhclient.Config{
 		Timeout: packetTimeout,
-		Retries: *retry,
+		Retries: opts.retry,
 		V4ServerAddr: &net.UDPAddr{
 			IP:   net.IPv4bcast,
-			Port: *v4Port,
+			Port: opts.v4Port,
 		},
 		V6ServerAddr: &net.UDPAddr{
-			IP:   net.ParseIP(*v6Server),
-			Port: *v6Port,
+			IP:   net.ParseIP(opts.v6Server),
+			Port: opts.v6Port,
 		},
 	}
-	if *verbose {
+	if opts.verbose {
 		c.LogLevel = dhclient.LogSummary
 	}
-	if *vverbose {
+	if opts.vverbose {
 		c.LogLevel = dhclient.LogDebug
 	}
-	r := dhclient.SendRequests(context.Background(), ifs, *ipv4, *ipv6, c, 30*time.Second)
+	r := dhclient.SendRequests(context.Background(), ifs, opts.ipv4, opts.ipv6, c, 30*time.Second)
 
 	for result := range r {
 		if result.Err != nil {
 			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, result.Err)
-		} else if *dryRun {
+		} else if opts.dryRun {
 			log.Printf("Dry run: would have configured %s with %s", result.Interface.Attrs().Name, result.Lease)
 		} else if err := result.Lease.Configure(); err != nil {
 			log.Printf("Could not configure %s for %s: %v", result.Interface.Attrs().Name, result.Protocol, err)
@@ -100,4 +126,5 @@ func configureAll(ifs []netlink.Link) {
 		}
 	}
 	log.Printf("Finished trying to configure all interfaces.")
+	return nil
 }
