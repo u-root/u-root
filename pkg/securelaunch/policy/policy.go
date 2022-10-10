@@ -30,6 +30,9 @@ type Policy struct {
 	EventLog   eventlog.EventLog
 }
 
+// policyBytes is a byte slice to hold a copy of the policy file in memory.
+var policyBytes []byte
+
 // scanKernelCmdLine scans the kernel cmdline for the 'sl_policy' flag.
 // When set it provides location of the policy file on disk. It reads it and
 // returns the policy file as a byte slice.
@@ -173,9 +176,19 @@ func parse(pf []byte) (*Policy, error) {
 	return p, nil
 }
 
-func measure(b []byte) error {
-	eventDesc := "measured securelaunch policy file"
-	return measurement.HashBytes(b, eventDesc)
+// Measure measures the policy file.
+func Measure() error {
+	if len(policyBytes) == 0 {
+		return fmt.Errorf("policy file not yet loaded or empty")
+	}
+
+	eventDesc := "File Collector: measured securelaunch policy file"
+	if err := measurement.HashBytes(policyBytes, eventDesc); err != nil {
+		log.Printf("policy: ERR: could not measure policy file: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 // Get locates and parses the policy file.
@@ -184,22 +197,18 @@ func measure(b []byte) error {
 //  1. the kernel cmdline `sl_policy` argument.
 //  2. a file on any partition on any disk called "securelaunch.policy".
 func Get() (*Policy, error) {
-	b, err := locate()
+	policyBytes, err := locate()
 	if err != nil {
 		return nil, err
 	}
 
-	err = measure(b)
-	if err != nil {
-		return nil, err
-	}
-
-	policy, err := parse(b)
+	policy, err := parse(policyBytes)
 	if err != nil {
 		return nil, err
 	}
 	if policy == nil {
 		return nil, fmt.Errorf("no policy found")
 	}
+
 	return policy, nil
 }

@@ -23,21 +23,25 @@ type Launcher struct {
 	Params map[string]string `json:"params"`
 }
 
-// MeasureKernel hashes the kernel and initrd files and extends those
-// measurements into a TPM PCR.
+// MeasureKernel hashes the kernel and extends the measurement into a TPM PCR.
 func (l *Launcher) MeasureKernel() error {
 	kernel := l.Params["kernel"]
+
+	if err := measurement.HashFile(kernel); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// MeasureInitrd hashes the initrd and extends the measurement into a TPM PCR.
+func (l *Launcher) MeasureInitrd() error {
 	initrd := l.Params["initrd"]
 
-	if e := measurement.HashFile(kernel); e != nil {
-		log.Printf("ERR: measure kernel input=%s, err=%v", kernel, e)
-		return e
+	if err := measurement.HashFile(initrd); err != nil {
+		return err
 	}
 
-	if e := measurement.HashFile(initrd); e != nil {
-		log.Printf("ERR: measure initrd input=%s, err=%v", initrd, e)
-		return e
-	}
 	return nil
 }
 
@@ -79,7 +83,7 @@ func (l *Launcher) Boot() error {
 		return e
 	}
 
-	slaunch.Debug("********Step 7: kexec called  ********")
+	slaunch.Debug("Calling kexec")
 	image := &boot.LinuxImage{
 		Kernel:  uio.NewLazyFile(k),
 		Initrd:  uio.NewLazyFile(i),

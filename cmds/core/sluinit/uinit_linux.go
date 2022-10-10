@@ -5,7 +5,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -18,11 +17,21 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/dhclient"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
 var slDebug = flag.Bool("d", false, "enable debug logs")
+
+// step keeps track of the current step (e.g., parse policy, measure).
+var step = 1
+
+// printStep prints a message for the next step.
+func printStep(msg string) {
+	slaunch.Debug("******** Step %d: %s ********", step, msg)
+	step++
+}
 
 // checkDebugFlag checks if `uroot.uinitargs=-d` is set on the kernel cmdline.
 // If it is set, slaunch.Debug is set to log.Printf.
@@ -44,6 +53,209 @@ func checkDebugFlag() {
 	}
 }
 
+// iscsiSpecified checks if iscsi has been set on the kernel command line.
+func iscsiSpecified() bool {
+	return cmdline.ContainsFlag("netroot") && cmdline.ContainsFlag("rd.iscsi.initator")
+}
+
+// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi
+// drives.
+func scanIscsiDrives() error {
+	uri, ok := cmdline.Flag("netroot")
+	if !ok {
+		return fmt.Errorf("could not get `netroot` argument")
+	}
+	slaunch.Debug("scanIscsiDrives: netroot flag is set: '%s'", uri)
+
+	initiator, ok := cmdline.Flag("rd.iscsi.initiator")
+	if !ok {
+		return fmt.Errorf("could not get `rd.iscsi.initiator` argument")
+	}
+	slaunch.Debug("scanIscsiDrives: rd.iscsi.initiator flag is set: '%s'", initiator)
+
+	target, volume, err := dhclient.ParseISCSIURI(uri)
+	if err != nil {
+		return fmt.Errorf("dhclient iSCSI parser failed: %w", err)
+	}
+
+	slaunch.Debug("scanIscsiDrives: resolved target: '%s'", target)
+	slaunch.Debug("scanIscsiDrives: resolved volume: '%s'", volume)
+
+	devices, err := iscsinl.MountIscsi(
+		iscsinl.WithInitiator(initiator),
+		iscsinl.WithTarget(target.String(), volume),
+		iscsinl.WithCmdsMax(128),
+		iscsinl.WithQueueDepth(16),
+		iscsinl.WithScheduler("noop"),
+	)
+	if err != nil {
+		return fmt.Errorf("could not mount iSCSI drive: %w", err)
+	}
+
+	for i := range devices {
+		slaunch.Debug("scanIscsiDrives: iSCSI drive mounted at '%s'", devices[i])
+	}
+
+	return nil
+}
+
+// initialize sets up the environment.
+func initialize() error {
+	printStep("Initialization")
+
+	// Check if an iSCSI drive was specified and if so, mount it.
+	if iscsiSpecified() {
+		if err := scanIscsiDrives(); err != nil {
+			return fmt.Errorf("failed to mount iSCSI drive: %w", err)
+		}
+	}
+
+	if err := tpm.New(); err != nil {
+		return fmt.Errorf("failed to get TPM device: %w", err)
+	}
+
+	slaunch.Debug("Initialization successfully completed")
+
+	return nil
+}
+
+// parsePolicy parses and gets the policy file.
+func parsePolicy() (*policy.Policy, error) {
+	printStep("Locate and parse SL policy")
+
+	p, err := policy.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse policy file: %w", err)
+	}
+
+	slaunch.Debug("Policy file successfully parsed")
+
+	return p, nil
+}
+
+// collectMeasurements runs any measurements specified in the policy file.
+func collectMeasurements(p *policy.Policy) error {
+	printStep("Collect evidence")
+
+	for _, collector := range p.Collectors {
+		slaunch.Debug("Input Collector: %v", collector)
+		if err := collector.Collect(); err != nil {
+			log.Printf("Collector %v failed: %v", collector, err)
+		}
+	}
+
+	slaunch.Debug("Collectors completed")
+
+	return nil
+}
+
+// measureFiles measures relevant files (e.g., policy, kernel, initrd).
+func measureFiles(p *policy.Policy) error {
+	printStep("Measure files")
+
+	if err := policy.Measure(); err != nil {
+		return fmt.Errorf("failed to measure policy file: %w", err)
+	}
+
+	if p.Launcher.Params["kernel"] != "" {
+		if err := p.Launcher.MeasureKernel(); err != nil {
+			return fmt.Errorf("failed to measure target kernel: %w", err)
+		}
+	}
+
+	if p.Launcher.Params["initrd"] != "" {
+		if err := p.Launcher.MeasureInitrd(); err != nil {
+			return fmt.Errorf("failed to measure target initrd: %w", err)
+		}
+	}
+
+	slaunch.Debug("Files successfully measured")
+
+	return nil
+}
+
+// parseEventLog parses the TPM event log.
+func parseEventLog(p *policy.Policy) error {
+	printStep("Parse event log")
+
+	if err := p.EventLog.Parse(); err != nil {
+		return fmt.Errorf("failed to parse event log: %w", err)
+	}
+
+	slaunch.Debug("Event log successfully parsed")
+
+	return nil
+}
+
+// dumpLogs writes out any pending logs to a file on disk.
+func dumpLogs() error {
+	printStep("Dump logs to disk")
+
+	if err := eventlog.ParseEventLog(); err != nil {
+		return fmt.Errorf("failed to parse event log: %w", err)
+	}
+
+	if err := slaunch.ClearPersistQueue(); err != nil {
+		return fmt.Errorf("failed to clear persist queue: %w", err)
+	}
+
+	slaunch.Debug("Logs successfully dumped to disk")
+
+	return nil
+}
+
+// unmountAll unmounts all mount points.
+func unmountAll() error {
+	printStep("Unmount all")
+
+	if err := slaunch.UnmountAll(); err != nil {
+		return fmt.Errorf("failed to unmount all devices: %w", err)
+	}
+
+	slaunch.Debug("Devices successfully unmounted")
+
+	return nil
+}
+
+// bootTarget boots the target kernel/initrd.
+func bootTarget(p *policy.Policy) error {
+	printStep("Boot target")
+
+	if err := p.Launcher.Boot(); err != nil {
+		return fmt.Errorf("failed to boot target: %w", err)
+	}
+
+	return nil
+}
+
+// exit loops forever trying to reboot the system.
+func exit(mainErr error) {
+	// Print the error.
+	fmt.Fprintf(os.Stderr, "ERROR: Failed to boot: %v\n", mainErr)
+
+	// Dump any logs, if possible. This can help figure out what went wrong.
+	if err := dumpLogs(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Could not dump logs: %v\n", err)
+	}
+
+	// Umount anything that might be mounted.
+	slaunch.UnmountAll()
+
+	// Close the connection to the TPM if it was opened.
+	tpm.Close()
+
+	// Loop trying to reboot the system.
+	for {
+		// Wait 5 seconds.
+		time.Sleep(5 * time.Second)
+
+		// Try to reboot the system.
+		if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: Failed to reboot: %v\n", err)
+		}
+	}
+}
+
 // main parses platform policy file, and based on the inputs performs
 // measurements and then launches a target kernel.
 //
@@ -58,110 +270,36 @@ func main() {
 
 	checkDebugFlag()
 
-	err := scanIscsiDrives()
+	if err := initialize(); err != nil {
+		exit(err)
+	}
+
+	p, err := parsePolicy()
 	if err != nil {
-		log.Printf("NO ISCSI DRIVES found, err=[%v]", err)
+		exit(err)
 	}
 
-	defer unmountAndExit() // called only on error, on success we kexec
-	slaunch.Debug("********Step 1: init completed. starting main ********")
-	if err := tpm.New(); err != nil {
-		log.Printf("tpm.New() failed. err=%v", err)
-		return
-	}
-	defer tpm.Close()
-
-	slaunch.Debug("********Step 2: locate and parse SL Policy ********")
-	p, err := policy.Get()
-	if err != nil {
-		log.Printf("failed to get policy err=%v", err)
-		return
-	}
-	slaunch.Debug("policy file successfully parsed")
-
-	slaunch.Debug("********Step 3: Collecting Evidence ********")
-	for _, c := range p.Collectors {
-		slaunch.Debug("Input Collector: %v", c)
-		if e := c.Collect(); e != nil {
-			log.Printf("Collector %v failed, err = %v", c, e)
-		}
-	}
-	slaunch.Debug("Collectors completed")
-
-	slaunch.Debug("********Step 4: Measuring target kernel, initrd ********")
-	if err := p.Launcher.MeasureKernel(); err != nil {
-		log.Printf("Launcher.MeasureKernel failed err=%v", err)
-		return
+	if err := parseEventLog(p); err != nil {
+		exit(err)
 	}
 
-	slaunch.Debug("********Step 5: Parse eventlogs *********")
-	if err := p.EventLog.Parse(); err != nil {
-		log.Printf("EventLog.Parse() failed err=%v", err)
-		return
+	if err := collectMeasurements(p); err != nil {
+		exit(err)
 	}
 
-	slaunch.Debug("*****Step 6: Dump logs to disk *******")
-	if err := slaunch.ClearPersistQueue(); err != nil {
-		log.Printf("ClearPersistQueue failed err=%v", err)
-		return
+	if err := measureFiles(p); err != nil {
+		exit(err)
 	}
 
-	slaunch.Debug("********Step *: Unmount all ********")
-	slaunch.UnmountAll()
-
-	slaunch.Debug("********Step 7: Launcher called to Boot ********")
-	if err := p.Launcher.Boot(); err != nil {
-		log.Printf("Boot failed. err=%s", err)
-		return
-	}
-}
-
-// unmountAndExit is called on error and unmounts all devices.
-func unmountAndExit() {
-	slaunch.UnmountAll()
-
-	// Let queued up debug statements get printed.
-	time.Sleep(5 * time.Second)
-
-	os.Exit(1)
-}
-
-// scanIscsiDrives calls dhcleint to parse cmdline and iscsinl to mount iscsi
-// drives.
-func scanIscsiDrives() error {
-	val, ok := cmdline.Flag("netroot")
-	if !ok {
-		return errors.New("netroot flag is not set")
-	}
-	slaunch.Debug("netroot flag is set with val=%s", val)
-
-	target, volume, err := dhclient.ParseISCSIURI(val)
-	if err != nil {
-		return fmt.Errorf("dhclient ISCSI parser failed err=%v", err)
+	if err := dumpLogs(); err != nil {
+		exit(err)
 	}
 
-	slaunch.Debug("resolved ip:port=%s", target)
-	slaunch.Debug("resolved vol=%v", volume)
-
-	slaunch.Debug("Scanning kernel cmd line for *rd.iscsi.initiator* flag")
-	initiatorName, ok := cmdline.Flag("rd.iscsi.initiator")
-	if !ok {
-		return errors.New("rd.iscsi.initiator flag is not set")
+	if err := unmountAll(); err != nil {
+		exit(err)
 	}
 
-	devices, err := iscsinl.MountIscsi(
-		iscsinl.WithInitiator(initiatorName),
-		iscsinl.WithTarget(target.String(), volume),
-		iscsinl.WithCmdsMax(128),
-		iscsinl.WithQueueDepth(16),
-		iscsinl.WithScheduler("noop"),
-	)
-	if err != nil {
-		return err
+	if err := bootTarget(p); err != nil {
+		exit(err)
 	}
-
-	for i := range devices {
-		slaunch.Debug("Mounted at dev %v", devices[i])
-	}
-	return nil
 }
