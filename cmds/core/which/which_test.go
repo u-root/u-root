@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -72,7 +71,7 @@ func TestWhichUnique(t *testing.T) {
 	}
 
 	// Comparing against only the cat command.
-	if !reflect.DeepEqual(b.Bytes(), tests[0].pathOnSys) {
+	if !bytes.Equal(b.Bytes(), tests[0].pathOnSys) {
 		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(tests[0].pathOnSys), b.String())
 	}
 }
@@ -98,7 +97,23 @@ func TestWhichMultiple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(b.Bytes(), pathsCombined) {
+	if !bytes.Equal(b.Bytes(), pathsCombined) {
 		t.Fatalf("Locating commands has failed, wants: %v, got: %v", string(pathsCombined), b.String())
+	}
+}
+
+func TestWithoutAllPathTrue(t *testing.T) {
+	r1, err := exec.Command("which", "cat", "ldd").Output()
+	if err != nil {
+		t.Fatalf("system which has failed: %v", err)
+	}
+
+	var b bytes.Buffer
+	if err := which(&b, strings.Split(p, ":"), []string{"cat", "ldd"}, false); err != nil {
+		t.Fatalf("which has failed: %v", err)
+	}
+
+	if !bytes.Equal(r1, b.Bytes()) {
+		t.Errorf("location command has failed: wants: %s, got %s", string(r1), b.String())
 	}
 }
