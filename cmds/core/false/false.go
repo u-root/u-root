@@ -5,10 +5,12 @@
 // false returns 1.
 //
 // Synopsis:
-//     false
+//
+//	false
 //
 // Description:
-//     Command line arguments are ignored.
+//
+//	Command line arguments are ignored.
 package main
 
 import "os"

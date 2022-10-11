@@ -28,11 +28,9 @@ func helpPrinter() {
 	pflag.PrintDefaults()
 }
 
-//
 // shaPrinter prints sha1/sha256 of given data. The
 // value of algorithm is expected to be 1 for SHA1
 // and 256 for SHA256
-//
 func shaGenerator(w io.Writer, r io.Reader, algo int) ([]byte, error) {
 	var h hash.Hash
 	switch algo {

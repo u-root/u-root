@@ -5,14 +5,18 @@
 // smn: read or write registers in the System Management Network on AMD cpus
 //
 // Synopsis:
-//     snm [0 or more addresses]
+//
+//	snm [0 or more addresses]
+//
 // N.B. having no addresses is an easy way to see if you can
 // access PCI at all.
 //
 // Description:
-//     read and write System Management Network registers
+//
+//	read and write System Management Network registers
 //
 // Options:
+//
 //	-s: device glob in the form tttt:bb:dd.fn with * as needed
 //	-n: number of 32-bit words to dump.
 //	-v: 32-bit value to write

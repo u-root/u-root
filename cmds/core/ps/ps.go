@@ -8,19 +8,22 @@
 // Print process information.
 //
 // Synopsis:
-//     ps [-Aaex] [aux]
+//
+//	ps [-Aaex] [aux]
 //
 // Description:
-//     ps reads the /proc filesystem and prints nice things about what it
-//     finds.  /proc in linux has grown by a process of Evilution, so it's
-//     messy.
+//
+//	ps reads the /proc filesystem and prints nice things about what it
+//	finds.  /proc in linux has grown by a process of Evilution, so it's
+//	messy.
 //
 // Options:
-//     -A: select all processes. Identical to -e.
-//     -e: select all processes. Identical to -A.
-//     -x: BSD-Like style, with STAT Column and long CommandLine
-//     -a: print all process except whose are session leaders or unlinked with terminal
-//    aux: see every process on the system using BSD syntax
+//
+//	 -A: select all processes. Identical to -e.
+//	 -e: select all processes. Identical to -A.
+//	 -x: BSD-Like style, with STAT Column and long CommandLine
+//	 -a: print all process except whose are session leaders or unlinked with terminal
+//	aux: see every process on the system using BSD syntax
 package main
 
 import (

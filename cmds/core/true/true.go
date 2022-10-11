@@ -5,10 +5,12 @@
 // Returns 0.
 //
 // Synopsis:
-//     true
+//
+//	true
 //
 // Description:
-//     Command line arguments are ignored.
+//
+//	Command line arguments are ignored.
 package main
 
 func main() {

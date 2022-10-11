@@ -5,10 +5,10 @@
 // Package ebda looks for the Extended Bios Data Area (EBDA) pointer in /dev/mem,
 // and provides access to the EBDA. This is useful for us to read or write to the EBDA,
 // for example to copy the RSDP into the EBDA.
-// * The address 0x40E contains the pointer to the start of the EBDA, shifted right by 4 bits
-// * We take that and find the EBDA, where the first byte usually encodes the length of the
-//   the area in KiB.
-// * If the pointer is not set, there may be no EBDA.
+//   - The address 0x40E contains the pointer to the start of the EBDA, shifted right by 4 bits
+//   - We take that and find the EBDA, where the first byte usually encodes the length of the
+//     the area in KiB.
+//   - If the pointer is not set, there may be no EBDA.
 package ebda
 
 import (

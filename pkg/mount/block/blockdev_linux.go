@@ -636,7 +636,8 @@ func parsePCIBlockList(blockList string) (pci.Devices, error) {
 // and partNo counting from 1. It is assumed that device names ending in a
 // number like nvme0n1 have partitions named like nvme0n1p1, nvme0n1p2, ...
 // and devices ending in a letter like sda have partitions named like
-//  sda1, sda2, ...
+//
+//	sda1, sda2, ...
 func composePartName(devName string, partNo int) string {
 	r := []rune(devName[len(devName)-1:])
 	if unicode.IsDigit(r[0]) {

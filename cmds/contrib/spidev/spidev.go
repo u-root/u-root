@@ -5,17 +5,20 @@
 // spidev communicates with the Linux spidev driver.
 //
 // Synopsis:
-//     spidev [OPTIONS] raw < tx.bin > rx.bin
-//     spidev [OPTIONS] sfdp
+//
+//	spidev [OPTIONS] raw < tx.bin > rx.bin
+//	spidev [OPTIONS] sfdp
 //
 // Options:
-//     -D DEV: spidev device (default /dev/spidev0.0)
-//     -s SPEED: max speed in Hz (default 500000)
+//
+//	-D DEV: spidev device (default /dev/spidev0.0)
+//	-s SPEED: max speed in Hz (default 500000)
 //
 // Description:
-//     raw: The binary data from stdin is transmitted over the SPI bus.
-//          Received data is printed to stdout.
-//     sfdp: Parse and print the parameters in the SFDP.
+//
+//	raw: The binary data from stdin is transmitted over the SPI bus.
+//	     Received data is printed to stdout.
+//	sfdp: Parse and print the parameters in the SFDP.
 package main
 
 import (

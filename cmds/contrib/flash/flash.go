@@ -5,33 +5,37 @@
 // flash reads and writes to a flash chip.
 //
 // Synopsis:
-//     flash -p PROGRAMMER[:parameter[,parameter[...]]] [-r FILE|-w FILE]
+//
+//	flash -p PROGRAMMER[:parameter[,parameter[...]]] [-r FILE|-w FILE]
 //
 // Options:
-//     -p PROGRAMMER: Specify the programmer with zero or more parameters (see
-//                    below).
-//     -r FILE: Read flash data into the file.
-//     -w FILE: Write the file to the flash chip. First, the flash chip is read
-//              and then diffed against the file. The differing blocks are
-//              erased and written. Finally, the contents are verified.
+//
+//	-p PROGRAMMER: Specify the programmer with zero or more parameters (see
+//	               below).
+//	-r FILE: Read flash data into the file.
+//	-w FILE: Write the file to the flash chip. First, the flash chip is read
+//	         and then diffed against the file. The differing blocks are
+//	         erased and written. Finally, the contents are verified.
 //
 // Programmers:
-//     dummy
-//       Virtual flash programmer for testing in a memory buffer.
 //
-//       dummy:image=image.rom
-//         File to memmap for the memory buffer.
+//	dummy
+//	  Virtual flash programmer for testing in a memory buffer.
 //
-//     linux_spi:dev=/dev/spidev0.0
-//       Use Linux's spidev driver. This is only supported on Linux. The dev
-//       parameter is required.
+//	  dummy:image=image.rom
+//	    File to memmap for the memory buffer.
 //
-//       linux_spi:dev=/dev/spidev0.0,spispeed=5000
-//         Set the SPI controller's speed. The frequency is in kilohertz.
+//	linux_spi:dev=/dev/spidev0.0
+//	  Use Linux's spidev driver. This is only supported on Linux. The dev
+//	  parameter is required.
+//
+//	  linux_spi:dev=/dev/spidev0.0,spispeed=5000
+//	    Set the SPI controller's speed. The frequency is in kilohertz.
 //
 // Description:
-//     flash is u-root's implementation of flashrom. It has a very limited
-//     feature set and depends on the the flash chip implementing the SFDP.
+//
+//	flash is u-root's implementation of flashrom. It has a very limited
+//	feature set and depends on the the flash chip implementing the SFDP.
 package main
 
 import (

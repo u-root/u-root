@@ -5,13 +5,16 @@
 // lsmod list currently loaded Linux kernel modules.
 //
 // Synopsis:
+//
 //	lsmod
 //
 // Description:
+//
 //	lsmod is a clone of lsmod(8)
 //
 // Author:
-//     Roland Kammerer <dev.rck@gmail.com>
+//
+//	Roland Kammerer <dev.rck@gmail.com>
 package main
 
 import (

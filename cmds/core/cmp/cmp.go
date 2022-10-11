@@ -5,20 +5,23 @@
 // cmp compares two files and prints a message if their contents differ.
 //
 // Synopsis:
-//     cmp [–lLs] FILE1 FILE2 [OFFSET1 [OFFSET2]]
+//
+//	cmp [–lLs] FILE1 FILE2 [OFFSET1 [OFFSET2]]
 //
 // Description:
-//     If offsets are given, comparison starts at the designated byte position
-//     of the corresponding file.
 //
-//     Offsets that begin with 0x are hexadecimal; with 0, octal; with anything
-//     else, decimal.
+//	If offsets are given, comparison starts at the designated byte position
+//	of the corresponding file.
+//
+//	Offsets that begin with 0x are hexadecimal; with 0, octal; with anything
+//	else, decimal.
 //
 // Options:
-//     –l: Print the byte number (decimal) and the differing bytes (octal) for
-//         each difference.
-//     –L: Print the line number of the first differing byte.
-//     –s: Print nothing for differing files, but set the exit status.
+//
+//	–l: Print the byte number (decimal) and the differing bytes (octal) for
+//	    each difference.
+//	–L: Print the line number of the first differing byte.
+//	–s: Print nothing for differing files, but set the exit status.
 package main
 
 import (

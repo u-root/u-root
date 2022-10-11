@@ -5,14 +5,17 @@
 // Print ansi escape sequences.
 //
 // Synopsis:
-//     ansi COMMAND
+//
+//	ansi COMMAND
 //
 // Options:
-//     COMMAND must be one of:
-//         - clear: clear the screen and reset the cursor position
+//
+//	COMMAND must be one of:
+//	    - clear: clear the screen and reset the cursor position
 //
 // Author:
-//     Manoel Vilela <manoel_vilela@engineer.com>
+//
+//	Manoel Vilela <manoel_vilela@engineer.com>
 package main
 
 import (

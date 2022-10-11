@@ -5,13 +5,16 @@
 // lsdrivers lists driver usage on Linux systems
 //
 // Synopsis:
-//     lsdrivers [-u]
+//
+//	lsdrivers [-u]
 //
 // Description:
-//     List driver usage. This program is mostly useful for scripts.
+//
+//	List driver usage. This program is mostly useful for scripts.
 //
 // Options:
-//     -u: list unused drivers
+//
+//	-u: list unused drivers
 package main
 
 import (

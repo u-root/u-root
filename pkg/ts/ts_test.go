@@ -59,9 +59,9 @@ func TestPrependTimestamp(t *testing.T) {
 
 // TestPrependTimestampBuffering ensures two important properties with regards
 // to buffering which would be easy to miss with just a readline implementation:
-//     1. Data is printed before the whole line is available.
-//     2. Timestamp is generated at the beginning of the line, not at the end
-//        of the previous line.
+//  1. Data is printed before the whole line is available.
+//  2. Timestamp is generated at the beginning of the line, not at the end
+//     of the previous line.
 func TestPrependTimestampBuffering(t *testing.T) {
 	// Mock out the format function.
 	i := 0

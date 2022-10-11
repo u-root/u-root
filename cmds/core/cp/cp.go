@@ -5,16 +5,18 @@
 // cp copies files.
 //
 // Synopsis:
-//     cp [-rRfivwP] FROM... TO
+//
+//	cp [-rRfivwP] FROM... TO
 //
 // Options:
-//     -w n: number of worker goroutines
-//     -R: copy file hierarchies
-//     -r: alias to -R recursive mode
-//     -i: prompt about overwriting file
-//     -f: force overwrite files
-//     -v: verbose copy mode
-//     -P: don't follow symlinks
+//
+//	-w n: number of worker goroutines
+//	-R: copy file hierarchies
+//	-r: alias to -R recursive mode
+//	-i: prompt about overwriting file
+//	-f: force overwrite files
+//	-v: verbose copy mode
+//	-P: don't follow symlinks
 package main
 
 import (

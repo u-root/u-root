@@ -31,8 +31,8 @@ import (
 //
 // - to detect an iPXE script beginning with #!ipxe,
 //
-// - to detect a pxelinux.0, in which case we will ignore the pxelinux.0 and
-//   try to parse pxelinux.cfg/<files>.
+//   - to detect a pxelinux.0, in which case we will ignore the pxelinux.0 and
+//     try to parse pxelinux.cfg/<files>.
 func BootImages(ctx context.Context, l ulog.Logger, s curl.Schemes, lease dhclient.Lease) ([]boot.OSImage, error) {
 	uri, err := lease.Boot()
 	if err != nil {

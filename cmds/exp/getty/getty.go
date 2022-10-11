@@ -8,7 +8,8 @@
 // is no more shell!
 //
 // Synopsis:
-//     getty <port> <baud> [term]
+//
+//	getty <port> <baud> [term]
 package main
 
 import (

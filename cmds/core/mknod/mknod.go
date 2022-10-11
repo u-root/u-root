@@ -8,12 +8,14 @@
 // Unmount a filesystem at the specified path.
 //
 // Synopsis:
-//     mknod PATH TYPE [MAJOR MINOR]
+//
+//	mknod PATH TYPE [MAJOR MINOR]
 //
 // Description:
-//     Creates a special file at PATH of the given TYPE. If TYPE is b, c or u,
-//     the MAJOR and MINOR number must be specified. If the TYPE is p, they
-//     must not be specified.
+//
+//	Creates a special file at PATH of the given TYPE. If TYPE is b, c or u,
+//	the MAJOR and MINOR number must be specified. If the TYPE is p, they
+//	must not be specified.
 package main
 
 import (

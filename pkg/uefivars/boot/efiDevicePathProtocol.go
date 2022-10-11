@@ -196,11 +196,11 @@ func (list EfiDevicePathProtocolList) String() string {
 // EfiDevicePathProtocolHdr is three one-byte fields that all DevicePathProtocol
 // entries begin with.
 //
-//    typedef struct _EFI_DEVICE_PATH_PROTOCOL {
-//        UINT8 Type;
-//        UINT8 SubType;
-//        UINT8 Length[2];
-//    } EFI_DEVICE_PATH_PROTOCOL;
+//	typedef struct _EFI_DEVICE_PATH_PROTOCOL {
+//	    UINT8 Type;
+//	    UINT8 SubType;
+//	    UINT8 Length[2];
+//	} EFI_DEVICE_PATH_PROTOCOL;
 //
 // It seems that the only relevant Type (for booting) is media.
 //

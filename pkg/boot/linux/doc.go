@@ -104,7 +104,8 @@
 // o use the ELF program header to tell us where to put the purgatory
 // o communicate arguments in the seven quadwords mentioned above
 // o rather than one does-it-all purgatory as we have today, we can provide several variants
-//   so we get one suited to the job at hand.
+//
+//	so we get one suited to the job at hand.
 //
 // This should result in a dramatically simpler purgatory implementation. Also,
 // being much simpler, it can be entirely Go assembly, obviating the need for a

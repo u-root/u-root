@@ -8,19 +8,22 @@
 // free reports usage information for physical memory and swap space.
 //
 // Synopsis:
-//     free [-k] [-m] [-g] [-t] [-h] [-json]
+//
+//	free [-k] [-m] [-g] [-t] [-h] [-json]
 //
 // Description:
-//     Read memory information from /proc/meminfo and display a summary for
-//     physical memory and swap space. The unit options use powers of 1024.
+//
+//	Read memory information from /proc/meminfo and display a summary for
+//	physical memory and swap space. The unit options use powers of 1024.
 //
 // Options:
-//     -k: display the values in kibibytes
-//     -m: display the values in mebibytes
-//     -g: display the values in gibibytes
-//     -t: display the values in tebibytes
-//     -h: display the values in human-readable form
-//     -json: use JSON output
+//
+//	-k: display the values in kibibytes
+//	-m: display the values in mebibytes
+//	-g: display the values in gibibytes
+//	-t: display the values in tebibytes
+//	-h: display the values in human-readable form
+//	-json: use JSON output
 package main
 
 import (

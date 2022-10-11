@@ -8,16 +8,18 @@
 // Kill kills processes.
 //
 // Synopsis:
-//     kill -l
-//     kill [<-s | --signal | -> <isgname|signum>] pid [pid...]
+//
+//	kill -l
+//	kill [<-s | --signal | -> <isgname|signum>] pid [pid...]
 //
 // Options:
-//     -l:                       list the signal names
-//     -name, --signal name, -s: name is the message to send. On some systems
-//                               this is a string, on others a number. It is
-//                               optional and an OS-dependent value will be
-//                               used if it is not set. pid is a list of at
-//                               least one pid.
+//
+//	-l:                       list the signal names
+//	-name, --signal name, -s: name is the message to send. On some systems
+//	                          this is a string, on others a number. It is
+//	                          optional and an OS-dependent value will be
+//	                          used if it is not set. pid is a list of at
+//	                          least one pid.
 package main
 
 import (

@@ -8,9 +8,11 @@
 // strace is a simple multi-process syscall & signal tracer.
 //
 // Synopsis:
-//     strace <command> [args...]
+//
+//	strace <command> [args...]
 //
 // Description:
+//
 //	trace a single process given a command name.
 package main
 

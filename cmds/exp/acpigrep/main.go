@@ -5,30 +5,33 @@
 // grep a stream of ACPI tables by regexp
 //
 // Synopsis:
-//     acpigrep [-v] [-d] regexp
+//
+//	acpigrep [-v] [-d] regexp
 //
 // Description:
-//	Read tables from stdin and write tables with ACPI signatures
-//	matching a pattern (or not matching, with -v, as in grep)
-//	to stdout.
 //
-//	Read all tables from sysfs and discard MADT
-//	sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep -v MADT
+//		Read tables from stdin and write tables with ACPI signatures
+//		matching a pattern (or not matching, with -v, as in grep)
+//		to stdout.
 //
-//	Read a large blob and print out its tables
-//	acpigrep -d '.*' >/dev/null < blob
+//		Read all tables from sysfs and discard MADT
+//		sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep -v MADT
 //
-//      Read all the files in /sys and discard any DSDT. Useful for coreboot work.
-// 	sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep -v DSDT > nodsdt.bin
+//		Read a large blob and print out its tables
+//		acpigrep -d '.*' >/dev/null < blob
 //
-//	Read all the files, keeping only SRAT and MADT
-// 	sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep 'MADT|SRAT' > madtsrat.bin
+//	     Read all the files in /sys and discard any DSDT. Useful for coreboot work.
+//		sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep -v DSDT > nodsdt.bin
 //
-//	Read all the files, keeping only SRAT and MADT, and print what is done
-// 	sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep -d 'MADT|SRAT' > madtsrat.bin
+//		Read all the files, keeping only SRAT and MADT
+//		sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep 'MADT|SRAT' > madtsrat.bin
+//
+//		Read all the files, keeping only SRAT and MADT, and print what is done
+//		sudo cat /sys/firmware/acpi/tables/[A-Z]* | ./acpigrep -d 'MADT|SRAT' > madtsrat.bin
 //
 // Options:
-// 	-d print debug information about what is kept and what is discarded.
+//
+//	-d print debug information about what is kept and what is discarded.
 //	-v reverse the sense of the match to "discard is matching"
 package main
 

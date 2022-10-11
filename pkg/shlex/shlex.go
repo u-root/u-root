@@ -6,7 +6,7 @@
 //
 // shlex will parse for example
 //
-//     start --append="foobar foobaz" --nogood 'food'
+//	start --append="foobar foobaz" --nogood 'food'
 //
 // into the appropriate argvs to start the command.
 package shlex

@@ -13,6 +13,7 @@
 // For now it only works on Linux.
 //
 // Other info:
-//       http://www.t13.org/ Technical Committee T13 AT Attachment (ATA/ATAPI) Interface.
-//       http://www.serialata.org/ Serial ATA International Organization.
+//
+//	http://www.t13.org/ Technical Committee T13 AT Attachment (ATA/ATAPI) Interface.
+//	http://www.serialata.org/ Serial ATA International Organization.
 package scuzz

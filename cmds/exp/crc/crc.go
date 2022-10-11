@@ -5,19 +5,22 @@
 // Prints crc checksum of a file.
 //
 // Synopsis:
-//     crc OPTIONS [FILE]
+//
+//	crc OPTIONS [FILE]
 //
 // Description:
-//     One of the crc types must be specified. If there is no file, stdin is
-//     read.
+//
+//	One of the crc types must be specified. If there is no file, stdin is
+//	read.
 //
 // Options:
-//     -f: CRC function to use. May be one of the following:
-//         crc32-ieee:       CRC-32 IEEE standard (default)
-//         crc32-castognoli: CRC-32 Castognoli standard
-//         crc32-koopman:    CRC-32 Koopman standard
-//         crc64-ecma:       CRC-64 ECMA standard
-//         crc64-iso:        CRC-64 ISO standard
+//
+//	-f: CRC function to use. May be one of the following:
+//	    crc32-ieee:       CRC-32 IEEE standard (default)
+//	    crc32-castognoli: CRC-32 Castognoli standard
+//	    crc32-koopman:    CRC-32 Koopman standard
+//	    crc64-ecma:       CRC-64 ECMA standard
+//	    crc64-iso:        CRC-64 ISO standard
 package main
 
 import (

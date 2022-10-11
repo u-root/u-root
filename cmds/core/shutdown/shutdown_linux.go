@@ -5,17 +5,20 @@
 // shutdown halts, suspends, or reboots at a specified time, or immediately.
 //
 // Synopsis:
-//     shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]
+//
+//	shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]
 //
 // Description:
-//     current operations are reboot (-r), suspend, and halt [-h].
-//     If no operation is specified halt is assumed.
-//     If a time is given, an opcode is not optional.
+//
+//	current operations are reboot (-r), suspend, and halt [-h].
+//	If no operation is specified halt is assumed.
+//	If a time is given, an opcode is not optional.
 //
 // Options:
-//     -r|reboot:	reboot the machine.
-//     -h|halt:		halt the machine.
-//     -s|suspend:	suspend the machine.
+//
+//	-r|reboot:	reboot the machine.
+//	-h|halt:		halt the machine.
+//	-s|suspend:	suspend the machine.
 //
 // Time is specified as "now", +minutes, or RFC3339 format.
 // All other arguments past time are printed as a message.

@@ -5,71 +5,76 @@
 // pox packages dynamic executable into an archive.
 //
 // Synopsis:
-//     pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c FILE [...FILE]
-//     pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-run|r] PROGRAM -- [...ARGS]
-//     pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c -[-run|r] PROGRAM -- [...ARGS]
+//
+//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c FILE [...FILE]
+//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-run|r] PROGRAM -- [...ARGS]
+//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c -[-run|r] PROGRAM -- [...ARGS]
 //
 // Description:
-//     pox packages a dynamic executable into an archive for use on another
-//     machine. By default, it uses the tcz format compatible with tinycore.
 //
-//     pox supports 3 archive formats:
-//     1) squashfs (default): The tcz is a squashfs. This requires mksquashfs.
-//     2) zip
-//     3) elf+zip: Self-extracting.
+//	pox packages a dynamic executable into an archive for use on another
+//	machine. By default, it uses the tcz format compatible with tinycore.
+//
+//	pox supports 3 archive formats:
+//	1) squashfs (default): The tcz is a squashfs. This requires mksquashfs.
+//	2) zip
+//	3) elf+zip: Self-extracting.
 //
 // Options:
-//     create|c: create the TCZ file.
-//     verbose|d: verbose
-//     file|f FILE: file name (default /tmp/pox.tcz)
-//     run|r: Runs the first non-flag argument to pox.  Remaining arguments will
-//            be passed to the program.  Use '--' before any flag-like arguments
-//            to prevent pox from interpretting the flags.
-//     self|s: Create a self-extracting elf. This implies -z.
-//     zip|z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
-//            to use -z for both creation and running, or not at all.
-//     For convenience and testing, you can create and run a pox in one command.
+//
+//	create|c: create the TCZ file.
+//	verbose|d: verbose
+//	file|f FILE: file name (default /tmp/pox.tcz)
+//	run|r: Runs the first non-flag argument to pox.  Remaining arguments will
+//	       be passed to the program.  Use '--' before any flag-like arguments
+//	       to prevent pox from interpretting the flags.
+//	self|s: Create a self-extracting elf. This implies -z.
+//	zip|z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
+//	       to use -z for both creation and running, or not at all.
+//	For convenience and testing, you can create and run a pox in one command.
 //
 // Example:
-//     $ pox -c /bin/bash /bin/cat /bin/ls /etc/hosts
-//     Will build a squashfs, which will be /tmp/pox.tcz
 //
-//     $ sudo pox -r /bin/bash
-//     Will drop you into the /tmp/pox.tcz running bash
-//     You can use ls and cat on /etc/hosts.
+//	$ pox -c /bin/bash /bin/cat /bin/ls /etc/hosts
+//	Will build a squashfs, which will be /tmp/pox.tcz
 //
-//     Simpler example, with arguments:
-//     $ sudo pox -r /bin/ls -- -la
-//     will run `ls -la` and exit.
+//	$ sudo pox -r /bin/bash
+//	Will drop you into the /tmp/pox.tcz running bash
+//	You can use ls and cat on /etc/hosts.
 //
-//     $ sudo pox -r -- /bin/ls -la
-//     Syntactically easier: the program name can come after '--'
+//	Simpler example, with arguments:
+//	$ sudo pox -r /bin/ls -- -la
+//	will run `ls -la` and exit.
 //
-//     $ sudo pox -c -r /bin/bash
-//     Create a pox with a bash and run it.
+//	$ sudo pox -r -- /bin/ls -la
+//	Syntactically easier: the program name can come after '--'
 //
-//     $ pox -cvsf date /bin/date
-//     Creates a self-executing pox called "date".
-//     $ ./date --utc
+//	$ sudo pox -c -r /bin/bash
+//	Create a pox with a bash and run it.
+//
+//	$ pox -cvsf date /bin/date
+//	Creates a self-executing pox called "date".
+//	$ ./date --utc
 //
 // Notes:
-//     - When running a pox, you likely need sudo to chroot
 //
-//     - Binaries run out of a chroot often need files you are unaware of. For
+//   - When running a pox, you likely need sudo to chroot
+//
+//   - Binaries run out of a chroot often need files you are unaware of. For
 //     instance, if bash can't find terminfo files, it won't know to handle
 //     backspaces properly. (They occur, but are not shown). To fix this, pass
 //     pox all of the files you need.  For bash: `find /lib/terminfo -type f`.
 //
-//     - Other programs rely on helper functions, such as '/bin/man'. If your
+//   - Other programs rely on helper functions, such as '/bin/man'. If your
 //     program has built-in help commands that trigger man pages, e.g. "git
 //     help foo", you'll want to include /bin/man too. But you'll also need
 //     everything that man uses, such as /etc/manpath.config. My advice: skip
 //     it.
 //
-//     - When adding all files in a directory, the easiest thing to do is:
+//   - When adding all files in a directory, the easiest thing to do is:
 //     `find $DIR -type f` (Note the ticks: this is a bash command execution).
 //
-//     - When creating a pox with an executable with shared libraries that are
+//   - When creating a pox with an executable with shared libraries that are
 //     not installed on your system, such as for a project installed in your
 //     home directory, run pox from the installation prefix directory, such
 //     that the lib/ and bin/ are in pox's working directory. Pox will strip
@@ -78,7 +83,7 @@
 //     full path from your machine in the pox file makes it easier to extract a
 //     pox file to /usr/local/.
 //
-//     - pox is not a security boundary. chroot is well known to have holes.
+//   - pox is not a security boundary. chroot is well known to have holes.
 //     Pox is about enabling execution. Don't expect it to "wall things off".
 //     In fact, we mount /dev, /proc, and /sys; and you can add more things.
 //     Commands run under pox are just as dangerous as anything else.

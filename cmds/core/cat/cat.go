@@ -5,13 +5,16 @@
 // cat concatenates files and prints them to stdout.
 //
 // Synopsis:
-//     cat [-u] [FILES]...
+//
+//	cat [-u] [FILES]...
 //
 // Description:
-//     If no files are specified, read from stdin.
+//
+//	If no files are specified, read from stdin.
 //
 // Options:
-//     -u: ignored flag
+//
+//	-u: ignored flag
 package main
 
 import (

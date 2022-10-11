@@ -5,13 +5,16 @@
 // Print name of current directory.
 //
 // Synopsis:
-//     pwd [-LP]
+//
+//	pwd [-LP]
 //
 // Options:
-//     -P: don't follow symlinks
+//
+//	-P: don't follow symlinks
 //
 // Author:
-//     created by Beletti (rhiguita@gmail.com)
+//
+//	created by Beletti (rhiguita@gmail.com)
 package main
 
 import (

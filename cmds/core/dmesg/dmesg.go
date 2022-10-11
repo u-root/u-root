@@ -7,11 +7,13 @@
 // dmesg reads the system log.
 //
 // Synopsis:
-//     dmesg [-clear|-read-clear]
+//
+//	dmesg [-clear|-read-clear]
 //
 // Options:
-//     -clear: clear the log
-//     -read-clear: clear the log after printing
+//
+//	-clear: clear the log
+//	-read-clear: clear the log after printing
 package main
 
 import (

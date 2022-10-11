@@ -5,10 +5,12 @@
 // fdtdump prints a readable version of Flattened Device Tree or dtb.
 //
 // Synopsis:
-//     fdtdump [-json] FILE
+//
+//	fdtdump [-json] FILE
 //
 // Options:
-//     -json: Print json with base64 encoded values.
+//
+//	-json: Print json with base64 encoded values.
 package main
 
 import (

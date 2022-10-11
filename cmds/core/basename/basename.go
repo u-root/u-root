@@ -5,8 +5,8 @@
 // Basename return name with leading path information removed.
 //
 // Synopsis:
-//     basename NAME [SUFFIX]
 //
+//	basename NAME [SUFFIX]
 package main
 
 import (

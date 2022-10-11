@@ -8,36 +8,40 @@
 // msr reads and writes msrs using a Forth interpreter on argv
 //
 // Synopsis:
-//     To see what is available:
-//     msr words
+//
+//	To see what is available:
+//	msr words
 //
 // Description:
-//     msr provides a set of Forth words that let you manage MSRs.
-//     You can add new ones of your own.
-//     For a start, it provides some pre-defined words for well-known MSRs
 //
-//     push a [] of MSR names and the 0x3a register on the stack
-//     IA32_FEATURE_CONTROL -- equivalent to * msr 0x3a reg
-//     The next two commands use IA32_FEATURE_CONTROL:
-//     READ_IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd
-//     LOCK IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd IA32_FEATURE_CONTROL 1 u64 or wr
-//     e.g.
-//./msr IA32_FEATURE_CONTROL
+//	msr provides a set of Forth words that let you manage MSRs.
+//	You can add new ones of your own.
+//	For a start, it provides some pre-defined words for well-known MSRs
+//
+//	push a [] of MSR names and the 0x3a register on the stack
+//	IA32_FEATURE_CONTROL -- equivalent to * msr 0x3a reg
+//	The next two commands use IA32_FEATURE_CONTROL:
+//	READ_IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd
+//	LOCK IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd IA32_FEATURE_CONTROL 1 u64 or wr
+//	e.g.
+//
+// ./msr IA32_FEATURE_CONTROL
 // [[/dev/cpu/0/msr /dev/cpu/1/msr /dev/cpu/2/msr /dev/cpu/3/msr] 58]
 //
-//     As a special convenience, we have two useful cases:
-//     r glob register -- read the MSR 'register' from cores matching 'glob'
-//     w glob register value -- write the value to 'register' on all cores matching 'glob'
+//	As a special convenience, we have two useful cases:
+//	r glob register -- read the MSR 'register' from cores matching 'glob'
+//	w glob register value -- write the value to 'register' on all cores matching 'glob'
 //
 // Examples:
-//     Show the IA32 feature MSR on all cores
-//     sudo fio READ_IA32_FEATURE_CONTROL
-//     [[5 5 5 5]]
-//     lock the registers
-//     sudo fio LOCK_IA32_FEATURE_CONTROL
-//     Just see it one core 0 and 1
-//     sudo ./fio '[01]' msr 0x3a reg rd
-//     [[5 5]]
+//
+//	Show the IA32 feature MSR on all cores
+//	sudo fio READ_IA32_FEATURE_CONTROL
+//	[[5 5 5 5]]
+//	lock the registers
+//	sudo fio LOCK_IA32_FEATURE_CONTROL
+//	Just see it one core 0 and 1
+//	sudo ./fio '[01]' msr 0x3a reg rd
+//	[[5 5]]
 package main
 
 import (

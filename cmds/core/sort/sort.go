@@ -5,16 +5,19 @@
 // Sort lines.
 //
 // Synopsis:
-//     sort [OPTIONS]... [INPUT]...
+//
+//	sort [OPTIONS]... [INPUT]...
 //
 // Description:
-//     Sort copies lines from the input to the output, sorting them in the
-//     process. This does nothing fancy (no multi-threading, compression,
-//     optiminzations, ...); it simply uses Go's sort.Sort function.
+//
+//	Sort copies lines from the input to the output, sorting them in the
+//	process. This does nothing fancy (no multi-threading, compression,
+//	optiminzations, ...); it simply uses Go's sort.Sort function.
 //
 // Options:
-//     -r:      reverse
-//     -o FILE: output file
+//
+//	-r:      reverse
+//	-o FILE: output file
 package main
 
 import (

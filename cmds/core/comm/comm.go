@@ -5,19 +5,22 @@
 // comm compares two files.
 //
 // Synopsis:
-//     comm [-123h] FILE1 FILE2
+//
+//	comm [-123h] FILE1 FILE2
 //
 // Descrption:
-//     Comm reads file1 and file2, which are in lexicographical order, and
-//     produces a three column output: lines only in file1; lines only in
-//     file2; and lines in both files. The file name – means the standard
-//     input.
+//
+//	Comm reads file1 and file2, which are in lexicographical order, and
+//	produces a three column output: lines only in file1; lines only in
+//	file2; and lines in both files. The file name – means the standard
+//	input.
 //
 // Options:
-//     -1: suppress printing of column 1
-//     -2: suppress printing of column 2
-//     -3: suppress printing of column 3
-//     -h: print this help message and exit
+//
+//	-1: suppress printing of column 1
+//	-2: suppress printing of column 2
+//	-3: suppress printing of column 3
+//	-h: print this help message and exit
 package main
 
 import (

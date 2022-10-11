@@ -105,10 +105,12 @@ func nullterm(buf []byte) string {
 
 // KInfo struct holds info extracted from the kernel's embedded version string
 //
-//2.6.24.111 (bluebat@linux-vm-os64.site) #606 Mon Apr 14 00:06:11 CEST 2014
-//4.19.16-norm_boot (user@host) #300 SMP Fri Jan 25 16:32:19 UTC 2019
-//   release             (builder)         version
-//maj.min.patch-localver                #buildnum SMP buildtime
+// 2.6.24.111 (bluebat@linux-vm-os64.site) #606 Mon Apr 14 00:06:11 CEST 2014
+// 4.19.16-norm_boot (user@host) #300 SMP Fri Jan 25 16:32:19 UTC 2019
+//
+//	release             (builder)         version
+//
+// maj.min.patch-localver                #buildnum SMP buildtime
 type KInfo struct {
 	Release, Version string // uname -r, uname -v respectfully
 	Builder          string // user@hostname in parenthesis, shown by `file` but not `uname`

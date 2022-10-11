@@ -37,7 +37,8 @@ type ZImage struct {
 // Header appears near the beginning of the zImage.
 //
 // The layout is defined in Linux:
-//     arch/arm/boot/compressed/head.S
+//
+//	arch/arm/boot/compressed/head.S
 type Header struct {
 	Magic      uint32
 	Start      uint32
@@ -50,7 +51,8 @@ type Header struct {
 // TableEntry is an extension to Header. A zImage may have 0 or more entries.
 //
 // The layout is defined in Linux:
-//     arch/arm/boot/compressed/vmlinux.lds.S
+//
+//	arch/arm/boot/compressed/vmlinux.lds.S
 type TableEntry struct {
 	Tag  Tag
 	Data []uint32

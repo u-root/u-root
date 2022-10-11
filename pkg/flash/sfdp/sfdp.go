@@ -109,11 +109,12 @@ var BasicTableLookup = []ParamLookupEntry{
 // SFDP (Serial Flash Discoverable Parameters) holds a copy of the tables of the SFDP.
 //
 // The structure is:
-//     SFDP
-//      |--> Header
-//      \--> []Parameter
-//              |--> ParameterHeader
-//              \--> Table: A copy of the table's contents.
+//
+//	SFDP
+//	 |--> Header
+//	 \--> []Parameter
+//	         |--> ParameterHeader
+//	         \--> Table: A copy of the table's contents.
 type SFDP struct {
 	Header
 	Parameters []Parameter

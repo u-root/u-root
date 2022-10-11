@@ -5,7 +5,8 @@
 // ts prepends each line of stdin with a timestamp.
 //
 // Synopsis:
-//     ts
+//
+//	ts
 package main
 
 import (

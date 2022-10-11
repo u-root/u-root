@@ -5,17 +5,19 @@
 // Send icmp packets to a server to test network connectivity.
 //
 // Synopsis:
-//     ping [-hV] [-c COUNT] [-i INTERVAL] [-s PACKETSIZE] [-w DEADLINE] DESTINATION
+//
+//	ping [-hV] [-c COUNT] [-i INTERVAL] [-s PACKETSIZE] [-w DEADLINE] DESTINATION
 //
 // Options:
-//     -6: use ipv6 (ip6:ipv6-icmp)
-//     -s: data size (default: 64)
-//     -c: # iterations, 0 to run forever (default)
-//     -i: interval in milliseconds (default: 1000)
-//     -V: version
-//     -w: wait time in milliseconds (default: 100)
-//     -a: Audible rings a bell when a packet is received
-//     -h: help
+//
+//	-6: use ipv6 (ip6:ipv6-icmp)
+//	-s: data size (default: 64)
+//	-c: # iterations, 0 to run forever (default)
+//	-i: interval in milliseconds (default: 1000)
+//	-V: version
+//	-w: wait time in milliseconds (default: 100)
+//	-a: Audible rings a bell when a packet is received
+//	-h: help
 package main
 
 import (

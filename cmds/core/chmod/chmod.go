@@ -5,10 +5,12 @@
 // chmod changes mode bits (e.g. permissions) of a file.
 //
 // Synopsis:
-//     chmod MODE FILE...
+//
+//	chmod MODE FILE...
 //
 // Desription:
-//     MODE is a three character octal value or a string like a=rwx
+//
+//	MODE is a three character octal value or a string like a=rwx
 package main
 
 import (

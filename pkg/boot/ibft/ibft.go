@@ -9,9 +9,9 @@
 //
 // An iBFT is typically placed in one of two places:
 //
-//  (1) an ACPI table named "iBFT", or
+//	(1) an ACPI table named "iBFT", or
 //
-//  (2) in the 512K-1M physical memory range identified by its first 4 bytes.
+//	(2) in the 512K-1M physical memory range identified by its first 4 bytes.
 //
 // However, this package doesn't concern itself with the placement, just the
 // marshaling of the table's bytes.

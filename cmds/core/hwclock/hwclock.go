@@ -5,14 +5,17 @@
 // hwclock reads or changes the hardware clock (RTC) in UTC format.
 //
 // Synopsis:
-//     hwclock [-w]
+//
+//	hwclock [-w]
 //
 // Description:
-//     It prints the current hwclock time in UTC if called without any flags.
-//     It sets the hwclock to the system clock in UTC if called with -w.
+//
+//	It prints the current hwclock time in UTC if called without any flags.
+//	It sets the hwclock to the system clock in UTC if called with -w.
 //
 // Options:
-//     -w: set hwclock to system clock in UTC
+//
+//	-w: set hwclock to system clock in UTC
 package main
 
 import (

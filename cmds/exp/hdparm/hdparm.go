@@ -17,8 +17,8 @@
 // arguments for commands requiring a password.
 //
 // Synopsis:
-//     hdparm [--i] [--security-unlock[=password]] [--user-master|--timeout] [device ...]
 //
+//	hdparm [--i] [--security-unlock[=password]] [--user-master|--timeout] [device ...]
 package main
 
 import (

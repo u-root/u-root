@@ -5,11 +5,13 @@
 // mv renames files and directories.
 //
 // Synopsis:
-//     mv SOURCE [-u] TARGET
-//     mv SOURCE... [-u] DIRECTORY
+//
+//	mv SOURCE [-u] TARGET
+//	mv SOURCE... [-u] DIRECTORY
 //
 // Author:
-//     Beletti (rhiguita@gmail.com)
+//
+//	Beletti (rhiguita@gmail.com)
 package main
 
 import (

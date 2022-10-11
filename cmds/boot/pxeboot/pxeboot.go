@@ -11,12 +11,12 @@
 // ServerName options (which may be embedded in the original BOOTP message, or
 // as option codes) to find something to boot.
 //
-// This BootFileName may point to
+// This BootFileName may point to:
 //
 // - an iPXE script beginning with #!ipxe
 //
-// - a pxelinux.0, in which case we will ignore the pxelinux and try to parse
-//   pxelinux.cfg/<files>
+//   - a pxelinux.0, in which case we will ignore the pxelinux and try to parse
+//     pxelinux.cfg/<files>
 package main
 
 import (

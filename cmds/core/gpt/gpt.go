@@ -5,13 +5,15 @@
 // gpt reads and writes GPT headers.
 //
 // Synopsis:
-//     gpt [-w] file
+//
+//	gpt [-w] file
 //
 // Description:
-//     For -w, it reads a JSON formatted GPT from stdin, and writes 'file'
-//     which is usually a device. It writes both primary and secondary headers.
 //
-//     Otherwise it just writes the headers to stdout in JSON format.
+//	For -w, it reads a JSON formatted GPT from stdin, and writes 'file'
+//	which is usually a device. It writes both primary and secondary headers.
+//
+//	Otherwise it just writes the headers to stdout in JSON format.
 package main
 
 import (

@@ -5,11 +5,13 @@
 // hexdump prints file content in hexadecimal.
 //
 // Synopsis:
-//     hexdump [FILES]...
+//
+//	hexdump [FILES]...
 //
 // Description:
-//     Concatenate the input files into a single hexdump. If there are no
-//     arguments, stdin is read.
+//
+//	Concatenate the input files into a single hexdump. If there are no
+//	arguments, stdin is read.
 package main
 
 import (

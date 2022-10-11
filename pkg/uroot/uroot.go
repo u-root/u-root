@@ -340,10 +340,10 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 //
 // Possible options are:
 //
-//   ./foobar
-//   ./foobar/glob*
-//   cmds/core/ip with UROOT_SOURCE=/directory/to/u-root
-//   cmds/core/g*lob with UROOT_SOURCE=/directory/to/u-root
+//	./foobar
+//	./foobar/glob*
+//	cmds/core/ip with UROOT_SOURCE=/directory/to/u-root
+//	cmds/core/g*lob with UROOT_SOURCE=/directory/to/u-root
 func resolvePackagePath(logger ulog.Logger, env golang.Environ, urootSource string, input string) ([]string, error) {
 	// In case the input is a u-root import path we strip the prefix here
 	// so that it can get re-added with a proper filepath.

@@ -130,12 +130,12 @@ func (b *Buffer) Cap() int {
 //
 // Use:
 //
-//   func (s *something) Unmarshal(l *Lexer) {
-//     s.Foo = l.Read8()
-//     s.Bar = l.Read8()
-//     s.Baz = l.Read16()
-//     return l.Error()
-//   }
+//	func (s *something) Unmarshal(l *Lexer) {
+//	  s.Foo = l.Read8()
+//	  s.Bar = l.Read8()
+//	  s.Baz = l.Read16()
+//	  return l.Error()
+//	}
 type Lexer struct {
 	*Buffer
 

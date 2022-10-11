@@ -5,7 +5,8 @@
 // man - print manual entry for command.
 //
 // Synopsis:
-//     man COMMAND
+//
+//	man COMMAND
 package main
 
 import (

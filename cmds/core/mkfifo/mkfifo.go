@@ -8,11 +8,12 @@
 // mkfifo creates a named pipe.
 //
 // Synopsis:
-//     mkfifo [OPTIONS] NAME...
+//
+//	mkfifo [OPTIONS] NAME...
 //
 // Options:
-//     -m: mode (default 0600)
 //
+//	-m: mode (default 0600)
 package main
 
 import (

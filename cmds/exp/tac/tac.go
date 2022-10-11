@@ -6,7 +6,8 @@
 // file by file
 //
 // Synopsis:
-//     tac <file...>
+//
+//	tac <file...>
 //
 // Description:
 //

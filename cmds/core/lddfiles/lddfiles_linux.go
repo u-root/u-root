@@ -5,6 +5,7 @@
 // lddfiles prints the arguments and all .so dependencies of those arguments
 //
 // Description:
+//
 //	lddfiles prints the arguments on the command line and all .so's
 //	on which they depend. In some cases, those .so's are actually symlinks;
 //	in that case, the symlink and its value are printed.

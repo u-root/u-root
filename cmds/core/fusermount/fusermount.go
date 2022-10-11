@@ -9,7 +9,8 @@
 // is invoked by other programs, or interactively only to unmount.
 //
 // Synopsis:
-//     fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>
+//
+//	fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>
 //
 // For mounting, per the FUSE model, the environment variable
 // _FUSE_COMMFD must have the value of a file descriptor variable on
@@ -20,6 +21,7 @@
 // kernels do.
 //
 // Description:
+//
 //	invoke fuse mount operations
 package main
 

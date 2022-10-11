@@ -5,11 +5,13 @@
 // modprobe - Add and remove modules from the Linux Kernel
 //
 // Synopsis:
-//     modprobe [-n] modulename [parameters...]
-//     modprobe [-n] -a modulename...
+//
+//	modprobe [-n] modulename [parameters...]
+//	modprobe [-n] -a modulename...
 //
 // Author:
-//     Roland Kammerer <dev.rck@gmail.com>
+//
+//	Roland Kammerer <dev.rck@gmail.com>
 package main
 
 import (

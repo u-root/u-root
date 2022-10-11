@@ -5,17 +5,19 @@
 // watchdog interacts with /dev/watchdog.
 //
 // Synopsis:
-//     watchdog [--dev=DEV] keepalive
-//         Pet the watchdog. This resets the time left back to the timeout.
-//     watchdog [--dev=DEV] set[pre]timeout DURATION
-//         Set the watchdog timeout or pretimeout
-//     watchdog [--dev=DEV] get[pre]timeout
-//         Print the watchdog timeout or pretimeout
-//     watchdog [--dev=DEV] gettimeleft
-//         Print the amount of time left.
+//
+//	watchdog [--dev=DEV] keepalive
+//	    Pet the watchdog. This resets the time left back to the timeout.
+//	watchdog [--dev=DEV] set[pre]timeout DURATION
+//	    Set the watchdog timeout or pretimeout
+//	watchdog [--dev=DEV] get[pre]timeout
+//	    Print the watchdog timeout or pretimeout
+//	watchdog [--dev=DEV] gettimeleft
+//	    Print the amount of time left.
 //
 // Options:
-//     --dev DEV: Device (default /dev/watchdog)
+//
+//	--dev DEV: Device (default /dev/watchdog)
 package main
 
 import (

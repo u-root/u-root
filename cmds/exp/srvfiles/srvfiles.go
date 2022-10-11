@@ -5,12 +5,14 @@
 // Serve files on the network.
 //
 // Synopsis:
-//     srvfiles [--h=HOST] [--p=PORT] [--d=DIR]
+//
+//	srvfiles [--h=HOST] [--p=PORT] [--d=DIR]
 //
 // Options:
-//     --h: hostname (default: 127.0.0.1)
-//     --p: port number (default: 8080)
-//     --d: directory to serve (default: .)
+//
+//	--h: hostname (default: 127.0.0.1)
+//	--p: port number (default: 8080)
+//	--d: directory to serve (default: .)
 package main
 
 import (

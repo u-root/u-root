@@ -5,7 +5,8 @@
 // date prints the date.
 //
 // Synopsis:
-//     date [-u] [+format] | date [-u] [MMDDhhmm[CC]YY[.ss]]
+//
+//	date [-u] [+format] | date [-u] [MMDDhhmm[CC]YY[.ss]]
 package main
 
 import (

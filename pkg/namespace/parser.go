@@ -21,7 +21,6 @@ import (
 // will make your head hurt.
 //
 // http://man.cat-v.org/plan_9/1/ns
-//
 func Parse(r io.Reader) (File, error) {
 	scanner := bufio.NewScanner(r)
 

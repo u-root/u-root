@@ -5,12 +5,14 @@
 // mkdir makes a new directory.
 //
 // Synopsis:
-//     mkdir [-m mode] [-v] [-p] DIRECTORY...
+//
+//	mkdir [-m mode] [-v] [-p] DIRECTORY...
 //
 // Options:
-//     -m: make all needed directories in the path
-//     -v: directory mode (ex: 666)
-//     -p: print each directory as it is made
+//
+//	-m: make all needed directories in the path
+//	-v: directory mode (ex: 666)
+//	-p: print each directory as it is made
 package main
 
 import (

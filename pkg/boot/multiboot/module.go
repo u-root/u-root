@@ -74,17 +74,18 @@ func (m *multiboot) addMultibootModules() (uintptr, error) {
 // loadModules loads module files.
 // Returns loaded modules description and buffer storing loaded modules.
 // Memory layout of the loaded modules is following:
-//			cmdLine_1
-//			cmdLine_2
-//			...
-//			cmdLine_n
-//			<padding>
-//			modules_1
-//			<padding>
-//			modules_2
-//			...
-//			<padding>
-//			modules_n
+//
+//	cmdLine_1
+//	cmdLine_2
+//	...
+//	cmdLine_n
+//	<padding>
+//	modules_1
+//	<padding>
+//	modules_2
+//	...
+//	<padding>
+//	modules_n
 //
 // <padding> aligns the start of each module to a page beginning.
 func loadModules(rmods []Module) (loaded modules, data []byte, err error) {

@@ -11,12 +11,15 @@
 // the kernel messages which could be quickly filled up in some cases
 //
 // Synopsis:
+//
 //	rsdp [-f file]
 //
 // Description:
+//
 //	Look for rsdp value in a file, default /dev/kmsg
 //
 // Example:
+//
 //	rsdp
 //	rsdp -f /path/to/file
 package main

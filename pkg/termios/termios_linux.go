@@ -139,12 +139,12 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 }
 
 // MakeSerialDefault updates the Termios to typical serial configuration:
-// - Ignore all flow control (modem, hardware, software...)
-// - Translate carriage return to newline on input
-// - Enable canonical mode: Input is available line by line, with line editing
-//   enabled (ERASE, KILL are supported)
-// - Local ECHO is added (and handled by line editing)
-// - Map newline to carriage return newline on output
+//   - Ignore all flow control (modem, hardware, software...)
+//   - Translate carriage return to newline on input
+//   - Enable canonical mode: Input is available line by line, with line editing
+//     enabled (ERASE, KILL are supported)
+//   - Local ECHO is added (and handled by line editing)
+//   - Map newline to carriage return newline on output
 func MakeSerialDefault(term *Termios) *Termios {
 	t := *term
 	/* Clear all except baud, stop bit and parity settings */
