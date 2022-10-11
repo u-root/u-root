@@ -150,6 +150,12 @@ type Config struct {
 	// relay agents).
 	V6ServerAddr *net.UDPAddr
 
+	// V6ClientPort is the port that is used to send and receive DHCPv6
+	// messages.
+	//
+	// If not set, it will default to dhcpv6's default (546).
+	V6ClientPort *int
+
 	// V4ServerAddr can be a unicast or broadcast destination for IPv4 DHCP
 	// messages.
 	//
@@ -209,6 +215,11 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 }
 
 func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout time.Duration) (Lease, error) {
+	clientPort := dhcpv6.DefaultClientPort
+	if c.V6ClientPort != nil {
+		clientPort = *c.V6ClientPort
+	}
+
 	// For ipv6, we cannot bind to the port until Duplicate Address
 	// Detection (DAD) is complete which is indicated by the link being no
 	// longer marked as "tentative". This usually takes about a second.
@@ -247,7 +258,15 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 	if c.V6ServerAddr != nil {
 		mods = append(mods, nclient6.WithBroadcastAddr(c.V6ServerAddr))
 	}
-	client, err := nclient6.New(iface.Attrs().Name, mods...)
+	conn, err := nclient6.NewIPv6UDPConn(iface.Attrs().Name, clientPort)
+	if err != nil {
+		return nil, err
+	}
+	i, err := net.InterfaceByName(iface.Attrs().Name)
+	if err != nil {
+		return nil, err
+	}
+	client, err := nclient6.NewWithConn(conn, i.HardwareAddr, mods...)
 	if err != nil {
 		return nil, err
 	}
