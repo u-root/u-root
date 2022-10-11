@@ -5,14 +5,17 @@
 // info command
 //
 // Synopsis:
-//     info
+//
+//	info
 //
 // Description:
-//     Print out info about our environment.
+//
+//	Print out info about our environment.
 //
 // Example:
-//     $ info
-//     Version, goos, etc.
+//
+//	$ info
+//	Version, goos, etc.
 //
 // Note:
 //

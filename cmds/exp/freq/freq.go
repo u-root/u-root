@@ -7,20 +7,23 @@
 // the –r option it instead counts UTF sequences, that is, runes.
 //
 // Synopsis:
-//     freq [-rdxoc] [FILES]...
+//
+//	freq [-rdxoc] [FILES]...
 //
 // Description:
-//     Each non–zero entry of the table is printed preceded by the byte value,
-//     in decimal, octal, hex, and Unicode character (if printable). If any
-//     options are given, the –d, –x, –o, –c flags specify a subset of value
-//     formats: decimal, hex, octal, and character, respectively.
+//
+//	Each non–zero entry of the table is printed preceded by the byte value,
+//	in decimal, octal, hex, and Unicode character (if printable). If any
+//	options are given, the –d, –x, –o, –c flags specify a subset of value
+//	formats: decimal, hex, octal, and character, respectively.
 //
 // Options:
-//     –r: treat input as UTF-8
-//     –d: print decimal value
-//     –x: print hex value
-//     –o: print octal value
-//     –c: print character/UTF value
+//
+//	–r: treat input as UTF-8
+//	–d: print decimal value
+//	–x: print hex value
+//	–o: print octal value
+//	–c: print character/UTF value
 package main
 
 import (

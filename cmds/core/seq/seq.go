@@ -5,20 +5,23 @@
 // Print a sequence of numbers.
 //
 // Synopsis:
-//     seq [-f FORMAT] [-w] [-s SEPARATOR] [START [STEP [END]]]
+//
+//	seq [-f FORMAT] [-w] [-s SEPARATOR] [START [STEP [END]]]
 //
 // Examples:
-//    % seq -s=' ' 3
-//    1 2 3
-//    % seq -s=' ' 2 4
-//    2 3 4
-//    % seq -s=' ' 3 2 7
-//    3 5 7
+//
+//	% seq -s=' ' 3
+//	1 2 3
+//	% seq -s=' ' 2 4
+//	2 3 4
+//	% seq -s=' ' 3 2 7
+//	3 5 7
 //
 // Options:
-//     -f: use printf style floating-point FORMAT (default: %v)
-//     -s: use STRING to separate numbers (default: \n)
-//     -w: equalize width by padding with leading zeroes (default: false)
+//
+//	-f: use printf style floating-point FORMAT (default: %v)
+//	-s: use STRING to separate numbers (default: \n)
+//	-w: equalize width by padding with leading zeroes (default: false)
 package main
 
 import (

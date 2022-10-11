@@ -18,13 +18,13 @@ var (
 		output []string
 	}{
 		{
-			name: "single vdso entry",
-			input: `	linux-vdso.so.1`,
+			name:   "single vdso entry",
+			input:  `	linux-vdso.so.1`,
 			output: []string{},
 		},
 		{
-			name: "duplicate vdso symlink",
-			input: `	linux-vdso.so.1 => linux-vdso.so.1`,
+			name:   "duplicate vdso symlink",
+			input:  `	linux-vdso.so.1 => linux-vdso.so.1`,
 			output: []string{},
 		},
 		{

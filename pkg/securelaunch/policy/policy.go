@@ -70,6 +70,7 @@ func scanKernelCmdLine() []byte {
 // the policy file as a byte slice.
 //
 //	e.g., if /dev/sda1 is mounted on /tmp/sda1, then mountPath would be
+//
 // /tmp/sda1 and searchPath would be /tmp/sda1/securelaunch.policy,
 // /tmp/sda1/efi/securelaunch.policy, and /tmp/sda1/boot/securelaunch.policy
 // respectively for each iteration of loop over SearchRoots slice.

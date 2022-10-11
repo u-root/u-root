@@ -5,7 +5,8 @@
 // Unmount unmounts new from old, or everything mounted on old if new is omitted.
 //
 // Synopsis:
-//	 unmount [ new ] old
+//
+//	unmount [ new ] old
 package main
 
 import (

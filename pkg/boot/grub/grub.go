@@ -53,8 +53,8 @@ var probeGrubFiles = []string{
 //
 // They add a special case to not escape hex sequences:
 //
-//     grub> echo hello \xff \xfg
-//     hello \xff xfg
+//	grub> echo hello \xff \xfg
+//	hello \xff xfg
 //
 // Their default installations depend on this functionality.
 var hexEscape = regexp.MustCompile(`\\x[0-9a-fA-F]{2}`)

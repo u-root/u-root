@@ -5,7 +5,8 @@
 // Rush is an interactive shell similar to sh.
 //
 // Description:
-//     Prompt is '% '.
+//
+//	Prompt is '% '.
 package main
 
 import (

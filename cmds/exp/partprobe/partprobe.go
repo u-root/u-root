@@ -5,8 +5,8 @@
 // partprobe prompts the OS to re-read partition tables.
 //
 // Synopsis:
-//   partprobe [device]...
 //
+//	partprobe [device]...
 package main
 
 import (

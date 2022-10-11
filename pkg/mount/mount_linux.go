@@ -78,7 +78,8 @@ func (mp *MountPoint) Unmount(flags uintptr) error {
 // opts is usually empty, but if you want, e.g., to pre-create the mountpoint,
 // you can call Mount with a mkdirall, e.g.
 // mount.Mount("none", dst, fstype, "", 0,
-//		func() error { return os.MkdirAll(dst, 0o666)})
+//
+//	func() error { return os.MkdirAll(dst, 0o666)})
 func Mount(dev, path, fsType, data string, flags uintptr, opts ...func() error) (*MountPoint, error) {
 	for _, f := range opts {
 		if err := f(); err != nil {

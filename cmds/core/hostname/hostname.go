@@ -5,10 +5,12 @@
 // hostname prints or changes the system's hostname.
 //
 // Synopsis:
-//     hostname [HOSTNAME]
+//
+//	hostname [HOSTNAME]
 //
 // Author:
-//     Beletti <rhiguita@gmail.com>
+//
+//	Beletti <rhiguita@gmail.com>
 package main
 
 import (

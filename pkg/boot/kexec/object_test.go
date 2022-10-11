@@ -50,10 +50,10 @@ func TestObject(t *testing.T) {
 var bogus = []byte{1, 2, 3, 4}
 
 // This is a 386 object from Plan9, from this source:
-//#include <u.h>
-//#include <libc.h>
-//main(int argc, char *argv[])
-//{return 0;}
+// #include <u.h>
+// #include <libc.h>
+// main(int argc, char *argv[])
+// {return 0;}
 var emptyAout = []byte{
 	0x00, 0x00, 0x01, 0xeb, 0x00, 0x00, 0x04, 0xb3, 0x00, 0x00, 0x00, 0x20,
 	0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x08, 0x86, 0x00, 0x00, 0x10, 0x23,

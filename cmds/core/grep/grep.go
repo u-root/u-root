@@ -5,13 +5,15 @@
 // grep searches file contents using regular expressions.
 //
 // Synopsis:
-//     grep [-vrlq] [FILE]...
+//
+//	grep [-vrlq] [FILE]...
 //
 // Options:
-//     -v: print only non-matching lines
-//     -r: recursive
-//     -l: list only files
-//     -q: don't print matches; exit on first match
+//
+//	-v: print only non-matching lines
+//	-r: recursive
+//	-l: list only files
+//	-q: don't print matches; exit on first match
 package main
 
 import (

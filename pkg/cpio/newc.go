@@ -224,10 +224,12 @@ func (n newc) Reader(r io.ReaderAt) RecordReader {
 // If it only implements Read, then a discarder will be used
 // instead.
 // Note a complication:
-// 	r, _, _ := os.Pipe()
+//
+//	r, _, _ := os.Pipe()
 //	var b [2]byte
 //	_, err := r.ReadAt(b[:], 0)
 //	fmt.Printf("%v", err)
+//
 // Pipes claim to implement ReadAt; most Unix kernels
 // do not agree. Even a seek to the current position fails.
 // This means that

@@ -5,16 +5,19 @@
 // Strings finds printable strings.
 //
 // Synopsis:
-//     strings OPTIONS [FILES]...
+//
+//	strings OPTIONS [FILES]...
 //
 // Description:
-//     Prints all sequences of `n` or more printable characters terminated by a
-//     non-printable character (or EOF).
 //
-//     If no files are specified, read from stdin.
+//	Prints all sequences of `n` or more printable characters terminated by a
+//	non-printable character (or EOF).
+//
+//	If no files are specified, read from stdin.
 //
 // Options:
-//     -n number: the minimum string length (default is 4)
+//
+//	-n number: the minimum string length (default is 4)
 package main
 
 import (

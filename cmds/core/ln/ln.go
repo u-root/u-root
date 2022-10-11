@@ -5,21 +5,24 @@
 // Ln makes links to files.
 //
 // Synopsis:
-//     ln [-svfTiLPrt] TARGET LINK
+//
+//	ln [-svfTiLPrt] TARGET LINK
 //
 // Options:
-//     -s: make symbolic links instead of hard links
-//     -v: print name of each linked file
-//     -f: remove destination files
-//     -T: treat linkname operand as a non-dir always
-//     -i: prompt if the user wants overwrite
-//     -L: dereference targets if are symbolic links
-//     -P: make hard links directly to symbolic links
-//     -r: create symlinks relative to link location
-//     -t: specify the directory to put the links
+//
+//	-s: make symbolic links instead of hard links
+//	-v: print name of each linked file
+//	-f: remove destination files
+//	-T: treat linkname operand as a non-dir always
+//	-i: prompt if the user wants overwrite
+//	-L: dereference targets if are symbolic links
+//	-P: make hard links directly to symbolic links
+//	-r: create symlinks relative to link location
+//	-t: specify the directory to put the links
 //
 // Author:
-//     Manoel Vilela <manoel_vilela@engineer.com>
+//
+//	Manoel Vilela <manoel_vilela@engineer.com>
 package main
 
 import (

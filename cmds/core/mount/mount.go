@@ -8,10 +8,12 @@
 // mount mounts a filesystem at the specified path.
 //
 // Synopsis:
-//     mount [-r] [-o options] [-t FSTYPE] DEV PATH
+//
+//	mount [-r] [-o options] [-t FSTYPE] DEV PATH
 //
 // Options:
-//     -r: read only
+//
+//	-r: read only
 package main
 
 import (

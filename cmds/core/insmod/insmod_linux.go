@@ -5,9 +5,11 @@
 // insmod inserts a module into the running Linux kernel.
 //
 // Synopsis:
+//
 //	insmod [filename] [module options...]
 //
 // Description:
+//
 //	insmod is a clone of insmod(8)
 package main
 

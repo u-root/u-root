@@ -5,11 +5,13 @@
 // Dump the headers of a PE file.
 //
 // Synopsis:
-//     pe [FILENAME]
+//
+//	pe [FILENAME]
 //
 // Description:
-//     Windows and EFI executables are in the portable executable (PE) format.
-//     This command prints the headers in a JSON format.
+//
+//	Windows and EFI executables are in the portable executable (PE) format.
+//	This command prints the headers in a JSON format.
 package main
 
 import (

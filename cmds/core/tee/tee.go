@@ -6,11 +6,13 @@
 // in the files.
 //
 // Synopsis:
-//     tee [-ai] FILES...
+//
+//	tee [-ai] FILES...
 //
 // Options:
-//     -a, --append: append the output to the files rather than rewriting them
-//     -i, --ignore-interrupts: ignore the SIGINT signal
+//
+//	-a, --append: append the output to the files rather than rewriting them
+//	-i, --ignore-interrupts: ignore the SIGINT signal
 package main
 
 import (

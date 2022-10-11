@@ -5,11 +5,12 @@
 // Package watchdog provides functions for interacting with the Linux watchdog.
 //
 // The basic usage is:
-//     wd, err := watchdog.Open(watchdog.Dev)
-//     while running {
-//         wd.KeepAlive()
-//     }
-//     wd.MagicClose()
+//
+//	wd, err := watchdog.Open(watchdog.Dev)
+//	while running {
+//	    wd.KeepAlive()
+//	}
+//	wd.MagicClose()
 //
 // Open() arms the watchdog. MagicClose() disarms the watchdog.
 //

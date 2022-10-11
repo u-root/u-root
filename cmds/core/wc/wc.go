@@ -5,41 +5,45 @@
 // Wc counts lines, words, runes, syntactically–invalid UTF codes.
 //
 // Synopsis:
-//     wc [OPTIONS...] [FILES]...
+//
+//	wc [OPTIONS...] [FILES]...
 //
 // Description:
-//     Wc counts lines, words, runes, syntactically–invalid UTF codes and bytes
-//     in the named files, or in the standard input if no file is named. A word
-//     is a maximal string of characters delimited by spaces, tabs or newlines.
-//     The count of runes includes invalid codes. If the optional argument is
-//     present, just the specified counts (lines, words, runes, broken UTF
-//     codes or bytes) are selected by the letters l, w, r, b, or c. Otherwise,
-//     lines, words and bytes (–lwc) are reported.
+//
+//	Wc counts lines, words, runes, syntactically–invalid UTF codes and bytes
+//	in the named files, or in the standard input if no file is named. A word
+//	is a maximal string of characters delimited by spaces, tabs or newlines.
+//	The count of runes includes invalid codes. If the optional argument is
+//	present, just the specified counts (lines, words, runes, broken UTF
+//	codes or bytes) are selected by the letters l, w, r, b, or c. Otherwise,
+//	lines, words and bytes (–lwc) are reported.
 //
 // Options:
-//     –l: count lines
-//     –w: count words
-//     –r: count runes
-//     –b: count broken UTF codes
-//     -c: count bytes
+//
+//	–l: count lines
+//	–w: count words
+//	–r: count runes
+//	–b: count broken UTF codes
+//	-c: count bytes
 //
 // Bugs:
-//     This wc differs from Plan 9's wc somewhat in word count (BSD's wc differs
-//     even more significantly):
 //
-//     $ unicode 0x0-0x10ffff | 9 wc -w
-//     2228221
-//     $ unicode 0x0-0x10ffff | gowc -w
-//     2228198
-//     $ unicode 0x0-0x10ffff | bsdwc -w
-//     2293628
+//	This wc differs from Plan 9's wc somewhat in word count (BSD's wc differs
+//	even more significantly):
 //
-//     This wc differs from Plan 9's wc significantly in bad rune count:
+//	$ unicode 0x0-0x10ffff | 9 wc -w
+//	2228221
+//	$ unicode 0x0-0x10ffff | gowc -w
+//	2228198
+//	$ unicode 0x0-0x10ffff | bsdwc -w
+//	2293628
 //
-//     $ unicode 0x0-0x10ffff | gowc -b
-//     6144
-//     $ unicode 0x0-0x10ffff | 9 wc -b
-//     1966080
+//	This wc differs from Plan 9's wc significantly in bad rune count:
+//
+//	$ unicode 0x0-0x10ffff | gowc -b
+//	6144
+//	$ unicode 0x0-0x10ffff | 9 wc -b
+//	1966080
 package main
 
 import (

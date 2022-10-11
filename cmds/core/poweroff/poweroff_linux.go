@@ -5,11 +5,12 @@
 // poweroff turns the system off, without delay. There are no options.
 //
 // Synopsis:
-//     poweroff
+//
+//	poweroff
 //
 // Description:
-//     poweroff calls the kernel to power off the systems.
 //
+//	poweroff calls the kernel to power off the systems.
 package main
 
 import (

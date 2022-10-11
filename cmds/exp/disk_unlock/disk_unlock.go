@@ -3,16 +3,16 @@
 // license that can be found in the LICENSE file.
 
 // The disk_unlock command is used to unlock a disk drive as follows:
-// 1. Via BMC, read a 32-byte secret seed known as the Host Secret Seed (HSS)
-//    using the OpenBMC IPMI blob transfer protocol
-// 2. Compute a password as follows:
-//	We get the deterministically computed 32-byte HDKF-SHA256 using:
-//	- salt: "SKM PROD_V2 ACCESS"
-//	- hss: 32-byte HSS
-//	- device identity: strings formed by concatenating the assembly serial
-//	  number, the _ character, and the assembly part number.
-// 3. Unlock the drive with the given password
-// 4. Update the partition table for the disk
+//  1. Via BMC, read a 32-byte secret seed known as the Host Secret Seed (HSS)
+//     using the OpenBMC IPMI blob transfer protocol
+//  2. Compute a password as follows:
+//     We get the deterministically computed 32-byte HDKF-SHA256 using:
+//     - salt: "SKM PROD_V2 ACCESS"
+//     - hss: 32-byte HSS
+//     - device identity: strings formed by concatenating the assembly serial
+//     number, the _ character, and the assembly part number.
+//  3. Unlock the drive with the given password
+//  4. Update the partition table for the disk
 package main
 
 import (

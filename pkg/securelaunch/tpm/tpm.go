@@ -136,8 +136,8 @@ func extendPCR(pcr uint32, hash []byte) error {
 // the kernel of this measurement by sending an event via sysfs.
 //
 // In debug mode, it prints:
-//   1. The old PCR value before the hash is extended to the PCR
-//   2. The new PCR value after the hash is extended to the PCR
+//  1. The old PCR value before the hash is extended to the PCR
+//  2. The new PCR value after the hash is extended to the PCR
 func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	oldPCRValue, err := readPCR(pcr)
 	if err != nil {

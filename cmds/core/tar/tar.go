@@ -5,21 +5,24 @@
 // Create and extract tar archives.
 //
 // Synopsis:
-//     tar [OPTION...] [FILE]...
+//
+//	tar [OPTION...] [FILE]...
 //
 // Description:
-//     This command line can be used only in the following ways:
-//        tar -cvf x.tar directory/         # create
-//        tar -cvf x.tar file1 file2 ...    # create
-//        tar -tvf x.tar                    # list
-//        tar -xvf x.tar directory/         # extract
+//
+//	This command line can be used only in the following ways:
+//	   tar -cvf x.tar directory/         # create
+//	   tar -cvf x.tar file1 file2 ...    # create
+//	   tar -tvf x.tar                    # list
+//	   tar -xvf x.tar directory/         # extract
 //
 // Options:
-//     -c: create a new tar archive from the given directory
-//     -x: extract a tar archive to the given directory
-//     -v: verbose, print each filename (optional)
-//     -f: tar filename (required)
-//     -t: list the contents of an archive
+//
+//	-c: create a new tar archive from the given directory
+//	-x: extract a tar archive to the given directory
+//	-v: verbose, print each filename (optional)
+//	-f: tar filename (required)
+//	-t: list the contents of an archive
 //
 // TODO: The arguments deviates slightly from gnu tar.
 package main

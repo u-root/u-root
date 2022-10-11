@@ -80,15 +80,15 @@ func main() {
 // and on Linux, they are not.
 //
 // This leads to a few conclusions:
-// - We can get around lack of symlinks by using #! (sh-bang) files with an absolute path to
-//   bb as the interpreter, e.g. #!/abs/path/to/bb argument.
-//   This achieves the "exec once" goal.
-// - We can specify which u-root tool to use via arguments to bb in the #! file.
-// - The argument to the interpreter (/bbin/bb) should be one token (e.g. ls) because of different
-//   behavior in different systems (some tokenize, some do not).
-// - Because of the differences in how arguments are presented to #! on different kernels,
-//   there should be a reasonably unique marker so that bb can have confidence that
-//   it is running as an interpreter.
+//   - We can get around lack of symlinks by using #! (sh-bang) files with an absolute path to
+//     bb as the interpreter, e.g. #!/abs/path/to/bb argument.
+//     This achieves the "exec once" goal.
+//   - We can specify which u-root tool to use via arguments to bb in the #! file.
+//   - The argument to the interpreter (/bbin/bb) should be one token (e.g. ls) because of different
+//     behavior in different systems (some tokenize, some do not).
+//   - Because of the differences in how arguments are presented to #! on different kernels,
+//     there should be a reasonably unique marker so that bb can have confidence that
+//     it is running as an interpreter.
 //
 // The conclusions lead to the following design:
 // #! files for bb specify their argument with #!. E.g., the file for ls looks like this:

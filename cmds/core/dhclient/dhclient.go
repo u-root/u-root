@@ -8,12 +8,14 @@
 // dhclient sets up network config using DHCP.
 //
 // Synopsis:
-//     dhclient [OPTIONS...]
+//
+//	dhclient [OPTIONS...]
 //
 // Options:
-//     -timeout:  lease timeout in seconds
-//     -renewals: number of DHCP renewals before exiting
-//     -verbose:  verbose output
+//
+//	-timeout:  lease timeout in seconds
+//	-renewals: number of DHCP renewals before exiting
+//	-verbose:  verbose output
 package main
 
 import (

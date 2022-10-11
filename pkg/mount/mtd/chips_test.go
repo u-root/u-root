@@ -87,10 +87,10 @@ func TestChipFromVIDID(t *testing.T) {
 			wantChipString: "ZETTADEVICE/ZD25D20: 0 pages, 0 pagesize, 0x0 bytes",
 		},
 		{
-			vid:          0xDA,
-			vname:        "WINBOND",
-			cid:          0x7E1D01,
-			wantChipName: "W29GL032CHL",
+			vid:            0xDA,
+			vname:          "WINBOND",
+			cid:            0x7E1D01,
+			wantChipName:   "W29GL032CHL",
 			wantChipString: "WINBOND/W29GL032CHL: 0 pages, 0 pagesize, 0x0 bytes, remarks: 	/* Uniform Sectors, WP protects Top OR Bottom sector */",
 		},
 		{

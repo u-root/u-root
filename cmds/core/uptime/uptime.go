@@ -4,7 +4,8 @@
 
 // Get the time the machine has been up
 // Synopsis:
-//     uptime
+//
+//	uptime
 package main
 
 import (

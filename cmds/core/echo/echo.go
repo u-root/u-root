@@ -6,7 +6,8 @@
 // the standard output.
 //
 // Synopsis:
-//     echo [-e] [-n] [-E] [STRING]...
+//
+//	echo [-e] [-n] [-E] [STRING]...
 package main
 
 import (

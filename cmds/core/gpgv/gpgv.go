@@ -5,21 +5,25 @@
 // gpgv validates a signature against a file.
 //
 // Synopsis:
-//     gpgv [-v] KEY SIG CONTENT
+//
+//	gpgv [-v] KEY SIG CONTENT
 //
 // Description:
-//     It prints "OK\n" to stdout if the check succeeds and exits with 0. It
-//     prints an error message and exits with non-0 otherwise.
 //
-//     The openpgp package ReadKeyRing function does not completely implement
-//     RFC4880 in that it can't use a PublicSigningKey with 0 signatures. We
-//     use one from Eric Grosse instead.
+//	It prints "OK\n" to stdout if the check succeeds and exits with 0. It
+//	prints an error message and exits with non-0 otherwise.
+//
+//	The openpgp package ReadKeyRing function does not completely implement
+//	RFC4880 in that it can't use a PublicSigningKey with 0 signatures. We
+//	use one from Eric Grosse instead.
 //
 // Options:
-//     -v: verbose
+//
+//	-v: verbose
 //
 // Author:
-//     grosse@gmail.com.
+//
+//	grosse@gmail.com.
 package main
 
 import (

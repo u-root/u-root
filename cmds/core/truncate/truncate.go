@@ -5,15 +5,18 @@
 // Truncate - shrink or extend the size of a file to the specified size
 //
 // Synopsis:
-//     truncate [OPTIONS] [FILE]...
+//
+//	truncate [OPTIONS] [FILE]...
 //
 // Options:
-//     -s: size in bytes
-//     -r: reference file for size
-//     -c: do not create any files
+//
+//	-s: size in bytes
+//	-r: reference file for size
+//	-c: do not create any files
 //
 // Author:
-//     Roland Kammerer <dev.rck@gmail.com>
+//
+//	Roland Kammerer <dev.rck@gmail.com>
 package main
 
 import (

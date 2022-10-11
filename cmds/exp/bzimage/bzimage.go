@@ -6,9 +6,11 @@
 // It reads the image in, applies an operator, and writes a new one out.
 //
 // Synopsis:
-//     bzImage [copy <in> <out> ] | [diff <image> <image> ] | [dump <file>] | [initramfs input-bzimage initramfs output-bzimage]
+//
+//	bzImage [copy <in> <out> ] | [diff <image> <image> ] | [dump <file>] | [initramfs input-bzimage initramfs output-bzimage]
 //
 // Description:
+//
 //	Read a bzImage in, change it, write it out, or print info.
 package main
 

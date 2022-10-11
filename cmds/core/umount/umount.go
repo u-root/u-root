@@ -8,11 +8,13 @@
 // Unmount a filesystem at the specified path.
 //
 // Synopsis:
-//     umount [-f | -l] PATH
+//
+//	umount [-f | -l] PATH
 //
 // Options:
-//     -f: force unmount
-//     -l: lazy unmount
+//
+//	-f: force unmount
+//	-l: lazy unmount
 package main
 
 import "log"

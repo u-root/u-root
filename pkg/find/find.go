@@ -122,11 +122,11 @@ func WithDebugLog(l func(string, ...interface{})) Set {
 //
 // e.g.
 //
-//   names := Find(ctx,
-//     WithRoot("/boot"),
-//     WithFilenameMatch("sda[0-9]"),
-//     WithDebugLog(log.Printf),
-//   )
+//	names := Find(ctx,
+//	  WithRoot("/boot"),
+//	  WithFilenameMatch("sda[0-9]"),
+//	  WithDebugLog(log.Printf),
+//	)
 func Find(ctx context.Context, opt ...Set) <-chan *File {
 	f := &finder{
 		root:       "/",

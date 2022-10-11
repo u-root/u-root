@@ -5,16 +5,19 @@
 // More pages through files without any terminal trickery.
 //
 // Synopsis:
-//     more [OPTIONS] FILE
+//
+//	more [OPTIONS] FILE
 //
 // Description:
-//     Admittedly, this does not follow the conventions of GNU more. Instead,
-//     it is built with the goal of not relying on any special ttys, ioctls or
-//     special ANSI escapes. This is ideal when your terminal is already
-//     borked. For bells and whistles, look at less.
+//
+//	Admittedly, this does not follow the conventions of GNU more. Instead,
+//	it is built with the goal of not relying on any special ttys, ioctls or
+//	special ANSI escapes. This is ideal when your terminal is already
+//	borked. For bells and whistles, look at less.
 //
 // Options:
-//     --lines NUMBER: screen size in number of lines
+//
+//	--lines NUMBER: screen size in number of lines
 package main
 
 import (

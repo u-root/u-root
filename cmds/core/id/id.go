@@ -8,12 +8,15 @@
 // id displays the user id, group id, and groups of the calling process.
 //
 // Synopsis:
-//      id [-gGnu]
+//
+//	id [-gGnu]
 //
 // Description:
-//      id displays the uid, gid and groups of the calling process
+//
+//	id displays the uid, gid and groups of the calling process
 //
 // Options:
+//
 //	-g, --group     print only the effective group ID
 //	-G, --groups    print all group IDs
 //	-n, --name      print a name instead of a number, for -ugG

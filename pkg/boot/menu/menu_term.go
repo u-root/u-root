@@ -41,13 +41,13 @@ type xterm struct {
 // example minicom, the behavior is different. And you would
 // see something like:
 //
-//     Select a boot option to edit:
-//                                  >
+//	Select a boot option to edit:
+//	                             >
 //
 // Instead of:
 //
-//     Select a boot option to edit:
-//      >
+//	Select a boot option to edit:
+//	 >
 func NewTerminal(f *os.File) *xterm {
 	oldState, err := term.MakeRaw(int(f.Fd()))
 	if err != nil {

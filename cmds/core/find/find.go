@@ -6,11 +6,12 @@
 // for matching.
 //
 // OPTIONS:
-//     -d: enable debugging in the find package
-//     -mode integer-arg: match against mode, e.g. -mode 0755
-//     -type: match against a file type, e.g. -type f will match files
-//     -name: glob to match against file
-//     -l: long listing. It's not very good, yet, but it's useful enough.
+//
+//	-d: enable debugging in the find package
+//	-mode integer-arg: match against mode, e.g. -mode 0755
+//	-type: match against a file type, e.g. -type f will match files
+//	-name: glob to match against file
+//	-l: long listing. It's not very good, yet, but it's useful enough.
 package main
 
 import (

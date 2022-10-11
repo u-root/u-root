@@ -5,14 +5,16 @@
 // Delete files.
 //
 // Synopsis:
-//     rm [-Rrvif] FILE...
+//
+//	rm [-Rrvif] FILE...
 //
 // Options:
-//     -i: interactive mode
-//     -v: verbose mode
-//     -R: remove file hierarchies
-//     -r: equivalent to -R
-//     -f: ignore nonexistent files and never prompt
+//
+//	-i: interactive mode
+//	-v: verbose mode
+//	-R: remove file hierarchies
+//	-r: equivalent to -R
+//	-f: ignore nonexistent files and never prompt
 package main
 
 import (

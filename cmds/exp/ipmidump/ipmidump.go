@@ -3,17 +3,19 @@
 // license that can be found in the LICENSE file.
 
 // Synopsis:
-//     ipmidump [-option]
+//
+//	ipmidump [-option]
 //
 // Description:
 //
 // Options:
-//     -chassis : Print chassis power status.
-//     -sel     : Print SEL information.
-//     -lan     : Print IP information.
-//     -device  : Print device information.
-//     -raw     : Send raw command and print response.
-//     -help    : Print help message.
+//
+//	-chassis : Print chassis power status.
+//	-sel     : Print SEL information.
+//	-lan     : Print IP information.
+//	-device  : Print device information.
+//	-raw     : Send raw command and print response.
+//	-help    : Print help message.
 package main
 
 import (

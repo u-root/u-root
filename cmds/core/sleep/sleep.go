@@ -5,21 +5,25 @@
 // Delay for the specified amount of time.
 //
 // Synopsis:
-//     sleep DURATION
+//
+//	sleep DURATION
 //
 // Description:
-//     If no units are given, the duration is assumed to be measured in
-//     seconds, otherwise any format parsed by Go's `time.ParseDuration` is
-//     accepted.
+//
+//	If no units are given, the duration is assumed to be measured in
+//	seconds, otherwise any format parsed by Go's `time.ParseDuration` is
+//	accepted.
 //
 // Examples:
-//     sleep 2.5
-//     sleep 300ms
-//     sleep 2h45m
+//
+//	sleep 2.5
+//	sleep 300ms
+//	sleep 2h45m
 //
 // Bugs:
-//     When sleep is first run, it must be compiled from source which creates a
-//     delay significantly longer than anticipated.
+//
+//	When sleep is first run, it must be compiled from source which creates a
+//	delay significantly longer than anticipated.
 package main
 
 import (

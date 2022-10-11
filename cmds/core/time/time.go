@@ -5,24 +5,29 @@
 // Time process execution.
 //
 // Synopsis:
-//     time CMD [ARG]...
+//
+//	time CMD [ARG]...
 //
 // Description:
-//     After executing CMD, its real, user and system times are printed to
-//     stderr in the POSIX format.
+//
+//	After executing CMD, its real, user and system times are printed to
+//	stderr in the POSIX format.
 //
 // Example:
-//     $ time sleep 1.23s
-//     real 1.230
-//     user 0.001
-//     sys 0.000
+//
+//	$ time sleep 1.23s
+//	real 1.230
+//	user 0.001
+//	sys 0.000
 //
 // Note:
-//     This is different from bash's time command which is built into the shell
-//     and can time the entire pipeline.
+//
+//	This is different from bash's time command which is built into the shell
+//	and can time the entire pipeline.
 //
 // Bugs:
-//     Time is not reported when exiting due to a signal.
+//
+//	Time is not reported when exiting due to a signal.
 package main
 
 import (

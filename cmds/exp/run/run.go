@@ -5,13 +5,16 @@
 // Run executes its arguments as a Go program.
 //
 // Synopsis:
-//     run [-v] GO_CODE..
+//
+//	run [-v] GO_CODE..
 //
 // Examples:
-//     run {fmt.Println("hello")}
+//
+//	run {fmt.Println("hello")}
 //
 // Options:
-//     -v: verbose display of processing
+//
+//	-v: verbose display of processing
 package main
 
 import (

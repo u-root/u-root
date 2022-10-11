@@ -5,10 +5,12 @@
 // zimage dumps the header of a zImage.
 //
 // Synopsis:
-//     zimage FILE
+//
+//	zimage FILE
 //
 // Description:
-//     This is mainly for debugging purposes.
+//
+//	This is mainly for debugging purposes.
 package main
 
 import (

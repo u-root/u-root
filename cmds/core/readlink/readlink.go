@@ -5,12 +5,14 @@
 // readlink display value of symbolic link file.
 //
 // Synopsis:
-//     readlink [OPTIONS] FILE
+//
+//	readlink [OPTIONS] FILE
 //
 // Options:
-//     -f: follow
-//     -n: nonewline
-//     -v: verbose
+//
+//	-f: follow
+//	-n: nonewline
+//	-v: verbose
 package main
 
 import (

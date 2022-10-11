@@ -8,12 +8,14 @@
 // pci: show pci bus vendor ids and other info
 //
 // Description:
-//     List the PCI bus, with names if possible.
+//
+//	List the PCI bus, with names if possible.
 //
 // Options:
-//     -n: just show numbers
-//     -c: dump config space
-//     -s: specify glob for choosing devices.
+//
+//	-n: just show numbers
+//	-c: dump config space
+//	-s: specify glob for choosing devices.
 package main
 
 import (

@@ -76,7 +76,8 @@ func SetInitialTimeout(timeout time.Duration) {
 
 // Choose presents the user a menu on input to choose an entry from and returns that entry.
 // Note: This call can block if MenuTerminal or the underlying os.File does
-//       not support SetTimeout/SetDeadline.
+//
+//	not support SetTimeout/SetDeadline.
 func Choose(term MenuTerminal, allowEdit bool, entries ...Entry) Entry {
 	fmt.Println("")
 	for i, e := range entries {

@@ -5,13 +5,16 @@
 // Remove a module from the Linux kernel
 //
 // Synopsis:
+//
 //	rmmod name
 //
 // Description:
+//
 //	rmmod is a clone of rmmod(8)
 //
 // Author:
-//     Roland Kammerer <dev.rck@gmail.com>
+//
+//	Roland Kammerer <dev.rck@gmail.com>
 package main
 
 import (

@@ -5,16 +5,19 @@
 // watch periodically executes the executable specified in argument.
 //
 // Synopsis:
-//     watch [-n] SEC [-t] cmd-exec
+//
+//	watch [-n] SEC [-t] cmd-exec
 //
 // Description:
-//    cmd-exec is executed every n seconds
-//    example, watch -n 5 dmesg >> log.txt
-//    : executes dmesg every 5 sec and stores the log in log.txt
+//
+//	cmd-exec is executed every n seconds
+//	example, watch -n 5 dmesg >> log.txt
+//	: executes dmesg every 5 sec and stores the log in log.txt
 //
 // Options:
-//     -n: time in seconds
-//     -t: do not print header
+//
+//	-n: time in seconds
+//	-t: do not print header
 package main
 
 import (

@@ -5,31 +5,35 @@
 // dd converts and copies a file.
 //
 // Synopsis:
-//     dd [OPTIONS...] [-inName FILE] [-outName FILE]
+//
+//	dd [OPTIONS...] [-inName FILE] [-outName FILE]
 //
 // Description:
-//     dd is modeled after dd(1).
+//
+//	dd is modeled after dd(1).
 //
 // Options:
-//     -ibs n:   input block size (default=1)
-//     -obs n:   output block size (default=1)
-//     -bs n:    input and output block size (default=0)
-//     -skip n:  skip n ibs-sized input blocks before reading (default=0)
-//     -seek n:  seek n obs-sized output blocks before writing (default=0)
-//     -conv s:  comma separated list of conversions (none|notrunc)
-//     -count n: copy only n ibs-sized input blocks
-//     -if:      defaults to stdin
-//     -of:      defaults to stdout
-//     -oflag:   comma separated list of out flags (none|sync|dsync)
-//     -status:  print transfer stats to stderr, can be one of:
-//         none:     do not display
-//         xfer:     print on completion (default)
-//         progress: print throughout transfer (GNU)
+//
+//	-ibs n:   input block size (default=1)
+//	-obs n:   output block size (default=1)
+//	-bs n:    input and output block size (default=0)
+//	-skip n:  skip n ibs-sized input blocks before reading (default=0)
+//	-seek n:  seek n obs-sized output blocks before writing (default=0)
+//	-conv s:  comma separated list of conversions (none|notrunc)
+//	-count n: copy only n ibs-sized input blocks
+//	-if:      defaults to stdin
+//	-of:      defaults to stdout
+//	-oflag:   comma separated list of out flags (none|sync|dsync)
+//	-status:  print transfer stats to stderr, can be one of:
+//	    none:     do not display
+//	    xfer:     print on completion (default)
+//	    progress: print throughout transfer (GNU)
 //
 // Notes:
-//     Because UTF-8 clashes with block-oriented copying, `conv=lcase` and
-//     `conv=ucase` will not be supported. Additionally, research showed these
-//     arguments are rarely useful. Use tr instead.
+//
+//	Because UTF-8 clashes with block-oriented copying, `conv=lcase` and
+//	`conv=ucase` will not be supported. Additionally, research showed these
+//	arguments are rarely useful. Use tr instead.
 package main
 
 import (

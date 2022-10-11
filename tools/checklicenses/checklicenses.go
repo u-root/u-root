@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 // Run with `go run checklicenses.go`. This script has one drawback:
-// - It does not correct the licenses; it simply outputs a list of files which
-//   do not conform and returns 1 if the list is non-empty.
+//   - It does not correct the licenses; it simply outputs a list of files which
+//     do not conform and returns 1 if the list is non-empty.
 package main
 
 import (

@@ -5,10 +5,12 @@
 // zbi dumps the header of a Zircon boot image.
 //
 // Synopsis:
-//     zbi FILE
+//
+//	zbi FILE
 //
 // Description:
-//     Debugging purposes.
+//
+//	Debugging purposes.
 package main
 
 import (

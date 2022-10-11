@@ -5,31 +5,34 @@
 // Disassociate parts of the process execution context.
 //
 // Synopsis:
-//     unshare [OPTIONS] [PROGRAM [ARGS]...]
+//
+//	unshare [OPTIONS] [PROGRAM [ARGS]...]
 //
 // Description:
-//     Go applications use multiple processes, and the Go user level scheduler
-//     schedules goroutines onto those processes. For this reason, it is not
-//     possible to use syscall.Unshare. A goroutine can call `syscall.Unshare`
-//     from process m and the scheduler can resume that goroutine in process n,
-//     which has not had the unshare operation! This is a known problem with
-//     any system call that modifies the name space or file system context of
-//     only one process as opposed to the entire Go application, i.e. all of
-//     its processes. Examples include chroot and unshare. There has been
-//     lively discussion of this problem but no resolution as of yet. In sum:
-//     it is not possible to use `syscall.Unshare` from Go with any reasonable
-//     expectation of success.
 //
-//     If PROGRAM is not specified, unshare defaults to /ubin/elvish.
+//	Go applications use multiple processes, and the Go user level scheduler
+//	schedules goroutines onto those processes. For this reason, it is not
+//	possible to use syscall.Unshare. A goroutine can call `syscall.Unshare`
+//	from process m and the scheduler can resume that goroutine in process n,
+//	which has not had the unshare operation! This is a known problem with
+//	any system call that modifies the name space or file system context of
+//	only one process as opposed to the entire Go application, i.e. all of
+//	its processes. Examples include chroot and unshare. There has been
+//	lively discussion of this problem but no resolution as of yet. In sum:
+//	it is not possible to use `syscall.Unshare` from Go with any reasonable
+//	expectation of success.
+//
+//	If PROGRAM is not specified, unshare defaults to /ubin/elvish.
 //
 // Options:
-//     -ipc:           Unshare the IPC namespace
-//     -mount:         Unshare the mount namespace
-//     -pid:           Unshare the pid namespace
-//     -net:           Unshare the net namespace
-//     -uts:           Unshare the uts namespace
-//     -user:          Unshare the user namespace
-//     -map-root-user: Map current uid to root. Not working
+//
+//	-ipc:           Unshare the IPC namespace
+//	-mount:         Unshare the mount namespace
+//	-pid:           Unshare the pid namespace
+//	-net:           Unshare the net namespace
+//	-uts:           Unshare the uts namespace
+//	-user:          Unshare the user namespace
+//	-map-root-user: Map current uid to root. Not working
 package main
 
 import (

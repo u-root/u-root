@@ -5,23 +5,25 @@
 // watchdogd is a background daemon for petting the watchdog.
 //
 // Synopsis:
-//     watchdogd run [OPTIONS]
-//         Run the watchdogd in a child process (does not daemonize).
-//     watchdogd stop
-//         Send a signal to arm the running watchdog.
-//     watchdogd continue
-//         Send a signal to disarm the running watchdog.
-//     watchdogd arm
-//         Send a signal to arm the running watchdog.
-//     watchdogd disarm
-//         Send a signal to disarm the running watchdog.
+//
+//	watchdogd run [OPTIONS]
+//	    Run the watchdogd in a child process (does not daemonize).
+//	watchdogd stop
+//	    Send a signal to arm the running watchdog.
+//	watchdogd continue
+//	    Send a signal to disarm the running watchdog.
+//	watchdogd arm
+//	    Send a signal to arm the running watchdog.
+//	watchdogd disarm
+//	    Send a signal to disarm the running watchdog.
 //
 // Options:
-//     --dev DEV: Device (default /dev/watchdog)
-//     --timeout: Duration before timing out (default -1)
-//     --pre_timeout: Duration for pretimeout (default -1)
-//     --keep_alive: Duration between issuing keepalive (default 10)
-//     --monitors: comma separated list of monitors, ex: oops
+//
+//	--dev DEV: Device (default /dev/watchdog)
+//	--timeout: Duration before timing out (default -1)
+//	--pre_timeout: Duration for pretimeout (default -1)
+//	--keep_alive: Duration between issuing keepalive (default 10)
+//	--monitors: comma separated list of monitors, ex: oops
 package main
 
 import (

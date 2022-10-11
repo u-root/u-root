@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 
 // Synopsis:
-//     page [file]
+//
+//	page [file]
 //
 // Description:
 // page prints a page at a time to stdout from either stdin or a named file.

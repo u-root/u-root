@@ -6,7 +6,8 @@
 // universal initramfs.
 //
 // Synopsis:
-//     madeye initramfs [initramfs...]
+//
+//	madeye initramfs [initramfs...]
 //
 // u-root was intended to be capable of function as a universal root, i.e. a
 // root file system that you could boot from different architectures. We call

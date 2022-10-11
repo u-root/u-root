@@ -5,9 +5,11 @@
 // smbios_transfer sends SMBIOS tables to BMC through IPMI blob interfaces.
 //
 // Synopsis:
-//     smbios_tranfer [-num_retries]
+//
+//	smbios_tranfer [-num_retries]
 //
 // Options:
+//
 //	-num_retries: number of times to retry transferring SMBIOS tables
 package main
 

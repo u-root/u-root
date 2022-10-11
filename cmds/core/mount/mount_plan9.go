@@ -8,14 +8,17 @@
 // Mount mounts servename on old, with an optional keypattern spec
 //
 // Synopsis:
-//	 mount [ option ... ] servename old [ spec ]
+//
+//	mount [ option ... ] servename old [ spec ]
 //
 // Description:
+//
 //	Mount modifies the name space of the current
 //	process and other processes in the same name space group
 //	(see https://9p.io/magic/man2html/1/bind).
 //
 // Options:
+//
 //	–b:	Both files must be directories. Add the new directory to the beginning of the union directory represented by the old file.
 //	–a:	Both files must be directories. Add the new directory to the end of the union directory represented by the old file.
 //	–c:	This can be used in addition to any of the above to permit creation in a union directory.

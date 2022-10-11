@@ -179,10 +179,10 @@ func BuildBusybox(env golang.Environ, pkgs []string, noStrip bool, binaryPath st
 //
 // p must be the bb template.
 //
-// - For each pkg in pkgs, add
+//   - For each pkg in pkgs, add
 //     import _ "pkg"
-//   to astp's first file.
-// - Write source file out to destDir.
+//     to astp's first file.
+//   - Write source file out to destDir.
 func CreateBBMainSource(fset *token.FileSet, astp *ast.Package, pkgs []string, destDir string) error {
 	for _, pkg := range pkgs {
 		for _, sourceFile := range astp.Files {

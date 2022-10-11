@@ -5,12 +5,14 @@
 // losetup sets up and controls loop devices.
 //
 // Synopsis:
-//     losetup [-Ad] FILE
-//     losetup [-Ad] DEV FILE
+//
+//	losetup [-Ad] FILE
+//	losetup [-Ad] DEV FILE
 //
 // Options:
-//     -A: pick any device
-//     -d: detach the device
+//
+//	-A: pick any device
+//	-d: detach the device
 package main
 
 import (

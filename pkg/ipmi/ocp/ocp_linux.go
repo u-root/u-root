@@ -233,9 +233,10 @@ func GetOemIpmiProcessorInfo(si *smbios.Info) ([]ProcessorInfo, error) {
 }
 
 // DIMM type: bit[7:6] for DDR3 00-Normal Voltage(1.5V), 01-Ultra Low Voltage(1.25V), 10-Low Voltage(1.35V), 11-Reserved
-//                     for DDR4 00~10-Reserved, 11-Normal Voltage(1.2V)
-//            bit[5:0] 0x00=SDRAM, 0x01=DDR1 RAM, 0x02-Rambus, 0x03-DDR2 RAM, 0x04-FBDIMM, 0x05-DDR3 RAM, 0x06-DDR4 RAM
-//		       , 0x07-DDR5 RAM
+//
+//	                    for DDR4 00~10-Reserved, 11-Normal Voltage(1.2V)
+//	           bit[5:0] 0x00=SDRAM, 0x01=DDR1 RAM, 0x02-Rambus, 0x03-DDR2 RAM, 0x04-FBDIMM, 0x05-DDR3 RAM, 0x06-DDR4 RAM
+//			       , 0x07-DDR5 RAM
 func detectDimmType(meminfo *DimmInfo, t17 *smbios.MemoryDevice) {
 	if t17.Type == smbios.MemoryDeviceTypeDDR3 {
 		switch t17.ConfiguredVoltage {

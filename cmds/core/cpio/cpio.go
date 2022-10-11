@@ -5,17 +5,18 @@
 // cpio operates on cpio files using a cpio package
 // It only implements basic cpio options.
 //
-//
 // Synopsis:
-//     cpio
+//
+//	cpio
 //
 // Description:
 //
 // Options:
-//     o: output an archive to stdout given a pattern
-//     i: output files from a stdin stream
-//     t: print table of contents
-//     -v: debug prints
+//
+//	o: output an archive to stdout given a pattern
+//	i: output files from a stdin stream
+//	t: print table of contents
+//	-v: debug prints
 //
 // Bugs: in i mode, it can't use non-seekable stdin, i.e. a pipe. Yep, this sucks.
 // But if we implement seek on such things, we have to do it by reading, which

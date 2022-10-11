@@ -8,19 +8,22 @@
 // ntpdate uses NTP to adjust the system clock.
 //
 // Synopsis:
-//     ntpdate [--config=/etc/ntp.conf] [--rtc] [--verbose] [server ...]
+//
+//	ntpdate [--config=/etc/ntp.conf] [--rtc] [--verbose] [server ...]
 //
 // Description:
-//     ntpdate queries NTP server(s) for time and update susyem time.
-//     If --rtc is specified, it updates the hardware clock as well.
-//     Servers to query are obtained from /etc/ntp.conf and/or the command line.
-//     By default --config is set to /etc/ntp.conf, config lookup can be disabled
-//     by setting --confg to an empty string.
-//     If servers are specified on the command line, they are tried first.
-//     time.google.com is used as the last resort.
+//
+//	ntpdate queries NTP server(s) for time and update susyem time.
+//	If --rtc is specified, it updates the hardware clock as well.
+//	Servers to query are obtained from /etc/ntp.conf and/or the command line.
+//	By default --config is set to /etc/ntp.conf, config lookup can be disabled
+//	by setting --confg to an empty string.
+//	If servers are specified on the command line, they are tried first.
+//	time.google.com is used as the last resort.
 //
 // Options:
-//     -w: set hwclock to system clock in UTC
+//
+//	-w: set hwclock to system clock in UTC
 package main
 
 import (

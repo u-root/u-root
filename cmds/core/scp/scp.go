@@ -5,16 +5,19 @@
 // Scp copies files between hosts on a network.
 //
 // Synopsis:
-//     scp [-t|-f] [FILE]
+//
+//	scp [-t|-f] [FILE]
 //
 // Description:
-//     If -t is given, decode SCP protocol from stdin and write to FILE.
-//     If -f is given, stream FILE over SCP protocol to stdout.
+//
+//	If -t is given, decode SCP protocol from stdin and write to FILE.
+//	If -f is given, stream FILE over SCP protocol to stdout.
 //
 // Options:
-//     -t: Act as the target
-//     -f: Act as the source
-//     -v: Passed if SCP is verbose, ignored
+//
+//	-t: Act as the target
+//	-f: Act as the source
+//	-v: Passed if SCP is verbose, ignored
 package main
 
 import (

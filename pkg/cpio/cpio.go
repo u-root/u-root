@@ -8,27 +8,26 @@
 //
 // Reading from or writing to a file:
 //
-//    f, err := os.Open(...)
-//    if err ...
-//    recReader := cpio.Newc.Reader(f)
-//    err := ForEachRecord(recReader, func(r cpio.Record) error {
+//	f, err := os.Open(...)
+//	if err ...
+//	recReader := cpio.Newc.Reader(f)
+//	err := ForEachRecord(recReader, func(r cpio.Record) error {
 //
-//    })
+//	})
 //
-//    // Or...
-//    recWriter := cpio.Newc.Writer(f)
-//
+//	// Or...
+//	recWriter := cpio.Newc.Writer(f)
 //
 // Reading from or writing to an in-memory archive:
 //
-//    a := cpio.InMemArchive()
-//    err := a.WriteRecord(...)
+//	a := cpio.InMemArchive()
+//	err := a.WriteRecord(...)
 //
-//    recReader := a.Reader() // Reads from the "beginning."
+//	recReader := a.Reader() // Reads from the "beginning."
 //
-//    if a.Contains("bar/foo") {
+//	if a.Contains("bar/foo") {
 //
-//    }
+//	}
 package cpio
 
 import (
