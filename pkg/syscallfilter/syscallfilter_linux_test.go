@@ -87,34 +87,6 @@ func TestNoActions(t *testing.T) {
 	}
 }
 
-func TestNoActionsDoubleWait(t *testing.T) {
-	if traced() {
-		t.Skipf("Skipping, we're being traced already")
-	}
-
-	c := Command("echo", "hi")
-	var stdout, stderr bytes.Buffer
-	c.Stdout, c.Stderr = &stdout, &stderr
-
-	if err := c.Run(); err != nil {
-		t.Fatalf(`%v.Run(), "echo", "hi"): %v != nil`, c, err)
-	}
-
-	// Through one path or another, c.Wait() should have been called.
-	// If we get no error here, that is a problem.
-	if err := c.Wait(); err == nil {
-		t.Errorf("c.Wait(): got nil, want an error")
-	}
-
-	t.Logf("stdout: %q, stderr: %q", stdout.String(), stderr.String())
-	if stdout.String() != "hi\n" {
-		t.Errorf("stdout: string is %q, not %q", stdout.String(), "hi\n")
-	}
-	if len(stderr.String()) != 0 {
-		t.Errorf("stderr.String: got %q, want %q", stderr.String(), "")
-	}
-}
-
 func TestNoErrorExit(t *testing.T) {
 	if traced() {
 		t.Skipf("Skipping, we're being traced already")
