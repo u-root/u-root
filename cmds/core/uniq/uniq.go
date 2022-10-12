@@ -21,6 +21,7 @@
 //	–d:      Print (one copy of) duplicated lines.
 //	–c:      Prefix a repetition count and a tab to each output line.
 //	         Implies –u and –d.
+//	-i:      Case insensitive comparison of lines.
 //	–f num:  The first num fields together with any blanks before each are
 //	         ignored. A field is defined as a string of non–space, non–tab
 //	         characters separated by tabs and spaces from its neighbors.
@@ -43,15 +44,16 @@ import (
 )
 
 var (
-	uniques    = flag.Bool("u", false, "print unique lines")
+	unique     = flag.Bool("u", false, "print unique lines")
 	duplicates = flag.Bool("d", false, "print one copy of duplicated lines")
 	count      = flag.Bool("c", false, "prefix a repetition count and a tab for each output line")
+	ignoreCase = flag.Bool("i", false, "case insensitive comparison of lines")
 )
 
 // var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
 // var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
 
-func uniq(r io.Reader, w io.Writer) {
+func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 	br := bufio.NewReader(r)
 
 	var err error
@@ -69,12 +71,12 @@ func uniq(r io.Reader, w io.Writer) {
 			oline = line
 			continue
 		}
-		if !bytes.Equal(line, oline) {
+		if !equal(line, oline) {
 			if *count {
 				fmt.Fprintf(w, "%d\t%s", cnt, oline)
 				goto skip
 			}
-			if cnt > 1 && *uniques {
+			if cnt > 1 && *unique {
 				goto skip
 			}
 			if cnt == 1 && *duplicates {
@@ -91,33 +93,36 @@ func uniq(r io.Reader, w io.Writer) {
 			break
 		}
 	}
-	if cnt > 1 && *uniques {
-		return
-	}
 	if cnt == 1 && *duplicates {
 		return
 	}
 	fmt.Fprintf(w, "%s", line)
 }
-func runUniq(w io.Writer, args ...string) error {
-	if len(args) > 0 {
-		for _, fn := range args {
-			f, err := os.Open(fn)
-			if err != nil {
-				log.Printf("open %s: %v\n", fn, err)
-				return err
-			}
-			uniq(f, w)
-			f.Close()
-		}
+func run(stdin io.Reader, stdout io.Writer, args ...string) error {
+	var eq func(a, b []byte) bool
+	if *ignoreCase {
+		eq = bytes.EqualFold
 	} else {
-		uniq(os.Stdin, w)
+		eq = bytes.Equal
+	}
+	if len(args) == 0 {
+		uniq(stdin, stdout, eq)
+		return nil
+	}
+	for _, fn := range args {
+		f, err := os.Open(fn)
+		if err != nil {
+			log.Printf("open %s: %v\n", fn, err)
+			return err
+		}
+		uniq(f, stdout, eq)
+		f.Close()
 	}
 	return nil
 }
 func main() {
 	flag.Parse()
-	if err := runUniq(os.Stdout, flag.Args()...); err != nil {
+	if err := run(os.Stdin, os.Stdout, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }
