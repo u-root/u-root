@@ -6,7 +6,9 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"log"
+	"strings"
 	"testing"
 )
 
@@ -14,11 +16,13 @@ func TestUniq(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		args       []string
-		uniques    bool
+		unique     bool
 		duplicates bool
 		count      bool
+		ignoreCase bool
 		want       string
 		wantErr    string
+		stdin      io.Reader
 	}{
 		{
 			name:    "file 1 with wrong file",
@@ -37,10 +41,10 @@ func TestUniq(t *testing.T) {
 			want:  "2\ttest\n3\tgo\n2\tcoool\n1\tcool\n1\tlegaal\n1\ttest\n",
 		},
 		{
-			name:    "file 1 uniques == true",
-			args:    []string{"testfiles/file1"},
-			uniques: true,
-			want:    "cool\nlegaal\ntest\n",
+			name:   "file 1 uniques == true",
+			args:   []string{"testfiles/file1"},
+			unique: true,
+			want:   "cool\nlegaal\ntest\n",
 		},
 		{
 			name:       "file 1 duplicates == true",
@@ -51,19 +55,19 @@ func TestUniq(t *testing.T) {
 		{
 			name: "file 2 without any flag",
 			args: []string{"testfiles/file2"},
-			want: "u-root\nuniq\nron\nteam\nbinaries\ntest\n\n",
+			want: "u-root\nuniq\nron\nteam\nbinaries\ntest\nTest\n\n",
 		},
 		{
 			name:  "file 2 count == true",
 			args:  []string{"testfiles/file2"},
 			count: true,
-			want:  "1\tu-root\n1\tuniq\n2\tron\n1\tteam\n1\tbinaries\n1\ttest\n5\t\n",
+			want:  "1\tu-root\n1\tuniq\n2\tron\n1\tteam\n1\tbinaries\n1\ttest\n1\tTest\n5\t\n",
 		},
 		{
-			name:    "file 2 uniques == true",
-			args:    []string{"testfiles/file2"},
-			uniques: true,
-			want:    "u-root\nuniq\nteam\nbinaries\ntest\n",
+			name:   "file 2 uniques == true",
+			args:   []string{"testfiles/file2"},
+			unique: true,
+			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n",
 		},
 		{
 			name:       "file 2 duplicates == true",
@@ -71,14 +75,28 @@ func TestUniq(t *testing.T) {
 			duplicates: true,
 			want:       "ron\n\n",
 		},
+		{
+			name:       "file 2 ignore case == true",
+			args:       []string{"testfiles/file2"},
+			ignoreCase: true,
+			want:       "u-root\nuniq\nron\nteam\nbinaries\ntest\n\n",
+		},
+		{
+			name:   "no args given use stdin",
+			args:   nil,
+			unique: true,
+			stdin:  strings.NewReader("go\nu-root\ngo\ngo\ngo\n"),
+			want:   "go\nu-root\n",
+		},
 	} {
-		*uniques = tt.uniques
+		*unique = tt.unique
 		*duplicates = tt.duplicates
 		*count = tt.count
+		*ignoreCase = tt.ignoreCase
 		buf := &bytes.Buffer{}
 		log.SetOutput(buf)
 		t.Run(tt.name, func(t *testing.T) {
-			if got := runUniq(buf, tt.args...); got != nil {
+			if got := run(tt.stdin, buf, tt.args...); got != nil {
 				if got.Error() != tt.wantErr {
 					t.Errorf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
 				}
