@@ -39,6 +39,7 @@ var (
 	doDebug            = flag.Bool("d", false, "Print debug output")
 	skipDHCP           = flag.Bool("skip-dhcp", false, "Skip DHCP and rely on SLAAC for network configuration. This requires -netboot-url")
 	overrideNetbootURL = flag.String("netboot-url", "", "Override the netboot URL normally obtained via DHCP")
+	overrideCmdline    = flag.String("cmdline", "", "Override the extra kernel command line normally obtained via DHCP")
 	readTimeout        = flag.Int("timeout", 3, "Read timeout in seconds")
 	dhcpRetries        = flag.Int("retries", 3, "Number of times a DHCP request is retried")
 	userClass          = flag.String("userclass", "", "Override DHCP User Class option")
@@ -188,6 +189,9 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	if *overrideNetbootURL != "" {
 		bootconf.BootfileURL = *overrideNetbootURL
+	}
+	if *overrideCmdline != "" {
+		bootconf.BootfileParam = []string{*overrideCmdline}
 	}
 	debug("DHCP: boot file URL is %s", bootconf.BootfileURL)
 	// check for supported schemes
