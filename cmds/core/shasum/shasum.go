@@ -60,9 +60,10 @@ func shasum(w io.Writer, r io.Reader, args ...string) error {
 			return err
 		}
 		fmt.Fprintf(w, "%x -\n", hashbytes)
-
-	} else {
-		file, err := os.Open(args[0])
+		return nil
+	}
+	for _, arg := range args {
+		file, err := os.Open(arg)
 		if err != nil {
 			return err
 		}
@@ -70,7 +71,7 @@ func shasum(w io.Writer, r io.Reader, args ...string) error {
 		if hashbytes, err = shaGenerator(w, file, *algorithm); err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "%x %s\n", hashbytes, args[0])
+		fmt.Fprintf(w, "%x %s\n", hashbytes, arg)
 	}
 	return nil
 }
