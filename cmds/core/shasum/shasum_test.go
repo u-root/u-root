@@ -94,6 +94,13 @@ func TestSHASum(t *testing.T) {
 			algorithm: 256,
 			want:      fmt.Sprintf("%s %s\n", "db296dd0bcb796df9b327f44104029da142c8fff313a25bd1ac7c3b7562caea9", file2.Name()),
 		},
+		{
+			name:      "file1 and file 2 as input with sha256 sum",
+			args:      []string{file1.Name(), file2.Name()},
+			algorithm: 256,
+			want: fmt.Sprintf("%s %s\n%s %s\n", "ae0666f161fed1a5dde998bbd0e140550d2da0db27db1d0e31e370f2bd366a57", file1.Name(),
+				"db296dd0bcb796df9b327f44104029da142c8fff313a25bd1ac7c3b7562caea9", file2.Name()),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setting flags
