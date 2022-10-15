@@ -67,7 +67,7 @@ func TestUniq(t *testing.T) {
 			name:   "file 2 uniques == true",
 			args:   []string{"testfiles/file2"},
 			unique: true,
-			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n",
+			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n\n",
 		},
 		{
 			name:       "file 2 duplicates == true",
@@ -87,6 +87,12 @@ func TestUniq(t *testing.T) {
 			unique: true,
 			stdin:  strings.NewReader("go\nu-root\ngo\ngo\ngo\n"),
 			want:   "go\nu-root\n",
+		},
+		{
+			name:  "same strings but no new line",
+			args:  nil,
+			stdin: strings.NewReader("go\ngo"),
+			want:  "go\n",
 		},
 	} {
 		*unique = tt.unique
