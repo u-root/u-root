@@ -62,6 +62,7 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 	isLast := false
 	for {
 		line, err = br.ReadBytes('\n')
+		line = bytes.TrimSuffix(line, []byte{'\n'})
 		if err == io.EOF {
 			isLast = true
 		} else if err != nil {
@@ -73,7 +74,7 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 		}
 		if !equal(line, oline) {
 			if *count {
-				fmt.Fprintf(w, "%d\t%s", cnt, oline)
+				fmt.Fprintf(w, "%d\t%s\n", cnt, oline)
 				goto skip
 			}
 			if cnt > 1 && *unique {
@@ -82,7 +83,7 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 			if cnt == 1 && *duplicates {
 				goto skip
 			}
-			fmt.Fprintf(w, "%s", oline)
+			fmt.Fprintf(w, "%s\n", oline)
 		skip:
 			oline = line
 			cnt = 1
@@ -96,7 +97,17 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 	if cnt == 1 && *duplicates {
 		return
 	}
-	fmt.Fprintf(w, "%s", line)
+	if len(line) == 0 && cnt == 1 {
+		return
+	}
+	if *count {
+		if len(line) == 0 {
+			cnt--
+		}
+		fmt.Fprintf(w, "%d\t%s\n", cnt, line)
+		return
+	}
+	fmt.Fprintf(w, "%s\n", line)
 }
 func run(stdin io.Reader, stdout io.Writer, args ...string) error {
 	var eq func(a, b []byte) bool
