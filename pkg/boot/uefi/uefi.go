@@ -120,7 +120,7 @@ func (fv *FVImage) Load(verbose bool) error {
 
 	// Install payload config & its memory map: 64 kb below the image
 	// We cannot use the memory above the image base because it may be used by HOB
-	var configAddr uintptr = fv.ImageBase - uintptr(uefiPayloadConfigSize)
+	configAddr := fv.ImageBase - uintptr(uefiPayloadConfigSize)
 
 	// Get MemoryMap
 	mm, err := kexecParseMemoryMap()

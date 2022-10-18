@@ -230,7 +230,6 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				if err := readOne(r, &c.Address, j); err != nil {
 					return nil, found, err
 				}
-				j += int64(reflect.TypeOf(c.Address).Size())
 				debug("    console data is at %#x", c.Address)
 				cbcons := int64(c.Address)
 				// u32 size;

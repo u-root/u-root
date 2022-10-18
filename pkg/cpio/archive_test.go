@@ -12,8 +12,8 @@ import (
 
 func FuzzWriteReadInMemArchive(f *testing.F) {
 	var fileCount uint64 = 4
-	var content []byte = []byte("Content")
-	var name string = "fileName"
+	var content = []byte("Content")
+	var name = "fileName"
 	var ino, mode, uid, gid, nlink, mtime, major, minor, rmajor, rminor uint64 = 1, S_IFREG | 2, 3, 4, 5, 6, 7, 8, 9, 10
 	f.Add(fileCount, content, name, ino, mode, uid, gid, nlink, mtime, major, minor, rmajor, rminor)
 	f.Fuzz(func(t *testing.T, fileCount uint64, content []byte, name string, ino uint64, mode uint64, uid uint64, gid uint64, nlink uint64, mtime uint64, major uint64, minor uint64, rmajor uint64, rminor uint64) {

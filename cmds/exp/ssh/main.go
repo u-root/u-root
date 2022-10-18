@@ -179,7 +179,6 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 			if err := raw(stdin); err != nil {
 				// throw a notice but continue
 				log.Printf("failed to set raw mode: %v", err)
-				err = nil
 			}
 			// Try to figure out the terminal size
 			width, height, err := getSize(stdin)
