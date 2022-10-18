@@ -35,7 +35,7 @@ const (
 
 var (
 	// BmcUpdatedBootorder is true when IPMI set boot order has been issued
-	BmcUpdatedBootorder bool = false
+	BmcUpdatedBootorder = false
 	// BootEntries is created with the new boot order and will be used to boot this time
 	BootEntries []systembooter.BootEntry
 )

@@ -20,10 +20,7 @@ jobs:
     - name: Install golangci-lint
       run: |
         cd ..
-        go install golang.org/x/lint/golint@latest
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0
-    - name: Install ineffassign
-      run: (cd .. && go install github.com/gordonklaus/ineffassign@latest)
     - name: Check vendored dependencies
       run: |
         go mod tidy
@@ -40,7 +37,7 @@ jobs:
       run: test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
     - name: golangci-lint
       run: |
-        golangci-lint run ./... --disable-all --enable=golint \
+        golangci-lint run ./... --disable-all --enable=revive \
           --skip-dirs=pkg/uroot/test \
           --skip-dirs=cmds/core/elvish \
           --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
@@ -52,7 +49,7 @@ jobs:
           --exclude="stutter" \
           --exclude="which can be annoying to use"
     - name: ineffassign
-      run: ineffassign .
+      run: golangci-lint run ./... --disable-all --enable=ineffassign
 
   build:
     runs-on: ubuntu-latest

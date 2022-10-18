@@ -286,7 +286,6 @@ func TestParseBIOSInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parseStruct := func(t *Table, off int, complete bool, sp interface{}) (int, error) {
-				sp = tt.val
 				return 0, tt.want
 			}
 			_, err := parseBIOSInfo(parseStruct, &tt.table)

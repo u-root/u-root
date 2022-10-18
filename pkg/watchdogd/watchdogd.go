@@ -115,7 +115,7 @@ func (d *Daemon) StartServing(l *net.UnixListener) {
 		}
 		op := int(b[0])
 		log.Printf("New op received: %c", op)
-		r := OpResultError
+		var r rune
 		switch op {
 		case OpStop:
 			r = d.StopPetting()
