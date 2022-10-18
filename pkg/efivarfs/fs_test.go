@@ -20,32 +20,24 @@ func TestFSGoodFile(t *testing.T) {
 	}
 	i, err := getInodeFlags(f)
 	if err != nil {
-		t.Skipf("Can not getInodeFlags: %v != nil", err)
+		t.Skipf("Cannot getInodeFlags: %v != nil", err)
 	}
 
 	if err := setInodeFlags(f, i); err != nil {
 		t.Fatalf("setInodeFlags: %v != nil", err)
 	}
 
-	restore, err := makeMutable(f)
-	if err != nil {
+	if err := setInodeFlags(f, i|unix.STATX_ATTR_IMMUTABLE); err != nil {
+		t.Skipf("Skipping rest of test, unable to set immutable flag: %+v", err)
+	}
+	if _, err := makeMutable(f); err != nil {
 		t.Fatalf("makeMutable: %v != nil", err)
 	}
-	if restore == nil {
-		t.Logf("it was not mutable to start")
-	}
-
-	i |= unix.STATX_ATTR_IMMUTABLE
-	if err := setInodeFlags(f, i); err != nil {
-		t.Skipf("Skipping rest of test, unable to set immutable flag")
-	}
-
-	restore()
 	if i, err = getInodeFlags(f); err != nil {
-		t.Fatalf("getInodeFlags after restore(): %v != nil", err)
+		t.Fatalf("Cannot getInodeFlags after makeMutable(): %v != nil", err)
 	}
 	if i&unix.STATX_ATTR_IMMUTABLE == unix.STATX_ATTR_IMMUTABLE {
-		t.Fatalf("getInodeFlags shows file is still immutable after restore()")
+		t.Errorf("getInodeFlags shows file is still immutable after makeMutable()")
 	}
 }
 
