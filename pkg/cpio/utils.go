@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -136,6 +137,63 @@ func WriteRecords(w RecordWriter, files []Record) error {
 	return nil
 }
 
+// WriteRecordsAndDirs writes records to w, with a slight difference from WriteRecords:
+// the record path is split and all the
+// directories are written first, in order, mimic'ing what happens with
+// find . -print
+//
+// When is this function needed?
+// Most cpio programs will create directories as needed for paths such as a/b/c/d
+// The cpio creation process for Linux uses find, and will create a
+// record for each directory in a/b/c/d
+//
+// But when code programatically generates a cpio for the Linux kernel,
+// the cpio is not generated via find, and Linux will not create
+// intermediate directories. The result, seen in practice, is that a path,
+// such as a/b/c/d, when unpacked by the linux kernel, will be ignored if
+// a/b/c does not exist!
+//
+// Again, this function is very rarely needed, save when we programatically generate
+// an initramfs for Linux.
+// This code only works with a deduplicating writer. Further, it will not accept a
+// Record if the full pathname of that Record already exists. This is arguably
+// overly restrictive but, at the same, avoids some very unpleasant programmer
+// errors.
+// There is overlap here with DedupWriter but given that this is a Special Snowflake
+// function, it seems best to leave the DedupWriter code alone.
+func WriteRecordsAndDirs(rw RecordWriter, files []Record) error {
+	w, ok := rw.(*DedupWriter)
+	if !ok {
+		return fmt.Errorf("WriteRecordsAndDirs(%T,...): only DedupWriter allowed:%w", rw, os.ErrInvalid)
+	}
+	for _, f := range files {
+		// This redundant Normalize does no harm, but, yes, it is redundant.
+		// Signed
+		// The Department of Redundancy Department.
+		f.Name = Normalize(f.Name)
+		if r, ok := w.alreadyWritten[f.Name]; ok {
+			return fmt.Errorf("WriteRecordsAndDirs: %q already in the archive: %v:%w", f.Name, r, os.ErrExist)
+		}
+
+		var recs []Record
+		// Paths must be written to the archive in the order in which they
+		// need to be created, i.e., a/b/c/d must be written as
+		// a, a/b/, a/b/c, a/b/c/d
+		// Note: do not use os.Separator here: cpio is a Unix standard, and hence
+		// / is used.
+		els := strings.Split(filepath.Dir(f.Name), "/")
+		for i := range els {
+			d := filepath.Join(els[:i+1]...)
+			recs = append(recs, Directory(d, 0777))
+		}
+		recs = append(recs, f)
+		if err := WriteRecords(rw, recs); err != nil {
+			return fmt.Errorf("WriteRecords: writing %q got %v", f.Info.Name, err)
+		}
+	}
+	return nil
+}
+
 // Passthrough copies from a RecordReader to a RecordWriter.
 //
 // Passthrough writes a trailer record.
@@ -204,6 +262,7 @@ func Normalize(path string) string {
 	if filepath.IsAbs(path) {
 		rel, err := filepath.Rel("/", path)
 		if err != nil {
+			// TODO: libraries should not panic.
 			panic("absolute filepath must be relative to /")
 		}
 		return rel
