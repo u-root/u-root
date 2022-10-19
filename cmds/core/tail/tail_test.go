@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -64,5 +65,45 @@ func TestTailReadFromBeginning(t *testing.T) {
 	}
 	if err != io.EOF {
 		t.Fatalf("Expected EOF, got another error instead: %v", err)
+	}
+}
+
+func TestTailRun(t *testing.T) {
+	f, err := ioutil.TempFile("", "tailRunTest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+
+	input := "a\nb\nc\n"
+	_, err = f.WriteString(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var b bytes.Buffer
+	err = run(os.Stdin, &b, []string{f.Name()})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if b.String() != input {
+		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
+	}
+
+	err = run(nil, nil, []string{"a", "b"})
+	if err == nil {
+		t.Error("tail should return an error if more than one file specified")
+	}
+
+	b.Truncate(0)
+	*flagNumLines = -1
+	err = run(f, &b, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if b.String() != "c\n" {
+		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
 	}
 }
