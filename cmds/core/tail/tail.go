@@ -1,4 +1,4 @@
-// Copyright 2012-2017 the u-root Authors. All rights reserved
+// Copyright 2012-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -35,13 +35,13 @@ var (
 	flagNumLines = flag.Int("n", 10, "specify the number of lines to show")
 )
 
-type ReadAtSeeker interface {
+type readAtSeeker interface {
 	io.ReaderAt
 	io.Seeker
 }
 
-// TailConfig is a configuration object for the Tail function
-type TailConfig struct {
+// tailConfig is a configuration object for the Tail function
+type tailConfig struct {
 	// enable follow-mode (-f)
 	follow bool
 
@@ -103,7 +103,7 @@ func lastNLines(buf []byte, n uint) []byte {
 // on stdin). For non-seekable files see readLastLinesFromBeginning.
 // It returns an error, if any. If no error is encountered, the File object's
 // offset is positioned after the last read location.
-func readLastLinesBackwards(input ReadAtSeeker, writer io.Writer, numLines uint) error {
+func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint) error {
 	blkSize := getBlockSize(numLines)
 	// go to the end of the file
 	lastPos, err := input.Seek(0, os.SEEK_END)
@@ -190,14 +190,11 @@ func readLastLinesFromBeginning(input io.ReadSeeker, writer io.Writer, numLines 
 	return nil
 }
 
-// Tail reads the last N lines from the input File and writes them to the Writer.
-// The TailConfig object allows to specify the precise behaviour.
-func Tail(inFile *os.File, writer io.Writer, config TailConfig) error {
+// tail reads the last N lines from the input File and writes them to the Writer.
+// The tailConfig object allows to specify the precise behaviour.
+func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 	if config.follow {
 		return fmt.Errorf("follow-mode not implemented yet")
-	}
-	if inFile == nil {
-		return fmt.Errorf("no input file specified")
 	}
 	// try reading from the end of the file
 	retryFromBeginning := false
@@ -221,32 +218,36 @@ func Tail(inFile *os.File, writer io.Writer, config TailConfig) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
-
+func run(reader *os.File, writer io.Writer, args []string) error {
 	var (
 		inFile *os.File
-		writer = os.Stdout
 		err    error
 	)
-	switch nArgs := len(flag.Args()); nArgs {
+	switch len(args) {
 	case 0:
-		inFile = os.Stdin
+		inFile = reader
 	case 1:
-		inFile, err = os.Open(flag.Args()[0])
+		inFile, err = os.Open(args[0])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	default:
 		// TODO support multiple files
-		log.Fatal("tail: can only read one file at a time")
+		return fmt.Errorf("tail: can only read one file at a time")
 	}
 
+	// TODO: add support for parsing + (from beggining of the file)
+	// negative sign is the same as none
 	if *flagNumLines < 0 {
-		log.Fatalf("The number of lines cannot be negative")
+		*flagNumLines = -1 * *flagNumLines
 	}
-	config := TailConfig{follow: *flagFollow, numLines: uint(*flagNumLines)}
-	if err := Tail(inFile, writer, config); err != nil {
+	config := tailConfig{follow: *flagFollow, numLines: uint(*flagNumLines)}
+	return tail(inFile, writer, config)
+}
+
+func main() {
+	flag.Parse()
+	if err := run(os.Stdin, os.Stdout, flag.Args()); err != nil {
 		log.Fatalf("tail: %v", err)
 	}
 }
