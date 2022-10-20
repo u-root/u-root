@@ -85,7 +85,11 @@ func lastNLines(buf []byte, n uint) []byte {
 				break
 			}
 			foundLines++
-			slice = slice[:idx-1]
+			if len(slice) > 1 && slice[idx-1] == '\n' {
+				slice = slice[:idx]
+			} else {
+				slice = slice[:idx-1]
+			}
 		}
 		if idx == -1 {
 			// if there are less than `numLines` lines, use all what we have read
