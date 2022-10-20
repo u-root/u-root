@@ -7,7 +7,6 @@ package main
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -69,7 +68,7 @@ func TestTailReadFromBeginning(t *testing.T) {
 }
 
 func TestTailRun(t *testing.T) {
-	f, err := ioutil.TempFile("", "tailRunTest")
+	f, err := os.CreateTemp("", "tailRunTest")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,5 +104,56 @@ func TestTailRun(t *testing.T) {
 
 	if b.String() != "c\n" {
 		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
+	}
+}
+
+func TestLastNLines(t *testing.T) {
+	tests := []struct {
+		input  []byte
+		output []byte
+		n      uint
+	}{
+		{
+			input:  []byte{'a', '\n', '\n', 'b', '\n'},
+			output: []byte{'a', '\n', '\n', 'b', '\n'},
+			n:      4,
+		},
+		{
+			input:  []byte{'a', '\n', '\n', 'b', '\n'},
+			output: []byte{'a', '\n', '\n', 'b', '\n'},
+			n:      3,
+		},
+		{
+			input:  []byte{'a', '\n', '\n', 'b', '\n'},
+			output: []byte{'\n', 'b', '\n'},
+			n:      2,
+		},
+		{
+			input:  []byte{'a', '\n', '\n', 'b', '\n'},
+			output: []byte{'b', '\n'},
+			n:      1,
+		},
+		{
+			input:  []byte{'a', '\n', 'b', '\n', 'c', '\n'},
+			output: []byte{'c', '\n'},
+			n:      1,
+		},
+		{
+			input:  []byte{'a', '\n', 'b', '\n', 'c'},
+			output: []byte{'c'},
+			n:      1,
+		},
+		{
+			input:  []byte{'\n'},
+			output: []byte{'\n'},
+			n:      1,
+		},
+	}
+
+	for _, test := range tests {
+		r := lastNLines(test.input, test.n)
+		if !bytes.Equal(r, test.output) {
+			t.Errorf("want: %q, got: %q", string(test.output), string(r))
+		}
 	}
 }
