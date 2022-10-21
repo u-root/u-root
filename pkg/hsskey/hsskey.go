@@ -8,7 +8,7 @@
 //     using the OpenBMC IPMI blob transfer protocol
 //  2. Compute a password as follows:
 //     We get the deterministically computed 32-byte HDKF-SHA256 using:
-//     - salt: "SKM PROD_V2 ACCESS"
+//     - salt: "SKM PROD_V2 ACCESS" (default)
 //     - hss: 32-byte HSS
 //     - device identity: strings formed by concatenating the assembly serial
 //     number, the _ character, and the assembly part number.
@@ -26,14 +26,20 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
+type blobReader interface {
+	BlobOpen(id string, flags int16) (blobs.SessionID, error)
+	BlobRead(sid blobs.SessionID, offset, size uint32) ([]uint8, error)
+	BlobClose(sid blobs.SessionID) error
+}
+
 const (
 	hostSecretSeedLen = 32
 
-	passwordSalt = "SKM PROD_V2 ACCESS"
+	DefaultPasswordSalt = "SKM PROD_V2 ACCESS"
 )
 
 // readHssBlob reads a host secret seed from the given blob id.
-func readHssBlob(id string, h *blobs.BlobHandler) (data []uint8, rerr error) {
+func readHssBlob(id string, h blobReader) (data []uint8, rerr error) {
 	sessionID, err := h.BlobOpen(id, blobs.BMC_BLOB_OPEN_FLAG_READ)
 	if err != nil {
 		return nil, fmt.Errorf("IPMI BlobOpen for %s failed: %v", id, err)
@@ -101,7 +107,7 @@ func GetAllHss(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 		}
 
 		hssStr := fmt.Sprint(hss)
-		if _, ok := seen[hssStr]; !ok {
+		if !seen[hssStr] {
 			seen[hssStr] = true
 			hssList = append(hssList, hss)
 		}
@@ -112,11 +118,11 @@ func GetAllHss(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 
 // GenPassword computes the password deterministically as the 32-byte HDKF-SHA256 of the
 // HSS plus the device identity.
-func GenPassword(hss []byte, serial []uint8, model []uint8) ([]byte, error) {
+func GenPassword(hss []byte, salt string, identifiers ...string) ([]byte, error) {
 	hash := sha256.New
-	devID := fmt.Sprintf("%s_%s", serial, model)
+	devID := strings.Join(identifiers, "_")
 
-	r := hkdf.New(hash, hss, ([]byte)(passwordSalt), ([]byte)(devID))
+	r := hkdf.New(hash, hss, ([]byte)(salt), ([]byte)(devID))
 	key := make([]byte, 32)
 
 	if _, err := io.ReadFull(r, key); err != nil {

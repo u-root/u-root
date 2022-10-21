@@ -31,6 +31,7 @@ var (
 	verboseNoSanitize  = flag.Bool("dangerously-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
 	retries            = flag.Int("num_retries", 1, "Number of times to retry password if unlocking fails for any reason other than the password being wrong.")
+	salt               = flag.String("salt", hsskey.DefaultPasswordSalt, "Salt for password generation")
 )
 
 func verboseLog(msg string) {
@@ -112,7 +113,7 @@ func main() {
 
 TryAllHSS:
 	for i, hss := range hssList {
-		key, err := hsskey.GenPassword(hss, ([]byte)(info.Serial), ([]byte)(info.Model))
+		key, err := hsskey.GenPassword(hss, *salt, info.Serial, info.Model)
 		if err != nil {
 			log.Printf("Couldn't generate password with HSS %d: %v", i, err)
 			continue
