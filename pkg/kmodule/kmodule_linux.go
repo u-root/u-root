@@ -57,7 +57,7 @@ func (l *LinuxLoader) Read(b []byte) (int, error) {
 // FileInit falls back to init_module(2) via Init when the finit_module(2)
 // syscall is not available and when loading compressed modules.
 func (l *LinuxLoader) FileInit(f *os.File, opts string, flags uintptr) error {
-	var r io.Reader
+	var r io.Reader = f
 	var err error
 	switch filepath.Ext(f.Name()) {
 	case ".xz":
@@ -72,17 +72,8 @@ func (l *LinuxLoader) FileInit(f *os.File, opts string, flags uintptr) error {
 		if r, err = zstd.NewReader(f); err != nil {
 			return err
 		}
-	}
-
-	if r == nil {
-		err := unix.FinitModule(int(f.Fd()), opts, int(flags))
-		if err == unix.ENOSYS {
-			if flags != 0 {
-				return err
-			}
-			// Fall back to init_module(2).
-			r = f
-		} else {
+	default:
+		if err := unix.FinitModule(int(f.Fd()), opts, int(flags)); (err == unix.ENOSYS && flags != 0) || err != nil {
 			return err
 		}
 	}
