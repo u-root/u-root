@@ -151,3 +151,13 @@ func TestFileInit(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadModule(t *testing.T) {
+	l, err := NewPath("proc.modules")
+	if err != nil {
+		t.Fatalf(`NewPath("proc.modules"): %v != nil`, err)
+	}
+	// This is not going to work in CI, but at least it covers
+	// more code.
+	l.loadModule("data/cpuid.ko", "", ProbeOpts{})
+}
