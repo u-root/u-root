@@ -127,6 +127,8 @@ func TestAll(t *testing.T) {
 	// Whether New succeeds or fails is difficult to be certain of.
 	// The CI VM may or may not have /proc/modules.
 	_, _ = New()
+	// Still not supported on CI but call it anyway.
+	_ = Probe("9p", "")
 }
 
 func TestFileInit(t *testing.T) {
