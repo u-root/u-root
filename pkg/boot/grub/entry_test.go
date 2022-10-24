@@ -6,6 +6,7 @@ package grub
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -46,4 +47,29 @@ initrd=initramfs.cpio
 	if diff := cmp.Diff(wantEnv, gotEnv); diff != "" {
 		t.Errorf("ParseEnvFile(%q) diff(-want, +got) = \n%s", file, diff)
 	}
+}
+
+func FuzzParseEnvFile(f *testing.F) {
+	f.Add([]byte(`kernel=bzImage
+		initrd=initramfs.cpio
+	`))
+	f.Fuzz(func(t *testing.T, env []byte) {
+		readEnv, err := ParseEnvFile(bytes.NewBuffer(env))
+		// just return if the given file is not parsable as an env file
+		if err != nil {
+			return
+		}
+
+		writeBuf := &bytes.Buffer{}
+		readEnv.WriteTo(writeBuf)
+
+		rereadEnv, err := ParseEnvFile(writeBuf)
+		if err != nil {
+			t.Fatalf("could not parse previously written env file %#v to %#v: %v", readEnv, writeBuf, err)
+		}
+		if !reflect.DeepEqual(readEnv, rereadEnv) {
+			t.Fatalf("Env files do not match: %#v - %#v", readEnv, rereadEnv)
+		}
+	})
+
 }
