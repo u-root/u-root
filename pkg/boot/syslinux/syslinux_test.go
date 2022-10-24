@@ -7,7 +7,11 @@ package syslinux
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -701,4 +705,42 @@ func TestParseURL(t *testing.T) {
 			t.Errorf("parseURL(%q, %s, %s) = %v, want %v", tt.filename, tt.rootdir, tt.wd, got, tt.want)
 		}
 	}
+}
+
+func FuzzParseSyslinuxConfig(f *testing.F) {
+	dirPath := f.TempDir()
+
+	path := filepath.Join(dirPath, "isolinux.cfg")
+
+	log.SetOutput(io.Discard)
+	log.SetFlags(0)
+
+	// get seed corpora from testdata_new files
+	seeds, err := filepath.Glob("testdata/*/*/isolinux.cfg")
+	if err != nil {
+		f.Errorf("failed to find seed corpora files: %v", err)
+	}
+
+	for _, seed := range seeds {
+		seedBytes, err := os.ReadFile(seed)
+		if err != nil {
+			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+		}
+
+		f.Add(seedBytes)
+	}
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) > 1000000 {
+			return
+		}
+
+		err := os.WriteFile(path, data, 0o777)
+		if err != nil {
+			t.Errorf("Failed to create configfile '%v':%v", path, err)
+		}
+
+		ParseLocalConfig(context.Background(), dirPath)
+	})
+
 }
