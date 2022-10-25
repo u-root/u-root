@@ -73,7 +73,12 @@ func checkFVAndGetEntryPoint(name string) (uintptr, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	secEntry, err := findSecurityCorePEEntry(dat)
+	if err != nil {
+		return 0, err
+	}
+
 	f, err := os.Open(name)
 	if err != nil {
 		return 0, err
