@@ -10,19 +10,21 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 type test struct {
-	flags      []string
-	out        string
-	stdErr     string
-	exitStatus int
+	args      []string
+	out       string
+	stdErr    string
+	hasError  bool
+	follow    bool
+	noNewLine bool
+	verbose   bool
 }
 
 func TestReadlink(t *testing.T) {
 	tmpDir := t.TempDir()
+	defer os.Remove(tmpDir)
 
 	// Creating here to utilize path in tests
 	testDir := filepath.Join(tmpDir, "readLinkDir")
@@ -36,55 +38,74 @@ func TestReadlink(t *testing.T) {
 
 	tests := []test{
 		{
-			flags:      []string{},
-			out:        "",
-			stdErr:     "",
-			exitStatus: 1,
+			args:     []string{},
+			out:      "",
+			stdErr:   "",
+			hasError: true,
 		},
 		{
-			flags:      []string{"-v", "f1"},
-			out:        "",
-			stdErr:     "readlink f1: invalid argument\n",
-			exitStatus: 1,
+			args:     []string{},
+			out:      "",
+			stdErr:   "missing operand",
+			hasError: true,
+			verbose:  true,
 		},
 		{
-			flags:      []string{"-f", "f2"},
-			out:        "",
-			stdErr:     "",
-			exitStatus: 1,
+			args:     []string{"f1"},
+			out:      "",
+			stdErr:   "readlink f1: invalid argument\n",
+			hasError: true,
+			verbose:  true,
 		},
 		{
-			flags:      []string{"f1symlink"},
-			out:        "f1\n",
-			stdErr:     "",
-			exitStatus: 0,
+			args:     []string{"f2"},
+			out:      "",
+			stdErr:   "",
+			hasError: true,
+			follow:   true,
 		},
 		{
-			flags:      []string{"multilinks"},
-			out:        fmt.Sprintf("%s/%s", testDir, "f1symlink\n"),
-			stdErr:     "",
-			exitStatus: 0,
+			args:     []string{"f1symlink"},
+			out:      "f1\n",
+			stdErr:   "",
+			hasError: false,
 		},
 		{
-			flags:      []string{"-v", "multilinks", "f1symlink", "f2"},
-			out:        fmt.Sprintf("%s/%sf1\n", testDir, "f1symlink\n"),
-			stdErr:     "readlink f2: invalid argument\n",
-			exitStatus: 1,
+			args:      []string{"f1symlink"},
+			out:       "f1",
+			stdErr:    "",
+			hasError:  false,
+			noNewLine: true,
 		},
 		{
-			flags:      []string{"-v", testDir},
-			out:        "",
-			stdErr:     fmt.Sprintf("readlink %s: invalid argument\n", testDir),
-			exitStatus: 1,
+			args:     []string{"multilinks"},
+			out:      fmt.Sprintf("%s/%s", testDir, "f1symlink\n"),
+			stdErr:   "",
+			hasError: false,
 		},
 		{
-			flags:      []string{"-v", "foo.bar"},
-			out:        "",
-			stdErr:     "readlink foo.bar: no such file or directory\n",
-			exitStatus: 1,
+			args:     []string{"multilinks", "f1symlink", "f2"},
+			out:      fmt.Sprintf("%s/%sf1\n", testDir, "f1symlink\n"),
+			stdErr:   "readlink f2: invalid argument\n",
+			hasError: true,
+			verbose:  true,
+		},
+		{
+			args:     []string{testDir},
+			out:      "",
+			stdErr:   fmt.Sprintf("readlink %s: invalid argument\n", testDir),
+			hasError: true,
+			verbose:  true,
+		},
+		{
+			args:     []string{"foo.bar"},
+			out:      "",
+			stdErr:   "readlink foo.bar: no such file or directory\n",
+			hasError: true,
+			verbose:  true,
 		},
 	}
-	// Createfiles.
+	// Create files.
 	if _, err := os.Create("f1"); err != nil {
 		t.Error(err)
 	}
@@ -107,11 +128,12 @@ func TestReadlink(t *testing.T) {
 
 	// Table-driven testing
 	for _, tt := range tests {
+		*verbose = tt.verbose
+		*noNewLine = tt.noNewLine
+		*follow = tt.follow
+
 		var out, stdErr bytes.Buffer
-		cmd := testutil.Command(t, tt.flags...)
-		cmd.Stdout = &out
-		cmd.Stderr = &stdErr
-		err := cmd.Run()
+		err := run(&out, &stdErr, tt.args)
 
 		if out.String() != tt.out {
 			t.Errorf("stdout got:\n%s\nwant:\n%s", out.String(), tt.out)
@@ -121,12 +143,12 @@ func TestReadlink(t *testing.T) {
 			t.Errorf("stderr got:\n%s\nwant:\n%s", stdErr.String(), tt.stdErr)
 		}
 
-		if tt.exitStatus == 0 && err != nil {
-			t.Errorf("expected to exit with %d, but exited with err %s", tt.exitStatus, err)
+		if tt.hasError && err == nil {
+			t.Error("expected to exit with error")
+		}
+
+		if !tt.hasError && err != nil {
+			t.Error("expected to exit without error")
 		}
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

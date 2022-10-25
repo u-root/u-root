@@ -1,4 +1,4 @@
-// Copyright 2013-2017 the u-root Authors. All rights reserved
+// Copyright 2013-2022 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,7 +6,7 @@
 //
 // Synopsis:
 //
-//	readlink [OPTIONS] FILE
+//	readlink [OPTIONS] [FILE...]
 //
 // Options:
 //
@@ -18,6 +18,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -25,9 +26,8 @@ import (
 const cmd = "readlink [-fnv] FILE"
 
 var (
-	delimiter = "\n"
 	follow    = flag.Bool("f", false, "follow recursively")
-	nonewline = flag.Bool("n", false, "do not output trailing newline")
+	noNewLine = flag.Bool("n", false, "do not output trailing newline")
 	verbose   = flag.Bool("v", false, "report error messages")
 )
 
@@ -39,7 +39,7 @@ func init() {
 	}
 }
 
-func readLink(file string) error {
+func readLink(stdout io.Writer, file string) error {
 	path, err := os.Readlink(file)
 	if err != nil {
 		return err
@@ -49,27 +49,40 @@ func readLink(file string) error {
 		path, err = filepath.EvalSymlinks(file)
 	}
 
-	if *nonewline {
+	delimiter := "\n"
+	if *noNewLine {
 		delimiter = ""
 	}
 
-	fmt.Printf("%s%s", path, delimiter)
+	fmt.Fprintf(stdout, "%s%s", path, delimiter)
 	return err
+}
+
+func run(stdout io.Writer, stderr io.Writer, args []string) error {
+	if len(args) == 0 {
+		if *verbose {
+			fmt.Fprintf(stderr, "missing operand")
+		}
+		return fmt.Errorf("missing operand")
+	}
+
+	var runErr error
+	for _, file := range args {
+		err := readLink(stdout, file)
+		if err != nil {
+			if *verbose {
+				fmt.Fprintf(stderr, "%v\n", err)
+			}
+			runErr = err
+		}
+	}
+
+	return runErr
 }
 
 func main() {
 	flag.Parse()
-
-	var exitStatus int
-
-	for _, file := range flag.Args() {
-		if err := readLink(file); err != nil {
-			if *verbose {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
-			}
-			exitStatus = 1
-		}
+	if err := run(os.Stdin, os.Stderr, flag.Args()); err != nil {
+		os.Exit(1)
 	}
-
-	os.Exit(exitStatus)
 }
