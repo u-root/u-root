@@ -407,6 +407,9 @@ func (c *parser) append(ctx context.Context, config string) error {
 					// The first module is special -- the kernel.
 					if len(modules) > 0 {
 						kernel := strings.Fields(modules[0])
+						if len(kernel) == 0 {
+							return fmt.Errorf("no kernel specified by %v", modules[0])
+						}
 						k, err := c.getFile(kernel[0])
 						if err != nil {
 							return err
@@ -472,7 +475,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 
 		for _, opt := range strings.Fields(label.Cmdline) {
 			optkv := strings.Split(opt, "=")
-			if optkv[0] != "initrd" {
+			if len(optkv) != 2 || optkv[0] != "initrd" {
 				continue
 			}
 
