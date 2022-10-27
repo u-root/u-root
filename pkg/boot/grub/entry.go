@@ -67,20 +67,35 @@ func (env *EnvFile) WriteTo(w io.Writer) (int64, error) {
 func ParseEnvFile(r io.Reader) (*EnvFile, error) {
 	s := bufio.NewScanner(r)
 	conf := NewEnvFile()
+
+	var replacer = strings.NewReplacer(
+		"\n", "",
+		"\r", "",
+	)
 	// Best lexer & parser in the world.
 	for s.Scan() {
 		if len(s.Text()) == 0 {
 			continue
 		}
-		// Comments.
-		if s.Text()[0] == '#' {
+		cleanedText := replacer.Replace(s.Text())
+		if len(cleanedText) == 0 {
 			continue
 		}
 
-		tokens := strings.SplitN(s.Text(), "=", 2)
-		if len(tokens) != 2 {
-			return nil, fmt.Errorf("error parsing %q: must find = or # in each line", s.Text())
+		// Comments.
+		if cleanedText[0] == '#' {
+			continue
 		}
+
+		tokens := strings.SplitN(cleanedText, "=", 2)
+		if len(tokens) != 2 {
+			return nil, fmt.Errorf("error parsing %q: must find = or # and key + values in each line", s.Text())
+		}
+
+		if tokens[0] == "" || tokens[1] == "" {
+			return nil, fmt.Errorf("error parsing %q: either the key or value is empty: %q = %q", s.Text(), tokens[0], tokens[1])
+		}
+
 		key, value := tokens[0], tokens[1]
 		conf.Vars[key] = value
 	}
