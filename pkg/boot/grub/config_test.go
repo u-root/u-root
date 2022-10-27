@@ -157,6 +157,7 @@ func FuzzParseGrubConfig(f *testing.F) {
 		f.Add(seedBytes)
 	}
 
+	f.Add([]byte("multiBoot 0\nmodule --nounzip"))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		if len(data) > 1000000 {
 			return
