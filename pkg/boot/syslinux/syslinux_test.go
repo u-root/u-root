@@ -730,6 +730,8 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 		f.Add(seedBytes)
 	}
 
+	f.Add([]byte("lABel 0\nAppend initrd"))
+	f.Add([]byte("lABel 0\nkernel mboot.c32\nAppend ---"))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		if len(data) > 1000000 {
 			return
