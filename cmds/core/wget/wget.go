@@ -32,12 +32,14 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
 var outPath = flag.String("O", "", "output file")
+var errEmptyURL = errors.New("empty url")
 
 func usage() {
 	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
@@ -45,29 +47,20 @@ func usage() {
 	os.Exit(2)
 }
 
-func run() (reterr error) {
+func run(arg string) error {
 	log.SetPrefix("wget: ")
 
-	if flag.Parse(); flag.NArg() != 1 {
-		usage()
+	if arg == "" {
+		return errEmptyURL
 	}
 
-	argURL := flag.Arg(0)
-	if argURL == "" {
-		return errors.New("Empty URL")
-	}
-
-	url, err := url.Parse(argURL)
+	parsedURL, err := url.Parse(arg)
 	if err != nil {
 		return err
 	}
 
 	if *outPath == "" {
-		if url.Path != "" && url.Path[len(url.Path)-1] != '/' {
-			*outPath = path.Base(url.Path)
-		} else {
-			*outPath = "index.html"
-		}
+		*outPath = defaultOutputPath(parsedURL.Path)
 	}
 
 	schemes := curl.Schemes{
@@ -79,9 +72,9 @@ func run() (reterr error) {
 		"file":  &curl.LocalFileClient{},
 	}
 
-	reader, err := schemes.FetchWithoutCache(context.Background(), url)
+	reader, err := schemes.FetchWithoutCache(context.Background(), parsedURL)
 	if err != nil {
-		return fmt.Errorf("Failed to download %v: %v", argURL, err)
+		return fmt.Errorf("failed to download %v: %w", arg, err)
 	}
 
 	if err := uio.ReadIntoFile(reader, *outPath); err != nil {
@@ -91,8 +84,19 @@ func run() (reterr error) {
 	return nil
 }
 
+func defaultOutputPath(urlPath string) string {
+	if urlPath == "" || strings.HasSuffix(urlPath, "/") {
+		return "index.html"
+	}
+	return path.Base(urlPath)
+}
+
 func main() {
-	if err := run(); err != nil {
+	flag.Parse()
+	if err := run(flag.Arg(0)); err != nil {
+		if errors.Is(err, errEmptyURL) {
+			usage()
+		}
 		log.Fatal(err)
 	}
 }

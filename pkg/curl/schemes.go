@@ -30,6 +30,7 @@ import (
 // Schemes.LazyFetch if there is no registered FileScheme
 // implementation for the given URL scheme.
 var ErrNoSuchScheme = errors.New("no such scheme")
+var ErrStatusNotOk = errors.New("not status 200")
 
 // File is a reference to a file fetched through this library.
 type File interface {
@@ -395,7 +396,7 @@ func httpFetch(ctx context.Context, c *http.Client, u *url.URL) (io.Reader, erro
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, &HTTPClientCodeError{err, resp.StatusCode}
+		return nil, &HTTPClientCodeError{ErrStatusNotOk, resp.StatusCode}
 	}
 	return resp.Body, nil
 }
