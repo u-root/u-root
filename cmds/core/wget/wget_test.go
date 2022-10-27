@@ -9,7 +9,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -17,7 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/curl"
 )
 
 const content = "Very simple web server"
@@ -45,21 +47,21 @@ var tests = []struct {
 	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
 	url     string   // in
 	content string   // out
-	retCode int      // out
+	err     error
 }{
 	{
 		name:    "basic",
-		flags:   []string{},
+		flags:   nil,
 		url:     "http://localhost:%[1]d/200",
 		content: content,
-		retCode: 0,
+		err:     nil,
 	},
 	{
 		name:    "ipv4",
-		flags:   []string{},
+		flags:   nil,
 		url:     "http://127.0.0.1:%[1]d/200",
 		content: content,
-		retCode: 0,
+		err:     nil,
 	},
 	// TODO: CircleCI does not support ipv6
 	// {
@@ -71,32 +73,39 @@ var tests = []struct {
 	// },
 	{
 		name:    "redirect",
-		flags:   []string{},
+		flags:   nil,
 		url:     "http://localhost:%[1]d/302",
 		content: "",
-		retCode: 0,
+		err:     nil,
 	},
 	{
 		name:    "4xx error",
-		flags:   []string{},
+		flags:   nil,
 		url:     "http://localhost:%[1]d/404",
 		content: "",
-		retCode: 1,
+		err:     curl.ErrStatusNotOk,
 	},
 	{
 		name:    "5xx error",
-		flags:   []string{},
+		flags:   nil,
 		url:     "http://localhost:%[1]d/500",
 		content: "",
-		retCode: 1,
+		err:     curl.ErrStatusNotOk,
 	},
 	{
 		name:    "no server",
-		flags:   []string{},
+		flags:   nil,
 		url:     "http://localhost:%[2]d/200",
 		content: "",
-		retCode: 1,
+		err:     io.EOF,
 	},
+	// {
+	// 	name:    "empty url",
+	// 	flags:   nil,
+	// 	url:     "",
+	// 	content: "",
+	// 	err:     errEmptyURL,
+	// },
 }
 
 func getListener(t *testing.T) (net.Listener, int) {
@@ -136,18 +145,15 @@ func TestWget(t *testing.T) {
 			// Change the working directory to a temporary directory, so we can
 			// delete the temporary files after the test runs.
 			tmpDir := t.TempDir()
-
 			fileName := filepath.Base(tt.url)
+			*outPath = filepath.Join(tmpDir, fileName)
+			err := run(fmt.Sprintf(tt.url, port, unusedPort))
 
-			args := append(tt.flags,
-				"-O", filepath.Join(tmpDir, fileName),
-				fmt.Sprintf(tt.url, port, unusedPort))
-			cmd := testutil.Command(t, args...)
-			output, err := cmd.CombinedOutput()
-
-			// Check return code.
-			if err := testutil.IsExitCode(err, tt.retCode); err != nil {
-				t.Errorf("exit code: %v, output: %s", err, string(output))
+			if tt.err == nil && err != nil {
+				t.Errorf("expect nil, got %v", err)
+			}
+			if tt.err != nil && !errors.Is(err, tt.err) {
+				t.Errorf("expect: %v, got: %v", tt.err, err)
 			}
 
 			if tt.content != "" {
@@ -165,6 +171,29 @@ func TestWget(t *testing.T) {
 	}
 }
 
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
+func TestDefaultOutputPath(t *testing.T) {
+	tests := []struct {
+		path   string
+		output string
+	}{
+		{
+			path:   "/",
+			output: "index.html",
+		},
+		{
+			path:   "",
+			output: "index.html",
+		},
+		{
+			path:   "file",
+			output: "file",
+		},
+	}
+
+	for _, test := range tests {
+		r := defaultOutputPath(test.path)
+		if r != test.output {
+			t.Errorf("expect: %s, got: %s", test.output, r)
+		}
+	}
 }
