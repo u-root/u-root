@@ -298,6 +298,9 @@ func (r *reader) ReadRecord() (Record, error) {
 	Debug("Decoded header is %v\n", hdr)
 
 	// Get the name.
+	if hdr.NameLength == 0 {
+		return Record{}, fmt.Errorf("name field of length zero")
+	}
 	nameBuf := make([]byte, hdr.NameLength)
 	if err := r.readAligned(nameBuf); err != nil {
 		Debug("name read failed")
@@ -305,11 +308,12 @@ func (r *reader) ReadRecord() (Record, error) {
 	}
 
 	info := hdr.Info()
-	info.Name = string(nameBuf[:hdr.NameLength-1])
+	info.Name = Normalize(string(nameBuf[:hdr.NameLength-1]))
 
 	recLen := uint64(r.pos - recPos)
 	filePos := r.pos
 
+	//TODO: check if hdr.FileSize is equal to the actual fileSize of the record
 	content := io.NewSectionReader(r.r, r.pos, int64(hdr.FileSize))
 	r.pos = round4(r.pos + int64(hdr.FileSize))
 	return Record{
