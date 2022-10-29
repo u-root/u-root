@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -174,12 +173,14 @@ func (o OSEndpoint) Load() error {
 			fmt.Printf("With Kernel at %s\n", tmpPath+"vmlinuz")
 			fmt.Printf("With Initrd at %s\n", tmpPath+"initrd")
 			fmt.Printf("Commandline: %s\n", o.Commandline)
+
 			// Load Kernel and initrd
-			err = kexec.FileLoad(vmlinuz, initrd, o.Commandline)
+			if err = kexec.FileLoad(vmlinuz, initrd, o.Commandline); err != nil {
+				return err
+			}
+
 			// Load KExec kernel and initrd - init cmdline
-			cmd := exec.Command("kexec", "-e")
-			err = cmd.Run()
-			return err
+			return kexec.Reboot()
 		}
 		return err
 	}

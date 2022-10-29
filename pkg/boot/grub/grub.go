@@ -515,10 +515,12 @@ func (c *parser) append(ctx context.Context, config string) error {
 				// The only allowed arg
 				cmdline := kv[1:]
 				if arg == "--nounzip" {
+					if len(kv) < 3 {
+						return fmt.Errorf("no file argument given: %v", kv)
+					}
 					arg = kv[2]
 					cmdline = kv[2:]
 				}
-
 				m, err := c.getFile(arg)
 				if err != nil {
 					return err

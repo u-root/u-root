@@ -104,6 +104,10 @@ func (s RSASignature) Verify(b []byte, ring openpgp.KeyRing) (*bytes.Reader, err
 	}
 
 	hashed, err := vfile.CalculateHash(bytes.NewReader(b), s.hash.New())
+	if err != nil {
+		return r, err
+	}
+
 	for _, key := range keys {
 		if err = rsa.VerifyPKCS1v15(key, s.hash, hashed, s.value); err == nil {
 			return r, nil

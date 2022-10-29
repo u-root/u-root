@@ -256,7 +256,7 @@ func nodespec() string {
 	return arg[cursor]
 }
 
-func nexthop() (string, *netlink.Addr, error) {
+func nexthop() (string, net.IP, error) {
 	cursor++
 	whatIWant = []string{"via"}
 	if arg[cursor] != "via" {
@@ -265,9 +265,9 @@ func nexthop() (string, *netlink.Addr, error) {
 	nh := arg[cursor]
 	cursor++
 	whatIWant = []string{"Gateway CIDR"}
-	addr, err := netlink.ParseAddr(arg[cursor])
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to parse gateway CIDR: %v", err)
+	addr := net.ParseIP(arg[cursor])
+	if addr == nil {
+		return "", nil, fmt.Errorf("failed to parse gateway IP: %v", arg[cursor])
 	}
 	return nh, addr, nil
 }
@@ -285,7 +285,7 @@ func routeadddefault() error {
 	switch nh {
 	case "via":
 		log.Printf("Add default route %v via %v", nhval, l.Attrs().Name)
-		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval.IPNet.IP}
+		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
 		if err := netlink.RouteAdd(r); err != nil {
 			return fmt.Errorf("error adding default route to %v: %v", l.Attrs().Name, err)
 		}
