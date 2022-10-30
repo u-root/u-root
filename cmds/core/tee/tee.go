@@ -30,19 +30,39 @@ var (
 	ignore = flag.BoolP("ignore-interrupts", "i", false, "ignore the SIGINT signal")
 )
 
-func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string) error {
+type command struct {
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
+	args   []string
+	cat    bool
+	ignore bool
+}
+
+func newCommand(cat, ignore bool, args []string) *command {
+	return &command{
+		stdin:  os.Stdin,
+		stdout: os.Stdout,
+		stderr: os.Stderr,
+		cat:    cat,
+		ignore: ignore,
+		args:   args,
+	}
+}
+
+func (c *command) run() error {
 	oflags := os.O_WRONLY | os.O_CREATE
-	if *cat {
+	if c.cat {
 		oflags |= os.O_APPEND
 	}
 
-	if *ignore {
+	if c.ignore {
 		signal.Ignore(os.Interrupt)
 	}
 
-	files := make([]*os.File, 0, len(args))
-	writers := make([]io.Writer, 0, len(args)+1)
-	for _, fname := range args {
+	files := make([]*os.File, 0, len(c.args))
+	writers := make([]io.Writer, 0, len(c.args)+1)
+	for _, fname := range c.args {
 		f, err := os.OpenFile(fname, oflags, 0o666)
 		if err != nil {
 			return fmt.Errorf("error opening %s: %v", fname, err)
@@ -50,16 +70,16 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string) err
 		files = append(files, f)
 		writers = append(writers, f)
 	}
-	writers = append(writers, stdout)
+	writers = append(writers, c.stdout)
 
 	mw := io.MultiWriter(writers...)
-	if _, err := io.Copy(mw, stdin); err != nil {
+	if _, err := io.Copy(mw, c.stdin); err != nil {
 		return fmt.Errorf("error: %v", err)
 	}
 
 	for _, f := range files {
 		if err := f.Close(); err != nil {
-			fmt.Fprintf(stderr, "tee: error closing file %q: %v\n", f.Name(), err)
+			fmt.Fprintf(c.stderr, "tee: error closing file %q: %v\n", f.Name(), err)
 		}
 	}
 
@@ -68,7 +88,7 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string) err
 
 func main() {
 	flag.Parse()
-	if err := run(os.Stdin, os.Stdout, os.Stderr, flag.Args()); err != nil {
+	if err := newCommand(*cat, *ignore, flag.Args()).run(); err != nil {
 		log.Fatalf("tee: %v", err)
 	}
 }
