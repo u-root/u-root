@@ -13,49 +13,75 @@ import (
 )
 
 func TestTee(t *testing.T) {
-	tempDir := t.TempDir()
-
 	tests := []struct {
-		input  string
-		args   []string
-		append bool
+		name          string
+		input         string
+		args          []string
+		append        bool
+		appendContent string
 	}{
 		{
-			"hello",
-			[]string{filepath.Join(tempDir, "a1"), filepath.Join(tempDir, "a2")},
-			false,
+			name:  "default tee",
+			input: "hello",
+			args:  []string{"a1", "a2"},
 		},
 		{
-			"a\nb\n",
-			[]string{filepath.Join(tempDir, "b1")},
-			true,
+			name:          "with append flag",
+			input:         "a\nb\n",
+			args:          []string{"b1"},
+			append:        true,
+			appendContent: "hello",
 		},
 	}
 
 	for _, test := range tests {
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-		*cat = test.append
-		err := run(strings.NewReader(test.input), &stdout, &stderr, test.args)
-		if err != nil {
-			t.Error(err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			tempDir := t.TempDir()
 
-		for _, name := range test.args {
-
-			b, err := os.ReadFile(name)
-			if err != nil {
-				t.Error(err)
-			}
-			res := string(b)
-
-			if res != test.input {
-				t.Errorf("want: %q, got %q", test.input, res)
+			for i := 0; i < len(test.args); i++ {
+				test.args[i] = filepath.Join(tempDir, test.args[i])
 			}
 
-			if res != stdout.String() {
-				t.Errorf("want: %q, got %q", test.input, res)
+			if test.append {
+				for _, arg := range test.args {
+					err := os.WriteFile(arg, []byte(test.appendContent), 0666)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
 			}
-		}
+
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			cmd := newCommand(test.append, false, test.args)
+			cmd.stdin = strings.NewReader(test.input)
+			cmd.stdout = &stdout
+			cmd.stderr = &stderr
+			if err := cmd.run(); err != nil {
+				t.Fatal(err)
+			}
+
+			// test if stdin match stdout
+			if test.input != stdout.String() {
+				t.Errorf("wanted: %q, got: %q", test.input, stdout.String())
+			}
+
+			for _, name := range test.args {
+				b, err := os.ReadFile(name)
+				if err != nil {
+					t.Error(err)
+				}
+				res := string(b)
+				expectedContent := test.input
+
+				if test.append {
+					expectedContent = test.appendContent + expectedContent
+				}
+
+				if res != expectedContent {
+					t.Errorf("wanted: %q, got %q", expectedContent, res)
+				}
+			}
+		})
 	}
 }
