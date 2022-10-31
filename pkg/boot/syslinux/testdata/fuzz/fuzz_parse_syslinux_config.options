@@ -1,0 +1,2 @@
+[libfuzzer]
+dict = parse_syslinux_cfg.dict
