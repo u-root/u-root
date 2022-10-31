@@ -1,0 +1,3 @@
+[libfuzzer]
+dict = cpio.dict
+rss_limit_mb=10240
