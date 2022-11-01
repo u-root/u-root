@@ -9,7 +9,7 @@ import (
 )
 
 // baud2unixB convert a baudrate to the corresponding unix const.
-var baud2unixB = map[int]uint64{
+var baud2unixB = map[int]uint32{
 	50:     unix.B50,
 	75:     unix.B75,
 	110:    unix.B110,
@@ -28,17 +28,4 @@ var baud2unixB = map[int]uint64{
 	57600:  unix.B57600,
 	115200: unix.B115200,
 	230400: unix.B230400,
-}
-
-// init adds constants that are darwin-specific
-func init() {
-	extra := map[string]*bit{
-		// not in FreeBSD
-		"iutf8": {word: I, mask: syscall.IUTF8},
-		"ofill": {word: O, mask: syscall.OFILL},
-		"ofdel": {word: O, mask: syscall.OFDEL},
-	}
-	for k, v := range extra {
-		boolFields[k] = v
-	}
 }

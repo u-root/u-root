@@ -50,6 +50,10 @@ func init() {
 		"iuclc": {word: I, mask: syscall.IUCLC},
 		"olcuc": {word: O, mask: syscall.OLCUC},
 		"xcase": {word: L, mask: syscall.XCASE},
+		// not in FreeBSD
+		"iutf8": {word: I, mask: syscall.IUTF8},
+		"ofill": {word: O, mask: syscall.OFILL},
+		"ofdel": {word: O, mask: syscall.OFDEL},
 	}
 	for k, v := range extra {
 		boolFields[k] = v

@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !darwin && !freebsd
-// +build !plan9,!windows,!darwin,!freebsd
-
 package termios
 
 import "golang.org/x/sys/unix"
 
 const (
-	gets       = unix.TCGETS
-	sets       = unix.TCSETS
+	gets       = unix.TIOCGETA
+	sets       = unix.TIOCSETA
 	getWinSize = unix.TIOCGWINSZ
 	setWinSize = unix.TIOCSWINSZ
 )
