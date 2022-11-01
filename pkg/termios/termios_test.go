@@ -216,7 +216,6 @@ func TestSet(t *testing.T) {
 		{"intr", "0x03"},
 		{"isig"},
 		{"~istrip"},
-		{"iutf8"},
 		{"~ixany"},
 		{"~ixoff"},
 		{"ixon"},
@@ -225,8 +224,6 @@ func TestSet(t *testing.T) {
 		{"min", "0x00"},
 		{"~noflsh"},
 		{"~ocrnl"},
-		{"~ofdel"},
-		{"~ofill"},
 		{"onlcr"},
 		{"~onlret"},
 		{"~onocr"},
@@ -246,6 +243,9 @@ func TestSet(t *testing.T) {
 
 	if runtime.GOOS == "linux" {
 		sets = append(sets, []string{"~iuclc"}, []string{"~olcuc"}, []string{"~xcase"})
+	}
+	if runtime.GOOS != "freebsd" {
+		sets = append(sets, []string{"iutf8"}, []string{"~ofdel"}, []string{"~ofill"})
 	}
 	for _, set := range sets {
 		if err := g.SetOpts(set); err != nil {
