@@ -9,6 +9,7 @@ import (
 	"hash/crc32"
 	"os"
 	"testing"
+	"unsafe"
 
 	"github.com/u-root/u-root/pkg/cpio"
 )
@@ -50,6 +51,8 @@ func TestUnmarshal(t *testing.T) {
 	compressedTests := []testImage{
 		// These test files have been created using .circleci/images/test-image-amd6/config_linux5.10_x86_64.txt
 		{name: "bzip2", path: "testdata/bzImage-linux5.10-x86_64-bzip2", crc32: 1083155033},
+		{name: "signed-debian", path: "testdata/bzImage-debian-signed-linux5.10.0-6-amd64_5.10.28-1_amd64", crc32: 3243083922},
+		{name: "signed-rocky", path: "testdata/bzImage-rockylinux9", crc32: 4110245191},
 		{name: "gzip", path: "testdata/bzImage-linux5.10-x86_64-gzip", crc32: 4192009363},
 		{name: "xz", path: "testdata/bzImage-linux5.10-x86_64-xz", crc32: 3062624786},
 		{name: "lz4", path: "testdata/bzImage-linux5.10-x86_64-lz4", crc32: 2177238538},
@@ -74,12 +77,13 @@ func TestUnmarshal(t *testing.T) {
 				t.Fatalf("IEEE CRC32 hash of decompressed kernel code has changed from %v to %v", want, got)
 			}
 			// Corrupt a byte in the CRC32 and verify that an error is returned.
-			image[len(image)-1] ^= 0xff
+			checksumOffset := uint32(b.KernelOffset) + uint32(b.Header.Syssize)*16 - uint32(unsafe.Sizeof(b.CRC32))
+			image[checksumOffset-1] ^= 0xff
 			if err := b.UnmarshalBinary(image); err == nil {
 				t.Fatalf("UnmarshalBinary did not return an error with corrupted CRC32")
 			}
 			// Restore the corrupted byte.
-			image[len(image)-1] ^= 0xff
+			image[checksumOffset-1] ^= 0xff
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatalf("UnmarshalBinary returned an unexpected error when called repeatedly: %v", err)
 			}

@@ -273,3 +273,30 @@ type BzImage struct {
 	// Some operations don't need the decompressed code; this speeds them up significantly.
 	NoDecompress bool
 }
+
+// PE Image file.
+// Details at: https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#file-headers
+type PEImage struct {
+	PEMagic [4]byte
+	COFFHeader
+	OptionalHeader
+}
+
+// COFF Header.
+// Details at: https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image
+type COFFHeader struct {
+	Machine              [2]byte
+	NumberOfSections     [2]byte
+	TimeDateStamp        [4]byte
+	PointerToSymbolTable [4]byte
+	NumberOfSymbols      [4]byte
+	SizeOfOptionalHeader uint16
+	Characteristics      [2]byte
+}
+
+// Standard fields in all PE Optional Headers.
+// Details at: https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-standard-fields-image-only
+type OptionalHeader struct {
+	Magic uint16
+	_     [22]byte
+}

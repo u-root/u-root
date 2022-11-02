@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"reflect"
@@ -95,13 +96,11 @@ func findDecompressor(b []byte) (decompressor, error) {
 // bzImages are almost impossible to modify. They form a sandwich with
 // the compressed kernel code in the middle. It's actually a BLT:
 // MBR and bootparams first 512 bytes
-// the MBR includes 0xc0 bytes of boot code which is vestigial.
+// the MBR includes 0xc0 bytes of boot code which is used for UEFI booting.
 // Then there is "preamble" code which is the kernel decompressor; then the
 // xz compressed kernel; then a library of sorts after the kernel which is called
 // by the early uncompressed kernel code. This is all linked together and forms
 // an essentially indivisible whole -- which we wish to divisible.
-// Hence the groveling around for the xz header that you see here, and hence the checks
-// to ensure that the kernel layout ends up largely the same before and after.
 // That said, if you keep layout unchanged, you can modify the uncompressed kernel.
 // For example, when you first build a kernel, you can:
 // dd if=/dev/urandom of=x bs=1048576 count=8
@@ -109,8 +108,19 @@ func findDecompressor(b []byte) (decompressor, error) {
 // and use that as an initrd, it's more or less an 8 MiB block you can replace
 // as needed. Just make sure nothing grows. And make sure the initramfs is in
 // the same place. Ah, joy.
+//
+// Important note for signed kernel images: The kernel signature is stripped away
+// and ignored. Users of UnmarshalBinary must separately check the image signature,
+// if required.
 func (b *BzImage) UnmarshalBinary(d []byte) error {
 	Debug("Processing %d byte image", len(d))
+
+	stripped, err := stripSignature(d)
+	if err != nil {
+		return fmt.Errorf("error stripping kernel signature: %v", err)
+	}
+	d = stripped
+
 	r := bytes.NewBuffer(d)
 	if err := binary.Read(r, binary.LittleEndian, &b.Header); err != nil {
 		return err
@@ -126,9 +136,20 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
 	Debug("StartSys %x", b.Header.StartSys)
 	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
+
+	if b.Header.SetupSects == 0 {
+		// Per https://www.kernel.org/doc/html/latest/x86/boot.html?highlight=boot:
+		// "For backwards compatibility, if the setup_sects field contains 0, the real value is 4."
+		b.Header.SetupSects = 4
+	}
+
 	Debug("SetupSects %d", b.Header.SetupSects)
 
 	off := len(d) - r.Len()
+	// Per https://www.kernel.org/doc/html/v5.4/x86/boot.html#loading-the-rest-of-the-kernel:
+	// "the 32-bit (non-real-mode) kernel starts at offset (setup_sects+1)*512 in the kernel file"
+	// The +1 is because the MBR (1 sect) is always assumed. The logic calculating this
+	// can be confirmed at: https://github.com/torvalds/linux/blob/master/arch/x86/boot/tools/build.c#L440
 	b.KernelOffset = (uintptr(b.Header.SetupSects) + 1) * 512
 	bclen := int(b.KernelOffset) - off
 	Debug("Kernel offset is %d bytes, low1mcode is %d bytes", b.KernelOffset, bclen)
@@ -195,26 +216,38 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		Debug("KernelCode size: %d", len(b.KernelCode))
 	}
 
-	var crcLen = int(unsafe.Sizeof(b.CRC32)) // Length of the CRC in bytes.
+	if err := binary.Read(r, binary.LittleEndian, &b.CRC32); err != nil {
+		return fmt.Errorf("error reading CRC: %v", err)
+	}
+	Debug("CRC read from image is: 0x%08x", b.CRC32)
 
-	b.TailCode = make([]byte, r.Len()-crcLen) // Read all remaining bytes except the CRC32.
+	b.TailCode = make([]byte, r.Len()) // Read all remaining bytes.
 	if _, err := r.Read(b.TailCode); err != nil {
 		return fmt.Errorf("can't read TailCode: %v", err)
 	}
 
-	if err := binary.Read(r, binary.LittleEndian, &b.CRC32); err != nil {
-		return fmt.Errorf("error reading CRC: %v", err)
-	}
-	Debug("CRC is: 0x%08x", b.CRC32)
-
-	generatedCRC := crc32.ChecksumIEEE(d[0:len(d)-crcLen]) ^ (0xffffffff)
+	// Generate the CRC checksum of the entire image until the end of sys_size.
+	//
+	// Per https://www.kernel.org/doc/html/v5.4/x86/boot.html#the-image-checksum
+	// "From boot protocol version 2.08 onwards the CRC-32 is calculated over the
+	//  entire file using the characteristic polynomial 0x04C11DB7 and an initial
+	//  remainder of 0xffffffff. The checksum is appended to the file; therefore
+	//  the CRC of the file up to the limit specified in the syssize field of the
+	//  header is always 0"
+	//
+	// We can't checksum the entire file because the kernel signing process
+	// appends certificate/signing information after sys_size.
+	// See https://github.com/phrack/sbsigntools/blob/master/src/image.c#L669 for the
+	// kernel signing code.
+	//
+	// Syssize is multiplied by 16 because it is "the size of the protected-mode code
+	// in units of 16-byte paragraphs." per https://www.kernel.org/doc/html/v5.4/x86/boot.html
+	// This can be confirmed in code at: https://github.com/torvalds/linux/blob/master/arch/x86/boot/tools/build.c#L429-L430
+	generatedCRC := crc32.ChecksumIEEE(d[0:uint32(b.KernelOffset)+uint32(b.Header.Syssize)*16]) ^ (0xffffffff)
 	Debug("Generated CRC is: 0x%08x", generatedCRC)
 
-	// This code is broken for signed images. For signed images we must skip the PE Certificate Table when calculating the checksum.
-	// See https://www.syslinux.org/archives/2019-June/026455.html for details.
-	// TODO(abrender): Fix this.
-	if b.CRC32 != generatedCRC {
-		return fmt.Errorf("generated CRC (0x%08x) does not match CRC in file (0x%08x)", generatedCRC, b.CRC32)
+	if generatedCRC != 0 {
+		return fmt.Errorf("generated CRC (0x%08x) does not match", generatedCRC)
 	}
 
 	b.KernelBase = uintptr(0x100000)
@@ -227,10 +260,104 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	return nil
 }
 
+// stripSignature returns an image with the UEFI/PE signatures stripped.
+//
+// The linux kernel supports UEFI Stub booting, which allows the UEFI firmware to load the kernel as
+// an executable. All UEFI images contain a PE/COFF header that defines the format of the executable
+// code. The PE format is documented at: https://learn.microsoft.com/en-us/windows/win32/debug/pe-format.
+//
+// Signed kernels are problematic because the kernel signature process updates the boot code in the
+// image, which in turn makes the CRC checksum of the image invalid. Specifically the `sbsigntools`
+// package [1] used by Debian (and others) updates the "Certificate Table" information [2] and PE checksum.
+// [1] https://github.com/phrack/sbsigntools
+// [2] https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only
+func stripSignature(image []byte) ([]byte, error) {
+	// Clone the slice so that we do not modify the slice that is passed to this function.
+	d := make([]byte, len(image))
+	copy(d, image)
+
+	var dosMagic = []byte("MZ")
+	var peMagic = []byte("PE\x00\x00")
+	var peSignaturePtr = 0x3C
+
+	// Verify that the image has a MS DOS Stub.
+	if bytes.Index(d, dosMagic) != 0 {
+		return d, nil
+	}
+
+	// Locate the PE signature.
+	// The PE signature is located at the offset found in location 0x3C.
+	if peSignaturePtr+4 > len(d) {
+		// Image is not large enough to have a PE signature offset.
+		return d, nil
+	}
+	peMagicOffset := uintptr(binary.LittleEndian.Uint32(d[peSignaturePtr:]))
+	if peMagicOffset+uintptr(len(peMagic)) > uintptr(len(d)) {
+		// Image is not large enough to have a PE signature.
+		return d, nil
+	}
+
+	peImage := &PEImage{}
+	if peMagicOffset+unsafe.Sizeof(peImage) > uintptr(len(d)) {
+		// File is too small to have the PE headers.
+		return d, nil
+	}
+	if err := binary.Read(bytes.NewReader(d[peMagicOffset:]), binary.LittleEndian, peImage); err != nil {
+		return nil, fmt.Errorf("failed to read PE header: %v", err)
+	}
+	// Verify that the image has the PE magic number.
+	if !bytes.Equal(peImage.PEMagic[:], peMagic) {
+		return d, nil
+	}
+
+	Debug("Found a PE image")
+
+	// TODO: Consider performing PE checksum and signature verification.
+	// This is non trivial because we must decide what roots to trust, etc.
+	// Existing code at https://github.com/saferwall/pe might be helpful in this process.
+
+	optionalHeaderOffset := peMagicOffset + unsafe.Offsetof(peImage.OptionalHeader)
+	Debug("Optional header offset: 0x%x", optionalHeaderOffset)
+
+	// Zero out the PE Checksum.
+	checksumOffset := uintptr(64)
+	if checksumOffset+4 < uintptr(peImage.COFFHeader.SizeOfOptionalHeader) {
+		Debug("Clearing checksum")
+		binary.LittleEndian.PutUint32(d[optionalHeaderOffset+checksumOffset:], 0)
+	}
+
+	// Zero out the Certificate Table.
+	var certificateTableOffset uintptr
+	// Unfortunately the offset of the Certificate Table depends on whether the image is
+	// PE32 or P32+ (https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only)
+	switch peImage.OptionalHeader.Magic {
+	case 0x10B: // PE32
+		Debug("Found PE32 image")
+		certificateTableOffset = 128
+	case 0x20B: // PES32+
+		Debug("Found PE32+ image")
+		certificateTableOffset = 144
+	default:
+		return nil, fmt.Errorf("unknown Magic type: 0x%x", peImage.OptionalHeader.Magic)
+	}
+	if certificateTableOffset+8 < uintptr(peImage.COFFHeader.SizeOfOptionalHeader) {
+		certificateTableAddress := optionalHeaderOffset + certificateTableOffset
+		if binary.LittleEndian.Uint64(d[certificateTableAddress:]) > 0 {
+			log.Printf("WARNING! The image is signed but the signature is being ignored.")
+		}
+
+		Debug("Clearing Certificate Table")
+		binary.LittleEndian.PutUint64(d[certificateTableAddress:], 0)
+	}
+
+	return d, nil
+}
+
 // ErrKCodeMissing is returned if kernel code was not decompressed.
 var ErrKCodeMissing = errors.New("No kernel code was decompressed")
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
+// The marshal'd image is *not* signed.
 func (b *BzImage) MarshalBinary() ([]byte, error) {
 	if b.NoDecompress || b.KernelCode == nil {
 		return nil, ErrKCodeMissing
@@ -285,9 +412,16 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 	if _, err := w.Write(b.compressed); err != nil {
 		return nil, err
 	}
-	if _, err := w.Write(b.TailCode); err != nil {
-		return nil, err
+	// b.TailCode is not written to the marshalled image. TailCode is used by signed images
+	// and therefore likely to break because this code does not produce signed images.
+	totalSize := (b.KernelOffset + uintptr(b.Header.Syssize)*16) - unsafe.Sizeof(b.CRC32)
+	padding := int(totalSize) - w.Len()
+	if padding > 0 {
+		if _, err := w.Write(bytes.Repeat([]byte{0}, padding)); err != nil {
+			return nil, fmt.Errorf("error writing padding")
+		}
 	}
+
 	Debug("Wrote %d bytes of header", w.Len())
 	generatedCRC := crc32.ChecksumIEEE(w.Bytes()) ^ (0xffffffff)
 	if err := binary.Write(&w, binary.LittleEndian, generatedCRC); err != nil {
@@ -508,9 +642,6 @@ func (b *BzImage) Diff(b2 *BzImage) string {
 	}
 	if len(b.KernelCode) != len(b2.KernelCode) {
 		s = s + fmt.Sprintf("b Kernelcode is %d; b2 KernelCode is %d", len(b.KernelCode), len(b2.KernelCode))
-	}
-	if len(b.TailCode) != len(b2.TailCode) {
-		s = s + fmt.Sprintf("b Tailcode is %d; b2 TailCode is %d", len(b.TailCode), len(b2.TailCode))
 	}
 	if b.CRC32 != b2.CRC32 {
 		s = s + fmt.Sprintf("b CRC32 is 0x%08x; b2 CRC32 is 0x%08x", b.CRC32, b2.CRC32)
