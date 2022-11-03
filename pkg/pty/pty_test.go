@@ -19,7 +19,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	if _, err := New(); os.IsNotExist(err) {
+	if _, err := New(); os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("Failed allocate /dev/pts device")
 	} else if err != nil {
 		t.Errorf("New pty: want nil, got %v", err)
