@@ -62,7 +62,7 @@ The resulting binary will the be placed where `go build` was invoked
 Or install directly with go:
 
 ```shell
-go install github.com/u-root/u-root
+go install github.com/u-root/u-root@latest
 ```
 
 **Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
