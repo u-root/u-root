@@ -41,26 +41,32 @@ import (
 var outPath = flag.String("O", "", "output file")
 var errEmptyURL = errors.New("empty url")
 
-func usage() {
-	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
-	flag.PrintDefaults()
-	os.Exit(2)
+type command struct {
+	url        string
+	outputPath string
 }
 
-func run(arg string) error {
+func New(outPath string, url string) *command {
+	return &command{
+		outputPath: outPath,
+		url:        url,
+	}
+}
+
+func (c *command) run() error {
 	log.SetPrefix("wget: ")
 
-	if arg == "" {
+	if c.url == "" {
 		return errEmptyURL
 	}
 
-	parsedURL, err := url.Parse(arg)
+	parsedURL, err := url.Parse(c.url)
 	if err != nil {
 		return err
 	}
 
-	if *outPath == "" {
-		*outPath = defaultOutputPath(parsedURL.Path)
+	if c.outputPath == "" {
+		c.outputPath = defaultOutputPath(parsedURL.Path)
 	}
 
 	schemes := curl.Schemes{
@@ -74,14 +80,20 @@ func run(arg string) error {
 
 	reader, err := schemes.FetchWithoutCache(context.Background(), parsedURL)
 	if err != nil {
-		return fmt.Errorf("failed to download %v: %w", arg, err)
+		return fmt.Errorf("failed to download %v: %w", c.url, err)
 	}
 
-	if err := uio.ReadIntoFile(reader, *outPath); err != nil {
+	if err := uio.ReadIntoFile(reader, c.outputPath); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func usage() {
+	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
+	flag.PrintDefaults()
+	os.Exit(2)
 }
 
 func defaultOutputPath(urlPath string) string {
@@ -93,7 +105,7 @@ func defaultOutputPath(urlPath string) string {
 
 func main() {
 	flag.Parse()
-	if err := run(flag.Arg(0)); err != nil {
+	if err := New(*outPath, flag.Arg(0)).run(); err != nil {
 		if errors.Is(err, errEmptyURL) {
 			usage()
 		}
