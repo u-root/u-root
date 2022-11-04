@@ -12,7 +12,7 @@ jobs:
   linters:
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -44,7 +44,7 @@ jobs:
   check-licenses:
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -61,7 +61,7 @@ jobs:
   build:
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -80,7 +80,7 @@ jobs:
       - build
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     env:
       UROOT_SOURCE: ${{ github.workspace }}
@@ -108,7 +108,7 @@ jobs:
       - test
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     env:
       UROOT_SOURCE: ${{ github.workspace }}
@@ -130,7 +130,7 @@ jobs:
       - test
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     env:
       UROOT_SOURCE: ${{ github.workspace }}
@@ -234,7 +234,7 @@ jobs:
       - build
     strategy:
       matrix:
-        go-version: [ 1.17, 1.18 ]
+        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
