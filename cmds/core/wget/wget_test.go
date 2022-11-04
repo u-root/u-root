@@ -42,72 +42,6 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var tests = []struct {
-	name    string
-	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
-	url     string   // in
-	content string   // out
-	err     error
-}{
-	{
-		name:    "basic",
-		flags:   nil,
-		url:     "http://localhost:%[1]d/200",
-		content: content,
-		err:     nil,
-	},
-	{
-		name:    "ipv4",
-		flags:   nil,
-		url:     "http://127.0.0.1:%[1]d/200",
-		content: content,
-		err:     nil,
-	},
-	// TODO: CircleCI does not support ipv6
-	// {
-	// 	name:    "ipv6",
-	// 	flags:   []string{},
-	// 	url:     "http://[::1]:%[1]d/200",
-	// 	content: content,
-	// 	retCode: 0,
-	// },
-	{
-		name:    "redirect",
-		flags:   nil,
-		url:     "http://localhost:%[1]d/302",
-		content: "",
-		err:     nil,
-	},
-	{
-		name:    "4xx error",
-		flags:   nil,
-		url:     "http://localhost:%[1]d/404",
-		content: "",
-		err:     curl.ErrStatusNotOk,
-	},
-	{
-		name:    "5xx error",
-		flags:   nil,
-		url:     "http://localhost:%[1]d/500",
-		content: "",
-		err:     curl.ErrStatusNotOk,
-	},
-	{
-		name:    "no server",
-		flags:   nil,
-		url:     "http://localhost:%[2]d/200",
-		content: "",
-		err:     io.EOF,
-	},
-	// {
-	// 	name:    "empty url",
-	// 	flags:   nil,
-	// 	url:     "",
-	// 	content: "",
-	// 	err:     errEmptyURL,
-	// },
-}
-
 func getListener(t *testing.T) (net.Listener, int) {
 	t.Helper()
 	l, err := net.Listen("tcp", ":0")
@@ -140,14 +74,74 @@ func TestWget(t *testing.T) {
 		log.Print(http.Serve(l, h))
 	}()
 
+	tmpDir := t.TempDir()
+
+	var tests = []struct {
+		name       string
+		url        string // in
+		content    string // out
+		outputPath string
+		err        error
+	}{
+		{
+			name:       "basic",
+			url:        fmt.Sprintf("http://localhost:%d/200", port),
+			content:    content,
+			outputPath: filepath.Join(tmpDir, "basic"),
+			err:        nil,
+		},
+		{
+			name:       "ipv4",
+			url:        fmt.Sprintf("http://127.0.0.1:%d/200", port),
+			content:    content,
+			outputPath: filepath.Join(tmpDir, "ipv4"),
+			err:        nil,
+		},
+		// TODO: CircleCI does not support ipv6
+		// {
+		// 	name:    "ipv6",
+		// 	flags:   []string{},
+		// 	url:     "http://[::1]:%[1]d/200",
+		// 	content: content,
+		// 	retCode: 0,
+		// },
+		{
+			name:       "redirect",
+			url:        fmt.Sprintf("http://localhost:%[1]d/302", port),
+			content:    "",
+			outputPath: filepath.Join(tmpDir, "redirect"),
+			err:        nil,
+		},
+		{
+			name:    "4xx error",
+			url:     fmt.Sprintf("http://localhost:%d/404", port),
+			content: "",
+			err:     curl.ErrStatusNotOk,
+		},
+		{
+			name:    "5xx error",
+			url:     fmt.Sprintf("http://localhost:%d/500", port),
+			content: "",
+			err:     curl.ErrStatusNotOk,
+		},
+		{
+			name:       "no server",
+			url:        fmt.Sprintf("http://localhost:%d/200", unusedPort),
+			outputPath: filepath.Join(tmpDir, "no-server"),
+			content:    "",
+			err:        io.EOF,
+		},
+		{
+			name:    "empty url",
+			url:     "",
+			content: "",
+			err:     errEmptyURL,
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Change the working directory to a temporary directory, so we can
-			// delete the temporary files after the test runs.
-			tmpDir := t.TempDir()
-			fileName := filepath.Base(tt.url)
-			*outPath = filepath.Join(tmpDir, fileName)
-			err := run(fmt.Sprintf(tt.url, port, unusedPort))
+			err := New(tt.outputPath, tt.url).run()
 
 			if tt.err == nil && err != nil {
 				t.Errorf("expect nil, got %v", err)
@@ -157,9 +151,9 @@ func TestWget(t *testing.T) {
 			}
 
 			if tt.content != "" {
-				content, err := os.ReadFile(filepath.Join(tmpDir, fileName))
+				content, err := os.ReadFile(tt.outputPath)
 				if err != nil {
-					t.Errorf("File %s was not created: %v", fileName, err)
+					t.Errorf("File %s was not created: %v", tt.outputPath, err)
 				}
 
 				// Check content.
