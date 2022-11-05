@@ -7,6 +7,7 @@ package libinit
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -274,7 +275,7 @@ func NewInitModuleLoader() *InitModuleLoader {
 func InstallAllModules() error {
 	loader := NewInitModuleLoader()
 	modulePattern := "/lib/modules/*.ko"
-	if err := InstallModulesFromDir(modulePattern, loader); err != nil {
+	if err := InstallModulesFromDir(modulePattern, loader); !errors.Is(err, ErrNoModulesFound) {
 		return err
 	}
 	var allModules []string
@@ -306,6 +307,10 @@ func InstallModules(m *InitModuleLoader, modules []string) {
 	}
 }
 
+// ErrNoModulesFound is the error returned when InstallModulesFromDir does not
+// find any valid modules in the path.
+var ErrNoModulesFound = fmt.Errorf("no modules found")
+
 // InstallModulesFromDir installs kernel modules (.ko files) from /lib/modules that
 // match the given pattern, skipping those in the exclude list.
 func InstallModulesFromDir(pattern string, loader *InitModuleLoader) error {
@@ -314,7 +319,7 @@ func InstallModulesFromDir(pattern string, loader *InitModuleLoader) error {
 		return err
 	}
 	if len(files) == 0 {
-		return fmt.Errorf("no modules found matching '%s'", pattern)
+		return ErrNoModulesFound
 	}
 
 	for _, filename := range files {
