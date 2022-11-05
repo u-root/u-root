@@ -14,7 +14,7 @@
 u-root embodies four different projects.
 
 *   Go versions of many standard Linux tools, such as [ls](cmds/core/ls/ls.go),
-    [cp](cmds/core/cp/cp.go), or [shutdown](cmds/core/shutdown/shutdown.go). See
+    [cp](cmds/core/cp/cp.go), or [shutdown](cmds/core/shutdown/shutdown_linux.go). See
     [cmds/core](cmds/core) for most of these.
 
 *   A way to compile many Go programs into a single binary with
