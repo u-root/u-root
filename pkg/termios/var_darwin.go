@@ -29,3 +29,16 @@ var baud2unixB = map[int]uint64{
 	115200: unix.B115200,
 	230400: unix.B230400,
 }
+
+// init adds constants that are darwin-specific
+func init() {
+	extra := map[string]*bit{
+		// not in FreeBSD
+		"iutf8": {word: I, mask: syscall.IUTF8},
+		"ofill": {word: O, mask: syscall.OFILL},
+		"ofdel": {word: O, mask: syscall.OFDEL},
+	}
+	for k, v := range extra {
+		boolFields[k] = v
+	}
+}
