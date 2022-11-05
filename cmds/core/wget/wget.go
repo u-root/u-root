@@ -46,7 +46,7 @@ type command struct {
 	outputPath string
 }
 
-func New(outPath string, url string) *command {
+func newCommand(outPath string, url string) *command {
 	return &command{
 		outputPath: outPath,
 		url:        url,
@@ -105,7 +105,7 @@ func defaultOutputPath(urlPath string) string {
 
 func main() {
 	flag.Parse()
-	if err := New(*outPath, flag.Arg(0)).run(); err != nil {
+	if err := newCommand(*outPath, flag.Arg(0)).run(); err != nil {
 		if errors.Is(err, errEmptyURL) {
 			usage()
 		}
