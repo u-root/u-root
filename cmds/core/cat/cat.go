@@ -55,7 +55,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 
 func main() {
 	flag.Parse()
-	if err := run(os.Args[1:], os.Stdin, os.Stdout); err != nil {
+	if err := run(flag.Args(), os.Stdin, os.Stdout); err != nil {
 		log.Fatalf("cat failed with: %v", err)
 	}
 }
