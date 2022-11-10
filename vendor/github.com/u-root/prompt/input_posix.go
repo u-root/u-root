@@ -5,7 +5,7 @@ package prompt
 import (
 	"syscall"
 
-	"github.com/c-bata/go-prompt/internal/term"
+	"github.com/u-root/prompt/internal/term"
 	"golang.org/x/sys/unix"
 )
 

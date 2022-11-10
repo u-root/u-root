@@ -4,14 +4,7 @@ github.com/anmitsu/go-shlex
 # github.com/beevik/ntp v0.3.0
 ## explicit
 github.com/beevik/ntp
-# github.com/c-bata/go-prompt v0.2.6
 ## explicit; go 1.14
-github.com/c-bata/go-prompt
-github.com/c-bata/go-prompt/completer
-github.com/c-bata/go-prompt/internal/bisect
-github.com/c-bata/go-prompt/internal/debug
-github.com/c-bata/go-prompt/internal/strings
-github.com/c-bata/go-prompt/internal/term
 # github.com/cenkalti/backoff/v4 v4.1.3
 ## explicit; go 1.13
 github.com/cenkalti/backoff/v4
@@ -159,6 +152,14 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
+# github.com/u-root/prompt v0.0.0-20221108075717-00adce9fcbbd
+## explicit; go 1.14
+github.com/u-root/prompt
+github.com/u-root/prompt/completer
+github.com/u-root/prompt/internal/bisect
+github.com/u-root/prompt/internal/debug
+github.com/u-root/prompt/internal/strings
+github.com/u-root/prompt/internal/term
 # github.com/u-root/uio v0.0.0-20220204230159-dac05f7d2cb4
 ## explicit; go 1.15
 github.com/u-root/uio/cp

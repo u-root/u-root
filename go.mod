@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/beevik/ntp v0.3.0
-	github.com/c-bata/go-prompt v0.2.6
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/creack/pty v1.1.15
 	github.com/davecgh/go-spew v1.1.1
@@ -31,6 +30,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/u-root/gobusybox/src v0.0.0-20220728145311-85dc1fd1bc75
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
+	github.com/u-root/prompt v0.0.0-20221108075717-00adce9fcbbd
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810

@@ -3,7 +3,7 @@ package prompt
 import (
 	"strings"
 
-	"github.com/c-bata/go-prompt/internal/debug"
+	"github.com/u-root/prompt/internal/debug"
 )
 
 // Buffer emulates the console buffer.
