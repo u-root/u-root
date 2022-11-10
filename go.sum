@@ -236,6 +236,8 @@ github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eV
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
 github.com/u-root/prompt v0.0.0-20221108075717-00adce9fcbbd h1:E4OwN2ifnd+xqR7e3lJQKA/WJcoEW6FcV9RO545XV6E=
 github.com/u-root/prompt v0.0.0-20221108075717-00adce9fcbbd/go.mod h1:LyU/Wj6OFmFnGUAR/8mzI5PjxxvbcIfDmZqKupSplG0=
+github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8 h1:JrSBKRfH2PmVACEvZ4H30Exs+kdyu2FuwsWknrY17z0=
+github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8/go.mod h1:LyU/Wj6OFmFnGUAR/8mzI5PjxxvbcIfDmZqKupSplG0=
 github.com/u-root/uio v0.0.0-20210528114334-82958018845c/go.mod h1:LpEX5FO/cB+WF4TYGY1V5qktpaZLkKkSegbr0V4eYXA=
 github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7/go.mod h1:LpEX5FO/cB+WF4TYGY1V5qktpaZLkKkSegbr0V4eYXA=
 github.com/u-root/uio v0.0.0-20220204230159-dac05f7d2cb4 h1:hl6sK6aFgTLISijk6xIzeqnPzQcsLqqvL6vEfTPinME=
