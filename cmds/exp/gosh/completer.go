@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	prompt "github.com/c-bata/go-prompt"
-	"github.com/c-bata/go-prompt/completer"
+	"github.com/u-root/prompt"
+	"github.com/u-root/prompt/completer"
 )
 
 func completerFunc(d prompt.Document) []prompt.Suggest {
