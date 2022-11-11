@@ -142,11 +142,9 @@ func retryableNetError(err error) bool {
 	if err == nil {
 		return false
 	}
-	switch err := err.(type) {
-	case net.Error:
-		if err.Timeout() {
-			return true
-		}
+	var netError net.Error
+	if errors.As(err, &netError) && netError.Timeout() {
+		return true
 	}
 	return false
 }
