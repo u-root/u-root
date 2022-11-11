@@ -173,7 +173,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		// send a netboot request via DHCP
 		bootconf, err = dhcp(ifname)
 		if err != nil {
-			return fmt.Errorf("DHCPv6: netboot request for interface %s failed: %v", ifname, err)
+			return fmt.Errorf("DHCP: netboot request for interface %s failed: %v", ifname, err)
 		}
 		debug("DHCP: network configuration: %+v", bootconf.NetConf)
 		if !*dryRun {
@@ -383,11 +383,11 @@ func dhcp6(ifname string) (*netboot.BootConf, error) {
 		modifiers = append(modifiers, dhcpv6.WithRequestedOptions(dhcpv6.OptionNTPServer))
 	}
 	conversation, err := netboot.RequestNetbootv6(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
-	for _, m := range conversation {
-		debug(m.Summary())
-	}
 	if err != nil {
 		return nil, fmt.Errorf("DHCPv6: netboot request for interface %s failed: %v", ifname, err)
+	}
+	for _, m := range conversation {
+		debug(m.Summary())
 	}
 	return netboot.ConversationToNetconf(conversation)
 }
@@ -402,11 +402,11 @@ func dhcp4(ifname string) (*netboot.BootConf, error) {
 		modifiers = append(modifiers, dhcpv4.WithRequestedOptions(dhcpv4.OptionNTPServers))
 	}
 	conversation, err := netboot.RequestNetbootv4(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
-	for _, m := range conversation {
-		debug(m.Summary())
-	}
 	if err != nil {
 		return nil, fmt.Errorf("DHCPv4: netboot request for interface %s failed: %v", ifname, err)
+	}
+	for _, m := range conversation {
+		debug(m.Summary())
 	}
 	return netboot.ConversationToNetconfv4(conversation)
 }

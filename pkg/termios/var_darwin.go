@@ -5,6 +5,8 @@
 package termios
 
 import (
+	"syscall"
+
 	"golang.org/x/sys/unix"
 )
 
