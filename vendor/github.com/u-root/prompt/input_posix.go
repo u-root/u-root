@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package prompt
@@ -5,7 +6,7 @@ package prompt
 import (
 	"syscall"
 
-	"github.com/c-bata/go-prompt/internal/term"
+	"github.com/u-root/prompt/internal/term"
 	"golang.org/x/sys/unix"
 )
 
@@ -55,6 +56,12 @@ func (t *PosixParser) GetWinSize() *WinSize {
 	ws, err := unix.IoctlGetWinsize(t.fd, unix.TIOCGWINSZ)
 	if err != nil {
 		panic(err)
+	}
+	if ws.Row <= 0 || ws.Col <= 0 {
+		return &WinSize{
+			Row: 25,
+			Col: 80,
+		}
 	}
 	return &WinSize{
 		Row: ws.Row,

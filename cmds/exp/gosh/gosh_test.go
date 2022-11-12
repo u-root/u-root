@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	prompt "github.com/c-bata/go-prompt"
+	"github.com/u-root/prompt"
 	"mvdan.cc/sh/v3/interp"
 )
 
