@@ -142,11 +142,9 @@ func retryableNetError(err error) bool {
 	if err == nil {
 		return false
 	}
-	switch err := err.(type) {
-	case net.Error:
-		if err.Timeout() {
-			return true
-		}
+	var netError net.Error
+	if errors.As(err, &netError) && netError.Timeout() {
+		return true
 	}
 	return false
 }
@@ -173,7 +171,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		// send a netboot request via DHCP
 		bootconf, err = dhcp(ifname)
 		if err != nil {
-			return fmt.Errorf("DHCPv6: netboot request for interface %s failed: %v", ifname, err)
+			return fmt.Errorf("DHCP: netboot request for interface %s failed: %v", ifname, err)
 		}
 		debug("DHCP: network configuration: %+v", bootconf.NetConf)
 		if !*dryRun {
@@ -235,24 +233,31 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	log.Printf("DHCP: fetching boot file URL: %s", bootconf.BootfileURL)
 
-	var resp *http.Response
-	for attempt := 0; attempt < maxHTTPAttempts; attempt++ {
-		log.Printf("netboot: attempt %d for http.Get", attempt+1)
-		req, err := http.NewRequest(http.MethodGet, bootconf.BootfileURL, nil)
-		if err != nil {
-			return fmt.Errorf("could not build request for %s: %v", bootconf.BootfileURL, err)
+	fetch := func(url string) (*http.Response, error) {
+		for attempt := 0; attempt < maxHTTPAttempts; attempt++ {
+			if attempt > 1 {
+				time.Sleep(retryInterval)
+			}
+			log.Printf("netboot: attempt %d for http.Get", attempt+1)
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			if err != nil {
+				return nil, fmt.Errorf("could not build request for %q: %v", url, err)
+			}
+			resp, err := client.Do(req)
+			if err == nil {
+				return resp, nil
+			}
+			log.Printf("attempt failed: %v", err)
+			if !retryableNetError(err) && !retryableHTTPError(resp) {
+				break
+			}
 		}
-		resp, err = client.Do(req)
-		if err != nil && retryableNetError(err) || retryableHTTPError(resp) {
-			time.Sleep(retryInterval)
-			continue
-		}
-		if err == nil {
-			break
-		}
-		return fmt.Errorf("DHCP: http.Get of %s failed: %v", bootconf.BootfileURL, err)
+		return nil, fmt.Errorf("fetch of %q failed", url)
 	}
-	// FIXME this will not be called if something fails after this point
+	resp, err := fetch(bootconf.BootfileURL)
+	if err != nil {
+		return fmt.Errorf("failed to fetch %q: %v", bootconf.BootfileURL, err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code is not 200 OK: %d", resp.StatusCode)
@@ -383,11 +388,11 @@ func dhcp6(ifname string) (*netboot.BootConf, error) {
 		modifiers = append(modifiers, dhcpv6.WithRequestedOptions(dhcpv6.OptionNTPServer))
 	}
 	conversation, err := netboot.RequestNetbootv6(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
-	for _, m := range conversation {
-		debug(m.Summary())
-	}
 	if err != nil {
 		return nil, fmt.Errorf("DHCPv6: netboot request for interface %s failed: %v", ifname, err)
+	}
+	for _, m := range conversation {
+		debug(m.Summary())
 	}
 	return netboot.ConversationToNetconf(conversation)
 }
@@ -402,11 +407,11 @@ func dhcp4(ifname string) (*netboot.BootConf, error) {
 		modifiers = append(modifiers, dhcpv4.WithRequestedOptions(dhcpv4.OptionNTPServers))
 	}
 	conversation, err := netboot.RequestNetbootv4(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
-	for _, m := range conversation {
-		debug(m.Summary())
-	}
 	if err != nil {
 		return nil, fmt.Errorf("DHCPv4: netboot request for interface %s failed: %v", ifname, err)
+	}
+	for _, m := range conversation {
+		debug(m.Summary())
 	}
 	return netboot.ConversationToNetconfv4(conversation)
 }

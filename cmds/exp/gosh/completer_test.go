@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/c-bata/go-prompt"
+	"github.com/u-root/prompt"
 )
 
 func TestCompleterFunc(t *testing.T) {
