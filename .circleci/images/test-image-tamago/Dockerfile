@@ -46,3 +46,8 @@ ENV PATH "${PATH}:${GOPATH}/bin:/usr/local/tamago-go/bin"
 
 USER $USER
 WORKDIR /build
+
+# for u-root circleci
+RUN sudo mkdir -p /home/circleci
+# IDs are still in flux.
+RUN sudo chown builder:builder /home/circleci
