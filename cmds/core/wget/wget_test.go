@@ -11,6 +11,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -122,6 +123,35 @@ func TestWget(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func getListener(t *testing.T) (net.Listener, int) {
+	t.Helper()
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatalf("error setting up TCP listener: %v", err)
+	}
+	return l, l.Addr().(*net.TCPAddr).Port
+}
+
+func TestNoServer(t *testing.T) {
+	l, port := getListener(t)
+
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				// End of test.
+				return
+			}
+			conn.Close()
+		}
+	}()
+
+	err := newCommand("", fmt.Sprintf("http://localhost:%d/200", port)).run()
+	if err == nil {
+		t.Error("expected err got nil")
 	}
 }
 
