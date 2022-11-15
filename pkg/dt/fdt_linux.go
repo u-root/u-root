@@ -7,35 +7,31 @@ package dt
 
 import (
 	"io"
-	"math"
-	"os"
 )
 
-var (
-	sysfsFDT = "/sys/firmware/fdt"
-)
+const sysfsFDT = "/sys/firmware/fdt"
 
 // LoadFDT loads a flattened device tree from current running system.
 //
 // It first tries to load it from given io.ReaderAt, then from
-// /sys/firmware/fdt.
-func LoadFDT(dtb io.ReaderAt) (*FDT, error) {
+// that passed-in file name. If there are not passed-in file names,
+// it will try sysfsFDT.
+//
+// BUGS:
+// It is a bit clunky due to its origins; in the original version it
+// even had a race. hopefully we can deprecate it in a future u-root
+// release.
+func LoadFDT(dtb io.ReaderAt, names ...string) (*FDT, error) {
+	f := []FDTReader{}
 	if dtb != nil {
-		fdt, err := ReadFDT(io.NewSectionReader(dtb, 0, math.MaxInt64))
-		if err == nil {
-			return fdt, nil
+		f = append(f, WithReaderAt(dtb))
+	}
+	if len(names) == 0 {
+		f = append(f, WithFileName(sysfsFDT))
+	} else {
+		for _, n := range names {
+			f = append(f, WithFileName(n))
 		}
 	}
-
-	// Fallback to load fdt from sysfs.
-	sysFDTFile, err := os.Open(sysfsFDT)
-	if err == nil {
-		defer sysFDTFile.Close()
-		fdt, err := ReadFDT(sysFDTFile)
-		if err == nil {
-			return fdt, nil
-		}
-	}
-
-	return nil, errLoadFDT
+	return New(f...)
 }
