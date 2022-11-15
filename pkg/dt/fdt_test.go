@@ -7,9 +7,10 @@ package dt
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -42,20 +43,15 @@ func TestLoadFDT(t *testing.T) {
 		t.Errorf(`Read("fdt.dtb") = %s \n, want %s`, got, jsonData)
 	}
 
-	nonexistDTB := fmt.Sprintf("testdata/fdt_2022.dtb")
-	if _, err := os.Stat(nonexistDTB); err == nil {
-		t.Fatalf("test file should not exist: %s", nonexistDTB)
-	}
+	dir := t.TempDir()
+	nonexistDTB := filepath.Join(dir, "xxx")
 	// 2. Fallback to read from sys fs, and sys fs reading also failed.
-	sysfsFDT = nonexistDTB
-	_, err = LoadFDT(nil)
-	if err != errLoadFDT {
-		t.Errorf("LoadFDT(%s) return error %v, want error %v", nonexistDTB, err, errLoadFDT)
+	if _, err = LoadFDT(nil, nonexistDTB); !errors.Is(err, ErrNoValidReaders) {
+		t.Errorf("LoadFDT(%s) got %v, want %v", nonexistDTB, err, ErrNoValidReaders)
 	}
 
 	// 3. Fallback to read from sys fs, and succeed.
-	sysfsFDT = "testdata/fdt.dtb"
-	fdt, err = LoadFDT(nil)
+	fdt, err = LoadFDT(nil, "testdata/fdt.dtb")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,16 +102,13 @@ func TestParity(t *testing.T) {
 	t.Skip()
 
 	// Read and write the fdt.
-	f, err := os.Open("testdata/fdt.dtb")
+	fdt, err := New(WithFileName("testdata/fdt.dtb"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	fdt, err := ReadFDT(f)
-	f.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err = os.Create("testdata/fdt2.dtb")
+	dir := t.TempDir()
+	dtb := filepath.Join(dir, "fdt2.dtb")
+	f, err := os.Create(dtb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,11 +119,12 @@ func TestParity(t *testing.T) {
 	}
 
 	// Run your system's fdtdump command.
-	f, err = os.Create("testdata/fdt2.dts")
+	dts := filepath.Join(dir, "fdt2.dts")
+	f, err = os.Create(dts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("fdtdump", "testdata/fdt2.dtb")
+	cmd := exec.Command("fdtdump", dtb)
 	cmd.Stdout = f
 	err = cmd.Run()
 	f.Close()
@@ -138,10 +132,13 @@ func TestParity(t *testing.T) {
 		t.Fatal(err) // TODO: skip if system does not have fdtdump
 	}
 
-	cmd = exec.Command("diff", "testdata/fdt.dts", "testdata/fdt2.dts")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
+	// This used to run diff, has to be done better. It's not even working now so.
+	if false {
+		cmd = exec.Command("diff", "testdata/fdt.dts", "testdata/fdt2.dts")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Run()
+	}
 }
 
 func TestFindNode(t *testing.T) {
