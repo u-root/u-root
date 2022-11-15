@@ -7,6 +7,7 @@ package cpio
 import (
 	"bytes"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -634,10 +635,12 @@ func FuzzReadWriteNewc(f *testing.F) {
 
 	// Cannot log when fuzzing
 	Debug = func(s string, i ...interface{}) {}
+	log.SetOutput(io.Discard)
+	log.SetFlags(0)
 
 	f.Fuzz(func(t *testing.T, cpio []byte) {
 		// Unneccessary big inputs will only slow down the fuzzing
-		if len(cpio) > 256000 {
+		if len(cpio) > 64 {
 			return
 		}
 

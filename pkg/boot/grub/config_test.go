@@ -5,6 +5,7 @@
 package grub
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log"
@@ -111,27 +112,6 @@ func TestConfigs(t *testing.T) {
 
 func FuzzParseGrubConfig(f *testing.F) {
 
-	baseDir := f.TempDir()
-
-	dirPath := baseDir + "/EFI/uefi"
-	err := os.MkdirAll(dirPath, 0o777)
-	if err != nil {
-		f.Errorf("failed %v: %v", dirPath, err)
-	}
-
-	path := filepath.Join(dirPath, "grub.cfg")
-	devices := block.BlockDevices{&block.BlockDev{
-		Name:   dirPath,
-		FSType: "test",
-		FsUUID: strings.TrimSpace("07338180-4a96-4611-aa6a-a452600e4cfe"),
-	}}
-	mountPool := &mount.Pool{}
-	mountPool.Add(&mount.MountPoint{
-		Path:   dirPath,
-		Device: filepath.Join("/dev", dirPath),
-		FSType: "test",
-	})
-
 	//no log output
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
@@ -159,11 +139,37 @@ func FuzzParseGrubConfig(f *testing.F) {
 
 	f.Add([]byte("multiBoot 0\nmodule --nounzip"))
 	f.Fuzz(func(t *testing.T, data []byte) {
-		if len(data) > 1000000 {
+		if len(data) > 4096 {
 			return
 		}
 
-		err := os.WriteFile(path, data, 0o777)
+		// do not allow arbitrary files reads
+		if bytes.Contains(data, []byte("include")) {
+			return
+		}
+
+		baseDir := t.TempDir()
+
+		dirPath := baseDir + "/EFI/uefi"
+		err := os.MkdirAll(dirPath, 0o777)
+		if err != nil {
+			t.Errorf("failed %v: %v", dirPath, err)
+		}
+
+		path := filepath.Join(dirPath, "grub.cfg")
+		devices := block.BlockDevices{&block.BlockDev{
+			Name:   dirPath,
+			FSType: "test",
+			FsUUID: strings.TrimSpace("07338180-4a96-4611-aa6a-a452600e4cfe"),
+		}}
+		mountPool := &mount.Pool{}
+		mountPool.Add(&mount.MountPoint{
+			Path:   dirPath,
+			Device: filepath.Join("/dev", dirPath),
+			FSType: "test",
+		})
+
+		err = os.WriteFile(path, data, 0o777)
 		if err != nil {
 			t.Errorf("Failed to create configfile '%v':%v", path, err)
 		}
