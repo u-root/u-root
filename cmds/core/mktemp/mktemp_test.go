@@ -7,6 +7,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -21,28 +23,29 @@ type test struct {
 }
 
 func TestMkTemp(t *testing.T) {
+	tmpDir := os.TempDir()
 	tests := []test{
 		{
 			flags:      []string{},
-			out:        "/tmp/",
+			out:        tmpDir,
 			stdErr:     "",
 			exitStatus: 0,
 		},
 		{
 			flags:      []string{"-d"},
-			out:        "/tmp",
+			out:        tmpDir,
 			stdErr:     "",
 			exitStatus: 0,
 		},
 		{
 			flags:      []string{"foofoo.XXXX"},
-			out:        "/tmp/foofoo",
+			out:        filepath.Join(tmpDir, "foofoo"),
 			stdErr:     "",
 			exitStatus: 0,
 		},
 		{
 			flags:      []string{"foo.XXXXX", "--suffix", "baz"},
-			out:        "/tmp/foo.baz",
+			out:        filepath.Join(tmpDir, "foo.baz"),
 			stdErr:     "",
 			exitStatus: 0,
 		},
