@@ -15,7 +15,6 @@ import (
 )
 
 func FuzzParseGrubCfg(f *testing.F) {
-	tmpDir := f.TempDir()
 
 	//no log output
 	log.SetOutput(io.Discard)
@@ -46,6 +45,7 @@ func FuzzParseGrubCfg(f *testing.F) {
 			return
 		}
 
+		tmpDir := t.TempDir()
 		blockDevs := block.BlockDevices{&block.BlockDev{Name: tmpDir, FSType: "test", FsUUID: "07338180-4a96-4611-aa6a-a452600e4cfe"}}
 		ParseGrubCfg(grubV2, blockDevs, data, tmpDir)
 
