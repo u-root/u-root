@@ -64,7 +64,7 @@ func usage() {
 
 func mktemp() (string, error) {
 	if flags.dir == "" {
-		flags.dir = os.Getenv("TMPDIR")
+		flags.dir = os.TempDir()
 	}
 
 	if flags.u {
