@@ -112,6 +112,13 @@ jobs:
       - run:
           name: Test u-root tamago build
           command: GOOS=tamago GOARCH=riscv64 go build ./pkg/dt/...
+      - run:
+          name: build armory-boot elf target
+          command: |
+            cd /home/circleci
+            git clone https://github.com/usbarmory/armory-boot.git
+            cd armory-boot
+            BOOT=eMMC make elf
 
   race:
     <<: *beefy-template
