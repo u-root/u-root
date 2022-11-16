@@ -150,10 +150,10 @@ func FuzzParseGrubConfig(f *testing.F) {
 
 		baseDir := t.TempDir()
 
-		dirPath := baseDir + "/EFI/uefi"
+		dirPath := filepath.Join(baseDir, "EFI", "uefi")
 		err := os.MkdirAll(dirPath, 0o777)
 		if err != nil {
-			t.Errorf("failed %v: %v", dirPath, err)
+			t.Fatalf("failed %v: %v", dirPath, err)
 		}
 
 		path := filepath.Join(dirPath, "grub.cfg")
@@ -171,7 +171,7 @@ func FuzzParseGrubConfig(f *testing.F) {
 
 		err = os.WriteFile(path, data, 0o777)
 		if err != nil {
-			t.Errorf("Failed to create configfile '%v':%v", path, err)
+			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
 		ParseLocalConfig(context.Background(), baseDir, devices, mountPool)

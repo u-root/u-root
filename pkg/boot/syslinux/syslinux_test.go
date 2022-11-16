@@ -746,7 +746,7 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 		path := filepath.Join(dirPath, "isolinux.cfg")
 		err := os.WriteFile(path, data, 0o777)
 		if err != nil {
-			t.Errorf("Failed to create configfile '%v':%v", path, err)
+			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
 		ParseLocalConfig(context.Background(), dirPath)
