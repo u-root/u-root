@@ -28,6 +28,8 @@ type handler struct{}
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
+	case "/":
+		w.Write([]byte(content))
 	case "/200":
 		w.WriteHeader(200)
 		w.Write([]byte(content))
@@ -47,6 +49,15 @@ func TestWget(t *testing.T) {
 	srv := httptest.NewServer(handler{})
 	defer srv.Close()
 
+	// os.Getwd is needed to test default output path
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// return back to initial dir
+	defer os.Chdir(dir)
+
 	var tests = []struct {
 		name        string
 		url         string // in
@@ -59,6 +70,20 @@ func TestWget(t *testing.T) {
 			url:         fmt.Sprintf("%s/200", srv.URL),
 			wantContent: content,
 			outputPath:  "basic",
+			wantErr:     nil,
+		},
+		{
+			name:        "index.html-1",
+			url:         fmt.Sprintf("%s/", srv.URL),
+			wantContent: content,
+			outputPath:  "",
+			wantErr:     nil,
+		},
+		{
+			name:        "index.html-2",
+			url:         srv.URL,
+			wantContent: content,
+			outputPath:  "",
 			wantErr:     nil,
 		},
 		{
@@ -101,8 +126,16 @@ func TestWget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.outputPath = filepath.Join(t.TempDir(), tt.outputPath)
-			err := newCommand(tt.outputPath, tt.url).run()
+			tempDir := t.TempDir()
+			err := os.Chdir(tempDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.outputPath != "" {
+				tt.outputPath = filepath.Join(tempDir, tt.outputPath)
+			}
+			err = newCommand(tt.outputPath, tt.url).run()
 
 			if tt.wantErr == nil && err != nil {
 				t.Fatalf("expected nil, got: %v", err)
@@ -112,6 +145,9 @@ func TestWget(t *testing.T) {
 			}
 
 			if tt.wantContent != "" {
+				if tt.outputPath == "" {
+					tt.outputPath = "./index.html"
+				}
 				content, err := os.ReadFile(tt.outputPath)
 				if err != nil {
 					t.Fatalf("file %s was not created: %v", tt.outputPath, err)
@@ -152,32 +188,5 @@ func TestNoServer(t *testing.T) {
 	err := newCommand("", fmt.Sprintf("http://localhost:%d/200", port)).run()
 	if err == nil {
 		t.Error("expected err got nil")
-	}
-}
-
-func TestDefaultOutputPath(t *testing.T) {
-	tests := []struct {
-		path       string
-		wantOutput string
-	}{
-		{
-			path:       "/",
-			wantOutput: "index.html",
-		},
-		{
-			path:       "",
-			wantOutput: "index.html",
-		},
-		{
-			path:       "file",
-			wantOutput: "file",
-		},
-	}
-
-	for _, test := range tests {
-		got := defaultOutputPath(test.path)
-		if got != test.wantOutput {
-			t.Errorf("defaultOutputPath(%q) returned: (%q) expected: %q", test.path, got, test.wantOutput)
-		}
 	}
 }
