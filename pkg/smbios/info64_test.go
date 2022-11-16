@@ -6,6 +6,9 @@ package smbios
 
 import (
 	"io/ioutil"
+	"os"
+	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -99,4 +102,57 @@ func setupMockData() (*Info, error) {
 	}
 
 	return info, nil
+}
+
+func FuzzParseInfo(f *testing.F) {
+	seeds, err := filepath.Glob("testdata/*.bin")
+	if err != nil {
+		f.Errorf("failed to find seed corpora files: %v", err)
+	}
+
+	for _, seed := range seeds {
+		seedBytes, err := os.ReadFile(seed)
+		if err != nil {
+			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+		}
+
+		f.Add(seedBytes)
+	}
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+
+		if len(data) < 64 || len(data) > 4096 {
+			return
+		}
+
+		entryData := data[:32]
+		data = data[32:]
+
+		info, err := ParseInfo(entryData, data)
+		if err != nil {
+			return
+		}
+
+		var entry []byte
+		if info.Entry32 != nil {
+			entry, err = info.Entry32.MarshalBinary()
+		} else if info.Entry64 != nil {
+			entry, err = info.Entry64.MarshalBinary()
+
+		} else {
+			t.Fatalf("expected a SMBIOS 32-Bit or 64-Bit entry point but got none")
+		}
+
+		if err != nil {
+			t.Fatalf("failed to unmarshal entry data")
+		}
+
+		reparsedInfo, err := ParseInfo(entry, data)
+		if err != nil {
+			t.Fatalf("failed to reparse the SMBIOS info struct")
+		}
+		if !reflect.DeepEqual(info, reparsedInfo) {
+			t.Errorf("expected: %#v\ngot:%#v", info, reparsedInfo)
+		}
+	})
 }

@@ -1,0 +1,4 @@
+# dictionary for fuzzing smbios files
+anchor32="_SM_"
+anchor64="_SM3_"
+intAnchor=32"_DMI_"

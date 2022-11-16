@@ -7,6 +7,8 @@ package esxi
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -310,4 +312,26 @@ func TestImageOrder(t *testing.T) {
 	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)
 	}
+}
+
+func FuzzParse(f *testing.F) {
+	seeds, err := filepath.Glob("testdata/*.cfg")
+	if err != nil {
+		f.Errorf("failed to find seed corpora files: %v", err)
+	}
+	for _, seed := range seeds {
+		seedBytes, err := os.ReadFile(seed)
+		if err != nil {
+			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+		}
+
+		f.Add(seedBytes)
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) > 4096 {
+			return
+		}
+
+		parse(string(data))
+	})
 }
