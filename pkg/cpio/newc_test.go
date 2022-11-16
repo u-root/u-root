@@ -660,13 +660,13 @@ func FuzzReadWriteNewc(f *testing.F) {
 		}
 
 		if err := WriteTrailer(w); err != nil {
-			t.Errorf("WriteTrailer: %v", err)
+			t.Fatalf("WriteTrailer: %v", err)
 		}
 
 		r = Newc.Reader(bytes.NewReader(buf.Bytes()))
 		filesReadBack, err := ReadAllRecords(r)
 		if err != nil {
-			t.Errorf("TestReadWrite: reading generated data: %v", err)
+			t.Fatalf("TestReadWrite: reading generated data: %v", err)
 		}
 
 		// Now check a few things: arrays should be same length, Headers should match,
