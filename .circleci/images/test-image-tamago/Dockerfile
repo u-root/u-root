@@ -10,7 +10,7 @@ ARG USER=builder
 RUN groupadd --gid ${GID} $USER
 RUN useradd --uid ${UID} --gid $USER --shell /bin/bash --home-dir /home/$USER --create-home $USER
 RUN apt-get install -y sudo
-RUN echo "builder ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+RUN echo "$USER ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
 
 ENV TZ=Europe/Rome
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -26,19 +26,6 @@ RUN wget -O tamago-go.tgz https://github.com/usbarmory/tamago-go/releases/downlo
 RUN echo "${TAMAGO_CHECKSUM} tamago-go.tgz" | sha256sum --strict --check -
 RUN tar -C / -xzf tamago-go.tgz && rm tamago-go.tgz
 
-# install minisign
-ENV MINISIGN_VERSION="0.10"
-ENV MINISIGN_CHECKSUM="9fe40c2bd899a91f6b62a6ff3d469ece670f155307df50c2482ddd31337ab6da"
-RUN wget -O minisign.tgz https://github.com/jedisct1/minisign/archive/refs/tags/${MINISIGN_VERSION}.tar.gz
-RUN echo "${MINISIGN_CHECKSUM} minisign.tgz" | sha256sum --strict --check -
-RUN tar -xzf minisign.tgz
-RUN cd minisign-${MINISIGN_VERSION}; mkdir build; cd build; cmake ..; make; make install
-RUN rm -r minisign*
-
-# install habtool
-ENV HABTOOL_VERSION="v2022.05.25"
-RUN su - $USER -c "/usr/local/tamago-go/bin/go install github.com/usbarmory/crucible/cmd/habtool@${HABTOOL_VERSION}"
-
 ENV GOPATH "/home/${USER}/go"
 ENV USBARMORY_GIT "/home/${USER}/usbarmory"
 ENV TAMAGO "/usr/local/tamago-go/bin/go"
@@ -50,4 +37,4 @@ WORKDIR /build
 # for u-root circleci
 RUN sudo mkdir -p /home/circleci
 # IDs are still in flux.
-RUN sudo chown builder:builder /home/circleci
+RUN sudo chown $USER:$USER /home/circleci
