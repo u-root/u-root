@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"os"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
@@ -36,10 +38,6 @@ const (
 	tokenProp      token = 0x3
 	tokenNop       token = 0x4
 	tokenEnd       token = 0x9
-)
-
-var (
-	errLoadFDT = errors.New("load fdt failed after trying all sources")
 )
 
 // FDT contains the parsed contents of a Flattend Device Tree (.dtb).
@@ -76,7 +74,7 @@ type ReserveEntry struct {
 	Size    uint64
 }
 
-// ReadFDT reads FDT from an io.ReadSeeker.
+// ReadFDT reads an FDT from an io.ReadSeeker.
 func ReadFDT(f io.ReadSeeker) (*FDT, error) {
 	fdt := &FDT{}
 	if err := fdt.readHeader(f); err != nil {
@@ -414,4 +412,52 @@ func (fdt *FDT) NodeByName(name string) (*Node, bool) {
 	return fdt.RootNode.Find(func(n *Node) bool {
 		return n.Name == name
 	})
+}
+
+// ReadFile accepts a file name and returns an *FDT or error.
+func ReadFile(n string) (*FDT, error) {
+	f, err := os.Open(n)
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
+	return ReadFDT(f)
+}
+
+// FDTReader is a function type with no args that returns
+// a *FDT or an error.
+type FDTReader func() (*FDT, error)
+
+// WithReaderAt constructs an FDTReader with the provided io.ReaderAt.
+func WithReaderAt(r io.ReaderAt) FDTReader {
+	return func() (*FDT, error) {
+		return ReadFDT(io.NewSectionReader(r, 0, math.MaxInt64))
+	}
+}
+
+// WithFileName constructs an FDTReader with the provided file name.
+func WithFileName(n string) FDTReader {
+	return func() (*FDT, error) {
+		return ReadFile(n)
+	}
+}
+
+// ErrNoValidReaders indicates that no readers succeeded.
+var ErrNoValidReaders = errors.New("No FDT readers succeeded")
+
+// New returns a new FDT, trying each FDTReader in turn
+// until it succeeds or all have failed. It will return
+// the last error.
+// TODO: once we move to go 1.20, use the new error tree
+// support.
+func New(readers ...FDTReader) (*FDT, error) {
+	for _, r := range readers {
+		f, err := r()
+		if err != nil {
+			continue
+		}
+		return f, nil
+	}
+	return nil, ErrNoValidReaders
 }
