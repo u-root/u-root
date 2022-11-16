@@ -1,0 +1,10 @@
+# dictionary for fuzzing esxci config
+title="title"
+kernel="kernel"
+kernelopt="kernelopt"
+updated="updated"
+bootstate="bootstate"
+modules="modules"
+opt1="b.b00"
+0="0"
+1="1"
