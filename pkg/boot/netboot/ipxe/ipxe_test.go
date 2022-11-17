@@ -471,12 +471,12 @@ func TestIpxeConfig(t *testing.T) {
 func FuzzParseIpxeConfig(f *testing.F) {
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
 		}
 
 		f.Add(seedBytes)
