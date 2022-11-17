@@ -41,6 +41,13 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 		}
 	}
 	for _, file := range args {
+		if file == "-" {
+			err := cat(stdin, stdout)
+			if err != nil {
+				return err
+			}
+			continue
+		}
 		f, err := os.Open(file)
 		if err != nil {
 			return err

@@ -10,8 +10,8 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
-	"reflect"
 	"testing"
 )
 
@@ -50,7 +50,7 @@ func TestCat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(out.Bytes(), someData) {
+	if !bytes.Equal(out.Bytes(), someData) {
 		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
 	}
 }
@@ -87,7 +87,7 @@ func TestRunFiles(t *testing.T) {
 	if err := run(files, nil, &out); err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(out.Bytes(), someData) {
+	if !bytes.Equal(out.Bytes(), someData) {
 		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
 	}
 }
@@ -122,5 +122,35 @@ func TestRunNoArgs(t *testing.T) {
 	}
 	if out.String() != inputdata {
 		t.Errorf("Want: %q Got: %q", inputdata, out.String())
+	}
+}
+
+func TestCatDash(t *testing.T) {
+	tempDir := t.TempDir()
+
+	f1 := path.Join(tempDir, "f1")
+	err := os.WriteFile(f1, []byte("line1\nline2\n"), 0o666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f2 := path.Join(tempDir, "f2")
+	err = os.WriteFile(f2, []byte("line4\nline5\n"), 0o666)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var stdin, stdout bytes.Buffer
+	stdin.WriteString("line3\n")
+
+	if err = run([]string{f1, "-", f2}, &stdin, &stdout); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "line1\nline2\nline3\nline4\nline5\n"
+	got := stdout.String()
+
+	if got != want {
+		t.Errorf("want: %s, got: %s", want, got)
 	}
 }
