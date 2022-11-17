@@ -5,6 +5,7 @@
 package syslinux
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -708,9 +709,6 @@ func TestParseURL(t *testing.T) {
 }
 
 func FuzzParseSyslinuxConfig(f *testing.F) {
-	dirPath := f.TempDir()
-
-	path := filepath.Join(dirPath, "isolinux.cfg")
 
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
@@ -733,13 +731,22 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 	f.Add([]byte("lABel 0\nAppend initrd"))
 	f.Add([]byte("lABel 0\nkernel mboot.c32\nAppend ---"))
 	f.Fuzz(func(t *testing.T, data []byte) {
-		if len(data) > 1000000 {
+
+		if len(data) > 4096 {
 			return
 		}
 
+		// do not allow arbitrary files reads
+		if bytes.Contains(data, []byte("include")) {
+			return
+		}
+
+		dirPath := t.TempDir()
+
+		path := filepath.Join(dirPath, "isolinux.cfg")
 		err := os.WriteFile(path, data, 0o777)
 		if err != nil {
-			t.Errorf("Failed to create configfile '%v':%v", path, err)
+			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
 		ParseLocalConfig(context.Background(), dirPath)
