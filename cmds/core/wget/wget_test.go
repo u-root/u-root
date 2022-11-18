@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -28,9 +27,7 @@ type handler struct{}
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
-	case "/":
-		w.Write([]byte(content))
-	case "/200":
+	case "/", "/200", "/200/", "/200/index.html", "/200/300/":
 		w.WriteHeader(200)
 		w.Write([]byte(content))
 	case "/302":
@@ -49,49 +46,58 @@ func TestWget(t *testing.T) {
 	srv := httptest.NewServer(handler{})
 	defer srv.Close()
 
-	// os.Getwd is needed to test default output path
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// return back to initial dir
-	defer os.Chdir(dir)
-
 	var tests = []struct {
-		name        string
-		url         string // in
-		wantContent string // out
-		outputPath  string
-		wantErr     error
+		name           string
+		url            string // in
+		wantContent    string // out
+		outputPath     string
+		wantOutputPath string
+		wantErr        error
 	}{
 		{
-			name:        "ipv4",
-			url:         fmt.Sprintf("%s/200", srv.URL),
-			wantContent: content,
-			outputPath:  "basic",
-			wantErr:     nil,
+			name:           "ipv4",
+			url:            fmt.Sprintf("%s/200", srv.URL),
+			wantContent:    content,
+			outputPath:     "basic",
+			wantOutputPath: "basic",
+			wantErr:        nil,
+		},
+
+		{
+			name:           "first path of url",
+			url:            fmt.Sprintf("%s/200", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "200",
+			wantErr:        nil,
 		},
 		{
-			name:        "index.html-1",
-			url:         fmt.Sprintf("%s/", srv.URL),
-			wantContent: content,
-			outputPath:  "",
-			wantErr:     nil,
+			name:           "index.html of domain",
+			url:            fmt.Sprintf("%s/", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "index.html",
+			wantErr:        nil,
 		},
 		{
-			name:        "index.html-2",
-			url:         srv.URL,
-			wantContent: content,
-			outputPath:  "",
-			wantErr:     nil,
+			name:           "index.html of subfolder",
+			url:            fmt.Sprintf("%s/200/", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "index.html",
+			wantErr:        nil,
 		},
 		{
-			name:        "localhost",
-			url:         strings.Replace(srv.URL, "127.0.0.1", "localhost", 1) + "/200",
-			wantContent: content,
-			outputPath:  "ipv4",
-			wantErr:     nil,
+			name:           "index.html of 2nd level subfolder",
+			url:            fmt.Sprintf("%s/200/300/", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "index.html",
+			wantErr:        nil,
+		},
+		{
+			name:           "localhost",
+			url:            strings.Replace(srv.URL, "127.0.0.1", "localhost", 1) + "/200",
+			wantContent:    content,
+			outputPath:     "ipv4",
+			wantOutputPath: "ipv4",
+			wantErr:        nil,
 		},
 		// TODO: CircleCI does not support ipv6
 		// {
@@ -102,10 +108,11 @@ func TestWget(t *testing.T) {
 		// 	retCode: 0,
 		// },
 		{
-			name:       "redirect",
-			url:        fmt.Sprintf("%s/302", srv.URL),
-			outputPath: "redirect",
-			wantErr:    nil,
+			name:           "redirect",
+			url:            fmt.Sprintf("%s/302", srv.URL),
+			outputPath:     "redirect",
+			wantOutputPath: "redirect",
+			wantErr:        nil,
 		},
 		{
 			name:    "4xx error",
@@ -126,16 +133,11 @@ func TestWget(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tempDir := t.TempDir()
-			err := os.Chdir(tempDir)
-			if err != nil {
-				t.Fatal(err)
+			if err := os.Chdir(t.TempDir()); err != nil {
+				t.Fatalf("failed to change into temporary directory: %v", err)
 			}
 
-			if tt.outputPath != "" {
-				tt.outputPath = filepath.Join(tempDir, tt.outputPath)
-			}
-			err = newCommand(tt.outputPath, tt.url).run()
+			err := newCommand(tt.outputPath, tt.url).run()
 
 			if tt.wantErr == nil && err != nil {
 				t.Fatalf("expected nil, got: %v", err)
@@ -145,12 +147,9 @@ func TestWget(t *testing.T) {
 			}
 
 			if tt.wantContent != "" {
-				if tt.outputPath == "" {
-					tt.outputPath = "./index.html"
-				}
-				content, err := os.ReadFile(tt.outputPath)
+				content, err := os.ReadFile(tt.wantOutputPath)
 				if err != nil {
-					t.Fatalf("file %s was not created: %v", tt.outputPath, err)
+					t.Fatalf("file %s was not created: %v", tt.wantOutputPath, err)
 				}
 
 				// Check content.
