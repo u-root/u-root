@@ -1,0 +1,5 @@
+#!ipxe
+				kernel http://someplace.com/foobar/pxefiles/kernel
+				initrd initrd-file.001
+				initrd initrd-file.002
+				boot

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -464,4 +466,30 @@ func TestIpxeConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func FuzzParseIpxeConfig(f *testing.F) {
+	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
+	if err != nil {
+		f.Fatalf("failed to find seed corpora files: %v", err)
+	}
+	for _, seed := range seeds {
+		seedBytes, err := os.ReadFile(seed)
+		if err != nil {
+			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
+		}
+
+		f.Add(seedBytes)
+	}
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) > 4096 {
+			return
+		}
+
+		parser := &parser{
+			log: ulogtest.Logger{t},
+		}
+		parser.parseIpxe(string(data))
+	})
 }

@@ -426,13 +426,13 @@ func FuzzRun(f *testing.F) {
 	// get seed corpora
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed to read seed corpora from file %v: %v", seed, err)
+			f.Fatalf("failed to read seed corpora from file %v: %v", seed, err)
 		}
 
 		f.Add(seedBytes)
