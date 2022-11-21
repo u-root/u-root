@@ -22,8 +22,6 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-var tabCompletion = flag.Bool("tabcomp", false, "Enable tab completion.")
-
 type input interface {
 	Input(prefix string, completer prompt.Completer, opts ...prompt.Option) string
 }
@@ -69,13 +67,7 @@ func (s shell) runAll(narg int) error {
 
 	if narg == 0 {
 		if term.IsTerminal(int(os.Stdin.Fd())) {
-			if *tabCompletion {
-				return s.runInteractiveTabCompletion(r, os.Stdout)
-			}
-
-			fmt.Println("To get tab completion run 'gosh -tabcomp'.\nTab completion will only work with a working framebuffer.")
-
-			return s.runInteractive(r, os.Stdin, os.Stdout)
+			return s.runInteractiveTabCompletion(r, os.Stdout)
 		}
 
 		return s.run(r, os.Stdin, "")
@@ -95,35 +87,6 @@ func (s shell) run(r *interp.Runner, reader io.Reader, name string) error {
 	return r.Run(context.Background(), prog)
 }
 
-func (s shell) runInteractive(r *interp.Runner, stdin io.Reader, stdout io.Writer) error {
-	parser := syntax.NewParser()
-
-	fmt.Fprintf(stdout, "$ ")
-
-	var runErr error
-
-	if err := parser.Interactive(stdin, func(stmts []*syntax.Stmt) bool {
-		if parser.Incomplete() {
-			fmt.Fprintf(stdout, "> ")
-
-			return true
-		}
-		for _, stmt := range stmts {
-			runErr = r.Run(context.Background(), stmt)
-			if r.Exited() {
-				return false
-			}
-		}
-		fmt.Fprintf(stdout, "$ ")
-
-		return true
-	}); err != nil {
-		return err
-	}
-
-	return runErr
-}
-
 func (s shell) runInteractiveTabCompletion(r *interp.Runner, stdout io.Writer) error {
 	parser := syntax.NewParser()
 
@@ -131,20 +94,7 @@ func (s shell) runInteractiveTabCompletion(r *interp.Runner, stdout io.Writer) e
 		s.input = inputPrompt{}
 	}
 
-	var runErr error
-
-	// TODO(MDr164): Has a tendency to panic when no framebuffer is available.
-	defer func() {
-		if err := recover(); err != nil {
-			runErr = fmt.Errorf("failed to initialize tabcompletion, falling back to no tabcompletion")
-		}
-	}()
-
 	for {
-		if runErr != nil {
-			break
-		}
-
 		in := s.Input(
 			"$ ",
 			completerFunc,
@@ -162,7 +112,7 @@ func (s shell) runInteractiveTabCompletion(r *interp.Runner, stdout io.Writer) e
 				return true
 			}
 
-			runErr = r.Run(context.Background(), stmt)
+			_ = r.Run(context.Background(), stmt)
 
 			return !r.Exited()
 		}); err != nil {
@@ -170,5 +120,5 @@ func (s shell) runInteractiveTabCompletion(r *interp.Runner, stdout io.Writer) e
 		}
 	}
 
-	return runErr
+	return nil
 }
