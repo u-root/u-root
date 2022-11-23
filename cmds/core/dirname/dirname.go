@@ -8,6 +8,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,9 +16,11 @@ import (
 	"path/filepath"
 )
 
+var ErrNoArg = errors.New("missing operand")
+
 func run(out io.Writer, args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("missing operand")
+		return ErrNoArg
 	}
 
 	for _, n := range args {

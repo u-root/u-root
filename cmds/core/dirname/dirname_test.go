@@ -6,19 +6,20 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
 type test struct {
 	args []string
 	out  string
-	err  string
+	err  error
 }
 
 var dirnameTests = []test{
 	// For no args it seems we have to print an error.
 	// It should be missing operand[s] but that's not the standard.
-	{args: []string{}, err: "missing operand"},
+	{args: []string{}, err: ErrNoArg},
 	{args: []string{""}, out: ".\n"},
 	{args: []string{"/this/that"}, out: "/this\n"},
 	{args: []string{"/this/that", "/other"}, out: "/this\n/\n"},
@@ -33,12 +34,8 @@ func TestDirName(t *testing.T) {
 		out.Reset()
 		err := run(out, tt.args)
 
-		if err != nil && tt.err == "" {
-			t.Errorf("no error expected, got: \n%v", err)
-		} else if err == nil && tt.err != "" {
-			t.Errorf("error \n%v\nexpected, got nil error", tt.err)
-		} else if err != nil && err.Error() != tt.err {
-			t.Errorf("error \n%v\nexpected, got: \n%v", tt.err, err)
+		if !errors.Is(err, tt.err) {
+			t.Errorf("errors do not match: got %v - want %v", err, tt.err)
 		}
 
 		if out.String() != tt.out {
