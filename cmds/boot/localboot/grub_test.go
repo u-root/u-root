@@ -16,6 +16,8 @@ import (
 
 func FuzzParseGrubCfg(f *testing.F) {
 
+	tmpDir := f.TempDir()
+
 	//no log output
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
@@ -40,12 +42,12 @@ func FuzzParseGrubCfg(f *testing.F) {
 
 		f.Add(string(seedBytes))
 	}
+
 	f.Fuzz(func(t *testing.T, data string) {
 		if len(data) > 256000 {
 			return
 		}
 
-		tmpDir := t.TempDir()
 		blockDevs := block.BlockDevices{&block.BlockDev{Name: tmpDir, FSType: "test", FsUUID: "07338180-4a96-4611-aa6a-a452600e4cfe"}}
 		ParseGrubCfg(grubV2, blockDevs, data, tmpDir)
 

@@ -200,6 +200,7 @@ func FuzzRun(f *testing.F) {
 		"wait with args not handled yet"}
 	re := strings.NewReplacer("\x22", "", "\x24", "", "\x26", "", "\x27", "", "\x28", "", "\x29", "", "\x2A", "", "\x3C", "", "\x3E", "", "\x3F", "", "\x5C", "", "\x7C", "")
 
+	dirPath := f.TempDir()
 	sh := shell{}
 	var buf bytes.Buffer
 	runner, err := interp.New(interp.StdIO(nil, &buf, &buf))
@@ -265,7 +266,6 @@ func FuzzRun(f *testing.F) {
 			return
 		}
 
-		dirPath := t.TempDir()
 		buf.Reset()
 		runner.Reset()
 		runner.Dir = dirPath
