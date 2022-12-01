@@ -23,54 +23,54 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type creator interface {
-	create() error
+type Creator interface {
+	Create() error
 	fmt.Stringer
 }
 
-type dir struct {
+type Dir struct {
 	Name string
 	Mode os.FileMode
 }
 
-func (d dir) create() error {
+func (d Dir) Create() error {
 	return os.MkdirAll(d.Name, d.Mode)
 }
 
-func (d dir) String() string {
+func (d Dir) String() string {
 	return fmt.Sprintf("dir %q (mode %#o)", d.Name, d.Mode)
 }
 
-type symlink struct {
+type Symlink struct {
 	Target  string
 	NewPath string
 }
 
-func (s symlink) create() error {
+func (s Symlink) Create() error {
 	os.Remove(s.NewPath)
 	return os.Symlink(s.Target, s.NewPath)
 }
 
-func (s symlink) String() string {
+func (s Symlink) String() string {
 	return fmt.Sprintf("symlink %q -> %q", s.NewPath, s.Target)
 }
 
-type dev struct {
+type Dev struct {
 	Name string
 	Mode uint32
 	Dev  int
 }
 
-func (d dev) create() error {
+func (d Dev) Create() error {
 	os.Remove(d.Name)
 	return unix.Mknod(d.Name, d.Mode, d.Dev)
 }
 
-func (d dev) String() string {
+func (d Dev) String() string {
 	return fmt.Sprintf("dev %q (mode %#o; magic %d)", d.Name, d.Mode, d.Dev)
 }
 
-type mount struct {
+type Mount struct {
 	Source string
 	Target string
 	FSType string
@@ -78,103 +78,103 @@ type mount struct {
 	Opts   string
 }
 
-func (m mount) create() error {
+func (m Mount) Create() error {
 	return unix.Mount(m.Source, m.Target, m.FSType, m.Flags, m.Opts)
 }
 
-func (m mount) String() string {
+func (m Mount) String() string {
 	return fmt.Sprintf("mount -t %q -o %s %q %q flags %#x", m.FSType, m.Opts, m.Source, m.Target, m.Flags)
 }
 
-type cpdir struct {
+type CpDir struct {
 	Source string
 	Target string
 }
 
-func (c cpdir) create() error {
+func (c CpDir) Create() error {
 	return cp.CopyTree(c.Source, c.Target)
 }
 
-func (c cpdir) String() string {
+func (c CpDir) String() string {
 	return fmt.Sprintf("cp -a %q %q", c.Source, c.Target)
 }
 
 var (
 	// These have to be created / mounted first, so that the logging works correctly.
-	preNamespace = []creator{
-		dir{Name: "/dev", Mode: 0o777},
+	PreNamespace = []Creator{
+		Dir{Name: "/dev", Mode: 0o777},
 
 		// Kernel must be compiled with CONFIG_DEVTMPFS.
-		mount{Source: "devtmpfs", Target: "/dev", FSType: "devtmpfs"},
+		Mount{Source: "devtmpfs", Target: "/dev", FSType: "devtmpfs"},
 	}
-	namespace = []creator{
-		dir{Name: "/buildbin", Mode: 0o777},
-		dir{Name: "/ubin", Mode: 0o777},
-		dir{Name: "/tmp", Mode: 0o777},
-		dir{Name: "/env", Mode: 0o777},
-		dir{Name: "/tcz", Mode: 0o777},
-		dir{Name: "/lib", Mode: 0o777},
-		dir{Name: "/usr/lib", Mode: 0o777},
-		dir{Name: "/var/log", Mode: 0o777},
-		dir{Name: "/go/pkg/linux_amd64", Mode: 0o777},
+	Namespace = []Creator{
+		Dir{Name: "/buildbin", Mode: 0o777},
+		Dir{Name: "/ubin", Mode: 0o777},
+		Dir{Name: "/tmp", Mode: 0o777},
+		Dir{Name: "/env", Mode: 0o777},
+		Dir{Name: "/tcz", Mode: 0o777},
+		Dir{Name: "/lib", Mode: 0o777},
+		Dir{Name: "/usr/lib", Mode: 0o777},
+		Dir{Name: "/var/log", Mode: 0o777},
+		Dir{Name: "/go/pkg/linux_amd64", Mode: 0o777},
 
-		dir{Name: "/etc", Mode: 0o777},
+		Dir{Name: "/etc", Mode: 0o777},
 
-		dir{Name: "/proc", Mode: 0o555},
-		mount{Source: "proc", Target: "/proc", FSType: "proc"},
-		mount{Source: "tmpfs", Target: "/tmp", FSType: "tmpfs"},
+		Dir{Name: "/proc", Mode: 0o555},
+		Mount{Source: "proc", Target: "/proc", FSType: "proc"},
+		Mount{Source: "tmpfs", Target: "/tmp", FSType: "tmpfs"},
 
-		dev{Name: "/dev/tty", Mode: unix.S_IFCHR | 0o666, Dev: 0x0500},
-		dev{Name: "/dev/urandom", Mode: unix.S_IFCHR | 0o444, Dev: 0x0109},
-		dev{Name: "/dev/port", Mode: unix.S_IFCHR | 0o640, Dev: 0x0104},
+		Dev{Name: "/dev/tty", Mode: unix.S_IFCHR | 0o666, Dev: 0x0500},
+		Dev{Name: "/dev/urandom", Mode: unix.S_IFCHR | 0o444, Dev: 0x0109},
+		Dev{Name: "/dev/port", Mode: unix.S_IFCHR | 0o640, Dev: 0x0104},
 
-		dir{Name: "/dev/pts", Mode: 0o777},
-		mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
+		Dir{Name: "/dev/pts", Mode: 0o777},
+		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
 		// Note: if we mount /dev/pts with "newinstance", we *must* make "/dev/ptmx" a symlink to "/dev/pts/ptmx"
-		symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
+		Symlink{NewPath: "/dev/ptmx", Target: "/dev/pts/ptmx"},
 		// Note: shm is required at least for Chrome. If you don't mount
 		// it chrome throws a bogus "out of memory" error, not the more
 		// useful "I can't open /dev/shm/whatever". SAD!
-		dir{Name: "/dev/shm", Mode: 0o777},
-		mount{Source: "tmpfs", Target: "/dev/shm", FSType: "tmpfs"},
+		Dir{Name: "/dev/shm", Mode: 0o777},
+		Mount{Source: "tmpfs", Target: "/dev/shm", FSType: "tmpfs"},
 
-		dir{Name: "/sys", Mode: 0o555},
-		mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
-		mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
-		mount{Source: "efivarfs", Target: "/sys/firmware/efi/efivars", FSType: "efivarfs"},
+		Dir{Name: "/sys", Mode: 0o555},
+		Mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
+		Mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
+		Mount{Source: "efivarfs", Target: "/sys/firmware/efi/efivars", FSType: "efivarfs"},
 
-		cpdir{Source: "/etc", Target: "/tmp/etc"},
-		mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},
+		CpDir{Source: "/etc", Target: "/tmp/etc"},
+		Mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},
 	}
 
 	// cgroups are optional for most u-root users, especially
 	// LinuxBoot/NERF. Some users use u-root for container stuff.
-	cgroupsnamespace = []creator{
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
-		dir{Name: "/sys/fs/cgroup/memory", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/freezer", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/devices", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/cpu,cpuacct", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/blkio", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/cpuset", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/pids", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/net_cls,net_prio", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/hugetlb", Mode: 0o555},
-		dir{Name: "/sys/fs/cgroup/perf_event", Mode: 0o555},
-		symlink{NewPath: "/sys/fs/cgroup/cpu", Target: "/sys/fs/cgroup/cpu,cpuacct"},
-		symlink{NewPath: "/sys/fs/cgroup/cpuacct", Target: "/sys/fs/cgroup/cpu,cpuacct"},
-		symlink{NewPath: "/sys/fs/cgroup/net_cls", Target: "/sys/fs/cgroup/net_cls,net_prio"},
-		symlink{NewPath: "/sys/fs/cgroup/net_prio", Target: "/sys/fs/cgroup/net_cls,net_prio"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/memory", FSType: "cgroup", Opts: "memory"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/freezer", FSType: "cgroup", Opts: "freezer"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/devices", FSType: "cgroup", Opts: "devices"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/cpu,cpuacct", FSType: "cgroup", Opts: "cpu,cpuacct"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/blkio", FSType: "cgroup", Opts: "blkio"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/cpuset", FSType: "cgroup", Opts: "cpuset"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/pids", FSType: "cgroup", Opts: "pids"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/net_cls,net_prio", FSType: "cgroup", Opts: "net_cls,net_prio"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/hugetlb", FSType: "cgroup", Opts: "hugetlb"},
-		mount{Source: "cgroup", Target: "/sys/fs/cgroup/perf_event", FSType: "cgroup", Opts: "perf_event"},
+	CgroupsNamespace = []Creator{
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
+		Dir{Name: "/sys/fs/cgroup/memory", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/freezer", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/devices", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/cpu,cpuacct", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/blkio", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/cpuset", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/pids", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/net_cls,net_prio", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/hugetlb", Mode: 0o555},
+		Dir{Name: "/sys/fs/cgroup/perf_event", Mode: 0o555},
+		Symlink{NewPath: "/sys/fs/cgroup/cpu", Target: "/sys/fs/cgroup/cpu,cpuacct"},
+		Symlink{NewPath: "/sys/fs/cgroup/cpuacct", Target: "/sys/fs/cgroup/cpu,cpuacct"},
+		Symlink{NewPath: "/sys/fs/cgroup/net_cls", Target: "/sys/fs/cgroup/net_cls,net_prio"},
+		Symlink{NewPath: "/sys/fs/cgroup/net_prio", Target: "/sys/fs/cgroup/net_cls,net_prio"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/memory", FSType: "cgroup", Opts: "memory"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/freezer", FSType: "cgroup", Opts: "freezer"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/devices", FSType: "cgroup", Opts: "devices"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/cpu,cpuacct", FSType: "cgroup", Opts: "cpu,cpuacct"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/blkio", FSType: "cgroup", Opts: "blkio"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/cpuset", FSType: "cgroup", Opts: "cpuset"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/pids", FSType: "cgroup", Opts: "pids"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/net_cls,net_prio", FSType: "cgroup", Opts: "net_cls,net_prio"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/hugetlb", FSType: "cgroup", Opts: "hugetlb"},
+		Mount{Source: "cgroup", Target: "/sys/fs/cgroup/perf_event", FSType: "cgroup", Opts: "perf_event"},
 	}
 )
 
@@ -182,12 +182,12 @@ func goBin() string {
 	return fmt.Sprintf("/go/bin/%s_%s:/go/bin:/go/pkg/tool/%s_%s", runtime.GOOS, runtime.GOARCH, runtime.GOOS, runtime.GOARCH)
 }
 
-func create(namespace []creator, optional bool) {
+func Create(namespace []Creator, optional bool) {
 	// Clear umask bits so that we get stuff like ptmx right.
 	m := unix.Umask(0)
 	defer unix.Umask(m)
 	for _, c := range namespace {
-		if err := c.create(); err != nil {
+		if err := c.Create(); err != nil {
 			if optional {
 				ulog.KernelLog.Printf("u-root init [optional]: warning creating %s: %v", c, err)
 			} else {
@@ -220,10 +220,10 @@ func SetEnv() {
 // CreateRootfs creates the default u-root file system.
 func CreateRootfs() {
 	// Mount devtmpfs, then open /dev/kmsg with Reinit.
-	create(preNamespace, false)
+	Create(PreNamespace, false)
 	ulog.KernelLog.Reinit()
 
-	create(namespace, false)
+	Create(Namespace, false)
 
 	// systemd gets upset when it discovers something has already setup cgroups
 	// We have to do this after the base namespace is created, so we have /proc
@@ -231,7 +231,7 @@ func CreateRootfs() {
 	systemd, present := initFlags["systemd"]
 	systemdEnabled, boolErr := strconv.ParseBool(systemd)
 	if !present || boolErr != nil || !systemdEnabled {
-		create(cgroupsnamespace, true)
+		Create(CgroupsNamespace, true)
 	}
 }
 
