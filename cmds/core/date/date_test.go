@@ -8,6 +8,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"os"
 	"regexp"
 	"strings"
@@ -237,6 +238,11 @@ func TestRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			rc := RealClock{}
+			// Avoid spamming our CI with errors -- we don't
+			// look at error output (yet), but when we do, this
+			// bytes.Buffer will make it more convenient.
+			var stderr bytes.Buffer
+			flag.CommandLine.SetOutput(&stderr)
 			if err := run(tt.arg, tt.univ, tt.fileref, rc, &buf); err != nil {
 				if !strings.Contains(err.Error(), tt.wantErr) {
 					t.Errorf("%q failed: %q", tt.name, err)
