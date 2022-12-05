@@ -27,22 +27,22 @@ func findBlockDevFromSmbios(sysPath string, s smbios.SystemSlots) ([]string, err
 	dev := (s.DeviceFunctionNumber & 0b11111000) >> 3
 	fn := s.DeviceFunctionNumber & 0b111
 	domainBusStr := fmt.Sprintf("%04x:%02x", s.SegmentGroupNumber, s.BusNumber)
-	slotBDFPrefix := fmt.Sprintf("%s/devices/pci%s/%s:%02x.%x/", sysPath, domainBusStr, domainBusStr, dev, fn)
+	slotBDFPrefix := filepath.Join(sysPath, fmt.Sprintf("devices/pci%s/%s:%02x.%x/", domainBusStr, domainBusStr, dev, fn))
 
-	blockPath := sysPath + "/block/"
+	blockPath := filepath.Join(sysPath, "block/")
 	dirEntries, err := os.ReadDir(blockPath)
 	if err != nil {
 		return nil, err
 	}
 	devPaths := make([]string, 0)
 	for _, dirEntry := range dirEntries {
-		path := blockPath + dirEntry.Name()
+		path := filepath.Join(blockPath, dirEntry.Name())
 		realPath, err := filepath.EvalSymlinks(path)
 		if err != nil {
 			return nil, err
 		}
 		if strings.HasPrefix(realPath, slotBDFPrefix) {
-			devPaths = append(devPaths, "/dev/"+dirEntry.Name())
+			devPaths = append(devPaths, filepath.Join("/dev", dirEntry.Name()))
 		}
 	}
 	return devPaths, nil
@@ -68,12 +68,10 @@ func findSlotType(sysPath string, slots []*smbios.SystemSlots, slotType uint8) (
 func FindSlotType(slotType uint8) ([]string, error) {
 	smbiosTables, err := smbios.FromSysfs()
 	if err != nil {
-		log.Printf("Could not read SMBIOS tables for version: %v", err)
 		return nil, err
 	}
 	slots, err := smbiosTables.GetSystemSlots()
 	if err != nil {
-		log.Printf("Could not read system slots from SMBIOS: %v", err)
 		return nil, err
 	}
 
