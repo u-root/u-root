@@ -35,8 +35,8 @@ import (
 	"log"
 	"os"
 
-	gpgerror "golang.org/x/crypto/openpgp/errors"
-	"golang.org/x/crypto/openpgp/packet"
+	gpgerror "github.com/ProtonMail/go-crypto/openpgp/errors"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 var (
