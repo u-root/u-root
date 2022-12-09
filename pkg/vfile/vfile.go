@@ -19,8 +19,8 @@ import (
 	"io"
 	"os"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 // ErrUnsigned is returned for a file that failed signature verification.
@@ -152,7 +152,7 @@ func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error
 
 	if keyring == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrNoKeyRing}
-	} else if signer, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(content), signaturef); err != nil {
+	} else if signer, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(content), signaturef, nil); err != nil {
 		return f, ErrUnsigned{Path: path, Err: err}
 	} else if signer == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrWrongSigner{keyring}}
