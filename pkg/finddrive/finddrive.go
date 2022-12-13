@@ -8,7 +8,6 @@ package finddrive
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,8 +54,6 @@ func findSlotType(sysPath string, slots []*smbios.SystemSlots, slotType uint8) (
 			newPaths, err := findBlockDevFromSmbios(sysPath, *s)
 			if err == nil {
 				paths = append(paths, newPaths...)
-			} else {
-				log.Printf("Error finding matching block device: %v", err)
 			}
 		}
 	}
