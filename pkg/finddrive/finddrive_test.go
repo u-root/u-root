@@ -6,6 +6,7 @@ package finddrive
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/smbios"
@@ -34,25 +35,25 @@ var (
 func mockSysDir(t *testing.T) string {
 	sysDir := t.TempDir()
 
-	devicesPath := sysDir + "/devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/"
+	devicesPath := filepath.Join(sysDir, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
 	err := os.MkdirAll(devicesPath, 0o777)
 	if err != nil {
 		t.Errorf("Error creating path %s: %v", devicesPath, err)
 	}
 
-	err = os.MkdirAll(sysDir+"/block/", 0o777)
+	err = os.MkdirAll(filepath.Join(sysDir, "block/"), 0o777)
 	if err != nil {
-		t.Errorf("Error creating path %s: %v", sysDir+"/block/", err)
+		t.Errorf("Error creating path %s: %v", filepath.Join(sysDir, "block/"), err)
 	}
 
-	devicesFile := devicesPath + devName
+	devicesFile := filepath.Join(devicesPath, devName)
 	f, err := os.Create(devicesFile)
 	if err != nil {
 		t.Errorf("Error creating file %s: %v", devicesFile, err)
 	}
 	f.Close()
 
-	err = os.Symlink(devicesFile, sysDir+"/block/nvme0n1")
+	err = os.Symlink(devicesFile, filepath.Join(sysDir, "block/nvme0n1"))
 	if err != nil {
 		t.Errorf("Error creating symlink: %v", err)
 	}
