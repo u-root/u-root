@@ -11,25 +11,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
-	// Loop ioctl commands --- we will commandeer 0x4C ('L')
-	_LOOP_SET_CAPACITY = 0x4C07
-	_LOOP_CHANGE_FD    = 0x4C06
-	_LOOP_GET_STATUS64 = 0x4C05
-	_LOOP_SET_STATUS64 = 0x4C04
-	_LOOP_GET_STATUS   = 0x4C03
-	_LOOP_SET_STATUS   = 0x4C02
-	_LOOP_CLR_FD       = 0x4C01
-	_LOOP_SET_FD       = 0x4C00
-	_LO_NAME_SIZE      = 64
-	_LO_KEY_SIZE       = 32
-
-	// /dev/loop-control interface
-	_LOOP_CTL_ADD      = 0x4C80
-	_LOOP_CTL_REMOVE   = 0x4C81
-	_LOOP_CTL_GET_FREE = 0x4C82
-)
-
 // FindDevice finds an unused loop device and returns its /dev/loopN path.
 func FindDevice() (string, error) {
 	cfd, err := os.OpenFile("/dev/loop-control", os.O_RDWR, 0o644)
@@ -47,7 +28,7 @@ func FindDevice() (string, error) {
 
 // ClearFD clears the loop device associated with file descriptor fd.
 func ClearFD(fd int) error {
-	return unix.IoctlSetInt(fd, _LOOP_CLR_FD, 0)
+	return unix.IoctlSetInt(fd, unix.LOOP_CLR_FD, 0)
 }
 
 // GetFree finds a free loop device /dev/loopN.
@@ -61,16 +42,12 @@ func ClearFD(fd int) error {
 // So you can not use unix.IoctlGetInt as it assumes the return
 // value is stored in a pointer in the normal style. Yuck.
 func GetFree(fd int) (int, error) {
-	r1, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), _LOOP_CTL_GET_FREE, 0)
-	if err == 0 {
-		return int(r1), nil
-	}
-	return 0, err
+	return unix.IoctlRetInt(fd, unix.LOOP_CTL_GET_FREE)
 }
 
 // SetFD associates a loop device lfd with a regular file ffd.
 func SetFD(lfd, ffd int) error {
-	return unix.IoctlSetInt(lfd, _LOOP_SET_FD, ffd)
+	return unix.IoctlSetInt(lfd, unix.LOOP_SET_FD, ffd)
 }
 
 // SetFile associates loop device "devicename" with regular file "filename"
