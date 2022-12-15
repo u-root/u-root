@@ -10,7 +10,6 @@ package kmodule
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -177,7 +176,7 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 		if err := unix.Uname(&u); err != nil {
 			return nil, fmt.Errorf("could not get release (uname -r): %v", err)
 		}
-		rel = string(u.Release[:bytes.IndexByte(u.Release[:], 0)])
+		rel = unix.ByteSliceToString(u.Release[:])
 	}
 
 	var moduleDir string
