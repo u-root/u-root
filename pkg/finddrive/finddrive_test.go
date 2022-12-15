@@ -68,10 +68,10 @@ func TestFindSlotType(t *testing.T) {
 	paths, err := findSlotType(sysDir, slots, matchingSlotType)
 
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, matchingSlotType, err)
 	}
 	if len(paths) != 2 || paths[0] != matchedSlotPath || paths[1] != matchedSlotPath {
-		t.Errorf("Wrong paths returned: %v", paths)
+		t.Errorf("findSlotType(%v, %v, %v) returned paths: %v, want: %v", sysDir, slots, matchingSlotType, paths, []string{matchedSlotPath, matchedSlotPath})
 	}
 }
 
@@ -82,10 +82,10 @@ func TestFindSlotTypeMissing(t *testing.T) {
 	paths, err := findSlotType(sysDir, slots, missingSlotType)
 
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, missingSlotType, err)
 	}
 	if len(paths) != 0 {
-		t.Errorf("Expected no paths returned: %v", paths)
+		t.Errorf("findSlotType(%v, %v, %v) returned paths: %v, want: []", sysDir, slots, missingSlotType, paths)
 	}
 }
 
@@ -96,9 +96,9 @@ func TestFindSlotTypeNoSlots(t *testing.T) {
 	paths, err := findSlotType(sysDir, slots, matchingSlotType)
 
 	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, matchingSlotType, err)
 	}
 	if len(paths) != 0 {
-		t.Errorf("Expected no paths returned: %v", paths)
+		t.Errorf("findSlotType(%v, %v, %v) returned paths: %v, want: []", sysDir, slots, matchingSlotType, paths)
 	}
 }
