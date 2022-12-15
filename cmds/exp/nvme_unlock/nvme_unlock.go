@@ -46,7 +46,7 @@ type opalLockUnlock struct {
 }
 
 var (
-	disk               = flag.String("disk", "", "The disk to be unlocked - will be discovered if left blank")
+	disk               = flag.String("disk", "", "The disk to be unlocked.  If left blank, will search for a boot disk.")
 	verbose            = flag.Bool("d", false, "print debug output")
 	verboseNoSanitize  = flag.Bool("dangerously-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
@@ -80,7 +80,9 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 		}
 		disk = disks[0]
 		if len(disks) > 1 {
-			log.Printf("Multiple boot disk candidates found, using the first from the list: %v", disks)
+			log.Printf("Multiple boot disk candidates found, using the first from the following list: %v", disks)
+		} else if verbose {
+			log.Printf("Found boot disk %s", disk)
 		}
 	}
 
