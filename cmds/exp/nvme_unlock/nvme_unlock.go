@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/finddrive"
 	"github.com/u-root/u-root/pkg/hsskey"
 	"github.com/u-root/u-root/pkg/mount/block"
 )
@@ -45,7 +46,7 @@ type opalLockUnlock struct {
 }
 
 var (
-	disk               = flag.String("disk", "/dev/nvme0n1", "The disk to be unlocked")
+	disk               = flag.String("disk", "", "The disk to be unlocked.  If left blank, will search for a boot disk.")
 	verbose            = flag.Bool("d", false, "print debug output")
 	verboseNoSanitize  = flag.Bool("dangerously-disable-sanitize", false, "Print sensitive information - this should only be used for testing!")
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
@@ -69,6 +70,22 @@ func getSysfsInfo(index string, field string) (string, error) {
 }
 
 func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions bool, lock bool) error {
+	if disk == "" {
+		disks, err := finddrive.FindSlotType(finddrive.M2MKeySlotType)
+		if err != nil {
+			return fmt.Errorf("error finding boot disk: %v", err)
+		}
+		if len(disks) == 0 {
+			return fmt.Errorf("no boot disk found")
+		}
+		disk = disks[0]
+		if len(disks) > 1 {
+			log.Printf("Multiple boot disk candidates found, using the first from the following list: %v", disks)
+		} else if verbose {
+			log.Printf("Found boot disk %s", disk)
+		}
+	}
+
 	commandName := "unlock"
 	if lock {
 		commandName = "lock"
