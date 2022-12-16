@@ -483,7 +483,7 @@ func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
 		hasParts := true
 		for _, part := range parts {
 			if _, err := os.Stat(filepath.Join("/sys/class/block",
-				composePartName(device.Name, part))); err != nil {
+				ComposePartName(device.Name, part))); err != nil {
 				hasParts = false
 				break
 			}
@@ -508,7 +508,7 @@ func (b BlockDevices) FilterPartID(guid string) BlockDevices {
 				continue
 			}
 			if strings.EqualFold(part.Id.String(), guid) {
-				names = append(names, composePartName(device.Name, i+1))
+				names = append(names, ComposePartName(device.Name, i+1))
 			}
 		}
 	}
@@ -528,7 +528,7 @@ func (b BlockDevices) FilterPartType(guid string) BlockDevices {
 				continue
 			}
 			if strings.EqualFold(part.Type.String(), guid) {
-				names = append(names, composePartName(device.Name, i+1))
+				names = append(names, ComposePartName(device.Name, i+1))
 			}
 		}
 	}
@@ -549,7 +549,7 @@ func (b BlockDevices) FilterPartLabel(label string) BlockDevices {
 				continue
 			}
 			if strings.EqualFold(part.Name(), label) {
-				names = append(names, composePartName(device.Name, i+1))
+				names = append(names, ComposePartName(device.Name, i+1))
 			}
 		}
 	}
@@ -632,13 +632,13 @@ func parsePCIBlockList(blockList string) (pci.Devices, error) {
 	return pciList, nil
 }
 
-// composePartName returns the partition name described by the parent devName
+// ComposePartName returns the partition name described by the parent devName
 // and partNo counting from 1. It is assumed that device names ending in a
 // number like nvme0n1 have partitions named like nvme0n1p1, nvme0n1p2, ...
 // and devices ending in a letter like sda have partitions named like
 //
 //	sda1, sda2, ...
-func composePartName(devName string, partNo int) string {
+func ComposePartName(devName string, partNo int) string {
 	r := []rune(devName[len(devName)-1:])
 	if unicode.IsDigit(r[0]) {
 		return fmt.Sprintf("%sp%d", devName, partNo)
