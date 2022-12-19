@@ -5,6 +5,7 @@
 package grub
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log"
@@ -113,10 +114,10 @@ func FuzzParseGrubConfig(f *testing.F) {
 
 	baseDir := f.TempDir()
 
-	dirPath := baseDir + "/EFI/uefi"
+	dirPath := filepath.Join(baseDir, "EFI", "uefi")
 	err := os.MkdirAll(dirPath, 0o777)
 	if err != nil {
-		f.Errorf("failed %v: %v", dirPath, err)
+		f.Fatalf("failed %v: %v", dirPath, err)
 	}
 
 	path := filepath.Join(dirPath, "grub.cfg")
@@ -139,19 +140,19 @@ func FuzzParseGrubConfig(f *testing.F) {
 	// get seed corpora from testdata_new files
 	seeds, err := filepath.Glob("testdata_new/*/*/*/grub.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	seeds2, err := filepath.Glob("testdata_new/*/*/grub.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	seeds = append(seeds, seeds2...)
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
 		}
 
 		f.Add(seedBytes)
@@ -159,13 +160,18 @@ func FuzzParseGrubConfig(f *testing.F) {
 
 	f.Add([]byte("multiBoot 0\nmodule --nounzip"))
 	f.Fuzz(func(t *testing.T, data []byte) {
-		if len(data) > 1000000 {
+		if len(data) > 4096 {
 			return
 		}
 
-		err := os.WriteFile(path, data, 0o777)
+		// do not allow arbitrary files reads
+		if bytes.Contains(data, []byte("include")) {
+			return
+		}
+
+		err = os.WriteFile(path, data, 0o777)
 		if err != nil {
-			t.Errorf("Failed to create configfile '%v':%v", path, err)
+			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
 		ParseLocalConfig(context.Background(), baseDir, devices, mountPool)

@@ -1,0 +1,5 @@
+# dictionary for fuzzing ipxe config
+kernel="kernel"
+initrd="initrd"
+boot="boot"
+comment="#"
