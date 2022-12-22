@@ -36,6 +36,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"os"
 	"syscall"
 	"time"
 )
@@ -155,7 +156,14 @@ func (fds *Server) Serve() error {
 	fds.listener.SetDeadline(deadline)
 	for {
 		conn, err := fds.listener.AcceptUnix()
-		if err != nil {
+		// Clean up after ourselves, since we are initiating our own
+		// closure through the timeout.
+		if os.IsTimeout(err) {
+			fds.Close()
+			return err
+		} else if errors.Is(err, net.ErrClosed) {
+			return nil
+		} else if err != nil {
 			return err
 		}
 		conn.SetDeadline(deadline)
@@ -172,6 +180,12 @@ func (fds *Server) Serve() error {
 
 // GetSharedFD gets an FD served at udsPath with nonce
 func GetSharedFD(udsPath, nonce string) (int, error) {
+	// If you don't send at least a byte, the server won't recvmsg.  This
+	// is a Linux UDS SOCK_STREAM thing.
+	if len(nonce) == 0 {
+		return 0, ErrEmptyNonce
+	}
+
 	ua, err := net.ResolveUnixAddr("unix", udsPath)
 	if err != nil {
 		return 0, err
@@ -180,23 +194,15 @@ func GetSharedFD(udsPath, nonce string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	var nonceb = []byte(nonce)
 
-	n, err := uc.Write(nonceb)
+	n, err := uc.Write([]byte(nonce))
 	if err != nil {
 		return 0, err
 	}
-	// If you don't send at least a byte, the server won't recvmsg.  This
-	// is a Linux UDS SOCK_STREAM thing.  It's possible that nonce is "",
-	// and len(nonceb) == 0.  We could check earlier for an empty string,
-	// but test code uses this method to make sure the server can handle an
-	// empty nonce (BadEmptyNonce).
-	if n == 0 {
-		return 0, ErrEmptyNonce
-	}
-	if n != len(nonceb) {
+	if n != len(nonce) {
 		return 0, ErrTruncatedWrite
 	}
+
 	oob := make([]byte, 1024)
 	_, oobn, _, _, err := uc.ReadMsgUnix(nil, oob)
 	if err != nil {
