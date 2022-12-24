@@ -185,6 +185,15 @@ func TestUrootCmdline(t *testing.T) {
 				itest.HasFile{"bin/bush"},
 			},
 		},
+		{
+			name: "supplied file can be uinit",
+			args: []string{"-nocmd", "-files=/bin/bash:bin/bash", "-uinitcmd=/bin/bash"},
+			env:  []string{"GO111MODULE=off"},
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"bin/bash"},
+				itest.HasRecord{cpio.Symlink("bin/uinit", "bash")},
+			},
+		},
 	}
 
 	bareTests := []testCase{
