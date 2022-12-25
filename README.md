@@ -29,21 +29,6 @@ u-root embodies four different projects.
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
 
-## :warning: Go Path is deprecated in favor of filesystem paths :warning:
-
-Since Go added modules in v1.11 it got increasingly difficult to determine
-where the source code actually ends up on the filesystem which caused a lot
-of confusion and breakages.
-
-The new behavior of u-root is therefore to only accept absolute or relative
-filesystem paths for Go programs which should be added into the BusyBox.
-One exception are templates like `core` or shortcuts to u-root commands
-like `cmds/core/ls`. For those to still work we added a new flag called `-uroot-source`
-which expects the filesystem path of a local copy of the u-root repository.
-If you're invoking `u-root` inside the repository for example, it would look
-like `./u-root -uroot-source ./`
-
-
 
 # Usage
 
@@ -75,10 +60,6 @@ examples with $UROOT_PATH being the path to where the u-root sources are on the 
 ```shell
 # Build an initramfs of all the Go cmds in ./cmds/core/... (default)
 u-root
-
-# Build an initramfs of all the Go cmds in ./cmds/core/...
-# But running the command outside of the repository root
-u-root -uroot-source $UROOT_PATH
 
 # Generate an archive with bootloaders
 #
@@ -319,6 +300,77 @@ qemu-system-x86_64 \
     -device virtio-rng-pci,rng=rng0 \
     -kernel vmlinuz \
     -initrd /tmp/initramfs.linux_amd64.cpio
+```
+
+## Depending on u-root with package paths
+
+You may use the u-root command-line exclusively with local file paths to avoid
+this section.
+
+Since u-root is a Go-based build system, like `go`, a go.mod must be present to
+resolve package paths. The packages named in the command line must be in the
+go.mod and go.sum to be buildable.
+
+Use `go mod init <throwawayname>` to create a module.
+
+```shell
+cd /anywhere/but/u-root
+go mod init demoname
+```
+
+Create a file with
+some unused build tag like this to create dependencies on commands:
+
+```go
+//go:build tools
+
+package something
+
+import (
+        "github.com/u-root/u-root/cmds/core/ip"
+        "github.com/u-root/u-root/cmds/core/init"
+        "github.com/u-root/u-root/cmds/core/dhclient"
+        "github.com/u-root/u-root/cmds/core/echo"
+        "github.com/u-root/u-bmc/cmd/socreset"
+)
+```
+
+To fill the `go.mod` and `go.sum` with the appropriate dependencies, run:
+
+```shell
+go get -v -d
+go mod tidy
+```
+
+Now it should be possible to use package paths rather than file system paths:
+
+```go
+u-root github.com/u-root/u-root/cmds/core/{ip,init,dhclient}
+```
+
+Again -- this is only necessary when using package paths. When using file paths
+to specify package directories, this is not necessary. This can be useful when
+u-root is a programmatic dependency rather than a human-used command-line tool.
+
+## Extra Files
+
+You may also include additional files in the initramfs using the `-files` flag.
+If you add binaries with `-files` are listed, their ldd dependencies will be
+included as well. As example for Debian, you want to add two kernel modules for
+testing, executing your currently booted kernel:
+
+> NOTE: these files will be placed in the `$HOME` dir in the initramfs.
+
+```shell
+u-root -files "$HOME/hello.ko $HOME/hello2.ko"
+qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
+```
+
+To specify the location in the initramfs, use `<sourcefile>:<destinationfile>`.
+For example:
+
+```shell
+u-root -files "root-fs/usr/bin/runc:usr/bin/run"
 ```
 
 ## SystemBoot
