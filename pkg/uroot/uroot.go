@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/golang"
@@ -430,13 +431,18 @@ func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]st
 		return nil, err
 	}
 	var paths []string
+	var merr error
 	for _, p := range pkgs {
 		if len(p.Errors) == 0 {
 			paths = append(paths, p.PkgPath)
+		} else {
+			for _, e := range p.Errors {
+				merr = multierror.Append(merr, e)
+			}
 		}
 	}
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("%q matched as neither file system path/glob nor package path/glob", input)
+		return nil, fmt.Errorf("%q matched as neither file system path/glob nor package path/glob: %v", input, merr)
 	}
 	return paths, nil
 }
