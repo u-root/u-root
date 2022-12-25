@@ -6,7 +6,6 @@ package uroot
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -88,7 +87,6 @@ func TestResolvePackagePathsUrootGOPATH(t *testing.T) {
 	moduleOnEnv := gbbgolang.Default()
 	moduleOnEnv.GO111MODULE = "on"
 
-	// Why doesn't the log package export this as a default?
 	l := &ulogtest.Logger{TB: t}
 
 	for _, env := range []gbbgolang.Environ{moduleOnEnv, moduleOffEnv} {
@@ -176,8 +174,7 @@ func TestCreateInitramfs(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Why doesn't the log package export this as a default?
-	l := log.New(os.Stdout, "", log.LstdFlags)
+	l := &ulogtest.Logger{TB: t}
 
 	for i, tt := range []struct {
 		name       string
