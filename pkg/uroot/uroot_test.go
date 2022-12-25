@@ -14,7 +14,6 @@ import (
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	itest "github.com/u-root/u-root/pkg/uroot/initramfs/test"
@@ -180,7 +179,6 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "BB archive with ls and init",
 			opts: Opts{
-				Env:             golang.Default(),
 				TempDir:         dir,
 				ExtraFiles:      nil,
 				UseExistingInit: false,
@@ -208,7 +206,6 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "no temp dir",
 			opts: Opts{
-				Env:          golang.Default(),
 				InitCmd:      "init",
 				DefaultShell: "",
 			},
@@ -220,7 +217,6 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "no commands",
 			opts: Opts{
-				Env:     golang.Default(),
 				TempDir: dir,
 			},
 			want: "",
@@ -231,7 +227,6 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "init specified, but not in commands",
 			opts: Opts{
-				Env:          golang.Default(),
 				TempDir:      dir,
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
@@ -252,7 +247,6 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "init symlinked to absolute path",
 			opts: Opts{
-				Env:     golang.Default(),
 				TempDir: dir,
 				InitCmd: "/bin/systemd",
 			},
@@ -264,7 +258,6 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "multi-mode archive",
 			opts: Opts{
-				Env:             golang.Default(),
 				TempDir:         dir,
 				ExtraFiles:      nil,
 				UseExistingInit: false,

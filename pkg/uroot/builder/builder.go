@@ -6,7 +6,6 @@ package builder
 
 import (
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -21,7 +20,7 @@ var (
 // Opts are options passed to the Builder.Build function.
 type Opts struct {
 	// Env is the Go compiler environment.
-	Env golang.Environ
+	Env gbbgolang.Environ
 
 	// Build options for building go binaries. Ultimate this holds all the
 	// args that end up being passed to `go build`.

@@ -12,7 +12,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
 
-func TestGBBBuild(t *testing.T) {
+func TestBinaryBuild(t *testing.T) {
 	dir := t.TempDir()
 
 	opts := Opts{
@@ -20,21 +20,23 @@ func TestGBBBuild(t *testing.T) {
 		Packages: []string{
 			"../test/foo",
 			"../../../cmds/core/elvish",
+			"github.com/u-root/u-root/cmds/core/init",
+			"cmd/test2json",
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",
 		BuildOpts: &gbbgolang.BuildOpts{},
 	}
 	af := initramfs.NewFiles()
-	var gbb GBBBuilder
-	if err := gbb.Build(ulogtest.Logger{TB: t}, af, opts); err != nil {
+	var b BinaryBuilder
+	if err := b.Build(ulogtest.Logger{TB: t}, af, opts); err != nil {
 		t.Fatalf("Build(%v, %v); %v != nil", af, opts, err)
 	}
 
 	mustContain := []string{
 		"bbin/elvish",
 		"bbin/foo",
-		"bbin/bb",
+		"bbin/init",
 	}
 	for _, name := range mustContain {
 		if !af.Contains(name) {

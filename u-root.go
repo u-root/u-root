@@ -18,7 +18,6 @@ import (
 	"time"
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -59,7 +58,7 @@ var (
 
 func init() {
 	var sh string
-	switch golang.Default().GOOS {
+	switch gbbgolang.Default().GOOS {
 	case "plan9":
 		sh = ""
 	default:
@@ -130,9 +129,8 @@ func writeBuildStats(stats buildStats, path string) error {
 	return nil
 }
 
-func generateLabel() string {
+func generateLabel(env gbbgolang.Environ) string {
 	var baseCmds []string
-	env := golang.Default()
 	if len(flag.Args()) > 0 {
 		// Use the last component of the name to keep the label short
 		for _, e := range flag.Args() {
@@ -154,10 +152,21 @@ func main() {
 	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
 	flag.Parse()
 
+	env := gbbgolang.Default()
+	env.BuildTags = strings.Split(*tags, ",")
+	if env.CgoEnabled {
+		l.Printf("Disabling CGO for u-root...")
+		env.CgoEnabled = false
+	}
+	l.Printf("Build environment: %s", env)
+	if env.GOOS != "linux" {
+		l.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+	}
+
 	start := time.Now()
 
 	// Main is in a separate functions so defers run on return.
-	if err := Main(l, gbbOpts); err != nil {
+	if err := Main(l, env, gbbOpts); err != nil {
 		l.Fatalf("Build error: %v", err)
 	}
 
@@ -169,7 +178,7 @@ func main() {
 		Duration: float64(elapsed.Milliseconds()) / 1000,
 	}
 	if stats.Label == "" {
-		stats.Label = generateLabel()
+		stats.Label = generateLabel(env)
 	}
 	if stat, err := os.Stat(*outputPath); err == nil && stat.ModTime().After(start) {
 		l.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
@@ -200,18 +209,7 @@ func isRecommendedVersion(v string) bool {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
-	env := golang.Default()
-	env.BuildTags = strings.Split(*tags, ",")
-	if env.CgoEnabled {
-		l.Printf("Disabling CGO for u-root...")
-		env.CgoEnabled = false
-	}
-	l.Printf("Build environment: %s", env)
-	if env.GOOS != "linux" {
-		l.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
-	}
-
+func Main(l ulog.Logger, env gbbgolang.Environ, buildOpts *gbbgolang.BuildOpts) error {
 	v, err := env.Version()
 	if err != nil {
 		l.Printf("Could not get environment's Go version, using runtime's version: %v", err)
@@ -318,7 +316,7 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	}
 
 	opts := uroot.Opts{
-		Env:             env,
+		Env:             &env,
 		Commands:        c,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,

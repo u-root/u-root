@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/uflag"
 	"github.com/u-root/u-root/pkg/ulog"
@@ -43,7 +42,7 @@ const (
 // If an OS is not known it will return a reasonable u-root specific
 // default.
 func DefaultRamfs() *cpio.Archive {
-	switch golang.Default().GOOS {
+	switch gbbgolang.Default().GOOS {
 	case "linux":
 		return cpio.ArchiveFromRecords([]cpio.Record{
 			cpio.Directory("bin", 0o755),
@@ -119,7 +118,9 @@ func (c Commands) TargetDir() string {
 // build environment.
 type Opts struct {
 	// Env is the Golang build environment (GOOS, GOARCH, etc).
-	Env golang.Environ
+	//
+	// If nil, gbbgolang.Default is used.
+	Env *gbbgolang.Environ
 
 	// Commands specify packages to build using a specific builder.
 	//
@@ -232,13 +233,15 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 		return fmt.Errorf("must give output file")
 	}
 
-	files := initramfs.NewFiles()
-
-	// Use the new busybox Environ.
-	env := gbbgolang.Environ{
-		Context:     opts.Env.Context,
-		GO111MODULE: os.Getenv("GO111MODULE"),
+	env := gbbgolang.Default()
+	if opts.Env != nil {
+		env = *opts.Env
 	}
+	if opts.BuildOpts == nil {
+		opts.BuildOpts = &gbbgolang.BuildOpts{}
+	}
+
+	files := initramfs.NewFiles()
 
 	// Expand commands.
 	for index, cmds := range opts.Commands {
@@ -247,11 +250,6 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 			return err
 		}
 		opts.Commands[index].Packages = directoryPaths
-	}
-
-	// Make sure this isn't a nil pointer
-	if opts.BuildOpts == nil {
-		opts.BuildOpts = &gbbgolang.BuildOpts{}
 	}
 
 	// Add each build mode's commands to the archive.
@@ -263,7 +261,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 		// Build packages.
 		bOpts := builder.Opts{
-			Env:       opts.Env,
+			Env:       env,
 			BuildOpts: opts.BuildOpts,
 			Packages:  cmds.Packages,
 			TempDir:   builderTmpDir,
