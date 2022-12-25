@@ -164,11 +164,6 @@ func TestCreateInitramfs(t *testing.T) {
 	dir := t.TempDir()
 	syscall.Umask(0)
 
-	urootpath, err := filepath.Abs("../../")
-	if err != nil {
-		t.Fatalf("failure to set up test: %v", err)
-	}
-
 	tmp777 := filepath.Join(dir, "tmp777")
 	if err := os.MkdirAll(tmp777, 0o777); err != nil {
 		t.Error(err)
@@ -191,7 +186,6 @@ func TestCreateInitramfs(t *testing.T) {
 				UseExistingInit: false,
 				InitCmd:         "init",
 				DefaultShell:    "ls",
-				UrootSource:     urootpath,
 				Commands: []Commands{
 					{
 						Builder: builder.BusyBox,
@@ -241,7 +235,6 @@ func TestCreateInitramfs(t *testing.T) {
 				TempDir:      dir,
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
-				UrootSource:  urootpath,
 				Commands: []Commands{
 					{
 						Builder: builder.Binary,
@@ -277,7 +270,6 @@ func TestCreateInitramfs(t *testing.T) {
 				UseExistingInit: false,
 				InitCmd:         "init",
 				DefaultShell:    "ls",
-				UrootSource:     urootpath,
 				Commands: []Commands{
 					{
 						Builder: builder.BusyBox,
@@ -441,6 +433,11 @@ func TestResolveGlobsUrootGOPATH(t *testing.T) {
 			// Single package with Plan 9 only files.
 			{
 				in:      "github.com/u-root/u-root/cmds/core/bind",
+				wantErr: true,
+			},
+			// Single package with Plan 9 only files.
+			{
+				in:      filepath.Join(urootpath, "cmds/core/bind"),
 				wantErr: true,
 			},
 			// Package directory glob

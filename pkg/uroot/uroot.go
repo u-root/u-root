@@ -406,6 +406,7 @@ func lookupPkgsWithGlob(env gbbgolang.Environ, dir string, pattern string) ([]*p
 func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]string, error) {
 	// File-system paths.
 	matches, _ := filepath.Glob(input)
+	var merr error
 	if len(matches) > 0 {
 		var directories []string
 		for _, match := range matches {
@@ -416,11 +417,22 @@ func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]st
 			}
 			absPath, _ := filepath.Abs(match)
 
-			if _, err := lookupPkgs(env, "", match); err != nil {
+			p, err := lookupPkgs(env, "", absPath)
+			if err != nil {
 				return nil, fmt.Errorf("failed to look up %q: %v", match, err)
-			} else {
+			} else if len(p) > 1 {
+				return nil, fmt.Errorf("package lookup of directory %q produced more than 1 package (a directory should only contain 1 package)", match)
+			}
+
+			for _, e := range p[0].Errors {
+				merr = multierror.Append(merr, e)
+			}
+			if len(p[0].Errors) == 0 {
 				directories = append(directories, absPath)
 			}
+		}
+		if len(directories) == 0 {
+			return nil, fmt.Errorf("%q failed to match as file system path: %v", input, merr)
 		}
 		return directories, nil
 	}
@@ -431,7 +443,6 @@ func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]st
 		return nil, err
 	}
 	var paths []string
-	var merr error
 	for _, p := range pkgs {
 		if len(p.Errors) == 0 {
 			paths = append(paths, p.PkgPath)
