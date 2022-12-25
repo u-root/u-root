@@ -238,9 +238,15 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	files := initramfs.NewFiles()
 
+	// Use the new busybox Environ.
+	env := gbbgolang.Environ{
+		Context:     opts.Env.Context,
+		GO111MODULE: os.Getenv("GO111MODULE"),
+	}
+
 	// Expand commands.
 	for index, cmds := range opts.Commands {
-		directoryPaths, err := ResolvePackagePaths(logger, opts.Env, opts.UrootSource, cmds.Packages)
+		directoryPaths, err := ResolvePackagePaths(logger, env, cmds.Packages)
 		if err != nil {
 			return err
 		}
@@ -440,61 +446,6 @@ func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]st
 	return paths, nil
 }
 
-// resolvePackagePath finds import paths for a single import path or directory string.
-//
-// Possible options are:
-//
-//	./foobar
-//	./foobar/glob*
-//	cmds/core/ip with UROOT_SOURCE=/directory/to/u-root
-//	cmds/core/g*lob with UROOT_SOURCE=/directory/to/u-root
-func resolvePackagePath(logger ulog.Logger, env golang.Environ, urootSource string, input string) ([]string, error) {
-	// In case the input is a u-root import path we strip the prefix here
-	// so that it can get re-added with a proper filepath.
-	input = strings.TrimPrefix(input, "github.com/u-root/u-root/")
-
-	// Search the current working directory, as well as the uroot source path if specified
-	prefixes := []string{""}
-	if len(urootSource) != 0 {
-		prefixes = append(prefixes, urootSource)
-	}
-
-	// Resolve file system paths to package import paths.
-	for _, prefix := range prefixes {
-		path := filepath.Join(prefix, input)
-		matches, err := filepath.Glob(path)
-		if len(matches) == 0 || err != nil {
-			continue
-		}
-
-		var directories []string
-		for _, match := range matches {
-			// Only match directories for building.
-			// Skip anything that is not a directory
-			fileInfo, _ := os.Stat(match)
-			if !fileInfo.IsDir() {
-				continue
-			}
-			absPath, _ := filepath.Abs(match)
-
-			if _, err := env.PackageByPath(match); err != nil {
-				logger.Printf("Skipping package %q: %v", match, err)
-			} else {
-				directories = append(directories, absPath)
-			}
-		}
-		return directories, nil
-	}
-
-	// No file import paths found. Check if pkg still resolves as a package name.
-	pkg, err := env.Package(input)
-	if err != nil {
-		return nil, fmt.Errorf("%q is neither package or path/glob: %v", input, err)
-	}
-	absDir, _ := filepath.Abs(pkg.Dir)
-	return []string{absDir}, nil
-}
-
 func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 	if strings.ContainsRune(cmd, filepath.Separator) {
 		return cmd, nil
@@ -522,22 +473,22 @@ func resolveCommandOrPath(cmd string, cmds []Commands) (string, error) {
 //
 //   - paths to package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/ls
 //   - globs of paths to package directories; e.g. ./cmds/*
-//   - u-root package paths; e.g. cmds/core/ls or github.com/u-root/u-root/cmds/core/ls
-//   - globs of u-root package paths, e.g. cmds/* or github.com/u-root/u-root/cmds/*
+//   - u-root package paths; e.g. github.com/u-root/u-root/cmds/core/ls
+//   - globs of u-root package paths, e.g github.com/u-root/u-root/cmds/*
 //   - if an entry starts with "-" it excludes the matching package(s)
 //
 // Directories may be relative or absolute, with or without globs.
-// Globs are resolved using filepath.Glob.
-func ResolvePackagePaths(logger ulog.Logger, env golang.Environ, urootSource string, pkgs []string) ([]string, error) {
+// Globs are resolved using filepath.Glob/Match.
+func ResolvePackagePaths(logger ulog.Logger, env gbbgolang.Environ, pkgs []string) ([]string, error) {
 	var includes []string
 	excludes := map[string]bool{}
 	for _, pkg := range pkgs {
 		isExclude := strings.HasPrefix(pkg, "-")
-
 		if isExclude {
 			pkg = pkg[1:]
 		}
-		paths, err := resolvePackagePath(logger, env, urootSource, pkg)
+
+		paths, err := resolveGlobs(logger, env, pkg)
 		if err != nil {
 			return nil, err
 		}
