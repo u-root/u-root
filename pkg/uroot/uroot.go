@@ -144,11 +144,6 @@ type Opts struct {
 	//   }
 	Commands []Commands
 
-	// UrootSource is the filesystem path to the locally checked out
-	// u-root source tree. This is needed to resolve templates or
-	// import paths of u-root commands.
-	UrootSource string
-
 	// TempDir is a temporary directory for builders to store files in.
 	TempDir string
 

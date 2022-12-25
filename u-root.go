@@ -92,10 +92,6 @@ func init() {
 
 	// Flags for the gobusybox, which we hope to move to, since it works with modules.
 	genDir = flag.String("gen-dir", "", "Directory to generate source in")
-
-	// Flag for the new filepath only mode. This will be required to find the u-root commands and make templates work
-	// In almost every case, "." is fine.
-	urootSourceDir = flag.String("uroot-source", ".", "Path to the locally checked out u-root source tree in case commands from there are desired.")
 }
 
 type buildStats struct {
@@ -158,10 +154,6 @@ func main() {
 	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
 	flag.Parse()
 
-	if usrc := os.Getenv("UROOT_SOURCE"); usrc != "" && *urootSourceDir == "" {
-		*urootSourceDir = usrc
-	}
-
 	start := time.Now()
 
 	// Main is in a separate functions so defers run on return.
@@ -204,14 +196,6 @@ func isRecommendedVersion(v string) bool {
 		}
 	}
 	return false
-}
-
-func canFindSource(dir string) error {
-	d := filepath.Join(dir, "cmds", "core")
-	if _, err := os.Stat(d); err != nil {
-		return fmt.Errorf("can not build u-root in %q:%w (-uroot-source may be incorrect or not set)", *urootSourceDir, os.ErrNotExist)
-	}
-	return nil
 }
 
 // Main is a separate function so defers are run on return, which they wouldn't
@@ -306,8 +290,8 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 		//
 		// Currently allowed format:
 		//   Paths to Go package directories; e.g. $GOPATH/src/github.com/u-root/u-root/cmds/*
-		//   u-root templates; e.g. all, core, minimal (requires uroot-source be valid)
-		//   Import paths of u-root commands; e.g. github.com/u-root/u-root/cmds/* (requires uroot-source)
+		//   u-root templates; e.g. all, core, minimal
+		//   Import paths of u-root commands; e.g. github.com/u-root/u-root/cmds/*
 		var pkgs []string
 		for _, a := range flag.Args() {
 			p, ok := templates[a]
@@ -319,23 +303,10 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 				pkgs = append(pkgs, a)
 				continue
 			}
-			// This is reached if a template was selected, so check uroot source path
-			// To make things a easier on our poor users, do
-			// validation so the error is a little less mysterious.
-			if err := canFindSource(*urootSourceDir); err != nil {
-				return err
-			}
-			for _, pkg := range p {
-				pkg = strings.TrimPrefix(pkg, "github.com/u-root/u-root/")
-				pkgs = append(pkgs, filepath.Join(*urootSourceDir, pkg))
-			}
 			pkgs = append(pkgs, p...)
 		}
 		if len(pkgs) == 0 {
-			if err := canFindSource(*urootSourceDir); err != nil {
-				return err
-			}
-			pkgs = []string{filepath.Join(*urootSourceDir, "cmds/core/*")}
+			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
 		}
 
 		// The command-line tool only allows specifying one build mode
@@ -349,7 +320,6 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	opts := uroot.Opts{
 		Env:             env,
 		Commands:        c,
-		UrootSource:     *urootSourceDir,
 		TempDir:         tempDir,
 		ExtraFiles:      extraFiles,
 		OutputFile:      w,
