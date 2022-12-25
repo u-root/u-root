@@ -24,6 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"golang.org/x/tools/go/packages"
 )
 
 // These constants are used in DefaultRamfs.
@@ -334,6 +335,109 @@ func (o *Opts) addSymlinkTo(logger ulog.Logger, archive *initramfs.Opts, command
 		return fmt.Errorf("failed to add symlink %s -> %s to initramfs: %v", source, relTarget, err)
 	}
 	return nil
+}
+
+func lookupPkgs(env gbbgolang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedFiles,
+		Env:  append(os.Environ(), env.Env()...),
+		Dir:  dir,
+	}
+	return packages.Load(cfg, patterns...)
+}
+
+func couldBeGlob(s string) bool {
+	return strings.ContainsAny(s, "*?[") || strings.Contains(s, `\\`)
+}
+
+func lookupPkgsWithGlob(env gbbgolang.Environ, dir string, pattern string) ([]*packages.Package, error) {
+	isGoGlob := strings.HasSuffix(pattern, "/...")
+
+	var nonGlobPath string
+	if isGoGlob {
+		nonGlobPath = pattern
+	} else if !couldBeGlob(pattern) {
+		nonGlobPath = pattern
+	} else {
+		elems := strings.Split(pattern, "/")
+
+		globIndex := 0
+		for i, e := range elems {
+			if couldBeGlob(e) {
+				globIndex = i
+				break
+			}
+		}
+
+		nonGlobPath = strings.Join(append(elems[:globIndex], "..."), "/")
+	}
+
+	pkgs, err := lookupPkgs(env, "", nonGlobPath)
+	if err != nil {
+		return nil, fmt.Errorf("%q is neither package or path/glob -- could not lookup %q (import path globs have to be within modules): %v", pattern, nonGlobPath, err)
+	}
+
+	// Apply the glob.
+	var filteredPkgs []*packages.Package
+	for _, p := range pkgs {
+		if matched, err := path.Match(pattern, p.PkgPath); err != nil {
+			return nil, fmt.Errorf("could not match %q to %q: %v", pattern, p.PkgPath, err)
+		} else if matched || isGoGlob {
+			filteredPkgs = append(filteredPkgs, p)
+		}
+	}
+	return filteredPkgs, nil
+}
+
+// resolveGlobs finds import paths for a single import path or directory string.
+//
+// Possible options are:
+//
+//	./foobar
+//	./foobar/glob*
+//	github.com/u-root/u-root/cmds/core/...
+//	github.com/u-root/u-root/cmds/core/ip
+//	github.com/u-root/u-root/cmds/core/g*lob
+//
+// Globs cannot be combined with "..." suffix.
+// Globs for Go import paths have to be within module boundaries.
+func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]string, error) {
+	// File-system paths.
+	matches, _ := filepath.Glob(input)
+	if len(matches) > 0 {
+		var directories []string
+		for _, match := range matches {
+			// Skip anything that is not a directory, as only directories can be packages.
+			fileInfo, _ := os.Stat(match)
+			if !fileInfo.IsDir() {
+				continue
+			}
+			absPath, _ := filepath.Abs(match)
+
+			if _, err := lookupPkgs(env, "", match); err != nil {
+				return nil, fmt.Errorf("failed to look up %q: %v", match, err)
+			} else {
+				directories = append(directories, absPath)
+			}
+		}
+		return directories, nil
+	}
+
+	// Try to apply globs to Go import path.
+	pkgs, err := lookupPkgsWithGlob(env, "", input)
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, p := range pkgs {
+		if len(p.Errors) == 0 {
+			paths = append(paths, p.PkgPath)
+		}
+	}
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("%q matched as neither file system path/glob nor package path/glob", input)
+	}
+	return paths, nil
 }
 
 // resolvePackagePath finds import paths for a single import path or directory string.
