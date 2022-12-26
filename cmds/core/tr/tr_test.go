@@ -6,10 +6,8 @@ package main
 
 import (
 	"bytes"
+	"strings"
 	"testing"
-	"unicode"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestUnescape(t *testing.T) {
@@ -28,101 +26,142 @@ func TestUnescape(t *testing.T) {
 
 func TestTR(t *testing.T) {
 	for _, test := range []struct {
-		name   string
-		input  string
-		output string
-		t      *transformer
+		name         string
+		args         []string
+		input        string
+		wantOutput   string
+		del          bool
+		wantNewError bool
 	}{
 		{
-			name:   "alnum",
-			input:  "0123456789!&?defgh",
-			output: "zzzzzzzzzz!&?zzzzz",
-			t:      setToRune(ALNUM, 'z'),
+			name:       "alnum",
+			args:       []string{"[:alnum:]", "z"},
+			input:      "0123456789!&?defgh",
+			wantOutput: "zzzzzzzzzz!&?zzzzz",
 		},
 		{
-			name:   "alpha",
-			input:  "0123456789abcdefgh",
-			output: "0123456789zzzzzzzz",
-			t:      setToRune(ALPHA, 'z'),
+			name:       "alpha",
+			args:       []string{"[:alpha:]", "z"},
+			input:      "0123456789abcdefgh",
+			wantOutput: "0123456789zzzzzzzz",
 		},
 		{
-			name:   "digit",
-			input:  "0123456789abcdefgh",
-			output: "zzzzzzzzzzabcdefgh",
-			t:      setToRune(DIGIT, 'z'),
+			name:       "digit",
+			args:       []string{"[:digit:]", "z"},
+			input:      "0123456789abcdefgh",
+			wantOutput: "zzzzzzzzzzabcdefgh",
 		},
 		{
-			name:   "lower",
-			input:  "0123456789abcdEFGH",
-			output: "0123456789zzzzEFGH",
-			t:      setToRune(LOWER, 'z'),
+			name:       "lower",
+			args:       []string{"[:lower:]", "z"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "0123456789zzzzEFGH",
 		},
 		{
-			name:   "upper",
-			input:  "0123456789abcdEFGH",
-			output: "0123456789abcdzzzz",
-			t:      setToRune(UPPER, 'z'),
+			name:       "upper",
+			args:       []string{"[:upper:]", "z"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "0123456789abcdzzzz",
 		},
 		{
-			name:   "punct",
-			input:  "012345*{}[]!.?&()def",
-			output: "012345zzzzzzzzzzzdef",
-			t:      setToRune(PUNCT, 'z'),
+			name:       "punct",
+			args:       []string{"[:punct:]", "z"},
+			input:      "012345*{}[]!.?&()def",
+			wantOutput: "012345zzzzzzzzzzzdef",
 		},
 		{
-			name:   "space",
-			input:  "0123456789\t\ncdef",
-			output: "0123456789zzcdef",
-			t:      setToRune(SPACE, 'z'),
+			name:       "space",
+			args:       []string{"[:space:]", "z"},
+			input:      "0123456789\t\ncdef",
+			wantOutput: "0123456789zzcdef",
 		},
 		{
-			name:   "graph",
-			input:  "\f\t🔫123456789abcdEFG",
-			output: "\f\tzzzzzzzzzzzzzzzzz",
-			t:      setToRune(GRAPH, 'z'),
+			name:       "graph",
+			args:       []string{"[:graph:]", "z"},
+			input:      "\f\t🔫123456789abcdEFG",
+			wantOutput: "\f\tzzzzzzzzzzzzzzzzz",
 		},
 		{
-			name:   "lower_to_upper",
-			input:  "0123456789abcdEFGH",
-			output: "0123456789ABCDEFGH",
-			t:      lowerToUpper(),
+			name:       "lower_to_upper",
+			args:       []string{"[:lower:]", "[:upper:]"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "0123456789ABCDEFGH",
 		},
 		{
-			name:   "upper_to_lower",
-			input:  "0123456789abcdEFGH",
-			output: "0123456789abcdefgh",
-			t:      upperToLower(),
+			name:       "upper_to_lower",
+			args:       []string{"[:upper:]", "[:lower:]"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "0123456789abcdefgh",
 		},
 		{
-			name:   "runes_to_runes",
-			input:  "0123456789abcdEFGH",
-			output: "012x45678yabcdzFGH",
-			t:      runesToRunes([]rune("39E"), 'x', 'y', 'z'),
+			name:       "runes_to_runes",
+			args:       []string{"39E", "xyz"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "012x45678yabcdzFGH",
 		},
 		{
-			name:   "runes_to_runes_truncated",
-			input:  "0123456789abcdEFGH",
-			output: "012x45678yabcdyFGH",
-			t:      runesToRunes([]rune("39E"), 'x', 'y'),
+			name:       "runes_to_runes_truncated",
+			args:       []string{"39E", "xy"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "012x45678yabcdyFGH",
 		},
 		{
-			name:   "delete_alnum",
-			input:  "0123456789abcdEFGH",
-			output: "",
-			t:      setToRune(ALNUM, unicode.ReplacementChar),
+			name:       "delete_alnum",
+			args:       []string{"[:alnum:]", "\uFFFD"},
+			input:      "0123456789abcdEFGH",
+			wantOutput: "",
+		},
+		{
+			name:       "delete_all_flag_true",
+			args:       []string{"[:alnum:]"},
+			input:      "12345",
+			del:        true,
+			wantOutput: "",
+		},
+		{
+			name:       "delete_lower_flag_true",
+			args:       []string{"[:lower:]"},
+			input:      "abcdeABCz",
+			del:        true,
+			wantOutput: "ABC",
+		},
+		{
+			name:         "no args",
+			args:         nil,
+			wantNewError: true,
+		},
+		{
+			name:         "del is true",
+			args:         []string{"a", "b"},
+			del:          true,
+			wantNewError: true,
+		},
+		{
+			name:         "more than two args",
+			args:         []string{"a", "b", "c"},
+			wantNewError: true,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			in := strings.NewReader(test.input)
 			out := &bytes.Buffer{}
-			test.t.run(bytes.NewBufferString(test.input), out)
+			cmd, err := newCommand(in, out, test.args, test.del)
+			if test.wantNewError {
+				if err == nil {
+					t.Fatal("expected error got: nil")
+				}
+				t.Skip()
+			}
+
+			err = cmd.run()
+			if err != nil {
+				t.Fatal(err)
+			}
 			res := out.String()
-			if test.output != res {
-				t.Errorf("run() want %q, got %q", test.output, res)
+
+			if test.wantOutput != res {
+				t.Errorf("run() want %q, got %q", test.wantOutput, res)
 			}
 		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
