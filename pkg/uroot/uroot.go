@@ -415,7 +415,10 @@ func resolveGlobs(logger ulog.Logger, env gbbgolang.Environ, input string) ([]st
 			}
 			absPath, _ := filepath.Abs(match)
 
-			p, err := lookupPkgs(env, "", absPath)
+			// File paths have to be looked up *in* their
+			// directory, so that *their* go.mod is used to resolve
+			// them.
+			p, err := lookupPkgs(env, absPath, absPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to look up %q: %v", match, err)
 			} else if len(p) > 1 {
