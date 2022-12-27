@@ -68,61 +68,71 @@ func testSharedOK(t *testing.T, udspath, nonce string) {
 func TestPassFD(t *testing.T) {
 	fds := allocPipeFDs(t, WithServeOnce())
 
+	serveErr := make(chan error)
 	go func() {
-		if err := fds.Serve(); err != nil {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
 	testSharedOK(t, fds.UDSPath(), "some_nonce")
+
+	fds.Close()
+	if err := <-serveErr; err != nil {
+		t.Errorf("Serve: %v", err)
+	}
 }
 
 func TestBadNonce(t *testing.T) {
 	fds := allocPipeFDs(t, WithServeOnce())
 
+	serveErr := make(chan error)
 	go func() {
-		if err := fds.Serve(); err != nil {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
 	sfd, err := GetSharedFD(fds.UDSPath(), "bad_nonce")
 	if err == nil {
 		t.Errorf("should have failed, but got sfd %d", sfd)
 	}
+	fds.Close()
+	if err := <-serveErr; err != nil {
+		t.Errorf("Serve: %v", err)
+	}
 }
 
 func TestBadSubsetNonce(t *testing.T) {
 	fds := allocPipeFDs(t, WithServeOnce())
 
+	serveErr := make(chan error)
 	go func() {
-		if err := fds.Serve(); err != nil {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
 	sfd, err := GetSharedFD(fds.UDSPath(), "some_non")
 	if err == nil {
 		t.Errorf("should have failed, but got sfd %d", sfd)
 	}
+	fds.Close()
+	if err := <-serveErr; err != nil {
+		t.Errorf("Serve: %v", err)
+	}
 }
 
 func TestBadEmptyNonce(t *testing.T) {
 	fds := allocPipeFDs(t, WithServeOnce())
 
+	serveErr := make(chan error)
 	go func() {
-		if err := fds.Serve(); err != nil {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
 	sfd, err := GetSharedFD(fds.UDSPath(), "")
 	if err == nil {
 		t.Errorf("should have failed, but got sfd %d", sfd)
+	}
+
+	fds.Close()
+	if err := <-serveErr; err != nil {
+		t.Errorf("Serve: %v", err)
 	}
 }
 
@@ -138,32 +148,37 @@ func TestEmptyNonce(t *testing.T) {
 func TestTimeoutDoesntFire(t *testing.T) {
 	fds := allocPipeFDs(t, WithServeOnce(), WithTimeout(time.Second))
 
+	serveErr := make(chan error)
 	go func() {
-		if err := fds.Serve(); err != nil {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
 	testSharedOK(t, fds.UDSPath(), "some_nonce")
+
+	fds.Close()
+	if err := <-serveErr; err != nil {
+		t.Errorf("Serve: %v", err)
+	}
 }
 
 // Might flake, based on timing
 func TestTimeoutFires(t *testing.T) {
-	fds := allocPipeFDs(t, WithServeOnce(), WithTimeout(time.Microsecond))
+	fds := allocPipeFDs(t, WithServeOnce(), WithTimeout(100*time.Millisecond))
 
+	serveErr := make(chan error)
 	go func() {
-		if err := fds.Serve(); err != nil && !os.IsTimeout(err) {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 1000)
 
 	sfd, err := GetSharedFD(fds.UDSPath(), "some_nonce")
 	if err == nil {
 		t.Errorf("should have timed out, but got sfd %d", sfd)
+	}
+	fds.Close()
+	if err := <-serveErr; err != nil && !os.IsTimeout(err) {
+		t.Errorf("Serve: %v", err)
 	}
 }
 
@@ -181,12 +196,9 @@ func TestWaitTimeout(t *testing.T) {
 func TestMultiServe(t *testing.T) {
 	fds := allocPipeFDs(t, WithTimeout(time.Second*5))
 
+	serveErr := make(chan error)
 	go func() {
-		// We'll eventually time out, or the whole test will exit
-		if err := fds.Serve(); err != nil && !os.IsTimeout(err) {
-			t.Error("serve:", err)
-		}
-		fds.Close()
+		serveErr <- fds.Serve()
 	}()
 
 	testSharedOK(t, fds.UDSPath(), "some_nonce")
@@ -197,5 +209,10 @@ func TestMultiServe(t *testing.T) {
 	}
 	if err := syscall.Close(sfd); err != nil {
 		t.Error("close:", err)
+	}
+
+	fds.Close()
+	if err := <-serveErr; err != nil && !os.IsTimeout(err) {
+		t.Errorf("Serve: %v", err)
 	}
 }

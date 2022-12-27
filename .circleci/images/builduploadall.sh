@@ -17,3 +17,12 @@ for GOARCH in amd64 arm arm64; do
     docker push uroottest/test-image-$GOARCH:$VERSION
   )
 done
+
+# Tamago has slightly different requirements; until we are sure why,
+# do a slightly custom build
+
+(
+	cd test-image-tamago
+	docker build . --build-arg UID=1000 --build-arg GID=1000 -t uroottest/test-image-tamago:$VERSION
+	docker push uroottest/test-image-tamago:$VERSION
+)

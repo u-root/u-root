@@ -9,15 +9,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/u-root/u-root/pkg/curl"
 )
 
 const content = "Very simple web server"
@@ -26,7 +27,7 @@ type handler struct{}
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
-	case "/200":
+	case "/", "/200", "/200/", "/200/index.html", "/200/300/":
 		w.WriteHeader(200)
 		w.Write([]byte(content))
 	case "/302":
@@ -40,63 +41,124 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var tests = []struct {
-	name    string
-	flags   []string // in, %[1]d is the server's port, %[2] is an unopen port
-	url     string   // in
-	content string   // out
-	retCode int      // out
-}{
-	{
-		name:    "basic",
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/200",
-		content: content,
-		retCode: 0,
-	},
-	{
-		name:    "ipv4",
-		flags:   []string{},
-		url:     "http://127.0.0.1:%[1]d/200",
-		content: content,
-		retCode: 0,
-	},
-	// TODO: CircleCI does not support ipv6
-	// {
-	// 	name:    "ipv6",
-	// 	flags:   []string{},
-	// 	url:     "http://[::1]:%[1]d/200",
-	// 	content: content,
-	// 	retCode: 0,
-	// },
-	{
-		name:    "redirect",
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/302",
-		content: "",
-		retCode: 0,
-	},
-	{
-		name:    "4xx error",
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/404",
-		content: "",
-		retCode: 1,
-	},
-	{
-		name:    "5xx error",
-		flags:   []string{},
-		url:     "http://localhost:%[1]d/500",
-		content: "",
-		retCode: 1,
-	},
-	{
-		name:    "no server",
-		flags:   []string{},
-		url:     "http://localhost:%[2]d/200",
-		content: "",
-		retCode: 1,
-	},
+// TestWget implements a table-driven test.
+func TestWget(t *testing.T) {
+	srv := httptest.NewServer(handler{})
+	defer srv.Close()
+
+	var tests = []struct {
+		name           string
+		url            string // in
+		wantContent    string // out
+		outputPath     string
+		wantOutputPath string
+		wantErr        error
+	}{
+		{
+			name:           "ipv4",
+			url:            fmt.Sprintf("%s/200", srv.URL),
+			wantContent:    content,
+			outputPath:     "basic",
+			wantOutputPath: "basic",
+			wantErr:        nil,
+		},
+
+		{
+			name:           "first path of url",
+			url:            fmt.Sprintf("%s/200", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "200",
+			wantErr:        nil,
+		},
+		{
+			name:           "index.html of domain",
+			url:            fmt.Sprintf("%s/", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "index.html",
+			wantErr:        nil,
+		},
+		{
+			name:           "index.html of subfolder",
+			url:            fmt.Sprintf("%s/200/", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "index.html",
+			wantErr:        nil,
+		},
+		{
+			name:           "index.html of 2nd level subfolder",
+			url:            fmt.Sprintf("%s/200/300/", srv.URL),
+			wantContent:    content,
+			wantOutputPath: "index.html",
+			wantErr:        nil,
+		},
+		{
+			name:           "localhost",
+			url:            strings.Replace(srv.URL, "127.0.0.1", "localhost", 1) + "/200",
+			wantContent:    content,
+			outputPath:     "ipv4",
+			wantOutputPath: "ipv4",
+			wantErr:        nil,
+		},
+		// TODO: CircleCI does not support ipv6
+		// {
+		// 	name:    "ipv6",
+		// 	flags:   []string{},
+		// 	url:     "http://[::1]:%[1]d/200",
+		// 	content: content,
+		// 	retCode: 0,
+		// },
+		{
+			name:           "redirect",
+			url:            fmt.Sprintf("%s/302", srv.URL),
+			outputPath:     "redirect",
+			wantOutputPath: "redirect",
+			wantErr:        nil,
+		},
+		{
+			name:    "4xx error",
+			url:     fmt.Sprintf("%s/404", srv.URL),
+			wantErr: curl.ErrStatusNotOk,
+		},
+		{
+			name:    "5xx error",
+			url:     fmt.Sprintf("%s/500", srv.URL),
+			wantErr: curl.ErrStatusNotOk,
+		},
+		{
+			name:    "empty url",
+			url:     "",
+			wantErr: errEmptyURL,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Chdir(t.TempDir()); err != nil {
+				t.Fatalf("failed to change into temporary directory: %v", err)
+			}
+
+			err := newCommand(tt.outputPath, tt.url).run()
+
+			if tt.wantErr == nil && err != nil {
+				t.Fatalf("expected nil, got: %v", err)
+			}
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
+				t.Fatalf("expected: %v, got: %v", tt.wantErr, err)
+			}
+
+			if tt.wantContent != "" {
+				content, err := os.ReadFile(tt.wantOutputPath)
+				if err != nil {
+					t.Fatalf("file %s was not created: %v", tt.wantOutputPath, err)
+				}
+
+				// Check content.
+				if string(content) != tt.wantContent {
+					t.Errorf("wanted:\n%#v\ngot:\n%#v", tt.wantContent, string(content))
+				}
+			}
+		})
+	}
 }
 
 func getListener(t *testing.T) (net.Listener, int) {
@@ -108,16 +170,12 @@ func getListener(t *testing.T) (net.Listener, int) {
 	return l, l.Addr().(*net.TCPAddr).Port
 }
 
-// TestWget implements a table-driven test.
-func TestWget(t *testing.T) {
-	// Start a webserver on a free port.
+func TestNoServer(t *testing.T) {
 	l, port := getListener(t)
-	defer l.Close()
-	ul, unusedPort := getListener(t)
-	defer ul.Close()
+
 	go func() {
 		for {
-			conn, err := ul.Accept()
+			conn, err := l.Accept()
 			if err != nil {
 				// End of test.
 				return
@@ -126,45 +184,8 @@ func TestWget(t *testing.T) {
 		}
 	}()
 
-	h := handler{}
-	go func() {
-		log.Print(http.Serve(l, h))
-	}()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Change the working directory to a temporary directory, so we can
-			// delete the temporary files after the test runs.
-			tmpDir := t.TempDir()
-
-			fileName := filepath.Base(tt.url)
-
-			args := append(tt.flags,
-				"-O", filepath.Join(tmpDir, fileName),
-				fmt.Sprintf(tt.url, port, unusedPort))
-			cmd := testutil.Command(t, args...)
-			output, err := cmd.CombinedOutput()
-
-			// Check return code.
-			if err := testutil.IsExitCode(err, tt.retCode); err != nil {
-				t.Errorf("exit code: %v, output: %s", err, string(output))
-			}
-
-			if tt.content != "" {
-				content, err := os.ReadFile(filepath.Join(tmpDir, fileName))
-				if err != nil {
-					t.Errorf("File %s was not created: %v", fileName, err)
-				}
-
-				// Check content.
-				if string(content) != tt.content {
-					t.Errorf("Want:\n%#v\nGot:\n%#v", tt.content, string(content))
-				}
-			}
-		})
+	err := newCommand("", fmt.Sprintf("http://localhost:%d/200", port)).run()
+	if err == nil {
+		t.Error("expected err got nil")
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }

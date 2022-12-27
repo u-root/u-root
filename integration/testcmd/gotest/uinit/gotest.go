@@ -89,7 +89,7 @@ func runTest() error {
 			return
 		}
 
-		args := []string{"-test.v"}
+		args := []string{"-test.v", "-test.bench=.", "-test.run=."}
 		coverFile := filepath.Join(filepath.Dir(path), "coverage.txt")
 		if len(*coverProfile) > 0 {
 			args = append(args, "-test.coverprofile", coverFile)

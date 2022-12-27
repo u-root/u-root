@@ -112,6 +112,27 @@ func TestConfigs(t *testing.T) {
 
 func FuzzParseGrubConfig(f *testing.F) {
 
+	baseDir := f.TempDir()
+
+	dirPath := filepath.Join(baseDir, "EFI", "uefi")
+	err := os.MkdirAll(dirPath, 0o777)
+	if err != nil {
+		f.Fatalf("failed %v: %v", dirPath, err)
+	}
+
+	path := filepath.Join(dirPath, "grub.cfg")
+	devices := block.BlockDevices{&block.BlockDev{
+		Name:   dirPath,
+		FSType: "test",
+		FsUUID: strings.TrimSpace("07338180-4a96-4611-aa6a-a452600e4cfe"),
+	}}
+	mountPool := &mount.Pool{}
+	mountPool.Add(&mount.MountPoint{
+		Path:   dirPath,
+		Device: filepath.Join("/dev", dirPath),
+		FSType: "test",
+	})
+
 	//no log output
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
@@ -119,19 +140,19 @@ func FuzzParseGrubConfig(f *testing.F) {
 	// get seed corpora from testdata_new files
 	seeds, err := filepath.Glob("testdata_new/*/*/*/grub.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	seeds2, err := filepath.Glob("testdata_new/*/*/grub.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	seeds = append(seeds, seeds2...)
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
 		}
 
 		f.Add(seedBytes)
@@ -147,27 +168,6 @@ func FuzzParseGrubConfig(f *testing.F) {
 		if bytes.Contains(data, []byte("include")) {
 			return
 		}
-
-		baseDir := t.TempDir()
-
-		dirPath := filepath.Join(baseDir, "EFI", "uefi")
-		err := os.MkdirAll(dirPath, 0o777)
-		if err != nil {
-			t.Fatalf("failed %v: %v", dirPath, err)
-		}
-
-		path := filepath.Join(dirPath, "grub.cfg")
-		devices := block.BlockDevices{&block.BlockDev{
-			Name:   dirPath,
-			FSType: "test",
-			FsUUID: strings.TrimSpace("07338180-4a96-4611-aa6a-a452600e4cfe"),
-		}}
-		mountPool := &mount.Pool{}
-		mountPool.Add(&mount.MountPoint{
-			Path:   dirPath,
-			Device: filepath.Join("/dev", dirPath),
-			FSType: "test",
-		})
 
 		err = os.WriteFile(path, data, 0o777)
 		if err != nil {

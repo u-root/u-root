@@ -622,13 +622,13 @@ func FuzzReadWriteNewc(f *testing.F) {
 	f.Add([]byte("07070100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000//000"))
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*")
 	if err != nil {
-		f.Errorf("failed to find seed corpora data %v", err)
+		f.Fatalf("failed to find seed corpora data %v", err)
 	}
 
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed to read seed corpora from file %v: %v", seed, err)
+			f.Fatalf("failed to read seed corpora from file %v: %v", seed, err)
 		}
 		f.Add(seedBytes)
 	}

@@ -410,9 +410,9 @@ func TestComposePartName(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := composePartName(tt.devName, tt.partNo)
+			got := ComposePartName(tt.devName, tt.partNo)
 			if got != tt.want {
-				t.Errorf("composePartName(%q, %d) = %q, want %q", tt.devName, tt.partNo, got, tt.want)
+				t.Errorf("ComposePartName(%q, %d) = %q, want %q", tt.devName, tt.partNo, got, tt.want)
 			}
 		})
 	}

@@ -8,7 +8,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	l "log"
+	"io"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -45,7 +46,6 @@ var (
 	cursor    int
 	arg       []string
 	whatIWant []string
-	log       = l.New(os.Stdout, "", 0)
 
 	addrScopes = map[netlink.Scope]string{
 		netlink.SCOPE_UNIVERSE: "global",
@@ -102,11 +102,11 @@ func maybename() (string, error) {
 	return arg[cursor], nil
 }
 
-func addrip() error {
+func addrip(w io.Writer) error {
 	var err error
 	var addr *netlink.Addr
 	if len(arg) == 1 {
-		return showLinks(os.Stdout, true)
+		return showLinks(w, true)
 	}
 	cursor++
 	whatIWant = []string{"add", "del"}
@@ -143,18 +143,18 @@ func addrip() error {
 	return nil
 }
 
-func neigh() error {
+func neigh(w io.Writer) error {
 	if len(arg) != 1 {
 		return errors.New("neigh subcommands not supported yet")
 	}
-	return showNeighbours(os.Stdout, true)
+	return showNeighbours(w, true)
 }
 
-func linkshow() error {
+func linkshow(w io.Writer) error {
 	cursor++
 	whatIWant = []string{"<nothing>", "<device name>"}
 	if len(arg[cursor:]) == 0 {
-		return showLinks(os.Stdout, false)
+		return showLinks(w, false)
 	}
 	return nil
 }
@@ -226,9 +226,9 @@ func linkadd() error {
 	return netlink.LinkAdd(&netlink.Bridge{LinkAttrs: attrs})
 }
 
-func link() error {
+func link(w io.Writer) error {
 	if len(arg) == 1 {
-		return linkshow()
+		return linkshow(w)
 	}
 
 	cursor++
@@ -237,7 +237,7 @@ func link() error {
 
 	switch one(cmd, whatIWant) {
 	case "show":
-		return linkshow()
+		return linkshow(w)
 	case "set":
 		return linkset()
 	case "add":
@@ -246,8 +246,8 @@ func link() error {
 	return usage()
 }
 
-func routeshow() error {
-	return showRoutes(*inet6)
+func routeshow(w io.Writer) error {
+	return showRoutes(w, *inet6)
 }
 
 func nodespec() string {
@@ -272,7 +272,7 @@ func nexthop() (string, net.IP, error) {
 	return nh, addr, nil
 }
 
-func routeadddefault() error {
+func routeadddefault(w io.Writer) error {
 	nh, nhval, err := nexthop()
 	if err != nil {
 		return err
@@ -284,7 +284,7 @@ func routeadddefault() error {
 	}
 	switch nh {
 	case "via":
-		log.Printf("Add default route %v via %v", nhval, l.Attrs().Name)
+		fmt.Fprintf(w, "Add default route %v via %v", nhval, l.Attrs().Name)
 		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
 		if err := netlink.RouteAdd(r); err != nil {
 			return fmt.Errorf("error adding default route to %v: %v", l.Attrs().Name, err)
@@ -294,11 +294,11 @@ func routeadddefault() error {
 	return usage()
 }
 
-func routeadd() error {
+func routeadd(w io.Writer) error {
 	ns := nodespec()
 	switch ns {
 	case "default":
-		return routeadddefault()
+		return routeadddefault(w)
 	default:
 		addr, err := netlink.ParseAddr(arg[cursor])
 		if err != nil {
@@ -333,44 +333,43 @@ func routedel() error {
 	return nil
 }
 
-func route() error {
+func route(w io.Writer) error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		return routeshow()
+		return routeshow(w)
 	}
 
 	whatIWant = []string{"show", "add", "del"}
 	switch one(arg[cursor], whatIWant) {
 	case "add":
-		return routeadd()
+		return routeadd(w)
 	case "del":
 		return routedel()
 	case "show":
-		return routeshow()
+		return routeshow(w)
 	}
 	return usage()
 }
 
-func main() {
+func run(out io.Writer) error {
 	// When this is embedded in busybox we need to reinit some things.
 	whatIWant = []string{"address", "route", "link", "neigh"}
 	cursor = 0
-	flag.Parse()
-	arg = flag.Args()
 
-	defer func() {
+	defer func() error {
 		switch err := recover().(type) {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				log.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				return fmt.Errorf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				log.Fatalf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				return fmt.Errorf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			}
-			log.Fatalf("Bummer: %v", err)
+			return fmt.Errorf("Bummer: %v", err)
 		default:
-			log.Fatalf("unexpected panic value: %T(%v)", err, err)
+			return fmt.Errorf("unexpected panic value: %T(%v)", err, err)
 		}
+		return nil
 	}()
 
 	// The ip command doesn't actually follow the BNF it prints on error.
@@ -378,17 +377,26 @@ func main() {
 	var err error
 	switch one(arg[cursor], whatIWant) {
 	case "address":
-		err = addrip()
+		err = addrip(out)
 	case "link":
-		err = link()
+		err = link(out)
 	case "route":
-		err = route()
+		err = route(out)
 	case "neigh":
-		err = neigh()
+		err = neigh(out)
 	default:
 		err = usage()
 	}
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	arg = os.Args[1:]
+	if err := run(os.Stdout); err != nil {
+		log.Fatalf("ip: %v", err)
 	}
 }

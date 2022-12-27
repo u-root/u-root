@@ -106,222 +106,6 @@ func TestRunAll(t *testing.T) {
 	}
 }
 
-func TestRunInteractive(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		pairs   []string
-		wantErr string
-	}{
-		{},
-		{
-			name: "newlines",
-			pairs: []string{
-				"\n",
-				"$ ",
-				"\n",
-				"$ ",
-			},
-		},
-		{
-			name: "echo foo",
-			pairs: []string{
-				"echo foo\n",
-				"foo\n",
-			},
-		},
-		{
-			name: "echo foo bar",
-			pairs: []string{
-				"echo foo\n",
-				"foo\n$ ",
-				"echo bar\n",
-				"bar\n",
-			},
-		},
-		{
-			name: "if then",
-			pairs: []string{
-				"if true\n",
-				"> ",
-				"then echo bar; fi\n",
-				"bar\n",
-			},
-		},
-		{
-			name: "quoted echo",
-			pairs: []string{
-				"echo 'foo\n",
-				"> ",
-				"bar'\n",
-				"foo\nbar\n",
-			},
-		},
-		{
-			name: "echo with semicolon",
-			pairs: []string{
-				"echo foo; echo bar\n",
-				"foo\nbar\n",
-			},
-		},
-		{
-			name: "echo with semicolon quoted",
-			pairs: []string{
-				"echo foo; echo 'bar\n",
-				"> ",
-				"baz'\n",
-				"foo\nbar\nbaz\n",
-			},
-		},
-		{
-			name: "braces",
-			pairs: []string{
-				"(\n",
-				"> ",
-				"echo foo)\n",
-				"foo\n",
-			},
-		},
-		{
-			name: "double brackets",
-			pairs: []string{
-				"[[\n",
-				"> ",
-				"true ]]\n",
-				"$ ",
-			},
-		},
-		{
-			name: "logic or",
-			pairs: []string{
-				"echo foo ||\n",
-				"> ",
-				"echo bar\n",
-				"foo\n",
-			},
-		},
-		{
-			name: "pipe",
-			pairs: []string{
-				"echo foo |\n",
-				"> ",
-				"read var; echo $var\n",
-				"foo\n",
-			},
-		},
-		{
-			name: "delayed newline",
-			pairs: []string{
-				"echo foo",
-				"",
-				" bar\n",
-				"foo bar\n",
-			},
-		},
-		{
-			name: "escaped newline",
-			pairs: []string{
-				"echo\\\n",
-				"> ",
-				" foo\n",
-				"foo\n",
-			},
-		},
-		{
-			name: "echo foo with escaped newline",
-			pairs: []string{
-				"echo foo\\\n",
-				"> ",
-				"bar\n",
-				"foobar\n",
-			},
-		},
-		{
-			name: "utf8",
-			pairs: []string{
-				"echo 你好\n",
-				"你好\n$ ",
-			},
-		},
-		{
-			name: "exit 0",
-			pairs: []string{
-				"echo foo; exit 0; echo bar\n",
-				"foo\n",
-				"echo baz\n",
-				"",
-			},
-		},
-		{
-			name: "exit 1",
-			pairs: []string{
-				"echo foo; exit 1; echo bar\n",
-				"foo\n",
-				"echo baz\n",
-				"",
-			},
-			wantErr: "exit status 1",
-		},
-		{
-			name: "no closing brace",
-			pairs: []string{
-				"(\n",
-				"> ",
-			},
-			wantErr: "1:1: reached EOF without matching ( with )",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			sh := shell{}
-			inReader, inWriter := io.Pipe()
-			outReader, outWriter := io.Pipe()
-			runner, err := interp.New(interp.StdIO(inReader, outWriter, outWriter))
-			if err != nil {
-				t.Errorf("Failed creating runner: %v", err)
-			}
-			errc := make(chan error, 1)
-			go func() {
-				errc <- sh.runInteractive(runner, inReader, outWriter)
-				if _, err := io.Copy(io.Discard, inReader); err != nil {
-					t.Errorf("Error discarding IO: %v", err)
-				}
-			}()
-
-			if err := readString(outReader, "$ "); err != nil {
-				t.Errorf("Failed reading string: %v", err)
-			}
-
-			for len(tt.pairs) > 0 {
-				if _, err := io.WriteString(inWriter, tt.pairs[0]); err != nil {
-					t.Errorf("Failed writing string: %v", err)
-				}
-				if err := readString(outReader, tt.pairs[1]); err != nil {
-					t.Errorf("Failed reading string: %v", err)
-				}
-
-				tt.pairs = tt.pairs[2:]
-			}
-
-			// Close the input pipe, so that the parser can stop
-			if err := inWriter.Close(); err != nil {
-				t.Errorf("Failed closing input pipe: %v", err)
-			}
-
-			// Once the input pipe is closed, close the output pipe
-			// so that any remaining prompt writes get discarded
-			if err := outReader.Close(); err != nil {
-				t.Errorf("Failed closing output pipe: %v", err)
-			}
-
-			err = <-errc
-			if err != nil && tt.wantErr == "" {
-				t.Errorf("Unexpected error: %v", err)
-			} else if tt.wantErr != "" && fmt.Sprint(err) != tt.wantErr {
-				t.Errorf("Want error %q, got: %v", tt.wantErr, err)
-			}
-		})
-	}
-}
-
 func TestRunInteractiveTabCompletion(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -416,6 +200,7 @@ func FuzzRun(f *testing.F) {
 		"wait with args not handled yet"}
 	re := strings.NewReplacer("\x22", "", "\x24", "", "\x26", "", "\x27", "", "\x28", "", "\x29", "", "\x2A", "", "\x3C", "", "\x3E", "", "\x3F", "", "\x5C", "", "\x7C", "")
 
+	dirPath := f.TempDir()
 	sh := shell{}
 	var buf bytes.Buffer
 	runner, err := interp.New(interp.StdIO(nil, &buf, &buf))
@@ -426,13 +211,13 @@ func FuzzRun(f *testing.F) {
 	// get seed corpora
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed to read seed corpora from file %v: %v", seed, err)
+			f.Fatalf("failed to read seed corpora from file %v: %v", seed, err)
 		}
 
 		f.Add(seedBytes)
@@ -481,7 +266,6 @@ func FuzzRun(f *testing.F) {
 			return
 		}
 
-		dirPath := t.TempDir()
 		buf.Reset()
 		runner.Reset()
 		runner.Dir = dirPath
