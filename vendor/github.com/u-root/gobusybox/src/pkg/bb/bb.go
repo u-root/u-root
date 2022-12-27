@@ -553,13 +553,13 @@ func moduleVersionIdentifier(m *packages.Module) string {
 //
 // Module-enabled Go programs resolve their dependencies in one of two ways:
 //
-// - versioned dependencies: via a version control system at a specific
-//   version, potentially remotely downloaded
+//   - versioned dependencies: via a version control system at a specific
+//     version, potentially remotely downloaded
 //
-// - locally: a module that is either `replace`d with a local file system
-//   directory, or a command that is being built from a module that is on the
-//   local file system (e.g. ./makebb ../u-root/cmds/core/ip -- here, ../u-root
-//   will be a local directory module)
+//   - locally: a module that is either `replace`d with a local file system
+//     directory, or a command that is being built from a module that is on the
+//     local file system (e.g. ./makebb ../u-root/cmds/core/ip -- here, ../u-root
+//     will be a local directory module)
 //
 // Go minimum version selection (MVS) will take care of all versioned
 // dependencies on its own.
