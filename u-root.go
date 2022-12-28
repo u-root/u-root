@@ -319,23 +319,10 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 				pkgs = append(pkgs, a)
 				continue
 			}
-			// This is reached if a template was selected, so check uroot source path
-			// To make things a easier on our poor users, do
-			// validation so the error is a little less mysterious.
-			if err := canFindSource(*urootSourceDir); err != nil {
-				return err
-			}
-			for _, pkg := range p {
-				pkg = strings.TrimPrefix(pkg, "github.com/u-root/u-root/")
-				pkgs = append(pkgs, filepath.Join(*urootSourceDir, pkg))
-			}
 			pkgs = append(pkgs, p...)
 		}
 		if len(pkgs) == 0 {
-			if err := canFindSource(*urootSourceDir); err != nil {
-				return err
-			}
-			pkgs = []string{filepath.Join(*urootSourceDir, "cmds/core/*")}
+			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
 		}
 
 		// The command-line tool only allows specifying one build mode
