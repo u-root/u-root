@@ -34,7 +34,9 @@ import (
 )
 
 // The Go spec defines the following grammar:
-//   identifier = letter { letter | unicode_digit } .
+//
+//	identifier = letter { letter | unicode_digit } .
+//
 // See also https://golang.org/ref/spec#Identifiers
 var pnameRegex = regexp.MustCompile("[^a-zA-Z0-9_]+")
 

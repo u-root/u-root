@@ -18,6 +18,7 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.org/x/tools/go/packages"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/u-root/gobusybox/src/pkg/bb/bbinternal"
 	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/uio/ulog"
@@ -53,11 +54,11 @@ func modules(filesystemPaths []string) (map[string][]string, []string) {
 
 // We load file system paths differently, because there is a big difference between
 //
-//    go list -json ../../foobar
+//	go list -json ../../foobar
 //
 // and
 //
-//    (cd ../../foobar && go list -json .)
+//	(cd ../../foobar && go list -json .)
 //
 // Namely, PWD determines which go.mod to use. We want each
 // package to use its own go.mod, if it has one.
@@ -113,8 +114,11 @@ func loadFSPackages(l ulog.Logger, env golang.Environ, filesystemPaths []string)
 
 func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) ([]*packages.Package, error) {
 	if len(p.Errors) > 0 {
-		packages.PrintErrors([]*packages.Package{p})
-		return plist, fmt.Errorf("failed to add package %v for errors:", p)
+		var merr error
+		for _, e := range p.Errors {
+			merr = multierror.Append(merr, e)
+		}
+		return plist, fmt.Errorf("failed to add package %v for errors: %v", p, merr)
 	} else if len(p.GoFiles) == 0 {
 		l.Printf("Skipping package %v because it has no Go files", p)
 	} else if p.Name != "main" {
@@ -150,6 +154,9 @@ func NewPackages(l ulog.Logger, env golang.Environ, names ...string) ([]*bbinter
 		}
 		for _, p := range importPkgs {
 			ps, err = addPkg(l, ps, p)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
