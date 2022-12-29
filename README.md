@@ -29,22 +29,6 @@ u-root embodies four different projects.
     [syslinux config files](pkg/boot/syslinux) are to make transition to
     LinuxBoot easier.
 
-## :warning: Go Path is deprecated in favor of filesystem paths :warning:
-
-Since Go added modules in v1.11 it got increasingly difficult to determine
-where the source code actually ends up on the filesystem which caused a lot
-of confusion and breakages.
-
-The new behavior of u-root is therefore to only accept absolute or relative
-filesystem paths for Go programs which should be added into the BusyBox.
-One exception are templates like `core` or shortcuts to u-root commands
-like `cmds/core/ls`. For those to still work we added a new flag called `-uroot-source`
-which expects the filesystem path of a local copy of the u-root repository.
-If you're invoking `u-root` inside the repository for example, it would look
-like `./u-root -uroot-source ./`
-
-
-
 # Usage
 
 Make sure your Go version is >=1.19.
@@ -68,9 +52,10 @@ go install github.com/u-root/u-root
 **Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
 need to add `$GOPATH/bin` to your `$PATH`.**
 
-You can now use the u-root command to build an initramfs. Here are some
-examples with $UROOT_PATH being the path to where the u-root sources are on the disk
-(explicitly specifiying this is only necessary if not runnig u-root inside the root of the repository):
+You can now use the u-root command to build an initramfs. Here are some examples
+with $UROOT_PATH being the path to where the u-root sources are on the disk
+(explicitly specifiying this is only necessary if not runnig u-root inside the
+root of the repository):
 
 ```shell
 # Build an initramfs of all the Go cmds in ./cmds/core/... (default)
@@ -78,7 +63,7 @@ u-root
 
 # Build an initramfs of all the Go cmds in ./cmds/core/...
 # But running the command outside of the repository root
-u-root -uroot-source $UROOT_PATH
+(cd /tmp && GBB_PATH=$UROOT_PATH u-root)
 
 # Generate an archive with bootloaders
 #
@@ -94,14 +79,33 @@ u-root core -cmds/core/{ls,losetup}
 # Generate an archive with a tool outside of u-root
 git clone https://github.com/u-root/cpu
 u-root ./cmds/core/{init,ls,elvish} ./cpu/cmds/cpud
+
+# Generate an archive with a tool outside of u-root, in any PWD
+(cd /tmp && GBB_PATH=$UROOT_PATH:$CPU_PATH u-root ./cmds/core/{init,ls,elvish} ./cmds/cpud)
 ```
 
 The default set of packages included is all packages in
-`https://github.com/u-root/u-root/cmds/core/...`.
+`github.com/u-root/u-root/cmds/core/...`.
 
 You can build the initramfs built by u-root into the kernel via the
 `CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an
 option in for example Grub or the QEMU command line or coreboot config variable.
+
+`GBB_PATH` is a place that u-root will look for commands. Each colon-separated
+`GBB_PATH` element is concatenated with patterns from the command-line and
+checked for existence. For example:
+
+```shell
+GBB_PATH=$HOME/u-root:$HOME/u-bmc u-root \
+    cmds/core/init \
+    cmds/core/elvish \
+    cmd/socreset
+
+# matches:
+#   $HOME/u-root/cmds/core/init
+#   $HOME/u-root/cmds/core/elvish
+#   $HOME/u-bmc/cmd/socreset
+```
 
 ## Extra Files
 
@@ -319,6 +323,58 @@ qemu-system-x86_64 \
     -device virtio-rng-pci,rng=rng0 \
     -kernel vmlinuz \
     -initrd /tmp/initramfs.linux_amd64.cpio
+```
+
+## u-root with Go package paths
+
+For Go package paths to be usable, the path passed to `u-root` must be in the
+go.mod of the working directory or one of its parents. This is mostly useful for
+repositories making programmatic use of u-root's APIs.
+
+```sh
+cd ./u-root
+
+# In u-root's directory itself, github.com/u-root/u-root is resolvable. There is
+# a go.mod here that can refer to u-root.
+u-root github.com/u-root/u-root/cmds/core/...
+u-root github.com/u-root/u-root/cmds/core/*
+u-root github.com/u-root/u-root/cmds/core/i*
+```
+
+To depend on commands outside of ones own repository, the easiest way to depend
+on Go commands is the following:
+
+```sh
+TMPDIR=$(mktemp -d)
+cd $TMPDIR
+go mod init foobar
+```
+
+Create a file with some unused build tag like this to create dependencies on
+commands:
+
+```go
+//go:build tools
+
+package something
+
+import (
+        "github.com/u-root/u-root/cmds/core/ip"
+        "github.com/u-root/u-root/cmds/core/init"
+        "github.com/hugelgupf/p9/cmd/p9ufs"
+)
+```
+
+The unused build tag keeps it from being compiled, but its existence forces `go
+mod tidy` to add these dependencies to `go.mod`:
+
+```sh
+go mod tidy
+
+u-root \
+  github.com/u-root/u-root/cmds/core/ip \
+  github.com/u-root/u-root/cmds/core/init \
+  github.com/hugelgupf/p9/cmd/p9ufs
 ```
 
 ## SystemBoot
