@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -17,7 +16,7 @@ func TestGBBBuild(t *testing.T) {
 	dir := t.TempDir()
 
 	opts := Opts{
-		Env: golang.Default(),
+		Env: gbbgolang.Default(),
 		Packages: []string{
 			"../test/foo",
 			"../../../cmds/core/elvish",
@@ -35,6 +34,7 @@ func TestGBBBuild(t *testing.T) {
 	mustContain := []string{
 		"bbin/elvish",
 		"bbin/foo",
+		"bbin/bb",
 	}
 	for _, name := range mustContain {
 		if !af.Contains(name) {

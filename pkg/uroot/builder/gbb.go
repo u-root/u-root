@@ -7,12 +7,10 @@ package builder
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/u-root/gobusybox/src/pkg/bb"
-	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
@@ -56,19 +54,12 @@ func (b GBBBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	}
 	bbPath := filepath.Join(opts.TempDir, "bb")
 
-	// gobusybox has its own copy of the golang package, but Environ stayed
-	// (mostly) the same.
-	env := golang.Environ{
-		Context:     opts.Env.Context,
-		GO111MODULE: os.Getenv("GO111MODULE"),
-	}
-
 	if len(opts.BinaryDir) == 0 {
 		return fmt.Errorf("must specify binary directory")
 	}
 
 	bopts := &bb.Opts{
-		Env:          env,
+		Env:          opts.Env,
 		GenSrcDir:    opts.TempDir,
 		CommandPaths: opts.Packages,
 		BinaryPath:   bbPath,
