@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"testing"
@@ -103,7 +102,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 			args = append(args, "-covermode=atomic")
 		}
 
-		cmd := exec.Command("go", args...)
+		cmd := env.GoCmd(args...)
 		if stderr, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("could not build %s: %v\n%s", pkg, err, string(stderr))
 		}
