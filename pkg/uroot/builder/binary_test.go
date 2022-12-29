@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -17,10 +16,12 @@ func TestBinaryBuild(t *testing.T) {
 	dir := t.TempDir()
 
 	opts := Opts{
-		Env: golang.Default(),
+		Env: gbbgolang.Default(),
 		Packages: []string{
 			"../test/foo",
 			"../../../cmds/core/elvish",
+			"github.com/u-root/u-root/cmds/core/init",
+			"cmd/test2json",
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",
@@ -35,6 +36,7 @@ func TestBinaryBuild(t *testing.T) {
 	mustContain := []string{
 		"bbin/elvish",
 		"bbin/foo",
+		"bbin/init",
 	}
 	for _, name := range mustContain {
 		if !af.Contains(name) {
