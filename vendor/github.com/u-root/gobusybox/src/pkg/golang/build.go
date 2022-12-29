@@ -9,9 +9,11 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/u-root/gobusybox/src/pkg/uflag"
@@ -22,6 +24,7 @@ type Environ struct {
 	build.Context
 
 	GO111MODULE string
+	GBBDEBUG    bool
 }
 
 // Valid returns an error if GOARCH, GOROOT, or GOOS are unset.
@@ -41,18 +44,31 @@ func (c Environ) Valid() error {
 	return nil
 }
 
+func parseBool(s string) bool {
+	ok, err := strconv.ParseBool(s)
+	if err != nil {
+		return false
+	}
+	return ok
+}
+
 // Default is the default build environment comprised of the default GOPATH,
 // GOROOT, GOOS, GOARCH, and CGO_ENABLED values.
 func Default() Environ {
 	return Environ{
 		Context:     build.Default,
 		GO111MODULE: os.Getenv("GO111MODULE"),
+		GBBDEBUG:    parseBool(os.Getenv("GBBDEBUG")),
 	}
 }
 
 // GoCmd runs a go command in the environment.
 func (c Environ) GoCmd(args ...string) *exec.Cmd {
-	cmd := exec.Command(filepath.Join(c.GOROOT, "bin", "go"), args...)
+	goBin := filepath.Join(c.GOROOT, "bin", "go")
+	cmd := exec.Command(goBin, args...)
+	if c.GBBDEBUG {
+		log.Printf("GBB Go invocation: %s %s %#v", c, goBin, args)
+	}
 	cmd.Env = append(os.Environ(), c.Env()...)
 	return cmd
 }
@@ -150,8 +166,8 @@ func (b *BuildOpts) RegisterFlags(f *flag.FlagSet) {
 	f.BoolVar(&b.NoStrip, "go-no-strip", false, "Do not strip symbols & Build ID from the binary (will not produce a reproducible binary)")
 	f.BoolVar(&b.EnableInlining, "go-enable-inlining", false, "Enable inlining (will likely produce a larger binary)")
 	f.BoolVar(&b.NoTrimPath, "go-no-trimpath", false, "Disable -trimpath (will not produce a reproducible binary)")
-	arg := uflag.Strings(b.ExtraArgs)
-	f.Var(&arg, "go-extra-args", "Extra args to `go build`")
+	arg := (*uflag.Strings)(&b.ExtraArgs)
+	f.Var(arg, "go-extra-args", "Extra args to `go build`")
 }
 
 // BuildDir compiles the package in the directory `dirPath`, writing the build
@@ -168,20 +184,23 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) er
 	if c.InstallSuffix != "" {
 		args = append(args, "-installsuffix", c.Context.InstallSuffix)
 	}
-	if !opts.EnableInlining {
+	if opts == nil || !opts.EnableInlining {
 		// Disable "function inlining" to get a (likely) smaller binary.
 		args = append(args, "-gcflags=all=-l")
 	}
-	if !opts.NoStrip {
+	if opts == nil || !opts.NoStrip {
 		// Strip all symbols, and don't embed a Go build ID to be reproducible.
 		args = append(args, "-ldflags", "-s -w -buildid=")
 	}
-	if !opts.NoTrimPath {
+	if opts == nil || !opts.NoTrimPath {
 		// Reproducible builds: Trim any GOPATHs out of the executable's
 		// debugging information.
 		//
 		// E.g. Trim /tmp/bb-*/ from /tmp/bb-12345567/src/github.com/...
 		args = append(args, "-trimpath")
+	}
+	if opts != nil {
+		args = append(args, opts.ExtraArgs...)
 	}
 
 	if len(c.BuildTags) > 0 {

@@ -70,6 +70,12 @@ type Opts struct {
 	// discovery.
 	Env golang.Environ
 
+	// LookupEnv is the environment for looking up and resolving command
+	// paths.
+	//
+	// If left unset, DefaultEnv will be used.
+	LookupEnv *findpkg.Env
+
 	// GenSrcDir is an empty directory to generate the busybox source code
 	// in.
 	//
@@ -159,8 +165,15 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	}
 	pkgDir := filepath.Join(tmpDir, "src")
 
+	var lookupEnv findpkg.Env
+	if opts.LookupEnv != nil {
+		lookupEnv = *opts.LookupEnv
+	} else {
+		lookupEnv = findpkg.DefaultEnv()
+	}
+
 	// Ask go about all the commands in one batch for dependency caching.
-	cmds, err := findpkg.NewPackages(l, opts.Env, opts.CommandPaths...)
+	cmds, err := findpkg.NewPackages(l, opts.Env, lookupEnv, opts.CommandPaths...)
 	if err != nil {
 		return fmt.Errorf("finding packages failed: %v", err)
 	}
