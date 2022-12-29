@@ -213,9 +213,9 @@ jobs:
       - run:
           name: Test integration
           command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m
+            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=20m
             -ldflags='-s' -failfast ./integration/...
-          no_output_timeout: 15m
+          no_output_timeout: 20m
       - run:
           name: Upload integration coverage
           command: bash <(curl -s https://codecov.io/bash)
