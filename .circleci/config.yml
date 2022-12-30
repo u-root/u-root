@@ -4,7 +4,7 @@ templates:
   golang-template:
     &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v5.1.0
+      - image: uroottest/test-image-amd64:v5.2.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
@@ -189,7 +189,7 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v5.1.0
+      - image: uroottest/test-image-amd64:v5.2.0
     # The resource_class feature allows configuring CPU and RAM resources for each job. Different resource classes are available for different executors. https://circleci.com/docs/2.0/configuration-reference/#resourceclass
     resource_class: large
 
