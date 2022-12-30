@@ -35,41 +35,43 @@ func TestWatchdogRunningQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %v", err)
 	}
 	defer i.Close()
 
 	ret, err := i.WatchdogRunning()
 	if err != nil {
-		t.Errorf(`i.WatchdogRunning() = _, not %q`, err)
+		t.Errorf("i.WatchdogRunning() = %v", err)
 	}
 	if !ret {
-		t.Errorf(`i.WatchdogRunning() = true, not %v`, ret)
+		t.Errorf("i.WatchdogRunning() = %t, want true", ret)
 	}
 }
+
 func TestShutoffWatchdogQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %q", err)
 	}
 	defer i.Close()
 
 	if err := i.ShutoffWatchdog(); err != nil {
-		t.Errorf(`i.ShutoffWatchdog() = nil, not %q`, err)
+		t.Errorf("i.ShutoffWatchdog() = %q", err)
 	}
 }
+
 func TestGetDeviceIDQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %q", err)
 	}
 	defer i.Close()
 
 	id, err := i.GetDeviceID()
 	if err != nil {
-		t.Errorf(`i.GetDeviceID() = nil, not %q`, err)
+		t.Errorf("i.GetDeviceID() = %q", err)
 	}
 	if id.DeviceID != 0x20 {
 		t.Errorf("DeviceID: %q, want: %q", id.DeviceID, 0x1)
@@ -101,20 +103,21 @@ func TestGetDeviceIDQemu(t *testing.T) {
 	}
 
 }
+
 func TestEnableSELQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %q", err)
 	}
 	defer i.Close()
 
 	ret, err := i.EnableSEL()
 	if err != nil {
-		t.Errorf(`i.EnableSEL() = nil, not %q`, err)
+		t.Errorf("i.EnableSEL() = %v", err)
 	}
 	if !ret {
-		t.Errorf(`i.EnableSEL() = true, not %v`, ret)
+		t.Errorf("i.EnableSEL() = %v, want true", ret)
 	}
 }
 
@@ -122,78 +125,82 @@ func TestGetSELInfoQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %v", err)
 	}
 	defer i.Close()
 
 	info, err := i.GetSELInfo()
 	if err != nil {
-		t.Errorf(`i.GetSELInfo() = nil, not %q`, err)
+		t.Errorf("i.GetSELInfo() = %v", err)
 	}
 	if info.Version != 0x51 {
-		t.Errorf(`Version = %q, not %q`, info.Version, 0x51)
+		t.Errorf("Version = %q, want %q", info.Version, 0x51)
 	}
 	if info.Entries != 0x0 {
-		t.Errorf(`Version = %q, not %q`, info.Entries, 0x0)
+		t.Errorf("Version = %q, want %q", info.Entries, 0x0)
 	}
 	if info.FreeSpace != 0x800 {
-		t.Errorf(`Version = %q, not %q`, info.FreeSpace, 0x800)
+		t.Errorf("Version = %q, want %q", info.FreeSpace, 0x800)
 	}
 	if info.OpSupport != 0x2 {
-		t.Errorf(`Version = %q, not %q`, info.Version, 0x2)
+		t.Errorf("Version = %q, want %q", info.Version, 0x2)
 	}
 
 }
+
 func TestGetLanConfigQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	t.Skip("Not supported command")
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %v", err)
 	}
 	defer i.Close()
 
 	if _, err := i.GetLanConfig(1, 1); err != nil {
-		t.Errorf(`i.GetLanConfig(1, 1) = nil, not %q`, err)
+		t.Errorf("i.GetLanConfig(1, 1) = %v", err)
 	}
 }
+
 func TestRawCmdQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %v", err)
 	}
 	defer i.Close()
 
 	// WatchdogRunning configuration
 	data := []byte{0x6, 0x1}
 	if _, err := i.RawCmd(data); err != nil {
-		t.Errorf(`i.RawCmd(data) = nil, not %q`, err)
+		t.Errorf("i.RawCmd(data) = %v", err)
 	}
 }
+
 func TestSetSystemFWVersionQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	t.Skip("Not supported command")
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %v", err)
 	}
 	defer i.Close()
 
 	if err := i.SetSystemFWVersion("TestTest"); err == nil {
-		t.Errorf(`i.SetSystemFWVersion("TestTest") = nil, not %q`, err)
+		t.Errorf("i.SetSystemFWVersion(TestTest) = %v", err)
 	}
 }
+
 func TestLogSystemEventQemu(t *testing.T) {
 	testutil.SkipIfNotRoot(t)
 	i, err := Open(0)
 	if err != nil {
-		t.Fatalf("Open(0):= i,nil, not nil, %q", err)
+		t.Fatalf("Open(0) = %v", err)
 	}
 	defer i.Close()
 
 	e := &Event{}
 	if err := i.LogSystemEvent(e); err != nil {
-		t.Errorf(`i.LogSystemEvent(e) = nil, not %q`, err)
+		t.Errorf("i.LogSystemEvent(e) = %v", err)
 	}
 }
