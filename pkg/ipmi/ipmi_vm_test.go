@@ -43,8 +43,8 @@ func TestWatchdogRunningQemu(t *testing.T) {
 	if err != nil {
 		t.Errorf("i.WatchdogRunning() = %v", err)
 	}
-	if !ret {
-		t.Errorf("i.WatchdogRunning() = %t, want true", ret)
+	if ret {
+		t.Errorf("i.WatchdogRunning() = %t, want false", ret)
 	}
 }
 
