@@ -94,6 +94,8 @@ CONFIG_9P_FS=y
 # GPIO test - mock GPIO libraries
 CONFIG_GPIOLIB=y
 CONFIG_GPIO_MOCKUP=y
+# CONFIG_EXPERT is required for CONFIG_GPIO_SYSFS
+CONFIG_EXPERT=y
 CONFIG_GPIO_SYSFS=y
 
 # Compressed initramfs
