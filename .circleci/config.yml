@@ -196,3 +196,4 @@ jobs:
     <<: *integration-template
     docker:
       - image: uroottest/test-image-arm64:v5.2.0
+    resource_class: large
