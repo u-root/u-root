@@ -78,6 +78,13 @@ func testPkgs(t *testing.T) []string {
 		blocklist = append(
 			blocklist,
 			"github.com/u-root/u-root/pkg/strace",
+
+			// These tests run in 1-2 seconds on x86, but run
+			// beyond their huge timeout under arm64 in the VM. Not
+			// sure why. Slow emulation?
+			"github.com/u-root/u-root/cmds/core/pci",
+			"github.com/u-root/u-root/cmds/exp/cbmem",
+			"github.com/u-root/u-root/pkg/vfile",
 		)
 	}
 	for i := 0; i < len(pkgs); i++ {
