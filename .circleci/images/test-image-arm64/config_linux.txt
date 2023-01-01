@@ -121,3 +121,9 @@ CONFIG_TMPFS_XATTR=y
 # Compilation fails if you use this and run `make olddefconfig` without setting
 # CONFIG_PCIE_KIRIN=n explicitly.
 CONFIG_PCIE_KIRIN=n
+
+# Enable time in guest. QEMU uses PL031 to set RTC. pkg/boot/fit requires
+# current time signature checks.
+CONFIG_RTC_CLASS=y
+CONFIG_ARM_RZN1=y
+CONFIG_RTC_DRV_PL031=y
