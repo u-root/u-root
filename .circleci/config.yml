@@ -25,7 +25,7 @@ templates:
       - run:
           name: Test integration
           command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m
+            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=20m
             -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
       - run:
@@ -190,7 +190,6 @@ jobs:
     <<: *integration-template
     docker:
       - image: uroottest/test-image-amd64:v5.2.0
-    # The resource_class feature allows configuring CPU and RAM resources for each job. Different resource classes are available for different executors. https://circleci.com/docs/2.0/configuration-reference/#resourceclass
     resource_class: large
 
   test-integration-arm:
@@ -198,24 +197,7 @@ jobs:
     docker:
       - image: uroottest/test-image-arm:v5.1.0
 
-  # This arch needs a different working dir, so don't use integration-template
   test-integration-arm64:
+    <<: *integration-template
     docker:
       - image: uroottest/test-image-arm64:v5.2.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-      # x7 all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 7
-    steps:
-      - checkout
-      - run:
-          name: Test integration
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=20m
-            -ldflags='-s' -failfast ./integration/...
-          no_output_timeout: 20m
-      - run:
-          name: Upload integration coverage
-          command: bash <(curl -s https://codecov.io/bash)
