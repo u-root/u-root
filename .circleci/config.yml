@@ -24,9 +24,8 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=20m -p=1
-            -ldflags='-s' -failfast ./integration/...
+          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v
+            -timeout=20m -p=1 -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
       - run:
           name: Upload integration coverage
@@ -129,13 +128,13 @@ jobs:
   race:
     <<: *beefy-template
     environment:
+      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
       - CGO_ENABLED: 1
     steps:
       - checkout
       - run:
           name: Race detector
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -race
-            -timeout=15m -p=1 -failfast ./cmds/... ./pkg/...
+          command: go test -race -timeout=15m -p=1 -failfast ./cmds/... ./pkg/...
 
   compile_cmds:
     <<: *golang-template
