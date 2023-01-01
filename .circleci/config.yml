@@ -41,7 +41,8 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - test
+      - test-pkgs
+      - test-cmds
       - test-build
       - test-build-tamago-riscv64
       - test-build-tamago-arm
@@ -54,25 +55,32 @@ workflows:
       - check_licenses
 
 jobs:
-  test:
+  test-pkgs:
     <<: *beefy-template
     environment:
       - GOMAXPROCS: 1
     steps:
       - checkout
       - run:
-          name: Test Packages
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -v -a
+          name: Test packages
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -a
             -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt
             -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
 
       - run:
-          name: Test coverage
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=20m
-            -failfast -coverprofile=coverage.txt -covermode=atomic -cover
-            ./cmds/... ./pkg/...
+          name: Upload coverage
+          command: bash <(curl -s https://codecov.io/bash)
+
+  test-cmds:
+    <<: *beefy-template
+    steps:
+      - checkout
+      - run:
+          name: Test commands
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v
+            -timeout=20m -failfast -coverprofile=coverage.txt -covermode=atomic
+            -cover ./cmds/...
 
       - run:
           name: Upload coverage
