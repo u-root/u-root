@@ -107,6 +107,9 @@ func TestGoTest(t *testing.T) {
 				//
 				//     disk = make([]byte, 0x100000000)
 				qemu.ArbitraryArgs{"-m", "6G"},
+
+				// aarch64 VMs start at 1970-01-01 without RTC explicitly set.
+				qemu.ArbitraryArgs{"-rtc", "base=localtime,clock=vm"},
 			},
 		},
 		BuildOpts: uroot.Opts{
