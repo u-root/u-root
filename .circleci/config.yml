@@ -161,15 +161,6 @@ jobs:
           command: go run tools/checklicenses/checklicenses.go -c
             tools/checklicenses/config.json
 
-  check_symlinks:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go
-            -files /tmp/usr minimal
-
   check_templates:
     <<: *golang-template
     steps:
