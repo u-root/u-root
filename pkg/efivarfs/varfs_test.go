@@ -10,12 +10,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	guid "github.com/google/uuid"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestProbeAndReturn(t *testing.T) {
@@ -147,12 +145,6 @@ func TestGet(t *testing.T) {
 			// This setup bypasses all the tests for this fake varfs.
 			e := &EFIVarFS{path: tmp}
 
-			if tt.name == "no permission" && runtime.GOARCH == "amd64" {
-				// For some reasons tests that run in the x86 Qemu
-				// VM ignore UNIX permission changes...
-				testutil.SkipIfInVMTest(t)
-			}
-
 			attr, data, err := e.Get(tt.vd)
 			if errors.Is(err, ErrNoFS) {
 				t.Logf("no EFIVarFS: %v; skipping this test", err)
@@ -272,12 +264,6 @@ func TestSet(t *testing.T) {
 			// This setup bypasses all the tests for this fake varfs.
 			e := &EFIVarFS{path: tmp}
 
-			if strings.Contains(tt.name, "permission") && runtime.GOARCH == "amd64" {
-				// For some reasons tests that run in the x86 Qemu
-				// VM ignore UNIX permission changes...
-				testutil.SkipIfInVMTest(t)
-			}
-
 			if err := e.Set(tt.vd, tt.attr, tt.data); err != nil {
 				if !errors.Is(err, tt.wantErr) {
 					// Needed as some errors include changing tmp directory names
@@ -353,12 +339,6 @@ func TestRemove(t *testing.T) {
 			tt.setup(tmp, t)
 			// This setup bypasses all the tests for this fake varfs.
 			e := &EFIVarFS{path: tmp}
-
-			if strings.Contains(tt.name, "permission") && runtime.GOARCH == "amd64" {
-				// For some reasons tests that run in the x86 Qemu
-				// VM ignore UNIX permission changes...
-				testutil.SkipIfInVMTest(t)
-			}
 
 			if err := e.Remove(tt.vd); err != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -503,12 +483,6 @@ func TestList(t *testing.T) {
 			tt.setup(tt.dir, t)
 			// This setup bypasses all the tests for this fake varfs.
 			e := &EFIVarFS{path: tmp}
-
-			if strings.Contains(tt.name, "permission") && runtime.GOARCH == "amd64" {
-				// For some reasons tests that run in the x86 Qemu
-				// VM ignore UNIX permission changes...
-				testutil.SkipIfInVMTest(t)
-			}
 
 			if _, err := e.List(); err != nil {
 				if !errors.Is(err, tt.wantErr) {
