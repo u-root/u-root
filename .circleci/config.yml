@@ -25,7 +25,7 @@ templates:
       - run:
           name: Test integration
           command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=20m
+            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=20m -p=1
             -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
       - run:
@@ -57,13 +57,11 @@ workflows:
 jobs:
   test-pkgs:
     <<: *beefy-template
-    environment:
-      - GOMAXPROCS: 1
     steps:
       - checkout
       - run:
           name: Test packages
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -a
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -a -p=1
             -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt
             -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
@@ -78,7 +76,7 @@ jobs:
       - checkout
       - run:
           name: Test commands
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -p=1
             -timeout=20m -failfast -coverprofile=coverage.txt -covermode=atomic
             -cover ./cmds/...
 
@@ -132,13 +130,12 @@ jobs:
     <<: *beefy-template
     environment:
       - CGO_ENABLED: 1
-      - GOMAXPROCS: 1
     steps:
       - checkout
       - run:
           name: Race detector
           command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -race
-            -timeout=15m -failfast ./cmds/... ./pkg/...
+            -timeout=15m -p=1 -failfast ./cmds/... ./pkg/...
 
   compile_cmds:
     <<: *golang-template
