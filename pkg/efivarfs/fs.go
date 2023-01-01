@@ -20,7 +20,7 @@ func getInodeFlags(f *os.File) (int, error) {
 	// If I knew how unix.Getxattr works I'd use that...
 	flags, err := unix.IoctlGetInt(int(f.Fd()), unix.FS_IOC_GETFLAGS)
 	if err != nil {
-		return 0, &os.PathError{Op: "ioctl", Path: f.Name(), Err: err}
+		return 0, &os.PathError{Op: "ioctl(FS_IOC_GETFLAGS)", Path: f.Name(), Err: err}
 	}
 	return flags, nil
 }
@@ -29,7 +29,7 @@ func getInodeFlags(f *os.File) (int, error) {
 func setInodeFlags(f *os.File, flags int) error {
 	// If I knew how unix.Setxattr works I'd use that...
 	if err := unix.IoctlSetPointerInt(int(f.Fd()), unix.FS_IOC_SETFLAGS, flags); err != nil {
-		return &os.PathError{Op: "ioctl", Path: f.Name(), Err: err}
+		return &os.PathError{Op: "ioctl(FS_IOC_SETFLAGS)", Path: f.Name(), Err: err}
 	}
 	return nil
 }
