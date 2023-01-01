@@ -12,6 +12,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// FS_IMMUTABLE_FL is an inode flag to make a file immutable.
+const FS_IMMUTABLE_FL = 0x10
+
 // getInodeFlags returns the extended attributes of a file.
 func getInodeFlags(f *os.File) (int, error) {
 	// If I knew how unix.Getxattr works I'd use that...
@@ -39,11 +42,11 @@ func makeMutable(f *os.File) (restore func(), err error) {
 	if err != nil {
 		return nil, err
 	}
-	if flags&unix.STATX_ATTR_IMMUTABLE == 0 {
+	if flags&FS_IMMUTABLE_FL == 0 {
 		return func() {}, nil
 	}
 
-	if err := setInodeFlags(f, flags&^unix.STATX_ATTR_IMMUTABLE); err != nil {
+	if err := setInodeFlags(f, flags&^FS_IMMUTABLE_FL); err != nil {
 		return nil, err
 	}
 	return func() {
