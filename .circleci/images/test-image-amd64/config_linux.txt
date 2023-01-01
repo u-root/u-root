@@ -117,3 +117,6 @@ CONFIG_IPMI_SI=y
 
 # Add DMI/SMBIOS support
 CONFIG_DMI_SYSFS=y
+
+# pkg/efivarfs (and its test) require immutable bit on xattr
+CONFIG_TMPFS_XATTR=y

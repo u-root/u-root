@@ -113,3 +113,11 @@ CONFIG_RELOCATABLE=y
 
 # Enable ACPI
 CONFIG_ACPI=y
+
+# pkg/efivarfs (and its test) require immutable bit on xattr
+CONFIG_TMPFS_XATTR=y
+
+# v6.0 has a missing dependency, and PCIE_KIRIN is "y" in the defconfig.
+# Compilation fails if you use this and run `make olddefconfig` without setting
+# CONFIG_PCIE_KIRIN=n explicitly.
+CONFIG_PCIE_KIRIN=n
