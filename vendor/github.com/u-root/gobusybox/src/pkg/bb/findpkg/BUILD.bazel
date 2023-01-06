@@ -10,7 +10,6 @@ go_library(
         "//src/pkg/golang",
         "@com_github_hashicorp_go_multierror//:go-multierror",
         "@com_github_u_root_uio//ulog",
-        "@org_golang_x_sys//unix",
         "@org_golang_x_tools//go/packages",
     ],
 )
@@ -19,4 +18,10 @@ go_test(
     name = "findpkg_test",
     srcs = ["bb_test.go"],
     embed = [":findpkg"],
+    # Uses standard Go list -json, not available in bazel.
+    tags = ["notest"],
+    deps = [
+        "//src/pkg/golang",
+        "@com_github_u_root_uio//ulog/ulogtest",
+    ],
 )

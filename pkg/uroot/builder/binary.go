@@ -5,13 +5,46 @@
 package builder
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/u-root/u-root/pkg/golang"
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"golang.org/x/tools/go/packages"
 )
+
+func lookupPkgs(env gbbgolang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedFiles,
+		Env:  append(os.Environ(), env.Env()...),
+		Dir:  dir,
+	}
+	return packages.Load(cfg, patterns...)
+}
+
+func dirFor(env gbbgolang.Environ, pkg string) (string, error) {
+	pkgs, err := lookupPkgs(env, "", pkg)
+	if err != nil {
+		return "", fmt.Errorf("failed to look up package %q: %v", pkg, err)
+	}
+
+	// One directory = one package in standard Go, so
+	// finding the first file's parent directory should
+	// find us the package directory.
+	var dir string
+	for _, p := range pkgs {
+		if len(p.GoFiles) > 0 {
+			dir = filepath.Dir(p.GoFiles[0])
+		}
+	}
+	if dir == "" {
+		return "", fmt.Errorf("could not find package directory for %q", pkg)
+	}
+	return dir, nil
+}
 
 // BinaryBuilder builds each Go command as a separate binary.
 //
@@ -28,21 +61,21 @@ func (BinaryBuilder) DefaultBinaryDir() string {
 // Build implements Builder.Build.
 func (BinaryBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	result := make(chan error, len(opts.Packages))
+
 	var wg sync.WaitGroup
-
-	noStrip := false
-	if opts.BuildOpts != nil {
-		noStrip = opts.BuildOpts.NoStrip
-	}
-
 	for _, pkg := range opts.Packages {
 		wg.Add(1)
 		go func(p string) {
 			defer wg.Done()
+			dir, err := dirFor(opts.Env, p)
+			if err != nil {
+				result <- err
+				return
+			}
 			result <- opts.Env.BuildDir(
-				p,
+				dir,
 				filepath.Join(opts.TempDir, opts.BinaryDir, filepath.Base(p)),
-				golang.BuildOpts{NoStrip: noStrip})
+				opts.BuildOpts)
 		}(pkg)
 	}
 

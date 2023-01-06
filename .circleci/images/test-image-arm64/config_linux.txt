@@ -113,3 +113,17 @@ CONFIG_RELOCATABLE=y
 
 # Enable ACPI
 CONFIG_ACPI=y
+
+# pkg/efivarfs (and its test) require immutable bit on xattr
+CONFIG_TMPFS_XATTR=y
+
+# v6.0 has a missing dependency, and PCIE_KIRIN is "y" in the defconfig.
+# Compilation fails if you use this and run `make olddefconfig` without setting
+# CONFIG_PCIE_KIRIN=n explicitly.
+CONFIG_PCIE_KIRIN=n
+
+# Enable time in guest. QEMU uses PL031 to set RTC. pkg/boot/fit requires
+# current time signature checks.
+CONFIG_RTC_CLASS=y
+CONFIG_ARM_RZN1=y
+CONFIG_RTC_DRV_PL031=y

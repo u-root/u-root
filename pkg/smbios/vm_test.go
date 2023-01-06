@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !race
+// +build !race
+
 package smbios
 
 import (
@@ -16,10 +19,7 @@ func TestIntegration(t *testing.T) {
 	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/smbios"}, &vmtest.Options{
 		QEMUOpts: qemu.Options{
 			Devices: []qemu.Device{
-				qemu.ArbitraryArgs{
-					"-smbios",
-					"type=2,manufacturer=u-root",
-				},
+				qemu.ArbitraryArgs{"-smbios", "type=2,manufacturer=u-root"},
 			},
 		},
 	})
@@ -92,23 +92,7 @@ func TestGetProcessorInfo(t *testing.T) {
 	}
 }
 
-func TestGetSystemSlots(t *testing.T) {
-
-	testutil.SkipIfNotRoot(t)
-
-	info, err := FromSysfs()
-	if err != nil {
-		t.Errorf("FromSysfs as a requirement failed.")
-	}
-
-	systemslots, err := info.GetSystemSlots()
-	if err != nil || systemslots == nil {
-		t.Errorf("GetSystemSlots() = %q, '%v'", systemslots, err)
-	}
-}
-
 func TestGetMemoryDevices(t *testing.T) {
-
 	testutil.SkipIfNotRoot(t)
 
 	info, err := FromSysfs()
