@@ -17,6 +17,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
@@ -265,5 +267,56 @@ func TestSet(t *testing.T) {
 		if err := g.SetOpts(set); err == nil {
 			t.Errorf("Setting %q: got nil, want err", set)
 		}
+	}
+}
+
+// This test tries to prevent people from breaking other operating systems.
+//
+// Compare:
+//
+//	GOOS=linux   GOARCH=amd64 go doc golang.org/x/sys/unix.Termios
+//	GOOS=darwin  GOARCH=amd64 go doc golang.org/x/sys/unix.Termios
+//	GOOS=openbsd GOARCH=amd64 go doc golang.org/x/sys/unix.Termios
+//
+// It's all a mess.
+//
+// This at least makes sure that the package compiles on all platforms.
+func TestCrossCompile(t *testing.T) {
+	testutil.SkipIfInVMTest(t)
+	if testing.Short() {
+		t.Skip("skipping in short mode")
+	}
+	platforms := []string{
+		"linux/386",
+		"linux/amd64",
+		"linux/arm64",
+		"darwin/amd64",
+		"darwin/arm64",
+		"freebsd/amd64",
+		"openbsd/amd64",
+	}
+	// As of Go 1.19+, running "go" selects the right one:
+	//
+	// https://go.dev/doc/go1.19
+	//
+	// "go test and go generate now place GOROOT/bin at the
+	// beginning of the PATH used for the subprocess, so tests and
+	// generators that execute the go command will resolve it to
+	// same GOROOT"
+	//
+	// And this project currently (2023-01-07) uses Go 1.19 as its
+	// CI minimum, so it should be fine to just use "go" here.
+	td := t.TempDir()
+	for _, platform := range platforms {
+		goos, goarch, _ := strings.Cut(platform, "/")
+		t.Run(platform, func(t *testing.T) {
+			t.Parallel()
+			outFile := filepath.Join(td, goos+"-"+goarch+".test")
+			cmd := exec.Command("go", "test", "-c", "-o", outFile, ".")
+			cmd.Env = append(os.Environ(), "GOOS="+goos, "GOARCH="+goarch)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("Failed: %v, %s", err, out)
+			}
+		})
 	}
 }
