@@ -142,6 +142,7 @@ var (
 		Mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		Mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
 		Mount{Source: "efivarfs", Target: "/sys/firmware/efi/efivars", FSType: "efivarfs"},
+		Mount{Source: "debugfs", Target: "/sys/kernel/debug", FSType: "debugfs"},
 
 		CpDir{Source: "/etc", Target: "/tmp/etc"},
 		Mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},
