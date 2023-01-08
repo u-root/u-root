@@ -127,6 +127,7 @@ var (
 		Dev{Name: "/dev/tty", Mode: unix.S_IFCHR | 0o666, Dev: 0x0500},
 		Dev{Name: "/dev/urandom", Mode: unix.S_IFCHR | 0o444, Dev: 0x0109},
 		Dev{Name: "/dev/port", Mode: unix.S_IFCHR | 0o640, Dev: 0x0104},
+		Dev{Name: "/dev/ttyhvc0", Mode: unix.S_IFCHR | 0o666, Dev: 0xe500},
 
 		Dir{Name: "/dev/pts", Mode: 0o777},
 		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
