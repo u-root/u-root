@@ -129,7 +129,7 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 	}
 
 	//	t.Cflag &^= unix.CBAUD
-	t.Cflag |= uint32(rate)
+	t.Cflag |= toTermiosCflag(rate)
 	t.Ispeed = rate
 	t.Ospeed = rate
 
