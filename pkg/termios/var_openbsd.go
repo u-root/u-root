@@ -5,13 +5,11 @@
 package termios
 
 import (
-	"syscall"
-
 	"golang.org/x/sys/unix"
 )
 
 // baud2unixB convert a baudrate to the corresponding unix const.
-var baud2unixB = map[int]uint64{
+var baud2unixB = map[int]int32{
 	50:     unix.B50,
 	75:     unix.B75,
 	110:    unix.B110,
@@ -32,17 +30,4 @@ var baud2unixB = map[int]uint64{
 	230400: unix.B230400,
 }
 
-// init adds constants that are darwin-specific
-func init() {
-	extra := map[string]*bit{
-		// not in FreeBSD
-		"iutf8": {word: I, mask: syscall.IUTF8},
-		"ofill": {word: O, mask: syscall.OFILL},
-		"ofdel": {word: O, mask: syscall.OFDEL},
-	}
-	for k, v := range extra {
-		boolFields[k] = v
-	}
-}
-
-func toTermiosCflag(r uint64) uint64 { return r }
+func toTermiosCflag(r int32) uint32 { return uint32(r) }
