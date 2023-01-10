@@ -67,6 +67,12 @@ var (
 	Debug   = func(string, ...interface{}) {}
 	opmap   map[string]Op
 	mapLock sync.Mutex
+	// EmptyStack means we wanted something and ... nothing there.
+	ErrEmptyStack = errors.New("empty stack")
+	// NotEnoughElements means the stack is not deep enough for whatever operator we have.
+	ErrNotEnoughElements = errors.New("not enough elements on stack")
+	// ErrWordExist is the error for trying to create a word that's already in use.
+	ErrWordExist = errors.New("word already exists")
 )
 
 func init() {
@@ -125,7 +131,7 @@ func Putop(n string, op Op) {
 	mapLock.Lock()
 	defer mapLock.Unlock()
 	if _, ok := opmap[n]; ok {
-		panic("Putting %s: op already assigned")
+		panic(fmt.Errorf("Putting %s: %w", n, ErrWordExist))
 	}
 	opmap[n] = op
 }
@@ -155,7 +161,7 @@ func (f *stack) Push(c Cell) {
 // Eval recovers() the panic.
 func (f *stack) Pop() (ret Cell) {
 	if len(f.stack) < 1 {
-		panic(errors.New("Empty stack"))
+		panic(ErrEmptyStack)
 	}
 	ret = f.stack[len(f.stack)-1]
 	f.stack = f.stack[0 : len(f.stack)-1]
@@ -183,7 +189,7 @@ func errRecover(errp *error) {
 			panic(e)
 		}
 		Debug("errRecover returns %v", e)
-		*errp = fmt.Errorf("%v", e)
+		*errp = e.(error)
 	}
 }
 
@@ -245,7 +251,7 @@ func EvalPop(f Forth, s string) (ret Cell, err error) {
 		return
 	}
 	if f.Length() != 1 {
-		panic(fmt.Sprintf("%v: length is not 1", f.Stack()))
+		panic(fmt.Errorf("%v: length is not 1;%w", f.Stack(), strconv.ErrRange))
 	}
 	ret = f.Pop()
 	Debug("EvalPop ret %v err %v", ret, err)
@@ -260,7 +266,7 @@ func String(f Forth) string {
 	case string:
 		return s
 	default:
-		panic(fmt.Sprintf("Can't convert %v to a string", c))
+		panic(fmt.Errorf("%v:%w", c, strconv.ErrSyntax))
 	}
 }
 
@@ -279,7 +285,7 @@ func toInt(f Forth) int64 {
 	case int64:
 		return s
 	default:
-		panic(fmt.Sprintf("NaN: %T", c))
+		panic(fmt.Errorf("%v NaN: %T:%w", c, c, strconv.ErrSyntax))
 	}
 }
 
@@ -287,7 +293,7 @@ func plus(f Forth) {
 	x := toInt(f)
 	y := toInt(f)
 	z := x + y
-	f.Push(strconv.FormatInt(z, 10))
+	f.Push(z)
 }
 
 func words(f Forth) {
@@ -305,7 +311,7 @@ func newword(f Forth) {
 	n := toInt(f)
 	// Pop <n> Cells.
 	if int64(f.Length()) < n {
-		panic(fmt.Sprintf("newword %s: stack is %d elements, need %d", s, f.Length(), n))
+		panic(fmt.Errorf("newword %s: stack is %d elements, need %d:%w", s, f.Length(), n, ErrNotEnoughElements))
 	}
 	c := make([]Cell, n)
 	for i := n; i > 0; i-- {
@@ -325,35 +331,35 @@ func times(f Forth) {
 	x := toInt(f)
 	y := toInt(f)
 	z := x * y
-	f.Push(strconv.FormatInt(z, 10))
+	f.Push(z)
 }
 
 func sub(f Forth) {
 	x := toInt(f)
 	y := toInt(f)
 	z := y - x
-	f.Push(strconv.FormatInt(z, 10))
+	f.Push(z)
 }
 
 func div(f Forth) {
 	x := toInt(f)
 	y := toInt(f)
 	z := y / x
-	f.Push(strconv.FormatInt(z, 10))
+	f.Push(z)
 }
 
 func mod(f Forth) {
 	x := toInt(f)
 	y := toInt(f)
 	z := y % x
-	f.Push(strconv.FormatInt(z, 10))
+	f.Push(z)
 }
 
 func roundup(f Forth) {
 	rnd := toInt(f)
 	v := toInt(f)
 	v = ((v + rnd - 1) / rnd) * rnd
-	f.Push(strconv.FormatInt(v, 10))
+	f.Push(v)
 }
 
 func swap(f Forth) {
@@ -389,7 +395,7 @@ func ifelse(f Forth) {
 func hostname(f Forth) {
 	h, err := os.Hostname()
 	if err != nil {
-		panic("No hostname")
+		panic(err)
 	}
 	f.Push(h)
 }
