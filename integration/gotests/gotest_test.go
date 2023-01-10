@@ -44,11 +44,11 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/dd",
 		"github.com/u-root/u-root/cmds/core/fusermount",
+		"github.com/u-root/u-root/cmds/core/gosh",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
 		// Some of TestEdCommands do not exit properly and end up left running. No idea how to fix this yet.
 		"github.com/u-root/u-root/cmds/exp/ed",
-		"github.com/u-root/u-root/cmds/exp/gosh",
 		"github.com/u-root/u-root/cmds/exp/pox",
 		"github.com/u-root/u-root/pkg/crypto",
 		"github.com/u-root/u-root/pkg/tarutil",

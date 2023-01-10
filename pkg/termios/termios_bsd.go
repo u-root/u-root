@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build darwin || freebsd
-// +build darwin freebsd
+//go:build darwin || freebsd || openbsd
+// +build darwin freebsd openbsd
 
 package termios
 
@@ -129,7 +129,7 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 	}
 
 	//	t.Cflag &^= unix.CBAUD
-	t.Cflag |= rate
+	t.Cflag |= toTermiosCflag(rate)
 	t.Ispeed = rate
 	t.Ospeed = rate
 
