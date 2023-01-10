@@ -127,6 +127,7 @@ var (
 		Dev{Name: "/dev/tty", Mode: unix.S_IFCHR | 0o666, Dev: 0x0500},
 		Dev{Name: "/dev/urandom", Mode: unix.S_IFCHR | 0o444, Dev: 0x0109},
 		Dev{Name: "/dev/port", Mode: unix.S_IFCHR | 0o640, Dev: 0x0104},
+		Dev{Name: "/dev/ttyhvc0", Mode: unix.S_IFCHR | 0o666, Dev: 0xe500},
 
 		Dir{Name: "/dev/pts", Mode: 0o777},
 		Mount{Source: "devpts", Target: "/dev/pts", FSType: "devpts", Opts: "newinstance,ptmxmode=666,gid=5,mode=620"},
@@ -142,6 +143,7 @@ var (
 		Mount{Source: "sysfs", Target: "/sys", FSType: "sysfs"},
 		Mount{Source: "securityfs", Target: "/sys/kernel/security", FSType: "securityfs"},
 		Mount{Source: "efivarfs", Target: "/sys/firmware/efi/efivars", FSType: "efivarfs"},
+		Mount{Source: "debugfs", Target: "/sys/kernel/debug", FSType: "debugfs"},
 
 		CpDir{Source: "/etc", Target: "/tmp/etc"},
 		Mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},

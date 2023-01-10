@@ -23,7 +23,7 @@ RUN sudo apt-get update &&                          \
         libpixman-1-dev                             \
         meson                                       \
         ninja-build                                 \
-        python                                      \
+        python3                                     \
         zlib1g-dev                                  \
         `# Linux kernel build deps`                 \
         libelf-dev                                  \
@@ -39,11 +39,11 @@ RUN sudo apt-get update &&                          \
 
 # Create working directory
 WORKDIR /home/circleci
-COPY config_linux5.10_x86_64.txt .config
+COPY config_linux.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
-    git clone --depth=1 --branch=v5.10 https://github.com/torvalds/linux; \
+    git clone --depth=1 --branch=v6.0 https://github.com/torvalds/linux;  \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \
@@ -84,7 +84,7 @@ RUN set -eux;                                                          \
 
 SHELL ["/bin/bash", "-c"]
 RUN set -ex;                                                           \
-    git clone --branch uefipayload --recursive                         \
+    git clone --branch uefipayload-2023 --recursive                    \
     https://github.com/linuxboot/edk2 uefipayload;                     \
     cd uefipayload;                                                    \
     source ./edksetup.sh;                                              \

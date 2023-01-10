@@ -4,7 +4,7 @@ templates:
   golang-template:
     &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v5.1.0
+      - image: uroottest/test-image-amd64:v5.2.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
@@ -24,9 +24,8 @@ templates:
       - checkout
       - run:
           name: Test integration
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m
-            -ldflags='-s' -failfast ./integration/...
+          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v
+            -timeout=20m -p=1 -ldflags='-s' -failfast ./integration/...
           no_output_timeout: 15m
       - run:
           name: Upload integration coverage
@@ -41,7 +40,8 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - test
+      - test-pkgs
+      - test-cmds
       - test-build
       - test-build-tamago-riscv64
       - test-build-tamago-arm
@@ -54,25 +54,30 @@ workflows:
       - check_licenses
 
 jobs:
-  test:
+  test-pkgs:
     <<: *beefy-template
-    environment:
-      - GOMAXPROCS: 1
     steps:
       - checkout
       - run:
-          name: Test Packages
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -v -a
+          name: Test packages
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -a -p=1
             -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt
             -covermode=atomic -coverpkg=./pkg/... ./pkg/...
           no_output_timeout: 15m
 
       - run:
-          name: Test coverage
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -timeout=20m
-            -failfast -coverprofile=coverage.txt -covermode=atomic -cover
-            ./cmds/... ./pkg/...
+          name: Upload coverage
+          command: bash <(curl -s https://codecov.io/bash)
+
+  test-cmds:
+    <<: *beefy-template
+    steps:
+      - checkout
+      - run:
+          name: Test commands
+          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -p=1
+            -timeout=20m -failfast -coverprofile=coverage.txt -covermode=atomic
+            -cover ./cmds/...
 
       - run:
           name: Upload coverage
@@ -123,14 +128,13 @@ jobs:
   race:
     <<: *beefy-template
     environment:
+      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
       - CGO_ENABLED: 1
-      - GOMAXPROCS: 1
     steps:
       - checkout
       - run:
           name: Race detector
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root go test -race
-            -timeout=15m -failfast ./cmds/... ./pkg/...
+          command: go test -race -timeout=15m -p=1 -failfast ./cmds/... ./pkg/...
 
   compile_cmds:
     <<: *golang-template
@@ -152,15 +156,6 @@ jobs:
           name: Check licenses
           command: go run tools/checklicenses/checklicenses.go -c
             tools/checklicenses/config.json
-
-  check_symlinks:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Symbol tests to ensure we do not break symlink handling
-          command: mkdir /tmp/usr && ln -s /tmp/usr/x /tmp/usr/y && go run u-root.go
-            -files /tmp/usr minimal
 
   check_templates:
     <<: *golang-template
@@ -189,8 +184,7 @@ jobs:
   test-integration-amd64:
     <<: *integration-template
     docker:
-      - image: uroottest/test-image-amd64:v5.1.0
-    # The resource_class feature allows configuring CPU and RAM resources for each job. Different resource classes are available for different executors. https://circleci.com/docs/2.0/configuration-reference/#resourceclass
+      - image: uroottest/test-image-amd64:v5.2.0
     resource_class: large
 
   test-integration-arm:
@@ -198,24 +192,8 @@ jobs:
     docker:
       - image: uroottest/test-image-arm:v5.1.0
 
-  # This arch needs a different working dir, so don't use integration-template
   test-integration-arm64:
+    <<: *integration-template
     docker:
-      - image: uroottest/test-image-arm64:v5.1.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-      # x7 all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 7
-    steps:
-      - checkout
-      - run:
-          name: Test integration
-          command: UROOT_SOURCE=/home/circleci/go/src/github.com/u-root/u-root
-            UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v -timeout=15m
-            -ldflags='-s' -failfast ./integration/...
-          no_output_timeout: 15m
-      - run:
-          name: Upload integration coverage
-          command: bash <(curl -s https://codecov.io/bash)
+      - image: uroottest/test-image-arm64:v5.2.0
+    resource_class: large

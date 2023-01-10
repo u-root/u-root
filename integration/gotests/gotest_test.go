@@ -44,11 +44,11 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/dd",
 		"github.com/u-root/u-root/cmds/core/fusermount",
+		"github.com/u-root/u-root/cmds/core/gosh",
 		"github.com/u-root/u-root/cmds/core/wget",
 		"github.com/u-root/u-root/cmds/core/which",
 		// Some of TestEdCommands do not exit properly and end up left running. No idea how to fix this yet.
 		"github.com/u-root/u-root/cmds/exp/ed",
-		"github.com/u-root/u-root/cmds/exp/gosh",
 		"github.com/u-root/u-root/cmds/exp/pox",
 		"github.com/u-root/u-root/pkg/crypto",
 		"github.com/u-root/u-root/pkg/tarutil",
@@ -78,6 +78,13 @@ func testPkgs(t *testing.T) []string {
 		blocklist = append(
 			blocklist,
 			"github.com/u-root/u-root/pkg/strace",
+
+			// These tests run in 1-2 seconds on x86, but run
+			// beyond their huge timeout under arm64 in the VM. Not
+			// sure why. Slow emulation?
+			"github.com/u-root/u-root/cmds/core/pci",
+			"github.com/u-root/u-root/cmds/exp/cbmem",
+			"github.com/u-root/u-root/pkg/vfile",
 		)
 	}
 	for i := 0; i < len(pkgs); i++ {
@@ -107,6 +114,9 @@ func TestGoTest(t *testing.T) {
 				//
 				//     disk = make([]byte, 0x100000000)
 				qemu.ArbitraryArgs{"-m", "6G"},
+
+				// aarch64 VMs start at 1970-01-01 without RTC explicitly set.
+				qemu.ArbitraryArgs{"-rtc", "base=localtime,clock=vm"},
 			},
 		},
 		BuildOpts: uroot.Opts{

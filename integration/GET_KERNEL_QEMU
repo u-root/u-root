@@ -63,13 +63,16 @@ esac
 # Note the docker pull only hurts a lot the first time.
 # After you have run it once, further cp operations take a second or so.
 # By doing it this way, we always use the latest Docker files.
-DOCKER=uroottest/test-image-${UROOT_TESTARCH}
+CONTAINER=uroottest/test-image-${UROOT_TESTARCH}
 
-docker run -v $TMP:/out $DOCKER cp -a $UROOT_KERNEL  $UROOT_BIOS $UROOT_QEMU /out
+DIR=/home/circleci
+
+docker run $CONTAINER bash -c "echo \$UROOT_QEMU"
+docker run $CONTAINER tar Ccf $DIR - $UROOT_KERNEL $UROOT_QEMU $UROOT_BIOS | tar Cxf $TMP -
 
 ls -l $TMP
 
 # now adjust paths and such
-UROOT_KERNEL=$TMP/$UROOT_KERNEL
-UROOT_QEMU="$TMP/$UROOT_QEMU $UROOT_QEMU_OPTS"
-UROOT_BIOS=$TMP/$UROOT_BIOS
+export UROOT_KERNEL=$TMP/$UROOT_KERNEL
+export UROOT_QEMU="$TMP/$UROOT_QEMU $UROOT_QEMU_OPTS"
+export UROOT_BIOS=$TMP/$UROOT_BIOS

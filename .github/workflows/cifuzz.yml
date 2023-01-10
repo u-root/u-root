@@ -17,6 +17,7 @@ jobs:
         oss-fuzz-project-name: 'u-root'
         fuzz-seconds: 300
         dry-run: false
+        report-unreproducible-crashes: false
         language: go
     - name: Upload Crash
       uses: actions/upload-artifact@v3

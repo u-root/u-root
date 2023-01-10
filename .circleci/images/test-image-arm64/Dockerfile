@@ -24,7 +24,7 @@ RUN sudo apt-get update &&                          \
         libpixman-1-dev                             \
         meson                                       \
         ninja-build                                 \
-        python                                      \
+        python3                                     \
         qemu-efi-aarch64                            \
         zlib1g-dev                                  \
         `# Linux kernel build deps`                 \
@@ -33,11 +33,11 @@ RUN sudo apt-get update &&                          \
 
 # Create working directory
 WORKDIR /home/circleci
-COPY config_linux5.10.0_arm64.txt .config
+COPY config_linux.txt .config
 
 # Build linux
 RUN set -eux;                                                             \
-    git clone --depth=1 --branch=v5.15 https://github.com/torvalds/linux; \
+    git clone --depth=1 --branch=v6.0 https://github.com/torvalds/linux;  \
     sudo chmod 0444 .config;                                              \
     mv .config linux/;                                                    \
     cd linux;                                                             \

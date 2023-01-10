@@ -94,6 +94,8 @@ CONFIG_9P_FS=y
 # GPIO test - mock GPIO libraries
 CONFIG_GPIOLIB=y
 CONFIG_GPIO_MOCKUP=y
+# CONFIG_EXPERT is required for CONFIG_GPIO_SYSFS
+CONFIG_EXPERT=y
 CONFIG_GPIO_SYSFS=y
 
 # Compressed initramfs
@@ -115,3 +117,6 @@ CONFIG_IPMI_SI=y
 
 # Add DMI/SMBIOS support
 CONFIG_DMI_SYSFS=y
+
+# pkg/efivarfs (and its test) require immutable bit on xattr
+CONFIG_TMPFS_XATTR=y
