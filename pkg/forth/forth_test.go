@@ -5,40 +5,44 @@
 package forth
 
 import (
-	"fmt"
+	"errors"
 	"os"
-	"reflect"
+	"strconv"
 	"testing"
 )
 
 type forthTest struct {
-	val string
-	res Cell
-	err string
+	val   string
+	res   Cell
+	err   error
+	empty bool
 }
 
 var forthTests = []forthTest{
-	{"hostname", "", ""},
-	{"2", "2", ""},
-	{"", "", "[]: length is not 1"},
-	{"2 2 +", "4", ""},
-	{"4 2 -", "2", ""},
-	{"4 2 *", "8", ""},
-	{"4 2 /", "2", ""},
-	{"5 2 %", "1", ""},
-	{"sb43 hostbase", "43", ""},
-	{"sb43 hostbase dup 20 / swap 20 % dup ifelse", "3", ""},
-	{"sb40 hostbase dup 20 / swap 20 % dup ifelse", "2", ""},
-	{"2 4 swap /", "2", ""},
-	{"0 1 1 ifelse", "1", ""},
-	{"0 1 0 ifelse", "0", ""},
-	{"str cat strcat", "strcat", ""},
-	{"1 dup +", "2", ""},
-	{"4095 4096 roundup", "4096", ""},
-	{"4097 8192 roundup", "8192", ""},
-	{"2 x +", nil, "parsing \"x\": invalid syntax"},
-	{"1 dd +", "2", ""},
-	{"1 d3d", "3", ""},
+	{val: "hostname", res: "", empty: true},
+	{val: "2", res: "2", empty: true},
+	{val: "2 2 +", res: "4", empty: true},
+	{val: "4 2 -", res: "2", empty: true},
+	{val: "4 2 *", res: "8", empty: true},
+	{val: "4 2 /", res: "2", empty: true},
+	{val: "5 2 %", res: "1", empty: true},
+	{val: "sb43 hostbase", res: "43", empty: true},
+	{val: "sb43 hostbase dup 20 / swap 20 % dup ifelse", res: "3", empty: true},
+	{val: "sb40 hostbase dup 20 / swap 20 % dup ifelse", res: "2", empty: true},
+	{val: "2 4 swap /", res: "2", empty: true},
+	{val: "0 1 1 ifelse", res: "1", empty: true},
+	{val: "0 1 0 ifelse", res: "0", empty: true},
+	{val: "str cat strcat", res: "strcat", empty: true},
+	{val: "1 dup +", res: "2", empty: true},
+	{val: "4095 4096 roundup", res: "4096", empty: true},
+	{val: "4097 8192 roundup", res: "8192", empty: true},
+	{val: "2 x +", res: "2", err: strconv.ErrSyntax, empty: false},
+	{val: "1 dd +", res: "2", empty: true},
+	{val: "1 d3d", res: "3", empty: true},
+	{val: "drop", res: "", err: ErrEmptyStack, empty: true},
+	{val: "5 5 + hostbase", res: "", err: strconv.ErrSyntax, empty: true},
+	{val: "1 1 '+ newword 1 1 '+ newword", res: "", err: ErrWordExist, empty: true},
+	{val: "1 4 bad newword", res: "", err: ErrNotEnoughElements, empty: false},
 }
 
 func TestForth(t *testing.T) {
@@ -66,27 +70,22 @@ func TestForth(t *testing.T) {
 	}
 	NewWord(f, "dd", "dup")
 	NewWord(f, "d3d", "dup", "dup", "+", "+")
-	for _, tt := range forthTests {
+	for i, tt := range forthTests {
 		var err error
 		res, err := EvalPop(f, tt.val)
 		t.Logf("tt %v res %v err %v", tt, res, err)
-		if res == tt.res || (err != nil && err.Error() == tt.err) {
-			if err != nil {
-				/* stack is not going to be right; reset it. */
-				f.Reset()
-			}
+		if res == tt.res || errors.Is(err, tt.err) {
 			t.Logf("Test: '%v' '%v' '%v': Pass\n", tt.val, res, err)
 		} else {
-			t.Errorf("Test: '%v' got (%v, %v): want (%v, %v): Fail\n", tt.val, res, err, tt.res, tt.err)
+			t.Errorf("Test %d: '%v' got (%v, %v): want (%v, %v): Fail\n", i, tt.val, res, err, tt.res, tt.err)
 			t.Logf("ops %v\n", Ops())
 			continue
 		}
-		if f.Length() != 0 {
-			t.Errorf("Test: %v: stack is %d and should be empty", tt, f.Length())
+		if f.Empty() != tt.empty {
+			t.Errorf("Test %d: %v: stack is %v and should be %v", i, tt, f.Empty(), tt.empty)
 		}
-		if f.Empty() != true {
-			t.Errorf("Test: %v: stack is %v and should be empty", tt, f.Empty())
-		}
+		/* stack may not be right; reset it. */
+		f.Reset()
 	}
 }
 
@@ -96,9 +95,8 @@ func TestBadPop(t *testing.T) {
 	f.Push(b)
 	res, err := EvalPop(f, "2 +")
 	t.Logf("%v, %v", res, err)
-	nan := fmt.Errorf("NaN: %T", b)
-	if !reflect.DeepEqual(err, nan) {
-		t.Errorf("got %v, want %v", err, nan)
+	if !errors.Is(err, strconv.ErrSyntax) {
+		t.Errorf("got %v, want %v", err, strconv.ErrSyntax)
 	}
 	if res != nil {
 		t.Errorf("got %v, want nil", res)
