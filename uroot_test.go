@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
+	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uio"
 	itest "github.com/u-root/u-root/pkg/uroot/initramfs/test"
@@ -47,7 +47,7 @@ func xTestDCE(t *testing.T) {
 	}()
 	st, _ := f.Stat()
 	t.Logf("Built %s, size %d", f.Name(), st.Size())
-	cmd := golang.Default().GoCmd("tool", "nm", f.Name())
+	cmd := gbbgolang.Default().GoCmd("tool", "nm", f.Name())
 	nmOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("failed to run nm: %s %s", err, nmOutput)
@@ -90,7 +90,7 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 		}
 	}()
 	// 2. Run "go nm" on it and build symbol table.
-	cmd := golang.Default().GoCmd("tool", "nm", tf.Name())
+	cmd := gbbgolang.Default().GoCmd("tool", "nm", tf.Name())
 	nmOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to run nm: %s %s", err, nmOutput)
@@ -185,6 +185,15 @@ func TestUrootCmdline(t *testing.T) {
 				itest.HasFile{"bin/bush"},
 			},
 		},
+		{
+			name: "supplied file can be uinit",
+			args: []string{"-nocmd", "-files=/bin/bash:bin/bash", "-uinitcmd=/bin/bash"},
+			env:  []string{"GO111MODULE=off"},
+			validators: []itest.ArchiveValidator{
+				itest.HasFile{"bin/bash"},
+				itest.HasRecord{cpio.Symlink("bin/uinit", "bash")},
+			},
+		},
 	}
 
 	bareTests := []testCase{
@@ -273,12 +282,12 @@ func TestUrootCmdline(t *testing.T) {
 	var bbTests []testCase
 	for _, test := range bareTests {
 		bbTest := test
-		bbTest.name = bbTest.name + " bb"
-		bbTest.args = append([]string{"-build=bb"}, bbTest.args...)
+		bbTest.name = bbTest.name + " gbb-gopath"
+		bbTest.args = append([]string{"-build=gbb"}, bbTest.args...)
 		bbTest.env = append(bbTest.env, "GO111MODULE=off")
 
 		gbbTest := test
-		gbbTest.name = gbbTest.name + " gbb"
+		gbbTest.name = gbbTest.name + " gbb-gomodule"
 		gbbTest.args = append([]string{"-build=gbb"}, gbbTest.args...)
 		gbbTest.env = append(gbbTest.env, "GO111MODULE=on")
 

@@ -32,42 +32,41 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
 var outPath = flag.String("O", "", "output file")
+var errEmptyURL = errors.New("empty url")
 
-func usage() {
-	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
-	flag.PrintDefaults()
-	os.Exit(2)
+type command struct {
+	url        string
+	outputPath string
 }
 
-func run() (reterr error) {
+func newCommand(outPath string, url string) *command {
+	return &command{
+		outputPath: outPath,
+		url:        url,
+	}
+}
+
+func (c *command) run() error {
 	log.SetPrefix("wget: ")
 
-	if flag.Parse(); flag.NArg() != 1 {
-		usage()
+	if c.url == "" {
+		return errEmptyURL
 	}
 
-	argURL := flag.Arg(0)
-	if argURL == "" {
-		return errors.New("Empty URL")
-	}
-
-	url, err := url.Parse(argURL)
+	parsedURL, err := url.Parse(c.url)
 	if err != nil {
 		return err
 	}
 
-	if *outPath == "" {
-		if url.Path != "" && url.Path[len(url.Path)-1] != '/' {
-			*outPath = path.Base(url.Path)
-		} else {
-			*outPath = "index.html"
-		}
+	if c.outputPath == "" {
+		c.outputPath = defaultOutputPath(parsedURL.Path)
 	}
 
 	schemes := curl.Schemes{
@@ -79,20 +78,37 @@ func run() (reterr error) {
 		"file":  &curl.LocalFileClient{},
 	}
 
-	reader, err := schemes.FetchWithoutCache(context.Background(), url)
+	reader, err := schemes.FetchWithoutCache(context.Background(), parsedURL)
 	if err != nil {
-		return fmt.Errorf("Failed to download %v: %v", argURL, err)
+		return fmt.Errorf("failed to download %v: %w", c.url, err)
 	}
 
-	if err := uio.ReadIntoFile(reader, *outPath); err != nil {
+	if err := uio.ReadIntoFile(reader, c.outputPath); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+func usage() {
+	log.Printf("Usage: %s [ARGS] URL\n", os.Args[0])
+	flag.PrintDefaults()
+	os.Exit(2)
+}
+
+func defaultOutputPath(urlPath string) string {
+	if urlPath == "" || strings.HasSuffix(urlPath, "/") {
+		return "index.html"
+	}
+	return path.Base(urlPath)
+}
+
 func main() {
-	if err := run(); err != nil {
+	flag.Parse()
+	if err := newCommand(*outPath, flag.Arg(0)).run(); err != nil {
+		if errors.Is(err, errEmptyURL) {
+			usage()
+		}
 		log.Fatal(err)
 	}
 }

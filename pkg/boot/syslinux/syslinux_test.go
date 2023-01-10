@@ -5,6 +5,7 @@
 package syslinux
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -708,6 +709,7 @@ func TestParseURL(t *testing.T) {
 }
 
 func FuzzParseSyslinuxConfig(f *testing.F) {
+
 	dirPath := f.TempDir()
 
 	path := filepath.Join(dirPath, "isolinux.cfg")
@@ -718,13 +720,13 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 	// get seed corpora from testdata_new files
 	seeds, err := filepath.Glob("testdata/*/*/isolinux.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
 		}
 
 		f.Add(seedBytes)
@@ -733,13 +735,19 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 	f.Add([]byte("lABel 0\nAppend initrd"))
 	f.Add([]byte("lABel 0\nkernel mboot.c32\nAppend ---"))
 	f.Fuzz(func(t *testing.T, data []byte) {
-		if len(data) > 1000000 {
+
+		if len(data) > 4096 {
+			return
+		}
+
+		// do not allow arbitrary files reads
+		if bytes.Contains(data, []byte("include")) {
 			return
 		}
 
 		err := os.WriteFile(path, data, 0o777)
 		if err != nil {
-			t.Errorf("Failed to create configfile '%v':%v", path, err)
+			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
 		ParseLocalConfig(context.Background(), dirPath)

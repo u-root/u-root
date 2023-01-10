@@ -174,7 +174,7 @@ var rtProto = map[int]string{
 	unix.RTPROT_ZEBRA:    "zebra",
 }
 
-func showRoutes(inet6 bool) error {
+func showRoutes(w io.Writer, inet6 bool) error {
 	var f int
 	if inet6 {
 		f = netlink.FAMILY_V6
@@ -192,23 +192,23 @@ func showRoutes(inet6 bool) error {
 			return err
 		}
 		if route.Dst == nil {
-			defaultRoute(route, link)
+			defaultRoute(w, route, link)
 		} else {
-			showRoute(route, link, f)
+			showRoute(w, route, link, f)
 		}
 	}
 	return nil
 }
 
-func defaultRoute(r netlink.Route, l netlink.Link) {
+func defaultRoute(w io.Writer, r netlink.Route, l netlink.Link) {
 	gw := r.Gw
 	name := l.Attrs().Name
 	proto := rtProto[int(r.Protocol)]
 	metric := r.Priority
-	fmt.Printf(defaultFmt, gw, name, proto, metric)
+	fmt.Fprintf(w, defaultFmt, gw, name, proto, metric)
 }
 
-func showRoute(r netlink.Route, l netlink.Link, f int) {
+func showRoute(w io.Writer, r netlink.Route, l netlink.Link, f int) {
 	dest := r.Dst
 	name := l.Attrs().Name
 	proto := rtProto[int(r.Protocol)]
@@ -217,13 +217,13 @@ func showRoute(r netlink.Route, l netlink.Link, f int) {
 	case netlink.FAMILY_V4:
 		scope := addrScopes[r.Scope]
 		src := r.Src
-		fmt.Printf(routeFmt, dest, name, proto, scope, src, metric)
+		fmt.Fprintf(w, routeFmt, dest, name, proto, scope, src, metric)
 	case netlink.FAMILY_V6:
 		if r.Gw != nil {
 			gw := r.Gw
-			fmt.Printf(routeVia6Fmt, dest, gw, name, proto, metric)
+			fmt.Fprintf(w, routeVia6Fmt, dest, gw, name, proto, metric)
 		} else {
-			fmt.Printf(route6Fmt, dest, name, proto, metric)
+			fmt.Fprintf(w, route6Fmt, dest, name, proto, metric)
 		}
 	}
 }

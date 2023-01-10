@@ -25,9 +25,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/u-root/u-root/pkg/dt"
 	"github.com/u-root/u-root/pkg/vfile"
-	"golang.org/x/crypto/openpgp"
 )
 
 var algs = map[string]crypto.Hash{
@@ -84,7 +84,7 @@ func (s PGPSignature) String() string {
 // both the file and a signature error will be returned.
 func (s PGPSignature) Verify(b []byte, ring openpgp.KeyRing) (*bytes.Reader, error) {
 	r := bytes.NewReader(b)
-	if signer, err := openpgp.CheckDetachedSignature(ring, bytes.NewReader(b), bytes.NewReader(s.value)); err != nil {
+	if signer, err := openpgp.CheckDetachedSignature(ring, bytes.NewReader(b), bytes.NewReader(s.value), nil); err != nil {
 		return r, vfile.ErrUnsigned{Path: s.name, Err: err}
 	} else if signer == nil {
 		return r, vfile.ErrUnsigned{Path: s.name, Err: vfile.ErrWrongSigner{ring}}

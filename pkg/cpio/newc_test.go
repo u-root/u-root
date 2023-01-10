@@ -7,6 +7,7 @@ package cpio
 import (
 	"bytes"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -621,23 +622,25 @@ func FuzzReadWriteNewc(f *testing.F) {
 	f.Add([]byte("07070100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000//000"))
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*")
 	if err != nil {
-		f.Errorf("failed to find seed corpora data %v", err)
+		f.Fatalf("failed to find seed corpora data %v", err)
 	}
 
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed to read seed corpora from file %v: %v", seed, err)
+			f.Fatalf("failed to read seed corpora from file %v: %v", seed, err)
 		}
 		f.Add(seedBytes)
 	}
 
 	// Cannot log when fuzzing
 	Debug = func(s string, i ...interface{}) {}
+	log.SetOutput(io.Discard)
+	log.SetFlags(0)
 
 	f.Fuzz(func(t *testing.T, cpio []byte) {
 		// Unneccessary big inputs will only slow down the fuzzing
-		if len(cpio) > 256000 {
+		if len(cpio) > 64 {
 			return
 		}
 
@@ -657,13 +660,13 @@ func FuzzReadWriteNewc(f *testing.F) {
 		}
 
 		if err := WriteTrailer(w); err != nil {
-			t.Errorf("WriteTrailer: %v", err)
+			t.Fatalf("WriteTrailer: %v", err)
 		}
 
 		r = Newc.Reader(bytes.NewReader(buf.Bytes()))
 		filesReadBack, err := ReadAllRecords(r)
 		if err != nil {
-			t.Errorf("TestReadWrite: reading generated data: %v", err)
+			t.Fatalf("TestReadWrite: reading generated data: %v", err)
 		}
 
 		// Now check a few things: arrays should be same length, Headers should match,

@@ -1,0 +1,3 @@
+[libfuzzer]
+dict = gosh.dict
+max_len = 16

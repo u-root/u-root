@@ -15,6 +15,7 @@ import (
 )
 
 func FuzzParseGrubCfg(f *testing.F) {
+
 	tmpDir := f.TempDir()
 
 	//no log output
@@ -24,23 +25,24 @@ func FuzzParseGrubCfg(f *testing.F) {
 	// get seed corpora from testdata_new files
 	seeds, err := filepath.Glob("../../../pkg/boot/grub/testdata_new/*/*/*/grub.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	seeds2, err := filepath.Glob("../../../pkg/boot/grub/testdata_new/*/*/grub.cfg")
 	if err != nil {
-		f.Errorf("failed to find seed corpora files: %v", err)
+		f.Fatalf("failed to find seed corpora files: %v", err)
 	}
 
 	seeds = append(seeds, seeds2...)
 	for _, seed := range seeds {
 		seedBytes, err := os.ReadFile(seed)
 		if err != nil {
-			f.Errorf("failed read seed corpora from files %v: %v", seed, err)
+			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
 		}
 
 		f.Add(string(seedBytes))
 	}
+
 	f.Fuzz(func(t *testing.T, data string) {
 		if len(data) > 256000 {
 			return

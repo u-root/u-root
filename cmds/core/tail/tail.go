@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"syscall"
+	"time"
 )
 
 var (
@@ -194,12 +195,23 @@ func readLastLinesFromBeginning(input io.ReadSeeker, writer io.Writer, numLines 
 	return nil
 }
 
+func isTruncated(file *os.File) (bool, error) {
+	// current read position in a file
+	currentPos, err := file.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return false, err
+	}
+	// file stat to get the size
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return false, err
+	}
+	return currentPos > fileInfo.Size(), nil
+}
+
 // tail reads the last N lines from the input File and writes them to the Writer.
 // The tailConfig object allows to specify the precise behaviour.
 func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
-	if config.follow {
-		return fmt.Errorf("follow-mode not implemented yet")
-	}
 	// try reading from the end of the file
 	retryFromBeginning := false
 	err := readLastLinesBackwards(inFile, writer, config.numLines)
@@ -217,6 +229,32 @@ func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 	if retryFromBeginning {
 		if err = readLastLinesFromBeginning(inFile, writer, config.numLines); err != nil {
 			return err
+		}
+	}
+	if config.follow {
+		blkSize := getBlockSize(1)
+		// read block by block until EOF and store a reference to the last lines
+		buf := make([]byte, blkSize)
+		for {
+			_, err = inFile.Read(buf)
+			if err == io.EOF {
+				// without this sleep you would hogg the CPU
+				time.Sleep(500 * time.Millisecond)
+				// truncated ?
+				truncated, errTruncated := isTruncated(inFile)
+				if errTruncated != nil {
+					break
+				}
+				if truncated {
+					// seek from start
+					_, errSeekStart := inFile.Seek(0, io.SeekStart)
+					if errSeekStart != nil {
+						break
+					}
+				}
+				continue
+			}
+			break
 		}
 	}
 	return nil

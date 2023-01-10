@@ -18,7 +18,6 @@ import (
 	"time"
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/golang"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -59,7 +58,7 @@ var (
 
 func init() {
 	var sh string
-	switch golang.Default().GOOS {
+	switch gbbgolang.Default().GOOS {
 	case "plan9":
 		sh = ""
 	default:
@@ -134,9 +133,8 @@ func writeBuildStats(stats buildStats, path string) error {
 	return nil
 }
 
-func generateLabel() string {
+func generateLabel(env gbbgolang.Environ) string {
 	var baseCmds []string
-	env := golang.Default()
 	if len(flag.Args()) > 0 {
 		// Use the last component of the name to keep the label short
 		for _, e := range flag.Args() {
@@ -162,10 +160,21 @@ func main() {
 		*urootSourceDir = usrc
 	}
 
+	env := gbbgolang.Default()
+	env.BuildTags = strings.Split(*tags, ",")
+	if env.CgoEnabled {
+		l.Printf("Disabling CGO for u-root...")
+		env.CgoEnabled = false
+	}
+	l.Printf("Build environment: %s", env)
+	if env.GOOS != "linux" {
+		l.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
+	}
+
 	start := time.Now()
 
 	// Main is in a separate functions so defers run on return.
-	if err := Main(l, gbbOpts); err != nil {
+	if err := Main(l, env, gbbOpts); err != nil {
 		l.Fatalf("Build error: %v", err)
 	}
 
@@ -177,7 +186,7 @@ func main() {
 		Duration: float64(elapsed.Milliseconds()) / 1000,
 	}
 	if stats.Label == "" {
-		stats.Label = generateLabel()
+		stats.Label = generateLabel(env)
 	}
 	if stat, err := os.Stat(*outputPath); err == nil && stat.ModTime().After(start) {
 		l.Printf("Successfully built %q (size %d).", *outputPath, stat.Size())
@@ -194,6 +203,7 @@ func main() {
 
 var recommendedVersions = []string{
 	"go1.19",
+	"go1.20",
 }
 
 func isRecommendedVersion(v string) bool {
@@ -215,18 +225,7 @@ func canFindSource(dir string) error {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
-	env := golang.Default()
-	env.BuildTags = strings.Split(*tags, ",")
-	if env.CgoEnabled {
-		l.Printf("Disabling CGO for u-root...")
-		env.CgoEnabled = false
-	}
-	l.Printf("Build environment: %s", env)
-	if env.GOOS != "linux" {
-		l.Printf("GOOS is not linux. Did you mean to set GOOS=linux?")
-	}
-
+func Main(l ulog.Logger, env gbbgolang.Environ, buildOpts *gbbgolang.BuildOpts) error {
 	v, err := env.Version()
 	if err != nil {
 		l.Printf("Could not get environment's Go version, using runtime's version: %v", err)
@@ -318,23 +317,10 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 				pkgs = append(pkgs, a)
 				continue
 			}
-			// This is reached if a template was selected, so check uroot source path
-			// To make things a easier on our poor users, do
-			// validation so the error is a little less mysterious.
-			if err := canFindSource(*urootSourceDir); err != nil {
-				return err
-			}
-			for _, pkg := range p {
-				pkg = strings.TrimPrefix(pkg, "github.com/u-root/u-root/")
-				pkgs = append(pkgs, filepath.Join(*urootSourceDir, pkg))
-			}
 			pkgs = append(pkgs, p...)
 		}
 		if len(pkgs) == 0 {
-			if err := canFindSource(*urootSourceDir); err != nil {
-				return err
-			}
-			pkgs = []string{filepath.Join(*urootSourceDir, "cmds/core/*")}
+			pkgs = []string{"github.com/u-root/u-root/cmds/core/*"}
 		}
 
 		// The command-line tool only allows specifying one build mode
@@ -346,7 +332,7 @@ func Main(l ulog.Logger, buildOpts *gbbgolang.BuildOpts) error {
 	}
 
 	opts := uroot.Opts{
-		Env:             env,
+		Env:             &env,
 		Commands:        c,
 		UrootSource:     *urootSourceDir,
 		TempDir:         tempDir,

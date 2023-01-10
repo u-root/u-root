@@ -1,0 +1,5 @@
+#!ipxe
+				kernel http://someplace.com/foobar/pxefiles/kernel
+                                initrd http://someplace.com/someinitrd.gz
+                                set ip 0.0.0.0
+				boot

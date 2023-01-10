@@ -45,7 +45,28 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var delete = flag.BoolP("delete", "d", false, "delete characters in SET1, do not translate")
+var del = flag.BoolP("delete", "d", false, "delete characters in SET1, do not translate")
+
+type command struct {
+	stdin  io.Reader
+	stdout io.Writer
+	del    bool
+	tr     *transformer
+}
+
+func newCommand(in io.Reader, out io.Writer, args []string, del bool) (*command, error) {
+	tr, err := parse(args, del)
+	if err != nil {
+		return nil, err
+	}
+
+	return &command{
+		stdin:  in,
+		stdout: out,
+		del:    del,
+		tr:     tr,
+	}, nil
+}
 
 const name = "tr"
 
@@ -141,9 +162,9 @@ func runesToRunes(in []rune, out ...rune) *transformer {
 	}
 }
 
-func (t *transformer) run(r io.Reader, w io.Writer) error {
-	in := bufio.NewReader(r)
-	out := bufio.NewWriter(w)
+func (c *command) run() error {
+	in := bufio.NewReader(c.stdin)
+	out := bufio.NewWriter(c.stdout)
 
 	defer out.Flush()
 
@@ -163,7 +184,7 @@ func (t *transformer) run(r io.Reader, w io.Writer) error {
 				return fmt.Errorf("write error: %v", err)
 			}
 		} else if size > 0 {
-			if outRune := t.transform(inRune); outRune != unicode.ReplacementChar {
+			if outRune := c.tr.transform(inRune); outRune != unicode.ReplacementChar {
 				if _, err := out.WriteRune(outRune); err != nil {
 					return fmt.Errorf("write error: %v", err)
 				}
@@ -179,15 +200,13 @@ func (t *transformer) run(r io.Reader, w io.Writer) error {
 	}
 }
 
-func parse() (*transformer, error) {
-	flag.Parse()
+func parse(args []string, del bool) (*transformer, error) {
+	narg := len(args)
 
-	narg := flag.NArg()
-	args := flag.Args()
 	switch {
-	case narg == 0 || (narg == 1 && !*delete):
+	case narg == 0 || (narg == 1 && !del):
 		return nil, fmt.Errorf("missing operand")
-	case narg > 1 && *delete:
+	case narg > 1 && del:
 		return nil, fmt.Errorf("extra operand after %q", args[0])
 	case narg > 2:
 		return nil, fmt.Errorf("extra operand after %q", args[1])
@@ -200,7 +219,7 @@ func parse() (*transformer, error) {
 	}
 
 	var set2 Set
-	if *delete {
+	if del {
 		set2 = Set(unicode.ReplacementChar)
 	} else {
 		set2 = Set(args[1])
@@ -260,11 +279,12 @@ func unescape(s Set) ([]rune, error) {
 }
 
 func main() {
-	t, err := parse()
+	flag.Parse()
+	cmd, err := newCommand(os.Stdin, os.Stdout, flag.Args(), *del)
 	if err != nil {
 		log.Fatalf("%s: %v\n", name, err)
 	}
-	if err := t.run(os.Stdin, os.Stdout); err != nil {
+	if err := cmd.run(); err != nil {
 		log.Fatalf("%s: %v\n", name, err)
 	}
 }

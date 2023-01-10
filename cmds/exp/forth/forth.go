@@ -26,7 +26,7 @@ func main() {
 	}
 	f := forth.New()
 	for {
-		fmt.Printf("%sOK\n", f.Stack())
+		fmt.Printf("%vOK\n", f.Stack())
 		n, err := os.Stdin.Read(b)
 		if err != nil {
 			if err != io.EOF {

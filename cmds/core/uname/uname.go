@@ -23,7 +23,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -43,14 +42,10 @@ var (
 	domain    = flag.Bool("d", false, "print your domain name")
 )
 
-func toString(d []byte) string {
-	return string(d[:bytes.IndexByte(d[:], 0)])
-}
-
 func handleFlags(u *unix.Utsname) string {
-	Sysname, Nodename := toString(u.Sysname[:]), toString(u.Nodename[:])
-	Release, Version := toString(u.Release[:]), toString(u.Version[:])
-	Machine, Domainname := toString(u.Machine[:]), toString(u.Domainname[:])
+	Sysname, Nodename := unix.ByteSliceToString(u.Sysname[:]), unix.ByteSliceToString(u.Nodename[:])
+	Release, Version := unix.ByteSliceToString(u.Release[:]), unix.ByteSliceToString(u.Version[:])
+	Machine, Domainname := unix.ByteSliceToString(u.Machine[:]), unix.ByteSliceToString(u.Domainname[:])
 	info := make([]string, 0, 6)
 
 	if *all || flag.NFlag() == 0 {

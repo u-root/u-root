@@ -70,6 +70,12 @@ type Opts struct {
 	// discovery.
 	Env golang.Environ
 
+	// LookupEnv is the environment for looking up and resolving command
+	// paths.
+	//
+	// If left unset, DefaultEnv will be used.
+	LookupEnv *findpkg.Env
+
 	// GenSrcDir is an empty directory to generate the busybox source code
 	// in.
 	//
@@ -159,8 +165,15 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	}
 	pkgDir := filepath.Join(tmpDir, "src")
 
+	var lookupEnv findpkg.Env
+	if opts.LookupEnv != nil {
+		lookupEnv = *opts.LookupEnv
+	} else {
+		lookupEnv = findpkg.DefaultEnv()
+	}
+
 	// Ask go about all the commands in one batch for dependency caching.
-	cmds, err := findpkg.NewPackages(l, opts.Env, opts.CommandPaths...)
+	cmds, err := findpkg.NewPackages(l, opts.Env, lookupEnv, opts.CommandPaths...)
 	if err != nil {
 		return fmt.Errorf("finding packages failed: %v", err)
 	}
@@ -553,13 +566,13 @@ func moduleVersionIdentifier(m *packages.Module) string {
 //
 // Module-enabled Go programs resolve their dependencies in one of two ways:
 //
-// - versioned dependencies: via a version control system at a specific
-//   version, potentially remotely downloaded
+//   - versioned dependencies: via a version control system at a specific
+//     version, potentially remotely downloaded
 //
-// - locally: a module that is either `replace`d with a local file system
-//   directory, or a command that is being built from a module that is on the
-//   local file system (e.g. ./makebb ../u-root/cmds/core/ip -- here, ../u-root
-//   will be a local directory module)
+//   - locally: a module that is either `replace`d with a local file system
+//     directory, or a command that is being built from a module that is on the
+//     local file system (e.g. ./makebb ../u-root/cmds/core/ip -- here, ../u-root
+//     will be a local directory module)
 //
 // Go minimum version selection (MVS) will take care of all versioned
 // dependencies on its own.
