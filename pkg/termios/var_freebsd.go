@@ -29,3 +29,5 @@ var baud2unixB = map[int]uint32{
 	115200: unix.B115200,
 	230400: unix.B230400,
 }
+
+func toTermiosCflag(r uint32) uint32 { return r }
