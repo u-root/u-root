@@ -33,35 +33,42 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"time"
 )
 
-func printTime(label string, t time.Duration) {
-	fmt.Fprintf(os.Stderr, "%s %.03f\n", label, t.Seconds())
+func printTime(stderr io.Writer, label string, t time.Duration) {
+	fmt.Fprintf(stderr, "%s %.03f\n", label, t.Seconds())
+}
+
+func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	start := time.Now()
+	if len(args) == 0 {
+		fmt.Fprintf(stderr, "real 0.000\nuser 0.000\nsys 0.000\n")
+		return nil
+	}
+	c := exec.Command(args[0], args[1:]...)
+	c.Stdin, c.Stdout, c.Stderr = stdin, stdout, stderr
+	defer func(*exec.Cmd, time.Time) {
+		realTime := time.Since(start)
+		printTime(stderr, "real", realTime)
+		if c.ProcessState != nil {
+			printTime(stderr, "user", c.ProcessState.UserTime())
+			printTime(stderr, "sys", c.ProcessState.SystemTime())
+		}
+	}(c, start)
+	if err := c.Run(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
 	flag.Parse()
-	a := flag.Args()
-	start := time.Now()
-	if len(a) == 0 {
-		fmt.Fprintf(os.Stderr, "real 0.000\nuser 0.000\nsys 0.000\n")
-		os.Exit(0)
-	}
-	c := exec.Command(a[0], a[1:]...)
-	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
-	defer func(*exec.Cmd, time.Time) {
-		realTime := time.Since(start)
-		printTime("real", realTime)
-		if c.ProcessState != nil {
-			printTime("user", c.ProcessState.UserTime())
-			printTime("sys", c.ProcessState.SystemTime())
-		}
-	}(c, start)
-	if err := c.Run(); err != nil {
-		log.Fatal(err)
+	if err := run(flag.Args(), os.Stdin, os.Stdout, os.Stderr); err != nil {
+		log.Fatalf("time: %v", err)
 	}
 }
