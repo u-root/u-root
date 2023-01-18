@@ -1,5 +1,5 @@
-//go:build !linux
-// +build !linux
+//go:build !tinygo && !linux
+// +build !tinygo,!linux
 
 package main
 
