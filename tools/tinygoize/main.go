@@ -17,8 +17,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
-	"go/format"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -34,7 +32,7 @@ const goBuild = "//go:build "
 func main() {
 	flag.Parse()
 
-	p := printer.Config{Mode: printer.UseSpaces | printer.TabIndent /*| printer.NormalizeNumbers*/, Tabwidth: 8}
+	p := printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 8}
 	for _, d := range flag.Args() {
 		c := exec.Command("tinygo", "build")
 		c.Dir = d
@@ -61,7 +59,6 @@ func main() {
 			if err != nil {
 				log.Fatalf("parsing\n%v\n:%v", string(b), err)
 			}
-			//log.Printf("%v", fset)
 		done:
 			for _, cg := range f.Comments {
 				for _, c := range cg.List {
@@ -72,24 +69,14 @@ func main() {
 					break done
 				}
 			}
-			if true {
-				// Complete source file.
-				var buf bytes.Buffer
-				if err = p.Fprint(&buf, fset, f); err != nil {
-					log.Fatalf("Printing:%v", err)
-				}
-				if false {
-					fmt.Printf("%s:%s\n", file, &buf)
-				}
-				if err := os.WriteFile(file, buf.Bytes(), 0644); err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				if err := format.Node(os.Stdout, fset, f); err != nil {
-					log.Fatal(err)
-				}
+			// Complete source file.
+			var buf bytes.Buffer
+			if err = p.Fprint(&buf, fset, f); err != nil {
+				log.Fatalf("Printing:%v", err)
+			}
+			if err := os.WriteFile(file, buf.Bytes(), 0o644); err != nil {
+				log.Fatal(err)
 			}
 		}
-
 	}
 }

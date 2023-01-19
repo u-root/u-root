@@ -48,7 +48,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/id",
 		"github.com/u-root/u-root/cmds/core/init",
 		"github.com/u-root/u-root/cmds/core/insmod",
-		//"github.com/u-root/u-root/cmds/core/io",
+		"github.com/u-root/u-root/cmds/core/io",
 		"github.com/u-root/u-root/cmds/core/ip",
 		"github.com/u-root/u-root/cmds/core/kexec",
 		"github.com/u-root/u-root/cmds/core/kill",
@@ -81,7 +81,7 @@ var templates = map[string][]string{
 		"github.com/u-root/u-root/cmds/core/unshare",
 		"github.com/u-root/u-root/cmds/core/wc",
 		"github.com/u-root/u-root/cmds/core/wget",
-		//"github.com/u-root/u-root/cmds/core/which",
+		"github.com/u-root/u-root/cmds/core/which",
 	},
 	// embedded systems, like ARM based gadgets and SBCs
 	"embedded": {
