@@ -37,17 +37,26 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
-func printTime(stderr io.Writer, label string, t time.Duration) {
-	fmt.Fprintf(stderr, "%s %.03f\n", label, t.Seconds())
+func printTime(stderr io.Writer, l string, t time.Duration) {
+	fmt.Fprintf(stderr, "%s\n", label(l, t))
+}
+
+func label(l string, t time.Duration) string {
+	return fmt.Sprintf("%s %.03f", l, t.Seconds())
 }
 
 func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	start := time.Now()
 	if len(args) == 0 {
-		fmt.Fprintf(stderr, "real 0.000\nuser 0.000\nsys 0.000\n")
+		fmt.Fprintf(stderr, "%s\n", strings.Join([]string{
+			label("real", 0*time.Second),
+			label("user", 0*time.Second),
+			label("sys", 0*time.Second),
+		}, "\n"))
 		return nil
 	}
 	c := exec.Command(args[0], args[1:]...)
