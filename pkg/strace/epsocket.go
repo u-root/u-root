@@ -17,6 +17,7 @@ package strace
 import (
 	"bytes"
 	"encoding/binary"
+	"net"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/ubinary"
@@ -72,10 +73,13 @@ func GetAddress(t Task, addr []byte) (FullAddress, error) {
 		if err := binary.Read(r, binary.BigEndian, &a); err != nil {
 			return FullAddress{}, unix.EFAULT
 		}
+
+		addr := net.IP(a.Addr[:])
 		out := FullAddress{
-			Addr: Address(a.Addr[:]),
+			Addr: Address(addr.String()),
 			Port: uint16(a.Port),
 		}
+
 		if out.Addr == "\x00\x00\x00\x00" {
 			out.Addr = ""
 		}
@@ -88,8 +92,9 @@ func GetAddress(t Task, addr []byte) (FullAddress, error) {
 			return FullAddress{}, unix.EFAULT
 		}
 
+		addr := net.IP(a.Addr[:])
 		out := FullAddress{
-			Addr: Address(a.Addr[:]),
+			Addr: Address(addr.String()),
 			Port: uint16(a.Port),
 		}
 
