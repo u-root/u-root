@@ -4,6 +4,15 @@ Note: All release >=1.0.0 have been bumped down from vX.0.0 to v0.X.0. This was
 done to avoid the +incompatible suffix from Go modules. The u-root API is
 currently unstable and may change slighly between releases.
 
+## v0.11.0 (2023-02-01)
+
+- Fixes for tamago dt compilation
+- tinygo support for many commands (see "tinygo" template)
+- cleanup dt to remove Linux dependencies
+- major cleanup of VM CI code (it works again)
+- fixups for ARM vms
+- many other smaller bug fixes, and cleanup
+
 ## v0.10.0 (2022-10-10)
 
 - Fixes for several commands including bzImage and ls

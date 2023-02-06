@@ -395,7 +395,7 @@ func run(out io.Writer) error {
 
 func main() {
 	flag.Parse()
-	arg = os.Args[1:]
+	arg = flag.Args()
 	if err := run(os.Stdout); err != nil {
 		log.Fatalf("ip: %v", err)
 	}

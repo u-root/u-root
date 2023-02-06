@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux
-// +build linux
+//go:build !tinygo && linux
+// +build !tinygo,linux
 
 // fusermount is a very limited replacement for the C fusermount.  It
 // is invoked by other programs, or interactively only to unmount.

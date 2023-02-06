@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9
-// +build !plan9
+//go:build !tinygo && !plan9
+// +build !tinygo,!plan9
 
 // msr reads and writes msrs using a Forth interpreter on argv
 //
