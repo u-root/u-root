@@ -6,7 +6,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,65 +24,75 @@ func TestCmp(t *testing.T) {
 		long   bool
 		line   bool
 		silent bool
-		want   string
+		err    error
+		stderr string
+		stdout string
 	}{
 		{
-			name: "empty args",
-			args: []string{},
-			want: fmt.Sprintf("expected two filenames (and one to two optional offsets), got %d", 0),
+			name:   "empty args",
+			args:   []string{},
+			err:    ErrArgCount,
+			stderr: usage,
 		},
 		{
 			name: "err in open file",
 			args: []string{"filedoesnotexist", "filealsodoesnotexist"},
-			want: fmt.Sprintf("failed to open %s: %s", "filedoesnotexist", "open filedoesnotexist: no such file or directory"),
+			err:  os.ErrNotExist,
 		},
 		{
-			name:  "cmp two files without flags, without offsets",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
-			file1: "hello\nthis is a test\n",
-			file2: "hello\nthiz is a text",
-			want:  fmt.Sprintf("%s %s differ: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10),
+			name:   "cmp two files without flags, without offsets",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\nthiz is a text",
+			err:    ErrDiffer,
+			stdout: fmt.Sprintf("%s %s: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10),
 		},
 		{
-			name: "cmp two files without flags, with wrong first offset",
-			args: []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), ""},
-			want: fmt.Sprintf("bad offset1: %s: %v", "", "invalid size \"\""),
+			name:   "cmp two files without flags, with wrong first offset",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), ""},
+			err:    ErrBadOffset,
+			stderr: fmt.Sprintf("bad offset1: %s: %v", "", "invalid size \"\""),
 		},
 		{
-			name:  "cmp two files without flags, with correct first offset",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "4"},
-			file1: "hello\nthis is a test\n",
-			file2: "hello\nthiz is a text",
-			want:  fmt.Sprintf("%s %s differ: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 1),
+			name:   "cmp two files without flags, with correct first offset",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "4"},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\nthiz is a text",
+			err:    ErrDiffer,
+			stdout: fmt.Sprintf("%s %s: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 1),
 		},
 		{
-			name:  "cmp two files without flags, with both offsets correct",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "4", "4"},
-			file1: "hello\nthis is a test\n",
-			file2: "hello\nthiz is a text",
-			want:  fmt.Sprintf("%s %s differ: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 6),
+			name:   "cmp two files without flags, with both offsets correct",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "4", "4"},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\nthiz is a text",
+			err:    ErrDiffer,
+			stdout: fmt.Sprintf("%s %s: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 6),
 		},
 		{
-			name:  "cmp two files without flags, with both offset set but first not valid",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "", "4"},
-			file1: "hello\nthis is a test\n",
-			file2: "hello\nthiz is a text",
-			want:  fmt.Sprintf("bad offset1: %s: %v", "", "invalid size \"\""),
+			name:   "cmp two files without flags, with both offset set but first not valid",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "", "4"},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\nthiz is a text",
+			err:    ErrBadOffset,
+			stderr: fmt.Sprintf("bad offset1: %s: %v", "", "invalid size \"\""),
 		},
 		{
-			name:  "cmp two files without flags, with both offset set but second not valid",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "4", ""},
-			file1: "hello\nthis is a test\n",
-			file2: "hello\nthiz is a text",
-			want:  fmt.Sprintf("bad offset2: %s: %v", "", "invalid size \"\""),
+			name:   "cmp two files without flags, with both offset set but second not valid",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), "4", ""},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\nthiz is a text",
+			err:    ErrBadOffset,
+			stderr: fmt.Sprintf("bad offset2: %s: %v", "", "invalid size \"\""),
 		},
 		{
-			name:  "cmp two files, flag line = true",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
-			file1: "hello\nthis is a test\n",
-			file2: "hello\nthiz is a text",
-			line:  true,
-			want:  fmt.Sprintf("%s %s differ: char %d line %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10, 2),
+			name:   "cmp two files, flag line = true",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\nthiz is a text",
+			line:   true,
+			err:    ErrDiffer,
+			stdout: fmt.Sprintf("%s %s: char %d line %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10, 2),
 		},
 		{
 			name:   "cmp two files, flag silent = true",
@@ -88,50 +100,44 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test\n",
 			file2:  "hello\nthiz is a text",
 			silent: true,
-			want:   "",
 		},
 		{
-			name:  "cmp two files, flag long = true",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
-			file1: "hello\nthis is a test",
-			file2: "hello\nthiz is a text",
-			long:  true,
-			want:  fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
+			name:   "cmp two files, flag long = true",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\nthis is a test",
+			file2:  "hello\nthiz is a text",
+			long:   true,
+			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
 		},
 		{
-			name:  "cmp two files, flag long = true, first file ends first",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
-			file1: "hello\nthis is a tes",
-			file2: "hello\nthiz is a text",
-			long:  true,
-			want:  fmt.Sprintf("EOF on %s", filepath.Join(tmpdir, "file1")),
+			name:   "cmp two files, flag long = true, first file ends first",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\nthis is a tes",
+			file2:  "hello\nthiz is a text",
+			long:   true,
+			err:    io.EOF,
+			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
+			stderr: fmt.Sprintf("%s:%v", filepath.Join(tmpdir, "file1"), io.EOF),
 		},
 		{
-			name:  "cmp two files, flag long = true, second file ends first",
-			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
-			file1: "hello\nthis is a test",
-			file2: "hello\nthiz is a tex",
-			long:  true,
-			want:  fmt.Sprintf("EOF on %s", filepath.Join(tmpdir, "file2")),
+			name:   "cmp two files, flag long = true, second file ends first",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\nthis is a test",
+			file2:  "hello\nthiz is a tex",
+			long:   true,
+			err:    io.EOF,
+			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
+			stderr: fmt.Sprintf("%s:%v", filepath.Join(tmpdir, "file2"), io.EOF),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			// Write data in file that should be compared
-			file1, err := os.Create(filepath.Join(tmpdir, "file1"))
-			if err != nil {
-				t.Errorf("failed to create file1: %v", err)
+			f1 := filepath.Join(tmpdir, "file1")
+			if err := os.WriteFile(f1, []byte(tt.file1), 0666); err != nil {
+				t.Fatal(err)
 			}
-			file2, err := os.Create(filepath.Join(tmpdir, "file2"))
-			if err != nil {
-				t.Errorf("failed to create file2: %v", err)
-			}
-			_, err = file1.WriteString(tt.file1)
-			if err != nil {
-				t.Errorf("failed to write to file1: %v", err)
-			}
-			_, err = file2.WriteString(tt.file2)
-			if err != nil {
-				t.Errorf("failed to write to file2: %v", err)
+			f2 := filepath.Join(tmpdir, "file2")
+			if err := os.WriteFile(f2, []byte(tt.file2), 0666); err != nil {
+				t.Fatal(err)
 			}
 
 			// Set flags
@@ -140,17 +146,16 @@ func TestCmp(t *testing.T) {
 			*silent = tt.silent
 
 			// Start tests
-			buf := &bytes.Buffer{}
-			if got := cmp(buf, tt.args...); got != nil {
-				if got.Error() != tt.want {
-					t.Errorf("cmp() = %q, want: %q", got.Error(), tt.want)
-				}
-			} else {
-				if buf.String() != tt.want {
-					t.Errorf("cmp() = %q, want: %q", buf.String(), tt.want)
-				}
+			var stdout, stderr bytes.Buffer
+			if err := cmp(&stdout, &stderr, tt.args...); !errors.Is(err, tt.err) {
+				t.Errorf("cmp(): got %v, want %v", err, tt.err)
 			}
-
+			if stdout.String() != tt.stdout {
+				t.Errorf("cmp():stdout:got %s, want %s", stdout.String(), tt.stdout)
+			}
+			if stderr.String() != tt.stderr {
+				t.Errorf("cmp():stderr:got %s, want %s", stderr.String(), tt.stderr)
+			}
 		})
 	}
 }
