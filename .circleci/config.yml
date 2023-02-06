@@ -43,6 +43,7 @@ workflows:
       - test-pkgs
       - test-cmds
       - test-build
+      - test-tinygo
       - test-build-tamago-riscv64
       - test-build-tamago-arm
       - test-integration-amd64
@@ -90,6 +91,15 @@ jobs:
       - run:
           name: Test u-root build
           command: go test -a -timeout=15m .
+          no_output_timeout: 15m
+
+  test-tinygo:
+    <<: *beefy-template
+    steps:
+      - checkout
+      - run:
+          name: tinygo build and test commands
+          command: echo sooner but not yet docker run --rm -v ~/go:/home/tinygo/go  tinygo/tinygo:0.26.0 bash -c 'cd  go/src/github.com/u-root/u-root/cmds/core/cmp && tinygo test .'
           no_output_timeout: 15m
 
   test-build-tamago-arm:
