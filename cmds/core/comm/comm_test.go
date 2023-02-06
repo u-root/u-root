@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,28 +23,30 @@ func TestComm(t *testing.T) {
 		s2    bool
 		s3    bool
 		help  bool
+		err   error
 		want  string
 	}{
+
 		{
 			name: "only one arguement",
 			args: []string{"onearg"},
-			want: ErrUsage.Error(),
+			err:  ErrUsage,
 		},
 		{
 			name: "help flag",
 			args: []string{"firstarg", "secondarg"},
 			help: true,
-			want: ErrUsage.Error(),
+			err:  ErrUsage,
 		},
 		{
 			name: "first file failed to open",
 			args: []string{"firstarg", "secondarg"},
-			want: "can't open firstarg: open firstarg: no such file or directory",
+			err:  os.ErrNotExist,
 		},
 		{
 			name: "second file failed to open",
 			args: []string{filepath.Join(tmpdir, "file1"), "secondarg"},
-			want: "can't open secondarg: open secondarg: no such file or directory",
+			err:  os.ErrNotExist,
 		},
 		{
 			name:  "comm case s1 > s2",
@@ -85,23 +88,12 @@ func TestComm(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create files
-			file1, err := os.Create(filepath.Join(tmpdir, "file1"))
-			if err != nil {
+
+			if err := os.WriteFile(filepath.Join(tmpdir, "file1"), []byte(tt.file1), 0644); err != nil {
 				t.Errorf("failed to create file1: %v", err)
 			}
-			file2, err := os.Create(filepath.Join(tmpdir, "file2"))
-			if err != nil {
-				t.Errorf("failed to create file2: %v", err)
-			}
-			// Write data in file that should be compared
-			_, err = file1.WriteString(tt.file1)
-			if err != nil {
-				t.Errorf("failed to write to file1: %v", err)
-			}
-			_, err = file2.WriteString(tt.file2)
-			if err != nil {
-				t.Errorf("failed to write to file2: %v", err)
+			if err := os.WriteFile(filepath.Join(tmpdir, "file2"), []byte(tt.file2), 0644); err != nil {
+				t.Errorf("failed to create file1: %v", err)
 			}
 
 			// Setting flags
@@ -111,15 +103,13 @@ func TestComm(t *testing.T) {
 			*help = tt.help
 
 			buf := &bytes.Buffer{}
-			if got := comm(buf, tt.args...); got != nil {
-				if got.Error() != tt.want {
-					t.Errorf("comm() = %q, want: %q", got.Error(), tt.want)
-				}
-			} else {
-				if buf.String() != tt.want {
-					t.Errorf("comm() = %q, want: %q", buf.String(), tt.want)
-				}
+			if err := comm(buf, tt.args...); !errors.Is(err, tt.err) {
+				t.Errorf("comm() = %q, want: %q", err, tt.err)
+			}
+			if buf.String() != tt.want {
+				t.Errorf("comm() = %q, want: %q", buf.String(), tt.want)
 			}
 		})
 	}
+
 }

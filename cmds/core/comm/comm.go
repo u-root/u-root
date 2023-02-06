@@ -101,12 +101,12 @@ func comm(w io.Writer, args ...string) error {
 
 	f1, err := os.Open(args[0])
 	if err != nil {
-		return fmt.Errorf("can't open %s: %v", args[0], err)
+		return fmt.Errorf("can't open %s: %w", args[0], err)
 	}
 
 	f2, err := os.Open(args[1])
 	if err != nil {
-		return fmt.Errorf("can't open %s: %v", args[1], err)
+		return fmt.Errorf("can't open %s: %w", args[1], err)
 	}
 	go reader(f1, c1)
 	go reader(f2, c2)
