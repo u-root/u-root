@@ -22,42 +22,39 @@
 //	    each difference.
 //	–L: Print the line number of the first differing byte.
 //	–s: Print nothing for differing files, but set the exit status.
+//
+// What is an error, what goes on stderr, and what goes on stdout in cmp
+// is fairly ad-hoc, but go something like this:
+// invocation error: unparseable integer: error return from cmp()
+// IO error, file too small: output on stderr, error return from cmp()
+// Files are different: print difference info on stdout, no error return
+// Files are same: no output, no error
 package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/rck/unit"
+)
+
+const (
+	usage = "usage:[-options] file1 file 2 [offset1 [offset 2]]"
 )
 
 var (
 	long   = flag.Bool("l", false, "print the byte number (decimal) and the differing bytes (hexadecimal) for each difference")
 	line   = flag.Bool("L", false, "print the line number of the first differing byte")
 	silent = flag.Bool("s", false, "print nothing for differing files, but set the exit status")
+
+	ErrArgCount  = errors.New("arg count")
+	ErrBadOffset = errors.New("bad offset")
+	ErrDiffer    = errors.New("files differ")
 )
-
-func emit(rs io.ReadSeeker, c chan byte, offset int64) error {
-	if offset > 0 {
-		if _, err := rs.Seek(offset, 0); err != nil {
-			log.Fatalf("%v", err)
-		}
-	}
-
-	b := bufio.NewReader(rs)
-	for {
-		b, err := b.ReadByte()
-		if err != nil {
-			close(c)
-			return err
-		}
-		c <- b
-	}
-}
 
 func readFileOrStdin(stdin *os.File, name string) (*os.File, error) {
 	var f *os.File
@@ -72,7 +69,7 @@ func readFileOrStdin(stdin *os.File, name string) (*os.File, error) {
 	return f, err
 }
 
-func cmp(w io.Writer, args ...string) error {
+func cmp(stdout, stderr io.Writer, args ...string) error {
 	var offset [2]int64
 	var f *os.File
 	var err error
@@ -81,7 +78,7 @@ func cmp(w io.Writer, args ...string) error {
 
 	off, err := unit.NewUnit(cmpUnits)
 	if err != nil {
-		return fmt.Errorf("could not create unit based on mapping: %v", err)
+		return fmt.Errorf("could not create unit based on mapping: %w", err)
 	}
 
 	var v *unit.Value
@@ -89,65 +86,80 @@ func cmp(w io.Writer, args ...string) error {
 	case 2:
 	case 3:
 		if v, err = off.ValueFromString(args[2]); err != nil {
-			return fmt.Errorf("bad offset1: %s: %v", args[2], err)
+			fmt.Fprintf(stderr, "bad offset1: %s: %v", args[2], err)
+			return fmt.Errorf("%v:%w", err, ErrBadOffset)
 		}
 		offset[0] = v.Value
 	case 4:
 		if v, err = off.ValueFromString(args[2]); err != nil {
-			return fmt.Errorf("bad offset1: %s: %v", args[2], err)
+			fmt.Fprintf(stderr, "bad offset1: %s: %v", args[2], err)
+			return fmt.Errorf("%v:%w", err, ErrBadOffset)
 		}
 		offset[0] = v.Value
 
 		if v, err = off.ValueFromString(args[3]); err != nil {
-			return fmt.Errorf("bad offset2: %s: %v", args[3], err)
+			fmt.Fprintf(stderr, "bad offset2: %s: %v", args[3], err)
+			return fmt.Errorf("%v:%w", err, ErrBadOffset)
 		}
 		offset[1] = v.Value
 	default:
-		return fmt.Errorf("expected two filenames (and one to two optional offsets), got %d", len(args))
+		fmt.Fprintf(stderr, usage)
+		return ErrArgCount
 	}
 
-	c := make([]chan byte, 2)
+	c := make([]io.Reader, 2)
 
 	for i := 0; i < 2; i++ {
 		if f, err = readFileOrStdin(os.Stdin, args[i]); err != nil {
-			return fmt.Errorf("failed to open %s: %v", args[i], err)
+			return fmt.Errorf("failed to open %s: %w", args[i], err)
 		}
-		c[i] = make(chan byte, 8192)
-		go emit(f, c[i], offset[i])
+		if _, err := f.Seek(offset[i], 0); err != nil {
+			return fmt.Errorf("%v:%w", err, ErrBadOffset)
+		}
+		c[i] = bufio.NewReader(f)
 	}
 
 	lineno, charno := int64(1), int64(1)
-	var b1, b2 byte
-	for {
-		b1 = <-c[0]
-		b2 = <-c[1]
 
+	for {
+		var b [2]byte
+		_, err1 := c[0].Read(b[:1])
+		_, err2 := c[1].Read(b[1:2])
+
+		if err1 != nil || err2 != nil {
+			if err1 == io.EOF && err2 == io.EOF {
+				return nil
+			}
+			if err1 != nil {
+				fmt.Fprintf(stderr, "%s:%v", args[0], err1)
+				return err1
+			}
+			if err2 != nil {
+				fmt.Fprintf(stderr, "%s:%v", args[1], err2)
+				return err2
+			}
+		}
+
+		b1, b2 := b[0], b[1]
 		if b1 != b2 {
 			if *silent {
 				return nil
 			}
 			if *line {
-				return fmt.Errorf("%s %s differ: char %d line %d", args[0], args[1], charno, lineno)
+				fmt.Fprintf(stdout, "%s %s: char %d line %d", args[0], args[1], charno, lineno)
+				return ErrDiffer
 			}
 			if *long {
-				if b1 == '\u0000' {
-					return fmt.Errorf("EOF on %s", args[0])
-				}
-				if b2 == '\u0000' {
-					return fmt.Errorf("EOF on %s", args[1])
-				}
-				fmt.Fprintf(w, "%8d %#.2o %#.2o\n", charno, b1, b2)
+				fmt.Fprintf(stdout, "%8d %#.2o %#.2o\n", charno, b1, b2)
 				goto skip
 			}
-			return fmt.Errorf("%s %s differ: char %d", args[0], args[1], charno)
+			fmt.Fprintf(stdout, "%s %s: char %d", args[0], args[1], charno)
+			return ErrDiffer
 		}
 	skip:
 		charno++
 		if b1 == '\n' {
 			lineno++
-		}
-		if b1 == '\u0000' && b2 == '\u0000' {
-			return nil
 		}
 	}
 }
@@ -155,7 +167,7 @@ func cmp(w io.Writer, args ...string) error {
 // cmp is defined to fail with exit code 2
 func main() {
 	flag.Parse()
-	if err := cmp(os.Stderr, flag.Args()...); err != nil {
+	if err := cmp(os.Stdout, os.Stderr, flag.Args()...); err != nil {
 		os.Exit(2)
 	}
 }
