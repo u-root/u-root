@@ -64,13 +64,10 @@ func run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) err
 	defer func(*exec.Cmd, time.Time) {
 		realTime := time.Since(start)
 		printTime(stderr, "real", realTime)
-		if c.ProcessState != nil {
-			printTime(stderr, "user", c.ProcessState.UserTime())
-			printTime(stderr, "sys", c.ProcessState.SystemTime())
-		}
+		printProcessState(stderr, c)
 	}(c, start)
 	if err := c.Run(); err != nil {
-		return err
+		return fmt.Errorf("%q:%w", args, err)
 	}
 	return nil
 }
