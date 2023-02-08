@@ -6,40 +6,36 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"os/exec"
 	"regexp"
 	"testing"
 )
 
-func TestTimeRewrite(t *testing.T) {
+func TestTime(t *testing.T) {
 	var tests = []struct {
-		args      []string
-		want      string
-		wantError bool
+		args []string
+		want string
+		err  error
 	}{
 		{
-			want:      "real 0.000.*\nuser 0.000.*\nsys 0.000",
-			wantError: false,
+			want: "real 0.000.*\nuser 0.000.*\nsys 0.000",
 		},
 		{
-			args:      []string{"date"},
-			want:      "real [0-9][0-9]*.*\nuser [0-9][0-9]*.*\nsys [0-9][0-9]*.*",
-			wantError: false,
+			args: []string{"date"},
+			want: "real [0-9][0-9]*.*\nuser [0-9][0-9]*.*\nsys [0-9][0-9]*.*",
 		},
 		{
-			args:      []string{"deadbeef"},
-			wantError: true,
+			args: []string{"deadbeef"},
+			err:  exec.ErrNotFound,
 		},
 	}
 
 	for _, test := range tests {
 		var stdin, stdout, stderr bytes.Buffer
 		err := run(test.args, &stdin, &stdout, &stderr)
-		if test.wantError && err == nil {
-			t.Error("want error but got nil")
-			continue
-		}
-		if !test.wantError && err != nil {
-			t.Errorf("want nil got: %v", err)
+		if !errors.Is(err, test.err) {
+			t.Errorf("got %v, want %v", err, test.err)
 			continue
 		}
 
