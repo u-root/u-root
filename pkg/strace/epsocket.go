@@ -83,7 +83,7 @@ func GetAddress(addr []byte) (*FullAddress, error) {
 		var a unix.RawSockaddrInet4
 		r = bytes.NewBuffer(addr)
 		if err := binary.Read(r, binary.BigEndian, &a); err != nil {
-			return &FullAddress{}, unix.EFAULT
+			return nil, unix.EFAULT
 		}
 		return &FullAddress{
 			Addr: Address(net.IP(a.Addr[:]).String()),
