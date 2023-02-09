@@ -72,7 +72,7 @@ func wire(cmds []*Command) error {
 		// There seems to be no way to do the classic
 		// inherited pipes thing in Go. Hard to believe.
 		go func() {
-			io.Copy(w, r)
+			_, _ = io.Copy(w, r)
 			w.Close()
 		}()
 	}
