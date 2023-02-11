@@ -24,6 +24,7 @@ func TestGetAddress(t *testing.T) {
 		{name: "too short", addr: []byte{unix.AF_UNIX, 0, 0}, f: nil, err: unix.EINVAL},
 		{name: "bad family", addr: []byte{0, 2, 'h', 'i', 0}, f: nil, err: unix.ENOTSUP},
 		{name: "unix", addr: []byte{unix.AF_UNIX, 0, 'h', 'i', 0}, f: &FullAddress{Addr: "hi"}, err: nil},
+		{name: "unix no null", addr: []byte{unix.AF_UNIX, 0, 'h', 'i'}, f: nil, err: unix.EINVAL},
 		{name: "unix ENAMETOOLONG", addr: (&[unix.PathMax * 2]byte{unix.AF_UNIX, 0, 'h', 'i', 0})[:], f: nil, err: unix.ENAMETOOLONG},
 		{name: "IP4", addr: []byte{unix.AF_INET, 0, 13, 14, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0}, f: &FullAddress{Addr: "1.2.3.4", Port: 3342}, err: nil},
 		{name: "IP4short", addr: []byte{unix.AF_INET, 0, 13}, f: nil, err: unix.EFAULT},
