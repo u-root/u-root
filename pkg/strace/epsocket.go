@@ -17,7 +17,8 @@ package strace
 import (
 	"bytes"
 	"encoding/binary"
-	"strings"
+	"fmt"
+	"net"
 
 	"github.com/u-root/u-root/pkg/ubinary"
 	"golang.org/x/sys/unix"
@@ -38,31 +39,43 @@ type FullAddress struct {
 	Port uint16
 }
 
+// String implements String
+func (a *FullAddress) String() string {
+	if a == nil {
+		return ":"
+	}
+	return fmt.Sprintf("%s:%#x", []byte(a.Addr), a.Port)
+}
+
 // GetAddress reads an sockaddr struct from the given address and converts it
 // to the FullAddress format. It supports AF_UNIX, AF_INET and AF_INET6
 // addresses.
-func GetAddress(t Task, addr []byte) (FullAddress, error) {
-	r := bytes.NewBuffer(addr[:2])
+func GetAddress(addr []byte) (*FullAddress, error) {
+	r := bytes.NewBuffer(addr)
+
 	var fam uint16
 	if err := binary.Read(r, ubinary.NativeEndian, &fam); err != nil {
-		return FullAddress{}, unix.EFAULT
+		return nil, err
 	}
 
 	// Get the rest of the fields based on the address family.
 	switch fam {
 	case unix.AF_UNIX:
-		path := addr[2:]
+		path := r.Bytes()
+
 		if len(path) > unix.PathMax {
-			return FullAddress{}, unix.EINVAL
+			return nil, unix.ENAMETOOLONG
 		}
+
 		// Drop the terminating NUL (if one exists) and everything after
 		// it for filesystem (non-abstract) addresses.
-		if len(path) > 0 && path[0] != 0 {
-			if n := bytes.IndexByte(path[1:], 0); n >= 0 {
-				path = path[:n+1]
-			}
+		if n := bytes.IndexByte(path, 0); n > 0 {
+			path = path[:n]
+		} else {
+			return nil, unix.EINVAL
 		}
-		return FullAddress{
+
+		return &FullAddress{
 			Addr: Address(path),
 		}, nil
 
@@ -70,39 +83,26 @@ func GetAddress(t Task, addr []byte) (FullAddress, error) {
 		var a unix.RawSockaddrInet4
 		r = bytes.NewBuffer(addr)
 		if err := binary.Read(r, binary.BigEndian, &a); err != nil {
-			return FullAddress{}, unix.EFAULT
+			return nil, unix.EFAULT
 		}
-		out := FullAddress{
-			Addr: Address(a.Addr[:]),
+		return &FullAddress{
+			Addr: Address(net.IP(a.Addr[:]).String()),
 			Port: uint16(a.Port),
-		}
-		if out.Addr == "\x00\x00\x00\x00" {
-			out.Addr = ""
-		}
-		return out, nil
+		}, nil
 
 	case unix.AF_INET6:
 		var a unix.RawSockaddrInet6
 		r = bytes.NewBuffer(addr)
 		if err := binary.Read(r, binary.BigEndian, &a); err != nil {
-			return FullAddress{}, unix.EFAULT
+			return nil, unix.EFAULT
 		}
 
-		out := FullAddress{
-			Addr: Address(a.Addr[:]),
+		return &FullAddress{
+			Addr: Address(net.IP(a.Addr[:]).String()),
 			Port: uint16(a.Port),
-		}
-
-		//if isLinkLocal(out.Addr) {
-		//			out.NIC = NICID(a.Scope_id)
-		//}
-
-		if out.Addr == Address(strings.Repeat("\x00", 16)) {
-			out.Addr = ""
-		}
-		return out, nil
+		}, nil
 
 	default:
-		return FullAddress{}, unix.ENOTSUP
+		return nil, unix.ENOTSUP
 	}
 }
