@@ -26,6 +26,7 @@ import (
 type signedFile struct {
 	signers []*openpgp.Entity
 	content string
+	time    func() time.Time
 }
 
 func (s signedFile) write(path string) error {
@@ -44,8 +45,12 @@ func (s signedFile) write(path string) error {
 		return err
 	}
 	defer sigf.Close()
+	var config packet.Config
+	if s.time != nil {
+		config.Time = s.time
+	}
 	for _, signer := range s.signers {
-		if err := openpgp.DetachSign(sigf, signer, strings.NewReader(s.content), nil); err != nil {
+		if err := openpgp.DetachSign(sigf, signer, strings.NewReader(s.content), &config); err != nil {
 			return err
 		}
 	}
@@ -157,6 +162,16 @@ func TestOpenSignedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	signedInTheFuture := signedFile{
+		signers: openpgp.EntityList{keys[0]},
+		content: "foo",
+		time:    func() time.Time { return time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC) },
+	}
+	signedInTheFuturePath := filepath.Join(dir, "signed_in_the_future.sig")
+	if err := signedInTheFuture.write(signedInTheFuturePath); err != nil {
+		t.Fatal(err)
+	}
+
 	normalPath := filepath.Join(dir, "unsigned")
 	if err := os.WriteFile(normalPath, []byte("foo"), 0o777); err != nil {
 		t.Fatal(err)
@@ -166,6 +181,7 @@ func TestOpenSignedFile(t *testing.T) {
 		desc             string
 		path             string
 		keyring          openpgp.KeyRing
+		opts             []OpenSignedFileOption
 		want             error
 		isSignatureValid bool
 	}{
@@ -245,9 +261,27 @@ func TestOpenSignedFile(t *testing.T) {
 			},
 			isSignatureValid: false,
 		},
+		{
+			desc:    "signed in the future",
+			keyring: ring,
+			path:    signedInTheFuturePath,
+			want: ErrUnsigned{
+				Path: signedInTheFuturePath,
+				Err:  errors.ErrSignatureExpired,
+			},
+			isSignatureValid: false,
+		},
+		{
+			desc:             "signed in the future - ignore time conflict",
+			keyring:          ring,
+			path:             signedInTheFuturePath,
+			opts:             []OpenSignedFileOption{WithIgnoreTimeConflict},
+			want:             nil,
+			isSignatureValid: true,
+		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			f, gotErr := OpenSignedSigFile(tt.keyring, tt.path)
+			f, gotErr := OpenSignedSigFile(tt.keyring, tt.path, tt.opts...)
 			if !reflect.DeepEqual(gotErr, tt.want) {
 				t.Errorf("openSignedFile(%v, %q) = %v, want %v", tt.keyring, tt.path, gotErr, tt.want)
 			}
