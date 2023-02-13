@@ -18,6 +18,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
@@ -109,8 +110,8 @@ func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
 // OpenSignedSigFile calls OpenSignedFile expecting the signature to be in path.sig.
 //
 // E.g. if path is /foo/bar, the signature is expected to be in /foo/bar.sig.
-func OpenSignedSigFile(keyring openpgp.KeyRing, path string) (*File, error) {
-	return OpenSignedFile(keyring, path, fmt.Sprintf("%s.sig", path))
+func OpenSignedSigFile(keyring openpgp.KeyRing, path string, opts ...OpenSignedFileOption) (*File, error) {
+	return OpenSignedFile(keyring, path, fmt.Sprintf("%s.sig", path), opts...)
 }
 
 // File encapsulates a bytes.Reader with the file contents and its name.
@@ -125,6 +126,26 @@ func (f *File) Name() string {
 	return f.FileName
 }
 
+// OpenSignedFileOption is an optional argument to OpenSignedFile.
+type OpenSignedFileOption func(*openSignedFileOptions)
+
+type openSignedFileOptions struct {
+	ignoreTimeConflict bool
+}
+
+func WithIgnoreTimeConflict(o *openSignedFileOptions) {
+	o.ignoreTimeConflict = true
+}
+
+func getEndOfTime() time.Time {
+	// number of seconds between Year 1 and 1970 (62135596800 seconds)
+	unixToInternal := int64((1969*365 + 1969/4 - 1969/100 + 1969/400) * 24 * 60 * 60)
+
+	// time.Unix adds unixToInternal seconds, subtract them to avoid
+	// integer overflow in the internal representation.
+	return time.Unix(1<<63-1-unixToInternal, 0)
+}
+
 // OpenSignedFile opens a file that is expected to be signed.
 //
 // WARNING! Unlike many Go functions, this may return both the file and an
@@ -134,7 +155,7 @@ func (f *File) Name() string {
 //
 // If the signature does not exist or does not match the keyring, both the file
 // and a signature error will be returned.
-func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error) {
+func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string, opts ...OpenSignedFileOption) (*File, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -143,6 +164,11 @@ func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error
 		Reader:   bytes.NewReader(content),
 		FileName: path,
 	}
+	var o openSignedFileOptions
+	// Apply options if given.
+	for _, opt := range opts {
+		opt(&o)
+	}
 
 	signaturef, err := os.Open(pathSig)
 	if err != nil {
@@ -150,9 +176,13 @@ func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string) (*File, error
 	}
 	defer signaturef.Close()
 
+	var config packet.Config
+	if o.ignoreTimeConflict {
+		config.Time = getEndOfTime
+	}
 	if keyring == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrNoKeyRing}
-	} else if signer, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(content), signaturef, nil); err != nil {
+	} else if signer, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(content), signaturef, &config); err != nil {
 		return f, ErrUnsigned{Path: path, Err: err}
 	} else if signer == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrWrongSigner{keyring}}
