@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/u-root/uio/ubinary"
+	"github.com/josharian/native"
 )
 
 // Marshaler is the interface implemented by an object that can marshal itself
@@ -129,12 +129,12 @@ func (b *Buffer) Cap() int {
 //
 // Use:
 //
-//   func (s *something) Unmarshal(l *Lexer) {
-//     s.Foo = l.Read8()
-//     s.Bar = l.Read8()
-//     s.Baz = l.Read16()
-//     return l.Error()
-//   }
+//	func (s *something) Unmarshal(l *Lexer) {
+//	  s.Foo = l.Read8()
+//	  s.Bar = l.Read8()
+//	  s.Baz = l.Read16()
+//	  return l.Error()
+//	}
 type Lexer struct {
 	*Buffer
 
@@ -173,7 +173,7 @@ func NewBigEndianBuffer(b []byte) *Lexer {
 func NewNativeEndianBuffer(b []byte) *Lexer {
 	return &Lexer{
 		Buffer: NewBuffer(b),
-		order:  ubinary.NativeEndian,
+		order:  native.Endian,
 	}
 }
 

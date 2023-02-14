@@ -9,10 +9,7 @@
 // testing.TB.Logf. To use the test logger import "ulog/ulogtest".
 package ulog
 
-import (
-	"log"
-	"os"
-)
+import "log"
 
 // Logger is a log receptacle.
 //
@@ -22,8 +19,8 @@ type Logger interface {
 	Print(v ...interface{})
 }
 
-// Log is a Logger that prints to stderr, like the default log package.
-var Log Logger = log.New(os.Stderr, "", log.LstdFlags)
+// Log is a Logger that prints to the log package's default logger.
+var Log Logger = log.Default()
 
 type emptyLogger struct{}
 
