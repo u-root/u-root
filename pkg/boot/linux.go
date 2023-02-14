@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/ulog"
 	"golang.org/x/sys/unix"
 )
 
@@ -182,7 +182,7 @@ func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 //     don't like them being opened for writting by anyone while
 //     executing.
 //   - Append DTB, if present to end of initrd.
-func loadLinuxImage(li *LinuxImage, verbose bool) (*LoadedLinuxImage, func(), error) {
+func loadLinuxImage(li *LinuxImage, logger ulog.Logger, verbose bool) (*LoadedLinuxImage, func(), error) {
 	if li.Kernel == nil {
 		return nil, nil, errNilKernel
 	}
@@ -209,14 +209,12 @@ func loadLinuxImage(li *LinuxImage, verbose bool) (*LoadedLinuxImage, func(), er
 		}
 	}
 
-	if verbose {
-		log.Printf("Kernel: %s", k.Name())
-		if i != nil {
-			log.Printf("Initrd: %s", i.Name())
-		}
-		log.Printf("Command line: %s", li.Cmdline)
-		log.Printf("KexecOpts: %v", li.KexecOpts)
+	logger.Printf("Kernel: %s", k.Name())
+	if i != nil {
+		logger.Printf("Initrd: %s", i.Name())
 	}
+	logger.Printf("Command line: %s", li.Cmdline)
+	logger.Printf("KexecOpts: %#v", li.KexecOpts)
 
 	cleanup := func() {
 		k.Close()
@@ -239,13 +237,21 @@ func (li *LinuxImage) Edit(f func(cmdline string) string) {
 }
 
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
-func (li *LinuxImage) Load(verbose bool) error {
-	loadedImage, cleanup, err := loadLinuxImage(li, verbose)
+func (li *LinuxImage) Load(opts ...LoadOption) error {
+	loadOpts := defaultLoadOptions()
+	for _, opt := range opts {
+		opt(loadOpts)
+	}
+
+	loadedImage, cleanup, err := loadLinuxImage(li, loadOpts.logger, loadOpts.verbose)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 
+	if !loadOpts.callKexecLoad {
+		return nil
+	}
 	if li.LoadSyscall {
 		return linux.KexecLoad(loadedImage.Kernel, loadedImage.Initrd, loadedImage.Cmdline, loadedImage.KexecOpts)
 	}

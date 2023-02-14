@@ -20,6 +20,7 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/vfile"
+	"github.com/u-root/uio/ulog/ulogtest"
 	"golang.org/x/sys/unix"
 )
 
@@ -320,7 +321,7 @@ func TestLoadLinuxImage(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			gotImage, _, gotErr := loadLinuxImage(tt.li, true)
+			gotImage, _, gotErr := loadLinuxImage(tt.li, ulogtest.Logger{t}, true)
 			if gotErr != nil {
 				if gotErr != tt.want.err {
 					t.Errorf("got error %v, want %v", gotErr, tt.want.err)
