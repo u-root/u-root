@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/ibft"
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
 
@@ -46,8 +47,23 @@ func (mi *MultibootImage) Edit(f func(cmdline string) string) {
 }
 
 // Load implements OSImage.Load.
-func (mi *MultibootImage) Load(verbose bool) error {
-	return multiboot.Load(verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
+func (mi *MultibootImage) Load(opts ...LoadOption) error {
+	loadOpts := defaultLoadOptions()
+	for _, opt := range opts {
+		opt(loadOpts)
+	}
+
+	entryPoint, segments, err := multiboot.PrepareLoad(loadOpts.verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
+	if err != nil {
+		return err
+	}
+	if !loadOpts.callKexecLoad {
+		return nil
+	}
+	if err := kexec.Load(entryPoint, segments, 0); err != nil {
+		return fmt.Errorf("kexec.Load() error: %v", err)
+	}
+	return nil
 }
 
 // String implements fmt.Stringer.

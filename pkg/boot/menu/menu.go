@@ -272,7 +272,11 @@ type OSImageAction struct {
 
 // Load implements Entry.Load by loading the OS image into memory.
 func (oia OSImageAction) Load() error {
-	if err := oia.OSImage.Load(oia.Verbose); err != nil {
+	var lo []boot.LoadOption
+	if oia.Verbose {
+		lo = append(lo, boot.Verbose)
+	}
+	if err := oia.OSImage.Load(lo...); err != nil {
 		return fmt.Errorf("could not load image %s: %v", oia.OSImage, err)
 	}
 	return nil

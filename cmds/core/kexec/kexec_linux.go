@@ -85,7 +85,9 @@ func main() {
 	opts := registerFlags()
 	flag.Parse()
 
+	var loadOpts []boot.LoadOption
 	if opts.debug {
+		loadOpts = append(loadOpts, boot.Verbose)
 		linux.Debug = log.Printf
 		purgatory.Debug = log.Printf
 	}
@@ -170,7 +172,7 @@ func main() {
 				},
 			}
 		}
-		if err := image.Load(opts.debug); err != nil {
+		if err := image.Load(loadOpts...); err != nil {
 			log.Fatal(err)
 		}
 	}

@@ -108,15 +108,15 @@ func (i *Image) Edit(f func(s string) string) {
 }
 
 // Load LinuxImage to memory
-func loadLinuxImage(i *boot.LinuxImage, verbose bool) error {
-	return i.Load(verbose)
+func loadLinuxImage(i *boot.LinuxImage, opts ...boot.LoadOption) error {
+	return i.Load(opts...)
 }
 
 // provide chance to mock in test
 var loadImage = loadLinuxImage
 
 // Load loads an image and reboots
-func (i *Image) Load(verbose bool) error {
+func (i *Image) Load(opts ...boot.LoadOption) error {
 	image := &boot.LinuxImage{
 		Cmdline: i.Cmdline,
 	}
@@ -151,11 +151,7 @@ func (i *Image) Load(verbose bool) error {
 		}
 	}
 
-	if err := loadImage(image, verbose); err != nil {
-		return err
-	}
-
-	return nil
+	return loadImage(image, opts...)
 }
 
 // ReadImage reads an image node from an FDT and returns the `data` contents.
