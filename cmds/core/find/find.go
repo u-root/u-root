@@ -34,15 +34,15 @@ type params struct {
 	debug    bool
 }
 
-type command struct {
+type cmd struct {
 	stdout io.Writer
 	strerr io.Writer
 	args   []string
 	params params
 }
 
-func newCommand(stdin io.Reader, stdout, stderr io.Writer, args []string, params params) *command {
-	return &command{
+func command(stdout, stderr io.Writer, params params, args []string) *cmd {
+	return &cmd{
 		stdout: stdout,
 		strerr: stderr,
 		args:   args,
@@ -50,26 +50,16 @@ func newCommand(stdin io.Reader, stdout, stderr io.Writer, args []string, params
 	}
 }
 
-const cmd = "find [opts] starting-at-path"
-
-var (
-	perm     = flag.Int("mode", -1, "permissions")
-	fileType = flag.String("type", "", "file type")
-	name     = flag.String("name", "", "glob for name")
-	long     = flag.Bool("l", false, "long listing")
-	debug    = flag.Bool("d", false, "enable debugging in the find package")
-)
-
 func init() {
 	defUsage := flag.Usage
 	flag.Usage = func() {
-		os.Args[0] = cmd
+		os.Args[0] = "find [opts] starting-at-path"
 		defUsage()
 		os.Exit(1)
 	}
 }
 
-func (c *command) run() error {
+func (c *cmd) run() error {
 	fileTypes := map[string]os.FileMode{
 		"f":         0,
 		"file":      0,
@@ -127,9 +117,14 @@ func (c *command) run() error {
 }
 
 func main() {
+	perm := flag.Int("mode", -1, "permissions")
+	fileType := flag.String("type", "", "file type")
+	name := flag.String("name", "", "glob for name")
+	long := flag.Bool("l", false, "long listing")
+	debug := flag.Bool("d", false, "enable debugging in the find package")
 	flag.Parse()
 	p := params{perm: *perm, fileType: *fileType, name: *name, long: *long, debug: *debug}
-	if err := newCommand(os.Stdin, os.Stdout, os.Stderr, flag.Args(), p).run(); err != nil {
+	if err := command(os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		log.Fatalf("find: %v", err)
 	}
 }

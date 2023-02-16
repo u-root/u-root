@@ -109,8 +109,8 @@ func TestFind(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		var stdout, stderr bytes.Buffer
-		err := newCommand(nil, &stdout, &stderr, tt.args, tt.params).run()
+		var stdout bytes.Buffer
+		err := command(&stdout, nil, tt.params, tt.args).run()
 		if tt.wantErr {
 			if err == nil {
 				t.Fatal("want error got nil")
@@ -133,7 +133,7 @@ func TestFindLong(t *testing.T) {
 	prepareDirLayout(t)
 
 	var stdout bytes.Buffer
-	err := newCommand(nil, &stdout, nil, []string{"file1"}, params{perm: -1, long: true}).run()
+	err := command(&stdout, nil, params{perm: -1, long: true}, []string{"file1"}).run()
 	if err != nil {
 		t.Fatal(err)
 	}
