@@ -156,9 +156,9 @@ func TestLoad(t *testing.T) {
 
 			i.Kernel, i.InitRAMFS, i.KeyRing = tt.kernel, tt.initram, tt.keyring
 
-			defer func(old func(i *boot.LinuxImage, verbose bool) error) { loadImage = old }(loadImage)
+			defer func(old func(i *boot.LinuxImage, opts ...boot.LoadOption) error) { loadImage = old }(loadImage)
 
-			loadImage = func(i *boot.LinuxImage, verbose bool) error {
+			loadImage = func(i *boot.LinuxImage, opts ...boot.LoadOption) error {
 				if i == nil {
 					t.Errorf("Load() of kernel:%s, init:%s, keys: %v - passed nil to loadImage", tt.kernel, tt.initram, tt.keyring)
 					return nil
@@ -180,7 +180,7 @@ func TestLoad(t *testing.T) {
 				return nil
 			}
 
-			gotErr := i.Load(true)
+			gotErr := i.Load()
 
 			// Shallow check to verify the correct error
 			if (tt.want == nil && gotErr != nil) || reflect.TypeOf(gotErr) != reflect.TypeOf(tt.want) {

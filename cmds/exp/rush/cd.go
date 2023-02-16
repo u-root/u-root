@@ -13,7 +13,7 @@ import (
 var errCdUsage = errors.New("usage: cd one-path")
 
 func init() {
-	addBuiltIn("cd", cd)
+	_ = addBuiltIn("cd", cd)
 }
 
 func cd(c *Command) error {

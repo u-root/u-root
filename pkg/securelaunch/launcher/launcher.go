@@ -89,7 +89,7 @@ func (l *Launcher) Boot() error {
 		Initrd:  uio.NewLazyFile(i),
 		Cmdline: cmdline,
 	}
-	err := image.Load(false)
+	err := image.Load()
 	if err != nil {
 		log.Printf("kexec -l failed. err: %v", err)
 		return err

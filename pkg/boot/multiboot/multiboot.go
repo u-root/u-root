@@ -174,6 +174,22 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
 func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
+	entryPoint, segments, err := PrepareLoad(debug, kernel, cmdline, modules, ibft)
+	if err != nil {
+		return err
+	}
+	if err := kexec.Load(entryPoint, segments, 0); err != nil {
+		return fmt.Errorf("kexec.Load() error: %v", err)
+	}
+	return nil
+}
+
+// PrepareLoad parses and loads a multiboot `kernel` ready for kexec_load. It
+// returns an entry point value and segments.
+//
+// Load can set up an arbitrary number of modules, and takes care of the
+// multiboot info structure, including the memory map.
+func PrepareLoad(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) (uintptr, kexec.Segments, error) {
 	kernel = util.TryGzipFilter(kernel)
 	for i, mod := range modules {
 		modules[i].Module = util.TryGzipFilter(mod.Module)
@@ -181,15 +197,12 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 
 	m, err := newMB(kernel, cmdline, modules)
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 	if err := m.load(debug, ibft); err != nil {
-		return err
+		return 0, nil, err
 	}
-	if err := kexec.Load(m.entryPoint, m.mem.Segments, 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
-	}
-	return nil
+	return m.entryPoint, m.mem.Segments, nil
 }
 
 // OpenModules open modules as files and fill a range of `Module` struct

@@ -10,7 +10,41 @@ import (
 	"fmt"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/uio/ulog"
 )
+
+// LoadOption is an optional parameter to Load.
+type LoadOption func(*loadOptions)
+
+type loadOptions struct {
+	logger        ulog.Logger
+	verbose       bool
+	callKexecLoad bool
+}
+
+func defaultLoadOptions() *loadOptions {
+	return &loadOptions{
+		logger:        ulog.Null,
+		verbose:       false,
+		callKexecLoad: true,
+	}
+}
+
+// WithLogger is a LoadOption that logs verbose debug output l.
+func WithLogger(l ulog.Logger) LoadOption {
+	return func(o *loadOptions) {
+		o.verbose = true
+		o.logger = l
+	}
+}
+
+// Verbose is a LoadOption that logs to os.Stderr like the standard log package.
+var Verbose = WithLogger(ulog.Log)
+
+// WithDryRun is a LoadOption that makes sure no kexec_load syscall is called during Load.
+func WithDryRun(o *loadOptions) {
+	o.callKexecLoad = false
+}
 
 // OSImage represents a bootable OS package.
 type OSImage interface {
@@ -34,7 +68,7 @@ type OSImage interface {
 	//
 	// After Load is called, call boot.Execute() to stop Linux and boot the
 	// loaded OSImage.
-	Load(verbose bool) error
+	Load(opts ...LoadOption) error
 }
 
 // Execute executes a previously loaded OSImage.

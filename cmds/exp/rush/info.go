@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	addBuiltIn("rushinfo", infocmd)
+	_ = addBuiltIn("rushinfo", infocmd)
 }
 
 func infocmd(c *Command) error {
