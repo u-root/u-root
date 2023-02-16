@@ -32,6 +32,7 @@ require (
 	github.com/u-root/gobusybox/src v0.0.0-20221229083637-46b2883a7f90
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8
+	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
@@ -64,7 +65,6 @@ require (
 	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065 // indirect
 	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.1.0 // indirect
