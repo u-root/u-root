@@ -33,17 +33,34 @@ func defaultLoadOptions() *loadOptions {
 // WithLogger is a LoadOption that logs verbose debug output l.
 func WithLogger(l ulog.Logger) LoadOption {
 	return func(o *loadOptions) {
-		o.verbose = true
+		o.verbose = (l != nil)
+		if l == nil {
+			l = ulog.Null
+		}
 		o.logger = l
 	}
 }
 
-// Verbose is a LoadOption that logs to os.Stderr like the standard log package.
+// Verbose is a LoadOption that logs to log.Default().
 var Verbose = WithLogger(ulog.Log)
 
+// WithVerbose enables verbose logging if verbose is set to true.
+func WithVerbose(verbose bool) LoadOption {
+	return func(o *loadOptions) {
+		o.verbose = verbose
+		if verbose {
+			o.logger = ulog.Log
+		} else {
+			o.logger = ulog.Null
+		}
+	}
+}
+
 // WithDryRun is a LoadOption that makes sure no kexec_load syscall is called during Load.
-func WithDryRun(o *loadOptions) {
-	o.callKexecLoad = false
+func WithDryRun(dryRun bool) LoadOption {
+	return func(o *loadOptions) {
+		o.callKexecLoad = !dryRun
+	}
 }
 
 // OSImage represents a bootable OS package.

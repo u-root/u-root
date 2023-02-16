@@ -32,9 +32,7 @@ var v = func(string, ...interface{}) {}
 func main() {
 	flag.Parse()
 
-	var loadOptions []boot.LoadOption
 	if *debug {
-		loadOptions = append(loadOptions, boot.Verbose)
 		v = log.Printf
 	}
 
@@ -81,7 +79,7 @@ func main() {
 		f.KeyRing = ring
 	}
 
-	if err := f.Load(loadOptions...); err != nil {
+	if err := f.Load(boot.WithVerbose(*debug)); err != nil {
 		log.Fatal(err)
 	}
 
