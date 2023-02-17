@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -25,26 +26,40 @@ import (
 	"github.com/u-root/u-root/pkg/find"
 )
 
-const cmd = "find [opts] starting-at-path"
+type params struct {
+	fileType string
+	name     string
+	perm     int
+	long     bool
+	debug    bool
+}
 
-var (
-	perm     = flag.Int("mode", -1, "Permissions")
-	fileType = flag.String("type", "", "File type")
-	name     = flag.String("name", "", "glob for name")
-	long     = flag.Bool("l", false, "long listing")
-	debug    = flag.Bool("d", false, "Enable debugging in the find package")
-)
+type cmd struct {
+	stdout io.Writer
+	strerr io.Writer
+	args   []string
+	params params
+}
+
+func command(stdout, stderr io.Writer, params params, args []string) *cmd {
+	return &cmd{
+		stdout: stdout,
+		strerr: stderr,
+		args:   args,
+		params: params,
+	}
+}
 
 func init() {
 	defUsage := flag.Usage
 	flag.Usage = func() {
-		os.Args[0] = cmd
+		os.Args[0] = "find [opts] starting-at-path"
 		defUsage()
 		os.Exit(1)
 	}
 }
 
-func main() {
+func (c *cmd) run() error {
 	fileTypes := map[string]os.FileMode{
 		"f":         0,
 		"file":      0,
@@ -52,50 +67,64 @@ func main() {
 		"directory": os.ModeDir,
 	}
 
-	flag.Parse()
-	a := flag.Args()
-	if len(a) != 1 {
+	if len(c.args) != 1 {
 		flag.Usage()
 	}
-	root := a[0]
+	root := c.args[0]
 
 	var mask, mode os.FileMode
-	if *perm != -1 {
+	if c.params.perm != -1 {
 		mask = os.ModePerm
-		mode = os.FileMode(*perm)
+		mode = os.FileMode(c.params.perm)
 	}
-	if *fileType != "" {
-		intType, ok := fileTypes[*fileType]
+	if c.params.fileType != "" {
+		intType, ok := fileTypes[c.params.fileType]
 		if !ok {
 			var keys []string
 			for key := range fileTypes {
 				keys = append(keys, key)
 			}
-			log.Fatalf("%v is not a valid file type\n valid types are %v", *fileType, strings.Join(keys, ","))
+			return fmt.Errorf("%v is not a valid file type\n valid types are %v", c.params.fileType, strings.Join(keys, ","))
 		}
 		mode |= intType
 		mask |= os.ModeType
 	}
 
 	debugLog := func(string, ...interface{}) {}
-	if *debug {
+	if c.params.debug {
 		debugLog = log.Printf
 	}
 	names := find.Find(context.Background(),
 		find.WithRoot(root),
 		find.WithModeMatch(mode, mask),
-		find.WithFilenameMatch(*name),
+		find.WithFilenameMatch(c.params.name),
 		find.WithDebugLog(debugLog),
 	)
+
 	for l := range names {
 		if l.Err != nil {
-			fmt.Fprintf(os.Stderr, "%v: %v\n", l.Name, l.Err)
+			fmt.Fprintf(c.strerr, "%s: %v\n", l.Name, l.Err)
 			continue
 		}
-		if *long {
-			fmt.Printf("%s\n", l)
+		if c.params.long {
+			fmt.Fprintf(c.stdout, "%s\n", l)
 			continue
 		}
-		fmt.Printf("%s\n", l.Name)
+		fmt.Fprintf(c.stdout, "%s\n", l.Name)
+	}
+
+	return nil
+}
+
+func main() {
+	perm := flag.Int("mode", -1, "permissions")
+	fileType := flag.String("type", "", "file type")
+	name := flag.String("name", "", "glob for name")
+	long := flag.Bool("l", false, "long listing")
+	debug := flag.Bool("d", false, "enable debugging in the find package")
+	flag.Parse()
+	p := params{perm: *perm, fileType: *fileType, name: *name, long: *long, debug: *debug}
+	if err := command(os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
+		log.Fatalf("find: %v", err)
 	}
 }
