@@ -27,10 +27,16 @@ type SessionID uint16
 
 // BlobStats contains statistics for a given blob.
 type BlobStats struct {
-	state       uint16
-	size        uint32
-	metadataLen uint8
-	metadata    []uint8
+	State       uint16
+	Size        uint32
+	MetadataLen uint8
+	Metadata    []uint8
+}
+
+type blobStatsHdr struct {
+	State       uint16
+	Size        uint32
+	MetadataLen uint8
 }
 
 // BlobHandler provides an interface for the blob protocol. IT can be used
@@ -333,6 +339,7 @@ func (h *BlobHandler) BlobWrite(sid SessionID, offset uint32, data []uint8) erro
 //
 // Each blob defines its own commit behavior. Optional blob-specific commit data
 // can be provided with |data|.
+// This function does not poll for BMC_BLOB_STATE_COMMITTED.
 func (h *BlobHandler) BlobCommit(sid SessionID, data []uint8) error {
 	req, err := appendLittleEndian([]uint8{}, sid, (uint8)(len(data)), data)
 	if err != nil {
@@ -386,14 +393,19 @@ func (h *BlobHandler) BlobStat(id string) (*BlobStats, error) {
 		return nil, err
 	}
 
-	buf := bytes.NewReader(data)
-	var stats BlobStats
+	buf := bytes.NewBuffer(data)
+	var statsHdr blobStatsHdr
 
-	if err := binary.Read(buf, binary.LittleEndian, &stats); err != nil {
+	if err := binary.Read(buf, binary.LittleEndian, &statsHdr); err != nil {
 		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
-	return &stats, nil
+	return &BlobStats{
+		State:       statsHdr.State,
+		Size:        statsHdr.Size,
+		MetadataLen: statsHdr.MetadataLen,
+		Metadata:    buf.Bytes(),
+	}, nil
 }
 
 // BlobSessionStat command returns the same data as BmcBlobStat.
@@ -412,12 +424,17 @@ func (h *BlobHandler) BlobSessionStat(sid SessionID) (*BlobStats, error) {
 		return nil, err
 	}
 
-	buf := bytes.NewReader(data)
-	var stats BlobStats
+	buf := bytes.NewBuffer(data)
+	var statsHdr blobStatsHdr
 
-	if err := binary.Read(buf, binary.LittleEndian, &stats); err != nil {
+	if err := binary.Read(buf, binary.LittleEndian, &statsHdr); err != nil {
 		return nil, fmt.Errorf("failed to read response: %v", err)
 	}
 
-	return &stats, nil
+	return &BlobStats{
+		State:       statsHdr.State,
+		Size:        statsHdr.Size,
+		MetadataLen: statsHdr.MetadataLen,
+		Metadata:    buf.Bytes(),
+	}, nil
 }
