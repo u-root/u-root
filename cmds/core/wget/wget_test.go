@@ -137,7 +137,7 @@ func TestWget(t *testing.T) {
 				t.Fatalf("failed to change into temporary directory: %v", err)
 			}
 
-			err := newCommand(tt.outputPath, tt.url).run()
+			err := command(tt.outputPath, tt.url).run()
 
 			if tt.wantErr == nil && err != nil {
 				t.Fatalf("expected nil, got: %v", err)
@@ -184,7 +184,7 @@ func TestNoServer(t *testing.T) {
 		}
 	}()
 
-	err := newCommand("", fmt.Sprintf("http://localhost:%d/200", port)).run()
+	err := command("", fmt.Sprintf("http://localhost:%d/200", port)).run()
 	if err == nil {
 		t.Error("expected err got nil")
 	}
