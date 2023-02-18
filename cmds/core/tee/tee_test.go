@@ -53,7 +53,7 @@ func TestTee(t *testing.T) {
 
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
-			cmd := newCommand(test.append, false, test.args)
+			cmd := command(test.append, false, test.args)
 			cmd.stdin = strings.NewReader(test.input)
 			cmd.stdout = &stdout
 			cmd.stderr = &stderr

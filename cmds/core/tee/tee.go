@@ -30,7 +30,7 @@ var (
 	ignore = flag.BoolP("ignore-interrupts", "i", false, "ignore the SIGINT signal")
 )
 
-type command struct {
+type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
@@ -39,8 +39,8 @@ type command struct {
 	ignore bool
 }
 
-func newCommand(cat, ignore bool, args []string) *command {
-	return &command{
+func command(cat, ignore bool, args []string) *cmd {
+	return &cmd{
 		stdin:  os.Stdin,
 		stdout: os.Stdout,
 		stderr: os.Stderr,
@@ -50,7 +50,7 @@ func newCommand(cat, ignore bool, args []string) *command {
 	}
 }
 
-func (c *command) run() error {
+func (c *cmd) run() error {
 	oflags := os.O_WRONLY | os.O_CREATE
 	if c.cat {
 		oflags |= os.O_APPEND
@@ -88,7 +88,7 @@ func (c *command) run() error {
 
 func main() {
 	flag.Parse()
-	if err := newCommand(*cat, *ignore, flag.Args()).run(); err != nil {
+	if err := command(*cat, *ignore, flag.Args()).run(); err != nil {
 		log.Fatalf("tee: %v", err)
 	}
 }

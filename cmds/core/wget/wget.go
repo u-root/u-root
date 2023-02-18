@@ -41,19 +41,19 @@ import (
 var outPath = flag.String("O", "", "output file")
 var errEmptyURL = errors.New("empty url")
 
-type command struct {
+type cmd struct {
 	url        string
 	outputPath string
 }
 
-func newCommand(outPath string, url string) *command {
-	return &command{
+func command(outPath string, url string) *cmd {
+	return &cmd{
 		outputPath: outPath,
 		url:        url,
 	}
 }
 
-func (c *command) run() error {
+func (c *cmd) run() error {
 	log.SetPrefix("wget: ")
 
 	if c.url == "" {
@@ -105,7 +105,7 @@ func defaultOutputPath(urlPath string) string {
 
 func main() {
 	flag.Parse()
-	if err := newCommand(*outPath, flag.Arg(0)).run(); err != nil {
+	if err := command(*outPath, flag.Arg(0)).run(); err != nil {
 		if errors.Is(err, errEmptyURL) {
 			usage()
 		}

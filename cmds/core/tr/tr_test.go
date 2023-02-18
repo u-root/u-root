@@ -145,7 +145,7 @@ func TestTR(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			in := strings.NewReader(test.input)
 			out := &bytes.Buffer{}
-			cmd, err := newCommand(in, out, test.args, test.del)
+			cmd, err := command(in, out, test.args, test.del)
 			if test.wantNewError {
 				if err == nil {
 					t.Fatal("expected error got: nil")

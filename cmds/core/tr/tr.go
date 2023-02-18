@@ -47,20 +47,20 @@ import (
 
 var del = flag.BoolP("delete", "d", false, "delete characters in SET1, do not translate")
 
-type command struct {
+type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
 	del    bool
 	tr     *transformer
 }
 
-func newCommand(in io.Reader, out io.Writer, args []string, del bool) (*command, error) {
+func command(in io.Reader, out io.Writer, args []string, del bool) (*cmd, error) {
 	tr, err := parse(args, del)
 	if err != nil {
 		return nil, err
 	}
 
-	return &command{
+	return &cmd{
 		stdin:  in,
 		stdout: out,
 		del:    del,
@@ -162,7 +162,7 @@ func runesToRunes(in []rune, out ...rune) *transformer {
 	}
 }
 
-func (c *command) run() error {
+func (c *cmd) run() error {
 	in := bufio.NewReader(c.stdin)
 	out := bufio.NewWriter(c.stdout)
 
@@ -280,7 +280,7 @@ func unescape(s Set) ([]rune, error) {
 
 func main() {
 	flag.Parse()
-	cmd, err := newCommand(os.Stdin, os.Stdout, flag.Args(), *del)
+	cmd, err := command(os.Stdin, os.Stdout, flag.Args(), *del)
 	if err != nil {
 		log.Fatalf("%s: %v\n", name, err)
 	}
