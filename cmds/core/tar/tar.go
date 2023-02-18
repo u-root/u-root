@@ -28,6 +28,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -35,73 +36,114 @@ import (
 	"github.com/u-root/u-root/pkg/tarutil"
 )
 
+type cmd struct {
+	p    params
+	args []string
+}
+
+type params struct {
+	file        string
+	create      bool
+	extract     bool
+	list        bool
+	noRecursion bool
+	verbose     bool
+}
+
 var (
-	create      = flag.BoolP("create", "c", false, "create a new tar archive from the given directory")
-	extract     = flag.BoolP("extract", "x", false, "extract a tar archive from the given directory")
-	file        = flag.StringP("file", "f", "", "tar file")
-	list        = flag.BoolP("list", "t", false, "list the contents of an archive")
-	noRecursion = flag.Bool("no-recursion", false, "do not automatically recurse into directories")
-	verbose     = flag.BoolP("verbose", "v", false, "print each filename")
+	errCreateAndExtract     = fmt.Errorf("cannot supply both -c and -x")
+	errCreateAndList        = fmt.Errorf("cannot supply both -c and -t")
+	errExtractAndList       = fmt.Errorf("cannot supply both -x and -t")
+	errEmptyFile            = fmt.Errorf("file is required")
+	errMissingMandatoryFlag = fmt.Errorf("must supply at least one of: -c, -x, -t")
+	errExtractArgsLen       = fmt.Errorf("args length should be 1")
 )
 
-func main() {
-	flag.Parse()
-
-	if *create && *extract {
-		log.Fatal("cannot supply both -c and -x")
-	} else if *create && *list {
-		log.Fatal("cannot supply both -c and -t")
-	} else if *extract && *list {
-		log.Fatal("cannot supply both -x and -t")
+func command(p params, args []string) (*cmd, error) {
+	if p.create && p.extract {
+		return nil, errCreateAndExtract
+	}
+	if p.create && p.list {
+		return nil, errCreateAndList
+	}
+	if p.extract && p.list {
+		return nil, errExtractAndList
+	}
+	if p.extract && len(args) != 1 {
+		return nil, errExtractArgsLen
+	}
+	if !p.extract && !p.create && !p.list {
+		return nil, errMissingMandatoryFlag
+	}
+	if p.file == "" {
+		return nil, errEmptyFile
 	}
 
-	if *file == "" {
-		log.Fatal("tar filename is required")
-	}
+	return &cmd{
+		p:    p,
+		args: args,
+	}, nil
+}
 
+func (c *cmd) run() error {
 	opts := &tarutil.Opts{
-		NoRecursion: *noRecursion,
+		NoRecursion: c.p.noRecursion,
 	}
-	if *verbose {
+	if c.p.verbose {
 		opts.Filters = []tarutil.Filter{tarutil.VerboseFilter}
 	}
 
 	switch {
-	case *create:
-		f, err := os.Create(*file)
+	case c.p.create:
+		f, err := os.Create(c.p.file)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		if err := tarutil.CreateTar(f, flag.Args(), opts); err != nil {
+		if err := tarutil.CreateTar(f, c.args, opts); err != nil {
 			f.Close()
-			log.Fatal(err)
+			return err
 		}
 		if err := f.Close(); err != nil {
-			log.Fatal(err)
+			return err
 		}
-	case *extract:
-		if flag.NArg() != 1 {
-			flag.Usage()
-			os.Exit(1)
-		}
-		f, err := os.Open(*file)
+	case c.p.extract:
+		f, err := os.Open(c.p.file)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer f.Close()
-		if err := tarutil.ExtractDir(f, flag.Arg(0), opts); err != nil {
-			log.Fatal(err)
+		if err := tarutil.ExtractDir(f, c.args[0], opts); err != nil {
+			return err
 		}
-	case *list:
-		f, err := os.Open(*file)
+	case c.p.list:
+		f, err := os.Open(c.p.file)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer f.Close()
 		if err := tarutil.ListArchive(f); err != nil {
-			log.Fatal(err)
+			return err
 		}
-	default:
-		log.Fatal("must supply at least one of: -c, -x, -t")
+	}
+
+	return nil
+}
+
+func main() {
+	create := flag.BoolP("create", "c", false, "create a new tar archive from the given directory")
+	extract := flag.BoolP("extract", "x", false, "extract a tar archive from the given directory")
+	file := flag.StringP("file", "f", "", "tar file")
+	list := flag.BoolP("list", "t", false, "list the contents of an archive")
+	noRecursion := flag.Bool("no-recursion", false, "do not automatically recurse into directories")
+	verbose := flag.BoolP("verbose", "v", false, "print each filename")
+
+	flag.Parse()
+	cmd, err := command(params{file: *file, create: *create, extract: *extract, list: *list, noRecursion: *noRecursion, verbose: *verbose}, flag.Args())
+	if err != nil {
+		flag.Usage()
+		log.Fatal(err)
+	}
+	if err := cmd.run(); err != nil {
+		log.Fatal(err)
 	}
 }
