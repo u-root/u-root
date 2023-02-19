@@ -14,6 +14,7 @@ type DHCPv6 interface {
 	ToBytes() []byte
 	String() string
 	Summary() string
+	LongString(indent int) string
 	IsRelay() bool
 
 	// GetInnerMessage returns the innermost encapsulated DHCPv6 message.

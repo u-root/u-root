@@ -100,6 +100,12 @@ func labelsFromBytes(buf []byte) ([]string, error) {
 
 	for {
 		if pos >= len(buf) {
+			// interpret label without trailing zero-length byte as a partial
+			// domain name field as per RFC 4704 Section 4.2
+			if label != "" {
+				labels = append(labels, label)
+			}
+
 			break
 		}
 		length := int(buf[pos])

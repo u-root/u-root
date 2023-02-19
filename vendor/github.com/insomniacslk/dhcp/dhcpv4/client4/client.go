@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"reflect"
 	"time"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
@@ -145,10 +144,10 @@ func toUDPAddr(addr net.Addr, defaultAddr *net.UDPAddr) (*net.UDPAddr, error) {
 	if addr == nil {
 		uaddr = defaultAddr
 	} else {
-		if addr, ok := addr.(*net.UDPAddr); ok {
-			uaddr = addr
+		if a, ok := addr.(*net.UDPAddr); ok {
+			uaddr = a
 		} else {
-			return nil, fmt.Errorf("could not convert to net.UDPAddr, got %v instead", reflect.TypeOf(addr))
+			return nil, fmt.Errorf("could not convert to net.UDPAddr, got %T instead", addr)
 		}
 	}
 	if uaddr.IP.To4() == nil {

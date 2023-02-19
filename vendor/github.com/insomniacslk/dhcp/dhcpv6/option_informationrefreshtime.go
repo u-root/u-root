@@ -32,7 +32,7 @@ func (op *optInformationRefreshTime) ToBytes() []byte {
 }
 
 func (op *optInformationRefreshTime) String() string {
-	return fmt.Sprintf("InformationRefreshTime: %v", op.InformationRefreshtime)
+	return fmt.Sprintf("%s: %v", op.Code(), op.InformationRefreshtime)
 }
 
 // parseOptInformationRefreshTime builds an optInformationRefreshTime structure from a sequence

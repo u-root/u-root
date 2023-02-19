@@ -29,7 +29,7 @@ func (op *OptFQDN) ToBytes() []byte {
 }
 
 func (op *OptFQDN) String() string {
-	return fmt.Sprintf("OptFQDN{flags=%d, domainname=%s}", op.Flags, op.DomainName)
+	return fmt.Sprintf("%s: {Flags=%d DomainName=%s}", op.Code(), op.Flags, op.DomainName)
 }
 
 // ParseOptFQDN deserializes from bytes to build a OptFQDN structure.

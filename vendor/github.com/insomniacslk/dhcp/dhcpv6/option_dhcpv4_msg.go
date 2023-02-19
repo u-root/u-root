@@ -2,6 +2,7 @@ package dhcpv6
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 )
@@ -25,7 +26,18 @@ func (op *OptDHCPv4Msg) ToBytes() []byte {
 }
 
 func (op *OptDHCPv4Msg) String() string {
-	return fmt.Sprintf("OptDHCPv4Msg{%v}", op.Msg)
+	return fmt.Sprintf("%s: %v", op.Code(), op.Msg)
+}
+
+// LongString returns a multi-line string representation of DHCPv4 data.
+func (op *OptDHCPv4Msg) LongString(indent int) string {
+	summary := op.Msg.Summary()
+	ind := strings.Repeat(" ", indent+2)
+	if strings.Contains(summary, "\n") {
+		summary = strings.Replace(summary, "\n  ", "\n"+ind, -1)
+	}
+	ind = strings.Repeat(" ", indent)
+	return fmt.Sprintf("%s: {%v%s}", op.Code(), summary, ind)
 }
 
 // ParseOptDHCPv4Msg builds an OptDHCPv4Msg structure

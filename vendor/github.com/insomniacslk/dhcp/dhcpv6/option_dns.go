@@ -31,7 +31,7 @@ func (op *optDNS) ToBytes() []byte {
 }
 
 func (op *optDNS) String() string {
-	return fmt.Sprintf("DNS: %v", op.NameServers)
+	return fmt.Sprintf("%s: %v", op.Code(), op.NameServers)
 }
 
 // parseOptDNS builds an optDNS structure

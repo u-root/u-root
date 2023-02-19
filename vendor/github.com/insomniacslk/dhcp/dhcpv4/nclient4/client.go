@@ -493,6 +493,7 @@ func (e *ErrNak) Error() string {
 }
 
 // RequestFromOffer sends a Request message and waits for an response.
+// It assumes the SELECTING state by default, see Section 4.3.2 in RFC 2131 for more details.
 func (c *Client) RequestFromOffer(ctx context.Context, offer *dhcpv4.DHCPv4, modifiers ...dhcpv4.Modifier) (*Lease, error) {
 	// TODO(chrisko): should this be unicast to the server?
 	request, err := dhcpv4.NewRequestFromOffer(offer, dhcpv4.PrependModifiers(modifiers,

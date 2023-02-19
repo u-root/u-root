@@ -31,8 +31,8 @@ func (op *OptStatusCode) ToBytes() []byte {
 
 // String returns a human-readable option.
 func (op *OptStatusCode) String() string {
-	return fmt.Sprintf("StatusCode: Code: %s (%d); Message: %s",
-		op.StatusCode, op.StatusCode, op.StatusMessage)
+	return fmt.Sprintf("%s: {Code=%s (%d); Message=%s}",
+		op.Code(), op.StatusCode, op.StatusCode, op.StatusMessage)
 }
 
 // ParseOptStatusCode builds an OptStatusCode structure from a sequence of

@@ -48,7 +48,6 @@ func RequestNetbootv6(ifname string, timeout time.Duration, retries int, modifie
 		if err != nil {
 			log.Printf("Client.Exchange failed: %v", err)
 			if i >= retries {
-				// don't wait at the end of the last attempt
 				return nil, fmt.Errorf("netboot failed after %d attempts: %v", retries+1, err)
 			}
 			log.Printf("sleeping %v before retrying", delay)
@@ -80,8 +79,7 @@ func RequestNetbootv4(ifname string, timeout time.Duration, retries int, modifie
 			log.Printf("Client.Exchange failed: %v", err)
 			log.Printf("sleeping %v before retrying", delay)
 			if i >= retries {
-				// don't wait at the end of the last attempt
-				break
+				return nil, fmt.Errorf("netboot failed after %d attempts: %v", retries+1, err)
 			}
 			sleeper(delay)
 			// TODO add random splay

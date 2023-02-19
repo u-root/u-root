@@ -29,7 +29,7 @@ func (op *optElapsedTime) ToBytes() []byte {
 }
 
 func (op *optElapsedTime) String() string {
-	return fmt.Sprintf("ElapsedTime: %s", op.ElapsedTime)
+	return fmt.Sprintf("%s: %s", op.Code(), op.ElapsedTime)
 }
 
 // build an optElapsedTime structure from a sequence of bytes.

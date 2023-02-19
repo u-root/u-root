@@ -36,7 +36,7 @@ func (op *OptVendorClass) String() string {
 	for _, data := range op.Data {
 		vcStrings = append(vcStrings, string(data))
 	}
-	return fmt.Sprintf("OptVendorClass{enterprisenum=%d, data=[%s]}", op.EnterpriseNumber, strings.Join(vcStrings, ", "))
+	return fmt.Sprintf("%s: {EnterpriseNumber=%d Data=[%s]}", op.Code(), op.EnterpriseNumber, strings.Join(vcStrings, ", "))
 }
 
 // ParseOptVendorClass builds an OptVendorClass structure from a sequence of

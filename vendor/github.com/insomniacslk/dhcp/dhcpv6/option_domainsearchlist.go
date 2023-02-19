@@ -25,7 +25,7 @@ func (op *optDomainSearchList) ToBytes() []byte {
 }
 
 func (op *optDomainSearchList) String() string {
-	return fmt.Sprintf("DomainSearchList: %s", op.DomainSearchList)
+	return fmt.Sprintf("%s: %s", op.Code(), op.DomainSearchList)
 }
 
 // ParseOptDomainSearchList builds an OptDomainSearchList structure from a sequence

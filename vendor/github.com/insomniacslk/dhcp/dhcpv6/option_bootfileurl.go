@@ -22,7 +22,7 @@ func (op optBootFileURL) ToBytes() []byte {
 }
 
 func (op optBootFileURL) String() string {
-	return fmt.Sprintf("BootFileURL: %s", string(op))
+	return fmt.Sprintf("%s: %s", op.Code(), string(op))
 }
 
 // parseOptBootFileURL builds an optBootFileURL structure from a sequence
