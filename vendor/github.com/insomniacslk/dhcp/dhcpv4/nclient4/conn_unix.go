@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build go1.12 && (darwin || freebsd || linux || netbsd || openbsd)
 // +build go1.12
+// +build darwin freebsd linux netbsd openbsd
 
 package nclient4
 
@@ -98,12 +100,26 @@ func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		buf := uio.NewBigEndianBuffer(pkt)
 
 		// To read the header length, access data directly.
+		if !buf.Has(ipv4MinimumSize) {
+			continue
+		}
+
 		ipHdr := ipv4(buf.Data())
+
+		if !buf.Has(int(ipHdr.headerLength())) {
+			continue
+		}
+
 		ipHdr = ipv4(buf.Consume(int(ipHdr.headerLength())))
 
 		if ipHdr.transportProtocol() != udpProtocolNumber {
 			continue
 		}
+
+		if !buf.Has(udpHdrLen) {
+			continue
+		}
+
 		udpHdr := udp(buf.Consume(udpHdrLen))
 
 		addr := &net.UDPAddr{

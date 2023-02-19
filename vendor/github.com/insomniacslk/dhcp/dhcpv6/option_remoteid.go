@@ -26,8 +26,8 @@ func (op *OptRemoteID) ToBytes() []byte {
 }
 
 func (op *OptRemoteID) String() string {
-	return fmt.Sprintf("RemoteID: EnterpriseNumber %d RemoteID %v",
-		op.EnterpriseNumber, op.RemoteID,
+	return fmt.Sprintf("%s: {EnterpriseNumber=%d RemoteID=%#x}",
+		op.Code(), op.EnterpriseNumber, op.RemoteID,
 	)
 }
 

@@ -35,7 +35,7 @@ func (op *OptUserClass) String() string {
 	for _, uc := range op.UserClasses {
 		ucStrings = append(ucStrings, string(uc))
 	}
-	return fmt.Sprintf("OptUserClass{userclass=[%s]}", strings.Join(ucStrings, ", "))
+	return fmt.Sprintf("%s: [%s]", op.Code(), strings.Join(ucStrings, ", "))
 }
 
 // ParseOptUserClass builds an OptUserClass structure from a sequence of

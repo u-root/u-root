@@ -42,7 +42,7 @@ func (op optBootFileParam) ToBytes() []byte {
 }
 
 func (op optBootFileParam) String() string {
-	return fmt.Sprintf("BootFileParam: %v", ([]string)(op))
+	return fmt.Sprintf("%s: %v", op.Code(), ([]string)(op))
 }
 
 // parseOptBootFileParam builds an OptBootFileParam structure from a sequence

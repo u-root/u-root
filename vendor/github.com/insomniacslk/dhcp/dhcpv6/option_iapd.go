@@ -70,8 +70,13 @@ func (op *OptIAPD) ToBytes() []byte {
 
 // String returns a string representation of the OptIAPD data
 func (op *OptIAPD) String() string {
-	return fmt.Sprintf("IAPD: {IAID=%v, t1=%v, t2=%v, Options=[%v]}",
-		op.IaId, op.T1, op.T2, op.Options)
+	return fmt.Sprintf("%s: {IAID=%#x T1=%v T2=%v Options=%v}",
+		op.Code(), op.IaId, op.T1, op.T2, op.Options)
+}
+
+// LongString returns a multi-line string representation of the OptIAPD data
+func (op *OptIAPD) LongString(indentSpace int) string {
+	return fmt.Sprintf("%s: IAID=%#x T1=%v T2=%v Options=%v", op.Code(), op.IaId, op.T1, op.T2, op.Options.LongString(indentSpace))
 }
 
 // ParseOptIAPD builds an OptIAPD structure from a sequence of bytes.

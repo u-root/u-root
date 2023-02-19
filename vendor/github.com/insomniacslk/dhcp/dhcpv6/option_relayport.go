@@ -29,7 +29,7 @@ func (op *optRelayPort) ToBytes() []byte {
 }
 
 func (op *optRelayPort) String() string {
-	return fmt.Sprintf("RelayPort: %d", op.DownstreamSourcePort)
+	return fmt.Sprintf("%s: %d", op.Code(), op.DownstreamSourcePort)
 }
 
 // build an optRelayPort structure from a sequence of bytes.

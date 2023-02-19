@@ -30,7 +30,7 @@ func (op *OptDHCP4oDHCP6Server) ToBytes() []byte {
 }
 
 func (op *OptDHCP4oDHCP6Server) String() string {
-	return fmt.Sprintf("OptDHCP4oDHCP6Server{4o6-servers=%v}", op.DHCP4oDHCP6Servers)
+	return fmt.Sprintf("%s: %v", op.Code(), op.DHCP4oDHCP6Servers)
 }
 
 // ParseOptDHCP4oDHCP6Server builds an OptDHCP4oDHCP6Server structure

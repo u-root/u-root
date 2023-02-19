@@ -23,7 +23,7 @@ func (op *optClientArchType) Code() OptionCode {
 }
 
 func (op optClientArchType) String() string {
-	return fmt.Sprintf("ClientArchType: %s", op.Archs.String())
+	return fmt.Sprintf("%s: %s", op.Code(), op.Archs)
 }
 
 // parseOptClientArchType builds an OptClientArchType structure from

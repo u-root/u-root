@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/insomniacslk/dhcp/iana"
@@ -31,21 +32,21 @@ func (mo MessageOptions) ArchTypes() iana.Archs {
 }
 
 // ClientID returns the client identifier option.
-func (mo MessageOptions) ClientID() *Duid {
+func (mo MessageOptions) ClientID() DUID {
 	opt := mo.GetOne(OptionClientID)
 	if opt == nil {
 		return nil
 	}
-	return &opt.(*optClientID).Duid
+	return opt.(*optClientID).DUID
 }
 
 // ServerID returns the server identifier option.
-func (mo MessageOptions) ServerID() *Duid {
+func (mo MessageOptions) ServerID() DUID {
 	opt := mo.GetOne(OptionServerID)
 	if opt == nil {
 		return nil
 	}
-	return &opt.(*optServerID).Duid
+	return opt.(*optServerID).DUID
 }
 
 // IANA returns all Identity Association for Non-temporary Address options.
@@ -202,8 +203,8 @@ func (mo MessageOptions) UserClasses() [][]byte {
 //
 // RFC 8415 Section 21.17:
 //
-//   Multiple instances of the Vendor-specific Information option may appear in
-//   a DHCP message.
+//	Multiple instances of the Vendor-specific Information option may appear in
+//	a DHCP message.
 func (mo MessageOptions) VendorOpts() []*OptVendorOpts {
 	opt := mo.Options.Get(OptionVendorOpts)
 	if opt == nil {
@@ -222,8 +223,8 @@ func (mo MessageOptions) VendorOpts() []*OptVendorOpts {
 //
 // RFC 8415 Section 21.17:
 //
-//   Servers and clients MUST NOT send more than one instance of the
-//   Vendor-specific Information option with the same Enterprise Number.
+//	Servers and clients MUST NOT send more than one instance of the
+//	Vendor-specific Information option with the same Enterprise Number.
 func (mo MessageOptions) VendorOpt(enterpriseNumber uint32) Options {
 	vo := mo.VendorOpts()
 	for _, v := range vo {
@@ -346,9 +347,8 @@ func GetTime() uint32 {
 // NewSolicit creates a new SOLICIT message, using the given hardware address to
 // derive the IAID in the IA_NA option.
 func NewSolicit(hwaddr net.HardwareAddr, modifiers ...Modifier) (*Message, error) {
-	duid := Duid{
-		Type:          DUID_LLT,
-		HwType:        iana.HWTypeEthernet,
+	duid := &DUIDLLT{
+		HWType:        iana.HWTypeEthernet,
 		Time:          GetTime(),
 		LinkLayerAddr: hwaddr,
 	}
@@ -543,28 +543,33 @@ func (m *Message) IsOptionRequested(requested OptionCode) bool {
 
 // String returns a short human-readable string for this message.
 func (m *Message) String() string {
-	return fmt.Sprintf("Message(messageType=%s transactionID=%s, %d options)",
+	return fmt.Sprintf("Message(MessageType=%s, TransactionID=%#x, %d options)",
 		m.MessageType, m.TransactionID, len(m.Options.Options))
 }
 
 // Summary prints all options associated with this message.
 func (m *Message) Summary() string {
-	ret := fmt.Sprintf(
-		"Message\n"+
-			"  messageType=%s\n"+
-			"  transactionid=%s\n",
-		m.MessageType,
-		m.TransactionID,
-	)
-	ret += "  options=["
-	if len(m.Options.Options) > 0 {
-		ret += "\n"
-	}
-	for _, opt := range m.Options.Options {
-		ret += fmt.Sprintf("    %v\n", opt.String())
-	}
-	ret += "  ]\n"
-	return ret
+	return m.LongString(0)
+}
+
+// LongString prints all options associated with this message.
+func (m *Message) LongString(spaceIndent int) string {
+	indent := strings.Repeat(" ", spaceIndent)
+
+	var s strings.Builder
+	s.WriteString("Message{\n")
+	s.WriteString(indent)
+	s.WriteString(fmt.Sprintf("  MessageType=%s\n", m.MessageType))
+	s.WriteString(indent)
+	s.WriteString(fmt.Sprintf("  TransactionID=%s\n", m.TransactionID))
+	s.WriteString(indent)
+	s.WriteString("  Options: ")
+	s.WriteString(m.Options.Options.LongString(spaceIndent + 2))
+	s.WriteString("\n")
+	s.WriteString(indent)
+	s.WriteString("}")
+
+	return s.String()
 }
 
 // ToBytes returns the serialized version of this message as defined by RFC

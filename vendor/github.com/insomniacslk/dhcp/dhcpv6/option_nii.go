@@ -59,7 +59,7 @@ func (op *OptNetworkInterfaceID) ToBytes() []byte {
 }
 
 func (op *OptNetworkInterfaceID) String() string {
-	return fmt.Sprintf("NetworkInterfaceID: %s (Revision %d.%d)", op.Typ, op.Major, op.Minor)
+	return fmt.Sprintf("%s: %s (Revision %d.%d)", op.Code(), op.Typ, op.Major, op.Minor)
 }
 
 // FromBytes builds an OptNetworkInterfaceID structure from a sequence of

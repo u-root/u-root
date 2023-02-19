@@ -70,8 +70,8 @@ func (op *OptIAPrefix) ToBytes() []byte {
 }
 
 func (op *OptIAPrefix) String() string {
-	return fmt.Sprintf("IAPrefix: {PreferredLifetime=%v, ValidLifetime=%v, Prefix=%s, Options=%v}",
-		op.PreferredLifetime, op.ValidLifetime, op.Prefix, op.Options)
+	return fmt.Sprintf("%s: {PreferredLifetime=%v, ValidLifetime=%v, Prefix=%s, Options=%v}",
+		op.Code(), op.PreferredLifetime, op.ValidLifetime, op.Prefix, op.Options)
 }
 
 // ParseOptIAPrefix an OptIAPrefix structure from a sequence of bytes. The

@@ -222,8 +222,7 @@ func PrependModifiers(m []Modifier, other ...Modifier) []Modifier {
 // NewInform builds a new DHCPv4 Informational message with the specified
 // hardware address.
 func NewInform(hwaddr net.HardwareAddr, localIP net.IP, modifiers ...Modifier) (*DHCPv4, error) {
-	return New(PrependModifiers(
-		modifiers,
+	return New(PrependModifiers(modifiers,
 		WithHwAddr(hwaddr),
 		WithMessageType(MessageTypeInform),
 		WithClientIP(localIP),
@@ -231,6 +230,7 @@ func NewInform(hwaddr net.HardwareAddr, localIP net.IP, modifiers ...Modifier) (
 }
 
 // NewRequestFromOffer builds a DHCPv4 request from an offer.
+// It assumes the SELECTING state by default, see Section 4.3.2 in RFC 2131 for more details.
 func NewRequestFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
 	return New(PrependModifiers(modifiers,
 		WithReply(offer),
@@ -245,6 +245,21 @@ func NewRequestFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) 
 			OptionDomainName,
 			OptionDomainNameServer,
 		),
+	)...)
+}
+
+// NewRenewFromOffer builds a DHCPv4 RENEW-style request from an offer. RENEW requests have minor
+// changes to their options compared to SELECT requests as specified by RFC 2131, section 4.3.2.
+func NewRenewFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
+	return NewRequestFromOffer(offer, PrependModifiers(modifiers,
+		// The server identifier option must not be filled in
+		WithoutOption(OptionServerIdentifier),
+		// The requested IP address must not be filled in
+		WithoutOption(OptionRequestedIPAddress),
+		// The client IP must be filled in with the IP offered to the client
+		WithClientIP(offer.YourIPAddr),
+		// The renewal request must use unicast
+		WithBroadcast(false),
 	)...)
 }
 
@@ -278,7 +293,7 @@ func NewReleaseFromACK(ack *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
 	)...)
 }
 
-// FromBytes encodes the DHCPv4 packet into a sequence of bytes, and returns an
+// FromBytes decodes a DHCPv4 packet from a sequence of bytes, and returns an
 // error if the packet is not valid.
 func FromBytes(q []byte) (*DHCPv4, error) {
 	var p DHCPv4
@@ -380,6 +395,13 @@ func (d *DHCPv4) SetUnicast() {
 // concatenated, and hence this should always just return one option.
 func (d *DHCPv4) GetOneOption(code OptionCode) []byte {
 	return d.Options.Get(code)
+}
+
+// DeleteOption deletes an existing option with the given option code.
+func (d *DHCPv4) DeleteOption(code OptionCode) {
+	if d.Options != nil {
+		d.Options.Del(code)
+	}
 }
 
 // UpdateOption replaces an existing option with the same option code with the

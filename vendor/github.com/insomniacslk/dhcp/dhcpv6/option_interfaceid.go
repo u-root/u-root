@@ -23,7 +23,7 @@ func (op *optInterfaceID) ToBytes() []byte {
 }
 
 func (op *optInterfaceID) String() string {
-	return fmt.Sprintf("InterfaceID: %v", op.ID)
+	return fmt.Sprintf("%s: %v", op.Code(), op.ID)
 }
 
 // build an optInterfaceID structure from a sequence of bytes.

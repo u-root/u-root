@@ -33,7 +33,7 @@ func (op *optClientLinkLayerAddress) ToBytes() []byte {
 }
 
 func (op *optClientLinkLayerAddress) String() string {
-	return fmt.Sprintf("ClientLinkLayerAddress: Type=%s LinkLayerAddress=%s", op.LinkLayerType, op.LinkLayerAddress)
+	return fmt.Sprintf("%s: Type=%s LinkLayerAddress=%s", op.Code(), op.LinkLayerType, op.LinkLayerAddress)
 }
 
 // parseOptClientLinkLayerAddress deserializes from bytes

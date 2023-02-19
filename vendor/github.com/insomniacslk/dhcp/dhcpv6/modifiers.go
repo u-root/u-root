@@ -16,12 +16,12 @@ func WithOption(o Option) Modifier {
 }
 
 // WithClientID adds a client ID option to a DHCPv6 packet
-func WithClientID(duid Duid) Modifier {
+func WithClientID(duid DUID) Modifier {
 	return WithOption(OptClientID(duid))
 }
 
 // WithServerID adds a client ID option to a DHCPv6 packet
-func WithServerID(duid Duid) Modifier {
+func WithServerID(duid DUID) Modifier {
 	return WithOption(OptServerID(duid))
 }
 
