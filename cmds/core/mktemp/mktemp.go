@@ -40,11 +40,11 @@ import (
 
 type cmd struct {
 	stdout io.Writer
-	flags  mktempflags
+	flags  flags
 	args   []string
 }
 
-type mktempflags struct {
+type flags struct {
 	d      bool
 	u      bool
 	q      bool
@@ -78,7 +78,7 @@ func (c *cmd) mktemp() (string, error) {
 	return f.Name(), err
 }
 
-func command(stdout io.Writer, f mktempflags, args []string) *cmd {
+func command(stdout io.Writer, f flags, args []string) *cmd {
 	return &cmd{
 		stdout: stdout,
 		flags:  f,
@@ -104,14 +104,18 @@ func (c *cmd) run() error {
 	return nil
 }
 
+func (f *flags) register(fs *flag.FlagSet) {
+	flag.BoolVarP(&f.d, "directory", "d", false, "Make a directory")
+	flag.BoolVarP(&f.u, "dry-run", "u", false, "Do everything save the actual create")
+	flag.BoolVarP(&f.v, "quiet", "q", false, "Quiet: show no errors")
+	flag.StringVarP(&f.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
+	flag.StringVarP(&f.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
+	flag.StringVarP(&f.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+}
+
 func main() {
-	flags := mktempflags{}
-	flag.BoolVarP(&flags.d, "directory", "d", false, "Make a directory")
-	flag.BoolVarP(&flags.u, "dry-run", "u", false, "Do everything save the actual create")
-	flag.BoolVarP(&flags.v, "quiet", "q", false, "Quiet: show no errors")
-	flag.StringVarP(&flags.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
-	flag.StringVarP(&flags.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
-	flag.StringVarP(&flags.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+	flags := flags{}
+	flags.register(flag.CommandLine)
 	flag.Parse()
 	if err := command(os.Stdout, flags, flag.Args()).run(); err != nil {
 		log.Fatal(err)
