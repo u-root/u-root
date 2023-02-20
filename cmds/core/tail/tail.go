@@ -236,7 +236,7 @@ func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 		// read block by block until EOF and store a reference to the last lines
 		buf := make([]byte, blkSize)
 		for {
-			_, err = inFile.Read(buf)
+			n, err := inFile.Read(buf)
 			if err == io.EOF {
 				// without this sleep you would hogg the CPU
 				time.Sleep(500 * time.Millisecond)
@@ -251,6 +251,13 @@ func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 					if errSeekStart != nil {
 						break
 					}
+				}
+				continue
+			}
+			if err == nil {
+				_, err := writer.Write(buf[:n])
+				if err != nil {
+					return err
 				}
 				continue
 			}
