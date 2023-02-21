@@ -8,7 +8,9 @@
 package integration
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -21,7 +23,7 @@ import (
 // This is possible because the generic initramfs ensures that we mount the
 // testdata directory containing the initramfs and kernel used in the VM.
 func TestMountKexec(t *testing.T) {
-	// TODO: support arm
+	// TODO: support arm.
 	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
 	}
@@ -141,6 +143,38 @@ func TestMountKexecLoadCustomDTB(t *testing.T) {
 	defer cleanup()
 
 	if err := q.Expect("SAW KEXEC=Y"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKexecLinuxImageCfgFile(t *testing.T) {
+	// TODO: support arm
+	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
+		t.Skipf("Test not supported on %s", vmtest.TestArch())
+	}
+
+	testdataDir := t.TempDir()
+	cfg := []byte("{ \"InitrdPath\": \"/testdata/initramfs.cpio\", \"KernelPath\": \"/testdata/kernel\", \"Cmdline\": \"/proc/cmdline\", \"Name\": \"testloadconfig\" }")
+
+	if err := os.WriteFile(filepath.Join(testdataDir, "linux_image_cfg.json"), cfg, 0777); err != nil {
+		t.Fatalf("Failed to setup test cfg file: %v", err)
+	}
+
+	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		TestCmds: []string{
+			"echo kexecloadresult ?(kexec -d -l -I /testdata/linux_image_cfg.json)",
+		},
+		TmpDir: testdataDir,
+		QEMUOpts: qemu.Options{
+			Timeout: 20 * time.Second,
+			Devices: []qemu.Device{
+				qemu.ArbitraryArgs{"-m", "8192"},
+			},
+		},
+	})
+	defer cleanup()
+
+	if err := q.Expect("kexecloadresult $ok"); err != nil {
 		t.Fatal(err)
 	}
 }
