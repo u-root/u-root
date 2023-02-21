@@ -5,6 +5,7 @@
 package boot
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -48,9 +49,78 @@ type LoadedLinuxImage struct {
 	KexecOpts   linux.KexecOptions
 }
 
+// loadedLinuxImageJSON is same as LoadedLinuxImage, but with transformed fields to help with serialization of LoadedLinuxImage.
+type loadedLinuxImageJSON struct {
+	Name        string
+	KernelPath  string
+	InitrdPath  string
+	Cmdline     string
+	LoadSyscall bool
+	KexecOpts   linux.KexecOptions
+}
+
 var _ OSImage = &LinuxImage{}
 
 var errNilKernel = errors.New("kernel image is empty, nothing to execute")
+
+// MarshalJSON customizes marshaling for LoadedLinuxImage. It handles serializations
+// for *os.File, so that kernel and initrd can be unmarshalled properly.
+func (lli *LoadedLinuxImage) MarshalJSON() ([]byte, error) {
+	lliJSON := loadedLinuxImageJSON{}
+	// Sync and close kernel and initrd File object, and marshal paths to the files.
+	if lli.Kernel != nil {
+		if err := lli.Kernel.Sync(); err != nil {
+			return nil, err
+		}
+		lliJSON.KernelPath = lli.Kernel.Name()
+		if err := lli.Kernel.Close(); err != nil {
+			return nil, err
+		}
+	}
+	if lli.Initrd != nil {
+		if err := lli.Initrd.Sync(); err != nil {
+			return nil, err
+		}
+		lliJSON.InitrdPath = lli.Initrd.Name()
+		if err := lli.Initrd.Close(); err != nil {
+			return nil, err
+		}
+	}
+	lliJSON.Name = lli.Name
+	lliJSON.Cmdline = lli.Cmdline
+	lliJSON.LoadSyscall = lli.LoadSyscall
+	lliJSON.KexecOpts = lli.KexecOpts
+
+	return json.Marshal(lliJSON)
+}
+
+// UnmarshalJSON customizes unmarshaling for LoadedLinuxImage. It processes kernel
+// and initrd file by name, and opens a read-only copies for further execution.
+func (lli *LoadedLinuxImage) UnmarshalJSON(b []byte) error {
+	lliJSON := loadedLinuxImageJSON{}
+	if err := json.Unmarshal(b, &lliJSON); err != nil {
+		return err
+	}
+	if len(strings.TrimSpace(lliJSON.KernelPath)) > 0 {
+		readOnlyK, err := os.Open(lliJSON.KernelPath)
+		if err != nil {
+			return err
+		}
+		lli.Kernel = readOnlyK
+	}
+	if len(strings.TrimSpace(lliJSON.InitrdPath)) > 0 {
+		readOnlyI, err := os.Open(lliJSON.InitrdPath)
+		if err != nil {
+			return err
+		}
+		lli.Initrd = readOnlyI
+	}
+	lli.Name = lliJSON.Name
+	lli.Cmdline = lliJSON.Cmdline
+	lli.LoadSyscall = lliJSON.LoadSyscall
+	lli.KexecOpts = lliJSON.KexecOpts
+	return nil
+}
 
 // named is satisifed by both *os.File and *vfile.File. Hack hack hack.
 type named interface {
@@ -231,6 +301,37 @@ func loadLinuxImage(li *LinuxImage, logger ulog.Logger, verbose bool) (*LoadedLi
 	}, cleanup, nil
 }
 
+// saveLoadedLinuxImage marshals a LoadedLinuxImage to a json file.
+//
+// Marshalling it to a json versus a binary format, makes it readable
+// and easier to tamper in case when we need change a field or two
+// for experiments and debug.
+//
+// With that said, it is obvious that this saved info can then be
+// loaded by a later kexec for further execution from an already loaded
+// linux image and original load options.
+func saveLoadedLinuxImage(lli *LoadedLinuxImage, p string) error {
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+	out, err := json.Marshal(lli)
+	if err != nil {
+		return err
+	}
+	nw, err := f.Write(out)
+	if err != nil {
+		return err
+	}
+	if nw != len(out) {
+		return fmt.Errorf("written %d bytes, want %d bytes", nw, len(out))
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	return f.Close()
+}
+
 // Edit the kernel command line.
 func (li *LinuxImage) Edit(f func(cmdline string) string) {
 	li.Cmdline = f(li.Cmdline)
@@ -250,7 +351,10 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 	defer cleanup()
 
 	if !loadOpts.callKexecLoad {
-		return nil
+		// If dryRun, serializes previously loaded linuxImage info to a file in tmpfs.
+		// The info can be re-loaded for later kexec execution. It works b/c kernel and
+		// initrd are already downloaded and saved into tmpfs.
+		return saveLoadedLinuxImage(loadedImage, loadOpts.linuxImageCfgFile)
 	}
 	if li.LoadSyscall {
 		return linux.KexecLoad(loadedImage.Kernel, loadedImage.Initrd, loadedImage.Cmdline, loadedImage.KexecOpts)

@@ -4,7 +4,10 @@
 
 package linux
 
-import "io"
+import (
+	"encoding/json"
+	"io"
+)
 
 // KexecOptions abstract a collection of options to be passed in KexecLoad.
 //
@@ -30,4 +33,34 @@ type KexecOptions struct {
 	MmapKernel bool
 	// MmapRamfs indicates if mmap initramfs into virtual memory.
 	MmapRamfs bool
+}
+
+// kexecOptionsJSON is same as KexecOptions, but with transformed fields to help with serialization of KexecOptions.
+type kexecOptionsJSON struct {
+	dtb        string
+	mmapKernel bool
+	mmapRamfs  bool
+}
+
+func (ko *KexecOptions) MarshalJSON() ([]byte, error) {
+	koJSON := kexecOptionsJSON{}
+	// TODO(100000TB): consider support serializing dtb.
+	//
+	// We can either change default type to path name, or
+	// read it and save it to a file under tmpfs during
+	// marshaling.
+
+	koJSON.mmapKernel = ko.MmapKernel
+	koJSON.mmapRamfs = ko.MmapRamfs
+	return json.Marshal(&koJSON)
+}
+
+func (ko *KexecOptions) UnmarshalJSON(b []byte) error {
+	koJSON := kexecOptionsJSON{}
+	if err := json.Unmarshal(b, &koJSON); err != nil {
+		return err
+	}
+	ko.MmapKernel = koJSON.mmapKernel
+	ko.MmapRamfs = koJSON.mmapRamfs
+	return nil
 }
