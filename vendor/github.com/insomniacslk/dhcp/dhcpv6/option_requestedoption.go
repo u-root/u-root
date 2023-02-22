@@ -71,5 +71,5 @@ func (*optRequestedOption) Code() OptionCode {
 }
 
 func (op *optRequestedOption) String() string {
-	return fmt.Sprintf("RequestedOptions: %s", op.OptionCodes)
+	return fmt.Sprintf("%s: %s", op.Code(), op.OptionCodes)
 }

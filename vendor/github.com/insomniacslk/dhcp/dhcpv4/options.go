@@ -81,6 +81,11 @@ func (o Options) Has(opcode OptionCode) bool {
 	return ok
 }
 
+// Del deletes the option matching the option code.
+func (o Options) Del(opcode OptionCode) {
+	delete(o, opcode.Code())
+}
+
 // Update updates the existing options with the passed option, adding it
 // at the end if not present already
 func (o Options) Update(option Option) {

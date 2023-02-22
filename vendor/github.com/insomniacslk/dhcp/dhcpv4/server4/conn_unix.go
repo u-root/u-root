@@ -33,6 +33,10 @@ func NewIPv4UDPConn(iface string, addr *net.UDPAddr) (*net.UDPConn, error) {
 	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEADDR, 1); err != nil {
 		return nil, fmt.Errorf("cannot set reuseaddr on socket: %v", err)
 	}
+	// Allow reusing the port to aid debugging and testing.
+	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
+		return nil, fmt.Errorf("cannot set reuseport on socket: %v", err)
+	}
 	if len(iface) != 0 {
 		// Bind directly to the interface.
 		if err := dhcpv4.BindToInterface(fd, iface); err != nil {

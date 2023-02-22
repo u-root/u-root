@@ -9,14 +9,17 @@ import (
 	"os"
 )
 
-// Open a channel to an IPMI device /dev/ipmi{devnum}.
-func Open(devnum int) (*IPMI, error) {
-	d := fmt.Sprintf("/dev/ipmi%d", devnum)
-
-	f, err := os.OpenFile(d, os.O_RDWR, 0)
+// OpenPath opens a channel to an IPMI device by path (e.g., /dev/ipmi0).
+func OpenPath(path string) (*IPMI, error) {
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	return &IPMI{dev: newDev(f)}, nil
+}
+
+// Open opens a channel to an IPMI device by device number (e.g., 0 for /dev/ipmi{devnum}).
+func Open(devnum int) (*IPMI, error) {
+	return OpenPath(fmt.Sprintf("/dev/ipmi%d", devnum))
 }

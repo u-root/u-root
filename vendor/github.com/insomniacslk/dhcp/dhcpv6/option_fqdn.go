@@ -29,18 +29,17 @@ func (op *OptFQDN) ToBytes() []byte {
 }
 
 func (op *OptFQDN) String() string {
-	return fmt.Sprintf("OptFQDN{flags=%d, domainname=%s}", op.Flags, op.DomainName)
+	return fmt.Sprintf("%s: {Flags=%d DomainName=%s}", op.Code(), op.Flags, op.DomainName)
 }
 
-// ParseOptFQDN deserializes from bytes to build a OptFQDN structure.
-func ParseOptFQDN(data []byte) (*OptFQDN, error) {
-	var opt OptFQDN
+// FromBytes deserializes from bytes to build a OptFQDN structure.
+func (op *OptFQDN) FromBytes(data []byte) error {
 	var err error
 	buf := uio.NewBigEndianBuffer(data)
-	opt.Flags = buf.Read8()
-	opt.DomainName, err = rfc1035label.FromBytes(buf.ReadAll())
+	op.Flags = buf.Read8()
+	op.DomainName, err = rfc1035label.FromBytes(buf.ReadAll())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &opt, buf.FinError()
+	return buf.FinError()
 }

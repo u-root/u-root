@@ -8,7 +8,9 @@ import (
 )
 
 // Opt4RD represents a 4RD option. It is only a container for 4RD_*_RULE options
-type Opt4RD Options
+type Opt4RD struct {
+	Options
+}
 
 // Code returns the Option Code for this option
 func (op *Opt4RD) Code() OptionCode {
@@ -17,20 +19,23 @@ func (op *Opt4RD) Code() OptionCode {
 
 // ToBytes serializes this option
 func (op *Opt4RD) ToBytes() []byte {
-	return (*Options)(op).ToBytes()
+	return op.Options.ToBytes()
 }
 
 // String returns a human-readable representation of the option
 func (op *Opt4RD) String() string {
-	return fmt.Sprintf("Opt4RD{%v}", (*Options)(op))
+	return fmt.Sprintf("%s: {Options=%v}", op.Code(), op.Options)
 }
 
-// ParseOpt4RD builds an Opt4RD structure from a sequence of bytes.
+// LongString returns a multi-line human-readable representation of the option
+func (op *Opt4RD) LongString(indentSpace int) string {
+	return fmt.Sprintf("%s: Options=%v", op.Code(), op.Options.LongString(indentSpace))
+}
+
+// FromBytes builds an Opt4RD structure from a sequence of bytes.
 // The input data does not include option code and length bytes
-func ParseOpt4RD(data []byte) (*Opt4RD, error) {
-	var opt Options
-	err := opt.FromBytes(data)
-	return (*Opt4RD)(&opt), err
+func (op *Opt4RD) FromBytes(data []byte) error {
+	return op.Options.FromBytes(data)
 }
 
 // Opt4RDMapRule represents a 4RD Mapping Rule option
@@ -94,22 +99,21 @@ func (op *Opt4RDMapRule) ToBytes() []byte {
 
 // String returns a human-readable description of this option
 func (op *Opt4RDMapRule) String() string {
-	return fmt.Sprintf("Opt4RDMapRule{Prefix4=%s, Prefix6=%s, EA-Bits=%d, WKPAuthorized=%t}",
-		op.Prefix4.String(), op.Prefix6.String(), op.EABitsLength, op.WKPAuthorized)
+	return fmt.Sprintf("%s: {Prefix4=%s, Prefix6=%s, EA-Bits=%d, WKPAuthorized=%t}",
+		op.Code(), op.Prefix4.String(), op.Prefix6.String(), op.EABitsLength, op.WKPAuthorized)
 }
 
-// ParseOpt4RDMapRule builds an Opt4RDMapRule structure from a sequence of bytes.
+// FromBytes builds an Opt4RDMapRule structure from a sequence of bytes.
 // The input data does not include option code and length bytes.
-func ParseOpt4RDMapRule(data []byte) (*Opt4RDMapRule, error) {
-	var opt Opt4RDMapRule
+func (op *Opt4RDMapRule) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	opt.Prefix4.Mask = net.CIDRMask(int(buf.Read8()), 32)
-	opt.Prefix6.Mask = net.CIDRMask(int(buf.Read8()), 128)
-	opt.EABitsLength = buf.Read8()
-	opt.WKPAuthorized = (buf.Read8() & opt4RDWKPAuthorizedMask) != 0
-	opt.Prefix4.IP = net.IP(buf.CopyN(net.IPv4len))
-	opt.Prefix6.IP = net.IP(buf.CopyN(net.IPv6len))
-	return &opt, buf.FinError()
+	op.Prefix4.Mask = net.CIDRMask(int(buf.Read8()), 32)
+	op.Prefix6.Mask = net.CIDRMask(int(buf.Read8()), 128)
+	op.EABitsLength = buf.Read8()
+	op.WKPAuthorized = (buf.Read8() & opt4RDWKPAuthorizedMask) != 0
+	op.Prefix4.IP = net.IP(buf.CopyN(net.IPv4len))
+	op.Prefix6.IP = net.IP(buf.CopyN(net.IPv6len))
+	return buf.FinError()
 }
 
 // Opt4RDNonMapRule represents 4RD parameters other than mapping rules
@@ -154,25 +158,24 @@ func (op *Opt4RDNonMapRule) String() string {
 		tClass = *op.TrafficClass
 	}
 
-	return fmt.Sprintf("Opt4RDNonMapRule{HubAndSpoke=%t, TrafficClass=%v, DomainPMTU=%d}",
-		op.HubAndSpoke, tClass, op.DomainPMTU)
+	return fmt.Sprintf("%s: {HubAndSpoke=%t, TrafficClass=%v, DomainPMTU=%d}",
+		op.Code(), op.HubAndSpoke, tClass, op.DomainPMTU)
 }
 
-// ParseOpt4RDNonMapRule builds an Opt4RDNonMapRule structure from a sequence of bytes.
+// FromBytes builds an Opt4RDNonMapRule structure from a sequence of bytes.
 // The input data does not include option code and length bytes
-func ParseOpt4RDNonMapRule(data []byte) (*Opt4RDNonMapRule, error) {
-	var opt Opt4RDNonMapRule
+func (op *Opt4RDNonMapRule) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
 	flags := buf.Read8()
 
-	opt.HubAndSpoke = flags&opt4RDHubAndSpokeMask != 0
+	op.HubAndSpoke = flags&opt4RDHubAndSpokeMask != 0
 
 	tClass := buf.Read8()
 	if flags&opt4RDTrafficClassMask != 0 {
-		opt.TrafficClass = &tClass
+		op.TrafficClass = &tClass
 	}
 
-	opt.DomainPMTU = buf.Read16()
+	op.DomainPMTU = buf.Read16()
 
-	return &opt, buf.FinError()
+	return buf.FinError()
 }

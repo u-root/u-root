@@ -84,7 +84,7 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/insomniacslk/dhcp v0.0.0-20211209223715-7d93572ebe8e
+# github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
 ## explicit; go 1.13
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4
@@ -101,7 +101,7 @@ github.com/insomniacslk/dhcp/rfc1035label
 # github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 ## explicit
 github.com/intel-go/cpuid
-# github.com/josharian/native v1.0.1-0.20221213033349-c1e37c09b531
+# github.com/josharian/native v1.1.0
 ## explicit; go 1.13
 github.com/josharian/native
 # github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c
@@ -256,7 +256,7 @@ golang.org/x/net/ipv6
 # golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.1.0
+# golang.org/x/sys v0.5.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
