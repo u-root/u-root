@@ -31,12 +31,11 @@ func (op *OptRemoteID) String() string {
 	)
 }
 
-// ParseOptRemoteId builds an OptRemoteId structure from a sequence of bytes.
-// The input data does not include option code and length bytes.
-func ParseOptRemoteID(data []byte) (*OptRemoteID, error) {
-	var opt OptRemoteID
+// FromBytes builds an OptRemoteId structure from a sequence of bytes. The
+// input data does not include option code and length bytes.
+func (op *OptRemoteID) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	opt.EnterpriseNumber = buf.Read32()
-	opt.RemoteID = buf.ReadAll()
-	return &opt, buf.FinError()
+	op.EnterpriseNumber = buf.Read32()
+	op.RemoteID = buf.ReadAll()
+	return buf.FinError()
 }

@@ -169,8 +169,8 @@ func (mo MessageOptions) BootFileURL() string {
 	if opt == nil {
 		return ""
 	}
-	if u, ok := opt.(optBootFileURL); ok {
-		return string(u)
+	if u, ok := opt.(*optBootFileURL); ok {
+		return u.url
 	}
 	return ""
 }
@@ -181,8 +181,8 @@ func (mo MessageOptions) BootFileParam() []string {
 	if opt == nil {
 		return nil
 	}
-	if u, ok := opt.(optBootFileParam); ok {
-		return []string(u)
+	if u, ok := opt.(*optBootFileParam); ok {
+		return u.params
 	}
 	return nil
 }

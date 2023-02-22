@@ -22,12 +22,10 @@ func (op *optServerID) String() string {
 	return fmt.Sprintf("%s: %v", op.Code(), op.DUID)
 }
 
-// parseOptServerID builds an optServerID structure from a sequence of bytes.
-// The input data does not include option code and length bytes.
-func parseOptServerID(data []byte) (*optServerID, error) {
-	sid, err := DUIDFromBytes(data)
-	if err != nil {
-		return nil, err
-	}
-	return &optServerID{sid}, nil
+// FromBytes builds an optServerID structure from a sequence of bytes. The
+// input data does not include option code and length bytes.
+func (op *optServerID) FromBytes(data []byte) error {
+	var err error
+	op.DUID, err = DUIDFromBytes(data)
+	return err
 }

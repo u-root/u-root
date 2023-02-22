@@ -36,12 +36,11 @@ func (op *optClientLinkLayerAddress) String() string {
 	return fmt.Sprintf("%s: Type=%s LinkLayerAddress=%s", op.Code(), op.LinkLayerType, op.LinkLayerAddress)
 }
 
-// parseOptClientLinkLayerAddress deserializes from bytes
-// to build an optClientLinkLayerAddress structure.
-func parseOptClientLinkLayerAddress(data []byte) (*optClientLinkLayerAddress, error) {
-	var opt optClientLinkLayerAddress
+// FromBytes deserializes from bytes to build an optClientLinkLayerAddress
+// structure.
+func (op *optClientLinkLayerAddress) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	opt.LinkLayerType = iana.HWType(buf.Read16())
-	opt.LinkLayerAddress = buf.ReadAll()
-	return &opt, buf.FinError()
+	op.LinkLayerType = iana.HWType(buf.Read16())
+	op.LinkLayerAddress = buf.ReadAll()
+	return buf.FinError()
 }

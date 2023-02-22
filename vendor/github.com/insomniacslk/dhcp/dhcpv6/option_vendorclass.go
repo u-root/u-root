@@ -39,18 +39,18 @@ func (op *OptVendorClass) String() string {
 	return fmt.Sprintf("%s: {EnterpriseNumber=%d Data=[%s]}", op.Code(), op.EnterpriseNumber, strings.Join(vcStrings, ", "))
 }
 
-// ParseOptVendorClass builds an OptVendorClass structure from a sequence of
-// bytes. The input data does not include option code and length bytes.
-func ParseOptVendorClass(data []byte) (*OptVendorClass, error) {
-	var opt OptVendorClass
+// FromBytes builds an OptVendorClass structure from a sequence of bytes. The
+// input data does not include option code and length bytes.
+func (op *OptVendorClass) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	opt.EnterpriseNumber = buf.Read32()
+	*op = OptVendorClass{}
+	op.EnterpriseNumber = buf.Read32()
 	for buf.Has(2) {
 		len := buf.Read16()
-		opt.Data = append(opt.Data, buf.CopyN(int(len)))
+		op.Data = append(op.Data, buf.CopyN(int(len)))
 	}
-	if len(opt.Data) < 1 {
-		return nil, errors.New("ParseOptVendorClass: at least one vendor class data is required")
+	if len(op.Data) < 1 {
+		return errors.New("ParseOptVendorClass: at least one vendor class data is required")
 	}
-	return &opt, buf.FinError()
+	return buf.FinError()
 }

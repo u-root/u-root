@@ -84,7 +84,7 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/insomniacslk/dhcp v0.0.0-20230219213952-223c67f573a9
+# github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
 ## explicit; go 1.13
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4

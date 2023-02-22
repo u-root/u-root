@@ -15,7 +15,7 @@ require (
 	github.com/google/go-tpm v0.3.3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/uuid v1.3.0
-	github.com/insomniacslk/dhcp v0.0.0-20230219213952-223c67f573a9
+	github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.10.6
