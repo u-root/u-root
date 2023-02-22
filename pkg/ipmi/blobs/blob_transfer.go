@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/ipmi"
 )
@@ -37,6 +38,24 @@ type blobStatsHdr struct {
 	State       uint16
 	Size        uint32
 	MetadataLen uint8
+}
+
+type blobID []byte
+
+// String returns the string representation of the blob ID, without the trailing NUL.
+func (b blobID) String() string {
+	return strings.TrimSuffix(string(b), "\000")
+}
+
+// blobIDFromString returns the IPMI blob-protocol representation of the given blob path (i.e., with one trailing NUL).
+func blobIDFromString(blob string) blobID {
+	terminated := strings.TrimSuffix(blob, "\000") + "\000"
+	return blobIDFromBytes([]byte(terminated))
+}
+
+// blobIDFromBytes returns the IPMI blob-protocol representation of the given blob path from the given byte-array.
+func blobIDFromBytes(bytes []byte) blobID {
+	return blobID(bytes)
 }
 
 // BlobHandler provides an interface for the blob protocol. IT can be used
@@ -269,7 +288,7 @@ func (h *BlobHandler) BlobEnumerate(index int) (string, error) {
 		return "", err
 	}
 
-	return (string)(data), nil
+	return blobIDFromBytes(data).String(), nil
 }
 
 // BlobOpen opens a blob referred to by |id| with the given |flags|, and returns
@@ -280,7 +299,7 @@ func (h *BlobHandler) BlobEnumerate(index int) (string, error) {
 // session based commands to operate on the blob.
 // NOTE: the new blob is not serialized and stored until BlobCommit is called.
 func (h *BlobHandler) BlobOpen(id string, flags int16) (SessionID, error) {
-	req, err := appendLittleEndian([]uint8{}, flags, ([]byte)(id))
+	req, err := appendLittleEndian([]uint8{}, flags, blobIDFromString(id))
 	if err != nil {
 		return 0, fmt.Errorf("failed to create data buffer: %v", err)
 	}
@@ -367,7 +386,7 @@ func (h *BlobHandler) BlobClose(sid SessionID) error {
 //
 // This command will fail if there are open sessions for the blob.
 func (h *BlobHandler) BlobDelete(id string) error {
-	req, err := appendLittleEndian([]uint8{}, ([]byte)(id))
+	req, err := appendLittleEndian([]uint8{}, blobIDFromString(id))
 	if err != nil {
 		return fmt.Errorf("failed to create data buffer: %v", err)
 	}
@@ -383,7 +402,7 @@ func (h *BlobHandler) BlobDelete(id string) error {
 // |state| will be set with OPEN_R, OPEN_W, and/or COMMITTED as appropriate
 // |metadata| is optional blob-specific bytes
 func (h *BlobHandler) BlobStat(id string) (*BlobStats, error) {
-	req, err := appendLittleEndian([]uint8{}, ([]byte)(id))
+	req, err := appendLittleEndian([]uint8{}, blobIDFromString(id))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create data buffer: %v", err)
 	}
