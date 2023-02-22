@@ -38,15 +38,14 @@ func (op *OptIATA) LongString(indentSpace int) string {
 	return fmt.Sprintf("%s: IAID=%#x Options=%v", op.Code(), op.IaId, op.Options.LongString(indentSpace))
 }
 
-// ParseOptIATA builds an OptIATA structure from a sequence of bytes.  The
-// input data does not include option code and length bytes.
-func ParseOptIATA(data []byte) (*OptIATA, error) {
-	var opt OptIATA
+// FromBytes builds an OptIATA structure from a sequence of bytes.  The input
+// data does not include option code and length bytes.
+func (op *OptIATA) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	buf.ReadBytes(opt.IaId[:])
+	buf.ReadBytes(op.IaId[:])
 
-	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
-		return nil, err
+	if err := op.Options.FromBytes(buf.ReadAll()); err != nil {
+		return err
 	}
-	return &opt, buf.FinError()
+	return buf.FinError()
 }

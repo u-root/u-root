@@ -18,15 +18,18 @@ func (n *NTPSuboptionSrvAddr) Code() OptionCode {
 
 // ToBytes returns the byte serialization of the suboption.
 func (n *NTPSuboptionSrvAddr) ToBytes() []byte {
-	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write16(uint16(NTPSuboptionSrvAddrCode))
-	buf.Write16(uint16(net.IPv6len))
-	buf.WriteBytes(net.IP(*n).To16())
-	return buf.Data()
+	return net.IP(*n).To16()
 }
 
 func (n *NTPSuboptionSrvAddr) String() string {
 	return fmt.Sprintf("Server Address: %s", net.IP(*n).String())
+}
+
+// FromBytes parses NTP server address from a byte slice p.
+func (n *NTPSuboptionSrvAddr) FromBytes(p []byte) error {
+	buf := uio.NewBigEndianBuffer(p)
+	*n = NTPSuboptionSrvAddr(buf.CopyN(net.IPv6len))
+	return buf.FinError()
 }
 
 // NTPSuboptionMCAddr is NTP_SUBOPTION_MC_ADDR according to RFC 5908.
@@ -39,19 +42,24 @@ func (n *NTPSuboptionMCAddr) Code() OptionCode {
 
 // ToBytes returns the byte serialization of the suboption.
 func (n *NTPSuboptionMCAddr) ToBytes() []byte {
-	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write16(uint16(NTPSuboptionMCAddrCode))
-	buf.Write16(uint16(net.IPv6len))
-	buf.WriteBytes(net.IP(*n).To16())
-	return buf.Data()
+	return net.IP(*n).To16()
 }
 
 func (n *NTPSuboptionMCAddr) String() string {
 	return fmt.Sprintf("Multicast Address: %s", net.IP(*n).String())
 }
 
+// FromBytes parses NTP multicast address from a byte slice p.
+func (n *NTPSuboptionMCAddr) FromBytes(p []byte) error {
+	buf := uio.NewBigEndianBuffer(p)
+	*n = NTPSuboptionMCAddr(buf.CopyN(net.IPv6len))
+	return buf.FinError()
+}
+
 // NTPSuboptionSrvFQDN is NTP_SUBOPTION_SRV_FQDN according to RFC 5908.
-type NTPSuboptionSrvFQDN rfc1035label.Labels
+type NTPSuboptionSrvFQDN struct {
+	rfc1035label.Labels
+}
 
 // Code returns the suboption code.
 func (n *NTPSuboptionSrvFQDN) Code() OptionCode {
@@ -60,17 +68,16 @@ func (n *NTPSuboptionSrvFQDN) Code() OptionCode {
 
 // ToBytes returns the byte serialization of the suboption.
 func (n *NTPSuboptionSrvFQDN) ToBytes() []byte {
-	buf := uio.NewBigEndianBuffer(nil)
-	buf.Write16(uint16(NTPSuboptionSrvFQDNCode))
-	l := rfc1035label.Labels(*n)
-	buf.Write16(uint16(l.Length()))
-	buf.WriteBytes(l.ToBytes())
-	return buf.Data()
+	return n.Labels.ToBytes()
 }
 
 func (n *NTPSuboptionSrvFQDN) String() string {
-	l := rfc1035label.Labels(*n)
-	return fmt.Sprintf("Server FQDN: %s", l.String())
+	return fmt.Sprintf("Server FQDN: %s", n.Labels.String())
+}
+
+// FromBytes parses an NTP server FQDN from a byte slice p.
+func (n *NTPSuboptionSrvFQDN) FromBytes(p []byte) error {
+	return n.Labels.FromBytes(p)
 }
 
 // NTPSuboptionSrvAddr is the value of NTP_SUBOPTION_SRV_ADDR according to RFC 5908.
@@ -82,53 +89,18 @@ const (
 
 // parseNTPSuboption implements the OptionParser interface.
 func parseNTPSuboption(code OptionCode, data []byte) (Option, error) {
-	//var o Options
-	buf := uio.NewBigEndianBuffer(data)
-	length := len(data)
-	data, err := buf.ReadN(length)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %d bytes for suboption: %w", length, err)
-	}
+	var o Option
 	switch code {
-	case NTPSuboptionSrvAddrCode, NTPSuboptionMCAddrCode:
-		if length != net.IPv6len {
-			return nil, fmt.Errorf("invalid suboption length, want %d, got %d", net.IPv6len, length)
-		}
-		var so Option
-		switch code {
-		case NTPSuboptionSrvAddrCode:
-			sos := NTPSuboptionSrvAddr(data)
-			so = &sos
-		case NTPSuboptionMCAddrCode:
-			som := NTPSuboptionMCAddr(data)
-			so = &som
-		}
-		return so, nil
+	case NTPSuboptionSrvAddrCode:
+		o = &NTPSuboptionSrvAddr{}
+	case NTPSuboptionMCAddrCode:
+		o = &NTPSuboptionMCAddr{}
 	case NTPSuboptionSrvFQDNCode:
-		l, err := rfc1035label.FromBytes(data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse rfc1035 labels: %w", err)
-		}
-		// TODO according to rfc3315, this label must not be compressed.
-		// Need to add support for compression detection to the
-		// `rfc1035label` package in order to do that.
-		so := NTPSuboptionSrvFQDN(*l)
-		return &so, nil
+		o = &NTPSuboptionSrvFQDN{}
 	default:
-		gopt := OptionGeneric{OptionCode: code, OptionData: data}
-		return &gopt, nil
+		o = &OptionGeneric{OptionCode: code}
 	}
-}
-
-// ParseOptNTPServer parses a sequence of bytes into an OptNTPServer object.
-func ParseOptNTPServer(data []byte) (*OptNTPServer, error) {
-	var so Options
-	if err := so.FromBytesWithParser(data, parseNTPSuboption); err != nil {
-		return nil, err
-	}
-	return &OptNTPServer{
-		Suboptions: so,
-	}, nil
+	return o, o.FromBytes(data)
 }
 
 // OptNTPServer is an option NTP server as defined by RFC 5908.
@@ -141,13 +113,14 @@ func (op *OptNTPServer) Code() OptionCode {
 	return OptionNTPServer
 }
 
+// FromBytes parses a sequence of bytes into an OptNTPServer object.
+func (op *OptNTPServer) FromBytes(data []byte) error {
+	return op.Suboptions.FromBytesWithParser(data, parseNTPSuboption)
+}
+
 // ToBytes returns the option serialized to bytes.
 func (op *OptNTPServer) ToBytes() []byte {
-	buf := uio.NewBigEndianBuffer(nil)
-	for _, so := range op.Suboptions {
-		buf.WriteBytes(so.ToBytes())
-	}
-	return buf.Data()
+	return op.Suboptions.ToBytes()
 }
 
 func (op *OptNTPServer) String() string {

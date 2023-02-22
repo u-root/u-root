@@ -33,14 +33,10 @@ func (op *optRelayMsg) LongString(indent int) string {
 	return fmt.Sprintf("%s: %v", op.Code(), op.Msg.LongString(indent))
 }
 
-// build an optRelayMsg structure from a sequence of bytes.
-// The input data does not include option code and length bytes.
-func parseOptRelayMsg(data []byte) (*optRelayMsg, error) {
+// FromBytes build an optRelayMsg structure from a sequence of bytes. The input
+// data does not include option code and length bytes.
+func (op *optRelayMsg) FromBytes(data []byte) error {
 	var err error
-	var opt optRelayMsg
-	opt.Msg, err = FromBytes(data)
-	if err != nil {
-		return nil, err
-	}
-	return &opt, nil
+	op.Msg, err = FromBytes(data)
+	return err
 }

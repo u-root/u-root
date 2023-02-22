@@ -108,8 +108,8 @@ github.com/hexdigest/gowrap v1.1.8/go.mod h1:H/JiFmQMp//tedlV8qt2xBdGzmne6bpbaSu
 github.com/hugelgupf/socketpair v0.0.0-20190730060125-05d35a94e714 h1:/jC7qQFrv8CrSJVmaolDVOxTfS9kc36uB6H40kdbQq8=
 github.com/hugelgupf/socketpair v0.0.0-20190730060125-05d35a94e714/go.mod h1:2Goc3h8EklBH5mspfHFxBnEoURQCGzQQH1ga9Myjvis=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/insomniacslk/dhcp v0.0.0-20230219213952-223c67f573a9 h1:u83NOa/yBGQhi9jVuTO32dW6vRohuSG5IGBfCaT3b0U=
-github.com/insomniacslk/dhcp v0.0.0-20230219213952-223c67f573a9/go.mod h1:m5WMe03WCvWcXjRnhvaAbAAXdCnu20J5P+mmH44ZzpE=
+github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7 h1:s8KQhoDsPEP8uX63C283FrGX6er11fCLMQCvzm0ZZRg=
+github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7/go.mod h1:yGKD3yZIGAjEZXiIjVQ0SQ09Y/RzETOoqEOi6nXqX0Y=
 github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2 h1:h+RKaNPjka7LRJGoeub/IQBdXSoEaJjfADkBq02hvjw=
 github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2/go.mod h1:RmeVYf9XrPRbRc3XIx0gLYA8qOFvNoPOfaEZduRlEp4=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
@@ -249,7 +249,6 @@ github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWq
 github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8 h1:JrSBKRfH2PmVACEvZ4H30Exs+kdyu2FuwsWknrY17z0=
 github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8/go.mod h1:LyU/Wj6OFmFnGUAR/8mzI5PjxxvbcIfDmZqKupSplG0=
 github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7/go.mod h1:LpEX5FO/cB+WF4TYGY1V5qktpaZLkKkSegbr0V4eYXA=
-github.com/u-root/uio v0.0.0-20221213070652-c3537552635f/go.mod h1:IogEAUBXDEwX7oR/BMmCctShYs80ql4hF0ySdzGxf7E=
 github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c h1:PHoGTnweZP+KIg/8Zc6+iOesrIF5yHkpb4GBDxHm7yE=
 github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c/go.mod h1:eLL9Nub3yfAho7qB0MzZizFhTU2QkLeoVsWdHtDW264=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=

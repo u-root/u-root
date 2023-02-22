@@ -79,21 +79,20 @@ func (op *OptIAPD) LongString(indentSpace int) string {
 	return fmt.Sprintf("%s: IAID=%#x T1=%v T2=%v Options=%v", op.Code(), op.IaId, op.T1, op.T2, op.Options.LongString(indentSpace))
 }
 
-// ParseOptIAPD builds an OptIAPD structure from a sequence of bytes.
-// The input data does not include option code and length bytes.
-func ParseOptIAPD(data []byte) (*OptIAPD, error) {
-	var opt OptIAPD
+// FromBytes builds an OptIAPD structure from a sequence of bytes. The input
+// data does not include option code and length bytes.
+func (op *OptIAPD) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	buf.ReadBytes(opt.IaId[:])
+	buf.ReadBytes(op.IaId[:])
 
 	var t1, t2 Duration
 	t1.Unmarshal(buf)
 	t2.Unmarshal(buf)
-	opt.T1 = t1.Duration
-	opt.T2 = t2.Duration
+	op.T1 = t1.Duration
+	op.T2 = t2.Duration
 
-	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
-		return nil, err
+	if err := op.Options.FromBytes(buf.ReadAll()); err != nil {
+		return err
 	}
-	return &opt, buf.FinError()
+	return buf.FinError()
 }

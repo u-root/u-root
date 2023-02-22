@@ -35,12 +35,11 @@ func (op *OptStatusCode) String() string {
 		op.Code(), op.StatusCode, op.StatusCode, op.StatusMessage)
 }
 
-// ParseOptStatusCode builds an OptStatusCode structure from a sequence of
-// bytes. The input data does not include option code and length bytes.
-func ParseOptStatusCode(data []byte) (*OptStatusCode, error) {
-	var opt OptStatusCode
+// FromBytes builds an OptStatusCode structure from a sequence of bytes. The
+// input data does not include option code and length bytes.
+func (op *OptStatusCode) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
-	opt.StatusCode = iana.StatusCode(buf.Read16())
-	opt.StatusMessage = string(buf.ReadAll())
-	return &opt, buf.FinError()
+	op.StatusCode = iana.StatusCode(buf.Read16())
+	op.StatusMessage = string(buf.ReadAll())
+	return buf.FinError()
 }

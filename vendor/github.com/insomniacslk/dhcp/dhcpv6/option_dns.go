@@ -34,14 +34,12 @@ func (op *optDNS) String() string {
 	return fmt.Sprintf("%s: %v", op.Code(), op.NameServers)
 }
 
-// parseOptDNS builds an optDNS structure
-// from a sequence of bytes. The input data does not include option code and length
-// bytes.
-func parseOptDNS(data []byte) (*optDNS, error) {
-	var opt optDNS
+// FromBytes builds an optDNS structure from a sequence of bytes. The input
+// data does not include option code and length bytes.
+func (op *optDNS) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)
 	for buf.Has(net.IPv6len) {
-		opt.NameServers = append(opt.NameServers, buf.CopyN(net.IPv6len))
+		op.NameServers = append(op.NameServers, buf.CopyN(net.IPv6len))
 	}
-	return &opt, buf.FinError()
+	return buf.FinError()
 }
