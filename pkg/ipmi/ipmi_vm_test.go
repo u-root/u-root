@@ -207,3 +207,30 @@ func TestLogSystemEventQemu(t *testing.T) {
 		t.Errorf("i.LogSystemEvent(e) = %v", err)
 	}
 }
+
+func TestOpenNonexistentDeviceQemu(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+	i, err := Open(42)
+	if err == nil {
+		i.Close()
+		t.Errorf("Open(42) succeeded unexpectedly")
+	}
+
+	i, err = OpenPath("/dev/ipmi42")
+	if err == nil {
+		i.Close()
+		t.Errorf("OpenPath(/dev/ipmi42) succeeded unexpectedly")
+	}
+}
+
+func TestOpenPathQemu(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+	i, err := OpenPath("/dev/ipmi0")
+	if err != nil {
+		t.Fatalf("Open(/dev/ipmi0) = %v", err)
+	}
+	err = i.Close()
+	if err != nil {
+		t.Errorf("i.Close() = %v", err)
+	}
+}

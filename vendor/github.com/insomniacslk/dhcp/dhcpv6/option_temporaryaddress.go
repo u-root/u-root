@@ -30,19 +30,22 @@ func (op *OptIATA) ToBytes() []byte {
 }
 
 func (op *OptIATA) String() string {
-	return fmt.Sprintf("IATA: {IAID=%v, options=%v}",
-		op.IaId, op.Options)
+	return fmt.Sprintf("%s: {IAID=%#x, Options=%v}", op.Code(), op.IaId, op.Options)
 }
 
-// ParseOptIATA builds an OptIATA structure from a sequence of bytes.  The
-// input data does not include option code and length bytes.
-func ParseOptIATA(data []byte) (*OptIATA, error) {
-	var opt OptIATA
-	buf := uio.NewBigEndianBuffer(data)
-	buf.ReadBytes(opt.IaId[:])
+// LongString returns a multi-line string representation of IATA data.
+func (op *OptIATA) LongString(indentSpace int) string {
+	return fmt.Sprintf("%s: IAID=%#x Options=%v", op.Code(), op.IaId, op.Options.LongString(indentSpace))
+}
 
-	if err := opt.Options.FromBytes(buf.ReadAll()); err != nil {
-		return nil, err
+// FromBytes builds an OptIATA structure from a sequence of bytes.  The input
+// data does not include option code and length bytes.
+func (op *OptIATA) FromBytes(data []byte) error {
+	buf := uio.NewBigEndianBuffer(data)
+	buf.ReadBytes(op.IaId[:])
+
+	if err := op.Options.FromBytes(buf.ReadAll()); err != nil {
+		return err
 	}
-	return &opt, buf.FinError()
+	return buf.FinError()
 }
