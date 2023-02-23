@@ -105,12 +105,12 @@ func (c *cmd) run() error {
 }
 
 func (f *flags) register(fs *flag.FlagSet) {
-	flag.BoolVarP(&f.d, "directory", "d", false, "Make a directory")
-	flag.BoolVarP(&f.u, "dry-run", "u", false, "Do everything save the actual create")
-	flag.BoolVarP(&f.v, "quiet", "q", false, "Quiet: show no errors")
-	flag.StringVarP(&f.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
-	flag.StringVarP(&f.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
-	flag.StringVarP(&f.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+	fs.BoolVarP(&f.d, "directory", "d", false, "Make a directory")
+	fs.BoolVarP(&f.u, "dry-run", "u", false, "Do everything save the actual create")
+	fs.BoolVarP(&f.v, "quiet", "q", false, "Quiet: show no errors")
+	fs.StringVarP(&f.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
+	fs.StringVarP(&f.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
+	fs.StringVarP(&f.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
 }
 
 func main() {
