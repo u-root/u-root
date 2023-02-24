@@ -80,6 +80,12 @@ func parseinterp(input string) ([]string, error) {
 		if f[0] == f[2] {
 			continue
 		}
+		// If the third part is a memory address instead
+		// of a file system path, the entry should be skipped.
+		// For example: linux-vdso.so.1 => (0x00007ffe4972d000)
+		if f[1] == "=>" && string(f[2][0]) == "(" {
+			continue
+		}
 		names = append(names, f[2])
 	}
 	return names, nil

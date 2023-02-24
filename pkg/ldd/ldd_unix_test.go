@@ -34,6 +34,11 @@ var (
 	/lib64/ld-linux-x86-64.so.2 => /usr/lib64/ld-linux-x86-64.so.2`,
 			output: []string{"/usr/lib/libc.so.6", "/usr/lib64/ld-linux-x86-64.so.2"},
 		},
+		{
+			name:   "entry with memory address",
+			input:  `linux-vdso.so.1 => (0x00007ffe4972d000)`,
+			output: []string{},
+		},
 	}
 )
 
