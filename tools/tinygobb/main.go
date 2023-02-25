@@ -1,0 +1,138 @@
+// Copyright 2023 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// This builds a tinygo image that does not need
+// fork/exec.
+
+package main
+
+import (
+	"flag"
+	"io/fs"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+var (
+	list = flag.String("l", "cmds/exp/rush", "comma-separated list of u-root commands to build")
+	code = `// Copyright 2023 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+//go:build tinygo
+// +build tinygo
+
+package bbrush
+
+import bbmain "bb.u-root.com/bb/pkg/bbmain"
+import "log"
+
+func runone(c*Command) error {
+   log.Printf("run %v", c)
+   return bbmain.Run(c.cmd)
+}
+
+// tty does whatever needs to be done to set up a tty for GOOS.
+func tty() {
+}
+
+func foreground() {
+	// Place process group in foreground.
+}
+
+func builtinAttr(c *Command) {
+}
+
+func forkAttr(c *Command) {
+}
+
+`
+)
+
+func main() {
+	flag.Parse()
+
+	dir, err := os.MkdirTemp("", "tiny")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c := exec.Command("./u-root", append([]string{"-tags", "tinygo", "-tmpdir", dir}, strings.Split(*list, ",")...)...)
+	c.Stdout, c.Stderr = os.Stdout, os.Stderr
+	if err := c.Run(); err != nil {
+		// An error is expected, for now.
+		log.Printf("Running u-root: %v", err)
+	}
+
+	build, err := filepath.Glob(filepath.Join(dir, "*"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(build) != 1 {
+		log.Fatal("can not find unique builddir from %q, got %q", dir, build)
+	}
+
+	rushdir := filepath.Join(build[0], "src/github.com/u-root/u-root/cmds/exp/rush/")
+
+	// Fixup rush.
+	if err := ioutil.WriteFile(filepath.Join(rushdir, "rush_tinygo.go"), []byte(code), 0644); err != nil {
+		log.Fatal(err)
+	}
+
+	// Walk the tree, find all go files, in each file, replace os.Exit
+	// with //.Exit. Sleazy.
+	err = filepath.WalkDir(build[0], func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		s := strings.ReplaceAll(string(b), "os.Exit", "//.Exit")
+		log.Printf("replaced os.Exit in %q, output %s", path, s)
+		if err := ioutil.WriteFile(path, []byte(s), 0644); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("Walkdir %q: %v", build[0], err)
+	}
+
+	// The rewrite step may result in os no longer being needed in some
+	// source. run imports.
+	c = exec.Command("goimports", "-w", ".")
+	c.Dir = build[0]
+	c.Stdout, c.Stderr = os.Stdout, os.Stderr
+	log.Printf("Now run imports: %v in %q", c, c.Dir)
+	if err := c.Run(); err != nil {
+		log.Fatalf("Running go: %v, %v", c, err)
+	}
+
+	c = exec.Command("go", "build", "-tags", "tinygo")
+	c.Dir = filepath.Join(build[0], "src/bb.u-root.com/bb")
+	c.Stdout, c.Stderr = os.Stdout, os.Stderr
+	log.Printf("Now compile it: %v", c)
+	if err := c.Run(); err != nil {
+		log.Fatalf("Running go: %v, %v", c, err)
+	}
+
+	bin := filepath.Join(c.Dir, "bb")
+	fi, err := os.Stat(bin)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("The binary is: %q, info %v", bin, fi)
+
+}
