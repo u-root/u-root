@@ -90,17 +90,9 @@ func runit(c *Command) error {
 		if err := b(c); err != nil {
 			return err
 		}
-	} else {
-
-		forkAttr(c)
-		if err := c.Start(); err != nil {
-			return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))
-		}
-		if err := c.Wait(); err != nil {
-			return fmt.Errorf("wait: %v", err)
-		}
+		return nil
 	}
-	return nil
+	return runone(c)
 }
 
 func openRead(c *Command, r io.Reader, fd int) (io.Reader, error) {
