@@ -33,6 +33,9 @@ import bbmain "bb.u-root.com/bb/pkg/bbmain"
 import "log"
 
 func runone(c*Command) error {
+   // put a recover here for the panic at some point.
+   os.Args = append([]string{c.cmd}, c.argv...)
+   flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.PanicOnError)
    log.Printf("run %v", c)
    return bbmain.Run(c.cmd)
 }
@@ -86,6 +89,8 @@ func main() {
 
 	// Walk the tree, find all go files, in each file, replace os.Exit
 	// with //.Exit. Sleazy.
+	// This is the wrong way to do this, should use AST of course, as we do it with
+	// the busybox. I was in a hurry.
 	err = filepath.WalkDir(build[0], func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
