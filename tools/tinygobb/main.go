@@ -77,7 +77,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if len(build) != 1 {
-		log.Fatal("can not find unique builddir from %q, got %q", dir, build)
+		log.Fatalf("can not find unique builddir from %q, got %q", dir, build)
 	}
 
 	rushdir := filepath.Join(build[0], "src/github.com/u-root/u-root/cmds/exp/rush/")
