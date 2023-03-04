@@ -99,9 +99,9 @@ func main() {
 			return nil
 		}
 
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return err
+		b, errRead := os.ReadFile(path)
+		if errRead != nil {
+			return errRead
 		}
 		s := strings.ReplaceAll(string(b), "os.Exit", "//.Exit")
 		log.Printf("replaced os.Exit in %q, output %s", path, s)
