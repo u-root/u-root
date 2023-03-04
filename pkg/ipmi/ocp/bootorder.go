@@ -167,8 +167,9 @@ func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool) error {
 		}
 		if bootType = entry.Booter.TypeName(); len(bootType) > 0 {
 			if bootType == "pxeboot" {
-				// Note: Does Ipv4 and IPv6. No IPv6 only option.
-				BIOSBootOrder.bootSeq[idx] = NETWORK_BOOT
+				// Note: Does IPv6 only when BIOS sets its boot order to BMC, we could extend
+				// Booter interface with a MethodName() to differentiate IPv4 and IPv6 in the future.
+				BIOSBootOrder.bootSeq[idx] = NETWORK_BOOT_IPV6
 				idx++
 			} else if bootType == "boot" {
 				BIOSBootOrder.bootSeq[idx] = LOCAL_BOOT
@@ -179,7 +180,7 @@ func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool) error {
 	// If there is no valid VPD boot order, write the default systembooter configurations
 	if idx == 0 {
 		log.Printf("No valid VPD boot order, set default boot orders to RW_VPD")
-		BIOSBootOrder.bootSeq[0] = NETWORK_BOOT
+		BIOSBootOrder.bootSeq[0] = NETWORK_BOOT_IPV6
 		BIOSBootOrder.bootSeq[1] = LOCAL_BOOT
 		return updateVPDBootOrder(i, &BIOSBootOrder)
 	}
