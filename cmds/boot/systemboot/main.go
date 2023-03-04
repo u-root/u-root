@@ -45,10 +45,9 @@ func isFlagPassed(name string) bool {
 }
 
 var defaultBootsequence = [][]string{
-	{"pxeboot"},
+	{"pxeboot", "-ipv6=true", "-ipv4=false"},
 	{"boot"},
 	{"fbnetboot", "-userclass", "linuxboot"},
-	{"localboot", "-grub"},
 }
 
 // VPD variable for enabling IPMI BMC overriding boot order, default is not set
@@ -221,7 +220,7 @@ func addSEL(sequence string) {
 	switch sequence {
 	case "netboot":
 		fallthrough
-	case "fbnetboot":
+	case "fbnetboot", "pxeboot":
 		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
 		bootErr.OEMNontsDefinedData[0] = 0x28
@@ -232,6 +231,7 @@ func addSEL(sequence string) {
 		if err := i.LogSystemEvent(&bootErr); err != nil {
 			log.Printf("SEL recorded: %s fail\n", sequence)
 		}
+		selRecorded = true
 	case "cmosclear":
 		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
