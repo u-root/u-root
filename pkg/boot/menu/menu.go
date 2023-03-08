@@ -267,12 +267,14 @@ func OSImages(verbose bool, imgs ...boot.OSImage) []Entry {
 // OSImageAction is a menu.Entry that boots an OSImage.
 type OSImageAction struct {
 	boot.OSImage
-	Verbose bool
+	Verbose           bool
+	NoKexecLoad       bool
+	LinuxImageCfgFile string
 }
 
 // Load implements Entry.Load by loading the OS image into memory.
 func (oia OSImageAction) Load() error {
-	if err := oia.OSImage.Load(boot.WithVerbose(oia.Verbose)); err != nil {
+	if err := oia.OSImage.Load(boot.WithVerbose(oia.Verbose), boot.WithDryRun(oia.NoKexecLoad), boot.WithLinuxImageCfgFile(oia.LinuxImageCfgFile)); err != nil {
 		return fmt.Errorf("could not load image %s: %v", oia.OSImage, err)
 	}
 	return nil
