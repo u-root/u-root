@@ -1,0 +1,24 @@
+// Copyright 2023 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+//go:build !tinygo
+// +build !tinygo
+
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func runone(c *Command) error {
+	forkAttr(c)
+	if err := c.Start(); err != nil {
+		return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))
+	}
+	if err := c.Wait(); err != nil {
+		return fmt.Errorf("wait: %v", err)
+	}
+	return nil
+}
