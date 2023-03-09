@@ -6,81 +6,89 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	flag "github.com/spf13/pflag"
 )
 
 type test struct {
-	flags      []string
-	out        string
-	stdErr     string
-	exitStatus int
+	flags flags
+	args  []string
+	out   string
+	err   error
 }
 
 func TestMkTemp(t *testing.T) {
 	tmpDir := os.TempDir()
 	tests := []test{
 		{
-			flags:      []string{},
-			out:        tmpDir,
-			stdErr:     "",
-			exitStatus: 0,
+			flags: flags{},
+			out:   tmpDir,
+			err:   nil,
 		},
 		{
-			flags:      []string{"-d"},
-			out:        tmpDir,
-			stdErr:     "",
-			exitStatus: 0,
+			flags: flags{d: true},
+			out:   tmpDir,
+			err:   nil,
 		},
 		{
-			flags:      []string{"foofoo.XXXX"},
-			out:        filepath.Join(tmpDir, "foofoo"),
-			stdErr:     "",
-			exitStatus: 0,
+			flags: flags{},
+			args:  []string{"foofoo.XXXX"},
+			out:   filepath.Join(tmpDir, "foofoo"),
+			err:   nil,
 		},
 		{
-			flags:      []string{"foo.XXXXX", "--suffix", "baz"},
-			out:        filepath.Join(tmpDir, "foo.baz"),
-			stdErr:     "",
-			exitStatus: 0,
+			flags: flags{suffix: "baz"},
+			args:  []string{"foo.XXXX"},
+			out:   filepath.Join(tmpDir, "foo.baz"),
+			err:   nil,
 		},
 		{
-			flags:      []string{"-u", "-q"},
-			out:        "",
-			stdErr:     "",
-			exitStatus: 0,
+			flags: flags{u: true, q: true},
+			out:   "",
+			err:   nil,
 		},
 	}
 
 	// Table-driven testing
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("Using flags %s", tt.flags), func(t *testing.T) {
-			var out, stdErr bytes.Buffer
-			cmd := testutil.Command(t, tt.flags...)
-			cmd.Stdout = &out
-			cmd.Stderr = &stdErr
-			err := cmd.Run()
+		var stdout bytes.Buffer
+		cmd := command(&stdout, tt.flags, tt.args)
+		err := cmd.run()
+		if err != tt.err {
+			t.Errorf("expected %v, got %v", tt.err, err)
+		}
 
-			if !strings.HasPrefix(out.String(), tt.out) {
-				t.Errorf("stdout got:\n%s\nwant starting with:\n%s", out.String(), tt.out)
-			}
-
-			if !strings.HasPrefix(stdErr.String(), tt.stdErr) {
-				t.Errorf("stderr got:\n%s\nwant starting with:\n%s", stdErr.String(), tt.stdErr)
-			}
-
-			if tt.exitStatus == 0 && err != nil {
-				t.Errorf("expected to exit with %d, but exited with err %s", tt.exitStatus, err)
-			}
-		})
+		r := stdout.String()
+		if !strings.HasPrefix(r, tt.out) {
+			t.Errorf("stdout got:\n%s\nwant starting with:\n%s", r, tt.out)
+		}
 	}
 }
 
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
+func TestDefaultFlags(t *testing.T) {
+	f := flags{}
+	f.register(flag.CommandLine)
+
+	if f.d {
+		t.Error("directory should be false by default")
+	}
+	if f.u {
+		t.Error("dry-run should be false by default")
+	}
+	if f.q {
+		t.Error("quiet should be false by default")
+	}
+	if f.prefix != "" {
+		t.Error("prefix should be empty string by default")
+	}
+	if f.suffix != "" {
+		t.Error("suffix should be empty string by default")
+	}
+	if f.dir != "" {
+		t.Error("tmpdir should be empty string by default")
+	}
 }

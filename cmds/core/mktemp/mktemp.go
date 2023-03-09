@@ -30,6 +30,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -37,7 +38,13 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-type mktempflags struct {
+type cmd struct {
+	stdout io.Writer
+	flags  flags
+	args   []string
+}
+
+type flags struct {
 	d      bool
 	u      bool
 	q      bool
@@ -47,60 +54,70 @@ type mktempflags struct {
 	dir    string
 }
 
-var flags mktempflags
-
-func init() {
-	flag.BoolVarP(&flags.d, "directory", "d", false, "Make a directory")
-	flag.BoolVarP(&flags.u, "dry-run", "u", false, "Do everything save the actual create")
-	flag.BoolVarP(&flags.v, "quiet", "q", false, "Quiet: show no errors")
-	flag.StringVarP(&flags.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
-	flag.StringVarP(&flags.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
-	flag.StringVarP(&flags.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
-}
-
 func usage() {
 	log.Fatalf("Usage: mktemp [options] [template]\n%v", flag.CommandLine.FlagUsages())
 }
 
-func mktemp() (string, error) {
-	if flags.dir == "" {
-		flags.dir = os.TempDir()
+func (c *cmd) mktemp() (string, error) {
+	if c.flags.dir == "" {
+		c.flags.dir = os.TempDir()
 	}
 
-	if flags.u {
-		if !flags.q {
+	if c.flags.u {
+		if !c.flags.q {
 			log.Printf("Not doing anything but dry-run is an inherently unsafe concept")
 		}
 		return "", nil
 	}
 
-	if flags.d {
-		d, err := os.MkdirTemp(flags.dir, flags.prefix)
+	if c.flags.d {
+		d, err := os.MkdirTemp(c.flags.dir, c.flags.prefix)
 		return d, err
 	}
-	f, err := os.CreateTemp(flags.dir, flags.prefix)
+	f, err := os.CreateTemp(c.flags.dir, c.flags.prefix)
 	return f.Name(), err
 }
 
-func main() {
-	flag.Parse()
+func command(stdout io.Writer, f flags, args []string) *cmd {
+	return &cmd{
+		stdout: stdout,
+		flags:  f,
+		args:   args,
+	}
+}
 
-	args := flag.Args()
-
-	switch len(args) {
+func (c *cmd) run() error {
+	switch len(c.args) {
 	case 1:
-		// To make this work, we strip the trailing X's, since the Go runtime doesn't work
-		// as old school mktemp(3) does. Just split on the first X.
-		// If they also specified a suffix, well, add that to the prefix I guess.
-		flags.prefix = flags.prefix + strings.Split(args[0], "X")[0] + flags.suffix
+		c.flags.prefix = c.flags.prefix + strings.Split(c.args[0], "X")[0] + c.flags.suffix
 	case 0:
 	default:
 		usage()
 	}
 
-	fileName, err := mktemp()
-	if err != nil && !flags.q {
-		log.Fatalf("%v", err)
+	fileName, err := c.mktemp()
+	if err != nil && !c.flags.q {
+		return err
 	}
-	fmt.Println(fileName)
+
+	fmt.Fprintf(c.stdout, "%s\n", fileName)
+	return nil
+}
+
+func (f *flags) register(fs *flag.FlagSet) {
+	fs.BoolVarP(&f.d, "directory", "d", false, "Make a directory")
+	fs.BoolVarP(&f.u, "dry-run", "u", false, "Do everything save the actual create")
+	fs.BoolVarP(&f.v, "quiet", "q", false, "Quiet: show no errors")
+	fs.StringVarP(&f.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
+	fs.StringVarP(&f.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
+	fs.StringVarP(&f.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+}
+
+func main() {
+	flags := flags{}
+	flags.register(flag.CommandLine)
+	flag.Parse()
+	if err := command(os.Stdout, flags, flag.Args()).run(); err != nil {
+		log.Fatal(err)
+	}
 }
