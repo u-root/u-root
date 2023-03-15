@@ -1,4 +1,4 @@
-// Copyright 2012-2018 the u-root Authors. All rights reserved
+// Copyright 2012-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -30,7 +30,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"os"
 )
 
 var (
@@ -60,12 +62,7 @@ const (
 
 var units = [...]string{"B", "K", "M", "G", "T"}
 
-// FreeConfig is a structure used to configure the behaviour of Free()
-type FreeConfig struct {
-	Unit        unit
-	HumanOutput bool
-	ToJSON      bool
-}
+var errMultipleUnits = fmt.Errorf("multiple unit options doesn't make sense")
 
 // the following types are used for JSON serialization
 type mainMemInfo struct {
@@ -114,11 +111,7 @@ func humanReadableValue(value uint64) string {
 	// bits to shift. 0 means bytes, 10 means kB, and so on. 40 is the highest
 	// and it means tB
 	var shift uint
-	for {
-		if shift >= uint(len(units)*10) {
-			// 4 means tebibyte, we don't go further
-			break
-		}
+	for shift < uint(len(units)*10) {
 		if v/1024 < 1 {
 			break
 		}
@@ -140,109 +133,138 @@ func humanReadableValue(value uint64) string {
 // formatValueByConfig formats a size in bytes in the appropriate unit,
 // depending on whether FreeConfig specifies a human-readable format or a
 // specific unit
-func formatValueByConfig(value uint64, config *FreeConfig) string {
-	if config.HumanOutput {
+func (c *cmd) formatValueByConfig(value uint64) string {
+	if c.human {
 		return humanReadableValue(value)
 	}
 	// units and decimal part are not printed when a unit is explicitly specified
-	return fmt.Sprintf("%v", value>>config.Unit)
-}
-
-// Free prints physical memory and swap space information. The fields will be
-// expressed with the specified unit (e.g. KB, MB)
-func Free(config *FreeConfig) error {
-	m, err := meminfo()
-	if err != nil {
-		log.Fatal(err)
-	}
-	mmi, err := getMainMemInfo(m, config)
-	if err != nil {
-		return err
-	}
-	si, err := getSwapInfo(m, config)
-	if err != nil {
-		return err
-	}
-	mi := MemInfo{Mem: *mmi, Swap: *si}
-	if config.ToJSON {
-		jsonData, err := json.Marshal(mi)
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(jsonData))
-	} else {
-		fmt.Printf("              total        used        free      shared  buff/cache   available\n")
-		fmt.Printf("%-7s %11v %11v %11v %11v %11v %11v\n",
-			"Mem:",
-			formatValueByConfig(mmi.Total, config),
-			formatValueByConfig(mmi.Used, config),
-			formatValueByConfig(mmi.Free, config),
-			formatValueByConfig(mmi.Shared, config),
-			formatValueByConfig(mmi.Buffers+mmi.Cached, config),
-			formatValueByConfig(mmi.Available, config),
-		)
-		fmt.Printf("%-7s %11v %11v %11v\n",
-			"Swap:",
-			formatValueByConfig(si.Total, config),
-			formatValueByConfig(si.Used, config),
-			formatValueByConfig(si.Free, config),
-		)
-	}
-	return nil
-}
-
-// validateUnits checks that only one option of -b, -k, -m, -g, -t or -h has been
-// specified on the command line
-func validateUnits() bool {
-	count := 0
-	if *inBytes {
-		count++
-	}
-	if *inKB {
-		count++
-	}
-	if *inMB {
-		count++
-	}
-	if *inGB {
-		count++
-	}
-	if *inTB {
-		count++
-	}
-	if *humanOutput {
-		count++
-	}
-	if count > 1 {
-		return false
-	}
-	return true
+	return fmt.Sprintf("%v", value>>c.unit)
 }
 
 func main() {
 	flag.Parse()
-	if !validateUnits() {
-		log.Fatal("Options -k, -m, -g, -t and -h are mutually exclusive")
+	o := options{human: *humanOutput, bytes: *inBytes, kbytes: *inKB, mbytes: *inMB, gbytes: *inGB, tbytes: *inTB, json: *toJSON}
+	cmd, err := command(os.Stdout, o)
+	if err != nil {
+		log.Fatal(err)
 	}
-	config := FreeConfig{ToJSON: *toJSON}
-	if *humanOutput {
-		config.HumanOutput = true
+	if err = cmd.run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type cmd struct {
+	stdout io.Writer
+	unit   unit
+	human  bool
+	toJSON bool
+}
+
+type options struct {
+	human  bool
+	bytes  bool
+	kbytes bool
+	mbytes bool
+	gbytes bool
+	tbytes bool
+	json   bool
+}
+
+func command(stdout io.Writer, o options) (*cmd, error) {
+	// validateUnits checks that only one option of -b, -k, -m, -g, -t or -h has been
+	// specified on the command line
+	count := 0
+	if o.bytes {
+		count++
+	}
+	if o.kbytes {
+		count++
+	}
+	if o.mbytes {
+		count++
+	}
+	if o.gbytes {
+		count++
+	}
+	if o.tbytes {
+		count++
+	}
+	if o.human {
+		count++
+	}
+	if count > 1 {
+		return nil, errMultipleUnits
+	}
+
+	c := &cmd{
+		stdout: stdout,
+		toJSON: o.json,
+	}
+
+	if o.human {
+		c.human = true
 	} else {
 		switch {
-		case *inBytes:
-			config.Unit = B
-		case *inKB:
-			config.Unit = KB
-		case *inMB:
-			config.Unit = MB
-		case *inGB:
-			config.Unit = GB
-		case *inTB:
-			config.Unit = TB
+		case o.bytes:
+			c.unit = B
+		case o.mbytes:
+			c.unit = MB
+		case o.gbytes:
+			c.unit = GB
+		case o.tbytes:
+			c.unit = TB
+		default:
+			c.unit = KB
 		}
 	}
 
-	if err := Free(&config); err != nil {
-		log.Fatal(err)
+	return c, nil
+}
+
+// run prints physical memory and swap space information. The fields will be
+// expressed with the specified unit (e.g. KB, MB)
+func (c *cmd) run() error {
+	m, err := meminfo()
+	if err != nil {
+		return err
 	}
+
+	return c.parse(m)
+}
+
+func (c *cmd) parse(m meminfomap) error {
+	mmi, err := getMainMemInfo(m)
+	if err != nil {
+		return err
+	}
+	si, err := getSwapInfo(m)
+	if err != nil {
+		return err
+	}
+	mi := MemInfo{Mem: *mmi, Swap: *si}
+	if c.toJSON {
+		jsonData, err := json.Marshal(mi)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(c.stdout, string(jsonData))
+	} else {
+		fmt.Fprintf(c.stdout, "              total        used        free      shared  buff/cache   available\n")
+		fmt.Fprintf(c.stdout, "%-7s %11v %11v %11v %11v %11v %11v\n",
+			"Mem:",
+			c.formatValueByConfig(mmi.Total),
+			c.formatValueByConfig(mmi.Used),
+			c.formatValueByConfig(mmi.Free),
+			c.formatValueByConfig(mmi.Shared),
+			c.formatValueByConfig(mmi.Buffers+mmi.Cached),
+			c.formatValueByConfig(mmi.Available),
+		)
+		fmt.Fprintf(c.stdout, "%-7s %11v %11v %11v\n",
+			"Swap:",
+			c.formatValueByConfig(si.Total),
+			c.formatValueByConfig(si.Used),
+			c.formatValueByConfig(si.Free),
+		)
+	}
+	return nil
 }
