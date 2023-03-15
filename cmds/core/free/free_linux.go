@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -48,7 +48,7 @@ func meminfoFromBytes(buf []byte) (meminfomap, error) {
 
 // getMainMemInfo prints the physical memory information in the specified units. Only
 // the relevant fields will be used from the input map.
-func getMainMemInfo(m meminfomap, config *FreeConfig) (*mainMemInfo, error) {
+func getMainMemInfo(m meminfomap) (*mainMemInfo, error) {
 	fields := []string{
 		"MemTotal",
 		"MemFree",
@@ -85,7 +85,7 @@ func getMainMemInfo(m meminfomap, config *FreeConfig) (*mainMemInfo, error) {
 
 // getSwapInfo prints the swap space information in the specified units. Only the
 // relevant fields will be used from the input map.
-func getSwapInfo(m meminfomap, config *FreeConfig) (*swapInfo, error) {
+func getSwapInfo(m meminfomap) (*swapInfo, error) {
 	fields := []string{
 		"SwapTotal",
 		"SwapFree",
