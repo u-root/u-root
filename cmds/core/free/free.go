@@ -170,28 +170,20 @@ type options struct {
 	json   bool
 }
 
+func countTrue(b ...bool) int {
+	var cnt int
+	for _, v := range b {
+		if v {
+			cnt++
+		}
+	}
+	return cnt
+}
+
 func command(stdout io.Writer, o options) (*cmd, error) {
 	// validateUnits checks that only one option of -b, -k, -m, -g, -t or -h has been
 	// specified on the command line
-	count := 0
-	if o.bytes {
-		count++
-	}
-	if o.kbytes {
-		count++
-	}
-	if o.mbytes {
-		count++
-	}
-	if o.gbytes {
-		count++
-	}
-	if o.tbytes {
-		count++
-	}
-	if o.human {
-		count++
-	}
+	count := countTrue(o.bytes, o.kbytes, o.mbytes, o.gbytes, o.tbytes, o.human)
 	if count > 1 {
 		return nil, errMultipleUnits
 	}
