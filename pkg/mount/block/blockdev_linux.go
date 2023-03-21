@@ -41,6 +41,8 @@ var (
 		0xba, 0x4b,
 		0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b,
 	})
+
+	ErrListFormat = errors.New("device list needs to be of format vendor1:device1,vendor2:device2")
 )
 
 // BlockDev maps a device name to a BlockStat structure for a given block device
@@ -556,12 +558,59 @@ func (b BlockDevices) FilterPartLabel(label string) BlockDevices {
 	return b.FilterNames(names...)
 }
 
+// FilterAllowPCIString parses a string in the format vendor:device,vendor:device
+// and returns a list of BlockDev objects whose backing pci devices match
+// the vendor:device pairs passed in. All values are treated as hex.
+// E.g. 0x8086:0xABCD,8086:0x1234
+func (b BlockDevices) FilterAllowPCIString(allowlist string) (BlockDevices, error) {
+	pciList, err := parsePCIList(allowlist)
+	if err != nil {
+		return nil, err
+	}
+	return b.FilterAllowPCI(pciList), nil
+}
+
+// FilterAllowPCI returns a list of BlockDev objects whose backing
+// pci devices match the allowlist of PCI devices passed in.
+// FilterAllowPCI discards entries which don't have a matching PCI vendor
+// and device ID as an entry in the allowlist.
+func (b BlockDevices) FilterAllowPCI(allowlist pci.Devices) BlockDevices {
+	type mapKey struct {
+		vendor, device uint16
+	}
+	m := make(map[mapKey]bool)
+
+	for _, v := range allowlist {
+		m[mapKey{v.Vendor, v.Device}] = true
+	}
+	Debug("allow map is %v", m)
+
+	partitions := make(BlockDevices, 0)
+	for _, device := range b {
+		p, err := device.PCIInfo()
+		if err != nil {
+			// In the case of an error, we err on the safe side and choose to block it.
+			// Not all block devices are backed by a pci device, for example SATA drives.
+			Debug("Failed to find PCI info; %v", err)
+			continue
+		}
+		if _, ok := m[mapKey{p.Vendor, p.Device}]; !ok {
+			Debug("Blocking device %v since it doesn't appear in allowlist", device.Name)
+			continue
+		}
+		// Included in allowlist, we're good to go
+		Debug("Allowing device %v, with pci %v, in map", device, p)
+		partitions = append(partitions, device)
+	}
+	return partitions
+}
+
 // FilterBlockPCIString parses a string in the format vendor:device,vendor:device
 // and returns a list of BlockDev objects whose backing pci devices do not match
 // the vendor:device pairs passed in. All values are treated as hex.
 // E.g. 0x8086:0xABCD,8086:0x1234
 func (b BlockDevices) FilterBlockPCIString(blocklist string) (BlockDevices, error) {
-	pciList, err := parsePCIBlockList(blocklist)
+	pciList, err := parsePCIList(blocklist)
 	if err != nil {
 		return nil, err
 	}
@@ -604,27 +653,27 @@ func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
 	return partitions
 }
 
-// parsePCIBlockList parses a string in the format vendor:device,vendor:device
-// and returns a list of PCI devices containing the vendor and device pairs to block.
-func parsePCIBlockList(blockList string) (pci.Devices, error) {
+// parsePCIList parses a string in the format vendor:device,vendor:device
+// and returns a list of PCI devices containing the vendor and device pairs.
+func parsePCIList(parseList string) (pci.Devices, error) {
 	pciList := pci.Devices{}
-	bL := strings.Split(blockList, ",")
+	bL := strings.Split(parseList, ",")
 	for _, b := range bL {
 		p := strings.Split(b, ":")
 		if len(p) != 2 {
-			return nil, fmt.Errorf("BlockList needs to be of format vendor1:device1,vendor2:device2...! got %v", blockList)
+			return nil, fmt.Errorf("Parsing device list %q: %w", parseList, ErrListFormat)
 		}
 		// Check that values are hex and convert them to sysfs formats
 		// This accepts 0xABCD and turns it into 0xabcd
 		// abcd also turns into 0xabcd
 		v, err := strconv.ParseUint(strings.TrimPrefix(p[0], "0x"), 16, 16)
 		if err != nil {
-			return nil, fmt.Errorf("BlockList needs to contain a hex vendor ID, got %v, err %v", p[0], err)
+			return nil, fmt.Errorf("Parsing pci device %q:%w", p[0], err)
 		}
 
 		d, err := strconv.ParseUint(strings.TrimPrefix(p[1], "0x"), 16, 16)
 		if err != nil {
-			return nil, fmt.Errorf("BlockList needs to contain a hex device ID, got %v, err %v", p[1], err)
+			return nil, fmt.Errorf("Parsing pci device %q:%w", p[1], err)
 		}
 
 		pciList = append(pciList, &pci.PCI{Vendor: uint16(v), Device: uint16(d)})
