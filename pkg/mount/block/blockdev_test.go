@@ -5,14 +5,15 @@
 package block
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/pci"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestDebug(t *testing.T) {
@@ -261,18 +262,18 @@ func TestGetMountpointByDevice(t *testing.T) {
 	})
 }
 
-func TestParsePCIBlockList(t *testing.T) {
+func TestParsePCIList(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		blockString string
 		want        pci.Devices
-		errStr      string
+		err         error
 	}{
 		{
 			name:        "one device",
 			blockString: "0x8086:0x1234",
 			want:        pci.Devices{&pci.PCI{Vendor: 0x8086, Device: 0x1234}},
-			errStr:      "",
+			err:         nil,
 		},
 		{
 			name:        "two devices",
@@ -281,7 +282,7 @@ func TestParsePCIBlockList(t *testing.T) {
 				&pci.PCI{Vendor: 0x8086, Device: 0x1234},
 				&pci.PCI{Vendor: 0x1234, Device: 0xabcd},
 			},
-			errStr: "",
+			err: nil,
 		},
 		{
 			name:        "no 0x",
@@ -290,7 +291,7 @@ func TestParsePCIBlockList(t *testing.T) {
 				&pci.PCI{Vendor: 0x8086, Device: 0x1234},
 				&pci.PCI{Vendor: 0x1234, Device: 0xabcd},
 			},
-			errStr: "",
+			err: nil,
 		},
 		{
 			name:        "capitals",
@@ -299,31 +300,31 @@ func TestParsePCIBlockList(t *testing.T) {
 				&pci.PCI{Vendor: 0x8086, Device: 0x1234},
 				&pci.PCI{Vendor: 0x1234, Device: 0xabcd},
 			},
-			errStr: "",
+			err: nil,
 		},
 		{
 			name:        "not hex vendor",
 			blockString: "0xghij:0x1234",
 			want:        nil,
-			errStr:      "BlockList needs to contain a hex vendor ID, got 0xghij, err strconv.ParseUint: parsing \"ghij\": invalid syntax",
+			err:         strconv.ErrSyntax,
 		},
 		{
 			name:        "not hex vendor",
 			blockString: "0x1234:0xghij",
 			want:        nil,
-			errStr:      "BlockList needs to contain a hex device ID, got 0xghij, err strconv.ParseUint: parsing \"ghij\": invalid syntax",
+			err:         strconv.ErrSyntax,
 		},
 		{
 			name:        "bad format",
 			blockString: "0xghij,0x1234",
 			want:        nil,
-			errStr:      "BlockList needs to be of format vendor1:device1,vendor2:device2...! got 0xghij,0x1234",
+			err:         ErrListFormat,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			devices, err := parsePCIBlockList(tt.blockString)
-			if e := testutil.CheckError(err, tt.errStr); e != nil {
-				t.Errorf(`testutil.CheckError(%v, %q) = %v, want nil`, err, tt.errStr, e)
+			devices, err := parsePCIList(tt.blockString)
+			if !errors.Is(err, tt.err) {
+				t.Errorf(`errors.Is(%v, %v) = false, want true`, err, tt.err)
 			}
 			if !reflect.DeepEqual(devices, tt.want) {
 				// Need to do this because stringer does not print device and vendor
