@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/blobs"
@@ -27,8 +28,8 @@ import (
 const (
 	maxWriteSize uint32 = 128
 
-	// IPMI blob ID on BMC
-	smbiosBlobID = "/smbios\x00"
+	// IPMI blob ID on BMC, without the trailing NUL character.
+	smbiosBlobID = "/smbios"
 
 	sysfsPath = "/sys/firmware/dmi/tables"
 )
@@ -113,7 +114,10 @@ func transferSmbiosData() error {
 			return fmt.Errorf("failed to enumerate blob %d: %v", j, err)
 		}
 
-		if id != smbiosBlobID {
+		// An older version of the blobs library returned strings with trailing NULs.
+		// (https://github.com/u-root/u-root/issues/2622)
+		// Support either the old or the fixed (no trailing NUL) behavior.
+		if strings.TrimSuffix(id, "\000") != smbiosBlobID {
 			continue
 		}
 
