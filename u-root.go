@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -36,6 +37,11 @@ func (m *multiFlag) Set(value string) error {
 	*m = append(*m, value)
 	return nil
 }
+
+// errors from the u-root command
+var (
+	ErrEmptyFilesArg = errors.New("Empty argument to -files")
+)
 
 // Flags for u-root builder.
 var (
@@ -146,7 +152,40 @@ func generateLabel(env gbbgolang.Environ) string {
 	return fmt.Sprintf("%s-%s-%s-%s", *build, env.GOOS, env.GOARCH, strings.Join(baseCmds, "_"))
 }
 
+// checkArgs checks for common mistakes that cause confusion.
+//  1. -files as the last argument
+//  2. -files followed by any switch, indicating a shell expansion problem
+//     This is usually caused by Makfiles structured as follows
+//     u-root -files `which ethtool` -files `which bash`
+//     if ethtool is not installed, the expansion yields
+//     u-root -files -files `which bash`
+//     and the rather confusing error message
+//     16:14:51 Skipping /usr/bin/bash because it is not a directory
+//     which, in practice, nobody understands
+func checkArgs(args ...string) error {
+	if len(args) == 0 {
+		return nil
+	}
+
+	if args[len(args)-1] == "-files" {
+		return fmt.Errorf("last argument is -files:%w", ErrEmptyFilesArg)
+	}
+
+	// We know the last arg is not -files; scan the arguments for -files
+	// followed by a switch.
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "-files" && args[i+1][0] == '-' {
+			return fmt.Errorf("-files argument %d is followed by a switch: %w", i, ErrEmptyFilesArg)
+		}
+	}
+
+	return nil
+}
+
 func main() {
+	if err := checkArgs(os.Args...); err != nil {
+		log.Fatal(err)
+	}
 	gbbOpts := &gbbgolang.BuildOpts{}
 	gbbOpts.RegisterFlags(flag.CommandLine)
 
