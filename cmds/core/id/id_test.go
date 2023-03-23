@@ -12,25 +12,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
-var logPrefixLength = len("2009/11/10 23:00:00 ")
-
-func TestBadFFiles(t *testing.T) {
+func TestBadFiles(t *testing.T) {
 	var flags = &flags{}
 
 	d := t.TempDir()
 	n := filepath.Join(d, "nosuchfile")
 	f := filepath.Join(d, "afile")
-	if err := ioutil.WriteFile(f, []byte{}, 0666); err != nil {
+	if err := os.WriteFile(f, []byte{}, 0666); err != nil {
 		t.Fatalf("writing %q: want nil, got %v", f, err)
 	}
 	if err := run(io.Discard, "root", flags, n, f); !errors.Is(err, os.ErrNotExist) {
@@ -41,13 +35,86 @@ func TestBadFFiles(t *testing.T) {
 	}
 }
 
-// Run the command, with the optional args, and return a string
-// for stdout, stderr, and an error.
-func runHelper(c *exec.Cmd) (string, string, error) {
-	var o, e bytes.Buffer
-	c.Stdout, c.Stderr = &o, &e
-	err := c.Run()
-	return o.String(), e.String(), err
+func TestGoodFiles(t *testing.T) {
+	tests := []struct {
+		passwdContent  string
+		groupContent   string
+		userName       string
+		expectedOutput string
+		flags          flags
+	}{
+		{
+			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
+			groupContent:   "root:x:0:",
+			userName:       "root",
+			flags:          flags{},
+			expectedOutput: "uid=0(root) gid=0(root) groups=0(root)\n",
+		},
+		{
+			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
+			groupContent:   "root:x:0:",
+			userName:       "root",
+			flags:          flags{name: true, user: true},
+			expectedOutput: "root\n",
+		},
+		{
+			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
+			groupContent:   "root:x:0:",
+			userName:       "root",
+			flags:          flags{name: true, group: true},
+			expectedOutput: "root\n",
+		},
+		{
+			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
+			groupContent:   "root:x:0:",
+			userName:       "root",
+			flags:          flags{group: true},
+			expectedOutput: "0\n",
+		},
+		{
+			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
+			groupContent:   "root:x:0:\nother:x:1:root",
+			userName:       "root",
+			flags:          flags{groups: true},
+			expectedOutput: "0 1 \n",
+		},
+		{
+			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
+			groupContent:   "root:x:0:",
+			userName:       "root",
+			flags:          flags{user: true},
+			expectedOutput: "0\n",
+		},
+	}
+
+	for _, test := range tests {
+		d := t.TempDir()
+		passwd, err := os.CreateTemp(d, "passwd")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = passwd.WriteString(test.passwdContent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		group, err := os.CreateTemp(d, "group")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = group.WriteString(test.groupContent)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var stdout bytes.Buffer
+		if err := run(&stdout, test.userName, &test.flags, passwd.Name(), group.Name()); err != nil {
+			t.Fatal(err)
+		}
+
+		if got, want := stdout.String(), test.expectedOutput; got != want {
+			t.Errorf("want %q, got %q", want, got)
+		}
+	}
 }
 
 type passwd struct {
@@ -279,10 +346,6 @@ func TestGroups(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
 
 func TestFlags(t *testing.T) {
