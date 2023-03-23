@@ -50,26 +50,28 @@ func run(narg int, args []string) error {
 		return err
 	}
 
+	parser := syntax.NewParser()
+
 	if narg > 0 {
 		if strings.HasSuffix(args[0], "sh") {
-			return runScript(runner, args, args[0])
+			return runScript(runner, parser, args, args[0])
 		}
 
-		return runCmd(runner, strings.NewReader(strings.Join(args, " ")), args[0])
+		return runCmd(runner, parser, strings.NewReader(strings.Join(args, " ")), args[0])
 	}
 
 	if narg == 0 {
 		if term.IsTerminal(int(os.Stdin.Fd())) {
-			return runInteractive(runner, os.Stdout, os.Stderr)
+			return runInteractive(runner, parser, os.Stdout, os.Stderr)
 		}
 
-		return runCmd(runner, os.Stdin, "")
+		return runCmd(runner, parser, os.Stdin, "")
 	}
 
 	return nil
 }
 
-func runScript(runner *interp.Runner, args []string, name string) error {
+func runScript(runner *interp.Runner, parser *syntax.Parser, args []string, name string) error {
 	if len(args) > 1 {
 		return fmt.Errorf("no support for trailing arguments to script: %v", args[1:])
 	}
@@ -80,7 +82,7 @@ func runScript(runner *interp.Runner, args []string, name string) error {
 	}
 	defer f.Close()
 
-	prog, err := syntax.NewParser().Parse(f, name)
+	prog, err := parser.Parse(f, name)
 	if err != nil {
 		return err
 	}
@@ -90,8 +92,8 @@ func runScript(runner *interp.Runner, args []string, name string) error {
 	return runner.Run(context.Background(), prog)
 }
 
-func runCmd(runner *interp.Runner, command io.Reader, name string) error {
-	prog, err := syntax.NewParser().Parse(command, name)
+func runCmd(runner *interp.Runner, parser *syntax.Parser, command io.Reader, name string) error {
+	prog, err := parser.Parse(command, name)
 	if err != nil {
 		return err
 	}
@@ -101,8 +103,7 @@ func runCmd(runner *interp.Runner, command io.Reader, name string) error {
 	return runner.Run(context.Background(), prog)
 }
 
-func runInteractive(runner *interp.Runner, stdout, stderr io.Writer) error {
-	parser := syntax.NewParser()
+func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer) error {
 	input := bubbline.New()
 
 	if err := input.LoadHistory(HISTFILE); err != nil {
@@ -154,7 +155,7 @@ func runInteractive(runner *interp.Runner, stdout, stderr io.Writer) error {
 		// check if we want to execute a shell script
 		fields := strings.Fields(line)
 		if len(fields) > 0 && strings.HasSuffix(fields[0], "sh") {
-			if err := runScript(runner, fields, fields[0]); err != nil {
+			if err := runScript(runner, parser, fields, fields[0]); err != nil {
 				fmt.Fprintf(stderr, "error: %s\n", err.Error())
 			}
 
