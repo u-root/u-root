@@ -6,7 +6,7 @@
 //
 // Synopsis:
 //
-//	smbios_tranfer [-num_retries]
+//	smbios_transfer [-num_retries]
 //
 // Options:
 //
@@ -19,7 +19,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/blobs"
@@ -114,10 +113,7 @@ func transferSmbiosData() error {
 			return fmt.Errorf("failed to enumerate blob %d: %v", j, err)
 		}
 
-		// An older version of the blobs library returned strings with trailing NULs.
-		// (https://github.com/u-root/u-root/issues/2622)
-		// Support either the old or the fixed (no trailing NUL) behavior.
-		if strings.TrimSuffix(id, "\000") != smbiosBlobID {
+		if id != smbiosBlobID {
 			continue
 		}
 
@@ -140,9 +136,9 @@ func main() {
 	for r := 0; r < *retries; r++ {
 		log.Printf("Transferring SMBIOS tables, attempt %d/%d", r+1, *retries)
 		if err := transferSmbiosData(); err != nil {
-			log.Printf("Error tranferring SMBIOS tables over IPMI: %v", err)
+			log.Printf("Error transferring SMBIOS tables over IPMI: %v", err)
 		} else {
-			log.Printf("SMBIOS tables are tranferred.")
+			log.Printf("SMBIOS tables are transferred.")
 			break
 		}
 	}
