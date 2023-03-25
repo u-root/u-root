@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,17 +38,14 @@ func TestBase64(t *testing.T) {
 			out: []byte(`REVTQ1JJUFRJT04KICAgICAgIEJhc2U2NCBlbmNvZGUgb3IgZGVjb2RlIEZJTEUsIG9yIHN0YW5kYXJkIGlucHV0LCB0byBzdGFuZGFyZCBvdXRwdXQuCgogICAgICAgV2l0aCBubyBGSUxFLCBvciB3aGVuIEZJTEUgaXMgLSwgcmVhZCBzdGFuZGFyZCBpbnB1dC4KCiAgICAgICBNYW5kYXRvcnkgYXJndW1lbnRzIHRvIGxvbmcgb3B0aW9ucyBhcmUgbWFuZGF0b3J5IGZvciBzaG9ydCBvcHRpb25zIHRvby4K`),
 		},
 	}
-	d, err := ioutil.TempDir("", "base64")
-	if err != nil {
-		t.Fatalf(`TempDir("", "base64"): %v != nil`, err)
-	}
+	d := t.TempDir()
 	for _, tt := range tests {
 		nin := filepath.Join(d, "in")
-		if err := ioutil.WriteFile(nin, tt.in, 0666); err != nil {
+		if err := os.WriteFile(nin, tt.in, 0666); err != nil {
 			t.Fatalf(`WriteFile(%q, %v, 0666): %v != nil`, nin, tt.in, err)
 		}
 		nout := filepath.Join(d, "out")
-		if err := ioutil.WriteFile(nout, tt.out, 0666); err != nil {
+		if err := os.WriteFile(nout, tt.out, 0666); err != nil {
 			t.Fatalf(`WriteFile(%q, %v, 0666): %v != nil`, nout, tt.out, err)
 		}
 
