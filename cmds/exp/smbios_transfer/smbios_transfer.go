@@ -6,7 +6,7 @@
 //
 // Synopsis:
 //
-//	smbios_tranfer [-num_retries]
+//	smbios_transfer [-num_retries]
 //
 // Options:
 //
@@ -27,8 +27,8 @@ import (
 const (
 	maxWriteSize uint32 = 128
 
-	// IPMI blob ID on BMC
-	smbiosBlobID = "/smbios\x00"
+	// IPMI blob ID on BMC, without the trailing NUL character.
+	smbiosBlobID = "/smbios"
 
 	sysfsPath = "/sys/firmware/dmi/tables"
 )
@@ -136,9 +136,9 @@ func main() {
 	for r := 0; r < *retries; r++ {
 		log.Printf("Transferring SMBIOS tables, attempt %d/%d", r+1, *retries)
 		if err := transferSmbiosData(); err != nil {
-			log.Printf("Error tranferring SMBIOS tables over IPMI: %v", err)
+			log.Printf("Error transferring SMBIOS tables over IPMI: %v", err)
 		} else {
-			log.Printf("SMBIOS tables are tranferred.")
+			log.Printf("SMBIOS tables are transferred.")
 			break
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -356,4 +357,25 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
 
 func TestMain(m *testing.M) {
 	testutil.Run(m, main)
+}
+
+func TestCheckArgs(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		args []string
+		err  error
+	}{
+		{"-files is only arg", []string{"-files"}, ErrEmptyFilesArg},
+		{"-files followed by -files", []string{"-files", "-files"}, ErrEmptyFilesArg},
+		{"-files followed by any other switch", []string{"-files", "-abc"}, ErrEmptyFilesArg},
+		{"no args", []string{}, nil},
+		{"u-root alone", []string{"u-root"}, nil},
+		{"u-root with -files and other args", []string{"u-root", "-files", "/bin/bash", "core"}, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := checkArgs(tt.args...); !errors.Is(err, tt.err) {
+				t.Errorf("%q: got %v, want %v", tt.args, err, tt.err)
+			}
+		})
+	}
 }

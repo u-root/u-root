@@ -31,9 +31,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
+)
+
+const (
+	groupFile  = "/etc/group"
+	passwdFile = "/etc/passwd"
 )
 
 type flags struct {
@@ -57,15 +63,15 @@ func correctFlags(flags ...bool) bool {
 			n++
 		}
 	}
-	return !(n > 1)
+	return n <= 1
 }
 
 // User contains user information, as from /etc/passwd
 type User struct {
+	groups map[int]string
 	name   string
 	uid    int
 	gid    int
-	groups map[int]string
 }
 
 // UID returns the integer UID for a user
@@ -162,17 +168,24 @@ func IDCommand(w io.Writer, flags *flags, u User) {
 			return
 		}
 
-		fmt.Printf("uid=%d(%s) ", u.UID(), u.Name())
-		fmt.Printf("gid=%d(%s) ", u.GID(), u.GIDName())
+		fmt.Fprintf(w, "uid=%d(%s) ", u.UID(), u.Name())
+		fmt.Fprintf(w, "gid=%d(%s) ", u.GID(), u.GIDName())
 	}
 
 	if !flags.groups {
-		fmt.Print("groups=")
+		fmt.Fprintf(w, "groups=")
 	}
 
-	var groupOutput []string
+	// handle Go map ordering
+	var gids []int
+	for gid := range u.Groups() {
+		gids = append(gids, gid)
+	}
+	sort.Ints(gids)
 
-	for gid, name := range u.Groups() {
+	var groupOutput []string
+	for id := range gids {
+		gid, name := id, u.Groups()[id]
 		if !flags.groups {
 			groupOutput = append(groupOutput, fmt.Sprintf("%d(%s)", gid, name))
 		} else {
@@ -196,7 +209,7 @@ func run(w io.Writer, name string, f *flags, passwd, group string) error {
 	if !correctFlags(f.groups, f.group, f.user) {
 		return errOnlyOneChoice
 	}
-	if f.name && !(f.groups || f.group || f.user) {
+	if f.name && (!f.groups && !f.group && !f.user) {
 		return errNotOnlyNames
 	}
 	if len(name) != 0 && f.real {
@@ -222,10 +235,6 @@ func run(w io.Writer, name string, f *flags, passwd, group string) error {
 }
 
 func main() {
-	const (
-		GroupFile  = "/etc/group"
-		PasswdFile = "/etc/passwd"
-	)
 	var flags = &flags{}
 	flag.BoolVar(&flags.group, "g", false, "print only the effective group ID")
 	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
@@ -234,7 +243,7 @@ func main() {
 	flag.BoolVar(&flags.real, "r", false, "print real ID instead of effective ID")
 
 	flag.Parse()
-	if err := run(os.Stdout, flag.Arg(0), flags, PasswdFile, GroupFile); err != nil {
+	if err := run(os.Stdout, flag.Arg(0), flags, passwdFile, groupFile); err != nil {
 		log.Fatalf("%v", err)
 	}
 
