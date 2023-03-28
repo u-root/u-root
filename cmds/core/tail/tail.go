@@ -111,7 +111,7 @@ func lastNLines(buf []byte, n uint) []byte {
 func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint) error {
 	blkSize := getBlockSize(numLines)
 	// go to the end of the file
-	lastPos, err := input.Seek(0, os.SEEK_END)
+	lastPos, err := input.Seek(0, io.SeekEnd)
 	if err != nil {
 		return err
 	}
