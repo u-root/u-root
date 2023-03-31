@@ -458,7 +458,8 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	if *status != "none" && *status != "xfer" && *status != "progress" {
 		usage()
 	}
-	progress := progress.Begin(*status, &bytesWritten)
+	progress := progress.New(stderr, *status, &bytesWritten)
+	progress.Begin()
 
 	// bs = both 'ibs' and 'obs' (IEEE Std 1003.1 - 2013)
 	if bs.IsSet {

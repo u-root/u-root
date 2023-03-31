@@ -11,34 +11,40 @@ package progress
 import (
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-type progressData struct {
+// ProgressData contains information about a progress printer
+type ProgressData struct {
 	mode         string // one of: none, xfer, progress
 	start        time.Time
 	end          time.Time
 	endTimeMutex sync.Mutex
 	variable     *int64 // must be aligned for atomic operations
 	quit         chan struct{}
+	w            io.Writer
 }
 
-// Begin - start a progress routine
-//
-// mode describes in which mode it runs, none, progress or xfer
-// variable holds the amount of bytes written
-func Begin(mode string, variable *int64) (ProgressData *progressData) {
-	p := &progressData{
+// New creates a new progress struct
+func New(w io.Writer, mode string, variable *int64) *ProgressData {
+	return &ProgressData{
 		mode:         mode,
 		start:        time.Now(),
 		endTimeMutex: sync.Mutex{},
 		variable:     variable,
+		w:            w,
 	}
+}
+
+// Begin begins a progress routine
+//
+// mode describes in which mode it runs, none, progress or xfer
+// variable holds the amount of bytes written
+func (p *ProgressData) Begin() {
 	if p.mode == "progress" {
-		p.print(os.Stderr)
+		p.print()
 		// Print progress in a separate goroutine.
 		p.quit = make(chan struct{}, 1)
 		go func() {
@@ -47,7 +53,7 @@ func Begin(mode string, variable *int64) (ProgressData *progressData) {
 			for {
 				select {
 				case <-ticker.C:
-					p.print(os.Stderr)
+					p.print()
 				case <-p.quit:
 					p.endTimeMutex.Lock()
 					p.end = time.Now()
@@ -57,11 +63,10 @@ func Begin(mode string, variable *int64) (ProgressData *progressData) {
 			}
 		}()
 	}
-	return p
 }
 
 // End - Ends the progress and send quit signal to the channel
-func (p *progressData) End() {
+func (p *ProgressData) End() {
 	if p.mode == "progress" {
 		// Properly synchronize goroutine.
 		p.quit <- struct{}{}
@@ -73,16 +78,17 @@ func (p *progressData) End() {
 	}
 	if p.mode == "progress" || p.mode == "xfer" {
 		// Print grand total.
-		p.print(os.Stderr)
-		fmt.Fprint(os.Stderr, "\n")
+		p.print("\n")
 	}
 }
 
+// print prints out progress information and any
+// extra strings needed at the end.
 // With "status=progress", this is called from 3 places:
 // - Once at the beginning to appear responsive
 // - Every 1s afterwards
 // - Once at the end so the final value is accurate
-func (p *progressData) print(out io.Writer) {
+func (p *ProgressData) print(extra ...string) {
 	elapse := time.Since(p.start)
 	n := atomic.LoadInt64(p.variable)
 	d := float64(n)
@@ -90,8 +96,11 @@ func (p *progressData) print(out io.Writer) {
 	const mb = 1000 * 1000
 	// The ANSI escape may be undesirable to some eyes.
 	if p.mode == "progress" {
-		out.Write([]byte("\033[2K\r"))
+		p.w.Write([]byte("\033[2K\r"))
 	}
-	fmt.Fprintf(out, "%d bytes (%.3f MB, %.3f MiB) copied, %.3f s, %.3f MB/s",
+	fmt.Fprintf(p.w, "%d bytes (%.3f MB, %.3f MiB) copied, %.3f s, %.3f MB/s",
 		n, d/mb, d/mib, elapse.Seconds(), float64(d)/elapse.Seconds()/mb)
+	for _, s := range extra {
+		fmt.Fprintf(p.w, s)
+	}
 }
