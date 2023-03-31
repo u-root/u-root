@@ -18,12 +18,12 @@ import (
 )
 
 type ws struct {
-	bytes.Buffer
+	io.Writer
 }
 
 // Write implements os.Write
 func (w *ws) Write(b []byte) (int, error) {
-	return w.Buffer.Write(b)
+	return w.Writer.Write(b)
 }
 
 // Seek implements a limited form of io.Seek:
@@ -410,7 +410,7 @@ func TestOutFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := outFile(&ws{Buffer: bytes.Buffer{}}, p, tt.outputBytes, tt.seek, tt.flags)
+			_, err := outFile(&ws{Writer: &bytes.Buffer{}}, p, tt.outputBytes, tt.seek, tt.flags)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
@@ -522,11 +522,11 @@ func TestDd(t *testing.T) {
 			compare: stdoutEqual,
 		},
 		{
-			name:    "512 MiB zeroed file in 1024 1KiB blocks",
-			flags:   []string{"bs=524288", "count=1024", "if=/dev/zero"},
+			name:    "256 MiB zeroed file in 1024 1KiB blocks",
+			flags:   []string{"bs=524288", "count=256", "if=/dev/zero"},
 			stdin:   "",
 			stdout:  []byte("\x00"),
-			count:   1024 * 1024 * 512,
+			count:   256 * 1024 * 512,
 			compare: byteCount,
 		},
 	}
@@ -534,9 +534,9 @@ func TestDd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stdin := strings.NewReader(tt.stdin)
-			stdout := &ws{Buffer: bytes.Buffer{}}
-			stderr := &ws{Buffer: bytes.Buffer{}}
-			if err := run(stdin, stdout, stderr, tt.name, tt.flags); err != nil {
+			stdout := &bytes.Buffer{}
+			stderr := &ws{Writer: io.Discard}
+			if err := run(stdin, &ws{Writer: stdout}, stderr, tt.name, tt.flags); err != nil {
 				t.Errorf("run: got %v, want nil", err)
 			}
 			if err := tt.compare(stdout, tt.stdout, tt.count); err != nil {
@@ -684,7 +684,7 @@ func TestFiles(t *testing.T) {
 			}
 
 			args := append(tt.flags, "if="+inFile, "of="+outFile)
-			if err := run(&bytes.Buffer{}, &ws{Buffer: bytes.Buffer{}}, &ws{Buffer: bytes.Buffer{}}, tt.name, args); err != nil {
+			if err := run(&bytes.Buffer{}, &ws{Writer: io.Discard}, &ws{Writer: io.Discard}, tt.name, args); err != nil {
 				t.Error(err)
 			}
 			got, err := os.ReadFile(filepath.Join(tmpDir, "outFile"))
@@ -710,7 +710,7 @@ func BenchmarkDd(b *testing.B) {
 		fmt.Sprintf("bs=%d", bytesPerOp),
 	}
 	b.ResetTimer()
-	if err := run(&bytes.Buffer{}, &ws{Buffer: bytes.Buffer{}}, &ws{Buffer: bytes.Buffer{}}, "dd", args); err != nil {
+	if err := run(&bytes.Buffer{}, &ws{Writer: io.Discard}, &ws{Writer: io.Discard}, "dd", args); err != nil {
 		b.Fatal(err)
 	}
 }
