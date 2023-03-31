@@ -51,17 +51,21 @@ import (
 	"github.com/u-root/u-root/pkg/progress"
 )
 
+type command struct {
+	skip    int64
+	seek    int64
+	conv    string
+	count   int64
+	inName  string
+	outName string
+	oFlag   string
+	status  string
+
+	bytesWritten int64 // access atomically, must be global for correct alignedness
+}
+
 var (
 	ibs, obs, bs *unit.Value
-	skip         = flag.Int64("skip", 0, "skip N ibs-sized blocks before reading")
-	seek         = flag.Int64("seek", 0, "seek N obs-sized blocks before writing")
-	conv         = flag.String("conv", "none", "comma separated list of conversions (none|notrunc)")
-	count        = flag.Int64("count", math.MaxInt64, "copy only N input blocks")
-	inName       = flag.String("if", "", "Input file")
-	outName      = flag.String("of", "", "Output file")
-	oFlag        = flag.String("oflag", "none", "comma separated list of out flags (none|sync|dsync)")
-	status       = flag.String("status", "xfer", "display status of transfer (none|xfer|progress)")
-
 	bytesWritten int64 // access atomically, must be global for correct alignedness
 )
 
@@ -98,19 +102,6 @@ type chunkedBuffer struct {
 }
 
 func init() {
-	ddUnits := unit.DefaultUnits
-	ddUnits["c"] = 1
-	ddUnits["w"] = 2
-	ddUnits["b"] = 512
-	delete(ddUnits, "B")
-
-	ibs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
-	obs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
-	bs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
-
-	flag.Var(ibs, "ibs", "Default input block size")
-	flag.Var(obs, "obs", "Default output block size")
-	flag.Var(bs, "bs", "Default input and output block size")
 }
 
 // newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
@@ -330,7 +321,7 @@ func (s *sectionReader) Read(p []byte) (int, error) {
 }
 
 // inFile opens the input file and seeks to the right position.
-func inFile(name string, inputBytes int64, skip int64, count int64) (io.Reader, error) {
+func inFile(stdin io.Reader, name string, inputBytes int64, skip int64, count int64) (io.Reader, error) {
 	maxRead := int64(math.MaxInt64)
 	if count != math.MaxInt64 {
 		maxRead = count * inputBytes
@@ -339,7 +330,7 @@ func inFile(name string, inputBytes int64, skip int64, count int64) (io.Reader, 
 	if name == "" {
 		// os.Stdin is an io.ReaderAt, but you can't actually call
 		// pread(2) on it, so use the copying section reader.
-		return newStreamSectionReader(os.Stdin, inputBytes*skip, maxRead), nil
+		return newStreamSectionReader(stdin, inputBytes*skip, maxRead), nil
 	}
 
 	in, err := os.Open(name)
@@ -350,11 +341,11 @@ func inFile(name string, inputBytes int64, skip int64, count int64) (io.Reader, 
 }
 
 // outFile opens the output file and seeks to the right position.
-func outFile(name string, outputBytes int64, seek int64, flags int) (io.Writer, error) {
+func outFile(stdout io.WriteSeeker, name string, outputBytes int64, seek int64, flags int) (io.Writer, error) {
 	var out io.WriteSeeker
 	var err error
 	if name == "" {
-		out = os.Stdout
+		out = stdout
 	} else {
 		perm := os.O_CREATE | os.O_WRONLY | (flags & allowedFlags)
 		if out, err = os.OpenFile(name, perm, 0o666); err != nil {
@@ -393,14 +384,47 @@ func convertArgs(osArgs []string) []string {
 }
 
 func main() {
+	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args[0], os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, args []string) error {
+	var f = flag.NewFlagSet(name, flag.ExitOnError)
+
+	var (
+		skip    = f.Int64("skip", 0, "skip N ibs-sized blocks before reading")
+		seek    = f.Int64("seek", 0, "seek N obs-sized blocks before writing")
+		conv    = f.String("conv", "none", "comma separated list of conversions (none|notrunc)")
+		count   = f.Int64("count", math.MaxInt64, "copy only N input blocks")
+		inName  = f.String("if", "", "Input file")
+		outName = f.String("of", "", "Output file")
+		oFlag   = f.String("oflag", "none", "comma separated list of out flags (none|sync|dsync)")
+		status  = f.String("status", "xfer", "display status of transfer (none|xfer|progress)")
+	)
+	ddUnits := unit.DefaultUnits
+	ddUnits["c"] = 1
+	ddUnits["w"] = 2
+	ddUnits["b"] = 512
+	delete(ddUnits, "B")
+
+	var (
+		ibs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+		obs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+		bs  = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+	)
+	f.Var(ibs, "ibs", "Default input block size")
+	f.Var(obs, "obs", "Default output block size")
+	f.Var(bs, "bs", "Default input and output block size")
+
 	// rather than, in essence, recreating all the apparatus of flag.xxxx
 	// with the if= bits, including dup checking, conversion, etc. we just
 	// convert the arguments and then run flag.Parse. Gross, but hey, it
 	// works.
-	os.Args = convertArgs(os.Args)
-	flag.Parse()
+	args = convertArgs(args)
+	f.Parse(args)
 
-	if len(flag.Args()) > 0 {
+	if len(f.Args()) > 0 {
 		usage()
 	}
 
@@ -442,17 +466,18 @@ func main() {
 		obs = bs
 	}
 
-	in, err := inFile(*inName, ibs.Value, *skip, *count)
+	in, err := inFile(stdin, *inName, ibs.Value, *skip, *count)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	out, err := outFile(*outName, obs.Value, *seek, flags)
+	out, err := outFile(stdout, *outName, obs.Value, *seek, flags)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, flags); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	progress.End()
+	return nil
 }

@@ -12,11 +12,31 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
+
+type ws struct {
+	bytes.Buffer
+}
+
+// Write implements os.Write
+func (w *ws) Write(b []byte) (int, error) {
+	return w.Buffer.Write(b)
+}
+
+// Seek implements a limited form of io.Seek:
+// whence is ignored. That is ok, because
+// all the tests start from the start of the file.
+func (w *ws) Seek(offset int64, _ int) (int64, error) {
+	for i := int64(0); i < offset; i++ {
+		if _, err := w.Write([]byte{1}[:]); err != nil {
+			return -1, err
+		}
+	}
+	return offset, nil
+}
 
 func TestNewChunkedBuffer(t *testing.T) {
 	tests := []struct {
@@ -313,7 +333,7 @@ func TestInFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := inFile(p, tt.outputBytes, tt.seek, tt.count)
+			_, err := inFile(&bytes.Buffer{}, p, tt.outputBytes, tt.seek, tt.count)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
@@ -390,7 +410,7 @@ func TestOutFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := outFile(p, tt.outputBytes, tt.seek, tt.flags)
+			_, err := outFile(&ws{Buffer: bytes.Buffer{}}, p, tt.outputBytes, tt.seek, tt.flags)
 			if err != nil && !tt.wantErr {
 				t.Errorf("outFile failed with %v", err)
 			}
@@ -513,21 +533,14 @@ func TestDd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := testutil.Command(t, tt.flags...)
-			cmd.Stdin = strings.NewReader(tt.stdin)
-			out, err := cmd.StdoutPipe()
-			if err != nil {
-				t.Fatal(err)
+			stdin := strings.NewReader(tt.stdin)
+			stdout := &ws{Buffer: bytes.Buffer{}}
+			stderr := &ws{Buffer: bytes.Buffer{}}
+			if err := run(stdin, stdout, stderr, tt.name, tt.flags); err != nil {
+				t.Errorf("run: got %v, want nil", err)
 			}
-			if err := cmd.Start(); err != nil {
-				t.Error(err)
-			}
-			err = tt.compare(out, tt.stdout, tt.count)
-			if err != nil {
+			if err := tt.compare(stdout, tt.stdout, tt.count); err != nil {
 				t.Errorf("Test compare function returned: %v", err)
-			}
-			if err := cmd.Wait(); err != nil {
-				t.Errorf("Test %v exited with error: %v", tt.flags, err)
 			}
 		})
 	}
@@ -641,6 +654,7 @@ func TestFiles(t *testing.T) {
 			inFile:   []byte("x: defaults"),
 			expected: []byte("x: defaults"),
 		},
+		// This test only works on Linux.
 		{
 			// Fully testing the file is synchronous would require something more.
 			name:     "dsync",
@@ -650,7 +664,13 @@ func TestFiles(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	// This is yucky. But it's simple.
+	lastTest := len(tests)
+	if runtime.GOOS != "linux" {
+		lastTest--
+	}
+
+	for _, tt := range tests[:lastTest] {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write in and out file to temporary dir.
 			tmpDir := t.TempDir()
@@ -664,7 +684,7 @@ func TestFiles(t *testing.T) {
 			}
 
 			args := append(tt.flags, "if="+inFile, "of="+outFile)
-			if err := testutil.Command(t, args...).Run(); err != nil {
+			if err := run(&bytes.Buffer{}, &ws{Buffer: bytes.Buffer{}}, &ws{Buffer: bytes.Buffer{}}, tt.name, args); err != nil {
 				t.Error(err)
 			}
 			got, err := os.ReadFile(filepath.Join(tmpDir, "outFile"))
@@ -690,11 +710,7 @@ func BenchmarkDd(b *testing.B) {
 		fmt.Sprintf("bs=%d", bytesPerOp),
 	}
 	b.ResetTimer()
-	if err := testutil.Command(b, args...).Run(); err != nil {
+	if err := run(&bytes.Buffer{}, &ws{Buffer: bytes.Buffer{}}, &ws{Buffer: bytes.Buffer{}}, "dd", args); err != nil {
 		b.Fatal(err)
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
