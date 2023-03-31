@@ -5,6 +5,7 @@
 package progress
 
 import (
+	"bytes"
 	"testing"
 	"time"
 )
@@ -33,12 +34,9 @@ func TestProgressBegin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			someVariable := int64(1)
-			p := Begin(tt.mode, &someVariable)
-
-			if p == nil {
-				t.Errorf(`Begin(%q, %v) = %v, want not nil`, tt.mode, &someVariable, p)
-			}
-
+			b := &bytes.Buffer{}
+			p := New(b, tt.mode, &someVariable)
+			p.Begin()
 			time.Sleep(tt.wait * time.Second)
 
 			if tt.sendQuit {
@@ -74,12 +72,9 @@ func TestProgressEnd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			someVariable := int64(1)
-			p := Begin(tt.mode, &someVariable)
-
-			if p == nil {
-				t.Fatal("Progress Structure is nil")
-			}
-
+			b := &bytes.Buffer{}
+			p := New(b, tt.mode, &someVariable)
+			p.Begin()
 			time.Sleep(tt.wait * time.Second)
 
 			p.End()
