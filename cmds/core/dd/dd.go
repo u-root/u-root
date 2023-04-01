@@ -51,24 +51,6 @@ import (
 	"github.com/u-root/u-root/pkg/progress"
 )
 
-type command struct {
-	skip    int64
-	seek    int64
-	conv    string
-	count   int64
-	inName  string
-	outName string
-	oFlag   string
-	status  string
-
-	bytesWritten int64 // access atomically, must be global for correct alignedness
-}
-
-var (
-	ibs, obs, bs *unit.Value
-	bytesWritten int64 // access atomically, must be global for correct alignedness
-)
-
 type bitClearAndSet struct {
 	clear int
 	set   int
@@ -99,9 +81,6 @@ type chunkedBuffer struct {
 	length   int64
 	data     []byte
 	flags    int
-}
-
-func init() {
 }
 
 // newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
@@ -190,7 +169,7 @@ func (bp bufferPool) Destroy() {
 	close(bp.c)
 }
 
-func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, flags int) error {
+func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, bytesWritten *int64, flags int) error {
 	if inBufSize == 0 {
 		return fmt.Errorf("inBufSize is not allowed to be zero")
 	}
@@ -249,7 +228,7 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 			writeErr = fmt.Errorf("output error: %v", err)
 			break
 		} else {
-			atomic.AddInt64(&bytesWritten, n)
+			atomic.AddInt64(bytesWritten, n)
 		}
 		pool.Put(buf)
 	}
@@ -458,6 +437,8 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	if *status != "none" && *status != "xfer" && *status != "progress" {
 		usage()
 	}
+
+	var bytesWritten int64
 	progress := progress.New(stderr, *status, &bytesWritten)
 	progress.Begin()
 
@@ -475,7 +456,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	if err != nil {
 		return err
 	}
-	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, flags); err != nil {
+	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, &bytesWritten, flags); err != nil {
 		return err
 	}
 
