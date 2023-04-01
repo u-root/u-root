@@ -196,7 +196,8 @@ func TestParallelChunkedCopy(t *testing.T) {
 			// Now we need a readbuffer
 			readBuf := bytes.NewReader(tt.inputBuffer)
 
-			err := parallelChunkedCopy(readBuf, writeBuf, int64(len(tt.inputBuffer)), 8, 0)
+			var bytesWritten int64
+			err := parallelChunkedCopy(readBuf, writeBuf, int64(len(tt.inputBuffer)), 8, &bytesWritten, 0)
 
 			if err != nil && !tt.wantError {
 				t.Errorf("parallelChunkedCopy failed with %v", err)
