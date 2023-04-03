@@ -12,7 +12,7 @@ import (
 	"github.com/klauspost/pgzip"
 )
 
-func TestOptions_ParseArgs(t *testing.T) {
+func TestOptionsParseArgs(t *testing.T) {
 	type fields struct {
 		Blocksize  int
 		Level      int
@@ -63,7 +63,7 @@ func TestOptions_ParseArgs(t *testing.T) {
 	}
 }
 
-func TestOptions_validate(t *testing.T) {
+func TestOptionsvalidate(t *testing.T) {
 	type fields struct {
 		Blocksize  int
 		Level      int
@@ -120,7 +120,7 @@ func TestOptions_validate(t *testing.T) {
 	}
 }
 
-func Test_parseLevels(t *testing.T) {
+func TestparseLevels(t *testing.T) {
 	type args struct {
 		levels [10]bool
 	}
