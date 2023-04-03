@@ -15,6 +15,7 @@ func Test_file_outputPath(t *testing.T) {
 		Path    string
 		Options *Options
 	}
+	tmpdir := t.TempDir()
 	tests := []struct {
 		name   string
 		fields fields
@@ -32,13 +33,13 @@ func Test_file_outputPath(t *testing.T) {
 		},
 		{
 			name:   "Compress",
-			fields: fields{Path: "/tmp/test", Options: &Options{Suffix: ".gz"}},
-			want:   "/tmp/test.gz",
+			fields: fields{Path: filepath.Join(tmpdir, "test"), Options: &Options{Suffix: ".gz"}},
+			want:   filepath.Join(tmpdir, "test.gz"),
 		},
 		{
 			name:   "Decompress",
-			fields: fields{Path: "/tmp/test.gz", Options: &Options{Decompress: true, Suffix: ".gz"}},
-			want:   "/tmp/test",
+			fields: fields{Path: filepath.Join(tmpdir, "test.gz"), Options: &Options{Decompress: true, Suffix: ".gz"}},
+			want:   filepath.Join(tmpdir, "test"),
 		},
 	}
 	for _, tt := range tests {
@@ -147,6 +148,7 @@ func TestFile_CheckOutputStdout(t *testing.T) {
 		Path    string
 		Options *Options
 	}
+	tmpdir := t.TempDir()
 	tests := []struct {
 		name    string
 		fields  fields
@@ -171,7 +173,7 @@ func TestFile_CheckOutputStdout(t *testing.T) {
 		{
 			name: "Stdout compress redirect to file",
 			fields: fields{
-				Path:    "/tmp/test",
+				Path:    filepath.Join(tmpdir, "test"),
 				Options: &Options{Stdout: true, Decompress: false, Force: false},
 			},
 			wantErr: false,
