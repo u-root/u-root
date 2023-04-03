@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func Test_file_outputPath(t *testing.T) {
+func TestFileoutputPath(t *testing.T) {
 	type fields struct {
 		Path    string
 		Options *Options
@@ -55,7 +55,7 @@ func Test_file_outputPath(t *testing.T) {
 	}
 }
 
-func TestFile_CheckPath(t *testing.T) {
+func TestFileCheckPath(t *testing.T) {
 	type fields struct {
 		Path    string
 		Options *Options
@@ -110,7 +110,7 @@ func TestFile_CheckPath(t *testing.T) {
 	}
 }
 
-func TestFile_CheckOutputPath(t *testing.T) {
+func TestFileCheckOutputPath(t *testing.T) {
 	type fields struct {
 		Path    string
 		Options *Options
@@ -143,7 +143,7 @@ func TestFile_CheckOutputPath(t *testing.T) {
 	}
 }
 
-func TestFile_CheckOutputStdout(t *testing.T) {
+func TestFileCheckOutputStdout(t *testing.T) {
 	type fields struct {
 		Path    string
 		Options *Options
@@ -205,7 +205,7 @@ func TestFile_CheckOutputStdout(t *testing.T) {
 	}
 }
 
-func TestFile_Cleanup(t *testing.T) {
+func TestFileCleanup(t *testing.T) {
 	type fields struct {
 		Path    string
 		Options *Options
@@ -277,7 +277,7 @@ func TestFile_Cleanup(t *testing.T) {
 	}
 }
 
-func TestFile_Process(t *testing.T) {
+func TestFileProcess(t *testing.T) {
 	tempDir := t.TempDir()
 	path, err := os.CreateTemp(tempDir, "process-test")
 	if err != nil {

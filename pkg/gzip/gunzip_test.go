@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func Test_Decompress(t *testing.T) {
+func TestDecompress(t *testing.T) {
 	type args struct {
 		r         io.Reader
 		blocksize int
