@@ -148,6 +148,8 @@ var templates = map[string][]string{
 	"plan9": {
 		"github.com/u-root/u-root/cmds/core/*",
 	},
+	// For a command to be uncommented,
+	// tinygo test should work on linux and darwin.
 	"tinygo": {
 		"github.com/u-root/u-root/cmds/core/backoff",
 		"github.com/u-root/u-root/cmds/core/base64",
@@ -155,12 +157,12 @@ var templates = map[string][]string{
 		////"github.com/u-root/u-root/cmds/core/bind",
 		//"github.com/u-root/u-root/cmds/core/blkid",
 		"github.com/u-root/u-root/cmds/core/cat",
-		//"github.com/u-root/u-root/cmds/core/chmod",
-		//"github.com/u-root/u-root/cmds/core/chroot",
+		"github.com/u-root/u-root/cmds/core/chmod",
+		//"github.com/u-root/u-root/cmds/core/chroot", credentials problem
 		"github.com/u-root/u-root/cmds/core/cmp",
 		"github.com/u-root/u-root/cmds/core/comm",
 		"github.com/u-root/u-root/cmds/core/cp",
-		//////"github.com/u-root/u-root/cmds/core/cpio",
+		//////"github.com/u-root/u-root/cmds/core/cpio", build constraints problem
 		"github.com/u-root/u-root/cmds/core/date",
 		"github.com/u-root/u-root/cmds/core/dd",
 		//////"github.com/u-root/u-root/cmds/core/df",
@@ -175,7 +177,7 @@ var templates = map[string][]string{
 		//"github.com/u-root/u-root/cmds/core/fusermount",
 		//////"github.com/u-root/u-root/cmds/core/gosh",
 		//"github.com/u-root/u-root/cmds/core/gpgv",
-		//"github.com/u-root/u-root/cmds/core/gpt",
+		"github.com/u-root/u-root/cmds/core/gpt",
 		"github.com/u-root/u-root/cmds/core/grep",
 		//"github.com/u-root/u-root/cmds/core/gzip",
 		"github.com/u-root/u-root/cmds/core/hexdump",
