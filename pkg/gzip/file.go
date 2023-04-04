@@ -39,6 +39,7 @@ func (f *File) CheckPath() error {
 		return nil
 	}
 
+	// Note: on Darwin, this permission test is not that reliable.
 	_, err := os.Stat(f.Path)
 	if os.IsNotExist(err) {
 		return err

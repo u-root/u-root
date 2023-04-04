@@ -5,6 +5,7 @@
 package gzip
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -311,4 +312,52 @@ func TestFileProcess(t *testing.T) {
 	if err := f.Process(); err != nil {
 		t.Errorf("File.Process() decompression error = %v", err)
 	}
+}
+
+func TestCheckPath(t *testing.T) {
+	d := t.TempDir()
+
+	f := &File{
+		Path: "",
+		Options: &Options{
+			Decompress: false,
+			Blocksize:  128,
+			Level:      -1,
+			Processes:  1,
+			Suffix:     ".gz",
+			Stdin:      true,
+		},
+	}
+
+	if err := f.CheckPath(); err != nil {
+		t.Errorf("f.Checkpath() with Force true: got %v, want nil", err)
+	}
+
+	n := filepath.Join(d, "x")
+	f.Options.Stdin = false
+	if err := f.CheckPath(); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("f.Checkpath() with Force true: got %v, want %v", err, os.ErrNotExist)
+	}
+
+	tf, err := os.OpenFile(n, os.O_CREATE, 0)
+	if err != nil {
+		t.Fatalf("create %q with mode 0: got %v, want nil", n, err)
+	}
+	tf.Close()
+
+	f.Path = n
+	f.Options.Force = true
+	if err := f.CheckPath(); err != nil {
+		t.Errorf("f.Checkpath() with Force true: got %v, want nil", err)
+	}
+	f.Options.Force = false
+
+	if err := f.CheckPath(); !errors.Is(err, os.ErrPermission) {
+		t.Logf("f.Checkpath(): got %v, want %v", err, os.ErrPermission)
+	}
+
+	if err := f.CheckOutputPath(); err != nil {
+		t.Logf("f.CheckOutputPath(): got %v, want nil", err)
+	}
+
 }
