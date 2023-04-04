@@ -120,7 +120,7 @@ func TestOptionsvalidate(t *testing.T) {
 	}
 }
 
-func TestparseLevels(t *testing.T) {
+func TestParseLevels(t *testing.T) {
 	type args struct {
 		levels [10]bool
 	}
