@@ -20,7 +20,6 @@ func TestFileoutputPath(t *testing.T) {
 		name   string
 		fields fields
 		want   string
-		err    error
 	}{
 		{
 			name:   "Stdout",

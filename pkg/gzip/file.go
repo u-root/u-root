@@ -41,19 +41,19 @@ func (f *File) CheckPath() error {
 
 	_, err := os.Stat(f.Path)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("skipping, %s does not exist", f.Path)
+		return err
 	} else if os.IsPermission(err) {
-		return fmt.Errorf("skipping, %s permission denied", f.Path)
+		return err
 	}
 
 	if !f.Options.Force {
 		if f.Options.Decompress {
 			if !strings.HasSuffix(f.Path, f.Options.Suffix) {
-				return fmt.Errorf("skipping, %s does not have %s suffix", f.Path, f.Options.Suffix)
+				return fmt.Errorf("%q does not have %q suffix", f.Path, f.Options.Suffix)
 			}
 		} else {
 			if strings.HasSuffix(f.Path, f.Options.Suffix) {
-				return fmt.Errorf("skipping, %s already has %s suffix", f.Path, f.Options.Suffix)
+				return fmt.Errorf("%q already has %q suffix", f.Path, f.Options.Suffix)
 			}
 		}
 	}
@@ -66,9 +66,9 @@ func (f *File) CheckPath() error {
 func (f *File) CheckOutputPath() error {
 	_, err := os.Stat(f.outputPath())
 	if !os.IsNotExist(err) && !f.Options.Stdout && !f.Options.Test && !f.Options.Force {
-		return fmt.Errorf("skipping, %s already exist", f.outputPath())
+		return err
 	} else if os.IsPermission(err) {
-		return fmt.Errorf("skipping, %s permission denied", f.outputPath())
+		return err
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (f *File) CheckOutputStdout() error {
 	if f.Options.Stdout {
 		stat, _ := os.Stdout.Stat()
 		if !f.Options.Decompress && !f.Options.Force && (stat.Mode()&os.ModeDevice) != 0 {
-			return fmt.Errorf("fatal, trying to write compressed data to a terminal/device (use -f to force)")
+			return fmt.Errorf("can not write compressed data to a terminal/device (use -f to force)")
 		}
 	}
 	return nil
