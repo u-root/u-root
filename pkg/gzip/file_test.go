@@ -20,6 +20,7 @@ func TestFileoutputPath(t *testing.T) {
 		name   string
 		fields fields
 		want   string
+		err    error
 	}{
 		{
 			name:   "Stdout",
@@ -41,6 +42,11 @@ func TestFileoutputPath(t *testing.T) {
 			fields: fields{Path: filepath.Join(tmpdir, "test.gz"), Options: &Options{Decompress: true, Suffix: ".gz"}},
 			want:   filepath.Join(tmpdir, "test"),
 		},
+		{
+			name:   "Decompress bad basename",
+			fields: fields{Path: ".gz", Options: &Options{Decompress: true, Suffix: ".gz"}},
+			want:   "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,7 +54,8 @@ func TestFileoutputPath(t *testing.T) {
 				Path:    tt.fields.Path,
 				Options: tt.fields.Options,
 			}
-			if got := f.outputPath(); got != tt.want {
+			got := f.outputPath()
+			if got != tt.want {
 				t.Errorf("file.outputPath() = %v, want %v", got, tt.want)
 			}
 		})

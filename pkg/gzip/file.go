@@ -25,7 +25,7 @@ func (f *File) outputPath() string {
 	if f.Options.Stdout || f.Options.Test {
 		return f.Path
 	} else if f.Options.Decompress {
-		return f.Path[:len(f.Path)-len(f.Options.Suffix)]
+		return strings.TrimSuffix(f.Path, f.Options.Suffix)
 	}
 	return f.Path + f.Options.Suffix
 }
