@@ -7,7 +7,6 @@ package uzip
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -65,7 +64,7 @@ func TestFromZip(t *testing.T) {
 
 	var x []byte
 
-	x, err = ioutil.ReadFile(f1)
+	x, err = os.ReadFile(f1)
 	if err != nil {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f1, err)
 	}
@@ -73,7 +72,7 @@ func TestFromZip(t *testing.T) {
 		t.Logf("\nGot:\t %v\nWant:\t %v", x[:30], f1Expected[:30])
 		t.Errorf("file %q and file %q are not equal", f1, "testdata/testFolder/file1")
 	}
-	x, err = ioutil.ReadFile(f2)
+	x, err = os.ReadFile(f2)
 	if err != nil {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f2, err)
 	}
@@ -82,7 +81,7 @@ func TestFromZip(t *testing.T) {
 		t.Errorf("file %q and file %q are not equal", f2, "testdata/testFolder/file2")
 	}
 
-	x, err = ioutil.ReadFile(f3)
+	x, err = os.ReadFile(f3)
 	if err != nil {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f3, err)
 	}
@@ -91,7 +90,7 @@ func TestFromZip(t *testing.T) {
 		t.Errorf("file %q and file %q are not equal", f3, "testdata/testFolder/file3")
 	}
 
-	x, err = ioutil.ReadFile(f4)
+	x, err = os.ReadFile(f4)
 	if err != nil {
 		t.Errorf("ioutil.ReadFile(%q) = %q, not nil", f4, err)
 	}
@@ -102,7 +101,7 @@ func TestFromZip(t *testing.T) {
 }
 
 func TestFromZipNoValidFile(t *testing.T) {
-	f, err := ioutil.TempFile("", "testfile-")
+	f, err := os.CreateTemp("", "testfile-")
 	if err != nil {
 		t.Errorf(`ioutil.TempFile("", "testfile-") = %q, not nil`, err)
 	}
@@ -131,7 +130,7 @@ func TestAppendZipNoDir1(t *testing.T) {
 }
 
 func TestAppendZipNoDir2(t *testing.T) {
-	f, err := ioutil.TempFile("", "testfile")
+	f, err := os.CreateTemp("", "testfile")
 	if err != nil {
 		t.Errorf(`ioutil.TempFile("", "testfile") = _, %q, not _, nil`, err)
 	}
@@ -157,7 +156,7 @@ func TestToZip(t *testing.T) {
 }
 
 func TestToZipInvalidDir(t *testing.T) {
-	f, err := ioutil.TempFile("", "testfile-")
+	f, err := os.CreateTemp("", "testfile-")
 	if err != nil {
 		t.Errorf(`ioutil.TempFile("", "testfile-") = %q, not nil`, err)
 	}

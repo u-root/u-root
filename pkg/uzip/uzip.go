@@ -65,7 +65,7 @@ func AppendZip(dir, dest, comment string) (reterr error) {
 	}()
 
 	// Go to the end of the file because we are appending.
-	end, err := archive.Seek(0, os.SEEK_END)
+	end, err := archive.Seek(0, io.SeekEnd)
 	if err != nil {
 		return err
 	}
