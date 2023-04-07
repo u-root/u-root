@@ -6,53 +6,128 @@ package main
 
 import (
 	"bytes"
+	"io"
+	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 // GrepTest is a table-driven which spawns grep with a variety of options and inputs.
-// We need to look at any output data, as well as exit status for things like the -q switch.
-func TestGrep(t *testing.T) {
-	tab := []struct {
+// We need to look at any output data, as well as exit status (errQuite) for things like the -q switch.
+func TestStdinGrep(t *testing.T) {
+	tests := []struct {
 		input  string
 		output string
-		status int
+		err    error
+		p      params
 		args   []string
 	}{
 		// BEWARE: the IO package seems to want this to be newline terminated.
 		// If you just use hix with no newline the test will fail. Yuck.
-		{"hix\n", "hix\n", 0, []string{"."}},
-		{"hix\n", "", 0, []string{"-q", "."}},
-		{"hix\n", "hix\n", 0, []string{"-i", "hix"}},
-		{"hix\n", "", 0, []string{"-i", "hox"}},
-		{"HiX\n", "HiX\n", 0, []string{"-i", "hix"}},
-		{"hix\n", ":0:hix\n", 0, []string{"-n", "hix"}},
-		{"hix\n", "hix\n", 0, []string{"-e", "hix"}},
-		{"hix\n", "1\n", 0, []string{"-c", "hix"}},
+		{
+			input:  "hix\n",
+			output: "hix\n",
+			err:    nil,
+			args:   []string{"."},
+		},
+		{
+			input:  "hix\n",
+			output: "",
+			err:    nil,
+			p:      params{quiet: true},
+			args:   []string{"."},
+		},
+		{
+			input:  "hix\n",
+			output: "hix\n",
+			err:    nil,
+			p:      params{caseInsensitive: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix\n",
+			output: "",
+			err:    nil,
+			p:      params{caseInsensitive: true},
+			args:   []string{"hox"},
+		},
+		{
+			input:  "HiX\n",
+			output: "HiX\n",
+			err:    nil,
+			p:      params{caseInsensitive: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix\n",
+			output: ":0:hix\n",
+			err:    nil,
+			p:      params{number: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix\n",
+			output: "hix\n",
+			err:    nil,
+			p:      params{expr: "hix"},
+		},
+		{
+			input:  "hix\n",
+			output: "1\n",
+			err:    nil,
+			p:      params{count: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix",
+			output: "",
+			err:    errQuite,
+			p:      params{quiet: true},
+			args:   []string{"hello"},
+		},
 		// These tests don't make a lot of sense the way we're running it, but
 		// hopefully it'll make codecov shut up.
-		{"hix\n", "hix\n", 0, []string{"-h", "hix"}},
-		{"hix\n", "hix\n", 0, []string{"-r", "hix"}},
-		{"hix\nfoo\n", "foo\n", 0, []string{"-v", "hix"}},
-		{"hix\n", "\n", 0, []string{"-l", "hix"}}, // no filename, so it just prints a newline
+		{
+			input:  "hix\n",
+			output: "hix\n",
+			err:    nil,
+			p:      params{headers: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix\n",
+			output: "hix\n",
+			err:    nil,
+			p:      params{recursive: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix\nfoo\n",
+			output: "foo\n",
+			err:    nil,
+			p:      params{invert: true},
+			args:   []string{"hix"},
+		},
+		{
+			input:  "hix\n",
+			output: "\n",
+			err:    nil,
+			p:      params{noShowMatch: true},
+			args:   []string{"hix"},
+		}, // no filename, so it just prints a newline
 	}
 
-	for _, v := range tab {
-		c := testutil.Command(t, v.args...)
-		c.Stdin = bytes.NewReader([]byte(v.input))
-		o, err := c.CombinedOutput()
-		if err := testutil.IsExitCode(err, v.status); err != nil {
-			t.Error(err)
-			continue
+	for _, test := range tests {
+		var stdout bytes.Buffer
+		rc := io.NopCloser(strings.NewReader(test.input))
+		cmd := command(rc, &stdout, nil, test.p, test.args)
+		err := cmd.run()
+		if err != test.err {
+			t.Errorf("got %v, want %v", err, test.err)
 		}
-		if string(o) != v.output {
-			t.Errorf("grep %v != %v: want '%v', got '%v'", v.args, v.input, v.output, string(o))
-			continue
+
+		res := stdout.String()
+		if res != test.output {
+			t.Errorf("got %v, want %v", res, test.output)
 		}
 	}
-}
-
-func TestMain(m *testing.M) {
-	testutil.Run(m, main)
 }
