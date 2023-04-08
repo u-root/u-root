@@ -47,6 +47,7 @@ func hexdump(filenames []string, reader io.Reader, writer io.Writer) error {
 	if _, err := io.Copy(w, r); err != nil {
 		return err
 	}
+
 	return nil
 }
 

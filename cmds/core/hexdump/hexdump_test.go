@@ -9,18 +9,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestHexdump(t *testing.T) {
+	const testString = "abcdefghijklmnopqrstuvwxyz"
 	// Creating file and write content into it for testing purposes
 	d := t.TempDir()
-	f, err := os.Create(filepath.Join(d, "testfile"))
-	if err != nil {
-		t.Errorf("failed to create tmp file: %v", err)
-	}
-	if _, err = f.WriteString("abcdefghijklmnopqrstuvwxyz"); err != nil {
-		t.Errorf("failed to write string into tmp file: %v", err)
+	n := filepath.Join(d, "testfile")
+	if err := os.WriteFile(n, []byte(testString), 0644); err != nil {
+		t.Fatal(err)
 	}
 
 	for _, tt := range []struct {
@@ -33,7 +32,7 @@ func TestHexdump(t *testing.T) {
 		{
 			name:      "hexdump from Stdin",
 			filenames: []string{},
-			readInput: "abcdefghijklmnopqrstuvwxyz",
+			readInput: testString,
 			want: `00000000  61 62 63 64 65 66 67 68  69 6a 6b 6c 6d 6e 6f 70  |abcdefghijklmnop|
 00000010  71 72 73 74 75 76 77 78  79 7a                    |qrstuvwxyz|
 `,
@@ -65,13 +64,21 @@ func TestHexdump(t *testing.T) {
 			var writeBuf = &bytes.Buffer{}
 			readBuf.WriteString(tt.readInput)
 			if got := hexdump(tt.filenames, readBuf, writeBuf); got != nil {
-				if got.Error() != tt.wantErr.Error() {
+				// Different Go compilers deliver
+				// different errors: either syscall.ENOENT
+				// or os.ErrNotExist.
+				// Once that is fixed, we can use errors.Is
+				if tt.wantErr == nil {
+					t.Errorf("hexdump() = '%v', want: nil", got)
+					return
+				}
+				if !strings.HasPrefix(got.Error(), tt.wantErr.Error()[:10]) {
 					t.Errorf("hexdump() = '%v', want: '%v'", got, tt.wantErr)
+					return
 				}
-			} else {
-				if writeBuf.String() != tt.want {
-					t.Errorf("Console output: '%s', want: '%s'", writeBuf.String(), tt.want)
-				}
+			}
+			if writeBuf.String() != tt.want {
+				t.Errorf("Console output: '%s', want: '%s'", writeBuf.String(), tt.want)
 			}
 		})
 	}
