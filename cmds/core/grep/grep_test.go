@@ -6,7 +6,9 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -123,6 +125,60 @@ func TestStdinGrep(t *testing.T) {
 		err := cmd.run()
 		if err != test.err {
 			t.Errorf("got %v, want %v", err, test.err)
+		}
+
+		res := stdout.String()
+		if res != test.output {
+			t.Errorf("got %v, want %v", res, test.output)
+		}
+	}
+}
+
+func TestFilesGrep(t *testing.T) {
+	tmpDir := t.TempDir()
+	f1, err := os.CreateTemp(tmpDir, "f1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2, err := os.CreateTemp(tmpDir, "f2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f1.WriteString("hix\nnix\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f2.WriteString("hix\nhello\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.Chdir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		output string
+		err    error
+		p      params
+		args   []string
+	}{
+		{
+			output: fmt.Sprintf("%s:hello\n", f2.Name()),
+			err:    nil,
+			args:   []string{"hello", f1.Name(), f2.Name()},
+		},
+	}
+
+	for _, test := range tests {
+		var stdout bytes.Buffer
+		cmd := command(nil, &stdout, nil, test.p, test.args)
+		err := cmd.run()
+		if err != nil {
+			t.Errorf("got %v, want nil", err)
 		}
 
 		res := stdout.String()
