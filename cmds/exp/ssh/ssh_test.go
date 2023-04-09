@@ -10,7 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	guser "os/user"
@@ -58,7 +57,7 @@ func TestGetKeyFile(t *testing.T) {
 	confPath := filepath.Join(dir, "sshconfig")
 	conf := []byte(`Host foo
 	IdentityFile bar_key`)
-	if err := ioutil.WriteFile(confPath, conf, 0600); err != nil {
+	if err := os.WriteFile(confPath, conf, 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := loadConfig(confPath); err != nil {

@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -32,7 +31,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	config "github.com/kevinburke/ssh_config"
 	sshconfig "github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -60,11 +58,11 @@ func loadConfig(path string) (err error) {
 	if f, err = os.Open(path); err != nil {
 		if os.IsNotExist(err) {
 			err = nil
-			cfg = &config.Config{}
+			cfg = &sshconfig.Config{}
 		}
 		return
 	}
-	cfg, err = config.Decode(f)
+	cfg, err = sshconfig.Decode(f)
 	return
 }
 
@@ -128,7 +126,7 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 	}
 	// Figure out if there's a keyfile or not
 	kf := getKeyFile(host, *keyFile)
-	key, err := ioutil.ReadFile(kf)
+	key, err := os.ReadFile(kf)
 	if err == nil {
 		// The key exists
 		signer, err := ssh.ParsePrivateKey(key)
