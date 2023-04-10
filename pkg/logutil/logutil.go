@@ -6,6 +6,7 @@
 package logutil
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -32,23 +33,27 @@ func NewWriterToFile(maxSize int, path string) (io.Writer, error) {
 
 }
 
-// TeeOutput tees out output to a file path specified by env var `UROOT_LOG_PATH` up to a max limit. Creates necessary directories for the specified logpath if they don't exist.
+// TeeOutput tees out output to a file path specified by env var `UROOT_LOG_PATH` and sets the log output to the newly created writer.
 func TeeOutput(writer io.Writer, maxSize int) (io.Writer, error) {
-	logPath := os.Getenv("UROOT_LOG_PATH")
-	if logPath != "" {
-		dir := filepath.Dir(logPath)
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			log.Printf("Log directory %s doesn't exist, creating...", dir)
-			if err := os.MkdirAll(dir, 0700); err != nil {
-				return nil, err
-			}
-		}
-		lw, err := NewWriterToFile(maxSize, logPath)
-		if err != nil {
-			return nil, err
-		}
-		writer = io.MultiWriter(writer, lw)
+	writer, err := CreateTeeWriter(writer, os.Getenv("UROOT_LOG_PATH"), maxSize)
+	if err == nil {
 		log.SetOutput(writer)
 	}
-	return writer, nil
+	return writer, err
+}
+
+// CreateTeeWriter tees out output to a file path specified by logPath up to a max limit. Creates necessary directories for the specified logpath if they don't exist.
+func CreateTeeWriter(writer io.Writer, logPath string, maxSize int) (io.Writer, error) {
+	if logPath == "" {
+		return nil, fmt.Errorf("Empty log path")
+	}
+	dir := filepath.Dir(logPath)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
+	}
+	lw, err := NewWriterToFile(maxSize, logPath)
+	if err != nil {
+		return nil, err
+	}
+	return io.MultiWriter(writer, lw), nil
 }
