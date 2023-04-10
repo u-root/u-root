@@ -69,16 +69,14 @@ func TestHexdump(t *testing.T) {
 				// or os.ErrNotExist.
 				// Once that is fixed, we can use errors.Is
 				if tt.wantErr == nil {
-					t.Errorf("hexdump() = '%v', want: nil", got)
-					return
+					t.Fatalf("hexdump() = '%v', want: nil", got)
 				}
 				if !strings.HasPrefix(got.Error(), tt.wantErr.Error()[:10]) {
-					t.Errorf("hexdump() = '%v', want: '%v'", got, tt.wantErr)
-					return
+					t.Fatalf("hexdump() = '%v', want: '%v'", got, tt.wantErr)
 				}
 			}
 			if writeBuf.String() != tt.want {
-				t.Errorf("Console output: '%s', want: '%s'", writeBuf.String(), tt.want)
+				t.Errorf("Console output: %q, want: %q", writeBuf.String(), tt.want)
 			}
 		})
 	}
