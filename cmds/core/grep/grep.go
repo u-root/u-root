@@ -74,14 +74,14 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) {
 	for {
 		if i, err := r.ReadString('\n'); err == nil {
 			m := re.Match([]byte(i))
-			if m == !c.params.invert {
+			if m == !c.invert {
 				res <- &grepResult{
 					match:   re.Match([]byte(i)),
 					c:       f,
 					line:    &i,
 					lineNum: lineNum,
 				}
-				if c.params.noShowMatch {
+				if c.noShowMatch {
 					break
 				}
 			}
@@ -96,24 +96,24 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) {
 
 func (c *cmd) printMatch(r *grepResult) {
 	var prefix string
-	if r.match == !c.params.invert {
+	if r.match == !c.invert {
 		c.matchCount++
 	}
-	if c.params.count {
+	if c.count {
 		return
 	}
 	if c.showName {
 		fmt.Fprintf(c.stdout, "%v", r.c.name)
 		prefix = ":"
 	}
-	if c.params.noShowMatch {
+	if c.noShowMatch {
 		fmt.Fprintf(c.stdout, "\n")
 		return
 	}
-	if c.params.number {
+	if c.number {
 		prefix = fmt.Sprintf(":%d:", r.lineNum)
 	}
-	if r.match == !c.params.invert {
+	if r.match == !c.invert {
 		fmt.Fprintf(c.stdout, "%v%v", prefix, *r.line)
 	}
 }
@@ -131,11 +131,11 @@ type params struct {
 }
 
 type cmd struct {
-	stdin      io.ReadCloser
-	stdout     io.Writer
-	stderr     io.Writer
-	allGrep    chan *oneGrep
-	params     params
+	stdin   io.ReadCloser
+	stdout  io.Writer
+	stderr  io.Writer
+	allGrep chan *oneGrep
+	params
 	args       []string
 	matchCount int
 	nGrep      int
@@ -176,14 +176,14 @@ func main() {
 }
 
 func (c *cmd) run() error {
-	if c.params.expr != "" {
-		c.args = append([]string{c.params.expr}, c.args...)
+	if c.expr != "" {
+		c.args = append([]string{c.expr}, c.args...)
 	}
 	r := ".*"
 	if len(c.args) > 0 {
 		r = c.args[0]
 	}
-	if c.params.caseInsensitive && !strings.HasPrefix(r, "(?i)") {
+	if c.caseInsensitive && !strings.HasPrefix(r, "(?i)") {
 		r = "(?i)" + r
 	}
 	re := regexp.MustCompile(r)
@@ -192,7 +192,7 @@ func (c *cmd) run() error {
 		c.nGrep++
 		go c.grep(&grepCommand{c.stdin, "<stdin>"}, re)
 	} else {
-		c.showName = (len(c.args[1:]) > 1 || c.params.recursive) && !c.params.headers
+		c.showName = (len(c.args[1:]) > 1 || c.recursive) && !c.headers
 		// generate a chan of file names, bounded by the size of the chan. This in turn
 		// throttles the opens.
 		treeNames := make(chan string, 128)
@@ -204,7 +204,7 @@ func (c *cmd) run() error {
 						fmt.Fprintf(c.stderr, "grep: %v: %v\n", name, err)
 						return nil
 					}
-					if fi.IsDir() && !c.params.recursive {
+					if fi.IsDir() && !c.recursive {
 						fmt.Fprintf(c.stderr, "grep: %v: Is a directory\n", name)
 						return filepath.SkipDir
 					}
@@ -241,7 +241,7 @@ func (c *cmd) run() error {
 		for og := range c.allGrep {
 			for r := range og.c {
 				// exit on first match.
-				if c.params.quiet {
+				if c.quiet {
 					return nil
 				}
 				c.printMatch(r)
@@ -253,10 +253,10 @@ func (c *cmd) run() error {
 		}
 	}
 
-	if c.params.quiet {
+	if c.quiet {
 		return errQuite
 	}
-	if c.params.count {
+	if c.count {
 		fmt.Fprintf(c.stdout, "%d\n", c.matchCount)
 	}
 
