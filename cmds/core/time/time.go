@@ -6,7 +6,7 @@
 //
 // Synopsis:
 //
-//	time CMD [ARG]...
+//	time [-p] CMD [ARG]...
 //
 // Description:
 //
@@ -40,6 +40,8 @@ import (
 	"strings"
 	"time"
 )
+
+var _ = flag.Bool("p", true, "makes time output POSIX.2 compliant")
 
 func printTime(stderr io.Writer, l string, t time.Duration) {
 	fmt.Fprintf(stderr, "%s\n", label(l, t))
