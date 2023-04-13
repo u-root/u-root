@@ -1,4 +1,4 @@
-// Copyright 2013-2017 the u-root Authors. All rights reserved
+// Copyright 2013-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -66,8 +66,66 @@ var (
 	chars  = flag.Bool("c", false, "count bytes (include partial UTF)")
 )
 
+type params struct {
+	lines  bool
+	words  bool
+	runes  bool
+	broken bool
+	chars  bool
+}
+
+type cmd struct {
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
+	args   []string
+	params
+}
+
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, p params, args []string) *cmd {
+	return &cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+		params: p,
+		args:   args,
+	}
+}
+
+func (c *cmd) run() error {
+	var totals cnt
+	if !c.lines && !c.words && !c.runes && !c.broken && !c.chars {
+		c.lines, c.words, c.chars = true, true, true
+	}
+
+	if len(c.args) == 0 {
+		res := c.count(c.stdin, "")
+		c.report(res, "")
+		return nil
+	}
+
+	for _, v := range c.args {
+		f, err := os.Open(v)
+		if err != nil {
+			fmt.Fprintf(c.stderr, "wc: %s: %v\n", v, err)
+			continue
+		}
+		res := c.count(f, v)
+		totals.lines += res.lines
+		totals.words += res.words
+		totals.runes += res.runes
+		totals.badRunes += res.badRunes
+		totals.chars += res.chars
+		c.report(res, v)
+	}
+	if len(c.args) > 1 {
+		c.report(totals, "total")
+	}
+	return nil
+}
+
 type cnt struct {
-	nline, nword, nrune, nbadr, nchar int64
+	lines, words, runes, badRunes, chars int64
 }
 
 // A modified version of utf8.Valid()
@@ -90,89 +148,59 @@ func invalidCount(p []byte) (n int64) {
 	return
 }
 
-func count(in io.Reader, fname string) (c cnt) {
+func (c *cmd) count(in io.Reader, fname string) cnt {
 	b := bufio.NewReaderSize(in, 8192)
 	counted := false
+	count := cnt{}
 	for !counted {
 		line, err := b.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
 				counted = true
 			} else {
-				fmt.Fprintf(os.Stderr, "error %s: %v", fname, err)
+				fmt.Fprintf(c.stderr, "wc: %s: %v\n", fname, err)
 				return cnt{} // no partial counts; should perhaps quit altogether?
 			}
 		}
 		if !counted {
-			c.nline++
+			count.lines++
 		}
-		c.nword += int64(len(bytes.Fields(line)))
-		c.nrune += int64(utf8.RuneCount(line))
-		c.nchar += int64(len(line))
-		c.nbadr += invalidCount(line)
+		count.words += int64(len(bytes.Fields(line)))
+		count.runes += int64(utf8.RuneCount(line))
+		count.chars += int64(len(line))
+		count.badRunes += invalidCount(line)
 	}
-	return
+	return count
 }
 
-func report(w io.Writer, c cnt, fname string) {
+func (c *cmd) report(count cnt, fname string) {
 	fields := []string{}
-	if *lines {
-		fields = append(fields, fmt.Sprintf("%d", c.nline))
+	if c.lines {
+		fields = append(fields, fmt.Sprintf("%d", count.lines))
 	}
-	if *words {
-		fields = append(fields, fmt.Sprintf("%d", c.nword))
+	if c.words {
+		fields = append(fields, fmt.Sprintf("%d", count.words))
 	}
-	if *runes {
-		fields = append(fields, fmt.Sprintf("%d", c.nrune))
+	if c.runes {
+		fields = append(fields, fmt.Sprintf("%d", count.runes))
 	}
-	if *broken {
-		fields = append(fields, fmt.Sprintf("%d", c.nbadr))
+	if c.broken {
+		fields = append(fields, fmt.Sprintf("%d", count.badRunes))
 	}
-	if *chars {
-		fields = append(fields, fmt.Sprintf("%d", c.nchar))
+	if c.chars {
+		fields = append(fields, fmt.Sprintf("%d", count.chars))
 	}
 	if fname != "" {
 		fields = append(fields, fname)
 	}
 
-	fmt.Fprintln(w, strings.Join(fields, " "))
-}
-
-func runwc(w io.Writer, r io.Reader, args ...string) error {
-	var totals cnt
-	if !(*lines || *words || *runes || *broken || *chars) {
-		*lines, *words, *chars = true, true, true
-	}
-
-	if len(args) == 0 {
-		cnt := count(r, "")
-		report(w, cnt, "")
-		return nil
-	}
-
-	for _, v := range args {
-		f, err := os.Open(v)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error opening %s: %v\n", v, err)
-			return err
-		}
-		cnt := count(f, v)
-		totals.nline += cnt.nline
-		totals.nword += cnt.nword
-		totals.nrune += cnt.nrune
-		totals.nbadr += cnt.nbadr
-		totals.nchar += cnt.nchar
-		report(w, cnt, v)
-	}
-	if len(args) > 1 {
-		report(w, totals, "total")
-	}
-	return nil
+	fmt.Fprintln(c.stdout, strings.Join(fields, " "))
 }
 
 func main() {
 	flag.Parse()
-	if err := runwc(os.Stdout, os.Stdin, flag.Args()...); err != nil {
+	p := params{lines: *lines, words: *words, runes: *runes, broken: *broken, chars: *chars}
+	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		log.Fatal(err)
 	}
 }
