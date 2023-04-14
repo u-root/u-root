@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 
@@ -86,7 +87,41 @@ func (c *parser) getFile(surl string) (io.ReaderAt, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
 	}
-	return c.schemes.LazyFetch(u)
+	// Cache content read from http body into a tmpfs file, other
+	// than in heap. This cuts down ram consumption and help boot
+	// on board with low ram config.
+	return uio.NewLazyOpenerAt(surl, func() (io.ReaderAt, error) {
+		f, err := os.CreateTemp("", "cache-kernel")
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		r, err := c.schemes.LazyFetchWithoutCache(u)
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(f, r)
+		if err != nil {
+			return nil, err
+		}
+		if err := f.Sync(); err != nil {
+			return nil, err
+		}
+		// Return a read-only copy.
+		readOnlyF, err := os.Open(f.Name())
+		if err != nil {
+			return nil, err
+		}
+		return readOnlyF, nil
+	}), nil
+}
+
+func (c *parser) getFileWithoutCache(surl string) (io.Reader, error) {
+	u, err := parseURL(surl, c.wd)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
+	}
+	return c.schemes.LazyFetchWithoutCache(u)
 }
 
 func parseURL(name string, wd *url.URL) (*url.URL, error) {
@@ -114,9 +149,9 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 	return u, nil
 }
 
-func (c *parser) createInitrd(initrds []io.ReaderAt) {
+func (c *parser) createInitrd(initrds []io.Reader) {
 	if len(initrds) > 0 {
-		c.bootImage.Initrd = boot.CatInitrds(initrds...)
+		c.bootImage.Initrd = boot.CatInitrdsWithFileCache(initrds...)
 	}
 }
 
@@ -126,7 +161,7 @@ func (c *parser) parseIpxe(config string) error {
 	// Currently only supports kernel and initrd commands.
 	c.bootImage = &boot.LinuxImage{}
 
-	var initrds []io.ReaderAt
+	var initrds []io.Reader
 	for _, line := range strings.Split(config, "\n") {
 		// Skip blank lines and comment lines.
 		line = strings.TrimSpace(line)
@@ -158,7 +193,7 @@ func (c *parser) parseIpxe(config string) error {
 		case "initrd":
 			if len(args) > 1 {
 				for _, f := range strings.Split(args[1], ",") {
-					i, err := c.getFile(f)
+					i, err := c.getFileWithoutCache(f)
 					if err != nil {
 						return err
 					}

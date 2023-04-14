@@ -127,7 +127,7 @@ type named interface {
 	Name() string
 }
 
-func stringer(mod io.ReaderAt) string {
+func stringer(mod interface{}) string {
 	if s, ok := mod.(fmt.Stringer); ok {
 		return s.String()
 	}
@@ -174,6 +174,30 @@ func (li *LinuxImage) String() string {
 	)
 }
 
+func isTmpfsReadOnlyFile(f *os.File) bool {
+	if f == nil {
+		return false
+	}
+
+	if fi, err := f.Stat(); err == nil && fi.Mode().IsRegular() {
+		if r, _ := mount.IsTmpRamfs(f.Name()); r {
+			// Check if original file is opened for write. Perform copy to
+			// get a read only version in that case, than directly return
+			// as kexec load would fail on a file opened for write.
+			wr := unix.O_RDWR | unix.O_WRONLY
+			if am, err := unix.FcntlInt(f.Fd(), unix.F_GETFL, 0); err == nil && am&wr == 0 {
+				return true
+			}
+			// Original file is either opened for write, or it failed to
+			// check (possibly, current kernel is too old and not supporting
+			// the sys call cmd)
+		}
+		// Original file is neither on a tmpfs, nor a ramfs.
+	}
+	// Not a regular file, or could not confirm it is a regular file.
+	return false
+}
+
 // copyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
 // necessary. It skips copying when source file is a regular file under
 // tmpfs or ramfs, and it is not opened for writing.
@@ -191,22 +215,22 @@ func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 	// conforming to os.File. We then can derive file descriptor, and the
 	// name.
 	if f, ok := r.(*os.File); ok {
-		if fi, err := f.Stat(); err == nil && fi.Mode().IsRegular() {
-			if r, _ := mount.IsTmpRamfs(f.Name()); r {
-				// Check if original file is opened for write. Perform copy to
-				// get a read only version in that case, than directly return
-				// as kexec load would fail on a file opened for write.
-				wr := unix.O_RDWR | unix.O_WRONLY
-				if am, err := unix.FcntlInt(f.Fd(), unix.F_GETFL, 0); err == nil && am&wr == 0 {
-					return f, nil
-				}
-				// Original file is either opened for write, or it failed to
-				// check (possibly, current kernel is too old and not supporting
-				// the sys call cmd)
-			}
-			// Original file is neither on a tmpfs, nor a ramfs.
+		if isTmpfsReadOnlyFile(f) {
+			return f, nil
 		}
-		// Not a regular file, or could not confirm it is a regular file.
+	}
+
+	// For boot entries whose image is lazily downloaded, try booting the
+	// backend file directly if possible.
+	if lor, ok := r.(*uio.LazyOpenerAt); ok {
+		// It is lazy, so read one byte to make sure backend file
+		// is created.
+		if err := uio.ReadOneByte(r); err != nil {
+			return nil, err
+		}
+		if isTmpfsReadOnlyFile(lor.File()) {
+			return lor.File(), nil
+		}
 	}
 
 	rdr := uio.Reader(r)
