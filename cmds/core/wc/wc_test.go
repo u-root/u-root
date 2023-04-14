@@ -110,35 +110,41 @@ func TestFiles(t *testing.T) {
 
 func TestStdin(t *testing.T) {
 	tests := []struct {
+		name  string
 		input string
 		want  string
 		args  []string
 		p     params
 	}{
 		{
+			name:  "ascii",
 			input: "hello world\n",
 			want:  "1 2 12\n",
 		},
 		{
+			name:  "utf8",
 			input: "München\n",
 			want:  "1 1 9\n",
 		},
 		{
+			name:  "empty",
 			input: "",
 			want:  "0 0 0\n",
 		},
 	}
 
 	for _, test := range tests {
-		stdin := bytes.NewBufferString(test.input)
-		stdout := &bytes.Buffer{}
+		t.Run(test.name, func(t *testing.T) {
+			stdin := bytes.NewBufferString(test.input)
+			stdout := &bytes.Buffer{}
 
-		if err := command(stdin, stdout, nil, test.p, test.args).run(); err != nil {
-			t.Fatal(err)
-		}
+			if err := command(stdin, stdout, nil, test.p, test.args).run(); err != nil {
+				t.Fatal(err)
+			}
 
-		if got := stdout.String(); got != test.want {
-			t.Errorf("wc %q = %q, want: %q", test.input, got, test.want)
-		}
+			if got := stdout.String(); got != test.want {
+				t.Errorf("wc %q = %q, want: %q", test.input, got, test.want)
+			}
+		})
 	}
 }
