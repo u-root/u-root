@@ -49,7 +49,7 @@ func TestLazyOpenerRead(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("Test #%02d", i), func(t *testing.T) {
 			var opened bool
-			lr := NewLazyOpener(func() (io.Reader, error) {
+			lr := NewLazyOpener("testname", func() (io.Reader, error) {
 				opened = true
 				return tt.openReader, tt.openErr
 			})

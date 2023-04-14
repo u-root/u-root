@@ -30,6 +30,8 @@ import (
 // Schemes.LazyFetch if there is no registered FileScheme
 // implementation for the given URL scheme.
 var ErrNoSuchScheme = errors.New("no such scheme")
+
+// ErrStatusNotOk is a error represents http codes other than 200.
 var ErrStatusNotOk = errors.New("not status 200")
 
 // File is a reference to a file fetched through this library.
@@ -124,6 +126,7 @@ func Fetch(ctx context.Context, u *url.URL) (FileWithCache, error) {
 	return DefaultSchemes.Fetch(ctx, u)
 }
 
+// FetchWithoutCache fetches given url without caching reader.
 func FetchWithoutCache(ctx context.Context, u *url.URL) (FileWithoutCache, error) {
 	return DefaultSchemes.FetchWithoutCache(ctx, u)
 }
@@ -193,6 +196,29 @@ func (s Schemes) FetchWithoutCache(ctx context.Context, u *url.URL) (FileWithout
 		return nil, &URLError{URL: u, Err: err}
 	}
 	return &file{Reader: r, url: u}, nil
+}
+
+// LazyFetch calls LazyFetchWithoutCache on DefaultSchemes.
+func LazyFetchWithoutCache(u *url.URL) (FileWithoutCache, error) {
+	return DefaultSchemes.LazyFetchWithoutCache(u)
+}
+
+// LazyFetchWithoutCache fetches gien url in same way as LazyFetch, except that it does not cache.
+func (s Schemes) LazyFetchWithoutCache(u *url.URL) (FileWithoutCache, error) {
+	fg, ok := s[u.Scheme]
+	if !ok {
+		return nil, &URLError{URL: u, Err: ErrNoSuchScheme}
+	}
+
+	return &file{
+		url: u,
+		Reader: uio.NewLazyOpener(u.String(), func() (io.Reader, error) {
+			r, err := fg.FetchWithoutCache(context.TODO(), u)
+			if err != nil {
+				return nil, &URLError{URL: u, Err: err}
+			}
+			return r, nil
+		})}, nil
 }
 
 // LazyFetch calls LazyFetch on DefaultSchemes.

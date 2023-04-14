@@ -10,19 +10,36 @@ import (
 	"os"
 )
 
+// ReadOneByte reads one byte from given io.ReaderAt.
+func ReadOneByte(r io.ReaderAt) error {
+	buf := make([]byte, 1)
+	n, err := r.ReadAt(buf, 0)
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return fmt.Errorf("expected to read 1 byte, but got %d", n)
+	}
+	return nil
+}
+
 // LazyOpener is a lazy io.Reader.
 //
 // LazyOpener will use a given open function to derive an io.Reader when Read
 // is first called on the LazyOpener.
 type LazyOpener struct {
 	r    io.Reader
+	s    string
 	err  error
 	open func() (io.Reader, error)
 }
 
 // NewLazyOpener returns a lazy io.Reader based on `open`.
-func NewLazyOpener(open func() (io.Reader, error)) io.ReadCloser {
-	return &LazyOpener{open: open}
+func NewLazyOpener(filename string, open func() (io.Reader, error)) *LazyOpener {
+	if len(filename) == 0 {
+		return nil
+	}
+	return &LazyOpener{s: filename, open: open}
 }
 
 // Read implements io.Reader.Read lazily.
@@ -37,6 +54,17 @@ func (lr *LazyOpener) Read(p []byte) (int, error) {
 		return 0, lr.err
 	}
 	return lr.r.Read(p)
+}
+
+// String implements fmt.Stringer.
+func (lr *LazyOpener) String() string {
+	if len(lr.s) > 0 {
+		return lr.s
+	}
+	if lr.r != nil {
+		return fmt.Sprintf("%v", lr.r)
+	}
+	return "unopened mystery file"
 }
 
 // Close implements io.Closer.Close.
@@ -82,6 +110,15 @@ func (loa *LazyOpenerAt) String() string {
 		return fmt.Sprintf("%v", loa.r)
 	}
 	return "unopened mystery file"
+}
+
+// File returns the backend file of the io.ReaderAt if it
+// is backed by a os.File.
+func (loa *LazyOpenerAt) File() *os.File {
+	if f, ok := loa.r.(*os.File); ok {
+		return f
+	}
+	return nil
 }
 
 // ReadAt implements io.ReaderAt.ReadAt.
