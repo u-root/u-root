@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build (linux && arm64) || (linux && amd64)
+// +build linux,arm64 linux,amd64
+
 package strace
 
 import (

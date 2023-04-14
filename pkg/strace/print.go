@@ -14,6 +14,9 @@
 //
 // Changes are Copyright 2018 the u-root Authors.
 
+//go:build (linux && arm64) || (linux && amd64)
+// +build linux,arm64 linux,amd64
+
 package strace
 
 import (
