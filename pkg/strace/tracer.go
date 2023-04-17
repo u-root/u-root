@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build (linux && arm64) || (linux && amd64)
+// +build linux,arm64 linux,amd64
+
 // Package strace traces Linux process events.
 //
 // An straced process will emit events for syscalls, signals, exits, and new
