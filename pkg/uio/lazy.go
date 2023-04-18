@@ -80,10 +80,11 @@ func (lr *LazyOpener) Close() error {
 // LazyOpenerAt will use a given open function to derive an io.ReaderAt when
 // ReadAt is first called.
 type LazyOpenerAt struct {
-	r    io.ReaderAt
-	s    string
-	err  error
-	open func() (io.ReaderAt, error)
+	r     io.ReaderAt
+	s     string
+	err   error
+	limit int64
+	open  func() (io.ReaderAt, error)
 }
 
 // NewLazyFile returns a lazy ReaderAt opened from path.
@@ -96,9 +97,24 @@ func NewLazyFile(path string) *LazyOpenerAt {
 	})
 }
 
+// NewLazyLimitFile returns a lazy ReaderAt opened from path with a limit reader on it.
+func NewLazyLimitFile(path string, limit int64) *LazyOpenerAt {
+	if len(path) == 0 {
+		return nil
+	}
+	return NewLazyLimitOpenerAt(path, limit, func() (io.ReaderAt, error) {
+		return os.Open(path)
+	})
+}
+
 // NewLazyOpenerAt returns a lazy io.ReaderAt based on `open`.
 func NewLazyOpenerAt(filename string, open func() (io.ReaderAt, error)) *LazyOpenerAt {
-	return &LazyOpenerAt{s: filename, open: open}
+	return &LazyOpenerAt{s: filename, open: open, limit: -1}
+}
+
+// NewLazyLimitOpenerAt returns a lazy io.ReaderAt based on `open`.
+func NewLazyLimitOpenerAt(filename string, limit int64, open func() (io.ReaderAt, error)) *LazyOpenerAt {
+	return &LazyOpenerAt{s: filename, open: open, limit: limit}
 }
 
 // String implements fmt.Stringer.
@@ -128,6 +144,14 @@ func (loa *LazyOpenerAt) ReadAt(p []byte, off int64) (int, error) {
 	}
 	if loa.err != nil {
 		return 0, loa.err
+	}
+	if loa.limit > 0 {
+		if off >= loa.limit {
+			return 0, io.EOF
+		}
+		if int64(len(p)) > loa.limit-off {
+			p = p[0 : loa.limit-off]
+		}
 	}
 	return loa.r.ReadAt(p, off)
 }
