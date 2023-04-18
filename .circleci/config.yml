@@ -53,6 +53,7 @@ workflows:
       - compile_cmds
       - check_templates
       - check_licenses
+      - vuln_check
 
 jobs:
   test-pkgs:
@@ -91,6 +92,18 @@ jobs:
       - run:
           name: Test u-root build
           command: go test -a -timeout=15m .
+          no_output_timeout: 15m
+
+  vuln_check:
+    <<: *beefy-template
+    steps:
+      - checkout
+      - run:
+          name: Test u-root build
+          command: |
+            go install golang.org/x/vuln/cmd/govulncheck@latest
+            GOOS=linux GOARCH=amd64 govulncheck ./...
+            GOOS=linux GOARCH=arm64 govulncheck ./...
           no_output_timeout: 15m
 
   test-tinygo:
