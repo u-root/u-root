@@ -243,7 +243,7 @@ func (r *Recorder) GetRecord(path string) (Record, error) {
 		if done {
 			return Record{Info: info}, nil
 		}
-		return Record{Info: info, ReaderAt: uio.NewLazyFile(path)}, nil
+		return Record{Info: info, ReaderAt: uio.NewLazyLimitFile(path, int64(info.FileSize))}, nil
 
 	case os.ModeSymlink:
 		linkname, err := os.Readlink(path)
