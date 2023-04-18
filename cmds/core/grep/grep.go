@@ -79,7 +79,7 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) {
 					match:   re.Match([]byte(i)),
 					c:       f,
 					line:    &i,
-					lineNum: lineNum,
+					lineNum: lineNum + 1,
 				}
 				if c.noShowMatch {
 					break
@@ -111,7 +111,7 @@ func (c *cmd) printMatch(r *grepResult) {
 		return
 	}
 	if c.number {
-		prefix = fmt.Sprintf(":%d:", r.lineNum)
+		prefix = fmt.Sprintf("%d:", r.lineNum)
 	}
 	if r.match == !c.invert {
 		fmt.Fprintf(c.stdout, "%v%v", prefix, *r.line)
@@ -135,8 +135,8 @@ type cmd struct {
 	stdout  io.Writer
 	stderr  io.Writer
 	allGrep chan *oneGrep
+	args    []string
 	params
-	args       []string
 	matchCount int
 	nGrep      int
 	showName   bool
@@ -208,7 +208,6 @@ func (c *cmd) run() error {
 						fmt.Fprintf(c.stderr, "grep: %v: Is a directory\n", name)
 						return filepath.SkipDir
 					}
-					// TODO: some unreacheable original code here
 					treeNames <- name
 					return nil
 				})
