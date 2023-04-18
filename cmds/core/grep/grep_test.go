@@ -61,7 +61,7 @@ func TestStdinGrep(t *testing.T) {
 		},
 		{
 			input:  "hix\n",
-			output: ":0:hix\n",
+			output: "1:hix\n",
 			err:    nil,
 			p:      params{number: true},
 			args:   []string{"hix"},
@@ -129,7 +129,7 @@ func TestStdinGrep(t *testing.T) {
 
 		res := stdout.String()
 		if res != test.output {
-			t.Errorf("got %v, want %v", res, test.output)
+			t.Errorf("got %q, want %q", res, test.output)
 		}
 	}
 }
