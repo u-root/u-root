@@ -1,96 +1,122 @@
-version: 2
+version: 2.1
+
+# Needed for uploading coverage reports
+orbs:
+  codecov: codecov/codecov@3.2.5
 
 templates:
+  # Base environment with dagger tooling
   golang-template:
     &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v5.2.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-      # x7 all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 7
-
-  integration-template:
-    &integration-template
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-      # x7 all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 7
+      - image: cimg/go:1.20
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: Test integration
-          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v
-            -timeout=20m -p=1 -ldflags='-s' -failfast ./integration/...
-          no_output_timeout: 15m
-      - run:
-          name: Upload integration coverage
-          command: bash <(curl -s https://codecov.io/bash)
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
 
+  # Several tasks need more resources than what CircleCI offers by default
   beefy-template:
     &beefy-template
     <<: *golang-template
     resource_class: large
 
 workflows:
-  version: 2
-  build_and_test:
+  ci:
     jobs:
-      - test-pkgs
-      - test-cmds
-      - test-build
-      - test-tinygo
-      - test-build-tamago-riscv64
-      - test-build-tamago-arm
-      - test-integration-amd64
-      - test-integration-arm
-      - test-integration-arm64
+      - build
+      - unit-tests
       - race
-      - compile_cmds
       - check_templates
-      - check_licenses
+      - test-integration-amd64
+      - test-integration-arm32
+      - test-integration-arm64
+      - test-tinygo
 
 jobs:
-  test-pkgs:
-    <<: *beefy-template
+  # This build for all supported architecture and platform combinations
+  build:
+    <<: *golang-template
     steps:
-      - checkout
-      - run:
-          name: Test packages
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -a -p=1
-            -timeout=20m -ldflags='-s' -failfast -coverprofile=coverage_pkg.txt
-            -covermode=atomic -coverpkg=./pkg/... ./pkg/...
-          no_output_timeout: 15m
-
-      - run:
-          name: Upload coverage
-          command: bash <(curl -s https://codecov.io/bash)
-
-  test-cmds:
-    <<: *beefy-template
-    steps:
-      - checkout
-      - run:
-          name: Test commands
-          command: UROOT_QEMU_COVERPROFILE=vmcoverage.txt go test -v -p=1
-            -timeout=20m -failfast -coverprofile=coverage.txt -covermode=atomic
-            -cover ./cmds/...
-
-      - run:
-          name: Upload coverage
-          command: bash <(curl -s https://codecov.io/bash)
-
-  test-build:
-    <<: *beefy-template
-    steps:
-      - checkout
       - run:
           name: Test u-root build
-          command: go test -a -timeout=15m .
+          command: ./tools/ci/ci -verbose -build
+            -target=all
+            -buildtoolchain="std,tamago,tinygo"
+            -arch="amd64,arm,arm64,riscv64"
+            -platform=linux
+          no_output_timeout: 15m
+
+  # Run all unit tests and generate a coverage report
+  unit-tests:
+    <<: *beefy-template
+    steps:
+      - run:
+          name: Run unit tests
+          command: ./tools/ci/ci -verbose -test
+            -cover
+          no_output_timeout: 15m
+      - codecov/upload:
+          file: coverage.txt
+
+  # Run Golangs race condition detector
+  race:
+    <<: *beefy-template
+    steps:
+      - run:
+          name: Race condition detection
+          command: ./tools/ci/ci -verbose -test
+            -race
+          no_output_timeout: 15m
+
+  check_templates:
+    <<: *golang-template
+    steps:
+      - checkout
+      - run:
+          name: Check all build templates
+          command: ./tools/ci/ci -verbose -build
+            -target=templates
+            -arch="amd64,arm,arm64"
+            -platform=linux
+          no_output_timeout: 15m
+      - store_artifacts:
+          name: Store build stats
+          path: /tmp/stats.json
+          destination: stats.json
+
+  test-integration-amd64:
+    <<: *beefy-template
+    steps:
+      - run:
+          name: Run integration tests
+          command: ./tools/ci/ci -verbose -test
+            -integration=amd64
+            -env="UROOT_QEMU_TIMEOUT_X=7"
+          no_output_timeout: 15m
+
+  test-integration-arm32:
+    <<: *beefy-template
+    steps:
+      - run:
+          name: Run integration tests
+          command: ./tools/ci/ci -verbose -test
+            -integration=arm32
+            -env="UROOT_QEMU_TIMEOUT_X=7"
+          no_output_timeout: 15m
+
+  test-integration-arm64:
+    <<: *beefy-template
+    steps:
+      - run:
+          name: Run integration tests
+          command: ./tools/ci/ci -verbose -test
+            -integration=arm64
+            -env="UROOT_QEMU_TIMEOUT_X=7"
           no_output_timeout: 15m
 
   test-tinygo:
@@ -98,113 +124,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: tinygo build and test commands
-          command: echo sooner but not yet docker run --rm -v ~/go:/home/tinygo/go  tinygo/tinygo:0.26.0 bash -c 'cd  go/src/github.com/u-root/u-root/cmds/core/cmp && tinygo test .'
+          name: Run unit tests with TinyGo
+          command: ./tools/ci/ci -verbose -test
+            -testtoolchain="tinygo"
           no_output_timeout: 15m
-
-  test-build-tamago-arm:
-    docker:
-      - image: uroottest/test-image-tamago:v4.5.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-    steps:
-      - checkout
-      - run:
-          name: Test u-root tamago build
-          command: GOOS=tamago GOARCH=arm GOARM=7 go build ./pkg/dt/...
-      - run:
-          name: build armory-boot elf target
-          command: |
-            cd /home/circleci
-            git clone https://github.com/usbarmory/armory-boot.git
-            cd armory-boot
-            go version
-            BOOT=eMMC make elf
-
-  test-build-tamago-riscv64:
-    docker:
-      - image: uroottest/test-image-tamago:v4.5.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-    steps:
-      - checkout
-      - run:
-          name: Test u-root tamago build
-          command: GOOS=tamago GOARCH=riscv64 go build ./pkg/dt/...
-
-  race:
-    <<: *beefy-template
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 1
-    steps:
-      - checkout
-      - run:
-          name: Race detector
-          command: go test -race -timeout=15m -p=1 -failfast ./cmds/... ./pkg/...
-
-  compile_cmds:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: build all tools
-          command: |
-            cd cmds
-            go install -a ./...
-            cd ../tools
-            go install -a ./...
-
-  check_licenses:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Check licenses
-          command: go run tools/checklicenses/checklicenses.go -c
-            tools/checklicenses/config.json
-
-  check_templates:
-    <<: *golang-template
-    steps:
-      - checkout
-      - run:
-          name: Ensure that every template builds for a variety of options.
-          command: |
-            go build .
-            goruncmd="./u-root -stats-output-path=/tmp/stats.json"
-            $goruncmd minimal
-            $goruncmd core
-            $goruncmd coreboot-app
-            $goruncmd all
-            $goruncmd world
-            # Fails because of dups. Is this supposed to work?
-            #$goruncmd all core
-            #$goruncmd all core
-            GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
-            cat /tmp/stats.json
-      - store_artifacts:
-          name: Store build stats
-          path: /tmp/stats.json
-          destination: stats.json
-
-  test-integration-amd64:
-    <<: *integration-template
-    docker:
-      - image: uroottest/test-image-amd64:v5.2.0
-    resource_class: large
-
-  test-integration-arm:
-    <<: *integration-template
-    docker:
-      - image: uroottest/test-image-arm:v5.1.0
-
-  test-integration-arm64:
-    <<: *integration-template
-    docker:
-      - image: uroottest/test-image-arm64:v5.2.0
-    resource_class: large

@@ -10,12 +10,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-12 # This is required for the FreeBSD VM
+    runs-on: macos-12 # This is required for the FreeBSD VM as only macOS runners have proper virtualisation capabilities
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-
-    - name: Run commands in FreeBSD VM
+    - name: Run commands in a FreeBSD VM
       uses: vmactions/freebsd-vm@v0
       with:
         usesh: true
