@@ -8,11 +8,55 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/uio"
 )
+
+// CatInitrdsWithFileCache lazily reads up multiple initrds into single tmpfs file
+// and return a os.File disguising as a io.ReaderAt.
+// It starts processing after first ReadAt call is made.
+func CatInitrdsWithFileCache(initrds ...io.Reader) io.ReaderAt {
+	var names []string
+	for _, initrd := range initrds {
+		names = append(names, stringer(initrd))
+	}
+	return uio.NewLazyOpenerAt(strings.Join(names, ","), func() (io.ReaderAt, error) {
+		f, err := os.CreateTemp("", "combined-initrd")
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		for i, ireader := range initrds {
+			size, err := io.Copy(f, ireader)
+			if err != nil {
+				return nil, err
+			}
+			// Don't pad the ending or an already aligned file.
+			if i != len(initrds)-1 && size%512 != 0 {
+				padding := make([]byte, 512-(size%512))
+				nr, err := f.Write(padding)
+				if err != nil {
+					return nil, err
+				}
+				if nr != len(padding) {
+					return nil, fmt.Errorf("write padding: %v", err)
+				}
+			}
+		}
+		if err := f.Sync(); err != nil {
+			return nil, err
+		}
+		// Return a read-only copy.
+		readOnlyF, err := os.Open(f.Name())
+		if err != nil {
+			return nil, err
+		}
+		return readOnlyF, nil
+	})
+}
 
 // CatInitrds concatenates initrds on first ReadAt call from a list of
 // io.ReaderAts, pads them to a 512 byte boundary.
