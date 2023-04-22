@@ -121,9 +121,6 @@ func TestStrings(t *testing.T) {
 			want:  "a123456\n",
 		},
 	} {
-		// Setting the flag n
-		*n = tt.n
-
 		// Write input into file than seek to the beginning and truncate the file afterwards
 		// Create file for input data
 		file, err := os.Create(filepath.Join(tmpdir, "file"))
@@ -140,7 +137,8 @@ func TestStrings(t *testing.T) {
 			bufIn := &bytes.Buffer{}
 			bufIn.WriteString(tt.input)
 			bufOut := &bytes.Buffer{}
-			if got := strings(bufOut, bufIn, tt.files...); got != nil {
+
+			if got := command(bufIn, bufOut, params{n: tt.n}, tt.files).run(); got != nil {
 				if got.Error() != tt.wantErr {
 					t.Errorf("strings() = %q, want: %q", got.Error(), tt.wantErr)
 				}
