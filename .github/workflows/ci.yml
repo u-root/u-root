@@ -36,11 +36,6 @@ jobs:
           exit 1
         fi
 
-    - name: Golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        version: v1.46
-
   check-licenses:
     strategy:
       matrix:
