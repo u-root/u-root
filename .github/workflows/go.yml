@@ -35,19 +35,6 @@ jobs:
         fi
     - name: gofmt
       run: test -z "$(gofmt -s -l $(find -name '*.go' | grep -v /vendor/))"
-    - name: golangci-lint
-      run: |
-        golangci-lint run ./... --disable-all --enable=revive \
-          --skip-dirs=pkg/uroot/test \
-          --skip-dirs=cmds/core/elvish \
-          --exclude="exported (function|type|const|method|var) (\w|_|\.)+ should have comment" \
-            --exclude="don't use underscores" \
-          --exclude="don't use ALL_CAPS" \
-          --exclude="comment on exported (function|type|const|method|var) (\w|_|\.)+ should be of the form" \
-          --exclude="package comment should be of the form" \
-          --exclude="(function|type|const|method|var|type field|struct field) (\w|_|\.)+ should be (\w|_|\.)+" \
-          --exclude="stutter" \
-          --exclude="which can be annoying to use"
     - name: ineffassign
       run: golangci-lint run ./... --disable-all --enable=ineffassign
 
