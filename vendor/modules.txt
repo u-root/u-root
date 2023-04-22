@@ -79,9 +79,6 @@ github.com/dustin/go-humanize
 # github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 ## explicit
 github.com/gliderlabs/ssh
-# github.com/gojuno/minimock/v3 v3.0.8
-## explicit; go 1.13
-github.com/gojuno/minimock/v3
 # github.com/google/go-cmp v0.5.6
 ## explicit; go 1.8
 github.com/google/go-cmp/cmp
@@ -216,9 +213,6 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
-# github.com/pmezard/go-difflib v1.0.0
-## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/rck/unit v0.0.3
 ## explicit
 github.com/rck/unit

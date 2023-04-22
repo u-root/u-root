@@ -10,7 +10,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
-	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-tpm v0.3.3
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
@@ -73,7 +72,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.13.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
