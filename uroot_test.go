@@ -29,7 +29,6 @@ var twocmds = []string{
 }
 
 func xTestDCE(t *testing.T) {
-	testutil.SkipInGithubActions(t)
 	delFiles := false
 	f, _ := buildIt(
 		t,
@@ -127,7 +126,6 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 }
 
 func TestUrootCmdline(t *testing.T) {
-	testutil.SkipInGithubActions(t)
 	samplef, err := os.CreateTemp("", "u-root-test-")
 	if err != nil {
 		t.Fatal(err)

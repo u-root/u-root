@@ -182,7 +182,6 @@ func saveCoverage(t *testing.T, path string) error {
 
 func QEMUTest(t *testing.T, o *Options) (*qemu.VM, func()) {
 	SkipWithoutQEMU(t)
-	testutil.SkipInGithubActions(t)
 
 	// Delete any previous coverage data.
 	if _, ok := instance[t.Name()]; !ok {
