@@ -1,4 +1,4 @@
-// Copyright 2018 the u-root Authors. All rights reserved
+// Copyright 2018-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -18,6 +18,7 @@
 // Options:
 //
 //	-n number: the minimum string length (default is 4)
+//	-t string: write each string preceded by its byte offset from the start of the file (d decimal, o octal, x hexadecimal)
 package main
 
 import (
@@ -30,18 +31,83 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var errInvalidFormatArgument = fmt.Errorf("invalid argument to option -t")
+var errInvalidMinLength = fmt.Errorf("invalid minimum string length -n")
+
 var n = flag.Int("n", 4, "the minimum string length")
+var t = flag.String("t", "", "offset format (d/o/x)")
+
+type cmd struct {
+	stdin  io.Reader
+	stdout io.Writer
+	params
+	args   []string
+	offset int
+}
+
+type params struct {
+	t string
+	n int
+}
+
+func command(stdin io.Reader, stdout io.Writer, p params, args []string) *cmd {
+	return &cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		params: p,
+		args:   args,
+	}
+}
+
+func (c *cmd) run() error {
+	if c.n < 1 {
+		return fmt.Errorf("%w: %d", errInvalidMinLength, c.n)
+	}
+	if c.t != "" && c.t != "d" && c.t != "o" && c.t != "x" {
+		return fmt.Errorf("%w: %s", errInvalidFormatArgument, c.t)
+	}
+	if len(c.args) == 0 {
+		rb := bufio.NewReader(c.stdin)
+		if err := c.stringsIO(rb, c.stdout); err != nil {
+			return err
+		}
+	}
+	for _, file := range c.args {
+		c.offset = 0
+		if err := c.stringsFile(file, c.stdout); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func asciiIsPrint(char byte) bool {
 	return char >= 32 && char <= 126
 }
 
-func stringsIO(r *bufio.Reader, w io.Writer) error {
+func (c *cmd) offsetValue(l int) string {
+	offset := c.offset - l
+	switch c.t {
+	case "d":
+		return fmt.Sprintf("%d ", offset)
+	case "o":
+		return fmt.Sprintf("%o ", offset)
+	case "x":
+		return fmt.Sprintf("%x ", offset)
+	default:
+		panic("t param parsed wrong")
+	}
+}
+
+func (c *cmd) stringsIO(r *bufio.Reader, w io.Writer) error {
 	var o []byte
 	for {
 		b, err := r.ReadByte()
 		if err == io.EOF {
-			if len(o) >= *n {
+			if len(o) >= c.n {
+				if c.t != "" {
+					w.Write([]byte(c.offsetValue(len(o))))
+				}
 				w.Write(o)
 				w.Write([]byte{'\n'})
 			}
@@ -51,23 +117,28 @@ func stringsIO(r *bufio.Reader, w io.Writer) error {
 			return err
 		}
 		if !asciiIsPrint(b) {
-			if len(o) >= *n {
+			if len(o) >= c.n {
+				if c.t != "" {
+					w.Write([]byte(c.offsetValue(len(o))))
+				}
 				w.Write(o)
 				w.Write([]byte{'\n'})
 			}
 			o = o[:0]
+			c.offset++
 			continue
 		}
 		// Prevent the buffer from growing indefinitely.
-		if len(o) >= *n+1024 {
+		if len(o) >= c.n+1024 {
 			w.Write(o[:1024])
 			o = o[1024:]
 		}
 		o = append(o, b)
+		c.offset++
 	}
 }
 
-func stringsFile(file string, w io.Writer) error {
+func (c *cmd) stringsFile(file string, w io.Writer) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -76,30 +147,12 @@ func stringsFile(file string, w io.Writer) error {
 
 	// Buffer reduces number of syscalls.
 	rb := bufio.NewReader(f)
-	return stringsIO(rb, w)
-}
-
-func strings(w io.Writer, r io.Reader, files ...string) error {
-	if *n < 1 {
-		return fmt.Errorf("strings: invalid minimum string length %v", *n)
-	}
-	if len(files) == 0 {
-		rb := bufio.NewReader(r)
-		if err := stringsIO(rb, w); err != nil {
-			return err
-		}
-	}
-	for _, file := range files {
-		if err := stringsFile(file, w); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.stringsIO(rb, w)
 }
 
 func main() {
 	flag.Parse()
-	if err := strings(os.Stdout, os.Stdin, flag.Args()...); err != nil {
+	if err := command(os.Stdin, os.Stdout, params{n: *n, t: *t}, flag.Args()).run(); err != nil {
 		log.Fatalf("strings: %v", err)
 	}
 }
