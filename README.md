@@ -18,7 +18,7 @@ u-root embodies four different projects.
     [cmds/core](cmds/core) for most of these.
 
 *   A way to compile many Go programs into a single binary with
-    [busybox mode](https://github.com/u-root/gobusybox/#readme).
+    [busybox mode](pkg/bb/README.md).
 
 *   A way to create initramfs (an archive of files) to use with Linux kernels.
 
