@@ -10,108 +10,55 @@ package main
 import (
 	"io/fs"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 
-	"github.com/knz/bubbline/complete"
-	"github.com/knz/bubbline/computil"
-	"github.com/knz/bubbline/editline"
+	"github.com/u-root/prompt"
+	"github.com/u-root/prompt/completer"
 )
 
-type candidate struct {
-	repl       string
-	moveRight  int
-	deleteLeft int
-}
+func completerFunc(d prompt.Document) []prompt.Suggest {
+	if d.TextBeforeCursor() == "" {
+		return []prompt.Suggest{}
+	}
+	args := strings.Split(d.TextBeforeCursor(), " ")
+	w := d.GetWordBeforeCursor()
 
-func (m candidate) Replacement() string {
-	return m.repl
-}
-
-func (m candidate) MoveRight() int {
-	return m.moveRight
-}
-
-func (m candidate) DeleteLeft() int {
-	return m.deleteLeft
-}
-
-type multiComplete struct {
-	complete.Values
-	moveRight  int
-	deleteLeft int
-}
-
-func (m *multiComplete) Candidate(e complete.Entry) editline.Candidate {
-	return candidate{e.Title(), m.moveRight, m.deleteLeft}
-}
-
-func autocomplete(val [][]rune, line, col int) (msg string, completions editline.Completions) {
-	word, wstart, wend := computil.FindWord(val, line, col)
-
-	if wstart == 0 && !(strings.HasPrefix(word, ".") || strings.HasPrefix(word, "/")) {
-		return commandCompleter(word, col, wstart, wend)
+	// If PIPE is in text before the cursor, returns empty suggestions.
+	for i := range args {
+		if args[i] == "|" {
+			return []prompt.Suggest{}
+		}
 	}
 
-	return filepathCompleter(word, col, wstart, wend)
-}
+	if strings.HasPrefix(w, "/") || strings.HasPrefix(w, ".") {
+		var filePathCompler = completer.FilePathCompleter{
+			IgnoreCase: true,
+		}
+		return filePathCompler.Complete(d)
+	}
 
-func filepathCompleter(input string, col, wstart, wend int) (msg string, completions editline.Completions) {
-	candidates := []string{}
+	paths := strings.Split(os.ExpandEnv("$PATH"), ":")
+	var cmds []fs.DirEntry
 
-	path, trail := path.Split(input)
-	if path == "" {
-		pwd, err := os.Getwd()
+	for _, path := range paths {
+		entries, err := os.ReadDir(path)
 		if err != nil {
-			return msg, completions
+			return []prompt.Suggest{}
 		}
-
-		path = pwd
+		cmds = append(cmds, entries...)
 	}
 
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return msg, completions
-	}
-
-	for _, entry := range entries {
-		if trail == "" || strings.Contains(entry.Name(), trail) {
-			candidates = append(candidates, filepath.Join(path, entry.Name()))
-		}
-	}
-
-	if len(candidates) != 0 {
-		completions = &multiComplete{
-			Values:     complete.StringValues("suggestions", candidates),
-			moveRight:  wend - col,
-			deleteLeft: wend - wstart,
-		}
-	}
-
-	return msg, completions
+	return entryToSuggestion(w, cmds)
 }
 
-func commandCompleter(input string, col, wstart, wend int) (msg string, completions editline.Completions) {
-	candidates := []string{}
-
-	for _, path := range strings.Split(os.Getenv("PATH"), ":") {
-		filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-			if d != nil && !d.IsDir() && strings.HasPrefix(d.Name(), input) {
-				candidates = append(candidates, d.Name())
-			}
-
-			return nil
-		})
-	}
-
-	if len(candidates) != 0 {
-		completions = &multiComplete{
-			Values:     complete.StringValues("suggestions", candidates),
-			moveRight:  wend - col,
-			deleteLeft: wend - wstart,
+func entryToSuggestion(w string, e []fs.DirEntry) []prompt.Suggest {
+	var s []prompt.Suggest
+	for _, entry := range e {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), w) {
+			s = append(s, prompt.Suggest{
+				Text: entry.Name(),
+			})
 		}
 	}
-
-	return msg, completions
+	return s
 }

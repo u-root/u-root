@@ -20,7 +20,6 @@ require (
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.10.6
 	github.com/klauspost/pgzip v1.2.4
-	github.com/knz/bubbline v0.0.0-20230124184034-a0b62576595b
 	github.com/kr/pty v1.1.8
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
@@ -32,6 +31,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/u-root/gobusybox/src v0.0.0-20221229083637-46b2883a7f90
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
+	github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8
 	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
@@ -49,33 +49,22 @@ require (
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
-	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/aymanbagabas/go-osc52 v1.0.3 // indirect
-	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
-	github.com/charmbracelet/bubbletea v0.23.1 // indirect
-	github.com/charmbracelet/lipgloss v0.6.0 // indirect
 	github.com/cloudflare/circl v1.1.0 // indirect
-	github.com/containerd/console v1.0.3 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c // indirect
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
-	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
-	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7 // indirect
 	github.com/mdlayher/netlink v1.1.1 // indirect
 	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065 // indirect
-	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
-	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.13.0 // indirect
+	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.7.0 // indirect

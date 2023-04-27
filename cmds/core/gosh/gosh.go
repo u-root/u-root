@@ -1,4 +1,4 @@
-// Copyright 2023 the u-root Authors. All rights reserved
+// Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
@@ -11,31 +11,45 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
 
+	"github.com/u-root/prompt"
+	"github.com/u-root/prompt/completer"
 	"golang.org/x/term"
-
-	"github.com/knz/bubbline"
 
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
 
-const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
+type input interface {
+	Input(prefix string, completer prompt.Completer, opts ...prompt.Option) string
+}
+
+type inputPrompt struct{}
+
+func (i inputPrompt) Input(prefix string, completer prompt.Completer, opts ...prompt.Option) string {
+	return prompt.Input(prefix, completer, opts...)
+}
+
+type shell struct {
+	input
+}
 
 func main() {
 	flag.Parse()
 
-	err := run(flag.NArg())
+	sh := shell{
+		input: inputPrompt{},
+	}
 
-	if status, ok := interp.IsExitStatus(err); ok {
-		os.Exit(int(status))
+	err := sh.runAll(flag.NArg())
+
+	if e, ok := interp.IsExitStatus(err); ok {
+		os.Exit(int(e))
 	}
 
 	if err != nil {
@@ -44,106 +58,68 @@ func main() {
 	}
 }
 
-func run(narg int) error {
-	runner, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
+func (s shell) runAll(narg int) error {
+	r, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
 	if err != nil {
 		return err
 	}
 
 	if narg > 0 {
-		args := flag.Args()
-
-		return runCmd(runner, strings.NewReader(strings.Join(args, " ")), args[0])
+		return s.run(r, strings.NewReader(strings.Join(flag.Args(), " ")), "")
 	}
 
 	if narg == 0 {
 		if term.IsTerminal(int(os.Stdin.Fd())) {
-			return runInteractive(runner, os.Stdout, os.Stderr)
+			return s.runInteractiveTabCompletion(r, os.Stdout)
 		}
 
-		return runCmd(runner, os.Stdin, "")
+		return s.run(r, os.Stdin, "")
 	}
 
 	return nil
 }
 
-func runCmd(runner *interp.Runner, command io.Reader, name string) error {
-	prog, err := syntax.NewParser().Parse(command, name)
+func (s shell) run(r *interp.Runner, reader io.Reader, name string) error {
+	prog, err := syntax.NewParser().Parse(reader, name)
 	if err != nil {
 		return err
 	}
 
-	runner.Reset()
+	r.Reset()
 
-	return runner.Run(context.Background(), prog)
+	return r.Run(context.Background(), prog)
 }
 
-func runInteractive(runner *interp.Runner, stdout, stderr io.Writer) error {
+func (s shell) runInteractiveTabCompletion(r *interp.Runner, stdout io.Writer) error {
 	parser := syntax.NewParser()
-	input := bubbline.New()
 
-	if err := input.LoadHistory(HISTFILE); err != nil {
-		return err
+	if s.input == nil {
+		s.input = inputPrompt{}
 	}
 
-	input.SetAutoSaveHistory(HISTFILE, true)
-
-	input.AutoComplete = autocomplete
-
-	var runErr error
-
-	// The following code is used to intercept SIGINT signals.
-	// Calling signal.Ignore wouldn't work as child prcesses inherit this trait.
-	// We only want to catch SIGINTs that are propagated from a child,
-	// the child itself should get the signal as per usual.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	go func(ch chan os.Signal) {
-		for {
-			<-ch
-		}
-	}(ch)
-
 	for {
-		if runErr != nil {
-			fmt.Fprintf(stdout, "error: %s\n", runErr.Error())
-			runErr = nil
-		}
+		in := s.Input(
+			"$ ",
+			completerFunc,
+			prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
+		)
 
-		line, err := input.GetLine()
-
-		if err != nil {
-			if err == io.EOF {
-				break // maybe we should continue instead of break
-			}
-			if errors.Is(err, bubbline.ErrInterrupted) {
-				fmt.Fprintf(stdout, "^C\n")
-			} else {
-				fmt.Fprintf(stderr, "error: %s\n", err.Error())
-			}
-			continue
-		}
-
-		if line == "exit" {
+		if in == "exit" {
 			break
 		}
 
-		if line != "" {
-			input.AddHistory(line)
-		}
-
-		if err := parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {
+		if err := parser.Stmts(strings.NewReader(in), func(stmt *syntax.Stmt) bool {
 			if parser.Incomplete() {
-				fmt.Fprintf(stdout, "-> ")
+				fmt.Fprintf(stdout, "> ")
 
 				return true
 			}
 
-			runErr = runner.Run(context.Background(), stmt)
+			_ = r.Run(context.Background(), stmt)
 
-			return !runner.Exited()
+			return !r.Exited()
 		}); err != nil {
-			fmt.Fprintf(stderr, "error: %s\n", err.Error())
+			return err
 		}
 	}
 

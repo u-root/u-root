@@ -21,35 +21,12 @@ github.com/ProtonMail/go-crypto/openpgp/s2k
 # github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 ## explicit; go 1.13
 github.com/anmitsu/go-shlex
-# github.com/atotto/clipboard v0.1.4
-## explicit
-github.com/atotto/clipboard
-# github.com/aymanbagabas/go-osc52 v1.0.3
-## explicit; go 1.16
-github.com/aymanbagabas/go-osc52
 # github.com/beevik/ntp v0.3.0
 ## explicit
 github.com/beevik/ntp
 # github.com/cenkalti/backoff/v4 v4.1.3
 ## explicit; go 1.13
 github.com/cenkalti/backoff/v4
-# github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb
-## explicit; go 1.13
-github.com/charmbracelet/bubbles/cursor
-github.com/charmbracelet/bubbles/help
-github.com/charmbracelet/bubbles/key
-github.com/charmbracelet/bubbles/list
-github.com/charmbracelet/bubbles/paginator
-github.com/charmbracelet/bubbles/runeutil
-github.com/charmbracelet/bubbles/spinner
-github.com/charmbracelet/bubbles/textinput
-github.com/charmbracelet/bubbles/viewport
-# github.com/charmbracelet/bubbletea v0.23.1
-## explicit; go 1.16
-github.com/charmbracelet/bubbletea
-# github.com/charmbracelet/lipgloss v0.6.0
-## explicit; go 1.15
-github.com/charmbracelet/lipgloss
 # github.com/cloudflare/circl v1.1.0
 ## explicit; go 1.15
 github.com/cloudflare/circl/dh/x25519
@@ -64,9 +41,6 @@ github.com/cloudflare/circl/math/mlsbset
 github.com/cloudflare/circl/sign
 github.com/cloudflare/circl/sign/ed25519
 github.com/cloudflare/circl/sign/ed448
-# github.com/containerd/console v1.0.3
-## explicit; go 1.13
-github.com/containerd/console
 # github.com/creack/pty v1.1.15
 ## explicit; go 1.13
 github.com/creack/pty
@@ -151,29 +125,21 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/pgzip v1.2.4
 ## explicit
 github.com/klauspost/pgzip
-# github.com/knz/bubbline v0.0.0-20230124184034-a0b62576595b
-## explicit; go 1.13
-github.com/knz/bubbline
-github.com/knz/bubbline/complete
-github.com/knz/bubbline/computil
-github.com/knz/bubbline/editline
-github.com/knz/bubbline/editline/internal/textarea
-github.com/knz/bubbline/history
 # github.com/kr/pty v1.1.8
 ## explicit; go 1.12
 github.com/kr/pty
-# github.com/lucasb-eyer/go-colorful v1.2.0
+# github.com/mattn/go-colorable v0.1.7
+## explicit; go 1.13
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.14
 ## explicit; go 1.12
-github.com/lucasb-eyer/go-colorful
-# github.com/mattn/go-isatty v0.0.16
-## explicit; go 1.15
 github.com/mattn/go-isatty
-# github.com/mattn/go-localereader v0.0.1
-## explicit
-github.com/mattn/go-localereader
-# github.com/mattn/go-runewidth v0.0.14
+# github.com/mattn/go-runewidth v0.0.9
 ## explicit; go 1.9
 github.com/mattn/go-runewidth
+# github.com/mattn/go-tty v0.0.3
+## explicit; go 1.14
+github.com/mattn/go-tty
 # github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
 ## explicit; go 1.12
 github.com/mdlayher/ethernet
@@ -184,22 +150,6 @@ github.com/mdlayher/netlink/nlenc
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
 ## explicit; go 1.12
 github.com/mdlayher/raw
-# github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b
-## explicit; go 1.17
-github.com/muesli/ansi
-github.com/muesli/ansi/compressor
-# github.com/muesli/cancelreader v0.2.2
-## explicit; go 1.17
-github.com/muesli/cancelreader
-# github.com/muesli/reflow v0.3.0
-## explicit; go 1.13
-github.com/muesli/reflow/ansi
-github.com/muesli/reflow/truncate
-github.com/muesli/reflow/wordwrap
-github.com/muesli/reflow/wrap
-# github.com/muesli/termenv v0.13.0
-## explicit; go 1.13
-github.com/muesli/termenv
 # github.com/nanmu42/limitio v1.0.0
 ## explicit; go 1.16
 github.com/nanmu42/limitio
@@ -216,6 +166,9 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/pkg/term v1.2.0-beta.2
+## explicit; go 1.14
+github.com/pkg/term/termios
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
@@ -225,15 +178,9 @@ github.com/rck/unit
 # github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 ## explicit
 github.com/rekby/gpt
-# github.com/rivo/uniseg v0.2.0
-## explicit; go 1.12
-github.com/rivo/uniseg
 # github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 ## explicit
 github.com/safchain/ethtool
-# github.com/sahilm/fuzzy v0.1.0
-## explicit
-github.com/sahilm/fuzzy
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
@@ -247,6 +194,14 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
+# github.com/u-root/prompt v0.0.0-20221110083427-a2ad3c8339a8
+## explicit; go 1.14
+github.com/u-root/prompt
+github.com/u-root/prompt/completer
+github.com/u-root/prompt/internal/bisect
+github.com/u-root/prompt/internal/debug
+github.com/u-root/prompt/internal/strings
+github.com/u-root/prompt/internal/term
 # github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
 ## explicit; go 1.16
 github.com/u-root/uio/cp
