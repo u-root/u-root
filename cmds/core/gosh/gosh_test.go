@@ -19,7 +19,6 @@ import (
 	"unicode"
 
 	"mvdan.cc/sh/v3/interp"
-	"mvdan.cc/sh/v3/syntax"
 )
 
 func TestRun(t *testing.T) {
@@ -94,9 +93,7 @@ func TestRunCmd(t *testing.T) {
 				t.Errorf("Failed creating runner: %v", err)
 			}
 
-			parser := syntax.NewParser()
-
-			if err := runCmd(runner, parser, strings.NewReader(tt.pairs[0]), tt.name); err != nil {
+			if err := runCmd(runner, strings.NewReader(tt.pairs[0]), tt.name); err != nil {
 				if err.Error() != tt.wantErr.Error() {
 					t.Errorf("Failed running command: %v", err)
 				}
@@ -132,9 +129,7 @@ func TestRunInteractive(t *testing.T) {
 				t.Errorf("Failed creating runner: %v", err)
 			}
 
-			parser := syntax.NewParser()
-
-			if err := runInteractive(runner, parser, outWriter, outWriter); err != nil && tt.wantErr == nil {
+			if err := runInteractive(runner, outWriter, outWriter); err != nil && tt.wantErr == nil {
 				t.Errorf("Unexpected error: %v", err)
 			} else if tt.wantErr != nil && fmt.Sprint(err) != tt.wantErr.Error() {
 				t.Errorf("Want error %q, got: %v", tt.wantErr, err)
@@ -200,8 +195,6 @@ func FuzzRun(f *testing.F) {
 		f.Fatalf("failed to initialize runner")
 	}
 
-	parser := syntax.NewParser()
-
 	// get seed corpora
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
 	if err != nil {
@@ -264,6 +257,6 @@ func FuzzRun(f *testing.F) {
 		runner.Reset()
 		runner.Dir = dirPath
 
-		runCmd(runner, parser, strings.NewReader(stringifiedData), "fuzz")
+		runCmd(runner, strings.NewReader(stringifiedData), "fuzz")
 	})
 }
