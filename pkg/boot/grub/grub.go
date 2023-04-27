@@ -494,7 +494,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				e.Initrd = i
 			}
 
-		case "multiboot":
+		case "multiboot", "multiboot2":
 			// TODO handle --quirk-* arguments ? (change parsing)
 			k, err := c.getFile(arg)
 			if err != nil {
@@ -509,7 +509,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			c.mbEntries[c.curEntry] = entry
 			c.mbEntries[c.curLabel] = entry
 
-		case "module":
+		case "module", "module2":
 			// TODO handle --nounzip arguments ? (change parsing)
 			if e, ok := c.mbEntries[c.curEntry]; ok {
 				// The only allowed arg
