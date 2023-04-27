@@ -96,15 +96,13 @@ func commandCompleter(input string, col, wstart, wend int) (msg string, completi
 	candidates := []string{}
 
 	for _, path := range strings.Split(os.Getenv("PATH"), ":") {
-		if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 			if d != nil && !d.IsDir() && strings.HasPrefix(d.Name(), input) {
 				candidates = append(candidates, d.Name())
 			}
 
 			return nil
-		}); err != nil {
-			continue
-		}
+		})
 	}
 
 	if len(candidates) != 0 {

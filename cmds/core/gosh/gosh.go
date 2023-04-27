@@ -32,7 +32,7 @@ const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
 func main() {
 	flag.Parse()
 
-	err := run(flag.NArg(), flag.Args())
+	err := run(flag.NArg())
 
 	if status, ok := interp.IsExitStatus(err); ok {
 		os.Exit(int(status))
@@ -44,13 +44,15 @@ func main() {
 	}
 }
 
-func run(narg int, args []string) error {
+func run(narg int) error {
 	runner, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
 	if err != nil {
 		return err
 	}
 
 	if narg > 0 {
+		args := flag.Args()
+
 		if strings.HasSuffix(args[0], "sh") {
 			return runScript(runner, args, args[0])
 		}
