@@ -53,10 +53,6 @@ func run(narg int) error {
 	if narg > 0 {
 		args := flag.Args()
 
-		if strings.HasSuffix(args[0], "sh") {
-			return runScript(runner, args, args[0])
-		}
-
 		return runCmd(runner, strings.NewReader(strings.Join(args, " ")), args[0])
 	}
 
@@ -69,27 +65,6 @@ func run(narg int) error {
 	}
 
 	return nil
-}
-
-func runScript(runner *interp.Runner, args []string, name string) error {
-	if len(args) > 1 {
-		return fmt.Errorf("no support for trailing arguments to script: %v", args[1:])
-	}
-
-	f, err := os.Open(name)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	prog, err := syntax.NewParser().Parse(f, name)
-	if err != nil {
-		return err
-	}
-
-	runner.Reset()
-
-	return runner.Run(context.Background(), prog)
 }
 
 func runCmd(runner *interp.Runner, command io.Reader, name string) error {
@@ -153,20 +128,8 @@ func runInteractive(runner *interp.Runner, stdout, stderr io.Writer) error {
 			break
 		}
 
-		// check if we want to execute a shell script
-		fields := strings.Fields(line)
-		if len(fields) > 0 && strings.HasSuffix(fields[0], "sh") {
-			if err := runScript(runner, fields, fields[0]); err != nil {
-				fmt.Fprintf(stderr, "error: %s\n", err.Error())
-			}
-
-			continue
-		}
-
 		if line != "" {
-			if err := input.AddHistory(line); err != nil {
-				fmt.Fprintf(stdout, "unable to add %s to history: %v\n", line, err)
-			}
+			input.AddHistory(line)
 		}
 
 		if err := parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {
