@@ -1,0 +1,47 @@
+[
+   {
+    "cmdline": "root=UUID=d0be5cb9-622d-42d5-a531-674aaa120309 ro crashkernel=auto rhgb quiet console=ttyS1,57600n8 ",
+    "image_type": "linux",
+    "initrd": {
+      "name": "testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/initramfs-5.18.0.img"
+    },
+    "kernel": {
+      "name": "testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/vmlinuz-5.18.0"
+    },
+    "name": "CentOS Linux (5.18.0) 8 5.18.0",
+    "rank": "1"
+   },
+   {
+    "cmdline": "root=UUID=d0be5cb9-622d-42d5-a531-674aaa120309 ro crashkernel=auto rhgb quiet console=ttyS1,57600n8",
+    "image_type": "linux",
+    "initrd": {
+      "name": "testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/initramfs-0-rescue-9af7b02ac08149d985841c07c8ff366e.img"
+    },
+    "kernel": {
+      "name": "testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/vmlinuz-0-rescue-9af7b02ac08149d985841c07c8ff366e"
+    },
+    "name": "CentOS Linux (0-rescue-9af7b02ac08149d985841c07c8ff366e) 8 0-rescue-9af7b02ac08149d985841c07c8ff366e",
+    "rank": "1"
+  },
+  {
+    "cmdline": "logging=serial,memory serial=57600,8n1,0x2f8 min_ram=0x2000000",
+    "image_type": "multiboot",
+    "kernel": {
+      "url": "file:///testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/tboot.gz"
+    },
+    "modules": [
+      {
+        "cmdline": "/boot/vmlinuz-5.18.0 root=UUID=d0be5cb9-622d-42d5-a531-674aaa120309 ro crashkernel=auto rhgb quiet console=ttyS1,57600n8 intel_iommu=on",
+        "name": "/boot/vmlinuz-5.18.0",
+        "url": "file:///testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/vmlinuz-5.18.0"
+      },
+      {
+        "cmdline": "/boot/initramfs-5.18.0.img",
+        "name": "/boot/initramfs-5.18.0.img",
+        "url": "file:///testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/initramfs-5.18.0.img"
+      }
+    ],
+    "name": "CentOS Linux GNU/Linux, with tboot 1.10.2 and Linux 5.18.0",
+    "rank": "0"
+  }
+]
