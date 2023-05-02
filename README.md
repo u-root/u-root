@@ -117,7 +117,7 @@ testing, executing your currently booted kernel:
 > NOTE: these files will be placed in the `$HOME` dir in the initramfs.
 
 ```shell
-u-root -files "$HOME/hello.ko $HOME/hello2.ko"
+u-root -files $HOME/hello.ko -files $HOME/hello2.ko
 qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
@@ -219,8 +219,15 @@ u-root -uinitcmd="/bin/foobar Go Gopher" ./cmds/core/{init,elvish}
 This will boot the same as the above.
 
 ```bash
-u-root -uinitcmd="/bin/foobar Go Gopher" -files /bin/echo:bin/foobar ./cmds/core/{init,elvish}
+u-root -uinitcmd="/bin/foobar Go Gopher" -files /bin/echo:bin/foobar -files your-hosts-file:/etc/hosts ./cmds/core/{init,elvish}
 ```
+
+The effect of the above command:
+*   Sets up the uinit command to be /bin/foobar, with 2 arguments: Go Gopher
+*   Adds /bin/echo as bin/foobar
+*   Adds your-hosts-file as etc/hosts
+*   builds in the cmds/core/init, and cmds/core/elvish commands.
+    The {} are expanded by the shell 
 
 This will bypass the regular u-root init and just launch a shell:
 
