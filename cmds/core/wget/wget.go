@@ -38,7 +38,6 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
-var outPath = flag.String("O", "", "output file")
 var errEmptyURL = errors.New("empty url")
 
 type cmd struct {
@@ -46,11 +45,56 @@ type cmd struct {
 	outputPath string
 }
 
-func command(outPath string, url string) *cmd {
+// flags parses wget flags
+// wget is old school, and allows flags after the URL.
+// This code does not process the -- flag specified in the
+// man page, as the command itself does not seem to either.
+func flags(args ...string) (string, string, error) {
+	// -- takes priority over everything else.
+	// flag package does not allow - as a flag.
+	// except, in spite of the docs, wget on linux seems
+	// to ignore --. Great. It's a terrible idea anyway,
+	// unless you really like creating files that start
+	// with -
+	// If at some point one wishes to add -- support,
+	// the slices package is a good place to start.
+
+	if len(args) == 0 {
+		return "", "", errEmptyURL
+	}
+
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	var outPath = f.String("O", "", "output file")
+
+	if err := f.Parse(args[1:]); err != nil {
+		return "", "", err
+	}
+
+	if len(f.Args()) == 0 {
+		return "", "", errEmptyURL
+	}
+
+	URL := f.Args()[0]
+
+	// Now, it is allowed to have switches after the URL,
+	// handle following flags
+	if err := f.Parse(f.Args()[1:]); err != nil {
+		return "", "", err
+	}
+
+	return *outPath, URL, nil
+}
+
+func command(args ...string) (*cmd, error) {
+	outPath, URL, err := flags(args...)
+	if err != nil {
+		return nil, err
+	}
+
 	return &cmd{
 		outputPath: outPath,
-		url:        url,
-	}
+		url:        URL,
+	}, nil
 }
 
 func (c *cmd) run() error {
@@ -104,8 +148,11 @@ func defaultOutputPath(urlPath string) string {
 }
 
 func main() {
-	flag.Parse()
-	if err := command(*outPath, flag.Arg(0)).run(); err != nil {
+	c, err := command(os.Args...)
+	if err == nil {
+		err = c.run()
+	}
+	if err != nil {
 		if errors.Is(err, errEmptyURL) {
 			usage()
 		}
