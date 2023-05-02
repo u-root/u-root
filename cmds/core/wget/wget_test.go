@@ -52,7 +52,7 @@ func TestWget(t *testing.T) {
 		wantContent    string // out
 		outputPath     string
 		wantOutputPath string
-		wantErr        error
+		err            error
 	}{
 		{
 			name:           "ipv4",
@@ -60,7 +60,7 @@ func TestWget(t *testing.T) {
 			wantContent:    content,
 			outputPath:     "basic",
 			wantOutputPath: "basic",
-			wantErr:        nil,
+			err:            nil,
 		},
 
 		{
@@ -68,28 +68,28 @@ func TestWget(t *testing.T) {
 			url:            fmt.Sprintf("%s/200", srv.URL),
 			wantContent:    content,
 			wantOutputPath: "200",
-			wantErr:        nil,
+			err:            nil,
 		},
 		{
 			name:           "index.html of domain",
 			url:            fmt.Sprintf("%s/", srv.URL),
 			wantContent:    content,
 			wantOutputPath: "index.html",
-			wantErr:        nil,
+			err:            nil,
 		},
 		{
 			name:           "index.html of subfolder",
 			url:            fmt.Sprintf("%s/200/", srv.URL),
 			wantContent:    content,
 			wantOutputPath: "index.html",
-			wantErr:        nil,
+			err:            nil,
 		},
 		{
 			name:           "index.html of 2nd level subfolder",
 			url:            fmt.Sprintf("%s/200/300/", srv.URL),
 			wantContent:    content,
 			wantOutputPath: "index.html",
-			wantErr:        nil,
+			err:            nil,
 		},
 		{
 			name:           "localhost",
@@ -97,7 +97,7 @@ func TestWget(t *testing.T) {
 			wantContent:    content,
 			outputPath:     "ipv4",
 			wantOutputPath: "ipv4",
-			wantErr:        nil,
+			err:            nil,
 		},
 		// TODO: CircleCI does not support ipv6
 		// {
@@ -112,22 +112,22 @@ func TestWget(t *testing.T) {
 			url:            fmt.Sprintf("%s/302", srv.URL),
 			outputPath:     "redirect",
 			wantOutputPath: "redirect",
-			wantErr:        nil,
+			err:            nil,
 		},
 		{
-			name:    "4xx error",
-			url:     fmt.Sprintf("%s/404", srv.URL),
-			wantErr: curl.ErrStatusNotOk,
+			name: "4xx error",
+			url:  fmt.Sprintf("%s/404", srv.URL),
+			err:  curl.ErrStatusNotOk,
 		},
 		{
-			name:    "5xx error",
-			url:     fmt.Sprintf("%s/500", srv.URL),
-			wantErr: curl.ErrStatusNotOk,
+			name: "5xx error",
+			url:  fmt.Sprintf("%s/500", srv.URL),
+			err:  curl.ErrStatusNotOk,
 		},
 		{
-			name:    "empty url",
-			url:     "",
-			wantErr: errEmptyURL,
+			name: "empty url",
+			url:  "",
+			err:  errEmptyURL,
 		},
 	}
 
@@ -136,14 +136,13 @@ func TestWget(t *testing.T) {
 			if err := os.Chdir(t.TempDir()); err != nil {
 				t.Fatalf("failed to change into temporary directory: %v", err)
 			}
-
-			err := command(tt.outputPath, tt.url).run()
-
-			if tt.wantErr == nil && err != nil {
-				t.Fatalf("expected nil, got: %v", err)
+			c, err := command([]string{"wget", "-O", tt.outputPath, tt.url}...)
+			if err == nil {
+				err = c.run()
 			}
-			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
-				t.Fatalf("expected: %v, got: %v", tt.wantErr, err)
+
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("got %v, want %v", err, tt.err)
 			}
 
 			if tt.wantContent != "" {
@@ -184,8 +183,42 @@ func TestNoServer(t *testing.T) {
 		}
 	}()
 
-	err := command("", fmt.Sprintf("http://localhost:%d/200", port)).run()
-	if err == nil {
-		t.Error("expected err got nil")
+	c, err := command("", fmt.Sprintf("http://localhost:%d/200", port))
+	if err != nil {
+		t.Fatalf("command: got %v, want nil", err)
+	}
+	if err := c.run(); err == nil {
+		t.Fatalf("run:got nil, want err")
+	}
+
+}
+
+func TestFlags(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		args []string
+		out  string
+		url  string
+		err  error
+	}{
+		{name: "no args", args: []string{}, out: "", url: "", err: errEmptyURL},
+		{name: "no url", args: []string{"wget"}, out: "", url: "", err: errEmptyURL},
+		{name: "opt but no url", args: []string{"wget", "-O", "b"}, out: "", url: "", err: errEmptyURL},
+		{name: "url with -O first", args: []string{"wget", "-O", "b", "a"}, out: "b", url: "a", err: nil},
+		{name: "url with -O last", args: []string{"wget", "a", "-O", "b"}, out: "b", url: "a", err: nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			o, u, err := flags(tt.args...)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("err:got %v, want %v", err, tt.err)
+			}
+			if o != tt.out {
+				t.Errorf("out:got %q, want %q", o, tt.out)
+			}
+			if u != tt.url {
+				t.Errorf("url:got %q,want %q", u, tt.url)
+			}
+		})
+
 	}
 }
