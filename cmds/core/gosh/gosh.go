@@ -31,7 +31,11 @@ const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
 
 func main() {
 	completion := true
-	if disable, ok := os.LookupEnv("GOSH_COMPLETION_DISABLE"); ok && disable == "1" {
+	// If UROOT_SHELL_TABCOMPLETE
+	//   is not set, completion is enabled.
+	//   is set, and it has value 1, completion is enabled.
+	//   is set, and it has value !=1, completion is DISABLED.
+	if c, ok := os.LookupEnv("UROOT_SHELL_TABCOMPLETE"); ok && c != "1" {
 		completion = false
 	}
 
