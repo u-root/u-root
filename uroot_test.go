@@ -303,10 +303,12 @@ func TestUrootCmdline(t *testing.T) {
 				sum1, sum2 []byte
 				errs       [2]error
 				wg         = &sync.WaitGroup{}
+				remove     []string
 			)
 
 			wg.Add(2)
 			go func() {
+				defer wg.Done()
 				f1, sum1, err = buildIt(t, tt.args, tt.env, tt.err)
 				if err != nil {
 					errs[0] = err
@@ -319,32 +321,33 @@ func TestUrootCmdline(t *testing.T) {
 					return
 				}
 
+				remove = append(remove, f1.Name())
 				for _, v := range tt.validators {
 					if err := v.Validate(a); err != nil {
 						t.Errorf("validator failed: %v / archive:\n%s", err, a)
 					}
 				}
-				wg.Done()
 			}()
 
-			defer func() {
-				if delFiles {
-					os.RemoveAll(f1.Name())
-				}
-			}()
 			go func() {
+				defer wg.Done()
 				var err error
 				f2, sum2, err = buildIt(t, tt.args, tt.env, tt.err)
-				errs[1] = err
-				wg.Done()
+				if err != nil {
+					errs[1] = err
+					return
+				}
+				remove = append(remove, f2.Name())
 			}()
 
+			wg.Wait()
 			defer func() {
 				if delFiles {
-					os.RemoveAll(f2.Name())
+					for _, n := range remove {
+						os.RemoveAll(n)
+					}
 				}
 			}()
-			wg.Wait()
 			if errs[0] != nil {
 				t.Error(errs[0])
 				return
