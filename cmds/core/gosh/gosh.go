@@ -168,6 +168,11 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 			break
 		}
 
+		if line == "nocomplete" {
+			input.AutoComplete = nil
+			continue
+		}
+
 		// check if we want to execute a shell script
 		fields := strings.Fields(line)
 		if len(fields) > 0 && strings.HasSuffix(fields[0], "sh") {
