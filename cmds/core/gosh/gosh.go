@@ -31,12 +31,17 @@ const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
 
 func main() {
 	completion := true
-	// If UROOT_SHELL_TABCOMPLETE
+	// If UROOT_SHELL_TABCOMPLETE_DISABLE
 	//   is not set, completion is enabled.
-	//   is set, and it has value 1, completion is enabled.
-	//   is set, and it has value !=1, completion is DISABLED.
-	if c, ok := os.LookupEnv("UROOT_SHELL_TABCOMPLETE"); ok && c != "1" {
-		completion = false
+	//   is set, and it has value "0", "false", or "no": completion is enabled.
+	//   otherwise, completion is DISABLED.
+	if c, ok := os.LookupEnv("UROOT_SHELL_TABCOMPLETE_DISABLE"); ok {
+		switch c {
+		// enabled.
+		case "0", "false", "no":
+		default:
+			completion = false
+		}
 	}
 
 	flag.Parse()
