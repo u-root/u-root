@@ -301,7 +301,7 @@ func TestUrootCmdline(t *testing.T) {
 			var (
 				f1, f2     *os.File
 				sum1, sum2 []byte
-				errs       error
+				errs       [2]error
 				wg         = &sync.WaitGroup{}
 			)
 
@@ -309,13 +309,13 @@ func TestUrootCmdline(t *testing.T) {
 			go func() {
 				f1, sum1, err = buildIt(t, tt.args, tt.env, tt.err)
 				if err != nil {
-					errs = errors.Join(errs, err)
+					errs[0] = err
 					return
 				}
 
 				a, err := itest.ReadArchive(f1.Name())
 				if err != nil {
-					errs = errors.Join(errs, err)
+					errs[0] = err
 					return
 				}
 
@@ -335,7 +335,7 @@ func TestUrootCmdline(t *testing.T) {
 			go func() {
 				var err error
 				f2, sum2, err = buildIt(t, tt.args, tt.env, tt.err)
-				errs = errors.Join(errs, err)
+				errs[1] = err
 				wg.Done()
 			}()
 
@@ -345,8 +345,12 @@ func TestUrootCmdline(t *testing.T) {
 				}
 			}()
 			wg.Wait()
-			if errs != nil {
-				t.Error(err)
+			if errs[0] != nil {
+				t.Error(errs[0])
+				return
+			}
+			if errs[1] != nil {
+				t.Error(errs[1])
 				return
 			}
 			if !bytes.Equal(sum1, sum2) {
