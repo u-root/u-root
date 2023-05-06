@@ -116,6 +116,20 @@ func TestStdinGrep(t *testing.T) {
 			p:      params{noShowMatch: true},
 			args:   []string{"hix"},
 		}, // no filename, so it just prints a newline
+		{
+			input:  "a: [a-z]{1,2}\n",
+			output: "a: [a-z]{1,2}\n",
+			err:    nil,
+			p:      params{fixed: true},
+			args:   []string{"{1,2}"},
+		},
+		{
+			input:  "a: [a-Z]{1,2}\n",
+			output: "a: [a-Z]{1,2}\n",
+			err:    nil,
+			p:      params{fixed: true, caseInsensitive: true},
+			args:   []string{"[A-z]"},
+		},
 	}
 
 	for _, test := range tests {
