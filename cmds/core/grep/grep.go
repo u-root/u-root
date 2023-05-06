@@ -56,6 +56,7 @@ var (
 	count           = flag.BoolP("count", "c", false, "Just show counts")
 	caseInsensitive = flag.BoolP("ignore-case", "i", false, "case-insensitive matching")
 	number          = flag.BoolP("line-number", "n", false, "Show line numbers")
+	fixed           = flag.BoolP("fixed-strings", "F", false, "Match using fixed strings")
 )
 
 // grep reads data from the os.File embedded in grepCommand.
@@ -73,10 +74,19 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) {
 	var lineNum int
 	for {
 		if i, err := r.ReadString('\n'); err == nil {
-			m := re.Match([]byte(i))
+			var m bool
+			if c.fixed {
+				if c.caseInsensitive {
+					m = strings.Contains(strings.ToLower(i), strings.ToLower(c.expr))
+				} else {
+					m = strings.Contains(i, c.expr)
+				}
+			} else {
+				m = re.Match([]byte(i))
+			}
 			if m == !c.invert {
 				res <- &grepResult{
-					match:   re.Match([]byte(i)),
+					match:   m,
 					c:       f,
 					line:    &i,
 					lineNum: lineNum + 1,
@@ -128,6 +138,7 @@ type params struct {
 	caseInsensitive bool
 	number          bool
 	quiet           bool
+	fixed           bool
 }
 
 type cmd struct {
@@ -165,6 +176,7 @@ func main() {
 		caseInsensitive: *caseInsensitive,
 		number:          *number,
 		quiet:           *quiet,
+		fixed:           *fixed,
 	}
 
 	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
@@ -183,10 +195,13 @@ func (c *cmd) run() error {
 	if len(c.args) > 0 {
 		r = c.args[0]
 	}
-	if c.caseInsensitive && !strings.HasPrefix(r, "(?i)") {
+	if c.caseInsensitive && !strings.HasPrefix(r, "(?i)") && !c.fixed {
 		r = "(?i)" + r
 	}
-	re := regexp.MustCompile(r)
+	var re *regexp.Regexp
+	if !c.fixed {
+		re = regexp.MustCompile(r)
+	}
 	// very special case, just stdin
 	if len(c.args) < 2 {
 		c.nGrep++
