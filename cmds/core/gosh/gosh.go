@@ -30,9 +30,23 @@ import (
 const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
 
 func main() {
+	completion := true
+	// If UROOT_SHELL_TABCOMPLETE_DISABLE
+	//   is not set, completion is enabled.
+	//   is set, and it has value "0", "false", or "no": completion is enabled.
+	//   otherwise, completion is DISABLED.
+	if c, ok := os.LookupEnv("UROOT_SHELL_TABCOMPLETE_DISABLE"); ok {
+		switch c {
+		// enabled.
+		case "0", "false", "no":
+		default:
+			completion = false
+		}
+	}
+
 	flag.Parse()
 
-	err := run(flag.NArg(), flag.Args())
+	err := run(completion, flag.Args()...)
 
 	if status, ok := interp.IsExitStatus(err); ok {
 		os.Exit(int(status))
@@ -44,7 +58,7 @@ func main() {
 	}
 }
 
-func run(narg int, args []string) error {
+func run(completion bool, args ...string) error {
 	runner, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
 	if err != nil {
 		return err
@@ -52,17 +66,17 @@ func run(narg int, args []string) error {
 
 	parser := syntax.NewParser()
 
-	if narg > 0 {
+	if len(args) > 0 {
 		if strings.HasSuffix(args[0], "sh") {
-			return runScript(runner, parser, args, args[0])
+			return runScript(runner, parser, args[0], args...)
 		}
 
 		return runCmd(runner, parser, strings.NewReader(strings.Join(args, " ")), args[0])
 	}
 
-	if narg == 0 {
+	if len(args) == 0 {
 		if term.IsTerminal(int(os.Stdin.Fd())) {
-			return runInteractive(runner, parser, os.Stdout, os.Stderr)
+			return runInteractive(runner, parser, os.Stdout, os.Stderr, completion)
 		}
 
 		return runCmd(runner, parser, os.Stdin, "")
@@ -71,7 +85,7 @@ func run(narg int, args []string) error {
 	return nil
 }
 
-func runScript(runner *interp.Runner, parser *syntax.Parser, args []string, name string) error {
+func runScript(runner *interp.Runner, parser *syntax.Parser, name string, args ...string) error {
 	if len(args) > 1 {
 		return fmt.Errorf("no support for trailing arguments to script: %v", args[1:])
 	}
@@ -103,7 +117,7 @@ func runCmd(runner *interp.Runner, parser *syntax.Parser, command io.Reader, nam
 	return runner.Run(context.Background(), prog)
 }
 
-func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer) error {
+func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer, completion bool) error {
 	input := bubbline.New()
 
 	if err := input.LoadHistory(HISTFILE); err != nil {
@@ -112,7 +126,9 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 
 	input.SetAutoSaveHistory(HISTFILE, true)
 
-	input.AutoComplete = autocomplete
+	if completion {
+		input.AutoComplete = autocomplete
+	}
 
 	var runErr error
 
@@ -152,10 +168,15 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 			break
 		}
 
+		if line == "nocomplete" {
+			input.AutoComplete = nil
+			continue
+		}
+
 		// check if we want to execute a shell script
 		fields := strings.Fields(line)
 		if len(fields) > 0 && strings.HasSuffix(fields[0], "sh") {
-			if err := runScript(runner, parser, fields, fields[0]); err != nil {
+			if err := runScript(runner, parser, fields[0], fields...); err != nil {
 				fmt.Fprintf(stderr, "error: %s\n", err.Error())
 			}
 
