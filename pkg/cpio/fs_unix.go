@@ -215,7 +215,7 @@ func (r *Recorder) inode(i Info) (Info, bool) {
 
 	if d, ok := r.inodeMap[d]; ok {
 		i.Ino = d.Ino
-		return i, d.Name != i.Name
+		return i, i.NLink > 1 && d.Name != i.Name
 	}
 
 	i.Ino = r.inumber
