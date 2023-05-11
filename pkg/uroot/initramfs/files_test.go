@@ -465,6 +465,15 @@ func sameNameModeContent(r1 cpio.Record, r2 cpio.Record) bool {
 }
 
 func TestOptsWrite(t *testing.T) {
+	dir := t.TempDir()
+	fooDir := filepath.Join(dir, "foo")
+	os.Mkdir(fooDir, os.ModePerm)
+	symlinkToFooDir := filepath.Join(dir, "fooSymDir")
+	os.Symlink(fooDir, symlinkToFooDir)
+	bar1 := filepath.Join(fooDir, "bar")
+	os.WriteFile(bar1, []byte("just test"), os.ModePerm)
+	bar2 := filepath.Join(symlinkToFooDir, "bar")
+
 	for i, tt := range []struct {
 		desc string
 		opts *Opts
@@ -649,6 +658,27 @@ func TestOptsWrite(t *testing.T) {
 			want: Records{
 				"init":  cpio.StaticFile("init", "boo", 0o555),
 				"inito": cpio.StaticFile("inito", "huh", 0o111),
+			},
+		},
+		{
+			desc: "symbol link parent directory",
+			opts: &Opts{
+				Files: &Files{
+					Files: map[string]string{
+						"a/bar": bar1,
+						"b/bar": bar2,
+					},
+					Records: map[string]cpio.Record{},
+				},
+			},
+			ma: &MockArchiver{
+				Records: make(Records),
+			},
+			want: Records{
+				"a":     cpio.Directory("a", 0o755),
+				"a/bar": cpio.StaticFile("a/bar", "just test", 0o755),
+				"b":     cpio.Directory("b", 0o755),
+				"b/bar": cpio.StaticFile("b/bar", "just test", 0o755),
 			},
 		},
 	} {
