@@ -36,7 +36,7 @@ require (
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.1.0
+	golang.org/x/crypto v0.3.1-0.20221117191849-2c476679df9a
 	golang.org/x/sys v0.5.0
 	golang.org/x/term v0.5.0
 	golang.org/x/text v0.7.0
@@ -54,7 +54,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
 	github.com/charmbracelet/bubbletea v0.23.1 // indirect
 	github.com/charmbracelet/lipgloss v0.6.0 // indirect
-	github.com/cloudflare/circl v1.1.0 // indirect
+	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
