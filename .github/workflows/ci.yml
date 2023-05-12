@@ -10,19 +10,14 @@ on:
 
 jobs:
   linters:
-    strategy:
-      matrix:
-        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: ${{ matrix.go-version }}
-
+        go-version: '1.20'
     - name: Check vendored dependencies
       run: |
         go mod tidy
@@ -35,80 +30,65 @@ jobs:
           git status --porcelain vendor
           exit 1
         fi
-
     - name: Golangci-lint
       uses: golangci/golangci-lint-action@v3
       with:
         version: v1.46
-
   check-licenses:
-    strategy:
-      matrix:
-        go-version: [ 1.18, 1.19 ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: ${{ matrix.go-version }}
-
+        go-version: '1.20'
     - name: Check Licenses
       run: go run tools/checklicenses/checklicenses.go -c tools/checklicenses/config.json
-
   build:
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19 ]
+        go-version: [ '1.18', '1.19', '1.20' ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
-
     - name: Build
       run: go build -v ./...
-
   test:
     needs:
       - build
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19 ]
+        go-version: [ '1.18', '1.19', '1.20' ]
     runs-on: ubuntu-latest
     env:
       UROOT_SOURCE: ${{ github.workspace }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
-
     - name: Run tests
       run: go test -v -timeout=15m -failfast ./...
-
     - name: Check for Symlink Regression
       run: |
         mkdir /tmp/usr
         ln -s /tmp/usr/x /tmp/usr/y
         go build
         ./u-root -files /tmp/usr minimal
-
   race:
     needs:
       - test
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19 ]
+        go-version: [ '1.18', '1.19', '1.20' ]
     runs-on: ubuntu-latest
     env:
       UROOT_SOURCE: ${{ github.workspace }}
@@ -116,21 +96,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
-
       - name: Run race condition tests
         run: go test -race -timeout=15m -failfast ./...
-
   coverage:
     needs:
       - test
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19 ]
+        go-version: [ '1.18', '1.19', '1.20' ]
     runs-on: ubuntu-latest
     env:
       UROOT_SOURCE: ${{ github.workspace }}
@@ -138,12 +115,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
-
       - name: Run coverage tests
         run: go test -cover -coverprofile=coverage.txt -timeout=15m -failfast ./...
 
@@ -234,17 +209,15 @@ jobs:
       - build
     strategy:
       matrix:
-        go-version: [ 1.18, 1.19 ]
+        go-version: [ '1.18', '1.19', '1.20' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
-
       - name: Check every Template
         run: |
           go build .
@@ -257,7 +230,6 @@ jobs:
           #$goruncmd all core # Fails because of dups. Is this supposed to work?
           GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
           cat /tmp/stats.json
-
       - name: Upload Stats
         uses: actions/upload-artifact@v3
         with:
