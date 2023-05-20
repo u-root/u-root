@@ -185,6 +185,12 @@ func TestFilesGrep(t *testing.T) {
 			err:    nil,
 			args:   []string{"hello", f1.Name(), f2.Name()},
 		},
+		{
+			output: fmt.Sprintf("%s\n", f1.Name()),
+			err:    nil,
+			p:      params{noShowMatch: true},
+			args:   []string{"nix", f1.Name()},
+		},
 	}
 
 	for _, test := range tests {
