@@ -207,7 +207,7 @@ func (c *cmd) run() error {
 		c.nGrep++
 		go c.grep(&grepCommand{c.stdin, "<stdin>"}, re)
 	} else {
-		c.showName = (len(c.args[1:]) > 1 || c.recursive) && !c.headers
+		c.showName = (len(c.args[1:]) > 1 || c.recursive || c.noShowMatch) && !c.headers
 		// generate a chan of file names, bounded by the size of the chan. This in turn
 		// throttles the opens.
 		treeNames := make(chan string, 128)
