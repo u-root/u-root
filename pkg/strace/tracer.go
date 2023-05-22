@@ -215,8 +215,10 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 	tracer.addProcess(c.Process.Pid, SyscallExit)
 
 	if err := unix.PtraceSetOptions(c.Process.Pid,
-		// Make it easy to distinguish syscall-stops from other SIGTRAPS.
-		unix.PTRACE_O_TRACESYSGOOD|
+		// Tells ptrace to generate a SIGTRAP signal immediately before a new program is executed with the execve system call.
+		unix.PTRACE_O_TRACEEXEC|
+			// Make it easy to distinguish syscall-stops from other SIGTRAPS.
+			unix.PTRACE_O_TRACESYSGOOD|
 			// Kill tracee if tracer exits.
 			unix.PTRACE_O_EXITKILL|
 			// Automatically trace fork(2)'d, clone(2)'d, and vfork(2)'d children.
