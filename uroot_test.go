@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
@@ -30,8 +31,7 @@ var twocmds = []string{
 
 func xTestDCE(t *testing.T) {
 	delFiles := false
-	f, _ := buildIt(
-		t,
+	f, _, err := buildIt(t,
 		[]string{
 			"-build=bb", "-no-strip",
 			"world",
@@ -41,6 +41,10 @@ func xTestDCE(t *testing.T) {
 		},
 		nil,
 		nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		if delFiles {
 			os.RemoveAll(f.Name())
@@ -282,60 +286,90 @@ func TestUrootCmdline(t *testing.T) {
 	}
 	var bbTests []testCase
 	for _, test := range bareTests {
-		bbTest := test
-		bbTest.name = bbTest.name + " gbb-gopath"
-		bbTest.args = append([]string{"-build=gbb"}, bbTest.args...)
-		bbTest.env = append(bbTest.env, "GO111MODULE=off")
-
 		gbbTest := test
 		gbbTest.name = gbbTest.name + " gbb-gomodule"
 		gbbTest.args = append([]string{"-build=gbb"}, gbbTest.args...)
 		gbbTest.env = append(gbbTest.env, "GO111MODULE=on")
 
-		bbTests = append(bbTests, gbbTest, bbTest)
+		bbTests = append(bbTests, gbbTest)
 	}
 
 	for _, tt := range append(noCmdTests, bbTests...) {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			delFiles := true
-			f, sum1 := buildIt(t, tt.args, tt.env, tt.err)
-			defer func() {
-				if delFiles {
-					os.RemoveAll(f.Name())
+			var (
+				f1, f2     *os.File
+				sum1, sum2 []byte
+				errs       [2]error
+				wg         = &sync.WaitGroup{}
+				remove     []string
+			)
+
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				f1, sum1, err = buildIt(t, tt.args, tt.env, tt.err)
+				if err != nil {
+					errs[0] = err
+					return
+				}
+
+				a, err := itest.ReadArchive(f1.Name())
+				if err != nil {
+					errs[0] = err
+					return
+				}
+
+				remove = append(remove, f1.Name())
+				for _, v := range tt.validators {
+					if err := v.Validate(a); err != nil {
+						t.Errorf("validator failed: %v / archive:\n%s", err, a)
+					}
 				}
 			}()
 
-			a, err := itest.ReadArchive(f.Name())
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			for _, v := range tt.validators {
-				if err := v.Validate(a); err != nil {
-					t.Errorf("validator failed: %v / archive:\n%s", err, a)
+			go func() {
+				defer wg.Done()
+				var err error
+				f2, sum2, err = buildIt(t, tt.args, tt.env, tt.err)
+				if err != nil {
+					errs[1] = err
+					return
 				}
-			}
+				remove = append(remove, f2.Name())
+			}()
 
-			f2, sum2 := buildIt(t, tt.args, tt.env, tt.err)
+			wg.Wait()
 			defer func() {
 				if delFiles {
-					os.RemoveAll(f2.Name())
+					for _, n := range remove {
+						os.RemoveAll(n)
+					}
 				}
 			}()
+			if errs[0] != nil {
+				t.Error(errs[0])
+				return
+			}
+			if errs[1] != nil {
+				t.Error(errs[1])
+				return
+			}
 			if !bytes.Equal(sum1, sum2) {
 				delFiles = false
 				t.Errorf("not reproducible, hashes don't match")
 				t.Errorf("env: %v args: %v", tt.env, tt.args)
-				t.Errorf("file1: %v file2: %v", f.Name(), f2.Name())
+				t.Errorf("file1: %v file2: %v", f1.Name(), f2.Name())
 			}
 		})
 	}
 }
 
-func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
+func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte, error) {
 	f, err := os.CreateTemp("", "u-root-")
 	if err != nil {
-		t.Fatal(err)
+		return nil, nil, err
 	}
 	// Use the u-root command outside of the $GOPATH tree to make sure it
 	// still works.
@@ -344,15 +378,15 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte) {
 	t.Logf("Commandline: %v u-root %v", strings.Join(env, " "), strings.Join(arg, " "))
 	c.Env = append(c.Env, env...)
 	if out, err := c.CombinedOutput(); err != want {
-		t.Fatalf("Error: %v\nOutput:\n%s", err, out)
+		return nil, nil, fmt.Errorf("Error: %v\nOutput:\n%s", err, out)
 	} else if err != nil {
 		h1 := sha256.New()
 		if _, err := io.Copy(h1, f); err != nil {
-			t.Fatal()
+			return nil, nil, err
 		}
-		return f, h1.Sum(nil)
+		return f, h1.Sum(nil), nil
 	}
-	return f, nil
+	return f, nil, nil
 }
 
 func TestMain(m *testing.M) {

@@ -50,8 +50,8 @@ github.com/charmbracelet/bubbletea
 # github.com/charmbracelet/lipgloss v0.6.0
 ## explicit; go 1.15
 github.com/charmbracelet/lipgloss
-# github.com/cloudflare/circl v1.1.0
-## explicit; go 1.15
+# github.com/cloudflare/circl v1.3.3
+## explicit; go 1.19
 github.com/cloudflare/circl/dh/x25519
 github.com/cloudflare/circl/dh/x448
 github.com/cloudflare/circl/ecc/goldilocks
@@ -270,7 +270,7 @@ github.com/vishvananda/netns
 # github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 ## explicit
 github.com/vtolstov/go-ioctl
-# golang.org/x/crypto v0.1.0
+# golang.org/x/crypto v0.3.1-0.20221117191849-2c476679df9a
 ## explicit; go 1.17
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
