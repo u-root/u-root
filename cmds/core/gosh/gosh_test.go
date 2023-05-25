@@ -36,7 +36,7 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(false, false, &bytes.Buffer{}, tt.args...); err != nil {
+			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, false, tt.args...); err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 		})
@@ -128,7 +128,7 @@ func TestRunInteractive(t *testing.T) {
 
 			parser := syntax.NewParser()
 
-			if err := runInteractive(runner, parser, outWriter, outWriter, false); err != nil && tt.wantErr == nil {
+			if err := runInteractive(runner, parser, outWriter, outWriter); err != nil && tt.wantErr == nil {
 				t.Errorf("Unexpected error: %v", err)
 			} else if tt.wantErr != nil && fmt.Sprint(err) != tt.wantErr.Error() {
 				t.Errorf("Want error %q, got: %v", tt.wantErr, err)

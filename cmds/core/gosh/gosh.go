@@ -35,23 +35,7 @@ var interactive = flag.Bool("interactive", true, "interactive mode")
 
 func main() {
 	flag.Parse()
-	completion := true
-	// If UROOT_SHELL_TABCOMPLETE_DISABLE
-	//   is not set, completion is enabled.
-	//   is set, and it has value "0", "false", or "no": completion is enabled.
-	//   otherwise, completion is DISABLED.
-	if c, ok := os.LookupEnv("UROOT_SHELL_TABCOMPLETE_DISABLE"); ok {
-		switch c {
-		// enabled.
-		case "0", "false", "no":
-		default:
-			completion = false
-		}
-	}
-
-	flag.Parse()
-
-	err := run(completion, *interactive, os.Stdin, flag.Args()...)
+	err := run(os.Stdin, os.Stdout, os.Stderr, *interactive, flag.Args()...)
 
 	if status, ok := interp.IsExitStatus(err); ok {
 		os.Exit(int(status))
@@ -63,8 +47,8 @@ func main() {
 	}
 }
 
-func run(completion bool, interactive bool, stdin io.Reader, args ...string) error {
-	runner, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
+func run(stdin io.Reader, stdout, stderr io.Writer, interactive bool, args ...string) error {
+	runner, err := interp.New(interp.StdIO(stdin, stdout, stderr))
 	if err != nil {
 		return err
 	}
@@ -82,7 +66,7 @@ func run(completion bool, interactive bool, stdin io.Reader, args ...string) err
 	if len(args) == 0 {
 		if interactive {
 			if r, ok := stdin.(*os.File); ok && term.IsTerminal(int(r.Fd())) {
-				return runInteractive(runner, parser, os.Stdout, os.Stderr, completion)
+				return runInteractive(runner, parser, os.Stdout, os.Stderr)
 			}
 		}
 
@@ -137,7 +121,7 @@ func runCmd(runner *interp.Runner, parser *syntax.Parser, command io.Reader, nam
 	return nil
 }
 
-func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer, completion bool) error {
+func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer) error {
 	input := bubbline.New()
 
 	if err := input.LoadHistory(HISTFILE); err != nil {
@@ -146,9 +130,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 
 	input.SetAutoSaveHistory(HISTFILE, true)
 
-	if completion {
-		input.AutoComplete = autocomplete
-	}
+	input.AutoComplete = autocomplete
 
 	var runErr error
 
@@ -186,11 +168,6 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 
 		if line == "exit" {
 			break
-		}
-
-		if line == "nocomplete" {
-			input.AutoComplete = nil
-			continue
 		}
 
 		// check if we want to execute a shell script
