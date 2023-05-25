@@ -80,8 +80,10 @@ func run(completion bool, interactive bool, stdin io.Reader, args ...string) err
 	}
 
 	if len(args) == 0 {
-		if interactive && term.IsTerminal(int(os.Stdin.Fd())) {
-			return runInteractive(runner, parser, os.Stdout, os.Stderr, completion)
+		if interactive {
+			if r, ok := stdin.(*os.File); ok && term.IsTerminal(int(r.Fd())) {
+				return runInteractive(runner, parser, os.Stdout, os.Stderr, completion)
+			}
 		}
 
 		return runCmd(runner, parser, stdin, "")
