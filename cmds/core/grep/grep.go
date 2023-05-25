@@ -201,6 +201,8 @@ func (c *cmd) run() error {
 	var re *regexp.Regexp
 	if !c.fixed {
 		re = regexp.MustCompile(r)
+	} else if c.expr == "" {
+		c.expr = c.args[0]
 	}
 	// very special case, just stdin
 	if len(c.args) < 2 {

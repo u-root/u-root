@@ -130,6 +130,19 @@ func TestStdinGrep(t *testing.T) {
 			p:      params{fixed: true, caseInsensitive: true},
 			args:   []string{"[A-z]"},
 		},
+		{
+			input:  "a\nb\nc\n",
+			output: "b\n",
+			err:    nil,
+			p:      params{fixed: true},
+			args:   []string{"b"},
+		},
+		{
+			input:  "a\nb\nc\n",
+			output: "b\n",
+			err:    nil,
+			p:      params{fixed: true, expr: "b"},
+		},
 	}
 
 	for _, test := range tests {
