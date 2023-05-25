@@ -36,7 +36,7 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(false, tt.args...); err != nil {
+			if err := run(false, false, &bytes.Buffer{}, tt.args...); err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 		})
@@ -45,9 +45,9 @@ func TestRun(t *testing.T) {
 
 func TestRunCmd(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		pairs   []string
-		wantErr error
+		name  string
+		pairs []string
+		err   error
 	}{
 		{
 			name: "echo foo",
@@ -59,8 +59,8 @@ func TestRunCmd(t *testing.T) {
 		{
 			name: "quoted echo",
 			pairs: []string{
-				"echo 'foo\nbar'",
-				"foo\nbar",
+				"echo 'foo\\nbar'",
+				"foo\\nbar",
 			},
 		},
 		{
@@ -69,7 +69,7 @@ func TestRunCmd(t *testing.T) {
 				"exit 1; echo foo",
 				"",
 			},
-			wantErr: errors.New("exit status 1"),
+			err: errors.New("exit status 1"),
 		},
 		{
 			name: "not parsable",
@@ -77,12 +77,12 @@ func TestRunCmd(t *testing.T) {
 				"(",
 				"",
 			},
-			wantErr: errors.New("not parsable:1:1: reached EOF without matching ( with )"),
+			err: errors.New("not parsable:1:1: reached EOF without matching ( with )"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			runner, err := interp.New(interp.StdIO(strings.NewReader(tt.pairs[0]), &buf, &buf))
+			runner, err := interp.New(interp.StdIO(nil, &buf, &buf))
 			if err != nil {
 				t.Errorf("Failed creating runner: %v", err)
 			}
@@ -90,8 +90,9 @@ func TestRunCmd(t *testing.T) {
 			parser := syntax.NewParser()
 
 			if err := runCmd(runner, parser, strings.NewReader(tt.pairs[0]), tt.name); err != nil {
-				if err.Error() != tt.wantErr.Error() {
-					t.Errorf("Failed running command: %v", err)
+				// can't use errors.Is: please ask mvdan to fix that.
+				if fmt.Sprintf("%v", err) != fmt.Sprintf("%v", tt.err) {
+					t.Errorf("got %v, want %v", err, tt.err)
 				}
 			}
 

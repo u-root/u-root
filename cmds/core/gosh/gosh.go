@@ -10,6 +10,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -29,7 +31,10 @@ import (
 
 const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
 
+var interactive = flag.Bool("interactive", true, "interactive mode")
+
 func main() {
+	flag.Parse()
 	completion := true
 	// If UROOT_SHELL_TABCOMPLETE_DISABLE
 	//   is not set, completion is enabled.
@@ -46,7 +51,7 @@ func main() {
 
 	flag.Parse()
 
-	err := run(completion, flag.Args()...)
+	err := run(completion, *interactive, os.Stdin, flag.Args()...)
 
 	if status, ok := interp.IsExitStatus(err); ok {
 		os.Exit(int(status))
@@ -58,7 +63,7 @@ func main() {
 	}
 }
 
-func run(completion bool, args ...string) error {
+func run(completion bool, interactive bool, stdin io.Reader, args ...string) error {
 	runner, err := interp.New(interp.StdIO(os.Stdin, os.Stdout, os.Stderr))
 	if err != nil {
 		return err
@@ -75,11 +80,11 @@ func run(completion bool, args ...string) error {
 	}
 
 	if len(args) == 0 {
-		if term.IsTerminal(int(os.Stdin.Fd())) {
+		if interactive && term.IsTerminal(int(os.Stdin.Fd())) {
 			return runInteractive(runner, parser, os.Stdout, os.Stderr, completion)
 		}
 
-		return runCmd(runner, parser, os.Stdin, "")
+		return runCmd(runner, parser, stdin, "")
 	}
 
 	return nil
@@ -107,14 +112,27 @@ func runScript(runner *interp.Runner, parser *syntax.Parser, name string, args .
 }
 
 func runCmd(runner *interp.Runner, parser *syntax.Parser, command io.Reader, name string) error {
-	prog, err := parser.Parse(command, name)
-	if err != nil {
-		return err
+	scanner := bufio.NewScanner(command)
+	defer runner.Reset()
+
+	for scanner.Scan() {
+		h := scanner.Text()
+		if err := scanner.Err(); err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		prog, err := parser.Parse(bytes.NewBuffer([]byte(h)), name)
+		if err != nil {
+			return err
+		}
+
+		if err := runner.Run(context.Background(), prog); err != nil {
+			return err
+		}
 	}
-
-	runner.Reset()
-
-	return runner.Run(context.Background(), prog)
+	return nil
 }
 
 func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer, completion bool) error {
