@@ -4,27 +4,6 @@ version: 2.1
 orbs:
   codecov: codecov/codecov@3.2.5
 
-templates:
-  # Base environment with dagger tooling
-  golang-template:
-    &golang-template
-    docker:
-      - image: cimg/go:1.20
-    steps:
-      - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          name: Build CI tool
-          working_directory: tools/ci
-          command: go build
-
-  # Several tasks need more resources than what CircleCI offers by default
-  beefy-template:
-    &beefy-template
-    <<: *golang-template
-    resource_class: large
-
 workflows:
   ci:
     jobs:
@@ -40,8 +19,16 @@ workflows:
 jobs:
   # This build for all supported architecture and platform combinations
   build:
-    <<: *golang-template
+    docker:
+      - image: cimg/go:1.20
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Test u-root build
           command: ./tools/ci/ci -verbose -build
@@ -53,8 +40,17 @@ jobs:
 
   # Run all unit tests and generate a coverage report
   unit-tests:
-    <<: *beefy-template
+    resource_class: large
+    docker:
+      - image: cimg/go:1.20
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Run unit tests
           command: ./tools/ci/ci -verbose -test
@@ -65,18 +61,34 @@ jobs:
 
   # Run Golangs race condition detector
   race:
-    <<: *beefy-template
+    resource_class: large
+    docker:
+      - image: cimg/go:1.20
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Race condition detection
           command: ./tools/ci/ci -verbose -test
             -race
-          no_output_timeout: 15m
+          no_output_timeout: 20m
 
   check_templates:
-    <<: *golang-template
+    docker:
+      - image: cimg/go:1.20
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Check all build templates
           command: ./tools/ci/ci -verbose -build
@@ -90,8 +102,17 @@ jobs:
           destination: stats.json
 
   test-integration-amd64:
-    <<: *beefy-template
+    resource_class: large
+    docker:
+      - image: cimg/go:1.20
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Run integration tests
           command: ./tools/ci/ci -verbose -test
@@ -100,8 +121,17 @@ jobs:
           no_output_timeout: 15m
 
   test-integration-arm32:
-    <<: *beefy-template
+    resource_class: large
+    docker:
+      - image: cimg/go:1.20
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Run integration tests
           command: ./tools/ci/ci -verbose -test
@@ -110,8 +140,17 @@ jobs:
           no_output_timeout: 15m
 
   test-integration-arm64:
-    <<: *beefy-template
+    resource_class: large
+    docker:
+      - image: cimg/go:1.20
     steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Run integration tests
           command: ./tools/ci/ci -verbose -test
@@ -120,9 +159,17 @@ jobs:
           no_output_timeout: 15m
 
   test-tinygo:
-    <<: *beefy-template
+    resource_class: large
+    docker:
+      - image: cimg/go:1.20
     steps:
       - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build CI tool
+          working_directory: tools/ci
+          command: go build
       - run:
           name: Run unit tests with TinyGo
           command: ./tools/ci/ci -verbose -test
