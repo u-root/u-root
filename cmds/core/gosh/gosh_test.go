@@ -106,9 +106,7 @@ func TestRunScript(t *testing.T) {
 				t.Errorf("Failed creating runner: %v", err)
 			}
 
-			parser := syntax.NewParser()
-
-			if err := runScript(runner, parser, tt.pairs[0]); err != nil {
+			if err := runScript(runner, syntax.NewParser(), tt.pairs[0]); err != nil {
 				// can't use errors.Is: please ask mvdan to fix that.
 				if fmt.Sprintf("%v", err) != fmt.Sprintf("%v", tt.err) {
 					t.Errorf("got '%v', want '%v'", err, tt.err)
@@ -137,7 +135,7 @@ func TestRunInteractive(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Skip("Find out how to instrument bubbline")
+			t.Skip("Currently broken")
 			inReader, inWriter := io.Pipe()
 			outReader, outWriter := io.Pipe()
 			runner, err := interp.New(interp.StdIO(inReader, outWriter, outWriter))
@@ -145,9 +143,7 @@ func TestRunInteractive(t *testing.T) {
 				t.Errorf("Failed creating runner: %v", err)
 			}
 
-			parser := syntax.NewParser()
-
-			if err := runInteractive(runner, parser, outWriter, outWriter); err != nil && tt.wantErr == nil {
+			if err := runInteractive(runner, syntax.NewParser(), outWriter, outWriter); err != nil && tt.wantErr == nil {
 				t.Errorf("Unexpected error: %v", err)
 			} else if tt.wantErr != nil && fmt.Sprint(err) != tt.wantErr.Error() {
 				t.Errorf("Want error %q, got: %v", tt.wantErr, err)
