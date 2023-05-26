@@ -62,15 +62,38 @@ func TestRunFail(t *testing.T) {
 }
 
 func TestRunScript(t *testing.T) {
+	d := t.TempDir()
+	script := filepath.Join(d, "a.sh")
+	if err := os.WriteFile(script, []byte("echo hi\n"), 0666); err != nil {
+		t.Fatalf("Writing %q: got %v, want nil", script, err)
+	}
+
 	for _, tt := range []struct {
 		name  string
 		pairs []string
 		err   error
 	}{
+
 		{
 			name: "bad file",
 			pairs: []string{
 				"/",
+				"",
+			},
+			err: errors.New("read /: is a directory"),
+		},
+		{
+			name: "bad file",
+			pairs: []string{
+				"bad file",
+				"",
+			},
+			err: errors.New("open bad file: no such file or directory"),
+		},
+		{
+			name: "echo script",
+			pairs: []string{
+				script,
 				"",
 			},
 			err: errors.New("open bad file: no such file or directory"),
@@ -85,7 +108,7 @@ func TestRunScript(t *testing.T) {
 
 			parser := syntax.NewParser()
 
-			if err := runScript(runner, parser, tt.name); err != nil {
+			if err := runScript(runner, parser, tt.pairs[0]); err != nil {
 				// can't use errors.Is: please ask mvdan to fix that.
 				if fmt.Sprintf("%v", err) != fmt.Sprintf("%v", tt.err) {
 					t.Errorf("got '%v', want '%v'", err, tt.err)
