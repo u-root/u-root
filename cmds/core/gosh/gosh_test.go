@@ -43,41 +43,37 @@ func TestRun(t *testing.T) {
 	}
 }
 
-func TestRunCmd(t *testing.T) {
+func TestRunFail(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "run a bad file",
+			args: []string{"/"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, false, tt.args...); err == nil {
+				t.Errorf("want err, got nil")
+			}
+		})
+	}
+}
+
+func TestRunScript(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
 		pairs []string
 		err   error
 	}{
 		{
-			name: "echo foo",
+			name: "bad file",
 			pairs: []string{
-				"echo foo",
-				"foo",
-			},
-		},
-		{
-			name: "quoted echo",
-			pairs: []string{
-				"echo 'foo\\nbar'",
-				"foo\\nbar",
-			},
-		},
-		{
-			name: "exit 1",
-			pairs: []string{
-				"exit 1; echo foo",
+				"/",
 				"",
 			},
-			err: errors.New("exit status 1"),
-		},
-		{
-			name: "not parsable",
-			pairs: []string{
-				"(",
-				"",
-			},
-			err: errors.New("not parsable:1:1: reached EOF without matching ( with )"),
+			err: errors.New("open bad file: no such file or directory"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -89,10 +85,10 @@ func TestRunCmd(t *testing.T) {
 
 			parser := syntax.NewParser()
 
-			if err := runCmd(runner, parser, strings.NewReader(tt.pairs[0]), tt.name); err != nil {
+			if err := runScript(runner, parser, tt.name); err != nil {
 				// can't use errors.Is: please ask mvdan to fix that.
 				if fmt.Sprintf("%v", err) != fmt.Sprintf("%v", tt.err) {
-					t.Errorf("got %v, want %v", err, tt.err)
+					t.Errorf("got '%v', want '%v'", err, tt.err)
 				}
 			}
 

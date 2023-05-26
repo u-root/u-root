@@ -57,37 +57,29 @@ func run(stdin io.Reader, stdout, stderr io.Writer, interactive bool, args ...st
 
 	if len(args) > 0 {
 		if strings.HasSuffix(args[0], "sh") {
-			return runScript(runner, parser, args[0], args...)
+			return runScript(runner, parser, args[0])
 		}
 
 		return runCmd(runner, parser, strings.NewReader(strings.Join(args, " ")), args[0])
 	}
 
-	if len(args) == 0 {
-		if interactive {
-			if r, ok := stdin.(*os.File); ok && term.IsTerminal(int(r.Fd())) {
-				return runInteractive(runner, parser, os.Stdout, os.Stderr)
-			}
+	if interactive {
+		if r, ok := stdin.(*os.File); ok && term.IsTerminal(int(r.Fd())) {
+			return runInteractive(runner, parser, os.Stdout, os.Stderr)
 		}
-
-		return runCmd(runner, parser, stdin, "")
 	}
 
-	return nil
+	return runCmd(runner, parser, stdin, "")
 }
 
-func runScript(runner *interp.Runner, parser *syntax.Parser, name string, args ...string) error {
-	if len(args) > 1 {
-		return fmt.Errorf("no support for trailing arguments to script: %v", args[1:])
-	}
-
-	f, err := os.Open(name)
+func runScript(runner *interp.Runner, parser *syntax.Parser, file string) error {
+	f, err := os.Open(file)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	prog, err := parser.Parse(f, name)
+	prog, err := parser.Parse(f, file)
 	if err != nil {
 		return err
 	}
@@ -173,7 +165,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 		// check if we want to execute a shell script
 		fields := strings.Fields(line)
 		if len(fields) > 0 && strings.HasSuffix(fields[0], "sh") {
-			if err := runScript(runner, parser, fields[0], fields...); err != nil {
+			if err := runScript(runner, parser, fields[0]); err != nil {
 				fmt.Fprintf(stderr, "error: %s\n", err.Error())
 			}
 
