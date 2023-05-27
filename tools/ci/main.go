@@ -17,7 +17,7 @@ import (
 	"dagger.io/dagger"
 )
 
-const DEFAULT_GO_VER = "1.20"
+const DEFAULT_GO_VER = "1.19"
 
 var (
 	ErrNoPipelineSpecified = errors.New("no pipeline selected")
