@@ -52,9 +52,16 @@ go install github.com/u-root/u-root
 **Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
 need to add `$GOPATH/bin` to your `$PATH`.**
 
+## Templates
+
+To quickly specify a set of commands from u-root, you can use any of the
+templates as defined in [templates.go](templates.go).
+
+## Examples
+
 You can now use the u-root command to build an initramfs. Here are some examples
-with $UROOT_PATH being the path to where the u-root sources are on the disk
-(explicitly specifiying this is only necessary if not runnig u-root inside the
+with `$UROOT_PATH` being the path to where the u-root sources are on the disk
+(explicitly specifiying this is only necessary if not running u-root inside the
 root of the repository):
 
 ```shell
@@ -483,9 +490,9 @@ assuming your kernel is configured to work that way.
 
 u-root can create an initramfs in two different modes, specified by `-build`:
 
-*   `bb`/`gbb` mode: One busybox-like binary comprising all the Go tools you ask to
-    include. See [here for how it works](pkg/bb/README.md).
-
+*   `gbb` mode: One busybox-like binary comprising all the Go tools you ask to
+    include.
+    See [the gobusybox README for how it works](https://github.com/u-root/gobusybox).
     In this mode, u-root copies and rewrites the source of the tools you asked
     to include to be able to compile everything into one busybox-like binary.
 
