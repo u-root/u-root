@@ -74,7 +74,7 @@ func main() {
 	verboseLog(fmt.Sprintf("Disk info for %s: %s", *disk, info.String()))
 
 	// Obtain 32 byte Host Secret Seed (HSS) from IPMI.
-	hssList, err := hsskey.GetAllHss(*verbose, *verboseNoSanitize)
+	hssList, err := hsskey.GetAllHss(*verbose, *verboseNoSanitize, "")
 	if err != nil {
 		log.Fatalf("error getting HSS: %v", err)
 	}
