@@ -1,4 +1,4 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2017-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -34,20 +34,43 @@ var (
 	outputFile = flag.String("o", "", "Output file")
 )
 
-func readInput(w io.Writer, f *os.File, args ...string) error {
+type params struct {
+	reverse    bool
+	outputFile string
+}
+
+type cmd struct {
+	stdin  io.ReadCloser
+	stdout io.Writer
+	stderr io.Writer
+	params params
+	args   []string
+}
+
+func command(stdin io.ReadCloser, stdout, stderr io.Writer, p params, args []string) *cmd {
+	return &cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+		params: p,
+		args:   args,
+	}
+}
+
+func (c *cmd) run() error {
 	// Input files
-	from := []*os.File{}
-	if len(args) > 0 {
-		for _, v := range args {
-			if f, err := os.Open(v); err == nil {
-				from = append(from, f)
-				defer f.Close()
-			} else {
-				return err
-			}
+	from := []io.ReadCloser{}
+	for _, v := range c.args {
+		f, err := os.Open(v)
+		if err != nil {
+			return err
 		}
-	} else {
-		from = []*os.File{f}
+		defer f.Close()
+		from = append(from, f)
+	}
+
+	if len(c.args) == 0 {
+		from = append(from, c.stdin)
 	}
 
 	// Read unicode string from input
@@ -65,13 +88,13 @@ func readInput(w io.Writer, f *os.File, args ...string) error {
 			fileContents = append(fileContents, "\n")
 		}
 	}
-	if err := writeOutput(w, sortAlgorithm(strings.Join(fileContents, ""))); err != nil {
+	if err := c.writeOutput(c.stdout, c.sortAlgorithm(strings.Join(fileContents, ""))); err != nil {
 		return err
 	}
 	return nil
 }
 
-func sortAlgorithm(s string) string {
+func (c *cmd) sortAlgorithm(s string) string {
 	if len(s) == 0 {
 		return "" // edge case mimics coreutils
 	}
@@ -79,7 +102,7 @@ func sortAlgorithm(s string) string {
 		s = s[:len(s)-1] // remove newline terminator
 	}
 	lines := strings.Split(string(s), "\n")
-	if *reverse {
+	if c.params.reverse {
 		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
 	} else {
 		sort.Strings(lines)
@@ -87,23 +110,24 @@ func sortAlgorithm(s string) string {
 	return strings.Join(lines, "\n") + "\n" // append newline terminator
 }
 
-func writeOutput(w io.Writer, s string) error {
+func (c *cmd) writeOutput(w io.Writer, s string) error {
 	to := w
-	if *outputFile != "" {
-		if f, err := os.Create(*outputFile); err == nil {
-			to = f
-			defer f.Close()
-		} else {
+	if c.params.outputFile != "" {
+		f, err := os.Create(c.params.outputFile)
+		if err != nil {
 			return err
 		}
+		defer f.Close()
+		to = f
 	}
-	to.Write([]byte(s))
-	return nil
+
+	_, err := to.Write([]byte(s))
+	return err
 }
 
 func main() {
 	flag.Parse()
-	if err := readInput(os.Stdout, os.Stdin, flag.Args()...); err != nil {
+	if err := command(os.Stdin, os.Stdout, os.Stderr, params{*reverse, *outputFile}, flag.Args()).run(); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright 2016 the u-root Authors. All rights reserved
+// Copyright 2016-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,8 +6,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -15,25 +17,25 @@ func TestSort(t *testing.T) {
 	tmpDir := t.TempDir()
 	file1, err := os.Create(filepath.Join(tmpDir, "file1"))
 	if err != nil {
-		t.Errorf("Failed to create tmp file1: %v", err)
+		t.Fatalf("Failed to create tmp file1: %v", err)
 	}
 	if _, err := file1.WriteString("α\nβ\nγ"); err != nil {
-		t.Errorf("failed to write into file1: %v", err)
+		t.Fatalf("failed to write into file1: %v", err)
 	}
 	file2, err := os.Create(filepath.Join(tmpDir, "file2"))
 	if err != nil {
-		t.Errorf("Failed to create tmp file2: %v", err)
+		t.Fatalf("Failed to create tmp file2: %v", err)
 	}
 	if _, err := file2.WriteString("a\nd\nc\n"); err != nil {
-		t.Errorf("failed to write into file1: %v", err)
+		t.Fatalf("failed to write into file1: %v", err)
 	}
+
 	for _, tt := range []struct {
-		name       string
-		args       []string
-		reverse    bool
-		outputFile string
-		want       string
-		wantErr    string
+		name    string
+		args    []string
+		params  params
+		want    string
+		wantErr error
 	}{
 		{
 			name: "empty input",
@@ -46,41 +48,47 @@ func TestSort(t *testing.T) {
 			want: "a\nc\nd\nα\nβ\nγ\n",
 		},
 		{
-			name:    "reversed = true",
-			args:    []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
-			reverse: true,
-			want:    "γ\nβ\nα\nd\nc\na\n",
+			name:   "reversed = true",
+			args:   []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
+			params: params{reverse: true},
+			want:   "γ\nβ\nα\nd\nc\na\n",
 		},
 		{
-			name:       "outputfile set",
-			args:       []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
-			outputFile: filepath.Join(tmpDir, "outputfile"),
-			want:       "a\nc\nd\nα\nβ\nγ\n",
+			name:   "outputfile set",
+			args:   []string{filepath.Join(tmpDir, "file1"), filepath.Join(tmpDir, "file2")},
+			params: params{outputFile: filepath.Join(tmpDir, "outputfile")},
+			want:   "a\nc\nd\nα\nβ\nγ\n",
+		},
+		{
+			name:    "no such file or directory",
+			args:    []string{"nosuchfile"},
+			wantErr: syscall.Errno(2),
 		},
 	} {
-		*reverse = tt.reverse
-		*outputFile = tt.outputFile
 		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
 			f, err := os.Create(filepath.Join(tmpDir, "file"))
 			if err != nil {
-				t.Errorf("failed to create tmp file: %v", err)
+				t.Fatalf("failed to create tmp file: %v", err)
 			}
-			if got := readInput(buf, f, tt.args...); got != nil {
-				if got.Error() != tt.wantErr {
-					t.Errorf("readInput() = %q, want: %q", got.Error(), tt.wantErr)
-				}
-			} else if tt.name == "outputfile set" {
-				sort, err := os.ReadFile(filepath.Join(tmpDir, "outputfile"))
+			stdout := &bytes.Buffer{}
+			c := command(f, stdout, nil, tt.params, tt.args)
+
+			err = c.run()
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("sort err: = %q, want: %q", err, tt.wantErr)
+			}
+
+			if tt.params.outputFile != "" {
+				res, err := os.ReadFile(tt.params.outputFile)
 				if err != nil {
-					t.Errorf("Failed to read file: %v", err)
+					t.Fatalf("failed to read file: %v", err)
 				}
-				if string(sort) != tt.want {
-					t.Errorf("readInput() = %q, want: %q", string(sort), tt.want)
+				if string(res) != tt.want {
+					t.Errorf("sort = %q, want: %q", string(res), tt.want)
 				}
 			} else {
-				if buf.String() != tt.want {
-					t.Errorf("readInput() = %q, want: %q", buf.String(), tt.want)
+				if stdout.String() != tt.want {
+					t.Errorf("sort = %q, want: %q", stdout.String(), tt.want)
 				}
 			}
 		})
