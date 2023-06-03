@@ -18,6 +18,7 @@
 //
 //	-r:      Reverse the result of comparisons
 //	-C:      Check that the single input file is ordered. No warnings.
+//	-u:	     Unique keys. Suppress all lines that have a key that is equal to an already processed one.
 //	-o FILE: Specify the name of an output file to be used instead of the standard output.
 package main
 
@@ -34,6 +35,7 @@ import (
 var (
 	reverse    = flag.Bool("r", false, "Reverse the result of comparisons.")
 	ordered    = flag.Bool("C", false, "Check that the single input file is ordered. No warnings.")
+	unique     = flag.Bool("u", false, "Unique keys. Suppress all lines that have a key that is equal to an already processed one.")
 	outputFile = flag.String("o", "", "Specify the name of an output file to be used instead of the standard output.")
 )
 
@@ -42,6 +44,7 @@ var errNotOrdered = errors.New("not ordered")
 type params struct {
 	reverse    bool
 	ordered    bool
+	unique     bool
 	outputFile string
 }
 
@@ -102,10 +105,19 @@ func (c *cmd) run() error {
 
 	if c.params.ordered {
 		lines := strings.Split(s, "\n")
-		if sort.IsSorted(sort.StringSlice(lines)) {
-			return nil
+		if !sort.IsSorted(sort.StringSlice(lines)) {
+			return errNotOrdered
 		}
-		return errNotOrdered
+
+		if c.params.unique && len(lines) > 1 {
+			for i := 1; i < len(lines); i++ {
+				if lines[i] == lines[i-1] {
+					return errNotOrdered
+				}
+			}
+		}
+
+		return nil
 	}
 
 	if err := c.writeOutput(c.stdout, c.sortAlgorithm(s)); err != nil {
@@ -124,6 +136,20 @@ func (c *cmd) sortAlgorithm(s string) string {
 	} else {
 		sort.Strings(lines)
 	}
+
+	if c.params.unique && len(lines) > 1 {
+		j := 1
+		for i := 1; i < len(lines); i++ {
+			if lines[i] == lines[i-1] {
+				continue
+			}
+			lines[j] = lines[i]
+			j++
+		}
+
+		lines = lines[:j]
+	}
+
 	return strings.Join(lines, "\n") + "\n" // append newline terminator
 }
 
@@ -144,7 +170,7 @@ func (c *cmd) writeOutput(w io.Writer, s string) error {
 
 func main() {
 	flag.Parse()
-	p := params{*reverse, *ordered, *outputFile}
+	p := params{reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique}
 	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		if err == errNotOrdered {
 			os.Exit(1)
