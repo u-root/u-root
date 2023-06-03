@@ -7,13 +7,66 @@ package main
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 )
 
-func TestSort(t *testing.T) {
+func TestSortStdin(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		params  params
+		input   string
+		want    string
+		wantErr error
+	}{
+		{
+			name:    "unique no dublicates",
+			params:  params{unique: true},
+			input:   "a\nb\nc\n",
+			want:    "a\nb\nc\n",
+			wantErr: nil,
+		},
+		{
+			name:    "unique with dublicates",
+			params:  params{unique: true},
+			input:   "a\nb\nc\na\n",
+			want:    "a\nb\nc\n",
+			wantErr: nil,
+		},
+		{
+			name:    "unique and ordered no dublicates",
+			params:  params{unique: true, ordered: true},
+			input:   "a\nb\nc\n",
+			wantErr: nil,
+		},
+		{
+			name:    "unique and ordered with dublicates",
+			params:  params{unique: true, ordered: true},
+			input:   "a\nb\nc\na\n",
+			wantErr: errNotOrdered,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			stdin := io.NopCloser(strings.NewReader(tt.input))
+			stdout := &bytes.Buffer{}
+
+			err := command(stdin, stdout, nil, tt.params, nil).run()
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("sort err: = %q, want: %q", err, tt.wantErr)
+			}
+
+			if stdout.String() != tt.want {
+				t.Errorf("sort = %q, want: %q", stdout.String(), tt.want)
+			}
+		})
+	}
+}
+
+func TestSortFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 	file1, err := os.Create(filepath.Join(tmpDir, "file1"))
 	if err != nil {
