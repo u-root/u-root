@@ -16,11 +16,13 @@
 //
 // Options:
 //
-//	-r:      reverse
-//	-o FILE: output file
+//	-r:      Reverse the result of comparisons
+//	-C:      Check that the single input file is ordered. No warnings.
+//	-o FILE: Specify the name of an output file to be used instead of the standard output.
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"log"
@@ -30,12 +32,16 @@ import (
 )
 
 var (
-	reverse    = flag.Bool("r", false, "Reverse")
-	outputFile = flag.String("o", "", "Output file")
+	reverse    = flag.Bool("r", false, "Reverse the result of comparisons.")
+	ordered    = flag.Bool("C", false, "Check that the single input file is ordered. No warnings.")
+	outputFile = flag.String("o", "", "Specify the name of an output file to be used instead of the standard output.")
 )
+
+var errNotOrdered = errors.New("not ordered")
 
 type params struct {
 	reverse    bool
+	ordered    bool
 	outputFile string
 }
 
@@ -88,7 +94,21 @@ func (c *cmd) run() error {
 			fileContents = append(fileContents, "\n")
 		}
 	}
-	if err := c.writeOutput(c.stdout, c.sortAlgorithm(strings.Join(fileContents, ""))); err != nil {
+
+	s := strings.Join(fileContents, "")
+	if len(s) > 0 && s[len(s)-1] == '\n' {
+		s = s[:len(s)-1] // remove newline terminator
+	}
+
+	if c.params.ordered {
+		lines := strings.Split(s, "\n")
+		if sort.IsSorted(sort.StringSlice(lines)) {
+			return nil
+		}
+		return errNotOrdered
+	}
+
+	if err := c.writeOutput(c.stdout, c.sortAlgorithm(s)); err != nil {
 		return err
 	}
 	return nil
@@ -98,10 +118,7 @@ func (c *cmd) sortAlgorithm(s string) string {
 	if len(s) == 0 {
 		return "" // edge case mimics coreutils
 	}
-	if s[len(s)-1] == '\n' {
-		s = s[:len(s)-1] // remove newline terminator
-	}
-	lines := strings.Split(string(s), "\n")
+	lines := strings.Split(s, "\n")
 	if c.params.reverse {
 		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
 	} else {
@@ -127,7 +144,11 @@ func (c *cmd) writeOutput(w io.Writer, s string) error {
 
 func main() {
 	flag.Parse()
-	if err := command(os.Stdin, os.Stdout, os.Stderr, params{*reverse, *outputFile}, flag.Args()).run(); err != nil {
+	p := params{*reverse, *ordered, *outputFile}
+	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
+		if err == errNotOrdered {
+			os.Exit(1)
+		}
 		log.Fatal(err)
 	}
 }

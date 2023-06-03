@@ -64,6 +64,17 @@ func TestSort(t *testing.T) {
 			args:    []string{"nosuchfile"},
 			wantErr: syscall.Errno(2),
 		},
+		{
+			name:   "ordered",
+			args:   []string{filepath.Join(tmpDir, "file1")},
+			params: params{ordered: true},
+		},
+		{
+			name:    "not ordered",
+			args:    []string{filepath.Join(tmpDir, "file2")},
+			params:  params{ordered: true},
+			wantErr: errNotOrdered,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f, err := os.Create(filepath.Join(tmpDir, "file"))
