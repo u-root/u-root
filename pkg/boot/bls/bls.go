@@ -35,13 +35,6 @@ const (
 	blsDefaultRank = 1
 )
 
-func cutConf(s string) string {
-	if strings.HasSuffix(s, ".conf") {
-		return s[:len(s)-6]
-	}
-	return s
-}
-
 // ScanBLSEntries scans the filesystem root for valid BLS entries.
 // This function skips over invalid or unreadable entries in an effort
 // to return everything that is bootable. map variables is the parsed result
@@ -72,7 +65,7 @@ func ScanBLSEntries(log ulog.Logger, fsRoot string, variables map[string]string)
 	// in the spec (but not mandated, surprisingly).
 	imgs := make(map[string]boot.OSImage)
 	for _, f := range files {
-		identifier := cutConf(filepath.Base(f))
+		identifier := strings.TrimSuffix(filepath.Base(f), ".conf")
 
 		img, err := parseBLSEntry(f, fsRoot, variables)
 		if err != nil {
