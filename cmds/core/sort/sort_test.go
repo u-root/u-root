@@ -24,27 +24,27 @@ func TestSortStdin(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "unique no dublicates",
+			name:    "unique no duplicates",
 			params:  params{unique: true},
 			input:   "a\nb\nc\n",
 			want:    "a\nb\nc\n",
 			wantErr: nil,
 		},
 		{
-			name:    "unique with dublicates",
+			name:    "unique with duplicates",
 			params:  params{unique: true},
 			input:   "a\nb\nc\na\n",
 			want:    "a\nb\nc\n",
 			wantErr: nil,
 		},
 		{
-			name:    "unique and ordered no dublicates",
+			name:    "unique and ordered no duplicates",
 			params:  params{unique: true, ordered: true},
 			input:   "a\nb\nc\n",
 			wantErr: nil,
 		},
 		{
-			name:    "unique and ordered with dublicates",
+			name:    "unique and ordered with duplicates",
 			params:  params{unique: true, ordered: true},
 			input:   "a\nb\nc\na\n",
 			wantErr: errNotOrdered,
