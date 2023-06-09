@@ -1,4 +1,4 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2017-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -16,11 +16,14 @@
 //
 // Options:
 //
-//	-r:      reverse
-//	-o FILE: output file
+//	-r:      Reverse the result of comparisons
+//	-C:      Check that the single input file is ordered. No warnings.
+//	-u:	     Unique keys. Suppress all lines that have a key that is equal to an already processed one.
+//	-o FILE: Specify the name of an output file to be used instead of the standard output.
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"log"
@@ -30,24 +33,53 @@ import (
 )
 
 var (
-	reverse    = flag.Bool("r", false, "Reverse")
-	outputFile = flag.String("o", "", "Output file")
+	reverse    = flag.Bool("r", false, "Reverse the result of comparisons.")
+	ordered    = flag.Bool("C", false, "Check that the single input file is ordered. No warnings.")
+	unique     = flag.Bool("u", false, "Unique keys. Suppress all lines that have a key that is equal to an already processed one.")
+	outputFile = flag.String("o", "", "Specify the name of an output file to be used instead of the standard output.")
 )
 
-func readInput(w io.Writer, f *os.File, args ...string) error {
+var errNotOrdered = errors.New("not ordered")
+
+type params struct {
+	reverse    bool
+	ordered    bool
+	unique     bool
+	outputFile string
+}
+
+type cmd struct {
+	stdin  io.ReadCloser
+	stdout io.Writer
+	stderr io.Writer
+	params params
+	args   []string
+}
+
+func command(stdin io.ReadCloser, stdout, stderr io.Writer, p params, args []string) *cmd {
+	return &cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+		params: p,
+		args:   args,
+	}
+}
+
+func (c *cmd) run() error {
 	// Input files
-	from := []*os.File{}
-	if len(args) > 0 {
-		for _, v := range args {
-			if f, err := os.Open(v); err == nil {
-				from = append(from, f)
-				defer f.Close()
-			} else {
-				return err
-			}
+	from := []io.ReadCloser{}
+	for _, v := range c.args {
+		f, err := os.Open(v)
+		if err != nil {
+			return err
 		}
-	} else {
-		from = []*os.File{f}
+		defer f.Close()
+		from = append(from, f)
+	}
+
+	if len(c.args) == 0 {
+		from = append(from, c.stdin)
 	}
 
 	// Read unicode string from input
@@ -65,45 +97,84 @@ func readInput(w io.Writer, f *os.File, args ...string) error {
 			fileContents = append(fileContents, "\n")
 		}
 	}
-	if err := writeOutput(w, sortAlgorithm(strings.Join(fileContents, ""))); err != nil {
+
+	s := strings.Join(fileContents, "")
+	if len(s) > 0 && s[len(s)-1] == '\n' {
+		s = s[:len(s)-1] // remove newline terminator
+	}
+
+	if c.params.ordered {
+		lines := strings.Split(s, "\n")
+		if !sort.IsSorted(sort.StringSlice(lines)) {
+			return errNotOrdered
+		}
+
+		if c.params.unique && len(lines) > 1 {
+			for i := 1; i < len(lines); i++ {
+				if lines[i] == lines[i-1] {
+					return errNotOrdered
+				}
+			}
+		}
+
+		return nil
+	}
+
+	if err := c.writeOutput(c.stdout, c.sortAlgorithm(s)); err != nil {
 		return err
 	}
 	return nil
 }
 
-func sortAlgorithm(s string) string {
+func (c *cmd) sortAlgorithm(s string) string {
 	if len(s) == 0 {
 		return "" // edge case mimics coreutils
 	}
-	if s[len(s)-1] == '\n' {
-		s = s[:len(s)-1] // remove newline terminator
-	}
-	lines := strings.Split(string(s), "\n")
-	if *reverse {
+	lines := strings.Split(s, "\n")
+	if c.params.reverse {
 		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
 	} else {
 		sort.Strings(lines)
 	}
+
+	if c.params.unique && len(lines) > 1 {
+		j := 1
+		for i := 1; i < len(lines); i++ {
+			if lines[i] == lines[i-1] {
+				continue
+			}
+			lines[j] = lines[i]
+			j++
+		}
+
+		lines = lines[:j]
+	}
+
 	return strings.Join(lines, "\n") + "\n" // append newline terminator
 }
 
-func writeOutput(w io.Writer, s string) error {
+func (c *cmd) writeOutput(w io.Writer, s string) error {
 	to := w
-	if *outputFile != "" {
-		if f, err := os.Create(*outputFile); err == nil {
-			to = f
-			defer f.Close()
-		} else {
+	if c.params.outputFile != "" {
+		f, err := os.Create(c.params.outputFile)
+		if err != nil {
 			return err
 		}
+		defer f.Close()
+		to = f
 	}
-	to.Write([]byte(s))
-	return nil
+
+	_, err := to.Write([]byte(s))
+	return err
 }
 
 func main() {
 	flag.Parse()
-	if err := readInput(os.Stdout, os.Stdin, flag.Args()...); err != nil {
+	p := params{reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique}
+	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
+		if err == errNotOrdered {
+			os.Exit(1)
+		}
 		log.Fatal(err)
 	}
 }

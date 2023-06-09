@@ -18,16 +18,14 @@ u-root embodies four different projects.
     [cmds/core](cmds/core) for most of these.
 
 *   A way to compile many Go programs into a single binary with
-    [busybox mode](https://github.com/u-root/gobusybox/#readme).
+    [busybox mode](#build-modes).
 
-*   A way to create initramfs (an archive of files) to use with Linux kernels.
+*   A way to create initramfs (an archive of files) to use with Linux kernels,
+    [embeddable into firmware](#build-an-embeddable-u-root).
 
-*   Go bootloaders that use `kexec` to boot Linux or multiboot kernels such as
-    ESXi, Xen, or tboot. They are meant to be used with
-    [LinuxBoot](https://www.linuxboot.org). With that, parsers for
-    [GRUB config files](pkg/boot/grub) or
-    [syslinux config files](pkg/boot/syslinux) are to make transition to
-    LinuxBoot easier.
+*   Go [bootloaders](#systemboot) that use `kexec` to boot Linux or multiboot
+    kernels such as ESXi, Xen, or tboot. They are meant to be used with
+    [LinuxBoot](https://www.linuxboot.org).
 
 # Usage
 
@@ -59,7 +57,7 @@ templates as defined in [templates.go](templates.go).
 
 ## Examples
 
-You can now use the u-root command to build an initramfs. Here are some examples
+Here are some examples of using the `u-root` command to build an initramfs,
 with `$UROOT_PATH` being the path to where the u-root sources are on the disk
 (explicitly specifiying this is only necessary if not running u-root inside the
 root of the repository):
@@ -93,10 +91,6 @@ u-root ./cmds/core/{init,ls,elvish} ./cpu/cmds/cpud
 
 The default set of packages included is all packages in
 `github.com/u-root/u-root/cmds/core/...`.
-
-You can build the initramfs built by u-root into the kernel via the
-`CONFIG_INITRAMFS_SOURCE` config variable or you can load it separately via an
-option in for example Grub or the QEMU command line or coreboot config variable.
 
 `GBB_PATH` is a place that u-root will look for commands. Each colon-separated
 `GBB_PATH` element is concatenated with patterns from the command-line and
@@ -396,6 +390,8 @@ u-root \
 SystemBoot is a set of bootloaders written in Go. It is meant to be a
 distribution for LinuxBoot to create a system firmware + bootloader. All of
 these use `kexec` to boot. The commands are in [cmds/boot](cmds/boot).
+Parsers are available for [GRUB](pkg/boot/grub), [syslinux](pkg/boot/syslinux),
+and other config files to make the transition to LinuxBoot easier.
 
 *   `pxeboot`: a network boot client that uses DHCP and HTTP or TFTP to get a
     boot configuration which can be parsed as PXELinux or iPXE configuration
@@ -470,12 +466,13 @@ You can do this to get a local server using the u-root srvfiles command:
 
 Of course you have to fetch all those packages first somehow :-)
 
-## Build an Embeddable U-root
+## Build an Embeddable u-root
 
-You can build this environment into a kernel as an initramfs, and further embed
-that into firmware as a coreboot payload.
+You can build the cpio image created by u-root into a Linux kernel via the
+`CONFIG_INITRAMFS_SOURCE` config variable or coreboot config variable, and
+further embed the kernel image into firmware as a coreboot payload.
 
-In the kernel and coreboot case, you need to configure ethernet. We have a
+In the kernel and coreboot case, you may need to configure ethernet. We have a
 `dhclient` command that works for both ipv4 and ipv6. Since v6 does not yet work
 that well for most people, a typical invocation looks like this:
 

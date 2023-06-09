@@ -6,7 +6,8 @@
 // drives based on the following procedure:
 //  1. Via BMC, read a 32-byte secret seed known as the Host Secret Seed (HSS)
 //     using the OpenBMC IPMI blob transfer protocol
-//  2. Compute a password as follows:
+//  2. Via EEPROM, read a 32-byte secret seed from EEPROM
+//  3. Compute a password as follows:
 //     We get the deterministically computed 32-byte HDKF-SHA256 using:
 //     - salt: "SKM PROD_V2 ACCESS" (default)
 //     - hss: 32-byte HSS
@@ -33,7 +34,10 @@ type blobReader interface {
 }
 
 const (
-	hostSecretSeedLen = 32
+	hostSecretSeedLen           = 32 // Size for HSS seed
+	hostSecretSeedChecksumBytes = 4  // Size for HSS checksum
+	hostSecretSeedStructSize    = 64 // Total size for serialized HSS data
+	hostSecretSeedCount         = 4  // Number of HSS data stored per EEPROM
 
 	DefaultPasswordSalt = "SKM PROD_V2 ACCESS"
 )
@@ -64,8 +68,8 @@ func readHssBlob(id string, h blobReader) (data []uint8, rerr error) {
 	return data, nil
 }
 
-// GetAllHss reads all host secret seeds over IPMI.
-func GetAllHss(verbose bool, verboseDangerous bool) ([][]uint8, error) {
+// getHssFromIpmi reads all host secret seeds over IPMI.
+func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 	i, err := ipmi.Open(0)
 	if err != nil {
 		return nil, err
@@ -94,7 +98,7 @@ func GetAllHss(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 
 		hss, err := readHssBlob(id, h)
 		if err != nil {
-			log.Printf("failed to read HSS of id %s: %v", id, err)
+			log.Printf("Failed to read HSS of id %s: %v", id, err)
 			continue
 		}
 
@@ -114,6 +118,39 @@ func GetAllHss(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 	}
 
 	return hssList, nil
+}
+
+// GetAllHss reads all host secret seeds from IPMI or EEPROM.
+//   - eepromPattern: A string pattern to find EEPROMs in sysfs paths. The glob string used for
+//     searching will be in the format: "/sys/bus/i2c/devices/{eepromPattern}/eeprom".
+//     For example, 0-005*
+//     An empty string "" will skip the attempt to read from EEPROM.
+func GetAllHss(verbose bool, verboseDangerous bool, eepromPattern string) ([][]uint8, error) {
+	// Attempt to get HSS from IPMI.
+	hssList, err := getHssFromIpmi(verbose, verboseDangerous)
+	if err == nil && len(hssList) > 0 {
+		// If it successfully reads from IPMI and the list is not empty, return the result.
+		return hssList, nil
+	}
+	log.Printf("Failed to get HSS key from IPMI: %v", err)
+
+	// Attempt to get HSS from EEPROM.
+	if eepromPattern != "" {
+		filePaths, err := getHssEepromPaths(baseSysfsPattern, eepromPattern)
+		if len(filePaths) != 2 {
+			log.Printf("Expecting 2 EEPROMs but found %d", len(filePaths))
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to find HSS EEPROM paths: %v", err)
+		}
+		hssList, err = getHssFromFile(verbose, verboseDangerous, filePaths)
+		if err == nil && len(hssList) > 0 {
+			return hssList, nil
+		}
+		log.Printf("Failed to get HSS key from file: %v", err)
+	}
+
+	return nil, fmt.Errorf("failed all HSS retrieval attempts")
 }
 
 // GenPassword computes the password deterministically as the 32-byte HDKF-SHA256 of the

@@ -52,6 +52,7 @@ var (
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
 	lock               = flag.Bool("lock", false, "Lock instead of unlocking")
 	salt               = flag.String("salt", hsskey.DefaultPasswordSalt, "Salt for password generation")
+	eepromPattern      = flag.String("eeprom-pattern", "", "The pattern used to match EEPROM sysfs paths where the Host Secret Seeds are located")
 )
 
 func verboseLog(msg string) {
@@ -118,7 +119,7 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 	}
 	defer diskFd.Close()
 
-	hssList, err := hsskey.GetAllHss(verbose, verboseNoSanitize)
+	hssList, err := hsskey.GetAllHss(verbose, verboseNoSanitize, *eepromPattern)
 	if err != nil {
 		return fmt.Errorf("error getting HSS: %v", err)
 	}
