@@ -19,6 +19,7 @@
 //	-r:      Reverse the result of comparisons
 //	-C:      Check that the single input file is ordered. No warnings.
 //	-u:	     Unique keys. Suppress all lines that have a key that is equal to an already processed one.
+//	-f: 	 Fold lower case to upper case character.
 //	-o FILE: Specify the name of an output file to be used instead of the standard output.
 package main
 
@@ -36,8 +37,15 @@ var (
 	reverse    = flag.Bool("r", false, "Reverse the result of comparisons.")
 	ordered    = flag.Bool("C", false, "Check that the single input file is ordered. No warnings.")
 	unique     = flag.Bool("u", false, "Unique keys. Suppress all lines that have a key that is equal to an already processed one.")
+	ignoreCase = flag.Bool("f", false, "Fold lower case to upper case character.")
 	outputFile = flag.String("o", "", "Specify the name of an output file to be used instead of the standard output.")
 )
+
+type ignoreCaseSort []string
+
+func (a ignoreCaseSort) Len() int           { return len(a) }
+func (a ignoreCaseSort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ignoreCaseSort) Less(i, j int) bool { return strings.ToUpper(a[i]) < strings.ToUpper(a[j]) }
 
 var errNotOrdered = errors.New("not ordered")
 
@@ -45,6 +53,7 @@ type params struct {
 	reverse    bool
 	ordered    bool
 	unique     bool
+	ignoreCase bool
 	outputFile string
 }
 
@@ -105,13 +114,15 @@ func (c *cmd) run() error {
 
 	if c.params.ordered {
 		lines := strings.Split(s, "\n")
-		if !sort.IsSorted(sort.StringSlice(lines)) {
+		if !sort.IsSorted(c.sortInterface(lines)) {
 			return errNotOrdered
 		}
 
 		if c.params.unique && len(lines) > 1 {
 			for i := 1; i < len(lines); i++ {
-				if lines[i] == lines[i-1] {
+				if c.params.ignoreCase && strings.EqualFold(lines[i], lines[i-1]) {
+					return errNotOrdered
+				} else if lines[i] == lines[i-1] {
 					return errNotOrdered
 				}
 			}
@@ -126,21 +137,37 @@ func (c *cmd) run() error {
 	return nil
 }
 
+func (c *cmd) sortInterface(lines []string) sort.Interface {
+	var si sort.Interface
+	switch {
+	case c.params.ignoreCase:
+		si = ignoreCaseSort(lines)
+	default:
+		si = sort.StringSlice(lines)
+	}
+
+	return si
+}
+
 func (c *cmd) sortAlgorithm(s string) string {
 	if len(s) == 0 {
 		return "" // edge case mimics coreutils
 	}
 	lines := strings.Split(s, "\n")
+	si := c.sortInterface(lines)
+
 	if c.params.reverse {
-		sort.Sort(sort.Reverse(sort.StringSlice(lines)))
+		sort.Sort(sort.Reverse(si))
 	} else {
-		sort.Strings(lines)
+		sort.Sort(si)
 	}
 
 	if c.params.unique && len(lines) > 1 {
 		j := 1
 		for i := 1; i < len(lines); i++ {
-			if lines[i] == lines[i-1] {
+			if c.params.ignoreCase && strings.EqualFold(lines[i], lines[j]) {
+				continue
+			} else if lines[i] == lines[i-1] {
 				continue
 			}
 			lines[j] = lines[i]
@@ -170,7 +197,7 @@ func (c *cmd) writeOutput(w io.Writer, s string) error {
 
 func main() {
 	flag.Parse()
-	p := params{reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique}
+	p := params{reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique, ignoreCase: *ignoreCase}
 	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		if err == errNotOrdered {
 			os.Exit(1)

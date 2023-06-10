@@ -49,6 +49,35 @@ func TestSortStdin(t *testing.T) {
 			input:   "a\nb\nc\na\n",
 			wantErr: errNotOrdered,
 		},
+		{
+			name:  "ignore case off",
+			input: "apple\nOrange\n",
+			want:  "Orange\napple\n",
+		},
+		{
+			name:   "ignore case on",
+			params: params{ignoreCase: true},
+			input:  "apple\nOrange\n",
+			want:   "apple\nOrange\n",
+		},
+		{
+			name:   "ordered if ignore case is true",
+			params: params{ignoreCase: true, ordered: true},
+			input:  "a\nB\nc\nD\ne\n",
+		},
+		{
+			name:    "unique with ignore case",
+			params:  params{unique: true, ignoreCase: true},
+			input:   "a\nA\n",
+			want:    "a\n",
+			wantErr: nil,
+		},
+		{
+			name:    "unique and ignore case not ordered",
+			params:  params{unique: true, ignoreCase: true, ordered: true},
+			input:   "A\na\n",
+			wantErr: errNotOrdered,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			stdin := io.NopCloser(strings.NewReader(tt.input))
