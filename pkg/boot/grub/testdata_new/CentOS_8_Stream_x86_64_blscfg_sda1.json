@@ -9,7 +9,7 @@
       "name": "testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1/boot/vmlinuz-5.18.0"
     },
     "name": "CentOS Linux (5.18.0) 8 5.18.0",
-    "rank": "1"
+    "rank": "2"
    },
    {
     "cmdline": "root=UUID=d0be5cb9-622d-42d5-a531-674aaa120309 ro crashkernel=auto rhgb quiet console=ttyS1,57600n8",

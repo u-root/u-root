@@ -28,7 +28,7 @@ func (a byRank) Len() int           { return len(a) }
 
 // parse treats device as a block device with a file system.
 func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mountDir string, mountPool *mount.Pool) []boot.OSImage {
-	imgs, err := bls.ScanBLSEntries(l, mountDir, nil)
+	imgs, err := bls.ScanBLSEntries(l, mountDir, nil, "")
 	if err != nil {
 		l.Printf("No systemd-boot BootLoaderSpec configs found on %s, trying another format...: %v", device, err)
 	}

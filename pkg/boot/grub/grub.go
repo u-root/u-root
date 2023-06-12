@@ -15,6 +15,7 @@ package grub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -43,6 +44,13 @@ var probeGrubFiles = []string{
 	"grub2/grub.cfg",
 	"boot/grub2/grub.cfg",
 }
+var probeGrubEnvFiles = []string{
+	"EFI/*/grubenv",
+	"boot/grub/grubenv",
+	"grub/grubenv",
+	"grub2/grubenv",
+	"boot/grub2/grubenv",
+}
 
 // Grub syntax for OpenSUSE/Fedora/RHEL has some undocumented quirks. You
 // won't find it on the master branch, but instead look at the rhel and fedora
@@ -62,6 +70,8 @@ var anyEscape = regexp.MustCompile(`\\.{0,3}`)
 
 // mountFlags are the flags this grub interpreter uses to mount partitions.
 var mountFlags = uintptr(mount.ReadOnly)
+
+var errMissingKey = errors.New("key is not found")
 
 // absFileScheme creates a file:/// scheme with an absolute path. Technically,
 // file schemes must be absolute paths and Go makes that assumption.
@@ -113,17 +123,40 @@ func ParseLocalConfig(ctx context.Context, diskDir string, devices block.BlockDe
 	return nil, fmt.Errorf("no valid grub config found")
 }
 
-func grubScanBLSEntries(mountPool *mount.Pool, variables map[string]string) ([]boot.OSImage, error) {
+func grubScanBLSEntries(mountPool *mount.Pool, variables map[string]string, grubDefaultSavedEntry string) ([]boot.OSImage, error) {
 	var images []boot.OSImage
 	// Scan each mounted partition for BLS entries
 	for _, m := range mountPool.MountPoints {
-		imgs, _ := bls.ScanBLSEntries(ulog.Null, m.Path, variables)
+		imgs, _ := bls.ScanBLSEntries(ulog.Null, m.Path, variables, grubDefaultSavedEntry)
 		images = append(images, imgs...)
 	}
 	if len(images) == 0 {
 		return nil, fmt.Errorf("no valid BLS entry found")
 	}
 	return images, nil
+}
+
+// Find and return the value of the key from a grubenv file
+func findkeywordGrubEnv(file string, fsRoot string, key string) (string, error) {
+	FileGrubenv, err := filepath.Glob(filepath.Join(fsRoot, file))
+	if FileGrubenv == nil || err != nil {
+		return "", err
+	}
+	relNamesFile, err := os.Open(FileGrubenv[0])
+	if err != nil {
+		return "", fmt.Errorf("[grubenv]:%w", err)
+	}
+	grubenv, err := uio.ReadAll(relNamesFile)
+	if err != nil {
+		return "", fmt.Errorf("[grubenv]:%w", err)
+	}
+	for _, line := range strings.Split(string(grubenv), "\n") {
+		vals := strings.SplitN(line, "=", 2)
+		if vals[0] == key {
+			return vals[1], nil
+		}
+	}
+	return "", fmt.Errorf("%q:%w", key, errMissingKey)
 }
 
 // ParseConfigFile parses a grub configuration as specified in
@@ -146,16 +179,31 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, roo
 	seenLinux := make(map[*boot.LinuxImage]struct{})
 	seenMB := make(map[*boot.MultibootImage]struct{})
 
+	var grubDefaultSavedEntry string
+	// If the value of keyword "default_saved_entry" exists, find the value of "save_entry" from grubenv files from all possible paths.
+	if _, ok := p.variables["default_saved_entry"]; ok {
+		for _, m := range mountPool.MountPoints {
+			for _, file := range probeGrubEnvFiles {
+				// Parse grubenv and return the value of 'saved_entry'.
+				val, _ := findkeywordGrubEnv(file, m.Path, "saved_entry")
+				if val != "" {
+					grubDefaultSavedEntry = val
+				}
+			}
+		}
+	}
+
 	if defaultEntry, ok := p.variables["default"]; ok {
 		p.labelOrder = append([]string{defaultEntry}, p.labelOrder...)
 	}
 
 	var images []boot.OSImage
 	if p.blscfgFound {
-		if imgs, err := grubScanBLSEntries(p.mountPool, p.variables); err == nil {
+		if imgs, err := grubScanBLSEntries(p.mountPool, p.variables, grubDefaultSavedEntry); err == nil {
 			images = append(images, imgs...)
 		}
 	}
+
 	for _, label := range p.labelOrder {
 		if img, ok := p.linuxEntries[label]; ok {
 			if _, ok := seenLinux[img]; !ok {
@@ -456,7 +504,16 @@ func (c *parser) append(ctx context.Context, config string) error {
 				if vals[0] == "root" {
 					continue
 				}
-				c.variables[vals[0]] = vals[1]
+				// here we only add the support for the case: set default="${saved_entry}".
+				if vals[0] == "default" {
+					if vals[1] == "${saved_entry}" {
+						c.variables["default_saved_entry"] = vals[1]
+					} else {
+						c.variables[vals[0]] = vals[1]
+					}
+				} else {
+					c.variables[vals[0]] = vals[1]
+				}
 			}
 
 		case "configfile":

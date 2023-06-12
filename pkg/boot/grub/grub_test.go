@@ -5,6 +5,7 @@
 package grub
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -40,6 +41,40 @@ func TestCmdlineQuote(t *testing.T) {
 			got := cmdlineQuote(tt.in)
 			if got != tt.want {
 				t.Errorf("cmdlineQuote = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFindkeywordGrubEnv(t *testing.T) {
+	file := "EFI/centos/grubenv"
+	fsRoot := "testdata_new/CentOS_8_Stream_x86_64_blscfg_sda1"
+
+	tests := []struct {
+		name string
+		key  string
+		want string
+		err  error
+	}{
+		{
+			name: "Return correct Grubenv value",
+			key:  "saved_entry",
+			want: "9af7b02ac08149d985841c07c8ff366e-5.18.0",
+			err:  nil,
+		},
+		{
+			name: "Return error key",
+			key:  "saved_en",
+			want: "",
+			err:  errMissingKey,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got string
+			got, err := findkeywordGrubEnv(file, fsRoot, tt.key)
+			if got != tt.want || !errors.Is(err, tt.err) {
+				t.Errorf("findkeywordGrubEnv() = %v, want %v : %v", got, tt.want, err)
 			}
 		})
 	}
