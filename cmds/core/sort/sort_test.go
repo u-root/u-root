@@ -55,10 +55,16 @@ func TestSortStdin(t *testing.T) {
 			want:  "Orange\napple\n",
 		},
 		{
-			name:   "ignore case on",
+			name:   "ignore case on 1",
 			params: params{ignoreCase: true},
 			input:  "apple\nOrange\n",
 			want:   "apple\nOrange\n",
+		},
+		{
+			name:   "ignore case on 2",
+			params: params{ignoreCase: true},
+			input:  "apple\nOrange\napple\n",
+			want:   "apple\napple\nOrange\n",
 		},
 		{
 			name:   "ordered if ignore case is true",
@@ -73,9 +79,39 @@ func TestSortStdin(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name:    "ordered but not unique",
+			params:  params{ordered: true, unique: true},
+			input:   "a\na\n",
+			wantErr: errNotOrdered,
+		},
+		{
 			name:    "unique and ignore case not ordered",
 			params:  params{unique: true, ignoreCase: true, ordered: true},
 			input:   "A\na\n",
+			wantErr: errNotOrdered,
+		},
+		{
+			name:   "ignore blanks",
+			params: params{ignoreBlanks: true},
+			input:  "  b\nA\n",
+			want:   "A\n  b\n",
+		},
+		{
+			name:   "ignore blanks and ignore case",
+			params: params{ignoreCase: true, ignoreBlanks: true},
+			input:  "  b\nA\n  C\n",
+			want:   "A\n  b\n  C\n",
+		},
+		{
+			name:   "ignore blanks, case and unique",
+			params: params{ignoreCase: true, ignoreBlanks: true, unique: true},
+			input:  " b\nA\n C\nA\nb\n",
+			want:   "A\n b\n C\n",
+		},
+		{
+			name:    "ignore blanks (no effect), case and unique and ordered ",
+			params:  params{ignoreCase: true, ignoreBlanks: true, ordered: true},
+			input:   " b\nA\n C\nA\nb\n",
 			wantErr: errNotOrdered,
 		},
 	} {
