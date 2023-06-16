@@ -29,48 +29,6 @@ var twocmds = []string{
 	"github.com/u-root/u-root/cmds/core/init",
 }
 
-func xTestDCE(t *testing.T) {
-	delFiles := false
-	f, _, err := buildIt(t,
-		[]string{
-			"-build=bb", "-no-strip",
-			"world",
-			"-github.com/u-root/u-root/cmds/exp/builtin",
-			"-github.com/u-root/u-root/cmds/exp/run",
-			"github.com/u-root/u-root/pkg/uroot/test/foo",
-		},
-		nil,
-		nil)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if delFiles {
-			os.RemoveAll(f.Name())
-		}
-	}()
-	st, _ := f.Stat()
-	t.Logf("Built %s, size %d", f.Name(), st.Size())
-	cmd := gbbgolang.Default().GoCmd("tool", "nm", f.Name())
-	nmOutput, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("failed to run nm: %s %s", err, nmOutput)
-	}
-	symScanner := bufio.NewScanner(bytes.NewBuffer(nmOutput))
-	syms := map[string]bool{}
-	for symScanner.Scan() {
-		line := symScanner.Text()
-		parts := strings.Split(line, " ")
-		if len(parts) == 0 {
-			continue
-		}
-		sym := parts[len(parts)-1]
-		syms[sym] = true
-		t.Logf("%s", sym)
-	}
-}
-
 type noDeadCode struct {
 	Path string
 }
