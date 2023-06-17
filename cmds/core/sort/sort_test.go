@@ -114,6 +114,18 @@ func TestSortStdin(t *testing.T) {
 			input:   " b\nA\n C\nA\nb\n",
 			wantErr: errNotOrdered,
 		},
+		{
+			name:   "ignore blanks breaking ties",
+			params: params{ignoreBlanks: true},
+			input:  " {\n  {\n {\n  {\n",
+			want:   "  {\n  {\n {\n {\n",
+		},
+		{
+			name:   "ignore blanks breaking ties with and ignore case",
+			params: params{ignoreBlanks: true, ignoreCase: true},
+			input:  "a\n {\n  {\n {\n  {\nA\n",
+			want:   "A\na\n  {\n  {\n {\n {\n",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			stdin := io.NopCloser(strings.NewReader(tt.input))
