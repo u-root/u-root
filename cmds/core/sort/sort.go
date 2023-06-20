@@ -55,7 +55,12 @@ type ignoreBlanksSort []string
 func (a ignoreBlanksSort) Len() int      { return len(a) }
 func (a ignoreBlanksSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ignoreBlanksSort) Less(i, j int) bool {
-	return strings.TrimLeftFunc(a[i], unicode.IsSpace) < strings.TrimLeftFunc(a[j], unicode.IsSpace)
+	l := strings.TrimLeftFunc(a[i], unicode.IsSpace)
+	r := strings.TrimLeftFunc(a[j], unicode.IsSpace)
+	if l == r {
+		return len(a[i]) >= len(a[j])
+	}
+	return l < r
 }
 
 type ignoreBlanksCaseSort []string
@@ -63,7 +68,12 @@ type ignoreBlanksCaseSort []string
 func (a ignoreBlanksCaseSort) Len() int      { return len(a) }
 func (a ignoreBlanksCaseSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ignoreBlanksCaseSort) Less(i, j int) bool {
-	return strings.ToUpper(strings.TrimLeftFunc(a[i], unicode.IsSpace)) < strings.ToUpper(strings.TrimLeftFunc(a[j], unicode.IsSpace))
+	l := strings.ToUpper(strings.TrimLeftFunc(a[i], unicode.IsSpace))
+	r := strings.ToUpper(strings.TrimLeftFunc(a[j], unicode.IsSpace))
+	if l == r {
+		return len(a[i]) >= len(a[j])
+	}
+	return l < r
 }
 
 var errNotOrdered = errors.New("not ordered")
