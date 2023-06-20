@@ -5,6 +5,7 @@
 package libinit
 
 import (
+	"io"
 	"os"
 	"os/exec"
 
@@ -22,6 +23,27 @@ func WithArguments(arg ...string) CommandModifier {
 		if len(arg) > 0 {
 			c.Args = append(c.Args, arg...)
 		}
+	}
+}
+
+// WithStdin changes the command's stdin to r.
+func WithStdin(r io.Reader) CommandModifier {
+	return func(c *exec.Cmd) {
+		c.Stdin = r
+	}
+}
+
+// WithStdout changes the command's stdout to w.
+func WithStdout(w io.Writer) CommandModifier {
+	return func(c *exec.Cmd) {
+		c.Stdout = w
+	}
+}
+
+// WithStderr changes the command's stderr to w.
+func WithStderr(w io.Writer) CommandModifier {
+	return func(c *exec.Cmd) {
+		c.Stderr = w
 	}
 }
 
