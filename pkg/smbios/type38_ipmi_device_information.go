@@ -17,7 +17,7 @@ type IPMIDeviceInfo struct {
 	Table
 	InterfaceType                    BMCInterfaceType // 04h
 	IPMISpecificationRevision        uint8            // 05h
-	I2CSlaveAddress                  uint8            // 06h
+	I2CAddress                       uint8            // 06h
 	NVStorageDeviceAddress           uint8            // 07h
 	BaseAddress                      uint64           // 08h
 	BaseAddressModifierInterruptInfo uint8            // 10h
@@ -55,7 +55,7 @@ func (di *IPMIDeviceInfo) String() string {
 		di.Header.String(),
 		fmt.Sprintf("Interface Type: %s", di.InterfaceType),
 		fmt.Sprintf("Specification Version: %d.%d", di.IPMISpecificationRevision>>4, di.IPMISpecificationRevision&0xf),
-		fmt.Sprintf("I2C Slave Address: 0x%02x", di.I2CSlaveAddress>>1),
+		fmt.Sprintf("I2C Address: 0x%02x", di.I2CAddress>>1),
 		fmt.Sprintf("NV Storage Device: %s", nvs),
 		fmt.Sprintf("Base Address: 0x%016X (%s)", ba, baType),
 	}
