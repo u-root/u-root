@@ -55,3 +55,11 @@ displayed on the terminal should contain the codes `200~` and `201~`:
 ```bash
 echo -ne "\033[?2004h" && sleep 10
 ```
+
+## Trigger Notification
+
+This command should trigger a notification:
+
+```bash
+echo -ne "\033]777;notify;Title;Body\033\\"
+```
