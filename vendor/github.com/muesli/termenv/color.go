@@ -117,12 +117,12 @@ func xTermColor(s string) (RGBColor, error) {
 	}
 
 	switch {
-	case strings.HasSuffix(s, "\a"):
-		s = strings.TrimSuffix(s, "\a")
-	case strings.HasSuffix(s, "\033"):
-		s = strings.TrimSuffix(s, "\033")
-	case strings.HasSuffix(s, "\033\\"):
-		s = strings.TrimSuffix(s, "\033\\")
+	case strings.HasSuffix(s, string(BEL)):
+		s = strings.TrimSuffix(s, string(BEL))
+	case strings.HasSuffix(s, string(ESC)):
+		s = strings.TrimSuffix(s, string(ESC))
+	case strings.HasSuffix(s, ST):
+		s = strings.TrimSuffix(s, ST)
 	default:
 		return RGBColor(""), ErrInvalidColor
 	}

@@ -34,6 +34,9 @@ func (m *Editor) Update(imsg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := imsg.(type) {
 	case tea.WindowSizeMsg:
 		m.Model.SetSize(msg.Width, msg.Height)
+
+	case editline.InputCompleteMsg:
+		return m, tea.Quit
 	}
 	_, next := m.Model.Update(imsg)
 	return m, next

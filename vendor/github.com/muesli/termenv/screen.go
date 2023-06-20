@@ -32,16 +32,20 @@ const (
 	EraseEntireLineSeq = "2K"
 
 	// Mouse.
-	EnableMousePressSeq       = "?9h" // press only (X10)
-	DisableMousePressSeq      = "?9l"
-	EnableMouseSeq            = "?1000h" // press, release, wheel
-	DisableMouseSeq           = "?1000l"
-	EnableMouseHiliteSeq      = "?1001h" // highlight
-	DisableMouseHiliteSeq     = "?1001l"
-	EnableMouseCellMotionSeq  = "?1002h" // press, release, move on pressed, wheel
-	DisableMouseCellMotionSeq = "?1002l"
-	EnableMouseAllMotionSeq   = "?1003h" // press, release, move, wheel
-	DisableMouseAllMotionSeq  = "?1003l"
+	EnableMousePressSeq         = "?9h" // press only (X10)
+	DisableMousePressSeq        = "?9l"
+	EnableMouseSeq              = "?1000h" // press, release, wheel
+	DisableMouseSeq             = "?1000l"
+	EnableMouseHiliteSeq        = "?1001h" // highlight
+	DisableMouseHiliteSeq       = "?1001l"
+	EnableMouseCellMotionSeq    = "?1002h" // press, release, move on pressed, wheel
+	DisableMouseCellMotionSeq   = "?1002l"
+	EnableMouseAllMotionSeq     = "?1003h" // press, release, move, wheel
+	DisableMouseAllMotionSeq    = "?1003l"
+	EnableMouseExtendedModeSeq  = "?1006h" // press, release, move, wheel, extended coordinates
+	DisableMouseExtendedModeSeq = "?1006l"
+	EnableMousePixelsModeSeq    = "?1016h" // press, release, move, wheel, extended pixel coordinates
+	DisableMousePixelsModeSeq   = "?1016l"
 
 	// Screen.
 	RestoreScreenSeq = "?47l"
@@ -57,10 +61,10 @@ const (
 	EndBracketedPasteSeq     = "201~"
 
 	// Session.
-	SetWindowTitleSeq     = "2;%s\007"
-	SetForegroundColorSeq = "10;%s\007"
-	SetBackgroundColorSeq = "11;%s\007"
-	SetCursorColorSeq     = "12;%s\007"
+	SetWindowTitleSeq     = "2;%s" + string(BEL)
+	SetForegroundColorSeq = "10;%s" + string(BEL)
+	SetBackgroundColorSeq = "11;%s" + string(BEL)
+	SetCursorColorSeq     = "12;%s" + string(BEL)
 	ShowCursorSeq         = "?25h"
 	HideCursorSeq         = "?25l"
 )
@@ -257,6 +261,29 @@ func (o Output) EnableMouseAllMotion() {
 // DisableMouseAllMotion disables All Motion Mouse mode.
 func (o Output) DisableMouseAllMotion() {
 	fmt.Fprint(o.tty, CSI+DisableMouseAllMotionSeq)
+}
+
+// EnableMouseExtendedMotion enables Extended Mouse mode (SGR). This should be
+// enabled in conjunction with EnableMouseCellMotion, and EnableMouseAllMotion.
+func (o Output) EnableMouseExtendedMode() {
+	fmt.Fprint(o.tty, CSI+EnableMouseExtendedModeSeq)
+}
+
+// DisableMouseExtendedMotion disables Extended Mouse mode (SGR).
+func (o Output) DisableMouseExtendedMode() {
+	fmt.Fprint(o.tty, CSI+DisableMouseExtendedModeSeq)
+}
+
+// EnableMousePixelsMotion enables Pixel Motion Mouse mode (SGR-Pixels). This
+// should be enabled in conjunction with EnableMouseCellMotion, and
+// EnableMouseAllMotion.
+func (o Output) EnableMousePixelsMode() {
+	fmt.Fprint(o.tty, CSI+EnableMousePixelsModeSeq)
+}
+
+// DisableMousePixelsMotion disables Pixel Motion Mouse mode (SGR-Pixels).
+func (o Output) DisableMousePixelsMode() {
+	fmt.Fprint(o.tty, CSI+DisableMousePixelsModeSeq)
 }
 
 // SetWindowTitle sets the terminal window title.
