@@ -11,10 +11,12 @@ import (
 	"strings"
 	"text/tabwriter"
 	"unicode"
+
+	"mvdan.cc/sh/v3/fileutil"
 )
 
 // PrinterOption is a function which can be passed to NewPrinter
-// to alter its behaviour. To apply option to existing Printer
+// to alter its behavior. To apply option to existing Printer
 // call it directly, for example KeepPadding(true)(printer).
 type PrinterOption func(*Printer)
 
@@ -107,9 +109,9 @@ func NewPrinter(opts ...PrinterOption) *Printer {
 // Print "pretty-prints" the given syntax tree node to the given writer. Writes
 // to w are buffered.
 //
-// The node types supported at the moment are *File, *Stmt, *Word, any Command
-// node, and any WordPart node. A trailing newline will only be printed when a
-// *File is used.
+// The node types supported at the moment are *File, *Stmt, *Word, *Assign, any
+// Command node, and any WordPart node. A trailing newline will only be printed
+// when a *File is used.
 func (p *Printer) Print(w io.Writer, node Node) error {
 	p.reset()
 
@@ -146,6 +148,9 @@ func (p *Printer) Print(w io.Writer, node Node) error {
 	case WordPart:
 		p.line = x.Pos().Line()
 		p.wordPart(x, nil)
+	case *Assign:
+		p.line = x.Pos().Line()
+		p.assigns([]*Assign{x})
 	default:
 		return fmt.Errorf("unsupported node type: %T", x)
 	}
@@ -211,7 +216,7 @@ func (c *colCounter) Reset(w io.Writer) {
 // Printer holds the internal state of the printing mechanism of a
 // program.
 type Printer struct {
-	bufWriter
+	bufWriter // TODO: embedding this makes the methods part of the API, which we did not intend
 	tabWriter *tabwriter.Writer
 	cols      colCounter
 
@@ -224,7 +229,8 @@ type Printer struct {
 	singleLine     bool
 	funcNextLine   bool
 
-	wantSpace   bool // space is wanted or required
+	wantSpace wantSpaceState // whether space is required or has been written
+
 	wantNewline bool // newline is wanted for pretty-printing; ignored by singleLine; ignored by singleLine
 	mustNewline bool // newline is required to keep shell syntax valid
 	wroteSemi   bool // wrote ';' for the current statement
@@ -259,7 +265,8 @@ type Printer struct {
 }
 
 func (p *Printer) reset() {
-	p.wantSpace, p.wantNewline, p.mustNewline = false, false, false
+	p.wantSpace = spaceWritten
+	p.wantNewline, p.mustNewline = false, false
 	p.pendingComments = p.pendingComments[:0]
 
 	// minification uses its own newline logic
@@ -280,7 +287,7 @@ func (p *Printer) spaces(n uint) {
 
 func (p *Printer) space() {
 	p.WriteByte(' ')
-	p.wantSpace = false
+	p.wantSpace = spaceWritten
 }
 
 func (p *Printer) spacePad(pos Pos) {
@@ -289,9 +296,9 @@ func (p *Printer) spacePad(pos Pos) {
 		// with spaces, since this may result in mixing of spaces and tabs.
 		return
 	}
-	if p.wantSpace {
+	if p.wantSpace == spaceRequired {
 		p.WriteByte(' ')
-		p.wantSpace = false
+		p.wantSpace = spaceWritten
 	}
 	for p.cols.column > 0 && p.cols.column < int(pos.Col()) {
 		p.WriteByte(' ')
@@ -301,22 +308,27 @@ func (p *Printer) spacePad(pos Pos) {
 // wantsNewline reports whether we want to print at least one newline before
 // printing a node at a given position. A zero position can be given to simply
 // tell if we want a newline following what's just been printed.
-func (p *Printer) wantsNewline(pos Pos) bool {
+func (p *Printer) wantsNewline(pos Pos, escapingNewline bool) bool {
 	if p.mustNewline {
 		// We must have a newline here.
 		return true
 	}
-	if p.singleLine {
-		// The newline is optional, and singleLine turns it off.
+	if p.singleLine && len(p.pendingComments) == 0 {
+		// The newline is optional, and singleLine skips it.
+		// Don't skip if there are any pending comments,
+		// as that might move them further down to the wrong place.
 		return false
 	}
-	// THe newline is optional, and we want it via either wantNewline or via
+	if escapingNewline && p.minify {
+		return false
+	}
+	// The newline is optional, and we want it via either wantNewline or via
 	// the position's line.
 	return p.wantNewline || pos.Line() > p.line
 }
 
 func (p *Printer) bslashNewl() {
-	if p.wantSpace {
+	if p.wantSpace == spaceRequired {
 		p.space()
 	}
 	p.WriteString("\\\n")
@@ -327,22 +339,22 @@ func (p *Printer) bslashNewl() {
 func (p *Printer) spacedString(s string, pos Pos) {
 	p.spacePad(pos)
 	p.WriteString(s)
-	p.wantSpace = true
+	p.wantSpace = spaceRequired
 }
 
 func (p *Printer) spacedToken(s string, pos Pos) {
 	if p.minify {
 		p.WriteString(s)
-		p.wantSpace = false
+		p.wantSpace = spaceNotRequired
 		return
 	}
 	p.spacePad(pos)
 	p.WriteString(s)
-	p.wantSpace = true
+	p.wantSpace = spaceRequired
 }
 
 func (p *Printer) semiOrNewl(s string, pos Pos) {
-	if p.wantsNewline(Pos{}) {
+	if p.wantsNewline(Pos{}, false) {
 		p.newline(pos)
 		p.indent()
 	} else {
@@ -352,10 +364,10 @@ func (p *Printer) semiOrNewl(s string, pos Pos) {
 		if !p.minify {
 			p.space()
 		}
-		p.line = pos.Line()
+		p.advanceLine(pos.Line())
 	}
 	p.WriteString(s)
-	p.wantSpace = true
+	p.wantSpace = spaceRequired
 }
 
 func (p *Printer) writeLit(s string) {
@@ -408,13 +420,19 @@ func (p *Printer) indent() {
 
 // TODO(mvdan): add an indent call at the end of newline?
 
+// newline prints one newline and advances p.line to pos.Line().
 func (p *Printer) newline(pos Pos) {
 	p.flushHeredocs()
 	p.flushComments()
 	p.WriteByte('\n')
-	p.wantNewline, p.mustNewline, p.wantSpace = false, false, false
-	if p.line < pos.Line() {
-		p.line++
+	p.wantSpace = spaceWritten
+	p.wantNewline, p.mustNewline = false, false
+	p.advanceLine(pos.Line())
+}
+
+func (p *Printer) advanceLine(line uint) {
+	if p.line < line {
+		p.line = line
 	}
 }
 
@@ -445,7 +463,8 @@ func (p *Printer) flushHeredocs() {
 	for _, r := range hdocs {
 		p.line++
 		p.WriteByte('\n')
-		p.wantNewline, p.wantNewline, p.wantSpace = false, false, false
+		p.wantSpace = spaceWritten
+		p.wantNewline, p.wantNewline = false, false
 		if r.Op == DashHdoc && p.indentSpaces == 0 && !p.minify {
 			if r.Hdoc != nil {
 				extra := extraIndenter{
@@ -477,44 +496,49 @@ func (p *Printer) flushHeredocs() {
 		if r.Hdoc != nil {
 			// Overwrite p.line, since printing r.Word again can set
 			// p.line to the beginning of the heredoc again.
-			p.line = r.Hdoc.End().Line()
+			p.advanceLine(r.Hdoc.End().Line())
 		}
-		p.wantSpace = false
+		p.wantSpace = spaceNotRequired
 	}
 	p.level = newLevel
 	p.pendingComments = coms
 	p.mustNewline = true
 }
 
+// newline prints between zero and two newlines.
+// If any newlines are printed, it advances p.line to pos.Line().
 func (p *Printer) newlines(pos Pos) {
 	if p.firstLine && len(p.pendingComments) == 0 {
 		p.firstLine = false
 		return // no empty lines at the top
 	}
-	if !p.wantsNewline(pos) {
+	if !p.wantsNewline(pos, false) {
 		return
 	}
-	p.newline(pos)
-	if pos.Line() > p.line {
-		if !p.minify {
-			// preserve single empty lines
-			p.WriteByte('\n')
-		}
-		p.line++
+	p.flushHeredocs()
+	p.flushComments()
+	p.WriteByte('\n')
+	p.wantSpace = spaceWritten
+	p.wantNewline, p.mustNewline = false, false
+
+	l := pos.Line()
+	if l > p.line+1 && !p.minify {
+		p.WriteByte('\n') // preserve single empty lines
 	}
+	p.advanceLine(l)
 	p.indent()
 }
 
 func (p *Printer) rightParen(pos Pos) {
-	if !p.minify {
+	if len(p.pendingHdocs) > 0 || !p.minify {
 		p.newlines(pos)
 	}
 	p.WriteByte(')')
-	p.wantSpace = true
+	p.wantSpace = spaceRequired
 }
 
 func (p *Printer) semiRsrv(s string, pos Pos) {
-	if p.wantsNewline(pos) {
+	if p.wantsNewline(pos, false) {
 		p.newlines(pos)
 	} else {
 		if !p.wroteSemi {
@@ -525,7 +549,7 @@ func (p *Printer) semiRsrv(s string, pos Pos) {
 		}
 	}
 	p.WriteString(s)
-	p.wantSpace = true
+	p.wantSpace = spaceRequired
 }
 
 func (p *Printer) flushComments() {
@@ -546,19 +570,19 @@ func (p *Printer) flushComments() {
 				p.WriteByte('\n')
 			}
 			p.indent()
-			p.wantSpace = false
+			p.wantSpace = spaceWritten
 			p.spacePad(c.Pos())
-		case p.wantSpace:
+		case p.wantSpace == spaceRequired:
 			if p.keepPadding {
 				p.spacePad(c.Pos())
 			} else {
 				p.WriteByte('\t')
 			}
+		case p.wantSpace != spaceWritten:
+			p.space()
 		}
 		// don't go back one line, which may happen in some edge cases
-		if p.line < cline {
-			p.line = cline
-		}
+		p.advanceLine(cline)
 		p.WriteByte('#')
 		p.writeLit(strings.TrimRightFunc(c.Text, unicode.IsSpace))
 		p.wantNewline = true
@@ -569,30 +593,44 @@ func (p *Printer) flushComments() {
 
 func (p *Printer) comments(comments ...Comment) {
 	if p.minify {
+		for _, c := range comments {
+			if fileutil.Shebang([]byte("#"+c.Text)) != "" && c.Hash.Col() == 1 && c.Hash.Line() == 1 {
+				p.WriteString(strings.TrimRightFunc("#"+c.Text, unicode.IsSpace))
+				p.WriteString("\n")
+				p.line++
+			}
+		}
 		return
 	}
 	p.pendingComments = append(p.pendingComments, comments...)
 }
 
 func (p *Printer) wordParts(wps []WordPart, quoted bool) {
+	// We disallow unquoted escaped newlines between word parts below.
+	// However, we want to allow a leading escaped newline for cases such as:
+	//
+	//   foo <<< \
+	//     "bar baz"
+	if !quoted && !p.singleLine && wps[0].Pos().Line() > p.line {
+		p.bslashNewl()
+	}
 	for i, wp := range wps {
 		var next WordPart
 		if i+1 < len(wps) {
 			next = wps[i+1]
 		}
+		// Keep escaped newlines separating word parts when quoted.
+		// Note that those escaped newlines don't cause indentaiton.
+		// When not quoted, we strip them out consistently,
+		// because attempting to keep them would prevent indentation.
 		// Can't use p.wantsNewline here, since this is only about
 		// escaped newlines.
-		for !p.singleLine && wp.Pos().Line() > p.line {
-			if quoted {
-				// No extra spacing or indentation if quoted.
-				p.WriteString("\\\n")
-				p.line++
-			} else {
-				p.bslashNewl()
-			}
+		for quoted && !p.singleLine && wp.Pos().Line() > p.line {
+			p.WriteString("\\\n")
+			p.line++
 		}
 		p.wordPart(wp, next)
-		p.line = wp.End().Line()
+		p.advanceLine(wp.End().Line())
 	}
 }
 
@@ -607,26 +645,36 @@ func (p *Printer) wordPart(wp, next WordPart) {
 		p.WriteByte('\'')
 		p.writeLit(x.Value)
 		p.WriteByte('\'')
-		p.line = x.End().Line()
+		p.advanceLine(x.End().Line())
 	case *DblQuoted:
 		p.dblQuoted(x)
 	case *CmdSubst:
-		p.line = x.Pos().Line()
+		p.advanceLine(x.Pos().Line())
 		switch {
 		case x.TempFile:
 			p.WriteString("${")
-			p.wantSpace = true
+			p.wantSpace = spaceRequired
 			p.nestedStmts(x.Stmts, x.Last, x.Right)
-			p.wantSpace = false
+			p.wantSpace = spaceNotRequired
 			p.semiRsrv("}", x.Right)
 		case x.ReplyVar:
 			p.WriteString("${|")
 			p.nestedStmts(x.Stmts, x.Last, x.Right)
-			p.wantSpace = false
+			p.wantSpace = spaceNotRequired
 			p.semiRsrv("}", x.Right)
+		// Special case: `# inline comment`
+		case x.Backquotes && len(x.Stmts) == 0 &&
+			len(x.Last) == 1 && x.Right.Line() == p.line:
+			p.WriteString("`#")
+			p.WriteString(x.Last[0].Text)
+			p.WriteString("`")
 		default:
 			p.WriteString("$(")
-			p.wantSpace = len(x.Stmts) > 0 && startsWithLparen(x.Stmts[0])
+			if len(x.Stmts) > 0 && startsWithLparen(x.Stmts[0]) {
+				p.wantSpace = spaceRequired
+			} else {
+				p.wantSpace = spaceNotRequired
+			}
 			p.nestedStmts(x.Stmts, x.Last, x.Right)
 			p.rightParen(x.Right)
 		}
@@ -663,7 +711,7 @@ func (p *Printer) wordPart(wp, next WordPart) {
 		p.WriteByte(')')
 	case *ProcSubst:
 		// avoid conflict with << and others
-		if p.wantSpace {
+		if p.wantSpace == spaceRequired {
 			p.space()
 		}
 		p.WriteString(x.Op.String())
@@ -821,14 +869,14 @@ func (p *Printer) testExpr(expr TestExpr) {
 	if expr.Pos().Line() > p.line {
 		p.newlines(expr.Pos())
 		p.spacePad(expr.Pos())
-	} else if p.wantSpace {
+	} else if p.wantSpace == spaceRequired {
 		p.space()
 	}
 	p.testExprSameLine(expr)
 }
 
 func (p *Printer) testExprSameLine(expr TestExpr) {
-	p.line = expr.Pos().Line()
+	p.advanceLine(expr.Pos().Line())
 	switch x := expr.(type) {
 	case *Word:
 		p.word(x)
@@ -838,7 +886,7 @@ func (p *Printer) testExprSameLine(expr TestExpr) {
 		p.WriteString(x.Op.String())
 		switch x.Op {
 		case AndTest, OrTest:
-			p.wantSpace = true
+			p.wantSpace = spaceRequired
 			p.testExpr(x.Y)
 		default:
 			p.space()
@@ -850,7 +898,11 @@ func (p *Printer) testExprSameLine(expr TestExpr) {
 		p.testExprSameLine(x.X)
 	case *ParenTest:
 		p.WriteByte('(')
-		p.wantSpace = startsWithLparen(x.X)
+		if startsWithLparen(x.X) {
+			p.wantSpace = spaceRequired
+		} else {
+			p.wantSpace = spaceNotRequired
+		}
 		p.testExpr(x.X)
 		p.WriteByte(')')
 	}
@@ -858,7 +910,7 @@ func (p *Printer) testExprSameLine(expr TestExpr) {
 
 func (p *Printer) word(w *Word) {
 	p.wordParts(w.Parts, false)
-	p.wantSpace = true
+	p.wantSpace = spaceRequired
 }
 
 func (p *Printer) unquotedWord(w *Word) {
@@ -906,7 +958,7 @@ func (p *Printer) casePatternJoin(pats []*Word) {
 		if i > 0 {
 			p.spacedToken("|", Pos{})
 		}
-		if p.wantsNewline(w.Pos()) {
+		if p.wantsNewline(w.Pos(), true) {
 			if !anyNewline {
 				p.incLevel()
 				anyNewline = true
@@ -937,7 +989,7 @@ func (p *Printer) elemJoin(elems []*ArrayElem, last []Comment) {
 		if el.Pos().Line() > p.line {
 			p.newlines(el.Pos())
 			p.spacePad(el.Pos())
-		} else if p.wantSpace {
+		} else if p.wantSpace == spaceRequired {
 			p.space()
 		}
 		if p.wroteIndex(el.Index) {
@@ -966,10 +1018,10 @@ func (p *Printer) stmt(s *Stmt) {
 	}
 	p.incLevel()
 	for _, r := range s.Redirs[startRedirs:] {
-		if p.wantsNewline(r.OpPos) {
+		if p.wantsNewline(r.OpPos, true) {
 			p.bslashNewl()
 		}
-		if p.wantSpace {
+		if p.wantSpace == spaceRequired {
 			p.spacePad(r.Pos())
 		}
 		if r.N != nil {
@@ -979,7 +1031,7 @@ func (p *Printer) stmt(s *Stmt) {
 		if p.spaceRedirects && (r.Op != DplIn && r.Op != DplOut) {
 			p.space()
 		} else {
-			p.wantSpace = true
+			p.wantSpace = spaceRequired
 		}
 		p.word(r.Word)
 		if r.Op == Hdoc || r.Op == DashHdoc {
@@ -1001,13 +1053,13 @@ func (p *Printer) stmt(s *Stmt) {
 			p.WriteString(";")
 		}
 		p.wroteSemi = true
-		p.wantSpace = true
+		p.wantSpace = spaceRequired
 	}
 	p.decLevel()
 }
 
 func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
-	p.line = cmd.Pos().Line()
+	p.advanceLine(cmd.Pos().Line())
 	p.spacePad(cmd.Pos())
 	switch x := cmd.(type) {
 	case *CallExpr:
@@ -1021,7 +1073,7 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 			if r.Pos().After(x.Args[1].Pos()) || r.Op == Hdoc || r.Op == DashHdoc {
 				break
 			}
-			if p.wantSpace {
+			if p.wantSpace == spaceRequired {
 				p.spacePad(r.Pos())
 			}
 			if r.N != nil {
@@ -1031,7 +1083,7 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 			if p.spaceRedirects && (r.Op != DplIn && r.Op != DplOut) {
 				p.space()
 			} else {
-				p.wantSpace = true
+				p.wantSpace = spaceRequired
 			}
 			p.word(r.Word)
 			startRedirs++
@@ -1039,7 +1091,7 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 		p.wordJoin(x.Args[1:])
 	case *Block:
 		p.WriteByte('{')
-		p.wantSpace = true
+		p.wantSpace = spaceRequired
 		// Forbid "foo()\n{ bar; }"
 		p.wantNewline = p.wantNewline || p.funcNextLine
 		p.nestedStmts(x.Stmts, x.Last, x.Rbrace)
@@ -1048,10 +1100,25 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 		p.ifClause(x, false)
 	case *Subshell:
 		p.WriteByte('(')
-		p.wantSpace = len(x.Stmts) > 0 && startsWithLparen(x.Stmts[0])
+		stmts := x.Stmts
+		if len(stmts) > 0 && startsWithLparen(stmts[0]) {
+			p.wantSpace = spaceRequired
+			// Add a space between nested parentheses if we're printing them in a single line,
+			// to avoid the ambiguity between `((` and `( (`.
+			if (x.Lparen.Line() != stmts[0].Pos().Line() || len(stmts) > 1) && !p.singleLine {
+				p.wantSpace = spaceNotRequired
+
+				if p.minify {
+					p.mustNewline = true
+				}
+			}
+		} else {
+			p.wantSpace = spaceNotRequired
+		}
+
 		p.spacePad(stmtsPos(x.Stmts, x.Last))
 		p.nestedStmts(x.Stmts, x.Last, x.Rparen)
-		p.wantSpace = false
+		p.wantSpace = spaceNotRequired
 		p.spacePad(x.Rparen)
 		p.rightParen(x.Rparen)
 	case *WhileClause:
@@ -1079,7 +1146,7 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 		if p.minify || p.singleLine || x.Y.Pos().Line() <= p.line {
 			// leave p.nestedBinary untouched
 			p.spacedToken(x.Op.String(), x.OpPos)
-			p.line = x.Y.Pos().Line()
+			p.advanceLine(x.Y.Pos().Line())
 			p.stmt(x.Y)
 			break
 		}
@@ -1093,7 +1160,7 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 			}
 			p.spacedToken(x.Op.String(), x.OpPos)
 			if len(x.Y.Comments) > 0 {
-				p.wantSpace = false
+				p.wantSpace = spaceNotRequired
 				p.newline(x.Y.Pos())
 				p.indent()
 				p.comments(x.Y.Comments...)
@@ -1102,12 +1169,12 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 			}
 		} else {
 			p.spacedToken(x.Op.String(), x.OpPos)
-			p.line = x.OpPos.Line()
+			p.advanceLine(x.OpPos.Line())
 			p.comments(x.Y.Comments...)
 			p.newline(Pos{})
 			p.indent()
 		}
-		p.line = x.Y.Pos().Line()
+		p.advanceLine(x.Y.Pos().Line())
 		_, p.nestedBinary = x.Y.Cmd.(*BinaryCmd)
 		p.stmt(x.Y)
 		if indent {
@@ -1128,14 +1195,15 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 		} else if !x.Parens || !p.minify {
 			p.space()
 		}
-		p.line = x.Body.Pos().Line()
+		p.advanceLine(x.Body.Pos().Line())
 		p.comments(x.Body.Comments...)
 		p.stmt(x.Body)
 	case *CaseClause:
 		p.WriteString("case ")
 		p.word(x.Word)
 		p.WriteString(" in")
-		p.wantSpace = true
+		p.advanceLine(x.In.Line())
+		p.wantSpace = spaceRequired
 		if p.swtCaseIndent {
 			p.incLevel()
 		}
@@ -1156,7 +1224,11 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 			p.spacePad(ci.Pos())
 			p.casePatternJoin(ci.Patterns)
 			p.WriteByte(')')
-			p.wantSpace = !p.minify
+			if !p.minify {
+				p.wantSpace = spaceRequired
+			} else {
+				p.wantSpace = spaceNotRequired
+			}
 
 			bodyPos := stmtsPos(ci.Stmts, ci.Last)
 			bodyEnd := stmtsEnd(ci.Stmts, ci.Last)
@@ -1170,6 +1242,7 @@ func (p *Printer) command(cmd Command, redirs []*Redirect) (startRedirs int) {
 					p.wantNewline = true
 				}
 				p.spacedToken(ci.Op.String(), ci.OpPos)
+				p.advanceLine(ci.OpPos.Line())
 				// avoid ; directly after tokens like ;;
 				p.wroteSemi = true
 			}
@@ -1271,20 +1344,6 @@ func (p *Printer) ifClause(ic *IfClause, elif bool) {
 	p.semiRsrv("fi", ic.FiPos)
 }
 
-func startsWithLparen(node Node) bool {
-	switch node := node.(type) {
-	case *Stmt:
-		return startsWithLparen(node.Cmd)
-	case *BinaryCmd:
-		return startsWithLparen(node.X)
-	case *Subshell:
-		return true // keep ( (
-	case *ArithmCmd:
-		return true // keep ( ((
-	}
-	return false
-}
-
 func (p *Printer) stmtList(stmts []*Stmt, last []Comment) {
 	sep := p.wantNewline || (len(stmts) > 0 && stmts[0].Pos().Line() > p.line)
 	for i, s := range stmts {
@@ -1292,7 +1351,7 @@ func (p *Printer) stmtList(stmts []*Stmt, last []Comment) {
 			// In singleLine mode, ensure we use semicolons between
 			// statements.
 			p.WriteByte(';')
-			p.wantSpace = true
+			p.wantSpace = spaceRequired
 		}
 		pos := s.Pos()
 		var midComs, endComs []Comment
@@ -1313,10 +1372,10 @@ func (p *Printer) stmtList(stmts []*Stmt, last []Comment) {
 			// statement.
 			p.comments(c)
 		}
-		if !p.minify || p.wantSpace {
+		if p.mustNewline || !p.minify || p.wantSpace == spaceRequired {
 			p.newlines(pos)
 		}
-		p.line = pos.Line()
+		p.advanceLine(pos.Line())
 		p.comments(midComs...)
 		p.stmt(s)
 		p.comments(endComs...)
@@ -1327,6 +1386,75 @@ func (p *Printer) stmtList(stmts []*Stmt, last []Comment) {
 	}
 	p.comments(last...)
 }
+
+func (p *Printer) nestedStmts(stmts []*Stmt, last []Comment, closing Pos) {
+	p.incLevel()
+	switch {
+	case len(stmts) > 1:
+		// Force a newline if we find:
+		//     { stmt; stmt; }
+		p.wantNewline = true
+	case closing.Line() > p.line && len(stmts) > 0 &&
+		stmtsEnd(stmts, last).Line() < closing.Line():
+		// Force a newline if we find:
+		//     { stmt
+		//     }
+		p.wantNewline = true
+	case len(p.pendingComments) > 0 && len(stmts) > 0:
+		// Force a newline if we find:
+		//     for i in a b # stmt
+		//     do foo; done
+		p.wantNewline = true
+	}
+	p.stmtList(stmts, last)
+	if closing.IsValid() {
+		p.flushComments()
+	}
+	p.decLevel()
+}
+
+func (p *Printer) assigns(assigns []*Assign) {
+	p.incLevel()
+	for _, a := range assigns {
+		if p.wantsNewline(a.Pos(), true) {
+			p.bslashNewl()
+		} else {
+			p.spacePad(a.Pos())
+		}
+		if a.Name != nil {
+			p.writeLit(a.Name.Value)
+			p.wroteIndex(a.Index)
+			if a.Append {
+				p.WriteByte('+')
+			}
+			if !a.Naked {
+				p.WriteByte('=')
+			}
+		}
+		if a.Value != nil {
+			// Ensure we don't use an escaped newline after '=',
+			// because that can result in indentation, thus
+			// splitting "foo=bar" into "foo= bar".
+			p.advanceLine(a.Value.Pos().Line())
+			p.word(a.Value)
+		} else if a.Array != nil {
+			p.wantSpace = spaceNotRequired
+			p.WriteByte('(')
+			p.elemJoin(a.Array.Elems, a.Array.Last)
+			p.rightParen(a.Array.Rparen)
+		}
+		p.wantSpace = spaceRequired
+	}
+	p.decLevel()
+}
+
+type wantSpaceState uint8
+
+const (
+	spaceNotRequired wantSpaceState = iota
+	spaceRequired                   // we should generally print a space or a newline next
+	spaceWritten                    // we have just written a space or newline
+)
 
 // extraIndenter ensures that all lines in a '<<-' heredoc body have at least
 // baseIndent leading tabs. Those that had more tab indentation than the first
@@ -1387,63 +1515,16 @@ func (e *extraIndenter) WriteString(s string) (int, error) {
 	return len(s), nil
 }
 
-func (p *Printer) nestedStmts(stmts []*Stmt, last []Comment, closing Pos) {
-	p.incLevel()
-	switch {
-	case len(stmts) > 1:
-		// Force a newline if we find:
-		//     { stmt; stmt; }
-		p.wantNewline = true
-	case closing.Line() > p.line && len(stmts) > 0 &&
-		stmtsEnd(stmts, last).Line() < closing.Line():
-		// Force a newline if we find:
-		//     { stmt
-		//     }
-		p.wantNewline = true
-	case len(p.pendingComments) > 0 && len(stmts) > 0:
-		// Force a newline if we find:
-		//     for i in a b # stmt
-		//     do foo; done
-		p.wantNewline = true
+func startsWithLparen(node Node) bool {
+	switch node := node.(type) {
+	case *Stmt:
+		return startsWithLparen(node.Cmd)
+	case *BinaryCmd:
+		return startsWithLparen(node.X)
+	case *Subshell:
+		return true // keep ( (
+	case *ArithmCmd:
+		return true // keep ( ((
 	}
-	p.stmtList(stmts, last)
-	if closing.IsValid() {
-		p.flushComments()
-	}
-	p.decLevel()
-}
-
-func (p *Printer) assigns(assigns []*Assign) {
-	p.incLevel()
-	for _, a := range assigns {
-		if p.wantsNewline(a.Pos()) {
-			p.bslashNewl()
-		} else {
-			p.spacePad(a.Pos())
-		}
-		if a.Name != nil {
-			p.writeLit(a.Name.Value)
-			p.wroteIndex(a.Index)
-			if a.Append {
-				p.WriteByte('+')
-			}
-			if !a.Naked {
-				p.WriteByte('=')
-			}
-		}
-		if a.Value != nil {
-			// Ensure we don't use an escaped newline after '=',
-			// because that can result in indentation, thus
-			// splitting "foo=bar" into "foo= bar".
-			p.line = a.Value.Pos().Line()
-			p.word(a.Value)
-		} else if a.Array != nil {
-			p.wantSpace = false
-			p.WriteByte('(')
-			p.elemJoin(a.Array.Elems, a.Array.Last)
-			p.rightParen(a.Array.Rparen)
-		}
-		p.wantSpace = true
-	}
-	p.decLevel()
+	return false
 }

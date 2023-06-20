@@ -4,6 +4,13 @@
 // Package interp implements an interpreter that executes shell
 // programs. It aims to support POSIX, but its support is not complete
 // yet. It also supports some Bash features.
+//
+// The interpreter generally aims to behave like Bash,
+// but it does not support all of its features.
+//
+// The interpreter currently aims to behave like a non-interactive shell,
+// which is how most shells run scripts, and is more useful to machines.
+// In the future, it may gain an option to behave like an interactive shell.
 package interp
 
 import (
@@ -14,28 +21,26 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
+
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
 )
 
 // A Runner interprets shell programs. It can be reused, but it is not safe for
-// concurrent use. You should typically use New to build a new Runner.
+// concurrent use. Use [New] to build a new Runner.
 //
 // Note that writes to Stdout and Stderr may be concurrent if background
-// commands are used. If you plan on using an io.Writer implementation that
+// commands are used. If you plan on using an [io.Writer] implementation that
 // isn't safe for concurrent use, consider a workaround like hiding writes
 // behind a mutex.
 //
-// To create a Runner, use New. Runner's exported fields are meant to be
-// configured via runner options; once a Runner has been created, the fields
-// should be treated as read-only.
+// Runner's exported fields are meant to be configured via [RunnerOption];
+// once a Runner has been created, the fields should be treated as read-only.
 type Runner struct {
 	// Env specifies the initial environment for the interpreter, which must
 	// be non-nil.
@@ -61,11 +66,27 @@ type Runner struct {
 
 	alias map[string]alias
 
-	// execHandler is a function responsible for executing programs. It must be non-nil.
+	// callHandler is a function allowing to replace a simple command's
+	// arguments. It may be nil.
+	callHandler CallHandlerFunc
+
+	// execHandler is responsible for executing programs. It must not be nil.
 	execHandler ExecHandlerFunc
 
-	// openHandler is a function responsible for opening files. It must be non-nil.
+	// execMiddlewares grows with calls to ExecHandlers,
+	// and is used to construct execHandler when Reset is first called.
+	// The slice is needed to preserve the relative order of middlewares.
+	execMiddlewares []func(ExecHandlerFunc) ExecHandlerFunc
+
+	// openHandler is a function responsible for opening files. It must not be nil.
 	openHandler OpenHandlerFunc
+
+	// readDirHandler is a function responsible for reading directories during
+	// glob expansion. It must be non-nil.
+	readDirHandler ReadDirHandlerFunc
+
+	// statHandler is a function responsible for getting file stat. It must be non-nil.
+	statHandler StatHandlerFunc
 
 	stdin  io.Reader
 	stdout io.Writer
@@ -73,6 +94,8 @@ type Runner struct {
 
 	ecfg *expand.Config
 	ectx context.Context // just so that Runner.Subshell can use it again
+
+	lastExpandExit int // used to surface exit codes while expanding fields
 
 	// didReset remembers whether the runner has ever been reset. This is
 	// used so that Reset is automatically called when running any program
@@ -161,9 +184,10 @@ func (r *Runner) optByFlag(flag byte) *bool {
 // standard output writer means that the output will be discarded.
 func New(opts ...RunnerOption) (*Runner, error) {
 	r := &Runner{
-		usedNew:     true,
-		execHandler: DefaultExecHandler(2 * time.Second),
-		openHandler: DefaultOpenHandler(),
+		usedNew:        true,
+		openHandler:    DefaultOpenHandler(),
+		readDirHandler: DefaultReadDirHandler(),
+		statHandler:    DefaultStatHandler(),
 	}
 	r.dirStack = r.dirBootstrap[:0]
 	for _, opt := range opts {
@@ -171,6 +195,12 @@ func New(opts ...RunnerOption) (*Runner, error) {
 			return nil, err
 		}
 	}
+
+	// turn "on" the default Bash options
+	for i, opt := range bashOptsTable {
+		r.opts[len(shellOptsTable)+i] = opt.defaultState
+	}
+
 	// Set the default fallbacks, if necessary.
 	if r.Env == nil {
 		Env(nil)(r)
@@ -186,9 +216,11 @@ func New(opts ...RunnerOption) (*Runner, error) {
 	return r, nil
 }
 
-// RunnerOption is a function which can be passed to New to alter Runner behaviour.
-// To apply option to existing Runner call it directly,
-// for example interp.Params("-e")(runner).
+// RunnerOption can be passed to [New] to alter a [Runner]'s behaviour.
+// It can also be applied directly on an existing Runner,
+// such as interp.Params("-e")(runner).
+// Note that options cannot be applied once Run or Reset have been called.
+// TODO: enforce that rule via didReset.
 type RunnerOption func(*Runner) error
 
 // Env sets the interpreter's environment. If nil, a copy of the current
@@ -210,18 +242,18 @@ func Dir(path string) RunnerOption {
 		if path == "" {
 			path, err := os.Getwd()
 			if err != nil {
-				return fmt.Errorf("could not get current dir: %v", err)
+				return fmt.Errorf("could not get current dir: %w", err)
 			}
 			r.Dir = path
 			return nil
 		}
 		path, err := filepath.Abs(path)
 		if err != nil {
-			return fmt.Errorf("could not get absolute dir: %v", err)
+			return fmt.Errorf("could not get absolute dir: %w", err)
 		}
 		info, err := os.Stat(path)
 		if err != nil {
-			return fmt.Errorf("could not stat: %v", err)
+			return fmt.Errorf("could not stat: %w", err)
 		}
 		if !info.IsDir() {
 			return fmt.Errorf("%s is not a directory", path)
@@ -241,6 +273,13 @@ func Params(args ...string) RunnerOption {
 		fp := flagParser{remaining: args}
 		for fp.more() {
 			flag := fp.flag()
+			if flag == "-" {
+				// TODO: implement "The -x and -v options are turned off."
+				if args := fp.args(); len(args) > 0 {
+					r.Params = args
+				}
+				return nil
+			}
 			enable := flag[0] == '-'
 			if flag[1] != 'o' {
 				opt := r.optByFlag(flag[1])
@@ -253,7 +292,7 @@ func Params(args ...string) RunnerOption {
 			value := fp.value()
 			if value == "" && enable {
 				for i, opt := range &shellOptsTable {
-					r.printOptLine(opt.name, r.opts[i])
+					r.printOptLine(opt.name, r.opts[i], true)
 				}
 				continue
 			}
@@ -267,7 +306,7 @@ func Params(args ...string) RunnerOption {
 				}
 				continue
 			}
-			opt := r.optByName(value, false)
+			_, opt := r.optByName(value, false)
 			if opt == nil {
 				return fmt.Errorf("invalid option: %q", value)
 			}
@@ -287,7 +326,18 @@ func Params(args ...string) RunnerOption {
 	}
 }
 
-// ExecHandler sets command execution handler. See ExecHandlerFunc for more info.
+// CallHandler sets the call handler. See [CallHandlerFunc] for more info.
+func CallHandler(f CallHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.callHandler = f
+		return nil
+	}
+}
+
+// ExecHandler sets one command execution handler,
+// which replaces DefaultExecHandler(2 * time.Second).
+//
+// Deprecated: use [ExecHandlers] instead, which allows for middleware handlers.
 func ExecHandler(f ExecHandlerFunc) RunnerOption {
 	return func(r *Runner) error {
 		r.execHandler = f
@@ -295,10 +345,55 @@ func ExecHandler(f ExecHandlerFunc) RunnerOption {
 	}
 }
 
-// OpenHandler sets file open handler. See OpenHandlerFunc for more info.
+// ExecHandlers appends middlewares to handle command execution.
+// The middlewares are chained from first to last, and the first is called by the runner.
+// Each middleware is expected to call the "next" middleware at most once.
+//
+// For example, a middleware may implement only some commands.
+// For those commands, it can run its logic and avoid calling "next".
+// For any other commands, it can call "next" with the original parameters.
+//
+// Another common example is a middleware which always calls "next",
+// but runs custom logic either before or after that call.
+// For instance, a middleware could change the arguments to the "next" call,
+// or it could print log lines before or after the call to "next".
+//
+// The last exec handler is DefaultExecHandler(2 * time.Second).
+func ExecHandlers(middlewares ...func(next ExecHandlerFunc) ExecHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.execMiddlewares = append(r.execMiddlewares, middlewares...)
+		return nil
+	}
+}
+
+// TODO: consider porting the middleware API in ExecHandlers to OpenHandler,
+// ReadDirHandler, and StatHandler.
+
+// TODO(v4): now that ExecHandlers allows calling a next handler with changed
+// arguments, one of the two advantages of CallHandler is gone. The other is the
+// ability to work with builtins; if we make ExecHandlers work with builtins, we
+// could join both APIs.
+
+// OpenHandler sets file open handler. See [OpenHandlerFunc] for more info.
 func OpenHandler(f OpenHandlerFunc) RunnerOption {
 	return func(r *Runner) error {
 		r.openHandler = f
+		return nil
+	}
+}
+
+// ReadDirHandler sets the read directory handler. See [ReadDirHandlerFunc] for more info.
+func ReadDirHandler(f ReadDirHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.readDirHandler = f
+		return nil
+	}
+}
+
+// StatHandler sets the stat handler. See [StatHandlerFunc] for more info.
+func StatHandler(f StatHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.statHandler = f
 		return nil
 	}
 }
@@ -321,28 +416,38 @@ func StdIO(in io.Reader, out, err io.Writer) RunnerOption {
 	}
 }
 
-func (r *Runner) optByName(name string, bash bool) *bool {
+// optByName returns the matching runner's option index and status
+func (r *Runner) optByName(name string, bash bool) (index int, status *bool) {
 	if bash {
-		for i, optName := range bashOptsTable {
-			if optName == name {
-				return &r.opts[len(shellOptsTable)+i]
+		for i, opt := range bashOptsTable {
+			if opt.name == name {
+				index = len(shellOptsTable) + i
+				return index, &r.opts[index]
 			}
 		}
 	}
 	for i, opt := range &shellOptsTable {
 		if opt.name == name {
-			return &r.opts[i]
+			return i, &r.opts[i]
 		}
 	}
-	return nil
+	return 0, nil
 }
 
 type runnerOpts [len(shellOptsTable) + len(bashOptsTable)]bool
 
-var shellOptsTable = [...]struct {
+type shellOpt struct {
 	flag byte
 	name string
-}{
+}
+
+type bashOpt struct {
+	name         string
+	defaultState bool // Bash's default value for this option
+	supported    bool // whether we support the option's non-default state
+}
+
+var shellOptsTable = [...]shellOpt{
 	// sorted alphabetically by name; use a space for the options
 	// that have no flag form
 	{'a', "allexport"},
@@ -350,14 +455,112 @@ var shellOptsTable = [...]struct {
 	{'n', "noexec"},
 	{'f', "noglob"},
 	{'u', "nounset"},
+	{'x', "xtrace"},
 	{' ', "pipefail"},
 }
 
-var bashOptsTable = [...]string{
-	// sorted alphabetically by name
-	"expand_aliases",
-	"globstar",
-	"nullglob",
+var bashOptsTable = [...]bashOpt{
+	// supported options, sorted alphabetically by name
+	{
+		name:         "expand_aliases",
+		defaultState: false,
+		supported:    true,
+	},
+	{
+		name:         "globstar",
+		defaultState: false,
+		supported:    true,
+	},
+	{
+		name:         "nullglob",
+		defaultState: false,
+		supported:    true,
+	},
+	// unsupported options, sorted alphabetically by name
+	{name: "assoc_expand_once"},
+	{name: "autocd"},
+	{name: "cdable_vars"},
+	{name: "cdspell"},
+	{name: "checkhash"},
+	{name: "checkjobs"},
+	{
+		name:         "checkwinsize",
+		defaultState: true,
+	},
+	{
+		name:         "cmdhist",
+		defaultState: true,
+	},
+	{name: "compat31"},
+	{name: "compat32"},
+	{name: "compat40"},
+	{name: "compat41"},
+	{name: "compat42"},
+	{name: "compat44"},
+	{name: "compat43"},
+	{name: "compat44"},
+	{
+		name:         "complete_fullquote",
+		defaultState: true,
+	},
+	{name: "direxpand"},
+	{name: "dirspell"},
+	{name: "dotglob"},
+	{name: "execfail"},
+	{name: "extdebug"},
+	{name: "extglob"},
+	{
+		name:         "extquote",
+		defaultState: true,
+	},
+	{name: "failglob"},
+	{
+		name:         "force_fignore",
+		defaultState: true,
+	},
+	{name: "globasciiranges"},
+	{name: "gnu_errfmt"},
+	{name: "histappend"},
+	{name: "histreedit"},
+	{name: "histverify"},
+	{
+		name:         "hostcomplete",
+		defaultState: true,
+	},
+	{name: "huponexit"},
+	{
+		name:         "inherit_errexit",
+		defaultState: true,
+	},
+	{
+		name:         "interactive_comments",
+		defaultState: true,
+	},
+	{name: "lastpipe"},
+	{name: "lithist"},
+	{name: "localvar_inherit"},
+	{name: "localvar_unset"},
+	{name: "login_shell"},
+	{name: "mailwarn"},
+	{name: "no_empty_cmd_completion"},
+	{name: "nocaseglob"},
+	{name: "nocasematch"},
+	{
+		name:         "progcomp",
+		defaultState: true,
+	},
+	{name: "progcomp_alias"},
+	{
+		name:         "promptvars",
+		defaultState: true,
+	},
+	{name: "restricted_shell"},
+	{name: "shift_verbose"},
+	{
+		name:         "sourcepath",
+		defaultState: true,
+	},
+	{name: "xpg_echo"},
 }
 
 // To access the shell options arrays without a linear search when we
@@ -369,6 +572,7 @@ const (
 	optNoExec
 	optNoGlob
 	optNoUnset
+	optXTrace
 	optPipeFail
 
 	optExpandAliases
@@ -394,12 +598,28 @@ func (r *Runner) Reset() {
 		r.origStdin = r.stdin
 		r.origStdout = r.stdout
 		r.origStderr = r.stderr
+
+		if r.execHandler != nil && len(r.execMiddlewares) > 0 {
+			panic("interp.ExecHandler should be replaced with interp.ExecHandlers, not mixed")
+		}
+		if r.execHandler == nil {
+			r.execHandler = DefaultExecHandler(2 * time.Second)
+		}
+		// Middlewares are chained from first to last, and each can call the
+		// next in the chain, so we need to construct the chain backwards.
+		for i := len(r.execMiddlewares) - 1; i >= 0; i-- {
+			middleware := r.execMiddlewares[i]
+			r.execHandler = middleware(r.execHandler)
+		}
 	}
 	// reset the internal state
 	*r = Runner{
-		Env:         r.Env,
-		execHandler: r.execHandler,
-		openHandler: r.openHandler,
+		Env:            r.Env,
+		callHandler:    r.callHandler,
+		execHandler:    r.execHandler,
+		openHandler:    r.openHandler,
+		readDirHandler: r.readDirHandler,
+		statHandler:    r.statHandler,
 
 		// These can be set by functions like Dir or Params, but
 		// builtins can overwrite them; reset the fields to whatever the
@@ -443,6 +663,13 @@ func (r *Runner) Reset() {
 			Str:      strconv.Itoa(os.Getuid()),
 		})
 	}
+	if !r.writeEnv.Get("EUID").IsSet() {
+		r.setVar("EUID", nil, expand.Variable{
+			Kind:     expand.String,
+			ReadOnly: true,
+			Str:      strconv.Itoa(os.Geteuid()),
+		})
+	}
 	if !r.writeEnv.Get("GID").IsSet() {
 		r.setVar("GID", nil, expand.Variable{
 			Kind:     expand.String,
@@ -454,14 +681,8 @@ func (r *Runner) Reset() {
 	r.setVarString("IFS", " \t\n")
 	r.setVarString("OPTIND", "1")
 
-	if runtime.GOOS == "windows" {
-		// convert $PATH to a unix path list
-		path := r.writeEnv.Get("PATH").String()
-		path = strings.Join(filepath.SplitList(path), ":")
-		r.setVarString("PATH", path)
-	}
-
 	r.dirStack = append(r.dirStack, r.Dir)
+
 	r.didReset = true
 }
 
@@ -554,18 +775,21 @@ func (r *Runner) Subshell() *Runner {
 	// Keep in sync with the Runner type. Manually copy fields, to not copy
 	// sensitive ones like errgroup.Group, and to do deep copies of slices.
 	r2 := &Runner{
-		Dir:         r.Dir,
-		Params:      r.Params,
-		execHandler: r.execHandler,
-		openHandler: r.openHandler,
-		stdin:       r.stdin,
-		stdout:      r.stdout,
-		stderr:      r.stderr,
-		filename:    r.filename,
-		opts:        r.opts,
-		usedNew:     r.usedNew,
-		exit:        r.exit,
-		lastExit:    r.lastExit,
+		Dir:            r.Dir,
+		Params:         r.Params,
+		callHandler:    r.callHandler,
+		execHandler:    r.execHandler,
+		openHandler:    r.openHandler,
+		readDirHandler: r.readDirHandler,
+		statHandler:    r.statHandler,
+		stdin:          r.stdin,
+		stdout:         r.stdout,
+		stderr:         r.stderr,
+		filename:       r.filename,
+		opts:           r.opts,
+		usedNew:        r.usedNew,
+		exit:           r.exit,
+		lastExit:       r.lastExit,
 
 		origStdout: r.origStdout, // used for process substitutions
 	}

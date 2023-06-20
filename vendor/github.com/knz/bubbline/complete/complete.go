@@ -239,7 +239,7 @@ func (m *Model) SetHeight(height int) {
 	m.height = clamp(height, 2, m.maxHeight)
 	for _, l := range m.valueLists {
 		l.SetHeight(m.height - 1)
-		// Force recomputing the keybindigns, which
+		// Force recomputing the keybindings, which
 		// is dependent on the page size.
 		l.SetFilteringEnabled(true)
 	}
@@ -301,7 +301,7 @@ func (m *Model) SetValues(values Values) {
 	// Make space for the description.
 	m.maxHeight++
 
-	// Propagate the logical weights to all lists.
+	// Propagate the logical heights to all lists.
 	m.SetHeight(m.maxHeight)
 
 	wasFocused := m.focused
@@ -449,12 +449,18 @@ func (m *Model) View() string {
 		contents[i] = l.View()
 	}
 	result := lipgloss.JoinHorizontal(lipgloss.Top, contents...)
-	item := m.valueLists[m.selectedList].SelectedItem().(candidateItem)
-	desc := item.Description()
-	if desc != "" {
-		desc = m.Styles.Description.Render(truncate.String(item.Title()+": "+desc, uint(m.width)))
+	curSelected := m.valueLists[m.selectedList].SelectedItem()
+	var desc string
+	if curSelected == nil {
+		desc = m.Styles.PlaceholderDescription.Render("(no entry seleted)")
 	} else {
-		desc = m.Styles.PlaceholderDescription.Render(fmt.Sprintf("(entry %q has no description)", item.Title()))
+		item := curSelected.(candidateItem)
+		desc = item.Description()
+		if desc != "" {
+			desc = m.Styles.Description.Render(truncate.String(item.Title()+": "+desc, uint(m.width)))
+		} else {
+			desc = m.Styles.PlaceholderDescription.Render(fmt.Sprintf("(entry %q has no description)", item.Title()))
+		}
 	}
 	return result + "\n" + desc
 }
