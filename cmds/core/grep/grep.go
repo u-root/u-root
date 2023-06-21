@@ -155,7 +155,7 @@ func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, 
 		stderr:  stderr,
 		params:  p,
 		args:    args,
-		allGrep: make(chan *oneGrep, 1),
+		allGrep: make(chan *oneGrep),
 	}
 }
 
