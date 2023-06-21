@@ -86,7 +86,7 @@ func init() {
 
 	noCommands = flag.Bool("nocmd", false, "Build no Go commands; initramfs only")
 
-	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be speficified multiple times.")
+	flag.Var(&extraFiles, "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be specified multiple times.")
 
 	shellbang = flag.Bool("shellbang", false, "Use #! instead of symlinks for busybox")
 
