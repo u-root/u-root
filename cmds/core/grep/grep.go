@@ -181,30 +181,40 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-func (c *cmd) run_print() error {
-	for {
-		og, ok := <-c.allGrep
-		if !ok {
-			break
-		}
-		for r := range og.c {
-			// exit on first match.
-			if c.quiet {
-				return nil
-			}
-			c.printMatch(r)
-		}
+func (c *cmd) run() error {
+	// parse the expression into valid regex
+	if c.expr != "" {
+		c.args = append([]string{c.expr}, c.args...)
+	}
+	r := ".*"
+	if len(c.args) > 0 {
+		r = c.args[0]
+	}
+	if c.caseInsensitive && !strings.HasPrefix(r, "(?i)") && !c.fixed {
+		r = "(?i)" + r
+	}
+	var re *regexp.Regexp
+	if !c.fixed {
+		re = regexp.MustCompile(r)
+	} else if c.expr == "" {
+		c.expr = c.args[0]
 	}
 
-	if c.quiet {
-		return errQuite
-	}
-	if c.count {
-		fmt.Fprintf(c.stdout, "%d\n", c.matchCount)
-	}
-	return nil
+	// start producing greps in a goroutine
+	go func() {
+		// very special case, just stdin
+		if len(c.args) < 2 {
+			c.run_stdin(re)
+		} else {
+			c.run_files(re)
+		}
+		// the allGrep channel is closed when work is done
+		close(c.allGrep)
+	}()
+
+	return c.run_print()
 }
+
 func (c *cmd) run_stdin(re *regexp.Regexp) {
 	res := make(chan *grepResult, 1)
 	go c.grep(&grepCommand{c.stdin, "<stdin>"}, re, res)
@@ -256,36 +266,26 @@ func (c *cmd) run_files(re *regexp.Regexp) {
 	}
 }
 
-func (c *cmd) run() error {
-	// parse the expression into valid regex
-	if c.expr != "" {
-		c.args = append([]string{c.expr}, c.args...)
-	}
-	r := ".*"
-	if len(c.args) > 0 {
-		r = c.args[0]
-	}
-	if c.caseInsensitive && !strings.HasPrefix(r, "(?i)") && !c.fixed {
-		r = "(?i)" + r
-	}
-	var re *regexp.Regexp
-	if !c.fixed {
-		re = regexp.MustCompile(r)
-	} else if c.expr == "" {
-		c.expr = c.args[0]
-	}
-
-	// start producing greps in a goroutine
-	go func() {
-		// very special case, just stdin
-		if len(c.args) < 2 {
-			c.run_stdin(re)
-		} else {
-			c.run_files(re)
+func (c *cmd) run_print() error {
+	for {
+		og, ok := <-c.allGrep
+		if !ok {
+			break
 		}
-		// the allGrep channel is closed when work is done
-		close(c.allGrep)
-	}()
+		for r := range og.c {
+			// exit on first match.
+			if c.quiet {
+				return nil
+			}
+			c.printMatch(r)
+		}
+	}
 
-	return c.run_print()
+	if c.quiet {
+		return errQuite
+	}
+	if c.count {
+		fmt.Fprintf(c.stdout, "%d\n", c.matchCount)
+	}
+	return nil
 }
