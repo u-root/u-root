@@ -171,6 +171,10 @@ func TestFilesGrep(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	f3, err := os.CreateTemp(tmpDir, "f2")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f1.WriteString("hix\nnix\n")
 	if err != nil {
@@ -178,6 +182,11 @@ func TestFilesGrep(t *testing.T) {
 	}
 
 	_, err = f2.WriteString("hix\nhello\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f3.WriteString("hix\ngoodbye\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,6 +202,11 @@ func TestFilesGrep(t *testing.T) {
 		p      params
 		args   []string
 	}{
+		{
+			output: fmt.Sprintf("%s:hix\n%s:hix\n%s:hix\n", f1.Name(), f2.Name(), f3.Name()),
+			err:    nil,
+			args:   []string{"hix", f1.Name(), f2.Name(), f3.Name()},
+		},
 		{
 			output: fmt.Sprintf("%s:hello\n", f2.Name()),
 			err:    nil,

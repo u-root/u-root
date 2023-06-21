@@ -273,7 +273,7 @@ func (c *cmd) run_print() error {
 			break
 		}
 		for r := range og.c {
-			// exit on first match.
+			// exit on first match if running in quiet mode.
 			if c.quiet {
 				return nil
 			}
