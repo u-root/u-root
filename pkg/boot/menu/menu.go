@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/sh"
+	"github.com/u-root/u-root/pkg/libinit"
 	"golang.org/x/sys/unix"
 )
 
@@ -290,7 +290,9 @@ func (oia OSImageAction) Exec() error {
 func (OSImageAction) IsDefault() bool { return true }
 
 // StartShell is a menu.Entry that starts a LinuxBoot shell.
-type StartShell struct{}
+type StartShell struct {
+	Mod []libinit.CommandModifier
+}
 
 // Label is the label to show to the user.
 func (StartShell) Label() string {
@@ -307,10 +309,10 @@ func (StartShell) Load() error {
 }
 
 // Exec implements Entry.Exec by running /bin/defaultsh.
-func (StartShell) Exec() error {
+func (s StartShell) Exec() error {
 	// Reset signal handler for SIGINT to enable user interrupts again
 	signal.Reset(syscall.SIGINT)
-	return sh.RunWithLogs("/bin/defaultsh")
+	return libinit.Command("/bin/defaultsh", s.Mod...).Run()
 }
 
 // IsDefault indicates that this should not be run as a default action.
