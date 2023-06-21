@@ -67,10 +67,8 @@ var (
 // to preserve file name order. Oops.
 // If we are only looking for a match, we exit as soon as the condition is met.
 // "match" means result of re.Match == match flag.
-func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) {
+func (c *cmd) grep(f *grepCommand, re *regexp.Regexp, res chan *grepResult) {
 	r := bufio.NewReader(f.rc)
-	res := make(chan *grepResult, 1)
-	c.allGrep <- &oneGrep{res}
 	var lineNum int
 	for {
 		if i, err := r.ReadString('\n'); err == nil {
@@ -149,7 +147,6 @@ type cmd struct {
 	args    []string
 	params
 	matchCount int
-	nGrep      int
 	showName   bool
 }
 
@@ -160,7 +157,7 @@ func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, 
 		stderr:  stderr,
 		params:  p,
 		args:    args,
-		allGrep: make(chan *oneGrep),
+		allGrep: make(chan *oneGrep, 1),
 	}
 }
 
@@ -187,7 +184,82 @@ func main() {
 	}
 }
 
+func (c *cmd) run_print() error {
+	for {
+		og, ok := <-c.allGrep
+		if !ok {
+			break
+		}
+		for r := range og.c {
+			// exit on first match.
+			if c.quiet {
+				return nil
+			}
+			c.printMatch(r)
+		}
+	}
+
+	if c.quiet {
+		return errQuite
+	}
+	if c.count {
+		fmt.Fprintf(c.stdout, "%d\n", c.matchCount)
+	}
+	return nil
+}
+func (c *cmd) run_stdin(re *regexp.Regexp) {
+	res := make(chan *grepResult, 1)
+	go c.grep(&grepCommand{c.stdin, "<stdin>"}, re, res)
+	c.allGrep <- &oneGrep{res}
+
+}
+
+func (c *cmd) run_files(re *regexp.Regexp) {
+	c.showName = (len(c.args[1:]) > 1 || c.recursive || c.noShowMatch) && !c.headers
+	// generate a chan of file names, bounded by the size of the chan. This in turn
+	// throttles the opens.
+	treeNames := make(chan string, 128)
+	go func() {
+		defer close(treeNames)
+		for _, v := range c.args[1:] {
+			filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
+				if err != nil {
+					fmt.Fprintf(c.stderr, "grep: %v: %v\n", name, err)
+					return nil
+				}
+				if fi.IsDir() && !c.recursive {
+					fmt.Fprintf(c.stderr, "grep: %v: Is a directory\n", name)
+					return filepath.SkipDir
+				}
+				treeNames <- name
+				return nil
+			})
+		}
+	}()
+
+	files := make(chan *grepCommand)
+	// convert the file names to a stream of os.File
+	go func() {
+		for i := range treeNames {
+			fp, err := os.Open(i)
+			if err != nil {
+				fmt.Fprintf(c.stderr, "can't open %s: %v\n", i, err)
+				continue
+			}
+			files <- &grepCommand{fp, i}
+		}
+		close(files)
+	}()
+	// now kick off the greps
+	for f := range files {
+		res := make(chan *grepResult, 1)
+		c.allGrep <- &oneGrep{res}
+		go c.grep(f, re, res)
+	}
+}
+
 func (c *cmd) run() error {
+	// parse the expression into valid regex
 	if c.expr != "" {
 		c.args = append([]string{c.expr}, c.args...)
 	}
@@ -204,77 +276,18 @@ func (c *cmd) run() error {
 	} else if c.expr == "" {
 		c.expr = c.args[0]
 	}
-	// very special case, just stdin
-	if len(c.args) < 2 {
-		c.nGrep++
-		go c.grep(&grepCommand{c.stdin, "<stdin>"}, re)
-	} else {
-		c.showName = (len(c.args[1:]) > 1 || c.recursive || c.noShowMatch) && !c.headers
-		// generate a chan of file names, bounded by the size of the chan. This in turn
-		// throttles the opens.
-		treeNames := make(chan string, 128)
-		go func() {
-			defer close(treeNames)
-			for _, v := range c.args[1:] {
-				filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
-					if err != nil {
-						fmt.Fprintf(c.stderr, "grep: %v: %v\n", name, err)
-						return nil
-					}
-					if fi.IsDir() && !c.recursive {
-						fmt.Fprintf(c.stderr, "grep: %v: Is a directory\n", name)
-						return filepath.SkipDir
-					}
-					treeNames <- name
-					return nil
-				})
-			}
-		}()
 
-		files := make(chan *grepCommand)
-		// convert the file names to a stream of os.File
-		go func() {
-			for i := range treeNames {
-				fp, err := os.Open(i)
-				if err != nil {
-					fmt.Fprintf(c.stderr, "can't open %s: %v\n", i, err)
-					continue
-				}
-				files <- &grepCommand{fp, i}
-			}
-			close(files)
-		}()
-		// now kick off the greps
-		// bug: file name order is not preserved here. Darn.
-
-		for f := range files {
-			c.nGrep++
-			go c.grep(f, re)
+	// start producing greps in a goroutine
+	go func() {
+		// very special case, just stdin
+		if len(c.args) < 2 {
+			c.run_stdin(re)
+		} else {
+			c.run_files(re)
 		}
-	}
+		// the allGrep channel is closed when work is done
+		close(c.allGrep)
+	}()
 
-	if c.nGrep > 0 {
-		for og := range c.allGrep {
-			for r := range og.c {
-				// exit on first match.
-				if c.quiet {
-					return nil
-				}
-				c.printMatch(r)
-			}
-			c.nGrep--
-			if c.nGrep == 0 {
-				break
-			}
-		}
-	}
-
-	if c.quiet {
-		return errQuite
-	}
-	if c.count {
-		fmt.Fprintf(c.stdout, "%d\n", c.matchCount)
-	}
-
-	return nil
+	return c.run_print()
 }
