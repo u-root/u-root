@@ -63,8 +63,6 @@ var (
 // It creates a chan of grepResults and pushes a pointer to it into allGrep.
 // It matches each line against the re and pushes the matching result
 // into the chan.
-// Bug: this chan should be created by the caller and passed in
-// to preserve file name order. Oops.
 // If we are only looking for a match, we exit as soon as the condition is met.
 // "match" means result of re.Match == match flag.
 func (c *cmd) grep(f *grepCommand, re *regexp.Regexp, res chan *grepResult) {
