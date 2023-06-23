@@ -11,8 +11,8 @@ import (
 	"io"
 	"strings"
 
+	tpm2 "github.com/google/go-tpm/legacy/tpm2"
 	tpm1 "github.com/google/go-tpm/tpm"
-	tpm2 "github.com/google/go-tpm/tpm2"
 )
 
 func readTPM12Information(rwc io.ReadWriter) (TPMInfo, error) {
