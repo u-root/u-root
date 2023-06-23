@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
+	tpm2 "github.com/google/go-tpm/legacy/tpm2"
 	tpm1 "github.com/google/go-tpm/tpm"
-	tpm2 "github.com/google/go-tpm/tpm2"
 	tpmutil "github.com/google/go-tpm/tpmutil"
 )
 
