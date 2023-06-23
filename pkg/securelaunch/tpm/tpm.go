@@ -14,7 +14,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/google/go-tpm/tpm2"
+	"github.com/google/go-tpm/legacy/tpm2"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
 	"github.com/u-root/u-root/pkg/tss"

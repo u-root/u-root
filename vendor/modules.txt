@@ -89,10 +89,10 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-tpm v0.3.3
-## explicit; go 1.12
+# github.com/google/go-tpm v0.9.0
+## explicit; go 1.20
+github.com/google/go-tpm/legacy/tpm2
 github.com/google/go-tpm/tpm
-github.com/google/go-tpm/tpm2
 github.com/google/go-tpm/tpmutil
 github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
