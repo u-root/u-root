@@ -21,6 +21,7 @@
 //	-u:	     Unique keys. Suppress all lines that have a key that is equal to an already processed one.
 //	-f: 	 Fold lower case to upper case character.
 //	-b: 	 Ignore leading blank characters when comparing lines.
+//	-n:      Compare according to string numerical value.
 //	-o FILE: Specify the name of an output file to be used instead of the standard output.
 package main
 
@@ -31,6 +32,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -41,6 +43,7 @@ var (
 	unique       = flag.Bool("u", false, "Unique keys. Suppress all lines that have a key that is equal to an already processed one.")
 	ignoreCase   = flag.Bool("f", false, "Fold lower case to upper case character.")
 	ignoreBlanks = flag.Bool("b", false, "Ignore leading blank characters when comparing lines.")
+	numeric      = flag.Bool("n", false, "Compare according to string numerical value.")
 	outputFile   = flag.String("o", "", "Specify the name of an output file to be used instead of the standard output.")
 )
 
@@ -76,6 +79,22 @@ func (a ignoreBlanksCaseSort) Less(i, j int) bool {
 	return l < r
 }
 
+type numericSort []string
+
+func (a numericSort) Len() int      { return len(a) }
+func (a numericSort) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a numericSort) Less(i, j int) bool {
+	// consider removing thousands separator and parsing LC_NUMERIC
+	l := strings.ToUpper(strings.TrimLeftFunc(a[i], unicode.IsSpace))
+	r := strings.ToUpper(strings.TrimLeftFunc(a[j], unicode.IsSpace))
+
+	// treat all non-numeric characters as zeros
+	ln, _ := strconv.ParseFloat(l, 64)
+	rn, _ := strconv.ParseFloat(r, 64)
+
+	return ln < rn
+}
+
 var errNotOrdered = errors.New("not ordered")
 
 type params struct {
@@ -85,6 +104,7 @@ type params struct {
 	unique       bool
 	ignoreCase   bool
 	ignoreBlanks bool
+	numeric      bool
 }
 
 type cmd struct {
@@ -179,6 +199,8 @@ func (c *cmd) sortInterface(lines []string) sort.Interface {
 		si = ignoreBlanksSort(lines)
 	case c.params.ignoreCase:
 		si = ignoreCaseSort(lines)
+	case c.params.numeric:
+		si = numericSort(lines)
 	default:
 		si = sort.StringSlice(lines)
 	}
@@ -241,7 +263,7 @@ func (c *cmd) writeOutput(w io.Writer, s string) error {
 func main() {
 	flag.Parse()
 	p := params{reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique,
-		ignoreCase: *ignoreCase, ignoreBlanks: *ignoreBlanks}
+		ignoreCase: *ignoreCase, ignoreBlanks: *ignoreBlanks, numeric: *numeric}
 	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		if err == errNotOrdered {
 			os.Exit(1)
