@@ -126,6 +126,47 @@ func TestSortStdin(t *testing.T) {
 			input:  "a\n {\n  {\n {\n  {\nA\n",
 			want:   "A\na\n  {\n  {\n {\n {\n",
 		},
+		{
+			name:   "numeric sort",
+			params: params{numeric: true},
+			input:  "39\n100\n21\n",
+			want:   "21\n39\n100\n",
+		},
+		{
+			name:   "numeric sort with floats",
+			params: params{numeric: true},
+			input:  "39.1\n100.2\n-21.3\n",
+			want:   "-21.3\n39.1\n100.2\n",
+		},
+		{
+			name:   "numeric sort with blanks",
+			params: params{numeric: true},
+			input:  " 39\n  100\n21\n",
+			want:   "21\n 39\n  100\n",
+		},
+		{
+			name:   "numeric sort with leading zeros",
+			params: params{numeric: true},
+			input:  "039\n00100.1\n00021\n",
+			want:   "00021\n039\n00100.1\n",
+		},
+		{
+			name:   "numeric sort with non numeric strings",
+			params: params{numeric: true},
+			input:  "hello\n1.0\n-1.0\n",
+			want:   "-1.0\nhello\n1.0\n",
+		},
+		{
+			name:   "numeric sort ordered",
+			params: params{numeric: true, ordered: true},
+			input:  "-1\n2.1\n3\n",
+		},
+		{
+			name:    "numeric sort unordered",
+			params:  params{numeric: true, ordered: true},
+			input:   "01\n2.1\n0.2\n",
+			wantErr: errNotOrdered,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			stdin := io.NopCloser(strings.NewReader(tt.input))
