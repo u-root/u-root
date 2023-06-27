@@ -142,6 +142,17 @@ func (n *Node) LookProperty(name string) (*Property, bool) {
 	return nil, false
 }
 
+// RemoveSubTreeAtIndex deletes the child at the given index (and all its children).
+func (n *Node) RemoveSubTreeAtIndex(idx int) error {
+	if idx < 0 || idx >= len(n.Children) {
+		return errInvalidChildIndex
+	}
+
+	// Compress the list of children nodes, keep the order
+	n.Children = append(n.Children[:idx], n.Children[idx+1:]...)
+	return nil
+}
+
 // RemoveProperty deletes a property by name.
 func (n *Node) RemoveProperty(name string) bool {
 	for idx := range n.Properties {
