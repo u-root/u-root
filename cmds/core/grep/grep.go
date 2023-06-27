@@ -90,9 +90,6 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	return true
 }
 
-// shared buffer for encoding the prefix
-var prefix bytes.Buffer
-
 func (c *cmd) printMatch(
 	cmd *grepCommand,
 	line []byte,
@@ -105,25 +102,32 @@ func (c *cmd) printMatch(
 	if c.count {
 		return
 	}
-	defer c.stdout.Flush()
-	prefix.Reset()
-	if c.showName {
-		fmt.Fprintf(c.stdout, "%v", cmd.name)
-		prefix.WriteByte(':')
-	}
-	if c.noShowMatch {
+	// at this point, we have committed to writing a line
+	defer func() {
 		c.stdout.WriteByte('\n')
+		c.stdout.Flush()
+	}()
+	// if showName, write name to stdout
+	if c.showName {
+		c.stdout.WriteString(cmd.name)
+	}
+	// if dont show match, then newline and return, we are done
+	if c.noShowMatch {
 		return
 	}
-	if c.number {
-		prefix.Write(strconv.AppendUint(nil, uint64(lineNum), 10))
-		prefix.WriteByte(':')
-	}
 	if match == !c.invert {
-		prefix.WriteTo(c.stdout)
+		// if showName, need a :
+		if c.showName {
+			c.stdout.WriteByte(':')
+		}
+		// if showing line number, print the line number then a :
+		if c.number {
+			c.stdout.Write(strconv.AppendUint(nil, uint64(lineNum), 10))
+			c.stdout.WriteByte(':')
+		}
+		// now write the line to stdout
 		c.stdout.Write(line)
 	}
-	c.stdout.WriteByte('\n')
 }
 
 type params struct {
@@ -242,7 +246,8 @@ func (c *cmd) run() error {
 		return errQuite
 	}
 	if c.count {
-		fmt.Fprintf(c.stdout, "%d\n", c.matchCount)
+		c.stdout.Write(strconv.AppendUint(nil, uint64(c.matchCount), 10))
+		c.stdout.WriteByte('\n')
 	}
 	return nil
 }
