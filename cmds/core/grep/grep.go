@@ -198,8 +198,7 @@ func (c *cmd) run() error {
 		c.expr = c.args[0]
 	}
 
-	// start producing greps in a goroutine
-	// very special case, just stdin
+	// if len(c.args) < 2, then we read from stdin
 	if len(c.args) < 2 {
 		if !c.grep(&grepCommand{c.stdin, "<stdin>"}, re) {
 			return nil
