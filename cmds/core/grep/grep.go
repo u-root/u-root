@@ -18,6 +18,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -43,10 +44,6 @@ type grepCommand struct {
 	name string
 }
 
-type oneGrep struct {
-	c chan *grepResult
-}
-
 var (
 	expr            = flag.StringP("regexp", "e", "", "Pattern to match")
 	headers         = flag.BoolP("no-filename", "h", false, "Suppress file name prefixes on output")
@@ -65,51 +62,54 @@ var (
 // into the chan.
 // If we are only looking for a match, we exit as soon as the condition is met.
 // "match" means result of re.Match == match flag.
-func (c *cmd) grep(f *grepCommand, re *regexp.Regexp, res chan *grepResult) {
+func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	r := bufio.NewReader(f.rc)
+	defer f.rc.Close()
 	var lineNum int
 	for {
-		if i, err := r.ReadString('\n'); err == nil {
-			var m bool
-			if c.fixed {
-				if c.caseInsensitive {
-					m = strings.Contains(strings.ToLower(i), strings.ToLower(c.expr))
-				} else {
-					m = strings.Contains(i, c.expr)
-				}
-			} else {
-				m = re.Match([]byte(i))
-			}
-			if m == !c.invert {
-				res <- &grepResult{
-					match:   m,
-					c:       f,
-					line:    &i,
-					lineNum: lineNum + 1,
-				}
-				if c.noShowMatch {
-					break
-				}
-			}
-		} else {
+		i, err := r.ReadString('\n')
+		if err != nil {
 			break
+		}
+		var m bool
+		switch {
+		case c.fixed && c.caseInsensitive:
+			m = strings.Contains(strings.ToLower(i), strings.ToLower(c.expr))
+		case c.fixed && !c.caseInsensitive:
+			m = strings.Contains(i, c.expr)
+		default:
+			m = re.Match([]byte(i))
+		}
+		if m != c.invert {
+			// in quiet mode, exit before the first match
+			if c.quiet {
+				return false
+			}
+			c.printMatch(f, &i, lineNum+1, m)
+			if c.noShowMatch {
+				break
+			}
 		}
 		lineNum++
 	}
-	close(res)
-	_ = f.rc.Close()
+	return true
 }
 
-func (c *cmd) printMatch(r *grepResult) {
+func (c *cmd) printMatch(
+	cmd *grepCommand,
+	line *string,
+	lineNum int,
+	match bool,
+) {
 	var prefix string
-	if r.match == !c.invert {
+	if match == !c.invert {
 		c.matchCount++
 	}
 	if c.count {
 		return
 	}
 	if c.showName {
-		fmt.Fprintf(c.stdout, "%v", r.c.name)
+		fmt.Fprintf(c.stdout, "%v", cmd.name)
 		prefix = ":"
 	}
 	if c.noShowMatch {
@@ -117,10 +117,10 @@ func (c *cmd) printMatch(r *grepResult) {
 		return
 	}
 	if c.number {
-		prefix = fmt.Sprintf("%d:", r.lineNum)
+		prefix = fmt.Sprintf("%d:", lineNum)
 	}
-	if r.match == !c.invert {
-		fmt.Fprintf(c.stdout, "%v%v", prefix, *r.line)
+	if match == !c.invert {
+		fmt.Fprintf(c.stdout, "%v%v", prefix, *line)
 	}
 }
 
@@ -138,11 +138,10 @@ type params struct {
 }
 
 type cmd struct {
-	stdin   io.ReadCloser
-	stdout  io.Writer
-	stderr  io.Writer
-	allGrep chan *oneGrep
-	args    []string
+	stdin  io.ReadCloser
+	stdout io.Writer
+	stderr io.Writer
+	args   []string
 	params
 	matchCount int
 	showName   bool
@@ -150,12 +149,11 @@ type cmd struct {
 
 func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, args []string) *cmd {
 	return &cmd{
-		stdin:   stdin,
-		stdout:  stdout,
-		stderr:  stderr,
-		params:  p,
-		args:    args,
-		allGrep: make(chan *oneGrep),
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+		params: p,
+		args:   args,
 	}
 }
 
@@ -201,36 +199,15 @@ func (c *cmd) run() error {
 	}
 
 	// start producing greps in a goroutine
-	go func() {
-		// very special case, just stdin
-		if len(c.args) < 2 {
-			c.run_stdin(re)
-		} else {
-			c.run_files(re)
+	// very special case, just stdin
+	if len(c.args) < 2 {
+		if !c.grep(&grepCommand{c.stdin, "<stdin>"}, re) {
+			return nil
 		}
-		// the allGrep channel is closed when work is done
-		close(c.allGrep)
-	}()
-
-	return c.run_print()
-}
-
-func (c *cmd) run_stdin(re *regexp.Regexp) {
-	res := make(chan *grepResult, 1)
-	go c.grep(&grepCommand{c.stdin, "<stdin>"}, re, res)
-	c.allGrep <- &oneGrep{res}
-
-}
-
-func (c *cmd) run_files(re *regexp.Regexp) {
-	c.showName = (len(c.args[1:]) > 1 || c.recursive || c.noShowMatch) && !c.headers
-	// generate a chan of file names, bounded by the size of the chan. This in turn
-	// throttles the opens.
-	treeNames := make(chan string, 128)
-	go func() {
-		defer close(treeNames)
+	} else {
+		c.showName = (len(c.args[1:]) > 1 || c.recursive || c.noShowMatch) && !c.headers
 		for _, v := range c.args[1:] {
-			filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
+			err := filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
 				if err != nil {
 					fmt.Fprintf(c.stderr, "grep: %v: %v\n", name, err)
 					return nil
@@ -239,48 +216,25 @@ func (c *cmd) run_files(re *regexp.Regexp) {
 					fmt.Fprintf(c.stderr, "grep: %v: Is a directory\n", name)
 					return filepath.SkipDir
 				}
-				treeNames <- name
+				fp, err := os.Open(name)
+				if err != nil {
+					fmt.Fprintf(c.stderr, "can't open %s: %v\n", name, err)
+					return nil
+				}
+				if !c.grep(&grepCommand{fp, name}, re) {
+					return errQuite
+				}
 				return nil
 			})
-		}
-	}()
-
-	files := make(chan *grepCommand)
-	// convert the file names to a stream of os.File
-	go func() {
-		for i := range treeNames {
-			fp, err := os.Open(i)
-			if err != nil {
-				fmt.Fprintf(c.stderr, "can't open %s: %v\n", i, err)
-				continue
-			}
-			files <- &grepCommand{fp, i}
-		}
-		close(files)
-	}()
-	// now kick off the greps
-	for f := range files {
-		res := make(chan *grepResult, 1)
-		c.allGrep <- &oneGrep{res}
-		go c.grep(f, re, res)
-	}
-}
-
-func (c *cmd) run_print() error {
-	for {
-		og, ok := <-c.allGrep
-		if !ok {
-			break
-		}
-		for r := range og.c {
-			// exit on first match if running in quiet mode.
-			if c.quiet {
+			// reuse the errQuite as a value that lets us know if we should not return an errQuite
+			if errors.Is(err, errQuite) {
 				return nil
 			}
-			c.printMatch(r)
+			if err != nil {
+				return err
+			}
 		}
 	}
-
 	if c.quiet {
 		return errQuite
 	}

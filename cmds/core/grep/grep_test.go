@@ -145,19 +145,22 @@ func TestStdinGrep(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		var stdout bytes.Buffer
-		rc := io.NopCloser(strings.NewReader(test.input))
-		cmd := command(rc, &stdout, nil, test.p, test.args)
-		err := cmd.run()
-		if err != test.err {
-			t.Errorf("got %v, want %v", err, test.err)
-		}
+	for idx, te := range tests {
+		test := te
+		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
+			var stdout bytes.Buffer
+			rc := io.NopCloser(strings.NewReader(test.input))
+			cmd := command(rc, &stdout, nil, test.p, test.args)
+			err := cmd.run()
+			if err != test.err {
+				t.Errorf("got err %v, want %v", err, test.err)
+			}
 
-		res := stdout.String()
-		if res != test.output {
-			t.Errorf("got %q, want %q", res, test.output)
-		}
+			res := stdout.String()
+			if res != test.output {
+				t.Errorf("got out %q, want %q", res, test.output)
+			}
+		})
 	}
 }
 
