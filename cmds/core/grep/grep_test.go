@@ -174,7 +174,7 @@ func TestFilesGrep(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f3, err := os.CreateTemp(tmpDir, "f2")
+	f3, err := os.CreateTemp(tmpDir, "f3")
 	if err != nil {
 		t.Fatal(err)
 	}
