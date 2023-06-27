@@ -18,6 +18,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -57,35 +59,30 @@ var (
 )
 
 // grep reads data from the os.File embedded in grepCommand.
-// It creates a chan of grepResults and pushes a pointer to it into allGrep.
-// It matches each line against the re and pushes the matching result
-// into the chan.
+// It matches each line against the re and prints the matching result
 // If we are only looking for a match, we exit as soon as the condition is met.
 // "match" means result of re.Match == match flag.
 func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
-	r := bufio.NewReader(f.rc)
+	r := bufio.NewScanner(f.rc)
 	defer f.rc.Close()
 	var lineNum int
-	for {
-		i, err := r.ReadString('\n')
-		if err != nil {
-			break
-		}
+	for r.Scan() {
+		i := r.Bytes()
 		var m bool
 		switch {
 		case c.fixed && c.caseInsensitive:
-			m = strings.Contains(strings.ToLower(i), strings.ToLower(c.expr))
+			m = bytes.Contains(bytes.ToLower(i), bytes.ToLower(c.exprB))
 		case c.fixed && !c.caseInsensitive:
-			m = strings.Contains(i, c.expr)
+			m = bytes.Contains(i, c.exprB)
 		default:
-			m = re.Match([]byte(i))
+			m = re.Match(i)
 		}
 		if m != c.invert {
 			// in quiet mode, exit before the first match
 			if c.quiet {
 				return false
 			}
-			c.printMatch(f, &i, lineNum+1, m)
+			c.printMatch(f, i, lineNum+1, m)
 			if c.noShowMatch {
 				break
 			}
@@ -95,37 +92,45 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	return true
 }
 
+// shared buffer for encoding the prefix
+var prefix bytes.Buffer
+
 func (c *cmd) printMatch(
 	cmd *grepCommand,
-	line *string,
+	line []byte,
 	lineNum int,
 	match bool,
 ) {
-	var prefix string
 	if match == !c.invert {
 		c.matchCount++
 	}
 	if c.count {
 		return
 	}
+	defer c.stdout.Flush()
+	prefix.Reset()
 	if c.showName {
 		fmt.Fprintf(c.stdout, "%v", cmd.name)
-		prefix = ":"
+		prefix.WriteByte(':')
 	}
 	if c.noShowMatch {
-		fmt.Fprintf(c.stdout, "\n")
+		c.stdout.WriteByte('\n')
 		return
 	}
 	if c.number {
-		prefix = fmt.Sprintf("%d:", lineNum)
+		prefix.Write(strconv.AppendUint(nil, uint64(lineNum), 10))
+		prefix.WriteByte(':')
 	}
 	if match == !c.invert {
-		fmt.Fprintf(c.stdout, "%v%v", prefix, *line)
+		prefix.WriteTo(c.stdout)
+		c.stdout.Write(line)
 	}
+	c.stdout.WriteByte('\n')
 }
 
 type params struct {
 	expr            string
+	exprB           []byte
 	headers         bool
 	invert          bool
 	recursive       bool
@@ -139,7 +144,7 @@ type params struct {
 
 type cmd struct {
 	stdin  io.ReadCloser
-	stdout io.Writer
+	stdout *bufio.Writer
 	stderr io.Writer
 	args   []string
 	params
@@ -150,7 +155,7 @@ type cmd struct {
 func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, args []string) *cmd {
 	return &cmd{
 		stdin:  stdin,
-		stdout: stdout,
+		stdout: bufio.NewWriter(stdout),
 		stderr: stderr,
 		params: p,
 		args:   args,
@@ -171,7 +176,6 @@ func main() {
 		quiet:           *quiet,
 		fixed:           *fixed,
 	}
-
 	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		if err == errQuite {
 			os.Exit(1)
@@ -180,6 +184,7 @@ func main() {
 	}
 }
 func (c *cmd) run() error {
+	defer c.stdout.Flush()
 	// parse the expression into valid regex
 	if c.expr != "" {
 		c.args = append([]string{c.expr}, c.args...)
@@ -197,6 +202,8 @@ func (c *cmd) run() error {
 	} else if c.expr == "" {
 		c.expr = c.args[0]
 	}
+
+	c.exprB = []byte(c.expr)
 
 	// if len(c.args) < 2, then we read from stdin
 	if len(c.args) < 2 {
