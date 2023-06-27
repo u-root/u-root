@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -208,6 +207,7 @@ func (c *cmd) run() error {
 		}
 	} else {
 		c.showName = (len(c.args[1:]) > 1 || c.recursive || c.noShowMatch) && !c.headers
+		var ok bool
 		for _, v := range c.args[1:] {
 			err := filepath.Walk(v, func(name string, fi os.FileInfo, err error) error {
 				if err != nil {
@@ -225,12 +225,12 @@ func (c *cmd) run() error {
 				}
 				defer fp.Close()
 				if !c.grep(&grepCommand{fp, name}, re) {
-					return errQuite
+					ok = true
+					return nil
 				}
 				return nil
 			})
-			// reuse the errQuite as a value that lets us know if we should not return an errQuite
-			if errors.Is(err, errQuite) {
+			if ok {
 				return nil
 			}
 			if err != nil {
