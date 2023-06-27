@@ -10,6 +10,65 @@ import (
 	"testing"
 )
 
+func TestLookupImmediateChild(t *testing.T) {
+	subtree0 := &Node{
+		Name: "child0",
+		Children: []*Node{
+			{
+				Name: "child0_1",
+			},
+		},
+	}
+	subtree1 := &Node{
+		Name: "child1",
+		Children: []*Node{
+			{
+				Name: "child1_1",
+			},
+		},
+	}
+	subtree2 := &Node{
+		Name: "child2",
+		Children: []*Node{
+			{
+				Name: "child2_1",
+			},
+		},
+	}
+	tree := &Node{
+		Name: "parent",
+		Children: []*Node{
+			subtree0,
+			subtree1,
+			subtree2,
+		},
+	}
+	for _, tc := range []struct {
+		name      string
+		needle    string
+		wantNode  *Node
+		wantFound bool
+	}{
+		{name: "2nd child", needle: "child1", wantNode: subtree1, wantFound: true},
+		{name: "3rd child", needle: "child2", wantNode: subtree2, wantFound: true},
+		{name: "1st child", needle: "child0", wantNode: subtree0, wantFound: true},
+		{name: "exists but not immediate", needle: "child1_1", wantFound: false},
+		{name: "missing", needle: "not found", wantFound: false},
+		{name: "prefix", needle: "child", wantFound: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			n, found := tree.LookupChildByName(tc.needle)
+			if found != tc.wantFound {
+				t.Errorf("tree.LookupChildByName(%s) returns found %v, want %v",
+					tc.needle, found, tc.wantFound)
+			}
+			if found && tc.wantFound && !reflect.DeepEqual(n, tc.wantNode) {
+				t.Errorf("when looking up %s, got %+v, want %+v", tc.needle, n, tc.wantNode)
+			}
+		})
+	}
+}
+
 func TestRemoveProperty(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
