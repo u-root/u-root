@@ -165,7 +165,6 @@ func TestPruneSubtree(t *testing.T) {
 		})
 	}
 }
-
 func TestRemoveProperty(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
