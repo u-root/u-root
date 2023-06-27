@@ -69,6 +69,103 @@ func TestLookupImmediateChild(t *testing.T) {
 	}
 }
 
+func TestPruneSubtree(t *testing.T) {
+	subtree1 := &Node{
+		Name: "child1",
+		Children: []*Node{
+			{
+				Name: "child1_1",
+			},
+			{
+				Name: "child1_2",
+			},
+		},
+	}
+	subtree2 := &Node{
+		Name: "child2",
+		Children: []*Node{
+			{
+				Name: "child2_1",
+			},
+			{
+				Name: "child2_2",
+			},
+		},
+	}
+	subtree3 := &Node{
+		Name: "child3",
+		Children: []*Node{
+			{
+				Name: "child3_1",
+			},
+			{
+				Name: "child3_2",
+			},
+		},
+	}
+
+	for _, tc := range []struct {
+		name    string
+		idx     int
+		want    *Node
+		wantErr error
+	}{
+		{
+			name: "remove at head",
+			idx:  0,
+			want: &Node{
+				Name:     "parent",
+				Children: []*Node{subtree2, subtree3},
+			},
+		},
+		{
+			name: "remove in the middle",
+			idx:  1,
+			want: &Node{
+				Name:     "parent",
+				Children: []*Node{subtree1, subtree3},
+			},
+		},
+		{
+			name: "remove at tail",
+			idx:  2,
+			want: &Node{
+				Name:     "parent",
+				Children: []*Node{subtree1, subtree2},
+			},
+		},
+		{
+			name:    "remove invalid index",
+			idx:     -1,
+			wantErr: errInvalidChildIndex,
+		},
+		{
+			name:    "remove another invalid index",
+			idx:     3,
+			wantErr: errInvalidChildIndex,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tree := &Node{
+				Name: "parent",
+				Children: []*Node{
+					subtree1,
+					subtree2,
+					subtree3,
+				},
+			}
+			err := tree.RemoveSubTreeAtIndex(tc.idx)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("t.RemoveSubTreeAtIndex(%d) returned error %v, want error %v",
+					tc.idx, err, tc.wantErr)
+			}
+			if err == nil && tc.wantErr == nil && !reflect.DeepEqual(tree, tc.want) {
+				t.Errorf("after removing %d got %+v, want %+v", tc.idx, tree, tc.want)
+			}
+		})
+	}
+}
+
 func TestRemoveProperty(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
