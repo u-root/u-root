@@ -6,6 +6,7 @@ package main
 
 import flag "github.com/spf13/pflag"
 
-var (
-	quiet = flag.BoolP("quiet", "q", false, "Don't print matches; exit on first match")
-)
+func init() {
+	flag.BoolVarP(&mainParams.quiet, "quiet", "q", false, "Don't print matches; exit on first match")
+
+}
