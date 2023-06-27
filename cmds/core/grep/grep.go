@@ -220,6 +220,7 @@ func (c *cmd) run() error {
 					fmt.Fprintf(c.stderr, "can't open %s: %v\n", name, err)
 					return nil
 				}
+				defer fp.Close()
 				if !c.grep(&grepCommand{fp, name}, re) {
 					return errQuite
 				}
