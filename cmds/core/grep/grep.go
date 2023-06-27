@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 
 	flag "github.com/spf13/pflag"
 )
@@ -71,9 +70,9 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 		var m bool
 		switch {
 		case c.fixed && c.caseInsensitive:
-			m = bytes.Contains(bytes.ToLower(i), bytes.ToLower(c.exprB))
+			m = bytes.Contains(bytes.ToLower(i), bytes.ToLower([]byte(c.expr)))
 		case c.fixed && !c.caseInsensitive:
-			m = bytes.Contains(i, c.exprB)
+			m = bytes.Contains(i, []byte(c.expr))
 		default:
 			m = re.Match(i)
 		}
@@ -130,7 +129,6 @@ func (c *cmd) printMatch(
 
 type params struct {
 	expr            string
-	exprB           []byte
 	headers         bool
 	invert          bool
 	recursive       bool
@@ -193,7 +191,7 @@ func (c *cmd) run() error {
 	if len(c.args) > 0 {
 		r = c.args[0]
 	}
-	if c.caseInsensitive && !strings.HasPrefix(r, "(?i)") && !c.fixed {
+	if c.caseInsensitive && !bytes.HasPrefix([]byte(r), []byte("(?i)")) && !c.fixed {
 		r = "(?i)" + r
 	}
 	var re *regexp.Regexp
@@ -202,8 +200,6 @@ func (c *cmd) run() error {
 	} else if c.expr == "" {
 		c.expr = c.args[0]
 	}
-
-	c.exprB = []byte(c.expr)
 
 	// if len(c.args) < 2, then we read from stdin
 	if len(c.args) < 2 {
