@@ -49,6 +49,7 @@ var StandardPropertyTypes = map[string]PropertyType{
 }
 
 var (
+	errInvalidChildIndex     = errors.New("invalid child index")
 	errPropertyRegionInvalid = errors.New("property value is not <u64x2>")
 )
 
@@ -57,6 +58,27 @@ type Node struct {
 	Name       string
 	Properties []Property `json:",omitempty"`
 	Children   []*Node    `json:",omitempty"`
+}
+
+// FindFirstMatchingChildIndex returns the index of the first immediate child node satisfying the
+// given predicate.
+func (n *Node) FindFirstMatchingChildIndex(predicate func(*Node) bool) (int, bool) {
+	for idx, child := range n.Children {
+		if predicate(child) {
+			return idx, true
+		}
+	}
+	return -1, false
+}
+
+// LookupChildByName returns the immediate child node with the given name.
+func (n *Node) LookupChildByName(name string) (*Node, bool) {
+	if idx, ok := n.FindFirstMatchingChildIndex(func(child *Node) bool {
+		return child.Name == name
+	}); ok {
+		return n.Children[idx], ok
+	}
+	return nil, false
 }
 
 // Walk calls f on a Node and alls its descendents.
@@ -72,7 +94,7 @@ func (n *Node) Walk(f func(*Node) error) error {
 	return nil
 }
 
-// Find finds a Node starting at a node, given a matching function.
+// Find returns the first matching Node (recursively) starting at a node, and given a matching function.
 func (n *Node) Find(f func(*Node) bool) (*Node, bool) {
 	if ok := f(n); ok {
 		return n, ok
@@ -85,7 +107,7 @@ func (n *Node) Find(f func(*Node) bool) (*Node, bool) {
 	return nil, false
 }
 
-// FindAll returns all Node starting at a node, given a matching function.
+// FindAll returns all Nodes (recursively) starting at a node, and given a matching function.
 func (n *Node) FindAll(f func(*Node) bool) ([]*Node, bool) {
 	var nodes []*Node
 	if ok := f(n); ok {
@@ -103,7 +125,7 @@ func (n *Node) FindAll(f func(*Node) bool) ([]*Node, bool) {
 	return nodes, true
 }
 
-// NodeByName uses Find to find a node by name.
+// NodeByName uses Find to find a node by name recursively.
 func (n *Node) NodeByName(name string) (*Node, bool) {
 	return n.Find(func(n *Node) bool {
 		return n.Name == name
@@ -118,6 +140,18 @@ func (n *Node) LookProperty(name string) (*Property, bool) {
 		}
 	}
 	return nil, false
+}
+
+// RemoveSubTreeAtIndex deletes the child at the given index (and all
+// its children).
+func (n *Node) RemoveSubTreeAtIndex(idx int) error {
+	if idx < 0 || idx >= len(n.Children) {
+		return fmt.Errorf("idx %d is not in range 0..%d: %w", idx, len(n.Children), errInvalidChildIndex)
+	}
+
+	// Compress the list of children nodes, keep the order
+	n.Children = append(n.Children[:idx], n.Children[idx+1:]...)
+	return nil
 }
 
 // RemoveProperty deletes a property by name.
