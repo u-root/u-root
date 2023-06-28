@@ -99,6 +99,9 @@ func parseinterp(input string) ([]string, error) {
 func runinterp(interp, file string) ([]string, error) {
 	o, err := exec.Command(interp, "--list", file).Output()
 	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("%s: %s", err, ee.Stderr)
+		}
 		return nil, err
 	}
 	return parseinterp(string(o))
@@ -193,6 +196,7 @@ func Ldd(names []string) ([]*FileInfo, error) {
 				return nil, err
 			}
 		}
+
 		// oh boy. Now to run the interp and get more names.
 		n, err := runinterp(interp, n)
 		if err != nil {
