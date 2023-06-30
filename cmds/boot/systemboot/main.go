@@ -351,11 +351,7 @@ func main() {
 					continue
 				}
 				if debugEnabled {
-					if bootcmd[0] == "pxeboot" || bootcmd[0] == "boot" {
-						bootcmd = append(bootcmd, "-v")
-					} else {
-						bootcmd = append(bootcmd, "-d")
-					}
+					bootcmd = append(bootcmd, "-v")
 				}
 				log.Printf("Running boot command: %v", bootcmd)
 				cmd := exec.Command(bootcmd[0], bootcmd[1:]...)

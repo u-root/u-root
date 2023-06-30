@@ -36,7 +36,7 @@ var (
 	useV6              = flag.Bool("6", true, "Get a DHCPv6 lease")
 	ifname             = flag.String("i", "", "Interface to send packets through")
 	dryRun             = flag.Bool("dryrun", false, "Do everything except assigning IP addresses, changing DNS, and kexec")
-	doDebug            = flag.Bool("d", false, "Print debug output")
+	doDebug            = flag.Bool("v", false, "Print debug output")
 	skipDHCP           = flag.Bool("skip-dhcp", false, "Skip DHCP and rely on SLAAC for network configuration. This requires -netboot-url")
 	overrideNetbootURL = flag.String("netboot-url", "", "Override the netboot URL normally obtained via DHCP")
 	overrideCmdline    = flag.String("cmdline", "", "Override the extra kernel command line normally obtained via DHCP")
