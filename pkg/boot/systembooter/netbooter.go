@@ -83,7 +83,7 @@ func (nb *NetBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
 	var l ulog.Logger = ulog.Null
 	if debugEnabled {
-		bootcmd = []string{"fbnetboot", "-d", "-userclass", "linuxboot"}
+		bootcmd = []string{"fbnetboot", "-v", "-userclass", "linuxboot"}
 		l = ulog.Log
 	} else {
 		bootcmd = []string{"fbnetboot", "-userclass", "linuxboot"}
