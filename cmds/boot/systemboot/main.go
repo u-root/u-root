@@ -18,6 +18,7 @@ import (
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/vpd"
 )
 
@@ -111,7 +112,7 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 	return nil
 }
 
-func runIPMICommands() {
+func runIPMICommands(l ulog.Logger) {
 	i, err := ipmi.Open(0)
 	if err != nil {
 		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
@@ -154,7 +155,7 @@ func runIPMICommands() {
 			if err = checkCMOSClear(i); err != nil {
 				log.Printf("IPMI CMOS clear err: %v", err)
 			}
-			if err = ocp.CheckBMCBootOrder(i, bmcBootOverride); err != nil {
+			if err = ocp.CheckBMCBootOrder(i, bmcBootOverride, l); err != nil {
 				log.Printf("Failed to sync BMC Boot Order %v.", err)
 			}
 			dimmInfo, err := ocp.GetOemIpmiDimmInfo(si)
@@ -300,7 +301,11 @@ func main() {
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
-	runIPMICommands()
+	var l ulog.Logger = ulog.Null
+	if debugEnabled {
+		l = ulog.Log
+	}
+	runIPMICommands(l)
 	sleepInterval := time.Duration(*interval) * time.Second
 	if *allowInteractive {
 		log.Printf("**************************************************************************")
@@ -316,7 +321,7 @@ func main() {
 	if bmcBootOverride && ocp.BmcUpdatedBootorder {
 		bootEntries = ocp.BootEntries
 	} else {
-		bootEntries = systembooter.GetBootEntries()
+		bootEntries = systembooter.GetBootEntries(l)
 	}
 	log.Printf("BOOT ENTRIES:")
 	for _, entry := range bootEntries {

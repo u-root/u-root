@@ -1,4 +1,4 @@
-// Copyright 2021 the u-root Authors. All rights reserved
+// Copyright 2021-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,9 +7,10 @@ package systembooter
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
+
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // Boot implements the Booter interface for booting from local storage.
@@ -23,7 +24,7 @@ type BootBooter struct {
 
 // NewBootBooter parses a boot entry config and returns a Booter instance, or
 // an error if any
-func NewBootBooter(config []byte) (Booter, error) {
+func NewBootBooter(config []byte, l ulog.Logger) (Booter, error) {
 	/* The configuration format for a Boot Booter entry is a JSON with the following structure:
 
 		{
@@ -34,22 +35,22 @@ func NewBootBooter(config []byte) (Booter, error) {
 			"kernel_reuse":  "<kernel args to reuse or empty>",
 		}
 
-	The JSON corisponds to the boot application command line variables:
+	The JSON corresponds to the boot application command line variables:
 	 "block": comma separated list of pci vendor and device ids to ignore (format vendor:device). E.g. 0x8086:0x1234,0x8086:0xabcd
 	 "append": comma separated list of kernel params value to reuse from current kernel configuration
 	 "remove": comma separated list of kernel params value to remove from parsed kernel configuration
 	 "reuse": comma separated list of kernel params value to reuse from current kernel configuration
 	*/
 
-	log.Printf("Trying Boot Booter...")
-	log.Printf("Config: %s", string(config))
+	l.Printf("Trying Boot Booter...")
+	l.Printf("Config: %s", string(config))
 	lb := BootBooter{}
 	if err := json.Unmarshal(config, &lb); err != nil {
 		return nil, err
 	}
-	log.Printf("BootBooter: %+v", lb)
+	l.Printf("BootBooter: %+v", lb)
 	if lb.Type != "boot" {
-		return nil, fmt.Errorf("wrong type for BootBooter: %s", lb.Type)
+		return nil, fmt.Errorf("%w:%q", errWrongType, lb.Type)
 	}
 	// the actual arguments validation is done in `Boot` to avoid duplicate code
 	return &lb, nil
@@ -59,11 +60,12 @@ func NewBootBooter(config []byte) (Booter, error) {
 // the `boot` command
 func (lb *BootBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
-
+	var l ulog.Logger = ulog.Null
 	bootcmd = []string{"boot"}
 
 	if debugEnabled {
 		bootcmd = append(bootcmd, "-v")
+		l = ulog.Log
 	}
 
 	// validate arguments
@@ -80,11 +82,11 @@ func (lb *BootBooter) Boot(debugEnabled bool) error {
 		bootcmd = append(bootcmd, []string{"-reuse", lb.KernelReuse}...)
 	}
 
-	log.Printf("Executing command: %v", bootcmd)
+	l.Printf("Executing command: %v", bootcmd)
 	cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
+		l.Printf("Error executing %v: %v", cmd, err)
 	}
 	return nil
 }

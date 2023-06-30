@@ -1,4 +1,4 @@
-// Copyright 2020-2021 the u-root Authors. All rights reserved
+// Copyright 2020-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,11 +7,11 @@ package ocp
 
 import (
 	"fmt"
-	"log"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/vpd"
 )
 
@@ -85,28 +85,28 @@ func remapSortBootOrder(BootOrder *BootOrder) {
 	copy(BootOrder.bootSeq[:], sorted[:])
 }
 
-func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder) error {
+func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder, l ulog.Logger) error {
 	var err error
 	var key string
 	var idx int
 	for _, bootType := range BootOrder.bootSeq {
 		key = fmt.Sprintf("Boot%04d", idx)
 		if bootType == NETWORK_BOOT {
-			log.Printf("VPD set %s to %s", key, NETBOOTER_CONFIG)
+			l.Printf("VPD set %s to %s", key, NETBOOTER_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(NETBOOTER_CONFIG)})
 			if err = vpd.FlashromRWVpdSet(key, []byte(NETBOOTER_CONFIG), false); err != nil {
 				return err
 			}
 			idx++
 		} else if bootType == NETWORK_BOOT_IPV6 {
-			log.Printf("VPD set %s to %s", key, NETBOOTER_IPV6_CONFIG)
+			l.Printf("VPD set %s to %s", key, NETBOOTER_IPV6_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(NETBOOTER_IPV6_CONFIG)})
 			if err = vpd.FlashromRWVpdSet(key, []byte(NETBOOTER_IPV6_CONFIG), false); err != nil {
 				return err
 			}
 			idx++
 		} else if bootType == LOCAL_BOOT {
-			log.Printf("VPD set %s to %s", key, LOCALBOOTER_CONFIG)
+			l.Printf("VPD set %s to %s", key, LOCALBOOTER_CONFIG)
 			BootEntries = append(BootEntries, systembooter.BootEntry{Name: key, Config: []byte(LOCALBOOTER_CONFIG)})
 			if err = vpd.FlashromRWVpdSet(key, []byte(LOCALBOOTER_CONFIG), false); err != nil {
 				return err
@@ -115,13 +115,13 @@ func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder) error {
 		} else if bootType == (INVALID_BOOT) {
 			// No need to write VPD
 		} else {
-			log.Printf("Ignoring unrecognized boot type: %x", bootType)
+			l.Printf("Ignoring unrecognized boot type: %x", bootType)
 		}
 	}
 
 	// Update the BootEntries with booters to match the new VPD
 	for idx, entry := range BootEntries {
-		entry.Booter = systembooter.GetBooterFor(entry)
+		entry.Booter = systembooter.GetBooterFor(entry, l)
 		BootEntries[idx] = entry
 	}
 
@@ -136,7 +136,7 @@ func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder) error {
 // When BMC IPMI sets boot order (valid bit 1), BIOS will update VPD boot
 // order and create new BootEntries accordingly. If BMC didn't set boot order,
 // BIOS would set its current boot order to BMC.
-func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool) error {
+func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool, l ulog.Logger) error {
 	var BMCBootOrder, BIOSBootOrder BootOrder
 	// Read boot order from BMC
 	if err := getBootOrder(i, &BMCBootOrder); err != nil {
@@ -147,8 +147,8 @@ func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool) error {
 	// VPD boot order accordingly. For now the booter configurations will be
 	// set to the default ones.
 	if bmcBootOverride && BMCBootOrder.bootMode&0x80 != 0 {
-		log.Printf("BMC set boot order valid bit is 1. Update VPD boot order.")
-		return updateVPDBootOrder(i, &BMCBootOrder)
+		l.Printf("BMC set boot order valid bit is 1. Update VPD boot order.")
+		return updateVPDBootOrder(i, &BMCBootOrder, l)
 	}
 
 	// Read VPD Boot entries and create BIOS BootOrder
@@ -158,7 +158,7 @@ func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool) error {
 	for idx = range BIOSBootOrder.bootSeq {
 		BIOSBootOrder.bootSeq[idx] = INVALID_BOOT
 	}
-	bootEntries := systembooter.GetBootEntries()
+	bootEntries := systembooter.GetBootEntries(l)
 	idx = 0
 	var bootType string
 	for _, entry := range bootEntries {
@@ -179,10 +179,10 @@ func CheckBMCBootOrder(i *ipmi.IPMI, bmcBootOverride bool) error {
 	}
 	// If there is no valid VPD boot order, write the default systembooter configurations
 	if idx == 0 {
-		log.Printf("No valid VPD boot order, set default boot orders to RW_VPD")
+		l.Printf("No valid VPD boot order, set default boot orders to RW_VPD")
 		BIOSBootOrder.bootSeq[0] = NETWORK_BOOT_IPV6
 		BIOSBootOrder.bootSeq[1] = LOCAL_BOOT
-		return updateVPDBootOrder(i, &BIOSBootOrder)
+		return updateVPDBootOrder(i, &BIOSBootOrder, l)
 	}
 	// clear valid bit and set BIOS boot order to BMC
 	BIOSBootOrder.bootMode &^= 0x80

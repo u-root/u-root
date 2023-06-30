@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,9 +6,9 @@ package systembooter
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/u-root/u-root/pkg/crypto"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/vpd"
 )
 
@@ -28,7 +28,7 @@ type BootEntry struct {
 	Booter Booter
 }
 
-var supportedBooterParsers = []func([]byte) (Booter, error){
+var supportedBooterParsers = []func([]byte, ulog.Logger) (Booter, error){
 	NewPxeBooter,
 	NewBootBooter,
 	NewNetBooter,
@@ -37,23 +37,23 @@ var supportedBooterParsers = []func([]byte) (Booter, error){
 
 // GetBooterFor looks for a supported Booter implementation and returns it, if
 // found. If not found, a NullBooter is returned.
-func GetBooterFor(entry BootEntry) Booter {
+func GetBooterFor(entry BootEntry, l ulog.Logger) Booter {
 	var (
 		booter Booter
 		err    error
 	)
 	for idx, booterParser := range supportedBooterParsers {
-		log.Printf("Trying booter #%d", idx)
-		booter, err = booterParser(entry.Config)
+		l.Printf("Trying booter #%d", idx)
+		booter, err = booterParser(entry.Config, l)
 		if err != nil {
-			log.Printf("This config is not valid for this booter (#%d)", idx)
-			log.Printf("  Error: %v", err.Error())
+			l.Printf("This config is not valid for this booter (#%d)", idx)
+			l.Printf("  Error: %v", err.Error())
 			continue
 		}
 		break
 	}
 	if booter == nil {
-		log.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
+		l.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
 		return &NullBooter{}
 	}
 	return booter
@@ -61,7 +61,7 @@ func GetBooterFor(entry BootEntry) Booter {
 
 // GetBootEntries returns a list of BootEntry objects stored in the VPD
 // partition of the flash chip
-func GetBootEntries() []BootEntry {
+func GetBootEntries(l ulog.Logger) []BootEntry {
 	var bootEntries []BootEntry
 
 	for idx := 0; idx < 9999; idx++ {
@@ -85,9 +85,9 @@ func GetBootEntries() []BootEntry {
 
 	// look for a Booter that supports the given configuration
 	for idx, entry := range bootEntries {
-		entry.Booter = GetBooterFor(entry)
+		entry.Booter = GetBooterFor(entry, l)
 		if entry.Booter == nil {
-			log.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
+			l.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
 		}
 		bootEntries[idx] = entry
 	}
