@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,9 +7,10 @@ package systembooter
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
+
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // LocalBooter implements the Booter interface for booting from local storage.
@@ -24,7 +25,7 @@ type LocalBooter struct {
 
 // NewLocalBooter parses a boot entry config and returns a Booter instance, or
 // an error if any
-func NewLocalBooter(config []byte) (Booter, error) {
+func NewLocalBooter(config []byte, l ulog.Logger) (Booter, error) {
 	/*
 		The configuration format for a LocalBooter entry is a JSON with the following structure:
 
@@ -57,15 +58,15 @@ func NewLocalBooter(config []byte) (Booter, error) {
 		`ramfs` is the path, relative to the device specified by `device_guid`, of the ramfs
 		    to be used for kexec'ing into the target kernel.
 	*/
-	log.Printf("Trying LocalBooter...")
-	log.Printf("Config: %s", string(config))
+	l.Printf("Trying LocalBooter...")
+	l.Printf("Config: %s", string(config))
 	lb := LocalBooter{}
 	if err := json.Unmarshal(config, &lb); err != nil {
 		return nil, err
 	}
-	log.Printf("LocalBooter: %+v", lb)
+	l.Printf("LocalBooter: %+v", lb)
 	if lb.Type != "localboot" {
-		return nil, fmt.Errorf("wrong type for LocalBooter: %s", lb.Type)
+		return nil, fmt.Errorf("%w:%q", errWrongType, lb.Type)
 	}
 	// the actual arguments validation is done in `Boot` to avoid duplicate code
 	return &lb, nil
@@ -75,8 +76,10 @@ func NewLocalBooter(config []byte) (Booter, error) {
 // the `localboot` command
 func (lb *LocalBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
+	var l ulog.Logger = ulog.Null
 	if debugEnabled {
 		bootcmd = []string{"localboot", "-d"}
+		l = ulog.Log
 	} else {
 		bootcmd = []string{"localboot"}
 	}
@@ -97,11 +100,11 @@ func (lb *LocalBooter) Boot(debugEnabled bool) error {
 		return fmt.Errorf("unknown boot method %s", lb.Method)
 	}
 
-	log.Printf("Executing command: %v", bootcmd)
+	l.Printf("Executing command: %v", bootcmd)
 	cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Printf("Error executing %v: %v", cmd, err)
+		l.Printf("Error executing %v: %v", cmd, err)
 	}
 	return nil
 }

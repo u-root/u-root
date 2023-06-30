@@ -1,4 +1,4 @@
-// Copyright 2017-2019 the u-root Authors. All rights reserved
+// Copyright 2017-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,10 +7,11 @@ package systembooter
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
+
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // NetBooter implements the Booter interface for booting over DHCPv6.
@@ -26,7 +27,7 @@ type NetBooter struct {
 
 // NewNetBooter parses a boot entry config and returns a Booter instance, or an
 // error if any
-func NewNetBooter(config []byte) (Booter, error) {
+func NewNetBooter(config []byte, l ulog.Logger) (Booter, error) {
 	// The configuration format for a NetBooterDHCPv6 entry is a JSON with the
 	// following structure:
 	// {
@@ -63,15 +64,15 @@ func NewNetBooter(config []byte) (Booter, error) {
 	// name + bootfile URL in case of DHCPv4.
 	//
 	// Additional options may be added in the future.
-	log.Printf("Trying NetBooter...")
-	log.Printf("Config: %s", string(config))
+	l.Printf("Trying NetBooter...")
+	l.Printf("Config: %s", string(config))
 	nb := NetBooter{}
 	if err := json.Unmarshal(config, &nb); err != nil {
 		return nil, err
 	}
-	log.Printf("NetBooter: %+v", nb)
+	l.Printf("NetBooter: %+v", nb)
 	if nb.Type != "netboot" {
-		return nil, fmt.Errorf("wrong type for NetBooter: %s", nb.Type)
+		return nil, fmt.Errorf("%w:%q", errWrongType, nb.Type)
 	}
 	return &nb, nil
 }
@@ -80,8 +81,10 @@ func NewNetBooter(config []byte) (Booter, error) {
 // `fbnetboot` command
 func (nb *NetBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
+	var l ulog.Logger = ulog.Null
 	if debugEnabled {
 		bootcmd = []string{"fbnetboot", "-d", "-userclass", "linuxboot"}
+		l = ulog.Log
 	} else {
 		bootcmd = []string{"fbnetboot", "-userclass", "linuxboot"}
 	}
@@ -101,7 +104,7 @@ func (nb *NetBooter) Boot(debugEnabled bool) error {
 	if nb.DebugOnFailure {
 		bootcmd = append(bootcmd, "-fix")
 	}
-	log.Printf("Executing command: %v", bootcmd)
+	l.Printf("Executing command: %v", bootcmd)
 	cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
