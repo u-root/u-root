@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -145,19 +146,22 @@ func TestStdinGrep(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		var stdout bytes.Buffer
-		rc := io.NopCloser(strings.NewReader(test.input))
-		cmd := command(rc, &stdout, nil, test.p, test.args)
-		err := cmd.run()
-		if err != test.err {
-			t.Errorf("got %v, want %v", err, test.err)
-		}
+	for idx, te := range tests {
+		test := te
+		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
+			var stdout bytes.Buffer
+			rc := io.NopCloser(strings.NewReader(test.input))
+			cmd := command(rc, &stdout, nil, test.p, test.args)
+			err := cmd.run()
+			if err != test.err {
+				t.Errorf("got err %v, want %v", err, test.err)
+			}
 
-		res := stdout.String()
-		if res != test.output {
-			t.Errorf("got %q, want %q", res, test.output)
-		}
+			res := stdout.String()
+			if res != test.output {
+				t.Errorf("got out %q, want %q", res, test.output)
+			}
+		})
 	}
 }
 
@@ -171,6 +175,16 @@ func TestFilesGrep(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	f3, err := os.CreateTemp(tmpDir, "f3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpDir2 := t.TempDir()
+	f4, err := os.CreateTemp(tmpDir2, "f4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f4.Chmod(0o000)
 
 	_, err = f1.WriteString("hix\nnix\n")
 	if err != nil {
@@ -182,17 +196,35 @@ func TestFilesGrep(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, err = f3.WriteString("hix\ngoodbye\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = os.Chdir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	tests := []struct {
-		output string
-		err    error
-		p      params
-		args   []string
+		output  string
+		err     error
+		partial bool
+		p       params
+		args    []string
 	}{
+		{
+			output: fmt.Sprintf("%s:hix\n%s:hix\n%s:hix\n", f1.Name(), f2.Name(), f3.Name()),
+			err:    nil,
+			p:      params{recursive: true},
+			args:   []string{"hix", tmpDir},
+		},
+		{
+			output: fmt.Sprintf("grep: %v: Is a directory\n", tmpDir),
+			err:    filepath.SkipDir,
+			p:      params{recursive: false},
+			args:   []string{"hix", tmpDir},
+		},
 		{
 			output: fmt.Sprintf("%s:hello\n", f2.Name()),
 			err:    nil,
@@ -204,19 +236,46 @@ func TestFilesGrep(t *testing.T) {
 			p:      params{noShowMatch: true},
 			args:   []string{"nix", f1.Name()},
 		},
+		{
+			output: "",
+			err:    nil,
+			p:      params{quiet: true},
+			args:   []string{"nix", f1.Name()},
+		},
+		{
+			output:  fmt.Sprintf("grep: %s", tmpDir+"1"),
+			partial: true,
+			err:     errQuite,
+			p:       params{quiet: true},
+			args:    []string{"nix", tmpDir + "1"},
+		},
+		//{
+		//	output:  fmt.Sprintf("can't open %s", f4.Name()),
+		//	partial: true,
+		//	err:     errQuite,
+		//	p:       params{quiet: true},
+		//	args:    []string{"nix", f4.Name()},
+		//},
 	}
 
-	for _, test := range tests {
-		var stdout bytes.Buffer
-		cmd := command(nil, &stdout, nil, test.p, test.args)
-		err := cmd.run()
-		if err != nil {
-			t.Errorf("got %v, want nil", err)
-		}
+	for idx, te := range tests {
+		test := te
+		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
+			var stdout bytes.Buffer
+			cmd := command(nil, &stdout, &stdout, test.p, test.args)
+			err := cmd.run()
+			if test.err == nil && err != nil {
+				t.Errorf("got %v, want nil", err)
+			} else if err != nil {
+				if !strings.Contains(err.Error(), test.err.Error()) {
+					t.Errorf("got %v, want %v", err, test.err)
+				}
+			}
 
-		res := stdout.String()
-		if res != test.output {
-			t.Errorf("got %v, want %v", res, test.output)
-		}
+			res := stdout.String()
+			if (test.partial && !strings.Contains(res, test.output)) || (!test.partial && res != test.output) {
+				t.Errorf("got %v, want %v", res, test.output)
+			}
+		})
 	}
 }
