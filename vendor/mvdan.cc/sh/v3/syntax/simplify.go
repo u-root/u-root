@@ -10,12 +10,12 @@ import "bytes"
 //
 // The changes currently applied are:
 //
-//     Remove clearly useless parentheses       $(( (expr) ))
-//     Remove dollars from vars in exprs        (($var))
-//     Remove duplicate subshells               $( (stmts) )
-//     Remove redundant quotes                  [[ "$var" == str ]]
-//     Merge negations with unary operators     [[ ! -n $var ]]
-//     Use single quotes to shorten literals    "\$foo"
+//	Remove clearly useless parentheses       $(( (expr) ))
+//	Remove dollars from vars in exprs        (($var))
+//	Remove duplicate subshells               $( (stmts) )
+//	Remove redundant quotes                  [[ "$var" == str ]]
+//	Merge negations with unary operators     [[ ! -n $var ]]
+//	Use single quotes to shorten literals    "\$foo"
 func Simplify(n Node) bool {
 	s := simplifier{}
 	Walk(n, s.visit)

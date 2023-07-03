@@ -1,7 +1,7 @@
 package lipgloss
 
 // This could (should) probably just be moved into NewStyle(). We've broken it
-// out so we can call it in a lazy way.
+// out, so we can call it in a lazy way.
 func (s *Style) init() {
 	if s.rules == nil {
 		s.rules = make(rules)
@@ -16,7 +16,7 @@ func (s *Style) set(key propKey, value interface{}) {
 	case int:
 		// We don't allow negative integers on any of our values, so just keep
 		// them at zero or above. We could use uints instead, but the
-		// conversions are a little tedious so we're sticking with ints for
+		// conversions are a little tedious, so we're sticking with ints for
 		// sake of usability.
 		s.rules[key] = max(0, v)
 	default:
@@ -39,7 +39,7 @@ func (s Style) Italic(v bool) Style {
 
 // Underline sets an underline rule. By default, underlines will not be drawn on
 // whitespace like margins and padding. To change this behavior set
-// renderUnderlinesOnSpaces.
+// UnderlineSpaces.
 func (s Style) Underline(v bool) Style {
 	s.set(underlineKey, v)
 	return s
@@ -47,7 +47,7 @@ func (s Style) Underline(v bool) Style {
 
 // Strikethrough sets a strikethrough rule. By default, strikes will not be
 // drawn on whitespace like margins and padding. To change this behavior set
-// renderStrikethroughOnSpaces.
+// StrikethroughSpaces.
 func (s Style) Strikethrough(v bool) Style {
 	s.set(strikethroughKey, v)
 	return s
@@ -120,13 +120,13 @@ func (s Style) Align(p ...Position) Style {
 	return s
 }
 
-// HorizontalAlign sets a horizontal text alignment rule.
+// AlignHorizontal sets a horizontal text alignment rule.
 func (s Style) AlignHorizontal(p Position) Style {
 	s.set(alignHorizontalKey, p)
 	return s
 }
 
-// VerticalAlign sets a text alignment rule.
+// AlignVertical sets a text alignment rule.
 func (s Style) AlignVertical(p Position) Style {
 	s.set(alignVerticalKey, p)
 	return s
@@ -251,7 +251,7 @@ func (s Style) MarginBackground(c TerminalColor) Style {
 	return s
 }
 
-// Border is shorthand for setting a the border style and which sides should
+// Border is shorthand for setting the border style and which sides should
 // have a border at once. The variadic argument sides works as follows:
 //
 // With one value, the value is applied to all sides.
@@ -300,8 +300,9 @@ func (s Style) Border(b Border, sides ...bool) Style {
 // the border style, the border will be enabled for all sides during rendering.
 //
 // You can define border characters as you'd like, though several default
-// styles are included: NormalBorder(), RoundedBorder(), ThickBorder(), and
-// DoubleBorder().
+// styles are included: NormalBorder(), RoundedBorder(), BlockBorder(),
+// OuterHalfBlockBorder(), InnerHalfBlockBorder(), ThickBorder(),
+// and DoubleBorder().
 //
 // Example:
 //
@@ -491,8 +492,8 @@ func (s Style) MaxWidth(n int) Style {
 	return o
 }
 
-// MaxHeight applies a max width to a given style. This is useful in enforcing
-// a certain width at render time, particularly with arbitrary strings and
+// MaxHeight applies a max height to a given style. This is useful in enforcing
+// a certain height at render time, particularly with arbitrary strings and
 // styles.
 //
 // Because this in intended to be used at the time of render, this method will
@@ -504,7 +505,7 @@ func (s Style) MaxHeight(n int) Style {
 }
 
 // UnderlineSpaces determines whether to underline spaces between words. By
-// default this is true. Spaces can also be underlined without underlining the
+// default, this is true. Spaces can also be underlined without underlining the
 // text itself.
 func (s Style) UnderlineSpaces(v bool) Style {
 	s.set(underlineSpacesKey, v)
@@ -512,10 +513,17 @@ func (s Style) UnderlineSpaces(v bool) Style {
 }
 
 // StrikethroughSpaces determines whether to apply strikethroughs to spaces
-// between words. By default this is true. Spaces can also be struck without
+// between words. By default, this is true. Spaces can also be struck without
 // underlining the text itself.
 func (s Style) StrikethroughSpaces(v bool) Style {
 	s.set(strikethroughSpacesKey, v)
+	return s
+}
+
+// Renderer sets the renderer for the style. This is useful for changing the
+// renderer for a style that is being used in a different context.
+func (s Style) Renderer(r *Renderer) Style {
+	s.r = r
 	return s
 }
 
