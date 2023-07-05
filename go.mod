@@ -80,7 +80,7 @@ require (
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	google.golang.org/grpc v1.27.1 // indirect
+	google.golang.org/grpc v1.53.0 // indirect
 )
 
 retract (
