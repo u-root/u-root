@@ -59,13 +59,6 @@ type params struct {
 	noShowMatch, quiet, count, number bool
 }
 
-type grepResult struct {
-	c       *grepCommand
-	line    *string
-	lineNum int
-	match   bool
-}
-
 type grepCommand struct {
 	rc   io.ReadCloser
 	name string
@@ -83,15 +76,14 @@ func main() {
 
 // cmd contains the actually business logic of grep
 type cmd struct {
-	stdin      io.ReadCloser
-	stdout     *bufio.Writer
-	stderr     io.Writer
-	args       []string
-	exprB      []byte
+	stdin  io.ReadCloser
+	stdout *bufio.Writer
+	stderr io.Writer
+	args   []string
+	exprB  []byte
+	params
 	matchCount int
 	showName   bool
-
-	params
 }
 
 func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, args []string) *cmd {
