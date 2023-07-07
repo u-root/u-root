@@ -105,7 +105,7 @@ func ParseGrubCfg(ver grubVersion, devices block.BlockDevices, grubcfg string, b
 			if sline[0] == "search" {
 				for _, str1 := range sline {
 					if str1 == "--set=root" {
-						log.Printf("Kernel seems to be on an other partitioin then the grub.cfg file")
+						log.Printf("Kernel seems to be on an other partition then the grub.cfg file")
 						for _, str2 := range sline {
 							if isValidFsUUID(str2) {
 								kernelFsUUID := str2
