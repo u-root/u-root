@@ -121,7 +121,7 @@ func updateVPDBootOrder(i *ipmi.IPMI, BootOrder *BootOrder, l ulog.Logger) error
 
 	// Update the BootEntries with booters to match the new VPD
 	for idx, entry := range BootEntries {
-		entry.Booter = systembooter.GetBooterFor(entry, l)
+		entry.Booter, _ = systembooter.GetBooterFor(entry, l)
 		BootEntries[idx] = entry
 	}
 

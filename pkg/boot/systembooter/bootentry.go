@@ -5,6 +5,7 @@
 package systembooter
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/u-root/u-root/pkg/crypto"
@@ -35,9 +36,11 @@ var supportedBooterParsers = []func([]byte, ulog.Logger) (Booter, error){
 	NewLocalBooter,
 }
 
+var errNoBooterFound = errors.New("No booter found for entry")
+
 // GetBooterFor looks for a supported Booter implementation and returns it, if
-// found. If not found, a NullBooter is returned.
-func GetBooterFor(entry BootEntry, l ulog.Logger) Booter {
+// found. If not found, error errNoBooterFound is returned.
+func GetBooterFor(entry BootEntry, l ulog.Logger) (Booter, error) {
 	var (
 		booter Booter
 		err    error
@@ -53,10 +56,9 @@ func GetBooterFor(entry BootEntry, l ulog.Logger) Booter {
 		break
 	}
 	if booter == nil {
-		l.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
-		return &NullBooter{}
+		return booter, fmt.Errorf("%w: %s: %s", errNoBooterFound, entry.Name, string(entry.Config))
 	}
-	return booter
+	return booter, nil
 }
 
 // GetBootEntries returns a list of BootEntry objects stored in the VPD
@@ -82,11 +84,11 @@ func GetBootEntries(l ulog.Logger) []BootEntry {
 			bootEntries = append(bootEntries, BootEntry{Name: key, Config: value})
 		}
 	}
-
+	var err error
 	// look for a Booter that supports the given configuration
 	for idx, entry := range bootEntries {
-		entry.Booter = GetBooterFor(entry, l)
-		if entry.Booter == nil {
+		entry.Booter, err = GetBooterFor(entry, l)
+		if err != nil {
 			l.Printf("No booter found for entry: %s: %s", entry.Name, string(entry.Config))
 		}
 		bootEntries[idx] = entry
