@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 )
@@ -80,7 +81,6 @@ type cmd struct {
 	stdout *bufio.Writer
 	stderr io.Writer
 	args   []string
-	exprB  []byte
 	params
 	matchCount int
 	showName   bool
@@ -105,22 +105,22 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	defer f.rc.Close()
 	var lineNum int
 	for r.Scan() {
-		i := r.Bytes()
+		line := r.Text()
 		var m bool
 		switch {
 		case c.fixed && c.caseInsensitive:
-			m = bytes.Contains(bytes.ToLower(i), bytes.ToLower(c.exprB))
+			m = strings.Contains(strings.ToLower(line), strings.ToLower(c.expr))
 		case c.fixed && !c.caseInsensitive:
-			m = bytes.Contains(i, c.exprB)
+			m = strings.Contains(line, c.expr)
 		default:
-			m = re.Match(i)
+			m = re.MatchString(line)
 		}
 		if m != c.invert {
 			// in quiet mode, exit before the first match
 			if c.quiet {
 				return false
 			}
-			c.printMatch(f, i, lineNum+1, m)
+			c.printMatch(f, line, lineNum+1, m)
 			if c.noShowMatch {
 				break
 			}
@@ -131,12 +131,7 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	return true
 }
 
-func (c *cmd) printMatch(
-	cmd *grepCommand,
-	line []byte,
-	lineNum int,
-	match bool,
-) {
+func (c *cmd) printMatch(cmd *grepCommand, line string, lineNum int, match bool) {
 	if match == !c.invert {
 		c.matchCount++
 	}
@@ -166,7 +161,7 @@ func (c *cmd) printMatch(
 			c.stdout.WriteByte(':')
 		}
 		// now write the line to stdout
-		c.stdout.Write(line)
+		c.stdout.WriteString(line)
 	}
 }
 
@@ -189,7 +184,6 @@ func (c *cmd) run() error {
 	} else if c.expr == "" {
 		c.expr = c.args[0]
 	}
-	c.exprB = []byte(c.expr)
 
 	// if len(c.args) < 2, then we read from stdin
 	if len(c.args) < 2 {
