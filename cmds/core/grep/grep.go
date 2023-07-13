@@ -38,7 +38,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var errQuite = fmt.Errorf("not found")
+var errQuiet = fmt.Errorf("not found")
 
 type params struct {
 	expr string
@@ -71,7 +71,7 @@ func parseParams() params {
 
 func main() {
 	if err := command(os.Stdin, os.Stdout, os.Stderr, parseParams(), flag.Args()).run(); err != nil {
-		if err == errQuite {
+		if err == errQuiet {
 			os.Exit(1)
 		}
 		log.Fatal(err)
@@ -227,7 +227,7 @@ func (c *cmd) run() error {
 		}
 	}
 	if c.quiet {
-		return errQuite
+		return errQuiet
 	}
 	if c.count {
 		c.stdout.Write(strconv.AppendUint(nil, uint64(c.matchCount), 10))
