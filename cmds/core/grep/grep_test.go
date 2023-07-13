@@ -83,7 +83,7 @@ func TestStdinGrep(t *testing.T) {
 		{
 			input:  "hix",
 			output: "",
-			err:    errQuite,
+			err:    errQuiet,
 			p:      params{quiet: true},
 			args:   []string{"hello"},
 		},
@@ -245,7 +245,7 @@ func TestFilesGrep(t *testing.T) {
 		{
 			output:  fmt.Sprintf("grep: %s", tmpDir+"1"),
 			partial: true,
-			err:     errQuite,
+			err:     errQuiet,
 			p:       params{quiet: true},
 			args:    []string{"nix", tmpDir + "1"},
 		},
