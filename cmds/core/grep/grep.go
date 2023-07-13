@@ -40,20 +40,6 @@ import (
 
 var errQuite = fmt.Errorf("not found")
 
-var mainParams = params{}
-
-func init() {
-	flag.StringVarP(&mainParams.expr, "regexp", "e", "", "Pattern to match")
-	flag.BoolVarP(&mainParams.headers, "no-filename", "h", false, "Suppress file name prefixes on output")
-	flag.BoolVarP(&mainParams.invert, "invert-match", "v", false, "Print only non-matching lines")
-	flag.BoolVarP(&mainParams.recursive, "recursive", "r", false, "recursive")
-	flag.BoolVarP(&mainParams.noShowMatch, "files-with-matches", "l", false, "list only files")
-	flag.BoolVarP(&mainParams.count, "count", "c", false, "Just show counts")
-	flag.BoolVarP(&mainParams.caseInsensitive, "ignore-case", "i", false, "case-insensitive matching")
-	flag.BoolVarP(&mainParams.number, "line-number", "n", false, "Show line numbers")
-	flag.BoolVarP(&mainParams.fixed, "fixed-strings", "F", false, "Match using fixed strings")
-}
-
 type params struct {
 	expr string
 	headers, invert, recursive, caseInsensitive, fixed,
@@ -65,9 +51,26 @@ type grepCommand struct {
 	name string
 }
 
-func main() {
+func parseParams() params {
+	p := params{}
+	flag.StringVarP(&p.expr, "regexp", "e", "", "Pattern to match")
+	flag.BoolVarP(&p.headers, "no-filename", "h", false, "Suppress file name prefixes on output")
+	flag.BoolVarP(&p.invert, "invert-match", "v", false, "Print only non-matching lines")
+	flag.BoolVarP(&p.recursive, "recursive", "r", false, "recursive")
+	flag.BoolVarP(&p.noShowMatch, "files-with-matches", "l", false, "list only files")
+	flag.BoolVarP(&p.count, "count", "c", false, "Just show counts")
+	flag.BoolVarP(&p.caseInsensitive, "ignore-case", "i", false, "case-insensitive matching")
+	flag.BoolVarP(&p.number, "line-number", "n", false, "Show line numbers")
+	flag.BoolVarP(&p.fixed, "fixed-strings", "F", false, "Match using fixed strings")
+	flag.BoolVarP(&p.quiet, "quiet", "q", false, "Don't print matches; exit on first match")
+	flag.BoolVarP(&p.quiet, "silent", "s", false, "Don't print matches; exit on first match")
 	flag.Parse()
-	if err := command(os.Stdin, os.Stdout, os.Stderr, mainParams, flag.Args()).run(); err != nil {
+
+	return p
+}
+
+func main() {
+	if err := command(os.Stdin, os.Stdout, os.Stderr, parseParams(), flag.Args()).run(); err != nil {
 		if err == errQuite {
 			os.Exit(1)
 		}

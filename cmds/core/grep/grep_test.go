@@ -279,3 +279,35 @@ func TestFilesGrep(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultParams(t *testing.T) {
+	p := parseParams()
+
+	if p.expr != "" {
+		t.Errorf("got %v, want %v", p.expr, "")
+	}
+	if p.headers != false {
+		t.Errorf("got %v, want %v", p.headers, false)
+	}
+	if p.invert != false {
+		t.Errorf("got %v, want %v", p.invert, false)
+	}
+	if p.recursive != false {
+		t.Errorf("got %v, want %v", p.recursive, false)
+	}
+	if p.noShowMatch != false {
+		t.Errorf("got %v, want %v", p.noShowMatch, false)
+	}
+	if p.count != false {
+		t.Errorf("got %v, want %v", p.count, false)
+	}
+	if p.caseInsensitive != false {
+		t.Errorf("got %v, want %v", p.caseInsensitive, false)
+	}
+	if p.fixed != false {
+		t.Errorf("got %v, want %v", p.fixed, false)
+	}
+	if p.quiet != false {
+		t.Errorf("got %v, want %v", p.quiet, false)
+	}
+}
