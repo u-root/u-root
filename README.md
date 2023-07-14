@@ -407,7 +407,7 @@ and other config files to make the transition to LinuxBoot easier.
 *   `localboot`: a tool that finds bootable kernel configurations on the local
     disks and boots them.
 
-*   `systemboot`: a wrapper around `fbnetboot` and `localboot` that just mimicks
+*   `systemboot`: a wrapper around `pxeboot` and `boot` that just mimicks
     a BIOS/UEFI BDS behaviour, by looping between network booting and local
     booting. Use `-uinitcmd` argument to the u-root build tool to make it the
     boot program.
