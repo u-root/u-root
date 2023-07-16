@@ -36,7 +36,7 @@ type params struct {
 
 type cmd struct {
 	stdout io.Writer
-	strerr io.Writer
+	stderr io.Writer
 	args   []string
 	params params
 }
@@ -44,7 +44,7 @@ type cmd struct {
 func command(stdout, stderr io.Writer, params params, args []string) *cmd {
 	return &cmd{
 		stdout: stdout,
-		strerr: stderr,
+		stderr: stderr,
 		args:   args,
 		params: params,
 	}
@@ -65,6 +65,11 @@ func (c *cmd) run() error {
 		"file":      0,
 		"d":         os.ModeDir,
 		"directory": os.ModeDir,
+		"s":         os.ModeSocket,
+		"p":         os.ModeNamedPipe,
+		"l":         os.ModeSymlink,
+		"c":         os.ModeCharDevice | os.ModeDevice,
+		"b":         os.ModeDevice,
 	}
 
 	if len(c.args) != 1 {
@@ -103,7 +108,7 @@ func (c *cmd) run() error {
 
 	for l := range names {
 		if l.Err != nil {
-			fmt.Fprintf(c.strerr, "%s: %v\n", l.Name, l.Err)
+			fmt.Fprintf(c.stderr, "%s: %v\n", l.Name, l.Err)
 			continue
 		}
 		if c.params.long {
