@@ -20,7 +20,7 @@ require (
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.10.6
 	github.com/klauspost/pgzip v1.2.4
-	github.com/knz/bubbline v0.0.0-20230422210153-e176cdfe1c43
+	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/kr/pty v1.1.8
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
