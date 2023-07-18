@@ -154,7 +154,7 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/pgzip v1.2.4
 ## explicit
 github.com/klauspost/pgzip
-# github.com/knz/bubbline v0.0.0-20230422210153-e176cdfe1c43
+# github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 ## explicit; go 1.13
 github.com/knz/bubbline
 github.com/knz/bubbline/complete
