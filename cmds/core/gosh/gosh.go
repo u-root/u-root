@@ -162,6 +162,8 @@ func runInteractiveSimple(runner *interp.Runner, parser *syntax.Parser, stdin io
 
 func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer) error {
 	input := bubbline.New()
+	// Set default window size to 80x24 in case ioctl isn't able to detect the actual window size
+	input.Model.SetSize(80, 24)
 
 	if err := input.LoadHistory(HISTFILE); err != nil {
 		return err

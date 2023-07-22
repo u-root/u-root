@@ -87,7 +87,7 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 		}
 
 		// error handling that matches standard ls is ... a real joy
-		if !errors.Is(err, os.ErrNotExist) {
+		if osfi != nil && !errors.Is(err, os.ErrNotExist) {
 			f.lsfi = ls.FromOSFileInfo(path, osfi)
 			if err != nil && path == d {
 				f.err = err

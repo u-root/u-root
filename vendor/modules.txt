@@ -93,7 +93,10 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit; go 1.20
 github.com/google/go-tpm/legacy/tpm2
 github.com/google/go-tpm/tpm
+github.com/google/go-tpm/tpm2
+github.com/google/go-tpm/tpm2/transport
 github.com/google/go-tpm/tpmutil
+github.com/google/go-tpm/tpmutil/mssim
 github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 ## explicit
@@ -151,7 +154,7 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/pgzip v1.2.4
 ## explicit
 github.com/klauspost/pgzip
-# github.com/knz/bubbline v0.0.0-20230422210153-e176cdfe1c43
+# github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 ## explicit; go 1.13
 github.com/knz/bubbline
 github.com/knz/bubbline/complete
