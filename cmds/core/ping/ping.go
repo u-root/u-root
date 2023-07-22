@@ -166,8 +166,10 @@ func ping(host string) error {
 	p := New()
 	// ping needs to run forever, except if '*iter' is not zero
 	waitFor := time.Duration(*wtf) * time.Millisecond
-	for i := uint64(0); i <= *iter; i++ {
-		msg, err := p.ping1(*net6, host, i+1, waitFor)
+
+	counter := uint64(0)
+	for {
+		msg, err := p.ping1(*net6, host, counter+1, waitFor)
 		if err != nil {
 			return fmt.Errorf("ping failed: %v", err)
 		}
@@ -176,7 +178,15 @@ func ping(host string) error {
 		}
 		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)
+
+		if *iter != 0 {
+			counter++
+			if counter >= *iter {
+				break
+			}
+		}
 	}
+
 	return nil
 }
 
