@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"os"
 	"time"
@@ -37,7 +38,7 @@ const usage = "ping [-V] [-6] [-c count] [-i interval] [-s packetsize] [-w deadl
 var (
 	net6       = flag.Bool("6", false, "use ipv4 (means ip4:icmp) or 6 (ip6:ipv6-icmp)")
 	packetSize = flag.Int("s", 64, "Data size")
-	iter       = flag.Uint64("c", 0, "# iterations")
+	iter       = flag.Uint64("c", math.MaxUint64, "# iterations")
 	intv       = flag.Int("i", 1000, "interval in milliseconds")
 	wtf        = flag.Int("w", 100, "wait time in milliseconds")
 	audible    = flag.Bool("a", false, "Audible rings a bell when a packet is received")
@@ -164,12 +165,10 @@ func ping(host string) error {
 
 	interval := time.Duration(*intv)
 	p := New()
-	// ping needs to run forever, except if '*iter' is not zero
+	// ping needs to run forever if count is not specified, so default value is MaxUint64
 	waitFor := time.Duration(*wtf) * time.Millisecond
-
-	counter := uint64(0)
-	for {
-		msg, err := p.ping1(*net6, host, counter+1, waitFor)
+	for i := uint64(0); i < *iter; i++ {
+		msg, err := p.ping1(*net6, host, i+1, waitFor)
 		if err != nil {
 			return fmt.Errorf("ping failed: %v", err)
 		}
@@ -178,13 +177,6 @@ func ping(host string) error {
 		}
 		log.Print(msg)
 		time.Sleep(time.Millisecond * interval)
-
-		if *iter != 0 {
-			counter++
-			if counter >= *iter {
-				break
-			}
-		}
 	}
 
 	return nil
