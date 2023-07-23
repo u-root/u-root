@@ -5,18 +5,80 @@
 package ls
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
 
 const lsregex string = "^([rwxSTstdcb\\-lp?]{10})\\s+(\\d+)?\\s?(\\S+)\\s+(\\S+)\\s+([0-9,]+)?\\s+(\\d+)?(\\D+)?(\\d{1,2}\\D\\d{1,2}\\D\\d{1,2})?(\\D{4})?([\\D|\\d]*)"
 const tDelta time.Duration = 1 * time.Second
+
+// badSys implements os.FileInfo but can return a sys that is NOT syscall.Stat_t.
+// This can happen with broken file system implementations, in which a stat
+// does not quite succeed. This has happened.
+// badSys is pretty flexible and we might consider using it
+// in future instead of creating files in this test. That said, creating at least one
+// file to test seems a good test of other functions.
+type badSys struct {
+	beBad bool
+	dir   bool
+}
+
+var _ os.FileInfo = &badSys{}
+
+func (b *badSys) Name() string {
+	return "bad"
+}
+
+func (b *badSys) Size() int64 {
+	return 0xbadfeed
+}
+
+func (b *badSys) Mode() os.FileMode {
+	return os.FileMode(0x754)
+}
+
+func (b *badSys) ModTime() time.Time {
+	return time.Unix(1, 23)
+}
+
+func (b *badSys) IsDir() bool {
+	return b.dir
+}
+
+func (b *badSys) Sys() any {
+	if b.beBad {
+		return &struct{}{}
+	}
+	stat := syscall.Stat_t{
+		Dev:     0,
+		Ino:     1,
+		Nlink:   2,
+		Mode:    0744,
+		Uid:     2,
+		Gid:     3,
+		Rdev:    4,
+		Size:    83,
+		Blksize: 4094,
+		Blocks:  1,
+		Atim:    syscall.Timespec{Sec: 55, Nsec: 56},
+		Mtim:    syscall.Timespec{Sec: 50, Nsec: 51},
+		Ctim:    syscall.Timespec{Sec: 52, Nsec: 53},
+	}
+	return stat
+}
+
+func TestFileInfoBadSys(t *testing.T) {
+	b := &badSys{beBad: true, dir: false}
+	fi := FromOSFileInfo("sobad", b)
+	t.Logf("fi %v", fi)
+
+}
 
 func TestFileInfo(t *testing.T) {
 	u, err := user.Current()
@@ -35,7 +97,6 @@ func TestFileInfo(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed look up group id: %q", err)
 	}
-	fmt.Println(gidname)
 	for _, tt := range []struct {
 		name          string
 		filename      string
