@@ -30,7 +30,7 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20221229083637-46b2883a7f90
+	github.com/u-root/gobusybox/src v0.0.0-20230727012353-e2d80c448e5d
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
 	github.com/ulikunitz/xz v0.5.8
