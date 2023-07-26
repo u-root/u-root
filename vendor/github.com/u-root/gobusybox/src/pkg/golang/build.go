@@ -27,6 +27,12 @@ type Environ struct {
 	GBBDEBUG    bool
 }
 
+// RegisterFlags registers flags for Environ.
+func (c *Environ) RegisterFlags(f *flag.FlagSet) {
+	arg := (*uflag.Strings)(&c.BuildTags)
+	f.Var(arg, "go-build-tags", "Go build tags")
+}
+
 // Valid returns an error if GOARCH, GOROOT, or GOOS are unset.
 func (c Environ) Valid() error {
 	if c.GOARCH == "" && c.GOROOT == "" && c.GOOS == "" {
@@ -167,7 +173,7 @@ func (b *BuildOpts) RegisterFlags(f *flag.FlagSet) {
 	f.BoolVar(&b.EnableInlining, "go-enable-inlining", false, "Enable inlining (will likely produce a larger binary)")
 	f.BoolVar(&b.NoTrimPath, "go-no-trimpath", false, "Disable -trimpath (will not produce a reproducible binary)")
 	arg := (*uflag.Strings)(&b.ExtraArgs)
-	f.Var(arg, "go-extra-args", "Extra args to `go build`")
+	f.Var(arg, "go-extra-args", "Extra args to 'go build'")
 }
 
 // BuildDir compiles the package in the directory `dirPath`, writing the build
