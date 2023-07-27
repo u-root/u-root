@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build (linux && arm64) || (linux && amd64)
-// +build linux,arm64 linux,amd64
+//go:build (linux && arm64) || (linux && amd64) || (linux && riscv64)
+// +build linux,arm64 linux,amd64 linux,riscv64
 
 package strace
 
