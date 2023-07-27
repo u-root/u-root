@@ -407,6 +407,15 @@ func (p *Package) rewriteFile(f *ast.File) bool {
 
 // WritePkg writes p's files into destDir.
 func WritePkg(p *packages.Package, destDir string) error {
+	// TODO(hugelgupf):
+	// - join errors
+	// - seems a bit late to check for these errors, but works for now --
+	//   should check when these packages are queried? first used?
+	// - test
+	if len(p.Errors) > 0 {
+		return p.Errors[0]
+	}
+
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}

@@ -104,7 +104,7 @@ jobs:
 
   test-build-tamago-arm:
     docker:
-      - image: uroottest/test-image-tamago:v4.4.0
+      - image: uroottest/test-image-tamago:v4.5.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
@@ -125,7 +125,7 @@ jobs:
 
   test-build-tamago-riscv64:
     docker:
-      - image: uroottest/test-image-tamago:v4.4.0
+      - image: uroottest/test-image-tamago:v4.5.0
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root

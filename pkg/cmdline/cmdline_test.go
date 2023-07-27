@@ -7,9 +7,87 @@ package cmdline
 import (
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestDequote(t *testing.T) {
+	for _, tt := range []struct {
+		in   string
+		want string
+	}{
+		{
+			in:   `"systemd test-flag=4  runlevel=2 --foo='bar fight'"`,
+			want: `systemd test-flag=4  runlevel=2 --foo='bar fight'`,
+		},
+		{
+			in:   "",
+			want: "",
+		},
+		{
+			in:   `systemd`,
+			want: `systemd`,
+		},
+		{
+			// This smells wrong.
+			in:   `"systemd test-flag=4  runlevel=2 --bar="bar" --foo='bar fight'"`,
+			want: `systemd test-flag=4  runlevel=2 --bar="bar" --foo='bar fight'`,
+		},
+		{
+			in:   `"systemd test-flag=4  runlevel=2 --bar=\"bar\" --foo='bar fight'"`,
+			want: `systemd test-flag=4  runlevel=2 --bar="bar" --foo='bar fight'`,
+		},
+		{
+			in:   `'systemd test-flag=4  runlevel=2 --bar=\"bar\" --foo=\'bar fight\''`,
+			want: `systemd test-flag=4  runlevel=2 --bar=\"bar\" --foo='bar fight'`,
+		},
+		{
+			in:   `"systemd test-flag=4  runlevel=2 --bar=\\\"bar\" --foo='bar fight'"`,
+			want: `systemd test-flag=4  runlevel=2 --bar=\\"bar" --foo='bar fight'`,
+		},
+	} {
+		if got := dequote(tt.in); got != tt.want {
+			t.Errorf("dequote(%s) = %s, want %s", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestParseToMap(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		input string
+		want  map[string]string
+	}{
+		{
+			name:  "basic",
+			input: "ro test-flag test2-flag=8",
+			want: map[string]string{
+				"ro":         "1",
+				"test-flag":  "1",
+				"test_flag":  "1",
+				"test2-flag": "8",
+				"test2_flag": "8",
+			},
+		},
+		{
+			name:  "quoted",
+			input: `ro uroot.initflags="systemd test-flag=4  runlevel=2 --bar=\"bar\" --foo='bar fight'" testflag`,
+			want: map[string]string{
+				"ro":              "1",
+				"testflag":        "1",
+				"uroot.initflags": `systemd test-flag=4  runlevel=2 --bar="bar" --foo='bar fight'`,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseToMap(tt.input)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseToMap(%s) = \n%#v, want \n%#v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
 
 func TestCmdline(t *testing.T) {
 	exampleCmdLine := `BOOT_IMAGE=/vmlinuz-4.11.2 ro ` +

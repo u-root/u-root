@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	algorithm = pflag.IntP("algorithmhttps://github.com/u-root/u-root/pull/2319", "a", 1, "SHA algorithm, valid args are 1 and 256")
+	algorithm = pflag.IntP("algorithm", "a", 1, "SHA algorithm, valid args are 1 and 256")
 	help      = pflag.BoolP("help", "h", false, "Show this help and exit")
 )
 var usage = "Usage:\nshasum -a <algorithm> <File Name>"
