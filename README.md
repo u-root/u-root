@@ -1,6 +1,6 @@
 # u-root
 
-[![Build Status](https://circleci.com/gh/u-root/u-root/tree/main.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/main)
+[![Build Status](https://circleci.com/gh/u-root/u-root/tree/main.png?style=shield)](https://circleci.com/gh/u-root/u-root/tree/main)
 [![codecov](https://codecov.io/gh/u-root/u-root/branch/main/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![CodeQL](https://github.com/u-root/u-root/workflows/CodeQL/badge.svg)](https://github.com/u-root/u-root/actions?query=workflow%3ACodeQL)
@@ -407,7 +407,7 @@ and other config files to make the transition to LinuxBoot easier.
 *   `localboot`: a tool that finds bootable kernel configurations on the local
     disks and boots them.
 
-*   `systemboot`: a wrapper around `fbnetboot` and `localboot` that just mimicks
+*   `systemboot`: a wrapper around `pxeboot` and `boot` that just mimicks
     a BIOS/UEFI BDS behaviour, by looping between network booting and local
     booting. Use `-uinitcmd` argument to the u-root build tool to make it the
     boot program.

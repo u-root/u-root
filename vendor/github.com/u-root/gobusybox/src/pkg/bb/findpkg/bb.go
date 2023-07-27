@@ -265,6 +265,10 @@ func loadPkgs(env golang.Environ, dir string, patterns ...string) ([]*packages.P
 		Env:  append(os.Environ(), env.Env()...),
 		Dir:  dir,
 	}
+	if len(env.Context.BuildTags) > 0 {
+		tags := fmt.Sprintf("-tags=%s", strings.Join(env.Context.BuildTags, ","))
+		cfg.BuildFlags = []string{tags}
+	}
 	return packages.Load(cfg, patterns...)
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/u-root/u-root/pkg/ipmi"
 	"github.com/u-root/u-root/pkg/ipmi/ocp"
 	"github.com/u-root/u-root/pkg/smbios"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/vpd"
 )
 
@@ -45,8 +46,9 @@ func isFlagPassed(name string) bool {
 }
 
 var defaultBootsequence = [][]string{
+	{"pxeboot", "-ipv6=true", "-ipv4=false"},
+	{"boot"},
 	{"fbnetboot", "-userclass", "linuxboot"},
-	{"localboot", "-grub"},
 }
 
 // VPD variable for enabling IPMI BMC overriding boot order, default is not set
@@ -110,7 +112,7 @@ func checkCMOSClear(ipmi *ipmi.IPMI) error {
 	return nil
 }
 
-func runIPMICommands() {
+func runIPMICommands(l ulog.Logger) {
 	i, err := ipmi.Open(0)
 	if err != nil {
 		log.Printf("Failed to open ipmi device %v, watchdog may still be running", err)
@@ -153,7 +155,7 @@ func runIPMICommands() {
 			if err = checkCMOSClear(i); err != nil {
 				log.Printf("IPMI CMOS clear err: %v", err)
 			}
-			if err = ocp.CheckBMCBootOrder(i, bmcBootOverride); err != nil {
+			if err = ocp.CheckBMCBootOrder(i, bmcBootOverride, l); err != nil {
 				log.Printf("Failed to sync BMC Boot Order %v.", err)
 			}
 			dimmInfo, err := ocp.GetOemIpmiDimmInfo(si)
@@ -205,6 +207,7 @@ func runIPMICommands() {
 	}
 }
 
+// Add an event to the IPMI System Even Log
 func addSEL(sequence string) {
 	var bootErr ipmi.Event
 
@@ -218,7 +221,7 @@ func addSEL(sequence string) {
 	switch sequence {
 	case "netboot":
 		fallthrough
-	case "fbnetboot":
+	case "fbnetboot", "pxeboot":
 		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
 		bootErr.OEMNontsDefinedData[0] = 0x28
@@ -229,6 +232,7 @@ func addSEL(sequence string) {
 		if err := i.LogSystemEvent(&bootErr); err != nil {
 			log.Printf("SEL recorded: %s fail\n", sequence)
 		}
+		selRecorded = true
 	case "cmosclear":
 		bootErr.RecordID = 0
 		bootErr.RecordType = ipmi.OEM_NTS_TYPE
@@ -297,7 +301,11 @@ func main() {
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
-	runIPMICommands()
+	var l ulog.Logger = ulog.Null
+	if debugEnabled {
+		l = ulog.Log
+	}
+	runIPMICommands(l)
 	sleepInterval := time.Duration(*interval) * time.Second
 	if *allowInteractive {
 		log.Printf("**************************************************************************")
@@ -313,16 +321,16 @@ func main() {
 	if bmcBootOverride && ocp.BmcUpdatedBootorder {
 		bootEntries = ocp.BootEntries
 	} else {
-		bootEntries = systembooter.GetBootEntries()
+		bootEntries = systembooter.GetBootEntries(l)
 	}
 	log.Printf("BOOT ENTRIES:")
 	for _, entry := range bootEntries {
-		log.Printf("    %v) %+v", entry.Name, string(entry.Config))
+		log.Printf("    %v : %+v", entry.Name, string(entry.Config))
 	}
 	for _, entry := range bootEntries {
 		log.Printf("Trying boot entry %s: %s", entry.Name, string(entry.Config))
 		if err := entry.Booter.Boot(debugEnabled); err != nil {
-			log.Printf("Warning: failed to boot with configuration: %+v", entry)
+			log.Printf("Warning: failed to boot with configuration: %s: %s", entry.Name, string(entry.Config))
 			addSEL(entry.Booter.TypeName())
 		}
 		if debugEnabled {
@@ -338,14 +346,19 @@ func main() {
 		log.Print("Falling back to the default boot sequence")
 		for {
 			for _, bootcmd := range defaultBootsequence {
+				if _, err := exec.LookPath(bootcmd[0]); err != nil {
+					log.Printf("No Path: %v", bootcmd)
+					continue
+				}
 				if debugEnabled {
-					bootcmd = append(bootcmd, "-d")
+					bootcmd = append(bootcmd, "-v")
 				}
 				log.Printf("Running boot command: %v", bootcmd)
 				cmd := exec.Command(bootcmd[0], bootcmd[1:]...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
+					//MJ TODO - Need a fix for booters with menues that fail and drop to menu.
 					log.Printf("Error executing %v: %v", cmd, err)
 					if !selRecorded {
 						addSEL(bootcmd[0])

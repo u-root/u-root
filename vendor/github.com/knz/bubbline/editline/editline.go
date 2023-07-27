@@ -649,8 +649,12 @@ func (m *Model) Debug() string {
 }
 
 // SetSize changes the size of the editor.
+// NB: if one of the dimensions is zero, the call is a no-op.
 // NB: it only takes effect at the first next event processed.
 func (m *Model) SetSize(width, height int) {
+	if width == 0 || height == 0 {
+		return
+	}
 	m.hasNewSize = true
 	m.newWidth = width
 	m.newHeight = height

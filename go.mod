@@ -20,7 +20,7 @@ require (
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.10.6
 	github.com/klauspost/pgzip v1.2.4
-	github.com/knz/bubbline v0.0.0-20230422210153-e176cdfe1c43
+	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/kr/pty v1.1.8
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
@@ -30,7 +30,7 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20221229083637-46b2883a7f90
+	github.com/u-root/gobusybox/src v0.0.0-20230727012353-e2d80c448e5d
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
 	github.com/ulikunitz/xz v0.5.8
@@ -55,7 +55,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.24.1 // indirect
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
-	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
+	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -80,7 +80,7 @@ require (
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	google.golang.org/grpc v1.27.1 // indirect
+	google.golang.org/grpc v1.53.0 // indirect
 )
 
 retract (

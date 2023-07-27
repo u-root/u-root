@@ -33,25 +33,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	flag "github.com/spf13/pflag"
 )
 
-var errQuite = fmt.Errorf("not found")
-
-var mainParams = params{}
-
-func init() {
-	flag.StringVarP(&mainParams.expr, "regexp", "e", "", "Pattern to match")
-	flag.BoolVarP(&mainParams.headers, "no-filename", "h", false, "Suppress file name prefixes on output")
-	flag.BoolVarP(&mainParams.invert, "invert-match", "v", false, "Print only non-matching lines")
-	flag.BoolVarP(&mainParams.recursive, "recursive", "r", false, "recursive")
-	flag.BoolVarP(&mainParams.noShowMatch, "files-with-matches", "l", false, "list only files")
-	flag.BoolVarP(&mainParams.count, "count", "c", false, "Just show counts")
-	flag.BoolVarP(&mainParams.caseInsensitive, "ignore-case", "i", false, "case-insensitive matching")
-	flag.BoolVarP(&mainParams.number, "line-number", "n", false, "Show line numbers")
-	flag.BoolVarP(&mainParams.fixed, "fixed-strings", "F", false, "Match using fixed strings")
-}
+var errQuiet = fmt.Errorf("not found")
 
 type params struct {
 	expr string
@@ -59,22 +46,32 @@ type params struct {
 	noShowMatch, quiet, count, number bool
 }
 
-type grepResult struct {
-	c       *grepCommand
-	line    *string
-	lineNum int
-	match   bool
-}
-
 type grepCommand struct {
 	rc   io.ReadCloser
 	name string
 }
 
-func main() {
+func parseParams() params {
+	p := params{}
+	flag.StringVarP(&p.expr, "regexp", "e", "", "Pattern to match")
+	flag.BoolVarP(&p.headers, "no-filename", "h", false, "Suppress file name prefixes on output")
+	flag.BoolVarP(&p.invert, "invert-match", "v", false, "Print only non-matching lines")
+	flag.BoolVarP(&p.recursive, "recursive", "r", false, "recursive")
+	flag.BoolVarP(&p.noShowMatch, "files-with-matches", "l", false, "list only files")
+	flag.BoolVarP(&p.count, "count", "c", false, "Just show counts")
+	flag.BoolVarP(&p.caseInsensitive, "ignore-case", "i", false, "case-insensitive matching")
+	flag.BoolVarP(&p.number, "line-number", "n", false, "Show line numbers")
+	flag.BoolVarP(&p.fixed, "fixed-strings", "F", false, "Match using fixed strings")
+	flag.BoolVarP(&p.quiet, "quiet", "q", false, "Don't print matches; exit on first match")
+	flag.BoolVarP(&p.quiet, "silent", "s", false, "Don't print matches; exit on first match")
 	flag.Parse()
-	if err := command(os.Stdin, os.Stdout, os.Stderr, mainParams, flag.Args()).run(); err != nil {
-		if err == errQuite {
+
+	return p
+}
+
+func main() {
+	if err := command(os.Stdin, os.Stdout, os.Stderr, parseParams(), flag.Args()).run(); err != nil {
+		if err == errQuiet {
 			os.Exit(1)
 		}
 		log.Fatal(err)
@@ -83,15 +80,13 @@ func main() {
 
 // cmd contains the actually business logic of grep
 type cmd struct {
-	stdin      io.ReadCloser
-	stdout     *bufio.Writer
-	stderr     io.Writer
-	args       []string
-	exprB      []byte
+	stdin  io.ReadCloser
+	stdout *bufio.Writer
+	stderr io.Writer
+	args   []string
+	params
 	matchCount int
 	showName   bool
-
-	params
 }
 
 func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, args []string) *cmd {
@@ -113,22 +108,22 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	defer f.rc.Close()
 	var lineNum int
 	for r.Scan() {
-		i := r.Bytes()
+		line := r.Text()
 		var m bool
 		switch {
 		case c.fixed && c.caseInsensitive:
-			m = bytes.Contains(bytes.ToLower(i), bytes.ToLower(c.exprB))
+			m = strings.Contains(strings.ToLower(line), strings.ToLower(c.expr))
 		case c.fixed && !c.caseInsensitive:
-			m = bytes.Contains(i, c.exprB)
+			m = strings.Contains(line, c.expr)
 		default:
-			m = re.Match(i)
+			m = re.MatchString(line)
 		}
 		if m != c.invert {
 			// in quiet mode, exit before the first match
 			if c.quiet {
 				return false
 			}
-			c.printMatch(f, i, lineNum+1, m)
+			c.printMatch(f, line, lineNum+1, m)
 			if c.noShowMatch {
 				break
 			}
@@ -139,12 +134,7 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	return true
 }
 
-func (c *cmd) printMatch(
-	cmd *grepCommand,
-	line []byte,
-	lineNum int,
-	match bool,
-) {
+func (c *cmd) printMatch(cmd *grepCommand, line string, lineNum int, match bool) {
 	if match == !c.invert {
 		c.matchCount++
 	}
@@ -174,7 +164,7 @@ func (c *cmd) printMatch(
 			c.stdout.WriteByte(':')
 		}
 		// now write the line to stdout
-		c.stdout.Write(line)
+		c.stdout.WriteString(line)
 	}
 }
 
@@ -197,7 +187,6 @@ func (c *cmd) run() error {
 	} else if c.expr == "" {
 		c.expr = c.args[0]
 	}
-	c.exprB = []byte(c.expr)
 
 	// if len(c.args) < 2, then we read from stdin
 	if len(c.args) < 2 {
@@ -238,7 +227,7 @@ func (c *cmd) run() error {
 		}
 	}
 	if c.quiet {
-		return errQuite
+		return errQuiet
 	}
 	if c.count {
 		c.stdout.Write(strconv.AppendUint(nil, uint64(c.matchCount), 10))

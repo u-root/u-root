@@ -46,6 +46,48 @@ func parse(cmdlineReader io.Reader) *CmdLine {
 	return line
 }
 
+func dequote(line string) string {
+	if len(line) == 0 {
+		return line
+	}
+
+	quotationMarks := `"'`
+
+	var quote byte
+	if strings.ContainsAny(string(line[0]), quotationMarks) {
+		quote = line[0]
+		line = line[1 : len(line)-1]
+	}
+
+	var context []byte
+	var newLine []byte
+	for _, c := range []byte(line) {
+		if c == '\\' {
+			context = append(context, c)
+		} else if c == quote {
+			if len(context) > 0 {
+				last := context[len(context)-1]
+				if last == c {
+					context = context[:len(context)-1]
+				} else if last == '\\' {
+					// Delete one level of backslash
+					newLine = newLine[:len(newLine)-1]
+					context = []byte{}
+				}
+			} else {
+				context = append(context, c)
+			}
+		} else if len(context) > 0 && context[len(context)-1] == '\\' {
+			// If backslash is being used to escape something other
+			// than "the quote", ignore it.
+			context = []byte{}
+		}
+
+		newLine = append(newLine, c)
+	}
+	return string(newLine)
+}
+
 func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
 	lastQuote := rune(0)
 	quotedFieldsCheck := func(c rune) bool {
@@ -82,7 +124,7 @@ func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedV
 			value = flag[split+1:]
 		}
 		canonicalKey := strings.Replace(key, "-", "_", -1)
-		trimmedValue := strings.Trim(value, "\"'")
+		trimmedValue := dequote(value)
 
 		// Call the user handler
 		handler(flag, key, canonicalKey, value, trimmedValue)

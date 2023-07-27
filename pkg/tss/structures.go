@@ -56,7 +56,9 @@ type PCR struct {
 type TPM struct {
 	Version TPMVersion
 	Interf  TPMInterface
-
+	// TODO: Remove SysPath from this structure: it is a
+	// leaky abstraction and other u-root code appears not
+	// to be using it.
 	SysPath string
 	RWC     io.ReadWriteCloser
 }

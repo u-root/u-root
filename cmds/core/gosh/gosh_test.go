@@ -36,7 +36,7 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, false, tt.args...); err != nil {
+			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, tt.args...); err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 		})
@@ -54,7 +54,7 @@ func TestRunFail(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, false, tt.args...); err == nil {
+			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, tt.args...); err == nil {
 				t.Errorf("want err, got nil")
 			}
 		})

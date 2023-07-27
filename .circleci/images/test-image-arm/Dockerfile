@@ -23,7 +23,7 @@ RUN sudo apt-get update &&                          \
         libpixman-1-dev                             \
         meson                                       \
         ninja-build                                 \
-        python                                      \
+        python3                                     \
         zlib1g-dev                                  \
         `# Linux kernel build deps`                 \
         libelf-dev &&                               \

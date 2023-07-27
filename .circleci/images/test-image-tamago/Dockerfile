@@ -20,8 +20,8 @@ RUN apt-get install -y cmake gcc gcc-arm-none-eabi gcc-mingw-w64 git gzip \
                        u-boot-tools vim wget
 
 # install tamago-go
-ENV TAMAGO_VERSION="1.20.3"
-ENV TAMAGO_CHECKSUM="7657d39b8e062f85433a48367012d138ef5b928408b0b41e15384fe150495082"
+ENV TAMAGO_VERSION="1.20.6"
+ENV TAMAGO_CHECKSUM="6319b1778e93695b62bb63946c5dd28c4d8f3c1ac3c4bf28e49cb967d570dfd5"
 RUN wget -O tamago-go.tgz https://github.com/usbarmory/tamago-go/releases/download/tamago-go${TAMAGO_VERSION}/tamago-go${TAMAGO_VERSION}.linux-amd64.tar.gz
 RUN echo "${TAMAGO_CHECKSUM} tamago-go.tgz" | sha256sum --strict --check -
 RUN tar -C / -xzf tamago-go.tgz && rm tamago-go.tgz
