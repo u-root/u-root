@@ -1,6 +1,6 @@
 # u-root
 
-[![Build Status](https://circleci.com/gh/u-root/u-root/tree/main.png?style=shield&circle-token=8d9396e32f76f82bf4257b60b414743e57734244)](https://circleci.com/gh/u-root/u-root/tree/main)
+[![Build Status](https://circleci.com/gh/u-root/u-root/tree/main.png?style=shield)](https://circleci.com/gh/u-root/u-root/tree/main)
 [![codecov](https://codecov.io/gh/u-root/u-root/branch/main/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![CodeQL](https://github.com/u-root/u-root/workflows/CodeQL/badge.svg)](https://github.com/u-root/u-root/actions?query=workflow%3ACodeQL)
