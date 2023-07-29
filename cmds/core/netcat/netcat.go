@@ -16,7 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-const usage = "netcat [go-style network address]"
+const usage = "netcat host port"
 
 var errMissingHostnameOrPort = fmt.Errorf("missing hostname or port")
 
@@ -28,39 +28,39 @@ type params struct {
 	port    string
 }
 
-func parseParms() (params, error) {
+func parseParams() params {
 	netType := flag.String("net", "tcp", "What net type to use, e.g. tcp, unix, etc.")
 	listen := flag.Bool("l", false, "Listen for connections.")
 	verbose := flag.Bool("v", false, "Verbose output.")
 	flag.Parse()
 
-	if len(flag.Args()) != 2 {
-		return params{}, errMissingHostnameOrPort
-	}
-
 	return params{
 		network: *netType,
 		listen:  *listen,
 		verbose: *verbose,
-		host:    flag.Args()[0],
-		port:    flag.Args()[1],
-	}, nil
+	}
 }
 
 type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
+	addr   string
 	params
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, p params) *cmd {
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string, p params) (*cmd, error) {
+	if len(args) != 2 {
+		return nil, errMissingHostnameOrPort
+	}
+
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,
 		stderr: stderr,
 		params: p,
-	}
+		addr:   net.JoinHostPort(args[0], args[1]),
+	}, nil
 }
 
 func init() {
@@ -68,13 +68,14 @@ func init() {
 }
 
 func main() {
-	p, err := parseParms()
+	p := parseParams()
+	c, err := command(os.Stdin, os.Stdout, os.Stderr, flag.Args(), p)
 	if err != nil {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := command(os.Stdin, os.Stdout, os.Stderr, p).run(); err != nil {
-		log.Fatalf("nc: %v", err)
+	if err := c.run(); err != nil {
+		log.Fatalf("netcat: %v", err)
 	}
 }
 
@@ -82,10 +83,8 @@ func (c *cmd) run() error {
 	var conn net.Conn
 	var err error
 
-	addr := net.JoinHostPort(c.host, c.port)
-
 	if c.listen {
-		ln, err := net.Listen(c.network, addr)
+		ln, err := net.Listen(c.network, c.addr)
 		if err != nil {
 			return err
 		}
@@ -98,7 +97,7 @@ func (c *cmd) run() error {
 			return err
 		}
 	} else {
-		if conn, err = net.Dial(c.network, addr); err != nil {
+		if conn, err = net.Dial(c.network, c.addr); err != nil {
 			return err
 		}
 	}
