@@ -14,7 +14,7 @@ import (
 )
 
 func freePort(t *testing.T) string {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func freePort(t *testing.T) string {
 }
 
 func TestArgs(t *testing.T) {
-	_, err := command(nil, nil, nil, []string{"localhost"}, params{})
+	_, err := command(nil, nil, nil, []string{"127.0.0.1"}, params{})
 	if !errors.Is(err, errMissingHostnameOrPort) {
 		t.Errorf("expected %v, got %v", errMissingHostnameOrPort, err)
 	}
