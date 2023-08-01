@@ -29,14 +29,9 @@ func freePort(t *testing.T) string {
 }
 
 func TestArgs(t *testing.T) {
-	_, err := command(nil, nil, nil, []string{"127.0.0.1"}, params{})
-	if !errors.Is(err, errMissingHostnameOrPort) {
-		t.Errorf("expected %v, got %v", errMissingHostnameOrPort, err)
-	}
-
-	_, err = command(nil, nil, nil, nil, params{})
-	if !errors.Is(err, errMissingHostnameOrPort) {
-		t.Errorf("expected %v, got %v", errMissingHostnameOrPort, err)
+	_, err := command(nil, nil, nil, params{}, nil)
+	if !errors.Is(err, errMissingHostnamePort) {
+		t.Errorf("expected %v, got %v", errMissingHostnamePort, err)
 	}
 }
 
@@ -45,12 +40,12 @@ func TestTCP(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	port := freePort(t)
-	nc, err := command(stdin, stdout, stderr, []string{"localhost", port}, params{
+	addr := net.JoinHostPort("localhost", freePort(t))
+	nc, err := command(stdin, stdout, stderr, params{
 		network: "tcp",
 		listen:  true,
 		verbose: true,
-	})
+	}, []string{addr})
 
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +58,7 @@ func TestTCP(t *testing.T) {
 		ch <- err
 	}(ch)
 
-	conn, err := net.Dial("tcp", net.JoinHostPort("localhost", port))
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		t.Fatal(err)
 	}

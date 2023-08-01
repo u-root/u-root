@@ -16,16 +16,14 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-const usage = "netcat host port"
+const usage = "netcat [go-style network address]"
 
-var errMissingHostnameOrPort = fmt.Errorf("missing hostname or port")
+var errMissingHostnamePort = fmt.Errorf("missing hostname:port")
 
 type params struct {
 	network string
 	listen  bool
 	verbose bool
-	host    string
-	port    string
 }
 
 func parseParams() params {
@@ -49,9 +47,9 @@ type cmd struct {
 	params
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string, p params) (*cmd, error) {
-	if len(args) != 2 {
-		return nil, errMissingHostnameOrPort
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, p params, args []string) (*cmd, error) {
+	if len(args) < 1 {
+		return nil, errMissingHostnamePort
 	}
 
 	return &cmd{
@@ -59,7 +57,7 @@ func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string,
 		stdout: stdout,
 		stderr: stderr,
 		params: p,
-		addr:   net.JoinHostPort(args[0], args[1]),
+		addr:   args[0],
 	}, nil
 }
 
@@ -69,7 +67,7 @@ func init() {
 
 func main() {
 	p := parseParams()
-	c, err := command(os.Stdin, os.Stdout, os.Stderr, flag.Args(), p)
+	c, err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args())
 	if err != nil {
 		flag.Usage()
 		os.Exit(1)
