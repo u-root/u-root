@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build arm64 || amd64
-// +build arm64 amd64
+//go:build arm64 || amd64 || riscv64
+// +build arm64 amd64 riscv64
 
 package strace
 
