@@ -57,6 +57,9 @@ func (b GBBBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
 	if len(opts.BinaryDir) == 0 {
 		return fmt.Errorf("must specify binary directory")
 	}
+	if opts.Env == nil {
+		return fmt.Errorf("must specify Go build environment")
+	}
 
 	bopts := &bb.Opts{
 		Env:          opts.Env,

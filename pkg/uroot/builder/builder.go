@@ -20,7 +20,7 @@ var (
 // Opts are options passed to the Builder.Build function.
 type Opts struct {
 	// Env is the Go compiler environment.
-	Env gbbgolang.Environ
+	Env *gbbgolang.Environ
 
 	// Build options for building go binaries. Ultimate this holds all the
 	// args that end up being passed to `go build`.

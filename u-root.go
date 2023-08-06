@@ -139,7 +139,7 @@ func writeBuildStats(stats buildStats, path string) error {
 	return nil
 }
 
-func generateLabel(env gbbgolang.Environ) string {
+func generateLabel(env *gbbgolang.Environ) string {
 	var baseCmds []string
 	if len(flag.Args()) > 0 {
 		// Use the last component of the name to keep the label short
@@ -264,7 +264,7 @@ func canFindSource(dir string) error {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main(l ulog.Logger, env gbbgolang.Environ, buildOpts *gbbgolang.BuildOpts) error {
+func Main(l ulog.Logger, env *gbbgolang.Environ, buildOpts *gbbgolang.BuildOpts) error {
 	v, err := env.Version()
 	if err != nil {
 		l.Printf("Could not get environment's Go version, using runtime's version: %v", err)
@@ -371,7 +371,7 @@ func Main(l ulog.Logger, env gbbgolang.Environ, buildOpts *gbbgolang.BuildOpts) 
 	}
 
 	opts := uroot.Opts{
-		Env:             &env,
+		Env:             env,
 		Commands:        c,
 		UrootSource:     *urootSourceDir,
 		TempDir:         tempDir,
