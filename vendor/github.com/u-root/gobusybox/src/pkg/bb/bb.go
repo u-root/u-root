@@ -68,7 +68,7 @@ func checkDuplicate(cmds []*bbinternal.Package) error {
 type Opts struct {
 	// Env are the environment variables used in Go compilation and package
 	// discovery.
-	Env golang.Environ
+	Env *golang.Environ
 
 	// LookupEnv is the environment for looking up and resolving command
 	// paths.
@@ -116,6 +116,8 @@ type Opts struct {
 func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	if opts == nil {
 		return fmt.Errorf("no options given for busybox build")
+	} else if opts.Env == nil {
+		return fmt.Errorf("Go build environment unspecified for busybox build")
 	} else if err := opts.Env.Valid(); err != nil {
 		return err
 	}
@@ -586,7 +588,7 @@ func moduleVersionIdentifier(m *packages.Module) string {
 //
 // Then, in the generated tree's main module, we create a go.mod file with
 // replace directives for all the local modules we just copied over.
-func copyLocalDeps(l ulog.Logger, env golang.Environ, bbDir, tmpDir, pkgDir string, mainPkgs []*bbinternal.Package) error {
+func copyLocalDeps(l ulog.Logger, env *golang.Environ, bbDir, tmpDir, pkgDir string, mainPkgs []*bbinternal.Package) error {
 	localModules, err := findLocalModules(l, mainPkgs)
 	if err != nil {
 		return err
