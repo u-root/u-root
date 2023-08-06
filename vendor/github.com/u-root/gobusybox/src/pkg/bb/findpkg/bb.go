@@ -263,16 +263,8 @@ func NewPackages(l ulog.Logger, genv *golang.Environ, env Env, names ...string) 
 }
 
 func loadPkgs(env *golang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
-	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedImports | packages.NeedFiles | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedCompiledGoFiles | packages.NeedModule | packages.NeedEmbedFiles,
-		Env:  append(os.Environ(), env.Env()...),
-		Dir:  dir,
-	}
-	if len(env.Context.BuildTags) > 0 {
-		tags := fmt.Sprintf("-tags=%s", strings.Join(env.Context.BuildTags, ","))
-		cfg.BuildFlags = []string{tags}
-	}
-	return packages.Load(cfg, patterns...)
+	mode := packages.NeedName | packages.NeedImports | packages.NeedFiles | packages.NeedDeps | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedCompiledGoFiles | packages.NeedModule | packages.NeedEmbedFiles
+	return env.Lookup(mode, dir, patterns...)
 }
 
 func filterDirectoryPaths(l ulog.Logger, env *golang.Environ, directories []string, excludes []string) ([]string, error) {
@@ -358,12 +350,7 @@ func excludePaths(paths []string, exclusions []string) []string {
 
 // Just looking up the stuff that doesn't take forever to parse.
 func lookupPkgNameAndFiles(env *golang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
-	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedFiles,
-		Env:  append(os.Environ(), env.Env()...),
-		Dir:  dir,
-	}
-	return packages.Load(cfg, patterns...)
+	return env.Lookup(packages.NeedName|packages.NeedFiles, dir, patterns...)
 }
 
 func couldBeGlob(s string) bool {
