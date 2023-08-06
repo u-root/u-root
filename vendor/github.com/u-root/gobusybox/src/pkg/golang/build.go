@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/u-root/gobusybox/src/pkg/uflag"
+	"golang.org/x/tools/go/packages"
 )
 
 // Environ are the environment variables for the Go compiler.
@@ -108,6 +109,20 @@ func Default(opt ...Opt) *Environ {
 		o(env)
 	}
 	return env
+}
+
+// Lookup looks up packages by patterns relative to dir, using the Go environment from c.
+func (c *Environ) Lookup(mode packages.LoadMode, dir string, patterns ...string) ([]*packages.Package, error) {
+	cfg := &packages.Config{
+		Mode: mode,
+		Env:  append(os.Environ(), c.Env()...),
+		Dir:  dir,
+	}
+	if len(c.Context.BuildTags) > 0 {
+		tags := fmt.Sprintf("-tags=%s", strings.Join(c.Context.BuildTags, ","))
+		cfg.BuildFlags = []string{tags}
+	}
+	return packages.Load(cfg, patterns...)
 }
 
 // GoCmd runs a go command in the environment.
