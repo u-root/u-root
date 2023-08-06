@@ -58,14 +58,56 @@ func parseBool(s string) bool {
 	return ok
 }
 
+// Opt is an option function applied to Environ.
+type Opt func(*Environ)
+
+// DisableCGO is an option that disables cgo.
+func DisableCGO() Opt {
+	return func(c *Environ) {
+		c.CgoEnabled = false
+	}
+}
+
+// WithGOARCH is an option that overrides GOARCH.
+func WithGOARCH(goarch string) Opt {
+	return func(c *Environ) {
+		c.GOARCH = goarch
+	}
+}
+
+// WithGOPATH is an option that overrides GOPATH.
+func WithGOPATH(gopath string) Opt {
+	return func(c *Environ) {
+		c.GOPATH = gopath
+	}
+}
+
+// WithGOROOT is an option that overrides GOROOT.
+func WithGOROOT(goroot string) Opt {
+	return func(c *Environ) {
+		c.GOROOT = goroot
+	}
+}
+
+// WithGO111MODULE is an option that overrides GO111MODULE.
+func WithGO111MODULE(go111module string) Opt {
+	return func(c *Environ) {
+		c.GO111MODULE = go111module
+	}
+}
+
 // Default is the default build environment comprised of the default GOPATH,
 // GOROOT, GOOS, GOARCH, and CGO_ENABLED values.
-func Default() Environ {
-	return Environ{
+func Default(opt ...Opt) *Environ {
+	env := &Environ{
 		Context:     build.Default,
 		GO111MODULE: os.Getenv("GO111MODULE"),
 		GBBDEBUG:    parseBool(os.Getenv("GBBDEBUG")),
 	}
+	for _, o := range opt {
+		o(env)
+	}
+	return env
 }
 
 // GoCmd runs a go command in the environment.
