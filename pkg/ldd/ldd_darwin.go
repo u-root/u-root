@@ -5,12 +5,6 @@
 //go:build darwin
 // +build darwin
 
-// ldd returns none of the library dependencies of an executable.
-//
-// On many Unix kernels, the kernel ABI is stable. On OSX, the stability
-// is held in the library interface; the kernel ABI is explicitly not
-// stable. The ldd package on OSX will only return the files passed to it.
-// It will continue to resolve symbolic links.
 package ldd
 
 import (
@@ -74,22 +68,4 @@ func Ldd(names ...string) ([]*FileInfo, error) {
 	}
 
 	return libs, nil
-}
-
-type FileInfo struct {
-	FullName string
-	os.FileInfo
-}
-
-// List returns the dependency file paths of files in names.
-func List(names ...string) ([]string, error) {
-	var list []string
-	l, err := Ldd(names...)
-	if err != nil {
-		return nil, err
-	}
-	for i := range l {
-		list = append(list, l[i].FullName)
-	}
-	return list, nil
 }
