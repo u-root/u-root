@@ -149,7 +149,7 @@ func poxCreate(bin ...string) error {
 	if len(bin) == 0 {
 		return fmt.Errorf(usage)
 	}
-	l, err := ldd.Ldd(bin)
+	l, err := ldd.Ldd(bin...)
 	if err != nil {
 		var stderr []byte
 		if eerr, ok := err.(*exec.ExitError); ok {
