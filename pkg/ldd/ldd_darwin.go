@@ -59,7 +59,7 @@ func follow(l string, names map[string]*FileInfo) error {
 // links, returning them as well.
 //
 // It's not an error for a file to not be an ELF.
-func Ldd(names []string) ([]*FileInfo, error) {
+func Ldd(names ...string) ([]*FileInfo, error) {
 	var (
 		list = make(map[string]*FileInfo)
 		libs []*FileInfo
@@ -82,9 +82,9 @@ type FileInfo struct {
 }
 
 // List returns the dependency file paths of files in names.
-func List(names []string) ([]string, error) {
+func List(names ...string) ([]string, error) {
 	var list []string
-	l, err := Ldd(names)
+	l, err := Ldd(names...)
 	if err != nil {
 		return nil, err
 	}

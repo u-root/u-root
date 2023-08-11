@@ -169,7 +169,7 @@ func GetInterp(file string) (string, error) {
 // read it, or we are not able to run its interpreter.
 //
 // It's not an error for a file to not be an ELF.
-func Ldd(names []string) ([]*FileInfo, error) {
+func Ldd(names ...string) ([]*FileInfo, error) {
 	var (
 		list    = make(map[string]*FileInfo)
 		interps = make(map[string]*FileInfo)
@@ -221,9 +221,9 @@ func Ldd(names []string) ([]*FileInfo, error) {
 }
 
 // List returns the dependency file paths of files in names.
-func List(names []string) ([]string, error) {
+func List(names ...string) ([]string, error) {
 	var list []string
-	l, err := Ldd(names)
+	l, err := Ldd(names...)
 	if err != nil {
 		return nil, err
 	}

@@ -430,7 +430,7 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 				}
 				// Pull dependencies in the case of binaries. If `path` is not
 				// a binary, `libs` will just be empty.
-				libs, err := ldd.List([]string{name})
+				libs, err := ldd.List(name)
 				if err != nil {
 					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %v", name, err)
 				}

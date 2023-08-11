@@ -28,7 +28,7 @@ import (
 )
 
 func main() {
-	l, err := ldd.Ldd(os.Args[1:])
+	l, err := ldd.Ldd(os.Args[1:]...)
 	if err != nil {
 		log.Fatalf("ldd: %v", err)
 	}
