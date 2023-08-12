@@ -17,6 +17,7 @@ import (
 )
 
 const usage = "netcat [go-style network address]"
+const bufSize = 1500
 
 var errMissingHostnamePort = fmt.Errorf("missing hostname:port")
 
@@ -72,12 +73,23 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := c.run(); err != nil {
+	if err = c.run(); err != nil {
 		log.Fatalf("netcat: %v", err)
 	}
 }
 
 func (c *cmd) run() error {
+	switch c.network {
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
+		return c.runStream()
+	case "udp", "udp4", "udp6":
+		return c.runDatagram()
+	default:
+		return fmt.Errorf("unsupported network type %q", c.network)
+	}
+}
+
+func (c *cmd) runStream() error {
 	var conn net.Conn
 	var err error
 
@@ -113,6 +125,83 @@ func (c *cmd) run() error {
 	}
 	if c.verbose {
 		fmt.Fprintln(c.stderr, "Disconnected")
+	}
+
+	return nil
+}
+
+func (c *cmd) runDatagram() error {
+	addr, err := net.ResolveUDPAddr(c.network, c.addr)
+	if err != nil {
+		return err
+	}
+
+	if c.listen {
+		conn, err := net.ListenUDP(c.network, addr)
+		if err != nil {
+			return err
+		}
+		if c.verbose {
+			fmt.Fprintln(c.stderr, "Listening on", conn.LocalAddr())
+		}
+
+		buf := make([]byte, bufSize)
+		n, raddr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			fmt.Fprintln(c.stderr, err)
+			return err
+		}
+
+		if c.verbose {
+			fmt.Fprintln(c.stderr, "Connected to", raddr)
+		}
+
+		_, err = c.stdout.Write(buf[:n])
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			buf := make([]byte, bufSize)
+			for {
+				n, err := c.stdin.Read(buf)
+				if err != nil {
+					fmt.Fprintln(c.stderr, err)
+					return
+				}
+
+				if _, err := conn.WriteToUDP(buf[:n], raddr); err != nil {
+					fmt.Fprintln(c.stderr, err)
+					return
+				}
+			}
+		}()
+
+		for {
+			n, _, err := conn.ReadFromUDP(buf)
+			if err != nil {
+				return err
+			}
+
+			if _, err := c.stdout.Write(buf[:n]); err != nil {
+				return err
+			}
+		}
+	}
+
+	conn, err := net.DialUDP(c.network, nil, addr)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		if _, err := io.Copy(conn, c.stdin); err != nil {
+			fmt.Fprintln(c.stderr, err)
+		}
+	}()
+
+	if _, err = io.Copy(c.stdout, conn); err != nil {
+		fmt.Fprintln(c.stderr, err)
 	}
 
 	return nil
