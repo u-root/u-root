@@ -88,3 +88,113 @@ func TestTCP(t *testing.T) {
 		t.Errorf("expected 'Connected' and 'Listening' in stderr, got %q", stderrStr)
 	}
 }
+
+func setupEchoServerUDP(t *testing.T) string {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: []byte{127, 0, 0, 1}, Port: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		defer conn.Close()
+		buf := make([]byte, 64)
+		n, raddr, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			return
+		}
+
+		if _, err := conn.WriteToUDP(buf[:n], raddr); err != nil {
+			return
+		}
+	}()
+
+	return conn.LocalAddr().String()
+}
+
+type testBuffer struct {
+	buf []byte
+	ch  chan string
+}
+
+func (t *testBuffer) Write(p []byte) (int, error) {
+	t.buf = append(t.buf, p...)
+	t.ch <- string(p)
+	return len(p), nil
+}
+
+func TestDialUDP(t *testing.T) {
+	addr := setupEchoServerUDP(t)
+
+	stdin := strings.NewReader("hello world")
+	stdout := &testBuffer{ch: make(chan string)}
+	stderr := &bytes.Buffer{}
+
+	cmd, err := command(stdin, stdout, stderr, params{network: "udp", verbose: true}, []string{addr})
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		_ = cmd.run()
+	}()
+
+	res := <-stdout.ch
+	if res != "hello world" {
+		t.Errorf("expected 'hello world', got %q", res)
+	}
+}
+
+func TestListenUDP(t *testing.T) {
+	stdin := &bytes.Buffer{}
+	stdout := &testBuffer{ch: make(chan string)}
+	stderr := &testBuffer{ch: make(chan string)}
+
+	cmd, err := command(stdin, stdout, stderr, params{network: "udp", listen: true, verbose: true}, []string{"127.0.0.1:0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		_ = cmd.run()
+	}()
+
+	listenOn := <-stderr.ch // consume listening on message
+	srvAddr := strings.TrimSpace(string(listenOn[13:]))
+
+	conn, err := net.Dial("udp", srvAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	_, err = conn.Write([]byte("hello world"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	<-stderr.ch // consume connected to message
+	res := <-stdout.ch
+	if res != "hello world" {
+		t.Errorf("expected 'hello world', got %q", res)
+	}
+
+	_, err = conn.Write([]byte("bye"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res = <-stdout.ch
+	if res != "bye" {
+		t.Errorf("expected 'bye', got %q", res)
+	}
+}
+
+func TestWrongNetwork(t *testing.T) {
+	cmd, err := command(nil, nil, nil, params{network: "quic"}, []string{"127.0.0.1:8080"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = cmd.run()
+	if err == nil {
+		t.Error("quic is not a valid network, expected error")
+	}
+}
