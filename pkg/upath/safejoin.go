@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !windows
-// +build !windows
-
 package upath
 
 import (
@@ -25,5 +22,5 @@ func SafeFilepathJoin(path1, path2 string) (string, error) {
 	if path1 == "" {
 		path1 = "."
 	}
-	return filepath.Join(path1, filepath.Join("/", relPath)), nil
+	return filepath.Join(path1, filepath.Join(string(filepath.Separator), relPath)), nil
 }
