@@ -6,5 +6,5 @@ package termios
 
 // Termios is a struct for Termios operations.
 type Termios struct {
-	tty *TTYIO
+	tty TTYIO
 }
