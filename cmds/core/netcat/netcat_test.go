@@ -162,7 +162,7 @@ func TestListenUDP(t *testing.T) {
 
 	conn, err := net.Dial("udp", srvAddr)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Dial(\"udp\", %v: got %v, want nil", srvAddr, err)
 	}
 	defer conn.Close()
 
