@@ -45,10 +45,7 @@ func toFileMode(r Record) os.FileMode {
 
 // setModes sets the modes.
 func setModes(r Record) error {
-	if err := os.Chmod(r.Name, toFileMode(r)&os.ModePerm); err != nil {
-		return err
-	}
-	return nil
+	return os.Chmod(r.Name, toFileMode(r)&os.ModePerm)
 }
 
 func perm(r Record) uint32 {
