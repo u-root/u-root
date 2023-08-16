@@ -17,7 +17,7 @@ import (
 )
 
 const usage = "netcat [go-style network address]"
-const bufSize = 1500
+const bufSize = 2048 // for MTU size, value taken from openbsd nc
 
 var errMissingHostnamePort = fmt.Errorf("missing hostname:port")
 
