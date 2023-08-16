@@ -144,7 +144,7 @@ func TestDialUDP(t *testing.T) {
 }
 
 func TestListenUDP(t *testing.T) {
-	stdin := &bytes.Buffer{}
+	stdin := strings.NewReader("hello client")
 	stdout := &testBuffer{ch: make(chan string)}
 	stderr := &testBuffer{ch: make(chan string)}
 
@@ -184,6 +184,17 @@ func TestListenUDP(t *testing.T) {
 	res = <-stdout.ch
 	if res != "bye" {
 		t.Errorf("expected 'bye', got %q", res)
+	}
+
+	// read back from server, to test if server can response to client
+	buf := make([]byte, 64)
+	n, err := conn.Read(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(buf[:n]) != "hello client" {
+		t.Errorf("expected 'hello client', got %q", string(buf[:n]))
 	}
 }
 
