@@ -60,20 +60,20 @@ func escapeString(s string) (string, error) {
 	return s, nil
 }
 
-func echo(w io.Writer, s ...string) error {
+func echo(w io.Writer, noNewline, escape, backslash bool, s ...string) error {
 	var err error
-	if *interpretBackslashEscapes {
-		*interpretEscapes = false
+	if backslash {
+		escape = false
 	}
 	line := strings.Join(s, " ")
-	if *interpretEscapes {
+	if escape {
 		line, err = escapeString(line)
 		if err != nil {
 			return err
 		}
 	}
 	format := "%s"
-	if !*noNewline {
+	if !noNewline {
 		format += "\n"
 	}
 	_, err = fmt.Fprintf(w, format, line)
@@ -87,7 +87,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if err := echo(os.Stdout, flag.Args()...); err != nil {
+	if err := echo(os.Stdout, *noNewline, *interpretEscapes, *interpretBackslashEscapes, flag.Args()...); err != nil {
 		log.Fatalf("%v", err)
 	}
 }
