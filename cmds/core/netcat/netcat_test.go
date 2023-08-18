@@ -112,8 +112,8 @@ func setupEchoServerUDP(t *testing.T) string {
 }
 
 type testBuffer struct {
-	buf []byte
 	ch  chan string
+	buf []byte
 }
 
 func (t *testBuffer) Write(p []byte) (int, error) {
