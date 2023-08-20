@@ -90,8 +90,8 @@ func outer(c1, c2 chan string, c chan out) {
 	close(c)
 }
 
-func comm(w io.Writer, args ...string) error {
-	if len(args) != 2 || *help {
+func comm(w io.Writer, s1, s2, s3, help bool, args ...string) error {
+	if len(args) != 2 || help {
 		return ErrUsage
 	}
 
@@ -119,15 +119,15 @@ func comm(w io.Writer, args ...string) error {
 		}
 
 		line := ""
-		if !*s1 {
+		if !s1 {
 			line += out.s1
 		}
 		line += "\t"
-		if !*s2 {
+		if !s2 {
 			line += out.s2
 		}
 		line += "\t"
-		if !*s3 {
+		if !s3 {
 			line += out.s3
 		}
 		if line != "\t\t" {
@@ -139,7 +139,7 @@ func comm(w io.Writer, args ...string) error {
 
 func main() {
 	flag.Parse()
-	if err := comm(os.Stdout, flag.Args()...); err != nil {
+	if err := comm(os.Stdout, *s1, *s2, *s3, *help, flag.Args()...); err != nil {
 		if err == ErrUsage {
 			log.Println(err.Error())
 			flag.Usage()

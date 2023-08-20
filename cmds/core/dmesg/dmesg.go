@@ -31,16 +31,16 @@ var (
 	readClear = flag.BoolP("read-clear", "c", false, "Clear the log after printing")
 )
 
-func dmesg(writer io.Writer) error {
-	if *clear && *readClear {
+func dmesg(writer io.Writer, clear, readClear bool) error {
+	if clear && readClear {
 		return fmt.Errorf("cannot specify both -clear and -read-clear")
 	}
 
 	level := unix.SYSLOG_ACTION_READ_ALL
-	if *clear {
+	if clear {
 		level = unix.SYSLOG_ACTION_CLEAR
 	}
-	if *readClear {
+	if readClear {
 		level = unix.SYSLOG_ACTION_READ_CLEAR
 	}
 
@@ -50,13 +50,13 @@ func dmesg(writer io.Writer) error {
 		return fmt.Errorf("syslog failed: %v", err)
 	}
 
-	writer.Write(b[:amt])
-	return nil
+	_, err = writer.Write(b[:amt])
+	return err
 }
 
 func main() {
 	flag.Parse()
-	if err := dmesg(os.Stdout); err != nil {
+	if err := dmesg(os.Stdout, *clear, *readClear); err != nil {
 		log.Fatal(err)
 	}
 }
