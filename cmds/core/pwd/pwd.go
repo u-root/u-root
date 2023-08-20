@@ -31,16 +31,7 @@ var (
 	_ = flag.Bool("L", true, "don't follow any symlinks")
 
 	physical = flag.Bool("P", false, "follow all symlinks (avoid all symlinks)")
-	cmd      = "pwd [-LP]"
 )
-
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = cmd
-		defUsage()
-	}
-}
 
 func pwd(followSymlinks bool) (string, error) {
 	path, err := os.Getwd()
