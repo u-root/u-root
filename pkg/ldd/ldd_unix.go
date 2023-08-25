@@ -31,6 +31,46 @@ import (
 	"strings"
 )
 
+// follow starts at a pathname and adds it
+// put the path to the unreachable array if it is not found because of the cross-compile reason
+// to a map if it is not there.
+// If the pathname is a symlink, indicated by the Readlink
+// succeeding, links repeats and continues
+// for as long as the name is not found in the map.
+func followAllowReachable(l string, names map[string]*FileInfo, unreachableNames map[string]*FileInfo) error {
+	for {
+		if names[l] != nil {
+			return nil
+		}
+		i, err := os.Lstat(l)
+		if err != nil && !os.IsNotExist(err){
+			unreachableNames[l] = &FileInfo{FullName: l, FileInfo: i}
+			return nil
+		}else if err != nil {
+			return fmt.Errorf("%v", err)
+		}
+
+		names[l] = &FileInfo{FullName: l, FileInfo: i}
+		if i.Mode().IsRegular() {
+			return nil
+		}
+		// If it's a symlink, the read works; if not, it fails.
+		// we can skip testing the type, since we still have to
+		// handle any error if it's a link.
+		next, err := os.Readlink(l)
+		if err != nil {
+			return err
+		}
+		// It may be a relative link, so we need to
+		// make it abs.
+		if filepath.IsAbs(next) {
+			l = next
+			continue
+		}
+		l = filepath.Join(filepath.Dir(l), next)
+	}
+}
+
 // Follow starts at a pathname and adds it
 // to a map if it is not there.
 // If the pathname is a symlink, indicated by the Readlink
@@ -215,6 +255,69 @@ func Ldd(names []string) ([]*FileInfo, error) {
 
 	for i := range list {
 		libs = append(libs, list[i])
+	}
+
+	return libs, nil
+}
+
+// LddAllowUnreachable returns the list of files passed to it, and resolves all symbolic
+// links, returning them as well.
+//
+// It's not an error for a file to not be an ELF.
+func LddAllowUnreachable(names []string) ([]*FileInfo, []*FileInfo, error) {
+	var (
+		list    = make(map[string]*FileInfo)
+		interps = make(map[string]*FileInfo)
+		unreachable = make(map[string]*FileInfo)
+		libs    []*FileInfo
+		unreachableLibs = []*FileInfo
+	)
+	for _, n := range names {
+		if err := followAllowReachable(n, list, unreachable); err != nil {
+			return nil, err
+		}
+	}
+	for _, n := range names {
+		interp, err := GetInterp(n)
+		if err != nil {
+			return nil, err
+		}
+		if interp == "" {
+			continue
+		}
+		// We could just append the interp but people
+		// expect to see that first.
+		if interps[interp] == nil {
+			err := followAllowReachable(interp, interps, unreachable) {
+				return nil, err
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// oh boy. Now to run the interp and get more names.
+		n, err := runinterp(interp, n)
+		if err != nil {
+			return nil, err
+		}
+		for _, soname := range n {
+			if err := follow(soname, list); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	for i := range interps {
+		libs = append(libs, interps[i])
+	}
+
+	for i := range list {
+		libs = append(libs, list[i])
+	}
+
+	for i := range unreachable {
+		unreachableLibs = append(unreachable, unreachable[i])
 	}
 
 	return libs, nil
