@@ -126,10 +126,7 @@ func TestMkdir(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf = bytes.NewBuffer(nil)
 			log.SetOutput(buf)
-			*mode = tt.flags.mode
-			*mkall = tt.flags.mkall
-			*verbose = tt.flags.verbose
-			if got := mkdir(tt.args); got != nil {
+			if got := mkdir(tt.flags.mode, tt.flags.mkall, tt.flags.verbose, tt.args); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("mkdir() = '%v', want: '%v'", got, tt.want)
 				}
