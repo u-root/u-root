@@ -43,21 +43,21 @@ func init() {
 	flag.Usage = util.Usage(flag.Usage, cmd)
 }
 
-func mkdir(args []string) error {
+func mkdir(mode string, mkall, verbose bool, args []string) error {
 	f := os.Mkdir
-	if *mkall {
+	if mkall {
 		f = os.MkdirAll
 	}
 
 	// Get Correct Creation Mode
 	var m uint64
 	var err error
-	if *mode == "" {
+	if mode == "" {
 		m = defaultCreationMode
 	} else {
-		m, err = strconv.ParseUint(*mode, 8, 32)
+		m, err = strconv.ParseUint(mode, 8, 32)
 		if err != nil || m > 0o7777 {
-			return fmt.Errorf("invalid mode %q", *mode)
+			return fmt.Errorf("invalid mode %q", mode)
 		}
 	}
 	createMode := os.FileMode(m)
@@ -76,10 +76,10 @@ func mkdir(args []string) error {
 			log.Printf("%v: %v\n", name, err)
 			continue
 		}
-		if *verbose {
+		if verbose {
 			fmt.Printf("%v\n", name)
 		}
-		if *mode != "" {
+		if mode != "" {
 			os.Chmod(name, createMode)
 		}
 	}
@@ -92,7 +92,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := mkdir(flag.Args()); err != nil {
+	if err := mkdir(*mode, *mkall, *verbose, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }
