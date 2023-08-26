@@ -122,6 +122,11 @@ func TestMkdir(t *testing.T) {
 			args:     []string{filepath.Join(d, "stub12"), filepath.Join(d, "stub13")},
 			wantMode: "dutrwxrwxrwx",
 		},
+		{
+			name:     "Default createtion mode",
+			args:     []string{filepath.Join(d, "stub14")},
+			wantMode: "drwxr-xr-x",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf = bytes.NewBuffer(nil)
