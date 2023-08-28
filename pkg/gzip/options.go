@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrStdoutNoForce = errors.New("standard output is a terminal -- ignoring")
+	ErrStdoutNoForce = errors.New("ignoring stdout, use -f to compression")
 	ErrHelp          = errors.New("help requested")
 )
 
@@ -78,7 +78,7 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 	return o.modify(args[0], len(cmdLine.Args()) > 0)
 }
 
-// modify update options if needed
+// modify updates options if needed
 // Forces decompression to be enabled when test mode is enabled.
 // It further modifies options if the running binary is named
 // gunzip or gzcat to allow for expected behavior. Checks if there is piped stdin data.

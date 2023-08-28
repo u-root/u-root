@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -78,8 +79,7 @@ func main() {
 
 	if err := opts.ParseArgs(os.Args, cmdLine); err != nil {
 		if errors.Is(err, gzip.ErrStdoutNoForce) {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(1)
+			log.Fatalf("gzip: %v", err)
 		}
 		if errors.Is(err, gzip.ErrHelp) {
 			cmdLine.Usage()
@@ -91,7 +91,6 @@ func main() {
 	}
 
 	if err := run(opts, cmdLine.Args()); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
+		log.Fatalf("gzip: %v", err)
 	}
 }
