@@ -8,29 +8,33 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/klauspost/pgzip"
 )
 
+var (
+	ErrStdoutNoForce = errors.New("standard output is a terminal -- ignoring")
+	ErrHelp          = errors.New("help requested")
+)
+
 // Options represents the CLI options possible, controlling how
 // gzip operates on the given input data.
 type Options struct {
+	Suffix     string
 	Blocksize  int
 	Level      int
 	Processes  int
-	Decompress bool
-	Force      bool
-	Help       bool
 	Keep       bool
+	Help       bool
+	Force      bool
 	Quiet      bool
 	Stdin      bool
 	Stdout     bool
 	Test       bool
 	Verbose    bool
-	Suffix     string
+	Decompress bool
 }
 
 // ParseArgs takes CLI args and parses them via a Flagset into fields in
@@ -71,21 +75,21 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 		return err
 	}
 
-	return o.validate(len(cmdLine.Args()) > 0)
+	return o.modify(args[0], len(cmdLine.Args()) > 0)
 }
 
-// Validate checks options.
+// modify update options if needed
 // Forces decompression to be enabled when test mode is enabled.
 // It further modifies options if the running binary is named
-// gunzip or gzcat to allow for expected behavor. Checks if there is piped stdin data.
-func (o *Options) validate(moreArgs bool) error {
-	if !moreArgs && !o.Force {
-		return fmt.Errorf("gzip: standard output is a terminal -- ignoring")
-	}
-
+// gunzip or gzcat to allow for expected behavior. Checks if there is piped stdin data.
+func (o *Options) modify(arg0 string, moreArgs bool) error {
 	if o.Help {
 		// Return an empty errorString so the CLI app does not continue
-		return errors.New("")
+		return ErrHelp
+	}
+
+	if !moreArgs && !o.Force {
+		return ErrStdoutNoForce
 	}
 
 	if o.Test {
@@ -93,9 +97,9 @@ func (o *Options) validate(moreArgs bool) error {
 	}
 
 	// Support gunzip and gzcat symlinks
-	if filepath.Base(os.Args[0]) == "gunzip" {
+	if filepath.Base(arg0) == "gunzip" {
 		o.Decompress = true
-	} else if filepath.Base(os.Args[0]) == "gzcat" {
+	} else if filepath.Base(arg0) == "gzcat" {
 		o.Decompress = true
 		o.Stdout = true
 	}
