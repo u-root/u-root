@@ -95,14 +95,10 @@ func TestUniq(t *testing.T) {
 			want:  "go\n",
 		},
 	} {
-		*unique = tt.unique
-		*duplicates = tt.duplicates
-		*count = tt.count
-		*ignoreCase = tt.ignoreCase
 		buf := &bytes.Buffer{}
 		log.SetOutput(buf)
 		t.Run(tt.name, func(t *testing.T) {
-			if got := run(tt.stdin, buf, tt.args...); got != nil {
+			if got := run(tt.stdin, buf, tt.unique, tt.duplicates, tt.count, tt.ignoreCase, tt.args); got != nil {
 				if got.Error() != tt.wantErr {
 					t.Errorf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
 				}
