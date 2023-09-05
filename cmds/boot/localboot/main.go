@@ -21,15 +21,16 @@ import (
 // TODO use a proper parser for grub config (see grub.go)
 
 var (
-	flagBaseMountPoint = flag.String("m", "/mnt", "Base mount point where to mount partitions")
-	flagDryRun         = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
-	flagDebug          = flag.Bool("d", false, "Print debug output")
-	flagConfigIdx      = flag.Int("config", -1, "Specify the index of the configuration to boot. The order is determined by the menu entries in the Grub config")
-	flagGrubMode       = flag.Bool("grub", false, "Use GRUB mode, i.e. look for valid Grub/Grub2 configuration in default locations to boot a kernel. GRUB mode ignores -kernel/-initramfs/-cmdline")
-	flagKernelPath     = flag.String("kernel", "", "Specify the path of the kernel to execute. If using -grub, this argument is ignored")
-	flagInitramfsPath  = flag.String("initramfs", "", "Specify the path of the initramfs to load. If using -grub, this argument is ignored")
-	flagKernelCmdline  = flag.String("cmdline", "", "Specify the kernel command line. If using -grub, this argument is ignored")
-	flagDeviceGUID     = flag.String("guid", "", "GUID of the device where the kernel (and optionally initramfs) are located. Ignored if -grub is set or if -kernel is not specified")
+	flagBaseMountPoint     = flag.String("m", "/mnt", "Base mount point where to mount partitions")
+	flagDryRun             = flag.Bool("dryrun", false, "Do not actually kexec into the boot config")
+	flagDebug              = flag.Bool("d", false, "Print debug output")
+	flagConfigIdx          = flag.Int("config", -1, "Specify the index of the configuration to boot. The order is determined by the menu entries in the Grub config")
+	flagGrubMode           = flag.Bool("grub", false, "Use GRUB mode, i.e. look for valid Grub/Grub2 configuration in default locations to boot a kernel. GRUB mode ignores -kernel/-initramfs/-cmdline")
+	flagBootloaderSpecMode = flag.Bool("blspec", false, "Use BootloaderSpec mode, i.e. look for valid boot configurations conforming to the Bootloader specification to boot a kernel (e.g. systemd-boot). BootloaderSpec mode ignores -kernel/-initramfs/-cmdline")
+	flagKernelPath         = flag.String("kernel", "", "Specify the path of the kernel to execute. If using -grub, this argument is ignored")
+	flagInitramfsPath      = flag.String("initramfs", "", "Specify the path of the initramfs to load. If using -grub, this argument is ignored")
+	flagKernelCmdline      = flag.String("cmdline", "", "Specify the kernel command line. If using -grub, this argument is ignored")
+	flagDeviceGUID         = flag.String("guid", "", "GUID of the device where the kernel (and optionally initramfs) are located. Ignored if -grub is set or if -kernel is not specified")
 )
 
 var debug = func(string, ...interface{}) {}
@@ -55,12 +56,12 @@ func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*moun
 	return partitions[0].Mount(mountpath, mount.MS_RDONLY, func() error { return os.MkdirAll(mountpath, 0o666) })
 }
 
-// BootGrubMode tries to boot a kernel in GRUB mode. GRUB mode means:
+// BootBootloaderMode tries to boot a kernel in Bootloader mode. Bootloader mode means:
 // * look for the partition with the specified GUID, and mount it
 // * if no GUID is specified, mount all of the specified devices
 // * try to mount the device(s) using any of the kernel-supported filesystems
-// * look for a GRUB configuration in various well-known locations
-// * build a list of valid boot configurations from the found GRUB configuration files
+// * look for a configuration in various well-known locations
+// * build a list of valid boot configurations from the found configuration files
 // * try to boot every valid boot configuration until one succeeds
 //
 // The first parameter, `devices` is a list of block.BlockDev . The function
@@ -72,7 +73,10 @@ func mountByGUID(devices block.BlockDevices, guid, baseMountpoint string) (*moun
 // instead.
 // The fourth parameter, `dryrun`, will not boot the found configurations if set
 // to true.
-func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string, dryrun bool, configIdx int) error {
+// The five parameter, grub will determine which configurations to search for.
+// If grub is true it will search for grub configuration files, otherwise it will
+// look for systemd configuration files.
+func BootBootloader(devices block.BlockDevices, baseMountpoint string, guid string, dryrun bool, configIdx int, grub bool) error {
 	var mounted []*mount.MountPoint
 	if guid == "" {
 		// try mounting all the available devices, with all the supported file
@@ -107,7 +111,11 @@ func BootGrubMode(devices block.BlockDevices, baseMountpoint string, guid string
 	// search for a valid grub config and extracts the boot configuration
 	bootconfigs := make([]jsonboot.BootConfig, 0)
 	for _, mountpoint := range mounted {
-		bootconfigs = append(bootconfigs, ScanGrubConfigs(devices, mountpoint.Path)...)
+		if grub {
+			bootconfigs = append(bootconfigs, ScanGrubConfigs(devices, mountpoint.Path)...)
+		} else {
+			bootconfigs = append(bootconfigs, ScanSystemdbootConfigs(devices, mountpoint.Path)...)
+		}
 	}
 	if len(bootconfigs) == 0 {
 		return fmt.Errorf("No boot configuration found")
@@ -226,7 +234,11 @@ func main() {
 	// TODO boot from EFI system partitions.
 
 	if *flagGrubMode {
-		if err := BootGrubMode(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagDryRun, *flagConfigIdx); err != nil {
+		if err := BootBootloader(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagDryRun, *flagConfigIdx, true); err != nil {
+			log.Fatal(err)
+		}
+	} else if *flagBootloaderSpecMode {
+		if err := BootBootloader(devices, *flagBaseMountPoint, *flagDeviceGUID, *flagDryRun, *flagConfigIdx, false); err != nil {
 			log.Fatal(err)
 		}
 	} else if *flagKernelPath != "" {
