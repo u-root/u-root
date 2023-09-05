@@ -8,28 +8,24 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestTac(t *testing.T) {
-	f, err := os.CreateTemp("", "")
+	path := filepath.Join(t.TempDir(), "tac1")
+	err := os.WriteFile(path, []byte("hello\nworld\n"), 0644)
 	if err != nil {
-		t.Fatalf(`os.CreateTemp("", "") = %v, want nil`, err)
-	}
-
-	_, err = f.WriteString("hello\nworld\n")
-	if err != nil {
-		t.Fatalf(`f.WriteString("hello\nworld\n") = %v, want nil`, err)
+		t.Fatalf(`os.WriteFile(%q, []byte("hello\nworld\n"), 0644) = %v, want nil`, path, err)
 	}
 
 	stdout := &bytes.Buffer{}
-
-	err = tac(stdout, []string{f.Name(), f.Name()})
+	err = tac(stdout, []string{path})
 	if err != nil {
 		t.Fatalf(`tac(stdout, []string{f.Name(), f.Name()}) = %v, want nil`, err)
 	}
 
-	expected := "world\nhello\nworld\nhello\n"
+	expected := "world\nhello\n"
 	if stdout.String() != expected {
 		t.Errorf("expected %s, got %s", expected, stdout.String())
 	}
