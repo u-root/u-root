@@ -14,8 +14,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
+	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/crypto"
 )
 
@@ -168,7 +170,13 @@ func (bc *BootConfig) Boot() error {
 				}
 			}
 		}()
-		if err := kexec.FileLoad(kernel, initramfs, bc.KernelArgs); err != nil {
+		// Decompress Kernel (if compressed)
+		kernelRaw, err := boot.CopyToFileIfNotRegular(util.TryGzipFilter(kernel), true)
+		if err != nil {
+			return err
+		}
+
+		if err := kexec.FileLoad(kernelRaw, initramfs, bc.KernelArgs); err != nil {
 			return fmt.Errorf("kexec.FileLoad() failed: %v", err)
 		}
 	} else if bc.Multiboot != "" {
