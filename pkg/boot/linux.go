@@ -198,7 +198,7 @@ func isTmpfsReadOnlyFile(f *os.File) bool {
 	return false
 }
 
-// copyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
+// CopyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
 // necessary. It skips copying when source file is a regular file under
 // tmpfs or ramfs, and it is not opened for writing.
 //
@@ -208,7 +208,7 @@ func isTmpfsReadOnlyFile(f *os.File) bool {
 // execve) if anything has the file opened for writing. That's unfortunately
 // something we can't guarantee here - unless we make a copy of the file
 // and dump it somewhere.
-func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
+func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 	// If source is a regular file in tmpfs, simply re-use that than copy.
 	//
 	// The assumption (bad?) is original local file was opened as a type
@@ -281,7 +281,7 @@ func loadLinuxImage(li *LinuxImage, logger ulog.Logger, verbose bool) (*LoadedLi
 		return nil, nil, errNilKernel
 	}
 
-	k, err := copyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), verbose)
+	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), verbose)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -297,7 +297,7 @@ func loadLinuxImage(li *LinuxImage, logger ulog.Logger, verbose bool) (*LoadedLi
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = copyToFileIfNotRegular(li.Initrd, verbose)
+		i, err = CopyToFileIfNotRegular(li.Initrd, verbose)
 		if err != nil {
 			return nil, nil, err
 		}
