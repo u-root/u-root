@@ -10,22 +10,22 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
 type dirEnt struct {
+	FileInfo os.FileInfo
 	Name     string
 	Type     string
 	Content  string
 	Target   string
-	FileInfo os.FileInfo
 }
 
-func TestCpio(t *testing.T) {
-	debug = t.Logf
-	// Create a temporary directory
-	tempDir := t.TempDir()
-
+// prepareTestDir creates a testing directory and returns a list of
+// dirEnts and inputFile for archive creation
+func prepareTestDir(t *testing.T, tempDir string) ([]dirEnt, *os.File) {
+	t.Helper()
 	targets := []dirEnt{
 		{Name: "file1", Type: "file", Content: "Hello World"},
 		{Name: "file2", Type: "file", Content: ""},
@@ -91,8 +91,45 @@ func TestCpio(t *testing.T) {
 	}
 	inputFile.Seek(0, 0)
 
+	return targets, inputFile
+}
+
+func TestCpioList(t *testing.T) {
+	tmpDir := t.TempDir()
+	targets, inputFile := prepareTestDir(t, tmpDir)
+
+	archive, err := os.CreateTemp(tmpDir, "archive.cpio")
+	if err != nil {
+		t.Fatalf("failed to create temporary archive file: %v", err)
+	}
+
+	err = run([]string{"o"}, inputFile, archive, false, "newc")
+	if err != nil {
+		t.Fatalf("failed to build archive from filepaths: %v", err)
+	}
+
+	stdout := &bytes.Buffer{}
+	err = run([]string{"t"}, archive, stdout, false, "newc")
+	if err != nil {
+		t.Fatalf("failed to list archive: %v", err)
+	}
+
+	stdoutStr := stdout.String()
+	for _, ent := range targets {
+		if !strings.Contains(stdoutStr, ent.Name) {
+			t.Errorf("expected to find %q in output", ent.Name)
+		}
+	}
+}
+
+func TestCpio(t *testing.T) {
+	debug = t.Logf
+	// Create a temporary directory
+	tempDir := t.TempDir()
+	targets, inputFile := prepareTestDir(t, tempDir)
+
 	archive := &bytes.Buffer{}
-	err = run([]string{"o"}, inputFile, archive, true, "newc")
+	err := run([]string{"o"}, inputFile, archive, true, "newc")
 	if err != nil {
 		t.Fatalf("failed to build archive from filepaths: %v", err)
 	}
@@ -152,7 +189,6 @@ func TestCpio(t *testing.T) {
 }
 
 func TestDirectoryHardLink(t *testing.T) {
-
 	// Open an archive containing two directories with the same inode (0).
 	// We're trying to test if having the same inode will trigger a hard link.
 	archiveFile, err := os.Open("testdata/dir-hard-link.cpio")
@@ -178,5 +214,4 @@ func TestDirectoryHardLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Extraction failed:\n%v\n%v\n", want, err)
 	}
-
 }

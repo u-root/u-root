@@ -16,6 +16,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -23,6 +24,8 @@ import (
 )
 
 const ReadSize int64 = 4096
+
+var errStdin = fmt.Errorf("can't reverse lines from stdin; can't seek")
 
 type ReadAtSeeker interface {
 	io.ReaderAt
@@ -79,6 +82,9 @@ func tacOne(w io.Writer, r ReadAtSeeker) error {
 }
 
 func tac(w io.Writer, files []string) error {
+	if len(files) == 0 {
+		return errStdin
+	}
 	for _, name := range files {
 		f, err := os.Open(name)
 		if err != nil {
@@ -96,11 +102,6 @@ func tac(w io.Writer, files []string) error {
 
 func main() {
 	flag.Parse()
-
-	if flag.NArg() == 0 {
-		log.Fatalf("Sorry, can't reverse lines from stdin; can't seek")
-	}
-
 	if err := tac(os.Stdout, flag.Args()); err != nil {
 		log.Fatalf("tac: %v", err)
 	}

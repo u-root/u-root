@@ -53,7 +53,7 @@ var (
 // var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
 // var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
 
-func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
+func uniq(r io.Reader, w io.Writer, unique, duplicates, count bool, equal func(a, b []byte) bool) {
 	br := bufio.NewReader(r)
 
 	var err error
@@ -73,14 +73,14 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 			continue
 		}
 		if !equal(line, oline) {
-			if *count {
+			if count {
 				fmt.Fprintf(w, "%d\t%s\n", cnt, oline)
 				goto skip
 			}
-			if cnt > 1 && *unique {
+			if cnt > 1 && unique {
 				goto skip
 			}
-			if cnt == 1 && *duplicates {
+			if cnt == 1 && duplicates {
 				goto skip
 			}
 			fmt.Fprintf(w, "%s\n", oline)
@@ -94,13 +94,13 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 			break
 		}
 	}
-	if cnt == 1 && *duplicates {
+	if cnt == 1 && duplicates {
 		return
 	}
 	if len(line) == 0 && cnt == 1 {
 		return
 	}
-	if *count {
+	if count {
 		if len(line) == 0 {
 			cnt--
 		}
@@ -109,15 +109,15 @@ func uniq(r io.Reader, w io.Writer, equal func(a, b []byte) bool) {
 	}
 	fmt.Fprintf(w, "%s\n", line)
 }
-func run(stdin io.Reader, stdout io.Writer, args ...string) error {
+func run(stdin io.Reader, stdout io.Writer, unique, duplicates, count, ignoreCase bool, args []string) error {
 	var eq func(a, b []byte) bool
-	if *ignoreCase {
+	if ignoreCase {
 		eq = bytes.EqualFold
 	} else {
 		eq = bytes.Equal
 	}
 	if len(args) == 0 {
-		uniq(stdin, stdout, eq)
+		uniq(stdin, stdout, unique, duplicates, count, eq)
 		return nil
 	}
 	for _, fn := range args {
@@ -126,14 +126,14 @@ func run(stdin io.Reader, stdout io.Writer, args ...string) error {
 			log.Printf("open %s: %v\n", fn, err)
 			return err
 		}
-		uniq(f, stdout, eq)
+		uniq(f, stdout, unique, duplicates, count, eq)
 		f.Close()
 	}
 	return nil
 }
 func main() {
 	flag.Parse()
-	if err := run(os.Stdin, os.Stdout, flag.Args()...); err != nil {
+	if err := run(os.Stdin, os.Stdout, *unique, *duplicates, *count, *ignoreCase, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }

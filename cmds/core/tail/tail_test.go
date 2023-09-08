@@ -81,7 +81,7 @@ func TestTailRun(t *testing.T) {
 	}
 
 	var b bytes.Buffer
-	err = run(os.Stdin, &b, []string{f.Name()})
+	err = run(os.Stdin, &b, false, 10, []string{f.Name()})
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,14 +90,13 @@ func TestTailRun(t *testing.T) {
 		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
 	}
 
-	err = run(nil, nil, []string{"a", "b"})
+	err = run(nil, nil, false, 10, []string{"a", "b"})
 	if err == nil {
 		t.Error("tail should return an error if more than one file specified")
 	}
 
 	b.Truncate(0)
-	*flagNumLines = -1
-	err = run(f, &b, nil)
+	err = run(f, &b, false, -1, nil)
 	if err != nil {
 		t.Error(err)
 	}
