@@ -44,7 +44,7 @@ var (
 	BINDERFS    = []byte{0x6c, 0x6f, 0x6f, 0x70}
 	BINFMTFS    = []byte{0x42, 0x49, 0x4e, 0x4d}
 	BPF         = []byte{0xca, 0xfe, 0x4a, 0x11}
-	BTRFS       = []byte{0x91, 0x23, 0x68, 0x3E}
+	BTRFS       = []byte{'_', 'B', 'H', 'R', 'f', 'S', '_', 'M'}
 	CGROUP      = []byte{0x27, 0xe0, 0xeb}
 	CGROUP2     = []byte{0x63, 0x67, 0x72, 0x70}
 	CODA        = []byte{0x73, 0x75, 0x72, 0x45}
@@ -129,6 +129,7 @@ var magics = []magic{
 	{magic: VFAT, name: "vfat", off: 0},
 	{magic: VVFAT, name: "vfat", off: 0},
 	{magic: XFS, name: "xfs", off: 0},
+	{magic: BTRFS, name: "btrfs", off: 0x10040},
 }
 
 var unknownMagics = []magic{
@@ -138,7 +139,6 @@ var unknownMagics = []magic{
 	{magic: V9FS, name: "9p", off: -1},
 	{magic: ADFS, name: "adfs", off: -1},
 	{magic: AFFS, name: "affs", off: -1},
-	{magic: BTRFS, name: "btrfs", off: -1},
 	{magic: SMB, name: "cifs", off: -1},
 	{magic: SMB, name: "smb3", off: -1},
 	{magic: CODA, name: "coda", off: -1},
@@ -201,7 +201,7 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		return "", 0, err
 	}
 	defer f.Close()
-	block := make([]byte, blocksize)
+	block := make([]byte, blocksize*2)
 	if _, err := io.ReadAtLeast(f, block, len(block)); err != nil {
 		return "", 0, fmt.Errorf("no suitable filesystem for %q: %v", n, err)
 	}
