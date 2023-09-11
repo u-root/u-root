@@ -75,10 +75,7 @@ func lastNLines(buf []byte, n uint) []byte {
 			foundLines uint
 			idx        int
 		)
-		for {
-			if foundLines >= n {
-				break
-			}
+		for foundLines < n {
 			// find newlines backwards from the end of `slice`
 			idx = bytes.LastIndexByte(slice, '\n')
 			if idx == -1 {
@@ -121,10 +118,7 @@ func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint)
 	pos := lastPos
 	var foundLines uint
 	// for each block, count how many new lines, until they add up to `numLines`
-	for {
-		if pos == 0 {
-			break
-		}
+	for pos != 0 {
 		var thisChunkSize int64
 		if pos < blkSize {
 			thisChunkSize = pos
@@ -267,7 +261,7 @@ func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 	return nil
 }
 
-func run(reader *os.File, writer io.Writer, args []string) error {
+func run(reader *os.File, writer io.Writer, follow bool, numLines int, args []string) error {
 	var (
 		inFile *os.File
 		err    error
@@ -287,16 +281,16 @@ func run(reader *os.File, writer io.Writer, args []string) error {
 
 	// TODO: add support for parsing + (from beggining of the file)
 	// negative sign is the same as none
-	if *flagNumLines < 0 {
-		*flagNumLines = -1 * *flagNumLines
+	if numLines < 0 {
+		numLines = -1 * numLines
 	}
-	config := tailConfig{follow: *flagFollow, numLines: uint(*flagNumLines)}
+	config := tailConfig{follow: follow, numLines: uint(numLines)}
 	return tail(inFile, writer, config)
 }
 
 func main() {
 	flag.Parse()
-	if err := run(os.Stdin, os.Stdout, flag.Args()); err != nil {
+	if err := run(os.Stdin, os.Stdout, *flagFollow, *flagNumLines, flag.Args()); err != nil {
 		log.Fatalf("tail: %v", err)
 	}
 }
