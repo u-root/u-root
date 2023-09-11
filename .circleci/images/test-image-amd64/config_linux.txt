@@ -120,3 +120,9 @@ CONFIG_DMI_SYSFS=y
 
 # pkg/efivarfs (and its test) require immutable bit on xattr
 CONFIG_TMPFS_XATTR=y
+
+# pkg/fpdt (and its tests) requires ACPI_FPDT table to be enabled
+CONFIG_ACPI=y
+CONFIG_ACPI_FPDT=y
+CONFIG_DEVMEM=y
+CONFIG_STRICT_DEVMEM=n
