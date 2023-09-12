@@ -34,14 +34,11 @@ import (
 	"strings"
 )
 
-var (
-	flags struct {
-		format     string
-		separator  string
-		widthEqual bool
-	}
-	cmd = "seq [-f format] [-w] [-s separator] [start [step [end]]]"
-)
+const cmd = "seq [-f format] [-w] [-s separator] [start [step [end]]]"
+
+var format = flag.String("f", "%v", "use printf style floating-point FORMAT")
+var separator = flag.String("s", "\n", "use STRING to separate numbers")
+var widthEqual = flag.Bool("w", false, "equalize width by padding with leading zeroes")
 
 func init() {
 	defUsage := flag.Usage
@@ -49,12 +46,9 @@ func init() {
 		os.Args[0] = cmd
 		defUsage()
 	}
-	flag.StringVar(&flags.format, "f", "%v", "use printf style floating-point FORMAT")
-	flag.StringVar(&flags.separator, "s", "\n", "use STRING to separate numbers")
-	flag.BoolVar(&flags.widthEqual, "w", false, "equalize width by padding with leading zeroes")
 }
 
-func seq(w io.Writer, args []string) error {
+func seq(w io.Writer, format string, separator string, widthEqual bool, args []string) error {
 	var (
 		stt   = 1.0
 		stp   = 1.0
@@ -62,7 +56,6 @@ func seq(w io.Writer, args []string) error {
 		width int
 	)
 
-	format := flags.format // I use that because I'll modify a global variable
 	argv, argc := args, len(args)
 	if argc < 1 || argc > 4 {
 		return fmt.Errorf("mismatch n args; got %v, wants 1 >= n args >= 3", argc)
@@ -95,7 +88,7 @@ func seq(w io.Writer, args []string) error {
 	}
 
 	format = strings.Replace(format, "%", "%0*", 1) // support widthEqual
-	if flags.widthEqual {
+	if widthEqual {
 		width = len(fmt.Sprintf(format, 0, end))
 	}
 
@@ -104,7 +97,7 @@ func seq(w io.Writer, args []string) error {
 		fmt.Fprintf(w, format, width, stt)
 		stt += stp
 		if stt <= end { // print only between the values
-			fmt.Fprint(w, flags.separator)
+			fmt.Fprint(w, separator)
 		}
 	}
 
@@ -113,10 +106,7 @@ func seq(w io.Writer, args []string) error {
 
 func main() {
 	flag.Parse()
-
-	if err := seq(os.Stdout, flag.Args()); err != nil {
-		log.Println(err)
-		flag.Usage()
-		os.Exit(1)
+	if err := seq(os.Stdout, *format, *separator, *widthEqual, flag.Args()); err != nil {
+		log.Fatalf("seq: %v", err)
 	}
 }
