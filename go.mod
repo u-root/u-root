@@ -12,7 +12,7 @@ require (
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-tpm v0.9.0
+	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/uuid v1.3.0
 	github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7

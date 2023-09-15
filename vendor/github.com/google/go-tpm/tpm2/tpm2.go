@@ -126,10 +126,10 @@ type StartupResponse struct{}
 type StartAuthSession struct {
 	// handle of a loaded decrypt key used to encrypt salt
 	// may be TPM_RH_NULL
-	TPMKey handle `gotpm:"handle,nullable"`
+	TPMKey handle `gotpm:"handle"`
 	// entity providing the authValue
 	// may be TPM_RH_NULL
-	Bind handle `gotpm:"handle,nullable"`
+	Bind handle `gotpm:"handle"`
 	// initial nonceCaller, sets nonceTPM size for the session
 	// shall be at least 16 octets
 	NonceCaller TPM2BNonce
@@ -392,7 +392,7 @@ type UnsealResponse struct {
 type CreateLoaded struct {
 	// Handle of a transient storage key, a persistent storage key,
 	// TPM_RH_ENDORSEMENT, TPM_RH_OWNER, TPM_RH_PLATFORM+{PP}, or TPM_RH_NULL
-	ParentHandle handle `gotpm:"handle,auth,nullable"`
+	ParentHandle handle `gotpm:"handle,auth"`
 	// the sensitive data, see TPM 2.0 Part 1 Sensitive Values
 	InSensitive TPM2BSensitiveCreate
 	// the public template
@@ -1468,6 +1468,72 @@ func (cmd FlushContext) Execute(t transport.TPM, s ...Session) (*FlushContextRes
 
 // FlushContextResponse is the response from TPM2_FlushContext.
 type FlushContextResponse struct{}
+
+// EvictControl is the input to TPM2_EvictControl.
+// See definition in Part 3, Commands, section 28.5
+type EvictControl struct {
+	// TPM_RH_OWNER or TPM_RH_PLATFORM+{PP}
+	Auth             handle `gotpm:"handle,auth"`
+	ObjectHandle     handle `gotpm:"handle"`
+	PersistentHandle TPMIDHPersistent
+}
+
+// EvictControlResponse is the response from TPM2_EvictControl.
+type EvictControlResponse struct{}
+
+// Command implements the Command interface.
+func (EvictControl) Command() TPMCC { return TPMCCEvictControl }
+
+// Execute executes the command and returns the response.
+func (cmd EvictControl) Execute(t transport.TPM, s ...Session) (*EvictControlResponse, error) {
+	var rsp EvictControlResponse
+	if err := execute[EvictControlResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// Import is the input to TPM2_Import.
+// See definition in Part 3, Commands, section 13.3
+type Import struct {
+	// handle of parent for new object
+	ParentHandle handle `gotpm:"handle,auth"`
+
+	// The optional symmetric encryption key used as the inner wrapper for duplicate
+	// If SymmetricAlg is TPM_ALG_NULL, then this parametert shall be the Empty Buffer
+	EncryptionKey TPM2BData
+
+	// The public area of the object to be imported
+	ObjectPublic TPM2BPublic
+
+	// The symmetrically encrypted duplicate object that may contain an inner
+	// symmetric wrapper
+	Duplicate TPM2BPrivate
+
+	// The seed for the symmetric key and HMAC key
+	InSymSeed TPM2BEncryptedSecret
+
+	// Definition of the symmetric algorithm to use for the inner wrapper
+	Symmetric TPMTSymDef
+}
+
+// ImportResponse is the response from TPM2_Import.
+type ImportResponse struct {
+	// the private portion of the object
+	OutPrivate TPM2BPrivate
+}
+
+// Command implements the Command interface.
+func (Import) Command() TPMCC { return TPMCCImport }
+
+// Execute executes the command and returns the response.
+func (cmd Import) Execute(t transport.TPM, s ...Session) (*ImportResponse, error) {
+	var rsp ImportResponse
+	if err := execute[ImportResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
 
 // GetCapability is the input to TPM2_GetCapability.
 // See definition in Part 3, Commands, section 30.2

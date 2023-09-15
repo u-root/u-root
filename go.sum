@@ -77,8 +77,8 @@ github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/google/go-tpm v0.9.0 h1:sQF6YqWMi+SCXpsmS3fd21oPy/vSddwZry4JnmltHVk=
-github.com/google/go-tpm v0.9.0/go.mod h1:FkNVkc6C+IsvDI9Jw1OveJmxGZUUaKxtrpOS47QWKfU=
+github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8 h1:g9RVRZdQrNEK2E94RcFescvXFC9afWsFar4IIdejP34=
+github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8/go.mod h1:FkNVkc6C+IsvDI9Jw1OveJmxGZUUaKxtrpOS47QWKfU=
 github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa h1:PMkmJA8ju9DjqAJjIzrBdrmhuuPsoNnNLYgKQBopWL0=
 github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa/go.mod h1:qtE5aAEkt0vOSA84DBh8aJsz6riL8ONfqfULY7lBjqc=
 github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 h1:CVuJwN34x4xM2aT4sIKhmeib40NeBPhRihNjQmpJsA4=
