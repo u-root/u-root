@@ -765,6 +765,25 @@ func cmdAuths[R any](cmd Command[R, *R]) ([]Session, error) {
 	return result, nil
 }
 
+func asHandle(value reflect.Value) (handle, error) {
+	// Special case: `handle`-typed members.
+	// Since `handle` is an interface, the zero-value is nil.
+	// https://go.dev/ref/spec#Type_assertions in this case will return false.
+	// Similarly, reflect.AssignableTo() will panic.
+	// Workaround: treat any nil interface value annotated as a `handle` as TPMRHNull.
+	var h handle
+	if value.Kind() == reflect.Interface && value.IsNil() {
+		h = TPMRHNull
+	} else {
+		var ok bool
+		h, ok = value.Interface().(handle)
+		if !ok {
+			return nil, fmt.Errorf("value of type %q does not satisfy handle", value.Type())
+		}
+	}
+	return h, nil
+}
+
 // cmdHandles returns the handles area of the command.
 func cmdHandles[R any](cmd Command[R, *R]) ([]byte, error) {
 	handles := taggedMembers(reflect.ValueOf(cmd), "handle", false)
@@ -772,19 +791,12 @@ func cmdHandles[R any](cmd Command[R, *R]) ([]byte, error) {
 	// Initial capacity is enough to hold 3 handles
 	result := bytes.NewBuffer(make([]byte, 0, 12))
 
-	for i, maybeHandle := range handles {
-		h, ok := maybeHandle.Interface().(handle)
-		if !ok {
-			return nil, fmt.Errorf("'handle'-tagged member of '%v' was of type '%v', which does not satisfy handle",
-				reflect.TypeOf(cmd), maybeHandle.Type())
+	for _, maybeHandle := range handles {
+		h, err := asHandle(maybeHandle)
+		if err != nil {
+			return nil, fmt.Errorf("invalid 'handle'-tagged member of %q: %v",
+				reflect.TypeOf(cmd), err)
 		}
-
-		// Special behavior: nullable handles have an effective zero-value of
-		// TPM_RH_NULL.
-		if h.HandleValue() == 0 && hasTag(reflect.TypeOf(cmd).Field(i), "nullable") {
-			h = TPMRHNull
-		}
-
 		binary.Write(result, binary.BigEndian, h.HandleValue())
 	}
 
@@ -796,18 +808,11 @@ func cmdNames[R any](cmd Command[R, *R]) ([]TPM2BName, error) {
 	handles := taggedMembers(reflect.ValueOf(cmd), "handle", false)
 	var result []TPM2BName
 	for i, maybeHandle := range handles {
-		h, ok := maybeHandle.Interface().(handle)
-		if !ok {
-			return nil, fmt.Errorf("'handle'-tagged member of '%v' was of type '%v', which does not satisfy handle",
-				reflect.TypeOf(cmd), maybeHandle.Type())
+		h, err := asHandle(maybeHandle)
+		if err != nil {
+			return nil, fmt.Errorf("invalid 'handle'-tagged member of %q: %v",
+				reflect.TypeOf(cmd), err)
 		}
-
-		// Special behavior: nullable handles have an effective zero-value of
-		// TPM_RH_NULL.
-		if h.HandleValue() == 0 && hasTag(reflect.TypeOf(cmd).Field(i), "nullable") {
-			h = TPMRHNull
-		}
-
 		name := h.KnownName()
 		if name == nil {
 			return nil, fmt.Errorf("missing Name for '%v' parameter",
