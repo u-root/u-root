@@ -23,20 +23,24 @@ var (
 	relative = flag.Bool("R", false, "Timestamps are relative to the previous timestamp")
 )
 
+func run(stdin io.Reader, stdout io.Writer, first, relative bool) error {
+	t := ts.New(stdin)
+	t.ResetTimeOnNextRead = first
+	if relative {
+		t.Format = ts.NewRelativeFormat()
+	}
+
+	_, err := io.Copy(stdout, t)
+	return err
+}
+
 func main() {
 	flag.Parse()
 	if flag.NArg() != 0 {
 		log.Fatal("Usage: ts")
 	}
 
-	t := ts.New(os.Stdin)
-	t.ResetTimeOnNextRead = *first
-	if *relative {
-		t.Format = ts.NewRelativeFormat()
-	}
-
-	_, err := io.Copy(os.Stdout, t)
-	if err != nil {
+	if err := run(os.Stdin, os.Stdout, *first, *relative); err != nil {
 		log.Fatal(err)
 	}
 }
