@@ -4,28 +4,10 @@
 
 package systembooter
 
-import "log"
-
 // Booter is an interface that defines custom boot types. Implementations can be
 // like network boot, local boot, etc. Boolean debugEnabled can be used to turning on/off
 // the Booter debugging log.
 type Booter interface {
 	Boot(debugEnabled bool) error
 	TypeName() string
-}
-
-// NullBooter is a booter that does nothing. It is used when no other booter
-// has been found.
-type NullBooter struct{}
-
-// TypeName returns the name of the booter type
-func (nb *NullBooter) TypeName() string {
-	return "null"
-}
-
-// Boot will run the boot procedure. In the case of this NullBooter it will do
-// nothing
-func (nb *NullBooter) Boot(debugEnabled bool) error {
-	log.Printf("Null booter does nothing")
-	return nil
 }

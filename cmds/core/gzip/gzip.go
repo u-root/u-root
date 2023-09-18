@@ -6,8 +6,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -21,20 +23,8 @@ func usage() {
 	cmdLine.PrintDefaults()
 }
 
-func main() {
-	var opts gzip.Options
-
-	cmdLine.Usage = usage
-
-	if err := opts.ParseArgs(os.Args, cmdLine); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		cmdLine.Usage()
-		os.Exit(2)
-	}
-
+func run(opts gzip.Options, args []string) error {
 	var input []gzip.File
-	args := cmdLine.Args()
-
 	if len(args) == 0 {
 		// no args given, compress stdin to stdout
 		input = append(input, gzip.File{Options: &opts})
@@ -56,7 +46,7 @@ func main() {
 			if !opts.Quiet {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 			}
-			os.Exit(1)
+			return err
 		}
 
 		if err := f.CheckOutputPath(); err != nil {
@@ -78,5 +68,29 @@ func main() {
 			}
 			continue
 		}
+	}
+
+	return nil
+}
+
+func main() {
+	var opts gzip.Options
+	cmdLine.Usage = usage
+
+	if err := opts.ParseArgs(os.Args, cmdLine); err != nil {
+		if errors.Is(err, gzip.ErrStdoutNoForce) {
+			log.Fatalf("gzip: %v", err)
+		}
+		if errors.Is(err, gzip.ErrHelp) {
+			cmdLine.Usage()
+			os.Exit(0)
+		}
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		cmdLine.Usage()
+		os.Exit(1)
+	}
+
+	if err := run(opts, cmdLine.Args()); err != nil {
+		log.Fatalf("gzip: %v", err)
 	}
 }

@@ -19,7 +19,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func lookupPkgs(env gbbgolang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
+func lookupPkgs(env *gbbgolang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
 	cfg := &packages.Config{
 		Mode:  packages.NeedName | packages.NeedFiles,
 		Env:   append(os.Environ(), env.Env()...),
@@ -64,10 +64,8 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 	}
 
 	// Set up u-root build options.
-	env := gbbgolang.Default()
-	env.CgoEnabled = false
-	env.GOARCH = TestArch()
-	o.BuildOpts.Env = &env
+	env := gbbgolang.Default(gbbgolang.DisableCGO(), gbbgolang.WithGOARCH(TestArch()))
+	o.BuildOpts.Env = env
 
 	// Statically build tests and add them to the temporary directory.
 	var tests []string
@@ -113,7 +111,7 @@ func GolangTest(t *testing.T, pkgs []string, o *Options) {
 		if _, err := os.Stat(testFile); !os.IsNotExist(err) {
 			tests = append(tests, pkg)
 
-			pkgs, err := lookupPkgs(*o.BuildOpts.Env, "", pkg)
+			pkgs, err := lookupPkgs(o.BuildOpts.Env, "", pkg)
 			if err != nil {
 				t.Fatalf("Failed to look up package %q: %v", pkg, err)
 			}

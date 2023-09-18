@@ -140,14 +140,9 @@ func TestCmp(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Set flags
-			*long = tt.long
-			*line = tt.line
-			*silent = tt.silent
-
 			// Start tests
 			var stdout, stderr bytes.Buffer
-			if err := cmp(&stdout, &stderr, tt.args...); !errors.Is(err, tt.err) {
+			if err := cmp(&stdout, &stderr, tt.long, tt.line, tt.silent, tt.args...); !errors.Is(err, tt.err) {
 				t.Errorf("cmp(): got %v, want %v", err, tt.err)
 			}
 			if stdout.String() != tt.stdout {

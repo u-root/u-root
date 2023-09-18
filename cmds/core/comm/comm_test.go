@@ -96,14 +96,8 @@ func TestComm(t *testing.T) {
 				t.Errorf("failed to create file1: %v", err)
 			}
 
-			// Setting flags
-			*s1 = tt.s1
-			*s2 = tt.s2
-			*s3 = tt.s3
-			*help = tt.help
-
 			buf := &bytes.Buffer{}
-			if err := comm(buf, tt.args...); !errors.Is(err, tt.err) {
+			if err := comm(buf, tt.s1, tt.s2, tt.s3, tt.help, tt.args...); !errors.Is(err, tt.err) {
 				t.Errorf("comm() = %q, want: %q", err, tt.err)
 			}
 			if buf.String() != tt.want {

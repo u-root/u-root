@@ -64,12 +64,10 @@ func TestDmesg(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			*clear = tt.clear
-			*readClear = tt.readClear
 			buf := &bytes.Buffer{}
 			tt.buf.Write([]byte{tt.bufIn})
 			buf.Write([]byte{tt.bufIn})
-			if got := dmesg(tt.buf); got != nil {
+			if got := dmesg(tt.buf, tt.clear, tt.readClear); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("dmesg() = '%v', want: '%v'", got, tt.want)
 				}

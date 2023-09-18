@@ -5,7 +5,9 @@
 package gzip
 
 import (
+	"errors"
 	"flag"
+	"reflect"
 	"runtime"
 	"testing"
 
@@ -13,108 +15,147 @@ import (
 )
 
 func TestOptionsParseArgs(t *testing.T) {
-	type fields struct {
-		Blocksize  int
-		Level      int
-		Processes  int
-		Decompress bool
-		Force      bool
-		Help       bool
-		Keep       bool
-		Quiet      bool
-		Stdin      bool
-		Stdout     bool
-		Test       bool
-		Verbose    bool
-		Suffix     string
-	}
 	type args struct {
-		args    []string
 		cmdLine *flag.FlagSet
+		args    []string
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{ // TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			o := &Options{
-				Blocksize:  tt.fields.Blocksize,
-				Level:      tt.fields.Level,
-				Processes:  tt.fields.Processes,
-				Decompress: tt.fields.Decompress,
-				Force:      tt.fields.Force,
-				Help:       tt.fields.Help,
-				Keep:       tt.fields.Keep,
-				Quiet:      tt.fields.Quiet,
-				Stdin:      tt.fields.Stdin,
-				Stdout:     tt.fields.Stdout,
-				Test:       tt.fields.Test,
-				Verbose:    tt.fields.Verbose,
-				Suffix:     tt.fields.Suffix,
-			}
-			if err := o.ParseArgs(tt.args.args, tt.args.cmdLine); (err != nil) != tt.wantErr {
-				t.Errorf("Options.ParseArgs() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestOptionsvalidate(t *testing.T) {
-	type fields struct {
-		Blocksize  int
-		Level      int
-		Processes  int
-		Decompress bool
-		Force      bool
-		Help       bool
-		Keep       bool
-		Quiet      bool
-		Stdin      bool
-		Stdout     bool
-		Test       bool
-		Verbose    bool
-		Suffix     string
-	}
-	type args struct {
-		moreArgs bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		fields  fields
-		wantErr bool
+		name       string
+		args       args
+		wantOption Options
+		wantErr    error
 	}{
 		{
-			name:    "Default values no args",
-			fields:  fields{Blocksize: 128, Level: -1, Processes: runtime.NumCPU(), Decompress: false, Force: false, Help: false},
-			args:    args{moreArgs: false},
-			wantErr: true,
+			name: "default values no flags",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzip", "file.txt"},
+			},
+			wantOption: Options{
+				Blocksize: 128,
+				Level:     -1,
+				Processes: runtime.NumCPU(),
+				Suffix:    ".gz",
+			},
+		},
+		{
+			name: "set level 7",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzip", "-7", "file.txt"},
+			},
+			wantOption: Options{
+				Blocksize: 128,
+				Level:     7,
+				Processes: runtime.NumCPU(),
+				Suffix:    ".gz",
+			},
+		},
+		{
+			name: "stdin/stdout with force",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzip", "-f"},
+			},
+			wantOption: Options{
+				Blocksize: 128,
+				Level:     -1,
+				Processes: runtime.NumCPU(),
+				Suffix:    ".gz",
+				Force:     true,
+				Stdin:     true,
+				Stdout:    true,
+			},
+		},
+		{
+			name: "with test decompress should be true",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzip", "-t", "file.txt"},
+			},
+			wantOption: Options{
+				Blocksize:  128,
+				Level:      -1,
+				Processes:  runtime.NumCPU(),
+				Suffix:     ".gz",
+				Test:       true,
+				Decompress: true,
+			},
+		},
+		{
+			name: "symlink to gunzip",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gunzip", "file.gz"},
+			},
+			wantOption: Options{
+				Blocksize:  128,
+				Level:      -1,
+				Processes:  runtime.NumCPU(),
+				Suffix:     ".gz",
+				Decompress: true,
+			},
+		},
+		{
+			name: "symlink to gunzip",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gunzip", "file.gz"},
+			},
+			wantOption: Options{
+				Blocksize:  128,
+				Level:      -1,
+				Processes:  runtime.NumCPU(),
+				Suffix:     ".gz",
+				Decompress: true,
+			},
+		},
+		{
+			name: "symlink to gzcat",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzcat", "file.gz"},
+			},
+			wantOption: Options{
+				Blocksize:  128,
+				Level:      -1,
+				Processes:  runtime.NumCPU(),
+				Suffix:     ".gz",
+				Decompress: true,
+				Stdout:     true,
+			},
+		},
+		{
+			name: "no args and no force",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzip"},
+			},
+			wantErr: ErrStdoutNoForce,
+		},
+		{
+			name: "request for help",
+			args: args{
+				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
+				args:    []string{"gzip", "-h"},
+			},
+			wantErr: ErrHelp,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &Options{
-				Blocksize:  tt.fields.Blocksize,
-				Level:      tt.fields.Level,
-				Processes:  tt.fields.Processes,
-				Decompress: tt.fields.Decompress,
-				Force:      tt.fields.Force,
-				Help:       tt.fields.Help,
-				Keep:       tt.fields.Keep,
-				Quiet:      tt.fields.Quiet,
-				Stdin:      tt.fields.Stdin,
-				Stdout:     tt.fields.Stdout,
-				Test:       tt.fields.Test,
-				Verbose:    tt.fields.Verbose,
-				Suffix:     tt.fields.Suffix,
+			o := &Options{}
+			err := o.ParseArgs(tt.args.args, tt.args.cmdLine)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Options.ParseArgs() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			if err := o.validate(tt.args.moreArgs); (err != nil) != tt.wantErr {
-				t.Errorf("Options.validate() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr != nil {
+				return
+			}
+
+			if !reflect.DeepEqual(*o, tt.wantOption) {
+				t.Errorf("Options.ParseArgs() = \n%+v, want \n%+v", *o, tt.wantOption)
 			}
 		})
 	}
@@ -126,8 +167,8 @@ func TestParseLevels(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		args    args
 		want    int
+		args    args
 		wantErr bool
 	}{
 		{
@@ -149,7 +190,7 @@ func TestParseLevels(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "Multuple levels specified",
+			name:    "Multiple levels specified",
 			args:    args{levels: [10]bool{false, true, false, false, false, false, false, false, false, true}},
 			want:    0,
 			wantErr: true,

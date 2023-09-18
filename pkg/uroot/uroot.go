@@ -239,7 +239,7 @@ func CreateInitramfs(logger ulog.Logger, opts Opts) error {
 
 	env := gbbgolang.Default()
 	if opts.Env != nil {
-		env = *opts.Env
+		env = opts.Env
 	}
 	if opts.BuildOpts == nil {
 		opts.BuildOpts = &gbbgolang.BuildOpts{}

@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 type flags struct {
@@ -122,14 +124,23 @@ func TestMkdir(t *testing.T) {
 			args:     []string{filepath.Join(d, "stub12"), filepath.Join(d, "stub13")},
 			wantMode: "dutrwxrwxrwx",
 		},
+		{
+			name:     "Default createtion mode",
+			args:     []string{filepath.Join(d, "stub14")},
+			wantMode: "drwxr-xr-x",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf = bytes.NewBuffer(nil)
 			log.SetOutput(buf)
-			*mode = tt.flags.mode
-			*mkall = tt.flags.mkall
-			*verbose = tt.flags.verbose
-			if got := mkdir(tt.args); got != nil {
+			// don't depend on system umask value, if mode is not specified
+			if tt.flags.mode == "" {
+				m := unix.Umask(unix.S_IWGRP | unix.S_IWOTH)
+				defer func() {
+					unix.Umask(m)
+				}()
+			}
+			if got := mkdir(tt.flags.mode, tt.flags.mkall, tt.flags.verbose, tt.args); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("mkdir() = '%v', want: '%v'", got, tt.want)
 				}

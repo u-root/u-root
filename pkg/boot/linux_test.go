@@ -141,7 +141,7 @@ func TestCopyToFile(t *testing.T) {
 	want := "abcdefg hijklmnop"
 	buf := bytes.NewReader([]byte(want))
 
-	f, err := copyToFileIfNotRegular(buf, true)
+	f, err := CopyToFileIfNotRegular(buf, true)
 	if err != nil {
 		t.Fatal(err)
 	}

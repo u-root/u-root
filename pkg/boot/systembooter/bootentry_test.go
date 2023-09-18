@@ -1,4 +1,4 @@
-// Copyright 2017-2021 the u-root Authors. All rights reserved
+// Copyright 2017-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"errors"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 func TestGetBooterForNetBooter(t *testing.T) {
@@ -15,9 +17,9 @@ func TestGetBooterForNetBooter(t *testing.T) {
 		Name:   "Boot0000",
 		Config: []byte(`{"type": "netboot", "method": "dhcpv6", "mac": "aa:bb:cc:dd:ee:ff"}`),
 	}
-	booter := GetBooterFor(validConfig)
-	if booter == nil {
-		t.Fatalf(`GetBooterFor(validConfig) = %v, want not nil`, booter)
+	booter, err := GetBooterFor(validConfig, ulog.Null)
+	if err != nil {
+		t.Fatalf(`GetBooterFor(validConfig) error = %v`, err)
 	}
 	if booter.TypeName() != "netboot" {
 		t.Errorf(`GetBooterFor(validConfig).TypeName() = %q, want "netboot"`, booter.TypeName())
@@ -32,18 +34,12 @@ func TestGetBooterForNullBooter(t *testing.T) {
 		Name:   "Boot0000",
 		Config: []byte(`{"type": "null"}`),
 	}
-	booter := GetBooterFor(validConfig)
-	if booter == nil {
-		t.Fatalf(`GetBooterFor(validConfig) = %v, want not nil`, booter)
+	booter, err := GetBooterFor(validConfig, ulog.Null)
+	if !errors.Is(err, errNoBooterFound) {
+		t.Fatalf(`GetBooterFor(validConfig) error = %v, wantErr %v`, err, errNoBooterFound)
 	}
-	if booter.TypeName() != "null" {
-		t.Errorf(`GetBooterFor(validConfig).TypeName() = %q, want "null"`, booter.TypeName())
-	}
-	if booter.(*NullBooter) == nil {
-		t.Errorf(`booter.(*NetBooter) = %v, want not nil`, booter.(*NetBooter))
-	}
-	if booter.Boot(true) != nil {
-		t.Errorf(`booter.Boot(true) = %v, want nil`, booter.Boot(true))
+	if booter != nil {
+		t.Fatalf(`GetBooterFor(validConfig) = %v, want nil`, booter)
 	}
 }
 
@@ -52,20 +48,12 @@ func TestGetBooterForInvalidBooter(t *testing.T) {
 		Name:   "Boot0000",
 		Config: []byte(`{"type": "invalid"`),
 	}
-	booter := GetBooterFor(invalidConfig)
-
-	if booter == nil {
-		t.Fatalf(`GetBooterFor(invalidConfig) = %v, want not nil`, booter)
+	booter, err := GetBooterFor(invalidConfig, ulog.Null)
+	if !errors.Is(err, errNoBooterFound) {
+		t.Fatalf(`GetBooterFor(invalidConfig) error = %v, wantErr %v`, err, errNoBooterFound)
 	}
-	// an invalid config returns always a NullBooter
-	if booter.TypeName() != "null" {
-		t.Errorf(`GetBooterFor(invalidConfig).TypeName() = %q, want "null"`, booter.TypeName())
-	}
-	if booter.(*NullBooter) == nil {
-		t.Errorf(`booter.(*NetBooter) = %v, want not nil`, booter.(*NetBooter))
-	}
-	if booter.Boot(true) != nil {
-		t.Errorf(`booter.Boot(true) = %v, want nil`, booter.Boot(true))
+	if booter != nil {
+		t.Fatalf(`GetBooterFor(invalidConfig) = %v, want nil`, booter)
 	}
 }
 
@@ -86,7 +74,7 @@ func TestGetBootEntries(t *testing.T) {
 			return nil, errors.New("No such key")
 		}
 	}
-	entries := GetBootEntries()
+	entries := GetBootEntries(ulog.Null)
 	if len(entries) != 2 {
 		t.Errorf(`len(entries) = %d, want "2"`, len(entries))
 	}
@@ -113,7 +101,7 @@ func TestGetBootEntriesOnlyRO(t *testing.T) {
 		}
 		return []byte(`{"type": "netboot", "method": "dhcpv6", "mac": "aa:bb:cc:dd:ee:ff"}`), nil
 	}
-	entries := GetBootEntries()
+	entries := GetBootEntries(ulog.Null)
 	if len(entries) != 1 {
 		t.Errorf(`len(entries) = %d, want "1"`, len(entries))
 	}

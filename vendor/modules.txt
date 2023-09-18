@@ -89,7 +89,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-tpm v0.9.0
+# github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 ## explicit; go 1.20
 github.com/google/go-tpm/legacy/tpm2
 github.com/google/go-tpm/tpm
@@ -240,7 +240,7 @@ github.com/sahilm/fuzzy
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/u-root/gobusybox/src v0.0.0-20230727012353-e2d80c448e5d
+# github.com/u-root/gobusybox/src v0.0.0-20230806212452-e9366a5b9fdc
 ## explicit; go 1.13
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal

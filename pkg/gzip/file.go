@@ -14,8 +14,8 @@ import (
 
 // File is a file path to be compressed or decompressed.
 type File struct {
-	Path    string
 	Options *Options
+	Path    string
 }
 
 // outputPath removes the path suffix on decompress and adds it on compress.

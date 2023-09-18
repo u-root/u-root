@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !tinygo && linux && amd64
-// +build !tinygo,linux,amd64
+//go:build !tinygo && linux && (amd64 || riscv64)
+// +build !tinygo
+// +build linux
+// +build amd64 riscv64
 
 // strace is a simple multi-process syscall & signal tracer.
 //

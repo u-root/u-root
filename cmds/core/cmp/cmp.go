@@ -69,7 +69,7 @@ func readFileOrStdin(stdin *os.File, name string) (*os.File, error) {
 	return f, err
 }
 
-func cmp(stdout, stderr io.Writer, args ...string) error {
+func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) error {
 	var offset [2]int64
 	var f *os.File
 	var err error
@@ -103,7 +103,7 @@ func cmp(stdout, stderr io.Writer, args ...string) error {
 		}
 		offset[1] = v.Value
 	default:
-		fmt.Fprintf(stderr, usage)
+		fmt.Fprint(stderr, usage)
 		return ErrArgCount
 	}
 
@@ -142,14 +142,14 @@ func cmp(stdout, stderr io.Writer, args ...string) error {
 
 		b1, b2 := b[0], b[1]
 		if b1 != b2 {
-			if *silent {
+			if silent {
 				return nil
 			}
-			if *line {
+			if line {
 				fmt.Fprintf(stdout, "%s %s: char %d line %d", args[0], args[1], charno, lineno)
 				return ErrDiffer
 			}
-			if *long {
+			if long {
 				fmt.Fprintf(stdout, "%8d %#.2o %#.2o\n", charno, b1, b2)
 				goto skip
 			}
@@ -167,7 +167,7 @@ func cmp(stdout, stderr io.Writer, args ...string) error {
 // cmp is defined to fail with exit code 2
 func main() {
 	flag.Parse()
-	if err := cmp(os.Stdout, os.Stderr, flag.Args()...); err != nil {
+	if err := cmp(os.Stdout, os.Stderr, *long, *line, *silent, flag.Args()...); err != nil {
 		os.Exit(2)
 	}
 }

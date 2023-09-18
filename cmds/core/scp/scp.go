@@ -50,7 +50,7 @@ func scpSingleSource(w io.Writer, r io.Reader, pth string) error {
 		return err
 	}
 	filename := path.Base(pth)
-	w.Write([]byte(fmt.Sprintf("C0%o %d %s\n", s.Mode(), s.Size(), filename)))
+	fmt.Fprintf(w, "C0%o %d %s\n", s.Mode(), s.Size(), filename)
 	if response(r) != SUCCESS {
 		return fmt.Errorf("response was not success")
 	}

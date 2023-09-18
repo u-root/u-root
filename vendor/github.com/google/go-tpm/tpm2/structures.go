@@ -343,6 +343,10 @@ type TPMIYesNo = bool
 // See definition in Part 2: Structures, section 9.3.
 type TPMIDHObject = TPMHandle
 
+// TPMIDHPersistent represents a TPMI_DH_PERSISTENT.
+// See definition in Part 2: Structures, section 9.5.
+type TPMIDHPersistent = TPMHandle
+
 // TPMIDHEntity represents a TPMI_DH_ENTITY.
 // See definition in Part 2: Structures, section 9.6.
 type TPMIDHEntity = TPMHandle

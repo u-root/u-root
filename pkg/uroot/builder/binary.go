@@ -6,7 +6,6 @@ package builder
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 
@@ -16,17 +15,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func lookupPkgs(env gbbgolang.Environ, dir string, patterns ...string) ([]*packages.Package, error) {
-	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedFiles,
-		Env:  append(os.Environ(), env.Env()...),
-		Dir:  dir,
-	}
-	return packages.Load(cfg, patterns...)
-}
-
-func dirFor(env gbbgolang.Environ, pkg string) (string, error) {
-	pkgs, err := lookupPkgs(env, "", pkg)
+func dirFor(env *gbbgolang.Environ, pkg string) (string, error) {
+	pkgs, err := env.Lookup(packages.NeedName|packages.NeedFiles, "", pkg)
 	if err != nil {
 		return "", fmt.Errorf("failed to look up package %q: %v", pkg, err)
 	}
@@ -60,6 +50,9 @@ func (BinaryBuilder) DefaultBinaryDir() string {
 
 // Build implements Builder.Build.
 func (BinaryBuilder) Build(l ulog.Logger, af *initramfs.Files, opts Opts) error {
+	if opts.Env == nil {
+		return fmt.Errorf("must specify Go build environment")
+	}
 	result := make(chan error, len(opts.Packages))
 
 	var wg sync.WaitGroup

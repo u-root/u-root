@@ -12,7 +12,7 @@ require (
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-tpm v0.9.0
+	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/uuid v1.3.0
 	github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
@@ -30,7 +30,7 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20230727012353-e2d80c448e5d
+	github.com/u-root/gobusybox/src v0.0.0-20230806212452-e9366a5b9fdc
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
 	github.com/ulikunitz/xz v0.5.8

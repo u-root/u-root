@@ -93,11 +93,8 @@ func TestEcho(t *testing.T) {
 	} {
 		// Run tests
 		t.Run(tt.name, func(t *testing.T) {
-			*noNewline = tt.noNewline
-			*interpretEscapes = tt.interpretEscapes
-			*interpretBackslashEscapes = tt.interpretBackslashEscapes
 			var got bytes.Buffer
-			if err := echo(&got, tt.input); err != nil {
+			if err := echo(&got, tt.noNewline, tt.interpretEscapes, tt.interpretBackslashEscapes, tt.input); err != nil {
 				t.Errorf("%q failed: %q", tt.name, err)
 			}
 			if got.String() != tt.want {

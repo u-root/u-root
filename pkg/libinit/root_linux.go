@@ -92,7 +92,10 @@ type CpDir struct {
 }
 
 func (c CpDir) Create() error {
-	return cp.CopyTree(c.Source, c.Target)
+	copier := cp.Options{
+		NoFollowSymlinks: true,
+	}
+	return copier.CopyTree(c.Source, c.Target)
 }
 
 func (c CpDir) String() string {

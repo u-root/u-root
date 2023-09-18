@@ -330,10 +330,7 @@ func ChooseTestInitramfs(o uroot.Opts, uinit, outputFile string) error {
 // the initramfs file after use.
 func CreateTestInitramfs(o uroot.Opts, uinit, outputFile string) (string, error) {
 	if o.Env == nil {
-		env := gbbgolang.Default()
-		env.CgoEnabled = false
-		env.GOARCH = TestArch()
-		o.Env = &env
+		o.Env = gbbgolang.Default(gbbgolang.DisableCGO(), gbbgolang.WithGOARCH(TestArch()))
 	}
 
 	if o.UrootSource == "" {
