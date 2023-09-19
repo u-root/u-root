@@ -11,7 +11,8 @@ import (
 	"testing"
 )
 
-func setup(t *testing.T) (string, error) {
+func setup(t *testing.T) string {
+	t.Helper()
 	d := t.TempDir()
 	for _, tt := range []struct {
 		name    string      // name
@@ -40,17 +41,14 @@ func setup(t *testing.T) (string, error) {
 		},
 	} {
 		if err := os.WriteFile(filepath.Join(d, tt.name), tt.content, tt.mode); err != nil {
-			return "", err
+			t.Fatalf("setup failed: %v", err)
 		}
 	}
-	return d, nil
+	return d
 }
 
 func TestMove(t *testing.T) {
-	d, err := setup(t)
-	if err != nil {
-		t.Errorf("File setup failed: %v", err)
-	}
+	d := setup(t)
 
 	for _, tt := range []struct {
 		name  string
@@ -73,9 +71,8 @@ func TestMove(t *testing.T) {
 			want:  fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
 		},
 	} {
-		*update = true
 		t.Run(tt.name, func(t *testing.T) {
-			if got := move(tt.files); got != nil {
+			if got := move(true, false, tt.files); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("move() = '%v', want: '%v'", got, tt.want)
 				}
@@ -86,10 +83,7 @@ func TestMove(t *testing.T) {
 }
 
 func TestMv(t *testing.T) {
-	d, err := setup(t)
-	if err != nil {
-		t.Errorf("File setup failed: %v", err)
-	}
+	d := setup(t)
 
 	for _, tt := range []struct {
 		name  string
@@ -99,7 +93,6 @@ func TestMv(t *testing.T) {
 		{
 			name:  "len(files) > 2",
 			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), d},
-			want:  fmt.Errorf(""),
 		},
 		{
 			name:  "len(files) > 2 && d does not exist",
@@ -109,11 +102,10 @@ func TestMv(t *testing.T) {
 		{
 			name:  "len(files) = 2",
 			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt")},
-			want:  fmt.Errorf(""),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mv(tt.files, false); got != nil {
+			if got := mv(true, false, tt.files, false); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("mv() = '%v', want: '%v'", got, tt.want)
 				}
@@ -124,10 +116,7 @@ func TestMv(t *testing.T) {
 }
 
 func TestMoveFile(t *testing.T) {
-	d, err := setup(t)
-	if err != nil {
-		t.Errorf("File setup failed: %v", err)
-	}
+	d := setup(t)
 
 	var testTable = []struct {
 		name string
@@ -151,7 +140,7 @@ func TestMoveFile(t *testing.T) {
 
 	for _, tt := range testTable {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := moveFile(tt.src, tt.dst); got != nil {
+			if got := moveFile(true, false, tt.src, tt.dst); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("moveFile() = '%v', want: '%v'", got, tt.want)
 				}
@@ -159,10 +148,8 @@ func TestMoveFile(t *testing.T) {
 		})
 	}
 
-	*noClobber = true
-	*update = false
 	t.Run("test for noClobber", func(t *testing.T) {
-		if err := moveFile(testTable[0].src, testTable[0].dst); err != nil {
+		if err := moveFile(false, true, testTable[0].src, testTable[0].dst); err != nil {
 			t.Errorf("Expected err: %v, got: %v", err, testTable[0].want)
 		}
 	})
