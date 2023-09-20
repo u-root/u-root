@@ -140,7 +140,7 @@ func TestMoveFile(t *testing.T) {
 
 	for _, tt := range testTable {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := moveFile(true, false, tt.src, tt.dst); got != nil {
+			if got := moveFile(tt.src, tt.dst, true, false); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("moveFile() = '%v', want: '%v'", got, tt.want)
 				}
@@ -149,7 +149,7 @@ func TestMoveFile(t *testing.T) {
 	}
 
 	t.Run("test for noClobber", func(t *testing.T) {
-		if err := moveFile(false, true, testTable[0].src, testTable[0].dst); err != nil {
+		if err := moveFile(testTable[0].src, testTable[0].dst, false, true); err != nil {
 			t.Errorf("Expected err: %v, got: %v", err, testTable[0].want)
 		}
 	})
