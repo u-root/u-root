@@ -31,7 +31,7 @@ var (
 	noClobber = flag.Bool("n", false, "do not overwrite an existing file")
 )
 
-func moveFile(update, noClobber bool, source string, dest string) error {
+func moveFile(source string, dest string, update bool, noClobber bool) error {
 	if noClobber {
 		_, err := os.Lstat(dest)
 		if !os.IsNotExist(err) {
@@ -67,7 +67,7 @@ func moveFile(update, noClobber bool, source string, dest string) error {
 func mv(update, noClobber bool, files []string, todir bool) error {
 	if len(files) == 2 && !todir {
 		// Rename/move a single file
-		if err := moveFile(update, noClobber, files[0], files[1]); err != nil {
+		if err := moveFile(files[0], files[1], update, noClobber); err != nil {
 			return err
 		}
 	} else {
@@ -75,7 +75,7 @@ func mv(update, noClobber bool, files []string, todir bool) error {
 		destdir := files[len(files)-1]
 		for _, f := range files[:len(files)-1] {
 			newPath := filepath.Join(destdir, filepath.Base(f))
-			if err := moveFile(update, noClobber, f, newPath); err != nil {
+			if err := moveFile(f, newPath, update, noClobber); err != nil {
 				return err
 			}
 		}
