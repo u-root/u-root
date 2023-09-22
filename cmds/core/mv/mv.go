@@ -64,7 +64,7 @@ func moveFile(source string, dest string, update bool, noClobber bool) error {
 	return nil
 }
 
-func mv(update, noClobber bool, files []string, todir bool) error {
+func mv(files []string, update, noClobber, todir bool) error {
 	if len(files) == 2 && !todir {
 		// Rename/move a single file
 		if err := moveFile(files[0], files[1], update, noClobber); err != nil {
@@ -83,7 +83,7 @@ func mv(update, noClobber bool, files []string, todir bool) error {
 	return nil
 }
 
-func move(update, noClobber bool, files []string) error {
+func move(files []string, update, noClobber bool) error {
 	var todir bool
 	dest := files[len(files)-1]
 	if destdir, err := os.Lstat(dest); err == nil {
@@ -92,7 +92,7 @@ func move(update, noClobber bool, files []string) error {
 	if len(files) > 2 && !todir {
 		return fmt.Errorf("not a directory: %s", dest)
 	}
-	return mv(update, noClobber, files, todir)
+	return mv(files, update, noClobber, todir)
 }
 
 func main() {
@@ -102,7 +102,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := move(*update, *noClobber, flag.Args()); err != nil {
+	if err := move(flag.Args(), *update, *noClobber); err != nil {
 		log.Fatal(err)
 	}
 }

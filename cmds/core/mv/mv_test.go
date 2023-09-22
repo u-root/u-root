@@ -15,9 +15,9 @@ func setup(t *testing.T) string {
 	t.Helper()
 	d := t.TempDir()
 	for _, tt := range []struct {
-		name    string      // name
-		mode    os.FileMode // mode
-		content []byte      // content
+		name    string
+		content []byte
+		mode    os.FileMode
 	}{
 		{
 			name:    "hi1.txt",
@@ -51,9 +51,9 @@ func TestMove(t *testing.T) {
 	d := setup(t)
 
 	for _, tt := range []struct {
+		want  error
 		name  string
 		files []string
-		want  error
 	}{
 		{
 			name:  "Is a directory",
@@ -72,7 +72,7 @@ func TestMove(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := move(true, false, tt.files); got != nil {
+			if got := move(tt.files, true, false); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("move() = '%v', want: '%v'", got, tt.want)
 				}
@@ -86,26 +86,32 @@ func TestMv(t *testing.T) {
 	d := setup(t)
 
 	for _, tt := range []struct {
-		name  string
-		files []string
-		want  error
+		want      error
+		name      string
+		files     []string
+		update    bool
+		noClobber bool
+		todir     bool
 	}{
 		{
-			name:  "len(files) > 2",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), d},
+			name:   "len(files) > 2",
+			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), d},
+			update: true,
 		},
 		{
-			name:  "len(files) > 2 && d does not exist",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), "d"},
-			want:  fmt.Errorf("lstat %s: no such file or directory", filepath.Join("d", "hi1.txt")),
+			name:   "len(files) > 2 && d does not exist",
+			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), "d"},
+			want:   fmt.Errorf("lstat %s: no such file or directory", filepath.Join("d", "hi1.txt")),
+			update: true,
 		},
 		{
-			name:  "len(files) = 2",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt")},
+			name:   "len(files) = 2",
+			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt")},
+			update: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mv(true, false, tt.files, false); got != nil {
+			if got := mv(tt.files, tt.update, tt.noClobber, tt.todir); got != nil {
 				if got.Error() != tt.want.Error() {
 					t.Errorf("mv() = '%v', want: '%v'", got, tt.want)
 				}
@@ -119,10 +125,10 @@ func TestMoveFile(t *testing.T) {
 	d := setup(t)
 
 	var testTable = []struct {
+		want error
 		name string
 		src  string
 		dst  string
-		want error
 	}{
 		{
 			name: "first file in update path does not exist",
