@@ -12,7 +12,7 @@ yourself.
 | :x: printf     |                 | Not implemented yet!   |
 | ps             |                 | Fix race conditions    |
 | readlink       | -em             |                        |
-| :x: sed        | -ie             | Not implemented yet!   |
+| sed            | -ie             |                        |
 | sort           | -bcfmnRu        |                        |
 | srvfiles       |                 | Serve files with TLS   |
 | truncate       | -o              |                        |
