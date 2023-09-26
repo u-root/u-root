@@ -13,18 +13,6 @@ import (
 )
 
 func TestMore(t *testing.T) {
-	t.Run("no files", func(t *testing.T) {
-		err := run(nil, nil, 0, []string{})
-		if !errors.Is(err, errOnlyOneFile) {
-			t.Errorf("expected %v, got %v", errOnlyOneFile, err)
-		}
-	})
-	t.Run("two files", func(t *testing.T) {
-		err := run(nil, nil, 0, []string{"file1", "file2"})
-		if !errors.Is(err, errOnlyOneFile) {
-			t.Errorf("expected %v, got %v", errOnlyOneFile, err)
-		}
-	})
 	t.Run("files is not exist", func(t *testing.T) {
 		err := run(nil, nil, 40, []string{"file-is-not-exists"})
 		if !errors.Is(err, os.ErrNotExist) {
