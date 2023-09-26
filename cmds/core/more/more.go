@@ -31,37 +31,39 @@ import (
 )
 
 var lines = flag.Int("lines", 40, "screen size in number of lines")
-var errOnlyOneFile = fmt.Errorf("more can only take one file")
 var errLinesMustBePositive = fmt.Errorf("lines must be positive")
 
 func run(stdin io.Reader, stdout io.Writer, lines int, args []string) error {
-	if len(args) != 1 {
-		return errOnlyOneFile
-	}
 	if lines <= 0 {
-		return errLinesMustBePositive
+		return fmt.Errorf("%d: %w", lines, errLinesMustBePositive)
 	}
 
-	f, err := os.Open(args[0])
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	for _, arg := range args {
+		f, err := os.Open(arg)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-	scanner := bufio.NewScanner(f)
-	for i := 0; scanner.Scan(); i++ {
-		if (i+1)%lines == 0 {
-			fmt.Fprint(stdout, scanner.Text())
-			c := make([]byte, 1)
-			// We expect the OS to echo the newline character.
-			if _, err := stdin.Read(c); err != nil {
-				return err
+		scanner := bufio.NewScanner(f)
+		for i := 0; scanner.Scan(); i++ {
+			if (i+1)%lines == 0 {
+				fmt.Fprint(stdout, scanner.Text())
+				c := make([]byte, 1)
+				// We expect the OS to echo the newline character.
+				if _, err := stdin.Read(c); err != nil {
+					return err
+				}
+			} else {
+				fmt.Fprintln(stdout, scanner.Text())
 			}
-		} else {
-			fmt.Fprintln(stdout, scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			return err
 		}
 	}
-	return scanner.Err()
+
+	return nil
 }
 
 func main() {
