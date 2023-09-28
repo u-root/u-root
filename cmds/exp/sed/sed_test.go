@@ -7,36 +7,56 @@
 package main
 
 import (
-	"bytes"
+	"fmt"
 	"io"
-	"strings"
+	"os"
 	"testing"
 )
 
-type nopCloser struct {
-	*bytes.Buffer
-}
-
-func (nopCloser) Close() error { return nil }
-
-func TestTransformCopy(t *testing.T) {
-	cfg := config{
-		transforms: transforms{
-			transform{from: "old", to: "new"},
-		},
-		inplace: false,
+func TestTmpWriter(t *testing.T) {
+	tmpDir := t.TempDir()
+	f1, err := os.CreateTemp(tmpDir, "f1")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	input := strings.NewReader("old\n")
-	output := &nopCloser{bytes.NewBuffer(nil)}
+	_, err = f1.WriteString("hix\nnix\n")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	readStreams := []io.ReadCloser{io.NopCloser(input)}
-	writeStreams := []io.WriteCloser{output}
+	err = os.Chdir(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	transformCopy(cfg, readStreams, writeStreams)
+	testcases := []struct {
+		filename string
+		content  string
+		err      error
+	}{
+		{
+			filename: "/tmp/tw",
+			content:  "foo\nbar",
+			err:      nil,
+		},
+	}
 
-	result := output.String()
-	if strings.TrimSpace(result) != "new" {
-		t.Errorf("Expected 'new', got '%s'", result)
+	for idx, tc := range testcases {
+		test := tc
+		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
+			tw, err := newTmpWriter(test.filename)
+			if err != nil {
+				t.Errorf("failed to create tempWriter: %v", err)
+			}
+			fmt.Fprint(tw, test.content)
+			tw.Close()
+			fh, _ := os.Open(tc.filename)
+			fc, _ := io.ReadAll(fh)
+			fcontent := string(fc)
+			if fcontent != tc.content {
+				t.Errorf("got %#v, want %#v", fcontent, tc.content)
+			}
+		})
 	}
 }

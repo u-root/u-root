@@ -7,124 +7,46 @@
 package main
 
 import (
-	"bufio"
-	"flag"
 	"fmt"
-	"io"
+	"log"
 	"os"
-	"path"
-	"strings"
+	"time"
 )
 
-type transform struct {
-	from string
-	to   string
+// Writes to a temp file first
+// Renames to the final file upon closing
+type tmpWriter struct {
+	filename string
+	ftmp     os.File
 }
 
-type transforms []transform
-
-func (t *transforms) String() string {
-	return fmt.Sprint(*t)
-}
-
-func (t *transforms) Set(value string) error {
-	transformDefinition := strings.Split(value, "/")
-
-	if len(transformDefinition) != 3 || transformDefinition[0] != "s" {
-		return fmt.Errorf("unable to parse transformation. This should be of the form s/old/new")
+func newTmpWriter(filename string) (*tmpWriter, error) {
+	ftmp, err := os.CreateTemp("/tmp", ".sed*.txt")
+	if err != nil {
+		return nil, fmt.Errorf("unable to create temp file: %w", err)
 	}
+	return &tmpWriter{filename: filename, ftmp: *ftmp}, nil
+}
 
-	*t = append(*t, transform{from: transformDefinition[1], to: transformDefinition[2]})
+func (tw *tmpWriter) Write(b []byte) (int, error) {
+	return tw.ftmp.Write(b)
+}
 
+func (tw *tmpWriter) Close() error {
+	err := tw.ftmp.Close()
+	if err != nil {
+		return err
+	}
+	os.Rename(tw.ftmp.Name(), tw.filename)
 	return nil
 }
 
-type config struct {
-	transforms transforms
-	inplace    bool
-}
-
-var cfg = config{}
-
-func init() {
-	flag.Var(&cfg.transforms, "e", "search/replace commands (s/old/new)")
-	flag.BoolVar(&cfg.inplace, "i", false, "edit files in place")
-}
-
-func transformCopy(cfg config, readStreams []io.ReadCloser, writeStreams []io.WriteCloser) {
-	for i := range readStreams {
-		r := bufio.NewScanner(readStreams[i])
-		w := bufio.NewWriter(writeStreams[i])
-
-		for r.Scan() {
-			line := r.Text()
-			for _, transform := range cfg.transforms {
-				line = strings.ReplaceAll(line, transform.from, transform.to)
-			}
-			_, err := fmt.Fprintf(w, "%s\n", line)
-			if err != nil {
-				fmt.Printf("unable to write output: %#v", err)
-				os.Exit(1)
-			}
-		}
-
-		if err := w.Flush(); err != nil {
-			panic(err)
-		}
-	}
-}
-
-func createWriteStreams(cfg config, readStreams []io.ReadCloser) []io.WriteCloser {
-	l := len(readStreams)
-	writeStreams := make([]io.WriteCloser, l)
-	for i := range writeStreams {
-		if cfg.inplace {
-			fiName := readStreams[i].(*os.File).Name()
-			fiDir := path.Dir(fiName)
-			ftmp, err := os.CreateTemp(fiDir, "sed*.txt")
-			if err != nil {
-				fmt.Printf("unable to create temp file: %#v\n", err)
-				os.Exit(1)
-			}
-			writeStreams[i] = ftmp
-		} else {
-			writeStreams[i] = os.Stdout
-		}
-	}
-	return writeStreams
-}
-
 func main() {
-	flag.Parse()
-
-	var readStreams []io.ReadCloser
-	if len(flag.Args()) == 0 {
-		readStreams = append(readStreams, os.Stdin)
-	} else {
-		for _, filename := range flag.Args() {
-			fh, err := os.Open(filename)
-			if err != nil {
-				fmt.Printf("unable to open input stream: %s. %#v\n", filename, err)
-				os.Exit(1)
-			}
-			readStreams = append(readStreams, fh)
-		}
+	tw, err := newTmpWriter("/tmp/tw")
+	if err != nil {
+		log.Fatalf("unable to create temp writer: %#v", err)
 	}
-	writeStreams := createWriteStreams(cfg, readStreams)
-	transformCopy(cfg, readStreams, writeStreams)
-
-	for i := range readStreams {
-		fi := readStreams[i]
-		fi.Close()
-		if cfg.inplace {
-			fo := writeStreams[i]
-			fo.Close()
-			fiName := fi.(*os.File).Name()
-			foName := fo.(*os.File).Name()
-			err := os.Rename(foName, fiName)
-			if err != nil {
-				fmt.Printf("uname to rename output file: %#v", err)
-			}
-		}
-	}
+	defer tw.Close()
+	fmt.Fprintf(tw, "some data\n")
+	time.Sleep(1 * time.Second)
 }
