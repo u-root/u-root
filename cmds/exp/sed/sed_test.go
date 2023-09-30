@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -109,6 +110,68 @@ func TestTransform(t *testing.T) {
 			got, _ := io.ReadAll(fhout)
 			if string(got) != tc.output {
 				t.Errorf("got %#v, want %#v", string(got), tc.output)
+			}
+		})
+	}
+}
+
+// SedTest is a table-driven which spawns sed with a variety of options and inputs.
+func TestStdinSed(t *testing.T) {
+	tests := []struct {
+		input  string
+		output string
+		err    error
+		p      params
+		args   []string
+	}{
+		// BEWARE: the IO package seems to want this to be newline terminated.
+		// If you just use hix with no newline the test will fail. Yuck.
+		{
+			input:  "hix\n",
+			output: "hix\n",
+			err:    nil,
+		},
+		{
+			input:  "hix\n",
+			output: "nix\n",
+			err:    nil,
+			p:      params{expr: []string{"s/hix/nix/"}},
+		},
+		{
+			input:  "hix\n",
+			output: "nix\n",
+			err:    fmt.Errorf("error parsing expressions"),
+			p:      params{expr: []string{"s/hix"}},
+		},
+		{
+			input:  "hix\n",
+			output: "nix\n",
+			err:    nil,
+			p:      params{expr: []string{"s/hix/nix/"}, inplace: true},
+		},
+		{
+			input:  "foo and foo\nbar and bar\n",
+			output: "FOO and FOO\nBAR and bar\n",
+			err:    nil,
+			p:      params{expr: []string{"s/foo/FOO/g", "s@bar@BAR@"}},
+		},
+	}
+
+	for idx, te := range tests {
+		test := te
+		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
+			var stdout bytes.Buffer
+			rc := io.NopCloser(strings.NewReader(test.input))
+			cmd := command(rc, &stdout, nil, test.p, test.args)
+			err := cmd.run()
+			if (err != nil) != (test.err != nil) {
+				t.Errorf("unexpected err %v", err)
+			}
+			if err == nil {
+				res := stdout.String()
+				if res != test.output {
+					t.Errorf("got out %q, want %q", res, test.output)
+				}
 			}
 		})
 	}
