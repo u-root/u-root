@@ -195,30 +195,32 @@ func (c *cmd) run() error {
 	}
 
 	if len(c.args) == 0 {
-		sc := &sedCommand{os.Stdin, os.Stdout, ts}
+		sc := &sedCommand{c.stdin, c.stdout, ts}
 		return c.sed(sc)
 	}
 	for i := range c.args {
-		var fo io.WriteCloser
-
 		fi, err := os.Open(c.args[i])
 		if err != nil {
 			return fmt.Errorf("unable to open input file: %v", err)
 		}
 		if c.inplace {
-			fo, err = newTmpWriter(fi.Name())
+			fo, err := newTmpWriter(fi.Name())
 			if err != nil {
 				return fmt.Errorf("unable to open output file: %v", err)
 			}
+			err = c.sed(&sedCommand{fi, fo, ts})
+			if err != nil {
+				return err
+			}
+			fi.Close()
+			fo.Close()
 		} else {
-			fo = os.Stdout
+			fo := c.stdout
+			err = c.sed(&sedCommand{fi, fo, ts})
+			if err != nil {
+				return err
+			}
 		}
-		err = c.sed(&sedCommand{fi, fo, ts})
-		if err != nil {
-			return err
-		}
-		fi.Close()
-		fo.Close()
 	}
 	return nil
 }
