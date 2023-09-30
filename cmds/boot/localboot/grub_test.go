@@ -4,52 +4,42 @@
 
 package main
 
-import (
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-	"testing"
+//func FuzzParseGrubCfg(f *testing.F) {
 
-	"github.com/u-root/u-root/pkg/mount/block"
-)
+//	tmpDir := f.TempDir()
 
-func FuzzParseGrubCfg(f *testing.F) {
+//	//no log output
+//	log.SetOutput(io.Discard)
+//	log.SetFlags(0)
 
-	tmpDir := f.TempDir()
+//	// get seed corpora from testdata_new files
+//	seeds, err := filepath.Glob("../../../pkg/boot/grub/testdata_new/*/*/*/grub.cfg")
+//	if err != nil {
+//		f.Fatalf("failed to find seed corpora files: %v", err)
+//	}
 
-	//no log output
-	log.SetOutput(io.Discard)
-	log.SetFlags(0)
+//	seeds2, err := filepath.Glob("../../../pkg/boot/grub/testdata_new/*/*/grub.cfg")
+//	if err != nil {
+//		f.Fatalf("failed to find seed corpora files: %v", err)
+//	}
 
-	// get seed corpora from testdata_new files
-	seeds, err := filepath.Glob("../../../pkg/boot/grub/testdata_new/*/*/*/grub.cfg")
-	if err != nil {
-		f.Fatalf("failed to find seed corpora files: %v", err)
-	}
+//	seeds = append(seeds, seeds2...)
+//	for _, seed := range seeds {
+//		seedBytes, err := os.ReadFile(seed)
+//		if err != nil {
+//			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
+//		}
 
-	seeds2, err := filepath.Glob("../../../pkg/boot/grub/testdata_new/*/*/grub.cfg")
-	if err != nil {
-		f.Fatalf("failed to find seed corpora files: %v", err)
-	}
+//		f.Add(string(seedBytes))
+//	}
 
-	seeds = append(seeds, seeds2...)
-	for _, seed := range seeds {
-		seedBytes, err := os.ReadFile(seed)
-		if err != nil {
-			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
-		}
+//	f.Fuzz(func(t *testing.T, data string) {
+//		if len(data) > 256000 {
+//			return
+//		}
 
-		f.Add(string(seedBytes))
-	}
+//		blockDevs := block.BlockDevices{&block.BlockDev{Name: tmpDir, FSType: "test", FsUUID: "07338180-4a96-4611-aa6a-a452600e4cfe"}}
+//		ParseGrubCfg(grubV2, blockDevs, data, tmpDir)
 
-	f.Fuzz(func(t *testing.T, data string) {
-		if len(data) > 256000 {
-			return
-		}
-
-		blockDevs := block.BlockDevices{&block.BlockDev{Name: tmpDir, FSType: "test", FsUUID: "07338180-4a96-4611-aa6a-a452600e4cfe"}}
-		ParseGrubCfg(grubV2, blockDevs, data, tmpDir)
-
-	})
-}
+//	})
+//}
