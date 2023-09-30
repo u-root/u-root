@@ -176,9 +176,8 @@ func command(stdin io.ReadCloser, stdout, stderr io.Writer, p params, args []str
 func (c *cmd) sed(sc *sedCommand) error {
 	r := sc.rc
 	for i := range sc.ts {
-		fmt.Printf("Running t: %#v\n", sc.ts[i])
-		// r = io.NopCloser(t.run(r))
-		r = io.NopCloser(sc.ts[i].run(r))
+		// r = t.run(r)
+		r = sc.ts[i].run(r)
 	}
 	_, err := io.Copy(sc.wc, r)
 	if err != nil {
@@ -200,13 +199,19 @@ func (c *cmd) run() error {
 		return c.sed(sc)
 	}
 	for i := range c.args {
+		var fo io.WriteCloser
+
 		fi, err := os.Open(c.args[i])
 		if err != nil {
 			return fmt.Errorf("unable to open input file: %v", err)
 		}
-		fo, err := newTmpWriter(fi.Name())
-		if err != nil {
-			return fmt.Errorf("unable to open output file: %v", err)
+		if c.inplace {
+			fo, err = newTmpWriter(fi.Name())
+			if err != nil {
+				return fmt.Errorf("unable to open output file: %v", err)
+			}
+		} else {
+			fo = os.Stdout
 		}
 		err = c.sed(&sedCommand{fi, fo, ts})
 		if err != nil {
