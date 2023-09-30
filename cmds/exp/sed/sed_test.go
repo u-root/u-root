@@ -140,12 +140,6 @@ func TestStdinSed(t *testing.T) {
 		{
 			input:  "hix\n",
 			output: "nix\n",
-			err:    fmt.Errorf("error parsing expressions"),
-			p:      params{expr: []string{"s/hix"}},
-		},
-		{
-			input:  "hix\n",
-			output: "nix\n",
 			err:    nil,
 			p:      params{expr: []string{"s/hix/nix/"}, inplace: true},
 		},
@@ -154,6 +148,18 @@ func TestStdinSed(t *testing.T) {
 			output: "FOO and FOO\nBAR and bar\n",
 			err:    nil,
 			p:      params{expr: []string{"s/foo/FOO/g", "s@bar@BAR@"}},
+		},
+		{
+			input:  "hix\n",
+			output: "nix\n",
+			err:    fmt.Errorf("error parsing expressions"),
+			p:      params{expr: []string{"s/hix"}},
+		},
+		{
+			input:  "hix\n",
+			output: "nix\n",
+			err:    fmt.Errorf("unsupported sed expression"),
+			p:      params{expr: []string{"X/hix"}},
 		},
 	}
 
@@ -169,6 +175,79 @@ func TestStdinSed(t *testing.T) {
 			}
 			if err == nil {
 				res := stdout.String()
+				if res != test.output {
+					t.Errorf("got out %q, want %q", res, test.output)
+				}
+			}
+		})
+	}
+}
+
+// SedTest is a table-driven which spawns sed with a variety of options and inputs.
+func TestFilesSed(t *testing.T) {
+	tmpDir := t.TempDir()
+	f1, err := os.CreateTemp(tmpDir, "f1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2, err := os.CreateTemp(tmpDir, "f2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f1.WriteString("foo and foo\nbar and bar\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f2.WriteString("foo and foo\nbar and bar\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		output string
+		err    error
+		p      params
+		args   []string
+	}{
+		{
+			output: "FOO and FOO\nBAR and bar\n",
+			err:    nil,
+			p:      params{expr: []string{"s/foo/FOO/g", "s@bar@BAR@"}},
+			args:   []string{f1.Name()},
+		},
+		{
+			output: "FOO and FOO\nBAR and bar\nFOO and FOO\nBAR and bar\n",
+			err:    nil,
+			p:      params{expr: []string{"s/foo/FOO/g", "s@bar@BAR@"}, inplace: true},
+			args:   []string{f1.Name(), f2.Name()},
+		},
+		{
+			output: "",
+			err:    fmt.Errorf("unable to open input file"),
+			p:      params{expr: []string{"s/foo/FOO/g", "s@bar@BAR@"}},
+			args:   []string{"non-existent.txt"},
+		},
+	}
+
+	for idx, te := range tests {
+		test := te
+		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
+			var stdout bytes.Buffer
+			cmd := command(nil, &stdout, nil, test.p, test.args)
+			err := cmd.run()
+			if (err != nil) != (test.err != nil) {
+				t.Errorf("unexpected err %v", err)
+			}
+			if err == nil {
+				res := stdout.String()
+				if test.p.inplace {
+					var lines []string
+					for i := range test.args {
+						fh, _ := os.Open(test.args[i])
+						o, _ := io.ReadAll(fh)
+						lines = append(lines, string(o))
+					}
+					res = strings.Join(lines, "")
+				}
 				if res != test.output {
 					t.Errorf("got out %q, want %q", res, test.output)
 				}
