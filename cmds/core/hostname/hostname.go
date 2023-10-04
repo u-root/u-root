@@ -15,24 +15,32 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
 
-func main() {
-	a := os.Args
-	switch len(a) {
+func run(stdout io.Writer, args []string) error {
+	switch len(args) {
 	case 2:
-		if err := Sethostname(a[1]); err != nil {
-			log.Fatalf("could not set hostname: %v", err)
+		if err := Sethostname(args[1]); err != nil {
+			return fmt.Errorf("could not set hostname: %v", err)
 		}
+		return nil
 	case 1:
 		hostname, err := os.Hostname()
 		if err != nil {
-			log.Fatalf("could not obtain hostname: %v", err)
+			return fmt.Errorf("could not obtain hostname: %v", err)
 		}
-		fmt.Println(hostname)
+		_, err = fmt.Fprintln(stdout, hostname)
+		return err
 	default:
-		log.Fatalf("usage: hostname [HOSTNAME]")
+		return fmt.Errorf("usage: hostname [HOSTNAME]")
+	}
+}
+
+func main() {
+	if err := run(os.Stdout, os.Args); err != nil {
+		log.Fatal(err)
 	}
 }
