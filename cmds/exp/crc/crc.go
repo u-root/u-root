@@ -32,13 +32,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
-var function = flag.String("f", "crc32-ieee", "CRC function")
-
-func main() {
-	flag.Parse()
-
+func run(stdin io.Reader, stdout io.Writer, function string, args []string) error {
 	functions := map[string]hash.Hash{
 		"crc32-ieee":       crc32.New(crc32.MakeTable(crc32.IEEE)),
 		"crc32-castognoli": crc32.New(crc32.MakeTable(crc32.Castagnoli)),
@@ -47,32 +44,43 @@ func main() {
 		"crc64-iso":        crc64.New(crc64.MakeTable(crc64.ISO)),
 	}
 
-	h, ok := functions[*function]
+	h, ok := functions[function]
 	if !ok {
-		expected := ""
-		for k := range functions {
-			expected += " " + k
+		var k []string
+		for key := range functions {
+			k = append(k, key)
 		}
-		log.Fatalf("invalid function %q, expected one of:%s", *function, expected)
+		return fmt.Errorf("%w: %q, expected one of: %s", os.ErrInvalid, function, strings.Join(k, " "))
 	}
 
 	var r io.Reader
-	switch flag.NArg() {
+	switch len(args) {
 	case 0:
-		r = os.Stdin
+		r = stdin
 	case 1:
-		f, err := os.Open(flag.Arg(0))
+		f, err := os.Open(args[0])
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer f.Close()
 		r = f
 	default:
-		log.Fatal("expected 0 or 1 positional args")
+		return fmt.Errorf("expected 0 or 1 positional args")
 	}
 
 	if _, err := io.Copy(h, r); err != nil {
+		return err
+	}
+
+	_, err := fmt.Fprintf(stdout, "%x\n", h.Sum([]byte{}))
+	return err
+}
+
+func main() {
+	function := flag.String("f", "crc32-ieee", "CRC function")
+	flag.Parse()
+
+	if err := run(os.Stdin, os.Stdout, *function, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%x\n", h.Sum([]byte{}))
 }
