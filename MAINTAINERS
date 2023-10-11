@@ -4,5 +4,5 @@
 "cmds/exp/pox/**":
   - rminnich
 
-"cmds/contrib/spidev/**":
+"cmds/fwtools/spidev/**":
   - rjoleary
