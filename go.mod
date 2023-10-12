@@ -25,22 +25,22 @@ require (
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/pborman/getopt/v2 v2.1.0
-	github.com/pierrec/lz4/v4 v4.1.14
+	github.com/pierrec/lz4/v4 v4.1.18
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20230806212452-e9366a5b9fdc
+	github.com/u-root/gobusybox/src v0.0.0-20230817123913-21a9727f4316
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
+	github.com/u-root/uio v0.0.0-20230305220412-3e8cd9d6bf63
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.3.1-0.20221117191849-2c476679df9a
-	golang.org/x/sys v0.9.0
-	golang.org/x/term v0.9.0
-	golang.org/x/text v0.10.0
-	golang.org/x/tools v0.6.0
+	golang.org/x/crypto v0.14.0
+	golang.org/x/sys v0.13.0
+	golang.org/x/term v0.13.0
+	golang.org/x/text v0.13.0
+	golang.org/x/tools v0.14.0
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
@@ -57,7 +57,7 @@ require (
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c // indirect
@@ -78,10 +78,9 @@ require (
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
+	golang.org/x/mod v0.13.0 // indirect
+	golang.org/x/net v0.16.0 // indirect
+	golang.org/x/sync v0.4.0 // indirect
 	google.golang.org/grpc v1.27.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
