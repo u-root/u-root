@@ -28,12 +28,12 @@ import (
 )
 
 func main() {
-	l, err := ldd.Ldd(os.Args[1:]...)
+	l, err := ldd.FList(os.Args[1:]...)
 	if err != nil {
 		log.Fatalf("ldd: %v", err)
 	}
 
 	for _, dep := range l {
-		fmt.Printf("%s\n", dep.FullName)
+		fmt.Printf("%s\n", dep)
 	}
 }
