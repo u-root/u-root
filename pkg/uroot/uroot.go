@@ -405,7 +405,7 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 		if err != nil {
 			return fmt.Errorf("couldn't find absolute path for %q: %v", src, err)
 		}
-		if err := archive.AddFileNoFollow(src, dst); err != nil {
+		if err := archive.AddFile(src, dst); err != nil {
 			return fmt.Errorf("couldn't add %q to archive: %v", file, err)
 		}
 
@@ -430,17 +430,11 @@ func ParseExtraFiles(logger ulog.Logger, archive *initramfs.Files, extraFiles []
 				}
 				// Pull dependencies in the case of binaries. If `path` is not
 				// a binary, `libs` will just be empty.
-				libs, err := ldd.Paths(name)
+				libs, err := ldd.FList(name)
 				if err != nil {
 					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %v", name, err)
 				}
 				for _, lib := range libs {
-					// N.B.: we already added information about the src.
-					// Don't add it twice. We have to do this check here in
-					// case we're renaming the src to a different dest.
-					if lib == name {
-						continue
-					}
 					if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
 						logger.Printf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
 					}
