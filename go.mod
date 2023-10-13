@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
 	github.com/beevik/ntp v0.3.0
+	github.com/bobuhiro11/gokvm v0.0.8-0.20231003020000-f53faca69d28
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/creack/pty v1.1.18
 	github.com/davecgh/go-spew v1.1.1
@@ -48,11 +49,9 @@ require (
 )
 
 require (
-	github.com/alecthomas/kong v0.8.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/bobuhiro11/gokvm v0.0.8-0.20231003020000-f53faca69d28 // indirect
 	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
 	github.com/charmbracelet/bubbletea v0.24.1 // indirect
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
