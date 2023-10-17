@@ -7,6 +7,7 @@ package hsskey
 import (
 	"encoding/binary"
 	"hash/crc32"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -341,13 +342,13 @@ func TestReadHssFromFile(t *testing.T) {
 				t.Fatalf("Failed to write test file: %v", err)
 			}
 
-			hssList, err := readHssFromFile(tempFile.Name())
+			hssList, err := ReadHssFromFile(tempFile.Name(), hostSecretSeedCount)
 			if err != nil {
 				if !tt.expectErr {
 					t.Fatalf("Unexpected error: %v", err)
 				}
 			} else if !reflect.DeepEqual(hssList, tt.expectedData) {
-				t.Fatalf("readHssFromFile(%v) = %v, want %v", tempFile.Name(), hssList, tt.expectedData)
+				t.Fatalf("ReadHssFromFile(%v) = %v, want %v", tempFile.Name(), hssList, tt.expectedData)
 			}
 		})
 	}
@@ -401,7 +402,7 @@ func TestGetHssFromFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hssList, err := getHssFromFile(true, true, []string{tempFile1.Name(), tempFile2.Name()})
+	hssList, err := GetHssFromFile(os.Stdout, true, []string{tempFile1.Name(), tempFile2.Name()}, hostSecretSeedCount)
 	// Expected to read two unique HSS key from td1 and td4
 	expectedResult := [][]byte{f1td1[:32], f1td2[:32], f2td1[:32], f2td3[:32]}
 	if err != nil {
@@ -409,5 +410,166 @@ func TestGetHssFromFile(t *testing.T) {
 	}
 	if !reflect.DeepEqual(hssList, expectedResult) {
 		t.Fatalf("getHssFromFile() = %v, want %v", hssList, expectedResult)
+	}
+}
+
+func TestWriteHssToFile(t *testing.T) {
+	validHssBlock1 := createDummyHssData()
+	validHssBlock2 := createDummyHssData()
+	invalidChecksumHssBlock1 := createDummyHssData()
+	invalidChecksumHssBlock2 := createDummyHssData()
+	// make checksum invalid
+	invalidChecksumHssBlock1[len(invalidChecksumHssBlock1)-1]++
+	invalidChecksumHssBlock2[len(invalidChecksumHssBlock2)-1]++
+
+	tests := []struct {
+		name         string
+		writeData    [][]byte
+		expectedData [][]byte
+		expectErr    bool
+	}{
+		{
+			name:      "Four valid hss blocks",
+			writeData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2},
+			expectedData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2,
+				validHssBlock2},
+			expectErr: false,
+		},
+		{
+			name: "Two valid and two invalid",
+			writeData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2},
+			expectedData: [][]byte{validHssBlock1, validHssBlock2},
+			expectErr:    false,
+		},
+		{
+			name:         "Mix invalid block",
+			writeData:    [][]byte{make([]byte, 5), validHssBlock1, validHssBlock1, validHssBlock1},
+			expectedData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock1},
+			expectErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temp file with the test HSS data.
+			tempFile, err := os.CreateTemp("", "testData")
+			if err != nil {
+				t.Fatalf("Failed to create temporary file: %v", err)
+			}
+			defer os.Remove(tempFile.Name())
+
+			err = WriteHssToFile(os.Stdout, true, tempFile, tt.writeData)
+			if err != nil {
+				if !tt.expectErr {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+			}
+
+			var wantFileContent []byte
+			for _, bytes := range tt.expectedData {
+				wantFileContent = append(wantFileContent, bytes...)
+			}
+
+			gotFileContent, err := os.ReadFile(tempFile.Name())
+			if err != nil {
+				t.Fatalf("Failed to read test file: %v", err)
+			}
+
+			if !reflect.DeepEqual(gotFileContent, wantFileContent) {
+				t.Fatalf("WriteHssToFile(%v, %v) =\ngot: %v\nwant: %v", tempFile.Name(), tt.writeData, gotFileContent, wantFileContent)
+			}
+		})
+	}
+}
+
+func TestWriteHssToTempFile(t *testing.T) {
+	validHssBlock1 := createDummyHssData()
+	validHssBlock2 := createDummyHssData()
+	invalidChecksumHssBlock1 := createDummyHssData()
+	invalidChecksumHssBlock2 := createDummyHssData()
+	// make checksum invalid
+	invalidChecksumHssBlock1[len(invalidChecksumHssBlock1)-1]++
+	invalidChecksumHssBlock2[len(invalidChecksumHssBlock2)-1]++
+
+	tests := []struct {
+		name          string
+		writeData     [][]byte
+		expectedData  [][]byte
+		expectErr     bool
+		warnings      io.Writer
+		dangerVerbose bool
+	}{
+		{
+			name:      "Four valid hss blocks",
+			writeData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2},
+			expectedData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2,
+				validHssBlock2},
+			expectErr:     false,
+			warnings:      os.Stdout,
+			dangerVerbose: true,
+		},
+		{
+			name: "Two valid and two invalid",
+			writeData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2},
+			expectedData:  [][]byte{validHssBlock1, validHssBlock2},
+			expectErr:     false,
+			warnings:      os.Stdout,
+			dangerVerbose: true,
+		},
+		{
+			name:          "Mix invalid block",
+			writeData:     [][]byte{make([]byte, 5), validHssBlock1, validHssBlock1, validHssBlock1},
+			expectedData:  [][]byte{validHssBlock1, validHssBlock1, validHssBlock1},
+			expectErr:     true,
+			warnings:      os.Stdout,
+			dangerVerbose: true,
+		},
+		{
+			name: "Two valid and two invalid skipping warnings",
+			writeData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2},
+			expectedData:  [][]byte{validHssBlock1, validHssBlock2},
+			expectErr:     false,
+			warnings:      nil,
+			dangerVerbose: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temp file with the test HSS data.
+			tempFilePath, err := WriteHssToTempFile(os.Stdout, true, tt.writeData)
+			if err != nil {
+				if !tt.expectErr {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+			}
+
+			var tempFile *os.File
+			if tempFilePath != "" {
+				defer os.Remove(tempFilePath)
+				tempFile, err = os.Open(tempFilePath)
+				if err != nil {
+					t.Fatalf("Failed to open temporary file: %v", err)
+				}
+				defer tempFile.Close()
+			}
+
+			var wantFileContent []byte
+			for _, bytes := range tt.expectedData {
+				wantFileContent = append(wantFileContent, bytes...)
+			}
+
+			gotFileContent, err := os.ReadFile(tempFilePath)
+			if err != nil {
+				t.Fatalf("Failed to read test file: %v", err)
+			}
+
+			if !reflect.DeepEqual(gotFileContent, wantFileContent) {
+				t.Fatalf("WriteHssToFile(%v, %v) =\ngot: %v\nwant: %v", tempFilePath, tt.writeData, gotFileContent, wantFileContent)
+			}
+		})
 	}
 }

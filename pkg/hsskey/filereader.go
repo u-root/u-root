@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -98,19 +99,20 @@ func getHssEepromPaths(basePattern string, busDevicePattern string) ([]string, e
 	return matches, nil
 }
 
-// readFromFile reads HSS keys from the specified file. Expecting the file containing 4 consecutive
-// HSS keys. Each HSS key is 64 bytes long and has a checksum for validation.
-func readHssFromFile(filePath string) ([][]byte, error) {
-	validLen := hostSecretSeedStructSize * hostSecretSeedCount
+// ReadHssFromFile reads HSS keys from the specified file.
+// Each HSS key is 64 bytes long and has a checksum for validation.
+func ReadHssFromFile(filePath string, minHssPerFile int) ([][]byte, error) {
+	minValidLen := hostSecretSeedStructSize * minHssPerFile
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %v", err)
 	}
-	if len(data) < validLen {
+
+	if len(data) < minValidLen {
 		return nil, fmt.Errorf("file size %d is less than expected", len(data))
 	}
-	if len(data) > validLen {
-		log.Printf("Expecting %d bytes but got more %d bytes", validLen, len(data))
+	if len(data) > minValidLen {
+		log.Printf("Expecting %d bytes but got more %d bytes", minValidLen, len(data))
 	}
 
 	var hssList [][]byte
@@ -129,24 +131,24 @@ func readHssFromFile(filePath string) ([][]byte, error) {
 	return hssList, nil
 }
 
-func getHssFromFile(verbose bool, verboseDangerous bool, filePaths []string) ([][]byte, error) {
+// GetHssFromFile reads HSS keys from the specified files.
+// Each HSS key is 64 bytes long and has a checksum for validation. Duplicate HSS are removed.
+func GetHssFromFile(warnings io.Writer, verboseDangerous bool, filePaths []string, minHssPerFile int) ([][]byte, error) {
 	allHss := [][]byte{}
 	for _, f := range filePaths {
-		hssKeys, err := readHssFromFile(f)
+		hssKeys, err := ReadHssFromFile(f, minHssPerFile)
 		if err != nil {
 			log.Printf("Failed to read HSS keys from file %s. err: %v", f, err)
 			continue
 		}
 
-		if verbose {
+		if verboseDangerous && warnings != nil {
 			msg := fmt.Sprintf("Reading HSS keys from file=%s", f)
-			if verboseDangerous {
-				for _, hss := range hssKeys {
-					msg = msg + fmt.Sprintf("\nseed=%x, seed(octal escape sequence)=%s", hss,
-						toOctalEscapeSequence(hss))
-				}
+			for _, hss := range hssKeys {
+				msg = msg + fmt.Sprintf("\nseed=%x, seed(octal escape sequence)=%s", hss,
+					toOctalEscapeSequence(hss))
 			}
-			log.Print(msg)
+			io.WriteString(warnings, msg+"\n")
 		}
 		allHss = append(allHss, hssKeys...)
 	}
@@ -155,4 +157,75 @@ func getHssFromFile(verbose bool, verboseDangerous bool, filePaths []string) ([]
 	allHss = deduplicate(allHss)
 
 	return allHss, nil
+}
+
+// WriteHssToTempFile writes a list of HSS to a tmpfs file where the filepath is returned.
+// See WriteHssToFile for HSS details.
+func WriteHssToTempFile(warnings io.Writer, verboseDangerous bool, hss [][]byte) (string, error) {
+	file, err := os.CreateTemp("", "hss_*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file %v", err)
+	}
+
+	err = WriteHssToFile(warnings, verboseDangerous, file, hss)
+	if err != nil {
+		file.Close()
+		os.Remove(file.Name())
+		return "", err
+	}
+
+	file.Close()
+	return file.Name(), nil
+}
+
+// WriteHssToFile writes a list of HSS to an open file.
+// Each HSS key is expected to be 64 bytes long and has a checksum for validation.
+// HSS that fail to validate are not written to the file.
+// Function returns error if no HSS are written or writing can no longer continue.
+func WriteHssToFile(warnings io.Writer, verboseDangerous bool, file *os.File, hss [][]byte) error {
+	if len(hss) == 0 {
+		return fmt.Errorf("InvalidArgument: No HSS to write")
+	}
+	if file == nil {
+		return fmt.Errorf("InvalidArgument: file is nil")
+	}
+	// Count of successful writes
+	written := 0
+
+	for i := 0; i < len(hss); i++ {
+		hssKey := hss[i]
+
+		// Verify the checksums.
+		if !validateChecksum(hssKey) {
+			if warnings != nil {
+				msg := fmt.Sprintf("Checksum validation failed for HSS key index %d", i)
+				if verboseDangerous {
+					msg = msg + fmt.Sprintf("\nseed=%x, seed(octal escape sequence)=%s", hssKey,
+						toOctalEscapeSequence(hssKey))
+				}
+				io.WriteString(warnings, msg+"\n")
+			}
+			continue
+		}
+
+		if verboseDangerous && warnings != nil {
+			msg := fmt.Sprintf("Writing HSS key to file=%s\nseed=%x, seed(octal escape sequence)=%s",
+				file.Name(), hssKey, toOctalEscapeSequence(hssKey))
+			io.WriteString(warnings, msg+"\n")
+		}
+
+		n, err := file.Write(hssKey)
+		if n != len(hssKey) {
+			return fmt.Errorf("failed to write entire HSS key to file %s", file.Name())
+		}
+		if err != nil {
+			return err
+		}
+		written++
+	}
+
+	if written == 0 {
+		return fmt.Errorf("no HSS keys were written to file %s", file.Name())
+	}
+	return nil
 }
