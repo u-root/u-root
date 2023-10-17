@@ -53,6 +53,7 @@ var (
 	lock               = flag.Bool("lock", false, "Lock instead of unlocking")
 	salt               = flag.String("salt", hsskey.DefaultPasswordSalt, "Salt for password generation")
 	eepromPattern      = flag.String("eeprom-pattern", "", "The pattern used to match EEPROM sysfs paths where the Host Secret Seeds are located")
+	hssFiles           = flag.String("hss-files", "", "Comma deliminated paths to files containing a Host Secret Seed (HSS) to use")
 )
 
 func verboseLog(msg string) {
@@ -119,7 +120,7 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 	}
 	defer diskFd.Close()
 
-	hssList, err := hsskey.GetAllHss(verbose, verboseNoSanitize, *eepromPattern)
+	hssList, err := hsskey.GetAllHss(os.Stdout, verboseNoSanitize, *eepromPattern, *hssFiles)
 	if err != nil {
 		return fmt.Errorf("error getting HSS: %v", err)
 	}
