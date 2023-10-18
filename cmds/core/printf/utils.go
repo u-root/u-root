@@ -48,7 +48,10 @@ func interpret(
 				continue
 			case 'b':
 				tmp := &bytes.Buffer{}
-				interpret(tmp, arg, nil, true, false)
+				err := interpret(tmp, arg, nil, true, false)
+				if err != nil {
+					return err
+				}
 				o.WriteString(tmp.String())
 				continue
 			case 'q':
@@ -129,6 +132,9 @@ func interpret(
 				continue
 			case 'v':
 				o.WriteRune('\v')
+				continue
+			case 'x':
+				readUnicode(fr, o, 2)
 				continue
 			case 'u':
 				readUnicode(fr, o, 4)
