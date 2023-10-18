@@ -178,7 +178,7 @@ func readOctal(fr *strings.Reader, o *bytes.Buffer) {
 	if len(octals) == 0 {
 		o.WriteRune('\\')
 	} else {
-		i, err := strconv.ParseInt(octals, 8, 64)
+		i, err := strconv.ParseInt(octals, 8, 32)
 		if err == nil {
 			o.WriteRune(rune(i))
 		}
@@ -203,7 +203,7 @@ func readUnicode(fr *strings.Reader, o *bytes.Buffer, length int) {
 	if len(hexcode) == 0 {
 		o.WriteRune('\\')
 	} else {
-		i, err := strconv.ParseInt(hexcode, 16, 64)
+		i, err := strconv.ParseInt(hexcode, 16, 32)
 		if err == nil {
 			o.WriteRune(rune(i))
 		}
