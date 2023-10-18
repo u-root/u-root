@@ -70,16 +70,20 @@ type command struct {
 	stderr io.Writer
 }
 
+func (c *command) execFormat(w *bytes.Buffer) (err error) {
+	// the current implementation performs this in two passes
+	return interpret(w, c.format, c.args, false, true)
+}
+
 func (c *command) exec(w *bytes.Buffer) (err error) {
-	w.WriteString(c.format)
-	return
+	return c.execFormat(w)
 }
 
 func (c *command) run() {
 	w := new(bytes.Buffer)
 	err := c.exec(w)
 	if err != nil {
-		c.stderr.Write([]byte("printf internal error: " + err.Error()))
+		c.stderr.Write([]byte("printf: " + err.Error() + "\n"))
 		return
 	}
 	// flush on success
@@ -94,7 +98,7 @@ func run() {
 		cmd.stderr.Write([]byte("printf: not enough arguments\n"))
 		return
 	}
-	cmd.format = interpretFormat(os.Args[1], false)
+	cmd.format = os.Args[1]
 	if len(os.Args) > 2 {
 		cmd.args = os.Args[2:]
 	}

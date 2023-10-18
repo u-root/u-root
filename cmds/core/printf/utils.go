@@ -2,13 +2,29 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 )
 
-func interpretFormat(from string, octalPrefix bool) string {
-	fr := strings.NewReader(from)
-	o := &bytes.Buffer{}
+func interpret(
+	w *bytes.Buffer,
+	format string,
+	args []string,
+	octalPrefix bool,
+	parseSubstitutions bool,
+) error {
+	o := w
+	fr := strings.NewReader(format)
+	idx := 0
+	nextArg := func() string {
+		if idx >= len(args) {
+			return ""
+		}
+		ans := args[idx]
+		idx = idx + 1
+		return ans
+	}
 
 	for fr.Len() > 0 {
 		c, _, err := fr.ReadRune()
@@ -16,7 +32,58 @@ func interpretFormat(from string, octalPrefix bool) string {
 		if err != nil {
 			continue
 		}
-		if c == '\\' {
+		if c == '%' && parseSubstitutions {
+			// at this point we are looking for which format code this is
+			// read another rune
+			n, _, err := fr.ReadRune()
+			// error only EOF, so write the original rune and continue
+			if err != nil {
+				o.WriteRune(c)
+				continue
+			}
+			arg := nextArg()
+			switch n {
+			case '%':
+				o.WriteRune('%')
+				continue
+			case 'b':
+				tmp := &bytes.Buffer{}
+				interpret(tmp, arg, nil, true, false)
+				o.WriteString(tmp.String())
+				continue
+			case 'q':
+				continue
+			case 'd':
+				continue
+			case 'i':
+				continue
+			case 'o':
+				continue
+			case 'u':
+				continue
+			case 'x':
+				continue
+			case 'X':
+				continue
+			case 'f':
+				continue
+			case 'e':
+				continue
+			case 'E':
+				continue
+			case 'g':
+				continue
+			case 'G':
+				continue
+			case 'c':
+				continue
+			case 's':
+				fmt.Fprintf(o, "%s", arg)
+				continue
+			default:
+				return fmt.Errorf("%s: %s", "%"+string(n), "invalid directive")
+			}
+		} else if c == '\\' {
 			// at this point we are looking for which escape sequence this is
 			// read another rune
 			n, _, err := fr.ReadRune()
@@ -44,7 +111,7 @@ func interpretFormat(from string, octalPrefix bool) string {
 				o.WriteRune('\b')
 				continue
 			case 'c': //produce no further input
-				return o.String()
+				return nil
 			case 'e': //escape
 				o.WriteRune(27)
 				continue
@@ -84,7 +151,7 @@ func interpretFormat(from string, octalPrefix bool) string {
 			o.WriteRune(c)
 		}
 	}
-	return o.String()
+	return nil
 }
 
 func readOctal(fr *strings.Reader, o *bytes.Buffer) {
@@ -111,6 +178,7 @@ func readOctal(fr *strings.Reader, o *bytes.Buffer) {
 		}
 	}
 }
+
 func readUnicode(fr *strings.Reader, o *bytes.Buffer, length int) {
 	hexcode := ""
 	for i := 0; i < length; i++ {
