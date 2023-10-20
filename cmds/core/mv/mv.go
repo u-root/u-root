@@ -31,8 +31,8 @@ var (
 	noClobber = flag.Bool("n", false, "do not overwrite an existing file")
 )
 
-func moveFile(source string, dest string) error {
-	if *noClobber {
+func moveFile(source string, dest string, update bool, noClobber bool) error {
+	if noClobber {
 		_, err := os.Lstat(dest)
 		if !os.IsNotExist(err) {
 			// This is either a real error if something unexpected happen during Lstat or nil
@@ -40,7 +40,7 @@ func moveFile(source string, dest string) error {
 		}
 	}
 
-	if *update {
+	if update {
 		sourceInfo, err := os.Lstat(source)
 		if err != nil {
 			return err
@@ -64,10 +64,10 @@ func moveFile(source string, dest string) error {
 	return nil
 }
 
-func mv(files []string, todir bool) error {
+func mv(files []string, update, noClobber, todir bool) error {
 	if len(files) == 2 && !todir {
 		// Rename/move a single file
-		if err := moveFile(files[0], files[1]); err != nil {
+		if err := moveFile(files[0], files[1], update, noClobber); err != nil {
 			return err
 		}
 	} else {
@@ -75,7 +75,7 @@ func mv(files []string, todir bool) error {
 		destdir := files[len(files)-1]
 		for _, f := range files[:len(files)-1] {
 			newPath := filepath.Join(destdir, filepath.Base(f))
-			if err := moveFile(f, newPath); err != nil {
+			if err := moveFile(f, newPath, update, noClobber); err != nil {
 				return err
 			}
 		}
@@ -83,7 +83,7 @@ func mv(files []string, todir bool) error {
 	return nil
 }
 
-func move(files []string) error {
+func move(files []string, update, noClobber bool) error {
 	var todir bool
 	dest := files[len(files)-1]
 	if destdir, err := os.Lstat(dest); err == nil {
@@ -92,7 +92,7 @@ func move(files []string) error {
 	if len(files) > 2 && !todir {
 		return fmt.Errorf("not a directory: %s", dest)
 	}
-	return mv(files, todir)
+	return mv(files, update, noClobber, todir)
 }
 
 func main() {
@@ -102,7 +102,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := move(flag.Args()); err != nil {
+	if err := move(flag.Args(), *update, *noClobber); err != nil {
 		log.Fatal(err)
 	}
 }

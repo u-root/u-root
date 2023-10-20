@@ -46,10 +46,6 @@ var (
 	errInvalidArgs = errors.New("Usage of the command:\ncpio o < name-list [> archive]\ncpio i [< archive]\ncpio p destination-directory < name-list\nOptions: -H format (default: newc) -v Debug prints ")
 )
 
-func usage() error {
-	return errInvalidArgs
-}
-
 func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string) error {
 	if d {
 		debug = log.Printf
@@ -57,7 +53,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 
 	debug("Args %v", args)
 	if len(args) < 1 {
-		return usage()
+		return errInvalidArgs
 	}
 	op := args[0]
 
@@ -82,7 +78,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 			if err != nil {
 				return fmt.Errorf("error reading records: %w", err)
 			}
-			debug("record name %s ino %d\n", rec.Name, rec.Info.Ino)
+			debug("record name %s ino %d\n", rec.Name, rec.Ino)
 
 			// A file with zero size could be a hard link to another file
 			// in the archive. The file with content always comes first.
@@ -93,7 +89,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 			// (nobody else cares about cpio any more save kernels).
 			// Those always have Ino of zero for reproducible builds.
 			// Hence doing the Ino != 0 test first saves a bit of work.
-			if rec.Info.Ino != 0 {
+			if rec.Ino != 0 {
 				switch rec.Mode & cpio.S_IFMT {
 				// In any Unix past about V1, you can't do os.Link from user mode.
 				// Except via mkdir of course :-).
@@ -101,7 +97,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 				default:
 					// FileSize of non-zero means it is the first and possibly
 					// only instance of this file.
-					if rec.Info.FileSize != 0 {
+					if rec.FileSize != 0 {
 						break
 					}
 					// If the file is not in []inums it is a true zero-length file,
@@ -109,7 +105,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 					// (pedantic mode: on Unix all files are hard links;
 					// so what this comment really means is "file with more than one
 					// hard link).
-					ino, ok := inums[rec.Info.Ino]
+					ino, ok := inums[rec.Ino]
 					if !ok {
 						break
 					}
@@ -120,7 +116,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 					}
 					continue
 				}
-				inums[rec.Info.Ino] = rec.Name
+				inums[rec.Ino] = rec.Name
 			}
 			debug("Creating file %s", rec.Name)
 			if err := cpio.CreateFile(rec); err != nil {
@@ -163,11 +159,11 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 			if err != nil {
 				return fmt.Errorf("error reading records: %w", err)
 			}
-			fmt.Println(rec)
+			fmt.Fprintln(stdout, rec)
 		}
 
 	default:
-		return usage()
+		return errInvalidArgs
 	}
 
 	return nil
@@ -175,9 +171,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 
 func main() {
 	flag.Parse()
-	args := flag.Args()
-
-	if err := run(args, os.Stdin, os.Stdout, *d, *format); err != nil {
+	if err := run(flag.Args(), os.Stdin, os.Stdout, *d, *format); err != nil {
 		log.Fatalf("cpio: %v", err)
 	}
 }

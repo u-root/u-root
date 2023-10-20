@@ -12,7 +12,7 @@ require (
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-tpm v0.9.0
+	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/uuid v1.3.0
 	github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
@@ -36,10 +36,10 @@ require (
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.3.1-0.20221117191849-2c476679df9a
-	golang.org/x/sys v0.9.0
-	golang.org/x/term v0.9.0
-	golang.org/x/text v0.10.0
+	golang.org/x/crypto v0.14.0
+	golang.org/x/sys v0.13.0
+	golang.org/x/term v0.13.0
+	golang.org/x/text v0.13.0
 	golang.org/x/tools v0.6.0
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
@@ -78,7 +78,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 )

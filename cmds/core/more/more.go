@@ -23,6 +23,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -30,36 +31,44 @@ import (
 )
 
 var lines = flag.Int("lines", 40, "screen size in number of lines")
+var errLinesMustBePositive = fmt.Errorf("lines must be positive")
+
+func run(stdin io.Reader, stdout io.Writer, lines int, args []string) error {
+	if lines <= 0 {
+		return fmt.Errorf("%d: %w", lines, errLinesMustBePositive)
+	}
+
+	for _, arg := range args {
+		f, err := os.Open(arg)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		scanner := bufio.NewScanner(f)
+		for i := 0; scanner.Scan(); i++ {
+			if (i+1)%lines == 0 {
+				fmt.Fprint(stdout, scanner.Text())
+				c := make([]byte, 1)
+				// We expect the OS to echo the newline character.
+				if _, err := stdin.Read(c); err != nil {
+					return err
+				}
+			} else {
+				fmt.Fprintln(stdout, scanner.Text())
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func main() {
 	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatal("more can only take one file")
-	}
-	if *lines <= 0 {
-		log.Fatal("lines must be positive")
-	}
-
-	f, err := os.Open(flag.Args()[0])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for i := 0; scanner.Scan(); i++ {
-		if (i+1)%*lines == 0 {
-			fmt.Print(scanner.Text())
-			c := make([]byte, 1)
-			// We expect the OS to echo the newline character.
-			if _, err := os.Stdin.Read(c); err != nil {
-				return
-			}
-		} else {
-			fmt.Println(scanner.Text())
-		}
-	}
-	if err := scanner.Err(); err != nil {
+	if err := run(os.Stdin, os.Stderr, *lines, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }

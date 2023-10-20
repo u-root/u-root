@@ -25,11 +25,6 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var (
-	cat    = flag.BoolP("append", "a", false, "append the output to the files rather than rewriting them")
-	ignore = flag.BoolP("ignore-interrupts", "i", false, "ignore the SIGINT signal")
-)
-
 type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
@@ -87,6 +82,11 @@ func (c *cmd) run() error {
 }
 
 func main() {
+	var (
+		cat    = flag.BoolP("append", "a", false, "append the output to the files rather than rewriting them")
+		ignore = flag.BoolP("ignore-interrupts", "i", false, "ignore the SIGINT signal")
+	)
+
 	flag.Parse()
 	if err := command(*cat, *ignore, flag.Args()).run(); err != nil {
 		log.Fatalf("tee: %v", err)
