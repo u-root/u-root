@@ -328,17 +328,16 @@ type SchemeWithRetries struct {
 
 // Fetch implements FileScheme.Fetch for retry wrapper.
 func (s *SchemeWithRetries) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
+	var r io.ReaderAt
 	var err error
+
 	s.BackOff.Reset()
 	back := backoff.WithContext(s.BackOff, ctx)
-	for d := time.Duration(0); d != backoff.Stop; d = back.NextBackOff() {
-		if d > 0 {
-			time.Sleep(d)
-		}
-
-		var r io.ReaderAt
-		// Note: err uses the scope outside the for loop.
-		r, err = s.Scheme.Fetch(ctx, u)
+	for d := back.NextBackOff(); d != backoff.Stop; d = back.NextBackOff() {
+		deadline := time.Now().Add(d)
+		fctx, cancel := context.WithDeadline(ctx, deadline)
+		r, err = s.Scheme.Fetch(fctx, u)
+		cancel()
 		if err == nil {
 			return r, nil
 		}
@@ -347,7 +346,13 @@ func (s *SchemeWithRetries) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt,
 		if s.DoRetry != nil && !s.DoRetry(u, err) {
 			return r, err
 		}
-		log.Printf("Retrying %v", u)
+		log.Printf("Retrying %v in %s", u, time.Until(deadline))
+		time.Sleep(time.Until(deadline))
+	}
+
+	r, err = s.Scheme.Fetch(ctx, u)
+	if err == nil {
+		return r, nil
 	}
 
 	log.Printf("Error: Too many retries to get file %v", u)
@@ -356,17 +361,16 @@ func (s *SchemeWithRetries) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt,
 
 // FetchWithoutCache implements FileScheme.FetchWithoutCache for retry wrapper.
 func (s *SchemeWithRetries) FetchWithoutCache(ctx context.Context, u *url.URL) (io.Reader, error) {
+	var r io.Reader
 	var err error
+
 	s.BackOff.Reset()
 	back := backoff.WithContext(s.BackOff, ctx)
-	for d := time.Duration(0); d != backoff.Stop; d = back.NextBackOff() {
-		if d > 0 {
-			time.Sleep(d)
-		}
-
-		var r io.Reader
-		// Note: err uses the scope outside the for loop.
-		r, err = s.Scheme.FetchWithoutCache(ctx, u)
+	for d := back.NextBackOff(); d != backoff.Stop; d = back.NextBackOff() {
+		deadline := time.Now().Add(d)
+		fctx, cancel := context.WithDeadline(ctx, deadline)
+		r, err = s.Scheme.FetchWithoutCache(fctx, u)
+		cancel()
 		if err == nil {
 			return r, nil
 		}
@@ -375,7 +379,13 @@ func (s *SchemeWithRetries) FetchWithoutCache(ctx context.Context, u *url.URL) (
 		if s.DoRetry != nil && !s.DoRetry(u, err) {
 			return r, err
 		}
-		log.Printf("Retrying %v", u)
+		log.Printf("Retrying %v in %s", u, time.Until(deadline))
+		time.Sleep(time.Until(deadline))
+	}
+
+	r, err = s.Scheme.FetchWithoutCache(ctx, u)
+	if err == nil {
+		return r, nil
 	}
 
 	log.Printf("Error: Too many retries to get file %v", u)
