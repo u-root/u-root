@@ -14,7 +14,7 @@ import (
 
 func TestCommandNotFound(t *testing.T) {
 	stdin := strings.NewReader("hello world")
-	err := run(stdin, nil, nil, []string{"commandnotfound", "arg1"})
+	err := run(stdin, nil, nil, "commandnotfound", "arg1")
 	if !errors.Is(err, exec.ErrNotFound) {
 		t.Fatalf("expected %v, got %v", exec.ErrNotFound, err)
 	}
@@ -23,7 +23,7 @@ func TestCommandNotFound(t *testing.T) {
 func TestEcho(t *testing.T) {
 	stdin := strings.NewReader("hello world")
 	stdout := &bytes.Buffer{}
-	err := run(stdin, stdout, nil, nil)
+	err := run(stdin, stdout, nil)
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}

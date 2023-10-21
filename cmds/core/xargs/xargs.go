@@ -14,12 +14,12 @@ import (
 )
 
 func main() {
-	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]); err != nil {
+	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]...); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(stdin io.Reader, stdout, stderr io.Writer, args []string) error {
+func run(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 	if len(args) == 0 {
 		args = append(args, "echo")
 	}
