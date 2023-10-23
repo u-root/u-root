@@ -1,4 +1,4 @@
-package main
+package printf
 
 import (
 	"bytes"
@@ -84,7 +84,7 @@ func interpret(
 				fmt.Fprintf(o, "%s", arg)
 				continue
 			default:
-				return fmt.Errorf("%s: %s", "%"+string(n), "invalid directive")
+				return NewErrInvalidDirective(string(n))
 			}
 		} else if c == '\\' {
 			// at this point we are looking for which escape sequence this is

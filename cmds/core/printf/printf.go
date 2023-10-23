@@ -58,54 +58,23 @@
 package main
 
 import (
-	"bytes"
-	"io"
 	"os"
+
+	"github.com/u-root/u-root/pkg/printf"
 )
 
-type printf struct {
-	Args   []string
-	Stdout io.Writer
-	Stderr io.Writer
-
-	format    string
-	arguments []string
-}
-
-func NewPrinter(stdout, stderr io.Writer, args []string) *printf {
-	return &printf{
-		Stdout: stdout,
-		Stderr: stderr,
-		Args:   args,
-	}
-}
-
-func (c *printf) exec(w *bytes.Buffer) (err error) {
-	return interpret(w, c.format, c.arguments, false, true)
-}
-
-func (c *printf) run() {
-	if len(c.Args) < 1 {
-		c.Stderr.Write([]byte("printf: not enough arguments\n"))
-		return
-	}
-	c.format = c.Args[0]
-	if len(c.Args) > 1 {
-		c.arguments = c.Args[1:]
-	}
-	w := new(bytes.Buffer)
-	err := c.exec(w)
-	if err != nil {
-		c.Stderr.Write([]byte("printf: " + err.Error() + "\n"))
-		return
-	}
-	// flush on success
-	w.WriteTo(c.Stdout)
-}
-
 func run() {
-	cmd := NewPrinter(os.Stdout, os.Stderr, os.Args[1:])
-	cmd.run()
+
+	cmd, err := printf.NewPrinterFromArgs(os.Stdout, os.Args[1:])
+	if err != nil {
+		os.Stderr.Write([]byte(err.Error() + "\n"))
+		return
+	}
+	err = cmd.Run()
+	if err != nil {
+		os.Stderr.Write([]byte(err.Error() + "\n"))
+		return
+	}
 	return
 }
 

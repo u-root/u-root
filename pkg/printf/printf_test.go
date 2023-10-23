@@ -1,17 +1,27 @@
-package main
+package printf_test
 
 import (
 	"bytes"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/printf"
 )
 
 func TestPrintfBasic(t *testing.T) {
 
-	printf := func(args ...string) (string, string) {
+	pf := func(args ...string) (string, string) {
 		o := &bytes.Buffer{}
-		e := &bytes.Buffer{}
-		NewPrinter(o, e, args).run()
-		return o.String(), e.String()
+		f := ""
+		a := []string{}
+		switch len(args) {
+		case 0:
+		default:
+		}
+		err := printf.NewPrinter(o, f, a).Run()
+		if err != nil {
+			return o.String(), err.Error()
+		}
+		return o.String(), ""
 	}
 
 	args := func(args ...string) []string {
@@ -49,7 +59,7 @@ func TestPrintfBasic(t *testing.T) {
 	}
 
 	for i, v := range cases {
-		ans, err := printf(v.a...)
+		ans, err := pf(v.a...)
 		if v.err != "" {
 			if err == "" {
 				t.Errorf("case %d: exected err %s, got nil", i, v.err)
