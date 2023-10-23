@@ -12,10 +12,12 @@ import (
 type printf struct {
 	format string
 	params []string
-	stdout io.Writer
+	writer io.Writer
 }
 
-func NewPrinterFromArgs(stdout io.Writer, args []string) (*printf, error) {
+// NewPrinterFromArgs returns a printf using the args provided
+// it will error if the length of args is below 1. it will use the first element of args as the format, and the remaining as the params
+func NewPrinterFromArgs(writer io.Writer, args []string) (*printf, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("%w: %w", ErrPrintf, ErrNotEnoughArguments)
 	}
@@ -24,18 +26,22 @@ func NewPrinterFromArgs(stdout io.Writer, args []string) (*printf, error) {
 	if len(args) > 1 {
 		params = args[1:]
 	}
-	return NewPrinter(stdout, format, params), nil
+	return NewPrinter(writer, format, params), nil
 }
 
-func NewPrinter(stdout io.Writer, format string, params []string) *printf {
+// NewPrinter returns a printf
+func NewPrinter(writer io.Writer, format string, params []string) *printf {
 	o := &printf{
-		stdout: stdout,
+		writer: writer,
 		format: format,
 		params: params,
 	}
 	return o
 }
 
+// Run processes the printf command with the format and parameters.
+// it will not have written any bytes to the writer if err is not nil
+// if err is nil, run may or may not write bytes to the writer
 func (c *printf) Run() error {
 	w := new(bytes.Buffer)
 	err := interpret(w, c.format, c.params, false, true)
@@ -43,7 +49,7 @@ func (c *printf) Run() error {
 		return fmt.Errorf("%w: %w", ErrPrintf, err)
 	}
 	// flush on success
-	_, err = w.WriteTo(c.stdout)
+	_, err = w.WriteTo(c.writer)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrPrintf, err)
 	}
