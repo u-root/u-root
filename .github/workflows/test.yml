@@ -1,0 +1,24 @@
+name: Testtool
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  testtool:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: Building testtool
+        run: go build
+        working-directory: ./tools/testtool
+      - name: Running tests
+        run: ./tools/testtool/testtool -containerized go test -a -v -timeout=30m -p=1 -ldflags='-s' -failfast -coverprofile=coverage.txt -covermode=atomic -cover -coverpkg=./cmds/core/... ./cmds/core/...
+        env:
+          CGO_ENABLED: 0
