@@ -162,6 +162,7 @@ func interpret(
 
 func readOctal(fr *strings.Reader, o *bytes.Buffer) {
 	octals := ""
+	// read up to three decimals from the stream
 	for i := 0; i < 3; i++ {
 		dec, _, err := fr.ReadRune()
 		if err != nil {
@@ -175,6 +176,8 @@ func readOctal(fr *strings.Reader, o *bytes.Buffer) {
 		fr.UnreadRune()
 		break
 	}
+	// if the length of octals is zero, that means this is not actually a format code.
+	// for instance, if the input is `\0\`, this would ensure that we properly print the ending \
 	if len(octals) == 0 {
 		o.WriteRune('\\')
 	} else {
