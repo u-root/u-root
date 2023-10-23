@@ -197,9 +197,7 @@ func readUnicode(fr *strings.Reader, o *bytes.Buffer, length int) {
 		fr.UnreadRune()
 		break
 	}
-	if len(hexcode) == 0 {
-		o.WriteRune('\\')
-	} else {
+	if len(hexcode) != 0 {
 		i, err := strconv.ParseInt(hexcode, 16, 32)
 		if err == nil {
 			o.WriteRune(rune(i))
