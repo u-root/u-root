@@ -7,13 +7,7 @@ import (
 	"strings"
 )
 
-func interpret(
-	w *bytes.Buffer,
-	format string,
-	args []string,
-	octalPrefix bool,
-	parseSubstitutions bool,
-) error {
+func interpret(w *bytes.Buffer, format string, args []string, octalPrefix bool, parseSubstitutions bool) error {
 	o := w
 	fr := strings.NewReader(format)
 	idx := 0
