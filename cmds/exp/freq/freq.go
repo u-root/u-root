@@ -31,89 +31,73 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"unicode/utf8"
 )
 
-var (
-	utf = flag.Bool("r", false, "treat input as UTF-8")
-	dec = flag.Bool("d", false, "print decimal value")
-	hex = flag.Bool("x", false, "print hexadecimal value")
-	oct = flag.Bool("o", false, "print octal value")
-	chr = flag.Bool("c", false, "print character/rune")
-)
+type params struct {
+	utf bool
+	dec bool
+	hex bool
+	oct bool
+	chr bool
+}
 
-var freq [utf8.MaxRune + 1]uint64
+type cmd struct {
+	stdin  io.Reader
+	stdout io.Writer
+	stderr io.Writer
+	args   []string
+	freq   [utf8.MaxRune + 1]uint64
+	params
+}
 
-func doFreq(f *os.File) {
-	b := bufio.NewReaderSize(f, 8192)
+func command(stdin io.Reader, stderr io.Writer, stdout io.Writer, p params, args ...string) *cmd {
+	if !p.dec && !p.hex && !p.oct && !p.chr {
+		p.dec, p.hex, p.oct, p.chr = true, true, true, true
+	}
 
-	var r rune
-	var c byte
-	var err error
-	if *utf {
-		for {
-			r, _, err = b.ReadRune()
-			if err != nil {
-				if err != io.EOF {
-					fmt.Fprintf(os.Stderr, "error reading: %v", err)
-				}
-				return
-			}
-			freq[r]++
-		}
-	} else {
-		for {
-			c, err = b.ReadByte()
-			if err != nil {
-				if err != io.EOF {
-					fmt.Fprintf(os.Stderr, "error reading: %v", err)
-				}
-				return
-			}
-			freq[c]++
-		}
+	return &cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+		params: p,
+		args:   args,
 	}
 }
 
-func main() {
-	flag.Parse()
-
-	if flag.NArg() > 0 {
-		for _, v := range flag.Args() {
+func (c *cmd) run() error {
+	if len(c.args) > 0 {
+		for _, v := range c.args {
 			f, err := os.Open(v)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "open %s: %v", v, err)
-				os.Exit(1)
+				return fmt.Errorf("open %s: %v", v, err)
 			}
-			doFreq(f)
+			c.doFreq(f)
 			f.Close()
 		}
 	} else {
-		doFreq(os.Stdin)
+		c.doFreq(c.stdin)
 	}
 
-	if !(*dec || *hex || *oct || *chr) {
-		*dec, *hex, *oct, *chr = true, true, true, true
-	}
-
-	b := bufio.NewWriterSize(os.Stdout, 8192*4)
-	for i, v := range freq {
+	b := bufio.NewWriterSize(c.stdout, 8192*4)
+	for i, v := range c.freq {
 		if v == 0 {
 			continue
 		}
 
-		if *dec {
+		if c.dec {
 			fmt.Fprintf(b, "%3d ", i)
 		}
-		if *oct {
+		if c.oct {
 			fmt.Fprintf(b, "%.3o ", i)
 		}
-		if *hex {
+		if c.hex {
 			fmt.Fprintf(b, "%.2x ", i)
 		}
-		if *chr {
-			if i <= 0x20 || (i >= 0x7f && i < 0xa0) || (i > 0xff && !(*utf)) {
+		if c.chr {
+			if i <= 0x20 || (i >= 0x7f && i < 0xa0) || (i > 0xff && !(c.utf)) {
 				b.WriteString("- ")
 			} else {
 				b.WriteRune(rune(i))
@@ -122,5 +106,49 @@ func main() {
 		}
 		fmt.Fprintf(b, "%8d\n", v)
 	}
-	b.Flush()
+	return b.Flush()
+}
+
+func (c *cmd) doFreq(f io.Reader) {
+	b := bufio.NewReaderSize(f, 8192)
+
+	var r rune
+	var ch byte
+	var err error
+	if c.utf {
+		for {
+			r, _, err = b.ReadRune()
+			if err != nil {
+				if err != io.EOF {
+					fmt.Fprintf(c.stderr, "error reading: %v", err)
+				}
+				return
+			}
+			c.freq[r]++
+		}
+	} else {
+		for {
+			ch, err = b.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					fmt.Fprintf(c.stderr, "error reading: %v", err)
+				}
+				return
+			}
+			c.freq[ch]++
+		}
+	}
+}
+
+func main() {
+	utf := flag.Bool("r", false, "treat input as UTF-8")
+	dec := flag.Bool("d", false, "print decimal value")
+	hex := flag.Bool("x", false, "print hexadecimal value")
+	oct := flag.Bool("o", false, "print octal value")
+	chr := flag.Bool("c", false, "print character/rune")
+	flag.Parse()
+	p := params{*utf, *dec, *hex, *oct, *chr}
+	if err := command(os.Stdin, os.Stderr, os.Stdout, p, flag.Args()...).run(); err != nil {
+		log.Fatal(err)
+	}
 }
