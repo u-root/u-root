@@ -53,7 +53,7 @@ type cmd struct {
 	params
 }
 
-func command(stdin io.Reader, stderr io.Writer, stdout io.Writer, p params, args ...string) *cmd {
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, p params, args ...string) *cmd {
 	if !p.dec && !p.hex && !p.oct && !p.chr {
 		p.dec, p.hex, p.oct, p.chr = true, true, true, true
 	}
