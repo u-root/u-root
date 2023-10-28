@@ -33,7 +33,8 @@ import (
 	"io"
 	"log"
 	"os"
-	"unicode/utf8"
+	"sort"
+	"unicode"
 )
 
 type params struct {
@@ -48,8 +49,8 @@ type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
+	freq   map[rune]uint64
 	args   []string
-	freq   [utf8.MaxRune + 1]uint64
 	params
 }
 
@@ -62,6 +63,7 @@ func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, p params, args
 		stdin:  stdin,
 		stdout: stdout,
 		stderr: stderr,
+		freq:   make(map[rune]uint64),
 		params: p,
 		args:   args,
 	}
@@ -81,30 +83,34 @@ func (c *cmd) run() error {
 		c.doFreq(c.stdin)
 	}
 
-	b := bufio.NewWriterSize(c.stdout, 8192*4)
-	for i, v := range c.freq {
-		if v == 0 {
-			continue
-		}
+	keys := make([]rune, 0, len(c.freq))
+	for k := range c.freq {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
 
+	b := bufio.NewWriterSize(c.stdout, 8192*4)
+	for _, r := range keys {
 		if c.dec {
-			fmt.Fprintf(b, "%3d ", i)
+			fmt.Fprintf(b, "%3d ", r)
 		}
 		if c.oct {
-			fmt.Fprintf(b, "%.3o ", i)
+			fmt.Fprintf(b, "%.3o ", r)
 		}
 		if c.hex {
-			fmt.Fprintf(b, "%.2x ", i)
+			fmt.Fprintf(b, "%.2x ", r)
 		}
 		if c.chr {
-			if i <= 0x20 || (i >= 0x7f && i < 0xa0) || (i > 0xff && !(c.utf)) {
-				b.WriteString("- ")
-			} else {
-				b.WriteRune(rune(i))
+			if unicode.IsPrint(r) {
+				b.WriteRune(r)
 				b.WriteString(" ")
+			} else {
+				b.WriteString("- ")
 			}
 		}
-		fmt.Fprintf(b, "%8d\n", v)
+		fmt.Fprintf(b, "%8d\n", c.freq[r])
 	}
 	return b.Flush()
 }
@@ -135,7 +141,7 @@ func (c *cmd) doFreq(f io.Reader) {
 				}
 				return
 			}
-			c.freq[ch]++
+			c.freq[rune(ch)]++
 		}
 	}
 }
