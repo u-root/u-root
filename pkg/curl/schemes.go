@@ -4,7 +4,10 @@
 
 // Package curl implements routines to fetch files given a URL.
 //
-// curl currently supports HTTP, TFTP, and local files.
+// curl currently supports HTTP, and local files.
+// TFTP is available with the build tag tftp.
+// Bare metal does not support TFTP, and TFTP is subject to MITM
+// attacks, so should not be used in almost all cases.
 package curl
 
 import (
@@ -18,12 +21,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/u-root/u-root/pkg/uio"
-	"pack.ag/tftp"
 )
 
 // ErrNoSuchScheme is returned by Schemes.Fetch and
@@ -74,14 +75,11 @@ var (
 	// http.Client that accepts only a private pool of certificates.
 	DefaultHTTPClient = NewHTTPClient(http.DefaultClient)
 
-	// DefaultTFTPClient is the default TFTP FileScheme.
-	DefaultTFTPClient = NewTFTPClient(tftp.ClientMode(tftp.ModeOctet), tftp.ClientBlocksize(1450), tftp.ClientWindowsize(64))
-
 	// DefaultSchemes are the schemes supported by default.
 	DefaultSchemes = Schemes{
-		"tftp": DefaultTFTPClient,
-		"http": DefaultHTTPClient,
-		"file": &LocalFileClient{},
+		"https": DefaultHTTPClient,
+		"http":  DefaultHTTPClient,
+		"file":  &LocalFileClient{},
 	}
 )
 
@@ -246,58 +244,6 @@ func (s Schemes) LazyFetch(u *url.URL) (FileWithCache, error) {
 			return r, nil
 		}),
 	}, nil
-}
-
-// TFTPClient implements FileScheme for TFTP files.
-type TFTPClient struct {
-	opts []tftp.ClientOpt
-}
-
-// NewTFTPClient returns a new TFTP client based on the given tftp.ClientOpt.
-func NewTFTPClient(opts ...tftp.ClientOpt) FileScheme {
-	return &TFTPClient{
-		opts: opts,
-	}
-}
-
-func tftpFetch(_ context.Context, t *TFTPClient, u *url.URL) (io.Reader, error) {
-	// TODO(hugelgupf): These clients are basically stateless, except for
-	// the options. Figure out whether you actually have to re-establish
-	// this connection every time. Audit the TFTP library.
-	c, err := tftp.NewClient(t.opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := c.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-
-	return r, nil
-}
-
-// Fetch implements FileScheme.Fetch for TFTP.
-func (t *TFTPClient) Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error) {
-	r, err := tftpFetch(ctx, t, u)
-	if err != nil {
-		return nil, err
-	}
-	return uio.NewCachingReader(r), nil
-}
-
-// FetchWithoutCache implements FileScheme.FetchWithoutCache for TFTP.
-func (t *TFTPClient) FetchWithoutCache(ctx context.Context, u *url.URL) (io.Reader, error) {
-	return tftpFetch(ctx, t, u)
-}
-
-// RetryTFTP retries downloads if the error does not contain FILE_NOT_FOUND.
-//
-// pack.ag/tftp does not export the necessary structs to get the
-// code out of the error message cleanly, but it does embed FILE_NOT_FOUND in
-// the error string.
-func RetryTFTP(u *url.URL, err error) bool {
-	return !strings.Contains(err.Error(), "FILE_NOT_FOUND")
 }
 
 // DoRetry returns true if the Fetch request for the URL should be

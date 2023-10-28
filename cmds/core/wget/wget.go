@@ -113,16 +113,7 @@ func (c *cmd) run() error {
 		c.outputPath = defaultOutputPath(parsedURL.Path)
 	}
 
-	schemes := curl.Schemes{
-		"tftp": curl.DefaultTFTPClient,
-		"http": curl.DefaultHTTPClient,
-
-		// curl.DefaultSchemes doesn't support HTTPS by default.
-		"https": curl.DefaultHTTPClient,
-		"file":  &curl.LocalFileClient{},
-	}
-
-	reader, err := schemes.FetchWithoutCache(context.Background(), parsedURL)
+	reader, err := curl.DefaultSchemes.FetchWithoutCache(context.Background(), parsedURL)
 	if err != nil {
 		return fmt.Errorf("failed to download %v: %w", c.url, err)
 	}
