@@ -8,10 +8,6 @@
 // size need be a power of 2.
 package align
 
-import "os"
-
-var pageSize = uint(os.Getpagesize())
-
 // Up aligns v up to next multiple of alignSize.
 //
 // alignSize need be a power of 2.
