@@ -66,6 +66,15 @@ func main() {
 	if cmdCount == 0 {
 		log.Printf("No suitable executable found in %v", ic.cmds)
 	}
+	
+	for {
+		ic := &initCmds{
+			cmds: []*exec.Cmd{
+				libinit.Command("/bin/defaultsh"),
+			},
+		}
+		libinit.RunCommands(debug, ic.cmds...)
+	}
 
 	// We need to reap all children before exiting.
 	log.Printf("Waiting for orphaned children")
