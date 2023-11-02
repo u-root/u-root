@@ -6,7 +6,7 @@ package smbios
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -26,7 +26,7 @@ func checkError(got error, want error) bool {
 }
 
 func TestParseSMBIOS(t *testing.T) {
-	data, err := ioutil.ReadFile(testbinary)
+	data, err := os.ReadFile(testbinary)
 	if err != nil {
 		t.Error(err)
 	}
