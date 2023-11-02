@@ -29,7 +29,9 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-const HISTFILE = "/tmp/bubble-sh.history" //TODO: make configurable
+// HistFile is the history file.
+// This might, possibly, use GetPid to avoid gosh'es writing over each other
+var HistFile = filepath.Join(os.TempDir(), "bubble-sh.history")
 
 var completion = flag.Bool("comp", false, "Enable tabcompletion and a more feature rich editline implementation")
 
@@ -137,11 +139,11 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 	// Set default window size to 80x24 in case ioctl isn't able to detect the actual window size
 	input.Model.SetSize(80, 24)
 
-	if err := input.LoadHistory(HISTFILE); err != nil {
+	if err := input.LoadHistory(HistFile); err != nil {
 		return err
 	}
 
-	input.SetAutoSaveHistory(HISTFILE, true)
+	input.SetAutoSaveHistory(HistFile, true)
 
 	input.AutoComplete = autocomplete
 
