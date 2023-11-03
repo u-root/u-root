@@ -38,7 +38,7 @@ type PCI struct {
 	Control  Control
 	Status   Status
 	Resource string `pci:"resource"`
-	BARS     []BAR  `json:"omitempty"`
+	BARS     []BAR  `json:",omitempty"`
 
 	// Type 1
 	Primary     uint8
