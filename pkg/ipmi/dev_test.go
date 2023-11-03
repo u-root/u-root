@@ -6,7 +6,6 @@ package ipmi
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"syscall"
@@ -71,7 +70,7 @@ func (t *testsyscalls) connRead(f func(fd uintptr) bool, conn syscall.RawConn) e
 }
 
 func TestDev(t *testing.T) {
-	df, err := ioutil.TempFile("", "ipmi_dummy_file-")
+	df, err := os.CreateTemp("", "ipmi_dummy_file-")
 	if err != nil {
 		t.Error(err)
 	}
@@ -168,9 +167,9 @@ func TestDev(t *testing.T) {
 }
 
 func TestNewDev(t *testing.T) {
-	df, err := ioutil.TempFile("", "ipmi_dummy_file-")
+	df, err := os.CreateTemp("", "ipmi_dummy_file-")
 	if err != nil {
-		t.Errorf(`ioutil.TempFile("", "ipmi_dummy_file-") = df, %q, not df, nil`, err)
+		t.Errorf(`os.CreateTemp("", "ipmi_dummy_file-") = df, %q, not df, nil`, err)
 	}
 	defer os.RemoveAll(df.Name())
 	_ = newDev(df)
