@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/bzimage"
@@ -43,7 +43,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	// boot_params directory is x86 specific. So for now, following code only
 	// works on x86.
 	// https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-kernel-boot_params
-	bp, err := ioutil.ReadFile("/sys/kernel/boot_params/data")
+	bp, err := os.ReadFile("/sys/kernel/boot_params/data")
 	if err != nil {
 		return fmt.Errorf("reading boot_param data: %w", err)
 	}
@@ -97,7 +97,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 
 	var ramfsRange kexec.Range
 	if ramfs != nil {
-		ramfsContents, err := ioutil.ReadAll(ramfs)
+		ramfsContents, err := io.ReadAll(ramfs)
 		if err != nil {
 			return fmt.Errorf("unable to read initramfs: %w", err)
 		}

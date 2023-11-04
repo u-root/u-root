@@ -81,18 +81,32 @@ func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 		return nil, fmt.Errorf("failed to get blob count: %v", err)
 	}
 
-	hssList := [][]uint8{}
-	seen := make(map[string]bool)
-	skmSubstr := "/skm/hss/"
+	hssLists := [][][]uint8{}
+	hssPrefixes := []string{"/skm/hss/", "/skm/hss-backup/"}
+	for range hssPrefixes {
+		hssLists = append(hssLists, [][]uint8{})
+	}
 
-	// Read from all */skm/hss/* blobs.
+	// Gather all HSS entries, expected to look like /skm/hss/0, /skm/hss-backup/3, etc.
 	for j := 0; j < blobCount; j++ {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
 			return nil, fmt.Errorf("failed to enumerate blob %d: %v", j, err)
 		}
 
-		if !strings.Contains(id, skmSubstr) {
+		// Ignore entries with a trailing /, which don't actually represent a HSS
+		if strings.HasSuffix(id, "/") {
+			continue
+		}
+
+		prefixIdx := -1
+		for k, prefix := range hssPrefixes {
+			if strings.HasPrefix(id, prefix) {
+				prefixIdx = k
+				break
+			}
+		}
+		if prefixIdx == -1 {
 			continue
 		}
 
@@ -110,10 +124,19 @@ func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 			log.Print(msg)
 		}
 
-		hssStr := fmt.Sprint(hss)
-		if !seen[hssStr] {
-			seen[hssStr] = true
-			hssList = append(hssList, hss)
+		hssLists[prefixIdx] = append(hssLists[prefixIdx], hss)
+	}
+
+	// Deduplicate repeated HSS entries, and order by hssPrefixes
+	seen := make(map[string]bool)
+	hssList := [][]uint8{}
+	for _, list := range hssLists {
+		for _, hss := range list {
+			hssStr := fmt.Sprint(hss)
+			if !seen[hssStr] {
+				seen[hssStr] = true
+				hssList = append(hssList, hss)
+			}
 		}
 	}
 
