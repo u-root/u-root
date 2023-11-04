@@ -30,6 +30,20 @@ github.com/aymanbagabas/go-osc52/v2
 # github.com/beevik/ntp v0.3.0
 ## explicit
 github.com/beevik/ntp
+# github.com/bobuhiro11/gokvm v0.0.8-0.20231003020000-f53faca69d28
+## explicit; go 1.20
+github.com/bobuhiro11/gokvm/bootparam
+github.com/bobuhiro11/gokvm/ebda
+github.com/bobuhiro11/gokvm/iodev
+github.com/bobuhiro11/gokvm/kvm
+github.com/bobuhiro11/gokvm/machine
+github.com/bobuhiro11/gokvm/pci
+github.com/bobuhiro11/gokvm/pvh
+github.com/bobuhiro11/gokvm/serial
+github.com/bobuhiro11/gokvm/tap
+github.com/bobuhiro11/gokvm/term
+github.com/bobuhiro11/gokvm/virtio
+github.com/bobuhiro11/gokvm/vmm
 # github.com/cenkalti/backoff/v4 v4.1.3
 ## explicit; go 1.13
 github.com/cenkalti/backoff/v4
@@ -273,6 +287,9 @@ github.com/vishvananda/netns
 # github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 ## explicit
 github.com/vtolstov/go-ioctl
+# golang.org/x/arch v0.2.0
+## explicit; go 1.17
+golang.org/x/arch/x86/x86asm
 # golang.org/x/crypto v0.14.0
 ## explicit; go 1.17
 golang.org/x/crypto/blowfish

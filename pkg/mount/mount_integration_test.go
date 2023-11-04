@@ -8,7 +8,7 @@
 package mount
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -23,7 +23,7 @@ func TestIntegration(t *testing.T) {
 	// qemu getting into lock wars. To avoid this, copy data files to
 	// a temp directory.
 	// Don't use this, we want to let the test decide whether to delete it. tmp := t.TempDir()
-	tmp, err := ioutil.TempDir("", "MountTestIntegration")
+	tmp, err := os.MkdirTemp("", "MountTestIntegration")
 	if err != nil {
 		t.Fatalf("Creating TempDir: %v", tmp)
 	}
