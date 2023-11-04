@@ -64,13 +64,7 @@ import (
 )
 
 func run() {
-
-	cmd, err := printf.NewPrinterFromArgs(os.Stdout, os.Args[1:])
-	if err != nil {
-		os.Stderr.Write([]byte(err.Error() + "\n"))
-		return
-	}
-	err = cmd.Run()
+	_, err := printf.Fprintf(os.Stdout, os.Args[1:]...)
 	if err != nil {
 		os.Stderr.Write([]byte(err.Error() + "\n"))
 		return

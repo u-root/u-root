@@ -4,20 +4,19 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
-func interpret(w *bytes.Buffer, format string, args []string, octalPrefix bool, parseSubstitutions bool) error {
+func interpret(w *bytes.Buffer, format []byte, args []string, octalPrefix bool, parseSubstitutions bool) error {
 	o := w
-	fr := strings.NewReader(format)
+	fr := bytes.NewBuffer(format)
 	idx := 0
-	nextArg := func() string {
+	nextArg := func() []byte {
 		if idx >= len(args) {
-			return ""
+			return nil
 		}
 		ans := args[idx]
 		idx = idx + 1
-		return ans
+		return []byte(ans)
 	}
 
 	for fr.Len() > 0 {
@@ -49,6 +48,9 @@ func interpret(w *bytes.Buffer, format string, args []string, octalPrefix bool, 
 				o.WriteString(tmp.String())
 				continue
 			case 'q':
+				if err := formatCodeQ.format(o, arg); err != nil {
+					return err
+				}
 				continue
 			case 'd':
 				continue
@@ -154,7 +156,7 @@ func interpret(w *bytes.Buffer, format string, args []string, octalPrefix bool, 
 	return nil
 }
 
-func readOctal(fr *strings.Reader, o *bytes.Buffer) {
+func readOctal(fr *bytes.Buffer, o *bytes.Buffer) {
 	octals := ""
 	// read up to three decimals from the stream
 	for i := 0; i < 3; i++ {
@@ -182,7 +184,7 @@ func readOctal(fr *strings.Reader, o *bytes.Buffer) {
 	}
 }
 
-func readUnicode(fr *strings.Reader, o *bytes.Buffer, length int) {
+func readUnicode(fr *bytes.Buffer, o *bytes.Buffer, length int) {
 	hexcode := ""
 	for i := 0; i < length; i++ {
 		dec, _, err := fr.ReadRune()
