@@ -58,7 +58,7 @@ func TestSync(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			*data = tt.data
 			*filesystem = tt.filesystem
-			if got := sync(tt.input); got != nil {
+			if got := sync(tt.data, tt.filesystem, tt.input); got != nil {
 				if tt.want.Error() != got.Error() {
 					t.Errorf("sync() = '%v', want: '%v'", got, tt.want)
 				}
