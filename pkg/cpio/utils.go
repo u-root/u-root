@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/uio"
@@ -181,9 +181,11 @@ func WriteRecordsAndDirs(rw RecordWriter, files []Record) error {
 		// a, a/b/, a/b/c, a/b/c/d
 		// Note: do not use os.Separator here: cpio is a Unix standard, and hence
 		// / is used.
-		els := strings.Split(filepath.Dir(f.Name), "/")
+		// do NOT use filepath, use path for the same reason.
+		// Things you learn the hard way when you run on Windows.
+		els := strings.Split(path.Dir(f.Name), "/")
 		for i := range els {
-			d := filepath.Join(els[:i+1]...)
+			d := path.Join(els[:i+1]...)
 			recs = append(recs, Directory(d, 0777))
 		}
 		recs = append(recs, f)
@@ -257,17 +259,18 @@ func ForEachRecord(rr RecordReader, fun func(Record) error) error {
 	}
 }
 
-// Normalize normalizes path to be relative to /.
-func Normalize(path string) string {
-	if filepath.IsAbs(path) {
-		rel, err := filepath.Rel("/", path)
-		if err != nil {
-			// TODO: libraries should not panic.
-			panic("absolute filepath must be relative to /")
-		}
-		return rel
-	}
-	return filepath.Clean(path)
+// Normalize normalizes namepath to be relative to /.
+func Normalize(name string) string {
+	// do not use filepath.IsAbs, it will not work on Windows.
+	// do not use filepath.Rel, that will not work
+	// sensibly on windows.
+	// The only thing one can do is strip all leading
+	// /
+	name = strings.TrimLeft(name, "/")
+	// do not use filepath.Clean here.
+	// This will result in paths with \\ on windows, and
+	// / is the cpio standard.
+	return path.Clean(name)
 }
 
 // MakeReproducible changes any fields in a Record such that if we run cpio
