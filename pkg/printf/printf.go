@@ -20,8 +20,7 @@ type printf struct {
 	writer io.Writer
 }
 
-// NewPrinterFromArgs returns a printf using the args provided
-// it will error if the length of args is below 1. it will use the first element of args as the format, and the remaining as the params
+// Fprintf will output to writer, using first of args as format
 func Fprintf(writer io.Writer, args ...string) (int64, error) {
 	if len(args) < 1 {
 		return 0, fmt.Errorf("%w: %w", ErrPrintf, ErrNotEnoughArguments)
@@ -32,6 +31,15 @@ func Fprintf(writer io.Writer, args ...string) (int64, error) {
 		params = args[1:]
 	}
 	return NewPrinter(writer).Printf(format, params...)
+}
+
+func Sprintf(format string, args ...string) (string, error) {
+	o := &bytes.Buffer{}
+	_, err := Fprintf(o, append([]string{format}, args...)...)
+	if err != nil {
+		return o.String(), err
+	}
+	return o.String(), nil
 }
 
 // NewPrinter returns a printfer

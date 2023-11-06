@@ -26,61 +26,29 @@ func interpret(w *bytes.Buffer, format []byte, args []string, octalPrefix bool, 
 			continue
 		}
 		if c == '%' && parseSubstitutions {
-			// at this point we are looking for which format code this is
-			// read another rune
-			n, _, err := fr.ReadRune()
-			// error only EOF, so write the original rune and continue
+			// we are now parsing a format code.
+			format, err := readFormat(fr)
 			if err != nil {
-				o.WriteRune(c)
-				continue
+				return err
 			}
-			arg := nextArg()
-			switch n {
-			case '%':
-				o.WriteRune('%')
-				continue
-			case 'b':
-				tmp := &bytes.Buffer{}
-				err := interpret(tmp, arg, nil, true, false)
-				if err != nil {
-					return err
-				}
-				o.WriteString(tmp.String())
-				continue
-			case 'q':
-				if err := formatCodeQ.format(o, arg); err != nil {
-					return err
-				}
-				continue
-			case 'd':
-				continue
-			case 'i':
-				continue
-			case 'o':
-				continue
-			case 'u':
-				continue
-			case 'x':
-				continue
-			case 'X':
-				continue
-			case 'f':
-				continue
-			case 'e':
-				continue
-			case 'E':
-				continue
-			case 'g':
-				continue
-			case 'G':
-				continue
-			case 'c':
-				continue
-			case 's':
-				fmt.Fprintf(o, "%s", arg)
-				continue
-			default:
-				return NewErrInvalidDirective(string(n))
+			// now we have the formatCode, so we figure out how many args we need to take.
+			if format.width == -1 {
+				arg := nextArg()
+				format.width, _ = readDecimal(bytes.NewBuffer(arg))
+			}
+			if format.precision == -1 {
+				arg := nextArg()
+				format.precision, _ = readDecimal(bytes.NewBuffer(arg))
+			}
+
+			formatter, ok := codeMap[format.specifier]
+			if !ok {
+				return fmt.Errorf("%w: %s", ErrUnimplemented, string(format.specifier))
+			}
+			err = formatter.format(format, o, nextArg())
+			if err != nil {
+				// formatter error, return it
+				return err
 			}
 		} else if c == '\\' {
 			// at this point we are looking for which escape sequence this is
@@ -205,4 +173,38 @@ func readUnicode(fr *bytes.Buffer, o *bytes.Buffer, length int) {
 			o.WriteRune(rune(i))
 		}
 	}
+}
+
+func readDecimal(fr *bytes.Buffer) (int, bool) {
+	octals := ""
+	// read decimals until there are no more decimals to read
+	// there is a sanity check at 256. more than that will not be supported for now
+	for i := 0; i < 256; i++ {
+		dec, _, err := fr.ReadRune()
+		if err != nil {
+			break
+		}
+		if dec >= '0' && dec <= '9' {
+			octals = octals + string(dec)
+			continue
+		}
+		// not an decimal, so unwind the last read and break
+		fr.UnreadRune()
+		break
+	}
+	// if the length of octals is zero, that means this is not actually a number. return nil
+	if len(octals) == 0 {
+		return 0, false
+	}
+	// read the base 10 number
+	i, err := strconv.ParseInt(octals, 10, 64)
+	// this should never actually error, since the input has been pre-sanitized... maybe overflow?
+	if err != nil {
+		return 0, true
+	}
+	return int(i), true
+}
+
+func isDecimal(r rune) bool {
+	return r >= '0' && r <= '9'
 }

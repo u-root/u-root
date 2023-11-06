@@ -2,27 +2,13 @@ package printf_test
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/printf"
 )
 
 func TestPrintfBasic(t *testing.T) {
-
-	pf := func(args ...string) (string, string) {
-		o := &bytes.Buffer{}
-		f := ""
-		a := []string{}
-		switch len(args) {
-		case 0:
-		default:
-		}
-		err := printf.NewPrinter(o, f, a).Run()
-		if err != nil {
-			return o.String(), err.Error()
-		}
-		return o.String(), ""
-	}
 
 	args := func(args ...string) []string {
 		return args
@@ -31,12 +17,12 @@ func TestPrintfBasic(t *testing.T) {
 	type testCase struct {
 		a   []string
 		e   string
-		err string
+		err error
 	}
 
 	cases := []testCase{
-		{a: nil, err: "printf: not enough arguments\n"},
-		{a: args("%j"), err: "printf: %j: invalid directive\n"},
+		{a: nil, err: printf.ErrNotEnoughArguments},
+		{a: args("%j"), err: printf.ErrInvalidDirective},
 		{a: args("hello"), e: "hello"},
 		{a: args(`hello\n`), e: "hello\n"},
 		{a: args(`hello\c there`), e: "hello"},
@@ -59,17 +45,19 @@ func TestPrintfBasic(t *testing.T) {
 	}
 
 	for i, v := range cases {
-		ans, err := pf(v.a...)
-		if v.err != "" {
-			if err == "" {
+		o := &bytes.Buffer{}
+		_, err := printf.Fprintf(o, v.a...)
+		ans := o.String()
+		if v.err != nil {
+			if err == nil {
 				t.Errorf("case %d: exected err %s, got nil", i, v.err)
 			}
-			if err != v.err {
+			if !errors.Is(err, v.err) {
 				t.Errorf("case %d: exected err %s, got %s", i, v.err, err)
 			}
 			continue
 		}
-		if err != "" {
+		if err != nil {
 			t.Errorf("case %d: exected err nil, got %s", i, err)
 		}
 		if v.e != ans {
