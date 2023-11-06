@@ -31,19 +31,20 @@ func interpret(w *bytes.Buffer, format []byte, args []string, octalPrefix bool, 
 				return err
 			}
 			// now we have the formatCode, so we figure out how many args we need to take.
+			// these codes are ignored because if we dont find a valid argument, we will just set it to 0
+			// perhaps better defaults or errors could be possibly set instead, but keeping it like this for now
 			if format.width == -1 {
-				arg := nextArg()
-				format.width, _ = readDecimal(bytes.NewBuffer(arg))
+				format.width, _ = readDecimal(bytes.NewBuffer(nextArg()))
 			}
 			if format.precision == -1 {
-				arg := nextArg()
-				format.precision, _ = readDecimal(bytes.NewBuffer(arg))
+				format.precision, _ = readDecimal(bytes.NewBuffer(nextArg()))
 			}
-
+			// see if the format code is implemented :)
 			formatter, ok := codeMap[format.specifier]
 			if !ok || formatter == nil {
 				return fmt.Errorf("%w: %s", ErrUnimplemented, string(format.specifier))
 			}
+			// run the formatter
 			err = formatter.format(format, o, nextArg())
 			if err != nil {
 				// formatter error, return it
