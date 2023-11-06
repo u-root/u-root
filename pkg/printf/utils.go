@@ -56,7 +56,7 @@ func readUnicode(fr *bytes.Buffer, o *bytes.Buffer, length int) {
 	}
 }
 
-func readDecimal(fr *bytes.Buffer) (int, bool) {
+func readDecimal(fr *bytes.Buffer) (int64, bool) {
 	octals := ""
 	// read decimals until there are no more decimals to read
 	// there is a sanity check at 256. more than that will not be supported for now
@@ -83,7 +83,7 @@ func readDecimal(fr *bytes.Buffer) (int, bool) {
 	if err != nil {
 		return 0, true
 	}
-	return int(i), true
+	return i, true
 }
 
 func isDecimal(r rune) bool {

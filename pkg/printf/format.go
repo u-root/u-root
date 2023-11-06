@@ -15,8 +15,8 @@ type format struct {
 	withPound   bool
 	padZero     bool
 
-	width     int
-	precision int
+	width     int64
+	precision int64
 	length    int
 	specifier rune
 }

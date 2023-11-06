@@ -38,13 +38,13 @@ var codeMap = map[rune]formatter{
 			}
 		}
 	}, nIdentity),
-	'd': newFormatCode[int](
-		func(f *format, w io.Writer, i int) error {
+	'd': newFormatCode[int64](
+		func(f *format, w io.Writer, i int64) error {
 			// TODO: properly encode the width and precision
 			_, err := fmt.Fprintf(w, "%d", i)
 			return err
 		},
-		func(f *format, b []byte) (int, bool) {
+		func(f *format, b []byte) (int64, bool) {
 			if !bytes.HasPrefix(b, []byte("0x")) {
 				return 0, false
 			}
@@ -53,9 +53,9 @@ var codeMap = map[rune]formatter{
 			if err != nil {
 				return 0, true
 			}
-			return int(i), true
+			return i, true
 		},
-		func(f *format, b []byte) (int, bool) {
+		func(f *format, b []byte) (int64, bool) {
 			return readDecimal(bytes.NewBuffer(b))
 		},
 	),
