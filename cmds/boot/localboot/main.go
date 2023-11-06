@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/boot/jsonboot"
@@ -173,8 +172,13 @@ func BootPathMode(devices block.BlockDevices, baseMountpoint string, guid string
 		return err
 	}
 
-	fullKernelPath := path.Join(mount.Path, *flagKernelPath)
-	fullInitramfsPath := path.Join(mount.Path, *flagInitramfsPath)
+	fullKernelPath := filepath.Join(mount.Path, *flagKernelPath)
+
+	var fullInitramfsPath string
+	if len(*flagInitramfsPath) != 0 {
+		fullInitramfsPath = filepath.Join(mount.Path, *flagInitramfsPath)
+	}
+
 	cfg := jsonboot.BootConfig{
 		Kernel:     fullKernelPath,
 		Initramfs:  fullInitramfsPath,
