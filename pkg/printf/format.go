@@ -108,22 +108,7 @@ func readFormat(fr *bytes.Buffer) (o *format, err error) {
 
 		// try to read a specifier
 		switch n {
-		case '%',
-			'b',
-			'q',
-			'd',
-			'i',
-			'o',
-			'u',
-			'x',
-			'X',
-			'f',
-			'e',
-			'E',
-			'g',
-			'G',
-			'c',
-			's':
+		case '%', 'b', 'q', 'd', 'i', 'o', 'u', 'x', 'X', 'f', 'e', 'E', 'g', 'G', 'c', 's':
 			o.specifier = n
 			return o, nil
 		default:
