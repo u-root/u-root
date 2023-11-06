@@ -40,6 +40,7 @@ var codeMap = map[rune]formatter{
 	}, nIdentity),
 	'd': newFormatCode[int](
 		func(f *format, w io.Writer, i int) error {
+			// TODO: properly encode the width and precision
 			_, err := fmt.Fprintf(w, "%d", i)
 			return err
 		},
@@ -58,6 +59,17 @@ var codeMap = map[rune]formatter{
 			return readDecimal(bytes.NewBuffer(b))
 		},
 	),
+	'i': nil,
+	'o': nil,
+	'u': nil,
+	'x': nil,
+	'X': nil,
+	'f': nil,
+	'e': nil,
+	'E': nil,
+	'g': nil,
+	'G': nil,
+	'c': nil,
 }
 
 func init() {
