@@ -5,21 +5,6 @@
 //go:build freebsd || linux
 // +build freebsd linux
 
-// ldd returns all the library dependencies of an executable.
-//
-// The way this is done on GNU-based systems is interesting. For each ELF, one
-// finds the .interp section. If there is no interpreter
-// there's not much to do.
-//
-// If there is an interpreter, we run it with the --list option and the file as
-// an argument. We need to parse the output.
-//
-// For all lines with =>  as the 2nd field, we take the 3rd field as a
-// dependency. The field may be a symlink.  Rather than stat the link and do
-// other such fooling around, we can do a readlink on it; if it fails, we just
-// need to add that file name; if it succeeds, we need to add that file name
-// and repeat with the next link in the chain. We can let the kernel do the
-// work of figuring what to do if and when we hit EMLINK.
 package ldd
 
 import (
@@ -30,42 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 )
-
-// Follow starts at a pathname and adds it
-// to a map if it is not there.
-// If the pathname is a symlink, indicated by the Readlink
-// succeeding, links repeats and continues
-// for as long as the name is not found in the map.
-func follow(l string, names map[string]*FileInfo) error {
-	for {
-		if names[l] != nil {
-			return nil
-		}
-		i, err := os.Lstat(l)
-		if err != nil {
-			return fmt.Errorf("%v", err)
-		}
-
-		names[l] = &FileInfo{FullName: l, FileInfo: i}
-		if i.Mode().IsRegular() {
-			return nil
-		}
-		// If it's a symlink, the read works; if not, it fails.
-		// we can skip testing the type, since we still have to
-		// handle any error if it's a link.
-		next, err := os.Readlink(l)
-		if err != nil {
-			return err
-		}
-		// It may be a relative link, so we need to
-		// make it abs.
-		if filepath.IsAbs(next) {
-			l = next
-			continue
-		}
-		l = filepath.Join(filepath.Dir(l), next)
-	}
-}
 
 func parseinterp(input string) ([]string, error) {
 	var names []string
@@ -107,11 +56,6 @@ func runinterp(interp, file string) ([]string, error) {
 	return parseinterp(string(o))
 }
 
-type FileInfo struct {
-	FullName string
-	os.FileInfo
-}
-
 func GetInterp(file string) (string, error) {
 	r, err := os.Open(file)
 	if err != nil {
@@ -122,6 +66,7 @@ func GetInterp(file string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
+
 	s := f.Section(".interp")
 	var interp string
 	if s != nil {
@@ -131,14 +76,17 @@ func GetInterp(file string) (string, error) {
 		if err != nil {
 			return "fail", err
 		}
+
+		// .interp section is file name + \0 character.
+		interp := strings.TrimRight(string(i), "\000")
+
 		// Ignore #! interpreters
-		if len(i) > 1 && i[0] == '#' && i[1] == '!' {
+		if strings.HasPrefix(interp, "#!") {
 			return "", nil
 		}
-		// annoyingly, s.Data() seems to return the null at the end and,
-		// weirdly, that seems to confuse the kernel. Truncate it.
-		interp = string(i[:len(i)-1])
+		return interp, nil
 	}
+
 	if interp == "" {
 		if f.Type != elf.ET_DYN || f.Class == elf.ELFCLASSNONE {
 			return "", nil
@@ -162,24 +110,66 @@ func GetInterp(file string) (string, error) {
 	return interp, nil
 }
 
-// Ldd returns a list of all library dependencies for a set of files.
+// follow returns all paths and any files they recursively point to through
+// symlinks.
+func follow(paths ...string) ([]string, error) {
+	seen := make(map[string]struct{})
+
+	for _, path := range paths {
+		if err := followInternal(path, seen); err != nil {
+			return nil, err
+		}
+	}
+
+	deps := make([]string, 0, len(seen))
+	for s := range seen {
+		deps = append(deps, s)
+	}
+	return deps, nil
+}
+
+func followInternal(path string, seen map[string]struct{}) error {
+	for {
+		if _, ok := seen[path]; ok {
+			return nil
+		}
+		i, err := os.Lstat(path)
+		if err != nil {
+			return err
+		}
+
+		seen[path] = struct{}{}
+		if i.Mode().IsRegular() {
+			return nil
+		}
+
+		// If it's a symlink, read works; if not, it fails.
+		// We can skip testing the type, since we still have to
+		// handle any error if it's a link.
+		next, err := os.Readlink(path)
+		if err != nil {
+			return err
+		}
+
+		// A relative link has to be interpreted relative to the file's
+		// parent's path.
+		if !filepath.IsAbs(next) {
+			next = filepath.Join(filepath.Dir(path), next)
+		}
+		path = next
+	}
+}
+
+// List returns a list of all library dependencies for a set of files.
 //
 // If a file has no dependencies, that is not an error. The only possible error
 // is if a file does not exist, or it says it has an interpreter but we can't
 // read it, or we are not able to run its interpreter.
 //
 // It's not an error for a file to not be an ELF.
-func Ldd(names []string) ([]*FileInfo, error) {
-	var (
-		list    = make(map[string]*FileInfo)
-		interps = make(map[string]*FileInfo)
-		libs    []*FileInfo
-	)
-	for _, n := range names {
-		if err := follow(n, list); err != nil {
-			return nil, err
-		}
-	}
+func List(names ...string) ([]string, error) {
+	list := make(map[string]struct{})
+	interps := make(map[string]struct{})
 	for _, n := range names {
 		interp, err := GetInterp(n)
 		if err != nil {
@@ -188,47 +178,42 @@ func Ldd(names []string) ([]*FileInfo, error) {
 		if interp == "" {
 			continue
 		}
-		// We could just append the interp but people
-		// expect to see that first.
-		if interps[interp] == nil {
-			err := follow(interp, interps)
-			if err != nil {
-				return nil, err
-			}
-		}
+		interps[interp] = struct{}{}
 
-		// oh boy. Now to run the interp and get more names.
-		n, err := runinterp(interp, n)
+		// Run the interpreter to get dependencies.
+		sonames, err := runinterp(interp, n)
 		if err != nil {
 			return nil, err
 		}
-		for _, soname := range n {
-			if err := follow(soname, list); err != nil {
-				return nil, err
-			}
+		for _, name := range sonames {
+			list[name] = struct{}{}
 		}
 	}
 
-	for i := range interps {
-		libs = append(libs, interps[i])
-	}
+	libs := make([]string, 0, len(list)+len(interps))
 
-	for i := range list {
-		libs = append(libs, list[i])
+	// People expect to see the interps first.
+	for s := range interps {
+		libs = append(libs, s)
 	}
-
+	for s := range list {
+		libs = append(libs, s)
+	}
 	return libs, nil
 }
 
-// List returns the dependency file paths of files in names.
-func List(names []string) ([]string, error) {
-	var list []string
-	l, err := Ldd(names)
+// FList returns a list of all library dependencies for a set of files,
+// including following symlinks.
+//
+// If a file has no dependencies, that is not an error. The only possible error
+// is if a file does not exist, or it says it has an interpreter but we can't
+// read it, or we are not able to run its interpreter.
+//
+// It's not an error for a file to not be an ELF.
+func FList(names ...string) ([]string, error) {
+	deps, err := List(names...)
 	if err != nil {
 		return nil, err
 	}
-	for i := range l {
-		list = append(list, l[i].FullName)
-	}
-	return list, nil
+	return follow(deps...)
 }

@@ -149,7 +149,7 @@ func poxCreate(bin ...string) error {
 	if len(bin) == 0 {
 		return fmt.Errorf(usage)
 	}
-	l, err := ldd.Ldd(bin)
+	names, err := ldd.List(bin...)
 	if err != nil {
 		var stderr []byte
 		if eerr, ok := err.(*exec.ExitError); ok {
@@ -158,10 +158,6 @@ func poxCreate(bin ...string) error {
 		return fmt.Errorf("running ldd on %v: %v %s", bin, err, stderr)
 	}
 
-	var names []string
-	for _, dep := range l {
-		names = append(names, dep.FullName)
-	}
 	sort.Strings(names)
 	// Now we need to make a template file hierarchy and put
 	// the stuff we want in there.
@@ -193,8 +189,7 @@ func poxCreate(bin ...string) error {
 			in.Close()
 			return err
 		}
-		out, err := os.OpenFile(dfile, os.O_WRONLY|os.O_CREATE,
-			fi.Mode().Perm())
+		out, err := os.OpenFile(dfile, os.O_WRONLY|os.O_CREATE, fi.Mode().Perm())
 		if err != nil {
 			in.Close()
 			return err
