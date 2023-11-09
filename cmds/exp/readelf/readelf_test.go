@@ -45,6 +45,12 @@ func TestRead(t *testing.T) {
 		t.Fatalf("elf output: want %q, got %q", out.String(), goodOut)
 	}
 
+	// test errors.Join with one good file, one bad file
+	bogus := filepath.Join(d, "bogus")
+	if err := run(nil, &out, f, bogus); err == nil {
+		t.Errorf("reading good elfFile, then non-existent file: got nil, want err")
+	}
+
 	// short file
 	if err := os.WriteFile(f, elfFile[:64], 0666); err != nil {
 		t.Fatalf("Writing data: %v", err)

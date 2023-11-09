@@ -16,6 +16,7 @@ package main
 import (
 	"debug/elf"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -44,11 +45,8 @@ func run(in io.ReaderAt, out io.Writer, args ...string) error {
 		for i, n := range args {
 			f, e := elf.Open(n)
 			if e != nil {
-				// Until CI gets to go1.21, just break
-				// on an error.
-				//err = errors.Join(err, e)
-				//continue
-				return e
+				err = errors.Join(err, e)
+				continue
 			}
 			files[i] = f
 			defer f.Close()
