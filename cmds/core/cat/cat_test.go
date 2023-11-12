@@ -8,11 +8,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
+	"testing/iotest"
 )
 
 // setup writes a set of files, putting 1 byte in each file.
@@ -46,7 +48,7 @@ func TestCat(t *testing.T) {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
 	}
 	var out bytes.Buffer
-	if err := run(files, nil, &out); err != nil {
+	if err := run(nil, &out, files...); err != nil {
 		t.Fatal(err)
 	}
 
@@ -84,7 +86,7 @@ func TestRunFiles(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := run(files, nil, &out); err != nil {
+	if err := run(nil, &out, files...); err != nil {
 		t.Error(err)
 	}
 	if !bytes.Equal(out.Bytes(), someData) {
@@ -107,7 +109,7 @@ func TestRunFilesError(t *testing.T) {
 	filenotexist := "testdata/doesnotexist.txt"
 	files = append(files, filenotexist)
 	var in, out bytes.Buffer
-	if err := run(files, &in, &out); err == nil {
+	if err := run(&in, &out, files...); err == nil {
 		t.Error("function run succeeded but should have failed")
 	}
 }
@@ -116,12 +118,25 @@ func TestRunNoArgs(t *testing.T) {
 	var in, out bytes.Buffer
 	inputdata := "teststring"
 	fmt.Fprintf(&in, "%s", inputdata)
-	args := make([]string, 0)
-	if err := run(args, &in, &out); err != nil {
+	if err := run(&in, &out); err != nil {
 		t.Error(err)
 	}
 	if out.String() != inputdata {
 		t.Errorf("Want: %q Got: %q", inputdata, out.String())
+	}
+}
+
+func TestIOErrors(t *testing.T) {
+	stdout := bytes.Buffer{}
+	errReader := iotest.ErrReader(errors.New("read error"))
+	err := run(errReader, &stdout)
+	if !errors.Is(err, errCopy) {
+		t.Errorf("expected %v, got %v", errCopy, err)
+	}
+
+	err = run(errReader, &stdout, "-")
+	if !errors.Is(err, errCopy) {
+		t.Errorf("expected %v, got %v", errCopy, err)
 	}
 }
 
@@ -143,7 +158,7 @@ func TestCatDash(t *testing.T) {
 	var stdin, stdout bytes.Buffer
 	stdin.WriteString("line3\n")
 
-	if err = run([]string{f1, "-", f2}, &stdin, &stdout); err != nil {
+	if err = run(&stdin, &stdout, f1, "-", f2); err != nil {
 		t.Fatal(err)
 	}
 
