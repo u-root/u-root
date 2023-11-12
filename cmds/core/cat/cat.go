@@ -26,18 +26,19 @@ import (
 )
 
 var _ = flag.Bool("u", false, "ignored")
+var errCopy = fmt.Errorf("error concatenating stdin to stdout")
 
 func cat(reader io.Reader, writer io.Writer) error {
 	if _, err := io.Copy(writer, reader); err != nil {
-		return fmt.Errorf("error concatenating stdin to stdout: %v", err)
+		return errCopy
 	}
 	return nil
 }
 
-func run(args []string, stdin io.Reader, stdout io.Writer) error {
+func run(stdin io.Reader, stdout io.Writer, args ...string) error {
 	if len(args) == 0 {
 		if err := cat(stdin, stdout); err != nil {
-			return fmt.Errorf("error concatenating stdin to stdout: %v", err)
+			return err
 		}
 	}
 	for _, file := range args {
@@ -62,7 +63,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 
 func main() {
 	flag.Parse()
-	if err := run(flag.Args(), os.Stdin, os.Stdout); err != nil {
+	if err := run(os.Stdin, os.Stdout, flag.Args()...); err != nil {
 		log.Fatalf("cat failed with: %v", err)
 	}
 }
