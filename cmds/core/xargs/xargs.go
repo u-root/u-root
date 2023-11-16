@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"io"
 	"log"
 	"os"
@@ -13,27 +14,48 @@ import (
 	"strings"
 )
 
+const defaultMaxArgs = 5000
+
 func main() {
-	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]...); err != nil {
+	var maxNumber = flag.Int("n", defaultMaxArgs, "max number of arguments per command")
+	flag.Parse()
+	if err := run(os.Stdin, os.Stdout, os.Stderr, *maxNumber, flag.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
+func run(stdin io.Reader, stdout, stderr io.Writer, maxArgs int, args ...string) error {
 	if len(args) == 0 {
 		args = append(args, "echo")
 	}
 
+	var xArgs []string
 	scanner := bufio.NewScanner(stdin)
 	for scanner.Scan() {
 		sp := strings.Fields(scanner.Text())
-		args = append(args, sp...)
+		xArgs = append(xArgs, sp...)
 	}
 
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	argsLen := len(args)
 
-	return cmd.Run()
+	for i := 0; i < len(xArgs); i += maxArgs {
+		m := len(xArgs)
+		if i+maxArgs < m {
+			m = i + maxArgs
+		}
+		args = append(args, xArgs[i:m]...)
+
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdin = stdin
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+
+		args = args[:argsLen]
+	}
+
+	return nil
 }
