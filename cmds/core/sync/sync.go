@@ -20,7 +20,6 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/uroot/util"
-	"golang.org/x/sys/unix"
 )
 
 var (
@@ -48,21 +47,9 @@ func doSyscall(syscallNum uintptr, args []string) error {
 	return nil
 }
 
-func sync(args []string) error {
-	switch {
-	case *data:
-		return doSyscall(unix.SYS_FDATASYNC, args)
-	case *filesystem:
-		return doSyscall(unix.SYS_SYNCFS, args)
-	default:
-		syscall.Sync()
-		return nil
-	}
-}
-
 func main() {
 	flag.Parse()
-	if err := sync(flag.Args()); err != nil {
+	if err := sync(*data, *filesystem, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }

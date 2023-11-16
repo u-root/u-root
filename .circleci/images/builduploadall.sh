@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-VERSION=v4.5.0
+VERSION=v4.21.0
 
 VC=$(git diff --exit-code builduploadall.sh | grep --no-ignore-case -P "VERSION=+" | wc -l)
 echo $vc

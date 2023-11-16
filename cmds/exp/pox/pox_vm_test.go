@@ -113,7 +113,7 @@ func TestPoxCreate(t *testing.T) {
 		{
 			name:    "error in ldd.Ldd",
 			args:    []string{""},
-			wantErr: "running ldd on []: lstat : no such file or directory ",
+			wantErr: "running ldd on []: open : no such file or directory ",
 		},
 		{
 			name:    "self = false, zip = false, err in c.CombinedOutput()",
