@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM cimg/go:1.19
+FROM cimg/go:1.21
 
 # Install dependencies
 RUN sudo apt-get update &&                          \

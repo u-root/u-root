@@ -19,13 +19,14 @@
 //	-r: print the kernel release
 //	-v: print the kernel version
 //	-m: print the machine hardware name
-//	-d: print your domain name
 package main
 
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -39,50 +40,71 @@ var (
 	version   = flag.Bool("v", false, "print the kernel version")
 	machine   = flag.Bool("m", false, "print the machine hardware name")
 	processor = flag.Bool("p", false, "print the machine hardware name")
-	domain    = flag.Bool("d", false, "print your domain name")
 )
 
-func handleFlags(u *unix.Utsname) string {
-	Sysname, Nodename := unix.ByteSliceToString(u.Sysname[:]), unix.ByteSliceToString(u.Nodename[:])
-	Release, Version := unix.ByteSliceToString(u.Release[:]), unix.ByteSliceToString(u.Version[:])
-	Machine, Domainname := unix.ByteSliceToString(u.Machine[:]), unix.ByteSliceToString(u.Domainname[:])
-	info := make([]string, 0, 6)
+type params struct {
+	kernel  bool
+	node    bool
+	release bool
+	version bool
+	machine bool
+}
 
-	if *all || flag.NFlag() == 0 {
-		info = append(info, Sysname, Nodename, Release, Version, Machine, Domainname)
-		goto end
+func handleFlags(u *unix.Utsname, p params) string {
+	sysname, nodename := unix.ByteSliceToString(u.Sysname[:]), unix.ByteSliceToString(u.Nodename[:])
+	release, version := unix.ByteSliceToString(u.Release[:]), unix.ByteSliceToString(u.Version[:])
+	machine := unix.ByteSliceToString(u.Machine[:])
+	info := make([]string, 0, 5)
+
+	if p.kernel {
+		info = append(info, sysname)
 	}
-	if *kernel {
-		info = append(info, Sysname)
+	if p.node {
+		info = append(info, nodename)
 	}
-	if *node {
-		info = append(info, Nodename)
+	if p.release {
+		info = append(info, release)
 	}
-	if *release {
-		info = append(info, Release)
+	if p.version {
+		info = append(info, version)
 	}
-	if *version {
-		info = append(info, Version)
-	}
-	if *machine || *processor {
-		info = append(info, Machine)
-	}
-	if *domain {
-		info = append(info, Domainname)
+	if p.machine {
+		info = append(info, machine)
 	}
 
-end:
 	return strings.Join(info, " ")
+}
+
+func run(stdout io.Writer, p params) error {
+	var u unix.Utsname
+	if err := unix.Uname(&u); err != nil {
+		return err
+	}
+	info := handleFlags(&u, p)
+	_, err := fmt.Fprintln(stdout, info)
+	return err
+}
+
+func parseParams(all, kernel, node, release, version, machine, processor bool) params {
+	p := params{
+		kernel:  kernel || all,
+		node:    node || all,
+		release: release || all,
+		version: version || all,
+		machine: machine || processor || all,
+	}
+
+	if !p.kernel && !p.node && !p.release && !p.version && !p.machine {
+		p.kernel = true
+	}
+
+	return p
 }
 
 func main() {
 	flag.Parse()
-
-	var u unix.Utsname
-	if err := unix.Uname(&u); err != nil {
-		log.Fatalf("%v", err)
+	p := parseParams(*all, *kernel, *node, *release, *version, *machine, *processor)
+	if err := run(os.Stdout, p); err != nil {
+		log.Fatal(err)
 	}
-
-	info := handleFlags(&u)
-	fmt.Println(info)
 }

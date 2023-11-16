@@ -6,7 +6,7 @@ package syscallfilter
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,7 +19,7 @@ import (
 // true, i.e. assume we're being traced somehow..
 // Yep, this is a kludge.
 func traced() bool {
-	b, err := ioutil.ReadFile("/proc/self/status")
+	b, err := os.ReadFile("/proc/self/status")
 	if err != nil {
 		return true
 	}

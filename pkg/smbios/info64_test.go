@@ -5,7 +5,6 @@
 package smbios
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -23,7 +22,7 @@ func Test64ParseInfo(t *testing.T) {
 }
 
 func Test64ParseInfoHeaderMalformed(t *testing.T) {
-	data, err := ioutil.ReadFile("./testdata/smbios_table.bin")
+	data, err := os.ReadFile("./testdata/smbios_table.bin")
 	if err != nil {
 		t.Errorf("error reading mockup smbios tables: %v", err)
 	}
@@ -88,7 +87,7 @@ func Test64GetTablesByType(t *testing.T) {
 }
 
 func setupMockData() (*Info, error) {
-	data, err := ioutil.ReadFile("./testdata/smbios_table.bin")
+	data, err := os.ReadFile("./testdata/smbios_table.bin")
 	if err != nil {
 		return nil, err
 	}

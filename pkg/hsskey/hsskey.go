@@ -69,7 +69,7 @@ func readHssBlob(id string, h blobReader) (data []uint8, rerr error) {
 }
 
 // getHssFromIpmi reads all host secret seeds over IPMI.
-func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
+func getHssFromIpmi(warnings io.Writer, verboseDangerous bool) ([][]uint8, error) {
 	i, err := ipmi.Open(0)
 	if err != nil {
 		return nil, err
@@ -81,18 +81,32 @@ func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 		return nil, fmt.Errorf("failed to get blob count: %v", err)
 	}
 
-	hssList := [][]uint8{}
-	seen := make(map[string]bool)
-	skmSubstr := "/skm/hss/"
+	hssLists := [][][]uint8{}
+	hssPrefixes := []string{"/skm/hss/", "/skm/hss-backup/"}
+	for range hssPrefixes {
+		hssLists = append(hssLists, [][]uint8{})
+	}
 
-	// Read from all */skm/hss/* blobs.
+	// Gather all HSS entries, expected to look like /skm/hss/0, /skm/hss-backup/3, etc.
 	for j := 0; j < blobCount; j++ {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
 			return nil, fmt.Errorf("failed to enumerate blob %d: %v", j, err)
 		}
 
-		if !strings.Contains(id, skmSubstr) {
+		// Ignore entries with a trailing /, which don't actually represent a HSS
+		if strings.HasSuffix(id, "/") {
+			continue
+		}
+
+		prefixIdx := -1
+		for k, prefix := range hssPrefixes {
+			if strings.HasPrefix(id, prefix) {
+				prefixIdx = k
+				break
+			}
+		}
+		if prefixIdx == -1 {
 			continue
 		}
 
@@ -102,18 +116,23 @@ func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 			continue
 		}
 
-		if verbose {
-			msg := fmt.Sprintf("HSS Entry: Id=%s", id)
-			if verboseDangerous {
-				msg = msg + fmt.Sprintf(",Seed=%x", hss)
-			}
-			log.Print(msg)
+		if warnings != nil && verboseDangerous {
+			io.WriteString(warnings, fmt.Sprintf("HSS Entry: Id=%s, Seed=%x\n", id, hss))
 		}
 
-		hssStr := fmt.Sprint(hss)
-		if !seen[hssStr] {
-			seen[hssStr] = true
-			hssList = append(hssList, hss)
+		hssLists[prefixIdx] = append(hssLists[prefixIdx], hss)
+	}
+
+	// Deduplicate repeated HSS entries, and order by hssPrefixes
+	seen := make(map[string]bool)
+	hssList := [][]uint8{}
+	for _, list := range hssLists {
+		for _, hss := range list {
+			hssStr := fmt.Sprint(hss)
+			if !seen[hssStr] {
+				seen[hssStr] = true
+				hssList = append(hssList, hss)
+			}
 		}
 	}
 
@@ -125,31 +144,41 @@ func getHssFromIpmi(verbose bool, verboseDangerous bool) ([][]uint8, error) {
 //     searching will be in the format: "/sys/bus/i2c/devices/{eepromPattern}/eeprom".
 //     For example, 0-005*
 //     An empty string "" will skip the attempt to read from EEPROM.
-func GetAllHss(verbose bool, verboseDangerous bool, eepromPattern string) ([][]uint8, error) {
+func GetAllHss(warnings io.Writer, verboseDangerous bool, eepromPattern string, hssFiles string) ([][]uint8, error) {
 	// Attempt to get HSS from IPMI.
-	hssList, err := getHssFromIpmi(verbose, verboseDangerous)
-	if err == nil && len(hssList) > 0 {
-		// If it successfully reads from IPMI and the list is not empty, return the result.
-		return hssList, nil
+	hssList, err := getHssFromIpmi(warnings, verboseDangerous)
+	if err != nil || len(hssList) == 0 {
+		io.WriteString(warnings, fmt.Sprintf("Failed to get HSS key from IPMI: %v\n", err))
 	}
-	log.Printf("Failed to get HSS key from IPMI: %v", err)
 
 	// Attempt to get HSS from EEPROM.
 	if eepromPattern != "" {
 		filePaths, err := getHssEepromPaths(baseSysfsPattern, eepromPattern)
-		if len(filePaths) != 2 {
-			log.Printf("Expecting 2 EEPROMs but found %d", len(filePaths))
-		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to find HSS EEPROM paths: %v", err)
+			io.WriteString(warnings, fmt.Sprintf("Failed to find HSS EEPROM paths: %v\n", err))
 		}
-		hssList, err = getHssFromFile(verbose, verboseDangerous, filePaths)
-		if err == nil && len(hssList) > 0 {
-			return hssList, nil
+		hssEeprom, err := GetHssFromFile(warnings, verboseDangerous, filePaths, hostSecretSeedCount)
+		if err == nil && len(hssEeprom) > 0 {
+			hssList = append(hssList, hssEeprom...)
+		} else {
+			io.WriteString(warnings, fmt.Sprintf("Failed to get HSS key from file: %v\n", err))
 		}
-		log.Printf("Failed to get HSS key from file: %v", err)
 	}
 
+	if hssFiles != "" {
+		hssFileArr := strings.Split(hssFiles, ",")
+		hss, err := GetHssFromFile(warnings, verboseDangerous, hssFileArr, 0)
+		if err != nil {
+			io.WriteString(warnings, fmt.Sprintf("Error parsing file %s for HSS: %v\n", hss, err))
+		}
+		if len(hss) > 0 {
+			hssList = append(hssList, hss...)
+		}
+	}
+
+	if len(hssList) > 0 {
+		return hssList, nil
+	}
 	return nil, fmt.Errorf("failed all HSS retrieval attempts")
 }
 

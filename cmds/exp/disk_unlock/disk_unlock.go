@@ -32,6 +32,8 @@ var (
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
 	retries            = flag.Int("num_retries", 1, "Number of times to retry password if unlocking fails for any reason other than the password being wrong.")
 	salt               = flag.String("salt", hsskey.DefaultPasswordSalt, "Salt for password generation")
+	eepromPattern      = flag.String("eeprom-pattern", "", "The pattern used to match EEPROM sysfs paths where the Host Secret Seeds are located")
+	hssFiles           = flag.String("hss-files", "", "Comma deliminated paths to files containing a Host Secret Seed (HSS) to use")
 )
 
 func verboseLog(msg string) {
@@ -74,7 +76,7 @@ func main() {
 	verboseLog(fmt.Sprintf("Disk info for %s: %s", *disk, info.String()))
 
 	// Obtain 32 byte Host Secret Seed (HSS) from IPMI.
-	hssList, err := hsskey.GetAllHss(*verbose, *verboseNoSanitize, "")
+	hssList, err := hsskey.GetAllHss(os.Stdout, *verboseNoSanitize, *eepromPattern, *hssFiles)
 	if err != nil {
 		log.Fatalf("error getting HSS: %v", err)
 	}

@@ -23,17 +23,26 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/ldd"
 )
 
 func main() {
-	l, err := ldd.Ldd(os.Args[1:])
+	l, err := ldd.FList(os.Args[1:]...)
 	if err != nil {
 		log.Fatalf("ldd: %v", err)
 	}
 
+	for _, p := range os.Args[1:] {
+		a, err := filepath.Abs(p)
+		if err != nil {
+			log.Fatalf("ldd: %v", err)
+		}
+		l = append(l, a)
+	}
+
 	for _, dep := range l {
-		fmt.Printf("%s\n", dep.FullName)
+		fmt.Printf("%s\n", dep)
 	}
 }
