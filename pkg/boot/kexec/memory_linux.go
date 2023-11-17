@@ -169,7 +169,7 @@ func (rs Ranges) Minus(r Range) Ranges {
 	return ram
 }
 
-// FindSpace finds a continguous piece of sz points within Ranges and returns
+// FindSpace finds a continuous piece of sz points within Ranges and returns
 // the Range pointing to it.
 //
 // If alignSizeBytes is zero, align up by page size.
@@ -180,13 +180,13 @@ func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
 // MaxAddr is the highest address in a 64bit address space.
 const MaxAddr = ^uintptr(0)
 
-// FindSpaceAbove finds a continguous piece of sz points within Ranges and
+// FindSpaceAbove finds a continuous piece of sz points within Ranges and
 // returns a space.Start >= minAddr.
 func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (space Range, err error) {
 	return rs.FindSpaceIn(sz, RangeFromInterval(minAddr, MaxAddr))
 }
 
-// FindSpaceIn finds a continguous piece of sz points within Ranges and returns
+// FindSpaceIn finds a continuous piece of sz points within Ranges and returns
 // a Range where space.Start >= limit.Start, with space.End() < limit.End().
 func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
 	for _, r := range rs {
