@@ -14,33 +14,38 @@ import (
 
 func TestCommandNotFound(t *testing.T) {
 	stdin := strings.NewReader("hello world")
-	err := run(stdin, nil, nil, 1, "commandnotfound", "arg1")
+	err := run(stdin, nil, nil, 1, false, "commandnotfound", "arg1")
 	if !errors.Is(err, exec.ErrNotFound) {
-		t.Fatalf("expected %v, got %v", exec.ErrNotFound, err)
+		t.Errorf("expected %v, got %v", exec.ErrNotFound, err)
 	}
 }
 
 func TestEcho(t *testing.T) {
 	stdin := strings.NewReader("hello world")
 	stdout := &bytes.Buffer{}
-	err := run(stdin, stdout, nil, defaultMaxArgs)
+	err := run(stdin, stdout, nil, defaultMaxArgs, false)
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
 	if stdout.String() != "hello world\n" {
-		t.Fatalf("expected 'hello world', got %q", stdout.String())
+		t.Errorf("expected 'hello world', got %q", stdout.String())
 	}
 }
 
 func TestEchoWithMaxArgs(t *testing.T) {
 	stdin := strings.NewReader("a b c d e f g")
 	stdout := &bytes.Buffer{}
-	err := run(stdin, stdout, nil, 3)
+	stderr := &bytes.Buffer{}
+	err := run(stdin, stdout, stderr, 3, true)
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
 	if stdout.String() != "a b c\nd e f\ng\n" {
-		t.Fatalf("expected 'a b c\nd e f\ng\n', got %q", stdout.String())
+		t.Errorf("expected 'a b c\nd e f\ng\n', got %q", stdout.String())
+	}
+	expectedStderr := "echo a b c\necho d e f\necho g\n"
+	if stderr.String() != expectedStderr {
+		t.Errorf("expected %q, got %q", expectedStderr, stderr.String())
 	}
 }
