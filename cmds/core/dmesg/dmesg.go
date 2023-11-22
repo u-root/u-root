@@ -33,7 +33,7 @@ var (
 
 func dmesg(writer io.Writer, clear, readClear bool) error {
 	if clear && readClear {
-		return fmt.Errorf("cannot specify both -clear and -read-clear")
+		return fmt.Errorf("cannot specify both -clear and -read-clear:%w", os.ErrInvalid)
 	}
 
 	level := unix.SYSLOG_ACTION_READ_ALL
@@ -47,7 +47,7 @@ func dmesg(writer io.Writer, clear, readClear bool) error {
 	b := make([]byte, 256*1024)
 	amt, err := unix.Klogctl(level, b)
 	if err != nil {
-		return fmt.Errorf("syslog failed: %v", err)
+		return fmt.Errorf("syslog failed: %w", err)
 	}
 
 	_, err = writer.Write(b[:amt])
