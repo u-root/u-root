@@ -167,7 +167,7 @@ func main() {
 		usage()
 	}
 	mpt = flag.Arg(0)
-	debug("mpt %v", mpt)
+	debug("mountpoint: %v", mpt)
 
 	// We let "ability to open /dev/fuse" stand in as an indicator or
 	// "we support FUSE".

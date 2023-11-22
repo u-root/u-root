@@ -20,10 +20,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Until the circleci mess is fixed, skip these tests.
-// I give up. We're breaking something in circleci and I'm not sure
-// what. This is fine when run from the commandline.
-func testArgs(t *testing.T) {
+func TestArgs(t *testing.T) {
+	if _, err := os.Stat("/dev/fuse"); err != nil {
+		t.Skipf("Skipping:%v", err)
+	}
 	tmpDir := t.TempDir()
 	tdir := filepath.Join(tmpDir, "a/b/c")
 	if err := os.MkdirAll(tdir, 0o777); err != nil {
@@ -85,6 +85,9 @@ func TestMount(t *testing.T) {
 	if os.Getuid() != 0 {
 		t.Skip("Skipping, not root")
 	}
+	if _, err := os.Stat("/dev/fuse"); err != nil {
+		t.Skipf("Skipping:%v", err)
+	}
 	// Get a socketpair to talk on, then spawn the kid
 	fds, err := unix.Socketpair(syscall.AF_FILE, syscall.SOCK_STREAM, 0)
 	if err != nil {
@@ -116,7 +119,7 @@ func TestMount(t *testing.T) {
 	c.ExtraFiles = []*os.File{writeFile}
 	go func() {
 		o, err := c.CombinedOutput()
-		t.Logf("Running fuse: %v,%v", string(o), err)
+		t.Logf("Running %v: %q,%v", c, string(o), err)
 	}()
 
 	buf := make([]byte, 32) // expect 1 byte
