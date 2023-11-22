@@ -6,7 +6,8 @@ package main
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -21,14 +22,14 @@ func TestDmesg(t *testing.T) {
 		bufIn     byte
 		clear     bool
 		readClear bool
-		want      error
+		err       error
 	}{
 		{
 			name:      "both flags set",
 			buf:       &bytes.Buffer{},
 			clear:     true,
 			readClear: true,
-			want:      fmt.Errorf("cannot specify both -clear and -read-clear"),
+			err:       os.ErrInvalid,
 		},
 		{
 			name:      "both flags unset and buffer has content",
@@ -36,7 +37,7 @@ func TestDmesg(t *testing.T) {
 			bufIn:     0xEE,
 			clear:     false,
 			readClear: false,
-			want:      fmt.Errorf(""),
+			err:       nil,
 		},
 		{
 			name:      "clear log",
@@ -44,7 +45,7 @@ func TestDmesg(t *testing.T) {
 			bufIn:     0x41,
 			clear:     true,
 			readClear: false,
-			want:      fmt.Errorf(""),
+			err:       nil,
 		},
 		{
 			name:      "clear log after printing",
@@ -52,7 +53,7 @@ func TestDmesg(t *testing.T) {
 			bufIn:     0x41,
 			clear:     false,
 			readClear: true,
-			want:      fmt.Errorf(""),
+			err:       nil,
 		},
 		{
 			name:      "clear log after printing and buffer has content",
@@ -60,16 +61,22 @@ func TestDmesg(t *testing.T) {
 			bufIn:     0xEE,
 			clear:     false,
 			readClear: true,
-			want:      fmt.Errorf(""),
+			err:       nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			tt.buf.Write([]byte{tt.bufIn})
 			buf.Write([]byte{tt.bufIn})
-			if got := dmesg(tt.buf, tt.clear, tt.readClear); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("dmesg() = '%v', want: '%v'", got, tt.want)
+			if err := dmesg(tt.buf, tt.clear, tt.readClear); err != nil {
+				// Some container environments return uid 0,
+				// but they are lying. If the error is ErrPermission,
+				// just return.
+				if errors.Is(err, os.ErrPermission) {
+					t.Skipf("Ignore test due to CI issue:%v", err)
+				}
+				if !errors.Is(err, tt.err) {
+					t.Errorf("dmesg() = '%v', want: '%v'", err, tt.err)
 				}
 			} else {
 				if tt.buf.String() != "A" && *clear {
