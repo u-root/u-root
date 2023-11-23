@@ -7,14 +7,18 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestCommandNotFound(t *testing.T) {
 	stdin := strings.NewReader("hello world")
-	err := run(stdin, nil, nil, 1, false, "commandnotfound", "arg1")
+	p := params{maxArgs: 1, trace: false}
+	c := command(stdin, nil, nil, p)
+	err := c.run("commandnotfound", "arg1")
 	if !errors.Is(err, exec.ErrNotFound) {
 		t.Errorf("expected %v, got %v", exec.ErrNotFound, err)
 	}
@@ -23,7 +27,8 @@ func TestCommandNotFound(t *testing.T) {
 func TestEcho(t *testing.T) {
 	stdin := strings.NewReader("hello world")
 	stdout := &bytes.Buffer{}
-	err := run(stdin, stdout, nil, defaultMaxArgs, false)
+	c := command(stdin, stdout, nil, params{maxArgs: defaultMaxArgs})
+	err := c.run()
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -37,7 +42,8 @@ func TestEchoWithMaxArgs(t *testing.T) {
 	stdin := strings.NewReader("a b c d e f g")
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := run(stdin, stdout, stderr, 3, true)
+	c := command(stdin, stdout, stderr, params{maxArgs: 3, trace: true})
+	err := c.run()
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -47,5 +53,43 @@ func TestEchoWithMaxArgs(t *testing.T) {
 	expectedStderr := "echo a b c\necho d e f\necho g\n"
 	if stderr.String() != expectedStderr {
 		t.Errorf("expected %q, got %q", expectedStderr, stderr.String())
+	}
+}
+
+func TestEchoPromt(t *testing.T) {
+	stdin := strings.NewReader("a b c")
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tty")
+	err := os.WriteFile(path, []byte("yes\nn\ny\n"), 0644)
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+
+	p := params{maxArgs: 1, prompt: true, trace: true}
+	c := command(stdin, stdout, stderr, p)
+	c.tty = path
+	err = c.run()
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+
+	if stdout.String() != "a\nc\n" {
+		t.Errorf("expected 'a\nc\n' got %q", stdout.String())
+	}
+}
+
+func TestDefaultParams(t *testing.T) {
+	p := parseParams()
+	if p.maxArgs != defaultMaxArgs {
+		t.Errorf("expected %d, got %d", defaultMaxArgs, p.maxArgs)
+	}
+	if p.trace {
+		t.Errorf("expected %t, got %t", false, p.trace)
+	}
+	if p.prompt {
+		t.Errorf("expected %t, got %t", false, p.prompt)
 	}
 }
