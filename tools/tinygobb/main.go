@@ -18,8 +18,11 @@ import (
 )
 
 var (
-	list = flag.String("l", "cmds/exp/rush", "comma-separated list of u-root commands to build")
-	code = `// Copyright 2023 the u-root Authors. All rights reserved
+	list   = flag.String("l", "cmds/exp/rush", "comma-separated list of u-root commands to build")
+	flash  = flag.Bool("flash", false, "whether to flash as well as build")
+	target = flag.String("target", "microbit-v2", "target name")
+	tinygo = flag.Bool("tinygo", false, "use tinygo, not go")
+	code   = `// Copyright 2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -37,20 +40,6 @@ func runone(c*Command) error {
    flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.PanicOnError)
    log.Printf("run %v", c)
    return bbmain.Run(c.cmd)
-}
-
-// tty does whatever needs to be done to set up a tty for GOOS.
-func tty() {
-}
-
-func foreground() {
-	// Place process group in foreground.
-}
-
-func builtinAttr(c *Command) {
-}
-
-func forkAttr(c *Command) {
 }
 
 `
@@ -124,6 +113,13 @@ func main() {
 	}
 
 	c = exec.Command("go", "build", "-tags", "tinygo")
+	if *tinygo {
+		action := "build"
+		if *flash {
+			action = "flash"
+		}
+		c = exec.Command("tinygo", action, "-target", *target)
+	}
 	c.Dir = filepath.Join(build[0], "src/bb.u-root.com/bb")
 	c.Stdout, c.Stderr = os.Stdout, os.Stderr
 	log.Printf("Now compile it: %v", c)
