@@ -124,6 +124,10 @@ func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 func diskUsage(mnt *mount) error {
 	fs := syscall.Statfs_t{}
 	if err := syscall.Statfs(mnt.MountPoint, &fs); err != nil {
+		// skip mount point if df is running without root
+		if os.IsPermission(err) {
+			return nil
+		}
 		return err
 	}
 	mnt.Blocks = fs.Blocks * uint64(fs.Bsize) / units
