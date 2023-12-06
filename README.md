@@ -7,6 +7,7 @@
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
 [![Slack](https://slack.osfw.dev/badge.svg)](https://slack.osfw.dev)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/main/LICENSE)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8160/badge)](https://www.bestpractices.dev/projects/8160)
 
 
 # Description
