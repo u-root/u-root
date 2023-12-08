@@ -24,7 +24,7 @@ and language idioms set out in the [Effective Go](https://golang.org/doc/effecti
 guide, for example [formatting](https://golang.org/doc/effective_go.html#formatting)
 and [names](https://golang.org/doc/effective_go.html#names).
 
-`gofmt` and `golint` are law, although this is not automatically enforced
+`gofmt` and `staticcheck` are law, although this is not automatically enforced
 yet and some housecleaning needs done to achieve that.
 
 We have a few rules not covered by these tools:
