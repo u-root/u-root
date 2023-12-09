@@ -40,7 +40,7 @@ func (m *multiFlag) Set(value string) error {
 
 // errors from the u-root command
 var (
-	ErrEmptyFilesArg = errors.New("Empty argument to -files")
+	ErrEmptyFilesArg = errors.New("empty argument to -files")
 )
 
 // Flags for u-root builder.

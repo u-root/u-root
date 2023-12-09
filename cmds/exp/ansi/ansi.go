@@ -40,7 +40,7 @@ func ansi(w io.Writer, args []string) error {
 		if exists {
 			fmt.Fprintf(w, commands[arg])
 		} else {
-			return fmt.Errorf("Command ANSI '%v' don't exists", arg)
+			return fmt.Errorf("command ANSI '%v' don't exists", arg)
 		}
 	}
 	return nil

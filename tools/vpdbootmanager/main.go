@@ -83,5 +83,5 @@ func cli(args []string) error {
 	case "dump":
 		return dump()
 	}
-	return fmt.Errorf("Unrecognized action")
+	return fmt.Errorf("unrecognized action")
 }

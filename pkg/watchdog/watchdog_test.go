@@ -273,7 +273,7 @@ func TestSetTimeoutError(t *testing.T) {
 	m := mockDog{}
 
 	wd.syscalls = &m
-	wantErr := errors.New("Watchdog timeout set to 0s, wanted 5ns")
+	wantErr := errors.New("watchdog timeout set to 0s, wanted 5ns")
 
 	if err := wd.SetTimeout(5); err != nil {
 		if !strings.Contains(err.Error(), wantErr.Error()) {
@@ -301,7 +301,7 @@ func TestSetPreTimeoutError(t *testing.T) {
 	m := mockDog{}
 
 	wd.syscalls = &m
-	wantErr := errors.New("Watchdog pretimeout set to 0s, wanted 5ns")
+	wantErr := errors.New("watchdog pretimeout set to 0s, wanted 5ns")
 
 	if err := wd.SetPreTimeout(5); err != nil {
 		if !strings.Contains(err.Error(), wantErr.Error()) {

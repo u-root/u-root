@@ -64,7 +64,7 @@ func ParseLog(firmware FirmwareType, tpmSpec tss.TPMVersion) (*PCRLog, error) {
 			}
 		}
 	default:
-		return nil, errors.New("No valid TPM specification found")
+		return nil, errors.New("no valid TPM specification found")
 	}
 
 	return pcrLog, nil
@@ -158,7 +158,7 @@ func readTPM2Log(firmware FirmwareType) (*PCRLog, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nil, errors.New("First event was not an EFI SpecID Event")
+		return nil, errors.New("first event was not an EFI SpecID Event")
 	}
 
 	pcrLog.PcrList = append(pcrLog.PcrList, pcrEvent)

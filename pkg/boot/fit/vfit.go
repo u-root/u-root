@@ -128,14 +128,14 @@ func parseHash(algo string) (crypto.Hash, error) {
 	})
 	algoSplit := strings.Split(cleaned, ",")
 	if len(algoSplit) == 0 {
-		return 0, fmt.Errorf("Unrecognized hash algo: '%s'", cleaned)
+		return 0, fmt.Errorf("unrecognized hash algo: '%s'", cleaned)
 	}
 	for _, alg := range algoSplit {
 		if matched, ok := algs[strings.ToUpper(alg)]; ok {
 			return matched, nil
 		}
 	}
-	return 0, fmt.Errorf("Unrecognized hash algo: '%s'", cleaned)
+	return 0, fmt.Errorf("unrecognized hash algo: '%s'", cleaned)
 }
 
 // parseSignatures parses dt.Node to RSASignatures
@@ -179,7 +179,7 @@ func parseSignatures(n ...*dt.Node) ([]Signature, error) {
 		}
 	}
 	if len(sigs) == 0 {
-		return nil, fmt.Errorf("Failed to parse any valid Signatures")
+		return nil, fmt.Errorf("failed to parse any valid Signatures")
 	}
 	return sigs, nil
 }

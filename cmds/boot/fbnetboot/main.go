@@ -369,7 +369,7 @@ func getClientForBootfile(bootfile string) (*http.Client, error) {
 		client = &http.Client{}
 		debug("http client setup")
 	default:
-		return nil, fmt.Errorf("Scheme %s is unsupported", scheme)
+		return nil, fmt.Errorf("scheme %s is unsupported", scheme)
 	}
 	return client, nil
 }

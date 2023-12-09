@@ -144,7 +144,7 @@ func addBootEntry(cfg systembooter.Booter, vpdDir string) error {
 			return err
 		}
 	}
-	return errors.New("Maximum number of boot entries already set")
+	return errors.New("maximum number of boot entries already set")
 }
 
 func set(key string, value string) error {

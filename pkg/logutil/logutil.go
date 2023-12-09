@@ -45,7 +45,7 @@ func TeeOutput(writer io.Writer, maxSize int) (io.Writer, error) {
 // CreateTeeWriter tees out output to a file path specified by logPath up to a max limit. Creates necessary directories for the specified logpath if they don't exist.
 func CreateTeeWriter(writer io.Writer, logPath string, maxSize int) (io.Writer, error) {
 	if logPath == "" {
-		return nil, fmt.Errorf("Empty log path")
+		return nil, fmt.Errorf("empty log path")
 	}
 	dir := filepath.Dir(logPath)
 	if err := os.MkdirAll(dir, 0700); err != nil {

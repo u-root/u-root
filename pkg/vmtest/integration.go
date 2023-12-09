@@ -373,7 +373,7 @@ func CreateTestInitramfs(o uroot.Opts, uinit, outputFile string) (string, error)
 	if len(o.TempDir) == 0 {
 		tempDir, err := os.MkdirTemp("", "initramfs-tempdir")
 		if err != nil {
-			return "", fmt.Errorf("Failed to create temp dir: %v", err)
+			return "", fmt.Errorf("failed to create temp dir: %v", err)
 		}
 		defer os.RemoveAll(tempDir)
 		o.TempDir = tempDir
@@ -389,7 +389,7 @@ func CreateTestInitramfs(o uroot.Opts, uinit, outputFile string) (string, error)
 	}
 	w, err := initramfs.CPIO.OpenWriter(logger, outputFile)
 	if err != nil {
-		return "", fmt.Errorf("Failed to create initramfs writer: %v", err)
+		return "", fmt.Errorf("failed to create initramfs writer: %v", err)
 	}
 	o.OutputFile = w
 

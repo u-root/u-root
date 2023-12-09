@@ -42,7 +42,7 @@ func (o *offsetReader) ReadAt(b []byte, i int64) (int, error) {
 	n, err := o.r.ReadAt(b, i)
 	debug("\t... i %#x n %d err %v", i, n, err)
 	if err != nil && err != io.EOF {
-		return n, fmt.Errorf("Reading at #%x for %d bytes: %v", i, len(b), err)
+		return n, fmt.Errorf("reading at #%x for %d bytes: %v", i, len(b), err)
 	}
 	return n, err
 }
@@ -80,7 +80,7 @@ func newOffsetReader(f *os.File, off int64, sz int) (*offsetReader, error) {
 func readOneSize(r io.ReaderAt, i interface{}, o int64, n int64) error {
 	err := binary.Read(io.NewSectionReader(r, o, n), binary.LittleEndian, i)
 	if err != nil {
-		return fmt.Errorf("Trying to read section for %T: %v", r, err)
+		return fmt.Errorf("trying to read section for %T: %v", r, err)
 	}
 	return nil
 }

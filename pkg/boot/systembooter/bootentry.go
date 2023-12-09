@@ -36,7 +36,7 @@ var supportedBooterParsers = []func([]byte, ulog.Logger) (Booter, error){
 	NewLocalBooter,
 }
 
-var errNoBooterFound = errors.New("No booter found for entry")
+var errNoBooterFound = errors.New("no booter found for entry")
 
 // GetBooterFor looks for a supported Booter implementation and returns it, if
 // found. If not found, error errNoBooterFound is returned.

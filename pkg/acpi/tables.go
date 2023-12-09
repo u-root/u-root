@@ -17,5 +17,5 @@ func GetTable() (string, []Table, error) {
 			return m, t, nil
 		}
 	}
-	return "", nil, fmt.Errorf("Could not get ACPI tables")
+	return "", nil, fmt.Errorf("could not get ACPI tables")
 }

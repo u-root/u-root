@@ -81,7 +81,7 @@ func getaddr(b []byte, addr64, addr32 int64) (int64, error) {
 	if err := binary.Read(io.NewSectionReader(bytes.NewReader(b), addr32, 4), binary.LittleEndian, &a32); err == nil {
 		return int64(a32), nil
 	}
-	return -1, fmt.Errorf("No 64-bit address at %d, no 32-bit address at %d, in %d-byte slice", addr64, addr32, len(b))
+	return -1, fmt.Errorf("no 64-bit address at %d, no 32-bit address at %d, in %d-byte slice", addr64, addr32, len(b))
 }
 
 // Method accepts a method name and returns a TableMethod if one exists, or error othewise.
@@ -112,7 +112,7 @@ func String(t Table) string {
 func WriteTables(w io.Writer, tab Table, tabs ...Table) error {
 	for _, tt := range append([]Table{tab}, tabs...) {
 		if _, err := w.Write(tt.Data()); err != nil {
-			return fmt.Errorf("Writing %s: %v", tt.Sig(), err)
+			return fmt.Errorf("writing %s: %v", tt.Sig(), err)
 		}
 	}
 	return nil

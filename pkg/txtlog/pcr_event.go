@@ -411,7 +411,7 @@ func getEventDataString(eventType uint32, eventData []byte) (*string, error) {
 	}
 
 	eventInfo := string(bytes.Trim(eventData, "\x00"))
-	return &eventInfo, errors.New("Event type couldn't get parsed")
+	return &eventInfo, errors.New("event type couldn't get parsed")
 }
 
 func stripControlSequences(str string) string {

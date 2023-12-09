@@ -51,7 +51,7 @@ func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 		} else {
 			u, err := strconv.ParseUint(ts, 0, 8)
 			if err != nil {
-				return nil, fmt.Errorf("Invalid type: %s", ts)
+				return nil, fmt.Errorf("invalid type: %s", ts)
 			}
 			types[smbios.TableType(uint8(u))] = true
 		}
