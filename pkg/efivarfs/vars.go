@@ -45,7 +45,7 @@ type VariableDescriptor struct {
 
 var (
 	// ErrBadGUID is for any errors parsing GUIDs.
-	ErrBadGUID = errors.New("Bad GUID")
+	ErrBadGUID = errors.New("bad GUID")
 )
 
 func guidParse(v string) ([]string, *guid.UUID, error) {

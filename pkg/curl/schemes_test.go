@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	errTest = errors.New("Test error")
+	errTest = errors.New("test error")
 	testURL = &url.URL{
 		Scheme: "fooftp",
 		Host:   "192.168.0.1",

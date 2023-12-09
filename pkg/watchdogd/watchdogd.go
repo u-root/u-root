@@ -271,7 +271,7 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 	d := New(opts)
 	l, cleanup, err := setupListener(d.CurrentOpts.UDS)
 	if err != nil {
-		return fmt.Errorf("Failed to setup server: %v", err)
+		return fmt.Errorf("failed to setup server: %v", err)
 	}
 	go func() {
 		log.Println("Start serving.")
@@ -280,11 +280,11 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 
 	log.Println("Start arming watchdog initially.")
 	if r := d.ArmWatchdog(); r != OpResultOk {
-		return fmt.Errorf("Initial arm failed")
+		return fmt.Errorf("initial arm failed")
 	}
 
 	if r := d.StartPetting(); r != OpResultOk {
-		return fmt.Errorf("Start petting failed")
+		return fmt.Errorf("start petting failed")
 	}
 
 	for {

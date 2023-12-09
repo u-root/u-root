@@ -235,13 +235,13 @@ func getCommand(b *bufio.Reader) (c []*Command, t string, err error) {
 			return nil, "", errors.New("empty commands not allowed (yet)")
 		}
 		if v.Link == "|" && v.fdmap[1] != "" {
-			return nil, "", errors.New("Can't have a pipe and > on one command")
+			return nil, "", errors.New("can't have a pipe and > on one command")
 		}
 		if v.Link == "|" && i == len(c)-1 {
-			return nil, "", errors.New("Can't have a pipe to nowhere")
+			return nil, "", errors.New("can't have a pipe to nowhere")
 		}
 		if i < len(c)-1 && v.Link == "|" && c[i+1].fdmap[0] != "" {
-			return nil, "", errors.New("Can't have a pipe to command with redirect on stdin")
+			return nil, "", errors.New("can't have a pipe to command with redirect on stdin")
 		}
 	}
 	return c, t, err

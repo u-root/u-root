@@ -56,7 +56,7 @@ func TestParseFilePathList(t *testing.T) {
 	if gotdesc != wantdesc {
 		t.Errorf("mismatch\nwant %s\n got %s", wantdesc, gotdesc)
 	}
-	expectedOutput := "Described device not found\n/EFI/BOOT/BOOTX64.EFI\n"
+	expectedOutput := "described device not found\n/EFI/BOOT/BOOTX64.EFI\n"
 	resolveFailed := false
 	var output string
 	for _, p := range b.FilePathList {

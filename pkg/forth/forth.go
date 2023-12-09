@@ -131,7 +131,7 @@ func Putop(n string, op Op) {
 	mapLock.Lock()
 	defer mapLock.Unlock()
 	if _, ok := opmap[n]; ok {
-		panic(fmt.Errorf("Putting %s: %w", n, ErrWordExist))
+		panic(fmt.Errorf("putting %s: %w", n, ErrWordExist))
 	}
 	opmap[n] = op
 }

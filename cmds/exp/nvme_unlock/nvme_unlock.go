@@ -186,11 +186,11 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 	}
 	diskdev, err := block.Device(disk)
 	if err != nil {
-		return fmt.Errorf("Could not find %s: %v", disk, err)
+		return fmt.Errorf("could not find %s: %v", disk, err)
 	}
 
 	if err := diskdev.ReadPartitionTable(); err != nil && !lock {
-		return fmt.Errorf("Could not re-read partition table: %v", err)
+		return fmt.Errorf("could not re-read partition table: %v", err)
 	}
 	return nil
 }

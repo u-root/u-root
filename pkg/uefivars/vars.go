@@ -108,7 +108,7 @@ func (vars EfiVars) Filter(filt VarFilter) EfiVars {
 // https://gist.github.com/bradleypeabody/185b1d7ed6c0c2ab6cec
 func DecodeUTF16(b []byte) (string, error) {
 	if len(b)%2 != 0 {
-		return "", fmt.Errorf("Must have even length byte slice")
+		return "", fmt.Errorf("must have even length byte slice")
 	}
 
 	u16s := make([]uint16, 1)

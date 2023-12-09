@@ -38,7 +38,7 @@ func ReadACPIFPDTTable() (acpi.Table, error) {
 			return t, nil
 		}
 	}
-	return nil, errors.New("Unable to find FPDT")
+	return nil, errors.New("unable to find FPDT")
 
 }
 
@@ -47,7 +47,7 @@ func FindFBPTTableAdrr(t acpi.Table) (uint64, error) {
 	var addr uint64
 
 	if t.Sig() != "FPDT" {
-		return addr, fmt.Errorf("Wrong table type passed. Table Signature %s", t.Sig())
+		return addr, fmt.Errorf("wrong table type passed. Table Signature %s", t.Sig())
 	}
 
 	for i := 0; i < len(t.TableData()); i += int(t.TableData()[i+2]) {
@@ -58,7 +58,7 @@ func FindFBPTTableAdrr(t acpi.Table) (uint64, error) {
 			return addr, nil
 		}
 	}
-	return addr, errors.New("Unable to find FPBT Address")
+	return addr, errors.New("unable to find FPBT Address")
 }
 
 // ReadFPDTRecordHeader reads Header for records

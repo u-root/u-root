@@ -17,7 +17,7 @@ func setupICMPv6Socket(c *net.IPConn) error {
 	}
 	// we want the stack to return us the network error if any occurred
 	if err := unix.SetsockoptInt(int(file.Fd()), unix.SOL_IPV6, unix.IPV6_RECVERR, 1); err != nil {
-		return fmt.Errorf("Failed to set sock opt IPV6_RECVERR: %w", err)
+		return fmt.Errorf("failed to set sock opt IPV6_RECVERR: %w", err)
 	}
 	return nil
 }

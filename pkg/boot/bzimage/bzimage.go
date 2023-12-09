@@ -354,7 +354,7 @@ func stripSignature(image []byte) ([]byte, error) {
 }
 
 // ErrKCodeMissing is returned if kernel code was not decompressed.
-var ErrKCodeMissing = errors.New("No kernel code was decompressed")
+var ErrKCodeMissing = errors.New("no kernel code was decompressed")
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
 // The marshal'd image is *not* signed.

@@ -219,7 +219,7 @@ func (b *BlockDev) PCIInfo() (*pci.PCI, error) {
 		vp = filepath.Join(p, "vendor")
 	}
 	if !found {
-		return nil, fmt.Errorf("Unable to find backing pci device with device and vendor files for %v", b.Name)
+		return nil, fmt.Errorf("unable to find backing pci device with device and vendor files for %v", b.Name)
 	}
 
 	return pci.OnePCI(p)
@@ -661,19 +661,19 @@ func parsePCIList(parseList string) (pci.Devices, error) {
 	for _, b := range bL {
 		p := strings.Split(b, ":")
 		if len(p) != 2 {
-			return nil, fmt.Errorf("Parsing device list %q: %w", parseList, ErrListFormat)
+			return nil, fmt.Errorf("parsing device list %q: %w", parseList, ErrListFormat)
 		}
 		// Check that values are hex and convert them to sysfs formats
 		// This accepts 0xABCD and turns it into 0xabcd
 		// abcd also turns into 0xabcd
 		v, err := strconv.ParseUint(strings.TrimPrefix(p[0], "0x"), 16, 16)
 		if err != nil {
-			return nil, fmt.Errorf("Parsing pci device %q:%w", p[0], err)
+			return nil, fmt.Errorf("parsing pci device %q:%w", p[0], err)
 		}
 
 		d, err := strconv.ParseUint(strings.TrimPrefix(p[1], "0x"), 16, 16)
 		if err != nil {
-			return nil, fmt.Errorf("Parsing pci device %q:%w", p[1], err)
+			return nil, fmt.Errorf("parsing pci device %q:%w", p[1], err)
 		}
 
 		pciList = append(pciList, &pci.PCI{Vendor: uint16(v), Device: uint16(d)})
@@ -713,5 +713,5 @@ func GetMountpointByDevice(devicePath string) (*string, error) {
 		}
 	}
 
-	return nil, errors.New("Mountpoint not found")
+	return nil, errors.New("mountpoint not found")
 }

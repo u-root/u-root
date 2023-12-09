@@ -444,7 +444,7 @@ func WithFileName(n string) FDTReader {
 }
 
 // ErrNoValidReaders indicates that no readers succeeded.
-var ErrNoValidReaders = errors.New("No FDT readers succeeded")
+var ErrNoValidReaders = errors.New("no FDT readers succeeded")
 
 // New returns a new FDT, trying each FDTReader in turn
 // until it succeeds or all have failed. It will return

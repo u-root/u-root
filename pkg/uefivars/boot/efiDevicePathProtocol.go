@@ -20,7 +20,7 @@ var (
 	Verbose bool
 
 	ErrParse    = errors.New("parse error")
-	ErrNotFound = errors.New("Described device not found")
+	ErrNotFound = errors.New("described device not found")
 
 	// ErrUnimpl is returned when we do not implement the Device Path
 	// Protocol entry type, because the Device Path Protocol is used for
@@ -29,7 +29,7 @@ var (
 	//
 	// There are probably others which can be used for boot entries, but are
 	// not implemented simply because they have not been needed yet.
-	ErrUnimpl = errors.New("Not implemented")
+	ErrUnimpl = errors.New("not implemented")
 )
 
 // ParseFilePathList decodes a FilePathList as found in a boot var.

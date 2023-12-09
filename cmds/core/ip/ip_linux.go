@@ -361,11 +361,11 @@ func run(out io.Writer) error {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				return fmt.Errorf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				return fmt.Errorf("args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				return fmt.Errorf("Args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				return fmt.Errorf("args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
 			}
-			return fmt.Errorf("Bummer: %v", err)
+			return fmt.Errorf("bummer: %v", err)
 		default:
 			return fmt.Errorf("unexpected panic value: %T(%v)", err, err)
 		}

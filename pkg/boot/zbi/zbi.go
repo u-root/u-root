@@ -157,7 +157,7 @@ func (it *ZBIType) ToString() (string, error) {
 	if typeMetadata, ok := ZBITypes[*it]; ok {
 		return typeMetadata.Name, nil
 	}
-	return "", fmt.Errorf("Can't find metadata for %#08x ZBIType", it)
+	return "", fmt.Errorf("can't find metadata for %#08x ZBIType", it)
 }
 
 // MarshalJSON returns JSON bytes of current ZBIType.

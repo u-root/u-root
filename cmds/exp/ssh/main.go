@@ -49,7 +49,7 @@ var (
 	// ssh config file
 	cfg *sshconfig.Config
 
-	errInvalidArgs = errors.New("Invalid command-line arguments")
+	errInvalidArgs = errors.New("invalid command-line arguments")
 )
 
 // loadConfig loads the SSH config file
@@ -135,7 +135,7 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 		}
 		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
 	} else if err != nil && *keyFile != "" {
-		return fmt.Errorf("Could not read user-specified keyfile %v: %v", kf, err)
+		return fmt.Errorf("could not read user-specified keyfile %v: %v", kf, err)
 	}
 	v("Config: %+v\n", config)
 	if term.IsTerminal(int(stdin.Fd())) {
@@ -164,7 +164,7 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 	if len(args) > 0 {
 		// run the command
 		if err := session.Run(strings.Join(args, " ")); err != nil {
-			return fmt.Errorf("Failed to run command: %v", err)
+			return fmt.Errorf("failed to run command: %v", err)
 		}
 	} else {
 		// Set up the terminal
@@ -227,7 +227,7 @@ func parseDest(input string) (user, host, port string, err error) {
 		port = "22"
 	}
 	if host == "" {
-		err = errors.New("No host specified")
+		err = errors.New("no host specified")
 	}
 	return
 }

@@ -197,7 +197,7 @@ func (w *Watchdog) SetTimeout(timeout time.Duration) error {
 	}
 	gotTimeout := to * time.Second
 	if gotTimeout != timeout {
-		return fmt.Errorf("Watchdog timeout set to %v, wanted %v", gotTimeout, timeout)
+		return fmt.Errorf("watchdog timeout set to %v, wanted %v", gotTimeout, timeout)
 	}
 	return nil
 }
@@ -221,7 +221,7 @@ func (w *Watchdog) SetPreTimeout(timeout time.Duration) error {
 	}
 	gotTimeout := to * time.Second
 	if gotTimeout != timeout {
-		return fmt.Errorf("Watchdog pretimeout set to %v, wanted %v", gotTimeout, timeout)
+		return fmt.Errorf("watchdog pretimeout set to %v, wanted %v", gotTimeout, timeout)
 	}
 	return nil
 }

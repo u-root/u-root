@@ -98,14 +98,14 @@ func CreateInitrd(files ...string) (io.ReaderAt, error) {
 	for _, n := range files {
 		rec, err := cr.GetRecord(n)
 		if err != nil {
-			return nil, fmt.Errorf("Getting record of %q failed: %v", n, err)
+			return nil, fmt.Errorf("getting record of %q failed: %v", n, err)
 		}
 		if err := w.WriteRecord(rec); err != nil {
-			return nil, fmt.Errorf("Writing record %q failed: %v", n, err)
+			return nil, fmt.Errorf("writing record %q failed: %v", n, err)
 		}
 	}
 	if err := cpio.WriteTrailer(w); err != nil {
-		return nil, fmt.Errorf("Error writing trailer record: %v", err)
+		return nil, fmt.Errorf("error writing trailer record: %v", err)
 	}
 	return bytes.NewReader(b.Bytes()), nil
 }

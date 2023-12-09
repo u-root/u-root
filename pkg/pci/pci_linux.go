@@ -80,7 +80,7 @@ func OnePCI(dir string) (*PCI, error) {
 		// It's not clear how this can happen, if ever; could someone
 		// hotunplug a device while we are scanning?
 		if err != nil {
-			return nil, fmt.Errorf("Scanning resource %d(%s): %v", i, dir, err)
+			return nil, fmt.Errorf("scanning resource %d(%s): %v", i, dir, err)
 		}
 		if b == 0 {
 			continue

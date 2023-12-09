@@ -277,7 +277,7 @@ func Locked() error {
 	vendor := cpuid.VendorIdentificatorString
 	// TODO: support more than Intel. Use the vendor id to look up msrs.
 	if vendor != "GenuineIntel" {
-		return fmt.Errorf("Sorry, this package only supports Intel at present")
+		return fmt.Errorf("sorry, this package only supports Intel at present")
 	}
 
 	cpus, err := AllCPUs()

@@ -43,7 +43,7 @@ var (
 	d      = flag.Bool("v", false, "Debug prints")
 	format = flag.String("H", "newc", "format")
 
-	errInvalidArgs = errors.New("Usage of the command:\ncpio o < name-list [> archive]\ncpio i [< archive]\ncpio p destination-directory < name-list\nOptions: -H format (default: newc) -v Debug prints ")
+	errInvalidArgs = errors.New("usage of the command:\ncpio o < name-list [> archive]\ncpio i [< archive]\ncpio p destination-directory < name-list\nOptions: -H format (default: newc) -v Debug prints ")
 )
 
 func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string) error {
@@ -59,7 +59,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 
 	archiver, err := cpio.Format(format)
 	if err != nil {
-		return fmt.Errorf("Format %q not supported: %w", format, err)
+		return fmt.Errorf("format %q not supported: %w", format, err)
 	}
 
 	switch op {
@@ -132,18 +132,18 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 			name := scanner.Text()
 			rec, err := cr.GetRecord(name)
 			if err != nil {
-				return fmt.Errorf("Getting record of %q failed: %w", name, err)
+				return fmt.Errorf("getting record of %q failed: %w", name, err)
 			}
 			if err := rw.WriteRecord(rec); err != nil {
-				return fmt.Errorf("Writing record %q failed: %w", name, err)
+				return fmt.Errorf("writing record %q failed: %w", name, err)
 			}
 		}
 
 		if err := scanner.Err(); err != nil {
-			return fmt.Errorf("Error reading stdin: %w", err)
+			return fmt.Errorf("error reading stdin: %w", err)
 		}
 		if err := cpio.WriteTrailer(rw); err != nil {
-			return fmt.Errorf("Error writing trailer record: %w", err)
+			return fmt.Errorf("error writing trailer record: %w", err)
 		}
 
 	case "t":

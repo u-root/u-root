@@ -46,7 +46,7 @@ type cmd struct {
 
 var (
 	timeout   = flag.Duration("t", 30*time.Second, "Timeout for command")
-	errNoArgs = errors.New("Need at least a command to run")
+	errNoArgs = errors.New("need at least a command to run")
 )
 
 func main() {
