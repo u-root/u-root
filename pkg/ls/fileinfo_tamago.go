@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !tamago
+//go:build tamago
 
 package ls
 
@@ -18,7 +18,6 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
-	"golang.org/x/sys/unix"
 )
 
 // Matches characters which would interfere with ls's formatting.
@@ -163,8 +162,8 @@ func (ls LongStringer) FileString(fi FileInfo) string {
 		replacer.Replace(fi.Mode.String()),
 		lookupUserName(fi.UID),
 		lookupGroupName(fi.GID),
-		unix.Major(fi.Rdev),
-		unix.Minor(fi.Rdev),
+		0, // unix.Major(fi.Rdev),
+		0, // unix.Minor(fi.Rdev),
 		size,
 		fi.MTime.Format("Jan _2 15:04"),
 		ls.Name.FileString(fi))
