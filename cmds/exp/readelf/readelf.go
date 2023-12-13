@@ -37,10 +37,10 @@ func run(in io.ReaderAt, out io.Writer, args ...string) error {
 	)
 	switch len(args) {
 	case 0:
-		files = make([]*elf.File, 1, 1)
+		files = make([]*elf.File, 1)
 		files[0], err = elf.NewFile(in)
 	default:
-		files = make([]*elf.File, len(args), len(args))
+		files = make([]*elf.File, len(args))
 		for i, n := range args {
 			f, e := elf.Open(n)
 			if e != nil {
