@@ -34,19 +34,21 @@ func TestListNameLinux(t *testing.T) {
 		t.Fatalf("err in unix.Mknod: %v", err)
 	}
 
+	var c cmd
 	// Setting the flags
-	*long = true
+	c.long = true
 	// Running the tests
 	// Write output in buffer.
 	var buf bytes.Buffer
 	var s ls.Stringer = ls.NameStringer{}
-	if *quoted {
+	if c.quoted {
 		s = ls.QuotedStringer{}
 	}
-	if *long {
-		s = ls.LongStringer{Human: *human, Name: s}
+	if c.long {
+		s = ls.LongStringer{Human: c.human, Name: s}
 	}
-	_ = listName(s, d, &buf, false)
+	c.w = &buf
+	_ = c.listName(s, d, false)
 	if !strings.Contains(buf.String(), "1110, 74616") {
 		t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
 	}

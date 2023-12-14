@@ -34,16 +34,17 @@ import (
 	"github.com/u-root/u-root/pkg/ls"
 )
 
-var (
-	all       = flag.BoolP("all", "a", false, "show hidden files")
-	human     = flag.BoolP("human-readable", "h", false, "human readable sizes")
-	directory = flag.BoolP("directory", "d", false, "list directories but not their contents")
-	long      = flag.BoolP("long", "l", false, "long form")
-	quoted    = flag.BoolP("quote-name", "Q", false, "quoted")
-	recurse   = flag.BoolP("recursive", "R", false, "equivalent to findutil's find")
-	classify  = flag.BoolP("classify", "F", false, "append indicator (one of */=>@|) to entries")
-	size      = flag.BoolP("size", "S", false, "sort by size")
-)
+type cmd struct {
+	w         io.Writer
+	all       bool
+	human     bool
+	directory bool
+	long      bool
+	quoted    bool
+	recurse   bool
+	classify  bool
+	size      bool
+}
 
 // file describes a file, its name, attributes, and the error
 // accessing it, if any.
@@ -77,7 +78,7 @@ type file struct {
 	err  error
 }
 
-func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
+func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 	var files []file
 
 	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
@@ -102,18 +103,18 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 			return filepath.SkipDir
 		}
 
-		if !*recurse && path == d && *directory {
+		if !c.recurse && path == d && c.directory {
 			return filepath.SkipDir
 		}
 
-		if path != d && f.lsfi.Mode.IsDir() && !*recurse {
+		if path != d && f.lsfi.Mode.IsDir() && !c.recurse {
 			return filepath.SkipDir
 		}
 
 		return nil
 	})
 
-	if *size {
+	if c.size {
 		sort.SliceStable(files, func(i, j int) bool {
 			return files[i].lsfi.Size > files[j].lsfi.Size
 		})
@@ -121,15 +122,15 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 
 	for _, f := range files {
 		if f.err != nil {
-			printFile(w, stringer, f)
+			c.printFile(c.w, stringer, f)
 			continue
 		}
-		if *recurse {
+		if c.recurse {
 			// Mimic find command
 			f.lsfi.Name = f.path
 		} else if f.path == d {
-			if *directory {
-				fmt.Fprintln(w, stringer.FileString(f.lsfi))
+			if c.directory {
+				fmt.Fprintln(c.w, stringer.FileString(f.lsfi))
 				continue
 			}
 
@@ -137,16 +138,16 @@ func listName(stringer ls.Stringer, d string, w io.Writer, prefix bool) error {
 			if f.osfi.IsDir() {
 				f.lsfi.Name = "."
 				if prefix {
-					if *quoted {
-						fmt.Fprintf(w, "%q:\n", d)
+					if c.quoted {
+						fmt.Fprintf(c.w, "%q:\n", d)
 					} else {
-						fmt.Fprintf(w, "%v:\n", d)
+						fmt.Fprintf(c.w, "%v:\n", d)
 					}
 				}
 			}
 		}
 
-		printFile(w, stringer, f)
+		c.printFile(c.w, stringer, f)
 	}
 
 	return nil
@@ -171,26 +172,27 @@ func indicator(fi ls.FileInfo) string {
 	return ""
 }
 
-func list(w io.Writer, names []string) error {
+func (c cmd) list(names []string) error {
 	if len(names) == 0 {
 		names = []string{"."}
 	}
 	// Write output in tabular form.
 	tw := &tabwriter.Writer{}
-	tw.Init(w, 0, 0, 1, ' ', 0)
+	tw.Init(c.w, 0, 0, 1, ' ', 0)
+	c.w = tw
 	defer tw.Flush()
 
 	var s ls.Stringer = ls.NameStringer{}
-	if *quoted {
+	if c.quoted {
 		s = ls.QuotedStringer{}
 	}
-	if *long {
-		s = ls.LongStringer{Human: *human, Name: s}
+	if c.long {
+		s = ls.LongStringer{Human: c.human, Name: s}
 	}
 	// Is a name a directory? If so, list it in its own section.
 	prefix := len(names) > 1
 	for _, d := range names {
-		if err := listName(s, d, tw, prefix); err != nil {
+		if err := c.listName(s, d, prefix); err != nil {
 			return fmt.Errorf("error while listing %q: %w", d, err)
 		}
 		tw.Flush()
@@ -199,8 +201,18 @@ func list(w io.Writer, names []string) error {
 }
 
 func main() {
+	var c cmd
+	flag.BoolVarP(&c.all, "all", "a", false, "show hidden files")
+	flag.BoolVarP(&c.human, "human-readable", "h", false, "human readable sizes")
+	flag.BoolVarP(&c.directory, "directory", "d", false, "list directories but not their contents")
+	flag.BoolVarP(&c.long, "long", "l", false, "long form")
+	flag.BoolVarP(&c.quoted, "quote-name", "Q", false, "quoted")
+	flag.BoolVarP(&c.recurse, "recursive", "R", false, "equivalent to findutil's find")
+	flag.BoolVarP(&c.classify, "classify", "F", false, "append indicator (, one of */=>@|) to entries")
+	flag.BoolVarP(&c.size, "size", "S", false, "sort by size")
+	c.w = os.Stdout
 	flag.Parse()
-	if err := list(os.Stdout, flag.Args()); err != nil {
+	if err := c.list(flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }
