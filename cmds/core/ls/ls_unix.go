@@ -9,15 +9,14 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/ls"
 )
 
-func (c cmd) printFile(w io.Writer, stringer ls.Stringer, f file) {
+func (c cmd) printFile(stringer ls.Stringer, f file) {
 	if f.err != nil {
-		fmt.Fprintln(w, f.err)
+		fmt.Fprintln(c.w, f.err)
 		return
 	}
 	// Hide .files unless -a was given
@@ -26,6 +25,6 @@ func (c cmd) printFile(w io.Writer, stringer ls.Stringer, f file) {
 		if c.classify {
 			f.lsfi.Name = f.lsfi.Name + indicator(f.lsfi)
 		}
-		fmt.Fprintln(w, stringer.FileString(f.lsfi))
+		fmt.Fprintln(c.w, stringer.FileString(f.lsfi))
 	}
 }

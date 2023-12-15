@@ -126,7 +126,7 @@ func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 
 	for _, f := range files {
 		if f.err != nil {
-			c.printFile(c.w, stringer, f)
+			c.printFile(stringer, f)
 			continue
 		}
 		if c.recurse {
@@ -151,7 +151,7 @@ func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 			}
 		}
 
-		c.printFile(c.w, stringer, f)
+		c.printFile(stringer, f)
 	}
 
 	return nil
