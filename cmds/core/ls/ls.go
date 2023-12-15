@@ -10,10 +10,14 @@
 //
 // Options:
 //
-//	-l: long form
-//	-Q: quoted
-//	-R: equivalent to findutil's find
-//	-F: append indicator (one of */=>@|) to entries
+//	-a[ll]: show hidden files
+//	-h[uman-readable]: show human-readable sizes
+//	-d[irectory]: show directories but not their contents
+//	-F|classify: append indicator (, one of */=>@|) to entries
+//	-l[ong]: long form
+//	-Q|quote-name: quoted
+//	-R|recursive: equivalent to findutil's find
+//	-s[ize]: sort by size
 //
 // Bugs:
 //
