@@ -182,7 +182,10 @@ func NewNativeEndianBuffer(b []byte) *Lexer {
 	}
 }
 
-func (l *Lexer) setError(err error) {
+// SetError sets the error if no error has previously been set.
+//
+// The error can later be retried with Error or FinError methods.
+func (l *Lexer) SetError(err error) {
 	if l.err == nil {
 		l.err = err
 	}
@@ -194,7 +197,7 @@ func (l *Lexer) setError(err error) {
 func (l *Lexer) Consume(n int) []byte {
 	v, err := l.Buffer.ReadN(n)
 	if err != nil {
-		l.setError(err)
+		l.SetError(err)
 		return nil
 	}
 	return v
@@ -311,7 +314,7 @@ func (l *Lexer) Read(p []byte) (int, error) {
 //
 // If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) ReadData(data interface{}) {
-	l.setError(binary.Read(l, l.order, data))
+	l.SetError(binary.Read(l, l.order, data))
 }
 
 // WriteData writes a binary representation of data to the buffer.
@@ -320,7 +323,7 @@ func (l *Lexer) ReadData(data interface{}) {
 //
 // If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) WriteData(data interface{}) {
-	l.setError(binary.Write(l, l.order, data))
+	l.SetError(binary.Write(l, l.order, data))
 }
 
 // Write8 writes a byte to the Buffer.

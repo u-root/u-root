@@ -3,24 +3,26 @@ module github.com/u-root/u-root
 go 1.21
 
 require (
+	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
 	github.com/ProtonMail/go-crypto v0.0.0-20221026131551-cf6655e29de4
 	github.com/beevik/ntp v0.3.0
 	github.com/bobuhiro11/gokvm v0.0.8-0.20231003020000-f53faca69d28
 	github.com/cenkalti/backoff/v4 v4.1.3
-	github.com/creack/pty v1.1.18
+	github.com/creack/pty v1.1.21
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
-	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
+	github.com/google/goexpect v0.0.0-20210430020637-ab937bf7fd6f
 	github.com/google/uuid v1.3.0
+	github.com/hugelgupf/vmtest v0.0.0-20240102225328-693afabdd27f
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kevinburke/ssh_config v1.1.0
-	github.com/klauspost/compress v1.10.6
-	github.com/klauspost/pgzip v1.2.4
+	github.com/klauspost/compress v1.17.4
+	github.com/klauspost/pgzip v1.2.6
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/kr/pty v1.1.8
 	github.com/nanmu42/limitio v1.0.0
@@ -31,11 +33,11 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20231224233253-2944a440b6b6
+	github.com/u-root/gobusybox/src v0.0.0-20231228173702-b69f654846aa
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923
-	github.com/ulikunitz/xz v0.5.8
-	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
+	github.com/u-root/uio v0.0.0-20230305220412-3e8cd9d6bf63
+	github.com/ulikunitz/xz v0.5.11
+	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.17.0
 	golang.org/x/sys v0.15.0
@@ -57,20 +59,20 @@ require (
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.3.3 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/packet v1.1.2 // indirect
-	github.com/mdlayher/socket v0.4.1 // indirect
+	github.com/mdlayher/socket v0.5.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
@@ -78,13 +80,14 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
-	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/arch v0.2.0 // indirect
+	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	google.golang.org/grpc v1.56.3 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
+	google.golang.org/grpc v1.31.0 // indirect
 )
 
 retract (

@@ -331,6 +331,16 @@ func (z *Reader) killReadAhead() error {
 		// Wait for decompressor to be closed and return error, if any.
 		e, ok := <-z.closeErr
 		z.activeRA = false
+
+		for blk := range z.readAhead {
+			if blk.b != nil {
+				z.blockPool <- blk.b
+			}
+		}
+		if cap(z.current) > 0 {
+			z.blockPool <- z.current
+			z.current = nil
+		}
 		if !ok {
 			// Channel is closed, so if there was any error it has already been returned.
 			return nil
@@ -418,6 +428,7 @@ func (z *Reader) doReadAhead() {
 			case z.readAhead <- read{b: buf, err: err}:
 			case <-closeReader:
 				// Sent on close, we don't care about the next results
+				z.blockPool <- buf
 				return
 			}
 			if err != nil {
@@ -502,6 +513,19 @@ func (z *Reader) Read(p []byte) (n int, err error) {
 
 func (z *Reader) WriteTo(w io.Writer) (n int64, err error) {
 	total := int64(0)
+	avail := z.current[z.roff:]
+	if len(avail) != 0 {
+		n, err := w.Write(avail)
+		if n != len(avail) {
+			return total, io.ErrShortWrite
+		}
+		total += int64(n)
+		if err != nil {
+			return total, err
+		}
+		z.blockPool <- z.current
+		z.current = nil
+	}
 	for {
 		if z.err != nil {
 			return total, z.err
