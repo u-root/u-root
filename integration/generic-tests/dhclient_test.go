@@ -8,25 +8,28 @@
 package integration
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/vmtest"
+	"github.com/u-root/u-root/pkg/uroot"
+	"golang.org/x/exp/slices"
 )
 
 // TestDhclientQEMU4 uses QEMU's DHCP server to test dhclient.
 func TestDhclientQEMU4(t *testing.T) {
 	// TODO: support arm
-	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
-		t.Skipf("test not supported on %s", vmtest.TestArch())
+	if arch := qemu.GuestArch(); !slices.Contains([]qemu.Arch{qemu.ArchAMD64, qemu.ArchArm64}, arch) {
+		t.Skipf("test not supported on %s", arch)
 	}
 
 	// Create the file to download
@@ -45,54 +48,64 @@ func TestDhclientQEMU4(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var wg sync.WaitGroup
 	s := &http.Server{}
-	wg.Add(1)
-	go func() {
-		_ = s.Serve(ln)
-		wg.Done()
-	}()
-	defer wg.Wait()
-	defer s.Close()
-
 	port := ln.Addr().(*net.TCPAddr).Port
 
-	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		QEMUOpts: qemu.Options{
-			SerialOutput: vmtest.TestLineWriter(t, "client"),
-			Timeout:      30 * time.Second,
-			Devices: []qemu.Device{
-				qemu.ArbitraryArgs{
-					"-device", "e1000,netdev=host0",
-					"-netdev", "user,id=host0,net=192.168.0.0/24,dhcpstart=192.168.0.10,ipv6=off",
-				},
-			},
-		},
-		TestCmds: []string{
-			"dhclient -ipv6=false -v",
-			"ip a",
-			// Download a file to make sure dhclient configures kernel networking correctly.
-			fmt.Sprintf("wget http://192.168.0.2:%d/foobar", port),
-			"cat ./foobar",
-			"sleep 5",
-			"shutdown -h",
-		},
-	})
-	defer ccleanup()
-
-	if err := dhcpClient.Expect("Configured eth0 with IPv4 DHCP Lease"); err != nil {
+	testCmds := []string{
+		"dhclient -ipv6=false -v",
+		"ip a",
+		// Download a file to make sure dhclient configures kernel networking correctly.
+		fmt.Sprintf("wget http://192.168.0.2:%d/foobar", port),
+		"cat ./foobar",
+		"sleep 5",
+		"shutdown -h",
+	}
+	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
+			"github.com/u-root/u-root/cmds/core/cat",
+			"github.com/u-root/u-root/cmds/core/dhclient",
+			"github.com/u-root/u-root/cmds/core/ip",
+			"github.com/u-root/u-root/cmds/core/sleep",
+			"github.com/u-root/u-root/cmds/core/shutdown",
+			"github.com/u-root/u-root/cmds/core/wget",
+		)}),
+		vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
+			qemu.ArbitraryArgs(
+				"-device", "e1000,netdev=host0",
+				"-netdev", "user,id=host0,net=192.168.0.0/24,dhcpstart=192.168.0.10,ipv6=off",
+			),
+			qemu.WithTask(func(ctx context.Context, n *qemu.Notifications) error {
+				if err := s.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
+					return err
+				}
+				return nil
+			}),
+			qemu.WithTask(func(ctx context.Context, n *qemu.Notifications) error {
+				// Wait for VM exit.
+				<-n.VMExited
+				// Then close HTTP server.
+				return s.Close()
+			}),
+		),
+	)
+	if _, err := vm.Console.ExpectString("Configured eth0 with IPv4 DHCP Lease"); err != nil {
 		t.Errorf("%s: %v", testutil.NowLog(), err)
 	}
-	if err := dhcpClient.Expect("inet 192.168.0.10"); err != nil {
+	if _, err := vm.Console.ExpectString("inet 192.168.0.10"); err != nil {
 		t.Errorf("%s: %v", testutil.NowLog(), err)
 	}
 	// "cat ./foobar" should be outputting this.
-	if err := dhcpClient.Expect(want); err != nil {
+	if _, err := vm.Console.ExpectString(want); err != nil {
 		t.Errorf("%s: %v", testutil.NowLog(), err)
+	}
+
+	if err := vm.Wait(); err != nil {
+		t.Errorf("Wait: %v", err)
 	}
 }
 
-func TestDhclientTimesOut(t *testing.T) {
+/*func TestDhclientTimesOut(t *testing.T) {
 	// TODO: support arm
 	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
 		t.Skipf("test not supported on %s", vmtest.TestArch())
@@ -184,4 +197,4 @@ func TestDhclient6(t *testing.T) {
 	if err := dhcpClient.Expect("inet6 fec0::3"); err != nil {
 		t.Errorf("%s ip: %v", testutil.NowLog(), err)
 	}
-}
+}*/

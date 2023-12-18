@@ -45,7 +45,7 @@ func (c *Environ) RegisterFlags(f *flag.FlagSet) {
 
 	mod := (*string)(&c.Mod)
 	defMod := ""
-	if c.GO111MODULE == "on" || c.GO111MODULE == "auto" {
+	if c.GO111MODULE != "off" {
 		defMod = "readonly"
 	}
 	f.StringVar(mod, "go-mod", defMod, "Value of -mod to go commands (allowed: (empty), vendor, mod, readonly)")
@@ -123,7 +123,7 @@ func Default(opt ...Opt) *Environ {
 		GBBDEBUG:    parseBool(os.Getenv("GBBDEBUG")),
 	}
 
-	if env.GO111MODULE == "on" || env.GO111MODULE == "auto" {
+	if env.GO111MODULE != "off" {
 		env.Mod = ModReadonly
 	}
 	for _, o := range opt {
