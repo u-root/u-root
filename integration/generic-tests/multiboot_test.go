@@ -10,56 +10,61 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
-	"github.com/u-root/u-root/pkg/qemu"
 	"github.com/u-root/u-root/pkg/uroot"
-	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func testMultiboot(t *testing.T, kernel string) {
-	var serial wc
-
-	src := fmt.Sprintf("/home/circleci/%v", kernel)
-	if tk := os.Getenv("UROOT_MULTIBOOT_TEST_KERNEL_DIR"); len(tk) > 0 {
-		src = filepath.Join(tk, kernel)
-	}
+	src := filepath.Join(os.Getenv("UROOT_MULTIBOOT_TEST_KERNEL_DIR"), kernel)
 	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
 		t.Skip("multiboot kernel is not present")
+	} else if err != nil {
+		t.Error(err)
 	}
 
-	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		BuildOpts: uroot.Opts{
+	dir := t.TempDir()
+	testCmds := []string{
+		`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb" | tee /testdata/output.json`,
+	}
+	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+		vmtest.WithSharedDir(dir),
+		vmtest.WithMergedInitramfs(uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/kexec",
+				"github.com/u-root/u-root/cmds/core/tee",
+			),
 			ExtraFiles: []string{
 				src + ":kernel",
 			},
-		},
-		TestCmds: []string{
-			`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
-		},
-		QEMUOpts: qemu.Options{
-			SerialOutput: &serial,
-		},
-	})
-	defer cleanup()
+		}),
+		vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
+		),
+	)
 
-	if err := q.Expect(`"status": "ok"`); err != nil {
-		t.Logf(serial.String())
-		t.Fatalf(`expected '"status": "ok"', got error: %v`, err)
+	if _, err := vm.Console.ExpectString(`"status": "ok"`); err != nil {
+		t.Errorf(`expected '"status": "ok"', got error: %v`, err)
+	}
+	if _, err := vm.Console.ExpectString(`}`); err != nil {
+		t.Errorf(`expected '}' = end of JSON, got error: %v`, err)
+	}
+	if err := vm.Wait(); err != nil {
+		t.Fatal(err)
 	}
 
-	if err := q.Expect(`}`); err != nil {
-		t.Logf(serial.String())
-		t.Fatalf(`expected '}' = end of JSON, got error: %v`, err)
+	output, err := os.ReadFile(filepath.Join(dir, "output.json"))
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	output := serial.Bytes()
-	t.Logf(serial.String())
+	t.Log(string(output))
 
 	i := bytes.Index(output, []byte(multiboot.DebugPrefix))
 	if i == -1 {
@@ -90,10 +95,7 @@ func testMultiboot(t *testing.T, kernel string) {
 }
 
 func TestMultiboot(t *testing.T) {
-	// TODO: support arm
-	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
-		t.Skipf("test not supported on %s", vmtest.TestArch())
-	}
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
 
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {
 		t.Run(kernel, func(t *testing.T) {
