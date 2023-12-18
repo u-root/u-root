@@ -9,21 +9,29 @@ package integration
 
 import (
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/vmtest"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/u-root/u-root/pkg/uroot"
 )
 
 func TestScript(t *testing.T) {
-	q, cleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "ShellScript",
-		TestCmds: []string{
-			"echo HELLO WORLD",
-			"shutdown -h",
-		},
-	})
-	defer cleanup()
+	testCmds := []string{
+		"echo HELLO WORLD",
+		"shutdown -h",
+	}
+	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
+			"github.com/u-root/u-root/cmds/core/shutdown",
+		)}),
+		vmtest.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
+	)
 
-	if err := q.Expect("HELLO WORLD"); err != nil {
-		t.Fatal(`expected "HELLO WORLD", got error: `, err)
+	if _, err := vm.Console.ExpectString("HELLO WORLD"); err != nil {
+		t.Errorf("Want HELLO WORLD: %v", err)
+	}
+	if err := vm.Wait(); err != nil {
+		t.Errorf("Wait: %v", err)
 	}
 }
