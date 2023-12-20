@@ -8,29 +8,19 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/u-root/u-root/integration/testcmd/common"
+	"github.com/hugelgupf/vmtest/guest"
 	"golang.org/x/sys/unix"
 )
 
-func runTest() error {
-	cleanup, err := common.MountSharedDir()
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-	defer common.CollectKernelCoverage()
+func runTest() {
+	defer guest.CollectKernelCoverage()
 
 	fmt.Println("HELLO WORLD")
-	return nil
 }
 
 // The most trivial init script.
 func main() {
-	if err := runTest(); err != nil {
-		log.Printf("Tests failed: %v", err)
-	} else {
-		log.Print("Tests passed")
-	}
+	runTest()
 
 	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 		log.Fatalf("Failed to reboot: %v", err)
