@@ -10,92 +10,85 @@ package integration
 import (
 	"regexp"
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/hugelgupf/vmtest/qemu/network"
 	"github.com/u-root/u-root/pkg/uroot"
-	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestTczclient(t *testing.T) {
 	// TODO: support arm
-	if vmtest.TestArch() != "amd64" && vmtest.TestArch() != "arm64" {
-		t.Skipf("test not supported on %s", vmtest.TestArch())
-	}
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
 
 	t.Skip("This test is flaky, and must be fixed")
 
-	network := qemu.NewNetwork()
-	// TODO: On the next iteration, this will serve and provide a missing tcz.
-	var sb wc
-	if true {
-		q, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
-			Name: "TestTczclient_Server",
-			BuildOpts: uroot.Opts{
-				ExtraFiles: []string{
-					"./testdata/tczserver:tcz",
-				},
+	serverCmds := []string{
+		"ip addr add 192.168.0.1/24 dev eth0",
+		"ip link set eth0 up",
+		"ip route add 255.255.255.255/32 dev eth0",
+		"ip l",
+		"ip a",
+		"srvfiles -h 192.168.0.1 -d /",
+		"echo The Server Completes",
+		"shutdown -h",
+	}
+	net := network.NewInterVM()
+	serverVM := vmtest.StartVMAndRunCmds(t, serverCmds,
+		vmtest.WithName("TestTczclient_Server"),
+		vmtest.WithMergedInitramfs(uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/ls",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/exp/srvfiles",
+				"github.com/u-root/u-root/cmds/exp/pxeserver",
+			),
+			ExtraFiles: []string{
+				"./testdata/tczserver:tcz",
 			},
-			TestCmds: []string{
-				"dmesg",
-				"ip l",
-				"echo NOW DO IT",
-				"ip addr add 192.168.0.1/24 dev eth0",
-				"ip link set eth0 up",
-				"ip route add 255.255.255.255/32 dev eth0",
-				"ip l",
-				"ip a",
-				"echo NOW SERVER IT",
-				"srvfiles -h 192.168.0.1 -d /",
-				"echo The Server Completes",
-				"shutdown -h",
-			},
-			QEMUOpts: qemu.Options{
-				SerialOutput: &sb,
-				Devices: []qemu.Device{
-					network.NewVM(),
-				},
-			},
-		})
-		if err := q.Expect("shutdown"); err != nil {
-			t.Logf("got %v", err)
-		}
-		defer scleanup()
+		}),
+		vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
+			net.NewVM(),
+		),
+	)
 
-		t.Logf("Server SerialOutput: %s", sb.String())
+	testCmds := []string{
+		"ip addr add 192.168.0.2/24 dev eth0",
+		"ip link set eth0 up",
+		//"ip route add 255.255.255.255/32 dev eth0",
+		"ip a",
+		"tcz -d -h 192.168.0.1 -p 8080 libXcomposite libXdamage libXinerama libxshmfence",
+		"tcz -d -h 192.168.0.1 -p 8080 libXdmcp",
+		"echo HI THERE",
+		"ls /TinyCorePackages/tcloop",
+		"shutdown -h",
 	}
 
 	var b wc
-	tczClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestTczclient_Client",
-		BuildOpts: uroot.Opts{
+	clientVM := vmtest.StartVMAndRunCmds(t, testCmds,
+		vmtest.WithName("TestTczclient_Client"),
+		vmtest.WithMergedInitramfs(uroot.Opts{
+			Commands: uroot.BusyBoxCmds(
+				"github.com/u-root/u-root/cmds/core/cat",
+				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/ls",
+				"github.com/u-root/u-root/cmds/core/shutdown",
+				"github.com/u-root/u-root/cmds/core/sleep",
+				"github.com/u-root/u-root/cmds/exp/tcz",
+			),
 			ExtraFiles: []string{
-				"testdata/tczclient:tcz",
+				"./testdata/tczclient:tcz",
 			},
-		},
-		TestCmds: []string{
-			"ip addr add 192.168.0.2/24 dev eth0",
-			"ip link set eth0 up",
-			//"ip route add 255.255.255.255/32 dev eth0",
-			"ip a",
-			"ls -l /",
-			"ls -l /dev",
-			"cat /proc/devices",
-			"cat /proc/filesystems",
-			"ip l",
-			"echo let us do this now",
-			"tcz -d -h 192.168.0.1 -p 8080 libXcomposite libXdamage libXinerama libxshmfence",
-			"tcz -d -h 192.168.0.1 -p 8080 libXdmcp",
-			"ls -l /proc/mounts",
-			"cat /proc/mounts",
-			"echo HI THERE",
-			"ls /TinyCorePackages/tcloop",
-			"shutdown -h",
-		},
-		QEMUOpts: qemu.Options{
-			SerialOutput: &b,
-		},
-	})
-	defer ccleanup()
+		}),
+		vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
+			net.NewVM(),
+			qemu.WithSerialOutput(&b),
+		),
+	)
 
 	// The directory list is the last thing we get. At that point,
 	// b will have the output we care about and the VM will have shut
@@ -104,8 +97,7 @@ func TestTczclient(t *testing.T) {
 	// about the order in which things appear.
 	tczs := []string{"libXcomposite", "libXdamage", "libXinerama", "libxshmfence"}
 	for _, s := range tczs {
-		if err := tczClient.Expect(s); err != nil {
-			t.Logf("Client SerialOutput: %s", b.String())
+		if _, err := clientVM.Console.ExpectString(s); err != nil {
 			t.Errorf("got %v, want nil", err)
 		}
 		t.Logf("Matched %s", s)
@@ -124,4 +116,11 @@ func TestTczclient(t *testing.T) {
 			}
 		}
 	}
+
+	if err := clientVM.Wait(); err != nil {
+		t.Errorf("Client Wait: %v", err)
+	}
+
+	serverVM.Kill()
+	serverVM.Wait()
 }
