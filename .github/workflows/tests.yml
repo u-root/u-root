@@ -1,0 +1,70 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancel running workflows on new push to a PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.21.x' ]
+        vmarch: [ 'amd64', 'arm64' ]
+        pattern: [ 'integration/generic-tests/...', 'integration/gotests/...' ]
+        extra-arg: [ '' ]
+        include:
+          # Only run these with VM arch amd64 for now.
+          - go-version: '1.21.x'
+            vmarch: 'amd64'
+            pattern: 'cmds/...'
+          - go-version: '1.21.x'
+            vmarch: 'amd64'
+            pattern: 'pkg/...'
+            extra-arg: '-coverpkg=./pkg/...'
+          # This doesn't pass on 1.21.x for some reason yet.
+          - go-version: '1.20'
+            vmarch: arm
+            pattern: 'integration/generic-tests/...'
+          # Root dir tests
+          - go-version: '1.21.x'
+            vmarch: 'amd64'
+            pattern: '.'
+
+    env:
+      GO_VERSION: ${{ matrix.go-version }}
+      VMTEST_ARCH: ${{ matrix.vmarch }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Build runvm tool
+        run: go install github.com/hugelgupf/vmtest/tools/runvmtest@latest
+
+      - name: Test
+        run: |
+          mkdir gocov
+          GOCOVERDIR=$(pwd)/gocov \
+            VMTEST_GO_PROFILE=vmcoverage.txt runvmtest -- \
+            go test -v -covermode=atomic ${{ matrix.extra-arg }} \
+            -coverprofile=coverage.txt ./${{ matrix.pattern }}
+
+      - uses: codecov/codecov-action@v4-beta
+        env:
+          CODECOV_TOKEN: '0ecf29bb-15fb-46f2-8c7d-0fb610d79f71'
+        with:
+          flags: ${{ matrix.pattern}}-${{ matrix.vmarch }}
+          fail_ci_if_error: true
+          verbose: true
+          env_vars: GO_VERSION,VMTEST_ARCH
