@@ -68,14 +68,15 @@ func (p *Packet6) Configure() error {
 			// "Observed Incorrect Implementation Behavior".)
 			Mask: net.CIDRMask(128, 128),
 		},
-		PreferedLft: int(l.PreferredLifetime),
-		ValidLft:    int(l.ValidLifetime),
+		PreferedLft: int(l.PreferredLifetime.Seconds()),
+		ValidLft:    int(l.ValidLifetime.Seconds()),
 		// Optimistic DAD (Duplicate Address Detection) means we can
 		// use the address before DAD is complete. The DHCP server's
 		// job was to give us a unique IP so there is little risk of a
 		// collision.
 		Flags: unix.IFA_F_OPTIMISTIC,
 	}
+
 	if err := netlink.AddrReplace(p.iface, dst); err != nil {
 		if os.IsExist(err) {
 			return fmt.Errorf("add/replace %s to %v: %v", dst, p.iface, err)
