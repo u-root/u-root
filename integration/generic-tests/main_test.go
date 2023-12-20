@@ -11,11 +11,11 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if len(os.Getenv("UROOT_KERNEL")) == 0 {
-		log.Fatalf("Failed to run tests: no kernel provide: source integration/GET_KERNEL_QEMU to get a kernel")
+	if len(os.Getenv("VMTEST_KERNEL")) == 0 {
+		log.Fatalf("Failed to run tests: no kernel provided: use runvmtest tool to supply it")
 	}
-	if len(os.Getenv("UROOT_QEMU")) == 0 {
-		log.Fatalf("Failed to run tests: no QEMU binary provided: source integration/GET_KERNEL_QEMU to get a qemu")
+	if len(os.Getenv("VMTEST_QEMU")) == 0 {
+		log.Fatalf("Failed to run tests: no QEMU binary provided: use runvmtest tool to supply it")
 	}
 
 	log.Printf("Starting generic tests...")
