@@ -17,16 +17,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type ttflags struct {
-	all       bool
-	human     bool
-	directory bool
-	long      bool
-	quoted    bool
-	recurse   bool
-	classify  bool
-}
-
 // Test listName func
 func TestListName(t *testing.T) {
 	// Create some directorys.
@@ -47,20 +37,20 @@ func TestListName(t *testing.T) {
 		name   string
 		input  string
 		want   string
-		flag   ttflags
+		flag   cmd
 		prefix bool
 	}{
 		{
 			name:  "ls without arguments",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s\n%s\n%s\n%s\n", "d1", "f1", "f2", "f3?line 2"),
-			flag:  ttflags{},
+			flag:  cmd{},
 		},
 		{
 			name:  "ls osfi.IsDir() path, quoted = true",
 			input: tmpDir,
 			want:  fmt.Sprintf("\"%s\"\n\"%s\"\n\"%s\"\n\"%s\"\n", "d1", "f1", "f2", "f3\\nline 2"),
-			flag: ttflags{
+			flag: cmd{
 				quoted: true,
 			},
 		},
@@ -68,7 +58,7 @@ func TestListName(t *testing.T) {
 			name:  "ls osfi.IsDir() path, quoted = true, prefix = true ",
 			input: tmpDir,
 			want:  fmt.Sprintf("\"%s\":\n\"%s\"\n\"%s\"\n\"%s\"\n\"%s\"\n", tmpDir, "d1", "f1", "f2", "f3\\nline 2"),
-			flag: ttflags{
+			flag: cmd{
 				quoted: true,
 			},
 			prefix: true,
@@ -84,7 +74,7 @@ func TestListName(t *testing.T) {
 			input: tmpDir,
 			want: fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n", tmpDir, filepath.Join(tmpDir, ".f4"), filepath.Join(tmpDir, "d1"),
 				filepath.Join(tmpDir, "d1/f4"), filepath.Join(tmpDir, "f1"), filepath.Join(tmpDir, "f2"), filepath.Join(tmpDir, "f3?line 2")),
-			flag: ttflags{
+			flag: cmd{
 				all:     true,
 				recurse: true,
 			},
@@ -93,7 +83,7 @@ func TestListName(t *testing.T) {
 			name:  "ls directory = true",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s\n", "tmpDir"),
-			flag: ttflags{
+			flag: cmd{
 				directory: true,
 			},
 		},
@@ -101,37 +91,29 @@ func TestListName(t *testing.T) {
 			name:  "ls classify = true",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s\n%s\n%s\n%s\n", "d1/", "f1", "f2", "f3?line 2"),
-			flag: ttflags{
+			flag: cmd{
 				classify: true,
 			},
 		},
 		{
 			name:  "file does not exist",
 			input: "dir",
-			flag:  ttflags{},
+			flag:  cmd{},
 		},
 	} {
-		// Setting the flags
-		*all = tt.flag.all
-		*human = tt.flag.human
-		*directory = tt.flag.directory
-		*long = tt.flag.long
-		*quoted = tt.flag.quoted
-		*recurse = tt.flag.recurse
-		*classify = tt.flag.classify
-
 		// Running the tests
 		t.Run(tt.name, func(t *testing.T) {
 			// Write output in buffer.
 			var buf bytes.Buffer
 			var s ls.Stringer = ls.NameStringer{}
-			if *quoted {
+			if tt.flag.quoted {
 				s = ls.QuotedStringer{}
 			}
-			if *long {
-				s = ls.LongStringer{Human: *human, Name: s}
+			if tt.flag.long {
+				s = ls.LongStringer{Human: tt.flag.human, Name: s}
 			}
-			if err := listName(s, tt.input, &buf, tt.prefix); err != nil {
+			tt.flag.w = &buf
+			if err := tt.flag.listName(s, tt.input, tt.prefix); err != nil {
 				if buf.String() != tt.want {
 					t.Errorf("listName() = '%v', want: '%v'", buf.String(), tt.want)
 				}
@@ -147,14 +129,14 @@ func TestList(t *testing.T) {
 		name   string
 		input  []string
 		err    error
-		flag   ttflags
+		flag   cmd
 		prefix bool
 	}{
 		{
 			name:  "input empty, quoted = true, long = true",
 			input: []string{},
 			err:   nil,
-			flag: ttflags{
+			flag: cmd{
 				quoted: true,
 				long:   true,
 			},
@@ -165,15 +147,10 @@ func TestList(t *testing.T) {
 			err:   os.ErrNotExist,
 		},
 	} {
-
-		// Setting the flags
-		*long = tt.flag.long
-		*quoted = tt.flag.quoted
-
-		// Running the tests
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if err := list(&buf, tt.input); err != nil {
+			tt.flag.w = &buf
+			if err := tt.flag.list(tt.input); err != nil {
 				if !errors.Is(err, tt.err) {
 					t.Errorf("list() = '%v', want: '%v'", err, tt.err)
 				}
@@ -251,7 +228,9 @@ func TestPermHandling(t *testing.T) {
 		}
 	}
 	b := &bytes.Buffer{}
-	if err := listName(ls.NameStringer{}, d, b, false); err != nil {
+	var c = cmd{w: b}
+
+	if err := c.listName(ls.NameStringer{}, d, false); err != nil {
 		t.Fatalf("listName(ls.NameString{}, %q, w, false): %v != nil", d, err)
 	}
 	// the output varies very widely between kernels and Go versions :-(
@@ -264,7 +243,8 @@ func TestPermHandling(t *testing.T) {
 func TestNotExist(t *testing.T) {
 	d := t.TempDir()
 	b := &bytes.Buffer{}
-	if err := listName(ls.NameStringer{}, filepath.Join(d, "b"), b, false); err != nil {
+	var c = cmd{w: b}
+	if err := c.listName(ls.NameStringer{}, filepath.Join(d, "b"), false); err != nil {
 		t.Fatalf("listName(ls.NameString{}, %q/b, w, false): nil != %v", d, err)
 	}
 	// yeesh.

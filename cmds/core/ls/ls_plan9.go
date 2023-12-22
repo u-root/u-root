@@ -9,7 +9,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -18,20 +17,20 @@ import (
 
 var final = flag.BoolP("print-last", "p", false, "Print only the final path element of each file name")
 
-func printFile(w io.Writer, stringer ls.Stringer, f file) {
+func (c cmd) printFile(stringer ls.Stringer, f file) {
 	if f.err != nil {
-		fmt.Fprintln(w, f.err)
+		fmt.Fprintln(c.w, f.err)
 		return
 	}
 	// Hide .files unless -a was given
-	if *all || !strings.HasPrefix(f.lsfi.Name, ".") {
+	if c.all || !strings.HasPrefix(f.lsfi.Name, ".") {
 		// Unless they said -p, we always print the full path
 		if !*final {
 			f.lsfi.Name = f.path
 		}
-		if *classify {
+		if c.classify {
 			f.lsfi.Name = f.lsfi.Name + indicator(f.lsfi)
 		}
-		fmt.Fprintln(w, stringer.FileString(f.lsfi))
+		fmt.Fprintln(c.w, stringer.FileString(f.lsfi))
 	}
 }
