@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/uroot"
-	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 // testPkgs returns a slice of tests to run.
@@ -29,7 +29,7 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/exp/...",
 		"github.com/u-root/u-root/pkg/...",
 	)
-	cmd.Env = append(os.Environ(), "GOARCH="+vmtest.TestArch())
+	cmd.Env = append(os.Environ(), "GOARCH="+string(qemu.GuestArch()))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/tss",
 		"github.com/u-root/u-root/pkg/syscallfilter",
 	}
-	if vmtest.TestArch() == "arm64" {
+	if qemu.GuestArch() == qemu.ArchArm64 {
 		blocklist = append(
 			blocklist,
 			"github.com/u-root/u-root/pkg/strace",
@@ -102,30 +102,36 @@ func testPkgs(t *testing.T) []string {
 // TestGoTest effectively runs "go test ./..." inside a QEMU instance. The
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
+
 	pkgs := testPkgs(t)
 
-	o := &vmtest.Options{
-		QEMUOpts: qemu.Options{
-			Timeout: 120 * time.Second,
-			Devices: []qemu.Device{
+	vmtest.RunGoTestsInVM(t, pkgs,
+		vmtest.WithVMOpt(
+			vmtest.WithMergedInitramfs(uroot.Opts{
+				DefaultShell: "elvish",
+				Commands: uroot.BusyBoxCmds(
+					"github.com/u-root/u-root/cmds/core/*",
+				),
+				ExtraFiles: []string{
+					"/etc/group",
+					"/etc/passwd",
+				},
+			}),
+			vmtest.WithQEMUFn(
+				qemu.WithVMTimeout(15*time.Minute),
+
 				// Bump this up so that some unit tests can happily
 				// and questionably pre-claim large bytes slices.
 				//
 				// e.g. pkg/mount/gpt/gpt_test.go need to claim 4.29G
 				//
 				//     disk = make([]byte, 0x100000000)
-				qemu.ArbitraryArgs{"-m", "6G"},
+				qemu.ArbitraryArgs("-m", "6G"),
 
 				// aarch64 VMs start at 1970-01-01 without RTC explicitly set.
-				qemu.ArbitraryArgs{"-rtc", "base=localtime,clock=vm"},
-			},
-		},
-		BuildOpts: uroot.Opts{
-			ExtraFiles: []string{
-				"/etc/group",
-				"/etc/passwd",
-			},
-		},
-	}
-	vmtest.GolangTest(t, pkgs, o)
+				qemu.ArbitraryArgs("-rtc", "base=localtime,clock=vm"),
+			),
+		),
+	)
 }
