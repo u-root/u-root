@@ -40,7 +40,7 @@ var blackHolePool = sync.Pool{
 
 func (devNull) ReadFrom(r io.Reader) (n int64, err error) {
 	bufp := blackHolePool.Get().(*[]byte)
-	readSize := 0
+	var readSize int
 	for {
 		readSize, err = r.Read(*bufp)
 		n += int64(readSize)

@@ -47,7 +47,7 @@ func MessageFromBytes(data []byte) (*Message, error) {
 	}
 	buf.ReadBytes(d.TransactionID[:])
 	if buf.Error() != nil {
-		return nil, fmt.Errorf("Error parsing DHCPv6 header: %v", buf.Error())
+		return nil, fmt.Errorf("failed to parse DHCPv6 header: %w", buf.Error())
 	}
 	if err := d.Options.FromBytes(buf.Data()); err != nil {
 		return nil, err

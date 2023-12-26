@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 // Error messages which can be returned by Validate.
@@ -25,20 +26,13 @@ func notSupported(op string) error {
 }
 
 // IsNotExist determines if an error is produced as the result of querying some
-// file, object, resource, etc. which does not exist.  Users of this package
-// should always use netlink.IsNotExist, rather than os.IsNotExist, when
-// checking for specific netlink-related errors.
+// file, object, resource, etc. which does not exist.
 //
-// Errors types created by this package, such as OpError, can be used with
-// IsNotExist, but this function also defers to the behavior of os.IsNotExist
-// for unrecognized error types.
-//
-// Deprecated: make use of errors.Unwrap and errors.Is in Go 1.13+.
+// Deprecated: use errors.Unwrap and/or `errors.Is(err, os.Permission)` in Go
+// 1.13+.
 func IsNotExist(err error) bool {
 	switch err := err.(type) {
 	case *OpError:
-		// TODO(mdlayher): more error handling logic?
-
 		// Unwrap the inner error and use the stdlib's logic.
 		return os.IsNotExist(err.Err)
 	default:
@@ -65,8 +59,16 @@ type OpError struct {
 	// *os.SyscallError. If Err was produced by an error code in a netlink
 	// message, Err will contain a raw error value type such as a unix.Errno.
 	//
-	// Most callers should inspect Err using a helper such as IsNotExist.
+	// Most callers should inspect Err using errors.Is from the standard
+	// library.
 	Err error
+
+	// Message and Offset contain additional error information provided by the
+	// kernel when the ExtendedAcknowledge option is set on a Conn and the
+	// kernel indicates the AcknowledgeTLVs flag in a response. If this option
+	// is not set, both of these fields will be empty.
+	Message string
+	Offset  int
 }
 
 // newOpError is a small wrapper for creating an OpError. As a convenience, it
@@ -87,7 +89,15 @@ func (e *OpError) Error() string {
 		return "<nil>"
 	}
 
-	return fmt.Sprintf("netlink %s: %v", e.Op, e.Err)
+	var sb strings.Builder
+	_, _ = sb.WriteString(fmt.Sprintf("netlink %s: %v", e.Op, e.Err))
+
+	if e.Message != "" || e.Offset != 0 {
+		_, _ = sb.WriteString(fmt.Sprintf(", offset: %d, message: %q",
+			e.Offset, e.Message))
+	}
+
+	return sb.String()
 }
 
 // Unwrap unwraps the internal Err field for use with errors.Unwrap.

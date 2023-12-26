@@ -26,7 +26,7 @@ func (c *Conn) AddrAdd(ifc *net.Interface, addr *net.IPNet) error {
 		PrefixLength: uint8(prefixlen),
 		Scope:        uint8(scope),
 		Index:        uint32(ifc.Index),
-		Attributes: rtnetlink.AddressAttributes{
+		Attributes: &rtnetlink.AddressAttributes{
 			Address: addr.IP,
 			Local:   addr.IP,
 		},
@@ -61,7 +61,7 @@ func (c *Conn) AddrDel(ifc *net.Interface, addr *net.IPNet) error {
 				Family:       uint8(af),
 				PrefixLength: uint8(prefixlen),
 				Index:        uint32(ifc.Index),
-				Attributes: rtnetlink.AddressAttributes{
+				Attributes: &rtnetlink.AddressAttributes{
 					Address: addr.IP,
 				},
 			}
@@ -123,7 +123,8 @@ func ParseAddr(s string) (*net.IPNet, error) {
 	if isSubnetAddr(cidr) {
 		return nil, &net.AddrError{
 			Err:  "attempted to parse a subnet address into a host address",
-			Addr: cidr.IP.String()}
+			Addr: cidr.IP.String(),
+		}
 	}
 
 	return cidr, nil
@@ -185,7 +186,6 @@ func broadcastAddr(ipnet *net.IPNet) net.IP {
 // It applies ipnet's subnet mask onto itself and compares the result to the
 // value of ipnet's IP field.
 func isSubnetAddr(ipnet *net.IPNet) bool {
-
 	// Addresses with /32 and /128 are always hosts.
 	if ones, bits := ipnet.Mask.Size(); ones == bits {
 		return false

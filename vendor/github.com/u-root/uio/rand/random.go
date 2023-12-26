@@ -43,7 +43,7 @@ type contextReader interface {
 // ctxReader takes a contextReader and turns it into a ContextReader.
 type ctxReader struct {
 	contextReader
-	ctx context.Context
+	ctx context.Context //nolint:containedctx
 }
 
 func (cr ctxReader) Read(b []byte) (int, error) {

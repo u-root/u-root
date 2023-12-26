@@ -133,18 +133,17 @@ func (l *NeighService) Delete(index uint32) error {
 
 // List retrieves all neighbors.
 func (l *NeighService) List() ([]NeighMessage, error) {
-	req := &NeighMessage{}
+	req := NeighMessage{}
 
 	flags := netlink.Request | netlink.Dump
-	msgs, err := l.c.Execute(req, unix.RTM_GETNEIGH, flags)
+	msgs, err := l.c.Execute(&req, unix.RTM_GETNEIGH, flags)
 	if err != nil {
 		return nil, err
 	}
 
-	neighs := make([]NeighMessage, 0, len(msgs))
-	for _, m := range msgs {
-		neigh := (m).(*NeighMessage)
-		neighs = append(neighs, *neigh)
+	neighs := make([]NeighMessage, len(msgs))
+	for i := range msgs {
+		neighs[i] = *msgs[i].(*NeighMessage)
 	}
 
 	return neighs, nil
@@ -181,7 +180,6 @@ type NeighAttributes struct {
 }
 
 func (a *NeighAttributes) decode(ad *netlink.AttributeDecoder) error {
-
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.NDA_UNSPEC:
@@ -193,7 +191,10 @@ func (a *NeighAttributes) decode(ad *netlink.AttributeDecoder) error {
 			}
 			a.Address = ad.Bytes()
 		case unix.NDA_LLADDR:
-			if len(ad.Bytes()) != 6 {
+			// Allow IEEE 802 MAC-48, EUI-48, EUI-64, or 20-octet
+			// IP over InfiniBand link-layer addresses
+			l := len(ad.Bytes())
+			if l != 6 && l != 8 && l != 20 {
 				return errInvalidNeighMessageAttr
 			}
 			a.LLAddress = ad.Bytes()

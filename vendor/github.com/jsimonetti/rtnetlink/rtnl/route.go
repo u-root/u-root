@@ -2,6 +2,7 @@ package rtnl
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/jsimonetti/rtnetlink/internal/unix"
@@ -11,13 +12,14 @@ import (
 
 // Route represents a route table entry
 type Route struct {
-	Gateway   net.IP
-	Interface *net.Interface
+	Destination *net.IPNet
+	Gateway     net.IP
+	Interface   *net.Interface
+	Metric      uint32
 }
 
 // generating route message
 func genRouteMessage(ifc *net.Interface, dst net.IPNet, gw net.IP, options ...RouteOption) (rm *rtnetlink.RouteMessage, err error) {
-
 	opts := DefaultRouteOptions(ifc, dst, gw)
 
 	for _, option := range options {
@@ -103,32 +105,60 @@ func (c *Conn) RouteDel(ifc *net.Interface, dst net.IPNet) error {
 
 // RouteGet gets a single route to the given destination address.
 func (c *Conn) RouteGet(dst net.IP) (*Route, error) {
+	list, err := c.RouteGetAll(dst)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list) == 0 {
+		return nil, errors.New("route wrong length")
+	}
+
+	return list[0], nil
+}
+
+// RouteGetAll returns all routes to the given destination IP in the main routing table.
+func (c *Conn) RouteGetAll(dst net.IP) (ret []*Route, err error) {
 	af, err := addrFamily(dst)
 	if err != nil {
 		return nil, err
 	}
+
 	attr := rtnetlink.RouteAttributes{
 		Dst: dst,
 	}
+
 	tx := &rtnetlink.RouteMessage{
 		Family:     uint8(af),
 		Table:      unix.RT_TABLE_MAIN,
 		Attributes: attr,
 	}
+
 	rx, err := c.Conn.Route.Get(tx)
 	if err != nil {
 		return nil, err
 	}
-	if len(rx) == 0 {
-		return nil, errors.New("route wrong length")
+
+	for _, rt := range rx {
+		ifindex := int(rt.Attributes.OutIface)
+
+		iface, err := c.LinkByIndex(ifindex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get link by interface index: %w", err)
+		}
+
+		_, dstNet, err := net.ParseCIDR(fmt.Sprintf("%s/%d", rt.Attributes.Dst.String(), rt.DstLength))
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct CIDR from route destination address and length: %w", err)
+		}
+
+		ret = append(ret, &Route{
+			Destination: dstNet,
+			Gateway:     rt.Attributes.Gateway,
+			Interface:   iface,
+			Metric:      rt.Attributes.Priority,
+		})
 	}
-	ifindex := int(rx[0].Attributes.OutIface)
-	iface, err := c.LinkByIndex(ifindex)
-	if err != nil {
-		return nil, err
-	}
-	return &Route{
-		Gateway:   rx[0].Attributes.Gateway,
-		Interface: iface,
-	}, nil
+
+	return ret, nil
 }

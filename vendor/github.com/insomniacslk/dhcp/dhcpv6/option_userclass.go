@@ -42,7 +42,7 @@ func (op *OptUserClass) String() string {
 // input data does not include option code and length bytes.
 func (op *OptUserClass) FromBytes(data []byte) error {
 	if len(data) == 0 {
-		return fmt.Errorf("user class option must not be empty")
+		return fmt.Errorf("%w: user class option must not be empty", uio.ErrBufferTooShort)
 	}
 	buf := uio.NewBigEndianBuffer(data)
 	for buf.Has(2) {

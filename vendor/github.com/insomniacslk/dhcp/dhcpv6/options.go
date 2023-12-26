@@ -224,7 +224,9 @@ type OptionParser func(code OptionCode, data []byte) (Option, error)
 // FromBytesWithParser parses Options from byte sequences using the parsing
 // function that is passed in as a paremeter
 func (o *Options) FromBytesWithParser(data []byte, parser OptionParser) error {
-	*o = make(Options, 0, 10)
+	if *o == nil {
+		*o = make(Options, 0, 10)
+	}
 	if len(data) == 0 {
 		// no options, no party
 		return nil

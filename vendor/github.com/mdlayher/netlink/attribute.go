@@ -4,7 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 
+	"github.com/josharian/native"
 	"github.com/mdlayher/netlink/nlenc"
 )
 
@@ -120,8 +122,8 @@ func UnmarshalAttributes(b []byte) ([]Attribute, error) {
 	attrs := make([]Attribute, 0, ad.Len())
 
 	for ad.Next() {
-		if ad.attr().Length != 0 {
-			attrs = append(attrs, ad.attr())
+		if ad.a.Length != 0 {
+			attrs = append(attrs, ad.a)
 		}
 	}
 
@@ -166,7 +168,7 @@ type AttributeDecoder struct {
 func NewAttributeDecoder(b []byte) (*AttributeDecoder, error) {
 	ad := &AttributeDecoder{
 		// By default, use native byte order.
-		ByteOrder: nlenc.NativeEndian(),
+		ByteOrder: native.Endian,
 
 		b: b,
 	}
@@ -233,14 +235,8 @@ func (ad *AttributeDecoder) Len() int { return ad.length }
 // count scans the input slice to count the number of netlink attributes
 // that could be decoded by Next().
 func (ad *AttributeDecoder) available() (int, error) {
-	var i, count int
-	for {
-
-		// No more data to read.
-		if i >= len(ad.b) {
-			break
-		}
-
+	var count int
+	for i := 0; i < len(ad.b); {
 		// Make sure there's at least a header's worth
 		// of data to read on each iteration.
 		if len(ad.b[i:]) < nlaHeaderLen {
@@ -266,20 +262,11 @@ func (ad *AttributeDecoder) available() (int, error) {
 	return count, nil
 }
 
-// attr returns the current Attribute pointed to by the decoder.
-func (ad *AttributeDecoder) attr() Attribute {
-	return ad.a
-}
-
 // data returns the Data field of the current Attribute pointed to by the decoder.
-func (ad *AttributeDecoder) data() []byte {
-	return ad.a.Data
-}
+func (ad *AttributeDecoder) data() []byte { return ad.a.Data }
 
 // Err returns the first error encountered by the decoder.
-func (ad *AttributeDecoder) Err() error {
-	return ad.err
-}
+func (ad *AttributeDecoder) Err() error { return ad.err }
 
 // Bytes returns the raw bytes of the current Attribute's data.
 func (ad *AttributeDecoder) Bytes() []byte {
@@ -356,6 +343,66 @@ func (ad *AttributeDecoder) Uint64() uint64 {
 	}
 
 	return ad.ByteOrder.Uint64(b)
+}
+
+// Int8 returns the Int8 representation of the current Attribute's data.
+func (ad *AttributeDecoder) Int8() int8 {
+	if ad.err != nil {
+		return 0
+	}
+
+	b := ad.data()
+	if len(b) != 1 {
+		ad.err = fmt.Errorf("netlink: attribute %d is not a int8; length: %d", ad.Type(), len(b))
+		return 0
+	}
+
+	return int8(b[0])
+}
+
+// Int16 returns the Int16 representation of the current Attribute's data.
+func (ad *AttributeDecoder) Int16() int16 {
+	if ad.err != nil {
+		return 0
+	}
+
+	b := ad.data()
+	if len(b) != 2 {
+		ad.err = fmt.Errorf("netlink: attribute %d is not a int16; length: %d", ad.Type(), len(b))
+		return 0
+	}
+
+	return int16(ad.ByteOrder.Uint16(b))
+}
+
+// Int32 returns the Int32 representation of the current Attribute's data.
+func (ad *AttributeDecoder) Int32() int32 {
+	if ad.err != nil {
+		return 0
+	}
+
+	b := ad.data()
+	if len(b) != 4 {
+		ad.err = fmt.Errorf("netlink: attribute %d is not a int32; length: %d", ad.Type(), len(b))
+		return 0
+	}
+
+	return int32(ad.ByteOrder.Uint32(b))
+}
+
+// Int64 returns the Int64 representation of the current Attribute's data.
+func (ad *AttributeDecoder) Int64() int64 {
+	if ad.err != nil {
+		return 0
+	}
+
+	b := ad.data()
+	if len(b) != 8 {
+		ad.err = fmt.Errorf("netlink: attribute %d is not a int64; length: %d", ad.Type(), len(b))
+		return 0
+	}
+
+	return int64(ad.ByteOrder.Uint64(b))
 }
 
 // Flag returns a boolean representing the Attribute.
@@ -438,9 +485,7 @@ type AttributeEncoder struct {
 
 // NewAttributeEncoder creates an AttributeEncoder that encodes Attributes.
 func NewAttributeEncoder() *AttributeEncoder {
-	return &AttributeEncoder{
-		ByteOrder: nlenc.NativeEndian(),
-	}
+	return &AttributeEncoder{ByteOrder: native.Endian}
 }
 
 // Uint8 encodes uint8 data into an Attribute specified by typ.
@@ -500,7 +545,64 @@ func (ae *AttributeEncoder) Uint64(typ uint16, v uint64) {
 	})
 }
 
-// Flag encodes a flag into an Attribute specidied by typ.
+// Int8 encodes int8 data into an Attribute specified by typ.
+func (ae *AttributeEncoder) Int8(typ uint16, v int8) {
+	if ae.err != nil {
+		return
+	}
+
+	ae.attrs = append(ae.attrs, Attribute{
+		Type: typ,
+		Data: []byte{uint8(v)},
+	})
+}
+
+// Int16 encodes int16 data into an Attribute specified by typ.
+func (ae *AttributeEncoder) Int16(typ uint16, v int16) {
+	if ae.err != nil {
+		return
+	}
+
+	b := make([]byte, 2)
+	ae.ByteOrder.PutUint16(b, uint16(v))
+
+	ae.attrs = append(ae.attrs, Attribute{
+		Type: typ,
+		Data: b,
+	})
+}
+
+// Int32 encodes int32 data into an Attribute specified by typ.
+func (ae *AttributeEncoder) Int32(typ uint16, v int32) {
+	if ae.err != nil {
+		return
+	}
+
+	b := make([]byte, 4)
+	ae.ByteOrder.PutUint32(b, uint32(v))
+
+	ae.attrs = append(ae.attrs, Attribute{
+		Type: typ,
+		Data: b,
+	})
+}
+
+// Int64 encodes int64 data into an Attribute specified by typ.
+func (ae *AttributeEncoder) Int64(typ uint16, v int64) {
+	if ae.err != nil {
+		return
+	}
+
+	b := make([]byte, 8)
+	ae.ByteOrder.PutUint64(b, uint64(v))
+
+	ae.attrs = append(ae.attrs, Attribute{
+		Type: typ,
+		Data: b,
+	})
+}
+
+// Flag encodes a flag into an Attribute specified by typ.
 func (ae *AttributeEncoder) Flag(typ uint16, v bool) {
 	// Only set flag on no previous error or v == true.
 	if ae.err != nil || !v {
@@ -518,6 +620,12 @@ func (ae *AttributeEncoder) String(typ uint16, s string) {
 		return
 	}
 
+	// Length checking, thanks ubiquitousbyte on GitHub.
+	if len(s) > math.MaxUint16-nlaHeaderLen {
+		ae.err = errors.New("string is too large to fit in a netlink attribute")
+		return
+	}
+
 	ae.attrs = append(ae.attrs, Attribute{
 		Type: typ,
 		Data: nlenc.Bytes(s),
@@ -527,6 +635,11 @@ func (ae *AttributeEncoder) String(typ uint16, s string) {
 // Bytes embeds raw byte data into an Attribute specified by typ.
 func (ae *AttributeEncoder) Bytes(typ uint16, b []byte) {
 	if ae.err != nil {
+		return
+	}
+
+	if len(b) > math.MaxUint16-nlaHeaderLen {
+		ae.err = errors.New("byte slice is too large to fit in a netlink attribute")
 		return
 	}
 
@@ -550,6 +663,11 @@ func (ae *AttributeEncoder) Do(typ uint16, fn func() ([]byte, error)) {
 	b, err := fn()
 	if err != nil {
 		ae.err = err
+		return
+	}
+
+	if len(b) > math.MaxUint16-nlaHeaderLen {
+		ae.err = errors.New("byte slice produced by Do is too large to fit in a netlink attribute")
 		return
 	}
 

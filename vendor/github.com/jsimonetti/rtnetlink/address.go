@@ -13,9 +13,6 @@ import (
 var (
 	// errInvalidaddressMessage is returned when a AddressMessage is malformed.
 	errInvalidAddressMessage = errors.New("rtnetlink AddressMessage is invalid or too short")
-
-	// errInvalidAddressMessageAttr is returned when link attributes are malformed.
-	errInvalidAddressMessageAttr = errors.New("rtnetlink AddressMessage has a wrong attribute data length")
 )
 
 var _ Message = &AddressMessage{}
@@ -37,8 +34,8 @@ type AddressMessage struct {
 	// Interface index
 	Index uint32
 
-	// Attributes List
-	Attributes AddressAttributes
+	// Optional attributes which are appended when not nil.
+	Attributes *AddressAttributes
 }
 
 // MarshalBinary marshals a AddressMessage into a byte slice.
@@ -51,8 +48,12 @@ func (m *AddressMessage) MarshalBinary() ([]byte, error) {
 	b[3] = m.Scope
 	nativeEndian.PutUint32(b[4:8], m.Index)
 
+	if m.Attributes == nil {
+		// No attributes to encode.
+		return b, nil
+	}
+
 	ae := netlink.NewAttributeEncoder()
-	ae.ByteOrder = nativeEndian
 	err := m.Attributes.encode(ae)
 	if err != nil {
 		return nil, err
@@ -80,16 +81,21 @@ func (m *AddressMessage) UnmarshalBinary(b []byte) error {
 	m.Index = nativeEndian.Uint32(b[4:8])
 
 	if l > unix.SizeofIfAddrmsg {
-		m.Attributes = AddressAttributes{}
 		ad, err := netlink.NewAttributeDecoder(b[unix.SizeofIfAddrmsg:])
 		if err != nil {
 			return err
 		}
-		ad.ByteOrder = nativeEndian
-		err = m.Attributes.decode(ad)
-		if err != nil {
+
+		var aa AddressAttributes
+		if err := aa.decode(ad); err != nil {
 			return err
 		}
+
+		// Must consume errors from decoder before returning.
+		if err := ad.Err(); err != nil {
+			return fmt.Errorf("invalid address message attributes: %v", err)
+		}
+		m.Attributes = &aa
 	}
 
 	return nil
@@ -127,18 +133,17 @@ func (a *AddressService) Delete(req *AddressMessage) error {
 
 // List retrieves all addresses.
 func (a *AddressService) List() ([]AddressMessage, error) {
-	req := &AddressMessage{}
+	req := AddressMessage{}
 
 	flags := netlink.Request | netlink.Dump
-	msgs, err := a.c.Execute(req, unix.RTM_GETADDR, flags)
+	msgs, err := a.c.Execute(&req, unix.RTM_GETADDR, flags)
 	if err != nil {
 		return nil, err
 	}
 
-	addresses := make([]AddressMessage, 0, len(msgs))
-	for _, m := range msgs {
-		address := (m).(*AddressMessage)
-		addresses = append(addresses, *address)
+	addresses := make([]AddressMessage, len(msgs))
+	for i := range msgs {
+		addresses[i] = *msgs[i].(*AddressMessage)
 	}
 	return addresses, nil
 }
@@ -156,53 +161,25 @@ type AddressAttributes struct {
 }
 
 func (a *AddressAttributes) decode(ad *netlink.AttributeDecoder) error {
-
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.IFA_UNSPEC:
 			// unused attribute
 		case unix.IFA_ADDRESS:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
-				return errInvalidAddressMessageAttr
-			}
-			a.Address = ad.Bytes()
+			ad.Do(decodeIP(&a.Address))
 		case unix.IFA_LOCAL:
-			if len(ad.Bytes()) != 4 {
-				return errInvalidAddressMessageAttr
-			}
-			a.Local = ad.Bytes()
+			ad.Do(decodeIP(&a.Local))
 		case unix.IFA_LABEL:
 			a.Label = ad.String()
 		case unix.IFA_BROADCAST:
-			if len(ad.Bytes()) != 4 {
-				return errInvalidAddressMessageAttr
-			}
-			a.Broadcast = ad.Bytes()
+			ad.Do(decodeIP(&a.Broadcast))
 		case unix.IFA_ANYCAST:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
-				return errInvalidAddressMessageAttr
-			}
-			a.Anycast = ad.Bytes()
+			ad.Do(decodeIP(&a.Anycast))
 		case unix.IFA_CACHEINFO:
-			if len(ad.Bytes()) != 16 {
-				return errInvalidAddressMessageAttr
-			}
-			err := a.CacheInfo.unmarshalBinary(ad.Bytes())
-			if err != nil {
-				return err
-			}
+			ad.Do(a.CacheInfo.decode)
 		case unix.IFA_MULTICAST:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
-				return errInvalidAddressMessageAttr
-			}
-			a.Multicast = ad.Bytes()
+			ad.Do(decodeIP(&a.Multicast))
 		case unix.IFA_FLAGS:
-			if len(ad.Bytes()) != 4 {
-				return errInvalidAddressMessageAttr
-			}
 			a.Flags = ad.Uint32()
 		}
 	}
@@ -212,18 +189,21 @@ func (a *AddressAttributes) decode(ad *netlink.AttributeDecoder) error {
 
 func (a *AddressAttributes) encode(ae *netlink.AttributeEncoder) error {
 	ae.Uint16(unix.IFA_UNSPEC, 0)
-	ae.Bytes(unix.IFA_ADDRESS, a.Address)
+	ae.Do(unix.IFA_ADDRESS, encodeIP(a.Address))
 	if a.Local != nil {
-		ae.Bytes(unix.IFA_LOCAL, a.Local)
+		ae.Do(unix.IFA_LOCAL, encodeIP(a.Local))
 	}
 	if a.Broadcast != nil {
-		ae.Bytes(unix.IFA_BROADCAST, a.Broadcast)
+		ae.Do(unix.IFA_BROADCAST, encodeIP(a.Broadcast))
 	}
 	if a.Anycast != nil {
-		ae.Bytes(unix.IFA_ANYCAST, a.Anycast)
+		ae.Do(unix.IFA_ANYCAST, encodeIP(a.Anycast))
 	}
 	if a.Multicast != nil {
-		ae.Bytes(unix.IFA_MULTICAST, a.Multicast)
+		ae.Do(unix.IFA_MULTICAST, encodeIP(a.Multicast))
+	}
+	if a.Label != "" {
+		ae.String(unix.IFA_LABEL, a.Label)
 	}
 	ae.Uint32(unix.IFA_FLAGS, a.Flags)
 
@@ -238,10 +218,10 @@ type CacheInfo struct {
 	Updated  uint32
 }
 
-// unmarshalBinary unmarshals the contents of a byte slice into a LinkMessage.
-func (c *CacheInfo) unmarshalBinary(b []byte) error {
+// decode decodes raw bytes into a CacheInfo's fields.
+func (c *CacheInfo) decode(b []byte) error {
 	if len(b) != 16 {
-		return fmt.Errorf("incorrect size, want: 16, got: %d", len(b))
+		return fmt.Errorf("rtnetlink: incorrect CacheInfo size, want: 16, got: %d", len(b))
 	}
 
 	c.Prefered = nativeEndian.Uint32(b[0:4])
@@ -250,4 +230,40 @@ func (c *CacheInfo) unmarshalBinary(b []byte) error {
 	c.Updated = nativeEndian.Uint32(b[12:16])
 
 	return nil
+}
+
+// encodeIP is a helper for validating and encoding IPv4 and IPv6 addresses as
+// appropriate for the specified netlink attribute type. It should be used
+// with (*netlink.AttributeEncoder).Do.
+func encodeIP(ip net.IP) func() ([]byte, error) {
+	return func() ([]byte, error) {
+		// Don't allow nil or non 4/16-byte addresses.
+		if ip == nil || ip.To16() == nil {
+			return nil, fmt.Errorf("rtnetlink: cannot encode invalid IP address: %s", ip)
+		}
+
+		if ip4 := ip.To4(); ip4 != nil {
+			// IPv4 address.
+			return ip4, nil
+		}
+
+		// IPv6 address.
+		return ip, nil
+	}
+}
+
+// decodeIP is a helper for validating and decoding IPv4 and IPv6 addresses as
+// appropriate for the specified netlink attribute type. It should be used with
+// (*netlink.AttributeDecoder).Do.
+func decodeIP(ip *net.IP) func(b []byte) error {
+	return func(b []byte) error {
+		if l := len(b); l != 4 && l != 16 {
+			return fmt.Errorf("rtnetlink: invalid IP address length: %d", l)
+		}
+
+		// We cannot retain b outside the closure, so make a copy into ip.
+		*ip = make(net.IP, len(b))
+		copy(*ip, b)
+		return nil
+	}
 }

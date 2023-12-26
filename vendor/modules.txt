@@ -130,8 +130,8 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
-## explicit; go 1.13
+# github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
+## explicit; go 1.20
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
@@ -150,8 +150,8 @@ github.com/intel-go/cpuid
 # github.com/josharian/native v1.1.0
 ## explicit; go 1.13
 github.com/josharian/native
-# github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c
-## explicit; go 1.12
+# github.com/jsimonetti/rtnetlink v1.3.5
+## explicit; go 1.18
 github.com/jsimonetti/rtnetlink
 github.com/jsimonetti/rtnetlink/internal/unix
 github.com/jsimonetti/rtnetlink/rtnl
@@ -194,16 +194,16 @@ github.com/mattn/go-localereader
 # github.com/mattn/go-runewidth v0.0.14
 ## explicit; go 1.9
 github.com/mattn/go-runewidth
-# github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
-## explicit; go 1.12
-github.com/mdlayher/ethernet
-# github.com/mdlayher/netlink v1.1.1
-## explicit; go 1.12
+# github.com/mdlayher/netlink v1.7.2
+## explicit; go 1.18
 github.com/mdlayher/netlink
 github.com/mdlayher/netlink/nlenc
-# github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
-## explicit; go 1.12
-github.com/mdlayher/raw
+# github.com/mdlayher/packet v1.1.2
+## explicit; go 1.20
+github.com/mdlayher/packet
+# github.com/mdlayher/socket v0.4.1
+## explicit; go 1.20
+github.com/mdlayher/socket
 # github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
 ## explicit; go 1.17
 github.com/muesli/ansi
@@ -267,7 +267,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
+# github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923
 ## explicit; go 1.16
 github.com/u-root/uio/cp
 github.com/u-root/uio/rand

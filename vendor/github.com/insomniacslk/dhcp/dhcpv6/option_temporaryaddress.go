@@ -9,8 +9,8 @@ import (
 // OptIATA implements the identity association for non-temporary addresses
 // option.
 //
-// This module defines the OptIATA structure.
-// https://www.ietf.org/rfc/rfc8415.txt
+// This module defines the OptIATA structure, as defined by RFC 8415 Section
+// 21.5.
 type OptIATA struct {
 	IaId    [4]byte
 	Options IdentityOptions
