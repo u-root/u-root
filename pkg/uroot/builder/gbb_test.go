@@ -7,7 +7,7 @@ package builder
 import (
 	"testing"
 
-	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
 )
@@ -16,14 +16,14 @@ func TestGBBBuild(t *testing.T) {
 	dir := t.TempDir()
 
 	opts := Opts{
-		Env: gbbgolang.Default(),
+		Env: golang.Default(golang.DisableCGO()),
 		Packages: []string{
 			"../test/foo",
 			"../../../cmds/core/elvish",
 		},
 		TempDir:   dir,
 		BinaryDir: "bbin",
-		BuildOpts: &gbbgolang.BuildOpts{},
+		BuildOpts: &golang.BuildOpts{},
 	}
 	af := initramfs.NewFiles()
 	var gbb GBBBuilder

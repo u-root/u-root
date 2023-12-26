@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot/builder"
@@ -49,6 +50,7 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "BB archive with ls and init",
 			opts: Opts{
+				Env:             golang.Default(golang.DisableCGO()),
 				TempDir:         dir,
 				ExtraFiles:      nil,
 				UseExistingInit: false,
@@ -98,6 +100,7 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "init specified, but not in commands",
 			opts: Opts{
+				Env:          golang.Default(golang.DisableCGO()),
 				TempDir:      dir,
 				DefaultShell: "zoocar",
 				InitCmd:      "foobar",
@@ -130,6 +133,7 @@ func TestCreateInitramfs(t *testing.T) {
 		{
 			name: "multi-mode archive",
 			opts: Opts{
+				Env:             golang.Default(golang.DisableCGO()),
 				TempDir:         dir,
 				ExtraFiles:      nil,
 				UseExistingInit: false,
