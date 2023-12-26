@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
+	"github.com/u-root/gobusybox/src/pkg/uflag"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
@@ -54,7 +55,6 @@ var (
 	statsOutputPath                         *string
 	statsLabel                              *string
 	shellbang                               *bool
-	tags                                    *string
 	// For the new gobusybox support
 	usegobusybox *bool
 	genDir       *string
@@ -92,8 +92,6 @@ func init() {
 
 	statsOutputPath = flag.String("stats-output-path", "", "Write build stats to this file (JSON)")
 	statsLabel = flag.String("stats-label", "", "Use this statsLabel when writing stats")
-
-	tags = flag.String("tags", "", "Comma separated list of build tags")
 
 	// Flags for the gobusybox, which we hope to move to, since it works with modules.
 	genDir = flag.String("gen-dir", "", "Directory to generate source in")
@@ -186,21 +184,25 @@ func main() {
 	if err := checkArgs(os.Args...); err != nil {
 		log.Fatal(err)
 	}
+
 	gbbOpts := &gbbgolang.BuildOpts{}
 	gbbOpts.RegisterFlags(flag.CommandLine)
-
-	l := log.New(os.Stderr, "", log.Ltime)
-
 	// Register an alias for -go-no-strip for backwards compatibility.
 	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
+
+	env := gbbgolang.Default()
+	env.RegisterFlags(flag.CommandLine)
+	tags := (*uflag.Strings)(&env.BuildTags)
+	flag.CommandLine.Var(tags, "tags", "Go build tags -- repeat the flag for multiple values")
+
 	flag.Parse()
+
+	l := log.New(os.Stderr, "", log.Ltime)
 
 	if usrc := os.Getenv("UROOT_SOURCE"); usrc != "" && *urootSourceDir == "" {
 		*urootSourceDir = usrc
 	}
 
-	env := gbbgolang.Default()
-	env.BuildTags = strings.Split(*tags, ",")
 	if env.CgoEnabled {
 		l.Printf("Disabling CGO for u-root...")
 		env.CgoEnabled = false
