@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/gobusybox/src/pkg/uflag"
 	"github.com/u-root/u-root/pkg/shlex"
 	"github.com/u-root/u-root/pkg/ulog"
@@ -64,7 +64,7 @@ var (
 
 func init() {
 	var sh string
-	switch gbbgolang.Default().GOOS {
+	switch golang.Default().GOOS {
 	case "plan9":
 		sh = ""
 	default:
@@ -137,7 +137,7 @@ func writeBuildStats(stats buildStats, path string) error {
 	return nil
 }
 
-func generateLabel(env *gbbgolang.Environ) string {
+func generateLabel(env *golang.Environ) string {
 	var baseCmds []string
 	if len(flag.Args()) > 0 {
 		// Use the last component of the name to keep the label short
@@ -185,12 +185,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	gbbOpts := &gbbgolang.BuildOpts{}
+	gbbOpts := &golang.BuildOpts{}
 	gbbOpts.RegisterFlags(flag.CommandLine)
 	// Register an alias for -go-no-strip for backwards compatibility.
 	flag.CommandLine.BoolVar(&gbbOpts.NoStrip, "no-strip", false, "Build unstripped binaries")
 
-	env := gbbgolang.Default()
+	env := golang.Default()
 	env.RegisterFlags(flag.CommandLine)
 	tags := (*uflag.Strings)(&env.BuildTags)
 	flag.CommandLine.Var(tags, "tags", "Go build tags -- repeat the flag for multiple values")
@@ -266,7 +266,7 @@ func canFindSource(dir string) error {
 
 // Main is a separate function so defers are run on return, which they wouldn't
 // on exit.
-func Main(l ulog.Logger, env *gbbgolang.Environ, buildOpts *gbbgolang.BuildOpts) error {
+func Main(l ulog.Logger, env *golang.Environ, buildOpts *golang.BuildOpts) error {
 	v, err := env.Version()
 	if err != nil {
 		l.Printf("Could not get environment's Go version, using runtime's version: %v", err)
