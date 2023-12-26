@@ -106,6 +106,18 @@ func (mo MessageOptions) OneIAPD() *OptIAPD {
 	return iapds[0]
 }
 
+// FourRD returns all 4RD options.
+func (mo MessageOptions) FourRD() []*Opt4RD {
+	opts := mo.Get(Option4RD)
+	var frds []*Opt4RD
+	for _, o := range opts {
+		if m, ok := o.(*Opt4RD); ok {
+			frds = append(frds, m)
+		}
+	}
+	return frds
+}
+
 // Status returns the status code associated with this option.
 func (mo MessageOptions) Status() *OptStatusCode {
 	opt := mo.Options.GetOne(OptionStatusCode)
@@ -195,6 +207,33 @@ func (mo MessageOptions) UserClasses() [][]byte {
 	}
 	if t, ok := opt.(*OptUserClass); ok {
 		return t.UserClasses
+	}
+	return nil
+}
+
+// VendorClasses returns the all vendor class options.
+func (mo MessageOptions) VendorClasses() []*OptVendorClass {
+	opt := mo.Options.Get(OptionVendorClass)
+	if opt == nil {
+		return nil
+	}
+	var vo []*OptVendorClass
+	for _, o := range opt {
+		if t, ok := o.(*OptVendorClass); ok {
+			vo = append(vo, t)
+		}
+	}
+	return vo
+}
+
+// VendorClass returns the vendor class options matching the given enterprise
+// number.
+func (mo MessageOptions) VendorClass(enterpriseNumber uint32) [][]byte {
+	vo := mo.VendorClasses()
+	for _, v := range vo {
+		if v.EnterpriseNumber == enterpriseNumber {
+			return v.Data
+		}
 	}
 	return nil
 }

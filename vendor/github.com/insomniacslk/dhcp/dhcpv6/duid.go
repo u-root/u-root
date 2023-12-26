@@ -61,6 +61,9 @@ func (d *DUIDLLT) Equal(e DUID) bool {
 	if !ok {
 		return false
 	}
+	if d == nil {
+		return d == ellt
+	}
 	return d.HWType == ellt.HWType && d.Time == ellt.Time && bytes.Equal(d.LinkLayerAddr, ellt.LinkLayerAddr)
 }
 
@@ -102,6 +105,9 @@ func (d *DUIDLL) Equal(e DUID) bool {
 	ell, ok := e.(*DUIDLL)
 	if !ok {
 		return false
+	}
+	if d == nil {
+		return d == ell
 	}
 	return d.HWType == ell.HWType && bytes.Equal(d.LinkLayerAddr, ell.LinkLayerAddr)
 }
@@ -145,6 +151,9 @@ func (d *DUIDEN) Equal(e DUID) bool {
 	if !ok {
 		return false
 	}
+	if d == nil {
+		return d == en
+	}
 	return d.EnterpriseNumber == en.EnterpriseNumber && bytes.Equal(d.EnterpriseIdentifier, en.EnterpriseIdentifier)
 }
 
@@ -187,6 +196,9 @@ func (d *DUIDUUID) Equal(e DUID) bool {
 	if !ok {
 		return false
 	}
+	if d == nil {
+		return d == euuid
+	}
 	return d.UUID == euuid.UUID
 }
 
@@ -226,6 +238,9 @@ func (d *DUIDOpaque) Equal(e DUID) bool {
 	if !ok {
 		return false
 	}
+	if d == nil {
+		return d == eopaque
+	}
 	return d.Type == eopaque.Type && bytes.Equal(d.Data, eopaque.Data)
 }
 
@@ -259,7 +274,7 @@ func (d DUIDType) String() string {
 func DUIDFromBytes(data []byte) (DUID, error) {
 	buf := uio.NewBigEndianBuffer(data)
 	if !buf.Has(2) {
-		return nil, fmt.Errorf("buffer too short: have %d bytes, want 2 bytes", buf.Len())
+		return nil, fmt.Errorf("%w: have %d bytes, want 2 bytes", uio.ErrBufferTooShort, buf.Len())
 	}
 
 	typ := DUIDType(buf.Read16())

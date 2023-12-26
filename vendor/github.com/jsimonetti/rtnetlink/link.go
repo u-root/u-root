@@ -110,15 +110,24 @@ type LinkService struct {
 	c *Conn
 }
 
+// execute executes the request and returns the messages as a LinkMessage slice
+func (l *LinkService) execute(m Message, family uint16, flags netlink.HeaderFlags) ([]LinkMessage, error) {
+	msgs, err := l.c.Execute(m, family, flags)
+
+	links := make([]LinkMessage, len(msgs))
+	for i := range msgs {
+		links[i] = *msgs[i].(*LinkMessage)
+	}
+
+	return links, err
+}
+
 // New creates a new interface using the LinkMessage information.
 func (l *LinkService) New(req *LinkMessage) error {
 	flags := netlink.Request | netlink.Create | netlink.Acknowledge | netlink.Excl
-	_, err := l.c.Execute(req, unix.RTM_NEWLINK, flags)
-	if err != nil {
-		return err
-	}
+	_, err := l.execute(req, unix.RTM_NEWLINK, flags)
 
-	return nil
+	return err
 }
 
 // Delete removes an interface by index.
@@ -129,11 +138,8 @@ func (l *LinkService) Delete(index uint32) error {
 
 	flags := netlink.Request | netlink.Acknowledge
 	_, err := l.c.Execute(req, unix.RTM_DELLINK, flags)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // Get retrieves interface information by index.
@@ -143,17 +149,13 @@ func (l *LinkService) Get(index uint32) (LinkMessage, error) {
 	}
 
 	flags := netlink.Request | netlink.DumpFiltered
-	msg, err := l.c.Execute(req, unix.RTM_GETLINK, flags)
-	if err != nil {
-		return LinkMessage{}, err
+	links, err := l.execute(req, unix.RTM_GETLINK, flags)
+
+	if len(links) != 1 {
+		return LinkMessage{}, fmt.Errorf("too many/little matches, expected 1, actual %d", len(links))
 	}
 
-	if len(msg) != 1 {
-		return LinkMessage{}, fmt.Errorf("too many/little matches, expected 1")
-	}
-
-	link := (msg[0]).(*LinkMessage)
-	return *link, nil
+	return links[0], err
 }
 
 // Set sets interface attributes according to the LinkMessage information.
@@ -168,11 +170,8 @@ func (l *LinkService) Get(index uint32) (LinkMessage, error) {
 func (l *LinkService) Set(req *LinkMessage) error {
 	flags := netlink.Request | netlink.Acknowledge
 	_, err := l.c.Execute(req, unix.RTM_NEWLINK, flags)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (l *LinkService) list(kind string) ([]LinkMessage, error) {
@@ -184,18 +183,7 @@ func (l *LinkService) list(kind string) ([]LinkMessage, error) {
 	}
 
 	flags := netlink.Request | netlink.Dump
-	msgs, err := l.c.Execute(req, unix.RTM_GETLINK, flags)
-	if err != nil {
-		return nil, err
-	}
-
-	links := make([]LinkMessage, 0, len(msgs))
-	for _, m := range msgs {
-		link := (m).(*LinkMessage)
-		links = append(links, *link)
-	}
-
-	return links, nil
+	return l.execute(req, unix.RTM_GETLINK, flags)
 }
 
 // ListByKind retrieves all interfaces of a specific kind.
@@ -211,16 +199,28 @@ func (l *LinkService) List() ([]LinkMessage, error) {
 // LinkAttributes contains all attributes for an interface.
 type LinkAttributes struct {
 	Address          net.HardwareAddr // Interface L2 address
+	Alias            *string          // Interface alias name
 	Broadcast        net.HardwareAddr // L2 broadcast address
-	Name             string           // Device name
+	Carrier          *uint8           // Current physical link state of the interface.
+	CarrierChanges   *uint32          // Number of times the link has seen a change from UP to DOWN and vice versa
+	CarrierUpCount   *uint32          // Number of times the link has been up
+	CarrierDownCount *uint32          // Number of times the link has been down
+	Index            *uint32          // System-wide interface unique index identifier
+	Info             *LinkInfo        // Detailed Interface Information
+	LinkMode         *uint8           // Interface link mode
 	MTU              uint32           // MTU of the device
-	Type             uint32           // Link type
+	Name             string           // Device name
+	NetDevGroup      *uint32          // Interface network device group
+	OperationalState OperationalState // Interface operation state
+	PhysPortID       *string          // Interface unique physical port identifier within the NIC
+	PhysPortName     *string          // Interface physical port name within the NIC
+	PhysSwitchID     *string          // Unique physical switch identifier of a switch this port belongs to
 	QueueDisc        string           // Queueing discipline
 	Master           *uint32          // Master device index (0 value un-enslaves)
-	OperationalState OperationalState // Interface operation state
 	Stats            *LinkStats       // Interface Statistics
 	Stats64          *LinkStats64     // Interface Statistics (64 bits version)
-	Info             *LinkInfo        // Detailed Interface Information
+	TxQueueLen       *uint32          // Interface transmit queue len in number of packets
+	Type             uint32           // Link type
 	XDP              *LinkXDP         // Express Data Patch Information
 }
 
@@ -242,7 +242,6 @@ const (
 
 // unmarshalBinary unmarshals the contents of a byte slice into a LinkMessage.
 func (a *LinkAttributes) decode(ad *netlink.AttributeDecoder) error {
-
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.IFLA_UNSPEC:
@@ -253,22 +252,58 @@ func (a *LinkAttributes) decode(ad *netlink.AttributeDecoder) error {
 				return errInvalidLinkMessageAttr
 			}
 			a.Address = ad.Bytes()
+		case unix.IFLA_IFALIAS:
+			v := ad.String()
+			a.Alias = &v
 		case unix.IFLA_BROADCAST:
 			l := len(ad.Bytes())
 			if l < 4 || l > 32 {
 				return errInvalidLinkMessageAttr
 			}
 			a.Broadcast = ad.Bytes()
-		case unix.IFLA_IFNAME:
-			a.Name = ad.String()
+		case unix.IFLA_CARRIER:
+			v := ad.Uint8()
+			a.Carrier = &v
+		case unix.IFLA_CARRIER_CHANGES:
+			v := ad.Uint32()
+			a.CarrierChanges = &v
+		case unix.IFLA_CARRIER_UP_COUNT:
+			v := ad.Uint32()
+			a.CarrierUpCount = &v
+		case unix.IFLA_CARRIER_DOWN_COUNT:
+			v := ad.Uint32()
+			a.CarrierDownCount = &v
+		case unix.IFLA_GROUP:
+			v := ad.Uint32()
+			a.NetDevGroup = &v
 		case unix.IFLA_MTU:
 			a.MTU = ad.Uint32()
+		case unix.IFLA_IFNAME:
+			a.Name = ad.String()
 		case unix.IFLA_LINK:
 			a.Type = ad.Uint32()
-		case unix.IFLA_QDISC:
-			a.QueueDisc = ad.String()
+		case unix.IFLA_LINKINFO:
+			a.Info = &LinkInfo{}
+			ad.Nested(a.Info.decode)
+		case unix.IFLA_LINKMODE:
+			v := ad.Uint8()
+			a.LinkMode = &v
+		case unix.IFLA_MASTER:
+			v := ad.Uint32()
+			a.Master = &v
 		case unix.IFLA_OPERSTATE:
 			a.OperationalState = OperationalState(ad.Uint8())
+		case unix.IFLA_PHYS_PORT_ID:
+			v := ad.String()
+			a.PhysPortID = &v
+		case unix.IFLA_PHYS_SWITCH_ID:
+			v := ad.String()
+			a.PhysSwitchID = &v
+		case unix.IFLA_PHYS_PORT_NAME:
+			v := ad.String()
+			a.PhysPortName = &v
+		case unix.IFLA_QDISC:
+			a.QueueDisc = ad.String()
 		case unix.IFLA_STATS:
 			a.Stats = &LinkStats{}
 			err := a.Stats.unmarshalBinary(ad.Bytes())
@@ -281,12 +316,9 @@ func (a *LinkAttributes) decode(ad *netlink.AttributeDecoder) error {
 			if err != nil {
 				return err
 			}
-		case unix.IFLA_LINKINFO:
-			a.Info = &LinkInfo{}
-			ad.Nested(a.Info.decode)
-		case unix.IFLA_MASTER:
+		case unix.IFLA_TXQLEN:
 			v := ad.Uint32()
-			a.Master = &v
+			a.TxQueueLen = &v
 		case unix.IFLA_XDP:
 			a.XDP = &LinkXDP{}
 			ad.Nested(a.XDP.decode)
@@ -396,7 +428,7 @@ type LinkStats struct {
 func (a *LinkStats) unmarshalBinary(b []byte) error {
 	l := len(b)
 	if l != 92 && l != 96 {
-		return fmt.Errorf("incorrect size, want: 92 or 96")
+		return fmt.Errorf("incorrect LinkMessage size, want: 92 or 96, got: %d", len(b))
 	}
 
 	a.RXPackets = nativeEndian.Uint32(b[0:4])
@@ -426,7 +458,7 @@ func (a *LinkStats) unmarshalBinary(b []byte) error {
 	a.RXCompressed = nativeEndian.Uint32(b[84:88])
 	a.TXCompressed = nativeEndian.Uint32(b[88:92])
 
-	if l == 96 {
+	if l == 96 { // kernel 4.6+
 		a.RXNoHandler = nativeEndian.Uint32(b[92:96])
 	}
 
@@ -466,13 +498,15 @@ type LinkStats64 struct {
 	TXCompressed uint64
 
 	RXNoHandler uint64 // dropped, no handler found
+
+	RXOtherhostDropped uint64 // Number of packets dropped due to mismatch in destination MAC address.
 }
 
 // unmarshalBinary unmarshals the contents of a byte slice into a LinkMessage.
 func (a *LinkStats64) unmarshalBinary(b []byte) error {
 	l := len(b)
-	if l != 184 && l != 192 {
-		return fmt.Errorf("incorrect size, want: 184 or 192")
+	if l != 184 && l != 192 && l != 200 {
+		return fmt.Errorf("incorrect size, want: 184 or 192 or 200")
 	}
 
 	a.RXPackets = nativeEndian.Uint64(b[0:8])
@@ -502,8 +536,12 @@ func (a *LinkStats64) unmarshalBinary(b []byte) error {
 	a.RXCompressed = nativeEndian.Uint64(b[168:176])
 	a.TXCompressed = nativeEndian.Uint64(b[176:184])
 
-	if l == 192 {
+	if l > 191 { // kernel 4.6+
 		a.RXNoHandler = nativeEndian.Uint64(b[184:192])
+	}
+
+	if l > 199 { // kernel 5.19+
+		a.RXOtherhostDropped = nativeEndian.Uint64(b[192:200])
 	}
 
 	return nil
@@ -518,7 +556,6 @@ type LinkInfo struct {
 }
 
 func (i *LinkInfo) decode(ad *netlink.AttributeDecoder) error {
-
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.IFLA_INFO_KIND:
@@ -549,21 +586,20 @@ func (i *LinkInfo) encode(ae *netlink.AttributeEncoder) error {
 
 // LinkXDP holds Express Data Path specific information
 type LinkXDP struct {
-	FD         uint32
-	ExpectedFD uint32
+	FD         int32
+	ExpectedFD int32
 	Attached   uint8
 	Flags      uint32
 	ProgID     uint32
 }
 
 func (xdp *LinkXDP) decode(ad *netlink.AttributeDecoder) error {
-
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.IFLA_XDP_FD:
-			xdp.FD = ad.Uint32()
+			xdp.FD = ad.Int32()
 		case unix.IFLA_XDP_EXPECTED_FD:
-			xdp.ExpectedFD = ad.Uint32()
+			xdp.ExpectedFD = ad.Int32()
 		case unix.IFLA_XDP_ATTACHED:
 			xdp.Attached = ad.Uint8()
 		case unix.IFLA_XDP_FLAGS:
@@ -576,12 +612,11 @@ func (xdp *LinkXDP) decode(ad *netlink.AttributeDecoder) error {
 }
 
 func (xdp *LinkXDP) encode(ae *netlink.AttributeEncoder) error {
-
-	ae.Uint32(unix.IFLA_XDP_FD, xdp.FD)
-	ae.Uint32(unix.IFLA_XDP_EXPECTED_FD, xdp.ExpectedFD)
-	ae.Uint8(unix.IFLA_XDP_ATTACHED, xdp.Attached)
+	ae.Int32(unix.IFLA_XDP_FD, xdp.FD)
+	ae.Int32(unix.IFLA_XDP_EXPECTED_FD, xdp.ExpectedFD)
 	ae.Uint32(unix.IFLA_XDP_FLAGS, xdp.Flags)
-	ae.Uint32(unix.IFLA_XDP_PROG_ID, xdp.ProgID)
-
+	// XDP_ATtACHED and XDP_PROG_ID are things that only can return from the kernel,
+	// not be send, so we don't encode them.
+	// source: https://elixir.bootlin.com/linux/v5.10.15/source/net/core/rtnetlink.c#L2894
 	return nil
 }

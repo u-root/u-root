@@ -49,7 +49,7 @@ func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error
 		// initialized.
 		n, err := unix.Getrandom(b, unix.GRND_NONBLOCK)
 		if err == nil {
-			return n, err
+			return n, nil
 		}
 		select {
 		case <-ctx.Done():

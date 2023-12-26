@@ -26,11 +26,11 @@ type ProgressReadCloser struct {
 func (rc *ProgressReadCloser) Read(p []byte) (n int, err error) {
 	defer func() {
 		numSymbols := (rc.counter%rc.Interval + n) / rc.Interval
-		rc.W.Write([]byte(strings.Repeat(rc.Symbol, numSymbols)))
+		_, _ = rc.W.Write([]byte(strings.Repeat(rc.Symbol, numSymbols)))
 		rc.counter += n
 		rc.written = (rc.written || numSymbols > 0)
 		if err == io.EOF && rc.written {
-			rc.W.Write([]byte("\n"))
+			_, _ = rc.W.Write([]byte("\n"))
 		}
 	}()
 	return rc.RC.Read(p)

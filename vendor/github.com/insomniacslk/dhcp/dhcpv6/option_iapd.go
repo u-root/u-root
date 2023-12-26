@@ -18,6 +18,9 @@ type PDOptions struct {
 // Prefixes are the prefixes associated with this delegation.
 func (po PDOptions) Prefixes() []*OptIAPrefix {
 	opts := po.Options.Get(OptionIAPrefix)
+	if len(opts) == 0 {
+		return nil
+	}
 	pre := make([]*OptIAPrefix, 0, len(opts))
 	for _, o := range opts {
 		if iap, ok := o.(*OptIAPrefix); ok {

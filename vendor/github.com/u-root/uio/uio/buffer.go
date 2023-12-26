@@ -6,6 +6,7 @@ package uio
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/josharian/native"
@@ -93,11 +94,15 @@ func (b *Buffer) WriteN(n int) []byte {
 	return b.data[len(b.data)-n:]
 }
 
+// ErrBufferTooShort is returned when a caller wants to read more bytes than
+// are available in the buffer.
+var ErrBufferTooShort = errors.New("buffer too short")
+
 // ReadN consumes n bytes from the Buffer. It returns nil, false if there
 // aren't enough bytes left.
 func (b *Buffer) ReadN(n int) ([]byte, error) {
 	if !b.Has(n) {
-		return nil, fmt.Errorf("buffer too short at position %d: have %d bytes, want %d bytes", b.byteCount, b.Len(), n)
+		return nil, fmt.Errorf("%w at position %d: have %d bytes, want %d bytes", ErrBufferTooShort, b.byteCount, b.Len(), n)
 	}
 	rval := b.data[:n]
 	b.data = b.data[n:]
@@ -204,6 +209,9 @@ func (l *Lexer) Error() error {
 	return l.err
 }
 
+// ErrUnreadBytes is returned when there is more data left to read in the buffer.
+var ErrUnreadBytes = errors.New("buffer contains unread bytes")
+
 // FinError returns an error if an error occurred or if there is more data left
 // to read in the buffer.
 func (l *Lexer) FinError() error {
@@ -211,7 +219,7 @@ func (l *Lexer) FinError() error {
 		return l.err
 	}
 	if l.Buffer.Len() > 0 {
-		return fmt.Errorf("buffer contains more bytes than it should")
+		return ErrUnreadBytes
 	}
 	return nil
 }
@@ -224,7 +232,7 @@ func (l *Lexer) Read8() uint8 {
 	if v == nil {
 		return 0
 	}
-	return uint8(v[0])
+	return v[0]
 }
 
 // Read16 reads a 16-bit value from the Buffer.
@@ -319,7 +327,7 @@ func (l *Lexer) WriteData(data interface{}) {
 //
 // If an error occurred, Error() will return a non-nil error.
 func (l *Lexer) Write8(v uint8) {
-	l.append(1)[0] = byte(v)
+	l.append(1)[0] = v
 }
 
 // Write16 writes a 16-bit value to the Buffer.

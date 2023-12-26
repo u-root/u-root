@@ -248,18 +248,22 @@ func NewRequestFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) 
 	)...)
 }
 
-// NewRenewFromOffer builds a DHCPv4 RENEW-style request from an offer. RENEW requests have minor
-// changes to their options compared to SELECT requests as specified by RFC 2131, section 4.3.2.
-func NewRenewFromOffer(offer *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
-	return NewRequestFromOffer(offer, PrependModifiers(modifiers,
-		// The server identifier option must not be filled in
-		WithoutOption(OptionServerIdentifier),
-		// The requested IP address must not be filled in
-		WithoutOption(OptionRequestedIPAddress),
+// NewRenewFromAck builds a DHCPv4 RENEW-style request from the ACK of a lease. RENEW requests have
+// minor changes to their options compared to SELECT requests as specified by RFC 2131, section 4.3.2.
+func NewRenewFromAck(ack *DHCPv4, modifiers ...Modifier) (*DHCPv4, error) {
+	return New(PrependModifiers(modifiers,
+		WithReply(ack),
+		WithMessageType(MessageTypeRequest),
 		// The client IP must be filled in with the IP offered to the client
-		WithClientIP(offer.YourIPAddr),
+		WithClientIP(ack.YourIPAddr),
 		// The renewal request must use unicast
 		WithBroadcast(false),
+		WithRequestedOptions(
+			OptionSubnetMask,
+			OptionRouter,
+			OptionDomainName,
+			OptionDomainNameServer,
+		),
 	)...)
 }
 

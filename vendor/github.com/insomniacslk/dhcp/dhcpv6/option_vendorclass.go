@@ -1,7 +1,6 @@
 package dhcpv6
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -49,8 +48,8 @@ func (op *OptVendorClass) FromBytes(data []byte) error {
 		len := buf.Read16()
 		op.Data = append(op.Data, buf.CopyN(int(len)))
 	}
-	if len(op.Data) < 1 {
-		return errors.New("ParseOptVendorClass: at least one vendor class data is required")
+	if len(op.Data) == 0 {
+		return fmt.Errorf("%w: vendor class data should not be empty", uio.ErrBufferTooShort)
 	}
 	return buf.FinError()
 }

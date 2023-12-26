@@ -1,7 +1,9 @@
 package rtnetlink
 
 import (
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
 	"unsafe"
 
@@ -78,15 +80,21 @@ func (m *RouteMessage) UnmarshalBinary(b []byte) error {
 	m.Flags = nativeEndian.Uint32(b[8:12])
 
 	if l > unix.SizeofRtMsg {
-		m.Attributes = RouteAttributes{}
 		ad, err := netlink.NewAttributeDecoder(b[unix.SizeofRtMsg:])
 		if err != nil {
 			return err
 		}
-		err = m.Attributes.decode(ad)
-		if err != nil {
+
+		var ra RouteAttributes
+		if err := ra.decode(ad); err != nil {
 			return err
 		}
+
+		// Must consume errors from decoder before returning.
+		if err := ad.Err(); err != nil {
+			return fmt.Errorf("invalid route message attributes: %v", err)
+		}
+		m.Attributes = ra
 	}
 
 	return nil
@@ -99,73 +107,51 @@ type RouteService struct {
 	c *Conn
 }
 
+func (r *RouteService) execute(m Message, family uint16, flags netlink.HeaderFlags) ([]RouteMessage, error) {
+	msgs, err := r.c.Execute(m, family, flags)
+
+	routes := make([]RouteMessage, len(msgs))
+	for i := range msgs {
+		routes[i] = *msgs[i].(*RouteMessage)
+	}
+
+	return routes, err
+}
+
 // Add new route
 func (r *RouteService) Add(req *RouteMessage) error {
 	flags := netlink.Request | netlink.Create | netlink.Acknowledge | netlink.Excl
 	_, err := r.c.Execute(req, unix.RTM_NEWROUTE, flags)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // Replace or add new route
 func (r *RouteService) Replace(req *RouteMessage) error {
 	flags := netlink.Request | netlink.Create | netlink.Replace | netlink.Acknowledge
 	_, err := r.c.Execute(req, unix.RTM_NEWROUTE, flags)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // Delete existing route
 func (r *RouteService) Delete(req *RouteMessage) error {
 	flags := netlink.Request | netlink.Acknowledge
 	_, err := r.c.Execute(req, unix.RTM_DELROUTE, flags)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // Get Route(s)
 func (r *RouteService) Get(req *RouteMessage) ([]RouteMessage, error) {
 	flags := netlink.Request | netlink.DumpFiltered
-	msgs, err := r.c.Execute(req, unix.RTM_GETROUTE, flags)
-	if err != nil {
-		return nil, err
-	}
-
-	routes := make([]RouteMessage, 0, len(msgs))
-	for _, m := range msgs {
-		route := (m).(*RouteMessage)
-		routes = append(routes, *route)
-	}
-
-	return routes, nil
+	return r.execute(req, unix.RTM_GETROUTE, flags)
 }
 
 // List all routes
 func (r *RouteService) List() ([]RouteMessage, error) {
-	req := &RouteMessage{}
-
 	flags := netlink.Request | netlink.Dump
-	msgs, err := r.c.Execute(req, unix.RTM_GETROUTE, flags)
-	if err != nil {
-		return nil, err
-	}
-
-	routes := make([]RouteMessage, 0, len(msgs))
-	for _, m := range msgs {
-		route := (m).(*RouteMessage)
-		routes = append(routes, *route)
-	}
-
-	return routes, nil
+	return r.execute(&RouteMessage{}, unix.RTM_GETROUTE, flags)
 }
 
 type RouteAttributes struct {
@@ -176,35 +162,23 @@ type RouteAttributes struct {
 	Priority  uint32
 	Table     uint32
 	Mark      uint32
+	Pref      *uint8
 	Expires   *uint32
 	Metrics   *RouteMetrics
 	Multipath []NextHop
 }
 
 func (a *RouteAttributes) decode(ad *netlink.AttributeDecoder) error {
-
 	for ad.Next() {
 		switch ad.Type() {
 		case unix.RTA_UNSPEC:
-			//unused attribute
+			// unused attribute
 		case unix.RTA_DST:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
-				return errInvalidRouteMessageAttr
-			}
-			a.Dst = ad.Bytes()
+			ad.Do(decodeIP(&a.Dst))
 		case unix.RTA_PREFSRC:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
-				return errInvalidRouteMessageAttr
-			}
-			a.Src = ad.Bytes()
+			ad.Do(decodeIP(&a.Src))
 		case unix.RTA_GATEWAY:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
-				return errInvalidRouteMessageAttr
-			}
-			a.Gateway = ad.Bytes()
+			ad.Do(decodeIP(&a.Gateway))
 		case unix.RTA_OIF:
 			a.OutIface = ad.Uint32()
 		case unix.RTA_PRIORITY:
@@ -221,41 +195,26 @@ func (a *RouteAttributes) decode(ad *netlink.AttributeDecoder) error {
 			ad.Nested(a.Metrics.decode)
 		case unix.RTA_MULTIPATH:
 			ad.Do(a.parseMultipath)
+		case unix.RTA_PREF:
+			pref := ad.Uint8()
+			a.Pref = &pref
 		}
 	}
 
-	return ad.Err()
+	return nil
 }
 
 func (a *RouteAttributes) encode(ae *netlink.AttributeEncoder) error {
 	if a.Dst != nil {
-		if ipv4 := a.Dst.To4(); ipv4 == nil {
-			// Dst Addr is IPv6
-			ae.Bytes(unix.RTA_DST, a.Dst)
-		} else {
-			// Dst Addr is IPv4
-			ae.Bytes(unix.RTA_DST, ipv4)
-		}
+		ae.Do(unix.RTA_DST, encodeIP(a.Dst))
 	}
 
 	if a.Src != nil {
-		if ipv4 := a.Src.To4(); ipv4 == nil {
-			// Src Addr is IPv6
-			ae.Bytes(unix.RTA_PREFSRC, a.Src)
-		} else {
-			// Src Addr is IPv4
-			ae.Bytes(unix.RTA_PREFSRC, ipv4)
-		}
+		ae.Do(unix.RTA_PREFSRC, encodeIP(a.Src))
 	}
 
 	if a.Gateway != nil {
-		if ipv4 := a.Gateway.To4(); ipv4 == nil {
-			// Gateway Addr is IPv6
-			ae.Bytes(unix.RTA_GATEWAY, a.Gateway)
-		} else {
-			// Gateway Addr is IPv4
-			ae.Bytes(unix.RTA_GATEWAY, ipv4)
-		}
+		ae.Do(unix.RTA_GATEWAY, encodeIP(a.Gateway))
 	}
 
 	if a.OutIface != 0 {
@@ -272,6 +231,10 @@ func (a *RouteAttributes) encode(ae *netlink.AttributeEncoder) error {
 
 	if a.Mark != 0 {
 		ae.Uint32(unix.RTA_MARK, a.Mark)
+	}
+
+	if a.Pref != nil {
+		ae.Uint8(unix.RTA_PREF, *a.Pref)
 	}
 
 	if a.Expires != nil {
@@ -294,6 +257,7 @@ type RouteMetrics struct {
 	AdvMSS   uint32
 	Features uint32
 	InitCwnd uint32
+	InitRwnd uint32
 	MTU      uint32
 }
 
@@ -306,6 +270,8 @@ func (rm *RouteMetrics) decode(ad *netlink.AttributeDecoder) error {
 			rm.Features = ad.Uint32()
 		case unix.RTAX_INITCWND:
 			rm.InitCwnd = ad.Uint32()
+		case unix.RTAX_INITRWND:
+			rm.InitRwnd = ad.Uint32()
 		case unix.RTAX_MTU:
 			rm.MTU = ad.Uint32()
 		}
@@ -328,6 +294,10 @@ func (rm *RouteMetrics) encode(ae *netlink.AttributeEncoder) error {
 		ae.Uint32(unix.RTAX_INITCWND, rm.InitCwnd)
 	}
 
+	if rm.InitRwnd != 0 {
+		ae.Uint32(unix.RTAX_INITRWND, rm.InitRwnd)
+	}
+
 	if rm.MTU != 0 {
 		ae.Uint32(unix.RTAX_MTU, rm.MTU)
 	}
@@ -348,8 +318,9 @@ type RTNextHop struct {
 
 // NextHop wraps struct rtnexthop to provide access to nested attributes
 type NextHop struct {
-	Hop     RTNextHop // a rtnexthop struct
-	Gateway net.IP    // that struct's nested Gateway attribute
+	Hop     RTNextHop     // a rtnexthop struct
+	Gateway net.IP        // that struct's nested Gateway attribute
+	MPLS    []MPLSNextHop // Any MPLS next hops for a route.
 }
 
 func (a *RouteAttributes) encodeMultipath() ([]byte, error) {
@@ -359,9 +330,15 @@ func (a *RouteAttributes) encodeMultipath() ([]byte, error) {
 		// compute the length of each (rtnexthop, attributes) pair.
 		ae := netlink.NewAttributeEncoder()
 
-		if a.Gateway != nil {
-			// TODO(mdlayher): more validation.
-			ae.Bytes(unix.RTA_GATEWAY, nh.Gateway)
+		if nh.Gateway != nil {
+			ae.Do(unix.RTA_GATEWAY, encodeIP(nh.Gateway))
+		}
+
+		if len(nh.MPLS) > 0 {
+			// TODO(mdlayher): validation over different encapsulation types,
+			// and ensure that only one can be set.
+			ae.Uint16(unix.RTA_ENCAP_TYPE, unix.LWTUNNEL_ENCAP_MPLS)
+			ae.Nested(unix.RTA_ENCAP, nh.encodeEncap)
 		}
 
 		ab, err := ae.Encode()
@@ -417,23 +394,125 @@ func (a *RouteAttributes) parseMultipath(b []byte) error {
 	return mpp.Err()
 }
 
-// rtnexthop payload is at least one nested attribute RTA_GATEWAY
-// possibly others?
+// decode decodes netlink attribute values into a NextHop.
 func (nh *NextHop) decode(ad *netlink.AttributeDecoder) error {
 	if ad == nil {
 		// Invalid decoder, do nothing.
 		return nil
 	}
 
+	// If encapsulation is present, we won't know how to deal with it until we
+	// identify the right type and then later parse the nested attribute bytes.
+	var (
+		encapType uint16
+		encapBuf  []byte
+	)
+
 	for ad.Next() {
 		switch ad.Type() {
+		case unix.RTA_ENCAP:
+			encapBuf = ad.Bytes()
+		case unix.RTA_ENCAP_TYPE:
+			encapType = ad.Uint16()
 		case unix.RTA_GATEWAY:
-			l := len(ad.Bytes())
-			if l != 4 && l != 16 {
+			ad.Do(decodeIP(&nh.Gateway))
+		}
+	}
+
+	if err := ad.Err(); err != nil {
+		return err
+	}
+
+	if encapType != 0 && encapBuf != nil {
+		// Found encapsulation, start decoding it from the buffer.
+		return nh.decodeEncap(encapType, encapBuf)
+	}
+
+	return nil
+}
+
+// An MPLSNextHop is a route next hop using MPLS encapsulation.
+type MPLSNextHop struct {
+	Label         int
+	TrafficClass  int
+	BottomOfStack bool
+	TTL           uint8
+}
+
+// TODO(mdlayher): MPLSNextHop TTL vs MPLS_IPTUNNEL_TTL. What's the difference?
+
+// encodeEncap encodes netlink attribute values related to encapsulation from
+// a NextHop.
+func (nh *NextHop) encodeEncap(ae *netlink.AttributeEncoder) error {
+	// TODO: this only handles MPLS encapsulation as that is all we support.
+
+	// Allocate enough space for an MPLS label stack.
+	var (
+		i int
+		b = make([]byte, 4*len(nh.MPLS))
+	)
+
+	for _, mnh := range nh.MPLS {
+		// Pack the following:
+		//  - label: 20 bits
+		//  - traffic class: 3 bits
+		//  - bottom-of-stack: 1 bit
+		//  - TTL: 8 bits
+		binary.BigEndian.PutUint32(b[i:i+4], uint32(mnh.Label)<<12)
+
+		b[i+2] |= byte(mnh.TrafficClass) << 1
+
+		if mnh.BottomOfStack {
+			b[i+2] |= 1
+		}
+
+		b[i+3] = mnh.TTL
+
+		// Advance in the buffer to begin storing the next label.
+		i += 4
+	}
+
+	// Finally store the output bytes.
+	ae.Bytes(unix.MPLS_IPTUNNEL_DST, b)
+	return nil
+}
+
+// decodeEncap decodes netlink attribute values related to encapsulation into a
+// NextHop.
+func (nh *NextHop) decodeEncap(typ uint16, b []byte) error {
+	if typ != unix.LWTUNNEL_ENCAP_MPLS {
+		// TODO: handle other encapsulation types as needed.
+		return nil
+	}
+
+	// MPLS labels are stored as big endian bytes.
+	ad, err := netlink.NewAttributeDecoder(b)
+	if err != nil {
+		return err
+	}
+
+	for ad.Next() {
+		switch ad.Type() {
+		case unix.MPLS_IPTUNNEL_DST:
+			// Every 4 bytes stores another MPLS label, so make sure the stored
+			// bytes are divisible by exactly 4.
+			b := ad.Bytes()
+			if len(b)%4 != 0 {
 				return errInvalidRouteMessageAttr
 			}
 
-			nh.Gateway = ad.Bytes()
+			for i := 0; i < len(b); i += 4 {
+				n := binary.BigEndian.Uint32(b[i : i+4])
+
+				// For reference, see:
+				// https://en.wikipedia.org/wiki/Multiprotocol_Label_Switching#Operation
+				nh.MPLS = append(nh.MPLS, MPLSNextHop{
+					Label:         int(n) >> 12,
+					TrafficClass:  int(n & 0xe00 >> 9),
+					BottomOfStack: n&0x100 != 0,
+					TTL:           uint8(n & 0xff),
+				})
+			}
 		}
 	}
 

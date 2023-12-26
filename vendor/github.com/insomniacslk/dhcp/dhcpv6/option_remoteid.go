@@ -31,7 +31,7 @@ func (op *OptRemoteID) String() string {
 	)
 }
 
-// FromBytes builds an OptRemoteId structure from a sequence of bytes. The
+// FromBytes builds an OptRemoteID structure from a sequence of bytes. The
 // input data does not include option code and length bytes.
 func (op *OptRemoteID) FromBytes(data []byte) error {
 	buf := uio.NewBigEndianBuffer(data)

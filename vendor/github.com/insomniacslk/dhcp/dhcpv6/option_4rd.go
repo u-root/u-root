@@ -9,7 +9,7 @@ import (
 
 // Opt4RD represents a 4RD option. It is only a container for 4RD_*_RULE options
 type Opt4RD struct {
-	Options
+	FourRDOptions
 }
 
 // Code returns the Option Code for this option
@@ -38,16 +38,56 @@ func (op *Opt4RD) FromBytes(data []byte) error {
 	return op.Options.FromBytes(data)
 }
 
-// Opt4RDMapRule represents a 4RD Mapping Rule option
-// The option is described in https://tools.ietf.org/html/rfc7600#section-4.9
-// The 4RD mapping rules are described in https://tools.ietf.org/html/rfc7600#section-4.2
+// FourRDOptions are options that can be encapsulated with the 4RD option.
+type FourRDOptions struct {
+	Options
+}
+
+// MapRules returns the map rules associated with the 4RD option.
+//
+//	"The OPTION_4RD DHCPv6 option contains at least one encapsulated
+//	OPTION_4RD_MAP_RULE option." (RFC 7600 Section 4.9)
+func (frdo FourRDOptions) MapRules() []*Opt4RDMapRule {
+	opts := frdo.Options.Get(Option4RDMapRule)
+	var mrs []*Opt4RDMapRule
+	for _, o := range opts {
+		if m, ok := o.(*Opt4RDMapRule); ok {
+			mrs = append(mrs, m)
+		}
+	}
+	return mrs
+}
+
+// NonMapRule returns the non-map-rule associated with this option.
+//
+//	"The OPTION_4RD DHCPv6 option contains ... a maximum of one
+//	encapsulated OPTION_4RD_NON_MAP_RULE option." (RFC 7600 Section 4.9)
+func (frdo FourRDOptions) NonMapRule() *Opt4RDNonMapRule {
+	opt := frdo.Options.GetOne(Option4RDNonMapRule)
+	if opt == nil {
+		return nil
+	}
+	nmr, ok := opt.(*Opt4RDNonMapRule)
+	if !ok {
+		return nil
+	}
+	return nmr
+}
+
+// Opt4RDMapRule represents a 4RD Mapping Rule option.
+//
+// The option is described in RFC 7600 Section 4.9. The 4RD mapping rules are
+// described in RFC 7600 Section 4.2.
 type Opt4RDMapRule struct {
 	// Prefix4 is the IPv4 prefix mapped by this rule
 	Prefix4 net.IPNet
+
 	// Prefix6 is the IPv6 prefix mapped by this rule
 	Prefix6 net.IPNet
+
 	// EABitsLength is the number of bits of an address used in constructing the mapped address
 	EABitsLength uint8
+
 	// WKPAuthorized determines if well-known ports are assigned to addresses in an A+P mapping
 	// It can only be set if the length of Prefix4 + EABits > 32
 	WKPAuthorized bool
@@ -120,8 +160,10 @@ func (op *Opt4RDMapRule) FromBytes(data []byte) error {
 type Opt4RDNonMapRule struct {
 	// HubAndSpoke is whether the network topology is hub-and-spoke or meshed
 	HubAndSpoke bool
+
 	// TrafficClass is an optional 8-bit tunnel traffic class identifier
 	TrafficClass *uint8
+
 	// DomainPMTU is the Path MTU for this 4RD domain
 	DomainPMTU uint16
 }
@@ -158,8 +200,7 @@ func (op *Opt4RDNonMapRule) String() string {
 		tClass = *op.TrafficClass
 	}
 
-	return fmt.Sprintf("%s: {HubAndSpoke=%t, TrafficClass=%v, DomainPMTU=%d}",
-		op.Code(), op.HubAndSpoke, tClass, op.DomainPMTU)
+	return fmt.Sprintf("%s: {HubAndSpoke=%t, TrafficClass=%v, DomainPMTU=%d}", op.Code(), op.HubAndSpoke, tClass, op.DomainPMTU)
 }
 
 // FromBytes builds an Opt4RDNonMapRule structure from a sequence of bytes.

@@ -478,6 +478,25 @@ func (c *Client) Request(ctx context.Context, modifiers ...dhcpv4.Modifier) (lea
 	return c.RequestFromOffer(ctx, offer, modifiers...)
 }
 
+// Inform sends an INFORM request using the given local IP.
+// Returns the ACK response from the server on success.
+func (c *Client) Inform(ctx context.Context, localIP net.IP, modifiers ...dhcpv4.Modifier) (*dhcpv4.DHCPv4, error) {
+	request, err := dhcpv4.NewInform(c.ifaceHWAddr, localIP, modifiers...)
+	if err != nil {
+		return nil, err
+	}
+
+	// DHCP clients must not fill in the server identifier in an INFORM request as per RFC 2131 Section 4.4.1 Table 5,
+	// however, they may still unicast the request to the target server if the address is known (c.serverAddr), as per
+	// Section 4.4.3. The server must then respond with an ACK, as per Section 4.3.5.
+	response, err := c.SendAndRead(ctx, c.serverAddr, request, IsMessageType(dhcpv4.MessageTypeAck))
+	if err != nil {
+		return nil, fmt.Errorf("got an error while processing the request: %w", err)
+	}
+
+	return response, nil
+}
+
 // ErrNak is returned if a DHCP server rejected our Request.
 type ErrNak struct {
 	Offer *dhcpv4.DHCPv4

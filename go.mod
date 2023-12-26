@@ -16,7 +16,7 @@ require (
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/goexpect v0.0.0-20191001010744-5b6988669ffa
 	github.com/google/uuid v1.3.0
-	github.com/insomniacslk/dhcp v0.0.0-20230220063916-5369909a5de7
+	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.10.6
@@ -33,7 +33,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/u-root/gobusybox/src v0.0.0-20230806212452-e9366a5b9fdc
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/uio v0.0.0-20230215032506-9aa6f7e2d72c
+	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923
 	github.com/ulikunitz/xz v0.5.8
 	github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
@@ -62,15 +62,15 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/josharian/native v1.1.0 // indirect
-	github.com/jsimonetti/rtnetlink v0.0.0-20201110080708-d2c240429e6c // indirect
+	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
-	github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7 // indirect
-	github.com/mdlayher/netlink v1.1.1 // indirect
-	github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065 // indirect
+	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/packet v1.1.2 // indirect
+	github.com/mdlayher/socket v0.4.1 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect

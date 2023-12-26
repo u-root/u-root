@@ -45,7 +45,7 @@ func (r *urandomReader) ReadContext(ctx context.Context, b []byte) (int, error) 
 	for {
 		n, err := unix.Read(r.fd, b)
 		if err == nil {
-			return n, err
+			return n, nil
 		}
 		select {
 		case <-ctx.Done():

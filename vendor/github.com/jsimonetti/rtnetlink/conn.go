@@ -17,6 +17,7 @@ type Conn struct {
 	Address *AddressService
 	Route   *RouteService
 	Neigh   *NeighService
+	Rule    *RuleService
 }
 
 var _ conn = &netlink.Conn{}
@@ -27,6 +28,7 @@ type conn interface {
 	Send(m netlink.Message) (netlink.Message, error)
 	Receive() ([]netlink.Message, error)
 	Execute(m netlink.Message) ([]netlink.Message, error)
+	SetOption(option netlink.ConnOption, enable bool) error
 	SetReadDeadline(t time.Time) error
 }
 
@@ -53,6 +55,7 @@ func newConn(c conn) *Conn {
 	rtc.Address = &AddressService{c: rtc}
 	rtc.Route = &RouteService{c: rtc}
 	rtc.Neigh = &NeighService{c: rtc}
+	rtc.Rule = &RuleService{c: rtc}
 
 	return rtc
 }
@@ -62,10 +65,12 @@ func (c *Conn) Close() error {
 	return c.c.Close()
 }
 
+// SetOption enables or disables a netlink socket option for the Conn.
+func (c *Conn) SetOption(option netlink.ConnOption, enable bool) error {
+	return c.c.SetOption(option, enable)
+}
+
 // SetReadDeadline sets the read deadline associated with the connection.
-//
-// Deadline functionality is only supported on Go 1.12+. Calling this function
-// on older versions of Go will result in an error.
 func (c *Conn) SetReadDeadline(t time.Time) error {
 	return c.c.SetReadDeadline(t)
 }
@@ -135,7 +140,7 @@ func (c *Conn) Execute(m Message, family uint16, flags netlink.HeaderFlags) ([]M
 	return unpackMessages(msgs)
 }
 
-//Message is the interface used for passing around different kinds of rtnetlink messages
+// Message is the interface used for passing around different kinds of rtnetlink messages
 type Message interface {
 	encoding.BinaryMarshaler
 	encoding.BinaryUnmarshaler
@@ -176,6 +181,8 @@ func unpackMessages(msgs []netlink.Message) ([]Message, error) {
 			m = &RouteMessage{}
 		case unix.RTM_GETNEIGH, unix.RTM_NEWNEIGH, unix.RTM_DELNEIGH:
 			m = &NeighMessage{}
+		case unix.RTM_GETRULE, unix.RTM_NEWRULE, unix.RTM_DELRULE:
+			m = &RuleMessage{}
 		default:
 			continue
 		}

@@ -92,7 +92,7 @@ func (c *Conn) LinkUp(ifc *net.Interface) error {
 		return err
 	}
 	tx := &rtnetlink.LinkMessage{
-		Family: rx.Family,
+		Family: unix.AF_UNSPEC,
 		Type:   rx.Type,
 		Index:  uint32(ifc.Index),
 		Flags:  unix.IFF_UP,
@@ -108,7 +108,7 @@ func (c *Conn) LinkDown(ifc *net.Interface) error {
 		return err
 	}
 	tx := &rtnetlink.LinkMessage{
-		Family: rx.Family,
+		Family: unix.AF_UNSPEC,
 		Type:   rx.Type,
 		Index:  uint32(ifc.Index),
 		Flags:  0,

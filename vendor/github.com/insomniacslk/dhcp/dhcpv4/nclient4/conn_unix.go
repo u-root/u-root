@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.12 && (darwin || freebsd || linux || netbsd || openbsd)
+//go:build go1.12 && (darwin || freebsd || linux || netbsd || openbsd || dragonfly)
 // +build go1.12
-// +build darwin freebsd linux netbsd openbsd
+// +build darwin freebsd linux netbsd openbsd dragonfly
 
 package nclient4
 
@@ -13,9 +13,9 @@ import (
 	"io"
 	"net"
 
-	"github.com/mdlayher/ethernet"
-	"github.com/mdlayher/raw"
+	"github.com/mdlayher/packet"
 	"github.com/u-root/uio/uio"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -39,7 +39,7 @@ func NewRawUDPConn(iface string, port int) (net.PacketConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	rawConn, err := raw.ListenPacket(ifc, uint16(ethernet.EtherTypeIPv4), &raw.Config{LinuxSockDGRAM: true})
+	rawConn, err := packet.Listen(ifc, packet.Datagram, unix.ETH_P_IP, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +99,9 @@ func (upc *BroadcastRawUDPConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		pkt = pkt[:n]
 		buf := uio.NewBigEndianBuffer(pkt)
 
-		// To read the header length, access data directly.
-		if !buf.Has(ipv4MinimumSize) {
-			continue
-		}
-
 		ipHdr := ipv4(buf.Data())
 
-		if !buf.Has(int(ipHdr.headerLength())) {
+		if !ipHdr.isValid(n) {
 			continue
 		}
 
@@ -152,8 +147,8 @@ func (upc *BroadcastRawUDPConn) WriteTo(b []byte, addr net.Addr) (int, error) {
 	}
 
 	// Using the boundAddr is not quite right here, but it works.
-	packet := udp4pkt(b, udpAddr, upc.boundAddr)
+	pkt := udp4pkt(b, udpAddr, upc.boundAddr)
 
 	// Broadcasting is not always right, but hell, what the ARP do I know.
-	return upc.PacketConn.WriteTo(packet, &raw.Addr{HardwareAddr: BroadcastMac})
+	return upc.PacketConn.WriteTo(pkt, &packet.Addr{HardwareAddr: BroadcastMac})
 }
