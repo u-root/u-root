@@ -20,11 +20,21 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+type ModBehavior string
+
+const (
+	ModNone     ModBehavior = ""
+	ModOnly     ModBehavior = "mod"
+	ModReadonly ModBehavior = "readonly"
+	ModVendor   ModBehavior = "vendor"
+)
+
 // Environ are the environment variables for the Go compiler.
 type Environ struct {
 	build.Context
 
 	GO111MODULE string
+	Mod         ModBehavior
 	GBBDEBUG    bool
 }
 
@@ -32,6 +42,13 @@ type Environ struct {
 func (c *Environ) RegisterFlags(f *flag.FlagSet) {
 	arg := (*uflag.Strings)(&c.BuildTags)
 	f.Var(arg, "go-build-tags", "Go build tags")
+
+	mod := (*string)(&c.Mod)
+	defMod := ""
+	if c.GO111MODULE == "on" || c.GO111MODULE == "auto" {
+		defMod = "readonly"
+	}
+	f.StringVar(mod, "go-mod", defMod, "Value of -mod to go commands (allowed: (empty), vendor, mod, readonly)")
 }
 
 // Valid returns an error if GOARCH, GOROOT, or GOOS are unset.
@@ -105,6 +122,10 @@ func Default(opt ...Opt) *Environ {
 		GO111MODULE: os.Getenv("GO111MODULE"),
 		GBBDEBUG:    parseBool(os.Getenv("GBBDEBUG")),
 	}
+
+	if env.GO111MODULE == "on" || env.GO111MODULE == "auto" {
+		env.Mod = ModReadonly
+	}
 	for _, o := range opt {
 		o(env)
 	}
@@ -122,12 +143,16 @@ func (c *Environ) Lookup(mode packages.LoadMode, dir string, patterns ...string)
 		tags := fmt.Sprintf("-tags=%s", strings.Join(c.Context.BuildTags, ","))
 		cfg.BuildFlags = []string{tags}
 	}
+	if c.GO111MODULE != "off" && len(c.Mod) > 0 {
+		cfg.BuildFlags = append(cfg.BuildFlags, "-mod", string(c.Mod))
+	}
 	return packages.Load(cfg, patterns...)
 }
 
 // GoCmd runs a go command in the environment.
-func (c Environ) GoCmd(args ...string) *exec.Cmd {
+func (c Environ) GoCmd(gocmd string, args ...string) *exec.Cmd {
 	goBin := filepath.Join(c.GOROOT, "bin", "go")
+	args = append([]string{gocmd}, args...)
 	cmd := exec.Command(goBin, args...)
 	if c.GBBDEBUG {
 		log.Printf("GBB Go invocation: %s %s %#v", c, goBin, args)
@@ -178,7 +203,7 @@ func (c Environ) envCommon() []string {
 func (c Environ) EnvHuman() []string {
 	env := c.envCommon()
 	if c.GOROOT != "" {
-		env = append(env, fmt.Sprintf("PATH=%s:$PATH", filepath.Join(c.GOROOT, "bin")))
+		env = append(env, fmt.Sprintf("PATH=%s", filepath.Join(c.GOROOT, "bin")))
 	}
 	return env
 }
@@ -188,9 +213,9 @@ func (c Environ) Env() []string {
 	env := c.envCommon()
 	if c.GOROOT != "" {
 		// If GOROOT is set to a different version of Go, we must
-		// ensure that $GOROOT/bin is also in path to make the "go"
-		// binary available to golang.org/x/tools/packages.
-		env = append(env, fmt.Sprintf("PATH=%s:%s", filepath.Join(c.GOROOT, "bin"), os.Getenv("PATH")))
+		// ensure that $GOROOT/bin is the path to make the "go" binary
+		// available to golang.org/x/tools/packages.
+		env = append(env, fmt.Sprintf("PATH=%s", filepath.Join(c.GOROOT, "bin")))
 	}
 	return env
 }
@@ -237,12 +262,13 @@ func (b *BuildOpts) RegisterFlags(f *flag.FlagSet) {
 // object to `binaryPath`.
 func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) error {
 	args := []string{
-		"build",
-
 		// Force rebuilding of packages.
 		"-a",
 
 		"-o", binaryPath,
+	}
+	if c.GO111MODULE != "off" && len(c.Mod) > 0 {
+		args = append(args, "-mod", string(c.Mod))
 	}
 	if c.InstallSuffix != "" {
 		args = append(args, "-installsuffix", c.Context.InstallSuffix)
@@ -272,7 +298,7 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) er
 	// We always set the working directory, so this is always '.'.
 	args = append(args, ".")
 
-	cmd := c.GoCmd(args...)
+	cmd := c.GoCmd("build", args...)
 	cmd.Dir = dirPath
 
 	if o, err := cmd.CombinedOutput(); err != nil {

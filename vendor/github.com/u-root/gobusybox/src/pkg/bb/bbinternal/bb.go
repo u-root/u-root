@@ -194,6 +194,9 @@ func importName(p *packages.Package, typePkgPath string) string {
 	if len(importName) > 0 {
 		return importName
 	}
+	if spl := strings.Split(typePkgPath, "/vendor/"); len(spl) > 1 {
+		return spl[len(spl)-1]
+	}
 	// It doesn't appear. We'll go import it.
 	return typePkgPath
 }

@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_embed_data", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "bb",

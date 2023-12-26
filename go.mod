@@ -31,7 +31,7 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20230806212452-e9366a5b9fdc
+	github.com/u-root/gobusybox/src v0.0.0-20231224233253-2944a440b6b6
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923
 	github.com/ulikunitz/xz v0.5.8
@@ -41,7 +41,7 @@ require (
 	golang.org/x/sys v0.15.0
 	golang.org/x/term v0.15.0
 	golang.org/x/text v0.14.0
-	golang.org/x/tools v0.6.0
+	golang.org/x/tools v0.16.1
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
@@ -80,9 +80,9 @@ require (
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sync v0.3.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/sync v0.5.0 // indirect
 	google.golang.org/grpc v1.56.3 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )
