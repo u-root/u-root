@@ -9,17 +9,21 @@ package gpio
 
 import (
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/vmtest"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/gpio"}, &vmtest.Options{
-		QEMUOpts: qemu.Options{
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/gpio"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
 			// Make GPIOs nums 10 to 20 available through the
 			// mockup driver.
-			KernelArgs: "gpio-mockup.gpio_mockup_ranges=10,20",
-		},
-	})
+			qemu.WithAppendKernel("gpio-mockup.gpio_mockup_ranges=10,20"),
+		)),
+	)
 }
