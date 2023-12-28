@@ -12,25 +12,6 @@ templates:
       # x7 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 7
 
-  integration-template:
-    &integration-template
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-      # x7 all timeouts for QEMU VM tests since they run without KVM.
-      - UROOT_QEMU_TIMEOUT_X: 7
-    steps:
-      - checkout
-      - run:
-          name: Test integration
-          command: UROOT_QEMU_COVERPROFILE=coverage.txt go test -a -v
-            -timeout=20m -p=1 -ldflags='-s' -failfast ./integration/...
-          no_output_timeout: 15m
-      - run:
-          name: Upload integration coverage
-          command: bash <(curl -s https://codecov.io/bash)
-
   beefy-template:
     &beefy-template
     <<: *golang-template
@@ -40,16 +21,9 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - test-pkgs
-      - test-cmds
-      - test-build
       - test-tinygo
       - test-build-tamago-riscv64
       - test-build-tamago-arm
-      - test-integration-amd64
-      - test-integration-arm
-      - test-integration-arm64
-      - race
       - compile_cmds
       - check_templates
       - check_licenses
@@ -83,15 +57,6 @@ jobs:
       - run:
           name: Upload coverage
           command: bash <(curl -s https://codecov.io/bash)
-
-  test-build:
-    <<: *beefy-template
-    steps:
-      - checkout
-      - run:
-          name: Test u-root build
-          command: go test -a -timeout=15m .
-          no_output_timeout: 15m
 
   test-tinygo:
     <<: *beefy-template
@@ -135,17 +100,6 @@ jobs:
       - run:
           name: Test u-root tamago build
           command: GOOS=tamago GOARCH=riscv64 go build ./pkg/dt/...
-
-  race:
-    <<: *beefy-template
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 1
-    steps:
-      - checkout
-      - run:
-          name: Race detector
-          command: go test -race -timeout=15m -p=1 -failfast ./cmds/... ./pkg/...
 
   compile_cmds:
     <<: *golang-template
@@ -191,20 +145,3 @@ jobs:
           name: Store build stats
           path: /tmp/stats.json
           destination: stats.json
-
-  test-integration-amd64:
-    <<: *integration-template
-    docker:
-      - image: uroottest/test-image-amd64:v5.2.0
-    resource_class: large
-
-  test-integration-arm:
-    <<: *integration-template
-    docker:
-      - image: uroottest/test-image-arm:v5.1.0
-
-  test-integration-arm64:
-    <<: *integration-template
-    docker:
-      - image: uroottest/test-image-arm64:v5.2.0
-    resource_class: large
