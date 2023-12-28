@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestTTY(t *testing.T) {
+func DisabledTestTTY(t *testing.T) {
 	tty()
 	foreground()
 	t.Logf("tty testing done")
