@@ -38,9 +38,12 @@ jobs:
             -timeout=20m -failfast -coverprofile=coverage.txt \
             -covermode=atomic ${{ matrix.extra-arg }} ./${{ matrix.dir }}/...
 
-      - uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.txt
-          fail_ci_if_error: true
-          verbose: true
+      - name: cov
+        run: bash <(curl -s https://codecov.io/bash)
+
+#      - uses: codecov/codecov-action@v3
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          files: ./coverage.txt
+#          fail_ci_if_error: true
+#          verbose: true
