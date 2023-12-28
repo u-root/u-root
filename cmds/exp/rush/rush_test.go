@@ -28,6 +28,8 @@ var tests = []struct {
 }
 
 func TestRush(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
 	// Table-driven testing
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("test%d", i), func(t *testing.T) {

@@ -6,9 +6,13 @@ package main
 
 import (
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestTTY(t *testing.T) {
+	testutil.SkipIfNotRoot(t)
+
 	tty()
 	foreground()
 	t.Logf("tty testing done")
