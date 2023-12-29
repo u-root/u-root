@@ -9,10 +9,16 @@ package loop
 
 import (
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/vmtest"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/mount/loop"}, nil)
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/mount/loop"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(qemu.WithVMTimeout(time.Minute))),
+	)
 }
