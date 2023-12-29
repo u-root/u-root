@@ -24,6 +24,9 @@ jobs:
             dir: 'pkg'
             extra-arg: '-coverpkg=./pkg/...'
 
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go ${{ matrix.go-version }}
@@ -42,5 +45,5 @@ jobs:
           files: ./coverage.txt
           fail_ci_if_error: true
           verbose: true
-          fixes: true
+            #fixes: true
           #token: ${{ secrets.CODECOV_TOKEN }}
