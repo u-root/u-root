@@ -10,28 +10,28 @@ package ipmi
 import (
 	"bytes"
 	"testing"
+	"time"
 
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/testutil"
-
-	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/vmtest"
 )
 
-func TestIntegrationIPMI(t *testing.T) {
-	o := &vmtest.Options{
-		QEMUOpts: qemu.Options{
-			Devices: []qemu.Device{
-				// This integration test requires kernel built with the following options set:
-				// CONFIG_IPMI=y
-				// CONFIG_IPMI_DEVICE_INTERFACE=y
-				// CONFIG_IPMI_WATCHDOG=y
-				// CONFIG_IPMI_SI=y
-				qemu.ArbitraryArgs{"-device", "ipmi-bmc-sim,id=bmc0"},
-				qemu.ArbitraryArgs{"-device", "pci-ipmi-kcs,bmc=bmc0"},
-			},
-		},
-	}
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/ipmi"}, o)
+func TestIntegration(t *testing.T) {
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/ipmi"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
+			// This integration test requires kernel built with the following options set:
+			// CONFIG_IPMI=y
+			// CONFIG_IPMI_DEVICE_INTERFACE=y
+			// CONFIG_IPMI_WATCHDOG=y
+			// CONFIG_IPMI_SI=y
+			qemu.ArbitraryArgs("-device", "ipmi-bmc-sim,id=bmc0"),
+			qemu.ArbitraryArgs("-device", "pci-ipmi-kcs,bmc=bmc0"),
+		)),
+	)
 }
 
 func TestWatchdogRunningQemu(t *testing.T) {
