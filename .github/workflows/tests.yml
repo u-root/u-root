@@ -24,9 +24,6 @@ jobs:
             dir: 'pkg'
             extra-arg: '-coverpkg=./pkg/...'
 
-    env:
-      CODECOV_TOKEN: '0ecf29bb-15fb-46f2-8c7d-0fb610d79f71'
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go ${{ matrix.go-version }}
@@ -40,16 +37,16 @@ jobs:
             -timeout=20m -failfast -coverprofile=coverage.txt \
             -covermode=atomic ${{ matrix.extra-arg }} ./${{ matrix.dir }}/...
 
-      - name: cov
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov upload-process -C ${GITHUB_SHA} -Z -f ./coverage.txt
+#      - name: cov
+#        run: |
+#          curl -Os https://cli.codecov.io/latest/linux/codecov
+#          chmod +x codecov
+#          ./codecov upload-process -C ${GITHUB_SHA} -Z -f ./coverage.txt
 
-#      - uses: codecov/codecov-action@v4-beta
-#        with:
-#          files: ./coverage.txt
-#          fail_ci_if_error: true
-#          verbose: true
-#            #fixes: true
-#          #token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@v4-beta
+        env:
+          CODECOV_TOKEN: '0ecf29bb-15fb-46f2-8c7d-0fb610d79f71'
+        with:
+          files: ./coverage.txt
+          fail_ci_if_error: true
+          verbose: true
