@@ -9,10 +9,16 @@ package ulog_test
 
 import (
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/vmtest"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/ulog"}, &vmtest.Options{})
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/ulog"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(qemu.WithVMTimeout(time.Minute))),
+	)
 }
