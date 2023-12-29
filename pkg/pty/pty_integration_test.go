@@ -11,15 +11,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/vmtest"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 )
 
 func TestIntegration(t *testing.T) {
-	o := &vmtest.Options{
-		QEMUOpts: qemu.Options{
-			Timeout: 120 * time.Second,
-		},
-	}
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/pty"}, o)
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/pty"},
+		vmtest.WithVMOpt(
+			vmtest.WithQEMUFn(qemu.WithVMTimeout(2*time.Minute)),
+			vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/echo"),
+		),
+	)
 }
