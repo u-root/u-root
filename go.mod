@@ -15,7 +15,6 @@ require (
 	github.com/gojuno/minimock/v3 v3.0.8
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
-	github.com/google/goexpect v0.0.0-20210430020637-ab937bf7fd6f
 	github.com/google/uuid v1.3.0
 	github.com/hugelgupf/vmtest v0.0.0-20240102225328-693afabdd27f
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
@@ -59,7 +58,6 @@ require (
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
-	github.com/golang/protobuf v1.3.3 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -86,8 +84,6 @@ require (
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
-	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
-	google.golang.org/grpc v1.31.0 // indirect
 )
 
 retract (
