@@ -44,7 +44,7 @@ jobs:
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov upload-process -C ${GITHUB_SHA} -Z -f ./coverage.txt
+          ./codecov upload-process -C ${GITHUB_SHA} -Z -f ./coverage.txt -t ${{ secrets.CODECOV_TOKEN }}
 
 #      - uses: codecov/codecov-action@v4-beta
 #        with:
