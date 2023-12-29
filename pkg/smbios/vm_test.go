@@ -9,20 +9,22 @@ package smbios
 
 import (
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/smbios"}, &vmtest.Options{
-		QEMUOpts: qemu.Options{
-			Devices: []qemu.Device{
-				qemu.ArbitraryArgs{"-smbios", "type=2,manufacturer=u-root"},
-			},
-		},
-	})
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/smbios"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+			qemu.WithVMTimeout(time.Minute),
+			qemu.ArbitraryArgs("-smbios", "type=2,manufacturer=u-root"),
+		)),
+	)
 }
 
 func TestFromSysfs(t *testing.T) {
@@ -63,7 +65,6 @@ func TestGetSystemInfo(t *testing.T) {
 }
 
 func TestGetChassisInfo(t *testing.T) {
-
 	testutil.SkipIfNotRoot(t)
 
 	info, err := FromSysfs()
@@ -78,7 +79,6 @@ func TestGetChassisInfo(t *testing.T) {
 }
 
 func TestGetProcessorInfo(t *testing.T) {
-
 	testutil.SkipIfNotRoot(t)
 
 	info, err := FromSysfs()
