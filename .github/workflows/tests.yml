@@ -40,10 +40,16 @@ jobs:
             -timeout=20m -failfast -coverprofile=coverage.txt \
             -covermode=atomic ${{ matrix.extra-arg }} ./${{ matrix.dir }}/...
 
-      - uses: codecov/codecov-action@v4-beta
-        with:
-          files: ./coverage.txt
-          fail_ci_if_error: true
-          verbose: true
-            #fixes: true
-          #token: ${{ secrets.CODECOV_TOKEN }}
+      - name: cov
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov upload-process -C ${GITHUB_SHA} -Z -f ./coverage.txt
+
+#      - uses: codecov/codecov-action@v4-beta
+#        with:
+#          files: ./coverage.txt
+#          fail_ci_if_error: true
+#          verbose: true
+#            #fixes: true
+#          #token: ${{ secrets.CODECOV_TOKEN }}
