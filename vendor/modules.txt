@@ -99,13 +99,6 @@ github.com/gliderlabs/ssh
 # github.com/gojuno/minimock/v3 v3.0.8
 ## explicit; go 1.13
 github.com/gojuno/minimock/v3
-# github.com/golang/protobuf v1.3.3
-## explicit; go 1.12
-github.com/golang/protobuf/proto
-github.com/golang/protobuf/ptypes
-github.com/golang/protobuf/ptypes/any
-github.com/golang/protobuf/ptypes/duration
-github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/go-cmp v0.5.9
 ## explicit; go 1.13
 github.com/google/go-cmp/cmp
@@ -122,9 +115,6 @@ github.com/google/go-tpm/tpm2/transport
 github.com/google/go-tpm/tpmutil
 github.com/google/go-tpm/tpmutil/mssim
 github.com/google/go-tpm/tpmutil/tbs
-# github.com/google/goexpect v0.0.0-20210430020637-ab937bf7fd6f
-## explicit; go 1.12
-github.com/google/goexpect
 # github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2
 ## explicit
 github.com/google/goterm/term
@@ -398,14 +388,6 @@ golang.org/x/tools/internal/tokeninternal
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
-## explicit
-google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.31.0
-## explicit; go 1.11
-google.golang.org/grpc/codes
-google.golang.org/grpc/internal/status
-google.golang.org/grpc/status
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2
