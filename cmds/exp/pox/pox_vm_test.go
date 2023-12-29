@@ -12,17 +12,19 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/u-root/u-root/pkg/qemu"
+	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/vmtest"
 )
 
 func TestIntegrationPox(t *testing.T) {
-	o := &vmtest.Options{
-		QEMUOpts: qemu.Options{},
-	}
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/cmds/exp/pox"}, o)
+	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+
+	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/cmds/exp/pox"},
+		vmtest.WithVMOpt(vmtest.WithQEMUFn(qemu.WithVMTimeout(time.Minute))),
+	)
 }
 
 func TestPox(t *testing.T) {
