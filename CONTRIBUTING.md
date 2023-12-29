@@ -200,61 +200,24 @@ underlying SPI driver. The `Flash` object can be tested without hardware
 dependencies.
 
 ### VM Tests using QEMU
-For code reading or manipulating hardware, it can be reasonable not to mock out syscalls etc. but to run tests in a virtual environment.
-In case you need to test against certain hardware, you can use a QEMU environment via `pkg/vmtest`. In your package, put the setup and corresponding tests in `vm_test.go`. 
+
+For code reading or manipulating hardware, it can be reasonable not to mock out
+syscalls but to run tests in a virtual environment. In case you need to test
+against certain hardware, you can use a QEMU environment via
+[vmtest](https://github.com/hugelgupf/vmtest).
+
+In your package, put the setup and corresponding tests in `vm_test.go`.
 
 **IMPORTANT Notes**
 * Add `!race` build tag to your `vm_test.go`
 * Setup QEMU inside a usual test function
 * Make sure the tests assuming this setup are skipped in non-VM test run
-* Add your package to `blocklist` in `integration/gotests/gotest_test.go` making sure the test doesn't run in the project wide integration tests without the proper QEMU setup.
+* Add your package to `blocklist` in `integration/gotests/gotest_test.go` making
+  sure the test doesn't run in the project wide integration tests without the
+  proper QEMU setup.
 
-See below or `pkg/mount/block` for examples.
-```
-//go:build !race
-// +build !race
-
-package foo
-
-import (
-	"github.com/u-root/u-root/pkg/qemu"
-	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/vmtest"
-)
-
-// VM setup:
-//
-//  Describe your setup
-
-func TestVM(t *testing.T) {
-	o := &vmtest.Options{
-		QEMUOpts: qemu.Options{
-			Devices: []qemu.Device{
-				// Configure QEMU here
-				qemu.ArbitraryArgs{...},
-			},
-		},
-	}
-	vmtest.GolangTest(t, []string{"github.com/u-root/u-root/pkg/foo"}, o)
-}
-
-func TestFooRunInQEMU1(t *testing.T) {
-  if os.Getuid != 0 {
-    t.Skip("Skipping since we are not root")
-  }
-  // ...
-}
-
-func TestFooRunInQEMU2(t *testing.T) {
-  if os.Getuid != 0 {
-    t.Skip("Skipping since we are not root")
-  }
-  // ...
-}
-
-// ...
-
-```
+See [/pkg/gpio/gpio_integration_test.go](pkg/gpio) for a simple example, or
+[/pkg/mount/block/vm_test.go](pkg/mount).
 
 ### Package main
 
