@@ -17,8 +17,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
-	"log"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,27 +38,41 @@ func init() {
 	flag.Usage = util.Usage(flag.Usage, usage)
 }
 
-func changeMode(path string, mode os.FileMode, octval uint64, mask uint64) (fs.FileMode, error) {
+type cmd struct {
+	stderr    io.Writer
+	reference string
+	recursive bool
+}
+
+func command(stderr io.Writer, recursive bool, reference string) *cmd {
+	return &cmd{
+		stderr:    stderr,
+		recursive: recursive,
+		reference: reference,
+	}
+}
+
+func changeMode(path string, mode os.FileMode, octval uint64, mask uint64) error {
 	// A special value for mask means the mode is fully described
 	if mask == special {
 		if err := os.Chmod(path, mode); err != nil {
-			return 0, err
+			return err
 		}
-		return mode, nil
+		return nil
 	}
 
 	var info os.FileInfo
 	info, err := os.Stat(path)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	mode = info.Mode() & os.FileMode(mask)
 	mode = mode | os.FileMode(octval)
 
 	if err := os.Chmod(path, mode); err != nil {
-		return 0, err
+		return err
 	}
-	return mode, nil
+	return nil
 }
 
 func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uint64, err error) {
@@ -135,26 +148,25 @@ func calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uin
 	return mode, octval, mask, nil
 }
 
-func chmod(recursive bool, reference string, args ...string) (fs.FileMode, error) {
+func (c *cmd) run(args ...string) error {
 	var mode os.FileMode
 	if len(args) < 1 {
-		return mode, errBadUsage
+		return errBadUsage
 	}
 
-	if len(args) < 2 && reference == "" {
-		return mode, errBadUsage
+	if len(args) < 2 && c.reference == "" {
+		return errBadUsage
 	}
 
 	var (
-		err          error
 		octval, mask uint64
 		fileList     []string
 	)
 
-	if reference != "" {
-		fi, err := os.Stat(reference)
+	if c.reference != "" {
+		fi, err := os.Stat(c.reference)
 		if err != nil {
-			return 0, fmt.Errorf("bad reference file: %w", err)
+			return fmt.Errorf("bad reference file: %w", err)
 		}
 		mask = special
 		mode = fi.Mode()
@@ -162,27 +174,35 @@ func chmod(recursive bool, reference string, args ...string) (fs.FileMode, error
 	} else {
 		var err error
 		if mode, octval, mask, err = calculateMode(args[0]); err != nil {
-			return mode, err
+			return err
 		}
 		fileList = args[1:]
 	}
 
+	var finalErr error
+
 	for _, name := range fileList {
-		if recursive {
-			err := filepath.Walk(name, func(path string, info os.FileInfo, err error) error {
-				mode, err = changeMode(path, mode, octval, mask)
+		if c.recursive {
+			err := filepath.Walk(name, func(path string, _ os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				err = changeMode(path, mode, octval, mask)
 				return err
 			})
 			if err != nil {
-				return mode, err
+				finalErr = err
+				fmt.Fprintln(c.stderr, err)
 			}
 		} else {
-			if mode, err = changeMode(name, mode, octval, mask); err != nil {
-				return mode, err
+			err := changeMode(name, mode, octval, mask)
+			if err != nil {
+				finalErr = err
+				fmt.Fprintln(c.stderr, err)
 			}
 		}
 	}
-	return mode, err
+	return finalErr
 }
 
 func main() {
@@ -191,7 +211,7 @@ func main() {
 		reference = flag.String("reference", "", "use mode from reference file")
 	)
 	flag.Parse()
-	if _, err := chmod(*recursive, *reference, flag.Args()...); err != nil {
-		log.Fatal(err)
+	if err := command(os.Stderr, *recursive, *reference).run(flag.Args()...); err != nil {
+		os.Exit(1)
 	}
 }
