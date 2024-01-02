@@ -8,19 +8,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hugelgupf/vmtest/guest"
 	"golang.org/x/sys/unix"
 )
 
-func runTest() {
-	defer guest.CollectKernelCoverage()
-
-	fmt.Println("HELLO WORLD")
-}
-
 // The most trivial init script.
 func main() {
-	runTest()
+	fmt.Println("HELLO WORLD")
 
 	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
 		log.Fatalf("Failed to reboot: %v", err)

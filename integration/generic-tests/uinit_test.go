@@ -21,9 +21,9 @@ func TestHelloWorld(t *testing.T) {
 	vm := vmtest.StartVM(t,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			InitCmd:  "init",
-			UinitCmd: "uinit",
+			UinitCmd: "helloworld",
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+				"github.com/u-root/u-root/integration/testcmd/helloworld",
 				"github.com/u-root/u-root/cmds/core/init",
 			),
 			TempDir: t.TempDir(),
@@ -47,9 +47,9 @@ func TestHelloWorldNegative(t *testing.T) {
 	vm := vmtest.StartVM(t,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			InitCmd:  "init",
-			UinitCmd: "uinit",
+			UinitCmd: "helloworld",
 			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/integration/testcmd/helloworld/uinit",
+				"github.com/u-root/u-root/integration/testcmd/helloworld",
 				"github.com/u-root/u-root/cmds/core/init",
 			),
 			TempDir: t.TempDir(),
