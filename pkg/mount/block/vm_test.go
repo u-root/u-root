@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
@@ -65,9 +66,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestBlockDevMount(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -104,9 +103,7 @@ func TestBlockDevMount(t *testing.T) {
 }
 
 func TestBlockDevGPTTable(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	devpath := fmt.Sprintf("/dev/%sc", getDevicePrefix())
 
@@ -139,9 +136,7 @@ func TestBlockDevGPTTable(t *testing.T) {
 }
 
 func TestBlockDevSizes(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -203,9 +198,7 @@ func TestBlockDevSizes(t *testing.T) {
 }
 
 func TestBlockDevReadPartitionTable(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -236,9 +229,7 @@ func TestBlockDevReadPartitionTable(t *testing.T) {
 }
 
 func TestBlockDevicesFilterHavingPartitions(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -257,9 +248,7 @@ func TestBlockDevicesFilterHavingPartitions(t *testing.T) {
 }
 
 func TestBlockDevicesFilterPartID(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	devname := fmt.Sprintf("%sc2", getDevicePrefix())
 	devs := testDevs(t)
@@ -295,9 +284,7 @@ func TestBlockDevicesFilterPartID(t *testing.T) {
 }
 
 func TestBlockDevicesFilterPartType(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -341,9 +328,7 @@ func TestBlockDevicesFilterPartType(t *testing.T) {
 }
 
 func TestBlockDevicesFilterPartLabel(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -360,9 +345,7 @@ func TestBlockDevicesFilterPartLabel(t *testing.T) {
 }
 
 func TestBlockDevicesFilterBlockPCIString(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)
@@ -394,9 +377,7 @@ func TestBlockDevicesFilterBlockPCIString(t *testing.T) {
 }
 
 func TestBlockDevicesFilterBlockPCI(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 	devs := testDevs(t)

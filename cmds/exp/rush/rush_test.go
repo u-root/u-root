@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -28,7 +29,7 @@ var tests = []struct {
 }
 
 func TestRush(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	// Table-driven testing
 	for i, tt := range tests {

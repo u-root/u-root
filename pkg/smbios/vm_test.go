@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestIntegration(t *testing.T) {
@@ -28,7 +28,7 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestFromSysfs(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	info, err := FromSysfs()
 	if err != nil || info == nil {
@@ -37,7 +37,7 @@ func TestFromSysfs(t *testing.T) {
 }
 
 func TestGetBIOSInfo(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	info, err := FromSysfs()
 	if err != nil {
@@ -51,7 +51,7 @@ func TestGetBIOSInfo(t *testing.T) {
 }
 
 func TestGetSystemInfo(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	info, err := FromSysfs()
 	if err != nil {
@@ -65,7 +65,7 @@ func TestGetSystemInfo(t *testing.T) {
 }
 
 func TestGetChassisInfo(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	info, err := FromSysfs()
 	if err != nil {
@@ -79,7 +79,7 @@ func TestGetChassisInfo(t *testing.T) {
 }
 
 func TestGetProcessorInfo(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	info, err := FromSysfs()
 	if err != nil {
@@ -93,7 +93,7 @@ func TestGetProcessorInfo(t *testing.T) {
 }
 
 func TestGetMemoryDevices(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	info, err := FromSysfs()
 	if err != nil {

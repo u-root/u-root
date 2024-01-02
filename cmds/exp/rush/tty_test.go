@@ -7,11 +7,11 @@ package main
 import (
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 func TestTTY(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	tty()
 	foreground()

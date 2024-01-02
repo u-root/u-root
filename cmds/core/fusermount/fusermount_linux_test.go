@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/testutil"
 	"golang.org/x/sys/unix"
 )
@@ -82,9 +83,8 @@ func TestArgs(t *testing.T) {
 }
 
 func TestMount(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping, not root")
-	}
+	guest.SkipIfNotInVM(t)
+
 	if _, err := os.Stat("/dev/fuse"); err != nil {
 		t.Skipf("Skipping:%v", err)
 	}

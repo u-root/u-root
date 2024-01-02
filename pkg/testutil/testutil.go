@@ -162,10 +162,3 @@ func SkipIfInVMTest(t *testing.T) {
 		t.Skipf("Skipping test since we are in a u-root test VM")
 	}
 }
-
-// SkipIfNotRoot skips the calling test if uid != 0.
-func SkipIfNotRoot(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skipf("Skipping test since we are not root")
-	}
-}

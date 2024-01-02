@@ -14,8 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
-
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/memio"
 )
 
@@ -95,7 +94,8 @@ func TestCMOS(t *testing.T) {
 
 // This is just for coverage percentage. This test does nothing of any other value.
 func TestNew(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	if _, err := New(); err != nil {
 		t.Errorf(`New() = %q, not nil`, err)
 	}

@@ -25,6 +25,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -128,7 +129,8 @@ func TestChangeTermios(t *testing.T) {
 
 func TestRaw(t *testing.T) {
 	// TestRaw no longer works in CircleCi, Restrict to only VM tests.
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	tty, err := New()
 	if os.IsNotExist(err) || errors.Is(err, syscall.ENXIO) {
 		t.Skipf("No /dev/tty here.")
@@ -283,6 +285,7 @@ func TestSet(t *testing.T) {
 // This at least makes sure that the package compiles on all platforms.
 func TestCrossCompile(t *testing.T) {
 	testutil.SkipIfInVMTest(t)
+
 	if testing.Short() {
 		t.Skip("skipping in short mode")
 	}

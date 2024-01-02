@@ -8,16 +8,15 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 // TestRSDP tests whether any method for getting an RSDP works.
 func TestRSDP(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
-
+	guest.SkipIfNotInVM(t)
 	// Our QEMU aarch64 does not boot via UEFI, so RSDP only works on x86.
 	if runtime.GOARCH != "amd64" {
-		t.Skip("RSDP in QEMU only available on amd64 for now")
+		t.Skipf("Test only supports amd64")
 	}
 
 	_, err := GetRSDP()

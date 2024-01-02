@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/ls"
-	"github.com/u-root/u-root/pkg/testutil"
 	"golang.org/x/sys/unix"
 )
 
@@ -27,7 +27,8 @@ import (
 
 // Test listName func
 func TestListNameLinux(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	// Create a directory
 	d := t.TempDir()
 	if err := unix.Mknod(filepath.Join(d, "large_node"), 0o660|unix.S_IFBLK, 0x12345678); err != nil {

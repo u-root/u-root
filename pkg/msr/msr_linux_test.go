@@ -1,12 +1,13 @@
 // Copyright 2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
 package msr
 
 import (
-	"os"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/testutil"
 )
 
@@ -165,9 +166,8 @@ func TestCPUsString(t *testing.T) {
 // but this is of necessity not a complete test! We don't want to set an MSR
 // as part of a test, it might cause real trouble.
 func TestTestAndSet(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skipf("Skipping test since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
+
 	c, err := AllCPUs()
 	if err != nil {
 		t.Fatalf("AllCPUs: got %v,want nil", err)

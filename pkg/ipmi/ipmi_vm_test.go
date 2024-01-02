@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestIntegration(t *testing.T) {
@@ -35,7 +35,8 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestWatchdogRunningQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %v", err)
@@ -52,7 +53,8 @@ func TestWatchdogRunningQemu(t *testing.T) {
 }
 
 func TestShutoffWatchdogQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %q", err)
@@ -65,7 +67,8 @@ func TestShutoffWatchdogQemu(t *testing.T) {
 }
 
 func TestGetDeviceIDQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %q", err)
@@ -108,7 +111,8 @@ func TestGetDeviceIDQemu(t *testing.T) {
 }
 
 func TestEnableSELQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %q", err)
@@ -125,7 +129,8 @@ func TestEnableSELQemu(t *testing.T) {
 }
 
 func TestGetSELInfoQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %v", err)
@@ -152,7 +157,8 @@ func TestGetSELInfoQemu(t *testing.T) {
 }
 
 func TestGetLanConfigQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	t.Skip("Not supported command")
 	i, err := Open(0)
 	if err != nil {
@@ -166,7 +172,8 @@ func TestGetLanConfigQemu(t *testing.T) {
 }
 
 func TestRawCmdQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %v", err)
@@ -181,7 +188,8 @@ func TestRawCmdQemu(t *testing.T) {
 }
 
 func TestSetSystemFWVersionQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	t.Skip("Not supported command")
 	i, err := Open(0)
 	if err != nil {
@@ -195,7 +203,8 @@ func TestSetSystemFWVersionQemu(t *testing.T) {
 }
 
 func TestLogSystemEventQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(0)
 	if err != nil {
 		t.Fatalf("Open(0) = %v", err)
@@ -209,7 +218,8 @@ func TestLogSystemEventQemu(t *testing.T) {
 }
 
 func TestOpenNonexistentDeviceQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := Open(42)
 	if err == nil {
 		i.Close()
@@ -224,7 +234,8 @@ func TestOpenNonexistentDeviceQemu(t *testing.T) {
 }
 
 func TestOpenPathQemu(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	i, err := OpenPath("/dev/ipmi0")
 	if err != nil {
 		t.Fatalf("Open(/dev/ipmi0) = %v", err)

@@ -8,12 +8,12 @@
 package securelaunch
 
 import (
-	"os"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/mount"
 )
@@ -62,9 +62,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestMountDevice(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("Skipping since we are not root")
-	}
+	guest.SkipIfNotInVM(t)
 
 	if err := GetBlkInfo(); err != nil {
 		t.Fatalf("GetBlkInfo() = %v, not nil", err)

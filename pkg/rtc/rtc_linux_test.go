@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 	"golang.org/x/sys/unix"
 )
 
@@ -47,7 +47,8 @@ func TestOpenRTC(t *testing.T) {
 }
 
 func TestOpenRealRTC(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	// The u-root amd64 VM does not seem to have a RTC device
 	if runtime.GOARCH == "amd64" {
 		t.Skip("Test not supported in amd64 Qemu")
