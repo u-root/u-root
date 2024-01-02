@@ -5,7 +5,9 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -244,14 +246,61 @@ func TestChmod(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Chmod(f.Name(), tt.modeBefore)
-			mode, err := chmod(tt.recursive, tt.reference, tt.args...)
+			err := command(io.Discard, tt.recursive, tt.reference).run(tt.args...)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("chmod(%v, %q, %q) = %v, want %v", tt.recursive, tt.reference, tt.args, err, tt.err)
 				return
 			}
-			if mode != tt.modeAfter {
-				t.Errorf("chmod(%v, %q, %q) = mode = %o, want %o", tt.recursive, tt.reference, tt.args, mode, tt.modeAfter)
+
+			fi, err := os.Stat(f.Name())
+			if err != nil {
+				t.Fatalf("failed to stat file: %v", err)
+			}
+
+			if fi.Mode() != tt.modeAfter {
+				t.Errorf("chmod(%v, %q, %q) = mode = %o, want %o", tt.recursive, tt.reference, tt.args, fi.Mode(), tt.modeAfter)
 			}
 		})
+	}
+}
+
+func TestMultipleFiles(t *testing.T) {
+	f1, err := os.Create(filepath.Join(t.TempDir(), "tmpfile1"))
+	if err != nil {
+		t.Fatalf("Failed to create tmp file, %v", err)
+	}
+
+	f2, err := os.Create(filepath.Join(t.TempDir(), "tmpfile2"))
+	if err != nil {
+		t.Fatalf("Failed to create tmp file, %v", err)
+	}
+
+	stderr := &bytes.Buffer{}
+
+	err = command(stderr, false, "").run("0777", f1.Name(), "filenotexists", f2.Name())
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("expected os.ErrNotExist, got %v", err)
+	}
+
+	// but file1 and file2 should have been chmod'ed
+	fi, err := os.Stat(f1.Name())
+	if err != nil {
+		t.Fatalf("failed to stat file: %v", err)
+	}
+
+	if fi.Mode() != 0o777 {
+		t.Errorf("chmod(%q) = %o, want %o", f1.Name(), fi.Mode(), 0o777)
+	}
+
+	fi, err = os.Stat(f2.Name())
+	if err != nil {
+		t.Fatalf("failed to stat file: %v", err)
+	}
+	if fi.Mode() != 0o777 {
+		t.Errorf("chmod(%q) = %o, want %o", f2.Name(), fi.Mode(), 0o777)
+	}
+
+	if stderr.String() != "chmod filenotexists: no such file or directory\n" {
+		t.Errorf("expected stderr to be 'chmod filenotexists: no such file or directory', got %q", stderr.String())
 	}
 }
