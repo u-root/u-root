@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/memio"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 var tmpBuf = []byte{0, 0, 0, 0, 0, 0}
@@ -98,10 +98,11 @@ func TestSMBIOSLegacySMBIOS3(t *testing.T) {
 }
 
 func TestSMBIOSLegacyQEMU(t *testing.T) {
+	guest.SkipIfNotInVM(t)
 	if runtime.GOARCH != "amd64" {
 		t.Skipf("test not supported on %s", runtime.GOARCH)
 	}
-	testutil.SkipIfNotRoot(t)
+
 	base, size, err := SMBIOSBaseLegacy()
 	if err != nil {
 		t.Fatal(err)

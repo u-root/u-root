@@ -7,7 +7,7 @@ package gpio
 import (
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 // GPIO allocations so the tests don't conflict with each other:
@@ -17,7 +17,7 @@ import (
 //   TestGetPinID - 12
 
 func TestReadValue(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	const gpioNum = 11
 
@@ -39,7 +39,7 @@ func TestReadValue(t *testing.T) {
 }
 
 func TestExport(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	if err := Export(10); err != nil {
 		t.Errorf("Could not export pin 10: %v", err)
@@ -52,7 +52,7 @@ func TestExport(t *testing.T) {
 }
 
 func TestGetPinID(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	// Base is 10, so we expect 10+2.
 	if pin, err := GetPinID("gpio-mockup-A", 2); err != nil {

@@ -8,17 +8,17 @@
 package acpi
 
 import (
-	"os"
 	"testing"
+
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 // TestLinux just verifies that tables read OK.
 // It does not verify content as content varies all
 // the time.
 func TestLinux(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skip("not root")
-	}
+	guest.SkipIfNotInVM(t)
+
 	tab, err := RawTablesFromSys()
 	if err != nil {
 		t.Fatalf("Got %v, want nil", err)

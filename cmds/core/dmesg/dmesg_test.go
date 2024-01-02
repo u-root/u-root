@@ -11,11 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 func TestDmesg(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	for _, tt := range []struct {
 		name      string
 		buf       *bytes.Buffer

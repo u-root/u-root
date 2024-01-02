@@ -8,14 +8,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 // TestTable tests whether any method for getting a table works.
 // If it succeeds, it is called again with the method it returns
 // to verify at least that much is the same.
 func TestTable(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	m, tg, err := GetTable()
 	if err != nil {

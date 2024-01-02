@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/cp"
 	"golang.org/x/sys/unix"
 )
@@ -18,14 +19,8 @@ const (
 	_LOOP_MAJOR = 7
 )
 
-func skipIfNotRoot(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Skipf("Skipping test since we are not root")
-	}
-}
-
 func TestFindDevice(t *testing.T) {
-	skipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	loopdev, err := FindDevice()
 	if err != nil {
@@ -44,7 +39,7 @@ func TestFindDevice(t *testing.T) {
 }
 
 func TestSetFile(t *testing.T) {
-	skipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	tmpDir := t.TempDir()
 	testdisk := filepath.Join(tmpDir, "testdisk")

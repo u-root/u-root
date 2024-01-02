@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 func TestUserSpecSet(t *testing.T) {
@@ -73,7 +73,6 @@ func TestUserSpecGet(t *testing.T) {
 }
 
 func TestGroupsSet(t *testing.T) {
-
 	for _, tt := range []struct {
 		name     string
 		input    string
@@ -159,7 +158,8 @@ func TestGroupsString(t *testing.T) {
 }
 
 func TestChroot(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	for _, tt := range []struct {
 		name          string
 		args          []string

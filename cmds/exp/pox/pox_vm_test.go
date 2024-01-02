@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestIntegrationPox(t *testing.T) {
@@ -28,7 +28,8 @@ func TestIntegrationPox(t *testing.T) {
 }
 
 func TestPox(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	f := filepath.Join(t.TempDir(), "x.tcz")
 	tmpFile, err := os.Create("/bin/bash")
 	if err != nil {
@@ -92,7 +93,8 @@ func TestPox(t *testing.T) {
 }
 
 func TestPoxCreate(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	f := filepath.Join(t.TempDir(), "x.tcz")
 	tmpFile, err := os.Create("/bin/bash")
 	if err != nil {
@@ -164,7 +166,8 @@ func TestPoxCreate(t *testing.T) {
 }
 
 func TestPoxRun(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	f := filepath.Join(t.TempDir(), "x.tcz")
 	if _, err := os.Create(f); err != nil {
 		t.Errorf("Couldn't create file: %v", err)

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/mount"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 // Assumptions:
@@ -33,7 +33,7 @@ import (
 //   ARM tests will load drives as virtio-blk devices (/dev/vd*)
 
 func TestTryMount(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	prefix := getDevicePrefix()
 
@@ -144,7 +144,7 @@ func TestMountPool(t *testing.T) {
 }
 
 func TestIsTmpRamfs(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	testRoot := t.TempDir()
 

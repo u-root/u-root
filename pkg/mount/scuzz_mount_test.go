@@ -10,13 +10,13 @@ package mount_test
 import (
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/mount/scuzz"
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestIdentify(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
 
 	disk, err := scuzz.NewSGDisk("/dev/sda")
 	if err != nil {

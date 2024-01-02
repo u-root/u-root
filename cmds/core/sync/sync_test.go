@@ -9,11 +9,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/testutil"
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 func TestSync(t *testing.T) {
-	testutil.SkipIfNotRoot(t)
+	guest.SkipIfNotInVM(t)
+
 	d := t.TempDir()
 	file1, err := os.CreateTemp(d, "file1")
 	if err != nil {

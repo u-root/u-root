@@ -5,15 +5,18 @@
 package ulog
 
 import (
+	"os"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestKernelLog(t *testing.T) {
 	// This is an integration test run in QEMU.
-	testutil.SkipIfNotRoot(t)
+	// Cannot use guest.SkipIfNotInVM here as vmtest depends on ulog --
+	// import cycles in tests are forbidden.
+	if os.Getenv("VMTEST_IN_GUEST") != "1" {
+		t.Skipf("Test only runs in VM")
+	}
 
 	// do something.
 	KernelLog.Printf("haha %v", "oh foobar")
