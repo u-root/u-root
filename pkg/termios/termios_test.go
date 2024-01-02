@@ -316,7 +316,7 @@ func TestCrossCompile(t *testing.T) {
 			t.Parallel()
 			outFile := filepath.Join(td, goos+"-"+goarch+".test")
 			cmd := exec.Command("go", "test", "-c", "-o", outFile, ".")
-			cmd.Env = append(os.Environ(), "GOOS="+goos, "GOARCH="+goarch)
+			cmd.Env = append(os.Environ(), "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0")
 			if out, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("Failed: %v, %s", err, out)
 			}
