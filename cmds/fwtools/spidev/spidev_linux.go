@@ -23,6 +23,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -39,6 +40,11 @@ type spi interface {
 	Close() error
 }
 
+var (
+	errFlag    = errors.New("unknown flag")
+	errCommand = errors.New("unknown subcommand")
+)
+
 type spiOpenFunc func(dev string) (spi, error)
 
 func openSPIDev(dev string) (spi, error) {
@@ -51,12 +57,11 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	dev := fs.StringP("device", "D", "/dev/spidev0.0", "spidev device")
 	speed := fs.Uint32P("speed", "s", 500000, "max speed in Hz")
 	if err := fs.Parse(args); err != nil {
-		return err
+		return fmt.Errorf("%w:%v", errFlag, err)
 	}
 
 	if fs.NArg() != 1 {
-		flag.Usage()
-		return errors.New("expected one subcommand")
+		return fmt.Errorf("%w: %s <raw|sfdp>", errCommand, fs.FlagUsages())
 	}
 
 	// Open the spi device.
@@ -106,8 +111,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return f.SFDP().PrettyPrint(output, sfdp.BasicTableLookup)
 
 	default:
-		flag.Usage()
-		return errors.New("unknown subcommand")
+		return fmt.Errorf("%w:%s", errCommand, fs.FlagUsages())
 	}
 }
 

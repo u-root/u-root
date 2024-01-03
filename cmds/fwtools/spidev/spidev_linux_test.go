@@ -7,7 +7,7 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"testing"
@@ -28,42 +28,42 @@ func TestRun(t *testing.T) {
 		wantSpeed          uint32
 		wantOutput         string
 		wantOutputRegex    *regexp.Regexp
-		wantErr            error
+		err                error
 	}{
 		{
-			name:    "invalid arguments",
-			args:    []string{"--invalid", "raw"},
-			wantErr: errors.New("unknown flag: --invalid"),
+			name: "invalid arguments",
+			args: []string{"--invalid", "raw"},
+			err:  errFlag,
 		},
 		{
-			name:    "invalid subcommand",
-			args:    []string{"potato"},
-			wantErr: errors.New("unknown subcommand"),
+			name: "invalid subcommand",
+			args: []string{"potato"},
+			err:  errCommand,
 		},
 		{
-			name:    "too many arguments",
-			args:    []string{"raw", "potato"},
-			wantErr: errors.New("expected one subcommand"),
+			name: "too many arguments",
+			args: []string{"raw", "potato"},
+			err:  errCommand,
 		},
 		{
 			name:         "open error",
 			args:         []string{"raw"},
-			ForceOpenErr: errors.New("fake open error"),
-			wantErr:      errors.New("fake open error"),
+			ForceOpenErr: os.ErrPermission,
+			err:          os.ErrPermission,
 		},
 		{
 			name:             "transfer error",
 			args:             []string{"raw"},
 			input:            []byte("abcd"),
-			ForceTransferErr: errors.New("fake transfer error"),
-			wantErr:          errors.New("fake transfer error"),
+			ForceTransferErr: os.ErrInvalid,
+			err:              os.ErrInvalid,
 		},
 		{
 			name:               "setspeedhz error",
 			args:               []string{"raw"},
 			input:              []byte("abcd"),
-			ForceSetSpeedHzErr: errors.New("fake setspeedhz error"),
-			wantErr:            errors.New("fake setspeedhz error"),
+			ForceSetSpeedHzErr: os.ErrInvalid,
+			err:                os.ErrInvalid,
 		},
 		{
 			name: "empty transfer",
@@ -105,10 +105,10 @@ func TestRun(t *testing.T) {
 			}
 
 			output := &bytes.Buffer{}
-			gotErr := run(tt.args, openFakeSpi, bytes.NewBuffer(tt.input), output)
+			got := run(tt.args, openFakeSpi, bytes.NewBuffer(tt.input), output)
 
-			if gotErrString, wantErrString := fmt.Sprint(gotErr), fmt.Sprint(tt.wantErr); gotErrString != wantErrString {
-				t.Errorf("run() got err %q; want err %q", gotErrString, wantErrString)
+			if !errors.Is(got, tt.err) {
+				t.Errorf("run(): %v != %v", got, tt.err)
 			}
 
 			gotOutputString := output.String()
