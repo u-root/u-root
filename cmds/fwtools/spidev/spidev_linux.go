@@ -42,7 +42,7 @@ type spi interface {
 
 var (
 	errFlag    = errors.New("unknown flag")
-	errCommand = errors.New("unknown subcommand")
+	errCommand = errors.New("usage")
 )
 
 type spiOpenFunc func(dev string) (spi, error)
@@ -57,6 +57,9 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	dev := fs.StringP("device", "D", "/dev/spidev0.0", "spidev device")
 	speed := fs.Uint32P("speed", "s", 500000, "max speed in Hz")
 	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return fmt.Errorf("%w:<raw|sfdp>", errCommand)
+		}
 		return fmt.Errorf("%w:%v", errFlag, err)
 	}
 
@@ -74,8 +77,9 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return err
 	}
 
+	cmd := fs.Arg(0)
 	// Currently, only the raw subcommand is supported.
-	switch fs.Args()[0] {
+	switch cmd {
 	case "raw":
 		// Create transfer from stdin.
 		tx, err := io.ReadAll(input)
@@ -111,12 +115,12 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return f.SFDP().PrettyPrint(output, sfdp.BasicTableLookup)
 
 	default:
-		return fmt.Errorf("%w:%s", errCommand, fs.FlagUsages())
+		return fmt.Errorf("%s:%w:%s", cmd, errCommand, fs.FlagUsages())
 	}
 }
 
 func main() {
 	if err := run(os.Args[1:], openSPIDev, os.Stdin, os.Stdout); err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatal(err)
 	}
 }
