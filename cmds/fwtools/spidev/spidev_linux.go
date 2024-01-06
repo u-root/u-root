@@ -90,26 +90,21 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		// transfers to ensure that happens.
 		transfers := []spidev.Transfer{
 			{
-				Tx: []byte{op.PRDRES},
-				Rx: make([]byte, 1),
+				Tx:       []byte{op.PRDRES},
+				Rx:       make([]byte, 1),
+				CSChange: true,
+			},
+			{
+				Tx: []byte{op.ReadJEDECID, 0, 0, 0},
+				Rx: make([]byte, 4),
 			},
 		}
 
-		// Perform transfers.
 		if err := s.Transfer(transfers); err != nil {
 			return err
 		}
-		var id = []byte{0x9f, 0, 0, 0}
-		transfers = []spidev.Transfer{
-			{
-				Tx: []byte{op.ReadJEDECID, 0, 0, 0},
-				Rx: id,
-			},
-		}
-		if err := s.Transfer(transfers); err != nil {
-			return err
-		}
-		fmt.Printf("%02x\n", id[1:])
+
+		fmt.Printf("%02x\n", transfers[1].Rx[1:])
 		return nil
 
 	case "raw":
