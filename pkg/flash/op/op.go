@@ -23,6 +23,8 @@ const (
 	ReadSFDP byte = 0x5a
 	// ReadID reads the JEDEC ID.
 	ReadJEDECID byte = 0x9f
+	// PRD/RES
+	PRDRES = 0xab
 	// Enter4BA enters 4-byte addressing mode.
 	Enter4BA byte = 0xb7
 	// BlockErase erases a block to the value 0xff.

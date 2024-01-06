@@ -32,6 +32,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/flash"
+	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spidev"
 )
@@ -84,12 +85,12 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	switch cmd {
 	case "id":
 		// Wake it up, then get the id.
-		// 0xab is not universally handled on all devices, but that's ok.
+		// PRDRES is not universally handled on all devices, but that's ok.
 		// but CE MUST drop, so we structure this as two separate
 		// transfers to ensure that happens.
 		transfers := []spidev.Transfer{
 			{
-				Tx: []byte{0xab},
+				Tx: []byte{op.PRDRES},
 				Rx: make([]byte, 1),
 			},
 		}
@@ -101,7 +102,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		var id = []byte{0x9f, 0, 0, 0}
 		transfers = []spidev.Transfer{
 			{
-				Tx: []byte{0x9f, 0, 0, 0},
+				Tx: []byte{op.ReadJEDECID, 0, 0, 0},
 				Rx: id,
 			},
 		}
