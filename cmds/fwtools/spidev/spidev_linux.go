@@ -8,6 +8,7 @@
 //
 //	spidev [OPTIONS] raw < tx.bin > rx.bin
 //	spidev [OPTIONS] sfdp
+//	spidev [OPTIONS] id
 //
 // Options:
 //
@@ -19,6 +20,7 @@
 //	raw: The binary data from stdin is transmitted over the SPI bus.
 //	     Received data is printed to stdout.
 //	sfdp: Parse and print the parameters in the SFDP.
+//	id: print the 3 byte hex id
 package main
 
 import (
@@ -58,13 +60,13 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	speed := fs.Uint32P("speed", "s", 500000, "max speed in Hz")
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
-			return fmt.Errorf("%w:<raw|sfdp>", errCommand)
+			return fmt.Errorf("%w:<raw|sfdp|id>", errCommand)
 		}
 		return fmt.Errorf("%w:%v", errFlag, err)
 	}
 
 	if fs.NArg() != 1 {
-		return fmt.Errorf("%w: %s <raw|sfdp>", errCommand, fs.FlagUsages())
+		return fmt.Errorf("%w: %s <raw|sfdp|id>", errCommand, fs.FlagUsages())
 	}
 
 	// Open the spi device.
@@ -80,6 +82,35 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	cmd := fs.Arg(0)
 	// Currently, only the raw subcommand is supported.
 	switch cmd {
+	case "id":
+		// Wake it up, then get the id.
+		// 0xab is not universally handled on all devices, but that's ok.
+		// but CE MUST drop, so we structure this as two separate
+		// transfers to ensure that happens.
+		transfers := []spidev.Transfer{
+			{
+				Tx: []byte{0xab},
+				Rx: make([]byte, 1),
+			},
+		}
+
+		// Perform transfers.
+		if err := s.Transfer(transfers); err != nil {
+			return err
+		}
+		var id = []byte{0x9f, 0, 0, 0}
+		transfers = []spidev.Transfer{
+			{
+				Tx: []byte{0x9f, 0, 0, 0},
+				Rx: id,
+			},
+		}
+		if err := s.Transfer(transfers); err != nil {
+			return err
+		}
+		fmt.Printf("%02x\n", id[1:])
+		return nil
+
 	case "raw":
 		// Create transfer from stdin.
 		tx, err := io.ReadAll(input)
