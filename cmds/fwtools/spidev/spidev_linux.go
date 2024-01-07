@@ -104,7 +104,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 			return err
 		}
 
-		fmt.Printf("%02x\n", transfers[1].Rx[1:])
+		fmt.Fprintf(output, "%02x\n", transfers[1].Rx[1:])
 		return nil
 
 	case "raw":

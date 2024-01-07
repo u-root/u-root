@@ -31,6 +31,17 @@ func TestRun(t *testing.T) {
 		err                error
 	}{
 		{
+			name:            "id",
+			args:            []string{"id"},
+			wantOutputRegex: regexp.MustCompile("[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]\n"),
+		},
+		{
+			name:             "id failing IO",
+			args:             []string{"id"},
+			ForceTransferErr: os.ErrInvalid,
+			err:              os.ErrInvalid,
+		},
+		{
 			name: "invalid arguments",
 			args: []string{"--invalid", "raw"},
 			err:  errFlag,

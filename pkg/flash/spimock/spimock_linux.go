@@ -259,6 +259,7 @@ func (s *MockSPI) Transfer(transfers []spidev.Transfer) error {
 		addr &= ^0x7fff
 		copy(s.Data[addr:], bytes.Repeat([]byte{0xff}, 0x8000))
 		s.IsWriteEnabled = false
+	case op.PRDRES:
 	case op.Exit4BA:
 		s.Is4BA = false
 	default:
