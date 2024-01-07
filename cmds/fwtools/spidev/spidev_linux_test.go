@@ -33,7 +33,7 @@ func TestRun(t *testing.T) {
 		{
 			name:            "id",
 			args:            []string{"id"},
-			wantOutputRegex: regexp.MustCompile("[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]\n"),
+			wantOutputRegex: regexp.MustCompile("[0-9a-fA-F]{6}\n"),
 		},
 		{
 			name:             "id failing IO",
