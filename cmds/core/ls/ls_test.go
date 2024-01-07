@@ -256,3 +256,59 @@ func TestNotExist(t *testing.T) {
 		t.Fatalf("ls of bad name: %q does not contain %q or %q", b.String(), eexist, enoent)
 	}
 }
+
+func TestLsDotDot(t *testing.T) {
+	d := t.TempDir()
+	b := &bytes.Buffer{}
+	var c = cmd{w: b, all: true}
+	if err := c.listName(ls.NameStringer{}, d, false); err != nil {
+		t.Fatalf("listName(ls.NameString{}, %q/b, w, false): nil != %v", d, err)
+	}
+	t.Logf("%q", b.String())
+	n := strings.Split(b.String(), "\n")
+	t.Logf("Split is %q", n)
+	if len(n) != 3 {
+		t.Fatalf("ls of empty dir: got %d entries, want 3", len(n))
+	}
+	if n[1] != ".." {
+		t.Fatalf("n[1] is %q, expected \"..\"", n[1])
+	}
+	b = &bytes.Buffer{}
+	c = cmd{w: b}
+	dd := ".."
+	if err := c.listName(ls.NameStringer{}, dd, false); err != nil {
+		t.Fatalf("listName(ls.NameString{}, \"..\", w, false): nil != %v", err)
+	}
+	t.Logf("ls .. is %q", b.String())
+	ddn := strings.Split(b.String(), "\n")
+	ddb := &bytes.Buffer{}
+	c = cmd{w: ddb, all: true}
+	if err := c.listName(ls.NameStringer{}, dd, false); err != nil {
+		t.Fatalf("listName(ls.NameString{}, \"..\", w, false): nil != %v", err)
+	}
+	t.Logf("ls -a .. is %q", ddb.String())
+	ddan := strings.Split(ddb.String(), "\n")
+
+	if len(ddan) != len(ddn)+2 {
+		t.Fatalf("listName(ls.NameString{}, \"..\", w, false): ls -a is %d elems, want %d", len(ddan), len(ddn)+2)
+	}
+	if ddan[1] != ".." {
+		t.Errorf("ls -a .. elem[1] is %q, expected \"..\"", ddan[1])
+	}
+	var founddotdot bool
+	var founddot bool
+	for _, n := range ddan {
+		if n == "." {
+			founddot = true
+		}
+		if n == ".." {
+			founddotdot = true
+		}
+	}
+	if !founddot {
+		t.Errorf("ls -a ..: . got not found, want found")
+	}
+	if !founddotdot {
+		t.Errorf("ls -a ..: .. got not found, want found")
+	}
+}

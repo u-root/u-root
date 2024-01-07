@@ -82,25 +82,29 @@ type file struct {
 	err  error
 }
 
+func newFile(d, path string, osfi os.FileInfo, err error) file {
+	f := file{
+		path: path,
+		osfi: osfi,
+	}
+
+	// error handling that matches standard ls is ... a real joy
+	if osfi != nil && !errors.Is(err, os.ErrNotExist) {
+		f.lsfi = ls.FromOSFileInfo(path, osfi)
+		if err != nil && path == d {
+			f.err = err
+		}
+	} else {
+		f.err = err
+	}
+	return f
+}
+
 func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 	var files []file
 
 	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
-		f := file{
-			path: path,
-			osfi: osfi,
-		}
-
-		// error handling that matches standard ls is ... a real joy
-		if osfi != nil && !errors.Is(err, os.ErrNotExist) {
-			f.lsfi = ls.FromOSFileInfo(path, osfi)
-			if err != nil && path == d {
-				f.err = err
-			}
-		} else {
-			f.err = err
-		}
-
+		f := newFile(d, path, osfi, err)
 		files = append(files, f)
 
 		if err != nil {
@@ -117,6 +121,9 @@ func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 
 		return nil
 	})
+
+	osfi, err := os.Stat("..")
+	files = append(files, newFile(d, "..", osfi, err))
 
 	if c.size {
 		sort.SliceStable(files, func(i, j int) bool {
