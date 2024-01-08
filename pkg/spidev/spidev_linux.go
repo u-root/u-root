@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/flash/op"
 	"golang.org/x/sys/unix"
 )
 
@@ -300,4 +301,31 @@ func (s *SPI) SetSpeedHz(hz uint32) error {
 		return os.NewSyscallError("ioctl(SPI_IOC_WR_MAX_SPEED_HZ)", err)
 	}
 	return nil
+}
+
+// ID gets the 24-bit id as an int
+func (s *SPI) ID() (int, error) {
+	// Wake it up, then get the id.
+	// PRDRES is not universally handled on all devices, but that's ok.
+	// but CE MUST drop, so we structure this as two separate
+	// transfers to ensure that happens.
+	var id [4]byte
+	transfers := []Transfer{
+		{
+			Tx:       []byte{op.PRDRES},
+			Rx:       make([]byte, 1),
+			CSChange: true,
+		},
+		{
+			Tx: []byte{op.ReadJEDECID, 0, 0, 0},
+			Rx: id[:],
+		},
+	}
+
+	if err := s.Transfer(transfers); err != nil {
+		return -1, err
+	}
+
+	id[0] = 0
+	return int(binary.BigEndian.Uint32(id[:])), nil
 }

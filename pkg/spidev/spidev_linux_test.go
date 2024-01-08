@@ -130,6 +130,20 @@ func TestGetters(t *testing.T) {
 	} {
 		m.forceErrno = tt.forceErrno
 
+		t.Run("ID"+tt.name, func(t *testing.T) {
+			m, err := s.ID()
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Mode() got error %q; want error %q", err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			want := 0
+			if m != want {
+				t.Errorf("ID() = %#v; want %#v", m, want)
+			}
+		})
+
 		t.Run("Mode"+tt.name, func(t *testing.T) {
 			m, err := s.Mode()
 			if !errors.Is(err, tt.wantErr) {
