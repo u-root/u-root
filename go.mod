@@ -56,7 +56,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
 	github.com/charmbracelet/bubbletea v0.24.1 // indirect
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
-	github.com/cloudflare/circl v1.3.3 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
