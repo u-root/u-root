@@ -25,6 +25,8 @@ const (
 	ReadJEDECID byte = 0x9f
 	// PRD/RES
 	PRDRES = 0xab
+	// AAI is auto address increment
+	AAI = 0xad
 	// Enter4BA enters 4-byte addressing mode.
 	Enter4BA byte = 0xb7
 	// BlockErase erases a block to the value 0xff.
