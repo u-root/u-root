@@ -10,7 +10,7 @@
 // See the github.com/pborman/options package for a simple structure based
 // interface to this package.
 //
-// USAGE
+// # USAGE
 //
 // Getopt supports functionality found in both the standard BSD getopt as well
 // as (one of the many versions of) the GNU getopt_long.  Being a Go package,
@@ -44,13 +44,13 @@
 //
 // If you don't want the program to exit on error, use getopt.Getopt:
 //
-//		err := getopt.Getopt(nil)
-//		if err != nil {
-//			// code to handle error
-//			fmt.Fprintln(os.Stderr, err)
-//		}
+//	err := getopt.Getopt(nil)
+//	if err != nil {
+//		// code to handle error
+//		fmt.Fprintln(os.Stderr, err)
+//	}
 //
-// FLAG SYNTAX
+// # FLAG SYNTAX
 //
 // Support is provided for both short (-f) and long (--flag) options.  A single
 // option may have both a short and a long name.  Each option may be a flag or a
@@ -69,35 +69,35 @@
 // must be after all short flags.  For example, if f is a flag and v is a value,
 // then:
 //
-//  -vvalue    (sets v to "value")
-//  -v value   (sets v to "value")
-//  -fvvalue   (sets f, and sets v to "value")
-//  -fv value  (sets f, and sets v to "value")
-//  -vf value  (set v to "f" and value is the first parameter)
+//	-vvalue    (sets v to "value")
+//	-v value   (sets v to "value")
+//	-fvvalue   (sets f, and sets v to "value")
+//	-fv value  (sets f, and sets v to "value")
+//	-vf value  (set v to "f" and value is the first parameter)
 //
 // For the long value option val:
 //
-//  --val value (sets val to "value")
-//  --val=value (sets val to "value")
-//  --valvalue  (invalid option "valvalue")
+//	--val value (sets val to "value")
+//	--val=value (sets val to "value")
+//	--valvalue  (invalid option "valvalue")
 //
 // Values with an optional value only set the value if the value is part of the
 // same argument.  In any event, the option count is increased and the option is
 // marked as seen.
 //
-//  -v -f          (sets v and f as being seen)
-//  -vvalue -f     (sets v to "value" and sets f)
-//  --val -f       (sets v and f as being seen)
-//  --val=value -f (sets v to "value" and sets f)
+//	-v -f          (sets v and f as being seen)
+//	-vvalue -f     (sets v to "value" and sets f)
+//	--val -f       (sets v and f as being seen)
+//	--val=value -f (sets v to "value" and sets f)
 //
 // There is no convenience function defined for making the value optional.  The
 // SetOptional method must be called on the actual Option.
 //
-//  v := String("val", 'v', "", "the optional v")
-//  Lookup("v").SetOptional()
+//	v := String("val", 'v', "", "the optional v")
+//	Lookup("v").SetOptional()
 //
-//  var s string
-//  FlagLong(&s, "val", 'v', "the optional v).SetOptional()
+//	var s string
+//	FlagLong(&s, "val", 'v', "the optional v).SetOptional()
 //
 // Parsing continues until the first non-option or "--" is encountered.
 //
@@ -107,18 +107,18 @@
 // then the single "-" will also terminate the option processing but unlike
 // "--", the "-" will be part of the remaining arguments.
 //
-// ADVANCED USAGE
+// # ADVANCED USAGE
 //
 // Normally the parsing is performed by calling the Parse function.  If it is
 // important to see the order of the options then the Getopt function should be
 // used.  The standard Parse function does the equivalent of:
 //
-// func Parse() {
-//	if err := getopt.Getopt(os.Args, nil); err != nil {
-//		fmt.Fprintln(os.Stderr, err)
-//		s.usage()
-//		os.Exit(1)
-//	}
+//	func Parse() {
+//		if err := getopt.Getopt(os.Args, nil); err != nil {
+//			fmt.Fprintln(os.Stderr, err)
+//			s.usage()
+//			os.Exit(1)
+//		}
 //
 // When calling Getopt it is the responsibility of the caller to print any
 // errors.
@@ -133,17 +133,17 @@
 // It is valid to call a set's Parse a second time to amen flags or values.  As
 // an example:
 //
-//  var a = getopt.Bool('a', "", "The a flag")
-//  var b = getopt.Bool('b', "", "The a flag")
-//  var cmd = ""
+//	var a = getopt.Bool('a', "", "The a flag")
+//	var b = getopt.Bool('b', "", "The a flag")
+//	var cmd = ""
 //
-//  var opts = getopt.CommandLine
+//	var opts = getopt.CommandLine
 //
-//  opts.Parse(os.Args)
-//  if opts.NArgs() > 0 {
-//      cmd = opts.Arg(0)
-//      opts.Parse(opts.Args())
-//  }
+//	opts.Parse(os.Args)
+//	if opts.NArgs() > 0 {
+//	    cmd = opts.Arg(0)
+//	    opts.Parse(opts.Args())
+//	}
 //
 // If called with set to { "prog", "-a", "cmd", "-b", "arg" } then both and and
 // b would be set, cmd would be set to "cmd", and opts.Args() would return {
@@ -152,7 +152,7 @@
 // Unless an option type explicitly prohibits it, an option may appear more than
 // once in the arguments.  The last value provided to the option is the value.
 //
-// MANDATORY OPTIONS
+// # MANDATORY OPTIONS
 //
 // An option marked as mandatory and not seen when parsing will cause an error
 // to be reported such as: "program: --name is a mandatory option".  An option
@@ -164,7 +164,7 @@
 //
 //	--path=value    the path (required)
 //
-// MUTUALLY EXCLUSIVE OPTIONS
+// # MUTUALLY EXCLUSIVE OPTIONS
 //
 // Options can be marked as part of a mutually exclusive group.  When two or
 // more options in a mutually exclusive group are both seen while parsing then
@@ -177,10 +177,10 @@
 // A set can have multiple mutually exclusive groups.  Mutually exclusive groups
 // are identified with their group name in {}'s appeneded to their help message:
 //
-//	 -a    use method A {method}
-//	 -b    use method B {method}
+//	-a    use method A {method}
+//	-b    use method B {method}
 //
-// BUILTIN TYPES
+// # BUILTIN TYPES
 //
 // The Flag and FlagLong functions support most standard Go types.  For the
 // list, see the description of FlagLong below for a list of supported types.
@@ -197,12 +197,12 @@
 // can be declared using Flag and FlagLong by passing in a pointer to the
 // appropriate type.
 //
-// DECLARING NEW FLAG TYPES
+// # DECLARING NEW FLAG TYPES
 //
 // A pointer to any type that implements the Value interface may be passed to
 // Flag or FlagLong.
 //
-// VALUEHELP
+// # VALUEHELP
 //
 // All non-flag options are created with a "valuehelp" as the last parameter.
 // Valuehelp should be 0, 1, or 2 strings.  The first string, if provided, is
@@ -212,17 +212,17 @@
 //
 // The usage message for the option created with
 //
-//  StringLong("option", 'o', "defval", "a string of letters")
+//	StringLong("option", 'o', "defval", "a string of letters")
 //
 // is
 //
-//  -o, -option=value
+//	-o, -option=value
 //
-//  StringLong("option", 'o', "defval", "a string of letters", "string")
+//	StringLong("option", 'o', "defval", "a string of letters", "string")
 //
 // is
 //
-//  -o, -option=string
+//	-o, -option=string
 package getopt
 
 import (
@@ -248,9 +248,9 @@ var DisplayWidth = 80
 // at.  If the option usage is too long then the help string will be displayed
 // on the next line.  For example:
 //
-//   -a   this is the a flag
-//   -u, --under=location
-//        the u flag's usage is quite long
+//	-a   this is the a flag
+//	-u, --under=location
+//	     the u flag's usage is quite long
 var HelpColumn = 20
 
 // PrintUsage prints the usage line and set of options of set S to w.

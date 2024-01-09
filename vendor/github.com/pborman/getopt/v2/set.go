@@ -43,9 +43,9 @@ type Set struct {
 
 	usage func() // usage should print the programs usage and exit.
 
-	shortOptions map[rune]*option
-	longOptions  map[string]*option
-	options      optionList
+	shortOptions   map[rune]*option
+	longOptions    map[string]*option
+	options        optionList
 	requiredGroups []string
 }
 

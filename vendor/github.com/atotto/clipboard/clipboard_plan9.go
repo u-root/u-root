@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build plan9
 // +build plan9
 
 package clipboard
 
 import (
-	"os"
 	"io/ioutil"
+	"os"
 )
 
 func readAll() (string, error) {
@@ -22,7 +23,7 @@ func readAll() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(str), nil
 }
 
@@ -32,11 +33,11 @@ func writeAll(text string) error {
 		return err
 	}
 	defer f.Close()
-	
+
 	_, err = f.Write([]byte(text))
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }

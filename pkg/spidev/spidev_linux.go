@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"runtime"
@@ -194,6 +193,9 @@ type SPI struct {
 
 type opt func(s *SPI) error
 
+// WithLogger returns an opt which can be used in Open to add
+// a logger. A common usage would be:
+// spidev.Open("/dev/spidev0.0", WithLogger(log.Printf))
 func WithLogger(l func(string, ...any)) opt {
 	return func(s *SPI) error {
 		s.logger = l
@@ -209,9 +211,9 @@ func Open(dev string, opts ...opt) (*SPI, error) {
 		return nil, err
 	}
 	s := &SPI{
-		f: f,
-		//logger:  func(string, ...any){}, // log.Printf,
-		logger: log.Printf,
+		f:      f,
+		logger: func(string, ...any) {}, // log.Printf,
+		//logger: log.Printf,
 		// a3 must be an unsafe.Pointer instead of a uintptr, otherwise
 		// we cannot mock out in the test without creating a race
 		// condition. See `go doc unsafe.Pointer`.
@@ -343,7 +345,7 @@ func (s *SPI) ID() (int, error) {
 	var id [4]byte
 	transfers := []Transfer{
 		{
-			Tx:       []byte{byte(op.PRDRES),},
+			Tx:       []byte{byte(op.PRDRES)},
 			Rx:       make([]byte, 1),
 			CSChange: true,
 		},

@@ -1,3 +1,4 @@
+//go:build aix || freebsd || openbsd || netbsd || dragonfly
 // +build aix freebsd openbsd netbsd dragonfly
 
 package interfaces

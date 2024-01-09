@@ -41,7 +41,6 @@ func (s Scope) String() string {
 	}
 }
 
-
 const (
 	FLAG_ONLINK    NextHopFlag = unix.RTNH_F_ONLINK
 	FLAG_PERVASIVE NextHopFlag = unix.RTNH_F_PERVASIVE
