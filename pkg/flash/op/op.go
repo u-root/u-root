@@ -68,6 +68,6 @@ func (o OpCode) String() string {
 	case Exit4BA:
 		return "Exit4BA"
 	default:
-		return fmt.Sprintf("Unknown(%02x)", o)
+		return fmt.Sprintf("Unknown(%02x)", byte(o))
 	}
 }

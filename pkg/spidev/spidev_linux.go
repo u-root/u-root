@@ -148,7 +148,8 @@ func (t *Transfer) String() string {
 	if len(t.Tx) == 0 {
 		return fmt.Sprint("no data")
 	}
-	return fmt.Sprintf("%#02x(%s)", t.Tx, op.OpCode(t.Tx[0]).String())
+	l := min(len(t.Tx), 8)
+	return fmt.Sprintf("%#02x[:%d](%s)", t.Tx[:l], len(t.Tx), op.OpCode(t.Tx[0]).String())
 }
 
 // ErrTxOverflow is returned if the Transfer buffer is too large.
@@ -209,7 +210,7 @@ func Open(dev string, opts ...opt) (*SPI, error) {
 	}
 	s := &SPI{
 		f:      f,
-		logger: log.Printf,
+		logger:  log.Printf,
 		// a3 must be an unsafe.Pointer instead of a uintptr, otherwise
 		// we cannot mock out in the test without creating a race
 		// condition. See `go doc unsafe.Pointer`.

@@ -52,7 +52,10 @@ var Chips = []Chip{
 		Chip:       "SST25VF016B",
 		ID:         0xbf2541,
 		Size:       2048 * 1048576,
-		PageSize:   256 * 1024,
+		// This is the real page size.
+		// The kernel gets an error on the ioctl.
+		// PageSize:   256 * 1024,
+		PageSize:   1024,
 		SectorSize: 4096,
 		BlockSize:  64 * 1024,
 		Is4BA:      false,
