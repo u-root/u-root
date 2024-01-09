@@ -76,7 +76,7 @@ func New(spi SPI) (*Flash, error) {
 	}
 
 	f.is4ba = f.chip.Is4BA
-	f.size = f.chip.Size / 1024
+	f.size = f.chip.Size
 	f.pageSize = f.chip.PageSize
 	f.sectorSize = f.chip.SectorSize
 	f.blockSize = f.chip.BlockSize
