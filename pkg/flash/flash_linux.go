@@ -32,24 +32,12 @@ type Flash struct {
 	// spi is the underlying SPI device.
 	spi SPI
 
-	chip *chips.Chip
-
-	// these are filled in from SFDP or the chip.
-	// is4ba is true if 4-byte addressing mode is enabled.
-	is4ba bool
-
-	// size is the size of the flash chip in bytes.
-	size int64
+	// Chip is derived from SFDP or looking up
+	// the chip via the ID.
+	chips.Chip
 
 	// sfdp is cached.
 	sfdp *sfdp.SFDP
-
-	// JEDEC ID is cached.
-	id uint32
-
-	pageSize   int64
-	sectorSize int64
-	blockSize  int64
 }
 
 // New creates a new flash device from a SPI interface.
@@ -71,15 +59,12 @@ func New(spi SPI) (*Flash, error) {
 		return nil, errors.Join(err, e)
 	}
 
-	if f.chip, e = chips.New(id); e != nil {
+	c, e := chips.New(id)
+	if e != nil {
 		return nil, errors.Join(err, e)
 	}
+	f.Chip = *c
 
-	f.is4ba = f.chip.Is4BA
-	f.size = f.chip.Size
-	f.pageSize = f.chip.PageSize
-	f.sectorSize = f.chip.SectorSize
-	f.blockSize = f.chip.BlockSize
 	return f, nil
 }
 
@@ -91,24 +76,24 @@ func (f *Flash) FillFromSFDP() error {
 	if density >= 0x80000000 {
 		return fmt.Errorf("unsupported flash density: %#x", density)
 	}
-	f.size = (density + 1) / 8
+	f.ArraySize = (density + 1) / 8
 
 	// Assume 4ba if address if size requires 4 bytes.
-	if f.size >= 0x1000000 {
-		f.is4ba = true
+	if f.ArraySize >= 0x1000000 {
+		f.Is4BA = true
 	}
 
 	// TODO
-	f.pageSize = 256
-	f.sectorSize = 4096
-	f.blockSize = 65536
+	f.PageSize = 256
+	f.SectorSize = 4096
+	f.BlockSize = 65536
 
 	return nil
 }
 
 // Size returns the size of the flash chip in bytes.
 func (f *Flash) Size() int64 {
-	return f.size
+	return f.ArraySize
 }
 
 const maxTransferSize = 4096
@@ -124,7 +109,7 @@ func min(x, y int64) int64 {
 func (f *Flash) prepareAddress(addr int64) []byte {
 	data := make([]byte, 4)
 	binary.BigEndian.PutUint32(data, uint32(addr))
-	if f.is4ba {
+	if f.Is4BA {
 		return data
 	}
 	return data[1:]
@@ -133,10 +118,10 @@ func (f *Flash) prepareAddress(addr int64) []byte {
 // ReadAt reads from the flash chip.
 func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 	// This is a valid implementation of io.ReaderAt.
-	if off < 0 || off > f.size {
+	if off < 0 || off > f.ArraySize {
 		return 0, io.EOF
 	}
-	p = p[:min(int64(len(p)), f.size-off)]
+	p = p[:min(int64(len(p)), f.ArraySize-off)]
 
 	// Split the transfer into maxTransferSize chunks.
 	for i := 0; i < len(p); i += maxTransferSize {
@@ -176,13 +161,13 @@ func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 // what you want instead!
 func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 	// This is a valid implementation of io.WriterAt.
-	if off < 0 || off > f.size {
+	if off < 0 || off > f.ArraySize {
 		return 0, io.EOF
 	}
-	p = p[:min(int64(len(p)), f.size-off)]
+	p = p[:min(int64(len(p)), f.ArraySize-off)]
 
 	// Special case where no page boundaries are crossed.
-	if off%f.pageSize+int64(len(p)) <= f.pageSize {
+	if off%f.PageSize+int64(len(p)) <= f.PageSize {
 		return f.writeAt(p, off)
 	}
 
@@ -190,16 +175,16 @@ func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 	// 1. A partial page before the first aligned offset. (optional)
 	// 2. All the aligned pages in the middle.
 	// 3. A partial page after the last aligned offset. (optional)
-	firstAlignedOff := (off + f.pageSize - 1) / f.pageSize * f.pageSize
-	lastAlignedOff := (off + int64(len(p))) / f.pageSize * f.pageSize
+	firstAlignedOff := (off + f.PageSize - 1) / f.PageSize * f.PageSize
+	lastAlignedOff := (off + int64(len(p))) / f.PageSize * f.PageSize
 
 	if off != firstAlignedOff {
 		if n, err := f.writeAt(p[:firstAlignedOff-off], off); err != nil {
 			return n, err
 		}
 	}
-	for i := firstAlignedOff; i < lastAlignedOff; i += f.pageSize {
-		if _, err := f.writeAt(p[i:i+f.pageSize], off+i); err != nil {
+	for i := firstAlignedOff; i < lastAlignedOff; i += f.PageSize {
+		if _, err := f.writeAt(p[i:i+f.PageSize], off+i); err != nil {
 			return int(i), err
 		}
 	}
@@ -219,22 +204,22 @@ func (f *Flash) ProgramAt(p []byte, off int64) (int, error) {
 // EraseAt erases n bytes from offset off. Both parameters must be aligned to
 // sectorSize.
 func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
-	if off < 0 || off > f.size || off+n > f.size {
+	if off < 0 || off > f.ArraySize || off+n > f.ArraySize {
 		return 0, io.EOF
 	}
 
-	if (off%f.sectorSize != 0) || (n%f.sectorSize != 0) {
+	if (off%f.SectorSize != 0) || (n%f.SectorSize != 0) {
 		return 0, fmt.Errorf("len(p) and off must be multiple of the sector size")
 	}
 
 	for i := int64(0); i < n; {
 		opcode := op.SectorErase
-		eraseSize := f.sectorSize
+		eraseSize := f.SectorSize
 
 		// Optimization to erase faster.
-		if i%f.blockSize == 0 && n-i > f.blockSize {
+		if i%f.BlockSize == 0 && n-i > f.BlockSize {
 			opcode = op.BlockErase
-			eraseSize = f.blockSize
+			eraseSize = f.BlockSize
 		}
 
 		if err := f.spi.Transfer([]spidev.Transfer{

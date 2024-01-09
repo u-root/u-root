@@ -1,4 +1,5 @@
 // Copyright 2021 the u-root Authors. All rights reserved
+
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -26,7 +27,7 @@ type Chip struct {
 	Vendor      string
 	Chip        string
 	ID          int
-	Size        int64
+	ArraySize   int64
 	PageSize    int64
 	SectorSize  int64
 	BlockSize   int64
@@ -39,7 +40,7 @@ type Chip struct {
 }
 
 func (c *Chip) String() string {
-	return fmt.Sprintf("Vendor:%s Chip:%s ID:%06x Size:%d 4BA:%v", c.Vendor, c.Chip, c.ID, c.Size, c.Is4BA)
+	return fmt.Sprintf("Vendor:%s Chip:%s ID:%06x Size:%d 4BA:%v", c.Vendor, c.Chip, c.ID, c.ArraySize, c.Is4BA)
 }
 
 func New(id int) (*Chip, error) {
@@ -53,10 +54,10 @@ func New(id int) (*Chip, error) {
 
 var Chips = []Chip{
 	{
-		Vendor: "SST",
-		Chip:   "SST25VF016B",
-		ID:     0xbf2541,
-		Size:   2 * m,
+		Vendor:    "SST",
+		Chip:      "SST25VF016B",
+		ID:        0xbf2541,
+		ArraySize: 2 * m,
 		// This is the real page size.
 		// The kernel gets an error on the ioctl.
 		// PageSize:   256 * 1024,
