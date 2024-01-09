@@ -163,10 +163,10 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		if _, err := io.ReadFull(f, buf); err != nil {
 			return err
 		}
-		if leftover, err := io.Copy(io.Discard, f); err != nil {
+		if leftover, err := programmer.WriteAt(buf, 0); err != nil {
 			return err
 		} else if leftover != 0 {
-			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), int64(len(buf))+leftover)
+			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), len(buf)+leftover)
 		}
 
 		return errors.New("write not yet supported")
