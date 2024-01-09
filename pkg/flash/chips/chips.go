@@ -32,9 +32,9 @@ type Chip struct {
 	Is4BA       bool
 	EraseBlocks []EraseBlock
 
-	Unlock uint8
-	Write  uint8
-	Read   uint8
+	Unlock op.OpCode
+	Write  op.OpCode
+	Read   op.OpCode
 }
 
 func New(id int) (*Chip, error) {

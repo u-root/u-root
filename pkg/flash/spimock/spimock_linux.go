@@ -197,7 +197,7 @@ func (s *MockSPI) Transfer(transfers []spidev.Transfer) error {
 	if err != nil {
 		return err
 	}
-	switch o {
+	switch op.OpCode(o) {
 	case op.PageProgram:
 		if !s.IsWriteEnabled {
 			break

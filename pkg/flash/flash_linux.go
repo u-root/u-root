@@ -24,6 +24,7 @@ const sfdpMaxAddress = (1 << 24) - 1
 // SPI interface for the underlying calls to the SPI driver.
 type SPI interface {
 	Transfer(transfers []spidev.Transfer) error
+	ID() (int, error)
 }
 
 // Flash provides operations for SPI flash chips.
@@ -60,14 +61,13 @@ func New(spi SPI) (*Flash, error) {
 	var err error
 	f.sfdp, err = sfdp.Read(f.SFDPReader())
 	if err == nil {
-		if err := f.FillFromSFDP(); err != nil {
-			return nil, err
+		if err = f.FillFromSFDP(); err == nil {
+			return f, nil
 		}
-		return f, nil
 	}
 
 	id, e := f.spi.ID()
-	if err != nil {
+	if e != nil {
 		return nil, errors.Join(err, e)
 	}
 
@@ -140,7 +140,7 @@ func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 	// Split the transfer into maxTransferSize chunks.
 	for i := 0; i < len(p); i += maxTransferSize {
 		if err := f.spi.Transfer([]spidev.Transfer{
-			{Tx: append([]byte{op.Read}, f.prepareAddress(off+int64(i))...)},
+			{Tx: append([]byte{byte(op.Read)}, f.prepareAddress(off+int64(i))...)},
 			{Rx: p[i:min(int64(i)+maxTransferSize, int64(len(p)))]},
 		}); err != nil {
 			return i, err
@@ -154,9 +154,9 @@ func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 	if err := f.spi.Transfer([]spidev.Transfer{
 		// Enable writing.
-		{Tx: []byte{op.WriteEnable}, CSChange: true},
+		{Tx: []byte{byte(op.WriteEnable)}, CSChange: true},
 		// Send the address.
-		{Tx: append([]byte{op.PageProgram}, f.prepareAddress(off)...)},
+		{Tx: append([]byte{byte(op.PageProgram)}, f.prepareAddress(off)...)},
 		// Send the data.
 		{Tx: p},
 	}); err != nil {
@@ -237,11 +237,11 @@ func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
 		if err := f.spi.Transfer([]spidev.Transfer{
 			// Enable writing.
 			{
-				Tx:       []byte{op.WriteEnable},
+				Tx:       []byte{byte(op.WriteEnable)},
 				CSChange: true,
 			},
 			// Send the address.
-			{Tx: append([]byte{opcode}, f.prepareAddress(off+i)...)},
+			{Tx: append([]byte{byte(opcode)}, f.prepareAddress(off+i)...)},
 		}); err != nil {
 			return i, err
 		}
@@ -253,7 +253,7 @@ func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
 
 // ReadJEDECID reads the flash chip's JEDEC ID.
 func (f *Flash) ReadJEDECID() (uint32, error) {
-	tx := []byte{op.ReadJEDECID}
+	tx := []byte{byte(op.ReadJEDECID)}
 	rx := make([]byte, 3)
 
 	if err := f.spi.Transfer([]spidev.Transfer{
@@ -288,7 +288,7 @@ func (f *SFDPReader) ReadAt(p []byte, off int64) (int, error) {
 	}
 	p = p[:min(int64(len(p)), sfdpMaxAddress-off)]
 	tx := []byte{
-		op.ReadSFDP,
+		byte(op.ReadSFDP),
 		// offset, 3-bytes, big-endian
 		byte((off >> 16) & 0xff), byte((off >> 8) & 0xff), byte(off & 0xff),
 		// dummy 0xff

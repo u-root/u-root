@@ -8,7 +8,9 @@ package spidev
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"runtime"
@@ -142,6 +144,13 @@ type Transfer struct {
 	WordDelayUSecs uint8
 }
 
+func (t *Transfer) String() string {
+	if len(t.Tx) == 0 {
+		return fmt.Sprint("no data")
+	}
+	return fmt.Sprintf("%#02x(%s)", t.Tx, op.OpCode(t.Tx[0]).String())
+}
+
 // ErrTxOverflow is returned if the Transfer buffer is too large.
 type ErrTxOverflow struct {
 	TxLen, TxMax int
@@ -178,24 +187,43 @@ type SPI struct {
 	f *os.File
 	// Used for mocking.
 	syscall func(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 uintptr, err unix.Errno)
+	// logger allows logging
+	logger func(string, ...any)
+}
+
+type opt func(s *SPI) error
+
+func WithLogger(l func(string, ...any)) opt {
+	return func(s *SPI) error {
+		s.logger = l
+		return nil
+	}
 }
 
 // Open opens a new SPI device. dev is a filename such as "/dev/spidev0.0".
 // Remember to call Close() once done.
-func Open(dev string) (*SPI, error) {
+func Open(dev string, opts ...opt) (*SPI, error) {
 	f, err := os.OpenFile(dev, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
-	return &SPI{
-		f: f,
+	s := &SPI{
+		f:      f,
+		logger: log.Printf,
 		// a3 must be an unsafe.Pointer instead of a uintptr, otherwise
 		// we cannot mock out in the test without creating a race
 		// condition. See `go doc unsafe.Pointer`.
 		syscall: func(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 uintptr, err unix.Errno) {
 			return unix.Syscall(trap, a1, a2, uintptr(a3))
 		},
-	}, err
+	}
+	for _, o := range opts {
+		err = errors.Join(o(s))
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // Close closes the SPI device.
@@ -209,6 +237,7 @@ func (s *SPI) Transfer(transfers []Transfer) error {
 	// Convert []Transfer to []iocTransfer.
 	it := make([]iocTransfer, len(transfers))
 	for i, t := range transfers {
+		s.logger("%d:%s", i, t.String())
 		it[i] = iocTransfer{
 			speedHz:        t.SpeedHz,
 			delayUSecs:     t.DelayUSecs,
@@ -317,7 +346,7 @@ func (s *SPI) ID() (int, error) {
 			CSChange: true,
 		},
 		{
-			Tx: []byte{op.ReadJEDECID, 0, 0, 0},
+			Tx: []byte{byte(op.ReadJEDECID), 0, 0, 0},
 			Rx: id[:],
 		},
 	}
