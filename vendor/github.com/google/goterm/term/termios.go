@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+
 /*
 Package term implements a subset of the C termios library to interface with Terminals.
 
@@ -151,9 +152,8 @@ type Winsize struct {
 //
 // Slave  - implements the virtual terminal functionality and the place you connect client applications
 // Master - Things written to the Master are forwarded to the Slave terminal and the other way around.
-//
-//	This gives reading from Master would give you nice line-by-line with no strange characters in
-//	Cooked() Mode and every char in Raw() mode.
+//					This gives reading from Master would give you nice line-by-line with no strange characters in
+//					Cooked() Mode and every char in Raw() mode.
 //
 // Since Slave is a virtual terminal it depends on the terminal settings ( in this lib the Termios ) what
 // and when data is forwarded through the terminal.
@@ -301,11 +301,11 @@ func (p *PTY) PTSNumber() (uint, error) {
 // var sig = make(chan os.Signal,2) 		// Channel to listen for UNIX SIGNALS on
 // signal.Notify(sig, syscall.SIGWINCH) // That'd be the window changing
 //
-//	for {
-//		<-sig
-//		term.Winsz(os.Stdin)			// We got signaled our terminal changed size so we read in the new value
-//	 term.Setwinsz(pty.Slave) // Copy it to our virtual Terminal
-//	}
+// for {
+//	<-sig
+// 	term.Winsz(os.Stdin)			// We got signaled our terminal changed size so we read in the new value
+//  term.Setwinsz(pty.Slave) // Copy it to our virtual Terminal
+// }
 func (t *Termios) Winsz(file *os.File) error {
 	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(file.Fd()), uintptr(TIOCGWINSZ), uintptr(unsafe.Pointer(&t.Wz)))
 	if errno != 0 {

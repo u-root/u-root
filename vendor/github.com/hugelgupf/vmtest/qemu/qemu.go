@@ -40,11 +40,11 @@ import (
 // ErrKernelRequiredForArgs is returned when KernelArgs is populated but Kernel is empty.
 var ErrKernelRequiredForArgs = errors.New("KernelArgs can only be used when Kernel is also specified due to how QEMU bootloader works")
 
-// ErrNoArch is returned when neither Arch nor VMTEST_ARCH are set.
-var ErrNoArch = errors.New("no guest architecture specified -- guest arch is required to decide some QEMU command-line arguments")
-
 // ErrUnsupportedArch is returned when an unsupported guest architecture value is used.
 var ErrUnsupportedArch = errors.New("unsupported guest architecture specified -- guest arch is required to decide some QEMU command-line arguments")
+
+// ErrInvalidTimeout is returned when VMTEST_TIMEOUT could not be parsed.
+var ErrInvalidTimeout = errors.New("could not parse VMTEST_TIMEOUT")
 
 // Arch is the QEMU guest architecture.
 type Arch string
@@ -87,14 +87,6 @@ func GuestArch() Arch {
 // Valid returns whether the guest arch is a supported guest arch value.
 func (g Arch) Valid() bool {
 	return slices.Contains(SupportedArches, g)
-}
-
-// Arch returns the guest architecture.
-func (g Arch) Arch() Arch {
-	if g == ArchUseEnvv {
-		g = GuestArch()
-	}
-	return g
 }
 
 // Fn is a QEMU configuration option supplied to Start or OptionsFor.
@@ -179,7 +171,7 @@ func OptionsFor(arch Arch, fns ...Fn) (*Options, error) {
 		var err error
 		vmTimeout, err = time.ParseDuration(d)
 		if err != nil {
-			return nil, fmt.Errorf("invalid VMTEST_TIMEOUT value: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrInvalidTimeout, err)
 		}
 	}
 
@@ -192,7 +184,7 @@ func OptionsFor(arch Arch, fns ...Fn) (*Options, error) {
 		QEMUArgs: []string{"-nographic"},
 	}
 
-	if err := o.setArch(arch.Arch()); err != nil {
+	if err := o.setArch(arch); err != nil {
 		return nil, err
 	}
 
@@ -403,8 +395,8 @@ func (o *Options) Start(ctx context.Context) (*VM, error) {
 }
 
 func (o *Options) setArch(arch Arch) error {
-	if len(arch) == 0 {
-		return ErrNoArch
+	if arch == ArchUseEnvv {
+		arch = GuestArch()
 	}
 	if !arch.Valid() {
 		return fmt.Errorf("%w: %s", ErrUnsupportedArch, arch)

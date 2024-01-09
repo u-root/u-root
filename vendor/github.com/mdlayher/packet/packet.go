@@ -39,7 +39,6 @@ type Config struct {
 }
 
 // Type is a socket type used when creating a Conn with Listen.
-//
 //enumcheck:exhaustive
 type Type int
 

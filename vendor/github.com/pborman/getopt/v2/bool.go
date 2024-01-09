@@ -7,8 +7,8 @@ package getopt
 // Bool creates a flag option that is a bool.  Bools normally do not take a
 // value however one can be assigned by using the long form of the option:
 //
-//	--option=true
-//	--o=false
+//  --option=true
+//  --o=false
 //
 // The value is case insensitive and one of true, false, t, f, on, off, t and 0.
 func Bool(name rune, helpvalue ...string) *bool {

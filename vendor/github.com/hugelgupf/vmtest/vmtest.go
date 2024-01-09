@@ -178,7 +178,12 @@ func WithInitramfsFiles(files ...string) Opt {
 	}
 }
 
-// WithSharedDir shares a directory with the VM.
+// WithSharedDir shares a directory with the QEMU VM using 9P using the
+// tag "tmpdir".
+//
+// guest.MountSharedDir mounts this directory at /testdata.
+//
+// If none is set, no directory is shared with the guest by default.
 func WithSharedDir(dir string) Opt {
 	return func(_ testing.TB, v *VMOptions) error {
 		v.SharedDir = dir

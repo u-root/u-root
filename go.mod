@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/uuid v1.3.0
-	github.com/hugelgupf/vmtest v0.0.0-20240102225328-693afabdd27f
+	github.com/hugelgupf/vmtest v0.0.0-20240105051717-9386b8adeaa1
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kevinburke/ssh_config v1.1.0
@@ -27,7 +27,7 @@ require (
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/pborman/getopt/v2 v2.1.0
-	github.com/pierrec/lz4/v4 v4.1.14
+	github.com/pierrec/lz4/v4 v4.1.21
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
@@ -39,7 +39,7 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.17.0
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.15.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.16.1

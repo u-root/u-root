@@ -12,13 +12,13 @@ type Conn struct {
 }
 
 // Dial the netlink socket. Establishes a new connection. The typical initialisation is:
-//
-//	conn, err := rtnl.Dial(nil)
+// 	conn, err := rtnl.Dial(nil)
 //	if err != nil {
 //		log.Fatal("can't establish netlink connection: ", err)
 //	}
 //	defer conn.Close()
 //	// use conn for your calls
+//
 func Dial(cfg *netlink.Config) (*Conn, error) {
 	conn, err := rtnetlink.Dial(cfg)
 	if err != nil {

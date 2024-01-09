@@ -2,7 +2,7 @@
 Package minimock is a command line tool that parses the input Go source file that contains an interface declaration and generates
 implementation of this interface that can be used as a mock.
 
-# Main features of minimock
+Main features of minimock
 
 1. It's integrated with the standard Go "testing" package
 
@@ -142,7 +142,7 @@ The result file ./tests/formatter_mock_test.go will contain the following code:
 		}
 	}
 
-# There are several ways to set up a mock
+There are several ways to set up a mock
 
 Setting up a mock using direct assignment:
 
@@ -164,10 +164,10 @@ Setting up a mock using builder and Set method:
 Builder pattern is convenient when you have to mock more than one method of an interface.
 Let's say we have an io.ReadCloser interface which has two methods: Read and Close
 
-	  type ReadCloser interface {
-			Read(p []byte) (n int, err error)
-			Close() error
-		}
+  type ReadCloser interface {
+		Read(p []byte) (n int, err error)
+		Close() error
+	}
 
 Then you can set up a mock using just one assignment:
 
@@ -202,26 +202,26 @@ All you have to do is instantiate the Controller and pass it as an argument to t
 Every mock is registered in the controller so by calling mc.Finish() you can verify that all the registered mocks have been called
 within your test.
 
-# Keep your tests clean
+Keep your tests clean
 
 Sometimes we write tons of mocks for our tests but over time the tested code stops using mocked dependencies,
 however mocks are still present and being initialized in the test files. So while tested code can shrink, tests are only growing.
 To prevent this minimock provides Finish() method that verifies that all your mocks have been called at least once during the test run.
 
-		func TestSomething(t *testing.T) {
-			mc := minimock.NewController(t)
-			defer mc.Finish()
+	func TestSomething(t *testing.T) {
+		mc := minimock.NewController(t)
+		defer mc.Finish()
 
-			formatterMock := NewFormatterMock(mc)
-			formatterMock.FormatMock.Return("minimock")
+		formatterMock := NewFormatterMock(mc)
+		formatterMock.FormatMock.Return("minimock")
 
-			readCloserMock := NewReadCloserMock(mc)
-			readCloserMock.ReadMock.Return(5, nil)
+		readCloserMock := NewReadCloserMock(mc)
+		readCloserMock.ReadMock.Return(5, nil)
 
-	 		//this test will fail because there are no calls to formatterMock.Format() and readCloserMock.Read()
-		}
+ 		//this test will fail because there are no calls to formatterMock.Format() and readCloserMock.Read()
+	}
 
-# Testing concurrent code
+Testing concurrent code
 
 Testing concurrent code is tough. Fortunately minimock provides you with the helper method that makes testing concurrent code easy.
 Here is how it works:
@@ -242,22 +242,23 @@ Here is how it works:
 
 Minimock comman line args:
 
-		$ minimock -h
-	  Usage of minimock:
-	    -f string
-	      	DEPRECATED: input file or import path of the package that contains interface declaration
-	    -h	show this help message
-	    -i string
-	      	comma-separated names of the interfaces to mock, i.e fmt.Stringer,io.Reader, use io.* notation to generate mocks for all interfaces in an io package
-	    -o string
-	      	destination file name to place the generated mock or path to destination package when multiple interfaces are given
-	    -p string
-	      	DEPRECATED: destination package name
-	    -s string
-	      	output file name suffix which is added to file names when multiple interfaces are given (default "_mock_test.go")
-	    -t string
-	      	DEPRECATED: mock struct name (default <interface name>Mock)
-	    -withTests
-	      	parse *_test.go files in the source package
+	$ minimock -h
+  Usage of minimock:
+    -f string
+      	DEPRECATED: input file or import path of the package that contains interface declaration
+    -h	show this help message
+    -i string
+      	comma-separated names of the interfaces to mock, i.e fmt.Stringer,io.Reader, use io.* notation to generate mocks for all interfaces in an io package
+    -o string
+      	destination file name to place the generated mock or path to destination package when multiple interfaces are given
+    -p string
+      	DEPRECATED: destination package name
+    -s string
+      	output file name suffix which is added to file names when multiple interfaces are given (default "_mock_test.go")
+    -t string
+      	DEPRECATED: mock struct name (default <interface name>Mock)
+    -withTests
+      	parse *_test.go files in the source package
+
 */
 package minimock

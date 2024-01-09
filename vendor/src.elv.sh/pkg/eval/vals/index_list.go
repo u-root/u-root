@@ -101,8 +101,7 @@ func ConvertListIndex(rawIndex interface{}, n int) (*ListIndex, error) {
 }
 
 // Index = Number |
-//
-//	Number ( ':' | '..' | '..=' ) Number
+//         Number ( ':' | '..' | '..=' ) Number
 func parseIndexString(s string, n int) (slice bool, i int, j int, err error) {
 	low, sep, high := splitIndexString(s)
 	if sep == "" {

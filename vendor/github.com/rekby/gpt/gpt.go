@@ -151,9 +151,9 @@ func (this *Header) write(writer io.Writer, saveCRC bool) (err error) {
 	return
 }
 
-// ////////////////////////////////////////////
-// /////////////// PARTITION //////////////////
-// ////////////////////////////////////////////
+//////////////////////////////////////////////
+///////////////// PARTITION //////////////////
+//////////////////////////////////////////////
 func readPartition(reader io.Reader, size uint32) (p Partition, err error) {
 	read := func(data interface{}) {
 		if err == nil {
@@ -418,8 +418,7 @@ type NewTableArgs struct {
 }
 
 // NewTable - return a valid empty Table for given sectorSize and diskSize
-//
-//	Note that a Protective MBR is needed for lots of software to read the GPT table.
+//    Note that a Protective MBR is needed for lots of software to read the GPT table.
 func NewTable(diskSize uint64, args *NewTableArgs) Table {
 	// CreateTableForNewdiskSize will update HeaderCopyStartLBA, LastUsableLBA, and CRC
 	if args == nil {

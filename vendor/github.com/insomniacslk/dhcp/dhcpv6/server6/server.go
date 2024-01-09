@@ -1,10 +1,10 @@
 // Package server6 is a basic, extensible DHCPv6 server.
 //
 // To use the DHCPv6 server code you have to call NewServer with three arguments:
-//   - an interface to listen on,
-//   - an address to listen on, and
-//   - a handler function, that will be called every time a valid DHCPv6 packet is
-//     received.
+// - an interface to listen on,
+// - an address to listen on, and
+// - a handler function, that will be called every time a valid DHCPv6 packet is
+//   received.
 //
 // The address to listen on is used to know IP address, port and optionally the
 // scope to create and UDP socket to listen on for DHCPv6 traffic.
@@ -49,6 +49,7 @@
 //		// goroutine.
 //		server.Serve()
 //	}
+//
 package server6
 
 import (
@@ -113,13 +114,12 @@ func WithConn(conn net.PacketConn) ServerOpt {
 }
 
 // NewServer initializes and returns a new Server object, listening on `addr`.
-//   - If `addr` is a multicast group, the group will be additionally joined
-//   - If `addr` is the wildcard address on the DHCPv6 server port (`[::]:547), the
-//     multicast groups All_DHCP_Relay_Agents_and_Servers(`[ff02::1:2]`) and
-//     All_DHCP_Servers(`[ff05::1:3]:547`) will be joined.
-//   - If `addr` is nil, IPv6 unspec on the DHCP server port is used and the above
-//     behaviour applies
-//
+// * If `addr` is a multicast group, the group will be additionally joined
+// * If `addr` is the wildcard address on the DHCPv6 server port (`[::]:547), the
+//   multicast groups All_DHCP_Relay_Agents_and_Servers(`[ff02::1:2]`) and
+//   All_DHCP_Servers(`[ff05::1:3]:547`) will be joined.
+// * If `addr` is nil, IPv6 unspec on the DHCP server port is used and the above
+//   behaviour applies
 // If `WithConn` is used with a non-nil address, `addr` and `ifname` have
 // no effect. In such case, joining the multicast group is the caller's
 // responsibility.

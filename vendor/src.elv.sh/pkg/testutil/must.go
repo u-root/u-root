@@ -55,7 +55,7 @@ func MustChdir(dir string) {
 
 // Must panics if the error value is not nil. It is typically used like this:
 //
-//	testutil.Must(someFunction(...))
+//   testutil.Must(someFunction(...))
 //
 // Where someFunction returns a single error value. This is useful with
 // functions like os.Mkdir to succinctly ensure the test fails to proceed if an

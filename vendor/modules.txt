@@ -127,7 +127,7 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/hugelgupf/vmtest v0.0.0-20240102225328-693afabdd27f
+# github.com/hugelgupf/vmtest v0.0.0-20240105051717-9386b8adeaa1
 ## explicit; go 1.18
 github.com/hugelgupf/vmtest
 github.com/hugelgupf/vmtest/guest
@@ -241,7 +241,7 @@ github.com/orangecms/go-framebuffer/framebuffer
 # github.com/pborman/getopt/v2 v2.1.0
 ## explicit; go 1.13
 github.com/pborman/getopt/v2
-# github.com/pierrec/lz4/v4 v4.1.14
+# github.com/pierrec/lz4/v4 v4.1.21
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
@@ -340,7 +340,7 @@ golang.org/x/net/ipv6
 # golang.org/x/sync v0.5.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.15.0
+# golang.org/x/sys v0.16.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9

@@ -157,9 +157,9 @@ func (r *Reader) Read(buf []byte) (n int, err error) {
 }
 
 // read uncompresses the next block as follow:
-//   - if buf has enough room, the block is uncompressed into it directly
-//     and the lenght of used space is returned
-//   - else, the uncompress data is stored in r.data and 0 is returned
+// - if buf has enough room, the block is uncompressed into it directly
+//   and the lenght of used space is returned
+// - else, the uncompress data is stored in r.data and 0 is returned
 func (r *Reader) read(buf []byte) (int, error) {
 	block := r.frame.Blocks.Block
 	_, err := block.Read(r.frame, r.src, r.cum)
@@ -196,10 +196,8 @@ func (r *Reader) read(buf []byte) (int, error) {
 }
 
 // Reset clears the state of the Reader r such that it is equivalent to its
-// initial state from NewReader, but instead writing to writer.
+// initial state from NewReader, but instead reading from reader.
 // No access to reader is performed.
-//
-// w.Close must be called before Reset.
 func (r *Reader) Reset(reader io.Reader) {
 	if r.data != nil {
 		lz4block.Put(r.data)

@@ -40,8 +40,8 @@ func (b *counterValue) String() string {
 // is seen while parsing the value is incremented.  The value of the counter
 // may be explicitly set by using the long form:
 //
-//	--counter=5
-//	--c=5
+//  --counter=5
+//  --c=5
 //
 // Further instances of the option will increment from the set value.
 func Counter(name rune, helpvalue ...string) *int {

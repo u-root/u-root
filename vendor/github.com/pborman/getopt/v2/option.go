@@ -89,12 +89,12 @@ type option struct {
 // usageName returns the name of the option for printing usage lines in one
 // of the following forms:
 //
-//	-f
-//	    --flag
-//	-f, --flag
-//	-s value
-//	    --set=value
-//	-s, --set=value
+//  -f
+//      --flag
+//  -f, --flag
+//  -s value
+//      --set=value
+//  -s, --set=value
 func (o *option) usageName() string {
 	// Don't print help messages if we have none and there is only one
 	// way to specify the option.

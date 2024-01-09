@@ -49,7 +49,7 @@ type PrivateKey struct {
 	s2kParams *s2k.Params
 }
 
-// S2KType s2k packet type
+//S2KType s2k packet type
 type S2KType uint8
 
 const (

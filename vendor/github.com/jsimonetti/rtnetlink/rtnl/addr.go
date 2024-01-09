@@ -12,6 +12,7 @@ import (
 //
 //	iface, _ := net.InterfaceByName("lo")
 //	conn.AddrAdd(iface, rtnl.MustParseAddr("127.0.0.1/8"))
+//
 func (c *Conn) AddrAdd(ifc *net.Interface, addr *net.IPNet) error {
 	af, err := addrFamily(addr.IP)
 	if err != nil {
@@ -42,6 +43,7 @@ func (c *Conn) AddrAdd(ifc *net.Interface, addr *net.IPNet) error {
 //
 //	iface, _ := net.InterfaceByName("lo")
 //	conn.AddrDel(iface, rtnl.MustParseAddr("127.0.0.1/8"))
+//
 func (c *Conn) AddrDel(ifc *net.Interface, addr *net.IPNet) error {
 	af, err := addrFamily(addr.IP)
 	if err != nil {
@@ -77,6 +79,7 @@ func (c *Conn) AddrDel(ifc *net.Interface, addr *net.IPNet) error {
 // To retrieve all addresses configured for the system, run:
 //
 //	conn.Addrs(nil, 0)
+//
 func (c *Conn) Addrs(ifc *net.Interface, family int) (out []*net.IPNet, err error) {
 	rx, err := c.Conn.Address.List()
 	if err != nil {
@@ -133,6 +136,7 @@ func ParseAddr(s string) (*net.IPNet, error) {
 //
 //	iface, _ := net.InterfaceByName("enp2s0")
 //	conn.AddrDel(iface, rtnl.MustParseAddr("10.1.1.1/24"))
+//
 func MustParseAddr(s string) *net.IPNet {
 	n, err := ParseAddr(s)
 	if err != nil {

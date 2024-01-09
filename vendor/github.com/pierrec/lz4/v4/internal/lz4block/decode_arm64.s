@@ -118,6 +118,9 @@ copyLiteralShortEnd:
 	MOVB.P  tmp4, 1(dst)
 
 copyLiteralDone:
+	// Initial part of match length.
+	AND $15, token, len
+
 	CMP src, srcend
 	BEQ end
 
@@ -129,8 +132,7 @@ copyLiteralDone:
 	MOVHU -2(src), offset
 	CBZ   offset, corrupt
 
-	// Read match length.
-	AND $15, token, len
+	// Read rest of match length.
 	CMP $15, len
 	BNE readMatchlenDone
 
@@ -174,58 +176,55 @@ copyDict:
 	CBZ len, copyMatchDone
 
 	// If the match extends beyond the dictionary, the rest is at dstorig.
+	// Recompute the offset for the next check.
 	MOVD dstorig, match
-
-	// The code up to copyMatchLoop1 assumes len >= minMatch.
-	CMP $const_minMatch, len
-	BLO copyMatchLoop1
+	SUB  dstorig, dst, offset
 
 copyMatchTry8:
 	// Copy doublewords if both len and offset are at least eight.
 	// A 16-at-a-time loop doesn't provide a further speedup.
 	CMP  $8, len
 	CCMP HS, offset, $8, $0
-	BLO  copyMatchLoop1
+	BLO  copyMatchTry4
 
 	AND    $7, len, lenRem
 	SUB    $8, len
 copyMatchLoop8:
-	SUBS   $8, len
 	MOVD.P 8(match), tmp1
 	MOVD.P tmp1, 8(dst)
+	SUBS   $8, len
 	BPL    copyMatchLoop8
 
-	ADD  lenRem, match
+	MOVD (match)(len), tmp2 // match+len == match+lenRem-8.
 	ADD  lenRem, dst
-	MOVD -8(match), tmp2
+	MOVD $0, len
 	MOVD tmp2, -8(dst)
 	B    copyMatchDone
 
-	// 4× unrolled byte copy loop for the overlapping case.
-copyMatchLoop4:
-	SUB     $4, len
-	MOVBU.P 4(match), tmp1
-	MOVB.P  tmp1, 4(dst)
-	MOVBU   -3(match), tmp2
-	MOVB    tmp2, -3(dst)
-	MOVBU   -2(match), tmp3
-	MOVB    tmp3, -2(dst)
-	MOVBU   -1(match), tmp4
-	MOVB    tmp4, -1(dst)
-	CBNZ   len, copyMatchLoop4
+copyMatchTry4:
+	// Copy words if both len and offset are at least four.
+	CMP  $4, len
+	CCMP HS, offset, $4, $0
+	BLO  copyMatchLoop1
+
+	MOVWU.P 4(match), tmp2
+	MOVWU.P tmp2, 4(dst)
+	SUBS    $4, len
+	BEQ     copyMatchDone
 
 copyMatchLoop1:
-	// Finish with a byte-at-a-time copy.
-	SUB     $1, len
+	// Byte-at-a-time copy for small offsets <= 3.
 	MOVBU.P 1(match), tmp2
 	MOVB.P  tmp2, 1(dst)
-	CBNZ    len, copyMatchLoop1
+	SUBS    $1, len
+	BNE     copyMatchLoop1
 
 copyMatchDone:
 	CMP src, srcend
 	BNE loop
 
 end:
+	CBNZ len, corrupt
 	SUB  dstorig, dst, tmp1
 	MOVD tmp1, ret+72(FP)
 	RET
