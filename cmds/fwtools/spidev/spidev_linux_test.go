@@ -119,7 +119,7 @@ func TestRun(t *testing.T) {
 			got := run(tt.args, openFakeSpi, bytes.NewBuffer(tt.input), output)
 
 			if !errors.Is(got, tt.err) {
-				t.Errorf("run(): %v != %v", got, tt.err)
+				t.Fatalf("run(): %v != %v", got, tt.err)
 			}
 
 			gotOutputString := output.String()

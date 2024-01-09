@@ -8,7 +8,6 @@ package flash
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 
@@ -46,6 +45,10 @@ func New(spi SPI) (*Flash, error) {
 		spi: spi,
 	}
 
+	// no errors.Join in ci yet.
+	// For now, ignore errors in SFDPReader until
+	// we get a part that can even provide
+	// a correct implementation.
 	var err error
 	f.sfdp, err = sfdp.Read(f.SFDPReader())
 	if err == nil {
@@ -54,14 +57,14 @@ func New(spi SPI) (*Flash, error) {
 		}
 	}
 
-	id, e := f.spi.ID()
-	if e != nil {
-		return nil, errors.Join(err, e)
+	id, err := f.spi.ID()
+	if err != nil {
+		return nil, err
 	}
 
-	c, e := chips.New(id)
-	if e != nil {
-		return nil, errors.Join(err, e)
+	c, err := chips.New(id)
+	if err != nil {
+		return nil, err
 	}
 	f.Chip = *c
 
