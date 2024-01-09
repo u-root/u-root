@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"runtime"
@@ -210,7 +209,7 @@ func Open(dev string, opts ...opt) (*SPI, error) {
 	}
 	s := &SPI{
 		f:      f,
-		logger:  log.Printf,
+		logger:  func(string, ...any){}, // log.Printf,
 		// a3 must be an unsafe.Pointer instead of a uintptr, otherwise
 		// we cannot mock out in the test without creating a race
 		// condition. See `go doc unsafe.Pointer`.

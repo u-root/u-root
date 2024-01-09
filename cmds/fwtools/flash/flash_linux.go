@@ -135,9 +135,9 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	}()
 
 	// Create a buffer to hold the contents of the image.
-	buf := make([]byte, programmer.Size())
 
 	if *r != "" {
+		buf := make([]byte, programmer.Size())
 		f, err := os.Create(*r)
 		if err != nil {
 			return err
@@ -155,12 +155,8 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 			return err
 		}
 	} else if *w != "" {
-		f, err := os.Open(*w)
+		buf, err := os.ReadFile(*w)
 		if err != nil {
-			return err
-		}
-		defer f.Close()
-		if _, err := io.ReadFull(f, buf); err != nil {
 			return err
 		}
 		if leftover, err := programmer.WriteAt(buf, 0); err != nil {
