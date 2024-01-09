@@ -155,6 +155,7 @@ func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 	if err := f.spi.Transfer([]spidev.Transfer{
 		// Enable writing.
+		{Tx: []byte{byte(op.PRDRES)}, CSChange: true},
 		{Tx: []byte{byte(op.WriteEnable)}, CSChange: true},
 		// Send the address.
 		{Tx: append([]byte{byte(op.PageProgram)}, f.prepareAddress(off)...)},
