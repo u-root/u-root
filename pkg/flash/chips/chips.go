@@ -5,7 +5,11 @@
 // Package chip contains chips known to work with the flash tool.
 package chips
 
-import "github.com/u-root/u-root/pkg/flash/op"
+import (
+	"os"
+
+	"github.com/u-root/u-root/pkg/flash/op"
+)
 
 const (
 	k = 1024
@@ -22,7 +26,10 @@ type Chip struct {
 	Chip        string
 	ID          int
 	Size        int64
-	PageSize    int
+	PageSize    int64
+	SectorSize  int64
+	BlockSize   int64
+	Is4BA       bool
 	EraseBlocks []EraseBlock
 
 	Unlock uint8
@@ -30,13 +37,25 @@ type Chip struct {
 	Read   uint8
 }
 
+func New(id int) (*Chip, error) {
+	for _, c := range Chips {
+		if c.ID == id {
+			return &c, nil
+		}
+	}
+	return nil, os.ErrNotExist
+}
+
 var Chips = []Chip{
 	{
-		Vendor:   "SST",
-		Chip:     "SST25VF016B",
-		ID:       0xbf2541,
-		Size:     2048 * 1048576,
-		PageSize: 256 * 1024,
+		Vendor:     "SST",
+		Chip:       "SST25VF016B",
+		ID:         0xbf2541,
+		Size:       2048 * 1048576,
+		PageSize:   256 * 1024,
+		SectorSize: 4096,
+		BlockSize:  64 * 1024,
+		Is4BA:      false,
 		EraseBlocks: []EraseBlock{
 			{
 				size: 4 * k,

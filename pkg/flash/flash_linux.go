@@ -8,9 +8,11 @@ package flash
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 
+	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spidev"
@@ -29,6 +31,9 @@ type Flash struct {
 	// spi is the underlying SPI device.
 	spi SPI
 
+	chip *chips.Chip
+
+	// these are filled in from SFDP or the chip.
 	// is4ba is true if 4-byte addressing mode is enabled.
 	is4ba bool
 
@@ -54,16 +59,36 @@ func New(spi SPI) (*Flash, error) {
 
 	var err error
 	f.sfdp, err = sfdp.Read(f.SFDPReader())
-	if err != nil {
-		return nil, fmt.Errorf("could not read sfdp: %v", err)
+	if err == nil {
+		if err := f.FillFromSFDP(); err != nil {
+			return nil, err
+		}
+		return f, nil
 	}
 
+	id, e := f.spi.ID()
+	if err != nil {
+		return nil, errors.Join(err, e)
+	}
+
+	if f.chip, e = chips.New(id); e != nil {
+		return nil, errors.Join(err, e)
+	}
+
+	f.is4ba = f.chip.Is4BA
+	f.pageSize = f.chip.PageSize
+	f.sectorSize = f.chip.SectorSize
+	f.blockSize = f.chip.BlockSize
+	return f, nil
+}
+
+func (f *Flash) FillFromSFDP() error {
 	density, err := f.SFDP().Param(sfdp.ParamFlashMemoryDensity)
 	if err != nil {
-		return nil, fmt.Errorf("flash chip SFDP does not have density param")
+		return fmt.Errorf("flash chip SFDP does not have density param")
 	}
 	if density >= 0x80000000 {
-		return nil, fmt.Errorf("unsupported flash density: %#x", density)
+		return fmt.Errorf("unsupported flash density: %#x", density)
 	}
 	f.size = (density + 1) / 8
 
@@ -77,7 +102,7 @@ func New(spi SPI) (*Flash, error) {
 	f.sectorSize = 4096
 	f.blockSize = 65536
 
-	return f, nil
+	return nil
 }
 
 // Size returns the size of the flash chip in bytes.
