@@ -28,9 +28,9 @@ const (
 	// ReadID reads the JEDEC ID.
 	ReadJEDECID OpCode = 0x9f
 	// PRD/RES
-	PRDRES = 0xab
+	PRDRES OpCode = 0xab
 	// AAI is auto address increment
-	AAI = 0xad
+	AAI OpCode = 0xad
 	// Enter4BA enters 4-OpCode addressing mode.
 	Enter4BA OpCode = 0xb7
 	// BlockErase erases a block to the value 0xff.
@@ -42,7 +42,7 @@ const (
 func (o OpCode) String() string {
 	switch o {
 	case PageProgram:
-		return "PageProgram "
+		return "PageProgram"
 	case Read:
 		return "Read"
 	case WriteDisable:

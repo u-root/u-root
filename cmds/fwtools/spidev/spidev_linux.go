@@ -88,7 +88,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(output, "%x\n", id)
+		fmt.Fprintf(output, "%02x\n", id)
 		return nil
 
 	case "raw":

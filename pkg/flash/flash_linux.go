@@ -159,7 +159,7 @@ func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 		// Send the address.
 		{Tx: append([]byte{byte(op.PageProgram)}, f.prepareAddress(off)...)},
 		// Send the data.
-		{Tx: p, CSChange: true,},
+		{Tx: p, CSChange: true},
 		{Tx: []byte{byte(op.WriteDisable)}, CSChange: true},
 	}); err != nil {
 		return 0, err

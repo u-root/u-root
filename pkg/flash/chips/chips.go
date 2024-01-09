@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package chip contains chips known to work with the flash tool.
+// Package chips contains chips known to work with the flash tool.
 package chips
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/pkg/flash/op"
@@ -17,8 +18,8 @@ const (
 )
 
 type EraseBlock struct {
-	size int
-	op   uint8
+	Size int
+	Op   uint8
 }
 
 type Chip struct {
@@ -37,6 +38,10 @@ type Chip struct {
 	Read   op.OpCode
 }
 
+func (c *Chip) String() string {
+	return fmt.Sprintf("Vendor:%s Chip:%s ID:%06x Size:%d 4BA:%v", c.Vendor, c.Chip, c.ID, c.Size, c.Is4BA)
+}
+
 func New(id int) (*Chip, error) {
 	for _, c := range Chips {
 		if c.ID == id {
@@ -48,37 +53,37 @@ func New(id int) (*Chip, error) {
 
 var Chips = []Chip{
 	{
-		Vendor:     "SST",
-		Chip:       "SST25VF016B",
-		ID:         0xbf2541,
-		Size:       2048 * 1048576,
+		Vendor: "SST",
+		Chip:   "SST25VF016B",
+		ID:     0xbf2541,
+		Size:   2 * m,
 		// This is the real page size.
 		// The kernel gets an error on the ioctl.
 		// PageSize:   256 * 1024,
-		PageSize:   1024,
-		SectorSize: 4096,
-		BlockSize:  64 * 1024,
+		PageSize:   1, // make it 1 until we get AAI 1024,
+		SectorSize: 4 * k,
+		BlockSize:  64 * k,
 		Is4BA:      false,
 		EraseBlocks: []EraseBlock{
 			{
-				size: 4 * k,
-				op:   0x20,
+				Size: 4 * k,
+				Op:   0x20,
 			},
 			{
-				size: 32 * k,
-				op:   0x52,
+				Size: 32 * k,
+				Op:   0x52,
 			},
 			{
-				size: 64 * k,
-				op:   0xD8,
+				Size: 64 * k,
+				Op:   0xD8,
 			},
 			{
-				size: 2 * m,
-				op:   0x60,
+				Size: 2 * m,
+				Op:   0x60,
 			},
 			{
-				size: 2 * m,
-				op:   0xc7,
+				Size: 2 * m,
+				Op:   0xc7,
 			},
 		},
 
