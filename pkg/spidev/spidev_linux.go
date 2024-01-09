@@ -8,7 +8,6 @@ package spidev
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -226,10 +225,9 @@ func Open(dev string, opts ...opt) (*SPI, error) {
 		},
 	}
 	for _, o := range opts {
-		err = errors.Join(o(s))
-	}
-	if err != nil {
-		return nil, err
+		if err := o(s); err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
 }
