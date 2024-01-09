@@ -165,11 +165,11 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		}
 		if leftover, err := programmer.WriteAt(buf, 0); err != nil {
 			return err
-		} else if leftover != 0 {
-			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), len(buf)+leftover)
+		} else if leftover != len(buf) {
+			return fmt.Errorf("Only flashed %d of %d bytes", leftover, len(buf))
 		}
 
-		return errors.New("write not yet supported")
+		return nil
 	}
 
 	return nil
