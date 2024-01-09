@@ -147,7 +147,11 @@ func (t *Transfer) String() string {
 	if len(t.Tx) == 0 {
 		return fmt.Sprint("no data")
 	}
-	l := min(len(t.Tx), 8)
+	// How do you say "up to the first 8 bytes" ...
+	l := len(t.Tx)
+	if l > 8 {
+		l = 8
+	}
 	return fmt.Sprintf("%#02x[:%d](%s)", t.Tx[:l], len(t.Tx), op.OpCode(t.Tx[0]).String())
 }
 
