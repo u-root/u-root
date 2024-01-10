@@ -15,6 +15,7 @@ import (
 
 // TestSFDPReader tests reading arbitrary offsets from the SFDP.
 func TestSFDPReader(t *testing.T) {
+	fakeErr := errors.New("fake transfer error")
 	for _, tt := range []struct {
 		name             string
 		readOffset       int64
@@ -40,16 +41,16 @@ func TestSFDPReader(t *testing.T) {
 			name:             "transfer error",
 			readOffset:       0x10,
 			readSize:         4,
-			forceTransferErr: errors.New("fake transfer error"),
-			wantNewErr:       errors.New("could not read sfdp: fake transfer error"),
+			forceTransferErr: fakeErr,
+			wantNewErr:       fakeErr,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			s := spimock.New()
 			s.ForceTransferErr = tt.forceTransferErr
 			f, err := New(s)
-			if gotErrString, wantErrString := fmt.Sprint(err), fmt.Sprint(tt.wantNewErr); gotErrString != wantErrString {
-				t.Errorf("flash.New() err = %q; want %q", gotErrString, wantErrString)
+			if !errors.Is(err, tt.wantNewErr) {
+				t.Errorf("flash.New() err = %v; want %v", err, tt.forceTransferErr)
 			}
 			if err != nil {
 				return
