@@ -45,7 +45,7 @@ func (c *Chip) String() string {
 	return fmt.Sprintf("Vendor:%s Chip:%s ID:%06x Size:%d 4BA:%v", c.Vendor, c.Chip, c.ID, c.ArraySize, c.Is4BA)
 }
 
-func New(id int) (*Chip, error) {
+func Lookup(id int) (*Chip, error) {
 	for _, c := range Chips {
 		if c.ID == id {
 			return &c, nil

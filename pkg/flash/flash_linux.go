@@ -62,7 +62,7 @@ func New(spi SPI) (*Flash, error) {
 		return nil, err
 	}
 
-	c, err := chips.New(id)
+	c, err := chips.Lookup(id)
 	if err != nil {
 		return nil, err
 	}
