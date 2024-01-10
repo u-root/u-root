@@ -71,3 +71,7 @@ func (o OpCode) String() string {
 		return fmt.Sprintf("Unknown(%02x)", byte(o))
 	}
 }
+
+func (o OpCode) Bytes() []byte {
+	return []byte{byte(o)}
+}
