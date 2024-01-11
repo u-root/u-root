@@ -24,11 +24,13 @@ type EraseBlock struct {
 	Op   op.OpCode
 }
 
+type ID int
+
 // Chip defines a chip.
 type Chip struct {
 	Vendor      string
 	Chip        string
-	ID          int
+	ID          ID
 	ArraySize   int64
 	PageSize    int64
 	SectorSize  int64
@@ -47,7 +49,7 @@ func (c *Chip) String() string {
 }
 
 // Lookup finds a Chip by id, returning os.ErrNotExist if it is not found.
-func Lookup(id int) (*Chip, error) {
+func Lookup(id ID) (*Chip, error) {
 	for _, c := range Chips {
 		if c.ID == id {
 			return &c, nil

@@ -16,7 +16,7 @@ import (
 func TestLookup(t *testing.T) {
 	tests := []struct {
 		name string
-		id   int
+		id   chips.ID
 		want *chips.Chip
 		err  error
 	}{
