@@ -15,19 +15,20 @@ var (
 )
 
 func TestOpen(t *testing.T) {
-	if _, err := os.Stat(DevName); err != nil {
+	m, err := NewDev(DevName)
+	if err != nil {
 		tmpDir := t.TempDir()
 		testmtd, err := os.CreateTemp(tmpDir, "testmtd")
 		if err != nil {
 			t.Errorf(`os.Create(tmpDir, "testmtd")=file, %q, want file, nil`, err)
 		}
 		DevName = testmtd.Name()
+		m, err = NewDev(DevName)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	m, err := NewDev(DevName)
-	if err != nil {
-		t.Fatal(err)
-	}
 	defer m.Close()
 
 	if _, err := m.QueueWriteAt([]byte(testString), 0); err != nil {
