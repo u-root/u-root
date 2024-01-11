@@ -90,12 +90,12 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		// transfers to ensure that happens.
 		transfers := []spidev.Transfer{
 			{
-				Tx:       []byte{op.PRDRES},
+				Tx:       op.PRDRES.Bytes(),
 				Rx:       make([]byte, 1),
 				CSChange: true,
 			},
 			{
-				Tx: []byte{op.ReadJEDECID, 0, 0, 0},
+				Tx: append(op.ReadJEDECID.Bytes(), 0, 0, 0),
 				Rx: make([]byte, 4),
 			},
 		}
