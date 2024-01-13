@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/spidev"
 	"golang.org/x/sys/unix"
@@ -276,4 +277,11 @@ func (s *MockSPI) SetSpeedHz(hz uint32) error {
 	}
 	s.SpeedHz = hz
 	return nil
+}
+
+func (s *MockSPI) ID() (chips.ID, error) {
+	if s.ForceTransferErr != nil {
+		return -1, s.ForceTransferErr
+	}
+	return 0xbf2541, nil
 }

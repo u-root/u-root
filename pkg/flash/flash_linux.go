@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spidev"
@@ -22,6 +23,7 @@ const sfdpMaxAddress = (1 << 24) - 1
 // SPI interface for the underlying calls to the SPI driver.
 type SPI interface {
 	Transfer(transfers []spidev.Transfer) error
+	ID() (chips.ID, error)
 }
 
 // Flash provides operations for SPI flash chips.
@@ -29,21 +31,12 @@ type Flash struct {
 	// spi is the underlying SPI device.
 	spi SPI
 
-	// is4ba is true if 4-byte addressing mode is enabled.
-	is4ba bool
-
-	// size is the size of the flash chip in bytes.
-	size int64
+	// Chip is derived from SFDP or looking up
+	// the chip via the ID.
+	chips.Chip
 
 	// sfdp is cached.
 	sfdp *sfdp.SFDP
-
-	// JEDEC ID is cached.
-	id uint32
-
-	pageSize   int64
-	sectorSize int64
-	blockSize  int64
 }
 
 // New creates a new flash device from a SPI interface.
@@ -53,36 +46,60 @@ func New(spi SPI) (*Flash, error) {
 	}
 
 	var err error
+	var id chips.ID
+	id, err = f.spi.ID()
+	if err != nil {
+		return nil, fmt.Errorf("can not ID chip: %w", err)
+	}
+	c, err := chips.Lookup(id)
+	if err == nil {
+		f.Chip = *c
+		// Even when we have a chip, there is still
+		// benefit to trying to get an SFDP.
+		// Further, the package as written wants
+		// some sort of empty sfdp to exist, and this
+		// is the easiest way to do it.
+		f.sfdp, _ = sfdp.Read(f.SFDPReader())
+		return f, nil
+	}
+
 	f.sfdp, err = sfdp.Read(f.SFDPReader())
 	if err != nil {
-		return nil, fmt.Errorf("could not read sfdp: %v", err)
+		return nil, fmt.Errorf("chip %#x: chip not known, and no SFDP: %w", id, err)
 	}
-
-	density, err := f.SFDP().Param(sfdp.ParamFlashMemoryDensity)
-	if err != nil {
-		return nil, fmt.Errorf("flash chip SFDP does not have density param")
+	if err = f.FillFromSFDP(); err != nil {
+		return nil, fmt.Errorf("chip %#x: chip not known, and no SFDP: %w", id, err)
 	}
-	if density >= 0x80000000 {
-		return nil, fmt.Errorf("unsupported flash density: %#x", density)
-	}
-	f.size = (density + 1) / 8
-
-	// Assume 4ba if address if size requires 4 bytes.
-	if f.size >= 0x1000000 {
-		f.is4ba = true
-	}
-
-	// TODO
-	f.pageSize = 256
-	f.sectorSize = 4096
-	f.blockSize = 65536
 
 	return f, nil
 }
 
+func (f *Flash) FillFromSFDP() error {
+	density, err := f.SFDP().Param(sfdp.ParamFlashMemoryDensity)
+	if err != nil {
+		return fmt.Errorf("flash chip SFDP does not have density param")
+	}
+	if density >= 0x80000000 {
+		return fmt.Errorf("unsupported flash density: %#x", density)
+	}
+	f.ArraySize = (density + 1) / 8
+
+	// Assume 4ba if address if size requires 4 bytes.
+	if f.ArraySize >= 0x1000000 {
+		f.Is4BA = true
+	}
+
+	// TODO
+	f.PageSize = 256
+	f.SectorSize = 4096
+	f.BlockSize = 65536
+
+	return nil
+}
+
 // Size returns the size of the flash chip in bytes.
 func (f *Flash) Size() int64 {
-	return f.size
+	return f.ArraySize
 }
 
 const maxTransferSize = 4096
@@ -98,7 +115,7 @@ func min(x, y int64) int64 {
 func (f *Flash) prepareAddress(addr int64) []byte {
 	data := make([]byte, 4)
 	binary.BigEndian.PutUint32(data, uint32(addr))
-	if f.is4ba {
+	if f.Is4BA {
 		return data
 	}
 	return data[1:]
@@ -107,10 +124,10 @@ func (f *Flash) prepareAddress(addr int64) []byte {
 // ReadAt reads from the flash chip.
 func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 	// This is a valid implementation of io.ReaderAt.
-	if off < 0 || off > f.size {
+	if off < 0 || off > f.ArraySize {
 		return 0, io.EOF
 	}
-	p = p[:min(int64(len(p)), f.size-off)]
+	p = p[:min(int64(len(p)), f.ArraySize-off)]
 
 	// Split the transfer into maxTransferSize chunks.
 	for i := 0; i < len(p); i += maxTransferSize {
@@ -129,11 +146,13 @@ func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 	if err := f.spi.Transfer([]spidev.Transfer{
 		// Enable writing.
+		{Tx: op.PRDRES.Bytes(), CSChange: true},
 		{Tx: op.WriteEnable.Bytes(), CSChange: true},
 		// Send the address.
 		{Tx: append(op.PageProgram.Bytes(), f.prepareAddress(off)...)},
 		// Send the data.
-		{Tx: p},
+		{Tx: p, CSChange: true},
+		{Tx: op.WriteDisable.Bytes(), CSChange: true},
 	}); err != nil {
 		return 0, err
 	}
@@ -148,13 +167,13 @@ func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 // what you want instead!
 func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 	// This is a valid implementation of io.WriterAt.
-	if off < 0 || off > f.size {
+	if off < 0 || off > f.ArraySize {
 		return 0, io.EOF
 	}
-	p = p[:min(int64(len(p)), f.size-off)]
+	p = p[:min(int64(len(p)), f.ArraySize-off)]
 
 	// Special case where no page boundaries are crossed.
-	if off%f.pageSize+int64(len(p)) <= f.pageSize {
+	if off%f.PageSize+int64(len(p)) <= f.PageSize {
 		return f.writeAt(p, off)
 	}
 
@@ -162,16 +181,16 @@ func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 	// 1. A partial page before the first aligned offset. (optional)
 	// 2. All the aligned pages in the middle.
 	// 3. A partial page after the last aligned offset. (optional)
-	firstAlignedOff := (off + f.pageSize - 1) / f.pageSize * f.pageSize
-	lastAlignedOff := (off + int64(len(p))) / f.pageSize * f.pageSize
+	firstAlignedOff := (off + f.PageSize - 1) / f.PageSize * f.PageSize
+	lastAlignedOff := (off + int64(len(p))) / f.PageSize * f.PageSize
 
 	if off != firstAlignedOff {
 		if n, err := f.writeAt(p[:firstAlignedOff-off], off); err != nil {
 			return n, err
 		}
 	}
-	for i := firstAlignedOff; i < lastAlignedOff; i += f.pageSize {
-		if _, err := f.writeAt(p[i:i+f.pageSize], off+i); err != nil {
+	for i := firstAlignedOff; i < lastAlignedOff; i += f.PageSize {
+		if _, err := f.writeAt(p[i:i+f.PageSize], off+i); err != nil {
 			return int(i), err
 		}
 	}
@@ -191,22 +210,22 @@ func (f *Flash) ProgramAt(p []byte, off int64) (int, error) {
 // EraseAt erases n bytes from offset off. Both parameters must be aligned to
 // sectorSize.
 func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
-	if off < 0 || off > f.size || off+n > f.size {
+	if off < 0 || off > f.ArraySize || off+n > f.ArraySize {
 		return 0, io.EOF
 	}
 
-	if (off%f.sectorSize != 0) || (n%f.sectorSize != 0) {
+	if (off%f.SectorSize != 0) || (n%f.SectorSize != 0) {
 		return 0, fmt.Errorf("len(p) and off must be multiple of the sector size")
 	}
 
 	for i := int64(0); i < n; {
 		opcode := op.SectorErase
-		eraseSize := f.sectorSize
+		eraseSize := f.SectorSize
 
 		// Optimization to erase faster.
-		if i%f.blockSize == 0 && n-i > f.blockSize {
+		if i%f.BlockSize == 0 && n-i > f.BlockSize {
 			opcode = op.BlockErase
-			eraseSize = f.blockSize
+			eraseSize = f.BlockSize
 		}
 
 		if err := f.spi.Transfer([]spidev.Transfer{
@@ -262,12 +281,13 @@ func (f *SFDPReader) ReadAt(p []byte, off int64) (int, error) {
 		return 0, io.EOF
 	}
 	p = p[:min(int64(len(p)), sfdpMaxAddress-off)]
-	tx := append(op.ReadSFDP.Bytes(),
+	tx := []byte{
+		byte(op.ReadSFDP),
 		// offset, 3-bytes, big-endian
-		byte((off>>16)&0xff), byte((off>>8)&0xff), byte(off&0xff),
+		byte((off >> 16) & 0xff), byte((off >> 8) & 0xff), byte(off & 0xff),
 		// dummy 0xff
 		0xff,
-	)
+	}
 	if err := f.spi.Transfer([]spidev.Transfer{
 		{Tx: tx},
 		{Rx: p},
