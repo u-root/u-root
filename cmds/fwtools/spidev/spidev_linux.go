@@ -13,7 +13,7 @@
 // Options:
 //
 //	-D DEV: spidev device (default /dev/spidev0.0)
-//	-s SPEED: max speed in Hz (default 500000)
+//	-s SPEED: max speed in Hz (default whatever the spi package sets)
 //
 // Description:
 //
@@ -59,7 +59,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	// Parse args.
 	fs := flag.NewFlagSet("spidev", flag.ContinueOnError)
 	dev := fs.StringP("device", "D", "/dev/spidev0.0", "spidev device")
-	speed := fs.Uint32P("speed", "s", 500000, "max speed in Hz")
+	speed := fs.Uint32P("speed", "s", 0, "max speed in Hz")
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			return fmt.Errorf("%w:<raw|sfdp|id>", errCommand)
@@ -77,8 +77,10 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return err
 	}
 	defer s.Close()
-	if err := s.SetSpeedHz(*speed); err != nil {
-		return err
+	if *speed != 0 {
+		if err := s.SetSpeedHz(*speed); err != nil {
+			return err
+		}
 	}
 
 	cmd := fs.Arg(0)

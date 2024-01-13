@@ -71,7 +71,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:               "setspeedhz error",
-			args:               []string{"raw"},
+			args:               []string{"-s", "1", "raw"},
 			input:              []byte("abcd"),
 			ForceSetSpeedHzErr: os.ErrInvalid,
 			err:                os.ErrInvalid,
