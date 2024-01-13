@@ -247,18 +247,8 @@ func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
 
 // ReadJEDECID reads the flash chip's JEDEC ID.
 func (f *Flash) ReadJEDECID() (uint32, error) {
-	tx := op.ReadJEDECID.Bytes()
-	rx := make([]byte, 3)
-
-	if err := f.spi.Transfer([]spidev.Transfer{
-		{Tx: tx},
-		{Rx: rx},
-	}); err != nil {
-		return 0, err
-	}
-
-	// Little-endian
-	return (uint32(rx[0]) << 16) | (uint32(rx[1]) << 8) | uint32(rx[2]), nil
+	id, err := f.spi.ID()
+	return uint32(id), err
 }
 
 // SFDPReader is used to read from the SFDP address space.
