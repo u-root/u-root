@@ -33,16 +33,15 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/flash"
 	"github.com/u-root/u-root/pkg/flash/chips"
-	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spidev"
 )
 
 type spi interface {
 	Transfer([]spidev.Transfer) error
+	ID() (chips.ID, error)
 	SetSpeedHz(uint32) error
 	Close() error
-	ID() (chips.ID, error)
 }
 
 var (
@@ -86,27 +85,11 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	// Currently, only the raw subcommand is supported.
 	switch cmd {
 	case "id":
-		// Wake it up, then get the id.
-		// PRDRES is not universally handled on all devices, but that's ok.
-		// but CE MUST drop, so we structure this as two separate
-		// transfers to ensure that happens.
-		transfers := []spidev.Transfer{
-			{
-				Tx:       op.PRDRES.Bytes(),
-				Rx:       make([]byte, 1),
-				CSChange: true,
-			},
-			{
-				Tx: append(op.ReadJEDECID.Bytes(), 0, 0, 0),
-				Rx: make([]byte, 4),
-			},
-		}
-
-		if err := s.Transfer(transfers); err != nil {
+		id, err := s.ID()
+		if err != nil {
 			return err
 		}
-
-		fmt.Fprintf(output, "%02x\n", transfers[1].Rx[1:])
+		fmt.Fprintf(output, "%02x\n", id)
 		return nil
 
 	case "raw":
