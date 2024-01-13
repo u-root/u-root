@@ -49,7 +49,7 @@ func New(spi SPI) (*Flash, error) {
 	var id chips.ID
 	id, err = f.spi.ID()
 	if err != nil {
-		return nil, fmt.Errorf("Can not ID chip: %w", err)
+		return nil, fmt.Errorf("can not ID chip: %w", err)
 	}
 	c, err := chips.Lookup(id)
 	if err == nil {
