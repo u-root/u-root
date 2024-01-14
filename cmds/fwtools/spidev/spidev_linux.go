@@ -77,6 +77,11 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return err
 	}
 	defer s.Close()
+
+	// Note that spidev.Open sets a safe default speed, known to
+	// work, that is conservative. In some cases, users might wish
+	// to override that speed. Since the speed can be set any number
+	// of times, this is a safe operation.
 	if *speed != 0 {
 		if err := s.SetSpeedHz(*speed); err != nil {
 			return err
