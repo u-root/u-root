@@ -203,14 +203,14 @@ func WithLogger(l func(string, ...any)) opt {
 	}
 }
 
-// safe sets "safe" settings for initial SPI operation.
-// Some SPI settings are required for proper initial
-// operation.
-func (s *SPI) safe() error {
+// safe tries to set "safe" settings for initial SPI operation.
+// However, settings may not succeed, for $REASONS$.
+// Hardware is highly variable.
+// If there is an error, log it, and continue.
+func (s *SPI) safe() {
 	if err := s.SetSpeedHz(500000); err != nil {
-		return err
+		s.logger("warning only: speeding set to %d err %v", 500000, err)
 	}
-	return nil
 }
 
 // Open opens a new SPI device. dev is a filename such as "/dev/spidev0.0".
@@ -232,15 +232,14 @@ func Open(dev string, opts ...opt) (*SPI, error) {
 		},
 	}
 
-	if err := s.safe(); err != nil {
-		return nil, err
-	}
-
 	for _, o := range opts {
 		if err := o(s); err != nil {
 			return nil, err
 		}
 	}
+
+	s.safe()
+
 	return s, nil
 }
 
