@@ -209,7 +209,7 @@ func WithLogger(l func(string, ...any)) opt {
 // If there is an error, log it, and continue.
 func (s *SPI) safe() {
 	if err := s.SetSpeedHz(500000); err != nil {
-		s.logger("warning only: speeding set to %d err %v", 500000, err)
+		s.logger("warning only: set speed to %d HZ err %v", 500000, err)
 	}
 }
 
