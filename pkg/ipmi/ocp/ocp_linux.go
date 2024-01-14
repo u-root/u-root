@@ -341,12 +341,12 @@ func GetOemIpmiBootDriveInfo(si *smbios.Info) (*BootDriveInfo, error) {
 	const bootDriveName = "Boot_Drive"
 	var info BootDriveInfo
 
-	if boardManufacturerID, ok := OENMap[t1.Manufacturer]; ok == true {
+	if boardManufacturerID, ok := OENMap[t1.Manufacturer]; ok {
 		info.ManufacturerID = boardManufacturerID
 	}
 
 	for index := 0; index < len(t9); index++ {
-		if strings.Contains(t9[index].SlotDesignation, bootDriveName) == false {
+		if !strings.Contains(t9[index].SlotDesignation, bootDriveName) {
 			continue
 		}
 
