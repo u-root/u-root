@@ -10,6 +10,7 @@ package integration
 import (
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func testPkgs(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs := strings.Fields(strings.TrimSpace(string(out)))
+	allPkgs := strings.Fields(strings.TrimSpace(string(out)))
 
 	// TODO: Some tests do not run properly in QEMU at the moment. They are
 	// blocklisted. These tests fail for mostly two reasons:
@@ -88,14 +89,13 @@ func testPkgs(t *testing.T) []string {
 			"github.com/u-root/u-root/pkg/vfile",
 		)
 	}
-	for i := 0; i < len(pkgs); i++ {
-		for _, b := range blocklist {
-			if pkgs[i] == b {
-				pkgs = append(pkgs[:i], pkgs[i+1:]...)
-			}
+
+	var pkgs []string
+	for _, p := range allPkgs {
+		if !slices.Contains(blocklist, p) {
+			pkgs = append(pkgs, p)
 		}
 	}
-
 	return pkgs
 }
 
