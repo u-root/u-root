@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/cmdline"
 )
 
 // CheckError is a helper function for tests
@@ -154,11 +153,8 @@ func Run(m *testing.M, mainFn func()) {
 }
 
 // SkipIfInVMTest skips a test if it's being executed in a u-root test VM.
-//
-// See pkg/vmtest/integration.go which starts the VM with the uroot.vmtest in
-// the kernel cmdline.
 func SkipIfInVMTest(t *testing.T) {
-	if cmdline.ContainsFlag("uroot.vmtest") {
+	if os.Getenv("VMTEST_IN_GUEST") == "1" {
 		t.Skipf("Skipping test since we are in a u-root test VM")
 	}
 }
