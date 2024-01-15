@@ -58,7 +58,6 @@ jobs:
           GOCOVERDIR=$(pwd)/gocov \
             VMTEST_GO_PROFILE=vmcoverage.txt runvmtest -- \
             go test -v -covermode=atomic ${{ matrix.extra-arg }} \
-            -timeout=15m \
             -coverprofile=coverage.txt ./${{ matrix.pattern }}
 
       - uses: codecov/codecov-action@v4-beta
