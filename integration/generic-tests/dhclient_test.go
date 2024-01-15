@@ -25,8 +25,6 @@ import (
 
 // TestDhclientQEMU4 uses QEMU's DHCP server to test dhclient.
 func TestDhclientQEMU4(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
 	// Create the file to download
 	dir := t.TempDir()
 	want := "Hello, world!"
@@ -86,8 +84,6 @@ func TestDhclientQEMU4(t *testing.T) {
 }
 
 func TestDhclientTimesOut(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
 	testCmds := []string{
 		"dhclient -v -retry 2 -timeout 10",
 		"echo \"DHCP timed out\"",
@@ -125,8 +121,6 @@ func TestDhclientTimesOut(t *testing.T) {
 }
 
 func TestDhclient6(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
 	serverCmds := []string{
 		"ip link set eth0 up",
 		"pxeserver -6 -your-ip6=fec0::3 -4=false",
