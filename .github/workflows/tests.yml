@@ -20,6 +20,7 @@ jobs:
         vmarch: [ 'amd64', 'arm64' ]
         pattern: [ 'integration/generic-tests/...', 'integration/gotests/...' ]
         extra-arg: [ '' ]
+        goarm: [ '' ]
         include:
           # Only run these with VM arch amd64 for now.
           - go-version: '1.21.x'
@@ -29,10 +30,11 @@ jobs:
             vmarch: 'amd64'
             pattern: 'pkg/...'
             extra-arg: '-coverpkg=./pkg/...'
-          # This doesn't pass on 1.21.x for some reason yet.
-          - go-version: '1.20'
+          # QEMU's -M virt only supports GOARM=5
+          - go-version: '1.21.x'
             vmarch: arm
             pattern: 'integration/generic-tests/...'
+            goarm: '5'
           # Root dir tests
           - go-version: '1.21.x'
             vmarch: 'amd64'
@@ -41,6 +43,7 @@ jobs:
     env:
       GO_VERSION: ${{ matrix.go-version }}
       VMTEST_ARCH: ${{ matrix.vmarch }}
+      GOARM: ${{ matrix.goarm }}
 
     steps:
       - uses: actions/checkout@v4
