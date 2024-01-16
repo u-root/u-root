@@ -178,7 +178,12 @@ func WithInitramfsFiles(files ...string) Opt {
 	}
 }
 
-// WithSharedDir shares a directory with the VM.
+// WithSharedDir shares a directory with the QEMU VM using 9P using the
+// tag "tmpdir".
+//
+// guest.MountSharedDir mounts this directory at /testdata.
+//
+// If none is set, no directory is shared with the guest by default.
 func WithSharedDir(dir string) Opt {
 	return func(_ testing.TB, v *VMOptions) error {
 		v.SharedDir = dir
@@ -224,9 +229,7 @@ func startVM(t testing.TB, o *VMOptions) *qemu.VM {
 		qemu.LogSerialByLine(qemu.PrintLineWithPrefix(o.ConsoleOutputPrefix, t.Logf)),
 		// Tests use this env var to identify they are running inside a
 		// vmtest using SkipIfNotInVM.
-		//
-		// Older tests use the presence of uroot.vmtest in the kernel command-line.
-		qemu.WithAppendKernel("VMTEST_IN_GUEST=1", "uroot.vmtest"),
+		qemu.WithAppendKernel("VMTEST_IN_GUEST=1"),
 		qemu.VirtioRandom(),
 	}
 	if o.SharedDir != "" {

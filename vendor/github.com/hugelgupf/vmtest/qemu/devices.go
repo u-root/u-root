@@ -20,6 +20,15 @@ import (
 	"github.com/hugelgupf/vmtest/internal/eventchannel"
 )
 
+// ErrInvalidDir is used when no directory is specified for file sharing.
+var ErrInvalidDir = errors.New("no directory specified")
+
+// ErrInvalidTag is used when no tag is specified for 9P file system sharing.
+var ErrInvalidTag = errors.New("no tag specified for 9P file system")
+
+// ErrIsNotDir is used when the directory specified for file sharing is not a directory.
+var ErrIsNotDir = errors.New("file system sharing requires directory")
+
 // IDAllocator is used to ensure no overlapping QEMU option IDs.
 type IDAllocator struct {
 	// maps a prefix to the maximum used suffix number.
@@ -46,7 +55,16 @@ func (a *IDAllocator) ID(prefix string) string {
 func ReadOnlyDirectory(dir string) Fn {
 	return func(alloc *IDAllocator, opts *Options) error {
 		if len(dir) == 0 {
-			return nil
+			return ErrInvalidDir
+		}
+		if fi, err := os.Stat(dir); err != nil {
+			return fmt.Errorf("cannot access directory %s to be shared with guest: %w", dir, err)
+		} else if !fi.IsDir() {
+			return &os.PathError{
+				Op:   "9P-directory-sharing",
+				Path: dir,
+				Err:  fmt.Errorf("%w: is %s", ErrIsNotDir, fi.Mode().Type()),
+			}
 		}
 
 		drive := alloc.ID("drive")
@@ -65,8 +83,8 @@ func ReadOnlyDirectory(dir string) Fn {
 // IDEBlockDevice emulates an AHCI/IDE block device.
 func IDEBlockDevice(file string) Fn {
 	return func(alloc *IDAllocator, opts *Options) error {
-		if len(file) == 0 {
-			return nil
+		if _, err := os.Stat(file); err != nil {
+			return fmt.Errorf("cannot access file %s to be shared with guest: %w", file, err)
 		}
 
 		drive := alloc.ID("drive")
@@ -105,15 +123,19 @@ func P9BootDirectory(dir string) Fn {
 func p9Directory(dir string, boot bool, tag string) Fn {
 	return func(alloc *IDAllocator, opts *Options) error {
 		if len(dir) == 0 {
-			return fmt.Errorf("no directory specified for shared 9P file system")
+			return fmt.Errorf("%w for shared 9P file system", ErrInvalidDir)
 		}
 		if len(tag) == 0 {
-			return fmt.Errorf("a tag must be specified for 9P file system")
+			return ErrInvalidTag
 		}
 		if fi, err := os.Stat(dir); err != nil {
-			return fmt.Errorf("cannot access directory %s to be shared with guest: %v", dir, err)
+			return fmt.Errorf("cannot access directory %s to be shared with guest: %w", dir, err)
 		} else if !fi.IsDir() {
-			return fmt.Errorf("directory %s to be shared with guest is not a directory, is %s", dir, fi.Mode().Type())
+			return &os.PathError{
+				Op:   "9P-directory-sharing",
+				Path: dir,
+				Err:  fmt.Errorf("%w: is %s", ErrIsNotDir, fi.Mode().Type()),
+			}
 		}
 
 		var id string
@@ -146,9 +168,6 @@ func p9Directory(dir string, boot bool, tag string) Fn {
 				"rootfstype=9p",
 				"rootflags=trans=virtio,version=9p2000.L",
 			)
-		} else {
-			// seen as an env var by the init process
-			opts.AppendKernel("UROOT_USE_9P=1")
 		}
 		return nil
 	}
@@ -203,7 +222,10 @@ func ServeHTTP(s *http.Server, l net.Listener) Fn {
 		})
 		opts.Tasks = append(opts.Tasks, func(ctx context.Context, n *Notifications) error {
 			// Wait for VM exit.
-			<-n.VMExited
+			select {
+			case <-n.VMExited:
+			case <-ctx.Done():
+			}
 			// Stop HTTP server.
 			return s.Close()
 		})
@@ -393,5 +415,51 @@ func Cleanup(f func() error) Task {
 		case <-n.VMExited:
 		}
 		return f()
+	}
+}
+
+// ByArch applies only the Fn config function applicable to the VM guest
+// architecture.
+func ByArch(m map[Arch]Fn) Fn {
+	return func(alloc *IDAllocator, opts *Options) error {
+		a := opts.Arch()
+		fn, ok := m[a]
+		if !ok {
+			return nil
+		}
+		return fn(alloc, opts)
+	}
+}
+
+// IfNotArch applies fn only if the VM guest arch is not the given arch.
+func IfNotArch(arch Arch, fn Fn) Fn {
+	return func(alloc *IDAllocator, opts *Options) error {
+		if opts.Arch() == arch {
+			return nil
+		}
+		return fn(alloc, opts)
+	}
+}
+
+// IfArch applies fn only if the VM guest arch is the given arch.
+func IfArch(arch Arch, fn Fn) Fn {
+	return func(alloc *IDAllocator, opts *Options) error {
+		if opts.Arch() == arch {
+			return fn(alloc, opts)
+		}
+		return nil
+	}
+}
+
+// All applies all given configurators in order. If an error occurs, it returns
+// the error early.
+func All(fn ...Fn) Fn {
+	return func(alloc *IDAllocator, opts *Options) error {
+		for _, f := range fn {
+			if err := f(alloc, opts); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }

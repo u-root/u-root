@@ -40,11 +40,11 @@ import (
 // ErrKernelRequiredForArgs is returned when KernelArgs is populated but Kernel is empty.
 var ErrKernelRequiredForArgs = errors.New("KernelArgs can only be used when Kernel is also specified due to how QEMU bootloader works")
 
-// ErrNoArch is returned when neither Arch nor VMTEST_ARCH are set.
-var ErrNoArch = errors.New("no guest architecture specified -- guest arch is required to decide some QEMU command-line arguments")
-
 // ErrUnsupportedArch is returned when an unsupported guest architecture value is used.
 var ErrUnsupportedArch = errors.New("unsupported guest architecture specified -- guest arch is required to decide some QEMU command-line arguments")
+
+// ErrInvalidTimeout is returned when VMTEST_TIMEOUT could not be parsed.
+var ErrInvalidTimeout = errors.New("could not parse VMTEST_TIMEOUT")
 
 // Arch is the QEMU guest architecture.
 type Arch string
@@ -65,6 +65,9 @@ const (
 
 	// ArchArm is the arm 32bit architecture.
 	ArchArm Arch = "arm"
+
+	// ArchRiscv64 is the riscv 64bit architecture.
+	ArchRiscv64 Arch = "riscv64"
 )
 
 // SupportedArches are the supported guest architecture values.
@@ -73,6 +76,7 @@ var SupportedArches = []Arch{
 	ArchI386,
 	ArchArm64,
 	ArchArm,
+	ArchRiscv64,
 }
 
 // GuestArch returns the Guest architecture under test. Either VMTEST_ARCH or
@@ -87,14 +91,6 @@ func GuestArch() Arch {
 // Valid returns whether the guest arch is a supported guest arch value.
 func (g Arch) Valid() bool {
 	return slices.Contains(SupportedArches, g)
-}
-
-// Arch returns the guest architecture.
-func (g Arch) Arch() Arch {
-	if g == ArchUseEnvv {
-		g = GuestArch()
-	}
-	return g
 }
 
 // Fn is a QEMU configuration option supplied to Start or OptionsFor.
@@ -179,7 +175,7 @@ func OptionsFor(arch Arch, fns ...Fn) (*Options, error) {
 		var err error
 		vmTimeout, err = time.ParseDuration(d)
 		if err != nil {
-			return nil, fmt.Errorf("invalid VMTEST_TIMEOUT value: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrInvalidTimeout, err)
 		}
 	}
 
@@ -192,7 +188,7 @@ func OptionsFor(arch Arch, fns ...Fn) (*Options, error) {
 		QEMUArgs: []string{"-nographic"},
 	}
 
-	if err := o.setArch(arch.Arch()); err != nil {
+	if err := o.setArch(arch); err != nil {
 		return nil, err
 	}
 
@@ -233,7 +229,7 @@ type Options struct {
 	// If empty, VMTEST_QEMU_ARCH env var will be used.
 	arch Arch
 
-	// QEMUCommand is QEMU binary to invoke and some additonal args.
+	// QEMUCommand is QEMU binary to invoke and some additional args.
 	//
 	// If empty, the VMTEST_QEMU env var will be used.
 	QEMUCommand string
@@ -262,6 +258,8 @@ type Options struct {
 	// QEMU subprocess exits. When the context is canceled, the QEMU
 	// subprocess is expected to exit as well, and when the QEMU subprocess
 	// exits, the context is canceled.
+	//
+	// Tasks may depend on ExtraFiles or SerialOutput to be closed to exit.
 	Tasks []Task
 
 	// Additional QEMU cmdline arguments.
@@ -373,9 +371,22 @@ func (o *Options) Start(ctx context.Context) (*VM, error) {
 	if err := cmd.Start(); err != nil {
 		// Cancel tasks.
 		cancel()
-		// Wait for tasks to exit. Some day we'll report their errors
-		// with errors.Join.
+
+		// Unblock tasks that may depend on these files.
+		vm.Console.Close()
+		for _, w := range vm.Options.SerialOutput {
+			w.Close()
+		}
+		for _, c := range o.ExtraFiles {
+			c.Close()
+		}
+
+		// Wait for tasks to exit.
 		_ = vm.taskWG.Wait()
+
+		// Close these after tasks have exited to guarantee that tasks
+		// use context cancelation or closing of their inputs to unblock.
+		vm.notifs.closeAll()
 		return nil, err
 	}
 	vm.notifs.vmStarted()
@@ -403,8 +414,8 @@ func (o *Options) Start(ctx context.Context) (*VM, error) {
 }
 
 func (o *Options) setArch(arch Arch) error {
-	if len(arch) == 0 {
-		return ErrNoArch
+	if arch == ArchUseEnvv {
+		arch = GuestArch()
 	}
 	if !arch.Valid() {
 		return fmt.Errorf("%w: %s", ErrUnsupportedArch, arch)
@@ -517,6 +528,14 @@ func (v *VM) Waited() bool {
 func (v *VM) Wait() error {
 	v.waitCalled.Store(true)
 
+	// If there is a lot of output after the last user's Expect call (or
+	// there are no Expect calls at all), the pty buffer may fill up and
+	// the guest is blocked from writing anything and from continuing
+	// execution.
+	//
+	// Therefore, drain! EOF should happen when the guest exits.
+	_, _ = v.Console.ExpectEOF()
+
 	<-v.wait
 
 	v.waitMu.Lock()
@@ -562,6 +581,13 @@ func (n notifications) vmStarted() {
 func (n notifications) vmExited(err error) {
 	for _, m := range n {
 		m.VMExited <- err
+		close(m.VMExited)
+	}
+}
+
+func (n notifications) closeAll() {
+	for _, m := range n {
+		close(m.VMStarted)
 		close(m.VMExited)
 	}
 }

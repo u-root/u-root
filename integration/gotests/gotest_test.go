@@ -10,6 +10,7 @@ package integration
 import (
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func testPkgs(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs := strings.Fields(strings.TrimSpace(string(out)))
+	allPkgs := strings.Fields(strings.TrimSpace(string(out)))
 
 	// TODO: Some tests do not run properly in QEMU at the moment. They are
 	// blocklisted. These tests fail for mostly two reasons:
@@ -75,9 +76,9 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/pkg/tss",
 		"github.com/u-root/u-root/pkg/syscallfilter",
 	}
-	if qemu.GuestArch() == qemu.ArchArm64 {
-		blocklist = append(
-			blocklist,
+	switch qemu.GuestArch() {
+	case qemu.ArchArm64:
+		blocklist = append(blocklist,
 			"github.com/u-root/u-root/pkg/strace",
 
 			// These tests run in 1-2 seconds on x86, but run
@@ -87,23 +88,31 @@ func testPkgs(t *testing.T) []string {
 			"github.com/u-root/u-root/cmds/exp/cbmem",
 			"github.com/u-root/u-root/pkg/vfile",
 		)
-	}
-	for i := 0; i < len(pkgs); i++ {
-		for _, b := range blocklist {
-			if pkgs[i] == b {
-				pkgs = append(pkgs[:i], pkgs[i+1:]...)
-			}
-		}
+
+	case qemu.ArchArm:
+		blocklist = append(blocklist,
+			"github.com/u-root/u-root/cmds/exp/cbmem",
+
+			// These 4 tests do not compile on arm.
+			"github.com/u-root/u-root/pkg/boot/kexec",
+			"github.com/u-root/u-root/pkg/flash/chips",
+			"github.com/u-root/u-root/pkg/mount/gpt",
+			"github.com/u-root/u-root/pkg/mount/mtd",
+		)
 	}
 
+	var pkgs []string
+	for _, p := range allPkgs {
+		if !slices.Contains(blocklist, p) {
+			pkgs = append(pkgs, p)
+		}
+	}
 	return pkgs
 }
 
 // TestGoTest effectively runs "go test ./..." inside a QEMU instance. The
 // tests run as root and can do all sorts of things not possible otherwise.
 func TestGoTest(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
 	pkgs := testPkgs(t)
 
 	vmtest.RunGoTestsInVM(t, pkgs,
@@ -127,7 +136,8 @@ func TestGoTest(t *testing.T) {
 				// e.g. pkg/mount/gpt/gpt_test.go need to claim 4.29G
 				//
 				//     disk = make([]byte, 0x100000000)
-				qemu.ArbitraryArgs("-m", "6G"),
+				qemu.IfNotArch(qemu.ArchArm, qemu.ArbitraryArgs("-m", "6G")),
+				qemu.IfArch(qemu.ArchArm, qemu.ArbitraryArgs("-m", "3G")),
 
 				// aarch64 VMs start at 1970-01-01 without RTC explicitly set.
 				qemu.ArbitraryArgs("-rtc", "base=localtime,clock=vm"),

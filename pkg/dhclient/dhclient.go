@@ -27,9 +27,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// isIpv6LinkReady returns true if the interface has a link-local address
+// isIPv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
-func isIpv6LinkReady(l netlink.Link) (bool, error) {
+func isIPv6LinkReady(l netlink.Link) (bool, error) {
 	addrs, err := netlink.AddrList(l, netlink.FAMILY_V6)
 	if err != nil {
 		return false, err
@@ -39,6 +39,31 @@ func isIpv6LinkReady(l netlink.Link) (bool, error) {
 			if addr.Flags&unix.IFA_F_DADFAILED != 0 {
 				log.Printf("DADFAILED for %v, continuing anyhow", addr.IP)
 			}
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// isIPv6RouteReady returns true if serverAddr is reachable.
+func isIPv6RouteReady(l netlink.Link, serverAddr net.IP) (bool, error) {
+	if serverAddr.IsMulticast() {
+		return true, nil
+	}
+
+	routes, err := netlink.RouteList(l, netlink.FAMILY_V6)
+	if err != nil {
+		return false, err
+	}
+	for _, route := range routes {
+		if route.LinkIndex != l.Attrs().Index {
+			continue
+		}
+		// Default route.
+		if route.Dst == nil {
+			return true, nil
+		}
+		if route.Dst.Contains(serverAddr) {
 			return true, nil
 		}
 	}
@@ -230,7 +255,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 	// Hardcode the timeout to 30s for now.
 	linkTimeout := time.After(linkUpTimeout)
 	for {
-		if ready, err := isIpv6LinkReady(iface); err != nil {
+		if ready, err := isIPv6LinkReady(iface); err != nil {
 			return nil, err
 		} else if ready {
 			break
@@ -239,9 +264,26 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 		case <-time.After(100 * time.Millisecond):
 			continue
 		case <-linkTimeout:
-			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		case <-ctx.Done():
 			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
+		}
+	}
+
+	// If user specified a non-multicast address, make sure it's routable before we start.
+	if c.V6ServerAddr != nil {
+		for {
+			if ready, err := isIPv6RouteReady(iface, c.V6ServerAddr.IP); err != nil {
+				return nil, err
+			} else if ready {
+				break
+			}
+			select {
+			case <-time.After(100 * time.Millisecond):
+				continue
+			case <-linkTimeout:
+			case <-ctx.Done():
+				return nil, errors.New("timeout after waiting for a route")
+			}
 		}
 	}
 

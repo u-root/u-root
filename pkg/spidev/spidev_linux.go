@@ -7,13 +7,17 @@
 package spidev
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"runtime"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/flash/chips"
+	"github.com/u-root/u-root/pkg/flash/op"
 	"golang.org/x/sys/unix"
 )
 
@@ -141,6 +145,12 @@ type Transfer struct {
 	WordDelayUSecs uint8
 }
 
+func (t *Transfer) String() string {
+	var x [8]byte
+	n, _ := io.ReadAtLeast(bytes.NewBuffer(t.Tx), x[:], len(x))
+	return fmt.Sprintf("%#02x...[:%d](%s)", x[:n], len(t.Tx), op.OpCode(x[0]).String())
+}
+
 // ErrTxOverflow is returned if the Transfer buffer is too large.
 type ErrTxOverflow struct {
 	TxLen, TxMax int
@@ -177,24 +187,60 @@ type SPI struct {
 	f *os.File
 	// Used for mocking.
 	syscall func(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 uintptr, err unix.Errno)
+	// logger allows logging
+	logger func(string, ...any)
+}
+
+type opt func(s *SPI) error
+
+// WithLogger returns an opt which can be used in Open to add
+// a logger. A common usage would be:
+// spidev.Open("/dev/spidev0.0", WithLogger(log.Printf))
+func WithLogger(l func(string, ...any)) opt {
+	return func(s *SPI) error {
+		s.logger = l
+		return nil
+	}
+}
+
+// safe tries to set "safe" settings for initial SPI operation.
+// However, settings may not succeed, for $REASONS$.
+// Hardware is highly variable.
+// If there is an error, log it, and continue.
+func (s *SPI) safe() {
+	if err := s.SetSpeedHz(500000); err != nil {
+		s.logger("warning only: set speed to %d HZ err %v", 500000, err)
+	}
 }
 
 // Open opens a new SPI device. dev is a filename such as "/dev/spidev0.0".
 // Remember to call Close() once done.
-func Open(dev string) (*SPI, error) {
+func Open(dev string, opts ...opt) (*SPI, error) {
 	f, err := os.OpenFile(dev, os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
-	return &SPI{
-		f: f,
+	s := &SPI{
+		f:      f,
+		logger: func(string, ...any) {}, // log.Printf,
+		//logger: log.Printf,
 		// a3 must be an unsafe.Pointer instead of a uintptr, otherwise
 		// we cannot mock out in the test without creating a race
 		// condition. See `go doc unsafe.Pointer`.
 		syscall: func(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 uintptr, err unix.Errno) {
 			return unix.Syscall(trap, a1, a2, uintptr(a3))
 		},
-	}, err
+	}
+
+	for _, o := range opts {
+		if err := o(s); err != nil {
+			return nil, err
+		}
+	}
+
+	s.safe()
+
+	return s, nil
 }
 
 // Close closes the SPI device.
@@ -208,6 +254,7 @@ func (s *SPI) Transfer(transfers []Transfer) error {
 	// Convert []Transfer to []iocTransfer.
 	it := make([]iocTransfer, len(transfers))
 	for i, t := range transfers {
+		s.logger("%d:%s", i, t.String())
 		it[i] = iocTransfer{
 			speedHz:        t.SpeedHz,
 			delayUSecs:     t.DelayUSecs,
@@ -300,4 +347,31 @@ func (s *SPI) SetSpeedHz(hz uint32) error {
 		return os.NewSyscallError("ioctl(SPI_IOC_WR_MAX_SPEED_HZ)", err)
 	}
 	return nil
+}
+
+// ID gets the 24-bit id as an int
+func (s *SPI) ID() (chips.ID, error) {
+	// Wake it up, then get the id.
+	// PRDRES is not universally handled on all devices, but that's ok.
+	// but CE MUST drop, so we structure this as two separate
+	// transfers to ensure that happens.
+	var id [4]byte
+	transfers := []Transfer{
+		{
+			Tx:       []byte{byte(op.PRDRES)},
+			Rx:       make([]byte, 1),
+			CSChange: true,
+		},
+		{
+			Tx: []byte{byte(op.ReadJEDECID), 0, 0, 0},
+			Rx: id[:],
+		},
+	}
+
+	if err := s.Transfer(transfers); err != nil {
+		return -1, err
+	}
+
+	id[0] = 0
+	return chips.ID(binary.BigEndian.Uint32(id[:])), nil
 }

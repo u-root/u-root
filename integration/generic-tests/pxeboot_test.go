@@ -20,9 +20,6 @@ import (
 
 // TestPxeboot runs a server and client to test pxebooting a node.
 func TestPxeboot4(t *testing.T) {
-	// TODO: support arm
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
 	serverCmds := []string{
 		"ip addr add 192.168.0.1/24 dev eth0",
 		"ip link set eth0 up",
