@@ -135,9 +135,9 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	}()
 
 	// Create a buffer to hold the contents of the image.
-	buf := make([]byte, programmer.Size())
 
 	if *r != "" {
+		buf := make([]byte, programmer.Size())
 		f, err := os.Create(*r)
 		if err != nil {
 			return err
@@ -155,21 +155,19 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 			return err
 		}
 	} else if *w != "" {
-		f, err := os.Open(*w)
+		buf, err := os.ReadFile(*w)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
-		if _, err := io.ReadFull(f, buf); err != nil {
-			return err
+		amt, err := programmer.WriteAt(buf, 0)
+		if err != nil {
+			return fmt.Errorf("Writing %d bytes to dev %v:%w", len(buf), programmer, err)
 		}
-		if leftover, err := io.Copy(io.Discard, f); err != nil {
-			return err
-		} else if leftover != 0 {
-			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), int64(len(buf))+leftover)
+		if amt != len(buf) {
+			return fmt.Errorf("Only flashed %d of %d bytes", amt, len(buf))
 		}
 
-		return errors.New("write not yet supported")
+		return nil
 	}
 
 	return nil
