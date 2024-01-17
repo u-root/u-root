@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
@@ -151,7 +152,12 @@ func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 		// Send the address.
 		{Tx: append(op.PageProgram.Bytes(), f.prepareAddress(off)...)},
 		// Send the data.
-		{Tx: p, CSChange: true},
+		{Tx: p},
+	}); err != nil {
+		return 0, err
+	}
+	time.Sleep(10 * time.Microsecond)
+	if err := f.spi.Transfer([]spidev.Transfer{
 		// The meaning of CSChange is ... odd.
 		// IF CSChange is set true here, then CE# never goes
 		// high. If CSChange is left unchanged,
