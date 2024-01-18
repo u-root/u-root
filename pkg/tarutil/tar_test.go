@@ -57,7 +57,10 @@ func TestCreateTarSingleFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := CreateTar(f, []string{"testdata/test0"}, nil); err != nil {
+	if err := CreateTar(f, []string{"testdata/test0"}, &Opts{
+		NoRecursion: true,
+		Filters:     []Filter{VerboseFilter, VerboseLogFilter},
+	}); err != nil {
 		f.Close()
 		t.Fatal(err)
 	}
@@ -69,11 +72,7 @@ func TestCreateTarSingleFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("system tar could not parse the file: %v", err)
 	}
-	expected := `testdata/test0
-testdata/test0/a.txt
-testdata/test0/dir
-testdata/test0/dir/b.txt
-`
+	expected := "testdata/test0\n"
 	if string(out) != expected {
 		t.Fatalf("got %q, want %q", string(out), expected)
 	}
