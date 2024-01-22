@@ -79,7 +79,7 @@ func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 		// ethernet can just vanish.
 		iface, err := netlink.LinkByName(ifname)
 		if err != nil {
-			return nil, fmt.Errorf("cannot get interface %q by name: %v", ifname, err)
+			return nil, fmt.Errorf("cannot get interface %q by name: %w", ifname, err)
 		}
 
 		// Check if link is actually operational.
@@ -90,7 +90,7 @@ func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 		}
 
 		if err := netlink.LinkSetUp(iface); err != nil {
-			return nil, fmt.Errorf("interface %q: %v can't make it up: %v", ifname, iface, err)
+			return nil, fmt.Errorf("interface %q: %v can't make it up: %w", ifname, iface, err)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
