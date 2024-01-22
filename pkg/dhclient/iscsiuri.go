@@ -94,7 +94,7 @@ func ParseISCSIURI(s string) (*net.TCPAddr, string, error) {
 			if len(tok) > 0 {
 				pv, err := strconv.Atoi(tok)
 				if err != nil {
-					return nil, "", fmt.Errorf("iSCSI URI %q has invalid port: %v", s, err)
+					return nil, "", fmt.Errorf("iSCSI URI %q has invalid port: %w", s, err)
 				}
 				port = pv
 			}
@@ -103,7 +103,7 @@ func ParseISCSIURI(s string) (*net.TCPAddr, string, error) {
 		}
 	}
 	if i.err != nil {
-		return nil, "", fmt.Errorf("iSCSI URI %q failed to parse: %v", s, i.err)
+		return nil, "", fmt.Errorf("iSCSI URI %q failed to parse: %w", s, i.err)
 	}
 	if magic != "iscsi" {
 		return nil, "", fmt.Errorf("iSCSI URI %q is missing iscsi scheme prefix, have %s", s, magic)
