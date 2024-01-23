@@ -112,7 +112,7 @@ func String(t Table) string {
 func WriteTables(w io.Writer, tab Table, tabs ...Table) error {
 	for _, tt := range append([]Table{tab}, tabs...) {
 		if _, err := w.Write(tt.Data()); err != nil {
-			return fmt.Errorf("writing %s: %v", tt.Sig(), err)
+			return fmt.Errorf("writing %s: %w", tt.Sig(), err)
 		}
 	}
 	return nil
