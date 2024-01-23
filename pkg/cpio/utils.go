@@ -131,7 +131,7 @@ func (dw *DedupWriter) WriteRecord(rec Record) error {
 func WriteRecords(w RecordWriter, files []Record) error {
 	for _, f := range files {
 		if err := w.WriteRecord(f); err != nil {
-			return fmt.Errorf("WriteRecords: writing %q got %v", f.Info.Name, err)
+			return fmt.Errorf("WriteRecords: writing %q got %w", f.Info.Name, err)
 		}
 	}
 	return nil
@@ -190,7 +190,7 @@ func WriteRecordsAndDirs(rw RecordWriter, files []Record) error {
 		}
 		recs = append(recs, f)
 		if err := WriteRecords(rw, recs); err != nil {
-			return fmt.Errorf("WriteRecords: writing %q got %v", f.Info.Name, err)
+			return fmt.Errorf("WriteRecords: writing %q got %w", f.Info.Name, err)
 		}
 	}
 	return nil
