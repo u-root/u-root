@@ -62,7 +62,7 @@ func DrawImageAt(img image.Image, posx int, posy int) error {
 	DrawOnBufAt(buf, img, posx, posy, stride, bpp)
 	err = os.WriteFile(fbdev, buf, 0o600)
 	if err != nil {
-		return fmt.Errorf("error writing to framebuffer: %v", err)
+		return fmt.Errorf("error writing to framebuffer: %w", err)
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func DrawScaledImageAt(img image.Image, posx int, posy int, factor int) error {
 	DrawScaledOnBufAt(buf, img, posx, posy, factor, stride, bpp)
 	err = os.WriteFile(fbdev, buf, 0o600)
 	if err != nil {
-		return fmt.Errorf("error writing to framebuffer: %v", err)
+		return fmt.Errorf("error writing to framebuffer: %w", err)
 	}
 	return nil
 }
