@@ -31,13 +31,13 @@ env:
 jobs:
   build-image:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        image: ['kernel-amd64', 'kernel-arm', 'kernel-arm64', 'uefipayload-amd64', 'multiboot-test-kernel-amd64']
-
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      matrix:
+        image: ['kernel-amd64', 'kernel-arm', 'kernel-arm64', 'uefipayload-amd64', 'multiboot-test-kernel-amd64']
 
     steps:
       - name: Checkout repository
