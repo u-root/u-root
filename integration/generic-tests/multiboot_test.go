@@ -10,6 +10,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,6 +23,14 @@ import (
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
+type nopCloser struct {
+	io.Writer
+}
+
+func (nopCloser) Close() error {
+	return nil
+}
+
 func testMultiboot(t *testing.T, kernel string) {
 	src := filepath.Join(os.Getenv("UROOT_MULTIBOOT_TEST_KERNEL_DIR"), kernel)
 	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
@@ -32,8 +41,9 @@ func testMultiboot(t *testing.T, kernel string) {
 
 	dir := t.TempDir()
 	testCmds := []string{
-		`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb" | tee /testdata/output.json`,
+		`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
 	}
+	var b bytes.Buffer
 	vm := vmtest.StartVMAndRunCmds(t, testCmds,
 		vmtest.WithSharedDir(dir),
 		vmtest.WithMergedInitramfs(uroot.Opts{
@@ -46,6 +56,7 @@ func testMultiboot(t *testing.T, kernel string) {
 			},
 		}),
 		vmtest.WithQEMUFn(
+			qemu.WithSerialOutput(nopCloser{&b}),
 			qemu.WithVMTimeout(time.Minute),
 		),
 	)
@@ -56,15 +67,12 @@ func testMultiboot(t *testing.T, kernel string) {
 	if _, err := vm.Console.ExpectString(`}`); err != nil {
 		t.Errorf(`expected '}' = end of JSON, got error: %v`, err)
 	}
-	if err := vm.Wait(); err != nil {
+	if err := vm.Kill(); err != nil {
 		t.Fatal(err)
 	}
+	_ = vm.Wait()
 
-	output, err := os.ReadFile(filepath.Join(dir, "output.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(output))
+	output := b.Bytes()
 
 	i := bytes.Index(output, []byte(multiboot.DebugPrefix))
 	if i == -1 {

@@ -44,7 +44,7 @@ func readInt(filename string) (int, error) {
 	// Get base offset (the first GPIO managed by this chip)
 	buf, err := os.ReadFile(filename)
 	if err != nil {
-		return 0, fmt.Errorf("failed to read integer out of %s: %v", filename, err)
+		return 0, fmt.Errorf("failed to read integer out of %s: %w", filename, err)
 	}
 	baseStr := strings.TrimSpace(string(buf))
 	num, err := strconv.Atoi(baseStr)
@@ -104,7 +104,7 @@ func SetOutputValue(pin int, val Value) error {
 	path := filepath.Join(gpioPath, fmt.Sprintf("gpio%d", pin), "direction")
 	outFile, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
-		return fmt.Errorf("failed to open %s: %v", path, err)
+		return fmt.Errorf("failed to open %s: %w", path, err)
 	}
 	defer outFile.Close()
 	if _, err := outFile.WriteString(dir); err != nil {
@@ -135,11 +135,11 @@ func Export(pin int) error {
 	path := filepath.Join(gpioPath, "export")
 	outFile, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
-		return fmt.Errorf("failed to open %s: %v", path, err)
+		return fmt.Errorf("failed to open %s: %w", path, err)
 	}
 	defer outFile.Close()
 	if _, err := outFile.WriteString(strconv.Itoa(pin)); err != nil {
-		return fmt.Errorf("failed to export gpio %d: %v", pin, err)
+		return fmt.Errorf("failed to export gpio %d: %w", pin, err)
 	}
 	return nil
 }
