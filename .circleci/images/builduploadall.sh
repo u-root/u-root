@@ -10,14 +10,6 @@ if [[ $VC != "3" ]]; then
     exit 1
 fi
 
-for GOARCH in amd64 arm arm64; do
-  (
-    cd test-image-$GOARCH
-    docker build . -t uroottest/test-image-$GOARCH:$VERSION
-    docker push uroottest/test-image-$GOARCH:$VERSION
-  )
-done
-
 # Tamago has slightly different requirements; until we are sure why,
 # do a slightly custom build
 
