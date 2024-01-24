@@ -1,0 +1,69 @@
+name: Publish test images
+
+on:
+  push:
+    paths:
+      - '.circleci/images/kernel-arm/*'
+      - '.circleci/images/kernel-arm64/*'
+      - '.circleci/images/kernel-amd64/*'
+      - '.circleci/images/multiboot-test-kernel-amd64/*'
+      - '.circleci/images/uefipayload-amd64/*'
+      - '.github/workflows/test-images.yml'
+    branches: ['main']
+  pull_request:
+    paths:
+      - '.circleci/images/kernel-arm/*'
+      - '.circleci/images/kernel-arm64/*'
+      - '.circleci/images/kernel-amd64/*'
+      - '.circleci/images/multiboot-test-kernel-amd64/*'
+      - '.circleci/images/uefipayload-amd64/*'
+      - '.github/workflows/test-images.yml'
+    branches: ['main']
+
+# Cancel running workflows on new push to a PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ['kernel-amd64', 'kernel-arm', 'kernel-arm64', 'uefipayload-amd64', 'multiboot-test-kernel-amd64']
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/test-${{ matrix.image }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./.circleci/images/${{ matrix.image }}
+          # Build for PRs, only push for main.
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
