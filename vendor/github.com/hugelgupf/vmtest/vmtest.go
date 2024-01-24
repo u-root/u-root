@@ -226,7 +226,7 @@ func startVM(t testing.TB, o *VMOptions) *qemu.VM {
 	SkipWithoutQEMU(t)
 
 	qopts := []qemu.Fn{
-		qemu.LogSerialByLine(qemu.PrintLineWithPrefix(o.ConsoleOutputPrefix, t.Logf)),
+		qemu.LogSerialByLine(qemu.DefaultPrint(o.ConsoleOutputPrefix, t.Logf)),
 		// Tests use this env var to identify they are running inside a
 		// vmtest using SkipIfNotInVM.
 		qemu.WithAppendKernel("VMTEST_IN_GUEST=1"),
