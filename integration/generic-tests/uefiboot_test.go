@@ -8,9 +8,7 @@
 package integration
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -24,14 +22,15 @@ import (
 func TestUefiBoot(t *testing.T) {
 	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	payload := "UEFIPAYLOAD.fd"
-	src := fmt.Sprintf("/home/circleci/%v", payload)
-	if tk := os.Getenv("UROOT_TEST_UEFIPAYLOAD_DIR"); len(tk) > 0 {
-		src = filepath.Join(tk, payload)
+	var payload string
+	if tk := os.Getenv("UROOT_TEST_UEFIPAYLOAD"); len(tk) == 0 {
+		t.Skipf("UROOT_TEST_UEFIPAYLOAD not set to payload")
+	} else {
+		payload = tk
 	}
 
-	if _, err := os.Stat(src); err != nil && os.IsNotExist(err) {
-		t.Skipf("UEFI payload image is not found: %s\n Usage: uefiboot <payload>", src)
+	if _, err := os.Stat(payload); err != nil && os.IsNotExist(err) {
+		t.Skipf("UEFI payload image is not found: %s\n Usage: uefiboot <payload>", payload)
 	}
 
 	testCmds := []string{
@@ -43,7 +42,7 @@ func TestUefiBoot(t *testing.T) {
 		)}),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
-			qemu.IDEBlockDevice(src),
+			qemu.IDEBlockDevice(payload),
 			qemu.ArbitraryArgs("-machine", "q35"),
 			qemu.ArbitraryArgs("-m", "4096"),
 		),
