@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux && amd64
-// +build linux,amd64
+//go:build (linux && arm64) || (linux && amd64) || (linux && riscv64)
+// +build linux,arm64 linux,amd64 linux,riscv64
 
 package syscallfilter
 
@@ -100,15 +100,16 @@ func eventName(r *strace.TraceRecord) string {
 	case strace.SyscallExit:
 		return "X" + sysname
 	case strace.SignalExit:
-		return fmt.Sprintf("SignalExit")
+		return "SignalExit"
 	case strace.Exit:
-		return fmt.Sprintf("Exit")
+		return "Exit"
 	case strace.SignalStop:
-		return fmt.Sprintf("SignalStop")
+		return "SignalStop"
 	case strace.NewChild:
-		return fmt.Sprintf("NewChild")
+		return "NewChild"
+	default:
+		log.Panicf("Unknown event %#x from record %v", r.Event, r)
 	}
-	log.Panicf("Unknown event %#x from record %v", r.Event, r)
 	return ""
 }
 
@@ -145,19 +146,13 @@ func (c *Cmd) handleEvent(t strace.Task, r *strace.TraceRecord, e []*event) erro
 // as created by AddActions. The slice can be empty, in which case the command
 // runs as normal.
 func (c *Cmd) Run() error {
-	defer func() {
-		// This wait may or may not be needed, since the process
-		// can end normally or be stopped by a filter. Hence,
-		// we will not check for an error.
-		c.Wait()
-	}()
-	if err := strace.Trace(c.Cmd, func(t strace.Task, r *strace.TraceRecord) error {
-		ret := c.handleEvent(t, r, c.events)
-		return ret
-	}); err != nil {
-		return fmt.Errorf("%v", err)
-	}
-	return nil
+	// This wait may or may not be needed, since the process
+	// can end normally or be stopped by a filter. Hence,
+	// we will not check for an error.
+	defer c.Wait()
+	return strace.Trace(c.Cmd, func(t strace.Task, r *strace.TraceRecord) error {
+		return c.handleEvent(t, r, c.events)
+	})
 }
 
 // AddActions creates an []event as defined by a possibly empty set of actions, and
