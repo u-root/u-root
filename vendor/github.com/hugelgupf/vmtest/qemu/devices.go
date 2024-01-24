@@ -14,7 +14,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/creack/pty"
 	"github.com/hugelgupf/vmtest/internal/eventchannel"
@@ -233,9 +235,12 @@ func ServeHTTP(s *http.Server, l net.Listener) Fn {
 	}
 }
 
+// LinePrinter prints one line to some output.
+type LinePrinter func(line string)
+
 // LogSerialByLine processes serial output from the guest one line at a time
 // and calls callback on each full line.
-func LogSerialByLine(callback func(line string)) Fn {
+func LogSerialByLine(callback LinePrinter) Fn {
 	return func(alloc *IDAllocator, opts *Options) error {
 		r, w := io.Pipe()
 		opts.SerialOutput = append(opts.SerialOutput, w)
@@ -253,12 +258,41 @@ func LogSerialByLine(callback func(line string)) Fn {
 	}
 }
 
-// PrintLineWithPrefix returns a usable callback for LogSerialByLine that
-// prints a prefix and the line. Usable with any standard Go print function
-// like t.Logf or fmt.Printf.
-func PrintLineWithPrefix(prefix string, printer func(fmt string, arg ...any)) func(line string) {
+// TS prefixes line printer output with a timestamp since the first log line.
+//
+// format can be any Time.Format format string. Recommendations are
+// time.TimeOnly or time.DateTime.
+func TS(format string, printer LinePrinter) LinePrinter {
 	return func(line string) {
-		printer("%s: %s", prefix, line)
+		printer(fmt.Sprintf("[%s] %s", time.Now().Format(format), line))
+	}
+}
+
+// DefaultPrint is the default LinePrinter, adding a prefix and relative timestamp.
+func DefaultPrint(prefix string, printer func(fmt string, arg ...any)) LinePrinter {
+	return RelativeTS(Prefix(prefix, PrintLine(printer)))
+}
+
+// RelativeTS prefixes line printer output with "[%06.4fs] " seconds since the
+// first log line.
+func RelativeTS(printer LinePrinter) LinePrinter {
+	start := sync.OnceValue(time.Now)
+	return func(line string) {
+		printer(fmt.Sprintf("[%06.4fs] %s", time.Since(start()).Seconds(), line))
+	}
+}
+
+// PrintLine is a LinePrinter that prints to a standard "formatter" like testing.TB.Logf or fmt.Printf.
+func PrintLine(printer func(fmt string, arg ...any)) LinePrinter {
+	return func(line string) {
+		printer("%s", line)
+	}
+}
+
+// Prefix returns a LinePrinter that prefixes the given LinePrinter with "prefix: ".
+func Prefix(prefix string, printer LinePrinter) LinePrinter {
+	return func(line string) {
+		printer(fmt.Sprintf("%s: %s", prefix, line))
 	}
 }
 

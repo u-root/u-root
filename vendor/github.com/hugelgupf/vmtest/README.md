@@ -106,7 +106,7 @@ func TestStartVM(t *testing.T) {
         qemu.WithInitramfs("./somewhere.cpio"),
 
         qemu.WithAppendKernel("console=ttyS0 earlyprintk=ttyS0"),
-        qemu.LogSerialByLine(qemu.PrintLineWithPrefix("vm", t.Logf)),
+        qemu.LogSerialByLine(qemu.DefaultPrint("vm", t.Logf)),
     )
     if err != nil {
         t.Fatalf("Failed to start VM: %v", err)
