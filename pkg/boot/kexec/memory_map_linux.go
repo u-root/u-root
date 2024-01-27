@@ -258,53 +258,53 @@ func memoryMapFromEFI(memoryMapDir string) (MemoryMap, error) {
 	return phys, nil
 }
 
-// PayloadMemType defines type of a memory map entry
-type PayloadMemType uint32
+// UEFIPayloadMemType are types used with LinuxBoot UEFI payload memory maps.
+type UEFIPayloadMemType uint32
 
-// Payload memory type (PayloadMemType) in UefiPayload
+// Payload memory type (PayloadMemType) in UEFI payload.
 const (
-	PayloadTypeRAM      = 1
-	PayloadTypeDefault  = 2
-	PayloadTypeACPI     = 3
-	PayloadTypeNVS      = 4
-	PayloadTypeReserved = 5
+	UEFIPayloadTypeRAM      UEFIPayloadMemType = 1
+	UEFIPayloadTypeDefault  UEFIPayloadMemType = 2
+	UEFIPayloadTypeACPI     UEFIPayloadMemType = 3
+	UEFIPayloadTypeNVS      UEFIPayloadMemType = 4
+	UEFIPayloadTypeReserved UEFIPayloadMemType = 5
 )
 
-// payloadMemoryMapEntry represent a memory map entry in payload param
-type payloadMemoryMapEntry struct {
+// UEFIPayloadMemoryMapEntry represent a memory map entry for a LinuxBoot UEFI payload.
+type UEFIPayloadMemoryMapEntry struct {
 	Start uint64
 	End   uint64
-	Type  PayloadMemType
+	Type  UEFIPayloadMemType
 }
 
-// PayloadMemoryMapParam is payload's MemoryMap parameter
-type PayloadMemoryMapParam []payloadMemoryMapEntry
+// UEFIPayloadMemoryMap is a memory map used with LinuxBoot's UEFI payload.
+type UEFIPayloadMemoryMap []UEFIPayloadMemoryMapEntry
 
-var rangeTypeToPayloadMemType = map[RangeType]PayloadMemType{
-	RangeRAM:      PayloadTypeRAM,
-	RangeDefault:  PayloadTypeDefault,
-	RangeACPI:     PayloadTypeACPI,
-	RangeNVS:      PayloadTypeNVS,
-	RangeReserved: PayloadTypeReserved,
+var rangeTypeToUEFIPayloadMemType = map[RangeType]UEFIPayloadMemType{
+	RangeRAM:      UEFIPayloadTypeRAM,
+	RangeDefault:  UEFIPayloadTypeDefault,
+	RangeACPI:     UEFIPayloadTypeACPI,
+	RangeNVS:      UEFIPayloadTypeNVS,
+	RangeReserved: UEFIPayloadTypeReserved,
 }
 
-func convertToPayloadMemType(rt RangeType) PayloadMemType {
-	mt, ok := rangeTypeToPayloadMemType[rt]
+func convertToUEFIPayloadMemType(rt RangeType) UEFIPayloadMemType {
+	mt, ok := rangeTypeToUEFIPayloadMemType[rt]
 	if !ok {
 		// return reserved if range type is not recognized
-		return PayloadTypeReserved
+		return UEFIPayloadTypeReserved
 	}
 	return mt
 }
 
-// AsPayloadParam converts MemoryMap to a PayloadMemoryMapParam
-func (m *MemoryMap) AsPayloadParam() PayloadMemoryMapParam {
-	var p PayloadMemoryMapParam
+// ToUEFIPayloadMemoryMap converts MemoryMap to a UEFI payload memory map.
+func (m *MemoryMap) ToUEFIPayloadMemoryMap() UEFIPayloadMemoryMap {
+	var p UEFIPayloadMemoryMap
 	for _, entry := range *m {
-		p = append(p, payloadMemoryMapEntry{
+		p = append(p, UEFIPayloadMemoryMapEntry{
 			Start: uint64(entry.Start),
 			End:   uint64(entry.Start) + uint64(entry.Size) - 1,
-			Type:  convertToPayloadMemType(entry.Type),
+			Type:  convertToUEFIPayloadMemType(entry.Type),
 		})
 	}
 	return p

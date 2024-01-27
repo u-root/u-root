@@ -154,7 +154,7 @@ func (fv *FVImage) Load(verbose bool) error {
 		return err
 	}
 
-	if err := binary.Write(pcbuf, binary.LittleEndian, mm.AsPayloadParam()); err != nil {
+	if err := binary.Write(pcbuf, binary.LittleEndian, mm.ToUEFIPayloadMemoryMap()); err != nil {
 		return err
 	}
 
