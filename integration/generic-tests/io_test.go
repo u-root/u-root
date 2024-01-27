@@ -21,12 +21,12 @@ import (
 func TestIO(t *testing.T) {
 	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	var testCmds []string
+	testCmd := []string{"io"}
 	for _, b := range []byte("UART TEST\r\n") {
-		testCmds = append(testCmds, fmt.Sprintf("io outb 0x3f8 %d", b))
+		testCmd = append(testCmd, fmt.Sprintf("outb 0x3f8 %d", b))
 	}
 
-	vm := vmtest.StartVMAndRunCmds(t, strings.Join(testCmds, "\n"),
+	vm := vmtest.StartVMAndRunCmds(t, strings.Join(testCmd, " "),
 		vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/io"),
 		vmtest.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
 	)
