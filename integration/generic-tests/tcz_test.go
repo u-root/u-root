@@ -14,7 +14,7 @@ import (
 
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/hugelgupf/vmtest/qemu/network"
+	"github.com/hugelgupf/vmtest/qemu/qnetwork"
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
@@ -24,18 +24,18 @@ func TestTczclient(t *testing.T) {
 
 	t.Skip("This test is flaky, and must be fixed")
 
-	serverCmds := []string{
-		"ip addr add 192.168.0.1/24 dev eth0",
-		"ip link set eth0 up",
-		"ip route add 255.255.255.255/32 dev eth0",
-		"ip l",
-		"ip a",
-		"srvfiles -h 192.168.0.1 -d /",
-		"echo The Server Completes",
-		"shutdown -h",
-	}
-	net := network.NewInterVM()
-	serverVM := vmtest.StartVMAndRunCmds(t, serverCmds,
+	serverScript := `
+		ip addr add 192.168.0.1/24 dev eth0
+		ip link set eth0 up
+		ip route add 255.255.255.255/32 dev eth0
+		ip l
+		ip a
+		srvfiles -h 192.168.0.1 -d /
+		echo The Server Completes
+		shutdown -h
+	`
+	net := qnetwork.NewInterVM()
+	serverVM := vmtest.StartVMAndRunCmds(t, serverScript,
 		vmtest.WithName("TestTczclient_Server"),
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
@@ -55,20 +55,18 @@ func TestTczclient(t *testing.T) {
 		),
 	)
 
-	testCmds := []string{
-		"ip addr add 192.168.0.2/24 dev eth0",
-		"ip link set eth0 up",
-		//"ip route add 255.255.255.255/32 dev eth0",
-		"ip a",
-		"tcz -d -h 192.168.0.1 -p 8080 libXcomposite libXdamage libXinerama libxshmfence",
-		"tcz -d -h 192.168.0.1 -p 8080 libXdmcp",
-		"echo HI THERE",
-		"ls /TinyCorePackages/tcloop",
-		"shutdown -h",
-	}
+	clientScript := `
+		ip addr add 192.168.0.2/24 dev eth0
+		ip link set eth0 up
+		ip a
+		tcz -d -h 192.168.0.1 -p 8080 libXcomposite libXdamage libXinerama libxshmfence
+		tcz -d -h 192.168.0.1 -p 8080 libXdmcp
+		echo HI THERE
+		ls /TinyCorePackages/tcloop
+	`
 
 	var b wc
-	clientVM := vmtest.StartVMAndRunCmds(t, testCmds,
+	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
 		vmtest.WithName("TestTczclient_Client"),
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
