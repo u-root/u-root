@@ -433,3 +433,31 @@ func TestMemoryMapFromMemblock(t *testing.T) {
 		t.Errorf("Memory maps not equal, got %v, want %v", mm2, want)
 	}
 }
+
+func TestMemoryMapMerge(t *testing.T) {
+	mm := MemoryMap{
+		TypedRange{Range: Range{Start: 0, Size: 50}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 50, Size: 20}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 70, Size: 40}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 111, Size: 50}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 121, Size: 50}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 400, Size: 50}, Type: RangeReserved},
+		TypedRange{Range: Range{Start: 500, Size: 50}, Type: RangeReserved},
+		TypedRange{Range: Range{Start: 500, Size: 20}, Type: RangeReserved},
+		TypedRange{Range: Range{Start: 600, Size: 20}, Type: RangeReserved},
+		TypedRange{Range: Range{Start: 600, Size: 50}, Type: RangeReserved},
+	}
+
+	want := MemoryMap{
+		TypedRange{Range: Range{Start: 0, Size: 110}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 111, Size: 60}, Type: RangeRAM},
+		TypedRange{Range: Range{Start: 400, Size: 50}, Type: RangeReserved},
+		TypedRange{Range: Range{Start: 500, Size: 50}, Type: RangeReserved},
+		TypedRange{Range: Range{Start: 600, Size: 50}, Type: RangeReserved},
+	}
+
+	mm.mergeAdjacent()
+	if !reflect.DeepEqual(mm, want) {
+		t.Errorf("Merge() got %v, want %v", mm, want)
+	}
+}
