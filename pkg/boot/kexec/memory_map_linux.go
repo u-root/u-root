@@ -62,6 +62,15 @@ func (tr TypedRange) String() string {
 // reserved for various reasons.
 type MemoryMap []TypedRange
 
+func (mm MemoryMap) String() string {
+	var s strings.Builder
+	for _, tr := range mm {
+		s.WriteString(tr.String())
+		s.WriteString("\n")
+	}
+	return s.String()
+}
+
 // FilterByType only returns ranges of the given typ.
 func (mm MemoryMap) FilterByType(typ RangeType) Ranges {
 	var rs Ranges
