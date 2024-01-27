@@ -85,6 +85,32 @@ func (m MemoryMap) sort() {
 	})
 }
 
+func (m *MemoryMap) mergeAdjacent() {
+	if len(*m) == 0 {
+		return
+	}
+
+	newMap := MemoryMap{(*m)[0]}
+	for i := 1; i < len(*m); i++ {
+		seg := (*m)[i]
+
+		prev := newMap[len(newMap)-1]
+		mergable := seg.Range.Overlaps(prev.Range) || seg.Range.Adjacent(prev.Range)
+		// Does the range overlap with the previous range? Merge them.
+		if mergable && seg.Type == prev.Type {
+			// Assuming the map is sorted by start, as it always
+			// should be, extend the size.
+			if seg.End() > prev.End() {
+				diffSize := seg.End() - prev.End()
+				newMap[len(newMap)-1].Range.Size += uint(diffSize)
+			}
+		} else {
+			newMap = append(newMap, seg)
+		}
+	}
+	*m = newMap
+}
+
 // Insert a new TypedRange into the memory map, removing chunks of other ranges
 // as necessary.
 //
@@ -165,6 +191,8 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 		})
 	}
 
+	phys.sort()
+	phys.mergeAdjacent()
 	return phys, nil
 }
 
@@ -241,7 +269,7 @@ func memoryMapFromEFI(memoryMapDir string) (MemoryMap, error) {
 		return nil, err
 	}
 
-	var phys []TypedRange
+	var mm MemoryMap
 	for _, r := range ranges {
 		// Range's end address is exclusive, while Linux's sysfs prints
 		// the end address inclusive.
@@ -253,15 +281,14 @@ func memoryMapFromEFI(memoryMapDir string) (MemoryMap, error) {
 		// while we represent
 		//
 		// start: 0x100, size: 0x100.
-		phys = append(phys, TypedRange{
+		mm = append(mm, TypedRange{
 			Range: RangeFromInterval(r.start, r.end+1),
 			Type:  r.typ,
 		})
 	}
-	sort.Slice(phys, func(i, j int) bool {
-		return phys[i].Start < phys[j].Start
-	})
-	return phys, nil
+	mm.sort()
+	mm.mergeAdjacent()
+	return mm, nil
 }
 
 // UEFIPayloadMemType are types used with LinuxBoot UEFI payload memory maps.
@@ -366,6 +393,8 @@ func memoryMapFromIOMem(r io.Reader) (MemoryMap, error) {
 	if err := b.Err(); err != nil {
 		return nil, err
 	}
+	mm.sort()
+	mm.mergeAdjacent()
 	return mm, nil
 }
 
@@ -465,5 +494,7 @@ func memoryMapFromMemblock(memory io.Reader, reserved io.Reader) (MemoryMap, err
 	if err := b.Err(); err != nil {
 		return nil, err
 	}
+	mm.sort()
+	mm.mergeAdjacent()
 	return mm, nil
 }
