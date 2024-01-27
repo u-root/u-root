@@ -303,13 +303,18 @@ func memoryMapFromEFI(memoryMapDir string) (MemoryMap, error) {
 // UEFIPayloadMemType are types used with LinuxBoot UEFI payload memory maps.
 type UEFIPayloadMemType uint32
 
-// Payload memory type (PayloadMemType) in UEFI payload.
+// Memory types in UEFI payload.
+//
+// UEFI payload uses E820 value types.
 const (
-	UEFIPayloadTypeRAM      UEFIPayloadMemType = 1
-	UEFIPayloadTypeDefault  UEFIPayloadMemType = 2
-	UEFIPayloadTypeACPI     UEFIPayloadMemType = 3
-	UEFIPayloadTypeNVS      UEFIPayloadMemType = 4
-	UEFIPayloadTypeReserved UEFIPayloadMemType = 5
+	UEFIPayloadTypeRAM       UEFIPayloadMemType = 1
+	UEFIPayloadTypeReserved  UEFIPayloadMemType = 2
+	UEFIPayloadTypeACPI      UEFIPayloadMemType = 3
+	UEFIPayloadTypeNVS       UEFIPayloadMemType = 4
+	UEFIPayloadTypeUnusable  UEFIPayloadMemType = 5
+	UEFIPayloadTypeDisabled  UEFIPayloadMemType = 6
+	UEFIPayloadTypePMEM      UEFIPayloadMemType = 7
+	UEFIPayloadTypeUndefined UEFIPayloadMemType = 8
 )
 
 // UEFIPayloadMemoryMapEntry represent a memory map entry for a LinuxBoot UEFI payload.
@@ -324,7 +329,7 @@ type UEFIPayloadMemoryMap []UEFIPayloadMemoryMapEntry
 
 var rangeTypeToUEFIPayloadMemType = map[RangeType]UEFIPayloadMemType{
 	RangeRAM:      UEFIPayloadTypeRAM,
-	RangeDefault:  UEFIPayloadTypeDefault,
+	RangeDefault:  UEFIPayloadTypeReserved,
 	RangeACPI:     UEFIPayloadTypeACPI,
 	RangeNVS:      UEFIPayloadTypeNVS,
 	RangeReserved: UEFIPayloadTypeReserved,
