@@ -69,27 +69,6 @@ func (r Range) Contains(p uintptr) bool {
 	return r.Start <= p && p < r.End()
 }
 
-func min(a, b uintptr) uintptr {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func minuint(a, b uint) uint {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b uintptr) uintptr {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // Intersect returns the continuous range of points common to r and r2 if there
 // is one.
 func (r Range) Intersect(r2 Range) *Range {
@@ -419,7 +398,7 @@ func (segs Segments) Phys() Ranges {
 // the same buffer content.
 func (segs Segments) IsSupersetOf(o Segments) error {
 	for _, seg := range o {
-		size := minuint(seg.Phys.Size, seg.Buf.Size)
+		size := min(seg.Phys.Size, seg.Buf.Size)
 		if size == 0 {
 			continue
 		}
