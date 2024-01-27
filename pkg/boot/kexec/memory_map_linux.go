@@ -372,3 +372,92 @@ func memoryMapFromIOMemFile(path string) (MemoryMap, error) {
 
 	return memoryMapFromIOMem(f)
 }
+
+func rangeFromMemblockLine(s string) *Range {
+	// Format:
+	//    0: 0x0000004000000000..0x00000040113fffff
+	els := strings.Split(s, ":")
+	if len(els) != 2 {
+		return nil
+	}
+	addrs := strings.Split(strings.TrimSpace(els[1]), "..")
+	if len(addrs) != 2 {
+		return nil
+	}
+	startS, _ := strings.CutPrefix(addrs[0], "0x")
+	start, err := strconv.ParseUint(startS, 16, 64)
+	if err != nil {
+		return nil
+	}
+	endS, _ := strings.CutPrefix(addrs[1], "0x")
+	end, err := strconv.ParseUint(endS, 16, 64)
+	if err != nil {
+		return nil
+	}
+
+	// Special case -- empty ranges are represented as "000-000"
+	// even though the non-inclusive end would make that a 1-sized
+	// region.
+	if start == end {
+		return nil
+	}
+
+	// end is inclusive.
+	r := RangeFromInterval(uintptr(start), uintptr(end+1))
+	return &r
+}
+
+// MemoryMapFromMemblock reads a kernel-maintained memory map from /sys/kernel/debug/memblock.
+//
+// memblock is only available on kernels with CONFIG_ARCH_KEEP_MEMBLOCK (and
+// debugfs). Without it, the kernel only maintains memblock early during init
+// as its memory allocation mechanism.
+func MemoryMapFromMemblock() (MemoryMap, error) {
+	m, err := os.Open("/sys/kernel/debug/memblock/memory")
+	if err != nil {
+		return nil, err
+	}
+	defer m.Close()
+
+	r, err := os.Open("/sys/kernel/debug/memblock/reserved")
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	return memoryMapFromMemblock(m, r)
+}
+
+func memoryMapFromMemblock(memory io.Reader, reserved io.Reader) (MemoryMap, error) {
+	var mm MemoryMap
+	b := bufio.NewScanner(memory)
+	for b.Scan() {
+		r := rangeFromMemblockLine(b.Text())
+		if r == nil {
+			continue
+		}
+		mm.Insert(TypedRange{
+			Range: *r,
+			Type:  RangeRAM,
+		})
+	}
+	if err := b.Err(); err != nil {
+		return nil, err
+	}
+
+	b = bufio.NewScanner(reserved)
+	for b.Scan() {
+		r := rangeFromMemblockLine(b.Text())
+		if r == nil {
+			continue
+		}
+		mm.Insert(TypedRange{
+			Range: *r,
+			Type:  RangeReserved,
+		})
+	}
+	if err := b.Err(); err != nil {
+		return nil, err
+	}
+	return mm, nil
+}

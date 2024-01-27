@@ -387,3 +387,50 @@ func TestMemoryMapFromIOMem(t *testing.T) {
 		t.Errorf("Memory maps not equal, got %v, want %v", mm2, want)
 	}
 }
+
+func TestMemoryMapFromMemblock(t *testing.T) {
+	memory := `  0: 0x0000004000000000..0x00000040113fffff
+   1: 0x0000004011400000..0x00000040123fffff
+   2: 0x0000004012400000..0x00000040dfffffff
+   3: 0x0000004400000000..0x00000044dfffffff`
+	reserved := `  0: 0x0000004000000000..0x00000040113fffff
+   1: 0x0000004012400000..0x00000040125fffff
+   2: 0x0000004012800000..0x00000040137fffff`
+	mm, err := memoryMapFromMemblock(strings.NewReader(memory), strings.NewReader(reserved))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := MemoryMap{
+		TypedRange{Range: RangeFromInterval(0x4000000000, 0x4011400000), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x4011400000, 0x4012400000), Type: RangeRAM},
+		TypedRange{Range: RangeFromInterval(0x4012400000, 0x4012600000), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x4012600000, 0x4012800000), Type: RangeRAM},
+		TypedRange{Range: RangeFromInterval(0x4012800000, 0x4013800000), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x4013800000, 0x40e0000000), Type: RangeRAM},
+		TypedRange{Range: RangeFromInterval(0x4400000000, 0x44e0000000), Type: RangeRAM},
+	}
+	if !reflect.DeepEqual(mm, want) {
+		t.Errorf("Not equal, got %v", mm)
+	}
+
+	memIgnored := `  0: 0x0000000000000000..0x0000000000000000
+   0: 0x0000004000000000..
+   1: 0x0000004011400000..0x00000040GGGGGGGG
+   0x0000004012400000..0x00000040dfffffff
+   2: 0x000000401GGGGGGG..0x00000040dfffffff
+   3: 0x00000044000000000x00000044dfffffff`
+	reservedIgnored := `  0: 0x0000004000000000..
+   1: 0x0000004011400000..0x00000040GGGGGGGG
+   0x0000004012400000..0x00000040dfffffff
+   2: 0x000000401GGGGGGG..0x00000040dfffffff
+   3: 0x00000044000000000x00000044dfffffff`
+	mm2, err := memoryMapFromMemblock(strings.NewReader(memIgnored), strings.NewReader(reservedIgnored))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := MemoryMap(nil); !reflect.DeepEqual(mm2, want) {
+		t.Errorf("Memory maps not equal, got %v, want %v", mm2, want)
+	}
+}
