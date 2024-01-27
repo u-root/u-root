@@ -39,12 +39,15 @@ The `qemu` API picks up the following values from env vars by default:
 * `VMTEST_ARCH`: Guest architecture (same as GOARCH values). Must match the QEMU
   binary supplied. If not supplied, defaults to `runtime.GOARCH`, i.e. it
   matches the host's GOARCH.
+* `VMTEST_KERNEL_APPEND`: is added to kernel command-line arguments
+* `VMTEST_QEMU_APPEND`: is added to QEMU command-line arguments.
 * `VMTEST_TIMEOUT`: Timeout value (e.g. `1m20s` -- parsed by Go's
   `time.ParseDuration`).
 * `VMTEST_INITRAMFS`: Initramfs to boot.
 
-These values can be overriden in the Go API, but typically only
-`VMTEST_INITRAMFS` and `VMTEST_TIMEOUT` are.
+Most of these values can be overriden in the Go API, but typically only
+`VMTEST_INITRAMFS` and `VMTEST_TIMEOUT` are. `VMTEST_KERNEL_APPEND` and
+`VMTEST_QEMU_APPEND` are always additive.
 
 The `runvmtest` tool automatically downloads `VMTEST_QEMU` and
 `VMTEST_KERNEL` for use with tests based on a provided `VMTEST_ARCH`. E.g.

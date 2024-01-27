@@ -15,22 +15,19 @@ import (
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
-// RunCmdsInVM starts a VM and runs each command provided in testCmds in a
-// shell in the VM. If any command fails, the test fails.
+// RunCmdsInVM starts a VM and runs the given script using gosh in the guest.
+// If any command fails, the test fails.
 //
 // The VM can be configured with o. The kernel can be provided via o or
 // VMTEST_KERNEL env var. Guest architecture can be set with VMTEST_ARCH.
 //
-// Underneath, this generates an Elvish script with these commands. The script
-// is shared with the VM and run from a special init.
-//
 //   - TODO: timeouts for individual individual commands.
 //   - TODO: It should check their exit status. Hahaha.
-func RunCmdsInVM(t *testing.T, testCmds []string, o ...Opt) {
-	vm := StartVMAndRunCmds(t, testCmds, o...)
+func RunCmdsInVM(t testing.TB, script string, o ...Opt) {
+	vm := StartVMAndRunCmds(t, script, o...)
 
 	if _, err := vm.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
-		t.Errorf("Waiting for 'TESTS PASSED MARKER' signal: %v", err)
+		t.Errorf("Waiting for 'TESTS PASSED MARKER' failed -- script likely failed: %v", err)
 	}
 
 	if err := vm.Wait(); err != nil {
@@ -38,22 +35,19 @@ func RunCmdsInVM(t *testing.T, testCmds []string, o ...Opt) {
 	}
 }
 
-// StartVMAndRunCmds starts a VM and runs each command provided in testCmds in
-// a shell in the VM. If the commands return, the VM will be shutdown.
+// StartVMAndRunCmds starts a VM and runs the script using gosh in the guest.
+// If the commands return, the VM will be shutdown.
 //
 // The VM can be configured with o.
-//
-// Underneath, this generates an Elvish script with these commands. The script
-// is shared with the VM and run from a special init.
-func StartVMAndRunCmds(t *testing.T, testCmds []string, o ...Opt) *qemu.VM {
+func StartVMAndRunCmds(t testing.TB, script string, o ...Opt) *qemu.VM {
 	SkipWithoutQEMU(t)
 
 	sharedDir := testtmp.TempDir(t)
 
-	// Generate Elvish shell script of test commands in o.SharedDir.
-	if len(testCmds) > 0 {
-		testFile := filepath.Join(sharedDir, "test.elv")
-		if err := os.WriteFile(testFile, []byte(strings.Join(testCmds, "\n")), 0o777); err != nil {
+	// Generate gosh shell script of test commands in o.SharedDir.
+	if len(script) > 0 {
+		testFile := filepath.Join(sharedDir, "test.sh")
+		if err := os.WriteFile(testFile, []byte(strings.Join([]string{"set -ex", script}, "\n")), 0o777); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -61,7 +55,7 @@ func StartVMAndRunCmds(t *testing.T, testCmds []string, o ...Opt) *qemu.VM {
 	initramfs := uroot.Opts{
 		Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/init",
-			"github.com/u-root/u-root/cmds/core/elvish",
+			"github.com/u-root/u-root/cmds/core/gosh",
 			"github.com/hugelgupf/vmtest/vminit/shelluinit",
 		),
 		InitCmd:  "init",
@@ -72,5 +66,6 @@ func StartVMAndRunCmds(t *testing.T, testCmds []string, o ...Opt) *qemu.VM {
 		WithQEMUFn(qemu.P9Directory(sharedDir, "shelltest")),
 		WithMergedInitramfs(initramfs),
 		CollectKernelCoverage(),
+		ShareGOCOVERDIR(),
 	}, o...)...)
 }

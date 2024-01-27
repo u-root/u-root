@@ -14,7 +14,9 @@
 // Other environment variables:
 //
 //	VMTEST_ARCH (used when Arch is empty or ArchUseEnvv is set)
+//	VMTEST_QEMU_APPEND (always added to QEMU arguments)
 //	VMTEST_KERNEL (used when Options.Kernel is empty)
+//	VMTEST_KERNEL_APPEND (always added to kernel args)
 //	VMTEST_INITRAMFS (used when Options.Initramfs is empty)
 //	VMTEST_TIMEOUT (used when Options.VMTimeout is empty)
 package qemu
@@ -182,10 +184,11 @@ func OptionsFor(arch Arch, fns ...Fn) (*Options, error) {
 	o := &Options{
 		QEMUCommand: os.Getenv("VMTEST_QEMU"),
 		Kernel:      os.Getenv("VMTEST_KERNEL"),
+		KernelArgs:  os.Getenv("VMTEST_KERNEL_APPEND"),
 		Initramfs:   os.Getenv("VMTEST_INITRAMFS"),
 		VMTimeout:   vmTimeout,
 		// Disable graphics by default.
-		QEMUArgs: []string{"-nographic"},
+		QEMUArgs: append([]string{"-nographic"}, strings.Fields(os.Getenv("VMTEST_QEMU_APPEND"))...),
 	}
 
 	if err := o.setArch(arch); err != nil {
@@ -245,6 +248,8 @@ type Options struct {
 	Initramfs string
 
 	// Extra kernel command-line arguments.
+	//
+	// VMTEST_KERNEL_APPEND env var will always be prepended.
 	KernelArgs string
 
 	// Where to send serial output.

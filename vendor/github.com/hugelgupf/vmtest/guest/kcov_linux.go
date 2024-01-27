@@ -15,6 +15,29 @@ import (
 	"github.com/u-root/u-root/pkg/tarutil"
 )
 
+// GOCOVERDIR sets GOCOVERDIR in the guest if it was shared by
+// vmtest.ShareGOCOVERDIR.
+func GOCOVERDIR() func() {
+	tag := os.Getenv("VMTEST_GOCOVERDIR")
+	if tag == "" {
+		return func() {}
+	}
+
+	mp, err := Mount9PDir("/gocov", tag)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.Setenv("GOCOVERDIR", "/gocov"); err != nil {
+		log.Fatal(err)
+	}
+	return func() {
+		if err := mp.Unmount(0); err != nil {
+			log.Printf("Unmounting GOCOVERDIR: %v", err)
+		}
+	}
+}
+
 // gcovFilter filters on all files ending with a gcda or gcno extension.
 func gcovFilter(hdr *tar.Header) bool {
 	if hdr.Typeflag == tar.TypeDir {
