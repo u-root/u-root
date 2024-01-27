@@ -63,6 +63,9 @@ jobs:
             go test -v -covermode=atomic ${{ matrix.extra-arg }} \
             -coverprofile=coverage.txt ./${{ matrix.pattern }}
 
+      - name: Convert GOCOVERDIR coverage data
+        run: go tool covdata textfmt -i=gocov -o vmintcoverage.txt
+
       - uses: codecov/codecov-action@v4-beta
         env:
           CODECOV_TOKEN: '0ecf29bb-15fb-46f2-8c7d-0fb610d79f71'
