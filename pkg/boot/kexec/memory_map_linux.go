@@ -63,9 +63,9 @@ func (tr TypedRange) String() string {
 type MemoryMap []TypedRange
 
 // FilterByType only returns ranges of the given typ.
-func (m MemoryMap) FilterByType(typ RangeType) Ranges {
+func (mm MemoryMap) FilterByType(typ RangeType) Ranges {
 	var rs Ranges
-	for _, tr := range m {
+	for _, tr := range mm {
 		if tr.Type == typ {
 			rs = append(rs, tr.Range)
 		}
@@ -75,24 +75,24 @@ func (m MemoryMap) FilterByType(typ RangeType) Ranges {
 
 // RAM is an alias for FilterByType(RangeRAM) and returns unreserved physical
 // memory in the memory map.
-func (m MemoryMap) RAM() Ranges {
-	return m.FilterByType(RangeRAM)
+func (mm MemoryMap) RAM() Ranges {
+	return mm.FilterByType(RangeRAM)
 }
 
-func (m MemoryMap) sort() {
-	sort.Slice(m, func(i, j int) bool {
-		return m[i].Start < m[j].Start
+func (mm MemoryMap) sort() {
+	sort.Slice(mm, func(i, j int) bool {
+		return mm[i].Start < mm[j].Start
 	})
 }
 
-func (m *MemoryMap) mergeAdjacent() {
-	if len(*m) == 0 {
+func (mm *MemoryMap) mergeAdjacent() {
+	if len(*mm) == 0 {
 		return
 	}
 
-	newMap := MemoryMap{(*m)[0]}
-	for i := 1; i < len(*m); i++ {
-		seg := (*m)[i]
+	newMap := MemoryMap{(*mm)[0]}
+	for i := 1; i < len(*mm); i++ {
+		seg := (*mm)[i]
 
 		prev := newMap[len(newMap)-1]
 		mergable := seg.Range.Overlaps(prev.Range) || seg.Range.Adjacent(prev.Range)
@@ -108,18 +108,18 @@ func (m *MemoryMap) mergeAdjacent() {
 			newMap = append(newMap, seg)
 		}
 	}
-	*m = newMap
+	*mm = newMap
 }
 
 // Insert a new TypedRange into the memory map, removing chunks of other ranges
 // as necessary.
 //
 // Assumes that TypedRange is a valid range -- no checking.
-func (m *MemoryMap) Insert(r TypedRange) {
+func (mm *MemoryMap) Insert(r TypedRange) {
 	var newMap MemoryMap
 
 	// Remove points in r from all existing physical ranges.
-	for _, q := range *m {
+	for _, q := range *mm {
 		split := q.Range.Minus(r.Range)
 		for _, r2 := range split {
 			newMap = append(newMap, TypedRange{Range: r2, Type: q.Type})
@@ -128,12 +128,12 @@ func (m *MemoryMap) Insert(r TypedRange) {
 
 	newMap = append(newMap, r)
 	newMap.sort()
-	*m = newMap
+	*mm = newMap
 }
 
 // MemoryMapFromFDT reads firmware provided memory map from an FDT.
 func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
-	var phys MemoryMap
+	var mm MemoryMap
 	addMemory := func(n *dt.Node) error {
 		p, found := n.LookProperty("device_type")
 		if !found {
@@ -149,7 +149,7 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 			if err != nil {
 				return err
 			}
-			phys = append(phys, TypedRange{
+			mm = append(mm, TypedRange{
 				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
 				Type:  RangeRAM,
 			})
@@ -169,7 +169,7 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 				return err
 			}
 
-			phys.Insert(TypedRange{
+			mm.Insert(TypedRange{
 				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
 				Type:  RangeReserved,
 			})
@@ -185,15 +185,15 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 	}
 
 	for _, r := range fdt.ReserveEntries {
-		phys.Insert(TypedRange{
+		mm.Insert(TypedRange{
 			Range: Range{Start: uintptr(r.Address), Size: uint(r.Size)},
 			Type:  RangeReserved,
 		})
 	}
 
-	phys.sort()
-	phys.mergeAdjacent()
-	return phys, nil
+	mm.sort()
+	mm.mergeAdjacent()
+	return mm, nil
 }
 
 var memoryMapRoot = "/sys/firmware/memmap/"
@@ -331,9 +331,9 @@ func convertToUEFIPayloadMemType(rt RangeType) UEFIPayloadMemType {
 }
 
 // ToUEFIPayloadMemoryMap converts MemoryMap to a UEFI payload memory map.
-func (m *MemoryMap) ToUEFIPayloadMemoryMap() UEFIPayloadMemoryMap {
+func (mm MemoryMap) ToUEFIPayloadMemoryMap() UEFIPayloadMemoryMap {
 	var p UEFIPayloadMemoryMap
-	for _, entry := range *m {
+	for _, entry := range mm {
 		p = append(p, UEFIPayloadMemoryMapEntry{
 			Start: uint64(entry.Start),
 			End:   uint64(entry.Start) + uint64(entry.Size) - 1,

@@ -277,13 +277,13 @@ func TestToUEFIPayloadMemoryMap(t *testing.T) {
 
 func TestMemoryMapInsert(t *testing.T) {
 	for i, tt := range []struct {
-		m    MemoryMap
+		mm   MemoryMap
 		r    TypedRange
 		want MemoryMap
 	}{
 		{
 			// r is entirely within m's one range.
-			m: MemoryMap{
+			mm: MemoryMap{
 				TypedRange{Range: Range{Start: 0, Size: 0x2000}, Type: RangeRAM},
 			},
 			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
@@ -295,7 +295,7 @@ func TestMemoryMapInsert(t *testing.T) {
 		},
 		{
 			// r sits across three RAM ranges.
-			m: MemoryMap{
+			mm: MemoryMap{
 				TypedRange{Range: Range{Start: 0, Size: 0x150}, Type: RangeRAM},
 				TypedRange{Range: Range{Start: 0x150, Size: 0x50}, Type: RangeRAM},
 				TypedRange{Range: Range{Start: 0x1a0, Size: 0x100}, Type: RangeRAM},
@@ -309,7 +309,7 @@ func TestMemoryMapInsert(t *testing.T) {
 		},
 		{
 			// r is a superset of the ranges in m.
-			m: MemoryMap{
+			mm: MemoryMap{
 				TypedRange{Range: Range{Start: 0x100, Size: 0x50}, Type: RangeRAM},
 			},
 			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
@@ -319,8 +319,8 @@ func TestMemoryMapInsert(t *testing.T) {
 		},
 		{
 			// r is the first range in the map.
-			m: MemoryMap{},
-			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
+			mm: MemoryMap{},
+			r:  TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
 			want: MemoryMap{
 				TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
 			},
@@ -328,11 +328,11 @@ func TestMemoryMapInsert(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
 			// Make a copy for the Errorf print.
-			m := tt.m
-			tt.m.Insert(tt.r)
+			mm := tt.mm
+			tt.mm.Insert(tt.r)
 
-			if !reflect.DeepEqual(tt.m, tt.want) {
-				t.Errorf("\n%v.Insert(%s) =\n%v, want\n%v", m, tt.r, tt.m, tt.want)
+			if !reflect.DeepEqual(tt.mm, tt.want) {
+				t.Errorf("\n%v.Insert(%s) =\n%v, want\n%v", mm, tt.r, tt.mm, tt.want)
 			}
 		})
 	}
