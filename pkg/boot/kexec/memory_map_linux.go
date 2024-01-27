@@ -97,8 +97,8 @@ func (m *MemoryMap) Insert(r TypedRange) {
 	*m = newMap
 }
 
-// ParseMemoryMapFromFDT reads firmware provided memory map from an FDT.
-func ParseMemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
+// MemoryMapFromFDT reads firmware provided memory map from an FDT.
+func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 	var phys MemoryMap
 	addMemory := func(n *dt.Node) error {
 		p, found := n.LookProperty("device_type")
@@ -162,12 +162,12 @@ func ParseMemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 
 var memoryMapRoot = "/sys/firmware/memmap/"
 
-// ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
-func ParseMemoryMap() (MemoryMap, error) {
-	return internalParseMemoryMap(memoryMapRoot)
+// MemoryMapFromEFI reads a firmware-provided memory map from /sys/firmware/memmap.
+func MemoryMapFromEFI() (MemoryMap, error) {
+	return memoryMapFromEFI(memoryMapRoot)
 }
 
-func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
+func memoryMapFromEFI(memoryMapDir string) (MemoryMap, error) {
 	type memRange struct {
 		// start and end addresses are inclusive
 		start, end uintptr

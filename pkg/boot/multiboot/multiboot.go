@@ -290,7 +290,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	}
 
 	log.Printf("Parsing memory map")
-	memmap, err := kexec.ParseMemoryMap()
+	memmap, err := kexec.MemoryMapFromEFI()
 	if err != nil {
 		return fmt.Errorf("error parsing memory map: %v", err)
 	}
