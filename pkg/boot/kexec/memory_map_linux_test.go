@@ -254,25 +254,24 @@ func TestMemoryMapFromEFI(t *testing.T) {
 	}
 }
 
-func TestAsPayloadParam(t *testing.T) {
-	var mem Memory
-	mem.Phys = MemoryMap{
+func TestToUEFIPayloadMemoryMap(t *testing.T) {
+	mm := MemoryMap{
 		TypedRange{Range: Range{Start: 0, Size: 50}, Type: RangeRAM},
 		TypedRange{Range: Range{Start: 100, Size: 50}, Type: RangeACPI},
 		TypedRange{Range: Range{Start: 200, Size: 50}, Type: RangeNVS},
 		TypedRange{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
 		TypedRange{Range: Range{Start: 400, Size: 50}, Type: RangeRAM},
 	}
-	want := PayloadMemoryMapParam{
-		{Start: 0, End: 49, Type: PayloadTypeRAM},
-		{Start: 100, End: 149, Type: PayloadTypeACPI},
-		{Start: 200, End: 249, Type: PayloadTypeNVS},
-		{Start: 300, End: 349, Type: PayloadTypeReserved},
-		{Start: 400, End: 449, Type: PayloadTypeRAM},
+	want := UEFIPayloadMemoryMap{
+		{Start: 0, End: 49, Type: UEFIPayloadTypeRAM},
+		{Start: 100, End: 149, Type: UEFIPayloadTypeACPI},
+		{Start: 200, End: 249, Type: UEFIPayloadTypeNVS},
+		{Start: 300, End: 349, Type: UEFIPayloadTypeReserved},
+		{Start: 400, End: 449, Type: UEFIPayloadTypeRAM},
 	}
-	mm := mem.Phys.AsPayloadParam()
-	if !reflect.DeepEqual(mm, want) {
-		t.Errorf("MemoryMap.AsPayloadParam() got %v, want %v", mm, want)
+	uefiMM := mm.ToUEFIPayloadMemoryMap()
+	if !reflect.DeepEqual(uefiMM, want) {
+		t.Errorf("ToUEFIPayloadMemoryMap() got %v, want %v", uefiMM, want)
 	}
 }
 
