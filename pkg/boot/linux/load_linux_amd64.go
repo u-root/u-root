@@ -72,12 +72,15 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	Debug("kernelEntry: %v", kernelEntry)
 
 	// Prepare segments.
-	kmem = &kexec.Memory{}
 	Debug("Try parsing memory map...")
 	// TODO(10000TB): refactor this call into initialization of
 	// kexec.Memory, as it does not depend on specific boot.
-	if err := kmem.ParseMemoryMap(); err != nil {
+	mm, err := kexec.ParseMemoryMap()
+	if err != nil {
 		return fmt.Errorf("parse memory map: %v", err)
+	}
+	kmem = &kexec.Memory{
+		Phys: mm,
 	}
 
 	var relocatableKernel bool
