@@ -29,7 +29,7 @@ func checkMemoryMap(t *testing.T, got, want MemoryMap) {
 	}
 }
 
-func TestParseMemoryMapFromFDT(t *testing.T) {
+func TestMemoryMapFromFDT(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		fdt     *dt.FDT
@@ -198,16 +198,16 @@ func TestParseMemoryMapFromFDT(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			mm, err := ParseMemoryMapFromFDT(tc.fdt)
+			mm, err := MemoryMapFromFDT(tc.fdt)
 			if err != tc.wantErr {
-				t.Errorf("ParseMemoryMapFromFDT returned error %v, want error %v", err, tc.wantErr)
+				t.Errorf("MemoryMapFromFDT returned error %v, want error %v", err, tc.wantErr)
 			}
 			checkMemoryMap(t, mm, tc.wantMap)
 		})
 	}
 }
 
-func TestParseMemoryMap(t *testing.T) {
+func TestMemoryMapFromEFI(t *testing.T) {
 	root := t.TempDir()
 
 	create := func(dir string, start, end uintptr, typ RangeType) error {
@@ -244,12 +244,12 @@ func TestParseMemoryMap(t *testing.T) {
 		{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
 	}
 
-	phys, err := internalParseMemoryMap(root)
+	phys, err := memoryMapFromEFI(root)
 	if err != nil {
-		t.Fatalf("ParseMemoryMap() error: %v", err)
+		t.Fatalf("MemoryMapFromEFI() error: %v", err)
 	}
 	if !reflect.DeepEqual(phys, want) {
-		t.Errorf("ParseMemoryMap() got %v, want %v", phys, want)
+		t.Errorf("MemoryMapFromEFI() got %v, want %v", phys, want)
 	}
 }
 

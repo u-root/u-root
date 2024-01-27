@@ -81,9 +81,9 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 
 	// Prepare segments.
 	Debug("Try parsing memory map...")
-	mm, err := kexec.ParseMemoryMapFromFDT(fdt)
+	mm, err := kexec.MemoryMapFromFDT(fdt)
 	if err != nil {
-		return fmt.Errorf("ParseMemoryMapFromFDT(%v): %v", fdt, err)
+		return fmt.Errorf("MemoryMapFromFDT(%v): %v", fdt, err)
 	}
 	kmem = &kexec.Memory{
 		Phys: mm,
