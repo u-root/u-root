@@ -5,7 +5,9 @@
 package kexec
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -306,4 +308,67 @@ func (m *MemoryMap) AsPayloadParam() PayloadMemoryMapParam {
 		})
 	}
 	return p
+}
+
+// MemoryMapFromIOMem reads the kernel-maintained memory map from /proc/iomem.
+func MemoryMapFromIOMem() (MemoryMap, error) {
+	return memoryMapFromIOMemFile("/proc/iomem")
+}
+
+func rangeType(s string) RangeType {
+	if s == "reserved" {
+		return RangeReserved
+	}
+	return RangeType(s)
+}
+
+func memoryMapFromIOMem(r io.Reader) (MemoryMap, error) {
+	var mm MemoryMap
+	b := bufio.NewScanner(r)
+	for b.Scan() {
+		// Format:
+		//   740100000000-7401001fffff : PCI Bus 0001:01
+		els := strings.Split(b.Text(), ":")
+		if len(els) != 2 {
+			continue
+		}
+		typ := strings.TrimSpace(els[1])
+		addrs := strings.Split(strings.TrimSpace(els[0]), "-")
+		if len(addrs) != 2 {
+			continue
+		}
+		start, err := strconv.ParseUint(addrs[0], 16, 64)
+		if err != nil {
+			continue
+		}
+		end, err := strconv.ParseUint(addrs[1], 16, 64)
+		if err != nil {
+			continue
+		}
+		// Special case -- empty ranges are represented as "000-000"
+		// even though the non-inclusive end would make that a 1-sized
+		// region.
+		if start == end {
+			continue
+		}
+		mm.Insert(TypedRange{
+			// end is inclusive.
+			Range: RangeFromInterval(uintptr(start), uintptr(end+1)),
+			Type:  rangeType(typ),
+		})
+	}
+	if err := b.Err(); err != nil {
+		return nil, err
+	}
+	return mm, nil
+}
+
+func memoryMapFromIOMemFile(path string) (MemoryMap, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return memoryMapFromIOMem(f)
 }
