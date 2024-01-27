@@ -290,9 +290,11 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	}
 
 	log.Printf("Parsing memory map")
-	if err := m.mem.ParseMemoryMap(); err != nil {
+	memmap, err := kexec.ParseMemoryMap()
+	if err != nil {
 		return fmt.Errorf("error parsing memory map: %v", err)
 	}
+	m.mem.Phys = memmap
 
 	// Insert the iBFT now, since nothing else has been allocated and this
 	// is the most restricted allocation we're gonna have to make.
