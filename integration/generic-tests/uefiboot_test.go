@@ -15,7 +15,6 @@ import (
 	"github.com/Netflix/go-expect"
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 )
 
 // TestUefiboot tests uefiboot commmands to boot to uefishell.
@@ -33,13 +32,9 @@ func TestUefiBoot(t *testing.T) {
 		t.Skipf("UEFI payload image is not found: %s\n Usage: uefiboot <payload>", payload)
 	}
 
-	testCmds := []string{
+	vm := vmtest.StartVMAndRunCmds(t,
 		"uefiboot /dev/sda",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
-		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
-			"github.com/u-root/u-root/cmds/exp/uefiboot",
-		)}),
+		vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/exp/uefiboot"),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			qemu.IDEBlockDevice(payload),

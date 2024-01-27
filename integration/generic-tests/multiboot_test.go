@@ -40,11 +40,9 @@ func testMultiboot(t *testing.T, kernel string) {
 	}
 
 	dir := t.TempDir()
-	testCmds := []string{
-		`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`,
-	}
+	script := `kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`
 	var b bytes.Buffer
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithSharedDir(dir),
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(

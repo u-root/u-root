@@ -13,21 +13,11 @@ import (
 
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
 )
 
 func TestScript(t *testing.T) {
-	testCmds := []string{
-		"echo HELLO WORLD",
-		"shutdown -h",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
-		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
-			"github.com/u-root/u-root/cmds/core/shutdown",
-		)}),
-		vmtest.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
-	)
-
+	script := "echo HELLO WORLD"
+	vm := vmtest.StartVMAndRunCmds(t, script, vmtest.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)))
 	if _, err := vm.Console.ExpectString("HELLO WORLD"); err != nil {
 		t.Errorf("Want HELLO WORLD: %v", err)
 	}

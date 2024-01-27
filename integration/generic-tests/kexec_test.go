@@ -27,14 +27,14 @@ import (
 func TestMountKexec(t *testing.T) {
 	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
 
-	testCmds := []string{
-		"var CMDLINE = (cat /proc/cmdline)",
-		"var SUFFIX = $CMDLINE[-7..]",
-		"echo SAW $SUFFIX",
-		"kexec -i /testdata/initramfs.cpio -c $CMDLINE' KEXEC=Y' /kernel",
-	}
+	script := `
+		CMDLINE=$(cat /proc/cmdline)
+		SUFFIX=${CMDLINE:(-7)}
+		echo SAW $SUFFIX
+		kexec -i /testdata/initramfs.cpio -c "${CMDLINE} KEXEC=Y" /kernel
+	`
 
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/cat",
@@ -73,13 +73,13 @@ func TestMountKexecLoad(t *testing.T) {
 		t.Skipf("no gzip found, skip it as it won't be able to de-compress kernel")
 	}
 
-	testCmds := []string{
-		"var CMDLINE = (cat /proc/cmdline)",
-		"var SUFFIX = $CMDLINE[-7..]",
-		"echo SAW $SUFFIX",
-		"kexec -d -i /testdata/initramfs.cpio --loadsyscall -c $CMDLINE' KEXEC=Y' /kernel",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := `
+		CMDLINE=$(cat /proc/cmdline)
+		SUFFIX=${CMDLINE:(-7)}
+		echo SAW $SUFFIX
+		kexec -d -i /testdata/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
+	`
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/cat",
@@ -118,11 +118,12 @@ func TestMountKexecLoadOnly(t *testing.T) {
 		t.Skipf("no gzip found, skip it as it won't be able to de-compress kernel")
 	}
 
-	testCmds := []string{
-		"var CMDLINE = (cat /proc/cmdline)",
-		"echo kexecloadresult ?(kexec -d -l -i /testdata/initramfs.cpio --loadsyscall -c $CMDLINE /kernel)",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := `
+		CMDLINE=$(cat /proc/cmdline)
+		kexec -d -l -i /testdata/initramfs.cpio --loadsyscall -c "${CMDLINE}" /kernel
+		echo kexecloadresult $?
+	`
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/cat",
@@ -142,7 +143,7 @@ func TestMountKexecLoadOnly(t *testing.T) {
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
 	)
 
-	if _, err := vm.Console.ExpectString("kexecloadresult $ok"); err != nil {
+	if _, err := vm.Console.ExpectString("kexecloadresult 0"); err != nil {
 		t.Error(err)
 	}
 	if err := vm.Wait(); err != nil {
@@ -154,14 +155,14 @@ func TestMountKexecLoadOnly(t *testing.T) {
 func TestMountKexecLoadCustomDTB(t *testing.T) {
 	vmtest.SkipIfNotArch(t, qemu.ArchArm64)
 
-	testCmds := []string{
-		"var CMDLINE = (cat /proc/cmdline)",
-		"var SUFFIX = $CMDLINE[-7..]",
-		"echo SAW $SUFFIX",
-		"cp /sys/firmware/fdt /tmp/userfdt",
-		"kexec -d --dtb /tmp/userfdt -i /testdata/initramfs.cpio --loadsyscall -c $CMDLINE' KEXEC=Y' /kernel",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := `
+		CMDLINE=$(cat /proc/cmdline)
+		SUFFIX=${CMDLINE:(-7)}
+		echo SAW $SUFFIX
+		cp /sys/firmware/fdt /tmp/userfdt
+		kexec -d --dtb /tmp/userfdt -i /testdata/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
+	`
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/cat",
@@ -200,10 +201,11 @@ func TestKexecLinuxImageCfgFile(t *testing.T) {
 		t.Fatalf("Failed to setup test cfg file: %v", err)
 	}
 
-	testCmds := []string{
-		"echo kexecloadresult ?(kexec -d -l -I /linux_image_cfg.json)",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := `
+		kexec -d -l -I /linux_image_cfg.json
+		echo kexecloadresult $?
+	`
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
 				"github.com/u-root/u-root/cmds/core/cat",
@@ -224,7 +226,7 @@ func TestKexecLinuxImageCfgFile(t *testing.T) {
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
 	)
 
-	if _, err := vm.Console.ExpectString("kexecloadresult $ok"); err != nil {
+	if _, err := vm.Console.ExpectString("kexecloadresult 0"); err != nil {
 		t.Error(err)
 	}
 	if err := vm.Wait(); err != nil {

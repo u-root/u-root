@@ -13,22 +13,22 @@ import (
 
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/hugelgupf/vmtest/qemu/network"
+	"github.com/hugelgupf/vmtest/qemu/qnetwork"
 	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
 // TestPxeboot runs a server and client to test pxebooting a node.
 func TestPxeboot4(t *testing.T) {
-	serverCmds := []string{
-		"ip addr add 192.168.0.1/24 dev eth0",
-		"ip link set eth0 up",
-		"ip route add 0.0.0.0/0 dev eth0",
-		"ls -l /pxeroot",
-		"pxeserver -tftp-dir=/pxeroot",
-	}
-	net := network.NewInterVM()
-	serverVM := vmtest.StartVMAndRunCmds(t, serverCmds,
+	serverScript := `
+		ip addr add 192.168.0.1/24 dev eth0
+		ip link set eth0 up
+		ip route add 0.0.0.0/0 dev eth0
+		ls -l /pxeroot
+		pxeserver -tftp-dir=/pxeroot
+	`
+	net := qnetwork.NewInterVM()
+	serverVM := vmtest.StartVMAndRunCmds(t, serverScript,
 		vmtest.WithName("TestPxeboot_Server"),
 		vmtest.WithMergedInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(
@@ -46,22 +46,10 @@ func TestPxeboot4(t *testing.T) {
 		),
 	)
 
-	testCmds := []string{
-		"pxeboot --no-exec -v",
-		// Sleep so serial console output gets flushed. The expect library is racy.
-		"sleep 5",
-		"shutdown -h",
-	}
-	clientVM := vmtest.StartVMAndRunCmds(t, testCmds,
+	clientScript := "pxeboot --no-exec -v"
+	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
 		vmtest.WithName("TestPxeboot_Client"),
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-				"github.com/u-root/u-root/cmds/core/sleep",
-				"github.com/u-root/u-root/cmds/boot/pxeboot",
-			),
-		}),
+		vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/boot/pxeboot"),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			net.NewVM(),
