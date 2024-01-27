@@ -73,6 +73,12 @@ func (m MemoryMap) FilterByType(typ RangeType) Ranges {
 	return rs
 }
 
+// RAM is an alias for FilterByType(RangeRAM) and returns unreserved physical
+// memory in the memory map.
+func (m MemoryMap) RAM() Ranges {
+	return m.FilterByType(RangeRAM)
+}
+
 func (m MemoryMap) sort() {
 	sort.Slice(m, func(i, j int) bool {
 		return m[i].Start < m[j].Start

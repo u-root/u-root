@@ -600,9 +600,9 @@ func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes ui
 //
 //	[{start:0 size:40} {start:4096 end:8000 - 4096}]
 func (m Memory) AvailableRAM() Ranges {
-	ram := m.Phys.FilterByType(RangeRAM)
+	ram := m.Phys.RAM()
 
-	// Remove all points in Segments from available RAM.
+	// Remove all points we've already reserved from available RAM.
 	for _, s := range m.Segments {
 		ram = ram.Minus(s.Phys)
 	}
