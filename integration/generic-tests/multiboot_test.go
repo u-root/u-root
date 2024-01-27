@@ -19,8 +19,8 @@ import (
 
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
-	"github.com/u-root/u-root/pkg/uroot"
 )
 
 type nopCloser struct {
@@ -39,24 +39,30 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Error(err)
 	}
 
-	dir := t.TempDir()
-	script := `kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb"`
+	script := `
+		kexec -l kernel -d --module="/kernel foo=bar" --module="/bbin/bb"
+		sync
+		kexec -e
+	`
 	var b bytes.Buffer
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithSharedDir(dir),
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/kexec",
-				"github.com/u-root/u-root/cmds/core/tee",
-			),
-			ExtraFiles: []string{
-				src + ":kernel",
-			},
-		}),
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+			"github.com/u-root/u-root/cmds/core/sync",
+		),
+		vmtest.WithInitramfsFiles(
+			src+":kernel",
+		),
 		vmtest.WithQEMUFn(
 			qemu.WithSerialOutput(nopCloser{&b}),
 			qemu.WithVMTimeout(time.Minute),
 		),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString(`"status": "ok"`); err != nil {
