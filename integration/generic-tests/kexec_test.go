@@ -18,7 +18,7 @@ import (
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/testtmp"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 )
 
 // TestMountKexec tests that kexec occurs correctly by checking the kernel cmdline.
@@ -31,20 +31,24 @@ func TestMountKexec(t *testing.T) {
 		CMDLINE=$(cat /proc/cmdline)
 		SUFFIX=${CMDLINE:(-7)}
 		echo SAW $SUFFIX
-		kexec -i /testdata/initramfs.cpio -c "${CMDLINE} KEXEC=Y" /kernel
+		kexec -l -i /testdata/initramfs.cpio -c "${CMDLINE} KEXEC=Y" /kernel
+		sync
+		kexec -e
 	`
 
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/kexec",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-			),
-			ExtraFiles: []string{
-				fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
-			},
-		}),
+		vmtest.WithBusyboxCommands(
+			"github.com/u-root/u-root/cmds/core/cat",
+			"github.com/u-root/u-root/cmds/core/sync",
+		),
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+		),
+		vmtest.WithInitramfsFiles(
+			fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
+		),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			qemu.ArbitraryArgs("-m", "8192"),
@@ -52,6 +56,10 @@ func TestMountKexec(t *testing.T) {
 		// The initramfs will be placed in shared dir, so in the VM
 		// it's available at /testdata/initramfs.cpio.
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString("SAW KEXEC=Y"); err != nil {
@@ -77,20 +85,24 @@ func TestMountKexecLoad(t *testing.T) {
 		CMDLINE=$(cat /proc/cmdline)
 		SUFFIX=${CMDLINE:(-7)}
 		echo SAW $SUFFIX
-		kexec -d -i /testdata/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
+		kexec -l -d -i /testdata/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
+		sync
+		kexec -e
 	`
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/kexec",
-				"github.com/u-root/u-root/cmds/core/shutdown",
-			),
-			ExtraFiles: []string{
-				fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
-				gzipP,
-			},
-		}),
+		vmtest.WithBusyboxCommands(
+			"github.com/u-root/u-root/cmds/core/cat",
+			"github.com/u-root/u-root/cmds/core/sync",
+		),
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+		),
+		vmtest.WithInitramfsFiles(
+			fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
+			gzipP,
+		),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			qemu.ArbitraryArgs("-m", "8192"),
@@ -98,6 +110,10 @@ func TestMountKexecLoad(t *testing.T) {
 		// The initramfs will be placed in shared dir, so in the VM
 		// it's available at /testdata/initramfs.cpio.
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString("SAW KEXEC=Y"); err != nil {
@@ -124,16 +140,18 @@ func TestMountKexecLoadOnly(t *testing.T) {
 		echo kexecloadresult $?
 	`
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/kexec",
-			),
-			ExtraFiles: []string{
-				fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
-				gzipP,
-			},
-		}),
+		vmtest.WithBusyboxCommands(
+			"github.com/u-root/u-root/cmds/core/cat",
+		),
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+		),
+		vmtest.WithInitramfsFiles(
+			fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
+			gzipP,
+		),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			qemu.ArbitraryArgs("-m", "8192"),
@@ -141,6 +159,10 @@ func TestMountKexecLoadOnly(t *testing.T) {
 		// The initramfs will be placed in shared dir, so in the VM
 		// it's available at /testdata/initramfs.cpio.
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString("kexecloadresult 0"); err != nil {
@@ -163,16 +185,16 @@ func TestMountKexecLoadCustomDTB(t *testing.T) {
 		kexec -d --dtb /tmp/userfdt -i /testdata/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
 	`
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/cp",
-				"github.com/u-root/u-root/cmds/core/kexec",
-			),
-			ExtraFiles: []string{
-				fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
-			},
-		}),
+		vmtest.WithBusyboxCommands(
+			"github.com/u-root/u-root/cmds/core/cat",
+			"github.com/u-root/u-root/cmds/core/cp",
+		),
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+		),
+		vmtest.WithInitramfsFiles(fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL"))),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			qemu.ArbitraryArgs("-m", "8192"),
@@ -180,6 +202,10 @@ func TestMountKexecLoadCustomDTB(t *testing.T) {
 		// The initramfs will be placed in shared dir, so in the VM
 		// it's available at /testdata/initramfs.cpio.
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString("SAW KEXEC=Y"); err != nil {
@@ -206,17 +232,19 @@ func TestKexecLinuxImageCfgFile(t *testing.T) {
 		echo kexecloadresult $?
 	`
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/kexec",
-			),
-			ExtraFiles: []string{
-				fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
-				fmt.Sprintf("%s:linux_image_cfg.json", cfgFile),
-			},
-		}),
+		vmtest.WithBusyboxCommands(
+			"github.com/u-root/u-root/cmds/core/cat",
+			"github.com/u-root/u-root/cmds/core/echo",
+		),
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+		),
+		vmtest.WithInitramfsFiles(
+			fmt.Sprintf("%s:kernel", os.Getenv("VMTEST_KERNEL")),
+			fmt.Sprintf("%s:linux_image_cfg.json", cfgFile),
+		),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			qemu.ArbitraryArgs("-m", "8192"),
@@ -224,6 +252,10 @@ func TestKexecLinuxImageCfgFile(t *testing.T) {
 		// The initramfs will be placed in shared dir, so in the VM
 		// it's available at /testdata/initramfs.cpio.
 		vmtest.WithSharedDir(testtmp.TempDir(t)),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString("kexecloadresult 0"); err != nil {
