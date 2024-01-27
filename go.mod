@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/uuid v1.3.0
-	github.com/hugelgupf/vmtest v0.0.0-20240124044647-150d99bfa80e
+	github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kevinburke/ssh_config v1.1.0
