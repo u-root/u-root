@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/dt"
@@ -335,5 +336,54 @@ func TestMemoryMapInsert(t *testing.T) {
 				t.Errorf("\n%v.Insert(%s) =\n%v, want\n%v", m, tt.r, tt.m, tt.want)
 			}
 		})
+	}
+}
+
+func TestMemoryMapFromIOMem(t *testing.T) {
+	f := `10000000-101fffff : reserved
+10201000-10202fff : reserved
+14000000-1effffff : System RAM
+  14154000-14154fff : reserved
+  141c0000-14bcffff : reserved
+  14c10000-1636ffff : Kernel code
+  16370000-1686ffff : reserved
+  16870000-1734ffff : Kernel data
+  17350000-17377fff : reserved`
+	mm, err := memoryMapFromIOMem(strings.NewReader(f))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := MemoryMap{
+		TypedRange{Range: RangeFromInterval(0x10000000, 0x101fffff+1), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x10201000, 0x10202fff+1), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x14000000, 0x14154000), Type: RangeRAM},
+		TypedRange{Range: RangeFromInterval(0x14154000, 0x14154fff+1), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x14155000, 0x141c0000), Type: RangeRAM},
+		TypedRange{Range: RangeFromInterval(0x141c0000, 0x14bcffff+1), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x14bd0000, 0x14c10000), Type: RangeRAM},
+		TypedRange{Range: RangeFromInterval(0x14c10000, 0x1636ffff+1), Type: RangeType("Kernel code")},
+		TypedRange{Range: RangeFromInterval(0x16370000, 0x1686ffff+1), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x16870000, 0x1734ffff+1), Type: RangeType("Kernel data")},
+		TypedRange{Range: RangeFromInterval(0x17350000, 0x17377fff+1), Type: RangeReserved},
+		TypedRange{Range: RangeFromInterval(0x17378000, 0x1effffff+1), Type: RangeRAM},
+	}
+	if !reflect.DeepEqual(mm, want) {
+		t.Errorf("Not equal, got %v", mm)
+	}
+
+	ignored := `00000000-00000000 : reserved
+10000000-101fffff
+10201000 : reserved
+: System RAM
+  141GGGGG-14154fff : reserved
+  141c0000-14GGGGGG : reserved`
+	mm2, err := memoryMapFromIOMem(strings.NewReader(ignored))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := MemoryMap(nil); !reflect.DeepEqual(mm2, want) {
+		t.Errorf("Memory maps not equal, got %v, want %v", mm2, want)
 	}
 }
