@@ -25,10 +25,8 @@ func TestESXi(t *testing.T) {
 		t.Skip("ESXi disk image is not present. Please set UROOT_ESXI_IMAGE= to an installed ESXi disk image.")
 	}
 
-	testCmds := []string{
-		`esxiboot -d="/dev/sda" --append="vmkBootVerbose=TRUE vmbLog=TRUE debugLogToSerial=1 logPort=com1"`,
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := `esxiboot -d="/dev/sda" --append="vmkBootVerbose=TRUE vmbLog=TRUE debugLogToSerial=1 logPort=com1"`
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/exp/esxiboot",
 		)}),
@@ -79,10 +77,8 @@ func TestESXiNVMe(t *testing.T) {
 		t.Skip("ESXi disk image is not present. Please set UROOT_ESXI_IMAGE= to an installed ESXi disk image.")
 	}
 
-	testCmds := []string{
-		`esxiboot -d="/dev/nvme0n1" --append="vmkBootVerbose=TRUE vmbLog=TRUE debugLogToSerial=1 logPort=com1"`,
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := `esxiboot -d="/dev/nvme0n1" --append="vmkBootVerbose=TRUE vmbLog=TRUE debugLogToSerial=1 logPort=com1"`
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/exp/esxiboot",
 		)}),

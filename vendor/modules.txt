@@ -127,7 +127,7 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/hugelgupf/vmtest v0.0.0-20240115033909-46506b2af5ea
+# github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa
 ## explicit; go 1.21
 github.com/hugelgupf/vmtest
 github.com/hugelgupf/vmtest/guest
@@ -135,7 +135,7 @@ github.com/hugelgupf/vmtest/internal/eventchannel
 github.com/hugelgupf/vmtest/internal/json2test
 github.com/hugelgupf/vmtest/internal/testevent
 github.com/hugelgupf/vmtest/qemu
-github.com/hugelgupf/vmtest/qemu/network
+github.com/hugelgupf/vmtest/qemu/qnetwork
 github.com/hugelgupf/vmtest/testtmp
 github.com/hugelgupf/vmtest/uqemu
 github.com/hugelgupf/vmtest/vminit/gouinit

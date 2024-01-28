@@ -78,7 +78,7 @@ func (p *Packet4) Configure() error {
 		IPNet: l,
 	}
 	if err := netlink.AddrReplace(p.iface, dst); err != nil {
-		return fmt.Errorf("add/replace %s to %v: %v", dst, p.iface, err)
+		return fmt.Errorf("add/replace %s to %v: %w", dst, p.iface, err)
 	}
 
 	// RFC 3442 notes that if classless static routes are available, they
@@ -96,7 +96,7 @@ func (p *Packet4) Configure() error {
 			}
 
 			if err := netlink.RouteReplace(r); err != nil {
-				return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
+				return fmt.Errorf("%s: add %s: %w", p.iface.Attrs().Name, r, err)
 			}
 		}
 	} else if gw := p.P.Router(); len(gw) > 0 {
@@ -106,7 +106,7 @@ func (p *Packet4) Configure() error {
 		}
 
 		if err := netlink.RouteReplace(r); err != nil {
-			return fmt.Errorf("%s: add %s: %v", p.iface.Attrs().Name, r, err)
+			return fmt.Errorf("%s: add %s: %w", p.iface.Attrs().Name, r, err)
 		}
 	}
 

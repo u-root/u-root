@@ -10,6 +10,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,9 +19,17 @@ import (
 
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
-	"github.com/u-root/u-root/pkg/uroot"
 )
+
+type nopCloser struct {
+	io.Writer
+}
+
+func (nopCloser) Close() error {
+	return nil
+}
 
 func testMultiboot(t *testing.T, kernel string) {
 	src := filepath.Join(os.Getenv("UROOT_MULTIBOOT_TEST_KERNEL_DIR"), kernel)
@@ -30,24 +39,30 @@ func testMultiboot(t *testing.T, kernel string) {
 		t.Error(err)
 	}
 
-	dir := t.TempDir()
-	testCmds := []string{
-		`kexec -l kernel -e -d --module="/kernel foo=bar" --module="/bbin/bb" | tee /testdata/output.json`,
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
-		vmtest.WithSharedDir(dir),
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
-				"github.com/u-root/u-root/cmds/core/kexec",
-				"github.com/u-root/u-root/cmds/core/tee",
-			),
-			ExtraFiles: []string{
-				src + ":kernel",
-			},
-		}),
+	script := `
+		kexec -l kernel -d --module="/kernel foo=bar" --module="/bbin/bb"
+		sync
+		kexec -e
+	`
+	var b bytes.Buffer
+	vm := vmtest.StartVMAndRunCmds(t, script,
+		// Build kexec as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/kexec",
+			"github.com/u-root/u-root/cmds/core/sync",
+		),
+		vmtest.WithInitramfsFiles(
+			src+":kernel",
+		),
 		vmtest.WithQEMUFn(
+			qemu.WithSerialOutput(nopCloser{&b}),
 			qemu.WithVMTimeout(time.Minute),
 		),
+		// Build kexec (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 	)
 
 	if _, err := vm.Console.ExpectString(`"status": "ok"`); err != nil {
@@ -56,15 +71,12 @@ func testMultiboot(t *testing.T, kernel string) {
 	if _, err := vm.Console.ExpectString(`}`); err != nil {
 		t.Errorf(`expected '}' = end of JSON, got error: %v`, err)
 	}
-	if err := vm.Wait(); err != nil {
+	if err := vm.Kill(); err != nil {
 		t.Fatal(err)
 	}
+	_ = vm.Wait()
 
-	output, err := os.ReadFile(filepath.Join(dir, "output.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(string(output))
+	output := b.Bytes()
 
 	i := bytes.Index(output, []byte(multiboot.DebugPrefix))
 	if i == -1 {

@@ -58,10 +58,13 @@ jobs:
       - name: Test
         run: |
           mkdir gocov
-          GOCOVERDIR=$(pwd)/gocov \
+          VMTEST_GOCOVERDIR=$(pwd)/gocov \
             VMTEST_GO_PROFILE=vmcoverage.txt runvmtest -- \
             go test -v -covermode=atomic ${{ matrix.extra-arg }} \
             -coverprofile=coverage.txt ./${{ matrix.pattern }}
+
+      - name: Convert GOCOVERDIR coverage data
+        run: go tool covdata textfmt -i=gocov -o vmintcoverage.txt
 
       - uses: codecov/codecov-action@v4-beta
         env:

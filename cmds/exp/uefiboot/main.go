@@ -33,6 +33,7 @@ var (
 	serialWidth = flag.Uint("serial_width", 1, "Serial port reg width")
 	serialHertz = flag.Uint("serial_hertz", 1843200, "Serial port input hertz")
 	serialBaud  = flag.Uint("serial_baud", 115200, "Serial port baud rate")
+	execute     = flag.Bool("e", true, "If true, kexec. If not true, just load kernel.")
 )
 
 var v = func(string, ...interface{}) {}
@@ -61,7 +62,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := boot.Execute(); err != nil {
-		log.Fatal(err)
+	if *execute {
+		if err := boot.Execute(); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
