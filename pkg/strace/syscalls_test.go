@@ -20,8 +20,8 @@ func TestByName(t *testing.T) {
 		val  uintptr
 		ret  error
 	}{
-		{name: "open", val: unix.SYS_OPEN, ret: nil},
-		{name: "Xopen", val: unix.SYS_OPEN, ret: fmt.Errorf("Xopen:not found")},
+		{name: "read", val: unix.SYS_READ, ret: nil},
+		{name: "Xread", val: unix.SYS_READ, ret: fmt.Errorf("Xread:not found")},
 	} {
 		n, err := ByName(tt.name)
 		if err != nil && tt.ret == nil {
@@ -42,8 +42,8 @@ func TestByNum(t *testing.T) {
 		val  uintptr
 		ret  error
 	}{
-		{name: "open", val: unix.SYS_OPEN, ret: nil},
-		{name: "bogus", val: 10000000, ret: fmt.Errorf("Xopen:not found")},
+		{name: "read", val: unix.SYS_READ, ret: nil},
+		{name: "bogus", val: 10000000, ret: fmt.Errorf("Xread:not found")},
 	} {
 		n, err := ByNumber(tt.val)
 		if err != nil && tt.ret == nil {
