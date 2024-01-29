@@ -32,7 +32,7 @@ func mockKexecLoad(entry uintptr, segments kexec.Segments, flags uint64) error {
 	return nil
 }
 
-func mockKexecParseMemoryMap() (kexec.MemoryMap, error) {
+func mockKexecMemoryMapFromEFI() (kexec.MemoryMap, error) {
 	return kexec.MemoryMap{}, nil
 }
 
@@ -50,8 +50,8 @@ func TestLoadFvImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer func(old func() (kexec.MemoryMap, error)) { kexecParseMemoryMap = old }(kexecParseMemoryMap)
-	kexecParseMemoryMap = mockKexecParseMemoryMap
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromEFI = old }(kexecMemoryMapFromEFI)
+	kexecMemoryMapFromEFI = mockKexecMemoryMapFromEFI
 
 	defer func(old func() (*acpi.RSDP, error)) { getRSDP = old }(getRSDP)
 	getRSDP = mockGetRSDP
@@ -97,14 +97,14 @@ func TestLoadFvImageNotFound(t *testing.T) {
 	}
 }
 
-func TestLoadFvImageFailAtParseMemoryMap(t *testing.T) {
+func TestLoadFvImageFailAtMemoryMapFromEFI(t *testing.T) {
 	fv, err := New("testdata/fv_with_sec.fd")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer func(old func() (kexec.MemoryMap, error)) { kexecParseMemoryMap = old }(kexecParseMemoryMap)
-	kexecParseMemoryMap = func() (kexec.MemoryMap, error) {
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromEFI = old }(kexecMemoryMapFromEFI)
+	kexecMemoryMapFromEFI = func() (kexec.MemoryMap, error) {
 		return nil, fmt.Errorf("PARSE_MEMORY_MAP_FAILED")
 	}
 
@@ -122,8 +122,8 @@ func TestLoadFvImageFailAtGetRSDP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer func(old func() (kexec.MemoryMap, error)) { kexecParseMemoryMap = old }(kexecParseMemoryMap)
-	kexecParseMemoryMap = mockKexecParseMemoryMap
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromEFI = old }(kexecMemoryMapFromEFI)
+	kexecMemoryMapFromEFI = mockKexecMemoryMapFromEFI
 
 	defer func(old func() (*acpi.RSDP, error)) { getRSDP = old }(getRSDP)
 	getRSDP = func() (*acpi.RSDP, error) {
@@ -144,8 +144,8 @@ func TestLoadFvImageFailAtGetSMBIOS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer func(old func() (kexec.MemoryMap, error)) { kexecParseMemoryMap = old }(kexecParseMemoryMap)
-	kexecParseMemoryMap = mockKexecParseMemoryMap
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromEFI = old }(kexecMemoryMapFromEFI)
+	kexecMemoryMapFromEFI = mockKexecMemoryMapFromEFI
 
 	defer func(old func() (*acpi.RSDP, error)) { getRSDP = old }(getRSDP)
 	getRSDP = mockGetRSDP
@@ -170,8 +170,8 @@ func TestLoadFvImageFailAtKexec(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer func(old func() (kexec.MemoryMap, error)) { kexecParseMemoryMap = old }(kexecParseMemoryMap)
-	kexecParseMemoryMap = mockKexecParseMemoryMap
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromEFI = old }(kexecMemoryMapFromEFI)
+	kexecMemoryMapFromEFI = mockKexecMemoryMapFromEFI
 
 	defer func(old func() (*acpi.RSDP, error)) { getRSDP = old }(getRSDP)
 	getRSDP = mockGetRSDP

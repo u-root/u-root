@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 
@@ -30,7 +31,7 @@ func init() {
 		}
 		delete(params, "dev")
 
-		spi, err := spidev.Open(dev)
+		spi, err := spidev.Open(dev, spidev.WithLogger(log.Printf))
 		if err != nil {
 			return nil, err
 		}

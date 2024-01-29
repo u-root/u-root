@@ -80,10 +80,13 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	Debug("FDT after sanitization: %s", fdt)
 
 	// Prepare segments.
-	kmem = &kexec.Memory{}
 	Debug("Try parsing memory map...")
-	if err := kmem.ParseMemoryMapFromFDT(fdt); err != nil {
-		return fmt.Errorf("ParseMemoryMapFromFDT(%v): %v", fdt, err)
+	mm, err := kexec.MemoryMapFromFDT(fdt)
+	if err != nil {
+		return fmt.Errorf("MemoryMapFromFDT(%v): %v", fdt, err)
+	}
+	kmem = &kexec.Memory{
+		Phys: mm,
 	}
 	Debug("Mem map: \n%+v", kmem.Phys)
 
