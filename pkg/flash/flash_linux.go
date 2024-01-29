@@ -149,10 +149,14 @@ func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 		{Tx: op.PRDRES.Bytes(), CSChange: true},
 		{Tx: op.WriteEnable.Bytes(), CSChange: true},
 		// Send the address.
-		{Tx: append(op.PageProgram.Bytes(), f.prepareAddress(off)...)},
-		// Send the data.
-		{Tx: p, CSChange: true},
-		{Tx: op.WriteDisable.Bytes(), CSChange: true},
+		{Tx: append(append(op.PageProgram.Bytes(), f.prepareAddress(off)...), p...)},
+		// The meaning of CSChange is ... odd.
+		// IF CSChange is set true here, then CE# never goes
+		// high. If CSChange is left unchanged,
+		// CE# is properly deasserted from the data write above,
+		// asserted for this command, and deasserted
+		// at the end.
+		{Tx: op.WriteDisable.Bytes(), DelayUSecs: 10},
 	}); err != nil {
 		return 0, err
 	}
