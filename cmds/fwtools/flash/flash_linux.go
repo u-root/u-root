@@ -161,10 +161,10 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		}
 		amt, err := programmer.WriteAt(buf, 0)
 		if err != nil {
-			return fmt.Errorf("Writing %d bytes to dev %v:%w", len(buf), programmer, err)
+			return fmt.Errorf("writing %d bytes to dev %v:%w", len(buf), programmer, err)
 		}
 		if amt != len(buf) {
-			return fmt.Errorf("Only flashed %d of %d bytes", amt, len(buf))
+			return fmt.Errorf("only flashed %d of %d bytes", amt, len(buf))
 		}
 
 		return nil
