@@ -30,6 +30,8 @@ const (
 	RangeACPI     RangeType = "ACPI Tables"
 	RangeNVS      RangeType = "ACPI Non-volatile Storage"
 	RangeReserved RangeType = "Reserved"
+	RangePRAM     RangeType = "Persistent Memory (legacy)"
+	RangePMEM     RangeType = "Persistent Memory"
 )
 
 // String implements fmt.Stringer.
@@ -37,13 +39,17 @@ func (r RangeType) String() string {
 	return string(r)
 }
 
+// /sys/firmware/memmap types on x86.
 var sysfsToRangeType = map[string]RangeType{
-	"System RAM":                RangeRAM,
-	"Default":                   RangeDefault,
-	"ACPI Tables":               RangeACPI,
-	"ACPI Non-volatile Storage": RangeNVS,
-	"Reserved":                  RangeReserved,
-	"reserved":                  RangeReserved,
+	"System RAM":                 RangeRAM,
+	"Default":                    RangeDefault,
+	"ACPI Tables":                RangeACPI,
+	"ACPI Non-volatile Storage":  RangeNVS,
+	"Reserved":                   RangeReserved,
+	"reserved":                   RangeReserved,
+	"Persistent Memory (legacy)": RangePRAM,
+	"Persistent Memory":          RangePMEM,
+	"usable":                     RangeRAM,
 }
 
 // TypedRange represents range of physical memory.
@@ -353,15 +359,42 @@ func (mm MemoryMap) ToUEFIPayloadMemoryMap() UEFIPayloadMemoryMap {
 }
 
 // MemoryMapFromIOMem reads the kernel-maintained memory map from /proc/iomem.
+//
+// MemoryMapFromIOMem will return only the reserved and unreserved system RAM
+// parts of the memory map, ignoring device memory.
+//
+// Some ranges marked as Kernel code/data/etc are considered usable unreserved
+// system RAM for kexec.
 func MemoryMapFromIOMem() (MemoryMap, error) {
 	return memoryMapFromIOMemFile("/proc/iomem")
 }
 
-func rangeType(s string) RangeType {
-	if s == "reserved" {
-		return RangeReserved
-	}
-	return RangeType(s)
+var resourceToRangeType = map[string]RangeType{
+	// The following are ranges that if a "firmware" memory map is created
+	// from this should be marked as reserved when passed to the next
+	// kernel.
+	//
+	// This serves to ignore device memory.
+	"reserved":                   RangeReserved,
+	"Reserved":                   RangeReserved,
+	"System ROM":                 RangeReserved,
+	"ACPI Tables":                RangeACPI,
+	"ACPI Non-volatile Storage":  RangeNVS,
+	"Persistent Memory (legacy)": RangePRAM,
+	"Persistent Memory":          RangePMEM,
+
+	// The following are all possible IORESOURCE_SYSTEM_RAM names found in
+	// the 6.1 kernel that make sense to interpret as usable RAM for kexec.
+	"System RAM":              RangeRAM,
+	"System RAM (boot alias)": RangeRAM,
+
+	// On a few architectures these are marked separately in iomem.
+	// For kexec, they represent usable RAM.
+	"Kernel code":   RangeRAM,
+	"Kernel rodata": RangeRAM,
+	"Kernel data":   RangeRAM,
+	"Kernel bss":    RangeRAM,
+	"Kernel image":  RangeRAM,
 }
 
 func memoryMapFromIOMem(r io.Reader) (MemoryMap, error) {
@@ -393,11 +426,15 @@ func memoryMapFromIOMem(r io.Reader) (MemoryMap, error) {
 		if start == end {
 			continue
 		}
-		mm.Insert(TypedRange{
-			// end is inclusive.
-			Range: RangeFromInterval(uintptr(start), uintptr(end+1)),
-			Type:  rangeType(typ),
-		})
+
+		// Only insert if it's one of the known /proc/iomem values.
+		if t, ok := resourceToRangeType[typ]; ok {
+			mm.Insert(TypedRange{
+				// end is inclusive.
+				Range: RangeFromInterval(uintptr(start), uintptr(end+1)),
+				Type:  t,
+			})
+		}
 	}
 	if err := b.Err(); err != nil {
 		return nil, err

@@ -347,7 +347,13 @@ func TestMemoryMapFromIOMem(t *testing.T) {
   14c10000-1636ffff : Kernel code
   16370000-1686ffff : reserved
   16870000-1734ffff : Kernel data
-  17350000-17377fff : reserved`
+  17350000-17377fff : reserved
+20020000-200200ff : pcie foo
+20020600-200209ff : pcie bar
+20070000-20077fff : spi stuff
+20082000-2008200f : some watchdog!
+20082100-2008210f : spy stuff
+20084000-2008401f : serial`
 	mm, err := memoryMapFromIOMem(strings.NewReader(f))
 	if err != nil {
 		t.Fatal(err)
@@ -360,10 +366,9 @@ func TestMemoryMapFromIOMem(t *testing.T) {
 		TypedRange{Range: RangeFromInterval(0x14154000, 0x14154fff+1), Type: RangeReserved},
 		TypedRange{Range: RangeFromInterval(0x14155000, 0x141c0000), Type: RangeRAM},
 		TypedRange{Range: RangeFromInterval(0x141c0000, 0x14bcffff+1), Type: RangeReserved},
-		TypedRange{Range: RangeFromInterval(0x14bd0000, 0x14c10000), Type: RangeRAM},
-		TypedRange{Range: RangeFromInterval(0x14c10000, 0x1636ffff+1), Type: RangeType("Kernel code")},
+		TypedRange{Range: RangeFromInterval(0x14bd0000, 0x16370000), Type: RangeRAM},
 		TypedRange{Range: RangeFromInterval(0x16370000, 0x1686ffff+1), Type: RangeReserved},
-		TypedRange{Range: RangeFromInterval(0x16870000, 0x1734ffff+1), Type: RangeType("Kernel data")},
+		TypedRange{Range: RangeFromInterval(0x16870000, 0x1734ffff+1), Type: RangeRAM},
 		TypedRange{Range: RangeFromInterval(0x17350000, 0x17377fff+1), Type: RangeReserved},
 		TypedRange{Range: RangeFromInterval(0x17378000, 0x1effffff+1), Type: RangeRAM},
 	}
@@ -371,13 +376,13 @@ func TestMemoryMapFromIOMem(t *testing.T) {
 		t.Errorf("Not equal, got %v", mm)
 	}
 
-	ignored := `00000000-00000000 : reserved
+	malformed := `00000000-00000000 : reserved
 10000000-101fffff
 10201000 : reserved
 : System RAM
   141GGGGG-14154fff : reserved
   141c0000-14GGGGGG : reserved`
-	mm2, err := memoryMapFromIOMem(strings.NewReader(ignored))
+	mm2, err := memoryMapFromIOMem(strings.NewReader(malformed))
 	if err != nil {
 		t.Fatal(err)
 	}
