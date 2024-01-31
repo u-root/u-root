@@ -19,7 +19,6 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/u-root/pkg/vfile"
 	"github.com/u-root/uio/ulog/ulogtest"
 	"golang.org/x/sys/unix"
 )
@@ -88,44 +87,25 @@ func TestLinuxLabel(t *testing.T) {
 			want: "Linux(kernel=http://127.0.0.1/kernel initrd=http://127.0.0.1/initrd1,http://127.0.0.1/initrd2)",
 		},
 		{
-			desc: "verified file",
-			img: &LinuxImage{
-				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
-				Initrd: CatInitrds(
-					&vfile.File{Reader: nil, FileName: "/boot/initrd1"},
-					&vfile.File{Reader: nil, FileName: "/boot/initrd2"},
-				),
-			},
-			want: "Linux(kernel=/boot/foobar initrd=/boot/initrd1,/boot/initrd2)",
-		},
-		{
-			desc: "no initrd",
-			img: &LinuxImage{
-				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
-				Initrd: nil,
-			},
-			want: "Linux(kernel=/boot/foobar)",
-		},
-		{
 			desc: "dtb file",
 			img: &LinuxImage{
-				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
-				Initrd: &vfile.File{Reader: nil, FileName: "/boot/initrd"},
+				Kernel: osKernel,
+				Initrd: osInitrd,
 				KexecOpts: linux.KexecOptions{
-					DTB: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+					DTB: osInitrd,
 				},
 			},
-			want: "Linux(kernel=/boot/foobar initrd=/boot/initrd dtb=/boot/board.dtb)",
+			want: fmt.Sprintf("Linux(kernel=%s/kernel initrd=%s/initrd dtb=%s/initrd)", dir, dir, dir),
 		},
 		{
 			desc: "dtb file, no initrd",
 			img: &LinuxImage{
-				Kernel: &vfile.File{Reader: nil, FileName: "/boot/foobar"},
+				Kernel: osKernel,
 				KexecOpts: linux.KexecOptions{
-					DTB: &vfile.File{Reader: nil, FileName: "/boot/board.dtb"},
+					DTB: osInitrd,
 				},
 			},
-			want: "Linux(kernel=/boot/foobar dtb=/boot/board.dtb)",
+			want: fmt.Sprintf("Linux(kernel=%s/kernel dtb=%s/initrd)", dir, dir),
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {

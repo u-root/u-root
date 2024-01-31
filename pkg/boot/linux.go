@@ -122,7 +122,7 @@ func (lli *LoadedLinuxImage) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// named is satisifed by both *os.File and *vfile.File. Hack hack hack.
+// named is satisifed by *os.File.
 type named interface {
 	Name() string
 }
