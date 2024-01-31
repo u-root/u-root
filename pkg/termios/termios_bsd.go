@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build darwin || freebsd || openbsd
-// +build darwin freebsd openbsd
+//go:build darwin || freebsd || openbsd || netbsd
+// +build darwin freebsd openbsd netbsd
 
 package termios
 
