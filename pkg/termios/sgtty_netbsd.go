@@ -2,20 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !darwin && !freebsd && !openbsd && !netbsd
-// +build !plan9,!windows,!darwin,!freebsd,!openbsd,!netbsd
-
 package termios
 
 import "golang.org/x/sys/unix"
 
 const (
-	gets       = unix.TCGETS
-	sets       = unix.TCSETS
+	gets       = unix.TIOCGETA
+	sets       = unix.TIOCSETA
 	getWinSize = unix.TIOCGWINSZ
 	setWinSize = unix.TIOCSWINSZ
 )
 
-func speed(speed int) uint32 {
-	return uint32(speed)
+func speed(speed int) int32 {
+	return int32(speed)
 }
