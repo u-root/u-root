@@ -8,7 +8,7 @@
 // Support for:
 //
 //   - /proc/iomem (exists on all systems)
-//   - /sys/firmware/memmap (exists on EFI systems)
+//   - /sys/firmware/memmap (exists on x86 systems)
 //   - /sys/kernel/debug/memblock (exists on systems with CONFIG_ARCH_KEEP_MEMBLOCK, in particular arm64)
 //   - /sys/firmware/fdt (exists on systems with device trees)
 package main
@@ -29,7 +29,7 @@ func printMM(mm kexec.MemoryMap) {
 }
 
 func main() {
-	memmap, err := kexec.MemoryMapFromEFI()
+	memmap, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
 		log.Printf("/sys/firmware/memmap: %v", err)
 	} else {

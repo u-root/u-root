@@ -208,7 +208,7 @@ func TestMemoryMapFromFDT(t *testing.T) {
 	}
 }
 
-func TestMemoryMapFromEFI(t *testing.T) {
+func TestMemoryMapFromSysfsMemmap(t *testing.T) {
 	root := t.TempDir()
 
 	create := func(dir string, start, end uintptr, typ RangeType) error {
@@ -245,12 +245,12 @@ func TestMemoryMapFromEFI(t *testing.T) {
 		{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
 	}
 
-	phys, err := memoryMapFromEFI(root)
+	phys, err := memoryMapFromSysfsMemmap(root)
 	if err != nil {
-		t.Fatalf("MemoryMapFromEFI() error: %v", err)
+		t.Fatalf("MemoryMapFromSysfsMemmap() error: %v", err)
 	}
 	if !reflect.DeepEqual(phys, want) {
-		t.Errorf("MemoryMapFromEFI() got %v, want %v", phys, want)
+		t.Errorf("MemoryMapFromSysfsMemmap() got %v, want %v", phys, want)
 	}
 }
 
