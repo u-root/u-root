@@ -27,7 +27,6 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"os"
@@ -45,18 +44,17 @@ import (
 )
 
 type options struct {
-	cmdline           string
-	debug             bool
-	dtb               string
-	exec              bool
-	extra             string
-	initramfs         string
-	load              bool
-	loadSyscall       bool
-	linuxImageCfgFile string
-	modules           []string
-	purgatory         string
-	reuseCmdline      bool
+	cmdline      string
+	debug        bool
+	dtb          string
+	exec         bool
+	extra        string
+	initramfs    string
+	load         bool
+	loadSyscall  bool
+	modules      []string
+	purgatory    string
+	reuseCmdline bool
 }
 
 func registerFlags() *options {
@@ -71,7 +69,6 @@ func registerFlags() *options {
 	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec_load syscall (not kexec_file_load)")
-	flag.StringVarP(&o.linuxImageCfgFile, "linux-image-cfg-file", "I", "", "Load Linux image from JSON info file given")
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
@@ -93,31 +90,10 @@ func main() {
 	if flag.NArg() > 0 {
 		kernelpath = flag.Arg(0)
 	}
-	// Option values from linux image config takes precedence
-	// over from cmdline.
-	if len(opts.linuxImageCfgFile) > 0 {
-		log.Printf("Load image info from %s", opts.linuxImageCfgFile)
-		d, err := os.ReadFile(opts.linuxImageCfgFile)
-		if err != nil {
-			log.Fatalf("Failed to load image info: %v", err)
-		}
-		lli := boot.LoadedLinuxImage{}
-		if err := json.Unmarshal(d, &lli); err != nil {
-			log.Fatalf("Unmarshal image info: %v", err)
-		}
-		if lli.Kernel != nil {
-			kernelpath = lli.Kernel.Name()
-		}
-		opts.cmdline = lli.Cmdline
-		if lli.Initrd != nil {
-			opts.initramfs = lli.Initrd.Name()
-		}
-		opts.loadSyscall = lli.LoadSyscall
-	}
 
 	if (!opts.exec && len(kernelpath) == 0) || flag.NArg() > 1 {
 		flag.PrintDefaults()
-		log.Fatalf("usage: kexec [flags] kernelname OR kexec [flags] -linux-image-cfg-file [file] OR kexec -e")
+		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
 	}
 
 	if opts.cmdline != "" && opts.reuseCmdline {
