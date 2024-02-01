@@ -69,6 +69,58 @@ func TestLookupImmediateChild(t *testing.T) {
 	}
 }
 
+func TestNewNode(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		opts []NodeOptioner
+		node *Node
+	}{
+		{
+			name: "new",
+			opts: nil,
+			node: &Node{Name: "new"},
+		},
+		{
+			name: "new-with-property",
+			opts: []NodeOptioner{WithProperty(PropertyU64("foo", 1))},
+			node: &Node{
+				Name: "new-with-property",
+				Properties: []Property{
+					{
+						Name:  "foo",
+						Value: []byte{0, 0, 0, 0, 0, 0, 0, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "new-with-children",
+			opts: []NodeOptioner{WithChildren(NewNode("child", WithProperty(PropertyString("foo", "abc"))))},
+			node: &Node{
+				Name: "new-with-children",
+				Children: []*Node{
+					{
+						Name: "child",
+						Properties: []Property{
+							{
+								Name:  "foo",
+								Value: []byte{'a', 'b', 'c', 0},
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			n := NewNode(tt.name, tt.opts...)
+			if !reflect.DeepEqual(n, tt.node) {
+				t.Errorf("NewNode = %v, want %v", n, tt.node)
+			}
+		})
+	}
+}
+
 func TestPruneSubtree(t *testing.T) {
 	subtree1 := &Node{
 		Name: "child1",
@@ -267,6 +319,59 @@ func TestRemoveProperty(t *testing.T) {
 				t.Errorf("after removing %s got %+v, want %+v", tc.remove, tc.node, tc.want)
 			}
 		})
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	for _, tt := range []struct {
+		node  *Node
+		prop  Property
+		want  *Node
+		found bool
+	}{
+		{
+			node: &Node{
+				Name: "test node",
+				Properties: []Property{
+					{Name: "linux,usable-memory-range", Value: []byte{1, 2, 3}},
+					{Name: "kaslr-seed", Value: []byte{1, 2, 3}},
+				},
+			},
+			prop: PropertyU64("kaslr-seed", 1),
+			want: &Node{
+				Name: "test node",
+				Properties: []Property{
+					{Name: "linux,usable-memory-range", Value: []byte{1, 2, 3}},
+					{Name: "kaslr-seed", Value: []byte{0, 0, 0, 0, 0, 0, 0, 1}},
+				},
+			},
+			found: true,
+		},
+		{
+			node: &Node{
+				Name: "test node",
+				Properties: []Property{
+					{Name: "linux,usable-memory-range", Value: []byte{1, 2, 3}},
+				},
+			},
+			prop: PropertyU64("kaslr-seed", 1),
+			want: &Node{
+				Name: "test node",
+				Properties: []Property{
+					{Name: "linux,usable-memory-range", Value: []byte{1, 2, 3}},
+					{Name: "kaslr-seed", Value: []byte{0, 0, 0, 0, 0, 0, 0, 1}},
+				},
+			},
+			found: false,
+		},
+	} {
+		got := tt.node.Update(tt.prop)
+		if got != tt.found {
+			t.Errorf("Node update, want %v, got %v", got, tt.found)
+		}
+		if !reflect.DeepEqual(tt.node, tt.want) {
+			t.Errorf("Node update, want %v, got %v", tt.node, tt.want)
+		}
 	}
 }
 

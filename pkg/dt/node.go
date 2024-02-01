@@ -60,6 +60,34 @@ type Node struct {
 	Children   []*Node    `json:",omitempty"`
 }
 
+// NodeOptioner is used to modify a Node for NewNode.
+type NodeOptioner func(n *Node)
+
+// WithProperty adds the given properties to the node.
+func WithProperty(p ...Property) NodeOptioner {
+	return func(n *Node) {
+		n.Properties = append(n.Properties, p...)
+	}
+}
+
+// WithChildren adds childen to the node.
+func WithChildren(c ...*Node) NodeOptioner {
+	return func(n *Node) {
+		n.Children = append(n.Children, c...)
+	}
+}
+
+// NewNode creates a node.
+func NewNode(name string, opts ...NodeOptioner) *Node {
+	n := &Node{
+		Name: name,
+	}
+	for _, opt := range opts {
+		opt(n)
+	}
+	return n
+}
+
 // FindFirstMatchingChildIndex returns the index of the first immediate child node satisfying the
 // given predicate.
 func (n *Node) FindFirstMatchingChildIndex(predicate func(*Node) bool) (int, bool) {
@@ -182,6 +210,36 @@ func (n *Node) UpdateProperty(name string, value []byte) bool {
 	prop := Property{Name: name, Value: value}
 	n.Properties = append(n.Properties, prop)
 	return false
+}
+
+// Update updates an existing property with the given one, if they match in
+// name, or adds a new property.
+func (n *Node) Update(prop Property) bool {
+	p, found := n.LookProperty(prop.Name)
+	if found {
+		p.Value = prop.Value
+		return true
+	}
+	n.Properties = append(n.Properties, prop)
+	return false
+}
+
+// PropertyU64 creates a uint64 property.
+func PropertyU64(name string, value uint64) Property {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, value)
+	return Property{
+		Name:  name,
+		Value: b,
+	}
+}
+
+// PropertyString creates a string property.
+func PropertyString(name string, value string) Property {
+	return Property{
+		Name:  name,
+		Value: append([]byte(value), 0),
+	}
 }
 
 // Property is a name-value pair. Note the PropertyType of Value is not
