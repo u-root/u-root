@@ -8,12 +8,13 @@
 package linux
 
 import (
+	"io"
 	"os"
 
 	"golang.org/x/sys/unix"
 )
 
 // KexecLoad is not implemented for platforms other than amd64 and arm64.
-func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error {
+func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 	return unix.ENOSYS
 }

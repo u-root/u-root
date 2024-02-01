@@ -28,8 +28,7 @@ type LinuxImage struct {
 	Cmdline     string
 	BootRank    int
 	LoadSyscall bool
-
-	KexecOpts linux.KexecOptions
+	DTB         io.ReaderAt
 }
 
 var _ OSImage = &LinuxImage{}
@@ -65,10 +64,10 @@ func (li *LinuxImage) Label() string {
 			fmt.Sprintf("initrd=%s", stringer(li.Initrd)),
 		)
 	}
-	if li.KexecOpts.DTB != nil {
+	if li.DTB != nil {
 		labelInfo = append(
 			labelInfo,
-			fmt.Sprintf("dtb=%s", stringer(li.KexecOpts.DTB)),
+			fmt.Sprintf("dtb=%s", stringer(li.DTB)),
 		)
 	}
 
@@ -83,8 +82,8 @@ func (li *LinuxImage) Rank() int {
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
 	return fmt.Sprintf(
-		"LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n  KexecOpts: %v\n)\n",
-		li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline, li.KexecOpts,
+		"LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n  DTB: %v\n)\n",
+		li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline, stringer(li.DTB),
 	)
 }
 
@@ -198,11 +197,11 @@ func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, erro
 	}
 
 	// Append device-tree file to the end of initrd.
-	if li.KexecOpts.DTB != nil {
+	if li.DTB != nil {
 		if li.Initrd != nil {
-			li.Initrd = CatInitrds(li.Initrd, li.KexecOpts.DTB)
+			li.Initrd = CatInitrds(li.Initrd, li.DTB)
 		} else {
-			li.Initrd = li.KexecOpts.DTB
+			li.Initrd = li.DTB
 		}
 	}
 
@@ -238,13 +237,13 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		loadOpts.logger.Printf("Initrd: %s", i.Name())
 	}
 	loadOpts.logger.Printf("Command line: %s", li.Cmdline)
-	loadOpts.logger.Printf("KexecOpts: %#v", li.KexecOpts)
+	loadOpts.logger.Printf("DTB: %#v", li.DTB)
 
 	if !loadOpts.callKexecLoad {
 		return nil
 	}
 	if li.LoadSyscall {
-		return linux.KexecLoad(k, i, li.Cmdline, li.KexecOpts)
+		return linux.KexecLoad(k, i, li.Cmdline, li.DTB)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

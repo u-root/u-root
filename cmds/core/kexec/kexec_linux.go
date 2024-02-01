@@ -163,9 +163,7 @@ func main() {
 				Initrd:      i,
 				Cmdline:     newCmdline,
 				LoadSyscall: opts.loadSyscall,
-				KexecOpts: linux.KexecOptions{
-					DTB: dtb,
-				},
+				DTB:         dtb,
 			}
 		}
 		if err := image.Load(boot.WithVerbose(opts.debug)); err != nil {
