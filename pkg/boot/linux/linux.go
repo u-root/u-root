@@ -33,6 +33,55 @@ type Image struct {
 
 var _ boot.OSImage = &Image{}
 
+// Opt modifies a Image.
+type Opt func(li *Image)
+
+// Append appends to the cmdline.
+func Append(cmdline string) Opt {
+	return func(li *Image) {
+		if li.Cmdline == "" {
+			li.Cmdline = cmdline
+		} else {
+			li.Cmdline += " " + cmdline
+		}
+	}
+}
+
+// AppendInitrd appends an initramfs.
+func AppendInitrd(initrd io.ReaderAt) Opt {
+	return func(li *Image) {
+		if li.Initrd == nil {
+			li.Initrd = initrd
+		} else {
+			li.Initrd = CatInitrds(li.Initrd, initrd)
+		}
+	}
+}
+
+// ReplaceDTB adds a device tree file.
+func ReplaceDTB(dtb io.ReaderAt) Opt {
+	return func(li *Image) {
+		li.DTB = dtb
+	}
+}
+
+func WithName(name string) Opt {
+	return func(li *Image) {
+		li.Name = name
+	}
+}
+
+// NewImage creates a new Linux image from the given options.
+func NewImage(kernel io.ReaderAt, opts ...Opt) *Image {
+	li := &Image{
+		Kernel: kernel,
+	}
+	for _, opt := range opts {
+		opt(li)
+	}
+	return li
+}
+
 var errNilKernel = errors.New("kernel image is empty, nothing to execute")
 
 // named is satisifed by *os.File.
