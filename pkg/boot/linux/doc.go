@@ -99,13 +99,14 @@
 // those seven quadwords can be used for parameter passing.
 //
 // These changes should let us:
-// o build the purgatory as a non-relative ELF, i.e. a statically linked program with one ELF program (segment)
-// o and link it at 0x3000; the code was putting the current relative ELF in a fixed place anyway
-// o use the ELF program header to tell us where to put the purgatory
-// o communicate arguments in the seven quadwords mentioned above
-// o rather than one does-it-all purgatory as we have today, we can provide several variants
-//
-//	so we get one suited to the job at hand.
+//   - build the purgatory as a non-relative ELF, i.e. a statically linked
+//     program with one ELF program (segment)
+//   - and link it at 0x3000; the code was putting the current relative ELF in
+//     a fixed place anyway - use the ELF program header to tell us where to
+//     put the purgatory
+//   - communicate arguments in the seven quadwords mentioned above
+//   - rather than one does-it-all purgatory as we have today, we can provide
+//     several variants so we get one suited to the job at hand.
 //
 // This should result in a dramatically simpler purgatory implementation. Also,
 // being much simpler, it can be entirely Go assembly, obviating the need for a
