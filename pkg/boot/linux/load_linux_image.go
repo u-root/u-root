@@ -121,12 +121,12 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		return nil, fmt.Errorf("parse arm64 Image from bytes: %v", err)
 	}
 
-	kernelRange, err := kmem.AddKexecSegmentExplicit(kernelBuf, uint(kImage.Header.ImageSize+kImage.Header.TextOffset), uint(kImage.Header.TextOffset), kernelAlignSize)
+	kernelRange, err := kmem.AddKexecSegmentExplicit(kernelBuf, uint(kImage.Header.ImageSize), uint(kImage.Header.TextOffset), kernelAlignSize)
 	if err != nil {
 		return nil, fmt.Errorf("add kernel segment: %v", err)
 	}
 
-	Debug("Added %d byte (size %d) kernel at %s", len(kernelBuf), kImage.Header.ImageSize, kernelRange)
+	Debug("Added %#x byte (size %#x) kernel at %s with offset %#x with alignment %#x", len(kernelBuf), kImage.Header.ImageSize, kernelRange, kImage.Header.TextOffset, kernelAlignSize)
 
 	chosen, err := sanitizeFDT(fdt)
 	if err != nil {
