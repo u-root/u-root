@@ -54,8 +54,6 @@ type options struct {
 	load              bool
 	loadSyscall       bool
 	linuxImageCfgFile string
-	mmapInitrd        bool
-	mmapKernel        bool
 	modules           []string
 	purgatory         string
 	reuseCmdline      bool
@@ -74,8 +72,6 @@ func registerFlags() *options {
 	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
 	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec_load syscall (not kexec_file_load)")
 	flag.StringVarP(&o.linuxImageCfgFile, "linux-image-cfg-file", "I", "", "Load Linux image from JSON info file given")
-	flag.BoolVar(&o.mmapInitrd, "mmap-initrd", true, "Mmap initrd file into virtual buffer, other than directly reading it (Only supported in Arm64 classic load mode for now)")
-	flag.BoolVar(&o.mmapKernel, "mmap-kernel", true, "Mmap kernel file into virtual buffer, other than directly reading it (Only supported in Arm64 classi load mode for now)")
 	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
@@ -117,8 +113,6 @@ func main() {
 			opts.initramfs = lli.Initrd.Name()
 		}
 		opts.loadSyscall = lli.LoadSyscall
-		opts.mmapKernel = lli.KexecOpts.MmapKernel
-		opts.mmapInitrd = lli.KexecOpts.MmapRamfs
 	}
 
 	if (!opts.exec && len(kernelpath) == 0) || flag.NArg() > 1 {
@@ -194,9 +188,7 @@ func main() {
 				Cmdline:     newCmdline,
 				LoadSyscall: opts.loadSyscall,
 				KexecOpts: linux.KexecOptions{
-					DTB:        dtb,
-					MmapKernel: opts.mmapKernel,
-					MmapRamfs:  opts.mmapInitrd,
+					DTB: dtb,
 				},
 			}
 		}

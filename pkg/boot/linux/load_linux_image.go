@@ -9,13 +9,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"syscall"
 
 	"github.com/u-root/u-root/pkg/boot/image"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
-	"github.com/u-root/u-root/pkg/uio"
-	"golang.org/x/sys/unix"
 )
 
 type kimage struct {
@@ -35,28 +32,6 @@ func (k kimage) clean() {
 const (
 	kernelAlignSize = 1 << 21 // 2 MB.
 )
-
-func mmap(f *os.File) (data []byte, ummap func() error, err error) {
-	s, err := f.Stat()
-	if err != nil {
-		return nil, nil, fmt.Errorf("stat error: %w", err)
-	}
-	if s.Size() == 0 {
-		return nil, nil, fmt.Errorf("cannot mmap zero-len file")
-	}
-	d, err := unix.Mmap(int(f.Fd()), 0, int(s.Size()), syscall.PROT_READ, syscall.MAP_PRIVATE)
-	if err != nil {
-		return nil, nil, fmt.Errorf("mmap failed: %w", err)
-	}
-
-	ummap = func() error {
-		if err := unix.Munmap(d); err != nil {
-			return fmt.Errorf("failed to unmap %s: %v", f.Name(), err)
-		}
-		return nil
-	}
-	return d, ummap, nil
-}
 
 // sanitizeFDT cleanups boot param properties from chosen node of the given FDT.
 func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
@@ -96,28 +71,17 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 	}
 
 	img := &kimage{}
+
 	// Load kernel.
-	var kernelBuf []byte
-	var err error
-	if opts.MmapKernel {
-		Debug("Mmapping kernel to virtual buffer...")
-		var cleanup func() error
-		kernelBuf, cleanup, err = mmap(kernel)
-		if err != nil {
-			return nil, fmt.Errorf("mmap kernel: %v", err)
-		}
-		img.cleanup = append(img.cleanup, cleanup)
-	} else {
-		Debug("Read kernel from file ...")
-		kernelBuf, err = uio.ReadAll(kernel)
-		if err != nil {
-			return nil, fmt.Errorf("read kernel from file: %v", err)
-		}
+	kernelBuf, cleanup, err := getFile(kernel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get kernel contents: %w", err)
 	}
+	img.cleanup = append(img.cleanup, cleanup)
 
 	kImage, err := image.ParseFromBytes(kernelBuf)
 	if err != nil {
-		return nil, fmt.Errorf("parse arm64 Image from bytes: %v", err)
+		return nil, fmt.Errorf("parse arm64 Image from bytes: %w", err)
 	}
 
 	kernelRange, err := kmem.AddKexecSegmentExplicit(kernelBuf, uint(kImage.Header.ImageSize), uint(kImage.Header.TextOffset), kernelAlignSize)
@@ -133,23 +97,12 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 	}
 	Debug("FDT after sanitization: %s", fdt)
 
-	var ramfsBuf []byte
 	if ramfs != nil {
-		if opts.MmapRamfs {
-			Debug("Mmap ramfs file to virtual buffer...")
-			var cleanup func() error
-			ramfsBuf, cleanup, err = mmap(ramfs)
-			if err != nil {
-				return nil, fmt.Errorf("mmap ramfs: %v", err)
-			}
-			img.cleanup = append(img.cleanup, cleanup)
-		} else {
-			Debug("Read ramfs from file...")
-			ramfsBuf, err = uio.ReadAll(ramfs)
-			if err != nil {
-				return nil, fmt.Errorf("read ramfs from file: %v", err)
-			}
+		ramfsBuf, cleanup, err := getFile(ramfs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get initramfs contents: %w", err)
 		}
+		img.cleanup = append(img.cleanup, cleanup)
 
 		// NOTE(10000TB): This need be placed after kernel by convention.
 		ramfsRange, err := kmem.AddKexecSegment(ramfsBuf)
