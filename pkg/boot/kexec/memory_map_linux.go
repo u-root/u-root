@@ -207,12 +207,14 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 
 var memoryMapRoot = "/sys/firmware/memmap/"
 
-// MemoryMapFromEFI reads a firmware-provided memory map from /sys/firmware/memmap.
-func MemoryMapFromEFI() (MemoryMap, error) {
-	return memoryMapFromEFI(memoryMapRoot)
+// MemoryMapFromSysfsMemmap reads a firmware-provided memory map from /sys/firmware/memmap.
+//
+// Linux support for this exists only on X86 at the time of this commit.
+func MemoryMapFromSysfsMemmap() (MemoryMap, error) {
+	return memoryMapFromSysfsMemmap(memoryMapRoot)
 }
 
-func memoryMapFromEFI(memoryMapDir string) (MemoryMap, error) {
+func memoryMapFromSysfsMemmap(memoryMapDir string) (MemoryMap, error) {
 	type memRange struct {
 		// start and end addresses are inclusive
 		start, end uintptr

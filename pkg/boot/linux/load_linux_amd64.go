@@ -75,7 +75,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	Debug("Try parsing memory map...")
 	// TODO(10000TB): refactor this call into initialization of
 	// kexec.Memory, as it does not depend on specific boot.
-	mm, err := kexec.MemoryMapFromEFI()
+	mm, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
 		return fmt.Errorf("parse memory map: %v", err)
 	}
