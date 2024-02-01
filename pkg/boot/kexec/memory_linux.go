@@ -182,14 +182,10 @@ func (rs Ranges) Sort() {
 	})
 }
 
-// pool stores byte slices pointed by the pointers Segments.Buf to
-// prevent underlying arrays to be collected by garbage collector.
-var pool [][]byte
-
 // Segment defines kernel memory layout.
 type Segment struct {
-	// Buf is a buffer in user space.
-	Buf Range
+	// Buf is a buffer to map to Phys in kexec.
+	Buf []byte
 
 	// Phys is a physical address of kernel.
 	Phys Range
@@ -199,27 +195,14 @@ type Segment struct {
 // Segments should be created using NewSegment method to prevent
 // data pointed by Segment.Buf to be collected by garbage collector.
 func NewSegment(buf []byte, phys Range) Segment {
-	if buf == nil {
-		return Segment{
-			Buf: Range{
-				Start: 0,
-				Size:  0,
-			},
-			Phys: phys,
-		}
-	}
-	pool = append(pool, buf)
 	return Segment{
-		Buf: Range{
-			Start: uintptr((unsafe.Pointer(&buf[0]))),
-			Size:  uint(len(buf)),
-		},
+		Buf:  buf,
 		Phys: phys,
 	}
 }
 
 func (s Segment) String() string {
-	return fmt.Sprintf("(userspace: %s, phys: %s)", s.Buf, s.Phys)
+	return fmt.Sprintf("(phys: %s, buffer: size %#x)", s.Phys, len(s.Buf))
 }
 
 // AlignAndMerge adjusts segs to the preconditions of kexec_load.
@@ -288,9 +271,7 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 		// We don't need to deal with the inverse, because kexec_load
 		// will fill the remainder of the segment with zeros anyway
 		// when buf.Size < phys.Size.
-		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
-			newSegs[i].Buf.Size = newSegs[i].Phys.Size
-		}
+		newSegs[i].Buf = newSegs[i].realBufTruncate()
 		newSegs[i].Phys.Size = align.UpPage(newSegs[i].Phys.Size)
 	}
 	return newSegs, nil
@@ -300,14 +281,16 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 // or be truncated.
 func (s Segment) realBufPad() []byte {
 	switch {
-	case s.Buf.Size == s.Phys.Size:
-		return s.Buf.toSlice()
+	case uint(len(s.Buf)) == s.Phys.Size:
+		return s.Buf
 
-	case s.Buf.Size < s.Phys.Size:
-		return append(s.Buf.toSlice(), make([]byte, int(s.Phys.Size-s.Buf.Size))...)
+	case uint(len(s.Buf)) < s.Phys.Size:
+		// Pad Buf.
+		return append(s.Buf, make([]byte, int(s.Phys.Size-uint(len(s.Buf))))...)
 
-	case s.Buf.Size > s.Phys.Size:
-		return s.Buf.toSlice()[:s.Phys.Size]
+	case uint(len(s.Buf)) > s.Phys.Size:
+		// Truncate Buf.
+		return s.Buf[:s.Phys.Size]
 	}
 	return nil
 }
@@ -315,17 +298,10 @@ func (s Segment) realBufPad() []byte {
 // realBufTruncate adjusts s.Buf.Size = s.Phys.Size, except when Buf is smaller
 // than Phys. Buf will either remain the same or be truncated.
 func (s Segment) realBufTruncate() []byte {
-	switch {
-	case s.Buf.Size == s.Phys.Size:
-		return s.Buf.toSlice()
-
-	case s.Buf.Size < s.Phys.Size:
-		return s.Buf.toSlice()
-
-	case s.Buf.Size > s.Phys.Size:
-		return s.Buf.toSlice()[:s.Phys.Size]
+	if uint(len(s.Buf)) > s.Phys.Size {
+		return s.Buf[:s.Phys.Size]
 	}
-	return nil
+	return s.Buf
 }
 
 func (s *Segment) mergeDisjoint(s2 Segment) bool {
@@ -360,14 +336,7 @@ func AlignPhysStart(s Segment) Segment {
 	diff := orig - s.Phys.Start
 	s.Phys.Size = s.Phys.Size + uint(diff)
 
-	if s.Buf.Start < diff && diff > 0 {
-		panic("cannot have virtual memory address within first page")
-	}
-	s.Buf.Start -= diff
-
-	if s.Buf.Size > 0 {
-		s.Buf.Size += uint(diff)
-	}
+	s.Buf = append(make([]byte, diff), s.Buf...)
 	return s
 }
 
@@ -398,7 +367,7 @@ func (segs Segments) Phys() Ranges {
 // the same buffer content.
 func (segs Segments) IsSupersetOf(o Segments) error {
 	for _, seg := range o {
-		size := min(seg.Phys.Size, seg.Buf.Size)
+		size := min(seg.Phys.Size, uint(len(seg.Buf)))
 		if size == 0 {
 			continue
 		}
@@ -407,7 +376,7 @@ func (segs Segments) IsSupersetOf(o Segments) error {
 		if buf == nil {
 			return fmt.Errorf("phys %s not found", r)
 		}
-		if !bytes.Equal(buf, seg.Buf.toSlice()[:size]) {
+		if !bytes.Equal(buf, seg.Buf[:size]) {
 			return fmt.Errorf("phys %s contains different bytes", r)
 		}
 	}
@@ -420,7 +389,7 @@ func (segs Segments) GetPhys(r Range) []byte {
 		if seg.Phys.IsSupersetOf(r) {
 			offset := r.Start - seg.Phys.Start
 			// TODO: This could be out of range.
-			buf := seg.Buf.toSlice()[int(offset) : int(offset)+int(r.Size)]
+			buf := seg.Buf[int(offset) : int(offset)+int(r.Size)]
 			return buf
 		}
 	}
