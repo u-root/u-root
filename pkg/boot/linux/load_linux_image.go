@@ -7,6 +7,7 @@ package linux
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 
@@ -67,6 +68,13 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, opts KexecOptions) (
 	return kexecLoadImageMM(mm, kernel, ramfs, fdt, cmdline, opts)
 }
 
+var (
+	errKernelSegmentFailed     = errors.New("failed to add kernel segment")
+	errInitramfsSegmentFailed  = errors.New("failed to add initramfs segment")
+	errDTBSegmentFailed        = errors.New("failed to add DTB segment")
+	errTrampolineSegmentFailed = errors.New("failed to add trampolineSegment")
+)
+
 func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, cmdline string, opts KexecOptions) (*kimage, error) {
 	kmem := &kexec.Memory{
 		Phys: mm,
@@ -88,7 +96,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 
 	kernelRange, err := kmem.AddKexecSegmentExplicit(kernelBuf, uint(kImage.Header.ImageSize), uint(kImage.Header.TextOffset), kernelAlignSize)
 	if err != nil {
-		return nil, fmt.Errorf("add kernel segment: %v", err)
+		return nil, fmt.Errorf("%w: %w", errKernelSegmentFailed, err)
 	}
 
 	Debug("Added %#x byte (size %#x) kernel at %s with offset %#x with alignment %#x", len(kernelBuf), kImage.Header.ImageSize, kernelRange, kImage.Header.TextOffset, kernelAlignSize)
@@ -109,7 +117,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		// NOTE(10000TB): This need be placed after kernel by convention.
 		ramfsRange, err := kmem.AddKexecSegment(ramfsBuf)
 		if err != nil {
-			return nil, fmt.Errorf("add initramfs segment: %v", err)
+			return nil, fmt.Errorf("%w: %w", errInitramfsSegmentFailed, err)
 		}
 		Debug("Added %d byte initramfs at %s", len(ramfsBuf), ramfsRange)
 
@@ -136,7 +144,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 	dtbBuf := dtbBuffer.Bytes()
 	dtbRange, err := kmem.AddKexecSegment(dtbBuf)
 	if err != nil {
-		return nil, fmt.Errorf("add device tree segment: %w", err)
+		return nil, fmt.Errorf("%w: %w", errDTBSegmentFailed, err)
 	}
 	Debug("Added %d byte device tree at %s", len(dtbBuf), dtbRange)
 
@@ -176,7 +184,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 	Debug("trampoline bytes %x", trampolineBuffer.Bytes())
 	trampolineRange, err := kmem.AddKexecSegment(trampolineBuffer.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("add trampoline segment: %v", err)
+		return nil, fmt.Errorf("%w: %w", errTrampolineSegmentFailed, err)
 	}
 	Debug("Added %d byte trampoline at %s", len(trampolineBuffer.Bytes()), trampolineRange)
 
