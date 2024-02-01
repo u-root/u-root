@@ -5,6 +5,7 @@
 package kexec
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -79,7 +80,7 @@ func TestAlignAndMerge(t *testing.T) {
 				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
 			},
 			want: Segments{
-				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
+				NewSegment([]byte{}, Range{Start: 0, Size: 0x1000}),
 			},
 		},
 		{
@@ -181,8 +182,7 @@ func TestAlignAndMerge(t *testing.T) {
 				t.Errorf("AlignAndMerge physical ranges = (-want, +got):\n%s", diff)
 			}
 			for i, s := range got {
-				b := s.Buf.toSlice()
-				if diff := cmp.Diff(tt.want[i].Buf.toSlice(), b); diff != "" {
+				if diff := cmp.Diff(tt.want[i].Buf, s.Buf); diff != "" {
 					t.Errorf("segment %s bytes differ (-want, +got):\n%s", got[i].Phys, diff)
 				}
 			}
@@ -206,7 +206,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "no space under 0x1000",
@@ -215,7 +215,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0, 0x1000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "disjunct space above 0x1000",
@@ -249,7 +249,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, 0x2000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "space is split across 0x1000, with enough space above",
@@ -277,7 +277,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, 0x2000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "space is split across 0x1000, with enough space in the next one",
@@ -294,20 +294,23 @@ func TestFindSpaceIn(t *testing.T) {
 			rs:    Ranges{},
 			size:  0x10,
 			limit: RangeFromInterval(0, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name:  "no ranges, zero size",
 			rs:    Ranges{},
 			size:  0,
 			limit: RangeFromInterval(0, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0},
+			err:   ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceIn(tt.size, tt.limit)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.limit, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %#x, want %#x", tt.rs, tt.size, tt.limit, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %v, want %v", tt.rs, tt.size, tt.limit, err, tt.err)
 			}
 		})
 	}
@@ -317,6 +320,7 @@ func TestFindSpace(t *testing.T) {
 	for i, tt := range []struct {
 		name string
 		rs   Ranges
+		opts []FindOptioner
 		size uint
 		want Range
 		err  error
@@ -335,19 +339,184 @@ func TestFindSpace(t *testing.T) {
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "no ranges, zero size",
 			rs:   Ranges{},
 			size: 0,
-			err:  ErrNotEnoughSpace{Size: 0},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "no space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			want: Range{Start: 0x1010, Size: 0x10},
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "no space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0, 0x1000))},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, MaxAddr))},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0, 0x1000))},
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "all spaces abvoe 0x1000 and under 0x2000 are too small",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0xf},
+				Range{Start: 0x1010, Size: 0xf},
+				Range{Start: 0x1f00, Size: 0xf},
+				Range{Start: 0x2000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, 0x2000))},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, MaxAddr))},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space under",
+			rs: Ranges{
+				Range{Start: 0xFF0, Size: 0x20},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0, 0x1000))},
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000 and 0x2000, but not enough space above or below",
+			rs: Ranges{
+				Range{Start: 0xFF1, Size: 0xf + 0xf},
+				Range{Start: 0x1FF1, Size: 0xf + 0xf},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, 0x2000))},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, MaxAddr))},
+			want: Range{Start: 0x1010, Size: 0x10},
+		},
+		{
+			name: "alignment with limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1010, Size: 0x10},
+				Range{Start: 0x2000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x500, MaxAddr)), WithStartAlignment(0x1000)},
+			want: Range{Start: 0x2000, Size: 0x10},
+		},
+		{
+			name: "alignment with limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1010, Size: 0x1010},
+				Range{Start: 0x3000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x500, MaxAddr)), WithStartAlignment(0x1000)},
+			want: Range{Start: 0x2000, Size: 0x10},
+		},
+		{
+			name: "alignment with limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1010, Size: 0x1010},
+				Range{Start: 0x3000, Size: 0x1000},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x500, MaxAddr)), WithAlignment(0x1000)},
+			want: Range{Start: 0x3000, Size: 0x1000},
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
-			got, err := tt.rs.FindSpace(tt.size)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpace(%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, got, err, tt.want, tt.err)
+			got, err := tt.rs.FindSpace(tt.size, tt.opts...)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpace(%#x) = %#x, want %#x", tt.rs, tt.size, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpace(%#x) = %v, want %v", tt.rs, tt.size, err, tt.err)
 			}
 		})
 	}
@@ -369,7 +538,7 @@ func TestFindSpaceAbove(t *testing.T) {
 			},
 			size: 0x10,
 			min:  0x1000,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "disjunct space above 0x1000",
@@ -415,19 +584,22 @@ func TestFindSpaceAbove(t *testing.T) {
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "no ranges, zero size",
 			rs:   Ranges{},
 			size: 0,
-			err:  ErrNotEnoughSpace{Size: 0},
+			err:  ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceAbove(tt.size, tt.min)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.min, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %#x, want %#x", tt.rs, tt.size, tt.min, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %v, want %v", tt.rs, tt.size, tt.min, err, tt.err)
 			}
 		})
 	}

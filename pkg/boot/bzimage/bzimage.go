@@ -117,7 +117,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 
 	stripped, err := stripSignature(d)
 	if err != nil {
-		return fmt.Errorf("error stripping kernel signature: %v", err)
+		return fmt.Errorf("error stripping kernel signature: %w", err)
 	}
 	d = stripped
 
@@ -161,11 +161,11 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 
 	b.HeadCode = make([]byte, b.Header.PayloadOffset)
 	if _, err := r.Read(b.HeadCode); err != nil {
-		return fmt.Errorf("can't read HeadCode: %v", err)
+		return fmt.Errorf("can't read HeadCode: %w", err)
 	}
 	b.compressed = make([]byte, b.Header.PayloadSize)
 	if _, err := r.Read(b.compressed); err != nil {
-		return fmt.Errorf("can't read KernelCode: %v", err)
+		return fmt.Errorf("can't read KernelCode: %w", err)
 	}
 	decompressor, err := findDecompressor(b.compressed)
 	if err != nil {
@@ -190,14 +190,14 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		var uncompressedLength uint32
 		last4Bytes := b.compressed[(len(b.compressed) - 4):]
 		if err := binary.Read(bytes.NewBuffer(last4Bytes), binary.LittleEndian, &uncompressedLength); err != nil {
-			return fmt.Errorf("error reading uncompressed kernel size: %v", err)
+			return fmt.Errorf("error reading uncompressed kernel size: %w", err)
 		}
 		Debug("Original length of uncompressed kernel is: %d", uncompressedLength)
 
 		// Use the decompressor and write the decompressed payload into b.KernelCode.
 		var buf bytes.Buffer
 		if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err != nil {
-			return fmt.Errorf("error decompressing payload: %v", err)
+			return fmt.Errorf("error decompressing payload: %w", err)
 		}
 		b.KernelCode = buf.Bytes()
 
@@ -217,13 +217,13 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	}
 
 	if err := binary.Read(r, binary.LittleEndian, &b.CRC32); err != nil {
-		return fmt.Errorf("error reading CRC: %v", err)
+		return fmt.Errorf("error reading CRC: %w", err)
 	}
 	Debug("CRC read from image is: 0x%08x", b.CRC32)
 
 	b.TailCode = make([]byte, r.Len()) // Read all remaining bytes.
 	if _, err := r.Read(b.TailCode); err != nil {
-		return fmt.Errorf("can't read TailCode: %v", err)
+		return fmt.Errorf("can't read TailCode: %w", err)
 	}
 
 	// Generate the CRC checksum of the entire image until the end of sys_size.
@@ -303,7 +303,7 @@ func stripSignature(image []byte) ([]byte, error) {
 		return d, nil
 	}
 	if err := binary.Read(bytes.NewReader(d[peMagicOffset:]), binary.LittleEndian, peImage); err != nil {
-		return nil, fmt.Errorf("failed to read PE header: %v", err)
+		return nil, fmt.Errorf("failed to read PE header: %w", err)
 	}
 	// Verify that the image has the PE magic number.
 	if !bytes.Equal(peImage.PEMagic[:], peMagic) {
@@ -467,7 +467,7 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 	// "_with_size").
 	buf := bytes.NewBuffer(dat)
 	if binary.Write(buf, binary.LittleEndian, uint32(len(b))); err != nil {
-		return nil, fmt.Errorf("failed to append the uncompressed size: %v", err)
+		return nil, fmt.Errorf("failed to append the uncompressed size: %w", err)
 	}
 	return buf.Bytes(), nil
 }
@@ -695,7 +695,7 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 
 	archiver, err := cpio.Format("newc")
 	if err != nil {
-		return -1, -1, fmt.Errorf("format newc not supported: %v", err)
+		return -1, -1, fmt.Errorf("format newc not supported: %w", err)
 	}
 	var cur int
 	for cur < len(dat) {

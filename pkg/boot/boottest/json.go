@@ -46,11 +46,11 @@ func makeFileRel(u *url.URL) (*url.URL, error) {
 	}
 	relU, err := url.Parse(u.String())
 	if err != nil {
-		return nil, fmt.Errorf("error parsing %v: %v", u.String(), err)
+		return nil, fmt.Errorf("error parsing %v: %w", u.String(), err)
 	}
 	wd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("error from os.GetWd(): %v", err)
+		return nil, fmt.Errorf("error from os.GetWd(): %w", err)
 	}
 	relU.Path = strings.TrimPrefix(relU.Path, wd)
 	return relU, nil
@@ -81,7 +81,7 @@ func module(r io.ReaderAt) map[string]interface{} {
 func CompareImagesToJSON(imgs []boot.OSImage, jsonEncoded []byte) error {
 	var want interface{}
 	if err := json.Unmarshal(jsonEncoded, &want); err != nil {
-		return fmt.Errorf("failed to unmarshall test json %q: %v", jsonEncoded, err)
+		return fmt.Errorf("failed to unmarshall test json %q: %w", jsonEncoded, err)
 	}
 
 	got := ImagesToJSONLike(imgs)

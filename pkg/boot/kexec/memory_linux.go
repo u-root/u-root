@@ -21,13 +21,7 @@ var pageMask = uint(os.Getpagesize() - 1)
 
 // ErrNotEnoughSpace is returned by the FindSpace family of functions if no
 // range is large enough to accommodate the request.
-type ErrNotEnoughSpace struct {
-	Size uint
-}
-
-func (e ErrNotEnoughSpace) Error() string {
-	return fmt.Sprintf("not enough space to allocate %#x bytes", e.Size)
-}
+var ErrNotEnoughSpace = fmt.Errorf("not enough space to allocate bytes")
 
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
@@ -67,6 +61,18 @@ func (r Range) Adjacent(r2 Range) bool {
 // Contains returns true iff p is in the interval described by r.
 func (r Range) Contains(p uintptr) bool {
 	return r.Start <= p && p < r.End()
+}
+
+// WithStart returns a range that begins at start and ends at r.End().
+func (r Range) WithStart(start uintptr) Range {
+	switch {
+	case r.Start > start:
+		return Range{Start: start, Size: r.Size + uint(r.Start-start)}
+	case r.Start == start:
+		return Range{Start: start, Size: 0}
+	default:
+		return Range{Start: start, Size: r.Size - uint(start-r.Start)}
+	}
 }
 
 // Intersect returns the continuous range of points common to r and r2 if there
@@ -142,14 +148,6 @@ func (rs Ranges) Minus(r Range) Ranges {
 	return ram
 }
 
-// FindSpace finds a continuous piece of sz points within Ranges and returns
-// the Range pointing to it.
-//
-// If alignSizeBytes is zero, align up by page size.
-func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
-	return rs.FindSpaceAbove(sz, 0)
-}
-
 // MaxAddr is the highest address in a 64bit address space.
 const MaxAddr = ^uintptr(0)
 
@@ -162,12 +160,73 @@ func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (space Range, err erro
 // FindSpaceIn finds a continuous piece of sz points within Ranges and returns
 // a Range where space.Start >= limit.Start, with space.End() < limit.End().
 func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
+	return rs.FindSpace(sz, WithinRange(limit))
+}
+
+type findSpaceOptions struct {
+	limit      Range
+	size       uint
+	startAlign uint
+}
+
+// FindOptioner is a config option for FindSpace.
+type FindOptioner func(o *findSpaceOptions)
+
+// WithMinimumAddr requires FindSpace to return a range with an address above
+// minAddr.
+func WithMinimumAddr(minAddr uintptr) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.limit.Start = minAddr
+		o.limit.Size -= uint(minAddr)
+	}
+}
+
+// WithinRange requires FindSpace to return a range within the limit.
+func WithinRange(limit Range) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.limit = limit
+	}
+}
+
+// WithAlignment requires FindSpace to return a range with an address and size
+// aligned to alignSize.
+func WithAlignment(alignSize uint) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.size = align.Up(o.size, alignSize)
+		o.startAlign = alignSize
+	}
+}
+
+// WithStartAlignment requires FindSpace to return a range with an address
+// aligned to alignSize.
+func WithStartAlignment(alignSize uint) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.startAlign = alignSize
+	}
+}
+
+// FindSpace finds a continuous piece of sz points within Ranges and the given
+// options and returns the Range pointing to it.
+func (rs Ranges) FindSpace(sz uint, opts ...FindOptioner) (Range, error) {
+	o := &findSpaceOptions{
+		limit: RangeFromInterval(0, MaxAddr),
+		size:  sz,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	if o.startAlign != 0 && !align.IsAligned(o.limit.Start, uintptr(o.startAlign)) {
+		o.limit = o.limit.WithStart(align.Up(o.limit.Start, uintptr(o.startAlign)))
+	}
 	for _, r := range rs {
-		if overlap := r.Intersect(limit); overlap != nil && overlap.Size >= sz {
-			return Range{Start: overlap.Start, Size: sz}, nil
+		if o.startAlign != 0 && !align.IsAligned(r.Start, uintptr(o.startAlign)) {
+			r = r.WithStart(align.Up(r.Start, uintptr(o.startAlign)))
+		}
+		if overlap := r.Intersect(o.limit); overlap != nil && overlap.Size >= o.size {
+			return Range{Start: overlap.Start, Size: o.size}, nil
 		}
 	}
-	return Range{}, ErrNotEnoughSpace{Size: sz}
+	return Range{}, fmt.Errorf("%w: %#x bytes", ErrNotEnoughSpace, sz)
 }
 
 // Sort sorts ranges by their start point.
@@ -182,14 +241,10 @@ func (rs Ranges) Sort() {
 	})
 }
 
-// pool stores byte slices pointed by the pointers Segments.Buf to
-// prevent underlying arrays to be collected by garbage collector.
-var pool [][]byte
-
 // Segment defines kernel memory layout.
 type Segment struct {
-	// Buf is a buffer in user space.
-	Buf Range
+	// Buf is a buffer to map to Phys in kexec.
+	Buf []byte
 
 	// Phys is a physical address of kernel.
 	Phys Range
@@ -199,27 +254,14 @@ type Segment struct {
 // Segments should be created using NewSegment method to prevent
 // data pointed by Segment.Buf to be collected by garbage collector.
 func NewSegment(buf []byte, phys Range) Segment {
-	if buf == nil {
-		return Segment{
-			Buf: Range{
-				Start: 0,
-				Size:  0,
-			},
-			Phys: phys,
-		}
-	}
-	pool = append(pool, buf)
 	return Segment{
-		Buf: Range{
-			Start: uintptr((unsafe.Pointer(&buf[0]))),
-			Size:  uint(len(buf)),
-		},
+		Buf:  buf,
 		Phys: phys,
 	}
 }
 
 func (s Segment) String() string {
-	return fmt.Sprintf("(userspace: %s, phys: %s)", s.Buf, s.Phys)
+	return fmt.Sprintf("(phys: %s, buffer: size %#x)", s.Phys, len(s.Buf))
 }
 
 // AlignAndMerge adjusts segs to the preconditions of kexec_load.
@@ -288,9 +330,7 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 		// We don't need to deal with the inverse, because kexec_load
 		// will fill the remainder of the segment with zeros anyway
 		// when buf.Size < phys.Size.
-		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
-			newSegs[i].Buf.Size = newSegs[i].Phys.Size
-		}
+		newSegs[i].Buf = newSegs[i].realBufTruncate()
 		newSegs[i].Phys.Size = align.UpPage(newSegs[i].Phys.Size)
 	}
 	return newSegs, nil
@@ -300,14 +340,16 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 // or be truncated.
 func (s Segment) realBufPad() []byte {
 	switch {
-	case s.Buf.Size == s.Phys.Size:
-		return s.Buf.toSlice()
+	case uint(len(s.Buf)) == s.Phys.Size:
+		return s.Buf
 
-	case s.Buf.Size < s.Phys.Size:
-		return append(s.Buf.toSlice(), make([]byte, int(s.Phys.Size-s.Buf.Size))...)
+	case uint(len(s.Buf)) < s.Phys.Size:
+		// Pad Buf.
+		return append(s.Buf, make([]byte, int(s.Phys.Size-uint(len(s.Buf))))...)
 
-	case s.Buf.Size > s.Phys.Size:
-		return s.Buf.toSlice()[:s.Phys.Size]
+	case uint(len(s.Buf)) > s.Phys.Size:
+		// Truncate Buf.
+		return s.Buf[:s.Phys.Size]
 	}
 	return nil
 }
@@ -315,17 +357,10 @@ func (s Segment) realBufPad() []byte {
 // realBufTruncate adjusts s.Buf.Size = s.Phys.Size, except when Buf is smaller
 // than Phys. Buf will either remain the same or be truncated.
 func (s Segment) realBufTruncate() []byte {
-	switch {
-	case s.Buf.Size == s.Phys.Size:
-		return s.Buf.toSlice()
-
-	case s.Buf.Size < s.Phys.Size:
-		return s.Buf.toSlice()
-
-	case s.Buf.Size > s.Phys.Size:
-		return s.Buf.toSlice()[:s.Phys.Size]
+	if uint(len(s.Buf)) > s.Phys.Size {
+		return s.Buf[:s.Phys.Size]
 	}
-	return nil
+	return s.Buf
 }
 
 func (s *Segment) mergeDisjoint(s2 Segment) bool {
@@ -360,14 +395,7 @@ func AlignPhysStart(s Segment) Segment {
 	diff := orig - s.Phys.Start
 	s.Phys.Size = s.Phys.Size + uint(diff)
 
-	if s.Buf.Start < diff && diff > 0 {
-		panic("cannot have virtual memory address within first page")
-	}
-	s.Buf.Start -= diff
-
-	if s.Buf.Size > 0 {
-		s.Buf.Size += uint(diff)
-	}
+	s.Buf = append(make([]byte, diff), s.Buf...)
 	return s
 }
 
@@ -398,7 +426,7 @@ func (segs Segments) Phys() Ranges {
 // the same buffer content.
 func (segs Segments) IsSupersetOf(o Segments) error {
 	for _, seg := range o {
-		size := min(seg.Phys.Size, seg.Buf.Size)
+		size := min(seg.Phys.Size, uint(len(seg.Buf)))
 		if size == 0 {
 			continue
 		}
@@ -407,7 +435,7 @@ func (segs Segments) IsSupersetOf(o Segments) error {
 		if buf == nil {
 			return fmt.Errorf("phys %s not found", r)
 		}
-		if !bytes.Equal(buf, seg.Buf.toSlice()[:size]) {
+		if !bytes.Equal(buf, seg.Buf[:size]) {
 			return fmt.Errorf("phys %s contains different bytes", r)
 		}
 	}
@@ -420,7 +448,7 @@ func (segs Segments) GetPhys(r Range) []byte {
 		if seg.Phys.IsSupersetOf(r) {
 			offset := r.Start - seg.Phys.Start
 			// TODO: This could be out of range.
-			buf := seg.Buf.toSlice()[int(offset) : int(offset)+int(r.Size)]
+			buf := seg.Buf[int(offset) : int(offset)+int(r.Size)]
 			return buf
 		}
 	}
