@@ -33,13 +33,15 @@ const (
 	kernelAlignSize = 1 << 21 // 2 MB.
 )
 
+var errNoChosenNode = fmt.Errorf("no /chosen node in device tree")
+
 // sanitizeFDT cleanups boot param properties from chosen node of the given FDT.
 func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	// Clear old entries in case we've already been through kexec to get
 	// to this instance of runtime.
 	chosen, _ := fdt.NodeByName("chosen")
 	if chosen == nil {
-		return nil, fmt.Errorf("no /chosen node in device tree")
+		return nil, errNoChosenNode
 	}
 	for _, property := range []string{"linux,elfcorehdr", "linux,usable-memory-range", "kaslr-seed", "rng-seed", "linux,initrd-start", "linux,initrd-end"} {
 		chosen.RemoveProperty(property)
@@ -93,7 +95,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 
 	chosen, err := sanitizeFDT(fdt)
 	if err != nil {
-		return nil, fmt.Errorf("sanitizeFDT(%v) = %v", fdt, err)
+		return nil, fmt.Errorf("sanitizeFDT(%v) = %w", fdt, err)
 	}
 	Debug("FDT after sanitization: %s", fdt)
 
