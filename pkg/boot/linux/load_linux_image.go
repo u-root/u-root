@@ -151,21 +151,21 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 				return nil, fmt.Errorf("read ramfs from file: %v", err)
 			}
 		}
-	}
 
-	// NOTE(10000TB): This need be placed after kernel by convention.
-	ramfsRange, err := kmem.AddKexecSegment(ramfsBuf)
-	if err != nil {
-		return nil, fmt.Errorf("add initramfs segment: %v", err)
-	}
-	Debug("Added %d byte initramfs at %s", len(ramfsBuf), ramfsRange)
+		// NOTE(10000TB): This need be placed after kernel by convention.
+		ramfsRange, err := kmem.AddKexecSegment(ramfsBuf)
+		if err != nil {
+			return nil, fmt.Errorf("add initramfs segment: %v", err)
+		}
+		Debug("Added %d byte initramfs at %s", len(ramfsBuf), ramfsRange)
 
-	ramfsStart := make([]byte, 8)
-	binary.BigEndian.PutUint64(ramfsStart, uint64(ramfsRange.Start))
-	chosen.UpdateProperty("linux,initrd-start", ramfsStart)
-	ramfsEnd := make([]byte, 8)
-	binary.BigEndian.PutUint64(ramfsEnd, uint64(ramfsRange.Start)+uint64(ramfsRange.Size))
-	chosen.UpdateProperty("linux,initrd-end", ramfsEnd)
+		ramfsStart := make([]byte, 8)
+		binary.BigEndian.PutUint64(ramfsStart, uint64(ramfsRange.Start))
+		chosen.UpdateProperty("linux,initrd-start", ramfsStart)
+		ramfsEnd := make([]byte, 8)
+		binary.BigEndian.PutUint64(ramfsEnd, uint64(ramfsRange.Start)+uint64(ramfsRange.Size))
+		chosen.UpdateProperty("linux,initrd-end", ramfsEnd)
+	}
 
 	Debug("Kernel cmdline to append: %s", cmdline)
 	if len(cmdline) > 0 {
