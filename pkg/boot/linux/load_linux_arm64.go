@@ -6,14 +6,15 @@ package linux
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
 // KexecLoad loads arm64 Image, with the given ramfs and kernel cmdline.
-func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error {
-	img, err := kexecLoadImage(kernel, ramfs, cmdline, opts)
+func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
+	img, err := kexecLoadImage(kernel, ramfs, cmdline, dtb)
 	if err != nil {
 		return err
 	}

@@ -25,7 +25,7 @@ const (
 // kernel with the given ramfs file and cmdline string.
 //
 // It uses the kexec_load system call.
-func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error {
+func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 	bzimage.Debug = Debug
 
 	// A collection of vars used for processing the kernel for kexec

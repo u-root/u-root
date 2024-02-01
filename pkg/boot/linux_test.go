@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
@@ -92,9 +91,7 @@ func TestLinuxLabel(t *testing.T) {
 			img: &LinuxImage{
 				Kernel: osKernel,
 				Initrd: osInitrd,
-				KexecOpts: linux.KexecOptions{
-					DTB: osInitrd,
-				},
+				DTB:    osInitrd,
 			},
 			want: fmt.Sprintf("Linux(kernel=%s/kernel initrd=%s/initrd dtb=%s/initrd)", dir, dir, dir),
 		},
@@ -102,9 +99,7 @@ func TestLinuxLabel(t *testing.T) {
 			desc: "dtb file, no initrd",
 			img: &LinuxImage{
 				Kernel: osKernel,
-				KexecOpts: linux.KexecOptions{
-					DTB: osInitrd,
-				},
+				DTB:    osInitrd,
 			},
 			want: fmt.Sprintf("Linux(kernel=%s/kernel dtb=%s/initrd)", dir, dir),
 		},
@@ -230,9 +225,7 @@ func TestLoadLinuxImage(t *testing.T) {
 			li: &LinuxImage{
 				Kernel: strings.NewReader("testkernel"),
 				Initrd: nil,
-				KexecOpts: linux.KexecOptions{
-					DTB: strings.NewReader("testdtb"),
-				},
+				DTB:    strings.NewReader("testdtb"),
 			},
 			wantKernel: setupTestFile(t, filepath.Join(testDir, "empty_inird_w_dtb_present_bzImage"), "testkernel"),
 			wantInitrd: setupTestFile(t, filepath.Join(testDir, "empty_inird_w_dtb_present_initramfs"), "testdtb"),
@@ -242,9 +235,7 @@ func TestLoadLinuxImage(t *testing.T) {
 			li: &LinuxImage{
 				Kernel: strings.NewReader("testkernel"),
 				Initrd: strings.NewReader("testinitrd"),
-				KexecOpts: linux.KexecOptions{
-					DTB: strings.NewReader("testdtb"),
-				},
+				DTB:    strings.NewReader("testdtb"),
 			},
 			wantKernel: setupTestFile(t, filepath.Join(testDir, "non_empty_inird_w_dtb_present_bzImage"), "testkernel"),
 			wantInitrd: setupTestFile(t, filepath.Join(testDir, "non_empty_inird_w_dtb_present_initramfs"), GenerateCatDummyInitrd(t, "testinitrd", "testdtb")),

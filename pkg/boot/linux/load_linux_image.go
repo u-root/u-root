@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/image"
@@ -51,10 +52,10 @@ func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	return chosen, nil
 }
 
-func kexecLoadImage(kernel, ramfs *os.File, cmdline string, opts KexecOptions) (*kimage, error) {
-	fdt, err := dt.LoadFDT(opts.DTB)
+func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) (*kimage, error) {
+	fdt, err := dt.LoadFDT(dtb)
 	if err != nil {
-		return nil, fmt.Errorf("loadFDT(%s) = %v", opts.DTB, err)
+		return nil, fmt.Errorf("loadFDT(%s) = %v", dtb, err)
 	}
 	Debug("Loaded FDT: %s", fdt)
 
