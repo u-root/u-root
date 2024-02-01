@@ -63,6 +63,18 @@ func (r Range) Contains(p uintptr) bool {
 	return r.Start <= p && p < r.End()
 }
 
+// WithStart returns a range that begins at start and ends at r.End().
+func (r Range) WithStart(start uintptr) Range {
+	switch {
+	case r.Start > start:
+		return Range{Start: start, Size: r.Size + uint(r.Start-start)}
+	case r.Start == start:
+		return Range{Start: start, Size: 0}
+	default:
+		return Range{Start: start, Size: r.Size - uint(start-r.Start)}
+	}
+}
+
 // Intersect returns the continuous range of points common to r and r2 if there
 // is one.
 func (r Range) Intersect(r2 Range) *Range {
@@ -136,14 +148,6 @@ func (rs Ranges) Minus(r Range) Ranges {
 	return ram
 }
 
-// FindSpace finds a continuous piece of sz points within Ranges and returns
-// the Range pointing to it.
-//
-// If alignSizeBytes is zero, align up by page size.
-func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
-	return rs.FindSpaceAbove(sz, 0)
-}
-
 // MaxAddr is the highest address in a 64bit address space.
 const MaxAddr = ^uintptr(0)
 
@@ -156,9 +160,70 @@ func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (space Range, err erro
 // FindSpaceIn finds a continuous piece of sz points within Ranges and returns
 // a Range where space.Start >= limit.Start, with space.End() < limit.End().
 func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
+	return rs.FindSpace(sz, WithinRange(limit))
+}
+
+type findSpaceOptions struct {
+	limit      Range
+	size       uint
+	startAlign uint
+}
+
+// FindOptioner is a config option for FindSpace.
+type FindOptioner func(o *findSpaceOptions)
+
+// WithMinimumAddr requires FindSpace to return a range with an address above
+// minAddr.
+func WithMinimumAddr(minAddr uintptr) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.limit.Start = minAddr
+		o.limit.Size -= uint(minAddr)
+	}
+}
+
+// WithinRange requires FindSpace to return a range within the limit.
+func WithinRange(limit Range) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.limit = limit
+	}
+}
+
+// WithAlignment requires FindSpace to return a range with an address and size
+// aligned to alignSize.
+func WithAlignment(alignSize uint) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.size = align.Up(o.size, alignSize)
+		o.startAlign = alignSize
+	}
+}
+
+// WithStartAlignment requires FindSpace to return a range with an address
+// aligned to alignSize.
+func WithStartAlignment(alignSize uint) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.startAlign = alignSize
+	}
+}
+
+// FindSpace finds a continuous piece of sz points within Ranges and the given
+// options and returns the Range pointing to it.
+func (rs Ranges) FindSpace(sz uint, opts ...FindOptioner) (Range, error) {
+	o := &findSpaceOptions{
+		limit: RangeFromInterval(0, MaxAddr),
+		size:  sz,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	if o.startAlign != 0 && !align.IsAligned(o.limit.Start, uintptr(o.startAlign)) {
+		o.limit = o.limit.WithStart(align.Up(o.limit.Start, uintptr(o.startAlign)))
+	}
 	for _, r := range rs {
-		if overlap := r.Intersect(limit); overlap != nil && overlap.Size >= sz {
-			return Range{Start: overlap.Start, Size: sz}, nil
+		if o.startAlign != 0 && !align.IsAligned(r.Start, uintptr(o.startAlign)) {
+			r = r.WithStart(align.Up(r.Start, uintptr(o.startAlign)))
+		}
+		if overlap := r.Intersect(o.limit); overlap != nil && overlap.Size >= o.size {
+			return Range{Start: overlap.Start, Size: o.size}, nil
 		}
 	}
 	return Range{}, fmt.Errorf("%w: %#x bytes", ErrNotEnoughSpace, sz)
