@@ -21,13 +21,7 @@ var pageMask = uint(os.Getpagesize() - 1)
 
 // ErrNotEnoughSpace is returned by the FindSpace family of functions if no
 // range is large enough to accommodate the request.
-type ErrNotEnoughSpace struct {
-	Size uint
-}
-
-func (e ErrNotEnoughSpace) Error() string {
-	return fmt.Sprintf("not enough space to allocate %#x bytes", e.Size)
-}
+var ErrNotEnoughSpace = fmt.Errorf("not enough space to allocate bytes")
 
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
@@ -167,7 +161,7 @@ func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
 			return Range{Start: overlap.Start, Size: sz}, nil
 		}
 	}
-	return Range{}, ErrNotEnoughSpace{Size: sz}
+	return Range{}, fmt.Errorf("%w: %#x bytes", ErrNotEnoughSpace, sz)
 }
 
 // Sort sorts ranges by their start point.
