@@ -94,6 +94,19 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		return nil, fmt.Errorf("parse arm64 Image from bytes: %w", err)
 	}
 
+	// "The Image must be placed text_offset bytes from a 2MB aligned base
+	// address anywhere in usable system RAM and called there."
+	// (arm64/booting.rst)
+	//
+	// "At least image_size bytes from the start of the image must be free
+	// for use by the kernel." (arm64/booting.rst)
+	//
+	// TODO: support versions below v4.6?
+	//
+	// "NOTE: versions prior to v4.6 cannot make use of memory below the
+	// physical offset of the Image so it is recommended that the Image be
+	// placed as close as possible to the start of system RAM."
+	// (arm64/booting.rst)
 	kernelRange, err := kmem.AddKexecSegmentExplicit(kernelBuf, uint(kImage.Header.ImageSize), uint(kImage.Header.TextOffset), kernelAlignSize)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errKernelSegmentFailed, err)
@@ -115,6 +128,11 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		img.cleanup = append(img.cleanup, cleanup)
 
 		// NOTE(10000TB): This need be placed after kernel by convention.
+		//
+		// "If an initrd/initramfs is passed to the kernel at boot, it
+		// must reside entirely within a 1 GB aligned physical memory
+		// window of up to 32 GB in size that fully covers the kernel
+		// Image as well." (arm64/booting.rst)
 		ramfsRange, err := kmem.AddKexecSegment(ramfsBuf)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", errInitramfsSegmentFailed, err)
