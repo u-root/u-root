@@ -141,16 +141,13 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 		return fmt.Errorf("re-marshaling header: %w", err)
 	}
 
-	// TODO(10000TB): Free mem hole start end aligns by
-	// max(16, pagesize).
-	//
-	// Push alignment logic to kexec memory functions, e.g. a similar
-	// function to FindSpace.
 	setupRange, err := kmem.AddPhysSegment(
 		linuxParam,
+		// We use Linux's 32bit/64bit entry point, so we can place the
+		// setup range anywhere in the low 4G.
 		kexec.RangeFromInterval(
-			uintptr(0x90000),
-			uintptr(len(linuxParam)),
+			uintptr(4096),
+			uintptr(1<<32-1),
 		),
 		// TODO(10000TB): evaluate if we need to provide  option to
 		// reserve from end.
