@@ -108,7 +108,6 @@ func TestKexecLoadImage(t *testing.T) {
 		ramfs   *os.File
 		fdt     *dt.FDT
 		cmdline string
-		opts    KexecOptions
 
 		// Results
 		segments kexec.Segments
@@ -248,7 +247,7 @@ func TestKexecLoadImage(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kexecLoadImageMM(tt.mm, tt.kernel, tt.ramfs, tt.fdt, tt.cmdline, tt.opts)
+			got, err := kexecLoadImageMM(tt.mm, tt.kernel, tt.ramfs, tt.fdt, tt.cmdline)
 			for _, wantErr := range tt.errs {
 				if !errors.Is(err, wantErr) {
 					t.Errorf("kexecLoad Arm Image = %v, want %v", err, wantErr)
