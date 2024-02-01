@@ -20,7 +20,7 @@ func mmap(f *os.File) ([]byte, func() error, error) {
 		return nil, nil, fmt.Errorf("stat error: %w", err)
 	}
 	if s.Size() == 0 {
-		return nil, nil, fmt.Errorf("cannot mmap zero-len file")
+		return nil, nil, fmt.Errorf("%w: cannot mmap zero-len file", os.ErrInvalid)
 	}
 	d, err := unix.Mmap(int(f.Fd()), 0, int(s.Size()), syscall.PROT_READ, syscall.MAP_PRIVATE)
 	if err != nil {
@@ -29,7 +29,7 @@ func mmap(f *os.File) ([]byte, func() error, error) {
 
 	ummap := func() error {
 		if err := unix.Munmap(d); err != nil {
-			return fmt.Errorf("failed to unmap %s: %v", f.Name(), err)
+			return fmt.Errorf("failed to unmap %s: %w", f.Name(), err)
 		}
 		return nil
 	}
