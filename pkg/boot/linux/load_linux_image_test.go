@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -56,6 +57,19 @@ func fdtBytes(t *testing.T, fdt *dt.FDT) []byte {
 	return b.Bytes()
 }
 
+func pipe(t *testing.T, content []byte) *os.File {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		_, _ = io.Copy(w, bytes.NewReader(content))
+		w.Close()
+	}()
+	return r
+}
+
 func trampoline(kernelEntry, dtbBase uint64) []byte {
 	t := []byte{
 		0xc4, 0x00, 0x00, 0x58,
@@ -73,16 +87,6 @@ func trampoline(kernelEntry, dtbBase uint64) []byte {
 }
 
 func TestKexecLoadImage(t *testing.T) {
-	chosen := dt.NewNode("chosen",
-		dt.WithProperty(
-			dt.PropertyU64("linux,initrd-start", 500),
-			dt.PropertyU64("linux,initrd-end", 500),
-		),
-	)
-	tree := &dt.FDT{
-		RootNode: dt.NewNode("/", dt.WithChildren(chosen)),
-	}
-
 	Debug = t.Logf
 
 	for _, tt := range []struct {
@@ -90,6 +94,7 @@ func TestKexecLoadImage(t *testing.T) {
 		mm       kexec.MemoryMap
 		kernel   *os.File
 		ramfs    *os.File
+		fdt      *dt.FDT
 		cmdline  string
 		opts     KexecOptions
 		segments kexec.Segments
@@ -103,6 +108,35 @@ func TestKexecLoadImage(t *testing.T) {
 			},
 			kernel: openFile(t, "../image/testdata/Image"),
 			entry:  0x101000, /* trampoline entry */
+			fdt: &dt.FDT{
+				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen",
+					dt.WithProperty(
+						dt.PropertyU64("linux,initrd-start", 500),
+						dt.PropertyU64("linux,initrd-end", 500),
+					),
+				))),
+			},
+			segments: kexec.Segments{
+				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
+				kexec.NewSegment(trampoline(0x200000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
+				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
+			},
+		},
+		{
+			name: "pipefile",
+			mm: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
+			},
+			kernel: pipe(t, readFile(t, "../image/testdata/Image")),
+			entry:  0x101000, /* trampoline entry */
+			fdt: &dt.FDT{
+				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen",
+					dt.WithProperty(
+						dt.PropertyU64("linux,initrd-start", 500),
+						dt.PropertyU64("linux,initrd-end", 500),
+					),
+				))),
+			},
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
@@ -111,9 +145,12 @@ func TestKexecLoadImage(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kexecLoadImageMM(tt.mm, tt.kernel, tt.ramfs, chosen, tree, tt.cmdline, tt.opts)
+			got, err := kexecLoadImageMM(tt.mm, tt.kernel, tt.ramfs, tt.fdt, tt.cmdline, tt.opts)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("kexecLoad Arm Image = %v, want %v", err, tt.err)
+			}
+			if got == nil {
+				return
 			}
 			if got.entry != tt.entry {
 				t.Errorf("kexecLoad Arm Image = %#x, want %#x", got.entry, tt.entry)
