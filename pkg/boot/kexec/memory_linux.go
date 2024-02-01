@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
@@ -260,6 +261,12 @@ func NewSegment(buf []byte, phys Range) Segment {
 	}
 }
 
+// SegmentEqual returns whether s and t point at the same physical region and
+// contain the same data.
+func SegmentEqual(s, t Segment) bool {
+	return s.Phys == t.Phys && bytes.Equal(s.Buf, t.Buf)
+}
+
 func (s Segment) String() string {
 	return fmt.Sprintf("(phys: %s, buffer: size %#x)", s.Phys, len(s.Buf))
 }
@@ -402,6 +409,15 @@ func AlignPhysStart(s Segment) Segment {
 // Segments is a collection of segments.
 type Segments []Segment
 
+func (segs Segments) String() string {
+	var s strings.Builder
+	for _, seg := range segs {
+		s.WriteString(seg.String())
+		s.WriteString("\n")
+	}
+	return s.String()
+}
+
 // PhysContains returns whether p exists in any of segs' physical memory
 // ranges.
 func (segs Segments) PhysContains(p uintptr) bool {
@@ -420,6 +436,20 @@ func (segs Segments) Phys() Ranges {
 		r = append(r, s.Phys)
 	}
 	return r
+}
+
+// SegmentsEqual returns whether the contents of all segments are the same,
+// while pointing to the same physical memory region.
+func SegmentsEqual(s, t Segments) bool {
+	if len(s) != len(t) {
+		return false
+	}
+	for i := range s {
+		if !SegmentEqual(s[i], t[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // IsSupersetOf checks whether all segments in o are present in s and contain

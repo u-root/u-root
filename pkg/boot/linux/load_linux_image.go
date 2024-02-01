@@ -55,7 +55,6 @@ func mmap(f *os.File) (data []byte, ummap func() error, err error) {
 		}
 		return nil
 	}
-
 	return d, ummap, nil
 }
 
