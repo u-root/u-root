@@ -5,6 +5,7 @@
 package kexec
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -205,7 +206,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "no space under 0x1000",
@@ -214,7 +215,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0, 0x1000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "disjunct space above 0x1000",
@@ -248,7 +249,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, 0x2000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "space is split across 0x1000, with enough space above",
@@ -276,7 +277,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, 0x2000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "space is split across 0x1000, with enough space in the next one",
@@ -293,20 +294,23 @@ func TestFindSpaceIn(t *testing.T) {
 			rs:    Ranges{},
 			size:  0x10,
 			limit: RangeFromInterval(0, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name:  "no ranges, zero size",
 			rs:    Ranges{},
 			size:  0,
 			limit: RangeFromInterval(0, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0},
+			err:   ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceIn(tt.size, tt.limit)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.limit, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %#x, want %#x", tt.rs, tt.size, tt.limit, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %v, want %v", tt.rs, tt.size, tt.limit, err, tt.err)
 			}
 		})
 	}
@@ -334,19 +338,22 @@ func TestFindSpace(t *testing.T) {
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "no ranges, zero size",
 			rs:   Ranges{},
 			size: 0,
-			err:  ErrNotEnoughSpace{Size: 0},
+			err:  ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpace(tt.size)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpace(%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpace(%#x) = %#x, want %#x", tt.rs, tt.size, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpace(%#x) = %v, want %v", tt.rs, tt.size, err, tt.err)
 			}
 		})
 	}
@@ -368,7 +375,7 @@ func TestFindSpaceAbove(t *testing.T) {
 			},
 			size: 0x10,
 			min:  0x1000,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "disjunct space above 0x1000",
@@ -414,19 +421,22 @@ func TestFindSpaceAbove(t *testing.T) {
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "no ranges, zero size",
 			rs:   Ranges{},
 			size: 0,
-			err:  ErrNotEnoughSpace{Size: 0},
+			err:  ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceAbove(tt.size, tt.min)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.min, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %#x, want %#x", tt.rs, tt.size, tt.min, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %v, want %v", tt.rs, tt.size, tt.min, err, tt.err)
 			}
 		})
 	}
