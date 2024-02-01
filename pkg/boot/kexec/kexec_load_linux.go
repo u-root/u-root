@@ -6,6 +6,7 @@ package kexec
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 	"unsafe"
 
@@ -44,18 +45,60 @@ func (e ErrKexec) Error() string {
 	return fmt.Sprintf("kexec_load(entry=%#x, segments=%s, flags %#x) = errno %s", e.Entry, e.Segments, e.Flags, e.Errno)
 }
 
+// kexecSegment defines kernel memory layout.
+type kexecSegment struct {
+	// Buf points to a buffer in user space.
+	Buf Range
+
+	// Phys is a physical address of kernel.
+	Phys Range
+}
+
+func (s Segment) toKexecSegment() kexecSegment {
+	if s.Buf == nil {
+		return kexecSegment{
+			Buf:  Range{Start: 0, Size: 0},
+			Phys: s.Phys,
+		}
+	}
+	return kexecSegment{
+		Buf: Range{
+			Start: uintptr((unsafe.Pointer(&s.Buf[0]))),
+			Size:  uint(len(s.Buf)),
+		},
+		Phys: s.Phys,
+	}
+}
+
+func (segs Segments) toKexecSegments() []kexecSegment {
+	var ks []kexecSegment
+	for _, seg := range segs {
+		ks = append(ks, seg.toKexecSegment())
+	}
+	return ks
+}
+
 // rawLoad is a wrapper around kexec_load(2) syscall.
 // Preconditions:
 // - segments must not overlap
 // - segments must be full pages
-func rawLoad(entry uintptr, segments []Segment, flags uint64) error {
-	if _, _, errno := unix.Syscall6(
+func rawLoad(entry uintptr, segments Segments, flags uint64) error {
+	ks := segments.toKexecSegments()
+	_, _, errno := unix.Syscall6(
 		unix.SYS_KEXEC_LOAD,
 		entry,
 		uintptr(len(segments)),
-		uintptr(unsafe.Pointer(&segments[0])),
+		uintptr(unsafe.Pointer(&ks[0])),
 		uintptr(flags),
-		0, 0); errno != 0 {
+		0, 0)
+	// segments (and all the buffers therein) may have gotten freed after
+	// evaluating Syscall6 arguments, but before the syscall actually
+	// happens.
+	for _, seg := range segments {
+		runtime.KeepAlive(seg.Buf)
+	}
+	runtime.KeepAlive(segments)
+	if errno != 0 {
 		return ErrKexec{
 			Entry:    entry,
 			Segments: segments,

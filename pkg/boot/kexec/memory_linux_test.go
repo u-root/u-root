@@ -80,7 +80,7 @@ func TestAlignAndMerge(t *testing.T) {
 				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
 			},
 			want: Segments{
-				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
+				NewSegment([]byte{}, Range{Start: 0, Size: 0x1000}),
 			},
 		},
 		{
@@ -182,8 +182,7 @@ func TestAlignAndMerge(t *testing.T) {
 				t.Errorf("AlignAndMerge physical ranges = (-want, +got):\n%s", diff)
 			}
 			for i, s := range got {
-				b := s.Buf.toSlice()
-				if diff := cmp.Diff(tt.want[i].Buf.toSlice(), b); diff != "" {
+				if diff := cmp.Diff(tt.want[i].Buf, s.Buf); diff != "" {
 					t.Errorf("segment %s bytes differ (-want, +got):\n%s", got[i].Phys, diff)
 				}
 			}
