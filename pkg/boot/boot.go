@@ -8,15 +8,10 @@ package boot
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/uio/ulog"
 )
-
-// DefaultLinuxImageCfgFile is the default file name in tmp directory to write loaded LinuxImage info to.
-const DefaultLinuxImageCfgFile = "linux_image_cfg.json"
 
 // LoadOption is an optional parameter to Load.
 type LoadOption func(*loadOptions)
@@ -25,16 +20,13 @@ type loadOptions struct {
 	logger        ulog.Logger
 	verbose       bool
 	callKexecLoad bool
-	// linuxImageCfgFile specifies where to writes loaded linuximage info to.
-	linuxImageCfgFile string
 }
 
 func defaultLoadOptions() *loadOptions {
 	return &loadOptions{
-		logger:            ulog.Null,
-		verbose:           false,
-		callKexecLoad:     true,
-		linuxImageCfgFile: filepath.Join(os.TempDir(), DefaultLinuxImageCfgFile),
+		logger:        ulog.Null,
+		verbose:       false,
+		callKexecLoad: true,
 	}
 }
 
@@ -68,13 +60,6 @@ func WithVerbose(verbose bool) LoadOption {
 func WithDryRun(dryRun bool) LoadOption {
 	return func(o *loadOptions) {
 		o.callKexecLoad = !dryRun
-	}
-}
-
-// WithLinuxImageCfgFile allows user to specify a different linux image config file path.
-func WithLinuxImageCfgFile(f string) LoadOption {
-	return func(o *loadOptions) {
-		o.linuxImageCfgFile = f
 	}
 }
 

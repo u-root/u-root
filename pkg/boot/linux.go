@@ -5,7 +5,6 @@
 package boot
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/uio/ulog"
 	"golang.org/x/sys/unix"
 )
 
@@ -34,93 +32,9 @@ type LinuxImage struct {
 	KexecOpts linux.KexecOptions
 }
 
-// LoadedLinuxImage is a processed version of LinuxImage.
-//
-// Main difference being that kernel and initrd is made as
-// a read-only *os.File. There is also additional processing
-// such as DTB, if available under KexecOpts, will be appended
-// to Initrd.
-type LoadedLinuxImage struct {
-	Name        string
-	Kernel      *os.File
-	Initrd      *os.File
-	Cmdline     string
-	LoadSyscall bool
-	KexecOpts   linux.KexecOptions
-}
-
-// loadedLinuxImageJSON is same as LoadedLinuxImage, but with transformed fields to help with serialization of LoadedLinuxImage.
-type loadedLinuxImageJSON struct {
-	Name        string
-	KernelPath  string
-	InitrdPath  string
-	Cmdline     string
-	LoadSyscall bool
-	KexecOpts   linux.KexecOptions
-}
-
 var _ OSImage = &LinuxImage{}
 
 var errNilKernel = errors.New("kernel image is empty, nothing to execute")
-
-// MarshalJSON customizes marshaling for LoadedLinuxImage. It handles serializations
-// for *os.File, so that kernel and initrd can be unmarshalled properly.
-func (lli *LoadedLinuxImage) MarshalJSON() ([]byte, error) {
-	lliJSON := loadedLinuxImageJSON{}
-	// Sync and close kernel and initrd File object, and marshal paths to the files.
-	if lli.Kernel != nil {
-		if err := lli.Kernel.Sync(); err != nil {
-			return nil, err
-		}
-		lliJSON.KernelPath = lli.Kernel.Name()
-		if err := lli.Kernel.Close(); err != nil {
-			return nil, err
-		}
-	}
-	if lli.Initrd != nil {
-		if err := lli.Initrd.Sync(); err != nil {
-			return nil, err
-		}
-		lliJSON.InitrdPath = lli.Initrd.Name()
-		if err := lli.Initrd.Close(); err != nil {
-			return nil, err
-		}
-	}
-	lliJSON.Name = lli.Name
-	lliJSON.Cmdline = lli.Cmdline
-	lliJSON.LoadSyscall = lli.LoadSyscall
-	lliJSON.KexecOpts = lli.KexecOpts
-
-	return json.Marshal(lliJSON)
-}
-
-// UnmarshalJSON customizes unmarshaling for LoadedLinuxImage. It processes kernel
-// and initrd file by name, and opens a read-only copies for further execution.
-func (lli *LoadedLinuxImage) UnmarshalJSON(b []byte) error {
-	lliJSON := loadedLinuxImageJSON{}
-	if err := json.Unmarshal(b, &lliJSON); err != nil {
-		return err
-	}
-	if len(strings.TrimSpace(lliJSON.KernelPath)) > 0 {
-		readOnlyK, err := os.Open(lliJSON.KernelPath)
-		if err != nil {
-			return err
-		}
-		lli.Kernel = readOnlyK
-	}
-	if len(strings.TrimSpace(lliJSON.InitrdPath)) > 0 {
-		readOnlyI, err := os.Open(lliJSON.InitrdPath)
-		if err != nil {
-			return err
-		}
-		lli.Initrd = readOnlyI
-	}
-	lli.Name = lliJSON.Name
-	lli.Cmdline = lliJSON.Cmdline
-	lli.LoadSyscall = lliJSON.LoadSyscall
-	lli.KexecOpts = lliJSON.KexecOpts
-	return nil
-}
 
 // named is satisifed by *os.File.
 type named interface {
@@ -268,20 +182,17 @@ func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 	return readOnlyF, nil
 }
 
-// loadLinuxImage processes given LinuxImage, and make it ready for kexec.
-//
-// For example:
-//
-//   - Acquiring a read-only copy of kernel and initrd as kernel
-//     don't like them being opened for writting by anyone while
-//     executing.
-//   - Append DTB, if present to end of initrd.
-func loadLinuxImage(li *LinuxImage, logger ulog.Logger, verbose bool) (*LoadedLinuxImage, func(), error) {
+// Edit the kernel command line.
+func (li *LinuxImage) Edit(f func(cmdline string) string) {
+	li.Cmdline = f(li.Cmdline)
+}
+
+func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, error) {
 	if li.Kernel == nil {
 		return nil, nil, errNilKernel
 	}
 
-	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), verbose)
+	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), loadOpts.verbose)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -297,68 +208,13 @@ func loadLinuxImage(li *LinuxImage, logger ulog.Logger, verbose bool) (*LoadedLi
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = CopyToFileIfNotRegular(li.Initrd, verbose)
+		i, err = CopyToFileIfNotRegular(li.Initrd, loadOpts.verbose)
 		if err != nil {
+			k.Close()
 			return nil, nil, err
 		}
 	}
-
-	logger.Printf("Kernel: %s", k.Name())
-	if i != nil {
-		logger.Printf("Initrd: %s", i.Name())
-	}
-	logger.Printf("Command line: %s", li.Cmdline)
-	logger.Printf("KexecOpts: %#v", li.KexecOpts)
-
-	cleanup := func() {
-		k.Close()
-		i.Close()
-	}
-
-	return &LoadedLinuxImage{
-		Name:        li.Name,
-		Kernel:      k,
-		Initrd:      i,
-		Cmdline:     li.Cmdline,
-		LoadSyscall: li.LoadSyscall,
-		KexecOpts:   li.KexecOpts,
-	}, cleanup, nil
-}
-
-// saveLoadedLinuxImage marshals a LoadedLinuxImage to a json file.
-//
-// Marshalling it to a json versus a binary format, makes it readable
-// and easier to tamper in case when we need change a field or two
-// for experiments and debug.
-//
-// With that said, it is obvious that this saved info can then be
-// loaded by a later kexec for further execution from an already loaded
-// linux image and original load options.
-func saveLoadedLinuxImage(lli *LoadedLinuxImage, p string) error {
-	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
-	if err != nil {
-		return err
-	}
-	out, err := json.Marshal(lli)
-	if err != nil {
-		return err
-	}
-	nw, err := f.Write(out)
-	if err != nil {
-		return err
-	}
-	if nw != len(out) {
-		return fmt.Errorf("written %d bytes, want %d bytes", nw, len(out))
-	}
-	if err := f.Sync(); err != nil {
-		return err
-	}
-	return f.Close()
-}
-
-// Edit the kernel command line.
-func (li *LinuxImage) Edit(f func(cmdline string) string) {
-	li.Cmdline = f(li.Cmdline)
+	return k, i, nil
 }
 
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
@@ -368,20 +224,27 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		opt(loadOpts)
 	}
 
-	loadedImage, cleanup, err := loadLinuxImage(li, loadOpts.logger, loadOpts.verbose)
+	k, i, err := li.loadImage(loadOpts)
 	if err != nil {
 		return err
 	}
-	defer cleanup()
+	defer k.Close()
+	if i != nil {
+		defer i.Close()
+	}
+
+	loadOpts.logger.Printf("Kernel: %s", k.Name())
+	if i != nil {
+		loadOpts.logger.Printf("Initrd: %s", i.Name())
+	}
+	loadOpts.logger.Printf("Command line: %s", li.Cmdline)
+	loadOpts.logger.Printf("KexecOpts: %#v", li.KexecOpts)
 
 	if !loadOpts.callKexecLoad {
-		// If dryRun, serializes previously loaded linuxImage info to a file in tmpfs.
-		// The info can be re-loaded for later kexec execution. It works b/c kernel and
-		// initrd are already downloaded and saved into tmpfs.
-		return saveLoadedLinuxImage(loadedImage, loadOpts.linuxImageCfgFile)
+		return nil
 	}
 	if li.LoadSyscall {
-		return linux.KexecLoad(loadedImage.Kernel, loadedImage.Initrd, loadedImage.Cmdline, loadedImage.KexecOpts)
+		return linux.KexecLoad(k, i, li.Cmdline, li.KexecOpts)
 	}
-	return kexec.FileLoad(loadedImage.Kernel, loadedImage.Initrd, loadedImage.Cmdline)
+	return kexec.FileLoad(k, i, li.Cmdline)
 }
