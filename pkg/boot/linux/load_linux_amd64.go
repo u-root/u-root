@@ -100,10 +100,16 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 
 	var ramfsRange kexec.Range
 	if ramfs != nil {
-		ramfsContents, err := io.ReadAll(ramfs)
+		ramfsContents, cleanup, err := getFile(ramfs)
 		if err != nil {
 			return fmt.Errorf("unable to read initramfs: %w", err)
 		}
+		defer func() {
+			if err := cleanup(); err != nil {
+				Debug("Failed to clean up initramfs: %v", err)
+			}
+		}()
+
 		if ramfsRange, err = kmem.AddKexecSegment(ramfsContents); err != nil {
 			return fmt.Errorf("add initramfs segment: %w", err)
 		}
