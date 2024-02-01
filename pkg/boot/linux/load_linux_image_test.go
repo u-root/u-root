@@ -143,6 +143,15 @@ func TestKexecLoadImage(t *testing.T) {
 				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
+		{
+			name: "no chosen node in fdt",
+			mm: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
+			},
+			kernel: pipe(t, readFile(t, "../image/testdata/Image")),
+			fdt:    &dt.FDT{RootNode: dt.NewNode("/")},
+			err:    errNoChosenNode,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := kexecLoadImageMM(tt.mm, tt.kernel, tt.ramfs, tt.fdt, tt.cmdline, tt.opts)
