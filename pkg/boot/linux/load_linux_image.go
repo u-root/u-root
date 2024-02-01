@@ -65,7 +65,7 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, opts KexecOptions) (
 		return nil, fmt.Errorf("MemoryMapFromFDT(%v): %v", fdt, err)
 	}
 	Debug("Mem map: \n%+v", mm)
-	return kexecLoadImageMM(mm, kernel, ramfs, fdt, cmdline, opts)
+	return kexecLoadImageMM(mm, kernel, ramfs, fdt, cmdline)
 }
 
 var (
@@ -75,7 +75,7 @@ var (
 	errTrampolineSegmentFailed = errors.New("failed to add trampolineSegment")
 )
 
-func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, cmdline string, opts KexecOptions) (*kimage, error) {
+func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, cmdline string) (*kimage, error) {
 	kmem := &kexec.Memory{
 		Phys: mm,
 	}
