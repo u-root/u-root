@@ -10,6 +10,8 @@
 //
 // Options:
 //
+//	-o offset: Offset at which to start.
+//	-s size: Number of bytes to read or write.
 //	-p PROGRAMMER: Specify the programmer with zero or more parameters (see
 //	               below).
 //	-r FILE: Read flash data into the file.
@@ -43,6 +45,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -94,9 +97,11 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	// Parse args.
 	fs := flag.NewFlagSet("flash", flag.ContinueOnError)
 	var (
-		p = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
-		r = fs.StringP("read", "r", "", "read flash data into the file")
-		w = fs.StringP("write", "w", "", "write the file to flash")
+		p    = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
+		r    = fs.StringP("read", "r", "", "read flash data into the file")
+		w    = fs.StringP("write", "w", "", "write the file to flash")
+		off  = fs.Int64P("offset", "o", 0, "off at which to write")
+		size = fs.Int64P("size", "s", math.MaxInt64, "number of bytes")
 	)
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -137,7 +142,7 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	// Create a buffer to hold the contents of the image.
 
 	if *r != "" {
-		buf := make([]byte, programmer.Size())
+		buf := make([]byte, min(*size, programmer.Size()))
 		f, err := os.Create(*r)
 		if err != nil {
 			return err
@@ -148,7 +153,7 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 				reterr = err
 			}
 		}()
-		if _, err := programmer.ReadAt(buf, 0); err != nil {
+		if _, err := programmer.ReadAt(buf, *off); err != nil {
 			return err
 		}
 		if _, err := f.Write(buf); err != nil {
@@ -159,7 +164,8 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		if err != nil {
 			return err
 		}
-		amt, err := programmer.WriteAt(buf, 0)
+		buf = buf[:min(int64(len(buf)), *size)]
+		amt, err := programmer.WriteAt(buf, *off)
 		if err != nil {
 			return fmt.Errorf("writing %d bytes to dev %v:%w", len(buf), programmer, err)
 		}
