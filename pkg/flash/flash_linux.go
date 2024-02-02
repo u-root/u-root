@@ -7,6 +7,7 @@
 package flash
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -74,6 +75,11 @@ func New(spi SPI) (*Flash, error) {
 	return f, nil
 }
 
+// FillFromSFDP fills the Flash struct with parameters from
+// the SFDP. Querying the SFDP is a bit messy, for each type of
+// parameter, so this code pulls the SFDP parameters into
+// struct members. It also makes the creation of chips a bit easier,
+// when we do not have an SFDP.
 func (f *Flash) FillFromSFDP() error {
 	density, err := f.SFDP().Param(sfdp.ParamFlashMemoryDensity)
 	if err != nil {
@@ -87,6 +93,15 @@ func (f *Flash) FillFromSFDP() error {
 	// Assume 4ba if address if size requires 4 bytes.
 	if f.ArraySize >= 0x1000000 {
 		f.Is4BA = true
+	}
+
+	if wer, err := f.SFDP().Param(sfdp.ParamWriteEnableInstructionRequired); err == nil && wer != 0 {
+		we, err := f.SFDP().Param(sfdp.ParamWriteEnableOpcodeSelect)
+		if err != nil {
+			return fmt.Errorf("write enable is required but WriteEnableOpcodeSelect is not in SFDP:%w", err)
+		}
+		f.WriteEnableInstructionRequired = true
+		f.WriteEnableOpcodeSelect = op.OpCode(we)
 	}
 
 	// TODO
@@ -144,20 +159,32 @@ func (f *Flash) ReadAt(p []byte, off int64) (int, error) {
 // writeAt performs a write operation without any care for page sizes or
 // alignment.
 func (f *Flash) writeAt(p []byte, off int64) (int, error) {
-	if err := f.spi.Transfer([]spidev.Transfer{
-		// Enable writing.
+	t := []spidev.Transfer{
 		{Tx: op.PRDRES.Bytes(), CSChange: true},
-		{Tx: op.WriteEnable.Bytes(), CSChange: true},
-		// Send the address.
-		{Tx: append(append(op.PageProgram.Bytes(), f.prepareAddress(off)...), p...)},
+	}
+	if f.Chip.WriteEnableInstructionRequired {
+		t = append(t, spidev.Transfer{Tx: f.Chip.WriteEnableOpcodeSelect.Bytes(), CSChange: true})
+	}
+	// AAAAAAARRRRGHHHHH!
+	// If this WriteEnable is not here, then the page program request
+	// NEVER MAKES IT TO THE SPI BUS.
+	// So, ... put it here, even if not requested, until we figure this out.
+	// Further, on the macronix part, we can't leave the write disable in, or
+	// the write enable command ends up being written to the part?
+	// This is a mess.
+	t = append(t, spidev.Transfer{Tx: op.WriteEnable.Bytes(), CSChange: true})
+	t = append(t, spidev.Transfer{Tx: append(append(op.PageProgram.Bytes(), f.prepareAddress(off)...), p...)})
+	if f.Chip.WriteEnableInstructionRequired {
 		// The meaning of CSChange is ... odd.
 		// IF CSChange is set true here, then CE# never goes
 		// high. If CSChange is left unchanged,
 		// CE# is properly deasserted from the data write above,
 		// asserted for this command, and deasserted
 		// at the end.
-		{Tx: op.WriteDisable.Bytes(), DelayUSecs: 10},
-	}); err != nil {
+
+		t = append(t, spidev.Transfer{Tx: op.WriteDisable.Bytes(), DelayUSecs: 10})
+	}
+	if err := f.spi.Transfer(t); err != nil {
 		return 0, err
 	}
 	return len(p), nil
@@ -188,18 +215,22 @@ func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 	firstAlignedOff := (off + f.PageSize - 1) / f.PageSize * f.PageSize
 	lastAlignedOff := (off + int64(len(p))) / f.PageSize * f.PageSize
 
+	b := bytes.NewBuffer(p)
 	if off != firstAlignedOff {
-		if n, err := f.writeAt(p[:firstAlignedOff-off], off); err != nil {
+		dat := b.Next(int(firstAlignedOff - off))
+		if n, err := f.writeAt(dat, off); err != nil {
 			return n, err
 		}
 	}
 	for i := firstAlignedOff; i < lastAlignedOff; i += f.PageSize {
-		if _, err := f.writeAt(p[i:i+f.PageSize], off+i); err != nil {
+		dat := b.Next(int(f.PageSize))
+		if _, err := f.writeAt(dat, i); err != nil {
 			return int(i), err
 		}
 	}
 	if off+int64(len(p)) != lastAlignedOff {
-		if _, err := f.writeAt(p[lastAlignedOff-off:], lastAlignedOff); err != nil {
+		dat := b.Bytes()
+		if _, err := f.writeAt(dat, lastAlignedOff); err != nil {
 			return int(lastAlignedOff - off), err
 		}
 	}
