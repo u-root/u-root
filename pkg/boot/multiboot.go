@@ -53,7 +53,7 @@ func (mi *MultibootImage) Load(opts ...LoadOption) error {
 		opt(loadOpts)
 	}
 
-	entryPoint, segments, err := multiboot.PrepareLoad(loadOpts.verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
+	entryPoint, segments, err := multiboot.PrepareLoad(mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
 	if err != nil {
 		return err
 	}

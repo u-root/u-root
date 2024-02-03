@@ -197,7 +197,7 @@ func (bc *BootConfig) Boot() error {
 			return err
 		}
 		defer modules.Close()
-		if err := multiboot.Load(true, mbkernel, bc.MultibootArgs, modules, nil); err != nil {
+		if err := multiboot.Load(mbkernel, bc.MultibootArgs, modules, nil); err != nil {
 			return fmt.Errorf("kexec.Load() error: %v", err)
 		}
 	}

@@ -15,7 +15,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/boot/util"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -173,8 +174,8 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 //
 // After Load is called, kexec.Reboot() is ready to be called any time to stop
 // Linux and execute the loaded kernel.
-func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
-	entryPoint, segments, err := PrepareLoad(debug, kernel, cmdline, modules, ibft)
+func Load(kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) error {
+	entryPoint, segments, err := PrepareLoad(kernel, cmdline, modules, ibft)
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 //
 // Load can set up an arbitrary number of modules, and takes care of the
 // multiboot info structure, including the memory map.
-func PrepareLoad(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) (uintptr, kexec.Segments, error) {
+func PrepareLoad(kernel io.ReaderAt, cmdline string, modules []Module, ibft *ibft.IBFT) (uintptr, kexec.Segments, error) {
 	kernel = util.TryGzipFilter(kernel)
 	for i, mod := range modules {
 		modules[i].Module = util.TryGzipFilter(mod.Module)
@@ -199,7 +200,7 @@ func PrepareLoad(debug bool, kernel io.ReaderAt, cmdline string, modules []Modul
 	if err != nil {
 		return 0, nil, err
 	}
-	if err := m.load(debug, ibft); err != nil {
+	if err := m.load(ibft); err != nil {
 		return 0, nil, err
 	}
 	return m.entryPoint, m.mem.Segments, nil
@@ -255,9 +256,9 @@ func (m Modules) Close() error {
 }
 
 // load loads and parses multiboot information from m.kernel.
-func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
+func (m *multiboot) load(ibft *ibft.IBFT) error {
 	var err error
-	log.Println("Parsing multiboot header")
+	slog.Debug("Parsing multiboot header")
 	// TODO: the kernel is opened like 4 separate times here. Just open it
 	// once and pass it around.
 
@@ -275,26 +276,26 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	if err != nil {
 		return fmt.Errorf("error parsing headers: %v", err)
 	}
-	log.Printf("Found %s image", header.name())
+	slog.Debug("Found image", "type", header.name())
 
-	log.Printf("Getting kernel entry point")
 	kernelEntry, err := getEntryPoint(m.kernel)
 	if err != nil {
 		return fmt.Errorf("error getting kernel entry point: %v", err)
 	}
-	log.Printf("Kernel entry point at %#x", kernelEntry)
+	slog.Debug("Kernel entry point", "entry", sulog.HexValue(kernelEntry))
 
-	log.Printf("Parsing ELF segments")
+	slog.Debug("Parsing ELF segments...")
 	if _, err := m.mem.LoadElfSegments(m.kernel); err != nil {
 		return fmt.Errorf("error loading ELF segments: %v", err)
 	}
 
-	log.Printf("Parsing memory map")
+	slog.Debug("Parsing memory map...")
 	memmap, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
 		return fmt.Errorf("error parsing memory map: %v", err)
 	}
 	m.mem.Phys = memmap
+	slog.Debug(fmt.Sprintf("Memory map:\n%s", memmap))
 
 	// Insert the iBFT now, since nothing else has been allocated and this
 	// is the most restricted allocation we're gonna have to make.
@@ -311,29 +312,26 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		if err != nil {
 			return fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
 		}
-		log.Printf("iBFT was allocated at %s: %#v", r, ibft)
+		slog.Debug("Added iBFT segment", "segment", r)
+		slog.Debug(fmt.Sprintf("iBFT: %#v", ibft))
 		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
 	}
 
-	log.Printf("Preparing %s info", header.name())
 	infoAddr, err := header.addInfo(m)
 	if err != nil {
 		return fmt.Errorf("error preparing %s info: %v", header.name(), err)
 	}
 
-	log.Printf("Adding trampoline")
 	if m.entryPoint, err = m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry); err != nil {
 		return fmt.Errorf("error adding trampoline: %v", err)
 	}
-	log.Printf("Trampoline entry point at %#x", m.entryPoint)
+	slog.Debug("Added trampoline", "entry_point", sulog.HexValue(m.entryPoint))
 
-	if debug {
-		info, err := m.description()
-		if err != nil {
-			log.Printf("%v cannot create debug info: %v", DebugPrefix, err)
-		}
-		log.Printf("%v %v", DebugPrefix, info)
+	info, err := m.description()
+	if err != nil {
+		slog.Debug(fmt.Sprintf("%v cannot create debug info", DebugPrefix), "err", err)
 	}
+	slog.Debug(fmt.Sprintf("%v %v", DebugPrefix, info))
 
 	return nil
 }
@@ -434,13 +432,13 @@ func (m multiboot) memoryMap() memoryMaps {
 		}
 		ret = append(ret, v)
 	}
-	log.Printf("Memory map: %v", ret)
 	return ret
 }
 
 // addMmap adds a multiboot-marshaled memory map in memory.
 func (m *multiboot) addMmap() (addr uintptr, size uint, err error) {
 	mmap := m.memoryMap()
+	slog.Debug(fmt.Sprintf("Multiboot memory map:\n%s", mmap))
 	d, err := mmap.marshal()
 	if err != nil {
 		return 0, 0, err

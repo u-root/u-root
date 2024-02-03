@@ -9,10 +9,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/u-root/u-root/pkg/align"
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -49,7 +50,9 @@ func (m *multiboot) loadModules() (modules, error) {
 	m.loadedModules = loaded
 
 	for i, mod := range loaded {
-		log.Printf("Added module %s at [%#x, %#x)", m.modules[i].Name(), mod.Start, mod.End)
+		slog.Debug("Added module",
+			"name", m.modules[i].Name(),
+			"segment", kexec.RangeFromInterval(uintptr(mod.Start), uintptr(mod.End)))
 	}
 
 	return loaded, nil
