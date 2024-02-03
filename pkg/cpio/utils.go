@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // Trailer is the name of the trailer record.

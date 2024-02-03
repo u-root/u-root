@@ -15,7 +15,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 	"golang.org/x/sys/unix"
 )
 

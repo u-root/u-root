@@ -10,7 +10,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 	"golang.org/x/sys/unix"
 )
 

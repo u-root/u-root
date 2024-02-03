@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/u-root/u-root/pkg/ls"
-	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/upath"
+	"github.com/u-root/uio/uio"
 )
 
 // A Recorder is a structure that contains variables used to calculate
