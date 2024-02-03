@@ -94,8 +94,8 @@ github.com/hexdigest/gowrap v1.1.7/go.mod h1:Z+nBFUDLa01iaNM+/jzoOA1JJ7sm51rnYFa
 github.com/hexdigest/gowrap v1.1.8/go.mod h1:H/JiFmQMp//tedlV8qt2xBdGzmne6bpbaSuiHmygnMw=
 github.com/hugelgupf/socketpair v0.0.0-20190730060125-05d35a94e714 h1:/jC7qQFrv8CrSJVmaolDVOxTfS9kc36uB6H40kdbQq8=
 github.com/hugelgupf/socketpair v0.0.0-20190730060125-05d35a94e714/go.mod h1:2Goc3h8EklBH5mspfHFxBnEoURQCGzQQH1ga9Myjvis=
-github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa h1:2q0UvEA7TSTrjU4aFrpF6u28tHat3KnCkqsy/gB86v0=
-github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa/go.mod h1:Z22CpRFjhoR/NoxBeEuyeGTwMC7G5s4RfKa9Bs/j74w=
+github.com/hugelgupf/vmtest v0.0.0-20240203233731-a3cb03712401 h1:zwpQcboMUmq5av9PdXZlqK45QUQtE67AN/zBwKE9gDc=
+github.com/hugelgupf/vmtest v0.0.0-20240203233731-a3cb03712401/go.mod h1:Z22CpRFjhoR/NoxBeEuyeGTwMC7G5s4RfKa9Bs/j74w=
 github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2 h1:9K06NfxkBh25x56yVhWWlKFE8YpicaSfHwoV8SFbueA=
 github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2/go.mod h1:3A9PQ1cunSDF/1rbTq99Ts4pVnycWg+vlPkfeD2NLFI=
 github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2 h1:h+RKaNPjka7LRJGoeub/IQBdXSoEaJjfADkBq02hvjw=

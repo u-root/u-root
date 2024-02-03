@@ -127,7 +127,7 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa
+# github.com/hugelgupf/vmtest v0.0.0-20240203233731-a3cb03712401
 ## explicit; go 1.21
 github.com/hugelgupf/vmtest
 github.com/hugelgupf/vmtest/guest
