@@ -16,9 +16,10 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/uuid v1.3.0
-	github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa
+	github.com/hugelgupf/vmtest v0.0.0-20240203233731-a3cb03712401
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
+	github.com/josharian/native v1.1.0
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.17.4
 	github.com/klauspost/pgzip v1.2.6
@@ -63,7 +64,6 @@ require (
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect

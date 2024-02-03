@@ -18,8 +18,8 @@ import (
 	"github.com/hugelgupf/vmtest/testtmp"
 	"github.com/hugelgupf/vmtest/uqemu"
 	"github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/uio/ulog/ulogtest"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
@@ -251,7 +251,6 @@ func startVM(t testing.TB, o *VMOptions) *qemu.VM {
 	SkipWithoutQEMU(t)
 
 	qopts := []qemu.Fn{
-		qemu.LogSerialByLine(qemu.DefaultPrint(o.ConsoleOutputPrefix, t.Logf)),
 		// Tests use this env var to identify they are running inside a
 		// vmtest using SkipIfNotInVM.
 		qemu.WithAppendKernel("VMTEST_IN_GUEST=1"),
@@ -274,20 +273,7 @@ func startVM(t testing.TB, o *VMOptions) *qemu.VM {
 	}
 
 	// Prepend our default options so user-supplied o.QEMUOpts supersede.
-	vm, err := qemu.Start(o.GuestArch, append(qopts, o.QEMUOpts...)...)
-	if err != nil {
-		t.Fatalf("Failed to start QEMU VM %s: %v", o.Name, err)
-	}
-
-	t.Cleanup(func() {
-		t.Logf("QEMU command line to reproduce %s:\n%s", o.Name, vm.CmdlineQuoted())
-	})
-	t.Cleanup(func() {
-		if !vm.Waited() {
-			t.Errorf("Must call Wait on *qemu.VM named %s", o.Name)
-		}
-	})
-	return vm
+	return qemu.StartT(t, o.Name, o.GuestArch, append(qopts, o.QEMUOpts...)...)
 }
 
 // SkipWithoutQEMU skips the test when the QEMU environment variable is not
