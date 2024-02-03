@@ -34,7 +34,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/u-root/gobusybox/src v0.0.0-20231228173702-b69f654846aa
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/uio v0.0.0-20230305220412-3e8cd9d6bf63
+	github.com/u-root/uio v0.0.0-20240118234441-a3c409a6018e
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810

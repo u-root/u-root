@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // File is a file path to be compressed or decompressed.

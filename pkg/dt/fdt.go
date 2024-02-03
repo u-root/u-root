@@ -17,7 +17,7 @@ import (
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 const (

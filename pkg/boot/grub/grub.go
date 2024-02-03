@@ -34,8 +34,8 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/shlex"
-	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/uio"
 )
 
 var probeGrubFiles = []string{

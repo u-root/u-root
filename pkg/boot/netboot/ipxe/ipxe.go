@@ -17,8 +17,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
-	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/uio"
 )
 
 // ErrNotIpxeScript is returned when the config file is not an

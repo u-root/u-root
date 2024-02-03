@@ -14,7 +14,7 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/measurement"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // Launcher describes the "launcher" section of policy file.

@@ -25,7 +25,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/ubinary"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 const bootloader = "u-root kexec"
