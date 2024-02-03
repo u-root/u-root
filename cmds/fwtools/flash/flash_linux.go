@@ -56,6 +56,7 @@ import (
 type programmer interface {
 	io.ReaderAt
 	io.WriterAt
+	EraseAt(int64, int64) (int64, error)
 	Size() int64
 	Close() error
 }
@@ -97,6 +98,7 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	// Parse args.
 	fs := flag.NewFlagSet("flash", flag.ContinueOnError)
 	var (
+		e    = fs.BoolP("erase", "e", false, "erase the flash part")
 		p    = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
 		r    = fs.StringP("read", "r", "", "read flash data into the file")
 		w    = fs.StringP("write", "w", "", "write the file to flash")
@@ -115,8 +117,8 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		return errors.New("-p needs to be set")
 	}
 
-	if *r == "" && *w == "" {
-		return errors.New("either -r or -w need to be set")
+	if *r == "" && *w == "" && !*e {
+		return errors.New("at least one of -e, -r or -w need to be set")
 	}
 	if *r != "" && *w != "" {
 		return errors.New("both -r and -w cannot be set")
@@ -138,6 +140,14 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 			reterr = err
 		}
 	}()
+
+	if *e {
+		n, err := programmer.EraseAt(min(*size, programmer.Size()), *off)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Erased %#x bytes @ %#x", n, *off)
+	}
 
 	// Create a buffer to hold the contents of the image.
 
