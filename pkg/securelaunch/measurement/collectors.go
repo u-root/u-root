@@ -11,7 +11,7 @@ import (
 )
 
 // PCR number to extend all measurements taken by the securelaunch package.
-const pcr = uint32(22)
+var pcr = uint32(22)
 
 // All collectors (e.g., cpuid, dmi, etc.) should satisfy this interface.
 // Collectors collect data and extend its hash into a PCR.
@@ -46,4 +46,9 @@ func GetCollector(config []byte) (Collector, error) {
 	}
 
 	return nil, fmt.Errorf("unsupported collector %s", header.Type)
+}
+
+// SetPCR sets the PCR value to use for measurements.
+func SetPCR(value uint32) {
+	pcr = value
 }

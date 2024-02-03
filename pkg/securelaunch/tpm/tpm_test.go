@@ -41,7 +41,7 @@ func TestHashReader(t *testing.T) {
 	want := []byte{213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91,
 		68, 228, 203, 78, 44, 34, 152, 244, 172, 69, 123, 168, 248, 39, 67, 243,
 		30, 147, 11}
-	got := hashReader(strings.NewReader(testString))
+	got := HashReader(strings.NewReader(testString))
 
 	if !bytes.Equal(got, want) {
 		t.Errorf("hashReader() = %v, want %v", got, want)
