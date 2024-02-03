@@ -301,7 +301,7 @@ func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
 			}
 		}
 
-		if spin > 101 {
+		if spin > 100 {
 			return i, fmt.Errorf("spi busy after erasing %d bytes", i)
 		}
 
