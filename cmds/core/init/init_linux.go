@@ -12,15 +12,15 @@ import (
 	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/klog"
 	"github.com/u-root/u-root/pkg/libinit"
 	"github.com/u-root/u-root/pkg/uflag"
-	"github.com/u-root/u-root/pkg/ulog"
 )
 
 func quiet() {
 	if !*verbose {
 		// Only messages more severe than "notice" are printed.
-		if err := ulog.KernelLog.SetConsoleLogLevel(ulog.KLogNotice); err != nil {
+		if err := klog.KernelLog.SetConsoleLogLevel(klog.KLogNotice); err != nil {
 			log.Printf("Could not set log level: %v", err)
 		}
 	}

@@ -5,7 +5,11 @@
 //go:build !linux
 // +build !linux
 
-package ulog
+package klog
+
+import (
+	"github.com/u-root/uio/ulog"
+)
 
 // KernelLog prints to stderr log on non-Linux systems.
-var KernelLog = Log
+var KernelLog = ulog.Log

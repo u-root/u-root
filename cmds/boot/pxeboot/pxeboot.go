@@ -35,7 +35,7 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/sh"
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/ulog"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 )

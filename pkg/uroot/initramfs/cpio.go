@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/ulog"
 )
 
 // CPIOArchiver is an implementation of Archiver for the cpio format.

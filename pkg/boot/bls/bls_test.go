@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot/boottest"
-	"github.com/u-root/u-root/pkg/ulog/ulogtest"
+	"github.com/u-root/uio/ulog/ulogtest"
 )
 
 var blsEntries = []struct {

@@ -16,7 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/ulog"
 )
 
 // Sort the image in descending order by rank

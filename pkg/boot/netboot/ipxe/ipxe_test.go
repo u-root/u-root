@@ -16,7 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/u-root/pkg/ulog/ulogtest"
+	"github.com/u-root/uio/ulog/ulogtest"
 )
 
 func mustReadAll(r io.ReaderAt) string {
