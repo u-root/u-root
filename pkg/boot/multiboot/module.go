@@ -14,7 +14,7 @@ import (
 
 	"github.com/josharian/native"
 	"github.com/u-root/u-root/pkg/align"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // A module represents a module to be loaded along with the kernel.

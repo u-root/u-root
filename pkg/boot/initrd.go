@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 // CatInitrdsWithFileCache lazily reads up multiple initrds into single tmpfs file

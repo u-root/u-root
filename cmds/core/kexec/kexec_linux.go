@@ -40,7 +40,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 type options struct {

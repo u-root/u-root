@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 	"pack.ag/tftp"
 )
 

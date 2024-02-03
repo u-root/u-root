@@ -15,7 +15,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 	"github.com/u-root/uio/ulog/ulogtest"
 )
 

@@ -20,8 +20,8 @@ import (
 	gbbgolang "github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/uio"
 	itest "github.com/u-root/u-root/pkg/uroot/initramfs/test"
+	"github.com/u-root/uio/uio"
 )
 
 var twocmds = []string{

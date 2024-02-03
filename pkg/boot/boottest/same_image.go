@@ -9,7 +9,7 @@ import (
 	"io"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 func mustReadAll(r io.ReaderAt) string {

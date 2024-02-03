@@ -9,7 +9,7 @@ import (
 	"compress/gzip"
 	"io"
 
-	"github.com/u-root/u-root/pkg/uio"
+	"github.com/u-root/uio/uio"
 )
 
 func readGzip(r io.Reader) ([]byte, error) {
