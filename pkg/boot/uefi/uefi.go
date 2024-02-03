@@ -20,10 +20,10 @@ import (
 )
 
 var (
-	kexecLoad           = kexec.Load
-	kexecParseMemoryMap = kexec.ParseMemoryMap
-	getRSDP             = acpi.GetRSDP
-	getSMBIOSBase       = smbios.SMBIOSBase
+	kexecLoad                     = kexec.Load
+	kexecMemoryMapFromSysfsMemmap = kexec.MemoryMapFromSysfsMemmap
+	getRSDP                       = acpi.GetRSDP
+	getSMBIOSBase                 = smbios.SMBIOSBase
 )
 
 // SerialPortConfig defines debug port configuration
@@ -123,7 +123,7 @@ func (fv *FVImage) Load(verbose bool) error {
 	configAddr := fv.ImageBase - uintptr(uefiPayloadConfigSize)
 
 	// Get MemoryMap
-	mm, err := kexecParseMemoryMap()
+	mm, err := kexecMemoryMapFromSysfsMemmap()
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (fv *FVImage) Load(verbose bool) error {
 		return err
 	}
 
-	if err := binary.Write(pcbuf, binary.LittleEndian, mm.AsPayloadParam()); err != nil {
+	if err := binary.Write(pcbuf, binary.LittleEndian, mm.ToUEFIPayloadMemoryMap()); err != nil {
 		return err
 	}
 

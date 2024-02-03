@@ -259,7 +259,7 @@ func (r *reader) read(p []byte) error {
 	}
 
 	if err != nil || n != len(p) {
-		return fmt.Errorf("ReadAt(pos = %d): got %d, want %d bytes; error %v", r.pos, n, len(p), err)
+		return fmt.Errorf("ReadAt(pos = %d): got %d, want %d bytes; error %w", r.pos, n, len(p), err)
 	}
 
 	r.pos += int64(n)
@@ -290,7 +290,7 @@ func (r *reader) ReadRecord() (Record, error) {
 	// Decode hex header fields.
 	dst := make([]byte, binary.Size(hdr))
 	if _, err := hex.Decode(dst, buf[magicLen:]); err != nil {
-		return Record{}, fmt.Errorf("reader: error decoding hex: %v", err)
+		return Record{}, fmt.Errorf("reader: error decoding hex: %w", err)
 	}
 	if err := binary.Read(bytes.NewReader(dst), binary.BigEndian, &hdr); err != nil {
 		return Record{}, err

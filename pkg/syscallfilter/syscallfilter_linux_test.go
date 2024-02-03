@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/strace"
@@ -224,8 +225,8 @@ func TestEventName(t *testing.T) {
 		r *strace.TraceRecord
 		n string
 	}{
-		{r: &strace.TraceRecord{Event: strace.SyscallEnter, Syscall: &strace.SyscallEvent{Sysno: 0}}, n: "Eread"},
-		{r: &strace.TraceRecord{Event: strace.SyscallExit, Syscall: &strace.SyscallEvent{Sysno: 0}}, n: "Xread"},
+		{r: &strace.TraceRecord{Event: strace.SyscallEnter, Syscall: &strace.SyscallEvent{Sysno: syscall.SYS_READ}}, n: "Eread"},
+		{r: &strace.TraceRecord{Event: strace.SyscallExit, Syscall: &strace.SyscallEvent{Sysno: syscall.SYS_READ}}, n: "Xread"},
 		{r: &strace.TraceRecord{Event: strace.SyscallEnter, Syscall: &strace.SyscallEvent{Sysno: 0xabcd}}, n: "Eabcd"},
 		{r: &strace.TraceRecord{Event: strace.SyscallExit, Syscall: &strace.SyscallEvent{Sysno: 0xbcde}}, n: "Xbcde"},
 		{r: &strace.TraceRecord{Event: strace.SignalExit}, n: "SignalExit"},

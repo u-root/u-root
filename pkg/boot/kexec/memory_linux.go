@@ -9,31 +9,20 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"path"
-	"path/filepath"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
-	"github.com/u-root/u-root/pkg/dt"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
 
 // ErrNotEnoughSpace is returned by the FindSpace family of functions if no
 // range is large enough to accommodate the request.
-type ErrNotEnoughSpace struct {
-	Size uint
-}
-
-func (e ErrNotEnoughSpace) Error() string {
-	return fmt.Sprintf("not enough space to allocate %#x bytes", e.Size)
-}
+var ErrNotEnoughSpace = fmt.Errorf("not enough space to allocate bytes")
 
 // Range represents a contiguous uintptr interval [Start, Start+Size).
 type Range struct {
@@ -75,25 +64,16 @@ func (r Range) Contains(p uintptr) bool {
 	return r.Start <= p && p < r.End()
 }
 
-func min(a, b uintptr) uintptr {
-	if a < b {
-		return a
+// WithStart returns a range that begins at start and ends at r.End().
+func (r Range) WithStart(start uintptr) Range {
+	switch {
+	case r.Start > start:
+		return Range{Start: start, Size: r.Size + uint(r.Start-start)}
+	case r.Start == start:
+		return Range{Start: start, Size: 0}
+	default:
+		return Range{Start: start, Size: r.Size - uint(start-r.Start)}
 	}
-	return b
-}
-
-func minuint(a, b uint) uint {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b uintptr) uintptr {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // Intersect returns the continuous range of points common to r and r2 if there
@@ -169,14 +149,6 @@ func (rs Ranges) Minus(r Range) Ranges {
 	return ram
 }
 
-// FindSpace finds a continuous piece of sz points within Ranges and returns
-// the Range pointing to it.
-//
-// If alignSizeBytes is zero, align up by page size.
-func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
-	return rs.FindSpaceAbove(sz, 0)
-}
-
 // MaxAddr is the highest address in a 64bit address space.
 const MaxAddr = ^uintptr(0)
 
@@ -189,12 +161,73 @@ func (rs Ranges) FindSpaceAbove(sz uint, minAddr uintptr) (space Range, err erro
 // FindSpaceIn finds a continuous piece of sz points within Ranges and returns
 // a Range where space.Start >= limit.Start, with space.End() < limit.End().
 func (rs Ranges) FindSpaceIn(sz uint, limit Range) (space Range, err error) {
+	return rs.FindSpace(sz, WithinRange(limit))
+}
+
+type findSpaceOptions struct {
+	limit      Range
+	size       uint
+	startAlign uint
+}
+
+// FindOptioner is a config option for FindSpace.
+type FindOptioner func(o *findSpaceOptions)
+
+// WithMinimumAddr requires FindSpace to return a range with an address above
+// minAddr.
+func WithMinimumAddr(minAddr uintptr) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.limit.Start = minAddr
+		o.limit.Size -= uint(minAddr)
+	}
+}
+
+// WithinRange requires FindSpace to return a range within the limit.
+func WithinRange(limit Range) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.limit = limit
+	}
+}
+
+// WithAlignment requires FindSpace to return a range with an address and size
+// aligned to alignSize.
+func WithAlignment(alignSize uint) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.size = align.Up(o.size, alignSize)
+		o.startAlign = alignSize
+	}
+}
+
+// WithStartAlignment requires FindSpace to return a range with an address
+// aligned to alignSize.
+func WithStartAlignment(alignSize uint) FindOptioner {
+	return func(o *findSpaceOptions) {
+		o.startAlign = alignSize
+	}
+}
+
+// FindSpace finds a continuous piece of sz points within Ranges and the given
+// options and returns the Range pointing to it.
+func (rs Ranges) FindSpace(sz uint, opts ...FindOptioner) (Range, error) {
+	o := &findSpaceOptions{
+		limit: RangeFromInterval(0, MaxAddr),
+		size:  sz,
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	if o.startAlign != 0 && !align.IsAligned(o.limit.Start, uintptr(o.startAlign)) {
+		o.limit = o.limit.WithStart(align.Up(o.limit.Start, uintptr(o.startAlign)))
+	}
 	for _, r := range rs {
-		if overlap := r.Intersect(limit); overlap != nil && overlap.Size >= sz {
-			return Range{Start: overlap.Start, Size: sz}, nil
+		if o.startAlign != 0 && !align.IsAligned(r.Start, uintptr(o.startAlign)) {
+			r = r.WithStart(align.Up(r.Start, uintptr(o.startAlign)))
+		}
+		if overlap := r.Intersect(o.limit); overlap != nil && overlap.Size >= o.size {
+			return Range{Start: overlap.Start, Size: o.size}, nil
 		}
 	}
-	return Range{}, ErrNotEnoughSpace{Size: sz}
+	return Range{}, fmt.Errorf("%w: %#x bytes", ErrNotEnoughSpace, sz)
 }
 
 // Sort sorts ranges by their start point.
@@ -209,14 +242,10 @@ func (rs Ranges) Sort() {
 	})
 }
 
-// pool stores byte slices pointed by the pointers Segments.Buf to
-// prevent underlying arrays to be collected by garbage collector.
-var pool [][]byte
-
 // Segment defines kernel memory layout.
 type Segment struct {
-	// Buf is a buffer in user space.
-	Buf Range
+	// Buf is a buffer to map to Phys in kexec.
+	Buf []byte
 
 	// Phys is a physical address of kernel.
 	Phys Range
@@ -226,27 +255,20 @@ type Segment struct {
 // Segments should be created using NewSegment method to prevent
 // data pointed by Segment.Buf to be collected by garbage collector.
 func NewSegment(buf []byte, phys Range) Segment {
-	if buf == nil {
-		return Segment{
-			Buf: Range{
-				Start: 0,
-				Size:  0,
-			},
-			Phys: phys,
-		}
-	}
-	pool = append(pool, buf)
 	return Segment{
-		Buf: Range{
-			Start: uintptr((unsafe.Pointer(&buf[0]))),
-			Size:  uint(len(buf)),
-		},
+		Buf:  buf,
 		Phys: phys,
 	}
 }
 
+// SegmentEqual returns whether s and t point at the same physical region and
+// contain the same data.
+func SegmentEqual(s, t Segment) bool {
+	return s.Phys == t.Phys && bytes.Equal(s.Buf, t.Buf)
+}
+
 func (s Segment) String() string {
-	return fmt.Sprintf("(userspace: %s, phys: %s)", s.Buf, s.Phys)
+	return fmt.Sprintf("(phys: %s, buffer: size %#x)", s.Phys, len(s.Buf))
 }
 
 // AlignAndMerge adjusts segs to the preconditions of kexec_load.
@@ -315,9 +337,7 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 		// We don't need to deal with the inverse, because kexec_load
 		// will fill the remainder of the segment with zeros anyway
 		// when buf.Size < phys.Size.
-		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
-			newSegs[i].Buf.Size = newSegs[i].Phys.Size
-		}
+		newSegs[i].Buf = newSegs[i].realBufTruncate()
 		newSegs[i].Phys.Size = align.UpPage(newSegs[i].Phys.Size)
 	}
 	return newSegs, nil
@@ -327,14 +347,16 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 // or be truncated.
 func (s Segment) realBufPad() []byte {
 	switch {
-	case s.Buf.Size == s.Phys.Size:
-		return s.Buf.toSlice()
+	case uint(len(s.Buf)) == s.Phys.Size:
+		return s.Buf
 
-	case s.Buf.Size < s.Phys.Size:
-		return append(s.Buf.toSlice(), make([]byte, int(s.Phys.Size-s.Buf.Size))...)
+	case uint(len(s.Buf)) < s.Phys.Size:
+		// Pad Buf.
+		return append(s.Buf, make([]byte, int(s.Phys.Size-uint(len(s.Buf))))...)
 
-	case s.Buf.Size > s.Phys.Size:
-		return s.Buf.toSlice()[:s.Phys.Size]
+	case uint(len(s.Buf)) > s.Phys.Size:
+		// Truncate Buf.
+		return s.Buf[:s.Phys.Size]
 	}
 	return nil
 }
@@ -342,17 +364,10 @@ func (s Segment) realBufPad() []byte {
 // realBufTruncate adjusts s.Buf.Size = s.Phys.Size, except when Buf is smaller
 // than Phys. Buf will either remain the same or be truncated.
 func (s Segment) realBufTruncate() []byte {
-	switch {
-	case s.Buf.Size == s.Phys.Size:
-		return s.Buf.toSlice()
-
-	case s.Buf.Size < s.Phys.Size:
-		return s.Buf.toSlice()
-
-	case s.Buf.Size > s.Phys.Size:
-		return s.Buf.toSlice()[:s.Phys.Size]
+	if uint(len(s.Buf)) > s.Phys.Size {
+		return s.Buf[:s.Phys.Size]
 	}
-	return nil
+	return s.Buf
 }
 
 func (s *Segment) mergeDisjoint(s2 Segment) bool {
@@ -387,19 +402,21 @@ func AlignPhysStart(s Segment) Segment {
 	diff := orig - s.Phys.Start
 	s.Phys.Size = s.Phys.Size + uint(diff)
 
-	if s.Buf.Start < diff && diff > 0 {
-		panic("cannot have virtual memory address within first page")
-	}
-	s.Buf.Start -= diff
-
-	if s.Buf.Size > 0 {
-		s.Buf.Size += uint(diff)
-	}
+	s.Buf = append(make([]byte, diff), s.Buf...)
 	return s
 }
 
 // Segments is a collection of segments.
 type Segments []Segment
+
+func (segs Segments) String() string {
+	var s strings.Builder
+	for _, seg := range segs {
+		s.WriteString(seg.String())
+		s.WriteString("\n")
+	}
+	return s.String()
+}
 
 // PhysContains returns whether p exists in any of segs' physical memory
 // ranges.
@@ -421,11 +438,25 @@ func (segs Segments) Phys() Ranges {
 	return r
 }
 
+// SegmentsEqual returns whether the contents of all segments are the same,
+// while pointing to the same physical memory region.
+func SegmentsEqual(s, t Segments) bool {
+	if len(s) != len(t) {
+		return false
+	}
+	for i := range s {
+		if !SegmentEqual(s[i], t[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 // IsSupersetOf checks whether all segments in o are present in s and contain
 // the same buffer content.
 func (segs Segments) IsSupersetOf(o Segments) error {
 	for _, seg := range o {
-		size := minuint(seg.Phys.Size, seg.Buf.Size)
+		size := min(seg.Phys.Size, uint(len(seg.Buf)))
 		if size == 0 {
 			continue
 		}
@@ -434,7 +465,7 @@ func (segs Segments) IsSupersetOf(o Segments) error {
 		if buf == nil {
 			return fmt.Errorf("phys %s not found", r)
 		}
-		if !bytes.Equal(buf, seg.Buf.toSlice()[:size]) {
+		if !bytes.Equal(buf, seg.Buf[:size]) {
 			return fmt.Errorf("phys %s contains different bytes", r)
 		}
 	}
@@ -447,7 +478,7 @@ func (segs Segments) GetPhys(r Range) []byte {
 		if seg.Phys.IsSupersetOf(r) {
 			offset := r.Start - seg.Phys.Start
 			// TODO: This could be out of range.
-			buf := seg.Buf.toSlice()[int(offset) : int(offset)+int(r.Size)]
+			buf := seg.Buf[int(offset) : int(offset)+int(r.Size)]
 			return buf
 		}
 	}
@@ -516,179 +547,6 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) (Object, error) {
 	return f, nil
 }
 
-// ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
-func (m *Memory) ParseMemoryMap() error {
-	p, err := ParseMemoryMap()
-	if err != nil {
-		return err
-	}
-	m.Phys = p
-	return nil
-}
-
-// ParseMemoryMapFromFDT reads firmware provided memory map from an FDT.
-func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
-	var phys MemoryMap
-	addMemory := func(n *dt.Node) error {
-		p, found := n.LookProperty("device_type")
-		if !found {
-			return nil
-		}
-		t, err := p.AsString()
-		if err != nil || t != "memory" {
-			return nil
-		}
-		p, found = n.LookProperty("reg")
-		if found {
-			r, err := p.AsRegion()
-			if err != nil {
-				return err
-			}
-			phys = append(phys, TypedRange{
-				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
-				Type:  RangeRAM,
-			})
-		}
-		return nil
-	}
-	err := fdt.RootNode.Walk(addMemory)
-	if err != nil {
-		return err
-	}
-
-	reserveMemory := func(n *dt.Node) error {
-		p, found := n.LookProperty("reg")
-		if found {
-			r, err := p.AsRegion()
-			if err != nil {
-				return err
-			}
-
-			phys.Insert(TypedRange{
-				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
-				Type:  RangeReserved,
-			})
-		}
-		return nil
-	}
-	resv, found := fdt.NodeByName("reserved-memory")
-	if found {
-		err := resv.Walk(reserveMemory)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, r := range fdt.ReserveEntries {
-		phys.Insert(TypedRange{
-			Range: Range{Start: uintptr(r.Address), Size: uint(r.Size)},
-			Type:  RangeReserved,
-		})
-	}
-
-	for _, r := range phys {
-		log.Printf("memmap: 0x%016x 0x%016x %s", r.Start, r.Size, r.Type)
-	}
-	m.Phys = phys
-	return nil
-}
-
-var memoryMapRoot = "/sys/firmware/memmap/"
-
-// ParseMemoryMap reads firmware provided memory map from /sys/firmware/memmap.
-func ParseMemoryMap() (MemoryMap, error) {
-	return internalParseMemoryMap(memoryMapRoot)
-}
-
-func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
-	type memRange struct {
-		// start and end addresses are inclusive
-		start, end uintptr
-		typ        RangeType
-	}
-
-	ranges := make(map[string]memRange)
-	walker := func(name string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		const (
-			// file names
-			start = "start"
-			end   = "end"
-			typ   = "type"
-		)
-
-		base := path.Base(name)
-		if base != start && base != end && base != typ {
-			return fmt.Errorf("unexpected file %q", name)
-		}
-		dir := path.Dir(name)
-
-		b, err := os.ReadFile(name)
-		if err != nil {
-			return fmt.Errorf("error reading file %q: %v", name, err)
-		}
-
-		data := strings.TrimSpace(string(b))
-		r := ranges[dir]
-		if base == typ {
-			typ, ok := sysfsToRangeType[data]
-			if !ok {
-				log.Printf("Sysfs file %q contains unrecognized memory map type %q, defaulting to Reserved", name, data)
-				r.typ = RangeReserved
-			} else {
-				r.typ = typ
-			}
-			ranges[dir] = r
-			return nil
-		}
-
-		v, err := strconv.ParseUint(data, 0, strconv.IntSize)
-		if err != nil {
-			return err
-		}
-		switch base {
-		case start:
-			r.start = uintptr(v)
-		case end:
-			r.end = uintptr(v)
-		}
-		ranges[dir] = r
-		return nil
-	}
-
-	if err := filepath.Walk(memoryMapDir, walker); err != nil {
-		return nil, err
-	}
-
-	var phys []TypedRange
-	for _, r := range ranges {
-		// Range's end address is exclusive, while Linux's sysfs prints
-		// the end address inclusive.
-		//
-		// E.g. sysfs will contain
-		//
-		// start: 0x100, end: 0x1ff
-		//
-		// while we represent
-		//
-		// start: 0x100, size: 0x100.
-		phys = append(phys, TypedRange{
-			Range: RangeFromInterval(r.start, r.end+1),
-			Type:  r.typ,
-		})
-	}
-	sort.Slice(phys, func(i, j int) bool {
-		return phys[i].Start < phys[j].Start
-	})
-	return phys, nil
-}
-
 // M1 is 1 Megabyte in bits.
 const M1 = 1 << 20
 
@@ -747,13 +605,7 @@ func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
 // AddKexecSegmentExplicit adds d to a new kexec segment, but allows asking
 // for extra space, secifying alignment size, and setting text_offset.
 func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes uint) (Range, error) {
-	if sz < uint(len(d)) {
-		return Range{}, fmt.Errorf("length of d is more than size requested")
-	}
-	if offset > sz {
-		return Range{}, fmt.Errorf("offset is larger than size requested")
-	}
-	r, err := m.FindSpace(sz, alignSizeBytes)
+	r, err := m.AvailableRAM().FindSpace(offset+sz, WithAlignment(alignSizeBytes))
 	if err != nil {
 		return Range{}, err
 	}
@@ -779,9 +631,9 @@ func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes ui
 //
 //	[{start:0 size:40} {start:4096 end:8000 - 4096}]
 func (m Memory) AvailableRAM() Ranges {
-	ram := m.Phys.FilterByType(RangeRAM)
+	ram := m.Phys.RAM()
 
-	// Remove all points in Segments from available RAM.
+	// Remove all points we've already reserved from available RAM.
 	for _, s := range m.Segments {
 		ram = ram.Minus(s.Phys)
 	}
@@ -798,136 +650,4 @@ func (m Memory) AvailableRAM() Ranges {
 		}
 	}
 	return alignedRanges
-}
-
-// RangeType defines type of a TypedRange based on the Linux
-// kernel string provided by firmware memory map.
-type RangeType string
-
-// These are the range types we know Linux uses.
-const (
-	RangeRAM      RangeType = "System RAM"
-	RangeDefault  RangeType = "Default"
-	RangeACPI     RangeType = "ACPI Tables"
-	RangeNVS      RangeType = "ACPI Non-volatile Storage"
-	RangeReserved RangeType = "Reserved"
-)
-
-// String implements fmt.Stringer.
-func (r RangeType) String() string {
-	return string(r)
-}
-
-var sysfsToRangeType = map[string]RangeType{
-	"System RAM":                RangeRAM,
-	"Default":                   RangeDefault,
-	"ACPI Tables":               RangeACPI,
-	"ACPI Non-volatile Storage": RangeNVS,
-	"Reserved":                  RangeReserved,
-	"reserved":                  RangeReserved,
-}
-
-// TypedRange represents range of physical memory.
-type TypedRange struct {
-	Range
-	Type RangeType
-}
-
-func (tr TypedRange) String() string {
-	return fmt.Sprintf("{addr: %s, type: %s}", tr.Range, tr.Type)
-}
-
-// MemoryMap defines the layout of physical memory.
-//
-// MemoryMap defines which ranges in memory are usable RAM and which are
-// reserved for various reasons.
-type MemoryMap []TypedRange
-
-// FilterByType only returns ranges of the given typ.
-func (m MemoryMap) FilterByType(typ RangeType) Ranges {
-	var rs Ranges
-	for _, tr := range m {
-		if tr.Type == typ {
-			rs = append(rs, tr.Range)
-		}
-	}
-	return rs
-}
-
-func (m MemoryMap) sort() {
-	sort.Slice(m, func(i, j int) bool {
-		return m[i].Start < m[j].Start
-	})
-}
-
-// Insert a new TypedRange into the memory map, removing chunks of other ranges
-// as necessary.
-//
-// Assumes that TypedRange is a valid range -- no checking.
-func (m *MemoryMap) Insert(r TypedRange) {
-	var newMap MemoryMap
-
-	// Remove points in r from all existing physical ranges.
-	for _, q := range *m {
-		split := q.Range.Minus(r.Range)
-		for _, r2 := range split {
-			newMap = append(newMap, TypedRange{Range: r2, Type: q.Type})
-		}
-	}
-
-	newMap = append(newMap, r)
-	newMap.sort()
-	*m = newMap
-}
-
-// PayloadMemType defines type of a memory map entry
-type PayloadMemType uint32
-
-// Payload memory type (PayloadMemType) in UefiPayload
-const (
-	PayloadTypeRAM      = 1
-	PayloadTypeDefault  = 2
-	PayloadTypeACPI     = 3
-	PayloadTypeNVS      = 4
-	PayloadTypeReserved = 5
-)
-
-// payloadMemoryMapEntry represent a memory map entry in payload param
-type payloadMemoryMapEntry struct {
-	Start uint64
-	End   uint64
-	Type  PayloadMemType
-}
-
-// PayloadMemoryMapParam is payload's MemoryMap parameter
-type PayloadMemoryMapParam []payloadMemoryMapEntry
-
-var rangeTypeToPayloadMemType = map[RangeType]PayloadMemType{
-	RangeRAM:      PayloadTypeRAM,
-	RangeDefault:  PayloadTypeDefault,
-	RangeACPI:     PayloadTypeACPI,
-	RangeNVS:      PayloadTypeNVS,
-	RangeReserved: PayloadTypeReserved,
-}
-
-func convertToPayloadMemType(rt RangeType) PayloadMemType {
-	mt, ok := rangeTypeToPayloadMemType[rt]
-	if !ok {
-		// return reserved if range type is not recognized
-		return PayloadTypeReserved
-	}
-	return mt
-}
-
-// AsPayloadParam converts MemoryMap to a PayloadMemoryMapParam
-func (m *MemoryMap) AsPayloadParam() PayloadMemoryMapParam {
-	var p PayloadMemoryMapParam
-	for _, entry := range *m {
-		p = append(p, payloadMemoryMapEntry{
-			Start: uint64(entry.Start),
-			End:   uint64(entry.Start) + uint64(entry.Size) - 1,
-			Type:  convertToPayloadMemType(entry.Type),
-		})
-	}
-	return p
 }

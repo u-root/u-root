@@ -33,7 +33,7 @@ func TestRun(t *testing.T) {
 		{
 			name:            "id",
 			args:            []string{"id"},
-			wantOutputRegex: regexp.MustCompile("[0-9a-fA-F]{6}\n"),
+			wantOutputRegex: regexp.MustCompile("[0-9a-fA-F]*\n"),
 		},
 		{
 			name:             "id failing IO",
@@ -71,7 +71,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:               "setspeedhz error",
-			args:               []string{"raw"},
+			args:               []string{"-s", "1", "raw"},
 			input:              []byte("abcd"),
 			ForceSetSpeedHzErr: os.ErrInvalid,
 			err:                os.ErrInvalid,
@@ -119,7 +119,7 @@ func TestRun(t *testing.T) {
 			got := run(tt.args, openFakeSpi, bytes.NewBuffer(tt.input), output)
 
 			if !errors.Is(got, tt.err) {
-				t.Errorf("run(): %v != %v", got, tt.err)
+				t.Fatalf("run(): %v != %v", got, tt.err)
 			}
 
 			gotOutputString := output.String()

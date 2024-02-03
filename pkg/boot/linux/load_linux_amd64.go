@@ -25,7 +25,7 @@ const (
 // kernel with the given ramfs file and cmdline string.
 //
 // It uses the kexec_load system call.
-func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error {
+func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 	bzimage.Debug = Debug
 
 	// A collection of vars used for processing the kernel for kexec
@@ -72,12 +72,15 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 	Debug("kernelEntry: %v", kernelEntry)
 
 	// Prepare segments.
-	kmem = &kexec.Memory{}
 	Debug("Try parsing memory map...")
 	// TODO(10000TB): refactor this call into initialization of
 	// kexec.Memory, as it does not depend on specific boot.
-	if err := kmem.ParseMemoryMap(); err != nil {
+	mm, err := kexec.MemoryMapFromSysfsMemmap()
+	if err != nil {
 		return fmt.Errorf("parse memory map: %v", err)
+	}
+	kmem = &kexec.Memory{
+		Phys: mm,
 	}
 
 	var relocatableKernel bool
@@ -97,10 +100,16 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 
 	var ramfsRange kexec.Range
 	if ramfs != nil {
-		ramfsContents, err := io.ReadAll(ramfs)
+		ramfsContents, cleanup, err := getFile(ramfs)
 		if err != nil {
 			return fmt.Errorf("unable to read initramfs: %w", err)
 		}
+		defer func() {
+			if err := cleanup(); err != nil {
+				Debug("Failed to clean up initramfs: %v", err)
+			}
+		}()
+
 		if ramfsRange, err = kmem.AddKexecSegment(ramfsContents); err != nil {
 			return fmt.Errorf("add initramfs segment: %w", err)
 		}
@@ -132,16 +141,13 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, opts KexecOptions) error 
 		return fmt.Errorf("re-marshaling header: %w", err)
 	}
 
-	// TODO(10000TB): Free mem hole start end aligns by
-	// max(16, pagesize).
-	//
-	// Push alignment logic to kexec memory functions, e.g. a similar
-	// function to FindSpace.
 	setupRange, err := kmem.AddPhysSegment(
 		linuxParam,
+		// We use Linux's 32bit/64bit entry point, so we can place the
+		// setup range anywhere in the low 4G.
 		kexec.RangeFromInterval(
-			uintptr(0x90000),
-			uintptr(len(linuxParam)),
+			uintptr(4096),
+			uintptr(1<<32-1),
 		),
 		// TODO(10000TB): evaluate if we need to provide  option to
 		// reserve from end.

@@ -13,6 +13,8 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/u-root/u-root/pkg/flash/chips"
+	"github.com/u-root/u-root/pkg/flash/op"
 	"golang.org/x/sys/unix"
 )
 
@@ -130,6 +132,20 @@ func TestGetters(t *testing.T) {
 	} {
 		m.forceErrno = tt.forceErrno
 
+		t.Run("ID"+tt.name, func(t *testing.T) {
+			m, err := s.ID()
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Mode() got error %q; want error %q", err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			want := chips.ID(0)
+			if m != want {
+				t.Errorf("ID() = %#v; want %#v", m, want)
+			}
+		})
+
 		t.Run("Mode"+tt.name, func(t *testing.T) {
 			m, err := s.Mode()
 			if !errors.Is(err, tt.wantErr) {
@@ -238,6 +254,32 @@ func TestSetters(t *testing.T) {
 			const want = 12345
 			if m.speedHz != want {
 				t.Errorf("SetSpeedHz() = %d; want %d", m.speedHz, want)
+			}
+		})
+	}
+}
+
+func TestTransferString(t *testing.T) {
+	for _, tt := range []struct {
+		n string
+		t Transfer
+		s string
+	}{
+		{
+			n: "empty",
+			t: Transfer{},
+			s: "00...[:0](Unknown(00))",
+		},
+		{
+			n: "Read with no data",
+			t: Transfer{Tx: op.Read.Bytes()},
+			s: "0x03...[:1](Read)",
+		},
+	} {
+		t.Run(tt.n, func(t *testing.T) {
+			s := tt.t.String()
+			if s != tt.s {
+				t.Fatalf("got %q, want %q", s, tt.s)
 			}
 		})
 	}

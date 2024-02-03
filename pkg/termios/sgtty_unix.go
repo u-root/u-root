@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !darwin && !freebsd && !openbsd
-// +build !plan9,!windows,!darwin,!freebsd,!openbsd
+//go:build !plan9 && !windows && !darwin && !freebsd && !openbsd && !netbsd
+// +build !plan9,!windows,!darwin,!freebsd,!openbsd,!netbsd
 
 package termios
 

@@ -18,15 +18,13 @@ import (
 
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/hugelgupf/vmtest/qemu/network"
+	"github.com/hugelgupf/vmtest/qemu/qnetwork"
 	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uroot"
 )
 
 // TestDhclientQEMU4 uses QEMU's DHCP server to test dhclient.
 func TestDhclientQEMU4(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
 	// Create the file to download
 	dir := t.TempDir()
 	want := "Hello, world!"
@@ -45,30 +43,24 @@ func TestDhclientQEMU4(t *testing.T) {
 	s := &http.Server{}
 	port := ln.Addr().(*net.TCPAddr).Port
 
-	testCmds := []string{
-		"dhclient -ipv6=false -v",
-		"ip a",
-		// Download a file to make sure dhclient configures kernel networking correctly.
-		fmt.Sprintf("wget http://192.168.0.2:%d/foobar", port),
-		"cat ./foobar",
-		"sleep 5",
-		"shutdown -h",
-	}
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	script := fmt.Sprintf(`
+		dhclient -ipv6=false -v
+		ip a
+		wget http://192.168.0.2:%d/foobar
+		cat ./foobar
+		sleep 5
+	`, port)
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/cat",
 			"github.com/u-root/u-root/cmds/core/dhclient",
 			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/cmds/core/sleep",
-			"github.com/u-root/u-root/cmds/core/shutdown",
 			"github.com/u-root/u-root/cmds/core/wget",
 		)}),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
-			network.IPv4HostNetwork(&net.IPNet{
-				IP:   net.IP{192, 168, 0, 0},
-				Mask: net.CIDRMask(24, 32),
-			}),
+			qnetwork.IPv4HostNetwork("192.168.0.0/24"),
 			qemu.ServeHTTP(s, ln),
 		),
 	)
@@ -86,21 +78,17 @@ func TestDhclientQEMU4(t *testing.T) {
 }
 
 func TestDhclientTimesOut(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
+	script := `
+		dhclient -v -retry 2 -timeout 10
+		echo "DHCP timed out"
+		sleep 5
+	`
 
-	testCmds := []string{
-		"dhclient -v -retry 2 -timeout 10",
-		"echo \"DHCP timed out\"",
-		"sleep 5",
-		"shutdown -h",
-	}
-
-	net := network.NewInterVM()
-	vm := vmtest.StartVMAndRunCmds(t, testCmds,
+	net := qnetwork.NewInterVM()
+	vm := vmtest.StartVMAndRunCmds(t, script,
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/dhclient",
 			"github.com/u-root/u-root/cmds/core/sleep",
-			"github.com/u-root/u-root/cmds/core/shutdown",
 		)}),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
@@ -125,19 +113,17 @@ func TestDhclientTimesOut(t *testing.T) {
 }
 
 func TestDhclient6(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
-
-	serverCmds := []string{
-		"ip link set eth0 up",
-		"pxeserver -6 -your-ip6=fec0::3 -4=false",
-	}
+	serverScript := `
+		ip link set eth0 up
+		pxeserver -6 -your-ip6=fec0::3 -4=false
+	`
 	// QEMU doesn't support DHCPv6 for getting IP configuration, so we have
 	// to supply our own server.
 	//
 	// We don't currently have a radvd server we can use, so we also cannot
 	// try to download a file using the DHCP configuration.
-	net := network.NewInterVM()
-	serverVM := vmtest.StartVMAndRunCmds(t, serverCmds,
+	net := qnetwork.NewInterVM()
+	serverVM := vmtest.StartVMAndRunCmds(t, serverScript,
 		vmtest.WithName("TestDhclient6_Server"),
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/ip",
@@ -149,17 +135,15 @@ func TestDhclient6(t *testing.T) {
 		),
 	)
 
-	testCmds := []string{
-		"dhclient -ipv4=false -vv",
-		"ip a",
-		"shutdown -h",
-	}
-	clientVM := vmtest.StartVMAndRunCmds(t, testCmds,
+	clientScript := `
+		dhclient -ipv4=false -vv
+		ip a
+	`
+	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
 		vmtest.WithName("TestDhclient6_Client"),
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/cmds/core/dhclient",
-			"github.com/u-root/u-root/cmds/core/shutdown",
 		)}),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),

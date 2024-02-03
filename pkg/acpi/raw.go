@@ -31,10 +31,7 @@ var _ = Table(&Raw{})
 // NewRaw returns a new Raw []Table fron a given byte slice.
 func NewRaw(b []byte) ([]Table, error) {
 	var tab []Table
-	for {
-		if len(b) == 0 {
-			break
-		}
+	for len(b) != 0 {
 		if len(b) < headerLength {
 			return nil, fmt.Errorf("NewRaw: byte slice is only %d bytes and must be at least %d bytes", len(b), headerLength)
 		}
@@ -102,7 +99,7 @@ func (r *Raw) TableData() []byte {
 
 // Sig returns the table signature.
 func (r *Raw) Sig() string {
-	return fmt.Sprintf("%s", r.data[:4])
+	return string(r.data[:4])
 }
 
 // Len returns the total table length.

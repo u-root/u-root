@@ -5,277 +5,13 @@
 package kexec
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"path"
 	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/u-root/u-root/pkg/dt"
 )
-
-func checkMemoryMap(t *testing.T, got, want MemoryMap) {
-	t.Helper()
-	if len(got) != len(want) {
-		t.Errorf("got memory map length %d, want memory map length %d", len(got), len(want))
-	}
-	for idx, r := range got {
-		if r.Type != want[idx].Type {
-			t.Errorf("got memory at index %d type %v, want type  %v", idx, r.Type, want[idx].Type)
-		}
-		if r.Range.Start != want[idx].Start || r.Size != want[idx].Size {
-			t.Errorf("got memory at index %d range %v, want range %v", idx, r.Range, want[idx].Range)
-		}
-	}
-}
-
-func TestParseMemoryMapFromFDT(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		fdt     *dt.FDT
-		wantMap MemoryMap
-		wantErr error
-	}{
-		{
-			"empty",
-			&dt.FDT{RootNode: &dt.Node{Name: "/"}},
-			MemoryMap{},
-			nil,
-		},
-		{
-			"add system memory ok",
-			&dt.FDT{
-				RootNode: &dt.Node{
-					Name: "/",
-					Children: []*dt.Node{
-						{
-							Name: "test memory",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "test memory 2",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "test memory 3",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-					},
-				},
-			},
-			MemoryMap{
-				TypedRange{Range{Start: uintptr(0x0), Size: 0xffffffffffff}, "System RAM"},
-				TypedRange{Range{Start: uintptr(0x1000000000000), Size: 0x1ffffffffffff}, "System RAM"},
-				TypedRange{Range{Start: uintptr(0x3000000000000), Size: 0x2ffffffffffff}, "System RAM"},
-			},
-			nil,
-		},
-		{
-			"add system memory, and reserved memory ok",
-			&dt.FDT{
-				RootNode: &dt.Node{
-					Name: "/",
-					Children: []*dt.Node{
-						{
-							Name: "test memory",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "test memory 2",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "test memory 3",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "reserved-memory",
-							Properties: []dt.Property{
-								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff}},
-							},
-							Children: []*dt.Node{
-								{
-									Name: "reserved mem child node",
-									Properties: []dt.Property{
-										{
-											"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			MemoryMap{
-				TypedRange{Range{Start: uintptr(0x0), Size: 0xffffffff}, "Reserved"},
-				TypedRange{Range{Start: uintptr(0xffffffff), Size: 0xffff00000000}, "System RAM"}, // carve out reserved portion from "reserved-memory".
-				TypedRange{Range{Start: uintptr(0x1000000000000), Size: 0x1ffffffffffff}, "System RAM"},
-				TypedRange{Range{Start: uintptr(0x3000000000000), Size: 0xffffffffff}, "Reserved"},
-				TypedRange{Range{Start: uintptr(0x300ffffffffff), Size: 0x2ff0000000000}, "System RAM"}, // Carve out reserved portion from "reserved mem child node".
-			},
-			nil,
-		},
-		{
-			"add system memory, reserved memory, and reserved entries ok",
-			&dt.FDT{
-				ReserveEntries: []dt.ReserveEntry{
-					{
-						Address: uint64(0x1000000000000),
-						Size:    uint64(0xffff),
-					},
-				},
-				RootNode: &dt.Node{
-					Name: "/",
-					Children: []*dt.Node{
-						{
-							Name: "test memory",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "test memory 2",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "test memory 3",
-							Properties: []dt.Property{
-								{"device_type", append([]byte("memory"), 0)},
-								{"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
-							},
-						},
-						{
-							Name: "reserved-memory",
-							Properties: []dt.Property{
-								{"reg", []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff}},
-							},
-							Children: []*dt.Node{
-								{
-									Name: "reserved mem child node",
-									Properties: []dt.Property{
-										{
-											"reg", []byte{0x0, 0x03, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			MemoryMap{
-				TypedRange{Range{Start: uintptr(0x0), Size: 0xffffffff}, "Reserved"},
-				TypedRange{Range{Start: uintptr(0xffffffff), Size: 0xffff00000000}, "System RAM"}, // carve out reserved portion from "reserved-memory".
-				TypedRange{Range{Start: uintptr(0x1000000000000), Size: 0xffff}, "Reserved"},
-				TypedRange{Range{Start: uintptr(0x100000000ffff), Size: 0x1ffffffff0000}, "System RAM"}, // carve out reserve entry.
-				TypedRange{Range{Start: uintptr(0x3000000000000), Size: 0xffffffffff}, "Reserved"},
-				TypedRange{Range{Start: uintptr(0x300ffffffffff), Size: 0x2ff0000000000}, "System RAM"}, // Carve out reserved portion from "reserved mem child node".
-			},
-			nil,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			km := &Memory{}
-			err := km.ParseMemoryMapFromFDT(tc.fdt)
-			if err != tc.wantErr {
-				t.Errorf("km.ParseMemoryMapFromFDT returned error %v, want error %v", err, tc.wantErr)
-			}
-			checkMemoryMap(t, km.Phys, tc.wantMap)
-		})
-	}
-}
-
-func TestParseMemoryMap(t *testing.T) {
-	root := t.TempDir()
-
-	create := func(dir string, start, end uintptr, typ RangeType) error {
-		p := path.Join(root, dir)
-		if err := os.Mkdir(p, 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(path.Join(p, "start"), []byte(fmt.Sprintf("%#x\n", start)), 0o655); err != nil {
-			return err
-		}
-		if err := os.WriteFile(path.Join(p, "end"), []byte(fmt.Sprintf("%#x\n", end)), 0o655); err != nil {
-			return err
-		}
-		return os.WriteFile(path.Join(p, "type"), append([]byte(typ), '\n'), 0o655)
-	}
-
-	if err := create("0", 0, 49, RangeRAM); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("1", 100, 149, RangeACPI); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("2", 200, 249, RangeNVS); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("3", 300, 349, RangeReserved); err != nil {
-		t.Fatal(err)
-	}
-
-	want := MemoryMap{
-		{Range: Range{Start: 0, Size: 50}, Type: RangeRAM},
-		{Range: Range{Start: 100, Size: 50}, Type: RangeACPI},
-		{Range: Range{Start: 200, Size: 50}, Type: RangeNVS},
-		{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
-	}
-
-	phys, err := internalParseMemoryMap(root)
-	if err != nil {
-		t.Fatalf("ParseMemoryMap() error: %v", err)
-	}
-	if !reflect.DeepEqual(phys, want) {
-		t.Errorf("ParseMemoryMap() got %v, want %v", phys, want)
-	}
-}
-
-func TestAsPayloadParam(t *testing.T) {
-	var mem Memory
-	mem.Phys = MemoryMap{
-		TypedRange{Range: Range{Start: 0, Size: 50}, Type: RangeRAM},
-		TypedRange{Range: Range{Start: 100, Size: 50}, Type: RangeACPI},
-		TypedRange{Range: Range{Start: 200, Size: 50}, Type: RangeNVS},
-		TypedRange{Range: Range{Start: 300, Size: 50}, Type: RangeReserved},
-		TypedRange{Range: Range{Start: 400, Size: 50}, Type: RangeRAM},
-	}
-	want := PayloadMemoryMapParam{
-		{Start: 0, End: 49, Type: PayloadTypeRAM},
-		{Start: 100, End: 149, Type: PayloadTypeACPI},
-		{Start: 200, End: 249, Type: PayloadTypeNVS},
-		{Start: 300, End: 349, Type: PayloadTypeReserved},
-		{Start: 400, End: 449, Type: PayloadTypeRAM},
-	}
-	mm := mem.Phys.AsPayloadParam()
-	if !reflect.DeepEqual(mm, want) {
-		t.Errorf("MemoryMap.AsPayloadParam() got %v, want %v", mm, want)
-	}
-}
 
 func TestAvailableRAM(t *testing.T) {
 	old := pageMask
@@ -344,7 +80,7 @@ func TestAlignAndMerge(t *testing.T) {
 				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
 			},
 			want: Segments{
-				NewSegment(nil, Range{Start: 0, Size: 0x1000}),
+				NewSegment([]byte{}, Range{Start: 0, Size: 0x1000}),
 			},
 		},
 		{
@@ -446,8 +182,7 @@ func TestAlignAndMerge(t *testing.T) {
 				t.Errorf("AlignAndMerge physical ranges = (-want, +got):\n%s", diff)
 			}
 			for i, s := range got {
-				b := s.Buf.toSlice()
-				if diff := cmp.Diff(tt.want[i].Buf.toSlice(), b); diff != "" {
+				if diff := cmp.Diff(tt.want[i].Buf, s.Buf); diff != "" {
 					t.Errorf("segment %s bytes differ (-want, +got):\n%s", got[i].Phys, diff)
 				}
 			}
@@ -471,7 +206,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "no space under 0x1000",
@@ -480,7 +215,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0, 0x1000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "disjunct space above 0x1000",
@@ -514,7 +249,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, 0x2000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "space is split across 0x1000, with enough space above",
@@ -542,7 +277,7 @@ func TestFindSpaceIn(t *testing.T) {
 			},
 			size:  0x10,
 			limit: RangeFromInterval(0x1000, 0x2000),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name: "space is split across 0x1000, with enough space in the next one",
@@ -559,20 +294,23 @@ func TestFindSpaceIn(t *testing.T) {
 			rs:    Ranges{},
 			size:  0x10,
 			limit: RangeFromInterval(0, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0x10},
+			err:   ErrNotEnoughSpace,
 		},
 		{
 			name:  "no ranges, zero size",
 			rs:    Ranges{},
 			size:  0,
 			limit: RangeFromInterval(0, MaxAddr),
-			err:   ErrNotEnoughSpace{Size: 0},
+			err:   ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceIn(tt.size, tt.limit)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.limit, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %#x, want %#x", tt.rs, tt.size, tt.limit, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %v, want %v", tt.rs, tt.size, tt.limit, err, tt.err)
 			}
 		})
 	}
@@ -582,6 +320,7 @@ func TestFindSpace(t *testing.T) {
 	for i, tt := range []struct {
 		name string
 		rs   Ranges
+		opts []FindOptioner
 		size uint
 		want Range
 		err  error
@@ -600,19 +339,184 @@ func TestFindSpace(t *testing.T) {
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "no ranges, zero size",
 			rs:   Ranges{},
 			size: 0,
-			err:  ErrNotEnoughSpace{Size: 0},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "no space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithMinimumAddr(0x1000)},
+			want: Range{Start: 0x1010, Size: 0x10},
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "no space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0, 0x1000))},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "disjunct space above 0x1000",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, MaxAddr))},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "just enough space under 0x1000",
+			rs: Ranges{
+				Range{Start: 0xFF, Size: 0xf},
+				Range{Start: 0xFF0, Size: 0x10},
+				Range{Start: 0x1000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0, 0x1000))},
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "all spaces abvoe 0x1000 and under 0x2000 are too small",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1000, Size: 0xf},
+				Range{Start: 0x1010, Size: 0xf},
+				Range{Start: 0x1f00, Size: 0xf},
+				Range{Start: 0x2000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, 0x2000))},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "space is split across 0x1000, with enough space above",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1010},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, MaxAddr))},
+			want: Range{Start: 0x1000, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000, with enough space under",
+			rs: Ranges{
+				Range{Start: 0xFF0, Size: 0x20},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0, 0x1000))},
+			want: Range{Start: 0xFF0, Size: 0x10},
+		},
+		{
+			name: "space is split across 0x1000 and 0x2000, but not enough space above or below",
+			rs: Ranges{
+				Range{Start: 0xFF1, Size: 0xf + 0xf},
+				Range{Start: 0x1FF1, Size: 0xf + 0xf},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, 0x2000))},
+			err:  ErrNotEnoughSpace,
+		},
+		{
+			name: "space is split across 0x1000, with enough space in the next one",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x100f},
+				Range{Start: 0x1010, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1000, MaxAddr))},
+			want: Range{Start: 0x1010, Size: 0x10},
+		},
+		{
+			name: "alignment with limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1010, Size: 0x10},
+				Range{Start: 0x2000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x500, MaxAddr)), WithStartAlignment(0x1000)},
+			want: Range{Start: 0x2000, Size: 0x10},
+		},
+		{
+			name: "alignment with limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1010, Size: 0x1010},
+				Range{Start: 0x3000, Size: 0x10},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x500, MaxAddr)), WithStartAlignment(0x1000)},
+			want: Range{Start: 0x2000, Size: 0x10},
+		},
+		{
+			name: "alignment with limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x1000},
+				Range{Start: 0x1010, Size: 0x1010},
+				Range{Start: 0x3000, Size: 0x1000},
+			},
+			size: 0x10,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x500, MaxAddr)), WithAlignment(0x1000)},
+			want: Range{Start: 0x3000, Size: 0x1000},
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
-			got, err := tt.rs.FindSpace(tt.size)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpace(%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, got, err, tt.want, tt.err)
+			got, err := tt.rs.FindSpace(tt.size, tt.opts...)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpace(%#x) = %#x, want %#x", tt.rs, tt.size, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpace(%#x) = %v, want %v", tt.rs, tt.size, err, tt.err)
 			}
 		})
 	}
@@ -634,7 +538,7 @@ func TestFindSpaceAbove(t *testing.T) {
 			},
 			size: 0x10,
 			min:  0x1000,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "disjunct space above 0x1000",
@@ -680,19 +584,22 @@ func TestFindSpaceAbove(t *testing.T) {
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,
-			err:  ErrNotEnoughSpace{Size: 0x10},
+			err:  ErrNotEnoughSpace,
 		},
 		{
 			name: "no ranges, zero size",
 			rs:   Ranges{},
 			size: 0,
-			err:  ErrNotEnoughSpace{Size: 0},
+			err:  ErrNotEnoughSpace,
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceAbove(tt.size, tt.min)
-			if !reflect.DeepEqual(got, tt.want) || err != tt.err {
-				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = (%#x, %v), want (%#x, %v)", tt.rs, tt.size, tt.min, got, err, tt.want, tt.err)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %#x, want %#x", tt.rs, tt.size, tt.min, got, tt.want)
+			}
+			if !errors.Is(err, tt.err) {
+				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %v, want %v", tt.rs, tt.size, tt.min, err, tt.err)
 			}
 		})
 	}
@@ -917,69 +824,6 @@ func TestAdjacent(t *testing.T) {
 			}
 			if got2 != tt.want {
 				t.Errorf("%s.Adjacent(%s) = %v, want %v", tt.r2, tt.r1, got2, tt.want)
-			}
-		})
-	}
-}
-
-func TestMemoryMapInsert(t *testing.T) {
-	for i, tt := range []struct {
-		m    MemoryMap
-		r    TypedRange
-		want MemoryMap
-	}{
-		{
-			// r is entirely within m's one range.
-			m: MemoryMap{
-				TypedRange{Range: Range{Start: 0, Size: 0x2000}, Type: RangeRAM},
-			},
-			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-			want: MemoryMap{
-				TypedRange{Range: Range{Start: 0, Size: 0x100}, Type: RangeRAM},
-				TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-				TypedRange{Range: Range{Start: 0x200, Size: 0x2000 - 0x200}, Type: RangeRAM},
-			},
-		},
-		{
-			// r sits across three RAM ranges.
-			m: MemoryMap{
-				TypedRange{Range: Range{Start: 0, Size: 0x150}, Type: RangeRAM},
-				TypedRange{Range: Range{Start: 0x150, Size: 0x50}, Type: RangeRAM},
-				TypedRange{Range: Range{Start: 0x1a0, Size: 0x100}, Type: RangeRAM},
-			},
-			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-			want: MemoryMap{
-				TypedRange{Range: Range{Start: 0, Size: 0x100}, Type: RangeRAM},
-				TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-				TypedRange{Range: Range{Start: 0x200, Size: 0xa0}, Type: RangeRAM},
-			},
-		},
-		{
-			// r is a superset of the ranges in m.
-			m: MemoryMap{
-				TypedRange{Range: Range{Start: 0x100, Size: 0x50}, Type: RangeRAM},
-			},
-			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-			want: MemoryMap{
-				TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-			},
-		},
-		{
-			// r is the first range in the map.
-			m: MemoryMap{},
-			r: TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-			want: MemoryMap{
-				TypedRange{Range: Range{Start: 0x100, Size: 0x100}, Type: RangeReserved},
-			},
-		},
-	} {
-		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
-			// Make a copy for the Errorf print.
-			m := tt.m
-			tt.m.Insert(tt.r)
-
-			if !reflect.DeepEqual(tt.m, tt.want) {
-				t.Errorf("\n%v.Insert(%s) =\n%v, want\n%v", m, tt.r, tt.m, tt.want)
 			}
 		})
 	}

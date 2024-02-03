@@ -38,9 +38,10 @@ type Chip struct {
 	Is4BA       bool
 	EraseBlocks []EraseBlock
 
-	Unlock op.OpCode
-	Write  op.OpCode
-	Read   op.OpCode
+	WriteEnableInstructionRequired bool
+	WriteEnableOpcodeSelect        op.OpCode
+	Write                          op.OpCode
+	Read                           op.OpCode
 }
 
 // String implements string for Chip.
@@ -97,8 +98,9 @@ var Chips = []Chip{
 			},
 		},
 
-		Unlock: op.WriteEnable,
-		Write:  op.AAI,
-		Read:   op.Read,
+		WriteEnableInstructionRequired: true,
+		WriteEnableOpcodeSelect:        op.WriteEnable,
+		Write:                          op.AAI,
+		Read:                           op.Read,
 	},
 }

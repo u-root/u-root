@@ -24,7 +24,7 @@ func stripSize(d decompressor) decompressor {
 		// Read all of the bytes so that we can determine the size.
 		allBytes, err := io.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("error reading all bytes: %v", err)
+			return fmt.Errorf("error reading all bytes: %w", err)
 		}
 		strippedLen := int64(len(allBytes) - 4)
 		Debug("Stripped reader is of length %d bytes", strippedLen)
@@ -44,20 +44,20 @@ func execer(command string, args ...string) decompressor {
 
 		stderrPipe, err := cmd.StderrPipe()
 		if err != nil {
-			return fmt.Errorf("error creating Stderr pipe: %v", err)
+			return fmt.Errorf("error creating Stderr pipe: %w", err)
 		}
 
 		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("error starting decompressor: %v", err)
+			return fmt.Errorf("error starting decompressor: %w", err)
 		}
 
 		stderr, err := io.ReadAll(stderrPipe)
 		if err != nil {
-			return fmt.Errorf("error reading stderr: %v", err)
+			return fmt.Errorf("error reading stderr: %w", err)
 		}
 
 		if err := cmd.Wait(); err != nil || len(stderr) > 0 {
-			return fmt.Errorf("decompressor failed: err=%v, stderr=%q", err, stderr)
+			return fmt.Errorf("decompressor failed: err=%w, stderr=%q", err, stderr)
 		}
 		return nil
 	}
@@ -68,11 +68,11 @@ func execer(command string, args ...string) decompressor {
 func gunzip(w io.Writer, r io.Reader) error {
 	gzipReader, err := gzip.NewReader(r)
 	if err != nil {
-		return fmt.Errorf("error creating gzip reader: %v", err)
+		return fmt.Errorf("error creating gzip reader: %w", err)
 	}
 
 	if _, err := io.Copy(w, gzipReader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
 	}
 	return nil
 }
@@ -82,11 +82,11 @@ func gunzip(w io.Writer, r io.Reader) error {
 func unlzma(w io.Writer, r io.Reader) error {
 	lzmaReader, err := lzma.NewReader(r)
 	if err != nil {
-		return fmt.Errorf("error creating lzma reader: %v", err)
+		return fmt.Errorf("error creating lzma reader: %w", err)
 	}
 
 	if _, err := io.Copy(w, lzmaReader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
 	}
 	return nil
 }
@@ -97,7 +97,7 @@ func unlz4(w io.Writer, r io.Reader) error {
 	lz4Reader := lz4.NewReader(r)
 
 	if _, err := io.Copy(w, lz4Reader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
 	}
 	return nil
 }
@@ -108,7 +108,7 @@ func unbzip2(w io.Writer, r io.Reader) error {
 	bzip2Reader := bzip2.NewReader(r)
 
 	if _, err := io.Copy(w, bzip2Reader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
 	}
 	return nil
 }
@@ -118,12 +118,12 @@ func unbzip2(w io.Writer, r io.Reader) error {
 func unzstd(w io.Writer, r io.Reader) error {
 	zstdReader, err := zstd.NewReader(r)
 	if err != nil {
-		return fmt.Errorf("failed to create new reader: %v", err)
+		return fmt.Errorf("failed to create new reader: %w", err)
 	}
 	defer zstdReader.Close()
 
 	if _, err := io.Copy(w, zstdReader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
 	}
 	return nil
 }

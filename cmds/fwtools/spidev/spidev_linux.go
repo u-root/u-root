@@ -13,7 +13,7 @@
 // Options:
 //
 //	-D DEV: spidev device (default /dev/spidev0.0)
-//	-s SPEED: max speed in Hz (default 500000)
+//	-s SPEED: max speed in Hz (default whatever the spi package sets)
 //
 // Description:
 //
@@ -32,6 +32,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/flash"
+	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spidev"
@@ -39,6 +40,8 @@ import (
 
 type spi interface {
 	Transfer([]spidev.Transfer) error
+	ID() (chips.ID, error)
+	Status() (op.Status, error)
 	SetSpeedHz(uint32) error
 	Close() error
 }
@@ -58,7 +61,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	// Parse args.
 	fs := flag.NewFlagSet("spidev", flag.ContinueOnError)
 	dev := fs.StringP("device", "D", "/dev/spidev0.0", "spidev device")
-	speed := fs.Uint32P("speed", "s", 500000, "max speed in Hz")
+	speed := fs.Uint32P("speed", "s", 0, "max speed in Hz")
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			return fmt.Errorf("%w:<raw|sfdp|id>", errCommand)
@@ -76,35 +79,26 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return err
 	}
 	defer s.Close()
-	if err := s.SetSpeedHz(*speed); err != nil {
-		return err
+
+	// Note that spidev.Open sets a safe default speed, known to
+	// work, that is conservative. In some cases, users might wish
+	// to override that speed. Since the speed can be set any number
+	// of times, this is a safe operation.
+	if *speed != 0 {
+		if err := s.SetSpeedHz(*speed); err != nil {
+			return err
+		}
 	}
 
 	cmd := fs.Arg(0)
 	// Currently, only the raw subcommand is supported.
 	switch cmd {
 	case "id":
-		// Wake it up, then get the id.
-		// PRDRES is not universally handled on all devices, but that's ok.
-		// but CE MUST drop, so we structure this as two separate
-		// transfers to ensure that happens.
-		transfers := []spidev.Transfer{
-			{
-				Tx:       op.PRDRES.Bytes(),
-				Rx:       make([]byte, 1),
-				CSChange: true,
-			},
-			{
-				Tx: append(op.ReadJEDECID.Bytes(), 0, 0, 0),
-				Rx: make([]byte, 4),
-			},
-		}
-
-		if err := s.Transfer(transfers); err != nil {
+		id, err := s.ID()
+		if err != nil {
 			return err
 		}
-
-		fmt.Fprintf(output, "%02x\n", transfers[1].Rx[1:])
+		fmt.Fprintf(output, "%02x\n", id)
 		return nil
 
 	case "raw":

@@ -75,6 +75,30 @@ func AppendFile(srcFile, targetFile string) error {
 func runTest() error {
 	flag.Parse()
 
+	// If these fail, the host will be missing the "Done" event from
+	// testEvents, or possibly even the errors.json file and fail.
+	mp, err := guest.Mount9PDir("/gotestdata", "gotests")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = mp.Unmount(0) }()
+
+	testEvents, err := guest.EventChannel[testevent.ErrorEvent]("/gotestdata/errors.json")
+	if err != nil {
+		return err
+	}
+	defer testEvents.Close()
+
+	if err := run(testEvents); err != nil {
+		_ = testEvents.Emit(testevent.ErrorEvent{
+			Error: fmt.Sprintf("running tests failed: %v", err),
+		})
+		return err
+	}
+	return nil
+}
+
+func run(testEvents *guest.Emitter[testevent.ErrorEvent]) error {
 	cleanup, err := guest.MountSharedDir()
 	if err != nil {
 		return err
@@ -82,34 +106,14 @@ func runTest() error {
 	defer cleanup()
 	defer guest.CollectKernelCoverage()
 
-	mp, err := guest.Mount9PDir("/gotestdata", "gotests")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = mp.Unmount(0) }()
-
-	var envv []string
-	if tag := os.Getenv("VMTEST_GOCOVERDIR"); tag != "" {
-		mp, err := guest.Mount9PDir("/gocov", tag)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = mp.Unmount(0) }()
-
-		envv = append(envv, "GOCOVERDIR=/gocov")
-	}
+	covCleanup := guest.GOCOVERDIR()
+	defer covCleanup()
 
 	goTestEvents, err := guest.EventChannel[json2test.TestEvent]("/gotestdata/results.json")
 	if err != nil {
 		return err
 	}
 	defer goTestEvents.Close()
-
-	testEvents, err := guest.EventChannel[testevent.ErrorEvent]("/gotestdata/errors.json")
-	if err != nil {
-		return err
-	}
-	defer testEvents.Close()
 
 	return walkTests("/gotestdata/tests", func(path, pkgName string) {
 		// Send the kill signal with a 500ms grace period.
@@ -130,7 +134,6 @@ func runTest() error {
 
 		cmd := exec.CommandContext(ctx, path, args...)
 		cmd.Stdin, cmd.Stderr = os.Stdin, os.Stderr
-		cmd.Env = append(os.Environ(), envv...)
 
 		// Write to stdout for humans, write to w for the JSON converter.
 		//
@@ -198,11 +201,10 @@ func runTest() error {
 }
 
 func main() {
+	flag.Parse()
+
 	if err := runTest(); err != nil {
 		log.Printf("Tests failed: %v", err)
-	} else {
-		// The test infra is expecting this exact print.
-		log.Print("TESTS PASSED MARKER")
 	}
 
 	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF); err != nil {

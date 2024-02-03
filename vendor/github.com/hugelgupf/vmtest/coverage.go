@@ -14,6 +14,24 @@ import (
 	"github.com/hugelgupf/vmtest/testtmp"
 )
 
+// ShareGOCOVERDIR shares VMTEST_GOCOVERDIR with the guest if it's available in the
+// environment.
+//
+// Call guest.GOCOVERDIR to set up the directory in the guest.
+func ShareGOCOVERDIR() Opt {
+	return func(t testing.TB, v *VMOptions) error {
+		goCov := os.Getenv("VMTEST_GOCOVERDIR")
+		if goCov == "" {
+			return nil
+		}
+		v.QEMUOpts = append(v.QEMUOpts,
+			qemu.P9Directory(goCov, "gocov"),
+			qemu.WithAppendKernel("VMTEST_GOCOVERDIR=gocov"),
+		)
+		return nil
+	}
+}
+
 // CollectKernelCoverage collects kernel coverage files for each test to
 // VMTEST_KERNEL_COVERAGE_DIR/{testName}/{instance}, where instance is a number
 // starting at 0.

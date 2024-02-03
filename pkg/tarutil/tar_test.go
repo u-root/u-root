@@ -45,7 +45,7 @@ func TestExtractDir(t *testing.T) {
 		{"a.txt", "hello\n"},
 		{"dir/b.txt", "world\n"},
 	}
-	extractAndCompare(t, "test.tar", files)
+	extractAndCompare(t, "testdata/test.tar", files)
 }
 
 func TestCreateTarSingleFile(t *testing.T) {
@@ -57,7 +57,10 @@ func TestCreateTarSingleFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := CreateTar(f, []string{"test0"}, nil); err != nil {
+	if err := CreateTar(f, []string{"testdata/test0"}, &Opts{
+		NoRecursion: true,
+		Filters:     []Filter{VerboseFilter, VerboseLogFilter},
+	}); err != nil {
 		f.Close()
 		t.Fatal(err)
 	}
@@ -69,11 +72,7 @@ func TestCreateTarSingleFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("system tar could not parse the file: %v", err)
 	}
-	expected := `test0
-test0/a.txt
-test0/dir
-test0/dir/b.txt
-`
+	expected := "testdata/test0\n"
 	if string(out) != expected {
 		t.Fatalf("got %q, want %q", string(out), expected)
 	}
@@ -88,7 +87,7 @@ func TestCreateTarMultFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files := []string{"test0", "test1", "test2.txt"}
+	files := []string{"testdata/test0", "testdata/test1", "testdata/test2.txt"}
 	if err := CreateTar(f, files, nil); err != nil {
 		f.Close()
 		t.Fatal(err)
@@ -101,13 +100,13 @@ func TestCreateTarMultFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("system tar could not parse the file: %v", err)
 	}
-	expected := `test0
-test0/a.txt
-test0/dir
-test0/dir/b.txt
-test1
-test1/a1.txt
-test2.txt
+	expected := `testdata/test0
+testdata/test0/a.txt
+testdata/test0/dir
+testdata/test0/dir/b.txt
+testdata/test1
+testdata/test1/a1.txt
+testdata/test2.txt
 `
 	if string(out) != expected {
 		t.Fatalf("got %q, want %q", string(out), expected)
@@ -168,7 +167,7 @@ func TestCreateTarProcfsFile(t *testing.T) {
 }
 
 func TestListArchive(t *testing.T) {
-	f, err := os.Open("test.tar")
+	f, err := os.Open("testdata/test.tar")
 	if err != nil {
 		t.Fatal(err)
 	}

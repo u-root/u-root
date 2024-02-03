@@ -79,7 +79,7 @@ func (p *Packet6) Configure() error {
 
 	if err := netlink.AddrReplace(p.iface, dst); err != nil {
 		if os.IsExist(err) {
-			return fmt.Errorf("add/replace %s to %v: %v", dst, p.iface, err)
+			return fmt.Errorf("add/replace %s to %v: %w", dst, p.iface, err)
 		}
 	}
 

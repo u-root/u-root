@@ -41,7 +41,7 @@ func Interfaces(ifName string) ([]netlink.Link, error) {
 
 	ifnames, err := netlink.LinkList()
 	if err != nil {
-		return nil, fmt.Errorf("can not get list of link names: %v", err)
+		return nil, fmt.Errorf("can not get list of link names: %w", err)
 	}
 
 	var filteredIfs []netlink.Link

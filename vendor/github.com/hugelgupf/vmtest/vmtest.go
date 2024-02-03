@@ -17,6 +17,7 @@ import (
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/testtmp"
 	"github.com/hugelgupf/vmtest/uqemu"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 	"github.com/u-root/u-root/pkg/uroot"
 	"golang.org/x/exp/maps"
@@ -118,6 +119,9 @@ func (v *VMOptions) MergeInitramfs(buildOpts uroot.Opts) error {
 	if buildOpts.DefaultShell != "" {
 		v.Initramfs.DefaultShell = buildOpts.DefaultShell
 	}
+	if buildOpts.BuildOpts != nil {
+		v.Initramfs.BuildOpts = buildOpts.BuildOpts
+	}
 	return nil
 }
 
@@ -160,10 +164,22 @@ func WithMergedInitramfs(o uroot.Opts) Opt {
 }
 
 // WithBusyboxCommands merges more busybox commands into the initramfs build options.
+//
+// Note that busybox rewrites commands, so if attempting to get integration
+// test coverage of commands, use WithBinaryCommands.
 func WithBusyboxCommands(cmds ...string) Opt {
 	return func(_ testing.TB, v *VMOptions) error {
 		return v.MergeInitramfs(uroot.Opts{
 			Commands: uroot.BusyBoxCmds(cmds...),
+		})
+	}
+}
+
+// WithBinaryCommands merges more binary commands into the initramfs build options.
+func WithBinaryCommands(cmds ...string) Opt {
+	return func(_ testing.TB, v *VMOptions) error {
+		return v.MergeInitramfs(uroot.Opts{
+			Commands: uroot.BinaryCmds(cmds...),
 		})
 	}
 }
@@ -178,7 +194,21 @@ func WithInitramfsFiles(files ...string) Opt {
 	}
 }
 
-// WithSharedDir shares a directory with the VM.
+// WithGoBuildOpts replaces Go build options for the initramfs.
+func WithGoBuildOpts(g *golang.BuildOpts) Opt {
+	return func(_ testing.TB, v *VMOptions) error {
+		return v.MergeInitramfs(uroot.Opts{
+			BuildOpts: g,
+		})
+	}
+}
+
+// WithSharedDir shares a directory with the QEMU VM using 9P using the
+// tag "tmpdir".
+//
+// guest.MountSharedDir mounts this directory at /testdata.
+//
+// If none is set, no directory is shared with the guest by default.
 func WithSharedDir(dir string) Opt {
 	return func(_ testing.TB, v *VMOptions) error {
 		v.SharedDir = dir
@@ -221,12 +251,10 @@ func startVM(t testing.TB, o *VMOptions) *qemu.VM {
 	SkipWithoutQEMU(t)
 
 	qopts := []qemu.Fn{
-		qemu.LogSerialByLine(qemu.PrintLineWithPrefix(o.ConsoleOutputPrefix, t.Logf)),
+		qemu.LogSerialByLine(qemu.DefaultPrint(o.ConsoleOutputPrefix, t.Logf)),
 		// Tests use this env var to identify they are running inside a
 		// vmtest using SkipIfNotInVM.
-		//
-		// Older tests use the presence of uroot.vmtest in the kernel command-line.
-		qemu.WithAppendKernel("VMTEST_IN_GUEST=1", "uroot.vmtest"),
+		qemu.WithAppendKernel("VMTEST_IN_GUEST=1"),
 		qemu.VirtioRandom(),
 	}
 	if o.SharedDir != "" {

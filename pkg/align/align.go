@@ -8,10 +8,12 @@
 // size need be a power of 2.
 package align
 
+import "golang.org/x/exp/constraints"
+
 // Up aligns v up to next multiple of alignSize.
 //
 // alignSize need be a power of 2.
-func Up(v uint, alignSize uint) uint {
+func Up[T constraints.Unsigned](v T, alignSize T) T {
 	mask := alignSize - 1
 	return (v + mask) &^ mask
 }
@@ -19,16 +21,23 @@ func Up(v uint, alignSize uint) uint {
 // Down aligns v down to a previous multiple of alignSize.
 //
 // alignSize need be a power of 2.
-func Down(v uint, alignSize uint) uint {
+func Down[T constraints.Unsigned](v T, alignSize T) T {
 	return Up(v-(alignSize-1), alignSize)
 }
 
 // UpPage aligns v up by system page size.
-func UpPage(v uint) uint {
-	return Up(v, pageSize)
+func UpPage[T constraints.Unsigned](v T) T {
+	return Up(v, T(pageSize))
 }
 
 // DownPage aligns v down by system page size.
-func DownPage(v uint) uint {
-	return Down(v, pageSize)
+func DownPage[T constraints.Unsigned](v T) T {
+	return Down(v, T(pageSize))
+}
+
+// IsAligned checks whether v is aligned to alignSize.
+//
+// alignSize need be a power of 2.
+func IsAligned[T constraints.Unsigned](v T, alignSize T) bool {
+	return v%alignSize == 0
 }

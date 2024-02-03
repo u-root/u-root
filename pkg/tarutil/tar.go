@@ -83,10 +83,10 @@ func ExtractDir(tarFile io.Reader, dir string, opts *Opts) error {
 	fi, err := os.Stat(dir)
 	if os.IsNotExist(err) {
 		if err := os.Mkdir(dir, os.ModePerm); err != nil {
-			return fmt.Errorf("could not create directory %s: %v", dir, err)
+			return fmt.Errorf("could not create directory %s: %w", dir, err)
 		}
 	} else if err != nil || !fi.IsDir() {
-		return fmt.Errorf("could not stat directory %s: %v", dir, err)
+		return fmt.Errorf("could not stat directory %s: %w", dir, err)
 	}
 
 	return applyToArchive(tarFile, func(tr *tar.Reader, hdr *tar.Header) error {
@@ -196,10 +196,7 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 			return err
 		}
 	}
-	if err := tw.Close(); err != nil {
-		return err
-	}
-	return nil
+	return tw.Close()
 }
 
 func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
@@ -248,7 +245,7 @@ func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
 	}
 
 	if err := os.Chmod(path, fi.Mode()&os.ModePerm); err != nil {
-		return fmt.Errorf("error setting mode %#o on %q: %v",
+		return fmt.Errorf("error setting mode %#o on %q: %w",
 			fi.Mode()&os.ModePerm, path, err)
 	}
 	// TODO: also set ownership, etc...
@@ -259,11 +256,6 @@ func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
 // The filter can modify the tar.Header struct. If the filter returns false,
 // the file is omitted.
 type Filter func(hdr *tar.Header) bool
-
-// NoFilter does not filter or modify any files.
-func NoFilter(hdr *tar.Header) bool {
-	return true
-}
 
 // VerboseFilter prints the name of every file.
 func VerboseFilter(hdr *tar.Header) bool {

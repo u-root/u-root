@@ -45,7 +45,7 @@ func ReadBiosTables() (*BiosTable, error) {
 		Debug("Check Table at %#x", a)
 		t, err := ReadRawTable(a)
 		if err != nil {
-			return nil, fmt.Errorf("%#x:%v", a, err)
+			return nil, fmt.Errorf("%#x:%w", a, err)
 		}
 		Debug("Add table %s", String(t))
 		bios.Tables = append(bios.Tables, t)
@@ -73,7 +73,7 @@ func ReadBiosTables() (*BiosTable, error) {
 		// Fix that.
 		t, err = ReadRawTable(int64(uint32(dsdt)))
 		if err != nil {
-			return nil, fmt.Errorf("%#x:%v", uint64(dsdt), err)
+			return nil, fmt.Errorf("%#x:%w", uint64(dsdt), err)
 		}
 		Debug("Add table %s", String(t))
 		bios.Tables = append(bios.Tables, t)

@@ -4,7 +4,7 @@ templates:
   golang-template:
     &golang-template
     docker:
-      - image: uroottest/test-image-amd64:v5.2.0
+      - image: cimg/go:1.21
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root

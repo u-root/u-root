@@ -4,7 +4,7 @@
 
 // Package vfile verifies files against a hash or signature.
 //
-// vfile aims to be TOCTTOU-safe by reading files into memory before verifying.
+// vfile is not TOCTTOU-safe against the contents of the file changing.
 package vfile
 
 import (
@@ -110,20 +110,8 @@ func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
 // OpenSignedSigFile calls OpenSignedFile expecting the signature to be in path.sig.
 //
 // E.g. if path is /foo/bar, the signature is expected to be in /foo/bar.sig.
-func OpenSignedSigFile(keyring openpgp.KeyRing, path string, opts ...OpenSignedFileOption) (*File, error) {
+func OpenSignedSigFile(keyring openpgp.KeyRing, path string, opts ...OpenSignedFileOption) (*os.File, error) {
 	return OpenSignedFile(keyring, path, fmt.Sprintf("%s.sig", path), opts...)
-}
-
-// File encapsulates a bytes.Reader with the file contents and its name.
-type File struct {
-	*bytes.Reader
-
-	FileName string
-}
-
-// Name returns the file name.
-func (f *File) Name() string {
-	return f.FileName
 }
 
 // OpenSignedFileOption is an optional argument to OpenSignedFile.
@@ -151,18 +139,14 @@ func getEndOfTime() time.Time {
 // WARNING! Unlike many Go functions, this may return both the file and an
 // error.
 //
-// It expects path.sig to be available.
+// It expects pathSig to be available.
 //
 // If the signature does not exist or does not match the keyring, both the file
 // and a signature error will be returned.
-func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string, opts ...OpenSignedFileOption) (*File, error) {
-	content, err := os.ReadFile(path)
+func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string, opts ...OpenSignedFileOption) (*os.File, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
-	}
-	f := &File{
-		Reader:   bytes.NewReader(content),
-		FileName: path,
 	}
 	var o openSignedFileOptions
 	// Apply options if given.
@@ -180,9 +164,13 @@ func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string, opts ...OpenS
 	if o.ignoreTimeConflict {
 		config.Time = getEndOfTime
 	}
+
+	// After CheckDetachedSignature reads the whole file, seek back to the beginning.
+	defer f.Seek(0, os.SEEK_SET)
+
 	if keyring == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrNoKeyRing}
-	} else if signer, err := openpgp.CheckDetachedSignature(keyring, bytes.NewReader(content), signaturef, &config); err != nil {
+	} else if signer, err := openpgp.CheckDetachedSignature(keyring, f, signaturef, &config); err != nil {
 		return f, ErrUnsigned{Path: path, Err: err}
 	} else if signer == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrWrongSigner{keyring}}
@@ -226,8 +214,8 @@ var ErrNoExpectedHash = errors.New("OpenHashedFile: no expected hash given")
 // WARNING! Unlike many Go functions, this may return both the file and an
 // error in case the expected hash does not match the contents.
 //
-// If the contents match, the contents are returned with no error.
-func OpenHashedFile256(path string, wantSHA256Hash []byte) (*File, error) {
+// If the contents match, the opened file is returned with no error.
+func OpenHashedFile256(path string, wantSHA256Hash []byte) (*os.File, error) {
 	return openHashedFile(path, wantSHA256Hash, sha256.New())
 }
 
@@ -237,19 +225,15 @@ func OpenHashedFile256(path string, wantSHA256Hash []byte) (*File, error) {
 // WARNING! Unlike many Go functions, this may return both the file and an
 // error in case the expected hash does not match the contents.
 //
-// If the contents match, the contents are returned with no error.
-func OpenHashedFile512(path string, wantSHA512Hash []byte) (*File, error) {
+// If the contents match, the opened file is returned with no error.
+func OpenHashedFile512(path string, wantSHA512Hash []byte) (*os.File, error) {
 	return openHashedFile(path, wantSHA512Hash, sha512.New())
 }
 
-func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
-	content, err := os.ReadFile(path)
+func openHashedFile(path string, wantHash []byte, h hash.Hash) (*os.File, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
-	}
-	f := &File{
-		Reader:   bytes.NewReader(content),
-		FileName: path,
 	}
 
 	if len(wantHash) == 0 {
@@ -259,8 +243,11 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (*File, error) {
 		}
 	}
 
+	// After io.Copy reads the whole file, Seek back to beginning.
+	defer f.Seek(0, os.SEEK_SET)
+
 	// Hash the file.
-	if _, err := io.Copy(h, bytes.NewReader(content)); err != nil {
+	if _, err := io.Copy(h, f); err != nil {
 		return f, ErrInvalidHash{
 			Path: path,
 			Err:  err,

@@ -10,6 +10,8 @@
 //
 // Options:
 //
+//	-o offset: Offset at which to start.
+//	-s size: Number of bytes to read or write.
 //	-p PROGRAMMER: Specify the programmer with zero or more parameters (see
 //	               below).
 //	-r FILE: Read flash data into the file.
@@ -43,6 +45,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -53,6 +56,7 @@ import (
 type programmer interface {
 	io.ReaderAt
 	io.WriterAt
+	EraseAt(int64, int64) (int64, error)
 	Size() int64
 	Close() error
 }
@@ -94,9 +98,12 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	// Parse args.
 	fs := flag.NewFlagSet("flash", flag.ContinueOnError)
 	var (
-		p = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
-		r = fs.StringP("read", "r", "", "read flash data into the file")
-		w = fs.StringP("write", "w", "", "write the file to flash")
+		e    = fs.BoolP("erase", "e", false, "erase the flash part")
+		p    = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
+		r    = fs.StringP("read", "r", "", "read flash data into the file")
+		w    = fs.StringP("write", "w", "", "write the file to flash")
+		off  = fs.Int64P("offset", "o", 0, "off at which to write")
+		size = fs.Int64P("size", "s", math.MaxInt64, "number of bytes")
 	)
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -110,8 +117,8 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		return errors.New("-p needs to be set")
 	}
 
-	if *r == "" && *w == "" {
-		return errors.New("either -r or -w need to be set")
+	if *r == "" && *w == "" && !*e {
+		return errors.New("at least one of -e, -r or -w need to be set")
 	}
 	if *r != "" && *w != "" {
 		return errors.New("both -r and -w cannot be set")
@@ -134,10 +141,18 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		}
 	}()
 
+	if *e {
+		n, err := programmer.EraseAt(min(*size, programmer.Size()), *off)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Erased %#x bytes @ %#x", n, *off)
+	}
+
 	// Create a buffer to hold the contents of the image.
-	buf := make([]byte, programmer.Size())
 
 	if *r != "" {
+		buf := make([]byte, min(*size, programmer.Size()))
 		f, err := os.Create(*r)
 		if err != nil {
 			return err
@@ -148,28 +163,27 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 				reterr = err
 			}
 		}()
-		if _, err := programmer.ReadAt(buf, 0); err != nil {
+		if _, err := programmer.ReadAt(buf, *off); err != nil {
 			return err
 		}
 		if _, err := f.Write(buf); err != nil {
 			return err
 		}
 	} else if *w != "" {
-		f, err := os.Open(*w)
+		buf, err := os.ReadFile(*w)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
-		if _, err := io.ReadFull(f, buf); err != nil {
-			return err
+		buf = buf[:min(int64(len(buf)), *size)]
+		amt, err := programmer.WriteAt(buf, *off)
+		if err != nil {
+			return fmt.Errorf("writing %d bytes to dev %v:%w", len(buf), programmer, err)
 		}
-		if leftover, err := io.Copy(io.Discard, f); err != nil {
-			return err
-		} else if leftover != 0 {
-			return fmt.Errorf("flash size (%#x) unequal to file size (%#x)", len(buf), int64(len(buf))+leftover)
+		if amt != len(buf) {
+			return fmt.Errorf("only flashed %d of %d bytes", amt, len(buf))
 		}
 
-		return errors.New("write not yet supported")
+		return nil
 	}
 
 	return nil

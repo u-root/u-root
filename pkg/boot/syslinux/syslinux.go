@@ -393,7 +393,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				if err != nil {
 					return err
 				}
-				e.KexecOpts.DTB = dtb
+				e.DTB = dtb
 			}
 
 		case "append":
