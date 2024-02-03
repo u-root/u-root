@@ -349,7 +349,7 @@ func (s *SPI) SetSpeedHz(hz uint32) error {
 	return nil
 }
 
-// ID gets the 24-bit id as an int
+// ID gets ID.
 func (s *SPI) ID() (chips.ID, error) {
 	// Wake it up, then get the id.
 	// PRDRES is not universally handled on all devices, but that's ok.
@@ -374,4 +374,32 @@ func (s *SPI) ID() (chips.ID, error) {
 
 	id[0] = 0
 	return chips.ID(binary.BigEndian.Uint32(id[:])), nil
+}
+
+// Status gets the 8 bit status register.
+// While this is similar to ID, there is a good chance
+// there will be special cases for each opcode type,
+// so they should probably remain separate.
+// SPI is always full of surprises.
+func (s *SPI) Status() (op.Status, error) {
+	var status [2]byte
+	transfers := []Transfer{
+		{
+			Tx:       []byte{byte(op.PRDRES)},
+			Rx:       make([]byte, 1),
+			CSChange: true,
+		},
+		{
+			Tx: []byte{byte(op.ReadStatus), 0},
+			Rx: status[:],
+		},
+	}
+
+	// in the event of an error, return all 1s,
+	// making the chip look busy.
+	if err := s.Transfer(transfers); err != nil {
+		return op.Status(0xff), err
+	}
+
+	return op.Status(status[1]), nil
 }

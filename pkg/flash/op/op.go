@@ -6,7 +6,10 @@
 // the beginning of a SPI transaction.
 package op
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type OpCode byte
 
@@ -74,4 +77,44 @@ func (o OpCode) String() string {
 
 func (o OpCode) Bytes() []byte {
 	return []byte{byte(o)}
+}
+
+type Status byte
+
+// Status is not universally defined, but a few bits are common.
+const (
+	WriteBusy Status = 1 << iota
+	WriteEnabled
+	ByteProtect0
+	ByteProtect1
+	ByteProtect2
+	ByteProtectP3
+	AutoAddressIncrement
+	ByteProtectLocked
+)
+
+var names = []string{
+	"WriteBusy",
+	"WriteEnabled",
+	"ByteProtect0",
+	"ByteProtect1",
+	"ByteProtect2",
+	"ByteProtectP3",
+	"AutoAddressIncrement",
+	"ByteProtectLocked",
+}
+
+func (status Status) String() string {
+	var s string
+	for i := 0; i < 8; i++ {
+		if byte(status)&(1<<i) != 0 {
+			s = s + names[i] + "|"
+		}
+	}
+	s = strings.TrimRight(s, "|")
+	return s
+}
+
+func (status Status) Busy() bool {
+	return (status & WriteBusy) != 0
 }

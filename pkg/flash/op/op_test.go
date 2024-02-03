@@ -56,3 +56,38 @@ func TestBytes(t *testing.T) {
 		}
 	}
 }
+
+func TestStatus(t *testing.T) {
+	for i, tt := range []struct {
+		name string
+		val  op.Status
+		out  string
+	}{
+		{name: "nothing", out: ""},
+		{name: "write enabled", val: op.WriteEnabled, out: "WriteEnabled"},
+		{name: "busy, write enabled", val: op.WriteBusy | op.WriteEnabled, out: "WriteBusy|WriteEnabled"},
+	} {
+		s := tt.val.String()
+		if s != tt.out {
+			t.Errorf("%d:%#x: got %s, want %s", i, tt.name, s, tt.out)
+		}
+	}
+}
+
+func TestStatusBus(t *testing.T) {
+	for i, tt := range []struct {
+		name string
+		val  op.Status
+		out  bool
+	}{
+		{name: "idle"},
+		{name: "busy", val: op.WriteBusy, out: true},
+		{name: "other than busy", val: op.WriteEnabled, out: false},
+	} {
+		busy := tt.val.Busy()
+		if busy != tt.out {
+			t.Errorf("%d:%#x: got %v, want %v", i, tt.name, busy, tt.out)
+		}
+	}
+
+}
