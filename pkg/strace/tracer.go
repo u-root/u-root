@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/u-root/u-root/pkg/ubinary"
+	"github.com/josharian/native"
 	"golang.org/x/sys/unix"
 )
 
@@ -122,7 +122,7 @@ func (p *process) Name() string {
 // and returns a byte count and error.
 func (p *process) Read(addr Addr, v interface{}) (int, error) {
 	r := newProcReader(p.pid, uintptr(addr))
-	err := binary.Read(r, ubinary.NativeEndian, v)
+	err := binary.Read(r, native.Endian, v)
 	return r.bytes, err
 }
 

@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/josharian/native"
 	"github.com/u-root/u-root/pkg/boot/ibft"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/boot/util"
-	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -104,7 +104,7 @@ type memoryMaps []MemoryMap
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format.
 func (m memoryMaps) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
-	err := binary.Write(&buf, ubinary.NativeEndian, m)
+	err := binary.Write(&buf, native.Endian, m)
 	return buf.Bytes(), err
 }
 

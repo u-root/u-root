@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/u-root/u-root/pkg/ubinary"
+	"github.com/josharian/native"
 )
 
 var sizeofInfo = uint32(binary.Size(info{}))
@@ -96,7 +96,7 @@ func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
 	iw.info.Flags |= flagInfoCmdline | flagInfoBootLoaderName
 
 	buf := bytes.Buffer{}
-	if err := binary.Write(&buf, ubinary.NativeEndian, iw.info); err != nil {
+	if err := binary.Write(&buf, native.Endian, iw.info); err != nil {
 		return nil, err
 	}
 

@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/josharian/native"
 	"github.com/u-root/u-root/pkg/acpi"
-	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 const (
@@ -54,7 +54,7 @@ func FindFBPTTableAdrr(t acpi.Table) (uint64, error) {
 		// Find Firmware Basic Boot Performance Pointer Record
 		// see ACPI Table Spec: https://uefi.org/sites/default/files/resources/ACPI%206_2_A_Sept29.pdf (page 210)
 		if t.TableData()[i] == 0x00 && t.TableData()[i+1] == 0x00 {
-			addr = ubinary.NativeEndian.Uint64(t.TableData()[i+8 : i+16])
+			addr = native.Endian.Uint64(t.TableData()[i+8 : i+16])
 			return addr, nil
 		}
 	}
@@ -80,5 +80,5 @@ func ReadFPDTRecordHeader(mem io.ReadSeeker) (uint16, uint8, uint8, error) {
 		return 0, 0, 0, err
 	}
 
-	return ubinary.NativeEndian.Uint16(HeaderType[:]), uint8(HeaderLength[0]), uint8(HeaderRevision[0]), nil
+	return native.Endian.Uint16(HeaderType[:]), uint8(HeaderLength[0]), uint8(HeaderRevision[0]), nil
 }

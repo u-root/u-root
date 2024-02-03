@@ -13,7 +13,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/u-root/u-root/pkg/ubinary"
+	"github.com/josharian/native"
 )
 
 const (
@@ -87,7 +87,7 @@ func ptrToSlice(ptr uintptr, size int) []byte {
 func patch(trampolineStart uintptr, trampoline []byte, magicVal, infoAddr, entryPoint uintptr) ([]byte, error) {
 	replace := func(start uintptr, d []byte, fPC uintptr, val uint32) error {
 		buf := make([]byte, 4)
-		ubinary.NativeEndian.PutUint32(buf, val)
+		native.Endian.PutUint32(buf, val)
 
 		offset := fPC - start
 		if int(offset+4) > len(d) {

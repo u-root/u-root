@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/u-root/u-root/pkg/ubinary"
+	"github.com/josharian/native"
 	"golang.org/x/sys/unix"
 )
 
@@ -57,7 +57,7 @@ func GetAddress(addr []byte) (*FullAddress, error) {
 	r := bytes.NewBuffer(addr)
 
 	var fam uint16
-	if err := binary.Read(r, ubinary.NativeEndian, &fam); err != nil {
+	if err := binary.Read(r, native.Endian, &fam); err != nil {
 		return nil, err
 	}
 
