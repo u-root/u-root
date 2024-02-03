@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
@@ -25,6 +26,7 @@ const sfdpMaxAddress = (1 << 24) - 1
 type SPI interface {
 	Transfer(transfers []spidev.Transfer) error
 	ID() (chips.ID, error)
+	Status() (op.Status, error)
 }
 
 // Flash provides operations for SPI flash chips.
@@ -181,12 +183,30 @@ func (f *Flash) writeAt(p []byte, off int64) (int, error) {
 		// CE# is properly deasserted from the data write above,
 		// asserted for this command, and deasserted
 		// at the end.
-
 		t = append(t, spidev.Transfer{Tx: op.WriteDisable.Bytes(), DelayUSecs: 10})
 	}
 	if err := f.spi.Transfer(t); err != nil {
 		return 0, err
 	}
+	// Hang out for a bit, let the part do its thing.
+	time.Sleep(time.Duration(len(p)) * time.Microsecond)
+	var i int
+	for i = 0; i < len(p); i++ {
+		stat, err := f.spi.Status()
+		if err != nil {
+			return len(p), fmt.Errorf("spi status read fails after writing %d bytes:%w", len(p), err)
+		}
+		if !stat.Busy() {
+			break
+		}
+		time.Sleep(10 * time.Microsecond)
+	}
+
+	if i == len(p) {
+		return len(p), fmt.Errorf("spi busy after writing %d bytes", len(p))
+	}
+	// Between each check for done, sleep about 10 microseconds, to give the part
+	// a chance to catch its breath.
 	return len(p), nil
 }
 
@@ -210,10 +230,8 @@ func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 
 	// Otherwise, there are three regions:
 	// 1. A partial page before the first aligned offset. (optional)
-	// 2. All the aligned pages in the middle.
-	// 3. A partial page after the last aligned offset. (optional)
+	// 2. All the aligned pages
 	firstAlignedOff := (off + f.PageSize - 1) / f.PageSize * f.PageSize
-	lastAlignedOff := (off + int64(len(p))) / f.PageSize * f.PageSize
 
 	b := bytes.NewBuffer(p)
 	if off != firstAlignedOff {
@@ -222,16 +240,10 @@ func (f *Flash) WriteAt(p []byte, off int64) (int, error) {
 			return n, err
 		}
 	}
-	for i := firstAlignedOff; i < lastAlignedOff; i += f.PageSize {
+	for i := firstAlignedOff; b.Len() > 0; i += f.PageSize {
 		dat := b.Next(int(f.PageSize))
 		if _, err := f.writeAt(dat, i); err != nil {
 			return int(i), err
-		}
-	}
-	if off+int64(len(p)) != lastAlignedOff {
-		dat := b.Bytes()
-		if _, err := f.writeAt(dat, lastAlignedOff); err != nil {
-			return int(lastAlignedOff - off), err
 		}
 	}
 	return len(p), nil

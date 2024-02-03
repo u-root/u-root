@@ -33,6 +33,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/flash"
 	"github.com/u-root/u-root/pkg/flash/chips"
+	"github.com/u-root/u-root/pkg/flash/op"
 	"github.com/u-root/u-root/pkg/flash/sfdp"
 	"github.com/u-root/u-root/pkg/spidev"
 )
@@ -40,6 +41,7 @@ import (
 type spi interface {
 	Transfer([]spidev.Transfer) error
 	ID() (chips.ID, error)
+	Status() (op.Status, error)
 	SetSpeedHz(uint32) error
 	Close() error
 }
