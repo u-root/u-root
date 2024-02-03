@@ -21,10 +21,10 @@ import (
 	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/gobusybox/src/pkg/uflag"
 	"github.com/u-root/u-root/pkg/shlex"
-	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"github.com/u-root/uio/ulog"
 )
 
 // multiFlag is used for flags that support multiple invocations, e.g. -files

@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/ulog"
 )
 
 func TestNewPxeBooter(t *testing.T) {

@@ -21,9 +21,9 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/uflag"
-	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/builder"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"github.com/u-root/uio/ulog"
 )
 
 // These constants are used in DefaultRamfs.

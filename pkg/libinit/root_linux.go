@@ -18,8 +18,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cp"
+	"github.com/u-root/u-root/pkg/klog"
 	"github.com/u-root/u-root/pkg/kmodule"
-	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
 )
 
@@ -194,9 +194,9 @@ func Create(namespace []Creator, optional bool) {
 	for _, c := range namespace {
 		if err := c.Create(); err != nil {
 			if optional {
-				ulog.KernelLog.Printf("u-root init [optional]: warning creating %s: %v", c, err)
+				klog.KernelLog.Printf("u-root init [optional]: warning creating %s: %v", c, err)
 			} else {
-				ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
+				klog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
 			}
 		}
 	}
@@ -226,7 +226,7 @@ func SetEnv() {
 func CreateRootfs() {
 	// Mount devtmpfs, then open /dev/kmsg with Reinit.
 	Create(PreNamespace, false)
-	ulog.KernelLog.Reinit()
+	klog.KernelLog.Reinit()
 
 	Create(Namespace, false)
 

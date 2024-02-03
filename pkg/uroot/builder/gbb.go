@@ -12,8 +12,8 @@ import (
 
 	"github.com/u-root/gobusybox/src/pkg/bb"
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/initramfs"
+	"github.com/u-root/uio/ulog"
 )
 
 // Commands to skip building in bb mode.

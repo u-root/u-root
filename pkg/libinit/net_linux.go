@@ -7,14 +7,14 @@ package libinit
 import (
 	"fmt"
 
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/u-root/pkg/klog"
 	"github.com/vishvananda/netlink"
 )
 
 // NetInit is u-root network initialization.
 func linuxNetInit() {
 	if err := loopbackUp(); err != nil {
-		ulog.KernelLog.Printf("Failed to initialize loopback: %v", err)
+		klog.KernelLog.Printf("Failed to initialize loopback: %v", err)
 	}
 }
 

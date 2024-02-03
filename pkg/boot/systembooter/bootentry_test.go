@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/ulog"
 )
 
 func TestGetBooterForNetBooter(t *testing.T) {

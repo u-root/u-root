@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/ulog"
 )
 
 type creator interface {
@@ -58,9 +58,9 @@ func create(namespace []creator, optional bool) {
 	for _, c := range namespace {
 		if err := c.create(); err != nil {
 			if optional {
-				ulog.KernelLog.Printf("u-root init [optional]: warning creating %s: %v", c, err)
+				ulog.Log.Printf("u-root init [optional]: warning creating %s: %v", c, err)
 			} else {
-				ulog.KernelLog.Printf("u-root init: error creating %s: %v", c, err)
+				ulog.Log.Printf("u-root init: error creating %s: %v", c, err)
 			}
 		}
 	}

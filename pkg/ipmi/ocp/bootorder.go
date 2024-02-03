@@ -11,8 +11,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot/systembooter"
 	"github.com/u-root/u-root/pkg/ipmi"
-	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/vpd"
+	"github.com/u-root/uio/ulog"
 )
 
 const (

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package ulog
+package klog
 
 import (
 	"fmt"
 	"os"
 	"sync/atomic"
 
+	"github.com/u-root/uio/ulog"
 	"golang.org/x/sys/unix"
 )
 
@@ -58,14 +59,14 @@ func (k *KLog) writeString(s string) bool {
 // Printf formats according to a format specifier and writes to kernel logging.
 func (k *KLog) Printf(format string, v ...interface{}) {
 	if !k.writeString(fmt.Sprintf(format, v...)) {
-		Log.Printf(format, v...)
+		ulog.Log.Printf(format, v...)
 	}
 }
 
 // Print formats using the default operands for v and writes to kernel logging.
 func (k *KLog) Print(v ...interface{}) {
 	if !k.writeString(fmt.Sprint(v...)) {
-		Log.Print(v...)
+		ulog.Log.Print(v...)
 	}
 }
 
