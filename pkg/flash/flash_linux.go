@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/u-root/u-root/pkg/flash/chips"
@@ -258,11 +259,11 @@ func (f *Flash) ProgramAt(p []byte, off int64) (int, error) {
 // sectorSize.
 func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
 	if off < 0 || off > f.ArraySize || off+n > f.ArraySize {
-		return 0, io.EOF
+		return 0, fmt.Errorf("offset (%#x) is < 0, or > %#x, or off+size (%#x) is > f.ArraySize (%#x):%w", off, f.ArraySize, off+n, f.ArraySize, os.ErrInvalid)
 	}
 
 	if (off%f.SectorSize != 0) || (n%f.SectorSize != 0) {
-		return 0, fmt.Errorf("len(p) and off must be multiple of the sector size")
+		return 0, fmt.Errorf("offset (%#x) and size (%#x) must be multiple of the sector size(%#x):%w", off, n, f.SectorSize, os.ErrInvalid)
 	}
 
 	for i := int64(0); i < n; {
@@ -285,6 +286,23 @@ func (f *Flash) EraseAt(n int64, off int64) (int64, error) {
 			{Tx: append(opcode.Bytes(), f.prepareAddress(off+i)...)},
 		}); err != nil {
 			return i, err
+		}
+
+		var spin int
+		// Give it 100 tries, which is 1000 ms
+		for spin = 0; spin <= 100; spin++ {
+			time.Sleep(10 * time.Millisecond)
+			stat, err := f.spi.Status()
+			if err != nil {
+				return n, fmt.Errorf("spi status read fails after erasing %#x:%w", off+i, err)
+			}
+			if !stat.Busy() {
+				break
+			}
+		}
+
+		if spin > 101 {
+			return i, fmt.Errorf("spi busy after erasing %d bytes", i)
 		}
 
 		i += eraseSize
