@@ -13,6 +13,7 @@ import (
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/fit"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/vfile"
 )
 
@@ -34,6 +35,8 @@ func main() {
 
 	if *debug {
 		v = log.Printf
+
+		sulog.SetDebugDefault()
 	}
 
 	if len(flag.Args()) != 1 {
@@ -79,7 +82,7 @@ func main() {
 		f.KeyRing = ring
 	}
 
-	if err := f.Load(boot.WithVerbose(*debug)); err != nil {
+	if err := f.Load(); err != nil {
 		log.Fatal(err)
 	}
 

@@ -35,6 +35,7 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/sh"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/ulog"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
@@ -156,6 +157,9 @@ func main() {
 	if len(flag.Args()) > 0 {
 		ifName = flag.Args()[0]
 	}
+	if *verbose {
+		sulog.SetDebugDefault()
+	}
 
 	var images []boot.OSImage
 	var err error
@@ -183,7 +187,7 @@ func main() {
 		})
 	}
 
-	menuEntries := menu.OSImages(*verbose, images...)
+	menuEntries := menu.OSImages(images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 

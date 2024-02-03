@@ -10,49 +10,18 @@ import (
 	"fmt"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"github.com/u-root/uio/ulog"
 )
 
 // LoadOption is an optional parameter to Load.
 type LoadOption func(*loadOptions)
 
 type loadOptions struct {
-	logger        ulog.Logger
-	verbose       bool
 	callKexecLoad bool
 }
 
 func defaultLoadOptions() *loadOptions {
 	return &loadOptions{
-		logger:        ulog.Null,
-		verbose:       false,
 		callKexecLoad: true,
-	}
-}
-
-// WithLogger is a LoadOption that logs verbose debug output l.
-func WithLogger(l ulog.Logger) LoadOption {
-	return func(o *loadOptions) {
-		o.verbose = (l != nil)
-		if l == nil {
-			l = ulog.Null
-		}
-		o.logger = l
-	}
-}
-
-// Verbose is a LoadOption that logs to log.Default().
-var Verbose = WithLogger(ulog.Log)
-
-// WithVerbose enables verbose logging if verbose is set to true.
-func WithVerbose(verbose bool) LoadOption {
-	return func(o *loadOptions) {
-		o.verbose = verbose
-		if verbose {
-			o.logger = ulog.Log
-		} else {
-			o.logger = ulog.Null
-		}
 	}
 }
 

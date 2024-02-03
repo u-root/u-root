@@ -40,6 +40,7 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -67,6 +68,7 @@ func main() {
 
 	if *verbose {
 		block.Debug = log.Printf
+		sulog.SetDebugDefault()
 	}
 	blockDevs, err := block.GetBlockDevices()
 	if err != nil {
@@ -102,7 +104,7 @@ func main() {
 		}
 	}
 
-	menuEntries := menu.OSImages(*verbose, images...)
+	menuEntries := menu.OSImages(images...)
 	menuEntries = append(menuEntries, menu.Reboot{})
 	menuEntries = append(menuEntries, menu.StartShell{})
 

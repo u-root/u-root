@@ -84,6 +84,7 @@ func main() {
 	if opts.debug {
 		sulog.SetDebugDefault()
 	}
+	log.SetFlags(log.Ltime)
 
 	var kernelpath string
 	if flag.NArg() > 0 {
@@ -165,7 +166,7 @@ func main() {
 				DTB:         dtb,
 			}
 		}
-		if err := image.Load(boot.WithVerbose(opts.debug)); err != nil {
+		if err := image.Load(); err != nil {
 			log.Fatal(err)
 		}
 	}
