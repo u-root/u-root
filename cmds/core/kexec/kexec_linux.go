@@ -36,10 +36,10 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -82,8 +82,7 @@ func main() {
 	flag.Parse()
 
 	if opts.debug {
-		linux.Debug = log.Printf
-		purgatory.Debug = log.Printf
+		sulog.SetDebugDefault()
 	}
 
 	var kernelpath string

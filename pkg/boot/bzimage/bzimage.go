@@ -20,6 +20,7 @@ import (
 	"hash/crc32"
 	"io"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"reflect"
@@ -27,6 +28,7 @@ import (
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/u-root/u-root/pkg/sulog"
 )
 
 const minBootParamLen = 616
@@ -70,10 +72,6 @@ var (
 		// use 04 22 4D 18
 		{[]byte{0x02, 0x21, 0x4C, 0x18}, stripSize(unlz4)},
 	}
-
-	// Debug is a function used to log debug information. It
-	// can be set to, for example, log.Printf.
-	Debug = func(string, ...interface{}) {}
 )
 
 // This is all C to Go and it reads like it, sorry
@@ -113,7 +111,7 @@ func findDecompressor(b []byte) (decompressor, error) {
 // and ignored. Users of UnmarshalBinary must separately check the image signature,
 // if required.
 func (b *BzImage) UnmarshalBinary(d []byte) error {
-	Debug("Processing %d byte image", len(d))
+	slog.Debug("Processing bzImage", "length", sulog.HexValue(len(d)))
 
 	stripped, err := stripSignature(d)
 	if err != nil {
@@ -125,39 +123,48 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if err := binary.Read(r, binary.LittleEndian, &b.Header); err != nil {
 		return err
 	}
-	Debug("Header was %d bytes", len(d)-r.Len())
-	Debug("magic %x switch %v", b.Header.HeaderMagic, b.Header.RealModeSwitch)
+	slog.Debug("bzImage header",
+		"length", sulog.HexValue(len(d)-r.Len()),
+		"magic", sulog.HexValue(b.Header.HeaderMagic[:]),
+		"real_mode_switch", b.Header.RealModeSwitch)
+
 	if b.Header.HeaderMagic != HeaderMagic {
 		return fmt.Errorf("not a bzImage: magic should be %02x, and is %02x", HeaderMagic, b.Header.HeaderMagic)
 	}
 	if b.Header.Protocolversion < 0x0208 {
 		return fmt.Errorf("boot protocol version 0x%04x not supported, version 0x0208 or higher (Kernel 2.6.26) required", b.Header.Protocolversion)
 	}
-	Debug("RamDisk image %x size %x", b.Header.RamdiskImage, b.Header.RamdiskSize)
-	Debug("StartSys %x", b.Header.StartSys)
-	Debug("Boot type: %s(%x)", LoaderType[boottype(b.Header.TypeOfLoader)], b.Header.TypeOfLoader)
-
 	if b.Header.SetupSects == 0 {
 		// Per https://www.kernel.org/doc/html/latest/x86/boot.html?highlight=boot:
 		// "For backwards compatibility, if the setup_sects field contains 0, the real value is 4."
 		b.Header.SetupSects = 4
 	}
 
-	Debug("SetupSects %d", b.Header.SetupSects)
+	slog.Debug("bzImage header",
+		"protocol_version", sulog.HexValue(b.Header.Protocolversion),
+		"setup_sects", b.Header.SetupSects,
+		"ramdisk_addr", sulog.HexValue(b.Header.RamdiskImage),
+		"ramdisk_size", sulog.HexValue(b.Header.RamdiskSize),
+		"type_of_loader", sulog.HexValue(b.Header.TypeOfLoader),
+		"type_of_loader_str", LoaderType[boottype(b.Header.TypeOfLoader)])
 
 	off := len(d) - r.Len()
 	// Per https://www.kernel.org/doc/html/v5.4/x86/boot.html#loading-the-rest-of-the-kernel:
 	// "the 32-bit (non-real-mode) kernel starts at offset (setup_sects+1)*512 in the kernel file"
-	// The +1 is because the MBR (1 sect) is always assumed. The logic calculating this
-	// can be confirmed at: https://github.com/torvalds/linux/blob/master/arch/x86/boot/tools/build.c#L440
+	//
+	// The +1 is because the MBR (1 sect) is always assumed. The logic
+	// calculating this can be confirmed at:
+	// https://github.com/torvalds/linux/blob/master/arch/x86/boot/tools/build.c#L440
 	b.KernelOffset = (uintptr(b.Header.SetupSects) + 1) * 512
 	bclen := int(b.KernelOffset) - off
-	Debug("Kernel offset is %d bytes, low1mcode is %d bytes", b.KernelOffset, bclen)
+	slog.Debug("bzImage",
+		"kernel_offset", sulog.HexValue(b.KernelOffset),
+		"low1mcode_length", sulog.HexValue(bclen))
+
 	b.BootCode = make([]byte, bclen)
 	if _, err := r.Read(b.BootCode); err != nil {
 		return err
 	}
-	Debug("%d bytes of BootCode", len(b.BootCode))
 
 	b.HeadCode = make([]byte, b.Header.PayloadOffset)
 	if _, err := r.Read(b.HeadCode); err != nil {
@@ -172,27 +179,34 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		return err
 	}
 	if b.NoDecompress {
-		Debug("skipping code decompress")
+		slog.Debug("Skipping bzImage code decompress")
 	} else {
-		Debug("Uncompress %d bytes", len(b.compressed))
+		slog.Debug("Decompressing bzImage", "compressed_length", sulog.HexValue(len(b.compressed)))
 
-		// The Linux boot process expects that the last 4 bytes of the compressed payload will
-		// contain the size of the uncompressed payload. This works well for gzip, where the
-		// last 4 bytes of the compressed payload contain the uncompressed size. However other
-		// compression formats (bzip2, lzma, xz, lzo, lz4, zstd, etc) do not satisfy this
-		// requirement, so the Makefile tacks on an extra 4 bytes for these compression formats
-		// and expects that the decompression code will ignore them.
-		// The authoritative list of compression formats that have the 4 byte size appended
-		// can be found here: https://github.com/torvalds/linux/blob/master/arch/x86/boot/compressed/Makefile#L132-L145
-		// (look for the entries ending in "_with_size", examples: bzip2_with_size, lzma_with_size.
+		// The Linux boot process expects that the last 4 bytes of the
+		// compressed payload will contain the size of the uncompressed
+		// payload. This works well for gzip, where the last 4 bytes of
+		// the compressed payload contain the uncompressed size.
+		// However other compression formats (bzip2, lzma, xz, lzo,
+		// lz4, zstd, etc) do not satisfy this requirement, so the
+		// Makefile tacks on an extra 4 bytes for these compression
+		// formats and expects that the decompression code will ignore
+		// them.
+		//
+		// The authoritative list of compression formats that have the
+		// 4 byte size appended can be found here (look for the entries
+		// ending in "_with_size", examples: bzip2_with_size,
+		// lzma_with_size):
+		// https://github.com/torvalds/linux/blob/master/arch/x86/boot/compressed/Makefile#L132-L145
 
-		// Read the uncompressed length of the payload from the last 4 bytes of the payload.
+		// Read the uncompressed length of the payload from the last 4
+		// bytes of the payload.
 		var uncompressedLength uint32
 		last4Bytes := b.compressed[(len(b.compressed) - 4):]
 		if err := binary.Read(bytes.NewBuffer(last4Bytes), binary.LittleEndian, &uncompressedLength); err != nil {
 			return fmt.Errorf("error reading uncompressed kernel size: %w", err)
 		}
-		Debug("Original length of uncompressed kernel is: %d", uncompressedLength)
+		slog.Debug("Uncompressed kernel", "length", sulog.HexValue(uncompressedLength))
 
 		// Use the decompressor and write the decompressed payload into b.KernelCode.
 		var buf bytes.Buffer
@@ -212,14 +226,15 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 			return fmt.Errorf("decompressed payload must be an ELF with magic 0x%08x, found 0x%08x", elfMagic, b.KernelCode[0:4])
 		}
 
-		Debug("Kernel at %d, %d bytes", b.KernelOffset, len(b.KernelCode))
-		Debug("KernelCode size: %d", len(b.KernelCode))
+		slog.Debug("Uncompressed kernel code",
+			"offset", sulog.HexValue(b.KernelOffset),
+			"length", sulog.HexValue(len(b.KernelCode)))
 	}
 
 	if err := binary.Read(r, binary.LittleEndian, &b.CRC32); err != nil {
 		return fmt.Errorf("error reading CRC: %w", err)
 	}
-	Debug("CRC read from image is: 0x%08x", b.CRC32)
+	slog.Debug("bzImage CRC32", "crc", sulog.HexValue(b.CRC32))
 
 	b.TailCode = make([]byte, r.Len()) // Read all remaining bytes.
 	if _, err := r.Read(b.TailCode); err != nil {
@@ -244,7 +259,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	// in units of 16-byte paragraphs." per https://www.kernel.org/doc/html/v5.4/x86/boot.html
 	// This can be confirmed in code at: https://github.com/torvalds/linux/blob/master/arch/x86/boot/tools/build.c#L429-L430
 	generatedCRC := crc32.ChecksumIEEE(d[0:uint32(b.KernelOffset)+uint32(b.Header.Syssize)*16]) ^ (0xffffffff)
-	Debug("Generated CRC is: 0x%08x", generatedCRC)
+	slog.Debug("Generated CRC", "crc", sulog.HexValue(generatedCRC))
 
 	if generatedCRC != 0 {
 		return fmt.Errorf("generated CRC (0x%08x) does not match", generatedCRC)
@@ -310,19 +325,19 @@ func stripSignature(image []byte) ([]byte, error) {
 		return d, nil
 	}
 
-	Debug("Found a PE image")
+	slog.Debug("Found a PE image")
 
 	// TODO: Consider performing PE checksum and signature verification.
 	// This is non trivial because we must decide what roots to trust, etc.
 	// Existing code at https://github.com/saferwall/pe might be helpful in this process.
 
 	optionalHeaderOffset := peMagicOffset + unsafe.Offsetof(peImage.OptionalHeader)
-	Debug("Optional header offset: 0x%x", optionalHeaderOffset)
+	slog.Debug("PE optional header offset", "offset", sulog.HexValue(optionalHeaderOffset))
 
 	// Zero out the PE Checksum.
 	checksumOffset := uintptr(64)
 	if checksumOffset+4 < uintptr(peImage.COFFHeader.SizeOfOptionalHeader) {
-		Debug("Clearing checksum")
+		slog.Debug("Clearing checksum")
 		binary.LittleEndian.PutUint32(d[optionalHeaderOffset+checksumOffset:], 0)
 	}
 
@@ -332,10 +347,10 @@ func stripSignature(image []byte) ([]byte, error) {
 	// PE32 or P32+ (https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#optional-header-data-directories-image-only)
 	switch peImage.OptionalHeader.Magic {
 	case 0x10B: // PE32
-		Debug("Found PE32 image")
+		slog.Debug("Found PE32 image")
 		certificateTableOffset = 128
 	case 0x20B: // PES32+
-		Debug("Found PE32+ image")
+		slog.Debug("Found PE32+ image")
 		certificateTableOffset = 144
 	default:
 		return nil, fmt.Errorf("unknown Magic type: 0x%x", peImage.OptionalHeader.Magic)
@@ -346,7 +361,7 @@ func stripSignature(image []byte) ([]byte, error) {
 			log.Printf("WARNING! The image is signed but the signature is being ignored.")
 		}
 
-		Debug("Clearing Certificate Table")
+		slog.Debug("Clearing Certificate Table")
 		binary.LittleEndian.PutUint64(d[certificateTableAddress:], 0)
 	}
 
@@ -370,7 +385,7 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 	if len(dat) > len(b.compressed) {
 		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d", len(b.compressed), len(dat))
 	}
-	Debug("b.compressed len %#x dat len %#x pad it out", len(b.compressed), len(dat))
+	slog.Debug(fmt.Sprintf("b.compressed len %#x dat len %#x pad it out", len(b.compressed), len(dat)))
 
 	if len(dat) < len(b.compressed) {
 		// If the new compressed payload fits in the existing compressed payload space then we
@@ -400,15 +415,15 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 	if err := binary.Write(&w, binary.LittleEndian, &b.Header); err != nil {
 		return nil, err
 	}
-	Debug("Wrote %d bytes of header", w.Len())
+	slog.Debug("Wrote header", "length", w.Len())
 	if _, err := w.Write(b.BootCode); err != nil {
 		return nil, err
 	}
-	Debug("Wrote %d bytes of BootCode", w.Len())
+	slog.Debug("Wrote BootCode", "length", w.Len())
 	if _, err := w.Write(b.HeadCode); err != nil {
 		return nil, err
 	}
-	Debug("Wrote %d bytes of HeadCode", w.Len())
+	slog.Debug("Wrote HeadCode", "length", w.Len())
 	if _, err := w.Write(b.compressed); err != nil {
 		return nil, err
 	}
@@ -422,19 +437,19 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		}
 	}
 
-	Debug("Wrote %d bytes of header", w.Len())
+	slog.Debug("Wrote header", "length", w.Len())
 	generatedCRC := crc32.ChecksumIEEE(w.Bytes()) ^ (0xffffffff)
 	if err := binary.Write(&w, binary.LittleEndian, generatedCRC); err != nil {
 		return nil, err
 	}
-	Debug("Finished writing, len is now %d bytes", w.Len())
+	slog.Debug("Finished writing bzImage", "length", w.Len())
 
 	return w.Bytes(), nil
 }
 
 // compress compresses a []byte via xz using the dictOps, collecting it from stdout
 func compress(b []byte, dictOps string) ([]byte, error) {
-	Debug("b is %d bytes", len(b))
+	slog.Debug("Compressing", "length", len(b))
 	// TODO: Replace this use of `exec` with a proper Go package.
 	c := exec.Command("xz", "--check=crc32", "--x86", dictOps, "--stdout")
 	stdout, err := c.StdoutPipe()
@@ -453,18 +468,24 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 	if err := c.Wait(); err != nil {
 		return nil, err
 	}
-	Debug("Compressed data is %d bytes, starts with %#02x", len(dat), dat[:32])
-	Debug("Last 16 bytes: %#02x", dat[len(dat)-16:])
+	slog.Debug("Compressed data",
+		"length", len(dat),
+		"begins_with", sulog.HexValue(dat[:32]),
+		"ends_with", sulog.HexValue(dat[len(dat)-16:]))
 
 	// Append the original, uncompressed size of the payload.
-	// HEAR YE, HEAR YE: The uncompressed size of the payload is appended to the payload because
-	// the Linux boot process expects that the last 4 bytes of teh payload will contain the
-	// uncompressed size. This appending is only required if the compression format does not
-	// already satisfy this requirement. If this function is changed to use GZIP compression in
-	// the future then this code is not required. This code is required for compression formats
-	// such as bzip lzma xz lzo lz4 and zstd. See https://github.com/torvalds/linux/blob/master/arch/x86/boot/compressed/Makefile#L132-L145
-	// for an authoritative list of which file formats require the extra 4 bytes appended (look for
-	// "_with_size").
+	//
+	// HEAR YE, HEAR YE: The uncompressed size of the payload is appended
+	// to the payload because the Linux boot process expects that the last
+	// 4 bytes of teh payload will contain the uncompressed size. This
+	// appending is only required if the compression format does not
+	// already satisfy this requirement. If this function is changed to use
+	// GZIP compression in the future then this code is not required. This
+	// code is required for compression formats such as bzip lzma xz lzo
+	// lz4 and zstd. See
+	// https://github.com/torvalds/linux/blob/master/arch/x86/boot/compressed/Makefile#L132-L145
+	// for an authoritative list of which file formats require the extra 4
+	// bytes appended (look for "_with_size").
 	buf := bytes.NewBuffer(dat)
 	if binary.Write(buf, binary.LittleEndian, uint32(len(b))); err != nil {
 		return nil, fmt.Errorf("failed to append the uncompressed size: %w", err)
@@ -474,11 +495,10 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 
 // ELF extracts the KernelCode.
 func (b *BzImage) ELF() (*elf.File, error) {
-	Debug("getting ELF...")
 	if b.NoDecompress || b.KernelCode == nil {
 		return nil, ErrKCodeMissing
 	}
-	Debug("creating a elf NewFile...")
+	slog.Debug("Parsing bzImage ELF...")
 	e, err := elf.NewFile(bytes.NewReader(b.KernelCode))
 	if err != nil {
 		return nil, err
@@ -547,9 +567,9 @@ func (b *BzImage) AddInitRAMFS(name string) error {
 	// What's interesting: the kernel decompressor, if I read it right,
 	// finds it easier to skip a bunch of leading nulls. So do that.
 	n := make([]byte, l)
-	Debug("Offset into n is %d\n", len(n)-len(d))
+	slog.Debug(fmt.Sprintf("Offset into n is %d\n", len(n)-len(d)))
 	copy(n[len(n)-len(d):], d)
-	Debug("Install %d byte initramfs in %d bytes of kernel code, @ %d:%d", len(d), len(n), s, e)
+	slog.Debug(fmt.Sprintf("Install %d byte initramfs in %d bytes of kernel code, @ %d:%d", len(d), len(n), s, e))
 	copy(b.KernelCode[s:e], n)
 	return nil
 }
@@ -699,44 +719,47 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 	}
 	var cur int
 	for cur < len(dat) {
-		x := bytes.Index(dat, []byte("070701"))
-		if x == -1 {
+		idx := bytes.Index(dat, []byte("070701"))
+		if idx == -1 {
 			return -1, -1, fmt.Errorf("no newc cpio magic found")
 		}
 		if err != nil {
 			return -1, -1, err
 		}
-		cur = x
+		cur = idx
 		r := bytes.NewReader(dat[cur:])
 		rr := archiver.Reader(r)
-		Debug("r.Len is %v", r.Len())
+		slog.Debug("Finding initramfs", "remaining_prog_length", r.Len())
 		var found bool
 		var size int
 		for {
 			rec, err := rr.ReadRecord()
-			Debug("Check %v", rec)
+			slog.Debug("Finding initramfs", "record", rec)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				Debug("error reading records: %v", err)
+				slog.Debug("Error reading records", "err", err)
 				break
 			}
 			switch rec.Name {
+			// TODO(chrisko): shouldn't we be looking for TRAILER!!!? Exists in every cpio?
+			// And shows the end of the cpio?
 			case "init", "dev", "bin", "usr":
-				Debug("Found initramfs at %d, %d bytes", cur, len(dat)-r.Len())
+				slog.Debug("Found initramfs", "offset", cur, "length", len(dat)-r.Len())
 				found = true
 			}
+			// TODO(chrisko): this seems wrong.
 			size = int(rec.FilePos) + int(rec.FileSize)
 		}
-		Debug("Size is %d", size)
+		slog.Debug(fmt.Sprintf("Size is %d", size))
 		// Add the trailer size.
-		y := x + size
+		y := idx + size
 		if found {
 			// The slice consists of the bytes for cur to the length of initramfs.
 			// We can derive the initramfs length by knowing how much is left of the reader.
-			Debug("Return %d %#x slice %d:%d from %d byte dat", len(dat[x:y]), len(dat[x:y]), cur, y, len(dat))
-			x += int(prog.Off)
+			slog.Debug(fmt.Sprintf("Return %d %#x slice %d:%dfrom %d byte dat", len(dat[idx:y]), len(dat[idx:y]), cur, y, len(dat)))
+			idx += int(prog.Off)
 			y += int(prog.Off)
 			// We need to round y up to the end of the record. We have to do this after we
 			// add the prog.Off value to it.
@@ -745,8 +768,8 @@ func (b *BzImage) InitRAMFS() (int, int, error) {
 			y += 120
 			y += 4 // and add at least one word of null
 			y = (y + 3) &^ 3
-			Debug("InitRAMFS: return %d, %d", x, y)
-			return x, y, nil
+			slog.Debug(fmt.Sprintf("InitRAMFS: return %d, %d", idx, y))
+			return idx, y, nil
 		}
 		cur += 6
 	}

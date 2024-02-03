@@ -171,7 +171,7 @@ func (bc *BootConfig) Boot() error {
 			}
 		}()
 		// Decompress Kernel (if compressed)
-		kernelRaw, err := boot.CopyToFileIfNotRegular(util.TryGzipFilter(kernel), true)
+		kernelRaw, err := boot.CopyToFileIfNotRegular(util.TryGzipFilter(kernel))
 		if err != nil {
 			return err
 		}

@@ -19,7 +19,6 @@ import (
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/uio/ulog/ulogtest"
 	"golang.org/x/sys/unix"
 )
 
@@ -117,7 +116,7 @@ func TestCopyToFile(t *testing.T) {
 	want := "abcdefg hijklmnop"
 	buf := bytes.NewReader([]byte(want))
 
-	f, err := CopyToFileIfNotRegular(buf, true)
+	f, err := CopyToFileIfNotRegular(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +250,7 @@ func TestLoadLinuxImage(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			gotKernel, gotInitrd, err := tt.li.loadImage(&loadOptions{logger: ulogtest.Logger{t}, verbose: true})
+			gotKernel, gotInitrd, err := tt.li.loadImage()
 			if !errors.Is(err, tt.err) {
 				t.Errorf("got error %v, want %v", err, tt.err)
 			} else if err != nil {

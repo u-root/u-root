@@ -97,8 +97,6 @@ func trampoline(kernelEntry, dtbBase uint64) []byte {
 }
 
 func TestKexecLoadImage(t *testing.T) {
-	Debug = t.Logf
-
 	for _, tt := range []struct {
 		name string
 

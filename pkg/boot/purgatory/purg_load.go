@@ -31,20 +31,16 @@ import (
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"golang.org/x/exp/constraints"
 )
 
 const defaultPurgatory = "default"
 
 var (
-	// Debug is called to print out verbose debug info.
-	//
-	// Set this to appropriate output stream for display
-	// of useful debug info.
-	Debug        = log.Printf // func(string, ...interface{}) {}
 	curPurgatory = Purgatories[defaultPurgatory]
 )
 
@@ -63,6 +59,14 @@ func Select(name string) error {
 	return nil
 }
 
+type hexable interface {
+	constraints.Integer | []byte
+}
+
+func hexValue[T hexable](value T) slog.Value {
+	return slog.StringValue(fmt.Sprintf("%#x", value))
+}
+
 // Load loads the selected purgatory into kmem, instructing it to jump to entry
 // with RSI set to rsi.
 func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
@@ -71,11 +75,18 @@ func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 		return 0, fmt.Errorf("parse purgatory ELF file from ELF buffer: %v", err)
 	}
 
-	log.Printf("Elf file: %#v, %d Progs", elfFile, len(elfFile.Progs))
+	slog.Debug("Purgatory ELF",
+		"entry", hexValue(elfFile.Entry),
+		"rsi", hexValue(rsi),
+		"num_progs", len(elfFile.Progs),
+		"num_sections", len(elfFile.Sections))
 	if len(elfFile.Progs) != 1 {
 		return 0, fmt.Errorf("parse purgatory ELF file: can only handle one Prog, not %d", len(elfFile.Progs))
 	}
 	p := elfFile.Progs[0]
+	slog.Debug("Loading ELF prog",
+		"memsz", hexValue(p.Memsz),
+		"vaddr", hexValue(p.Vaddr))
 
 	// the package really wants things page-sized, and rather than
 	// deal with all the bugs that arise from that, just keep it happy.
@@ -99,5 +110,6 @@ func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 		return 0, fmt.Errorf("purgatory: reserve phys ram of size %d between range(%d, %d): %v", len(b), min, max, err)
 	}
 	kmem.Segments.Insert(kexec.NewSegment(b, phyRange))
+	slog.Debug("Added purgatory segment", "segment", phyRange)
 	return elfEntry, nil
 }

@@ -10,6 +10,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log/slog"
 	"os/exec"
 
 	"github.com/klauspost/compress/zstd"
@@ -27,7 +28,7 @@ func stripSize(d decompressor) decompressor {
 			return fmt.Errorf("error reading all bytes: %w", err)
 		}
 		strippedLen := int64(len(allBytes) - 4)
-		Debug("Stripped reader is of length %d bytes", strippedLen)
+		slog.Debug("Stripped reader", "length", strippedLen)
 
 		reader := bytes.NewReader(allBytes)
 		return d(w, io.LimitReader(reader, strippedLen))

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/bzimage"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
@@ -63,7 +64,7 @@ var (
 
 func run(w io.Writer, args ...string) error {
 	if *debug {
-		bzimage.Debug = log.Printf
+		sulog.SetDebugDefault()
 	}
 	if len(args) < 2 {
 		flag.Usage()
@@ -125,7 +126,7 @@ func run(w io.Writer, args ...string) error {
 	case "dump":
 		fmt.Fprintf(w, "%s\n", strings.Join(br.Header.Show(), "\n"))
 	case "extract":
-		bzimage.Debug = log.Printf
+		sulog.SetDebugDefault()
 		var i []byte
 		s, e, err := br.InitRAMFS()
 		if err != nil {

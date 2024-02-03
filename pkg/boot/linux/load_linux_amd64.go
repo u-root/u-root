@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/bzimage"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
+	"github.com/u-root/u-root/pkg/sulog"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -26,8 +28,6 @@ const (
 //
 // It uses the kexec_load system call.
 func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
-	bzimage.Debug = Debug
-
 	// A collection of vars used for processing the kernel for kexec
 	var err error
 	// bzimage is the deserialized bzImage from the kernel
@@ -69,16 +69,17 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 		return fmt.Errorf("getting ELF from bzImage: %w", err)
 	}
 	kernelEntry := uintptr(kelf.Entry)
-	Debug("kernelEntry: %v", kernelEntry)
+	slog.Debug("Kernel entry point", "entry", sulog.HexValue(kernelEntry))
 
 	// Prepare segments.
-	Debug("Try parsing memory map...")
+	slog.Debug("Parsing memory map...")
 	// TODO(10000TB): refactor this call into initialization of
 	// kexec.Memory, as it does not depend on specific boot.
 	mm, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
 		return fmt.Errorf("parse memory map: %v", err)
 	}
+	slog.Debug(fmt.Sprintf("Memory map:\n%s", mm))
 	kmem = &kexec.Memory{
 		Phys: mm,
 	}
@@ -106,29 +107,32 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 		}
 		defer func() {
 			if err := cleanup(); err != nil {
-				Debug("Failed to clean up initramfs: %v", err)
+				slog.Debug("Failed to clean up initramfs", "err", err)
 			}
 		}()
 
 		if ramfsRange, err = kmem.AddKexecSegment(ramfsContents); err != nil {
 			return fmt.Errorf("add initramfs segment: %w", err)
 		}
-		Debug("Added %d byte initramfs at %s", len(ramfsContents), ramfsRange)
+		slog.Debug("Added initramfs segment",
+			"segment", ramfsRange,
+			"initramfs_length", sulog.HexValue(len(ramfsContents)))
 		lp.Initrdstart = uint32(ramfsRange.Start)
 		lp.Initrdsize = uint32(ramfsRange.Size)
 	}
 
-	Debug("Kernel cmdline to append: %s", cmdline)
+	slog.Debug("Appending kernel cmdline", "cmdline", cmdline)
 	if len(cmdline) > 0 {
 		var cmdlineRange kexec.Range
-		Debug("Add cmdline: %s", cmdline)
 
 		// Cmdline must be null-terminated.
 		cmdlineBytes := []byte(cmdline + "\x00")
 		if cmdlineRange, err = kmem.AddKexecSegment(cmdlineBytes); err != nil {
 			return fmt.Errorf("add cmdline segment: %v", err)
 		}
-		Debug("Added %d byte of cmdline at %s", len(cmdlineBytes), cmdlineRange)
+		slog.Debug("Added cmdline segment",
+			"segment", cmdlineRange,
+			"cmdline_length", sulog.HexValue(len(cmdlineBytes)))
 		lp.CLPtr = uint32(cmdlineRange.Start)      // 2.02+
 		lp.CmdLineSize = uint32(cmdlineRange.Size) // 2.06+
 	}
@@ -166,7 +170,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 		return fmt.Errorf("add real mode data and cmdline: %v", err)
 	}
 
-	Debug("Loaded real mode data and cmdline at: %v", setupRange)
+	slog.Debug("Added setup segment", "segment", setupRange)
 
 	// Verify purgatory loads higher than the parameters.
 	// TODO(10000TB): if rel_addr < setupRange.Start then return error.
@@ -176,7 +180,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 	if err != nil {
 		return err
 	}
-	Debug("purgatory entry: %v", purgatoryEntry)
+	slog.Debug("Purgatory entry point", "entry", sulog.HexValue(purgatoryEntry))
 
 	// Load it.
 	if err := kexec.Load(purgatoryEntry, kmem.Segments, 0); err != nil {

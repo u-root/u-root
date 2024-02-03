@@ -46,8 +46,6 @@ func mustReadFile(t *testing.T, path string) []byte {
 }
 
 func TestUnmarshal(t *testing.T) {
-	Debug = t.Logf
-
 	compressedTests := []testImage{
 		// These test files have been created using .circleci/images/test-image-amd6/config_linux5.10_x86_64.txt
 		{name: "bzip2", path: "testdata/bzImage-linux5.10-x86_64-bzip2", crc32: 1083155033},
@@ -92,8 +90,6 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestSupportedVersions(t *testing.T) {
-	Debug = t.Logf
-
 	tests := []struct {
 		version uint16
 		wantErr bool
@@ -144,7 +140,6 @@ func TestSupportedVersions(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
 			image := mustReadFile(t, tc.path)
@@ -213,7 +208,6 @@ func TestMarshal(t *testing.T) {
 
 func TestBadMagic(t *testing.T) {
 	var b BzImage
-	Debug = t.Logf
 	if err := b.UnmarshalBinary(badmagic); err == nil {
 		t.Fatal("Want err, got nil")
 	}
@@ -221,7 +215,6 @@ func TestBadMagic(t *testing.T) {
 
 func TestAddInitRAMFS(t *testing.T) {
 	t.Logf("TestAddInitRAMFS")
-	Debug = t.Logf
 	initramfsimage := mustReadFile(t, "testdata/bzimage-64kurandominitramfs")
 	var b BzImage
 	if err := b.UnmarshalBinary(initramfsimage); err != nil {
@@ -273,7 +266,6 @@ func TestAddInitRAMFS(t *testing.T) {
 }
 
 func TestHeaderString(t *testing.T) {
-	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
 			initramfsimage := mustReadFile(t, tc.path)
@@ -287,7 +279,6 @@ func TestHeaderString(t *testing.T) {
 }
 
 func TestExtract(t *testing.T) {
-	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
 			initramfsimage := mustReadFile(t, tc.path)
@@ -310,7 +301,6 @@ func TestExtract(t *testing.T) {
 }
 
 func TestELF(t *testing.T) {
-	Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {
 			initramfsimage := mustReadFile(t, tc.path)
@@ -329,7 +319,6 @@ func TestELF(t *testing.T) {
 }
 
 func TestInitRAMFS(t *testing.T) {
-	Debug = t.Logf
 	cpio.Debug = t.Logf
 	for _, tc := range testImages {
 		t.Run(tc.name, func(t *testing.T) {

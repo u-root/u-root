@@ -5,9 +5,11 @@
 package boot
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -121,7 +123,7 @@ func isTmpfsReadOnlyFile(f *os.File) bool {
 // execve) if anything has the file opened for writing. That's unfortunately
 // something we can't guarantee here - unless we make a copy of the file
 // and dump it somewhere.
-func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
+func CopyToFileIfNotRegular(r io.ReaderAt) (*os.File, error) {
 	// If source is a regular file in tmpfs, simply re-use that than copy.
 	//
 	// The assumption (bad?) is original local file was opened as a type
@@ -148,7 +150,7 @@ func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 
 	rdr := uio.Reader(r)
 
-	if verbose {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		// In verbose mode, print a dot every 5MiB. It is not pretty,
 		// but it at least proves the files are still downloading.
 		progress := func(r io.Reader) io.Reader {
@@ -186,12 +188,12 @@ func (li *LinuxImage) Edit(f func(cmdline string) string) {
 	li.Cmdline = f(li.Cmdline)
 }
 
-func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, error) {
+func (li *LinuxImage) loadImage() (*os.File, *os.File, error) {
 	if li.Kernel == nil {
 		return nil, nil, errNilKernel
 	}
 
-	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), loadOpts.verbose)
+	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -207,7 +209,7 @@ func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, erro
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = CopyToFileIfNotRegular(li.Initrd, loadOpts.verbose)
+		i, err = CopyToFileIfNotRegular(li.Initrd)
 		if err != nil {
 			k.Close()
 			return nil, nil, err
@@ -223,7 +225,7 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		opt(loadOpts)
 	}
 
-	k, i, err := li.loadImage(loadOpts)
+	k, i, err := li.loadImage()
 	if err != nil {
 		return err
 	}
@@ -232,12 +234,14 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		defer i.Close()
 	}
 
-	loadOpts.logger.Printf("Kernel: %s", k.Name())
+	slog.Debug("Loading", "kernel", k.Name())
 	if i != nil {
-		loadOpts.logger.Printf("Initrd: %s", i.Name())
+		slog.Debug("Loading", "initrd", i.Name())
 	}
-	loadOpts.logger.Printf("Command line: %s", li.Cmdline)
-	loadOpts.logger.Printf("DTB: %#v", li.DTB)
+	slog.Debug("Loading with", "cmdline", li.Cmdline)
+	if li.DTB != nil {
+		slog.Debug("Loading with", "DTB", stringer(li.DTB))
+	}
 
 	if !loadOpts.callKexecLoad {
 		return nil

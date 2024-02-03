@@ -6,15 +6,18 @@ package linux
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/image"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
+	"github.com/u-root/u-root/pkg/sulog"
 )
 
 type kimage struct {
@@ -26,7 +29,7 @@ type kimage struct {
 func (k kimage) clean() {
 	for _, c := range k.cleanup {
 		if err := c(); err != nil {
-			Debug("Failure: %v", err)
+			slog.Error("Failure cleaning up", "err", err)
 		}
 	}
 }
@@ -57,15 +60,15 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) (*k
 	if err != nil {
 		return nil, fmt.Errorf("loadFDT(%s) = %v", dtb, err)
 	}
-	Debug("Loaded FDT: %s", fdt)
+	slog.Log(context.Background(), slog.LevelDebug-1, fmt.Sprintf("Parsed FDT %v", fdt))
 
 	// Prepare segments.
-	Debug("Try parsing memory map...")
+	slog.Debug("Try parsing memory map...")
 	mm, err := kexec.MemoryMapFromFDT(fdt)
 	if err != nil {
 		return nil, fmt.Errorf("MemoryMapFromFDT(%v): %v", fdt, err)
 	}
-	Debug("Mem map: \n%+v", mm)
+	slog.Debug(fmt.Sprintf("Memory map:\n%s", mm))
 	return kexecLoadImageMM(mm, kernel, ramfs, fdt, cmdline)
 }
 
@@ -113,13 +116,18 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		return nil, fmt.Errorf("%w: %w", errKernelSegmentFailed, err)
 	}
 
-	Debug("Added %#x byte (size %#x) kernel at %s with offset %#x with alignment %#x", len(kernelBuf), kImage.Header.ImageSize, kernelRange, kImage.Header.TextOffset, kernelAlignSize)
+	slog.Debug("Added kernel segment",
+		"segment", kernelRange,
+		"kernel_length", sulog.HexValue(len(kernelBuf)),
+		"image_size", sulog.HexValue(kImage.Header.ImageSize),
+		"text_offset", sulog.HexValue(kImage.Header.TextOffset),
+		"alignment", sulog.HexValue(kernelAlignSize))
 
 	chosen, err := sanitizeFDT(fdt)
 	if err != nil {
 		return nil, fmt.Errorf("sanitizeFDT(%v) = %w", fdt, err)
 	}
-	Debug("FDT after sanitization: %s", fdt)
+	slog.Log(context.Background(), slog.LevelDebug-1, fmt.Sprintf("FDT after sanitization: %v", fdt))
 
 	if ramfs != nil {
 		ramfsBuf, cleanup, err := getFile(ramfs)
@@ -138,7 +146,9 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", errInitramfsSegmentFailed, err)
 		}
-		Debug("Added %d byte initramfs at %s", len(ramfsBuf), ramfsRange)
+		slog.Debug("Added initramfs segment",
+			"segment", ramfsRange,
+			"initramfs_size", sulog.HexValue(len(ramfsBuf)))
 
 		ramfsStart := make([]byte, 8)
 		binary.BigEndian.PutUint64(ramfsStart, uint64(ramfsRange.Start))
@@ -148,7 +158,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		chosen.UpdateProperty("linux,initrd-end", ramfsEnd)
 	}
 
-	Debug("Kernel cmdline to append: %s", cmdline)
+	slog.Debug("Appending", "cmdline", cmdline)
 	if len(cmdline) > 0 {
 		cmdlineBuf := append([]byte(cmdline), byte(0))
 		chosen.UpdateProperty("bootargs", cmdlineBuf)
@@ -165,7 +175,9 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errDTBSegmentFailed, err)
 	}
-	Debug("Added %d byte device tree at %s", len(dtbBuf), dtbRange)
+	slog.Debug("Added FDT segment",
+		"segment", dtbRange,
+		"dtb_size", sulog.HexValue(len(dtbBuf)))
 
 	// Trampoline.
 	//
@@ -200,16 +212,20 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 	if err := binary.Write(&trampolineBuffer, binary.LittleEndian, trampoline); err != nil {
 		return nil, fmt.Errorf("make trampoline: %v", err)
 	}
-	Debug("trampoline bytes %x", trampolineBuffer.Bytes())
-	trampolineRange, err := kmem.AddKexecSegment(trampolineBuffer.Bytes())
+
+	t := trampolineBuffer.Bytes()
+	slog.Debug("Generated trampoline", "trampoline", sulog.HexValue(t))
+	trampolineRange, err := kmem.AddKexecSegment(t)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errTrampolineSegmentFailed, err)
 	}
-	Debug("Added %d byte trampoline at %s", len(trampolineBuffer.Bytes()), trampolineRange)
+	slog.Debug("Added trampoline segment",
+		"segment", trampolineRange,
+		"trampoline_length", sulog.HexValue(len(t)))
 
 	/* Load it */
 	img.entry = trampolineRange.Start
 	img.segments = kmem.Segments
-	Debug("Entry: %#x", img.entry)
+	slog.Debug("Entry point", "entry", sulog.HexValue(img.entry))
 	return img, nil
 }
