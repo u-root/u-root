@@ -15,7 +15,8 @@ import (
 // TPMDevice is defined in DSP0134 7.44.
 type TPMDevice struct {
 	Table
-	VendorID         TPMDeviceVendorID        `smbios:"-,skip=4"` // 04h
+
+	VendorID         TPMDeviceVendorID        // 04h
 	MajorSpecVersion uint8                    // 08h
 	MinorSpecVersion uint8                    // 09h
 	FirmwareVersion1 uint32                   // 0Ah
@@ -41,8 +42,6 @@ func newTPMDevice(parseFn parseStructure, t *Table) (*TPMDevice, error) {
 	if _, err := parseFn(t, 0 /* off */, false /* complete */, di); err != nil {
 		return nil, err
 	}
-	vid, _ := di.GetBytesAt(4, 4)
-	copy(di.VendorID[:], vid)
 	return di, nil
 }
 
@@ -72,6 +71,16 @@ func (di *TPMDevice) String() string {
 
 // TPMDeviceVendorID is defined in TCG Vendor ID Registry.
 type TPMDeviceVendorID [4]byte
+
+// ParseField parses TPMDeviceVendorID within a table.
+func (vid *TPMDeviceVendorID) ParseField(t *Table, off int) (int, error) {
+	v, err := t.GetBytesAt(off, 4)
+	if err != nil {
+		return off, err
+	}
+	copy(vid[:], v)
+	return off + 4, nil
+}
 
 func (vid TPMDeviceVendorID) String() string {
 	// DSP0134 specifies Vendor ID field as 4 BYTEs, not a DWORD, and gives an example value.
