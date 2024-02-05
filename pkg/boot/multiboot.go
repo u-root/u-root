@@ -48,16 +48,16 @@ func (mi *MultibootImage) Edit(f func(cmdline string) string) {
 
 // Load implements OSImage.Load.
 func (mi *MultibootImage) Load(opts ...LoadOption) error {
-	loadOpts := defaultLoadOptions()
+	loadOpts := DefaultLoadOptions()
 	for _, opt := range opts {
 		opt(loadOpts)
 	}
 
-	entryPoint, segments, err := multiboot.PrepareLoad(loadOpts.verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
+	entryPoint, segments, err := multiboot.PrepareLoad(loadOpts.Verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
 	if err != nil {
 		return err
 	}
-	if !loadOpts.callKexecLoad {
+	if !loadOpts.CallKexecLoad {
 		return nil
 	}
 	if err := kexec.Load(entryPoint, segments, 0); err != nil {

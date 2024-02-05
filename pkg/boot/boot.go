@@ -14,30 +14,30 @@ import (
 )
 
 // LoadOption is an optional parameter to Load.
-type LoadOption func(*loadOptions)
+type LoadOption func(*LoadOptions)
 
-type loadOptions struct {
-	logger        ulog.Logger
-	verbose       bool
-	callKexecLoad bool
+type LoadOptions struct {
+	Logger        ulog.Logger
+	Verbose       bool
+	CallKexecLoad bool
 }
 
-func defaultLoadOptions() *loadOptions {
-	return &loadOptions{
-		logger:        ulog.Null,
-		verbose:       false,
-		callKexecLoad: true,
+func DefaultLoadOptions() *LoadOptions {
+	return &LoadOptions{
+		Logger:        ulog.Null,
+		Verbose:       false,
+		CallKexecLoad: true,
 	}
 }
 
 // WithLogger is a LoadOption that logs verbose debug output l.
 func WithLogger(l ulog.Logger) LoadOption {
-	return func(o *loadOptions) {
-		o.verbose = (l != nil)
+	return func(o *LoadOptions) {
+		o.Verbose = (l != nil)
 		if l == nil {
 			l = ulog.Null
 		}
-		o.logger = l
+		o.Logger = l
 	}
 }
 
@@ -46,20 +46,20 @@ var Verbose = WithLogger(ulog.Log)
 
 // WithVerbose enables verbose logging if verbose is set to true.
 func WithVerbose(verbose bool) LoadOption {
-	return func(o *loadOptions) {
-		o.verbose = verbose
+	return func(o *LoadOptions) {
+		o.Verbose = verbose
 		if verbose {
-			o.logger = ulog.Log
+			o.Logger = ulog.Log
 		} else {
-			o.logger = ulog.Null
+			o.Logger = ulog.Null
 		}
 	}
 }
 
 // WithDryRun is a LoadOption that makes sure no kexec_load syscall is called during Load.
 func WithDryRun(dryRun bool) LoadOption {
-	return func(o *loadOptions) {
-		o.callKexecLoad = !dryRun
+	return func(o *LoadOptions) {
+		o.CallKexecLoad = !dryRun
 	}
 }
 

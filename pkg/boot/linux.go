@@ -186,12 +186,12 @@ func (li *LinuxImage) Edit(f func(cmdline string) string) {
 	li.Cmdline = f(li.Cmdline)
 }
 
-func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, error) {
+func (li *LinuxImage) loadImage(loadOpts *LoadOptions) (*os.File, *os.File, error) {
 	if li.Kernel == nil {
 		return nil, nil, errNilKernel
 	}
 
-	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), loadOpts.verbose)
+	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), loadOpts.Verbose)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -207,7 +207,7 @@ func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, erro
 
 	var i *os.File
 	if li.Initrd != nil {
-		i, err = CopyToFileIfNotRegular(li.Initrd, loadOpts.verbose)
+		i, err = CopyToFileIfNotRegular(li.Initrd, loadOpts.Verbose)
 		if err != nil {
 			k.Close()
 			return nil, nil, err
@@ -218,7 +218,7 @@ func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, erro
 
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
 func (li *LinuxImage) Load(opts ...LoadOption) error {
-	loadOpts := defaultLoadOptions()
+	loadOpts := DefaultLoadOptions()
 	for _, opt := range opts {
 		opt(loadOpts)
 	}
@@ -232,14 +232,14 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		defer i.Close()
 	}
 
-	loadOpts.logger.Printf("Kernel: %s", k.Name())
+	loadOpts.Logger.Printf("Kernel: %s", k.Name())
 	if i != nil {
-		loadOpts.logger.Printf("Initrd: %s", i.Name())
+		loadOpts.Logger.Printf("Initrd: %s", i.Name())
 	}
-	loadOpts.logger.Printf("Command line: %s", li.Cmdline)
-	loadOpts.logger.Printf("DTB: %#v", li.DTB)
+	loadOpts.Logger.Printf("Command line: %s", li.Cmdline)
+	loadOpts.Logger.Printf("DTB: %#v", li.DTB)
 
-	if !loadOpts.callKexecLoad {
+	if !loadOpts.CallKexecLoad {
 		return nil
 	}
 	if li.LoadSyscall {
