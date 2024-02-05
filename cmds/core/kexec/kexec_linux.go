@@ -2,28 +2,30 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// kexec executes a new kernel over the running kernel (u-root).
+// Command kexec executes a new kernel over the running kernel (u-root).
 //
 // Synopsis:
-//     kexec [--initrd=FILE] [--command-line=STRING] [-l] [-e] [KERNELIMAGE]
+//
+//	kexec [--initrd=FILE] [--command-line=STRING] [-l] [-e] [KERNELIMAGE]
 //
 // Description:
-//		 Loads a kernel for later execution.
+//
+//	Loads a kernel for later execution.
 //
 // Options:
-//      --append string        Append to the kernel command line
-//  -c, --cmdline string       Append to the kernel command line
-//  -d, --debug                Print debug info (default true)
-//  -e, --exec                 Execute a currently loaded kernel
-//  -x, --extra string         Add a cpio containing extra files
-//      --initramfs string     Use file as the kernel's initial ramdisk
-//  -i, --initrd string        Use file as the kernel's initial ramdisk
-//  -l, --load                 Load the new kernel into the current kernel
-//  -L, --loadsyscall          Use the kexec load syscall (not file_load) (default true)
-//      --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
-//  -p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
-//      --reuse-cmdline        Use the kernel command line from running system
-
+//
+//	    --append string        Append to the kernel command line
+//	-c, --cmdline string       Append to the kernel command line
+//	-d, --debug                Print debug info (default true)
+//	-e, --exec                 Execute a currently loaded kernel
+//	-x, --extra string         Add a cpio containing extra files
+//	    --initramfs string     Use file as the kernel's initial ramdisk
+//	-i, --initrd string        Use file as the kernel's initial ramdisk
+//	-l, --load                 Load the new kernel into the current kernel
+//	-L, --loadsyscall          Use the kexec load syscall (not file_load) (default true)
+//	    --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
+//	-p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
+//	    --reuse-cmdline        Use the kernel command line from running system
 package main
 
 import (

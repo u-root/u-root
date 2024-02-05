@@ -2,30 +2,32 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// boot allows to handover a system running linuxboot/u-root
+// Command boot allows to handover a system running linuxboot/u-root
 // to a legacy preinstalled operating system by replacing the traditional
 // bootloader path
-
 //
 // Synopsis:
+//
 //	boot [-v][-no-load][-no-exec]
 //
 // Description:
-//	If returns to u-root shell, the code didn't found a local bootable option
 //
-//      -v prints messages
-//      -no-load prints the boot image paths it was going to load, but doesn't load + exec them
-//      -no-exec loads the boot image, but doesn't exec it
+//	If the code didn't found a local bootable option, command exits.
+//
+//	-v prints messages
+//	-no-load prints the boot image paths it was going to load, but doesn't load + exec them
+//	-no-exec loads the boot image, but doesn't exec it
 //
 // Notes:
+//
 //	The code is looking for boot/grub/grub.cfg file as to identify the
 //	boot option.
 //	The first bootable device found in the block device tree is the one used
 //	Windows is not supported (that is a work in progress)
 //
 // Example:
+//
 //	boot -v 	- Start the script in verbose mode for debugging purpose
-
 package main
 
 import (

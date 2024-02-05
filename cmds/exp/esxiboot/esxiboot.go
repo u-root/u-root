@@ -5,16 +5,19 @@
 // esxiboot executes ESXi kernel over the running kernel.
 //
 // Synopsis:
-//     esxiboot [-d --device] [-c --config] [-r --cdrom]
+//
+//	esxiboot [-d --device] [-c --config] [-r --cdrom]
 //
 // Description:
-//     Loads and executes ESXi kernel.
+//
+//	Loads and executes ESXi kernel.
 //
 // Options:
-//     --config=FILE or -c=FILE: set the ESXi config
-//     --device=FILE or -d=FILE: set an ESXi disk to boot from
-//     --cdrom=FILE or -r=FILE: set an ESXI CDROM to boot from
-//     --append: append kernel cmdline arguments
+//
+//	--config=FILE or -c=FILE: set the ESXi config
+//	--device=FILE or -d=FILE: set an ESXi disk to boot from
+//	--cdrom=FILE or -r=FILE: set an ESXI CDROM to boot from
+//	--append: append kernel cmdline arguments
 //
 // --device is required to kexec installed ESXi instance.
 // You don't need it if you kexec ESXi installer.
@@ -26,7 +29,6 @@
 // modules=MOD1 [ARGS] --- MOD2 [ARGS] --- ...
 //
 // Lines starting with '#' are ignored.
-
 package main
 
 import (
