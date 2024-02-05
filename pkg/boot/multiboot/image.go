@@ -14,7 +14,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
-// Image is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,
+// Image is a multiboot-formated boot.OSImage, such as ESXi, Xen, Akaros,
 // tboot.
 type Image struct {
 	Name string
@@ -27,6 +27,44 @@ type Image struct {
 }
 
 var _ boot.OSImage = &Image{}
+
+// Opt modifies Image.
+type Opt func(*Image)
+
+// Append appends to the kernel command-line.
+func Append(cmdline string) Opt {
+	return func(img *Image) {
+		if img.Cmdline == "" {
+			img.Cmdline = cmdline
+		} else {
+			img.Cmdline += " " + cmdline
+		}
+	}
+}
+
+// WithModule appends modules.
+func WithModule(m ...Module) Opt {
+	return func(img *Image) {
+		img.Modules = append(img.Modules, m...)
+	}
+}
+
+func WithName(name string) Opt {
+	return func(img *Image) {
+		img.Name = name
+	}
+}
+
+// NewImage creates a new multiboot image with the given options.
+func NewImage(kernel io.ReaderAt, opts ...Opt) *Image {
+	img := &Image{
+		Kernel: kernel,
+	}
+	for _, opt := range opts {
+		opt(img)
+	}
+	return img
+}
 
 // named is satisifed by *os.File.
 type named interface {
