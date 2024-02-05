@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/u-root/u-root/pkg/align"
-	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 // Marshaler is the interface implemented by an object that can marshal itself
@@ -174,7 +173,7 @@ func NewBigEndianBuffer(b []byte) *Lexer {
 func NewNativeEndianBuffer(b []byte) *Lexer {
 	return &Lexer{
 		Buffer: NewBuffer(b),
-		order:  ubinary.NativeEndian,
+		order:  binary.NativeEndian,
 	}
 }
 

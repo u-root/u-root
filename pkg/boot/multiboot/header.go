@@ -10,8 +10,6 @@ import (
 	"errors"
 	"io"
 	"log"
-
-	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 var (
@@ -105,7 +103,7 @@ func parseHeader(r io.Reader) (*header, error) {
 	br := new(bytes.Reader)
 	for len(buf) >= sizeofHeader {
 		br.Reset(buf)
-		if err := binary.Read(br, ubinary.NativeEndian, &hdr); err != nil {
+		if err := binary.Read(br, binary.NativeEndian, &hdr); err != nil {
 			return nil, err
 		}
 		if hdr.Magic == headerMagic && (hdr.Magic+uint32(hdr.Flags)+hdr.Checksum) == 0 {
