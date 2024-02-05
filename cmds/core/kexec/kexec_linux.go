@@ -135,7 +135,7 @@ func main() {
 		} else {
 			var files []io.ReaderAt
 			if len(opts.extra) > 0 {
-				initrd, err := boot.CreateInitrd(strings.Fields(opts.extra)...)
+				initrd, err := linux.CreateInitrd(strings.Fields(opts.extra)...)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -148,7 +148,7 @@ func main() {
 			}
 			var i io.ReaderAt
 			if len(files) > 0 {
-				i = boot.CatInitrds(files...)
+				i = linux.CatInitrds(files...)
 			}
 
 			var dtb io.ReaderAt
@@ -158,7 +158,7 @@ func main() {
 					log.Fatalf("Failed to open dtb file %s: %v", opts.dtb, err)
 				}
 			}
-			image = &boot.LinuxImage{
+			image = &linux.Image{
 				Kernel:      uio.NewLazyFile(kernelpath),
 				Initrd:      i,
 				Cmdline:     newCmdline,

@@ -27,6 +27,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/curl"
 )
 
@@ -112,7 +113,7 @@ func ToJSONFile(imgs []boot.OSImage, filename string) error {
 func ImagesToJSONLike(imgs []boot.OSImage) []interface{} {
 	var infs []interface{}
 	for _, img := range imgs {
-		if l, ok := img.(*boot.LinuxImage); ok {
+		if l, ok := img.(*linux.Image); ok {
 			infs = append(infs, LinuxImageToJSON(l))
 		}
 		if m, ok := img.(*boot.MultibootImage); ok {
@@ -126,7 +127,7 @@ func ImagesToJSONLike(imgs []boot.OSImage) []interface{} {
 // tests.
 //
 // It should be json-encodable and decodable.
-func LinuxImageToJSON(li *boot.LinuxImage) map[string]interface{} {
+func LinuxImageToJSON(li *linux.Image) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["image_type"] = "linux"
 	m["name"] = li.Name

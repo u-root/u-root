@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
@@ -124,7 +124,7 @@ func TestIpxeConfig(t *testing.T) {
 		desc       string
 		schemeFunc func() curl.Schemes
 		curl       *url.URL
-		want       *boot.LinuxImage
+		want       *linux.Image
 		err        error
 	}{
 		{
@@ -147,7 +147,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content2),
 			},
@@ -171,7 +171,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content2),
 			},
@@ -197,7 +197,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content1024),
 			},
@@ -224,7 +224,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content1024),
 			},
@@ -247,7 +247,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 			},
 		},
@@ -271,7 +271,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 			},
 		},
@@ -292,7 +292,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: errorReader{&curl.URLError{
 					URL: &url.URL{
 						Scheme: "http",
@@ -358,7 +358,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{},
+			want: &linux.Image{},
 		},
 		{
 			desc: "valid config with kernel cmdline args",
@@ -378,7 +378,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel:  strings.NewReader(content1),
 				Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 			},
@@ -408,7 +408,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content2),
 			},
@@ -434,7 +434,7 @@ func TestIpxeConfig(t *testing.T) {
 				Host:   "someplace.com",
 				Path:   "/foobar/pxefiles/ipxeconfig",
 			},
-			want: &boot.LinuxImage{
+			want: &linux.Image{
 				Kernel: strings.NewReader(content1),
 				Initrd: strings.NewReader(content2),
 			},

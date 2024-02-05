@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -32,8 +33,8 @@ func SameBootImage(got, want boot.OSImage) error {
 		return fmt.Errorf("got image label %s, want %s", got.Label(), want.Label())
 	}
 
-	if gotLinux, ok := got.(*boot.LinuxImage); ok {
-		wantLinux, ok := want.(*boot.LinuxImage)
+	if gotLinux, ok := got.(*linux.Image); ok {
+		wantLinux, ok := want.(*linux.Image)
 		if !ok {
 			return fmt.Errorf("got image %s is Linux image, but %s is not", got, want)
 		}

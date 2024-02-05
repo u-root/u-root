@@ -14,6 +14,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/dt"
 )
 
@@ -108,7 +109,7 @@ func (i *Image) Edit(f func(s string) string) {
 }
 
 // Load LinuxImage to memory
-func loadLinuxImage(i *boot.LinuxImage, opts ...boot.LoadOption) error {
+func loadLinuxImage(i *linux.Image, opts ...boot.LoadOption) error {
 	return i.Load(opts...)
 }
 
@@ -117,7 +118,7 @@ var loadImage = loadLinuxImage
 
 // Load loads an image and reboots
 func (i *Image) Load(opts ...boot.LoadOption) error {
-	image := &boot.LinuxImage{
+	image := &linux.Image{
 		Cmdline: i.Cmdline,
 	}
 

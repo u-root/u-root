@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/mount"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/measurement"
@@ -84,7 +84,7 @@ func (l *Launcher) Boot() error {
 	}
 
 	slaunch.Debug("Calling kexec")
-	image := &boot.LinuxImage{
+	image := &linux.Image{
 		Kernel:  uio.NewLazyFile(k),
 		Initrd:  uio.NewLazyFile(i),
 		Cmdline: cmdline,

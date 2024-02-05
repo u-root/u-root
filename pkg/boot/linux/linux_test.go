@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package boot
+package linux
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
@@ -45,12 +46,12 @@ func TestLinuxLabel(t *testing.T) {
 
 	for _, tt := range []struct {
 		desc string
-		img  *LinuxImage
+		img  *Image
 		want string
 	}{
 		{
 			desc: "os.File",
-			img: &LinuxImage{
+			img: &Image{
 				Kernel: osKernel,
 				Initrd: osInitrd,
 			},
@@ -58,7 +59,7 @@ func TestLinuxLabel(t *testing.T) {
 		},
 		{
 			desc: "lazy file",
-			img: &LinuxImage{
+			img: &Image{
 				Kernel: uio.NewLazyFile(filepath.Join(dir, "kernel")),
 				Initrd: uio.NewLazyFile(filepath.Join(dir, "initrd")),
 			},
@@ -66,7 +67,7 @@ func TestLinuxLabel(t *testing.T) {
 		},
 		{
 			desc: "concat lazy file",
-			img: &LinuxImage{
+			img: &Image{
 				Kernel: uio.NewLazyFile(filepath.Join(dir, "kernel")),
 				Initrd: CatInitrds(
 					uio.NewLazyFile(filepath.Join(dir, "initrd")),
@@ -77,7 +78,7 @@ func TestLinuxLabel(t *testing.T) {
 		},
 		{
 			desc: "curl lazy file",
-			img: &LinuxImage{
+			img: &Image{
 				Kernel: httpKernel,
 				Initrd: CatInitrds(
 					httpInitrd1,
@@ -88,7 +89,7 @@ func TestLinuxLabel(t *testing.T) {
 		},
 		{
 			desc: "dtb file",
-			img: &LinuxImage{
+			img: &Image{
 				Kernel: osKernel,
 				Initrd: osInitrd,
 				DTB:    osInitrd,
@@ -97,7 +98,7 @@ func TestLinuxLabel(t *testing.T) {
 		},
 		{
 			desc: "dtb file, no initrd",
-			img: &LinuxImage{
+			img: &Image{
 				Kernel: osKernel,
 				DTB:    osInitrd,
 			},
@@ -133,7 +134,7 @@ func TestCopyToFile(t *testing.T) {
 
 func TestLinuxRank(t *testing.T) {
 	testRank := 2
-	img := &LinuxImage{BootRank: testRank}
+	img := &Image{BootRank: testRank}
 	l := img.Rank()
 	if l != testRank {
 		t.Fatalf("Expected Image rank %d, got %d", testRank, l)
@@ -188,32 +189,32 @@ func GenerateCatDummyInitrd(t *testing.T, initrds ...string) string {
 	return string(d)
 }
 
-func TestLoadLinuxImage(t *testing.T) {
+func TestLoadImage(t *testing.T) {
 	testDir := t.TempDir()
 
 	for _, tt := range []struct {
 		name       string
-		li         *LinuxImage
+		li         *Image
 		wantKernel *os.File
 		wantInitrd *os.File
 		err        error
 	}{
 		{
 			name:       "kernel is nil",
-			li:         &LinuxImage{Kernel: nil},
+			li:         &Image{Kernel: nil},
 			wantKernel: nil,
 			err:        errNilKernel,
 		},
 		{
 			name: "basic happy case w/o initrd",
-			li: &LinuxImage{
+			li: &Image{
 				Kernel: strings.NewReader("testkernel"),
 			},
 			wantKernel: setupTestFile(t, filepath.Join(testDir, "basic_happy_case_wo_initrd_bzimage"), "testkernel"),
 		},
 		{
 			name: "basic happy case w/ initrd",
-			li: &LinuxImage{
+			li: &Image{
 				Kernel: strings.NewReader("testkernel"),
 				Initrd: strings.NewReader("testinitrd"),
 			},
@@ -222,7 +223,7 @@ func TestLoadLinuxImage(t *testing.T) {
 		},
 		{
 			name: "empty initrd, with DTB present", // Expect DTB appended to loaded initrd.
-			li: &LinuxImage{
+			li: &Image{
 				Kernel: strings.NewReader("testkernel"),
 				Initrd: nil,
 				DTB:    strings.NewReader("testdtb"),
@@ -232,7 +233,7 @@ func TestLoadLinuxImage(t *testing.T) {
 		},
 		{
 			name: "non-empty initrd, with DTB present", // Expect DTB appended to loaded initrd.
-			li: &LinuxImage{
+			li: &Image{
 				Kernel: strings.NewReader("testkernel"),
 				Initrd: strings.NewReader("testinitrd"),
 				DTB:    strings.NewReader("testdtb"),
@@ -242,7 +243,7 @@ func TestLoadLinuxImage(t *testing.T) {
 		},
 		{
 			name: "oringnal kernel and initrd are files, skip copying",
-			li: &LinuxImage{
+			li: &Image{
 				Kernel: setupTestFile(t, filepath.Join(testDir, "original_kernel_and_initrd_are_files_skip_copying_bzImage"), "testkernel"),
 				Initrd: setupTestFile(t, filepath.Join(testDir, "original_kernel_and_initrd_are_files_skip_copying_initramfs"), "testinitrd"),
 			},
@@ -251,13 +252,13 @@ func TestLoadLinuxImage(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			gotKernel, gotInitrd, err := tt.li.loadImage(&loadOptions{logger: ulogtest.Logger{t}, verbose: true})
+			gotKernel, gotInitrd, err := tt.li.loadImage(&boot.LoadOptions{Logger: ulogtest.Logger{t}, Verbose: true})
 			if !errors.Is(err, tt.err) {
 				t.Errorf("got error %v, want %v", err, tt.err)
 			} else if err != nil {
 				return
 			}
-			// Kernel is opened as read only, and contents match that from original LinuxImage.
+			// Kernel is opened as read only, and contents match that from original Image.
 			checkReadOnly(t, gotKernel)
 			// If src is a read-only *os.File on tmpfs, shoukd skip copying.
 			checkFilePath(t, tt.li.Kernel, gotKernel)
@@ -272,7 +273,7 @@ func TestLoadLinuxImage(t *testing.T) {
 			if string(kernelBytes) != string(wantBytes) {
 				t.Errorf("got kernel %s, want %s", string(kernelBytes), string(wantBytes))
 			}
-			// Initrd, if present, is opened as read only, and contents match that from original LinuxImage.
+			// Initrd, if present, is opened as read only, and contents match that from original Image.
 			// OR original initrd, with DTB appended.
 			if tt.li.Initrd != nil {
 				checkReadOnly(t, gotInitrd)

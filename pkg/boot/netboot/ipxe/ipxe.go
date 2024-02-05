@@ -15,7 +15,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"
@@ -29,7 +29,7 @@ var ErrNotIpxeScript = errors.New("config file is not ipxe as it does not start 
 //
 // We currently only support kernel and initrd commands.
 type parser struct {
-	bootImage *boot.LinuxImage
+	bootImage *linux.Image
 
 	// wd is the current working directory.
 	//
@@ -45,7 +45,7 @@ type parser struct {
 // schemes.
 //
 // `s` is used to get files referred to by URLs in the configuration.
-func ParseConfig(ctx context.Context, l ulog.Logger, configURL *url.URL, s curl.Schemes) (*boot.LinuxImage, error) {
+func ParseConfig(ctx context.Context, l ulog.Logger, configURL *url.URL, s curl.Schemes) (*linux.Image, error) {
 	c := &parser{
 		schemes: s,
 		log:     l,
@@ -151,7 +151,7 @@ func parseURL(name string, wd *url.URL) (*url.URL, error) {
 
 func (c *parser) createInitrd(initrds []io.Reader) {
 	if len(initrds) > 0 {
-		c.bootImage.Initrd = boot.CatInitrdsWithFileCache(initrds...)
+		c.bootImage.Initrd = linux.CatInitrdsWithFileCache(initrds...)
 	}
 }
 
@@ -159,7 +159,7 @@ func (c *parser) createInitrd(initrds []io.Reader) {
 func (c *parser) parseIpxe(config string) error {
 	// A trivial ipxe script parser.
 	// Currently only supports kernel and initrd commands.
-	c.bootImage = &boot.LinuxImage{}
+	c.bootImage = &linux.Image{}
 
 	var initrds []io.Reader
 	for _, line := range strings.Split(config, "\n") {

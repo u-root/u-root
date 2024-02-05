@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package boot
+package linux
 
 import (
 	"errors"
@@ -11,16 +11,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
 	"golang.org/x/sys/unix"
 )
 
-// LinuxImage implements OSImage for a Linux kernel + initramfs.
-type LinuxImage struct {
+// Image implements OSImage for a Linux kernel + initramfs.
+type Image struct {
 	Name string
 
 	Kernel      io.ReaderAt
@@ -31,7 +31,7 @@ type LinuxImage struct {
 	DTB         io.ReaderAt
 }
 
-var _ OSImage = &LinuxImage{}
+var _ boot.OSImage = &Image{}
 
 var errNilKernel = errors.New("kernel image is empty, nothing to execute")
 
@@ -51,7 +51,7 @@ func stringer(mod interface{}) string {
 }
 
 // Label returns either the Name or a short description.
-func (li *LinuxImage) Label() string {
+func (li *Image) Label() string {
 	if len(li.Name) > 0 {
 		return li.Name
 	}
@@ -75,14 +75,14 @@ func (li *LinuxImage) Label() string {
 }
 
 // Rank for the boot menu order
-func (li *LinuxImage) Rank() int {
+func (li *Image) Rank() int {
 	return li.BootRank
 }
 
 // String prints a human-readable version of this linux image.
-func (li *LinuxImage) String() string {
+func (li *Image) String() string {
 	return fmt.Sprintf(
-		"LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n  DTB: %v\n)\n",
+		"Image(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n  DTB: %v\n)\n",
 		li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline, stringer(li.DTB),
 	)
 }
@@ -182,11 +182,11 @@ func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 }
 
 // Edit the kernel command line.
-func (li *LinuxImage) Edit(f func(cmdline string) string) {
+func (li *Image) Edit(f func(cmdline string) string) {
 	li.Cmdline = f(li.Cmdline)
 }
 
-func (li *LinuxImage) loadImage(loadOpts *LoadOptions) (*os.File, *os.File, error) {
+func (li *Image) loadImage(loadOpts *boot.LoadOptions) (*os.File, *os.File, error) {
 	if li.Kernel == nil {
 		return nil, nil, errNilKernel
 	}
@@ -217,8 +217,8 @@ func (li *LinuxImage) loadImage(loadOpts *LoadOptions) (*os.File, *os.File, erro
 }
 
 // Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
-func (li *LinuxImage) Load(opts ...LoadOption) error {
-	loadOpts := DefaultLoadOptions()
+func (li *Image) Load(opts ...boot.LoadOption) error {
+	loadOpts := boot.DefaultLoadOptions()
 	for _, opt := range opts {
 		opt(loadOpts)
 	}
@@ -243,7 +243,7 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		return nil
 	}
 	if li.LoadSyscall {
-		return linux.KexecLoad(k, i, li.Cmdline, li.DTB)
+		return KexecLoad(k, i, li.Cmdline, li.DTB)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

@@ -19,6 +19,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 )
@@ -83,7 +84,7 @@ func TestParseGeneral(t *testing.T) {
 					append initrd=./pxefiles/global_initrd`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Initrd:  strings.NewReader(globalInitrd),
@@ -112,7 +113,7 @@ func TestParseGeneral(t *testing.T) {
 					append foo=bar`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Initrd:  strings.NewReader(initrd1),
@@ -129,7 +130,7 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/kernel1`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Initrd:  nil,
@@ -148,10 +149,10 @@ func TestParseGeneral(t *testing.T) {
 					append foo=bar`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "multi-initrd",
 					Kernel:  strings.NewReader(kernel1),
-					Initrd:  boot.CatInitrds(strings.NewReader(initrd1), strings.NewReader(initrd2)),
+					Initrd:  linux.CatInitrds(strings.NewReader(initrd1), strings.NewReader(initrd2)),
 					Cmdline: "foo=bar",
 				},
 			},
@@ -167,7 +168,7 @@ func TestParseGeneral(t *testing.T) {
 					append foo=bar`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "multi-initrd",
 					Kernel: strings.NewReader(kernel1),
 					Initrd: errorReader{&curl.URLError{
@@ -191,7 +192,7 @@ func TestParseGeneral(t *testing.T) {
 					kernel ./pxefiles/does-not-exist`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name: "foo",
 					Kernel: errorReader{&curl.URLError{
 						URL: &url.URL{
@@ -240,12 +241,12 @@ func TestParseGeneral(t *testing.T) {
 					append earlyprintk=ttyS0 printk=ttyS0`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "Bla Bla Bla",
 					Kernel:  strings.NewReader(kernel2),
 					Cmdline: "console=ttyS0",
@@ -267,12 +268,12 @@ func TestParseGeneral(t *testing.T) {
 					append earlyprintk=ttyS0 printk=ttyS0`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "Bla Bla Bla",
 					Kernel:  strings.NewReader(kernel2),
 					Cmdline: "console=ttyS0",
@@ -296,12 +297,12 @@ func TestParseGeneral(t *testing.T) {
 					append console=ttyS0`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "bar",
 					Kernel:  strings.NewReader(kernel2),
 					Cmdline: "console=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
@@ -325,12 +326,12 @@ func TestParseGeneral(t *testing.T) {
 					append console=ttyS0`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "bar",
 					Kernel:  strings.NewReader(kernel2),
 					Cmdline: "console=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
@@ -357,19 +358,19 @@ func TestParseGeneral(t *testing.T) {
 					append -`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "foo",
 					Kernel: strings.NewReader(kernel1),
 					// Does not contain global APPEND.
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "bar",
 					Kernel: strings.NewReader(kernel2),
 					// Contains only global APPEND.
 					Cmdline: "foo=bar",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "baz",
 					Kernel: strings.NewReader(kernel2),
 					// "APPEND -" means ignore global APPEND.
@@ -401,26 +402,26 @@ func TestParseGeneral(t *testing.T) {
 				`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "mcnulty",
 					Kernel: strings.NewReader(kernel1),
 					// Does not contain global APPEND.
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "lester",
 					Kernel: strings.NewReader(kernel1),
 					Initrd: strings.NewReader(globalInitrd),
 					// Contains only global APPEND.
 					Cmdline: "initrd=./pxefiles/global_initrd",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "omar",
 					Kernel: strings.NewReader(kernel2),
 					// "APPEND -" means ignore global APPEND.
 					Cmdline: "",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "stringer",
 					Kernel: strings.NewReader(kernel2),
 					Initrd: strings.NewReader(initrd2),
@@ -452,7 +453,7 @@ func TestParseGeneral(t *testing.T) {
 				initrd http://someplace.com/initrd2`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "sheeeit",
 					Kernel: strings.NewReader(kernel2),
 					Initrd: strings.NewReader(initrd2),
@@ -486,12 +487,12 @@ func TestParseGeneral(t *testing.T) {
 				`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "mcnulty",
 					Kernel:  strings.NewReader(kernel1),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:   "omar",
 					Kernel: strings.NewReader(kernel2),
 				},
@@ -517,7 +518,7 @@ func TestParseGeneral(t *testing.T) {
 					append earlyprintk=ttyS0 printk=ttyS0`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(mboot),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
@@ -555,7 +556,7 @@ func TestParseGeneral(t *testing.T) {
 					fdt ./pxefiles/board.dtb`,
 			},
 			want: []boot.OSImage{
-				&boot.LinuxImage{
+				&linux.Image{
 					Name:    "foo",
 					Kernel:  strings.NewReader(kernel1),
 					Initrd:  strings.NewReader(globalInitrd),

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -171,7 +172,7 @@ func getGrubvalue(variables map[string]string, key string) (string, error) {
 }
 
 func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string]string, grubDefaultFlag bool) (boot.OSImage, error) {
-	linux := &boot.LinuxImage{}
+	linux := &linux.Image{}
 	var cmdlines []string
 	var tokens []string
 	var value string

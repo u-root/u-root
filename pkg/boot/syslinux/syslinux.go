@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/uio"
@@ -156,7 +157,7 @@ func dedupStrings(list []string) []string {
 
 type parser struct {
 	// linuxEntries is a map of label name -> label configuration.
-	linuxEntries map[string]*boot.LinuxImage
+	linuxEntries map[string]*linux.Image
 	mbEntries    map[string]*boot.MultibootImage
 
 	// labelOrder is the order of label entries in linuxEntries.
@@ -194,7 +195,7 @@ const (
 // `s` is used to get files referred to by URLs.
 func newParser(rootdir *url.URL, wd string, s curl.Schemes) *parser {
 	return &parser{
-		linuxEntries: make(map[string]*boot.LinuxImage),
+		linuxEntries: make(map[string]*linux.Image),
 		mbEntries:    make(map[string]*boot.MultibootImage),
 		scope:        scopeGlobal,
 		wd:           wd,
@@ -335,7 +336,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			// We forever enter label scope.
 			c.scope = scopeEntry
 			c.curEntry = arg
-			c.linuxEntries[c.curEntry] = &boot.LinuxImage{
+			c.linuxEntries[c.curEntry] = &linux.Image{
 				Cmdline: c.globalAppend,
 				Name:    c.curEntry,
 			}
@@ -378,7 +379,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 					}
 					initrds = append(initrds, i)
 				}
-				e.Initrd = boot.CatInitrds(initrds...)
+				e.Initrd = linux.CatInitrds(initrds...)
 			}
 
 		case "fdt":

@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/crypto"
@@ -171,7 +171,7 @@ func (bc *BootConfig) Boot() error {
 			}
 		}()
 		// Decompress Kernel (if compressed)
-		kernelRaw, err := boot.CopyToFileIfNotRegular(util.TryGzipFilter(kernel), true)
+		kernelRaw, err := linux.CopyToFileIfNotRegular(util.TryGzipFilter(kernel), true)
 		if err != nil {
 			return err
 		}

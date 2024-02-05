@@ -33,8 +33,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bootcmd"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/localboot"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/cmdline"
@@ -97,7 +97,7 @@ func main() {
 	}
 	for _, img := range images {
 		// Make changes to the kernel command line based on our cmdline.
-		if li, ok := img.(*boot.LinuxImage); ok {
+		if li, ok := img.(*linux.Image); ok {
 			li.Cmdline = updateBootCmdline(li.Cmdline)
 		}
 	}

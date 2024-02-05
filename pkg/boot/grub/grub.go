@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bls"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
@@ -176,7 +177,7 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, roo
 	// Don't add entries twice.
 	//
 	// Multiple labels can refer to the same image, so we have to dedup by pointer.
-	seenLinux := make(map[*boot.LinuxImage]struct{})
+	seenLinux := make(map[*linux.Image]struct{})
 	seenMB := make(map[*boot.MultibootImage]struct{})
 
 	var grubDefaultSavedEntry string
@@ -223,7 +224,7 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, roo
 }
 
 type parser struct {
-	linuxEntries map[string]*boot.LinuxImage
+	linuxEntries map[string]*linux.Image
 	mbEntries    map[string]*boot.MultibootImage
 
 	labelOrder []string
@@ -267,7 +268,7 @@ type parser struct {
 // looks through mounts for a matching device number.
 func newParser(root *url.URL, devices block.BlockDevices, mountPool *mount.Pool, s curl.Schemes) *parser {
 	return &parser{
-		linuxEntries: make(map[string]*boot.LinuxImage),
+		linuxEntries: make(map[string]*linux.Image),
 		mbEntries:    make(map[string]*boot.MultibootImage),
 		variables: map[string]string{
 			"root": root.String(),
@@ -534,7 +535,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			// from grub manual: "Any initrd must be reloaded after using this command" so we can replace the entry
-			entry := &boot.LinuxImage{
+			entry := &linux.Image{
 				Name:    c.curLabel,
 				Kernel:  k,
 				Cmdline: cmdlineQuote(kv[2:]),

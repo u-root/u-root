@@ -15,11 +15,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/vfile"
-
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/linux"
+	"github.com/u-root/u-root/pkg/vfile"
 )
 
 const (
@@ -156,9 +156,9 @@ func TestLoad(t *testing.T) {
 
 			i.Kernel, i.InitRAMFS, i.KeyRing = tt.kernel, tt.initram, tt.keyring
 
-			defer func(old func(i *boot.LinuxImage, opts ...boot.LoadOption) error) { loadImage = old }(loadImage)
+			defer func(old func(i *linux.Image, opts ...boot.LoadOption) error) { loadImage = old }(loadImage)
 
-			loadImage = func(i *boot.LinuxImage, opts ...boot.LoadOption) error {
+			loadImage = func(i *linux.Image, opts ...boot.LoadOption) error {
 				if i == nil {
 					t.Errorf("Load() of kernel:%s, init:%s, keys: %v - passed nil to loadImage", tt.kernel, tt.initram, tt.keyring)
 					return nil

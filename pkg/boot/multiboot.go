@@ -28,6 +28,21 @@ type MultibootImage struct {
 
 var _ OSImage = &MultibootImage{}
 
+// named is satisifed by *os.File.
+type named interface {
+	Name() string
+}
+
+func stringer(mod interface{}) string {
+	if s, ok := mod.(fmt.Stringer); ok {
+		return s.String()
+	}
+	if f, ok := mod.(named); ok {
+		return f.Name()
+	}
+	return fmt.Sprintf("%T", mod)
+}
+
 // Label returns either Name or a short description.
 func (mi *MultibootImage) Label() string {
 	if len(mi.Name) > 0 {
