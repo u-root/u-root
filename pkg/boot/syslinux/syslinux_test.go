@@ -523,7 +523,7 @@ func TestParseGeneral(t *testing.T) {
 					Kernel:  strings.NewReader(mboot),
 					Cmdline: "earlyprintk=ttyS0 printk=ttyS0",
 				},
-				&boot.MultibootImage{
+				&multiboot.Image{
 					Name:    "Bla Bla Bla",
 					Kernel:  strings.NewReader(xengz),
 					Cmdline: "console=none",
@@ -538,7 +538,7 @@ func TestParseGeneral(t *testing.T) {
 						},
 					},
 				},
-				&boot.MultibootImage{
+				&multiboot.Image{
 					Name:   "mbootnomodules",
 					Kernel: strings.NewReader(xengz),
 				},

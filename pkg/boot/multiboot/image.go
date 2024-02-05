@@ -2,31 +2,31 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package boot
+package multiboot
 
 import (
 	"fmt"
 	"io"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/ibft"
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
 
-// MultibootImage is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,
+// Image is a multiboot-formated OSImage, such as ESXi, Xen, Akaros,
 // tboot.
-type MultibootImage struct {
+type Image struct {
 	Name string
 
 	Kernel   io.ReaderAt
 	Cmdline  string
-	Modules  []multiboot.Module
+	Modules  []Module
 	IBFT     *ibft.IBFT
 	BootRank int
 }
 
-var _ OSImage = &MultibootImage{}
+var _ boot.OSImage = &Image{}
 
 // named is satisifed by *os.File.
 type named interface {
@@ -44,7 +44,7 @@ func stringer(mod interface{}) string {
 }
 
 // Label returns either Name or a short description.
-func (mi *MultibootImage) Label() string {
+func (mi *Image) Label() string {
 	if len(mi.Name) > 0 {
 		return mi.Name
 	}
@@ -52,23 +52,23 @@ func (mi *MultibootImage) Label() string {
 }
 
 // Rank for the boot menu order
-func (mi *MultibootImage) Rank() int {
+func (mi *Image) Rank() int {
 	return mi.BootRank
 }
 
 // Edit the kernel command line.
-func (mi *MultibootImage) Edit(f func(cmdline string) string) {
+func (mi *Image) Edit(f func(cmdline string) string) {
 	mi.Cmdline = f(mi.Cmdline)
 }
 
 // Load implements OSImage.Load.
-func (mi *MultibootImage) Load(opts ...LoadOption) error {
-	loadOpts := DefaultLoadOptions()
+func (mi *Image) Load(opts ...boot.LoadOption) error {
+	loadOpts := boot.DefaultLoadOptions()
 	for _, opt := range opts {
 		opt(loadOpts)
 	}
 
-	entryPoint, segments, err := multiboot.PrepareLoad(loadOpts.Verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
+	entryPoint, segments, err := PrepareLoad(loadOpts.Verbose, mi.Kernel, mi.Cmdline, mi.Modules, mi.IBFT)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (mi *MultibootImage) Load(opts ...LoadOption) error {
 }
 
 // String implements fmt.Stringer.
-func (mi *MultibootImage) String() string {
+func (mi *Image) String() string {
 	modules := make([]string, len(mi.Modules))
 	for i, mod := range mi.Modules {
 		modules[i] = mod.Cmdline

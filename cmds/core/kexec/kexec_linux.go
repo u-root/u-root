@@ -127,7 +127,7 @@ func main() {
 		defer kernel.Close()
 		var image boot.OSImage
 		if err := multiboot.Probe(kernel); err == nil {
-			image = &boot.MultibootImage{
+			image = &multiboot.Image{
 				Modules: multiboot.LazyOpenModules(opts.modules),
 				Kernel:  kernel,
 				Cmdline: newCmdline,

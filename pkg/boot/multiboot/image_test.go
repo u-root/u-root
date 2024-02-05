@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package boot
+package multiboot
 
 import (
 	"fmt"
@@ -22,12 +22,12 @@ func TestLabel(t *testing.T) {
 	cmdLine := "console=ttyS0"
 	for _, tt := range []struct {
 		desc string
-		img  *MultibootImage
+		img  *Image
 		want string
 	}{
 		{
 			desc: "include name",
-			img: &MultibootImage{
+			img: &Image{
 				Name:   "multiboot_test",
 				Kernel: osKernel,
 			},
@@ -35,7 +35,7 @@ func TestLabel(t *testing.T) {
 		},
 		{
 			desc: "wo name and ibft",
-			img: &MultibootImage{
+			img: &Image{
 				Kernel:  osKernel,
 				Cmdline: cmdLine,
 			},
@@ -53,7 +53,7 @@ func TestLabel(t *testing.T) {
 
 func TestRank(t *testing.T) {
 	testRank := 2
-	img := &MultibootImage{BootRank: testRank}
+	img := &Image{BootRank: testRank}
 	l := img.Rank()
 	if l != testRank {
 		t.Fatalf("Expected Image rank %d, got %d", testRank, l)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/linux"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -56,8 +57,8 @@ func SameBootImage(got, want boot.OSImage) error {
 		return nil
 	}
 
-	if gotMB, ok := got.(*boot.MultibootImage); ok {
-		wantMB, ok := want.(*boot.MultibootImage)
+	if gotMB, ok := got.(*multiboot.Image); ok {
+		wantMB, ok := want.(*multiboot.Image)
 		if !ok {
 			return fmt.Errorf("got image %s is Multiboot image, but %s is not", got, want)
 		}

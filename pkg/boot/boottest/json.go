@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/linux"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
 )
 
@@ -116,7 +117,7 @@ func ImagesToJSONLike(imgs []boot.OSImage) []interface{} {
 		if l, ok := img.(*linux.Image); ok {
 			infs = append(infs, LinuxImageToJSON(l))
 		}
-		if m, ok := img.(*boot.MultibootImage); ok {
+		if m, ok := img.(*multiboot.Image); ok {
 			infs = append(infs, MultibootImageToJSON(m))
 		}
 	}
@@ -146,7 +147,7 @@ func LinuxImageToJSON(li *linux.Image) map[string]interface{} {
 // in tests.
 //
 // It should be json-encodable and decodable.
-func MultibootImageToJSON(mi *boot.MultibootImage) map[string]interface{} {
+func MultibootImageToJSON(mi *multiboot.Image) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["image_type"] = "multiboot"
 	m["name"] = mi.Name

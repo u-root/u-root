@@ -37,6 +37,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/esxi"
+	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/mount"
 )
 
@@ -86,7 +87,7 @@ func main() {
 		}
 	} else {
 		var err error
-		var img *boot.MultibootImage
+		var img *multiboot.Image
 		var mp *mount.MountPoint
 		if len(*cfg) > 0 {
 			img, err = esxi.LoadConfig(*cfg)

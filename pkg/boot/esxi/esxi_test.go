@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -186,12 +185,12 @@ var (
 // the Kernel and Modules fields will be full of uio.NewLazyFiles. We just want
 // them to be pointing to the same file name; we can't compare the function
 // pointers obviously. Lazy files will always print their name.
-func multibootEqual(a, b []*boot.MultibootImage) bool {
+func multibootEqual(a, b []*multiboot.Image) bool {
 	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 }
 
 func TestDev5Valid(t *testing.T) {
-	want := []*boot.MultibootImage{
+	want := []*multiboot.Image{
 		{
 			Name:    "VMware ESXi from testdata/dev5",
 			Kernel:  uio.NewLazyFile("testdata/k"),
@@ -227,7 +226,7 @@ func TestDev5Valid(t *testing.T) {
 }
 
 func TestDev6Valid(t *testing.T) {
-	want := []*boot.MultibootImage{
+	want := []*multiboot.Image{
 		{
 			Name:    "VMware ESXi from testdata/dev6",
 			Kernel:  uio.NewLazyFile("testdata/k"),
@@ -277,7 +276,7 @@ func TestImageOrder(t *testing.T) {
 		updated:   2,
 		bootstate: bootValid,
 	}
-	want5 := &boot.MultibootImage{
+	want5 := &multiboot.Image{
 		Name:    "VMware ESXi from testdata/dev5",
 		Kernel:  uio.NewLazyFile("foobar"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid5),
@@ -290,7 +289,7 @@ func TestImageOrder(t *testing.T) {
 		updated:   1,
 		bootstate: bootValid,
 	}
-	want6 := &boot.MultibootImage{
+	want6 := &multiboot.Image{
 		Name:    "VMware ESXi from testdata/dev6",
 		Kernel:  uio.NewLazyFile("testdata/k"),
 		Cmdline: fmt.Sprintf(" bootUUID=%s", uuid6),
@@ -298,7 +297,7 @@ func TestImageOrder(t *testing.T) {
 	}
 
 	// Way 1.
-	want := []*boot.MultibootImage{want5, want6}
+	want := []*multiboot.Image{want5, want6}
 	imgs, _ := getImages(device, opt5, opt6)
 	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)
@@ -307,7 +306,7 @@ func TestImageOrder(t *testing.T) {
 	opt5.updated = 1
 	opt6.updated = 2
 	// Vice versa priority.
-	want = []*boot.MultibootImage{want6, want5}
+	want = []*multiboot.Image{want6, want5}
 	imgs, _ = getImages(device, opt5, opt6)
 	if !multibootEqual(imgs, want) {
 		t.Fatalf("getImages(%s, %v, %v) = %v, want %v", device, opt5, opt6, imgs, want)

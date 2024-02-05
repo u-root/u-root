@@ -178,7 +178,7 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, roo
 	//
 	// Multiple labels can refer to the same image, so we have to dedup by pointer.
 	seenLinux := make(map[*linux.Image]struct{})
-	seenMB := make(map[*boot.MultibootImage]struct{})
+	seenMB := make(map[*multiboot.Image]struct{})
 
 	var grubDefaultSavedEntry string
 	// If the value of keyword "default_saved_entry" exists, find the value of "save_entry" from grubenv files from all possible paths.
@@ -225,7 +225,7 @@ func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, roo
 
 type parser struct {
 	linuxEntries map[string]*linux.Image
-	mbEntries    map[string]*boot.MultibootImage
+	mbEntries    map[string]*multiboot.Image
 
 	labelOrder []string
 
@@ -269,7 +269,7 @@ type parser struct {
 func newParser(root *url.URL, devices block.BlockDevices, mountPool *mount.Pool, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*linux.Image),
-		mbEntries:    make(map[string]*boot.MultibootImage),
+		mbEntries:    make(map[string]*multiboot.Image),
 		variables: map[string]string{
 			"root": root.String(),
 		},
@@ -559,7 +559,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			// from grub manual: "Any initrd must be reloaded after using this command" so we can replace the entry
-			entry := &boot.MultibootImage{
+			entry := &multiboot.Image{
 				Name:    c.curLabel,
 				Kernel:  k,
 				Cmdline: cmdlineQuote(kv[2:]),

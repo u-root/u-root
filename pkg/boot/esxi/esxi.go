@@ -36,13 +36,11 @@ import (
 	"strings"
 	"unicode"
 
-	"golang.org/x/sys/unix"
-
-	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/gpt"
 	"github.com/u-root/u-root/pkg/uio"
+	"golang.org/x/sys/unix"
 )
 
 func partNo(device string, number int) (string, error) {
@@ -68,7 +66,7 @@ func partNo(device string, number int) (string, error) {
 // may not be valid.
 //
 // device5 and device6 will be mounted at temporary directories.
-func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error) {
+func LoadDisk(device string) ([]*multiboot.Image, []*mount.MountPoint, error) {
 	opts5, mp5, err5 := mountPartition(device, 5)
 	opts6, mp6, err6 := mountPartition(device, 6)
 	if err5 != nil && err6 != nil {
@@ -92,9 +90,9 @@ func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error
 	return imgs, mps, nil
 }
 
-func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, error) {
+func getImages(device string, opts5, opts6 *options) ([]*multiboot.Image, error) {
 	var (
-		img5, img6 *boot.MultibootImage
+		img5, img6 *multiboot.Image
 		err5, err6 error
 	)
 	if opts5 != nil {
@@ -111,19 +109,19 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 
 	if img5 != nil && img6 != nil {
 		if opts6.updated > opts5.updated {
-			return []*boot.MultibootImage{img6, img5}, nil
+			return []*multiboot.Image{img6, img5}, nil
 		}
-		return []*boot.MultibootImage{img5, img6}, nil
+		return []*multiboot.Image{img5, img6}, nil
 	} else if img5 != nil {
-		return []*boot.MultibootImage{img5}, nil
+		return []*multiboot.Image{img5}, nil
 	}
-	return []*boot.MultibootImage{img6}, nil
+	return []*multiboot.Image{img6}, nil
 }
 
 // LoadCDROM loads an ESXi multiboot kernel from a CDROM at device.
 //
 // device will be mounted at mountPoint.
-func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
+func LoadCDROM(device string) (*multiboot.Image, *mount.MountPoint, error) {
 	mountPoint, err := os.MkdirTemp("", "esxi-mount-")
 	if err != nil {
 		return nil, nil, err
@@ -150,7 +148,7 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 }
 
 // LoadConfig loads an ESXi configuration from configFile.
-func LoadConfig(configFile string) (*boot.MultibootImage, error) {
+func LoadConfig(configFile string) (*multiboot.Image, error) {
 	opts, err := parse(configFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
@@ -199,7 +197,7 @@ func lazyOpenModules(mods []module) multiboot.Modules {
 	return modules
 }
 
-func getBootImage(opts options, device string, partition int, name string) (*boot.MultibootImage, error) {
+func getBootImage(opts options, device string, partition int, name string) (*multiboot.Image, error) {
 	// Only valid and upgrading are bootable partitions.
 	//
 	// We are supposed to support the following two state transitions (only
@@ -223,7 +221,7 @@ func getBootImage(opts options, device string, partition int, name string) (*boo
 		}
 	}
 
-	return &boot.MultibootImage{
+	return &multiboot.Image{
 		Name:    fmt.Sprintf("%s from %s", opts.title, name),
 		Kernel:  uio.NewLazyFile(opts.kernel),
 		Cmdline: opts.args,

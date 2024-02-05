@@ -158,7 +158,7 @@ func dedupStrings(list []string) []string {
 type parser struct {
 	// linuxEntries is a map of label name -> label configuration.
 	linuxEntries map[string]*linux.Image
-	mbEntries    map[string]*boot.MultibootImage
+	mbEntries    map[string]*multiboot.Image
 
 	// labelOrder is the order of label entries in linuxEntries.
 	labelOrder []string
@@ -196,7 +196,7 @@ const (
 func newParser(rootdir *url.URL, wd string, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*linux.Image),
-		mbEntries:    make(map[string]*boot.MultibootImage),
+		mbEntries:    make(map[string]*multiboot.Image),
 		scope:        scopeGlobal,
 		wd:           wd,
 		rootdir:      rootdir,
@@ -348,7 +348,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			if arg == "mboot.c32" {
 				// Prepare for a multiboot kernel.
 				delete(c.linuxEntries, c.curEntry)
-				c.mbEntries[c.curEntry] = &boot.MultibootImage{
+				c.mbEntries[c.curEntry] = &multiboot.Image{
 					Name: c.curEntry,
 				}
 			}
