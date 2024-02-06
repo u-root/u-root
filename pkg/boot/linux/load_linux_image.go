@@ -55,7 +55,7 @@ func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) (*kimage, error) {
 	fdt, err := dt.LoadFDT(dtb)
 	if err != nil {
-		return nil, fmt.Errorf("loadFDT(%s) = %v", dtb, err)
+		return nil, fmt.Errorf("loadFDT(%s) = %w", dtb, err)
 	}
 	Debug("Loaded FDT: %s", fdt)
 

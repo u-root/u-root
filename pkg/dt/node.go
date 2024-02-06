@@ -242,6 +242,17 @@ func PropertyString(name string, value string) Property {
 	}
 }
 
+// PropertyRegion creates a property encoding start and size of a region of memory.
+func PropertyRegion(name string, start, size uint64) Property {
+	b := bytes.NewBuffer(nil)
+	_ = binary.Write(b, binary.BigEndian, start)
+	_ = binary.Write(b, binary.BigEndian, size)
+	return Property{
+		Name:  name,
+		Value: b.Bytes(),
+	}
+}
+
 // Property is a name-value pair. Note the PropertyType of Value is not
 // encoded.
 type Property struct {
