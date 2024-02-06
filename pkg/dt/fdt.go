@@ -78,20 +78,20 @@ type ReserveEntry struct {
 func ReadFDT(f io.ReadSeeker) (*FDT, error) {
 	fdt := &FDT{}
 	if err := fdt.readHeader(f); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading FDT header: %w", err)
 	}
 	if err := fdt.readMemoryReservationBlock(f); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading memory reservation block: %w", err)
 	}
 	if err := fdt.checkLayout(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("layout check: %w", err)
 	}
 	strs, err := fdt.readStringsBlock(f)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading strings block: %w", err)
 	}
 	if err := fdt.readStructBlock(f, strs); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading struct block: %w", err)
 	}
 	return fdt, nil
 }
