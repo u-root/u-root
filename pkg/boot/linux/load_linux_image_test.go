@@ -293,6 +293,27 @@ func TestKexecLoadImage(t *testing.T) {
 			))}),
 			errs: []error{errDTBSegmentFailed, kexec.ErrNotEnoughSpace},
 		},
+		{
+			name:   "not-enough-space-for-trampoline",
+			kernel: openFile(t, "../image/testdata/Image"),
+			ramfs:  createFile(t, []byte("ramfs")),
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					// kernel size is 0x940000, which rounds up to 0xa00000
+					// Initramfs takes another 0x1000
+					// DTB takes another 0x1000
+					dt.PropertyRegion("reg", 0x200000, 0xa02000),
+				)),
+			))}),
+			errs: []error{errTrampolineSegmentFailed, kexec.ErrNotEnoughSpace},
+		},
+		{
+			name: "loadFDT fails",
+			fdt:  closedFile(t),
+			errs: []error{dt.ErrNoValidReaders},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := kexecLoadImage(tt.kernel, tt.ramfs, tt.cmdline, tt.fdt)
