@@ -312,7 +312,7 @@ func TestKexecLoadImage(t *testing.T) {
 		{
 			name: "loadFDT fails",
 			fdt:  closedFile(t),
-			errs: []error{dt.ErrNoValidReaders},
+			errs: []error{os.ErrClosed},
 		},
 		{
 			name:   "invalid-memmap",

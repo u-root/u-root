@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 
 	"github.com/u-root/u-root/pkg/boot/image"
@@ -55,9 +56,17 @@ func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 var ErrMemmapEmpty = errors.New("memory map is empty or contains no information about system RAM")
 
 func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) (*kimage, error) {
-	fdt, err := dt.LoadFDT(dtb)
+	var fdt *dt.FDT
+	var err error
+	// We want to fail when a user-supplied FDT is not parseable, not
+	// implicitly fall back to some other FDT. Avoid the dt.LoadFDT API.
+	if dtb != nil {
+		fdt, err = dt.ReadFDT(io.NewSectionReader(dtb, 0, math.MaxInt64))
+	} else {
+		fdt, err = dt.ReadFile("/sys/firmware/fdt")
+	}
 	if err != nil {
-		return nil, fmt.Errorf("loadFDT(%s) = %w", dtb, err)
+		return nil, fmt.Errorf("Read FDT = %w", err)
 	}
 	Debug("Loaded FDT: %s", fdt)
 
