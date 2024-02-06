@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/boot/bzimage"
+	"github.com/u-root/u-root/pkg/boot/linux/bzimage"
 )
 
 var (
-	testdataPath = "../../../pkg/boot/bzimage/testdata/"
+	testdataPath = "../../../pkg/boot/linux/bzimage/testdata/"
 	// Test BzImage we are not using yet.
 	b = bzimage.BzImage{
 		BootCode:     []byte{1, 2, 3, 4},

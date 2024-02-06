@@ -66,7 +66,7 @@ func testPkgs(t *testing.T) []string {
 
 		// Missing xzcat in VM.
 		"github.com/u-root/u-root/cmds/exp/bzimage",
-		"github.com/u-root/u-root/pkg/boot/bzimage",
+		"github.com/u-root/u-root/pkg/boot/linux/bzimage",
 
 		// No Go compiler in VM.
 		"github.com/u-root/u-root/pkg/uroot",

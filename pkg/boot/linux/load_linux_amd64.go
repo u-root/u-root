@@ -11,8 +11,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/u-root/u-root/pkg/boot/bzimage"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux/bzimage"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/uio"
 )

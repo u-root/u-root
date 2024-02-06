@@ -12,8 +12,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/u-root/u-root/pkg/boot/image"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux/image"
 	"github.com/u-root/u-root/pkg/dt"
 )
 

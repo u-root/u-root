@@ -17,7 +17,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/boot/bzimage"
+	"github.com/u-root/u-root/pkg/boot/linux/bzimage"
 )
 
 const (

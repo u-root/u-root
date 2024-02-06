@@ -119,7 +119,7 @@ func TestKexecLoadImage(t *testing.T) {
 			mm: kexec.MemoryMap{
 				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
 			},
-			kernel: openFile(t, "../image/testdata/Image"),
+			kernel: openFile(t, "image/testdata/Image"),
 			entry:  0x101000, /* trampoline entry */
 			fdt: &dt.FDT{
 				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen",
@@ -133,7 +133,7 @@ func TestKexecLoadImage(t *testing.T) {
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
-				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
+				kexec.NewSegment(readFile(t, "image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
 		{
@@ -141,7 +141,7 @@ func TestKexecLoadImage(t *testing.T) {
 			mm: kexec.MemoryMap{
 				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
 			},
-			kernel:  openFile(t, "../image/testdata/Image"),
+			kernel:  openFile(t, "image/testdata/Image"),
 			ramfs:   createFile(t, []byte("ramfs")),
 			cmdline: "foobar",
 			fdt: &dt.FDT{
@@ -161,7 +161,7 @@ func TestKexecLoadImage(t *testing.T) {
 					)),
 				)}), kexec.Range{Start: 0x101000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x101000), kexec.Range{Start: 0x102000, Size: 0x1000}),
-				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
+				kexec.NewSegment(readFile(t, "image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
 		{
@@ -169,7 +169,7 @@ func TestKexecLoadImage(t *testing.T) {
 			mm: kexec.MemoryMap{
 				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
 			},
-			kernel: pipe(t, readFile(t, "../image/testdata/Image")),
+			kernel: pipe(t, readFile(t, "image/testdata/Image")),
 			entry:  0x101000, /* trampoline entry */
 			fdt: &dt.FDT{
 				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen",
@@ -182,7 +182,7 @@ func TestKexecLoadImage(t *testing.T) {
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
-				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
+				kexec.NewSegment(readFile(t, "image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
 		{
@@ -190,7 +190,7 @@ func TestKexecLoadImage(t *testing.T) {
 			mm: kexec.MemoryMap{
 				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
 			},
-			kernel: openFile(t, "../image/testdata/Image"),
+			kernel: openFile(t, "image/testdata/Image"),
 			fdt:    &dt.FDT{RootNode: dt.NewNode("/")},
 			errs:   []error{errNoChosenNode},
 		},
@@ -199,7 +199,7 @@ func TestKexecLoadImage(t *testing.T) {
 			mm: kexec.MemoryMap{
 				kexec.TypedRange{Range: kexec.RangeFromInterval(0, 0x100000), Type: kexec.RangeRAM},
 			},
-			kernel: openFile(t, "../image/testdata/Image"),
+			kernel: openFile(t, "image/testdata/Image"),
 			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
 			errs:   []error{errKernelSegmentFailed, kexec.ErrNotEnoughSpace},
 		},
@@ -217,7 +217,7 @@ func TestKexecLoadImage(t *testing.T) {
 			mm: kexec.MemoryMap{
 				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
 			},
-			kernel: openFile(t, "../image/testdata/Image"),
+			kernel: openFile(t, "image/testdata/Image"),
 			ramfs:  closedFile(t),
 			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
 			errs:   []error{os.ErrClosed},
@@ -228,7 +228,7 @@ func TestKexecLoadImage(t *testing.T) {
 				// kernel is 0x940000, which rounds up to 0xa00000
 				kexec.TypedRange{Range: kexec.Range{Start: 0x200000, Size: 0xa00000}, Type: kexec.RangeRAM},
 			},
-			kernel: openFile(t, "../image/testdata/Image"),
+			kernel: openFile(t, "image/testdata/Image"),
 			ramfs:  createFile(t, []byte("ramfs")),
 			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
 			errs:   []error{errInitramfsSegmentFailed, kexec.ErrNotEnoughSpace},
@@ -240,7 +240,7 @@ func TestKexecLoadImage(t *testing.T) {
 				// Initramfs takes another 0x1000
 				kexec.TypedRange{Range: kexec.Range{Start: 0x200000, Size: 0xa01000}, Type: kexec.RangeRAM},
 			},
-			kernel: openFile(t, "../image/testdata/Image"),
+			kernel: openFile(t, "image/testdata/Image"),
 			ramfs:  createFile(t, []byte("ramfs")),
 			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
 			errs:   []error{errDTBSegmentFailed, kexec.ErrNotEnoughSpace},
