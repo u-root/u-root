@@ -52,6 +52,8 @@ func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	return chosen, nil
 }
 
+var ErrMemmapEmpty = errors.New("memory map is empty or contains no information about system RAM")
+
 func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) (*kimage, error) {
 	fdt, err := dt.LoadFDT(dtb)
 	if err != nil {
@@ -63,9 +65,12 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) (*k
 	Debug("Try parsing memory map...")
 	mm, err := kexec.MemoryMapFromFDT(fdt)
 	if err != nil {
-		return nil, fmt.Errorf("MemoryMapFromFDT(%v): %v", fdt, err)
+		return nil, fmt.Errorf("MemoryMapFromFDT(%v): %w", fdt, err)
 	}
 	Debug("Mem map: \n%+v", mm)
+	if len(mm.RAM()) == 0 {
+		return nil, ErrMemmapEmpty
+	}
 	return kexecLoadImageMM(mm, kernel, ramfs, fdt, cmdline)
 }
 

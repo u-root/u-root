@@ -50,7 +50,7 @@ var StandardPropertyTypes = map[string]PropertyType{
 
 var (
 	errInvalidChildIndex     = errors.New("invalid child index")
-	errPropertyRegionInvalid = errors.New("property value is not <u64x2>")
+	ErrPropertyRegionInvalid = errors.New("property value is not <u64x2>")
 )
 
 // Node is one Node in the Device Tree.
@@ -357,7 +357,7 @@ type Region struct {
 // AsRegion converts the property to a Region.
 func (p *Property) AsRegion() (*Region, error) {
 	if len(p.Value) != 16 {
-		return nil, errPropertyRegionInvalid
+		return nil, ErrPropertyRegionInvalid
 	}
 	var start, size uint64
 	b := bytes.NewBuffer(p.Value)

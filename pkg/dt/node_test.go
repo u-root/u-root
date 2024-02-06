@@ -433,7 +433,7 @@ func TestAsRegion(t *testing.T) {
 				Value: []byte{},
 			},
 			want:    &Region{},
-			wantErr: errPropertyRegionInvalid,
+			wantErr: ErrPropertyRegionInvalid,
 		},
 		{
 			name: "read start and size, success",
