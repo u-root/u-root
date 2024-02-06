@@ -13,6 +13,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/bls"
 	"github.com/u-root/u-root/pkg/boot/esxi"
 	"github.com/u-root/u-root/pkg/boot/grub"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
@@ -27,8 +28,8 @@ func (a byRank) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byRank) Len() int           { return len(a) }
 
 // parse treats device as a block device with a file system.
-func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mountDir string, mountPool *mount.Pool) []boot.OSImage {
-	imgs, err := bls.ScanBLSEntries(l, mountDir, nil, "")
+func parse(l ulog.Logger, c *images.Creator, device *block.BlockDev, devices block.BlockDevices, mountDir string, mountPool *mount.Pool) []boot.OSImage {
+	imgs, err := bls.ScanBLSEntries(l, c, mountDir, nil, "")
 	if err != nil {
 		l.Printf("No systemd-boot BootLoaderSpec configs found on %s, trying another format...: %v", device, err)
 	}
@@ -36,7 +37,7 @@ func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mo
 	// Grub parser may want to load files (kernel, initramfs, modules, ...)
 	// from another partition, thus it is given devices and mountPool in
 	// order to reuse mounts and mount more file systems.
-	grubImgs, err := grub.ParseLocalConfig(context.Background(), mountDir, devices, mountPool)
+	grubImgs, err := grub.ParseLocalConfig(context.Background(), c, mountDir, devices, mountPool)
 	if err != nil {
 		l.Printf("No GRUB configs found on %s, trying another format...: %v", device, err)
 	}
@@ -52,7 +53,7 @@ func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mo
 }
 
 // parseUnmounted treats device as unmounted, with or without partitions.
-func parseUnmounted(l ulog.Logger, device *block.BlockDev, mountPool *mount.Pool) []boot.OSImage {
+func parseUnmounted(l ulog.Logger, c *images.Creator, device *block.BlockDev, mountPool *mount.Pool) []boot.OSImage {
 	// This will try to mount device partition 5 and 6.
 	imgs, mps, err := esxi.LoadDisk(device.DevicePath())
 	if mps != nil {
@@ -82,10 +83,10 @@ func parseUnmounted(l ulog.Logger, device *block.BlockDev, mountPool *mount.Pool
 }
 
 // Localboot tries to boot from any local filesystem by parsing grub configuration
-func Localboot(l ulog.Logger, blockDevs block.BlockDevices, mp *mount.Pool) ([]boot.OSImage, error) {
+func Localboot(l ulog.Logger, c *images.Creator, blockDevs block.BlockDevices, mp *mount.Pool) ([]boot.OSImage, error) {
 	var images []boot.OSImage
 	for _, device := range blockDevs {
-		imgs := parseUnmounted(l, device, mp)
+		imgs := parseUnmounted(l, c, device, mp)
 		if len(imgs) > 0 {
 			images = append(images, imgs...)
 		} else {
@@ -93,7 +94,7 @@ func Localboot(l ulog.Logger, blockDevs block.BlockDevices, mp *mount.Pool) ([]b
 			if err != nil {
 				continue
 			}
-			imgs = parse(l, device, blockDevs, m.Path, mp)
+			imgs = parse(l, c, device, blockDevs, m.Path, mp)
 			images = append(images, imgs...)
 		}
 	}

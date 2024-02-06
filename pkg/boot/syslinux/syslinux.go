@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
@@ -59,7 +60,7 @@ func probeIsolinuxFiles() []string {
 
 // ParseLocalConfig treats diskDir like a mount point on the local file system
 // and finds an isolinux config under there.
-func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, error) {
+func ParseLocalConfig(ctx context.Context, c *images.Creator, diskDir string) ([]boot.OSImage, error) {
 	rootdir := &url.URL{
 		Scheme: "file",
 		Path:   diskDir,
@@ -73,7 +74,7 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 		// configuration file."
 		//
 		// https://wiki.syslinux.org/wiki/index.php?title=Config#Working_directory
-		imgs, err := ParseConfigFile(ctx, curl.DefaultSchemes, name, rootdir, dir)
+		imgs, err := ParseConfigFile(ctx, c, curl.DefaultSchemes, name, rootdir, dir)
 		if curl.IsURLError(err) {
 			continue
 		}
@@ -99,8 +100,8 @@ func ParseLocalConfig(ctx context.Context, diskDir string) ([]boot.OSImage, erro
 // For PXE clients, rootdir will be the the URL without the path, and wd the
 // path component of the URL (e.g. rootdir = http://foobar.com, wd =
 // barfoo/pxelinux.cfg/).
-func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, rootdir *url.URL, wd string) ([]boot.OSImage, error) {
-	p := newParser(rootdir, wd, s)
+func ParseConfigFile(ctx context.Context, c *images.Creator, s curl.Schemes, configFile string, rootdir *url.URL, wd string) ([]boot.OSImage, error) {
+	p := newParser(c, rootdir, wd, s)
 	if err := p.appendFile(ctx, configFile); err != nil {
 		return nil, err
 	}
@@ -160,6 +161,8 @@ type parser struct {
 	linuxEntries map[string]*linux.Image
 	mbEntries    map[string]*multiboot.Image
 
+	creator *images.Creator
+
 	// labelOrder is the order of label entries in linuxEntries.
 	labelOrder []string
 
@@ -193,10 +196,11 @@ const (
 // resulting URL is roughly `wd.String()/path`.
 //
 // `s` is used to get files referred to by URLs.
-func newParser(rootdir *url.URL, wd string, s curl.Schemes) *parser {
+func newParser(c *images.Creator, rootdir *url.URL, wd string, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*linux.Image),
 		mbEntries:    make(map[string]*multiboot.Image),
+		creator:      c,
 		scope:        scopeGlobal,
 		wd:           wd,
 		rootdir:      rootdir,
@@ -336,10 +340,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			// We forever enter label scope.
 			c.scope = scopeEntry
 			c.curEntry = arg
-			c.linuxEntries[c.curEntry] = &linux.Image{
-				Cmdline: c.globalAppend,
-				Name:    c.curEntry,
-			}
+			c.linuxEntries[c.curEntry] = c.creator.NewLinuxImage(nil, linux.WithName(c.curEntry), linux.Append(c.globalAppend))
 			c.labelOrder = append(c.labelOrder, c.curEntry)
 
 		case "kernel":
@@ -348,9 +349,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			if arg == "mboot.c32" {
 				// Prepare for a multiboot kernel.
 				delete(c.linuxEntries, c.curEntry)
-				c.mbEntries[c.curEntry] = &multiboot.Image{
-					Name: c.curEntry,
-				}
+				c.mbEntries[c.curEntry] = c.creator.NewMultibootImage(nil, multiboot.WithName(c.curEntry))
 			}
 			fallthrough
 

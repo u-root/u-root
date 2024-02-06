@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/ulog"
 )
@@ -40,7 +41,7 @@ const (
 // This function skips over invalid or unreadable entries in an effort
 // to return everything that is bootable. map variables is the parsed result
 // from Grub parser that should be used by BLS parser, pass nil if there's none.
-func ScanBLSEntries(l ulog.Logger, fsRoot string, variables map[string]string, grubDefaultSavedEntry string) ([]boot.OSImage, error) {
+func ScanBLSEntries(l ulog.Logger, c *images.Creator, fsRoot string, variables map[string]string, grubDefaultSavedEntry string) ([]boot.OSImage, error) {
 	entriesDir := filepath.Join(fsRoot, blsEntriesDir)
 
 	files, err := filepath.Glob(filepath.Join(entriesDir, "*.conf"))
@@ -72,9 +73,9 @@ func ScanBLSEntries(l ulog.Logger, fsRoot string, variables map[string]string, g
 		var img boot.OSImage
 		var err error
 		if strings.Compare(identifier, grubDefaultSavedEntry) == 0 {
-			img, err = parseBLSEntry(f, fsRoot, variables, true)
+			img, err = parseBLSEntry(c, f, fsRoot, variables, true)
 		} else {
-			img, err = parseBLSEntry(f, fsRoot, variables, false)
+			img, err = parseBLSEntry(c, f, fsRoot, variables, false)
 		}
 		if err != nil {
 			l.Printf("BootLoaderSpec skipping entry %s: %v", f, err)
@@ -171,7 +172,7 @@ func getGrubvalue(variables map[string]string, key string) (string, error) {
 	return "", nil
 }
 
-func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string]string, grubDefaultFlag bool) (boot.OSImage, error) {
+func parseLinuxImage(c *images.Creator, vals map[string]string, fsRoot string, variables map[string]string, grubDefaultFlag bool) (boot.OSImage, error) {
 	linux := &linux.Image{}
 	var cmdlines []string
 	var tokens []string
@@ -269,7 +270,7 @@ func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string
 // parseBLSEntry takes a Type #1 BLS entry and the directory of entries, and
 // returns a LinuxImage.
 // An error is returned if the syntax is wrong or required keys are missing.
-func parseBLSEntry(entryPath, fsRoot string, variables map[string]string, grubDefaultFlag bool) (boot.OSImage, error) {
+func parseBLSEntry(c *images.Creator, entryPath, fsRoot string, variables map[string]string, grubDefaultFlag bool) (boot.OSImage, error) {
 	vals, err := parseConf(entryPath)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config in %s: %w", entryPath, err)
@@ -278,7 +279,7 @@ func parseBLSEntry(entryPath, fsRoot string, variables map[string]string, grubDe
 	var img boot.OSImage
 	err = fmt.Errorf("neither linux, efi, nor multiboot present in BootLoaderSpec config")
 	if _, ok := vals["linux"]; ok {
-		img, err = parseLinuxImage(vals, fsRoot, variables, grubDefaultFlag)
+		img, err = parseLinuxImage(c, vals, fsRoot, variables, grubDefaultFlag)
 	} else if _, ok := vals["multiboot"]; ok {
 		err = fmt.Errorf("multiboot not yet supported")
 	} else if _, ok := vals["efi"]; ok {

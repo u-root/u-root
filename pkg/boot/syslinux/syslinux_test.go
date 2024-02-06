@@ -19,6 +19,7 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
@@ -580,7 +581,7 @@ func TestParseGeneral(t *testing.T) {
 				Path:   "/",
 			}
 
-			got, err := ParseConfigFile(context.Background(), s, "pxelinux.cfg/default", rootdir, "foobar")
+			got, err := ParseConfigFile(context.Background(), &images.Creator{}, s, "pxelinux.cfg/default", rootdir, "foobar")
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("AppendFile() got %v, want %v", err, tt.err)
 			} else if err != nil {
@@ -657,7 +658,7 @@ func TestParseCorner(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ParseConfigFile(context.Background(), tt.s, tt.configFile, tt.rootdir, tt.wd)
+			_, err := ParseConfigFile(context.Background(), &images.Creator{}, tt.s, tt.configFile, tt.rootdir, tt.wd)
 			if !reflect.DeepEqual(err, tt.err) {
 				t.Errorf("ParseConfigFile() = %v, want %v", err, tt.err)
 			}
@@ -749,7 +750,7 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
-		ParseLocalConfig(context.Background(), dirPath)
+		ParseLocalConfig(context.Background(), &images.Creator{}, dirPath)
 	})
 
 }

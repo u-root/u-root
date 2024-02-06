@@ -89,7 +89,7 @@ func absFileScheme(path string) (*url.URL, error) {
 
 // ParseLocalConfig looks for a GRUB config in the disk partition mounted at
 // diskDir and parses out OSes to boot.
-func ParseLocalConfig(ctx context.Context, diskDir string, devices block.BlockDevices, mountPool *mount.Pool) ([]boot.OSImage, error) {
+func ParseLocalConfig(ctx context.Context, cr *images.Creator, diskDir string, devices block.BlockDevices, mountPool *mount.Pool) ([]boot.OSImage, error) {
 	root, err := absFileScheme(diskDir)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func ParseLocalConfig(ctx context.Context, diskDir string, devices block.BlockDe
 	}
 
 	for _, relname := range append(relNames, probeGrubFiles...) {
-		c, err := ParseConfigFile(ctx, curl.DefaultSchemes, relname, root, devices, mountPool)
+		c, err := ParseConfigFile(ctx, cr, curl.DefaultSchemes, relname, root, devices, mountPool)
 		if curl.IsURLError(err) {
 			continue
 		}
@@ -168,8 +168,8 @@ func findkeywordGrubEnv(file string, fsRoot string, key string) (string, error) 
 // `root` is the default scheme, host, and path for any files named as a
 // relative path - e.g. kernel and initramfs paths are requested relative to
 // the root.
-func ParseConfigFile(ctx context.Context, s curl.Schemes, configFile string, root *url.URL, devices block.BlockDevices, mountPool *mount.Pool) ([]boot.OSImage, error) {
-	p := newParser(root, devices, mountPool, s)
+func ParseConfigFile(ctx context.Context, c *images.Creator, s curl.Schemes, configFile string, root *url.URL, devices block.BlockDevices, mountPool *mount.Pool) ([]boot.OSImage, error) {
+	p := newParser(root, c, devices, mountPool, s)
 	if err := p.appendFile(ctx, configFile); err != nil {
 		return nil, err
 	}
@@ -229,6 +229,8 @@ type parser struct {
 
 	labelOrder []string
 
+	creator *images.Creator
+
 	W io.Writer
 
 	// parser internals.
@@ -266,13 +268,14 @@ type parser struct {
 // For example, if the grub config contains `search --by-label LINUX`, this
 // resolves to the device node "/dev/disk/by-partlabel/LINUX". This grub parser
 // looks through mounts for a matching device number.
-func newParser(root *url.URL, devices block.BlockDevices, mountPool *mount.Pool, s curl.Schemes) *parser {
+func newParser(root *url.URL, c *images.Creator, devices block.BlockDevices, mountPool *mount.Pool, s curl.Schemes) *parser {
 	return &parser{
 		linuxEntries: make(map[string]*linux.Image),
 		mbEntries:    make(map[string]*multiboot.Image),
 		variables: map[string]string{
 			"root": root.String(),
 		},
+		creator:     c,
 		devices:     devices,
 		mountPool:   mountPool,
 		schemes:     s,
@@ -535,11 +538,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			// from grub manual: "Any initrd must be reloaded after using this command" so we can replace the entry
-			entry := &linux.Image{
-				Name:    c.curLabel,
-				Kernel:  k,
-				Cmdline: cmdlineQuote(kv[2:]),
-			}
+			entry := c.creator.NewLinuxImage(k, WithName(c.curLabel), Append(cmdlineQuote(kv[2:])))
 			c.linuxEntries[c.curEntry] = entry
 			c.linuxEntries[c.curLabel] = entry
 
@@ -559,11 +558,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			// from grub manual: "Any initrd must be reloaded after using this command" so we can replace the entry
-			entry := &multiboot.Image{
-				Name:    c.curLabel,
-				Kernel:  k,
-				Cmdline: cmdlineQuote(kv[2:]),
-			}
+			entry := c.creator.NewMultibootImage(k, WithName(c.curLabel), Append(cmdlineQuote(kv[2:])))
 			c.mbEntries[c.curEntry] = entry
 			c.mbEntries[c.curLabel] = entry
 

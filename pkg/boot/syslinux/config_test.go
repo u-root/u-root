@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/boot/images"
 )
 
 // Enable this to generate new configs.
@@ -24,7 +25,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			imgs, err := ParseLocalConfig(context.Background(), configPath)
+			imgs, err := ParseLocalConfig(context.Background(), &images.Creator{}, configPath)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -51,7 +52,7 @@ func TestConfigs(t *testing.T) {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}
 
-			imgs, err := ParseLocalConfig(context.Background(), configPath)
+			imgs, err := ParseLocalConfig(context.Background(), &images.Creator{}, configPath)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
