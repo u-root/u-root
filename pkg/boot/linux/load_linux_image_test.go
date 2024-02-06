@@ -314,6 +314,33 @@ func TestKexecLoadImage(t *testing.T) {
 			fdt:  closedFile(t),
 			errs: []error{dt.ErrNoValidReaders},
 		},
+		{
+			name:   "invalid-memmap",
+			kernel: openFile(t, "../image/testdata/Image"),
+			ramfs:  createFile(t, []byte("ramfs")),
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					// Too short.
+					dt.Property{Name: "reg", Value: []byte{0x0}},
+				)),
+			))}),
+			errs: []error{dt.ErrPropertyRegionInvalid},
+		},
+		{
+			name:   "no-memmap",
+			kernel: openFile(t, "../image/testdata/Image"),
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/",
+				dt.WithChildren(
+					dt.NewNode("chosen", dt.WithProperty(
+						dt.PropertyU64("linux,initrd-start", 500),
+						dt.PropertyU64("linux,initrd-end", 500),
+					)),
+				),
+			)}),
+			errs: []error{ErrMemmapEmpty},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := kexecLoadImage(tt.kernel, tt.ramfs, tt.cmdline, tt.fdt)
