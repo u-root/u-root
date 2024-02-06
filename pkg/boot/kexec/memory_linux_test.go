@@ -907,3 +907,115 @@ func TestIsSupersetOf(t *testing.T) {
 		}
 	}
 }
+
+func TestRanges(t *testing.T) {
+	for _, tt := range []struct {
+		start uintptr
+		end   uintptr
+		conv  func(uintptr, uintptr) Range
+		want  Range
+	}{
+		{
+			start: 0,
+			end:   0x1000,
+			conv:  RangeFromInterval,
+			want:  Range{Start: 0, Size: 0x1000},
+		},
+		{
+			start: 0,
+			end:   0xfff,
+			conv:  RangeFromInclusiveInterval,
+			want:  Range{Start: 0, Size: 0x1000},
+		},
+		{
+			start: 0,
+			end:   0,
+			conv:  RangeFromInterval,
+			want:  Range{Start: 0, Size: 0},
+		},
+		{
+			start: 0,
+			end:   0,
+			conv:  RangeFromInclusiveInterval,
+			want:  Range{Start: 0, Size: 0x1},
+		},
+	} {
+		got := tt.conv(tt.start, tt.end)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("Range(%#x, %#x) = %v, want %v", tt.start, tt.end, got, tt.want)
+		}
+	}
+}
+
+func TestAlign(t *testing.T) {
+	for _, tt := range []struct {
+		r         Range
+		alignSize uint
+		want      Range
+	}{
+		{
+			r:         Range{Start: 0x10, Size: 0x10},
+			alignSize: 0x1000,
+			want:      Range{Start: 0, Size: 0x1000},
+		},
+		{
+			r:         Range{Start: 0x10, Size: 0},
+			alignSize: 0x1000,
+			want:      Range{Start: 0, Size: 0},
+		},
+		{
+			r:         Range{Start: 0, Size: 0},
+			alignSize: 0x1000,
+			want:      Range{Start: 0, Size: 0},
+		},
+		{
+			r:         Range{Start: 0, Size: 0x10},
+			alignSize: 0x1000,
+			want:      Range{Start: 0, Size: 0x1000},
+		},
+		{
+			r:         Range{Start: 0x10, Size: 0x10},
+			alignSize: 0,
+			want:      Range{Start: 0x10, Size: 0x10},
+		},
+		{
+			r:         Range{Start: 0x10, Size: 0x10},
+			alignSize: 1,
+			want:      Range{Start: 0x10, Size: 0x10},
+		},
+	} {
+		got := tt.r.Align(tt.alignSize)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("%v.Align(%#x) = %v, want %v", tt.r, tt.alignSize, got, tt.want)
+		}
+	}
+}
+
+func TestAlignPage(t *testing.T) {
+	for _, tt := range []struct {
+		r    Range
+		want Range
+	}{
+		{
+			r:    Range{Start: 0x10, Size: 0x10},
+			want: Range{Start: 0, Size: 0x1000},
+		},
+		{
+			r:    Range{Start: 0x10, Size: 0},
+			want: Range{Start: 0, Size: 0},
+		},
+		{
+			r:    Range{Start: 0, Size: 0},
+			want: Range{Start: 0, Size: 0},
+		},
+		{
+			r:    Range{Start: 0, Size: 0x10},
+			want: Range{Start: 0, Size: 0x1000},
+		},
+	} {
+		got := tt.r.AlignPage()
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("%v.AlignPage() = %v, want %v", tt.r, got, tt.want)
+		}
+	}
+}
