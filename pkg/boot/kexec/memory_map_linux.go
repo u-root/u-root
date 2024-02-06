@@ -293,7 +293,7 @@ func memoryMapFromSysfsMemmap(memoryMapDir string) (MemoryMap, error) {
 		//
 		// start: 0x100, size: 0x100.
 		mm = append(mm, TypedRange{
-			Range: RangeFromInterval(r.start, r.end+1),
+			Range: RangeFromInclusiveInterval(r.start, r.end),
 			Type:  r.typ,
 		})
 	}
@@ -396,8 +396,7 @@ func memoryMapFromIOMem(r io.Reader) (MemoryMap, error) {
 			continue
 		}
 		mm.Insert(TypedRange{
-			// end is inclusive.
-			Range: RangeFromInterval(uintptr(start), uintptr(end+1)),
+			Range: RangeFromInclusiveInterval(uintptr(start), uintptr(end)),
 			Type:  rangeType(typ),
 		})
 	}
@@ -449,7 +448,7 @@ func rangeFromMemblockLine(s string) *Range {
 	}
 
 	// end is inclusive.
-	r := RangeFromInterval(uintptr(start), uintptr(end+1))
+	r := RangeFromInclusiveInterval(uintptr(start), uintptr(end))
 	return &r
 }
 
