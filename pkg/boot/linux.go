@@ -29,6 +29,14 @@ type LinuxImage struct {
 	BootRank    int
 	LoadSyscall bool
 	DTB         io.ReaderAt
+
+	// ReservedRanges are additional physical memory pieces that will be
+	// avoided when allocating kexec segments. Only used for LoadSyscall.
+	//
+	// ReservedRanges will not be shared with the next kernel, which is
+	// free to use this memory unless some other mechanism (such as
+	// memmap=) reserves it.
+	ReservedRanges kexec.Ranges
 }
 
 var _ OSImage = &LinuxImage{}
@@ -243,7 +251,7 @@ func (li *LinuxImage) Load(opts ...LoadOption) error {
 		return nil
 	}
 	if li.LoadSyscall {
-		return linux.KexecLoad(k, i, li.Cmdline, li.DTB)
+		return linux.KexecLoad(k, i, li.Cmdline, li.DTB, li.ReservedRanges)
 	}
 	return kexec.FileLoad(k, i, li.Cmdline)
 }

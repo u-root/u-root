@@ -50,7 +50,7 @@ var StandardPropertyTypes = map[string]PropertyType{
 
 var (
 	errInvalidChildIndex     = errors.New("invalid child index")
-	errPropertyRegionInvalid = errors.New("property value is not <u64x2>")
+	ErrPropertyRegionInvalid = errors.New("property value is not <u64x2>")
 )
 
 // Node is one Node in the Device Tree.
@@ -242,6 +242,17 @@ func PropertyString(name string, value string) Property {
 	}
 }
 
+// PropertyRegion creates a property encoding start and size of a region of memory.
+func PropertyRegion(name string, start, size uint64) Property {
+	b := bytes.NewBuffer(nil)
+	_ = binary.Write(b, binary.BigEndian, start)
+	_ = binary.Write(b, binary.BigEndian, size)
+	return Property{
+		Name:  name,
+		Value: b.Bytes(),
+	}
+}
+
 // Property is a name-value pair. Note the PropertyType of Value is not
 // encoded.
 type Property struct {
@@ -346,7 +357,7 @@ type Region struct {
 // AsRegion converts the property to a Region.
 func (p *Property) AsRegion() (*Region, error) {
 	if len(p.Value) != 16 {
-		return nil, errPropertyRegionInvalid
+		return nil, ErrPropertyRegionInvalid
 	}
 	var start, size uint64
 	b := bytes.NewBuffer(p.Value)

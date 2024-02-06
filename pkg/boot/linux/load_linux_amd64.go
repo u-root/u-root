@@ -25,7 +25,7 @@ const (
 // kernel with the given ramfs file and cmdline string.
 //
 // It uses the kexec_load system call.
-func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
+func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservations kexec.Ranges) error {
 	bzimage.Debug = Debug
 
 	// A collection of vars used for processing the kernel for kexec
@@ -78,6 +78,9 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
 	mm, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
 		return fmt.Errorf("parse memory map: %v", err)
+	}
+	for _, r := range reservations {
+		mm.Insert(kexec.TypedRange{Range: r, Type: kexec.RangeReserved})
 	}
 	kmem = &kexec.Memory{
 		Phys: mm,
