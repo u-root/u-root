@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 )
@@ -67,7 +68,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			imgs, err := ParseLocalConfig(context.Background(), configPath, devices, mountPool)
+			imgs, err := ParseLocalConfig(context.Background(), &images.Creator{}, configPath, devices, mountPool)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -98,7 +99,7 @@ func TestConfigs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			imgs, err := ParseLocalConfig(context.Background(), configPath, devices, mountPool)
+			imgs, err := ParseLocalConfig(context.Background(), &images.Creator{}, configPath, devices, mountPool)
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -174,6 +175,6 @@ func FuzzParseGrubConfig(f *testing.F) {
 			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
-		ParseLocalConfig(context.Background(), baseDir, devices, mountPool)
+		ParseLocalConfig(context.Background(), &images.Creator{}, baseDir, devices, mountPool)
 	})
 }

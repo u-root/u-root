@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bls"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/curl"
@@ -124,11 +125,11 @@ func ParseLocalConfig(ctx context.Context, cr *images.Creator, diskDir string, d
 	return nil, fmt.Errorf("no valid grub config found")
 }
 
-func grubScanBLSEntries(mountPool *mount.Pool, variables map[string]string, grubDefaultSavedEntry string) ([]boot.OSImage, error) {
+func grubScanBLSEntries(c *images.Creator, mountPool *mount.Pool, variables map[string]string, grubDefaultSavedEntry string) ([]boot.OSImage, error) {
 	var images []boot.OSImage
 	// Scan each mounted partition for BLS entries
 	for _, m := range mountPool.MountPoints {
-		imgs, _ := bls.ScanBLSEntries(ulog.Null, m.Path, variables, grubDefaultSavedEntry)
+		imgs, _ := bls.ScanBLSEntries(ulog.Null, c, m.Path, variables, grubDefaultSavedEntry)
 		images = append(images, imgs...)
 	}
 	if len(images) == 0 {
@@ -200,7 +201,7 @@ func ParseConfigFile(ctx context.Context, c *images.Creator, s curl.Schemes, con
 
 	var images []boot.OSImage
 	if p.blscfgFound {
-		if imgs, err := grubScanBLSEntries(p.mountPool, p.variables, grubDefaultSavedEntry); err == nil {
+		if imgs, err := grubScanBLSEntries(c, p.mountPool, p.variables, grubDefaultSavedEntry); err == nil {
 			images = append(images, imgs...)
 		}
 	}
@@ -538,7 +539,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			// from grub manual: "Any initrd must be reloaded after using this command" so we can replace the entry
-			entry := c.creator.NewLinuxImage(k, WithName(c.curLabel), Append(cmdlineQuote(kv[2:])))
+			entry := c.creator.NewLinuxImage(k, linux.WithName(c.curLabel), linux.Append(cmdlineQuote(kv[2:])))
 			c.linuxEntries[c.curEntry] = entry
 			c.linuxEntries[c.curLabel] = entry
 
@@ -558,7 +559,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 			// from grub manual: "Any initrd must be reloaded after using this command" so we can replace the entry
-			entry := c.creator.NewMultibootImage(k, WithName(c.curLabel), Append(cmdlineQuote(kv[2:])))
+			entry := c.creator.NewMultibootImage(k, multiboot.WithName(c.curLabel), multiboot.Append(cmdlineQuote(kv[2:])))
 			c.mbEntries[c.curEntry] = entry
 			c.mbEntries[c.curLabel] = entry
 

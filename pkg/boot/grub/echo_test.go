@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/curl"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
@@ -111,7 +112,7 @@ func TestGrubTests(t *testing.T) {
 				Path:   "./testdata",
 			}
 			mountPool := &mount.Pool{}
-			c := newParser(wd, block.BlockDevices{}, mountPool, curl.DefaultSchemes)
+			c := newParser(wd, &images.Creator{}, block.BlockDevices{}, mountPool, curl.DefaultSchemes)
 			c.W = &b
 
 			script, err := os.ReadFile(file)
