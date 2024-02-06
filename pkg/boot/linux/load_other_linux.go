@@ -11,10 +11,11 @@ import (
 	"io"
 	"os"
 
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"golang.org/x/sys/unix"
 )
 
 // KexecLoad is not implemented for platforms other than amd64 and arm64.
-func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt) error {
+func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservations kexec.Ranges) error {
 	return unix.ENOSYS
 }

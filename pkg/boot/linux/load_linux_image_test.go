@@ -116,10 +116,11 @@ func TestKexecLoadImage(t *testing.T) {
 		name string
 
 		// Inputs
-		kernel  *os.File
-		ramfs   *os.File
-		fdt     io.ReaderAt
-		cmdline string
+		kernel       *os.File
+		ramfs        *os.File
+		fdt          io.ReaderAt
+		cmdline      string
+		reservations kexec.Ranges
 
 		// Results
 		segments kexec.Segments
@@ -341,9 +342,39 @@ func TestKexecLoadImage(t *testing.T) {
 			)}),
 			errs: []error{ErrMemmapEmpty},
 		},
+		{
+			name:   "load-with-reservation",
+			kernel: openFile(t, "../image/testdata/Image"),
+			entry:  0x101000, /* trampoline entry */
+			fdt: fdtReader(t, &dt.FDT{
+				RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen"),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				)),
+			}),
+			reservations: []kexec.Range{
+				// Kernel would normally be allocated here.
+				// This forces kernel to go for the next 2M boundary, 0x400000.
+				{Start: 0x200000, Size: 0x1},
+			},
+			segments: kexec.Segments{
+				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen"),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
+				kexec.NewSegment(trampoline(0x400000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
+				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x400000, Size: 0xa00000}),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kexecLoadImage(tt.kernel, tt.ramfs, tt.cmdline, tt.fdt)
+			got, err := kexecLoadImage(tt.kernel, tt.ramfs, tt.cmdline, tt.fdt, tt.reservations)
 			for _, wantErr := range tt.errs {
 				if !errors.Is(err, wantErr) {
 					t.Errorf("kexecLoad Arm Image = %v, want %v", err, wantErr)
