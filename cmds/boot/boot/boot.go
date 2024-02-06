@@ -59,9 +59,9 @@ var (
 // updateBootCmdline get the kernel command line parameters and filter it:
 // it removes parameters listed in 'remove' and append extra parameters from
 // the 'append' and 'reuse' flags
-func updateBootCmdline(cl string) string {
+func cmdlineModifier(li *boot.LinuxImage) {
 	f := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
-	return f.Update(cmdline.NewCmdLine(), cl)
+	li.Cmdline = f.Update(cmdline.NewCmdLine(), li.Cmdline)
 }
 
 func main() {
@@ -97,12 +97,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, img := range images {
-		// Make changes to the kernel command line based on our cmdline.
-		if li, ok := img.(*boot.LinuxImage); ok {
-			li.Cmdline = updateBootCmdline(li.Cmdline)
-		}
-	}
+	// Make changes to the kernel command line based on our cmdline.
+	boot.ApplyLinuxModifiers(images, cmdlineModifier)
 
 	menuEntries := menu.OSImages(*verbose, images...)
 	menuEntries = append(menuEntries, menu.Reboot{})

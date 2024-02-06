@@ -94,3 +94,53 @@ type OSImage interface {
 func Execute() error {
 	return kexec.Reboot()
 }
+
+// LinuxModifier modifies a Linux image.
+type LinuxModifier func(img *LinuxImage)
+
+// PrependLinux prepends cmdline to any existing Linux cmdline.
+func PrependLinux(cmdline string) LinuxModifier {
+	return func(img *LinuxImage) {
+		if img.Cmdline == "" {
+			img.Cmdline = cmdline
+		} else {
+			img.Cmdline = cmdline + " " + img.Cmdline
+		}
+	}
+}
+
+// AppendLinux appends cmdline to any existing Linux cmdline.
+func AppendLinux(cmdline string) LinuxModifier {
+	return func(img *LinuxImage) {
+		if img.Cmdline == "" {
+			img.Cmdline = cmdline
+		} else {
+			img.Cmdline += " " + cmdline
+		}
+	}
+}
+
+// MultibootModifier modifies a multiboot image.
+type MultibootModifier func(img *MultibootImage)
+
+// ApplyLinuxModifiers applies opts to every LinuxImage in images.
+func ApplyLinuxModifiers(images []OSImage, opts ...LinuxModifier) {
+	for _, img := range images {
+		if li, ok := img.(*LinuxImage); ok {
+			for _, opt := range opts {
+				opt(li)
+			}
+		}
+	}
+}
+
+// ApplyMultibootModifiers applies opts to every MultibootImage in images.
+func ApplyMultibootModifiers(images []OSImage, opts ...MultibootModifier) {
+	for _, img := range images {
+		if li, ok := img.(*MultibootImage); ok {
+			for _, opt := range opts {
+				opt(li)
+			}
+		}
+	}
+}
