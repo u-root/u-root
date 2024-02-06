@@ -61,10 +61,23 @@ func openFile(t *testing.T, path string) *os.File {
 func fdtBytes(t *testing.T, fdt *dt.FDT) []byte {
 	t.Helper()
 	var b bytes.Buffer
+	fdt.Header.Magic = dt.Magic
+	fdt.Header.Version = 17
 	if _, err := fdt.Write(&b); err != nil {
 		t.Fatal(err)
 	}
 	return b.Bytes()
+}
+
+func fdtReader(t *testing.T, fdt *dt.FDT) io.ReaderAt {
+	t.Helper()
+	var b bytes.Buffer
+	fdt.Header.Magic = dt.Magic
+	fdt.Header.Version = 17
+	if _, err := fdt.Write(&b); err != nil {
+		t.Fatal(err)
+	}
+	return bytes.NewReader(b.Bytes())
 }
 
 func pipe(t *testing.T, content []byte) *os.File {
@@ -103,10 +116,9 @@ func TestKexecLoadImage(t *testing.T) {
 		name string
 
 		// Inputs
-		mm      kexec.MemoryMap
 		kernel  *os.File
 		ramfs   *os.File
-		fdt     *dt.FDT
+		fdt     io.ReaderAt
 		cmdline string
 
 		// Results
@@ -115,139 +127,175 @@ func TestKexecLoadImage(t *testing.T) {
 		errs     []error
 	}{
 		{
-			name: "load-no-initramfs",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
-			},
+			name:   "load-no-initramfs",
 			kernel: openFile(t, "../image/testdata/Image"),
 			entry:  0x101000, /* trampoline entry */
-			fdt: &dt.FDT{
-				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen",
-					dt.WithProperty(
+			fdt: fdtReader(t, &dt.FDT{
+				RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen", dt.WithProperty(
 						dt.PropertyU64("linux,initrd-start", 500),
 						dt.PropertyU64("linux,initrd-end", 500),
 						dt.PropertyString("bootargs", "ohno"),
-					),
-				))),
-			},
+					)),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				)),
+			}),
 			segments: kexec.Segments{
-				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
+				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen"),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
 				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
 		{
-			name: "load-initramfs-and-cmdline",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
-			},
+			name:    "load-initramfs-and-cmdline",
 			kernel:  openFile(t, "../image/testdata/Image"),
 			ramfs:   createFile(t, []byte("ramfs")),
 			cmdline: "foobar",
-			fdt: &dt.FDT{
-				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen"))),
-			},
-			entry: 0x102000, /* trampoline entry */
+			fdt: fdtReader(t, &dt.FDT{
+				RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen"),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				)),
+			}),
+			entry: 0x102000,
 			segments: kexec.Segments{
 				kexec.NewSegment([]byte("ramfs"), kexec.Range{Start: 0x100000, Size: 0x1000}),
-				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/",
-					dt.WithChildren(dt.NewNode("chosen",
-						dt.WithProperty(
-							dt.PropertyU64("linux,initrd-start", 0x100000),
-							// TODO: should this actually be 0x100005?
-							dt.PropertyU64("linux,initrd-end", 0x101000),
-							dt.PropertyString("bootargs", "foobar"),
-						),
+				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen", dt.WithProperty(
+						dt.PropertyU64("linux,initrd-start", 0x100000),
+						// TODO: should this actually be 0x100005?
+						dt.PropertyU64("linux,initrd-end", 0x101000),
+						dt.PropertyString("bootargs", "foobar"),
 					)),
-				)}), kexec.Range{Start: 0x101000, Size: 0x1000}),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				))}), kexec.Range{Start: 0x101000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x101000), kexec.Range{Start: 0x102000, Size: 0x1000}),
 				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
 		{
-			name: "pipefile",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
-			},
+			name:   "pipefile",
 			kernel: pipe(t, readFile(t, "../image/testdata/Image")),
-			entry:  0x101000, /* trampoline entry */
-			fdt: &dt.FDT{
-				RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen",
-					dt.WithProperty(
+			entry:  0x101000,
+			fdt: fdtReader(t, &dt.FDT{
+				RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen", dt.WithProperty(
 						dt.PropertyU64("linux,initrd-start", 500),
 						dt.PropertyU64("linux,initrd-end", 500),
-					),
-				))),
-			},
+					)),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				)),
+			}),
 			segments: kexec.Segments{
-				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
+				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+					dt.NewNode("chosen"),
+					dt.NewNode("test memory", dt.WithProperty(
+						dt.PropertyString("device_type", "memory"),
+						dt.PropertyRegion("reg", 0x100000, 0xf00000),
+					)),
+				))}), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(trampoline(0x200000, 0x100000), kexec.Range{Start: 0x101000, Size: 0x1000}),
 				kexec.NewSegment(readFile(t, "../image/testdata/Image"), kexec.Range{Start: 0x200000, Size: 0xa00000}),
 			},
 		},
 		{
-			name: "no chosen node in fdt",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
-			},
+			name:   "no chosen node in fdt",
 			kernel: openFile(t, "../image/testdata/Image"),
-			fdt:    &dt.FDT{RootNode: dt.NewNode("/")},
-			errs:   []error{errNoChosenNode},
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					dt.PropertyRegion("reg", 0x100000, 0xf00000),
+				)),
+			))}),
+			errs: []error{errNoChosenNode},
 		},
 		{
-			name: "not enough space for kernel image",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0, 0x100000), Type: kexec.RangeRAM},
-			},
+			name:   "not enough space for kernel image",
 			kernel: openFile(t, "../image/testdata/Image"),
-			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
-			errs:   []error{errKernelSegmentFailed, kexec.ErrNotEnoughSpace},
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					dt.PropertyRegion("reg", 0, 0x100000),
+				)),
+			))}),
+			errs: []error{errKernelSegmentFailed, kexec.ErrNotEnoughSpace},
 		},
 		{
-			name: "kernel-error",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
-			},
+			name:   "kernel-error",
 			kernel: closedFile(t),
-			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
-			errs:   []error{os.ErrClosed},
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					dt.PropertyRegion("reg", 0, 0x1000000),
+				)),
+			))}),
+			errs: []error{os.ErrClosed},
 		},
 		{
-			name: "initramfs-error",
-			mm: kexec.MemoryMap{
-				kexec.TypedRange{Range: kexec.RangeFromInterval(0x100000, 0x10000000), Type: kexec.RangeRAM},
-			},
+			name:   "initramfs-error",
 			kernel: openFile(t, "../image/testdata/Image"),
 			ramfs:  closedFile(t),
-			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
-			errs:   []error{os.ErrClosed},
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					dt.PropertyRegion("reg", 0, 0x1000000),
+				)),
+			))}),
+			errs: []error{os.ErrClosed},
 		},
 		{
-			name: "not-enough-space-for-kernel-and-initramfs",
-			mm: kexec.MemoryMap{
-				// kernel is 0x940000, which rounds up to 0xa00000
-				kexec.TypedRange{Range: kexec.Range{Start: 0x200000, Size: 0xa00000}, Type: kexec.RangeRAM},
-			},
+			name:   "not-enough-space-for-kernel-and-initramfs",
 			kernel: openFile(t, "../image/testdata/Image"),
 			ramfs:  createFile(t, []byte("ramfs")),
-			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
-			errs:   []error{errInitramfsSegmentFailed, kexec.ErrNotEnoughSpace},
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					// kernel size is 0x940000, which rounds up to 0xa00000
+					dt.PropertyRegion("reg", 0x200000, 0xa00000),
+				)),
+			))}),
+			errs: []error{errInitramfsSegmentFailed, kexec.ErrNotEnoughSpace},
 		},
 		{
-			name: "not-enough-space-for-dtb",
-			mm: kexec.MemoryMap{
-				// kernel is 0x940000, which rounds up to 0xa00000
-				// Initramfs takes another 0x1000
-				kexec.TypedRange{Range: kexec.Range{Start: 0x200000, Size: 0xa01000}, Type: kexec.RangeRAM},
-			},
+			name:   "not-enough-space-for-dtb",
 			kernel: openFile(t, "../image/testdata/Image"),
 			ramfs:  createFile(t, []byte("ramfs")),
-			fdt:    &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(dt.NewNode("chosen")))},
-			errs:   []error{errDTBSegmentFailed, kexec.ErrNotEnoughSpace},
+			fdt: fdtReader(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+				dt.NewNode("chosen"),
+				dt.NewNode("test memory", dt.WithProperty(
+					dt.PropertyString("device_type", "memory"),
+					// kernel size is 0x940000, which rounds up to 0xa00000
+					// Initramfs takes another 0x1000
+					dt.PropertyRegion("reg", 0x200000, 0xa01000),
+				)),
+			))}),
+			errs: []error{errDTBSegmentFailed, kexec.ErrNotEnoughSpace},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kexecLoadImageMM(tt.mm, tt.kernel, tt.ramfs, tt.fdt, tt.cmdline)
+			got, err := kexecLoadImage(tt.kernel, tt.ramfs, tt.cmdline, tt.fdt)
 			for _, wantErr := range tt.errs {
 				if !errors.Is(err, wantErr) {
 					t.Errorf("kexecLoad Arm Image = %v, want %v", err, wantErr)
