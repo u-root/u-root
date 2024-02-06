@@ -25,7 +25,6 @@ import (
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/images"
-	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
@@ -173,7 +172,7 @@ func getGrubvalue(variables map[string]string, key string) (string, error) {
 }
 
 func parseLinuxImage(c *images.Creator, vals map[string]string, fsRoot string, variables map[string]string, grubDefaultFlag bool) (boot.OSImage, error) {
-	linux := &linux.Image{}
+	linux := c.NewLinuxImage(nil)
 	var cmdlines []string
 	var tokens []string
 	var value string
@@ -249,7 +248,11 @@ func parseLinuxImage(c *images.Creator, vals map[string]string, fsRoot string, v
 	}
 	// If both title and version were empty, so will this.
 	linux.Name = strings.Join(name, " ")
-	linux.Cmdline = strings.Join(cmdlines, " ")
+	if linux.Cmdline == "" {
+		linux.Cmdline = strings.Join(cmdlines, " ")
+	} else {
+		linux.Cmdline += " " + strings.Join(cmdlines, " ")
+	}
 	// If this is the default option, increase the BootRank by 1
 	// when os.LookupEnv("BLS_BOOT_RANK") doesn't exist so it's not affected.
 	if val, exist := os.LookupEnv("BLS_BOOT_RANK"); exist {

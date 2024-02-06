@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot/boottest"
+	"github.com/u-root/u-root/pkg/boot/images"
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 )
 
@@ -38,7 +39,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil, "")
+			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, &images.Creator{}, configPath, nil, "")
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -56,7 +57,7 @@ func TestParseBLSEntries(t *testing.T) {
 
 	for _, tt := range blsEntries {
 		t.Run(tt.entry, func(t *testing.T) {
-			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), fsRoot, nil, false)
+			image, err := parseBLSEntry(&images.Creator{}, filepath.Join(dir, tt.entry), fsRoot, nil, false)
 			if err != nil {
 				if tt.err == "" {
 					t.Fatalf("Got error %v", err)
@@ -89,7 +90,7 @@ func TestScanBLSEntries(t *testing.T) {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}
 
-			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil, "")
+			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, &images.Creator{}, configPath, nil, "")
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -110,7 +111,7 @@ func TestSetBLSRank(t *testing.T) {
 
 	for _, tt := range blsEntries {
 		t.Run(tt.entry, func(t *testing.T) {
-			image, err := parseBLSEntry(filepath.Join(dir, tt.entry), fsRoot, nil, false)
+			image, err := parseBLSEntry(&images.Creator{}, filepath.Join(dir, tt.entry), fsRoot, nil, false)
 			if err != nil {
 				if tt.err == "" {
 					t.Fatalf("Got error %v", err)
