@@ -43,6 +43,14 @@ func RangeFromInterval(start, end uintptr) Range {
 	}
 }
 
+// RangeFromInclusiveInterval returns a Range representing [start, last].
+func RangeFromInclusiveInterval(start, last uintptr) Range {
+	return Range{
+		Start: start,
+		Size:  uint(last - start + 1),
+	}
+}
+
 // String returns [Start, Start+Size) as a string.
 func (r Range) String() string {
 	return fmt.Sprintf("[%#x, %#x)", r.Start, r.End())
@@ -51,6 +59,11 @@ func (r Range) String() string {
 // End returns the uintptr *after* the end of the interval.
 func (r Range) End() uintptr {
 	return r.Start + uintptr(r.Size)
+}
+
+// Last returns last uintptr inside the interval.
+func (r Range) Last() uintptr {
+	return r.Start + uintptr(r.Size) - 1
 }
 
 // Adjacent returns true if r and r2 do not overlap, but are immediately next
@@ -391,6 +404,39 @@ func (s *Segment) mergeDisjoint(s2 Segment) bool {
 	phys.Size += uint(diffSize) + s2.Phys.Size
 	*s = NewSegment(buf, phys)
 	return true
+}
+
+// Align aligns start and size by the given alignSize.
+//
+// The resulting range is guaranteed to be superset of r.
+func (r Range) Align(alignSize uint) Range {
+	if alignSize == 0 {
+		return r
+	}
+	s := align.Down(r.Start, uintptr(alignSize))
+	// Empty range remains empty.
+	if r.Size == 0 {
+		return Range{Start: s}
+	}
+	return Range{
+		Start: s,
+		Size:  align.Up(r.Size+uint(r.Start-s), alignSize),
+	}
+}
+
+// AlignPage aligns start and size by page size.
+//
+// The resulting range is guaranteed to be superset of r.
+func (r Range) AlignPage() Range {
+	s := align.DownPage(r.Start)
+	// Empty range remains empty.
+	if r.Size == 0 {
+		return Range{Start: s}
+	}
+	return Range{
+		Start: s,
+		Size:  align.UpPage(r.Size + uint(r.Start-s)),
+	}
 }
 
 // AlignPhysStart aligns s.Phys.Start to the page size. AlignPhysStart does not
