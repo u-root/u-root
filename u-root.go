@@ -68,7 +68,7 @@ func init() {
 	case "plan9":
 		sh = ""
 	default:
-		sh = "elvish"
+		sh = "gosh"
 	}
 
 	build = flag.String("build", "gbb", "u-root build format (e.g. bb/gbb or binary).")
