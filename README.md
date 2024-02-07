@@ -77,17 +77,17 @@ u-root
 u-root core boot
 
 # Generate an archive with only these given commands
-u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,elvish}
+u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,gosh}
 
 # Generate an archive with all of the core tools with some exceptions
 u-root core -cmds/core/{ls,losetup}
 
 # Generate an archive with a tool outside of u-root
 git clone https://github.com/u-root/cpu
-u-root ./cmds/core/{init,ls,elvish} ./cpu/cmds/cpud
+u-root ./cmds/core/{init,ls,gosh} ./cpu/cmds/cpud
 
 # Generate an archive with a tool outside of u-root, in any PWD
-(cd /tmp && GBB_PATH=$UROOT_PATH:$CPU_PATH u-root ./cmds/core/{init,ls,elvish} ./cmds/cpud)
+(cd /tmp && GBB_PATH=$UROOT_PATH:$CPU_PATH u-root ./cmds/core/{init,ls,gosh} ./cmds/cpud)
 ```
 
 The default set of packages included is all packages in
@@ -100,12 +100,12 @@ checked for existence. For example:
 ```shell
 GBB_PATH=$HOME/u-root:$HOME/u-bmc u-root \
     cmds/core/init \
-    cmds/core/elvish \
+    cmds/core/gosh \
     cmd/socreset
 
 # matches:
 #   $HOME/u-root/cmds/core/init
-#   $HOME/u-root/cmds/core/elvish
+#   $HOME/u-root/cmds/core/gosh
 #   $HOME/u-bmc/cmd/socreset
 ```
 
@@ -153,7 +153,7 @@ symlink path. **Only `-uinitcmd` accepts command-line arguments, however.** For
 example,
 
 ```bash
-u-root -uinitcmd="echo Go Gopher" ./cmds/core/{init,echo,elvish}
+u-root -uinitcmd="echo Go Gopher" ./cmds/core/{init,echo,gosh}
 
 cpio -ivt < /tmp/initramfs.linux_amd64.cpio
 # ...
@@ -178,7 +178,7 @@ Passing command line arguments like above is equivalent to passing the arguments
 Additionally, you can pass arguments to uinit via the `uroot.uinitargs` kernel parameters, for example:
 
 ```bash
-u-root -uinitcmd="echo Gopher" ./cmds/core/{init,echo,elvish}
+u-root -uinitcmd="echo Gopher" ./cmds/core/{init,echo,gosh}
 
 cpio -ivt < /tmp/initramfs.linux_amd64.cpio
 # ...
@@ -205,7 +205,7 @@ The command you name must be present in the command set. The following will *not
 work*:
 
 ```bash
-u-root -uinitcmd="echo Go Gopher" ./cmds/core/{init,elvish}
+u-root -uinitcmd="echo Go Gopher" ./cmds/core/{init,gosh}
 # 2020/04/30 21:05:57 could not create symlink from "bin/uinit" to "echo": command or path "echo" not included in u-root build: specify -uinitcmd="" to ignore this error and build without a uinit
 ```
 
@@ -215,30 +215,30 @@ don't presume to know whether your symlink target is correct or not.
 This will build, but not work unless you add a /bin/foobar to the initramfs.
 
 ```bash
-u-root -uinitcmd="/bin/foobar Go Gopher" ./cmds/core/{init,elvish}
+u-root -uinitcmd="/bin/foobar Go Gopher" ./cmds/core/{init,gosh}
 ```
 
 This will boot the same as the above.
 
 ```bash
-u-root -uinitcmd="/bin/foobar Go Gopher" -files /bin/echo:bin/foobar -files your-hosts-file:/etc/hosts ./cmds/core/{init,elvish}
+u-root -uinitcmd="/bin/foobar Go Gopher" -files /bin/echo:bin/foobar -files your-hosts-file:/etc/hosts ./cmds/core/{init,gosh}
 ```
 
 The effect of the above command:
 *   Sets up the uinit command to be /bin/foobar, with 2 arguments: Go Gopher
 *   Adds /bin/echo as bin/foobar
 *   Adds your-hosts-file as etc/hosts
-*   builds in the cmds/core/init, and cmds/core/elvish commands.
+*   builds in the cmds/core/init, and cmds/core/gosh commands.
     The {} are expanded by the shell 
 
 This will bypass the regular u-root init and just launch a shell:
 
 ```bash
-u-root -initcmd=elvish ./cmds/core/{elvish,ls}
+u-root -initcmd=gosh ./cmds/core/{gosh,ls}
 
 cpio -ivt < /tmp/initramfs.linux_amd64.cpio
 # ...
-# lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/elvish
+# lrwxrwxrwx   0 root     root            9 Dec 31  1969 init -> bbin/gosh
 
 qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nographic -append "console=ttyS0"
 # ...

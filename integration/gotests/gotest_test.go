@@ -118,7 +118,7 @@ func TestGoTest(t *testing.T) {
 	vmtest.RunGoTestsInVM(t, pkgs,
 		vmtest.WithVMOpt(
 			vmtest.WithMergedInitramfs(uroot.Opts{
-				DefaultShell: "elvish",
+				DefaultShell: "gosh",
 				Commands: uroot.BusyBoxCmds(
 					"github.com/u-root/u-root/cmds/core/*",
 				),
