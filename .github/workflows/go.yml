@@ -20,7 +20,7 @@ jobs:
     - name: Install golangci-lint
       run: |
         cd ..
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.0
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.56.0
     - name: Check vendored dependencies
       run: |
         go mod tidy
@@ -47,7 +47,13 @@ jobs:
           --exclude="package comment should be of the form" \
           --exclude="(function|type|const|method|var|type field|struct field) (\w|_|\.)+ should be (\w|_|\.)+" \
           --exclude="stutter" \
-          --exclude="which can be annoying to use"
+          --exclude="which can be annoying to use" \
+          --exclude="unused-parameter" \
+          --exclude="redefines-builtin-id" \
+          --exclude="superfluous-else" \
+          --exclude="empty-block" \
+          --exclude="unreachable-code" \
+          --exclude="indent-error-flow"
     - name: ineffassign
       run: golangci-lint run ./... --disable-all --enable=ineffassign
 
