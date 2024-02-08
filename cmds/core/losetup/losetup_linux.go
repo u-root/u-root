@@ -49,7 +49,6 @@ func main() {
 		devicename, err = loop.FindDevice()
 		if err != nil {
 			log.Fatalf("can't find a loop: %v", err)
-			os.Exit(1)
 		}
 		filename = args[0]
 	} else if len(args) == 2 {
