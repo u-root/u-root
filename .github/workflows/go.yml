@@ -51,8 +51,7 @@ jobs:
           --exclude="unused-parameter" \
           --exclude="redefines-builtin-id" \
           --exclude="superfluous-else" \
-          --exclude="empty-block" \
-          --exclude="indent-error-flow"
+          --exclude="empty-block"
     - name: ineffassign
       run: golangci-lint run ./... --disable-all --enable=ineffassign
 
