@@ -186,7 +186,6 @@ func (list EfiDevicePathProtocolList) String() string {
 	for n, dpp := range list {
 		if dpp == nil {
 			log.Fatalf("nil dpp %d %#v", n, list)
-			continue
 		}
 		res += dpp.String() + "/"
 	}
