@@ -8,15 +8,17 @@
 package strace
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"os/exec"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/uio/uio/uiotest"
 )
 
 func prepareTestCmd(t *testing.T, cmd string) {
@@ -32,7 +34,17 @@ func prepareTestCmd(t *testing.T, cmd string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	w := uiotest.TestLineWriter(t, "make all")
+
+	r, w := io.Pipe()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		s := bufio.NewScanner(r)
+		for s.Scan() {
+			t.Logf("Output: %s", s.Text())
+		}
+		wg.Done()
+	}()
 
 	c := exec.CommandContext(ctx, "make", "all")
 	c.Stdout = w
@@ -41,16 +53,29 @@ func prepareTestCmd(t *testing.T, cmd string) {
 	if err := c.Run(); err != nil {
 		t.Fatalf("make failed: %v", err)
 	}
+	w.Close()
+	wg.Wait()
 }
 
 func runAndCollectTrace(t *testing.T, cmd *exec.Cmd) []*TraceRecord {
 	// Write strace logs to t.Logf.
-	w := uiotest.TestLineWriter(t, "")
+	r, w := io.Pipe()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		s := bufio.NewScanner(r)
+		for s.Scan() {
+			t.Logf("Output: %s", s.Text())
+		}
+		wg.Done()
+	}()
+
 	traceChan := make(chan *TraceRecord)
 	done := make(chan error, 1)
 
 	go func() {
 		done <- Trace(cmd, PrintTraces(w), RecordTraces(traceChan))
+		w.Close()
 		close(traceChan)
 	}()
 
@@ -66,6 +91,7 @@ func runAndCollectTrace(t *testing.T, cmd *exec.Cmd) []*TraceRecord {
 			t.Errorf("Trace exited with error: %v", err)
 		}
 	}
+	wg.Wait()
 	return events
 }
 
