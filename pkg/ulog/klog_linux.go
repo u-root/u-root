@@ -62,13 +62,6 @@ func (k *KLog) Printf(format string, v ...interface{}) {
 	}
 }
 
-// Print formats using the default operands for v and writes to kernel logging.
-func (k *KLog) Print(v ...interface{}) {
-	if !k.writeString(fmt.Sprint(v...)) {
-		Log.Print(v...)
-	}
-}
-
 // KLogLevel are the log levels used by printk.
 type KLogLevel uintptr
 
