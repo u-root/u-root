@@ -279,12 +279,11 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/uio v0.0.0-20240118234441-a3c409a6018e
-## explicit; go 1.16
+# github.com/u-root/uio v0.0.0-20240208165552-2ba503b08e3b
+## explicit; go 1.21
 github.com/u-root/uio/cp
 github.com/u-root/uio/rand
 github.com/u-root/uio/uio
-github.com/u-root/uio/uio/uiotest
 github.com/u-root/uio/ulog
 github.com/u-root/uio/ulog/ulogtest
 # github.com/ulikunitz/xz v0.5.11
