@@ -19,6 +19,7 @@ import (
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/qemu/qnetwork"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uroot"
 )
@@ -51,9 +52,17 @@ func TestDhclientQEMU4(t *testing.T) {
 		sleep 5
 	`, port)
 	vm := vmtest.StartVMAndRunCmds(t, script,
+		// Build dhclient as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/dhclient",
+		),
+		// Build dhclient (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/cat",
-			"github.com/u-root/u-root/cmds/core/dhclient",
 			"github.com/u-root/u-root/cmds/core/ip",
 			"github.com/u-root/u-root/cmds/core/sleep",
 			"github.com/u-root/u-root/cmds/core/wget",
@@ -86,8 +95,16 @@ func TestDhclientTimesOut(t *testing.T) {
 
 	net := qnetwork.NewInterVM()
 	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
+		// Build dhclient as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
 			"github.com/u-root/u-root/cmds/core/dhclient",
+		),
+		// Build dhclient (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
+		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/sleep",
 		)}),
 		vmtest.WithQEMUFn(
@@ -141,9 +158,17 @@ func TestDhclient6(t *testing.T) {
 	`
 	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
 		vmtest.WithName("TestDhclient6_Client"),
+		// Build dhclient as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/core/dhclient",
+		),
+		// Build dhclient (and all other initramfs commands) with coverage enabled.
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
 			"github.com/u-root/u-root/cmds/core/ip",
-			"github.com/u-root/u-root/cmds/core/dhclient",
 		)}),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),

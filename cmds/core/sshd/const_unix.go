@@ -8,6 +8,6 @@
 package main
 
 var (
-	shells = [...]string{"bash", "zsh", "elvish"}
+	shells = [...]string{"bash", "zsh", "gosh", "elvish"}
 	shell  = "/bin/sh"
 )
