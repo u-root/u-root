@@ -14,6 +14,7 @@ import (
 	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/qemu/qnetwork"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/u-root/pkg/testutil"
 	"github.com/u-root/u-root/pkg/uroot"
 )
@@ -49,7 +50,14 @@ func TestPxeboot4(t *testing.T) {
 	clientScript := "pxeboot --no-exec -v"
 	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
 		vmtest.WithName("TestPxeboot_Client"),
-		vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/boot/pxeboot"),
+		// Build pxeboot as a binary command to get accurate GOCOVERDIR
+		// integration coverage data (busybox rewrites command code).
+		vmtest.WithBinaryCommands(
+			"github.com/u-root/u-root/cmds/boot/pxeboot",
+		),
+		vmtest.WithGoBuildOpts(&golang.BuildOpts{
+			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
+		}),
 		vmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			net.NewVM(),
