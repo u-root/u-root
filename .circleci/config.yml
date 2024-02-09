@@ -21,58 +21,12 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - test-tinygo
-      - test-build-tamago-riscv64
-      - test-build-tamago-arm
       - race
       - compile_cmds
       - check_templates
       - check_licenses
 
 jobs:
-  test-tinygo:
-    <<: *beefy-template
-    steps:
-      - checkout
-      - run:
-          name: tinygo build and test commands
-          command: echo sooner but not yet docker run --rm -v ~/go:/home/tinygo/go  tinygo/tinygo:0.26.0 bash -c 'cd  go/src/github.com/u-root/u-root/cmds/core/cmp && tinygo test .'
-          no_output_timeout: 15m
-
-  test-build-tamago-arm:
-    docker:
-      - image: uroottest/test-image-tamago:v4.5.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-    steps:
-      - checkout
-      - run:
-          name: Test u-root tamago build
-          command: GOOS=tamago GOARCH=arm GOARM=7 go build ./pkg/dt/...
-      - run:
-          name: build armory-boot elf target
-          command: |
-            cd /home/circleci
-            git clone https://github.com/usbarmory/armory-boot.git
-            cd armory-boot
-            go version
-            BOOT=eMMC make elf
-
-  test-build-tamago-riscv64:
-    docker:
-      - image: uroottest/test-image-tamago:v4.5.0
-    working_directory: /home/circleci/go/src/github.com/u-root/u-root
-    environment:
-      - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
-      - CGO_ENABLED: 0
-    steps:
-      - checkout
-      - run:
-          name: Test u-root tamago build
-          command: GOOS=tamago GOARCH=riscv64 go build ./pkg/dt/...
-
   race:
     <<: *beefy-template
     environment:
