@@ -9,6 +9,13 @@ linters:
     - revive
     - ineffassign
     - staticcheck
+    - stylecheck
+
+linters-settings:
+  staticcheck:
+    checks: ["all", "-SA1006", "-SA1019", "-SA4003", "-SA4006", "-SA4016", "-SA5001", "-SA9004"]
+  stylecheck:
+    checks: ["all", "-ST1003", "-ST1005", "-ST1016", "-ST1023"]
 
 issues:
   exclude-rules:
@@ -28,6 +35,3 @@ issues:
       text: "superfluous-else"
     - linters: revive
       text: "empty-block"
-    - linters:
-        - staticcheck
-      text: "SA1006:|SA1019:|SA4003:|SA4006:|SA4016:|SA5001:|SA9004:"
