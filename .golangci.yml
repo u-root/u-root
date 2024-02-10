@@ -1,0 +1,37 @@
+run:
+  skip-dirs:
+    - pkg/uroot/test
+    - cmds/core/elvish
+
+linters:
+  disable-all: true
+  enable:
+    - revive
+    - ineffassign
+
+issues:
+  exclude-rules:
+    - linters: revive
+      text: "exported (function|type|const|method|var) (\\w|_|\\.)+ should have comment"
+    - linters: revive
+      text: "don't use underscores"
+    - linters: revive
+      text: "don't use ALL_CAPS"
+    - linters: revive
+      text: "comment on exported (function|type|const|method|var) (\\w|_|\\.)+ should be of the form"
+    - linters: revive
+      text: "package comment should be of the form"
+    - linters: revive
+      text: "(function|type|const|method|var|type field|struct field) (\\w|_|\\.)+ should be (\\w|_|\\.)+"
+    - linters: revive
+      text: "stutter"
+    - linters: revive
+      text: "which can be annoying to use"
+    - linters: revive
+      text: "unused-parameter"
+    - linters: revive
+      text: "redefines-builtin-id"
+    - linters: revive
+      text: "superfluous-else"
+    - linters: revive
+      text: "empty-block"
