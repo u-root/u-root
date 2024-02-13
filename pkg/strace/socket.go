@@ -18,13 +18,13 @@
 package strace
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/strace/internal/abi"
-	"github.com/u-root/u-root/pkg/strace/internal/binary"
-	"github.com/u-root/u-root/pkg/ubinary"
+	sbinary "github.com/u-root/u-root/pkg/strace/internal/binary"
 	"golang.org/x/sys/unix"
 )
 
@@ -47,7 +47,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 		}
 
 		var h abi.ControlMessageHeader
-		binary.Unmarshal(buf[i:i+abi.SizeOfControlMessageHeader], ubinary.NativeEndian, &h)
+		sbinary.Unmarshal(buf[i:i+abi.SizeOfControlMessageHeader], binary.NativeEndian, &h)
 
 		var skipData bool
 		level := "SOL_SOCKET"
@@ -89,7 +89,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 
 			numRights := rightsSize / abi.SizeOfControlMessageRight
 			fds := make(abi.ControlMessageRights, numRights)
-			binary.Unmarshal(buf[i:i+rightsSize], ubinary.NativeEndian, &fds)
+			sbinary.Unmarshal(buf[i:i+rightsSize], binary.NativeEndian, &fds)
 
 			rights := make([]string, 0, len(fds))
 			for _, fd := range fds {
@@ -116,7 +116,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 			}
 
 			var creds abi.ControlMessageCredentials
-			binary.Unmarshal(buf[i:i+abi.SizeOfControlMessageCredentials], binary.LittleEndian, &creds)
+			sbinary.Unmarshal(buf[i:i+abi.SizeOfControlMessageCredentials], binary.LittleEndian, &creds)
 
 			strs = append(strs, fmt.Sprintf(
 				"{level=%s, type=%s, length=%d, pid: %d, uid: %d, gid: %d}",
@@ -140,7 +140,7 @@ func cmsghdr(t Task, addr Addr, length uint64, maxBytes uint64) string {
 			}
 
 			var tv unix.Timeval
-			binary.Unmarshal(buf[i:i+abi.SizeOfTimeval], ubinary.NativeEndian, &tv)
+			sbinary.Unmarshal(buf[i:i+abi.SizeOfTimeval], binary.NativeEndian, &tv)
 
 			strs = append(strs, fmt.Sprintf(
 				"{level=%s, type=%s, length=%d, Sec: %d, Usec: %d}",
@@ -195,7 +195,7 @@ func sockAddr(t Task, addr Addr, length uint32) string {
 	if len(b) < 2 {
 		return fmt.Sprintf("%#x {address too short: %d bytes}", addr, len(b))
 	}
-	family := ubinary.NativeEndian.Uint16(b)
+	family := binary.NativeEndian.Uint16(b)
 
 	familyStr := abi.SocketFamily.Parse(uint64(family))
 

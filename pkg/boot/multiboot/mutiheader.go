@@ -9,8 +9,6 @@ import (
 	"encoding/binary"
 	"io"
 	"log"
-
-	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 // esxBootInfoMagic is both the magic value found in the esxBootInfo kernel header as
@@ -90,7 +88,7 @@ func parseMutiHeader(r io.Reader) (*esxBootInfoHeader, error) {
 	br := new(bytes.Reader)
 	for len(buf) >= sizeofHeader {
 		br.Reset(buf)
-		if err := binary.Read(br, ubinary.NativeEndian, &hdr); err != nil {
+		if err := binary.Read(br, binary.NativeEndian, &hdr); err != nil {
 			return nil, err
 		}
 		if hdr.Magic == esxBootInfoMagic && (hdr.Magic+uint32(hdr.Flags)+hdr.Checksum) == 0 {
