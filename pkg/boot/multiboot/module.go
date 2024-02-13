@@ -13,7 +13,6 @@ import (
 	"os"
 
 	"github.com/u-root/u-root/pkg/align"
-	"github.com/u-root/u-root/pkg/ubinary"
 	"github.com/u-root/uio/uio"
 )
 
@@ -150,7 +149,7 @@ func (m modules) fix(base uint32) {
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 func (m modules) marshal() ([]byte, error) {
 	buf := bytes.Buffer{}
-	err := binary.Write(&buf, ubinary.NativeEndian, m)
+	err := binary.Write(&buf, binary.NativeEndian, m)
 	return buf.Bytes(), err
 }
 
