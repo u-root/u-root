@@ -8,8 +8,6 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
-
-	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 // Reader is the interface for reading from memory and IO ports.
@@ -41,7 +39,7 @@ func (m *Port) Read(out UintN, addr int64) error {
 	if _, err := m.File.Seek(addr, io.SeekStart); err != nil {
 		return err
 	}
-	return binary.Read(m.File, ubinary.NativeEndian, out)
+	return binary.Read(m.File, binary.NativeEndian, out)
 }
 
 // Write implements Writer for a Port
@@ -49,7 +47,7 @@ func (m *Port) Write(in UintN, addr int64) error {
 	if _, err := m.File.Seek(addr, io.SeekStart); err != nil {
 		return err
 	}
-	return binary.Write(m.File, ubinary.NativeEndian, in)
+	return binary.Write(m.File, binary.NativeEndian, in)
 }
 
 // Close implements Close.

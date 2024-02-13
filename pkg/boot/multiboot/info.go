@@ -7,8 +7,6 @@ package multiboot
 import (
 	"bytes"
 	"encoding/binary"
-
-	"github.com/u-root/u-root/pkg/ubinary"
 )
 
 var sizeofInfo = uint32(binary.Size(info{}))
@@ -96,7 +94,7 @@ func (iw *infoWrapper) marshal(base uintptr) ([]byte, error) {
 	iw.info.Flags |= flagInfoCmdline | flagInfoBootLoaderName
 
 	buf := bytes.Buffer{}
-	if err := binary.Write(&buf, ubinary.NativeEndian, iw.info); err != nil {
+	if err := binary.Write(&buf, binary.NativeEndian, iw.info); err != nil {
 		return nil, err
 	}
 
