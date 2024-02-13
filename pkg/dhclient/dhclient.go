@@ -264,6 +264,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 		case <-time.After(100 * time.Millisecond):
 			continue
 		case <-linkTimeout:
+			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		case <-ctx.Done():
 			return nil, errors.New("timeout after waiting for a non-tentative IPv6 address")
 		}
@@ -281,6 +282,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 			case <-time.After(100 * time.Millisecond):
 				continue
 			case <-linkTimeout:
+				return nil, errors.New("timeout after waiting for a route")
 			case <-ctx.Done():
 				return nil, errors.New("timeout after waiting for a route")
 			}
