@@ -66,7 +66,7 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, res
 		fdt, err = dt.ReadFile("/sys/firmware/fdt")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Read FDT = %w", err)
+		return nil, fmt.Errorf("read FDT = %w", err)
 	}
 	Debug("Loaded FDT: %s", fdt)
 
@@ -74,7 +74,7 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, res
 	Debug("Try parsing memory map...")
 	mm, err := kexec.MemoryMapFromFDT(fdt)
 	if err != nil {
-		return nil, fmt.Errorf("MemoryMapFromFDT(%v): %w", fdt, err)
+		return nil, fmt.Errorf("memoryMapFromFDT(%v): %w", fdt, err)
 	}
 	Debug("Mem map: \n%+v", mm)
 	if len(mm.RAM()) == 0 {
