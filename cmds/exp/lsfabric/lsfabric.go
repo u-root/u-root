@@ -147,7 +147,7 @@ func (d *DataFabric) address(id nodeID, fun uint8, off uint16) error {
 		return fmt.Errorf("fun is %#x but must be < 8", fun)
 	}
 	if off&3 != 0 {
-		return fmt.Errorf("Target id is %#x but must be 8-byte aligned", off)
+		return fmt.Errorf("target id is %#x but must be 8-byte aligned", off)
 	}
 	if off >= 2048 {
 		return fmt.Errorf("off %#x must be < %#x", off, 2048)
@@ -179,7 +179,7 @@ func (d *DataFabric) ReadBroadcast(fun uint8, off uint16) (uint64, error) {
 
 func new(n uint8) (*DataFabric, error) {
 	if n > 1 {
-		return nil, fmt.Errorf("Node is %d, but can only be 0 or 1", n)
+		return nil, fmt.Errorf("node is %d, but can only be 0 or 1", n)
 	}
 	devName := fmt.Sprintf("0000:00:%02x.4", n+0x18)
 	r, err := pci.NewBusReader(devName)
@@ -210,7 +210,7 @@ func new(n uint8) (*DataFabric, error) {
 	v("config is %#x", c)
 	d.Config = cfg(c).Unmarshal()
 	if c, err = d.ReadBroadcast(0, 0x40); err != nil {
-		return nil, fmt.Errorf("Read TotalCount: %v", err)
+		return nil, fmt.Errorf("read TotalCount: %v", err)
 	}
 	d.TotalCount = uint(uint8(c))
 	v("Reg 40 is %#x, totalcount %d", c, d.TotalCount)
