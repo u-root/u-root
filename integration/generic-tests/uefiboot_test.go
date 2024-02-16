@@ -13,15 +13,14 @@ import (
 	"time"
 
 	"github.com/Netflix/go-expect"
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/gobusybox/src/pkg/golang"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/hugelgupf/vmtest/scriptvm"
+	"github.com/u-root/mkuimage/uimage"
 )
 
 // TestUefiboot tests uefiboot commmands to boot to uefishell.
 func TestUEFIBoot(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
 	var payload string
 	if tk := os.Getenv("UROOT_TEST_UEFIPAYLOAD"); len(tk) == 0 {
@@ -40,26 +39,23 @@ func TestUEFIBoot(t *testing.T) {
 		sync
 		kexec -e
 	`
-	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithBusyboxCommands(
-			"github.com/u-root/u-root/cmds/core/kexec",
-			"github.com/u-root/u-root/cmds/core/sync",
+	vm := scriptvm.Start(t, "vm", script,
+		scriptvm.WithUimage(
+			uimage.WithBusyboxCommands(
+				"github.com/u-root/u-root/cmds/core/kexec",
+				"github.com/u-root/u-root/cmds/core/sync",
+			),
+			// Since busybox mode rewrites commands, build uefiboot
+			// straight up as a binary to get integration test coverage.
+			uimage.WithCoveredCommands("github.com/u-root/u-root/cmds/exp/uefiboot"),
 		),
-		// Since busybox mode rewrites commands, build uefiboot
-		// straight up as a binary to get integration test coverage.
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BinaryCmds("github.com/u-root/u-root/cmds/exp/uefiboot"),
-		}),
-		vmtest.WithQEMUFn(
+		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			qemu.IDEBlockDevice(payload),
 			qemu.ArbitraryArgs("-machine", "q35"),
 			qemu.ArbitraryArgs("-m", "4096"),
+			qemu.VirtioRandom(),
 		),
-		// Build uefiboot (and all other initramfs commands) with coverage enabled.
-		vmtest.WithGoBuildOpts(&golang.BuildOpts{
-			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
-		}),
 	)
 
 	// Edk2 debug mode will print PROGRESS CODE. We will want to make sure
