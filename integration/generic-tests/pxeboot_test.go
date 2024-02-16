@@ -11,12 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/qemu/qnetwork"
-	"github.com/u-root/gobusybox/src/pkg/golang"
+	"github.com/hugelgupf/vmtest/scriptvm"
+	"github.com/u-root/mkuimage/uimage"
 	"github.com/u-root/u-root/pkg/testutil"
-	"github.com/u-root/u-root/pkg/uroot"
 )
 
 // TestPxeboot runs a server and client to test pxebooting a node.
@@ -29,38 +28,35 @@ func TestPxeboot4(t *testing.T) {
 		pxeserver -tftp-dir=/pxeroot
 	`
 	net := qnetwork.NewInterVM()
-	serverVM := vmtest.StartVMAndRunCmds(t, serverScript,
-		vmtest.WithName("TestPxeboot_Server"),
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
+	serverVM := scriptvm.Start(t, "pxe_server", serverScript,
+		scriptvm.WithUimage(
+			uimage.WithBusyboxCommands(
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/ls",
 				"github.com/u-root/u-root/cmds/exp/pxeserver",
 			),
-			ExtraFiles: []string{
-				"./testdata/pxe:pxeroot",
-			},
-		}),
-		vmtest.WithQEMUFn(
-			qemu.WithVMTimeout(time.Minute),
+			uimage.WithFiles("./testdata/pxe:pxeroot"),
+		),
+		scriptvm.WithQEMUFn(
+			qemu.WithVMTimeout(90*time.Second),
 			net.NewVM(),
+			qemu.VirtioRandom(),
 		),
 	)
 
 	clientScript := "pxeboot --no-exec -v"
-	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
-		vmtest.WithName("TestPxeboot_Client"),
-		// Build pxeboot as a binary command to get accurate GOCOVERDIR
-		// integration coverage data (busybox rewrites command code).
-		vmtest.WithBinaryCommands(
-			"github.com/u-root/u-root/cmds/boot/pxeboot",
+	clientVM := scriptvm.Start(t, "pxe_client", clientScript,
+		scriptvm.WithUimage(
+			// Build pxeboot as a binary command to get accurate GOCOVERDIR
+			// integration coverage data (busybox rewrites command code).
+			uimage.WithCoveredCommands(
+				"github.com/u-root/u-root/cmds/boot/pxeboot",
+			),
 		),
-		vmtest.WithGoBuildOpts(&golang.BuildOpts{
-			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
-		}),
-		vmtest.WithQEMUFn(
-			qemu.WithVMTimeout(time.Minute),
+		scriptvm.WithQEMUFn(
+			qemu.WithVMTimeout(90*time.Second),
 			net.NewVM(),
+			qemu.VirtioRandom(),
 		),
 	)
 
