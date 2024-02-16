@@ -12,16 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/ipmi"},
-		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+	govmtest.Run(t, "vm",
+		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/ipmi"),
+		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			// This integration test requires kernel built with the following options set:
 			// CONFIG_IPMI=y
@@ -30,7 +31,7 @@ func TestIntegration(t *testing.T) {
 			// CONFIG_IPMI_SI=y
 			qemu.ArbitraryArgs("-device", "ipmi-bmc-sim,id=bmc0"),
 			qemu.ArbitraryArgs("-device", "pci-ipmi-kcs,bmc=bmc0"),
-		)),
+		),
 	)
 }
 
