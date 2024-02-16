@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/u-root/u-root/pkg/mount"
@@ -40,10 +40,11 @@ import (
 //   ARM tests will load drives as virtio-blk devices (/dev/vd*)
 
 func TestVM(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/securelaunch"},
-		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+	govmtest.Run(t, "vm",
+		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch"),
+		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 
 			// CONFIG_ATA_PIIX is required for this option to work.
@@ -57,7 +58,7 @@ func TestVM(t *testing.T) {
 
 			// With NVMe devices enabled, kernel crashes when not using q35 machine model.
 			qemu.ArbitraryArgs("-machine", "q35"),
-		)),
+		),
 	)
 }
 
