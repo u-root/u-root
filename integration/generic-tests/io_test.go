@@ -13,22 +13,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/hugelgupf/vmtest/scriptvm"
+	"github.com/u-root/mkuimage/uimage"
 )
 
 // TestIO tests the string "UART TEST" is written to the serial port on 0x3f8.
 func TestIO(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
 	testCmd := []string{"io"}
 	for _, b := range []byte("UART TEST\r\n") {
 		testCmd = append(testCmd, fmt.Sprintf("outb 0x3f8 %d", b))
 	}
 
-	vm := vmtest.StartVMAndRunCmds(t, strings.Join(testCmd, " "),
-		vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/io"),
-		vmtest.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
+	vm := scriptvm.Start(t, "vm", strings.Join(testCmd, " "),
+		scriptvm.WithUimage(uimage.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/io")),
+		scriptvm.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
 	)
 
 	if _, err := vm.Console.ExpectString("UART TEST"); err != nil {
@@ -41,12 +42,12 @@ func TestIO(t *testing.T) {
 
 // TestCMOS runs a series of cmos read and write commands and then checks if the changes to CMOS are reflected.
 func TestCMOS(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
 	script := "io cw 14 1 cr 14 cw 14 0 cr 14"
-	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/io"),
-		vmtest.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
+	vm := scriptvm.Start(t, "vm", script,
+		scriptvm.WithUimage(uimage.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/io")),
+		scriptvm.WithQEMUFn(qemu.WithVMTimeout(30*time.Second)),
 	)
 
 	if _, err := vm.Console.ExpectString("0x01"); err != nil {
