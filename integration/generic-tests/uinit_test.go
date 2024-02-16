@@ -11,27 +11,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/hugelgupf/vmtest/qemu/qcoverage"
+	"github.com/hugelgupf/vmtest/qemu/quimage"
+	"github.com/u-root/mkuimage/uimage"
 )
 
 // TestHelloWorld runs an init which prints the string "HELLO WORLD" and exits.
 func TestHelloWorld(t *testing.T) {
-	vm := vmtest.StartVM(t,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			InitCmd:  "init",
-			UinitCmd: "helloworld",
-			Commands: uroot.BusyBoxCmds(
+	vm := qemu.StartT(t, "vm", qemu.ArchUseEnvv,
+		quimage.WithUimageT(t,
+			uimage.WithInit("init"),
+			uimage.WithUinit("helloworld"),
+			uimage.WithBusyboxCommands(
 				"github.com/u-root/u-root/integration/testcmd/helloworld",
 				"github.com/u-root/u-root/cmds/core/init",
 			),
-			TempDir: t.TempDir(),
-		}),
-		vmtest.WithQEMUFn(
-			qemu.WithVMTimeout(time.Minute),
 		),
-		vmtest.CollectKernelCoverage(),
+		qemu.WithVMTimeout(time.Minute),
+		qcoverage.CollectKernelCoverage(t),
 	)
 
 	if _, err := vm.Console.ExpectString("HELLO WORLD"); err != nil {
@@ -42,22 +40,19 @@ func TestHelloWorld(t *testing.T) {
 	}
 }
 
-// TestHelloWorldNegative runs an init which does not print the string "HELLO WORLD".
+// TestHelloWorldNegative runs an init which does not print the string "GOODBYE WORLD".
 func TestHelloWorldNegative(t *testing.T) {
-	vm := vmtest.StartVM(t,
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			InitCmd:  "init",
-			UinitCmd: "helloworld",
-			Commands: uroot.BusyBoxCmds(
+	vm := qemu.StartT(t, "vm", qemu.ArchUseEnvv,
+		quimage.WithUimageT(t,
+			uimage.WithInit("init"),
+			uimage.WithUinit("helloworld"),
+			uimage.WithBusyboxCommands(
 				"github.com/u-root/u-root/integration/testcmd/helloworld",
 				"github.com/u-root/u-root/cmds/core/init",
 			),
-			TempDir: t.TempDir(),
-		}),
-		vmtest.WithQEMUFn(
-			qemu.WithVMTimeout(time.Minute),
 		),
-		vmtest.CollectKernelCoverage(),
+		qemu.WithVMTimeout(time.Minute),
+		qcoverage.CollectKernelCoverage(t),
 	)
 
 	if _, err := vm.Console.ExpectString("GOODBYE WORLD"); err == nil {
