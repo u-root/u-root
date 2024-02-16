@@ -12,10 +12,6 @@ import (
 )
 
 const (
-	// SharedDir is where MountSharedDir will mount a directory shared via
-	// vmtest.WithSharedDir.
-	SharedDir = "/testdata"
-
 	// https://wiki.qemu.org/Documentation/9psetup#msize recommends an
 	// msize of at least 10MiB. Larger number might give better
 	// performance. QEMU will print a warning if it is too small. Linux's
@@ -35,18 +31,4 @@ func Mount9PDir(dir, tag string) (*mount.MountPoint, error) {
 		return nil, fmt.Errorf("failed to mount directory %s: %v", dir, err)
 	}
 	return mp, nil
-}
-
-// MountSharedDir mounts the directory shared with the VM test. A cleanup
-// function is returned to unmount.
-func MountSharedDir() (func(), error) {
-	tag := os.Getenv("VMTEST_SHARED_DIR")
-	if tag == "" {
-		return func() {}, nil
-	}
-	mp, err := Mount9PDir(SharedDir, tag)
-	if err != nil {
-		return nil, err
-	}
-	return func() { _ = mp.Unmount(0) }, nil
 }

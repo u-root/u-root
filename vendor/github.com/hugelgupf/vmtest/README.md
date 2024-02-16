@@ -14,20 +14,24 @@ vmtest is a Go API for launching QEMU VMs.
     * running tasks (goroutines) bound to the VM process lifetime, and
     * using expect-scripting to check for outputs.
 
-* [The `uqemu` package](https://pkg.go.dev/github.com/hugelgupf/vmtest/uqemu)
-  can be used to configure a u-root initramfs to be used as the boot root file
-  system.
+    * [`quimage`](https://pkg.go.dev/github.com/hugelgupf/vmtest/quimage)
+      can be used to configure a Go-based u-root initramfs to be used as the
+      root file system, including any arbitrary Go commands.
+    * [`qnetwork`](https://pkg.go.dev/github.com/hugelgupf/vmtest/qemu/qnetwork)
+      (WIP) is an API to QEMU network devices.
+    * [`qevent`](https://pkg.go.dev/github.com/hugelgupf/vmtest/qemu/qevent)
+      provides a JSON-over-virtio-serial channel from guest to host.
+    * [`qcoverage`](https://pkg.go.dev/github.com/hugelgupf/vmtest/qemu/qcoverage)
+      adds utilities to collect kernel & Go
+      [`GOCOVERDIR`-based](https://go.dev/doc/build-cover) integration test
+      coverage.
 
-* [The `vmtest` package](https://pkg.go.dev/github.com/hugelgupf/vmtest)
-  contains
+* [The `govmtest` package](https://pkg.go.dev/github.com/hugelgupf/vmtest/govmtest)
+  (WIP) contains an API for running Go unit tests in the guest and collecting
+  their test coverage as well as results.
 
-    * a `testing.TB` wrapper around the `qemu` API with some safe defaults
-      (logging serial console to `t.Logf`, etc)
-    * an API for running shell scripts in the guest
-    * an API for running Go unit tests in the guest and collecting their
-      results.
-
-Out of these, the `vmtest` API is still the most raw and being iterated on.
+* [The `scriptvm` package](https://pkg.go.dev/github.com/hugelgupf/vmtest/scriptvm)
+  (WIP) contains an API for running shell scripts in the guest.
 
 ## Running Tests
 
@@ -90,7 +94,63 @@ Docker image with just QEMU binaries and their dependencies.
 
 ## Writing Tests
 
+### Architecture-independent test with shared directory
+
+The recommendation for architecture-independent tests is to allow
+architecture-dependent values like `VMTEST_QEMU` and `VMTEST_KERNEL` be provided
+by `runvmtest` based on `VMTEST_ARCH`, while configuring everything else with
+the Go API.
+
+See e.g. [examples/shareddir](./examples/shareddir/vm_test.go)
+
+Run it with:
+
+```sh
+$ cd examples/shareddir
+$ VMTEST_ARCH=amd64 runvmtest -- go test -v
+$ VMTEST_ARCH=arm64 runvmtest -- go test -v
+$ VMTEST_ARCH=riscv64 runvmtest -- go test -v
+$ VMTEST_ARCH=arm runvmtest -- go test -v
+```
+
+They all should pass.
+
+Every test in this repository is written this way to test every feature on all
+architectures.
+
+### Example: Go unit tests in VM
+
+See [tests/gobench](./tests/gobench/bench_test.go)
+
+### Example: qemu API with u-root initramfs
+
+```go
+func TestStartVM(t *testing.T) {
+    vm := qemu.StartT(
+        t,
+        "vm", // Prefix for t.Logf serial console lines.
+        qemu.ArchUseEnvv,
+        quimage.WithUimageT(t,
+                uimage.WithInit("init"),
+                uimage.WithUinit("shutdownafter", "--", "cat", "etc/thatfile"),
+                uimage.WithBusyboxCommands(
+                        "github.com/u-root/u-root/cmds/core/init",
+                        "github.com/u-root/u-root/cmds/core/cat",
+                        "github.com/hugelgupf/vmtest/vminit/shutdownafter",
+                ),
+                uimage.WithFiles("./testdata/foo:etc/thatfile"),
+        ),
+
+        // Other options...
+    )
+    // ...
+}
+```
+
 ### Example: qemu API
+
+The qemu API can be used without `testing.TB`, and any of the environment
+variables can be overridden in the Go API:
 
 ```go
 func TestStartVM(t *testing.T) {
@@ -105,7 +165,7 @@ func TestStartVM(t *testing.T) {
         qemu.WithKernel("./foobar"),
 
         // Or omit and set VMTEST_INITRAMFS=./somewhere.cpio
-        // Or use u-root initramfs builder in uqemu package. See example below.
+        // Or use u-root initramfs builder in quimage package. See example below.
         qemu.WithInitramfs("./somewhere.cpio"),
 
         qemu.WithAppendKernel("console=ttyS0 earlyprintk=ttyS0"),
@@ -123,33 +183,6 @@ func TestStartVM(t *testing.T) {
     if err := vm.Wait(); err != nil {
         t.Fatalf("Error waiting for VM to exit: %v", err)
     }
-}
-```
-
-### Example: qemu API with u-root initramfs
-
-```go
-func TestStartVM(t *testing.T) {
-    initramfs := uroot.Opts{
-        TempDir:   t.TempDir(),
-        InitCmd:   "init",
-        UinitCmd:  "cat",
-        UinitArgs: []string{"etc/thatfile"},
-        Commands: uroot.BusyBoxCmds(
-            "github.com/u-root/u-root/cmds/core/init",
-            "github.com/u-root/u-root/cmds/core/cat",
-        ),
-        ExtraFiles: []string{
-            "./testdata/foo:etc/thatfile",
-        },
-    }
-    vm, err := qemu.Start(
-        qemu.ArchUseEnvv,
-        uqemu.WithUrootInitramfsT(t, initramfs),
-
-        // Other options...
-    )
-    // ...
 }
 ```
 
@@ -183,14 +216,6 @@ func TestStartVM(t *testing.T) {
     // ...
 }
 ```
-
-### Example: vmtest API
-
-See [tests/startexample](./tests/startexample/vm_test.go)
-
-### Example: Go unit tests in VM
-
-See [tests/gobench](./tests/gobench/bench_test.go)
 
 ## Custom runvmtest configuration
 

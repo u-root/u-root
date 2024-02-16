@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/uuid v1.3.0
-	github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa
+	github.com/hugelgupf/vmtest v0.0.0-20240216064925-0561770280a1
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/kevinburke/ssh_config v1.1.0
@@ -32,19 +32,20 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20231228173702-b69f654846aa
+	github.com/u-root/gobusybox/src v0.0.0-20240212035024-44ff0bf359ad
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/uio v0.0.0-20240208165552-2ba503b08e3b
+	github.com/u-root/mkuimage v0.0.0-20240216050315-5f527d1fae2e
+	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.17.0
+	golang.org/x/crypto v0.18.0
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
-	golang.org/x/net v0.19.0
-	golang.org/x/sys v0.15.0
-	golang.org/x/term v0.15.0
+	golang.org/x/net v0.20.0
+	golang.org/x/sys v0.16.0
+	golang.org/x/term v0.16.0
 	golang.org/x/text v0.14.0
-	golang.org/x/tools v0.16.1
+	golang.org/x/tools v0.17.0
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
@@ -61,8 +62,7 @@ require (
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
 	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
 	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
@@ -83,7 +83,7 @@ require (
 	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/arch v0.2.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 )
 
 retract (
