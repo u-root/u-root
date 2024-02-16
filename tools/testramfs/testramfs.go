@@ -27,8 +27,7 @@ const (
 		// since none of my CLs to fix go runtime for
 		// it ever got in.
 		// syscall.CLONE_NEWPID |
-		syscall.CLONE_NEWUTS |
-		0
+		syscall.CLONE_NEWUTS
 )
 
 var (
