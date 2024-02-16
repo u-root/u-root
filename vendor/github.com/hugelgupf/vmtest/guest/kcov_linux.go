@@ -15,29 +15,6 @@ import (
 	"github.com/u-root/u-root/pkg/tarutil"
 )
 
-// GOCOVERDIR sets GOCOVERDIR in the guest if it was shared by
-// vmtest.ShareGOCOVERDIR.
-func GOCOVERDIR() func() {
-	tag := os.Getenv("VMTEST_GOCOVERDIR")
-	if tag == "" {
-		return func() {}
-	}
-
-	mp, err := Mount9PDir("/gocov", tag)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := os.Setenv("GOCOVERDIR", "/gocov"); err != nil {
-		log.Fatal(err)
-	}
-	return func() {
-		if err := mp.Unmount(0); err != nil {
-			log.Printf("Unmounting GOCOVERDIR: %v", err)
-		}
-	}
-}
-
 // gcovFilter filters on all files ending with a gcda or gcno extension.
 func gcovFilter(hdr *tar.Header) bool {
 	if hdr.Typeflag == tar.TypeDir {
@@ -53,21 +30,15 @@ func gcovFilter(hdr *tar.Header) bool {
 }
 
 // CollectKernelCoverage saves the kernel coverage report to a tar file.
+//
+// Assumes that the `vmmount` command has been used to mount the kernel
+// coverage 9P shared dir at /mount/9p/kcoverage.
 func CollectKernelCoverage() {
-	tag := os.Getenv("VMTEST_KCOVERAGE_TAG")
-	if tag == "" {
-		log.Printf("Kernel coverage collection skipped.")
+	if _, err := os.Stat("/mount/9p/kcoverage"); os.IsNotExist(err) {
+		log.Printf("Skipping kernel coverage collection as /mount/9p/kcoverage does not exist")
 		return
 	}
-
-	coverageDir := "/coverage"
-	mp, err := Mount9PDir(coverageDir, tag)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() { _ = mp.Unmount(0) }()
-
-	if err := collectKernelCoverage(filepath.Join(coverageDir, "kernel_coverage.tar")); err != nil {
+	if err := collectKernelCoverage("/mount/9p/kcoverage/kernel_coverage.tar"); err != nil {
 		log.Printf("Failed to collect kernel coverage: %v", err)
 	}
 }

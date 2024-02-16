@@ -1,0 +1,273 @@
+// Copyright 2018 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package initramfs
+
+import (
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"path"
+	"path/filepath"
+	"sort"
+
+	"github.com/u-root/mkuimage/cpio"
+)
+
+// Files are host files and records to add to the resulting initramfs.
+type Files struct {
+	// Files is a map of relative archive path -> absolute host file path.
+	Files map[string]string
+
+	// Records is a map of relative archive path -> Record to use.
+	//
+	// TODO: While the only archive mode is cpio, this will be a
+	// cpio.Record. If or when there is another archival mode, we can add a
+	// similar uroot.Record type.
+	Records map[string]cpio.Record
+}
+
+// NewFiles returns a new archive files map.
+func NewFiles() *Files {
+	return &Files{
+		Files:   make(map[string]string),
+		Records: make(map[string]cpio.Record),
+	}
+}
+
+// sortedKeys returns a list of sorted paths in the archive.
+func (af *Files) sortedKeys() []string {
+	keys := make([]string, 0, len(af.Files)+len(af.Records))
+	for dest := range af.Files {
+		keys = append(keys, dest)
+	}
+	for dest := range af.Records {
+		keys = append(keys, dest)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func (af *Files) addFile(src string, dest string, follow bool) error {
+	src = filepath.Clean(src)
+	dest = path.Clean(dest)
+	if path.IsAbs(dest) {
+		r, err := filepath.Rel("/", dest)
+		if err != nil {
+			return fmt.Errorf("%q is an absolute path and can't make it relative to /: %v", dest, err)
+		}
+		log.Printf("Warning: You used an absolute path %q and it was adjusted to %q", dest, r)
+		dest = r
+	}
+
+	if follow {
+		s, err := filepath.EvalSymlinks(src)
+		if err != nil {
+			return err
+		}
+		src = s
+	}
+
+	// We check if it's a directory first. If a directory already exists as
+	// a record or file, we want to include its children anyway.
+	sInfo, err := os.Lstat(src)
+	if err != nil {
+		return fmt.Errorf("adding %q to archive failed because Lstat failed: %w", src, err)
+	}
+
+	// Recursively add children.
+	if sInfo.Mode().IsDir() {
+		err := children(src, func(name string) error {
+			return af.addFile(filepath.Join(src, name), filepath.Join(dest, name), follow)
+		})
+		if err != nil {
+			return err
+		}
+
+		// Only override an existing directory if all children were
+		// added successfully.
+		af.Files[dest] = src
+		return nil
+	}
+
+	if record, ok := af.Records[dest]; ok {
+		return &os.PathError{
+			Op:   "add to archive",
+			Path: dest,
+			Err:  fmt.Errorf("%w: is %v", os.ErrExist, record),
+		}
+	}
+
+	if srcFile, ok := af.Files[dest]; ok {
+		// Just a duplicate.
+		if src == srcFile {
+			return nil
+		}
+		return &os.PathError{
+			Op:   "add to archive",
+			Path: dest,
+			Err:  fmt.Errorf("%w: backed by %q", os.ErrExist, src),
+		}
+	}
+
+	af.Files[dest] = src
+	return nil
+}
+
+// AddFile adds a host file at src into the archive at dest.
+// It follows symlinks.
+//
+// If src is a directory, it and its children will be added to the archive
+// relative to dest.
+//
+// Duplicate files with identical content will be silently ignored.
+func (af *Files) AddFile(src string, dest string) error {
+	return af.addFile(src, dest, true)
+}
+
+// AddFileNoFollow adds a host file at src into the archive at dest.
+// It does not follow symlinks.
+//
+// If src is a directory, it and its children will be added to the archive
+// relative to dest.
+//
+// Duplicate files with identical content will be silently ignored.
+func (af *Files) AddFileNoFollow(src string, dest string) error {
+	return af.addFile(src, dest, false)
+}
+
+var errAbsoluteName = errors.New("record name must not be absolute")
+
+// AddRecord adds a cpio.Record into the archive at `r.Name`.
+func (af *Files) AddRecord(r cpio.Record) error {
+	r.Name = path.Clean(r.Name)
+	if filepath.IsAbs(r.Name) {
+		return fmt.Errorf("%w: %q", errAbsoluteName, r.Name)
+	}
+
+	if src, ok := af.Files[r.Name]; ok {
+		return &os.PathError{
+			Op:   "add to archive",
+			Path: r.Name,
+			Err:  fmt.Errorf("%w: backed by %q", os.ErrExist, src),
+		}
+	}
+	if record, ok := af.Records[r.Name]; ok {
+		if record.Info == r.Info {
+			return nil
+		}
+		return &os.PathError{
+			Op:   "add to archive",
+			Path: r.Name,
+			Err:  fmt.Errorf("%w: is %v", os.ErrExist, record),
+		}
+	}
+
+	af.Records[r.Name] = r
+	return nil
+}
+
+// Contains returns whether path `dest` is already contained in the archive.
+func (af *Files) Contains(dest string) bool {
+	_, fok := af.Files[dest]
+	_, rok := af.Records[dest]
+	return fok || rok
+}
+
+// Rename renames a file in the archive.
+func (af *Files) Rename(name string, newname string) {
+	if src, ok := af.Files[name]; ok {
+		delete(af.Files, name)
+		af.Files[newname] = src
+	}
+	if record, ok := af.Records[name]; ok {
+		delete(af.Records, name)
+		record.Name = newname
+		af.Records[newname] = record
+	}
+}
+
+// addParent recursively adds parent directory records for `name`.
+func (af *Files) addParent(name string) {
+	parent := path.Dir(name)
+	if parent == "." {
+		return
+	}
+	if !af.Contains(parent) {
+		_ = af.AddRecord(cpio.Directory(parent, 0o755))
+	}
+	af.addParent(parent)
+}
+
+// fillInParents adds parent directory records for unparented files in `af`.
+func (af *Files) fillInParents() {
+	for name := range af.Files {
+		af.addParent(name)
+	}
+	for name := range af.Records {
+		af.addParent(name)
+	}
+}
+
+// WriteTo writes all records and files in `af` to `w`.
+func (af *Files) WriteTo(w Writer) error {
+	// Add parent directories when not added specifically.
+	af.fillInParents()
+	cr := cpio.NewRecorder()
+
+	// Reproducible builds: Files should be added to the archive in the
+	// same order.
+	for _, path := range af.sortedKeys() {
+		if record, ok := af.Records[path]; ok {
+			if err := w.WriteRecord(record); err != nil {
+				return err
+			}
+		}
+		if src, ok := af.Files[path]; ok {
+			if err := writeFile(w, cr, src, path); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// writeFile takes the file at `src` on the host system and adds it to the
+// archive `w` at path `dest`.
+//
+// If `src` is a directory, its children will be added to the archive as well.
+func writeFile(w Writer, r *cpio.Recorder, src, dest string) error {
+	record, err := r.GetRecord(src)
+	if err != nil {
+		return err
+	}
+
+	// Fix the name.
+	record.Name = dest
+	return w.WriteRecord(cpio.MakeReproducible(record))
+}
+
+// children calls `fn` on all direct children of directory `dir`.
+func children(dir string, fn func(name string) error) error {
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if err := fn(name); os.IsNotExist(err) {
+			// File was deleted in the meantime.
+			continue
+		} else if err != nil {
+			return err
+		}
+	}
+	return nil
+}

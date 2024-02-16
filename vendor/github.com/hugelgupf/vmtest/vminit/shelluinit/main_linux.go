@@ -13,28 +13,13 @@ import (
 	"os/exec"
 
 	"github.com/hugelgupf/vmtest/guest"
-	"golang.org/x/sys/unix"
 )
 
 func runTest() error {
-	cleanup, err := guest.MountSharedDir()
-	if err != nil {
-		return err
-	}
-	defer cleanup()
 	defer guest.CollectKernelCoverage()
 
-	covCleanup := guest.GOCOVERDIR()
-	defer covCleanup()
-
-	mp, err := guest.Mount9PDir("/shelltestdata", "shelltest")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = mp.Unmount(0) }()
-
 	// Run the test script test.sh
-	test := "/shelltestdata/test.sh"
+	test := "/mount/9p/shelltest/test.sh"
 	if _, err := os.Stat(test); os.IsNotExist(err) {
 		return errors.New("could not find any test script to run")
 	}
@@ -52,9 +37,5 @@ func main() {
 		log.Printf("Tests failed: %v", err)
 	} else {
 		log.Print("TESTS PASSED MARKER")
-	}
-
-	if err := unix.Reboot(unix.LINUX_REBOOT_CMD_POWER_OFF); err != nil {
-		log.Fatalf("Failed to reboot: %v", err)
 	}
 }

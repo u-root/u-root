@@ -121,23 +121,24 @@ github.com/google/goterm/term
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
-# github.com/hashicorp/errwrap v1.1.0
-## explicit
-github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.1.1
-## explicit; go 1.13
-github.com/hashicorp/go-multierror
-# github.com/hugelgupf/vmtest v0.0.0-20240127073930-89f92b39a1fa
+# github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
+## explicit; go 1.14
+github.com/hugelgupf/go-shlex
+# github.com/hugelgupf/vmtest v0.0.0-20240216064925-0561770280a1
 ## explicit; go 1.21
 github.com/hugelgupf/vmtest
+github.com/hugelgupf/vmtest/govmtest
 github.com/hugelgupf/vmtest/guest
 github.com/hugelgupf/vmtest/internal/eventchannel
 github.com/hugelgupf/vmtest/internal/json2test
 github.com/hugelgupf/vmtest/internal/testevent
 github.com/hugelgupf/vmtest/qemu
+github.com/hugelgupf/vmtest/qemu/qcoverage
+github.com/hugelgupf/vmtest/qemu/qevent
 github.com/hugelgupf/vmtest/qemu/qnetwork
+github.com/hugelgupf/vmtest/qemu/quimage
+github.com/hugelgupf/vmtest/scriptvm
 github.com/hugelgupf/vmtest/testtmp
-github.com/hugelgupf/vmtest/uqemu
 github.com/hugelgupf/vmtest/vminit/gouinit
 github.com/hugelgupf/vmtest/vminit/shelluinit
 # github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
@@ -269,8 +270,8 @@ github.com/sahilm/fuzzy
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/u-root/gobusybox/src v0.0.0-20231228173702-b69f654846aa
-## explicit; go 1.18
+# github.com/u-root/gobusybox/src v0.0.0-20240212035024-44ff0bf359ad
+## explicit; go 1.20
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
 github.com/u-root/gobusybox/src/pkg/bb/findpkg
@@ -279,9 +280,19 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/uio v0.0.0-20240208165552-2ba503b08e3b
+# github.com/u-root/mkuimage v0.0.0-20240216050315-5f527d1fae2e
+## explicit; go 1.21
+github.com/u-root/mkuimage/cpio
+github.com/u-root/mkuimage/cpio/internal/upath
+github.com/u-root/mkuimage/fileflag
+github.com/u-root/mkuimage/ldd
+github.com/u-root/mkuimage/uimage
+github.com/u-root/mkuimage/uimage/builder
+github.com/u-root/mkuimage/uimage/initramfs
+# github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
 ## explicit; go 1.21
 github.com/u-root/uio/cp
+github.com/u-root/uio/llog
 github.com/u-root/uio/rand
 github.com/u-root/uio/uio
 github.com/u-root/uio/ulog
@@ -305,7 +316,7 @@ github.com/vtolstov/go-ioctl
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.17.0
+# golang.org/x/crypto v0.18.0
 ## explicit; go 1.18
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -322,15 +333,13 @@ golang.org/x/crypto/ssh/knownhosts
 # golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
 ## explicit; go 1.20
 golang.org/x/exp/constraints
-golang.org/x/exp/maps
-golang.org/x/exp/slices
 # golang.org/x/mod v0.14.0
 ## explicit; go 1.18
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.19.0
+# golang.org/x/net v0.20.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/icmp
@@ -338,16 +347,16 @@ golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sync v0.5.0
+# golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.15.0
+# golang.org/x/sys v0.16.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.15.0
+# golang.org/x/term v0.16.0
 ## explicit; go 1.18
 golang.org/x/term
 # golang.org/x/text v0.14.0
@@ -366,7 +375,7 @@ golang.org/x/text/message
 golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.16.1
+# golang.org/x/tools v0.17.0
 ## explicit; go 1.18
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata

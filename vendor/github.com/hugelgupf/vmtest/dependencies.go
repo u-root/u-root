@@ -1,4 +1,4 @@
-//go:build tools
+//go:build otools
 
 package vmtest
 
