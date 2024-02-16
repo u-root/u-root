@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/u-root/mkuimage/uimage"
 )
 
 // testPkgs returns a slice of tests to run.
@@ -115,33 +115,31 @@ func testPkgs(t *testing.T) []string {
 func TestGoTest(t *testing.T) {
 	pkgs := testPkgs(t)
 
-	vmtest.RunGoTestsInVM(t, pkgs,
-		vmtest.WithVMOpt(
-			vmtest.WithMergedInitramfs(uroot.Opts{
-				DefaultShell: "gosh",
-				Commands: uroot.BusyBoxCmds(
-					"github.com/u-root/u-root/cmds/core/*",
-				),
-				ExtraFiles: []string{
-					"/etc/group",
-					"/etc/passwd",
-				},
-			}),
-			vmtest.WithQEMUFn(
-				qemu.WithVMTimeout(15*time.Minute),
-
-				// Bump this up so that some unit tests can happily
-				// and questionably pre-claim large bytes slices.
-				//
-				// e.g. pkg/mount/gpt/gpt_test.go need to claim 4.29G
-				//
-				//     disk = make([]byte, 0x100000000)
-				qemu.IfNotArch(qemu.ArchArm, qemu.ArbitraryArgs("-m", "6G")),
-				qemu.IfArch(qemu.ArchArm, qemu.ArbitraryArgs("-m", "3G")),
-
-				// aarch64 VMs start at 1970-01-01 without RTC explicitly set.
-				qemu.ArbitraryArgs("-rtc", "base=localtime,clock=vm"),
+	govmtest.Run(t, "vm",
+		govmtest.WithPackageToTest(pkgs...),
+		govmtest.WithUimage(
+			uimage.WithShell("gosh"),
+			uimage.WithBusyboxCommands("github.com/u-root/u-root/cmds/core/*"),
+			uimage.WithFiles(
+				"/etc/group",
+				"/etc/passwd",
 			),
+		),
+		govmtest.WithQEMUFn(
+			qemu.WithVMTimeout(15*time.Minute),
+			qemu.VirtioRandom(),
+
+			// Bump this up so that some unit tests can happily
+			// and questionably pre-claim large bytes slices.
+			//
+			// e.g. pkg/mount/gpt/gpt_test.go need to claim 4.29G
+			//
+			//     disk = make([]byte, 0x100000000)
+			qemu.IfNotArch(qemu.ArchArm, qemu.ArbitraryArgs("-m", "6G")),
+			qemu.IfArch(qemu.ArchArm, qemu.ArbitraryArgs("-m", "3G")),
+
+			// aarch64 VMs start at 1970-01-01 without RTC explicitly set.
+			qemu.ArbitraryArgs("-rtc", "base=localtime,clock=vm"),
 		),
 	)
 }
