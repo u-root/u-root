@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/gobusybox/src/pkg/golang"
+	"github.com/hugelgupf/vmtest/scriptvm"
+	"github.com/u-root/mkuimage/uimage"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
 
@@ -45,24 +45,22 @@ func testMultiboot(t *testing.T, kernel string) {
 		kexec -e
 	`
 	var b bytes.Buffer
-	vm := vmtest.StartVMAndRunCmds(t, script,
-		// Build kexec as a binary command to get accurate GOCOVERDIR
-		// integration coverage data (busybox rewrites command code).
-		vmtest.WithBinaryCommands(
-			"github.com/u-root/u-root/cmds/core/kexec",
-			"github.com/u-root/u-root/cmds/core/sync",
+	vm := scriptvm.Start(t, "vm", script,
+		scriptvm.WithUimage(
+			// Build kexec as a binary command to get accurate GOCOVERDIR
+			// integration coverage data (busybox rewrites command code).
+			uimage.WithCoveredCommands(
+				"github.com/u-root/u-root/cmds/core/kexec",
+				"github.com/u-root/u-root/cmds/core/sync",
+			),
+			uimage.WithFiles(
+				src+":kernel",
+			),
 		),
-		vmtest.WithInitramfsFiles(
-			src+":kernel",
-		),
-		vmtest.WithQEMUFn(
+		scriptvm.WithQEMUFn(
 			qemu.WithSerialOutput(nopCloser{&b}),
 			qemu.WithVMTimeout(time.Minute),
 		),
-		// Build kexec (and all other initramfs commands) with coverage enabled.
-		vmtest.WithGoBuildOpts(&golang.BuildOpts{
-			ExtraArgs: []string{"-cover", "-coverpkg=github.com/u-root/u-root/...", "-covermode=atomic"},
-		}),
 	)
 
 	if _, err := vm.Console.ExpectString(`"status": "ok"`); err != nil {
@@ -107,7 +105,7 @@ func testMultiboot(t *testing.T, kernel string) {
 }
 
 func TestMultiboot(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
 
 	for _, kernel := range []string{"/kernel", "/kernel.gz"} {
 		t.Run(kernel, func(t *testing.T) {
