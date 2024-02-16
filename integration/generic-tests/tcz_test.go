@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/qemu/qnetwork"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/hugelgupf/vmtest/scriptvm"
+	"github.com/u-root/mkuimage/uimage"
 )
 
 func TestTczclient(t *testing.T) {
 	// TODO: support arm
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
 
 	t.Skip("This test is flaky, and must be fixed")
 
@@ -35,23 +35,23 @@ func TestTczclient(t *testing.T) {
 		shutdown -h
 	`
 	net := qnetwork.NewInterVM()
-	serverVM := vmtest.StartVMAndRunCmds(t, serverScript,
-		vmtest.WithName("TestTczclient_Server"),
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
+	serverVM := scriptvm.Start(t, "tcz_server", serverScript,
+		scriptvm.WithUimage(
+			uimage.WithBusyboxCommands(
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/ls",
 				"github.com/u-root/u-root/cmds/core/shutdown",
 				"github.com/u-root/u-root/cmds/exp/srvfiles",
 				"github.com/u-root/u-root/cmds/exp/pxeserver",
 			),
-			ExtraFiles: []string{
+			uimage.WithFiles(
 				"./testdata/tczserver:tcz",
-			},
-		}),
-		vmtest.WithQEMUFn(
+			),
+		),
+		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			net.NewVM(),
+			qemu.VirtioRandom(),
 		),
 	)
 
@@ -66,10 +66,9 @@ func TestTczclient(t *testing.T) {
 	`
 
 	var b wc
-	clientVM := vmtest.StartVMAndRunCmds(t, clientScript,
-		vmtest.WithName("TestTczclient_Client"),
-		vmtest.WithMergedInitramfs(uroot.Opts{
-			Commands: uroot.BusyBoxCmds(
+	clientVM := scriptvm.Start(t, "tcz_client", clientScript,
+		scriptvm.WithUimage(
+			uimage.WithBusyboxCommands(
 				"github.com/u-root/u-root/cmds/core/cat",
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/ls",
@@ -77,14 +76,15 @@ func TestTczclient(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/sleep",
 				"github.com/u-root/u-root/cmds/exp/tcz",
 			),
-			ExtraFiles: []string{
+			uimage.WithFiles(
 				"./testdata/tczclient:tcz",
-			},
-		}),
-		vmtest.WithQEMUFn(
+			),
+		),
+		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			net.NewVM(),
 			qemu.WithSerialOutput(&b),
+			qemu.VirtioRandom(),
 		),
 	)
 
