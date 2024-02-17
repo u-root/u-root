@@ -37,9 +37,6 @@ func (s *mockSpidev) syscall(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 ui
 	if trap != unix.SYS_IOCTL {
 		return 0, 0, unix.EINVAL
 	}
-	if a1 < 0 {
-		return 0, 0, unix.EINVAL
-	}
 
 	switch a2 {
 	case iocRdBitsPerWord:
