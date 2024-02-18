@@ -346,22 +346,22 @@ type ecStatus uint8
 
 const (
 	ecResSuccess          ecStatus = 0
-	ecResInvalidCommand            = 1
-	ecResError                     = 2
-	ecResInvalidParam              = 3
-	ecResAccessDenied              = 4
-	ecResInvalidResponse           = 5
-	ecResInvalidVersion            = 6
-	ecResInvalidChecksum           = 7
-	ecResInProgress                = 8  /* Accepted, command in progress */
-	ecResUnavailable               = 9  /* No response available */
-	ecResTimeout                   = 10 /* We got a timeout */
-	ecResOverflow                  = 11 /* Table / data overflow */
-	ecResInvalidHeader             = 12 /* Header contains invalid data */
-	ecResRequestTruncated          = 13 /* Didn't get the entire request */
-	ecResResponseTooBig            = 14 /* Response was too big to handle */
-	ecResBusError                  = 15 /* Communications bus error */
-	ecResBusy                      = 16 /* Up but too busy.  Should retry */
+	ecResInvalidCommand   ecStatus = 1
+	ecResError            ecStatus = 2
+	ecResInvalidParam     ecStatus = 3
+	ecResAccessDenied     ecStatus = 4
+	ecResInvalidResponse  ecStatus = 5
+	ecResInvalidVersion   ecStatus = 6
+	ecResInvalidChecksum  ecStatus = 7
+	ecResInProgress       ecStatus = 8  /* Accepted, command in progress */
+	ecResUnavailable      ecStatus = 9  /* No response available */
+	ecResTimeout          ecStatus = 10 /* We got a timeout */
+	ecResOverflow         ecStatus = 11 /* Table / data overflow */
+	ecResInvalidHeader    ecStatus = 12 /* Header contains invalid data */
+	ecResRequestTruncated ecStatus = 13 /* Didn't get the entire request */
+	ecResResponseTooBig   ecStatus = 14 /* Response was too big to handle */
+	ecResBusError         ecStatus = 15 /* Communications bus error */
+	ecResBusy             ecStatus = 16 /* Up but too busy.  Should retry */
 )
 
 /*
@@ -375,18 +375,18 @@ type hostEventCode uint8
 
 const (
 	ecHostEventLidClosed        hostEventCode = 1
-	ecHostEventLidOpen                        = 2
-	ecHostEventPowerButton                    = 3
-	ecHostEventAcConnected                    = 4
-	ecHostEventAcDisconnected                 = 5
-	ecHostEventBatteryLow                     = 6
-	ecHostEventBatteryCritical                = 7
-	ecHostEventBattery                        = 8
-	ecHostEventThermalThreshold               = 9
-	ecHostEventThermalOverload                = 10
-	ecHostEventThermal                        = 11
-	ecHostEventUsbCharger                     = 12
-	ecHostEventKeyPressed                     = 13
+	ecHostEventLidOpen          hostEventCode = 2
+	ecHostEventPowerButton      hostEventCode = 3
+	ecHostEventAcConnected      hostEventCode = 4
+	ecHostEventAcDisconnected   hostEventCode = 5
+	ecHostEventBatteryLow       hostEventCode = 6
+	ecHostEventBatteryCritical  hostEventCode = 7
+	ecHostEventBattery          hostEventCode = 8
+	ecHostEventThermalThreshold hostEventCode = 9
+	ecHostEventThermalOverload  hostEventCode = 10
+	ecHostEventThermal          hostEventCode = 11
+	ecHostEventUsbCharger       hostEventCode = 12
+	ecHostEventKeyPressed       hostEventCode = 13
 	/*
 	 * EC has finished initializing the host interface.  The host can check
 	 * for this event following sending a ecCmdRebootEc command to
@@ -1591,9 +1591,9 @@ type ecVbootHashCmd uint8
 
 const (
 	ecVbootHashGet    ecVbootHashCmd = 0 /* Get current hash status */
-	ecVbootHashAbort                 = 1 /* Abort calculating current hash */
-	ecVbootHashStart                 = 2 /* Start computing a new hash */
-	ecVbootHashRecalc                = 3 /* Synchronously compute a new hash */
+	ecVbootHashAbort  ecVbootHashCmd = 1 /* Abort calculating current hash */
+	ecVbootHashStart  ecVbootHashCmd = 2 /* Start computing a new hash */
+	ecVbootHashRecalc ecVbootHashCmd = 3 /* Synchronously compute a new hash */
 )
 
 type ecVbootHashType uint8
@@ -1606,8 +1606,8 @@ type ecVbootHashStatus uint8
 
 const (
 	ecVbootHashStatusNone ecVbootHashStatus = 0 /* No hash (not started, or aborted) */
-	ecVbootHashStatusDone                   = 1 /* Finished computing a hash */
-	ecVbootHashStatusBusy                   = 2 /* Busy computing a hash */
+	ecVbootHashStatusDone ecVbootHashStatus = 1 /* Finished computing a hash */
+	ecVbootHashStatusBusy ecVbootHashStatus = 2 /* Busy computing a hash */
 )
 
 /*
@@ -1677,7 +1677,7 @@ type motionsensorType uint8
 
 const (
 	motionsenseTypeAccel motionsensorType = 0
-	motionsenseTypeGyro                   = 1
+	motionsenseTypeGyro  motionsensorType = 1
 )
 
 /* List of motion sensor locations. */
@@ -1685,7 +1685,7 @@ type motionsensorLocation uint8
 
 const (
 	motionsenseLocBase motionsensorLocation = 0
-	motionsenseLocLid                       = 1
+	motionsenseLocLid  motionsensorLocation = 1
 )
 
 /* List of motion sensor chips. */
@@ -1693,7 +1693,7 @@ type motionsensorChip uint8
 
 const (
 	motionsenseChipKxcj9   motionsensorChip = 0
-	motionsenseChipLsm6ds0                  = 1
+	motionsenseChipLsm6ds0 motionsensorChip = 1
 )
 
 /* Module flag masks used for the dump sub-command. */
@@ -2179,10 +2179,10 @@ type ecKeyscanSeqCmd uint8
 
 const (
 	ecKeyscanSeqStatus  ecKeyscanSeqCmd = 0 /* Get status information */
-	ecKeyscanSeqClear                   = 1 /* Clear sequence */
-	ecKeyscanSeqAdd                     = 2 /* Add item to sequence */
-	ecKeyscanSeqStart                   = 3 /* Start running sequence */
-	ecKeyscanSeqCollect                 = 4 /* Collect sequence summary data */
+	ecKeyscanSeqClear   ecKeyscanSeqCmd = 1 /* Clear sequence */
+	ecKeyscanSeqAdd     ecKeyscanSeqCmd = 2 /* Add item to sequence */
+	ecKeyscanSeqStart   ecKeyscanSeqCmd = 3 /* Start running sequence */
+	ecKeyscanSeqCollect ecKeyscanSeqCmd = 4 /* Collect sequence summary data */
 )
 
 type ecCollectFlags uint8
@@ -2425,8 +2425,8 @@ type gpioGetSubcmd uint8
 
 const (
 	ecGpioGetByName gpioGetSubcmd = 0
-	ecGpioGetCount                = 1
-	ecGpioGetInfo                 = 2
+	ecGpioGetCount  gpioGetSubcmd = 1
+	ecGpioGetInfo   gpioGetSubcmd = 2
 )
 
 /*****************************************************************************/
@@ -2539,7 +2539,7 @@ type ecLdoState uint8
 
 const (
 	ecLdoStateOff ecLdoState = 0 /* the LDO / FET is shut down */
-	ecLdoStateOn             = 1 /* the LDO / FET is ON / providing power */
+	ecLdoStateOn  ecLdoState = 1 /* the LDO / FET is ON / providing power */
 )
 
 /*
@@ -2864,13 +2864,13 @@ type ecSbFwUpdateSubcmd uint8
 
 const (
 	ecSbFwUpdatePrepare ecSbFwUpdateSubcmd = 0x0
-	ecSbFwUpdateInfo                       = 0x1 /*query sb info */
-	ecSbFwUpdateBegin                      = 0x2 /*check if protected */
-	ecSbFwUpdateWrite                      = 0x3 /*check if protected */
-	ecSbFwUpdateEnd                        = 0x4
-	ecSbFwUpdateStatus                     = 0x5
-	ecSbFwUpdateProtect                    = 0x6
-	ecSbFwUpdateMax                        = 0x7
+	ecSbFwUpdateInfo    ecSbFwUpdateSubcmd = 0x1 /*query sb info */
+	ecSbFwUpdateBegin   ecSbFwUpdateSubcmd = 0x2 /*check if protected */
+	ecSbFwUpdateWrite   ecSbFwUpdateSubcmd = 0x3 /*check if protected */
+	ecSbFwUpdateEnd     ecSbFwUpdateSubcmd = 0x4
+	ecSbFwUpdateStatus  ecSbFwUpdateSubcmd = 0x5
+	ecSbFwUpdateProtect ecSbFwUpdateSubcmd = 0x6
+	ecSbFwUpdateMax     ecSbFwUpdateSubcmd = 0x7
 )
 
 const (
@@ -2941,12 +2941,12 @@ type ecRebootCmd uint8
 
 const (
 	ecRebootCancel ecRebootCmd = 0 /* Cancel a pending reboot */
-	ecRebootJumpRo             = 1 /* Jump to RO without rebooting */
-	ecRebootJumpRw             = 2 /* Jump to RW without rebooting */
+	ecRebootJumpRo ecRebootCmd = 1 /* Jump to RO without rebooting */
+	ecRebootJumpRw ecRebootCmd = 2 /* Jump to RW without rebooting */
 	/* (command 3 was jump to RW-B) */
-	ecRebootCold        = 4 /* Cold-reboot */
-	ecRebootDisableJump = 5 /* Disable jump until next reboot */
-	ecRebootHibernate   = 6 /* Hibernate EC */
+	ecRebootCold        ecRebootCmd = 4 /* Cold-reboot */
+	ecRebootDisableJump ecRebootCmd = 5 /* Disable jump until next reboot */
+	ecRebootHibernate   ecRebootCmd = 6 /* Hibernate EC */
 )
 
 /* Flags for ecParamsRebootEc.rebootFlags */
@@ -3230,7 +3230,7 @@ type usbPdOverridePorts int8
 
 const (
 	overrideDontCharge usbPdOverridePorts = -2
-	overrideOff                           = -1
+	overrideOff        usbPdOverridePorts = -1
 	/* [0, pdPortCount): Port# */
 )
 
@@ -3383,7 +3383,7 @@ type pdModeCmd uint8
 
 const (
 	pdExitMode  pdModeCmd = 0
-	pdEnterMode           = 1
+	pdEnterMode pdModeCmd = 1
 	/* Not a command.  Do NOT remove. */
 	pdModeCmdCount
 )
