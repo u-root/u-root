@@ -59,7 +59,7 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 						sz := e.l - e.b + 1
 						s = fmt.Sprintf(e.h+e.f, e.b, e.l, sz)
 					}
-					if _, err := fmt.Fprintf(o, s); err != nil {
+					if _, err := fmt.Fprint(o, s); err != nil {
 						return err
 					}
 				}

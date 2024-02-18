@@ -101,6 +101,6 @@ func (p *ProgressData) print(extra ...string) {
 	fmt.Fprintf(p.w, "%d bytes (%.3f MB, %.3f MiB) copied, %.3f s, %.3f MB/s",
 		n, d/mb, d/mib, elapse.Seconds(), float64(d)/elapse.Seconds()/mb)
 	for _, s := range extra {
-		fmt.Fprintf(p.w, s)
+		fmt.Fprint(p.w, s)
 	}
 }
