@@ -402,33 +402,16 @@ and other config files to make the transition to LinuxBoot easier.
     them. Supports (basic) GRUB, (basic) syslinux, (non-EFI) BootLoaderSpec, and
     ESXi configurations.
 
-*   `fbnetboot`: a network boot client that uses DHCP and HTTP to get a boot
-    program based on Linux, and boots it. To be merged with `pxeboot`.
-
-*   `localboot`: a tool that finds bootable kernel configurations on the local
-    disks and boots them.
-
-*   `systemboot`: a wrapper around `pxeboot` and `boot` that just mimicks
-    a BIOS/UEFI BDS behaviour, by looping between network booting and local
-    booting. Use `-uinitcmd` argument to the u-root build tool to make it the
-    boot program.
+More detailed information about the build process for a full LinuxBoot firmware
+image using u-root/systemboot and coreboot can be found in the
+[LinuxBoot book](https://github.com/linuxboot/book) chapter about
+[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
 
 This project started as a loose collection of programs in u-root by various
 LinuxBoot contributors, as well as a personal experiment by
 [Andrea Barberio](https://github.com/insomniacslk) that has since been merged
 in. It is now an effort of a broader community and graduated to a real project
 for system firmwares.
-
-More detailed information about the build process for a full LinuxBoot firmware
-image using u-root/systemboot and coreboot can be found in the
-[LinuxBoot book](https://github.com/linuxboot/book) chapter about
-[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
-
-You can build systemboot like this:
-
-```shell
-u-root -uinitcmd=systemboot core ./cmds/boot/{systemboot,localboot,fbnetboot}
-```
 
 ## Compression
 
