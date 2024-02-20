@@ -191,9 +191,6 @@ github.com/knz/bubbline/computil
 github.com/knz/bubbline/editline
 github.com/knz/bubbline/editline/internal/textarea
 github.com/knz/bubbline/history
-# github.com/kr/pty v1.1.8
-## explicit; go 1.12
-github.com/kr/pty
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful

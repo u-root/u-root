@@ -11,11 +11,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
-	"unsafe"
 
+	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
-	"github.com/kr/pty" // TODO: get rid of krpty
 	flag "github.com/spf13/pflag"
 )
 
@@ -24,11 +22,6 @@ var (
 	pubKeyFile  = flag.StringP("pubkeyfile", "k", "key.pub", "file for public key")
 	port        = flag.StringP("port", "p", "2222", "default port")
 )
-
-func setWinsize(f *os.File, w, h int) {
-	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
-		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
-}
 
 func handler(s ssh.Session) {
 	var a []string
@@ -47,7 +40,7 @@ func handler(s ssh.Session) {
 		}
 		go func() {
 			for win := range winCh {
-				setWinsize(f, win.Width, win.Height)
+				pty.Setsize(f, &pty.Winsize{Rows: uint16(win.Height), Cols: uint16(win.Width)})
 			}
 		}()
 		go func() {
