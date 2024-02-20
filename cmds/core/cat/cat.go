@@ -25,7 +25,7 @@ import (
 	"os"
 )
 
-var _ = flag.Bool("u", false, "ignored")
+var _ = flag.Bool("u", false, "ignored1")
 var errCopy = fmt.Errorf("error concatenating stdin to stdout")
 
 func cat(reader io.Reader, writer io.Writer) error {
