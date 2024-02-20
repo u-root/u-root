@@ -13,7 +13,7 @@ linters:
 
 linters-settings:
   staticcheck:
-    checks: ["all", "-SA1019", "-SA4006", "-SA9004"]
+    checks: ["all", "-SA1019", "-SA4006"]
   stylecheck:
     checks: ["all", "-ST1003", "-ST1023"]
 
