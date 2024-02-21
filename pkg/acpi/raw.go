@@ -57,10 +57,10 @@ func RawFromFile(r io.Reader) ([]Table, error) {
 // RawFromName reads a raw []Table in from a named file.
 func RawFromName(n string) ([]Table, error) {
 	f, err := os.Open(n)
-	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 	return RawFromFile(f)
 }
 

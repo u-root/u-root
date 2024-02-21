@@ -30,7 +30,7 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is >=1.19.
+Make sure your Go version is >=1.21.
 
 Download and install u-root either via git:
 

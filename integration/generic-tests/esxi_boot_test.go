@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/Netflix/go-expect"
-	"github.com/hugelgupf/vmtest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/uroot"
+	"github.com/hugelgupf/vmtest/scriptvm"
+	"github.com/u-root/mkuimage/uimage"
 )
 
 func TestESXi(t *testing.T) {
@@ -26,13 +26,16 @@ func TestESXi(t *testing.T) {
 	}
 
 	script := `esxiboot -d="/dev/sda" --append="vmkBootVerbose=TRUE vmbLog=TRUE debugLogToSerial=1 logPort=com1"`
-	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
-			"github.com/u-root/u-root/cmds/exp/esxiboot",
-		)}),
-		vmtest.WithQEMUFn(
+	vm := scriptvm.Start(t, "vm", script,
+		scriptvm.WithUimage(
+			uimage.WithBusyboxCommands(
+				"github.com/u-root/u-root/cmds/exp/esxiboot",
+			),
+		),
+		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			qemu.IDEBlockDevice(img),
+			qemu.VirtioRandom(),
 			// If at some point we get virtio-net working
 			// again in ESXi, you may need to set num CPUs
 			// to 4.
@@ -78,12 +81,15 @@ func TestESXiNVMe(t *testing.T) {
 	}
 
 	script := `esxiboot -d="/dev/nvme0n1" --append="vmkBootVerbose=TRUE vmbLog=TRUE debugLogToSerial=1 logPort=com1"`
-	vm := vmtest.StartVMAndRunCmds(t, script,
-		vmtest.WithMergedInitramfs(uroot.Opts{Commands: uroot.BusyBoxCmds(
-			"github.com/u-root/u-root/cmds/exp/esxiboot",
-		)}),
-		vmtest.WithQEMUFn(
+	vm := scriptvm.Start(t, "vm", script,
+		scriptvm.WithUimage(
+			uimage.WithBusyboxCommands(
+				"github.com/u-root/u-root/cmds/exp/esxiboot",
+			),
+		),
+		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
+			qemu.VirtioRandom(),
 			qemu.ArbitraryArgs("-device", "nvme,drive=NVME1,serial=nvme-1"),
 			qemu.ArbitraryArgs("-drive", fmt.Sprintf("file=%s,if=none,id=NVME1", img)),
 			// If at some point we get virtio-net working

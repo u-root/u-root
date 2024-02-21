@@ -116,7 +116,7 @@ func WithGO111MODULE(go111module string) Opt {
 
 // Default is the default build environment comprised of the default GOPATH,
 // GOROOT, GOOS, GOARCH, and CGO_ENABLED values.
-func Default(opt ...Opt) *Environ {
+func Default(opts ...Opt) *Environ {
 	env := &Environ{
 		Context:     build.Default,
 		GO111MODULE: os.Getenv("GO111MODULE"),
@@ -126,10 +126,17 @@ func Default(opt ...Opt) *Environ {
 	if env.GO111MODULE != "off" {
 		env.Mod = ModReadonly
 	}
-	for _, o := range opt {
-		o(env)
-	}
+	env.Apply(opts...)
 	return env
+}
+
+// Apply applies additional opts to the environment.
+func (c *Environ) Apply(opts ...Opt) {
+	for _, opt := range opts {
+		if opt != nil {
+			opt(c)
+		}
+	}
 }
 
 // Lookup looks up packages by patterns relative to dir, using the Go environment from c.

@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 	"github.com/hugelgupf/vmtest/testtmp"
 	"github.com/u-root/u-root/pkg/cp"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
 	// qemu likes to lock files.
 	// In practice we've seen issues with multiple instantiations of
@@ -37,8 +37,9 @@ func TestIntegration(t *testing.T) {
 		}
 	}
 
-	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/mount"},
-		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+	govmtest.Run(t, "vm",
+		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/mount"),
+		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
 			// CONFIG_ATA_PIIX is required for this option to work.
 			qemu.ArbitraryArgs("-hda", filepath.Join(tmp, "1MB.ext4_vfat")),
@@ -47,6 +48,6 @@ func TestIntegration(t *testing.T) {
 			qemu.ArbitraryArgs("-drive", "file="+filepath.Join(tmp, "gptdisk2")+",if=none,id=NVME1"),
 			// use-intel-id uses the vendor=0x8086 and device=0x5845 ids for NVME
 			qemu.ArbitraryArgs("-device", "nvme,drive=NVME1,serial=nvme-1,use-intel-id"),
-		)),
+		),
 	)
 }

@@ -73,13 +73,13 @@ func KVer(k io.ReadSeeker) (string, error) {
 }
 
 // KVer reads the kernel version string. See also: KVer() above.
-func (bz *BzImage) KVer() (string, error) {
-	if bz.Header.Kveraddr == 0 {
+func (b *BzImage) KVer() (string, error) {
+	if b.Header.Kveraddr == 0 {
 		return "", ErrParse
 	}
-	start := uint64(bz.Header.Kveraddr + 0x200)
-	bclen := uint64(len(bz.BootCode))
-	hdrlen := uint64(bz.KernelOffset) - bclen
+	start := uint64(b.Header.Kveraddr + 0x200)
+	bclen := uint64(len(b.BootCode))
+	hdrlen := uint64(b.KernelOffset) - bclen
 	bcoffs := start - hdrlen
 	if bcoffs >= bclen {
 		return "", ErrParse
@@ -88,7 +88,7 @@ func (bz *BzImage) KVer() (string, error) {
 	if end > bclen {
 		end = bclen
 	}
-	return nullterm(bz.BootCode[bcoffs:end]), nil
+	return nullterm(b.BootCode[bcoffs:end]), nil
 }
 
 // read c string from buffer

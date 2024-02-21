@@ -11,14 +11,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/qemu"
 )
 
 func TestIntegration(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/ulog"},
-		vmtest.WithVMOpt(vmtest.WithQEMUFn(qemu.WithVMTimeout(time.Minute))),
+	govmtest.Run(t, "vm",
+		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/ulog"),
+		govmtest.WithQEMUFn(qemu.WithVMTimeout(time.Minute)),
 	)
 }

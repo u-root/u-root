@@ -7,6 +7,7 @@
 package findpkg
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -14,7 +15,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/u-root/gobusybox/src/pkg/bb/bbinternal"
 	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/uio/ulog"
@@ -137,9 +137,9 @@ func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) ([]*p
 	if len(p.Errors) > 0 {
 		var merr error
 		for _, e := range p.Errors {
-			merr = multierror.Append(merr, e)
+			merr = errors.Join(merr, e)
 		}
-		return plist, fmt.Errorf("failed to add package %v for errors: %v", p, merr)
+		return plist, fmt.Errorf("failed to add package %v for errors: %w", p, merr)
 	} else if len(p.GoFiles) > 0 {
 		plist = append(plist, p)
 	}
@@ -323,7 +323,7 @@ func checkEligibility(l ulog.Logger, pkgs []*packages.Package) ([]*packages.Pack
 			// we're not returning early because we want to give
 			// the user as much information as possible.
 			for _, e := range p.Errors {
-				merr = multierror.Append(merr, fmt.Errorf("package %s: %w", p.PkgPath, e))
+				merr = errors.Join(merr, fmt.Errorf("package %s: %w", p.PkgPath, e))
 			}
 		}
 	}

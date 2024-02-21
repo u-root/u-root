@@ -292,11 +292,10 @@ func Read(f io.ReadSeeker) (*Image, error) {
 // Load loads an Image from given path.
 func Load(imagePath string) (*Image, error) {
 	imageFile, err := os.Open(imagePath)
-	defer imageFile.Close()
-
 	if err != nil {
 		return nil, fmt.Errorf("load ZBI image failed: %w", err)
 	}
+	defer imageFile.Close()
 
 	image, err := Read(imageFile)
 	if err != nil {
