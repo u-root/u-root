@@ -214,7 +214,7 @@ func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string
 					if value == "" {
 						// If it's not found, fallback to look for default_kernelopts
 						log.Printf("kernelopts is empty, look for default_kernelopts\n")
-						if value, err = getGrubvalue(variables, "default_kernelopts"); value == "" {
+						if value, _ = getGrubvalue(variables, "default_kernelopts"); value == "" {
 							return nil, fmt.Errorf("no valid kernelopts is found")
 						}
 					}

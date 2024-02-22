@@ -210,8 +210,7 @@ func TestFindProperty(t *testing.T) {
 		t.Fatalf("Checking value of %s: got %q, want %q", p.Name, p.Value, v)
 	}
 	l = "bogosity"
-	p, ok = n.LookProperty(l)
-	if ok {
+	if _, ok = n.LookProperty(l); ok {
 		t.Fatalf("Find property %q in %s: got true, want false", l, n)
 	}
 }
