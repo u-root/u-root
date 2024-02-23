@@ -26,6 +26,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
@@ -267,11 +268,37 @@ func showBridge(name string) {
 	fmt.Printf("%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.Bridge_id, info.Stp_state, info.Interfaces)
 }
 
+func showmacs(name string) error {
+	// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name/brforward,
+	// The following format applies:
+	// 00-05: MAC address
+	// 06-08: port number
+	// 08-09: is_local
+	// 25-128: timeval (ignored for now)
+
+	// parse sysf into 0x10 byte chunks
+	brforward, err := os.ReadFile("/sys/class/net/" + name + "/brforward")
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	fmt.Printf("port no\tmac addr\t\tis_local?\n")
+
+	for i := 0; i < len(brforward); i += 0x10 {
+		chunk := brforward[i : i+0x10]
+		mac := chunk[0:6]
+		port_no := uint16(binary.BigEndian.Uint16(chunk[6:8]))
+		is_local := uint8(chunk[8]) != 0
+
+		fmt.Printf("%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", port_no, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], is_local)
+	}
+
+	return nil
+}
+
 func show(names ...string) error {
 	fmt.Println("bridge name\tbridge id\tSTP enabled\t\tinterfaces")
 	if len(names) == 0 {
-		// show all devices
-		// get all bridge names from /sys/class/net
 		devices, err := os.ReadDir("/sys/class/net")
 		if err != nil {
 			return fmt.Errorf("%w", err)
@@ -312,6 +339,7 @@ func run(out io.Writer, argv []string) error {
 			return fmt.Errorf("too few args")
 		}
 		err = delbr(args[0])
+
 	case "addif":
 		if len(args) != 2 {
 			return fmt.Errorf("too few args")
@@ -323,8 +351,16 @@ func run(out io.Writer, argv []string) error {
 			return fmt.Errorf("too few args")
 		}
 		err = delif(args[0], args[1])
+
 	case "show":
 		err = show(args...)
+
+	case "showmacs":
+		if len(args) != 1 {
+			return fmt.Errorf("too few args")
+		}
+		err = showmacs(args[0])
+
 	default:
 		return fmt.Errorf("unknown command: %s", command)
 	}
