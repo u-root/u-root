@@ -30,6 +30,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -46,6 +48,16 @@ var (
 type ifreqptr struct {
 	Ifrn [16]byte
 	ptr  unsafe.Pointer
+}
+
+// BridgeInfo contains information about a bridge
+// This information is not exhaustive, only the most important fields are included
+// Feel free to add more fields if needed.
+type BridgeInfo struct {
+	Name       string
+	Bridge_id  string
+	Stp_state  bool
+	Interfaces []string
 }
 
 // cli
@@ -216,25 +228,77 @@ func delif(name string, iface string) error {
 	return nil
 }
 
-// func show(names ...string) error {
-// 	if len(names) == 0 {
-// 		// show all bridges
+// All bridges are in the virtfs under /sys/class/net/<name>/bridge/<item>, read info from there
+// Update this function if BridgeInfo struct changes
+func getBridgeInfo(name string) (BridgeInfo, error) {
+	base_path := "/sys/class/net/" + name + "/bridge/"
+	bridge_id, err := os.ReadFile(base_path + "bridge_id")
+	if err != nil {
+		return BridgeInfo{}, fmt.Errorf("%w", err)
+	}
 
-// 	} else {
-// 		for _, name := range names {
-// 		}
-// 	}
-// 	return nil
-// }
+	stp_enabled, err := os.ReadFile(base_path + "stp_state")
+	if err != nil {
+		return BridgeInfo{}, fmt.Errorf("%w", err)
+	}
+
+	stp_enabled_bool, err := strconv.ParseBool(strings.TrimSuffix(string(stp_enabled), "\n"))
+	if err != nil {
+		return BridgeInfo{}, fmt.Errorf("%w", err)
+	}
+
+	var interfaces = []string{"eth0", "eth1", "eth2"}
+
+	return BridgeInfo{
+		Name:       name,
+		Bridge_id:  strings.TrimSuffix(string(bridge_id), "\n"),
+		Stp_state:  stp_enabled_bool,
+		Interfaces: interfaces,
+	}, nil
+
+}
+
+// for now, only show essentials: bridge name, bridge id interfaces
+func showBridge(name string) {
+	info, err := getBridgeInfo(name)
+	if err != nil {
+		log.Fatalf("show_bridge: %v", err)
+	}
+	fmt.Printf("%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.Bridge_id, info.Stp_state, info.Interfaces)
+}
+
+func show(names ...string) error {
+	fmt.Println("bridge name\tbridge id\tSTP enabled\t\tinterfaces")
+	if len(names) == 0 {
+		// show all devices
+		// get all bridge names from /sys/class/net
+		devices, err := os.ReadDir("/sys/class/net")
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		for _, bridge := range devices {
+			// check if device is bridge, aka if it has a bridge directory
+			_, err := os.Stat("/sys/class/net/" + bridge.Name() + "/bridge/")
+			if err == nil {
+				showBridge(bridge.Name())
+			}
+		}
+
+	} else {
+		for _, name := range names {
+			showBridge(name)
+		}
+	}
+	return nil
+}
 
 // runner
 func run(out io.Writer, argv []string) error {
+	var err error
+
 	command := argv[0]
 	args := argv[1:]
-
-	fmt.Printf("argv = %v\n", args)
-
-	var err error
 
 	switch command {
 	case "addbr":
@@ -259,6 +323,8 @@ func run(out io.Writer, argv []string) error {
 			return fmt.Errorf("too few args")
 		}
 		err = delif(args[0], args[1])
+	case "show":
+		err = show(args...)
 	default:
 		return fmt.Errorf("unknown command: %s", command)
 	}
@@ -274,7 +340,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("argv = %v, argc = %d\n", argv, len(argv))
 	if err := run(os.Stdout, argv[1:]); err != nil {
 		log.Fatalf("brctl: %v", err)
 	}
