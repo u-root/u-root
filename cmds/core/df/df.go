@@ -112,9 +112,8 @@ func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 		}
 		if mnt.Blocks == 0 {
 			continue
-		} else {
-			ret[key] = mnt
 		}
+		ret[key] = mnt
 	}
 	return ret, nil
 }
