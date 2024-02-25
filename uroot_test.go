@@ -357,9 +357,9 @@ func TestCheckArgs(t *testing.T) {
 		args []string
 		err  error
 	}{
-		{"-files is only arg", []string{"-files"}, ErrEmptyFilesArg},
-		{"-files followed by -files", []string{"-files", "-files"}, ErrEmptyFilesArg},
-		{"-files followed by any other switch", []string{"-files", "-abc"}, ErrEmptyFilesArg},
+		{"-files is only arg", []string{"-files"}, errEmptyFilesArg},
+		{"-files followed by -files", []string{"-files", "-files"}, errEmptyFilesArg},
+		{"-files followed by any other switch", []string{"-files", "-abc"}, errEmptyFilesArg},
 		{"no args", []string{}, nil},
 		{"u-root alone", []string{"u-root"}, nil},
 		{"u-root with -files and other args", []string{"u-root", "-files", "/bin/bash", "core"}, nil},
