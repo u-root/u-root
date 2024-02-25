@@ -67,18 +67,11 @@ jobs:
           name: Ensure that every template builds for a variety of options.
           command: |
             go build .
-            goruncmd="./u-root -stats-output-path=/tmp/stats.json"
+            goruncmd="./u-root"
             $goruncmd minimal
             $goruncmd core
             $goruncmd coreboot-app
             $goruncmd all
             $goruncmd world
-            # Fails because of dups. Is this supposed to work?
-            #$goruncmd all core
-            #$goruncmd all core
+            $goruncmd all core
             GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
-            cat /tmp/stats.json
-      - store_artifacts:
-          name: Store build stats
-          path: /tmp/stats.json
-          destination: stats.json
