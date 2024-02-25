@@ -13,4 +13,6 @@ package main
 import (
 	_ "github.com/hugelgupf/vmtest/vminit/gouinit"
 	_ "github.com/hugelgupf/vmtest/vminit/shelluinit"
+	_ "github.com/hugelgupf/vmtest/vminit/shutdownafter"
+	_ "github.com/hugelgupf/vmtest/vminit/vmmount"
 )

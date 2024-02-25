@@ -137,6 +137,8 @@ github.com/hugelgupf/vmtest/scriptvm
 github.com/hugelgupf/vmtest/testtmp
 github.com/hugelgupf/vmtest/vminit/gouinit
 github.com/hugelgupf/vmtest/vminit/shelluinit
+github.com/hugelgupf/vmtest/vminit/shutdownafter
+github.com/hugelgupf/vmtest/vminit/vmmount
 # github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 ## explicit; go 1.20
 github.com/insomniacslk/dhcp/dhcpv4
