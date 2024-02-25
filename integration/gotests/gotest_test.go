@@ -68,10 +68,6 @@ func testPkgs(t *testing.T) []string {
 		"github.com/u-root/u-root/cmds/exp/bzimage",
 		"github.com/u-root/u-root/pkg/boot/bzimage",
 
-		// No Go compiler in VM.
-		"github.com/u-root/u-root/pkg/uroot",
-		"github.com/u-root/u-root/pkg/uroot/builder",
-
 		// ??
 		"github.com/u-root/u-root/pkg/tss",
 		"github.com/u-root/u-root/pkg/syscallfilter",
