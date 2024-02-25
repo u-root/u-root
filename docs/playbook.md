@@ -50,3 +50,13 @@ In this case, it looks like this:
 +ENV TAMAGO_CHECKSUM="6319b1778e93695b62bb63946c5dd28c4d8f3c1ac3c4bf28e49cb967d570dfd5"
 
 Then follow the instructions, above, for updating the test images.
+
+## Make u-root init verbose
+The u-root init command has several options, one being -v.
+Setting -v will enable verbose logging.
+How do you set it? 
+This can be done with the Linux kernel command line. The flags to init
+are set via uroot.initflags, a string. So, to set verbose:
+```
+uroot.initflags="-v"
+```
