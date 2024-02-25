@@ -30,46 +30,36 @@ u-root embodies four different projects.
 
 # Usage
 
-Make sure your Go version is >=1.21.
+Make sure your Go version is >= 1.21.
 
 Download and install u-root either via git:
 
 ```shell
 git clone https://github.com/u-root/u-root
 cd u-root
-go build
+go install
 ```
-
-The resulting binary will the be placed where `go build` was invoked
 
 Or install directly with go:
 
 ```shell
-go install github.com/u-root/u-root
+go install github.com/u-root/u-root@latest
 ```
 
-**Note: The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
-need to add `$GOPATH/bin` to your `$PATH`.**
+> [!NOTE]
+> The `u-root` command will end up in `$GOPATH/bin/u-root`, so you may
+> need to add `$GOPATH/bin` to your `$PATH`.
 
-## Templates
+# Examples
 
-To quickly specify a set of commands from u-root, you can use any of the
-templates as defined in [templates.go](templates.go).
-
-## Examples
-
-Here are some examples of using the `u-root` command to build an initramfs,
-with `$UROOT_PATH` being the path to where the u-root sources are on the disk
-(explicitly specifiying this is only necessary if not running u-root inside the
-root of the repository):
+Here are some examples of using the `u-root` command to build an initramfs.
 
 ```shell
+git clone https://github.com/u-root/u-root
+cd u-root
+
 # Build an initramfs of all the Go cmds in ./cmds/core/... (default)
 u-root
-
-# Build an initramfs of all the Go cmds in ./cmds/core/...
-# But running the command outside of the repository root
-(cd /tmp && GBB_PATH=$UROOT_PATH u-root)
 
 # Generate an archive with bootloaders
 #
@@ -81,53 +71,118 @@ u-root ./cmds/core/{init,ls,ip,dhclient,wget,cat,gosh}
 
 # Generate an archive with all of the core tools with some exceptions
 u-root core -cmds/core/{ls,losetup}
-
-# Generate an archive with a tool outside of u-root
-git clone https://github.com/u-root/cpu
-u-root ./cmds/core/{init,ls,gosh} ./cpu/cmds/cpud
-
-# Generate an archive with a tool outside of u-root, in any PWD
-(cd /tmp && GBB_PATH=$UROOT_PATH:$CPU_PATH u-root ./cmds/core/{init,ls,gosh} ./cmds/cpud)
 ```
 
-The default set of packages included is all packages in
-`github.com/u-root/u-root/cmds/core/...`.
+> [!IMPORTANT]
+>
+> `u-root` works exactly when `go build` and `go list` work as well.
 
-`GBB_PATH` is a place that u-root will look for commands. Each colon-separated
-`GBB_PATH` element is concatenated with patterns from the command-line and
-checked for existence. For example:
+> [!NOTE]
+>
+> The `u-root` tool is the same as the
+> [mkuimage](https://github.com/u-root/mkuimage) tool with some defaults
+> applied.
+>
+> In the near future, `uimage` will replace `u-root`.
+
+> [!TIP]
+>
+> To just build Go busybox binaries, try out
+> [gobusybox](https://github.com/u-root/gobusybox)'s `makebb` tool.
+
+## Multi-module workspace builds
+
+There are several ways to build multi-module command images using standard Go
+tooling.
 
 ```shell
-GBB_PATH=$HOME/u-root:$HOME/u-bmc u-root \
-    cmds/core/init \
-    cmds/core/gosh \
-    cmd/socreset
+$ mkdir workspace
+$ cd workspace
+$ git clone https://github.com/u-root/u-root
+$ git clone https://github.com/u-root/cpu
 
-# matches:
-#   $HOME/u-root/cmds/core/init
-#   $HOME/u-root/cmds/core/gosh
-#   $HOME/u-bmc/cmd/socreset
+$ go work init ./u-root
+$ go work use ./cpu
+
+$ u-root ./u-root/cmds/core/{init,gosh} ./cpu/cmds/cpud
+
+$ cpio -ivt < /tmp/initramfs.linux_amd64.cpio
+...
+-rwxr-x---   0 root     root      6365184 Jan  1  1970 bbin/bb
+lrwxrwxrwx   0 root     root            2 Jan  1  1970 bbin/cpud -> bb
+lrwxrwxrwx   0 root     root            2 Jan  1  1970 bbin/gosh -> bb
+lrwxrwxrwx   0 root     root            2 Jan  1  1970 bbin/init -> bb
+...
+
+# Works for offline vendored builds as well.
+$ go work vendor # Go 1.22 feature.
+
+$ u-root ./u-root/cmds/core/{init,gosh} ./cpu/cmds/cpud
 ```
+
+When creating a new Go workspace is too much work, the `goanywhere` tool can
+create one on the fly. This works **only with local file system paths**:
+
+```shell
+$ go install github.com/u-root/gobusybox/src/cmd/goanywhere@latest
+
+$ goanywhere ./u-root/cmds/core/{init,gosh} ./cpu/cmds/cpud -- u-root
+```
+
+`goanywhere` creates a workspace in a temporary directory with the given
+modules, and then execs `u-root` in the workspace passing along the command
+names.
+
+> [!TIP]
+>
+> While workspaces are good for local compilation, they are not meant to be
+> checked in to version control systems.
+>
+> For a non-workspace way of building multi-module initramfs images, read more
+> in the [mkuimage README](https://github.com/u-root/mkuimage). (The `u-root`
+> tool is `mkuimage` with more defaults applied.)
 
 ## Extra Files
 
 You may also include additional files in the initramfs using the `-files` flag.
-If you add binaries with `-files` are listed, their ldd dependencies will be
-included as well. As example for Debian, you want to add two kernel modules for
-testing, executing your currently booted kernel:
 
-> NOTE: these files will be placed in the `$HOME` dir in the initramfs.
+If you add binaries with `-files` are listed, their ldd dependencies will be
+included as well.
 
 ```shell
-u-root -files $HOME/hello.ko -files $HOME/hello2.ko
-qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
+$ u-root -files /bin/bash
+
+$ cpio -ivt < /tmp/initramfs.linux_amd64.cpio
+...
+-rwxr-xr-x   0 root     root      1277936 Jan  1  1970 bin/bash
+...
+drwxr-xr-x   0 root     root            0 Jan  1  1970 lib/x86_64-linux-gnu
+-rwxr-xr-x   0 root     root       210792 Jan  1  1970 lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+-rwxr-xr-x   0 root     root      1926256 Jan  1  1970 lib/x86_64-linux-gnu/libc.so.6
+lrwxrwxrwx   0 root     root           15 Jan  1  1970 lib/x86_64-linux-gnu/libtinfo.so.6 -> libtinfo.so.6.4
+-rw-r--r--   0 root     root       216368 Jan  1  1970 lib/x86_64-linux-gnu/libtinfo.so.6.4
+drwxr-xr-x   0 root     root            0 Jan  1  1970 lib64
+lrwxrwxrwx   0 root     root           42 Jan  1  1970 lib64/ld-linux-x86-64.so.2 -> /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+...
 ```
 
-To specify the location in the initramfs, use `<sourcefile>:<destinationfile>`.
-For example:
+You can determine placement with colons:
 
 ```shell
-u-root -files "root-fs/usr/bin/runc:usr/bin/run"
+$ u-root -files "/bin/bash:sbin/sh"
+
+$ cpio -ivt < /tmp/initramfs.linux_amd64.cpio
+...
+-rwxr-xr-x   0 root     root      1277936 Jan  1  1970 sbin/sh
+...
+```
+
+For example on Debian, if you want to add two kernel modules for testing,
+executing your currently booted kernel:
+
+```shell
+$ u-root -files "$HOME/hello.ko:etc/hello.ko" -files "$HOME/hello2.ko:etc/hello2.ko"
+$ qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
 ```
 
 ## Init and Uinit
@@ -137,10 +192,12 @@ and `-uinitcmd` command-line flags.
 
 *   `-initcmd` determines what `/init` is symlinked to. `-initcmd` may be a
     u-root command name or a symlink target.
+
 *   `-uinitcmd` is run by the default u-root [init](cmds/core/init) after some
     basic file system setup. There is no default, users should optionally supply
     their own. `-uinitcmd` may be a u-root command name with arguments or a
     symlink target with arguments.
+
 *   After running a uinit (if there is one), [init](cmds/core/init) will start a
     shell determined by the `-defaultsh` argument.
 
@@ -173,9 +230,12 @@ qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nogr
 # Go Gopher
 # ~/>
 ```
-Passing command line arguments like above is equivalent to passing the arguments to uinit via a flags file in `/etc/uinit.flags`, see [Extra Files](#extra-files).
 
-Additionally, you can pass arguments to uinit via the `uroot.uinitargs` kernel parameters, for example:
+Passing command line arguments like above is equivalent to passing the arguments
+to uinit via a flags file in `/etc/uinit.flags`, see [Extra Files](#extra-files).
+
+Additionally, you can pass arguments to uinit via the `uroot.uinitargs` kernel
+parameters, for example:
 
 ```bash
 u-root -uinitcmd="echo Gopher" ./cmds/core/{init,echo,gosh}
@@ -198,15 +258,15 @@ qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nogr
 # Go Gopher
 # ~/>
 ```
-Note the order of the passed arguments in the above example.
 
+Note the order of the passed arguments in the above example.
 
 The command you name must be present in the command set. The following will *not
 work*:
 
 ```bash
 u-root -uinitcmd="echo Go Gopher" ./cmds/core/{init,gosh}
-# 2020/04/30 21:05:57 could not create symlink from "bin/uinit" to "echo": command or path "echo" not included in u-root build: specify -uinitcmd="" to ignore this error and build without a uinit
+# 21:05:57 could not create symlink from "bin/uinit" to "echo": command or path "echo" not included in u-root build: specify -uinitcmd="" to ignore this error and build without a uinit
 ```
 
 You can also refer to non-u-root-commands; they will be added as symlinks. We
@@ -229,7 +289,6 @@ The effect of the above command:
 *   Adds /bin/echo as bin/foobar
 *   Adds your-hosts-file as etc/hosts
 *   builds in the cmds/core/init, and cmds/core/gosh commands.
-    The {} are expanded by the shell 
 
 This will bypass the regular u-root init and just launch a shell:
 
@@ -256,9 +315,9 @@ Cross-OS and -architecture compilation comes for free with Go. In fact, every PR
 to the u-root repo is built against the following architectures: amd64, x86
 (i.e. 32bit), mipsle, armv7, arm64, and ppc64le.
 
-Further, we run integration tests on linux/amd64, freebsd/amd64 and linux/arm64,
-using several CI systems. If you need to add another CI system, processor or OS,
-please let us know.
+Further, we run integration tests on linux/amd64, and linux/arm64, using several
+CI systems. If you need to add another CI system, processor or OS, please let us
+know.
 
 To cross compile for an ARM, on Linux:
 
@@ -283,12 +342,15 @@ qemu-system-x86_64 -nographic -kernel path/to/kernel -initrd /tmp/initramfs.linu
 Note that you do not have to build a special kernel on your own, it is
 sufficient to use an existing one. Usually you can find one in `/boot`.
 
-If you quickly need to obtain a kernel, for example, when you are on a non-Linux
-system, you can assemble a URL to download one through Arch Linux's
-[iPXE menu file](https://www.archlinux.org/releng/netboot/archlinux.ipxe). It
-would download from `${mirrorurl}iso/${release}/arch/boot/x86_64/vmlinuz-linux`, so
-just search for a mirror URL you prefer and a release version, for example,
-`http://mirror.rackspace.com/archlinux/iso/2024.02.01/arch/boot/x86_64/vmlinuz-linux`.
+If you don't have a kernel handy, you can also get the one we use for VM testing:
+
+```shell
+go install github.com/hugelgupf/vmtest/tools/runvmtest@latest
+
+runvmtest -- bash -c "cp \$VMTEST_KERNEL ./kernel"
+```
+
+It may not have all features you require, however.
 
 ### Framebuffer
 
@@ -332,58 +394,6 @@ qemu-system-x86_64 \
     -device virtio-rng-pci,rng=rng0 \
     -kernel vmlinuz \
     -initrd /tmp/initramfs.linux_amd64.cpio
-```
-
-## u-root with Go package paths
-
-For Go package paths to be usable, the path passed to `u-root` must be in the
-go.mod of the working directory or one of its parents. This is mostly useful for
-repositories making programmatic use of u-root's APIs.
-
-```sh
-cd ./u-root
-
-# In u-root's directory itself, github.com/u-root/u-root is resolvable. There is
-# a go.mod here that can refer to u-root.
-u-root github.com/u-root/u-root/cmds/core/...
-u-root github.com/u-root/u-root/cmds/core/*
-u-root github.com/u-root/u-root/cmds/core/i*
-```
-
-To depend on commands outside of ones own repository, the easiest way to depend
-on Go commands is the following:
-
-```sh
-TMPDIR=$(mktemp -d)
-cd $TMPDIR
-go mod init foobar
-```
-
-Create a file with some unused build tag like this to create dependencies on
-commands:
-
-```go
-//go:build tools
-
-package something
-
-import (
-        "github.com/u-root/u-root/cmds/core/ip"
-        "github.com/u-root/u-root/cmds/core/init"
-        "github.com/hugelgupf/p9/cmd/p9ufs"
-)
-```
-
-The unused build tag keeps it from being compiled, but its existence forces `go
-mod tidy` to add these dependencies to `go.mod`:
-
-```sh
-go mod tidy
-
-u-root \
-  github.com/u-root/u-root/cmds/core/ip \
-  github.com/u-root/u-root/cmds/core/init \
-  github.com/hugelgupf/p9/cmd/p9ufs
 ```
 
 ## SystemBoot
@@ -490,41 +500,13 @@ go mod vendor
 
 ## Building without network access
 
-Go modules require network access. If you need to make a repeatable build with
-no network access, make sure that your code is under `$GOPATH` and the
-environment variable `GO111MODULE` is set to `off`. This is:
+The u-root command supports building with workspace vendoring and module
+vendoring. In both of those cases, if all dependencies are found in the vendored
+directories, the build happens completely offline.
 
-1. Pick a location for your off-network build, it can be anywhere and
-the directory does not need to exist ahead of time:
+Read more in the [mkuimage README](https://github.com/u-root/mkuimage).
 
-```shell
-export GOPATH=$(mktemp -d)
-
-```
-
-2. Fetch the code, you can use `git`, `go get` or even a release file, just
-make sure that the code ends in: `${GOPATH}/src/github.com/u-root/u-root` E.g:
-
-```shell
-mkdir -p ${GOPATH}/src/github.com/u-root/
-cd ${GOPATH}/src/github.com/u-root/
-git clone https://github.com/u-root/u-root.git
-cd u-root
-```
-
-Or simply:
-
-```shell
-GO111MODULE=off go get github.com/u-root/u-root
-cd $GOPATH/src/github.com/u-root/u-root
-```
-
-3. Build u-root and use it normally:
-
-```shell
-GO111MODULE=off GOPROXY=off go build
-GO111MODULE=off GOPROXY=off ./u-root
-```
+u-root also still supports `GO111MODULE=off` builds.
 
 # Hardware
 
