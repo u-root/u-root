@@ -38,17 +38,22 @@ type Environ struct {
 	GBBDEBUG    bool
 }
 
+// Copy makes a copy of Environ with the given changes.
+func (c *Environ) Copy(opts ...Opt) *Environ {
+	e := &Environ{
+		Context:     c.Context,
+		GO111MODULE: c.GO111MODULE,
+		Mod:         c.Mod,
+		GBBDEBUG:    c.GBBDEBUG,
+	}
+	e.Apply(opts...)
+	return e
+}
+
 // RegisterFlags registers flags for Environ.
 func (c *Environ) RegisterFlags(f *flag.FlagSet) {
-	arg := (*uflag.Strings)(&c.BuildTags)
-	f.Var(arg, "go-build-tags", "Go build tags")
-
-	mod := (*string)(&c.Mod)
-	defMod := ""
-	if c.GO111MODULE != "off" {
-		defMod = "readonly"
-	}
-	f.StringVar(mod, "go-mod", defMod, "Value of -mod to go commands (allowed: (empty), vendor, mod, readonly)")
+	f.Var((*uflag.Strings)(&c.BuildTags), "go-build-tags", "Go build tags")
+	f.StringVar((*string)(&c.Mod), "go-mod", string(c.Mod), "Value of -mod to go commands (allowed: (empty), vendor, mod, readonly)")
 }
 
 // Valid returns an error if GOARCH, GOROOT, or GOOS are unset.
@@ -88,8 +93,28 @@ func DisableCGO() Opt {
 
 // WithGOARCH is an option that overrides GOARCH.
 func WithGOARCH(goarch string) Opt {
+	if goarch == "" {
+		return nil
+	}
 	return func(c *Environ) {
 		c.GOARCH = goarch
+	}
+}
+
+// WithGOOS is an option that overrides GOOS.
+func WithGOOS(goos string) Opt {
+	if goos == "" {
+		return nil
+	}
+	return func(c *Environ) {
+		c.GOOS = goos
+	}
+}
+
+// WithBuildTag is an option that appends build tags.
+func WithBuildTag(tag ...string) Opt {
+	return func(c *Environ) {
+		c.BuildTags = append(c.BuildTags, tag...)
 	}
 }
 
@@ -114,6 +139,20 @@ func WithGO111MODULE(go111module string) Opt {
 	}
 }
 
+// WithMod is an option that overrides module behavior.
+func WithMod(mod ModBehavior) Opt {
+	return func(c *Environ) {
+		c.Mod = mod
+	}
+}
+
+// WithWorkingDir sets the working directory for calls to `go`.
+func WithWorkingDir(wd string) Opt {
+	return func(c *Environ) {
+		c.Dir = wd
+	}
+}
+
 // Default is the default build environment comprised of the default GOPATH,
 // GOROOT, GOOS, GOARCH, and CGO_ENABLED values.
 func Default(opts ...Opt) *Environ {
@@ -121,10 +160,6 @@ func Default(opts ...Opt) *Environ {
 		Context:     build.Default,
 		GO111MODULE: os.Getenv("GO111MODULE"),
 		GBBDEBUG:    parseBool(os.Getenv("GBBDEBUG")),
-	}
-
-	if env.GO111MODULE != "off" {
-		env.Mod = ModReadonly
 	}
 	env.Apply(opts...)
 	return env
@@ -140,11 +175,11 @@ func (c *Environ) Apply(opts ...Opt) {
 }
 
 // Lookup looks up packages by patterns relative to dir, using the Go environment from c.
-func (c *Environ) Lookup(mode packages.LoadMode, dir string, patterns ...string) ([]*packages.Package, error) {
+func (c *Environ) Lookup(mode packages.LoadMode, patterns ...string) ([]*packages.Package, error) {
 	cfg := &packages.Config{
 		Mode: mode,
 		Env:  append(os.Environ(), c.Env()...),
-		Dir:  dir,
+		Dir:  c.Dir,
 	}
 	if len(c.Context.BuildTags) > 0 {
 		tags := fmt.Sprintf("-tags=%s", strings.Join(c.Context.BuildTags, ","))
@@ -164,6 +199,7 @@ func (c Environ) GoCmd(gocmd string, args ...string) *exec.Cmd {
 	if c.GBBDEBUG {
 		log.Printf("GBB Go invocation: %s %s %#v", c, goBin, args)
 	}
+	cmd.Dir = c.Dir
 	cmd.Env = append(os.Environ(), c.Env()...)
 	return cmd
 }
@@ -261,13 +297,10 @@ func (b *BuildOpts) RegisterFlags(f *flag.FlagSet) {
 	f.BoolVar(&b.NoStrip, "go-no-strip", false, "Do not strip symbols & Build ID from the binary (will not produce a reproducible binary)")
 	f.BoolVar(&b.EnableInlining, "go-enable-inlining", false, "Enable inlining (will likely produce a larger binary)")
 	f.BoolVar(&b.NoTrimPath, "go-no-trimpath", false, "Disable -trimpath (will not produce a reproducible binary)")
-	arg := (*uflag.Strings)(&b.ExtraArgs)
-	f.Var(arg, "go-extra-args", "Extra args to 'go build'")
+	f.Var((*uflag.Strings)(&b.ExtraArgs), "go-extra-args", "Extra args to 'go build'")
 }
 
-// BuildDir compiles the package in the directory `dirPath`, writing the build
-// object to `binaryPath`.
-func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) error {
+func (c Environ) build(dirPath string, binaryPath string, pattern []string, opts *BuildOpts) error {
 	args := []string{
 		// Force rebuilding of packages.
 		"-a",
@@ -302,14 +335,26 @@ func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) er
 	if len(c.BuildTags) > 0 {
 		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
 	}
-	// We always set the working directory, so this is always '.'.
-	args = append(args, ".")
+	args = append(args, pattern...)
 
 	cmd := c.GoCmd("build", args...)
-	cmd.Dir = dirPath
+	if dirPath != "" {
+		cmd.Dir = dirPath
+	}
 
 	if o, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("error building go package in %q: %v, %v", dirPath, string(o), err)
 	}
 	return nil
+}
+
+// BuildDir compiles the package in the directory `dirPath`, writing the build
+// object to `binaryPath`.
+func (c Environ) BuildDir(dirPath string, binaryPath string, opts *BuildOpts) error {
+	return c.build(dirPath, binaryPath, []string{"."}, opts)
+}
+
+// Build compiles the pattern.
+func (c Environ) Build(binaryPath string, pattern []string, opts *BuildOpts) error {
+	return c.build("", binaryPath, pattern, opts)
 }

@@ -9,32 +9,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/mkuimage/uimage/initramfs"
 	"github.com/u-root/uio/llog"
-	"golang.org/x/tools/go/packages"
 )
-
-func dirFor(env *golang.Environ, pkg string) (string, error) {
-	pkgs, err := env.Lookup(packages.NeedName|packages.NeedFiles, "", pkg)
-	if err != nil {
-		return "", fmt.Errorf("failed to look up package %q: %v", pkg, err)
-	}
-
-	// One directory = one package in standard Go, so
-	// finding the first file's parent directory should
-	// find us the package directory.
-	var dir string
-	for _, p := range pkgs {
-		if len(p.GoFiles) > 0 {
-			dir = filepath.Dir(p.GoFiles[0])
-		}
-	}
-	if dir == "" {
-		return "", fmt.Errorf("%w for %q", ErrNoGoFiles, pkg)
-	}
-	return dir, nil
-}
 
 // BinaryBuilder builds each Go command as a separate binary.
 //
@@ -68,14 +45,9 @@ func (b BinaryBuilder) Build(l *llog.Logger, af *initramfs.Files, opts Opts) err
 		wg.Add(1)
 		go func(p string) {
 			defer wg.Done()
-			dir, err := dirFor(opts.Env, p)
-			if err != nil {
-				result <- err
-				return
-			}
-			result <- opts.Env.BuildDir(
-				dir,
+			result <- opts.Env.Build(
 				filepath.Join(opts.TempDir, binaryDir, filepath.Base(p)),
+				[]string{p},
 				opts.BuildOpts)
 		}(pkg)
 	}
@@ -85,7 +57,7 @@ func (b BinaryBuilder) Build(l *llog.Logger, af *initramfs.Files, opts Opts) err
 
 	for err := range result {
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: %w", ErrBinaryFailed, err)
 		}
 	}
 
