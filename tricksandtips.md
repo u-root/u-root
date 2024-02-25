@@ -19,24 +19,3 @@ u-root -o /dev/stdout | cpio -ivt
 ```
 u-root -base /dev/null
 ```
-
-## Make an image that is BOTH dynamic and busybox
-
-Well, it *almost* works ... help wanted.
-
-Because busybox binaries go in /bbin
-and source binaries go in /ubin. This is useful because
-you can get a faster boot but still have a Go toolchain
-
-```
-u-root -base /dev/null -o /tmp/busybox.cpio
-u-root -base /tmp/busybox.cpio -build source -o combined.cpio
-```
-
-To see what that looks like:
-```
-cpio -ivt < combined.cpio
-```
-
-You can use testramfs to run it and watch it fork-bomb itself
-on init. So close! Working on it.
