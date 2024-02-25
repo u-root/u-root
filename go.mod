@@ -31,20 +31,20 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20240212035024-44ff0bf359ad
+	github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/mkuimage v0.0.0-20240216050315-5f527d1fae2e
+	github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
 	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.18.0
-	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
-	golang.org/x/net v0.20.0
-	golang.org/x/sys v0.16.0
-	golang.org/x/term v0.16.0
+	golang.org/x/crypto v0.19.0
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
+	golang.org/x/net v0.21.0
+	golang.org/x/sys v0.17.0
+	golang.org/x/term v0.17.0
 	golang.org/x/text v0.14.0
-	golang.org/x/tools v0.17.0
+	golang.org/x/tools v0.18.0
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
@@ -60,7 +60,6 @@ require (
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
-	github.com/google/goterm v0.0.0-20200907032337-555d40f16ae2 // indirect
 	github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa // indirect
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
@@ -81,8 +80,9 @@ require (
 	github.com/sahilm/fuzzy v0.1.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0 // indirect
 )
 
 retract (

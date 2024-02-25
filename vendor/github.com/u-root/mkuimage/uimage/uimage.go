@@ -286,6 +286,14 @@ func WithSkipLDD() Modifier {
 	}
 }
 
+// WithReplaceEnv replaces the Go build environment.
+func WithReplaceEnv(env *golang.Environ) Modifier {
+	return func(o *Opts) error {
+		o.Env = env
+		return nil
+	}
+}
+
 // WithEnv alters the Go build environment (e.g. build tags, GOARCH, GOOS env vars).
 func WithEnv(gopts ...golang.Opt) Modifier {
 	return func(o *Opts) error {
@@ -370,6 +378,55 @@ func WithBusyboxCommands(cmd ...string) Modifier {
 	}
 }
 
+// WithShellBang directs the busybox builder to use #! instead of symlinks.
+func WithShellBang(b bool) Modifier {
+	return func(o *Opts) error {
+		for i, cmd := range o.Commands {
+			if _, ok := cmd.Builder.(*builder.GBBBuilder); ok {
+				// Make a copy, because the same object may
+				// have been used in other builds.
+				o.Commands[i].Builder = &builder.GBBBuilder{
+					ShellBang: b,
+				}
+				return nil
+			}
+		}
+
+		// Otherwise, add an empty builder with no packages.
+		// AddBusyboxCommands/WithBusyboxCommands will append to this.
+		//
+		// Yeah, it's a hack, sue me.
+		o.Commands = append(o.Commands, Commands{
+			Builder: &builder.GBBBuilder{ShellBang: b},
+		})
+		return nil
+	}
+}
+
+// WithBusyboxBuildOpts directs the busybox builder to use the given build opts.
+//
+// Overrides any previously defined build options.
+func WithBusyboxBuildOpts(g *golang.BuildOpts) Modifier {
+	return func(o *Opts) error {
+		for i, cmd := range o.Commands {
+			if _, ok := cmd.Builder.(*builder.GBBBuilder); ok {
+				o.Commands[i].BuildOpts = g
+				return nil
+			}
+		}
+
+		// Otherwise, add an empty builder with no packages.
+		// AddBusyboxCommands/WithBusyboxCommands will append to this.
+		//
+		// Yeah, it's a hack, sue me.
+		o.Commands = append(o.Commands, Commands{
+			Builder:   &builder.GBBBuilder{},
+			BuildOpts: g,
+		})
+		return nil
+	}
+}
+
 // WithBinaryCommands adds Go commands to compile as individual binaries and
 // add to the archive.
 //
@@ -402,12 +459,27 @@ func WithOutput(w initramfs.WriteOpener) Modifier {
 	}
 }
 
+// WithExistingInit sets whether an existing init from BaseArchive should remain the init.
+//
+// If not, it will be renamed inito.
+func WithExistingInit(use bool) Modifier {
+	return func(o *Opts) error {
+		o.UseExistingInit = use
+		return nil
+	}
+}
+
 // WithCPIOOutput sets the archive output file to be a CPIO created at the given path.
 func WithCPIOOutput(path string) Modifier {
 	if path == "" {
 		return nil
 	}
 	return WithOutput(&initramfs.CPIOFile{Path: path})
+}
+
+// WithOutputDir sets the archive output to be in the given directory.
+func WithOutputDir(path string) Modifier {
+	return WithOutput(&initramfs.Dir{Path: path})
 }
 
 // WithBase is an existing initramfs to include in the resulting initramfs.
@@ -446,16 +518,17 @@ func WithBaseArchive(archive *cpio.Archive) Modifier {
 // If this is empty, no uinit symlink will be created, but a user may
 // still specify a command called uinit or include a /bin/uinit file.
 func WithUinitCommand(cmd string) Modifier {
-	if cmd == "" {
-		return nil
-	}
 	return func(opts *Opts) error {
 		args := shlex.Split(cmd)
 		if len(args) > 0 {
 			opts.UinitCmd = args[0]
+		} else {
+			opts.UinitCmd = ""
 		}
 		if len(args) > 1 {
 			opts.UinitArgs = args[1:]
+		} else {
+			opts.UinitArgs = nil
 		}
 		return nil
 	}
@@ -502,9 +575,6 @@ func WithShell(arg0 string) Modifier {
 
 // WithTempDir sets a temporary directory to use for building commands.
 func WithTempDir(dir string) Modifier {
-	if dir == "" {
-		return nil
-	}
 	return func(o *Opts) error {
 		o.TempDir = dir
 		return nil
@@ -542,6 +612,9 @@ func CreateInitramfs(l *llog.Logger, opts Opts) error {
 
 	// Expand commands.
 	for index, cmds := range opts.Commands {
+		if len(cmds.Packages) == 0 {
+			continue
+		}
 		paths, err := findpkg.ResolveGlobs(l.AtLevel(slog.LevelInfo), env, lookupEnv, cmds.Packages)
 		if err != nil {
 			return fmt.Errorf("%w: %w", errResolvePackage, err)
@@ -551,6 +624,9 @@ func CreateInitramfs(l *llog.Logger, opts Opts) error {
 
 	// Add each build mode's commands to the archive.
 	for _, cmds := range opts.Commands {
+		if len(cmds.Packages) == 0 {
+			continue
+		}
 		builderTmpDir, err := os.MkdirTemp(opts.TempDir, "builder")
 		if err != nil {
 			return err
@@ -569,7 +645,7 @@ func CreateInitramfs(l *llog.Logger, opts Opts) error {
 			BinaryDir: cmds.TargetDir(),
 		}
 		if err := cmds.Builder.Build(l, files, bOpts); err != nil {
-			return fmt.Errorf("error building: %v", err)
+			return fmt.Errorf("error building: %w", err)
 		}
 	}
 
@@ -771,7 +847,7 @@ func (o *Opts) AddCommands(c ...Commands) {
 // AddBusyboxCommands adds Go commands to the busybox build.
 func (o *Opts) AddBusyboxCommands(pkgs ...string) {
 	for i, cmds := range o.Commands {
-		if cmds.Builder == builder.Busybox {
+		if _, ok := cmds.Builder.(*builder.GBBBuilder); ok {
 			o.Commands[i].Packages = append(o.Commands[i].Packages, pkgs...)
 			return
 		}
