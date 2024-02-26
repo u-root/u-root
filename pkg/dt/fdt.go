@@ -220,13 +220,14 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 
 			// The name is a null-terminating string.
 			for {
-				if b, err := r.ReadByte(); err != nil {
+				b, err := r.ReadByte()
+				if err != nil {
 					return err
-				} else if b == 0 {
-					break
-				} else {
-					child.Name += string(b)
 				}
+				if b == 0 {
+					break
+				}
+				child.Name += string(b)
 			}
 
 		case tokenEndNode:
