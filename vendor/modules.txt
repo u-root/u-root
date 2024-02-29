@@ -237,6 +237,9 @@ github.com/orangecms/go-framebuffer/framebuffer
 # github.com/pborman/getopt/v2 v2.1.0
 ## explicit; go 1.13
 github.com/pborman/getopt/v2
+# github.com/peterh/liner v1.2.2
+## explicit
+github.com/peterh/liner
 # github.com/pierrec/lz4/v4 v4.1.14
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4
