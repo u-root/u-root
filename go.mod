@@ -26,6 +26,7 @@ require (
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/pborman/getopt/v2 v2.1.0
+	github.com/peterh/liner v1.2.2
 	github.com/pierrec/lz4/v4 v4.1.14
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc

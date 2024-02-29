@@ -34,11 +34,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v", err)
 	}
 	fmt.Printf("p %v\n", p)
-	if c, ok := chips[*defaultChip]; !ok {
+	chip, ok := chips[*defaultChip]
+	if !ok {
 		fmt.Fprintf(os.Stderr, "Unknown chip %v: Choices: %v\n", *defaultChip, chips)
 		os.Exit(1)
-	} else {
-		chip = c
 	}
 
 	ec := chip(p, ecLpcAddrHostCmd, time.Second*10, time.Second*10, d)
