@@ -27,6 +27,7 @@
 // brctl setmaxage <bridge> <time>
 // brctl setpathcost <bridge> <port> <cost>
 // brctl setportprio <bridge> <port> <priority>
+// brctl hairpin <bridge> <port> <state>
 //
 // Busybox Implementation: https://elixir.bootlin.com/busybox/latest/source/networking/brctl.c
 // Kernel Implementation: https://mirrors.edge.kernel.org/pub/linux/utils/net/bridge-utils/
@@ -57,6 +58,8 @@ var (
 	BRCTL_DEL_I               = 5
 	BRCTL_SET_AEGING_TIME     = 11
 	BRCTL_SET_BRIDGE_PRIORITY = 15
+	BRCTL_SET_PORT_PRIORITY   = 16
+	BRCTL_SET_PATH_COST       = 17
 )
 
 type ifreqptr struct {
@@ -143,6 +146,16 @@ func br_set_val(bridge string, name string, value uint64, ioctlcode uint64) erro
 	err := os.WriteFile("/sys/class/net/"+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_val: %v", err)
+		// 2. Use ioctl as fallback
+		return nil
+	}
+	return nil
+}
+
+func br_set_port(bridge string, port string, name string, value uint64, ioctlcode uint64) error {
+	err := os.WriteFile("/sys/class/net/"+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
+	if err != nil {
+		log.Printf("br_set_port: %v", err)
 		// 2. Use ioctl as fallback
 		return nil
 	}
@@ -338,7 +351,7 @@ func showBridge(name string) {
 }
 
 func showmacs(name string) error {
-	// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name/brforward,
+	// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
 	// The following format applies:
 	// 00-05: MAC address
 	// 06-08: port number
@@ -493,6 +506,48 @@ func setmaxage(bridge string, time string) error {
 	return nil
 }
 
+// port ~= interface
+func setpathcost(bridge string, port string, cost string) error {
+	path_cost, err := strconv.ParseUint(cost, 10, 64)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := br_set_port(bridge, port, "path_cost", path_cost, uint64(BRCTL_SET_PATH_COST)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func setportprio(bridge string, port string, prio string) error {
+	port_priority, err := strconv.ParseUint(prio, 10, 64)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := br_set_port(bridge, port, "priority", port_priority, uint64(BRCTL_SET_PATH_COST)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func hairpin(bridge string, port string, hairpinmode string) error {
+	var hairpin_mode uint64
+	if hairpinmode == "on" {
+		hairpin_mode = 1
+	} else {
+		hairpin_mode = 0
+	}
+
+	if err := br_set_port(bridge, port, "hairpin", hairpin_mode, 0); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
 // runner
 // TODO: define generic commands and minify parsing
 func run(out io.Writer, argv []string) error {
@@ -576,6 +631,24 @@ func run(out io.Writer, argv []string) error {
 			return fmt.Errorf("too few args")
 		}
 		err = setmaxage(args[0], args[1])
+
+	case "setpathcost":
+		if len(args) != 3 {
+			return fmt.Errorf("too few args")
+		}
+		err = setpathcost(args[0], args[1], args[2])
+
+	case "setportprio":
+		if len(args) != 3 {
+			return fmt.Errorf("too few args")
+		}
+		err = setportprio(args[0], args[1], args[2])
+
+	case "hairpin":
+		if len(args) != 3 {
+			return fmt.Errorf("too few args")
+		}
+		err = hairpin(args[0], args[1], args[2])
 
 	default:
 		return fmt.Errorf("unknown command: %s", command)
