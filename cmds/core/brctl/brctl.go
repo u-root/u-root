@@ -2,27 +2,38 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// brctl - ethernet bridge administration
+// brctl - ethernet bridge administration brctl(8)
 //
-// Synopsis:
-//
+// INSTANCES:
 // brctl addbr <name> creates a new instance of the ethernet bridge
 // brctl delbr <name> deletes the instance <name> of the ethernet bridge
 // brctl show shows all current instances of the ethernet bridge
 //
+// PORTS:
 // brctl addif <brname> <ifname> will make the interface <ifname> a port of the bridge <brname>
 // brctl delif <brname> <ifname> will detach the interface <ifname> from the bridge <brname>
 // brctl show <brname> will show some information on the bridge and its attached ports
 //
+// AGEING:
 // brctl showmacs <brname> shows a list of learned MAC addresses for this bridge
 // brctl setageingtime <brname> <time> sets the ethernet (MAC) address ageing time, in seconds [OPT]
 // brctl setgcint <brname> <time> sets the garbage collection interval for the bridge <brname> to <time> seconds [OPT]
 //
-// TODO: Spanning Tree Protocol
-// See: https://elixir.bootlin.com/busybox/latest/source/networking/brctl.c
-// Author:
+// SPANNING TREE PROTOCOL (IEEE 802.1d):
+// brctl stp <bridge> <state> controls this bridge instance's participation in the spanning tree protocol.
+// brctl setbridgeprio <bridge> <priority> sets the bridge's priority to <priority>
+// brctl setfd <bridge> <time>
+// brctl sethello <bridge> <time>
+// brctl setmaxage <bridge> <time>
+// brctl setpathcost <bridge> <port> <cost>
+// brctl setportprio <bridge> <port> <priority>
 //
-//	Leon Gross (leon.gross@9elements.com)
+// Busybox Implementation: https://elixir.bootlin.com/busybox/latest/source/networking/brctl.c
+// Kernel Implementation: https://mirrors.edge.kernel.org/pub/linux/utils/net/bridge-utils/
+//
+// Author: Leon Gross (leon.gross@9elements.com)
+//
+
 package main
 
 import (
@@ -40,10 +51,12 @@ import (
 )
 
 var (
-	BRCTL_ADD_BRIDGE = 2
-	BRCTL_DEL_BRIDGE = 3
-	BRCTL_ADD_I      = 4
-	BRCTL_DEL_I      = 5
+	BRCTL_ADD_BRIDGE          = 2
+	BRCTL_DEL_BRIDGE          = 3
+	BRCTL_ADD_I               = 4
+	BRCTL_DEL_I               = 5
+	BRCTL_SET_AEGING_TIME     = 11
+	BRCTL_SET_BRIDGE_PRIORITY = 15
 )
 
 type ifreqptr struct {
@@ -63,6 +76,12 @@ type BridgeInfo struct {
 
 // cli
 const usage = "brctl [commands]"
+
+//type command struct {
+//	name string
+//	args int
+//	help string
+//}
 
 func ifreq_option(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
 	i := ifreqptr{ptr: ptr}
@@ -107,6 +126,56 @@ func if_nametoindex(ifname string) (int, error) {
 	}
 
 	return int(ifr_ifindex), nil
+}
+
+// set values for the bridge
+// 1. Try to set the config options using the sysfs` bridge directory
+// 2. Else use the ioctl interface
+// TODO: hide this behind an interface and check in beforehand which to use
+// TODO: how to parse the struct timeval and the jiffies?
+/*
+	@param bridge: name of the bridge
+	@param name: name of the value to set
+	@param value: value to set
+	@param ioctlcode: old value to set, aka IOCTL control value, like BRCTL_SET_BRIDGE_MAX_AGE
+*/
+func br_set_val(bridge string, name string, value uint64, ioctlcode uint64) error {
+	err := os.WriteFile("/sys/class/net/"+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
+	if err != nil {
+		log.Printf("br_set_val: %v", err)
+		// 2. Use ioctl as fallback
+		return nil
+	}
+	return nil
+}
+
+/*
+Helper functions that convert seconds to jiffies and vice versa.
+https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html
+*/
+
+func str_to_tv(in string) (unix.Timeval, error) {
+	// cast string to long float
+	time, err := strconv.ParseFloat(in, 64)
+	if err != nil {
+		return unix.Timeval{}, fmt.Errorf("%w", err)
+	}
+
+	// TODO: placeholder
+	// 10^{-5}
+	return unix.Timeval{
+		Sec:  int64(time),
+		Usec: int64(time / 100000),
+	}, nil
+}
+
+// TODO: placeholder
+func to_jiffies(tv unix.Timeval) int {
+	return int(tv.Sec * 100)
+}
+
+func from_jiffies(jiffies int) int {
+	return jiffies / 100
 }
 
 // subcommands
@@ -161,7 +230,7 @@ func delbr(name string) error {
 	return nil
 }
 
-// create dummy device for testing: sudo ip link add eth10 type dummy
+// create dummy device for testing: `sudo ip link add eth10 type dummy`
 func addif(name string, iface string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
@@ -179,7 +248,7 @@ func addif(name string, iface string) error {
 	}
 	ifr.SetUint32(uint32(if_index))
 
-	// SIOCBRADDIF
+	//SIOCBRADDIF
 	//SIOCGIFINDEX
 	if err := unix.IoctlIfreq(brctl_socket, unix.SIOCBRADDIF, ifr); err != nil {
 		return fmt.Errorf("%w", err)
@@ -273,8 +342,8 @@ func showmacs(name string) error {
 	// The following format applies:
 	// 00-05: MAC address
 	// 06-08: port number
-	// 08-09: is_local
-	// 25-128: timeval (ignored for now)
+	// 09-10: is_local
+	// 11-15: timeval (ignored for now)
 
 	// parse sysf into 0x10 byte chunks
 	brforward, err := os.ReadFile("/sys/class/net/" + name + "/brforward")
@@ -288,7 +357,7 @@ func showmacs(name string) error {
 		chunk := brforward[i : i+0x10]
 		mac := chunk[0:6]
 		port_no := uint16(binary.BigEndian.Uint16(chunk[6:8]))
-		is_local := uint8(chunk[8]) != 0
+		is_local := uint8(chunk[9]) != 0
 
 		fmt.Printf("%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", port_no, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], is_local)
 	}
@@ -320,7 +389,112 @@ func show(names ...string) error {
 	return nil
 }
 
+// Spanning Tree Options
+// TODO: this has a lot of boilerplate code. Maybe use a struct to store the values and use a switch statement to set the values
+func setageingtime(name string, time string) error {
+	tv, err := str_to_tv(time)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	ageing_time := to_jiffies(tv)
+	if err = br_set_val(name, "ageing_time", uint64(ageing_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	return nil
+}
+
+// weird, cannot find it in source code?
+func setgcint(name string, time string) error {
+	// tv, err := str_to_tv(time)
+	// if err != nil {
+	// 	return fmt.Errorf("%w", err)
+	// }
+
+	// if err = br_set_val(name, "ageing_time", uint64(to_jiffies(tv)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	// 	return fmt.Errorf("%w", err)
+	// }
+	return nil
+}
+
+// The manpage states:
+// > If <state> is "on" or "yes"  the STP  will  be turned on, otherwise it will be turned off
+// So this is actually the described behavior, not checking for "off" and "no"
+// For coreutils see: brctl_cmd.c:284
+func stp(bridge string, state string) error {
+	var stp_state uint64
+	if state == "on" || state == "yes" {
+		stp_state = 1
+	} else {
+		stp_state = 0
+	}
+
+	if err := br_set_val(bridge, "stp_state", stp_state, uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+// The manpage states only uint16 should be supplied, but brctl_cmd.c uses regular 'int'
+// providing 2^16+1 results in 0 -> integer overflow
+func setbridgeprio(bridge string, bridge_priority string) error {
+	prio, err := strconv.ParseUint(bridge_priority, 10, 16)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := br_set_val(bridge, "priority", prio, uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func setfd(bridge string, time string) error {
+	tv, err := str_to_tv(time)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	forward_delay := to_jiffies(tv)
+	if err := br_set_val(bridge, "forward_delay", uint64(forward_delay), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func sethello(bridge string, time string) error {
+	tv, err := str_to_tv(time)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	hello_time := to_jiffies(tv)
+	if err := br_set_val(bridge, "hello_time", uint64(hello_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func setmaxage(bridge string, time string) error {
+	tv, err := str_to_tv(time)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	max_age := to_jiffies(tv)
+	if err := br_set_val(bridge, "max_age", uint64(max_age), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
 // runner
+// TODO: define generic commands and minify parsing
 func run(out io.Writer, argv []string) error {
 	var err error
 
@@ -360,6 +534,48 @@ func run(out io.Writer, argv []string) error {
 			return fmt.Errorf("too few args")
 		}
 		err = showmacs(args[0])
+
+	case "setageingtime":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = setageingtime(args[0], args[1])
+
+	case "setgcint":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = setgcint(args[0], args[1])
+
+	case "stp":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = stp(args[0], args[1])
+
+	case "setbridgeprio":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = setbridgeprio(args[0], args[1])
+
+	case "setfd":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = setfd(args[0], args[1])
+
+	case "sethello":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = sethello(args[0], args[1])
+
+	case "setmaxage":
+		if len(args) != 2 {
+			return fmt.Errorf("too few args")
+		}
+		err = setmaxage(args[0], args[1])
 
 	default:
 		return fmt.Errorf("unknown command: %s", command)
