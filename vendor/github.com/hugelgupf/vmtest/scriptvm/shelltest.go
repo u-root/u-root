@@ -53,7 +53,6 @@ func WithUimage(mods ...uimage.Modifier) Modifier {
 // If any command fails, the test fails.
 //
 //   - TODO: timeouts for individual individual commands.
-//   - TODO: It should check their exit status. Hahaha.
 func Run(t testing.TB, name, script string, mods ...Modifier) {
 	vm := Start(t, name, script, mods...)
 
@@ -96,9 +95,6 @@ func Start(t testing.TB, name, script string, mods ...Modifier) *qemu.VM {
 			"github.com/u-root/u-root/cmds/core/gosh",
 			"github.com/hugelgupf/vmtest/vminit/shutdownafter",
 			"github.com/hugelgupf/vmtest/vminit/vmmount",
-		),
-		// Collect coverage of shelluinit.
-		uimage.WithCoveredCommands(
 			"github.com/hugelgupf/vmtest/vminit/shelluinit",
 		),
 		uimage.WithInit("init"),
