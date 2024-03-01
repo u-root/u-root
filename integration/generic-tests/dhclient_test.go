@@ -67,7 +67,7 @@ func TestDhclientQEMU4(t *testing.T) {
 		),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
-			qnetwork.IPv4HostNetwork("192.168.0.0/24"),
+			qnetwork.HostNetwork("192.168.0.0/24"),
 			qnetwork.ServeHTTP(s, ln),
 			qemu.VirtioRandom(),
 		),
