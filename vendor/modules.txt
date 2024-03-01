@@ -121,7 +121,7 @@ github.com/google/uuid
 # github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
 ## explicit; go 1.14
 github.com/hugelgupf/go-shlex
-# github.com/hugelgupf/vmtest v0.0.0-20240216064925-0561770280a1
+# github.com/hugelgupf/vmtest v0.0.0-20240228002643-de15f4612e10
 ## explicit; go 1.21
 github.com/hugelgupf/vmtest/govmtest
 github.com/hugelgupf/vmtest/guest

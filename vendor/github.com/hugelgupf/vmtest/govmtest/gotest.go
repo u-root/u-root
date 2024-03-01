@@ -134,22 +134,22 @@ func WithGoTestTimeout(timeout time.Duration) Modifier {
 }
 
 // Run compiles the tests added with WithPackageToTest and runs them in a QEMU
-// VM configured in options `o`. It collects the test results and provides a
-// pass/fail result of each individual test.
+// VM configured by mods. It collects the test results and provides a pass/fail
+// result of each individual test.
 //
-// Run runs tests and benchmarks, but not fuzz tests. Guest test architecture
-// can be set with VMTEST_ARCH.
+// Run runs tests and benchmarks, but not fuzz tests.
 //
 // The test environment in the VM is very minimal. If a test depends on other
 // binaries or specific files to be present, they must be specified with
-// additional initramfs commands via WithMergedInitramfs.
+// additional initramfs commands via [WithUimage].
 //
 // All files and directories in the same directory as the test package will be
 // made available to the test in the guest as well (e.g. testdata/
 // directories).
 //
 // Coverage from the Go tests is collected if a coverage file name is specified
-// via the VMTEST_GO_PROFILE env var.
+// via the VMTEST_GO_PROFILE env var, as well as integration test coverage if
+// VMTEST_GOCOVERDIR is set.
 //
 //   - TODO: specify test, bench, fuzz filter. Flags for fuzzing.
 func Run(t testing.TB, name string, mods ...Modifier) {
@@ -201,9 +201,6 @@ func Run(t testing.TB, name string, mods ...Modifier) {
 			"github.com/u-root/u-root/cmds/core/init",
 			"github.com/hugelgupf/vmtest/vminit/shutdownafter",
 			"github.com/hugelgupf/vmtest/vminit/vmmount",
-		),
-		// Collect coverage of gouinit.
-		uimage.WithCoveredCommands(
 			"github.com/hugelgupf/vmtest/vminit/gouinit",
 		),
 		uimage.WithBinaryCommands("cmd/test2json"),
