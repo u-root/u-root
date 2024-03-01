@@ -1,3 +1,22 @@
 parsers:
   go:
     partials_as_hits: true #false by default
+
+comment:
+  layout: "header, diff, flags, components"  # show component info in the PR comment
+
+component_management:
+  individual_components:
+    - component_id: nonexp
+      name: everything
+      paths:
+        - cmds/core/**
+        - cmds/boot/**
+        - cmds/contrib/**
+        - cmds/fwtools/**
+        - pkg/**
+        - u-root.go
+    - component_id: exp
+      name: cmds/exp
+      paths:
+        - cmds/exp/**
