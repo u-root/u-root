@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 	"unicode"
@@ -28,21 +29,42 @@ import (
 )
 
 func TestRun(t *testing.T) {
+	echoSc := filepath.Join(t.TempDir(), "b.sh")
+	_ = os.WriteFile(echoSc, []byte("echo foo"), 0o777)
+
 	for _, tt := range []struct {
-		name string
-		args []string
+		name    string
+		command string
+		args    []string
+		wantOut string
+		wantErr string
 	}{
 		{
 			name: "no args",
 		},
 		{
-			name: "args",
-			args: []string{"echo"},
+			name:    "args",
+			args:    []string{echoSc},
+			wantOut: "foo\n",
+		},
+		{
+			name:    "cmd",
+			command: "echo foo",
+			wantOut: "foo\n",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, tt.args...); err != nil {
+			var in, out, err bytes.Buffer
+			if err := run(&in, &out, &err, tt.command, tt.args...); err != nil {
 				t.Errorf("Unexpected error: %v", err)
+			}
+			t.Logf("out: %s", out.Bytes())
+			t.Logf("err: %s", err.Bytes())
+			if gotOut := string(out.Bytes()); gotOut != tt.wantOut {
+				t.Errorf("Stdout = %s, want %s", gotOut, tt.wantOut)
+			}
+			if gotErr := string(err.Bytes()); gotErr != tt.wantErr {
+				t.Errorf("Stderr = %s, want %s", gotErr, tt.wantErr)
 			}
 		})
 	}
@@ -59,7 +81,7 @@ func TestRunFail(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, tt.args...); err == nil {
+			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, "", tt.args...); err == nil {
 				t.Errorf("want err, got nil")
 			}
 		})
@@ -111,7 +133,7 @@ func TestRunScript(t *testing.T) {
 				t.Errorf("Failed creating runner: %v", err)
 			}
 
-			if err := runScript(runner, syntax.NewParser(), tt.pairs[0]); err != nil {
+			if err := runScript(runner, tt.pairs[0]); err != nil {
 				// can't use errors.Is: please ask mvdan to fix that.
 				if fmt.Sprintf("%v", err) != fmt.Sprintf("%v", tt.err) {
 					t.Errorf("got '%v', want '%v'", err, tt.err)
@@ -214,8 +236,6 @@ func FuzzRun(f *testing.F) {
 		f.Fatalf("failed to initialize runner")
 	}
 
-	parser := syntax.NewParser()
-
 	// get seed corpora
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
 	if err != nil {
@@ -278,7 +298,7 @@ func FuzzRun(f *testing.F) {
 		runner.Reset()
 		runner.Dir = dirPath
 
-		runCmd(runner, parser, strings.NewReader(stringifiedData), "fuzz")
+		runReader(runner, strings.NewReader(stringifiedData), "fuzz")
 	})
 }
 
@@ -430,6 +450,87 @@ func TestInteractiveLiner(t *testing.T) {
 			}
 			if err := con.Close(); err != nil {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestGoshInvocation(t *testing.T) {
+	dir := t.TempDir()
+	execPath := filepath.Join(dir, "gosh")
+	// Build the stuff.
+	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name       string
+		args       []string
+		stdout     string
+		stdin      string
+		exitStatus int
+	}{
+		{
+			name: "echo",
+			args: []string{
+				"-c", "echo foo",
+			},
+			stdout: "foo\n",
+		},
+		{
+			name: "cmdline cmd wins",
+			args: []string{
+				"-c", "echo foo", "./testdata/setenv.sh",
+			},
+			stdout: "foo\n",
+		},
+		{
+			name: "cmd",
+			args: []string{
+				"./testdata/setenv.sh",
+			},
+			stdout: "hi\n",
+		},
+		{
+			name:   "stdin",
+			stdin:  "echo hi",
+			stdout: "hi\n",
+		},
+		{
+			name:       "exit status",
+			stdin:      "false",
+			exitStatus: 1,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.CommandContext(context.Background(), execPath, tt.args...)
+			var b bytes.Buffer
+			if tt.stdin == "" {
+				// This means os.Stdin would register as a terminal.
+				con, err := expect.NewTestConsole(t, expect.WithDefaultTimeout(2*time.Second))
+				if err != nil {
+					t.Fatal(err)
+				}
+				cmd.Stdin = con.Tty()
+				t.Cleanup(func() { con.Close() })
+			} else {
+				cmd.Stdin = strings.NewReader(tt.stdin)
+			}
+			cmd.Stdout, cmd.Stderr = &b, &b
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+
+			var e *exec.ExitError
+			if err := cmd.Wait(); errors.As(err, &e) {
+				if got := e.Sys().(syscall.WaitStatus).ExitStatus(); got != tt.exitStatus {
+					t.Errorf("Exit status = %v, want %d", err, tt.exitStatus)
+				}
+			} else if err != nil {
+				t.Error(err)
+			}
+			if got := string(b.Bytes()); got != tt.stdout {
+				t.Errorf("gosh = %s, want %s", got, tt.stdout)
 			}
 		})
 	}

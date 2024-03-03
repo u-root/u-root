@@ -10,8 +10,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -28,14 +26,15 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+var command = flag.String("c", "", "Command to run")
+
 func main() {
 	flag.Parse()
-	err := run(os.Stdin, os.Stdout, os.Stderr, flag.Args()...)
 
+	err := run(os.Stdin, os.Stdout, os.Stderr, *command, flag.Args()...)
 	if status, ok := interp.IsExitStatus(err); ok {
 		os.Exit(int(status))
 	}
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,78 +42,50 @@ func main() {
 
 var errNotImplemented = errors.New("fancy interactive interpreter not implemented")
 
-func run(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
+func run(stdin io.Reader, stdout, stderr io.Writer, command string, args ...string) error {
 	runner, err := interp.New(interp.StdIO(stdin, stdout, stderr))
 	if err != nil {
 		return err
 	}
 
-	parser := syntax.NewParser()
-
-	if len(args) > 0 {
-		if strings.HasSuffix(args[0], "sh") {
-			return runScript(runner, parser, args[0])
-		}
-
-		return runCmd(runner, parser, strings.NewReader(strings.Join(args, " ")), args[0])
+	if command != "" {
+		return runReader(runner, strings.NewReader(command), "")
 	}
-
-	if r, ok := stdin.(*os.File); ok && term.IsTerminal(int(r.Fd())) {
-		if err := runInteractive(runner, parser, stdout, stderr); !errors.Is(err, errNotImplemented) {
-			return err
+	if len(args) == 0 {
+		if r, ok := stdin.(*os.File); ok && term.IsTerminal(int(r.Fd())) {
+			if err := runInteractive(runner, syntax.NewParser(), stdout, stderr); !errors.Is(err, errNotImplemented) {
+				return err
+			}
+			return runInteractiveSimple(runner, stdin, stdout)
 		}
-		return runInteractiveSimple(runner, parser, stdin, stdout)
+		return runReader(runner, stdin, "")
 	}
-
-	return runCmd(runner, parser, stdin, "")
+	return runScript(runner, args[0])
 }
 
-func runScript(runner *interp.Runner, parser *syntax.Parser, file string) error {
+func runScript(runner *interp.Runner, file string) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+	return runReader(runner, f, file)
+}
 
-	prog, err := parser.Parse(f, file)
+func runReader(runner *interp.Runner, reader io.Reader, name string) error {
+	prog, err := syntax.NewParser().Parse(reader, name)
 	if err != nil {
 		return err
 	}
-
 	runner.Reset()
-
 	return runner.Run(context.Background(), prog)
 }
 
-func runCmd(runner *interp.Runner, parser *syntax.Parser, command io.Reader, name string) error {
-	scanner := bufio.NewScanner(command)
-	defer runner.Reset()
-
-	for scanner.Scan() {
-		h := scanner.Text()
-		if err := scanner.Err(); err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		prog, err := parser.Parse(bytes.NewBuffer([]byte(h)), name)
-		if err != nil {
-			return err
-		}
-
-		if err := runner.Run(context.Background(), prog); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func runInteractiveSimple(runner *interp.Runner, parser *syntax.Parser, stdin io.Reader, stdout io.Writer) error {
+func runInteractiveSimple(runner *interp.Runner, stdin io.Reader, stdout io.Writer) error {
+	parser := syntax.NewParser()
 	fmt.Fprintf(stdout, "$ ")
 
 	var runErr error
-
 	// The following code is used to intercept SIGINT signals.
 	// Calling signal.Ignore wouldn't work as child prcesses inherit this trait.
 	// We only want to catch SIGINTs that are propagated from a child,
