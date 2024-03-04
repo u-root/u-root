@@ -552,3 +552,73 @@ func TestGoshInvocation(t *testing.T) {
 		})
 	}
 }
+
+func TestInteractiveSimple(t *testing.T) {
+	dir := t.TempDir()
+	execPath := filepath.Join(dir, "gosh")
+
+	var opts *golang.BuildOpts
+	// Setting -cover without GOCOVERDIR adds extra warning output, which changes the result of the test.
+	if os.Getenv("GOCOVERDIR") != "" {
+		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
+	}
+	// Build the stuff.
+	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("goshsmall")).BuildDir("", execPath, opts); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		expect []consoleAction
+	}{
+		{
+			name: "exit shell",
+			expect: []consoleAction{
+				expectString("$ "),
+				send("echo hi\x0D"),
+				expectString("hi"),
+				expectString("$ "),
+				send("exit\x0D"),
+			},
+		},
+		{
+			name: "source script",
+			expect: []consoleAction{
+				expectString("$ "),
+				send("source ./testdata/setenv.sh && echo $FOO\x0D"),
+				expectString("hi"),
+				expectString("hahaha"),
+				expectString("$ "),
+				send("exit\x0D"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			con, err := expect.NewTestConsole(t, expect.WithDefaultTimeout(2*time.Second))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cmd := exec.CommandContext(context.Background(), execPath)
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = con.Tty(), con.Tty(), con.Tty()
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+			// Close our end of child's tty.
+			con.Tty().Close()
+
+			for i, a := range tt.expect {
+				if err := a(con); err != nil {
+					t.Errorf("Action %d: %v", i, err)
+				}
+			}
+
+			if err := cmd.Wait(); err != nil {
+				t.Error(err)
+			}
+			if err := con.Close(); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
