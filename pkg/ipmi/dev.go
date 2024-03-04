@@ -13,67 +13,49 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (cc CompletionCode) Error() string {
-	switch cc {
-	case IPMI_CC_OK:
-		return "command completed normally"
-	case IPMI_CC_NODE_BUSY:
-		return "node busy"
-	case IPMI_CC_INV_CMD:
-		return "invalid command"
-	case IPMI_CC_INV_CMD_FOR_LUN:
-		return "command invalid for given LUN"
-	case IPMI_CC_TIMEOUT:
-		return "timeout while processing command"
-	case IPMI_CC_OUT_OF_SPACE:
-		return "out of space"
-	case IPMI_CC_RES_CANCELED:
-		return "reservation canceled or invalid reservation ID"
-	case IPMI_CC_REQ_DATA_TRUNC:
-		return "request data truncated"
-	case IPMI_CC_REQ_DATA_INV_LENGTH:
-		return "request data length invalid"
-	case IPMI_CC_REQ_DATA_FIELD_EXCEED:
-		return "request data field length limit exceeded"
-	case IPMI_CC_PARAM_OUT_OF_RANGE:
-		return "parameter out of range"
-	case IPMI_CC_CANT_RET_NUM_REQ_BYTES:
-		return "cannot return number of requested data bytes"
-	case IPMI_CC_REQ_DATA_NOT_PRESENT:
-		return "requested sensor, data, or record not present"
-	case IPMI_CC_INV_DATA_FIELD_IN_REQ:
-		return "invalid data field in request"
-	case IPMI_CC_ILL_SENSOR_OR_RECORD:
-		return "command illegal for specified sensor or record type"
-	case IPMI_CC_RESP_COULD_NOT_BE_PRV:
-		return "command response could not be provided"
-	case IPMI_CC_CANT_RESP_DUPLI_REQ:
-		return "cannot execute duplicated request"
-	case IPMI_CC_CANT_RESP_SDRR_UPDATE:
-		return "command response could not be provided: SDR repository in update mode"
-	case IPMI_CC_CANT_RESP_FIRM_UPDATE:
-		return "command response could not be provided: device in firmware update mode"
-	case IPMI_CC_CANT_RESP_BMC_INIT:
-		return "command response could not be provided: BMC initialization or initialization agent in progress"
-	case IPMI_CC_DESTINATION_UNAVAILABLE:
-		return "destination unavailable"
-	case IPMI_CC_INSUFFICIENT_PRIVILEGES:
-		return "cannot execute command due to insufficient privilege level or other security-based restriction"
-	case IPMI_CC_NOT_SUPPORTED_PRESENT_STATE:
-		return "cannot execute command: command, or request parameter(s), not supported in present state"
-	case IPMI_CC_ILLEGAL_COMMAND_DISABLED:
-		return "cannot execute command: parameter is illegal because command sub-function has been disabled or is unavailable"
-	case IPMI_CC_UNSPECIFIED_ERROR:
-		return "unspecified error"
-	default:
-		if 0x01 <= cc && cc <= 0x7e {
-			return fmt.Sprintf("device specific (OEM) completion code: %x", byte(cc))
-		}
-		if 0x80 <= cc && cc <= 0xbe {
-			return fmt.Sprintf("command-specific completion code: %x", byte(cc))
-		}
-		return fmt.Sprintf("unknown completion code in reserved range: %x", byte(cc))
+var completionCodeMessages = map[CompletionCode]string{
+	IPMI_CC_OK:                          "command completed normally",
+	IPMI_CC_NODE_BUSY:                   "node busy",
+	IPMI_CC_INV_CMD:                     "invalid command",
+	IPMI_CC_INV_CMD_FOR_LUN:             "command invalid for given LUN",
+	IPMI_CC_TIMEOUT:                     "timeout while processing command",
+	IPMI_CC_OUT_OF_SPACE:                "out of space",
+	IPMI_CC_RES_CANCELED:                "reservation canceled or invalid reservation ID",
+	IPMI_CC_REQ_DATA_TRUNC:              "request data truncated",
+	IPMI_CC_REQ_DATA_INV_LENGTH:         "request data length invalid",
+	IPMI_CC_REQ_DATA_FIELD_EXCEED:       "request data field length limit exceeded",
+	IPMI_CC_PARAM_OUT_OF_RANGE:          "parameter out of range",
+	IPMI_CC_CANT_RET_NUM_REQ_BYTES:      "cannot return number of requested data bytes",
+	IPMI_CC_REQ_DATA_NOT_PRESENT:        "requested sensor, data, or record not present",
+	IPMI_CC_INV_DATA_FIELD_IN_REQ:       "invalid data field in request",
+	IPMI_CC_ILL_SENSOR_OR_RECORD:        "command illegal for specified sensor or record type",
+	IPMI_CC_RESP_COULD_NOT_BE_PRV:       "command response could not be provided",
+	IPMI_CC_CANT_RESP_DUPLI_REQ:         "cannot execute duplicated request",
+	IPMI_CC_CANT_RESP_SDRR_UPDATE:       "command response could not be provided: SDR repository in update mode",
+	IPMI_CC_CANT_RESP_FIRM_UPDATE:       "command response could not be provided: device in firmware update mode",
+	IPMI_CC_CANT_RESP_BMC_INIT:          "command response could not be provided: BMC initialization or initialization agent in progress",
+	IPMI_CC_DESTINATION_UNAVAILABLE:     "destination unavailable",
+	IPMI_CC_INSUFFICIENT_PRIVILEGES:     "cannot execute command due to insufficient privilege level or other security-based restriction",
+	IPMI_CC_NOT_SUPPORTED_PRESENT_STATE: "cannot execute command: command, or request parameter(s), not supported in present state",
+	IPMI_CC_ILLEGAL_COMMAND_DISABLED:    "cannot execute command: parameter is illegal because command sub-function has been disabled or is unavailable",
+	IPMI_CC_UNSPECIFIED_ERROR:           "unspecified error",
+}
+
+func (cc CompletionCode) String() string {
+	if s, ok := completionCodeMessages[cc]; ok {
+		return s
 	}
+	if 0x01 <= cc && cc <= 0x7e {
+		return fmt.Sprintf("device specific (OEM) completion code: 0x%x", byte(cc))
+	}
+	if 0x80 <= cc && cc <= 0xbe {
+		return fmt.Sprintf("command-specific completion code: 0x%x", byte(cc))
+	}
+	return fmt.Sprintf("unknown completion code in reserved range: 0x%x", byte(cc))
+}
+
+func (ce CompletionError) Error() string {
+	return fmt.Sprintf("command completed with non-OK code: %s", CompletionCode(ce))
 }
 
 type dev struct {
@@ -112,7 +94,7 @@ func (d *dev) ReceiveResponse(msgID int64, resp *response, buf []byte) ([]byte, 
 		if resp.msg.DataLen >= _IPMI_BUF_SIZE {
 			rerr = fmt.Errorf("data length received too large: %d > %d", resp.msg.DataLen, _IPMI_BUF_SIZE)
 		} else if cc := CompletionCode(buf[0]); cc != IPMI_CC_OK {
-			rerr = cc
+			rerr = CompletionError(cc)
 		} else {
 			result = buf[:resp.msg.DataLen:resp.msg.DataLen]
 			rerr = nil
