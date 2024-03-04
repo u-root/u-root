@@ -37,6 +37,34 @@ const (
 	// LAN Device Commands
 	BMC_GET_LAN_CONFIG Command = 0x02
 
+	// Completion codes.
+	// See Intelligent Platform Management Interface Specification v2.0 rev. 1.1, section 5.2.
+	IPMI_CC_OK                          CompletionCode = 0x00
+	IPMI_CC_NODE_BUSY                   CompletionCode = 0xc0
+	IPMI_CC_INV_CMD                     CompletionCode = 0xc1
+	IPMI_CC_INV_CMD_FOR_LUN             CompletionCode = 0xc2
+	IPMI_CC_TIMEOUT                     CompletionCode = 0xc3
+	IPMI_CC_OUT_OF_SPACE                CompletionCode = 0xc4
+	IPMI_CC_RES_CANCELED                CompletionCode = 0xc5
+	IPMI_CC_REQ_DATA_TRUNC              CompletionCode = 0xc6
+	IPMI_CC_REQ_DATA_INV_LENGTH         CompletionCode = 0xc7
+	IPMI_CC_REQ_DATA_FIELD_EXCEED       CompletionCode = 0xc8
+	IPMI_CC_PARAM_OUT_OF_RANGE          CompletionCode = 0xc9
+	IPMI_CC_CANT_RET_NUM_REQ_BYTES      CompletionCode = 0xca
+	IPMI_CC_REQ_DATA_NOT_PRESENT        CompletionCode = 0xcb
+	IPMI_CC_INV_DATA_FIELD_IN_REQ       CompletionCode = 0xcc
+	IPMI_CC_ILL_SENSOR_OR_RECORD        CompletionCode = 0xcd
+	IPMI_CC_RESP_COULD_NOT_BE_PRV       CompletionCode = 0xce
+	IPMI_CC_CANT_RESP_DUPLI_REQ         CompletionCode = 0xcf
+	IPMI_CC_CANT_RESP_SDRR_UPDATE       CompletionCode = 0xd0
+	IPMI_CC_CANT_RESP_FIRM_UPDATE       CompletionCode = 0xd1
+	IPMI_CC_CANT_RESP_BMC_INIT          CompletionCode = 0xd2
+	IPMI_CC_DESTINATION_UNAVAILABLE     CompletionCode = 0xd3
+	IPMI_CC_INSUFFICIENT_PRIVILEGES     CompletionCode = 0xd4
+	IPMI_CC_NOT_SUPPORTED_PRESENT_STATE CompletionCode = 0xd5
+	IPMI_CC_ILLEGAL_COMMAND_DISABLED    CompletionCode = 0xd6
+	IPMI_CC_UNSPECIFIED_ERROR           CompletionCode = 0xff
+
 	IPM_WATCHDOG_NO_ACTION    = 0x00
 	IPM_WATCHDOG_SMS_OS       = 0x04
 	IPM_WATCHDOG_CLEAR_SMS_OS = 0x10
