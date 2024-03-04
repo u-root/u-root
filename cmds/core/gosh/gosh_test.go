@@ -8,16 +8,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 
+	"github.com/Netflix/go-expect"
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -275,4 +280,157 @@ func FuzzRun(f *testing.F) {
 
 		runCmd(runner, parser, strings.NewReader(stringifiedData), "fuzz")
 	})
+}
+
+type consoleAction func(*expect.Console) error
+
+func expectOpts(o ...expect.ExpectOpt) consoleAction {
+	return func(c *expect.Console) error {
+		_, err := c.Expect(o...)
+		return err
+	}
+}
+
+func expectString(s string) consoleAction {
+	return func(c *expect.Console) error {
+		_, err := c.ExpectString(s)
+		if err != nil {
+			return fmt.Errorf("failed to expect %q: %w", s, err)
+		}
+		return nil
+	}
+}
+
+func send(s string) consoleAction {
+	return func(c *expect.Console) error {
+		_, err := c.Send(s)
+		return err
+	}
+}
+
+func TestInteractiveBubbline(t *testing.T) {
+	dir := t.TempDir()
+	execPath := filepath.Join(dir, "gosh")
+	// Build the stuff.
+	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		expect []consoleAction
+	}{
+		{
+			name: "exit shell",
+			expect: []consoleAction{
+				expectString("> "),
+				send("echo hi\x0D"),
+				expectString("> "),
+				send("exit\x0D"),
+			},
+		},
+		{
+			name: "source script",
+			expect: []consoleAction{
+				expectString("> "),
+				send("source ./testdata/setenv.sh && echo $FOO\x0D"),
+				expectString("hi"),
+				expectString("hahaha"),
+				expectString("> "),
+				send("exit\x0D"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			con, err := expect.NewTestConsole(t, expect.WithDefaultTimeout(2*time.Second), expect.WithStdout(os.Stdout))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cmd := exec.CommandContext(context.Background(), execPath)
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = con.Tty(), con.Tty(), con.Tty()
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+			// Close our end of child's tty.
+			con.Tty().Close()
+
+			for i, a := range tt.expect {
+				if err := a(con); err != nil {
+					t.Errorf("Action %d: %v", i, err)
+				}
+			}
+
+			if err := cmd.Wait(); err != nil {
+				t.Error(err)
+			}
+			if err := con.Close(); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestInteractiveLiner(t *testing.T) {
+	dir := t.TempDir()
+	execPath := filepath.Join(dir, "gosh")
+	// Build the stuff.
+	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("goshliner")).BuildDir("", execPath, &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		expect []consoleAction
+	}{
+		{
+			name: "exit shell",
+			expect: []consoleAction{
+				expectString("$ "),
+				send("echo hi\x0D"),
+				expectString("hi"),
+				expectString("$ "),
+				send("exit\x0D"),
+			},
+		},
+		{
+			name: "source script",
+			expect: []consoleAction{
+				expectString("$ "),
+				send("source ./testdata/setenv.sh && echo $FOO\x0D"),
+				expectString("hi"),
+				expectString("hahaha"),
+				expectString("$ "),
+				send("exit\x0D"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			con, err := expect.NewTestConsole(t, expect.WithDefaultTimeout(2*time.Second))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cmd := exec.CommandContext(context.Background(), execPath)
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = con.Tty(), con.Tty(), con.Tty()
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+			// Close our end of child's tty.
+			con.Tty().Close()
+
+			for i, a := range tt.expect {
+				if err := a(con); err != nil {
+					t.Errorf("Action %d: %v", i, err)
+				}
+			}
+
+			if err := cmd.Wait(); err != nil {
+				t.Error(err)
+			}
+			if err := con.Close(); err != nil {
+				t.Error(err)
+			}
+		})
+	}
 }
