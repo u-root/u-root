@@ -57,7 +57,7 @@ func main() {
 
 	a := flag.Args()
 	if len(a) == 0 {
-		a = []string{"/ubin/elvish", "elvish"}
+		a = []string{"/bin/sh"}
 	}
 
 	c := exec.Command(a[0], a[1:]...)
