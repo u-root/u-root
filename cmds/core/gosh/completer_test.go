@@ -124,6 +124,7 @@ func TestAutocomplete(t *testing.T) {
 			input: "./testdata/",
 			want: []string{
 				"./testdata/fuzz",
+				"./testdata/setenv.sh",
 			},
 		},
 		{
