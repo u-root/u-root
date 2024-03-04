@@ -82,16 +82,6 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 		default:
 		}
 
-		// check if we want to execute a shell script
-		fields := strings.Fields(line)
-		if len(fields) > 0 && strings.HasSuffix(fields[0], "sh") {
-			if err := runScript(runner, parser, fields[0]); err != nil {
-				fmt.Fprintf(stderr, "error: %s\n", err.Error())
-			}
-
-			continue
-		}
-
 		if line != "" {
 			input.AppendHistory(line)
 			if f != nil {
@@ -101,12 +91,10 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 		if err := parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {
 			if parser.Incomplete() {
 				fmt.Fprintf(stdout, "-> ")
-
 				return true
 			}
 
 			runErr = runner.Run(context.Background(), stmt)
-
 			return !runner.Exited()
 		}); err != nil {
 			fmt.Fprintf(stderr, "error: %s\n", err.Error())
