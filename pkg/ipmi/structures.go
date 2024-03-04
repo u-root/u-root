@@ -12,6 +12,9 @@ type Command byte
 // NetFn is the network function of the class of message being sent.
 type NetFn byte
 
+// CompletionCode is the completion code in the response from a command.
+type CompletionCode byte
+
 // Msg is the full IPMI message to be sent.
 type Msg struct {
 	Netfn   NetFn
