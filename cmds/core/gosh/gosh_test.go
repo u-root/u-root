@@ -331,8 +331,14 @@ func send(s string) consoleAction {
 func TestInteractiveBubbline(t *testing.T) {
 	dir := t.TempDir()
 	execPath := filepath.Join(dir, "gosh")
+
+	var opts *golang.BuildOpts
+	// Setting -cover without GOCOVERDIR adds extra warning output, which changes the result of the test.
+	if os.Getenv("GOCOVERDIR") != "" {
+		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
+	}
 	// Build the stuff.
-	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}); err != nil {
+	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, opts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -394,8 +400,14 @@ func TestInteractiveBubbline(t *testing.T) {
 func TestInteractiveLiner(t *testing.T) {
 	dir := t.TempDir()
 	execPath := filepath.Join(dir, "gosh")
+
+	var opts *golang.BuildOpts
+	// Setting -cover without GOCOVERDIR adds extra warning output, which changes the result of the test.
+	if os.Getenv("GOCOVERDIR") != "" {
+		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
+	}
 	// Build the stuff.
-	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("goshliner")).BuildDir("", execPath, &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}); err != nil {
+	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("goshliner")).BuildDir("", execPath, opts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -458,8 +470,13 @@ func TestInteractiveLiner(t *testing.T) {
 func TestGoshInvocation(t *testing.T) {
 	dir := t.TempDir()
 	execPath := filepath.Join(dir, "gosh")
+	var opts *golang.BuildOpts
+	// Setting -cover without GOCOVERDIR adds extra warning output, which changes the result of the test.
+	if os.Getenv("GOCOVERDIR") != "" {
+		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
+	}
 	// Build the stuff.
-	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}); err != nil {
+	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, opts); err != nil {
 		t.Fatal(err)
 	}
 
