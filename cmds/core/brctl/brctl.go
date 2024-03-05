@@ -4,34 +4,8 @@
 
 // brctl - ethernet bridge administration brctl(8)
 //
-// INSTANCES:
-// brctl addbr <name> creates a new instance of the ethernet bridge
-// brctl delbr <name> deletes the instance <name> of the ethernet bridge
-// brctl show shows all current instances of the ethernet bridge
-//
-// PORTS:
-// brctl addif <brname> <ifname> will make the interface <ifname> a port of the bridge <brname>
-// brctl delif <brname> <ifname> will detach the interface <ifname> from the bridge <brname>
-// brctl show <brname> will show some information on the bridge and its attached ports
-//
-// AGEING:
-// brctl showmacs <brname> shows a list of learned MAC addresses for this bridge
-// brctl setageingtime <brname> <time> sets the ethernet (MAC) address ageing time, in seconds [OPT]
-// brctl setgcint <brname> <time> sets the garbage collection interval for the bridge <brname> to <time> seconds [OPT]
-//
-// SPANNING TREE PROTOCOL (IEEE 802.1d):
-// brctl stp <bridge> <state> controls this bridge instance's participation in the spanning tree protocol.
-// brctl setbridgeprio <bridge> <priority> sets the bridge's priority to <priority>
-// brctl setfd <bridge> <time>
-// brctl sethello <bridge> <time>
-// brctl setmaxage <bridge> <time>
-// brctl setpathcost <bridge> <port> <cost>
-// brctl setportprio <bridge> <port> <priority>
-// brctl hairpin <bridge> <port> <state>
-//
 // Busybox Implementation: https://elixir.bootlin.com/busybox/latest/source/networking/brctl.c
 // Kernel Implementation: https://mirrors.edge.kernel.org/pub/linux/utils/net/bridge-utils/
-//
 // Author: Leon Gross (leon.gross@9elements.com)
 //
 
@@ -78,7 +52,35 @@ type BridgeInfo struct {
 }
 
 // cli
-const usage = "brctl [commands]"
+const usage = `
+Usage: brctl [commands]
+commands:
+
+INSTANCES:
+brctl addbr <name>		creates a new instance of the ethernet bridge
+brctl delbr <name>		deletes the instance <name> of the ethernet bridge
+brctl show			show current instance(s) of the ethernet bridge
+
+PORTS:
+brctl addif <brname> <ifname>	will make the interface <ifname> a port of the bridge <brname>
+brctl delif <brname> <ifname>	will detach the interface <ifname> from the bridge <brname>
+brctl show <brname>		will show some information on the bridge and its attached ports
+
+AGEING:
+brctl showmacs <brname> 		shows a list of learned MAC addresses for this bridge
+brctl setageingtime <brname> <time>	sets the ethernet (MAC) address ageing time, in seconds [OPT]
+brctl setgcint <brname> <time> 		sets the garbage collection interval for the bridge <brname> to <time> seconds [OPT]
+
+SPANNING TREE PROTOCOL (IEEE 802.1d):
+brctl stp <bridge> <state>			controls this bridge instance's participation in the spanning tree protocol.
+brctl setbridgeprio <bridge> <priority>		sets the bridge's priority to <priority>
+brctl setfd <bridge> <time>			sets the bridge's 'bridge forward delay' to <time> seconds
+brctl sethello <bridge> <time>			sets the bridge's 'bridge hello time' to <time> seconds
+brctl setmaxage <bridge> <time>			sets the bridge's 'maximum message age' to <time> seconds.
+brctl setpathcost <bridge> <port> <cost>	sets the port cost of the port <port> to <cost>. This is a dimensionless metric
+brctl setportprio <bridge> <port> <priority>	sets the port <port>'s priority to <priority>
+brctl hairpin <bridge> <port> <state>		enable/disable hairpin mode on the port <port> of the bridge <bridge>
+`
 
 //type command struct {
 //	name string
