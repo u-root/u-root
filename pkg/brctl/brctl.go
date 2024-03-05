@@ -8,12 +8,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
 	"unsafe"
 
+	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
 )
 
@@ -43,6 +45,14 @@ var (
 	BRCTL_SET_PORT_PRIORITY   = 16
 	BRCTL_SET_PATH_COST       = 17
 )
+
+func sysconfhz() (int, error) {
+	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	if err != nil {
+		return 0, fmt.Errorf("%w", err)
+	}
+	return int(clktck), nil
+}
 
 func ifreq_option(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
 	i := ifreqptr{ptr: ptr}
@@ -124,33 +134,37 @@ func br_set_port(bridge string, port string, name string, value uint64, ioctlcod
 Helper functions that convert seconds to jiffies and vice versa.
 https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html
 */
-
 func str_to_tv(in string) (unix.Timeval, error) {
-	// cast string to long float
 	time, err := strconv.ParseFloat(in, 64)
 	if err != nil {
 		return unix.Timeval{}, fmt.Errorf("%w", err)
 	}
 
-	// TODO: placeholder
-	// 10^{-5}
+	modf_int, modf_frac := math.Modf(time)
+	if math.IsInf(modf_int, 0) || math.IsNaN(modf_int) {
+		return unix.Timeval{}, fmt.Errorf("invalid time value")
+	}
+
 	return unix.Timeval{
-		Sec:  int64(time),
-		Usec: int64(time / 100000),
+		Sec:  int64(modf_int),
+		Usec: int64(modf_frac * 1000000),
 	}, nil
 }
 
-// TODO: placeholder
-func to_jiffies(tv unix.Timeval) int {
-	return int(tv.Sec * 100)
+// Linux kernel jiffies https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec2.html
+func to_jiffies(tv unix.Timeval, hz int) int {
+	// fmt.Printf("hz*sec = %v, usec = %v, final = %v\n", int(tv.Sec)*hz, int(tv.Usec)/100000*hz/100, int(tv.Sec)*hz+int(tv.Usec)/10000*hz/100)
+	return int((int(tv.Sec) * hz) + (int(tv.Usec)*hz)/1000000)
 }
 
-func from_jiffies(jiffies int) int {
-	return jiffies / 100
+func from_jiffies(jiffies int, hz int) unix.Timeval {
+	return unix.Timeval{
+		Sec:  int64(jiffies / hz),
+		Usec: int64(jiffies % hz * 1000000 / hz),
+	}
 }
 
 // subcommands
-// https://elixir.bootlin.com/busybox/latest/source/networking/brctl.c#L583
 // https://github.com/slackhq/nebula/blob/8822f1366c1111feb2f64fef229eed2024512104/overlay/tun_linux.go#L222
 // can this also be done using IoctlIfreq?
 func Addbr(name string) error {
@@ -369,7 +383,16 @@ func Setageingtime(name string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	ageing_time := to_jiffies(tv)
+	hz, err := sysconfhz()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	ageing_time := to_jiffies(tv, hz)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	if err = br_set_val(name, "ageing_time", uint64(ageing_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
@@ -429,7 +452,16 @@ func Setfd(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	forward_delay := to_jiffies(tv)
+	hz, err := sysconfhz()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	forward_delay := to_jiffies(tv, hz)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	if err := br_set_val(bridge, "forward_delay", uint64(forward_delay), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
@@ -443,7 +475,16 @@ func Sethello(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	hello_time := to_jiffies(tv)
+	hz, err := sysconfhz()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	hello_time := to_jiffies(tv, hz)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	if err := br_set_val(bridge, "hello_time", uint64(hello_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
@@ -452,12 +493,22 @@ func Sethello(bridge string, time string) error {
 }
 
 func Setmaxage(bridge string, time string) error {
+	// TODO: refactor this 3 conversion block into 1 function
 	tv, err := str_to_tv(time)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	max_age := to_jiffies(tv)
+	hz, err := sysconfhz()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	max_age := to_jiffies(tv, hz)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	if err := br_set_val(bridge, "max_age", uint64(max_age), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
