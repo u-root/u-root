@@ -7,6 +7,7 @@ package brctl
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -30,12 +31,12 @@ type ifreqptr struct {
 // Feel free to add more fields if needed.
 type BridgeInfo struct {
 	Name       string
-	Bridge_id  string
-	Stp_state  bool
+	BridgeId   string
+	StpState   bool
 	Interfaces []string
 }
 
-var (
+const (
 	BRCTL_ADD_BRIDGE          = 2
 	BRCTL_DEL_BRIDGE          = 3
 	BRCTL_ADD_I               = 4
@@ -79,7 +80,6 @@ func if_nametoindex(ifname string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("%w", err)
 	}
-	fmt.Printf("ifr = %v, name = %v\n", ifreq, ifreq.Name())
 
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
@@ -153,7 +153,7 @@ func str_to_tv(in string) (unix.Timeval, error) {
 
 // Linux kernel jiffies https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec2.html
 func to_jiffies(tv unix.Timeval, hz int) int {
-	// fmt.Printf("hz*sec = %v, usec = %v, final = %v\n", int(tv.Sec)*hz, int(tv.Usec)/100000*hz/100, int(tv.Sec)*hz+int(tv.Usec)/10000*hz/100)
+	// fmt.Fprintf(out, "hz*sec = %v, usec = %v, final = %v\n", int(tv.Sec)*hz, int(tv.Usec)/100000*hz/100, int(tv.Sec)*hz+int(tv.Usec)/10000*hz/100)
 	return int((int(tv.Sec) * hz) + (int(tv.Usec)*hz)/1000000)
 }
 
@@ -307,23 +307,23 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 
 	return BridgeInfo{
 		Name:       name,
-		Bridge_id:  strings.TrimSuffix(string(bridge_id), "\n"),
-		Stp_state:  stp_enabled_bool,
+		BridgeId:   strings.TrimSuffix(string(bridge_id), "\n"),
+		StpState:   stp_enabled_bool,
 		Interfaces: interfaces,
 	}, nil
 
 }
 
 // for now, only show essentials: bridge name, bridge id interfaces
-func showBridge(name string) {
+func showBridge(name string, out io.Writer) {
 	info, err := getBridgeInfo(name)
 	if err != nil {
 		log.Fatalf("show_bridge: %v", err)
 	}
-	fmt.Printf("%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.Bridge_id, info.Stp_state, info.Interfaces)
+	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeId, info.StpState, info.Interfaces)
 }
 
-func Showmacs(name string) error {
+func Showmacs(name string, out io.Writer) error {
 	// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
 	// The following format applies:
 	// 00-05: MAC address
@@ -337,7 +337,7 @@ func Showmacs(name string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	fmt.Printf("port no\tmac addr\t\tis_local?\n")
+	fmt.Fprintf(out, "port no\tmac addr\t\tis_local?\n")
 
 	for i := 0; i < len(brforward); i += 0x10 {
 		chunk := brforward[i : i+0x10]
@@ -345,13 +345,13 @@ func Showmacs(name string) error {
 		port_no := uint16(binary.BigEndian.Uint16(chunk[6:8]))
 		is_local := uint8(chunk[9]) != 0
 
-		fmt.Printf("%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", port_no, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], is_local)
+		fmt.Fprintf(out, "%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", port_no, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], is_local)
 	}
 
 	return nil
 }
 
-func Show(names ...string) error {
+func Show(out io.Writer, names ...string) error {
 	fmt.Println("bridge name\tbridge id\tSTP enabled\t\tinterfaces")
 	if len(names) == 0 {
 		devices, err := os.ReadDir("/sys/class/net")
@@ -363,13 +363,13 @@ func Show(names ...string) error {
 			// check if device is bridge, aka if it has a bridge directory
 			_, err := os.Stat("/sys/class/net/" + bridge.Name() + "/bridge/")
 			if err == nil {
-				showBridge(bridge.Name())
+				showBridge(bridge.Name(), out)
 			}
 		}
 
 	} else {
 		for _, name := range names {
-			showBridge(name)
+			showBridge(name, out)
 		}
 	}
 	return nil
