@@ -1,10 +1,21 @@
 package brctl
 
 import (
+	"net"
 	"testing"
 
 	"golang.org/x/sys/unix"
 )
+
+// Check if the list of interfaces exist in the system
+func interfacesExist(ifs []string) error {
+	for _, iface := range ifs {
+		if _, err := net.InterfaceByName(iface); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 var test_str_to_tv = []struct {
 	name  string
@@ -88,5 +99,59 @@ func TestFromJiffies(t *testing.T) {
 				t.Errorf("from_jiffies(%d, %d) = %v, want %v", tt.jiffies, tt.hz, tv, tt.input)
 			}
 		})
+	}
+}
+
+// All the following tests require virtual hardware to work properly, hence they need to be run in a VM.
+// This is done by the integration test in brctl_integration_test.go.
+func TestAddbrDelbr(t *testing.T) {
+	// Check if interfaces exist
+	if err := interfacesExist(BRCTL_TEST_IFACES); err != nil {
+		t.Fatalf("interfacesExist(%v) = %v, want nil", BRCTL_TEST_IFACES, err)
+	}
+
+	// Add bridges
+	for _, bridge := range BRCTL_TEST_BRIDGES {
+		err := Addbr(bridge)
+		if err != nil {
+			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
+		}
+	}
+
+	// Check if bridges were created successfully
+	if err := interfacesExist(BRCTL_TEST_BRIDGES); err != nil {
+		t.Fatalf("interfacesExist(%v) = %v, want nil", BRCTL_TEST_BRIDGES, err)
+	}
+
+	// Cleanup the VM
+	for _, bridge := range BRCTL_TEST_BRIDGES {
+		err := Delbr(bridge)
+		if err != nil {
+			t.Fatalf("DelBr(%q) = %v, want nil", bridge, err)
+		}
+	}
+
+	// Check if bridges were deleted successfully
+	for _, iface := range BRCTL_TEST_BRIDGES {
+		if _, err := net.InterfaceByName(iface); err == nil {
+			t.Fatalf("net.InterfaceByName(%q) = nil, want an error", iface)
+		}
+	}
+}
+
+func TestIfDelIf(t *testing.T) {
+	// Check if interfaces exist
+	if err := interfacesExist(BRCTL_TEST_IFACES); err != nil {
+		t.Fatalf("interfacesExist(%v) = %v, want nil", BRCTL_TEST_IFACES, err)
+	}
+
+	// Add interface to bridge
+	// brrctl addbr br0 eht0
+	// brrctl addbr br1 eht1
+	for _, bridge := range BRCTL_TEST_BRIDGES {
+		err := Addbr(bridge)
+		if err != nil {
+			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
+		}
 	}
 }

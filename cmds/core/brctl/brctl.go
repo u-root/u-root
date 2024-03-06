@@ -1,7 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//
+
 // brctl - ethernet bridge administration brctl(8)
 //
 // Usage: brctl [commands]
@@ -31,11 +31,10 @@
 // brctl setpathcost <bridge> <port> <cost>		sets the port cost of the port <port> to <cost>. This is a dimensionless metric
 // brctl setportprio <bridge> <port> <priority>	sets the port <port>'s priority to <priority>
 // brctl hairpin <bridge> <port> <state>		enable/disable hairpin mode on the port <port> of the bridge <bridge>
-//
+
 // Busybox Implementation: https://elixir.bootlin.com/busybox/latest/source/networking/brctl.c
 // Kernel Implementation: https://mirrors.edge.kernel.org/pub/linux/utils/net/bridge-utils/
 // Author: Leon Gross (leon.gross@9elements.com)
-//
 
 package main
 
@@ -79,12 +78,8 @@ brctl setportprio <bridge> <port> <priority>	sets the port <port>'s priority to 
 brctl hairpin <bridge> <port> <state>		enable/disable hairpin mode on the port <port> of the bridge <bridge>
 `
 
-// runner
-// TODO: define generic commands and minify parsing
 func run(out io.Writer, argv []string) error {
 	var err error
-	// For flags parsing see cmds/core/dd/dd.go:374
-
 	command := argv[0]
 	args := argv[1:]
 
@@ -114,13 +109,13 @@ func run(out io.Writer, argv []string) error {
 		err = brctl.Delif(args[0], args[1])
 
 	case "show":
-		err = brctl.Show(args...)
+		err = brctl.Show(out, args...)
 
 	case "showmacs":
 		if len(args) != 1 {
 			return fmt.Errorf("too few args")
 		}
-		err = brctl.Showmacs(args[0])
+		err = brctl.Showmacs(args[0], out)
 
 	case "setageingtime":
 		if len(args) != 2 {
