@@ -6,6 +6,11 @@ comment:
   layout: "header, diff, flags, components"  # show component info in the PR comment
 
 component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+      - type: patch
   individual_components:
     - component_id: nonexp
       name: everything
