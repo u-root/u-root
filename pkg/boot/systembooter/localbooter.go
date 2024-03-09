@@ -76,7 +76,7 @@ func NewLocalBooter(config []byte, l ulog.Logger) (Booter, error) {
 // the `localboot` command
 func (lb *LocalBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
-	var l ulog.Logger = ulog.Null
+	var l = ulog.Null
 	if debugEnabled {
 		bootcmd = []string{"localboot", "-d"}
 		l = ulog.Log

@@ -301,7 +301,7 @@ func main() {
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
-	var l ulog.Logger = ulog.Null
+	var l = ulog.Null
 	if debugEnabled {
 		l = ulog.Log
 	}

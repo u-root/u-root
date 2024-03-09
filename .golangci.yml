@@ -15,7 +15,7 @@ linters-settings:
   staticcheck:
     checks: ["all", "-SA1019"]
   stylecheck:
-    checks: ["all", "-ST1003", "-ST1023"]
+    checks: ["all", "-ST1003"]
 
 issues:
   exclude-rules:
