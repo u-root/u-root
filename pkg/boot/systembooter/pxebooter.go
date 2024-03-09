@@ -46,7 +46,7 @@ func NewPxeBooter(config []byte, l ulog.Logger) (Booter, error) {
 // `pxeboot` command
 func (nb *PxeBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
-	var l ulog.Logger = ulog.Null
+	var l = ulog.Null
 	bootcmd = []string{"pxeboot"}
 
 	if debugEnabled {
