@@ -17,7 +17,7 @@ type Entry32 struct {
 	Length             uint8
 	SMBIOSMajorVersion uint8
 	SMBIOSMinorVersion uint8
-	StructMaxSize      uint16
+	StructMaxSize      uint16 // Max size of a single table among all the tables, this definition is different from the one in Entry64.
 	Revision           uint8
 	Reserved           [5]uint8
 	IntAnchor          [5]uint8

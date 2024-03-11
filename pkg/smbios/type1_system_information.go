@@ -15,7 +15,7 @@ import (
 
 // SystemInfo is defined in DSP0134 7.2.
 type SystemInfo struct {
-	Table
+	Header
 	Manufacturer string     // 04h
 	ProductName  string     // 05h
 	Version      string     // 06h
@@ -24,6 +24,99 @@ type SystemInfo struct {
 	WakeupType   WakeupType // 18h
 	SKUNumber    string     // 19h
 	Family       string     // 1Ah
+}
+
+// MarshalBinary encodes the SystemInfo content into a binary
+func (si *SystemInfo) MarshalBinary() ([]byte, error) {
+	t, err := si.toTable()
+	if err != nil {
+		return nil, err
+	}
+	return t.MarshalBinary()
+}
+
+func joinBytes(args ...any) ([]byte, error) {
+	var result []byte
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case int:
+			result = append(result, byte(v))
+		case byte:
+			result = append(result, v)
+		case []byte:
+			result = append(result, v...)
+		case string:
+			result = append(result, []byte(v)...)
+		default:
+			return nil, fmt.Errorf("unsupported type: %T", v)
+		}
+	}
+	return result, nil
+}
+
+func (si *SystemInfo) toTable() (*Table, error) {
+	h, err := si.Header.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	var d []byte
+	var tableStr []string
+	id := byte(1)
+
+	d = append(d, h...)
+	if si.Manufacturer != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, si.Manufacturer)
+	} else {
+		d = append(d, 0)
+	}
+	if si.ProductName != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, si.ProductName)
+	} else {
+		d = append(d, 0)
+	}
+	if si.Version != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, si.Version)
+	} else {
+		d = append(d, 0)
+	}
+	if si.SerialNumber != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, si.SerialNumber)
+	} else {
+		d = append(d, 0)
+	}
+
+	d = append(d, si.UUID[:]...)
+	d = append(d, byte(si.WakeupType))
+
+	if si.SKUNumber != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, si.SKUNumber)
+	} else {
+		d = append(d, 0)
+	}
+	if si.Family != "" {
+		d = append(d, id)
+		tableStr = append(tableStr, si.Family)
+	} else {
+		d = append(d, 0)
+	}
+
+	t := &Table{
+		Header:  si.Header,
+		data:    d,
+		strings: tableStr,
+	}
+	return t, nil
 }
 
 // ParseSystemInfo parses a generic Table into SystemInfo.
@@ -38,7 +131,7 @@ func parseSystemInfo(parseFn parseStructure, t *Table) (*SystemInfo, error) {
 	if t.Len() < 8 {
 		return nil, errors.New("required fields missing")
 	}
-	si := &SystemInfo{Table: *t}
+	si := &SystemInfo{Header: t.Header}
 	if _, err := parseFn(t, 0 /* off */, false /* complete */, si); err != nil {
 		return nil, err
 	}
@@ -63,13 +156,13 @@ func (si *SystemInfo) String() string {
 		fmt.Sprintf("Version: %s", si.Version),
 		fmt.Sprintf("Serial Number: %s", si.SerialNumber),
 	}
-	if si.Len() >= 8 { // 2.1+
+	if si.Length >= 8 { // 2.1+
 		lines = append(lines,
 			fmt.Sprintf("UUID: %s", si.UUID),
 			fmt.Sprintf("Wake-up Type: %s", si.WakeupType),
 		)
 	}
-	if si.Len() >= 0x19 { // 2.4+
+	if si.Length >= 0x19 { // 2.4+
 		lines = append(lines,
 			fmt.Sprintf("SKU Number: %s", si.SKUNumber),
 			fmt.Sprintf("Family: %s", si.Family),

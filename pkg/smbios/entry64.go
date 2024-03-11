@@ -20,7 +20,7 @@ type Entry64 struct {
 	SMBIOSDocRev       uint8
 	Revision           uint8
 	Reserved           uint8
-	StructMaxSize      uint32
+	StructMaxSize      uint32 // Max possible size of all the tables combined, this definition is different from the one in Entry32.
 	StructTableAddr    uint64
 }
 
