@@ -9,6 +9,7 @@
 package smbios
 
 import (
+	"encoding"
 	"fmt"
 )
 
@@ -206,4 +207,52 @@ func (i *Info) GetTPMDevices() ([]*TPMDevice, error) {
 		res = append(res, d)
 	}
 	return res, nil
+}
+
+// Marshal gets the raw bytes from Info
+func (i *Info) Marshal(opts ...OverrideOpt) ([]byte, []byte, error) {
+	over := make(map[TableType]encoding.BinaryMarshaler)
+	for _, opt := range opts {
+		opt(over)
+	}
+
+	var result []byte
+	var maxLen int
+	var totalLen int
+	for _, t := range i.Tables {
+		m := (encoding.BinaryMarshaler)(t)
+		if ot, ok := over[t.Type]; ok {
+			m = ot
+		}
+		b, err := m.MarshalBinary()
+		if err != nil {
+			return nil, nil, err
+		}
+		result = append(result, b...)
+		l := len(b)
+		totalLen += l
+		if maxLen < l {
+			maxLen = l
+		}
+	}
+
+	var entry []byte
+	var err error
+	if i.Entry32 != nil {
+		i.Entry32.StructMaxSize = uint16(maxLen) // StructMaxSize in Entry32 means the size of the largest table.
+		i.Entry32.StructTableLength = uint16(totalLen)
+		entry, err = i.Entry32.MarshalBinary()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	if i.Entry64 != nil {
+		i.Entry64.StructMaxSize = uint32(totalLen) // StructMaxSize in Entry64 means the maximum possible size of all tables combined.
+		entry, err = i.Entry64.MarshalBinary()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return entry, result, nil
 }

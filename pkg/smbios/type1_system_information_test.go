@@ -6,8 +6,27 @@ package smbios
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
+
+var (
+	validType1SystemInfoData = []byte{1, 27, 1, 0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 5, 6}
+)
+
+func validType1SystemInfoRaw(t *testing.T) []byte {
+	return joinBytesT(
+		t,
+		validType1SystemInfoData,
+		"MockManufacturer", 0,
+		"MockProductName", 0,
+		"MockVersion", 0,
+		"MockSerialNumber", 0,
+		"MockSKUNumber", 0,
+		"MockFamily", 0,
+		0, // Table terminator
+	)
+}
 
 func TestSystemInfoString(t *testing.T) {
 	tests := []struct {
@@ -18,9 +37,10 @@ func TestSystemInfoString(t *testing.T) {
 		{
 			name: "All Infos provided",
 			val: SystemInfo{
-				Table: Table{
-					data: []byte{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
-						0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf},
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 27,
+					Handle: 0,
 				},
 				Manufacturer: "u-root testing",
 				ProductName:  "Illusion",
@@ -30,8 +50,8 @@ func TestSystemInfoString(t *testing.T) {
 				SKUNumber:    "3a",
 				Family:       "UR00T1234",
 			},
-			want: `Handle 0x0000, DMI type 0, 0 bytes
-BIOS Information
+			want: `Handle 0x0000, DMI type 1, 27 bytes
+System Information
 	Manufacturer: u-root testing
 	Product Name: Illusion
 	Version: 1.0
@@ -44,8 +64,10 @@ BIOS Information
 		{
 			name: "UUID not present",
 			val: SystemInfo{
-				Table: Table{
-					data: []byte{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 14,
+					Handle: 0,
 				},
 				Manufacturer: "u-root testing",
 				ProductName:  "Illusion",
@@ -55,8 +77,8 @@ BIOS Information
 				SKUNumber:    "3a",
 				Family:       "UR00T1234",
 			},
-			want: `Handle 0x0000, DMI type 0, 0 bytes
-BIOS Information
+			want: `Handle 0x0000, DMI type 1, 14 bytes
+System Information
 	Manufacturer: u-root testing
 	Product Name: Illusion
 	Version: 1.0
@@ -67,8 +89,10 @@ BIOS Information
 		{
 			name: "UUID not present",
 			val: SystemInfo{
-				Table: Table{
-					data: []byte{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 14,
+					Handle: 0,
 				},
 				Manufacturer: "u-root testing",
 				ProductName:  "Illusion",
@@ -78,8 +102,8 @@ BIOS Information
 				SKUNumber:    "3a",
 				Family:       "UR00T1234",
 			},
-			want: `Handle 0x0000, DMI type 0, 0 bytes
-BIOS Information
+			want: `Handle 0x0000, DMI type 1, 14 bytes
+System Information
 	Manufacturer: u-root testing
 	Product Name: Illusion
 	Version: 1.0
@@ -200,5 +224,91 @@ func TestParseSystemInfo(t *testing.T) {
 				t.Errorf("parseSystemInfo(): '%v', want '%v'", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestToTable(t *testing.T) {
+
+	tests := []struct {
+		name string
+		si   *SystemInfo
+		want *Table
+	}{
+		{
+			name: "Full of strings",
+			si: &SystemInfo{
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 27,
+					Handle: 0,
+				},
+				Manufacturer: "Manufacturer",
+				ProductName:  "ProductName",
+				Version:      "Version",
+				SerialNumber: "SerialNumber",
+				UUID:         [16]byte{0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3},
+				WakeupType:   WakeupTypeReserved,
+				SKUNumber:    "SKUNumber",
+				Family:       "Family",
+			},
+			want: &Table{
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 27,
+					Handle: 0,
+				},
+				data: []byte{
+					1, 27, 0, 0, // Header
+					1, 2, 3, 4, // string number
+					0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, // UUID
+					0,    // WakeupType
+					5, 6, // string number
+				},
+				strings: []string{"Manufacturer", "ProductName", "Version", "SerialNumber", "SKUNumber", "Family"},
+			},
+		},
+		{
+			name: "Have empty strings",
+			si: &SystemInfo{
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 27,
+					Handle: 0,
+				},
+				Manufacturer: "Manufacturer",
+				ProductName:  "",
+				Version:      "Version",
+				SerialNumber: "",
+				UUID:         [16]byte{0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3},
+				WakeupType:   WakeupTypeReserved,
+				SKUNumber:    "SKUNumber",
+				Family:       "",
+			},
+			want: &Table{
+				Header: Header{
+					Type:   TableTypeSystemInfo,
+					Length: 27,
+					Handle: 0,
+				},
+				data: []byte{
+					1, 27, 0, 0, // Header
+					1, 0, 2, 0, // string number
+					0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, // UUID
+					0,    // WakeupType
+					3, 0, // string number
+				},
+				strings: []string{"Manufacturer", "Version", "SKUNumber"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got, err := tt.si.toTable()
+		if err != nil {
+			t.Errorf("toTable() should pass but return error: %v", err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("toTable(): '%v', want '%v'", got, tt.want)
+		}
 	}
 }

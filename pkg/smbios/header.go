@@ -28,3 +28,13 @@ func (h *Header) String() string {
 		"Handle 0x%04X, DMI type %d, %d bytes\n%s",
 		h.Handle, h.Type, h.Length, h.Type)
 }
+
+// MarshalBinary encodes the Header content into a binary
+func (h *Header) MarshalBinary() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.LittleEndian, h)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}

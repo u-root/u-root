@@ -9,6 +9,21 @@ import (
 	"testing"
 )
 
+var (
+	validType0BIOSInfoData = []byte{0, 26, 0, 0, 1, 2, 0, 0, 3, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+)
+
+func validType0BIOSInfoRaw(t *testing.T) []byte {
+	return joinBytesT(
+		t,
+		validType0BIOSInfoData,
+		"MockVendor", 0,
+		"1.0", 0,
+		"01/01/2024", 0,
+		0, // Table terminator
+	)
+}
+
 func TestBIOSCharacteristicsString(t *testing.T) {
 	tests := []struct {
 		name string
