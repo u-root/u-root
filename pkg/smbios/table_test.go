@@ -4,10 +4,10 @@
 package smbios
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -50,7 +50,7 @@ func Test64Len(t *testing.T) {
 
 	if info.Tables != nil {
 		if info.Tables[0].Len() != 14 {
-			t.Errorf("Wrong length: Got %d want %d", info.Tables[0].Len(), 14)
+			t.Errorf("Wrong length: Got %d, want %d", info.Tables[0].Len(), 14)
 		}
 	}
 }
@@ -74,8 +74,68 @@ OEM-specific Type
 
 	if info.Tables != nil {
 		if info.Tables[0].String() != tableString {
-			t.Errorf("Wrong length: Got %s want %s", info.Tables[0].String(), tableString)
+			t.Errorf("Wrong length: Got %s, want %s", info.Tables[0].String(), tableString)
 		}
+	}
+}
+
+func Test64MarshalBinary(t *testing.T) {
+	tests := []struct {
+		name  string
+		table Table
+		want  []byte
+	}{
+		{
+			name: "GetRaw",
+			table: Table{
+				Header: Header{
+					Type:   224,
+					Length: 14,
+					Handle: 0,
+				},
+				data:    []byte{222, 14, 0, 0, 1, 153, 0, 3, 16, 1, 32, 2, 48, 3},
+				strings: []string{"Memory Init Complete", "End of DXE Phase", "BIOS Boot Complete"},
+			},
+			want: []byte{
+				// Header and Data
+				222, 14, 0, 0, 1, 153, 0, 3, 16, 1, 32, 2, 48, 3,
+				// Strings
+				77, 101, 109, 111, 114, 121, 32, 73, 110, 105, 116, 32, 67, 111, 109, 112, 108, 101, 116, 101, 0, // Memory Init Complete
+				69, 110, 100, 32, 111, 102, 32, 68, 88, 69, 32, 80, 104, 97, 115, 101, 0, // End of DXE Phase
+				66, 73, 79, 83, 32, 66, 111, 111, 116, 32, 67, 111, 109, 112, 108, 101, 116, 101, 0, //  BIOS Boot Complete
+				0, // Table terminator
+			},
+		},
+		{
+			name: "GetRawNoString",
+			table: Table{
+				Header: Header{
+					Type:   224,
+					Length: 14,
+					Handle: 0,
+				},
+				data: []byte{222, 14, 0, 0, 1, 153, 0, 3, 16, 1, 32, 2, 48, 3},
+			},
+			want: []byte{
+				// Header and Data
+				222, 14, 0, 0, 1, 153, 0, 3, 16, 1, 32, 2, 48, 3,
+				// Strings
+				0, // String terminator
+				0, // Table terminator
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.table.MarshalBinary()
+			if err != nil {
+				t.Errorf("MarshalBinary returned error: %v", err)
+			}
+			if !bytes.Equal(got, tt.want) {
+				t.Errorf("Wrong raw data: Got %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -171,7 +231,7 @@ func Test64GetBytesAt(t *testing.T) {
 			if !checkError(err, tt.want) {
 				t.Errorf("GetBytesAt(): '%v', want '%v'", err, tt.want)
 			}
-			if !reflect.DeepEqual(resultBytes, tt.expectedBytes) && err == nil {
+			if !bytes.Equal(resultBytes, tt.expectedBytes) && err == nil {
 				t.Errorf("GetBytesAt(): Wrong byte size, %x, want %x", resultBytes, tt.expectedBytes)
 			}
 		})
@@ -222,7 +282,7 @@ func Test64GetWordAt(t *testing.T) {
 			if !checkError(err, tt.want) {
 				t.Errorf("GetBytesAt(): '%v', want '%v'", err, tt.want)
 			}
-			if !reflect.DeepEqual(resultBytes, tt.expectedBytes) && err == nil {
+			if resultBytes != tt.expectedBytes && err == nil {
 				t.Errorf("GetBytesAt(): Wrong byte size, %x, want %x", resultBytes, tt.expectedBytes)
 			}
 		})
@@ -273,7 +333,7 @@ func Test64GetDWordAt(t *testing.T) {
 			if !checkError(err, tt.want) {
 				t.Errorf("GetBytesAt(): '%v', want '%v'", err, tt.want)
 			}
-			if !reflect.DeepEqual(resultBytes, tt.expectedBytes) && err == nil {
+			if resultBytes != tt.expectedBytes && err == nil {
 				t.Errorf("GetBytesAt(): Wrong byte size, %x, want %x", resultBytes, tt.expectedBytes)
 			}
 		})
@@ -323,7 +383,7 @@ func Test64GetQWordAt(t *testing.T) {
 			if !checkError(err, tt.want) {
 				t.Errorf("GetBytesAt(): '%v', want '%v'", err, tt.want)
 			}
-			if !reflect.DeepEqual(resultBytes, tt.expectedBytes) && err == nil {
+			if resultBytes != tt.expectedBytes && err == nil {
 				t.Errorf("GetBytesAt(): Wrong byte size, %x, want %x", resultBytes, tt.expectedBytes)
 			}
 		})

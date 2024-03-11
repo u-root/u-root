@@ -16,7 +16,7 @@ import (
 // it only allows access to its contents by offset.
 type Table struct {
 	Header
-	data    []byte   `smbios:"-"` // Structured part of the table.
+	data    []byte   `smbios:"-"` // Structured part of the table, this includes the raw data in Header.
 	strings []string `smbios:"-"` // Strings section.
 }
 
@@ -39,6 +39,21 @@ const (
 // Len returns length of the structured part of the table.
 func (t *Table) Len() int {
 	return len(t.data)
+}
+
+// MarshalBinary encodes the table content into a binary
+func (t *Table) MarshalBinary() ([]byte, error) {
+	var result []byte
+	result = append(result, t.data...)
+	for _, s := range t.strings {
+		result = append(result, []byte(s)...)
+		result = append(result, 0x0) // string terminator: 0x0
+	}
+	if len(t.strings) == 0 { // If there's no string, table still needs a string terminator.
+		result = append(result, 0x0) // string terminator: 0x0
+	}
+	result = append(result, 0x0) // table terminator: 0x0
+	return result, nil
 }
 
 // GetByteAt returns a byte from the structured part at the specified offset.
