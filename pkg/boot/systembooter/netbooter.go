@@ -81,7 +81,7 @@ func NewNetBooter(config []byte, l ulog.Logger) (Booter, error) {
 // `fbnetboot` command
 func (nb *NetBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
-	var l ulog.Logger = ulog.Null
+	var l = ulog.Null
 	if debugEnabled {
 		bootcmd = []string{"fbnetboot", "-v", "-userclass", "linuxboot"}
 		l = ulog.Log

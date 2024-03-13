@@ -60,7 +60,7 @@ func NewBootBooter(config []byte, l ulog.Logger) (Booter, error) {
 // the `boot` command
 func (lb *BootBooter) Boot(debugEnabled bool) error {
 	var bootcmd []string
-	var l ulog.Logger = ulog.Null
+	var l = ulog.Null
 	bootcmd = []string{"boot"}
 
 	if debugEnabled {
