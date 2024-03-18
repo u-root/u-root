@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"log"
 	"strconv"
+	"strings"
 )
 
 func isHex(b byte) bool {
@@ -25,6 +26,10 @@ func scan(s *bufio.Scanner, ids map[uint16]Vendor) {
 		line = s.Text()
 
 		switch {
+		case strings.HasPrefix(line, "#"):
+			continue
+		case len(line) < 1:
+			continue
 		case isHex(line[0]) && isHex(line[1]):
 			v, err := strconv.ParseUint(line[:4], 16, 16)
 			if err != nil {
