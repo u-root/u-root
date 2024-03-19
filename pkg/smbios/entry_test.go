@@ -5,8 +5,8 @@ package smbios
 
 import "testing"
 
-var (
-	validEntry32 = Entry32{
+func defaultEntry32() *Entry32 {
+	return &Entry32{
 		Anchor:             [4]byte{95, 83, 77, 95},
 		Checksum:           0x73,
 		Length:             0x1F,
@@ -22,16 +22,16 @@ var (
 		NumberOfStructs:    0x0000,
 		BCDRevision:        0x00,
 	}
-)
+}
 
 func TestEntry32Marshall(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
-		entry Entry32
+		entry *Entry32
 	}{
 		{
 			name:  "Test valid Entry32",
-			entry: validEntry32,
+			entry: defaultEntry32(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,8 +64,8 @@ func TestEntry32Unmarshall(t *testing.T) {
 	}
 }
 
-var (
-	validEntry64 = Entry64{
+func defaultEntry64() *Entry64 {
+	return &Entry64{
 		Anchor:             [5]byte{95, 83, 77, 51, 95},
 		Checksum:           0x5F,
 		Length:             0x18,
@@ -77,16 +77,16 @@ var (
 		StructMaxSize:      0xFFFFFFFF,
 		StructTableAddr:    0xFFFFFFFFFFFFFFFF,
 	}
-)
+}
 
 func TestEntry64Marshall(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
-		entry Entry64
+		entry *Entry64
 	}{
 		{
 			name:  "Test valid Entry64",
-			entry: validEntry64,
+			entry: defaultEntry64(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

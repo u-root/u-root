@@ -9,7 +9,6 @@
 package smbios
 
 import (
-	"encoding"
 	"fmt"
 )
 
@@ -211,20 +210,19 @@ func (i *Info) GetTPMDevices() ([]*TPMDevice, error) {
 
 // Marshal gets the raw bytes from Info
 func (i *Info) Marshal(opts ...OverrideOpt) ([]byte, []byte, error) {
-	over := make(map[TableType]encoding.BinaryMarshaler)
+	var err error
 	for _, opt := range opts {
-		opt(over)
+		i.Tables, err = opt(i.Tables)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	var result []byte
 	var maxLen int
 	var totalLen int
 	for _, t := range i.Tables {
-		m := (encoding.BinaryMarshaler)(t)
-		if ot, ok := over[t.Type]; ok {
-			m = ot
-		}
-		b, err := m.MarshalBinary()
+		b, err := t.MarshalBinary()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -237,7 +235,6 @@ func (i *Info) Marshal(opts ...OverrideOpt) ([]byte, []byte, error) {
 	}
 
 	var entry []byte
-	var err error
 	if i.Entry32 != nil {
 		i.Entry32.StructMaxSize = uint16(maxLen) // StructMaxSize in Entry32 means the size of the largest table.
 		i.Entry32.StructTableLength = uint16(totalLen)
