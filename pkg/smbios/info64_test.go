@@ -5,12 +5,12 @@
 package smbios
 
 import (
-	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func Test64ParseInfo(t *testing.T) {
@@ -88,94 +88,124 @@ func Test64GetTablesByType(t *testing.T) {
 	}
 }
 
-func systemInfoTable() (*Table, error) {
-	info, err := setupMockData()
-	if err != nil {
-		return nil, err
+func defaultType1Table() *Table {
+	return &Table{
+		Header: Header{
+			Type:   TableTypeSystemInfo,
+			Length: 27,
+			Handle: 0,
+		},
+		data:    []byte{1, 27, 0, 0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 5, 6},
+		strings: []string{"Manufacturer", "ProductName", "Version", "SerialNumber", "SKUNumber", "Family"},
 	}
+}
 
-	for _, t := range info.Tables {
-		if t.Header.Type == TableTypeSystemInfo {
-			return t, nil
-		}
+func defaultType2Table() *Table {
+	return &Table{
+		Header: Header{
+			Type:   TableTypeBaseboardInfo,
+			Length: 17,
+			Handle: 0,
+		},
+		data: []byte{
+			2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+			10, // BoardTypeMotherboardIncludesProcessorMemoryAndIO
+			1, 10, 0,
+		},
+		strings: []string{"Manufacturer", "Product", "Version", "1234-5678", "8765-4321", "Location"},
 	}
-	return nil, fmt.Errorf("Unable to find type 1 table")
+}
+
+func type1Table(manufacturer string) *Table {
+	t1 := defaultType1Table()
+	t1.strings[0] = manufacturer
+	return t1
+}
+
+func type2Table(asset string) *Table {
+	t2 := defaultType2Table()
+	t2.strings[4] = asset
+	return t2
+}
+
+func getRawT(t *testing.T, table *Table) []byte {
+	result, err := table.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error marshalling table: %v", err)
+	}
+	return result
 }
 
 func Test64Marshal(t *testing.T) {
-	vanillaTable, err := systemInfoTable()
-	if err != nil {
-		t.Fatalf("Error setup mock system info table: %v", err)
-	}
-	vanillaTableRaw, err := vanillaTable.MarshalBinary()
-	if err != nil {
-		t.Fatalf("Error marshalling vanilla table: %v", err)
-	}
+	oldType1 := defaultType1Table()
+	oldType1Raw := getRawT(t, oldType1)
 
-	longTable, err := systemInfoTable()
-	if err != nil {
-		t.Fatalf("Error setup mock system info table: %v", err)
-	}
-	longTable.strings[0] += "a-very-long-string"
+	oldType2 := defaultType2Table()
+	oldType2Raw := getRawT(t, oldType2)
 
-	shortTable, err := systemInfoTable()
-	if err != nil {
-		t.Fatalf("Error setup mock system info table: %v", err)
-	}
-	shortTable.strings[0] = "-"
+	newTag := "new-tag"
+	newType2 := type2Table(newTag)
+	newType2Raw := getRawT(t, newType2)
+	baseboardOpt := ReplaceBaseboardInfoMotherboard(&newTag)
+
+	longStr := "a-very-loooooooooooooooooooooooooooooooooooong-string"
+	longType1 := type1Table(longStr)
+	longType1Raw := getRawT(t, longType1)
+	longType1Opt := ReplaceSystemInfo(&longStr, nil, nil, nil, nil, nil, nil, nil)
+
+	shortStr := "-"
+	shortType1 := type1Table(shortStr)
+	shortType1Raw := getRawT(t, shortType1)
+	shortType1Opt := ReplaceSystemInfo(&shortStr, nil, nil, nil, nil, nil, nil, nil)
 
 	tests := []struct {
-		name          string
-		replacedTable *Table
-		wantEntry     []byte
+		name      string
+		options   []OverrideOpt
+		wantTable []byte
+		wantEntry []byte
 	}{
 		{
-			name:          "SameTable",
-			replacedTable: vanillaTable,
-			wantEntry:     []byte{95, 83, 77, 51, 95, 45, 24, 3, 1, 1, 1, 0, 248, 12, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0},
+			name:      "SameTable",
+			wantTable: joinBytesT(t, oldType1Raw, oldType2Raw),
+			wantEntry: []byte{95, 83, 77, 51, 95, 180, 24, 2, 1, 1, 0, 0, 167, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		{
-			name:          "LongerTable",
-			replacedTable: longTable,
-			wantEntry:     []byte{95, 83, 77, 51, 95, 26, 24, 3, 1, 1, 1, 0, 10, 13, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0},
+			name:      "LongerTable",
+			options:   []OverrideOpt{longType1Opt},
+			wantTable: joinBytesT(t, longType1Raw, oldType2Raw),
+			wantEntry: []byte{95, 83, 77, 51, 95, 139, 24, 2, 1, 1, 0, 0, 208, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		{
-			name:          "ShorterTable",
-			replacedTable: shortTable,
-			wantEntry:     []byte{95, 83, 77, 51, 95, 50, 24, 3, 1, 1, 1, 0, 243, 12, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0},
+			name:      "ShorterTable",
+			options:   []OverrideOpt{shortType1Opt},
+			wantTable: joinBytesT(t, shortType1Raw, oldType2Raw),
+			wantEntry: []byte{95, 83, 77, 51, 95, 191, 24, 2, 1, 1, 0, 0, 156, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		{
+			name:      "2 OverrideOpts",
+			options:   []OverrideOpt{shortType1Opt, baseboardOpt},
+			wantTable: joinBytesT(t, shortType1Raw, newType2Raw),
+			wantEntry: []byte{95, 83, 77, 51, 95, 193, 24, 2, 1, 1, 0, 0, 154, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			info, err := setupMockData()
-			if err != nil {
-				t.Fatalf("Error setup mock data: %v", err)
-			}
-			_, originalTablesRaw, err := setupMockRawData()
-			if err != nil {
-				t.Fatalf("Error setup mock raw data: %v", err)
+			info := &Info{
+				Entry64: defaultEntry64(),
+				Tables:  []*Table{defaultType1Table(), defaultType2Table()},
 			}
 
-			b, err := tt.replacedTable.MarshalBinary()
-			if err != nil {
-				t.Fatalf("Error marshalling replaced table: %v", err)
-			}
-			if bytes.Index(originalTablesRaw, vanillaTableRaw) == -1 {
-				t.Fatal("table raw should contain original table bytes")
-			}
-			wantTables := bytes.Replace(originalTablesRaw, vanillaTableRaw, b, -1)
-
-			gotEntry, gotTables, err := info.Marshal(ReplaceTable(TableTypeSystemInfo, tt.replacedTable))
+			gotEntry, gotTable, err := info.Marshal(tt.options...)
 			if err != nil {
 				t.Fatalf("Error marshalling info: %v", err)
 			}
 
-			if !bytes.Equal(tt.wantEntry, gotEntry) {
-				t.Errorf("Wrong marshalled entry, want: %#v\ngot:%#v", tt.wantEntry, gotEntry)
+			if diff := cmp.Diff(gotEntry, tt.wantEntry); diff != "" {
+				t.Errorf("Wrong marshalled entry, diff (-want +got):\n%s", diff)
 			}
-			if !bytes.Equal(wantTables, gotTables) {
-				t.Errorf("Wrong marshalled tables, want: %#v\ngot:%#v", wantTables, gotTables)
+			if diff := cmp.Diff(gotTable, tt.wantTable); diff != "" {
+				t.Errorf("Wrong marshalled tables, diff (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -196,19 +226,6 @@ func setupMockData() (*Info, error) {
 	}
 
 	return info, nil
-}
-
-func setupMockRawData() ([]byte, []byte, error) {
-	data, err := os.ReadFile("./testdata/smbios_table.bin")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	entryData := make([]byte, 24) // Entry64 length should be 24 instead of 32, the test data padded with zeros from 25th to 32nd byte.
-	tableData := make([]byte, len(data)-32)
-	copy(entryData, data[:24])
-	copy(tableData, data[32:])
-	return entryData, tableData, nil
 }
 
 func FuzzParseInfo(f *testing.F) {
