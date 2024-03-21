@@ -74,7 +74,7 @@ func cli(args []string) error {
 		}
 	case "delete":
 		if len(args) == 2 {
-			err := delete(args[1])
+			err := remove(args[1])
 			if err == nil {
 				fmt.Println("Successfully deleted, it will take effect after reboot")
 			}

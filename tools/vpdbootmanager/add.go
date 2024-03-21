@@ -151,7 +151,7 @@ func set(key string, value string) error {
 	return vpd.FlashromRWVpdSet(key, []byte(value), false)
 }
 
-func delete(key string) error {
+func remove(key string) error {
 	return vpd.FlashromRWVpdSet(key, []byte("dummy"), true)
 }
 
