@@ -184,22 +184,22 @@ func strcpyPadded(dst []byte, src string) {
 
 // SetSystemFWVersion sets the provided system firmware version to BMC via IPMI.
 func (i *IPMI) SetSystemFWVersion(version string) error {
-	len := len(version)
+	length := len(version)
 
-	if len == 0 {
+	if length == 0 {
 		return fmt.Errorf("version length is 0")
-	} else if len > strlenMax {
-		len = strlenMax
+	} else if length > strlenMax {
+		length = strlenMax
 	}
 
 	var data setSystemInfoReq
 	var index int
 	data.paramSelector = _SYSTEM_FW_VERSION
 	data.setSelector = 0
-	for len > index {
+	for length > index {
 		if data.setSelector == 0 { // the fisrt block of string data
 			data.strData[0] = _ASCII
-			data.strData[1] = byte(len)
+			data.strData[1] = byte(length)
 			strcpyPadded(data.strData[2:], version)
 			index += _SYSTEM_INFO_BLK_SZ - 2
 		} else {
