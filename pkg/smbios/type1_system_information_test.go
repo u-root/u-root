@@ -227,8 +227,7 @@ func TestParseSystemInfo(t *testing.T) {
 	}
 }
 
-func TestToTable(t *testing.T) {
-
+func TestSystemInfoToTable(t *testing.T) {
 	tests := []struct {
 		name string
 		si   *SystemInfo

@@ -6,6 +6,7 @@ package smbios
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -252,5 +253,120 @@ func TestParseBaseboardInfo(t *testing.T) {
 				t.Errorf("parseBaseboardInfo(): '%v', want '%v'", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestBaseboardInfoToTablePass(t *testing.T) {
+	tests := []struct {
+		name string
+		bi   *BaseboardInfo
+		want *Table
+	}{
+		{
+			name: "Full of strings",
+			bi: &BaseboardInfo{
+				Header: Header{
+					Type:   TableTypeBaseboardInfo,
+					Length: 17,
+					Handle: 0,
+				},
+				Manufacturer:                   "Manufacturer",
+				Product:                        "Product",
+				Version:                        "Version",
+				SerialNumber:                   "1234-5678",
+				AssetTag:                       "8765-4321",
+				BoardFeatures:                  0,
+				LocationInChassis:              "Location",
+				ChassisHandle:                  0,
+				BoardType:                      0,
+				NumberOfContainedObjectHandles: 1,
+				ContainedObjectHandles:         []uint16{10},
+			},
+			want: &Table{
+				Header: Header{
+					Type:   TableTypeBaseboardInfo,
+					Length: 17,
+					Handle: 0,
+				},
+				data: []byte{
+					2, 17, 0, 0, // Header
+					1, 2, 3, 4, 5, // string number
+					0,    // BoardFeatures
+					6,    // string number
+					0, 0, // ChassisHandle
+					0,     // BoardType
+					1,     // NumberOfContainedObjectHandles
+					10, 0, // ContainedObjectHandles
+				},
+				strings: []string{"Manufacturer", "Product", "Version", "1234-5678", "8765-4321", "Location"},
+			},
+		},
+		{
+			name: "Have empty strings",
+			bi: &BaseboardInfo{
+				Header: Header{
+					Type:   TableTypeBaseboardInfo,
+					Length: 17,
+					Handle: 0,
+				},
+				Manufacturer:                   "Manufacturer",
+				Product:                        "",
+				Version:                        "Version",
+				SerialNumber:                   "",
+				AssetTag:                       "8765-4321",
+				BoardFeatures:                  0,
+				LocationInChassis:              "Location",
+				ChassisHandle:                  0,
+				BoardType:                      0,
+				NumberOfContainedObjectHandles: 1,
+				ContainedObjectHandles:         []uint16{10},
+			},
+			want: &Table{
+				Header: Header{
+					Type:   TableTypeBaseboardInfo,
+					Length: 17,
+					Handle: 0,
+				},
+				data: []byte{
+					2, 17, 0, 0, // Header
+					1, 0, 2, 0, 3, // string number
+					0,    // BoardFeatures
+					4,    // string number
+					0, 0, // ChassisHandle
+					0,     // BoardType
+					1,     // NumberOfContainedObjectHandles
+					10, 0, // ContainedObjectHandles
+				},
+				strings: []string{"Manufacturer", "Version", "8765-4321", "Location"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		got, err := tt.bi.toTable()
+		if err != nil {
+			t.Errorf("toTable() should pass but return error: %v", err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("toTable(): '%v', want '%v'", got, tt.want)
+		}
+	}
+}
+
+func TestBaseboardInfoToTableFail(t *testing.T) {
+	bi := &BaseboardInfo{
+		Header: Header{
+			Type:   TableTypeBaseboardInfo,
+			Length: 17,
+			Handle: 0,
+		},
+		NumberOfContainedObjectHandles: 2, // Wrong NumberOfContainedObjectHandles
+		ContainedObjectHandles:         []uint16{10},
+	}
+
+	_, err := bi.toTable()
+
+	if err == nil {
+		t.Fatalf("toTable() should fail but pass")
 	}
 }

@@ -5,6 +5,7 @@
 package smbios
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,7 +15,7 @@ import (
 
 // BaseboardInfo is defined in DSP0134 7.3.
 type BaseboardInfo struct {
-	Table
+	Header
 	Manufacturer                   string        // 04h
 	Product                        string        // 05h
 	Version                        string        // 06h
@@ -26,6 +27,96 @@ type BaseboardInfo struct {
 	BoardType                      BoardType     // 0Dh
 	NumberOfContainedObjectHandles uint8         // 0Eh
 	ContainedObjectHandles         []uint16      `smbios:"-"` // 0Fh
+}
+
+// MarshalBinary encodes the BaseboardInfo content into a binary
+func (bi *BaseboardInfo) MarshalBinary() ([]byte, error) {
+	t, err := bi.toTable()
+	if err != nil {
+		return nil, err
+	}
+	return t.MarshalBinary()
+}
+
+func (bi *BaseboardInfo) toTable() (*Table, error) {
+	h, err := bi.Header.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	var d []byte
+	var tableStr []string
+	id := byte(1)
+
+	d = append(d, h...)
+	if bi.Manufacturer != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, bi.Manufacturer)
+	} else {
+		d = append(d, 0)
+	}
+	if bi.Product != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, bi.Product)
+	} else {
+		d = append(d, 0)
+	}
+	if bi.Version != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, bi.Version)
+	} else {
+		d = append(d, 0)
+	}
+	if bi.SerialNumber != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, bi.SerialNumber)
+	} else {
+		d = append(d, 0)
+	}
+	if bi.AssetTag != "" {
+		d = append(d, id)
+		id++
+		tableStr = append(tableStr, bi.AssetTag)
+	} else {
+		d = append(d, 0)
+	}
+
+	d = append(d, byte(bi.BoardFeatures))
+
+	if bi.LocationInChassis != "" {
+		d = append(d, id)
+		tableStr = append(tableStr, bi.LocationInChassis)
+	} else {
+		d = append(d, 0)
+	}
+
+	chb := make([]byte, 2)
+	binary.LittleEndian.PutUint16(chb, bi.ChassisHandle)
+	d = append(d, chb...)
+
+	d = append(d, byte(bi.BoardType))
+	d = append(d, bi.NumberOfContainedObjectHandles)
+
+	if bi.NumberOfContainedObjectHandles != uint8(len(bi.ContainedObjectHandles)) {
+		return nil, fmt.Errorf("invalid number of contained object handles, NumberOfContainedObjectHandles: %d, len of ContainedObjectHandles: %d", bi.NumberOfContainedObjectHandles, len(bi.ContainedObjectHandles))
+	}
+
+	for _, coh := range bi.ContainedObjectHandles {
+		cohb := make([]byte, 2)
+		binary.LittleEndian.PutUint16(cohb, coh)
+		d = append(d, cohb...)
+	}
+
+	t := &Table{
+		Header:  bi.Header,
+		data:    d,
+		strings: tableStr,
+	}
+	return t, nil
 }
 
 // ParseBaseboardInfo parses a generic Table into BaseboardInfo.
@@ -41,13 +132,13 @@ func parseBaseboardInfo(parseFn parseStructure, t *Table) (*BaseboardInfo, error
 	if t.Len() < 0x8 {
 		return nil, errors.New("required fields missing")
 	}
-	bi := &BaseboardInfo{Table: *t}
+	bi := &BaseboardInfo{Header: t.Header}
 	off, err := parseFn(t, 0 /* off */, false /* complete */, bi)
 	if err != nil {
 		return nil, err
 	}
 	if bi.NumberOfContainedObjectHandles > 0 {
-		if t.Len() != off+2*int(bi.NumberOfContainedObjectHandles) {
+		if t.Len() < off+2*int(bi.NumberOfContainedObjectHandles) {
 			return nil, errors.New("invalid data length")
 		}
 		for i := 0; i < int(bi.NumberOfContainedObjectHandles); i++ {
@@ -55,9 +146,14 @@ func parseBaseboardInfo(parseFn parseStructure, t *Table) (*BaseboardInfo, error
 			if err != nil {
 				return nil, err
 			}
+			off += 2
 			bi.ContainedObjectHandles = append(bi.ContainedObjectHandles, h)
 		}
 	}
+
+	// Reassign length to reflect actual object handle amount.
+	// Since the parsing process will only parse NumberOfContainedObjectHandles handles and ignore the all trailing "zero value" object handle.
+	bi.Length = uint8(off)
 	return bi, nil
 }
 

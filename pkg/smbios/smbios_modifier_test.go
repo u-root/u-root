@@ -75,7 +75,7 @@ func mockEntry32Raw(t *testing.T, maxSize uint16, tableLength uint16, tableAddr 
 // mockEntry64 creates a valid Entry64 with custom attributes
 func mockEntry64(t *testing.T, structMaxSize uint32, tableAddr uint64) *Entry64 {
 	t.Helper()
-	e64 := validEntry64
+	e64 := defaultEntry64()
 	e64.StructMaxSize = structMaxSize
 	e64.StructTableAddr = tableAddr
 
@@ -85,13 +85,13 @@ func mockEntry64(t *testing.T, structMaxSize uint32, tableAddr uint64) *Entry64 
 		t.Fatal(err)
 	}
 	e64.UnmarshalBinary(data)
-	return &e64
+	return e64
 }
 
 // mockEntry32 creates a valid Entry32 with custom attributes
 func mockEntry32(t *testing.T, maxSize uint16, tableLength uint16, tableAddr uint32, numberOfStructs uint16) *Entry32 {
 	t.Helper()
-	e32 := validEntry32
+	e32 := defaultEntry32()
 	e32.StructMaxSize = maxSize
 	e32.StructTableLength = tableLength
 	e32.StructTableAddr = tableAddr
@@ -103,7 +103,7 @@ func mockEntry32(t *testing.T, maxSize uint16, tableLength uint16, tableAddr uin
 		panic(err)
 	}
 	e32.UnmarshalBinary(data)
-	return &e32
+	return e32
 }
 
 func newMock64Modifier(t *testing.T) *Modifier {
@@ -205,7 +205,9 @@ func TestModifySystemInfo(t *testing.T) {
 			mod := newMock64Modifier(t)
 			defer mod.CloseMemFile()
 
-			if err := mod.ModifySystemInfo(tt.manufacturer, tt.productName, tt.version, tt.serialNumber); err != nil {
+			opt := ReplaceSystemInfo(&tt.manufacturer, &tt.productName, &tt.version, &tt.serialNumber, nil, nil, nil, nil)
+
+			if err := mod.Modify(opt); err != nil {
 				t.Fatalf("ModifySystemInfo should pass but returned error: %v", err)
 			}
 
@@ -263,5 +265,102 @@ func TestGetEntries(t *testing.T) {
 				t.Errorf("Wrong entry64 want %v, got %v", tt.wantE64, e64)
 			}
 		})
+	}
+}
+
+func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
+	assetTag := "newTag"
+	opt := ReplaceBaseboardInfoMotherboard(&assetTag)
+
+	oldTable := []*Table{
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+				10, // BoardTypeMotherboardIncludesProcessorMemoryAndIO
+				1, 10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "-", "-"},
+		},
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+				1, // BoardTypeUnknown
+				1, 10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "-", "-"},
+		},
+	}
+	wantTable := []*Table{
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+				10, // BoardTypeMotherboardIncludesProcessorMemoryAndIO
+				1, 10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "newTag", "-"},
+		},
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+				1, // BoardTypeUnknown
+				1, 10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "-", "-"},
+		},
+	}
+
+	newTable, err := opt(oldTable)
+
+	if err != nil {
+		t.Fatalf("opt should pass but returned error: %v", err)
+	}
+	for i := 0; i < len(newTable); i++ {
+		if !reflect.DeepEqual(newTable[i], wantTable[i]) {
+			t.Errorf("opt return incorrect table, got %+v, want %+v", newTable[i], wantTable[i])
+		}
+	}
+}
+
+func TestReplaceBaseboardInfoMotherboardFail(t *testing.T) {
+	malformedTable := []*Table{
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0, 1,
+				255, // wrong NumberOfContainedObjectHandles
+				10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "-", "-"},
+		},
+	}
+
+	opt := ReplaceBaseboardInfoMotherboard(nil)
+
+	if _, err := opt(malformedTable); err == nil {
+		t.Fatalf("opt should fail but returned nil error")
 	}
 }

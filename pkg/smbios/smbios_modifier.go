@@ -5,7 +5,6 @@
 package smbios
 
 import (
-	"encoding"
 	"fmt"
 	"os"
 )
@@ -42,28 +41,96 @@ func getEntries(smbiosBase func() (int64, int64, error), memFile *os.File) (*Ent
 	return e32, e64, entryAddr, err
 }
 
-// OverrideOpt is a function overriding the marshaler
-type OverrideOpt func(over map[TableType]encoding.BinaryMarshaler)
+// OverrideOpt is a function return overridden tables given another tables the marshaler
+type OverrideOpt func(t []*Table) ([]*Table, error)
 
-// ReplaceTable returns func replacing the marshaler given table type
-func ReplaceTable(typ TableType, table encoding.BinaryMarshaler) OverrideOpt {
-	return func(over map[TableType]encoding.BinaryMarshaler) {
-		over[typ] = table
+// ReplaceSystemInfo returns override options of the SystemInfo table with the given values
+func ReplaceSystemInfo(manufacturer, productName, version, serialNumber, sku, family *string, uuid *UUID, wakeupType *WakeupType) OverrideOpt {
+	return func(tables []*Table) ([]*Table, error) {
+		var result []*Table
+
+		for _, t := range tables {
+			if t.Type != TableTypeSystemInfo {
+				result = append(result, t)
+				continue
+			}
+			// replace it
+			si, err := ParseSystemInfo(t)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse system info: %w", err)
+			}
+
+			if manufacturer != nil {
+				si.Manufacturer = *manufacturer
+			}
+			if productName != nil {
+				si.ProductName = *productName
+			}
+			if version != nil {
+				si.Version = *version
+			}
+			if serialNumber != nil {
+				si.SerialNumber = *serialNumber
+			}
+			if sku != nil {
+				si.SKUNumber = *sku
+			}
+			if family != nil {
+				si.Family = *family
+			}
+			if uuid != nil {
+				si.UUID = *uuid
+			}
+			if wakeupType != nil {
+				si.WakeupType = *wakeupType
+			}
+
+			sit, err := si.toTable()
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert system info to table: %w", err)
+			}
+			result = append(result, sit)
+		}
+		return result, nil
 	}
 }
 
-// ModifySystemInfo modifies the SystemInfo table in system memory
-func (m *Modifier) ModifySystemInfo(manufacturer, productName, version, serialNumber string) error {
-	sysInfo, err := m.Info.GetSystemInfo()
-	if err != nil {
-		return fmt.Errorf("failed to get system info: %w", err)
-	}
-	sysInfo.Manufacturer = manufacturer
-	sysInfo.ProductName = productName
-	sysInfo.Version = version
-	sysInfo.SerialNumber = serialNumber
+// ReplaceBaseboardInfoMotherboard returns override options that only overrides table with Type = BaseboardInfo and BoardType = BoardTypeMotherboardIncludesProcessorMemoryAndIO
+func ReplaceBaseboardInfoMotherboard(assetTag *string) OverrideOpt {
+	return func(tables []*Table) ([]*Table, error) {
+		var result []*Table
+		for _, t := range tables {
+			if t.Type != TableTypeBaseboardInfo {
+				result = append(result, t)
+				continue
+			}
 
-	entry, tables, err := m.Info.Marshal(ReplaceTable(TableTypeSystemInfo, sysInfo))
+			bi, err := ParseBaseboardInfo(t)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse baseboard info: %w", err)
+			}
+			if bi.BoardType != BoardTypeMotherboardIncludesProcessorMemoryAndIO {
+				result = append(result, t)
+				continue
+			}
+
+			// replace it
+			if assetTag != nil {
+				bi.AssetTag = *assetTag
+			}
+			biT, err := bi.toTable()
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert baseboard info to table: %w", err)
+			}
+			result = append(result, biT)
+		}
+		return result, nil
+	}
+}
+
+// Modify modifies SMBIOS tables in system memory given override options
+func (m *Modifier) Modify(opts ...OverrideOpt) error {
+	entry, tables, err := m.Info.Marshal(opts...)
 	if err != nil {
 		return fmt.Errorf("failed to marshal info: %w", err)
 	}

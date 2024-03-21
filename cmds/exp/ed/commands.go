@@ -393,11 +393,11 @@ func cmdMove(ctx *Context) (e error) {
 		return
 	}
 	// this is a bit hacky, but we're supposed to allow 0
-	append := 1
+	offset := 1
 	last := len(nctx.addrs) - 1
 	if nctx.addrs[last] == -1 {
 		nctx.addrs[last] = 0
-		append = 0
+		offset = 0
 	}
 	if dest, e = buffer.AddrValue(nctx.addrs); e != nil {
 		return
@@ -417,7 +417,7 @@ func cmdMove(ctx *Context) (e error) {
 	}
 
 	// Should we throw an error if there's trailing stuff?
-	if e = buffer.Insert(dest+append, lines); e != nil {
+	if e = buffer.Insert(dest+offset, lines); e != nil {
 		return
 	}
 	if cmd == 'm' {
@@ -437,16 +437,16 @@ func cmdCopy(ctx *Context) (e error) {
 func cmdPaste(ctx *Context) (e error) {
 	var addr int
 	// this is a bit hacky, but we're supposed to allow 0
-	append := 1
+	offset := 1
 	last := len(ctx.addrs) - 1
 	if ctx.addrs[last] == -1 {
 		ctx.addrs[last] = 0
-		append = 0
+		offset = 0
 	}
 	if addr, e = buffer.AddrValue(ctx.addrs); e != nil {
 		return
 	}
-	return buffer.Paste(addr + append)
+	return buffer.Paste(addr + offset)
 }
 
 func cmdPrompt(ctx *Context) (e error) {
