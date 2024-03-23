@@ -215,7 +215,7 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func print(err error, t *testing.T) { t.Log(err) }
+func printErr(err error, t *testing.T) { t.Log(err) }
 
 func Test_parseLine(t *testing.T) {
 	type args struct {
@@ -238,7 +238,7 @@ func Test_parseLine(t *testing.T) {
 				args:    []string{"#s/boot", "/root", "$rootspec"},
 			},
 			wantErr:    false,
-			inspectErr: print,
+			inspectErr: printErr,
 		},
 		{
 			name: "mount",
@@ -249,7 +249,7 @@ func Test_parseLine(t *testing.T) {
 				args:    []string{"#s/boot", "/root"},
 			},
 			wantErr:    false,
-			inspectErr: print,
+			inspectErr: printErr,
 		},
 		{
 			name: "bind",

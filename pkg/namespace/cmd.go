@@ -77,14 +77,14 @@ func (c cmd) Modify(ns Namespace, b *Builder) error {
 		}
 		return ns.Mount(servername, old, spec, c.flag)
 	case UNMOUNT:
-		new, old := "", ""
+		newNS, oldNS := "", ""
 		if len(args) == 2 {
-			new = args[0]
-			old = args[1]
+			newNS = args[0]
+			oldNS = args[1]
 		} else {
-			old = args[0]
+			oldNS = args[0]
 		}
-		return ns.Unmount(new, old)
+		return ns.Unmount(newNS, oldNS)
 	case RFORK:
 		return ns.Clear()
 	case CHDIR:
