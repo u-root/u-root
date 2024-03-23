@@ -177,7 +177,7 @@ func (d *DataFabric) ReadBroadcast(fun uint8, off uint16) (uint64, error) {
 	return d.ReadIndirect(BROAD, fun, off)
 }
 
-func new(n uint8) (*DataFabric, error) {
+func New(n uint8) (*DataFabric, error) {
 	if n > 1 {
 		return nil, fmt.Errorf("node is %d, but can only be 0 or 1", n)
 	}
@@ -289,7 +289,7 @@ func main() {
 		v = log.Printf
 	}
 
-	df, err := new(uint8(*node))
+	df, err := New(uint8(*node))
 	if err != nil {
 		log.Fatal(err)
 	}
