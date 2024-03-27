@@ -77,10 +77,9 @@ func (c cmd) Modify(ns Namespace, b *Builder) error {
 		}
 		return ns.Mount(servername, old, spec, c.flag)
 	case UNMOUNT:
-		newNS, oldNS := "", ""
+		var newNS, oldNS string
 		if len(args) == 2 {
-			newNS = args[0]
-			oldNS = args[1]
+			newNS, oldNS = args[0], args[1]
 		} else {
 			oldNS = args[0]
 		}
