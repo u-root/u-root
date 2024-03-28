@@ -252,6 +252,17 @@ func Test_parseLine(t *testing.T) {
 			inspectErr: printErr,
 		},
 		{
+			name: "mount",
+			args: func(*testing.T) args { return args{"./mount -aC #s/boot /root"} },
+			want1: cmd{
+				syscall: MOUNT,
+				flag:    REPL | AFTER | CACHE,
+				args:    []string{"#s/boot", "/root"},
+			},
+			wantErr:    false,
+			inspectErr: printErr,
+		},
+		{
 			name: "bind",
 			args: func(*testing.T) args { return args{"bind -a '#r' /dev"} },
 			want1: cmd{
