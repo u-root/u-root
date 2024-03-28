@@ -37,6 +37,11 @@ const (
 	// LAN Device Commands
 	BMC_GET_LAN_CONFIG Command = 0x02
 
+	// Boot Time Measurement Commands
+	BMC_SEND_REBOOT_CHECKPOINT          Command = 0x12
+	BMC_SEND_REBOOT_COMPLETE            Command = 0x13
+	BMC_SEND_REBOOT_ADDITIONAL_DURATION Command = 0x14
+
 	// Completion codes.
 	// See Intelligent Platform Management Interface Specification v2.0 rev. 1.1, section 5.2.
 	IPMI_CC_OK                          CompletionCode = 0x00
