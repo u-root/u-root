@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -88,7 +89,7 @@ func ParseFlags(args []string) (mountflag, []string) {
 // After extracting the command, ParseArgs will call ParseFlags to extract
 // appropriate bind/mount flags, if any.
 func ParseArgs(args []string) (Modifier, error) {
-	arg := args[0]
+	arg := path.Base(args[0])
 	args = args[1:]
 	trap := syzcall(0)
 
