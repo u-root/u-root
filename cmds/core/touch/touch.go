@@ -4,9 +4,9 @@
 package main
 
 import (
+	"errors"
 	"flag"
-	"fmt"
-	"io"
+	"log"
 	"os"
 	"time"
 )
@@ -19,16 +19,14 @@ type params struct {
 }
 
 type cmd struct {
-	stderr io.Writer
 	params
 	args []string
 }
 
-func command(stderr io.Writer, p params, args ...string) *cmd {
+func command(p params, args ...string) *cmd {
 	return &cmd{
 		args:   args,
 		params: p,
-		stderr: stderr,
 	}
 }
 
@@ -51,10 +49,7 @@ func parseParams(dateTime string, access, modification, create bool) (params, er
 }
 
 func (c *cmd) run() error {
-	// TODO: move to errors.Join in future
-	// right now log error in stderr and return last error
-	// to indicate a non zero exit code
-	var lastError error
+	var errs error
 	for _, arg := range c.args {
 		_, existsErr := os.Stat(arg)
 		notExist := os.IsNotExist(existsErr)
@@ -65,8 +60,7 @@ func (c *cmd) run() error {
 
 			f, err := os.Create(arg)
 			if err != nil {
-				lastError = err
-				fmt.Fprintf(c.stderr, "touch: %v\n", err)
+				errs = errors.Join(errs, err)
 				continue
 			}
 			f.Close()
@@ -83,12 +77,11 @@ func (c *cmd) run() error {
 
 		err := os.Chtimes(arg, accessTime, modificationTime)
 		if err != nil {
-			lastError = err
-			fmt.Fprintf(c.stderr, "touch: %v\n", err)
+			errs = errors.Join(errs, err)
 		}
 	}
 
-	return lastError
+	return errs
 }
 
 func main() {
@@ -102,7 +95,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := command(os.Stderr, p, flag.Args()...).run(); err != nil {
-		os.Exit(1)
+	if err := command(p, flag.Args()...).run(); err != nil {
+		log.Fatalf("touch: %v", err)
 	}
 }
