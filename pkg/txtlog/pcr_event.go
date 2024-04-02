@@ -13,10 +13,10 @@ import (
 )
 
 func parseTcgBiosSpecIDEvent(handle io.Reader) (*TcgBiosSpecIDEvent, error) {
-	var endianess binary.ByteOrder = binary.LittleEndian
+	var endianness binary.ByteOrder = binary.LittleEndian
 	var biosSpecEvent TcgBiosSpecIDEvent
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.signature); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.signature); err != nil {
 		return nil, err
 	}
 
@@ -25,32 +25,32 @@ func parseTcgBiosSpecIDEvent(handle io.Reader) (*TcgBiosSpecIDEvent, error) {
 		return nil, nil
 	}
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.platformClass); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.platformClass); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.specVersionMinor); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.specVersionMinor); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.specVersionMajor); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.specVersionMajor); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.specErrata); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.specErrata); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.uintnSize); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.uintnSize); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &biosSpecEvent.vendorInfoSize); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.vendorInfoSize); err != nil {
 		return nil, err
 	}
 
 	biosSpecEvent.vendorInfo = make([]byte, biosSpecEvent.vendorInfoSize)
-	if err := binary.Read(handle, endianess, &biosSpecEvent.vendorInfo); err != nil {
+	if err := binary.Read(handle, endianness, &biosSpecEvent.vendorInfo); err != nil {
 		return nil, err
 	}
 
@@ -58,10 +58,10 @@ func parseTcgBiosSpecIDEvent(handle io.Reader) (*TcgBiosSpecIDEvent, error) {
 }
 
 func parseEfiSpecEvent(handle io.Reader) (*TcgEfiSpecIDEvent, error) {
-	var endianess binary.ByteOrder = binary.LittleEndian
+	var endianness binary.ByteOrder = binary.LittleEndian
 	var efiSpecEvent TcgEfiSpecIDEvent
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.signature); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.signature); err != nil {
 		return nil, err
 	}
 
@@ -70,46 +70,46 @@ func parseEfiSpecEvent(handle io.Reader) (*TcgEfiSpecIDEvent, error) {
 		return nil, nil
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.platformClass); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.platformClass); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.specVersionMinor); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.specVersionMinor); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.specVersionMajor); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.specVersionMajor); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.specErrata); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.specErrata); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.uintnSize); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.uintnSize); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.numberOfAlgorithms); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.numberOfAlgorithms); err != nil {
 		return nil, err
 	}
 
 	efiSpecEvent.digestSizes = make([]TcgEfiSpecIDEventAlgorithmSize, efiSpecEvent.numberOfAlgorithms)
 	for i := uint32(0); i < efiSpecEvent.numberOfAlgorithms; i++ {
-		if err := binary.Read(handle, endianess, &efiSpecEvent.digestSizes[i].algorithID); err != nil {
+		if err := binary.Read(handle, endianness, &efiSpecEvent.digestSizes[i].algorithID); err != nil {
 			return nil, err
 		}
-		if err := binary.Read(handle, endianess, &efiSpecEvent.digestSizes[i].digestSize); err != nil {
+		if err := binary.Read(handle, endianness, &efiSpecEvent.digestSizes[i].digestSize); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := binary.Read(handle, endianess, &efiSpecEvent.vendorInfoSize); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.vendorInfoSize); err != nil {
 		return nil, err
 	}
 
 	efiSpecEvent.vendorInfo = make([]byte, efiSpecEvent.vendorInfoSize)
-	if err := binary.Read(handle, endianess, &efiSpecEvent.vendorInfo); err != nil {
+	if err := binary.Read(handle, endianness, &efiSpecEvent.vendorInfo); err != nil {
 		return nil, err
 	}
 
@@ -118,24 +118,24 @@ func parseEfiSpecEvent(handle io.Reader) (*TcgEfiSpecIDEvent, error) {
 
 // TcgPcrEvent parser and PCREvent interface implementation
 func parseTcgPcrEvent(handle io.Reader) (*TcgPcrEvent, error) {
-	var endianess binary.ByteOrder = binary.LittleEndian
+	var endianness binary.ByteOrder = binary.LittleEndian
 	var pcrEvent TcgPcrEvent
 
-	if err := binary.Read(handle, endianess, &pcrEvent.pcrIndex); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.pcrIndex); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(handle, endianess, &pcrEvent.eventType); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.eventType); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(handle, endianess, &pcrEvent.digest); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.digest); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(handle, endianess, &pcrEvent.eventSize); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.eventSize); err != nil {
 		return nil, err
 	}
 
 	pcrEvent.event = make([]byte, pcrEvent.eventSize)
-	if err := binary.Read(handle, endianess, &pcrEvent.event); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.event); err != nil {
 		return nil, err
 	}
 
@@ -199,37 +199,37 @@ func (e *TcgPcrEvent) String() string {
 
 // TcgPcrEvent2 parser and PCREvent interface implementation
 func parseTcgPcrEvent2(handle io.Reader) (*TcgPcrEvent2, error) {
-	var endianess binary.ByteOrder = binary.LittleEndian
+	var endianness binary.ByteOrder = binary.LittleEndian
 	var pcrEvent TcgPcrEvent2
 
-	if err := binary.Read(handle, endianess, &pcrEvent.pcrIndex); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.pcrIndex); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(handle, endianess, &pcrEvent.eventType); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.eventType); err != nil {
 		return nil, err
 	}
-	if err := binary.Read(handle, endianess, &pcrEvent.digests.count); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.digests.count); err != nil {
 		return nil, err
 	}
 
 	pcrEvent.digests.digests = make([]THA, pcrEvent.digests.count)
 	for i := uint32(0); i < pcrEvent.digests.count; i++ {
-		if err := binary.Read(handle, endianess, &pcrEvent.digests.digests[i].hashAlg); err != nil {
+		if err := binary.Read(handle, endianness, &pcrEvent.digests.digests[i].hashAlg); err != nil {
 			return nil, err
 		}
 
 		pcrEvent.digests.digests[i].digest.hash = make([]byte, HashAlgoToSize[pcrEvent.digests.digests[i].hashAlg])
-		if err := binary.Read(handle, endianess, &pcrEvent.digests.digests[i].digest.hash); err != nil {
+		if err := binary.Read(handle, endianness, &pcrEvent.digests.digests[i].digest.hash); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := binary.Read(handle, endianess, &pcrEvent.eventSize); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.eventSize); err != nil {
 		return nil, err
 	}
 
 	pcrEvent.event = make([]byte, pcrEvent.eventSize)
-	if err := binary.Read(handle, endianess, &pcrEvent.event); err != nil {
+	if err := binary.Read(handle, endianness, &pcrEvent.event); err != nil {
 		return nil, err
 	}
 
