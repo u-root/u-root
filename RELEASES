@@ -72,7 +72,7 @@ currently unstable and may change slighly between releases.
   - xcmds/sshd: Like sshd, but supports port forwarding
 - New packages:
   - forth: An interpreter for Forth
-  - ubinary: Gives machine's native endianess
+  - ubinary: Gives machine's native endianness
 - New flags:
   - grep -c : Print counts
   - grep -i : Case insensitive search
