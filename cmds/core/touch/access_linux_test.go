@@ -26,7 +26,7 @@ func TestAccess(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	cmd := command(nil, params{time: accessDate, access: true}, f.Name())
+	cmd := command(params{time: accessDate, access: true}, f.Name())
 	err = cmd.run()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)

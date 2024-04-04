@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"testing"
@@ -135,8 +134,7 @@ func TestTouchEmptyDir(t *testing.T) {
 		for _, arg := range test.args {
 			args = append(args, temp+arg)
 		}
-		stderr := &bytes.Buffer{}
-		err := command(stderr, test.p, args...).run()
+		err := command(test.p, args...).run()
 		if !errors.Is(err, test.err) {
 			t.Fatalf("command() expected %v, got %v", test.err, err)
 		}
