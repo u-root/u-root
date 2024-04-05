@@ -112,6 +112,9 @@ func (c *cmd) run() error {
 	if c.outputPath == "" {
 		c.outputPath = defaultOutputPath(parsedURL.Path)
 	}
+	if c.outputPath == "-" {
+		c.outputPath = "/dev/stdout"
+	}
 
 	schemes := curl.Schemes{
 		"tftp": curl.DefaultTFTPClient,
