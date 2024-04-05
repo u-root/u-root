@@ -15,7 +15,7 @@ import (
 // Magic values used in the zImage header and table.
 const (
 	Magic      = 0x016f2818
-	Endianness  = 0x04030201
+	Endianness = 0x04030201
 	TableMagic = 0x45454545
 )
 
@@ -43,7 +43,7 @@ type Header struct {
 	Magic      uint32
 	Start      uint32
 	End        uint32
-	Endianness  uint32
+	Endianness uint32
 	TableMagic uint32
 	TableAddr  uint32
 }

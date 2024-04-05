@@ -22,7 +22,7 @@ const (
 var (
 	kernelImageSize = uint64(math.Pow(2, 24)) // 16MB, a guess value similar to that used in kexec-tools.
 
-	errBadMagic     = errors.New("bad header magic")
+	errBadMagic      = errors.New("bad header magic")
 	errBadEndianness = errors.New("invalid Image endianness, expected little")
 )
 
