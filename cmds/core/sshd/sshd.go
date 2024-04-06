@@ -174,24 +174,51 @@ func session(chans <-chan ssh.NewChannel) {
 	}
 }
 
-func main() {
-	flag.Parse()
-	if *debug {
+type params struct {
+	keys    string
+	privkey string
+	ip      string
+	port    string
+	debug   bool
+}
+
+func parseParams() params {
+	return params{
+		debug:   *debug,
+		keys:    *keys,
+		privkey: *privkey,
+		ip:      *ip,
+		port:    *port,
+	}
+}
+
+type cmd struct {
+	params
+}
+
+func command(p params) *cmd {
+	return &cmd{
+		params: p,
+	}
+}
+
+func (c *cmd) run() error {
+	if c.debug {
 		dprintf = log.Printf
 	}
 	// Public key authentication is done by comparing
 	// the public key of a received connection
 	// with the entries in the authorized_keys file.
-	authorizedKeysBytes, err := os.ReadFile(*keys)
+	authorizedKeysBytes, err := os.ReadFile(c.keys)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	authorizedKeysMap := map[string]bool{}
 	for len(authorizedKeysBytes) > 0 {
 		pubKey, _, _, rest, err := ssh.ParseAuthorizedKey(authorizedKeysBytes)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		authorizedKeysMap[string(pubKey.Marshal())] = true
@@ -215,23 +242,23 @@ func main() {
 		},
 	}
 
-	privateBytes, err := os.ReadFile(*privkey)
+	privateBytes, err := os.ReadFile(c.privkey)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	config.AddHostKey(private)
 
 	// Once a ServerConfig has been configured, connections can be
 	// accepted.
-	listener, err := net.Listen("tcp", net.JoinHostPort(*ip, *port))
+	listener, err := net.Listen("tcp", net.JoinHostPort(c.ip, c.port))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	for {
 		nConn, err := listener.Accept()
@@ -253,5 +280,12 @@ func main() {
 		go ssh.DiscardRequests(reqs)
 
 		go session(chans)
+	}
+}
+
+func main() {
+	flag.Parse()
+	if err := command(parseParams()).run(); err != nil {
+		log.Fatal(err)
 	}
 }
