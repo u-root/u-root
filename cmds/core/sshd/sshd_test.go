@@ -14,6 +14,25 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+func TestParseParmams(t *testing.T) {
+	params := parseParams()
+	if params.debug {
+		t.Error("expected default debug to be false, got true")
+	}
+	if params.keys != "authorized_keys" {
+		t.Errorf("expected default keys to be authorized_keys, got %q", params.keys)
+	}
+	if params.privkey != "id_rsa" {
+		t.Errorf("expected default privatekey to be id_rsa, got %q", params.privkey)
+	}
+	if params.ip != "0.0.0.0" {
+		t.Errorf("expected default ip to be 0.0.0.0, got %q", params.ip)
+	}
+	if params.port != "2022" {
+		t.Errorf("expected default port to be 2022, got %q", params.port)
+	}
+}
+
 func TestConfigErrors(t *testing.T) {
 	t.Run("authorized_keys file does not exist", func(t *testing.T) {
 		cmd := command(params{
