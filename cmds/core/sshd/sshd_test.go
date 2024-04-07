@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"net"
 	"os"
 	"testing"
@@ -12,6 +13,78 @@ import (
 
 	"golang.org/x/crypto/ssh"
 )
+
+func TestConfigErrors(t *testing.T) {
+	t.Run("authorized_keys file does not exist", func(t *testing.T) {
+		cmd := command(params{
+			keys: "filenotexist",
+		})
+
+		err := cmd.run()
+		if !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("expected %v, got %v", os.ErrNotExist, err)
+		}
+	})
+	t.Run("authorized_keys file don't have public keys", func(t *testing.T) {
+		tf, err := os.CreateTemp("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tf.Name())
+		tf.WriteString("keys")
+
+		cmd := command(params{
+			keys: tf.Name(),
+		})
+
+		err = cmd.run()
+		if err == nil {
+			t.Errorf("expected ssh: no key found, got nil")
+		}
+	})
+	t.Run("private key file does not exist", func(t *testing.T) {
+		cmd := command(params{
+			privkey: "filenotexist",
+			keys:    "./testdata/id_rsa.pub",
+		})
+
+		err := cmd.run()
+		if !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("expected %v, got %v", os.ErrNotExist, err)
+		}
+	})
+	t.Run("privete key file does have private key", func(t *testing.T) {
+		tf, err := os.CreateTemp("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tf.Name())
+		tf.WriteString("privatekey")
+
+		cmd := command(params{
+			privkey: tf.Name(),
+			keys:    "./testdata/id_rsa.pub",
+		})
+
+		err = cmd.run()
+		if err == nil {
+			t.Error("expected ssh: no key found, got nil")
+		}
+	})
+	t.Run("wrong port host config", func(t *testing.T) {
+		cmd := command(params{
+			privkey: "./testdata/id_rsa",
+			keys:    "./testdata/id_rsa.pub",
+			ip:      "host",
+			port:    "port",
+		})
+
+		err := cmd.run()
+		if err == nil {
+			t.Error("expected listen tcp: lookup tcp/port: unknown port, got nil")
+		}
+	})
+}
 
 func connect(t *testing.T, addr string, cfg *ssh.ClientConfig) *ssh.Client {
 	t.Helper()
