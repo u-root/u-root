@@ -15,7 +15,7 @@ var testData = &ZImage{
 		Magic:      0x16f2818,
 		Start:      0x0,
 		End:        0xd5638,
-		Endianess:  0x4030201,
+		Endianness: 0x4030201,
 		TableMagic: 0x45454545,
 		TableAddr:  0x25bc,
 	},

@@ -34,36 +34,36 @@ func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
 	slaunch.Debug("marshalPcrEvent: pcr=[%v], slaunchType=[%v], count=[%v], hashAlgo=[%v], eventDesc=[%s], eventDescLen=[%v]",
 		pcr, slaunchType, count, hashAlgo, eventDesc, eventDescLen)
 
-	endianess := binary.LittleEndian
+	endianness := binary.LittleEndian
 	var buf bytes.Buffer
 
-	if err := binary.Write(&buf, endianess, pcr); err != nil {
+	if err := binary.Write(&buf, endianness, pcr); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(&buf, endianess, slaunchType); err != nil {
+	if err := binary.Write(&buf, endianness, slaunchType); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(&buf, endianess, count); err != nil {
+	if err := binary.Write(&buf, endianness, count); err != nil {
 		return nil, err
 	}
 
 	for i := uint32(0); i < count; i++ {
-		if err := binary.Write(&buf, endianess, hashAlgo); err != nil {
+		if err := binary.Write(&buf, endianness, hashAlgo); err != nil {
 			return nil, err
 		}
 
-		if err := binary.Write(&buf, endianess, h); err != nil {
+		if err := binary.Write(&buf, endianness, h); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := binary.Write(&buf, endianess, eventDescLen); err != nil {
+	if err := binary.Write(&buf, endianness, eventDescLen); err != nil {
 		return nil, err
 	}
 
-	if err := binary.Write(&buf, endianess, eventDesc); err != nil {
+	if err := binary.Write(&buf, endianness, eventDesc); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

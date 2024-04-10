@@ -18,10 +18,10 @@ type UintN interface {
 	// Return string formatted in hex.
 	String() string
 
-	// Read from given address with native endianess.
+	// Read from given address with native endianness.
 	read(addr unsafe.Pointer) error
 
-	// Write to given address with native endianess.
+	// Write to given address with native endianness.
 	write(addr unsafe.Pointer) error
 }
 

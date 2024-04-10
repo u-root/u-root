@@ -74,7 +74,7 @@ func TestKillProcess(t *testing.T) {
 		{
 			name: "signal is invalid",
 			args: []string{"kill", "-1", "a"},
-			want: "some processes could not be killed: [a: arguments must be process or job IDS]",
+			want: "some processes could not be killed: a: arguments must be process or job IDS",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 // Magic values used in the zImage header and table.
 const (
 	Magic      = 0x016f2818
-	Endianess  = 0x04030201
+	Endianness = 0x04030201
 	TableMagic = 0x45454545
 )
 
@@ -43,7 +43,7 @@ type Header struct {
 	Magic      uint32
 	Start      uint32
 	End        uint32
-	Endianess  uint32
+	Endianness uint32
 	TableMagic uint32
 	TableAddr  uint32
 }
@@ -72,8 +72,8 @@ func Parse(f io.ReadSeeker) (*ZImage, error) {
 		return z, fmt.Errorf("invalid zImage magic, got %#08x, expected %#08x",
 			z.Header.Magic, Magic)
 	}
-	if z.Header.Endianess != Endianess {
-		return z, fmt.Errorf("unsupported zImage endianess, expected little")
+	if z.Header.Endianness != Endianness {
+		return z, fmt.Errorf("unsupported zImage endianness, expected little")
 	}
 	if z.Header.End < z.Header.Start {
 		return z, fmt.Errorf("invalid zImage, end is less than start, %d < %d",
