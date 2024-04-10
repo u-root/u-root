@@ -5,6 +5,10 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -39,7 +43,7 @@ func TestUptime(t *testing.T) {
 			name:   "emptyDataInput",
 			input:  "",
 			uptime: nil,
-			err:    "error:the contents of proc/uptime we are trying to read are empty",
+			err:    errUptimeFormat.Error(),
 		},
 	}
 
@@ -69,8 +73,8 @@ func TestLoadAverage(t *testing.T) {
 		loadAverage string
 		err         string
 	}{
-		{"goodInput", "0.60 0.70 0.74", "0.60,0.70,0.74", ""},
-		{"badDataInput", "1.00 2.00", "", "error:invalid contents:the contents of proc/loadavg we are trying to process contain less than the required 3 loadavgs"},
+		{"goodInput", "0.60 0.70 0.74", "0.60, 0.70, 0.74", ""},
+		{"badDataInput", "1.00 2.00", "", errAverageFormat.Error()},
 	}
 
 	for _, test := range tests {
@@ -90,4 +94,86 @@ func TestLoadAverage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRun(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Run("error uptime open", func(t *testing.T) {
+		err := run(nil, "filenotexists", "filenotexists")
+		if !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("expected %v, got %v", os.ErrNotExist, err)
+		}
+	})
+	t.Run("error uptime empty file", func(t *testing.T) {
+		path := tmpDir + "/uptime-error-0"
+		err := os.WriteFile(path, nil, 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = run(nil, path, "filenotexists")
+		if !errors.Is(err, errUptimeFormat) {
+			t.Fatal(err)
+		}
+	})
+	t.Run("error uptime parsin file", func(t *testing.T) {
+		path := tmpDir + "/uptime-error-1"
+		err := os.WriteFile(path, []byte("wrong"), 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = run(nil, path, "filenotexists")
+		if err == nil {
+			t.Error("expected err got nil")
+		}
+	})
+	t.Run("error average open", func(t *testing.T) {
+		path := tmpDir + "/uptime-error-2"
+		err := os.WriteFile(path, []byte("1462.14 5746.97"), 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = run(nil, path, "filenotexists")
+		if !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("expected %v, got %v", os.ErrNotExist, err)
+		}
+	})
+	t.Run("error average empty file", func(t *testing.T) {
+		pathUptime := tmpDir + "/uptime-error-3"
+		err := os.WriteFile(pathUptime, []byte("1462.14 5746.97"), 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pathAvg := tmpDir + "/avg-error-0"
+		err = os.WriteFile(pathAvg, nil, 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = run(nil, pathUptime, pathAvg)
+		if !errors.Is(err, errAverageFormat) {
+			t.Errorf("expected %v, got %v", errAverageFormat, err)
+		}
+	})
+	t.Run("success", func(t *testing.T) {
+		pathUptime := tmpDir + "/uptime"
+		err := os.WriteFile(pathUptime, []byte("1462.14 5746.97"), 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pathAvg := tmpDir + "/avg"
+		err = os.WriteFile(pathAvg, []byte("0.08 0.09 0.10"), 0o664)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		stdout := &bytes.Buffer{}
+		err = run(stdout, pathUptime, pathAvg)
+		if err != nil {
+			t.Errorf("expected nil got %v", err)
+		}
+
+		if !strings.Contains(stdout.String(), "0.08, 0.09, 0.10") {
+			t.Error("expected to see load averages")
+		}
+	})
 }
