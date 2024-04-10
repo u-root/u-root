@@ -8,6 +8,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -16,17 +17,17 @@ import (
 
 var defaultSignal = "-SIGTERM"
 
-func kill(sig os.Signal, pids ...string) []error {
-	var errs []error
+func kill(sig os.Signal, pids ...string) error {
+	var errs error
 	s := sig.(syscall.Signal)
 	for _, p := range pids {
 		pid, err := strconv.Atoi(p)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("%v: arguments must be process or job IDS", p))
+			errs = errors.Join(errs, fmt.Errorf("%v: arguments must be process or job IDS", p))
 			continue
 		}
 		if err := syscall.Kill(pid, s); err != nil {
-			errs = append(errs, err)
+			errs = errors.Join(errs, err)
 		}
 
 	}

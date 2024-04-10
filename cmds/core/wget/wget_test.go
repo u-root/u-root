@@ -222,3 +222,17 @@ func TestFlags(t *testing.T) {
 
 	}
 }
+
+func TestStdout(t *testing.T) {
+	srv := httptest.NewServer(handler{})
+	defer srv.Close()
+
+	c, err := command([]string{"wget", "-O", "-", fmt.Sprintf("%s/200", srv.URL)}...)
+	if err != nil {
+		t.Errorf("expected nil got %v", err)
+	}
+	err = c.run()
+	if err != nil {
+		t.Errorf("expected nil got %v", err)
+	}
+}
