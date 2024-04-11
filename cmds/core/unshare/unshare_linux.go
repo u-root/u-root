@@ -22,7 +22,7 @@
 //	it is not possible to use `syscall.Unshare` from Go with any reasonable
 //	expectation of success.
 //
-//	If PROGRAM is not specified, unshare defaults to /ubin/elvish.
+//	If PROGRAM is not specified, unshare defaults to /bin/sh.
 //
 // Options:
 //
