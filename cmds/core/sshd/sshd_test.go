@@ -159,6 +159,12 @@ func TestSessionRun(t *testing.T) {
 	}
 	defer session.Close()
 
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		t.Fatalf("can't pipe stdin: %v", err)
+	}
+	stdin.Close()
+
 	output, err := session.StdoutPipe()
 	if err != nil {
 		t.Fatalf("can't pipe output: %v", err)

@@ -65,11 +65,13 @@ func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 		e := exec.Command(cmd, args...)
 		e.Stdin, e.Stdout, e.Stderr = c, c, c
 		log.Printf("Executing non-PTY command %s %v", cmd, args)
-		if err := e.Start(); err != nil {
+		// execute command and wait for response
+		if err := e.Run(); err != nil {
 			dprintf("Failed to execute: %v", err)
 			return err
 		}
-		ps, _ = e.Process.Wait()
+
+		ps = e.ProcessState
 	}
 
 	// TODO(bluecmd): If somebody wants we can send exit-signal to return
