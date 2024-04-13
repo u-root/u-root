@@ -186,10 +186,7 @@ func chroot(w io.Writer, args ...string) (err error) {
 		Chroot: newRoot,
 	}
 
-	if err = cmd.Run(); err != nil {
-		return err
-	}
-	return nil
+	return cmd.Run()
 }
 
 func main() {
