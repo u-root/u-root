@@ -8,59 +8,47 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
 
-var testTime = time.Date(0o001, 1, 15, 5, 35, 49, 0, time.UTC)
-
-func invalidDurationError(d string) string {
-	_, err := time.ParseDuration(d)
-	return err.Error()
-}
-
 func TestUptime(t *testing.T) {
+	testTime := time.Date(0o001, 1, 15, 5, 35, 49, 0, time.UTC)
+
 	tests := []struct {
+		err    error
+		uptime *time.Time
 		name   string
 		input  string
-		uptime *time.Time
-		err    string
 	}{
 		{
 			name:   "goodInput",
 			input:  "1229749 1422244",
 			uptime: &testTime,
-			err:    "",
-		},
-		{
-			name:   "badDataInput",
-			input:  "string",
-			uptime: nil,
-			err:    invalidDurationError("strings"),
 		},
 		{
 			name:   "emptyDataInput",
-			input:  "",
 			uptime: nil,
-			err:    errUptimeFormat.Error(),
+			err:    errUptimeFormat,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			gotUptime, err := uptime(test.input)
-			if err == nil && test.err != "" {
-				t.Errorf("uptime(%q) err = nil, want %q", test.input, test.err)
-			} else if err != nil && err.Error() != test.err {
-				t.Errorf("uptime(%q) err = %q, want %q", test.input, err.Error(), test.err)
+			if !errors.Is(err, test.err) {
+				t.Errorf("uptime(%q) err = %v, want %v", test.input, err, test.err)
+				return
 			}
-			if gotUptime == nil && test.uptime != nil {
-				t.Errorf("uptime(%q) = nil, want %v", test.input, *test.uptime)
-			} else if gotUptime != nil && test.uptime != nil && *gotUptime != *test.uptime {
+
+			if test.err != nil {
+				return
+			}
+
+			if !gotUptime.Equal(*test.uptime) {
 				t.Errorf("uptime(%q) = %v, want %v", test.input, *gotUptime, *test.uptime)
-			} else if gotUptime != nil && test.uptime == nil {
-				t.Errorf("uptime(%q) = %v, want nil", test.input, *gotUptime)
 			}
 		})
 	}
@@ -68,29 +56,33 @@ func TestUptime(t *testing.T) {
 
 func TestLoadAverage(t *testing.T) {
 	tests := []struct {
+		err         error
 		name        string
 		input       string
 		loadAverage string
-		err         string
 	}{
-		{"goodInput", "0.60 0.70 0.74", "0.60, 0.70, 0.74", ""},
-		{"badDataInput", "1.00 2.00", "", errAverageFormat.Error()},
+		{
+			name:        "goodInput",
+			input:       "0.60 0.70 0.74",
+			loadAverage: "0.60, 0.70, 0.74",
+			err:         nil,
+		},
+		{
+			name:  "badDataInput",
+			input: "1.00 2.00",
+			err:   errAverageFormat,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			loadAverage, err := loadavg(test.input)
-			if err == nil && test.err != "" {
-				t.Errorf("loadavg(%q) err = nil, want %q", test.input, test.err)
-			} else if err != nil && err.Error() != test.err {
-				t.Errorf("loadavg(%q) err = %q, want %q", test.input, err.Error(), test.err)
+			if !errors.Is(err, test.err) {
+				t.Errorf("loadavg(%q) err = %v, want %v", test.input, err, test)
+				return
 			}
-			if loadAverage == "" && test.loadAverage != "" {
+			if loadAverage != test.loadAverage {
 				t.Errorf("loadavg(%q) = \"\", want %v", test.input, test.loadAverage)
-			} else if loadAverage != "" && test.loadAverage != "" && loadAverage != test.loadAverage {
-				t.Errorf("loadavg(%q) = %v, want %v", test.input, loadAverage, test.loadAverage)
-			} else if loadAverage != "" && test.loadAverage == "" {
-				t.Errorf("loadavg(%q) = %v, want \"\"", test.input, loadAverage)
 			}
 		})
 	}
@@ -98,53 +90,54 @@ func TestLoadAverage(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	tmpDir := t.TempDir()
+	notExists := filepath.Join(tmpDir, "filenotexists")
 	t.Run("error uptime open", func(t *testing.T) {
-		err := run(nil, "filenotexists", "filenotexists")
+		err := run(nil, notExists, notExists)
 		if !errors.Is(err, os.ErrNotExist) {
 			t.Errorf("expected %v, got %v", os.ErrNotExist, err)
 		}
 	})
 	t.Run("error uptime empty file", func(t *testing.T) {
-		path := tmpDir + "/uptime-error-0"
+		path := filepath.Join(tmpDir, "uptime-error-0")
 		err := os.WriteFile(path, nil, 0o664)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = run(nil, path, "filenotexists")
+		err = run(nil, path, notExists)
 		if !errors.Is(err, errUptimeFormat) {
 			t.Fatal(err)
 		}
 	})
-	t.Run("error uptime parsin file", func(t *testing.T) {
-		path := tmpDir + "/uptime-error-1"
+	t.Run("error uptime parsing file", func(t *testing.T) {
+		path := filepath.Join(tmpDir, "/uptime-error-1")
 		err := os.WriteFile(path, []byte("wrong"), 0o664)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = run(nil, path, "filenotexists")
+		err = run(nil, path, notExists)
 		if err == nil {
 			t.Error("expected err got nil")
 		}
 	})
 	t.Run("error average open", func(t *testing.T) {
-		path := tmpDir + "/uptime-error-2"
+		path := filepath.Join(tmpDir, "uptime-error-2")
 		err := os.WriteFile(path, []byte("1462.14 5746.97"), 0o664)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		err = run(nil, path, "filenotexists")
+		err = run(nil, path, notExists)
 		if !errors.Is(err, os.ErrNotExist) {
 			t.Errorf("expected %v, got %v", os.ErrNotExist, err)
 		}
 	})
 	t.Run("error average empty file", func(t *testing.T) {
-		pathUptime := tmpDir + "/uptime-error-3"
+		pathUptime := filepath.Join(tmpDir, "/uptime-error-3")
 		err := os.WriteFile(pathUptime, []byte("1462.14 5746.97"), 0o664)
 		if err != nil {
 			t.Fatal(err)
 		}
-		pathAvg := tmpDir + "/avg-error-0"
+		pathAvg := filepath.Join(tmpDir, "/avg-error-0")
 		err = os.WriteFile(pathAvg, nil, 0o664)
 		if err != nil {
 			t.Fatal(err)
@@ -155,12 +148,12 @@ func TestRun(t *testing.T) {
 		}
 	})
 	t.Run("success", func(t *testing.T) {
-		pathUptime := tmpDir + "/uptime"
+		pathUptime := filepath.Join(tmpDir, "uptime")
 		err := os.WriteFile(pathUptime, []byte("1462.14 5746.97"), 0o664)
 		if err != nil {
 			t.Fatal(err)
 		}
-		pathAvg := tmpDir + "/avg"
+		pathAvg := filepath.Join(tmpDir, "avg")
 		err = os.WriteFile(pathAvg, []byte("0.08 0.09 0.10"), 0o664)
 		if err != nil {
 			t.Fatal(err)

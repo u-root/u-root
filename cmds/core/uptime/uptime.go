@@ -19,17 +19,17 @@ import (
 )
 
 var (
-	errAverageFormat = errors.New("the contents of proc/loadavg we are trying to process contain less than the required 3 loadavgs")
-	errUptimeFormat  = errors.New("the contents of proc/uptime we are trying to read are empty")
+	errAverageFormat = errors.New("/proc/loadavg has less then 3 fields")
+	errUptimeFormat  = errors.New("/proc/uptime is empty")
 )
 
 // loadavg takes in the contents of proc/loadavg,it then extracts and returns the three load averages as a string
 func loadavg(contents string) (loadaverage string, err error) {
 	loadavg := strings.Fields(contents)
 	if len(loadavg) < 3 {
-		return "", errAverageFormat
+		return "", fmt.Errorf("%q: %w", contents, errAverageFormat)
 	}
-	return loadavg[0] + ", " + loadavg[1] + ", " + loadavg[2], nil
+	return strings.Join(loadavg, ", "), nil
 }
 
 // uptime takes in the contents of proc/uptime it then extracts and returns the uptime in the format Days , Hours , Minutes ,Seconds
@@ -50,7 +50,7 @@ func uptime(contents string) (*time.Time, error) {
 func run(stdout io.Writer, uptimePath, loadavgPath string) error {
 	procUptimeOutput, err := os.ReadFile(uptimePath)
 	if err != nil {
-		return fmt.Errorf("error reading /proc/uptime: %w", err)
+		return err
 	}
 
 	uptimeTime, err := uptime(string(procUptimeOutput))
@@ -60,7 +60,7 @@ func run(stdout io.Writer, uptimePath, loadavgPath string) error {
 
 	procLoadAvgOutput, err := os.ReadFile(loadavgPath)
 	if err != nil {
-		return fmt.Errorf("error reading /proc/loadavg: %w", err)
+		return err
 	}
 	loadAverage, err := loadavg(string(procLoadAvgOutput))
 	if err != nil {
