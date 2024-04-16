@@ -43,41 +43,29 @@ import (
 	"syscall"
 )
 
-var (
-	ipc   = flag.Bool("ipc", false, "Unshare the IPC namespace")
-	mount = flag.Bool("mount", false, "Unshare the mount namespace")
-	pid   = flag.Bool("pid", false, "Unshare the pid namespace")
-	net   = flag.Bool("net", false, "Unshare the net namespace")
-	uts   = flag.Bool("uts", false, "Unshare the uts namespace")
-	user  = flag.Bool("user", false, "Unshare the user namespace")
-)
-
-func main() {
-	flag.Parse()
-
-	a := flag.Args()
-	if len(a) == 0 {
-		a = []string{"/bin/sh"}
+func command(ipc, mount, pid, net, uts, user bool, args []string) *exec.Cmd {
+	if len(args) == 0 {
+		args = []string{"/bin/sh"}
 	}
 
-	c := exec.Command(a[0], a[1:]...)
+	c := exec.Command(args[0], args[1:]...)
 	c.SysProcAttr = &syscall.SysProcAttr{}
-	if *mount {
+	if mount {
 		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
 	}
-	if *uts {
+	if uts {
 		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUTS
 	}
-	if *ipc {
+	if ipc {
 		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWIPC
 	}
-	if *net {
+	if net {
 		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNET
 	}
-	if *pid {
+	if pid {
 		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWPID
 	}
-	if *user {
+	if user {
 		c.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUSER
 	}
 
@@ -85,7 +73,18 @@ func main() {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
-	if err := c.Run(); err != nil {
+	return c
+}
+
+func main() {
+	ipc := flag.Bool("ipc", false, "Unshare the IPC namespace")
+	mount := flag.Bool("mount", false, "Unshare the mount namespace")
+	pid := flag.Bool("pid", false, "Unshare the pid namespace")
+	net := flag.Bool("net", false, "Unshare the net namespace")
+	uts := flag.Bool("uts", false, "Unshare the uts namespace")
+	user := flag.Bool("user", false, "Unshare the user namespace")
+	flag.Parse()
+	if err := command(*ipc, *mount, *pid, *net, *uts, *user, flag.Args()).Run(); err != nil {
 		log.Fatalf("%v", err)
 	}
 }
