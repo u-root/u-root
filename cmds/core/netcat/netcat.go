@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
+	"sync"
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/netcat"
@@ -19,11 +21,11 @@ import (
 var errMissingHostnamePort = fmt.Errorf("missing hostname:port")
 
 func parseParams() netcat.NetcatConfig {
-	// TODO: create  tt for mutual exclusive flags and reduce it to KNF / DNF and evaluate the flagset
 	// With that we don't need to check for mutual exclusive flags but can discard wrong flags at once
-
 	// TODO: make sanity check for network?
 	// TODO: add parsing for optional array params that need parsing of multiple values and default empty string
+	// TODO: make this proper, create a flagset
+
 	timingOptions := netcat.NetcatTimingOptions{}
 	miscOptions := netcat.NetcatMiscOptions{}
 	outputOptions := netcat.NetcatOutputOptions{}
@@ -134,7 +136,8 @@ func parseParams() netcat.NetcatConfig {
 
 	pc := netcat.NetcatProxyConfig{}
 	flag.StringVarP(&pc.Address, "proxy", "", "", "Specify address of host to proxy through (<addr[:port]> )")
-	flag.StringVarP(&pc.DNSAddress, "proxy-dns", "", "", "Specify where to resolve proxy destination")
+	proxydns := flag.StringP("proxy-dns", "", "", "Specify where to resolve proxy destination")
+	pc.DNSType = netcat.ProxyDNSTypeFromString(*proxydns)
 
 	proxyType := flag.StringP("proxy-type", "", "", "Specify proxy type ('http', 'socks4', 'socks5')")
 	proxyAuthType := flag.StringP("proxy-auth", "", "", "Authenticate with HTTP or SOCKS proxy server")
@@ -185,7 +188,7 @@ type cmd struct {
 
 func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config netcat.NetcatConfig, args []string) (*cmd, error) {
 	if len(args) < 1 {
-		return nil, errMissingHostnamePort
+		return nil, fmt.Errorf("missing arguments")
 	}
 
 	return &cmd{
@@ -201,51 +204,82 @@ func init() {
 	flag.Usage = util.Usage(flag.Usage, netcat.Usage)
 }
 
-// udpRemoteConn saves raddr from first connection and implement io.ReadWriter
-// interface, so io.Copy will work
-
+// From the prepared config generate a network connection that will be used for the netcat command
+// TODO: create own NetcatConnection struct
 func (c *cmd) connection() (io.ReadWriter, error) {
-	// switch c.network {
-	// case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-	// 	if c.listen {
-	// 		ln, err := net.Listen(c.network, c.address)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		if c.verbose {
-	// 			fmt.Fprintln(c.stderr, "Listening on", ln.Addr())
-	// 		}
-	// 		return ln.Accept()
-	// 	}
-	// 	return net.Dial(c.network, c.address)
-	// case "udp", "udp4", "udp6":
-	// 	addr, err := net.ResolveUDPAddr(c.network, c.address)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if c.listen {
-	// 		conn, err := net.ListenUDP(c.network, addr)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		if c.verbose {
-	// 			fmt.Fprintln(c.stderr, "Listening on", conn.LocalAddr())
-	// 		}
-	// 		waitGroup := &sync.WaitGroup{}
-	// 		waitGroup.Add(1)
-	// 		return &netcat.UdpRemoteConn{conn: conn, wg: waitGroup, once: &sync.Once{}, stderr: c.stderr, verbose: c.verbose}, nil
-	// 	}
-	// 	return net.DialUDP(c.network, nil, addr)
-	// default:
-	// 	return nil, fmt.Errorf("unsupported network type %q", c.network)
-	// }
+	network, err := c.config.SocketType.ToGoType(c.config.ProtocolOptions.IPType)
+	netcat.FLogf(c.config, c.stderr, "network type = %q\n", network)
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch c.config.ProtocolOptions.SocketType {
+	case netcat.SOCKET_TYPE_TCP, netcat.SOCKET_TYPE_UNIX:
+
+		// Listen Mode
+		if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
+			listen, err := net.Listen(network, c.address)
+			if err != nil {
+				return nil, err
+			}
+			netcat.FLogf(c.config, c.stderr, "Listening on %v\n", listen.Addr())
+
+			return listen.Accept()
+		}
+
+		// Connection Mode
+		return net.Dial(network, c.address)
+
+	case netcat.SOCKET_TYPE_UDP:
+		udpAddr, err := net.ResolveUDPAddr(network, c.address)
+		if err != nil {
+			return nil, err
+		}
+
+		// Listen Mode
+		if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
+			conn, err := net.ListenUDP(network, udpAddr)
+			if err != nil {
+				return nil, err
+			}
+
+			if c.config.Output.Verbose {
+				fmt.Fprintln(c.stderr, "Listening on", conn.LocalAddr())
+			}
+
+			waitGroup := &sync.WaitGroup{}
+			waitGroup.Add(1)
+
+			return &netcat.UdpRemoteConn{Conn: conn, Wg: waitGroup, Once: &sync.Once{}, Stderr: c.stderr, Verbose: c.config.Output.Verbose}, nil
+		}
+		// Connection Mode
+		return net.DialUDP(network, nil, udpAddr)
+
+	// unsupported socket types
+	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_UDP_UNIX:
+		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
+
+	case netcat.SOCKET_TYPE_NONE:
+	default:
+		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+	}
+
 	return nil, nil
 }
 
 func (c *cmd) run() error {
+	// Netcat can operate in 2 modes: connect or listen
+	// These modes will automatically be handled by the io.ReadWriter returned by the connection function
+	// TODO: implement that for Netcat new? Can we handle all the tls/proxy stuff in the connection function?
+	c.config.Output.Verbose = true
 	conn, err := c.connection()
 	if err != nil {
 		return err
+	}
+
+	if c.config.Output.Verbose {
+		fmt.Fprintf(c.stderr, "client is in %p mode\n", c.config.ConnectionMode.String())
 	}
 
 	go func() {
@@ -271,6 +305,7 @@ func main() {
 
 	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
 	if err != nil {
+		fmt.Printf("error: %v\n", err)
 		flag.Usage()
 		os.Exit(1)
 	}

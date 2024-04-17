@@ -26,15 +26,43 @@ type NetcatSocketType int
 
 // UDP can be combined with one of {UNIX, VSOCK} or stand alone
 const (
-	SOCKET_TYPE_NONE NetcatSocketType = iota
-	SOCKET_TYPE_TCP
+	SOCKET_TYPE_TCP NetcatSocketType = iota
 	SOCKET_TYPE_UDP
 	SOCKET_TYPE_UNIX
 	SOCKET_TYPE_VSOCK
 	SOCKET_TYPE_SCTP
 	SOCKET_TYPE_UDP_VSOCK
 	SOCKET_TYPE_UDP_UNIX
+	SOCKET_TYPE_NONE
 )
+
+// TODO: combine ipv4 and ipv6 within that
+func (s NetcatSocketType) ToGoType(i NetcatIPType) (string, error) {
+	switch i {
+	case IP_V4:
+		if s == SOCKET_TYPE_TCP {
+			return "tcp4", nil
+		}
+		if s == SOCKET_TYPE_UDP {
+			return "udp4", nil
+		}
+	case IP_V6:
+		if s == SOCKET_TYPE_TCP {
+			return "tcp6", nil
+		}
+		if s == SOCKET_TYPE_UDP {
+			return "udp6", nil
+		}
+	case IP_V4_V6:
+		if s == SOCKET_TYPE_TCP {
+			return "tcp", nil
+		}
+		if s == SOCKET_TYPE_UDP {
+			return "udp", nil
+		}
+	}
+	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type")
+}
 
 // TODO: should we do this via enabled or can we just pass nil?
 // NOTE: The key files have to be of PEM format
@@ -112,17 +140,40 @@ func ProxyAuthTypeFromString(s string) ProxyAuthType {
 	}
 }
 
+type ProxyDNSType int
+
+const (
+	PROXY_DNS_NONE ProxyDNSType = iota
+	PROXY_DNS_LOCAL
+	PROXY_DNS_REMOTE
+	PROXY_DNS_BOTH
+)
+
+func ProxyDNSTypeFromString(s string) ProxyDNSType {
+	switch strings.ToUpper(s) {
+	case "LOCAL":
+		return PROXY_DNS_LOCAL
+	case "REMOTE":
+		return PROXY_DNS_REMOTE
+	case "BOTH":
+		return PROXY_DNS_BOTH
+	default:
+		return PROXY_DNS_NONE
+	}
+}
+
 type NetcatProxyConfig struct {
-	Type       ProxyType // If this is none, discard the entire Proxy handling
-	Address    string
-	DNSAddress string
-	Port       uint
-	AuthType   ProxyAuthType // If this is none, discard the entire ProxyAuth handling
+	Type     ProxyType // If this is none, discard the entire Proxy handling
+	Address  string
+	DNSType  ProxyDNSType
+	Port     uint
+	AuthType ProxyAuthType // If this is none, discard the entire ProxyAuth handling
 }
 
 type NetcatSSLConfig struct {
 	// In connect mode, this option transparently negotiates an SSL session
 	// In server mode, this option listens for incoming SSL connections
+	// Depending on the Protocol Type, either TLS (TCP) od DTLS (UDP) will be used
 	Enabled bool
 
 	CertFilePath  string // Path to the certificate file in PEM format
@@ -178,6 +229,13 @@ const (
 	CONNECTION_MODE_LISTEN
 )
 
+func (n NetcatConnectionMode) String() string {
+	return [...]string{
+		"connect",
+		"listen",
+	}[n]
+}
+
 type NetcatProtocolOptions struct {
 	IPType     NetcatIPType
 	SocketType NetcatSocketType
@@ -226,6 +284,7 @@ type NetcatAccessControlOptions struct {
 func ParseAccessControl(connectionAllowFile *string, connectionAllowList *[]string, connectionDenyFile *string, connectionDenyList *[]string) (NetcatAccessControlOptions, error) {
 	accessControl := NetcatAccessControlOptions{}
 
+	// Allowlist
 	if *connectionAllowFile != "" && *connectionAllowList != nil {
 		log.Fatal("Cannot specify both allowlist and allowfile")
 	}
@@ -235,7 +294,7 @@ func ParseAccessControl(connectionAllowFile *string, connectionAllowList *[]stri
 			log.Fatal(err)
 
 		}
-		*&accessControl.ConnectionAllowList = strings.Split(string(data), ",")
+		accessControl.ConnectionAllowList = strings.Split(string(data), ",")
 	}
 	if *connectionAllowList != nil {
 		accessControl.ConnectionAllowList = *connectionAllowList
@@ -251,7 +310,7 @@ func ParseAccessControl(connectionAllowFile *string, connectionAllowList *[]stri
 			log.Fatal(err)
 
 		}
-		*&accessControl.ConnectionDenyList = strings.Split(string(data), ",")
+		accessControl.ConnectionDenyList = strings.Split(string(data), ",")
 	}
 	if *connectionDenyList != nil {
 		accessControl.ConnectionDenyList = *connectionDenyList

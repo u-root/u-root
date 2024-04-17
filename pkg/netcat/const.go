@@ -19,5 +19,6 @@ var (
 )
 
 const (
-	Usage = "netcat [go-style network address]"
+	Usage      = "netcat [go-style network address]"
+	LOG_PREFIX = "netcat: "
 )
