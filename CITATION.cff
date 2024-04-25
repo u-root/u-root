@@ -1,0 +1,45 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: u-root
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Ronald
+    family-names: Minnich
+    email: rminnich@gmail.com
+    name-particle: ronald
+    orcid: 'https://orcid.org/0009-0003-1777-562X'
+  - {}
+repository-code: 'https://github.com/u-root/u-root'
+url: 'https://u-root.org'
+abstract: >-
+  u-root embodies four different projects.
+
+
+  Go versions of many standard Linux tools, such as ls, cp,
+  or shutdown. See cmds/core for most of these.
+
+
+  A way to compile many Go programs into a single binary
+  with busybox mode.
+
+
+  A way to create initramfs (an archive of files) to use
+  with Linux kernels, embeddable into firmware.
+
+
+  Go bootloaders that use kexec to boot Linux or multiboot
+  kernels such as ESXi, Xen, or tboot. They are meant to be
+  used with LinuxBoot.
+keywords:
+  - Go
+  - firmware
+  - initramfs
+license: BSD-3-Clause
+commit: main
+version: 0.14.0
+date-released: '2024-02-27'
