@@ -5,207 +5,96 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
-	"errors"
-	"net"
+	"fmt"
+	"io"
 	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/netcat"
 )
 
-func TestArgs(t *testing.T) {
-	_, err := command(nil, nil, nil, params{}, nil)
-	if !errors.Is(err, errMissingHostnamePort) {
-		t.Errorf("expected %v, got %v", errMissingHostnamePort, err)
-	}
+var connectionTests = []struct {
+	name   string
+	config netcat.NetcatConfig
+	args   []string
+	stdin  string
+}{
+	{
+		name: "TCP Listen IPv4",
+		config: netcat.NetcatConfig{
+			ConnectionMode: netcat.CONNECTION_MODE_LISTEN,
+			ProtocolOptions: netcat.NetcatProtocolOptions{
+				IPType:     netcat.IP_V4,
+				SocketType: netcat.SOCKET_TYPE_TCP,
+			},
+		},
+		args: []string{""},
+	},
+	{
+		name: "UDP Listen IPv4",
+		config: netcat.NetcatConfig{
+			ConnectionMode: netcat.CONNECTION_MODE_LISTEN,
+			ProtocolOptions: netcat.NetcatProtocolOptions{
+				IPType:     netcat.IP_V4,
+				SocketType: netcat.SOCKET_TYPE_UDP,
+			},
+		},
+		args: []string{""},
+	},
+	{
+		name: "TCP Dial IPv4",
+		config: netcat.NetcatConfig{
+			ConnectionMode: netcat.CONNECTION_MODE_CONNECT,
+			ProtocolOptions: netcat.NetcatProtocolOptions{
+				IPType:     netcat.IP_V4,
+				SocketType: netcat.SOCKET_TYPE_TCP,
+			},
+		},
+		args: []string{""},
+	},
+	{
+		name: "UDP Dial IPv4",
+		config: netcat.NetcatConfig{
+			ConnectionMode: netcat.CONNECTION_MODE_CONNECT,
+			ProtocolOptions: netcat.NetcatProtocolOptions{
+				IPType:     netcat.IP_V4,
+				SocketType: netcat.SOCKET_TYPE_UDP,
+			},
+		},
+		args: []string{""},
+	},
 }
 
-func TestParseParams(t *testing.T) {
-	p := parseParams()
+func TestConnection(t *testing.T) {
+	for _, tt := range connectionTests {
+		stdin := strings.NewReader("hello client")
+		stdout := bufio.NewWriter(&bytes.Buffer{})
+		stderr := bufio.NewWriter(&bytes.Buffer{})
+		// cmdIO := io.NewReaderWriter(stdin, stdout, stderr)
 
-	// test defaults
-	if p.network != "tcp" {
-		t.Errorf("expected default network to be tcp, got %s", p.network)
-	}
+		t.Run(tt.name, func(t *testing.T) {
+			cmd, err := command(stdin, stdout, stderr, tt.config, tt.args)
+			if err != nil {
+				t.Fatalf("command() = %v", err)
+			}
 
-	if p.listen != false {
-		t.Errorf("expected default listen to be false, got %t", p.listen)
-	}
+			con, err := cmd.connection()
+			if err != nil {
+				t.Fatalf("cmd.connection() = %v, want nil", err)
+			}
 
-	if p.verbose != false {
-		t.Errorf("expected default verbose to be false, got %t", p.verbose)
-	}
-}
-
-func setupEchoServer(t *testing.T) string {
-	l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: []byte{127, 0, 0, 1}, Port: 0})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		conn, err := l.AcceptTCP()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 64)
-		n, err := conn.Read(buf)
-		if err != nil {
-			return
-		}
-
-		if _, err := conn.Write(buf[:n]); err != nil {
-			return
-		}
-	}()
-
-	return l.Addr().String()
-}
-
-func TestTCP(t *testing.T) {
-	addr := setupEchoServer(t)
-
-	stdin := strings.NewReader("hello world")
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	cmd, err := command(stdin, stdout, stderr, params{network: "tcp", verbose: true}, []string{addr})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = cmd.run()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if stdout.String() != "hello world" {
-		t.Errorf("expected 'hello world', got %q", stdout.String())
-	}
-
-	stderrStr := stderr.String()
-	if !strings.Contains(stderrStr, "Connected") && !strings.Contains(stderrStr, "Disconnected") {
-		t.Errorf("expected 'Connected' and 'Listening' in stderr, got %q", stderrStr)
-	}
-}
-
-func setupEchoServerUDP(t *testing.T) string {
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: []byte{127, 0, 0, 1}, Port: 0})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		defer conn.Close()
-		buf := make([]byte, 64)
-		n, raddr, err := conn.ReadFromUDP(buf)
-		if err != nil {
-			return
-		}
-
-		if _, err := conn.WriteToUDP(buf[:n], raddr); err != nil {
-			return
-		}
-	}()
-
-	return conn.LocalAddr().String()
-}
-
-type testBuffer struct {
-	ch  chan string
-	buf []byte
-}
-
-func (t *testBuffer) Write(p []byte) (int, error) {
-	t.buf = append(t.buf, p...)
-	t.ch <- string(p)
-	return len(p), nil
-}
-
-func TestDialUDP(t *testing.T) {
-	addr := setupEchoServerUDP(t)
-
-	stdin := strings.NewReader("hello world")
-	stdout := &testBuffer{ch: make(chan string)}
-	stderr := &bytes.Buffer{}
-
-	cmd, err := command(stdin, stdout, stderr, params{network: "udp", verbose: true}, []string{addr})
-	if err != nil {
-		t.Fatal(err)
-	}
-	go func() {
-		_ = cmd.run()
-	}()
-
-	res := <-stdout.ch
-	if res != "hello world" {
-		t.Errorf("expected 'hello world', got %q", res)
-	}
-}
-
-func TestListenUDP(t *testing.T) {
-	stdin := strings.NewReader("hello client")
-	stdout := &testBuffer{ch: make(chan string)}
-	stderr := &testBuffer{ch: make(chan string)}
-
-	cmd, err := command(stdin, stdout, stderr, params{network: "udp", listen: true, verbose: true}, []string{"127.0.0.1:0"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		_ = cmd.run()
-	}()
-
-	listenOn := <-stderr.ch // consume listening on message
-	srvAddr := strings.TrimSpace(string(listenOn[13:]))
-
-	conn, err := net.Dial("udp", srvAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-
-	_, err = conn.Write([]byte("hello world"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	<-stderr.ch // consume connected to message
-	res := <-stdout.ch
-	if res != "hello world" {
-		t.Errorf("expected 'hello world', got %q", res)
-	}
-
-	_, err = conn.Write([]byte("bye"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	res = <-stdout.ch
-	if res != "bye" {
-		t.Errorf("expected 'bye', got %q", res)
-	}
-
-	// read back from server, to test if server can response to client
-	buf := make([]byte, 64)
-	n, err := conn.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if string(buf[:n]) != "hello client" {
-		t.Errorf("expected 'hello client', got %q", string(buf[:n]))
-	}
-}
-
-func TestWrongNetwork(t *testing.T) {
-	cmd, err := command(nil, nil, nil, params{network: "quic"}, []string{"127.0.0.1:8080"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = cmd.run()
-	if err == nil {
-		t.Error("quic is not a valid network, expected error")
+			if cmd.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
+				// receive connection
+				go func() {
+					if _, err := io.Copy(con, cmd.stdin); err != nil {
+						fmt.Fprintln(cmd.stderr, err)
+					}
+				}()
+			} else {
+				// Make connection to fake server
+			}
+		})
 	}
 }

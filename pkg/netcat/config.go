@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -415,4 +416,16 @@ type NetcatConfig struct {
 	Hostname              string
 	Port                  uint
 	ZeroIo                bool
+}
+
+func (n *NetcatConfig) Address() string {
+	var address string
+	switch n.ProtocolOptions.IPType {
+	case IP_V4:
+		address = "0.0.0.0"
+	case IP_V6:
+		address = "[::]"
+	}
+
+	return address + ":" + strconv.FormatUint(uint64(n.Port), 10)
 }

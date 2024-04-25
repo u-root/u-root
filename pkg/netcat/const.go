@@ -4,6 +4,8 @@
 
 package netcat
 
+// Default values for the netcat command.
+// These values were taken from the original netcat project.
 const (
 	DEFAULT_PORT            = 31337
 	DEFAULT_IP_TYPE         = IP_V4_V6
@@ -18,7 +20,8 @@ var (
 	LINE_FEED_CRLF = []byte{0x0d, 0x0a} // \r\n
 )
 
+// Constants for the netcat command cli.
 const (
-	Usage      = "netcat [go-style network address]"
+	USAGE      = "netcat [go-style network address]"
 	LOG_PREFIX = "netcat: "
 )
