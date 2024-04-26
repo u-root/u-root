@@ -179,9 +179,6 @@ func (t *TTY) SetOpts(opts []string) error {
 			return fmt.Errorf("opt %v is not valid", o)
 		}
 		t.Opts[o] = set
-		if err != nil {
-			return err
-		}
 	}
 	return err
 }
