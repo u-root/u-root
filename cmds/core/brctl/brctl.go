@@ -16,7 +16,6 @@
 // brctl addif <brname> <ifname>	will make the interface <ifname> a port of the bridge <brname>
 // brctl delif <brname> <ifname>	will detach the interface <ifname> from the bridge <brname>
 // brctl show <brname>				will show some information on the bridge and its attached ports
-// brctl showstp <brname>			show bridge stp info
 //
 // AGEING:
 // brctl showmacs <brname> 				shows a list of learned MAC addresses for this bridge

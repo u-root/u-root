@@ -92,13 +92,6 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 // 1. Try to set the config options using the sysfs` bridge directory
 // 2. Else use the ioctl interface
 // TODO: hide this behind an interface and check in beforehand which to use
-// TODO: how to parse the struct timeval and the jiffies?
-/*
-	@param bridge: name of the bridge
-	@param name: name of the value to set
-	@param value: value to set
-	@param ioctlcode: old value to set, aka IOCTL control value, like BRCTL_SET_BRIDGE_MAX_AGE
-*/
 func setBridgeValue(bridge string, name string, value uint64, ioctlcode uint64) error {
 	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
@@ -121,10 +114,17 @@ func setBridgePort(bridge string, port string, name string, value uint64, ioctlc
 	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_port: %v", err)
-		// TODO: 2. Use ioctl as fallback
 		return nil
 	}
 	return nil
+}
+
+func getBridgePort(bridge string, port string, name string) (string, error) {
+	out, err := os.ReadFile(BRCTL_SYS_NET + port + "/brport/" + bridge + "/" + name)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
 
 /*
@@ -395,10 +395,11 @@ func Setageingtime(name string, time string) error {
 	return nil
 }
 
+// Set the STP state of the bridge to on or off
+// Enable using "on" or "yes", disable by providing anything else
 // The manpage states:
 // > If <state> is "on" or "yes"  the STP  will  be turned on, otherwise it will be turned off
 // So this is actually the described behavior, not checking for "off" and "no"
-// For coreutils see: brctl_cmd.c:284
 func Stp(bridge string, state string) error {
 	var stp_state uint64
 	if state == "on" || state == "yes" {
@@ -416,8 +417,8 @@ func Stp(bridge string, state string) error {
 
 // The manpage states only uint16 should be supplied, but brctl_cmd.c uses regular 'int'
 // providing 2^16+1 results in 0 -> integer overflow
-func Setbridgeprio(bridge string, bridge_priority string) error {
-	prio, err := strconv.ParseUint(bridge_priority, 10, 16)
+func Setbridgeprio(bridge string, bridgePriority string) error {
+	prio, err := strconv.ParseUint(bridgePriority, 10, 16)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
