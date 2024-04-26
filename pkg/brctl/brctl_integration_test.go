@@ -7,6 +7,19 @@
 
 package brctl
 
+// Sometimes manual testing might be necessary or just more straight forward.
+// To setup a local test environment similar to the integration test, run the following commands.
+// Since the tests issue raw ioctl calls, they have to be run as root.
+//
+// ```
+// ip link add eth10 type dummy
+// ip link add eth10 type dummy
+// brctl addbr br0
+// brctl addbr br1
+// brctl addif br0 eth0
+// brctl addif br1 eth1
+// ````
+
 import (
 	"fmt"
 	"testing"
