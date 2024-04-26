@@ -43,7 +43,7 @@ import (
 	"syscall"
 )
 
-func command(ipc, mount, pid, net, uts, user bool, args []string) *exec.Cmd {
+func command(ipc, mount, pid, net, uts, user bool, args ...string) *exec.Cmd {
 	if len(args) == 0 {
 		args = []string{"/bin/sh"}
 	}
@@ -84,7 +84,7 @@ func main() {
 	uts := flag.Bool("uts", false, "Unshare the uts namespace")
 	user := flag.Bool("user", false, "Unshare the user namespace")
 	flag.Parse()
-	if err := command(*ipc, *mount, *pid, *net, *uts, *user, flag.Args()).Run(); err != nil {
+	if err := command(*ipc, *mount, *pid, *net, *uts, *user, flag.Args()...).Run(); err != nil {
 		log.Fatalf("%v", err)
 	}
 }

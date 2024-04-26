@@ -39,7 +39,7 @@ func TestCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		res := command(test.ipc, test.mount, test.pid, test.net, test.uts, test.user, test.args)
+		res := command(test.ipc, test.mount, test.pid, test.net, test.uts, test.user, test.args...)
 		if res.SysProcAttr.Cloneflags != test.expectedFlags {
 			t.Errorf("expected %v, got %v", test.expectedFlags, res.SysProcAttr.Cloneflags)
 		}
