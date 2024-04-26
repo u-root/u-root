@@ -32,8 +32,8 @@ require (
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
-	github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
 	github.com/tklauser/go-sysconf v0.3.13
+	github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
 	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
