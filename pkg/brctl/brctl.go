@@ -36,17 +36,6 @@ type BridgeInfo struct {
 	Interfaces []string
 }
 
-const (
-	BRCTL_ADD_BRIDGE          = 2
-	BRCTL_DEL_BRIDGE          = 3
-	BRCTL_ADD_I               = 4
-	BRCTL_DEL_I               = 5
-	BRCTL_SET_AEGING_TIME     = 11
-	BRCTL_SET_BRIDGE_PRIORITY = 15
-	BRCTL_SET_PORT_PRIORITY   = 16
-	BRCTL_SET_PATH_COST       = 17
-)
-
 func sysconfhz() (int, error) {
 	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	if err != nil {
@@ -55,7 +44,7 @@ func sysconfhz() (int, error) {
 	return int(clktck), nil
 }
 
-func ifreq_option(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
+func getIfreqOption(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
 	i := ifreqptr{ptr: ptr}
 	copy(i.Ifrn[:], ifreq.Name())
 	return i
@@ -63,7 +52,7 @@ func ifreq_option(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
 
 // ioctl helpers
 // TODO: maybe use ifreq.withData for this?
-func ioctl_str(fd int, req uint, raw string) (int, error) {
+func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	local_bytes := append([]byte(raw), 0)
 	err_int, _, err_str := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
 	return int(err_int), fmt.Errorf("%s", err_str)
@@ -75,7 +64,7 @@ func ioctl(fd int, req uint, addr uintptr) (int, error) {
 }
 
 // https://github.com/WireGuard/wireguard-go/blob/master/tun/tun_linux.go#L217
-func if_nametoindex(ifname string) (int, error) {
+func getIndexFromInterfaceName(ifname string) (int, error) {
 	ifreq, err := unix.NewIfreq(ifname)
 	if err != nil {
 		return 0, fmt.Errorf("%w", err)
@@ -110,8 +99,8 @@ func if_nametoindex(ifname string) (int, error) {
 	@param value: value to set
 	@param ioctlcode: old value to set, aka IOCTL control value, like BRCTL_SET_BRIDGE_MAX_AGE
 */
-func br_set_val(bridge string, name string, value uint64, ioctlcode uint64) error {
-	err := os.WriteFile("/sys/class/net/"+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
+func setBridgeValue(bridge string, name string, value uint64, ioctlcode uint64) error {
+	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_val: %v", err)
 		// TODO: 2. Use ioctl as fallback
@@ -120,8 +109,16 @@ func br_set_val(bridge string, name string, value uint64, ioctlcode uint64) erro
 	return nil
 }
 
-func br_set_port(bridge string, port string, name string, value uint64, ioctlcode uint64) error {
-	err := os.WriteFile("/sys/class/net/"+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
+func getBridgeValue(bridge string, name string) (string, error) {
+	out, err := os.ReadFile(BRCTL_SYS_NET + bridge + "/bridge/" + name)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func setBridgePort(bridge string, port string, name string, value uint64, ioctlcode uint64) error {
+	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_port: %v", err)
 		// TODO: 2. Use ioctl as fallback
@@ -134,7 +131,7 @@ func br_set_port(bridge string, port string, name string, value uint64, ioctlcod
 Helper functions that convert seconds to jiffies and vice versa.
 https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html
 */
-func str_to_tv(in string) (unix.Timeval, error) {
+func stringToTimeval(in string) (unix.Timeval, error) {
 	time, err := strconv.ParseFloat(in, 64)
 	if err != nil {
 		return unix.Timeval{}, fmt.Errorf("%w", err)
@@ -152,16 +149,29 @@ func str_to_tv(in string) (unix.Timeval, error) {
 }
 
 // Linux kernel jiffies https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec2.html
-func to_jiffies(tv unix.Timeval, hz int) int {
+func timevalToJiffies(tv unix.Timeval, hz int) int {
 	// fmt.Fprintf(out, "hz*sec = %v, usec = %v, final = %v\n", int(tv.Sec)*hz, int(tv.Usec)/100000*hz/100, int(tv.Sec)*hz+int(tv.Usec)/10000*hz/100)
 	return int((int(tv.Sec) * hz) + (int(tv.Usec)*hz)/1000000)
 }
 
-func from_jiffies(jiffies int, hz int) unix.Timeval {
+func jiffiesToTimeval(jiffies int, hz int) unix.Timeval {
 	return unix.Timeval{
 		Sec:  int64(jiffies / hz),
 		Usec: int64(jiffies % hz * 1000000 / hz),
 	}
+}
+
+func stringToJiffies(in string) (int, error) {
+	hz, err := sysconfhz()
+	if err != nil {
+		return 0, fmt.Errorf("%w", err)
+	}
+	tv, err := stringToTimeval(in)
+	if err != nil {
+		return 0, fmt.Errorf("%w", err)
+	}
+
+	return timevalToJiffies(tv, hz), nil
 }
 
 // subcommands
@@ -169,12 +179,11 @@ func from_jiffies(jiffies int, hz int) unix.Timeval {
 // can this also be done using IoctlIfreq?
 func Addbr(name string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
-
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	if _, err := ioctl_str(brctl_socket, unix.SIOCBRADDBR, name); err != nil {
+	if _, err := executeIoctlStr(brctl_socket, unix.SIOCBRADDBR, name); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -193,12 +202,11 @@ func Addbr(name string) error {
 
 func Delbr(name string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
-
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	if _, err := ioctl_str(brctl_socket, unix.SIOCBRDELBR, name); err != nil {
+	if _, err := executeIoctlStr(brctl_socket, unix.SIOCBRDELBR, name); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -227,7 +235,7 @@ func Addif(name string, iface string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if_index, err := if_nametoindex(iface)
+	if_index, err := getIndexFromInterfaceName(iface)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
@@ -243,7 +251,7 @@ func Addif(name string, iface string) error {
 	// apparently the go unix api does not support setting the second union value to a raw pointer
 	// so we have to manually craft sth that looks like a struct ifreq
 	var args = []int64{int64(BRCTL_ADD_I), int64(if_index), 0, 0}
-	ifrd := ifreq_option(ifr, unsafe.Pointer(&args[0]))
+	ifrd := getIfreqOption(ifr, unsafe.Pointer(&args[0]))
 
 	if _, err = ioctl(brctl_socket, unix.SIOCDEVPRIVATE, uintptr(unsafe.Pointer(&ifrd))); err != nil {
 		return fmt.Errorf("%w", err)
@@ -263,7 +271,7 @@ func Delif(name string, iface string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if_index, err := if_nametoindex(iface)
+	if_index, err := getIndexFromInterfaceName(iface)
 	if err != nil || if_index == 0 {
 		return fmt.Errorf("%w", err)
 	}
@@ -275,7 +283,7 @@ func Delif(name string, iface string) error {
 
 	// set args
 	var args = []int64{int64(BRCTL_DEL_I), int64(if_index), 0, 0}
-	ifrd := ifreq_option(ifr, unsafe.Pointer(&args[0]))
+	ifrd := getIfreqOption(ifr, unsafe.Pointer(&args[0]))
 
 	if _, err = ioctl(brctl_socket, unix.SIOCDEVPRIVATE, uintptr(unsafe.Pointer(&ifrd))); err != nil {
 		return fmt.Errorf("%w", err)
@@ -286,7 +294,7 @@ func Delif(name string, iface string) error {
 // All bridges are in the virtfs under /sys/class/net/<name>/bridge/<item>, read info from there
 // Update this function if BridgeInfo struct changes
 func getBridgeInfo(name string) (BridgeInfo, error) {
-	base_path := "/sys/class/net/" + name + "/bridge/"
+	base_path := BRCTL_SYS_NET + name + "/bridge/"
 	bridge_id, err := os.ReadFile(base_path + "bridge_id")
 	if err != nil {
 		return BridgeInfo{}, fmt.Errorf("%w", err)
@@ -323,16 +331,16 @@ func showBridge(name string, out io.Writer) {
 	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeId, info.StpState, info.Interfaces)
 }
 
+// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
+// The following format applies:
+// 00-05: MAC address
+// 06-08: port number
+// 09-10: is_local
+// 11-15: timeval (ignored for now)
 func Showmacs(name string, out io.Writer) error {
-	// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
-	// The following format applies:
-	// 00-05: MAC address
-	// 06-08: port number
-	// 09-10: is_local
-	// 11-15: timeval (ignored for now)
 
 	// parse sysf into 0x10 byte chunks
-	brforward, err := os.ReadFile("/sys/class/net/" + name + "/brforward")
+	brforward, err := os.ReadFile(BRCTL_SYS_NET + name + "/brforward")
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
@@ -354,19 +362,18 @@ func Showmacs(name string, out io.Writer) error {
 func Show(out io.Writer, names ...string) error {
 	fmt.Println("bridge name\tbridge id\tSTP enabled\t\tinterfaces")
 	if len(names) == 0 {
-		devices, err := os.ReadDir("/sys/class/net")
+		devices, err := os.ReadDir(BRCTL_SYS_NET)
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
 		for _, bridge := range devices {
 			// check if device is bridge, aka if it has a bridge directory
-			_, err := os.Stat("/sys/class/net/" + bridge.Name() + "/bridge/")
+			_, err := os.Stat(BRCTL_SYS_NET + bridge.Name() + "/bridge/")
 			if err == nil {
 				showBridge(bridge.Name(), out)
 			}
 		}
-
 	} else {
 		for _, name := range names {
 			showBridge(name, out)
@@ -376,39 +383,15 @@ func Show(out io.Writer, names ...string) error {
 }
 
 // Spanning Tree Options
-// TODO: this has a lot of boilerplate code. Maybe use a struct to store the values and use a switch statement to set the values
 func Setageingtime(name string, time string) error {
-	tv, err := str_to_tv(time)
+	ageing_time, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	hz, err := sysconfhz()
-	if err != nil {
+	if err = setBridgeValue(name, BRCTL_AGEING_TIME, uint64(ageing_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
-
-	ageing_time := to_jiffies(tv, hz)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if err = br_set_val(name, "ageing_time", uint64(ageing_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-	return nil
-}
-
-// weird, cannot find it in source code?
-func Setgcint(name string, time string) error {
-	// tv, err := str_to_tv(time)
-	// if err != nil {
-	// 	return fmt.Errorf("%w", err)
-	// }
-
-	// if err = br_set_val(name, "ageing_time", uint64(to_jiffies(tv)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
-	// 	return fmt.Errorf("%w", err)
-	// }
 	return nil
 }
 
@@ -424,7 +407,7 @@ func Stp(bridge string, state string) error {
 		stp_state = 0
 	}
 
-	if err := br_set_val(bridge, "stp_state", stp_state, uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_STP_STATE, stp_state, uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -439,7 +422,7 @@ func Setbridgeprio(bridge string, bridge_priority string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := br_set_val(bridge, "priority", prio, uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, prio, uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -447,22 +430,12 @@ func Setbridgeprio(bridge string, bridge_priority string) error {
 }
 
 func Setfd(bridge string, time string) error {
-	tv, err := str_to_tv(time)
+	forward_delay, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	hz, err := sysconfhz()
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	forward_delay := to_jiffies(tv, hz)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if err := br_set_val(bridge, "forward_delay", uint64(forward_delay), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, uint64(forward_delay), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -470,22 +443,12 @@ func Setfd(bridge string, time string) error {
 }
 
 func Sethello(bridge string, time string) error {
-	tv, err := str_to_tv(time)
+	hello_time, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	hz, err := sysconfhz()
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	hello_time := to_jiffies(tv, hz)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if err := br_set_val(bridge, "hello_time", uint64(hello_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, uint64(hello_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -493,23 +456,12 @@ func Sethello(bridge string, time string) error {
 }
 
 func Setmaxage(bridge string, time string) error {
-	// TODO: refactor this 3 conversion block into 1 function
-	tv, err := str_to_tv(time)
+	max_age, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	hz, err := sysconfhz()
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	max_age := to_jiffies(tv, hz)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if err := br_set_val(bridge, "max_age", uint64(max_age), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, uint64(max_age), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -523,7 +475,7 @@ func Setpathcost(bridge string, port string, cost string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := br_set_port(bridge, port, "path_cost", path_cost, uint64(BRCTL_SET_PATH_COST)); err != nil {
+	if err := setBridgePort(bridge, port, BRCTL_PATH_COST, path_cost, uint64(BRCTL_SET_PATH_COST)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -536,7 +488,7 @@ func Setportprio(bridge string, port string, prio string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := br_set_port(bridge, port, "priority", port_priority, uint64(BRCTL_SET_PATH_COST)); err != nil {
+	if err := setBridgePort(bridge, port, BRCTL_PRIORITY, port_priority, uint64(BRCTL_SET_PATH_COST)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -551,7 +503,7 @@ func Hairpin(bridge string, port string, hairpinmode string) error {
 		hairpin_mode = 0
 	}
 
-	if err := br_set_port(bridge, port, "hairpin", hairpin_mode, 0); err != nil {
+	if err := setBridgePort(bridge, port, BRCTL_HAIRPIN, hairpin_mode, 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
