@@ -57,21 +57,21 @@ func TestPCIExecution(t *testing.T) {
 	}{
 		{
 			name:     "readJSON true, without error",
-			readJSON: "testfiles/testfile1.json",
+			readJSON: "testdata/testfile1.json",
 		},
 		{
 			name:     "readJSON true, error in os.ReadFile",
-			readJSON: "testfiles/testfile.json",
+			readJSON: "testdata/testfile.json",
 			wantErr:  "no such file or directory",
 		},
 		{
 			name:     "readJSON true, error in json.Unmarshal",
-			readJSON: "testfiles/testfile2.json",
+			readJSON: "testdata/testfile2.json",
 			wantErr:  "unexpected end of JSON input",
 		},
 		{
 			name:     "dumpJSON",
-			readJSON: "testfiles/testfile1.json",
+			readJSON: "testdata/testfile1.json",
 			dumpJSON: true,
 		},
 		{
