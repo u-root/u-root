@@ -12,7 +12,7 @@ import (
 )
 
 func TestTailReadBackwards(t *testing.T) {
-	input, err := os.Open("./test_samples/read_backwards.txt")
+	input, err := os.Open("./testdata/read_backwards.txt")
 	if err != nil {
 		t.Error(err)
 	}
@@ -38,7 +38,7 @@ func TestTailReadBackwards(t *testing.T) {
 }
 
 func TestTailReadFromBeginning(t *testing.T) {
-	input, err := os.Open("./test_samples/read_from_beginning.txt")
+	input, err := os.Open("./testdata/read_from_beginning.txt")
 	if err != nil {
 		t.Error(err)
 	}
