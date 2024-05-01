@@ -20,19 +20,20 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
 )
 
-func main() {
-	file, err := os.Open("/proc/modules")
+func run(stdout io.Writer, path string) error {
+	file, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer file.Close()
 
-	fmt.Println("Module                  Size  Used by")
+	fmt.Fprintln(stdout, "Module                  Size  Used by")
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -43,10 +44,14 @@ func main() {
 			usedBy = usedBy[:len(usedBy)-1]
 			final += fmt.Sprintf(" %s", usedBy)
 		}
-		fmt.Println(final)
+		fmt.Fprintln(stdout, final)
 	}
 
-	if err := scanner.Err(); err != nil {
+	return scanner.Err()
+}
+
+func main() {
+	if err := run(os.Stdout, "/proc/modules"); err != nil {
 		log.Fatal(err)
 	}
 }
