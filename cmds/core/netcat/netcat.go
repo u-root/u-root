@@ -12,6 +12,8 @@ import (
 	"net"
 	"os"
 
+	"crypto/tls"
+
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/netcat"
 	"github.com/u-root/u-root/pkg/uroot/util"
@@ -71,7 +73,6 @@ func init() {
 	flag.UintVarP(&listenModeOpts.MaxConnections, "max-conns", "m", netcat.DEFAULT_CONNECTION_MAX, "Maximum <n> simultaneous connections")
 	flag.UintVarP(&timingOptions.Delay, "delay", "d", 0, "Wait between read/writes")
 
-	// output:: they are not mutual exclusive
 	flag.StringVarP(&outputOptions.OutFilePath, "output", "o", "", "Dump session data to a file")
 	flag.StringVarP(&outputOptions.OutFileHexPath, "hex-dump", "x", "", "Dump session data as hex to a file")
 	flag.BoolVarP(&outputOptions.AppendOutput, "append-output", "", false, "Append rather than clobber specified output files")
@@ -123,6 +124,8 @@ func init() {
 	flag.StringSliceVarP(&ssl.Ciphers, "ssl-ciphers", "", []string{netcat.DEFAULT_SSL_SUITE_STR}, "Cipherlist containing SSL ciphers to use")
 	flag.StringVarP(&ssl.SNI, "ssl-servername", "", "", "Request distinct server name (SNI)")
 	flag.StringSliceVarP(&ssl.ALPN, "ssl-alpn", "", nil, "List of protocols to send via ALPN")
+
+	flag.Usage = util.Usage(flag.Usage, netcat.USAGE)
 }
 
 func evalParams() (netcat.NetcatConfig, error) {
@@ -224,10 +227,6 @@ func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat
 	}, nil
 }
 
-func init() {
-	flag.Usage = util.Usage(flag.Usage, netcat.USAGE)
-}
-
 // From the prepared config generate a network connection that will be used for the netcat command
 // TODO: create own NetcatConnection struct
 func (c *cmd) connection() (io.ReadWriter, error) {
@@ -241,31 +240,69 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 		c.config.Port = netcat.DEFAULT_PORT
 	}
 
-	addressConnect := c.config.Address()
+	connectHost := c.config.Address()
+	// connectHost := c.config.Hostname
+	// if connectHost == "" {
+	// 	connectHost = c.args[0]
+	// }
+
+	// connectPort := c.config.Port
+	// if connectPort == 0 {
+	// 	connectPort, err := strconv.Atoi(c.args[1])
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("connection: %v", err)
+	// 	}
+	// }
+
+	// connectAddress := connectHost + ":" + connectPort
 
 	switch c.config.ProtocolOptions.SocketType {
 	case netcat.SOCKET_TYPE_TCP, netcat.SOCKET_TYPE_UNIX:
 		// Listen Mode
 		if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-			address := c.config.Address()
-			listen, err := net.Listen(network, address)
-			if err != nil {
-				return nil, err
+			if c.config.SSLConfig.Enabled {
+				// TLS
+				cer, err := tls.LoadX509KeyPair(c.config.SSLConfig.CertFilePath, c.config.SSLConfig.KeyFilePath)
+				if err != nil {
+					return nil, fmt.Errorf("connection: %v", err)
+				}
+
+				tlsConfig := &tls.Config{Certificates: []tls.Certificate{cer}}
+				tlsListen, err := tls.Listen(network, c.config.Address(), tlsConfig)
+				if err != nil {
+					return nil, fmt.Errorf("connection: %v", err)
+				}
+
+				return tlsListen.Accept()
+			} else {
+				// No TLS
+				address := c.config.Address()
+				listen, err := net.Listen(network, address)
+				if err != nil {
+					return nil, err
+				}
+				netcat.FLogf(c.config, c.stderr, "Listening on %v\n", listen.Addr())
+				return listen.Accept()
 			}
-			netcat.FLogf(c.config, c.stderr, "Listening on %v\n", listen.Addr())
-			return listen.Accept()
 		} else {
 			// Connection Mode
-			return net.Dial(network, addressConnect)
+			if c.config.SSLConfig.Enabled {
+				// TLS
+				tlsConfig := &tls.Config{InsecureSkipVerify: true}
+				return tls.Dial(network, connectHost, tlsConfig)
+			} else {
+				// No TLS
+				return net.Dial(network, connectHost)
+			}
 		}
 
 	case netcat.SOCKET_TYPE_UDP:
 		// Listen Mode
 		if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-			return netcat.NewUdpRemoteConn(network, addressConnect, c.stderr, c.config.Output.Verbose)
+			return netcat.NewUdpRemoteConn(network, connectHost, c.stderr, c.config.Output.Verbose)
 		} else {
 			// Connection Mode
-			udpAddr, err := net.ResolveUDPAddr(network, addressConnect)
+			udpAddr, err := net.ResolveUDPAddr(network, connectHost)
 			if err != nil {
 				return nil, err
 			}
@@ -284,13 +321,16 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 }
 
 func (c *cmd) run() error {
-	conn, err := c.connection()
+	// Netcat can operate in 2 modes: connect or listen
+	// These modes will automatically be handled by the io.ReadWriter returned by the connection function
+	// TODO: implement that for Netcat new? Can we handle all the tls/proxy stuff in the connection function?
 
+	conn, err := c.connection()
 	if err != nil {
 		return fmt.Errorf("run: %v", err)
 	}
-	netcat.Logf(c.config, "client is in %q mode\n", c.config.ConnectionMode.String())
 
+	netcat.Logf(c.config, "client is in %q mode\n", c.config.ConnectionMode.String())
 	go func() {
 		if _, err := io.Copy(conn, c.stdin); err != nil {
 			fmt.Fprintf(c.stderr, "run send: %v\n", err)
@@ -301,7 +341,7 @@ func (c *cmd) run() error {
 	mw := io.MultiWriter(c.stdout, &c.config.Output)
 	if n, err := io.Copy(mw, conn); err != nil {
 		fmt.Fprintf(c.stderr, "run dump: %v, n = %v\n", err, n)
-		return err
+		return fmt.Errorf("run dump: %v", err)
 	}
 
 	netcat.Logf(c.config, "disconnected\n")

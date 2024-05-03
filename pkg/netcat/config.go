@@ -232,11 +232,6 @@ func (config *NetcatSSLOptions) Verify() error {
 	return nil
 }
 
-// Verify checks if the configuration is valid and can be used
-func (config NetcatConfig) Verify() error {
-	return nil
-}
-
 type NetcatConnectionMode int
 
 // Ncat operates in one of two primary modes: connect mode and listen mode.
@@ -379,9 +374,9 @@ func ParseCommands(commands []string) (NetcatExec, error) {
 // TODO: Make this a generic ConnectionModeOptions struct that may have different fields
 type NetcatConnectModeOptions struct {
 	LooseSourceRouterPoints []string // IPV4_STRICT, Point as IP or Hostname
-	LooseSourcePointer      uint     // The argument must be a multiple of 4 and no more than 28.
+	LooseSourcePointer      uint     // The argument must be a multiple of 4 and no more than 28
 	Host                    string   // Address for Ncat to bind to
-	Port                    uint     // Port number for Ncat to bind to.
+	Port                    uint     // Port number for Ncat to bind to
 }
 
 // All the modes can be combined with each other, no need to check for mutual exclusivity
@@ -401,10 +396,10 @@ type NetcatTimingOptions struct {
 type NetcatOutputOptions struct {
 	OutFilePath     string     // Dump session data to a file
 	OutFileMutex    sync.Mutex // Mutex for the file
-	OutFileHexPath  string     // Dump session data in hex to a file.
+	OutFileHexPath  string     // Dump session data in hex to a file
 	OutFileHexMutex sync.Mutex // Mutex for the hex file
 	AppendOutput    bool       // Append the resulted output rather than truncating
-	Verbose         bool       // TOOD: make this adjustable level with -v..v
+	Verbose         bool       // TODO: make this adjustable level with -v..v
 }
 
 // Write writes the data to the file specified in the options
@@ -412,7 +407,6 @@ type NetcatOutputOptions struct {
 // https://go.dev/src/io/io.go
 func (n *NetcatOutputOptions) Write(data []byte) (int, error) {
 	fileOpts := os.O_CREATE | os.O_WRONLY
-	fmt.Printf("Data: %s, len = %v\n", data, len(data))
 	if n.AppendOutput {
 		fileOpts |= os.O_APPEND
 	}
