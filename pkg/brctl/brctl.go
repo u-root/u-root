@@ -310,8 +310,16 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 		return BridgeInfo{}, fmt.Errorf("%w", err)
 	}
 
-	// TODO: get interfaces
-	var interfaces = []string{"eth0", "eth1", "eth2"}
+	// get interfaceDir from sysfs
+	interfaceDir, err := os.ReadDir(BRCTL_SYS_NET + name + "/brif/")
+	if err != nil {
+		return BridgeInfo{}, fmt.Errorf("%w", err)
+	}
+
+	interfaces := []string{}
+	for i := range interfaceDir {
+		interfaces = append(interfaces, interfaceDir[i].Name())
+	}
 
 	return BridgeInfo{
 		Name:       name,
@@ -328,7 +336,13 @@ func showBridge(name string, out io.Writer) {
 	if err != nil {
 		log.Fatalf("show_bridge: %v", err)
 	}
-	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeId, info.StpState, info.Interfaces)
+
+	ifaceString := ""
+	for _, iface := range info.Interfaces {
+		ifaceString += iface + " "
+	}
+
+	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeId, info.StpState, ifaceString)
 }
 
 // The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
