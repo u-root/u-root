@@ -37,6 +37,19 @@ const (
 	SOCKET_TYPE_NONE
 )
 
+func (s NetcatSocketType) String() string {
+	return [...]string{
+		"tcp",
+		"udp",
+		"unix",
+		"vsock",
+		"sctp",
+		"udp-vsock",
+		"udp-unix",
+		"none",
+	}[s]
+}
+
 // TODO: combine ipv4 and ipv6 within that
 func (s NetcatSocketType) ToGoType(i NetcatIPType) (string, error) {
 	switch i {
@@ -163,7 +176,7 @@ func ProxyDNSTypeFromString(s string) ProxyDNSType {
 	}
 }
 
-type NetcatProxyConfig struct {
+type NetcatProxyOptions struct {
 	Type     ProxyType // If this is none, discard the entire Proxy handling
 	Address  string
 	DNSType  ProxyDNSType
@@ -171,7 +184,7 @@ type NetcatProxyConfig struct {
 	AuthType ProxyAuthType // If this is none, discard the entire ProxyAuth handling
 }
 
-type NetcatSSLConfig struct {
+type NetcatSSLOptions struct {
 	// In connect mode, this option transparently negotiates an SSL session
 	// In server mode, this option listens for incoming SSL connections
 	// Depending on the Protocol Type, either TLS (TCP) od DTLS (UDP) will be used
@@ -189,7 +202,7 @@ type NetcatSSLConfig struct {
 	ALPN    []string // List of protocols to send via the Application-Layer Protocol Negotiation
 }
 
-func (config *NetcatSSLConfig) Verify() error {
+func (config *NetcatSSLOptions) Verify() error {
 	// If it is enabled but any other value is set it's invalid
 	if config.Enabled && (config.CertFilePath != "" ||
 		config.KeyFilePath != "" ||
@@ -282,39 +295,39 @@ type NetcatAccessControlOptions struct {
 	ConnectionDenyList  []string
 }
 
-func ParseAccessControl(connectionAllowFile *string, connectionAllowList *[]string, connectionDenyFile *string, connectionDenyList *[]string) (NetcatAccessControlOptions, error) {
+func ParseAccessControl(connectionAllowFile string, connectionAllowList []string, connectionDenyFile string, connectionDenyList []string) (NetcatAccessControlOptions, error) {
 	accessControl := NetcatAccessControlOptions{}
 
 	// Allowlist
-	if *connectionAllowFile != "" && *connectionAllowList != nil {
+	if connectionAllowFile != "" && connectionAllowList != nil {
 		log.Fatal("Cannot specify both allowlist and allowfile")
 	}
-	if *connectionAllowFile != "" {
-		data, err := os.ReadFile(*connectionAllowFile)
+	if connectionAllowFile != "" {
+		data, err := os.ReadFile(connectionAllowFile)
 		if err != nil {
 			log.Fatal(err)
 
 		}
 		accessControl.ConnectionAllowList = strings.Split(string(data), ",")
 	}
-	if *connectionAllowList != nil {
-		accessControl.ConnectionAllowList = *connectionAllowList
+	if connectionAllowList != nil {
+		accessControl.ConnectionAllowList = connectionAllowList
 	}
 
 	// Denylist
-	if *connectionDenyFile != "" && *connectionDenyList != nil {
+	if connectionDenyFile != "" && connectionDenyList != nil {
 		log.Fatal("Cannot specify both denylist and denyfile")
 	}
-	if *connectionDenyFile != "" {
-		data, err := os.ReadFile(*connectionDenyFile)
+	if connectionDenyFile != "" {
+		data, err := os.ReadFile(connectionDenyFile)
 		if err != nil {
 			log.Fatal(err)
 
 		}
 		accessControl.ConnectionDenyList = strings.Split(string(data), ",")
 	}
-	if *connectionDenyList != nil {
-		accessControl.ConnectionDenyList = *connectionDenyList
+	if connectionDenyList != nil {
+		accessControl.ConnectionDenyList = connectionDenyList
 	}
 
 	return accessControl, nil
@@ -334,11 +347,11 @@ type NetcatExec struct {
 	Command string
 }
 
-func ParseCommands(commands []*string) (NetcatExec, error) {
+func ParseCommands(commands []string) (NetcatExec, error) {
 	cmds := 0
 	last_valid := -1
 	for i, e := range commands {
-		if *e != "" {
+		if e != "" {
 			cmds++
 			last_valid = i
 		}
@@ -355,7 +368,7 @@ func ParseCommands(commands []*string) (NetcatExec, error) {
 
 	return NetcatExec{
 		Type:    NetcatExecType(last_valid),
-		Command: *commands[last_valid],
+		Command: commands[last_valid],
 	}, nil
 }
 
@@ -405,8 +418,8 @@ type NetcatConfig struct {
 	ConnectionModeOptions NetcatConnectModeOptions
 	ListenModeOptions     NetcatListenModeOptions
 	ProtocolOptions       NetcatProtocolOptions
-	SSLConfig             NetcatSSLConfig
-	ProxyConfig           NetcatProxyConfig
+	SSLConfig             NetcatSSLOptions
+	ProxyConfig           NetcatProxyOptions
 	AccessControl         NetcatAccessControlOptions
 	CommandExec           NetcatExec
 	Output                NetcatOutputOptions
