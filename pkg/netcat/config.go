@@ -405,7 +405,6 @@ type NetcatConfig struct {
 	ConnectionModeOptions NetcatConnectModeOptions
 	ListenModeOptions     NetcatListenModeOptions
 	ProtocolOptions       NetcatProtocolOptions
-	SocketType            NetcatSocketType
 	SSLConfig             NetcatSSLConfig
 	ProxyConfig           NetcatProxyConfig
 	AccessControl         NetcatAccessControlOptions
