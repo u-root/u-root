@@ -5,11 +5,13 @@
 package netcat
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type NetcatIPType int
@@ -397,10 +399,59 @@ type NetcatTimingOptions struct {
 }
 
 type NetcatOutputOptions struct {
-	OutFilePath    string // Dump session data to a file
-	OutFileHexPath string //  Dump session data in hex to a file.
-	AppendOutput   bool   // Append the resulted output rather than truncating
-	Verbose        bool   // TOOD: make this adjustable level with -v..v
+	OutFilePath     string     // Dump session data to a file
+	OutFileMutex    sync.Mutex // Mutex for the file
+	OutFileHexPath  string     // Dump session data in hex to a file.
+	OutFileHexMutex sync.Mutex // Mutex for the hex file
+	AppendOutput    bool       // Append the resulted output rather than truncating
+	Verbose         bool       // TOOD: make this adjustable level with -v..v
+}
+
+// Write writes the data to the file specified in the options
+// If Netcat is not configured to write to a file, it will return 0, nil
+// https://go.dev/src/io/io.go
+func (n *NetcatOutputOptions) Write(data []byte) (int, error) {
+	fileOpts := os.O_CREATE | os.O_WRONLY
+	fmt.Printf("Data: %s, len = %v\n", data, len(data))
+	if n.AppendOutput {
+		fileOpts |= os.O_APPEND
+	}
+
+	if n.OutFilePath != "" {
+		n.OutFileMutex.Lock()
+		f, err := os.OpenFile(n.OutFilePath, fileOpts, 0644)
+		if err != nil {
+			n.OutFileMutex.Unlock()
+			return 0, fmt.Errorf("netcat oo open: %w", err)
+		}
+
+		_, err = f.Write(data)
+		if err != nil {
+			n.OutFileMutex.Unlock()
+			return 0, fmt.Errorf("netcat oo write: %w", err)
+		}
+		n.OutFileMutex.Unlock()
+	}
+
+	if n.OutFileHexPath != "" {
+		n.OutFileHexMutex.Lock()
+
+		f, err := os.OpenFile(n.OutFileHexPath, fileOpts, 0644)
+		if err != nil {
+			n.OutFileHexMutex.Unlock()
+			return 0, fmt.Errorf("netcat outopt open: %w", err)
+		}
+
+		_, err = f.Write([]byte(hex.Dump(data)))
+		if err != nil {
+			n.OutFileHexMutex.Unlock()
+			return 0, fmt.Errorf("netcat outopt write: %w", err)
+		}
+
+		n.OutFileHexMutex.Unlock()
+	}
+
+	return len(data), nil
 }
 
 type NetcatMiscOptions struct {

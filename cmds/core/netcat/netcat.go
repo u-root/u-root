@@ -78,7 +78,7 @@ func init() {
 
 	flag.UintVarP(&timingOptions.Timeout, "idle-timeout", "I", 0, "Idle read/write timeout")
 
-	flag.UintVarP(&sourcePort, "source-port", "p", 0, "Specify source port to use")
+	flag.UintVarP(&sourcePort, "source-port", "p", netcat.DEFAULT_PORT, "Specify source port to use")
 	flag.StringVarP(&sourceAddress, "source", "s", "", "Specify source address to use (doesn't affect -l)")
 
 	flag.BoolVarP(&listen, "listen", "l", false, "Bind and listen for incoming connections")
@@ -157,12 +157,12 @@ func evalParams() (netcat.NetcatConfig, error) {
 	}
 	exec, err := netcat.ParseCommands(execs)
 	if err != nil {
-		log.Fatal(err)
+		return netcat.NetcatConfig{}, err
 	}
 
 	// Loose source routing
 	if looseSourcePointer%4 != 0 || looseSourcePointer > 28 {
-		log.Fatalf("Loose source routing hop pointer must be a multiple of 4 and less than 28")
+		return netcat.NetcatConfig{}, fmt.Errorf("loose source routing hop pointer must be a multiple of 4 and less than 28")
 	}
 
 	// Connection Mode
@@ -174,13 +174,13 @@ func evalParams() (netcat.NetcatConfig, error) {
 	// Socket Types
 	protOptions.SocketType, err = netcat.ParseSocketType(udpSocket, sctpSocket, unixSocket, virtualSocket)
 	if err != nil {
-		log.Fatal(err)
+		return netcat.NetcatConfig{}, err
 	}
 
 	// Access Control: Allowlist and Denylist
 	accessControl, err := netcat.ParseAccessControl(connectionAllowFile, connectionAllowList, connectionDenyFile, connectionDenyList)
 	if err != nil {
-		log.Fatal(err)
+		return netcat.NetcatConfig{}, err
 	}
 
 	proxyConfig.DNSType = netcat.ProxyDNSTypeFromString(proxydns)
@@ -210,11 +210,11 @@ type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
-	config netcat.NetcatConfig
+	config *netcat.NetcatConfig
 	args   []string
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config netcat.NetcatConfig, args []string) (*cmd, error) {
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.NetcatConfig, args []string) (*cmd, error) {
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,
@@ -284,37 +284,31 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 }
 
 func (c *cmd) run() error {
-	// Netcat can operate in 2 modes: connect or listen
-	// These modes will automatically be handled by the io.ReadWriter returned by the connection function
-	// TODO: implement that for Netcat new? Can we handle all the tls/proxy stuff in the connection function?
-	c.config.Output.Verbose = true
-	// c.config.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
-	c.config.ProtocolOptions.IPType = netcat.IP_V4
-	// c.config.ProtocolOptions.SocketType = netcat.SOCKET_TYPE_UDP
 	conn, err := c.connection()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("run: %v", err)
 	}
 	netcat.Logf(c.config, "client is in %q mode\n", c.config.ConnectionMode.String())
 
 	go func() {
 		if _, err := io.Copy(conn, c.stdin); err != nil {
-			fmt.Fprintln(c.stderr, err)
+			fmt.Fprintf(c.stderr, "run send: %v\n", err)
 		}
 	}()
 
-	if _, err = io.Copy(c.stdout, conn); err != nil {
-		fmt.Fprintln(c.stderr, err)
+	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
+	mw := io.MultiWriter(c.stdout, &c.config.Output)
+	if n, err := io.Copy(mw, conn); err != nil {
+		fmt.Fprintf(c.stderr, "run dump: %v, n = %v\n", err, n)
+		return err
 	}
 
 	netcat.Logf(c.config, "disconnected\n")
-
-	return nil
+	return err
 }
 
 func main() {
-	// config := evalParams()
 	config, err := evalParams()
 	if err != nil {
 		log.Fatalf("error: %v", err)
@@ -324,7 +318,7 @@ func main() {
 
 	fmt.Printf("config: %+v, args = %+v\n", config, flag.Args())
 
-	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
+	c, err := command(os.Stdin, os.Stdout, os.Stderr, &config, flag.Args())
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		flag.Usage()

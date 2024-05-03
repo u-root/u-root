@@ -11,7 +11,7 @@ import (
 )
 
 // Logf logs a message if the verbose flag is set.
-func Logf(nc NetcatConfig, format string, args ...interface{}) {
+func Logf(nc *NetcatConfig, format string, args ...interface{}) {
 	if nc.Output.Verbose {
 		log.Printf(LOG_PREFIX+format, args...)
 	}
@@ -19,7 +19,7 @@ func Logf(nc NetcatConfig, format string, args ...interface{}) {
 
 // Logf logs a message if the verbose flag is set.
 // The output is written to the provided writer instead of os.stderr
-func FLogf(nc NetcatConfig, w io.Writer, format string, args ...interface{}) {
+func FLogf(nc *NetcatConfig, w io.Writer, format string, args ...interface{}) {
 	if nc.Output.Verbose {
 		fmt.Fprintf(w, LOG_PREFIX+format, args...)
 	}
