@@ -21,6 +21,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -31,6 +32,7 @@ import (
 )
 
 var dev = flag.String("dev", "/dev/watchdog", "device")
+var errUsage = errors.New("usage error")
 
 func usage() {
 	flag.Usage()
@@ -43,16 +45,14 @@ watchdog get[pre]timeout
 watchdog gettimeleft
 	Print the amount of time left.
 `)
-	os.Exit(1)
 }
 
-func runCommand() error {
-	flag.Parse()
-	if flag.NArg() < 1 {
-		usage()
+func runCommand(dev string, args ...string) error {
+	if len(args) < 1 {
+		return errUsage
 	}
 
-	wd, err := watchdog.Open(*dev)
+	wd, err := watchdog.Open(dev)
 	if err != nil {
 		return err
 	}
@@ -62,19 +62,19 @@ func runCommand() error {
 		}
 	}()
 
-	switch flag.Arg(0) {
+	switch args[0] {
 	case "keepalive":
-		if flag.NArg() != 1 {
-			usage()
+		if len(args) != 1 {
+			return errUsage
 		}
 		if err := wd.KeepAlive(); err != nil {
 			return err
 		}
 	case "settimeout":
-		if flag.NArg() != 2 {
-			usage()
+		if len(args) != 2 {
+			return errUsage
 		}
-		d, err := time.ParseDuration(flag.Arg(1))
+		d, err := time.ParseDuration(args[1])
 		if err != nil {
 			return err
 		}
@@ -82,10 +82,10 @@ func runCommand() error {
 			return err
 		}
 	case "setpretimeout":
-		if flag.NArg() != 2 {
-			usage()
+		if len(args) != 2 {
+			return errUsage
 		}
-		d, err := time.ParseDuration(flag.Arg(1))
+		d, err := time.ParseDuration(args[1])
 		if err != nil {
 			return err
 		}
@@ -93,8 +93,8 @@ func runCommand() error {
 			return err
 		}
 	case "gettimeout":
-		if flag.NArg() != 1 {
-			usage()
+		if len(args) != 1 {
+			return errUsage
 		}
 		i, err := wd.Timeout()
 		if err != nil {
@@ -102,8 +102,8 @@ func runCommand() error {
 		}
 		fmt.Println(i)
 	case "getpretimeout":
-		if flag.NArg() != 1 {
-			usage()
+		if len(args) != 1 {
+			return errUsage
 		}
 		i, err := wd.PreTimeout()
 		if err != nil {
@@ -111,8 +111,8 @@ func runCommand() error {
 		}
 		fmt.Println(i)
 	case "gettimeleft":
-		if flag.NArg() != 1 {
-			usage()
+		if len(args) != 1 {
+			return errUsage
 		}
 		i, err := wd.TimeLeft()
 		if err != nil {
@@ -120,13 +120,18 @@ func runCommand() error {
 		}
 		fmt.Println(i)
 	default:
-		return fmt.Errorf("unrecognized command: %q", flag.Arg(0))
+		return fmt.Errorf("unrecognized command: %q", args[0])
 	}
 	return nil
 }
 
 func main() {
-	if err := runCommand(); err != nil {
+	flag.Parse()
+	if err := runCommand(*dev, flag.Args()...); err != nil {
+		if errors.Is(err, errUsage) {
+			usage()
+			os.Exit(1)
+		}
 		log.Fatal(err)
 	}
 }
