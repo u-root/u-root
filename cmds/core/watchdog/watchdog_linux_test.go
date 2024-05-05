@@ -13,11 +13,10 @@ import (
 // TestRun test watchdog cli against a regular file, most tests expected to
 // return an error, except of "keepalive"
 func TestRun(t *testing.T) {
-	dev, err := os.CreateTemp("", "")
+	dev, err := os.CreateTemp(t.TempDir(), "")
 	if err != nil {
 		t.Fatalf("can't create temp file: %v", err)
 	}
-	defer os.Remove(dev.Name())
 
 	tests := []struct {
 		name               string
