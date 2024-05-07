@@ -7,8 +7,10 @@ package netcat
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -367,6 +369,39 @@ func ParseCommands(commands []string) (NetcatExec, error) {
 		Type:    NetcatExecType(last_valid),
 		Command: commands[last_valid],
 	}, nil
+}
+
+// Execute a given command on the host system
+// stdout of the command is send to to the connection
+// stderr of the command is displayed on stdout of the host
+// The host process exits with the exit code of the command unless --keep-open is specified
+func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer) error {
+	var cmd *exec.Cmd
+	switch n.Type {
+	case EXEC_TYPE_NATIVE:
+		cmd = exec.Command(n.Command)
+	case EXEC_TYPE_SHELL:
+		cmd = exec.Command(DEFAULT_SHELL, "-c", n.Command)
+	case EXEC_TYPE_LUA:
+		return fmt.Errorf("not implemented")
+	default:
+		return nil
+	}
+
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.Stdin = stdin
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("exec start: %w", err)
+	}
+
+	// Wait waits for the command to exit and waits for any copying to stdin or copying from stdout or stderr to complete.
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("exec wait: %w", err)
+	}
+
+	return nil
 }
 
 // Since Ncat can be either in connect mode or in listen mode, only one of these

@@ -324,6 +324,7 @@ func (c *cmd) run() error {
 	// Netcat can operate in 2 modes: connect or listen
 	// These modes will automatically be handled by the io.ReadWriter returned by the connection function
 	// TODO: implement that for Netcat new? Can we handle all the tls/proxy stuff in the connection function?
+	c.config.Output.Verbose = true
 
 	conn, err := c.connection()
 	if err != nil {
@@ -331,6 +332,7 @@ func (c *cmd) run() error {
 	}
 
 	netcat.Logf(c.config, "client is in %q mode\n", c.config.ConnectionMode.String())
+	// host stdin
 	go func() {
 		if _, err := io.Copy(conn, c.stdin); err != nil {
 			fmt.Fprintf(c.stderr, "run send: %v\n", err)
@@ -338,10 +340,20 @@ func (c *cmd) run() error {
 	}()
 
 	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
-	mw := io.MultiWriter(c.stdout, &c.config.Output)
-	if n, err := io.Copy(mw, conn); err != nil {
-		fmt.Fprintf(c.stderr, "run dump: %v, n = %v\n", err, n)
-		return fmt.Errorf("run dump: %v", err)
+	combinedOUt := io.MultiWriter(c.stdout, &c.config.Output)
+
+	// prepare command execution on the server
+	if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
+		netcat.FLogf(c.config, c.stderr, "executing command %q\n", c.config.CommandExec.Command)
+		if err := c.config.CommandExec.Execute(conn, io.MultiWriter(conn, combinedOUt), c.stderr); err != nil {
+			fmt.Fprintf(c.stderr, "run command: %v\n", err)
+			return fmt.Errorf("run command: %v", err)
+		}
+	} else {
+		if n, err := io.Copy(combinedOUt, conn); err != nil {
+			fmt.Fprintf(c.stderr, "run dump: %v, n = %v\n", err, n)
+			return fmt.Errorf("run dump: %v", err)
+		}
 	}
 
 	netcat.Logf(c.config, "disconnected\n")
