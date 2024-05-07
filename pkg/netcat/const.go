@@ -13,6 +13,9 @@ const (
 	DEFAULT_CONNECTION_MAX  = 100
 	DEFAULT_SSL_SUITE_STR   = "ALL:!aNULL:!eNULL:!LOW:!EXP:!RC4:!MD5:@STRENGTH"
 	DEFAULT_SHELL           = "/bin/sh"
+	DEFAULT_UNIX_SOCKET     = "/tmp/netcat.sock"
+	DEFAULT_IPV4_ADDRESS    = "0.0.0.0"
+	DEFAULT_IPV6_ADDRESS    = "[::]"
 )
 
 var (

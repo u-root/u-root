@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type NetcatIPType int
@@ -49,7 +50,7 @@ func (s NetcatSocketType) String() string {
 		"vsock",
 		"sctp",
 		"udp-vsock",
-		"udp-unix",
+		"unixgram",
 		"none",
 	}[s]
 }
@@ -79,7 +80,12 @@ func (s NetcatSocketType) ToGoType(i NetcatIPType) (string, error) {
 			return "udp", nil
 		}
 	}
-	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type")
+
+	if s == SOCKET_TYPE_UNIX {
+		return "unix", nil
+	}
+
+	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type (%v)", s)
 }
 
 // TODO: should we do this via enabled or can we just pass nil?
@@ -423,9 +429,9 @@ type NetcatListenModeOptions struct {
 }
 
 type NetcatTimingOptions struct {
-	Delay   uint // Delay interval for lines sent
-	Timeout uint // If the idle timeout is reached, the connection is terminated.
-	Wait    uint // Fixed timeout for connection attempts.
+	Delay   time.Duration // Delay interval for lines sent
+	Timeout time.Duration // If the idle timeout is reached, the connection is terminated.
+	Wait    time.Duration // Fixed timeout for connection attempts.
 }
 
 type NetcatOutputOptions struct {
@@ -510,13 +516,24 @@ type NetcatConfig struct {
 	ZeroIo                bool
 }
 
+// Return a default address for the provided configuration
 func (n *NetcatConfig) Address() string {
 	var address string
-	switch n.ProtocolOptions.IPType {
-	case IP_V4:
-		address = "0.0.0.0"
-	case IP_V6:
-		address = "[::]"
+
+	fmt.Printf("%+v\n", n.ProtocolOptions.SocketType)
+	switch n.ProtocolOptions.SocketType {
+	case SOCKET_TYPE_TCP | SOCKET_TYPE_UDP:
+		switch n.ProtocolOptions.IPType {
+		case IP_V4:
+			address = DEFAULT_IPV4_ADDRESS
+		case IP_V6:
+			address = DEFAULT_IPV6_ADDRESS
+		}
+	case SOCKET_TYPE_UNIX:
+		return DEFAULT_UNIX_SOCKET
+	default:
+		Logf(n, "Invalid socket type %v", n.ProtocolOptions.SocketType)
+		return ""
 	}
 
 	return address + ":" + strconv.FormatUint(uint64(n.Port), 10)

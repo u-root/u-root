@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"crypto/tls"
 
@@ -28,6 +29,9 @@ var (
 	listenModeOpts      netcat.NetcatListenModeOptions
 	proxyConfig         netcat.NetcatProxyOptions
 	ssl                 netcat.NetcatSSLOptions
+	timingDelay         string
+	timingTimeout       string
+	timingWait          string
 	ipv4                bool
 	ipv6                bool
 	unixSocket          bool
@@ -71,13 +75,13 @@ func init() {
 	flag.UintVar(&looseSourcePointer, "G", 4, "Loose source routing hop pointer (<n>)")
 
 	flag.UintVarP(&listenModeOpts.MaxConnections, "max-conns", "m", netcat.DEFAULT_CONNECTION_MAX, "Maximum <n> simultaneous connections")
-	flag.UintVarP(&timingOptions.Delay, "delay", "d", 0, "Wait between read/writes")
+	flag.StringVarP(&timingDelay, "delay", "d", "0ms", "Wait between read/writes")
 
 	flag.StringVarP(&outputOptions.OutFilePath, "output", "o", "", "Dump session data to a file")
 	flag.StringVarP(&outputOptions.OutFileHexPath, "hex-dump", "x", "", "Dump session data as hex to a file")
 	flag.BoolVarP(&outputOptions.AppendOutput, "append-output", "", false, "Append rather than clobber specified output files")
 
-	flag.UintVarP(&timingOptions.Timeout, "idle-timeout", "I", 0, "Idle read/write timeout")
+	flag.StringVarP(&timingWait, "idle-timeout", "I", "0ms", "Idle read/write timeout")
 
 	flag.UintVarP(&sourcePort, "source-port", "p", netcat.DEFAULT_PORT, "Specify source port to use")
 	flag.StringVarP(&sourceAddress, "source", "s", "", "Specify source address to use (doesn't affect -l)")
@@ -92,7 +96,7 @@ func init() {
 	flag.BoolVarP(&udpSocket, "udp", "u", false, "Use UDP instead of default TCP")
 	flag.BoolVarP(&sctpSocket, "sctp", "", false, "Use SCTP instead of default TCP")
 
-	flag.UintVarP(&timingOptions.Timeout, "timeout", "w", 0, "Connect timeout")
+	flag.StringVarP(&timingTimeout, "timeout", "w", "0ms", "Connect timeout")
 	flag.BoolVarP(&zeroIo, "", "z", false, "ero-I/O mode, report connection status only")
 
 	flag.BoolVarP(&miscOptions.SendOnly, "send-only", "", false, "Only send data, ignoring received; quit on EOF")
@@ -194,6 +198,22 @@ func evalParams() (netcat.NetcatConfig, error) {
 		return netcat.NetcatConfig{}, err
 	}
 
+	// timing options
+	timingOptions.Delay, err = time.ParseDuration(timingDelay)
+	if err != nil {
+		return netcat.NetcatConfig{}, fmt.Errorf("invalid delay: %v", err)
+	}
+
+	timingOptions.Timeout, err = time.ParseDuration(timingTimeout)
+	if err != nil {
+		return netcat.NetcatConfig{}, fmt.Errorf("invalid timeout: %v", err)
+	}
+
+	timingOptions.Wait, err = time.ParseDuration(timingWait)
+	if err != nil {
+		return netcat.NetcatConfig{}, fmt.Errorf("invalid wait: %v", err)
+	}
+
 	return netcat.NetcatConfig{
 		ConnectionMode:        conMode,
 		ConnectionModeOptions: conmodeOpts,
@@ -206,6 +226,7 @@ func evalParams() (netcat.NetcatConfig, error) {
 		AccessControl:         accessControl,
 		CommandExec:           exec,
 		ZeroIo:                zeroIo,
+		Timing:                timingOptions,
 	}, nil
 }
 
@@ -240,24 +261,11 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 		c.config.Port = netcat.DEFAULT_PORT
 	}
 
+	// get default address for current config
 	connectHost := c.config.Address()
-	// connectHost := c.config.Hostname
-	// if connectHost == "" {
-	// 	connectHost = c.args[0]
-	// }
-
-	// connectPort := c.config.Port
-	// if connectPort == 0 {
-	// 	connectPort, err := strconv.Atoi(c.args[1])
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("connection: %v", err)
-	// 	}
-	// }
-
-	// connectAddress := connectHost + ":" + connectPort
 
 	switch c.config.ProtocolOptions.SocketType {
-	case netcat.SOCKET_TYPE_TCP, netcat.SOCKET_TYPE_UNIX:
+	case netcat.SOCKET_TYPE_TCP:
 		// Listen Mode
 		if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
 			if c.config.SSLConfig.Enabled {
@@ -289,7 +297,11 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 			if c.config.SSLConfig.Enabled {
 				// TLS
 				tlsConfig := &tls.Config{InsecureSkipVerify: true}
-				return tls.Dial(network, connectHost, tlsConfig)
+				conn, err := tls.Dial(network, connectHost, tlsConfig)
+				if err != nil {
+					return nil, fmt.Errorf("connection: %w", err)
+				}
+				conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
 			} else {
 				// No TLS
 				return net.Dial(network, connectHost)
@@ -309,6 +321,31 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 			return net.DialUDP(network, nil, udpAddr)
 		}
 
+	// TODO: TLS and Unix domain sockets are not supported
+	// For now, just ignore it
+	case netcat.SOCKET_TYPE_UNIX:
+		// Listen Mode
+		var address string
+		if len(c.args) == 1 {
+			address = c.args[0]
+		} else {
+			address = c.config.Address()
+		}
+		netcat.Logf(c.config, "unix: address = %q\n", address)
+
+		if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
+			listen, err := net.Listen(network, address)
+			if err != nil {
+				return nil, err
+			}
+			netcat.FLogf(c.config, c.stderr, "Listening on %v\n", listen.Addr())
+			return listen.Accept()
+		} else {
+			// Connection Mode
+			netcat.FLogf(c.config, c.stderr, "Connecting to %v\n", address)
+			return net.Dial(network, address)
+		}
+
 	// unsupported socket types
 	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_UDP_UNIX:
 		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
@@ -325,8 +362,20 @@ func (c *cmd) run() error {
 	// These modes will automatically be handled by the io.ReadWriter returned by the connection function
 	// TODO: implement that for Netcat new? Can we handle all the tls/proxy stuff in the connection function?
 	c.config.Output.Verbose = true
+	c.config.ProtocolOptions.IPType = netcat.IP_V4
+	c.config.Output.OutFileHexPath = "out.hex"
+	c.config.CommandExec.Type = netcat.EXEC_TYPE_NONE
+	c.config.ProtocolOptions.SocketType = netcat.SOCKET_TYPE_UNIX
+	// c.config.CommandExec = netcat.NetcatExec{
+	// 	Command: "echo hello",
+	// 	Type:    netcat.EXEC_TYPE_SHELL,
+	// }
+	// c.config.SSLConfig.Enabled = true
+	// c.config.SSLConfig.CertFilePath = "server.crt"
+	// c.config.SSLConfig.KeyFilePath = "server.key"
 
 	conn, err := c.connection()
+	fmt.Print("conn = ", conn, " err = ", err, "\n")
 	if err != nil {
 		return fmt.Errorf("run: %v", err)
 	}
