@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestTailReadBackwards(t *testing.T) {
@@ -81,7 +82,7 @@ func TestTailRun(t *testing.T) {
 	}
 
 	var b bytes.Buffer
-	err = run(os.Stdin, &b, false, 10, []string{f.Name()})
+	err = run(os.Stdin, &b, false, 10, time.Second, []string{f.Name()})
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,19 +91,70 @@ func TestTailRun(t *testing.T) {
 		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
 	}
 
-	err = run(nil, nil, false, 10, []string{"a", "b"})
+	err = run(nil, nil, false, 10, time.Second, []string{"a", "b"})
 	if err == nil {
 		t.Error("tail should return an error if more than one file specified")
 	}
 
 	b.Truncate(0)
-	err = run(f, &b, false, -1, nil)
+	err = run(f, &b, false, -1, time.Second, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	if b.String() != "c\n" {
 		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
+	}
+}
+
+type syncWriter struct {
+	ch chan []byte
+}
+
+func (sw *syncWriter) Write(b []byte) (int, error) {
+	// ignore writes with len zero
+	if len(b) == 0 {
+		return 0, nil
+	}
+	sw.ch <- b
+	return len(b), nil
+}
+
+func TestTailFollow(t *testing.T) {
+	dir := t.TempDir()
+	f, err := os.CreateTemp(dir, "follow")
+	if err != nil {
+		t.Fatalf("can't create temp file: %v", err)
+	}
+	defer f.Close()
+
+	sw := &syncWriter{
+		ch: make(chan []byte),
+	}
+
+	go func() {
+		run(f, sw, true, 10, 100*time.Millisecond, nil)
+	}()
+	ff, err := os.OpenFile(f.Name(), os.O_RDWR, 0644)
+	if err != nil {
+		t.Fatalf("can't open temp file: %v", err)
+	}
+
+	// wait a bit before writting to file
+	time.Sleep(300 * time.Millisecond)
+
+	firstLine := []byte("hello\n")
+
+	_, err = ff.Write(firstLine)
+	if err != nil {
+		t.Fatalf("can't write to file: %v", err)
+	}
+
+	ff.Sync()
+
+	r1 := <-sw.ch
+	if !bytes.Equal(r1, firstLine) {
+		t.Fatalf("expected %q, got %q", string(firstLine), string(r1))
 	}
 }
 
