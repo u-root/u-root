@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo && !plan9
+// +build !tinygo,!plan9
+
 package main
 
 import (
@@ -148,7 +151,6 @@ func main() {
 
 	if len(argv) < 2 {
 		log.Fatal(usage)
-		os.Exit(1)
 	}
 
 	if err := run(os.Stdout, argv[1:]); err != nil {

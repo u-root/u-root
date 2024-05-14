@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo && !plan9
+// +build !tinygo,!plan9
+
 package brctl
 
 import (
@@ -31,7 +34,7 @@ type ifreqptr struct {
 // Feel free to add more fields if needed.
 type BridgeInfo struct {
 	Name       string
-	BridgeId   string
+	BridgeID   string
 	StpState   bool
 	Interfaces []string
 }
@@ -55,7 +58,7 @@ func getIfreqOption(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
 func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	local_bytes := append([]byte(raw), 0)
 	err_int, _, err_str := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
-	return int(err_int), fmt.Errorf("%s", err_str)
+	return int(err_int), fmt.Errorf("syscall.Syscall: %s", err_str)
 }
 
 func ioctl(fd int, req uint, addr uintptr) (int, error) {
@@ -203,21 +206,21 @@ func Addbr(name string) error {
 func Delbr(name string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
 	if _, err := executeIoctlStr(brctl_socket, unix.SIOCBRDELBR, name); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("executeIoctlStr: %w", err)
 	}
 
 	name_bytes, err := unix.ByteSliceFromString(name)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.ByteSliceFromString: %w", err)
 	}
 
 	args := []int64{int64(BRCTL_DEL_BRIDGE), int64(uintptr(unsafe.Pointer(&name_bytes))), 0, 0}
 	if _, err := ioctl(brctl_socket, unix.SIOCSIFBR, uintptr(unsafe.Pointer(&args))); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("ioctl: %w", err)
 	}
 
 	return nil
@@ -323,7 +326,7 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 
 	return BridgeInfo{
 		Name:       name,
-		BridgeId:   strings.TrimSuffix(string(bridge_id), "\n"),
+		BridgeID:   strings.TrimSuffix(string(bridge_id), "\n"),
 		StpState:   stp_enabled_bool,
 		Interfaces: interfaces,
 	}, nil
@@ -342,7 +345,7 @@ func showBridge(name string, out io.Writer) {
 		ifaceString += iface + " "
 	}
 
-	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeId, info.StpState, ifaceString)
+	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeID, info.StpState, ifaceString)
 }
 
 // The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
