@@ -86,7 +86,7 @@ var test_fd = []struct {
 func interfacesExist(ifs []string) error {
 	for _, iface := range ifs {
 		if _, err := net.InterfaceByName(iface); err != nil {
-			return err
+			return fmt.Errorf("interfacesExist: %w", err)
 		}
 	}
 	return nil
@@ -98,14 +98,14 @@ func interfacesExist(ifs []string) error {
 func clearEnv() error {
 	// Check if interfaces exist
 	if err := interfacesExist(BRCTL_TEST_IFACES); err != nil {
-		return fmt.Errorf("interfacesExist(%v) = %v, want nil", BRCTL_TEST_IFACES, err)
+		return fmt.Errorf("clearEnv(%v): %w", BRCTL_TEST_IFACES, err)
 	}
 
 	// Remove all bridges
 	for _, bridge := range BRCTL_TEST_BRIDGES {
 		err := Delbr(bridge)
 		if err != nil {
-			return fmt.Errorf("Delbr(%q) = %v, want nil", bridge, err)
+			return fmt.Errorf("Delbr(%q):  %w", bridge, err)
 		}
 	}
 
