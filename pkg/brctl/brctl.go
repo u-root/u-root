@@ -14,6 +14,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"syscall"
@@ -130,6 +131,22 @@ func getBridgePort(bridge string, port string, name string) (string, error) {
 	return string(out), nil
 }
 
+// since the sixe of timeval struct members differs between 32 and 64 bit systems, we have to convert
+// them depending on the system
+// use reflection to cast the timeval struct to the correct size
+func newTimeval(sec int, usec int) (unix.Timeval, error) {
+	// get type of timeval.Sec and timeval.Usec member
+	sec_type := reflect.TypeOf(unix.Timeval{}.Sec)
+	usec_type := reflect.TypeOf(unix.Timeval{}.Usec)
+
+	// cast the values to the correct type
+	tv := unix.Timeval{}
+	tv.Sec = reflect.ValueOf(sec).Convert(sec_type).Int()
+	tv.Usec = reflect.ValueOf(usec).Convert(usec_type).Int()
+
+	return tv, nil
+}
+
 /*
 Helper functions that convert seconds to jiffies and vice versa.
 https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html
@@ -145,10 +162,11 @@ func stringToTimeval(in string) (unix.Timeval, error) {
 		return unix.Timeval{}, fmt.Errorf("invalid time value")
 	}
 
-	return unix.Timeval{
-		Sec:  int64(modf_int),
-		Usec: int64(modf_frac * 1000000),
-	}, nil
+	tv, err := newTimeval(int(modf_frac), int(modf_frac*1000000))
+	if err != nil {
+		return unix.Timeval{}, fmt.Errorf("newTimeval: %v", err)
+	}
+	return tv, nil
 }
 
 // Linux kernel jiffies https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec2.html
@@ -158,10 +176,11 @@ func timevalToJiffies(tv unix.Timeval, hz int) int {
 }
 
 func jiffiesToTimeval(jiffies int, hz int) unix.Timeval {
-	return unix.Timeval{
-		Sec:  int64(jiffies / hz),
-		Usec: int64(jiffies % hz * 1000000 / hz),
+	tv, err := newTimeval(jiffies/hz, jiffies%hz*1000000/hz)
+	if err != nil {
+		log.Fatalf("jiffiesToTimeval: %v", err)
 	}
+	return tv
 }
 
 func stringToJiffies(in string) (int, error) {
