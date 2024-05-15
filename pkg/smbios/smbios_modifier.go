@@ -96,7 +96,7 @@ func ReplaceSystemInfo(manufacturer, productName, version, serialNumber, sku, fa
 }
 
 // ReplaceBaseboardInfoMotherboard returns override options that only overrides table with Type = BaseboardInfo and BoardType = BoardTypeMotherboardIncludesProcessorMemoryAndIO
-func ReplaceBaseboardInfoMotherboard(assetTag *string) OverrideOpt {
+func ReplaceBaseboardInfoMotherboard(manufacturer, product, version, serialNumber, assetTag, locationInChassis *string, boardFeatures *BoardFeatures, chassisHandle *uint16, boardType *BoardType, containedObjectHandles *[]uint16) OverrideOpt {
 	return func(tables []*Table) ([]*Table, error) {
 		var result []*Table
 		for _, t := range tables {
@@ -115,8 +115,36 @@ func ReplaceBaseboardInfoMotherboard(assetTag *string) OverrideOpt {
 			}
 
 			// replace it
+			if manufacturer != nil {
+				bi.Manufacturer = *manufacturer
+			}
+			if product != nil {
+				bi.Product = *product
+			}
+			if version != nil {
+				bi.Version = *version
+			}
+			if serialNumber != nil {
+				bi.SerialNumber = *serialNumber
+			}
 			if assetTag != nil {
 				bi.AssetTag = *assetTag
+			}
+			if locationInChassis != nil {
+				bi.LocationInChassis = *locationInChassis
+			}
+			if boardFeatures != nil {
+				bi.BoardFeatures = *boardFeatures
+			}
+			if chassisHandle != nil {
+				bi.ChassisHandle = *chassisHandle
+			}
+			if boardType != nil {
+				bi.BoardType = *boardType
+			}
+			if containedObjectHandles != nil {
+				bi.NumberOfContainedObjectHandles = uint8(len(*containedObjectHandles))
+				bi.ContainedObjectHandles = *containedObjectHandles
 			}
 			biT, err := bi.toTable()
 			if err != nil {

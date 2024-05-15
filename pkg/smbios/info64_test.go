@@ -146,7 +146,7 @@ func Test64Marshal(t *testing.T) {
 	newTag := "new-tag"
 	newType2 := type2Table(newTag)
 	newType2Raw := getRawT(t, newType2)
-	baseboardOpt := ReplaceBaseboardInfoMotherboard(&newTag)
+	baseboardOpt := ReplaceBaseboardInfoMotherboard(nil, nil, nil, nil, &newTag, nil, nil, nil, nil, nil)
 
 	longStr := "a-very-loooooooooooooooooooooooooooooooooooong-string"
 	longType1 := type1Table(longStr)
