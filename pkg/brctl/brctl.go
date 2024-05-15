@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !tinygo && !plan9
-// +build !tinygo,!plan9
-
 package brctl
 
 import (
@@ -12,201 +9,22 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
-	"syscall"
 	"unsafe"
 
-	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
 )
 
-// Helper for issuing raw ioctl with a pointer value
-type ifreqptr struct {
-	Ifrn [16]byte
-	ptr  unsafe.Pointer
-}
-
-// BridgeInfo contains information about a bridge
-// This information is not exhaustive, only the most important fields are included
-// Feel free to add more fields if needed.
-type BridgeInfo struct {
-	Name       string
-	BridgeID   string
-	StpState   bool
-	Interfaces []string
-}
-
-func sysconfhz() (int, error) {
-	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	if err != nil {
-		return 0, fmt.Errorf("%w", err)
-	}
-	return int(clktck), nil
-}
-
-func getIfreqOption(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
-	i := ifreqptr{ptr: ptr}
-	copy(i.Ifrn[:], ifreq.Name())
-	return i
-}
-
-// ioctl helpers
-// TODO: maybe use ifreq.withData for this?
-func executeIoctlStr(fd int, req uint, raw string) (int, error) {
-	local_bytes := append([]byte(raw), 0)
-	err_int, _, err_str := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
-	return int(err_int), fmt.Errorf("syscall.Syscall: %s", err_str)
-}
-
-func ioctl(fd int, req uint, addr uintptr) (int, error) {
-	err_int, _, err_str := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), addr)
-	return int(err_int), fmt.Errorf("%s", err_str)
-}
-
-// https://github.com/WireGuard/wireguard-go/blob/master/tun/tun_linux.go#L217
-func getIndexFromInterfaceName(ifname string) (int, error) {
-	ifreq, err := unix.NewIfreq(ifname)
-	if err != nil {
-		return 0, fmt.Errorf("%w", err)
-	}
-
-	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
-	if err != nil {
-		return 0, fmt.Errorf("%w", err)
-	}
-
-	err = unix.IoctlIfreq(brctl_socket, unix.SIOCGIFINDEX, ifreq)
-	if err != nil {
-		return 0, fmt.Errorf("%w %s", err, ifname)
-	}
-
-	ifr_ifindex := ifreq.Uint32()
-	if ifr_ifindex == 0 {
-		return 0, fmt.Errorf("interface %s not found", ifname)
-	}
-
-	return int(ifr_ifindex), nil
-}
-
-// set values for the bridge
-// 1. Try to set the config options using the sysfs` bridge directory
-// 2. Else use the ioctl interface
-// TODO: hide this behind an interface and check in beforehand which to use
-func setBridgeValue(bridge string, name string, value uint64, ioctlcode uint64) error {
-	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
-	if err != nil {
-		log.Printf("br_set_val: %v", err)
-		// TODO: 2. Use ioctl as fallback
-		return nil
-	}
-	return nil
-}
-
-func getBridgeValue(bridge string, name string) (string, error) {
-	out, err := os.ReadFile(BRCTL_SYS_NET + bridge + "/bridge/" + name)
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
-}
-
-func setBridgePort(bridge string, port string, name string, value uint64, ioctlcode uint64) error {
-	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
-	if err != nil {
-		log.Printf("br_set_port: %v", err)
-		return nil
-	}
-	return nil
-}
-
-func getBridgePort(bridge string, port string, name string) (string, error) {
-	out, err := os.ReadFile(BRCTL_SYS_NET + port + "/brport/" + bridge + "/" + name)
-	if err != nil {
-		return "", err
-	}
-	return string(out), nil
-}
-
-// since the sixe of timeval struct members differs between 32 and 64 bit systems, we have to convert
-// them depending on the system
-// use reflection to cast the timeval struct to the correct size
-func newTimeval(sec int, usec int) (unix.Timeval, error) {
-	// get type of timeval.Sec and timeval.Usec member
-	sec_type := reflect.TypeOf(unix.Timeval{}.Sec)
-	usec_type := reflect.TypeOf(unix.Timeval{}.Usec)
-
-	// cast the values to the correct type
-	tv := unix.Timeval{}
-	tv.Sec = reflect.ValueOf(sec).Convert(sec_type).Int()
-	tv.Usec = reflect.ValueOf(usec).Convert(usec_type).Int()
-
-	return tv, nil
-}
-
-/*
-Helper functions that convert seconds to jiffies and vice versa.
-https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html
-*/
-func stringToTimeval(in string) (unix.Timeval, error) {
-	time, err := strconv.ParseFloat(in, 64)
-	if err != nil {
-		return unix.Timeval{}, fmt.Errorf("%w", err)
-	}
-
-	modf_int, modf_frac := math.Modf(time)
-	if math.IsInf(modf_int, 0) || math.IsNaN(modf_int) {
-		return unix.Timeval{}, fmt.Errorf("invalid time value")
-	}
-
-	tv, err := newTimeval(int(modf_frac), int(modf_frac*1000000))
-	if err != nil {
-		return unix.Timeval{}, fmt.Errorf("newTimeval: %v", err)
-	}
-	return tv, nil
-}
-
-// Linux kernel jiffies https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec2.html
-func timevalToJiffies(tv unix.Timeval, hz int) int {
-	// fmt.Fprintf(out, "hz*sec = %v, usec = %v, final = %v\n", int(tv.Sec)*hz, int(tv.Usec)/100000*hz/100, int(tv.Sec)*hz+int(tv.Usec)/10000*hz/100)
-	return int((int(tv.Sec) * hz) + (int(tv.Usec)*hz)/1000000)
-}
-
-func jiffiesToTimeval(jiffies int, hz int) unix.Timeval {
-	tv, err := newTimeval(jiffies/hz, jiffies%hz*1000000/hz)
-	if err != nil {
-		log.Fatalf("jiffiesToTimeval: %v", err)
-	}
-	return tv
-}
-
-func stringToJiffies(in string) (int, error) {
-	hz, err := sysconfhz()
-	if err != nil {
-		return 0, fmt.Errorf("%w", err)
-	}
-	tv, err := stringToTimeval(in)
-	if err != nil {
-		return 0, fmt.Errorf("%w", err)
-	}
-
-	return timevalToJiffies(tv, hz), nil
-}
-
-// subcommands
-// https://github.com/slackhq/nebula/blob/8822f1366c1111feb2f64fef229eed2024512104/overlay/tun_linux.go#L222
-// can this also be done using IoctlIfreq?
 func Addbr(name string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
 	if _, err := executeIoctlStr(brctl_socket, unix.SIOCBRADDBR, name); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("executeIoctlStr: %w", err)
 	}
 
 	name_bytes, err := unix.ByteSliceFromString(name)
@@ -216,7 +34,7 @@ func Addbr(name string) error {
 
 	args := []int64{int64(BRCTL_ADD_I), int64(uintptr(unsafe.Pointer(&name_bytes))), 0, 0}
 	if _, err := ioctl(brctl_socket, unix.SIOCSIFBR, uintptr(unsafe.Pointer(&args))); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("ioctl: %w", err)
 	}
 
 	return nil
@@ -245,28 +63,28 @@ func Delbr(name string) error {
 	return nil
 }
 
-// create dummy device for testing: `sudo ip link add eth10 type dummy`
+// Create dummy device for testing: `sudo ip link add eth10 type dummy`
 func Addif(name string, iface string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
 	ifr, err := unix.NewIfreq(name)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.NewIfreq: %w", err)
 	}
 
 	if_index, err := getIndexFromInterfaceName(iface)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("getIndexFromInterfaceName: %w", err)
 	}
 	ifr.SetUint32(uint32(if_index))
 
 	//SIOCBRADDIF
 	//SIOCGIFINDEX
 	if err := unix.IoctlIfreq(brctl_socket, unix.SIOCBRADDIF, ifr); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.IoctlIfreq: %w", err)
 	}
 
 	// prepare args for ifr
@@ -276,31 +94,32 @@ func Addif(name string, iface string) error {
 	ifrd := getIfreqOption(ifr, unsafe.Pointer(&args[0]))
 
 	if _, err = ioctl(brctl_socket, unix.SIOCDEVPRIVATE, uintptr(unsafe.Pointer(&ifrd))); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("ioctl: %w", err)
 	}
 
 	return nil
 }
 
+// Create dummy device for testing: `sudo ip link add eth10 type dummy`
 func Delif(name string, iface string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
 	ifr, err := unix.NewIfreq(name)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.NewIfreq: %w", err)
 	}
 
 	if_index, err := getIndexFromInterfaceName(iface)
 	if err != nil || if_index == 0 {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("getIndexFromInterfaceName: %w", err)
 	}
 	ifr.SetUint32(uint32(if_index))
 
 	if err := unix.IoctlIfreq(brctl_socket, unix.SIOCBRDELIF, ifr); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("unix.IoctlIfreq: %w", err)
 	}
 
 	// set args
@@ -308,7 +127,7 @@ func Delif(name string, iface string) error {
 	ifrd := getIfreqOption(ifr, unsafe.Pointer(&args[0]))
 
 	if _, err = ioctl(brctl_socket, unix.SIOCDEVPRIVATE, uintptr(unsafe.Pointer(&ifrd))); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("ioctl: %w", err)
 	}
 	return nil
 }
@@ -319,23 +138,23 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 	base_path := BRCTL_SYS_NET + name + "/bridge/"
 	bridge_id, err := os.ReadFile(base_path + "bridge_id")
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("%w", err)
+		return BridgeInfo{}, fmt.Errorf("os.ReadFile: %w", err)
 	}
 
 	stp_enabled, err := os.ReadFile(base_path + "stp_state")
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("%w", err)
+		return BridgeInfo{}, fmt.Errorf("os.ReadFile: %w", err)
 	}
 
 	stp_enabled_bool, err := strconv.ParseBool(strings.TrimSuffix(string(stp_enabled), "\n"))
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("%w", err)
+		return BridgeInfo{}, fmt.Errorf("strconv.ParseBool: %w", err)
 	}
 
 	// get interfaceDir from sysfs
 	interfaceDir, err := os.ReadDir(BRCTL_SYS_NET + name + "/brif/")
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("%w", err)
+		return BridgeInfo{}, fmt.Errorf("os.ReadDir: %w", err)
 	}
 
 	interfaces := []string{}

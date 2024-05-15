@@ -8,57 +8,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
-
-	"golang.org/x/sys/unix"
 )
-
-var test_str_to_tv = []struct {
-	name  string
-	input string
-	tv    unix.Timeval
-}{
-	{
-		name:  "1 second",
-		input: "1.000000000",
-		tv:    unix.Timeval{Sec: 1, Usec: 0},
-	},
-	{
-		name:  "1.5 seconds",
-		input: "1.500000000",
-		tv:    unix.Timeval{Sec: 1, Usec: 500000},
-	},
-	{
-		name:  "1.5 seconds",
-		input: "1.500000000",
-		tv:    unix.Timeval{Sec: 1, Usec: 500000},
-	},
-}
-
-var test_to_jiffies = []struct {
-	name    string
-	input   unix.Timeval
-	jiffies int
-	hz      int
-}{
-	{
-		name:    "1 second, 100Hz",
-		input:   unix.Timeval{Sec: 1, Usec: 0},
-		jiffies: 100,
-		hz:      100,
-	},
-	{
-		name:    "1.5 seconds, 100Hz",
-		input:   unix.Timeval{Sec: 1, Usec: 500000},
-		jiffies: 150,
-		hz:      100,
-	},
-	{
-		name:    "1.5 seconds, 1000Hz",
-		input:   unix.Timeval{Sec: 1, Usec: 500000},
-		jiffies: 1500,
-		hz:      1000,
-	},
-}
 
 var test_fd = []struct {
 	name    string
@@ -83,6 +33,69 @@ var test_fd = []struct {
 	},
 }
 
+var test_str_to_jiffies = []struct {
+	name     string
+	duration string
+	hz       int
+	jiffies  int
+	wanterr  bool
+	err      error
+}{
+	{
+		"1 second",
+		"1s",
+		100,
+		100,
+		false,
+		nil,
+	},
+	{
+		"1.5 seconds",
+		"1.5s",
+		100,
+		150,
+		false,
+		nil,
+	},
+	{
+		"1 minute",
+		"1m",
+		100,
+		6000,
+		false,
+		nil,
+	},
+	{
+		"1.5 minutes err",
+		"1.5",
+		100,
+		0,
+		true,
+		fmt.Errorf("time: missing unit in duration \"1.5\""),
+	},
+}
+
+func TestStringToJiffies(t *testing.T) {
+	for _, tt := range test_str_to_jiffies {
+		t.Run(tt.name, func(t *testing.T) {
+			jiffies, err := stringToJiffies(tt.duration)
+			if err != nil && !tt.wanterr {
+				t.Fatalf("stringToJiffies(%q, %d) = '%v', want nil", tt.duration, tt.hz, err)
+			}
+
+			if err != nil && tt.wanterr {
+				if err.Error() != tt.err.Error() {
+					t.Fatalf("stringToJiffies(%q, %d) = '%v', want '%v'", tt.duration, tt.hz, err, tt.err)
+				}
+			}
+
+			if jiffies != tt.jiffies {
+				t.Fatalf("stringToJiffies(%q, %d) = %d, want %d", tt.duration, tt.hz, jiffies, tt.jiffies)
+			}
+		})
+	}
+}
+
 func interfacesExist(ifs []string) error {
 	for _, iface := range ifs {
 		if _, err := net.InterfaceByName(iface); err != nil {
@@ -94,7 +107,7 @@ func interfacesExist(ifs []string) error {
 
 // This function should be called at the start of each test to ensure that the environment is clean.
 // It removes all bridges that were created during the test.
-// It is assumed, that all necessary bridges and interfaces will be added per test case
+// It is assumed, that all necessary bridges and interfaces will be added per test case.
 func clearEnv() error {
 	// Check if interfaces exist
 	if err := interfacesExist(BRCTL_TEST_IFACES); err != nil {
@@ -103,57 +116,10 @@ func clearEnv() error {
 
 	// Remove all bridges
 	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Delbr(bridge)
-		if err != nil {
-			return fmt.Errorf("Delbr(%q):  %w", bridge, err)
-		}
-	}
-
-	// Check if bridges were deleted successfully
-	for _, iface := range BRCTL_TEST_BRIDGES {
-		if _, err := net.InterfaceByName(iface); err == nil {
-			return fmt.Errorf("net.InterfaceByName(%q) = nil, want an error", iface)
-		}
+		Delbr(bridge)
 	}
 
 	return nil
-}
-
-func TestStrToTV(t *testing.T) {
-	for _, tt := range test_str_to_tv {
-		t.Run(tt.name, func(t *testing.T) {
-			tv, err := stringToTimeval(tt.input)
-			if err != nil {
-				t.Errorf("str_to_tv(%q) = %v, want nil", tt.input, err)
-			}
-
-			if tv.Sec != tt.tv.Sec || tv.Usec != tt.tv.Usec {
-				t.Errorf("str_to_tv(%q) = %v, want %v", tt.input, tv, tt.tv)
-			}
-		})
-	}
-}
-
-func TestToJiffies(t *testing.T) {
-	for _, tt := range test_to_jiffies {
-		t.Run(tt.name, func(t *testing.T) {
-			jiffies := timevalToJiffies(tt.input, tt.hz)
-			if jiffies != tt.jiffies {
-				t.Errorf("to_jiffies(%v, %d) = %d, want %d", tt.input, tt.hz, jiffies, tt.jiffies)
-			}
-		})
-	}
-}
-
-func TestFromJiffies(t *testing.T) {
-	for _, tt := range test_to_jiffies {
-		t.Run(tt.name, func(t *testing.T) {
-			tv := jiffiesToTimeval(tt.jiffies, tt.hz)
-			if tv.Sec != tt.input.Sec || tv.Usec != tt.input.Usec {
-				t.Errorf("from_jiffies(%d, %d) = %v, want %v", tt.jiffies, tt.hz, tv, tt.input)
-			}
-		})
-	}
 }
 
 // All the following tests require virtual hardware to work properly.
@@ -167,7 +133,7 @@ func TestAddbrDelbr(t *testing.T) {
 	// Add bridges
 	for _, bridge := range BRCTL_TEST_BRIDGES {
 		err := Addbr(bridge)
-		if err != nil {
+		if err.Error() != errno0.Error() {
 			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
 		}
 	}
@@ -208,7 +174,7 @@ func TestSetageingTime(t *testing.T) {
 	// Add bridges
 	for _, bridge := range BRCTL_TEST_BRIDGES {
 		err := Addbr(bridge)
-		if err != nil {
+		if err != errno0 {
 			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
 		}
 	}

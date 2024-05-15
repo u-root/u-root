@@ -46,6 +46,7 @@ func TestVM(t *testing.T) {
 	// https://elixir.bootlin.com/linux/v6.0/source/net/socket.c#L1136
 	// kernel needs to have the bridge built in
 	// CONFIG_BRIDGE=y
+	// CONFIG_NETLINK=y
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/brctl"),
 		govmtest.WithQEMUFn(
