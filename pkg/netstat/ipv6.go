@@ -19,6 +19,165 @@ type IPv6 struct {
 	*Output
 }
 
+var (
+	ProcNetRoutePath6 = "/proc/net/ipv6_route"
+	//ProcNetRouteCachePath6 = "/proc/net/ndisc"
+)
+
+func (i *IPv6) PrintRoutes(cont bool) error {
+	for {
+		file, err := os.Open(ProcNetRoutePath6)
+		if err != nil {
+			return err
+		}
+
+		s := bufio.NewScanner(file)
+
+		for s.Scan() {
+			r, err := parseRoutev6(s.Text())
+			if err != nil {
+				return err
+			}
+			i.Output.AddRoute6(*r)
+		}
+
+		i.Output.InitRoute6Titel()
+		fmt.Printf("%s\n", i.Output.String())
+		if !cont {
+			break
+		}
+		time.Sleep(time.Second * 5)
+	}
+	return nil
+}
+
+type routev6 struct {
+	Dest         net.IP
+	DestPrefix   uint32
+	Source       net.IP
+	SourcePrefix uint32
+	NextHop      net.IP
+	Metric       uint32
+	RefCnt       uint32
+	Use          uint32
+	Flags        string
+	IFace        string
+}
+
+func parseRoutev6(line string) (*routev6, error) {
+	r := &routev6{}
+	var dest, destprefix, src, srcprefix, nHop string
+	var flag uint32
+
+	_, err := fmt.Sscanf(line, "%s %s %s %s %s %x %x %d %x %s",
+		&dest,
+		&destprefix,
+		&src,
+		&srcprefix,
+		&nHop,
+		&r.Metric,
+		&r.RefCnt,
+		&r.Use,
+		&flag,
+		&r.IFace,
+	)
+	if err != nil {
+		fmt.Printf("%v\n", line)
+		return nil, err
+	}
+
+	destip, err := newIPAddress(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Dest = destip.Address
+
+	d, err := strconv.ParseUint(destprefix, 16, 32)
+	if err != nil {
+		return nil, err
+	}
+	r.DestPrefix = uint32(d)
+
+	srcip, err := newIPAddress(src)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Source = srcip.Address
+
+	d, err = strconv.ParseUint(srcprefix, 16, 32)
+	if err != nil {
+		return nil, err
+	}
+	r.SourcePrefix = uint32(d)
+
+	nHopip, err := newIPAddress(nHop)
+	if err != nil {
+		return nil, err
+	}
+
+	r.NextHop = nHopip.Address
+
+	r.Flags = parseIPv6Flags(flag)
+
+	return r, nil
+}
+
+func parseIPv6Flags(flags uint32) string {
+
+	var s strings.Builder
+	if flags&RTFUP > 0 {
+		s.WriteString("U")
+	}
+
+	if flags&RTFGATEWAY > 0 {
+		s.WriteString("G")
+	}
+
+	if flags&RTFREJECT > 0 {
+		s.WriteString("!")
+	}
+
+	if flags&RTFHOST > 0 {
+		s.WriteString("H")
+	}
+
+	if flags&RTFDEFAULT > 0 {
+		s.WriteString("D")
+	}
+
+	if flags&RTFALLONLINK > 0 {
+		s.WriteString("a")
+	}
+
+	if flags&RTFADDRCONF > 0 {
+		s.WriteString("A")
+	}
+
+	if flags&RTFNONEXTHOP > 0 {
+		s.WriteString("n")
+	}
+
+	if flags&RTFFLOW > 0 {
+		s.WriteString("f")
+	}
+
+	if flags&RTFMODIFIED > 0 {
+		s.WriteString("m")
+	}
+
+	if flags&RTFCACHE > 0 {
+		s.WriteString("C")
+	}
+
+	if flags&RTFEXPIRES > 0 {
+		s.WriteString("e")
+	}
+
+	return s.String()
+}
+
 func (i *IPv6) PrintStatistics() error {
 	snmp6, err := newSNMP6()
 	if err != nil {
