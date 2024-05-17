@@ -15,6 +15,10 @@ import (
 var (
 	interfacesFlag = flag.BoolP("interfaces", "i", false, "display interface table")
 	ifFlag         = flag.StringP("interface", "I", "", "Display interface table for interface <if>")
+	groupsFlag     = flag.BoolP("groups", "g", false, "display multicast group memberships")
+	// AF Flags
+	ipv4Flag = flag.BoolP("4", "4", false, "IPv4 flag. default: true")
+	ipv6Flag = flag.BoolP("6", "6", false, "IPv6 flag. default: false")
 	// Format flags
 	wideFlag      = flag.BoolP("wide", "W", false, "don't truncate IP addresses")
 	numericFlag   = flag.BoolP("numeric", "n", false, "don't resolve names")
@@ -30,6 +34,12 @@ var (
 
 func evalFlags() error {
 	flag.Parse()
+	// Can't use default capability of pflags package, have to determine it like this
+	// to keep same usage as original netstat tool.
+	if !*ipv4Flag && !*ipv6Flag {
+		*ipv4Flag = true
+
+	}
 	// Evaluate numeric flags
 	if *numericFlag {
 		*numHostFlag = true
@@ -64,6 +74,13 @@ func evalFlags() error {
 
 	if *ifFlag != "" {
 		if err := netstat.PrintInterfaceTable(*ifFlag, *continFlag); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
+
+	if *groupsFlag {
+		if err := netstat.PrintMulticastGroups(*ipv4Flag, *ipv6Flag); err != nil {
 			log.Fatal(err)
 		}
 		os.Exit(0)
