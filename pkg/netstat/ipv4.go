@@ -16,6 +16,7 @@ import (
 )
 
 type AddressFamily interface {
+	PrintRoutes(bool) error
 	PrintStatistics() error
 }
 
@@ -28,6 +29,106 @@ func NewAddressFamily(ipv6Flag bool, output *Output) AddressFamily {
 
 type IPv4 struct {
 	*Output
+}
+
+var (
+	ProcNetRoutePath4 = "/proc/net/route"
+)
+
+func (i *IPv4) PrintRoutes(cont bool) error {
+	i.Output.InitRoute4Titel()
+
+	for {
+		file, err := os.Open(ProcNetRoutePath4)
+		if err != nil {
+			return err
+		}
+
+		s := bufio.NewScanner(file)
+
+		// Scan the first line, which contains only title texts
+		s.Scan()
+
+		// All subsequent lines contain routes
+		for s.Scan() {
+			r, err := parseRoutev4(s.Text())
+			if err != nil {
+				return err
+			}
+
+			i.Output.AddRoute4(*r)
+		}
+
+		fmt.Printf("%s\n", i.Output.String())
+		if !cont {
+			break
+		}
+		time.Sleep(time.Second * 5)
+	}
+
+	return nil
+}
+
+type routev4 struct {
+	IFace   string
+	Dest    net.IP
+	Gateway net.IP
+	Flags   string
+	RefCnt  uint32
+	Use     uint32
+	Metric  uint32
+	Mask    net.IP
+	MTU     uint32
+	Window  uint32
+	IRRT    uint32
+}
+
+func parseRoutev4(line string) (*routev4, error) {
+	retr := &routev4{}
+	var dest, gate, mask string
+	var flag uint32
+
+	_, err := fmt.Sscanf(line, "%s %s %s %d %d %d %d %s %d %d %d",
+		&retr.IFace,
+		&dest,
+		&gate,
+		&flag,
+		&retr.RefCnt,
+		&retr.Use,
+		&retr.Metric,
+		&mask,
+		&retr.MTU,
+		&retr.Window,
+		&retr.IRRT,
+	)
+	if err != nil {
+		return nil, nil
+	}
+
+	ip, err := newIPAddress(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	retr.Dest = ip.Address
+
+	ip, err = newIPAddress(gate)
+	if err != nil {
+		return nil, err
+	}
+
+	retr.Gateway = ip.Address
+
+	genmask, err := newIPAddress(mask)
+	if err != nil {
+		return nil, err
+	}
+
+	retr.Mask = genmask.Address
+
+	retr.Flags = convertFlagData(flag)
+
+	return retr, nil
 }
 
 func (i *IPv4) PrintStatistics() error {

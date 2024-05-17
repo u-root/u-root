@@ -13,6 +13,8 @@ import (
 )
 
 var (
+	// Info source flags
+	routeFlag      = flag.BoolP("route", "r", false, "display routing table")
 	interfacesFlag = flag.BoolP("interfaces", "i", false, "display interface table")
 	ifFlag         = flag.StringP("interface", "I", "", "Display interface table for interface <if>")
 	groupsFlag     = flag.BoolP("groups", "g", false, "display multicast group memberships")
@@ -37,6 +39,14 @@ func evalFlags() error {
 	flag.Parse()
 
 	afs := make([]netstat.AddressFamily, 0)
+
+	// Validate info source flags
+	// none or one allowed allowed to be set
+	if !xorFlags(*routeFlag, *interfacesFlag, *groupsFlag, *statsFlag, *ifFlag != "") {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	// Can't use default capability of pflags package, have to determine it like this
 	// to keep same usage as original netstat tool.
 	if !*ipv4Flag && !*ipv6Flag {
@@ -66,6 +76,24 @@ func evalFlags() error {
 	outfmts, err := netstat.NewOutput(outflags)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if *routeFlag {
+		if *ipv4Flag {
+			afs = append(afs, netstat.NewAddressFamily(false, outfmts))
+		}
+
+		if *ipv6Flag {
+			afs = append(afs, netstat.NewAddressFamily(true, outfmts))
+		}
+
+		for _, af := range afs {
+			if err := af.PrintRoutes(*continFlag); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		os.Exit(0)
 	}
 
 	if *interfacesFlag {
@@ -113,4 +141,15 @@ func main() {
 	if err := evalFlags(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func xorFlags(flags ...bool) bool {
+	c := 0
+	for _, flag := range flags {
+		if flag {
+			c++
+		}
+	}
+
+	return c <= 1
 }

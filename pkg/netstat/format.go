@@ -162,3 +162,118 @@ func (o *Output) resolveAddress(addr IPAddress, netmask net.IPMask) string {
 
 	return s.String()
 }
+
+func (o *Output) InitRoute4Titel() {
+	fmt.Fprintf(&o.Builder, "%s\n", "Kernel IP routing table")
+	fmt.Fprintf(&o.Builder, "%-16s %-16s %-16s %-8s %s %-7s %s %s\n",
+		"Destination",
+		"Gateway",
+		"Genmask",
+		"Flags",
+		"MSS",
+		"Window",
+		"irrt",
+		"Iface",
+	)
+}
+
+func (o *Output) AddRoute4(r routev4) {
+	var gw []string
+	var dest string
+	var err error
+
+	if o.NumHosts {
+		dest = r.Dest.String()
+		gw = append(gw, r.Gateway.String())
+	} else {
+		gw, err = net.LookupAddr(r.Gateway.String())
+		if err != nil {
+			gw = append(gw, r.Gateway.String())
+		}
+
+		dest = o.resolveAddress(IPAddress{Address: r.Dest}, net.IPv4Mask(0, 0, 0, 0))
+		if len(dest) < 1 {
+			dest = r.Dest.String()
+		}
+	}
+
+	fmt.Fprintf(&o.Builder, "%-16s %-16s %-16s %-8s %-3v %-7d %4d %s\n",
+		dest,
+		gw[0],
+		r.Mask,
+		r.Flags,
+		r.MTU,
+		r.Window,
+		r.IRRT,
+		r.IFace,
+	)
+}
+
+func (o *Output) InitRoute6Titel() {
+	fmt.Fprintf(&o.Builder, "%s\n", "Kernel IPv6 routing table")
+	fmt.Fprintf(&o.Builder, "%-34s %-32s %-8s %-10s %-8s %-8s %s\n",
+		"Destination",
+		"Next Hop",
+		"Flag",
+		"Met",
+		"Ref",
+		"Use",
+		"If",
+	)
+}
+
+func (o *Output) AddRoute6(r routev6) {
+	var dest, d, nextH []string
+	var err error
+
+	if o.NumHosts {
+		if r.Dest.String() == "::" {
+			d = append(d, "[::]")
+		} else {
+			d = append(d, r.Dest.String())
+		}
+
+		if r.NextHop.String() == "::" {
+			nextH = append(nextH, "[::]")
+		} else {
+			nextH = append(nextH, r.NextHop.String())
+		}
+	} else {
+		dest, err = net.LookupAddr(r.Dest.String())
+		if err != nil {
+			if r.Dest.String() == "::" {
+				dest = append(dest, "[::]")
+			} else {
+				dest = append(dest, r.Dest.String())
+			}
+			d = append(d, fmt.Sprintf("%s/%d", dest[0], r.DestPrefix))
+		} else {
+			d = append(d, fmt.Sprintf("%s/%d", dest[0], r.DestPrefix))
+		}
+
+		nextH, err = net.LookupAddr(r.NextHop.String())
+		if err != nil {
+			if r.NextHop.String() == "::" {
+				nextH = append(nextH, "[::]")
+			} else {
+				nextH = append(nextH, r.NextHop.String())
+			}
+		}
+	}
+
+	metstr := strconv.FormatUint(uint64(r.Metric), 10)
+
+	if r.Metric == 0xFFFFFFFF {
+		metstr = "-1"
+	}
+
+	fmt.Fprintf(&o.Builder, "%-34s %-32s %-8s %-10s %-8d %-8d %s\n",
+		d[0],
+		nextH[0],
+		r.Flags,
+		metstr,
+		r.RefCnt,
+		r.Use,
+		r.IFace,
+	)
+}
