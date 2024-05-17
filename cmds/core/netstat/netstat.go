@@ -16,6 +16,7 @@ var (
 	interfacesFlag = flag.BoolP("interfaces", "i", false, "display interface table")
 	ifFlag         = flag.StringP("interface", "I", "", "Display interface table for interface <if>")
 	groupsFlag     = flag.BoolP("groups", "g", false, "display multicast group memberships")
+	statsFlag      = flag.BoolP("statistics", "s", false, "display networking statistics (like SNMP)")
 	// AF Flags
 	ipv4Flag = flag.BoolP("4", "4", false, "IPv4 flag. default: true")
 	ipv6Flag = flag.BoolP("6", "6", false, "IPv6 flag. default: false")
@@ -34,6 +35,8 @@ var (
 
 func evalFlags() error {
 	flag.Parse()
+
+	afs := make([]netstat.AddressFamily, 0)
 	// Can't use default capability of pflags package, have to determine it like this
 	// to keep same usage as original netstat tool.
 	if !*ipv4Flag && !*ipv6Flag {
@@ -86,8 +89,26 @@ func evalFlags() error {
 		os.Exit(0)
 	}
 
+	if *statsFlag {
+		if *ipv4Flag {
+			afs = append(afs, netstat.NewAddressFamily(false, outfmts))
+		}
+
+		if *ipv6Flag {
+			afs = append(afs, netstat.NewAddressFamily(true, outfmts))
+		}
+
+		for _, af := range afs {
+			if err := af.PrintStatistics(); err != nil {
+				log.Fatal(err)
+			}
+		}
+		os.Exit(0)
+	}
+
 	return nil
 }
+
 func main() {
 	if err := evalFlags(); err != nil {
 		log.Fatal(err)
