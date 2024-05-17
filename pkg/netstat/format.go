@@ -49,6 +49,111 @@ func NewOutput(
 	return ret, nil
 }
 
+func (o *Output) InitIPSocketTitels() {
+	fmt.Fprintf(&o.Builder, "%-6s %-6s %-6s %-35s %-35s %-17s",
+		"Proto",
+		"Recv-Q",
+		"Send-Q",
+		"Local Address",
+		"Foreign Address",
+		"State",
+	)
+
+	if o.Extend {
+		fmt.Fprintf(&o.Builder, "%-9s %-11s", "User", "Inode")
+	}
+
+	if o.ProgNames {
+		fmt.Fprintf(&o.Builder, "%-27s", "PID/Program name")
+	}
+
+	if o.Timer {
+		fmt.Fprintf(&o.Builder, "%-10s", "Timer")
+	}
+
+	fmt.Fprint(&o.Builder, "\n")
+}
+
+func (o *Output) InitUnixSocketTitels() {
+	fmt.Fprintf(&o.Builder, "%s\n", "Active sockets in the UNIX domain")
+	fmt.Fprintf(&o.Builder, "%-8s%-8s%-8s%-10s%-16s%-10s",
+		"Proto",
+		"RefCnt",
+		"Flags",
+		"Type",
+		"State",
+		"I-Node",
+	)
+
+	if o.ProgNames {
+		fmt.Fprintf(&o.Builder, "%-27s", "PID/Program name")
+	}
+
+	fmt.Fprintf(&o.Builder, "%s\n", "Path")
+}
+
+func (o *Output) AddIPSocket(ipsock netSocket) {
+	fmt.Fprintf(&o.Builder, "%-6s %6d %6d %-35s %-35s %-17s",
+		ipsock.Protocol,
+		ipsock.RxQueue,
+		ipsock.TxQueue,
+		o.resolveAddress(ipsock.LocalAddr, net.CIDRMask(6, 8)),   // TODO: Transform in correct representation
+		o.resolveAddress(ipsock.ForeignAddr, net.CIDRMask(6, 8)), // TODO: Transform in correct representation
+		ipsock.State.String(),
+	)
+
+	if o.Extend {
+		if o.NumUsers {
+			fmt.Fprintf(&o.Builder, "%-10d", ipsock.UID)
+		} else {
+			username, err := convertUID(ipsock.UID)
+			if err != nil {
+				fmt.Fprintf(&o.Builder, "%-10d", ipsock.UID)
+			}
+			fmt.Fprintf(&o.Builder, "%-10s", username)
+		}
+		fmt.Fprintf(&o.Builder, "%-11d", ipsock.Inode)
+	}
+
+	if o.ProgNames {
+		name, err := o.getNameFromInode(uint64(ipsock.Inode))
+		if err != nil {
+			fmt.Fprintf(&o.Builder, "%-27v", err)
+		}
+		fmt.Fprintf(&o.Builder, "%-27s", name)
+	}
+
+	if o.Timer {
+		fmt.Fprintf(&o.Builder, "%-15s",
+			o.constructTimer(ipsock.TimerRun,
+				ipsock.TimerLen,
+				ipsock.Retr,
+				ipsock.Timeout))
+	}
+
+	fmt.Fprint(&o.Builder, "\n")
+}
+
+func (o *Output) AddUnixSocket(uSock unixSocket) {
+	fmt.Fprintf(&o.Builder, "%-8s%-8d%-8s%-10s%-16s%-10d",
+		"unix",
+		uSock.RefCnt,
+		parseUnixFlags(uSock.Flags),
+		uSock.Type.String(),
+		uSock.St.parseState(uSock.Flags),
+		uSock.Inode,
+	)
+
+	if o.ProgNames {
+		name, err := o.getNameFromInode(uint64(uSock.Inode))
+		if err != nil {
+			fmt.Fprintf(&o.Builder, "%-27v", err)
+		}
+		fmt.Fprintf(&o.Builder, "%-27s", name)
+	}
+
+	fmt.Fprintf(&o.Builder, "%s\n", uSock.Path)
+}
 
 func convertUID(uid uint32) (string, error) {
 	var s strings.Builder

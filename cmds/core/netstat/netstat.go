@@ -19,10 +19,20 @@ var (
 	ifFlag         = flag.StringP("interface", "I", "", "Display interface table for interface <if>")
 	groupsFlag     = flag.BoolP("groups", "g", false, "display multicast group memberships")
 	statsFlag      = flag.BoolP("statistics", "s", false, "display networking statistics (like SNMP)")
+
+	// Socket flags
+	tcpFlag  = flag.BoolP("tcp", "t", false, "TCP")
+	udpFlag  = flag.BoolP("udp", "u", false, "UDP")
+	udpLFlag = flag.BoolP("udplite", "U", false, "UDPlite")
+	rawFlag  = flag.BoolP("raw", "w", false, "RAW")
+	unixFlag = flag.BoolP("unix", "x", false, "UNIX")
+
 	// AF Flags
 	ipv4Flag = flag.BoolP("4", "4", false, "IPv4 flag. default: true")
 	ipv6Flag = flag.BoolP("6", "6", false, "IPv6 flag. default: false")
+
 	// Format flags
+
 	wideFlag      = flag.BoolP("wide", "W", false, "don't truncate IP addresses")
 	numericFlag   = flag.BoolP("numeric", "n", false, "don't resolve names")
 	numHostFlag   = flag.Bool("numeric-hosts", false, "don't resolve host names")
@@ -33,6 +43,8 @@ var (
 	programsFlag  = flag.BoolP("programs", "p", false, "display PID/Program name for sockets")
 	timersFlag    = flag.BoolP("timers", "o", false, "display timers")
 	continFlag    = flag.BoolP("continuous", "c", false, "continuous listing")
+	listeningFlag = flag.BoolP("listening", "l", false, "display listening server sockets")
+	allFlag       = flag.BoolP("all", "a", false, "display all sockets (default: connected)")
 )
 
 func evalFlags() error {
@@ -53,6 +65,22 @@ func evalFlags() error {
 		*ipv4Flag = true
 
 	}
+
+	// Why do I have to write it like that? It's ugly....MOM!
+	if (*ipv4Flag || *ipv6Flag || *statsFlag) &&
+		!(*tcpFlag || *udpFlag || *udpLFlag || *rawFlag || *unixFlag) {
+		*tcpFlag = true
+		*udpFlag = true
+		*udpLFlag = true
+		*rawFlag = true
+		*unixFlag = true
+	}
+
+	socks, err := evalProtocols(*tcpFlag, *udpFlag, *udpLFlag, *rawFlag, *unixFlag, *ipv4Flag, *ipv6Flag)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Evaluate numeric flags
 	if *numericFlag {
 		*numHostFlag = true
@@ -134,6 +162,12 @@ func evalFlags() error {
 		os.Exit(0)
 	}
 
+	for _, sock := range socks {
+		if err := sock.PrintSockets(*listeningFlag, *allFlag, outfmts); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	return nil
 }
 
@@ -152,4 +186,82 @@ func xorFlags(flags ...bool) bool {
 	}
 
 	return c <= 1
+}
+
+func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket, error) {
+	retProtos := make([]netstat.Socket, 0)
+
+	if tcp && ipv4 {
+		t, err := netstat.NewSocket(netstat.PROT_TCP)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if tcp && ipv6 {
+		t, err := netstat.NewSocket(netstat.PROT_TCP6)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if udp && ipv4 {
+		t, err := netstat.NewSocket(netstat.PROT_UDP)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if udp && ipv6 {
+		t, err := netstat.NewSocket(netstat.PROT_UDP6)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if udpl && ipv4 {
+		t, err := netstat.NewSocket(netstat.PROT_UDPL)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if udpl && ipv6 {
+		t, err := netstat.NewSocket(netstat.PROT_UDPL6)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if raw && ipv4 {
+		t, err := netstat.NewSocket(netstat.PROT_RAW)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if raw && ipv6 {
+		t, err := netstat.NewSocket(netstat.PROT_RAW6)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	if unix {
+		t, err := netstat.NewSocket(netstat.PROT_UNIX)
+		if err != nil {
+			return nil, err
+		}
+		retProtos = append(retProtos, t)
+	}
+
+	return retProtos, nil
 }
