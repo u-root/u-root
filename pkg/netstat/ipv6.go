@@ -19,10 +19,7 @@ type IPv6 struct {
 	*Output
 }
 
-var (
-	ProcNetRoutePath6 = "/proc/net/ipv6_route"
-	//ProcNetRouteCachePath6 = "/proc/net/ndisc"
-)
+var ProcNetRoutePath6 = "/proc/net/ipv6_route"
 
 func (i *IPv6) PrintRoutes(cont, cache bool) error {
 	for {
@@ -31,6 +28,7 @@ func (i *IPv6) PrintRoutes(cont, cache bool) error {
 			return err
 		}
 
+		i.Output.InitRoute6Titel()
 		s := bufio.NewScanner(file)
 
 		for s.Scan() {
@@ -47,7 +45,6 @@ func (i *IPv6) PrintRoutes(cont, cache bool) error {
 			}
 		}
 
-		i.Output.InitRoute6Titel()
 		fmt.Printf("%s\n", i.Output.String())
 		if !cont {
 			break
