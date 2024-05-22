@@ -5,12 +5,296 @@
 package netstat_test
 
 import (
+	"errors"
 	"net"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"github.com/u-root/u-root/pkg/netstat"
 )
+
+func TestOutputNewOutput(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		fmt     netstat.FmtFlags
+		rootreq bool
+		experr  error
+	}{
+		{
+			name:    "SuccessNoProgNames",
+			fmt:     netstat.FmtFlags{},
+			rootreq: false,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessProgNamesRoot",
+			fmt:     netstat.FmtFlags{ProgNames: true},
+			rootreq: true,
+			experr:  nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			if tt.rootreq {
+				guest.SkipIfNotInVM(t)
+			}
+			_, err := netstat.NewOutput(tt.fmt)
+			if !errors.Is(err, tt.experr) {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestOutputInitIPSocketTitel(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		fmt     netstat.FmtFlags
+		rootreq bool
+		experr  error
+	}{
+		{
+			name:    "SuccessAllFlagsFalse",
+			fmt:     netstat.FmtFlags{},
+			rootreq: false,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessProgNameSet",
+			fmt:     netstat.FmtFlags{ProgNames: true},
+			rootreq: true,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessExtendSet",
+			fmt:     netstat.FmtFlags{Extend: true},
+			rootreq: false,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessTimerSet",
+			fmt:     netstat.FmtFlags{Timer: true},
+			rootreq: false,
+			experr:  nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			if tt.rootreq {
+				guest.SkipIfNotInVM(t)
+			}
+
+			out, err := netstat.NewOutput(tt.fmt)
+			if !errors.Is(err, tt.experr) {
+				t.Error(err)
+			}
+
+			out.InitIPSocketTitels()
+
+			if !strings.Contains(out.String(), "Proto") {
+				t.Error("formatted output string does not contain 'Proto'")
+			}
+
+			if !strings.Contains(out.String(), "Recv-Q") {
+				t.Error("formatted output string does not contain 'Recv-Q'")
+			}
+
+			if !strings.Contains(out.String(), "Send-Q") {
+				t.Error("formatted output string does not contain 'Send-Q'")
+			}
+
+			if !strings.Contains(out.String(), "Local Address") {
+				t.Error("formatted output string does not contain 'Local Address'")
+			}
+
+			if !strings.Contains(out.String(), "Foreign Address") {
+				t.Error("formatted output string does not contain 'Foreign Address'")
+			}
+
+			if !strings.Contains(out.String(), "State") {
+				t.Error("formatted output string does not contain 'State'")
+			}
+
+			if tt.fmt.Extend {
+				if !strings.Contains(out.String(), "User") {
+					t.Error("formatted output string does not contain 'User'")
+				}
+
+				if !strings.Contains(out.String(), "Inode") {
+					t.Error("formatted output string does not contain 'Inode'")
+				}
+			}
+
+			if tt.fmt.Timer && !strings.Contains(out.String(), "Timer") {
+				t.Error("formatted output string does not contain 'Timer'")
+			}
+
+			if tt.fmt.ProgNames && !strings.Contains(out.String(), "PID/Program name") {
+				t.Error("formatted output string does not contain 'PID/Program name'")
+			}
+		})
+	}
+}
+
+func TestOutputInitUnixSocketTitels(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		fmt     netstat.FmtFlags
+		rootreq bool
+		expErr  error
+	}{
+		{
+			name:    "SuccessNoFlagsSet",
+			fmt:     netstat.FmtFlags{},
+			rootreq: false,
+			expErr:  nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			if tt.rootreq {
+				guest.SkipIfNotInVM(t)
+			}
+			out, err := netstat.NewOutput(tt.fmt)
+			if err != nil {
+				t.Error(err)
+			}
+
+			out.InitUnixSocketTitels()
+
+			if !strings.Contains(out.String(), "Proto") {
+				t.Error("formatted output string does not contain 'Proto'")
+			}
+
+			if !strings.Contains(out.String(), "RefCnt") {
+				t.Error("formatted output string does not contain 'RefCnt'")
+			}
+
+			if !strings.Contains(out.String(), "Flags") {
+				t.Error("formatted output string does not contain 'Flags'")
+			}
+
+			if !strings.Contains(out.String(), "Type") {
+				t.Error("formatted output string does not contain 'Type'")
+			}
+
+			if !strings.Contains(out.String(), "State") {
+				t.Error("formatted output string does not contain 'State'")
+			}
+
+			if !strings.Contains(out.String(), "I-Node") {
+				t.Error("formatted output string does not contain 'I-Node'")
+			}
+
+			if tt.fmt.ProgNames && !strings.Contains(out.String(), "PID/Program name") {
+				t.Error("formatted output string does not contain 'PID/Program name'")
+			}
+		})
+	}
+}
+
+func TestOutputAddIPSocket(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		fmt     netstat.FmtFlags
+		rootreq bool
+		experr  error
+	}{
+		{
+			name:    "SuccessAllFlagsFalse",
+			fmt:     netstat.FmtFlags{},
+			rootreq: false,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessProgNameSet",
+			fmt:     netstat.FmtFlags{ProgNames: true},
+			rootreq: true,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessExtendSet",
+			fmt:     netstat.FmtFlags{Extend: true},
+			rootreq: false,
+			experr:  nil,
+		},
+		{
+			name:    "SuccessTimerSet",
+			fmt:     netstat.FmtFlags{Timer: true},
+			rootreq: false,
+			experr:  nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			if tt.rootreq {
+				guest.SkipIfNotInVM(t)
+			}
+
+			out, err := netstat.NewOutput(tt.fmt)
+			if !errors.Is(err, tt.experr) {
+				t.Error(err)
+			}
+
+			out.InitIPSocketTitels()
+
+			sock, err := netstat.NewSocket(netstat.PROT_TCP)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if err := sock.PrintSockets(false, false, out); !errors.Is(err, tt.experr) {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestOutputAddUnixSocket(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		fmt     netstat.FmtFlags
+		rootreq bool
+		expErr  error
+	}{
+		{
+			name:    "SuccessNoFlagsSet",
+			fmt:     netstat.FmtFlags{},
+			rootreq: false,
+			expErr:  nil,
+		},
+		{
+			name:    "SuccessProgNameFlagsSet",
+			fmt:     netstat.FmtFlags{ProgNames: true},
+			rootreq: true,
+			expErr:  nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			if tt.rootreq {
+				guest.SkipIfNotInVM(t)
+			}
+			out, err := netstat.NewOutput(tt.fmt)
+			if err != nil {
+				t.Error(err)
+			}
+
+			out.InitUnixSocketTitels()
+
+			sock, err := netstat.NewSocket(netstat.PROT_UNIX)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if err := sock.PrintSockets(false, false, out); !errors.Is(err, tt.expErr) {
+				t.Error(err)
+			}
+		})
+	}
+}
 
 func TestProtocolString(t *testing.T) {
 	tcpProt := netstat.PROT_TCP
