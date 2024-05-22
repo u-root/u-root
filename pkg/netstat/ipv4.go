@@ -12,12 +12,12 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"time"
 )
 
 type AddressFamily interface {
-	PrintRoutes(bool, bool) error
+	RoutesFormatString(bool) (string, error)
 	PrintStatistics() error
+	ClearOutput()
 }
 
 func NewAddressFamily(ipv6Flag bool, output *Output) AddressFamily {
@@ -35,38 +35,30 @@ var (
 	ProcNetRoutePath4 = "/proc/net/route"
 )
 
-func (i *IPv4) PrintRoutes(cont bool, _ bool) error {
+func (i *IPv4) RoutesFormatString(_ bool) (string, error) {
 	i.Output.InitRoute4Titel()
 
-	for {
-		file, err := os.Open(ProcNetRoutePath4)
-		if err != nil {
-			return err
-		}
-
-		s := bufio.NewScanner(file)
-
-		// Scan the first line, which contains only title texts
-		s.Scan()
-
-		// All subsequent lines contain routes
-		for s.Scan() {
-			r, err := parseRoutev4(s.Text())
-			if err != nil {
-				return err
-			}
-
-			i.Output.AddRoute4(*r)
-		}
-
-		fmt.Printf("%s\n", i.Output.String())
-		if !cont {
-			break
-		}
-		time.Sleep(time.Second * 5)
+	file, err := os.Open(ProcNetRoutePath4)
+	if err != nil {
+		return "", err
 	}
 
-	return nil
+	s := bufio.NewScanner(file)
+
+	// Scan the first line, which contains only title texts
+	s.Scan()
+
+	// All subsequent lines contain routes
+	for s.Scan() {
+		r, err := parseRoutev4(s.Text())
+		if err != nil {
+			return "", err
+		}
+
+		i.Output.AddRoute4(*r)
+	}
+
+	return i.Output.String(), nil
 }
 
 type routev4 struct {
@@ -252,4 +244,8 @@ func parseData(ts, ds []string, stc reflect.Value) {
 		}
 		field.SetString(dataSlice[i])
 	}
+}
+
+func (i *IPv4) ClearOutput() {
+	i.Output.Builder.Reset()
 }
