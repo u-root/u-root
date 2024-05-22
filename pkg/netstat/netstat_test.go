@@ -186,7 +186,7 @@ func TestIPv4(t *testing.T) {
 		t.Skip()
 	}
 
-	if err := ipv4.PrintRoutes(false); err != nil {
+	if err := ipv4.PrintRoutes(false, false); err != nil {
 		t.Error(err)
 	}
 
@@ -217,7 +217,7 @@ func TestIPv6(t *testing.T) {
 		t.Skip()
 	}
 
-	if err := ipv6.PrintRoutes(false); err != nil {
+	if err := ipv6.PrintRoutes(false, false); err != nil {
 		t.Error(err)
 	}
 

@@ -31,8 +31,10 @@ var (
 	ipv4Flag = flag.BoolP("4", "4", false, "IPv4 flag. default: true")
 	ipv6Flag = flag.BoolP("6", "6", false, "IPv6 flag. default: false")
 
-	// Format flags
+	// Route type flag
+	routecacheFalg = flag.BoolP("cache", "C", false, "")
 
+	// Format flags
 	wideFlag      = flag.BoolP("wide", "W", false, "don't truncate IP addresses")
 	numericFlag   = flag.BoolP("numeric", "n", false, "don't resolve names")
 	numHostFlag   = flag.Bool("numeric-hosts", false, "don't resolve host names")
@@ -88,6 +90,11 @@ func evalFlags() error {
 		*numUsersFlag = true
 	}
 
+	// Evaluate for route cache for IPv6
+	if *routecacheFalg && *routeFlag && !*ipv6Flag {
+		log.Fatal(netstat.ErrRouteCacheIPv6only)
+	}
+
 	// Set up format flags for route listing and socket listing
 	outflags := netstat.FmtFlags{
 		Extend:    *extendFlag,
@@ -116,7 +123,7 @@ func evalFlags() error {
 		}
 
 		for _, af := range afs {
-			if err := af.PrintRoutes(*continFlag); err != nil {
+			if err := af.PrintRoutes(*continFlag, *routecacheFalg); err != nil {
 				log.Fatal(err)
 			}
 		}

@@ -16,7 +16,7 @@ import (
 )
 
 type AddressFamily interface {
-	PrintRoutes(bool) error
+	PrintRoutes(bool, bool) error
 	PrintStatistics() error
 }
 
@@ -35,7 +35,7 @@ var (
 	ProcNetRoutePath4 = "/proc/net/route"
 )
 
-func (i *IPv4) PrintRoutes(cont bool) error {
+func (i *IPv4) PrintRoutes(cont bool, _ bool) error {
 	i.Output.InitRoute4Titel()
 
 	for {

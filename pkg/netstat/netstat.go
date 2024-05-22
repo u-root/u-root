@@ -4,6 +4,10 @@
 
 package netstat
 
+import "errors"
+
+var ErrRouteCacheIPv6only = errors.New("route cache printing for IPv6 only")
+
 type Protocol string
 
 func (p *Protocol) String() string {
