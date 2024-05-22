@@ -245,7 +245,8 @@ func TestOutputAddIPSocket(t *testing.T) {
 				t.Error(err)
 			}
 
-			if err := sock.PrintSockets(false, false, out); !errors.Is(err, tt.experr) {
+			_, err = sock.SocketsString(false, false, out)
+			if !errors.Is(err, tt.experr) {
 				t.Error(err)
 			}
 		})
@@ -289,7 +290,8 @@ func TestOutputAddUnixSocket(t *testing.T) {
 				t.Error(err)
 			}
 
-			if err := sock.PrintSockets(false, false, out); !errors.Is(err, tt.expErr) {
+			_, err = sock.SocketsString(false, false, out)
+			if !errors.Is(err, tt.expErr) {
 				t.Error(err)
 			}
 		})
@@ -470,7 +472,8 @@ func TestIPv4(t *testing.T) {
 		t.Skip()
 	}
 
-	if err := ipv4.PrintRoutes(false, false); err != nil {
+	_, err = ipv4.RoutesFormatString(false)
+	if err != nil {
 		t.Error(err)
 	}
 
@@ -501,7 +504,8 @@ func TestIPv6(t *testing.T) {
 		t.Skip()
 	}
 
-	if err := ipv6.PrintRoutes(false, false); err != nil {
+	_, err = ipv6.RoutesFormatString(false)
+	if err != nil {
 		t.Error(err)
 	}
 
@@ -568,7 +572,10 @@ func TestPrintNetFiles(t *testing.T) {
 	}
 
 	for _, s := range sock {
-		s.PrintSockets(false, false, output)
+		_, err := s.SocketsString(false, false, output)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
