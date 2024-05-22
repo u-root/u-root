@@ -17,7 +17,7 @@ import (
 )
 
 type Socket interface {
-	PrintSockets(bool, bool, *Output) error
+	SocketsString(bool, bool, *Output) (string, error)
 	readData() error
 }
 
@@ -120,7 +120,7 @@ func (n *NetSockets) readData() error {
 	return nil
 }
 
-func (n *NetSockets) PrintSockets(lst, all bool, outputfmt *Output) error {
+func (n *NetSockets) SocketsString(lst, all bool, outputfmt *Output) (string, error) {
 	states := []NetState{TCP_ESTABLISHED, TCP_TIME_WAIT}
 
 	if lst {
@@ -153,8 +153,8 @@ func (n *NetSockets) PrintSockets(lst, all bool, outputfmt *Output) error {
 			}
 		}
 	}
-	fmt.Printf("%s", outputfmt.String())
-	return nil
+
+	return outputfmt.String(), nil
 }
 
 type UnixSockets struct {
@@ -195,7 +195,7 @@ func (s *SockType) String() string {
 	return str.String()
 }
 
-func (u *UnixSockets) PrintSockets(lst, all bool, outputfmt *Output) error {
+func (u *UnixSockets) SocketsString(lst, all bool, outputfmt *Output) (string, error) {
 	states := []SockState{SSCONNECTED}
 
 	if lst {
@@ -225,9 +225,8 @@ func (u *UnixSockets) PrintSockets(lst, all bool, outputfmt *Output) error {
 			}
 		}
 	}
-	fmt.Printf("%s", outputfmt.String())
-	return nil
 
+	return outputfmt.String(), nil
 }
 
 func (u *UnixSockets) readData() error {

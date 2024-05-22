@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type IPv6 struct {
@@ -21,37 +20,29 @@ type IPv6 struct {
 
 var ProcNetRoutePath6 = "/proc/net/ipv6_route"
 
-func (i *IPv6) PrintRoutes(cont, cache bool) error {
-	for {
-		file, err := os.Open(ProcNetRoutePath6)
+func (i *IPv6) RoutesFormatString(cache bool) (string, error) {
+	file, err := os.Open(ProcNetRoutePath6)
+	if err != nil {
+		return "", err
+	}
+
+	i.Output.InitRoute6Titel()
+	s := bufio.NewScanner(file)
+
+	for s.Scan() {
+		r, err := parseRoutev6(s.Text())
 		if err != nil {
-			return err
+			return "", err
 		}
-
-		i.Output.InitRoute6Titel()
-		s := bufio.NewScanner(file)
-
-		for s.Scan() {
-			r, err := parseRoutev6(s.Text())
-			if err != nil {
-				return err
-			}
-			if cache {
-				if strings.Contains(r.Flags, "C") {
-					i.Output.AddRoute6(*r)
-				}
-			} else {
+		if cache {
+			if strings.Contains(r.Flags, "C") {
 				i.Output.AddRoute6(*r)
 			}
+		} else {
+			i.Output.AddRoute6(*r)
 		}
-
-		fmt.Printf("%s\n", i.Output.String())
-		if !cont {
-			break
-		}
-		time.Sleep(time.Second * 5)
 	}
-	return nil
+	return i.Output.String(), nil
 }
 
 type routev6 struct {
@@ -288,4 +279,8 @@ func newSNMP6() (*SNMP6, error) {
 		}
 	}
 	return &SNMP6{IP6: *i, ICMP6: *ic, UDP6: *u, UDPL6: *ul, TCP6: *tcp}, nil
+}
+
+func (i *IPv6) ClearOutput() {
+	i.Output.Builder.Reset()
 }

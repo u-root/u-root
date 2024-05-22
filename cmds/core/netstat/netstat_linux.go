@@ -5,8 +5,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/netstat"
@@ -123,9 +125,19 @@ func evalFlags() error {
 		}
 
 		for _, af := range afs {
-			if err := af.PrintRoutes(*continFlag, *routecacheFalg); err != nil {
-				log.Fatal(err)
+			for {
+				str, err := af.RoutesFormatString(*routecacheFalg)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("%s\n", str)
+				if !*continFlag {
+					break
+				}
+				af.ClearOutput()
+				time.Sleep(2 * time.Second)
 			}
+
 		}
 
 		os.Exit(0)
@@ -169,10 +181,19 @@ func evalFlags() error {
 		os.Exit(0)
 	}
 
-	for _, sock := range socks {
-		if err := sock.PrintSockets(*listeningFlag, *allFlag, outfmts); err != nil {
-			log.Fatal(err)
+	for {
+		for _, sock := range socks {
+			str, err := sock.SocketsString(*listeningFlag, *allFlag, outfmts)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%s\n", str)
 		}
+		if !*continFlag {
+			break
+		}
+		outfmts.Builder.Reset()
+		time.Sleep(2 * time.Second)
 	}
 
 	return nil
