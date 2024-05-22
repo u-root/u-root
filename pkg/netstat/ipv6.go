@@ -24,7 +24,7 @@ var (
 	//ProcNetRouteCachePath6 = "/proc/net/ndisc"
 )
 
-func (i *IPv6) PrintRoutes(cont bool) error {
+func (i *IPv6) PrintRoutes(cont, cache bool) error {
 	for {
 		file, err := os.Open(ProcNetRoutePath6)
 		if err != nil {
@@ -38,7 +38,13 @@ func (i *IPv6) PrintRoutes(cont bool) error {
 			if err != nil {
 				return err
 			}
-			i.Output.AddRoute6(*r)
+			if cache {
+				if strings.Contains(r.Flags, "C") {
+					i.Output.AddRoute6(*r)
+				}
+			} else {
+				i.Output.AddRoute6(*r)
+			}
 		}
 
 		i.Output.InitRoute6Titel()
