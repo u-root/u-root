@@ -119,54 +119,30 @@ func parseRoutev6(line string) (*routev6, error) {
 }
 
 func parseIPv6Flags(flags uint32) string {
-
 	var s strings.Builder
-	if flags&RTFUP > 0 {
-		s.WriteString("U")
+
+	f := []struct {
+		flag uint32
+		n    string
+	}{
+		{RTFUP, "U"},
+		{RTFREJECT, "!"},
+		{RTFGATEWAY, "G"},
+		{RTFHOST, "H"},
+		{RTFDEFAULT, "D"},
+		{RTFADDRCONF, "A"},
+		{RTFCACHE, "C"},
+		{RTFALLONLINK, "a"},
+		{RTFEXPIRES, "e"},
+		{RTFMODIFIED, "m"},
+		{RTFNONEXTHOP, "n"},
+		{RTFFLOW, "f"},
 	}
 
-	if flags&RTFGATEWAY > 0 {
-		s.WriteString("G")
-	}
-
-	if flags&RTFREJECT > 0 {
-		s.WriteString("!")
-	}
-
-	if flags&RTFHOST > 0 {
-		s.WriteString("H")
-	}
-
-	if flags&RTFDEFAULT > 0 {
-		s.WriteString("D")
-	}
-
-	if flags&RTFALLONLINK > 0 {
-		s.WriteString("a")
-	}
-
-	if flags&RTFADDRCONF > 0 {
-		s.WriteString("A")
-	}
-
-	if flags&RTFNONEXTHOP > 0 {
-		s.WriteString("n")
-	}
-
-	if flags&RTFFLOW > 0 {
-		s.WriteString("f")
-	}
-
-	if flags&RTFMODIFIED > 0 {
-		s.WriteString("m")
-	}
-
-	if flags&RTFCACHE > 0 {
-		s.WriteString("C")
-	}
-
-	if flags&RTFEXPIRES > 0 {
-		s.WriteString("e")
+	for _, f := range f {
+		if (f.flag & flags) > 0 {
+			s.WriteString(f.n)
+		}
 	}
 
 	return s.String()
