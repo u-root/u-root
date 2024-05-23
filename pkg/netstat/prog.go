@@ -40,37 +40,56 @@ func readProgFS() (map[int]ProcNode, error) {
 			continue
 		}
 
-		fdpath := path.Join(procFS, entry.Name(), "fd", "1")
-		fdlink, err := os.Readlink(fdpath)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-
-		fdnumStr, ok := strings.CutPrefix(fdlink, "socket:[")
-		if !ok {
-			continue
-		}
-
-		fdnumStr1, _ := strings.CutSuffix(fdnumStr, "]")
-
-		sockInode, err := strconv.Atoi(fdnumStr1)
-		if err != nil {
-			return nil, err
-		}
-
 		cmdpath := path.Join(procFS, entry.Name(), "cmdline")
 		cmdline, err := os.ReadFile(cmdpath)
 		if err != nil {
 			return nil, err
 		}
 
-		pNode := ProcNode{
-			Name:  string(cmdline[:20]),
-			PID:   pid,
-			Inode: sockInode,
+		splitcmdline := strings.Split(string(cmdline), "/")
+		lencmd := len(splitcmdline)
+		cmdName := splitcmdline[lencmd-1]
+		lencmd = len(cmdName) - 1
+		if lencmd > 20 {
+			lencmd = 20
 		}
 
-		retMap[sockInode] = pNode
+		fdpath := path.Join(procFS, entry.Name(), "fd")
+		fddir, err := os.ReadDir(fdpath)
+		if err != nil {
+			return nil, err
+		}
+
+		var fdnum string
+		for i := 0; i < len(fddir); i++ {
+			fdnum = strconv.Itoa(i)
+
+			fdnumpath := path.Join(fdpath, fdnum)
+			fdlink, err := os.Readlink(fdnumpath)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return nil, err
+			}
+
+			fdnumStr, ok := strings.CutPrefix(fdlink, "socket:[")
+			if !ok {
+				continue
+			}
+
+			fdnumStr1, _ := strings.CutSuffix(fdnumStr, "]")
+
+			sockInode, err := strconv.Atoi(fdnumStr1)
+			if err != nil {
+				return nil, err
+			}
+
+			pNode := ProcNode{
+				Name:  string(cmdName[:lencmd]),
+				PID:   pid,
+				Inode: sockInode,
+			}
+
+			retMap[sockInode] = pNode
+		}
 	}
 
 	return retMap, nil

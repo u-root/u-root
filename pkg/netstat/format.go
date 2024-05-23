@@ -172,6 +172,7 @@ func (o *Output) getNameFromInode(inode uint64) (string, error) {
 		s.WriteString("-")
 	} else {
 		s.WriteString(strconv.Itoa(pnote.PID))
+		s.WriteString("/")
 	}
 
 	s.WriteString(pnote.Name)
