@@ -7,7 +7,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -60,7 +59,7 @@ func evalFlags() error {
 	// none or one allowed allowed to be set
 	if !xorFlags(*routeFlag, *interfacesFlag, *groupsFlag, *statsFlag, *ifFlag != "") {
 		flag.Usage()
-		os.Exit(1)
+		return nil
 	}
 
 	// Can't use default capability of pflags package, have to determine it like this
@@ -82,7 +81,7 @@ func evalFlags() error {
 
 	socks, err := evalProtocols(*tcpFlag, *udpFlag, *udpLFlag, *rawFlag, *unixFlag, *ipv4Flag, *ipv6Flag)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Evaluate numeric flags
@@ -94,7 +93,7 @@ func evalFlags() error {
 
 	// Evaluate for route cache for IPv6
 	if *routecacheFalg && *routeFlag && !*ipv6Flag {
-		log.Fatal(netstat.ErrRouteCacheIPv6only)
+		return netstat.ErrRouteCacheIPv6only
 	}
 
 	// Set up format flags for route listing and socket listing
@@ -112,7 +111,7 @@ func evalFlags() error {
 	// Set up output generator for route and socket listing
 	outfmts, err := netstat.NewOutput(outflags)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if *routeFlag {
@@ -128,7 +127,7 @@ func evalFlags() error {
 			for {
 				str, err := af.RoutesFormatString(*routecacheFalg)
 				if err != nil {
-					log.Fatal(err)
+					return err
 				}
 				fmt.Printf("%s\n", str)
 				if !*continFlag {
@@ -140,28 +139,19 @@ func evalFlags() error {
 
 		}
 
-		os.Exit(0)
+		return err
 	}
 
 	if *interfacesFlag {
-		if err := netstat.PrintInterfaceTable(*ifFlag, *continFlag); err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
+		return netstat.PrintInterfaceTable(*ifFlag, *continFlag)
 	}
 
 	if *ifFlag != "" {
-		if err := netstat.PrintInterfaceTable(*ifFlag, *continFlag); err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
+		return netstat.PrintInterfaceTable(*ifFlag, *continFlag)
 	}
 
 	if *groupsFlag {
-		if err := netstat.PrintMulticastGroups(*ipv4Flag, *ipv6Flag); err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
+		return netstat.PrintMulticastGroups(*ipv4Flag, *ipv6Flag)
 	}
 
 	if *statsFlag {
@@ -175,17 +165,17 @@ func evalFlags() error {
 
 		for _, af := range afs {
 			if err := af.PrintStatistics(); err != nil {
-				log.Fatal(err)
+				return err
 			}
 		}
-		os.Exit(0)
+		return nil
 	}
 
 	for {
 		for _, sock := range socks {
 			str, err := sock.SocketsString(*listeningFlag, *allFlag, outfmts)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			fmt.Printf("%s\n", str)
 		}
