@@ -125,7 +125,7 @@ func (o *Output) AddIPSocket(ipsock netSocket) {
 
 	if o.Timer {
 		fmt.Fprintf(&o.Builder, "%-15s",
-			o.constructTimer(ipsock.TimerRun,
+			o.ConstructTimer(ipsock.TimerRun,
 				ipsock.TimerLen,
 				ipsock.Retr,
 				ipsock.Timeout))
@@ -186,7 +186,7 @@ func (o *Output) getNameFromInode(inode uint64) (string, error) {
 // https://lore.kernel.org/lkml/agtlq6$iht$1@penguin.transmeta.com/
 const SystemClkTck = 100
 
-func (o *Output) constructTimer(tr uint8, tl, retr, to uint64) string {
+func (o *Output) ConstructTimer(tr uint8, tl, retr, to uint64) string {
 	var s strings.Builder
 	clktick := SystemClkTck
 	switch tr {

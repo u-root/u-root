@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestEvalFlags(t *testing.T) {
+func TestRun(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
 		ops    string
@@ -78,7 +78,7 @@ func TestEvalFlags(t *testing.T) {
 			case "iface":
 				*ifFlag = tt.arg[0]
 			}
-			if err := evalFlags(); !errors.Is(err, tt.expErr) {
+			if err := run(); !errors.Is(err, tt.expErr) {
 				t.Errorf("evalFlags() failed: %v, want: %v", err, tt.expErr)
 			}
 

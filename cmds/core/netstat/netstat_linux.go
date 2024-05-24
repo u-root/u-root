@@ -50,7 +50,7 @@ var (
 	allFlag       = flag.BoolP("all", "a", false, "display all sockets (default: connected)")
 )
 
-func evalFlags() error {
+func run() error {
 	flag.Parse()
 
 	afs := make([]netstat.AddressFamily, 0)
@@ -190,7 +190,7 @@ func evalFlags() error {
 }
 
 func main() {
-	if err := evalFlags(); err != nil {
+	if err := run(); err != nil {
 		log.Fatal(err)
 	}
 }

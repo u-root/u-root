@@ -134,6 +134,8 @@ func TestOutputInitIPSocketTitel(t *testing.T) {
 			if tt.fmt.ProgNames && !strings.Contains(out.String(), "PID/Program name") {
 				t.Error("formatted output string does not contain 'PID/Program name'")
 			}
+
+			out.Builder.Reset()
 		})
 	}
 }
@@ -221,6 +223,15 @@ func TestOutputAddIPSocket(t *testing.T) {
 			experr:  nil,
 		},
 		{
+			name: "SuccessExtendNumUser",
+			fmt: netstat.FmtFlags{
+				Extend:   true,
+				NumUsers: true,
+			},
+			rootreq: false,
+			experr:  nil,
+		},
+		{
 			name:    "SuccessTimerSet",
 			fmt:     netstat.FmtFlags{Timer: true},
 			rootreq: false,
@@ -294,6 +305,71 @@ func TestOutputAddUnixSocket(t *testing.T) {
 			if !errors.Is(err, tt.expErr) {
 				t.Error(err)
 			}
+		})
+	}
+}
+
+func TestConstructTimer(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		state uint8
+		tl    uint64
+		retr  uint64
+		to    uint64
+	}{
+		{
+			name:  "TimerOff",
+			state: 0,
+			tl:    0,
+			retr:  0,
+			to:    0,
+		},
+		{
+			name:  "TimerOn",
+			state: 1,
+			tl:    0,
+			retr:  0,
+			to:    0,
+		},
+		{
+			name:  "TimerKeepAlive",
+			state: 2,
+			tl:    0,
+			retr:  0,
+			to:    0,
+		},
+		{
+			name:  "TimerTimeWait",
+			state: 3,
+			tl:    0,
+			retr:  0,
+			to:    0,
+		},
+		{
+			name:  "TimerProbe",
+			state: 4,
+			tl:    0,
+			retr:  0,
+			to:    0,
+		},
+		{
+			name:  "TimerUnknown",
+			state: 5,
+			tl:    0,
+			retr:  0,
+			to:    0,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			out, err := netstat.NewOutput(netstat.FmtFlags{})
+			if err != nil {
+				t.Error(err)
+			}
+
+			out.ConstructTimer(tt.state, tt.tl, tt.retr, tt.to)
+
+			out.Builder.Reset()
 		})
 	}
 }
