@@ -7,6 +7,7 @@ package netstat
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -43,7 +44,7 @@ type member struct {
 	Users uint32
 }
 
-func PrintMulticastGroups(ipv4, ipv6 bool) error {
+func PrintMulticastGroups(ipv4, ipv6 bool, out io.Writer) error {
 	g := Groups{}
 
 	if ipv4 {
@@ -52,7 +53,7 @@ func PrintMulticastGroups(ipv4, ipv6 bool) error {
 			return err
 		}
 		g = append(g, members...)
-		fmt.Printf("%s", "IPv4")
+		fmt.Fprintf(out, "%s", "IPv4")
 	}
 
 	if ipv6 {
@@ -62,15 +63,15 @@ func PrintMulticastGroups(ipv4, ipv6 bool) error {
 		}
 		g = append(g, members...)
 		if ipv4 {
-			fmt.Printf("%s", "/")
+			fmt.Fprintf(out, "%s", "/")
 		}
-		fmt.Printf("%s", "IPv6")
+		fmt.Fprintf(out, "%s", "IPv6")
 	}
 
-	fmt.Printf("%s\n\n", " Group memberships")
-	fmt.Printf("%-20s %-10s %s\n", "------------------", "---------", "---------")
+	fmt.Fprintf(out, "%s\n\n", " Group memberships")
+	fmt.Fprintf(out, "%-20s %-10s %s\n", "------------------", "---------", "---------")
 
-	fmt.Printf("%s\n", g.String())
+	fmt.Fprintf(out, "%s\n", g.String())
 
 	return nil
 }

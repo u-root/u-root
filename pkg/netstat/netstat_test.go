@@ -553,7 +553,9 @@ func TestIPv4(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := ipv4.PrintStatistics(); err != nil {
+	var out strings.Builder
+
+	if err := ipv4.PrintStatistics(&out); err != nil {
 		t.Error(err)
 	}
 }
@@ -585,7 +587,9 @@ func TestIPv6(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := ipv6.PrintStatistics(); err != nil {
+	var out strings.Builder
+
+	if err := ipv6.PrintStatistics(&out); err != nil {
 		t.Error(err)
 	}
 }
@@ -596,7 +600,9 @@ func TestPrintInterfaceTable(t *testing.T) {
 		t.Skip()
 	}
 
-	if err := netstat.PrintInterfaceTable("", false); err != nil {
+	var out strings.Builder
+
+	if err := netstat.PrintInterfaceTable("", false, &out); err != nil {
 		t.Error(err)
 	}
 }
@@ -612,7 +618,9 @@ func TestPrintMulticastGroups(t *testing.T) {
 		t.Skip()
 	}
 
-	if err := netstat.PrintMulticastGroups(true, true); err != nil {
+	var out strings.Builder
+
+	if err := netstat.PrintMulticastGroups(true, true, &out); err != nil {
 		t.Error(err)
 	}
 }
