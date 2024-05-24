@@ -7,6 +7,7 @@ package netstat
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -17,7 +18,7 @@ var (
 	ProcNetDevPath = "/proc/net/dev"
 )
 
-func PrintInterfaceTable(ifstr string, cont bool) error {
+func PrintInterfaceTable(ifstr string, cont bool, out io.Writer) error {
 	for {
 		var s strings.Builder
 
@@ -59,7 +60,7 @@ func PrintInterfaceTable(ifstr string, cont bool) error {
 			}
 		}
 
-		fmt.Printf("%s\n", s.String())
+		fmt.Fprintf(out, "%s\n", s.String())
 		if !cont {
 			break
 		}

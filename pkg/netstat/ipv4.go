@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"reflect"
@@ -16,7 +17,7 @@ import (
 
 type AddressFamily interface {
 	RoutesFormatString(bool) (string, error)
-	PrintStatistics() error
+	PrintStatistics(io.Writer) error
 	ClearOutput()
 }
 
@@ -123,20 +124,20 @@ func parseRoutev4(line string) (*routev4, error) {
 	return retr, nil
 }
 
-func (i *IPv4) PrintStatistics() error {
+func (i *IPv4) PrintStatistics(out io.Writer) error {
 	snmp, err := newSNMP()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%s\n", snmp.String())
+	fmt.Fprintf(out, "%s\n", snmp.String())
 
 	netstat, err := newNetstat()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%s\n", netstat.String())
+	fmt.Fprintf(out, "%s\n", netstat.String())
 
 	return nil
 }

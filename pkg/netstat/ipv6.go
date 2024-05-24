@@ -7,6 +7,7 @@ package netstat
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"reflect"
@@ -148,13 +149,13 @@ func parseIPv6Flags(flags uint32) string {
 	return s.String()
 }
 
-func (i *IPv6) PrintStatistics() error {
+func (i *IPv6) PrintStatistics(out io.Writer) error {
 	snmp6, err := newSNMP6()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%s\n", snmp6.String())
+	fmt.Fprintf(out, "%s\n", snmp6.String())
 
 	return nil
 }

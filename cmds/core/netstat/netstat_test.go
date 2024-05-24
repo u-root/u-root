@@ -6,120 +6,85 @@ package main
 
 import (
 	"errors"
+	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/netstat"
 )
 
 func TestRun(t *testing.T) {
 	for _, tt := range []struct {
-		name   string
-		ops    string
-		arg    []string
-		af     string
+		name string
+		Flags
 		expErr error
 	}{
 		{
 			name:   "SucessSocketsDefault",
-			ops:    "sockets",
+			Flags:  Flags{},
 			expErr: nil,
 		},
 		{
 			name:   "SucessSocketsIPv4",
-			ops:    "sockets",
-			af:     "ipv4",
+			Flags:  Flags{ipv4: true},
 			expErr: nil,
 		},
 		{
 			name:   "SucessSocketsIPv6",
-			ops:    "sockets",
-			af:     "ipv6",
+			Flags:  Flags{ipv6: true},
 			expErr: nil,
 		},
 		{
-			name:   "SucessRoute",
-			ops:    "route",
+			name: "SucessRoute",
+			Flags: Flags{
+				route: true,
+				ipv4:  true,
+				ipv6:  true,
+			},
 			expErr: nil,
+		},
+		{
+			name: "FailRouteCacheIPv4",
+			Flags: Flags{
+				route:      true,
+				routecache: true,
+				ipv4:       true,
+			},
+			expErr: netstat.ErrRouteCacheIPv6only,
 		},
 		{
 			name:   "SuccessInterfaces",
-			ops:    "interfaces",
+			Flags:  Flags{interfaces: true},
 			expErr: nil,
 		},
 		{
-			name:   "SuccessIface_th0",
-			ops:    "iface",
-			arg:    []string{"eth0"},
+			name:   "SuccessIface_eth0",
+			Flags:  Flags{iface: "eth0"},
 			expErr: nil,
 		},
 		{
-			name:   "SuccessStats",
-			ops:    "stats",
+			name: "SuccessStats",
+			Flags: Flags{
+				stats: true,
+				ipv4:  true,
+				ipv6:  true,
+			},
+			expErr: nil,
+		},
+		{
+			name: "Success_xorFlagsUsage",
+			Flags: Flags{
+				stats: true,
+				route: true,
+				ipv4:  true,
+			},
 			expErr: nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			switch tt.ops {
-			case "route":
-				*routeFlag = true
-			case "interfaces":
-				*interfacesFlag = true
-			case "stats":
-				*statsFlag = true
-				*ipv4Flag = true
-				*ipv6Flag = true
-			case "sockets":
-				switch tt.af {
-				case "ipv4":
-					*ipv4Flag = true
-				case "ipv6":
-					*ipv6Flag = true
-				}
-			case "groups":
-				*groupsFlag = true
-			case "iface":
-				*ifFlag = tt.arg[0]
-			}
-			if err := run(); !errors.Is(err, tt.expErr) {
+			var out strings.Builder
+			if err := run(tt.Flags, &out); !errors.Is(err, tt.expErr) {
 				t.Errorf("evalFlags() failed: %v, want: %v", err, tt.expErr)
 			}
-
-			resetFlags()
 		})
 	}
-}
-
-func resetFlags() {
-	// Info source flags
-	*routeFlag = false
-	*interfacesFlag = false
-	*ifFlag = ""
-	*groupsFlag = false
-	*statsFlag = false
-
-	// Socket flags
-	*tcpFlag = false
-	*udpFlag = false
-	*udpLFlag = false
-	*rawFlag = false
-	*unixFlag = false
-
-	// AF Flags
-	*ipv4Flag = false
-	*ipv6Flag = false
-
-	// Route type flag
-	*routecacheFalg = false
-
-	// Format flags
-	*wideFlag = false
-	*numericFlag = false
-	*numHostFlag = false
-	*numPortsFlag = false
-	*numUsersFlag = false
-	*symbolicFlag = false
-	*extendFlag = false
-	*programsFlag = false
-	*timersFlag = false
-	*continFlag = false
-	*listeningFlag = false
-	*allFlag = false
 }
