@@ -88,3 +88,53 @@ func TestRun(t *testing.T) {
 		})
 	}
 }
+
+func TestXorFlags(t *testing.T) {
+	tests := []struct {
+		name   string
+		flags  []bool
+		result bool
+	}{
+		{"None set", []bool{false, false, false}, true},
+		{"One set", []bool{true, false, false}, true},
+		{"Two set", []bool{true, true, false}, false},
+		{"All set", []bool{true, true, true}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := xorFlags(test.flags...); got != test.result {
+				t.Errorf("xorFlags() = %v, want %v", got, test.result)
+			}
+		})
+	}
+}
+
+func TestEvalProtocols(t *testing.T) {
+	tests := []struct {
+		name          string
+		tcp, udp      bool
+		udpl, raw     bool
+		unix, ipv4    bool
+		ipv6          bool
+		wantProtocols int
+	}{
+		{"TCP and IPv4", true, false, false, false, false, true, false, 1},
+		{"UDP and IPv6", false, true, false, false, false, false, true, 1},
+		{"TCP and UDP with IPv4", true, true, false, false, false, true, false, 2},
+		{"All protocols with IPv4 and IPv6", true, true, true, true, true, true, true, 9},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			protocols, err := evalProtocols(test.tcp, test.udp, test.udpl, test.raw, test.unix, test.ipv4, test.ipv6)
+			if err != nil {
+				t.Errorf("evalProtocols() error = %v", err)
+				return
+			}
+			if len(protocols) != test.wantProtocols {
+				t.Errorf("evalProtocols() len = %v, want %v", len(protocols), test.wantProtocols)
+			}
+		})
+	}
+}
