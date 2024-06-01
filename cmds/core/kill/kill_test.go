@@ -53,7 +53,7 @@ func TestKillProcess(t *testing.T) {
 		},
 		{
 			name: "kill signal with signal but without pid",
-			args: []string{"kill", "--signal", "50"},
+			args: []string{"kill", "--signal", "9"},
 			want: fmt.Sprintf("%s\n", eUsage),
 		},
 		{
@@ -63,7 +63,7 @@ func TestKillProcess(t *testing.T) {
 		},
 		{
 			name: "kill signal with signal and wrong pid",
-			args: []string{"kill", "--signal", "50", getUnusedPID()},
+			args: []string{"kill", "--signal", "9", getUnusedPID()},
 			want: "some processes could not be killed",
 		},
 		{
@@ -89,5 +89,11 @@ func TestKillProcess(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSignalList(t *testing.T) {
+	if len(signames)*2 != len(signums) {
+		t.Error("len(signames) * 2 != len(signums)")
 	}
 }
