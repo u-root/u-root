@@ -270,7 +270,8 @@ func TestGetEntries(t *testing.T) {
 
 func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
 	assetTag := "newTag"
-	opt := ReplaceBaseboardInfoMotherboard(&assetTag)
+	serialNumber := "newSerialNumber"
+	opt := ReplaceBaseboardInfoMotherboard(nil, nil, nil, &serialNumber, &assetTag, nil, nil, nil, nil, nil)
 
 	oldTable := []*Table{
 		{
@@ -312,7 +313,7 @@ func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
 				10, // BoardTypeMotherboardIncludesProcessorMemoryAndIO
 				1, 10, 0,
 			},
-			strings: []string{"-", "-", "-", "-", "newTag", "-"},
+			strings: []string{"-", "-", "-", "newSerialNumber", "newTag", "-"},
 		},
 		{
 			Header: Header{
@@ -358,7 +359,7 @@ func TestReplaceBaseboardInfoMotherboardFail(t *testing.T) {
 		},
 	}
 
-	opt := ReplaceBaseboardInfoMotherboard(nil)
+	opt := ReplaceBaseboardInfoMotherboard(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	if _, err := opt(malformedTable); err == nil {
 		t.Fatalf("opt should fail but returned nil error")

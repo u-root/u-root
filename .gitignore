@@ -52,3 +52,6 @@ vmlinux
 
 # tools
 tools/checklicenses/checklicenses
+
+# JetBrains IDEs
+/.idea/

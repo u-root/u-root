@@ -252,6 +252,15 @@ func (c *parser) getFile(url string) (io.ReaderAt, error) {
 	return c.schemes.LazyFetch(u)
 }
 
+// getFileWithoutCache gets the file at `url` without caching.
+func (c *parser) getFileWithoutCache(surl string) (io.Reader, error) {
+	u, err := parseURL(surl, c.rootdir, c.wd)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse URL %q: %w", surl, err)
+	}
+	return c.schemes.LazyFetchWithoutCache(u)
+}
+
 // appendFile parses the config file downloaded from `url` and adds it to `c`.
 func (c *parser) appendFile(ctx context.Context, url string) error {
 	u, err := parseURL(url, c.rootdir, c.wd)
@@ -370,15 +379,15 @@ func (c *parser) append(ctx context.Context, config string) error {
 				// read
 				// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
 				// Multiple initrds are comma-separated
-				var initrds []io.ReaderAt
+				var initrds []io.Reader
 				for _, f := range strings.Split(arg, ",") {
-					i, err := c.getFile(f)
+					i, err := c.getFileWithoutCache(f)
 					if err != nil {
 						return err
 					}
 					initrds = append(initrds, i)
 				}
-				e.Initrd = boot.CatInitrds(initrds...)
+				e.Initrd = boot.CatInitrdsWithFileCache(initrds...)
 			}
 
 		case "fdt":

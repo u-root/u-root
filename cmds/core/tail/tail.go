@@ -48,6 +48,9 @@ type tailConfig struct {
 
 	// specifies the number of lines to print (-n)
 	numLines uint
+
+	// time to wait for new write in follow mode
+	followDuration time.Duration
 }
 
 // getBlockSize returns the number of bytes to read for each ReadAt call. This
@@ -233,7 +236,7 @@ func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 			n, err := inFile.Read(buf)
 			if err == io.EOF {
 				// without this sleep you would hogg the CPU
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(config.followDuration)
 				// truncated ?
 				truncated, errTruncated := isTruncated(inFile)
 				if errTruncated != nil {
@@ -261,7 +264,7 @@ func tail(inFile *os.File, writer io.Writer, config tailConfig) error {
 	return nil
 }
 
-func run(reader *os.File, writer io.Writer, follow bool, numLines int, args []string) error {
+func run(reader *os.File, writer io.Writer, follow bool, numLines int, followDuration time.Duration, args []string) error {
 	var (
 		inFile *os.File
 		err    error
@@ -284,13 +287,13 @@ func run(reader *os.File, writer io.Writer, follow bool, numLines int, args []st
 	if numLines < 0 {
 		numLines = -1 * numLines
 	}
-	config := tailConfig{follow: follow, numLines: uint(numLines)}
+	config := tailConfig{follow: follow, numLines: uint(numLines), followDuration: followDuration}
 	return tail(inFile, writer, config)
 }
 
 func main() {
 	flag.Parse()
-	if err := run(os.Stdin, os.Stdout, *flagFollow, *flagNumLines, flag.Args()); err != nil {
+	if err := run(os.Stdin, os.Stdout, *flagFollow, *flagNumLines, 500*time.Millisecond, flag.Args()); err != nil {
 		log.Fatalf("tail: %v", err)
 	}
 }
