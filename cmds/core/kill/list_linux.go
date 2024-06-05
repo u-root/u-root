@@ -5,7 +5,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"syscall"
 )
@@ -202,10 +201,3 @@ var (
 		"64":          syscall.Signal(64),
 	}
 )
-
-func siglist() (s string) {
-	for i, sig := range signames {
-		s = s + fmt.Sprintf("%d: %v\n", i, sig)
-	}
-	return
-}
