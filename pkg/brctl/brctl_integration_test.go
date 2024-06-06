@@ -29,16 +29,6 @@ import (
 	"github.com/hugelgupf/vmtest/qemu"
 )
 
-var (
-	BRCTL_TEST_IFACE_0 = "eth0"
-	BRCTL_TEST_IFACE_1 = "eth1"
-	BRCTL_TEST_IFACES  = []string{BRCTL_TEST_IFACE_0, BRCTL_TEST_IFACE_1}
-
-	BRCTL_TEST_BR_0    = "br0"
-	BRCTL_TEST_BR_1    = "br1"
-	BRCTL_TEST_BRIDGES = []string{BRCTL_TEST_BR_0, BRCTL_TEST_BR_1}
-)
-
 // TODO: Since ioctl needs root privileges, we need to run the tests in a VM with root privileges.
 func TestVM(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
