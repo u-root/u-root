@@ -10,6 +10,16 @@ import (
 	"testing"
 )
 
+var (
+	BRCTL_TEST_IFACE_0 = "eth0"
+	BRCTL_TEST_IFACE_1 = "eth1"
+	BRCTL_TEST_IFACES  = []string{BRCTL_TEST_IFACE_0, BRCTL_TEST_IFACE_1}
+
+	BRCTL_TEST_BR_0    = "br0"
+	BRCTL_TEST_BR_1    = "br1"
+	BRCTL_TEST_BRIDGES = []string{BRCTL_TEST_BR_0, BRCTL_TEST_BR_1}
+)
+
 var test_fd = []struct {
 	name    string
 	input   string
@@ -127,7 +137,7 @@ func clearEnv() error {
 // The following tests should be executed in a VM with root privileges, which is done in `brctl_integraion_test.go`
 func TestAddbrDelbr(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -153,7 +163,7 @@ func TestAddbrDelbr(t *testing.T) {
 
 func TestIfDelif(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	for _, bridge := range BRCTL_TEST_BRIDGES {
@@ -166,7 +176,7 @@ func TestIfDelif(t *testing.T) {
 
 func TestSetageingTime(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	TEST_AGETIME := "1"
@@ -206,7 +216,7 @@ func TestShow(t *testing.T) {
 
 func TestScpt(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -246,7 +256,7 @@ func TestScpt(t *testing.T) {
 
 func TestSetbridgeprio(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -277,7 +287,7 @@ func TestSetbridgeprio(t *testing.T) {
 
 func TestSetfd(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -314,7 +324,7 @@ func TestSetfd(t *testing.T) {
 
 func TestSethello(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -344,7 +354,7 @@ func TestSethello(t *testing.T) {
 
 func TestSetmaxage(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -374,7 +384,7 @@ func TestSetmaxage(t *testing.T) {
 
 func TestSetpathcost(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -404,7 +414,7 @@ func TestSetpathcost(t *testing.T) {
 
 func TestSetportprio(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges
@@ -434,7 +444,7 @@ func TestSetportprio(t *testing.T) {
 
 func TestHairpin(t *testing.T) {
 	if err := clearEnv(); err != nil {
-		t.Fatalf("ClearEnv() = %v, want nil", err)
+		t.Skip(err)
 	}
 
 	// Add bridges

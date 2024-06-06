@@ -101,7 +101,7 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 // 1. Try to set the config options using the sysfs` bridge directory
 // 2. Else use the ioctl interface
 // TODO: hide this behind an interface and check in beforehand which to use
-func setBridgeValue(bridge string, name string, value uint64, ioctlcode uint64) error {
+func setBridgeValue(bridge string, name string, value uint64, _ uint64) error {
 	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_val: %v", err)
@@ -121,7 +121,7 @@ func getBridgeValue(bridge string, name string) (string, error) {
 }
 
 // Set the value of a port in a bridge
-func setBridgePort(bridge string, port string, name string, value uint64, ioctlcode uint64) error {
+func setBridgePort(bridge string, port string, name string, value uint64, _ uint64) error {
 	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_port: %v", err)
