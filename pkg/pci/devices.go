@@ -98,9 +98,9 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 
 // SetVendorDeviceName sets all numeric IDs of all the devices
 // using the pci device SetVendorDeviceName.
-func (d Devices) SetVendorDeviceName() {
+func (d Devices) SetVendorDeviceName(ids []Vendor) {
 	for _, p := range d {
-		p.SetVendorDeviceName()
+		p.SetVendorDeviceName(ids)
 	}
 }
 

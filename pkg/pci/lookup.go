@@ -11,10 +11,16 @@ const venDevFmt = "%04x"
 // Lookup takes PCI and device ID values and returns human
 // readable labels for both the vendor and device. It returns the input ID value if
 // if label is not found in the ids map.
-func Lookup(ids map[uint16]Vendor, vendor uint16, device uint16) (string, string) {
-	if v, ok := ids[vendor]; ok {
-		if d, ok := v.Devices[device]; ok {
-			return v.Name, string(d)
+func Lookup(ids []Vendor, vendor, device uint16) (string, string) {
+	for _, v := range ids {
+		if v.ID != vendor {
+			continue
+		}
+		for _, d := range v.Devices {
+			if d.ID != device {
+				continue
+			}
+			return v.Name, d.Name
 		}
 		// If entry for device doesn't exist return the hex ID
 		return v.Name, fmt.Sprintf(venDevFmt, device)

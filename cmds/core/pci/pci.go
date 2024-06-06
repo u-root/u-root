@@ -152,7 +152,7 @@ func pciExecution(w io.Writer, args ...string) error {
 	}
 
 	if !*numbers || *dumpJSON {
-		d.SetVendorDeviceName()
+		d.SetVendorDeviceName(pci.IDs)
 	}
 	if len(args) > 0 {
 		registers(d, args...)
