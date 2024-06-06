@@ -45,7 +45,7 @@ func scan(s *bufio.Scanner, ids map[uint16]Vendor) {
 	}
 }
 
-func parse(input []byte) idMap {
+func parse(input []byte) Vendors {
 	ids := make(map[uint16]Vendor)
 	s := bufio.NewScanner(bytes.NewReader(input))
 	scan(s, ids)
