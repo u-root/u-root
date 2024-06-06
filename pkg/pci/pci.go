@@ -59,8 +59,7 @@ func (p *PCI) String() string {
 // SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
 // if possible.
 func (p *PCI) SetVendorDeviceName() {
-	ids = newIDs()
-	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
+	p.VendorName, p.DeviceName = Lookup(pciids, p.Vendor, p.Device)
 }
 
 // ReadConfig reads the config space.

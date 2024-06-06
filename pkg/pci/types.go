@@ -53,3 +53,6 @@ type BridgeCtl uint16
 
 // BridgeStatus is the Bridge Status register.
 type BridgeStatus uint16
+
+// Vendors is a map of uint16 to Vendor
+type Vendors map[uint16]Vendor
