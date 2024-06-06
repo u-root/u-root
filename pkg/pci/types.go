@@ -13,15 +13,18 @@ type BusReader interface {
 	Read(...Filter) (Devices, error)
 }
 
-// Vendor is a PCI vendor human readable label. It contains a map of one or
-// more Devices keyed by hex ID.
+// Vendor is a PCI vendor, with an ID, a Name, and a possibly empty []Device.
 type Vendor struct {
+	ID      uint16
 	Name    string
-	Devices map[uint16]DeviceName
+	Devices []Device
 }
 
-// DeviceName is a PCI device human readable label
-type DeviceName string
+// Device is a PCI Device, with an ID and a Name.
+type Device struct {
+	ID   uint16
+	Name string
+}
 
 // Control configures how the device responds to operations. It is the 3rd 16-bit word.
 type Control uint16
@@ -53,6 +56,3 @@ type BridgeCtl uint16
 
 // BridgeStatus is the Bridge Status register.
 type BridgeStatus uint16
-
-// Vendors is a map of uint16 to Vendor
-type Vendors map[uint16]Vendor

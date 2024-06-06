@@ -274,7 +274,7 @@ func GetMeiPciDevice() (*pci.PCI, error) {
 		// look for a known MEI product ID
 		for _, devID := range meiDevIDs {
 			if devID == device.Device {
-				device.SetVendorDeviceName()
+				device.SetVendorDeviceName(pci.IDs)
 				// there is only one MEI device, right?
 				return device, nil
 			}

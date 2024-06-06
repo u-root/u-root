@@ -21,7 +21,7 @@ func TestLookup(t *testing.T) {
 				Vendor: 0x1055,
 				Device: 0xe420,
 			},
-			VendorNameWant: "Efar Microsystems",
+			VendorNameWant: "Microchip Technology / SMSC",
 			DeviceNameWant: "LAN9420/LAN9420i",
 		},
 		{
@@ -107,7 +107,7 @@ func TestLookup(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.pci.SetVendorDeviceName()
+			tt.pci.SetVendorDeviceName(IDs)
 			VendorNameGot, DeviceNameGot := tt.pci.VendorName, tt.pci.DeviceName
 			if VendorNameGot != tt.VendorNameWant {
 				t.Errorf("Vendor mismatch, got: '%s', want: '%s'\n", VendorNameGot, tt.VendorNameWant)
