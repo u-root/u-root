@@ -21,7 +21,7 @@ func TestLookup(t *testing.T) {
 				Vendor: 0x1055,
 				Device: 0xe420,
 			},
-			VendorNameWant: "Microchip Technology / SMSC",
+			VendorNameWant: "Efar Microsystems",
 			DeviceNameWant: "LAN9420/LAN9420i",
 		},
 		{

@@ -123,7 +123,7 @@ func TestSetVendorDeviceName(t *testing.T) {
 					Device: 0xe420,
 				},
 			},
-			VendorNameWant: "Microchip Technology / SMSC",
+			VendorNameWant: "Efar Microsystems",
 			DeviceNameWant: "LAN9420/LAN9420i",
 		},
 	} {
