@@ -1,0 +1,48 @@
+.key-visual {
+  height: auto;
+
+  /* @keyframes float {
+    0% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 0.75rem;
+    }
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @keyframes animate-out {
+    0% {
+      opacity: 1;
+      translate: 0 0;
+    }
+    100% {
+      opacity: 0;
+      translate: 0 -15%;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: float 6s ease-in-out infinite;
+
+    @supports (animation-timeline: view()) and (animation-range: contain) {
+      &__terminal {
+        animation: animate-out ease-in forwards;
+        animation-timeline: view();
+        animation-range: contain 60% cover 85%;
+      }
+      &__binary {
+        animation: animate-out ease-in forwards;
+        animation-timeline: view();
+        animation-range: contain 60% cover 95%;
+      }
+      &__box {
+        animation: animate-out ease-in forwards;
+        animation-timeline: view();
+        animation-range: contain 60% cover 105%;
+      }
+    }
+  } */
+}

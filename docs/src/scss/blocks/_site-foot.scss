@@ -1,0 +1,38 @@
+.site-foot {
+  padding-block: var(--space-s);
+  background-color: #2c343c;
+
+  /* For focus-visible to work */
+  a {
+    display: block;
+  }
+
+  a:focus-visible {
+    outline: 2px dashed var(--color-recover);
+    outline-offset: 2px;
+  }
+
+  a:not(.site-foot__logo):hover {
+    color: var(--color-recover);
+  }
+
+  &__content {
+    flex-direction: column;
+
+    @media (width > 32em) {
+      flex-direction: initial;
+    }
+  }
+
+  &__logo svg {
+    width: 3.75rem;
+  }
+
+  &__copyright {
+    text-align: center;
+
+    a {
+      display: inline;
+    }
+  }
+}

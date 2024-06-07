@@ -1,0 +1,51 @@
+.logo-wall {
+  display: grid;
+  justify-items: center;
+  padding-block-end: var(--space-2xs);
+
+  &__logo-list {
+    position: relative;
+    width: 100%;
+    place-items: center;
+
+    img {
+      object-fit: contain;
+    }
+
+    /* For focus-visible to work */
+    a {
+      display: block;
+    }
+
+    a:hover :is(svg, img) {
+      transition: transform 0.2s ease;
+      transform: scale(1.05);
+    }
+
+    a:focus-visible {
+      outline: 2px dashed var(--color-recover);
+      outline-offset: 2px;
+    }
+
+    &::before,
+    &::after {
+      content: '';
+      background-size: contain;
+      position: absolute;
+      inset-block: auto;
+      width: clamp(1.5rem, 1.357rem + 0.71vi, 2rem);
+      aspect-ratio: 0.5;
+      height: auto;
+    }
+
+    &::before {
+      inset-inline-start: clamp(-2rem, -1.357rem + -0.71vi, -1.5rem);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='64' fill='none' viewBox='0 0 32 64'%3E%3Cpath stroke='%23B1B5BA' d='M1 0v32m0 32V32m0 0h31' opacity='.4'/%3E%3C/svg%3E");
+    }
+
+    &::after {
+      inset-inline-end: clamp(-2rem, -1.357rem + -0.71vi, -1.5rem);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='64' fill='none' viewBox='0 0 32 64'%3E%3Cpath stroke='%23B1B5BA' d='M31 64V32m0 0V0m0 32H0' opacity='.4'/%3E%3C/svg%3E");
+    }
+  }
+}

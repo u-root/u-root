@@ -1,0 +1,40 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+  text-decoration: none;
+  @include apply-utility('font', 'mono');
+  @include apply-utility('bg', 'recover');
+  @include apply-utility('color', 'void');
+  padding: 0.75em 1.5em;
+  border: 1px solid var(--color-recover);
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s ease-out;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: none;
+    color: var(--color-recover);
+    border-color: currentColor;
+  }
+
+  &:focus-visible {
+    outline: 2px dashed var(--color-recover);
+    outline-offset: 2px;
+  }
+
+  &--secondary {
+    background: none;
+    color: inherit;
+    border: 1px solid currentColor;
+
+    &:hover {
+      background: var(--color-init);
+      color: var(--color-void);
+      border-color: var(--color-void);
+    }
+  }
+}

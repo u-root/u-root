@@ -1,0 +1,51 @@
+.case-study-teaser {
+  display: grid;
+  grid-template-rows: minmax(8em, auto);
+  width: min(25rem, 100%);
+  transition: background-color 0.2s ease-out;
+  text-decoration: none;
+
+  &:hover {
+    background-color: rgb(54 73 78 / 0.3);
+
+    .case-study-teaser__link::after {
+      translate: 0.5em;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px dashed var(--color-recover);
+    outline-offset: 2px;
+  }
+
+  &__title {
+    @include apply-utility('font', 'base');
+    @include apply-utility('text', 'step-1');
+    @include apply-utility('leading', 'tight');
+    @include apply-utility('weight', 'regular');
+  }
+
+  &__link {
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    gap: var(--space-3xs);
+    align-self: flex-end;
+    padding-inline-end: 0.5em;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
+
+    &::after {
+      content: '';
+      display: inline-block;
+      width: 1.8125rem;
+      height: 0.6875rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='11' fill='none' viewBox='0 0 29 11'%3E%3Cpath stroke='%23E7EAEE' stroke-width='.75' d='M.0449219 10.2655H27.4567L17.7618.570841'/%3E%3C/svg%3E");
+      transition: translate 0.2s ease-out;
+    }
+  }
+}

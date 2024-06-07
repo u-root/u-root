@@ -1,0 +1,33 @@
+:root {
+  // 242px–90px von 320px bis 890px;
+  --site-head-height: clamp(5.635rem, 20.755rem + -28.15vw, 15.125rem);
+}
+
+.site-head {
+  width: 100%;
+  background-color: rgb(17 21 29 / 0.9);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  position: fixed;
+  z-index: 1;
+
+  &__wrapper {
+    width: min(100% - var(--space-xl), 90rem);
+    margin-inline: auto;
+    padding-block: var(--space-2xs);
+
+    /* For focus-visible to work */
+    a {
+      display: block;
+    }
+
+    a:focus-visible {
+      outline: 2px dashed var(--color-recover);
+      outline-offset: 2px;
+    }
+
+    a:not(.site-head__logo):hover {
+      color: var(--color-recover);
+    }
+  }
+}

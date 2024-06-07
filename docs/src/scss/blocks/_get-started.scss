@@ -1,0 +1,24 @@
+.get-started {
+  &::before,
+  &::after {
+    content: '';
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' fill='none' viewBox='0 0 64 64'%3E%3Cpath stroke='%23B1B5BA' d='M31.8251 0v32m0 32V32m0 0H64m-32.1749 0H0' opacity='.4'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    display: block;
+    position: relative;
+    width: 100%;
+    height: clamp(3rem, 2.714rem + 1.43vi, 4rem);
+  }
+
+  &::before {
+    margin-left: clamp(-2rem, -1.357rem + -0.71vw, -1.5rem);
+    margin-bottom: var(--space-s-m);
+  }
+
+  &::after {
+    background-position: 100%;
+    margin-left: clamp(1.5rem, 1.357rem + 0.71vw, 2rem);
+    margin-top: var(--space-s-m);
+  }
+}

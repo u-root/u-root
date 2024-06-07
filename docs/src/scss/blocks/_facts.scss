@@ -1,0 +1,13 @@
+.facts {
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3xs);
+    align-items: center;
+    text-align: center;
+
+    @media (width > 26.25em) {
+      flex-direction: row;
+    }
+  }
+}

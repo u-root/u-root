@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "name": "Emilie Vaskes",
+      "position": "",
+      "imgPath": "/images/emilie-vaskes.jpg",
+      "quote": "It has become quite easy to fit u-root’s 160 commands in a four MiB xz-compressed binary."
+    },
+    {
+      "name": "Ramon Itrer",
+      "imgPath": "/images/ramon-itrer.jpg",
+      "position": "CTO at SomeCompany",
+      "quote": "The firmware images are built in seconds, not hours, as with UEFI."
+    }
+  ]
+}

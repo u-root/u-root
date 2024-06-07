@@ -1,0 +1,141 @@
+<svg viewBox="0 0 610 409" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .code {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.5;
+      color: #e7eaee;
+    }
+
+    .code > * + * {
+      margin-block-start: 1.5em;
+    }
+
+    .comment {
+      color: #ac9cff;
+    }
+  </style>
+
+  <g filter="url(#filter0)">
+    <path d="M5 0L605 0.000417775V46H5V0Z" fill="#36494E" fill-opacity="0.15" />
+  </g>
+  <g opacity="0.8" filter="url(#filter1)">
+    <path
+      d="M11.4012 0.533429H598.599C601.84 0.533429 604.467 3.16049 604.467 6.40115V44.6547V393.599C604.467 396.84 601.839 399.467 598.599 399.467H11.4011C8.16046 399.467 5.53343 396.84 5.53343 393.599V6.40116C5.53343 3.1605 8.1605 0.533429 11.4012 0.533429Z"
+      stroke="#3E4952"
+      stroke-width="1.06686"
+      shape-rendering="crispEdges" />
+  </g>
+
+  <ellipse cx="26.4132" cy="22.7424" rx="6.48744" ry="6.74239" fill="#4A5056" />
+  <ellipse cx="43.9264" cy="22.7424" rx="6.48744" ry="6.74239" fill="#4A5056" />
+  <ellipse cx="61.443" cy="22.7424" rx="6.48744" ry="6.74239" fill="#4A5056" />
+  <g>
+    <foreignObject x="32" y="77" width="530" height="300">
+      <div class="code" xmlns="http://www.w3.org/1999/xhtml">
+        <p>
+          wget
+          https://github.com/u-root/u-root-distro/releases/download/v0.0.3/kernel-x86_64
+        </p>
+        <p>git clone https://github.com/u-root/u-root</p>
+        <p>
+          (cd u-root &amp;&amp; go build . &amp;&amp; GOOS=linux GOARCH=amd64
+          ./u-root -o initramfs)
+        </p>
+        <p>
+          qemu-system-x86_64 -nographic -kernel kernel-x86_64 -initrd
+          u-root/initramfs
+        </p>
+        <p class="comment"># you can exit qemu with the poweroff command</p>
+      </div>
+    </foreignObject>
+  </g>
+  <defs>
+    <filter
+      id="filter0"
+      x="-5.66858"
+      y="-10.6686"
+      width="621.337"
+      height="67.3372"
+      filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feGaussianBlur in="BackgroundImageFix" stdDeviation="5.33429" />
+      <feComposite
+        in2="SourceAlpha"
+        operator="in"
+        result="effect1_backgroundBlur_674_30" />
+      <feBlend
+        mode="normal"
+        in="SourceGraphic"
+        in2="effect1_backgroundBlur_674_30"
+        result="shape" />
+    </filter>
+    <filter
+      id="filter1"
+      x="0.732566"
+      y="-4.26743"
+      width="608.535"
+      height="412.802"
+      filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feGaussianBlur in="BackgroundImageFix" stdDeviation="2.13372" />
+      <feComposite
+        in2="SourceAlpha"
+        operator="in"
+        result="effect1_backgroundBlur_674_30" />
+      <feColorMatrix
+        in="SourceAlpha"
+        type="matrix"
+        values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+        result="hardAlpha" />
+      <feOffset dy="4.26743" />
+      <feGaussianBlur stdDeviation="2.13372" />
+      <feComposite in2="hardAlpha" operator="out" />
+      <feColorMatrix
+        type="matrix"
+        values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
+      <feBlend
+        mode="normal"
+        in2="effect1_backgroundBlur_674_30"
+        result="effect2_dropShadow_674_30" />
+      <feBlend
+        mode="normal"
+        in="SourceGraphic"
+        in2="effect2_dropShadow_674_30"
+        result="shape" />
+    </filter>
+    <filter
+      id="filter2"
+      x="26.5775"
+      y="71.8314"
+      width="532.669"
+      height="265.824"
+      filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feColorMatrix
+        in="SourceAlpha"
+        type="matrix"
+        values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+        result="hardAlpha" />
+      <feOffset />
+      <feGaussianBlur stdDeviation="5.33429" />
+      <feComposite in2="hardAlpha" operator="out" />
+      <feColorMatrix
+        type="matrix"
+        values="0 0 0 0 0.905882 0 0 0 0 0.917647 0 0 0 0 0.933333 0 0 0 0.4 0" />
+      <feBlend
+        mode="normal"
+        in2="BackgroundImageFix"
+        result="effect1_dropShadow_674_30" />
+      <feBlend
+        mode="normal"
+        in="SourceGraphic"
+        in2="effect1_dropShadow_674_30"
+        result="shape" />
+    </filter>
+  </defs>
+</svg>

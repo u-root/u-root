@@ -1,0 +1,56 @@
+/*
+  This utility generates classes used for vertical stacking.
+  Classes are generated based on a SCSS map called $space-size-scale e.g.
+
+  $space-size-scale: (
+    "s": 0.5rem,
+    "m": 1rem,
+    "l": 4rem
+  );
+
+  Basic usage:
+  This generates a stacking context, where every element apart from the first
+  has a top margin of 1rem.
+
+  <div class="stack-m">
+    <div>...</div>
+    <div>...</div>
+    <div>...</div>
+  </div>
+
+  Self spacing:
+  If you want one element to have a different spacing, you can use the generated
+  utility classes ".my-stack-space-xx"
+
+  <div class="stack-m">
+    <div>...</div>
+    <div class="my-stack-space-s">...</div>
+    <div>...</div>
+  </div>
+*/
+
+/* --------------------------------- */
+/* Utility Classes for Child-Spacing */
+
+.stack-base-xx {
+  margin-top: var(--stack-space, 1em);
+}
+
+@each $key, $value in $space-size-scale {
+  #{".stack-" + $key + " > * + *"} {
+    @extend .stack-base-xx;
+  }
+
+  #{".stack-" + $key + " > *"} {
+    --stack-space: var(--space-#{$key});
+  }
+}
+
+/* -------------------------------- */
+/* Utility Classes for Self-Spacing */
+
+@each $key, $value in $space-size-scale {
+  #{".my-stack-space-" + $key} {
+    --stack-space: var(--space-#{$key});
+  }
+}
