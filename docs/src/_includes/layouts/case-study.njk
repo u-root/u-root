@@ -1,0 +1,49 @@
+{% extends "layouts/base.njk" %}
+
+{% block content %}
+  <div class="wrapper">
+    <article class="case-study | markdown-content | stack-s">
+      <a href="/#success-stories">← Back to the overview</a>
+      {{ content | replace("<p><img", "<img") | replace("></p>", ">") | safe }}
+    </article>
+
+    <div class="stack-xl">
+      {# <div class="stack-s">
+        <h2 class="step-1">More success stories</h2>
+
+        <ul class="cluster" role="list" style="
+          --cluster-justification: center;
+          --cluster-gap: var(--space-s);
+        ">
+          <li>
+            <a href="/success-stories/google" class="card case-study-teaser">
+              <div class="case-study-teaser__title">
+              Google worked with 9elements to bring u-root test coverage up significantly
+            </div>
+
+              <div class="case-study-teaser__link">
+                Read more<span class="sr-only"> about the Google case study</span>
+              </div>
+            </a>
+          </li>
+
+          <li>
+            <a href="/success-stories/bytedance" class="card case-study-teaser">
+              <div class="case-study-teaser__title">
+                ByteDance greatly improved their boot software stack
+              </div>
+
+              <div class="case-study-teaser__link">
+                Read more<span class="sr-only"> about the ByteDance case study</span>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </div> #}
+
+      <div class="cluster" style="--cluster-justification: center">
+        <img loading="lazy" src="/images/go-gopher.png" alt="The Go Gopher mascot peeks from behind the footer">
+      </div>
+    </div>
+  </div>
+{% endblock %}

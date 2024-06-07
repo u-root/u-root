@@ -1,0 +1,62 @@
+<header class="site-head">
+  <div class="site-head__wrapper | centerflex" style="
+    --centerflex-threshold: 36rem;
+    --centerflex-gap: 2rem; 
+  ">
+    <div class="site-head__navigation | cluster" style="
+    --cluster-justification: center; 
+    --cluster-alignment: center;
+  ">
+      <a href="/" class="site-head__logo" aria-label="u-root Home">{% include "svg/logo.svg" %}</a>
+
+      <nav aria-label="Main">
+        <ul class="cluster" role="list" style="
+        --cluster-gap: var(--space-s-m);
+      ">
+          {% for item in navigation.items %}
+            <li>
+              <a href="{{ item.url }}" {{ helpers.getLinkActiveState(item.url, page.url) | safe }}>
+                {{ item.text }}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+
+    <ul class="site-head__socials | cluster" role="list" style="
+    --cluster-justification: center; 
+    --cluster-gap: var(--space-s);
+  ">
+      <li>
+        <a href="https://github.com/u-root/u-root">
+          <span class="sr-only">GitHub</span>
+          {%- icon 
+          icon = "github",
+          width = "1.75rem"
+        -%}
+        </a>
+      </li>
+
+      {# <li>
+      <a href="#">
+        <span class="sr-only">Mastodon</span>
+        {%- icon
+          icon = "mastodon",
+          width = "1.75rem"
+        -%}
+      </a>
+    </li> #}
+
+      <li>
+        <a href="https://slack.osfw.dev/">
+          <span class="sr-only">Slack</span>
+          {%- icon
+          icon = "slack",
+          width = "1.75rem"
+        -%}
+        </a>
+      </li>
+    </ul>
+  </div>
+</header>

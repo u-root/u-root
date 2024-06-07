@@ -1,0 +1,36 @@
+/*
+  SIDEBAR
+  Sidebar Layout needs two children. One has a fixed width
+  and the other fills the available space. When
+  the flexible elements shrinks below a given width (can
+  be customized with '--sidebar-threshold'), both elements are
+  stacked and take up the full width.
+
+  You can adjust '--sidebar-gap' and '--sidebar-gap-vertical' to
+  adjust spacing. '--sidebar-gap' sets both horizontal and vertical
+  space, '--sidebar-gap-vertical' only adjusts the vertical gap.
+*/
+
+.sidebar-left,
+.sidebar-right{
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  gap: var(--sidebar-gap-vertical, var(--sidebar-gap, 1rem)) var(--sidebar-gap, 1rem);
+
+  > * {
+    flex-grow: 1;
+  }
+}
+
+.sidebar-left > *:last-child,
+.sidebar-right > *:first-child {
+  flex-grow: 999;
+  flex-basis: calc(var(--sidebar-threshold, 50%) - var(--sidebar-gap, 1rem));
+}
+
+.sidebar-right > *:last-child,
+.sidebar-left > *:first-child {
+  flex-basis: var(--sidebar-width, 20rem);
+}

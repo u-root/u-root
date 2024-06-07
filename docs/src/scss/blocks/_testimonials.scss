@@ -1,0 +1,31 @@
+.testimonials {
+  &__wrapper {
+    position: relative;
+    padding: var(--space-m);
+
+    img {
+      width: 4.5rem;
+      aspect-ratio: 1;
+      height: auto;
+      object-fit: cover;
+      object-position: center top;
+      border-radius: var(--border-radius);
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+
+      background-image: radial-gradient(
+          at 100% 100%,
+          hsla(249, 100%, 80%, 1) 0px,
+          transparent 50%
+        ),
+        radial-gradient(at 0% 0%, hsla(138, 72%, 55%, 1) 0px, transparent 50%);
+
+      opacity: 0.25;
+    }
+  }
+}

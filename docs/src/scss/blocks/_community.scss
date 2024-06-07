@@ -1,0 +1,12 @@
+.community {
+  &__links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3xs);
+  }
+
+  &__video {
+    width: 30rem;
+  }
+}

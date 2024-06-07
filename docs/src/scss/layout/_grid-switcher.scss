@@ -1,0 +1,32 @@
+/*
+  This switcher layout accepts two breakpoints. At the first breakpoint (--gs-bp-medium) it switches from the
+  initial column count (--gs-columns-small) to the medium column count (--gs-columns-medium).
+  Then when reaching the second breakpoint (--gs-bp-large) it switches to the large column count (--gs-columns-large)
+*/
+.grid-switcher {
+  /* define fallback values once, so they don't need to be repeated every time */
+  --_gs-columns-small: var(--gs-columns-small, 1);
+  --_gs-bp-medium: var(--gs-bp-medium, 25rem);
+  --_gs-columns-medium: var(--gs-columns-medium, 2);
+  --_gs-bp-large: var(--gs-bp-large, 50rem);
+  --_gs-columns-large: var(--gs-columns-large, 4);
+  --_gs-gap: var(--gs-gap, 1rem);
+
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      clamp(
+        clamp(
+          100% / var(--_gs-columns-large) - var(--_gs-gap),
+          (var(--_gs-bp-large) - 100%) * 1000,
+          100% / var(--_gs-columns-medium) - var(--_gs-gap)
+        ),
+        (var(--_gs-bp-medium) - 100%) * 1000,
+        100% / var(--_gs-columns-small) - var(--_gs-gap)
+      ),
+      1fr
+    )
+  );
+  gap: var(--gs-gap-vertical, var(--_gs-gap)) var(--_gs-gap);
+}

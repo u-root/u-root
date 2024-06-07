@@ -1,0 +1,57 @@
+:is(vimeo-embed, youtube-embed) {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--video-embed-bdrs, 0.25em);
+  display: grid;
+  inline-size: 100%;
+  position: relative;
+}
+
+:is(vimeo-embed, youtube-embed) .play-button {
+  background-color: var(--button-bgc, #f00);
+  block-size: var(--button-h, 50px);
+  border: 0;
+  border-radius: var(--button-bdrs, 14%);
+  display: grid;
+  inline-size: var(--button-w, 75px);
+  opacity: var(--button-op, 0.8);
+  position: absolute;
+  place-self: center;
+  transition: opacity 0.2s ease-out;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px dashed var(--color-recover);
+    outline-offset: 2px;
+  }
+}
+
+:is(vimeo-embed, youtube-embed) .play-button::before {
+  aspect-ratio: 1;
+  background: #fff;
+  block-size: 1.5em;
+  clip-path: polygon(20% 0%, 20% 100%, 100% 50%);
+  content: '';
+  place-self: center;
+}
+
+:is(vimeo-embed, youtube-embed) :is(iframe, img) {
+  block-size: 100%;
+  border: 0;
+  border-radius: inherit;
+  inline-size: 100%;
+  inset: 0;
+  object-fit: cover;
+  position: absolute;
+}
+
+:is(vimeo-embed, youtube-embed) iframe:not([src='']) + .play-button {
+  display: none;
+}
+
+:is(vimeo-embed .play-button) {
+  --button-bgc: #00adef;
+}
+
+:is(vimeo-embed, youtube-embed):hover .play-button {
+  --button-op: 1;
+}
