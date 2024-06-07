@@ -15,7 +15,7 @@ func TestTS(t *testing.T) {
 	stdin := strings.NewReader("hello\nworld\n")
 	stdout := &bytes.Buffer{}
 
-	err := run(stdin, stdout, true, true)
+	err := run(stdin, stdout, []string{"ts", "-R", "-f"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,5 +33,15 @@ func TestTS(t *testing.T) {
 	m, err = regexp.MatchString(ts+" world$", l2)
 	if !m || err != nil {
 		t.Errorf("expected timestamped line, got %q", l2)
+	}
+}
+
+func TestInvalidUse(t *testing.T) {
+	stdin := strings.NewReader("")
+	stdout := &bytes.Buffer{}
+
+	err := run(stdin, stdout, []string{"ts", "foo"})
+	if err == nil {
+		t.Error("expected error, got nil")
 	}
 }
