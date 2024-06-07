@@ -15,8 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	flag "github.com/spf13/pflag"
 )
 
 const (
@@ -27,7 +25,7 @@ func usage(w io.Writer) {
 	fmt.Fprintf(w, "%s", usageString)
 }
 
-func runBasename(w io.Writer, args []string) {
+func run(w io.Writer, args []string) {
 	switch len(args) {
 	case 2:
 		fileName := filepath.Base(args[0])
@@ -44,6 +42,5 @@ func runBasename(w io.Writer, args []string) {
 }
 
 func main() {
-	flag.Parse()
-	runBasename(os.Stdout, flag.Args())
+	run(os.Stdout, os.Args[1:])
 }
