@@ -36,16 +36,15 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"unicode"
-
-	flag "github.com/spf13/pflag"
 )
 
-var del = flag.BoolP("delete", "d", false, "delete characters in SET1, do not translate")
+var del bool
 
 type cmd struct {
 	stdin  io.Reader
@@ -279,8 +278,12 @@ func unescape(s Set) ([]rune, error) {
 }
 
 func main() {
+	flag.BoolVar(&del, "delete", false, "delete characters in SET1, do not translate")
+	flag.BoolVar(&del, "d", false, "delete characters in SET1, do not translate (shorthand)")
+
 	flag.Parse()
-	cmd, err := command(os.Stdin, os.Stdout, flag.Args(), *del)
+
+	cmd, err := command(os.Stdin, os.Stdout, flag.Args(), del)
 	if err != nil {
 		log.Fatalf("%s: %v\n", name, err)
 	}
