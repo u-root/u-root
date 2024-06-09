@@ -1,0 +1,22 @@
+.wrapper {
+  --padding: var(--space-m);
+  --max-content-width: 72.5rem;
+
+  display: grid;
+  grid-template-columns:
+    [full-width-start] 1fr var(--padding)
+    [content-start] min(
+      calc(100% - 2 * var(--padding)),
+      var(--max-content-width)
+    )
+    [content-end] var(--padding) 1fr
+    [full-width-end];
+
+  > * {
+    grid-column: content;
+  }
+
+  > .full-width {
+    grid-column: full-width;
+  }
+}

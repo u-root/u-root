@@ -1,0 +1,21 @@
+.features {
+  &__list {
+    display: grid;
+    gap: var(--space-s);
+
+    @media (width >= 600px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  &__card {
+    display: grid;
+    justify-items: center;
+  }
+
+  svg {
+    @media (width >= 600px) {
+      margin-top: -48%;
+    }
+  }
+}

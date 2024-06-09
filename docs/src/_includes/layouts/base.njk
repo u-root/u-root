@@ -1,0 +1,44 @@
+{% set assetHash = global.random() %}
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    {% include "partials/meta-info.html" %}
+
+    <script>
+      document
+        .documentElement
+        .classList
+        .remove("no-js");
+      document
+        .documentElement
+        .classList
+        .add("js-active");
+    </script>
+
+    <link rel="stylesheet" media="all" href="/fonts/fonts.css?{{ assetHash }}"/>
+
+    {% if env.nodeenv !== 'production' %}
+      <!-- We're not in production mode -->
+      <style>
+        {% include "css/critical.css" %}
+      </style>
+    {% endif %}
+  </head>
+
+  <body>
+    {% include "partials/site-head.html" %}
+
+    <main tabindex="-1" id="main-content">
+      {% block content %}
+        {{ content | safe }}
+      {% endblock %}
+    </main>
+
+    {% include "partials/site-foot.html" %}
+    {% script src = "global.js" %}
+    {% script src = scripts %}
+  </body>
+</html>

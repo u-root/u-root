@@ -58,8 +58,7 @@ func (p *PCI) String() string {
 
 // SetVendorDeviceName changes VendorName and DeviceName from a name to a number,
 // if possible.
-func (p *PCI) SetVendorDeviceName() {
-	ids = newIDs()
+func (p *PCI) SetVendorDeviceName(ids []Vendor) {
 	p.VendorName, p.DeviceName = Lookup(ids, p.Vendor, p.Device)
 }
 
@@ -182,7 +181,7 @@ iter:
 		if err := p.ReadConfig(); err != nil {
 			return nil, err
 		}
-		p.SetVendorDeviceName()
+		p.SetVendorDeviceName(IDs)
 
 		c := p.Config
 		// Fill in whatever random stuff we can, from the base config.

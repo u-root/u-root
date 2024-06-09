@@ -1,0 +1,20 @@
+.gopher {
+  z-index: -1;
+
+  @keyframes peek {
+    0% {
+      translate: 0 100%;
+    }
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) and (animation-range: contain) {
+      animation: peek ease forwards;
+      animation-timeline: view();
+      animation-range: 35% 55%;
+    }
+  }
+}

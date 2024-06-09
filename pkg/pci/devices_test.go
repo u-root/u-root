@@ -128,7 +128,7 @@ func TestSetVendorDeviceName(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.devices.SetVendorDeviceName()
+			tt.devices.SetVendorDeviceName(IDs)
 			VendorNameGot, DeviceNameGot := tt.devices[0].VendorName, tt.devices[0].DeviceName
 			if VendorNameGot != tt.VendorNameWant {
 				t.Errorf("Vendor mismatch, got: %q, want: %q\n", VendorNameGot, tt.VendorNameWant)
