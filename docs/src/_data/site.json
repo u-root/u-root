@@ -1,0 +1,7 @@
+{
+  "name": "u-root",
+  "authorName": "9elements",
+  "url": "https://u-root.org",
+  "authorEmail": "info@u-root.org",
+  "metaDesc": "A fully Go userland with Linux bootloaders!"
+}

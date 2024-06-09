@@ -1,0 +1,35 @@
+.markdown-content {
+  display: grid;
+  justify-items: center;
+  margin-block: var(--space-xl);
+
+  h1 {
+    @include apply-utility('head', 'step-1');
+    max-width: 30ch;
+
+    & + img {
+      margin-top: var(--space-m);
+    }
+  }
+
+  h2 {
+    @include apply-utility('head', 'step-0');
+  }
+
+  p {
+    max-width: 56ch;
+
+    &:first-of-type {
+      margin-top: var(--space-m);
+    }
+
+    & + p {
+      margin-top: var(--space-xs);
+    }
+  }
+
+  ul,
+  ol {
+    max-width: 56ch;
+  }
+}

@@ -1,0 +1,23 @@
+name: Deploy Page
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - name: Install dependencies & build
+        working-directory: ./docs
+        run: |
+          npm install
+          npm run production
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          publish_dir: ./docs/dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}

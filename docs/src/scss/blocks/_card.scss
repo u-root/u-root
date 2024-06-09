@@ -1,0 +1,26 @@
+.card {
+  position: relative;
+  padding: var(--card-padding, var(--space-xs));
+  background-color: rgb(54 73 78 / 0.15);
+  border-radius: var(--border-radius);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+
+  &:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      170deg,
+      rgba(44, 52, 60, 1) 0%,
+      rgba(44, 52, 60, 0) 40%
+    );
+    border-radius: var(--border-radius);
+    mask: linear-gradient(#0000, #0000), linear-gradient(#fff, #fff);
+    border: 2px solid transparent;
+    mask-clip: padding-box, border-box;
+    background-origin: border-box;
+    mask-composite: intersect;
+    z-index: -1;
+  }
+}

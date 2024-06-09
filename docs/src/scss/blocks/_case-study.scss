@@ -1,0 +1,25 @@
+.case-study {
+  &.markdown-content {
+    margin-top: calc(var(--site-head-height) + var(--space-m));
+  }
+
+  footer {
+    color: var(--color-args);
+    border-top: 1px solid var(--color-args);
+
+    /* Prevent break-out of long urls */
+    word-break: break-word;
+
+    .footnote-item p {
+      margin-top: var(--space-2xs);
+    }
+  }
+
+  /**
+   * Highlight target note
+   */
+  footer :target {
+    outline: thin dotted;
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,28 @@
+.centerflex {
+  /* ↓ Save the large negative or large positive value to a variable */
+  --multiplier: calc((var(--centerflex-threshold, 38rem) - 100%) * 666);
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  /* ↓ Multiply by -1 to make negative */
+  margin: calc(var(--centerflex-gap, 1rem) / 2 * -1) 0;
+
+  &:before {
+    content: '';
+    flex-grow: 666;
+    margin: 0;
+    background: #f09;
+    /* ↓ If --multiplier is negative, use 0px instead */
+    flex-basis: max(0px, var(--multiplier));
+  }
+
+  > * {
+    /* ↓ Half the value to each element, combining to make the whole */
+    margin: calc(var(--centerflex-gap, 1rem) / 2) auto;
+
+    &:first-child {
+      order: -1;
+    }
+  }
+}
