@@ -6,6 +6,7 @@ package binary
 
 import (
 	"encoding/binary"
+	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,31 +26,33 @@ type tts struct {
 	U2 uint16
 	U3 uint32
 	U4 uint64
-	A  [1]int32
+	A  [1]uint32
 }
 
 func TestMarshalUnmarshal(t *testing.T) {
 	t1 := ts{
 		I1: 1,
-		I2: -2,
+		I2: math.MinInt16,
 		I3: 3,
-		I4: -4,
+		I4: math.MaxInt64,
 		S: tts{
 			U1: 10,
-			U2: 11,
+			U2: math.MaxUint16,
 			U3: 12,
-			U4: 13,
+			U4: math.MaxUint64,
 		},
 		A: [1]int32{13},
 	}
 
-	mb := Marshal(nil, binary.BigEndian, t1)
-	var t2 ts
-	Unmarshal(mb, binary.BigEndian, &t2)
+	for _, order := range []binary.ByteOrder{binary.BigEndian, binary.LittleEndian} {
+		mb := Marshal(nil, order, t1)
+		var t2 ts
+		Unmarshal(mb, order, &t2)
 
-	diff := cmp.Diff(t1, t2)
-	if diff != "" {
-		t.Errorf("t1 is not equal to t2:\n%s", diff)
+		diff := cmp.Diff(t1, t2)
+		if diff != "" {
+			t.Errorf("t1 is not equal to t2 with %v:\n%s", order, diff)
+		}
 	}
 }
 
