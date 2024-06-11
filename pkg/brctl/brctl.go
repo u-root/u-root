@@ -204,7 +204,7 @@ func Setageingtime(name string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err = setBridgeValue(name, BRCTL_AGEING_TIME, uint64(ageing_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err = setBridgeValue(name, BRCTL_AGEING_TIME, []byte(strconv.Itoa(ageing_time)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 	return nil
@@ -216,14 +216,14 @@ func Setageingtime(name string, time string) error {
 // > If <state> is "on" or "yes"  the STP  will  be turned on, otherwise it will be turned off
 // So this is actually the described behavior, not checking for "off" and "no"
 func Stp(bridge string, state string) error {
-	var stp_state uint64
+	var stp_state int
 	if state == "on" || state == "yes" {
 		stp_state = 1
 	} else {
 		stp_state = 0
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_STP_STATE, stp_state, uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_STP_STATE, []byte(strconv.Itoa(stp_state)), uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -233,12 +233,13 @@ func Stp(bridge string, state string) error {
 // The manpage states only uint16 should be supplied, but brctl_cmd.c uses regular 'int'
 // providing 2^16+1 results in 0 -> integer overflow
 func Setbridgeprio(bridge string, bridgePriority string) error {
-	prio, err := strconv.ParseUint(bridgePriority, 10, 16)
+	// parse bridgePriority to int
+	prio, err := strconv.Atoi(bridgePriority)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, prio, 0); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, []byte(strconv.Itoa(prio)), 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -251,7 +252,7 @@ func Setfd(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, uint64(forward_delay), 0); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, []byte(strconv.Itoa(forward_delay)), 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -264,7 +265,7 @@ func Sethello(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, uint64(hello_time), 0); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, []byte(strconv.Itoa(hello_time)), 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -277,49 +278,47 @@ func Setmaxage(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, uint64(max_age), 0); err != nil {
-		return fmt.Errorf("%w", err)
+	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, []byte(strconv.Itoa(max_age)), 0); err != nil {
+		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
 	return nil
 }
 
-// port ~= interface
+// port ~= interface, aka /sys/net/ehtX
 func Setpathcost(bridge string, port string, cost string) error {
 	path_cost, err := strconv.ParseUint(cost, 10, 64)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgePort(bridge, port, BRCTL_PATH_COST, path_cost, uint64(BRCTL_SET_PATH_COST)); err != nil {
-		return fmt.Errorf("%w", err)
+	err = setPortBrportValue(port, BRCTL_PATH_COST, append([]byte(strconv.FormatUint(path_cost, 10)), BRCTL_SYS_SUFFIX))
+	if err != nil {
+		log.Printf("setPortBrport: %v", err)
+		return nil
 	}
 
 	return nil
 }
 
 func Setportprio(bridge string, port string, prio string) error {
-	port_priority, err := strconv.ParseUint(prio, 10, 64)
+	port_priority, err := strconv.Atoi(prio)
 	if err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("strconv: %w", err)
 	}
 
-	if err := setBridgePort(bridge, port, BRCTL_PRIORITY, port_priority, 0); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	return nil
+	return setPortBrportValue(port, BRCTL_PRIORITY, []byte(strconv.Itoa(port_priority)))
 }
 
 func Hairpin(bridge string, port string, hairpinmode string) error {
-	var hairpin_mode uint64
+	var hairpin_mode string
 	if hairpinmode == "on" {
-		hairpin_mode = 1
+		hairpin_mode = "1"
 	} else {
-		hairpin_mode = 0
+		hairpin_mode = "0"
 	}
 
-	if err := setBridgePort(bridge, port, BRCTL_HAIRPIN, hairpin_mode, 0); err != nil {
+	if err := setPortBrportValue(port, BRCTL_HAIRPIN, []byte(hairpin_mode)); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 

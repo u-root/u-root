@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9th || a || pointer || value
-// +build !plan9th a pointer value
+//go:build !plan9
+// +build !plan9
 
 package brctl
 
@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -96,31 +97,31 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 }
 
 // set values for the bridge
-// 1. Try to set the config options using the sysfs` bridge directory
-// 2. Else use the ioctl interface
-// TODO: hide this behind an interface and check in beforehand which to use
-func setBridgeValue(bridge string, name string, value uint64, _ uint64) error {
-	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, []byte(strconv.FormatUint(value, 10)), 0)
+// all values in the sysfs are of type <bytes> + '\n'
+func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
+	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
 		log.Printf("br_set_val: %v", err)
-		// TODO: 2. Use ioctl as fallback
-		return nil
+		return err
 	}
 	return nil
 }
 
 // Get values for the bridge
+// For some reason these values have a '\n' (0x0a) as a suffix, so we need to trim it
 func getBridgeValue(bridge string, name string) (string, error) {
 	out, err := os.ReadFile(BRCTL_SYS_NET + bridge + "/bridge/" + name)
 	if err != nil {
 		return "", err
 	}
-	return string(out), nil
+	return strings.TrimSuffix(string(out), "\n"), nil
 }
 
 // Set the value of a port in a bridge
-func setBridgePort(bridge string, port string, name string, value uint64, _ uint64) error {
-	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
+//
+//	SYSFS_CLASS_NET "%s/brport/%s", ifname, name
+func setBridgePort(bridge string, iface string, name string, value uint64, _ uint64) error {
+	err := os.WriteFile(BRCTL_SYS_NET+iface+"/brport/"+bridge+"/"+name, []byte(strconv.FormatUint(value, 10)), 0)
 	if err != nil {
 		log.Printf("br_set_port: %v", err)
 		return nil
@@ -129,8 +130,25 @@ func setBridgePort(bridge string, port string, name string, value uint64, _ uint
 }
 
 // Get the value of a port in a bridge
-func getBridgePort(bridge string, port string, name string) (string, error) {
-	out, err := os.ReadFile(BRCTL_SYS_NET + port + "/brport/" + bridge + "/" + name)
+func getBridgePort(bridge string, iface string, name string) (string, error) {
+	out, err := os.ReadFile(BRCTL_SYS_NET + iface + "/brport/" + bridge + "/" + name)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func setPortBrportValue(port string, name string, value []byte) error {
+	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+name, append(value, BRCTL_SYS_SUFFIX), 0)
+	if err != nil {
+		log.Printf("br_set_port: %v", err)
+		return err
+	}
+	return nil
+}
+
+func getPortBrportValue(port string, name string) (string, error) {
+	out, err := os.ReadFile(BRCTL_SYS_NET + port + "/brport/" + name)
 	if err != nil {
 		return "", err
 	}
