@@ -8,7 +8,6 @@
 package brctl
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -57,22 +56,21 @@ func getIfreqOption(ifreq *unix.Ifreq, ptr unsafe.Pointer) ifreqptr {
 // TODO: maybe use ifreq.withData for this?
 func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	local_bytes := append([]byte(raw), 0)
-	err_int, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
-	if !errors.Is(errno, errno0) {
-		return int(err_int), fmt.Errorf("syscall.Syscall: %s", errno)
+	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
+	if errno != 0 {
+		return 0, fmt.Errorf("syscall.Syscall: %s", errno)
 	}
-	return int(err_int), nil
+	return 0, nil
 }
 
 func ioctl(fd int, req uint, addr uintptr) (int, error) {
-	err_int, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), addr)
-	if !errors.Is(errno, errno0) {
-		return int(err_int), fmt.Errorf("syscall.Syscall: %s", errno)
+	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), addr)
+	if errno != 0 {
+		return 0, fmt.Errorf("syscall.Syscall: %s", errno)
 	}
-	return int(err_int), nil
+	return 0, nil
 }
 
-// https://github.com/WireGuard/wireguard-go/blob/master/tun/tun_linux.go#L217
 func getIndexFromInterfaceName(ifname string) (int, error) {
 	ifreq, err := unix.NewIfreq(ifname)
 	if err != nil {

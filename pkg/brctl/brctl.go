@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -27,16 +26,6 @@ func Addbr(name string) error {
 		return fmt.Errorf("executeIoctlStr: %w", err)
 	}
 
-	name_bytes, err := unix.ByteSliceFromString(name)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	args := []int64{int64(BRCTL_ADD_I), int64(uintptr(unsafe.Pointer(&name_bytes))), 0, 0}
-	if _, err := ioctl(brctl_socket, unix.SIOCSIFBR, uintptr(unsafe.Pointer(&args))); err != nil {
-		return fmt.Errorf("ioctl: %w", err)
-	}
-
 	return nil
 }
 
@@ -48,16 +37,6 @@ func Delbr(name string) error {
 
 	if _, err := executeIoctlStr(brctl_socket, unix.SIOCBRDELBR, name); err != nil {
 		return fmt.Errorf("executeIoctlStr: %w", err)
-	}
-
-	name_bytes, err := unix.ByteSliceFromString(name)
-	if err != nil {
-		return fmt.Errorf("unix.ByteSliceFromString: %w", err)
-	}
-
-	args := []int64{int64(BRCTL_DEL_BRIDGE), int64(uintptr(unsafe.Pointer(&name_bytes))), 0, 0}
-	if _, err := ioctl(brctl_socket, unix.SIOCSIFBR, uintptr(unsafe.Pointer(&args))); err != nil {
-		return fmt.Errorf("ioctl: %w", err)
 	}
 
 	return nil
@@ -81,20 +60,8 @@ func Addif(name string, iface string) error {
 	}
 	ifr.SetUint32(uint32(if_index))
 
-	//SIOCBRADDIF
-	//SIOCGIFINDEX
 	if err := unix.IoctlIfreq(brctl_socket, unix.SIOCBRADDIF, ifr); err != nil {
 		return fmt.Errorf("unix.IoctlIfreq: %w", err)
-	}
-
-	// prepare args for ifr
-	// apparently the go unix api does not support setting the second union value to a raw pointer
-	// so we have to manually craft sth that looks like a struct ifreq
-	var args = []int64{int64(BRCTL_ADD_I), int64(if_index), 0, 0}
-	ifrd := getIfreqOption(ifr, unsafe.Pointer(&args[0]))
-
-	if _, err = ioctl(brctl_socket, unix.SIOCDEVPRIVATE, uintptr(unsafe.Pointer(&ifrd))); err != nil {
-		return fmt.Errorf("ioctl: %w", err)
 	}
 
 	return nil
@@ -122,13 +89,6 @@ func Delif(name string, iface string) error {
 		return fmt.Errorf("unix.IoctlIfreq: %w", err)
 	}
 
-	// set args
-	var args = []int64{int64(BRCTL_DEL_I), int64(if_index), 0, 0}
-	ifrd := getIfreqOption(ifr, unsafe.Pointer(&args[0]))
-
-	if _, err = ioctl(brctl_socket, unix.SIOCDEVPRIVATE, uintptr(unsafe.Pointer(&ifrd))); err != nil {
-		return fmt.Errorf("ioctl: %w", err)
-	}
 	return nil
 }
 
@@ -278,7 +238,7 @@ func Setbridgeprio(bridge string, bridgePriority string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, prio, uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, prio, 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -291,7 +251,7 @@ func Setfd(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, uint64(forward_delay), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, uint64(forward_delay), 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -304,7 +264,7 @@ func Sethello(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, uint64(hello_time), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, uint64(hello_time), 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -317,7 +277,7 @@ func Setmaxage(bridge string, time string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, uint64(max_age), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, uint64(max_age), 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
@@ -344,7 +304,7 @@ func Setportprio(bridge string, port string, prio string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := setBridgePort(bridge, port, BRCTL_PRIORITY, port_priority, uint64(BRCTL_SET_PATH_COST)); err != nil {
+	if err := setBridgePort(bridge, port, BRCTL_PRIORITY, port_priority, 0); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
