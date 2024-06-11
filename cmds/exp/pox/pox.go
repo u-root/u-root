@@ -91,6 +91,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -101,11 +102,11 @@ import (
 	"strings"
 	"syscall"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/loop"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/u-root/u-root/pkg/uzip"
 )
 
@@ -120,21 +121,20 @@ type mp struct {
 	perm   os.FileMode // for target in the chroot
 }
 
-var (
-	verbose = flag.BoolP("verbose", "v", false, "enable verbose prints")
-	run     = flag.BoolP("run", "r", false, "Run the first file argument")
-	create  = flag.BoolP("create", "c", false, "create it")
-	zip     = flag.BoolP("zip", "z", false, "use zip instead of squashfs")
-	self    = flag.BoolP("self", "s", false, "use self-extracting zip")
-	file    = flag.StringP("output", "f", "/tmp/pox.tcz", "Output file")
-	extra   = flag.StringP("extra", "e", "", `comma-separated list of extra directories to add (on create) and binds to do (on run).
-You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
-pox -c -e /tmp,/etc commands ....
-pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
-This can also be passed in with the POX_EXTRA variable.
-`)
-	v = func(string, ...interface{}) {}
-)
+type cmd struct {
+	//flag
+	verbose bool
+	run     bool
+	create  bool
+	zip     bool
+	self    bool
+	file    string
+	extra   string
+	// positional args
+	args []string
+	// verbose output
+	debug func(string, ...interface{})
+}
 
 // When chrooting, programs often want to access various system directories:
 var chrootMounts = []mp{
@@ -145,21 +145,21 @@ var chrootMounts = []mp{
 	// mount --bind /dev /chroot/dev
 	{"/dev", "/dev", "", mount.MS_BIND, "", 0o755}}
 
-func poxCreate(bin ...string) error {
-	if len(bin) == 0 {
+func (c cmd) poxCreate() error {
+	if len(c.args) == 0 {
 		return fmt.Errorf(usage)
 	}
-	names, err := ldd.List(bin...)
+	names, err := ldd.List(c.args...)
 	if err != nil {
 		var stderr []byte
 		if eerr, ok := err.(*exec.ExitError); ok {
 			stderr = eerr.Stderr
 		}
-		return fmt.Errorf("running ldd on %v: %v %s", bin, err, stderr)
+		return fmt.Errorf("running ldd on %v: %v %s", c.args, err, stderr)
 	}
 	// At some point the ldd API changed and it no longer includes the
 	// bins.
-	names = append(names, bin...)
+	names = append(names, c.args...)
 
 	sort.Strings(names)
 	// Now we need to make a template file hierarchy and put
@@ -176,7 +176,7 @@ func poxCreate(bin ...string) error {
 	// We don't use defer() here to close files as
 	// that can cause open failures with a large enough number.
 	for _, f := range names {
-		v("Adding %q", f)
+		c.debug("Adding %q", f)
 		fi, err := os.Stat(f)
 		if err != nil {
 			return err
@@ -207,46 +207,46 @@ func poxCreate(bin ...string) error {
 
 	for _, m := range chrootMounts {
 		d := filepath.Join(dir, m.target)
-		v("Adding mount %q, perm %s", d, m.perm.String())
+		c.debug("Adding mount %q, perm %s", d, m.perm.String())
 		if err := os.MkdirAll(d, m.perm); err != nil {
 			return err
 		}
 	}
-	if err := os.Remove(*file); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(c.file); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	if *self {
+	if c.self {
 		// Make a copy of the exe and append the zip file.
 		exe, err := os.Executable()
 		if err != nil {
 			return err
 		}
-		if err := cp.Copy(exe, *file); err != nil {
+		if err := cp.Copy(exe, c.file); err != nil {
 			return err
 		}
-		if err := uzip.AppendZip(dir, *file, bin[0]); err != nil {
+		if err := uzip.AppendZip(dir, c.file, c.args[0]); err != nil {
 			return err
 		}
-	} else if *zip {
-		if err := uzip.ToZip(dir, *file, ""); err != nil {
+	} else if c.zip {
+		if err := uzip.ToZip(dir, c.file, ""); err != nil {
 			return err
 		}
 	} else {
-		c := exec.Command("mksquashfs", dir, *file, "-noappend")
-		o, err := c.CombinedOutput()
-		v("%v", string(o))
+		ec := exec.Command("mksquashfs", dir, c.file, "-noappend")
+		o, err := ec.CombinedOutput()
+		c.debug("%v", string(o))
 		if err != nil {
-			return fmt.Errorf("%v: %v: %v", c.Args, string(o), err)
+			return fmt.Errorf("%v: %v: %v", ec.Args, string(o), err)
 		}
 	}
 
-	v("Done, your pox is %q", *file)
+	c.debug("Done, your pox is %q", c.file)
 	return nil
 }
 
-func poxRun(args ...string) error {
-	if len(args) == 0 {
+func (c cmd) poxRun() error {
+	if len(c.args) == 0 {
 		return fmt.Errorf(usage)
 	}
 	dir, err := os.MkdirTemp("", "pox")
@@ -254,12 +254,12 @@ func poxRun(args ...string) error {
 		return err
 	}
 
-	if *zip {
-		if err := uzip.FromZip(*file, dir); err != nil {
+	if c.zip {
+		if err := uzip.FromZip(c.file, dir); err != nil {
 			return err
 		}
 	} else {
-		lo, err := loop.New(*file, "squashfs", "")
+		lo, err := loop.New(c.file, "squashfs", "")
 		if err != nil {
 			return err
 		}
@@ -272,7 +272,7 @@ func poxRun(args ...string) error {
 		defer mountPoint.Unmount(0) //nolint:errcheck
 	}
 	for _, m := range chrootMounts {
-		v("mount(%q, %q, %q, %q, %#x)", m.source, filepath.Join(dir, m.target), m.fstype, m.data, m.flags)
+		c.debug("mount(%q, %q, %q, %q, %#x)", m.source, filepath.Join(dir, m.target), m.fstype, m.data, m.flags)
 		mp, err := mount.Mount(m.source, filepath.Join(dir, m.target), m.fstype, m.data, m.flags)
 		if err != nil {
 			return err
@@ -285,28 +285,28 @@ func poxRun(args ...string) error {
 	// picked is undoubtably wrong.  Let's help them out: if they give us a
 	// program with no /, let's look in /bin/.  If they want the root of the
 	// chroot, they can use "./"
-	if filepath.Base(args[0]) == args[0] {
-		args[0] = filepath.Join(string(os.PathSeparator), "bin", args[0])
+	if filepath.Base(c.args[0]) == c.args[0] {
+		c.args[0] = filepath.Join(string(os.PathSeparator), "bin", c.args[0])
 	}
-	c := exec.Command(args[0], args[1:]...)
-	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
-	c.SysProcAttr = &syscall.SysProcAttr{
+	ec := exec.Command(c.args[0], c.args[1:]...)
+	ec.Stdin, ec.Stdout, ec.Stderr = os.Stdin, os.Stdout, os.Stderr
+	ec.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
 	}
-	c.Env = append(os.Environ(), "PWD=.")
+	ec.Env = append(os.Environ(), "PWD=.")
 
-	if err = c.Run(); err != nil {
-		v("pox command exited with: %v", err)
+	if err = ec.Run(); err != nil {
+		c.debug("pox command exited with: %v", err)
 	}
 
 	return nil
 }
 
-func extraMounts(mountList string) error {
+func (c cmd) extraMounts(mountList string) error {
 	if mountList == "" {
 		return nil
 	}
-	v("Extra mounts: %q", mountList)
+	c.debug("Extra mounts: %q", mountList)
 	// We have to specify the extra directories and do the create here b/c it is a squashfs. Sorry.
 	for _, e := range strings.Split(mountList, ",") {
 		m := mp{flags: mount.MS_BIND, perm: 0o755}
@@ -319,13 +319,13 @@ func extraMounts(mountList string) error {
 		default:
 			return fmt.Errorf("%q is not in the form src:target", mp)
 		}
-		v("Extra mounts: append %q to chrootMounts", m)
+		c.debug("Extra mounts: append %q to chrootMounts", m)
 		chrootMounts = append(chrootMounts, m)
 	}
 	return nil
 }
 
-func pox(args ...string) error {
+func (c cmd) start() error {
 	// If the current executable is a zip file, extract and run.
 	// Sneakily re-write os.Args to include a "-rzf" before flag parsing.
 	// The zip comment contains the executable path once extracted.
@@ -345,32 +345,71 @@ func pox(args ...string) error {
 		}, os.Args[1:]...)
 	}
 
-	if *verbose {
-		v = log.Printf
+	if c.verbose {
+		c.debug = log.Printf
 	}
-	if err := extraMounts(*extra); err != nil {
+	if err := c.extraMounts(c.extra); err != nil {
 		return err
 	}
-	if err := extraMounts(os.Getenv("POX_EXTRA")); err != nil {
+	if err := c.extraMounts(os.Getenv("POX_EXTRA")); err != nil {
 		return err
 	}
-	if !*create && !*run {
+	if !c.create && !c.run {
 		return fmt.Errorf(usage)
 	}
-	if *create {
-		if err := poxCreate(args...); err != nil {
+	if c.create {
+		if err := c.poxCreate(); err != nil {
 			return err
 		}
 	}
-	if *run {
-		return poxRun(args...)
+	if c.run {
+		return c.poxRun()
 	}
 	return nil
 }
 
+func command(args []string) *cmd {
+	var c cmd
+
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	f.BoolVar(&c.verbose, "verbose", false, "enable verbose prints")
+	f.BoolVar(&c.verbose, "v", false, "enable verbose prints (shorthand)")
+
+	f.BoolVar(&c.run, "run", false, "Run the first file argument")
+	f.BoolVar(&c.run, "r", false, "Run the first file argument (shorthand)")
+
+	f.BoolVar(&c.create, "create", false, "create it")
+	f.BoolVar(&c.create, "c", false, "create it")
+
+	f.BoolVar(&c.zip, "zip", false, "use zip instead of squashfs")
+	f.BoolVar(&c.zip, "z", false, "use zip instead of squashfs (shorthand)")
+
+	f.BoolVar(&c.self, "self", false, "use self-extracting zip")
+	f.BoolVar(&c.self, "s", false, "use self-extracting zip (shorthand)")
+
+	f.StringVar(&c.file, "output", "/tmp/pox.tcz", "Output file")
+	f.StringVar(&c.file, "f", "/tmp/pox.tcz", "Output file (shorthand)")
+
+	const extraUsage = `comma-separated list of extra directories to add (on create) and binds to do (on run).
+You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
+pox -c -e /tmp,/etc commands ....
+pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
+This can also be passed in with the POX_EXTRA variable.
+`
+	f.StringVar(&c.extra, "extra", "", extraUsage)
+	f.StringVar(&c.extra, "e", "", extraUsage+" (shorthand)")
+
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	c.args = f.Args()
+	c.debug = func(string, ...interface{}) {}
+
+	return &c
+}
+
 func main() {
-	flag.Parse()
-	if err := pox(flag.Args()...); err != nil {
+	if err := command(os.Args).start(); err != nil {
 		log.Fatal(err)
 	}
 }
