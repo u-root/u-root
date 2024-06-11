@@ -22,6 +22,7 @@ package brctl
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 
@@ -29,14 +30,14 @@ import (
 	"github.com/hugelgupf/vmtest/qemu"
 )
 
-// TODO: Since ioctl needs root privileges, we need to run the tests in a VM with root privileges.
 func TestVM(t *testing.T) {
+	// check if arch is amd64
+	if runtime.GOARCH != "amd64" {
+		t.Skip("skipping integration test")
+	}
+
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	// https://elixir.bootlin.com/linux/v6.0/source/net/socket.c#L1136
-	// kernel needs to have the bridge built in
-	// CONFIG_BRIDGE=y
-	// CONFIG_NETLINK=y
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/brctl"),
 		govmtest.WithQEMUFn(
