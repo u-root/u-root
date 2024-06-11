@@ -5,6 +5,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -14,13 +15,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
-	flag "github.com/spf13/pflag"
-)
-
-var (
-	hostKeyFile = flag.StringP("hostkeyfile", "h", "/etc/ssh_host_rsa_key", "file for host key")
-	pubKeyFile  = flag.StringP("pubkeyfile", "k", "key.pub", "file for public key")
-	port        = flag.StringP("port", "p", "2222", "default port")
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 func handler(s ssh.Session) {
@@ -56,12 +51,17 @@ func handler(s ssh.Session) {
 	}
 }
 
-func main() {
-	flag.Parse()
+type cmd struct {
+	hostKeyFile string
+	pubKeyFile  string
+	port        string
+}
+
+func (c *cmd) run() error {
 	publicKeyOption := func(ctx ssh.Context, key ssh.PublicKey) bool {
 		// Glob the users's home directory for all the
 		// possible keys?
-		data, err := os.ReadFile(*pubKeyFile)
+		data, err := os.ReadFile(c.pubKeyFile)
 		if err != nil {
 			fmt.Print(err)
 			return false
@@ -75,7 +75,7 @@ func main() {
 			log.Println("Accepted forward", dhost, dport)
 			return true
 		}),
-		Addr:             ":" + *port,
+		Addr:             ":" + c.port,
 		PublicKeyHandler: publicKeyOption,
 		ReversePortForwardingCallback: ssh.ReversePortForwardingCallback(func(ctx ssh.Context, host string, port uint32) bool {
 			log.Println("attempt to bind", host, port, "granted")
@@ -84,7 +84,31 @@ func main() {
 		Handler: handler,
 	}
 
-	server.SetOption(ssh.HostKeyFile(*hostKeyFile))
-	log.Println("starting ssh server on port " + *port)
-	log.Fatal(server.ListenAndServe())
+	server.SetOption(ssh.HostKeyFile(c.hostKeyFile))
+	log.Println("starting ssh server on port " + c.port)
+
+	return (server.ListenAndServe())
+}
+
+func command(args []string) *cmd {
+	c := &cmd{}
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	f.StringVar(&c.hostKeyFile, "hostkeyfile", "/etc/ssh_host_rsa_key", "file for host key")
+	f.StringVar(&c.hostKeyFile, "h", "/etc/ssh_host_rsa_key", "file for host key (shorthand)")
+
+	f.StringVar(&c.pubKeyFile, "pubkeyfile", "key.pub", "file for public key")
+	f.StringVar(&c.pubKeyFile, "k", "key.pub", "file for public key (shorthand)")
+
+	f.StringVar(&c.port, "port", "2222", "default port")
+	f.StringVar(&c.port, "p", "2222", "default port (shorthand)")
+
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	return c
+}
+
+func main() {
+	if err := command(os.Args).run(); err != nil {
+		log.Fatal(err)
+	}
 }
