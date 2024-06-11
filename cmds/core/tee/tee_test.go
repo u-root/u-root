@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -53,10 +54,14 @@ func TestTee(t *testing.T) {
 
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
-			cmd := command(test.append, false, test.args)
-			cmd.stdin = strings.NewReader(test.input)
-			cmd.stdout = &stdout
-			cmd.stderr = &stderr
+			//cmd := command(test.append, false, test.args)
+			cmd := &cmd{
+				stdin:  strings.NewReader(test.input),
+				stdout: &stdout,
+				stderr: &stderr,
+				args:   test.args,
+				cat:    test.append,
+			}
 			if err := cmd.run(); err != nil {
 				t.Fatal(err)
 			}
@@ -81,6 +86,64 @@ func TestTee(t *testing.T) {
 				if res != expectedContent {
 					t.Errorf("wanted: %q, got %q", expectedContent, res)
 				}
+			}
+		})
+	}
+}
+
+func TestCommand(t *testing.T) {
+	stdin := os.Stdin
+	stdout := os.Stdout
+	stderr := os.Stderr
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantCmd *cmd
+	}{
+		{
+			name: "Append mode short flag",
+			args: []string{"tee", "-a"},
+			wantCmd: &cmd{
+				stdin:  stdin,
+				stdout: stdout,
+				stderr: stderr,
+				cat:    true,
+				ignore: false,
+				args:   []string{},
+			},
+		},
+		{
+			name: "Ignore interrupts long flag",
+			args: []string{"tee", "--ignore-interrupts"},
+			wantCmd: &cmd{
+				stdin:  stdin,
+				stdout: stdout,
+				stderr: stderr,
+				cat:    false,
+				ignore: true,
+				args:   []string{},
+			},
+		},
+		{
+			name: "Append and ignore interrupts",
+			args: []string{"tee", "-a", "-i"},
+			wantCmd: &cmd{
+				stdin:  stdin,
+				stdout: stdout,
+				stderr: stderr,
+				cat:    true,
+				ignore: true,
+				args:   []string{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotCmd := command(tt.args)
+			if !reflect.DeepEqual(gotCmd, tt.wantCmd) {
+				t.Errorf("%s: command() = %+v, want %+v", tt.name, gotCmd, tt.wantCmd)
 			}
 		})
 	}
