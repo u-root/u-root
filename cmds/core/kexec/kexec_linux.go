@@ -27,12 +27,13 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
 
-	flag "github.com/spf13/pflag"
+	"flag"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -40,10 +41,14 @@ import (
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/u-root/uio/uio"
 )
 
 type options struct {
+	kernelpath string
+
+	// Flags
 	cmdline      string
 	debug        bool
 	dtb          string
@@ -57,48 +62,118 @@ type options struct {
 	reuseCmdline bool
 }
 
-func registerFlags() *options {
-	o := &options{}
-	flag.StringVarP(&o.cmdline, "cmdline", "c", "", "Append to the kernel command line")
-	flag.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
-	flag.BoolVarP(&o.debug, "debug", "d", false, "Print debug info")
-	flag.StringVar(&o.dtb, "dtb", "", "FILE used as the flatten device tree blob")
-	flag.BoolVarP(&o.exec, "exec", "e", false, "Execute a currently loaded kernel")
-	flag.StringVarP(&o.extra, "extra", "x", "", "Add a cpio containing extra files")
-	flag.StringVarP(&o.initramfs, "initrd", "i", "", "Use file as the kernel's initial ramdisk")
-	flag.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
-	flag.BoolVarP(&o.load, "load", "l", false, "Load the new kernel into the current kernel")
-	flag.BoolVarP(&o.loadSyscall, "loadsyscall", "L", false, "Use the kexec_load syscall (not kexec_file_load)")
-	flag.StringArrayVar(&o.modules, "module", nil, `Load multiboot module with command line args (e.g --module="mod arg1")`)
+func (o *options) parseCmdline(args []string, f *flag.FlagSet) {
+	f.StringVar(&o.cmdline, "cmdline", "", "Append to the kernel command line")
+	f.StringVar(&o.cmdline, "c", "", "Append to the kernel command line (shorthand)")
+
+	f.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
+
+	f.BoolVar(&o.debug, "debug", false, "Print debug info")
+	f.BoolVar(&o.debug, "d", false, "Print debug info (shorthand)")
+
+	f.StringVar(&o.dtb, "dtb", "", "FILE used as the flatten device tree blob")
+
+	f.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel")
+	f.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel (shorthand)")
+
+	f.StringVar(&o.extra, "extra", "", "Add a cpio containing extra files")
+	f.StringVar(&o.extra, "x", "", "Add a cpio containing extra files")
+
+	f.StringVar(&o.initramfs, "initrd", "", "Use file as the kernel's initial ramdisk")
+	f.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk (shorthand)")
+
+	f.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
+
+	// Although -l or--load is actually a switch, traditional kexec command allows the kernel
+	// to be passed as the value right after the l flag. This is why we have to handle this
+	// as a special case and define the flag as a string. Together with some checks below,
+	// we can handle both:
+	// - kexec -l [other flags] /path/to/kernel
+	// - kexec -l /path/to/kernel [other flags]
+	var loadFlagPath string
+	f.StringVar(&loadFlagPath, "load", "", "Load the new kernel into the current kernel")
+	f.StringVar(&loadFlagPath, "l", "", "Load the new kernel into the current kernel (shorthand)")
+
+	f.BoolVar(&o.loadSyscall, "loadsyscall", false, "Use the kexec_load syscall (not kexec_file_load)")
+	f.BoolVar(&o.loadSyscall, "L", false, "Use the kexec_load syscall (not kexec_file_load) (shorthand)")
+
+	f.Var((*unixflag.StringArray)(&o.modules), "module", `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
 	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
-	flag.StringVarP(&o.purgatory, "purgatory", "p", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list")
-	flag.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
-	return o
+	f.StringVar(&o.purgatory, "purgatory", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list")
+	f.StringVar(&o.purgatory, "p", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list (shorthand)")
+
+	f.BoolVar(&o.reuseCmdline, "reuse-cmdline", false, "Use the kernel command line from running system")
+
+	unixargs := unixflag.ArgsToGoArgs(args[1:])
+	hackedArgs := hackLoadFlagValue(unixargs)
+
+	f.Parse(hackedArgs)
+
+	if loadFlagPath != "" {
+		o.load = true
+		if loadFlagPath == setButEmpty {
+			loadFlagPath = ""
+		}
+	}
+
+	// Allow the kernel argument to appear eitheras the value of the -l flag
+	// or as an argument at the end of the command line.
+	if f.NArg() > 0 && loadFlagPath == "" {
+		o.kernelpath = f.Arg(0)
+	} else if loadFlagPath != "" {
+		o.kernelpath = loadFlagPath
+	}
+}
+
+const setButEmpty = "eMptY"
+
+// hackLoadFlagValue makes sure that the value of the -l flag has a string representation for being not set.
+// Otherwise, in case of e.g. "kexec -l -d /path/to/kernel" the -d flag would be interpreted as the value of the -l flag.
+func hackLoadFlagValue(in []string) []string {
+	if len(in) == 0 {
+		return in
+	}
+
+	var out []string
+	for n := 0; n <= len(in)-2; n++ {
+		current := n
+		//next := n + 1
+		if (in[current] == "-l" || in[current] == "--load") && strings.HasPrefix(in[current+1], "-") {
+			out = append(out, in[current], setButEmpty)
+		} else {
+			out = append(out, in[current])
+		}
+	}
+
+	out = append(out, in[len(in)-1])
+	return out
 }
 
 func main() {
-	opts := registerFlags()
-	flag.Parse()
+	if err := run(os.Args); err != nil {
+		log.Fatalf("%v", err)
+	}
+}
+
+func run(args []string) error {
+	opts := &options{}
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	opts.parseCmdline(args, f)
 
 	if opts.debug {
 		linux.Debug = log.Printf
 		purgatory.Debug = log.Printf
 	}
 
-	var kernelpath string
-	if flag.NArg() > 0 {
-		kernelpath = flag.Arg(0)
-	}
-
-	if (!opts.exec && len(kernelpath) == 0) || flag.NArg() > 1 {
-		flag.PrintDefaults()
-		log.Fatalf("usage: kexec [flags] kernelname OR kexec -e")
+	if (!opts.exec && len(opts.kernelpath) == 0) || f.NArg() > 1 {
+		f.PrintDefaults()
+		return fmt.Errorf("usage: kexec [fs] kernelname OR kexec -e")
 	}
 
 	if opts.cmdline != "" && opts.reuseCmdline {
-		flag.PrintDefaults()
-		log.Fatalf("--reuse-cmdline and other command line options are mutually exclusive")
+		f.PrintDefaults()
+		return fmt.Errorf("--reuse-cmdline and other command line options are mutually exclusive")
 	}
 
 	if !opts.load && !opts.exec {
@@ -110,19 +185,19 @@ func main() {
 	if opts.reuseCmdline {
 		procCmdLine := cmdline.NewCmdLine()
 		if procCmdLine.Err != nil {
-			log.Fatal("Couldn't read /proc/cmdline")
-		} else {
-			newCmdline = procCmdLine.Raw
+			return fmt.Errorf("couldn't read /proc/cmdline")
 		}
+		newCmdline = procCmdLine.Raw
+
 	}
 
 	if err := purgatory.Select(opts.purgatory); err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if opts.load {
-		kernel, err := os.Open(kernelpath)
+		kernel, err := os.Open(opts.kernelpath)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		defer kernel.Close()
 		var image boot.OSImage
@@ -137,7 +212,7 @@ func main() {
 			if len(opts.extra) > 0 {
 				initrd, err := boot.CreateInitrd(strings.Fields(opts.extra)...)
 				if err != nil {
-					log.Fatal(err)
+					return err
 				}
 				files = append(files, initrd)
 			}
@@ -155,11 +230,11 @@ func main() {
 			if len(opts.dtb) > 0 {
 				dtb, err = os.Open(opts.dtb)
 				if err != nil {
-					log.Fatalf("Failed to open dtb file %s: %v", opts.dtb, err)
+					return fmt.Errorf("failed to open dtb file %s: %w", opts.dtb, err)
 				}
 			}
 			image = &boot.LinuxImage{
-				Kernel:      uio.NewLazyFile(kernelpath),
+				Kernel:      uio.NewLazyFile(opts.kernelpath),
 				Initrd:      i,
 				Cmdline:     newCmdline,
 				LoadSyscall: opts.loadSyscall,
@@ -167,13 +242,15 @@ func main() {
 			}
 		}
 		if err := image.Load(boot.WithVerbose(opts.debug)); err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	if opts.exec {
 		if err := kexec.Reboot(); err != nil {
-			log.Fatalf("%v", err)
+			return err
 		}
 	}
+
+	return nil
 }
