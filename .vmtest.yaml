@@ -6,7 +6,7 @@ amd64:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:10ea580ef29468f6d6f4674279586d37e118b145564fd1e99b708370262961a4"
+    container: "ghcr.io/leongross/vmtest/kernel-amd64:main"
     template: "{{.bzImage}}"
     files:
       bzImage: "/bzImage"
