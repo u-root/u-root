@@ -52,10 +52,10 @@ func TestPs(t *testing.T) {
 			want:    []string{"PID", "TTY", "TIME", "CMD"},
 		},
 	} {
-		*all = tt.all
-		*every = tt.every
-		*x = tt.x
-		*nSidTty = tt.nSidTty
+		all = tt.all
+		every = tt.every
+		x = tt.x
+		nSidTty = tt.nSidTty
 		aux = tt.aux
 		t.Run(tt.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
