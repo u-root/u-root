@@ -341,6 +341,17 @@ func TestSetfd(t *testing.T) {
 */
 
 func TestSetfd(t *testing.T) {
+	if err := clearEnv(); err != nil {
+		t.Skip(err)
+	}
+	// Add bridges
+	for _, bridge := range BRCTL_TEST_BRIDGES {
+		err := Addbr(bridge)
+		if err != nil {
+			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
+		}
+	}
+
 	TEST_FD := "1s"
 	TEST_FD_JIFFIES, err := stringToJiffies(TEST_FD)
 	if err != nil {
@@ -446,13 +457,13 @@ func TestSetpathcost(t *testing.T) {
 		t.Fatalf("AddBr(%q) = %v, want nil", BRCTL_TEST_BR_0, err)
 	}
 
-	// Set Port for test
 	err = Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0)
 	if err != nil {
 		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
 
 	}
 
+	// Set Port for test
 	TEST_BRIDGE := BRCTL_TEST_BR_0
 	TEST_PORT := BRCTL_TEST_IFACE_0
 	TEST_COST := "1"
@@ -479,31 +490,33 @@ func TestSetportprio(t *testing.T) {
 		t.Skip(err)
 	}
 
-	// Add bridges
-	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Addbr(bridge)
-		if err != nil {
-			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
-		}
-	}
-
+	TEST_BRIDGE := BRCTL_TEST_BR_0
 	TEST_PORT := BRCTL_TEST_IFACE_0
 	TEST_PRIO := "1"
 
-	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Setportprio(bridge, TEST_PORT, TEST_PRIO)
-		if err != nil {
-			t.Fatalf("Setportprio(%q, %q, %v) = %v, want nil", bridge, TEST_PORT, TEST_PRIO, err)
-		}
+	// Add bridge
+	err := Addbr(TEST_BRIDGE)
+	if err != nil {
+		t.Fatalf("AddBr(%q) = %v, want nil", TEST_BRIDGE, err)
+	}
+	err = Addif(TEST_BRIDGE, BRCTL_TEST_IFACE_0)
+	if err != nil {
+		t.Fatalf("Addif(%q, %q) = %v, want nil", TEST_BRIDGE, BRCTL_TEST_IFACE_0, err)
 
-		prio, err := getPortBrportValue(TEST_PORT, BRCTL_PRIORITY)
-		if err != nil {
-			t.Fatalf("br_get_val(%q, \"port_priority\") = %v, want nil", bridge, err)
-		}
+	}
 
-		if strings.TrimSuffix(prio, "\n") != TEST_PRIO {
-			t.Fatalf("br_get_val(%q, \"port_priority\") = %q, want \"0\"", bridge, prio)
-		}
+	err = Setportprio(TEST_BRIDGE, TEST_PORT, TEST_PRIO)
+	if err != nil {
+		t.Fatalf("Setportprio(%q, %q, %v) = %v, want nil", TEST_BRIDGE, TEST_PORT, TEST_PRIO, err)
+	}
+
+	prio, err := getPortBrportValue(TEST_PORT, BRCTL_PRIORITY)
+	if err != nil {
+		t.Fatalf("br_get_val(%q, \"port_priority\") = %v, want nil", TEST_BRIDGE, err)
+	}
+
+	if strings.TrimSuffix(prio, "\n") != TEST_PRIO {
+		t.Fatalf("br_get_val(%q, \"port_priority\") = %q, want \"0\"", TEST_BRIDGE, prio)
 	}
 }
 
@@ -520,6 +533,12 @@ func TestHairpin(t *testing.T) {
 	err := Addbr(TEST_BRIDGE)
 	if err != nil {
 		t.Fatalf("AddBr(%q) = %v, want nil", TEST_BRIDGE, err)
+	}
+
+	err = Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0)
+	if err != nil {
+		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
+
 	}
 
 	err = Hairpin(TEST_BRIDGE, TEST_PORT, "on")

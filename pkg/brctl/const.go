@@ -29,5 +29,5 @@ const (
 	BRCTL_MAX_AGE       = "max_age"
 	BRCTL_PATH_COST     = "path_cost"
 	BRCTL_PRIORITY      = "priority"
-	BRCTL_HAIRPIN       = "hairpin"
+	BRCTL_HAIRPIN       = "hairpin_mode"
 )
