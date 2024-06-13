@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -87,7 +88,7 @@ var test_str_to_jiffies = []struct {
 		100,
 		0,
 		true,
-		fmt.Errorf("time: missing unit in duration \"1.5\""),
+		fmt.Errorf("ParseDuration(\"1.5\") = time: missing unit in duration \"1.5\""),
 	},
 }
 
@@ -519,9 +520,9 @@ func TestSetpathcost(t *testing.T) {
 		t.Fatalf("Setpathcost(%q, %q, %v) = %v, want nil", TEST_BRIDGE, TEST_PORT, TEST_COST, err)
 	}
 
-	pathCost, err := os.ReadFile(BRCTL_SYS_NET + TEST_PORT + "/brport/path_cost")
+	pathCost, err := os.ReadFile(path.Join(BRCTL_SYS_NET, TEST_PORT, "brport", "path_cost"))
 	if err != nil {
-		t.Fatalf("os.ReadFile(%q) = %v, want nil", BRCTL_SYS_NET+TEST_PORT+"/brport/path_cost", err)
+		t.Fatalf("os.ReadFile(%q) = %v, want nil", path.Join(BRCTL_SYS_NET, TEST_PORT, "brport", "path_cost"), err)
 	}
 
 	// trim the '\n' from the output

@@ -10,6 +10,7 @@ package brctl
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -34,7 +35,7 @@ type BridgeInfo struct {
 func sysconfhz() (int, error) {
 	clktck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	if err != nil {
-		return 0, fmt.Errorf("%w", err)
+		return 0, err
 	}
 	return int(clktck), nil
 }
@@ -53,17 +54,17 @@ func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 func getIndexFromInterfaceName(ifname string) (int, error) {
 	ifreq, err := unix.NewIfreq(ifname)
 	if err != nil {
-		return 0, fmt.Errorf("%w", err)
+		return 0, err
 	}
 
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return 0, fmt.Errorf("%w", err)
+		return 0, err
 	}
 
 	err = unix.IoctlIfreq(brctl_socket, unix.SIOCGIFINDEX, ifreq)
 	if err != nil {
-		return 0, fmt.Errorf("%w %s", err, ifname)
+		return 0, err
 	}
 
 	ifr_ifindex := ifreq.Uint32()
@@ -77,7 +78,7 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 // set values for the bridge
 // all values in the sysfs are of type <bytes> + '\n'
 func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
-	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, append(value, BRCTL_SYS_SUFFIX), 0)
+	err := os.WriteFile(path.Join(BRCTL_SYS_NET, bridge, "bridge", name), append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
 // Get values for the bridge
 // For some reason these values have a '\n' (0x0a) as a suffix, so we need to trim it
 func getBridgeValue(bridge string, name string) (string, error) {
-	out, err := os.ReadFile(BRCTL_SYS_NET + bridge + "/bridge/" + name)
+	out, err := os.ReadFile(path.Join(BRCTL_SYS_NET, bridge, "bridge", name))
 	if err != nil {
 		return "", err
 	}
@@ -95,7 +96,7 @@ func getBridgeValue(bridge string, name string) (string, error) {
 }
 
 func setPortBrportValue(port string, name string, value []byte) error {
-	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+name, append(value, BRCTL_SYS_SUFFIX), 0)
+	err := os.WriteFile(path.Join(BRCTL_SYS_NET, port, "brport", name), append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
 		return err
 	}
@@ -103,7 +104,7 @@ func setPortBrportValue(port string, name string, value []byte) error {
 }
 
 func getPortBrportValue(port string, name string) (string, error) {
-	out, err := os.ReadFile(BRCTL_SYS_NET + port + "/brport/" + name)
+	out, err := os.ReadFile(path.Join(BRCTL_SYS_NET, port, "brport", name))
 	if err != nil {
 		return "", err
 	}
@@ -114,12 +115,12 @@ func getPortBrportValue(port string, name string) (string, error) {
 func stringToJiffies(in string) (int, error) {
 	hz, err := sysconfhz()
 	if err != nil {
-		return 0, fmt.Errorf("%w", err)
+		return 0, fmt.Errorf("sysconfhz():%w", err)
 	}
 
 	tv, err := time.ParseDuration(in)
 	if err != nil {
-		return 0, fmt.Errorf("%w", err)
+		return 0, fmt.Errorf("ParseDuration(%q) = %w", in, err)
 	}
 
 	return int(tv.Seconds() * float64(hz)), nil
