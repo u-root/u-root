@@ -169,8 +169,6 @@ github.com/nanmu42/limitio v1.0.0/go.mod h1:8H40zQ7pqxzbwZ9jxsK2hDoE06TH5ziybtAp
 github.com/opentracing/opentracing-go v1.0.2/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330 h1:zJBTzBuTR7EdFzmCGx0xp0pbOOb82sAh0+YUK4JTDEI=
 github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330/go.mod h1:3Myb/UszJY32F2G7yGkUtcW/ejHpjlGfYLim7cv2uKA=
-github.com/pborman/getopt/v2 v2.1.0 h1:eNfR+r+dWLdWmV8g5OlpyrTYHkhVNxHBdN2cCrJmOEA=
-github.com/pborman/getopt/v2 v2.1.0/go.mod h1:4NtW75ny4eBw9fO1bhtNdYTlZKYX5/tBLtsOpwKIKd0=
 github.com/peterh/liner v1.2.2 h1:aJ4AOodmL+JxOZZEL2u9iJf8omNRpqHc/EbrK+3mAXw=
 github.com/peterh/liner v1.2.2/go.mod h1:xFwJyiKIXJZUKItq5dGHZSTBRAuG/CpeNpWLyiNRNwI=
 github.com/pierrec/lz4/v4 v4.1.14 h1:+fL8AQEZtz/ijeNnpduH0bROTu0O3NZAlPjQxGn8LwE=
