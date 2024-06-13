@@ -5,6 +5,7 @@
 package brctl
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"os"
@@ -180,11 +181,16 @@ func TestIfDelif(t *testing.T) {
 		t.Skip(err)
 	}
 
-	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Addbr(bridge)
-		if err != nil {
-			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
-		}
+	if err := Addbr(BRCTL_TEST_BR_0); err != nil {
+		t.Fatalf("AddBr(%q) = %v, want nil", BRCTL_TEST_BR_0, err)
+	}
+
+	if err := Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0); err != nil {
+		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
+	}
+
+	if err := Delif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0); err != nil {
+		t.Fatalf("DelIf(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
 	}
 }
 
@@ -234,7 +240,30 @@ func TestSetageingTime(t *testing.T) {
 	}
 }
 
-func TestShow(t *testing.T) {}
+func TestShow(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	if err := clearEnv(); err != nil {
+		t.Skip(err)
+	}
+
+	if err := Addbr(BRCTL_TEST_BR_0); err != nil {
+		t.Fatalf("AddBr(%q) = %v, want nil", BRCTL_TEST_BR_0, err)
+	}
+
+	if err := Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0); err != nil {
+		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
+	}
+
+	var bufOut bytes.Buffer
+	if err := Show(&bufOut, BRCTL_TEST_BR_0); err != nil {
+		t.Errorf("Show(%q, %q)= %v", &bufOut, BRCTL_TEST_BR_0, err)
+	}
+
+	if err := Show(&bufOut); err != nil {
+		t.Errorf("Show(%q, %q)= %v", &bufOut, BRCTL_TEST_BR_0, err)
+	}
+}
 
 func TestScpt(t *testing.T) {
 	guest.SkipIfNotInVM(t)
