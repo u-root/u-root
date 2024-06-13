@@ -59,7 +59,7 @@ func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	local_bytes := append([]byte(raw), 0)
 	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
 	if errno != 0 {
-		return 0, fmt.Errorf("syscall.Syscall: %s", errno)
+		return 0, fmt.Errorf("syscall.Syscall: %w", errno)
 	}
 	return 0, nil
 }
@@ -67,7 +67,7 @@ func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 func ioctl(fd int, req uint, addr uintptr) (int, error) {
 	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), addr)
 	if errno != 0 {
-		return 0, fmt.Errorf("syscall.Syscall: %s", errno)
+		return 0, fmt.Errorf("syscall.Syscall: %w", errno)
 	}
 	return 0, nil
 }
@@ -101,7 +101,6 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
 	err := os.WriteFile(BRCTL_SYS_NET+bridge+"/bridge/"+name, append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
-		log.Printf("br_set_val: %v", err)
 		return err
 	}
 	return nil
@@ -141,7 +140,6 @@ func getBridgePort(bridge string, iface string, name string) (string, error) {
 func setPortBrportValue(port string, name string, value []byte) error {
 	err := os.WriteFile(BRCTL_SYS_NET+port+"/brport/"+name, append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
-		log.Printf("br_set_port: %v", err)
 		return err
 	}
 	return nil

@@ -175,7 +175,7 @@ func Showmacs(name string, out io.Writer) error {
 }
 
 func Show(out io.Writer, names ...string) error {
-	fmt.Println("bridge name\tbridge id\tSTP enabled\t\tinterfaces")
+	fmt.Fprint(out, "bridge name\tbridge id\tSTP enabled\t\tinterfaces")
 	if len(names) == 0 {
 		devices, err := os.ReadDir(BRCTL_SYS_NET)
 		if err != nil {
@@ -205,7 +205,7 @@ func Setageingtime(name string, time string) error {
 	}
 
 	if err = setBridgeValue(name, BRCTL_AGEING_TIME, []byte(strconv.Itoa(ageing_time)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 	return nil
 }
@@ -224,7 +224,7 @@ func Stp(bridge string, state string) error {
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_STP_STATE, []byte(strconv.Itoa(stp_state)), uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
 	return nil
@@ -240,7 +240,7 @@ func Setbridgeprio(bridge string, bridgePriority string) error {
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, []byte(strconv.Itoa(prio)), 0); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("setBridgeValue %w", err)
 	}
 
 	return nil
@@ -253,7 +253,7 @@ func Setfd(bridge string, time string) error {
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, []byte(strconv.Itoa(forward_delay)), 0); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
 	return nil
@@ -266,7 +266,7 @@ func Sethello(bridge string, time string) error {
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, []byte(strconv.Itoa(hello_time)), 0); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
 	return nil
@@ -294,8 +294,7 @@ func Setpathcost(bridge string, port string, cost string) error {
 
 	err = setPortBrportValue(port, BRCTL_PATH_COST, append([]byte(strconv.FormatUint(path_cost, 10)), BRCTL_SYS_SUFFIX))
 	if err != nil {
-		log.Printf("setPortBrport: %v", err)
-		return nil
+		return fmt.Errorf("setPortBrportValue: %w", err)
 	}
 
 	return nil
