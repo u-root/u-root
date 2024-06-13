@@ -4,6 +4,7 @@
 
 package pci
 
+// IDs is an array of Vendor structs, enumerating vendor and device IDs.
 var IDs = []Vendor{
 	{ID: 0x0001, Name: "SafeNet (wrong ID)", Devices: []Device{}},
 	{ID: 0x0010, Name: "Allied Telesis, Inc (Wrong ID)", Devices: []Device{

@@ -7,9 +7,9 @@ package pci
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -156,7 +156,7 @@ func TestReadConfig(t *testing.T) {
 		devices     Devices
 		controlWant Control
 		statusWant  Status
-		errWant     string
+		err         error
 	}{
 		{
 			name: "Reading config file",
@@ -175,13 +175,13 @@ func TestReadConfig(t *testing.T) {
 					FullPath: "d",
 				},
 			},
-			errWant: "no such file or directory",
+			err: os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.devices.ReadConfig(); got != nil {
-				if !strings.Contains(got.Error(), tt.errWant) {
-					t.Errorf("ReadConfig() = %q, want to contain: %q", got, tt.errWant)
+				if !errors.Is(got, tt.err) {
+					t.Errorf("ReadConfig() = got %v, want : %q", got, tt.err)
 				}
 			} else {
 				if tt.devices[0].Control != tt.controlWant {
@@ -212,7 +212,7 @@ func TestReadConfigRegister(t *testing.T) {
 		offset   int64
 		size     int64
 		valsWant uint64
-		errWant  string
+		err      error
 	}{
 		{
 			name: "read byte 2 from config file",
@@ -243,9 +243,9 @@ func TestReadConfigRegister(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			offset:  0,
-			size:    0,
-			errWant: "only options are 8, 16, 32, 64",
+			offset: 0,
+			size:   0,
+			err:    ErrBadWidth,
 		},
 		{
 			name: "config file does not exist",
@@ -254,13 +254,13 @@ func TestReadConfigRegister(t *testing.T) {
 					FullPath: "d",
 				},
 			},
-			errWant: "no such file or directory",
+			err: os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if vals, got := tt.devices.ReadConfigRegister(tt.offset, tt.size); got != nil {
-				if !strings.Contains(got.Error(), tt.errWant) {
-					t.Errorf("ReadConfig() = %q, want to contain: %q", got, tt.errWant)
+				if !errors.Is(got, tt.err) {
+					t.Errorf("ReadConfig() = got %v, want: %v", got, tt.err)
 				}
 			} else {
 				if vals[0] != tt.valsWant {
@@ -289,7 +289,7 @@ func TestWriteConfigRegister(t *testing.T) {
 		size    int64
 		val     uint64
 		want    string
-		errWant string
+		err     error
 	}{
 		{
 			name: "Writing 1 byte to config file with offset 1",
@@ -322,13 +322,13 @@ func TestWriteConfigRegister(t *testing.T) {
 					FullPath: "d",
 				},
 			},
-			errWant: "no such file or directory",
+			err: os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.devices.WriteConfigRegister(tt.offset, tt.size, tt.val); got != nil {
-				if !strings.Contains(got.Error(), tt.errWant) {
-					t.Errorf("ReadConfig() = %q, want to contain: %q", got, tt.errWant)
+				if !errors.Is(got, tt.err) {
+					t.Errorf("ReadConfig() = got %v, want %v", got, tt.err)
 				}
 			} else {
 				got, err := os.ReadFile(filepath.Join(dir, "config"))
