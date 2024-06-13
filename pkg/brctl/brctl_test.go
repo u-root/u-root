@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 var (
@@ -139,6 +141,8 @@ func clearEnv() error {
 // Hence they need to be run an VM, re-create the setup accordingly to the defined devices or adjust them to fit your platform.
 // The following tests should be executed in a VM with root privileges, which is done in `brctl_integraion_test.go`
 func TestAddbrDelbr(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -171,6 +175,7 @@ func TestAddbrDelbr(t *testing.T) {
 }
 
 func TestIfDelif(t *testing.T) {
+	guest.SkipIfNotInVM(t)
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -184,6 +189,8 @@ func TestIfDelif(t *testing.T) {
 }
 
 func TestSetageingTime(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -230,6 +237,8 @@ func TestSetageingTime(t *testing.T) {
 func TestShow(t *testing.T) {}
 
 func TestScpt(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -270,6 +279,8 @@ func TestScpt(t *testing.T) {
 }
 
 func TestSetbridgeprio(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -341,6 +352,8 @@ func TestSetfd(t *testing.T) {
 */
 
 func TestSetfd(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -377,6 +390,8 @@ func TestSetfd(t *testing.T) {
 }
 
 func TestSethello(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	TEST_SETHELLO_TIME := "1s"
 	TEST_SETHELLO_JIFFIES, err := stringToJiffies(TEST_SETHELLO_TIME)
 	if err != nil {
@@ -447,6 +462,8 @@ func TestSetmaxage(t *testing.T) {
 }
 
 func TestSetpathcost(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -486,6 +503,8 @@ func TestSetpathcost(t *testing.T) {
 
 // /sys/class/net/dummy0/brport
 func TestSetportprio(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
@@ -521,6 +540,8 @@ func TestSetportprio(t *testing.T) {
 }
 
 func TestHairpin(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	if err := clearEnv(); err != nil {
 		t.Skip(err)
 	}
