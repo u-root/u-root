@@ -33,7 +33,7 @@ import (
 
 var (
 	numbers   = flag.Bool('n', "Show numeric IDs")
-	devs      = flag.StringLong("select", 's', "*", "Devices to match")
+	devs      = flag.StringLong("select", 's', "*", "/sys/bus/pci/devices/ glob, e.g. 0000:*")
 	dumpJSON  = flag.BoolLong("json", 'j', "Dump the bus in JSON")
 	verbosity = flag.Counter('v', "verbosity")
 	hexdump   = flag.Counter('x', "hexdump the config space")
