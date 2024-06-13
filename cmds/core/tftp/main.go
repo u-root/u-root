@@ -13,10 +13,10 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 
 	flag "github.com/spf13/pflag"
 	tftppkg "github.com/u-root/u-root/pkg/tftp"
+	"pack.ag/tftp"
 )
 
 func main() {
@@ -42,30 +42,30 @@ func run(f tftppkg.Flags, cmdline, args []string, stdin io.Reader, stdout io.Wri
 		return tftppkg.RunInteractive(f, ipPort, stdin, stdout)
 	}
 
-	// Deconstruct files and look for hosts in the supplied cmdArgs
-	// Only if "put" or "get"
-	files := make([]string, 0)
-	if f.Cmd == "put" || f.Cmd == "get" {
-		hosts := make([]string, 0)
-		for _, file := range cmdArgs {
-			if !strings.Contains(file, ":") || f.Literal {
-				files = append(files, file)
-				continue
-			}
+	ip, port := getIPPort(ipPort)
 
-			splitFile := strings.Split(file, ":")
-			hosts = append(hosts, splitFile[0])
-			files = append(files, splitFile[1])
-		}
+	m, err := tftppkg.ValidateMode(f.Mode)
+	if err != nil {
+		return err
+	}
 
-		if len(hosts) > 0 {
-			// Use the last host/ip from host as stated in the man page of tftp
-			if len(ipPort) > 0 {
-				ipPort[0] = hosts[len(hosts)-1]
-			} else {
-				ipPort = append(ipPort, hosts[len(hosts)-1])
-			}
-		}
+	clientcfg := &tftppkg.ClientCfg{
+		Host:    ip,
+		Port:    port,
+		Mode:    m,
+		Rexmt:   tftp.ClientRetransmit(10),
+		Timeout: tftp.ClientTimeout(1),
+		Trace:   false,
+		Literal: f.Literal,
+		Verbose: f.Verbose,
+	}
+
+	input := make([]string, 0)
+	input = append(input, f.Cmd)
+	input = append(input, cmdArgs...)
+
+	if _, err := tftppkg.ExecuteOp(input, clientcfg, os.Stdout); err != nil {
+		return err
 	}
 
 	return nil
@@ -83,4 +83,12 @@ func splitArgs(cmdline, args []string) ([]string, []string) {
 	retIPPort = append(retIPPort, args[:len(args)-len(retCmdArgs)]...)
 
 	return retCmdArgs, retIPPort
+}
+
+func getIPPort(ipPort []string) (string, string) {
+	const defaultPort = "69"
+	if len(ipPort) == 2 {
+		return ipPort[0], ipPort[0]
+	}
+	return ipPort[0], defaultPort
 }

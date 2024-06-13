@@ -24,16 +24,16 @@ type Flags struct {
 	Verbose   bool
 }
 
-type clientCfg struct {
-	host    string
-	port    string
-	client  ClientIf
-	mode    tftp.TransferMode
-	rexmt   tftp.ClientOpt
-	timeout tftp.ClientOpt
-	trace   bool
-	literal bool
-	verbose bool
+type ClientCfg struct {
+	Host    string
+	Port    string
+	Client  ClientIf
+	Mode    tftp.TransferMode
+	Rexmt   tftp.ClientOpt
+	Timeout tftp.ClientOpt
+	Trace   bool
+	Literal bool
+	Verbose bool
 }
 
 func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer) error {
@@ -54,19 +54,19 @@ func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer)
 		}
 	}
 
-	clientcfg := &clientCfg{
-		host:    ipHost,
-		port:    port,
-		mode:    tftp.ModeNetASCII,
-		rexmt:   tftp.ClientRetransmit(10),
-		timeout: tftp.ClientTimeout(1),
-		trace:   false,
-		literal: f.Literal,
+	clientcfg := &ClientCfg{
+		Host:    ipHost,
+		Port:    port,
+		Mode:    tftp.ModeNetASCII,
+		Rexmt:   tftp.ClientRetransmit(10),
+		Timeout: tftp.ClientTimeout(1),
+		Trace:   false,
+		Literal: f.Literal,
 	}
 
 	for {
 		input := readInputInteractive(inScan, stdout)
-		exit, err := executeOp(input, clientcfg, stdout)
+		exit, err := ExecuteOp(input, clientcfg, stdout)
 		if err != nil {
 			fmt.Fprintf(stdout, "%v", err)
 		}
@@ -76,7 +76,7 @@ func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer)
 	}
 }
 
-func executeOp(input []string, clientcfg *clientCfg, stdout io.Writer) (bool, error) {
+func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, error) {
 	var err error
 
 	switch input[0] {
@@ -85,64 +85,64 @@ func executeOp(input []string, clientcfg *clientCfg, stdout io.Writer) (bool, er
 	case "h", "help", "?":
 		fmt.Fprintf(stdout, "%s", printHelp())
 	case "ascii":
-		clientcfg.mode, _ = validateMode("ascii")
+		clientcfg.Mode, _ = ValidateMode("ascii")
 	case "binary":
-		clientcfg.mode, _ = validateMode("binary")
+		clientcfg.Mode, _ = ValidateMode("binary")
 	case "mode":
 		if len(input) > 1 {
-			clientcfg.mode, err = validateMode(input[1])
+			clientcfg.Mode, err = ValidateMode(input[1])
 			if err != nil {
 				fmt.Fprintf(stdout, "%v", err)
 
 			}
 		}
-		fmt.Fprintf(stdout, "Using %s mode to transfer files.\n", clientcfg.mode)
+		fmt.Fprintf(stdout, "Using %s mode to transfer files.\n", clientcfg.Mode)
 	case "get":
-		clientcfg.client, err = NewClient(clientcfg)
+		clientcfg.Client, err = NewClient(clientcfg)
 		if err != nil {
 			return false, err
 		}
 
-		err = executeGet(clientcfg.client, clientcfg.host, clientcfg.port, input[1:])
+		err = executeGet(clientcfg.Client, clientcfg.Host, clientcfg.Port, input[1:])
 	case "put":
-		clientcfg.client, err = NewClient(clientcfg)
+		clientcfg.Client, err = NewClient(clientcfg)
 		if err != nil {
 			return false, err
 		}
 
-		err = executePut(clientcfg.client, clientcfg.host, clientcfg.port, input[1:])
+		err = executePut(clientcfg.Client, clientcfg.Host, clientcfg.Port, input[1:])
 	case "connect":
 		if len(input) > 2 {
-			clientcfg.port = input[2]
+			clientcfg.Port = input[2]
 		}
-		clientcfg.host = input[1]
+		clientcfg.Host = input[1]
 	case "literal":
-		clientcfg.literal = !clientcfg.literal
-		fmt.Fprintf(stdout, "Literal mode is %s\n", statusString(clientcfg.literal))
+		clientcfg.Literal = !clientcfg.Literal
+		fmt.Fprintf(stdout, "Literal mode is %s\n", statusString(clientcfg.Literal))
 	case "rexmt":
 		var val int
 		val, err = strconv.Atoi(input[1])
 
-		clientcfg.rexmt = tftp.ClientRetransmit(val)
+		clientcfg.Rexmt = tftp.ClientRetransmit(val)
 	case "status":
-		fmt.Fprintf(stdout, "Connected to %s\n", clientcfg.host)
+		fmt.Fprintf(stdout, "Connected to %s\n", clientcfg.Host)
 		fmt.Fprintf(stdout, "Mode: %s Verbose: %s Tracing: %s Literal: %s\n",
-			clientcfg.mode,
-			statusString(clientcfg.verbose),
-			statusString(clientcfg.trace),
-			statusString(clientcfg.literal),
+			clientcfg.Mode,
+			statusString(clientcfg.Verbose),
+			statusString(clientcfg.Trace),
+			statusString(clientcfg.Literal),
 		)
 	case "timeout":
 		var val int
 		val, err = strconv.Atoi(input[1])
 
-		clientcfg.timeout = tftp.ClientTimeout(val)
+		clientcfg.Timeout = tftp.ClientTimeout(val)
 	case "trace":
-		clientcfg.trace = !clientcfg.trace
-		fmt.Fprintf(stdout, "Packet tracing %s.\n", statusString(clientcfg.trace))
+		clientcfg.Trace = !clientcfg.Trace
+		fmt.Fprintf(stdout, "Packet tracing %s.\n", statusString(clientcfg.Trace))
 	case "verbose":
-		clientcfg.verbose = !clientcfg.verbose
-		fmt.Fprintf(stdout, "Verbose mode %s.\n", statusString(clientcfg.verbose))
+		clientcfg.Verbose = !clientcfg.Verbose
+		fmt.Fprintf(stdout, "Verbose mode %s.\n", statusString(clientcfg.Verbose))
 	}
 	if err != nil {
 		fmt.Fprintf(stdout, "%v\n", err)
@@ -188,7 +188,7 @@ func readHostInteractive(in *bufio.Scanner, out io.Writer) string {
 
 var ErrInvalidTransferMode = errors.New("invalid transfer mode")
 
-func validateMode(mode string) (tftp.TransferMode, error) {
+func ValidateMode(mode string) (tftp.TransferMode, error) {
 	var ret tftp.TransferMode
 	switch tftp.TransferMode(mode) {
 	case "ascii":

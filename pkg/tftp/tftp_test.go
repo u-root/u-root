@@ -63,7 +63,7 @@ func TestValidateMode(t *testing.T) {
 	} {
 		t.Run(tt.input, func(t *testing.T) {
 			tt := tt
-			if _, err := validateMode(tt.input); !errors.Is(err, tt.err) {
+			if _, err := ValidateMode(tt.input); !errors.Is(err, tt.err) {
 				t.Errorf("validateMode(): %v, not: %v", err, tt.err)
 			}
 		})

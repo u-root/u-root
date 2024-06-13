@@ -56,8 +56,8 @@ func (r *RealResponse) Size() (int64, error) {
 	return r.Response.Size()
 }
 
-func NewClient(ccfg *clientCfg) (*Client, error) {
-	c, err := tftp.NewClient(tftp.ClientMode(ccfg.mode), ccfg.rexmt, ccfg.timeout)
+func NewClient(ccfg *ClientCfg) (*Client, error) {
+	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, ccfg.Timeout)
 	return &Client{
 		Client: c,
 	}, err
