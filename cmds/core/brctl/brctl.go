@@ -8,6 +8,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -46,6 +47,11 @@ brctl setportprio <bridge> <port> <priority>	sets the port <port>'s priority to 
 brctl hairpin <bridge> <port> <state>		enable/disable hairpin mode on the port <port> of the bridge <bridge>
 `
 
+var (
+	errFewArgs    = errors.New("too few args")
+	errInvalidCmd = errors.New("unknown command")
+)
+
 func run(out io.Writer, argv []string) error {
 	var err error
 	command := argv[0]
@@ -54,25 +60,25 @@ func run(out io.Writer, argv []string) error {
 	switch command {
 	case "addbr":
 		if len(args) != 1 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Addbr(args[0])
 
 	case "delbr":
 		if len(args) != 1 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Delbr(args[0])
 
 	case "addif":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Addif(args[0], args[1])
 
 	case "delif":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Delif(args[0], args[1])
 
@@ -81,66 +87,66 @@ func run(out io.Writer, argv []string) error {
 
 	case "showmacs":
 		if len(args) != 1 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Showmacs(args[0], out)
 
 	case "setageingtime":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Setageingtime(args[0], args[1])
 
 	case "stp":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Stp(args[0], args[1])
 
 	case "setbridgeprio":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Setbridgeprio(args[0], args[1])
 
 	case "setfd":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Setfd(args[0], args[1])
 
 	case "sethello":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Sethello(args[0], args[1])
 
 	case "setmaxage":
 		if len(args) != 2 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Setmaxage(args[0], args[1])
 
 	case "setpathcost":
 		if len(args) != 3 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Setpathcost(args[0], args[1], args[2])
 
 	case "setportprio":
 		if len(args) != 3 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Setportprio(args[0], args[1], args[2])
 
 	case "hairpin":
 		if len(args) != 3 {
-			return fmt.Errorf("too few args")
+			return errFewArgs
 		}
 		err = brctl.Hairpin(args[0], args[1], args[2])
 
 	default:
-		return fmt.Errorf("unknown command: %s", command)
+		return fmt.Errorf("%w: %s", errInvalidCmd, command)
 	}
 
 	return err
