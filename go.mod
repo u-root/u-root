@@ -49,7 +49,6 @@ require (
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
-	src.elv.sh v0.16.0-rc1.0.20220116211855-fda62502ad7f
 )
 
 require (
