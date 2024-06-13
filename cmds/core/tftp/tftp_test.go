@@ -5,13 +5,13 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/tftp"
 )
 
 func TestParseRun(t *testing.T) {
@@ -20,14 +20,14 @@ func TestParseRun(t *testing.T) {
 		cmdline []string
 		args    []string
 		input   []string
-		f       Flags
+		f       tftp.Flags
 		exp     string
 		err     error
 	}{
 		{
 			name: "SimpleQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -35,8 +35,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "HelpQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -44,8 +44,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "BinaryQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -53,8 +53,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "AsciiQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -62,8 +62,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "ModeQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -72,8 +72,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "ModeWithValueQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -82,8 +82,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "ModeWithValueQuit",
-			f: Flags{
-				mode: "binary",
+			f: tftp.Flags{
+				Mode: "binary",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -92,18 +92,18 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "ModeWithErrorQuit",
-			f: Flags{
-				mode: "binary",
+			f: tftp.Flags{
+				Mode: "binary",
 			},
 			cmdline: []string{},
 			args:    []string{},
 			input:   []string{"localhost", "mode error", "q"},
-			exp:     fmt.Sprintf("%v", errInvalidTransferMode),
+			exp:     fmt.Sprintf("%v", tftp.ErrInvalidTransferMode),
 		},
 		{
 			name: "LiteralQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -112,8 +112,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "rexmtQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -121,8 +121,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "timeoutQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -130,8 +130,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "traceQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -140,8 +140,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "verboseQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -150,8 +150,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "connectQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -159,8 +159,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "statusQuit",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{},
 			args:    []string{},
@@ -169,8 +169,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "IP supplied",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{"127.0.0.1"},
 			args:    []string{"127.0.0.1"},
@@ -178,8 +178,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "IP/Port supplied",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{"127.0.0.1", "69"},
 			args:    []string{"127.0.0.1", "69"},
@@ -187,8 +187,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "Hostname supplied",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{"localhost"},
 			args:    []string{"localhost"},
@@ -196,8 +196,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "Hostname/Port supplied",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{"localhost", "69"},
 			args:    []string{"localhost", "69"},
@@ -205,8 +205,8 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "Hostname/Port after options",
-			f: Flags{
-				mode: "ascii",
+			f: tftp.Flags{
+				Mode: "ascii",
 			},
 			cmdline: []string{"-l", "-m", "ascii", "localhost", "69"},
 			args:    []string{"localhost", "69"},
@@ -214,52 +214,64 @@ func TestParseRun(t *testing.T) {
 		},
 		{
 			name: "Hostname/Port after options and literal",
-			f: Flags{
-				mode: "ascii",
-				cmd:  "literal",
+			f: tftp.Flags{
+				Mode: "ascii",
+				Cmd:  "literal",
 			},
 			cmdline: []string{"-m", "ascii", "localhost", "69", "-c", "literal"},
 			args:    []string{"localhost", "69"},
 			input:   []string{"q"},
 		},
-		/*
-			{
-				name: "Hostname/Port after options with get",
-				f: Flags{
-					mode: "ascii",
-					cmd:  "get",
-				},
-				cmdline: []string{"-l", "-m", "ascii", "localhost", "69", "-c", "get", "hostname:file1", "file2", "file3"},
-				args:    []string{"localhost", "69", "hostname:file1", "file2", "file3"},
+		{
+			name: "Hostname/Port after options with get",
+			f: tftp.Flags{
+				Mode: "ascii",
+				Cmd:  "get",
 			},
-			{
-				name: "NoIPPort get with no args",
-				f: Flags{
-					mode: "ascii",
-					cmd:  "get",
-				},
-				cmdline: []string{"-l", "-m", "ascii", "-c", "get", "file1", "file2", "file3"},
-				args:    []string{"file1", "file2", "file3"},
+			cmdline: []string{"-l", "-m", "ascii", "localhost", "69", "-c", "get", "hostname:file1", "file2", "file3"},
+			args:    []string{"localhost", "69", "hostname:file1", "file2", "file3"},
+			input:   []string{"q"},
+		},
+		{
+			name: "NoIPPort get",
+			f: tftp.Flags{
+				Mode: "ascii",
+				Cmd:  "get",
 			},
-			{
-				name: "NoIPPort put with no args",
-				f: Flags{
-					mode: "ascii",
-					cmd:  "put",
-				},
-				cmdline: []string{"-l", "-m", "ascii", "-c", "put", "file1", "file2", "file3"},
-				args:    []string{"file1", "file2", "file3"},
+			cmdline: []string{"-l", "-m", "ascii", "-c", "get", "file1", "file2", "file3"},
+			args:    []string{"file1", "file2", "file3"},
+			input:   []string{"localhost", "q"},
+		},
+		{
+			name: "NoIPPort put",
+			f: tftp.Flags{
+				Mode: "ascii",
+				Cmd:  "put",
 			},
-			{
-				name: "NoIPPort put with no args",
-				f: Flags{
-					mode: "ascii",
-					cmd:  "put",
-				},
-				cmdline: []string{"-l", "-m", "ascii", "localhost", "69", "-c", "put"},
-				args:    []string{"localhost", "69"},
+			cmdline: []string{"-l", "-m", "ascii", "-c", "put", "file1", "file2", "file3"},
+			args:    []string{"file1", "file2", "file3"},
+			input:   []string{"localhost", "q"},
+		},
+		{
+			name: "NoIPPort put with no args",
+			f: tftp.Flags{
+				Mode: "ascii",
+				Cmd:  "put",
 			},
-		*/
+			cmdline: []string{"-l", "-m", "ascii", "-c", "put"},
+			args:    []string{},
+			input:   []string{"localhost", "q"},
+		},
+		{
+			name: "NoIPPort get with no args",
+			f: tftp.Flags{
+				Mode: "ascii",
+				Cmd:  "get",
+			},
+			cmdline: []string{"-l", "-m", "ascii", "-c", "get"},
+			args:    []string{},
+			input:   []string{"localhost", "q"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
@@ -277,64 +289,6 @@ func TestParseRun(t *testing.T) {
 				if !strings.Contains(outBuf.String(), tt.exp) {
 					t.Errorf("output: %s, not: %s", outBuf.String(), tt.exp)
 				}
-			}
-		})
-	}
-}
-
-func TestReadInteractiveInput(t *testing.T) {
-	for _, tt := range []struct {
-		name  string
-		input []string
-		exp   []string
-	}{
-		{
-			name:  "Hello_World",
-			input: []string{"Hello World"},
-			exp:   []string{"Hello", "World"},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			tt := tt
-			var inbuf, outBuf bytes.Buffer
-
-			inScan := bufio.NewScanner(&inbuf)
-
-			for _, input := range tt.input {
-				fmt.Fprintf(&inbuf, "%s\n", input)
-				ret := readInputInteractive(inScan, &outBuf)
-				for iterator, r := range ret {
-					if r != tt.exp[iterator] {
-						t.Errorf("%s != %s", ret[iterator], input)
-					}
-				}
-
-			}
-
-		})
-	}
-}
-
-func TestValidateMode(t *testing.T) {
-	for _, tt := range []struct {
-		input string
-		err   error
-	}{
-		{
-			input: "ascii",
-		},
-		{
-			input: "binary",
-		},
-		{
-			input: "garbage",
-			err:   errInvalidTransferMode,
-		},
-	} {
-		t.Run(tt.input, func(t *testing.T) {
-			tt := tt
-			if _, err := validateMode(tt.input); !errors.Is(err, tt.err) {
-				t.Errorf("validateMode(): %v, not: %v", err, tt.err)
 			}
 		})
 	}
@@ -406,33 +360,6 @@ func TestSplitArgs(t *testing.T) {
 	}
 }
 
-func TestConstructURL(t *testing.T) {
-	for _, tt := range []struct {
-		name string
-		host string
-		port string
-		dir  string
-		file string
-		exp  string
-	}{
-		{
-			name: "SimpleHostPortFile",
-			host: "localhost",
-			port: "69",
-			dir:  "",
-			file: "abc.file",
-			exp:  "tftp://localhost:69/abc.file",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			url := constructURL(tt.host, tt.port, tt.dir, tt.file)
-			if url != tt.exp {
-				t.Errorf("constructURL() failed:%s, want: %s", url, tt.exp)
-			}
-		})
-	}
-}
-
 func eqStringSlice(s1, s2 []string) bool {
 	if len(s1) != len(s2) {
 		return false
@@ -445,85 +372,4 @@ func eqStringSlice(s1, s2 []string) bool {
 	}
 
 	return true
-}
-
-func TestExecuteGetPut(t *testing.T) {
-	for _, tt := range []struct {
-		name   string
-		client ClientIf
-		host   string
-		port   string
-		dir    string
-		files  []string
-	}{
-		{
-			name:   "GetPut1File",
-			client: &ClientMock{},
-			host:   "localhost",
-			port:   "69",
-			dir:    "",
-			files:  []string{"abc.file"},
-		},
-		{
-			name:   "GetPut2File",
-			client: &ClientMock{},
-			host:   "localhost",
-			port:   "69",
-			dir:    "",
-			files:  []string{"abc.file", "cde.file"},
-		},
-		{
-			name:   "GetPut3File",
-			client: &ClientMock{},
-			host:   "localhost",
-			port:   "69",
-			dir:    "",
-			files:  []string{"abc.file", "cde.file", "fgh.file"},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			files := make([]string, 0)
-			for _, file := range tt.files {
-				tf, err := os.CreateTemp("", file)
-				if err != nil {
-					t.Error(err)
-				}
-				files = append(files, tf.Name())
-				tf.Close()
-			}
-			if err := executeGet(tt.client, tt.host, tt.port, files); err != nil {
-				t.Error(err)
-			}
-
-			for _, file := range files {
-				if err := os.Remove(file); err != nil {
-					t.Error(err)
-				}
-			}
-		})
-
-		t.Run(tt.name, func(t *testing.T) {
-			files := make([]string, 0)
-			for _, file := range tt.files {
-				tf, err := os.CreateTemp("", file)
-				if err != nil {
-					t.Error(err)
-				}
-				files = append(files, tf.Name())
-				tf.Close()
-			}
-
-			if err := executePut(tt.client, tt.host, tt.port, files); err != nil {
-				t.Error(err)
-			}
-
-			for _, file := range files {
-				if err := os.Remove(file); err != nil {
-					t.Error(err)
-				}
-			}
-		})
-
-	}
-
 }

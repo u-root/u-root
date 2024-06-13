@@ -2,80 +2,26 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package tftp
 
 import (
 	"bufio"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
 
-	flag "github.com/spf13/pflag"
 	"pack.ag/tftp"
 )
 
 type Flags struct {
-	cmd     string
-	mode    string
-	rPort   string
-	literal bool
-	verbose bool
-}
-
-func main() {
-	f := Flags{}
-	flag.StringVarP(&f.cmd, "c", "c", "", "Execute command as if it had been entered on the tftp prompt.  Must be specified last on the command line.")
-	flag.StringVarP(&f.mode, "m", "m", "netascii", "Set the default transfer mode to mode.  This is usually used with -c.")
-	flag.StringVarP(&f.rPort, "R", "R", "", "Force the originating port number to be in the specified range of port numbers.")
-	flag.BoolVarP(&f.literal, "l", "l", false, "Default to literal mode. Used to avoid special processing of ':' in a file name.")
-	flag.BoolVarP(&f.verbose, "v", "v", false, "Default to verbose mode.")
-
-	flag.Parse()
-
-	if err := run(f, os.Args[1:], flag.Args(), os.Stdin, os.Stdout); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run(f Flags, cmdline, args []string, stdin io.Reader, stdout io.Writer) error {
-	// If we have IP/Host/Port supplied before command, ipPort holds this information.
-	cmdArgs, ipPort := splitArgs(cmdline, args)
-
-	if len(ipPort) < 1 || f.cmd == "" {
-		return runInteractive(f, ipPort, stdin, stdout)
-	}
-
-	// Deconstruct files and look for hosts in the supplied cmdArgs
-	// Only if "put" or "get"
-	files := make([]string, 0)
-	if f.cmd == "put" || f.cmd == "get" {
-		hosts := make([]string, 0)
-		for _, file := range cmdArgs {
-			if !strings.Contains(file, ":") || f.literal {
-				files = append(files, file)
-				continue
-			}
-
-			splitFile := strings.Split(file, ":")
-			hosts = append(hosts, splitFile[0])
-			files = append(files, splitFile[1])
-		}
-
-		if len(hosts) > 0 {
-			// Use the last host/ip from host as stated in the man page of tftp
-			if len(ipPort) > 0 {
-				ipPort[0] = hosts[len(hosts)-1]
-			} else {
-				ipPort = append(ipPort, hosts[len(hosts)-1])
-			}
-		}
-	}
-
-	return nil
+	Cmd       string
+	Mode      string
+	PortRange string
+	Literal   bool
+	Verbose   bool
 }
 
 type clientCfg struct {
@@ -90,7 +36,7 @@ type clientCfg struct {
 	verbose bool
 }
 
-func runInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer) error {
+func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer) error {
 	const defaultPort = "69"
 	var ipHost string
 	var port string
@@ -115,7 +61,7 @@ func runInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer)
 		rexmt:   tftp.ClientRetransmit(10),
 		timeout: tftp.ClientTimeout(1),
 		trace:   false,
-		literal: f.literal,
+		literal: f.Literal,
 	}
 
 	for {
@@ -166,7 +112,7 @@ func executeOp(input []string, clientcfg *clientCfg, stdout io.Writer) (bool, er
 
 		err = executePut(clientcfg.client, clientcfg.host, clientcfg.port, input[1:])
 	case "connect":
-		if len(input) > 1 {
+		if len(input) > 2 {
 			clientcfg.port = input[2]
 		}
 		clientcfg.host = input[1]
@@ -240,7 +186,7 @@ func readHostInteractive(in *bufio.Scanner, out io.Writer) string {
 	return in.Text()
 }
 
-var errInvalidTransferMode = errors.New("invalid transfer mode")
+var ErrInvalidTransferMode = errors.New("invalid transfer mode")
 
 func validateMode(mode string) (tftp.TransferMode, error) {
 	var ret tftp.TransferMode
@@ -250,21 +196,123 @@ func validateMode(mode string) (tftp.TransferMode, error) {
 	case "binary":
 		ret = tftp.ModeOctet
 	default:
-		return ret, errInvalidTransferMode
+		return ret, ErrInvalidTransferMode
 	}
 	return ret, nil
 }
 
-func splitArgs(cmdline, args []string) ([]string, []string) {
-	retCmdArgs := make([]string, 0)
-	retIPPort := make([]string, 0)
-	for i := len(cmdline) - 1; i > 0; i-- {
-		if cmdline[i] == "-c" {
-			retCmdArgs = append(retCmdArgs, cmdline[i+2:]...)
+type PutCmd struct {
+	localfiles []string
+	remotefile string
+	remotedir  string
+}
+
+func executePut(client ClientIf, host, port string, files []string) error {
+	ret := &PutCmd{}
+	switch len(files) {
+	case 1:
+		// Put file to server
+		ret.localfiles = append(ret.localfiles, files...)
+	case 2:
+		// files[0] == localfile
+		ret.localfiles = append(ret.localfiles, files[0])
+		// files[1] == remotefile
+		ret.remotefile = files[1]
+	default:
+		// files[:len(files)-2] == localfiles,
+		ret.localfiles = append(ret.localfiles, files[:len(files)-2]...)
+		// files[len(files)-1] == remote-directory
+		ret.remotedir = files[len(files)-1]
+	}
+
+	for _, file := range ret.localfiles {
+		url := constructURL(host, port, "", file)
+
+		if len(ret.localfiles) == 1 && ret.remotefile != "" {
+			url = constructURL(host, port, "", ret.remotefile)
+		} else if len(ret.localfiles) > 1 {
+			url = constructURL(host, port, ret.remotedir, file)
+		}
+
+		locFile, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+
+		fs, err := locFile.Stat()
+		if err != nil {
+			return err
+		}
+		if err := client.Put(url, locFile, fs.Size()); err != nil {
+			return err
 		}
 	}
 
-	retIPPort = append(retIPPort, args[:len(args)-len(retCmdArgs)]...)
+	return nil
+}
 
-	return retCmdArgs, retIPPort
+type GetCmd struct {
+	remotefiles []string
+	localfile   string
+}
+
+var errSizeNoMatch = errors.New("data size of read and write mismatch")
+
+func executeGet(client ClientIf, host, port string, files []string) error {
+	ret := &GetCmd{}
+	switch len(files) {
+	case 1:
+		// files[0] == remotefile
+		ret.remotefiles = append(ret.remotefiles, files[0])
+	case 2:
+		// files[0] == remotefile
+		ret.remotefiles = append(ret.remotefiles, files[0])
+		// files[1] == localfile
+		ret.localfile = files[1]
+	default:
+		// files... == remotefiles
+		ret.remotefiles = append(ret.remotefiles, files...)
+	}
+
+	for _, file := range ret.remotefiles {
+		resp, err := client.Get(constructURL(host, port, "", file))
+		if err != nil {
+			return err
+		}
+
+		localfile, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0o666)
+		if err != nil {
+			return nil
+		}
+		defer localfile.Close()
+
+		if ret.localfile != "" && len(ret.remotefiles) == 1 {
+			localfile, err = os.OpenFile(ret.localfile, os.O_CREATE|os.O_WRONLY, 0o666)
+			if err != nil {
+				return err
+			}
+		}
+
+		datalen, err := resp.Size()
+		if err != nil {
+			return err
+		}
+
+		data := make([]byte, datalen)
+		nR, err := resp.Read(data)
+		if err != nil {
+			return err
+		}
+
+		nW, err := localfile.Write(data)
+		if err != nil {
+			return err
+		}
+
+		if nR != nW {
+			return errSizeNoMatch
+		}
+	}
+
+	return nil
 }
