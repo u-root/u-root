@@ -10,19 +10,28 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hugelgupf/vmtest/guest"
 	"golang.org/x/sys/unix"
 )
 
 func TestRun(t *testing.T) {
 	for _, tt := range []struct {
-		name   string
-		argv   []string
-		expErr error
+		name    string
+		argv    []string
+		expErr  error
+		skipVM  bool
+		forceVM bool
 	}{
 		{
 			name:   "addbr",
 			argv:   []string{"addbr", "bridge0"},
-			expErr: unix.EPERM,
+			skipVM: true,
+		},
+		{
+			name:    "addbr_VM",
+			argv:    []string{"addbr", "bridge0"},
+			expErr:  unix.EEXIST,
+			forceVM: true,
 		},
 		{
 			name:   "addbr_fewArgs",
@@ -32,7 +41,13 @@ func TestRun(t *testing.T) {
 		{
 			name:   "delbr",
 			argv:   []string{"delbr", "bridge0"},
-			expErr: unix.EPERM,
+			skipVM: true,
+		},
+		{
+			name:    "delbr_VM",
+			argv:    []string{"delbr", "bridge0"},
+			expErr:  unix.ENXIO,
+			forceVM: true,
 		},
 		{
 			name:   "delbr_fewArgs",
@@ -42,7 +57,14 @@ func TestRun(t *testing.T) {
 		{
 			name:   "addif",
 			argv:   []string{"addif", "bridge0", "eth0"},
-			expErr: unix.EPERM,
+			expErr: unix.ENODEV,
+			skipVM: true,
+		},
+		{
+			name:    "addif_VM",
+			argv:    []string{"addif", "bridge0", "eth0"},
+			expErr:  unix.ENODEV,
+			forceVM: true,
 		},
 		{
 			name:   "addif_fewArgs",
@@ -52,7 +74,14 @@ func TestRun(t *testing.T) {
 		{
 			name:   "delif",
 			argv:   []string{"delif", "bridge0", "eth0"},
-			expErr: unix.EPERM,
+			expErr: unix.ENODEV,
+			skipVM: true,
+		},
+		{
+			name:    "delif_VM",
+			argv:    []string{"delif", "bridge0", "eth0"},
+			expErr:  unix.ENODEV,
+			forceVM: true,
 		},
 		{
 			name:   "delif_fewArgs",
@@ -171,6 +200,14 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.skipVM {
+				guest.SkipIfInVM(t)
+			}
+
+			if tt.forceVM {
+				guest.SkipIfNotInVM(t)
+			}
+
 			var outbuf bytes.Buffer
 			if err := run(&outbuf, tt.argv); !errors.Is(err, tt.expErr) {
 				t.Errorf("run(): %v, not: %v", err, tt.expErr)
