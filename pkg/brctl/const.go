@@ -5,7 +5,7 @@
 package brctl
 
 const (
-	BRCTL_SYS_NET    = "/sys/class/net/"
+	BRCTL_SYS_NET    = "/sys/class/net"
 	BRCTL_SYS_SUFFIX = 0x0a
 )
 
