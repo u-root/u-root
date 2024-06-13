@@ -368,8 +368,20 @@ func cmdlineQuote(args []string) string {
 // even understand the {} scoping in GRUB. But let's get the tests to pass, and
 // then we can do a rewrite.
 func (c *parser) append(ctx context.Context, config string) error {
+	var isOsProber = false
 	// Here's a shitty parser.
 	for _, line := range strings.Split(config, "\n") {
+		if strings.Contains(strings.ToLower(line), "os-prober") && strings.Contains(strings.ToLower(line), "begin") {
+			isOsProber = true
+			continue
+		}
+		if strings.Contains(strings.ToLower(line), "os-prober") && strings.Contains(strings.ToLower(line), "end") {
+			isOsProber = false
+			continue
+		}
+		if isOsProber {
+			continue
+		}
 		// Add extra backslash for OpenSUSE/Fedora/RHEL use case. shlex
 		// will convert it back to a single backslash.
 		line = hexEscape.ReplaceAllString(line, `\\$0`)
