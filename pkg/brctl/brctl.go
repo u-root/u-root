@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Addbr adds a bridge with the provided name.
 func Addbr(name string) error {
 	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
@@ -30,6 +31,7 @@ func Addbr(name string) error {
 	return nil
 }
 
+// Delbr deletes a bridge with the name provided.
 func Delbr(name string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
@@ -43,14 +45,14 @@ func Delbr(name string) error {
 	return nil
 }
 
-// Create dummy device for testing: `sudo ip link add eth10 type dummy`
-func Addif(name string, iface string) error {
+// Addif adds an interface to the bridge provided
+func Addif(bridge string, iface string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
-	ifr, err := unix.NewIfreq(name)
+	ifr, err := unix.NewIfreq(bridge)
 	if err != nil {
 		return fmt.Errorf("unix.NewIfreq: %w", err)
 	}
@@ -68,14 +70,14 @@ func Addif(name string, iface string) error {
 	return nil
 }
 
-// Create dummy device for testing: `sudo ip link add eth10 type dummy`
-func Delif(name string, iface string) error {
+// Delif deleted a given interface from the bridge
+func Delif(bridge string, iface string) error {
 	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
-	ifr, err := unix.NewIfreq(name)
+	ifr, err := unix.NewIfreq(bridge)
 	if err != nil {
 		return fmt.Errorf("unix.NewIfreq: %w", err)
 	}
@@ -132,7 +134,7 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 
 }
 
-// for now, only show essentials: bridge name, bridge id interfaces
+// for now, only show essentials: bridge name, bridge id interfaces.
 func showBridge(name string, out io.Writer) {
 	info, err := getBridgeInfo(name)
 	if err != nil {
@@ -147,18 +149,19 @@ func showBridge(name string, out io.Writer) {
 	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeID, info.StpState, ifaceString)
 }
 
+// Showmacs shows a list of learned MAC addresses for this bridge.
 // The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
 // The following format applies:
 // 00-05: MAC address
 // 06-08: port number
 // 09-10: is_local
 // 11-15: timeval (ignored for now)
-func Showmacs(name string, out io.Writer) error {
+func Showmacs(bridge string, out io.Writer) error {
 
 	// parse sysf into 0x10 byte chunks
-	brforward, err := os.ReadFile(path.Join(BRCTL_SYS_NET, name, "brforward"))
+	brforward, err := os.ReadFile(path.Join(BRCTL_SYS_NET, bridge, "brforward"))
 	if err != nil {
-		return fmt.Errorf("Readfile(%q): %w", path.Join(BRCTL_SYS_NET, name, "brforward"), err)
+		return fmt.Errorf("Readfile(%q): %w", path.Join(BRCTL_SYS_NET, bridge, "brforward"), err)
 	}
 
 	fmt.Fprintf(out, "port no\tmac addr\t\tis_local?\n")
@@ -175,6 +178,7 @@ func Showmacs(name string, out io.Writer) error {
 	return nil
 }
 
+// Show will show some information on the bridge and its attached ports.
 func Show(out io.Writer, names ...string) error {
 	fmt.Fprint(out, "bridge name\tbridge id\tSTP enabled\t\tinterfaces")
 	if len(names) == 0 {
@@ -198,7 +202,9 @@ func Show(out io.Writer, names ...string) error {
 	return nil
 }
 
-// Spanning Tree Options
+// Setageingtime sets the ethernet (MAC) address ageing time, in seconds.
+// After <time> seconds of not having seen a frame coming from a certain address,
+// the bridge will time out (delete) that address from the Forwarding DataBase (fdb).
 func Setageingtime(name string, time string) error {
 	ageing_time, err := stringToJiffies(time)
 	if err != nil {
@@ -211,7 +217,7 @@ func Setageingtime(name string, time string) error {
 	return nil
 }
 
-// Set the STP state of the bridge to on or off
+// Stp set the STP state of the bridge to on or off
 // Enable using "on" or "yes", disable by providing anything else
 // The manpage states:
 // > If <state> is "on" or "yes"  the STP  will  be turned on, otherwise it will be turned off
@@ -231,8 +237,9 @@ func Stp(bridge string, state string) error {
 	return nil
 }
 
-// The manpage states only uint16 should be supplied, but brctl_cmd.c uses regular 'int'
-// providing 2^16+1 results in 0 -> integer overflow
+// Setbridgeprio sets the port <port>'s priority to <priority>.
+// The priority value is an unsigned 8-bit quantity (a number between 0 and 255),
+// and has no dimension. This metric is used in the designated port and root port selection algorithms.
 func Setbridgeprio(bridge string, bridgePriority string) error {
 	// parse bridgePriority to int
 	prio, err := strconv.Atoi(bridgePriority)
@@ -247,6 +254,7 @@ func Setbridgeprio(bridge string, bridgePriority string) error {
 	return nil
 }
 
+// Setfd sets the bridge's 'bridge forward delay' to <time> seconds.
 func Setfd(bridge string, time string) error {
 	forward_delay, err := stringToJiffies(time)
 	if err != nil {
@@ -260,6 +268,7 @@ func Setfd(bridge string, time string) error {
 	return nil
 }
 
+// Sethello sets the bridge's 'bridge hello time' to <time> seconds.
 func Sethello(bridge string, time string) error {
 	hello_time, err := stringToJiffies(time)
 	if err != nil {
@@ -273,6 +282,7 @@ func Sethello(bridge string, time string) error {
 	return nil
 }
 
+// Setmaxage sets the bridge's 'maximum message age' to <time> seconds.
 func Setmaxage(bridge string, time string) error {
 	max_age, err := stringToJiffies(time)
 	if err != nil {
@@ -286,7 +296,7 @@ func Setmaxage(bridge string, time string) error {
 	return nil
 }
 
-// port ~= interface, aka /sys/net/ehtX
+// Setpathcost sets the port cost of the port <port> to <cost>. This is a dimensionless metric.
 func Setpathcost(bridge string, port string, cost string) error {
 	path_cost, err := strconv.ParseUint(cost, 10, 64)
 	if err != nil {
@@ -301,6 +311,9 @@ func Setpathcost(bridge string, port string, cost string) error {
 	return nil
 }
 
+// Setportprio sets the port <port>'s priority to <priority>.
+// The priority value is an unsigned 8-bit quantity (a number between 0 and 255),
+// and has no dimension. This metric is used in the designated port and root port selection algorithms.
 func Setportprio(bridge string, port string, prio string) error {
 	port_priority, err := strconv.Atoi(prio)
 	if err != nil {
@@ -310,6 +323,7 @@ func Setportprio(bridge string, port string, prio string) error {
 	return setPortBrportValue(port, BRCTL_PRIORITY, []byte(strconv.Itoa(port_priority)))
 }
 
+// Hairpin sets the hairpin mode of the <port> attached to <bridge>
 func Hairpin(bridge string, port string, hairpinmode string) error {
 	var hairpin_mode string
 	if hairpinmode == "on" {
