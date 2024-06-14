@@ -22,9 +22,9 @@ func TestSymlink(t *testing.T) {
 	tab := []struct {
 		s, t, v string
 	}{
-		{filepath.Join(td, "bin/ash"), "sh", filepath.Join(td, "buildbin/elvish")},
-		{filepath.Join(td, "bin/sh"), "../buildbin/elvish", filepath.Join(td, "buildbin/elvish")},
-		{filepath.Join(td, "buildbin/elvish"), "installcommand", filepath.Join(td, "buildbin/elvish")},
+		{filepath.Join(td, "bin/ash"), "sh", filepath.Join(td, "buildbin/gosh")},
+		{filepath.Join(td, "bin/sh"), "../buildbin/gosh", filepath.Join(td, "buildbin/gosh")},
+		{filepath.Join(td, "buildbin/gosh"), "installcommand", filepath.Join(td, "buildbin/gosh")},
 	}
 	for _, s := range tab {
 		if err := os.Symlink(s.t, s.s); err != nil {
