@@ -1,7 +1,6 @@
 run:
   skip-dirs:
     - pkg/uroot/test
-    - cmds/core/elvish
 
 linters:
   disable-all: true
