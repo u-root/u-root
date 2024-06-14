@@ -178,7 +178,23 @@ func statusString(state bool) string {
 
 func printHelp() string {
 	var s strings.Builder
-	fmt.Fprintf(&s, "not implemented yet\n")
+
+	fmt.Fprintf(&s, "Commands may be abbreviated.  Commands are:\n")
+	fmt.Fprintf(&s, "connect\tconnect to remote tftp\n")
+	fmt.Fprintf(&s, "mode\tset file transfer mode\n")
+	fmt.Fprintf(&s, "put\tsend file\n")
+	fmt.Fprintf(&s, "get\treceive file\n")
+	fmt.Fprintf(&s, "quit\texit tftp\n")
+	fmt.Fprintf(&s, "verbose\ttoggle verbose mode (no functionality implemented)\n")
+	fmt.Fprintf(&s, "trace\ttoggle packet tracing (no functionality implemented)")
+	fmt.Fprintf(&s, "literal\ttoggle literal mode (no functionality implemented)\n")
+	fmt.Fprintf(&s, "status\tshow current status\n")
+	fmt.Fprintf(&s, "binary\tset mode to octet\n")
+	fmt.Fprintf(&s, "ascii\tset mode to netascii\n")
+	fmt.Fprintf(&s, "rexmt\tset per-packet transmission timeout\n")
+	fmt.Fprintf(&s, "timeout\tset total retransmission timeout\n")
+	fmt.Fprintf(&s, "?\t\tprint help information\n")
+	fmt.Fprintf(&s, "help\tprint help information\n")
 	return s.String()
 }
 
