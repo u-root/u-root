@@ -40,8 +40,6 @@ func sysconfhz() (int, error) {
 	return int(clktck), nil
 }
 
-// ioctl helpers
-// TODO: maybe use ifreq.withData for this?
 func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	local_bytes := append([]byte(raw), 0)
 	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
