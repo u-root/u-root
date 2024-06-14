@@ -21,13 +21,16 @@ const (
 )
 
 const (
-	BRCTL_AGEING_TIME   = "ageing_time"
-	BRCTL_STP_STATE     = "stp_state"
-	BRCTL_BRIDGE_PRIO   = "priority"
-	BRCTL_FORWARD_DELAY = "forward_delay"
-	BRCTL_HELLO_TIME    = "hello_time"
-	BRCTL_MAX_AGE       = "max_age"
-	BRCTL_PATH_COST     = "path_cost"
-	BRCTL_PRIORITY      = "priority"
-	BRCTL_HAIRPIN       = "hairpin_mode"
+	BRCTL_AGEING_TIME      = "ageing_time"
+	BRCTL_STP_STATE        = "stp_state"
+	BRCTL_BRIDGE_PRIO      = "priority"
+	BRCTL_FORWARD_DELAY    = "forward_delay"
+	BRCTL_HELLO_TIME       = "hello_time"
+	BRCTL_MAX_AGE          = "max_age"
+	BRCTL_PATH_COST        = "path_cost"
+	BRCTL_PRIORITY         = "priority"
+	BRCTL_HAIRPIN          = "hairpin_mode"
+	BRCTL_BRFORWARD        = "brforward"
+	BRCTL_BRIDGEID         = "bridge_id"
+	BRCTL_BRIDGE_INTERFACE = "brif"
 )
