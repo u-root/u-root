@@ -25,3 +25,4 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.56.1
+          args: --out-format=line-number
