@@ -16,6 +16,8 @@ import (
 	"pack.ag/tftp"
 )
 
+// Flags provides the flags used in ./cmds/core/tftp.
+// For more details, see the main-function in ./cmds/core/tftp/main.go.
 type Flags struct {
 	Cmd       string
 	Mode      string
@@ -24,6 +26,7 @@ type Flags struct {
 	Verbose   bool
 }
 
+// ClientCfg holds all configuration values of a client.
 type ClientCfg struct {
 	Host    string
 	Port    string
@@ -36,6 +39,8 @@ type ClientCfg struct {
 	Verbose bool
 }
 
+// RunInteractive starts the internal interactive command loop, where the user provides input to control
+// the application.
 func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer) error {
 	const defaultPort = "69"
 	var ipHost string
@@ -76,6 +81,9 @@ func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer)
 	}
 }
 
+// ExecuteOp executes a given command on input[0] with args in input[1:].
+// Depending on the command, clientcfg is manipulated or used to create a new client
+// for get and put command.
 func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, error) {
 	var err error
 
@@ -186,8 +194,12 @@ func readHostInteractive(in *bufio.Scanner, out io.Writer) string {
 	return in.Text()
 }
 
+// ErrInvalidTransferMode is returned by ValidateMode in case
+// the provided mode string has no matching tftp.TransferMode.
 var ErrInvalidTransferMode = errors.New("invalid transfer mode")
 
+// ValidateMode takes a the modes string 'ascii' or 'binary' and
+// returns the valid tftp.TransferMode or error.
 func ValidateMode(mode string) (tftp.TransferMode, error) {
 	var ret tftp.TransferMode
 	switch tftp.TransferMode(mode) {
@@ -201,14 +213,14 @@ func ValidateMode(mode string) (tftp.TransferMode, error) {
 	return ret, nil
 }
 
-type PutCmd struct {
+type putCmd struct {
 	localfiles []string
 	remotefile string
 	remotedir  string
 }
 
 func executePut(client ClientIf, host, port string, files []string) error {
-	ret := &PutCmd{}
+	ret := &putCmd{}
 	switch len(files) {
 	case 1:
 		// Put file to server
@@ -251,7 +263,7 @@ func executePut(client ClientIf, host, port string, files []string) error {
 	return nil
 }
 
-type GetCmd struct {
+type getCmd struct {
 	remotefiles []string
 	localfile   string
 }
@@ -259,7 +271,7 @@ type GetCmd struct {
 var errSizeNoMatch = errors.New("data size of read and write mismatch")
 
 func executeGet(client ClientIf, host, port string, files []string) error {
-	ret := &GetCmd{}
+	ret := &getCmd{}
 	switch len(files) {
 	case 1:
 		// files[0] == remotefile

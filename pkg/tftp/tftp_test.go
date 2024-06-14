@@ -281,6 +281,54 @@ func TestRunInteractive(t *testing.T) {
 				"q",
 			},
 		},
+		{
+			name: "Input_literal_Quit",
+			input: []string{
+				"localhost",
+				"literal",
+				"q",
+			},
+		},
+		{
+			name: "Input_rexmt_Quit",
+			input: []string{
+				"localhost",
+				"rexmt 10",
+				"q",
+			},
+		},
+		{
+			name: "Input_status_Quit",
+			input: []string{
+				"localhost",
+				"status",
+				"q",
+			},
+		},
+		{
+			name: "Input_timeout_Quit",
+			input: []string{
+				"localhost",
+				"timeout 10",
+				"q",
+			},
+		},
+		{
+			name: "Input_trace_Quit",
+			input: []string{
+				"localhost",
+				"trace",
+				"q",
+			},
+		},
+		{
+			name: "Input_verbose_Quit",
+			input: []string{
+				"localhost",
+				"verbose",
+				"q",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var inBuf, outBuf bytes.Buffer
