@@ -6,6 +6,47 @@
 //
 // Synopsis: tftp [ options... ] [host [port]] [-c command]
 //
+//	Options:
+//		-m <ascii/binary>
+//
+//	Commands:
+//		q,quit
+//			- Quits the application
+//		h, help, ?
+//			- Prints help
+//		ascii
+//			- Sets TransferMode to netascii
+//		binary
+//			- Sets TransferMode to octet
+//		mode <ascii/binary>
+//			- Sets Transfermode to provided argument
+//		connect <host> [port]
+//			- Sets the host and optionally the port to connect to
+//		get file
+//			- gets the file. Host must be set.
+//		get remotefile localfile
+//			- gets the remote file and stores it in localfile.
+//				If localfile does not exist, it will be created.
+//		get file1, file2, file3,...
+//			- gets all the files from the given host.
+//		put file
+//			- puts the file on the host
+//		put localfile remotefile
+//			- puts the localfile to the host under the remotefile name.
+//		put file1, file2, file3..., remote-directory
+//			- puts the files in the remote-directory on the host.
+//		literal
+//			- activates literal mode filename/path handling (not implemented).
+//		rexmt <int>
+//			- Sets the per-packet retransmission attemts to <int>. Default: 10.
+//		status
+//			- Prints the program/client configuration
+//		timeout <int>
+//			- Sets the total transmission timeout to <int> seconds. Default: 1
+//		trace
+//			- Activates packet tracing (not implemented)
+//		verbose
+//			- Activates verbose mode (not implemented)
 
 package main
 
@@ -23,9 +64,6 @@ func main() {
 	f := tftppkg.Flags{}
 	flag.StringVarP(&f.Cmd, "c", "c", "", "Execute command as if it had been entered on the tftp prompt.  Must be specified last on the command line.")
 	flag.StringVarP(&f.Mode, "m", "m", "netascii", "Set the default transfer mode to mode.  This is usually used with -c.")
-	flag.StringVarP(&f.PortRange, "R", "R", "", "Force the originating port number to be in the specified range of port numbers.")
-	flag.BoolVarP(&f.Literal, "l", "l", false, "Default to literal mode. Used to avoid special processing of ':' in a file name.")
-	flag.BoolVarP(&f.Verbose, "v", "v", false, "Default to verbose mode.")
 
 	flag.Parse()
 
