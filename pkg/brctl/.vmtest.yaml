@@ -1,0 +1,13 @@
+amd64:
+  VMTEST_KERNEL:
+    container: "ghcr.io/leongross/vmtest/kernel-amd64:latest"
+    template: "{{.bzImage}}"
+    files:
+      bzImage: "/bzImage"
+
+arm:
+  VMTEST_KERNEL:
+    container: "ghcr.io/leongross/vmtest/kernel-arm:main"
+    template: "{{.bzImage}}"
+    files:
+      bzImage: "/zImage"
