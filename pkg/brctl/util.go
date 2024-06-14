@@ -41,8 +41,8 @@ func sysconfhz() (int, error) {
 }
 
 func executeIoctlStr(fd int, req uint, raw string) (int, error) {
-	local_bytes := append([]byte(raw), 0)
-	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&local_bytes[0])))
+	localBytes := append([]byte(raw), 0)
+	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&localBytes[0])))
 	if errno != 0 {
 		return 0, fmt.Errorf("syscall.Syscall: %w", errno)
 	}
@@ -55,22 +55,22 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 		return 0, err
 	}
 
-	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return 0, err
 	}
 
-	err = unix.IoctlIfreq(brctl_socket, unix.SIOCGIFINDEX, ifreq)
+	err = unix.IoctlIfreq(brctlSocket, unix.SIOCGIFINDEX, ifreq)
 	if err != nil {
 		return 0, err
 	}
 
-	ifr_ifindex := ifreq.Uint32()
-	if ifr_ifindex == 0 {
+	ifrIfindex := ifreq.Uint32()
+	if ifrIfindex == 0 {
 		return 0, fmt.Errorf("interface %s not found", ifname)
 	}
 
-	return int(ifr_ifindex), nil
+	return int(ifrIfindex), nil
 }
 
 // set values for the bridge

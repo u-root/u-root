@@ -33,12 +33,12 @@ func Addbr(name string) error {
 
 // Delbr deletes a bridge with the name provided.
 func Delbr(name string) error {
-	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return fmt.Errorf("unix.Socket: %w", err)
 	}
 
-	if _, err := executeIoctlStr(brctl_socket, unix.SIOCBRDELBR, name); err != nil {
+	if _, err := executeIoctlStr(brctlSocket, unix.SIOCBRDELBR, name); err != nil {
 		return fmt.Errorf("executeIoctlStr: %w", err)
 	}
 
@@ -47,7 +47,7 @@ func Delbr(name string) error {
 
 // Addif adds an interface to the bridge provided
 func Addif(bridge string, iface string) error {
-	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return fmt.Errorf("unix.Socket: %w", err)
 	}
@@ -57,13 +57,13 @@ func Addif(bridge string, iface string) error {
 		return fmt.Errorf("unix.NewIfreq: %w", err)
 	}
 
-	if_index, err := getIndexFromInterfaceName(iface)
+	ifIndex, err := getIndexFromInterfaceName(iface)
 	if err != nil {
 		return fmt.Errorf("getIndexFromInterfaceName: %w", err)
 	}
-	ifr.SetUint32(uint32(if_index))
+	ifr.SetUint32(uint32(ifIndex))
 
-	if err := unix.IoctlIfreq(brctl_socket, unix.SIOCBRADDIF, ifr); err != nil {
+	if err := unix.IoctlIfreq(brctlSocket, unix.SIOCBRADDIF, ifr); err != nil {
 		return fmt.Errorf("unix.IoctlIfreq: %w", err)
 	}
 
@@ -72,7 +72,7 @@ func Addif(bridge string, iface string) error {
 
 // Delif deleted a given interface from the bridge
 func Delif(bridge string, iface string) error {
-	brctl_socket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return fmt.Errorf("unix.Socket: %w", err)
 	}
@@ -82,13 +82,13 @@ func Delif(bridge string, iface string) error {
 		return fmt.Errorf("unix.NewIfreq: %w", err)
 	}
 
-	if_index, err := getIndexFromInterfaceName(iface)
-	if err != nil || if_index == 0 {
+	ifIndex, err := getIndexFromInterfaceName(iface)
+	if err != nil || ifIndex == 0 {
 		return fmt.Errorf("getIndexFromInterfaceName: %w", err)
 	}
-	ifr.SetUint32(uint32(if_index))
+	ifr.SetUint32(uint32(ifIndex))
 
-	if err := unix.IoctlIfreq(brctl_socket, unix.SIOCBRDELIF, ifr); err != nil {
+	if err := unix.IoctlIfreq(brctlSocket, unix.SIOCBRDELIF, ifr); err != nil {
 		return fmt.Errorf("unix.IoctlIfreq: %w", err)
 	}
 
@@ -98,24 +98,24 @@ func Delif(bridge string, iface string) error {
 // All bridges are in the virtfs under /sys/class/net/<name>/bridge/<item>, read info from there
 // Update this function if BridgeInfo struct changes
 func getBridgeInfo(name string) (BridgeInfo, error) {
-	base_path := path.Join(BRCTL_SYS_NET, name, "bridge")
-	bridge_id, err := os.ReadFile(path.Join(base_path, "bridge_id"))
+	basePath := path.Join(BRCTL_SYS_NET, name, "bridge")
+	bridgeID, err := os.ReadFile(path.Join(basePath, BRCTL_BRIDGEID))
 	if err != nil {
 		return BridgeInfo{}, fmt.Errorf("os.ReadFile: %w", err)
 	}
 
-	stp_enabled, err := os.ReadFile(path.Join(base_path, "stp_state"))
+	stpEnabledRaw, err := os.ReadFile(path.Join(basePath, BRCTL_STP_STATE))
 	if err != nil {
 		return BridgeInfo{}, fmt.Errorf("os.ReadFile: %w", err)
 	}
 
-	stp_enabled_bool, err := strconv.ParseBool(strings.TrimSuffix(string(stp_enabled), "\n"))
+	stpEnabled, err := strconv.ParseBool(strings.TrimSuffix(string(stpEnabledRaw), "\n"))
 	if err != nil {
 		return BridgeInfo{}, fmt.Errorf("strconv.ParseBool: %w", err)
 	}
 
 	// get interfaceDir from sysfs
-	interfaceDir, err := os.ReadDir(path.Join(BRCTL_SYS_NET, name, "brif"))
+	interfaceDir, err := os.ReadDir(path.Join(BRCTL_SYS_NET, name, BRCTL_BRIDGE_INTERFACE))
 	if err != nil {
 		return BridgeInfo{}, fmt.Errorf("os.ReadDir: %w", err)
 	}
@@ -127,8 +127,8 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 
 	return BridgeInfo{
 		Name:       name,
-		BridgeID:   strings.TrimSuffix(string(bridge_id), "\n"),
-		StpState:   stp_enabled_bool,
+		BridgeID:   strings.TrimSuffix(string(bridgeID), "\n"),
+		StpState:   stpEnabled,
 		Interfaces: interfaces,
 	}, nil
 
@@ -157,11 +157,10 @@ func showBridge(name string, out io.Writer) {
 // 09-10: is_local
 // 11-15: timeval (ignored for now)
 func Showmacs(bridge string, out io.Writer) error {
-
 	// parse sysf into 0x10 byte chunks
-	brforward, err := os.ReadFile(path.Join(BRCTL_SYS_NET, bridge, "brforward"))
+	brforward, err := os.ReadFile(path.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD))
 	if err != nil {
-		return fmt.Errorf("Readfile(%q): %w", path.Join(BRCTL_SYS_NET, bridge, "brforward"), err)
+		return fmt.Errorf("Readfile(%q): %w", path.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD), err)
 	}
 
 	fmt.Fprintf(out, "port no\tmac addr\t\tis_local?\n")
@@ -169,10 +168,10 @@ func Showmacs(bridge string, out io.Writer) error {
 	for i := 0; i < len(brforward); i += 0x10 {
 		chunk := brforward[i : i+0x10]
 		mac := chunk[0:6]
-		port_no := uint16(binary.BigEndian.Uint16(chunk[6:8]))
-		is_local := uint8(chunk[9]) != 0
+		portNo := uint16(binary.BigEndian.Uint16(chunk[6:8]))
+		isLocal := uint8(chunk[9]) != 0
 
-		fmt.Fprintf(out, "%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", port_no, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], is_local)
+		fmt.Fprintf(out, "%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", portNo, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], isLocal)
 	}
 
 	return nil
@@ -206,12 +205,12 @@ func Show(out io.Writer, names ...string) error {
 // After <time> seconds of not having seen a frame coming from a certain address,
 // the bridge will time out (delete) that address from the Forwarding DataBase (fdb).
 func Setageingtime(name string, time string) error {
-	ageing_time, err := stringToJiffies(time)
+	ageingTime, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
 	}
 
-	if err = setBridgeValue(name, BRCTL_AGEING_TIME, []byte(strconv.Itoa(ageing_time)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
+	if err = setBridgeValue(name, BRCTL_AGEING_TIME, []byte(strconv.Itoa(ageingTime)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
 		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 	return nil
@@ -223,14 +222,14 @@ func Setageingtime(name string, time string) error {
 // > If <state> is "on" or "yes"  the STP  will  be turned on, otherwise it will be turned off
 // So this is actually the described behavior, not checking for "off" and "no"
 func Stp(bridge string, state string) error {
-	var stp_state int
+	var stpState int
 	if state == "on" || state == "yes" {
-		stp_state = 1
+		stpState = 1
 	} else {
-		stp_state = 0
+		stpState = 0
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_STP_STATE, []byte(strconv.Itoa(stp_state)), uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_STP_STATE, []byte(strconv.Itoa(stpState)), uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
 		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
@@ -256,12 +255,12 @@ func Setbridgeprio(bridge string, bridgePriority string) error {
 
 // Setfd sets the bridge's 'bridge forward delay' to <time> seconds.
 func Setfd(bridge string, time string) error {
-	forward_delay, err := stringToJiffies(time)
+	forwardDelay, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, []byte(strconv.Itoa(forward_delay)), 0); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, []byte(strconv.Itoa(forwardDelay)), 0); err != nil {
 		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
@@ -270,12 +269,12 @@ func Setfd(bridge string, time string) error {
 
 // Sethello sets the bridge's 'bridge hello time' to <time> seconds.
 func Sethello(bridge string, time string) error {
-	hello_time, err := stringToJiffies(time)
+	helloTime, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, []byte(strconv.Itoa(hello_time)), 0); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, []byte(strconv.Itoa(helloTime)), 0); err != nil {
 		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
@@ -284,12 +283,12 @@ func Sethello(bridge string, time string) error {
 
 // Setmaxage sets the bridge's 'maximum message age' to <time> seconds.
 func Setmaxage(bridge string, time string) error {
-	max_age, err := stringToJiffies(time)
+	maxAge, err := stringToJiffies(time)
 	if err != nil {
 		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
 	}
 
-	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, []byte(strconv.Itoa(max_age)), 0); err != nil {
+	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, []byte(strconv.Itoa(maxAge)), 0); err != nil {
 		return fmt.Errorf("setBridgeValue: %w", err)
 	}
 
@@ -298,12 +297,12 @@ func Setmaxage(bridge string, time string) error {
 
 // Setpathcost sets the port cost of the port <port> to <cost>. This is a dimensionless metric.
 func Setpathcost(bridge string, port string, cost string) error {
-	path_cost, err := strconv.ParseUint(cost, 10, 64)
+	pathCost, err := strconv.ParseUint(cost, 10, 64)
 	if err != nil {
 		return err
 	}
 
-	err = setPortBrportValue(port, BRCTL_PATH_COST, append([]byte(strconv.FormatUint(path_cost, 10)), BRCTL_SYS_SUFFIX))
+	err = setPortBrportValue(port, BRCTL_PATH_COST, append([]byte(strconv.FormatUint(pathCost, 10)), BRCTL_SYS_SUFFIX))
 	if err != nil {
 		return fmt.Errorf("setPortBrportValue: %w", err)
 	}
@@ -315,24 +314,24 @@ func Setpathcost(bridge string, port string, cost string) error {
 // The priority value is an unsigned 8-bit quantity (a number between 0 and 255),
 // and has no dimension. This metric is used in the designated port and root port selection algorithms.
 func Setportprio(bridge string, port string, prio string) error {
-	port_priority, err := strconv.Atoi(prio)
+	portPriority, err := strconv.Atoi(prio)
 	if err != nil {
 		return err
 	}
 
-	return setPortBrportValue(port, BRCTL_PRIORITY, []byte(strconv.Itoa(port_priority)))
+	return setPortBrportValue(port, BRCTL_PRIORITY, []byte(strconv.Itoa(portPriority)))
 }
 
 // Hairpin sets the hairpin mode of the <port> attached to <bridge>
 func Hairpin(bridge string, port string, hairpinmode string) error {
-	var hairpin_mode string
+	var hairpinMode string
 	if hairpinmode == "on" {
-		hairpin_mode = "1"
+		hairpinMode = "1"
 	} else {
-		hairpin_mode = "0"
+		hairpinMode = "0"
 	}
 
-	if err := setPortBrportValue(port, BRCTL_HAIRPIN, []byte(hairpin_mode)); err != nil {
+	if err := setPortBrportValue(port, BRCTL_HAIRPIN, []byte(hairpinMode)); err != nil {
 		return fmt.Errorf("setPortBrportValue: %w", err)
 	}
 
