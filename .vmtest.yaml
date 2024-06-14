@@ -6,19 +6,19 @@ amd64:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:10ea580ef29468f6d6f4674279586d37e118b145564fd1e99b708370262961a4"
+    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:f2e059a15c78754db1f4b13e218e671188b301e00d89ae5dd7c90852b93051fa"
     template: "{{.bzImage}}"
     files:
       bzImage: "/bzImage"
 
   UROOT_MULTIBOOT_TEST_KERNEL_DIR:
-    container: "ghcr.io/u-root/u-root/test-multiboot-test-kernel-amd64@sha256:0fba729eddd76a50f5cfdfdabc4389d6a6902486b1190d354813ae953cc94b52"
+    container: "ghcr.io/u-root/u-root/test-multiboot-test-kernel-amd64@sha256:0385b76e46f707ec2cd37942605d414f25fdea20be69ef942a24c447332ed2f4"
     template: "{{.mbdir}}"
     directories:
       mbdir: "/mb"
 
   UROOT_TEST_UEFIPAYLOAD:
-    container: "ghcr.io/u-root/u-root/test-uefipayload-amd64@sha256:4a9a47cdce32fb6dd7610f6de9f55d64b5dc380cf95bc23561696bb48e34622a"
+    container: "ghcr.io/u-root/u-root/test-uefipayload-amd64@sha256:1bd2eba74930d863ff76a3cf1889ecda8d5bf569c795d3bc7a9d79d5580d7972"
     template: "{{.payload}}"
     files:
       payload: "/UEFIPAYLOAD.fd"
@@ -31,7 +31,7 @@ arm:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:d185d93812738b2869f4835d5a209fcf25ffdea4fd6601fcd206dfad67c9bced"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:89f168f0da14f69c69ba3427b7c553ffa5e66d1e9f5f7f8f46ac09d1d776a602"
     template: "{{.zImage}}"
     files:
       zImage: "/zImage"
@@ -44,7 +44,7 @@ arm64:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm64@sha256:805d64653b654ddf96e307cd3d7e835e5e9b9fd67d1b7e79b73cfa8ea2ce86e4"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm64@sha256:1ca9bc35409b5cd83fcdb04817ceac034ad437ebeaae34df1172d0a3df6f16f4"
     template: "{{.Image}}"
     files:
       Image: "/Image"
