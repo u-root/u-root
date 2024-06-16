@@ -25,13 +25,13 @@ require (
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
-	github.com/pborman/getopt/v2 v2.1.0
 	github.com/peterh/liner v1.2.2
 	github.com/pierrec/lz4/v4 v4.1.14
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
+	github.com/tklauser/go-sysconf v0.3.14
 	github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
@@ -42,7 +42,7 @@ require (
 	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	golang.org/x/net v0.23.0
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.19.0
 	golang.org/x/term v0.18.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.18.0
@@ -78,6 +78,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/arch v0.2.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect

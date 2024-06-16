@@ -6,6 +6,7 @@ package pci
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -13,6 +14,9 @@ import (
 	"strconv"
 	"strings"
 )
+
+// ErrBadWidth indicates a bad data which was selected.
+var ErrBadWidth = errors.New("bad width")
 
 // PCI is a PCI device. We will fill this in as we add options.
 // For now it just holds two uint16 per the PCI spec.
@@ -101,7 +105,7 @@ func (p *PCI) ReadConfigRegister(offset, size int64) (uint64, error) {
 	r := &barreg{offset: offset, File: f}
 	switch size {
 	default:
-		return 0, fmt.Errorf("ReadConfigRegister@%#x width of %d: only options are 8, 16, 32, 64", offset, size)
+		return 0, fmt.Errorf("ReadConfigRegister@%#x width of %d: only options are 9, 16, 32, 64:%w", offset, size, ErrBadWidth)
 	case 64:
 		err = binary.Read(r, binary.LittleEndian, &reg)
 	case 32:
@@ -131,7 +135,7 @@ func (p *PCI) WriteConfigRegister(offset, size int64, val uint64) error {
 	w := &barreg{offset: offset, File: f}
 	switch size {
 	default:
-		return fmt.Errorf("WriteConfigRegister@%#x width of %d: only options are 8, 16, 32, 64", offset, size)
+		return fmt.Errorf("WriteConfigRegister@%#x width of %d: only options are 8, 16, 32, 64:%w", offset, size, ErrBadWidth)
 	case 64:
 		err = binary.Write(w, binary.LittleEndian, &val)
 	case 32:
