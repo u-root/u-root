@@ -6,9 +6,11 @@ package pci
 
 import (
 	"encoding/hex"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
 	"testing"
 )
 
@@ -29,7 +31,7 @@ func TestPCIReadConfigRegister(t *testing.T) {
 		offset   int64
 		size     int64
 		valsWant uint64
-		errWant  string
+		err      error
 	}{
 		{
 			name: "read byte 1 from config file",
@@ -72,37 +74,35 @@ func TestPCIReadConfigRegister(t *testing.T) {
 			pci: PCI{
 				FullPath: dir,
 			},
-			offset:   2,
-			size:     64,
-			valsWant: 0x7766554433221100,
-			errWant:  "EOF",
+			offset: 2,
+			size:   64,
+			err:    io.ErrUnexpectedEOF,
 		},
 		{
 			name: "wrong size",
 			pci: PCI{
 				FullPath: dir,
 			},
-			offset:  0,
-			size:    0,
-			errWant: "only options are 8, 16, 32, 64",
+			offset: 0,
+			size:   0,
+			err:    ErrBadWidth,
 		},
 		{
 			name: "config file does not exist",
 			pci: PCI{
 				FullPath: "d",
 			},
-			errWant: "no such file or directory",
+			err: os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if vals, got := tt.pci.ReadConfigRegister(tt.offset, tt.size); got != nil {
-				if !strings.Contains(got.Error(), tt.errWant) {
-					t.Errorf("ReadConfig() = %q, want to contain: %q", got, tt.errWant)
-				}
-			} else {
-				if vals != tt.valsWant {
-					t.Errorf("ReadConfig() = '%#x', want: '%#x'", vals, tt.valsWant)
-				}
+			vals, got := tt.pci.ReadConfigRegister(tt.offset, tt.size)
+			if !errors.Is(got, tt.err) {
+				t.Errorf("ReadConfig() = got %v, want %v", got, tt.err)
+				return
+			}
+			if vals != tt.valsWant {
+				t.Errorf("ReadConfig() = '%#x', want: '%#x'", vals, tt.valsWant)
 			}
 		})
 	}
@@ -120,13 +120,13 @@ func TestPCIWriteConfigRegister(t *testing.T) {
 		t.Errorf("Writing to file failed: %v", err)
 	}
 	for _, tt := range []struct {
-		name    string
-		pci     PCI
-		offset  int64
-		size    int64
-		val     uint64
-		want    string
-		errWant string
+		name   string
+		pci    PCI
+		offset int64
+		size   int64
+		val    uint64
+		want   string
+		err    error
 	}{
 		{
 			name: "Writing 1 byte to config file",
@@ -183,62 +183,64 @@ func TestPCIWriteConfigRegister(t *testing.T) {
 			pci: PCI{
 				FullPath: dir,
 			},
-			offset:  0,
-			size:    0,
-			errWant: "only options are 8, 16, 32, 64",
+			offset: 0,
+			size:   0,
+			err:    ErrBadWidth,
 		},
 		{
 			name: "More than 32 bits",
 			pci: PCI{
 				FullPath: dir,
 			},
-			offset:  0,
-			size:    32,
-			val:     1 << 33,
-			errWant: "out of range",
+			offset: 0,
+			size:   32,
+			val:    1 << 33,
+			err:    strconv.ErrRange,
 		},
 		{
 			name: "More than 16 bits",
 			pci: PCI{
 				FullPath: dir,
 			},
-			offset:  0,
-			size:    16,
-			val:     1 << 17,
-			errWant: "out of range",
+			offset: 0,
+			size:   16,
+			val:    1 << 17,
+			err:    strconv.ErrRange,
 		},
 		{
 			name: "More than 8 bits",
 			pci: PCI{
 				FullPath: dir,
 			},
-			offset:  0,
-			size:    8,
-			val:     1 << 17,
-			errWant: "out of range",
+			offset: 0,
+			size:   8,
+			val:    1 << 17,
+			err:    strconv.ErrRange,
 		},
 		{
 			name: "config file does not exist",
 			pci: PCI{
 				FullPath: "d",
 			},
-			errWant: "no such file or directory",
+			err: os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.pci.WriteConfigRegister(tt.offset, tt.size, tt.val); got != nil {
-				if !strings.Contains(got.Error(), tt.errWant) {
-					t.Errorf("ReadConfig() = %q, want to contain: %q", got, tt.errWant)
-				}
-			} else {
-				got, err := os.ReadFile(filepath.Join(dir, "config"))
-				if err != nil {
-					t.Errorf("Failed to read file %v", err)
-				}
-				if hex.EncodeToString(got) != tt.want {
-					t.Errorf("Config file contains = %q, want: %q", hex.EncodeToString(got), tt.want)
-				}
+			err := tt.pci.WriteConfigRegister(tt.offset, tt.size, tt.val)
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("ReadConfig() = %v, want %v", err, tt.err)
 			}
+			if err != nil {
+				return
+			}
+			got, err := os.ReadFile(filepath.Join(dir, "config"))
+			if err != nil {
+				t.Fatalf("Failed to read file %v", err)
+			}
+			if hex.EncodeToString(got) != tt.want {
+				t.Fatalf("Config file contains = %q, want: %q", hex.EncodeToString(got), tt.want)
+			}
+
 		})
 	}
 }

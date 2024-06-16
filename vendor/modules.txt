@@ -235,9 +235,6 @@ github.com/nanmu42/limitio
 # github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 ## explicit; go 1.14
 github.com/orangecms/go-framebuffer/framebuffer
-# github.com/pborman/getopt/v2 v2.1.0
-## explicit; go 1.13
-github.com/pborman/getopt/v2
 # github.com/peterh/liner v1.2.2
 ## explicit
 github.com/peterh/liner

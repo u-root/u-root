@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -123,34 +124,27 @@ func TestListName(t *testing.T) {
 }
 
 // Test list func
-func TestList(t *testing.T) {
+func TestRun(t *testing.T) {
 	// Creating test table
 	for _, tt := range []struct {
 		name   string
-		input  []string
+		args   []string
 		err    error
-		flag   cmd
 		prefix bool
 	}{
 		{
-			name:  "input empty, quoted = true, long = true",
-			input: []string{},
-			err:   nil,
-			flag: cmd{
-				quoted: true,
-				long:   true,
-			},
+			name: "input empty, quoted = true, long = true",
+			args: []string{"ls", "-Ql"},
+			err:  nil,
 		},
 		{
-			name:  "input empty, quoted = true, long = true",
-			input: []string{"dir"},
-			err:   os.ErrNotExist,
+			name: "input empty, quoted = true, long = true",
+			args: []string{"ls", "-Ql", "dir"},
+			err:  os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			tt.flag.w = &buf
-			if err := tt.flag.list(tt.input); err != nil {
+			if err := run(io.Discard, tt.args); err != nil {
 				if !errors.Is(err, tt.err) {
 					t.Errorf("list() = '%v', want: '%v'", err, tt.err)
 				}
