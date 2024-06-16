@@ -84,7 +84,7 @@ func (p *Packet6) Configure() error {
 	}
 
 	if ips := p.DNS(); ips != nil {
-		if err := WriteDNSSettings(ips, nil, ""); err != nil {
+		if err := WriteDNSSettings(ips, nil, "", ResolvConfPath); err != nil {
 			return err
 		}
 	}
