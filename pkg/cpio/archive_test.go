@@ -6,9 +6,51 @@ package cpio
 
 import (
 	"fmt"
+	"strings"
 	"syscall"
 	"testing"
 )
+
+func TestArchiveMethods(t *testing.T) {
+	r1 := StaticFile("/bin/r1", "content1", 0644)
+	r2 := StaticFile("/bin/r2", "content2", 0755)
+	records := []Record{r1, r2}
+
+	ar1 := ArchiveFromRecords(records)
+	r := ar1.Reader()
+	ar2, err := ArchiveFromReader(r)
+	if err != nil {
+		t.Fatalf("expected nil got %v", err)
+	}
+
+	if ar2.Empty() {
+		t.Fatalf("archive is empty, expected to have two records")
+	}
+
+	for _, r := range records {
+		if !ar2.Contains(r) {
+			t.Errorf("records %v missing", r)
+		}
+	}
+
+	_, ok := ar2.Get("/bin/r1")
+	if !ok {
+		t.Errorf("record %v not found", r1)
+	}
+
+	_, ok = ar2.Get("/bin/r2")
+	if !ok {
+		t.Errorf("record %v not found", r2)
+	}
+
+	s := ar2.String()
+	if !strings.Contains(s, "bin/r1") {
+		t.Errorf("missing 'bin/r1' from ar2.String()")
+	}
+	if !strings.Contains(s, "bin/r2") {
+		t.Errorf("missing 'bin/r2' from ar2.String()")
+	}
+}
 
 func FuzzWriteReadInMemArchive(f *testing.F) {
 	var fileCount uint64 = 4
