@@ -103,3 +103,73 @@ func TestWriteRecordsAndDirs(t *testing.T) {
 	}
 
 }
+
+func TestEqualAll(t *testing.T) {
+	tests := []struct {
+		r        []Record
+		s        []Record
+		expected bool
+	}{
+		{
+			expected: true,
+		},
+		{
+			r:        []Record{Symlink("name", "target")},
+			s:        []Record{Symlink("name", "target")},
+			expected: true,
+		},
+		{
+			r:        []Record{Symlink("name", "target")},
+			expected: false,
+		},
+		{
+			r:        []Record{Symlink("name", "target")},
+			s:        []Record{Symlink("other", "target")},
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		if AllEqual(test.r, test.s) != test.expected {
+			t.Errorf("AllEqual(%v, %v) != %t", test.r, test.s, test.expected)
+		}
+	}
+}
+
+func TestCharDev(t *testing.T) {
+	tests := []struct {
+		name  string
+		perm  uint64
+		major uint64
+		minor uint64
+	}{
+		{
+			name:  "name",
+			perm:  0777,
+			major: 8,
+			minor: 1,
+		},
+		{
+			name:  "name",
+			perm:  0644,
+			major: 8,
+			minor: 1,
+		},
+	}
+
+	for _, test := range tests {
+		r := CharDev(test.name, test.perm, test.major, test.minor)
+		if r.Name != test.name {
+			t.Errorf("expected name: %q, got %q", test.name, r.Name)
+		}
+		if test.perm|S_IFCHR != r.Mode {
+			t.Errorf("character special file bit not set")
+		}
+		if r.Rmajor != test.major {
+			t.Errorf("expected major: %d, got %d", test.major, r.Major)
+		}
+		if r.Rminor != test.minor {
+			t.Errorf("expected minor: %d, got %d", test.minor, r.Minor)
+		}
+	}
+}
