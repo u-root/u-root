@@ -25,7 +25,7 @@ func AbsSymlink(originalFile, target string) string {
 	// Relative symlinks are resolved relative to the original file's
 	// parent directory.
 	//
-	// E.g. /bin/defaultsh -> ../bbin/elvish
+	// E.g. /bin/defaultsh -> ../bbin/gosh
 	if !filepath.IsAbs(target) {
 		return filepath.Join(filepath.Dir(originalFile), target)
 	}

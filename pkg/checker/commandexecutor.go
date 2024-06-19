@@ -11,7 +11,7 @@ import (
 )
 
 // DefaultShell is used by EmergencyShell
-var DefaultShell = "elvish"
+var DefaultShell = "gosh"
 
 func runCmd(prog string, args ...string) error {
 	cmd := exec.Command(prog, args...)

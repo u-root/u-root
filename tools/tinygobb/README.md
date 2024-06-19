@@ -18,7 +18,6 @@ The neccessary additions to tinygo will be tracked in the according issue that t
  - [ ] `df`
  - [ ] `dhclient`
  - [ ] `dmesg`
- - [ ] `elvish`
  - [ ] `fusermount`
  - [ ] `gosh`
  - [ ] `gpgv`

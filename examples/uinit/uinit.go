@@ -16,7 +16,7 @@ var commands = []string{
 	"/bbin/date",
 	"/bbin/dhclient -ipv6=false",
 	"/bbin/ip a",
-	"/bbin/elvish",
+	"/bin/defaultsh",
 	"/bbin/shutdown halt",
 }
 

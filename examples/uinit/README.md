@@ -3,9 +3,9 @@
 u-root's built-in init command will call uinit if it exits.
 
 The `uinit.go` in this dir runs a number of commands, including getting an IPv4
-address using DHCP, then runs the elvish shell. When the user exists the shell,
+address using DHCP, then runs the default shell. When the user exists the shell,
 `shutdown halt` is automatically run.
-
+s
 To build the example:
 
 ```shell
