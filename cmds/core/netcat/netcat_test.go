@@ -75,7 +75,7 @@ func TestConnection(t *testing.T) {
 		// cmdIO := io.NewReaderWriter(stdin, stdout, stderr)
 
 		t.Run(tt.name, func(t *testing.T) {
-			cmd, err := command(stdin, stdout, stderr, tt.config, tt.args)
+			cmd, err := command(stdin, stdout, stderr, &tt.config, tt.args)
 			if err != nil {
 				t.Fatalf("command() = %v", err)
 			}

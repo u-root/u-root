@@ -5,6 +5,8 @@
 package netcat
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -16,6 +18,44 @@ import (
 	"sync"
 	"time"
 )
+
+// Default values for the netcat command.
+func DefaultConfig() NetcatConfig {
+	return NetcatConfig{
+		Port:           DEFAULT_PORT,
+		ConnectionMode: DEFAULT_CONNECTION_MODE,
+		ConnectionModeOptions: NetcatConnectModeOptions{
+			SourceHost: DEFAULT_IPV4_ADDRESS,
+			SourcePort: DEFAULT_PORT,
+		},
+		ListenModeOptions: NetcatListenModeOptions{
+			MaxConnections: DEFAULT_CONNECTION_MAX,
+		},
+		ProtocolOptions: NetcatProtocolOptions{
+			IPType:     DEFAULT_IP_TYPE,
+			SocketType: SOCKET_TYPE_TCP,
+		},
+		SSLConfig: NetcatSSLOptions{
+			Ciphers: []string{DEFAULT_SSL_SUITE_STR},
+		},
+		ProxyConfig: NetcatProxyOptions{
+			Type:     PROXY_TYPE_NONE,
+			DNSType:  PROXY_DNS_NONE,
+			AuthType: PROXY_AUTH_NONE,
+		},
+		AccessControl: NetcatAccessControlOptions{},
+		CommandExec: NetcatExec{
+			Type: EXEC_TYPE_NONE,
+		},
+		Output: NetcatOutputOptions{},
+		Misc: NetcatMiscOptions{
+			EOL: DEFAULT_LF,
+		},
+		Timing: NetcatTimingOptions{
+			Wait: DEFAULT_WAIT,
+		},
+	}
+}
 
 type NetcatIPType int
 
@@ -212,34 +252,6 @@ type NetcatSSLOptions struct {
 	ALPN    []string // List of protocols to send via the Application-Layer Protocol Negotiation
 }
 
-func (config *NetcatSSLOptions) Verify() error {
-	// If it is enabled but any other value is set it's invalid
-	if config.Enabled && (config.CertFilePath != "" ||
-		config.KeyFilePath != "" ||
-		config.VerifyTrust ||
-		config.TrustFilePath != "" ||
-		len(config.Ciphers) > 0 && (len(config.Ciphers) == 1 && config.Ciphers[0] != DEFAULT_SSL_SUITE_STR) ||
-		config.SNI != "" ||
-		len(config.ALPN) > 0) {
-		return fmt.Errorf("ssl is enabled but other ssl options are set")
-	}
-
-	// check if provided files exist
-	if config.CertFilePath != "" {
-		if _, err := os.Stat(config.CertFilePath); err != nil {
-			return fmt.Errorf("certificate file does not exist")
-		}
-	}
-
-	if config.KeyFilePath != "" {
-		if _, err := os.Stat(config.KeyFilePath); err != nil {
-			return fmt.Errorf("key file does not exist")
-		}
-	}
-
-	return nil
-}
-
 type NetcatConnectionMode int
 
 // Ncat operates in one of two primary modes: connect mode and listen mode.
@@ -293,46 +305,88 @@ func ParseSocketType(udp, unix, vsock, sctp bool) (NetcatSocketType, error) {
 	return SOCKET_TYPE_NONE, fmt.Errorf("invalid socket type combination")
 }
 
-// TODO: review policy if we want to merge cli and file or if they are mutual exclusive
-// For now this is mutual exclusive
+// Holds allowed and denied hosts for the connection.
+// The map is a string representation of the host is allowed or denied.
+// The key is the host and the value is true for allowed and false for denied.
+// If the host is not in the map, it is allowed by default.
+// The map is populated by the access cli flags, with access flags taking precedence over deny flags.
 type NetcatAccessControlOptions struct {
-	ConnectionAllowList []string
-	ConnectionDenyList  []string
+	SetAllowed     bool
+	ConnectionList map[string]bool
+}
+
+// Check if the host is allowed to connect.
+func (ac *NetcatAccessControlOptions) IsAllowed(host string) bool {
+	// If atleast one item is in the allowed list, the host is only allowed if set so.
+	if ac.SetAllowed {
+		allowed, ok := ac.ConnectionList[host]
+		if !ok {
+			return false
+		}
+		return allowed
+	}
+
+	// Otherwise check if the host is denied.
+	if allowed, ok := ac.ConnectionList[host]; ok {
+		return allowed
+	}
+
+	// If the host is not in the list, it is allowed by default.
+	return true
 }
 
 func ParseAccessControl(connectionAllowFile string, connectionAllowList []string, connectionDenyFile string, connectionDenyList []string) (NetcatAccessControlOptions, error) {
 	accessControl := NetcatAccessControlOptions{}
 
-	// Allowlist
-	if connectionAllowFile != "" && connectionAllowList != nil {
-		log.Fatal("Cannot specify both allowlist and allowfile")
-	}
-	if connectionAllowFile != "" {
-		data, err := os.ReadFile(connectionAllowFile)
-		if err != nil {
-			log.Fatal(err)
+	accessControl.ConnectionList = make(map[string]bool)
 
-		}
-		accessControl.ConnectionAllowList = strings.Split(string(data), ",")
-	}
-	if connectionAllowList != nil {
-		accessControl.ConnectionAllowList = connectionAllowList
-	}
-
-	// Denylist
-	if connectionDenyFile != "" && connectionDenyList != nil {
-		log.Fatal("Cannot specify both denylist and denyfile")
-	}
 	if connectionDenyFile != "" {
-		data, err := os.ReadFile(connectionDenyFile)
+		denyFile, err := os.Open(connectionDenyFile)
 		if err != nil {
 			log.Fatal(err)
-
 		}
-		accessControl.ConnectionDenyList = strings.Split(string(data), ",")
+		defer denyFile.Close()
+
+		scanner := bufio.NewScanner(denyFile)
+		for scanner.Scan() {
+			line := scanner.Text()
+			accessControl.ConnectionList[line] = false
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
 	}
-	if connectionDenyList != nil {
-		accessControl.ConnectionDenyList = connectionDenyList
+
+	for _, deniedLine := range connectionDenyList {
+		accessControl.ConnectionList[deniedLine] = false
+	}
+
+	// allowed hosts are parsed secondly as they take precedence
+	if len(connectionAllowList) > 0 || connectionAllowFile != "" {
+		accessControl.SetAllowed = true
+	}
+
+	if connectionAllowFile != "" {
+		allowFile, err := os.Open(connectionAllowFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer allowFile.Close()
+
+		scanner := bufio.NewScanner(allowFile)
+		for scanner.Scan() {
+			line := scanner.Text()
+			accessControl.ConnectionList[line] = true
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for _, allowedLine := range connectionAllowList {
+		accessControl.ConnectionList[allowedLine] = true
 	}
 
 	return accessControl, nil
@@ -381,8 +435,12 @@ func ParseCommands(commands []string) (NetcatExec, error) {
 // stdout of the command is send to to the connection
 // stderr of the command is displayed on stdout of the host
 // The host process exits with the exit code of the command unless --keep-open is specified
-func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer) error {
-	var cmd *exec.Cmd
+func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer, eol []byte) error {
+	var (
+		cmd    *exec.Cmd
+		buffer bytes.Buffer
+	)
+
 	switch n.Type {
 	case EXEC_TYPE_NATIVE:
 		cmd = exec.Command(n.Command)
@@ -396,7 +454,16 @@ func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Wr
 
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	cmd.Stdin = stdin
+
+	scanner := bufio.NewScanner(stdin)
+	for scanner.Scan() {
+		buffer.WriteString(scanner.Text())
+		buffer.Write(eol)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	cmd.Stdin = &buffer
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("exec start: %w", err)
@@ -416,8 +483,9 @@ func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Wr
 type NetcatConnectModeOptions struct {
 	LooseSourceRouterPoints []string // IPV4_STRICT, Point as IP or Hostname
 	LooseSourcePointer      uint     // The argument must be a multiple of 4 and no more than 28
-	Host                    string   // Address for Ncat to bind to
-	Port                    uint     // Port number for Ncat to bind to
+	SourceHost              string   // Address for Ncat to bind to
+	SourcePort              uint     // Port number for Ncat to bind to
+	ZeroIO                  bool     // restrict IO, only report connection
 }
 
 // All the modes can be combined with each other, no need to check for mutual exclusivity
@@ -454,7 +522,7 @@ func (n *NetcatOutputOptions) Write(data []byte) (int, error) {
 
 	if n.OutFilePath != "" {
 		n.OutFileMutex.Lock()
-		f, err := os.OpenFile(n.OutFilePath, fileOpts, 0644)
+		f, err := os.OpenFile(n.OutFilePath, fileOpts, 0o644)
 		if err != nil {
 			n.OutFileMutex.Unlock()
 			return 0, fmt.Errorf("netcat oo open: %w", err)
@@ -471,7 +539,7 @@ func (n *NetcatOutputOptions) Write(data []byte) (int, error) {
 	if n.OutFileHexPath != "" {
 		n.OutFileHexMutex.Lock()
 
-		f, err := os.OpenFile(n.OutFileHexPath, fileOpts, 0644)
+		f, err := os.OpenFile(n.OutFileHexPath, fileOpts, 0o644)
 		if err != nil {
 			n.OutFileHexMutex.Unlock()
 			return 0, fmt.Errorf("netcat outopt open: %w", err)
@@ -494,12 +562,14 @@ type NetcatMiscOptions struct {
 	ReceiveOnly bool   // Only receive data and will not try to send anything.
 	SendOnly    bool   // Ncat will only send data and will ignore anything received
 	NoShutdown  bool   // Req: half-duplex mode, Ncat will not invoke shutdown on a socket after seeing EOF on stdin
-	NoDns       bool   // Completely disable hostname resolution across all Ncat options (destination, source address, source routing hops, proxy)
+	NoDNS       bool   // Completely disable hostname resolution across all Ncat options (destination, source address, source routing hops, proxy)
 	Telnet      bool   // Handle DO/DONT WILL/WONT Telnet negotiations.
 }
 
 // Omit version and help here since they are handled by the flag parser
 type NetcatConfig struct {
+	Host                  string
+	Port                  uint
 	ConnectionMode        NetcatConnectionMode
 	ConnectionModeOptions NetcatConnectModeOptions
 	ListenModeOptions     NetcatListenModeOptions
@@ -511,30 +581,45 @@ type NetcatConfig struct {
 	Output                NetcatOutputOptions
 	Misc                  NetcatMiscOptions
 	Timing                NetcatTimingOptions
-	Hostname              string
-	Port                  uint
-	ZeroIo                bool
 }
 
 // Return a default address for the provided configuration
-func (n *NetcatConfig) Address() string {
-	var address string
-
-	fmt.Printf("%+v\n", n.ProtocolOptions.SocketType)
-	switch n.ProtocolOptions.SocketType {
-	case SOCKET_TYPE_TCP | SOCKET_TYPE_UDP:
-		switch n.ProtocolOptions.IPType {
-		case IP_V4:
-			address = DEFAULT_IPV4_ADDRESS
-		case IP_V6:
-			address = DEFAULT_IPV6_ADDRESS
+func (n *NetcatConfig) Address() (string, error) {
+	switch n.ConnectionMode {
+	case CONNECTION_MODE_CONNECT:
+		if n.Host == "" {
+			return "", fmt.Errorf("missing host")
 		}
-	case SOCKET_TYPE_UNIX:
-		return DEFAULT_UNIX_SOCKET
-	default:
-		Logf(n, "Invalid socket type %v", n.ProtocolOptions.SocketType)
-		return ""
-	}
 
-	return address + ":" + strconv.FormatUint(uint64(n.Port), 10)
+		switch n.ProtocolOptions.SocketType {
+		case SOCKET_TYPE_UNIX:
+			return n.Host, nil
+		default:
+			return n.Host + ":" + strconv.FormatUint(uint64(n.Port), 10), nil
+		}
+	case CONNECTION_MODE_LISTEN:
+		var address string
+
+		if n.Host != "" {
+			address = n.Host
+		} else {
+			switch n.ProtocolOptions.SocketType {
+			case SOCKET_TYPE_TCP | SOCKET_TYPE_UDP:
+				switch n.ProtocolOptions.IPType {
+				case IP_V4:
+					address = DEFAULT_IPV4_ADDRESS
+				case IP_V6:
+					address = DEFAULT_IPV6_ADDRESS
+				}
+			case SOCKET_TYPE_UNIX:
+				return DEFAULT_UNIX_SOCKET, nil
+			default:
+				return "", fmt.Errorf("invalid socket type %v", n.ProtocolOptions.SocketType)
+			}
+		}
+
+		return address + ":" + strconv.FormatUint(uint64(n.Port), 10), nil
+	default:
+		return "", fmt.Errorf("invalid connection mode %v", n.ConnectionMode)
+	}
 }

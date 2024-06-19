@@ -4,6 +4,8 @@
 
 package netcat
 
+import "time"
+
 // Default values for the netcat command.
 // These values were taken from the original netcat project.
 const (
@@ -16,6 +18,7 @@ const (
 	DEFAULT_UNIX_SOCKET     = "/tmp/netcat.sock"
 	DEFAULT_IPV4_ADDRESS    = "0.0.0.0"
 	DEFAULT_IPV6_ADDRESS    = "[::]"
+	DEFAULT_WAIT            = time.Duration(10) * time.Second
 )
 
 var (

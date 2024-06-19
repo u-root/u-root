@@ -12,12 +12,13 @@ import (
 )
 
 type UdpRemoteConn struct {
-	Raddr   *net.UDPAddr
-	Conn    *net.UDPConn
-	Wg      *sync.WaitGroup
-	Once    *sync.Once
-	Stderr  io.Writer
-	Verbose bool
+	Raddr         *net.UDPAddr
+	AccessControl NetcatAccessControlOptions
+	Conn          *net.UDPConn
+	Wg            *sync.WaitGroup
+	Once          *sync.Once
+	Stderr        io.Writer
+	Verbose       bool
 }
 
 // NewUdpRemoteConn creates a new UdpRemoteConn object
@@ -25,7 +26,7 @@ type UdpRemoteConn struct {
 // 2. Get `UDPCon` from `ListenUDP`
 // 3. Create a `sync.WaitGroup` with delta `wgDelta`
 // 4. Return a new `UdpRemoteConn` object
-func NewUdpRemoteConn(network string, address string, stderr io.Writer, verbose bool) (*UdpRemoteConn, error) {
+func NewUdpRemoteConn(network string, address string, stderr io.Writer, accessControl NetcatAccessControlOptions, verbose bool) (*UdpRemoteConn, error) {
 	udpAddr, err := net.ResolveUDPAddr(network, address)
 	if err != nil {
 		return nil, err
@@ -40,11 +41,12 @@ func NewUdpRemoteConn(network string, address string, stderr io.Writer, verbose 
 	waitGroup.Add(1)
 
 	return &UdpRemoteConn{
-		Conn:    conn,
-		Wg:      waitGroup,
-		Once:    &sync.Once{},
-		Stderr:  stderr,
-		Verbose: verbose,
+		Conn:          conn,
+		AccessControl: accessControl,
+		Wg:            waitGroup,
+		Once:          &sync.Once{},
+		Stderr:        stderr,
+		Verbose:       verbose,
 	}, nil
 }
 
@@ -54,6 +56,12 @@ func (u *UdpRemoteConn) Read(b []byte) (int, error) {
 	if err != nil {
 		return n, err
 	}
+
+	// return if host is not allowed
+	if !u.AccessControl.IsAllowed(raddr.IP.String()) {
+		return 0, nil
+	}
+
 	setRaddr := func() {
 		u.Raddr = raddr
 		if u.Verbose {
