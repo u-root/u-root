@@ -7,8 +7,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -17,6 +15,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -348,7 +347,6 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
 		return c.listenMode(network, address)
 	}
-
 	return c.connectMode(network, address)
 }
 
@@ -358,23 +356,10 @@ func (c *cmd) listenMode(network, address string) (io.ReadWriter, error) {
 		listener net.Listener
 	)
 
-	// Set the context for the connection with a timeout
-	ctx := context.Background()
-	cancel := func() {}
-	if c.config.Timing.Wait > 0 {
-		ctx, cancel = context.WithTimeout(ctx, c.config.Timing.Wait)
-	}
-	defer cancel()
-
 	// If listing mode and Zero-I/O mode are combined the program will block indefinitely
 	if c.config.ConnectionModeOptions.ZeroIO {
 		for {
-			select {
-			case <-ctx.Done():
-				return nil, fmt.Errorf("timeout waiting for connection")
-			default:
-				time.Sleep(250 * time.Millisecond)
-			}
+			time.Sleep(1 * time.Hour)
 		}
 	}
 
@@ -427,14 +412,17 @@ func (c *cmd) listenMode(network, address string) (io.ReadWriter, error) {
 		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 	}
 
-	return c.waitOnConnection(ctx, listener)
+	return c.waitOnConnection(listener)
 }
 
 func (c *cmd) connectMode(network, address string) (io.ReadWriter, error) {
-	var err error
+	var (
+		err  error
+		conn net.Conn
+	)
 
 	dialer := &net.Dialer{
-		Timeout: c.config.Timing.Timeout,
+		Timeout: c.config.Timing.Wait,
 	}
 
 	switch c.config.ProtocolOptions.SocketType {
@@ -479,51 +467,50 @@ func (c *cmd) connectMode(network, address string) (io.ReadWriter, error) {
 			return nil, fmt.Errorf("connection: %v", err)
 		}
 
-		conn, err := tls.DialWithDialer(dialer, network, address, tlsConfig)
+		conn, err = tls.DialWithDialer(dialer, network, address, tlsConfig)
 		if err != nil {
-			return nil, fmt.Errorf("connection: %w", err)
+			return nil, fmt.Errorf("connection: %v", err)
 		}
-
-		// TODO: timeout
-		// conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
-		return conn, nil
+	} else {
+		conn, err = dialer.Dial(network, address)
+		if err != nil {
+			return nil, fmt.Errorf("connection: %v", err)
+		}
 	}
 
-	return dialer.Dial(network, address)
+	if c.config.Timing.Timeout > 0 {
+		conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
+	}
+
+	return conn, nil
 }
 
 // waitOnConnection listens for incoming connections and returns the first connection that is allowed by the access control list.
-// It returns if the context lifetime is exceeded ( set by -wait flag / defaults to 10s). The connection is closed if it is not allowed and a new connection is awaited.
-func (c *cmd) waitOnConnection(ctx context.Context, listener net.Listener) (net.Conn, error) {
+func (c *cmd) waitOnConnection(listener net.Listener) (net.Conn, error) {
 	for {
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("timeout waiting for connection")
-		default:
-			conn, err := listener.Accept()
-			if err != nil {
-				return nil, err
-			}
-
-			var remoteAddr string
-			switch c.config.ProtocolOptions.SocketType {
-			case netcat.SOCKET_TYPE_TCP:
-				remoteAddr = conn.RemoteAddr().(*net.TCPAddr).IP.String()
-			case netcat.SOCKET_TYPE_UDP:
-				remoteAddr = conn.RemoteAddr().(*net.UDPAddr).String()
-			case netcat.SOCKET_TYPE_UNIX:
-				remoteAddr = conn.RemoteAddr().(*net.UnixAddr).String()
-			default:
-				return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
-			}
-
-			if c.config.AccessControl.IsAllowed(remoteAddr) {
-				return conn, nil
-			}
-
-			conn.Close()
-			time.Sleep(50 * time.Millisecond)
+		conn, err := listener.Accept()
+		if err != nil {
+			return nil, err
 		}
+
+		var remoteAddr string
+		switch c.config.ProtocolOptions.SocketType {
+		case netcat.SOCKET_TYPE_TCP:
+			remoteAddr = conn.RemoteAddr().(*net.TCPAddr).IP.String()
+		case netcat.SOCKET_TYPE_UDP:
+			remoteAddr = conn.RemoteAddr().(*net.UDPAddr).String()
+		case netcat.SOCKET_TYPE_UNIX:
+			remoteAddr = conn.RemoteAddr().(*net.UnixAddr).String()
+		default:
+			return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+		}
+
+		if c.config.AccessControl.IsAllowed(remoteAddr) {
+			return conn, nil
+		}
+
+		conn.Close()
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -579,31 +566,22 @@ func (c *cmd) run() error {
 		return fmt.Errorf("run: %v", err)
 	}
 
+	// Return immediately if Zero-I/O mode is enabled and connection is established
+	if c.config.ConnectionModeOptions.ZeroIO {
+		return nil
+	}
+
 	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
 	combinedOut := io.MultiWriter(c.stdout, &c.config.Output)
 
+	var wg sync.WaitGroup
+
 	if !c.config.Misc.ReceiveOnly && c.config.ConnectionMode != netcat.CONNECTION_MODE_LISTEN {
-		// Return immediately if Zero-I/O mode is enabled
-		if c.config.ConnectionModeOptions.ZeroIO {
-			return nil
-		}
+		wg.Add(1)
 
 		go func() {
-			var buffer bytes.Buffer
-
-			scanner := bufio.NewScanner(c.stdin)
-			for scanner.Scan() {
-				buffer.WriteString(scanner.Text())
-				buffer.Write(c.config.Misc.EOL)
-			}
-			if err := scanner.Err(); err != nil {
-				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
-			}
-
-			// write to the connection
-			if _, err := io.Copy(conn, &buffer); err != nil {
-				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
-			}
+			defer wg.Done()
+			c.writeToRemote(conn)
 		}()
 
 		// prepare command execution on the server
@@ -624,7 +602,40 @@ func (c *cmd) run() error {
 		return fmt.Errorf("run dump: %v", err)
 	}
 
+	wg.Wait()
 	return nil
+}
+
+func (c *cmd) writeToRemote(conn io.Writer) {
+	eolReader := netcat.NewEOLReader(c.stdin, c.config.Misc.EOL)
+
+	// If the delay is set, read the input line by line in time intervals of the delay duration
+	if c.config.Timing.Delay > 0 {
+		scanner := bufio.NewScanner(eolReader)
+
+		for scanner.Scan() {
+			if _, err := conn.Write([]byte(scanner.Text() + "\n")); err != nil {
+				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+			}
+
+			time.Sleep(c.config.Timing.Delay)
+		}
+
+		if err := scanner.Err(); err != nil {
+			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+		}
+	} else {
+		if _, err := io.Copy(conn, eolReader); err != nil {
+			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+		}
+	}
+
+	// do not shutdown the connection if the no-shutdown flag is set
+	if c.config.Misc.NoShutdown {
+		for {
+			time.Sleep(1 * time.Hour)
+		}
+	}
 }
 
 func main() {

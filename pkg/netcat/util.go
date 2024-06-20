@@ -5,10 +5,48 @@
 package netcat
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
 )
+
+// EOLReader is a reader that reads until the end of line and appends the EOL sequence.
+type EOLReader struct {
+	scanner *bufio.Scanner
+	eol     []byte
+}
+
+func (cr *EOLReader) Read(p []byte) (n int, err error) {
+	if !cr.scanner.Scan() {
+		if err := cr.scanner.Err(); err != nil {
+			return 0, err
+		}
+	}
+
+	buf := cr.scanner.Bytes()
+
+	// Remove the last element of buf
+	if len(buf) > 0 {
+		buf = buf[:len(buf)-1]
+	}
+
+	// Append the EOL sequence
+	buf = append(buf, cr.eol...)
+
+	copy(p, buf)
+
+	n = len(buf)
+
+	return n, nil
+}
+
+func NewEOLReader(reader io.Reader, eol []byte) *EOLReader {
+	return &EOLReader{
+		scanner: bufio.NewScanner(reader),
+		eol:     eol,
+	}
+}
 
 // Logf logs a message if the verbose flag is set.
 func Logf(nc *NetcatConfig, format string, args ...interface{}) {
