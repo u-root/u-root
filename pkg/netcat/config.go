@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -595,6 +596,11 @@ func (n *NetcatConfig) Address() (string, error) {
 		case SOCKET_TYPE_UNIX:
 			return n.Host, nil
 		default:
+			if n.Misc.NoDNS {
+				if ip := net.ParseIP(n.Host); ip == nil {
+					return "", fmt.Errorf("non-numerical host but DNS resolution is disabled: %v", n.Host)
+				}
+			}
 			return n.Host + ":" + strconv.FormatUint(uint64(n.Port), 10), nil
 		}
 	case CONNECTION_MODE_LISTEN:
