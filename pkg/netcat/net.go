@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-type UdpRemoteConn struct {
+type UDPRemoteConn struct {
 	Raddr         *net.UDPAddr
 	AccessControl NetcatAccessControlOptions
 	Conn          *net.UDPConn
@@ -21,12 +21,12 @@ type UdpRemoteConn struct {
 	Verbose       bool
 }
 
-// NewUdpRemoteConn creates a new UdpRemoteConn object
+// NewUDPRemoteConn creates a new UDPRemoteConn object
 // 1. Resolve UDP address from network and address
 // 2. Get `UDPCon` from `ListenUDP`
 // 3. Create a `sync.WaitGroup` with delta `wgDelta`
-// 4. Return a new `UdpRemoteConn` object
-func NewUdpRemoteConn(network string, address string, stderr io.Writer, accessControl NetcatAccessControlOptions, verbose bool) (*UdpRemoteConn, error) {
+// 4. Return a new `UDPRemoteConn` object
+func NewUDPRemoteConn(network string, address string, stderr io.Writer, accessControl NetcatAccessControlOptions, verbose bool) (*UDPRemoteConn, error) {
 	udpAddr, err := net.ResolveUDPAddr(network, address)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func NewUdpRemoteConn(network string, address string, stderr io.Writer, accessCo
 	waitGroup := &sync.WaitGroup{}
 	waitGroup.Add(1)
 
-	return &UdpRemoteConn{
+	return &UDPRemoteConn{
 		Conn:          conn,
 		AccessControl: accessControl,
 		Wg:            waitGroup,
@@ -50,8 +50,8 @@ func NewUdpRemoteConn(network string, address string, stderr io.Writer, accessCo
 	}, nil
 }
 
-// Implement interface io.ReadWriter for UdpRemoteConn
-func (u *UdpRemoteConn) Read(b []byte) (int, error) {
+// Implement interface io.ReadWriter for UDPRemoteConn
+func (u *UDPRemoteConn) Read(b []byte) (int, error) {
 	n, raddr, err := u.Conn.ReadFromUDP(b)
 	if err != nil {
 		return n, err
@@ -73,11 +73,79 @@ func (u *UdpRemoteConn) Read(b []byte) (int, error) {
 	return n, nil
 }
 
-// Implement interface io.ReadWriter for UdpRemoteConn
-func (u *UdpRemoteConn) Write(b []byte) (int, error) {
+// Implement interface io.ReadWriter for UDPRemoteConn
+func (u *UDPRemoteConn) Write(b []byte) (int, error) {
 	// we can't answer without raddr, so waiting for incomming request
 	u.Wg.Wait()
 	return u.Conn.WriteToUDP(b, u.Raddr)
+}
+
+type UnixRemoteConn struct {
+	Raddr         *net.UnixAddr
+	AccessControl NetcatAccessControlOptions
+	Conn          *net.UnixConn
+	Wg            *sync.WaitGroup
+	Once          *sync.Once
+	Stderr        io.Writer
+	Verbose       bool
+}
+
+// NewUnixgramRemoteConn creates a new UnixRemoteConn object
+// 1. Resolve Unix address from network and address
+// 2. Get `UnixCon` from `ListenUnixgram`
+// 3. Create a `sync.WaitGroup` with delta `wgDelta`
+// 4. Return a new `UnixRemoteConn` object
+func NewUnixgramRemoteConn(network string, address string, stderr io.Writer, accessControl NetcatAccessControlOptions, verbose bool) (*UnixRemoteConn, error) {
+	addr, err := net.ResolveUnixAddr("unixgram", address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve Unix address: %v", err)
+	}
+
+	conn, err := net.ListenUnixgram("unixgram", addr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to listen on Unix address: %v", err)
+	}
+
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(1)
+
+	return &UnixRemoteConn{
+		Conn:          conn,
+		AccessControl: accessControl,
+		Wg:            waitGroup,
+		Once:          &sync.Once{},
+		Stderr:        stderr,
+		Verbose:       verbose,
+	}, nil
+}
+
+// Implement interface io.ReadWriter for UDPRemoteConn
+func (u *UnixRemoteConn) Read(b []byte) (int, error) {
+	n, raddr, err := u.Conn.ReadFromUnix(b)
+	if err != nil {
+		return n, err
+	}
+
+	// return if host is not allowed
+	if !u.AccessControl.IsAllowed(raddr.Name) {
+		return 0, nil
+	}
+
+	setRaddr := func() {
+		u.Raddr = raddr
+		if u.Verbose {
+			fmt.Fprintln(u.Stderr, "Connected to", raddr)
+		}
+		u.Wg.Done()
+	}
+	u.Once.Do(setRaddr)
+	return n, nil
+}
+
+// Implement interface io.ReadWriter for UnixRemoteConn
+func (u *UnixRemoteConn) Write(b []byte) (int, error) {
+	u.Wg.Wait()
+	return u.Conn.Write(b)
 }
 
 // Netcat connection wrapper
@@ -85,7 +153,6 @@ type NetcatConnection struct {
 	Conn net.Conn
 }
 
-// Implement interface io.ReadWriter for UdpRemoteConn
 func (nc *NetcatConnection) Read(b []byte) (int, error) {
 	return 0, nil
 }

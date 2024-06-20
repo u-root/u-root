@@ -163,11 +163,11 @@ func evalParams() (*netcat.NetcatConfig, error) {
 	}
 
 	if len(args) > 2 {
-		portInt, err := strconv.Atoi(args[1])
+		port, err := strconv.ParseUint(args[1], 10, 64)
 		if err != nil {
-			// handle error
+			return nil, fmt.Errorf("invalid port: %v", err)
 		}
-		config.Port = uint(portInt)
+		config.Port = port
 	}
 
 	// protocol options
@@ -313,9 +313,27 @@ func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat
 
 // From the prepared config generate a network connection that will be used for the netcat command
 func (c *cmd) connection() (io.ReadWriter, error) {
-	network, err := c.config.ProtocolOptions.SocketType.ToGoType(c.config.ProtocolOptions.IPType)
+	// check if SSL is available for the selected protocol if enabled
+	if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
+		switch c.config.ProtocolOptions.SocketType {
+		case netcat.SOCKET_TYPE_UDP:
+			return nil, fmt.Errorf("SSL is not supported for UDP connections")
+		case netcat.SOCKET_TYPE_UNIX:
+			return nil, fmt.Errorf("SSL is not supported for UNIX connections")
+		case netcat.SOCKET_TYPE_UDP_UNIX:
+			return nil, fmt.Errorf("SSL is not supported for UNIX connections")
+		case netcat.SOCKET_TYPE_UDP_VSOCK:
+			return nil, fmt.Errorf("SSL is not supported for VSOCK connections")
+		case netcat.SOCKET_TYPE_VSOCK:
+			return nil, fmt.Errorf("SSL is not supported for VSOCK connections")
+		case netcat.SOCKET_TYPE_SCTP:
+			return nil, fmt.Errorf("SSL is not supported for SCTP connections")
+		}
+	}
+
+	network, err := c.config.Network()
 	if err != nil {
-		return nil, fmt.Errorf("connection: invalid socket type: %v", err)
+		return nil, fmt.Errorf("connection: %v", err)
 	}
 
 	address, err := c.config.Address()
@@ -323,6 +341,7 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 		return nil, fmt.Errorf("connection: %v", err)
 	}
 
+	// Set the context for the connection with a timeout
 	ctx := context.Background()
 	cancel := func() {}
 	if c.config.Timing.Wait > 0 {
@@ -330,92 +349,80 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 	}
 	defer cancel()
 
-	// Listen Mode
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		var listener net.Listener
-		// If listing mode and Zero-I/O mode are combined the program will block indefinitely
-		if c.config.ConnectionModeOptions.ZeroIO {
-			for {
-				select {
-				case <-ctx.Done():
-					return nil, fmt.Errorf("timeout waiting for connection")
-				default:
-					time.Sleep(250 * time.Millisecond)
-				}
-			}
-		}
+		return c.listenMode(ctx, network, address)
+	}
 
-		if c.config.Misc.NoDNS {
-			return nil, fmt.Errorf("listen: disabling DNS resolution is not supported in listen mode")
-		}
+	return c.connectMode(ctx, network, address)
+}
 
-		switch c.config.ProtocolOptions.SocketType {
-		case netcat.SOCKET_TYPE_TCP:
-			var listener net.Listener
+func (c *cmd) listenMode(ctx context.Context, network, address string) (io.ReadWriter, error) {
+	var (
+		err      error
+		listener net.Listener
+	)
 
-			if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-				tlsConfig, err := c.generateTLSConfiguration()
-				if err != nil {
-					return nil, fmt.Errorf("connection: %v", err)
-				}
-
-				listener, err = tls.Listen(network, address, tlsConfig)
-				if err != nil {
-					return nil, fmt.Errorf("connection: %v", err)
-				}
-
-			} else {
-				listener, err = net.Listen(network, address)
-				if err != nil {
-					return nil, err
-				}
-			}
-
+	// If listing mode and Zero-I/O mode are combined the program will block indefinitely
+	if c.config.ConnectionModeOptions.ZeroIO {
+		for {
 			select {
 			case <-ctx.Done():
 				return nil, fmt.Errorf("timeout waiting for connection")
 			default:
-				conn, err := listener.Accept()
-				if err != nil {
-					return nil, err
-				}
+				time.Sleep(250 * time.Millisecond)
+			}
+		}
+	}
 
-				remoteAddr := conn.RemoteAddr().(*net.TCPAddr).IP.String()
-				if c.config.AccessControl.IsAllowed(remoteAddr) {
-					return conn, nil
-				}
+	if c.config.Misc.NoDNS {
+		return nil, fmt.Errorf("listen: disabling DNS resolution is not supported in listen mode")
+	}
 
-				conn.Close()
+	switch c.config.ProtocolOptions.SocketType {
+	case netcat.SOCKET_TYPE_TCP:
+		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
+			tlsConfig, err := c.generateTLSConfiguration()
+			if err != nil {
+				return nil, fmt.Errorf("connection: %v", err)
 			}
 
-		case netcat.SOCKET_TYPE_UDP:
-			return netcat.NewUdpRemoteConn(network, address, c.stderr, c.config.AccessControl, c.config.Output.Verbose)
-
-		case netcat.SOCKET_TYPE_UNIX:
-			var address string
-			if len(c.args) == 1 {
-				address = c.args[0]
+			listener, err = tls.Listen(network, address, tlsConfig)
+			if err != nil {
+				return nil, fmt.Errorf("connection: %v", err)
 			}
 
+		} else {
 			listener, err = net.Listen(network, address)
 			if err != nil {
 				return nil, err
 			}
-
-		// unsupported socket types
-		case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_UDP_UNIX:
-			return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
-
-		case netcat.SOCKET_TYPE_NONE:
-		default:
-			return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 		}
 
-		return c.waitOnConnection(ctx, listener)
+	case netcat.SOCKET_TYPE_UDP:
+		return netcat.NewUDPRemoteConn(network, address, c.stderr, c.config.AccessControl, c.config.Output.Verbose)
+
+	case netcat.SOCKET_TYPE_UNIX:
+		listener, err = net.Listen(network, address)
+		if err != nil {
+			return nil, err
+		}
+
+	case netcat.SOCKET_TYPE_UDP_UNIX:
+		return netcat.NewUnixgramRemoteConn(network, address, c.stderr, c.config.AccessControl, c.config.Output.Verbose)
+
+	case netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_SCTP:
+		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
+
+	case netcat.SOCKET_TYPE_NONE:
+	default:
+		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 	}
 
-	// Connection Mode
-	//TODO:implement source host/port
+	return c.waitOnConnection(ctx, listener)
+}
+
+func (c *cmd) connectMode(_ context.Context, network, address string) (io.ReadWriter, error) {
+	// TODO:implement source host/port + wait
 	switch c.config.ProtocolOptions.SocketType {
 
 	case netcat.SOCKET_TYPE_TCP:
@@ -437,17 +444,26 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 		}
 
 	case netcat.SOCKET_TYPE_UDP:
-		udpAddr, err := net.ResolveUDPAddr(network, address)
+		addr, err := net.ResolveUDPAddr(network, address)
 		if err != nil {
 			return nil, err
 		}
-		return net.DialUDP(network, nil, udpAddr)
+
+		return net.DialUDP(network, nil, addr)
 
 	case netcat.SOCKET_TYPE_UNIX:
 		return net.Dial(network, address)
 
+	case netcat.SOCKET_TYPE_UDP_UNIX:
+		addr, err := net.ResolveUnixAddr("unixgram", address)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve Unix address: %v", err)
+		}
+
+		return net.DialUnix("unixgram", nil, addr)
+
 	// unsupported socket types
-	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_UDP_UNIX:
+	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
 		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
 
 	case netcat.SOCKET_TYPE_NONE:
@@ -476,7 +492,6 @@ func (c *cmd) waitOnConnection(ctx context.Context, listener net.Listener) (net.
 				remoteAddr = conn.RemoteAddr().(*net.TCPAddr).IP.String()
 			case netcat.SOCKET_TYPE_UDP:
 				remoteAddr = conn.RemoteAddr().(*net.UDPAddr).String()
-
 			case netcat.SOCKET_TYPE_UNIX:
 				remoteAddr = conn.RemoteAddr().(*net.UnixAddr).String()
 			default:
@@ -545,12 +560,11 @@ func (c *cmd) run() error {
 		return fmt.Errorf("run: %v", err)
 	}
 
-	// Return immediately if Zero-I/O mode is enabled
-
 	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
 	combinedOut := io.MultiWriter(c.stdout, &c.config.Output)
 
 	if !c.config.Misc.ReceiveOnly && c.config.ConnectionMode != netcat.CONNECTION_MODE_LISTEN {
+		// Return immediately if Zero-I/O mode is enabled
 		if c.config.ConnectionModeOptions.ZeroIO {
 			return nil
 		}
@@ -567,13 +581,14 @@ func (c *cmd) run() error {
 				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
 			}
 
+			// write to the connection
 			if _, err := io.Copy(conn, &buffer); err != nil {
 				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
 			}
 		}()
 
 		// prepare command execution on the server
-		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE && !c.config.Misc.ReceiveOnly {
+		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
 			if err := c.config.CommandExec.Execute(conn, io.MultiWriter(conn, combinedOut), c.stderr, c.config.Misc.EOL); err != nil {
 				return fmt.Errorf("run command: %v", err)
 			}
@@ -585,6 +600,7 @@ func (c *cmd) run() error {
 		return nil
 	}
 
+	// read from the connection
 	if _, err := io.Copy(combinedOut, conn); err != nil {
 		return fmt.Errorf("run dump: %v", err)
 	}

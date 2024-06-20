@@ -96,37 +96,48 @@ func (s NetcatSocketType) String() string {
 	}[s]
 }
 
-// TODO: combine ipv4 and ipv6 within that
-func (s NetcatSocketType) ToGoType(i NetcatIPType) (string, error) {
-	switch i {
-	case IP_V4:
-		if s == SOCKET_TYPE_TCP {
+func (n *NetcatConfig) Network() (string, error) {
+	switch n.ProtocolOptions.SocketType {
+	case SOCKET_TYPE_TCP:
+		switch n.ProtocolOptions.IPType {
+		case IP_V4:
+			fallthrough
+		case IP_V4_STRICT:
 			return "tcp4", nil
-		}
-		if s == SOCKET_TYPE_UDP {
-			return "udp4", nil
-		}
-	case IP_V6:
-		if s == SOCKET_TYPE_TCP {
+		case IP_V6_STRICT:
+			fallthrough
+		case IP_V6:
 			return "tcp6", nil
-		}
-		if s == SOCKET_TYPE_UDP {
-			return "udp6", nil
-		}
-	case IP_V4_V6:
-		if s == SOCKET_TYPE_TCP {
+		default:
 			return "tcp", nil
 		}
-		if s == SOCKET_TYPE_UDP {
+
+	case SOCKET_TYPE_UDP:
+		switch n.ProtocolOptions.IPType {
+		case IP_V4:
+			fallthrough
+		case IP_V4_STRICT:
+			return "udp4", nil
+		case IP_V6_STRICT:
+			fallthrough
+		case IP_V6:
+			return "udp6", nil
+		default:
 			return "udp", nil
 		}
-	}
 
-	if s == SOCKET_TYPE_UNIX {
+	case SOCKET_TYPE_UNIX:
 		return "unix", nil
+
+	case SOCKET_TYPE_UDP_UNIX:
+		return "unixgram", nil
+
+	// VSOCK connections don't require a network specification
+	case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
+		return "", nil
 	}
 
-	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type (%v)", s)
+	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type (%v - %v)", n.ProtocolOptions.SocketType, n.ProtocolOptions.IPType)
 }
 
 // TODO: should we do this via enabled or can we just pass nil?
@@ -570,7 +581,7 @@ type NetcatMiscOptions struct {
 // Omit version and help here since they are handled by the flag parser
 type NetcatConfig struct {
 	Host                  string
-	Port                  uint
+	Port                  uint64
 	ConnectionMode        NetcatConnectionMode
 	ConnectionModeOptions NetcatConnectModeOptions
 	ListenModeOptions     NetcatListenModeOptions
@@ -593,8 +604,12 @@ func (n *NetcatConfig) Address() (string, error) {
 		}
 
 		switch n.ProtocolOptions.SocketType {
-		case SOCKET_TYPE_UNIX:
+		case SOCKET_TYPE_UNIX, SOCKET_TYPE_UDP_UNIX:
 			return n.Host, nil
+
+		// unimplemented
+		case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
+			return "", nil
 		default:
 			if n.Misc.NoDNS {
 				if ip := net.ParseIP(n.Host); ip == nil {
@@ -617,8 +632,13 @@ func (n *NetcatConfig) Address() (string, error) {
 				case IP_V6:
 					address = DEFAULT_IPV6_ADDRESS
 				}
+
 			case SOCKET_TYPE_UNIX:
 				return DEFAULT_UNIX_SOCKET, nil
+
+			// unimplemented
+			case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
+				return "", nil
 			default:
 				return "", fmt.Errorf("invalid socket type %v", n.ProtocolOptions.SocketType)
 			}
