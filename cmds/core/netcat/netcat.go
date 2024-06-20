@@ -418,7 +418,8 @@ func (c *cmd) listenMode(network, address string) (io.ReadWriter, error) {
 	case netcat.SOCKET_TYPE_UDP_UNIX:
 		return netcat.NewUnixgramRemoteConn(network, address, c.stderr, c.config.AccessControl, c.config.Output.Verbose)
 
-	case netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_SCTP:
+	// unsupported socket types
+	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
 		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
 
 	case netcat.SOCKET_TYPE_NONE:
@@ -441,43 +442,25 @@ func (c *cmd) connectMode(network, address string) (io.ReadWriter, error) {
 	case netcat.SOCKET_TYPE_TCP:
 		dialer.LocalAddr, err = net.ResolveTCPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
 		if err != nil {
-			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
-		}
-
-		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-			tlsConfig, err := c.generateTLSConfiguration()
-			if err != nil {
-				return nil, fmt.Errorf("connection: %v", err)
-			}
-
-			net.ResolveTCPAddr(network, address)
-
-			conn, err := tls.DialWithDialer(dialer, network, address, tlsConfig)
-			if err != nil {
-				return nil, fmt.Errorf("connection: %w", err)
-			}
-
-			// TODO: timeout
-			// conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
-			return conn, nil
+			return nil, fmt.Errorf("connection: failed to resolve source address %v", err)
 		}
 
 	case netcat.SOCKET_TYPE_UDP:
 		dialer.LocalAddr, err = net.ResolveUDPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
 		if err != nil {
-			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
+			return nil, fmt.Errorf("connection: failed to resolve source address %v", err)
 		}
 
 	case netcat.SOCKET_TYPE_UNIX:
 		dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
 		if err != nil {
-			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
+			return nil, fmt.Errorf("connection: failed to resolve source address %v", err)
 		}
 
 	case netcat.SOCKET_TYPE_UDP_UNIX:
 		dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
 		if err != nil {
-			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
+			return nil, fmt.Errorf("connection: failed to resolve source address %v", err)
 		}
 
 	// unsupported socket types
@@ -487,6 +470,23 @@ func (c *cmd) connectMode(network, address string) (io.ReadWriter, error) {
 	case netcat.SOCKET_TYPE_NONE:
 	default:
 		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+	}
+
+	// TLS Support
+	if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
+		tlsConfig, err := c.generateTLSConfiguration()
+		if err != nil {
+			return nil, fmt.Errorf("connection: %v", err)
+		}
+
+		conn, err := tls.DialWithDialer(dialer, network, address, tlsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("connection: %w", err)
+		}
+
+		// TODO: timeout
+		// conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
+		return conn, nil
 	}
 
 	return dialer.Dial(network, address)

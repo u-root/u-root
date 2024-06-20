@@ -496,7 +496,7 @@ type NetcatConnectModeOptions struct {
 	LooseSourceRouterPoints []string // IPV4_STRICT, Point as IP or Hostname
 	LooseSourcePointer      uint     // The argument must be a multiple of 4 and no more than 28
 	SourceHost              string   // Address for Ncat to bind to
-	SourcePort              string     // Port number for Ncat to bind to
+	SourcePort              string   // Port number for Ncat to bind to
 	ZeroIO                  bool     // restrict IO, only report connection
 }
 
@@ -609,7 +609,7 @@ func (n *NetcatConfig) Address() (string, error) {
 
 		// unimplemented
 		case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
-			return "", nil
+			return "nil", fmt.Errorf("currently unsupported socket type %v", n.ProtocolOptions.SocketType)
 		default:
 			if n.Misc.NoDNS {
 				if ip := net.ParseIP(n.Host); ip == nil {
@@ -638,7 +638,7 @@ func (n *NetcatConfig) Address() (string, error) {
 
 			// unimplemented
 			case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
-				return "", nil
+				return "nil", fmt.Errorf("currently unsupported socket type %v", n.ProtocolOptions.SocketType)
 			default:
 				return "", fmt.Errorf("invalid socket type %v", n.ProtocolOptions.SocketType)
 			}
