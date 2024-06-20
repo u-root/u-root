@@ -27,7 +27,7 @@ func DefaultConfig() NetcatConfig {
 		ConnectionMode: DEFAULT_CONNECTION_MODE,
 		ConnectionModeOptions: NetcatConnectModeOptions{
 			SourceHost: DEFAULT_IPV4_ADDRESS,
-			SourcePort: DEFAULT_PORT,
+			SourcePort: DEFAULT_SOURCE_PORT,
 		},
 		ListenModeOptions: NetcatListenModeOptions{
 			MaxConnections: DEFAULT_CONNECTION_MAX,
@@ -496,7 +496,7 @@ type NetcatConnectModeOptions struct {
 	LooseSourceRouterPoints []string // IPV4_STRICT, Point as IP or Hostname
 	LooseSourcePointer      uint     // The argument must be a multiple of 4 and no more than 28
 	SourceHost              string   // Address for Ncat to bind to
-	SourcePort              uint     // Port number for Ncat to bind to
+	SourcePort              string     // Port number for Ncat to bind to
 	ZeroIO                  bool     // restrict IO, only report connection
 }
 

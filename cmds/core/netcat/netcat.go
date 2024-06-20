@@ -41,7 +41,7 @@ var (
 	execLua                 string
 	looseSourcePointer      uint
 	looseSourceRouterPoints []string
-	sourcePort              uint
+	sourcePort              string
 	sourceAddress           string
 	listen                  bool
 	udpSocket               bool
@@ -93,7 +93,7 @@ func init() {
 
 	// connection mode options
 	flag.BoolVarP(&zeroIo, "", "z", false, "ero-I/O mode, report connection status only")
-	flag.UintVarP(&sourcePort, "source-port", "p", netcat.DEFAULT_PORT, "Specify source port to use")
+	flag.StringVarP(&sourcePort, "source-port", "p", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use")
 	flag.StringVarP(&sourceAddress, "source", "s", "", "Specify source address to use (doesn't affect -l)")
 	flag.StringSliceVar(&looseSourceRouterPoints, "g", []string{}, "Loose source routing hop points (8 max)")
 	flag.UintVar(&looseSourcePointer, "G", 4, "Loose source routing hop pointer (<n>)")
@@ -208,7 +208,11 @@ func evalParams() (*netcat.NetcatConfig, error) {
 	}
 
 	config.ConnectionModeOptions.SourceHost = sourceAddress
-	config.ConnectionModeOptions.SourcePort = sourcePort
+
+	if sourcePort != "" {
+		config.ConnectionModeOptions.SourcePort = sourcePort
+	}
+
 	config.ConnectionModeOptions.ZeroIO = zeroIo
 	config.ConnectionModeOptions.LooseSourcePointer = looseSourcePointer
 	config.ConnectionModeOptions.LooseSourceRouterPoints = looseSourceRouterPoints
@@ -341,6 +345,19 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 		return nil, fmt.Errorf("connection: %v", err)
 	}
 
+	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
+		return c.listenMode(network, address)
+	}
+
+	return c.connectMode(network, address)
+}
+
+func (c *cmd) listenMode(network, address string) (io.ReadWriter, error) {
+	var (
+		err      error
+		listener net.Listener
+	)
+
 	// Set the context for the connection with a timeout
 	ctx := context.Background()
 	cancel := func() {}
@@ -348,19 +365,6 @@ func (c *cmd) connection() (io.ReadWriter, error) {
 		ctx, cancel = context.WithTimeout(ctx, c.config.Timing.Wait)
 	}
 	defer cancel()
-
-	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(ctx, network, address)
-	}
-
-	return c.connectMode(ctx, network, address)
-}
-
-func (c *cmd) listenMode(ctx context.Context, network, address string) (io.ReadWriter, error) {
-	var (
-		err      error
-		listener net.Listener
-	)
 
 	// If listing mode and Zero-I/O mode are combined the program will block indefinitely
 	if c.config.ConnectionModeOptions.ZeroIO {
@@ -376,6 +380,10 @@ func (c *cmd) listenMode(ctx context.Context, network, address string) (io.ReadW
 
 	if c.config.Misc.NoDNS {
 		return nil, fmt.Errorf("listen: disabling DNS resolution is not supported in listen mode")
+	}
+
+	if c.config.ConnectionModeOptions.SourceHost != "" && c.config.ConnectionModeOptions.SourcePort != "" {
+		return nil, fmt.Errorf("listen: source host/port cannot be set in listen mode")
 	}
 
 	switch c.config.ProtocolOptions.SocketType {
@@ -421,11 +429,20 @@ func (c *cmd) listenMode(ctx context.Context, network, address string) (io.ReadW
 	return c.waitOnConnection(ctx, listener)
 }
 
-func (c *cmd) connectMode(_ context.Context, network, address string) (io.ReadWriter, error) {
-	// TODO:implement source host/port + wait
+func (c *cmd) connectMode(network, address string) (io.ReadWriter, error) {
+	var err error
+
+	dialer := &net.Dialer{
+		Timeout: c.config.Timing.Timeout,
+	}
+
 	switch c.config.ProtocolOptions.SocketType {
 
 	case netcat.SOCKET_TYPE_TCP:
+		dialer.LocalAddr, err = net.ResolveTCPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
+		if err != nil {
+			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
+		}
 
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
 			tlsConfig, err := c.generateTLSConfiguration()
@@ -433,34 +450,35 @@ func (c *cmd) connectMode(_ context.Context, network, address string) (io.ReadWr
 				return nil, fmt.Errorf("connection: %v", err)
 			}
 
-			conn, err := tls.Dial(network, address, tlsConfig)
+			net.ResolveTCPAddr(network, address)
+
+			conn, err := tls.DialWithDialer(dialer, network, address, tlsConfig)
 			if err != nil {
 				return nil, fmt.Errorf("connection: %w", err)
 			}
-			conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
-		} else {
-			// No TLS
-			return net.Dial(network, address)
+
+			// TODO: timeout
+			// conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
+			return conn, nil
 		}
 
 	case netcat.SOCKET_TYPE_UDP:
-		addr, err := net.ResolveUDPAddr(network, address)
+		dialer.LocalAddr, err = net.ResolveUDPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
 		}
-
-		return net.DialUDP(network, nil, addr)
 
 	case netcat.SOCKET_TYPE_UNIX:
-		return net.Dial(network, address)
-
-	case netcat.SOCKET_TYPE_UDP_UNIX:
-		addr, err := net.ResolveUnixAddr("unixgram", address)
+		dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve Unix address: %v", err)
+			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
 		}
 
-		return net.DialUnix("unixgram", nil, addr)
+	case netcat.SOCKET_TYPE_UDP_UNIX:
+		dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
+		if err != nil {
+			return nil, fmt.Errorf("connection: failed to resolve source address%v", err)
+		}
 
 	// unsupported socket types
 	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
@@ -470,7 +488,8 @@ func (c *cmd) connectMode(_ context.Context, network, address string) (io.ReadWr
 	default:
 		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 	}
-	return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+
+	return dialer.Dial(network, address)
 }
 
 // waitOnConnection listens for incoming connections and returns the first connection that is allowed by the access control list.

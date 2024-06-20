@@ -10,6 +10,7 @@ import "time"
 // These values were taken from the original netcat project.
 const (
 	DEFAULT_PORT            = 31337
+	DEFAULT_SOURCE_PORT     = "31337"
 	DEFAULT_IP_TYPE         = IP_V4_V6
 	DEFAULT_CONNECTION_MODE = CONNECTION_MODE_CONNECT
 	DEFAULT_CONNECTION_MAX  = 100
