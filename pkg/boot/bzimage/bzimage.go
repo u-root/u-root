@@ -54,9 +54,7 @@ var (
 		// GZIP
 		{[]byte{0x1F, 0x8B}, gunzip},
 		// XZ
-		// It would be nice to use a Go package instead of shelling out to 'unxz'.
-		// https://github.com/ulikunitz/xz fails to decompress the payloads and returns an error: "unsupported filter count"
-		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, stripSize(execer("unxz"))},
+		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, stripSize(unxz)},
 		// LZMA
 		{[]byte{0x5D, 0x00, 0x00}, stripSize(unlzma)},
 		// LZO
@@ -83,6 +81,7 @@ var (
 func findDecompressor(b []byte) (decompressor, error) {
 	for _, m := range magics {
 		if bytes.Index(b, m.signature) == 0 {
+			fmt.Println("found decompressor for signature: ", m.signature)
 			return m.decompressor, nil
 		}
 	}
