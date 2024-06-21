@@ -5,10 +5,17 @@
   min-height: calc(100dvh - var(--site-head-height));
   margin-block-start: var(--site-head-height);
 
-  .color-dots svg {
+  .color-squares {
     display: inline-block;
-    height: 1.5ex;
-    transform: translateY(0.1em);
+    position: relative;
+    bottom: 1ex;
+    width: 0;
+    height: 0.5ex;
+
+    svg {
+      height: 100%;
+      max-width: initial;
+    }
   }
 
   &__key-visual {
