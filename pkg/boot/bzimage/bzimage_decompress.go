@@ -12,7 +12,7 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/therootcompany/xz/v/v1/xz"
+	"github.com/therootcompany/xz"
 	"github.com/klauspost/compress/zstd"
 	"github.com/pierrec/lz4/v4"
 	"github.com/ulikunitz/xz/lzma"
@@ -125,6 +125,20 @@ func unzstd(w io.Writer, r io.Reader) error {
 
 	if _, err := io.Copy(w, zstdReader); err != nil {
 		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
+	}
+	return nil
+}
+
+// unxz reads compressed bytes from the io.Reader and writes the uncompressed bytes to the
+// writer. unxz satisfies the decompressor interface.
+func unxz(w io.Writer, r io.Reader) error {
+	unxzReader, err := xz.NewReader(r, 0)
+	if err != nil {
+		return fmt.Errorf("error creating unxz reader: %v", err)
+	}
+
+	if _, err := io.Copy(w, unxzReader); err != nil {
+		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
 	}
 	return nil
 }
