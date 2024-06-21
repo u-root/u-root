@@ -5,19 +5,23 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"time"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/netstat"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-// Flags groups the available functionality of netstat.
+// cmd groups the available functionality of netstat.
 // More information is given in the main function down below.
-type Flags struct {
+type cmd struct {
+	out io.Writer
+
 	// Info source flags
 	route      bool
 	interfaces bool
@@ -53,80 +57,40 @@ type Flags struct {
 	all       bool
 }
 
-func main() {
-	f := Flags{}
-	flag.BoolVarP(&f.route, "route", "r", false, "display routing table")
-	flag.BoolVarP(&f.interfaces, "interfaces", "i", false, "display interface table")
-	flag.StringVarP(&f.iface, "interface", "I", "", "Display interface table for interface <if>")
-	flag.BoolVarP(&f.groups, "groups", "g", false, "display multicast group memberships")
-	flag.BoolVarP(&f.stats, "statistics", "s", false, "display networking statistics (like SNMP)")
+var errMutualExcludeFlags = errors.New("only one of route, interfaces, groups, statistics or interface allowed")
 
-	flag.BoolVarP(&f.tcp, "tcp", "t", false, "Print TCP sockets")
-	flag.BoolVarP(&f.udp, "udp", "u", false, "Print UDP sockets")
-	flag.BoolVarP(&f.udpL, "udplite", "U", false, "Print UDPlite sockets")
-	flag.BoolVarP(&f.raw, "raw", "w", false, "Print IPv4/IPv6 RAW sockets")
-	flag.BoolVarP(&f.unix, "unix", "x", false, "Print UNIX sockets")
-
-	flag.BoolVarP(&f.ipv4, "4", "4", false, "IPv4 flag. default: true")
-	flag.BoolVarP(&f.ipv6, "6", "6", false, "IPv6 flag. default: false")
-
-	flag.BoolVarP(&f.routecache, "cache", "C", false, "")
-
-	flag.BoolVarP(&f.wide, "wide", "W", false, "don't truncate IP addresses")
-	flag.BoolVarP(&f.numeric, "numeric", "n", false, "don't resolve names")
-	flag.BoolVar(&f.numHost, "numeric-hosts", false, "don't resolve host names")
-	flag.BoolVar(&f.numPorts, "numeric-ports", false, "don't resolve port names")
-	flag.BoolVar(&f.numUsers, "numeric-users", false, "don't resolve user names")
-	flag.BoolVarP(&f.symbolic, "symbolic", "N", false, "resolve hardware names")
-	flag.BoolVarP(&f.extend, "extend", "e", false, "display other/more information")
-	flag.BoolVarP(&f.programs, "programs", "p", false, "display PID/Program name for sockets")
-	flag.BoolVarP(&f.timers, "timers", "o", false, "display timers")
-	flag.BoolVarP(&f.contin, "continuous", "c", false, "continuous listing")
-	flag.BoolVarP(&f.listening, "listening", "l", false, "display listening server sockets")
-	flag.BoolVarP(&f.all, "all", "a", false, "display all sockets (default: connected)")
-
-	flag.Parse()
-	if err := run(f, os.Stdout); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run(f Flags, out io.Writer) error {
+func (c cmd) run() error {
 	afs := make([]netstat.AddressFamily, 0)
 
-	// Validate info source flags
-	// none or one allowed to be set
-	if !xorFlags(f.route, f.interfaces, f.groups, f.stats, f.iface != "") {
-		flag.Usage()
-		return nil
+	if !xorFlags(c.route, c.interfaces, c.groups, c.stats, c.iface != "") {
+		return errMutualExcludeFlags
 	}
 
-	// Can't use default capability of pflags package, have to determine it like this
-	// to keep same usage as original netstat tool.
-	if !f.ipv4 && !f.ipv6 {
-		f.ipv4 = true
+	// use IPv4 as default if no address family is given
+	if !c.ipv4 && !c.ipv6 {
+		c.ipv4 = true
 	}
 
 	// In case we want to print IP Sockets and give no further information, all protocols shall
 	// be printet. The default value of the protocol flags is false, but for that we need to override
 	// them to be true.
-	if (f.ipv4 || f.ipv6 || f.stats) &&
-		!(f.tcp || f.udp || f.udpL || f.raw || f.unix) {
-		f.tcp = true
-		f.udp = true
-		f.udpL = true
-		f.raw = true
-		f.unix = true
+	if (c.ipv4 || c.ipv6 || c.stats) &&
+		!(c.tcp || c.udp || c.udpL || c.raw || c.unix) {
+		c.tcp = true
+		c.udp = true
+		c.udpL = true
+		c.raw = true
+		c.unix = true
 	}
 
 	socks, err := evalProtocols(
-		f.tcp,
-		f.udp,
-		f.udpL,
-		f.raw,
-		f.unix,
-		f.ipv4,
-		f.ipv6,
+		c.tcp,
+		c.udp,
+		c.udpL,
+		c.raw,
+		c.unix,
+		c.ipv4,
+		c.ipv6,
 	)
 	if err != nil {
 		return err
@@ -134,27 +98,27 @@ func run(f Flags, out io.Writer) error {
 
 	// numeric groups the format functionality of numeric-hosts, numeric-ports and numeric-users.
 	// It overrides the other numeric format flags.
-	if f.numeric {
-		f.numHost = true
-		f.numPorts = true
-		f.numUsers = true
+	if c.numeric {
+		c.numHost = true
+		c.numPorts = true
+		c.numUsers = true
 	}
 
 	// Evaluate for route cache for IPv6
-	if f.routecache && f.route && !f.ipv6 {
+	if c.routecache && c.route && !c.ipv6 {
 		return netstat.ErrRouteCacheIPv6only
 	}
 
 	// Set up format flags for route listing and socket listing
 	outflags := netstat.FmtFlags{
-		Extend:    f.extend,
-		Wide:      f.wide,
-		NumHosts:  f.numHost,
-		NumPorts:  f.numPorts,
-		NumUsers:  f.numUsers,
-		ProgNames: f.programs,
-		Timer:     f.timers,
-		Symbolic:  f.symbolic,
+		Extend:    c.extend,
+		Wide:      c.wide,
+		NumHosts:  c.numHost,
+		NumPorts:  c.numPorts,
+		NumUsers:  c.numUsers,
+		ProgNames: c.programs,
+		Timer:     c.timers,
+		Symbolic:  c.symbolic,
 	}
 
 	// Set up output generator for route and socket listing
@@ -163,23 +127,23 @@ func run(f Flags, out io.Writer) error {
 		return err
 	}
 
-	if f.route {
-		if f.ipv4 {
+	if c.route {
+		if c.ipv4 {
 			afs = append(afs, netstat.NewAddressFamily(false, outfmts))
 		}
 
-		if f.ipv6 {
+		if c.ipv6 {
 			afs = append(afs, netstat.NewAddressFamily(true, outfmts))
 		}
 
 		for _, af := range afs {
 			for {
-				str, err := af.RoutesFormatString(f.routecache)
+				str, err := af.RoutesFormatString(c.routecache)
 				if err != nil {
 					return err
 				}
-				fmt.Fprintf(out, "%s\n", str)
-				if !f.contin {
+				fmt.Fprintf(c.out, "%s\n", str)
+				if !c.contin {
 					break
 				}
 				af.ClearOutput()
@@ -191,29 +155,29 @@ func run(f Flags, out io.Writer) error {
 		return err
 	}
 
-	if f.interfaces {
-		return netstat.PrintInterfaceTable(f.iface, f.contin, out)
+	if c.interfaces {
+		return netstat.PrintInterfaceTable(c.iface, c.contin, c.out)
 	}
 
-	if f.iface != "" {
-		return netstat.PrintInterfaceTable(f.iface, f.contin, out)
+	if c.iface != "" {
+		return netstat.PrintInterfaceTable(c.iface, c.contin, c.out)
 	}
 
-	if f.groups {
-		return netstat.PrintMulticastGroups(f.ipv4, f.ipv6, out)
+	if c.groups {
+		return netstat.PrintMulticastGroups(c.ipv4, c.ipv6, c.out)
 	}
 
-	if f.stats {
-		if f.ipv4 {
+	if c.stats {
+		if c.ipv4 {
 			afs = append(afs, netstat.NewAddressFamily(false, outfmts))
 		}
 
-		if f.ipv6 {
+		if c.ipv6 {
 			afs = append(afs, netstat.NewAddressFamily(true, outfmts))
 		}
 
 		for _, af := range afs {
-			if err := af.PrintStatistics(out); err != nil {
+			if err := af.PrintStatistics(c.out); err != nil {
 				return err
 			}
 		}
@@ -222,13 +186,13 @@ func run(f Flags, out io.Writer) error {
 
 	for {
 		for _, sock := range socks {
-			str, err := sock.SocketsString(f.listening, f.all, outfmts)
+			str, err := sock.SocketsString(c.listening, c.all, outfmts)
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(out, "%s\n", str)
+			fmt.Fprintf(c.out, "%s\n", str)
 		}
-		if !f.contin {
+		if !c.contin {
 			break
 		}
 		outfmts.Builder.Reset()
@@ -325,4 +289,93 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	}
 
 	return retProtos, nil
+}
+
+func command(out io.Writer, args []string) *cmd {
+	var c cmd
+	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
+	fs.BoolVar(&c.route, "route", false, "display routing table")
+	fs.BoolVar(&c.route, "r", false, "display routing table")
+
+	fs.BoolVar(&c.interfaces, "interfaces", false, "display interface table")
+	fs.BoolVar(&c.interfaces, "i", false, "display interface table")
+
+	fs.StringVar(&c.iface, "interface", "", "Display interface table for interface <if>")
+	fs.StringVar(&c.iface, "I", "", "Display interface table for interface <if>")
+
+	fs.BoolVar(&c.groups, "groups", false, "display multicast group memberships")
+	fs.BoolVar(&c.groups, "g", false, "display multicast group memberships")
+
+	fs.BoolVar(&c.stats, "statistics", false, "display networking statistics (like SNMP)")
+	fs.BoolVar(&c.stats, "s", false, "display networking statistics (like SNMP)")
+
+	fs.BoolVar(&c.tcp, "tcp", false, "Print TCP sockets")
+	fs.BoolVar(&c.tcp, "t", false, "Print TCP sockets")
+
+	fs.BoolVar(&c.udp, "udp", false, "Print UDP sockets")
+	fs.BoolVar(&c.udp, "u", false, "Print UDP sockets")
+
+	fs.BoolVar(&c.udpL, "udplite", false, "Print UDPlite sockets")
+	fs.BoolVar(&c.udpL, "U", false, "Print UDPlite sockets")
+
+	fs.BoolVar(&c.raw, "raw", false, "Print IPv4/IPv6 RAW sockets")
+	fs.BoolVar(&c.raw, "w", false, "Print IPv4/IPv6 RAW sockets")
+
+	fs.BoolVar(&c.unix, "unix", false, "Print UNIX sockets")
+	fs.BoolVar(&c.unix, "x", false, "Print UNIX sockets")
+
+	fs.BoolVar(&c.ipv4, "4", false, "IPv4 fs. default: false")
+	fs.BoolVar(&c.ipv6, "6", false, "IPv6 fs. default: false")
+
+	fs.BoolVar(&c.routecache, "cache", false, "")
+	fs.BoolVar(&c.routecache, "C", false, "")
+
+	fs.BoolVar(&c.wide, "wide", false, "don't truncate IP addresses")
+	fs.BoolVar(&c.wide, "W", false, "don't truncate IP addresses")
+
+	fs.BoolVar(&c.numeric, "numeric", false, "don't resolve names")
+	fs.BoolVar(&c.numeric, "n", false, "don't resolve names")
+
+	fs.BoolVar(&c.numHost, "numeric-hosts", false, "don't resolve host names")
+	fs.BoolVar(&c.numPorts, "numeric-ports", false, "don't resolve port names")
+	fs.BoolVar(&c.numUsers, "numeric-users", false, "don't resolve user names")
+
+	fs.BoolVar(&c.symbolic, "symbolic", false, "resolve hardware names")
+	fs.BoolVar(&c.symbolic, "N", false, "resolve hardware names")
+
+	fs.BoolVar(&c.extend, "extend", false, "display other/more information")
+	fs.BoolVar(&c.extend, "e", false, "display other/more information")
+
+	fs.BoolVar(&c.programs, "programs", false, "display PID/Program name for sockets")
+	fs.BoolVar(&c.programs, "p", false, "display PID/Program name for sockets")
+
+	fs.BoolVar(&c.timers, "timers", false, "display timers")
+	fs.BoolVar(&c.timers, "o", false, "display timers")
+
+	fs.BoolVar(&c.contin, "continuous", false, "continuous listing")
+	fs.BoolVar(&c.contin, "c", false, "continuous listing")
+
+	fs.BoolVar(&c.listening, "listening", false, "display listening server sockets")
+	fs.BoolVar(&c.listening, "l", false, "display listening server sockets")
+
+	fs.BoolVar(&c.all, "all", false, "display all sockets (default: connected)")
+	fs.BoolVar(&c.all, "a", false, "display all sockets (default: connected)")
+
+	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	// Validate info source flags
+	// none or one allowed to be set
+	if !xorFlags(c.route, c.interfaces, c.groups, c.stats, c.iface != "") {
+		fs.Usage()
+	}
+
+	c.out = out
+
+	return &c
+}
+
+func main() {
+	if err := command(os.Stdout, os.Args).run(); err != nil {
+		log.Fatal(err)
+	}
 }
