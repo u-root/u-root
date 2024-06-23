@@ -24,13 +24,14 @@
 package main
 
 import (
+	"encoding/hex"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/flash"
 	"github.com/u-root/u-root/pkg/flash/chips"
 	"github.com/u-root/u-root/pkg/flash/op"
@@ -47,8 +48,10 @@ type spi interface {
 }
 
 var (
-	errFlag    = errors.New("unknown flag")
-	errCommand = errors.New("usage")
+	// ErrCommand should be used for any error, including those from flag.Parse()
+	ErrCommand = errors.New("usage:spidev [-D device] [-s speed] <raw [bytes]...|sfdp|id>")
+	// ErrConvert is for any type of conversion error
+	ErrConvert = errors.New("bad syntax")
 )
 
 type spiOpenFunc func(dev string) (spi, error)
@@ -58,21 +61,26 @@ func openSPIDev(dev string) (spi, error) {
 }
 
 func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) error {
-	// Parse args.
-	fs := flag.NewFlagSet("spidev", flag.ContinueOnError)
-	dev := fs.StringP("device", "D", "/dev/spidev0.0", "spidev device")
-	speed := fs.Uint32P("speed", "s", 0, "max speed in Hz")
+	fs := flag.NewFlagSet("spidev <raw [bytes]...|sfdp|id>", flag.ContinueOnError)
+	// Usage spews a lot at the wrong time, dirtying up test output.
+	// It's also not very controllable. We just print the message in our own way.
+	fs.Usage = func() {}
+	fs.SetOutput(io.Discard)
+	dev := fs.String("D", "/dev/spidev0.0", "spidev device")
+	speed := fs.Uint("s", 0, "max speed in Hz")
 	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return fmt.Errorf("%w:<raw|sfdp|id>", errCommand)
+		return ErrCommand
+	}
+	if fs.NArg() == 0 {
+		return ErrCommand
+	}
+	cmd := fs.Arg(0)
+	switch cmd {
+	case "id", "sfdp":
+		if fs.NArg() != 1 {
+			return fmt.Errorf("%w: id and sfdp do not require an argument", ErrCommand)
 		}
-		return fmt.Errorf("%w:%v", errFlag, err)
 	}
-
-	if fs.NArg() != 1 {
-		return fmt.Errorf("%w: %s <raw|sfdp|id>", errCommand, fs.FlagUsages())
-	}
-
 	// Open the spi device.
 	s, err := spiOpen(*dev)
 	if err != nil {
@@ -85,12 +93,11 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 	// to override that speed. Since the speed can be set any number
 	// of times, this is a safe operation.
 	if *speed != 0 {
-		if err := s.SetSpeedHz(*speed); err != nil {
+		if err := s.SetSpeedHz(uint32(*speed)); err != nil {
 			return err
 		}
 	}
 
-	cmd := fs.Arg(0)
 	// Currently, only the raw subcommand is supported.
 	switch cmd {
 	case "id":
@@ -102,6 +109,23 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return nil
 
 	case "raw":
+		for _, a := range fs.Args()[1:] {
+			b, err := hex.DecodeString(a)
+			if err != nil {
+				return fmt.Errorf("%v:%w", err, ErrConvert)
+			}
+			transfers := []spidev.Transfer{
+				{
+					Tx: b,
+					Rx: make([]byte, len(b)),
+				},
+			}
+			// Perform transfers.
+			if err := s.Transfer(transfers); err != nil {
+				return err
+			}
+
+		}
 		// Create transfer from stdin.
 		tx, err := io.ReadAll(input)
 		if err != nil {
@@ -136,7 +160,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return f.SFDP().PrettyPrint(output, sfdp.BasicTableLookup)
 
 	default:
-		return fmt.Errorf("%s:%w:%s", cmd, errCommand, fs.FlagUsages())
+		return fmt.Errorf("%s:%w:%v", cmd, ErrCommand, err)
 	}
 }
 
