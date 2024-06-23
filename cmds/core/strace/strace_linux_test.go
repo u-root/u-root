@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !race && !tinygo && linux && (amd64 || riscv64 || arm64)
-// +build !race
+//go:build !tinygo && linux && (amd64 || riscv64 || arm64)
 // +build !tinygo
 // +build linux
 // +build amd64 riscv64 arm64
@@ -11,8 +10,8 @@
 package main
 
 import (
-	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -42,10 +41,16 @@ func TestRun(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		stdout := &bytes.Buffer{}
-		stderr := &bytes.Buffer{}
+		stdout, err := os.CreateTemp(tmp, "stdout")
+		if err != nil {
+			t.Fatal(err)
+		}
+		stderr, err := os.CreateTemp(tmp, "stderr")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		err := run(nil, stdout, stderr, test.p, test.args...)
+		err = run(nil, stdout, stderr, test.p, test.args...)
 		if !errors.Is(err, test.err) {
 			t.Fatalf("expected %v, got %v", test.err, err)
 		}
