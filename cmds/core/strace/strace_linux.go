@@ -22,7 +22,10 @@ import (
 	// Don't use spf13 flags. It will not allow commands like
 	// strace ls -l
 	// it tries to use the -l for strace instead of leaving it alone.
+	"errors"
 	"flag"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -30,36 +33,37 @@ import (
 	"github.com/u-root/u-root/pkg/strace"
 )
 
-const (
-	cmdUsage = "Usage: strace [-o <outputfile>] <command> [args...]"
-)
+var errUsage = errors.New("usage: strace [-o <outputfile>] <command> [args...]")
 
-func usage() {
-	log.Fatalf(cmdUsage)
+type params struct {
+	output string
+}
+
+func run(stdin io.Reader, stdout, stderr io.Writer, p params, args ...string) error {
+	if len(args) < 1 {
+		return errUsage
+	}
+
+	c := exec.Command(args[0], args[1:]...)
+	c.Stdin, c.Stdout, c.Stderr = stdin, stdout, stderr
+
+	if p.output != "" {
+		f, err := os.Create(p.output)
+		if err != nil {
+			return fmt.Errorf("creating out file: %s: %w", p.output, err)
+		}
+		defer f.Close()
+		c.Stderr = f
+	}
+
+	return strace.Strace(c, c.Stderr)
 }
 
 func main() {
-	o := flag.String("o", "", "write output to file (if empty, stdout)")
+	output := flag.String("o", "", "write output to file (if empty, stdout)")
 	flag.Parse()
 
-	a := flag.Args()
-	if len(a) < 1 {
-		usage()
-	}
-
-	c := exec.Command(a[0], a[1:]...)
-	c.Stdin, c.Stdout, c.Stderr = os.Stdin, os.Stdout, os.Stderr
-
-	out := os.Stdout
-	if len(*o) > 0 {
-		f, err := os.Create(*o)
-		if err != nil {
-			log.Fatalf("creating output file: %s", err)
-		}
-		defer f.Close()
-		out = f
-	}
-	if err := strace.Strace(c, out); err != nil {
-		log.Printf("strace exited: %v", err)
+	if err := run(os.Stdin, os.Stdout, os.Stderr, params{output: *output}, flag.Args()...); err != nil {
+		log.Fatal(err)
 	}
 }
