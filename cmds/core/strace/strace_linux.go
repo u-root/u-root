@@ -50,7 +50,7 @@ func run(stdin io.Reader, stdout, stderr io.Writer, p params, args ...string) er
 	if p.output != "" {
 		f, err := os.Create(p.output)
 		if err != nil {
-			return fmt.Errorf("creating out file: %s: %w", p.output, err)
+			return fmt.Errorf("creating output file: %s: %w", p.output, err)
 		}
 		defer f.Close()
 		c.Stderr = f
