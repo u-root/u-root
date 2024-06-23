@@ -219,7 +219,7 @@ func run(w io.Writer, args []string) error {
 	f.BoolVar(&c.size, "S", false, "sort by size")
 	c.w = w
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
-	return c.list(flag.Args())
+	return c.list(f.Args())
 }
 
 func main() {
