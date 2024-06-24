@@ -383,10 +383,6 @@ func (c *cmd) generateTLSConfiguration() (*tls.Config, error) {
 		tlsConfig.NextProtos = c.config.SSLConfig.ALPN
 	}
 
-	if len(c.config.SSLConfig.Ciphers) > 0 {
-		// Set the cipher suites
-	}
-
 	return tlsConfig, nil
 }
 
