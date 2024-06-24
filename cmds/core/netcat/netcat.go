@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -54,7 +55,7 @@ var (
 	proxydns                string
 	proxyType               string
 	proxyAuthType           string
-	maxConnections          uint
+	maxConnections          uint32
 	keepOpen                bool
 	noDNS                   bool
 	telnet                  bool
@@ -105,7 +106,7 @@ func init() {
 
 	// listen options
 	flag.BoolVarP(&listen, "listen", "l", false, "Bind and listen for incoming connections")
-	flag.UintVarP(&maxConnections, "max-conns", "m", netcat.DEFAULT_CONNECTION_MAX, "Maximum <n> simultaneous connections")
+	flag.Uint32VarP(&maxConnections, "max-conns", "m", netcat.DEFAULT_CONNECTION_MAX, "Maximum <n> simultaneous connections")
 	flag.BoolVarP(&keepOpen, "keep-open", "k", false, "Accept multiple connections in listen mode")
 	flag.BoolVarP(&brokerMode, "broker", "", false, "Enable Ncat's connection brokering mode")
 	flag.BoolVarP(&chatMode, "chat", "", false, "Start a simple Ncat chat server")
@@ -517,34 +518,79 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 	return nil
 }
 
+func (c *cmd) writeToRemote(conn io.Writer) {
+	eolReader := netcat.NewEOLReader(c.stdin, c.config.Misc.EOL)
+
+	// If the delay is set, read the input line by line in time intervals of the delay duration
+	if c.config.Timing.Delay > 0 {
+		scanner := bufio.NewScanner(eolReader)
+
+		for scanner.Scan() {
+			if _, err := conn.Write([]byte(scanner.Text() + "\n")); err != nil {
+				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+			}
+
+			time.Sleep(c.config.Timing.Delay)
+		}
+
+		if err := scanner.Err(); err != nil {
+			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+		}
+	} else {
+		if _, err := io.Copy(conn, eolReader); err != nil {
+			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+		}
+	}
+
+	// do not shutdown the connection if the no-shutdown flag is set
+	if c.config.Misc.NoShutdown {
+		for {
+			time.Sleep(1 * time.Hour)
+		}
+	}
+}
+
 // readFromConnections listens for incoming connections and reads from the first connection that is allowed by the access control list.
 func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error {
-	for {
+	// If keep open is set, the maximum number of connections is set to maxConnections else it is set to 1
+	var (
+		maxConnections     uint32 = 1
+		connectionsHandled uint32
+	)
+
+	if c.config.ListenModeOptions.KeepOpen {
+		maxConnections = c.config.ListenModeOptions.MaxConnections
+	}
+
+	for atomic.LoadUint32(&connectionsHandled) < maxConnections {
 		conn, err := listener.Accept()
 		if err != nil {
 			return err
 		}
 
-		remoteAddr := conn.RemoteAddr().String()
+		go func() {
+			remoteAddr := conn.RemoteAddr().String()
 
-		// Perform a reverse lookup to get the domain names associated with the address
-		names, err := net.LookupAddr(remoteAddr)
-		if err != nil {
-			netcat.Logf(c.config, "failed to resolve address: %v", err)
-		}
-
-		if c.config.AccessControl.IsAllowed(append(names, remoteAddr)) {
-			// read from the connection
-			if _, err := io.Copy(output, conn); err != nil {
-				return fmt.Errorf("run dump: %v", err)
+			// Perform a reverse lookup to get the domain names associated with the address
+			names, err := net.LookupAddr(remoteAddr)
+			if err != nil {
+				netcat.Logf(c.config, "failed to resolve address: %v", err)
 			}
 
-			return nil
-		}
+			if c.config.AccessControl.IsAllowed(append(names, remoteAddr)) {
+				atomic.AddUint32(&connectionsHandled, 1)
+				// read from the connection
+				if _, err := io.Copy(output, conn); err != nil {
+					netcat.Logf(c.config, "run dump: %v", err)
+				}
 
-		conn.Close()
-		time.Sleep(50 * time.Millisecond)
+			}
+
+			conn.Close()
+		}()
 	}
+
+	return nil
 }
 
 func (c *cmd) generateTLSConfiguration() (*tls.Config, error) {
@@ -602,42 +648,10 @@ func (c *cmd) run() error {
 	output := io.MultiWriter(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(output, network, address)
+		return c.listenMode(netcat.NewConcurrentWriter(output), network, address)
 	}
 
 	return c.connectMode(output, network, address)
-}
-
-func (c *cmd) writeToRemote(conn io.Writer) {
-	eolReader := netcat.NewEOLReader(c.stdin, c.config.Misc.EOL)
-
-	// If the delay is set, read the input line by line in time intervals of the delay duration
-	if c.config.Timing.Delay > 0 {
-		scanner := bufio.NewScanner(eolReader)
-
-		for scanner.Scan() {
-			if _, err := conn.Write([]byte(scanner.Text() + "\n")); err != nil {
-				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
-			}
-
-			time.Sleep(c.config.Timing.Delay)
-		}
-
-		if err := scanner.Err(); err != nil {
-			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
-		}
-	} else {
-		if _, err := io.Copy(conn, eolReader); err != nil {
-			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
-		}
-	}
-
-	// do not shutdown the connection if the no-shutdown flag is set
-	if c.config.Misc.NoShutdown {
-		for {
-			time.Sleep(1 * time.Hour)
-		}
-	}
 }
 
 func main() {

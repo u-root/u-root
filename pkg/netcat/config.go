@@ -513,10 +513,10 @@ type NetcatConnectModeOptions struct {
 
 // All the modes can be combined with each other, no need to check for mutual exclusivity
 type NetcatListenModeOptions struct {
-	MaxConnections uint // Maximum number of simultaneous connections accepted by an Ncat instance
-	KeepOpen       bool // Accept multiple connections. In this mode there is no way for Ncat to know when its network input is finished, so it will keep running until interrupted
-	BrokerMode     bool // Don't echo messages but redirect them to all others. Compatible with other modes
-	ChatMode       bool // Enables chat mode, intended for the exchange of text between several users
+	MaxConnections uint32 // Maximum number of simultaneous connections accepted by an Ncat instance
+	KeepOpen       bool   // Accept multiple connections. In this mode there is no way for Ncat to know when its network input is finished, so it will keep running until interrupted
+	BrokerMode     bool   // Don't echo messages but redirect them to all others. Compatible with other modes
+	ChatMode       bool   // Enables chat mode, intended for the exchange of text between several users
 }
 
 type NetcatTimingOptions struct {

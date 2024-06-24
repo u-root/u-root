@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sync"
 )
 
 // EOLReader is a reader that reads until the end of line and appends the EOL sequence.
@@ -46,6 +47,24 @@ func NewEOLReader(reader io.Reader, eol []byte) *EOLReader {
 		scanner: bufio.NewScanner(reader),
 		eol:     eol,
 	}
+}
+
+// ConcurrentWriter wraps an io.Writer with a mutex to ensure safe concurrent writes.
+type ConcurrentWriter struct {
+	mu     sync.Mutex
+	writer io.Writer
+}
+
+// NewConcurrentWriter creates a new ConcurrentWriter.
+func NewConcurrentWriter(w io.Writer) *ConcurrentWriter {
+	return &ConcurrentWriter{writer: w}
+}
+
+// Write writes data to the underlying io.Writer, locking the writer during the operation.
+func (sw *ConcurrentWriter) Write(p []byte) (n int, err error) {
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+	return sw.writer.Write(p)
 }
 
 // Logf logs a message if the verbose flag is set.
