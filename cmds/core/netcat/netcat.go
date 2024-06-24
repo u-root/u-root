@@ -370,7 +370,7 @@ func (c *cmd) listenMode(output io.Writer, network, address string) error {
 	}
 
 	switch c.config.ProtocolOptions.SocketType {
-	case netcat.SOCKET_TYPE_TCP:
+	case netcat.SOCKET_TYPE_TCP, netcat.SOCKET_TYPE_UNIX:
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
 			tlsConfig, err := c.generateTLSConfiguration()
 			if err != nil {
@@ -391,12 +391,6 @@ func (c *cmd) listenMode(output io.Writer, network, address string) error {
 
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
 		listener, err = netcat.NewUDPListener(network, address, c.config.Output.Verbose)
-		if err != nil {
-			return err
-		}
-
-	case netcat.SOCKET_TYPE_UNIX:
-		listener, err = net.Listen(network, address)
 		if err != nil {
 			return err
 		}
