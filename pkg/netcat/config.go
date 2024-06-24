@@ -327,20 +327,31 @@ type NetcatAccessControlOptions struct {
 	ConnectionList map[string]bool
 }
 
-// Check if the host is allowed to connect.
-func (ac *NetcatAccessControlOptions) IsAllowed(host string) bool {
-	// If atleast one item is in the allowed list, the host is only allowed if set so.
+// Check if the hostName is allowed to connect.
+func (ac *NetcatAccessControlOptions) IsAllowed(hostNames []string) bool {
+	// If atleast one item is in the allowed list, the hostName is only allowed if also mentioned.
 	if ac.SetAllowed {
-		allowed, ok := ac.ConnectionList[host]
-		if !ok {
-			return false
+		for _, hostName := range hostNames {
+			allowed, ok := ac.ConnectionList[hostName]
+			if !ok {
+				// If the hostname is not in the list, check the next hostname.
+				continue
+			}
+
+			// If the host name is allowed, return true.
+			return allowed
 		}
-		return allowed
+
+		// If the host name is not in the list, it is denied by default.
+		return false
 	}
 
-	// Otherwise check if the host is denied.
-	if allowed, ok := ac.ConnectionList[host]; ok {
-		return allowed
+	// If the host is part of the list and not one entry is set to allowed, it is denied by default.
+	for _, hostName := range hostNames {
+		// Otherwise check if the host name is denied.
+		if _, ok := ac.ConnectionList[hostName]; ok {
+			return false
+		}
 	}
 
 	// If the host is not in the list, it is allowed by default.
