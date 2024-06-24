@@ -157,6 +157,9 @@ func poxCreate(bin ...string) error {
 		}
 		return fmt.Errorf("running ldd on %v: %v %s", bin, err, stderr)
 	}
+	// At some point the ldd API changed and it no longer includes the
+	// bins.
+	names = append(names, bin...)
 
 	sort.Strings(names)
 	// Now we need to make a template file hierarchy and put
