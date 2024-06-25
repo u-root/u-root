@@ -5,45 +5,41 @@
 package netcat
 
 import (
-	"bufio"
+	"bytes"
 	"io"
 	"sync"
 )
 
 // EOLReader is a reader that reads until the end of line and appends the EOL sequence.
 type EOLReader struct {
-	scanner *bufio.Scanner
-	eol     []byte
+	reader io.Reader
+	eol    []byte
 }
 
 func (cr *EOLReader) Read(p []byte) (n int, err error) {
-	if !cr.scanner.Scan() {
-		if err := cr.scanner.Err(); err != nil {
-			return 0, err
-		}
+	buffer := make([]byte, len(p))
+	bytesRead, readErr := cr.reader.Read(buffer)
+
+	if bytesRead == 0 {
+		return 0, readErr
 	}
 
-	buf := cr.scanner.Bytes()
+	buffer = buffer[:bytesRead]
 
-	// Remove the last element of buf
-	if len(buf) > 0 {
-		buf = buf[:len(buf)-1]
+	// Check and replace the EOL sequence if necessary.
+	if len(buffer) > 0 {
+		buffer = bytes.ReplaceAll(buffer, []byte("\n"), cr.eol)
 	}
 
-	// Append the EOL sequence
-	buf = append(buf, cr.eol...)
-
-	copy(p, buf)
-
-	n = len(buf)
-
-	return n, nil
+	// Copy the processed data into p and calculate the number of bytes copied.
+	n = copy(p, buffer)
+	return n, readErr
 }
 
 func NewEOLReader(reader io.Reader, eol []byte) *EOLReader {
 	return &EOLReader{
-		scanner: bufio.NewScanner(reader),
-		eol:     eol,
+		reader: reader,
+		eol:    eol,
 	}
 }
 
