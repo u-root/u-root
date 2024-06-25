@@ -337,7 +337,7 @@ func (c *cmd) connection() (string, string, error) {
 		}
 	}
 
-	network, err := c.config.Network()
+	network, err := c.config.ProtocolOptions.Network()
 	if err != nil {
 		return "", "", fmt.Errorf("connection: %v", err)
 	}

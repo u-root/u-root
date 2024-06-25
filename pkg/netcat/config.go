@@ -64,91 +64,6 @@ func DefaultConfig() Config {
 	}
 }
 
-type IPType int
-
-const (
-	IP_NONE IPType = iota
-	IP_V4
-	IP_V6
-	IP_V4_V6
-	IP_V4_STRICT
-	IP_V6_STRICT
-)
-
-type SocketType int
-
-// UDP can be combined with one of {UNIX, VSOCK} or stand alone
-const (
-	SOCKET_TYPE_TCP SocketType = iota
-	SOCKET_TYPE_UDP
-	SOCKET_TYPE_UNIX
-	SOCKET_TYPE_VSOCK
-	SOCKET_TYPE_SCTP
-	SOCKET_TYPE_UDP_VSOCK
-	SOCKET_TYPE_UDP_UNIX
-	SOCKET_TYPE_NONE
-)
-
-func (s SocketType) String() string {
-	return [...]string{
-		"tcp",
-		"udp",
-		"unix",
-		"vsock",
-		"sctp",
-		"udp-vsock",
-		"unixgram",
-		"none",
-	}[s]
-}
-
-func (p *ProtocolOptions) Network() (string, error) {
-	switch p.SocketType {
-	case SOCKET_TYPE_TCP:
-		switch p.IPType {
-		case IP_V4:
-			fallthrough
-		case IP_V4_STRICT:
-			return "tcp4", nil
-		case IP_V6_STRICT:
-			fallthrough
-		case IP_V6:
-			return "tcp6", nil
-		default:
-			return "tcp", nil
-		}
-
-	case SOCKET_TYPE_UDP:
-		switch p.IPType {
-		case IP_V4:
-			fallthrough
-		case IP_V4_STRICT:
-			return "udp4", nil
-		case IP_V6_STRICT:
-			fallthrough
-		case IP_V6:
-			return "udp6", nil
-		default:
-			return "udp", nil
-		}
-
-	case SOCKET_TYPE_UNIX:
-		return "unix", nil
-
-	case SOCKET_TYPE_UDP_UNIX:
-		return "unixgram", nil
-
-	// VSOCK connections don't require a network specification
-	case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
-		return "", nil
-	}
-
-	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type (%v - %v)", p.SocketType, p.IPType)
-}
-
-// TODO: should we do this via enabled or can we just pass nil?
-// NOTE: The key files have to be of PEM format
-
 type ProxyType int
 
 const (
@@ -279,44 +194,6 @@ func (c ConnectionMode) String() string {
 		"connect",
 		"listen",
 	}[c]
-}
-
-type ProtocolOptions struct {
-	IPType     IPType
-	SocketType SocketType
-}
-
-func ParseSocketType(udp, unix, vsock, sctp bool) (SocketType, error) {
-	// tcp ^ (udp || udp && unix || udp && vsock) ^ unix ^ vsock ^ sctp
-	if !(udp || unix || vsock || sctp) {
-		return SOCKET_TYPE_TCP, nil
-	}
-
-	if udp && !(unix || vsock || sctp) {
-		return SOCKET_TYPE_UDP, nil
-	}
-
-	if udp && (unix != vsock) && !sctp {
-		if unix {
-			return SOCKET_TYPE_UDP_UNIX, nil
-		} else if vsock {
-			return SOCKET_TYPE_UDP_VSOCK, nil
-		}
-	}
-
-	if unix && !(udp || vsock || sctp) {
-		return SOCKET_TYPE_UNIX, nil
-	}
-
-	if vsock && !(udp || unix || sctp) {
-		return SOCKET_TYPE_VSOCK, nil
-	}
-
-	if sctp && !(udp || unix || vsock) {
-		return SOCKET_TYPE_SCTP, nil
-	}
-
-	return SOCKET_TYPE_NONE, fmt.Errorf("invalid socket type combination")
 }
 
 // Holds allowed and denied hosts for the connection.
