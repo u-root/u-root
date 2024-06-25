@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // Default values for the netcat command.
@@ -48,7 +50,9 @@ func DefaultConfig() NetcatConfig {
 		CommandExec: NetcatExec{
 			Type: EXEC_TYPE_NONE,
 		},
-		Output: NetcatOutputOptions{},
+		Output: NetcatOutputOptions{
+			Logger: ulog.Null,
+		},
 		Misc: NetcatMiscOptions{
 			EOL: DEFAULT_LF,
 		},
@@ -526,12 +530,12 @@ type NetcatTimingOptions struct {
 }
 
 type NetcatOutputOptions struct {
-	OutFilePath     string     // Dump session data to a file
-	OutFileMutex    sync.Mutex // Mutex for the file
-	OutFileHexPath  string     // Dump session data in hex to a file
-	OutFileHexMutex sync.Mutex // Mutex for the hex file
-	AppendOutput    bool       // Append the resulted output rather than truncating
-	Verbose         bool       // TODO: make this adjustable level with -v..v
+	OutFilePath     string      // Dump session data to a file
+	OutFileMutex    sync.Mutex  // Mutex for the file
+	OutFileHexPath  string      // Dump session data in hex to a file
+	OutFileHexMutex sync.Mutex  // Mutex for the hex file
+	AppendOutput    bool        // Append the resulted output rather than truncating
+	Logger          ulog.Logger // Verbose output
 }
 
 // Write writes the data to the file specified in the options

@@ -17,6 +17,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/netcat"
+	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
@@ -214,7 +215,10 @@ func evalParams() (*netcat.NetcatConfig, error) {
 	config.ConnectionModeOptions.LooseSourceRouterPoints = looseSourceRouterPoints
 
 	// OutputOptions
-	config.Output.Verbose = verbose
+	if verbose {
+		config.Output.Logger = ulog.Log
+	}
+
 	config.Output.OutFilePath = outFilePath
 	config.Output.OutFileHexPath = outFileHexPath
 	config.Output.AppendOutput = appendOutput
@@ -409,12 +413,10 @@ func main() {
 
 	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		flag.Usage()
-		os.Exit(1)
+		log.Fatalf("error: %v", err)
 	}
 
 	if err = c.run(); err != nil {
-		log.Fatalf("netcat: %v", err)
+		log.Fatalf("error: %v", err)
 	}
 }

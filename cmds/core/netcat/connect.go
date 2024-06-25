@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -130,18 +131,18 @@ func (c *cmd) writeToRemote(conn io.Writer) {
 
 		for scanner.Scan() {
 			if _, err := conn.Write([]byte(scanner.Text() + "\n")); err != nil {
-				netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+				log.Printf("failed writing to host: %v", err)
 			}
 
 			time.Sleep(c.config.Timing.Delay)
 		}
 
 		if err := scanner.Err(); err != nil {
-			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+			log.Printf("failed writing to host: %v", err)
 		}
 	} else {
 		if _, err := io.Copy(conn, eolReader); err != nil {
-			netcat.FLogf(c.config, c.stderr, "run copy: %v", err)
+			log.Printf("failed writing to host: %v", err)
 		}
 	}
 

@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -56,7 +57,7 @@ func (c *cmd) listenMode(output io.Writer, network, address string) error {
 		}
 
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
-		listener, err = netcat.NewUDPListener(network, address, c.config.Output.Verbose)
+		listener, err = netcat.NewUDPListener(network, address, c.config.Output.Logger)
 		if err != nil {
 			return err
 		}
@@ -97,14 +98,14 @@ func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error
 			// Perform a reverse lookup to get the domain names associated with the address
 			names, err := net.LookupAddr(remoteAddr)
 			if err != nil {
-				netcat.Logf(c.config, "failed to resolve address: %v", err)
+				log.Printf("failed to resolve host address: %v", err)
 			}
 
 			if c.config.AccessControl.IsAllowed(append(names, remoteAddr)) {
 				atomic.AddUint32(&connectionsHandled, 1)
 				// read from the connection
 				if _, err := io.Copy(output, conn); err != nil {
-					netcat.Logf(c.config, "run dump: %v", err)
+					log.Printf("failed to read from connection: %v", err)
 				}
 
 			}
