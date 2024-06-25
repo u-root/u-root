@@ -27,39 +27,41 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 		Timeout: c.config.Timing.Wait,
 	}
 
-	switch c.config.ProtocolOptions.SocketType {
+	if c.config.ConnectionModeOptions.SourceHost != "" {
+		switch c.config.ProtocolOptions.SocketType {
 
-	case netcat.SOCKET_TYPE_TCP:
-		dialer.LocalAddr, err = net.ResolveTCPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
-		if err != nil {
-			return fmt.Errorf("connection: failed to resolve source address %v", err)
+		case netcat.SOCKET_TYPE_TCP:
+			dialer.LocalAddr, err = net.ResolveTCPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
+			if err != nil {
+				return fmt.Errorf("connection: failed to resolve source address %v", err)
+			}
+
+		case netcat.SOCKET_TYPE_UDP:
+			dialer.LocalAddr, err = net.ResolveUDPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
+			if err != nil {
+				return fmt.Errorf("connection: failed to resolve source address %v", err)
+			}
+
+		case netcat.SOCKET_TYPE_UNIX:
+			dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
+			if err != nil {
+				return fmt.Errorf("connection: failed to resolve source address %v", err)
+			}
+
+		case netcat.SOCKET_TYPE_UDP_UNIX:
+			dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
+			if err != nil {
+				return fmt.Errorf("connection: failed to resolve source address %v", err)
+			}
+
+		// unsupported socket types
+		case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
+			return fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
+
+		case netcat.SOCKET_TYPE_NONE:
+		default:
+			return fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 		}
-
-	case netcat.SOCKET_TYPE_UDP:
-		dialer.LocalAddr, err = net.ResolveUDPAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
-		if err != nil {
-			return fmt.Errorf("connection: failed to resolve source address %v", err)
-		}
-
-	case netcat.SOCKET_TYPE_UNIX:
-		dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
-		if err != nil {
-			return fmt.Errorf("connection: failed to resolve source address %v", err)
-		}
-
-	case netcat.SOCKET_TYPE_UDP_UNIX:
-		dialer.LocalAddr, err = net.ResolveUnixAddr(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort)
-		if err != nil {
-			return fmt.Errorf("connection: failed to resolve source address %v", err)
-		}
-
-	// unsupported socket types
-	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
-		return fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
-
-	case netcat.SOCKET_TYPE_NONE:
-	default:
-		return fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 	}
 
 	// TLS Support

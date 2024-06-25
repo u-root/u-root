@@ -14,7 +14,6 @@ const (
 	DEFAULT_IP_TYPE         = IP_V4_V6
 	DEFAULT_CONNECTION_MODE = CONNECTION_MODE_CONNECT
 	DEFAULT_CONNECTION_MAX  = 100
-	DEFAULT_SSL_SUITE_STR   = "ALL:!aNULL:!eNULL:!LOW:!EXP:!RC4:!MD5:@STRENGTH"
 	DEFAULT_SHELL           = "/bin/sh"
 	DEFAULT_UNIX_SOCKET     = "/tmp/netcat.sock"
 	DEFAULT_IPV4_ADDRESS    = "0.0.0.0"
@@ -23,13 +22,13 @@ const (
 )
 
 var (
-	DEFAULT_LF     = LINE_FEED_LF
-	LINE_FEED_LF   = []byte{0xa}        // \n
-	LINE_FEED_CRLF = []byte{0x0d, 0x0a} // \r\n
+	DEFAULT_LF            = LINE_FEED_LF
+	DEFAULT_SSL_SUITE_STR = []string{"ALL", "!aNULL", "!eNULL", "!LOW", "!EXP", "!RC4", "!MD5", "@STRENGTH"}
+	LINE_FEED_LF          = []byte{0xa}        // \n
+	LINE_FEED_CRLF        = []byte{0x0d, 0x0a} // \r\n
 )
 
 // Constants for the netcat command cli.
 const (
-	USAGE      = "netcat [go-style network address]"
-	LOG_PREFIX = "netcat: "
+	USAGE = "netcat [go-style network address]"
 )

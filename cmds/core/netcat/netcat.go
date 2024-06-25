@@ -89,11 +89,11 @@ func init() {
 	flag.StringVarP(&execLua, "lua-exec", "", "", "Executes the given Lua script (filepath argument)") // EXEC_TYPE_LUA
 
 	// connection mode options
-	flag.BoolVarP(&zeroIo, "", "z", false, "ero-I/O mode, report connection status only")
+	flag.BoolVarP(&zeroIo, "", "z", false, "zero-I/O mode, report connection status only")
 	flag.StringVarP(&sourcePort, "source-port", "p", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use")
 	flag.StringVarP(&sourceAddress, "source", "s", "", "Specify source address to use (doesn't affect -l)")
 	flag.StringSliceVar(&looseSourceRouterPoints, "g", []string{}, "Loose source routing hop points (8 max)")
-	flag.UintVar(&looseSourcePointer, "G", 4, "Loose source routing hop pointer (<n>)")
+	flag.UintVar(&looseSourcePointer, "G", 0, "Loose source routing hop pointer (<n>)")
 
 	// output options
 	flag.BoolVar(&verbose, "v", false, "Set verbosity level (can not be used several times)")
@@ -140,14 +140,14 @@ func init() {
 	flag.StringVarP(&sslKeyFilePath, "ssl-key", "", "", "Specify SSL private key file (PEM) for listening")
 	flag.BoolVarP(&sslVerifyTrust, "ssl-verify", "", false, "Verify trust and domain name of certificates")
 	flag.StringVarP(&sslTrustFilePath, "ssl-trustfile", "", "", "PEM file containing trusted SSL certificates")
-	flag.StringSliceVarP(&sslCiphers, "ssl-ciphers", "", []string{}, "Cipherlist containing SSL ciphers to use")
+	flag.StringSliceVarP(&sslCiphers, "ssl-ciphers", "", []string{"ALL", "!aNULL", "!eNULL", "!LOW", "!EXP", "!RC4", "!MD5", "@STRENGTH"}, "Cipherlist containing SSL ciphers to use")
 	flag.StringVarP(&sslSNI, "ssl-servername", "", "", "Request distinct server name (SNI)")
 	flag.StringSliceVarP(&sslALPN, "ssl-alpn", "", nil, "List of protocols to send via ALPN")
 
 	flag.Usage = util.Usage(flag.Usage, netcat.USAGE)
 }
 
-func evalParams() (*netcat.NetcatConfig, error) {
+func evalParams() (*netcat.Config, error) {
 	var err error
 
 	config := netcat.DefaultConfig()
@@ -245,9 +245,11 @@ func evalParams() (*netcat.NetcatConfig, error) {
 		return nil, fmt.Errorf("invalid timeout: %v", err)
 	}
 
-	config.Timing.Wait, err = time.ParseDuration(timingWait)
-	if err != nil {
-		return nil, fmt.Errorf("invalid wait: %v", err)
+	if timingWait == "0" {
+		config.Timing.Wait, err = time.ParseDuration(timingWait)
+		if err != nil {
+			return nil, fmt.Errorf("invalid wait: %v", err)
+		}
 	}
 
 	// Misc Options
@@ -301,11 +303,11 @@ type cmd struct {
 	stdin  io.Reader
 	stdout io.Writer
 	stderr io.Writer
-	config *netcat.NetcatConfig
+	config *netcat.Config
 	args   []string
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.NetcatConfig, args []string) (*cmd, error) {
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,

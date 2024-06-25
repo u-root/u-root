@@ -23,49 +23,51 @@ import (
 )
 
 // Default values for the netcat command.
-func DefaultConfig() NetcatConfig {
-	return NetcatConfig{
+func DefaultConfig() Config {
+	return Config{
 		Port:           DEFAULT_PORT,
 		ConnectionMode: DEFAULT_CONNECTION_MODE,
-		ConnectionModeOptions: NetcatConnectModeOptions{
-			SourceHost: DEFAULT_IPV4_ADDRESS,
-			SourcePort: DEFAULT_SOURCE_PORT,
+		ConnectionModeOptions: ConnectModeOptions{
+			LooseSourceRouterPoints: make([]string, 0),
+			SourcePort:              DEFAULT_SOURCE_PORT,
 		},
-		ListenModeOptions: NetcatListenModeOptions{
+		ListenModeOptions: ListenModeOptions{
 			MaxConnections: DEFAULT_CONNECTION_MAX,
 		},
-		ProtocolOptions: NetcatProtocolOptions{
+		ProtocolOptions: ProtocolOptions{
 			IPType:     DEFAULT_IP_TYPE,
 			SocketType: SOCKET_TYPE_TCP,
 		},
-		SSLConfig: NetcatSSLOptions{
-			Ciphers: []string{DEFAULT_SSL_SUITE_STR},
+		SSLConfig: SSLOptions{
+			Ciphers: DEFAULT_SSL_SUITE_STR,
 		},
-		ProxyConfig: NetcatProxyOptions{
+		ProxyConfig: ProxyOptions{
 			Type:     PROXY_TYPE_NONE,
 			DNSType:  PROXY_DNS_NONE,
 			AuthType: PROXY_AUTH_NONE,
 		},
-		AccessControl: NetcatAccessControlOptions{},
-		CommandExec: NetcatExec{
+		AccessControl: AccessControlOptions{
+			ConnectionList: make(map[string]bool),
+		},
+		CommandExec: Exec{
 			Type: EXEC_TYPE_NONE,
 		},
-		Output: NetcatOutputOptions{
+		Output: OutputOptions{
 			Logger: ulog.Null,
 		},
-		Misc: NetcatMiscOptions{
+		Misc: MiscOptions{
 			EOL: DEFAULT_LF,
 		},
-		Timing: NetcatTimingOptions{
+		Timing: TimingOptions{
 			Wait: DEFAULT_WAIT,
 		},
 	}
 }
 
-type NetcatIPType int
+type IPType int
 
 const (
-	IP_NONE NetcatIPType = iota
+	IP_NONE IPType = iota
 	IP_V4
 	IP_V6
 	IP_V4_V6
@@ -73,11 +75,11 @@ const (
 	IP_V6_STRICT
 )
 
-type NetcatSocketType int
+type SocketType int
 
 // UDP can be combined with one of {UNIX, VSOCK} or stand alone
 const (
-	SOCKET_TYPE_TCP NetcatSocketType = iota
+	SOCKET_TYPE_TCP SocketType = iota
 	SOCKET_TYPE_UDP
 	SOCKET_TYPE_UNIX
 	SOCKET_TYPE_VSOCK
@@ -87,7 +89,7 @@ const (
 	SOCKET_TYPE_NONE
 )
 
-func (s NetcatSocketType) String() string {
+func (s SocketType) String() string {
 	return [...]string{
 		"tcp",
 		"udp",
@@ -100,10 +102,10 @@ func (s NetcatSocketType) String() string {
 	}[s]
 }
 
-func (n *NetcatConfig) Network() (string, error) {
-	switch n.ProtocolOptions.SocketType {
+func (p *ProtocolOptions) Network() (string, error) {
+	switch p.SocketType {
 	case SOCKET_TYPE_TCP:
-		switch n.ProtocolOptions.IPType {
+		switch p.IPType {
 		case IP_V4:
 			fallthrough
 		case IP_V4_STRICT:
@@ -117,7 +119,7 @@ func (n *NetcatConfig) Network() (string, error) {
 		}
 
 	case SOCKET_TYPE_UDP:
-		switch n.ProtocolOptions.IPType {
+		switch p.IPType {
 		case IP_V4:
 			fallthrough
 		case IP_V4_STRICT:
@@ -141,7 +143,7 @@ func (n *NetcatConfig) Network() (string, error) {
 		return "", nil
 	}
 
-	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type (%v - %v)", n.ProtocolOptions.SocketType, n.ProtocolOptions.IPType)
+	return "", fmt.Errorf("invalid/unimplemented combination of socket and ip type (%v - %v)", p.SocketType, p.IPType)
 }
 
 // TODO: should we do this via enabled or can we just pass nil?
@@ -197,10 +199,6 @@ func ProxyTypeFromString(s string) ProxyType {
 	}
 }
 
-type NetcatConnectTypeOptions struct {
-	LooseSourceRouterPoints []string
-}
-
 type ProxyAuthType int
 
 const (
@@ -242,7 +240,7 @@ func ProxyDNSTypeFromString(s string) ProxyDNSType {
 	}
 }
 
-type NetcatProxyOptions struct {
+type ProxyOptions struct {
 	Type     ProxyType // If this is none, discard the entire Proxy handling
 	Address  string
 	DNSType  ProxyDNSType
@@ -250,7 +248,7 @@ type NetcatProxyOptions struct {
 	AuthType ProxyAuthType // If this is none, discard the entire ProxyAuth handling
 }
 
-type NetcatSSLOptions struct {
+type SSLOptions struct {
 	// In connect mode, this option transparently negotiates an SSL session
 	// In server mode, this option listens for incoming SSL connections
 	// Depending on the Protocol Type, either TLS (TCP) od DTLS (UDP) will be used
@@ -268,27 +266,27 @@ type NetcatSSLOptions struct {
 	ALPN    []string // List of protocols to send via the Application-Layer Protocol Negotiation
 }
 
-type NetcatConnectionMode int
+type ConnectionMode int
 
 // Ncat operates in one of two primary modes: connect mode and listen mode.
 const (
-	CONNECTION_MODE_CONNECT NetcatConnectionMode = iota
+	CONNECTION_MODE_CONNECT ConnectionMode = iota
 	CONNECTION_MODE_LISTEN
 )
 
-func (n NetcatConnectionMode) String() string {
+func (c ConnectionMode) String() string {
 	return [...]string{
 		"connect",
 		"listen",
-	}[n]
+	}[c]
 }
 
-type NetcatProtocolOptions struct {
-	IPType     NetcatIPType
-	SocketType NetcatSocketType
+type ProtocolOptions struct {
+	IPType     IPType
+	SocketType SocketType
 }
 
-func ParseSocketType(udp, unix, vsock, sctp bool) (NetcatSocketType, error) {
+func ParseSocketType(udp, unix, vsock, sctp bool) (SocketType, error) {
 	// tcp ^ (udp || udp && unix || udp && vsock) ^ unix ^ vsock ^ sctp
 	if !(udp || unix || vsock || sctp) {
 		return SOCKET_TYPE_TCP, nil
@@ -326,13 +324,13 @@ func ParseSocketType(udp, unix, vsock, sctp bool) (NetcatSocketType, error) {
 // The key is the host and the value is true for allowed and false for denied.
 // If the host is not in the map, it is allowed by default.
 // The map is populated by the access cli flags, with access flags taking precedence over deny flags.
-type NetcatAccessControlOptions struct {
+type AccessControlOptions struct {
 	SetAllowed     bool
 	ConnectionList map[string]bool
 }
 
 // Check if the hostName is allowed to connect.
-func (ac *NetcatAccessControlOptions) IsAllowed(hostNames []string) bool {
+func (ac *AccessControlOptions) IsAllowed(hostNames []string) bool {
 	// If atleast one item is in the allowed list, the hostName is only allowed if also mentioned.
 	if ac.SetAllowed {
 		for _, hostName := range hostNames {
@@ -362,8 +360,8 @@ func (ac *NetcatAccessControlOptions) IsAllowed(hostNames []string) bool {
 	return true
 }
 
-func ParseAccessControl(connectionAllowFile string, connectionAllowList []string, connectionDenyFile string, connectionDenyList []string) (NetcatAccessControlOptions, error) {
-	accessControl := NetcatAccessControlOptions{}
+func ParseAccessControl(connectionAllowFile string, connectionAllowList []string, connectionDenyFile string, connectionDenyList []string) (AccessControlOptions, error) {
+	accessControl := AccessControlOptions{}
 
 	accessControl.ConnectionList = make(map[string]bool)
 
@@ -419,21 +417,21 @@ func ParseAccessControl(connectionAllowFile string, connectionAllowList []string
 	return accessControl, nil
 }
 
-type NetcatExecType int
+type ExecType int
 
 const (
-	EXEC_TYPE_NATIVE NetcatExecType = iota
+	EXEC_TYPE_NATIVE ExecType = iota
 	EXEC_TYPE_SHELL
 	EXEC_TYPE_LUA
 	EXEC_TYPE_NONE // For faster case switching this is appended at the end
 )
 
-type NetcatExec struct {
-	Type    NetcatExecType
+type Exec struct {
+	Type    ExecType
 	Command string
 }
 
-func ParseCommands(commands []string) (NetcatExec, error) {
+func ParseCommands(commands []string) (Exec, error) {
 	cmds := 0
 	last_valid := -1
 	for i, e := range commands {
@@ -445,15 +443,15 @@ func ParseCommands(commands []string) (NetcatExec, error) {
 
 	// This is a recoverable error, we can just ignore the command
 	if last_valid == -1 {
-		return NetcatExec{}, nil
+		return Exec{}, nil
 	}
 
 	if cmds > 1 {
-		return NetcatExec{}, fmt.Errorf("only one of --exec, --sh-exec, and --lua-exec is allowed")
+		return Exec{}, fmt.Errorf("only one of --exec, --sh-exec, and --lua-exec is allowed")
 	}
 
-	return NetcatExec{
-		Type:    NetcatExecType(last_valid),
+	return Exec{
+		Type:    ExecType(last_valid),
 		Command: commands[last_valid],
 	}, nil
 }
@@ -462,7 +460,7 @@ func ParseCommands(commands []string) (NetcatExec, error) {
 // stdout of the command is send to to the connection
 // stderr of the command is displayed on stdout of the host
 // The host process exits with the exit code of the command unless --keep-open is specified
-func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer, eol []byte) error {
+func (n *Exec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer, eol []byte) error {
 	var (
 		cmd    *exec.Cmd
 		buffer bytes.Buffer
@@ -507,7 +505,7 @@ func (n *NetcatExec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Wr
 // Since Ncat can be either in connect mode or in listen mode, only one of these
 // options structs should be filled at a time.
 // TODO: Make this a generic ConnectionModeOptions struct that may have different fields
-type NetcatConnectModeOptions struct {
+type ConnectModeOptions struct {
 	LooseSourceRouterPoints []string // IPV4_STRICT, Point as IP or Hostname
 	LooseSourcePointer      uint     // The argument must be a multiple of 4 and no more than 28
 	SourceHost              string   // Address for Ncat to bind to
@@ -516,20 +514,20 @@ type NetcatConnectModeOptions struct {
 }
 
 // All the modes can be combined with each other, no need to check for mutual exclusivity
-type NetcatListenModeOptions struct {
+type ListenModeOptions struct {
 	MaxConnections uint32 // Maximum number of simultaneous connections accepted by an Ncat instance
 	KeepOpen       bool   // Accept multiple connections. In this mode there is no way for Ncat to know when its network input is finished, so it will keep running until interrupted
 	BrokerMode     bool   // Don't echo messages but redirect them to all others. Compatible with other modes
 	ChatMode       bool   // Enables chat mode, intended for the exchange of text between several users
 }
 
-type NetcatTimingOptions struct {
+type TimingOptions struct {
 	Delay   time.Duration // Delay interval for lines sent
 	Timeout time.Duration // If the idle timeout is reached, the connection is terminated.
 	Wait    time.Duration // Fixed timeout for connection attempts.
 }
 
-type NetcatOutputOptions struct {
+type OutputOptions struct {
 	OutFilePath     string      // Dump session data to a file
 	OutFileMutex    sync.Mutex  // Mutex for the file
 	OutFileHexPath  string      // Dump session data in hex to a file
@@ -541,7 +539,7 @@ type NetcatOutputOptions struct {
 // Write writes the data to the file specified in the options
 // If Netcat is not configured to write to a file, it will return 0, nil
 // https://go.dev/src/io/io.go
-func (n *NetcatOutputOptions) Write(data []byte) (int, error) {
+func (n *OutputOptions) Write(data []byte) (int, error) {
 	fileOpts := os.O_CREATE | os.O_WRONLY
 	if n.AppendOutput {
 		fileOpts |= os.O_APPEND
@@ -584,7 +582,7 @@ func (n *NetcatOutputOptions) Write(data []byte) (int, error) {
 	return len(data), nil
 }
 
-type NetcatMiscOptions struct {
+type MiscOptions struct {
 	EOL         []byte // This can either be a single byte or a sequence of bytes
 	ReceiveOnly bool   // Only receive data and will not try to send anything.
 	SendOnly    bool   // Ncat will only send data and will ignore anything received
@@ -594,54 +592,54 @@ type NetcatMiscOptions struct {
 }
 
 // Omit version and help here since they are handled by the flag parser
-type NetcatConfig struct {
+type Config struct {
 	Host                  string
 	Port                  uint64
-	ConnectionMode        NetcatConnectionMode
-	ConnectionModeOptions NetcatConnectModeOptions
-	ListenModeOptions     NetcatListenModeOptions
-	ProtocolOptions       NetcatProtocolOptions
-	SSLConfig             NetcatSSLOptions
-	ProxyConfig           NetcatProxyOptions
-	AccessControl         NetcatAccessControlOptions
-	CommandExec           NetcatExec
-	Output                NetcatOutputOptions
-	Misc                  NetcatMiscOptions
-	Timing                NetcatTimingOptions
+	ConnectionMode        ConnectionMode
+	ConnectionModeOptions ConnectModeOptions
+	ListenModeOptions     ListenModeOptions
+	ProtocolOptions       ProtocolOptions
+	SSLConfig             SSLOptions
+	ProxyConfig           ProxyOptions
+	AccessControl         AccessControlOptions
+	CommandExec           Exec
+	Output                OutputOptions
+	Misc                  MiscOptions
+	Timing                TimingOptions
 }
 
 // Return a default address for the provided configuration
-func (n *NetcatConfig) Address() (string, error) {
-	switch n.ConnectionMode {
+func (c *Config) Address() (string, error) {
+	switch c.ConnectionMode {
 	case CONNECTION_MODE_CONNECT:
-		if n.Host == "" {
+		if c.Host == "" {
 			return "", fmt.Errorf("missing host")
 		}
 
-		switch n.ProtocolOptions.SocketType {
+		switch c.ProtocolOptions.SocketType {
 		case SOCKET_TYPE_UNIX, SOCKET_TYPE_UDP_UNIX:
-			return n.Host, nil
+			return c.Host, nil
 
 		// unimplemented
 		case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
-			return "nil", fmt.Errorf("currently unsupported socket type %v", n.ProtocolOptions.SocketType)
+			return "nil", fmt.Errorf("currently unsupported socket type %v", c.ProtocolOptions.SocketType)
 		default:
-			if n.Misc.NoDNS {
-				if ip := net.ParseIP(n.Host); ip == nil {
-					return "", fmt.Errorf("non-numerical host but DNS resolution is disabled: %v", n.Host)
+			if c.Misc.NoDNS {
+				if ip := net.ParseIP(c.Host); ip == nil {
+					return "", fmt.Errorf("non-numerical host but DNS resolution is disabled: %v", c.Host)
 				}
 			}
-			return n.Host + ":" + strconv.FormatUint(uint64(n.Port), 10), nil
+			return c.Host + ":" + strconv.FormatUint(uint64(c.Port), 10), nil
 		}
 	case CONNECTION_MODE_LISTEN:
 		var address string
 
-		if n.Host != "" {
-			address = n.Host
+		if c.Host != "" {
+			address = c.Host
 		} else {
-			switch n.ProtocolOptions.SocketType {
+			switch c.ProtocolOptions.SocketType {
 			case SOCKET_TYPE_TCP | SOCKET_TYPE_UDP:
-				switch n.ProtocolOptions.IPType {
+				switch c.ProtocolOptions.IPType {
 				case IP_V4:
 					address = DEFAULT_IPV4_ADDRESS
 				case IP_V6:
@@ -653,14 +651,14 @@ func (n *NetcatConfig) Address() (string, error) {
 
 			// unimplemented
 			case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
-				return "nil", fmt.Errorf("currently unsupported socket type %v", n.ProtocolOptions.SocketType)
+				return "nil", fmt.Errorf("currently unsupported socket type %v", c.ProtocolOptions.SocketType)
 			default:
-				return "", fmt.Errorf("invalid socket type %v", n.ProtocolOptions.SocketType)
+				return "", fmt.Errorf("invalid socket type %v", c.ProtocolOptions.SocketType)
 			}
 		}
 
-		return address + ":" + strconv.FormatUint(uint64(n.Port), 10), nil
+		return address + ":" + strconv.FormatUint(uint64(c.Port), 10), nil
 	default:
-		return "", fmt.Errorf("invalid connection mode %v", n.ConnectionMode)
+		return "", fmt.Errorf("invalid connection mode %v", c.ConnectionMode)
 	}
 }
