@@ -188,13 +188,19 @@ func evalParams() (*netcat.Config, error) {
 		return nil, err
 	}
 
-	// Exec commands
-	execs := []string{
-		execNative,
-		execSh,
-		execLua,
-	}
-	config.CommandExec, err = netcat.ParseCommands(execs)
+	config.CommandExec, err = netcat.ParseCommands(
+		netcat.Exec{
+			Type:    netcat.EXEC_TYPE_NATIVE,
+			Command: execNative,
+		},
+		netcat.Exec{
+			Type:    netcat.EXEC_TYPE_SHELL,
+			Command: execSh,
+		},
+		netcat.Exec{
+			Type:    netcat.EXEC_TYPE_LUA,
+			Command: execLua,
+		})
 	if err != nil {
 		return nil, err
 	}

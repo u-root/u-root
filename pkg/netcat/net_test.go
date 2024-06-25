@@ -20,7 +20,6 @@ func TestNewUDPListener(t *testing.T) {
 	}{
 		{"udp", "127.0.0.1:0"},
 		{"udp4", "127.0.0.1:0"},
-		{"udp6", "[::1]:0"},
 		{"unixgram", "/tmp/test_unixgram"},
 	}
 

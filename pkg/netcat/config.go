@@ -5,17 +5,9 @@
 package netcat
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"log"
 	"net"
-	"os"
-	"os/exec"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/u-root/u-root/pkg/ulog"
@@ -96,91 +88,6 @@ func (c ConnectionMode) String() string {
 	}[c]
 }
 
-type ExecType int
-
-const (
-	EXEC_TYPE_NATIVE ExecType = iota
-	EXEC_TYPE_SHELL
-	EXEC_TYPE_LUA
-	EXEC_TYPE_NONE // For faster case switching this is appended at the end
-)
-
-type Exec struct {
-	Type    ExecType
-	Command string
-}
-
-func ParseCommands(commands []string) (Exec, error) {
-	cmds := 0
-	last_valid := -1
-	for i, e := range commands {
-		if e != "" {
-			cmds++
-			last_valid = i
-		}
-	}
-
-	// This is a recoverable error, we can just ignore the command
-	if last_valid == -1 {
-		return Exec{}, nil
-	}
-
-	if cmds > 1 {
-		return Exec{}, fmt.Errorf("only one of --exec, --sh-exec, and --lua-exec is allowed")
-	}
-
-	return Exec{
-		Type:    ExecType(last_valid),
-		Command: commands[last_valid],
-	}, nil
-}
-
-// Execute a given command on the host system
-// stdout of the command is send to to the connection
-// stderr of the command is displayed on stdout of the host
-// The host process exits with the exit code of the command unless --keep-open is specified
-func (n *Exec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer, eol []byte) error {
-	var (
-		cmd    *exec.Cmd
-		buffer bytes.Buffer
-	)
-
-	switch n.Type {
-	case EXEC_TYPE_NATIVE:
-		cmd = exec.Command(n.Command)
-	case EXEC_TYPE_SHELL:
-		cmd = exec.Command(DEFAULT_SHELL, "-c", n.Command)
-	case EXEC_TYPE_LUA:
-		return fmt.Errorf("not implemented")
-	default:
-		return nil
-	}
-
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	scanner := bufio.NewScanner(stdin)
-	for scanner.Scan() {
-		buffer.WriteString(scanner.Text())
-		buffer.Write(eol)
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	cmd.Stdin = &buffer
-
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("exec start: %w", err)
-	}
-
-	// Wait waits for the command to exit and waits for any copying to stdin or copying from stdout or stderr to complete.
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("exec wait: %w", err)
-	}
-
-	return nil
-}
-
 // Since Ncat can be either in connect mode or in listen mode, only one of these
 // options structs should be filled at a time.
 // TODO: Make this a generic ConnectionModeOptions struct that may have different fields
@@ -204,61 +111,6 @@ type TimingOptions struct {
 	Delay   time.Duration // Delay interval for lines sent
 	Timeout time.Duration // If the idle timeout is reached, the connection is terminated.
 	Wait    time.Duration // Fixed timeout for connection attempts.
-}
-
-type OutputOptions struct {
-	OutFilePath     string      // Dump session data to a file
-	OutFileMutex    sync.Mutex  // Mutex for the file
-	OutFileHexPath  string      // Dump session data in hex to a file
-	OutFileHexMutex sync.Mutex  // Mutex for the hex file
-	AppendOutput    bool        // Append the resulted output rather than truncating
-	Logger          ulog.Logger // Verbose output
-}
-
-// Write writes the data to the file specified in the options
-// If Netcat is not configured to write to a file, it will return 0, nil
-// https://go.dev/src/io/io.go
-func (n *OutputOptions) Write(data []byte) (int, error) {
-	fileOpts := os.O_CREATE | os.O_WRONLY
-	if n.AppendOutput {
-		fileOpts |= os.O_APPEND
-	}
-
-	if n.OutFilePath != "" {
-		n.OutFileMutex.Lock()
-		f, err := os.OpenFile(n.OutFilePath, fileOpts, 0o644)
-		if err != nil {
-			n.OutFileMutex.Unlock()
-			return 0, fmt.Errorf("netcat oo open: %w", err)
-		}
-
-		_, err = f.Write(data)
-		if err != nil {
-			n.OutFileMutex.Unlock()
-			return 0, fmt.Errorf("netcat oo write: %w", err)
-		}
-		n.OutFileMutex.Unlock()
-	}
-
-	if n.OutFileHexPath != "" {
-		n.OutFileHexMutex.Lock()
-
-		f, err := os.OpenFile(n.OutFileHexPath, fileOpts, 0o644)
-		if err != nil {
-			n.OutFileHexMutex.Unlock()
-			return 0, fmt.Errorf("netcat outopt open: %w", err)
-		}
-
-		_, err = f.Write([]byte(hex.Dump(data)))
-		if err != nil {
-			n.OutFileHexMutex.Unlock()
-			return 0, fmt.Errorf("netcat outopt write: %w", err)
-		}
-
-		n.OutFileHexMutex.Unlock()
-	}
-
-	return len(data), nil
 }
 
 type MiscOptions struct {
@@ -317,15 +169,17 @@ func (c *Config) Address() (string, error) {
 			address = c.Host
 		} else {
 			switch c.ProtocolOptions.SocketType {
-			case SOCKET_TYPE_TCP | SOCKET_TYPE_UDP:
+			case SOCKET_TYPE_TCP, SOCKET_TYPE_UDP:
 				switch c.ProtocolOptions.IPType {
 				case IP_V4:
 					address = DEFAULT_IPV4_ADDRESS
 				case IP_V6:
 					address = DEFAULT_IPV6_ADDRESS
+				default:
+					address = DEFAULT_IPV4_ADDRESS
 				}
 
-			case SOCKET_TYPE_UNIX:
+			case SOCKET_TYPE_UNIX, SOCKET_TYPE_UDP_UNIX:
 				return DEFAULT_UNIX_SOCKET, nil
 
 			// unimplemented

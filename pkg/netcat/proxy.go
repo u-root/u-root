@@ -26,7 +26,6 @@ func (p ProxyType) String() string {
 	}[p]
 }
 
-
 func (p ProxyType) DefaultPort() (uint, error) {
 	switch p {
 	case PROXY_TYPE_SOCKS5:
