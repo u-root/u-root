@@ -113,7 +113,7 @@ func init() {
 	flag.StringVarP(&timingTimeout, "timeout", "w", "0ms", "Connect timeout")
 
 	// misc options
-	flag.BoolVarP(&eolCRLF, "C", "crlf", false, "Use CRLF for EOL sequence")
+	flag.BoolVarP(&eolCRLF, "crlf", "C", false, "Use CRLF for EOL sequence")
 	flag.BoolVarP(&noDNS, "nodns", "n", false, "Do not resolve hostnames via DNS")
 	flag.BoolVarP(&telnet, "telnet", "t", false, "Answer Telnet negotiations")
 	flag.BoolVarP(&sendOnly, "send-only", "", false, "Only send data, ignoring received; quit on EOF")
