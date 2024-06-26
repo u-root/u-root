@@ -278,7 +278,10 @@ func Normalize(name string) string {
 // files have unchanged contents, the cpio file it produces will be bit-for-bit
 // identical. This is an essential property for firmware-embedded payloads.
 func MakeReproducible(r Record) Record {
-	r.Ino = 0
+	// Do NOT zero Ino. The Ino is created in a reproducible manner
+	// and a non-zero value is critical for creating hard links when
+	// reading the archive.
+	// r.Ino = 0
 	r.Name = Normalize(r.Name)
 	r.MTime = 0
 	r.UID = 0
@@ -286,6 +289,9 @@ func MakeReproducible(r Record) Record {
 	r.Dev = 0
 	r.Major = 0
 	r.Minor = 0
+	// Always set NLink to 0. Consider that a file may have 10 links,
+	// but we are only including 1: NLink will be incorrect. In the
+	// general case, it is almost impossible to set NLink correctly.
 	r.NLink = 0
 	return r
 }
