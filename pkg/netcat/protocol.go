@@ -53,13 +53,9 @@ func (p *ProtocolOptions) Network() (string, error) {
 	switch p.SocketType {
 	case SOCKET_TYPE_TCP:
 		switch p.IPType {
-		case IP_V4:
-			fallthrough
-		case IP_V4_STRICT:
+		case IP_V4, IP_V4_STRICT:
 			return "tcp4", nil
-		case IP_V6_STRICT:
-			fallthrough
-		case IP_V6:
+		case IP_V6, IP_V6_STRICT:
 			return "tcp6", nil
 		default:
 			return "tcp", nil
@@ -67,13 +63,9 @@ func (p *ProtocolOptions) Network() (string, error) {
 
 	case SOCKET_TYPE_UDP:
 		switch p.IPType {
-		case IP_V4:
-			fallthrough
-		case IP_V4_STRICT:
+		case IP_V4, IP_V4_STRICT:
 			return "udp4", nil
-		case IP_V6_STRICT:
-			fallthrough
-		case IP_V6:
+		case IP_V6, IP_V6_STRICT:
 			return "udp6", nil
 		default:
 			return "udp", nil

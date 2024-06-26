@@ -16,11 +16,15 @@ import (
 )
 
 func (c *cmd) listenMode(output io.Writer, network, address string) error {
-	var (
-		err      error
-		listener net.Listener
-	)
+	listener, err := c.setupListener(network, address)
+	if err != nil {
+		return fmt.Errorf("failed to setup listener: %v", err)
+	}
 
+	return c.readFromConnections(output, listener)
+}
+
+func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	// If listing mode and Zero-I/O mode are combined the program will block indefinitely
 	if c.config.ConnectionModeOptions.ZeroIO {
 		for {
@@ -29,49 +33,40 @@ func (c *cmd) listenMode(output io.Writer, network, address string) error {
 	}
 
 	if c.config.Misc.NoDNS {
-		return fmt.Errorf("listen: disabling DNS resolution is not supported in listen mode")
+		return nil, fmt.Errorf("disabling DNS resolution is not supported in listen mode")
 	}
 
 	if c.config.ConnectionModeOptions.SourceHost != "" && c.config.ConnectionModeOptions.SourcePort != "" {
-		return fmt.Errorf("listen: source host/port cannot be set in listen mode")
+		return nil, fmt.Errorf("source host/port cannot be set in listen mode")
 	}
 
 	switch c.config.ProtocolOptions.SocketType {
 	case netcat.SOCKET_TYPE_TCP, netcat.SOCKET_TYPE_UNIX:
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-			tlsConfig, err := c.generateTLSConfiguration()
+			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
 			if err != nil {
-				return fmt.Errorf("connection: %v", err)
+				return nil, fmt.Errorf("failed generating TLS configuration: %v", err)
 			}
 
-			listener, err = tls.Listen(network, address, tlsConfig)
-			if err != nil {
-				return fmt.Errorf("connection: %v", err)
-			}
+			return tls.Listen(network, address, tlsConfig)
 
 		} else {
-			listener, err = net.Listen(network, address)
-			if err != nil {
-				return err
-			}
+			return net.Listen(network, address)
 		}
 
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
-		listener, err = netcat.NewUDPListener(network, address, c.config.Output.Logger)
-		if err != nil {
-			return err
-		}
+		return netcat.NewUDPListener(network, address, c.config.Output.Logger)
 
 	// unsupported socket types
 	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
-		return fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
+		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
 
 	case netcat.SOCKET_TYPE_NONE:
 	default:
-		return fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
 	}
 
-	return c.readFromConnections(output, listener)
+	return nil, fmt.Errorf("unexpected error")
 }
 
 // readFromConnections listens for incoming connections and reads from the first connection that is allowed by the access control list.
@@ -82,6 +77,7 @@ func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error
 		connectionsHandled uint32
 	)
 
+	log.Printf("Listening on %s", listener.Addr().String())
 	if c.config.ListenModeOptions.KeepOpen {
 		maxConnections = c.config.ListenModeOptions.MaxConnections
 	}

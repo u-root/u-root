@@ -44,7 +44,7 @@ func ParseCommands(execs ...Exec) (Exec, error) {
 
 	// This is a recoverable error, we can just ignore the command
 	if last_valid == -1 {
-		return Exec{}, nil
+		return Exec{Type: EXEC_TYPE_NONE}, nil
 	}
 
 	if cmds > 1 {

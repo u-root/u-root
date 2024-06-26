@@ -6,12 +6,11 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -75,9 +74,8 @@ var (
 )
 
 func init() {
-	// protocol options
-	flag.BoolVar(&ipv4, "4", false, "Use IPv4 only")
-	flag.BoolVar(&ipv6, "6", false, "Use IPv6 only")
+	flag.BoolVarP(&ipv4, "ipv4", "4", false, "Use IPv4 only")
+	flag.BoolVarP(&ipv6, "ipv6", "6", false, "Use IPv6 only")
 	flag.BoolVarP(&udpSocket, "udp", "u", false, "Use UDP instead of default TCP")
 	flag.BoolVarP(&sctpSocket, "sctp", "", false, "Use SCTP instead of default TCP")
 	flag.BoolVarP(&unixSocket, "unixsock", "U", false, "Use Unix domain sockets only")
@@ -89,14 +87,14 @@ func init() {
 	flag.StringVarP(&execLua, "lua-exec", "", "", "Executes the given Lua script (filepath argument)") // EXEC_TYPE_LUA
 
 	// connection mode options
-	flag.BoolVarP(&zeroIo, "", "z", false, "zero-I/O mode, report connection status only")
+	flag.BoolVarP(&zeroIo, "z", "z", false, "zero-I/O mode, report connection status only")
 	flag.StringVarP(&sourcePort, "source-port", "p", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use")
 	flag.StringVarP(&sourceAddress, "source", "s", "", "Specify source address to use (doesn't affect -l)")
-	flag.StringSliceVar(&looseSourceRouterPoints, "g", []string{}, "Loose source routing hop points (8 max)")
-	flag.UintVar(&looseSourcePointer, "G", 0, "Loose source routing hop pointer (<n>)")
+	flag.StringSliceVarP(&looseSourceRouterPoints, "loose-source-router-points", "g", []string{}, "Loose source routing hop points (8 max)")
+	flag.UintVarP(&looseSourcePointer, "loose-source-pointer", "G", 0, "Loose source routing hop pointer (<n>)")
 
 	// output options
-	flag.BoolVar(&verbose, "v", false, "Set verbosity level (can not be used several times)")
+	flag.BoolVarP(&verbose, "v", "v", false, "Set verbosity level (can not be used several times)")
 	flag.StringVarP(&outFilePath, "output", "o", "", "Dump session data to a file")
 	flag.StringVarP(&outFileHexPath, "hex-dump", "x", "", "Dump session data as hex to a file")
 	flag.BoolVarP(&appendOutput, "append-output", "", false, "Append rather than clobber specified output files")
@@ -109,9 +107,9 @@ func init() {
 	flag.BoolVarP(&chatMode, "chat", "", false, "Start a simple Ncat chat server")
 
 	// timing options
-	flag.StringVarP(&timingWait, "idle-timeout", "i", "0ms", "Idle read/write timeout")
+	flag.StringVarP(&timingTimeout, "idle-timeout", "i", "0ms", "Idle read/write timeout")
 	flag.StringVarP(&timingDelay, "delay", "d", "0ms", "Wait between read/writes")
-	flag.StringVarP(&timingTimeout, "timeout", "w", "0ms", "Connect timeout")
+	flag.StringVarP(&timingWait, "wait", "w", "10s", "Connect timeout")
 
 	// misc options
 	flag.BoolVarP(&eolCRLF, "crlf", "C", false, "Use CRLF for EOL sequence")
@@ -128,7 +126,6 @@ func init() {
 	flag.StringVarP(&connectionDenyFile, "denyfile", "", "", "A file of hosts denied from connecting to Ncat")
 
 	// proxy
-	// TODO proxy port
 	flag.StringVarP(&proxyAddress, "proxy", "", "", "Specify address of host to proxy through (<addr[:port]> )")
 	flag.StringVarP(&proxydns, "proxy-dns", "", "", "Specify where to resolve proxy destination")
 	flag.StringVarP(&proxyType, "proxy-type", "", "", "Specify proxy type ('http', 'socks4', 'socks5')")
@@ -140,7 +137,7 @@ func init() {
 	flag.StringVarP(&sslKeyFilePath, "ssl-key", "", "", "Specify SSL private key file (PEM) for listening")
 	flag.BoolVarP(&sslVerifyTrust, "ssl-verify", "", false, "Verify trust and domain name of certificates")
 	flag.StringVarP(&sslTrustFilePath, "ssl-trustfile", "", "", "PEM file containing trusted SSL certificates")
-	flag.StringSliceVarP(&sslCiphers, "ssl-ciphers", "", []string{"ALL", "!aNULL", "!eNULL", "!LOW", "!EXP", "!RC4", "!MD5", "@STRENGTH"}, "Cipherlist containing SSL ciphers to use")
+	flag.StringSliceVarP(&sslCiphers, "ssl-ciphers", "", []string{}, "Cipherlist containing SSL ciphers to use")
 	flag.StringVarP(&sslSNI, "ssl-servername", "", "", "Request distinct server name (SNI)")
 	flag.StringSliceVarP(&sslALPN, "ssl-alpn", "", nil, "List of protocols to send via ALPN")
 
@@ -155,11 +152,11 @@ func evalParams() (*netcat.Config, error) {
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) > 1 {
+	if len(args) >= 1 {
 		config.Host = args[0]
 	}
 
-	if len(args) > 2 {
+	if len(args) >= 2 {
 		port, err := strconv.ParseUint(args[1], 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("invalid port: %v", err)
@@ -171,7 +168,7 @@ func evalParams() (*netcat.Config, error) {
 
 	// IP Type
 	if ipv4 && ipv6 {
-		log.Fatal("Cannot specify both IPv4 and IPv6 explicitly")
+		return nil, fmt.Errorf("cannot specify both IPv4 and IPv6 explicitly")
 	}
 
 	if ipv4 {
@@ -206,8 +203,8 @@ func evalParams() (*netcat.Config, error) {
 	}
 
 	// Loose source routing
-	if looseSourcePointer%4 != 0 || looseSourcePointer > 28 {
-		return nil, fmt.Errorf("loose source routing hop pointer must be a multiple of 4 and less than 28")
+	if looseSourcePointer != 0 || len(looseSourceRouterPoints) > 0 {
+		return nil, fmt.Errorf("loose source routing is not yet supported")
 	}
 
 	config.ConnectionModeOptions.SourceHost = sourceAddress
@@ -217,8 +214,6 @@ func evalParams() (*netcat.Config, error) {
 	}
 
 	config.ConnectionModeOptions.ZeroIO = zeroIo
-	config.ConnectionModeOptions.LooseSourcePointer = looseSourcePointer
-	config.ConnectionModeOptions.LooseSourceRouterPoints = looseSourceRouterPoints
 
 	// OutputOptions
 	if verbose {
@@ -251,7 +246,7 @@ func evalParams() (*netcat.Config, error) {
 		return nil, fmt.Errorf("invalid timeout: %v", err)
 	}
 
-	if timingWait == "0" {
+	if timingWait != "" {
 		config.Timing.Wait, err = time.ParseDuration(timingWait)
 		if err != nil {
 			return nil, fmt.Errorf("invalid wait: %v", err)
@@ -276,17 +271,19 @@ func evalParams() (*netcat.Config, error) {
 		return nil, err
 	}
 
-	config.ProxyConfig.Address = proxyAddress
-	config.ProxyConfig.DNSType = netcat.ProxyDNSTypeFromString(proxydns)
-	config.ProxyConfig.Type = netcat.ProxyTypeFromString(proxyType)
-	config.ProxyConfig.AuthType = netcat.ProxyAuthTypeFromString(proxyAuthType)
+	if proxyAddress != "" || proxydns != "" || proxyType != "" || proxyAuthType != "" {
+		return nil, fmt.Errorf("proxy options are not yet supported")
+	}
+
+	if reflect.DeepEqual(sslCiphers, []string{}) {
+		return nil, fmt.Errorf("selection of ssl-ciphers are not yet supported")
+	}
 
 	config.SSLConfig.Enabled = sslEnabled
 	config.SSLConfig.CertFilePath = sslCertFilePath
 	config.SSLConfig.KeyFilePath = sslKeyFilePath
 	config.SSLConfig.VerifyTrust = sslVerifyTrust
 	config.SSLConfig.TrustFilePath = sslTrustFilePath
-	config.SSLConfig.Ciphers = sslCiphers
 	config.SSLConfig.SNI = sslSNI
 	config.SSLConfig.ALPN = sslALPN
 
@@ -327,19 +324,9 @@ func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat
 func (c *cmd) connection() (string, string, error) {
 	// check if SSL is available for the selected protocol if enabled
 	if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-		switch c.config.ProtocolOptions.SocketType {
-		case netcat.SOCKET_TYPE_UDP:
-			return "", "", fmt.Errorf("SSL is not supported for UDP connections")
-		case netcat.SOCKET_TYPE_UNIX:
-			return "", "", fmt.Errorf("SSL is not supported for UNIX connections")
-		case netcat.SOCKET_TYPE_UDP_UNIX:
-			return "", "", fmt.Errorf("SSL is not supported for UNIX connections")
-		case netcat.SOCKET_TYPE_UDP_VSOCK:
-			return "", "", fmt.Errorf("SSL is not supported for VSOCK connections")
-		case netcat.SOCKET_TYPE_VSOCK:
-			return "", "", fmt.Errorf("SSL is not supported for VSOCK connections")
-		case netcat.SOCKET_TYPE_SCTP:
-			return "", "", fmt.Errorf("SSL is not supported for SCTP connections")
+		switch s := c.config.ProtocolOptions.SocketType; s {
+		case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UNIX, netcat.SOCKET_TYPE_UDP_UNIX, netcat.SOCKET_TYPE_UDP_VSOCK, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_SCTP:
+			return "", "", fmt.Errorf("SSL is not available for %s", s)
 		}
 	}
 
@@ -354,48 +341,6 @@ func (c *cmd) connection() (string, string, error) {
 	}
 
 	return network, address, nil
-}
-
-func (c *cmd) generateTLSConfiguration() (*tls.Config, error) {
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !c.config.SSLConfig.VerifyTrust,
-	}
-
-	if c.config.SSLConfig.CertFilePath == "" && c.config.SSLConfig.KeyFilePath != "" || c.config.SSLConfig.CertFilePath != "" && c.config.SSLConfig.KeyFilePath == "" {
-		return nil, fmt.Errorf("both  certificate and key file must be provided")
-	}
-
-	if c.config.SSLConfig.CertFilePath == "" || c.config.SSLConfig.KeyFilePath == "" {
-		cer, err := tls.LoadX509KeyPair(c.config.SSLConfig.CertFilePath, c.config.SSLConfig.KeyFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("connection: %v", err)
-		}
-
-		tlsConfig.Certificates = []tls.Certificate{cer}
-	}
-
-	if c.config.SSLConfig.VerifyTrust {
-		caCert, err := os.ReadFile(c.config.SSLConfig.TrustFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("cannot read CA certificate: %v", err)
-		}
-		caCertPool := x509.NewCertPool()
-		if !caCertPool.AppendCertsFromPEM(caCert) {
-			return nil, fmt.Errorf("cannot append CA certificate to pool")
-		}
-
-		tlsConfig.RootCAs = caCertPool
-	}
-
-	if c.config.SSLConfig.SNI != "" {
-		tlsConfig.ServerName = c.config.SSLConfig.SNI
-	}
-
-	if c.config.SSLConfig.ALPN != nil {
-		tlsConfig.NextProtos = c.config.SSLConfig.ALPN
-	}
-
-	return tlsConfig, nil
 }
 
 func (c *cmd) run() error {
