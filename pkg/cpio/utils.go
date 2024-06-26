@@ -286,7 +286,6 @@ func MakeReproducible(r Record) Record {
 	r.Dev = 0
 	r.Major = 0
 	r.Minor = 0
-	r.NLink = 0
 	return r
 }
 
