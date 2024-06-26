@@ -117,6 +117,8 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 			name: "VerifyTrust with valid CA certificate",
 			opts: SSLOptions{
 				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
 				VerifyTrust:   true,
 				TrustFilePath: certFile.Name(),
 			},
@@ -125,8 +127,10 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 		{
 			name: "SNI is set",
 			opts: SSLOptions{
-				Enabled: true,
-				SNI:     "example.com",
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				SNI:          "example.com",
 			},
 			wantErr: false,
 			checkFunc: func(cfg *tls.Config) error {
@@ -139,8 +143,10 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 		{
 			name: "ALPN is set",
 			opts: SSLOptions{
-				Enabled: true,
-				ALPN:    []string{"http/1.1", "h2"},
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				ALPN:         []string{"http/1.1", "h2"},
 			},
 			wantErr: false,
 			checkFunc: func(cfg *tls.Config) error {

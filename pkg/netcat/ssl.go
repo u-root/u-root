@@ -33,18 +33,16 @@ func (s *SSLOptions) GenerateTLSConfiguration() (*tls.Config, error) {
 		InsecureSkipVerify: !s.VerifyTrust,
 	}
 
-	if s.CertFilePath == "" && s.KeyFilePath != "" || s.CertFilePath != "" && s.KeyFilePath == "" {
+	if s.CertFilePath == "" || s.KeyFilePath == "" {
 		return nil, fmt.Errorf("both  certificate and key file must be provided")
 	}
 
-	if s.CertFilePath != "" && s.KeyFilePath != "" {
-		cer, err := tls.LoadX509KeyPair(s.CertFilePath, s.KeyFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("connection: %v", err)
-		}
-
-		tlsConfig.Certificates = []tls.Certificate{cer}
+	cer, err := tls.LoadX509KeyPair(s.CertFilePath, s.KeyFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("connection: %v", err)
 	}
+
+	tlsConfig.Certificates = []tls.Certificate{cer}
 
 	if s.VerifyTrust {
 		caCert, err := os.ReadFile(s.TrustFilePath)
