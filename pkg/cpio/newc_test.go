@@ -7,6 +7,7 @@ package cpio
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -697,4 +698,41 @@ func FuzzReadWriteNewc(f *testing.F) {
 			}
 		}
 	})
+}
+
+// Is there an equivalent to io.Discard for readers? I thought there was.
+type EmptyReaderAt struct{}
+
+func (e EmptyReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	return 0, io.EOF
+}
+
+func TestReproducibleWrite(t *testing.T) {
+	d := t.TempDir()
+	for _, n := range []string{"a", "b"} {
+		if err := ioutil.WriteFile(filepath.Join(d, n), []byte{}, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Link(filepath.Join(d, "b"), filepath.Join(d, "c")); err != nil {
+		t.Fatal(err)
+	}
+
+	cr := NewRecorder()
+	var recs []Record
+	for i, name := range []string{"a", "b", "c"} {
+		rec, err := cr.GetRecord(filepath.Join(d, name))
+		if err != nil {
+			t.Fatalf("getting record of %q: got %v, want nil", name, err)
+		}
+		rr := MakeReproducible(rec)
+		if rr.Ino == 0 {
+			t.Errorf("record %d: %v: got Ino 0, want non-zero", i, rr)
+		}
+		recs = append(recs, rr)
+	}
+
+	if recs[1].Ino != recs[2].Ino {
+		t.Errorf("ino for rec %d(%s): got %d, want %d", 2, recs[2], recs[2].Ino, recs[1].Ino)
+	}
 }
