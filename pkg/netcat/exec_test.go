@@ -44,8 +44,8 @@ func TestParseCommands(t *testing.T) {
 		},
 		{
 			name:        "No commands",
-			execs:       []Exec{},
-			expected:    Exec{},
+			execs:       []Exec{{EXEC_TYPE_NONE, ""}},
+			expected:    Exec{EXEC_TYPE_NONE, ""},
 			expectError: false,
 		},
 		{
@@ -54,7 +54,7 @@ func TestParseCommands(t *testing.T) {
 				{Type: EXEC_TYPE_SHELL, Command: ""},
 				{Type: EXEC_TYPE_LUA, Command: ""},
 			},
-			expected:    Exec{},
+			expected:    Exec{EXEC_TYPE_NONE, ""},
 			expectError: false,
 		},
 	}
