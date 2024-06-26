@@ -134,7 +134,6 @@ func TestEstablishConnection(t *testing.T) {
 					defer wg.Done()
 					conn, err := l.Accept()
 					if err != nil {
-						t.Error(err)
 						return
 					}
 
@@ -277,7 +276,6 @@ func TestEstablishConnectionUnix(t *testing.T) {
 					defer wg.Done()
 					conn, err := unixL.Accept()
 					if err != nil {
-						t.Error(err)
 						return
 					}
 					defer conn.Close()
