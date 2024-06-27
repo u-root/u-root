@@ -476,9 +476,20 @@ func TestParseRemoteAddr(t *testing.T) {
 			wantAddress: []string{"::1", "ip6-localhost"},
 		},
 		{
-			socketType: netcat.SOCKET_TYPE_UNIX,
-
+			socketType:  netcat.SOCKET_TYPE_UNIX,
 			name:        "Unix Socket",
+			remoteAddr:  "/tmp/socket",
+			wantAddress: []string{"/tmp/socket"},
+		},
+		{
+			socketType:  netcat.SOCKET_TYPE_NONE,
+			name:        "None Socket",
+			remoteAddr:  "/tmp/socket",
+			wantAddress: []string{"/tmp/socket"},
+		},
+		{
+			socketType:  netcat.SOCKET_TYPE_SCTP,
+			name:        "unsupported socket",
 			remoteAddr:  "/tmp/socket",
 			wantAddress: []string{"/tmp/socket"},
 		},

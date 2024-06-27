@@ -114,6 +114,38 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "Fail to parse cert / key",
+			opts: SSLOptions{
+				Enabled:      true,
+				KeyFilePath:  certFile.Name(),
+				CertFilePath: keyFile.Name(),
+			},
+
+			wantErr: true,
+		},
+		{
+			name: "VerifyTrust with wrong CA certificate",
+			opts: SSLOptions{
+				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: keyFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "VerifyTrust with nonexistent CA certificate",
+			opts: SSLOptions{
+				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: "nonexistent_ca.pem",
+			},
+			wantErr: true,
+		},
+		{
 			name: "VerifyTrust with valid CA certificate",
 			opts: SSLOptions{
 				Enabled:       true,

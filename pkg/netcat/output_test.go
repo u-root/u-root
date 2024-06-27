@@ -35,6 +35,11 @@ func TestWriteMultipleCases(t *testing.T) {
 		wantErr           bool
 	}{
 		{
+			name:         "No output files",
+			appendOutput: false,
+			data:         []byte("Hello, World\n"),
+		},
+		{
 			name:              "Write without append",
 			appendOutput:      false,
 			data:              []byte("Hello, World\n"),
@@ -71,7 +76,7 @@ func TestWriteMultipleCases(t *testing.T) {
 				OutFileHexPath: tt.outFileHexPath,
 			}
 
-			_, err = opts.Write(tt.data)
+			n, err := opts.Write(tt.data)
 			if err != nil {
 				if tt.wantErr {
 					return
@@ -79,26 +84,28 @@ func TestWriteMultipleCases(t *testing.T) {
 				t.Errorf("Write failed: %v", err)
 			}
 
-			// Verify file content
-			content, err := os.ReadFile(tt.outFilePath)
-			if err != nil {
-				t.Fatalf("Failed to read file: %v", err)
-			}
-
-			if diff := cmp.Diff(tt.expectFileContent, string(content)); diff != "" {
-				t.Errorf("File content mismatch (-want +got):\n%s", diff)
-			}
-
-			// Verify hex file content
-			if tt.outFileHexPath == "" {
-				hexContent, err := os.ReadFile(tt.outFileHexPath)
+			if n > 0 {
+				// Verify file content
+				content, err := os.ReadFile(tt.outFilePath)
 				if err != nil {
-					t.Fatalf("Failed to read hex file: %v", err)
+					t.Fatalf("Failed to read file: %v", err)
 				}
 
-				// Since hexContent is already a string in hex format, compare directly
-				if diff := cmp.Diff(hex.EncodeToString([]byte(tt.expectFileContent)), string(hexContent)); diff != "" {
-					t.Errorf("Hex file content mismatch (-want +got):\n%s", diff)
+				if diff := cmp.Diff(tt.expectFileContent, string(content)); diff != "" {
+					t.Errorf("File content mismatch (-want +got):\n%s", diff)
+				}
+
+				// Verify hex file content
+				if tt.outFileHexPath == "" {
+					hexContent, err := os.ReadFile(tt.outFileHexPath)
+					if err != nil {
+						t.Fatalf("Failed to read hex file: %v", err)
+					}
+
+					// Since hexContent is already a string in hex format, compare directly
+					if diff := cmp.Diff(hex.EncodeToString([]byte(tt.expectFileContent)), string(hexContent)); diff != "" {
+						t.Errorf("Hex file content mismatch (-want +got):\n%s", diff)
+					}
 				}
 			}
 		})

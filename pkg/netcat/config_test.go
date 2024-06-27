@@ -134,6 +134,7 @@ func TestAddressConnectMode(t *testing.T) {
 		{
 			name: "Unsupported Socket Type",
 			config: &Config{
+				Host:           "/tmp/sock",
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				ProtocolOptions: ProtocolOptions{
 					SocketType: SOCKET_TYPE_VSOCK,

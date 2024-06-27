@@ -151,10 +151,19 @@ func TestParseAccessControl(t *testing.T) {
 			expectError:            false,
 		},
 		{
-			name:                   "Nonexistent Allow and Deny Files",
-			connectionAllowFile:    "nonexistent_allow_file",
+			name:                   "Nonexistent Deny Files",
+			connectionAllowFile:    allowFileName,
 			connectionAllowList:    []string{},
 			connectionDenyFile:     "nonexistent_deny_file",
+			connectionDenyList:     []string{},
+			expectedConnectionList: map[string]bool{},
+			expectError:            true, // Expect error due to nonexistent files
+		},
+		{
+			name:                   "Nonexistent Allow Files",
+			connectionAllowFile:    "nonexistent_allow_file",
+			connectionAllowList:    []string{},
+			connectionDenyFile:     denyFileName,
 			connectionDenyList:     []string{},
 			expectedConnectionList: map[string]bool{},
 			expectError:            true, // Expect error due to nonexistent files
@@ -168,13 +177,15 @@ func TestParseAccessControl(t *testing.T) {
 				t.Fatalf("ParseAccessControl() error = %v, wantErr %v", err, tt.expectError)
 			}
 
-			if len(ac.ConnectionList) != len(tt.expectedConnectionList) {
-				t.Errorf("Expected %d items in the ConnectionList, got %d", len(tt.expectedConnectionList), len(ac.ConnectionList))
-			}
+			if !tt.expectError {
+				if len(ac.ConnectionList) != len(tt.expectedConnectionList) {
+					t.Errorf("Expected %d items in the ConnectionList, got %d", len(tt.expectedConnectionList), len(ac.ConnectionList))
+				}
 
-			for host, allowed := range tt.expectedConnectionList {
-				if ac.ConnectionList[host] != allowed {
-					t.Errorf("Expected %v for host %s, got %v", allowed, host, ac.ConnectionList[host])
+				for host, allowed := range tt.expectedConnectionList {
+					if ac.ConnectionList[host] != allowed {
+						t.Errorf("Expected %v for host %s, got %v", allowed, host, ac.ConnectionList[host])
+					}
 				}
 			}
 		})

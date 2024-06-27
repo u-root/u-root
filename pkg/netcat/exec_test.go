@@ -105,7 +105,7 @@ func TestExec_Execute(t *testing.T) {
 			name: "Lua execution not implemented",
 			exec: Exec{
 				Type:    EXEC_TYPE_LUA,
-				Command: "",
+				Command: "lua cmd",
 			},
 			stdin:   "",
 			eol:     []byte("\n"),
