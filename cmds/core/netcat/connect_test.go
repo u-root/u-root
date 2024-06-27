@@ -18,6 +18,123 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
+// Mock for the net.Conn interface
+type mockConn struct {
+	net.Conn
+	read  func(b []byte) (n int, err error)
+	write func(b []byte) (n int, err error)
+	close func() error
+}
+
+func (m *mockConn) Read(b []byte) (n int, err error) {
+	return m.read(b)
+}
+
+func (m *mockConn) Write(b []byte) (n int, err error) {
+	return m.write(b)
+}
+
+func (m *mockConn) Close() error {
+	return m.close()
+}
+
+func TestConnectMode(t *testing.T) {
+	response := "World"
+	tests := []struct {
+		name        string
+		stdin       string
+		stderr      string
+		stdout      string
+		config      *netcat.Config // Assuming Config is the type of c.config
+		expectError bool
+	}{
+		{
+			name: "zero I/O",
+			config: &netcat.Config{
+				ProtocolOptions:       netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
+				CommandExec:           netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
+				ConnectionModeOptions: netcat.ConnectModeOptions{ZeroIO: true},
+			},
+		},
+		{
+			name: "successful connection",
+			config: &netcat.Config{
+				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
+				CommandExec:     netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
+			},
+			stdout: response,
+		},
+		{
+			name: "successful connection with send only",
+			config: &netcat.Config{
+				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
+				CommandExec:     netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
+				Misc:            netcat.MiscOptions{SendOnly: true},
+			},
+			stdout: "",
+		},
+		{
+			name: "successful connection with receive only",
+			config: &netcat.Config{
+				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
+				CommandExec:     netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
+				Misc:            netcat.MiscOptions{ReceiveOnly: true},
+			},
+			stdout: response,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+
+			l, err := net.Listen("tcp", "127.0.0.1:8080")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			wg.Add(1)
+			time.AfterFunc(500*time.Millisecond, func() {
+				defer wg.Done()
+				l.Close()
+			})
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				conn, err := l.Accept()
+				if err != nil {
+					return
+				}
+				conn.Write([]byte(response))
+				conn.Close()
+			}()
+
+			stdin := strings.NewReader(tt.stdin)
+
+			c := &cmd{
+				stdin:  stdin,
+				config: tt.config,
+			}
+
+			var output bytes.Buffer
+			err = c.connectMode(&output, "tcp", "127.0.0.1:8080")
+			if err != nil {
+				if !tt.expectError {
+					return
+				}
+				t.Errorf("Expected no error, got %v", err)
+			}
+
+			if output.String() != tt.stdout {
+				t.Errorf("Expected %q, got %q", tt.stdout, output.String())
+			}
+
+			wg.Wait()
+		})
+	}
+}
+
 func TestEstablishConnection(t *testing.T) {
 	addr := "localhost:3000"
 
@@ -85,7 +202,6 @@ func TestEstablishConnection(t *testing.T) {
 					Timeout: 5 * time.Second,
 				},
 			},
-
 			expectError: false,
 		},
 		{
