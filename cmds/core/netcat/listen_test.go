@@ -4,9 +4,13 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"net"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/u-root/u-root/pkg/netcat"
 )
@@ -104,4 +108,405 @@ func TestSetupListener(t *testing.T) {
 			}
 		})
 	}
+}
+
+// MockListener is a simple mock for net.Listener
+type MockListener struct {
+	AcceptFunc func() (net.Conn, error)
+	CloseFunc  func() error
+}
+
+func (m *MockListener) Accept() (net.Conn, error) {
+	return m.AcceptFunc()
+}
+
+func (m *MockListener) Close() error {
+	return m.CloseFunc()
+}
+
+func (m *MockListener) Addr() net.Addr {
+	return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8080}
+}
+
+// MockConn is a simple mock for net.Conn
+type MockConn struct {
+	ReadFunc             func([]byte) (int, error)
+	WriteFunc            func([]byte) (int, error)
+	CloseFunc            func() error
+	LocalAddrFunc        func() net.Addr
+	RemoteAddrFunc       func() net.Addr
+	SetDeadlineFunc      func(t int64) error
+	SetReadDeadlineFunc  func(t int64) error
+	SetWriteDeadlineFunc func(t int64) error
+}
+
+func (m *MockConn) Close() error {
+	return m.CloseFunc()
+}
+
+func (m *MockConn) RemoteAddr() net.Addr {
+	return m.RemoteAddrFunc()
+}
+
+func (m *MockConn) LocalAddr() net.Addr {
+	return m.LocalAddrFunc()
+}
+
+func (m *MockConn) SetDeadline(t time.Time) error {
+	return m.SetDeadlineFunc(t.Unix())
+}
+
+func (m *MockConn) SetReadDeadline(t time.Time) error {
+	return m.SetReadDeadlineFunc(t.Unix())
+}
+
+func (m *MockConn) SetWriteDeadline(t time.Time) error {
+	return m.SetWriteDeadlineFunc(t.Unix())
+}
+
+func (m *MockConn) Read(b []byte) (int, error) {
+	return m.ReadFunc(b)
+}
+
+func (m *MockConn) Write(b []byte) (int, error) {
+	return m.WriteFunc(b)
+}
+
+// Do not set maxConnections higher than the number of mockConns or else the function will run indefinitely waiting for more connections
+func TestReadFromConnections(t *testing.T) {
+	partialData := "partial data"
+	tests := []struct {
+		name           string
+		mockConns      []*MockConn
+		config         *netcat.Config
+		expectedOutput []string
+		expectError    bool
+	}{
+		{
+			name: "Successful read",
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						return 0, io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.1.1"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{ // Example config for this test case
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       false,
+					MaxConnections: 1,
+				},
+			},
+			expectedOutput: []string{""},
+			expectError:    false,
+		},
+		{
+			name:           "Read with partial data",
+			expectedOutput: []string{partialData},
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, partialData)
+						return len(partialData), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.2.1"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{ // Example config for this test case
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       false,
+					MaxConnections: 1,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Read with data from multiple connections",
+			expectedOutput: []string{
+				"part 1part 2part 3",
+				"part 1part 3part 2",
+				"part 2part 1part 3",
+				"part 2part 3part 1",
+				"part 3part 1part 2",
+				"part 3part 2part 1",
+			},
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 1")
+						return len("part 1"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.1"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 2")
+						return len("part 2"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.2"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 3")
+						return len("part 3"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.3"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{ // Example config for this test case
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       true,
+					MaxConnections: 3,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Disallow a host",
+			expectedOutput: []string{
+				"part 1part 2",
+				"part 2part 1",
+			},
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 1")
+						return len("part 1"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.4.1"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 2")
+						return len("part 2"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.4.2"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 3")
+						return len("part 3"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.4.3"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{ // Example config for this test case
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       true,
+					MaxConnections: 3,
+				},
+				AccessControl: netcat.AccessControlOptions{
+					ConnectionList: map[string]bool{
+						"127.0.4.3": false,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:           "Disallow all localhosts",
+			expectedOutput: []string{""},
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 1")
+						return len("part 1"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 2")
+						return len("part 2"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.0.2"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 3")
+						return len("part 3"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.0.3"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{ // Example config for this test case
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       true,
+					MaxConnections: 3,
+				},
+				AccessControl: netcat.AccessControlOptions{
+					ConnectionList: map[string]bool{
+						"localhost": false,
+					},
+				},
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currentConnIndex := 0
+
+			// MockListener that returns the MockConns in the order they are defined in the test case
+			mockListener := &MockListener{
+				AcceptFunc: func() (net.Conn, error) {
+					if currentConnIndex < len(tt.mockConns) {
+						conn := tt.mockConns[currentConnIndex]
+						currentConnIndex++
+						return conn, nil
+					}
+
+					return nil, errors.New("no more MockConns available")
+				},
+			}
+
+			output := &bytes.Buffer{}
+			cmd := &cmd{
+				config: tt.config,
+			}
+
+			err := cmd.readFromConnections(netcat.NewConcurrentWriter(output), mockListener)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
+			}
+
+			// The output may appear in different order as the io.Copy from the connections are executed concurrently
+			// So we check if the output is a permutation of the connection reads
+			matchFound := false
+			for _, expected := range tt.expectedOutput {
+				if output.String() == expected {
+					matchFound = true
+					break
+				}
+			}
+
+			if !matchFound {
+				t.Errorf("Expected output: '%v', got: '%v'", tt.expectedOutput, output.String())
+			}
+		})
+	}
+}
+
+func TestParseRemoteAddr(t *testing.T) {
+	tests := []struct {
+		name        string
+		remoteAddr  string
+		socketType  netcat.SocketType
+		wantAddress []string
+	}{
+		{
+			socketType:  netcat.SOCKET_TYPE_TCP,
+			name:        "IP and Port",
+			remoteAddr:  "127.0.0.1:80",
+			wantAddress: []string{"127.0.0.1:80", "127.0.0.1", "localhost"},
+		},
+		{
+			socketType:  netcat.SOCKET_TYPE_TCP,
+			name:        "IP",
+			remoteAddr:  "127.0.0.1",
+			wantAddress: []string{"127.0.0.1", "localhost"},
+		},
+		{
+			socketType:  netcat.SOCKET_TYPE_TCP,
+			name:        "IPv6 and Port",
+			remoteAddr:  "[::1]:80",
+			wantAddress: []string{"[::1]:80", "::1", "ip6-localhost"},
+		},
+		{
+			socketType:  netcat.SOCKET_TYPE_TCP,
+			name:        "IPv6",
+			remoteAddr:  "::1",
+			wantAddress: []string{"::1", "ip6-localhost"},
+		},
+		{
+			socketType: netcat.SOCKET_TYPE_UNIX,
+
+			name:        "Unix Socket",
+			remoteAddr:  "/tmp/socket",
+			wantAddress: []string{"/tmp/socket"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotAddress := parseRemoteAddr(tt.socketType, tt.remoteAddr)
+			if !isSubset(t, gotAddress, tt.wantAddress) {
+				t.Errorf("parseRemoteAddr(%v, %v) = %v, want a subset of %v", tt.socketType, tt.remoteAddr, gotAddress, tt.wantAddress)
+			}
+		})
+	}
+}
+
+func isSubset(t *testing.T, gotAddress, wantAddress []string) bool {
+	for _, want := range wantAddress {
+		found := false
+		for _, got := range gotAddress {
+			if want == got {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
 }
