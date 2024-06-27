@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 	"strings"
@@ -289,10 +290,12 @@ func MakeReproducible(r Record) Record {
 	r.Dev = 0
 	r.Major = 0
 	r.Minor = 0
-	// Always set NLink to 0. Consider that a file may have 10 links,
+	// Consider that a file may have 10 links,
 	// but we are only including 1: NLink will be incorrect. In the
 	// general case, it is almost impossible to set NLink correctly.
-	r.NLink = 0
+	if r.NLink > 1 {
+		r.NLink = math.MaxUint64
+	}
 	return r
 }
 
