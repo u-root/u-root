@@ -131,8 +131,8 @@ func (m *MockListener) Addr() net.Addr {
 
 // MockConn is a simple mock for net.Conn
 type MockConn struct {
+	Output               bytes.Buffer
 	ReadFunc             func([]byte) (int, error)
-	WriteFunc            func([]byte) (int, error)
 	CloseFunc            func() error
 	LocalAddrFunc        func() net.Addr
 	RemoteAddrFunc       func() net.Addr
@@ -170,11 +170,11 @@ func (m *MockConn) Read(b []byte) (int, error) {
 }
 
 func (m *MockConn) Write(b []byte) (int, error) {
-	return m.WriteFunc(b)
+	return m.Output.Write(b)
 }
 
 // Do not set maxConnections higher than the number of mockConns or else the function will run indefinitely waiting for more connections
-func TestReadFromConnections(t *testing.T) {
+func TestListenForConnections(t *testing.T) {
 	partialData := "partial data"
 	tests := []struct {
 		name           string
@@ -520,10 +520,11 @@ func TestReadFromConnections(t *testing.T) {
 
 			output := &bytes.Buffer{}
 			cmd := &cmd{
+				stdin:  &bytes.Buffer{},
 				config: tt.config,
 			}
 
-			err := cmd.readFromConnections(netcat.NewConcurrentWriter(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriter(output), mockListener)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
@@ -540,6 +541,75 @@ func TestReadFromConnections(t *testing.T) {
 
 			if !matchFound {
 				t.Errorf("Expected output:\n'%v', got:\n'%v'", tt.expectedOutput, output.String())
+			}
+		})
+	}
+}
+
+func TestWriteFromListenerToConnection(t *testing.T) {
+	tests := []struct {
+		name           string
+		config         *netcat.Config
+		expectedOutput string
+		expectError    bool
+		mockConns      []*MockConn // Ensure this is defined and includes at least one mock connection
+	}{
+		{
+			name: "Successful write",
+			config: &netcat.Config{
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       false,
+					MaxConnections: 1,
+				},
+			},
+			expectedOutput: "abc",
+			expectError:    false,
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						return 0, io.EOF
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 8081}
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			currentConnIndex := 0
+
+			mockListener := &MockListener{
+				AcceptFunc: func() (net.Conn, error) {
+					if currentConnIndex < len(tt.mockConns) {
+						conn := tt.mockConns[currentConnIndex]
+						currentConnIndex++
+						return conn, nil
+					}
+					return nil, errors.New("no more MockConns available")
+				},
+			}
+
+			output := &bytes.Buffer{}
+			cmd := &cmd{
+				stdin:  bytes.NewBufferString(tt.expectedOutput),
+				config: tt.config,
+			}
+
+			err := cmd.listenForConnections(netcat.NewConcurrentWriter(output), mockListener)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
+			}
+
+			for _, conn := range tt.mockConns {
+				if conn.Output.String() != tt.expectedOutput {
+					t.Errorf("Expected output 'abc', got '%v'", conn.Output.String())
+				}
 			}
 		})
 	}
@@ -578,7 +648,7 @@ func TestBroadcastMessage(t *testing.T) {
 	}()
 
 	message := "Broadcasted Message!"
-	connections.Broadcast(&outputBuffer, 2, message)
+	connections.Broadcast(netcat.NewConcurrentWriter(&outputBuffer), 2, message)
 	senderConn.Close()
 	receiverConn.Close()
 

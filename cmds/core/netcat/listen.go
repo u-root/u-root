@@ -25,7 +25,7 @@ func (c *cmd) listenMode(output io.Writer, network, address string) error {
 		return fmt.Errorf("failed to setup listener: %v", err)
 	}
 
-	return c.readFromConnections(output, listener)
+	return c.listenForConnections(output, listener)
 }
 
 // setupListener initializes a network listener based on the configuration provided in the cmd struct.
@@ -146,17 +146,21 @@ func (c *Connections) Broadcast(output io.Writer, senderID uint32, message strin
 	}
 }
 
-// readFromConnections listens for incoming connections on a specified listener and reads data from these.
+// listenForConnections listens for incoming connections on a specified listener and reads data from these.
+// The function reads data from the connections and writes it to the output writer.
+// The first connection to be accepted is used to write data to from stdin.
 // If keep open is set, the maximum number of connections is set to maxConnections else it is set to 1.
+// In broker mode, the function reads from all connections and broadcasts the messages to all other connections.
+// In chat mode, the function prepends the user id to the message before broadcasting.
 // Arguments:
+//   - output: The io.Writer object to which the function writes the data read from the connections.
 //   - listener: The net.Listener object on which the function listens for incoming connections. This listener should already be initialized
 //     and listening on the desired port.
-//   - acl: An AccessControlList object that contains the rules for which connections are allowed to communicate with this service.
-//     The function uses this list to determine if an incoming connection should be accepted or rejected based on the source address.
-func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error {
+func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) error {
 	var (
 		connectionsHandled uint32
 		wg                 sync.WaitGroup
+		once               sync.Once
 	)
 
 	connections := NewConnections()
@@ -190,6 +194,12 @@ func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error
 			defer func() {
 				connections.Delete(id)
 			}()
+
+			once.Do(func() {
+				if _, err := io.Copy(conn, c.stdin); err != nil {
+					log.Printf("failed to write to connection: %v", err)
+				}
+			})
 
 			// broadcast messages to all connections in broker mode
 			if c.config.ListenModeOptions.BrokerMode {
