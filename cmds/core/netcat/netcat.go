@@ -233,7 +233,13 @@ func evalParams() (*netcat.Config, error) {
 	config.ListenModeOptions.MaxConnections = maxConnections
 	config.ListenModeOptions.KeepOpen = keepOpen
 	config.ListenModeOptions.BrokerMode = brokerMode
+
 	config.ListenModeOptions.ChatMode = chatMode
+
+	// broker-mode is implied by chat-mode
+	if chatMode {
+		config.ListenModeOptions.BrokerMode = true
+	}
 
 	// timing options
 	config.Timing.Delay, err = time.ParseDuration(timingDelay)

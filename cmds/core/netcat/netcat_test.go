@@ -58,6 +58,10 @@ func TestEvalParams(t *testing.T) {
 	clrfConfig := netcat.DefaultConfig()
 	clrfConfig.Misc.EOL = netcat.LINE_FEED_CRLF
 
+	chatModeConfig := netcat.DefaultConfig()
+	chatModeConfig.ListenModeOptions.ChatMode = true
+	chatModeConfig.ListenModeOptions.BrokerMode = true
+
 	// Define test cases
 	tests := []struct {
 		name       string
@@ -199,7 +203,13 @@ func TestEvalParams(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		// Add more test cases as needed
+		{
+			name: "chat mode",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--chat"}
+			},
+			wantConfig: &chatModeConfig,
+		},
 	}
 
 	for _, tt := range tests {

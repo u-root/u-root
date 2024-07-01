@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -197,7 +198,7 @@ func TestReadFromConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{ // Example config for this test case
+			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       false,
 					MaxConnections: 1,
@@ -223,7 +224,7 @@ func TestReadFromConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{ // Example config for this test case
+			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       false,
 					MaxConnections: 1,
@@ -279,10 +280,110 @@ func TestReadFromConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{ // Example config for this test case
+			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
 					MaxConnections: 3,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Read with data from multiple connections in chat mode",
+			expectedOutput: []string{
+				"user<1>: part 1\nuser<2>: part 2\nuser<3>: part 3\n",
+				"user<1>: part 1\nuser<3>: part 3\nuser<2>: part 2\n",
+				"user<2>: part 2\nuser<1>: part 1\nuser<3>: part 3\n",
+				"user<2>: part 2\nuser<3>: part 3\nuser<1>: part 1\n",
+				"user<3>: part 3\nuser<1>: part 1\nuser<2>: part 2\n",
+				"user<3>: part 3\nuser<2>: part 2\nuser<1>: part 1\n",
+			},
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 1\n")
+						return len("part 1\n"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.1"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 2\n")
+						return len("part 2\n"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.2"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 3\n")
+						return len("part 3\n"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.3"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       true,
+					MaxConnections: 3,
+					ChatMode:       true,
+					BrokerMode:     true,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Read with data from multiple connections in broker mode",
+			expectedOutput: []string{
+				"part 1\npart 2\n",
+				"part 2\npart 1\n",
+			},
+			mockConns: []*MockConn{
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 1\n")
+						return len("part 1\n"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.1"), Port: 8081}
+					},
+				},
+				{
+					ReadFunc: func(b []byte) (int, error) {
+						copy(b, "part 2\n")
+						return len("part 2\n"), io.EOF
+					},
+					CloseFunc: func() error {
+						return nil
+					},
+					RemoteAddrFunc: func() net.Addr {
+						return &net.TCPAddr{IP: net.ParseIP("127.0.3.2"), Port: 8081}
+					},
+				},
+			},
+			config: &netcat.Config{
+				ListenModeOptions: netcat.ListenModeOptions{
+					KeepOpen:       true,
+					MaxConnections: 2,
+					ChatMode:       false,
+					BrokerMode:     true,
 				},
 			},
 			expectError: false,
@@ -331,7 +432,7 @@ func TestReadFromConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{ // Example config for this test case
+			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
 					MaxConnections: 3,
@@ -385,7 +486,7 @@ func TestReadFromConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{ // Example config for this test case
+			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
 					MaxConnections: 3,
@@ -438,9 +539,61 @@ func TestReadFromConnections(t *testing.T) {
 			}
 
 			if !matchFound {
-				t.Errorf("Expected output: '%v', got: '%v'", tt.expectedOutput, output.String())
+				t.Errorf("Expected output:\n'%v', got:\n'%v'", tt.expectedOutput, output.String())
 			}
 		})
+	}
+}
+
+func TestBroadcastMessage(t *testing.T) {
+	// Setup
+	connections := NewConnections()
+
+	senderConn, receiverConn := net.Pipe()
+	defer senderConn.Close()
+	defer receiverConn.Close()
+
+	// Add connections
+	connections.Add(1, senderConn)
+	connections.Add(2, receiverConn)
+
+	// Prepare a buffer to capture the broadcast output for the receiver
+	var (
+		wg             sync.WaitGroup
+		outputBuffer   bytes.Buffer
+		senderBuffer   bytes.Buffer
+		receiverBuffer bytes.Buffer
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		io.Copy(&receiverBuffer, receiverConn)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		io.Copy(&senderBuffer, senderConn)
+	}()
+
+	message := "Broadcasted Message!"
+	connections.Broadcast(&outputBuffer, 2, message)
+	senderConn.Close()
+	receiverConn.Close()
+
+	wg.Wait()
+
+	if receiverBuffer.String() != message {
+		t.Errorf("Expected message to receiver to be %q, got %q", message, receiverBuffer.String())
+	}
+
+	if outputBuffer.String() != message {
+		t.Errorf("Expected output to be %q, got %q", message, outputBuffer.String())
+	}
+
+	if senderBuffer.String() != "" {
+		t.Errorf("Expected sender buffer to be empty, got %q", senderBuffer.String())
 	}
 }
 

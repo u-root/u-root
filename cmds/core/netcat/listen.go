@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -81,6 +82,53 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	return nil, fmt.Errorf("unexpected error")
 }
 
+// Connections holds all the active connections of a listener.
+type Connections struct {
+	Connections map[uint32]net.Conn
+	mutex       sync.Mutex
+}
+
+func NewConnections() *Connections {
+	return &Connections{
+		Connections: make(map[uint32]net.Conn),
+		mutex:       sync.Mutex{},
+	}
+}
+
+func (c *Connections) Add(id uint32, conn net.Conn) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.Connections[id] = conn
+}
+
+func (c *Connections) Delete(id uint32) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	delete(c.Connections, id)
+}
+
+// Broadcast sends a message to all connections in the Connections object (except the sender) and the output writer.
+func (c *Connections) Broadcast(output io.Writer, senderID uint32, message string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if _, err := io.WriteString(output, message); err != nil {
+		log.Printf("Error broadcasting message: %v", err)
+	}
+
+	for id, conn := range c.Connections {
+		if id == senderID {
+			continue
+		}
+
+		if _, err := io.WriteString(conn, message); err != nil {
+			log.Printf("Error broadcasting to connection %d: %v", id, err)
+		}
+	}
+}
+
 // readFromConnections listens for incoming connections on a specified listener and reads data from these.
 // If keep open is set, the maximum number of connections is set to maxConnections else it is set to 1.
 // Arguments:
@@ -93,6 +141,8 @@ func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error
 		connectionsHandled uint32
 		wg                 sync.WaitGroup
 	)
+
+	connections := NewConnections()
 
 	maxConnections := c.config.ListenModeOptions.MaxConnections
 
@@ -113,17 +163,46 @@ func (c *cmd) readFromConnections(output io.Writer, listener net.Listener) error
 		}
 
 		atomic.AddUint32(&connectionsHandled, 1)
-		wg.Add(1)
+		connectionID := atomic.LoadUint32(&connectionsHandled)
+		connections.Add(connectionID, conn)
 
-		go func(conn net.Conn) {
+		wg.Add(1)
+		go func(connections *Connections, id uint32) {
 			defer wg.Done()
 			defer conn.Close()
+			defer func() {
+				connections.Delete(id)
+			}()
 
-			// Read from the connection.
-			if _, err := io.Copy(output, conn); err != nil {
-				log.Printf("failed to read from connection: %v", err)
+			// broadcast messages to all connections in broker mode
+			if c.config.ListenModeOptions.BrokerMode {
+
+				scanner := bufio.NewScanner(conn)
+				for scanner.Scan() {
+					line := scanner.Text()
+
+					var formattedLine string
+					// if chat-mode is enabled, prepend the user id to the message
+					if c.config.ListenModeOptions.ChatMode {
+						formattedLine = fmt.Sprintf("user<%d>: %s\n", id, line)
+					} else {
+						formattedLine = fmt.Sprintf("%s\n", line)
+					}
+
+					// broadcast the message to all connections except itseld
+					connections.Broadcast(output, id, formattedLine)
+				}
+
+				if err := scanner.Err(); err != nil {
+					log.Printf("failed to read from connection: %v", err)
+				}
+			} else {
+				// without broker mode, read from the connection and write to the output
+				if _, err := io.Copy(output, connections.Connections[id]); err != nil {
+					log.Printf("failed to read from connection: %v", err)
+				}
 			}
-		}(conn)
+		}(connections, connectionID)
 	}
 
 	wg.Wait() // Wait for all connections to finish
