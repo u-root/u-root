@@ -42,6 +42,7 @@ func TestConnectMode(t *testing.T) {
 	response := "World"
 	tests := []struct {
 		name        string
+		address     string
 		stdin       string
 		stderr      string
 		stdout      string
@@ -49,7 +50,8 @@ func TestConnectMode(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name: "zero I/O",
+			name:    "zero I/O",
+			address: "127.0.0.1:8080",
 			config: &netcat.Config{
 				ProtocolOptions:       netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
 				CommandExec:           netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
@@ -57,7 +59,8 @@ func TestConnectMode(t *testing.T) {
 			},
 		},
 		{
-			name: "successful connection",
+			name:    "successful connection",
+			address: "127.0.0.2:8080",
 			config: &netcat.Config{
 				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
 				CommandExec:     netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
@@ -65,7 +68,8 @@ func TestConnectMode(t *testing.T) {
 			stdout: response,
 		},
 		{
-			name: "successful connection with send only",
+			name:    "successful connection with send only",
+			address: "127.0.0.3:8080",
 			config: &netcat.Config{
 				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
 				CommandExec:     netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
@@ -74,7 +78,8 @@ func TestConnectMode(t *testing.T) {
 			stdout: "",
 		},
 		{
-			name: "successful connection with receive only",
+			name:    "successful connection with receive only",
+			address: "127.0.0.4:8080",
 			config: &netcat.Config{
 				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_TCP},
 				CommandExec:     netcat.Exec{Type: netcat.EXEC_TYPE_NONE},
@@ -88,7 +93,7 @@ func TestConnectMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
 
-			l, err := net.Listen("tcp", "127.0.0.1:8080")
+			l, err := net.Listen("tcp", tt.address)
 			if err != nil {
 				t.Fatal(err)
 			}

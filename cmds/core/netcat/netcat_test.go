@@ -337,7 +337,7 @@ func resetGlobalVars(t *testing.T) {
 	sslKeyFilePath = ""
 	sslVerifyTrust = false
 	sslTrustFilePath = ""
-	sslCiphers = []string{"ALL", "!aNULL", "!eNULL", "!LOW", "!EXP", "!RC4", "!MD5", "@STRENGTH"}
+	sslCiphers = []string{}
 	sslSNI = ""
 	sslALPN = nil
 }

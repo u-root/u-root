@@ -30,7 +30,7 @@ func DefaultConfig() Config {
 			SocketType: SOCKET_TYPE_TCP,
 		},
 		SSLConfig: SSLOptions{
-			Ciphers: DEFAULT_SSL_SUITE_STR,
+			Ciphers: []string{},
 		},
 		ProxyConfig: ProxyOptions{
 			Type:    DEFAULT_PROXY_TYPE,

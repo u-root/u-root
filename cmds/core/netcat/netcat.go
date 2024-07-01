@@ -126,7 +126,7 @@ func init() {
 	// proxy
 	flag.StringVarP(&proxyAddress, "proxy", "", "", "Specify address of host to proxy through (<addr[:port]> )")
 	flag.StringVarP(&proxydns, "proxy-dns", "", "", "Specify where to resolve proxy destination")
-	flag.StringVarP(&proxyType, "proxy-type", "", "socks5", "Specify proxy type ('http', 'socks4', 'socks5')")
+	flag.StringVarP(&proxyType, "proxy-type", "", "", "Specify proxy type ('http', 'socks4', 'socks5')")
 	flag.StringVarP(&proxyAuth, "proxy-auth", "", "", "Authenticate with HTTP or SOCKS proxy server")
 
 	// ssl
@@ -279,7 +279,7 @@ func evalParams() (*netcat.Config, error) {
 		return nil, fmt.Errorf("proxy and SSL cannot be used together")
 	}
 
-	if proxyAddress == "" && proxyType != "" || proxyAddress != "" && proxyType == "" {
+	if (proxyAddress == "" && proxyType != "") || (proxyAddress != "" && proxyType == "") {
 		return nil, fmt.Errorf("proxy address and type must be specified together")
 	}
 
@@ -299,7 +299,7 @@ func evalParams() (*netcat.Config, error) {
 		}
 	}
 
-	if reflect.DeepEqual(sslCiphers, []string{}) {
+	if !reflect.DeepEqual(sslCiphers, []string{}) {
 		return nil, fmt.Errorf("selection of ssl-ciphers are not yet supported")
 	}
 

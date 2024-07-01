@@ -327,7 +327,7 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("expected SocketType to be %d, got %d", SOCKET_TYPE_TCP, defaultConfig.ProtocolOptions.SocketType)
 	}
 
-	if cmp.Diff(defaultConfig.SSLConfig.Ciphers, DEFAULT_SSL_SUITE_STR) != "" {
+	if cmp.Diff(defaultConfig.SSLConfig.Ciphers, []string{}) != "" {
 		t.Errorf("expected Ciphers to be %s, got %s", DEFAULT_SSL_SUITE_STR, defaultConfig.SSLConfig.Ciphers)
 	}
 
