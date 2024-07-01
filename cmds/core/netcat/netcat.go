@@ -48,7 +48,7 @@ var (
 	proxyAddress            string
 	proxydns                string
 	proxyType               string
-	proxyAuthType           string
+	proxyAuth               string
 	maxConnections          uint32
 	keepOpen                bool
 	noDNS                   bool
@@ -126,8 +126,8 @@ func init() {
 	// proxy
 	flag.StringVarP(&proxyAddress, "proxy", "", "", "Specify address of host to proxy through (<addr[:port]> )")
 	flag.StringVarP(&proxydns, "proxy-dns", "", "", "Specify where to resolve proxy destination")
-	flag.StringVarP(&proxyType, "proxy-type", "", "", "Specify proxy type ('http', 'socks4', 'socks5')")
-	flag.StringVarP(&proxyAuthType, "proxy-auth", "", "", "Authenticate with HTTP or SOCKS proxy server")
+	flag.StringVarP(&proxyType, "proxy-type", "", "socks5", "Specify proxy type ('http', 'socks4', 'socks5')")
+	flag.StringVarP(&proxyAuth, "proxy-auth", "", "", "Authenticate with HTTP or SOCKS proxy server")
 
 	// ssl
 	flag.BoolVarP(&sslEnabled, "ssl", "", false, "Connect or listen with SSL")
@@ -275,8 +275,28 @@ func evalParams() (*netcat.Config, error) {
 		return nil, err
 	}
 
-	if proxyAddress != "" || proxydns != "" || proxyType != "" || proxyAuthType != "" {
-		return nil, fmt.Errorf("proxy options are not yet supported")
+	if proxyAddress != "" && sslEnabled || proxyAddress != "" && sslVerifyTrust {
+		return nil, fmt.Errorf("proxy and SSL cannot be used together")
+	}
+
+	if proxyAddress == "" && proxyType != "" || proxyAddress != "" && proxyType == "" {
+		return nil, fmt.Errorf("proxy address and type must be specified together")
+	}
+
+	if proxyAddress != "" {
+		config.ProxyConfig.Enabled = true
+		config.ProxyConfig.Address = proxyAddress
+		config.ProxyConfig.Auth = proxyAuth
+		config.ProxyConfig.Type = netcat.ProxyTypeFromString(proxyType)
+		config.ProxyConfig.DNSType = netcat.ProxyDNSTypeFromString(proxydns)
+
+		if netcat.ProxyTypeFromString(proxyType) != netcat.PROXY_TYPE_SOCKS5 {
+			return nil, fmt.Errorf("only SOCKS5 proxy type is supported")
+		}
+
+		if config.ProxyConfig.DNSType != netcat.PROXY_DNS_NONE {
+			return nil, fmt.Errorf("unsupported proxy DNS type")
+		}
 	}
 
 	if reflect.DeepEqual(sslCiphers, []string{}) {

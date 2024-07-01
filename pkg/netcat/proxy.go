@@ -15,27 +15,8 @@ const (
 	PROXY_TYPE_HTTP
 	PROXY_TYPE_SOCKS4
 	PROXY_TYPE_SOCKS5
+	DEFAULT_PROXY_TYPE = PROXY_TYPE_SOCKS5
 )
-
-func (p ProxyType) String() string {
-	return [...]string{
-		"None",
-		"HTTP",
-		"SOCKS4",
-		"SOCKS5",
-	}[p]
-}
-
-func (p ProxyType) DefaultPort() (uint, error) {
-	switch p {
-	case PROXY_TYPE_SOCKS5:
-		return 1080, nil
-	case PROXY_TYPE_HTTP:
-		return 3128, nil
-	default:
-		return 0, fmt.Errorf("ProxyType %s has no default port", p.String())
-	}
-}
 
 func ProxyTypeFromString(s string) ProxyType {
 	switch strings.ToUpper(s) {
@@ -50,22 +31,23 @@ func ProxyTypeFromString(s string) ProxyType {
 	}
 }
 
-type ProxyAuthType int
+func (p ProxyType) String() string {
+	return [...]string{
+		"None",
+		"http",
+		"socks4",
+		"socks5",
+	}[p]
+}
 
-const (
-	PROXY_AUTH_NONE ProxyAuthType = iota
-	PROXY_AUTH_HTTP
-	PROXY_AUTH_SOCKS5
-)
-
-func ProxyAuthTypeFromString(s string) ProxyAuthType {
-	switch strings.ToUpper(s) {
-	case "HTTP":
-		return PROXY_AUTH_HTTP
-	case "SOCKS5":
-		return PROXY_AUTH_SOCKS5
+func (p ProxyType) DefaultPort() (uint, error) {
+	switch p {
+	case PROXY_TYPE_SOCKS4, PROXY_TYPE_SOCKS5:
+		return 1080, nil
+	case PROXY_TYPE_HTTP:
+		return 3128, nil
 	default:
-		return PROXY_AUTH_NONE
+		return 0, fmt.Errorf("ProxyType %s has no default port", p.String())
 	}
 }
 
@@ -92,9 +74,9 @@ func ProxyDNSTypeFromString(s string) ProxyDNSType {
 }
 
 type ProxyOptions struct {
-	Type     ProxyType // If this is none, discard the entire Proxy handling
-	Address  string
-	DNSType  ProxyDNSType
-	Port     uint
-	AuthType ProxyAuthType // If this is none, discard the entire ProxyAuth handling
+	Enabled bool
+	Type    ProxyType
+	Address string // if address is empty, discard the entire proxy handling
+	Auth    string
+	DNSType ProxyDNSType
 }

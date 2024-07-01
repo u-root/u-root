@@ -204,6 +204,27 @@ func TestEvalParams(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "invalid proxy",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=aa"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid proxy type",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks4"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid proxy dns type",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks5", "--proxy-dns=both"}
+			},
+			wantErr: true,
+		},
+		{
 			name: "chat mode",
 			setupFunc: func() {
 				os.Args = []string{"cmd", "--chat"}
@@ -310,7 +331,7 @@ func resetGlobalVars(t *testing.T) {
 	proxyAddress = ""
 	proxydns = ""
 	proxyType = ""
-	proxyAuthType = ""
+	proxyAuth = ""
 	sslEnabled = false
 	sslCertFilePath = ""
 	sslKeyFilePath = ""

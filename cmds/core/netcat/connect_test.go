@@ -582,3 +582,36 @@ func TestScanWithCustomEOL(t *testing.T) {
 		})
 	}
 }
+
+// mockDialer is a mock implementation of proxy.Dialer for testing purposes.
+type mockDialer struct{}
+
+func (m *mockDialer) Dial(network, addr string) (conn net.Conn, err error) {
+	// Mock implementation
+	return nil, nil
+}
+
+func TestProxyDialer(t *testing.T) {
+	// Setup
+	mockDial := &mockDialer{}
+	testCmd := &cmd{
+		config: &netcat.Config{
+			ProxyConfig: netcat.ProxyOptions{
+				Auth:    "user:pass",
+				Type:    netcat.PROXY_TYPE_SOCKS5,
+				Address: "proxy.example.com:8080",
+			},
+		},
+	}
+
+	// Execute
+	dialer, err := testCmd.proxyDialer(mockDial)
+	// Assert
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if dialer == nil {
+		t.Error("Expected dialer to be not nil")
+	}
+}

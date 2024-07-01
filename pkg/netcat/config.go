@@ -33,9 +33,8 @@ func DefaultConfig() Config {
 			Ciphers: DEFAULT_SSL_SUITE_STR,
 		},
 		ProxyConfig: ProxyOptions{
-			Type:     PROXY_TYPE_NONE,
-			DNSType:  PROXY_DNS_NONE,
-			AuthType: PROXY_AUTH_NONE,
+			Type:    DEFAULT_PROXY_TYPE,
+			DNSType: PROXY_DNS_NONE,
 		},
 		AccessControl: AccessControlOptions{
 			ConnectionList: make(map[string]bool),

@@ -10,8 +10,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"sync"
 	"time"
+
+	"golang.org/x/net/proxy"
 
 	"github.com/u-root/u-root/pkg/netcat"
 )
@@ -59,6 +62,21 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 	wg.Wait()
 
 	return nil
+}
+
+func (c *cmd) proxyDialer(dialer proxy.Dialer) (proxy.Dialer, error) {
+	var proxyAuth string
+	if c.config.ProxyConfig.Auth != "" {
+		proxyAuth = c.config.ProxyConfig.Auth + "@"
+	}
+
+	proxyAddr := fmt.Sprintf("%v://%v%v", c.config.ProxyConfig.Type, proxyAuth, c.config.ProxyConfig.Address)
+	proxyURL, err := url.Parse(proxyAddr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid proxy URL: %v", err)
+	}
+
+	return proxy.FromURL(proxyURL, dialer)
 }
 
 func (c *cmd) writeToRemote(conn io.Writer) {

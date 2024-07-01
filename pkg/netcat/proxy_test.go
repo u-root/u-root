@@ -12,9 +12,9 @@ func TestProxyType_String(t *testing.T) {
 		expected string
 	}{
 		{name: "Test None", p: PROXY_TYPE_NONE, expected: "None"},
-		{name: "Test HTTP", p: PROXY_TYPE_HTTP, expected: "HTTP"},
-		{name: "Test SOCKS4", p: PROXY_TYPE_SOCKS4, expected: "SOCKS4"},
-		{name: "Test SOCKS5", p: PROXY_TYPE_SOCKS5, expected: "SOCKS5"},
+		{name: "Test HTTP", p: PROXY_TYPE_HTTP, expected: "http"},
+		{name: "Test SOCKS4", p: PROXY_TYPE_SOCKS4, expected: "socks4"},
+		{name: "Test SOCKS5", p: PROXY_TYPE_SOCKS5, expected: "socks5"},
 	}
 
 	for _, tt := range tests {
@@ -69,27 +69,6 @@ func TestProxyTypeFromString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ProxyTypeFromString(tt.s); got != tt.expected {
 				t.Errorf("ProxyTypeFromString(%v) = %v, want %v", tt.s, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestProxyAuthTypeFromString(t *testing.T) {
-	tests := []struct {
-		name     string
-		s        string
-		expected ProxyAuthType
-	}{
-		{name: "HTTP lowercase", s: "http", expected: PROXY_AUTH_HTTP},
-		{name: "SOCKS5 uppercase", s: "SOCKS5", expected: PROXY_AUTH_SOCKS5},
-		{name: "Invalid type", s: "invalid", expected: PROXY_AUTH_NONE},
-		{name: "Empty string", s: "", expected: PROXY_AUTH_NONE},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ProxyAuthTypeFromString(tt.s); got != tt.expected {
-				t.Errorf("ProxyAuthTypeFromString(%v) = %v, want %v", tt.s, got, tt.expected)
 			}
 		})
 	}

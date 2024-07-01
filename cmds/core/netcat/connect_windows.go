@@ -78,21 +78,34 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 		}
 	}
 
-	// TLS Support
-	if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-		tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
+	// Proxy Support
+	if c.config.ProxyConfig.Enabled {
+		proxyDialer, err := c.proxyDialer(dialer)
 		if err != nil {
 			return nil, fmt.Errorf("connection: %v", err)
 		}
 
-		conn, err = tls.DialWithDialer(dialer, network, address, tlsConfig)
+		conn, err = proxyDialer.Dial(network, address)
 		if err != nil {
 			return nil, fmt.Errorf("connection: %v", err)
 		}
 	} else {
-		conn, err = dialer.Dial(network, address)
-		if err != nil {
-			return nil, fmt.Errorf("connection: %v", err)
+		// TLS Support
+		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
+			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
+			if err != nil {
+				return nil, fmt.Errorf("connection: %v", err)
+			}
+
+			conn, err = tls.DialWithDialer(dialer, network, address, tlsConfig)
+			if err != nil {
+				return nil, fmt.Errorf("connection: %v", err)
+			}
+		} else {
+			conn, err = dialer.Dial(network, address)
+			if err != nil {
+				return nil, fmt.Errorf("connection: %v", err)
+			}
 		}
 	}
 
