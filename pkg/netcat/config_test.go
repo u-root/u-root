@@ -132,12 +132,36 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name: "SCTP",
+			config: &Config{
+				Host:           "127.0.0.1",
+				Port:           8080,
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_SCTP,
+				},
+			},
+			wantAddr: "127.0.0.1:8080",
+		},
+		{
+			name: "VSOCK",
+			config: &Config{
+				Host:           "123",
+				Port:           8080,
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_VSOCK,
+				},
+			},
+			wantAddr: "123:8080",
+		},
+		{
 			name: "Unsupported Socket Type",
 			config: &Config{
 				Host:           "/tmp/sock",
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				ProtocolOptions: ProtocolOptions{
-					SocketType: SOCKET_TYPE_VSOCK,
+					SocketType: SOCKET_TYPE_UDP_VSOCK,
 				},
 			},
 			wantErr: true,

@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ishidawataru/sctp"
+	"github.com/mdlayher/vsock"
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
@@ -70,8 +72,23 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
 		return netcat.NewUDPListener(network, address, c.config.Output.Logger)
 
+	case netcat.SOCKET_TYPE_SCTP:
+		sctpAddr, err := sctp.ResolveSCTPAddr(network, address)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve SCTP address: %w", err)
+		}
+
+		return sctp.ListenSCTP(network, sctpAddr)
+	case netcat.SOCKET_TYPE_VSOCK:
+		cid, port, err := netcat.SplitVSockAddr(address)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve VSOCK address: %v", err)
+		}
+
+		return vsock.ListenContextID(cid, port, nil)
+
 	// unsupported socket types
-	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
+	case netcat.SOCKET_TYPE_UDP_VSOCK:
 		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
 
 	case netcat.SOCKET_TYPE_NONE:

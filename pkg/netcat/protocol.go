@@ -4,7 +4,11 @@
 
 package netcat
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 type ProtocolOptions struct {
 	IPType     IPType
@@ -60,7 +64,15 @@ func (p *ProtocolOptions) Network() (string, error) {
 		default:
 			return "tcp", nil
 		}
-
+	case SOCKET_TYPE_SCTP:
+		switch p.IPType {
+		case IP_V4, IP_V4_STRICT:
+			return "sctp4", nil
+		case IP_V6, IP_V6_STRICT:
+			return "sctp6", nil
+		default:
+			return "sctp", nil
+		}
 	case SOCKET_TYPE_UDP:
 		switch p.IPType {
 		case IP_V4, IP_V4_STRICT:
@@ -78,7 +90,7 @@ func (p *ProtocolOptions) Network() (string, error) {
 		return "unixgram", nil
 
 	// VSOCK connections don't require a network specification
-	case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
+	case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK:
 		return "", nil
 	}
 
@@ -116,4 +128,24 @@ func ParseSocketType(udp, unix, vsock, sctp bool) (SocketType, error) {
 	}
 
 	return SOCKET_TYPE_NONE, fmt.Errorf("invalid socket type combination")
+}
+
+func SplitVSockAddr(addr string) (uint32, uint32, error) {
+	splitAddr := strings.Split(addr, ":")
+
+	if len(splitAddr) != 2 {
+		return 0, 0, fmt.Errorf("invalid vsock address %q", addr)
+	}
+
+	cid, err := strconv.ParseUint(splitAddr[0], 10, 32)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse vsock CID %q: %v", splitAddr[0], err)
+	}
+
+	port, err := strconv.ParseUint(splitAddr[1], 10, 32)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse vsock port %q: %v", splitAddr[1], err)
+	}
+
+	return uint32(cid), uint32(port), nil
 }

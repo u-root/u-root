@@ -22,8 +22,6 @@ import (
 
 var (
 	verbose                 bool
-	udp                     bool
-	sctp                    bool
 	timingDelay             string
 	timingTimeout           string
 	timingWait              string

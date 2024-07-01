@@ -42,7 +42,7 @@ func TestSetupListener(t *testing.T) {
 		{
 			name: "Unsupported Socket Type",
 			config: &netcat.Config{
-				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_SCTP},
+				ProtocolOptions: netcat.ProtocolOptions{SocketType: netcat.SOCKET_TYPE_UDP_VSOCK},
 			},
 			network: "sctp",
 			address: "127.0.0.1:0",

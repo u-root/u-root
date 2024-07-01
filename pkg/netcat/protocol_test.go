@@ -32,7 +32,7 @@ func TestNetcatSocketType_String(t *testing.T) {
 	}
 }
 
-func TestNetcatConfig_Network(t *testing.T) {
+func TestNetwork(t *testing.T) {
 	testCases := []struct {
 		name     string
 		config   ProtocolOptions
@@ -49,7 +49,9 @@ func TestNetcatConfig_Network(t *testing.T) {
 		{name: "UNIXGRAM", config: ProtocolOptions{SocketType: SOCKET_TYPE_UDP_UNIX}, expected: "unixgram", wantErr: false},
 		{name: "VSOCK", config: ProtocolOptions{SocketType: SOCKET_TYPE_VSOCK}, expected: "", wantErr: false},
 		{name: "UDP VSOCK", config: ProtocolOptions{SocketType: SOCKET_TYPE_UDP_VSOCK}, expected: "", wantErr: false},
-		{name: "SCTP", config: ProtocolOptions{SocketType: SOCKET_TYPE_SCTP}, expected: "", wantErr: false},
+		{name: "SCTP", config: ProtocolOptions{SocketType: SOCKET_TYPE_SCTP}, expected: "sctp", wantErr: false},
+		{name: "SCTP IPv4", config: ProtocolOptions{SocketType: SOCKET_TYPE_SCTP, IPType: IP_V4}, expected: "sctp4", wantErr: false},
+		{name: "SCTP IPv6", config: ProtocolOptions{SocketType: SOCKET_TYPE_SCTP, IPType: IP_V6}, expected: "sctp6", wantErr: false},
 		{name: "Invalid", config: ProtocolOptions{SocketType: 999, IPType: 999}, expected: "", wantErr: true},
 	}
 
@@ -96,6 +98,89 @@ func TestParseSocketType(t *testing.T) {
 			}
 			if gotType != tt.expectedType {
 				t.Errorf("ParseSocketType() = %v, want %v", gotType, tt.expectedType)
+			}
+		})
+	}
+}
+
+func TestSplitVSockAddr(t *testing.T) {
+	tests := []struct {
+		name     string
+		addr     string
+		wantCID  uint32
+		wantPort uint32
+		wantErr  bool
+	}{
+		{
+			name:     "valid address",
+			addr:     "3:1024",
+			wantCID:  3,
+			wantPort: 1024,
+			wantErr:  false,
+		},
+		{
+			name:     "invalid address format",
+			addr:     "3-1024",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid CID",
+			addr:     "abc:1024",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid port",
+			addr:     "3:abc",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "empty address",
+			addr:     "",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "only CID",
+			addr:     "3:",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "only port",
+			addr:     ":1024",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+		{
+			name:     "extra fields",
+			addr:     "3:1024:extra",
+			wantCID:  0,
+			wantPort: 0,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotCID, gotPort, err := SplitVSockAddr(tt.addr)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("splitVSockAddr() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotCID != tt.wantCID {
+				t.Errorf("splitVSockAddr() gotCID = %v, want %v", gotCID, tt.wantCID)
+			}
+			if gotPort != tt.wantPort {
+				t.Errorf("splitVSockAddr() gotPort = %v, want %v", gotPort, tt.wantPort)
 			}
 		})
 	}

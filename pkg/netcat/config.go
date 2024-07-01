@@ -134,7 +134,7 @@ func (c *Config) Address() (string, error) {
 			return c.Host, nil
 
 		// unimplemented
-		case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
+		case SOCKET_TYPE_UDP_VSOCK:
 			return "nil", fmt.Errorf("currently unsupported socket type %v", c.ProtocolOptions.SocketType)
 		default:
 			if c.Misc.NoDNS {
@@ -163,7 +163,7 @@ func (c *Config) Address() (string, error) {
 				return DEFAULT_UNIX_SOCKET, nil
 
 			// unimplemented
-			case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK, SOCKET_TYPE_SCTP:
+			case SOCKET_TYPE_VSOCK, SOCKET_TYPE_UDP_VSOCK:
 				return "nil", fmt.Errorf("currently unsupported socket type %v", c.ProtocolOptions.SocketType)
 			default:
 				return "", fmt.Errorf("invalid socket type %v", c.ProtocolOptions.SocketType)
