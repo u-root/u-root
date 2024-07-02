@@ -57,6 +57,7 @@ func TestFlags(t *testing.T) {
 			cmdline: "pox",
 			want: cmd{
 				file: "/tmp/pox.tcz",
+				arg0: "pox",
 			},
 		},
 	} {
@@ -65,7 +66,7 @@ func TestFlags(t *testing.T) {
 			got.debug, tt.want.debug = nil, nil
 
 			if !reflect.DeepEqual(got, &tt.want) {
-				t.Errorf("\ngot: %+v\nwant: %+v", got, tt.want)
+				t.Errorf("\ngot: %+v\nwant: %+v", got, &tt.want)
 			}
 		})
 	}

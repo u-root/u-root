@@ -90,7 +90,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -131,7 +130,9 @@ type cmd struct {
 	file    string
 	extra   string
 	// positional args
-	args []string
+	arg0       string
+	args       []string
+	pathInRoot string
 	// verbose output
 	debug func(string, ...interface{})
 }
@@ -246,18 +247,21 @@ func (c cmd) poxCreate() error {
 }
 
 func (c cmd) poxRun() error {
-	if len(c.args) == 0 {
-		return fmt.Errorf(usage)
+	if os.Getuid() != 0 {
+		return fmt.Errorf("this primitive kernel requires root permissions to run pox:%w", os.ErrPermission)
 	}
+	v := c.debug
 	dir, err := os.MkdirTemp("", "pox")
 	if err != nil {
 		return err
 	}
 
 	if c.zip {
+		v("uzip...")
 		if err := uzip.FromZip(c.file, dir); err != nil {
 			return err
 		}
+		v("...ok")
 	} else {
 		lo, err := loop.New(c.file, "squashfs", "")
 		if err != nil {
@@ -280,24 +284,23 @@ func (c cmd) poxRun() error {
 		defer mp.Unmount(0) //nolint:errcheck
 	}
 
-	// If you pass Command a path with no slashes, it'll use PATH from the
-	// parent to resolve the path to exec.  Once we chroot, whatever path we
-	// picked is undoubtably wrong.  Let's help them out: if they give us a
-	// program with no /, let's look in /bin/.  If they want the root of the
-	// chroot, they can use "./"
-	if filepath.Base(c.args[0]) == c.args[0] {
-		c.args[0] = filepath.Join(string(os.PathSeparator), "bin", c.args[0])
-	}
-	ec := exec.Command(c.args[0], c.args[1:]...)
+	// We called ourselves with name -rz -f name -- command args
+	// So the args to exec.Command should just be c.args...
+	ec := exec.Command(c.pathInRoot, c.args[1:]...)
+	v("cmd q args %q", c.args)
 	ec.Stdin, ec.Stdout, ec.Stderr = os.Stdin, os.Stdout, os.Stderr
 	ec.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
 	}
+	v("chroot %q", dir)
 	ec.Env = append(os.Environ(), "PWD=.")
 
+	v("cmd %v", ec)
 	if err = ec.Run(); err != nil {
-		c.debug("pox command exited with: %v", err)
+		v("pox command exited with: %v", err)
+		return err
 	}
+	v("POX ran it; did anything go")
 
 	return nil
 }
@@ -326,28 +329,29 @@ func (c cmd) extraMounts(mountList string) error {
 }
 
 func (c cmd) start() error {
-	// If the current executable is a zip file, extract and run.
-	// Sneakily re-write os.Args to include a "-rzf" before flag parsing.
-	// The zip comment contains the executable path once extracted.
+	if c.verbose {
+		c.debug = log.Printf
+	}
+	v := c.debug
 	exe, err := os.Executable()
 	if err != nil {
 		return err
 	}
+	v("%q: %q, %v", exe, c.args, c)
 	if comment, err := uzip.Comment(exe); err == nil {
-		if comment == "" {
-			return errors.New("expected zip comment on self-extracting pox")
+		if len(comment) == 0 {
+			return fmt.Errorf("zip comment is empty, no path to command:%w", os.ErrNotExist)
 		}
-		os.Args = append([]string{
-			os.Args[0],
-			"-rzf", exe,
-			"--",
-			comment,
-		}, os.Args[1:]...)
+		v("self-running zip file, comment %q, arg0 %q, args: %q", comment, c.arg0, c.args)
+		c.args = append([]string{c.arg0}, c.args...)
+		c.run = true
+		c.zip = true
+		c.file = exe
+		c.pathInRoot = comment
+		v("re-written args: %q %q", c.pathInRoot, c.args)
+
 	}
 
-	if c.verbose {
-		c.debug = log.Printf
-	}
 	if err := c.extraMounts(c.extra); err != nil {
 		return err
 	}
@@ -369,7 +373,7 @@ func (c cmd) start() error {
 }
 
 func command(args []string) *cmd {
-	var c cmd
+	c := cmd{arg0: args[0]}
 
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
