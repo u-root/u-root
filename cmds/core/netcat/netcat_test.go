@@ -1,4 +1,4 @@
-// Copyright 2023 the u-root Authors. All rights reserved
+// Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,206 +6,338 @@ package main
 
 import (
 	"bytes"
-	"errors"
-	"net"
-	"strings"
+	"os"
+	"reflect"
 	"testing"
+	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/u-root/u-root/pkg/netcat"
+	"github.com/u-root/u-root/pkg/ulog"
 )
 
-func TestArgs(t *testing.T) {
-	_, err := command(nil, nil, nil, params{}, nil)
-	if !errors.Is(err, errMissingHostnamePort) {
-		t.Errorf("expected %v, got %v", errMissingHostnamePort, err)
+func TestEvalParams(t *testing.T) {
+	hostSet := netcat.DefaultConfig()
+	hostSet.Host = "testhost"
+
+	portSet := netcat.DefaultConfig()
+	portSet.Host = "testhost"
+	portSet.Host = "testhost"
+	portSet.Port = 1234
+
+	ipv4Set := netcat.DefaultConfig()
+	ipv4Set.Host = "testhost"
+	ipv4Set.ProtocolOptions.IPType = netcat.IP_V4_STRICT
+
+	ipv6Set := netcat.DefaultConfig()
+	ipv6Set.Host = "testhost"
+	ipv6Set.ProtocolOptions.IPType = netcat.IP_V6_STRICT
+
+	execNativeSet := netcat.DefaultConfig()
+	execNativeSet.Host = "testhost"
+	execNativeSet.CommandExec.Type = netcat.EXEC_TYPE_NATIVE
+	execNativeSet.CommandExec.Command = "testcommand"
+
+	sourcePortSet := netcat.DefaultConfig()
+	sourcePortSet.Host = "testhost"
+	sourcePortSet.ConnectionModeOptions.SourcePort = "123"
+
+	verboseSet := netcat.DefaultConfig()
+	verboseSet.Host = "testhost"
+	verboseSet.Output.Logger = ulog.Log
+
+	listenMode := netcat.DefaultConfig()
+	listenMode.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
+
+	setTimings := netcat.DefaultConfig()
+	setTimings.Host = "testhost"
+	setTimings.Timing.Wait = 10 * time.Second
+	setTimings.Timing.Timeout = 20 * time.Second
+	setTimings.Timing.Delay = 30 * time.Second
+
+	sslConfig := netcat.DefaultConfig()
+	sslConfig.Host = "testhost"
+	sslConfig.SSLConfig.CertFilePath = "cert.pem"
+	sslConfig.SSLConfig.KeyFilePath = "key.pem"
+
+	clrfConfig := netcat.DefaultConfig()
+	clrfConfig.Host = "testhost"
+	clrfConfig.Misc.EOL = netcat.LINE_FEED_CRLF
+
+	chatModeConfig := netcat.DefaultConfig()
+	chatModeConfig.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
+	chatModeConfig.ListenModeOptions.ChatMode = true
+	chatModeConfig.ListenModeOptions.BrokerMode = true
+
+	// Define test cases
+	tests := []struct {
+		name       string
+		setupFunc  func()
+		wantConfig *netcat.Config
+		wantErr    bool
+	}{
+		{
+			name: "host set",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "testhost"}
+			},
+			wantConfig: &hostSet,
+			wantErr:    false,
+		},
+		{
+			name: "port set",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "testhost", "1234"}
+			},
+			wantConfig: &portSet,
+			wantErr:    false,
+		},
+		{
+			name: "ipv4 set",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-4", "testhost"}
+			},
+			wantConfig: &ipv4Set,
+			wantErr:    false,
+		},
+		{
+			name: "ipv6 set",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-6", "testhost"}
+			},
+			wantConfig: &ipv6Set,
+			wantErr:    false,
+		},
+		{
+			name: "ipv4 & ipv6 set",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-4", "-6", "testhost"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "exec native",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--exec=testcommand", "testhost"}
+			},
+			wantConfig: &execNativeSet,
+			wantErr:    false,
+		},
+		{
+			name: "loose source pointer false",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-G", "3", "testhost"}
+			},
+			wantConfig: &execNativeSet,
+			wantErr:    true,
+		},
+		{
+			name: "source port set",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-p=123", "testhost"}
+			},
+			wantConfig: &sourcePortSet,
+			wantErr:    false,
+		},
+		{
+			name: "verbose",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-v", "testhost"}
+			},
+			wantConfig: &verboseSet,
+			wantErr:    false,
+		},
+		{
+			name: "listen mode",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-l"}
+			},
+			wantConfig: &listenMode,
+			wantErr:    false,
+		},
+		{
+			name: "timings",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-i=20s", "--wait=10s", "--delay=30s", "testhost"}
+			},
+			wantConfig: &setTimings,
+			wantErr:    false,
+		},
+		{
+			name: "proxy",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "testhost"}
+			},
+			wantConfig: &setTimings,
+			wantErr:    true,
+		},
+		{
+			name: "ssl missing key file",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-ssl", "--ssl-key=key.pem", "testhost"}
+			},
+			wantConfig: &sslConfig,
+			wantErr:    true,
+		},
+		{
+			name: "ssl missing cert file",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-ssl", "--ssl-cert=cert.pem", "testhost"}
+			},
+			wantConfig: &sslConfig,
+			wantErr:    true,
+		},
+		{
+			name: "crlf",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-C", "testhost"}
+			},
+			wantConfig: &clrfConfig,
+			wantErr:    false,
+		},
+		{
+			name: "invalid port",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "testhost", "invalid", "testhost"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid proxy",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=aa", "testhost"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid proxy type",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks4", "testhost"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid proxy dns type",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks5", "--proxy-dns=both", "testhost"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "chat mode",
+			setupFunc: func() {
+				os.Args = []string{"cmd", "-l", "--chat"}
+			},
+			wantConfig: &chatModeConfig,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset flag state
+
+			resetGlobalVars(t)
+
+			tt.setupFunc()
+
+			t.Log(os.Args)
+			gotConfig, err := evalParams()
+			if err != nil {
+				if tt.wantErr {
+					return
+				}
+
+				t.Errorf("evalParams() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// Assert config
+			diff := cmp.Diff(gotConfig, tt.wantConfig, cmpopts.IgnoreFields(netcat.Config{}, "Output.OutFileMutex", "Output.OutFileHexMutex", "Output.Logger"))
+			if diff != "" {
+				t.Errorf("evalParams() diff : %v", diff)
+			}
+		})
 	}
 }
 
-func TestParseParams(t *testing.T) {
-	p := parseParams()
+func TestCommand(t *testing.T) {
+	// Mock inputs
+	stdin := bytes.NewBufferString("input data")
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	config := &netcat.Config{} // Assuming Config is a struct within the netcat package
+	args := []string{"arg1", "arg2"}
 
-	// test defaults
-	if p.network != "tcp" {
-		t.Errorf("expected default network to be tcp, got %s", p.network)
+	// Expected cmd struct
+	expectedCmd := &cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+		config: config,
+		args:   args,
 	}
 
-	if p.listen != false {
-		t.Errorf("expected default listen to be false, got %t", p.listen)
+	// Call the function
+	resultCmd, err := command(stdin, stdout, stderr, config, args)
+	// Verify no error is returned
+	if err != nil {
+		t.Errorf("command() error = %v, wantErr %v", err, nil)
 	}
 
-	if p.verbose != false {
-		t.Errorf("expected default verbose to be false, got %t", p.verbose)
+	// Verify the result
+	if !reflect.DeepEqual(resultCmd, expectedCmd) {
+		t.Errorf("command() = %v, want %v", resultCmd, expectedCmd)
 	}
 }
 
-func setupEchoServer(t *testing.T) string {
-	l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: []byte{127, 0, 0, 1}, Port: 0})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		conn, err := l.AcceptTCP()
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 64)
-		n, err := conn.Read(buf)
-		if err != nil {
-			return
-		}
-
-		if _, err := conn.Write(buf[:n]); err != nil {
-			return
-		}
-	}()
-
-	return l.Addr().String()
-}
-
-func TestTCP(t *testing.T) {
-	addr := setupEchoServer(t)
-
-	stdin := strings.NewReader("hello world")
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-
-	cmd, err := command(stdin, stdout, stderr, params{network: "tcp", verbose: true}, []string{addr})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = cmd.run()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if stdout.String() != "hello world" {
-		t.Errorf("expected 'hello world', got %q", stdout.String())
-	}
-
-	stderrStr := stderr.String()
-	if !strings.Contains(stderrStr, "Connected") && !strings.Contains(stderrStr, "Disconnected") {
-		t.Errorf("expected 'Connected' and 'Listening' in stderr, got %q", stderrStr)
-	}
-}
-
-func setupEchoServerUDP(t *testing.T) string {
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: []byte{127, 0, 0, 1}, Port: 0})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		defer conn.Close()
-		buf := make([]byte, 64)
-		n, raddr, err := conn.ReadFromUDP(buf)
-		if err != nil {
-			return
-		}
-
-		if _, err := conn.WriteToUDP(buf[:n], raddr); err != nil {
-			return
-		}
-	}()
-
-	return conn.LocalAddr().String()
-}
-
-type testBuffer struct {
-	ch  chan string
-	buf []byte
-}
-
-func (t *testBuffer) Write(p []byte) (int, error) {
-	t.buf = append(t.buf, p...)
-	t.ch <- string(p)
-	return len(p), nil
-}
-
-func TestDialUDP(t *testing.T) {
-	addr := setupEchoServerUDP(t)
-
-	stdin := strings.NewReader("hello world")
-	stdout := &testBuffer{ch: make(chan string)}
-	stderr := &bytes.Buffer{}
-
-	cmd, err := command(stdin, stdout, stderr, params{network: "udp", verbose: true}, []string{addr})
-	if err != nil {
-		t.Fatal(err)
-	}
-	go func() {
-		_ = cmd.run()
-	}()
-
-	res := <-stdout.ch
-	if res != "hello world" {
-		t.Errorf("expected 'hello world', got %q", res)
-	}
-}
-
-func TestListenUDP(t *testing.T) {
-	stdin := strings.NewReader("hello client")
-	stdout := &testBuffer{ch: make(chan string)}
-	stderr := &testBuffer{ch: make(chan string)}
-
-	cmd, err := command(stdin, stdout, stderr, params{network: "udp", listen: true, verbose: true}, []string{"127.0.0.1:0"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	go func() {
-		_ = cmd.run()
-	}()
-
-	listenOn := <-stderr.ch // consume listening on message
-	srvAddr := strings.TrimSpace(string(listenOn[13:]))
-
-	conn, err := net.Dial("udp", srvAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-
-	_, err = conn.Write([]byte("hello world"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	<-stderr.ch // consume connected to message
-	res := <-stdout.ch
-	if res != "hello world" {
-		t.Errorf("expected 'hello world', got %q", res)
-	}
-
-	_, err = conn.Write([]byte("bye"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	res = <-stdout.ch
-	if res != "bye" {
-		t.Errorf("expected 'bye', got %q", res)
-	}
-
-	// read back from server, to test if server can response to client
-	buf := make([]byte, 64)
-	n, err := conn.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if string(buf[:n]) != "hello client" {
-		t.Errorf("expected 'hello client', got %q", string(buf[:n]))
-	}
-}
-
-func TestWrongNetwork(t *testing.T) {
-	cmd, err := command(nil, nil, nil, params{network: "quic"}, []string{"127.0.0.1:8080"})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = cmd.run()
-	if err == nil {
-		t.Error("quic is not a valid network, expected error")
-	}
+func resetGlobalVars(t *testing.T) {
+	t.Helper()
+	ipv4 = false
+	ipv6 = false
+	udpSocket = false
+	sctpSocket = false
+	unixSocket = false
+	virtualSocket = false
+	execNative = ""
+	execSh = ""
+	execLua = ""
+	zeroIo = false
+	sourcePort = netcat.DEFAULT_SOURCE_PORT
+	sourceAddress = ""
+	looseSourceRouterPoints = []string{}
+	looseSourcePointer = 0
+	verbose = false
+	outFilePath = ""
+	outFileHexPath = ""
+	appendOutput = false
+	listen = false
+	maxConnections = netcat.DEFAULT_CONNECTION_MAX
+	keepOpen = false
+	brokerMode = false
+	chatMode = false
+	timingWait = "10s"
+	timingDelay = "0s"
+	timingTimeout = "0s"
+	eolCRLF = false
+	noDNS = false
+	telnet = false
+	sendOnly = false
+	receiveOnly = false
+	noShutdown = false
+	connectionAllowFile = ""
+	connectionDenyFile = ""
+	connectionAllowList = []string{}
+	connectionDenyList = []string{}
+	proxyAddress = ""
+	proxydns = ""
+	proxyType = ""
+	proxyAuth = ""
+	sslEnabled = false
+	sslCertFilePath = ""
+	sslKeyFilePath = ""
+	sslVerifyTrust = false
+	sslTrustFilePath = ""
+	sslCiphers = []string{}
+	sslSNI = ""
+	sslALPN = nil
 }
