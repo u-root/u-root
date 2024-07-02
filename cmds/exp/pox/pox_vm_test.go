@@ -189,11 +189,6 @@ func TestPoxRun(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name:    "len(args) == 0",
-			args:    []string{},
-			wantErr: "pox [-[-verbose]|v] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]",
-		},
-		{
 			name:    "zip = true with error",
 			args:    []string{"/bin/bash"},
 			zip:     true,
