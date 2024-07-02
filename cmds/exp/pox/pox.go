@@ -288,6 +288,14 @@ func (c cmd) poxRun() error {
 	// So the args to exec.Command should just be c.args...
 	ec := exec.Command(c.pathInRoot, c.args[1:]...)
 	v("cmd q args %q", c.args)
+	// Go does the chroot first, then the chdir.
+	// So set dir to /
+	// If that is not done, pwd won't work at all, since
+	// Dir will not be set and the process cwd will be outside
+	// the chroot. We ran for years with this bug, but apptainer
+	// in a pox revealed. And, yes, sometimes you have to put
+	// apptainer in a pox; it's dynamically linked!
+	ec.Dir = "/"
 	ec.Stdin, ec.Stdout, ec.Stderr = os.Stdin, os.Stdout, os.Stderr
 	ec.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
