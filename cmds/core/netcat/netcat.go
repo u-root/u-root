@@ -150,19 +150,49 @@ func evalParams() (*netcat.Config, error) {
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) >= 1 {
-		config.Host = args[0]
+
+	// Connection Mode
+	if listen {
+		config.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
 	}
 
-	if len(args) >= 2 {
-		port, err := strconv.ParseUint(args[1], 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid port: %v", err)
+	// in connect mode the first arg is necessarily host
+	// The port is optional as the second argument.
+	switch config.ConnectionMode {
+	case netcat.CONNECTION_MODE_CONNECT:
+		if len(args) < 1 {
+			return nil, fmt.Errorf("missing host")
 		}
-		config.Port = port
-	}
 
-	// protocol options
+		config.Host = args[0]
+
+		if len(args) >= 2 {
+			port, err := strconv.ParseUint(args[1], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid port: %v", err)
+			}
+			config.Port = port
+		}
+
+	// If one argument is given in listen mode it is expected to be the port.
+	// If two args are given the first arg is the host and the second is the port.
+	case netcat.CONNECTION_MODE_LISTEN:
+		if len(args) == 1 {
+			port, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid port: %v", err)
+			}
+			config.Port = port
+		} else if len(args) >= 2 {
+			config.Host = args[0]
+
+			port, err := strconv.ParseUint(args[1], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid port: %v", err)
+			}
+			config.Port = port
+		}
+	}
 
 	// IP Type
 	if ipv4 && ipv6 {
@@ -221,11 +251,6 @@ func evalParams() (*netcat.Config, error) {
 	config.Output.OutFilePath = outFilePath
 	config.Output.OutFileHexPath = outFileHexPath
 	config.Output.AppendOutput = appendOutput
-
-	// Connection Mode
-	if listen {
-		config.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
-	}
 
 	// Listen Mode Options
 	config.ListenModeOptions.MaxConnections = maxConnections
