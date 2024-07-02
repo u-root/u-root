@@ -166,7 +166,7 @@ func OpenSignedFile(keyring openpgp.KeyRing, path, pathSig string, opts ...OpenS
 	}
 
 	// After CheckDetachedSignature reads the whole file, seek back to the beginning.
-	defer f.Seek(0, os.SEEK_SET)
+	defer f.Seek(0, io.SeekStart)
 
 	if keyring == nil {
 		return f, ErrUnsigned{Path: path, Err: ErrNoKeyRing}
@@ -244,7 +244,7 @@ func openHashedFile(path string, wantHash []byte, h hash.Hash) (*os.File, error)
 	}
 
 	// After io.Copy reads the whole file, Seek back to beginning.
-	defer f.Seek(0, os.SEEK_SET)
+	defer f.Seek(0, io.SeekStart)
 
 	// Hash the file.
 	if _, err := io.Copy(h, f); err != nil {
