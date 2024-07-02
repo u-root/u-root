@@ -10,7 +10,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/ishidawataru/sctp"
 	"github.com/mdlayher/vsock"
 	"github.com/u-root/u-root/pkg/netcat"
 )
@@ -52,14 +51,6 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 				return nil, fmt.Errorf("connection: failed to resolve source address %v", err)
 			}
 
-		case netcat.SOCKET_TYPE_SCTP:
-			sctpAddr, err := sctp.ResolveSCTPAddr(network, address)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve SCTP address: %w", err)
-			}
-
-			return sctp.DialSCTP(network, nil, sctpAddr)
-
 		case netcat.SOCKET_TYPE_VSOCK:
 			cid, port, err := netcat.SplitVSockAddr(address)
 			if err != nil {
@@ -69,7 +60,7 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 			return vsock.Dial(cid, port, nil)
 
 		// unsupported socket types
-		case netcat.SOCKET_TYPE_UDP_VSOCK:
+		case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_UDP_VSOCK:
 			return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
 
 		case netcat.SOCKET_TYPE_NONE:
