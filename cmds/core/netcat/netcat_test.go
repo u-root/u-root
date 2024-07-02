@@ -18,47 +18,55 @@ import (
 )
 
 func TestEvalParams(t *testing.T) {
-	defaultConfig := netcat.DefaultConfig()
-
 	hostSet := netcat.DefaultConfig()
 	hostSet.Host = "testhost"
 
 	portSet := netcat.DefaultConfig()
 	portSet.Host = "testhost"
+	portSet.Host = "testhost"
 	portSet.Port = 1234
 
 	ipv4Set := netcat.DefaultConfig()
+	ipv4Set.Host = "testhost"
 	ipv4Set.ProtocolOptions.IPType = netcat.IP_V4_STRICT
 
 	ipv6Set := netcat.DefaultConfig()
+	ipv6Set.Host = "testhost"
 	ipv6Set.ProtocolOptions.IPType = netcat.IP_V6_STRICT
 
 	execNativeSet := netcat.DefaultConfig()
+	execNativeSet.Host = "testhost"
 	execNativeSet.CommandExec.Type = netcat.EXEC_TYPE_NATIVE
 	execNativeSet.CommandExec.Command = "testcommand"
 
 	sourcePortSet := netcat.DefaultConfig()
+	sourcePortSet.Host = "testhost"
 	sourcePortSet.ConnectionModeOptions.SourcePort = "123"
 
 	verboseSet := netcat.DefaultConfig()
+	verboseSet.Host = "testhost"
 	verboseSet.Output.Logger = ulog.Log
 
 	listenMode := netcat.DefaultConfig()
 	listenMode.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
 
 	setTimings := netcat.DefaultConfig()
+	setTimings.Host = "testhost"
 	setTimings.Timing.Wait = 10 * time.Second
 	setTimings.Timing.Timeout = 20 * time.Second
 	setTimings.Timing.Delay = 30 * time.Second
 
 	sslConfig := netcat.DefaultConfig()
+	sslConfig.Host = "testhost"
 	sslConfig.SSLConfig.CertFilePath = "cert.pem"
 	sslConfig.SSLConfig.KeyFilePath = "key.pem"
 
 	clrfConfig := netcat.DefaultConfig()
+	clrfConfig.Host = "testhost"
 	clrfConfig.Misc.EOL = netcat.LINE_FEED_CRLF
 
 	chatModeConfig := netcat.DefaultConfig()
+	chatModeConfig.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
 	chatModeConfig.ListenModeOptions.ChatMode = true
 	chatModeConfig.ListenModeOptions.BrokerMode = true
 
@@ -69,14 +77,6 @@ func TestEvalParams(t *testing.T) {
 		wantConfig *netcat.Config
 		wantErr    bool
 	}{
-		{
-			name: "default",
-			setupFunc: func() {
-				os.Args = []string{"cmd"}
-			},
-			wantConfig: &defaultConfig,
-			wantErr:    false,
-		},
 		{
 			name: "host set",
 			setupFunc: func() {
@@ -96,7 +96,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "ipv4 set",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-4"}
+				os.Args = []string{"cmd", "-4", "testhost"}
 			},
 			wantConfig: &ipv4Set,
 			wantErr:    false,
@@ -104,7 +104,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "ipv6 set",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-6"}
+				os.Args = []string{"cmd", "-6", "testhost"}
 			},
 			wantConfig: &ipv6Set,
 			wantErr:    false,
@@ -112,14 +112,14 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "ipv4 & ipv6 set",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-4", "-6"}
+				os.Args = []string{"cmd", "-4", "-6", "testhost"}
 			},
 			wantErr: true,
 		},
 		{
 			name: "exec native",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "--exec=testcommand"}
+				os.Args = []string{"cmd", "--exec=testcommand", "testhost"}
 			},
 			wantConfig: &execNativeSet,
 			wantErr:    false,
@@ -127,7 +127,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "loose source pointer false",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-G", "3"}
+				os.Args = []string{"cmd", "-G", "3", "testhost"}
 			},
 			wantConfig: &execNativeSet,
 			wantErr:    true,
@@ -135,7 +135,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "source port set",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-p=123"}
+				os.Args = []string{"cmd", "-p=123", "testhost"}
 			},
 			wantConfig: &sourcePortSet,
 			wantErr:    false,
@@ -143,7 +143,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "verbose",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-v"}
+				os.Args = []string{"cmd", "-v", "testhost"}
 			},
 			wantConfig: &verboseSet,
 			wantErr:    false,
@@ -159,7 +159,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "timings",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-i=20s", "--wait=10s", "--delay=30s"}
+				os.Args = []string{"cmd", "-i=20s", "--wait=10s", "--delay=30s", "testhost"}
 			},
 			wantConfig: &setTimings,
 			wantErr:    false,
@@ -167,7 +167,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "proxy",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "--proxy=proxyhost:1234"}
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "testhost"}
 			},
 			wantConfig: &setTimings,
 			wantErr:    true,
@@ -175,7 +175,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "ssl missing key file",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-ssl", "--ssl-key=key.pem"}
+				os.Args = []string{"cmd", "-ssl", "--ssl-key=key.pem", "testhost"}
 			},
 			wantConfig: &sslConfig,
 			wantErr:    true,
@@ -183,7 +183,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "ssl missing cert file",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-ssl", "--ssl-cert=cert.pem"}
+				os.Args = []string{"cmd", "-ssl", "--ssl-cert=cert.pem", "testhost"}
 			},
 			wantConfig: &sslConfig,
 			wantErr:    true,
@@ -191,7 +191,7 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "crlf",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "-C"}
+				os.Args = []string{"cmd", "-C", "testhost"}
 			},
 			wantConfig: &clrfConfig,
 			wantErr:    false,
@@ -199,35 +199,35 @@ func TestEvalParams(t *testing.T) {
 		{
 			name: "invalid port",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "testhost", "invalid"}
+				os.Args = []string{"cmd", "testhost", "invalid", "testhost"}
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid proxy",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "--proxy=aa"}
+				os.Args = []string{"cmd", "--proxy=aa", "testhost"}
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid proxy type",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks4"}
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks4", "testhost"}
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid proxy dns type",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks5", "--proxy-dns=both"}
+				os.Args = []string{"cmd", "--proxy=proxyhost:1234", "--proxy-type=socks5", "--proxy-dns=both", "testhost"}
 			},
 			wantErr: true,
 		},
 		{
 			name: "chat mode",
 			setupFunc: func() {
-				os.Args = []string{"cmd", "--chat"}
+				os.Args = []string{"cmd", "-l", "--chat"}
 			},
 			wantConfig: &chatModeConfig,
 		},
