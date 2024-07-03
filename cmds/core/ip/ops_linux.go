@@ -13,13 +13,37 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func showLinks(w io.Writer, withAddresses bool) error {
-	ifaces, err := netlink.LinkList()
+func showAllLinks(w io.Writer, withAddresses bool, filterByType ...string) error {
+	links, err := netlink.LinkList()
 	if err != nil {
 		return fmt.Errorf("can't enumerate interfaces: %v", err)
 	}
+	return showLinks(w, withAddresses, links, filterByType...)
+}
 
-	for _, v := range ifaces {
+func showLink(w io.Writer, link netlink.Link, withAddresses bool, filterByType ...string) error {
+	return showLinks(w, withAddresses, []netlink.Link{link}, filterByType...)
+}
+
+func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByType ...string) error {
+	for _, v := range links {
+		found := true
+
+		// check if the link type is in the filter list if the filter list is not empty
+		if len(filterByType) > 0 {
+			found = false
+		}
+
+		for _, t := range filterByType {
+			if v.Type() == t {
+				found = true
+			}
+		}
+
+		if !found {
+			continue
+		}
+
 		l := v.Attrs()
 
 		master := ""
@@ -30,6 +54,7 @@ func showLinks(w io.Writer, withAddresses bool) error {
 			}
 			master = fmt.Sprintf("master %s ", link.Attrs().Name)
 		}
+
 		fmt.Fprintf(w, "%d: %s: <%s> mtu %d %sstate %s\n", l.Index, l.Name,
 			strings.Replace(strings.ToUpper(l.Flags.String()), "|", ",", -1),
 			l.MTU, master, strings.ToUpper(l.OperState.String()))
@@ -62,9 +87,11 @@ func showLinkAddresses(w io.Writer, link netlink.Link) error {
 		}
 
 		fmt.Fprintf(w, "    %s %s", inet, addr.IP)
+
 		if addr.Broadcast != nil {
 			fmt.Fprintf(w, " brd %s", addr.Broadcast)
 		}
+
 		fmt.Fprintf(w, " scope %s %s\n", addrScopes[netlink.Scope(addr.Scope)], addr.Label)
 
 		var validLft, preferredLft string
@@ -74,11 +101,13 @@ func showLinkAddresses(w io.Writer, link netlink.Link) error {
 		} else {
 			preferredLft = fmt.Sprintf("%dsec", addr.PreferedLft)
 		}
+
 		if uint32(addr.ValidLft) == math.MaxUint32 {
 			validLft = "forever"
 		} else {
 			validLft = fmt.Sprintf("%dsec", addr.ValidLft)
 		}
+
 		fmt.Fprintf(w, "       valid_lft %s preferred_lft %s\n", validLft, preferredLft)
 	}
 	return nil
