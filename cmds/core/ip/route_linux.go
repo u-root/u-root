@@ -18,7 +18,7 @@ func routeAdddefault(w io.Writer) error {
 		return err
 	}
 	// TODO: NHFLAGS.
-	l, err := parseDeviceName()
+	l, err := parseDeviceName(true)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func routeAdd(w io.Writer) error {
 		if err != nil {
 			return usage()
 		}
-		d, err := parseDeviceName()
+		d, err := parseDeviceName(true)
 		if err != nil {
 			return usage()
 		}
@@ -62,7 +62,7 @@ func routeDel() error {
 	if err != nil {
 		return usage()
 	}
-	d, err := parseDeviceName()
+	d, err := parseDeviceName(true)
 	if err != nil {
 		return usage()
 	}
@@ -74,7 +74,7 @@ func routeDel() error {
 }
 
 func routeShow(w io.Writer) error {
-	return showRoutes(w, *inet6)
+	return showRoutes(w, inet6)
 }
 
 func showRoutes(w io.Writer, inet6 bool) error {

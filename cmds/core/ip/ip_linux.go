@@ -67,26 +67,29 @@ func run(out io.Writer) error {
 	whatIWant = []string{"address", "route", "link", "neigh"}
 	cursor = 0
 
-	defer func() error {
+	defer func() {
 		switch err := recover().(type) {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				return fmt.Errorf("args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", arg, cursor, whatIWant)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				return fmt.Errorf("args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", arg, cursor, whatIWant)
 			}
-			return fmt.Errorf("bummer: %v", err)
+			log.Fatalf("ip: %v", err)
 		default:
-			return fmt.Errorf("unexpected panic value: %T(%v)", err, err)
+			log.Fatalf("ip: unexpected panic value: %T(%v)", err, err)
 		}
-		return nil
+
+		return
 	}()
 
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
 	var err error
-	switch findPrefix(arg[cursor], whatIWant) {
+
+	c := findPrefix(arg[cursor], whatIWant)
+	switch c {
 	case "address":
 		err = address(out)
 	case "link":
@@ -99,7 +102,7 @@ func run(out io.Writer) error {
 		err = usage()
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("%v: %v", c, err)
 	}
 	return nil
 }
@@ -108,7 +111,8 @@ func main() {
 	flag.BoolVar(&inet6, "6", false, "use inet6")
 	flag.Parse()
 	arg = flag.Args()
-	if err := run(os.Stdout); err != nil {
+	err := run(os.Stdout)
+	if err != nil {
 		log.Fatalf("ip: %v", err)
 	}
 }
