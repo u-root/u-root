@@ -134,21 +134,8 @@ func unzstd(w io.Writer, r io.Reader) error {
 func unxz(w io.Writer, r io.Reader) error {
 	unxzReader, err := xz.NewReader(r, 0)
 	if err != nil {
-		return fmt.Errorf("error creating unxz reader: %v", err)
-	}
-
-	if _, err := io.Copy(w, unxzReader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
-	}
-	return nil
-}
-
-// unxz reads compressed bytes from the io.Reader and writes the uncompressed bytes to the
-// writer. unxz satisfies the decompressor interface.
-func unxz(w io.Writer, r io.Reader) error {
-	unxzReader, err := xz.NewReader(r, 0)
-	if err != nil {
-		return fmt.Errorf("error creating unxz reader: %v", err)
+		// falling back to shelling out to 'unxz' 
+		unxzReader, nil = execer("unxz")
 	}
 
 	if _, err := io.Copy(w, unxzReader); err != nil {
