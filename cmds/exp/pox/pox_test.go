@@ -62,7 +62,7 @@ func TestFlags(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := command(strings.Split(tt.cmdline, " "))
+			got := command(nil, nil, nil, strings.Split(tt.cmdline, " "))
 			got.debug, tt.want.debug = nil, nil
 
 			if !reflect.DeepEqual(got, &tt.want) {

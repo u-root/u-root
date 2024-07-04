@@ -6,9 +6,9 @@
 //
 // Synopsis:
 //
-//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c FILE [...FILE]
-//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-run|r] PROGRAM -- [...ARGS]
-//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c -[-run|r] PROGRAM -- [...ARGS]
+//	pox [-v] [-f tcz-file] -c FILE [...FILE]
+//	pox [-v] [-f tcz-file] -r PROGRAM -- [...ARGS]
+//	pox [-v] [-f tcz-file] -c -r PROGRAM -- [...ARGS]
 //
 // Description:
 //
@@ -22,14 +22,14 @@
 //
 // Options:
 //
-//	create|c: create the TCZ file.
-//	verbose|d: verbose
-//	file|f FILE: file name (default /tmp/pox.tcz)
-//	run|r: Runs the first non-flag argument to pox.  Remaining arguments will
+//	c: create the TCZ file.
+//	d: verbose
+//	f FILE: file name (default /tmp/pox.tcz)
+//	r: Runs the first non-flag argument to pox.  Remaining arguments will
 //	       be passed to the program.  Use '--' before any flag-like arguments
 //	       to prevent pox from interpretting the flags.
-//	self|s: Create a self-extracting elf. This implies -z.
-//	zip|z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
+//	s: Create a self-extracting elf. This implies -z.
+//	z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
 //	       to use -z for both creation and running, or not at all.
 //	For convenience and testing, you can create and run a pox in one command.
 //
@@ -90,6 +90,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -109,7 +110,7 @@ import (
 	"github.com/u-root/u-root/pkg/uzip"
 )
 
-const usage = "pox [-[-verbose]|v] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]"
+var ErrUsage = errors.New("pox [-v] [-r] [-c]  [-f tcz-file] file [...file]")
 
 type mp struct {
 	source string
@@ -135,6 +136,10 @@ type cmd struct {
 	pathInRoot string
 	// verbose output
 	debug func(string, ...interface{})
+	// io
+	in  io.Reader
+	out io.Writer
+	err io.Writer
 }
 
 // When chrooting, programs often want to access various system directories:
@@ -148,7 +153,7 @@ var chrootMounts = []mp{
 
 func (c cmd) poxCreate() error {
 	if len(c.args) == 0 {
-		return fmt.Errorf(usage)
+		return ErrUsage
 	}
 	names, err := ldd.List(c.args...)
 	if err != nil {
@@ -296,7 +301,7 @@ func (c cmd) poxRun() error {
 	// in a pox revealed. And, yes, sometimes you have to put
 	// apptainer in a pox; it's dynamically linked!
 	ec.Dir = "/"
-	ec.Stdin, ec.Stdout, ec.Stderr = os.Stdin, os.Stdout, os.Stderr
+	ec.Stdin, ec.Stdout, ec.Stderr = c.in, c.out, c.err
 	ec.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
 	}
@@ -367,7 +372,7 @@ func (c cmd) start() error {
 		return err
 	}
 	if !c.create && !c.run {
-		return fmt.Errorf(usage)
+		return ErrUsage
 	}
 	if c.create {
 		if err := c.poxCreate(); err != nil {
@@ -380,28 +385,22 @@ func (c cmd) start() error {
 	return nil
 }
 
-func command(args []string) *cmd {
-	c := cmd{arg0: args[0]}
+func command(in io.Reader, out, err io.Writer, args []string) *cmd {
+	c := cmd{arg0: args[0], in: in, out: out, err: err}
 
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	f.BoolVar(&c.verbose, "verbose", false, "enable verbose prints")
-	f.BoolVar(&c.verbose, "v", false, "enable verbose prints (shorthand)")
+	f.BoolVar(&c.verbose, "v", false, "enable verbose prints")
 
-	f.BoolVar(&c.run, "run", false, "Run the first file argument")
-	f.BoolVar(&c.run, "r", false, "Run the first file argument (shorthand)")
+	f.BoolVar(&c.run, "r", false, "Run the first file argument")
 
-	f.BoolVar(&c.create, "create", false, "create it")
 	f.BoolVar(&c.create, "c", false, "create it")
 
-	f.BoolVar(&c.zip, "zip", false, "use zip instead of squashfs")
-	f.BoolVar(&c.zip, "z", false, "use zip instead of squashfs (shorthand)")
+	f.BoolVar(&c.zip, "z", false, "use zip instead of squashfs")
 
-	f.BoolVar(&c.self, "self", false, "use self-extracting zip")
-	f.BoolVar(&c.self, "s", false, "use self-extracting zip (shorthand)")
+	f.BoolVar(&c.self, "s", false, "use self-extracting zip")
 
-	f.StringVar(&c.file, "output", "/tmp/pox.tcz", "Output file")
-	f.StringVar(&c.file, "f", "/tmp/pox.tcz", "Output file (shorthand)")
+	f.StringVar(&c.file, "f", "/tmp/pox.tcz", "Output file")
 
 	const extraUsage = `comma-separated list of extra directories to add (on create) and binds to do (on run).
 You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
@@ -409,8 +408,7 @@ pox -c -e /tmp,/etc commands ....
 pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
 This can also be passed in with the POX_EXTRA variable.
 `
-	f.StringVar(&c.extra, "extra", "", extraUsage)
-	f.StringVar(&c.extra, "e", "", extraUsage+" (shorthand)")
+	f.StringVar(&c.extra, "e", "", extraUsage)
 
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
@@ -421,7 +419,7 @@ This can also be passed in with the POX_EXTRA variable.
 }
 
 func main() {
-	if err := command(os.Args).start(); err != nil {
+	if err := command(os.Stdin, os.Stdout, os.Stderr, os.Args).start(); err != nil {
 		log.Fatal(err)
 	}
 }
