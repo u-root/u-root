@@ -41,3 +41,39 @@ func ArgsToGoArgs(args []string) []string {
 func OSArgsToGoArgs() []string {
 	return ArgsToGoArgs(os.Args[1:])
 }
+
+// StringArray implements flag.Value that appends multiple invocations of the
+// flag to a slice of strings. The value of each argument will not try to be
+// separated by comma. Use a StringSlice for that.
+// For example: `--flag foo --flag bar` will result in `[]string{"foo", "bar"}`.
+type StringArray []string
+
+// Set implements flag.Value.Set.
+func (s *StringArray) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
+// String implements flag.Value.String.
+func (s StringArray) String() string {
+	return strings.Join(s, ",")
+}
+
+// StringSlice implements flag.Value that appends multiple invocations of the
+// flag to a slice of strings. Compared to StringArray flags, StringSlice flags
+// take comma-separated value as arguments and split them accordingly.
+// For example: `--flag=foo,bar --flag=baz` will result in `[]string{"foo", "bar", "baz"}`.
+type StringSlice []string
+
+// Set implements flag.Value.Set.
+func (s *StringSlice) Set(value string) error {
+	for _, v := range strings.Split(value, ",") {
+		*s = append(*s, v)
+	}
+	return nil
+}
+
+// String implements flag.Value.String.
+func (s StringSlice) String() string {
+	return strings.Join(s, ",")
+}

@@ -27,20 +27,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"sort"
 
-	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
+// Flags
 var (
-	all     = flag.BoolP("All", "A", false, "Select all processes.  Identical to -e.")
-	every   = flag.BoolP("every", "e", false, "Select all processes.  Identical to -A.")
-	x       = flag.BoolP("bsd", "x", false, "BSD-Like style, with STAT Column and long CommandLine")
-	nSidTty = flag.BoolP("nSIDTTY", "a", false, "Print all process except whose are session leaders or unlinked with terminal")
+	all     bool
+	every   bool
+	x       bool
+	nSidTty bool
 	aux     = false
 )
 
@@ -171,7 +173,7 @@ func ps(w io.Writer, args ...string) error {
 	for _, a := range args {
 		switch a {
 		case "aux":
-			*all, *every, aux = true, true, true
+			all, every, aux = true, true, true
 		default:
 			usage()
 			return nil
@@ -192,7 +194,7 @@ func ps(w io.Writer, args ...string) error {
 	case aux:
 		pT.headers = []string{"PID", "PGRP", "SID", "TTY", "STAT", "TIME", "COMMAND"}
 		pT.fields = []string{"Pid", "Pgrp", "Sid", "Ctty", "State", "Time", "Cmd"}
-	case *x:
+	case x:
 		pT.headers = []string{"PID", "TTY", "STAT", "TIME", "COMMAND"}
 		pT.fields = []string{"Pid", "Ctty", "State", "Time", "Cmd"}
 	default:
@@ -204,19 +206,19 @@ func ps(w io.Writer, args ...string) error {
 	pT.PrintHeader(w)
 	for index, p := range pT.table {
 		switch {
-		case *nSidTty:
+		case nSidTty:
 			// no session leaders and no unlinked terminals
 			if p.Sid == p.Pid || p.Ctty == "?" {
 				continue
 			}
 
-		case *x:
+		case x:
 			// print only process with same eUID of caller
 			if eUID != p.uid {
 				continue
 			}
 
-		case *all || *every:
+		case all || every:
 			// pass, print all
 
 		default:
@@ -234,8 +236,22 @@ func ps(w io.Writer, args ...string) error {
 }
 
 func main() {
-	flag.Parse()
-	if err := ps(os.Stdout, flag.Args()...); err != nil {
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	f.BoolVar(&all, "All", false, "Select all processes.  Identical to -e.")
+	f.BoolVar(&all, "A", false, "Select all processes.  Identical to -e. (shorthand)")
+
+	f.BoolVar(&every, "every", false, "Select all processes.  Identical to -A.")
+	f.BoolVar(&every, "e", false, "Select all processes.  Identical to -A. (shorthand)")
+
+	f.BoolVar(&x, "bsd", false, "BSD-Like style, with STAT Column and long CommandLine")
+	f.BoolVar(&x, "x", false, "BSD-Like style, with STAT Column and long CommandLine (shorthand)")
+
+	f.BoolVar(&nSidTty, "anSIDTTY", false, "Print all process except whose are session leaders or unlinked with terminal")
+	f.BoolVar(&nSidTty, "a", false, "Print all process except whose are session leaders or unlinked with terminal (shorthand)")
+
+	f.Parse(unixflag.OSArgsToGoArgs())
+	if err := ps(os.Stdout, f.Args()...); err != nil {
 		log.Fatal(err)
 	}
 }

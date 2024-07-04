@@ -5,6 +5,7 @@
 package main
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -32,11 +33,39 @@ func TestExtraMounts(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			*extra = tt.extra
-			if got := extraMounts(tt.extra); got != nil {
+			c := cmd{
+				debug: func(s string, i ...interface{}) {},
+				extra: tt.extra,
+			}
+			if got := c.extraMounts(tt.extra); got != nil {
 				if !strings.Contains(got.Error(), tt.wantErr) {
 					t.Errorf("extraMounts() = %q, want: %q", got.Error(), tt.wantErr)
 				}
+			}
+		})
+	}
+}
+
+func TestFlags(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		cmdline string
+		want    cmd
+	}{
+		{
+			name:    "Default flags",
+			cmdline: "pox",
+			want: cmd{
+				file: "/tmp/pox.tcz",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := command(strings.Split(tt.cmdline, " "))
+			got.debug, tt.want.debug = nil, nil
+
+			if !reflect.DeepEqual(got, &tt.want) {
+				t.Errorf("\ngot: %+v\nwant: %+v", got, tt.want)
 			}
 		})
 	}

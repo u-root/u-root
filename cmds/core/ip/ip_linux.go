@@ -7,6 +7,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -14,12 +15,10 @@ import (
 	"os"
 	"strings"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/vishvananda/netlink"
 )
 
-var inet6 = flag.BoolP("6", "6", false, "use ipv6")
+var inet6 bool
 
 // The language implemented by the standard 'ip' is not super consistent
 // and has lots of convenience shortcuts.
@@ -247,7 +246,7 @@ func link(w io.Writer) error {
 }
 
 func routeshow(w io.Writer) error {
-	return showRoutes(w, *inet6)
+	return showRoutes(w, inet6)
 }
 
 func nodespec() string {
@@ -394,6 +393,7 @@ func run(out io.Writer) error {
 }
 
 func main() {
+	flag.BoolVar(&inet6, "6", false, "use inet6")
 	flag.Parse()
 	arg = flag.Args()
 	if err := run(os.Stdout); err != nil {

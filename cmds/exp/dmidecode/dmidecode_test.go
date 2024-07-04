@@ -7,14 +7,13 @@ package main
 import (
 	"bytes"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	flag "github.com/spf13/pflag"
 )
 
 const (
@@ -22,8 +21,8 @@ const (
 )
 
 func resetFlags() {
-	*flagFromDump = ""
-	*flagType = nil
+	flagFromDump = ""
+	flagType = nil
 }
 
 func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile string) {

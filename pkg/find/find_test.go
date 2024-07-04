@@ -6,6 +6,7 @@ package find
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,7 +18,7 @@ import (
 func TestSimple(t *testing.T) {
 	type tests struct {
 		name  string
-		opts  Set
+		opts  []Set
 		names []string
 	}
 
@@ -35,7 +36,7 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name: "just a dir",
-			opts: WithModeMatch(os.ModeDir, os.ModeDir),
+			opts: []Set{WithModeMatch(os.ModeDir, os.ModeDir)},
 			names: []string{
 				"",
 				"/root",
@@ -44,7 +45,7 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name: "just a file",
-			opts: WithModeMatch(0, os.ModeType),
+			opts: []Set{WithModeMatch(0, os.ModeType)},
 			names: []string{
 				"/root/xyz/0777",
 				"/root/xyz/file",
@@ -52,12 +53,27 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name:  "file by mode",
-			opts:  WithModeMatch(0o444, os.ModePerm),
+			opts:  []Set{WithModeMatch(0o444, os.ModePerm)},
 			names: []string{"/root/xyz/0777"},
 		},
 		{
 			name:  "file by name",
-			opts:  WithFilenameMatch("*file"),
+			opts:  []Set{WithFilenameMatch("*file")},
+			names: []string{"/root/xyz/file"},
+		},
+		{
+			name:  "file by name with debug log",
+			opts:  []Set{WithFilenameMatch("*file"), WithDebugLog(log.Printf)},
+			names: []string{"/root/xyz/file"},
+		},
+		{
+			name:  "file by name without error",
+			opts:  []Set{WithFilenameMatch("*file"), WithoutError()},
+			names: []string{"/root/xyz/file"},
+		},
+		{
+			name:  "file by name with regex",
+			opts:  []Set{WithRegexPathMatch("file")},
 			names: []string{"/root/xyz/file"},
 		},
 	}
@@ -78,7 +94,8 @@ func TestSimple(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			files := Find(ctx, WithRoot(d), tc.opts)
+			opts := append([]Set{WithRoot(d)}, tc.opts...)
+			files := Find(ctx, opts...)
 
 			var names []string
 			for o := range files {
@@ -95,5 +112,22 @@ func TestSimple(t *testing.T) {
 				t.Errorf("Find output: got %v, want %v", names, tc.names)
 			}
 		})
+	}
+}
+
+func TestString(t *testing.T) {
+	dir := t.TempDir()
+	f, err := os.CreateTemp(dir, "")
+	if err != nil {
+		t.Fatalf("can't create file: %v", err)
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		t.Fatalf("can't stat file: %v", err)
+	}
+	ff := File{f.Name(), fi, nil}
+	s := ff.String()
+	if !strings.Contains(s, f.Name()) {
+		t.Errorf("expected to see %q, got %q", f.Name(), s)
 	}
 }

@@ -22,12 +22,11 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-
-	flag "github.com/spf13/pflag"
 )
 
 var lines = flag.Int("lines", 40, "screen size in number of lines")

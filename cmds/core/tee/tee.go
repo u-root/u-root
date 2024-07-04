@@ -16,13 +16,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/signal"
 
-	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 type cmd struct {
@@ -32,17 +33,6 @@ type cmd struct {
 	args   []string
 	cat    bool
 	ignore bool
-}
-
-func command(cat, ignore bool, args []string) *cmd {
-	return &cmd{
-		stdin:  os.Stdin,
-		stdout: os.Stdout,
-		stderr: os.Stderr,
-		cat:    cat,
-		ignore: ignore,
-		args:   args,
-	}
 }
 
 func (c *cmd) run() error {
@@ -81,14 +71,29 @@ func (c *cmd) run() error {
 	return nil
 }
 
-func main() {
-	var (
-		cat    = flag.BoolP("append", "a", false, "append the output to the files rather than rewriting them")
-		ignore = flag.BoolP("ignore-interrupts", "i", false, "ignore the SIGINT signal")
-	)
+func command(args []string) *cmd {
+	c := &cmd{
+		stdin:  os.Stdin,
+		stdout: os.Stdout,
+		stderr: os.Stderr,
+	}
 
-	flag.Parse()
-	if err := command(*cat, *ignore, flag.Args()).run(); err != nil {
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+
+	f.BoolVar(&c.cat, "append", false, "append the output to the files rather than rewriting them")
+	f.BoolVar(&c.cat, "a", false, "append the output to the files rather than rewriting them")
+
+	f.BoolVar(&c.ignore, "ignore-interrupts", false, "ignore the SIGINT signal")
+	f.BoolVar(&c.ignore, "i", false, "ignore the SIGINT signal")
+
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	c.args = f.Args()
+
+	return c
+}
+
+func main() {
+	if err := command(os.Args).run(); err != nil {
 		log.Fatalf("tee: %v", err)
 	}
 }
