@@ -104,6 +104,13 @@ func parseHardwareAddress() (net.HardwareAddr, error) {
 	return net.ParseMAC(arg[cursor])
 }
 
+func parseString() string {
+	cursor++
+	whatIWant = []string{"string"}
+
+	return arg[cursor]
+}
+
 func parseInt() (int, error) {
 	cursor++
 	whatIWant = []string{"<id>"}
