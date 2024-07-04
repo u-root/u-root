@@ -7,7 +7,6 @@ package cpio
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -710,7 +709,7 @@ func (e EmptyReaderAt) ReadAt(p []byte, off int64) (int, error) {
 func TestReproducibleWrite(t *testing.T) {
 	d := t.TempDir()
 	for _, n := range []string{"a", "b"} {
-		if err := ioutil.WriteFile(filepath.Join(d, n), []byte{}, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(d, n), []byte{}, 0644); err != nil {
 			t.Fatal(err)
 		}
 	}
