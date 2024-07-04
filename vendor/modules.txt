@@ -266,6 +266,9 @@ github.com/sahilm/fuzzy
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
+# github.com/therootcompany/xz v1.0.1
+## explicit; go 1.15
+github.com/therootcompany/xz
 # github.com/tklauser/go-sysconf v0.3.14
 ## explicit; go 1.18
 github.com/tklauser/go-sysconf
