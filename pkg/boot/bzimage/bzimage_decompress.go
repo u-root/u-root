@@ -135,7 +135,7 @@ func unxz(w io.Writer, r io.Reader) error {
 	unxzReader, err := xz.NewReader(r, 0)
 	if err != nil {
 		// falling back to shelling out to 'unxz' 
-		unxzReader, nil = execer("unxz")
+		unxzReader = execer("unxz")
 	}
 
 	if _, err := io.Copy(w, unxzReader); err != nil {
