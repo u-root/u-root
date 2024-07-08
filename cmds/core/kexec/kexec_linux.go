@@ -41,6 +41,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
+	"github.com/u-root/u-root/pkg/boot/universalpayload"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/u-root/uio/uio"
@@ -170,6 +171,10 @@ func run(args []string) error {
 	if (!opts.exec && len(opts.kernelpath) == 0) || f.NArg() > 1 {
 		f.PrintDefaults()
 		return fmt.Errorf("usage: kexec [fs] kernelname OR kexec -e")
+	}
+
+	if err := universalpayload.Load(opts.kernelpath) ; err != nil {
+		log.Printf("Failed to load universalpayload, try legacy kernel..")
 	}
 
 	if opts.cmdline != "" && opts.reuseCmdline {
