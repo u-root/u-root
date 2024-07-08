@@ -6,11 +6,14 @@ package universalpayload
 
 import (
 	"fmt"
+	"bytes"
+	"encoding/binary"
+	"math"
 
 	"github.com/u-root/u-root/pkg/dt"
 )
 
-// Porperties to be fetched from device tree.
+// Properties to be fetched from device tree.
 const (
 	FirstLevelNodeName    = "images"
 	SecondLevelNodeName   = "tianocore"
@@ -24,7 +27,7 @@ type FdtLoad struct {
 }
 
 // Device Tree Blob resides at the start of FIT binary. In order to
-// get the expected load and entry point address, need to walk though
+// get the expected load and entry point address, need to walk through
 // DTB to get value of properties 'load' and 'entry-start'.
 //
 // The simplified device tree layout is:
@@ -77,4 +80,23 @@ func getFdtInfo(name string) (*FdtLoad, error) {
 		Load:       loadAddr,
 		EntryStart: entryAddr,
 	}, nil
+}
+
+// alignHOBLength writes pad bytes at the end of a HOB buf
+// It's because we calculate HOB length with golang, while write bytes to the buf with actual length
+func alignHOBLength(expectLen uint64, bufLen int, buf *bytes.Buffer) error {
+	if expectLen < uint64(bufLen) {
+		return fmt.Errorf("negative padding size")
+	}
+
+	if expectLen > math.MaxInt {
+		return fmt.Errorf("failed to align pad size, out of int range")
+	}
+	if padLen := int(expectLen) - bufLen; padLen > 0 {
+		pad := make([]byte, padLen)
+		if err := binary.Write(buf, binary.LittleEndian, pad); err != nil {
+			return err
+		}
+	}
+	return nil
 }
