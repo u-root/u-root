@@ -64,7 +64,7 @@ func usage() error {
 
 func run(out io.Writer) error {
 	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = []string{"address", "route", "link", "neigh"}
+	whatIWant = []string{"address", "route", "link", "monitor", "neigh"}
 	cursor = 0
 
 	defer func() {
@@ -98,6 +98,8 @@ func run(out io.Writer) error {
 		err = route(out)
 	case "neigh":
 		err = neigh(out)
+	case "monitor":
+		err = monitor(out)
 	default:
 		err = usage()
 	}
