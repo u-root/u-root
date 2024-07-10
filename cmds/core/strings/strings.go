@@ -23,19 +23,17 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 var errInvalidFormatArgument = fmt.Errorf("invalid argument to option -t")
 var errInvalidMinLength = fmt.Errorf("invalid minimum string length -n")
-
-var n = flag.Int("n", 4, "the minimum string length")
-var t = flag.String("t", "", "offset format (d/o/x)")
 
 type cmd struct {
 	stdin  io.Reader
@@ -151,8 +149,13 @@ func (c *cmd) stringsFile(file string, w io.Writer) error {
 }
 
 func main() {
-	flag.Parse()
-	if err := command(os.Stdin, os.Stdout, params{n: *n, t: *t}, flag.Args()).run(); err != nil {
+	var n int
+	var t string
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	f.IntVar(&n, "n", 4, "the minimum string length")
+	f.StringVar(&t, "t", "", "write each string preceded by its byte offset from the start of the file (d decimal, o octal, x hexadecimal)")
+	f.Parse(unixflag.OSArgsToGoArgs())
+	if err := command(os.Stdin, os.Stdout, params{n: n, t: t}, flag.Args()).run(); err != nil {
 		log.Fatalf("strings: %v", err)
 	}
 }

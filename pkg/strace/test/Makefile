@@ -1,4 +1,4 @@
-all: fork hello sleep
+all: fork hello addr
 
 fork: fork.c
 	gcc -static fork.c -o fork
@@ -6,8 +6,8 @@ fork: fork.c
 hello: hello.c
 	gcc -static hello.c -o hello
 
-sleep: sleep.c
-	gcc -static sleep.c -o sleep
+addr: addr.c
+	gcc -static addr.c -o addr
 
 clean:
-	rm fork hello sleep
+	rm fork hello addr

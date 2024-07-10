@@ -156,6 +156,28 @@ func ReplaceBaseboardInfoMotherboard(manufacturer, product, version, serialNumbe
 	}
 }
 
+// RemoveBaseboardInfo returns override options that removes all Type 2 tables with the given board type.
+func RemoveBaseboardInfo(boardType BoardType) OverrideOpt {
+	return func(tables []*Table) ([]*Table, error) {
+		var result []*Table
+		for _, t := range tables {
+			if t.Type != TableTypeBaseboardInfo {
+				result = append(result, t)
+				continue
+			}
+
+			bi, err := ParseBaseboardInfo(t)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse generic table into BaseboardInfo table: %w", err)
+			}
+			if bi.BoardType != boardType {
+				result = append(result, t)
+			}
+		}
+		return result, nil
+	}
+}
+
 // Modify modifies SMBIOS tables in system memory given override options
 func (m *Modifier) Modify(opts ...OverrideOpt) error {
 	entry, tables, err := m.Info.Marshal(opts...)

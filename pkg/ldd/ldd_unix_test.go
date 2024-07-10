@@ -8,6 +8,10 @@
 package ldd
 
 import (
+	"os"
+	"path/filepath"
+	"slices"
+	"sort"
 	"testing"
 )
 
@@ -60,5 +64,33 @@ func TestParseInterp(t *testing.T) {
 		if !cmp(out, c.output) {
 			t.Fatalf("'%s' expected %v, but got %v", c.name, c.output, out)
 		}
+	}
+}
+
+func TestFollow(t *testing.T) {
+	dir := t.TempDir()
+	f, err := os.CreateTemp(dir, "")
+	if err != nil {
+		t.Fatalf("can't create tempdir: %v", err)
+	}
+
+	sPath := filepath.Join(dir, "symlink")
+
+	err = os.Symlink(f.Name(), sPath)
+	if err != nil {
+		t.Fatalf("can't create symlink: %v", err)
+	}
+
+	xs, err := follow(f.Name(), sPath, f.Name())
+	if err != nil {
+		t.Fatalf("expected nil got %v", err)
+	}
+
+	expected := []string{f.Name(), sPath}
+	sort.Strings(expected)
+	sort.Strings(xs)
+
+	if !slices.Equal(expected, xs) {
+		t.Errorf("expected: %v, got: %v", expected, xs)
 	}
 }

@@ -29,13 +29,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
 
-	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 type cmd struct {
@@ -52,10 +53,6 @@ type flags struct {
 	prefix string
 	suffix string
 	dir    string
-}
-
-func usage() {
-	log.Fatalf("Usage: mktemp [options] [template]\n%v", flag.CommandLine.FlagUsages())
 }
 
 func (c *cmd) mktemp() (string, error) {
@@ -78,23 +75,7 @@ func (c *cmd) mktemp() (string, error) {
 	return f.Name(), err
 }
 
-func command(stdout io.Writer, f flags, args []string) *cmd {
-	return &cmd{
-		stdout: stdout,
-		flags:  f,
-		args:   args,
-	}
-}
-
 func (c *cmd) run() error {
-	switch len(c.args) {
-	case 1:
-		c.flags.prefix = c.flags.prefix + strings.Split(c.args[0], "X")[0] + c.flags.suffix
-	case 0:
-	default:
-		usage()
-	}
-
 	fileName, err := c.mktemp()
 	if err != nil && !c.flags.q {
 		return err
@@ -105,19 +86,69 @@ func (c *cmd) run() error {
 }
 
 func (f *flags) register(fs *flag.FlagSet) {
-	fs.BoolVarP(&f.d, "directory", "d", false, "Make a directory")
-	fs.BoolVarP(&f.u, "dry-run", "u", false, "Do everything save the actual create")
-	fs.BoolVarP(&f.v, "quiet", "q", false, "Quiet: show no errors")
-	fs.StringVarP(&f.prefix, "prefix", "s", "", "add a prefix -- the s flag is for compatibility with GNU mktemp")
-	fs.StringVarP(&f.suffix, "suffix", "", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
-	fs.StringVarP(&f.dir, "tmpdir", "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+	fs.BoolVar(&f.d, "directory", false, "Make a directory")
+	fs.BoolVar(&f.d, "d", false, "Make a directory (shorthand)")
+
+	fs.BoolVar(&f.u, "dry-run", false, "Do everything save the actual create")
+	fs.BoolVar(&f.u, "u", false, "Do everything save the actual create (shorthand)")
+
+	fs.BoolVar(&f.v, "quiet", false, "Quiet: show no errors")
+	fs.BoolVar(&f.v, "q", false, "Quiet: show no errors (shorthand)")
+
+	fs.StringVar(&f.prefix, "prefix", "", "add a prefix")
+	fs.StringVar(&f.prefix, "s", "", "add a prefix (shorthand, 's' is for compatibility with GNU mktemp")
+
+	fs.StringVar(&f.suffix, "suffix", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
+
+	fs.StringVar(&f.dir, "tmpdir", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+	fs.StringVar(&f.dir, "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp (shorthand)")
+
+}
+
+func command(stdout io.Writer, args []string) *cmd {
+	var c cmd
+	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
+	fs.BoolVar(&c.flags.d, "directory", false, "Make a directory")
+	fs.BoolVar(&c.flags.d, "d", false, "Make a directory (shorthand)")
+
+	fs.BoolVar(&c.flags.u, "dry-run", false, "Do everything save the actual create")
+	fs.BoolVar(&c.flags.u, "u", false, "Do everything save the actual create (shorthand)")
+
+	fs.BoolVar(&c.flags.v, "quiet", false, "Quiet: show no errors")
+	fs.BoolVar(&c.flags.v, "q", false, "Quiet: show no errors (shorthand)")
+
+	fs.StringVar(&c.flags.prefix, "prefix", "", "add a prefix")
+	fs.StringVar(&c.flags.prefix, "s", "", "add a prefix (shorthand, 's' is for compatibility with GNU mktemp")
+
+	fs.StringVar(&c.flags.suffix, "suffix", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
+
+	fs.StringVar(&c.flags.dir, "tmpdir", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
+	fs.StringVar(&c.flags.dir, "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp (shorthand)")
+
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: mktemp [options] [template]\n")
+		fs.PrintDefaults()
+	}
+
+	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	c.stdout = stdout
+	c.args = fs.Args()
+
+	switch len(c.args) {
+	case 1:
+		c.flags.prefix = c.flags.prefix + strings.Split(c.args[0], "X")[0] + c.flags.suffix
+	case 0:
+	default:
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	return &c
 }
 
 func main() {
-	flags := flags{}
-	flags.register(flag.CommandLine)
-	flag.Parse()
-	if err := command(os.Stdout, flags, flag.Args()).run(); err != nil {
+	if err := command(os.Stdout, os.Args).run(); err != nil {
 		log.Fatal(err)
 	}
 }

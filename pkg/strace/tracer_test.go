@@ -114,3 +114,13 @@ func TestMultiProcess(t *testing.T) {
 
 	runAndCollectTrace(t, cmd)
 }
+
+func TestAddrProcess(t *testing.T) {
+	prepareTestCmd(t, "./test/addr")
+
+	var b bytes.Buffer
+	cmd := exec.Command("./test/addr")
+	cmd.Stdout = &b
+
+	runAndCollectTrace(t, cmd)
+}

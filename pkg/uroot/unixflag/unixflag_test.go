@@ -46,3 +46,35 @@ func TestOSArgsToGoArgs(t *testing.T) {
 		t.Fatalf("%v:got %v, want %v", os.Args, out, xargs)
 	}
 }
+
+func TestStringArray(t *testing.T) {
+	var s unixflag.StringArray
+	if err := s.Set("foo"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Set("bar"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(s), 2; got != want {
+		t.Fatalf("got slice of length %d, want %d", got, want)
+	}
+	if got, want := s.String(), "foo,bar"; got != want {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestStringSlice(t *testing.T) {
+	var s unixflag.StringSlice
+	if err := s.Set("foo,bar"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Set("baz"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(s), 3; got != want {
+		t.Fatalf("got slice of length %d, want %d", got, want)
+	}
+	if got, want := s.String(), "foo,bar,baz"; got != want {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}

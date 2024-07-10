@@ -28,13 +28,13 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/watchdog"
 	"github.com/u-root/u-root/pkg/watchdogd"
 )
@@ -63,7 +63,7 @@ func runCommand() error {
 
 	switch cmd {
 	case "run":
-		fs := flag.NewFlagSet("watchdogd run", flag.PanicOnError)
+		fs := flag.NewFlagSet("run", flag.PanicOnError)
 		var (
 			dev        = fs.String("dev", watchdog.Dev, "device")
 			timeout    = fs.Duration("timeout", -1, "duration before timing out")

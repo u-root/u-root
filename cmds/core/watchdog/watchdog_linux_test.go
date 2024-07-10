@@ -10,9 +10,9 @@ import (
 	"testing"
 )
 
-// TestRun test watchdog cli against a regular file, most tests expected to
+// TestCmdRun test watchdog cli against a regular file, most tests expected to
 // return an error, except of "keepalive"
-func TestRun(t *testing.T) {
+func TestCmdRun(t *testing.T) {
 	dev, err := os.CreateTemp(t.TempDir(), "")
 	if err != nil {
 		t.Fatalf("can't create temp file: %v", err)
@@ -139,7 +139,8 @@ func TestRun(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := runCommand(test.dev, test.args...)
+		c := cmd{dev: test.dev}
+		err := c.run(test.args)
 		if test.expectedError && err == nil {
 			t.Error("expected error, got nil")
 		}
@@ -148,6 +149,44 @@ func TestRun(t *testing.T) {
 		}
 		if test.expectedUsageError && !errors.Is(err, errUsage) {
 			t.Errorf("expected %v, got %v", errUsage, err)
+		}
+	}
+}
+
+func TestRun(t *testing.T) {
+	dev, err := os.CreateTemp(t.TempDir(), "")
+	if err != nil {
+		t.Fatalf("can't create temp file: %v", err)
+	}
+
+	tests := []struct {
+		name          string
+		cmdline       []string
+		expectedError bool
+	}{
+		{
+			name:          "no args",
+			cmdline:       []string{"watchdog"},
+			expectedError: true,
+		},
+		{
+			name:          "device not exists",
+			cmdline:       []string{"watchdog", "--dev", "does/not/exist/", "keepalive"},
+			expectedError: true,
+		},
+		{
+			name:    "keepalive", // expect no error even file is not watchdog device
+			cmdline: []string{"watchdog", "--dev", dev.Name(), "keepalive"},
+		},
+	}
+
+	for _, test := range tests {
+		err := run(test.cmdline)
+		if test.expectedError && err == nil {
+			t.Error("expected error, got nil")
+		}
+		if !test.expectedError && err != nil {
+			t.Errorf("expected nil, got %v", err)
 		}
 	}
 }

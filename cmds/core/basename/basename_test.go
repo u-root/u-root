@@ -15,7 +15,7 @@ type test struct {
 	out   string
 }
 
-func TestBasename(t *testing.T) {
+func TestRun(t *testing.T) {
 	tests := []test{
 		{
 			flags: []string{"foo.h", ".h"},
@@ -47,7 +47,7 @@ func TestBasename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Using flags %s", tt.flags), func(t *testing.T) {
 			var out bytes.Buffer
-			runBasename(&out, tt.flags)
+			run(&out, tt.flags)
 
 			if out.String() != tt.out {
 				t.Errorf("stdout got:\n%s\nwant:\n%s", out.String(), tt.out)

@@ -26,6 +26,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -35,7 +36,7 @@ import (
 	"strconv"
 	"strings"
 
-	flag "github.com/spf13/pflag"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 var errQuiet = fmt.Errorf("not found")
@@ -51,26 +52,61 @@ type grepCommand struct {
 	name string
 }
 
-func parseParams() params {
-	p := params{}
-	flag.StringVarP(&p.expr, "regexp", "e", "", "Pattern to match")
-	flag.BoolVarP(&p.headers, "no-filename", "h", false, "Suppress file name prefixes on output")
-	flag.BoolVarP(&p.invert, "invert-match", "v", false, "Print only non-matching lines")
-	flag.BoolVarP(&p.recursive, "recursive", "r", false, "recursive")
-	flag.BoolVarP(&p.noShowMatch, "files-with-matches", "l", false, "list only files")
-	flag.BoolVarP(&p.count, "count", "c", false, "Just show counts")
-	flag.BoolVarP(&p.caseInsensitive, "ignore-case", "i", false, "case-insensitive matching")
-	flag.BoolVarP(&p.number, "line-number", "n", false, "Show line numbers")
-	flag.BoolVarP(&p.fixed, "fixed-strings", "F", false, "Match using fixed strings")
-	flag.BoolVarP(&p.quiet, "quiet", "q", false, "Don't print matches; exit on first match")
-	flag.BoolVarP(&p.quiet, "silent", "s", false, "Don't print matches; exit on first match")
-	flag.Parse()
+// run runs a command. args are as from os.Args, i.e., args[0] is the command name.
+func run(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, args []string) error {
+	var c cmd
 
-	return p
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	f.StringVar(&c.params.expr, "regexp", "", "Pattern to match")
+	f.StringVar(&c.expr, "e", "", "Pattern to match (shorthand)")
+
+	f.BoolVar(&c.params.headers, "no-filename", false, "Suppress file name prefixes on output")
+	f.BoolVar(&c.params.headers, "h", false, "Suppress file name prefixes on output (shorthand)")
+
+	f.BoolVar(&c.params.invert, "invert-match", false, "Print only non-matching lines")
+	f.BoolVar(&c.params.invert, "v", false, "Print only non-matching lines (shorthand)")
+
+	f.BoolVar(&c.params.recursive, "recursive", false, "recursive")
+	f.BoolVar(&c.params.recursive, "r", false, "recursive")
+
+	f.BoolVar(&c.params.noShowMatch, "files-with-matches", false, "list only files")
+	f.BoolVar(&c.params.noShowMatch, "l", false, "list only files (shorthand)")
+
+	f.BoolVar(&c.params.count, "count", false, "Just show counts")
+	f.BoolVar(&c.params.count, "c", false, "Just show counts")
+
+	f.BoolVar(&c.params.caseInsensitive, "ignore-case", false, "case-insensitive matching")
+	f.BoolVar(&c.params.caseInsensitive, "i", false, "case-insensitive matching (shorthand)")
+
+	f.BoolVar(&c.params.number, "line-number", false, "Show line numbers")
+	f.BoolVar(&c.params.number, "n", false, "Show line numbers (shorthand)")
+
+	f.BoolVar(&c.params.fixed, "fixed-strings", false, "Match using fixed strings")
+	f.BoolVar(&c.params.fixed, "F", false, "Match using fixed strings (shorthand)")
+
+	f.BoolVar(&c.params.quiet, "quiet", false, "Don't print matches; exit on first match")
+	f.BoolVar(&c.params.quiet, "q", false, "Don't print matches; exit on first match (shorthand)")
+
+	f.BoolVar(&c.params.quiet, "silent", false, "Don't print matches; exit on first match")
+	f.BoolVar(&c.params.quiet, "s", false, "Don't print matches; exit on first match (shorthand)")
+
+	f.Usage = func() {
+		fmt.Fprint(f.Output(), "Usage: grep [-clFivnhqre] [FILE]...\n\n")
+		f.PrintDefaults()
+	}
+
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	c.args = f.Args()
+	c.stdin = stdin
+	c.stdout = bufio.NewWriter(stdout)
+	c.stderr = stderr
+
+	return c.run()
 }
 
 func main() {
-	if err := command(os.Stdin, os.Stdout, os.Stderr, parseParams(), flag.Args()).run(); err != nil {
+	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args); err != nil {
 		if err == errQuiet {
 			os.Exit(1)
 		}
@@ -87,16 +123,6 @@ type cmd struct {
 	params
 	matchCount int
 	showName   bool
-}
-
-func command(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, p params, args []string) *cmd {
-	return &cmd{
-		stdin:  stdin,
-		stdout: bufio.NewWriter(stdout),
-		stderr: stderr,
-		params: p,
-		args:   args,
-	}
 }
 
 // grep reads data from the os.File embedded in grepCommand.

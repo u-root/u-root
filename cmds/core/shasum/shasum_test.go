@@ -36,13 +36,8 @@ func TestSHASum(t *testing.T) {
 		name      string
 		args      []string
 		algorithm int
-		help      bool
 		want      string
 	}{
-		{
-			name: "help true",
-			help: true,
-		},
 		{
 			name:      "bufIn as input with sha1 sum",
 			args:      []string{},
@@ -104,8 +99,7 @@ func TestSHASum(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setting flags
-			*algorithm = tt.algorithm
-			*help = tt.help
+			algorithm = tt.algorithm
 			bufIn := &bytes.Buffer{}
 			if _, err := bufIn.WriteString("abcdef\n"); err != nil {
 				t.Errorf("failed to write string to bufIn: %v", err)
