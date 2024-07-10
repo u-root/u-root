@@ -32,7 +32,7 @@ func findPrefix(cmd string, cmds []string) string {
 
 var ErrNotFound = fmt.Errorf("not found")
 
-// in the ip command, turns out 'dev' is a noise word.
+// in the ip command, turns out 'dev' is a noisy word.
 // The BNF it shows is not right in that case.
 // Always make 'dev' optional.
 func parseDeviceName(mandatory bool) (netlink.Link, error) {
@@ -104,23 +104,47 @@ func parseHardwareAddress() (net.HardwareAddr, error) {
 	return net.ParseMAC(arg[cursor])
 }
 
-func parseString() string {
+func parseString(expected string) string {
 	cursor++
-	whatIWant = []string{"string"}
+	whatIWant = []string{expected}
 
 	return arg[cursor]
 }
 
-func parseInt() (int, error) {
+func parseInt(expected string) (int, error) {
 	cursor++
-	whatIWant = []string{"<id>"}
+	whatIWant = []string{expected}
 
 	return strconv.Atoi(arg[cursor])
 }
 
-func parseUint32() (uint32, error) {
+func parseUint8(expected string) (uint8, error) {
 	cursor++
-	whatIWant = []string{"<id>"}
+	whatIWant = []string{expected}
+
+	val, err := strconv.ParseUint(arg[cursor], 10, 8)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse uint8: %v", err)
+	}
+
+	return uint8(val), nil
+}
+
+func parseUint16(expected string) (uint16, error) {
+	cursor++
+	whatIWant = []string{expected}
+
+	val, err := strconv.ParseUint(arg[cursor], 10, 16)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse uint16: %v", err)
+	}
+
+	return uint16(val), nil
+}
+
+func parseUint32(expected string) (uint32, error) {
+	cursor++
+	whatIWant = []string{expected}
 
 	val, err := strconv.ParseUint(arg[cursor], 10, 32)
 	if err != nil {

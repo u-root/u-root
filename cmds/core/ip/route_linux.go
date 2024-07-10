@@ -165,21 +165,21 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 		switch arg[cursor] {
 		case "tos":
 			cursor++
-			route.Tos, err = parseInt()
+			route.Tos, err = parseInt("")
 			if err != nil {
 				return nil, nil, err
 			}
 
 		case "table":
 			cursor++
-			route.Table, err = parseInt()
+			route.Table, err = parseInt("TABLE_ID")
 			if err != nil {
 				return nil, nil, err
 			}
 
 		case "proto":
 			cursor++
-			proto, err := parseInt()
+			proto, err := parseInt("RTPROTO")
 			if err != nil {
 				return nil, nil, err
 			}
@@ -187,74 +187,74 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 
 		case "scope":
 			cursor++
-			scope, err := parseUint8()
+			scope, err := parseUint8("SCOPE")
 			if err != nil {
 				return nil, nil, err
 			}
 			route.Scope = netlink.Scope(scope)
 		case "metric":
 			cursor++
-			route.Priority, err = parseInt()
+			route.Priority, err = parseInt("METRIC")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "mtu":
 			cursor++
-			route.MTU, err = parseInt()
+			route.MTU, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "advmss":
 			cursor++
-			route.AdvMSS, err = parseInt()
+			route.AdvMSS, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "rtt":
 			cursor++
-			route.Rtt, err = parseInt()
+			route.Rtt, err = parseInt("TIME")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "rttvar":
 			cursor++
-			route.RttVar, err = parseInt()
+			route.RttVar, err = parseInt("TIME")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "reordering":
 			cursor++
-			route.Reordering, err = parseInt()
+			route.Reordering, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "window":
 			cursor++
-			route.Window, err = parseInt()
+			route.Window, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "cwnd":
 			cursor++
-			route.Cwnd, err = parseInt()
+			route.Cwnd, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "initcwnd":
 			cursor++
-			route.InitCwnd, err = parseInt()
+			route.InitCwnd, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "ssthresh":
 			cursor++
-			route.Ssthresh, err = parseInt()
+			route.Ssthresh, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "realms":
 			cursor++
-			route.Realm, err = parseInt()
+			route.Realm, err = parseInt("REALM")
 			if err != nil {
 				return nil, nil, err
 			}
@@ -266,28 +266,28 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 			}
 		case "rto_min":
 			cursor++
-			route.RtoMin, err = parseInt()
+			route.RtoMin, err = parseInt("TIME")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "hoplimit":
 			cursor++
-			route.Hoplimit, err = parseInt()
+			route.Hoplimit, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "initrwnd":
 			cursor++
-			route.InitRwnd, err = parseInt()
+			route.InitRwnd, err = parseInt("NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "congctl":
 			cursor++
-			route.Congctl = parseString()
+			route.Congctl = parseString("NAME")
 		case "features":
 			cursor++
-			route.Features, err = parseInt()
+			route.Features, err = parseInt("FEATURES")
 			if err != nil {
 				return nil, nil, err
 			}
@@ -382,7 +382,7 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 		case "scope":
 			filterMask |= netlink.RT_FILTER_SCOPE
 			cursor++
-			scope, err := parseUint8()
+			scope, err := parseUint8("SCOPE")
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
@@ -391,7 +391,7 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 		case "table":
 			filterMask |= netlink.RT_FILTER_TABLE
 			cursor++
-			table, err := parseInt()
+			table, err := parseInt("TABLE_ID")
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
@@ -400,7 +400,7 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 		case "proto":
 			filterMask |= netlink.RT_FILTER_PROTOCOL
 			cursor++
-			proto, err := parseInt()
+			proto, err := parseInt("RTPROTO")
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
