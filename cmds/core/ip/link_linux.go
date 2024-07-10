@@ -229,7 +229,7 @@ func setLinkNetns(iface netlink.Link) error {
 }
 
 func setLinkVf(iface netlink.Link) error {
-	vf, err := parseInt()
+	vf, err := parseInt("VF")
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func setLinkVf(iface netlink.Link) error {
 
 			return netlink.LinkSetVfHardwareAddr(iface, vf, addr)
 		case "vlan":
-			vlan, err := parseInt()
+			vlan, err := parseInt("VLANID")
 			if err != nil {
 				return err
 			}
@@ -260,7 +260,7 @@ func setLinkVf(iface netlink.Link) error {
 			whatIWant = []string{"qos"}
 			switch arg[cursor] {
 			case "qos":
-				qos, err := parseInt()
+				qos, err := parseInt("VLAN-QOS")
 				if err != nil {
 					return err
 				}
@@ -270,28 +270,28 @@ func setLinkVf(iface netlink.Link) error {
 				return usage()
 			}
 		case "rate":
-			rate, err := parseInt()
+			rate, err := parseInt("TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return netlink.LinkSetVfTxRate(iface, vf, rate)
 		case "max_tx_rate":
-			rate, err := parseInt()
+			rate, err := parseInt("TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return netlink.LinkSetVfRate(iface, vf, int(iface.Attrs().Vfs[0].MinTxRate), rate)
 		case "min_tx_rate":
-			rate, err := parseInt()
+			rate, err := parseInt("TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return netlink.LinkSetVfRate(iface, vf, rate, int(iface.Attrs().Vfs[0].MaxTxRate))
 		case "state":
-			state, err := parseUint32()
+			state, err := parseUint32("STATE")
 			if err != nil {
 				return err
 			}
@@ -350,7 +350,7 @@ func linkAdd() error {
 		whatIWant = []string{"type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues"}
 		switch arg[cursor] {
 		case "txqueuelen", "txqlen":
-			qlen, err := parseInt()
+			qlen, err := parseInt("PACKETS")
 			if err != nil {
 				return err
 			}
@@ -362,26 +362,26 @@ func linkAdd() error {
 			}
 			attrs.HardwareAddr = hwAddr
 		case "mtu":
-			mtu, err := parseInt()
+			mtu, err := parseInt("MTU")
 			if err != nil {
 				return err
 			}
 			attrs.MTU = mtu
 		case "index":
-			index, err := parseInt()
+			index, err := parseInt("IDX")
 			if err != nil {
 				return err
 			}
 			attrs.Index = index
 		case "numtxqueues":
-			numtxqueues, err := parseInt()
+			numtxqueues, err := parseInt("QUEUE_COUNT")
 			if err != nil {
 				return err
 			}
 
 			attrs.NumTxQueues = numtxqueues
 		case "numrxqueues":
-			numrxqueues, err := parseInt()
+			numrxqueues, err := parseInt("QUEUE_COUNT")
 			if err != nil {
 				return err
 			}

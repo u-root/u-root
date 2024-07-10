@@ -113,7 +113,7 @@ func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 				return nil, err
 			}
 		case "nud":
-			state, err = parseInt()
+			state, err = parseInt("STATE")
 			if err != nil {
 				return nil, err
 			}
@@ -166,7 +166,7 @@ func parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) 
 		case "proxy":
 			proxy = true
 		case "nud":
-			nud, err = parseInt()
+			nud, err = parseInt("STATE")
 			if err != nil {
 				return nil, false, 0, err
 			}
