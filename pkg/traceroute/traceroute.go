@@ -12,7 +12,7 @@ import (
 )
 
 type Probe struct {
-	id       uint16
+	id       uint32
 	sendtime time.Time
 	recvTime time.Time
 	dest     [4]byte
@@ -22,7 +22,7 @@ type Probe struct {
 	done     bool
 }
 
-func RunTraceroute(host string, debug bool) error {
+func RunTraceroute(host string, prot string, debug bool) error {
 	dAddr, err := destAddr(host)
 	if err != nil {
 		return err
@@ -41,9 +41,14 @@ func RunTraceroute(host string, debug bool) error {
 		exitChan: make(chan bool),
 	}
 
-	mod := NewModule("udp", dAddr, sAddr, cc, debug)
+	mod := NewTrace(prot, dAddr, sAddr, cc, debug)
 
-	go mod.SendTraces()
+	switch prot {
+	case "udp4":
+		go mod.SendTracesUDP4()
+	case "tcp4":
+		go mod.SendTracesTCP4()
+	}
 
 	printMap := runTransmission(cc)
 
