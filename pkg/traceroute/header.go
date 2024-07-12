@@ -39,6 +39,14 @@ type TCPHeader struct {
 	Urgent     uint16
 }
 
+type ICMPHeader struct {
+	IType    uint8
+	ICode    uint8
+	Checksum uint16
+	ID       uint16
+	Seq      uint16
+}
+
 // checksum function
 func checkSum(buf []byte) uint16 {
 	sum := uint32(0)

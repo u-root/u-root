@@ -27,6 +27,6 @@ const (
 	IPV6HdrLen    = 40
 
 	TCPDEFPORT   = 443
-	DEFNUMHOPS   = 30
+	DEFNUMHOPS   = 20
 	DEFNUMTRACES = 3
 )

@@ -7,6 +7,7 @@ package traceroute
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -41,10 +42,11 @@ func (t *Trace) SendTracesTCP4() {
 			}
 			t.SendChan <- pb
 			seq = (seq + 4) % mod
+			go t.ReceiveTracesTCP4ICMP()
+			go t.ReceiveTracesTCP4()
+			time.Sleep(time.Microsecond * time.Duration(200000/t.PacketRate))
 		}
-		go t.ReceiveTracesTCP4ICMP()
-		go t.ReceiveTracesTCP4()
-		time.Sleep(time.Microsecond * time.Duration(200000/t.PacketRate))
+
 	}
 }
 
@@ -105,6 +107,39 @@ func (t *Trace) ReceiveTracesTCP4ICMP() {
 			}
 		}
 	}
+}
+
+func (t *Trace) IPv4TCPProbe(dport uint16) {
+	seq := uint32(1000)
+	mod := uint32(1 << 30)
+	for i := 0; i < t.MaxHops; i++ {
+		go t.IPv4TCPPing(seq, dport)
+		seq = (seq + 4) % mod
+		time.Sleep(time.Microsecond * time.Duration(200000/t.PacketRate))
+	}
+
+}
+
+func (t *Trace) IPv4TCPPing(seq uint32, dport uint16) {
+	pbs := &Probe{
+		id:       seq,
+		dest:     [4]byte(t.Dest.To4()),
+		ttl:      0,
+		sendtime: time.Now(),
+	}
+	t.SendChan <- pbs
+
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", t.Dest.String(), dport), time.Second*2)
+	if err != nil {
+		return
+	}
+	conn.Close()
+	pbr := &Probe{
+		id:       seq,
+		saddr:    t.Dest.String(),
+		recvTime: time.Now(),
+	}
+	t.ReceiveChan <- pbr
 }
 
 func (t *Trace) BuildIPv4TCPSYN(srcPort uint16, dstPort uint16, ttl uint8, seq uint32, tos int) (*ipv4.Header, []byte) {

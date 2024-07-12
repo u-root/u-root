@@ -6,7 +6,6 @@ package traceroute
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 )
 
@@ -33,13 +32,27 @@ func destAddr(dest string) (destAddr [4]byte, err error) {
 }
 
 func findDestinationTTL(printMap map[int]*Probe, dest [4]byte) int {
+	icmp := false
+	destttl := 1
+	var icmpfinalpb *Probe
 	for _, pb := range printMap {
-		if bytes.Equal([]byte(pb.saddr), dest[:]) {
-			fmt.Println(pb)
-			return pb.ttl
+		if !bytes.Equal([]byte(pb.saddr), dest[:]) && destttl < pb.ttl {
+			destttl = pb.ttl
+		}
+		if pb.ttl == 0 {
+			// ICMP TCPProbe needs to increade return value by one
+			icmpfinalpb = pb
+			icmp = true
 		}
 	}
-	return DEFNUMHOPS
+
+	if icmp {
+		destttl++
+		newttl := destttl
+		icmpfinalpb.ttl = newttl
+	}
+
+	return destttl
 }
 
 func getProbesByTLL(printMap map[int]*Probe, ttl int) []*Probe {

@@ -29,6 +29,8 @@ func NewTrace(proto string, dAddr [4]byte, sAddr *net.UDPAddr, cc coms, debug bo
 		destPort = 33434
 	case "tcp4":
 		destPort = 443
+		// ICMP does not require a port, duh!
+		// case "icmp4":
 	}
 
 	ret := &Trace{
