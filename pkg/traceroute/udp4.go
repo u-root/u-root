@@ -5,6 +5,7 @@
 package traceroute
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -15,29 +16,15 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-type UDP4Trace struct {
-	Dest     net.IP
-	destPort uint16
-	src      net.IP
-	//srcPort     uint16
-	PortOffset   int32
-	MaxHops      int
-	SendChan     chan<- *Probe
-	ReceiveChan  chan<- *Probe
-	exitChan     chan<- bool
-	debug        bool
-	TracesPerHop int
-}
-
 // SendTrace in a routine
-func (u *UDP4Trace) SendTraces() {
+func (t *Trace) SendTracesUDP4() {
 	id := uint16(1)
-	dport := uint16(int32(u.destPort) + rand.Int31n(64))
-	sport := uint16(1000 + u.PortOffset + rand.Int31n(500))
+	dport := uint16(int32(t.destPort) + rand.Int31n(64))
+	sport := uint16(1000 + t.PortOffset + rand.Int31n(500))
 	mod := uint16(1 << 15)
 
-	for ttl := 1; ttl <= int(u.MaxHops); ttl++ {
-		for j := 0; j < u.TracesPerHop; j++ {
+	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
+		for j := 0; j < t.TracesPerHop; j++ {
 			conn, err := net.ListenPacket("ip4:udp", "")
 			if err != nil {
 				log.Printf("net.ListenPacket() = %v", err)
@@ -52,30 +39,29 @@ func (u *UDP4Trace) SendTraces() {
 			}
 
 			pb := &Probe{
-				id:   id,
-				dest: [4]byte(u.Dest.To4()),
+				id:   uint32(id),
+				dest: [4]byte(t.Dest.To4()),
 				port: dport,
 				ttl:  ttl,
 			}
-			hdr, pl := u.BuildIPv4UDPkt(sport, dport, uint8(ttl), id, 0)
+			hdr, pl := t.BuildIPv4UDPkt(sport, dport, uint8(ttl), id, 0)
 
 			pb.sendtime = time.Now()
 			if err := rSock.WriteTo(hdr, pl, nil); err != nil {
 				log.Fatal(err)
 			}
 
-			u.SendChan <- pb
-			dport = uint16(int32(u.destPort) + rand.Int31n(64))
+			t.SendChan <- pb
+			dport = uint16(int32(t.destPort) + rand.Int31n(64))
 			id = (id + 1) % mod
-			go u.ReceiveTraces()
+			go t.ReceiveTracesUDP4()
 			time.Sleep(time.Microsecond * time.Duration(100000))
 		}
-
 	}
 }
 
-func (u *UDP4Trace) ReceiveTraces() {
-	dest := u.Dest.To4()
+func (t *Trace) ReceiveTracesUDP4() {
+	dest := t.Dest.To4()
 	var err error
 	recvICMPConn, err := net.ListenIP("ip4:icmp", nil)
 	if err != nil {
@@ -91,7 +77,6 @@ func (u *UDP4Trace) ReceiveTraces() {
 
 	icmpType := buf[0]
 	if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { //TTL Exceeded or Port Unreachable
-
 		id := binary.BigEndian.Uint16(buf[12:14])
 		dstip := net.IP(buf[24:28])
 		//srcip := net.IP(buf[20:24])
@@ -99,11 +84,51 @@ func (u *UDP4Trace) ReceiveTraces() {
 		_ = binary.BigEndian.Uint16(buf[30:32])
 		if dstip.Equal(dest) { // && dstPort == t.dstPort {
 			recvProbe := &Probe{
-				id:       id,
+				id:       uint32(id),
 				saddr:    raddr.String(),
 				recvTime: time.Now(),
 			}
-			u.ReceiveChan <- recvProbe
+			t.ReceiveChan <- recvProbe
 		}
 	}
+}
+
+func (t *Trace) BuildIPv4UDPkt(srcPort uint16, dstPort uint16, ttl uint8, id uint16, tos int) (*ipv4.Header, []byte) {
+	iph := &ipv4.Header{
+		Version:  ipv4.Version,
+		TOS:      tos,
+		Len:      ipv4.HeaderLen,
+		TotalLen: 60,
+		ID:       int(id),
+		Flags:    0,
+		FragOff:  0,
+		TTL:      int(ttl),
+		Protocol: 17,
+		Checksum: 0,
+		Src:      t.src,
+		Dst:      t.Dest,
+	}
+
+	h, err := iph.Marshal()
+	if err != nil {
+		log.Fatal(err)
+	}
+	iph.Checksum = int(checkSum(h))
+
+	udp := UDPHeader{
+		Src: srcPort,
+		Dst: dstPort,
+	}
+
+	payload := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		payload[i] = uint8(i + 64)
+	}
+	udp.Length = uint16(len(payload) + 8)
+	udp.checksum(iph, payload)
+
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.BigEndian, &udp)
+	binary.Write(&buf, binary.BigEndian, &payload)
+	return iph, buf.Bytes()
 }

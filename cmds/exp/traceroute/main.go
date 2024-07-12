@@ -6,10 +6,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/traceroute"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
@@ -27,11 +29,10 @@ func run(out io.Writer, args []string) error {
 	f.BoolVar(&flags.AF4, "4", false, "Explicitly  force  IPv4 tracerouting.")
 	f.BoolVar(&flags.AF6, "6", false, "Explicitly  force  IPv6 tracerouting.")
 	f.UintVar(&flags.DestPortSeq, "p", 0, "Destination port")
-	//f.StringVar(&flags.Module, "m", "default", traceroute.SupportedModules())
+	f.StringVar(&flags.Module, "m", "udp4", "udp, tcp, icmp")
 
 	// Long form flags - must be provided with two dashes (--)
 	f.UintVar(&flags.DestPortSeq, "port", 0, "Destination port")
-	//f.StringVar(&flags.Module, "module", "default", traceroute.SupportedModules())
 
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
@@ -51,10 +52,18 @@ func run(out io.Writer, args []string) error {
 		}
 	}
 
+	// Evaluate AF and Module
+	af := "4"
+	if !flags.AF4 && flags.AF6 {
+		af = "6"
+	}
+
+	modaf := strings.ToLower(fmt.Sprintf("%s%s", flags.Module, af))
+	fmt.Println(modaf)
 	// Pass execution to pkg/traceroute.
 	// Setup can be quite complexe with such amount of flags
 	// and the different modules.
-	return traceroute.RunTraceroute(trargs.Host, false)
+	return traceroute.RunTraceroute(trargs.Host, modaf, false)
 }
 
 func main() {

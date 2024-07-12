@@ -7,7 +7,6 @@ package traceroute
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
 
 	"golang.org/x/net/ipv4"
 )
@@ -101,44 +100,4 @@ func (t *TCPHeader) checksum(ip *ipv4.Header, payload []byte) {
 	binary.Write(&b, binary.BigEndian, t)
 	binary.Write(&b, binary.BigEndian, &payload)
 	t.Checksum = checkSum(b.Bytes())
-}
-
-func (u *UDP4Trace) BuildIPv4UDPkt(srcPort uint16, dstPort uint16, ttl uint8, id uint16, tos int) (*ipv4.Header, []byte) {
-	iph := &ipv4.Header{
-		Version:  ipv4.Version,
-		TOS:      tos,
-		Len:      ipv4.HeaderLen,
-		TotalLen: 60,
-		ID:       int(id),
-		Flags:    0,
-		FragOff:  0,
-		TTL:      int(ttl),
-		Protocol: 17,
-		Checksum: 0,
-		Src:      u.src,
-		Dst:      u.Dest,
-	}
-
-	h, err := iph.Marshal()
-	if err != nil {
-		log.Fatal(err)
-	}
-	iph.Checksum = int(checkSum(h))
-
-	udp := UDPHeader{
-		Src: srcPort,
-		Dst: dstPort,
-	}
-
-	payload := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		payload[i] = uint8(i + 64)
-	}
-	udp.Length = uint16(len(payload) + 8)
-	udp.checksum(iph, payload)
-
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, &udp)
-	binary.Write(&buf, binary.BigEndian, &payload)
-	return iph, buf.Bytes()
 }

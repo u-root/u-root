@@ -9,7 +9,6 @@ const (
 	DEFAULTDATALEN = 40
 
 	DEFFIRSTHOP  = 1
-	DEFHOPS      = 30
 	MAXHOPS      = 255
 	DEFSIMPROBES = 16
 	DEFNUMPROBES = 3
@@ -26,4 +25,8 @@ const (
 
 	IPV4HdrMinLen = 20
 	IPV6HdrLen    = 40
+
+	TCPDEFPORT   = 443
+	DEFNUMHOPS   = 30
+	DEFNUMTRACES = 3
 )
