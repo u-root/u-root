@@ -44,7 +44,7 @@ func (t *Trace) SendTracesUDP4() {
 				port: dport,
 				ttl:  ttl,
 			}
-			hdr, pl := t.BuildIPv4UDPkt(sport, dport, uint8(ttl), id, 0)
+			hdr, pl := t.BuildUDP4Pkt(sport, dport, uint8(ttl), id, 0)
 
 			pb.sendtime = time.Now()
 			if err := rSock.WriteTo(hdr, pl, nil); err != nil {
@@ -93,7 +93,7 @@ func (t *Trace) ReceiveTracesUDP4() {
 	}
 }
 
-func (t *Trace) BuildIPv4UDPkt(srcPort uint16, dstPort uint16, ttl uint8, id uint16, tos int) (*ipv4.Header, []byte) {
+func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint16, tos int) (*ipv4.Header, []byte) {
 	iph := &ipv4.Header{
 		Version:  ipv4.Version,
 		TOS:      tos,

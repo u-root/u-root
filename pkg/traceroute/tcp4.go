@@ -32,7 +32,7 @@ func (t *Trace) SendTracesTCP4() {
 	mod := uint32(1 << 30)
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			hdr, payload := t.BuildIPv4TCPSYN(sport, t.destPort, uint8(ttl), seq, 0)
+			hdr, payload := t.BuildTCP4SYNPkt(sport, t.destPort, uint8(ttl), seq, 0)
 			rSocket.WriteTo(hdr, payload, nil)
 			pb := &Probe{
 				id:       seq,
@@ -142,7 +142,7 @@ func (t *Trace) IPv4TCPPing(seq uint32, dport uint16) {
 	t.ReceiveChan <- pbr
 }
 
-func (t *Trace) BuildIPv4TCPSYN(srcPort uint16, dstPort uint16, ttl uint8, seq uint32, tos int) (*ipv4.Header, []byte) {
+func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq uint32, tos int) (*ipv4.Header, []byte) {
 	iph := &ipv4.Header{
 		Version:  ipv4.Version,
 		TOS:      tos,
