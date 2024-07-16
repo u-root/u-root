@@ -16,7 +16,10 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var inet6 bool
+var (
+	inet4 bool
+	inet6 bool
+)
 
 // The language implemented by the standard 'ip' is not super consistent
 // and has lots of convenience shortcuts.
@@ -40,10 +43,10 @@ var inet6 bool
 var (
 	// Cursor is out next token pointer.
 	// The language of this command doesn't require much more.
-	cursor    int
-	arg       []string
-	whatIWant []string
-
+	cursor     int
+	arg        []string
+	whatIWant  []string
+	family     int // netlink.FAMILY_ALL, netlink.FAMILY_V4, netlink.FAMILY_V6
 	addrScopes = map[netlink.Scope]string{
 		netlink.SCOPE_UNIVERSE: "global",
 		netlink.SCOPE_HOST:     "host",
@@ -64,7 +67,13 @@ func usage() error {
 
 func run(out io.Writer) error {
 	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = []string{"address", "route", "link", "monitor", "neigh", "tunnel"}
+	family = netlink.FAMILY_ALL
+	if inet6 {
+		family = netlink.FAMILY_V6
+	} else if inet4 {
+		family = netlink.FAMILY_V4
+	}
+	whatIWant = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tcp_metrics", "tcpmetrics", "xfrm"}
 	cursor = 0
 
 	defer func() {
@@ -102,6 +111,10 @@ func run(out io.Writer) error {
 		err = monitor(out)
 	case "tunnel":
 		err = tunnel(out)
+	case "tcpmetrics", "tcp_metrics":
+		err = tcpMetrics(out)
+	case "xfrm":
+		err = xfrm(out)
 	default:
 		err = usage()
 	}
@@ -113,6 +126,7 @@ func run(out io.Writer) error {
 
 func main() {
 	flag.BoolVar(&inet6, "6", false, "use inet6")
+	flag.BoolVar(&inet4, "4", false, "use inet6")
 	flag.Parse()
 	arg = flag.Args()
 	err := run(os.Stdout)

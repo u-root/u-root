@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strconv"
@@ -97,6 +98,38 @@ func parseType() (string, error) {
 	return arg[cursor], nil
 }
 
+func parseAddress() (net.IP, error) {
+	cursor++
+	whatIWant = []string{"[address] PREFIX"}
+
+	if arg[cursor] == "address" {
+		cursor++
+	}
+
+	whatIWant = []string{"PREFIX"}
+	ip := net.ParseIP(arg[cursor])
+
+	if ip == nil {
+		return nil, fmt.Errorf("failed to parse adress: %v", arg[cursor])
+	}
+	return net.ParseIP(arg[cursor]), nil
+}
+
+func parseIPNet() (*net.IPNet, error) {
+	cursor++
+	whatIWant = []string{"ADDR/PLEN"}
+	_, ipNet, err := net.ParseCIDR(arg[cursor])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CIDR: %v", arg[cursor])
+	}
+
+	if ipNet == nil {
+		return nil, fmt.Errorf("failed to parse adress: %v", arg[cursor])
+	}
+
+	return ipNet, nil
+}
+
 func parseHardwareAddress() (net.HardwareAddr, error) {
 	cursor++
 	whatIWant = []string{"<mac address>"}
@@ -109,6 +142,13 @@ func parseString(expected string) string {
 	whatIWant = []string{expected}
 
 	return arg[cursor]
+}
+
+func parseByte(expected string) ([]byte, error) {
+	cursor++
+	whatIWant = []string{expected}
+
+	return hex.DecodeString(arg[cursor])
 }
 
 func parseInt(expected string) (int, error) {
@@ -152,6 +192,13 @@ func parseUint32(expected string) (uint32, error) {
 	}
 
 	return uint32(val), nil
+}
+
+func parseUint64(expected string) (uint64, error) {
+	cursor++
+	whatIWant = []string{expected}
+
+	return strconv.ParseUint(arg[cursor], 10, 64)
 }
 
 func parseBool() (bool, error) {
