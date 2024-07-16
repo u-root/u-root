@@ -29,7 +29,7 @@ func (t *Trace) SendTracesICMP4() {
 	mod := uint16(1 << 15)
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			hdr, payload := t.BuildIPv4ICMP(uint8(ttl), id, id, 0)
+			hdr, payload := t.BuildICMP4Pkt(uint8(ttl), id, id, 0)
 			rSocket.WriteTo(hdr, payload, nil)
 			pb := &Probe{
 				id:       uint32(hdr.ID),
@@ -82,7 +82,7 @@ func (t *Trace) ReceiveTracesICMP4() {
 	}
 }
 
-func (t *Trace) BuildIPv4ICMP(ttl uint8, id, seq uint16, tos int) (*ipv4.Header, []byte) {
+func (t *Trace) BuildICMP4Pkt(ttl uint8, id, seq uint16, tos int) (*ipv4.Header, []byte) {
 	iph := &ipv4.Header{
 		Version:  ipv4.Version,
 		TOS:      tos,
