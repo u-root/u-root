@@ -22,7 +22,7 @@ func tcpMetrics(w io.Writer) error {
 		return showTCPMetrics(w, nil)
 	}
 
-	whatIWant = []string{"show", "help"}
+	expectedValues = []string{"show", "help"}
 	switch arg[1] {
 	case "show":
 		cursor++
@@ -47,7 +47,7 @@ func tcpMetrics(w io.Writer) error {
 
 func showTCPMetrics(w io.Writer, address net.IP) error {
 	var family uint8 = unix.AF_INET
-	if inet6 {
+	if family == netlink.FAMILY_V6 {
 		family = unix.AF_INET6
 	}
 

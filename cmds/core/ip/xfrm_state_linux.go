@@ -38,8 +38,8 @@ ENCAP := { espinudp | espinudp-nonike | espintcp } SPORT DPORT OADDR`
 
 func xfrmState(w io.Writer) error {
 	cursor++
-	whatIWant = []string{"add", "update", "allocspi", "delete", "deleteall", "show", "list", "flush", "count", "help"}
-	switch findPrefix(arg[cursor], whatIWant) {
+	expectedValues = []string{"add", "update", "allocspi", "delete", "deleteall", "show", "list", "flush", "count", "help"}
+	switch findPrefix(arg[cursor], expectedValues) {
 	case "add":
 		xfrmState, err := parseXfrmStateAddUpdate()
 		if err != nil {
@@ -296,7 +296,7 @@ func parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 		if cursor == len(arg) {
 			break
 		}
-		whatIWant = []string{"src", "dst", "proto", "spi", "enc", "auth", "auth-trunc", "aead", "comp", "mode", "mark", "reqid", "replay-window", "limit", "encap", "output-mark", "if_id"}
+		expectedValues = []string{"src", "dst", "proto", "spi", "enc", "auth", "auth-trunc", "aead", "comp", "mode", "mark", "reqid", "replay-window", "limit", "encap", "output-mark", "if_id"}
 		switch arg[cursor] {
 		case "src":
 			state.Src, err = parseAddress()
@@ -434,7 +434,7 @@ func parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
 		if cursor == len(arg) {
 			break
 		}
-		whatIWant = []string{"src", "dst", "proto", "spi", "mode", "mark", "reqid"}
+		expectedValues = []string{"src", "dst", "proto", "spi", "mode", "mark", "reqid"}
 		switch arg[cursor] {
 		case "src":
 			state.Src, err = parseAddress()
@@ -490,7 +490,7 @@ func parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
 		if cursor == len(arg) {
 			break
 		}
-		whatIWant = []string{"src", "dst", "proto", "spi", "mark"}
+		expectedValues = []string{"src", "dst", "proto", "spi", "mark"}
 		switch arg[cursor] {
 		case "src":
 			state.Src, err = parseAddress()
@@ -539,7 +539,7 @@ func parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
 		if cursor == len(arg) {
 			break
 		}
-		whatIWant = []string{"src", "dst", "proto", "spi", "mode", "reqid", "nokeys"}
+		expectedValues = []string{"src", "dst", "proto", "spi", "mode", "reqid", "nokeys"}
 		switch arg[cursor] {
 		case "src":
 			state.Src, err = parseAddress()

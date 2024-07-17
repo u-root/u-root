@@ -74,6 +74,15 @@ func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByTy
 
 		fmt.Fprintf(w, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
 
+		if f.stats {
+			stats := l.Statistics
+			if stats != nil {
+				fmt.Fprintf(w, "    RX: bytes %d packets %d errors %d dropped %d missed %d mcast %d\n",
+					stats.RxBytes, stats.RxPackets, stats.RxErrors, stats.RxDropped, stats.RxMissedErrors, stats.Multicast)
+				fmt.Fprintf(w, "    TX: bytes %d packets %d errors %d dropped %d carrier %d collsns %d\n",
+					stats.TxBytes, stats.TxPackets, stats.TxErrors, stats.TxDropped, stats.TxCarrierErrors, stats.Collisions)
+			}
+		}
 		if withAddresses {
 			showLinkAddresses(w, v)
 		}
@@ -82,7 +91,7 @@ func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByTy
 }
 
 func showLinkAddresses(w io.Writer, link netlink.Link) error {
-	addrs, err := netlink.AddrList(link, netlink.FAMILY_ALL)
+	addrs, err := netlink.AddrList(link, family)
 	if err != nil {
 		return fmt.Errorf("can't enumerate addresses: %v", err)
 	}

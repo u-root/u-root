@@ -13,13 +13,28 @@ import (
 	"os"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/vishvananda/netlink"
 )
 
-var (
+type flags struct {
 	inet4 bool
 	inet6 bool
-)
+	stats bool
+}
+
+const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
+where  OBJECT := { address |  help | link | monitor | neighbor | neighbour |
+				   route | rule | tap | tcpmetrics |
+                   token | tunnel | tuntap | vrf | xfrm }
+       OPTIONS := { -V[ersion] | -s[tatistics] | -d[etails] | -r[esolve] |
+                    -h[uman-readable] | -iec | -j[son] | -p[retty] |
+                    -f[amily] { inet | inet6 | mpls | bridge | link } |
+                    -4 | -6 | -M | -B | -0 |
+                    -l[oops] { maximum-addr-flush-attempts } | -br[ief] |
+                    -o[neline] | -t[imestamp] | -ts[hort] | -b[atch] [filename] |
+                    -rc[vbuf] [size] | -n[etns] name | -N[umeric] | -a[ll] |
+                    -c[olor]}`
 
 // The language implemented by the standard 'ip' is not super consistent
 // and has lots of convenience shortcuts.
@@ -43,11 +58,12 @@ var (
 var (
 	// Cursor is out next token pointer.
 	// The language of this command doesn't require much more.
-	cursor     int
-	arg        []string
-	whatIWant  []string
-	family     int // netlink.FAMILY_ALL, netlink.FAMILY_V4, netlink.FAMILY_V6
-	addrScopes = map[netlink.Scope]string{
+	f              flags
+	cursor         int
+	arg            []string
+	expectedValues []string
+	family         int // netlink.FAMILY_ALL, netlink.FAMILY_V4, netlink.FAMILY_V6
+	addrScopes     = map[netlink.Scope]string{
 		netlink.SCOPE_UNIVERSE: "global",
 		netlink.SCOPE_HOST:     "host",
 		netlink.SCOPE_SITE:     "site",
@@ -62,18 +78,33 @@ var (
 
 func usage() error {
 	return fmt.Errorf("this was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
-		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
+		arg[0:cursor], arg[cursor:], arg[cursor], expectedValues)
 }
 
-func run(out io.Writer) error {
-	// When this is embedded in busybox we need to reinit some things.
+func run(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs.BoolVar(&f.inet4, "4", false, "Display IPv4 addresses")
+	fs.BoolVar(&f.inet6, "6", false, "Display IPv6 addresses")
+	fs.BoolVar(&f.stats, "s", false, "Display statistics")
+	fs.BoolVar(&f.stats, "statistics", false, "Display statistics")
+	fs.Usage = func() {
+		fmt.Fprintf(out, "%s\n\n", ipHelp)
+
+		fs.PrintDefaults()
+	}
+
+	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	arg = fs.Args()
+
 	family = netlink.FAMILY_ALL
-	if inet6 {
+	if f.inet6 {
 		family = netlink.FAMILY_V6
-	} else if inet4 {
+	} else if f.inet4 {
 		family = netlink.FAMILY_V4
 	}
-	whatIWant = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm"}
+
+	expectedValues = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"}
 	cursor = 0
 
 	defer func() {
@@ -81,9 +112,9 @@ func run(out io.Writer) error {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", arg, cursor, whatIWant)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", arg, cursor, expectedValues)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", arg, cursor, whatIWant)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", arg, cursor, expectedValues)
 			}
 			log.Fatalf("ip: %v", err)
 		default:
@@ -97,7 +128,7 @@ func run(out io.Writer) error {
 	// There are lots of handy shortcuts that people will expect.
 	var err error
 
-	c := findPrefix(arg[cursor], whatIWant)
+	c := findPrefix(arg[cursor], expectedValues)
 	switch c {
 	case "address":
 		err = address(out)
@@ -119,6 +150,10 @@ func run(out io.Writer) error {
 		err = vrf(out)
 	case "xfrm":
 		err = xfrm(out)
+	case "help":
+		fmt.Fprint(out, ipHelp)
+
+		return nil
 	default:
 		err = usage()
 	}
@@ -129,11 +164,7 @@ func run(out io.Writer) error {
 }
 
 func main() {
-	flag.BoolVar(&inet6, "6", false, "use inet6")
-	flag.BoolVar(&inet4, "4", false, "use inet6")
-	flag.Parse()
-	arg = flag.Args()
-	err := run(os.Stdout)
+	err := run(os.Args, os.Stdout)
 	if err != nil {
 		log.Fatalf("ip: %v", err)
 	}

@@ -32,10 +32,10 @@ func neigh(w io.Writer) error {
 	}
 
 	cursor++
-	whatIWant = []string{"show", "add", "del", "replace", "flush", "get", "help"}
+	expectedValues = []string{"show", "add", "del", "replace", "flush", "get", "help"}
 	cmd := arg[cursor]
 
-	switch c := findPrefix(cmd, whatIWant); c {
+	switch c := findPrefix(cmd, expectedValues); c {
 	case "add", "del", "replace":
 		neigh, err := parseNeighAddDelReplaceParams()
 		if err != nil {
@@ -54,10 +54,10 @@ func neigh(w io.Writer) error {
 	case "show":
 		return neighShow(w)
 	case "flush":
-		return neighFlush(w)
+		return neighFlush()
 	case "get":
 		cursor++
-		whatIWant = []string{"CIDR format address"}
+		expectedValues = []string{"CIDR format address"}
 		ipAddr := net.ParseIP(arg[cursor])
 		if ipAddr == nil {
 			return fmt.Errorf("invalid IP address: %s", arg[cursor])
@@ -78,7 +78,7 @@ func neigh(w io.Writer) error {
 
 func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 	cursor++
-	whatIWant = []string{"CIDR format address"}
+	expectedValues = []string{"CIDR format address"}
 	addr := net.ParseIP(arg[cursor])
 	if addr == nil {
 		return nil, fmt.Errorf("invalid IP address: %s", arg[cursor])
@@ -99,7 +99,7 @@ func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		}
 
 		cursor++
-		whatIWant = []string{"dev", "lladdr", "nud", "router", "extern_learn"}
+		expectedValues = []string{"dev", "lladdr", "nud", "router", "extern_learn"}
 		switch arg[cursor] {
 		case "dev":
 			iface, err = parseDeviceName(true)
@@ -123,7 +123,7 @@ func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		case "extern_learn":
 			flag |= netlink.NTF_EXT_LEARNED
 		default:
-			return nil, fmt.Errorf("unsupported option %q, expected: %v", arg[cursor], whatIWant)
+			return nil, fmt.Errorf("unsupported option %q, expected: %v", arg[cursor], expectedValues)
 		}
 	}
 
@@ -155,7 +155,7 @@ func parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) 
 		}
 
 		cursor++
-		whatIWant = []string{"dev", "proxy", "nud"}
+		expectedValues = []string{"dev", "proxy", "nud"}
 		switch arg[cursor] {
 		case "dev":
 			dev, err := parseDeviceName(true)
@@ -171,7 +171,7 @@ func parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) 
 				return nil, false, 0, err
 			}
 		default:
-			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", arg[cursor], whatIWant)
+			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", arg[cursor], expectedValues)
 		}
 	}
 
@@ -275,7 +275,7 @@ func neighShow(w io.Writer) error {
 	return showAllNeighbours(w, nud, proxy)
 }
 
-func neighFlush(w io.Writer) error {
+func neighFlush() error {
 	var (
 		ifaces []netlink.Link
 		flags  uint8

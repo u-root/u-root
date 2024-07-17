@@ -48,7 +48,7 @@ func parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 		if cursor == len(arg) {
 			break
 		}
-		whatIWant = []string{"src", "dst", "proto", "spi", "mode", "reqid", "level"}
+		expectedValues = []string{"src", "dst", "proto", "spi", "mode", "reqid", "level"}
 		switch arg[cursor] {
 		case "src":
 			tmpl.Src, err = parseAddress()
@@ -82,7 +82,7 @@ func parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 			}
 		case "level":
 			cursor++
-			whatIWant = []string{"required", "use"}
+			expectedValues = []string{"required", "use"}
 			if arg[cursor] == "use" {
 				tmpl.Optional = 1
 			}
@@ -96,8 +96,8 @@ func parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 
 func xfrmPolicy(w io.Writer) error {
 	cursor++
-	whatIWant = []string{"add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help"}
-	switch findPrefix(arg[cursor], whatIWant) {
+	expectedValues = []string{"add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help"}
+	switch findPrefix(arg[cursor], expectedValues) {
 	case "add":
 		policy, err := parseXfrmPolicyAddUpdate()
 		if err != nil {
@@ -177,7 +177,7 @@ func parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 			break
 		}
 
-		whatIWant = []string{"src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "action", "priority", "if_id", "tmpl"}
+		expectedValues = []string{"src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "action", "priority", "if_id", "tmpl"}
 		switch arg[cursor] {
 		case "src":
 			policy.Src, err = parseIPNet()
@@ -265,7 +265,7 @@ func parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 			break
 		}
 
-		whatIWant = []string{"src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "if_id"}
+		expectedValues = []string{"src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "if_id"}
 		switch arg[cursor] {
 		case "src":
 			policy.Src, err = parseIPNet()
@@ -341,7 +341,7 @@ func parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
 			break
 		}
 
-		whatIWant = []string{"src", "dst", "dir", "proto", "sport", "dport", "index", "action", "priority"}
+		expectedValues = []string{"src", "dst", "dir", "proto", "sport", "dport", "index", "action", "priority"}
 		switch arg[cursor] {
 		case "src":
 			policy.Src, err = parseIPNet()

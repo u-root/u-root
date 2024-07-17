@@ -37,10 +37,10 @@ func address(w io.Writer) error {
 		return showAllLinks(w, true)
 	}
 	cursor++
-	whatIWant = []string{"add", "replace", "del", "show", "flush", "help"}
+	expectedValues = []string{"add", "replace", "del", "show", "flush", "help"}
 	cmd := arg[cursor]
 
-	c := findPrefix(cmd, whatIWant)
+	c := findPrefix(cmd, expectedValues)
 	switch c {
 	case "show":
 		return addressShow(w)
@@ -71,7 +71,7 @@ func addressShow(w io.Writer) error {
 
 func addressAddReplaceDel(cmd string) error {
 	cursor++
-	whatIWant = []string{"CIDR format address"}
+	expectedValues = []string{"CIDR format address"}
 	addr, err := netlink.ParseAddr(arg[cursor])
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func addressAddReplaceDel(cmd string) error {
 		return err
 	}
 
-	c := findPrefix(cmd, whatIWant)
+	c := findPrefix(cmd, expectedValues)
 	switch c {
 	case "add":
 		if err := netlink.AddrAdd(iface, addr); err != nil {
@@ -97,7 +97,7 @@ func addressAddReplaceDel(cmd string) error {
 			return fmt.Errorf("deleting %v from %v failed: %v", arg[1], arg[2], err)
 		}
 	default:
-		return fmt.Errorf("subcommand %s not yet implemented, expected: %v", c, whatIWant)
+		return fmt.Errorf("subcommand %s not yet implemented, expected: %v", c, expectedValues)
 	}
 	return nil
 }

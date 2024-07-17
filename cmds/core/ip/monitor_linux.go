@@ -46,7 +46,7 @@ func monitor(w io.Writer) error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	whatIWant = []string{"all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "all-nsid"}
+	expectedValues = []string{"all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "all-nsid"}
 
 	if arg[cursor+1] == "help" {
 		fmt.Fprint(w, monitorHelp)
@@ -62,7 +62,7 @@ func monitor(w io.Writer) error {
 			break
 		}
 
-		switch c := findPrefix(arg[cursor], whatIWant); c {
+		switch c := findPrefix(arg[cursor], expectedValues); c {
 
 		case "all":
 			if singleOptionSelected {
