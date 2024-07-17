@@ -161,7 +161,7 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 		if cursor == len(arg) {
 			break
 		}
-		whatIWant = []string{"type", "tos", "table", "proto", "scope", "metric", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "congctl", "features", "quickack", "fastopen_no_cookie"}
+		expectedValues = []string{"type", "tos", "table", "proto", "scope", "metric", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "congctl", "features", "quickack", "fastopen_no_cookie"}
 		switch arg[cursor] {
 		case "tos":
 			cursor++
@@ -325,24 +325,16 @@ func routeShow(w io.Writer) error {
 		return err
 	}
 
-	return showRoutes(w, filter, filterMask, root, match, exact, inet6)
+	return showRoutes(w, filter, filterMask, root, match, exact)
 }
 
 func routeFlush() error {
-	var f int
-
-	if inet6 {
-		f = netlink.FAMILY_V6
-	} else {
-		f = netlink.FAMILY_V4
-	}
-
 	filter, filterMask, root, match, exact, err := parseRouteShowListFlush()
 	if err != nil {
 		return err
 	}
 
-	routes, err := filteredRouteList(f, filter, filterMask, root, match, exact)
+	routes, err := filteredRouteList(family, filter, filterMask, root, match, exact)
 	if err != nil {
 		return err
 	}
@@ -440,16 +432,8 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 
 // showRoutes prints the routes in the system.
 // If filterMask is not zero, only routes that match the filter are printed.
-func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet, inet6 bool) error {
-	var f int
-
-	if inet6 {
-		f = netlink.FAMILY_V6
-	} else {
-		f = netlink.FAMILY_V4
-	}
-
-	routes, err := filteredRouteList(f, route, filterMask, root, match, exact)
+func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) error {
+	routes, err := filteredRouteList(family, route, filterMask, root, match, exact)
 	if err != nil {
 		return err
 	}
@@ -462,7 +446,7 @@ func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, matc
 		if route.Dst == nil {
 			defaultRoute(w, route, link)
 		} else {
-			showRoute(w, route, link, f)
+			showRoute(w, route, link, family)
 		}
 	}
 	return nil
@@ -511,15 +495,7 @@ func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netli
 	return matchedRoutes, nil
 }
 
-func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOptions, inet6 bool) error {
-	var f int
-
-	if inet6 {
-		f = netlink.FAMILY_V6
-	} else {
-		f = netlink.FAMILY_V4
-	}
-
+func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOptions, family int) error {
 	routes, err := netlink.RouteGetWithOptions(addr, options)
 	if err != nil {
 		return err
@@ -533,7 +509,7 @@ func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOpt
 		if route.Dst == nil {
 			defaultRoute(w, route, link)
 		} else {
-			showRoute(w, route, link, f)
+			showRoute(w, route, link, family)
 		}
 	}
 	return nil
@@ -604,7 +580,7 @@ func showRoute(w io.Writer, r netlink.Route, l netlink.Link, f int) {
 
 func routeGet(w io.Writer) error {
 	cursor++
-	whatIWant = []string{"CIDR Address"}
+	expectedValues = []string{"CIDR Address"}
 	addr, _, err := net.ParseCIDR(arg[cursor])
 	if err != nil {
 		return err
@@ -615,7 +591,7 @@ func routeGet(w io.Writer) error {
 		return err
 	}
 
-	return showRoutesForAddress(w, addr, options, inet6)
+	return showRoutesForAddress(w, addr, options, family)
 }
 
 func parseRouteGet() (*netlink.RouteGetOptions, error) {
@@ -653,8 +629,8 @@ func route(w io.Writer) error {
 		return routeShow(w)
 	}
 
-	whatIWant = []string{"show", "add", "append", "replace", "del", "list", "get", "help"}
-	switch findPrefix(arg[cursor], whatIWant) {
+	expectedValues = []string{"show", "add", "append", "replace", "del", "list", "get", "help"}
+	switch findPrefix(arg[cursor], expectedValues) {
 	case "add":
 		return routeAdd(w)
 	case "append":

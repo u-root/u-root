@@ -27,8 +27,8 @@ func tuntap(w io.Writer) error {
 		return routeShow(w)
 	}
 
-	whatIWant = []string{"add", "del", "show", "list", "lst", "help"}
-	c := findPrefix(arg[cursor], whatIWant)
+	expectedValues = []string{"add", "del", "show", "list", "lst", "help"}
+	c := findPrefix(arg[cursor], expectedValues)
 
 	options, err := parseTunTap()
 	if err != nil {
@@ -72,13 +72,13 @@ func parseTunTap() (tuntapOptions, error) {
 
 	options := defaultTuntapOptions
 
-	whatIWant = []string{"mode", "user", "group", "one_queue", "pi", "vnet_hdr", "multi_queue", "name", "dev"}
+	expectedValues = []string{"mode", "user", "group", "one_queue", "pi", "vnet_hdr", "multi_queue", "name", "dev"}
 	for cursor < len(arg)-1 {
 		cursor++
 		switch arg[cursor] {
 		case "mode":
 			cursor++
-			whatIWant = []string{"tun, tap"}
+			expectedValues = []string{"tun, tap"}
 
 			switch arg[cursor] {
 			case "tun":

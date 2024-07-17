@@ -15,8 +15,7 @@ import (
 )
 
 func FuzzIPCmd(f *testing.F) {
-
-	//no log output
+	// no log output
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
 
@@ -39,6 +38,6 @@ func FuzzIPCmd(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data string) {
 		stdout.Reset()
 		arg = strings.Split(data, " ")
-		run(stdout)
+		run([]string{}, stdout)
 	})
 }

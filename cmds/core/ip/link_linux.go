@@ -70,7 +70,7 @@ func linkSet() error {
 
 	for cursor < len(arg)-1 {
 		cursor++
-		whatIWant = []string{"address", "up", "down", "arp", "promisc", "multicast", "allmulticast", "mtu", "name", "alias", "vf", "master", "nomaster", "netns", "txqueuelen", "txqlen", "group"}
+		expectedValues = []string{"address", "up", "down", "arp", "promisc", "multicast", "allmulticast", "mtu", "name", "alias", "vf", "master", "nomaster", "netns", "txqueuelen", "txqlen", "group"}
 		switch arg[cursor] {
 		case "address":
 			return setLinkHardwareAddress(iface)
@@ -84,7 +84,7 @@ func linkSet() error {
 			}
 		case "arp":
 			cursor++
-			whatIWant = []string{"on", "off"}
+			expectedValues = []string{"on", "off"}
 			switch arg[cursor] {
 			case "on":
 				return netlink.LinkSetARPOn(iface)
@@ -93,7 +93,7 @@ func linkSet() error {
 			}
 		case "promisc":
 			cursor++
-			whatIWant = []string{"on", "off"}
+			expectedValues = []string{"on", "off"}
 			switch arg[cursor] {
 			case "on":
 				return netlink.SetPromiscOn(iface)
@@ -102,7 +102,7 @@ func linkSet() error {
 			}
 		case "multicast":
 			cursor++
-			whatIWant = []string{"on", "off"}
+			expectedValues = []string{"on", "off"}
 			switch arg[cursor] {
 			case "on":
 				return netlink.LinkSetMulticastOn(iface)
@@ -111,7 +111,7 @@ func linkSet() error {
 			}
 		case "allmulticast":
 			cursor++
-			whatIWant = []string{"on", "off"}
+			expectedValues = []string{"on", "off"}
 			switch arg[cursor] {
 			case "on":
 				return netlink.LinkSetAllmulticastOn(iface)
@@ -128,7 +128,7 @@ func linkSet() error {
 			return setLinkVf(iface)
 		case "master":
 			cursor++
-			whatIWant = []string{"device name"}
+			expectedValues = []string{"device name"}
 			master, err := netlink.LinkByName(arg[cursor])
 			if err != nil {
 				return err
@@ -186,7 +186,7 @@ func setLinkGroup(iface netlink.Link) error {
 
 func setLinkName(iface netlink.Link) error {
 	cursor++
-	whatIWant = []string{"<name>"}
+	expectedValues = []string{"<name>"}
 	name := arg[cursor]
 
 	return netlink.LinkSetName(iface, name)
@@ -194,7 +194,7 @@ func setLinkName(iface netlink.Link) error {
 
 func setLinkAlias(iface netlink.Link) error {
 	cursor++
-	whatIWant = []string{"<alias name>"}
+	expectedValues = []string{"<alias name>"}
 	alias := arg[cursor]
 
 	return netlink.LinkSetAlias(iface, alias)
@@ -202,7 +202,7 @@ func setLinkAlias(iface netlink.Link) error {
 
 func setLinkTxQLen(iface netlink.Link) error {
 	cursor++
-	whatIWant = []string{"<qlen>"}
+	expectedValues = []string{"<qlen>"}
 	qlen, err := strconv.Atoi(arg[cursor])
 	if err != nil {
 		return fmt.Errorf("invalid queuelen %v: %v", arg[cursor], err)
@@ -213,7 +213,7 @@ func setLinkTxQLen(iface netlink.Link) error {
 
 func setLinkNetns(iface netlink.Link) error {
 	cursor++
-	whatIWant = []string{"<netns pid>, <netns path>"}
+	expectedValues = []string{"<netns pid>, <netns path>"}
 	ns, err := strconv.Atoi(arg[cursor])
 	if err != nil {
 		return fmt.Errorf("invalid int %v: %v", arg[cursor], err)
@@ -236,7 +236,7 @@ func setLinkVf(iface netlink.Link) error {
 
 	cursor++
 
-	whatIWant = []string{"vlan", "mac", "qos", "rate", "max_tx_rate", "min_tx_rate", "state", "spoofchk", "trust", "node_guid", "port_guid"}
+	expectedValues = []string{"vlan", "mac", "qos", "rate", "max_tx_rate", "min_tx_rate", "state", "spoofchk", "trust", "node_guid", "port_guid"}
 	for cursor < len(arg)-1 {
 		switch arg[cursor] {
 		case "mac":
@@ -257,7 +257,7 @@ func setLinkVf(iface netlink.Link) error {
 			}
 
 			cursor++
-			whatIWant = []string{"qos"}
+			expectedValues = []string{"qos"}
 			switch arg[cursor] {
 			case "qos":
 				qos, err := parseInt("VLAN-QOS")
@@ -347,7 +347,7 @@ func linkAdd() error {
 		}
 
 		cursor++
-		whatIWant = []string{"type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues"}
+		expectedValues = []string{"type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues"}
 		switch arg[cursor] {
 		case "txqueuelen", "txqlen":
 			qlen, err := parseInt("PACKETS")
@@ -433,7 +433,7 @@ func linkAdd() error {
 		return netlink.LinkAdd(&netlink.Gretun{LinkAttrs: attrs})
 	case "vrf":
 		cursor++
-		whatIWant = []string{"table"}
+		expectedValues = []string{"table"}
 		if arg[cursor] != "table" {
 			return usage()
 		}
@@ -485,10 +485,10 @@ func link(w io.Writer) error {
 	}
 
 	cursor++
-	whatIWant = []string{"show", "set", "add", "delete", "help"}
+	expectedValues = []string{"show", "set", "add", "delete", "help"}
 	cmd := arg[cursor]
 
-	switch findPrefix(cmd, whatIWant) {
+	switch findPrefix(cmd, expectedValues) {
 	case "show":
 		return linkShow(w)
 	case "set":

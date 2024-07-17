@@ -40,13 +40,13 @@ func parseDeviceName(mandatory bool) (netlink.Link, error) {
 	switch mandatory {
 	case true:
 		cursor++
-		whatIWant = []string{"dev", "device name"}
+		expectedValues = []string{"dev", "device name"}
 
 		if arg[cursor] == "dev" {
 			cursor++
 		}
 
-		whatIWant = []string{"device name"}
+		expectedValues = []string{"device name"}
 		return netlink.LinkByName(arg[cursor])
 	case false:
 		if cursor == len(arg)-1 {
@@ -54,7 +54,7 @@ func parseDeviceName(mandatory bool) (netlink.Link, error) {
 		}
 
 		cursor++
-		whatIWant = []string{"dev", "device name"}
+		expectedValues = []string{"dev", "device name"}
 
 		if cursor > len(arg)-1 {
 			return nil, ErrNotFound
@@ -69,7 +69,7 @@ func parseDeviceName(mandatory bool) (netlink.Link, error) {
 
 		}
 
-		whatIWant = []string{"device name"}
+		expectedValues = []string{"device name"}
 		return netlink.LinkByName(arg[cursor])
 	}
 
@@ -82,7 +82,7 @@ func parseType() (string, error) {
 	}
 
 	cursor++
-	whatIWant = []string{"type"}
+	expectedValues = []string{"type"}
 
 	if cursor > len(arg)-1 {
 		return "", ErrNotFound
@@ -94,19 +94,19 @@ func parseType() (string, error) {
 
 	cursor++
 
-	whatIWant = []string{"type name"}
+	expectedValues = []string{"type name"}
 	return arg[cursor], nil
 }
 
 func parseAddress() (net.IP, error) {
 	cursor++
-	whatIWant = []string{"[address] PREFIX"}
+	expectedValues = []string{"[address] PREFIX"}
 
 	if arg[cursor] == "address" {
 		cursor++
 	}
 
-	whatIWant = []string{"PREFIX"}
+	expectedValues = []string{"PREFIX"}
 	ip := net.ParseIP(arg[cursor])
 
 	if ip == nil {
@@ -117,7 +117,7 @@ func parseAddress() (net.IP, error) {
 
 func parseIPNet() (*net.IPNet, error) {
 	cursor++
-	whatIWant = []string{"ADDR/PLEN"}
+	expectedValues = []string{"ADDR/PLEN"}
 	_, ipNet, err := net.ParseCIDR(arg[cursor])
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse CIDR: %v", arg[cursor])
@@ -132,35 +132,35 @@ func parseIPNet() (*net.IPNet, error) {
 
 func parseHardwareAddress() (net.HardwareAddr, error) {
 	cursor++
-	whatIWant = []string{"<mac address>"}
+	expectedValues = []string{"<mac address>"}
 
 	return net.ParseMAC(arg[cursor])
 }
 
 func parseString(expected string) string {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	return arg[cursor]
 }
 
 func parseByte(expected string) ([]byte, error) {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	return hex.DecodeString(arg[cursor])
 }
 
 func parseInt(expected string) (int, error) {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	return strconv.Atoi(arg[cursor])
 }
 
 func parseUint8(expected string) (uint8, error) {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	val, err := strconv.ParseUint(arg[cursor], 10, 8)
 	if err != nil {
@@ -172,7 +172,7 @@ func parseUint8(expected string) (uint8, error) {
 
 func parseUint16(expected string) (uint16, error) {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	val, err := strconv.ParseUint(arg[cursor], 10, 16)
 	if err != nil {
@@ -184,7 +184,7 @@ func parseUint16(expected string) (uint16, error) {
 
 func parseUint32(expected string) (uint32, error) {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	val, err := strconv.ParseUint(arg[cursor], 10, 32)
 	if err != nil {
@@ -196,14 +196,14 @@ func parseUint32(expected string) (uint32, error) {
 
 func parseUint64(expected string) (uint64, error) {
 	cursor++
-	whatIWant = []string{expected}
+	expectedValues = []string{expected}
 
 	return strconv.ParseUint(arg[cursor], 10, 64)
 }
 
 func parseBool() (bool, error) {
 	cursor++
-	whatIWant = []string{"true", "false"}
+	expectedValues = []string{"true", "false"}
 
 	switch arg[cursor] {
 	case "on":
@@ -217,26 +217,26 @@ func parseBool() (bool, error) {
 
 func parseName() (string, error) {
 	cursor++
-	whatIWant = []string{"name", "device name"}
+	expectedValues = []string{"name", "device name"}
 	if arg[cursor] == "name" {
 		cursor++
 	}
 
-	whatIWant = []string{"device name"}
+	expectedValues = []string{"device name"}
 
 	return arg[cursor], nil
 }
 
 func parseNodeSpec() string {
 	cursor++
-	whatIWant = []string{"default", "CIDR"}
+	expectedValues = []string{"default", "CIDR"}
 
 	return arg[cursor]
 }
 
 func parseNextHop() (string, net.IP, error) {
 	cursor++
-	whatIWant = []string{"via"}
+	expectedValues = []string{"via"}
 
 	if arg[cursor] != "via" {
 		return "", nil, usage()
@@ -244,7 +244,7 @@ func parseNextHop() (string, net.IP, error) {
 
 	nh := arg[cursor]
 	cursor++
-	whatIWant = []string{"Gateway CIDR"}
+	expectedValues = []string{"Gateway CIDR"}
 
 	addr := net.ParseIP(arg[cursor])
 	if addr == nil {

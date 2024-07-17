@@ -25,10 +25,10 @@ func vrf(w io.Writer) error {
 		return vrfShow(w)
 	}
 
-	whatIWant = []string{"show", "help"}
+	expectedValues = []string{"show", "help"}
 	var c string
 
-	switch c = findPrefix(arg[cursor], whatIWant); c {
+	switch c = findPrefix(arg[cursor], expectedValues); c {
 	case "show":
 		return vrfShow(w)
 	case "help":

@@ -36,8 +36,8 @@ var xfrmFilterMap = map[string][]nl.XfrmMsgType{
 func xfrm(w io.Writer) error {
 	cursor++
 
-	whatIWant = []string{"state", "policy", "monitor"}
-	switch findPrefix(arg[cursor], whatIWant) {
+	expectedValues = []string{"state", "policy", "monitor"}
+	switch findPrefix(arg[cursor], expectedValues) {
 	case "state":
 		return xfrmState(w)
 	case "monitor":
@@ -52,7 +52,7 @@ func xfrm(w io.Writer) error {
 
 func parseXfrmProto() (netlink.Proto, error) {
 	cursor++
-	whatIWant = []string{"esp", "ah", "comp", "route2", "hao"}
+	expectedValues = []string{"esp", "ah", "comp", "route2", "hao"}
 
 	switch arg[cursor] {
 	case "esp":
@@ -72,7 +72,7 @@ func parseXfrmProto() (netlink.Proto, error) {
 
 func parseXfrmMode() (netlink.Mode, error) {
 	cursor++
-	whatIWant = []string{"esp", "ah", "comp", "route2", "hao", "ipsec-any"}
+	expectedValues = []string{"esp", "ah", "comp", "route2", "hao", "ipsec-any"}
 
 	switch arg[cursor] {
 	case "transport":
@@ -92,7 +92,7 @@ func parseXfrmMode() (netlink.Mode, error) {
 
 func parseXfrmDir() (netlink.Dir, error) {
 	cursor++
-	whatIWant = []string{"in", "out", "fwd"}
+	expectedValues = []string{"in", "out", "fwd"}
 
 	switch arg[cursor] {
 	case "in":
@@ -108,7 +108,7 @@ func parseXfrmDir() (netlink.Dir, error) {
 
 func parseXfrmAction() (netlink.PolicyAction, error) {
 	cursor++
-	whatIWant = []string{"allow", "block"}
+	expectedValues = []string{"allow", "block"}
 
 	switch arg[cursor] {
 	case "allow":
@@ -122,7 +122,7 @@ func parseXfrmAction() (netlink.PolicyAction, error) {
 
 func parseXfrmMark() (*netlink.XfrmMark, error) {
 	cursor++
-	whatIWant = []string{"MARK"}
+	expectedValues = []string{"MARK"}
 
 	mark, err := parseUint32("MARK")
 	if err != nil {
@@ -155,7 +155,7 @@ func parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
 	)
 
 	cursor++
-	whatIWant = []string{"espinudp", "espinudp-nonike", "espintcp"}
+	expectedValues = []string{"espinudp", "espinudp-nonike", "espintcp"}
 
 	switch arg[cursor] {
 	case "espinudp":
@@ -167,21 +167,21 @@ func parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
 	}
 
 	cursor++
-	whatIWant = []string{"SPORT"}
+	expectedValues = []string{"SPORT"}
 	encap.SrcPort, err = parseInt("SPORT")
 	if err != nil {
 		return nil, err
 	}
 
 	cursor++
-	whatIWant = []string{"DPORT"}
+	expectedValues = []string{"DPORT"}
 	encap.DstPort, err = parseInt("DPORT")
 	if err != nil {
 		return nil, err
 	}
 
 	cursor++
-	whatIWant = []string{"OADDR"}
+	expectedValues = []string{"OADDR"}
 	encap.OriginalAddress, err = parseAddress()
 	if err != nil {
 		return nil, err
@@ -197,7 +197,7 @@ func parseXfrmLimit() (netlink.XfrmStateLimits, error) {
 	)
 
 	cursor++
-	whatIWant = []string{"time-soft", "time-hard", "time-use-soft", "time-use-hard", "byte-soft", "byte-hard", "packet-soft", "packet-hard"}
+	expectedValues = []string{"time-soft", "time-hard", "time-use-soft", "time-use-hard", "byte-soft", "byte-hard", "packet-soft", "packet-hard"}
 
 	switch arg[cursor] {
 	case "time-soft":
@@ -258,7 +258,7 @@ func xfrmMonitor(w io.Writer) error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	whatIWant = []string{"all", "acquire", "expire", "SA", "aevent", "policy", "help"}
+	expectedValues = []string{"all", "acquire", "expire", "SA", "aevent", "policy", "help"}
 	for {
 		cursor++
 

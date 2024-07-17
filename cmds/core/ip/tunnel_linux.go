@@ -41,10 +41,10 @@ func tunnel(w io.Writer) error {
 		return routeShow(w)
 	}
 
-	whatIWant = []string{"add", "del", "show"}
+	expectedValues = []string{"add", "del", "show"}
 	var c string
 
-	switch c = findPrefix(arg[cursor], whatIWant); c {
+	switch c = findPrefix(arg[cursor], expectedValues); c {
 	case "show", "add", "del":
 		options, err := parseTunnel()
 		if err != nil {
@@ -92,12 +92,12 @@ func parseTunnel() (*options, error) {
 	options := defaultOptions()
 	cursor++
 
-	whatIWant = []string{"name", "mode", "remote", "local", "ttl", "tos", "ikey", "okey", "dev"}
+	expectedValues = []string{"name", "mode", "remote", "local", "ttl", "tos", "ikey", "okey", "dev"}
 	for cursor < len(arg) {
 		switch arg[cursor] {
 		case "mode":
 			cursor++
-			whatIWant = []string{"gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit"}
+			expectedValues = []string{"gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit"}
 
 			switch arg[cursor] {
 			case "gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit":
@@ -108,16 +108,16 @@ func parseTunnel() (*options, error) {
 			}
 		case "remote":
 			cursor++
-			whatIWant = []string{"IP_ADDRESS, any"}
+			expectedValues = []string{"IP_ADDRESS, any"}
 
 			options.remote = arg[cursor]
 		case "local":
 			cursor++
-			whatIWant = []string{"IP_ADDRESS, any"}
+			expectedValues = []string{"IP_ADDRESS, any"}
 
 			options.local = arg[cursor]
 		case "ttl":
-			whatIWant = []string{"TTL (0...255) | inherit"}
+			expectedValues = []string{"TTL (0...255) | inherit"}
 			if arg[cursor+1] == "inherit" {
 				cursor++
 				options.ttl = 0
@@ -139,7 +139,7 @@ func parseTunnel() (*options, error) {
 			options.tos = int(tos)
 		case "ikey":
 			cursor++
-			whatIWant = []string{"key"}
+			expectedValues = []string{"key"}
 
 			iKey, err := parseUint16("KEY")
 			if err != nil {
@@ -149,7 +149,7 @@ func parseTunnel() (*options, error) {
 			options.iKey = int(iKey)
 		case "okey":
 			cursor++
-			whatIWant = []string{"key"}
+			expectedValues = []string{"key"}
 
 			oKey, err := parseUint16("KEY")
 			if err != nil {
@@ -159,7 +159,7 @@ func parseTunnel() (*options, error) {
 			options.oKey = int(oKey)
 		case "dev":
 			cursor++
-			whatIWant = []string{"PHYS_DEV"}
+			expectedValues = []string{"PHYS_DEV"}
 
 			options.dev = arg[cursor]
 		default:
