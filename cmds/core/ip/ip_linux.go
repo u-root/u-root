@@ -73,7 +73,7 @@ func run(out io.Writer) error {
 	} else if inet4 {
 		family = netlink.FAMILY_V4
 	}
-	whatIWant = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tcp_metrics", "tcpmetrics", "xfrm"}
+	whatIWant = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "xfrm"}
 	cursor = 0
 
 	defer func() {
@@ -111,6 +111,8 @@ func run(out io.Writer) error {
 		err = monitor(out)
 	case "tunnel":
 		err = tunnel(out)
+	case "tuntap", "tap":
+		err = tuntap(out)
 	case "tcpmetrics", "tcp_metrics":
 		err = tcpMetrics(out)
 	case "xfrm":
