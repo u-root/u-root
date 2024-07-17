@@ -418,7 +418,18 @@ func tunnelAdd(op *options) error {
 	}
 
 	if op.name == "" {
-		return fmt.Errorf("tunnel name is required")
+		switch op.mode {
+		case "gre", "ip6gre":
+			op.name = "gre0"
+		case "ipip":
+			op.name = "tuln0"
+		case "ip6tln":
+			op.name = "ip6tnl0"
+		case "vti", "vti6":
+			op.name = "ip_vti0"
+		case "sit":
+			op.name = "sit0"
+		}
 	}
 
 	if op.iKey < 0 {

@@ -27,6 +27,19 @@ func showLink(w io.Writer, link netlink.Link, withAddresses bool, filterByType .
 
 func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByType ...string) error {
 	for _, v := range links {
+		if withAddresses {
+
+			addrs, err := netlink.AddrList(v, family)
+			if err != nil {
+				return fmt.Errorf("can't enumerate addresses: %v", err)
+			}
+
+			// if there are no addresses and the link is not a vrf (only wihout -4 or -6), skip it
+			if len(addrs) == 0 && (v.Type() != "vrf" || family != netlink.FAMILY_ALL) {
+				continue
+			}
+		}
+
 		found := true
 
 		// check if the link type is in the filter list if the filter list is not empty
