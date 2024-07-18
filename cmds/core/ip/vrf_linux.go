@@ -39,10 +39,33 @@ func vrf(w io.Writer) error {
 	return usage()
 }
 
+type Vrf struct {
+	Name  string `json:"name"`
+	Table uint32 `json:"table"`
+}
+
 func vrfShow(w io.Writer) error {
 	links, err := netlink.LinkList()
 	if err != nil {
 		return err
+	}
+
+	if f.json {
+		vrfs := make([]Vrf, 0, len(links))
+
+		for _, link := range links {
+			vrf, ok := link.(*netlink.Vrf)
+			if !ok {
+				continue
+			}
+
+			vrfs = append(vrfs, Vrf{
+				Name:  vrf.Name,
+				Table: vrf.Table,
+			})
+		}
+
+		return printJSON(w, vrfs)
 	}
 
 	// Print header

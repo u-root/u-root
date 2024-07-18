@@ -113,8 +113,16 @@ func addressFlush() error {
 	}
 
 	for _, a := range addr {
-		if err := netlink.AddrDel(iface, &a); err != nil {
-			return err
+		for idx := 1; idx <= f.loops; idx++ {
+			if err := netlink.AddrDel(iface, &a); err != nil {
+				if idx != f.loops {
+					continue
+				}
+
+				return fmt.Errorf("deleting %v from %v failed: %v", a, iface, err)
+			}
+
+			break
 		}
 	}
 

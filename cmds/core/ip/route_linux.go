@@ -443,12 +443,51 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 	return &filter, filterMask, root, match, exact, nil
 }
 
+type Route struct {
+	Dst      string   `json:"dst"`
+	Dev      string   `json:"dev"`
+	Protocol string   `json:"protocol"`
+	Scope    string   `json:"scope"`
+	PrefSrc  string   `json:"prefsrc"`
+	Flags    []string `json:"flags"`
+}
+
 // showRoutes prints the routes in the system.
 // If filterMask is not zero, only routes that match the filter are printed.
 func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) error {
 	routes, err := filteredRouteList(route, filterMask, root, match, exact)
 	if err != nil {
 		return err
+	}
+
+	if f.json {
+		obj := make([]Route, 0, len(routes))
+
+		for _, route := range routes {
+			link, err := netlink.LinkByIndex(route.LinkIndex)
+			if err != nil {
+				return err
+			}
+
+			pRoute := Route{
+				Dst:      route.Dst.String(),
+				Dev:      link.Attrs().Name,
+				Protocol: rtProto[int(route.Protocol)],
+				Scope:    route.Scope.String(),
+			}
+
+			if route.Src != nil {
+				pRoute.PrefSrc = route.Src.String()
+			}
+
+			if len(route.ListFlags()) != 0 {
+				pRoute.Flags = route.ListFlags()
+			}
+
+			obj = append(obj, pRoute)
+		}
+
+		return printJSON(w, obj)
 	}
 
 	for _, route := range routes {

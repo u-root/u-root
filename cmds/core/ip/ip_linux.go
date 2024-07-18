@@ -18,11 +18,16 @@ import (
 )
 
 type flags struct {
-	family  string
-	inet4   bool
-	inet6   bool
-	details bool
-	stats   bool
+	family        string
+	inet4         bool
+	inet6         bool
+	details       bool
+	stats         bool
+	loops         int
+	humanReadable bool
+	iec           bool
+	json          bool
+	prettify      bool
 }
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
@@ -93,6 +98,16 @@ func run(args []string, out io.Writer) error {
 	fs.BoolVar(&f.details, "details", false, "Display details")
 	fs.BoolVar(&f.stats, "s", false, "Display statistics")
 	fs.BoolVar(&f.stats, "statistics", false, "Display statistics")
+	fs.IntVar(&f.loops, "l", 0, "Set maximum number of attempts to flush all addresses")
+	fs.IntVar(&f.loops, "loops", 1, "Set maximum number of attempts to flush all addresses")
+	fs.BoolVar(&f.humanReadable, "h", false, "Display timings and sizes in human readable format")
+	fs.BoolVar(&f.humanReadable, "humanreadable", false, "Display timings and sizes in human-readable format")
+	fs.BoolVar(&f.iec, "iec", false, "Use 1024-based block sizes for human-readable sizes")
+	fs.BoolVar(&f.json, "j", false, "Output in JSON format")
+	fs.BoolVar(&f.json, "json", false, "Output in JSON format")
+	fs.BoolVar(&f.prettify, "p", false, "Make JSON output pretty")
+	fs.BoolVar(&f.prettify, "pretty", false, "Make JSON output pretty")
+
 	fs.Usage = func() {
 		fmt.Fprintf(out, "%s\n\n", ipHelp)
 

@@ -38,7 +38,7 @@ var (
 func tunnel(w io.Writer) error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		return routeShow(w)
+		return showAllTunnels(w)
 	}
 
 	expectedValues = []string{"add", "del", "show"}
@@ -176,6 +176,10 @@ func parseTunnel() (*options, error) {
 	return &options, nil
 }
 
+func showAllTunnels(w io.Writer) error {
+	return showTunnels(w, &options{modes: allTunnelTypes})
+}
+
 func showTunnels(w io.Writer, op *options) error {
 	links, err := netlink.LinkList()
 	if err != nil {
@@ -185,6 +189,7 @@ func showTunnels(w io.Writer, op *options) error {
 	var tunnels []netlink.Link
 
 	for _, l := range links {
+
 		found := false
 		for _, t := range op.modes {
 			if l.Type() == t {
@@ -234,58 +239,75 @@ func showTunnels(w io.Writer, op *options) error {
 	return printTunnels(w, tunnels)
 }
 
+type Tunnel struct {
+	IfName string `json:"ifname"`
+	Mode   string `json:"mode"`
+	Remote string `json:"remote"`
+	Local  string `json:"local"`
+	TTL    string `json:"ttl",omitempty`
+}
+
 func printTunnels(w io.Writer, tunnels []netlink.Link) error {
-	var (
-		remote  string
-		local   string
-		ttl     string
-		tlnType string
-	)
+	pTunnels := make([]Tunnel, 0, len(tunnels))
 
 	for _, t := range tunnels {
+		var tunnel Tunnel
+		tunnel.IfName = t.Attrs().Name
+
 		switch v := t.(type) {
 		case *netlink.Gretun:
-			remote = v.Remote.String()
-			local = v.Local.String()
-			tlnType = "gre"
-			ttl = fmt.Sprintf("ttl %d", v.Ttl)
+			tunnel.Remote = v.Remote.String()
+			tunnel.Local = v.Local.String()
+			tunnel.Mode = "gre"
+			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 		case *netlink.Iptun:
-			remote = v.Remote.String()
-			local = v.Local.String()
-			tlnType = "ip"
-			ttl = fmt.Sprintf("ttl %d", v.Ttl)
+			tunnel.Remote = v.Remote.String()
+			tunnel.Local = v.Local.String()
+			tunnel.Mode = "ip"
+			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 		case *netlink.Ip6tnl:
-			remote = v.Remote.String()
-			local = v.Local.String()
-			tlnType = "ipv6"
-			ttl = fmt.Sprintf("ttl %d", v.Ttl)
+			tunnel.Remote = v.Remote.String()
+			tunnel.Local = v.Local.String()
+			tunnel.Mode = "ipv6"
+			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 		case *netlink.Vti:
-			remote = v.Remote.String()
-			local = v.Local.String()
-			tlnType = "ip"
+			tunnel.Remote = v.Remote.String()
+			tunnel.Local = v.Local.String()
+			tunnel.Mode = "ip"
 		case *netlink.Sittun:
-			remote = v.Remote.String()
-			local = v.Local.String()
-			tlnType = "ipv6"
-			ttl = fmt.Sprintf("ttl %d", v.Ttl)
+			tunnel.Remote = v.Remote.String()
+			tunnel.Local = v.Local.String()
+			tunnel.Mode = "ipv6"
+			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 		default:
 			return fmt.Errorf("unsupported tunnel type %s", t.Type())
 		}
 
-		if remote == "0.0.0.0" || remote == "::" {
-			remote = "any"
+		if tunnel.Remote == "0.0.0.0" || tunnel.Remote == "::" {
+			tunnel.Remote = "any"
 		}
 
-		if local == "0.0.0.0" || local == "::" {
-			local = "any"
+		if tunnel.Local == "0.0.0.0" || tunnel.Local == "::" {
+			tunnel.Local = "any"
 		}
 
-		if ttl == "ttl 0" || ttl == "ttl 255" {
-			ttl = "ttl inherit"
+		if tunnel.TTL == "0" || tunnel.TTL == "255" {
+			tunnel.TTL = "inherit"
 		}
 
-		fmt.Fprintf(w, "%s %s/ip remote %s local %s %s\n", t.Attrs().Name, tlnType, remote, local, ttl)
+		pTunnels = append(pTunnels, tunnel)
+	}
 
+	if f.json {
+		return printJSON(w, pTunnels)
+	}
+
+	for _, t := range pTunnels {
+		ttlStr := ""
+		if t.TTL != "" {
+			ttlStr = fmt.Sprintf(" ttl %s", t.TTL)
+		}
+		fmt.Fprintf(w, "%s %s/ip remote %s local %s%s\n", t.IfName, t.Mode, t.Remote, t.Local, ttlStr)
 	}
 
 	return nil
