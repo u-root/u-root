@@ -59,6 +59,15 @@ var routeTypes = map[string]int{
 	"nat":         unix.RTN_NAT,
 }
 
+func routeTypeToString(routeType int) string {
+	for key, value := range routeTypes {
+		if value == routeType {
+			return key
+		}
+	}
+	return "unknown"
+}
+
 func routeAdddefault(w io.Writer) error {
 	nh, nhval, err := parseNextHop()
 	if err != nil {
@@ -328,13 +337,17 @@ func routeShow(w io.Writer) error {
 	return showRoutes(w, filter, filterMask, root, match, exact)
 }
 
+func showAllRoutes(w io.Writer) error {
+	return showRoutes(w, nil, 0, nil, nil, nil)
+}
+
 func routeFlush() error {
 	filter, filterMask, root, match, exact, err := parseRouteShowListFlush()
 	if err != nil {
 		return err
 	}
 
-	routes, err := filteredRouteList(family, filter, filterMask, root, match, exact)
+	routes, err := filteredRouteList(filter, filterMask, root, match, exact)
 	if err != nil {
 		return err
 	}
@@ -366,7 +379,7 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 	for {
 		cursor++
 
-		if cursor == len(arg) {
+		if cursor >= len(arg) {
 			break
 		}
 
@@ -433,7 +446,7 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 // showRoutes prints the routes in the system.
 // If filterMask is not zero, only routes that match the filter are printed.
 func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) error {
-	routes, err := filteredRouteList(family, route, filterMask, root, match, exact)
+	routes, err := filteredRouteList(route, filterMask, root, match, exact)
 	if err != nil {
 		return err
 	}
@@ -446,16 +459,16 @@ func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, matc
 		if route.Dst == nil {
 			defaultRoute(w, route, link)
 		} else {
-			showRoute(w, route, link, family)
+			showRoute(w, route, link)
 		}
 	}
 	return nil
 }
 
-func filteredRouteList(f int, route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) ([]netlink.Route, error) {
+func filteredRouteList(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) ([]netlink.Route, error) {
 	var matchedRoutes []netlink.Route
 
-	routes, err := netlink.RouteListFiltered(f, route, filterMask)
+	routes, err := netlink.RouteListFiltered(family, route, filterMask)
 	if err != nil {
 		return matchedRoutes, err
 	}
@@ -495,7 +508,7 @@ func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netli
 	return matchedRoutes, nil
 }
 
-func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOptions, family int) error {
+func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOptions) error {
 	routes, err := netlink.RouteGetWithOptions(addr, options)
 	if err != nil {
 		return err
@@ -509,7 +522,7 @@ func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOpt
 		if route.Dst == nil {
 			defaultRoute(w, route, link)
 		} else {
-			showRoute(w, route, link, family)
+			showRoute(w, route, link)
 		}
 	}
 	return nil
@@ -543,10 +556,10 @@ var rtProto = map[int]string{
 }
 
 const (
-	defaultFmt   = "default via %v dev %s proto %s metric %d\n"
-	routeFmt     = "%v dev %s proto %s scope %s src %s metric %d\n"
-	route6Fmt    = "%s dev %s proto %s metric %d\n"
-	routeVia6Fmt = "%s via %s dev %s proto %s metric %d\n"
+	defaultFmt   = "%v default via %v dev %s proto %s metric %d\n"
+	routeFmt     = "%v %v dev %s proto %s scope %s src %s metric %d\n"
+	route6Fmt    = "%v %s dev %s proto %s metric %d\n"
+	routeVia6Fmt = "%v %s via %s dev %s proto %s metric %d\n"
 )
 
 func defaultRoute(w io.Writer, r netlink.Route, l netlink.Link) {
@@ -554,27 +567,69 @@ func defaultRoute(w io.Writer, r netlink.Route, l netlink.Link) {
 	name := l.Attrs().Name
 	proto := rtProto[int(r.Protocol)]
 	metric := r.Priority
-	fmt.Fprintf(w, defaultFmt, gw, name, proto, metric)
+
+	var detail string
+
+	if f.details {
+		detail = routeTypeToString(r.Type)
+	}
+
+	fmt.Fprintf(w, defaultFmt, detail, gw, name, proto, metric)
 }
 
-func showRoute(w io.Writer, r netlink.Route, l netlink.Link, f int) {
+func showRoute(w io.Writer, r netlink.Route, l netlink.Link) {
+	switch family {
+	// print only ipv4 per default
+	case netlink.FAMILY_ALL, netlink.FAMILY_V4:
+		if r.Dst.IP.To4() == nil {
+			return
+		}
+
+		printIPv4Route(w, r, l)
+
+	case netlink.FAMILY_V6:
+		if r.Dst.IP.To4() != nil {
+			return
+		}
+
+		printIPv6Route(w, r, l)
+	}
+}
+
+func printIPv4Route(w io.Writer, r netlink.Route, l netlink.Link) {
+	dest := r.Dst
+	name := l.Attrs().Name
+	proto := rtProto[int(r.Protocol)]
+	scope := addrScopes[r.Scope]
+	src := r.Src
+	metric := r.Priority
+
+	var detail string
+
+	if f.details {
+		detail = routeTypeToString(r.Type)
+	}
+
+	fmt.Fprintf(w, routeFmt, detail, dest, name, proto, scope, src, metric)
+}
+
+func printIPv6Route(w io.Writer, r netlink.Route, l netlink.Link) {
 	dest := r.Dst
 	name := l.Attrs().Name
 	proto := rtProto[int(r.Protocol)]
 	metric := r.Priority
 
-	switch f {
-	case netlink.FAMILY_V4:
-		scope := addrScopes[r.Scope]
-		src := r.Src
-		fmt.Fprintf(w, routeFmt, dest, name, proto, scope, src, metric)
-	case netlink.FAMILY_V6:
-		if r.Gw != nil {
-			gw := r.Gw
-			fmt.Fprintf(w, routeVia6Fmt, dest, gw, name, proto, metric)
-		} else {
-			fmt.Fprintf(w, route6Fmt, dest, name, proto, metric)
-		}
+	var detail string
+
+	if f.details {
+		detail = routeTypeToString(r.Type)
+	}
+
+	if r.Gw != nil {
+		gw := r.Gw
+		fmt.Fprintf(w, routeVia6Fmt, detail, dest, gw, name, proto, metric)
+	} else {
+		fmt.Fprintf(w, route6Fmt, detail, dest, name, proto, metric)
 	}
 }
 
@@ -591,7 +646,7 @@ func routeGet(w io.Writer) error {
 		return err
 	}
 
-	return showRoutesForAddress(w, addr, options, family)
+	return showRoutesForAddress(w, addr, options)
 }
 
 func parseRouteGet() (*netlink.RouteGetOptions, error) {
@@ -625,8 +680,9 @@ func parseRouteGet() (*netlink.RouteGetOptions, error) {
 
 func route(w io.Writer) error {
 	cursor++
-	if len(arg[cursor:]) == 0 {
-		return routeShow(w)
+
+	if len(arg) == cursor {
+		return showAllRoutes(w)
 	}
 
 	expectedValues = []string{"show", "add", "append", "replace", "del", "list", "get", "help"}
