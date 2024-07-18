@@ -24,7 +24,7 @@ Where: USER  := { STRING | NUMBER }
 func tuntap(w io.Writer) error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		return routeShow(w)
+		return tuntapShow(w)
 	}
 
 	expectedValues = []string{"add", "del", "show", "list", "lst", "help"}
@@ -179,11 +179,18 @@ func tuntapDel(options tuntapOptions) error {
 	return nil
 }
 
+type Tuntap struct {
+	IfName string   `json:"ifname"`
+	Flags  []string `json:"flags"`
+}
+
 func tuntapShow(w io.Writer) error {
 	links, err := netlink.LinkList()
 	if err != nil {
 		return err
 	}
+
+	prints := make([]Tuntap, 0)
 
 	for _, link := range links {
 		tunTap, ok := link.(*netlink.Tuntap)
@@ -191,39 +198,56 @@ func tuntapShow(w io.Writer) error {
 			continue
 		}
 
-		pi := ""
-		if tunTap.Flags&netlink.TUNTAP_NO_PI == 0 {
-			pi = "pi "
+		var obj Tuntap
+
+		obj.Flags = append(obj.Flags, tunTap.Mode.String())
+
+		if tunTap.Flags&netlink.TUNTAP_NO_PI == 1 {
+			obj.Flags = append(obj.Flags, "pi")
 		}
 
-		queue := ""
 		if tunTap.Flags&netlink.TUNTAP_ONE_QUEUE != 0 {
-			queue = "one_queue "
+			obj.Flags = append(obj.Flags, "one_queue")
 		} else if tunTap.Flags&netlink.TUNTAP_MULTI_QUEUE != 0 {
-			queue = "multi_queue "
+			obj.Flags = append(obj.Flags, "multi_queue")
 		}
 
-		vnetHdr := ""
 		if tunTap.Flags&netlink.TUNTAP_VNET_HDR != 0 {
-			vnetHdr = "vnet_hdr "
+			obj.Flags = append(obj.Flags, "vnet_hdr")
 		}
 
-		persist := "persist "
 		if tunTap.NonPersist {
-			persist = "non-persist "
+			obj.Flags = append(obj.Flags, "non-persist")
+		} else {
+			obj.Flags = append(obj.Flags, "persist")
 		}
 
-		user := ""
 		if tunTap.Owner != 0 {
-			user = fmt.Sprintf("user %d ", tunTap.Owner)
+			obj.Flags = append(obj.Flags, fmt.Sprintf("user %d", tunTap.Owner))
 		}
 
-		group := ""
 		if tunTap.Group != 0 {
-			group = fmt.Sprintf("group %d", tunTap.Group)
+			obj.Flags = append(obj.Flags, fmt.Sprintf("group %d", tunTap.Group))
 		}
 
-		fmt.Fprintf(w, "%s: %s %s%s%s%s%s%s\n", tunTap.Name, tunTap.Mode, pi, queue, vnetHdr, persist, user, group)
+		obj.IfName = tunTap.Name
+
+		prints = append(prints, obj)
+	}
+
+	if f.json {
+		return printJSON(w, prints)
+	}
+
+	for _, print := range prints {
+		output := fmt.Sprintf("%s:", print.IfName)
+
+		for _, flag := range print.Flags {
+			output += fmt.Sprintf(" %s", flag)
+		}
+
+		// Print the final output
+		fmt.Fprintln(w, output)
 	}
 
 	return nil

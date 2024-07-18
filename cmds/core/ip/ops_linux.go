@@ -25,7 +25,84 @@ func showLink(w io.Writer, link netlink.Link, withAddresses bool, filterByType .
 	return showLinks(w, withAddresses, []netlink.Link{link}, filterByType...)
 }
 
+type Link struct {
+	IfIndex   int        `json:"ifindex"`
+	IfName    string     `json:"ifname"`
+	Flags     []string   `json:"flags"`
+	MTU       int        `json:"mtu"`
+	Operstate string     `json:"operstate"`
+	Group     uint32     `json:"group"`
+	Txqlen    int        `json:"txqlen"`
+	LinkType  string     `json:"link_type"`
+	Address   string     `json:"address"`
+	AddrInfo  []AddrInfo `json:"addr_info,omitempty"`
+}
+
+type AddrInfo struct {
+	Family            string `json:"ip"`
+	Local             string `json:"local"`
+	PrefixLen         int    `json:"prefixlen"`
+	Broadcast         string `json:"broadcast,omitempty"`
+	Scope             string `json:"scope"`
+	Label             string `json:"label"`
+	ValidLifeTime     string `json:"valid_life_time"`
+	PreferredLifeTime string `json:"preferred_life_time"`
+}
+
 func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByType ...string) error {
+	if f.json {
+		linkObs := make([]Link, 0)
+
+		for _, v := range links {
+			link := Link{
+				IfIndex:   v.Attrs().Index,
+				IfName:    v.Attrs().Name,
+				Flags:     strings.Split(v.Attrs().Flags.String(), "|"),
+				MTU:       v.Attrs().MTU,
+				Operstate: v.Attrs().OperState.String(),
+				Group:     v.Attrs().Group,
+				Txqlen:    v.Attrs().TxQLen,
+				LinkType:  v.Type(),
+				Address:   v.Attrs().HardwareAddr.String(),
+			}
+			if withAddresses {
+
+				addrs, err := netlink.AddrList(v, family)
+				if err != nil {
+					return fmt.Errorf("can't enumerate addresses: %v", err)
+				}
+
+				link.AddrInfo = make([]AddrInfo, 0)
+				for _, addr := range addrs {
+					family := "inet"
+					if addr.IP.To4() == nil {
+						family = "inet6"
+					}
+
+					addrInfo := AddrInfo{
+						Family:            family,
+						Local:             addr.IPNet.IP.String(),
+						PrefixLen:         len(addr.IPNet.Mask),
+						Scope:             addrScopes[netlink.Scope(addr.Scope)],
+						Label:             addr.Label,
+						ValidLifeTime:     fmt.Sprintf("%dsec", addr.ValidLft),
+						PreferredLifeTime: fmt.Sprintf("%dsec", addr.PreferedLft),
+					}
+
+					if addr.Broadcast != nil {
+						addrInfo.Broadcast = addr.Broadcast.String()
+					}
+
+					link.AddrInfo = append(link.AddrInfo, addrInfo)
+				}
+
+			}
+			linkObs = append(linkObs, link)
+		}
+
+		return printJSON(w, linkObs)
+	}
+
 	for _, v := range links {
 		if withAddresses {
 

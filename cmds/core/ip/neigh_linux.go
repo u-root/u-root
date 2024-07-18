@@ -212,6 +212,13 @@ func showAllNeighbours(w io.Writer, nud int, proxy bool) error {
 	return showNeighbours(w, nud, proxy, nil, ifaces...)
 }
 
+type Neigh struct {
+	Dst    net.IP `json:"dst"`
+	Dev    string `json:"dev"`
+	LLAddr string `json:"lladdr"`
+	State  string `json:"state"`
+}
+
 func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
 	var (
 		flags uint8
@@ -225,6 +232,9 @@ func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ..
 	if nud != -1 && nud <= math.MaxUint16 {
 		state = uint16(nud)
 	}
+
+	filteredNeighs := make([]netlink.Neigh, 0)
+	ifaceNames := make([]string, 0)
 
 	for _, iface := range ifaces {
 		neighs, err := netlink.NeighListExecute(netlink.Ndmsg{
@@ -246,19 +256,40 @@ func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ..
 				continue
 			}
 
-			entry := fmt.Sprintf("%s dev %s", v.IP.String(), iface.Attrs().Name)
-			if v.HardwareAddr != nil {
-				entry += fmt.Sprintf(" lladdr %s", v.HardwareAddr)
-			}
-
-			if v.Flags&netlink.NTF_ROUTER != 0 {
-				entry += " router"
-			}
-
-			entry += " " + getState(v.State) + "\n"
-			fmt.Fprintln(w, entry)
+			filteredNeighs = append(filteredNeighs, v)
+			ifaceNames = append(ifaceNames, iface.Attrs().Name)
 		}
 	}
+
+	if f.json {
+		neighs := make([]Neigh, 0, len(filteredNeighs))
+
+		for idx, v := range filteredNeighs {
+			neighs = append(neighs, Neigh{
+				Dst:    v.IP,
+				Dev:    ifaceNames[idx],
+				LLAddr: v.HardwareAddr.String(),
+				State:  getState(v.State),
+			})
+		}
+
+		return printJSON(w, neighs)
+	}
+
+	for idx, v := range filteredNeighs {
+		entry := fmt.Sprintf("%s dev %s", v.IP.String(), ifaceNames[idx])
+		if v.HardwareAddr != nil {
+			entry += fmt.Sprintf(" lladdr %s", v.HardwareAddr)
+		}
+
+		if v.Flags&netlink.NTF_ROUTER != 0 {
+			entry += " router"
+		}
+
+		entry += " " + getState(v.State) + "\n"
+		fmt.Fprintln(w, entry)
+	}
+
 	return nil
 }
 
