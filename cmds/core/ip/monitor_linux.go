@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
 	"os/signal"
@@ -141,11 +142,11 @@ func monitor(w io.Writer) error {
 			validLft := fmt.Sprintf("%v", update.ValidLft)
 			preferedLft := fmt.Sprintf("%v", update.PreferedLft)
 
-			if update.ValidLft == 4294967295 {
+			if update.ValidLft >= math.MaxInt32 {
 				validLft = "forever"
 			}
 
-			if update.PreferedLft == 4294967295 {
+			if update.PreferedLft >= math.MaxInt32 {
 				preferedLft = "forever"
 			}
 

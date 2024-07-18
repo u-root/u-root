@@ -126,11 +126,11 @@ func tuntapAdd(options tuntapOptions) error {
 		Mode: options.mode,
 	}
 
-	if options.user >= 0 && options.user <= math.MaxUint32 {
+	if options.user >= 0 && options.user <= math.MaxUint16 {
 		link.Owner = uint32(options.user)
 	}
 
-	if options.group >= 0 && options.group <= math.MaxUint32 {
+	if options.group >= 0 && options.group <= math.MaxUint16 {
 		link.Group = uint32(options.group)
 	}
 
