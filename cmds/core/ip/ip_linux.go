@@ -18,16 +18,18 @@ import (
 )
 
 type flags struct {
-	inet4 bool
-	inet6 bool
-	stats bool
+	family  string
+	inet4   bool
+	inet6   bool
+	details bool
+	stats   bool
 }
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
 where  OBJECT := { address |  help | link | monitor | neighbor | neighbour |
 				   route | rule | tap | tcpmetrics |
                    token | tunnel | tuntap | vrf | xfrm }
-       OPTIONS := { -V[ersion] | -s[tatistics] | -d[etails] | -r[esolve] |
+       OPTIONS := { -s[tatistics] | -d[etails] | -r[esolve] |
                     -h[uman-readable] | -iec | -j[son] | -p[retty] |
                     -f[amily] { inet | inet6 | mpls | bridge | link } |
                     -4 | -6 | -M | -B | -0 |
@@ -83,8 +85,12 @@ func usage() error {
 
 func run(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs.StringVar(&f.family, "f", "", "Specify family (inet, inet6, mpls, link)")
+	fs.StringVar(&f.family, "family", "", "Specify family (inet, inet6, mpls, link)")
 	fs.BoolVar(&f.inet4, "4", false, "Display IPv4 addresses")
 	fs.BoolVar(&f.inet6, "6", false, "Display IPv6 addresses")
+	fs.BoolVar(&f.details, "d", false, "Display details")
+	fs.BoolVar(&f.details, "details", false, "Display details")
 	fs.BoolVar(&f.stats, "s", false, "Display statistics")
 	fs.BoolVar(&f.stats, "statistics", false, "Display statistics")
 	fs.Usage = func() {
@@ -97,11 +103,26 @@ func run(args []string, out io.Writer) error {
 
 	arg = fs.Args()
 
+	if f.family != "" && (f.inet4 || f.inet6) {
+		return fmt.Errorf("cannot specify both -f and -4 or -6")
+	}
+
 	family = netlink.FAMILY_ALL
 	if f.inet6 {
 		family = netlink.FAMILY_V6
 	} else if f.inet4 {
 		family = netlink.FAMILY_V4
+	} else if f.family != "" {
+		switch f.family {
+		case "inet":
+			family = netlink.FAMILY_V4
+		case "inet6":
+			family = netlink.FAMILY_V6
+		case "mpls":
+			family = netlink.FAMILY_MPLS
+		case "link":
+			family = netlink.FAMILY_ALL
+		}
 	}
 
 	expectedValues = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"}
