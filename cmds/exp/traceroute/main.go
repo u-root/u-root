@@ -63,7 +63,7 @@ func run(out io.Writer, args []string) error {
 	// Pass execution to pkg/traceroute.
 	// Setup can be quite complexe with such amount of flags
 	// and the different modules.
-	return traceroute.RunTraceroute(trargs.Host, modaf, false)
+	return traceroute.RunTraceroute(trargs.Host, modaf, flags)
 }
 
 func main() {

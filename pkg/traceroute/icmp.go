@@ -15,7 +15,7 @@ import (
 )
 
 func (t *Trace) SendTracesICMP4() {
-	conn, err := net.ListenPacket("ip4:icmp", t.src.String())
+	conn, err := net.ListenPacket("ip4:icmp", t.srcIP.String())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func (t *Trace) SendTracesICMP4() {
 			rSocket.WriteTo(hdr, payload, nil)
 			pb := &Probe{
 				id:       uint32(hdr.ID),
-				dest:     [4]byte(t.Dest.To4()),
+				dest:     t.destIP.To4(),
 				ttl:      ttl,
 				sendtime: time.Now(),
 			}
@@ -54,7 +54,7 @@ func (t *Trace) SendTracesICMP4() {
 }
 
 func (t *Trace) ReceiveTracesICMP4() {
-	laddr := &net.IPAddr{IP: t.src}
+	laddr := &net.IPAddr{IP: t.srcIP.To4()}
 	recvICMPConn, err := net.ListenIP("ip4:icmp", laddr)
 	if err != nil {
 		log.Fatal("bind failure:", err)
@@ -71,10 +71,10 @@ func (t *Trace) ReceiveTracesICMP4() {
 		dstip := net.IP(buf[24:28])
 		//srcip := net.IP(buf[20:24])
 
-		if dstip.Equal(t.Dest) {
+		if dstip.Equal(t.destIP) {
 			pb := &Probe{
 				id:       uint32(id),
-				saddr:    raddr.String(),
+				saddr:    net.ParseIP(raddr.String()),
 				recvTime: time.Now(),
 			}
 			t.ReceiveChan <- pb
@@ -94,8 +94,8 @@ func (t *Trace) BuildICMP4Pkt(ttl uint8, id, seq uint16, tos int) (*ipv4.Header,
 		TTL:      int(ttl),
 		Protocol: 1,
 		Checksum: 0,
-		Src:      t.src,
-		Dst:      t.Dest,
+		Src:      t.srcIP.To4(),
+		Dst:      t.destIP.To4(),
 	}
 
 	h, err := iph.Marshal()
