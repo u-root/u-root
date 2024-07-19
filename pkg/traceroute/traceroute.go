@@ -15,15 +15,15 @@ type Probe struct {
 	id       uint32
 	sendtime time.Time
 	recvTime time.Time
-	dest     [4]byte
+	dest     net.IP
 	port     uint16
 	ttl      int
-	saddr    string
+	saddr    net.IP
 	done     bool
 }
 
-func RunTraceroute(host string, prot string, debug bool) error {
-	dAddr, err := destAddr(host)
+func RunTraceroute(host string, prot string, f *Flags) error {
+	dAddr, err := destAddr(host, prot)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func RunTraceroute(host string, prot string, debug bool) error {
 		exitChan: make(chan bool),
 	}
 
-	mod := NewTrace(prot, dAddr, sAddr, cc, debug)
+	mod := NewTrace(prot, dAddr, sAddr.IP, cc, f)
 
 	switch prot {
 	case "udp4":
@@ -50,15 +50,17 @@ func RunTraceroute(host string, prot string, debug bool) error {
 		go mod.SendTracesTCP4()
 	case "icmp4":
 		go mod.SendTracesICMP4()
-
+	case "udp6":
+	case "tcp6":
+	case "icmp6":
 	}
 
 	printMap := runTransmission(cc)
 
-	destTTL := findDestinationTTL(printMap, dAddr)
+	destTTL := findDestinationTTL(printMap)
 	fmt.Printf("traceroute to %s (%s), %d hops max, %d byte packets\n",
 		host,
-		net.IPv4(dAddr[0], dAddr[1], dAddr[2], dAddr[3]).String(),
+		dAddr.String(),
 		mod.MaxHops,
 		60)
 
@@ -93,9 +95,7 @@ func runTransmission(cc coms) map[int]*Probe {
 					sendProbes[i].done = true
 					// Add to map
 					printMap[int(sp.id)] = sendProbes[i]
-
-					if p.saddr == net.IPv4(sp.dest[0], sp.dest[1], sp.dest[2], sp.dest[3]).String() {
-						//fmt.Println(p.saddr)
+					if p.saddr.Equal(sp.dest) {
 						return printMap
 					}
 				}

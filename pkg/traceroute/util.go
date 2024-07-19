@@ -5,8 +5,8 @@
 package traceroute
 
 import (
-	"bytes"
 	"net"
+	"strings"
 )
 
 type coms struct {
@@ -16,31 +16,35 @@ type coms struct {
 }
 
 // Given a host name convert it to a 4 byte IP address.
-func destAddr(dest string) (destAddr [4]byte, err error) {
+func destAddr(dest, proto string) (net.IP, error) {
 	addrs, err := net.LookupHost(dest)
 	if err != nil {
-		return
+		return nil, err
 	}
+
 	addr := addrs[0]
+	if strings.Contains(proto, "6") {
+		addr = addrs[1]
+	}
 
 	ipAddr, err := net.ResolveIPAddr("ip", addr)
 	if err != nil {
-		return
+		return nil, err
 	}
-	copy(destAddr[:], ipAddr.IP.To4())
-	return
+
+	return ipAddr.IP, nil
 }
 
-func findDestinationTTL(printMap map[int]*Probe, dest [4]byte) int {
+func findDestinationTTL(printMap map[int]*Probe) int {
 	icmp := false
 	destttl := 1
 	var icmpfinalpb *Probe
 	for _, pb := range printMap {
-		if !bytes.Equal([]byte(pb.saddr), dest[:]) && destttl < pb.ttl {
+		if destttl < pb.ttl {
 			destttl = pb.ttl
 		}
 		if pb.ttl == 0 {
-			// ICMP TCPProbe needs to increade return value by one
+			// ICMP TCPProbe needs to increase return value by one
 			icmpfinalpb = pb
 			icmp = true
 		}

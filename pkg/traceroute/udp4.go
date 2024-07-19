@@ -40,7 +40,7 @@ func (t *Trace) SendTracesUDP4() {
 
 			pb := &Probe{
 				id:   uint32(id),
-				dest: [4]byte(t.Dest.To4()),
+				dest: t.destIP,
 				port: dport,
 				ttl:  ttl,
 			}
@@ -61,7 +61,7 @@ func (t *Trace) SendTracesUDP4() {
 }
 
 func (t *Trace) ReceiveTracesUDP4() {
-	dest := t.Dest.To4()
+	dest := t.destIP.To4()
 	var err error
 	recvICMPConn, err := net.ListenIP("ip4:icmp", nil)
 	if err != nil {
@@ -85,7 +85,7 @@ func (t *Trace) ReceiveTracesUDP4() {
 		if dstip.Equal(dest) { // && dstPort == t.dstPort {
 			recvProbe := &Probe{
 				id:       uint32(id),
-				saddr:    raddr.String(),
+				saddr:    net.ParseIP(raddr.String()),
 				recvTime: time.Now(),
 			}
 			t.ReceiveChan <- recvProbe
@@ -105,8 +105,8 @@ func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint1
 		TTL:      int(ttl),
 		Protocol: 17,
 		Checksum: 0,
-		Src:      t.src,
-		Dst:      t.Dest,
+		Src:      t.srcIP.To4(),
+		Dst:      t.destIP.To4(),
 	}
 
 	h, err := iph.Marshal()

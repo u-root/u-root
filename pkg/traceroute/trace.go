@@ -7,9 +7,9 @@ package traceroute
 import "net"
 
 type Trace struct {
-	Dest     net.IP
+	destIP   net.IP
 	destPort uint16
-	src      net.IP
+	srcIP    net.IP
 	//srcPort     uint16
 	PortOffset   int32
 	MaxHops      int
@@ -21,30 +21,53 @@ type Trace struct {
 	PacketRate   int
 }
 
-func NewTrace(proto string, dAddr [4]byte, sAddr *net.UDPAddr, cc coms, debug bool) *Trace {
-	var destPort uint16
+func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trace {
+	var ret *Trace
 
 	switch proto {
 	case "udp4":
-		destPort = 33434
+		ret = &Trace{
+			destIP:       dAddr.To4(),
+			destPort:     33434,
+			srcIP:        sAddr.To4(),
+			PortOffset:   0,
+			MaxHops:      DEFNUMHOPS, // for IPv4 for now
+			SendChan:     cc.sendChan,
+			ReceiveChan:  cc.recvChan,
+			exitChan:     cc.exitChan,
+			debug:        f.Debug,
+			TracesPerHop: DEFNUMTRACES,
+			PacketRate:   1,
+		}
 	case "tcp4":
-		destPort = 443
-		// ICMP does not require a port, duh!
-		// case "icmp4":
+		ret = &Trace{
+			destIP:       dAddr.To4(),
+			destPort:     443,
+			srcIP:        sAddr.To4(),
+			PortOffset:   0,
+			MaxHops:      DEFNUMHOPS, // for IPv4 for now
+			SendChan:     cc.sendChan,
+			ReceiveChan:  cc.recvChan,
+			exitChan:     cc.exitChan,
+			debug:        f.Debug,
+			TracesPerHop: DEFNUMTRACES,
+			PacketRate:   1,
+		}
+	case "icmp4":
+		ret = &Trace{
+			destIP:       dAddr.To4(),
+			destPort:     0,
+			srcIP:        sAddr.To4(),
+			PortOffset:   0,
+			MaxHops:      DEFNUMHOPS, // for IPv4 for now
+			SendChan:     cc.sendChan,
+			ReceiveChan:  cc.recvChan,
+			exitChan:     cc.exitChan,
+			debug:        f.Debug,
+			TracesPerHop: DEFNUMTRACES,
+			PacketRate:   1,
+		}
 	}
 
-	ret := &Trace{
-		Dest:         net.IPv4(dAddr[0], dAddr[1], dAddr[2], dAddr[3]),
-		destPort:     destPort,
-		src:          sAddr.IP,
-		PortOffset:   0,
-		MaxHops:      DEFNUMHOPS, // for IPv4 for now
-		SendChan:     cc.sendChan,
-		ReceiveChan:  cc.recvChan,
-		exitChan:     cc.exitChan,
-		debug:        debug,
-		TracesPerHop: DEFNUMTRACES,
-		PacketRate:   1,
-	}
 	return ret
 }
