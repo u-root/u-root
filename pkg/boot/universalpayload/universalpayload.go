@@ -29,6 +29,11 @@ const (
 	UniversalPayloadSerialPortRegisterBase   = 0x3f8
 )
 
+const (
+	UniversalPayloadBaseGUID = "1dc6d403-1327-c54e-a1cc-883be9dc18e5"
+)
+
+
 type UniversalPayloadGenericHeader struct {
 	Revision uint8
 	Reserved uint8
@@ -43,12 +48,21 @@ type UniversalPayloadSerialPortInfo struct {
 	RegisterBase   EfiPhysicalAddress
 }
 
+// Structure member 'Pad' is introduced to match the offset of 'Entry'
+// in structure UNIVERSAL_PAYLOAD_BASE which is defined in EDK2 UPL.
+type UniveralPlayloadBase struct {
+	Header UniversalPayloadGenericHeader
+	Pad    [4]byte
+	Entry  EfiPhysicalAddress
+}
+
 // Map GUID string to size of corresponding structure. Use
 // this map to simplify the length calculation in function
 // constructGUIDHob.
 var (
 	guidToLength = map[string]uintptr{
 		UniversalPayloadSerialPortInfoGUID: unsafe.Sizeof(UniversalPayloadSerialPortInfo{}),
+		UniversalPayloadBaseGUID:           unsafe.Sizeof(UniveralPlayloadBase{}),
 	}
 )
 
@@ -81,6 +95,16 @@ func constructSerialPortHob() *UniversalPayloadSerialPortInfo {
 		RegisterStride: UniversalPayloadSerialPortRegisterStride,
 		BaudRate:       UniversalPayloadSerialPortBaudRate,
 		RegisterBase:   UniversalPayloadSerialPortRegisterBase,
+	}
+}
+
+func constructUniveralPlayloadBase(addr uint64) *UniveralPlayloadBase {
+	return &UniveralPlayloadBase{
+		Header: UniversalPayloadGenericHeader{
+			Revision: 0,
+			Length:   uint16(unsafe.Sizeof(UniveralPlayloadBase{})),
+		},
+		Entry: EfiPhysicalAddress(addr),
 	}
 }
 
@@ -129,6 +153,34 @@ func appendSerialPortHob(buf *bytes.Buffer, hobLen *uint64) error {
 
 	if length != (uint64)(buf.Len()-prev) {
 		return fmt.Errorf("length mismatch when appending serial port")
+	}
+
+	*hobLen += length
+
+	return nil
+}
+
+func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load uint64) error {
+	// Construct universal payload base Hob
+	uplBase := constructUniveralPlayloadBase(load)
+	uplBaseGUIDHob, err := constructGUIDHob(UniversalPayloadBaseGUID)
+	if err != nil {
+		return err
+	}
+
+	length := uint64(unsafe.Sizeof(EfiHobGUIDType{}) + unsafe.Sizeof(UniveralPlayloadBase{}))
+	prev := buf.Len()
+
+	if err := binary.Write(buf, binary.LittleEndian, uplBaseGUIDHob); err != nil {
+		return fmt.Errorf("failed to append universal payload base guid hob to buffer")
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, uplBase); err != nil {
+		return fmt.Errorf("failed to append universal payload base to buffer")
+	}
+
+	if length != (uint64)(buf.Len()-prev) {
+		return fmt.Errorf("length mismatch when appending universal payload base")
 	}
 
 	*hobLen += length
@@ -192,6 +244,10 @@ func Load(name string) error {
 	}
 
 	if err := appendSerialPortHob(hobBuf, &hobLen); err != nil {
+		return nil
+	}
+
+	if err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad.Load); err != nil {
 		return nil
 	}
 
