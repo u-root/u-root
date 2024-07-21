@@ -298,6 +298,27 @@ func appendSmbiosTableHob(buf *bytes.Buffer, hobLen *uint64) error {
 	return nil
 }
 
+func appendEfiCPUHob(buf *bytes.Buffer, hobLen *uint64) error {
+	cpuHob, err := hobCreateEfiHobCPU()
+	if err != nil {
+		return err
+	}
+
+	length := uint64(unsafe.Sizeof(EfiHobCPU{}))
+	prev := buf.Len()
+	if err := binary.Write(buf, binary.LittleEndian, cpuHob); err != nil {
+		return fmt.Errorf("failed to append cpu hob to buffer")
+	}
+
+	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
+		return fmt.Errorf("length mismatch when appending cpu hob")
+	}
+
+	*hobLen += length
+
+	return nil
+}
+
 func constructHobList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) error {
 	handoffHob := hobCreateEfiHobHandoffInfoTable(*hobLen)
 	if err := binary.Write(dst, binary.LittleEndian, handoffHob); err != nil {
@@ -366,6 +387,10 @@ func Load(name string) error {
 	}
 
 	if err := appendSmbiosTableHob(hobBuf, &hobLen); err != nil {
+		return nil
+	}
+
+	if err := appendEfiCPUHob(hobBuf, &hobLen); err != nil {
 		return nil
 	}
 
