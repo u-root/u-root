@@ -20,6 +20,7 @@ import (
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/smbios"
 )
 
 const (
@@ -39,6 +40,10 @@ const (
 	UniversalPayloadAcpiTableRevision = 1
 )
 
+const (
+	UniversalPayloadSmbiosTableGUID     = "260d0a59-e506-204d-8a82-59ea1b34982d"
+	UniversalPayloadSmbiosTableRevision = 1
+)
 
 type UniversalPayloadGenericHeader struct {
 	Revision uint8
@@ -67,6 +72,11 @@ type UniveralPlayloadAcpiTable struct {
 	Rsdp   EfiPhysicalAddress
 }
 
+type UniveralPlayloadSmbiosTable struct {
+	Header           UniversalPayloadGenericHeader
+	SmBiosEntryPoint EfiPhysicalAddress
+}
+
 // Map GUID string to size of corresponding structure. Use
 // this map to simplify the length calculation in function
 // constructGUIDHob.
@@ -75,6 +85,7 @@ var (
 		UniversalPayloadSerialPortInfoGUID: unsafe.Sizeof(UniversalPayloadSerialPortInfo{}),
 		UniversalPayloadBaseGUID:           unsafe.Sizeof(UniveralPlayloadBase{}),
 		UniversalPayloadAcpiTableGUID:      unsafe.Sizeof(UniveralPlayloadAcpiTable{}),
+		UniversalPayloadSmbiosTableGUID:    unsafe.Sizeof(UniveralPlayloadSmbiosTable{}),
 	}
 )
 
@@ -132,6 +143,21 @@ func constructRSDPTable() (*UniveralPlayloadAcpiTable, error) {
 			Length:   uint16(unsafe.Sizeof(UniveralPlayloadAcpiTable{})),
 		},
 		Rsdp: EfiPhysicalAddress(rsdp.RSDPAddr()),
+	}, nil
+}
+
+func constructSmbiosTable() (*UniveralPlayloadSmbiosTable, error) {
+	smbiosTableBase, _, err := smbios.SMBIOSBase()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get smbios base")
+	}
+
+	return &UniveralPlayloadSmbiosTable{
+		Header: UniversalPayloadGenericHeader{
+			Revision: UniversalPayloadSmbiosTableRevision,
+			Length:   uint16(unsafe.Sizeof(UniveralPlayloadSmbiosTable{})),
+		},
+		SmBiosEntryPoint: EfiPhysicalAddress(smbiosTableBase),
 	}, nil
 }
 
@@ -254,6 +280,45 @@ func appendAcpiTableHob(buf *bytes.Buffer, hobLen *uint64) error {
 	return nil
 }
 
+func appendSmbiosTableHob(buf *bytes.Buffer, hobLen *uint64) error {
+	// Construct SMBIOS Hob
+	smbiosTable, err := constructSmbiosTable()
+	if err != nil {
+		return err
+	}
+
+	smbiosTableGUIDHob, err := constructGUIDHob(UniversalPayloadSmbiosTableGUID)
+	if err != nil {
+		return err
+	}
+
+	length := uint64(unsafe.Sizeof(EfiHobGUIDType{}) + unsafe.Sizeof(UniveralPlayloadSmbiosTable{}))
+	prev := buf.Len()
+
+	if err := binary.Write(buf, binary.LittleEndian, smbiosTableGUIDHob); err != nil {
+		return fmt.Errorf("failed to append smbios table guid to buffer")
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, smbiosTable); err != nil {
+		return fmt.Errorf("failed to append smbios table to buffer")
+	}
+
+	// TODO: Remove this hardcode 4
+	// This hardcode is introduced by golang structure algnment vs. write bytes.
+	var pad [4]byte
+	if err := binary.Write(buf, binary.LittleEndian, pad); err != nil {
+		return fmt.Errorf("failed to append smbios table pad to buffer")
+	}
+
+	if length != (uint64)(buf.Len()-prev) {
+		return fmt.Errorf("length mismatch when appending smbios table")
+	}
+
+	*hobLen += length
+
+	return nil
+}
+
 func constructHobList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) error {
 	handoffHob := hobCreateEfiHobHandoffInfoTable(*hobLen)
 	if err := binary.Write(dst, binary.LittleEndian, handoffHob); err != nil {
@@ -318,6 +383,10 @@ func Load(name string) error {
 	}
 
 	if err := appendAcpiTableHob(hobBuf, &hobLen); err != nil {
+		return nil
+	}
+
+	if err := appendSmbiosTableHob(hobBuf, &hobLen); err != nil {
 		return nil
 	}
 
