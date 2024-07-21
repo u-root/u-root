@@ -89,6 +89,14 @@ const (
 	EfiHobHandoffInfoFreeMemoryBottom = 0xE00000
 )
 
+// According to Intel SDM Volume 1 Chapter 19.3 "I/O ADDRESS SPACE":
+// The I/O address space consists of 2^16 (64K) individually addressable
+// 8-bit I/O ports, numbered 0 through FFFFH.
+// Set the default IO Address size to 16
+const (
+	DefaultIOAddressSize = 16
+)
+
 // Type Aliases
 type EfiBootMode uint32
 type EfiResourceType uint32
@@ -208,4 +216,20 @@ func hobCreateEfiHobHandoffInfoTable(length uint64) EfiHobHandoffInfoTable {
 		EfiFreeMemoryBottom: EfiPhysicalAddress(EfiHobHandoffInfoFreeMemoryBottom + length + 8),
 		EfiEndOfHobList:     EfiPhysicalAddress(EfiHobHandoffInfoFreeMemoryBottom + length),
 	}
+}
+
+func hobCreateEfiHobCPU() (*EfiHobCPU, error) {
+	phyAddrSize, err := getPhysicalAddressSizes()
+	if err != nil {
+		return nil, err
+	}
+
+	return &EfiHobCPU{
+		Header: EfiHobGenericHeader{
+			HobType:   EfiHobTypeCPU,
+			HobLength: uint16(unsafe.Sizeof(EfiHobCPU{})),
+		},
+		SizeOfMemorySpace: uint8(phyAddrSize),
+		SizeOfIOSpace:     DefaultIOAddressSize,
+	}, nil
 }

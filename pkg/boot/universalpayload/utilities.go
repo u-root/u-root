@@ -5,7 +5,11 @@
 package universalpayload
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"regexp"
+	"strconv"
 
 	"github.com/u-root/u-root/pkg/dt"
 )
@@ -17,6 +21,8 @@ const (
 	LoadAddrPropertyName  = "load"
 	EntryAddrPropertyName = "entry-start"
 )
+
+const sysfsCPUInfoPath = "/proc/cpuinfo"
 
 type FdtLoad struct {
 	Load       uint64
@@ -77,4 +83,40 @@ func getFdtInfo(name string) (*FdtLoad, error) {
 		Load:       loadAddr,
 		EntryStart: entryAddr,
 	}, nil
+}
+
+// Get Physical Address size from sysfs node /proc/cpuinfo.
+// Both Phiscal and Virtual Address size will be prompted as format:
+// "address sizes	: 39 bits physical, 48 bits virtual"
+// Use regular experssion to fetch the interge of Physical Address
+// size before "bits physical" keyword
+func getPhysicalAddressSizes() (int, error) {
+	file, err := os.Open(sysfsCPUInfoPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open %s: %v", sysfsCPUInfoPath, err)
+	}
+	defer file.Close()
+
+	// Regular expression to match the address size line
+	re := regexp.MustCompile(`address sizes\s*:\s*(\d+)\s+bits physical,\s*(\d+)\s+bits virtual`)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if match := re.FindStringSubmatch(line); match != nil {
+			// Convert the physical bits size to integer
+			physicalBits, err := strconv.Atoi(match[1])
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse physical bits size: %v", err)
+			}
+			// We only need the first match
+			return physicalBits, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, fmt.Errorf("error reading %s: %v", sysfsCPUInfoPath, err)
+	}
+
+	return 0, fmt.Errorf("address sizes information not found")
 }
