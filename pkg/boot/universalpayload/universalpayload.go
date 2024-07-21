@@ -17,6 +17,7 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
@@ -31,6 +32,11 @@ const (
 
 const (
 	UniversalPayloadBaseGUID = "1dc6d403-1327-c54e-a1cc-883be9dc18e5"
+)
+
+const (
+	UniversalPayloadAcpiTableGUID     = "06959a9f-9755-1545-bab6-8bcde784ba87"
+	UniversalPayloadAcpiTableRevision = 1
 )
 
 
@@ -56,6 +62,11 @@ type UniversalPayloadBase struct {
 	Entry  EfiPhysicalAddress
 }
 
+type UniversalPayloadAcpiTable struct {
+	Header UniversalPayloadGenericHeader
+	Rsdp   EfiPhysicalAddress
+}
+
 // Map GUID string to size of corresponding structure. Use
 // this map to simplify the length calculation in function
 // constructGUIDHob.
@@ -63,6 +74,7 @@ var (
 	guidToLength = map[string]uintptr{
 		UniversalPayloadSerialPortInfoGUID: unsafe.Sizeof(UniversalPayloadSerialPortInfo{}),
 		UniversalPayloadBaseGUID:           unsafe.Sizeof(UniversalPayloadBase{}),
+		UniversalPayloadAcpiTableGUID:      unsafe.Sizeof(UniversalPayloadAcpiTable{}),
 	}
 )
 
@@ -106,6 +118,21 @@ func constructUnivesralPayloadBase(addr uint64) *UniversalPayloadBase {
 		},
 		Entry: EfiPhysicalAddress(addr),
 	}
+}
+
+func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
+	rsdp, err := acpi.GetRSDP()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rdsp table")
+	}
+
+	return &UniversalPayloadAcpiTable{
+		Header: UniversalPayloadGenericHeader{
+			Revision: UniversalPayloadAcpiTableRevision,
+			Length:   uint16(unsafe.Sizeof(UniversalPayloadAcpiTable{})),
+		},
+		Rsdp: EfiPhysicalAddress(rsdp.RSDPAddr()),
+	}, nil
 }
 
 func appendMemMapHob(buf *bytes.Buffer, hobLen *uint64) error {
@@ -181,6 +208,38 @@ func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load uint64) 
 	return nil
 }
 
+func appendAcpiTableHob(buf *bytes.Buffer, hobLen *uint64) error {
+	// Construct universal payload ACPI (RSDP) table Hob
+	rsdpTable, err := constructRSDPTable()
+	if err != nil {
+		return err
+	}
+
+	rsdpTableGUIDHob, err := constructGUIDHob(UniversalPayloadAcpiTableGUID)
+	if err != nil {
+		return err
+	}
+
+	length := uint64(unsafe.Sizeof(EfiHobGUIDType{}) + unsafe.Sizeof(UniversalPayloadAcpiTable{}))
+	prev := buf.Len()
+
+	if err := binary.Write(buf, binary.LittleEndian, rsdpTableGUIDHob); err != nil {
+		return fmt.Errorf("failed to append acpi table guid to buffer")
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, rsdpTable); err != nil {
+		return fmt.Errorf("failed to append acpi table to buffer")
+	}
+
+	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
+		return fmt.Errorf("length mismatch when appending acpi table")
+	}
+
+	*hobLen += length
+
+	return nil
+}
+
 func constructHobList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) error {
 	handoffHob := hobCreateEfiHobHandoffInfoTable(*hobLen)
 	if err := binary.Write(dst, binary.LittleEndian, handoffHob); err != nil {
@@ -241,6 +300,10 @@ func Load(name string) error {
 	}
 
 	if err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad.Load); err != nil {
+		return nil
+	}
+
+	if err := appendAcpiTableHob(hobBuf, &hobLen); err != nil {
 		return nil
 	}
 
