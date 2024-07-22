@@ -67,6 +67,20 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trac
 			TracesPerHop: DEFNUMTRACES,
 			PacketRate:   1,
 		}
+	case "icmp6":
+		ret = &Trace{
+			destIP:       dAddr,
+			destPort:     0,
+			srcIP:        sAddr,
+			PortOffset:   0,
+			MaxHops:      DEFNUMHOPS, // for IPv4 for now
+			SendChan:     cc.sendChan,
+			ReceiveChan:  cc.recvChan,
+			exitChan:     cc.exitChan,
+			debug:        f.Debug,
+			TracesPerHop: DEFNUMTRACES,
+			PacketRate:   1,
+		}
 	}
 
 	return ret

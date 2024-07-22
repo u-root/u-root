@@ -6,7 +6,6 @@ package traceroute
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"time"
 )
@@ -28,12 +27,12 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 		return err
 	}
 
-	conn, err := net.Dial("udp", "8.8.8.8:53")
+	fmt.Println(dAddr)
+
+	sAddr, err := srcAddr(prot)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	sAddr := conn.LocalAddr().(*net.UDPAddr)
-	conn.Close()
 
 	cc := coms{
 		sendChan: make(chan *Probe),
@@ -41,7 +40,7 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 		exitChan: make(chan bool),
 	}
 
-	mod := NewTrace(prot, dAddr, sAddr.IP, cc, f)
+	mod := NewTrace(prot, dAddr, sAddr, cc, f)
 
 	switch prot {
 	case "udp4":
@@ -53,6 +52,7 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 	case "udp6":
 	case "tcp6":
 	case "icmp6":
+		go mod.SendTracesICMP6()
 	}
 
 	printMap := runTransmission(cc)
@@ -96,6 +96,7 @@ func runTransmission(cc coms) map[int]*Probe {
 					// Add to map
 					printMap[int(sp.id)] = sendProbes[i]
 					if p.saddr.Equal(sp.dest) {
+						fmt.Println("final")
 						return printMap
 					}
 				}
