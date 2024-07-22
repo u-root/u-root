@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 
 	"github.com/vishvananda/netlink"
@@ -17,9 +16,9 @@ const tcpMetricsHelp = `Usage:	ip tcp_metrics/tcpmetrics { COMMAND | help }
 	ip tcp_metrics show SELECTOR
 SELECTOR := [ [ address ] PREFIX ]`
 
-func tcpMetrics(w io.Writer) error {
+func (cmd cmd) tcpMetrics() error {
 	if len(arg) == 1 {
-		return showTCPMetrics(w, nil)
+		return cmd.showTCPMetrics(nil)
 	}
 
 	expectedValues = []string{"show", "help"}
@@ -32,12 +31,12 @@ func tcpMetrics(w io.Writer) error {
 				return err
 			}
 
-			return showTCPMetrics(w, addr)
+			return cmd.showTCPMetrics(addr)
 		}
 
-		return showTCPMetrics(w, nil)
+		return cmd.showTCPMetrics(nil)
 	case "help":
-		fmt.Fprint(w, tcpMetricsHelp)
+		fmt.Fprint(cmd.out, tcpMetricsHelp)
 
 		return nil
 	}
@@ -45,7 +44,7 @@ func tcpMetrics(w io.Writer) error {
 	return usage()
 }
 
-func showTCPMetrics(w io.Writer, address net.IP) error {
+func (cmd cmd) showTCPMetrics(address net.IP) error {
 	var family uint8 = unix.AF_INET
 	if family == netlink.FAMILY_V6 {
 		family = unix.AF_INET6
@@ -71,7 +70,7 @@ func showTCPMetrics(w io.Writer, address net.IP) error {
 			tcpInfo = fmt.Sprintf("cwnd %v rtt %v rttvar %vus", v.TCPInfo.Snd_cwnd, v.TCPInfo.Rtt, v.TCPInfo.Rttvar)
 		}
 
-		fmt.Fprintf(w, "%v age %vsec %s source %v\n", v.InetDiagMsg.ID.Destination.String(), v.InetDiagMsg.Expires, tcpInfo, v.InetDiagMsg.ID.Source.String())
+		fmt.Fprintf(cmd.out, "%v age %vsec %s source %v\n", v.InetDiagMsg.ID.Destination.String(), v.InetDiagMsg.Expires, tcpInfo, v.InetDiagMsg.ID.Source.String())
 	}
 
 	return nil

@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/vishvananda/netlink"
 )
 
 func FuzzIPCmd(f *testing.F) {
@@ -38,6 +40,17 @@ func FuzzIPCmd(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data string) {
 		stdout.Reset()
 		arg = strings.Split(data, " ")
-		run([]string{}, stdout)
+
+		handle, err := netlink.NewHandle()
+		if err != nil {
+			t.Fatalf("failed to create netlink handle: %v", err)
+		}
+
+		cmd := cmd{
+			out:    os.Stdout,
+			handle: handle,
+		}
+
+		cmd.run()
 	})
 }

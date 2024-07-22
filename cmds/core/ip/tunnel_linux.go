@@ -35,10 +35,10 @@ var (
 	allTunnelTypes = []string{"gre", "ipip", "ip6tln", "ip6gre", "vti", "vti6", "sit"}
 )
 
-func tunnel(w io.Writer) error {
+func (cmd cmd) tunnel() error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		return showAllTunnels(w)
+		return cmd.showAllTunnels()
 	}
 
 	expectedValues = []string{"add", "del", "show"}
@@ -53,11 +53,11 @@ func tunnel(w io.Writer) error {
 
 		switch c {
 		case "add":
-			return tunnelAdd(options)
+			return cmd.tunnelAdd(options)
 		case "del":
-			return tunnelDelete(options)
+			return cmd.tunnelDelete(options)
 		case "show":
-			return showTunnels(w, options)
+			return cmd.showTunnels(options)
 		}
 	}
 	return usage()
@@ -176,11 +176,11 @@ func parseTunnel() (*options, error) {
 	return &options, nil
 }
 
-func showAllTunnels(w io.Writer) error {
-	return showTunnels(w, &options{modes: allTunnelTypes})
+func (cmd cmd) showAllTunnels() error {
+	return cmd.showTunnels(&options{modes: allTunnelTypes})
 }
 
-func showTunnels(w io.Writer, op *options) error {
+func (cmd cmd) showTunnels(op *options) error {
 	links, err := netlink.LinkList()
 	if err != nil {
 		return fmt.Errorf("failed to list interfaces: %v", err)
@@ -236,7 +236,7 @@ func showTunnels(w io.Writer, op *options) error {
 		tunnels = append(tunnels, l)
 	}
 
-	return printTunnels(w, tunnels)
+	return printTunnels(cmd.out, tunnels)
 }
 
 type Tunnel struct {
@@ -244,7 +244,7 @@ type Tunnel struct {
 	Mode   string `json:"mode"`
 	Remote string `json:"remote"`
 	Local  string `json:"local"`
-	TTL    string `json:"ttl",omitempty`
+	TTL    string `json:"ttl,omitempty"`
 }
 
 func printTunnels(w io.Writer, tunnels []netlink.Link) error {
@@ -434,7 +434,7 @@ func equalOKey(l netlink.Link, oKey int) bool {
 	}
 }
 
-func tunnelAdd(op *options) error {
+func (cmd cmd) tunnelAdd(op *options) error {
 	if op.mode == "" {
 		return fmt.Errorf("tunnel mode is required")
 	}
@@ -529,19 +529,19 @@ func tunnelAdd(op *options) error {
 		return fmt.Errorf("unsupported tunnel type %s", op.mode)
 	}
 
-	if err := netlink.LinkAdd(link); err != nil {
+	if err := cmd.handle.LinkAdd(link); err != nil {
 		return fmt.Errorf("failed to add tunnel: %v", err)
 	}
 
 	return nil
 }
 
-func tunnelDelete(op *options) error {
+func (cmd cmd) tunnelDelete(op *options) error {
 	if op.name == "" {
 		return fmt.Errorf("tunnel name is required")
 	}
 
-	link, err := netlink.LinkByName(op.name)
+	link, err := cmd.handle.LinkByName(op.name)
 	if err != nil {
 		return fmt.Errorf("failed to find tunnel %s: %v", op.name, err)
 	}
@@ -558,7 +558,7 @@ func tunnelDelete(op *options) error {
 		return fmt.Errorf("%s is not a tunnel device", op.name)
 	}
 
-	if err := netlink.LinkDel(link); err != nil {
+	if err := cmd.handle.LinkDel(link); err != nil {
 		return fmt.Errorf("failed to delete tunnel %s: %v", op.name, err)
 	}
 

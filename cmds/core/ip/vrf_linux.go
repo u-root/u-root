@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/vishvananda/netlink"
 )
@@ -19,10 +18,10 @@ const (
 `
 )
 
-func vrf(w io.Writer) error {
+func (cmd cmd) vrf() error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		return vrfShow(w)
+		return cmd.vrfShow()
 	}
 
 	expectedValues = []string{"show", "help"}
@@ -30,9 +29,9 @@ func vrf(w io.Writer) error {
 
 	switch c = findPrefix(arg[cursor], expectedValues); c {
 	case "show":
-		return vrfShow(w)
+		return cmd.vrfShow()
 	case "help":
-		fmt.Fprint(w, vrfHelp)
+		fmt.Fprint(cmd.out, vrfHelp)
 
 		return nil
 	}
@@ -44,8 +43,8 @@ type Vrf struct {
 	Table uint32 `json:"table"`
 }
 
-func vrfShow(w io.Writer) error {
-	links, err := netlink.LinkList()
+func (cmd cmd) vrfShow() error {
+	links, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
 	}
@@ -65,12 +64,12 @@ func vrfShow(w io.Writer) error {
 			})
 		}
 
-		return printJSON(w, vrfs)
+		return printJSON(cmd.out, vrfs)
 	}
 
 	// Print header
-	fmt.Fprintln(w, "Name              Table")
-	fmt.Fprintln(w, "-----------------------")
+	fmt.Fprintln(cmd.out, "Name              Table")
+	fmt.Fprintln(cmd.out, "-----------------------")
 
 	for _, link := range links {
 		vrf, ok := link.(*netlink.Vrf)
@@ -79,7 +78,7 @@ func vrfShow(w io.Writer) error {
 		}
 
 		// Adjusted to print both the VRF name and its table ID in the specified format
-		fmt.Fprintf(w, "%-17s %d\n", vrf.Name, vrf.Table)
+		fmt.Fprintf(cmd.out, "%-17s %d\n", vrf.Name, vrf.Table)
 	}
 	return nil
 }

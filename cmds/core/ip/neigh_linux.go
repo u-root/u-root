@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"net"
 	"strings"
@@ -26,16 +25,16 @@ STATE := { delay | failed | incomplete | noarp | none |
            permanent | probe | reachable | stale }
 `
 
-func neigh(w io.Writer) error {
+func (cmd cmd) neigh() error {
 	if len(arg) == 1 {
-		return showAllNeighbours(w, -1, false)
+		return cmd.showAllNeighbours(-1, false)
 	}
 
 	cursor++
 	expectedValues = []string{"show", "add", "del", "replace", "flush", "get", "help"}
-	cmd := arg[cursor]
+	argument := arg[cursor]
 
-	switch c := findPrefix(cmd, expectedValues); c {
+	switch c := findPrefix(argument, expectedValues); c {
 	case "add", "del", "replace":
 		neigh, err := parseNeighAddDelReplaceParams()
 		if err != nil {
@@ -44,17 +43,17 @@ func neigh(w io.Writer) error {
 
 		switch c {
 		case "add":
-			return netlink.NeighAdd(neigh)
+			return cmd.handle.NeighAdd(neigh)
 		case "del":
-			return netlink.NeighDel(neigh)
+			return cmd.handle.NeighDel(neigh)
 		case "replace":
-			return netlink.NeighSet(neigh)
+			return cmd.handle.NeighSet(neigh)
 		}
 
 	case "show":
-		return neighShow(w)
+		return cmd.neighShow()
 	case "flush":
-		return neighFlush()
+		return cmd.neighFlush()
 	case "get":
 		cursor++
 		expectedValues = []string{"CIDR format address"}
@@ -67,9 +66,9 @@ func neigh(w io.Writer) error {
 			return err
 		}
 
-		return showNeighbours(w, -1, false, &ipAddr, iface)
+		return cmd.showNeighbours(-1, false, &ipAddr, iface)
 	case "help":
-		fmt.Fprint(w, neighHelp)
+		fmt.Fprint(cmd.out, neighHelp)
 		return nil
 	}
 
@@ -203,13 +202,13 @@ func getState(state int) string {
 	return strings.Join(ret, ",")
 }
 
-func showAllNeighbours(w io.Writer, nud int, proxy bool) error {
-	ifaces, err := netlink.LinkList()
+func (cmd cmd) showAllNeighbours(nud int, proxy bool) error {
+	ifaces, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
 	}
 
-	return showNeighbours(w, nud, proxy, nil, ifaces...)
+	return cmd.showNeighbours(nud, proxy, nil, ifaces...)
 }
 
 type Neigh struct {
@@ -219,7 +218,7 @@ type Neigh struct {
 	State  string `json:"state,omitempty"`
 }
 
-func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
+func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
 	var (
 		flags uint8
 		state uint16
@@ -237,7 +236,7 @@ func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ..
 	ifaceNames := make([]string, 0)
 
 	for _, iface := range ifaces {
-		neighs, err := netlink.NeighListExecute(netlink.Ndmsg{
+		neighs, err := cmd.handle.NeighListExecute(netlink.Ndmsg{
 			Family: netlink.FAMILY_ALL,
 			Index:  uint32(iface.Attrs().Index),
 			Flags:  flags,
@@ -278,14 +277,14 @@ func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ..
 			neighs = append(neighs, neigh)
 		}
 
-		return printJSON(w, neighs)
+		return printJSON(cmd.out, neighs)
 	}
 
 	neighFmt := "%s dev %s%s%s %s\n"
 	neighBriefFmt := "%-39s %-13s %-9s\n"
 	for idx, v := range filteredNeighs {
 		if f.brief {
-			fmt.Fprintf(w, neighBriefFmt, v.IP, ifaceNames[idx], v.HardwareAddr)
+			fmt.Fprintf(cmd.out, neighBriefFmt, v.IP, ifaceNames[idx], v.HardwareAddr)
 		} else {
 			llAddr := ""
 			routerStr := ""
@@ -298,27 +297,27 @@ func showNeighbours(w io.Writer, nud int, proxy bool, address *net.IP, ifaces ..
 				routerStr = " router"
 			}
 
-			fmt.Fprintf(w, neighFmt, v.IP, ifaceNames[idx], llAddr, routerStr, getState(v.State))
+			fmt.Fprintf(cmd.out, neighFmt, v.IP, ifaceNames[idx], llAddr, routerStr, getState(v.State))
 		}
 	}
 
 	return nil
 }
 
-func neighShow(w io.Writer) error {
+func (cmd cmd) neighShow() error {
 	iface, proxy, nud, err := parseNeighShowFlush()
 	if err != nil {
 		return err
 	}
 
 	if iface != nil {
-		return showNeighbours(w, nud, proxy, nil, iface)
+		return cmd.showNeighbours(nud, proxy, nil, iface)
 	}
 
-	return showAllNeighbours(w, nud, proxy)
+	return cmd.showAllNeighbours(nud, proxy)
 }
 
-func neighFlush() error {
+func (cmd cmd) neighFlush() error {
 	var (
 		ifaces []netlink.Link
 		flags  uint8
@@ -331,7 +330,7 @@ func neighFlush() error {
 	}
 
 	if iface == nil {
-		ifaces, err = netlink.LinkList()
+		ifaces, err = cmd.handle.LinkList()
 		if err != nil {
 			return fmt.Errorf("failed to list interfaces: %w", err)
 		}
@@ -356,13 +355,13 @@ func neighFlush() error {
 			State:  state,
 		}
 
-		neighbors, err := netlink.NeighListExecute(msg)
+		neighbors, err := cmd.handle.NeighListExecute(msg)
 		if err != nil {
 			return fmt.Errorf("failed to list neighbors: %w", err)
 		}
 
 		for _, neigh := range neighbors {
-			if err := netlink.NeighDel(&neigh); err != nil {
+			if err := cmd.handle.NeighDel(&neigh); err != nil {
 				return fmt.Errorf("failed to delete neighbor: %w", err)
 			}
 		}
