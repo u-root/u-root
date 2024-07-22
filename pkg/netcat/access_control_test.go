@@ -5,8 +5,8 @@
 package netcat
 
 import (
-	"bufio"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -194,20 +194,19 @@ func TestParseAccessControl(t *testing.T) {
 
 func createTempFileWithContent(t *testing.T, content []string) string {
 	t.Helper()
-	tmpFile, err := os.CreateTemp("", "testfile")
+	tmpDir := t.TempDir()
+
+	tmpFile, err := os.CreateTemp(tmpDir, "example")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tmpFile.Close()
 
-	writer := bufio.NewWriter(tmpFile)
-	for _, line := range content {
-		_, err := writer.WriteString(line + "\n")
-		if err != nil {
-			t.Fatal(err)
-		}
+	contentStr := strings.Join(content, "\n")
+	_, err = tmpFile.WriteString(contentStr)
+	if err != nil {
+		t.Fatal(err)
 	}
-	writer.Flush()
 
 	return tmpFile.Name()
 }

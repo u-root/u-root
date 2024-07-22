@@ -13,15 +13,16 @@ import (
 
 func TestWriteMultipleCases(t *testing.T) {
 	// Setup temporary files for testing
-	tmpFile, err := os.CreateTemp("", "testfile")
+	tmpDir := t.TempDir()
+	tmpFile, err := os.CreateTemp(tmpDir, "output.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
-	tmpHexFile, err := os.CreateTemp("", "testhexfile")
+	tmpHexFile, err := os.CreateTemp(tmpDir, "output.hex")
 	if err != nil {
-		t.Fatalf("Failed to create temp hex file: %v", err)
+		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tmpHexFile.Name())
 

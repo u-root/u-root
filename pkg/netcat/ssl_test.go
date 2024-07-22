@@ -64,13 +64,15 @@ H4ng16X4yY1OGtXg+MbXeaM=
 -----END PRIVATE KEY-----`
 
 func TestGenerateTLSConfigurationExtended(t *testing.T) {
-	certFile, err := os.CreateTemp("", "cert.pem")
+	tmpDir := t.TempDir()
+
+	certFile, err := os.CreateTemp(tmpDir, "cert.pem")
 	if err != nil {
 		t.Fatalf("Failed to create temp cert file: %v", err)
 	}
 	defer os.Remove(certFile.Name())
 
-	keyFile, err := os.CreateTemp("", "key.pem")
+	keyFile, err := os.CreateTemp(tmpDir, "key.pem")
 	if err != nil {
 		t.Fatalf("Failed to create temp key file: %v", err)
 	}
