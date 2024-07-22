@@ -11,27 +11,41 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 type flags struct {
-	family        string
-	inet4         bool
-	inet6         bool
-	bridge        bool
-	mpls          bool
-	link          bool
-	details       bool
-	stats         bool
-	loops         int
-	humanReadable bool
-	iec           bool
-	json          bool
-	prettify      bool
-	brief         bool
+	family         string
+	families       []int
+	inet4          bool
+	inet6          bool
+	bridge         bool
+	mpls           bool
+	link           bool
+	details        bool
+	stats          bool
+	loops          int
+	humanReadable  bool
+	iec            bool
+	json           bool
+	prettify       bool
+	brief          bool
+	resolve        bool
+	color          string
+	rcvBuf         string
+	timeStamp      bool
+	timeStampShort bool
+	all            bool
+	numeric        bool
+	batch          string
+	force          bool
+	oneline        bool
+	netns          string
 }
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
@@ -73,7 +87,8 @@ var (
 	cursor         int
 	arg            []string
 	expectedValues []string
-	family         int // netlink.FAMILY_ALL, netlink.FAMILY_V4, netlink.FAMILY_V6
+	families       []int
+	family         int
 	addrScopes     = map[netlink.Scope]string{
 		netlink.SCOPE_UNIVERSE: "global",
 		netlink.SCOPE_HOST:     "host",
@@ -92,10 +107,12 @@ func usage() error {
 		arg[0:cursor], arg[cursor:], arg[cursor], expectedValues)
 }
 
-func run(args []string, out io.Writer) error {
+func parseFlags(args []string, out io.Writer) (*netlink.Handle, error) {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fs.StringVar(&f.family, "f", "", "Specify family (inet, inet6, mpls, link)")
 	fs.StringVar(&f.family, "family", "", "Specify family (inet, inet6, mpls, link)")
+	fs.BoolVar(&f.resolve, "r", false, "Use system resolver to display DNS names")
+	fs.BoolVar(&f.resolve, "resolve", false, "Use system resolver to display DNS names")
 	fs.BoolVar(&f.inet4, "4", false, "Set protocol family to inet")
 	fs.BoolVar(&f.inet6, "6", false, "Set protocol family to inet6")
 	fs.BoolVar(&f.bridge, "B", false, "Set protocol family to bridge")
@@ -116,6 +133,25 @@ func run(args []string, out io.Writer) error {
 	fs.BoolVar(&f.json, "json", false, "Output in JSON format")
 	fs.BoolVar(&f.prettify, "p", false, "Make JSON output pretty")
 	fs.BoolVar(&f.prettify, "pretty", false, "Make JSON output pretty")
+	fs.StringVar(&f.color, "c", "", "Use color output")
+	fs.StringVar(&f.color, "color", "", "Use color output")
+	fs.StringVar(&f.rcvBuf, "rc", "", "Set the netlink socket receive buffer size, defaults to 1MB")
+	fs.StringVar(&f.rcvBuf, "rcvbuf", "", "Set the netlink socket receive buffer size, defaults to 1MB")
+	fs.BoolVar(&f.timeStamp, "t", false, "Display time stamps")
+	fs.BoolVar(&f.timeStamp, "timestamp", false, "Display time stamps")
+	fs.BoolVar(&f.timeStampShort, "ts", false, "Display short time stamps")
+	fs.BoolVar(&f.timeStampShort, "tshort", false, "Display short time stamps")
+	fs.BoolVar(&f.all, "a", false, "Display all information")
+	fs.BoolVar(&f.all, "all", false, "Display all information")
+	fs.BoolVar(&f.numeric, "N", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
+	fs.BoolVar(&f.numeric, "numeric", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
+	fs.StringVar(&f.batch, "b", "", "Read commands from a file")
+	fs.StringVar(&f.batch, "batch", "", "Read commands from a file")
+	fs.BoolVar(&f.force, "force", false, "Don't terminate ip on errors in batch mode.  If there were any errors during execution of the commands, the application return code will be non zero.")
+	fs.BoolVar(&f.oneline, "o", false, "Output each record on a single line")
+	fs.BoolVar(&f.oneline, "oneline", false, "Output each record on a single line")
+	fs.StringVar(&f.netns, "n", "", "Switch to network namespace")
+	fs.StringVar(&f.netns, "netns", "", "Switch to network namespace")
 
 	fs.Usage = func() {
 		fmt.Fprintf(out, "%s\n\n", ipHelp)
@@ -127,39 +163,91 @@ func run(args []string, out io.Writer) error {
 
 	arg = fs.Args()
 
-	familySet := 0
 	family = netlink.FAMILY_ALL
 
 	if f.inet4 {
 		family = netlink.FAMILY_V4
-		familySet++
+		families = append(families, netlink.FAMILY_V4)
 	}
 	if f.inet6 {
 		family = netlink.FAMILY_V6
-		familySet++
+		families = append(families, netlink.FAMILY_V6)
 	}
+
 	if f.mpls {
-		family = netlink.FAMILY_MPLS
-		familySet++
+		return nil, fmt.Errorf("protocol family MPLS is not yet supported")
 	}
 
 	if f.bridge {
-		return fmt.Errorf("protocol family bridge is not yet supported")
+		return nil, fmt.Errorf("protocol family bridge is not yet supported")
 	}
 
 	if f.link {
 		family = netlink.FAMILY_ALL
-		familySet++
+		families = append(families, netlink.FAMILY_ALL)
 	}
 
-	if f.family != "" {
-		familySet++
+	if f.resolve {
+		return nil, fmt.Errorf("resolving DNS names is unsupported")
 	}
 
-	if familySet > 1 {
-		return fmt.Errorf("cannot specify more than one protocol family (inet, inet6, mpls, link)")
+	if f.color != "" {
+		return nil, fmt.Errorf("color output is unsupported")
 	}
 
+	if f.oneline {
+		return nil, fmt.Errorf("outputting each record on a single line is unsupported")
+	}
+
+	if f.batch != "" {
+		return nil, fmt.Errorf("batch mode is unsupported")
+	}
+
+	if f.force {
+		return nil, fmt.Errorf("force mode is unsupported")
+	}
+
+	var (
+		err    error
+		handle *netlink.Handle
+	)
+
+	if f.netns != "" {
+		nsHandle, err := netns.GetFromName(f.netns)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find network namespace %q: %v", f.netns, err)
+		}
+		defer nsHandle.Close()
+
+		handle, err = netlink.NewHandleAt(nsHandle, families...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create netlink handle in network namespace %q: %v", f.netns, err)
+		}
+	} else {
+		handle, err = netlink.NewHandle(families...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create netlink handle: %v", err)
+		}
+	}
+
+	if f.rcvBuf != "" {
+		bufSize, err := strconv.Atoi(f.rcvBuf)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse rcvbuf flag: %v", err)
+		}
+
+		handle.SetSocketReceiveBufferSize(bufSize, true)
+	}
+
+	return handle, nil
+}
+
+type cmd struct {
+	out    io.Writer
+	handle *netlink.Handle
+}
+
+func (cmd cmd) run() error {
 	expectedValues = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"}
 	cursor = 0
 
@@ -182,32 +270,33 @@ func run(args []string, out io.Writer) error {
 
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
+
 	var err error
 
 	c := findPrefix(arg[cursor], expectedValues)
 	switch c {
 	case "address":
-		err = address(out)
+		err = cmd.address()
 	case "link":
-		err = link(out)
+		err = cmd.link()
 	case "route":
-		err = route(out)
+		err = cmd.route()
 	case "neigh":
-		err = neigh(out)
+		err = cmd.neigh()
 	case "monitor":
-		err = monitor(out)
+		err = cmd.monitor()
 	case "tunnel":
-		err = tunnel(out)
+		err = cmd.tunnel()
 	case "tuntap", "tap":
-		err = tuntap(out)
+		err = cmd.tuntap()
 	case "tcpmetrics", "tcp_metrics":
-		err = tcpMetrics(out)
+		err = cmd.tcpMetrics()
 	case "vrf":
-		err = vrf(out)
+		err = cmd.vrf()
 	case "xfrm":
-		err = xfrm(out)
+		err = cmd.xfrm()
 	case "help":
-		fmt.Fprint(out, ipHelp)
+		fmt.Fprint(cmd.out, ipHelp)
 
 		return nil
 	default:
@@ -220,7 +309,17 @@ func run(args []string, out io.Writer) error {
 }
 
 func main() {
-	err := run(os.Args, os.Stdout)
+	handle, err := parseFlags(os.Args, os.Stdout)
+	if err != nil {
+		log.Fatalf("ip: %v", err)
+	}
+
+	cmd := cmd{
+		out:    os.Stdout,
+		handle: handle,
+	}
+
+	err = cmd.run()
 	if err != nil {
 		log.Fatalf("ip: %v", err)
 	}

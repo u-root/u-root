@@ -94,7 +94,7 @@ func parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 	return tmpl, nil
 }
 
-func xfrmPolicy(w io.Writer) error {
+func (cmd cmd) xfrmPolicy() error {
 	cursor++
 	expectedValues = []string{"add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help"}
 	switch findPrefix(arg[cursor], expectedValues) {
@@ -104,58 +104,58 @@ func xfrmPolicy(w io.Writer) error {
 			return err
 		}
 
-		return netlink.XfrmPolicyAdd(policy)
+		return cmd.handle.XfrmPolicyAdd(policy)
 	case "update":
 		policy, err := parseXfrmPolicyAddUpdate()
 		if err != nil {
 			return err
 		}
 
-		return netlink.XfrmPolicyUpdate(policy)
+		return cmd.handle.XfrmPolicyUpdate(policy)
 	case "delete":
 		policy, err := parseXfrmPolicyDeleteGet()
 		if err != nil {
 			return err
 		}
 
-		return netlink.XfrmPolicyDel(policy)
+		return cmd.handle.XfrmPolicyDel(policy)
 	case "get":
 		policy, err := parseXfrmPolicyDeleteGet()
 		if err != nil {
 			return err
 		}
 
-		policy, err = netlink.XfrmPolicyGet(policy)
+		policy, err = cmd.handle.XfrmPolicyGet(policy)
 		if err != nil {
 			return err
 		}
 
-		printXfrmPolicy(w, policy)
+		printXfrmPolicy(cmd.out, policy)
 	case "deleteall":
 		policy, err := parseXfrmPolicyListDeleteAll()
 		if err != nil {
 			return err
 		}
 
-		return netlink.XfrmPolicyDel(policy)
+		return cmd.handle.XfrmPolicyDel(policy)
 	case "list", "show":
 		policy, err := parseXfrmPolicyListDeleteAll()
 		if err != nil {
 			return err
 		}
 
-		return printFilteredXfrmPolicies(w, policy, family)
+		return printFilteredXfrmPolicies(cmd.out, policy, family)
 	case "flush":
-		return netlink.XfrmPolicyFlush()
+		return cmd.handle.XfrmPolicyFlush()
 	case "count":
-		policies, err := netlink.XfrmPolicyList(family)
+		policies, err := cmd.handle.XfrmPolicyList(family)
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprintf(w, "XFRM policies: %d\n", len(policies))
+		fmt.Fprintf(cmd.out, "XFRM policies: %d\n", len(policies))
 	case "help":
-		fmt.Fprint(w, xfrmPolicyHelp)
+		fmt.Fprint(cmd.out, xfrmPolicyHelp)
 
 		return nil
 	default:

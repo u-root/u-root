@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"math"
 
 	"github.com/vishvananda/netlink"
@@ -21,10 +20,10 @@ Where: USER  := { STRING | NUMBER }
        GROUP := { STRING | NUMBER }`
 )
 
-func tuntap(w io.Writer) error {
+func (cmd cmd) tuntap() error {
 	cursor++
 	if len(arg[cursor:]) == 0 {
-		return tuntapShow(w)
+		return cmd.tuntapShow()
 	}
 
 	expectedValues = []string{"add", "del", "show", "list", "lst", "help"}
@@ -37,13 +36,13 @@ func tuntap(w io.Writer) error {
 
 	switch c {
 	case "add":
-		return tuntapAdd(options)
+		return cmd.tuntapAdd(options)
 	case "del":
-		return tuntapDel(options)
+		return cmd.tuntapDel(options)
 	case "show", "list", "lst":
-		return tuntapShow(w)
+		return cmd.tuntapShow()
 	case "help":
-		fmt.Fprint(w, tuntapHelp)
+		fmt.Fprint(cmd.out, tuntapHelp)
 
 		return nil
 	default:
@@ -118,7 +117,7 @@ func parseTunTap() (tuntapOptions, error) {
 	return options, nil
 }
 
-func tuntapAdd(options tuntapOptions) error {
+func (cmd cmd) tuntapAdd(options tuntapOptions) error {
 	link := &netlink.Tuntap{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: options.name,
@@ -136,15 +135,15 @@ func tuntapAdd(options tuntapOptions) error {
 
 	link.Flags = options.flags
 
-	if err := netlink.LinkAdd(link); err != nil {
+	if err := cmd.handle.LinkAdd(link); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func tuntapDel(options tuntapOptions) error {
-	links, err := netlink.LinkList()
+func (cmd cmd) tuntapDel(options tuntapOptions) error {
+	links, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
 	}
@@ -172,7 +171,7 @@ func tuntapDel(options tuntapOptions) error {
 		return fmt.Errorf("found %d matching tun/tap devices", len(filteredTunTaps))
 	}
 
-	if err := netlink.LinkDel(filteredTunTaps[0]); err != nil {
+	if err := cmd.handle.LinkDel(filteredTunTaps[0]); err != nil {
 		return err
 	}
 
@@ -184,8 +183,8 @@ type Tuntap struct {
 	Flags  []string `json:"flags"`
 }
 
-func tuntapShow(w io.Writer) error {
-	links, err := netlink.LinkList()
+func (cmd cmd) tuntapShow() error {
+	links, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
 	}
@@ -236,7 +235,7 @@ func tuntapShow(w io.Writer) error {
 	}
 
 	if f.json {
-		return printJSON(w, prints)
+		return printJSON(cmd.out, prints)
 	}
 
 	for _, print := range prints {
@@ -246,8 +245,7 @@ func tuntapShow(w io.Writer) error {
 			output += fmt.Sprintf(" %s", flag)
 		}
 
-		// Print the final output
-		fmt.Fprintln(w, output)
+		fmt.Fprintln(cmd.out, output)
 	}
 
 	return nil

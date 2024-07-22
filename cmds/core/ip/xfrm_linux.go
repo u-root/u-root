@@ -33,17 +33,17 @@ var xfrmFilterMap = map[string][]nl.XfrmMsgType{
 	"report":  {nl.XFRM_MSG_REPORT},
 }
 
-func xfrm(w io.Writer) error {
+func (cmd cmd) xfrm() error {
 	cursor++
 
 	expectedValues = []string{"state", "policy", "monitor"}
 	switch findPrefix(arg[cursor], expectedValues) {
 	case "state":
-		return xfrmState(w)
+		return cmd.xfrmState()
 	case "monitor":
-		return xfrmMonitor(w)
+		return cmd.xfrmMonitor()
 	case "help":
-		fmt.Fprint(w, xfrmHelp)
+		fmt.Fprint(cmd.out, xfrmHelp)
 		return nil
 	default:
 		return usage()
@@ -247,7 +247,7 @@ func parseXfrmLimit() (netlink.XfrmStateLimits, error) {
 	return limits, nil
 }
 
-func xfrmMonitor(w io.Writer) error {
+func (cmd cmd) xfrmMonitor() error {
 	updates := make(chan netlink.XfrmMsg)
 	errChan := make(chan error)
 	done := make(chan struct{})
@@ -268,7 +268,7 @@ func xfrmMonitor(w io.Writer) error {
 
 		switch v := arg[cursor]; v {
 		case "help":
-			fmt.Fprint(w, xfrmMonitorHelp)
+			fmt.Fprint(cmd.out, xfrmMonitorHelp)
 			return nil
 		case "all":
 			for _, v := range xfrmFilterMap {
@@ -303,9 +303,9 @@ func xfrmMonitor(w io.Writer) error {
 					return fmt.Errorf("invalid type %T", msg)
 				}
 
-				printXfrmMsgExpire(w, msg.XfrmState)
+				printXfrmMsgExpire(cmd.out, msg.XfrmState)
 			default:
-				fmt.Fprintf(w, "unsupported msg type: %x", msg.Type())
+				fmt.Fprintf(cmd.out, "unsupported msg type: %x", msg.Type())
 			}
 
 		case err := <-errChan:

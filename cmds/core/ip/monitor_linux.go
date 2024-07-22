@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"net"
 	"os"
@@ -35,7 +34,7 @@ var (
 	routeLabel   string
 )
 
-func monitor(w io.Writer) error {
+func (cmd cmd) monitor() error {
 	addrUpdates := make(chan netlink.AddrUpdate)
 	linkUpdates := make(chan netlink.LinkUpdate)
 	neighUpdates := make(chan netlink.NeighUpdate)
@@ -49,44 +48,34 @@ func monitor(w io.Writer) error {
 
 	expectedValues = []string{"all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "all-nsid"}
 
-	if arg[cursor+1] == "help" {
-		fmt.Fprint(w, monitorHelp)
-		return nil
-	}
-
 	var singleOptionSelected bool
 
-	for {
+	for cursor < len(arg)-1 {
 		cursor++
 
-		if cursor == len(arg) {
-			break
-		}
-
-		switch c := findPrefix(arg[cursor], expectedValues); c {
-
+		switch arg[cursor] {
 		case "all":
 			if singleOptionSelected {
 				return fmt.Errorf("all option can't be used with other options")
 			}
 		case "address":
 			singleOptionSelected = true
-			if err := netlink.AddrSubscribeWithOptions(addrUpdates, done, netlink.AddrSubscribeOptions{}); err != nil {
+			if err := netlink.AddrSubscribe(addrUpdates, done); err != nil {
 				return fmt.Errorf("failed to subscribe to address updates: %v", err)
 			}
 		case "link":
 			singleOptionSelected = true
-			if err := netlink.LinkSubscribeWithOptions(linkUpdates, done, netlink.LinkSubscribeOptions{}); err != nil {
+			if err := netlink.LinkSubscribe(linkUpdates, done); err != nil {
 				return fmt.Errorf("failed to subscribe to link updates: %v", err)
 			}
 		case "neigh":
 			singleOptionSelected = true
-			if err := netlink.NeighSubscribeWithOptions(neighUpdates, done, netlink.NeighSubscribeOptions{}); err != nil {
+			if err := netlink.NeighSubscribe(neighUpdates, done); err != nil {
 				return fmt.Errorf("failed to subscribe to neigh updates: %v", err)
 			}
 		case "route":
 			singleOptionSelected = true
-			if err := netlink.RouteSubscribeWithOptions(routeUpdates, done, netlink.RouteSubscribeOptions{}); err != nil {
+			if err := netlink.RouteSubscribe(routeUpdates, done); err != nil {
 				return fmt.Errorf("failed to subscribe to route updates: %v", err)
 			}
 		case "label":
@@ -100,8 +89,9 @@ func monitor(w io.Writer) error {
 			prefixLabel = "[PREFIX]"
 			routeLabel = "[ROUTE]"
 		case "mroute", "netconf", "nexthop", "nsid", "prefix", "rule":
-			return fmt.Errorf("monitoring %s is not yet supported", c)
+			return fmt.Errorf("monitoring %s is not yet supported", arg[cursor])
 		default:
+
 			return usage()
 		}
 
@@ -109,21 +99,32 @@ func monitor(w io.Writer) error {
 
 	// if either the all option was selected or no option was selected, subscribe to all
 	if !singleOptionSelected {
-		if err := netlink.AddrSubscribeWithOptions(addrUpdates, done, netlink.AddrSubscribeOptions{}); err != nil {
+		if err := netlink.AddrSubscribe(addrUpdates, done); err != nil {
 			return fmt.Errorf("failed to subscribe to address updates: %v", err)
 		}
-		if err := netlink.LinkSubscribeWithOptions(linkUpdates, done, netlink.LinkSubscribeOptions{}); err != nil {
+		if err := netlink.LinkSubscribe(linkUpdates, done); err != nil {
 			return fmt.Errorf("failed to subscribe to link updates: %v", err)
 		}
-		if err := netlink.NeighSubscribeWithOptions(neighUpdates, done, netlink.NeighSubscribeOptions{}); err != nil {
+		if err := netlink.NeighSubscribe(neighUpdates, done); err != nil {
 			return fmt.Errorf("failed to subscribe to neigh updates: %v", err)
 		}
-		if err := netlink.RouteSubscribeWithOptions(routeUpdates, done, netlink.RouteSubscribeOptions{}); err != nil {
+		if err := netlink.RouteSubscribe(routeUpdates, done); err != nil {
 			return fmt.Errorf("failed to subscribe to route updates: %v", err)
 		}
 	}
 
+	timestamp := ""
+
 	for {
+
+		if f.timeStamp {
+			currentTime := time.Now()
+			timestamp = currentTime.Format("Timestamp: Mon Jan 2 15:04:05 2006") + fmt.Sprintf(" %06d usec", currentTime.Nanosecond()/1000) + "\n"
+		} else if f.timeStampShort {
+			currentTime := time.Now()
+			timestamp = currentTime.Format("[2006-01-02T15:04:05.000000]")
+		}
+
 		select {
 		case update := <-addrUpdates:
 
@@ -137,7 +138,7 @@ func monitor(w io.Writer) error {
 				action = "Deleted"
 			}
 
-			fmt.Fprintf(w, "%s%s %d: %s    %v %v scope %d %v\n", addressLabel, action, update.LinkIndex, link.Attrs().Name, ipFamily(update.LinkAddress.IP), update.LinkAddress.String(), update.Scope, link.Attrs().Name)
+			fmt.Fprintf(cmd.out, "%s%s%s %d: %s    %v %v scope %d %v\n", timestamp, addressLabel, action, update.LinkIndex, link.Attrs().Name, ipFamily(update.LinkAddress.IP), update.LinkAddress.String(), update.Scope, link.Attrs().Name)
 
 			validLft := fmt.Sprintf("%v", update.ValidLft)
 			preferedLft := fmt.Sprintf("%v", update.PreferedLft)
@@ -150,7 +151,7 @@ func monitor(w io.Writer) error {
 				preferedLft = "forever"
 			}
 
-			fmt.Fprintf(w, "    valid_lft %s preferred_lft %s\n", validLft, preferedLft)
+			fmt.Fprintf(cmd.out, "    valid_lft %s preferred_lft %s\n", validLft, preferedLft)
 
 		case update := <-neighUpdates:
 			var action string
@@ -164,7 +165,7 @@ func monitor(w io.Writer) error {
 				return fmt.Errorf("failed to get link by index %d: %v", update.Neigh.LinkIndex, err)
 			}
 
-			fmt.Fprintf(w, "%s%s%s dev %v lladdr %s %v\n", neighLabel, action, update.Neigh.IP, link.Attrs().Name, update.Neigh.HardwareAddr.String(), neighStateToString(update.Neigh.State))
+			fmt.Fprintf(cmd.out, "%s%s%s%s dev %v lladdr %s %v\n", timestamp, neighLabel, action, update.Neigh.IP, link.Attrs().Name, update.Neigh.HardwareAddr.String(), neighStateToString(update.Neigh.State))
 
 		case update := <-routeUpdates:
 			var action string
@@ -180,10 +181,10 @@ func monitor(w io.Writer) error {
 				return fmt.Errorf("failed to get link by index %d: %v", update.Route.LinkIndex, err)
 			}
 
-			fmt.Fprintf(w, "%s%s %s dev %s table %d proto %s scope %s src %s\n", routeLabel, action, update.Route.Dst, link.Attrs().Name, update.Route.Table, update.Route.Protocol.String(), update.Route.Scope.String(), update.Route.Src)
+			fmt.Fprintf(cmd.out, "%s%s%s %s dev %s table %d proto %s scope %s src %s\n", timestamp, routeLabel, action, update.Route.Dst, link.Attrs().Name, update.Route.Table, update.Route.Protocol.String(), update.Route.Scope.String(), update.Route.Src)
 		case update := <-linkUpdates:
-			fmt.Fprintf(w, "%s%d: %s: <%s>\n", linkLabel, update.Link.Attrs().Index, update.Link.Attrs().Name, strings.Replace(strings.ToUpper(net.Flags(update.Flags).String()), "|", ",", -1))
-			fmt.Fprintf(w, "    link/%v\n", update.Link.Attrs().EncapType)
+			fmt.Fprintf(cmd.out, "%s%s%d: %s: <%s>\n", timestamp, linkLabel, update.Link.Attrs().Index, update.Link.Attrs().Name, strings.Replace(strings.ToUpper(net.Flags(update.Flags).String()), "|", ",", -1))
+			fmt.Fprintf(cmd.out, "    link/%v\n", update.Link.Attrs().EncapType)
 		case <-sig:
 			return nil
 		case <-done:

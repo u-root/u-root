@@ -36,7 +36,7 @@ LIMIT := { time-soft | time-hard | time-use-soft | time-use-hard } SECONDS |
 ENCAP := { espinudp | espinudp-nonike | espintcp } SPORT DPORT OADDR`
 )
 
-func xfrmState(w io.Writer) error {
+func (cmd cmd) xfrmState() error {
 	cursor++
 	expectedValues = []string{"add", "update", "allocspi", "delete", "deleteall", "show", "list", "flush", "count", "help"}
 	switch findPrefix(arg[cursor], expectedValues) {
@@ -46,14 +46,14 @@ func xfrmState(w io.Writer) error {
 			return err
 		}
 
-		return netlink.XfrmStateAdd(xfrmState)
+		return cmd.handle.XfrmStateAdd(xfrmState)
 	case "update":
 		xfrmState, err := parseXfrmStateAddUpdate()
 		if err != nil {
 			return err
 		}
 
-		return netlink.XfrmStateUpdate(xfrmState)
+		return cmd.handle.XfrmStateUpdate(xfrmState)
 	case "allocspi":
 		xfrmState, err := parseXfrmStateAllocSPI()
 		if err != nil {
@@ -70,19 +70,19 @@ func xfrmState(w io.Writer) error {
 			return err
 		}
 
-		return netlink.XfrmStateDel(xfrmState)
+		return cmd.handle.XfrmStateDel(xfrmState)
 	case "get":
 		xfrmState, err := parseXfrmStateDeleteGet()
 		if err != nil {
 			return err
 		}
 
-		xfrmState, err = netlink.XfrmStateGet(xfrmState)
+		xfrmState, err = cmd.handle.XfrmStateGet(xfrmState)
 		if err != nil {
 			return err
 		}
 
-		printXfrmState(w, xfrmState, true)
+		printXfrmState(cmd.out, xfrmState, true)
 	case "list", "show":
 
 		xfrmState, noKeys, err := parseXfrmStateListDeleteAll()
@@ -90,20 +90,20 @@ func xfrmState(w io.Writer) error {
 			return err
 		}
 
-		return printFilteredXfrmStates(w, xfrmState, family, noKeys)
+		return printFilteredXfrmStates(cmd.out, xfrmState, family, noKeys)
 	case "count":
-		states, err := netlink.XfrmStateList(family)
+		states, err := cmd.handle.XfrmStateList(family)
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprintf(w, "XFRM states: %d\n", len(states))
+		fmt.Fprintf(cmd.out, "XFRM states: %d\n", len(states))
 	case "flush":
-		return xfrmStateFlush()
+		return cmd.xfrmStateFlush()
 	case "deleteall":
-		return xfrmStateDeleteAll()
+		return cmd.xfrmStateDeleteAll()
 	case "help":
-		fmt.Fprint(w, xfrmStateHelp)
+		fmt.Fprint(cmd.out, xfrmStateHelp)
 
 		return nil
 	default:
@@ -113,9 +113,9 @@ func xfrmState(w io.Writer) error {
 	return nil
 }
 
-func xfrmStateFlush() error {
+func (cmd cmd) xfrmStateFlush() error {
 	if cursor == len(arg) {
-		return netlink.XfrmStateFlush(0)
+		return cmd.handle.XfrmStateFlush(0)
 	}
 
 	cursor++
@@ -128,10 +128,10 @@ func xfrmStateFlush() error {
 		return err
 	}
 
-	return netlink.XfrmStateFlush(proto)
+	return cmd.handle.XfrmStateFlush(proto)
 }
 
-func xfrmStateDeleteAll() error {
+func (cmd cmd) xfrmStateDeleteAll() error {
 	filter, noKeys, err := parseXfrmStateListDeleteAll()
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func xfrmStateDeleteAll() error {
 		return fmt.Errorf("deleteall does not support nokeys")
 	}
 
-	states, err := netlink.XfrmStateList(family)
+	states, err := cmd.handle.XfrmStateList(family)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func xfrmStateDeleteAll() error {
 			}
 		}
 
-		if err := netlink.XfrmStateDel(&state); err != nil {
+		if err := cmd.handle.XfrmStateDel(&state); err != nil {
 			return err
 		}
 	}

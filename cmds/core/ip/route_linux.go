@@ -68,7 +68,7 @@ func routeTypeToString(routeType int) string {
 	return "unknown"
 }
 
-func routeAdddefault(w io.Writer) error {
+func (cmd cmd) routeAdddefault() error {
 	nh, nhval, err := parseNextHop()
 	if err != nil {
 		return err
@@ -80,9 +80,9 @@ func routeAdddefault(w io.Writer) error {
 	}
 	switch nh {
 	case "via":
-		fmt.Fprintf(w, "Add default route %v via %v", nhval, l.Attrs().Name)
+		fmt.Fprintf(cmd.out, "Add default route %v via %v", nhval, l.Attrs().Name)
 		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
-		if err := netlink.RouteAdd(r); err != nil {
+		if err := cmd.handle.RouteAdd(r); err != nil {
 			return fmt.Errorf("error adding default route to %v: %v", l.Attrs().Name, err)
 		}
 		return nil
@@ -90,58 +90,58 @@ func routeAdddefault(w io.Writer) error {
 	return usage()
 }
 
-func routeAdd(w io.Writer) error {
+func (cmd cmd) routeAdd() error {
 	ns := parseNodeSpec()
 	switch ns {
 	case "default":
-		return routeAdddefault(w)
+		return cmd.routeAdddefault()
 	default:
 		route, d, err := parseRouteAddAppendReplaceDel(ns)
 		if err != nil {
 			return err
 		}
 
-		if err := netlink.RouteAdd(route); err != nil {
+		if err := cmd.handle.RouteAdd(route); err != nil {
 			return fmt.Errorf("error adding route %s -> %s: %v", route.Dst.IP, d.Attrs().Name, err)
 		}
 		return nil
 	}
 }
 
-func routeAppend() error {
+func (cmd cmd) routeAppend() error {
 	ns := parseNodeSpec()
 	route, d, err := parseRouteAddAppendReplaceDel(ns)
 	if err != nil {
 		return err
 	}
 
-	if err := netlink.RouteAppend(route); err != nil {
+	if err := cmd.handle.RouteAppend(route); err != nil {
 		return fmt.Errorf("error appending route %s -> %s: %v", route.Dst.IP, d.Attrs().Name, err)
 	}
 	return nil
 }
 
-func routeReplace() error {
+func (cmd cmd) routeReplace() error {
 	ns := parseNodeSpec()
 	route, d, err := parseRouteAddAppendReplaceDel(ns)
 	if err != nil {
 		return err
 	}
 
-	if err := netlink.RouteReplace(route); err != nil {
+	if err := cmd.handle.RouteReplace(route); err != nil {
 		return fmt.Errorf("error appending route %s -> %s: %v", route.Dst.IP, d.Attrs().Name, err)
 	}
 	return nil
 }
 
-func routeDel() error {
+func (cmd cmd) routeDel() error {
 	ns := parseNodeSpec()
 	route, d, err := parseRouteAddAppendReplaceDel(ns)
 	if err != nil {
 		return err
 	}
 
-	if err := netlink.RouteDel(route); err != nil {
+	if err := cmd.handle.RouteDel(route); err != nil {
 		return fmt.Errorf("error deleting route %s -> %s: %v", route.Dst.IP, d.Attrs().Name, err)
 	}
 	return nil
@@ -328,20 +328,20 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 	return route, d, nil
 }
 
-func routeShow(w io.Writer) error {
+func (cmd cmd) routeShow() error {
 	filter, filterMask, root, match, exact, err := parseRouteShowListFlush()
 	if err != nil {
 		return err
 	}
 
-	return showRoutes(w, filter, filterMask, root, match, exact)
+	return cmd.showRoutes(filter, filterMask, root, match, exact)
 }
 
-func showAllRoutes(w io.Writer) error {
-	return showRoutes(w, nil, 0, nil, nil, nil)
+func (cmd cmd) showAllRoutes() error {
+	return cmd.showRoutes(nil, 0, nil, nil, nil)
 }
 
-func routeFlush() error {
+func (cmd cmd) routeFlush() error {
 	filter, filterMask, root, match, exact, err := parseRouteShowListFlush()
 	if err != nil {
 		return err
@@ -353,7 +353,7 @@ func routeFlush() error {
 	}
 
 	for _, route := range routes {
-		if err := netlink.RouteDel(&route); err != nil {
+		if err := cmd.handle.RouteDel(&route); err != nil {
 			return err
 		}
 	}
@@ -454,7 +454,7 @@ type Route struct {
 
 // showRoutes prints the routes in the system.
 // If filterMask is not zero, only routes that match the filter are printed.
-func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) error {
+func (cmd cmd) showRoutes(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) error {
 	routes, err := filteredRouteList(route, filterMask, root, match, exact)
 	if err != nil {
 		return err
@@ -464,16 +464,23 @@ func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, matc
 		obj := make([]Route, 0, len(routes))
 
 		for _, route := range routes {
-			link, err := netlink.LinkByIndex(route.LinkIndex)
+			link, err := cmd.handle.LinkByIndex(route.LinkIndex)
 			if err != nil {
 				return err
 			}
 
 			pRoute := Route{
-				Dst:      route.Dst.String(),
-				Dev:      link.Attrs().Name,
-				Protocol: rtProto[int(route.Protocol)],
-				Scope:    route.Scope.String(),
+				Dst:   route.Dst.String(),
+				Dev:   link.Attrs().Name,
+				Scope: route.Scope.String(),
+			}
+
+			if !f.numeric {
+				pRoute.Protocol = rtProto[int(route.Protocol)]
+				pRoute.Scope = route.Scope.String()
+			} else {
+				pRoute.Protocol = fmt.Sprintf("%d", route.Protocol)
+				pRoute.Scope = fmt.Sprintf("%d", route.Scope)
 			}
 
 			if route.Src != nil {
@@ -487,18 +494,18 @@ func showRoutes(w io.Writer, route *netlink.Route, filterMask uint64, root, matc
 			obj = append(obj, pRoute)
 		}
 
-		return printJSON(w, obj)
+		return printJSON(cmd.out, obj)
 	}
 
 	for _, route := range routes {
-		link, err := netlink.LinkByIndex(route.LinkIndex)
+		link, err := cmd.handle.LinkByIndex(route.LinkIndex)
 		if err != nil {
 			return err
 		}
 		if route.Dst == nil {
-			defaultRoute(w, route, link)
+			defaultRoute(cmd.out, route, link)
 		} else {
-			showRoute(w, route, link)
+			showRoute(cmd.out, route, link)
 		}
 	}
 	return nil
@@ -547,21 +554,21 @@ func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netli
 	return matchedRoutes, nil
 }
 
-func showRoutesForAddress(w io.Writer, addr net.IP, options *netlink.RouteGetOptions) error {
-	routes, err := netlink.RouteGetWithOptions(addr, options)
+func (cmd cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptions) error {
+	routes, err := cmd.handle.RouteGetWithOptions(addr, options)
 	if err != nil {
 		return err
 	}
 
 	for _, route := range routes {
-		link, err := netlink.LinkByIndex(route.LinkIndex)
+		link, err := cmd.handle.LinkByIndex(route.LinkIndex)
 		if err != nil {
 			return err
 		}
 		if route.Dst == nil {
-			defaultRoute(w, route, link)
+			defaultRoute(cmd.out, route, link)
 		} else {
-			showRoute(w, route, link)
+			showRoute(cmd.out, route, link)
 		}
 	}
 	return nil
@@ -604,7 +611,15 @@ const (
 func defaultRoute(w io.Writer, r netlink.Route, l netlink.Link) {
 	gw := r.Gw
 	name := l.Attrs().Name
-	proto := rtProto[int(r.Protocol)]
+
+	var proto string
+
+	if !f.numeric {
+		proto = rtProto[int(r.Protocol)]
+	} else {
+		proto = fmt.Sprintf("%d", r.Protocol)
+	}
+
 	metric := r.Priority
 
 	var detail string
@@ -638,8 +653,17 @@ func showRoute(w io.Writer, r netlink.Route, l netlink.Link) {
 func printIPv4Route(w io.Writer, r netlink.Route, l netlink.Link) {
 	dest := r.Dst
 	name := l.Attrs().Name
-	proto := rtProto[int(r.Protocol)]
-	scope := addrScopes[r.Scope]
+
+	var proto, scope string
+
+	if !f.numeric {
+		proto = rtProto[int(r.Protocol)]
+		scope = addrScopes[r.Scope]
+	} else {
+		proto = fmt.Sprintf("%d", r.Protocol)
+		scope = fmt.Sprintf("%d", r.Scope)
+	}
+
 	src := r.Src
 	metric := r.Priority
 
@@ -655,7 +679,15 @@ func printIPv4Route(w io.Writer, r netlink.Route, l netlink.Link) {
 func printIPv6Route(w io.Writer, r netlink.Route, l netlink.Link) {
 	dest := r.Dst
 	name := l.Attrs().Name
-	proto := rtProto[int(r.Protocol)]
+
+	var proto string
+
+	if !f.numeric {
+		proto = rtProto[int(r.Protocol)]
+	} else {
+		proto = fmt.Sprintf("%d", r.Protocol)
+	}
+
 	metric := r.Priority
 
 	var detail string
@@ -672,7 +704,7 @@ func printIPv6Route(w io.Writer, r netlink.Route, l netlink.Link) {
 	}
 }
 
-func routeGet(w io.Writer) error {
+func (cmd cmd) routeGet() error {
 	cursor++
 	expectedValues = []string{"CIDR Address"}
 	addr, _, err := net.ParseCIDR(arg[cursor])
@@ -685,7 +717,7 @@ func routeGet(w io.Writer) error {
 		return err
 	}
 
-	return showRoutesForAddress(w, addr, options)
+	return cmd.showRoutesForAddress(addr, options)
 }
 
 func parseRouteGet() (*netlink.RouteGetOptions, error) {
@@ -717,31 +749,31 @@ func parseRouteGet() (*netlink.RouteGetOptions, error) {
 	return &opts, nil
 }
 
-func route(w io.Writer) error {
+func (cmd cmd) route() error {
 	cursor++
 
 	if len(arg) == cursor {
-		return showAllRoutes(w)
+		return cmd.showAllRoutes()
 	}
 
 	expectedValues = []string{"show", "add", "append", "replace", "del", "list", "get", "help"}
 	switch findPrefix(arg[cursor], expectedValues) {
 	case "add":
-		return routeAdd(w)
+		return cmd.routeAdd()
 	case "append":
-		return routeAppend()
+		return cmd.routeAppend()
 	case "replace":
-		return routeReplace()
+		return cmd.routeReplace()
 	case "del":
-		return routeDel()
+		return cmd.routeDel()
 	case "show", "list":
-		return routeShow(w)
+		return cmd.routeShow()
 	case "flush":
-		return routeFlush()
+		return cmd.routeFlush()
 	case "get":
-		return routeGet(w)
+		return cmd.routeGet()
 	case "help":
-		fmt.Fprint(w, routeHelp)
+		fmt.Fprint(cmd.out, routeHelp)
 		return nil
 	}
 	return usage()
