@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -199,14 +200,6 @@ func parseFlags(args []string, out io.Writer) (*netlink.Handle, error) {
 		return nil, fmt.Errorf("outputting each record on a single line is unsupported")
 	}
 
-	if f.batch != "" {
-		return nil, fmt.Errorf("batch mode is unsupported")
-	}
-
-	if f.force {
-		return nil, fmt.Errorf("force mode is unsupported")
-	}
-
 	var (
 		err    error
 		handle *netlink.Handle
@@ -248,9 +241,6 @@ type cmd struct {
 }
 
 func (cmd cmd) run() error {
-	expectedValues = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"}
-	cursor = 0
-
 	defer func() {
 		switch err := recover().(type) {
 		case nil:
@@ -271,41 +261,75 @@ func (cmd cmd) run() error {
 	// The ip command doesn't actually follow the BNF it prints on error.
 	// There are lots of handy shortcuts that people will expect.
 
-	var err error
+	if f.batch != "" {
+		file, err := os.Open(f.batch)
+		if err != nil {
+			log.Fatalf("Failed to open batch file: %v", err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			arg = strings.Fields(line)
+
+			if len(arg) == 0 { // Skip empty lines
+				continue
+			}
+
+			err := cmd.runSubCommand()
+			if err != nil {
+				if f.force {
+					log.Printf("Error (force mode on, continuing): Failed to run command '%s': %v", line, err)
+				} else {
+					return fmt.Errorf("failed to run command '%s': %v", line, err)
+				}
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatalf("Error reading batch file: %v", err)
+		}
+
+		return nil
+	}
+
+	return cmd.runSubCommand()
+}
+
+func (cmd cmd) runSubCommand() error {
+	expectedValues = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"}
+	cursor = 0
 
 	c := findPrefix(arg[cursor], expectedValues)
 	switch c {
 	case "address":
-		err = cmd.address()
+		return cmd.address()
 	case "link":
-		err = cmd.link()
+		return cmd.link()
 	case "route":
-		err = cmd.route()
+		return cmd.route()
 	case "neigh":
-		err = cmd.neigh()
+		return cmd.neigh()
 	case "monitor":
-		err = cmd.monitor()
+		return cmd.monitor()
 	case "tunnel":
-		err = cmd.tunnel()
+		return cmd.tunnel()
 	case "tuntap", "tap":
-		err = cmd.tuntap()
+		return cmd.tuntap()
 	case "tcpmetrics", "tcp_metrics":
-		err = cmd.tcpMetrics()
+		return cmd.tcpMetrics()
 	case "vrf":
-		err = cmd.vrf()
+		return cmd.vrf()
 	case "xfrm":
-		err = cmd.xfrm()
+		return cmd.xfrm()
 	case "help":
 		fmt.Fprint(cmd.out, ipHelp)
 
 		return nil
 	default:
-		err = usage()
+		return usage()
 	}
-	if err != nil {
-		return fmt.Errorf("%v: %v", c, err)
-	}
-	return nil
 }
 
 func main() {
