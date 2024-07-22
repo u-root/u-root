@@ -26,27 +26,27 @@ func showLink(w io.Writer, link netlink.Link, withAddresses bool, filterByType .
 }
 
 type Link struct {
-	IfIndex   int        `json:"ifindex"`
+	IfIndex   int        `json:"ifindex,omitempty"`
 	IfName    string     `json:"ifname"`
 	Flags     []string   `json:"flags"`
-	MTU       int        `json:"mtu"`
+	MTU       int        `json:"mtu,omitempty"`
 	Operstate string     `json:"operstate"`
-	Group     uint32     `json:"group"`
-	Txqlen    int        `json:"txqlen"`
-	LinkType  string     `json:"link_type"`
+	Group     uint32     `json:"group,omitempty"`
+	Txqlen    int        `json:"txqlen,omitempty"`
+	LinkType  string     `json:"link_type,omitempty"`
 	Address   string     `json:"address"`
 	AddrInfo  []AddrInfo `json:"addr_info,omitempty"`
 }
 
 type AddrInfo struct {
-	Family            string `json:"ip"`
+	Family            string `json:"ip,omitempty"`
 	Local             string `json:"local"`
-	PrefixLen         int    `json:"prefixlen"`
+	PrefixLen         string `json:"prefixlen"`
 	Broadcast         string `json:"broadcast,omitempty"`
-	Scope             string `json:"scope"`
-	Label             string `json:"label"`
-	ValidLifeTime     string `json:"valid_life_time"`
-	PreferredLifeTime string `json:"preferred_life_time"`
+	Scope             string `json:"scope,omitempty"`
+	Label             string `json:"label,omitempty"`
+	ValidLifeTime     string `json:"valid_life_time,omitempty"`
+	PreferredLifeTime string `json:"preferred_life_time,omitempty"`
 }
 
 func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByType ...string) error {
@@ -55,16 +55,20 @@ func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByTy
 
 		for _, v := range links {
 			link := Link{
-				IfIndex:   v.Attrs().Index,
 				IfName:    v.Attrs().Name,
 				Flags:     strings.Split(v.Attrs().Flags.String(), "|"),
-				MTU:       v.Attrs().MTU,
 				Operstate: v.Attrs().OperState.String(),
-				Group:     v.Attrs().Group,
-				Txqlen:    v.Attrs().TxQLen,
-				LinkType:  v.Type(),
 				Address:   v.Attrs().HardwareAddr.String(),
 			}
+
+			if !f.brief {
+				link.IfIndex = v.Attrs().Index
+				link.MTU = v.Attrs().MTU
+				link.LinkType = v.Type()
+				link.Group = v.Attrs().Group
+				link.Txqlen = v.Attrs().TxQLen
+			}
+
 			if withAddresses {
 
 				addrs, err := netlink.AddrList(v, family)
@@ -80,17 +84,22 @@ func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByTy
 					}
 
 					addrInfo := AddrInfo{
-						Family:            family,
-						Local:             addr.IPNet.IP.String(),
-						PrefixLen:         len(addr.IPNet.Mask),
-						Scope:             addrScopes[netlink.Scope(addr.Scope)],
-						Label:             addr.Label,
-						ValidLifeTime:     fmt.Sprintf("%dsec", addr.ValidLft),
-						PreferredLifeTime: fmt.Sprintf("%dsec", addr.PreferedLft),
+						Local:     addr.IPNet.IP.String(),
+						PrefixLen: addr.IPNet.Mask.String(),
 					}
 
-					if addr.Broadcast != nil {
-						addrInfo.Broadcast = addr.Broadcast.String()
+					if !f.brief {
+						if addr.Broadcast != nil {
+							addrInfo.Family = family
+							addrInfo.Scope = addrScopes[netlink.Scope(addr.Scope)]
+							addrInfo.Label = addr.Label
+							addrInfo.ValidLifeTime = fmt.Sprintf("%dsec", addr.ValidLft)
+							addrInfo.PreferredLifeTime = fmt.Sprintf("%dsec", addr.PreferedLft)
+						}
+
+						if addr.Broadcast != nil {
+							addrInfo.Broadcast = addr.Broadcast.String()
+						}
 					}
 
 					link.AddrInfo = append(link.AddrInfo, addrInfo)
@@ -135,6 +144,35 @@ func showLinks(w io.Writer, withAddresses bool, links []netlink.Link, filterByTy
 		}
 
 		l := v.Attrs()
+
+		if f.brief {
+			if withAddresses {
+				addrs, err := netlink.AddrList(v, family)
+				if err != nil {
+					return fmt.Errorf("can't enumerate addresses: %v", err)
+				}
+
+				fmt.Fprintf(w, "%-20s %-10s", l.Name, l.OperState.String())
+
+				for _, addr := range addrs {
+					fmt.Fprintf(w, " %s", addr.IP)
+				}
+
+				fmt.Fprintf(w, "\n")
+
+				continue
+			}
+
+			addr := " "
+			if l.HardwareAddr != nil {
+				addr = fmt.Sprintf(" %s ", l.HardwareAddr.String())
+			}
+
+			fmt.Fprintf(w, "%-25s %-10s%-20s <%s>\n", l.Name,
+				l.OperState.String(), addr, strings.Replace(strings.ToUpper(l.Flags.String()), "|", ",", -1))
+
+			continue
+		}
 
 		master := ""
 		if l.MasterIndex != 0 {

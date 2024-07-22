@@ -21,6 +21,9 @@ type flags struct {
 	family        string
 	inet4         bool
 	inet6         bool
+	bridge        bool
+	mpls          bool
+	link          bool
 	details       bool
 	stats         bool
 	loops         int
@@ -28,6 +31,7 @@ type flags struct {
 	iec           bool
 	json          bool
 	prettify      bool
+	brief         bool
 }
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
@@ -92,8 +96,11 @@ func run(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fs.StringVar(&f.family, "f", "", "Specify family (inet, inet6, mpls, link)")
 	fs.StringVar(&f.family, "family", "", "Specify family (inet, inet6, mpls, link)")
-	fs.BoolVar(&f.inet4, "4", false, "Display IPv4 addresses")
-	fs.BoolVar(&f.inet6, "6", false, "Display IPv6 addresses")
+	fs.BoolVar(&f.inet4, "4", false, "Set protocol family to inet")
+	fs.BoolVar(&f.inet6, "6", false, "Set protocol family to inet6")
+	fs.BoolVar(&f.bridge, "B", false, "Set protocol family to bridge")
+	fs.BoolVar(&f.mpls, "M", false, "Set protocol family to mpls")
+	fs.BoolVar(&f.link, "0", false, "Set protocol family to link")
 	fs.BoolVar(&f.details, "d", false, "Display details")
 	fs.BoolVar(&f.details, "details", false, "Display details")
 	fs.BoolVar(&f.stats, "s", false, "Display statistics")
@@ -103,6 +110,8 @@ func run(args []string, out io.Writer) error {
 	fs.BoolVar(&f.humanReadable, "h", false, "Display timings and sizes in human readable format")
 	fs.BoolVar(&f.humanReadable, "humanreadable", false, "Display timings and sizes in human-readable format")
 	fs.BoolVar(&f.iec, "iec", false, "Use 1024-based block sizes for human-readable sizes")
+	fs.BoolVar(&f.brief, "br", false, "Brief output")
+	fs.BoolVar(&f.brief, "brief", false, "Brief output")
 	fs.BoolVar(&f.json, "j", false, "Output in JSON format")
 	fs.BoolVar(&f.json, "json", false, "Output in JSON format")
 	fs.BoolVar(&f.prettify, "p", false, "Make JSON output pretty")
@@ -118,26 +127,37 @@ func run(args []string, out io.Writer) error {
 
 	arg = fs.Args()
 
-	if f.family != "" && (f.inet4 || f.inet6) {
-		return fmt.Errorf("cannot specify both -f and -4 or -6")
-	}
-
+	familySet := 0
 	family = netlink.FAMILY_ALL
+
+	if f.inet4 {
+		family = netlink.FAMILY_V4
+		familySet++
+	}
 	if f.inet6 {
 		family = netlink.FAMILY_V6
-	} else if f.inet4 {
-		family = netlink.FAMILY_V4
-	} else if f.family != "" {
-		switch f.family {
-		case "inet":
-			family = netlink.FAMILY_V4
-		case "inet6":
-			family = netlink.FAMILY_V6
-		case "mpls":
-			family = netlink.FAMILY_MPLS
-		case "link":
-			family = netlink.FAMILY_ALL
-		}
+		familySet++
+	}
+	if f.mpls {
+		family = netlink.FAMILY_MPLS
+		familySet++
+	}
+
+	if f.bridge {
+		return fmt.Errorf("protocol family bridge is not yet supported")
+	}
+
+	if f.link {
+		family = netlink.FAMILY_ALL
+		familySet++
+	}
+
+	if f.family != "" {
+		familySet++
+	}
+
+	if familySet > 1 {
+		return fmt.Errorf("cannot specify more than one protocol family (inet, inet6, mpls, link)")
 	}
 
 	expectedValues = []string{"address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"}
