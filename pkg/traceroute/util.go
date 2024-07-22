@@ -5,6 +5,8 @@
 package traceroute
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"strings"
 )
@@ -22,9 +24,19 @@ func destAddr(dest, proto string) (net.IP, error) {
 		return nil, err
 	}
 
-	addr := addrs[0]
-	if strings.Contains(proto, "6") {
-		addr = addrs[1]
+	var addr string
+	for _, a := range addrs {
+		if strings.Contains(a, ":") && strings.Contains(proto, "6") {
+			addr = a
+			break
+		} else if strings.Contains(a, ".") && strings.Contains(proto, "4") {
+			addr = a
+			break
+		}
+	}
+
+	if len(addr) < 1 {
+		return nil, fmt.Errorf("no valid ip address for proto: %s", proto)
 	}
 
 	ipAddr, err := net.ResolveIPAddr("ip", addr)
@@ -33,6 +45,26 @@ func destAddr(dest, proto string) (net.IP, error) {
 	}
 
 	return ipAddr.IP, nil
+}
+
+func srcAddr(proto string) (net.IP, error) {
+	var sAddr net.Addr
+	if strings.Contains(proto, "6") {
+		conn, err := net.Dial("udp6", "[2001:4860:4860::8844]:53")
+		if err != nil {
+			log.Fatal(err)
+		}
+		sAddr = conn.LocalAddr().(*net.UDPAddr)
+		conn.Close()
+	} else {
+		conn, err := net.Dial("udp", "8.8.8.8:53")
+		if err != nil {
+			log.Fatal(err)
+		}
+		sAddr = conn.LocalAddr().(*net.UDPAddr)
+		conn.Close()
+	}
+	return sAddr.(*net.UDPAddr).IP, nil
 }
 
 func findDestinationTTL(printMap map[int]*Probe) int {

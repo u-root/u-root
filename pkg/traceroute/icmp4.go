@@ -94,8 +94,8 @@ func (t *Trace) BuildICMP4Pkt(ttl uint8, id, seq uint16, tos int) (*ipv4.Header,
 		TTL:      int(ttl),
 		Protocol: 1,
 		Checksum: 0,
-		Src:      t.srcIP.To4(),
-		Dst:      t.destIP.To4(),
+		Src:      t.srcIP,
+		Dst:      t.destIP,
 	}
 
 	h, err := iph.Marshal()
