@@ -34,27 +34,23 @@ var xfrmFilterMap = map[string][]nl.XfrmMsgType{
 }
 
 func (cmd cmd) xfrm() error {
-	cursor++
-
-	expectedValues = []string{"state", "policy", "monitor"}
-	switch findPrefix(arg[cursor], expectedValues) {
+	switch cmd.findPrefix("state", "policy", "monitor", "help") {
 	case "state":
 		return cmd.xfrmState()
+	case "policy":
+		return cmd.xfrmPolicy()
 	case "monitor":
 		return cmd.xfrmMonitor()
 	case "help":
 		fmt.Fprint(cmd.out, xfrmHelp)
 		return nil
 	default:
-		return usage()
+		return cmd.usage()
 	}
 }
 
-func parseXfrmProto() (netlink.Proto, error) {
-	cursor++
-	expectedValues = []string{"esp", "ah", "comp", "route2", "hao"}
-
-	switch arg[cursor] {
+func (cmd cmd) parseXfrmProto() (netlink.Proto, error) {
+	switch c := cmd.nextToken("esp", "ah", "comp", "route2", "hao"); c {
 	case "esp":
 		return netlink.XFRM_PROTO_ESP, nil
 	case "ah":
@@ -66,15 +62,12 @@ func parseXfrmProto() (netlink.Proto, error) {
 	case "hao":
 		return netlink.XFRM_PROTO_HAO, nil
 	default:
-		return netlink.XFRM_PROTO_IPSEC_ANY, fmt.Errorf("invalid proto %s", arg[cursor])
+		return netlink.XFRM_PROTO_IPSEC_ANY, fmt.Errorf("invalid proto %s", c)
 	}
 }
 
-func parseXfrmMode() (netlink.Mode, error) {
-	cursor++
-	expectedValues = []string{"esp", "ah", "comp", "route2", "hao", "ipsec-any"}
-
-	switch arg[cursor] {
+func (cmd cmd) parseXfrmMode() (netlink.Mode, error) {
+	switch c := cmd.nextToken("transport", "tunnel", "ro", "in_trigger", "beet"); c {
 	case "transport":
 		return netlink.XFRM_MODE_TRANSPORT, nil
 	case "tunnel":
@@ -86,15 +79,12 @@ func parseXfrmMode() (netlink.Mode, error) {
 	case "beet":
 		return netlink.XFRM_MODE_BEET, nil
 	default:
-		return netlink.XFRM_MODE_MAX, fmt.Errorf("invalid mode %s", arg[cursor])
+		return netlink.XFRM_MODE_MAX, fmt.Errorf("invalid mode %s", c)
 	}
 }
 
-func parseXfrmDir() (netlink.Dir, error) {
-	cursor++
-	expectedValues = []string{"in", "out", "fwd"}
-
-	switch arg[cursor] {
+func (cmd cmd) parseXfrmDir() (netlink.Dir, error) {
+	switch c := cmd.findPrefix("in", "out", "fwd"); c {
 	case "in":
 		return netlink.XFRM_DIR_IN, nil
 	case "out":
@@ -102,45 +92,38 @@ func parseXfrmDir() (netlink.Dir, error) {
 	case "fwd":
 		return netlink.XFRM_DIR_FWD, nil
 	default:
-		return netlink.XFRM_DIR_IN, fmt.Errorf("invalid mode %s", arg[cursor])
+		return netlink.XFRM_DIR_IN, fmt.Errorf("invalid mode %s", c)
 	}
 }
 
-func parseXfrmAction() (netlink.PolicyAction, error) {
-	cursor++
-	expectedValues = []string{"allow", "block"}
-
-	switch arg[cursor] {
+func (cmd cmd) parseXfrmAction() (netlink.PolicyAction, error) {
+	switch c := cmd.findPrefix("allow", "block"); c {
 	case "allow":
 		return netlink.XFRM_POLICY_ALLOW, nil
 	case "block":
 		return netlink.XFRM_POLICY_BLOCK, nil
 	default:
-		return netlink.XFRM_POLICY_ALLOW, fmt.Errorf("invalid mode %s", arg[cursor])
+		return netlink.XFRM_POLICY_ALLOW, fmt.Errorf("invalid mode %s", c)
 	}
 }
 
-func parseXfrmMark() (*netlink.XfrmMark, error) {
-	cursor++
-	expectedValues = []string{"MARK"}
-
-	mark, err := parseUint32("MARK")
+func (cmd cmd) parseXfrmMark() (*netlink.XfrmMark, error) {
+	mark, err := parseValue[uint32](cmd, "MARK")
 	if err != nil {
 		return nil, err
 	}
 
-	cursor++
-	if len(arg) == cursor {
+	if !cmd.tokenRemains() {
 		return &netlink.XfrmMark{Value: mark}, nil
 	}
 
 	// mask is optional
-	if arg[cursor] != "mask" {
-		cursor--
+	if cmd.nextToken() != "mask" {
+		cmd.lastToken("MARK")
 		return &netlink.XfrmMark{Value: mark}, nil
 	}
 
-	mask, err := parseUint32("MASK")
+	mask, err := parseValue[uint32](cmd, "MASK")
 	if err != nil {
 		return nil, err
 	}
@@ -148,16 +131,13 @@ func parseXfrmMark() (*netlink.XfrmMark, error) {
 	return &netlink.XfrmMark{Value: mark, Mask: mask}, nil
 }
 
-func parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
+func (cmd cmd) parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
 	var (
 		encap netlink.XfrmStateEncap
 		err   error
 	)
 
-	cursor++
-	expectedValues = []string{"espinudp", "espinudp-nonike", "espintcp"}
-
-	switch arg[cursor] {
+	switch cmd.nextToken("espinudp", "espinudp-nonike", "espintcp") {
 	case "espinudp":
 		encap.Type = netlink.XFRM_ENCAP_ESPINUDP
 	case "espinudp-nonike":
@@ -166,23 +146,17 @@ func parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
 		return nil, fmt.Errorf("espintcp not supported yet")
 	}
 
-	cursor++
-	expectedValues = []string{"SPORT"}
-	encap.SrcPort, err = parseInt("SPORT")
+	encap.SrcPort, err = parseValue[int](cmd, "SPORT")
 	if err != nil {
 		return nil, err
 	}
 
-	cursor++
-	expectedValues = []string{"DPORT"}
-	encap.DstPort, err = parseInt("DPORT")
+	encap.DstPort, err = parseValue[int](cmd, "DPORT")
 	if err != nil {
 		return nil, err
 	}
 
-	cursor++
-	expectedValues = []string{"OADDR"}
-	encap.OriginalAddress, err = parseAddress()
+	encap.OriginalAddress, err = cmd.parseAddress()
 	if err != nil {
 		return nil, err
 	}
@@ -190,58 +164,55 @@ func parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
 	return &encap, nil
 }
 
-func parseXfrmLimit() (netlink.XfrmStateLimits, error) {
+func (cmd cmd) parseXfrmLimit() (netlink.XfrmStateLimits, error) {
 	var (
 		err    error
 		limits netlink.XfrmStateLimits
 	)
 
-	cursor++
-	expectedValues = []string{"time-soft", "time-hard", "time-use-soft", "time-use-hard", "byte-soft", "byte-hard", "packet-soft", "packet-hard"}
-
-	switch arg[cursor] {
+	switch c := cmd.nextToken("time-soft", "time-hard", "time-use-soft", "time-use-hard", "byte-soft", "byte-hard", "packet-soft", "packet-hard"); c {
 	case "time-soft":
-		limits.TimeSoft, err = parseUint64("SECONDS")
+		limits.TimeSoft, err = parseValue[uint64](cmd, "SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "time-hard":
-		limits.TimeHard, err = parseUint64("SECONDS")
+		limits.TimeHard, err = parseValue[uint64](cmd, "SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "time-use-soft":
-		limits.TimeUseSoft, err = parseUint64("SECONDS")
+		limits.TimeUseSoft, err = parseValue[uint64](cmd, "SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "time-use-hard":
-		limits.TimeUseHard, err = parseUint64("SECONDS")
+		limits.TimeUseHard, err = parseValue[uint64](cmd, "SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "byte-soft":
-		limits.ByteSoft, err = parseUint64("SIZE")
+		limits.ByteSoft, err = parseValue[uint64](cmd, "SIZE")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "byte-hard":
-		limits.ByteHard, err = parseUint64("SIZE")
+		limits.ByteHard, err = parseValue[uint64](cmd, "SIZE")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "packet-soft":
-		limits.PacketSoft, err = parseUint64("COUNT")
+		limits.PacketSoft, err = parseValue[uint64](cmd, "COUNT")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "packet-hard":
-		limits.PacketHard, err = parseUint64("COUNT")
+		limits.PacketHard, err = parseValue[uint64](cmd, "COUNT")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	default:
-		return netlink.XfrmStateLimits{}, fmt.Errorf("unknown limit option %s", arg[cursor])
+		return netlink.XfrmStateLimits{}, fmt.Errorf("unknown limit option %s", c)
 	}
 
 	return limits, nil
@@ -258,15 +229,8 @@ func (cmd cmd) xfrmMonitor() error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	expectedValues = []string{"all", "acquire", "expire", "SA", "aevent", "policy", "help"}
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-
-		switch v := arg[cursor]; v {
+	for cmd.tokenRemains() {
+		switch v := cmd.nextToken("all", "acquire", "expire", "SA", "aevent", "policy", "help"); v {
 		case "help":
 			fmt.Fprint(cmd.out, xfrmMonitorHelp)
 			return nil
@@ -277,7 +241,7 @@ func (cmd cmd) xfrmMonitor() error {
 		case "acquire", "expire", "SA", "aevent", "policy":
 			filter = append(filter, xfrmFilterMap[v]...)
 		default:
-			return usage()
+			return cmd.usage()
 
 		}
 	}

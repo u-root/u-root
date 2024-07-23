@@ -17,16 +17,14 @@ const tcpMetricsHelp = `Usage:	ip tcp_metrics/tcpmetrics { COMMAND | help }
 SELECTOR := [ [ address ] PREFIX ]`
 
 func (cmd cmd) tcpMetrics() error {
-	if len(arg) == 1 {
+	if !cmd.tokenRemains() {
 		return cmd.showTCPMetrics(nil)
 	}
 
-	expectedValues = []string{"show", "help"}
-	switch arg[1] {
+	switch cmd.nextToken("show", "help") {
 	case "show":
-		cursor++
-		if len(arg) > 2 {
-			addr, err := parseAddress()
+		if cmd.tokenRemains() {
+			addr, err := cmd.parseAddress()
 			if err != nil {
 				return err
 			}
@@ -41,7 +39,7 @@ func (cmd cmd) tcpMetrics() error {
 		return nil
 	}
 
-	return usage()
+	return cmd.usage()
 }
 
 func (cmd cmd) showTCPMetrics(address net.IP) error {

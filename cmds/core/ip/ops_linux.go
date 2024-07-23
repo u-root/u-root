@@ -49,7 +49,7 @@ type AddrInfo struct {
 }
 
 func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType ...string) error {
-	if f.json {
+	if cmd.opts.json {
 		linkObs := make([]Link, 0)
 
 		for _, v := range links {
@@ -60,13 +60,13 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 				Address:   v.Attrs().HardwareAddr.String(),
 			}
 
-			if !f.brief {
+			if !cmd.opts.brief {
 				link.IfIndex = v.Attrs().Index
 				link.MTU = v.Attrs().MTU
 				link.LinkType = v.Type()
 				link.Group = fmt.Sprintf("%v", v.Attrs().Group)
 
-				if !f.numeric && v.Attrs().Group == 0 {
+				if !cmd.opts.numeric && v.Attrs().Group == 0 {
 					link.Group = "default"
 				}
 
@@ -75,7 +75,7 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 
 			if withAddresses {
 
-				addrs, err := cmd.handle.AddrList(v, family)
+				addrs, err := cmd.handle.AddrList(v, cmd.family)
 				if err != nil {
 					return fmt.Errorf("can't enumerate addresses: %v", err)
 				}
@@ -92,7 +92,7 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 						PrefixLen: addr.IPNet.Mask.String(),
 					}
 
-					if !f.brief {
+					if !cmd.opts.brief {
 						if addr.Broadcast != nil {
 							addrInfo.Family = family
 							addrInfo.Scope = addrScopes[netlink.Scope(addr.Scope)]
@@ -113,19 +113,19 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 			linkObs = append(linkObs, link)
 		}
 
-		return printJSON(cmd.out, linkObs)
+		return printJSON(cmd, linkObs)
 	}
 
 	for _, v := range links {
 		if withAddresses {
 
-			addrs, err := netlink.AddrList(v, family)
+			addrs, err := netlink.AddrList(v, cmd.family)
 			if err != nil {
 				return fmt.Errorf("can't enumerate addresses: %v", err)
 			}
 
 			// if there are no addresses and the link is not a vrf (only wihout -4 or -6), skip it
-			if len(addrs) == 0 && (v.Type() != "vrf" || family != netlink.FAMILY_ALL) {
+			if len(addrs) == 0 && (v.Type() != "vrf" || cmd.family != netlink.FAMILY_ALL) {
 				continue
 			}
 		}
@@ -149,9 +149,9 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 
 		l := v.Attrs()
 
-		if f.brief {
+		if cmd.opts.brief {
 			if withAddresses {
-				addrs, err := netlink.AddrList(v, family)
+				addrs, err := netlink.AddrList(v, cmd.family)
 				if err != nil {
 					return fmt.Errorf("can't enumerate addresses: %v", err)
 				}
@@ -189,7 +189,7 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 
 		group := fmt.Sprintf("%v", l.Group)
 
-		if !f.numeric && l.Group == 0 {
+		if !cmd.opts.numeric && l.Group == 0 {
 			group = "default"
 		}
 
@@ -199,7 +199,7 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 
 		fmt.Fprintf(cmd.out, "    link/%s %s\n", l.EncapType, l.HardwareAddr)
 
-		if f.details {
+		if cmd.opts.details {
 			switch v := v.(type) {
 			case *netlink.Bridge:
 				fmt.Fprintf(cmd.out, "    bridge hello_time %d ageing_time %d vlan_filtering %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d\n",
@@ -265,7 +265,7 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 			}
 		}
 
-		if f.stats {
+		if cmd.opts.stats {
 			stats := l.Statistics
 			if stats != nil {
 				fmt.Fprintf(cmd.out, "    RX: bytes %d packets %d errors %d dropped %d missed %d mcast %d\n",
@@ -283,7 +283,7 @@ func (cmd cmd) showLinks(withAddresses bool, links []netlink.Link, filterByType 
 }
 
 func (cmd cmd) showLinkAddresses(link netlink.Link) error {
-	addrs, err := netlink.AddrList(link, family)
+	addrs, err := netlink.AddrList(link, cmd.family)
 	if err != nil {
 		return fmt.Errorf("can't enumerate addresses: %v", err)
 	}

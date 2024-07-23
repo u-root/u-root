@@ -39,7 +39,7 @@ func FuzzIPCmd(f *testing.F) {
 	stdout := &bytes.Buffer{}
 	f.Fuzz(func(t *testing.T, data string) {
 		stdout.Reset()
-		arg = strings.Split(data, " ")
+		arg := strings.Split(data, " ")
 
 		handle, err := netlink.NewHandle()
 		if err != nil {
@@ -47,8 +47,10 @@ func FuzzIPCmd(f *testing.F) {
 		}
 
 		cmd := cmd{
-			out:    os.Stdout,
+			args:   arg,
+			out:    stdout,
 			handle: handle,
+			family: netlink.FAMILY_ALL,
 		}
 
 		cmd.run()

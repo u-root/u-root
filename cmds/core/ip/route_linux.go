@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 
 	"github.com/vishvananda/netlink"
@@ -47,17 +46,27 @@ BOOL := [1|0]
 OPTIONS := OPTION [ OPTIONS ]
 `
 
-var routeTypes = map[string]int{
-	"unicast":     unix.RTN_UNICAST,
-	"local":       unix.RTN_LOCAL,
-	"broadcast":   unix.RTN_BROADCAST,
-	"multicast":   unix.RTN_MULTICAST,
-	"throw":       unix.RTN_THROW,
-	"unreachable": unix.RTN_UNREACHABLE,
-	"prohibit":    unix.RTN_PROHIBIT,
-	"blackhole":   unix.RTN_BLACKHOLE,
-	"nat":         unix.RTN_NAT,
-}
+var (
+	routeTypes = map[string]int{
+		"unicast":     unix.RTN_UNICAST,
+		"local":       unix.RTN_LOCAL,
+		"broadcast":   unix.RTN_BROADCAST,
+		"multicast":   unix.RTN_MULTICAST,
+		"throw":       unix.RTN_THROW,
+		"unreachable": unix.RTN_UNREACHABLE,
+		"prohibit":    unix.RTN_PROHIBIT,
+		"blackhole":   unix.RTN_BLACKHOLE,
+		"nat":         unix.RTN_NAT,
+	}
+
+	addrScopes = map[netlink.Scope]string{
+		netlink.SCOPE_UNIVERSE: "global",
+		netlink.SCOPE_HOST:     "host",
+		netlink.SCOPE_SITE:     "site",
+		netlink.SCOPE_LINK:     "link",
+		netlink.SCOPE_NOWHERE:  "nowhere",
+	}
+)
 
 func routeTypeToString(routeType int) string {
 	for key, value := range routeTypes {
@@ -69,12 +78,12 @@ func routeTypeToString(routeType int) string {
 }
 
 func (cmd cmd) routeAdddefault() error {
-	nh, nhval, err := parseNextHop()
+	nh, nhval, err := cmd.parseNextHop()
 	if err != nil {
 		return err
 	}
 	// TODO: NHFLAGS.
-	l, err := parseDeviceName(true)
+	l, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return err
 	}
@@ -87,16 +96,16 @@ func (cmd cmd) routeAdddefault() error {
 		}
 		return nil
 	}
-	return usage()
+	return cmd.usage()
 }
 
 func (cmd cmd) routeAdd() error {
-	ns := parseNodeSpec()
+	ns := cmd.parseNodeSpec()
 	switch ns {
 	case "default":
 		return cmd.routeAdddefault()
 	default:
-		route, d, err := parseRouteAddAppendReplaceDel(ns)
+		route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
 		if err != nil {
 			return err
 		}
@@ -109,8 +118,8 @@ func (cmd cmd) routeAdd() error {
 }
 
 func (cmd cmd) routeAppend() error {
-	ns := parseNodeSpec()
-	route, d, err := parseRouteAddAppendReplaceDel(ns)
+	ns := cmd.parseNodeSpec()
+	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
 	if err != nil {
 		return err
 	}
@@ -122,8 +131,8 @@ func (cmd cmd) routeAppend() error {
 }
 
 func (cmd cmd) routeReplace() error {
-	ns := parseNodeSpec()
-	route, d, err := parseRouteAddAppendReplaceDel(ns)
+	ns := cmd.parseNodeSpec()
+	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
 	if err != nil {
 		return err
 	}
@@ -135,8 +144,8 @@ func (cmd cmd) routeReplace() error {
 }
 
 func (cmd cmd) routeDel() error {
-	ns := parseNodeSpec()
-	route, d, err := parseRouteAddAppendReplaceDel(ns)
+	ns := cmd.parseNodeSpec()
+	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
 	if err != nil {
 		return err
 	}
@@ -147,7 +156,7 @@ func (cmd cmd) routeDel() error {
 	return nil
 }
 
-func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, error) {
+func (cmd cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, error) {
 	var err error
 
 	route := &netlink.Route{}
@@ -157,171 +166,146 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 		return nil, nil, err
 	}
 
-	d, err := parseDeviceName(true)
+	d, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	route.LinkIndex = d.Attrs().Index
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		expectedValues = []string{"type", "tos", "table", "proto", "scope", "metric", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "congctl", "features", "quickack", "fastopen_no_cookie"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("type", "tos", "table", "proto", "scope", "metric", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "congctl", "features", "quickack", "fastopen_no_cookie") {
 		case "tos":
-			cursor++
-			route.Tos, err = parseInt("")
+			route.Tos, err = parseValue[int](cmd, "")
 			if err != nil {
 				return nil, nil, err
 			}
 
 		case "table":
-			cursor++
-			route.Table, err = parseInt("TABLE_ID")
+			route.Table, err = parseValue[int](cmd, "TABLE_ID")
 			if err != nil {
 				return nil, nil, err
 			}
 
 		case "proto":
-			cursor++
-			proto, err := parseInt("RTPROTO")
+			proto, err := parseValue[int](cmd, "RTPROTO")
 			if err != nil {
 				return nil, nil, err
 			}
 			route.Protocol = netlink.RouteProtocol(proto)
 
 		case "scope":
-			cursor++
-			scope, err := parseUint8("SCOPE")
+			scope, err := parseValue[uint8](cmd, "SCOPE")
 			if err != nil {
 				return nil, nil, err
 			}
 			route.Scope = netlink.Scope(scope)
 		case "metric":
-			cursor++
-			route.Priority, err = parseInt("METRIC")
+			route.Priority, err = parseValue[int](cmd, "METRIC")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "mtu":
-			cursor++
-			route.MTU, err = parseInt("NUMBER")
+			route.MTU, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "advmss":
-			cursor++
-			route.AdvMSS, err = parseInt("NUMBER")
+			route.AdvMSS, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "rtt":
-			cursor++
-			route.Rtt, err = parseInt("TIME")
+			route.Rtt, err = parseValue[int](cmd, "TIME")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "rttvar":
-			cursor++
-			route.RttVar, err = parseInt("TIME")
+			route.RttVar, err = parseValue[int](cmd, "TIME")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "reordering":
-			cursor++
-			route.Reordering, err = parseInt("NUMBER")
+			route.Reordering, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "window":
-			cursor++
-			route.Window, err = parseInt("NUMBER")
+			route.Window, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "cwnd":
-			cursor++
-			route.Cwnd, err = parseInt("NUMBER")
+			route.Cwnd, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "initcwnd":
-			cursor++
-			route.InitCwnd, err = parseInt("NUMBER")
+			route.InitCwnd, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "ssthresh":
-			cursor++
-			route.Ssthresh, err = parseInt("NUMBER")
+			route.Ssthresh, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "realms":
-			cursor++
-			route.Realm, err = parseInt("REALM")
+			route.Realm, err = parseValue[int](cmd, "REALM")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "src":
-			cursor++
-			route.Src = net.ParseIP(arg[cursor])
+			token := cmd.nextToken("ADDRESS")
+			route.Src = net.ParseIP(token)
 			if route.Src == nil {
-				return nil, nil, fmt.Errorf("invalid source address: %v", arg[cursor])
+				return nil, nil, fmt.Errorf("invalid source address: %v", token)
 			}
 		case "rto_min":
-			cursor++
-			route.RtoMin, err = parseInt("TIME")
+			route.RtoMin, err = parseValue[int](cmd, "TIME")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "hoplimit":
-			cursor++
-			route.Hoplimit, err = parseInt("NUMBER")
+			route.Hoplimit, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "initrwnd":
-			cursor++
-			route.InitRwnd, err = parseInt("NUMBER")
+			route.InitRwnd, err = parseValue[int](cmd, "NUMBER")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "congctl":
-			cursor++
-			route.Congctl = parseString("NAME")
+			route.Congctl, err = parseValue[string](cmd, "NAME")
+			if err != nil {
+				return nil, nil, err
+			}
 		case "features":
-			cursor++
-			route.Features, err = parseInt("FEATURES")
+			route.Features, err = parseValue[int](cmd, "FEATURES")
 			if err != nil {
 				return nil, nil, err
 			}
 		case "quickack":
-			cursor++
-			switch arg[cursor] {
+			switch cmd.nextToken("0", "1") {
 			case "1":
 				route.QuickACK = 1
 			case "0":
 				route.QuickACK = 0
 			default:
-				return nil, nil, usage()
+				return nil, nil, cmd.usage()
 			}
 		case "fastopen_no_cookie":
-			cursor++
-			switch arg[cursor] {
+			switch cmd.nextToken("0", "1") {
 			case "1":
 				route.FastOpenNoCookie = 1
 			case "0":
 				route.FastOpenNoCookie = 0
 			default:
-				return nil, nil, usage()
+				return nil, nil, cmd.usage()
 			}
 		default:
-			return nil, nil, usage()
+			return nil, nil, cmd.usage()
 		}
 	}
 
@@ -329,7 +313,7 @@ func parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, netlink.Link, err
 }
 
 func (cmd cmd) routeShow() error {
-	filter, filterMask, root, match, exact, err := parseRouteShowListFlush()
+	filter, filterMask, root, match, exact, err := cmd.parseRouteShowListFlush()
 	if err != nil {
 		return err
 	}
@@ -342,12 +326,12 @@ func (cmd cmd) showAllRoutes() error {
 }
 
 func (cmd cmd) routeFlush() error {
-	filter, filterMask, root, match, exact, err := parseRouteShowListFlush()
+	filter, filterMask, root, match, exact, err := cmd.parseRouteShowListFlush()
 	if err != nil {
 		return err
 	}
 
-	routes, err := filteredRouteList(filter, filterMask, root, match, exact)
+	routes, err := cmd.filteredRouteList(filter, filterMask, root, match, exact)
 	if err != nil {
 		return err
 	}
@@ -361,7 +345,7 @@ func (cmd cmd) routeFlush() error {
 	return nil
 }
 
-func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, *net.IPNet, error) {
+func (cmd cmd) parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, *net.IPNet, error) {
 	var (
 		filterMask uint64
 		filter     netlink.Route
@@ -370,24 +354,16 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 		exact      *net.IPNet
 	)
 
-	if routeType, ok := routeTypes[arg[cursor]]; ok {
+	if routeType, ok := routeTypes[cmd.currentToken()]; ok {
 		filter.Type = routeType
 		filterMask |= netlink.RT_FILTER_TYPE
-		cursor++
 	}
 
-	for {
-		cursor++
-
-		if cursor >= len(arg) {
-			break
-		}
-
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("scope", "table", "proto", "root", "match", "exact") {
 		case "scope":
 			filterMask |= netlink.RT_FILTER_SCOPE
-			cursor++
-			scope, err := parseUint8("SCOPE")
+			scope, err := parseValue[uint8](cmd, "SCOPE")
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
@@ -395,8 +371,7 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 
 		case "table":
 			filterMask |= netlink.RT_FILTER_TABLE
-			cursor++
-			table, err := parseInt("TABLE_ID")
+			table, err := parseValue[int](cmd, "TABLE_ID")
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
@@ -404,40 +379,38 @@ func parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, 
 
 		case "proto":
 			filterMask |= netlink.RT_FILTER_PROTOCOL
-			cursor++
-			proto, err := parseInt("RTPROTO")
+			proto, err := parseValue[int](cmd, "RTPROTO")
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
 			filter.Protocol = netlink.RouteProtocol(proto)
 
 		case "root":
-			cursor++
-			_, prefix, err := net.ParseCIDR(arg[cursor])
+			token := cmd.nextToken("PREFIX")
+			_, prefix, err := net.ParseCIDR(token)
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
 			root = prefix
 
 		case "match":
-			cursor++
-			_, prefix, err := net.ParseCIDR(arg[cursor])
+			token := cmd.nextToken("PREFIX")
+			_, prefix, err := net.ParseCIDR(token)
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
 			match = prefix
 
 		case "exact":
-			cursor++
-			_, prefix, err := net.ParseCIDR(arg[cursor])
+			token := cmd.nextToken("PREFIX")
+			_, prefix, err := net.ParseCIDR(token)
 			if err != nil {
 				return nil, 0, nil, nil, nil, err
 			}
 			exact = prefix
 		default:
-			return nil, 0, nil, nil, nil, usage()
+			return nil, 0, nil, nil, nil, cmd.usage()
 		}
-
 	}
 
 	return &filter, filterMask, root, match, exact, nil
@@ -455,12 +428,12 @@ type Route struct {
 // showRoutes prints the routes in the system.
 // If filterMask is not zero, only routes that match the filter are printed.
 func (cmd cmd) showRoutes(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) error {
-	routes, err := filteredRouteList(route, filterMask, root, match, exact)
+	routes, err := cmd.filteredRouteList(route, filterMask, root, match, exact)
 	if err != nil {
 		return err
 	}
 
-	if f.json {
+	if cmd.opts.json {
 		obj := make([]Route, 0, len(routes))
 
 		for _, route := range routes {
@@ -475,7 +448,7 @@ func (cmd cmd) showRoutes(route *netlink.Route, filterMask uint64, root, match, 
 				Scope: route.Scope.String(),
 			}
 
-			if !f.numeric {
+			if !cmd.opts.numeric {
 				pRoute.Protocol = rtProto[int(route.Protocol)]
 				pRoute.Scope = route.Scope.String()
 			} else {
@@ -494,7 +467,7 @@ func (cmd cmd) showRoutes(route *netlink.Route, filterMask uint64, root, match, 
 			obj = append(obj, pRoute)
 		}
 
-		return printJSON(cmd.out, obj)
+		return printJSON(cmd, obj)
 	}
 
 	for _, route := range routes {
@@ -503,18 +476,18 @@ func (cmd cmd) showRoutes(route *netlink.Route, filterMask uint64, root, match, 
 			return err
 		}
 		if route.Dst == nil {
-			defaultRoute(cmd.out, route, link)
+			cmd.defaultRoute(route, link)
 		} else {
-			showRoute(cmd.out, route, link)
+			cmd.showRoute(route, link)
 		}
 	}
 	return nil
 }
 
-func filteredRouteList(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) ([]netlink.Route, error) {
+func (cmd cmd) filteredRouteList(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) ([]netlink.Route, error) {
 	var matchedRoutes []netlink.Route
 
-	routes, err := netlink.RouteListFiltered(family, route, filterMask)
+	routes, err := netlink.RouteListFiltered(cmd.family, route, filterMask)
 	if err != nil {
 		return matchedRoutes, err
 	}
@@ -566,9 +539,9 @@ func (cmd cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOption
 			return err
 		}
 		if route.Dst == nil {
-			defaultRoute(cmd.out, route, link)
+			cmd.defaultRoute(route, link)
 		} else {
-			showRoute(cmd.out, route, link)
+			cmd.showRoute(route, link)
 		}
 	}
 	return nil
@@ -608,13 +581,13 @@ const (
 	routeVia6Fmt = "%v %s via %s dev %s proto %s metric %d\n"
 )
 
-func defaultRoute(w io.Writer, r netlink.Route, l netlink.Link) {
+func (cmd cmd) defaultRoute(r netlink.Route, l netlink.Link) {
 	gw := r.Gw
 	name := l.Attrs().Name
 
 	var proto string
 
-	if !f.numeric {
+	if !cmd.opts.numeric {
 		proto = rtProto[int(r.Protocol)]
 	} else {
 		proto = fmt.Sprintf("%d", r.Protocol)
@@ -624,39 +597,39 @@ func defaultRoute(w io.Writer, r netlink.Route, l netlink.Link) {
 
 	var detail string
 
-	if f.details {
+	if cmd.opts.details {
 		detail = routeTypeToString(r.Type)
 	}
 
-	fmt.Fprintf(w, defaultFmt, detail, gw, name, proto, metric)
+	fmt.Fprintf(cmd.out, defaultFmt, detail, gw, name, proto, metric)
 }
 
-func showRoute(w io.Writer, r netlink.Route, l netlink.Link) {
-	switch family {
+func (cmd cmd) showRoute(r netlink.Route, l netlink.Link) {
+	switch cmd.family {
 	// print only ipv4 per default
 	case netlink.FAMILY_ALL, netlink.FAMILY_V4:
 		if r.Dst.IP.To4() == nil {
 			return
 		}
 
-		printIPv4Route(w, r, l)
+		cmd.printIPv4Route(r, l)
 
 	case netlink.FAMILY_V6:
 		if r.Dst.IP.To4() != nil {
 			return
 		}
 
-		printIPv6Route(w, r, l)
+		cmd.printIPv6Route(r, l)
 	}
 }
 
-func printIPv4Route(w io.Writer, r netlink.Route, l netlink.Link) {
+func (cmd cmd) printIPv4Route(r netlink.Route, l netlink.Link) {
 	dest := r.Dst
 	name := l.Attrs().Name
 
 	var proto, scope string
 
-	if !f.numeric {
+	if !cmd.opts.numeric {
 		proto = rtProto[int(r.Protocol)]
 		scope = addrScopes[r.Scope]
 	} else {
@@ -669,20 +642,20 @@ func printIPv4Route(w io.Writer, r netlink.Route, l netlink.Link) {
 
 	var detail string
 
-	if f.details {
+	if cmd.opts.details {
 		detail = routeTypeToString(r.Type)
 	}
 
-	fmt.Fprintf(w, routeFmt, detail, dest, name, proto, scope, src, metric)
+	fmt.Fprintf(cmd.out, routeFmt, detail, dest, name, proto, scope, src, metric)
 }
 
-func printIPv6Route(w io.Writer, r netlink.Route, l netlink.Link) {
+func (cmd cmd) printIPv6Route(r netlink.Route, l netlink.Link) {
 	dest := r.Dst
 	name := l.Attrs().Name
 
 	var proto string
 
-	if !f.numeric {
+	if !cmd.opts.numeric {
 		proto = rtProto[int(r.Protocol)]
 	} else {
 		proto = fmt.Sprintf("%d", r.Protocol)
@@ -692,27 +665,25 @@ func printIPv6Route(w io.Writer, r netlink.Route, l netlink.Link) {
 
 	var detail string
 
-	if f.details {
+	if cmd.opts.details {
 		detail = routeTypeToString(r.Type)
 	}
 
 	if r.Gw != nil {
 		gw := r.Gw
-		fmt.Fprintf(w, routeVia6Fmt, detail, dest, gw, name, proto, metric)
+		fmt.Fprintf(cmd.out, routeVia6Fmt, detail, dest, gw, name, proto, metric)
 	} else {
-		fmt.Fprintf(w, route6Fmt, detail, dest, name, proto, metric)
+		fmt.Fprintf(cmd.out, route6Fmt, detail, dest, name, proto, metric)
 	}
 }
 
 func (cmd cmd) routeGet() error {
-	cursor++
-	expectedValues = []string{"CIDR Address"}
-	addr, _, err := net.ParseCIDR(arg[cursor])
+	addr, err := cmd.parseAddress()
 	if err != nil {
 		return err
 	}
 
-	options, err := parseRouteGet()
+	options, err := cmd.parseRouteGet()
 	if err != nil {
 		return err
 	}
@@ -720,29 +691,21 @@ func (cmd cmd) routeGet() error {
 	return cmd.showRoutesForAddress(addr, options)
 }
 
-func parseRouteGet() (*netlink.RouteGetOptions, error) {
+func (cmd cmd) parseRouteGet() (*netlink.RouteGetOptions, error) {
 	var opts netlink.RouteGetOptions
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("from", "iif", "oif", "vrf") {
 		case "oif":
-			cursor++
-			opts.Oif = arg[cursor]
+			opts.Oif = cmd.nextToken("OIF")
 		case "iif":
-			cursor++
-			opts.Iif = arg[cursor]
+			opts.Iif = cmd.nextToken("IIF")
+
 		case "vrf":
-			cursor++
-			opts.VrfName = arg[cursor]
+			opts.VrfName = cmd.nextToken("VRF_NAME")
 		case "from":
-			cursor++
-			opts.SrcAddr = net.ParseIP(arg[cursor])
+			opts.SrcAddr = net.ParseIP(cmd.nextToken("ADDRESS"))
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
@@ -750,14 +713,11 @@ func parseRouteGet() (*netlink.RouteGetOptions, error) {
 }
 
 func (cmd cmd) route() error {
-	cursor++
-
-	if len(arg) == cursor {
+	if !cmd.tokenRemains() {
 		return cmd.showAllRoutes()
 	}
 
-	expectedValues = []string{"show", "add", "append", "replace", "del", "list", "get", "help"}
-	switch findPrefix(arg[cursor], expectedValues) {
+	switch cmd.findPrefix("show", "add", "append", "replace", "del", "list", "flush", "get", "help") {
 	case "add":
 		return cmd.routeAdd()
 	case "append":
@@ -776,5 +736,5 @@ func (cmd cmd) route() error {
 		fmt.Fprint(cmd.out, routeHelp)
 		return nil
 	}
-	return usage()
+	return cmd.usage()
 }

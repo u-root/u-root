@@ -14,18 +14,48 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func findPrefix(cmd string, cmds []string) string {
+// tokenRemains returns true if there are more tokens to parse.
+func (cmd *cmd) tokenRemains() bool {
+	return cmd.cursor < len(cmd.args)-1
+}
+
+// currentToken returns the current token.
+func (cmd *cmd) currentToken() string {
+	return cmd.args[cmd.cursor]
+}
+
+// nextToken returns the next token and sets its expected values.
+func (cmd *cmd) nextToken(expectedValues ...string) string {
+	cmd.expectedValues = expectedValues
+	cmd.cursor++
+
+	return cmd.args[cmd.cursor]
+}
+
+// lastToken returns the last token and sets its expected values.
+func (cmd *cmd) lastToken(expectedValues ...string) string {
+	cmd.expectedValues = expectedValues
+	cmd.cursor--
+
+	return cmd.args[cmd.cursor]
+}
+
+// findPrefix returns the prefix of the next token.
+// If the prefix is not found, an empty string is returned.
+func (cmd *cmd) findPrefix(expectedValue ...string) string {
+	cmd.expectedValues = expectedValue
+	cmd.cursor++
 	var x, n int
 
-	for i, v := range cmds {
-		if strings.HasPrefix(v, cmd) {
+	for i, v := range cmd.expectedValues {
+		if strings.HasPrefix(v, cmd.currentToken()) {
 			n++
 			x = i
 		}
 	}
 
 	if n == 1 {
-		return cmds[x]
+		return cmd.expectedValues[x]
 	}
 
 	return ""
@@ -35,220 +65,198 @@ var ErrNotFound = fmt.Errorf("not found")
 
 // in the ip command, turns out 'dev' is a noisy word.
 // The BNF it shows is not right in that case.
-// Always make 'dev' optional.
-func parseDeviceName(mandatory bool) (netlink.Link, error) {
+// Some commands require 'dev' to be present, some don't.
+// If 'dev' is present, it is skipped.
+// If no device name is present, an error ErrNotFound is returned.
+// The mandatory flag will make sure that the program will panic if the device name is not found.
+func (cmd cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
 	switch mandatory {
 	case true:
-		cursor++
-		expectedValues = []string{"dev", "device name"}
+		cmd.cursor++
+		cmd.expectedValues = []string{"dev", "device name"}
 
-		if arg[cursor] == "dev" {
-			cursor++
+		if cmd.args[cmd.cursor] == "dev" {
+			cmd.cursor++
 		}
 
-		expectedValues = []string{"device name"}
-		return netlink.LinkByName(arg[cursor])
+		cmd.expectedValues = []string{"device name"}
+		return netlink.LinkByName(cmd.args[cmd.cursor])
 	case false:
-		if cursor == len(arg)-1 {
+		if cmd.cursor == len(cmd.args)-1 {
 			return nil, ErrNotFound
 		}
 
-		cursor++
-		expectedValues = []string{"dev", "device name"}
+		cmd.cursor++
+		cmd.expectedValues = []string{"dev", "device name"}
 
-		if cursor > len(arg)-1 {
+		if cmd.cursor > len(cmd.args)-1 {
 			return nil, ErrNotFound
 		}
 
-		if arg[cursor] == "dev" {
-			cursor++
+		if cmd.args[cmd.cursor] == "dev" {
+			cmd.cursor++
 
-			if cursor > len(arg)-1 {
+			if cmd.cursor > len(cmd.args)-1 {
 				return nil, ErrNotFound
 			}
 
 		}
 
-		expectedValues = []string{"device name"}
-		return netlink.LinkByName(arg[cursor])
+		cmd.expectedValues = []string{"device name"}
+		return netlink.LinkByName(cmd.args[cmd.cursor])
 	}
 
 	return nil, ErrNotFound
 }
 
-func parseType() (string, error) {
-	if cursor == len(arg)-1 {
+// parseType parses the type of the command.
+// The type is the next argument after the 'type' keyword.
+// The type is optional in some commands, hence an `ErrNotFound` is returned if the type is not found.
+func (cmd cmd) parseType() (string, error) {
+	if cmd.cursor == len(cmd.args)-1 {
 		return "", ErrNotFound
 	}
 
-	cursor++
-	expectedValues = []string{"type"}
+	cmd.cursor++
+	cmd.expectedValues = []string{"type"}
 
-	if cursor > len(arg)-1 {
+	if cmd.cursor > len(cmd.args)-1 {
 		return "", ErrNotFound
 	}
 
-	if arg[cursor] != "type" {
+	if cmd.args[cmd.cursor] != "type" {
 		return "", ErrNotFound
 	}
 
-	cursor++
+	cmd.cursor++
 
-	expectedValues = []string{"type name"}
-	return arg[cursor], nil
+	cmd.expectedValues = []string{"type name"}
+	return cmd.args[cmd.cursor], nil
 }
 
-func parseAddress() (net.IP, error) {
-	cursor++
-	expectedValues = []string{"[address] PREFIX"}
+func (cmd cmd) parseAddress() (net.IP, error) {
+	token := cmd.nextToken("address", "PREFIX")
 
-	if arg[cursor] == "address" {
-		cursor++
+	if token == "address" {
+		token = cmd.nextToken("PREFIX")
 	}
 
-	expectedValues = []string{"PREFIX"}
-	ip := net.ParseIP(arg[cursor])
+	ip := net.ParseIP(token)
 
 	if ip == nil {
-		return nil, fmt.Errorf("failed to parse adress: %v", arg[cursor])
+		return nil, fmt.Errorf("failed to parse address: %v", token)
 	}
-	return net.ParseIP(arg[cursor]), nil
+	return ip, nil
 }
 
-func parseIPNet() (*net.IPNet, error) {
-	cursor++
-	expectedValues = []string{"ADDR/PLEN"}
-	_, ipNet, err := net.ParseCIDR(arg[cursor])
+func (cmd cmd) parseIPNet() (*net.IPNet, error) {
+	token := cmd.nextToken("CIDR")
+	_, ipNet, err := net.ParseCIDR(token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse CIDR: %v", arg[cursor])
+		return nil, fmt.Errorf("failed to parse CIDR: %v", token)
 	}
 
 	if ipNet == nil {
-		return nil, fmt.Errorf("failed to parse adress: %v", arg[cursor])
+		return nil, fmt.Errorf("failed to parse CIDR: %v", token)
 	}
 
 	return ipNet, nil
 }
 
-func parseHardwareAddress() (net.HardwareAddr, error) {
-	cursor++
-	expectedValues = []string{"<mac address>"}
-
-	return net.ParseMAC(arg[cursor])
+func (cmd cmd) parseHardwareAddress() (net.HardwareAddr, error) {
+	return net.ParseMAC(cmd.nextToken("<MAC-ADDR>"))
 }
 
-func parseString(expected string) string {
-	cursor++
-	expectedValues = []string{expected}
-
-	return arg[cursor]
+type Integer interface {
+	string | uint8 | uint16 | uint32 | uint64 | int | []byte
 }
 
-func parseByte(expected string) ([]byte, error) {
-	cursor++
-	expectedValues = []string{expected}
+// parseValue parses a value from the cmd.argument list.
+// expected is the string that represents the expected value.
+// allowed types are string, []byte, int, uint16, uint32, uint64, uint8.
+func parseValue[T Integer](cmd cmd, expected string) (val T, err error) {
+	token := cmd.nextToken(expected)
 
-	return hex.DecodeString(arg[cursor])
-}
+	var value interface{}
 
-func parseInt(expected string) (int, error) {
-	cursor++
-	expectedValues = []string{expected}
+	switch any(val).(type) {
+	case string:
+		return any(token).(T), nil
+	case []byte:
+		value, err = hex.DecodeString(token)
+		if err != nil {
+			return val, fmt.Errorf("failed to parse hex: %v", err)
+		}
 
-	return strconv.Atoi(arg[cursor])
-}
+		return any(val).(T), nil
+	case int:
+		value, err = strconv.Atoi(token)
+		if err != nil {
+			return val, fmt.Errorf("failed to parse integer: %v", err)
+		}
 
-func parseUint8(expected string) (uint8, error) {
-	cursor++
-	expectedValues = []string{expected}
-
-	val, err := strconv.ParseUint(arg[cursor], 10, 8)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse uint8: %v", err)
+		return any(val).(T), nil
+	case uint16:
+		value, err = strconv.ParseUint(token, 10, 16)
+		if err != nil {
+			return val, fmt.Errorf("failed to parse integer: %v", err)
+		}
+	case uint32:
+		value, err = strconv.ParseUint(token, 10, 32)
+		if err != nil {
+			return val, fmt.Errorf("failed to parse integer: %v", err)
+		}
+	case uint64:
+		value, err = strconv.ParseUint(token, 10, 64)
+		if err != nil {
+			return val, fmt.Errorf("failed to parse integer: %v", err)
+		}
+	default:
+		value, err = strconv.ParseUint(token, 10, 8)
+		if err != nil {
+			return val, fmt.Errorf("failed to parse integer: %v", err)
+		}
 	}
 
-	return uint8(val), nil
+	return any(value).(T), nil
 }
 
-func parseUint16(expected string) (uint16, error) {
-	cursor++
-	expectedValues = []string{expected}
-
-	val, err := strconv.ParseUint(arg[cursor], 10, 16)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse uint16: %v", err)
-	}
-
-	return uint16(val), nil
-}
-
-func parseUint32(expected string) (uint32, error) {
-	cursor++
-	expectedValues = []string{expected}
-
-	val, err := strconv.ParseUint(arg[cursor], 10, 32)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse uint32: %v", err)
-	}
-
-	return uint32(val), nil
-}
-
-func parseUint64(expected string) (uint64, error) {
-	cursor++
-	expectedValues = []string{expected}
-
-	return strconv.ParseUint(arg[cursor], 10, 64)
-}
-
-func parseBool() (bool, error) {
-	cursor++
-	expectedValues = []string{"true", "false"}
-
-	switch arg[cursor] {
-	case "on":
+// parseBool parses a boolean value from the cmd.argument list.
+// expectedTrue and expectedFalse are the strings that represent true and false.
+func (cmd cmd) parseBool(expectedTrue, expectedFalse string) (bool, error) {
+	switch cmd.nextToken([]string{expectedTrue, expectedFalse}...) {
+	case expectedTrue:
 		return true, nil
-	case "off":
+	case expectedFalse:
 		return false, nil
 	}
 
-	return false, fmt.Errorf("invalid bool value: %v", arg[cursor])
+	return false, fmt.Errorf("invalid bool value: %v", cmd.args[cmd.cursor])
 }
 
-func parseName() (string, error) {
-	cursor++
-	expectedValues = []string{"name", "device name"}
-	if arg[cursor] == "name" {
-		cursor++
+func (cmd cmd) parseName() string {
+	nextToken := cmd.nextToken("name", "device name")
+
+	if nextToken == "name" {
+		nextToken = cmd.nextToken("device name")
 	}
 
-	expectedValues = []string{"device name"}
-
-	return arg[cursor], nil
+	return nextToken
 }
 
-func parseNodeSpec() string {
-	cursor++
-	expectedValues = []string{"default", "CIDR"}
-
-	return arg[cursor]
+func (cmd cmd) parseNodeSpec() string {
+	return cmd.nextToken("default", "CIDR")
 }
 
-func parseNextHop() (string, net.IP, error) {
-	cursor++
-	expectedValues = []string{"via"}
-
-	if arg[cursor] != "via" {
-		return "", nil, usage()
+func (cmd cmd) parseNextHop() (string, net.IP, error) {
+	nh := cmd.nextToken("via")
+	if nh != "via" {
+		return "", nil, cmd.usage()
 	}
 
-	nh := arg[cursor]
-	cursor++
-	expectedValues = []string{"Gateway CIDR"}
-
-	addr := net.ParseIP(arg[cursor])
+	addr := net.ParseIP(cmd.nextToken("Gateway CIDR"))
 	if addr == nil {
-		return "", nil, fmt.Errorf("failed to parse gateway IP: %v", arg[cursor])
+		return "", nil, fmt.Errorf("failed to parse gateway IP: %v", cmd.args[cmd.cursor])
 	}
 
 	return nh, addr, nil

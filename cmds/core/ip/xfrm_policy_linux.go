@@ -35,59 +35,49 @@ LEVEL := required | use
 `
 )
 
-func parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
+func (cmd cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 	var err error
 
 	tmpl := &netlink.XfrmPolicyTmpl{}
 
-	cursor++
-
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		expectedValues = []string{"src", "dst", "proto", "spi", "mode", "reqid", "level"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "proto", "spi", "mode", "reqid", "level") {
 		case "src":
-			tmpl.Src, err = parseAddress()
+			tmpl.Src, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "dst":
-			tmpl.Dst, err = parseAddress()
+			tmpl.Dst, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "proto":
-			tmpl.Proto, err = parseXfrmProto()
+			tmpl.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 		case "spi":
-			tmpl.Spi, err = parseInt("SPI")
+			tmpl.Spi, err = parseValue[int](cmd, "SPI")
 			if err != nil {
 				return nil, err
 			}
 		case "mode":
-			tmpl.Mode, err = parseXfrmMode()
+			tmpl.Mode, err = cmd.parseXfrmMode()
 			if err != nil {
 				return nil, err
 			}
 		case "reqid":
-			tmpl.Reqid, err = parseInt("REQID")
+			tmpl.Reqid, err = parseValue[int](cmd, "REQID")
 			if err != nil {
 				return nil, err
 			}
 		case "level":
-			cursor++
-			expectedValues = []string{"required", "use"}
-			if arg[cursor] == "use" {
+			if cmd.nextToken("required", "use") == "use" {
 				tmpl.Optional = 1
 			}
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
@@ -95,32 +85,30 @@ func parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 }
 
 func (cmd cmd) xfrmPolicy() error {
-	cursor++
-	expectedValues = []string{"add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help"}
-	switch findPrefix(arg[cursor], expectedValues) {
+	switch cmd.findPrefix("add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help") {
 	case "add":
-		policy, err := parseXfrmPolicyAddUpdate()
+		policy, err := cmd.parseXfrmPolicyAddUpdate()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmPolicyAdd(policy)
 	case "update":
-		policy, err := parseXfrmPolicyAddUpdate()
+		policy, err := cmd.parseXfrmPolicyAddUpdate()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmPolicyUpdate(policy)
 	case "delete":
-		policy, err := parseXfrmPolicyDeleteGet()
+		policy, err := cmd.parseXfrmPolicyDeleteGet()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmPolicyDel(policy)
 	case "get":
-		policy, err := parseXfrmPolicyDeleteGet()
+		policy, err := cmd.parseXfrmPolicyDeleteGet()
 		if err != nil {
 			return err
 		}
@@ -132,23 +120,23 @@ func (cmd cmd) xfrmPolicy() error {
 
 		printXfrmPolicy(cmd.out, policy)
 	case "deleteall":
-		policy, err := parseXfrmPolicyListDeleteAll()
+		policy, err := cmd.parseXfrmPolicyListDeleteAll()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmPolicyDel(policy)
 	case "list", "show":
-		policy, err := parseXfrmPolicyListDeleteAll()
+		policy, err := cmd.parseXfrmPolicyListDeleteAll()
 		if err != nil {
 			return err
 		}
 
-		return printFilteredXfrmPolicies(cmd.out, policy, family)
+		return printFilteredXfrmPolicies(cmd.out, policy, cmd.family)
 	case "flush":
 		return cmd.handle.XfrmPolicyFlush()
 	case "count":
-		policies, err := cmd.handle.XfrmPolicyList(family)
+		policies, err := cmd.handle.XfrmPolicyList(cmd.family)
 		if err != nil {
 			return err
 		}
@@ -159,97 +147,90 @@ func (cmd cmd) xfrmPolicy() error {
 
 		return nil
 	default:
-		return usage()
+		return cmd.usage()
 	}
 
 	return nil
 }
 
-func parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
+func (cmd cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 	var err error
 
 	policy := &netlink.XfrmPolicy{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-
-		expectedValues = []string{"src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "action", "priority", "if_id", "tmpl"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "action", "priority", "if_id", "tmpl") {
 		case "src":
-			policy.Src, err = parseIPNet()
+			policy.Src, err = cmd.parseIPNet()
 			if err != nil {
 				return nil, err
 			}
 		case "dst":
-			policy.Dst, err = parseIPNet()
+			policy.Dst, err = cmd.parseIPNet()
 			if err != nil {
 				return nil, err
 			}
 		case "proto":
-			policy.Proto, err = parseXfrmProto()
+			policy.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 		case "sport":
-			policy.SrcPort, err = parseInt("SPORT")
+			policy.SrcPort, err = parseValue[int](cmd, "SPORT")
 			if err != nil {
 				return nil, err
 			}
 		case "dport":
-			policy.DstPort, err = parseInt("DPORT")
+			policy.DstPort, err = parseValue[int](cmd, "DPORT")
 			if err != nil {
 				return nil, err
 			}
 		case "dir":
-			policy.Dir, err = parseXfrmDir()
+			policy.Dir, err = cmd.parseXfrmDir()
 			if err != nil {
 				return nil, err
 			}
 		case "mark":
-			policy.Mark, err = parseXfrmMark()
+			policy.Mark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		case "index":
-			policy.Index, err = parseInt("INDEX")
+			policy.Index, err = parseValue[int](cmd, "INDEX")
 			if err != nil {
 				return nil, err
 			}
 		case "action":
-			policy.Action, err = parseXfrmAction()
+			policy.Action, err = cmd.parseXfrmAction()
 			if err != nil {
 				return nil, err
 			}
 		case "priority":
-			policy.Priority, err = parseInt("PRIORITY")
+			policy.Priority, err = parseValue[int](cmd, "PRIORITY")
 			if err != nil {
 				return nil, err
 			}
 		case "if_id":
-			policy.Ifid, err = parseInt("IF_ID")
+			policy.Ifid, err = parseValue[int](cmd, "IF_ID")
 			if err != nil {
 				return nil, err
 			}
 		case "tmpl":
-			tmpl, err := parseXfrmPolicyTmpl()
+			tmpl, err := cmd.parseXfrmPolicyTmpl()
 			if err != nil {
 				return nil, err
 			}
 			policy.Tmpls = append(policy.Tmpls, *tmpl)
 
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
 	return policy, nil
 }
 
-func parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
+func (cmd cmd) parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 	var (
 		indexSpecified    bool
 		selectorSpecified bool
@@ -258,68 +239,61 @@ func parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 
 	policy := &netlink.XfrmPolicy{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-
-		expectedValues = []string{"src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "if_id"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "dir", "proto", "sport", "dport", "mark", "index", "if_id") {
 		case "src":
-			policy.Src, err = parseIPNet()
+			policy.Src, err = cmd.parseIPNet()
 			if err != nil {
 				return nil, err
 			}
 			selectorSpecified = true
 		case "dst":
-			policy.Dst, err = parseIPNet()
+			policy.Dst, err = cmd.parseIPNet()
 			if err != nil {
 				return nil, err
 			}
 			selectorSpecified = true
 		case "proto":
-			policy.Proto, err = parseXfrmProto()
+			policy.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 			selectorSpecified = true
 		case "sport":
-			policy.SrcPort, err = parseInt("SPORT")
+			policy.SrcPort, err = parseValue[int](cmd, "SPORT")
 			if err != nil {
 				return nil, err
 			}
 			selectorSpecified = true
 		case "dport":
-			policy.DstPort, err = parseInt("DPORT")
+			policy.DstPort, err = parseValue[int](cmd, "DPORT")
 			if err != nil {
 				return nil, err
 			}
 			selectorSpecified = true
 		case "dir":
-			policy.Dir, err = parseXfrmDir()
+			policy.Dir, err = cmd.parseXfrmDir()
 			if err != nil {
 				return nil, err
 			}
 		case "mark":
-			policy.Mark, err = parseXfrmMark()
+			policy.Mark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		case "index":
-			policy.Index, err = parseInt("INDEX")
+			policy.Index, err = parseValue[int](cmd, "INDEX")
 			if err != nil {
 				return nil, err
 			}
 			indexSpecified = true
 		case "if_id":
-			policy.Ifid, err = parseInt("IF_ID")
+			policy.Ifid, err = parseValue[int](cmd, "IF_ID")
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
@@ -329,67 +303,60 @@ func parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 	return policy, nil
 }
 
-func parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
+func (cmd cmd) parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
 	var err error
 
 	policy := &netlink.XfrmPolicy{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-
-		expectedValues = []string{"src", "dst", "dir", "proto", "sport", "dport", "index", "action", "priority"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "dir", "proto", "sport", "dport", "index", "action", "priority", "mark", "if_id") {
 		case "src":
-			policy.Src, err = parseIPNet()
+			policy.Src, err = cmd.parseIPNet()
 			if err != nil {
 				return nil, err
 			}
 		case "dst":
-			policy.Dst, err = parseIPNet()
+			policy.Dst, err = cmd.parseIPNet()
 			if err != nil {
 				return nil, err
 			}
 		case "proto":
-			policy.Proto, err = parseXfrmProto()
+			policy.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 		case "sport":
-			policy.SrcPort, err = parseInt("SPORT")
+			policy.SrcPort, err = parseValue[int](cmd, "SPORT")
 			if err != nil {
 				return nil, err
 			}
 		case "dport":
-			policy.DstPort, err = parseInt("DPORT")
+			policy.DstPort, err = parseValue[int](cmd, "DPORT")
 			if err != nil {
 				return nil, err
 			}
 		case "dir":
-			policy.Dir, err = parseXfrmDir()
+			policy.Dir, err = cmd.parseXfrmDir()
 			if err != nil {
 				return nil, err
 			}
 		case "mark":
-			policy.Mark, err = parseXfrmMark()
+			policy.Mark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		case "index":
-			policy.Index, err = parseInt("INDEX")
+			policy.Index, err = parseValue[int](cmd, "INDEX")
 			if err != nil {
 				return nil, err
 			}
 		case "if_id":
-			policy.Ifid, err = parseInt("IF_ID")
+			policy.Ifid, err = parseValue[int](cmd, "IF_ID")
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 

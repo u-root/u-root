@@ -11,23 +11,15 @@ import (
 )
 
 const (
-	vrfHelp = `Usage:	ip vrf show [NAME] ...
-	ip vrf exec [NAME] cmd ...
-	ip vrf identify [PID]
-	ip vrf pids [NAME]
-`
+	vrfHelp = `Usage:	ip vrf show [NAME] ...`
 )
 
 func (cmd cmd) vrf() error {
-	cursor++
-	if len(arg[cursor:]) == 0 {
+	if !cmd.tokenRemains() {
 		return cmd.vrfShow()
 	}
 
-	expectedValues = []string{"show", "help"}
-	var c string
-
-	switch c = findPrefix(arg[cursor], expectedValues); c {
+	switch cmd.findPrefix("show", "help") {
 	case "show":
 		return cmd.vrfShow()
 	case "help":
@@ -35,7 +27,7 @@ func (cmd cmd) vrf() error {
 
 		return nil
 	}
-	return usage()
+	return cmd.usage()
 }
 
 type Vrf struct {
@@ -49,7 +41,7 @@ func (cmd cmd) vrfShow() error {
 		return err
 	}
 
-	if f.json {
+	if cmd.opts.json {
 		vrfs := make([]Vrf, 0, len(links))
 
 		for _, link := range links {
@@ -64,7 +56,7 @@ func (cmd cmd) vrfShow() error {
 			})
 		}
 
-		return printJSON(cmd.out, vrfs)
+		return printJSON(cmd, vrfs)
 	}
 
 	// Print header
