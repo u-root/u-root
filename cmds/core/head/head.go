@@ -49,8 +49,10 @@ func run(stdout io.Writer, stderr io.Writer, bytes, count int, files ...string) 
 			}
 		}
 		if printBytes {
-			n, err := f.Read(buffer)
-			if err != nil {
+			n, err := io.ReadFull(f, buffer)
+			if err == io.ErrUnexpectedEOF {
+				// ignore if user request more bytes than file has
+			} else if err != nil {
 				fmt.Fprintf(stderr, "head: %v", err)
 				continue
 			}
