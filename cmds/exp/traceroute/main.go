@@ -59,7 +59,6 @@ func run(out io.Writer, args []string) error {
 	}
 
 	modaf := strings.ToLower(fmt.Sprintf("%s%s", flags.Module, af))
-	fmt.Println(modaf)
 	// Pass execution to pkg/traceroute.
 	// Setup can be quite complexe with such amount of flags
 	// and the different modules.
