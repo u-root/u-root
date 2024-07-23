@@ -14,12 +14,9 @@ import (
 )
 
 const (
-	tunnelHelp = `Usage: ip tunnel { add | change | del | show | prl | 6rd } [ NAME ]
+	tunnelHelp = `Usage: ip tunnel { add  | del | show } [ NAME ]
         [ mode { gre | ipip | sit | vti } ]
-        [ remote ADDR ] [ local ADDR ]
-        [ [i|o]seq ] [ [i|o]key KEY ] [ [i|o]csum ]
-        [ prl-default ADDR ] [ prl-nodefault ADDR ] [ prl-delete ADDR ]
-        [ 6rd-prefix ADDR ] [ 6rd-relay_prefix ADDR ] [ 6rd-reset ]
+        [ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
         [ ttl TTL ] [ tos TOS ] [ [no]pmtudisc ] [ dev PHYS_DEV ]
 
 Where: NAME := STRING
@@ -112,28 +109,28 @@ func (cmd cmd) parseTunnel() (*options, error) {
 				continue
 			}
 
-			ttl, err := strconv.Atoi(token)
+			ttl, err := strconv.ParseUint(token, 10, 8)
 			if err != nil {
 				return nil, err
 			}
 
 			options.ttl = int(ttl)
 		case "tos":
-			tos, err := parseValue[uint8](cmd, "TOS (0...255)")
+			tos, err := cmd.parseUint8("TOS (0...255)")
 			if err != nil {
 				return nil, err
 			}
 
 			options.tos = int(tos)
 		case "ikey":
-			iKey, err := parseValue[uint16](cmd, "KEY")
+			iKey, err := cmd.parseUint16("KEY")
 			if err != nil {
 				return nil, err
 			}
 
 			options.iKey = int(iKey)
 		case "okey":
-			oKey, err := parseValue[uint16](cmd, "KEY")
+			oKey, err := cmd.parseUint16("KEY")
 			if err != nil {
 				return nil, err
 			}

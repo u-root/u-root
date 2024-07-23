@@ -81,20 +81,17 @@ func (cmd cmd) parseTunTap() (tuntapOptions, error) {
 				return tuntapOptions{}, fmt.Errorf("invalid mode %s", cmd.currentToken())
 			}
 		case "user":
-			options.user, err = parseValue[int](cmd, "USER")
+			options.user, err = cmd.parseInt("USER")
 			if err != nil {
 				return tuntapOptions{}, err
 			}
 		case "group":
-			options.group, err = parseValue[int](cmd, "GROUP")
+			options.group, err = cmd.parseInt("GROUP")
 			if err != nil {
 				return tuntapOptions{}, err
 			}
 		case "dev", "name":
-			options.name, err = parseValue[string](cmd, "NAME")
-			if err != nil {
-				return tuntapOptions{}, err
-			}
+			options.name = cmd.nextToken("NAME")
 		case "one_queue":
 			options.flags |= netlink.TUNTAP_ONE_QUEUE
 		case "pi":

@@ -58,7 +58,7 @@ func (cmd cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 				return nil, err
 			}
 		case "spi":
-			tmpl.Spi, err = parseValue[int](cmd, "SPI")
+			tmpl.Spi, err = cmd.parseInt("SPI")
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +68,7 @@ func (cmd cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 				return nil, err
 			}
 		case "reqid":
-			tmpl.Reqid, err = parseValue[int](cmd, "REQID")
+			tmpl.Reqid, err = cmd.parseInt("REQID")
 			if err != nil {
 				return nil, err
 			}
@@ -176,12 +176,12 @@ func (cmd cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 				return nil, err
 			}
 		case "sport":
-			policy.SrcPort, err = parseValue[int](cmd, "SPORT")
+			policy.SrcPort, err = cmd.parseInt("SPORT")
 			if err != nil {
 				return nil, err
 			}
 		case "dport":
-			policy.DstPort, err = parseValue[int](cmd, "DPORT")
+			policy.DstPort, err = cmd.parseInt("DPORT")
 			if err != nil {
 				return nil, err
 			}
@@ -196,7 +196,7 @@ func (cmd cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 				return nil, err
 			}
 		case "index":
-			policy.Index, err = parseValue[int](cmd, "INDEX")
+			policy.Index, err = cmd.parseInt("INDEX")
 			if err != nil {
 				return nil, err
 			}
@@ -206,12 +206,12 @@ func (cmd cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 				return nil, err
 			}
 		case "priority":
-			policy.Priority, err = parseValue[int](cmd, "PRIORITY")
+			policy.Priority, err = cmd.parseInt("PRIORITY")
 			if err != nil {
 				return nil, err
 			}
 		case "if_id":
-			policy.Ifid, err = parseValue[int](cmd, "IF_ID")
+			policy.Ifid, err = cmd.parseInt("IF_ID")
 			if err != nil {
 				return nil, err
 			}
@@ -260,13 +260,13 @@ func (cmd cmd) parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 			}
 			selectorSpecified = true
 		case "sport":
-			policy.SrcPort, err = parseValue[int](cmd, "SPORT")
+			policy.SrcPort, err = cmd.parseInt("SPORT")
 			if err != nil {
 				return nil, err
 			}
 			selectorSpecified = true
 		case "dport":
-			policy.DstPort, err = parseValue[int](cmd, "DPORT")
+			policy.DstPort, err = cmd.parseInt("DPORT")
 			if err != nil {
 				return nil, err
 			}
@@ -282,13 +282,13 @@ func (cmd cmd) parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 				return nil, err
 			}
 		case "index":
-			policy.Index, err = parseValue[int](cmd, "INDEX")
+			policy.Index, err = cmd.parseInt("INDEX")
 			if err != nil {
 				return nil, err
 			}
 			indexSpecified = true
 		case "if_id":
-			policy.Ifid, err = parseValue[int](cmd, "IF_ID")
+			policy.Ifid, err = cmd.parseInt("IF_ID")
 			if err != nil {
 				return nil, err
 			}
@@ -326,12 +326,12 @@ func (cmd cmd) parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
 				return nil, err
 			}
 		case "sport":
-			policy.SrcPort, err = parseValue[int](cmd, "SPORT")
+			policy.SrcPort, err = cmd.parseInt("SPORT")
 			if err != nil {
 				return nil, err
 			}
 		case "dport":
-			policy.DstPort, err = parseValue[int](cmd, "DPORT")
+			policy.DstPort, err = cmd.parseInt("DPORT")
 			if err != nil {
 				return nil, err
 			}
@@ -346,12 +346,12 @@ func (cmd cmd) parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
 				return nil, err
 			}
 		case "index":
-			policy.Index, err = parseValue[int](cmd, "INDEX")
+			policy.Index, err = cmd.parseInt("INDEX")
 			if err != nil {
 				return nil, err
 			}
 		case "if_id":
-			policy.Ifid, err = parseValue[int](cmd, "IF_ID")
+			policy.Ifid, err = cmd.parseInt("IF_ID")
 			if err != nil {
 				return nil, err
 			}

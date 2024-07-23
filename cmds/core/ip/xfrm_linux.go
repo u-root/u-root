@@ -20,7 +20,7 @@ const (
 	xfrmHelp = `Usage: ip xfrm XFRM-OBJECT { COMMAND | help }
 where  XFRM-OBJECT := state | policy | monitor`
 
-	xfrmMonitorHelp = `Usage: ip xfrm monitor [ nokeys ] [ all-nsid ] [ all | OBJECTS | help ]
+	xfrmMonitorHelp = `Usage: ip xfrm monitor [ nokeys ] [ all | OBJECTS | help ]
 OBJECTS := { acquire | expire | SA | aevent | policy | report }`
 )
 
@@ -108,7 +108,7 @@ func (cmd cmd) parseXfrmAction() (netlink.PolicyAction, error) {
 }
 
 func (cmd cmd) parseXfrmMark() (*netlink.XfrmMark, error) {
-	mark, err := parseValue[uint32](cmd, "MARK")
+	mark, err := cmd.parseUint32("MARK")
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (cmd cmd) parseXfrmMark() (*netlink.XfrmMark, error) {
 		return &netlink.XfrmMark{Value: mark}, nil
 	}
 
-	mask, err := parseValue[uint32](cmd, "MASK")
+	mask, err := cmd.parseUint32("MASK")
 	if err != nil {
 		return nil, err
 	}
@@ -146,12 +146,12 @@ func (cmd cmd) parseXfrmEncap() (*netlink.XfrmStateEncap, error) {
 		return nil, fmt.Errorf("espintcp not supported yet")
 	}
 
-	encap.SrcPort, err = parseValue[int](cmd, "SPORT")
+	encap.SrcPort, err = cmd.parseInt("SPORT")
 	if err != nil {
 		return nil, err
 	}
 
-	encap.DstPort, err = parseValue[int](cmd, "DPORT")
+	encap.DstPort, err = cmd.parseInt("DPORT")
 	if err != nil {
 		return nil, err
 	}
@@ -172,42 +172,42 @@ func (cmd cmd) parseXfrmLimit() (netlink.XfrmStateLimits, error) {
 
 	switch c := cmd.nextToken("time-soft", "time-hard", "time-use-soft", "time-use-hard", "byte-soft", "byte-hard", "packet-soft", "packet-hard"); c {
 	case "time-soft":
-		limits.TimeSoft, err = parseValue[uint64](cmd, "SECONDS")
+		limits.TimeSoft, err = cmd.parseUint64("SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "time-hard":
-		limits.TimeHard, err = parseValue[uint64](cmd, "SECONDS")
+		limits.TimeHard, err = cmd.parseUint64("SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "time-use-soft":
-		limits.TimeUseSoft, err = parseValue[uint64](cmd, "SECONDS")
+		limits.TimeUseSoft, err = cmd.parseUint64("SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "time-use-hard":
-		limits.TimeUseHard, err = parseValue[uint64](cmd, "SECONDS")
+		limits.TimeUseHard, err = cmd.parseUint64("SECONDS")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "byte-soft":
-		limits.ByteSoft, err = parseValue[uint64](cmd, "SIZE")
+		limits.ByteSoft, err = cmd.parseUint64("SIZE")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "byte-hard":
-		limits.ByteHard, err = parseValue[uint64](cmd, "SIZE")
+		limits.ByteHard, err = cmd.parseUint64("SIZE")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "packet-soft":
-		limits.PacketSoft, err = parseValue[uint64](cmd, "COUNT")
+		limits.PacketSoft, err = cmd.parseUint64("COUNT")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}
 	case "packet-hard":
-		limits.PacketHard, err = parseValue[uint64](cmd, "COUNT")
+		limits.PacketHard, err = cmd.parseUint64("COUNT")
 		if err != nil {
 			return netlink.XfrmStateLimits{}, err
 		}

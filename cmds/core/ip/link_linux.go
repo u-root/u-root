@@ -19,7 +19,7 @@ const linkHelp = `Usage: ip link add  [ name ] NAME
 		    [ mtu MTU ] [index IDX ]
 		    [ numtxqueues QUEUE_COUNT ]
 		    [ numrxqueues QUEUE_COUNT ]
-		    type TYPE 
+		    type TYPE [ARGS]
 
 	ip link delete { DEVICE | dev DEVICE  } 
 
@@ -207,7 +207,7 @@ func (cmd cmd) setLinkNetns(iface netlink.Link) error {
 }
 
 func (cmd cmd) setLinkVf(iface netlink.Link) error {
-	vf, err := parseValue[int](cmd, "VF")
+	vf, err := cmd.parseInt("VF")
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 
 			return cmd.handle.LinkSetVfHardwareAddr(iface, vf, addr)
 		case "vlan":
-			vlan, err := parseValue[int](cmd, "VLANID")
+			vlan, err := cmd.parseInt("VLANID")
 			if err != nil {
 				return err
 			}
@@ -233,7 +233,7 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 
 			switch cmd.nextToken("qos") {
 			case "qos":
-				qos, err := parseValue[int](cmd, "VLAN-QOS")
+				qos, err := cmd.parseInt("VLAN-QOS")
 				if err != nil {
 					return err
 				}
@@ -243,28 +243,28 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 				return cmd.usage()
 			}
 		case "rate":
-			rate, err := parseValue[int](cmd, "TXRATE")
+			rate, err := cmd.parseInt("TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfTxRate(iface, vf, rate)
 		case "max_tx_rate":
-			rate, err := parseValue[int](cmd, "TXRATE")
+			rate, err := cmd.parseInt("TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfRate(iface, vf, int(iface.Attrs().Vfs[0].MinTxRate), rate)
 		case "min_tx_rate":
-			rate, err := parseValue[int](cmd, "TXRATE")
+			rate, err := cmd.parseInt("TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfRate(iface, vf, rate, int(iface.Attrs().Vfs[0].MaxTxRate))
 		case "state":
-			state, err := parseValue[uint32](cmd, "STATE")
+			state, err := cmd.parseUint32("STATE")
 			if err != nil {
 				return err
 			}
@@ -317,7 +317,7 @@ func (cmd cmd) linkAdd() error {
 
 		switch cmd.nextToken("type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues") {
 		case "txqueuelen", "txqlen":
-			qlen, err := parseValue[int](cmd, "PACKETS")
+			qlen, err := cmd.parseInt("PACKETS")
 			if err != nil {
 				return err
 			}
@@ -329,26 +329,26 @@ func (cmd cmd) linkAdd() error {
 			}
 			attrs.HardwareAddr = hwAddr
 		case "mtu":
-			mtu, err := parseValue[int](cmd, "MTU")
+			mtu, err := cmd.parseInt("MTU")
 			if err != nil {
 				return err
 			}
 			attrs.MTU = mtu
 		case "index":
-			index, err := parseValue[int](cmd, "IDX")
+			index, err := cmd.parseInt("IDX")
 			if err != nil {
 				return err
 			}
 			attrs.Index = index
 		case "numtxqueues":
-			numtxqueues, err := parseValue[int](cmd, "QUEUE_COUNT")
+			numtxqueues, err := cmd.parseInt("QUEUE_COUNT")
 			if err != nil {
 				return err
 			}
 
 			attrs.NumTxQueues = numtxqueues
 		case "numrxqueues":
-			numrxqueues, err := parseValue[int](cmd, "QUEUE_COUNT")
+			numrxqueues, err := cmd.parseInt("QUEUE_COUNT")
 			if err != nil {
 				return err
 			}
@@ -401,7 +401,7 @@ func (cmd cmd) linkAdd() error {
 		if cmd.nextToken("table") != "table" {
 			return cmd.usage()
 		}
-		tableID, err := parseValue[uint32](cmd, "TABLE")
+		tableID, err := cmd.parseUint32("TABLE")
 		if err != nil {
 			return err
 		}
