@@ -85,6 +85,20 @@ func TestHead(t *testing.T) {
 		}
 	})
 
+	t.Run("request more bytes", func(t *testing.T) {
+		stdout := &bytes.Buffer{}
+		err := run(stdout, nil, 10000, 0, f1.Name())
+		if err != nil {
+			t.Fatalf("expected nil, got %v", err)
+		}
+
+		expected := "f11\nf12\nf13\nf14\nf15"
+
+		if stdout.String() != expected {
+			t.Errorf("%v != %v", expected, stdout.String())
+		}
+	})
+
 	t.Run("file not exists", func(t *testing.T) {
 		stderr := &bytes.Buffer{}
 		err := run(nil, stderr, 0, 0, filepath.Join(dir, "filenotexists"))
