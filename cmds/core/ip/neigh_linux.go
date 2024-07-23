@@ -98,7 +98,7 @@ func (cmd cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 				return nil, err
 			}
 		case "nud":
-			state, err = parseValue[int](cmd, "STATE")
+			state, err = cmd.parseInt("STATE")
 			if err != nil {
 				return nil, err
 			}
@@ -147,10 +147,7 @@ func (cmd cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, e
 		case "proxy":
 			proxy = true
 		case "nud":
-			nudStr, err := parseValue[string](cmd, "STATE")
-			if err != nil {
-				return nil, false, 0, err
-			}
+			nudStr := cmd.nextToken("STATE")
 
 			nud, ok = neighStatesMap[strings.ToLower(nudStr)]
 			if !ok {

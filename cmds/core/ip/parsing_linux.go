@@ -72,38 +72,23 @@ var ErrNotFound = fmt.Errorf("not found")
 func (cmd cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
 	switch mandatory {
 	case true:
-		cmd.cursor++
-		cmd.expectedValues = []string{"dev", "device name"}
-
-		if cmd.args[cmd.cursor] == "dev" {
+		if cmd.nextToken("dev", "device name") == "dev" {
 			cmd.cursor++
 		}
 
 		cmd.expectedValues = []string{"device name"}
-		return netlink.LinkByName(cmd.args[cmd.cursor])
+		return netlink.LinkByName(cmd.currentToken())
 	case false:
-		if cmd.cursor == len(cmd.args)-1 {
+		if !cmd.tokenRemains() {
 			return nil, ErrNotFound
 		}
 
-		cmd.cursor++
-		cmd.expectedValues = []string{"dev", "device name"}
-
-		if cmd.cursor > len(cmd.args)-1 {
-			return nil, ErrNotFound
-		}
-
-		if cmd.args[cmd.cursor] == "dev" {
+		if cmd.nextToken("dev", "device name") == "dev" {
 			cmd.cursor++
-
-			if cmd.cursor > len(cmd.args)-1 {
-				return nil, ErrNotFound
-			}
-
 		}
 
 		cmd.expectedValues = []string{"device name"}
-		return netlink.LinkByName(cmd.args[cmd.cursor])
+		return netlink.LinkByName(cmd.currentToken())
 	}
 
 	return nil, ErrNotFound
@@ -113,25 +98,15 @@ func (cmd cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
 // The type is the next argument after the 'type' keyword.
 // The type is optional in some commands, hence an `ErrNotFound` is returned if the type is not found.
 func (cmd cmd) parseType() (string, error) {
-	if cmd.cursor == len(cmd.args)-1 {
+	if !cmd.tokenRemains() {
 		return "", ErrNotFound
 	}
 
-	cmd.cursor++
-	cmd.expectedValues = []string{"type"}
-
-	if cmd.cursor > len(cmd.args)-1 {
+	if cmd.nextToken("type") != "type" {
 		return "", ErrNotFound
 	}
 
-	if cmd.args[cmd.cursor] != "type" {
-		return "", ErrNotFound
-	}
-
-	cmd.cursor++
-
-	cmd.expectedValues = []string{"type name"}
-	return cmd.args[cmd.cursor], nil
+	return cmd.nextToken("type name"), nil
 }
 
 func (cmd cmd) parseAddress() (net.IP, error) {
@@ -167,58 +142,38 @@ func (cmd cmd) parseHardwareAddress() (net.HardwareAddr, error) {
 	return net.ParseMAC(cmd.nextToken("<MAC-ADDR>"))
 }
 
-type Integer interface {
-	string | uint8 | uint16 | uint32 | uint64 | int | []byte
+func (cmd cmd) parseByte(expected ...string) ([]byte, error) {
+	return hex.DecodeString(cmd.nextToken(expected...))
 }
 
-// parseValue parses a value from the cmd.argument list.
-// expected is the string that represents the expected value.
-// allowed types are string, []byte, int, uint16, uint32, uint64, uint8.
-func parseValue[T Integer](cmd cmd, expected string) (val T, err error) {
-	token := cmd.nextToken(expected)
+func (cmd cmd) parseInt(expected ...string) (int, error) {
+	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 0)
 
-	var value interface{}
+	return int(val), err
+}
 
-	switch any(val).(type) {
-	case string:
-		return any(token).(T), nil
-	case []byte:
-		value, err = hex.DecodeString(token)
-		if err != nil {
-			return val, fmt.Errorf("failed to parse hex: %v", err)
-		}
+func (cmd cmd) parseUint8(expected ...string) (uint8, error) {
+	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 8)
 
-		return any(val).(T), nil
-	case int:
-		value, err = strconv.Atoi(token)
-		if err != nil {
-			return val, fmt.Errorf("failed to parse integer: %v", err)
-		}
+	return uint8(val), err
+}
 
-		return any(val).(T), nil
-	case uint16:
-		value, err = strconv.ParseUint(token, 10, 16)
-		if err != nil {
-			return val, fmt.Errorf("failed to parse integer: %v", err)
-		}
-	case uint32:
-		value, err = strconv.ParseUint(token, 10, 32)
-		if err != nil {
-			return val, fmt.Errorf("failed to parse integer: %v", err)
-		}
-	case uint64:
-		value, err = strconv.ParseUint(token, 10, 64)
-		if err != nil {
-			return val, fmt.Errorf("failed to parse integer: %v", err)
-		}
-	default:
-		value, err = strconv.ParseUint(token, 10, 8)
-		if err != nil {
-			return val, fmt.Errorf("failed to parse integer: %v", err)
-		}
-	}
+func (cmd cmd) parseUint16(expected ...string) (uint16, error) {
+	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 16)
 
-	return any(value).(T), nil
+	return uint16(val), err
+}
+
+func (cmd cmd) parseUint32(expected ...string) (uint32, error) {
+	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 32)
+
+	return uint32(val), err
+}
+
+func (cmd cmd) parseUint64(expected ...string) (uint64, error) {
+	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 64)
+
+	return uint64(val), err
 }
 
 // parseBool parses a boolean value from the cmd.argument list.

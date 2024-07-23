@@ -305,17 +305,14 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 		case "spi":
-			state.Spi, err = parseValue[int](cmd, "SPI")
+			state.Spi, err = cmd.parseInt("SPI")
 			if err != nil {
 				return nil, err
 			}
 		case "enc":
-			name, err := parseValue[string](cmd, "ALGO-NAME")
-			if err != nil {
-				return nil, err
-			}
+			name := cmd.nextToken("ALGO-NAME")
 
-			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
+			key, err := cmd.parseByte("ALGO-KEYMAT")
 			if err != nil {
 				return nil, err
 			}
@@ -325,12 +322,9 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				Key:  key,
 			}
 		case "auth":
-			name, err := parseValue[string](cmd, "ALGO-NAME")
-			if err != nil {
-				return nil, err
-			}
+			name := cmd.nextToken("ALGO-NAME")
 
-			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
+			key, err := cmd.parseByte("ALGO-KEYMAT")
 			if err != nil {
 				return nil, err
 			}
@@ -341,16 +335,13 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 			}
 
 		case "auth-trunc":
-			name, err := parseValue[string](cmd, "ALGO-NAME")
-			if err != nil {
-				return nil, err
-			}
+			name := cmd.nextToken("ALGO-NAME")
 
-			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
+			key, err := cmd.parseByte("ALGO-KEYMAT")
 			if err != nil {
 				return nil, err
 			}
-			truncLen, err := parseValue[int](cmd, "ALGO-TRUNC-LEN")
+			truncLen, err := cmd.parseInt("ALGO-TRUNC-LEN")
 			if err != nil {
 				return nil, err
 			}
@@ -361,16 +352,13 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				TruncateLen: truncLen,
 			}
 		case "aead":
-			name, err := parseValue[string](cmd, "ALGO-NAME")
-			if err != nil {
-				return nil, err
-			}
+			name := cmd.nextToken("ALGO-NAME")
 
-			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
+			key, err := cmd.parseByte("ALGO-KEYMAT")
 			if err != nil {
 				return nil, err
 			}
-			icvLen, err := parseValue[int](cmd, "ALGO-ICV-LEN")
+			icvLen, err := cmd.parseInt("ALGO-ICV-LEN")
 			if err != nil {
 				return nil, err
 			}
@@ -393,12 +381,12 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 		case "reqid":
-			state.Reqid, err = parseValue[int](cmd, "REQID")
+			state.Reqid, err = cmd.parseInt("REQID")
 			if err != nil {
 				return nil, err
 			}
 		case "replay-window":
-			state.ReplayWindow, err = parseValue[int](cmd, "SIZE")
+			state.ReplayWindow, err = cmd.parseInt("SIZE")
 			if err != nil {
 				return nil, err
 			}
@@ -418,7 +406,7 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 		case "if_id":
-			state.Ifid, err = parseValue[int](cmd, "IF_ID")
+			state.Ifid, err = cmd.parseInt("IF_ID")
 			if err != nil {
 				return nil, err
 			}
@@ -453,7 +441,7 @@ func (cmd cmd) parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 		case "spi":
-			state.Spi, err = parseValue[int](cmd, "SPI")
+			state.Spi, err = cmd.parseInt("SPI")
 			if err != nil {
 				return nil, err
 			}
@@ -468,7 +456,7 @@ func (cmd cmd) parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 		case "reqid":
-			state.Reqid, err = parseValue[int](cmd, "REQID")
+			state.Reqid, err = cmd.parseInt("REQID")
 			if err != nil {
 				return nil, err
 			}
@@ -503,7 +491,7 @@ func (cmd cmd) parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 		case "spi":
-			state.Spi, err = parseValue[int](cmd, "SPI")
+			state.Spi, err = cmd.parseInt("SPI")
 			if err != nil {
 				return nil, err
 			}
@@ -546,7 +534,7 @@ func (cmd cmd) parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
 				return nil, false, err
 			}
 		case "spi":
-			state.Spi, err = parseValue[int](cmd, "SPI")
+			state.Spi, err = cmd.parseInt("SPI")
 			if err != nil {
 				return nil, false, err
 			}
@@ -556,7 +544,7 @@ func (cmd cmd) parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
 				return nil, false, err
 			}
 		case "reqid":
-			state.Reqid, err = parseValue[int](cmd, "REQID")
+			state.Reqid, err = cmd.parseInt("REQID")
 			if err != nil {
 				return nil, false, err
 			}
