@@ -51,8 +51,7 @@ func (t *Trace) SendTracesTCP4() {
 }
 
 func (t *Trace) ReceiveTracesTCP4() {
-	laddr := &net.IPAddr{IP: t.srcIP}
-	recvTCPConn, err := net.ListenIP("ip4:tcp", laddr)
+	recvTCPConn, err := net.ListenIP("ip4:tcp", &net.IPAddr{IP: t.srcIP})
 	if err != nil {
 		log.Fatal("bind TCP failure:", err)
 	}
@@ -79,7 +78,6 @@ func (t *Trace) ReceiveTracesTCP4() {
 }
 
 func (t *Trace) ReceiveTracesTCP4ICMP() {
-	//laddr := &net.IPAddr{IP: t.srcIP}
 	recvICMPConn, err := net.ListenIP("ip4:icmp", &net.IPAddr{IP: t.srcIP})
 	if err != nil {
 		log.Fatal("bind failure:", err)

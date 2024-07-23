@@ -51,6 +51,7 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 		go mod.SendTracesICMP4()
 	case "udp6":
 	case "tcp6":
+		go mod.SendTracesTCP6()
 	case "icmp6":
 		go mod.SendTracesICMP6()
 	}
@@ -87,7 +88,9 @@ func runTransmission(cc coms) map[int]*Probe {
 		select {
 		case p = <-cc.sendChan:
 			sendProbes = append(sendProbes, p)
+			//fmt.Println(p.id)
 		case p = <-cc.recvChan:
+			//fmt.Println(p.id)
 			for i, sp := range sendProbes {
 				if sp.id == p.id {
 					sendProbes[i].recvTime = p.recvTime
