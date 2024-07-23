@@ -23,92 +23,48 @@ type Trace struct {
 
 func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trace {
 	var ret *Trace
+	var destAddr, srcAddr net.IP
+	var dPort uint16
 
 	switch proto {
 	case "udp4":
-		ret = &Trace{
-			destIP:       dAddr.To4(),
-			destPort:     33434,
-			srcIP:        sAddr.To4(),
-			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS,
-			SendChan:     cc.sendChan,
-			ReceiveChan:  cc.recvChan,
-			exitChan:     cc.exitChan,
-			debug:        f.Debug,
-			TracesPerHop: DEFNUMTRACES,
-			PacketRate:   1,
-		}
+		destAddr = dAddr.To4()
+		srcAddr = sAddr.To4()
+		dPort = 33434
 	case "udp6":
-		ret = &Trace{
-			destIP:       dAddr.To16(),
-			destPort:     33434,
-			srcIP:        sAddr.To16(),
-			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS,
-			SendChan:     cc.sendChan,
-			ReceiveChan:  cc.recvChan,
-			exitChan:     cc.exitChan,
-			debug:        f.Debug,
-			TracesPerHop: DEFNUMTRACES,
-			PacketRate:   1,
-		}
+		destAddr = dAddr.To16()
+		srcAddr = sAddr.To16()
+		dPort = 33434
 	case "tcp4":
-		ret = &Trace{
-			destIP:       dAddr.To4(),
-			destPort:     443,
-			srcIP:        sAddr.To4(),
-			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS,
-			SendChan:     cc.sendChan,
-			ReceiveChan:  cc.recvChan,
-			exitChan:     cc.exitChan,
-			debug:        f.Debug,
-			TracesPerHop: DEFNUMTRACES,
-			PacketRate:   1,
-		}
+		destAddr = dAddr.To4()
+		srcAddr = sAddr.To4()
+		dPort = 443
 	case "tcp6":
-		ret = &Trace{
-			destIP:       dAddr.To16(),
-			destPort:     443,
-			srcIP:        sAddr.To16(),
-			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS,
-			SendChan:     cc.sendChan,
-			ReceiveChan:  cc.recvChan,
-			exitChan:     cc.exitChan,
-			debug:        f.Debug,
-			TracesPerHop: DEFNUMTRACES,
-			PacketRate:   1,
-		}
+		destAddr = dAddr.To16()
+		srcAddr = sAddr.To16()
+		dPort = 443
 	case "icmp4":
-		ret = &Trace{
-			destIP:       dAddr.To4(),
-			destPort:     0,
-			srcIP:        sAddr.To4(),
-			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS, // for IPv4 for now
-			SendChan:     cc.sendChan,
-			ReceiveChan:  cc.recvChan,
-			exitChan:     cc.exitChan,
-			debug:        f.Debug,
-			TracesPerHop: DEFNUMTRACES,
-			PacketRate:   1,
-		}
+		destAddr = dAddr.To4()
+		srcAddr = sAddr.To4()
+		dPort = 0
 	case "icmp6":
-		ret = &Trace{
-			destIP:       dAddr,
-			destPort:     0,
-			srcIP:        sAddr,
-			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS, // for IPv4 for now
-			SendChan:     cc.sendChan,
-			ReceiveChan:  cc.recvChan,
-			exitChan:     cc.exitChan,
-			debug:        f.Debug,
-			TracesPerHop: DEFNUMTRACES,
-			PacketRate:   1,
-		}
+		destAddr = dAddr.To16()
+		srcAddr = sAddr.To16()
+		dPort = 0
+	}
+
+	ret = &Trace{
+		destIP:       destAddr,
+		destPort:     dPort,
+		srcIP:        srcAddr,
+		PortOffset:   0,
+		MaxHops:      DEFNUMHOPS,
+		SendChan:     cc.sendChan,
+		ReceiveChan:  cc.recvChan,
+		exitChan:     cc.exitChan,
+		debug:        f.Debug,
+		TracesPerHop: DEFNUMTRACES,
+		PacketRate:   1,
 	}
 
 	return ret
