@@ -141,8 +141,6 @@ func (t *Trace) BuildTCP6SYNPkt(sport, dport, ttl uint16, seq uint32, tc int) (*
 		HopLimit: int(ttl),
 	}
 
-	psyHdr := pseudoHeaderTCPIPv6(t.srcIP, t.destIP)
-
 	tcp := TCPHeader{
 		Src:        sport,
 		Dst:        dport,
@@ -157,26 +155,9 @@ func (t *Trace) BuildTCP6SYNPkt(sport, dport, ttl uint16, seq uint32, tc int) (*
 	//payload is TCP Optionheader
 	payload := []byte{0x02, 0x04, 0x05, 0xb4, 0x04, 0x02, 0x08, 0x0a, 0x7f, 0x73, 0xf9, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07}
 
-	var b bytes.Buffer
-	binary.Write(&b, binary.BigEndian, &tcp)
-	binary.Write(&b, binary.BigEndian, &psyHdr)
-	binary.Write(&b, binary.BigEndian, &payload)
-
-	tcp.Checksum = checkSum(b.Bytes())
-
 	var ret bytes.Buffer
 	binary.Write(&ret, binary.BigEndian, &tcp)
 	binary.Write(&ret, binary.BigEndian, &payload)
 
 	return cm, ret.Bytes()
-}
-
-func pseudoHeaderTCPIPv6(src, dst net.IP) []byte {
-	const ProtocolTCP = 6 // Transmission Control
-	const ipv6PseudoHeaderLen = 2*net.IPv6len + 8
-	b := make([]byte, ipv6PseudoHeaderLen)
-	copy(b, src)
-	copy(b[net.IPv6len:], dst)
-	b[len(b)-1] = byte(ProtocolTCP)
-	return b
 }

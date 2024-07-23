@@ -39,6 +39,20 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trac
 			TracesPerHop: DEFNUMTRACES,
 			PacketRate:   1,
 		}
+	case "udp6":
+		ret = &Trace{
+			destIP:       dAddr.To16(),
+			destPort:     33434,
+			srcIP:        sAddr.To16(),
+			PortOffset:   0,
+			MaxHops:      DEFNUMHOPS,
+			SendChan:     cc.sendChan,
+			ReceiveChan:  cc.recvChan,
+			exitChan:     cc.exitChan,
+			debug:        f.Debug,
+			TracesPerHop: DEFNUMTRACES,
+			PacketRate:   1,
+		}
 	case "tcp4":
 		ret = &Trace{
 			destIP:       dAddr.To4(),

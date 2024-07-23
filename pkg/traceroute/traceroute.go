@@ -27,8 +27,6 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 		return err
 	}
 
-	fmt.Println(dAddr)
-
 	sAddr, err := srcAddr(prot)
 	if err != nil {
 		return err
@@ -50,6 +48,7 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 	case "icmp4":
 		go mod.SendTracesICMP4()
 	case "udp6":
+		go mod.SendTracesUDP6()
 	case "tcp6":
 		go mod.SendTracesTCP6()
 	case "icmp6":
@@ -99,7 +98,6 @@ func runTransmission(cc coms) map[int]*Probe {
 					// Add to map
 					printMap[int(sp.id)] = sendProbes[i]
 					if p.saddr.Equal(sp.dest) {
-						fmt.Println("final")
 						return printMap
 					}
 				}
