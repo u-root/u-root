@@ -109,3 +109,14 @@ func (t *TCPHeader) checksum(ip *ipv4.Header, payload []byte) {
 	binary.Write(&b, binary.BigEndian, &payload)
 	t.Checksum = checkSum(b.Bytes())
 }
+
+func parseTCP(data []byte) (*TCPHeader, error) {
+	r := bytes.NewReader(data)
+	hdr := &TCPHeader{}
+
+	if err := binary.Read(r, binary.BigEndian, hdr); err != nil {
+		return nil, err
+	}
+
+	return hdr, nil
+}

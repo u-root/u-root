@@ -31,7 +31,7 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trac
 			destPort:     33434,
 			srcIP:        sAddr.To4(),
 			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS, // for IPv4 for now
+			MaxHops:      DEFNUMHOPS,
 			SendChan:     cc.sendChan,
 			ReceiveChan:  cc.recvChan,
 			exitChan:     cc.exitChan,
@@ -45,7 +45,21 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trac
 			destPort:     443,
 			srcIP:        sAddr.To4(),
 			PortOffset:   0,
-			MaxHops:      DEFNUMHOPS, // for IPv4 for now
+			MaxHops:      DEFNUMHOPS,
+			SendChan:     cc.sendChan,
+			ReceiveChan:  cc.recvChan,
+			exitChan:     cc.exitChan,
+			debug:        f.Debug,
+			TracesPerHop: DEFNUMTRACES,
+			PacketRate:   1,
+		}
+	case "tcp6":
+		ret = &Trace{
+			destIP:       dAddr.To16(),
+			destPort:     443,
+			srcIP:        sAddr.To16(),
+			PortOffset:   0,
+			MaxHops:      DEFNUMHOPS,
 			SendChan:     cc.sendChan,
 			ReceiveChan:  cc.recvChan,
 			exitChan:     cc.exitChan,
