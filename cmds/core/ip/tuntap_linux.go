@@ -21,15 +21,13 @@ Where: USER  := { STRING | NUMBER }
 )
 
 func (cmd cmd) tuntap() error {
-	cursor++
-	if len(arg[cursor:]) == 0 {
+	if !cmd.tokenRemains() {
 		return cmd.tuntapShow()
 	}
 
-	expectedValues = []string{"add", "del", "show", "list", "lst", "help"}
-	c := findPrefix(arg[cursor], expectedValues)
+	c := cmd.findPrefix("add", "del", "show", "list", "lst", "help")
 
-	options, err := parseTunTap()
+	options, err := cmd.parseTunTap()
 	if err != nil {
 		return err
 	}
@@ -46,7 +44,7 @@ func (cmd cmd) tuntap() error {
 
 		return nil
 	default:
-		return usage()
+		return cmd.usage()
 	}
 }
 
@@ -66,39 +64,37 @@ var defaultTuntapOptions = tuntapOptions{
 	flags: netlink.TUNTAP_DEFAULTS,
 }
 
-func parseTunTap() (tuntapOptions, error) {
+func (cmd cmd) parseTunTap() (tuntapOptions, error) {
 	var err error
 
 	options := defaultTuntapOptions
 
-	expectedValues = []string{"mode", "user", "group", "one_queue", "pi", "vnet_hdr", "multi_queue", "name", "dev"}
-	for cursor < len(arg)-1 {
-		cursor++
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.findPrefix("mode", "user", "group", "one_queue", "pi", "vnet_hdr", "multi_queue", "name", "dev") {
 		case "mode":
-			cursor++
-			expectedValues = []string{"tun, tap"}
-
-			switch arg[cursor] {
+			switch cmd.nextToken("tun, tap") {
 			case "tun":
 				options.mode = netlink.TUNTAP_MODE_TUN
 			case "tap":
 				options.mode = netlink.TUNTAP_MODE_TAP
 			default:
-				return tuntapOptions{}, fmt.Errorf("invalid mode %s", arg[cursor])
+				return tuntapOptions{}, fmt.Errorf("invalid mode %s", cmd.currentToken())
 			}
 		case "user":
-			options.user, err = parseInt("USER")
+			options.user, err = parseValue[int](cmd, "USER")
 			if err != nil {
 				return tuntapOptions{}, err
 			}
 		case "group":
-			options.group, err = parseInt("GROUP")
+			options.group, err = parseValue[int](cmd, "GROUP")
 			if err != nil {
 				return tuntapOptions{}, err
 			}
 		case "dev", "name":
-			options.name = parseString("NAME")
+			options.name, err = parseValue[string](cmd, "NAME")
+			if err != nil {
+				return tuntapOptions{}, err
+			}
 		case "one_queue":
 			options.flags |= netlink.TUNTAP_ONE_QUEUE
 		case "pi":
@@ -110,7 +106,7 @@ func parseTunTap() (tuntapOptions, error) {
 			options.flags &^= netlink.TUNTAP_ONE_QUEUE
 
 		default:
-			return tuntapOptions{}, usage()
+			return tuntapOptions{}, cmd.usage()
 		}
 	}
 
@@ -234,8 +230,8 @@ func (cmd cmd) tuntapShow() error {
 		prints = append(prints, obj)
 	}
 
-	if f.json {
-		return printJSON(cmd.out, prints)
+	if cmd.opts.json {
+		return printJSON(cmd, prints)
 	}
 
 	for _, print := range prints {

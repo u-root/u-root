@@ -32,35 +32,81 @@ TYPE := { bareudp | bond | bond_slave | bridge | bridge_slave |
 `
 
 func (cmd cmd) address() error {
-	if len(arg) == 1 {
+	if !cmd.tokenRemains() {
 		return cmd.showAllLinks(true)
 	}
-	cursor++
-	expectedValues = []string{"add", "replace", "del", "show", "flush", "help"}
-	argument := arg[cursor]
 
-	c := findPrefix(argument, expectedValues)
+	c := cmd.findPrefix("add", "replace", "del", "show", "flush", "help")
 	switch c {
 	case "show":
 		return cmd.addressShow()
-	case "add", "change", "replace", "del":
-		return cmd.addressAddReplaceDel(c)
+	case "add":
+		tokenAddr := cmd.nextToken("CIDR format address")
+		addr, err := netlink.ParseAddr(tokenAddr)
+		if err != nil {
+			return err
+		}
+
+		iface, err := cmd.parseDeviceName(true)
+		if err != nil {
+			return err
+		}
+
+		if err := cmd.handle.AddrAdd(iface, addr); err != nil {
+			return fmt.Errorf("adding %v to %v failed: %v", tokenAddr, cmd.currentToken(), err)
+		}
+
+		return nil
+	case "replace":
+		tokenAddr := cmd.nextToken("CIDR format address")
+		addr, err := netlink.ParseAddr(tokenAddr)
+		if err != nil {
+			return err
+		}
+
+		iface, err := cmd.parseDeviceName(true)
+		if err != nil {
+			return err
+		}
+
+		if err := cmd.handle.AddrReplace(iface, addr); err != nil {
+			return fmt.Errorf("replacing %v on %v failed: %v", tokenAddr, cmd.currentToken(), err)
+		}
+
+		return nil
+	case "del":
+		tokenAddr := cmd.nextToken("CIDR format address")
+		addr, err := netlink.ParseAddr(tokenAddr)
+		if err != nil {
+			return err
+		}
+
+		iface, err := cmd.parseDeviceName(true)
+		if err != nil {
+			return err
+		}
+
+		if err := cmd.handle.AddrDel(iface, addr); err != nil {
+			return fmt.Errorf("deleting %v from %v failed: %v", tokenAddr, cmd.currentToken(), err)
+		}
+
+		return nil
 	case "flush":
 		return cmd.addressFlush()
 	case "help":
 		fmt.Fprint(cmd.out, addressHelp)
 		return nil
 	default:
-		return usage()
+		return cmd.usage()
 	}
 }
 
 func (cmd cmd) addressShow() error {
-	device, err := parseDeviceName(false)
+	device, err := cmd.parseDeviceName(false)
 	if errors.Is(err, ErrNotFound) {
 		return cmd.showAllLinks(true)
 	}
-	typeName, err := parseType()
+	typeName, err := cmd.parseType()
 	if errors.Is(err, ErrNotFound) {
 		return cmd.showLink(device, true)
 	}
@@ -68,41 +114,8 @@ func (cmd cmd) addressShow() error {
 	return cmd.showLink(device, true, typeName)
 }
 
-func (cmd cmd) addressAddReplaceDel(argument string) error {
-	cursor++
-	expectedValues = []string{"CIDR format address"}
-	addr, err := netlink.ParseAddr(arg[cursor])
-	if err != nil {
-		return err
-	}
-
-	iface, err := parseDeviceName(true)
-	if err != nil {
-		return err
-	}
-
-	c := findPrefix(argument, expectedValues)
-	switch c {
-	case "add":
-		if err := cmd.handle.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("adding %v to %v failed: %v", arg[1], arg[2], err)
-		}
-	case "replace":
-		if err := cmd.handle.AddrReplace(iface, addr); err != nil {
-			return fmt.Errorf("replacing %v on %v failed: %v", arg[1], arg[2], err)
-		}
-	case "del":
-		if err := cmd.handle.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("deleting %v from %v failed: %v", arg[1], arg[2], err)
-		}
-	default:
-		return fmt.Errorf("subcommand %s not yet implemented, expected: %v", c, expectedValues)
-	}
-	return nil
-}
-
 func (cmd cmd) addressFlush() error {
-	iface, err := parseDeviceName(true)
+	iface, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return err
 	}
@@ -112,9 +125,9 @@ func (cmd cmd) addressFlush() error {
 	}
 
 	for _, a := range addr {
-		for idx := 1; idx <= f.loops; idx++ {
+		for idx := 1; idx <= cmd.opts.loops; idx++ {
 			if err := cmd.handle.AddrDel(iface, &a); err != nil {
-				if idx != f.loops {
+				if idx != cmd.opts.loops {
 					continue
 				}
 

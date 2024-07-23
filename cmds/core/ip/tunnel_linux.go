@@ -6,9 +6,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"reflect"
+	"strconv"
 
 	"github.com/vishvananda/netlink"
 )
@@ -36,17 +36,15 @@ var (
 )
 
 func (cmd cmd) tunnel() error {
-	cursor++
-	if len(arg[cursor:]) == 0 {
+	if !cmd.tokenRemains() {
 		return cmd.showAllTunnels()
 	}
 
-	expectedValues = []string{"add", "del", "show"}
 	var c string
 
-	switch c = findPrefix(arg[cursor], expectedValues); c {
+	switch c = cmd.findPrefix("add", "del", "show"); c {
 	case "show", "add", "del":
-		options, err := parseTunnel()
+		options, err := cmd.parseTunnel()
 		if err != nil {
 			return err
 		}
@@ -60,7 +58,7 @@ func (cmd cmd) tunnel() error {
 			return cmd.showTunnels(options)
 		}
 	}
-	return usage()
+	return cmd.usage()
 }
 
 type options struct {
@@ -88,85 +86,64 @@ func defaultOptions() options {
 	}
 }
 
-func parseTunnel() (*options, error) {
+func (cmd cmd) parseTunnel() (*options, error) {
 	options := defaultOptions()
-	cursor++
 
-	expectedValues = []string{"name", "mode", "remote", "local", "ttl", "tos", "ikey", "okey", "dev"}
-	for cursor < len(arg) {
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("name", "mode", "remote", "local", "ttl", "tos", "ikey", "okey", "dev") {
 		case "mode":
-			cursor++
-			expectedValues = []string{"gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit"}
-
-			switch arg[cursor] {
+			token := cmd.nextToken("gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit")
+			switch token {
 			case "gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit":
-				options.mode = arg[cursor]
-				options.modes = append(options.modes, filterMap[arg[cursor]]...)
+				options.mode = token
+				options.modes = append(options.modes, filterMap[token]...)
 			default:
-				return nil, fmt.Errorf("invalid mode %s", arg[cursor])
+				return nil, fmt.Errorf("invalid mode %s", token)
 			}
 		case "remote":
-			cursor++
-			expectedValues = []string{"IP_ADDRESS, any"}
-
-			options.remote = arg[cursor]
+			options.remote = cmd.nextToken("IP_ADDRESS, any")
 		case "local":
-			cursor++
-			expectedValues = []string{"IP_ADDRESS, any"}
-
-			options.local = arg[cursor]
+			options.local = cmd.nextToken("IP_ADDRESS, any")
 		case "ttl":
-			expectedValues = []string{"TTL (0...255) | inherit"}
-			if arg[cursor+1] == "inherit" {
-				cursor++
+			token := cmd.nextToken("0...255", "inherit")
+			if token == "inherit" {
+				cmd.nextToken()
 				options.ttl = 0
 				continue
 			}
 
-			ttl, err := parseUint8("TTL (0...255) | inherit")
+			ttl, err := strconv.Atoi(token)
 			if err != nil {
 				return nil, err
 			}
 
 			options.ttl = int(ttl)
 		case "tos":
-			tos, err := parseUint8("TOS (0...255)")
+			tos, err := parseValue[uint8](cmd, "TOS (0...255)")
 			if err != nil {
 				return nil, err
 			}
 
 			options.tos = int(tos)
 		case "ikey":
-			cursor++
-			expectedValues = []string{"key"}
-
-			iKey, err := parseUint16("KEY")
+			iKey, err := parseValue[uint16](cmd, "KEY")
 			if err != nil {
 				return nil, err
 			}
 
 			options.iKey = int(iKey)
 		case "okey":
-			cursor++
-			expectedValues = []string{"key"}
-
-			oKey, err := parseUint16("KEY")
+			oKey, err := parseValue[uint16](cmd, "KEY")
 			if err != nil {
 				return nil, err
 			}
 
 			options.oKey = int(oKey)
 		case "dev":
-			cursor++
-			expectedValues = []string{"PHYS_DEV"}
-
-			options.dev = arg[cursor]
+			options.dev = cmd.nextToken("PHYS_DEV")
 		default:
-			options.name = arg[cursor]
+			options.name = cmd.nextToken("NAME")
 		}
-
-		cursor++
 	}
 
 	if reflect.DeepEqual(options.modes, []string{}) {
@@ -236,7 +213,7 @@ func (cmd cmd) showTunnels(op *options) error {
 		tunnels = append(tunnels, l)
 	}
 
-	return printTunnels(cmd.out, tunnels)
+	return cmd.printTunnels(tunnels)
 }
 
 type Tunnel struct {
@@ -247,7 +224,7 @@ type Tunnel struct {
 	TTL    string `json:"ttl,omitempty"`
 }
 
-func printTunnels(w io.Writer, tunnels []netlink.Link) error {
+func (cmd cmd) printTunnels(tunnels []netlink.Link) error {
 	pTunnels := make([]Tunnel, 0, len(tunnels))
 
 	for _, t := range tunnels {
@@ -298,8 +275,8 @@ func printTunnels(w io.Writer, tunnels []netlink.Link) error {
 		pTunnels = append(pTunnels, tunnel)
 	}
 
-	if f.json {
-		return printJSON(w, pTunnels)
+	if cmd.opts.json {
+		return printJSON(cmd, pTunnels)
 	}
 
 	for _, t := range pTunnels {
@@ -307,7 +284,7 @@ func printTunnels(w io.Writer, tunnels []netlink.Link) error {
 		if t.TTL != "" {
 			ttlStr = fmt.Sprintf(" ttl %s", t.TTL)
 		}
-		fmt.Fprintf(w, "%s %s/ip remote %s local %s%s\n", t.IfName, t.Mode, t.Remote, t.Local, ttlStr)
+		fmt.Fprintf(cmd.out, "%s %s/ip remote %s local %s%s\n", t.IfName, t.Mode, t.Remote, t.Local, ttlStr)
 	}
 
 	return nil

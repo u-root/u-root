@@ -26,17 +26,13 @@ STATE := { delay | failed | incomplete | noarp | none |
 `
 
 func (cmd cmd) neigh() error {
-	if len(arg) == 1 {
+	if !cmd.tokenRemains() {
 		return cmd.showAllNeighbours(-1, false)
 	}
 
-	cursor++
-	expectedValues = []string{"show", "add", "del", "replace", "flush", "get", "help"}
-	argument := arg[cursor]
-
-	switch c := findPrefix(argument, expectedValues); c {
+	switch c := cmd.findPrefix("show", "add", "del", "replace", "flush", "get", "help"); c {
 	case "add", "del", "replace":
-		neigh, err := parseNeighAddDelReplaceParams()
+		neigh, err := cmd.parseNeighAddDelReplaceParams()
 		if err != nil {
 			return err
 		}
@@ -55,32 +51,29 @@ func (cmd cmd) neigh() error {
 	case "flush":
 		return cmd.neighFlush()
 	case "get":
-		cursor++
-		expectedValues = []string{"CIDR format address"}
-		ipAddr := net.ParseIP(arg[cursor])
-		if ipAddr == nil {
-			return fmt.Errorf("invalid IP address: %s", arg[cursor])
-		}
-		iface, err := parseDeviceName(true)
+		ip, err := cmd.parseAddress()
 		if err != nil {
 			return err
 		}
 
-		return cmd.showNeighbours(-1, false, &ipAddr, iface)
+		iface, err := cmd.parseDeviceName(true)
+		if err != nil {
+			return err
+		}
+
+		return cmd.showNeighbours(-1, false, &ip, iface)
 	case "help":
 		fmt.Fprint(cmd.out, neighHelp)
 		return nil
 	}
 
-	return usage()
+	return cmd.usage()
 }
 
-func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
-	cursor++
-	expectedValues = []string{"CIDR format address"}
-	addr := net.ParseIP(arg[cursor])
-	if addr == nil {
-		return nil, fmt.Errorf("invalid IP address: %s", arg[cursor])
+func (cmd cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
+	addr, err := cmd.parseAddress()
+	if err != nil {
+		return nil, err
 	}
 
 	var (
@@ -89,30 +82,23 @@ func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		deviceFound bool
 		state       int
 		flag        int
-		err         error
 	)
 
-	for {
-		if cursor == len(arg)-1 {
-			break
-		}
-
-		cursor++
-		expectedValues = []string{"dev", "lladdr", "nud", "router", "extern_learn"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch c := cmd.nextToken("dev", "lladdr", "nud", "router", "extern_learn"); c {
 		case "dev":
-			iface, err = parseDeviceName(true)
+			iface, err = cmd.parseDeviceName(true)
 			if err != nil {
 				return nil, err
 			}
 			deviceFound = true
 		case "lladdr":
-			llAddr, err = parseHardwareAddress()
+			llAddr, err = cmd.parseHardwareAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "nud":
-			state, err = parseInt("STATE")
+			state, err = parseValue[int](cmd, "STATE")
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +108,7 @@ func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		case "extern_learn":
 			flag |= netlink.NTF_EXT_LEARNED
 		default:
-			return nil, fmt.Errorf("unsupported option %q, expected: %v", arg[cursor], expectedValues)
+			return nil, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.expectedValues)
 		}
 	}
 
@@ -145,19 +131,15 @@ func parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 	}, nil
 }
 
-func parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) {
+func (cmd cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) {
 	nud = -1
 
-	for {
-		if cursor == len(arg)-1 {
-			break
-		}
+	var ok bool
 
-		cursor++
-		expectedValues = []string{"dev", "proxy", "nud"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch c := cmd.nextToken("dev", "proxy", "nud"); c {
 		case "dev":
-			dev, err := parseDeviceName(true)
+			dev, err := cmd.parseDeviceName(true)
 			iface = dev
 			if err != nil {
 				return nil, false, 0, err
@@ -165,12 +147,18 @@ func parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) 
 		case "proxy":
 			proxy = true
 		case "nud":
-			nud, err = parseInt("STATE")
+			nudStr, err := parseValue[string](cmd, "STATE")
 			if err != nil {
 				return nil, false, 0, err
 			}
+
+			nud, ok = neighStatesMap[strings.ToLower(nudStr)]
+			if !ok {
+				return nil, false, 0, fmt.Errorf("invalid state %q", nudStr)
+			}
+
 		default:
-			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", arg[cursor], expectedValues)
+			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.expectedValues)
 		}
 	}
 
@@ -187,6 +175,18 @@ var neighStates = map[int]string{
 	netlink.NUD_FAILED:     "FAILED",
 	netlink.NUD_NOARP:      "NOARP",
 	netlink.NUD_PERMANENT:  "PERMANENT",
+}
+
+var neighStatesMap = map[string]int{
+	"none":       netlink.NUD_NONE,
+	"incomplete": netlink.NUD_INCOMPLETE,
+	"reachable":  netlink.NUD_REACHABLE,
+	"stale":      netlink.NUD_STALE,
+	"delay":      netlink.NUD_DELAY,
+	"probe":      netlink.NUD_PROBE,
+	"failed":     netlink.NUD_FAILED,
+	"noarp":      netlink.NUD_NOARP,
+	"permanent":  netlink.NUD_PERMANENT,
 }
 
 func getState(state int) string {
@@ -260,7 +260,7 @@ func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...ne
 		}
 	}
 
-	if f.json {
+	if cmd.opts.json {
 		neighs := make([]Neigh, 0, len(filteredNeighs))
 
 		for idx, v := range filteredNeighs {
@@ -270,20 +270,20 @@ func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...ne
 				LLAddr: v.HardwareAddr.String(),
 			}
 
-			if !f.brief {
+			if !cmd.opts.brief {
 				neigh.State = getState(v.State)
 			}
 
 			neighs = append(neighs, neigh)
 		}
 
-		return printJSON(cmd.out, neighs)
+		return printJSON(cmd, neighs)
 	}
 
 	neighFmt := "%s dev %s%s%s %s\n"
 	neighBriefFmt := "%-39s %-13s %-9s\n"
 	for idx, v := range filteredNeighs {
-		if f.brief {
+		if cmd.opts.brief {
 			fmt.Fprintf(cmd.out, neighBriefFmt, v.IP, ifaceNames[idx], v.HardwareAddr)
 		} else {
 			llAddr := ""
@@ -305,7 +305,7 @@ func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...ne
 }
 
 func (cmd cmd) neighShow() error {
-	iface, proxy, nud, err := parseNeighShowFlush()
+	iface, proxy, nud, err := cmd.parseNeighShowFlush()
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ func (cmd cmd) neighFlush() error {
 		state  uint16
 	)
 
-	iface, proxy, nud, err := parseNeighShowFlush()
+	iface, proxy, nud, err := cmd.parseNeighShowFlush()
 	if err != nil {
 		return err
 	}

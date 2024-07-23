@@ -37,25 +37,23 @@ ENCAP := { espinudp | espinudp-nonike | espintcp } SPORT DPORT OADDR`
 )
 
 func (cmd cmd) xfrmState() error {
-	cursor++
-	expectedValues = []string{"add", "update", "allocspi", "delete", "deleteall", "show", "list", "flush", "count", "help"}
-	switch findPrefix(arg[cursor], expectedValues) {
+	switch cmd.findPrefix("add", "update", "allocspi", "delete", "deleteall", "show", "list", "flush", "count", "help") {
 	case "add":
-		xfrmState, err := parseXfrmStateAddUpdate()
+		xfrmState, err := cmd.parseXfrmStateAddUpdate()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmStateAdd(xfrmState)
 	case "update":
-		xfrmState, err := parseXfrmStateAddUpdate()
+		xfrmState, err := cmd.parseXfrmStateAddUpdate()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmStateUpdate(xfrmState)
 	case "allocspi":
-		xfrmState, err := parseXfrmStateAllocSPI()
+		xfrmState, err := cmd.parseXfrmStateAllocSPI()
 		if err != nil {
 			return err
 		}
@@ -65,14 +63,14 @@ func (cmd cmd) xfrmState() error {
 		}
 
 	case "delete":
-		xfrmState, err := parseXfrmStateDeleteGet()
+		xfrmState, err := cmd.parseXfrmStateDeleteGet()
 		if err != nil {
 			return err
 		}
 
 		return cmd.handle.XfrmStateDel(xfrmState)
 	case "get":
-		xfrmState, err := parseXfrmStateDeleteGet()
+		xfrmState, err := cmd.parseXfrmStateDeleteGet()
 		if err != nil {
 			return err
 		}
@@ -85,14 +83,14 @@ func (cmd cmd) xfrmState() error {
 		printXfrmState(cmd.out, xfrmState, true)
 	case "list", "show":
 
-		xfrmState, noKeys, err := parseXfrmStateListDeleteAll()
+		xfrmState, noKeys, err := cmd.parseXfrmStateListDeleteAll()
 		if err != nil {
 			return err
 		}
 
-		return printFilteredXfrmStates(cmd.out, xfrmState, family, noKeys)
+		return cmd.printFilteredXfrmStates(xfrmState, noKeys)
 	case "count":
-		states, err := cmd.handle.XfrmStateList(family)
+		states, err := cmd.handle.XfrmStateList(cmd.family)
 		if err != nil {
 			return err
 		}
@@ -107,23 +105,22 @@ func (cmd cmd) xfrmState() error {
 
 		return nil
 	default:
-		return usage()
+		return cmd.usage()
 	}
 
 	return nil
 }
 
 func (cmd cmd) xfrmStateFlush() error {
-	if cursor == len(arg) {
+	if !cmd.tokenRemains() {
 		return cmd.handle.XfrmStateFlush(0)
 	}
 
-	cursor++
-	if arg[cursor] != "proto" {
-		return usage()
+	if cmd.nextToken("proto") != "proto" {
+		return cmd.usage()
 	}
 
-	proto, err := parseXfrmProto()
+	proto, err := cmd.parseXfrmProto()
 	if err != nil {
 		return err
 	}
@@ -132,7 +129,7 @@ func (cmd cmd) xfrmStateFlush() error {
 }
 
 func (cmd cmd) xfrmStateDeleteAll() error {
-	filter, noKeys, err := parseXfrmStateListDeleteAll()
+	filter, noKeys, err := cmd.parseXfrmStateListDeleteAll()
 	if err != nil {
 		return err
 	}
@@ -141,7 +138,7 @@ func (cmd cmd) xfrmStateDeleteAll() error {
 		return fmt.Errorf("deleteall does not support nokeys")
 	}
 
-	states, err := cmd.handle.XfrmStateList(family)
+	states, err := cmd.handle.XfrmStateList(cmd.family)
 	if err != nil {
 		return err
 	}
@@ -176,8 +173,8 @@ func (cmd cmd) xfrmStateDeleteAll() error {
 	return nil
 }
 
-func printFilteredXfrmStates(w io.Writer, filter *netlink.XfrmState, family int, noKeys bool) error {
-	states, err := netlink.XfrmStateList(family)
+func (cmd cmd) printFilteredXfrmStates(filter *netlink.XfrmState, noKeys bool) error {
+	states, err := netlink.XfrmStateList(cmd.family)
 	if err != nil {
 		return err
 	}
@@ -203,8 +200,8 @@ func printFilteredXfrmStates(w io.Writer, filter *netlink.XfrmState, family int,
 				continue
 			}
 		}
-		printXfrmState(w, &state, noKeys)
-		fmt.Fprintln(w)
+		printXfrmState(cmd.out, &state, noKeys)
+		fmt.Fprintln(cmd.out)
 	}
 
 	return nil
@@ -285,42 +282,40 @@ func printXfrmState(w io.Writer, state *netlink.XfrmState, noKeys bool) {
 	fmt.Fprintf(w, "statistics: replay-window %d replay %d failed %d bytes %d packets %d\n", state.Statistics.ReplayWindow, state.Statistics.Replay, state.Statistics.Failed, state.Statistics.Bytes, state.Statistics.Packets)
 }
 
-func parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
+func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 	var err error
 
 	state := &netlink.XfrmState{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		expectedValues = []string{"src", "dst", "proto", "spi", "enc", "auth", "auth-trunc", "aead", "comp", "mode", "mark", "reqid", "replay-window", "limit", "encap", "output-mark", "if_id"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "proto", "spi", "enc", "auth", "auth-trunc", "aead", "comp", "mode", "mark", "reqid", "replay-window", "limit", "encap", "output-mark", "if_id") {
 		case "src":
-			state.Src, err = parseAddress()
+			state.Src, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "dst":
-			state.Dst, err = parseAddress()
+			state.Dst, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "proto":
-			state.Proto, err = parseXfrmProto()
+			state.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 		case "spi":
-			state.Spi, err = parseInt("SPI")
+			state.Spi, err = parseValue[int](cmd, "SPI")
 			if err != nil {
 				return nil, err
 			}
 		case "enc":
-			name := parseString("ALGO-NAME")
-			key, err := parseByte("ALGO-KEYMAT")
+			name, err := parseValue[string](cmd, "ALGO-NAME")
+			if err != nil {
+				return nil, err
+			}
+
+			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
 			if err != nil {
 				return nil, err
 			}
@@ -330,8 +325,12 @@ func parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				Key:  key,
 			}
 		case "auth":
-			name := parseString("ALGO-NAME")
-			key, err := parseByte("ALGO-KEYMAT")
+			name, err := parseValue[string](cmd, "ALGO-NAME")
+			if err != nil {
+				return nil, err
+			}
+
+			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
 			if err != nil {
 				return nil, err
 			}
@@ -342,12 +341,16 @@ func parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 			}
 
 		case "auth-trunc":
-			name := parseString("ALGO-NAME")
-			key, err := parseByte("ALGO-KEYMAT")
+			name, err := parseValue[string](cmd, "ALGO-NAME")
 			if err != nil {
 				return nil, err
 			}
-			truncLen, err := parseInt("ALGO-TRUNC-LEN")
+
+			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
+			if err != nil {
+				return nil, err
+			}
+			truncLen, err := parseValue[int](cmd, "ALGO-TRUNC-LEN")
 			if err != nil {
 				return nil, err
 			}
@@ -358,12 +361,16 @@ func parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				TruncateLen: truncLen,
 			}
 		case "aead":
-			name := parseString("ALGO-NAME")
-			key, err := parseByte("ALGO-KEYMAT")
+			name, err := parseValue[string](cmd, "ALGO-NAME")
 			if err != nil {
 				return nil, err
 			}
-			icvLen, err := parseInt("ALGO-ICV-LEN")
+
+			key, err := parseValue[[]byte](cmd, "ALGO-KEYMAT")
+			if err != nil {
+				return nil, err
+			}
+			icvLen, err := parseValue[int](cmd, "ALGO-ICV-LEN")
 			if err != nil {
 				return nil, err
 			}
@@ -376,156 +383,144 @@ func parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 		case "comp":
 			return nil, fmt.Errorf("comp not implemented")
 		case "mode":
-			state.Mode, err = parseXfrmMode()
+			state.Mode, err = cmd.parseXfrmMode()
 			if err != nil {
 				return nil, err
 			}
 		case "mark":
-			state.Mark, err = parseXfrmMark()
+			state.Mark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		case "reqid":
-			state.Reqid, err = parseInt("REQID")
+			state.Reqid, err = parseValue[int](cmd, "REQID")
 			if err != nil {
 				return nil, err
 			}
 		case "replay-window":
-			state.ReplayWindow, err = parseInt("SIZE")
+			state.ReplayWindow, err = parseValue[int](cmd, "SIZE")
 			if err != nil {
 				return nil, err
 			}
 		case "limit":
-			state.Limits, err = parseXfrmLimit()
+			state.Limits, err = cmd.parseXfrmLimit()
 			if err != nil {
 				return nil, err
 			}
 		case "encap":
-			state.Encap, err = parseXfrmEncap()
+			state.Encap, err = cmd.parseXfrmEncap()
 			if err != nil {
 				return nil, err
 			}
 		case "output-mark":
-			state.OutputMark, err = parseXfrmMark()
+			state.OutputMark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		case "if_id":
-			state.Ifid, err = parseInt("IF_ID")
+			state.Ifid, err = parseValue[int](cmd, "IF_ID")
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
 	return state, nil
 }
 
-func parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
+func (cmd cmd) parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
 	var err error
 
 	state := &netlink.XfrmState{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		expectedValues = []string{"src", "dst", "proto", "spi", "mode", "mark", "reqid"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "proto", "spi", "mode", "mark", "reqid") {
 		case "src":
-			state.Src, err = parseAddress()
+			state.Src, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "dst":
-			state.Dst, err = parseAddress()
+			state.Dst, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "proto":
-			state.Proto, err = parseXfrmProto()
+			state.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 		case "spi":
-			state.Spi, err = parseInt("SPI")
+			state.Spi, err = parseValue[int](cmd, "SPI")
 			if err != nil {
 				return nil, err
 			}
 		case "mode":
-			state.Mode, err = parseXfrmMode()
+			state.Mode, err = cmd.parseXfrmMode()
 			if err != nil {
 				return nil, err
 			}
 		case "mark":
-			state.Mark, err = parseXfrmMark()
+			state.Mark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		case "reqid":
-			state.Reqid, err = parseInt("REQID")
+			state.Reqid, err = parseValue[int](cmd, "REQID")
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
 	return state, nil
 }
 
-func parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
+func (cmd cmd) parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
 	var err error
 
 	state := &netlink.XfrmState{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		expectedValues = []string{"src", "dst", "proto", "spi", "mark"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "proto", "spi", "mark") {
 		case "src":
-			state.Src, err = parseAddress()
+			state.Src, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "dst":
-			state.Dst, err = parseAddress()
+			state.Dst, err = cmd.parseAddress()
 			if err != nil {
 				return nil, err
 			}
 		case "proto":
-			state.Proto, err = parseXfrmProto()
+			state.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, err
 			}
 		case "spi":
-			state.Spi, err = parseInt("SPI")
+			state.Spi, err = parseValue[int](cmd, "SPI")
 			if err != nil {
 				return nil, err
 			}
 		case "mark":
-			state.Mark, err = parseXfrmMark()
+			state.Mark, err = cmd.parseXfrmMark()
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, usage()
+			return nil, cmd.usage()
 		}
 	}
 
 	return state, nil
 }
 
-func parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
+func (cmd cmd) parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
 	var (
 		noKeys bool
 		err    error
@@ -533,48 +528,42 @@ func parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
 
 	state := &netlink.XfrmState{}
 
-	for {
-		cursor++
-
-		if cursor == len(arg) {
-			break
-		}
-		expectedValues = []string{"src", "dst", "proto", "spi", "mode", "reqid", "nokeys"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("src", "dst", "proto", "spi", "mode", "reqid", "nokeys") {
 		case "src":
-			state.Src, err = parseAddress()
+			state.Src, err = cmd.parseAddress()
 			if err != nil {
 				return nil, false, err
 			}
 		case "dst":
-			state.Dst, err = parseAddress()
+			state.Dst, err = cmd.parseAddress()
 			if err != nil {
 				return nil, false, err
 			}
 		case "proto":
-			state.Proto, err = parseXfrmProto()
+			state.Proto, err = cmd.parseXfrmProto()
 			if err != nil {
 				return nil, false, err
 			}
 		case "spi":
-			state.Spi, err = parseInt("SPI")
+			state.Spi, err = parseValue[int](cmd, "SPI")
 			if err != nil {
 				return nil, false, err
 			}
 		case "mode":
-			state.Mode, err = parseXfrmMode()
+			state.Mode, err = cmd.parseXfrmMode()
 			if err != nil {
 				return nil, false, err
 			}
 		case "reqid":
-			state.Reqid, err = parseInt("REQID")
+			state.Reqid, err = parseValue[int](cmd, "REQID")
 			if err != nil {
 				return nil, false, err
 			}
 		case "nokeys":
 			noKeys = true
 		default:
-			return nil, false, usage()
+			return nil, false, cmd.usage()
 		}
 	}
 

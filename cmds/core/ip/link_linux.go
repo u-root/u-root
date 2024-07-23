@@ -7,7 +7,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net"
 	"strconv"
 
 	"github.com/vishvananda/netlink"
@@ -62,15 +61,14 @@ TYPE := { bareudp | bond |bridge | dummy |
 `
 
 func (cmd cmd) linkSet() error {
-	iface, err := parseDeviceName(true)
+	iface, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return err
 	}
 
-	for cursor < len(arg)-1 {
-		cursor++
-		expectedValues = []string{"address", "up", "down", "arp", "promisc", "multicast", "allmulticast", "mtu", "name", "alias", "vf", "master", "nomaster", "netns", "txqueuelen", "txqlen", "group"}
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		token := cmd.nextToken("address", "up", "down", "arp", "promisc", "multicast", "allmulticast", "mtu", "name", "alias", "vf", "master", "nomaster", "netns", "txqueuelen", "txqlen", "group")
+		switch token {
 		case "address":
 			return cmd.setLinkHardwareAddress(iface)
 		case "up":
@@ -82,36 +80,28 @@ func (cmd cmd) linkSet() error {
 				return fmt.Errorf("%v can't make it down: %v", iface.Attrs().Name, err)
 			}
 		case "arp":
-			cursor++
-			expectedValues = []string{"on", "off"}
-			switch arg[cursor] {
+			switch cmd.nextToken("on", "off") {
 			case "on":
 				return cmd.handle.LinkSetARPOn(iface)
 			case "off":
 				return cmd.handle.LinkSetARPOff(iface)
 			}
 		case "promisc":
-			cursor++
-			expectedValues = []string{"on", "off"}
-			switch arg[cursor] {
+			switch cmd.nextToken("on", "off") {
 			case "on":
 				return cmd.handle.SetPromiscOn(iface)
 			case "off":
 				return cmd.handle.SetPromiscOff(iface)
 			}
 		case "multicast":
-			cursor++
-			expectedValues = []string{"on", "off"}
-			switch arg[cursor] {
+			switch cmd.nextToken("on", "off") {
 			case "on":
 				return cmd.handle.LinkSetMulticastOn(iface)
 			case "off":
 				return cmd.handle.LinkSetMulticastOff(iface)
 			}
 		case "allmulticast":
-			cursor++
-			expectedValues = []string{"on", "off"}
-			switch arg[cursor] {
+			switch cmd.nextToken("on", "off") {
 			case "on":
 				return cmd.handle.LinkSetAllmulticastOn(iface)
 			case "off":
@@ -126,9 +116,7 @@ func (cmd cmd) linkSet() error {
 		case "vf":
 			return cmd.setLinkVf(iface)
 		case "master":
-			cursor++
-			expectedValues = []string{"device name"}
-			master, err := cmd.handle.LinkByName(arg[cursor])
+			master, err := cmd.handle.LinkByName(cmd.nextToken("device name"))
 			if err != nil {
 				return err
 			}
@@ -148,9 +136,9 @@ func (cmd cmd) linkSet() error {
 }
 
 func (cmd cmd) setLinkHardwareAddress(iface netlink.Link) error {
-	hwAddr, err := net.ParseMAC(arg[cursor])
+	hwAddr, err := cmd.parseHardwareAddress()
 	if err != nil {
-		return fmt.Errorf("invalid mac address %v: %v", arg[cursor], err)
+		return err
 	}
 
 	err = cmd.handle.LinkSetHardwareAddr(iface, hwAddr)
@@ -162,60 +150,51 @@ func (cmd cmd) setLinkHardwareAddress(iface netlink.Link) error {
 }
 
 func (cmd cmd) setLinkMTU(iface netlink.Link) error {
-	cursor++
+	token := cmd.nextToken("MTU")
 
-	mtu, err := strconv.Atoi(arg[cursor])
+	mtu, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid mtu %v: %v", arg[cursor], err)
+		return fmt.Errorf("invalid mtu %v: %v", token, err)
 	}
 
 	return cmd.handle.LinkSetMTU(iface, mtu)
 }
 
 func (cmd cmd) setLinkGroup(iface netlink.Link) error {
-	cursor++
+	token := cmd.nextToken("GROUP")
 
-	group, err := strconv.Atoi(arg[cursor])
+	group, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid group %v: %v", arg[cursor], err)
+		return fmt.Errorf("invalid group %v: %v", token, err)
 	}
 
 	return cmd.handle.LinkSetMTU(iface, group)
 }
 
 func (cmd cmd) setLinkName(iface netlink.Link) error {
-	cursor++
-	expectedValues = []string{"<name>"}
-	name := arg[cursor]
-
-	return cmd.handle.LinkSetName(iface, name)
+	return cmd.handle.LinkSetName(iface, cmd.nextToken("name"))
 }
 
 func (cmd cmd) setLinkAlias(iface netlink.Link) error {
-	cursor++
-	expectedValues = []string{"<alias name>"}
-	alias := arg[cursor]
-
-	return cmd.handle.LinkSetAlias(iface, alias)
+	return cmd.handle.LinkSetAlias(iface, cmd.nextToken("<alias name>"))
 }
 
 func (cmd cmd) setLinkTxQLen(iface netlink.Link) error {
-	cursor++
-	expectedValues = []string{"<qlen>"}
-	qlen, err := strconv.Atoi(arg[cursor])
+	token := cmd.nextToken("<qlen>")
+	qlen, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid queuelen %v: %v", arg[cursor], err)
+		return fmt.Errorf("invalid queuelen %v: %v", token, err)
 	}
 
 	return cmd.handle.LinkSetTxQLen(iface, qlen)
 }
 
 func (cmd cmd) setLinkNetns(iface netlink.Link) error {
-	cursor++
-	expectedValues = []string{"<netns pid>, <netns path>"}
-	ns, err := strconv.Atoi(arg[cursor])
+	token := cmd.nextToken("PID", "NAME")
+
+	ns, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid int %v: %v", arg[cursor], err)
+		return fmt.Errorf("invalid int %v: %v", token, err)
 	}
 
 	if err := cmd.handle.LinkSetNsPid(iface, ns); err != nil {
@@ -228,90 +207,85 @@ func (cmd cmd) setLinkNetns(iface netlink.Link) error {
 }
 
 func (cmd cmd) setLinkVf(iface netlink.Link) error {
-	vf, err := parseInt("VF")
+	vf, err := parseValue[int](cmd, "VF")
 	if err != nil {
 		return err
 	}
 
-	cursor++
-
-	expectedValues = []string{"vlan", "mac", "qos", "rate", "max_tx_rate", "min_tx_rate", "state", "spoofchk", "trust", "node_guid", "port_guid"}
-	for cursor < len(arg)-1 {
-		switch arg[cursor] {
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("vlan", "mac", "qos", "rate", "max_tx_rate", "min_tx_rate", "state", "spoofchk", "trust", "node_guid", "port_guid") {
 		case "mac":
-			addr, err := parseHardwareAddress()
+			addr, err := cmd.parseHardwareAddress()
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfHardwareAddr(iface, vf, addr)
 		case "vlan":
-			vlan, err := parseInt("VLANID")
+			vlan, err := parseValue[int](cmd, "VLANID")
 			if err != nil {
 				return err
 			}
 
-			if cursor == len(arg)-1 {
+			if !cmd.tokenRemains() {
 				return cmd.handle.LinkSetVfVlan(iface, vf, vlan)
 			}
 
-			cursor++
-			expectedValues = []string{"qos"}
-			switch arg[cursor] {
+			switch cmd.nextToken("qos") {
 			case "qos":
-				qos, err := parseInt("VLAN-QOS")
+				qos, err := parseValue[int](cmd, "VLAN-QOS")
 				if err != nil {
 					return err
 				}
 
 				return cmd.handle.LinkSetVfVlanQos(iface, vf, vlan, qos)
 			default:
-				return usage()
+				return cmd.usage()
 			}
 		case "rate":
-			rate, err := parseInt("TXRATE")
+			rate, err := parseValue[int](cmd, "TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfTxRate(iface, vf, rate)
 		case "max_tx_rate":
-			rate, err := parseInt("TXRATE")
+			rate, err := parseValue[int](cmd, "TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfRate(iface, vf, int(iface.Attrs().Vfs[0].MinTxRate), rate)
 		case "min_tx_rate":
-			rate, err := parseInt("TXRATE")
+			rate, err := parseValue[int](cmd, "TXRATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfRate(iface, vf, rate, int(iface.Attrs().Vfs[0].MaxTxRate))
 		case "state":
-			state, err := parseUint32("STATE")
+			state, err := parseValue[uint32](cmd, "STATE")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfState(iface, vf, state)
 		case "spoofchk":
-			check, err := parseBool()
+			check, err := cmd.parseBool("on", "off")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfSpoofchk(iface, vf, check)
 		case "trust":
-			trust, err := parseBool()
+			trust, err := cmd.parseBool("on", "off")
 			if err != nil {
 				return err
 			}
 
 			return cmd.handle.LinkSetVfTrust(iface, vf, trust)
 		case "node_guid":
-			nodeguid, err := parseHardwareAddress()
+			nodeguid, err := cmd.parseHardwareAddress()
 			if err != nil {
 				return err
 			}
@@ -319,7 +293,7 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 			return netlink.LinkSetVfNodeGUID(iface, vf, nodeguid)
 
 		case "port_guid":
-			portguid, err := parseHardwareAddress()
+			portguid, err := cmd.parseHardwareAddress()
 			if err != nil {
 				return err
 			}
@@ -327,60 +301,54 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 			return netlink.LinkSetVfPortGUID(iface, vf, portguid)
 		}
 	}
-	return usage()
+	return cmd.usage()
 }
 
 func (cmd cmd) linkAdd() error {
-	name, err := parseName()
-	if err != nil {
-		return err
-	}
-	attrs := netlink.LinkAttrs{Name: name}
+	attrs := netlink.LinkAttrs{Name: cmd.parseName()}
 
 	// Parse link attributes
 	optionsDone := false
 
-	for {
-		if cursor == len(arg)-1 || optionsDone {
+	for cmd.tokenRemains() {
+		if optionsDone {
 			break
 		}
 
-		cursor++
-		expectedValues = []string{"type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues"}
-		switch arg[cursor] {
+		switch cmd.nextToken("type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues") {
 		case "txqueuelen", "txqlen":
-			qlen, err := parseInt("PACKETS")
+			qlen, err := parseValue[int](cmd, "PACKETS")
 			if err != nil {
 				return err
 			}
 			attrs.TxQLen = qlen
 		case "address":
-			hwAddr, err := parseHardwareAddress()
+			hwAddr, err := cmd.parseHardwareAddress()
 			if err != nil {
 				return err
 			}
 			attrs.HardwareAddr = hwAddr
 		case "mtu":
-			mtu, err := parseInt("MTU")
+			mtu, err := parseValue[int](cmd, "MTU")
 			if err != nil {
 				return err
 			}
 			attrs.MTU = mtu
 		case "index":
-			index, err := parseInt("IDX")
+			index, err := parseValue[int](cmd, "IDX")
 			if err != nil {
 				return err
 			}
 			attrs.Index = index
 		case "numtxqueues":
-			numtxqueues, err := parseInt("QUEUE_COUNT")
+			numtxqueues, err := parseValue[int](cmd, "QUEUE_COUNT")
 			if err != nil {
 				return err
 			}
 
 			attrs.NumTxQueues = numtxqueues
 		case "numrxqueues":
-			numrxqueues, err := parseInt("QUEUE_COUNT")
+			numrxqueues, err := parseValue[int](cmd, "QUEUE_COUNT")
 			if err != nil {
 				return err
 			}
@@ -391,8 +359,7 @@ func (cmd cmd) linkAdd() error {
 		}
 	}
 
-	cursor--
-	typeName, err := parseType()
+	typeName, err := cmd.parseType()
 	if err != nil {
 		return err
 	}
@@ -431,12 +398,10 @@ func (cmd cmd) linkAdd() error {
 	case "gre":
 		return cmd.handle.LinkAdd(&netlink.Gretun{LinkAttrs: attrs})
 	case "vrf":
-		cursor++
-		expectedValues = []string{"table"}
-		if arg[cursor] != "table" {
-			return usage()
+		if cmd.nextToken("table") != "table" {
+			return cmd.usage()
 		}
-		tableID, err := parseUint32("TABLE")
+		tableID, err := parseValue[uint32](cmd, "TABLE")
 		if err != nil {
 			return err
 		}
@@ -456,7 +421,7 @@ func (cmd cmd) linkAdd() error {
 }
 
 func (cmd cmd) linkDel() error {
-	link, err := parseDeviceName(true)
+	link, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return err
 	}
@@ -465,12 +430,12 @@ func (cmd cmd) linkDel() error {
 }
 
 func (cmd cmd) linkShow() error {
-	dev, err := parseDeviceName(false)
+	dev, err := cmd.parseDeviceName(false)
 	if errors.Is(err, ErrNotFound) {
 		return cmd.showAllLinks(false)
 	}
 
-	typeName, err := parseType()
+	typeName, err := cmd.parseType()
 	if errors.Is(err, ErrNotFound) {
 		return cmd.showLink(dev, false)
 	}
@@ -479,15 +444,11 @@ func (cmd cmd) linkShow() error {
 }
 
 func (cmd cmd) link() error {
-	if len(arg) == 1 {
+	if !cmd.tokenRemains() {
 		return cmd.linkShow()
 	}
 
-	cursor++
-	expectedValues = []string{"show", "set", "add", "delete", "help"}
-	argument := arg[cursor]
-
-	switch findPrefix(argument, expectedValues) {
+	switch cmd.findPrefix("show", "set", "add", "delete", "help") {
 	case "show":
 		return cmd.linkShow()
 	case "set":
@@ -500,6 +461,6 @@ func (cmd cmd) link() error {
 		fmt.Fprint(cmd.out, linkHelp)
 		return nil
 	default:
-		return usage()
+		return cmd.usage()
 	}
 }

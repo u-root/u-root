@@ -46,14 +46,12 @@ func (cmd cmd) monitor() error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	expectedValues = []string{"all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "all-nsid"}
-
 	var singleOptionSelected bool
 
-	for cursor < len(arg)-1 {
-		cursor++
+	for cmd.tokenRemains() {
+		token := cmd.nextToken("all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "all-nsid")
 
-		switch arg[cursor] {
+		switch token {
 		case "all":
 			if singleOptionSelected {
 				return fmt.Errorf("all option can't be used with other options")
@@ -89,10 +87,10 @@ func (cmd cmd) monitor() error {
 			prefixLabel = "[PREFIX]"
 			routeLabel = "[ROUTE]"
 		case "mroute", "netconf", "nexthop", "nsid", "prefix", "rule":
-			return fmt.Errorf("monitoring %s is not yet supported", arg[cursor])
+			return fmt.Errorf("monitoring %s is not yet supported", cmd.currentToken())
 		default:
 
-			return usage()
+			return cmd.usage()
 		}
 
 	}
@@ -117,10 +115,10 @@ func (cmd cmd) monitor() error {
 
 	for {
 
-		if f.timeStamp {
+		if cmd.opts.timeStamp {
 			currentTime := time.Now()
 			timestamp = currentTime.Format("Timestamp: Mon Jan 2 15:04:05 2006") + fmt.Sprintf(" %06d usec", currentTime.Nanosecond()/1000) + "\n"
-		} else if f.timeStampShort {
+		} else if cmd.opts.timeStampShort {
 			currentTime := time.Now()
 			timestamp = currentTime.Format("[2006-01-02T15:04:05.000000]")
 		}
