@@ -80,7 +80,7 @@ func (cmd cmd) xfrmState() error {
 			return err
 		}
 
-		printXfrmState(cmd.out, xfrmState, true)
+		printXfrmState(cmd.Out, *xfrmState, true)
 	case "list", "show":
 
 		xfrmState, noKeys, err := cmd.parseXfrmStateListDeleteAll()
@@ -88,20 +88,25 @@ func (cmd cmd) xfrmState() error {
 			return err
 		}
 
-		return cmd.printFilteredXfrmStates(xfrmState, noKeys)
-	case "count":
-		states, err := cmd.handle.XfrmStateList(cmd.family)
+		states, err := netlink.XfrmStateList(cmd.Family)
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprintf(cmd.out, "XFRM states: %d\n", len(states))
+		cmd.printFilteredXfrmStates(states, xfrmState, noKeys)
+	case "count":
+		states, err := cmd.handle.XfrmStateList(cmd.Family)
+		if err != nil {
+			return err
+		}
+
+		fmt.Fprintf(cmd.Out, "XFRM states: %d\n", len(states))
 	case "flush":
 		return cmd.xfrmStateFlush()
 	case "deleteall":
 		return cmd.xfrmStateDeleteAll()
 	case "help":
-		fmt.Fprint(cmd.out, xfrmStateHelp)
+		fmt.Fprint(cmd.Out, xfrmStateHelp)
 
 		return nil
 	default:
@@ -138,7 +143,7 @@ func (cmd cmd) xfrmStateDeleteAll() error {
 		return fmt.Errorf("deleteall does not support nokeys")
 	}
 
-	states, err := cmd.handle.XfrmStateList(cmd.family)
+	states, err := cmd.handle.XfrmStateList(cmd.Family)
 	if err != nil {
 		return err
 	}
@@ -173,12 +178,7 @@ func (cmd cmd) xfrmStateDeleteAll() error {
 	return nil
 }
 
-func (cmd cmd) printFilteredXfrmStates(filter *netlink.XfrmState, noKeys bool) error {
-	states, err := netlink.XfrmStateList(cmd.family)
-	if err != nil {
-		return err
-	}
-
+func (cmd cmd) printFilteredXfrmStates(states []netlink.XfrmState, filter *netlink.XfrmState, noKeys bool) {
 	for _, state := range states {
 		if filter != nil {
 			if filter.Src != nil && !filter.Src.Equal(state.Src) {
@@ -200,14 +200,12 @@ func (cmd cmd) printFilteredXfrmStates(filter *netlink.XfrmState, noKeys bool) e
 				continue
 			}
 		}
-		printXfrmState(cmd.out, &state, noKeys)
-		fmt.Fprintln(cmd.out)
+		printXfrmState(cmd.Out, state, noKeys)
+		fmt.Fprintln(cmd.Out)
 	}
-
-	return nil
 }
 
-func printXfrmState(w io.Writer, state *netlink.XfrmState, noKeys bool) {
+func printXfrmState(w io.Writer, state netlink.XfrmState, noKeys bool) {
 	fmt.Fprintf(w, "src %s dst %s\n", state.Src, state.Dst)
 	fmt.Fprintf(w, "\tproto %s spi 0x%x mode %s\n", state.Proto, state.Spi, state.Mode)
 
@@ -218,7 +216,7 @@ func printXfrmState(w io.Writer, state *netlink.XfrmState, noKeys bool) {
 	}
 
 	if state.ReplayWindow != 0 {
-		options += fmt.Sprintf("replay-window %d", state.ReplayWindow)
+		options += fmt.Sprintf(" replay-window %d", state.ReplayWindow)
 	}
 
 	if options != "\t" {
@@ -227,7 +225,7 @@ func printXfrmState(w io.Writer, state *netlink.XfrmState, noKeys bool) {
 
 	if state.Auth != nil {
 		if noKeys {
-			fmt.Fprintf(w, "\tauth %s %d\n", state.Auth.Name, len(state.Auth.Key)*8)
+			fmt.Fprintf(w, "\tauth %s %dbits\n", state.Auth.Name, len(state.Auth.Key)*8)
 		} else {
 			fmt.Fprintf(w, "\tauth %s 0x%x %dbits\n", state.Auth.Name, state.Auth.Key, len(state.Auth.Key)*8)
 		}
@@ -363,7 +361,7 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 				return nil, err
 			}
 
-			state.Crypt = &netlink.XfrmStateAlgo{
+			state.Aead = &netlink.XfrmStateAlgo{
 				Name:   name,
 				Key:    key,
 				ICVLen: icvLen,

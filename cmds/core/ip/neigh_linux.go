@@ -63,7 +63,7 @@ func (cmd cmd) neigh() error {
 
 		return cmd.showNeighbours(-1, false, &ip, iface)
 	case "help":
-		fmt.Fprint(cmd.out, neighHelp)
+		fmt.Fprint(cmd.Out, neighHelp)
 		return nil
 	}
 
@@ -108,7 +108,7 @@ func (cmd cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		case "extern_learn":
 			flag |= netlink.NTF_EXT_LEARNED
 		default:
-			return nil, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.expectedValues)
+			return nil, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.ExpectedValues)
 		}
 	}
 
@@ -155,7 +155,7 @@ func (cmd cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, e
 			}
 
 		default:
-			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.expectedValues)
+			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.ExpectedValues)
 		}
 	}
 
@@ -216,25 +216,17 @@ type Neigh struct {
 }
 
 func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
-	var (
-		flags uint8
-		state uint16
-	)
-
-	if proxy {
-		flags |= netlink.NTF_PROXY
+	flags, state, err := cmd.neighFlagState(proxy, nud)
+	if err != nil {
+		return err
 	}
 
-	if nud != -1 && nud <= math.MaxUint16 {
-		state = uint16(nud)
-	}
-
-	filteredNeighs := make([]netlink.Neigh, 0)
-	ifaceNames := make([]string, 0)
+	neighs := make([]netlink.Neigh, 0)
+	linkNames := make([]string, 0)
 
 	for _, iface := range ifaces {
-		neighs, err := cmd.handle.NeighListExecute(netlink.Ndmsg{
-			Family: netlink.FAMILY_ALL,
+		linkNeighs, err := cmd.handle.NeighListExecute(netlink.Ndmsg{
+			Family: uint8(cmd.Family),
 			Index:  uint32(iface.Attrs().Index),
 			Flags:  flags,
 			State:  state,
@@ -243,45 +235,62 @@ func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...ne
 			return err
 		}
 
-		for _, v := range neighs {
-			if address != nil && !v.IP.Equal(*address) {
-				continue
-			}
+		neighs = append(neighs, linkNeighs...)
 
-			if v.State&netlink.NUD_NOARP != 0 {
-				continue
-			}
-
-			filteredNeighs = append(filteredNeighs, v)
-			ifaceNames = append(ifaceNames, iface.Attrs().Name)
+		for range linkNeighs {
+			linkNames = append(linkNames, iface.Attrs().Name)
 		}
 	}
 
-	if cmd.opts.json {
-		neighs := make([]Neigh, 0, len(filteredNeighs))
+	filteredNeighs, filteredLinkNames := filterNeighsByAddr(neighs, linkNames, address)
 
-		for idx, v := range filteredNeighs {
+	return cmd.printNeighs(filteredNeighs, filteredLinkNames)
+}
+
+func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP) ([]netlink.Neigh, []string) {
+	filtered := make([]netlink.Neigh, 0)
+	filteredLinkNames := make([]string, 0)
+
+	for idx, neigh := range neighs {
+		if addr != nil {
+			if *addr != nil && !neigh.IP.Equal(*addr) {
+				continue
+			}
+		}
+		if neigh.State != netlink.NUD_NOARP {
+			filtered = append(filtered, neigh)
+			filteredLinkNames = append(filteredLinkNames, linkNames[idx])
+		}
+	}
+	return filtered, filteredLinkNames
+}
+
+func (cmd cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
+	if cmd.Opts.JSON {
+		pNeighs := make([]Neigh, 0, len(neighs))
+
+		for idx, v := range neighs {
 			neigh := Neigh{
 				Dst:    v.IP,
-				Dev:    ifaceNames[idx],
+				Dev:    ifacesNames[idx],
 				LLAddr: v.HardwareAddr.String(),
 			}
 
-			if !cmd.opts.brief {
+			if !cmd.Opts.Brief {
 				neigh.State = getState(v.State)
 			}
 
-			neighs = append(neighs, neigh)
+			pNeighs = append(pNeighs, neigh)
 		}
 
-		return printJSON(cmd, neighs)
+		return printJSON(cmd, pNeighs)
 	}
 
 	neighFmt := "%s dev %s%s%s %s\n"
 	neighBriefFmt := "%-39s %-13s %-9s\n"
-	for idx, v := range filteredNeighs {
-		if cmd.opts.brief {
-			fmt.Fprintf(cmd.out, neighBriefFmt, v.IP, ifaceNames[idx], v.HardwareAddr)
+	for idx, v := range neighs {
+		if cmd.Opts.Brief {
+			fmt.Fprintf(cmd.Out, neighBriefFmt, v.IP, ifacesNames[idx], v.HardwareAddr)
 		} else {
 			llAddr := ""
 			routerStr := ""
@@ -294,7 +303,7 @@ func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...ne
 				routerStr = " router"
 			}
 
-			fmt.Fprintf(cmd.out, neighFmt, v.IP, ifaceNames[idx], llAddr, routerStr, getState(v.State))
+			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, routerStr, getState(v.State))
 		}
 	}
 
@@ -335,18 +344,15 @@ func (cmd cmd) neighFlush() error {
 		ifaces = append(ifaces, iface)
 	}
 
-	if proxy {
-		flags |= netlink.NTF_PROXY
-	}
-
-	if nud != -1 && nud <= math.MaxUint16 {
-		state = uint16(nud)
+	flags, state, err = cmd.neighFlagState(proxy, nud)
+	if err != nil {
+		return err
 	}
 
 	for _, iface := range ifaces {
 
 		msg := netlink.Ndmsg{
-			Family: netlink.FAMILY_ALL,
+			Family: uint8(cmd.Family),
 			Index:  uint32(iface.Attrs().Index),
 			Flags:  flags,
 			State:  state,
@@ -365,4 +371,23 @@ func (cmd cmd) neighFlush() error {
 	}
 
 	return nil
+}
+
+func (cmd cmd) neighFlagState(proxy bool, nud int) (uint8, uint16, error) {
+	var flags uint8
+	var state uint16
+
+	if cmd.Family < 0 || cmd.Family > 255 {
+		return 0, 0, fmt.Errorf("invalid family %d", cmd.Family)
+	}
+
+	if proxy {
+		flags |= netlink.NTF_PROXY
+	}
+
+	if nud != -1 && nud <= math.MaxUint16 {
+		state = uint16(nud)
+	}
+
+	return flags, state, nil
 }

@@ -73,8 +73,14 @@ func (cmd cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 				return nil, err
 			}
 		case "level":
-			if cmd.nextToken("required", "use") == "use" {
+			c := cmd.nextToken("required", "use")
+			switch c {
+			case "use":
 				tmpl.Optional = 1
+			case "required":
+				tmpl.Optional = 0
+			default:
+				return nil, cmd.usage()
 			}
 		default:
 			return nil, cmd.usage()
@@ -118,7 +124,7 @@ func (cmd cmd) xfrmPolicy() error {
 			return err
 		}
 
-		printXfrmPolicy(cmd.out, policy)
+		printXfrmPolicy(cmd.Out, *policy)
 	case "deleteall":
 		policy, err := cmd.parseXfrmPolicyListDeleteAll()
 		if err != nil {
@@ -132,18 +138,25 @@ func (cmd cmd) xfrmPolicy() error {
 			return err
 		}
 
-		return printFilteredXfrmPolicies(cmd.out, policy, cmd.family)
-	case "flush":
-		return cmd.handle.XfrmPolicyFlush()
-	case "count":
-		policies, err := cmd.handle.XfrmPolicyList(cmd.family)
+		policies, err := netlink.XfrmPolicyList(cmd.Family)
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprintf(cmd.out, "XFRM policies: %d\n", len(policies))
+		printFilteredXfrmPolicies(cmd.Out, policies, policy)
+
+		return nil
+	case "flush":
+		return cmd.handle.XfrmPolicyFlush()
+	case "count":
+		policies, err := cmd.handle.XfrmPolicyList(cmd.Family)
+		if err != nil {
+			return err
+		}
+
+		fmt.Fprintf(cmd.Out, "XFRM policies: %d\n", len(policies))
 	case "help":
-		fmt.Fprint(cmd.out, xfrmPolicyHelp)
+		fmt.Fprint(cmd.Out, xfrmPolicyHelp)
 
 		return nil
 	default:
@@ -363,9 +376,9 @@ func (cmd cmd) parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
 	return policy, nil
 }
 
-func printXfrmPolicy(w io.Writer, policy *netlink.XfrmPolicy) {
+func printXfrmPolicy(w io.Writer, policy netlink.XfrmPolicy) {
 	fmt.Fprintf(w, "src %s dst %s\n", policy.Src, policy.Dst)
-	fmt.Fprintf(w, "\tdir %s priorioty %d\n", policy.Dir, policy.Priority)
+	fmt.Fprintf(w, "\t%s priority %d\n", policy.Dir, policy.Priority)
 	fmt.Fprintf(w, "\tproto %s sport %d dport %d\n", policy.Proto, policy.SrcPort, policy.DstPort)
 	fmt.Fprintf(w, "\taction %s if_id %d\n", policy.Action, policy.Ifid)
 
@@ -382,12 +395,7 @@ func printXfrmPolicy(w io.Writer, policy *netlink.XfrmPolicy) {
 	}
 }
 
-func printFilteredXfrmPolicies(w io.Writer, filter *netlink.XfrmPolicy, family int) error {
-	policies, err := netlink.XfrmPolicyList(family)
-	if err != nil {
-		return err
-	}
-
+func printFilteredXfrmPolicies(w io.Writer, policies []netlink.XfrmPolicy, filter *netlink.XfrmPolicy) {
 	for _, policy := range policies {
 		if filter != nil {
 			if filter.Src != nil && filter.Src.String() == policy.Src.String() {
@@ -423,9 +431,7 @@ func printFilteredXfrmPolicies(w io.Writer, filter *netlink.XfrmPolicy, family i
 				continue
 			}
 		}
-		printXfrmPolicy(w, &policy)
+		printXfrmPolicy(w, policy)
 		fmt.Fprintln(w)
 	}
-
-	return nil
 }

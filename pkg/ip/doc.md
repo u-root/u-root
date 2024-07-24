@@ -19,45 +19,40 @@ OPTIONS := { -V[ersion] | -s[tatistics] | -d[etails] | -r[esolve] | -h[uman-read
 
 Options
 
-- [ ] -V[ersion]
-- [ ] -s[tatistics] / -stats
-- [ ] -d[etails]
+- [x] -s[tatistics] / -stats
+- [x] -d[etails]
 - [ ] -r[esolve]
-- [ ] -h[uman-readable]
-- [ ] -iec
-- [ ] -j[son]
-- [ ] -p[retty]
-- [ ] -f[amily]
-- [ ] -4
-- [ ] -6
+- [x] -h[uman-readable]
+- [x] -iec
+- [x] -j[son]
+- [x] -p[retty]
+- [x] -f[amily]
+- [x] -4
+- [x] -6
 - [ ] -M
 - [ ] -B
-- [ ] -0
-- [ ] -l[oops]
-- [ ] -br[ief]
-- [ ] -o[neline]
-- [ ] -t[imestamp]
-- [ ] -ts[hort]
-- [ ] -b[atch] [filename]
-- [ ] -rc[vbuf] [size]
-- [ ] -n[etns] name
-- [ ] -N[umeric]
-- [ ] -a[ll]
+- [x] -0
+- [x] -l[oops]
+- [x] -br[ief]
+- [x] -o[neline]
+- [x] -t[imestamp]
+- [x] -ts[hort]
+- [x] -b[atch] [filename]
+- [x] -rc[vbuf] [size]
+- [x] -n[etns] name
+- [x] -N[umeric]
+- [x] -a[ll]
 - [ ] -c[olor]
-- [ ] -echo
 
 Command
 
 - [x] address
   - [x] add
   - [ ] change
-  - [ ] replace
+  - [x] replace
   - [x] del
-  - [ ] show
-  - [ ] save
-  - [ ] flush
-  - [ ] showdump
-  - [ ] restore
+  - [x] show
+  - [x] flush
 
 - [ ] addrlabel
   - [ ] add
@@ -102,7 +97,7 @@ Command
 
 - [x] link
   - [x] add
-  - [ ] delete
+  - [x] delete
   - [x] set
   - [x] show
   - [ ] xstats
@@ -110,7 +105,7 @@ Command
   - [ ] property
     - [ ] add
     - [ ] del
-  - [ ] help
+  - [x] help
 
 - [ ] macsec
   - [ ] add
@@ -126,19 +121,19 @@ Command
   - [ ] show
   - [ ] help
 
-- [ ] monitor
-  - [ ] all
-  - [ ] address
-  - [ ] link
+- [x] monitor
+  - [x] all
+  - [x] address
+  - [x] link
   - [ ] mroute
-  - [ ] neigh
+  - [x] neigh
   - [ ] netconf
   - [ ] nexthop
   - [ ] nsid
   - [ ] prefix
-  - [ ] route
+  - [x] route
   - [ ] rule
-  - [ ] help
+  - [x] help
   
 - [ ] mptcp
   - [ ] endpoint
@@ -157,13 +152,13 @@ Command
   - [ ] help
 
 - [x] neigh(bour/bor)
-  - [ ] add
-  - [ ] del
+  - [x] add
+  - [x] del
   - [ ] change
-  - [ ] replace
+  - [x] replace
   - [x] show
-  - [ ] flush
-  - [ ] get
+  - [x] flush
+  - [x] get
 
 - [ ] netconf
   - [ ] show
@@ -200,18 +195,15 @@ Command
   - [ ] help
 
 - [x] route
-  - [ ] list
-  - [ ] flush
-  - [ ] save
-  - [ ] restore
-  - [ ] showdump
-  - [ ] get
+  - [x] list
+  - [x] flush
+  - [x] get
   - [x] add
   - [x] del
   - [ ] change
-  - [ ] append
-  - [ ] replace
-  - [ ] help
+  - [x] append
+  - [x] replace
+  - [x] help
 
 - [ ] rule / mrule
   - [ ] list
@@ -231,11 +223,11 @@ Command
     - [ ] show
   - [ ] help
 
-- [ ] tcp_metrics
-  - [ ] show
+- [x] tcp_metrics
+  - [x] show
   - [ ] flush
   - [ ] delete
-  - [ ] help
+  - [x] help
 
 - [ ] token
   - [ ] list
@@ -244,62 +236,62 @@ Command
   - [ ] get
   - [ ] help
 
-- [ ] tunnel
-  - [ ] add
+- [x] tunnel
+  - [x] add
   - [ ] change
-  - [ ] del
+  - [x] del
   - [ ] show
   - [ ] prl
   - [ ] 6rd
-  - [ ] help
+  - [x] help
 
-- [ ] tuntap / tap
-  - [ ] add
-  - [ ] del
-  - [ ] show
-  - [ ] list
-  - [ ] lst
-  - [ ] help
+- [x] tuntap / tap
+  - [x] add
+  - [x] del
+  - [x] show
+  - [x] list
+  - [x] lst
+  - [x] help
 
-- [ ] vrf
-  - [ ] show
+- [x] vrf
+  - [x] show
   - [ ] exec
   - [ ] identify
   - [ ] pids
-  - [ ] help
+  - [x] help
 
-- [ ] xfrm
-  - [ ] state
-    - [ ] add
-    - [ ] update
-    - [ ] allocspi
-    - [ ] delete
-    - [ ] get
-    - [ ] deleteall
-    - [ ] list
-    - [ ] flush
-    - [ ] count
-  - [ ] policy
-    - [ ] add
-    - [ ] update
-    - [ ] delete
-    - [ ] get
-    - [ ] deleteall
-    - [ ] list
-    - [ ] flush
-    - [ ] count
-    - [ ] set
+- [x] xfrm
+  - [x] state
+    - [x] add
+    - [x] update
+    - [x] allocspi
+    - [x] delete
+    - [x] get
+    - [x] deleteall
+    - [x] list
+    - [x] flush
+    - [x] count
+  - [x] policy
+    - [x] add
+    - [x] update
+    - [x] delete
+    - [x] get
+    - [x] deleteall
+    - [x] list
+    - [x] flush
+    - [x] count
+    - [x] set
     - [ ] setdefault
     - [ ] getdefault
-  - [ ] monitor
-    - [ ] all
+  - [x] monitor
+    - [x] all
     - [ ] aquire
-    - [ ] expire
+    - [x] expire
     - [ ] SA
     - [ ] aevent
     - [ ] policy
     - [ ] report
-  - [ ] help
+  - [x] help
 
 
 ### Testing

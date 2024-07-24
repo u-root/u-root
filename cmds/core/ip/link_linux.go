@@ -5,7 +5,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -305,61 +304,7 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 }
 
 func (cmd cmd) linkAdd() error {
-	attrs := netlink.LinkAttrs{Name: cmd.parseName()}
-
-	// Parse link attributes
-	optionsDone := false
-
-	for cmd.tokenRemains() {
-		if optionsDone {
-			break
-		}
-
-		switch cmd.nextToken("type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues") {
-		case "txqueuelen", "txqlen":
-			qlen, err := cmd.parseInt("PACKETS")
-			if err != nil {
-				return err
-			}
-			attrs.TxQLen = qlen
-		case "address":
-			hwAddr, err := cmd.parseHardwareAddress()
-			if err != nil {
-				return err
-			}
-			attrs.HardwareAddr = hwAddr
-		case "mtu":
-			mtu, err := cmd.parseInt("MTU")
-			if err != nil {
-				return err
-			}
-			attrs.MTU = mtu
-		case "index":
-			index, err := cmd.parseInt("IDX")
-			if err != nil {
-				return err
-			}
-			attrs.Index = index
-		case "numtxqueues":
-			numtxqueues, err := cmd.parseInt("QUEUE_COUNT")
-			if err != nil {
-				return err
-			}
-
-			attrs.NumTxQueues = numtxqueues
-		case "numrxqueues":
-			numrxqueues, err := cmd.parseInt("QUEUE_COUNT")
-			if err != nil {
-				return err
-			}
-
-			attrs.NumRxQueues = numrxqueues
-		default:
-			optionsDone = true
-		}
-	}
-
-	typeName, err := cmd.parseType()
+	typeName, attrs, err := cmd.parseLinkAttrs()
 	if err != nil {
 		return err
 	}
@@ -420,6 +365,60 @@ func (cmd cmd) linkAdd() error {
 	}
 }
 
+func (cmd cmd) parseLinkAttrs() (string, netlink.LinkAttrs, error) {
+	typeName := ""
+	attrs := netlink.LinkAttrs{Name: cmd.parseName()}
+
+	for cmd.tokenRemains() {
+		switch cmd.nextToken("type", "txqueuelen", "txqlen", "address", "mtu", "index", "numtxqueues", "numrxqueues") {
+		case "txqueuelen", "txqlen":
+			qlen, err := cmd.parseInt("PACKETS")
+			if err != nil {
+				return "", netlink.LinkAttrs{}, err
+			}
+			attrs.TxQLen = qlen
+		case "address":
+			hwAddr, err := cmd.parseHardwareAddress()
+			if err != nil {
+				return "", netlink.LinkAttrs{}, err
+			}
+			attrs.HardwareAddr = hwAddr
+		case "mtu":
+			mtu, err := cmd.parseInt("MTU")
+			if err != nil {
+				return "", netlink.LinkAttrs{}, err
+			}
+			attrs.MTU = mtu
+		case "index":
+			index, err := cmd.parseInt("IDX")
+			if err != nil {
+				return "", netlink.LinkAttrs{}, err
+			}
+			attrs.Index = index
+		case "numtxqueues":
+			numtxqueues, err := cmd.parseInt("QUEUE_COUNT")
+			if err != nil {
+				return "", netlink.LinkAttrs{}, err
+			}
+
+			attrs.NumTxQueues = numtxqueues
+		case "numrxqueues":
+			numrxqueues, err := cmd.parseInt("QUEUE_COUNT")
+			if err != nil {
+				return "", netlink.LinkAttrs{}, err
+			}
+
+			attrs.NumRxQueues = numrxqueues
+		case "type":
+			typeName = cmd.nextToken("TYPE")
+		default:
+			return "", netlink.LinkAttrs{}, cmd.usage()
+		}
+	}
+
+	return typeName, attrs, nil
+}
+
 func (cmd cmd) linkDel() error {
 	link, err := cmd.parseDeviceName(true)
 	if err != nil {
@@ -430,17 +429,45 @@ func (cmd cmd) linkDel() error {
 }
 
 func (cmd cmd) linkShow() error {
-	dev, err := cmd.parseDeviceName(false)
-	if errors.Is(err, ErrNotFound) {
-		return cmd.showAllLinks(false)
+	dev, typeName, err := cmd.parseLinkShow()
+	if err != nil {
+		return err
 	}
 
-	typeName, err := cmd.parseType()
-	if errors.Is(err, ErrNotFound) {
-		return cmd.showLink(dev, false)
+	if dev == nil {
+		return cmd.showAllLinks(false, typeName...)
 	}
 
-	return cmd.showLink(dev, false, typeName)
+	return cmd.showLink(dev, false, typeName...)
+}
+
+func (cmd cmd) parseLinkShow() (netlink.Link, []string, error) {
+	var (
+		device netlink.Link
+		err    error
+	)
+
+	typeNames := []string{}
+
+	for cmd.tokenRemains() {
+		switch c := cmd.nextToken("device", "type"); c {
+		case "dev":
+			devName := cmd.nextToken("device name")
+			device, err = netlink.LinkByName(devName)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to get link %v: %v", device, err)
+			}
+		case "type":
+			for cmd.tokenRemains() {
+				if cmd.peekToken("dev") == "dev" {
+					break
+				}
+				typeNames = append(typeNames, cmd.nextToken("type name"))
+			}
+		}
+	}
+
+	return device, typeNames, nil
 }
 
 func (cmd cmd) link() error {
@@ -458,7 +485,7 @@ func (cmd cmd) link() error {
 	case "delete":
 		return cmd.linkDel()
 	case "help":
-		fmt.Fprint(cmd.out, linkHelp)
+		fmt.Fprint(cmd.Out, linkHelp)
 		return nil
 	default:
 		return cmd.usage()
