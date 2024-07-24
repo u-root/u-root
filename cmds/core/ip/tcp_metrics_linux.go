@@ -9,7 +9,6 @@ import (
 	"net"
 
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 )
 
 const tcpMetricsHelp = `Usage:	ip tcp_metrics/tcpmetrics { COMMAND | help }
@@ -34,7 +33,7 @@ func (cmd cmd) tcpMetrics() error {
 
 		return cmd.showTCPMetrics(nil)
 	case "help":
-		fmt.Fprint(cmd.out, tcpMetricsHelp)
+		fmt.Fprint(cmd.Out, tcpMetricsHelp)
 
 		return nil
 	}
@@ -43,18 +42,22 @@ func (cmd cmd) tcpMetrics() error {
 }
 
 func (cmd cmd) showTCPMetrics(address net.IP) error {
-	var family uint8 = unix.AF_INET
-	if family == netlink.FAMILY_V6 {
-		family = unix.AF_INET6
+	if cmd.Family > 255 || cmd.Family < 0 {
+		return fmt.Errorf("invalid protocol family %v", cmd.Family)
 	}
 
-	resp, err := netlink.SocketDiagTCPInfo(family)
+	resp, err := netlink.SocketDiagTCPInfo(uint8(cmd.Family))
 	if err != nil {
 		return err
 	}
 
+	cmd.printTCPMetrics(resp, address)
+	return nil
+}
+
+func (cmd cmd) printTCPMetrics(resp []*netlink.InetDiagTCPInfoResp, address net.IP) {
 	for _, v := range resp {
-		if v.InetDiagMsg.ID.Destination.IsUnspecified() {
+		if v.InetDiagMsg.ID.Destination.IsUnspecified() || v.InetDiagMsg.ID.Source.IsUnspecified() || v.InetDiagMsg.ID.Source == nil || v.InetDiagMsg.ID.Destination == nil {
 			continue
 		}
 
@@ -68,8 +71,6 @@ func (cmd cmd) showTCPMetrics(address net.IP) error {
 			tcpInfo = fmt.Sprintf("cwnd %v rtt %v rttvar %vus", v.TCPInfo.Snd_cwnd, v.TCPInfo.Rtt, v.TCPInfo.Rttvar)
 		}
 
-		fmt.Fprintf(cmd.out, "%v age %vsec %s source %v\n", v.InetDiagMsg.ID.Destination.String(), v.InetDiagMsg.Expires, tcpInfo, v.InetDiagMsg.ID.Source.String())
+		fmt.Fprintf(cmd.Out, "%v age %vsec %s source %v\n", v.InetDiagMsg.ID.Destination.String(), v.InetDiagMsg.Expires, tcpInfo, v.InetDiagMsg.ID.Source.String())
 	}
-
-	return nil
 }

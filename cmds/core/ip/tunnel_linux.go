@@ -39,7 +39,7 @@ func (cmd cmd) tunnel() error {
 
 	var c string
 
-	switch c = cmd.findPrefix("add", "del", "show"); c {
+	switch c = cmd.findPrefix("add", "del", "show", "help"); c {
 	case "show", "add", "del":
 		options, err := cmd.parseTunnel()
 		if err != nil {
@@ -53,7 +53,11 @@ func (cmd cmd) tunnel() error {
 			return cmd.tunnelDelete(options)
 		case "show":
 			return cmd.showTunnels(options)
+
 		}
+	case "help":
+		fmt.Fprint(cmd.Out, tunnelHelp)
+		return nil
 	}
 	return cmd.usage()
 }
@@ -104,7 +108,6 @@ func (cmd cmd) parseTunnel() (*options, error) {
 		case "ttl":
 			token := cmd.nextToken("0...255", "inherit")
 			if token == "inherit" {
-				cmd.nextToken()
 				options.ttl = 0
 				continue
 			}
@@ -139,7 +142,7 @@ func (cmd cmd) parseTunnel() (*options, error) {
 		case "dev":
 			options.dev = cmd.nextToken("PHYS_DEV")
 		default:
-			options.name = cmd.nextToken("NAME")
+			options.name = cmd.currentToken()
 		}
 	}
 
@@ -160,6 +163,10 @@ func (cmd cmd) showTunnels(op *options) error {
 		return fmt.Errorf("failed to list interfaces: %v", err)
 	}
 
+	return cmd.printTunnels(filterTunnels(links, op))
+}
+
+func filterTunnels(links []netlink.Link, op *options) []netlink.Link {
 	var tunnels []netlink.Link
 
 	for _, l := range links {
@@ -210,7 +217,7 @@ func (cmd cmd) showTunnels(op *options) error {
 		tunnels = append(tunnels, l)
 	}
 
-	return cmd.printTunnels(tunnels)
+	return tunnels
 }
 
 type Tunnel struct {
@@ -272,7 +279,7 @@ func (cmd cmd) printTunnels(tunnels []netlink.Link) error {
 		pTunnels = append(pTunnels, tunnel)
 	}
 
-	if cmd.opts.json {
+	if cmd.Opts.JSON {
 		return printJSON(cmd, pTunnels)
 	}
 
@@ -281,7 +288,7 @@ func (cmd cmd) printTunnels(tunnels []netlink.Link) error {
 		if t.TTL != "" {
 			ttlStr = fmt.Sprintf(" ttl %s", t.TTL)
 		}
-		fmt.Fprintf(cmd.out, "%s %s/ip remote %s local %s%s\n", t.IfName, t.Mode, t.Remote, t.Local, ttlStr)
+		fmt.Fprintf(cmd.Out, "%s %s/ip remote %s local %s%s\n", t.IfName, t.Mode, t.Remote, t.Local, ttlStr)
 	}
 
 	return nil
@@ -408,7 +415,7 @@ func equalOKey(l netlink.Link, oKey int) bool {
 	}
 }
 
-func (cmd cmd) tunnelAdd(op *options) error {
+func normalizeOptsForAddingTunnel(op *options) error {
 	if op.mode == "" {
 		return fmt.Errorf("tunnel mode is required")
 	}
@@ -442,6 +449,14 @@ func (cmd cmd) tunnelAdd(op *options) error {
 
 	if op.tos < 0 {
 		op.tos = 0
+	}
+
+	return nil
+}
+
+func (cmd cmd) tunnelAdd(op *options) error {
+	if err := normalizeOptsForAddingTunnel(op); err != nil {
+		return err
 	}
 
 	var link netlink.Link

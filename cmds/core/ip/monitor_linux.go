@@ -49,7 +49,7 @@ func (cmd cmd) monitor() error {
 	var singleOptionSelected bool
 
 	for cmd.tokenRemains() {
-		token := cmd.nextToken("all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "all-nsid")
+		token := cmd.nextToken("all", "address", "link", "mroute", "neigh", "netconf", "nexthop", "nsid", "prefix", "route", "rule", "label", "help")
 
 		switch token {
 		case "all":
@@ -88,8 +88,10 @@ func (cmd cmd) monitor() error {
 			routeLabel = "[ROUTE]"
 		case "mroute", "netconf", "nexthop", "nsid", "prefix", "rule":
 			return fmt.Errorf("monitoring %s is not yet supported", cmd.currentToken())
+		case "help":
+			fmt.Fprint(cmd.Out, tunnelHelp)
+			return nil
 		default:
-
 			return cmd.usage()
 		}
 
@@ -111,14 +113,18 @@ func (cmd cmd) monitor() error {
 		}
 	}
 
+	return cmd.printUpdates(addrUpdates, linkUpdates, neighUpdates, routeUpdates, done, sig)
+}
+
+func (cmd cmd) printUpdates(addrUpdates chan netlink.AddrUpdate, linkUpdates chan netlink.LinkUpdate, neighUpdates chan netlink.NeighUpdate, routeUpdates chan netlink.RouteUpdate, done chan struct{}, sig chan os.Signal) error {
 	timestamp := ""
 
 	for {
 
-		if cmd.opts.timeStamp {
+		if cmd.Opts.TimeStamp {
 			currentTime := time.Now()
 			timestamp = currentTime.Format("Timestamp: Mon Jan 2 15:04:05 2006") + fmt.Sprintf(" %06d usec", currentTime.Nanosecond()/1000) + "\n"
-		} else if cmd.opts.timeStampShort {
+		} else if cmd.Opts.TimeStampShort {
 			currentTime := time.Now()
 			timestamp = currentTime.Format("[2006-01-02T15:04:05.000000]")
 		}
@@ -136,7 +142,7 @@ func (cmd cmd) monitor() error {
 				action = "Deleted"
 			}
 
-			fmt.Fprintf(cmd.out, "%s%s%s %d: %s    %v %v scope %d %v\n", timestamp, addressLabel, action, update.LinkIndex, link.Attrs().Name, ipFamily(update.LinkAddress.IP), update.LinkAddress.String(), update.Scope, link.Attrs().Name)
+			fmt.Fprintf(cmd.Out, "%s%s%s %d: %s    %v %v scope %d %v\n", timestamp, addressLabel, action, update.LinkIndex, link.Attrs().Name, ipFamily(update.LinkAddress.IP), update.LinkAddress.String(), update.Scope, link.Attrs().Name)
 
 			validLft := fmt.Sprintf("%v", update.ValidLft)
 			preferedLft := fmt.Sprintf("%v", update.PreferedLft)
@@ -149,7 +155,7 @@ func (cmd cmd) monitor() error {
 				preferedLft = "forever"
 			}
 
-			fmt.Fprintf(cmd.out, "    valid_lft %s preferred_lft %s\n", validLft, preferedLft)
+			fmt.Fprintf(cmd.Out, "    valid_lft %s preferred_lft %s\n", validLft, preferedLft)
 
 		case update := <-neighUpdates:
 			var action string
@@ -163,7 +169,7 @@ func (cmd cmd) monitor() error {
 				return fmt.Errorf("failed to get link by index %d: %v", update.Neigh.LinkIndex, err)
 			}
 
-			fmt.Fprintf(cmd.out, "%s%s%s%s dev %v lladdr %s %v\n", timestamp, neighLabel, action, update.Neigh.IP, link.Attrs().Name, update.Neigh.HardwareAddr.String(), neighStateToString(update.Neigh.State))
+			fmt.Fprintf(cmd.Out, "%s%s%s%s dev %v lladdr %s %v\n", timestamp, neighLabel, action, update.Neigh.IP, link.Attrs().Name, update.Neigh.HardwareAddr.String(), neighStateToString(update.Neigh.State))
 
 		case update := <-routeUpdates:
 			var action string
@@ -179,10 +185,10 @@ func (cmd cmd) monitor() error {
 				return fmt.Errorf("failed to get link by index %d: %v", update.Route.LinkIndex, err)
 			}
 
-			fmt.Fprintf(cmd.out, "%s%s%s %s dev %s table %d proto %s scope %s src %s\n", timestamp, routeLabel, action, update.Route.Dst, link.Attrs().Name, update.Route.Table, update.Route.Protocol.String(), update.Route.Scope.String(), update.Route.Src)
+			fmt.Fprintf(cmd.Out, "%s%s%s %s dev %s table %d proto %s scope %s src %s\n", timestamp, routeLabel, action, update.Route.Dst, link.Attrs().Name, update.Route.Table, update.Route.Protocol.String(), update.Route.Scope.String(), update.Route.Src)
 		case update := <-linkUpdates:
-			fmt.Fprintf(cmd.out, "%s%s%d: %s: <%s>\n", timestamp, linkLabel, update.Link.Attrs().Index, update.Link.Attrs().Name, strings.Replace(strings.ToUpper(net.Flags(update.Flags).String()), "|", ",", -1))
-			fmt.Fprintf(cmd.out, "    link/%v\n", update.Link.Attrs().EncapType)
+			fmt.Fprintf(cmd.Out, "%s%s%d: %s: <%s>\n", timestamp, linkLabel, update.Link.Attrs().Index, update.Link.Attrs().Name, strings.Replace(strings.ToUpper(net.Flags(update.Flags).String()), "|", ",", -1))
+			fmt.Fprintf(cmd.Out, "    link/%v\n", update.Link.Attrs().EncapType)
 		case <-sig:
 			return nil
 		case <-done:

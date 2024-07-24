@@ -16,7 +16,7 @@ const addressHelp = `Usage: ip address {add|replace} ADDR dev IFNAME [ LIFETIME 
 
        ip address del IFADDR dev IFNAME 
 
-       ip address flush dev IFNAME [ scope SCOPE-ID ] [ to PREFIX ] [ label LABEL ]
+       ip address flush dev IFNAME [ scope SCOPE-ID ] [ label LABEL ]
 
        ip address [ show [ dev IFNAME ] [ type TYPE ]
 
@@ -51,67 +51,49 @@ func (cmd cmd) address() error {
 	case "show":
 		return cmd.addressShow()
 	case "add":
-		tokenAddr := cmd.nextToken("CIDR format address")
-		addr, err := netlink.ParseAddr(tokenAddr)
-		if err != nil {
-			return err
-		}
-
-		iface, err := cmd.parseDeviceName(true)
+		iface, addr, err := cmd.parseAddrAddReplace()
 		if err != nil {
 			return err
 		}
 
 		if err := cmd.handle.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("adding %v to %v failed: %v", tokenAddr, cmd.currentToken(), err)
+			return fmt.Errorf("adding %v to %v failed: %v", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
 	case "replace":
-		tokenAddr := cmd.nextToken("CIDR format address")
-		addr, err := netlink.ParseAddr(tokenAddr)
-		if err != nil {
-			return err
-		}
-
-		iface, err := cmd.parseDeviceName(true)
+		iface, addr, err := cmd.parseAddrAddReplace()
 		if err != nil {
 			return err
 		}
 
 		if err := cmd.handle.AddrReplace(iface, addr); err != nil {
-			return fmt.Errorf("replacing %v on %v failed: %v", tokenAddr, cmd.currentToken(), err)
+			return fmt.Errorf("replacing %v on %v failed: %v", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
 	case "del":
-		tokenAddr := cmd.nextToken("CIDR format address")
-		addr, err := netlink.ParseAddr(tokenAddr)
-		if err != nil {
-			return err
-		}
-
-		iface, err := cmd.parseDeviceName(true)
+		iface, addr, err := cmd.parseAddrAddReplace()
 		if err != nil {
 			return err
 		}
 
 		if err := cmd.handle.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("deleting %v from %v failed: %v", tokenAddr, cmd.currentToken(), err)
+			return fmt.Errorf("deleting %v from %v failed: %v", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
 	case "flush":
 		return cmd.addressFlush()
 	case "help":
-		fmt.Fprint(cmd.out, addressHelp)
+		fmt.Fprint(cmd.Out, addressHelp)
 		return nil
 	default:
 		return cmd.usage()
 	}
 }
 
-func (cmd cmd) parseAddrAddReplace() (*netlink.Link, *netlink.Addr, error) {
+func (cmd cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 	tokenAddr := cmd.nextToken("CIDR format address")
 	addr, err := netlink.ParseAddr(tokenAddr)
 	if err != nil {
@@ -150,32 +132,45 @@ func (cmd cmd) parseAddrAddReplace() (*netlink.Link, *netlink.Addr, error) {
 			}
 		}
 	}
-	return &iface, addr, nil
+	return iface, addr, nil
 }
 
 func (cmd cmd) addressShow() error {
-	device, err := cmd.parseDeviceName(false)
-	if errors.Is(err, ErrNotFound) {
-		return cmd.showAllLinks(true)
-	}
-	typeName, err := cmd.parseType()
-	if errors.Is(err, ErrNotFound) {
-		return cmd.showLink(device, true)
+	device, typeName, err := cmd.parseAddrShow()
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return cmd.showAllLinks(true)
+		}
+
+		return err
 	}
 
 	return cmd.showLink(device, true, typeName)
 }
 
-func (cmd cmd) parseAddrFlush() (*netlink.Link, *netlink.Addr, error) {
-	iface, err := cmd.parseDeviceName(true)
+func (cmd cmd) parseAddrShow() (netlink.Link, string, error) {
+	device, err := cmd.parseDeviceName(false)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", err
+	}
+	typeName, err := cmd.parseType()
+	if err != nil {
+		return nil, "", err
 	}
 
+	return device, typeName, nil
+}
+
+func (cmd cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {
 	var addr netlink.Addr
 
+	iface, err := cmd.parseDeviceName(true)
+	if err != nil {
+		return nil, addr, err
+	}
+
 	for cmd.tokenRemains() {
-		switch cmd.nextToken("scope", "to", "label") {
+		switch cmd.nextToken("scope", "label") {
 		case "scope":
 			scope := cmd.nextToken("SCOPE-ID")
 
@@ -184,21 +179,16 @@ func (cmd cmd) parseAddrFlush() (*netlink.Link, *netlink.Addr, error) {
 			} else {
 				scopeInt, err := strconv.ParseInt(scope, 10, 32)
 				if err != nil {
-					return nil, nil, fmt.Errorf("invalid scope value: %v", scope)
+					return nil, addr, fmt.Errorf("invalid scope value: %v", scope)
 				}
 				addr.Scope = int(scopeInt)
-			}
-		case "to":
-			addr.IP, err = cmd.parseAddress()
-			if err != nil {
-				return nil, nil, err
 			}
 		case "label":
 			addr.Label = cmd.nextToken("LABEL")
 		}
 	}
 
-	return &iface, &addr, nil
+	return iface, addr, nil
 }
 
 func (cmd cmd) addressFlush() error {
@@ -207,27 +197,19 @@ func (cmd cmd) addressFlush() error {
 		return err
 	}
 
-	addrs, err := cmd.handle.AddrList(*iface, netlink.FAMILY_ALL)
+	addrs, err := cmd.handle.AddrList(iface, cmd.Family)
 	if err != nil {
 		return err
 	}
 
 	for _, a := range addrs {
-		if addr.IP != nil && !addr.IP.Equal(a.IP) {
+		if skipAddr(a, addr) {
 			continue
 		}
 
-		if addr.Scope != 0 && addr.Scope != a.Scope {
-			continue
-		}
-
-		if addr.Label != "" && addr.Label != a.Label {
-			continue
-		}
-
-		for idx := 1; idx <= cmd.opts.loops; idx++ {
-			if err := cmd.handle.AddrDel(*iface, &a); err != nil {
-				if idx != cmd.opts.loops {
+		for idx := 1; idx <= cmd.Opts.Loops; idx++ {
+			if err := cmd.handle.AddrDel(iface, &a); err != nil {
+				if idx != cmd.Opts.Loops {
 					continue
 				}
 
@@ -239,4 +221,16 @@ func (cmd cmd) addressFlush() error {
 	}
 
 	return nil
+}
+
+func skipAddr(addr netlink.Addr, filter netlink.Addr) bool {
+	if addr.Scope != 0 && addr.Scope != filter.Scope {
+		return true
+	}
+
+	if addr.Label != "" && addr.Label != filter.Label {
+		return true
+	}
+
+	return false
 }

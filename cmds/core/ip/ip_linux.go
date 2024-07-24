@@ -18,35 +18,35 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
+	"golang.org/x/sys/unix"
 )
 
 type flags struct {
-	family         string
-	families       []int
-	inet4          bool
-	inet6          bool
-	bridge         bool
-	mpls           bool
-	link           bool
-	details        bool
-	stats          bool
-	loops          int
-	humanReadable  bool
-	iec            bool
-	json           bool
-	prettify       bool
-	brief          bool
-	resolve        bool
-	color          string
-	rcvBuf         string
-	timeStamp      bool
-	timeStampShort bool
-	all            bool
-	numeric        bool
-	batch          string
-	force          bool
-	oneline        bool
-	netns          string
+	Family         string
+	Inet4          bool
+	Inet6          bool
+	Bridge         bool
+	MPLS           bool
+	Link           bool
+	Details        bool
+	Stats          bool
+	Loops          int
+	HumanReadable  bool
+	Iec            bool
+	JSON           bool
+	Prettify       bool
+	Brief          bool
+	Resolve        bool
+	Color          string
+	RcvBuf         string
+	TimeStamp      bool
+	TimeStampShort bool
+	All            bool
+	Numeric        bool
+	Batch          string
+	Force          bool
+	Oneline        bool
+	Netns          string
 }
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
@@ -92,58 +92,58 @@ var (
 
 func (cmd cmd) usage() error {
 	return fmt.Errorf("this was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
-		cmd.args[0:cmd.cursor], cmd.args[cmd.cursor:], cmd.args[cmd.cursor], cmd.expectedValues)
+		cmd.Args[0:cmd.Cursor], cmd.Args[cmd.Cursor:], cmd.Args[cmd.Cursor], cmd.ExpectedValues)
 }
 
-func parseFlags(args []string, out io.Writer) (*cmd, error) {
+func parseFlags(args []string, out io.Writer) (cmd, error) {
 	cmd := cmd{
-		out: out,
+		Out: out,
 	}
 
 	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	fs.StringVar(&cmd.opts.family, "f", "", "Specify family (inet, inet6, mpls, link)")
-	fs.StringVar(&cmd.opts.family, "family", "", "Specify family (inet, inet6, mpls, link)")
-	fs.BoolVar(&cmd.opts.resolve, "r", false, "Use system resolver to display DNS names")
-	fs.BoolVar(&cmd.opts.resolve, "resolve", false, "Use system resolver to display DNS names")
-	fs.BoolVar(&cmd.opts.inet4, "4", false, "Set protocol family to inet")
-	fs.BoolVar(&cmd.opts.inet6, "6", false, "Set protocol family to inet6")
-	fs.BoolVar(&cmd.opts.bridge, "B", false, "Set protocol family to bridge")
-	fs.BoolVar(&cmd.opts.mpls, "M", false, "Set protocol family to mpls")
-	fs.BoolVar(&cmd.opts.link, "0", false, "Set protocol family to link")
-	fs.BoolVar(&cmd.opts.details, "d", false, "Display details")
-	fs.BoolVar(&cmd.opts.details, "details", false, "Display details")
-	fs.BoolVar(&cmd.opts.stats, "s", false, "Display statistics")
-	fs.BoolVar(&cmd.opts.stats, "statistics", false, "Display statistics")
-	fs.IntVar(&cmd.opts.loops, "l", 0, "Set maximum number of attempts to flush all addresses")
-	fs.IntVar(&cmd.opts.loops, "loops", 1, "Set maximum number of attempts to flush all addresses")
-	fs.BoolVar(&cmd.opts.humanReadable, "h", false, "Display timings and sizes in human readable format")
-	fs.BoolVar(&cmd.opts.humanReadable, "humanreadable", false, "Display timings and sizes in human-readable format")
-	fs.BoolVar(&cmd.opts.iec, "iec", false, "Use 1024-based block sizes for human-readable sizes")
-	fs.BoolVar(&cmd.opts.brief, "br", false, "Brief output")
-	fs.BoolVar(&cmd.opts.brief, "brief", false, "Brief output")
-	fs.BoolVar(&cmd.opts.json, "j", false, "Output in JSON format")
-	fs.BoolVar(&cmd.opts.json, "json", false, "Output in JSON format")
-	fs.BoolVar(&cmd.opts.prettify, "p", false, "Make JSON output pretty")
-	fs.BoolVar(&cmd.opts.prettify, "pretty", false, "Make JSON output pretty")
-	fs.StringVar(&cmd.opts.color, "c", "", "Use color output")
-	fs.StringVar(&cmd.opts.color, "color", "", "Use color output")
-	fs.StringVar(&cmd.opts.rcvBuf, "rc", "", "Set the netlink socket receive buffer size, defaults to 1MB")
-	fs.StringVar(&cmd.opts.rcvBuf, "rcvbuf", "", "Set the netlink socket receive buffer size, defaults to 1MB")
-	fs.BoolVar(&cmd.opts.timeStamp, "t", false, "Display time stamps")
-	fs.BoolVar(&cmd.opts.timeStamp, "timestamp", false, "Display time stamps")
-	fs.BoolVar(&cmd.opts.timeStampShort, "ts", false, "Display short time stamps")
-	fs.BoolVar(&cmd.opts.timeStampShort, "tshort", false, "Display short time stamps")
-	fs.BoolVar(&cmd.opts.all, "a", false, "Display all information")
-	fs.BoolVar(&cmd.opts.all, "all", false, "Display all information")
-	fs.BoolVar(&cmd.opts.numeric, "N", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
-	fs.BoolVar(&cmd.opts.numeric, "numeric", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
-	fs.StringVar(&cmd.opts.batch, "b", "", "Read commands from a file")
-	fs.StringVar(&cmd.opts.batch, "batch", "", "Read commands from a file")
-	fs.BoolVar(&cmd.opts.force, "force", false, "Don't terminate ip on errors in batch mode.  If there were any errors during execution of the commands, the application return code will be non zero.")
-	fs.BoolVar(&cmd.opts.oneline, "o", false, "Output each record on a single line")
-	fs.BoolVar(&cmd.opts.oneline, "oneline", false, "Output each record on a single line")
-	fs.StringVar(&cmd.opts.netns, "n", "", "Switch to network namespace")
-	fs.StringVar(&cmd.opts.netns, "netns", "", "Switch to network namespace")
+	fs.StringVar(&cmd.Opts.Family, "f", "", "Specify family (inet, inet6, mpls, link)")
+	fs.StringVar(&cmd.Opts.Family, "family", "", "Specify family (inet, inet6, mpls, link)")
+	fs.BoolVar(&cmd.Opts.Resolve, "r", false, "Use system resolver to display DNS names")
+	fs.BoolVar(&cmd.Opts.Resolve, "resolve", false, "Use system resolver to display DNS names")
+	fs.BoolVar(&cmd.Opts.Inet4, "4", false, "Set protocol family to inet")
+	fs.BoolVar(&cmd.Opts.Inet6, "6", false, "Set protocol family to inet6")
+	fs.BoolVar(&cmd.Opts.Bridge, "B", false, "Set protocol family to bridge")
+	fs.BoolVar(&cmd.Opts.MPLS, "M", false, "Set protocol family to mpls")
+	fs.BoolVar(&cmd.Opts.Link, "0", false, "Set protocol family to link")
+	fs.BoolVar(&cmd.Opts.Details, "d", false, "Display details")
+	fs.BoolVar(&cmd.Opts.Details, "details", false, "Display details")
+	fs.BoolVar(&cmd.Opts.Stats, "s", false, "Display statistics")
+	fs.BoolVar(&cmd.Opts.Stats, "statistics", false, "Display statistics")
+	fs.IntVar(&cmd.Opts.Loops, "l", 0, "Set maximum number of attempts to flush all addresses")
+	fs.IntVar(&cmd.Opts.Loops, "loops", 1, "Set maximum number of attempts to flush all addresses")
+	fs.BoolVar(&cmd.Opts.HumanReadable, "h", false, "Display timings and sizes in human readable format")
+	fs.BoolVar(&cmd.Opts.HumanReadable, "humanreadable", false, "Display timings and sizes in human-readable format")
+	fs.BoolVar(&cmd.Opts.Iec, "iec", false, "Use 1024-based block sizes for human-readable sizes")
+	fs.BoolVar(&cmd.Opts.Brief, "br", false, "Brief output")
+	fs.BoolVar(&cmd.Opts.Brief, "brief", false, "Brief output")
+	fs.BoolVar(&cmd.Opts.JSON, "j", false, "Output in JSON format")
+	fs.BoolVar(&cmd.Opts.JSON, "json", false, "Output in JSON format")
+	fs.BoolVar(&cmd.Opts.Prettify, "p", false, "Make JSON output pretty")
+	fs.BoolVar(&cmd.Opts.Prettify, "pretty", false, "Make JSON output pretty")
+	fs.StringVar(&cmd.Opts.Color, "c", "", "Use color output")
+	fs.StringVar(&cmd.Opts.Color, "color", "", "Use color output")
+	fs.StringVar(&cmd.Opts.RcvBuf, "rc", "", "Set the netlink socket receive buffer size, defaults to 1MB")
+	fs.StringVar(&cmd.Opts.RcvBuf, "rcvbuf", "", "Set the netlink socket receive buffer size, defaults to 1MB")
+	fs.BoolVar(&cmd.Opts.TimeStamp, "t", false, "Display time stamps")
+	fs.BoolVar(&cmd.Opts.TimeStamp, "timestamp", false, "Display time stamps")
+	fs.BoolVar(&cmd.Opts.TimeStampShort, "ts", false, "Display short time stamps")
+	fs.BoolVar(&cmd.Opts.TimeStampShort, "tshort", false, "Display short time stamps")
+	fs.BoolVar(&cmd.Opts.All, "a", false, "Display all information")
+	fs.BoolVar(&cmd.Opts.All, "all", false, "Display all information")
+	fs.BoolVar(&cmd.Opts.Numeric, "N", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
+	fs.BoolVar(&cmd.Opts.Numeric, "numeric", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
+	fs.StringVar(&cmd.Opts.Batch, "b", "", "Read commands from a file")
+	fs.StringVar(&cmd.Opts.Batch, "batch", "", "Read commands from a file")
+	fs.BoolVar(&cmd.Opts.Force, "force", false, "Don't terminate ip on errors in batch mode.  If there were any errors during execution of the commands, the application return code will be non zero.")
+	fs.BoolVar(&cmd.Opts.Oneline, "o", false, "Output each record on a single line")
+	fs.BoolVar(&cmd.Opts.Oneline, "oneline", false, "Output each record on a single line")
+	fs.StringVar(&cmd.Opts.Netns, "n", "", "Switch to network namespace")
+	fs.StringVar(&cmd.Opts.Netns, "netns", "", "Switch to network namespace")
 
 	fs.Usage = func() {
 		fmt.Fprintf(out, "%s\n\n", ipHelp)
@@ -151,46 +151,52 @@ func parseFlags(args []string, out io.Writer) (*cmd, error) {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	fs.Parse(unixflag.ArgsToGoArgs(args))
 
-	cmd.args = fs.Args()
+	cmd.Args = fs.Args()
 
-	cmd.family = netlink.FAMILY_ALL
+	cmd.Family = netlink.FAMILY_ALL
 
-	var families []int
-
-	if cmd.opts.inet4 {
-		cmd.family = netlink.FAMILY_V4
-		families = append(families, netlink.FAMILY_V4)
+	if cmd.Opts.Inet4 {
+		cmd.Family = netlink.FAMILY_V4
 	}
-	if cmd.opts.inet6 {
-		cmd.family = netlink.FAMILY_V6
-		families = append(families, netlink.FAMILY_V6)
+	if cmd.Opts.Inet6 {
+		cmd.Family = netlink.FAMILY_V6
 	}
 
-	if cmd.opts.mpls {
-		return nil, fmt.Errorf("protocol family MPLS is not yet supported")
+	if cmd.Opts.MPLS {
+		return cmd, fmt.Errorf("protocol family MPLS is not yet supported")
 	}
 
-	if cmd.opts.bridge {
-		return nil, fmt.Errorf("protocol family bridge is not yet supported")
+	if cmd.Opts.Bridge {
+		return cmd, fmt.Errorf("protocol family bridge is not yet supported")
 	}
 
-	if cmd.opts.link {
-		cmd.family = netlink.FAMILY_ALL
-		families = append(families, netlink.FAMILY_ALL)
+	if cmd.Opts.Link {
+		cmd.Family = netlink.FAMILY_ALL
 	}
 
-	if cmd.opts.resolve {
-		return nil, fmt.Errorf("resolving DNS names is unsupported")
+	if cmd.Opts.Family != "" {
+		switch cmd.Opts.Family {
+		case "inet":
+			cmd.Family = netlink.FAMILY_V4
+		case "inet6":
+			cmd.Family = netlink.FAMILY_V6
+		default:
+			return cmd, fmt.Errorf("invalid family %q", cmd.Opts.Family)
+		}
 	}
 
-	if cmd.opts.color != "" {
-		return nil, fmt.Errorf("color output is unsupported")
+	if cmd.Opts.Resolve {
+		return cmd, fmt.Errorf("resolving DNS names is unsupported")
 	}
 
-	if cmd.opts.oneline {
-		return nil, fmt.Errorf("outputting each record on a single line is unsupported")
+	if cmd.Opts.Color != "" {
+		return cmd, fmt.Errorf("color output is unsupported")
+	}
+
+	if cmd.Opts.Oneline {
+		return cmd, fmt.Errorf("outputting each record on a single line is unsupported")
 	}
 
 	var (
@@ -198,28 +204,28 @@ func parseFlags(args []string, out io.Writer) (*cmd, error) {
 		handle *netlink.Handle
 	)
 
-	if cmd.opts.netns != "" {
-		nsHandle, err := netns.GetFromName(cmd.opts.netns)
+	if cmd.Opts.Netns != "" {
+		nsHandle, err := netns.GetFromName(cmd.Opts.Netns)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find network namespace %q: %v", cmd.opts.netns, err)
+			return cmd, fmt.Errorf("failed to find network namespace %q: %v", cmd.Opts.Netns, err)
 		}
 		defer nsHandle.Close()
 
-		handle, err = netlink.NewHandleAt(nsHandle, families...)
+		handle, err = netlink.NewHandleAt(nsHandle, unix.NETLINK_ROUTE)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create netlink handle in network namespace %q: %v", cmd.opts.netns, err)
+			return cmd, fmt.Errorf("failed to create netlink handle in network namespace %q: %v", cmd.Opts.Netns, err)
 		}
 	} else {
-		handle, err = netlink.NewHandle(families...)
+		handle, err = netlink.NewHandle(unix.NETLINK_ROUTE)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create netlink handle: %v", err)
+			return cmd, fmt.Errorf("failed to create netlink handle: %v", err)
 		}
 	}
 
-	if cmd.opts.rcvBuf != "" {
-		bufSize, err := strconv.Atoi(cmd.opts.rcvBuf)
+	if cmd.Opts.RcvBuf != "" {
+		bufSize, err := strconv.Atoi(cmd.Opts.RcvBuf)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse rcvbuf flag: %v", err)
+			return cmd, fmt.Errorf("failed to parse rcvbuf flag: %v", err)
 		}
 
 		handle.SetSocketReceiveBufferSize(bufSize, true)
@@ -227,24 +233,24 @@ func parseFlags(args []string, out io.Writer) (*cmd, error) {
 
 	cmd.handle = handle
 
-	return &cmd, nil
+	return cmd, nil
 }
 
 type cmd struct {
 	// Output writer
-	out io.Writer
+	Out io.Writer
 	// Netlink handle for all netlink ops
 	handle *netlink.Handle
 	// Cursor is our next token pointer
-	cursor int
+	Cursor int
 	// Options
-	opts flags
+	Opts flags
 	// Arguments
-	args []string
+	Args []string
 	// Expected values for current token placement
-	expectedValues []string
-	// Selected protocol family
-	family int
+	ExpectedValues []string
+	// Selected protocol Family
+	Family int
 }
 
 func (cmd cmd) run() error {
@@ -253,9 +259,9 @@ func (cmd cmd) run() error {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.args, cmd.cursor, cmd.expectedValues)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.Args, cmd.Cursor, cmd.ExpectedValues)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.args, cmd.cursor, cmd.expectedValues)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.Args, cmd.Cursor, cmd.ExpectedValues)
 			}
 			log.Fatalf("ip: %v", err)
 		default:
@@ -265,7 +271,7 @@ func (cmd cmd) run() error {
 		return
 	}()
 
-	if cmd.opts.batch != "" {
+	if cmd.Opts.Batch != "" {
 		return cmd.batchCmds()
 	}
 
@@ -273,7 +279,7 @@ func (cmd cmd) run() error {
 }
 
 func (cmd cmd) batchCmds() error {
-	file, err := os.Open(cmd.opts.batch)
+	file, err := os.Open(cmd.Opts.Batch)
 	if err != nil {
 		log.Fatalf("Failed to open batch file: %v", err)
 	}
@@ -282,15 +288,15 @@ func (cmd cmd) batchCmds() error {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		cmd.args = strings.Fields(line)
+		cmd.Args = strings.Fields(line)
 
-		if len(cmd.args) == 0 { // Skip empty lines
+		if len(cmd.Args) == 0 { // Skip empty lines
 			continue
 		}
 
 		err := cmd.runSubCommand()
 		if err != nil {
-			if cmd.opts.force {
+			if cmd.Opts.Force {
 				log.Printf("Error (force mode on, continuing): Failed to run command '%s': %v", line, err)
 			} else {
 				return fmt.Errorf("failed to run command '%s': %v", line, err)
@@ -306,7 +312,11 @@ func (cmd cmd) batchCmds() error {
 }
 
 func (cmd cmd) runSubCommand() error {
-	cmd.cursor = -1
+	cmd.Cursor = 0
+
+	if !cmd.tokenRemains() {
+		fmt.Fprint(cmd.Out, ipHelp)
+	}
 
 	switch c := cmd.findPrefix("address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"); c {
 	case "address":
@@ -330,7 +340,7 @@ func (cmd cmd) runSubCommand() error {
 	case "xfrm":
 		return cmd.xfrm()
 	case "help":
-		fmt.Fprint(cmd.out, ipHelp)
+		fmt.Fprint(cmd.Out, ipHelp)
 
 		return nil
 	default:

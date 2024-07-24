@@ -16,38 +16,45 @@ import (
 
 // tokenRemains returns true if there are more tokens to parse.
 func (cmd *cmd) tokenRemains() bool {
-	return cmd.cursor < len(cmd.args)-1
+	return cmd.Cursor < len(cmd.Args)-1
 }
 
 // currentToken returns the current token.
 func (cmd *cmd) currentToken() string {
-	return cmd.args[cmd.cursor]
+	return cmd.Args[cmd.Cursor]
 }
 
 // nextToken returns the next token and sets its expected values.
 func (cmd *cmd) nextToken(expectedValues ...string) string {
-	cmd.expectedValues = expectedValues
-	cmd.cursor++
+	cmd.ExpectedValues = expectedValues
+	cmd.Cursor++
 
-	return cmd.args[cmd.cursor]
+	return cmd.Args[cmd.Cursor]
 }
 
 // lastToken returns the last token and sets its expected values.
 func (cmd *cmd) lastToken(expectedValues ...string) string {
-	cmd.expectedValues = expectedValues
-	cmd.cursor--
+	cmd.ExpectedValues = expectedValues
+	cmd.Cursor--
 
-	return cmd.args[cmd.cursor]
+	return cmd.Args[cmd.Cursor]
+}
+
+// peekToken returns the next token without moving the cursor.
+func (cmd *cmd) peekToken(expectedValues ...string) string {
+	cmd.ExpectedValues = expectedValues
+
+	return cmd.Args[cmd.Cursor+1]
 }
 
 // findPrefix returns the prefix of the next token.
 // If the prefix is not found, an empty string is returned.
 func (cmd *cmd) findPrefix(expectedValue ...string) string {
-	cmd.expectedValues = expectedValue
-	cmd.cursor++
+	cmd.ExpectedValues = expectedValue
+	cmd.Cursor++
 	var x, n int
 
-	for i, v := range cmd.expectedValues {
+	for i, v := range cmd.ExpectedValues {
 		if strings.HasPrefix(v, cmd.currentToken()) {
 			n++
 			x = i
@@ -55,7 +62,7 @@ func (cmd *cmd) findPrefix(expectedValue ...string) string {
 	}
 
 	if n == 1 {
-		return cmd.expectedValues[x]
+		return cmd.ExpectedValues[x]
 	}
 
 	return ""
@@ -69,35 +76,33 @@ var ErrNotFound = fmt.Errorf("not found")
 // If 'dev' is present, it is skipped.
 // If no device name is present, an error ErrNotFound is returned.
 // The mandatory flag will make sure that the program will panic if the device name is not found.
-func (cmd cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
+func (cmd *cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
 	switch mandatory {
 	case true:
 		if cmd.nextToken("dev", "device name") == "dev" {
-			cmd.cursor++
+			cmd.Cursor++
 		}
 
-		cmd.expectedValues = []string{"device name"}
+		cmd.ExpectedValues = []string{"device name"}
 		return netlink.LinkByName(cmd.currentToken())
-	case false:
+	default:
 		if !cmd.tokenRemains() {
 			return nil, ErrNotFound
 		}
 
 		if cmd.nextToken("dev", "device name") == "dev" {
-			cmd.cursor++
+			cmd.Cursor++
 		}
 
-		cmd.expectedValues = []string{"device name"}
+		cmd.ExpectedValues = []string{"device name"}
 		return netlink.LinkByName(cmd.currentToken())
 	}
-
-	return nil, ErrNotFound
 }
 
 // parseType parses the type of the command.
 // The type is the next argument after the 'type' keyword.
 // The type is optional in some commands, hence an `ErrNotFound` is returned if the type is not found.
-func (cmd cmd) parseType() (string, error) {
+func (cmd *cmd) parseType() (string, error) {
 	if !cmd.tokenRemains() {
 		return "", ErrNotFound
 	}
@@ -109,9 +114,8 @@ func (cmd cmd) parseType() (string, error) {
 	return cmd.nextToken("type name"), nil
 }
 
-func (cmd cmd) parseAddress() (net.IP, error) {
+func (cmd *cmd) parseAddress() (net.IP, error) {
 	token := cmd.nextToken("address", "PREFIX")
-
 	if token == "address" {
 		token = cmd.nextToken("PREFIX")
 	}
@@ -121,56 +125,53 @@ func (cmd cmd) parseAddress() (net.IP, error) {
 	if ip == nil {
 		return nil, fmt.Errorf("failed to parse address: %v", token)
 	}
+
 	return ip, nil
 }
 
-func (cmd cmd) parseIPNet() (*net.IPNet, error) {
+func (cmd *cmd) parseIPNet() (*net.IPNet, error) {
 	token := cmd.nextToken("CIDR")
 	_, ipNet, err := net.ParseCIDR(token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse CIDR: %v", token)
 	}
 
-	if ipNet == nil {
-		return nil, fmt.Errorf("failed to parse CIDR: %v", token)
-	}
-
 	return ipNet, nil
 }
 
-func (cmd cmd) parseHardwareAddress() (net.HardwareAddr, error) {
+func (cmd *cmd) parseHardwareAddress() (net.HardwareAddr, error) {
 	return net.ParseMAC(cmd.nextToken("<MAC-ADDR>"))
 }
 
-func (cmd cmd) parseByte(expected ...string) ([]byte, error) {
+func (cmd *cmd) parseByte(expected ...string) ([]byte, error) {
 	return hex.DecodeString(cmd.nextToken(expected...))
 }
 
-func (cmd cmd) parseInt(expected ...string) (int, error) {
+func (cmd *cmd) parseInt(expected ...string) (int, error) {
 	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 0)
 
 	return int(val), err
 }
 
-func (cmd cmd) parseUint8(expected ...string) (uint8, error) {
+func (cmd *cmd) parseUint8(expected ...string) (uint8, error) {
 	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 8)
 
 	return uint8(val), err
 }
 
-func (cmd cmd) parseUint16(expected ...string) (uint16, error) {
+func (cmd *cmd) parseUint16(expected ...string) (uint16, error) {
 	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 16)
 
 	return uint16(val), err
 }
 
-func (cmd cmd) parseUint32(expected ...string) (uint32, error) {
+func (cmd *cmd) parseUint32(expected ...string) (uint32, error) {
 	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 32)
 
 	return uint32(val), err
 }
 
-func (cmd cmd) parseUint64(expected ...string) (uint64, error) {
+func (cmd *cmd) parseUint64(expected ...string) (uint64, error) {
 	val, err := strconv.ParseInt(cmd.nextToken(expected...), 10, 64)
 
 	return uint64(val), err
@@ -178,7 +179,7 @@ func (cmd cmd) parseUint64(expected ...string) (uint64, error) {
 
 // parseBool parses a boolean value from the cmd.argument list.
 // expectedTrue and expectedFalse are the strings that represent true and false.
-func (cmd cmd) parseBool(expectedTrue, expectedFalse string) (bool, error) {
+func (cmd *cmd) parseBool(expectedTrue, expectedFalse string) (bool, error) {
 	switch cmd.nextToken([]string{expectedTrue, expectedFalse}...) {
 	case expectedTrue:
 		return true, nil
@@ -186,10 +187,10 @@ func (cmd cmd) parseBool(expectedTrue, expectedFalse string) (bool, error) {
 		return false, nil
 	}
 
-	return false, fmt.Errorf("invalid bool value: %v", cmd.args[cmd.cursor])
+	return false, fmt.Errorf("invalid bool value: %v", cmd.Args[cmd.Cursor])
 }
 
-func (cmd cmd) parseName() string {
+func (cmd *cmd) parseName() string {
 	nextToken := cmd.nextToken("name", "device name")
 
 	if nextToken == "name" {
@@ -199,11 +200,7 @@ func (cmd cmd) parseName() string {
 	return nextToken
 }
 
-func (cmd cmd) parseNodeSpec() string {
-	return cmd.nextToken("default", "CIDR")
-}
-
-func (cmd cmd) parseNextHop() (string, net.IP, error) {
+func (cmd *cmd) parseNextHop() (string, net.IP, error) {
 	nh := cmd.nextToken("via")
 	if nh != "via" {
 		return "", nil, cmd.usage()
@@ -211,7 +208,7 @@ func (cmd cmd) parseNextHop() (string, net.IP, error) {
 
 	addr := net.ParseIP(cmd.nextToken("Gateway CIDR"))
 	if addr == nil {
-		return "", nil, fmt.Errorf("failed to parse gateway IP: %v", cmd.args[cmd.cursor])
+		return "", nil, fmt.Errorf("failed to parse gateway IP: %v", cmd.Args[cmd.Cursor])
 	}
 
 	return nh, addr, nil

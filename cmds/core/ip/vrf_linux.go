@@ -23,7 +23,7 @@ func (cmd cmd) vrf() error {
 	case "show":
 		return cmd.vrfShow()
 	case "help":
-		fmt.Fprint(cmd.out, vrfHelp)
+		fmt.Fprint(cmd.Out, vrfHelp)
 
 		return nil
 	}
@@ -41,7 +41,11 @@ func (cmd cmd) vrfShow() error {
 		return err
 	}
 
-	if cmd.opts.json {
+	return cmd.printVrf(links)
+}
+
+func (cmd cmd) printVrf(links []netlink.Link) error {
+	if cmd.Opts.JSON {
 		vrfs := make([]Vrf, 0, len(links))
 
 		for _, link := range links {
@@ -60,8 +64,8 @@ func (cmd cmd) vrfShow() error {
 	}
 
 	// Print header
-	fmt.Fprintln(cmd.out, "Name              Table")
-	fmt.Fprintln(cmd.out, "-----------------------")
+	fmt.Fprintln(cmd.Out, "Name              Table")
+	fmt.Fprintln(cmd.Out, "-----------------------")
 
 	for _, link := range links {
 		vrf, ok := link.(*netlink.Vrf)
@@ -70,7 +74,8 @@ func (cmd cmd) vrfShow() error {
 		}
 
 		// Adjusted to print both the VRF name and its table ID in the specified format
-		fmt.Fprintf(cmd.out, "%-17s %d\n", vrf.Name, vrf.Table)
+		fmt.Fprintf(cmd.Out, "%-17s %d\n", vrf.Name, vrf.Table)
 	}
+
 	return nil
 }

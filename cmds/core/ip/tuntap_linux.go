@@ -40,7 +40,7 @@ func (cmd cmd) tuntap() error {
 	case "show", "list", "lst":
 		return cmd.tuntapShow()
 	case "help":
-		fmt.Fprint(cmd.out, tuntapHelp)
+		fmt.Fprint(cmd.Out, tuntapHelp)
 
 		return nil
 	default:
@@ -49,24 +49,23 @@ func (cmd cmd) tuntap() error {
 }
 
 type tuntapOptions struct {
-	mode  netlink.TuntapMode
-	user  int
-	group int
-	name  string
-	flags netlink.TuntapFlag
+	Mode  netlink.TuntapMode
+	User  int
+	Group int
+	Name  string
+	Flags netlink.TuntapFlag
 }
 
 var defaultTuntapOptions = tuntapOptions{
-	mode:  netlink.TUNTAP_MODE_TUN,
-	user:  -1,
-	group: -1,
-	name:  "",
-	flags: netlink.TUNTAP_DEFAULTS,
+	Mode:  netlink.TUNTAP_MODE_TUN,
+	User:  -1,
+	Group: -1,
+	Name:  "",
+	Flags: netlink.TUNTAP_DEFAULTS,
 }
 
 func (cmd cmd) parseTunTap() (tuntapOptions, error) {
 	var err error
-
 	options := defaultTuntapOptions
 
 	for cmd.tokenRemains() {
@@ -74,33 +73,33 @@ func (cmd cmd) parseTunTap() (tuntapOptions, error) {
 		case "mode":
 			switch cmd.nextToken("tun, tap") {
 			case "tun":
-				options.mode = netlink.TUNTAP_MODE_TUN
+				options.Mode = netlink.TUNTAP_MODE_TUN
 			case "tap":
-				options.mode = netlink.TUNTAP_MODE_TAP
+				options.Mode = netlink.TUNTAP_MODE_TAP
 			default:
 				return tuntapOptions{}, fmt.Errorf("invalid mode %s", cmd.currentToken())
 			}
 		case "user":
-			options.user, err = cmd.parseInt("USER")
+			options.User, err = cmd.parseInt("USER")
 			if err != nil {
 				return tuntapOptions{}, err
 			}
 		case "group":
-			options.group, err = cmd.parseInt("GROUP")
+			options.Group, err = cmd.parseInt("GROUP")
 			if err != nil {
 				return tuntapOptions{}, err
 			}
 		case "dev", "name":
-			options.name = cmd.nextToken("NAME")
+			options.Name = cmd.nextToken("NAME")
 		case "one_queue":
-			options.flags |= netlink.TUNTAP_ONE_QUEUE
+			options.Flags |= netlink.TUNTAP_ONE_QUEUE
 		case "pi":
-			options.flags &^= netlink.TUNTAP_NO_PI
+			options.Flags &^= netlink.TUNTAP_NO_PI
 		case "vnet_hdr":
-			options.flags |= netlink.TUNTAP_VNET_HDR
+			options.Flags |= netlink.TUNTAP_VNET_HDR
 		case "multi_queue":
-			options.flags |= netlink.TUNTAP_MULTI_QUEUE_DEFAULTS
-			options.flags &^= netlink.TUNTAP_ONE_QUEUE
+			options.Flags = netlink.TUNTAP_MULTI_QUEUE_DEFAULTS
+			options.Flags &^= netlink.TUNTAP_ONE_QUEUE
 
 		default:
 			return tuntapOptions{}, cmd.usage()
@@ -113,20 +112,20 @@ func (cmd cmd) parseTunTap() (tuntapOptions, error) {
 func (cmd cmd) tuntapAdd(options tuntapOptions) error {
 	link := &netlink.Tuntap{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: options.name,
+			Name: options.Name,
 		},
-		Mode: options.mode,
+		Mode: options.Mode,
 	}
 
-	if options.user >= 0 && options.user <= math.MaxUint16 {
-		link.Owner = uint32(options.user)
+	if options.User >= 0 && options.User <= math.MaxUint16 {
+		link.Owner = uint32(options.User)
 	}
 
-	if options.group >= 0 && options.group <= math.MaxUint16 {
-		link.Group = uint32(options.group)
+	if options.Group >= 0 && options.Group <= math.MaxUint16 {
+		link.Group = uint32(options.Group)
 	}
 
-	link.Flags = options.flags
+	link.Flags = options.Flags
 
 	if err := cmd.handle.LinkAdd(link); err != nil {
 		return err
@@ -141,6 +140,19 @@ func (cmd cmd) tuntapDel(options tuntapOptions) error {
 		return err
 	}
 
+	tuntap, err := filterTunTaps(links, options)
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.handle.LinkDel(tuntap); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func filterTunTaps(links []netlink.Link, options tuntapOptions) (*netlink.Tuntap, error) {
 	filteredTunTaps := make([]*netlink.Tuntap, 0)
 
 	for _, link := range links {
@@ -149,11 +161,11 @@ func (cmd cmd) tuntapDel(options tuntapOptions) error {
 			continue
 		}
 
-		if options.name != "" && tunTap.Name != options.name {
+		if options.Name != "" && tunTap.Name != options.Name {
 			continue
 		}
 
-		if options.mode != 0 && tunTap.Mode != options.mode {
+		if options.Mode != 0 && tunTap.Mode != options.Mode {
 			continue
 		}
 
@@ -161,14 +173,10 @@ func (cmd cmd) tuntapDel(options tuntapOptions) error {
 	}
 
 	if len(filteredTunTaps) != 1 {
-		return fmt.Errorf("found %d matching tun/tap devices", len(filteredTunTaps))
+		return nil, fmt.Errorf("found %d matching tun/tap devices", len(filteredTunTaps))
 	}
 
-	if err := cmd.handle.LinkDel(filteredTunTaps[0]); err != nil {
-		return err
-	}
-
-	return nil
+	return filteredTunTaps[0], nil
 }
 
 type Tuntap struct {
@@ -182,6 +190,10 @@ func (cmd cmd) tuntapShow() error {
 		return err
 	}
 
+	return cmd.printTunTaps(links)
+}
+
+func (cmd cmd) printTunTaps(links []netlink.Link) error {
 	prints := make([]Tuntap, 0)
 
 	for _, link := range links {
@@ -227,7 +239,7 @@ func (cmd cmd) tuntapShow() error {
 		prints = append(prints, obj)
 	}
 
-	if cmd.opts.json {
+	if cmd.Opts.JSON {
 		return printJSON(cmd, prints)
 	}
 
@@ -238,7 +250,7 @@ func (cmd cmd) tuntapShow() error {
 			output += fmt.Sprintf(" %s", flag)
 		}
 
-		fmt.Fprintln(cmd.out, output)
+		fmt.Fprintln(cmd.Out, output)
 	}
 
 	return nil
