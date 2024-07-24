@@ -1,0 +1,6 @@
+# files
+*.zip
+*.test
+
+# folders
+testdata/
