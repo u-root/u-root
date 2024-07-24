@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -33,11 +34,12 @@ func run(stdout io.Writer, stderr io.Writer, bytes, count int, files ...string) 
 	}
 
 	var newLineHeader bool
+	var errs error
 
 	for _, file := range files {
 		f, err := os.Open(file)
 		if err != nil {
-			fmt.Fprintf(stderr, "head: %v", err)
+			errs = errors.Join(errs, fmt.Errorf("head: %w", err))
 			continue
 		}
 		if len(files) > 1 {
@@ -53,7 +55,7 @@ func run(stdout io.Writer, stderr io.Writer, bytes, count int, files ...string) 
 			if err == io.ErrUnexpectedEOF {
 				// ignore if user request more bytes than file has
 			} else if err != nil {
-				fmt.Fprintf(stderr, "head: %v", err)
+				errs = errors.Join(errs, fmt.Errorf("head: %w", err))
 				continue
 			}
 			stdout.Write(buffer[:n])
@@ -70,6 +72,9 @@ func run(stdout io.Writer, stderr io.Writer, bytes, count int, files ...string) 
 		}
 	}
 
+	if errs != nil {
+		fmt.Fprintf(stderr, "\n%v\n", errs)
+	}
 	return nil
 }
 
