@@ -16,7 +16,6 @@ type Trace struct {
 	SendChan     chan<- *Probe
 	ReceiveChan  chan<- *Probe
 	exitChan     chan<- bool
-	debug        bool
 	TracesPerHop int
 	PacketRate   int
 }
@@ -62,7 +61,6 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trac
 		SendChan:     cc.sendChan,
 		ReceiveChan:  cc.recvChan,
 		exitChan:     cc.exitChan,
-		debug:        f.Debug,
 		TracesPerHop: DEFNUMTRACES,
 		PacketRate:   1,
 	}

@@ -7,20 +7,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/traceroute"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-func run(out io.Writer, args []string) error {
-	var err error
+type Args struct {
+	Host string
+}
+
+func run(args []string) error {
 	flags := &traceroute.Flags{}
-	trargs := &traceroute.Args{}
+	trargs := &Args{}
 
 	f := flag.NewFlagSet(args[0], flag.ExitOnError)
 	// Short form flags - must be provided with a single dash (-)
@@ -33,6 +34,10 @@ func run(out io.Writer, args []string) error {
 
 	// Long form flags - must be provided with two dashes (--)
 	f.UintVar(&flags.DestPortSeq, "port", 0, "Destination port")
+	f.StringVar(&flags.Module, "module", "", "udp, tcp, icmp")
+	f.BoolVar(&flags.ICMP, "icmp", false, "Use ICMP method. Same as -m icmp")
+	f.BoolVar(&flags.TCP, "tcp", false, "Use TCP method. Same as -m tcp")
+	f.BoolVar(&flags.UDP, "udp", true, "Use UDP method. Same as -m udp")
 
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
@@ -45,12 +50,7 @@ func run(out io.Writer, args []string) error {
 
 	trargs.Host = leftoverArgs[0]
 
-	if len(leftoverArgs) > 1 {
-		trargs.PacketLen, err = strconv.Atoi(leftoverArgs[1])
-		if err != nil {
-			return err
-		}
-	}
+	flags.Host = trargs.Host
 
 	// Evaluate AF and Module
 	af := "4"
@@ -58,15 +58,25 @@ func run(out io.Writer, args []string) error {
 		af = "6"
 	}
 
+	if (flags.TCP || flags.ICMP || flags.UDP) && flags.Module == "" {
+		if flags.TCP {
+			flags.Module = "tcp"
+		} else if flags.ICMP {
+			flags.Module = "icmp"
+		} else if flags.UDP {
+			flags.Module = "udp"
+		}
+	}
+
 	modaf := strings.ToLower(fmt.Sprintf("%s%s", flags.Module, af))
 	// Pass execution to pkg/traceroute.
 	// Setup can be quite complexe with such amount of flags
 	// and the different modules.
-	return traceroute.RunTraceroute(trargs.Host, modaf, flags)
+	return traceroute.RunTraceroute(modaf, flags)
 }
 
 func main() {
-	if err := run(os.Stdout, os.Args); err != nil {
+	if err := run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

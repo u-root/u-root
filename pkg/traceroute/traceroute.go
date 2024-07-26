@@ -21,8 +21,8 @@ type Probe struct {
 	done     bool
 }
 
-func RunTraceroute(host string, prot string, f *Flags) error {
-	dAddr, err := destAddr(host, prot)
+func RunTraceroute(prot string, f *Flags) error {
+	dAddr, err := destAddr(f.Host, prot)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func RunTraceroute(host string, prot string, f *Flags) error {
 
 	destTTL := findDestinationTTL(printMap)
 	fmt.Printf("traceroute to %s (%s), %d hops max, %d byte packets\n",
-		host,
+		f.Host,
 		dAddr.String(),
 		mod.MaxHops,
 		60)
