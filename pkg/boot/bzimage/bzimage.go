@@ -196,9 +196,10 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		for _, decompressor := range decompressors {
 			if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err != nil {
 				return fmt.Errorf("error decompressing payload: %w", err)
+			} else {
+				b.KernelCode = buf.Bytes()
+				break
 			}
-			b.KernelCode = buf.Bytes()
-			break
 		}
 
 		// Verify that the length of the uncompressed payload matches the size read from the last 4 bytes of the compressed payload.
