@@ -12,9 +12,9 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/therootcompany/xz"
 	"github.com/klauspost/compress/zstd"
 	"github.com/pierrec/lz4/v4"
+	"github.com/therootcompany/xz"
 	"github.com/ulikunitz/xz/lzma"
 )
 
@@ -134,8 +134,7 @@ func unzstd(w io.Writer, r io.Reader) error {
 func unxz(w io.Writer, r io.Reader) error {
 	unxzReader, err := xz.NewReader(r, 0)
 	if err != nil {
-		// falling back to shelling out to 'unxz' 
-		unxzReader = execer("unxz")
+		return fmt.Errorf("failed to create new reader: %w", err)
 	}
 
 	if _, err := io.Copy(w, unxzReader); err != nil {

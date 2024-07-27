@@ -37,7 +37,7 @@ type decompressor func(w io.Writer, r io.Reader) error
 
 type magic struct {
 	signature    []byte
-	decompressor decompressor
+	decompressor []decompressor
 }
 
 // MSDOS tag used in .efi binaries.
@@ -52,21 +52,21 @@ var (
 	// shell script, which won't work in u-root.
 	magics = []*magic{
 		// GZIP
-		{[]byte{0x1F, 0x8B}, gunzip},
+		{[]byte{0x1F, 0x8B}, []decompressor{gunzip}},
 		// XZ
-		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, stripSize(unxz)},
+		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, []decompressor{stripSize(unxz), stripSize(execer("unxz"))}},
 		// LZMA
-		{[]byte{0x5D, 0x00, 0x00}, stripSize(unlzma)},
+		{[]byte{0x5D, 0x00, 0x00}, []decompressor{stripSize(unlzma)}},
 		// LZO
-		{[]byte{0x89, 0x4C, 0x5A, 0x4F, 0x00, 0x0D, 0x0A, 0x1A, 0x0A}, stripSize(execer("lzop", "-c", "-d"))},
+		{[]byte{0x89, 0x4C, 0x5A, 0x4F, 0x00, 0x0D, 0x0A, 0x1A, 0x0A}, []decompressor{stripSize(execer("lzop", "-c", "-d"))}},
 		// ZSTD
-		{[]byte{0x28, 0xB5, 0x2F, 0xFD}, stripSize(unzstd)},
+		{[]byte{0x28, 0xB5, 0x2F, 0xFD}, []decompressor{stripSize(unzstd)}},
 		// BZIP2
-		{[]byte{0x42, 0x5A, 0x68}, stripSize(unbzip2)},
+		{[]byte{0x42, 0x5A, 0x68}, []decompressor{stripSize(unbzip2)}},
 		// LZ4 - Note that there are *two* file formats for LZ4 (http://fileformats.archiveteam.org/wiki/LZ4).
 		// The Linux boot process uses the legacy 02 21 4C 18 magic bytes, while newer systems
 		// use 04 22 4D 18
-		{[]byte{0x02, 0x21, 0x4C, 0x18}, stripSize(unlz4)},
+		{[]byte{0x02, 0x21, 0x4C, 0x18}, []decompressor{stripSize(unlz4)}},
 	}
 
 	// Debug is a function used to log debug information. It
@@ -78,7 +78,7 @@ var (
 // unpacking bzimage is a mess, so for now, this is a mess.
 
 // decompressor finds a decompressor by scanning a []byte for a tag.
-func findDecompressor(b []byte) (decompressor, error) {
+func findDecompressors(b []byte) ([]decompressor, error) {
 	for _, m := range magics {
 		if bytes.Index(b, m.signature) == 0 {
 			fmt.Println("found decompressor for signature: ", m.signature)
@@ -166,13 +166,11 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.compressed); err != nil {
 		return fmt.Errorf("can't read KernelCode: %w", err)
 	}
-	decompressor, err := findDecompressor(b.compressed)
+	decompressors, err := findDecompressors(b.compressed)
 	if err != nil {
 		return err
 	}
-	if b.NoDecompress {
-		Debug("skipping code decompress")
-	} else {
+	if !b.NoDecompress {
 		Debug("Uncompress %d bytes", len(b.compressed))
 
 		// The Linux boot process expects that the last 4 bytes of the compressed payload will
@@ -195,10 +193,13 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 
 		// Use the decompressor and write the decompressed payload into b.KernelCode.
 		var buf bytes.Buffer
-		if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err != nil {
-			return fmt.Errorf("error decompressing payload: %w", err)
+		for _, decompressor := range decompressors {
+			if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err != nil {
+				return fmt.Errorf("error decompressing payload: %w", err)
+			}
+			b.KernelCode = buf.Bytes()
+			break
 		}
-		b.KernelCode = buf.Bytes()
 
 		// Verify that the length of the uncompressed payload matches the size read from the last 4 bytes of the compressed payload.
 		if uint32(len(b.KernelCode)) != uncompressedLength {
