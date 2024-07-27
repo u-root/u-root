@@ -194,11 +194,11 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		// Use the decompressor and write the decompressed payload into b.KernelCode.
 		var buf bytes.Buffer
 		for _, decompressor := range decompressors {
-			if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err != nil {
-				return fmt.Errorf("error decompressing payload: %w", err)
-			} else {
+			if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err == nil {
 				b.KernelCode = buf.Bytes()
 				break
+			} else {
+				return fmt.Errorf("error decompressing payload: %w", err)
 			}
 		}
 
