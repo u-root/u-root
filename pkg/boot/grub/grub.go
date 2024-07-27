@@ -522,6 +522,15 @@ func (c *parser) append(ctx context.Context, config string) error {
 				return err
 			}
 
+		case "devicetree":
+			if e, ok := c.linuxEntries[c.curEntry]; ok {
+				dtb, err := c.getFile(arg)
+				if err != nil {
+					return err
+				}
+				e.DTB = dtb
+			}
+
 		case "menuentry":
 			c.curEntry = strconv.Itoa(c.numEntry)
 			c.curLabel = arg
