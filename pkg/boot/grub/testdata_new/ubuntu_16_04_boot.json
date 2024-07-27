@@ -8,6 +8,9 @@
     "kernel": {
       "url": "file:///testdata_new/ubuntu_16_04_boot/vmlinuz-4.10.0-42-generic.efi.signed"
     },
+    "dtb": {
+      "url": "file:///testdata_new/ubuntu_16_04_boot/dtb-4.10.0-42-generic"
+    },
     "name": "Ubuntu",
     "rank": "0"
   },
