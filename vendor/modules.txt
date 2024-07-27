@@ -157,6 +157,9 @@ github.com/insomniacslk/dhcp/rfc1035label
 # github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 ## explicit
 github.com/intel-go/cpuid
+# github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
+## explicit; go 1.12
+github.com/ishidawataru/sctp
 # github.com/josharian/native v1.1.0
 ## explicit; go 1.13
 github.com/josharian/native
@@ -213,6 +216,9 @@ github.com/mdlayher/packet
 # github.com/mdlayher/socket v0.5.0
 ## explicit; go 1.21
 github.com/mdlayher/socket
+# github.com/mdlayher/vsock v1.2.1
+## explicit; go 1.20
+github.com/mdlayher/vsock
 # github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
 ## explicit; go 1.17
 github.com/muesli/ansi
@@ -352,8 +358,10 @@ golang.org/x/net/bpf
 golang.org/x/net/icmp
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
+golang.org/x/net/internal/socks
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
+golang.org/x/net/proxy
 # golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup

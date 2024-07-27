@@ -282,7 +282,7 @@ func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
 			},
 			data: []byte{
 				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
-				10, // BoardTypeMotherboardIncludesProcessorMemoryAndIO
+				byte(BoardTypeMotherboardIncludesProcessorMemoryAndIO),
 				1, 10, 0,
 			},
 			strings: []string{"-", "-", "-", "-", "-", "-"},
@@ -310,7 +310,7 @@ func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
 			},
 			data: []byte{
 				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
-				10, // BoardTypeMotherboardIncludesProcessorMemoryAndIO
+				byte(BoardTypeMotherboardIncludesProcessorMemoryAndIO),
 				1, 10, 0,
 			},
 			strings: []string{"-", "-", "-", "newSerialNumber", "newTag", "-"},
@@ -360,6 +360,63 @@ func TestReplaceBaseboardInfoMotherboardFail(t *testing.T) {
 	}
 
 	opt := ReplaceBaseboardInfoMotherboard(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	if _, err := opt(malformedTable); err == nil {
+		t.Fatalf("opt should fail but returned nil error")
+	}
+}
+
+func TestRemoveBaseboardInfoPass(t *testing.T) {
+	opt := RemoveBaseboardInfo(BoardTypeSystemManagementModule)
+
+	oldTable := []*Table{
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+				byte(BoardTypeSystemManagementModule),
+				1, 10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "-", "-"},
+		},
+	}
+	wantTable := []*Table{}
+
+	newTable, err := opt(oldTable)
+
+	if err != nil {
+		t.Fatalf("opt should pass but returned error: %v", err)
+	}
+	for i := 0; i < len(newTable); i++ {
+		if !reflect.DeepEqual(newTable[i], wantTable[i]) {
+			t.Errorf("opt return incorrect table, got %+v, want %+v", newTable[i], wantTable[i])
+		}
+	}
+}
+
+func TestRemoveBaseboardInfoFail(t *testing.T) {
+	opt := RemoveBaseboardInfo(BoardTypeSystemManagementModule)
+
+	malformedTable := []*Table{
+		{
+			Header: Header{
+				Type:   TableTypeBaseboardInfo,
+				Length: 17,
+				Handle: 0,
+			},
+			data: []byte{
+				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+				byte(BoardTypeSystemManagementModule),
+				255, // wrong NumberOfContainedObjectHandles
+				10, 0,
+			},
+			strings: []string{"-", "-", "-", "-", "-", "-"},
+		},
+	}
 
 	if _, err := opt(malformedTable); err == nil {
 		t.Fatalf("opt should fail but returned nil error")

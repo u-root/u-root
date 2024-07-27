@@ -57,15 +57,16 @@ func TestFlags(t *testing.T) {
 			cmdline: "pox",
 			want: cmd{
 				file: "/tmp/pox.tcz",
+				arg0: "pox",
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := command(strings.Split(tt.cmdline, " "))
+			got := command(nil, nil, nil, strings.Split(tt.cmdline, " "))
 			got.debug, tt.want.debug = nil, nil
 
 			if !reflect.DeepEqual(got, &tt.want) {
-				t.Errorf("\ngot: %+v\nwant: %+v", got, tt.want)
+				t.Errorf("\ngot: %+v\nwant: %+v", got, &tt.want)
 			}
 		})
 	}

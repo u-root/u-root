@@ -5,7 +5,6 @@
 package cpio
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +12,6 @@ import (
 
 func TestRecord(t *testing.T) {
 	r := StaticFile("file", "hello", 0644)
-	fmt.Println(r.String(), r.Info.String())
 	toFileMode(r)
 }
 

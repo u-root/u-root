@@ -6,9 +6,9 @@
 //
 // Synopsis:
 //
-//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c FILE [...FILE]
-//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-run|r] PROGRAM -- [...ARGS]
-//	pox [-[-verbose]|v] [-[-file]|f tcz-file] -[-create]|c -[-run|r] PROGRAM -- [...ARGS]
+//	pox [-v] [-f tcz-file] -c FILE [...FILE]
+//	pox [-v] [-f tcz-file] -r PROGRAM -- [...ARGS]
+//	pox [-v] [-f tcz-file] -c -r PROGRAM -- [...ARGS]
 //
 // Description:
 //
@@ -22,14 +22,14 @@
 //
 // Options:
 //
-//	create|c: create the TCZ file.
-//	verbose|d: verbose
-//	file|f FILE: file name (default /tmp/pox.tcz)
-//	run|r: Runs the first non-flag argument to pox.  Remaining arguments will
+//	c: create the TCZ file.
+//	d: verbose
+//	f FILE: file name (default /tmp/pox.tcz)
+//	r: Runs the first non-flag argument to pox.  Remaining arguments will
 //	       be passed to the program.  Use '--' before any flag-like arguments
 //	       to prevent pox from interpretting the flags.
-//	self|s: Create a self-extracting elf. This implies -z.
-//	zip|z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
+//	s: Create a self-extracting elf. This implies -z.
+//	z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
 //	       to use -z for both creation and running, or not at all.
 //	For convenience and testing, you can create and run a pox in one command.
 //
@@ -110,7 +110,7 @@ import (
 	"github.com/u-root/u-root/pkg/uzip"
 )
 
-const usage = "pox [-[-verbose]|v] -[-run|r] | -[-create]|c  [-[-file]|f tcz-file] file [...file]"
+var ErrUsage = errors.New("pox [-v] [-r] [-c]  [-f tcz-file] file [...file]")
 
 type mp struct {
 	source string
@@ -131,9 +131,15 @@ type cmd struct {
 	file    string
 	extra   string
 	// positional args
-	args []string
+	arg0       string
+	args       []string
+	pathInRoot string
 	// verbose output
 	debug func(string, ...interface{})
+	// io
+	in  io.Reader
+	out io.Writer
+	err io.Writer
 }
 
 // When chrooting, programs often want to access various system directories:
@@ -147,7 +153,7 @@ var chrootMounts = []mp{
 
 func (c cmd) poxCreate() error {
 	if len(c.args) == 0 {
-		return fmt.Errorf(usage)
+		return ErrUsage
 	}
 	names, err := ldd.List(c.args...)
 	if err != nil {
@@ -246,18 +252,21 @@ func (c cmd) poxCreate() error {
 }
 
 func (c cmd) poxRun() error {
-	if len(c.args) == 0 {
-		return fmt.Errorf(usage)
+	if os.Getuid() != 0 {
+		return fmt.Errorf("this primitive kernel requires root permissions to run pox:%w", os.ErrPermission)
 	}
+	v := c.debug
 	dir, err := os.MkdirTemp("", "pox")
 	if err != nil {
 		return err
 	}
 
 	if c.zip {
+		v("uzip...")
 		if err := uzip.FromZip(c.file, dir); err != nil {
 			return err
 		}
+		v("...ok")
 	} else {
 		lo, err := loop.New(c.file, "squashfs", "")
 		if err != nil {
@@ -280,24 +289,31 @@ func (c cmd) poxRun() error {
 		defer mp.Unmount(0) //nolint:errcheck
 	}
 
-	// If you pass Command a path with no slashes, it'll use PATH from the
-	// parent to resolve the path to exec.  Once we chroot, whatever path we
-	// picked is undoubtably wrong.  Let's help them out: if they give us a
-	// program with no /, let's look in /bin/.  If they want the root of the
-	// chroot, they can use "./"
-	if filepath.Base(c.args[0]) == c.args[0] {
-		c.args[0] = filepath.Join(string(os.PathSeparator), "bin", c.args[0])
-	}
-	ec := exec.Command(c.args[0], c.args[1:]...)
-	ec.Stdin, ec.Stdout, ec.Stderr = os.Stdin, os.Stdout, os.Stderr
+	// We called ourselves with name -rz -f name -- command args
+	// So the args to exec.Command should just be c.args...
+	ec := exec.Command(c.pathInRoot, c.args[1:]...)
+	v("cmd q args %q", c.args)
+	// Go does the chroot first, then the chdir.
+	// So set dir to /
+	// If that is not done, pwd won't work at all, since
+	// Dir will not be set and the process cwd will be outside
+	// the chroot. We ran for years with this bug, but apptainer
+	// in a pox revealed. And, yes, sometimes you have to put
+	// apptainer in a pox; it's dynamically linked!
+	ec.Dir = "/"
+	ec.Stdin, ec.Stdout, ec.Stderr = c.in, c.out, c.err
 	ec.SysProcAttr = &syscall.SysProcAttr{
 		Chroot: dir,
 	}
+	v("chroot %q", dir)
 	ec.Env = append(os.Environ(), "PWD=.")
 
+	v("cmd %v", ec)
 	if err = ec.Run(); err != nil {
-		c.debug("pox command exited with: %v", err)
+		v("pox command exited with: %v", err)
+		return err
 	}
+	v("POX ran it; did anything go")
 
 	return nil
 }
@@ -326,28 +342,29 @@ func (c cmd) extraMounts(mountList string) error {
 }
 
 func (c cmd) start() error {
-	// If the current executable is a zip file, extract and run.
-	// Sneakily re-write os.Args to include a "-rzf" before flag parsing.
-	// The zip comment contains the executable path once extracted.
+	if c.verbose {
+		c.debug = log.Printf
+	}
+	v := c.debug
 	exe, err := os.Executable()
 	if err != nil {
 		return err
 	}
+	v("%q: %q, %v", exe, c.args, c)
 	if comment, err := uzip.Comment(exe); err == nil {
-		if comment == "" {
-			return errors.New("expected zip comment on self-extracting pox")
+		if len(comment) == 0 {
+			return fmt.Errorf("zip comment is empty, no path to command:%w", os.ErrNotExist)
 		}
-		os.Args = append([]string{
-			os.Args[0],
-			"-rzf", exe,
-			"--",
-			comment,
-		}, os.Args[1:]...)
+		v("self-running zip file, comment %q, arg0 %q, args: %q", comment, c.arg0, c.args)
+		c.args = append([]string{c.arg0}, c.args...)
+		c.run = true
+		c.zip = true
+		c.file = exe
+		c.pathInRoot = comment
+		v("re-written args: %q %q", c.pathInRoot, c.args)
+
 	}
 
-	if c.verbose {
-		c.debug = log.Printf
-	}
 	if err := c.extraMounts(c.extra); err != nil {
 		return err
 	}
@@ -355,7 +372,7 @@ func (c cmd) start() error {
 		return err
 	}
 	if !c.create && !c.run {
-		return fmt.Errorf(usage)
+		return ErrUsage
 	}
 	if c.create {
 		if err := c.poxCreate(); err != nil {
@@ -368,28 +385,22 @@ func (c cmd) start() error {
 	return nil
 }
 
-func command(args []string) *cmd {
-	var c cmd
+func command(in io.Reader, out, err io.Writer, args []string) *cmd {
+	c := cmd{arg0: args[0], in: in, out: out, err: err}
 
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	f.BoolVar(&c.verbose, "verbose", false, "enable verbose prints")
-	f.BoolVar(&c.verbose, "v", false, "enable verbose prints (shorthand)")
+	f.BoolVar(&c.verbose, "v", false, "enable verbose prints")
 
-	f.BoolVar(&c.run, "run", false, "Run the first file argument")
-	f.BoolVar(&c.run, "r", false, "Run the first file argument (shorthand)")
+	f.BoolVar(&c.run, "r", false, "Run the first file argument")
 
-	f.BoolVar(&c.create, "create", false, "create it")
 	f.BoolVar(&c.create, "c", false, "create it")
 
-	f.BoolVar(&c.zip, "zip", false, "use zip instead of squashfs")
-	f.BoolVar(&c.zip, "z", false, "use zip instead of squashfs (shorthand)")
+	f.BoolVar(&c.zip, "z", false, "use zip instead of squashfs")
 
-	f.BoolVar(&c.self, "self", false, "use self-extracting zip")
-	f.BoolVar(&c.self, "s", false, "use self-extracting zip (shorthand)")
+	f.BoolVar(&c.self, "s", false, "use self-extracting zip")
 
-	f.StringVar(&c.file, "output", "/tmp/pox.tcz", "Output file")
-	f.StringVar(&c.file, "f", "/tmp/pox.tcz", "Output file (shorthand)")
+	f.StringVar(&c.file, "f", "/tmp/pox.tcz", "Output file")
 
 	const extraUsage = `comma-separated list of extra directories to add (on create) and binds to do (on run).
 You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
@@ -397,8 +408,7 @@ pox -c -e /tmp,/etc commands ....
 pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
 This can also be passed in with the POX_EXTRA variable.
 `
-	f.StringVar(&c.extra, "extra", "", extraUsage)
-	f.StringVar(&c.extra, "e", "", extraUsage+" (shorthand)")
+	f.StringVar(&c.extra, "e", "", extraUsage)
 
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
@@ -409,7 +419,7 @@ This can also be passed in with the POX_EXTRA variable.
 }
 
 func main() {
-	if err := command(os.Args).start(); err != nil {
+	if err := command(os.Stdin, os.Stdout, os.Stderr, os.Args).start(); err != nil {
 		log.Fatal(err)
 	}
 }

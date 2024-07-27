@@ -21,6 +21,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -29,20 +30,28 @@ import (
 )
 
 func main() {
-	l, err := ldd.FList(os.Args[1:]...)
+	if err := run(os.Stdout, os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run(stdout io.Writer, args []string) error {
+	l, err := ldd.FList(args...)
 	if err != nil {
-		log.Fatalf("ldd: %v", err)
+		return fmt.Errorf("ldd: %w", err)
 	}
 
-	for _, p := range os.Args[1:] {
+	for _, p := range args {
 		a, err := filepath.Abs(p)
 		if err != nil {
-			log.Fatalf("ldd: %v", err)
+			return fmt.Errorf("ldd: %w", err)
 		}
 		l = append(l, a)
 	}
 
 	for _, dep := range l {
-		fmt.Printf("%s\n", dep)
+		fmt.Fprintf(stdout, "%s\n", dep)
 	}
+
+	return nil
 }
