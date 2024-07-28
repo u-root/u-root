@@ -74,6 +74,9 @@ func printf(format string, args []string) (string, error) {
 					if i+3 < len(format) && isHexDigit(format[i+2]) && isHexDigit(format[i+3]) {
 						hex := format[i+2 : i+4]
 						num, _ := strconv.ParseInt(hex, 16, 32)
+						if num < 0 || num > 255 {
+							return "", fmt.Errorf("%%x: value out of uint8 range")
+						}
 						output.WriteByte(byte(num))
 						i += 3
 						continue
@@ -82,6 +85,9 @@ func printf(format string, args []string) (string, error) {
 					if i+3 < len(format) && isOctalDigit(format[i+2]) && isOctalDigit(format[i+3]) {
 						oct := format[i+1 : i+4]
 						num, _ := strconv.ParseInt(oct, 8, 32)
+						if num < 0 || num > 255 {
+							return "", fmt.Errorf("%%O: value out of uint8 range")
+						}
 						output.WriteByte(byte(num))
 						i += 3
 						continue
@@ -252,6 +258,9 @@ func unescape(s string) (string, error) {
 				if i+3 < len(s) && isHexDigit(s[i+2]) && isHexDigit(s[i+3]) {
 					hex := s[i+2 : i+4]
 					num, _ := strconv.ParseInt(hex, 16, 32)
+					if num < 0 || num > 255 {
+						return "", fmt.Errorf("%%x: value out of uint8 range")
+					}
 					output.WriteByte(byte(num))
 					i += 3
 					continue
@@ -260,6 +269,9 @@ func unescape(s string) (string, error) {
 				if i+3 < len(s) && isOctalDigit(s[i+2]) && isOctalDigit(s[i+3]) {
 					oct := s[i+1 : i+4]
 					num, _ := strconv.ParseInt(oct, 8, 32)
+					if num < 0 || num > 255 {
+						return "", fmt.Errorf("%%O: value out of uint8 range")
+					}
 					output.WriteByte(byte(num))
 					i += 3
 					continue
