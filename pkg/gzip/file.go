@@ -6,6 +6,7 @@ package gzip
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -16,6 +17,21 @@ import (
 type File struct {
 	Options *Options
 	Path    string
+}
+
+// Compression and Decompression functions used by the File.Process method.
+// Bare metal support can be enabled, for example, witht the `tinygo` build tag.
+// Setting these build tags will result in the use of pure go libraries for compression/decompression.
+func Compress(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
+	return compress(r, w, level, blocksize, processes)
+}
+
+// Decompress takes gzip compressed input from io.Reader and expands it using
+// pgzip or gzip, depending on the build tags.
+// When the `tinygo` build tag is set, the `compress/gzip` package is used and the `processes`
+// argument is ignored.
+func Decompress(r io.Reader, w io.Writer, blocksize int, processes int) error {
+	return decompress(r, w, blocksize, processes)
 }
 
 // outputPath removes the path suffix on decompress and adds it on compress.
