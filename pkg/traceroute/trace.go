@@ -7,20 +7,19 @@ package traceroute
 import "net"
 
 type Trace struct {
-	destIP   net.IP
+	DestIP   net.IP
 	destPort uint16
-	srcIP    net.IP
+	SrcIP    net.IP
 	//srcPort     uint16
 	PortOffset   int32
 	MaxHops      int
 	SendChan     chan<- *Probe
 	ReceiveChan  chan<- *Probe
-	exitChan     chan<- bool
 	TracesPerHop int
 	PacketRate   int
 }
 
-func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trace {
+func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc Coms, f *Flags) *Trace {
 	var ret *Trace
 	var destAddr, srcAddr net.IP
 	var dPort uint16
@@ -53,14 +52,13 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc coms, f *Flags) *Trac
 	}
 
 	ret = &Trace{
-		destIP:       destAddr,
+		DestIP:       destAddr,
 		destPort:     dPort,
-		srcIP:        srcAddr,
+		SrcIP:        srcAddr,
 		PortOffset:   0,
 		MaxHops:      DEFNUMHOPS,
-		SendChan:     cc.sendChan,
-		ReceiveChan:  cc.recvChan,
-		exitChan:     cc.exitChan,
+		SendChan:     cc.SendChan,
+		ReceiveChan:  cc.RecvChan,
 		TracesPerHop: DEFNUMTRACES,
 		PacketRate:   1,
 	}

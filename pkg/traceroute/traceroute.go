@@ -11,36 +11,35 @@ import (
 )
 
 type Probe struct {
-	id       uint32
-	sendtime time.Time
-	recvTime time.Time
-	dest     net.IP
-	port     uint16
-	ttl      int
-	saddr    net.IP
-	done     bool
+	ID       uint32
+	Sendtime time.Time
+	RecvTime time.Time
+	Dest     net.IP
+	Port     uint16
+	TTL      int
+	Saddr    net.IP
+	Done     bool
 }
 
-func RunTraceroute(prot string, f *Flags) error {
-	dAddr, err := destAddr(f.Host, prot)
+func RunTraceroute(f *Flags) error {
+	dAddr, err := DestAddr(f.Host, f.Proto)
 	if err != nil {
 		return err
 	}
 
-	sAddr, err := srcAddr(prot)
+	sAddr, err := SrcAddr(f.Proto)
 	if err != nil {
 		return err
 	}
 
-	cc := coms{
-		sendChan: make(chan *Probe),
-		recvChan: make(chan *Probe),
-		exitChan: make(chan bool),
+	cc := Coms{
+		SendChan: make(chan *Probe),
+		RecvChan: make(chan *Probe),
 	}
 
-	mod := NewTrace(prot, dAddr, sAddr, cc, f)
+	mod := NewTrace(f.Proto, dAddr, *sAddr, cc, f)
 
-	switch prot {
+	switch f.Proto {
 	case "udp4":
 		go mod.SendTracesUDP4()
 	case "tcp4":
@@ -57,7 +56,7 @@ func RunTraceroute(prot string, f *Flags) error {
 
 	printMap := runTransmission(cc)
 
-	destTTL := findDestinationTTL(printMap)
+	destTTL := FindDestinationTTL(printMap)
 	fmt.Printf("traceroute to %s (%s), %d hops max, %d byte packets\n",
 		f.Host,
 		dAddr.String(),
@@ -65,13 +64,13 @@ func RunTraceroute(prot string, f *Flags) error {
 		60)
 
 	for i := 1; i <= destTTL; i++ {
-		pbs := getProbesByTLL(printMap, i)
+		pbs := GetProbesByTLL(printMap, i)
 		if len(pbs) == 0 {
 			continue
 		}
 		fmt.Printf("TTL: %-5d", i)
 		for _, pb := range pbs {
-			fmt.Printf("%-20s (%-7.3fms) ", pb.saddr, float64(pb.recvTime.Sub(pb.sendtime)/time.Microsecond)/1000)
+			fmt.Printf("%-20s (%-7.3fms) ", pb.Saddr, float64(pb.RecvTime.Sub(pb.Sendtime)/time.Microsecond)/1000)
 		}
 		fmt.Printf("\n")
 	}
@@ -79,25 +78,25 @@ func RunTraceroute(prot string, f *Flags) error {
 	return nil
 }
 
-func runTransmission(cc coms) map[int]*Probe {
+func runTransmission(cc Coms) map[int]*Probe {
 	sendProbes := make([]*Probe, 0)
 	printMap := map[int]*Probe{}
 	for {
 		var p *Probe
 		select {
-		case p = <-cc.sendChan:
+		case p = <-cc.SendChan:
 			sendProbes = append(sendProbes, p)
 			//fmt.Println(p.id)
-		case p = <-cc.recvChan:
+		case p = <-cc.RecvChan:
 			//fmt.Println(p.id)
 			for i, sp := range sendProbes {
-				if sp.id == p.id {
-					sendProbes[i].recvTime = p.recvTime
-					sendProbes[i].saddr = p.saddr
-					sendProbes[i].done = true
+				if sp.ID == p.ID {
+					sendProbes[i].RecvTime = p.RecvTime
+					sendProbes[i].Saddr = p.Saddr
+					sendProbes[i].Done = true
 					// Add to map
-					printMap[int(sp.id)] = sendProbes[i]
-					if p.saddr.Equal(sp.dest) {
+					printMap[int(sp.ID)] = sendProbes[i]
+					if p.Saddr.Equal(sp.Dest) {
 						return printMap
 					}
 				}

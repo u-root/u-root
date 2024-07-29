@@ -18,8 +18,8 @@ import (
 
 func (t *Trace) SendTracesTCP6() {
 	sport := uint16(1000 + t.PortOffset + rand.Int31n(500))
-	fmt.Println(t.srcIP.String())
-	conn, err := net.ListenPacket("ip6:tcp", t.srcIP.String())
+	fmt.Println(t.SrcIP.String())
+	conn, err := net.ListenPacket("ip6:tcp", t.SrcIP.String())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,12 +33,12 @@ func (t *Trace) SendTracesTCP6() {
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
 			cm, payload := t.BuildTCP6SYNPkt(sport, t.destPort, uint16(ttl), seq, 0)
-			rSocket.WriteTo(payload, cm, &net.IPAddr{IP: t.destIP})
+			rSocket.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
 			pb := &Probe{
-				id:       seq,
-				dest:     t.destIP,
-				ttl:      ttl,
-				sendtime: time.Now(),
+				ID:       seq,
+				Dest:     t.DestIP,
+				TTL:      ttl,
+				Sendtime: time.Now(),
 			}
 			t.SendChan <- pb
 			seq = (seq + 4) % mod
@@ -50,7 +50,7 @@ func (t *Trace) SendTracesTCP6() {
 }
 
 func (t *Trace) ReceiveTracesTCP6() {
-	recvTCPConn, err := net.ListenIP("ip6:tcp", &net.IPAddr{IP: t.srcIP})
+	recvTCPConn, err := net.ListenIP("ip6:tcp", &net.IPAddr{IP: t.SrcIP})
 	if err != nil {
 		log.Fatal("bind TCP failure:", err)
 	}
@@ -60,13 +60,13 @@ func (t *Trace) ReceiveTracesTCP6() {
 		return
 	}
 
-	tcphdr, _ := parseTCP(buf)
+	tcphdr, _ := ParseTCP(buf)
 	if (n >= 20) && (n <= 100) {
-		if (tcphdr.Flags == TCP_ACK+TCP_SYN) && (raddr.String() == t.destIP.String()) {
+		if (tcphdr.Flags == TCP_ACK+TCP_SYN) && (raddr.String() == t.DestIP.String()) {
 			pb := &Probe{
-				id:       tcphdr.AckNum - 1,
-				saddr:    net.ParseIP(raddr.String()),
-				recvTime: time.Now(),
+				ID:       tcphdr.AckNum - 1,
+				Saddr:    net.ParseIP(raddr.String()),
+				RecvTime: time.Now(),
 			}
 			t.ReceiveChan <- pb
 		}
@@ -74,8 +74,8 @@ func (t *Trace) ReceiveTracesTCP6() {
 }
 
 func (t *Trace) ReceiveTracesTCP6ICMP() {
-	//laddr := &net.IPAddr{IP: t.srcIP}
-	recvICMPConn, err := net.ListenIP("ip6:ipv6-icmp", &net.IPAddr{IP: t.srcIP})
+	//laddr := &net.IPAddr{IP: t.SrcIP}
+	recvICMPConn, err := net.ListenIP("ip6:ipv6-icmp", &net.IPAddr{IP: t.SrcIP})
 	if err != nil {
 		log.Fatal("bind failure:", err)
 	}
@@ -89,12 +89,12 @@ func (t *Trace) ReceiveTracesTCP6ICMP() {
 		icmpType := buf[0]
 		if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { //TTL Exceeded or Port Unreachable
 			ipv6hdr, _ := ipv6.ParseHeader(buf[8:])
-			tcphdr, _ := parseTCP(buf[8+ipv6.HeaderLen : 48+ipv6.HeaderLen])
-			if ipv6hdr.Dst.Equal(t.destIP) { // && dstPort == t.dstPort {
+			tcphdr, _ := ParseTCP(buf[8+ipv6.HeaderLen : 48+ipv6.HeaderLen])
+			if ipv6hdr.Dst.Equal(t.DestIP) { // && dstPort == t.dstPort {
 				pb := &Probe{
-					id:       tcphdr.SeqNum,
-					saddr:    net.ParseIP(raddr.String()),
-					recvTime: time.Now(),
+					ID:       tcphdr.SeqNum,
+					Saddr:    net.ParseIP(raddr.String()),
+					RecvTime: time.Now(),
 				}
 				t.ReceiveChan <- pb
 			}
@@ -114,14 +114,14 @@ func (t *Trace) IPv6TCPProbe(dport uint16) {
 
 func (t *Trace) IPv6TCPPing(seq uint32, dport uint16) {
 	pbs := &Probe{
-		id:       seq,
-		dest:     t.destIP,
-		ttl:      0,
-		sendtime: time.Now(),
+		ID:       seq,
+		Dest:     t.DestIP,
+		TTL:      0,
+		Sendtime: time.Now(),
 	}
 	t.SendChan <- pbs
 
-	conn, err := net.DialTimeout("ip6:tcp", fmt.Sprintf("%s:%d", t.destIP.String(), dport), time.Second*2)
+	conn, err := net.DialTimeout("ip6:tcp", fmt.Sprintf("%s:%d", t.DestIP.String(), dport), time.Second*2)
 	if err != nil {
 		return
 	}
@@ -129,9 +129,9 @@ func (t *Trace) IPv6TCPPing(seq uint32, dport uint16) {
 
 	fmt.Println("tcp probe")
 	pbr := &Probe{
-		id:       seq,
-		saddr:    t.destIP,
-		recvTime: time.Now(),
+		ID:       seq,
+		Saddr:    t.DestIP,
+		RecvTime: time.Now(),
 	}
 	t.ReceiveChan <- pbr
 }

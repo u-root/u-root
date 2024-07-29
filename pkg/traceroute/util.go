@@ -6,19 +6,17 @@ package traceroute
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
 )
 
-type coms struct {
-	sendChan chan *Probe
-	recvChan chan *Probe
-	exitChan chan bool
+type Coms struct {
+	SendChan chan *Probe
+	RecvChan chan *Probe
 }
 
-// Given a host name convert it to a 4 byte IP address.
-func destAddr(dest, proto string) (net.IP, error) {
+// Given a host name convert it to a IP address according to provided ip protocol.
+func DestAddr(dest, proto string) (net.IP, error) {
 	addrs, err := net.LookupHost(dest)
 	if err != nil {
 		return nil, err
@@ -47,35 +45,35 @@ func destAddr(dest, proto string) (net.IP, error) {
 	return ipAddr.IP, nil
 }
 
-func srcAddr(proto string) (net.IP, error) {
+func SrcAddr(proto string) (*net.IP, error) {
 	var sAddr net.Addr
 	if strings.Contains(proto, "6") {
 		conn, err := net.Dial("udp6", "[2001:4860:4860::8844]:53")
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		sAddr = conn.LocalAddr().(*net.UDPAddr)
 		conn.Close()
 	} else {
 		conn, err := net.Dial("udp", "8.8.8.8:53")
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		sAddr = conn.LocalAddr().(*net.UDPAddr)
 		conn.Close()
 	}
-	return sAddr.(*net.UDPAddr).IP, nil
+	return &sAddr.(*net.UDPAddr).IP, nil
 }
 
-func findDestinationTTL(printMap map[int]*Probe) int {
+func FindDestinationTTL(printMap map[int]*Probe) int {
 	icmp := false
 	destttl := 1
 	var icmpfinalpb *Probe
 	for _, pb := range printMap {
-		if destttl < pb.ttl {
-			destttl = pb.ttl
+		if destttl < pb.TTL {
+			destttl = pb.TTL
 		}
-		if pb.ttl == 0 {
+		if pb.TTL == 0 {
 			// ICMP TCPProbe needs to increase return value by one
 			icmpfinalpb = pb
 			icmp = true
@@ -85,16 +83,16 @@ func findDestinationTTL(printMap map[int]*Probe) int {
 	if icmp {
 		destttl++
 		newttl := destttl
-		icmpfinalpb.ttl = newttl
+		icmpfinalpb.TTL = newttl
 	}
 
 	return destttl
 }
 
-func getProbesByTLL(printMap map[int]*Probe, ttl int) []*Probe {
+func GetProbesByTLL(printMap map[int]*Probe, ttl int) []*Probe {
 	pbs := make([]*Probe, 0)
 	for _, pb := range printMap {
-		if pb.ttl == ttl {
+		if pb.TTL == ttl {
 			pbs = append(pbs, pb)
 		}
 	}

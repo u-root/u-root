@@ -39,14 +39,14 @@ func (t *Trace) SendTracesUDP4() {
 			}
 
 			pb := &Probe{
-				id:   uint32(id),
-				dest: t.destIP,
-				port: dport,
-				ttl:  ttl,
+				ID:   uint32(id),
+				Dest: t.DestIP,
+				Port: dport,
+				TTL:  ttl,
 			}
 			hdr, pl := t.BuildUDP4Pkt(sport, dport, uint8(ttl), id, 0)
 
-			pb.sendtime = time.Now()
+			pb.Sendtime = time.Now()
 			if err := rSock.WriteTo(hdr, pl, nil); err != nil {
 				log.Fatal(err)
 			}
@@ -61,7 +61,7 @@ func (t *Trace) SendTracesUDP4() {
 }
 
 func (t *Trace) ReceiveTracesUDP4() {
-	dest := t.destIP.To4()
+	dest := t.DestIP.To4()
 	var err error
 	recvICMPConn, err := net.ListenIP("ip4:icmp", nil)
 	if err != nil {
@@ -84,9 +84,9 @@ func (t *Trace) ReceiveTracesUDP4() {
 		_ = binary.BigEndian.Uint16(buf[30:32])
 		if dstip.Equal(dest) { // && dstPort == t.dstPort {
 			recvProbe := &Probe{
-				id:       uint32(id),
-				saddr:    net.ParseIP(raddr.String()),
-				recvTime: time.Now(),
+				ID:       uint32(id),
+				Saddr:    net.ParseIP(raddr.String()),
+				RecvTime: time.Now(),
 			}
 			t.ReceiveChan <- recvProbe
 		}
@@ -105,8 +105,8 @@ func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint1
 		TTL:      int(ttl),
 		Protocol: 17,
 		Checksum: 0,
-		Src:      t.srcIP.To4(),
-		Dst:      t.destIP.To4(),
+		Src:      t.SrcIP.To4(),
+		Dst:      t.DestIP.To4(),
 	}
 
 	h, err := iph.Marshal()
