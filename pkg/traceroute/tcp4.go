@@ -18,7 +18,7 @@ import (
 
 func (t *Trace) SendTracesTCP4() {
 	sport := uint16(1000 + t.PortOffset + rand.Int31n(500))
-	conn, err := net.ListenPacket("ip4:tcp", t.srcIP.String())
+	conn, err := net.ListenPacket("ip4:tcp", t.SrcIP.String())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,10 +35,10 @@ func (t *Trace) SendTracesTCP4() {
 			hdr, payload := t.BuildTCP4SYNPkt(sport, t.destPort, uint8(ttl), seq, 0)
 			rSocket.WriteTo(hdr, payload, nil)
 			pb := &Probe{
-				id:       seq,
-				dest:     t.destIP,
-				ttl:      ttl,
-				sendtime: time.Now(),
+				ID:       seq,
+				Dest:     t.DestIP,
+				TTL:      ttl,
+				Sendtime: time.Now(),
 			}
 			t.SendChan <- pb
 			seq = (seq + 4) % mod
@@ -51,7 +51,7 @@ func (t *Trace) SendTracesTCP4() {
 }
 
 func (t *Trace) ReceiveTracesTCP4() {
-	recvTCPConn, err := net.ListenIP("ip4:tcp", &net.IPAddr{IP: t.srcIP})
+	recvTCPConn, err := net.ListenIP("ip4:tcp", &net.IPAddr{IP: t.SrcIP})
 	if err != nil {
 		log.Fatal("bind TCP failure:", err)
 	}
@@ -62,15 +62,15 @@ func (t *Trace) ReceiveTracesTCP4() {
 	}
 
 	if (n >= 20) && (n <= 100) {
-		if (buf[13] == TCP_ACK+TCP_SYN) && (raddr.String() == t.destIP.String()) {
+		if (buf[13] == TCP_ACK+TCP_SYN) && (raddr.String() == t.DestIP.String()) {
 			//no need to generate RST message, Linux will automatically send rst
 			//sport := binary.BigEndian.Uint16(buf[0:2])
 			//dport := binary.BigEndian.Uint16(buf[2:4])
 			ack := binary.BigEndian.Uint32(buf[8:12]) - 1
 			pb := &Probe{
-				id:       ack,
-				saddr:    net.ParseIP(raddr.String()),
-				recvTime: time.Now(),
+				ID:       ack,
+				Saddr:    net.ParseIP(raddr.String()),
+				RecvTime: time.Now(),
 			}
 			t.ReceiveChan <- pb
 		}
@@ -78,7 +78,7 @@ func (t *Trace) ReceiveTracesTCP4() {
 }
 
 func (t *Trace) ReceiveTracesTCP4ICMP() {
-	recvICMPConn, err := net.ListenIP("ip4:icmp", &net.IPAddr{IP: t.srcIP})
+	recvICMPConn, err := net.ListenIP("ip4:icmp", &net.IPAddr{IP: t.SrcIP})
 	if err != nil {
 		log.Fatal("bind failure:", err)
 	}
@@ -96,11 +96,11 @@ func (t *Trace) ReceiveTracesTCP4ICMP() {
 			//srcip := net.IP(buf[20:24])
 			//srcPort := binary.BigEndian.Uint16(buf[28:30])
 			//dstPort := binary.BigEndian.Uint16(buf[30:32])
-			if dstip.Equal(t.destIP) { // && dstPort == t.dstPort {
+			if dstip.Equal(t.DestIP) { // && dstPort == t.dstPort {
 				pb := &Probe{
-					id:       seq,
-					saddr:    net.ParseIP(raddr.String()),
-					recvTime: time.Now(),
+					ID:       seq,
+					Saddr:    net.ParseIP(raddr.String()),
+					RecvTime: time.Now(),
 				}
 				t.ReceiveChan <- pb
 			}
@@ -121,22 +121,22 @@ func (t *Trace) IPv4TCPProbe(dport uint16) {
 
 func (t *Trace) IPv4TCPPing(seq uint32, dport uint16) {
 	pbs := &Probe{
-		id:       seq,
-		dest:     t.destIP,
-		ttl:      0,
-		sendtime: time.Now(),
+		ID:       seq,
+		Dest:     t.DestIP,
+		TTL:      0,
+		Sendtime: time.Now(),
 	}
 	t.SendChan <- pbs
 
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", t.destIP.String(), dport), time.Second*2)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", t.DestIP.String(), dport), time.Second*2)
 	if err != nil {
 		return
 	}
 	conn.Close()
 	pbr := &Probe{
-		id:       seq,
-		saddr:    t.destIP,
-		recvTime: time.Now(),
+		ID:       seq,
+		Saddr:    t.DestIP,
+		RecvTime: time.Now(),
 	}
 	t.ReceiveChan <- pbr
 }
@@ -153,8 +153,8 @@ func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq u
 		TTL:      int(ttl),
 		Protocol: 6,
 		Checksum: 0,
-		Src:      t.srcIP,
-		Dst:      t.destIP,
+		Src:      t.SrcIP,
+		Dst:      t.DestIP,
 	}
 
 	h, err := iph.Marshal()

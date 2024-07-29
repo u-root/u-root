@@ -6,8 +6,7 @@ package traceroute
 
 type Flags struct {
 	Host         string
-	AF4          bool
-	AF6          bool
+	Proto        string
 	ICMP         bool
 	TCP          bool
 	MaxHops      int
@@ -17,4 +16,8 @@ type Flags struct {
 	Source       string
 	Module       string
 	UDP          bool
+}
+
+type Args struct {
+	Host string
 }

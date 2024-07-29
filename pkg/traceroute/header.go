@@ -110,7 +110,7 @@ func (t *TCPHeader) checksum(ip *ipv4.Header, payload []byte) {
 	t.Checksum = checkSum(b.Bytes())
 }
 
-func parseTCP(data []byte) (*TCPHeader, error) {
+func ParseTCP(data []byte) (*TCPHeader, error) {
 	r := bytes.NewReader(data)
 	hdr := &TCPHeader{}
 

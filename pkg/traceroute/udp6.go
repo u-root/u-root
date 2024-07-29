@@ -35,15 +35,15 @@ func (t *Trace) SendTracesUDP6() {
 			rSock.SetChecksum(true, 0x8)
 
 			pb := &Probe{
-				id:   uint32(id),
-				dest: t.destIP,
-				port: dport,
-				ttl:  ttl,
+				ID:   uint32(id),
+				Dest: t.DestIP,
+				Port: dport,
+				TTL:  ttl,
 			}
 			cm, payload := t.BuildUDP6Pkt(sport, dport, uint8(ttl), id, 0)
 
-			pb.sendtime = time.Now()
-			rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.destIP})
+			pb.Sendtime = time.Now()
+			rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
 
 			t.SendChan <- pb
 			dport = uint16(int32(t.destPort) + rand.Int31n(64))
@@ -73,11 +73,11 @@ func (t *Trace) ReceiveTracesUDP6() {
 	icmpType := buf[0]
 	if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { //TTL Exceeded or Port Unreachable
 		id := binary.BigEndian.Uint16(buf[46+ipv6.HeaderLen : 48+ipv6.HeaderLen])
-		if ip6hdr.Dst.Equal(t.destIP) { // && dstPort == t.dstPort {
+		if ip6hdr.Dst.Equal(t.DestIP) { // && dstPort == t.dstPort {
 			recvProbe := &Probe{
-				id:       uint32(id),
-				saddr:    net.ParseIP(raddr.String()),
-				recvTime: time.Now(),
+				ID:       uint32(id),
+				Saddr:    net.ParseIP(raddr.String()),
+				RecvTime: time.Now(),
 			}
 			t.ReceiveChan <- recvProbe
 		}

@@ -16,7 +16,7 @@ import (
 )
 
 func (t *Trace) SendTracesICMP6() {
-	conn, err := net.ListenPacket("ip6:ipv6-icmp", t.srcIP.String())
+	conn, err := net.ListenPacket("ip6:ipv6-icmp", t.SrcIP.String())
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -29,12 +29,12 @@ func (t *Trace) SendTracesICMP6() {
 	for ttl := 1; ttl < int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
 			cm, payload := t.BuildICMP6Pkt(ttl, id, id, 0)
-			pktconn.WriteTo(payload, cm, &net.UDPAddr{IP: t.destIP})
+			pktconn.WriteTo(payload, cm, &net.UDPAddr{IP: t.DestIP})
 			pb := &Probe{
-				id:       uint32(id),
-				dest:     t.destIP,
-				ttl:      ttl,
-				sendtime: time.Now(),
+				ID:       uint32(id),
+				Dest:     t.DestIP,
+				TTL:      ttl,
+				Sendtime: time.Now(),
 			}
 			t.SendChan <- pb
 			id = (id + 1) % mod
@@ -70,11 +70,11 @@ func (t *Trace) ReceiveTraceICMP6() {
 		id := binary.BigEndian.Uint16(buf[14+ipv6.HeaderLen : 16+ipv6.HeaderLen])
 		//fmt.Printf("%v\n", id)
 		ipv6hdr, _ := ipv6.ParseHeader(buf[8:])
-		if ipv6hdr.Dst.Equal(t.destIP) {
+		if ipv6hdr.Dst.Equal(t.DestIP) {
 			pb := &Probe{
-				id:       uint32(id),
-				saddr:    net.ParseIP(raddr.String()),
-				recvTime: time.Now(),
+				ID:       uint32(id),
+				Saddr:    net.ParseIP(raddr.String()),
+				RecvTime: time.Now(),
 			}
 			t.ReceiveChan <- pb
 		}
