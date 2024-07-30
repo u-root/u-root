@@ -17,8 +17,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -26,6 +28,11 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/loop"
 	"golang.org/x/sys/unix"
+)
+
+var (
+	errUsage     = errors.New("usage")
+	errMountPath = errors.New("can not read mount path")
 )
 
 type mountOptions []string
@@ -41,14 +48,30 @@ func (o *mountOptions) Set(value string) error {
 	return nil
 }
 
-var (
-	ro      = flag.Bool("r", false, "Read only mount")
-	fsType  = flag.String("t", "", "File system type")
-	options mountOptions
-)
+type cmd struct {
+	stdout          io.Writer
+	stderr          io.Writer
+	fileSystemsPath string
+	fsType          string
+	mountsPath      []string
+	options         mountOptions
+	ro              bool
+}
 
-func init() {
-	flag.Var(&options, "o", "Comma separated list of mount options")
+func command(stdout, stderr io.Writer, ro bool, fsType string, opts mountOptions) *cmd {
+	return &cmd{
+		stdout: stdout,
+		stderr: stderr,
+		mountsPath: []string{
+			"/proc/self/mounts",
+			"/proc/mounts",
+			"/etc/mtab",
+		},
+		fileSystemsPath: "/proc/filesystems",
+		ro:              ro,
+		options:         opts,
+		fsType:          fsType,
+	}
 }
 
 func loopSetup(filename string) (loopDevice string, err error) {
@@ -63,10 +86,10 @@ func loopSetup(filename string) (loopDevice string, err error) {
 }
 
 // extended from boot.go
-func getSupportedFilesystem(originFS string) ([]string, bool, error) {
+func (c *cmd) getSupportedFilesystem(originFS string) ([]string, bool, error) {
 	var known bool
 	var err error
-	fs, err := os.ReadFile("/proc/filesystems")
+	fs, err := os.ReadFile(c.fileSystemsPath)
 	if err != nil {
 		return nil, known, err
 	}
@@ -85,45 +108,43 @@ func getSupportedFilesystem(originFS string) ([]string, bool, error) {
 	return returnValue, known, err
 }
 
-func informIfUnknownFS(originFS string) {
-	knownFS, known, err := getSupportedFilesystem(originFS)
+func (c *cmd) informIfUnknownFS(originFS string) {
+	knownFS, known, err := c.getSupportedFilesystem(originFS)
 	if err != nil {
 		// just don't make things even worse...
 		return
 	}
 	if !known {
-		log.Printf("Hint: unknown filesystem %s. Known are: %v", originFS, knownFS)
+		fmt.Fprintf(c.stderr, "Hint: unknown filesystem %s. Known are: %v", originFS, knownFS)
 	}
 }
 
-func main() {
-	if len(os.Args) == 1 {
-		n := []string{"/proc/self/mounts", "/proc/mounts", "/etc/mtab"}
-		for _, p := range n {
+func (c *cmd) run(args ...string) error {
+	if len(args) == 0 {
+		for _, p := range c.mountsPath {
 			if b, err := os.ReadFile(p); err == nil {
-				fmt.Print(string(b))
-				os.Exit(0)
+				c.stdout.Write(b)
+				return nil
 			}
 		}
-		log.Fatalf("Could not read %s to get namespace", n)
+		return fmt.Errorf("%w: %v to get namespace", errMountPath, c.mountsPath)
 	}
-	flag.Parse()
-	if len(flag.Args()) < 2 {
-		flag.Usage()
-		os.Exit(1)
+
+	if len(args) < 2 {
+		return errUsage
 	}
-	a := flag.Args()
-	dev := a[0]
-	path := a[1]
+
+	dev := args[0]
+	path := args[1]
 	var flags uintptr
 	var data []string
 	var err error
-	for _, option := range options {
+	for _, option := range c.options {
 		switch option {
 		case "loop":
 			dev, err = loopSetup(dev)
 			if err != nil {
-				log.Fatal("Error setting loop device:", err)
+				return fmt.Errorf("error setting loop device: %w", err)
 			}
 		default:
 			if f, ok := opts[option]; ok {
@@ -133,18 +154,37 @@ func main() {
 			}
 		}
 	}
-	if *ro {
+
+	if c.ro {
 		flags |= unix.MS_RDONLY
 	}
-	if *fsType == "" {
+	if c.fsType == "" {
 		if _, err := mount.TryMount(dev, path, strings.Join(data, ","), flags); err != nil {
-			log.Fatalf("%v", err)
+			return err
 		}
 	} else {
-		if _, err := mount.Mount(dev, path, *fsType, strings.Join(data, ","), flags); err != nil {
-			log.Printf("%v", err)
-			informIfUnknownFS(*fsType)
-			os.Exit(1)
+		if _, err := mount.Mount(dev, path, c.fsType, strings.Join(data, ","), flags); err != nil {
+			c.informIfUnknownFS(c.fsType)
+			return err
 		}
+	}
+
+	return nil
+}
+
+func main() {
+	ro := flag.Bool("r", false, "Read only mount")
+	fsType := flag.String("t", "", "File system type")
+	var options mountOptions
+	flag.Var(&options, "o", "Comma separated list of mount options")
+	flag.Parse()
+	cmd := command(os.Stdout, os.Stderr, *ro, *fsType, options)
+
+	err := cmd.run(flag.Args()...)
+	if errors.Is(err, errUsage) {
+		flag.Usage()
+		os.Exit(1)
+	} else if err != nil {
+		log.Fatal(err)
 	}
 }
