@@ -32,7 +32,7 @@ import (
 
 var (
 	errUsage     = errors.New("usage")
-	errMountPath = errors.New("can't read mount path")
+	errMountPath = errors.New("can not read mount path")
 )
 
 type mountOptions []string
