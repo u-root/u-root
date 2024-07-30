@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/ipmi"
@@ -78,7 +80,7 @@ func getHssFromIpmi(warnings io.Writer, verboseDangerous bool) ([][]uint8, error
 
 	blobCount, err := h.BlobGetCount()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get blob count: %v", err)
+		return nil, fmt.Errorf("failed to get blob count: %w", err)
 	}
 
 	hssLists := [][][]uint8{}
@@ -117,7 +119,7 @@ func getHssFromIpmi(warnings io.Writer, verboseDangerous bool) ([][]uint8, error
 		}
 
 		if warnings != nil && verboseDangerous {
-			io.WriteString(warnings, fmt.Sprintf("HSS Entry: Id=%s, Seed=%x\n", id, hss))
+			fmt.Fprintf(warnings, "HSS Entry: Id=%s, Seed=%x\n", id, hss)
 		}
 
 		hssLists[prefixIdx] = append(hssLists[prefixIdx], hss)
@@ -148,30 +150,40 @@ func GetAllHss(warnings io.Writer, verboseDangerous bool, eepromPattern string, 
 	// Attempt to get HSS from IPMI.
 	hssList, err := getHssFromIpmi(warnings, verboseDangerous)
 	if err != nil || len(hssList) == 0 {
-		io.WriteString(warnings, fmt.Sprintf("Failed to get HSS key from IPMI: %v\n", err))
+		fmt.Fprintf(warnings, "Failed to get HSS key from IPMI: %v\n", err)
 	}
 
 	// Attempt to get HSS from EEPROM.
 	if eepromPattern != "" {
 		filePaths, err := getHssEepromPaths(baseSysfsPattern, eepromPattern)
 		if err != nil {
-			io.WriteString(warnings, fmt.Sprintf("Failed to find HSS EEPROM paths: %v\n", err))
+			fmt.Fprintf(warnings, "Failed to find HSS EEPROM paths: %v\n", err)
 		}
 		hssEeprom, err := GetHssFromFile(warnings, verboseDangerous, filePaths, hostSecretSeedCount)
 		if err == nil && len(hssEeprom) > 0 {
 			hssList = append(hssList, hssEeprom...)
 		} else {
-			io.WriteString(warnings, fmt.Sprintf("Failed to get HSS key from file: %v\n", err))
+			fmt.Fprintf(warnings, "Failed to get HSS key from file: %v\n", err)
 		}
 	}
 
+	// Attempt to get HSS from files.
 	if hssFiles != "" {
-		hssFileArr := strings.Split(hssFiles, ",")
-		hss, err := GetHssFromFile(warnings, verboseDangerous, hssFileArr, 0)
-		if err != nil {
-			io.WriteString(warnings, fmt.Sprintf("Error parsing file %s for HSS: %v\n", hss, err))
+		hssFileArr := []string{}
+		// Parse if list of paths were given.
+		for _, hssFile := range strings.Split(strings.TrimSpace(hssFiles), ",") {
+			hssFile, err := evaluateHssPath(hssFile)
+			if err != nil {
+				fmt.Fprintf(warnings, "Error parsing path %s for file: %v\n", hssFile, err)
+			}
+			hssFileArr = append(hssFileArr, hssFile...)
 		}
-		if len(hss) > 0 {
+
+		if len(hssFileArr) > 0 {
+			hss, err := GetHssFromFile(warnings, verboseDangerous, hssFileArr, 0)
+			if err != nil {
+				fmt.Fprintf(warnings, "Error parsing files %s for HSS: %v\n", hss, err)
+			}
 			hssList = append(hssList, hss...)
 		}
 	}
@@ -180,6 +192,38 @@ func GetAllHss(warnings io.Writer, verboseDangerous bool, eepromPattern string, 
 		return hssList, nil
 	}
 	return nil, fmt.Errorf("failed all HSS retrieval attempts")
+}
+
+// evaluateHssPath evaluates a filepath to return the file or contents if a directory.
+// This function evaluates the base pointer for symlinks.
+func evaluateHssPath(hssFiles string) ([]string, error) {
+	// Follow symlink if needed.
+	hssFiles, err := filepath.EvalSymlinks(hssFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed evaluating HSS path: %w", err)
+	}
+
+	hssFileArr := []string{}
+
+	fi, err := os.Stat(hssFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat HSS files: %w", err)
+	}
+
+	// Check if hssFiles is a directory or a file. Add all regular files in the base directory.
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		filepath.Walk(hssFiles, func(fpath string, info os.FileInfo, _ error) error {
+			if info.Mode().IsRegular() {
+				hssFileArr = append(hssFileArr, fpath)
+			}
+			return nil
+		})
+	case mode.IsRegular():
+		hssFileArr = append(hssFileArr, hssFiles)
+	}
+
+	return hssFileArr, nil
 }
 
 // GenPassword computes the password deterministically as the 32-byte HDKF-SHA256 of the
