@@ -25,7 +25,7 @@ STATE := { delay | failed | incomplete | noarp | none |
            permanent | probe | reachable | stale }
 `
 
-func (cmd cmd) neigh() error {
+func (cmd *cmd) neigh() error {
 	if !cmd.tokenRemains() {
 		return cmd.showAllNeighbours(-1, false)
 	}
@@ -70,7 +70,7 @@ func (cmd cmd) neigh() error {
 	return cmd.usage()
 }
 
-func (cmd cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
+func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 	addr, err := cmd.parseAddress()
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (cmd cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 	}, nil
 }
 
-func (cmd cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) {
+func (cmd *cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) {
 	nud = -1
 
 	var ok bool
@@ -199,7 +199,7 @@ func getState(state int) string {
 	return strings.Join(ret, ",")
 }
 
-func (cmd cmd) showAllNeighbours(nud int, proxy bool) error {
+func (cmd *cmd) showAllNeighbours(nud int, proxy bool) error {
 	ifaces, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ type Neigh struct {
 	State  string `json:"state,omitempty"`
 }
 
-func (cmd cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
+func (cmd *cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
 	flags, state, err := cmd.neighFlagState(proxy, nud)
 	if err != nil {
 		return err
@@ -265,7 +265,7 @@ func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP
 	return filtered, filteredLinkNames
 }
 
-func (cmd cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
+func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
 	if cmd.Opts.JSON {
 		pNeighs := make([]Neigh, 0, len(neighs))
 
@@ -283,7 +283,7 @@ func (cmd cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
 			pNeighs = append(pNeighs, neigh)
 		}
 
-		return printJSON(cmd, pNeighs)
+		return printJSON(*cmd, pNeighs)
 	}
 
 	neighFmt := "%s dev %s%s%s %s\n"
@@ -310,7 +310,7 @@ func (cmd cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
 	return nil
 }
 
-func (cmd cmd) neighShow() error {
+func (cmd *cmd) neighShow() error {
 	iface, proxy, nud, err := cmd.parseNeighShowFlush()
 	if err != nil {
 		return err
@@ -323,7 +323,7 @@ func (cmd cmd) neighShow() error {
 	return cmd.showAllNeighbours(nud, proxy)
 }
 
-func (cmd cmd) neighFlush() error {
+func (cmd *cmd) neighFlush() error {
 	var (
 		ifaces []netlink.Link
 		flags  uint8
@@ -373,7 +373,7 @@ func (cmd cmd) neighFlush() error {
 	return nil
 }
 
-func (cmd cmd) neighFlagState(proxy bool, nud int) (uint8, uint16, error) {
+func (cmd *cmd) neighFlagState(proxy bool, nud int) (uint8, uint16, error) {
 	var flags uint8
 	var state uint16
 

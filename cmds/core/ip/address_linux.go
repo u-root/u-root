@@ -41,7 +41,7 @@ var stringScope = map[string]netlink.Scope{
 	"link":   netlink.SCOPE_LINK,
 }
 
-func (cmd cmd) address() error {
+func (cmd *cmd) address() error {
 	if !cmd.tokenRemains() {
 		return cmd.showAllLinks(true)
 	}
@@ -93,7 +93,7 @@ func (cmd cmd) address() error {
 	}
 }
 
-func (cmd cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
+func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 	tokenAddr := cmd.nextToken("CIDR format address")
 	addr, err := netlink.ParseAddr(tokenAddr)
 	if err != nil {
@@ -135,7 +135,7 @@ func (cmd cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 	return iface, addr, nil
 }
 
-func (cmd cmd) addressShow() error {
+func (cmd *cmd) addressShow() error {
 	device, typeName, err := cmd.parseAddrShow()
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
@@ -148,7 +148,7 @@ func (cmd cmd) addressShow() error {
 	return cmd.showLink(device, true, typeName)
 }
 
-func (cmd cmd) parseAddrShow() (netlink.Link, string, error) {
+func (cmd *cmd) parseAddrShow() (netlink.Link, string, error) {
 	device, err := cmd.parseDeviceName(false)
 	if err != nil {
 		return nil, "", err
@@ -161,7 +161,7 @@ func (cmd cmd) parseAddrShow() (netlink.Link, string, error) {
 	return device, typeName, nil
 }
 
-func (cmd cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {
+func (cmd *cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {
 	var addr netlink.Addr
 
 	iface, err := cmd.parseDeviceName(true)
@@ -191,7 +191,7 @@ func (cmd cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {
 	return iface, addr, nil
 }
 
-func (cmd cmd) addressFlush() error {
+func (cmd *cmd) addressFlush() error {
 	iface, addr, err := cmd.parseAddrFlush()
 	if err != nil {
 		return err

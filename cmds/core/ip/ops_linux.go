@@ -12,7 +12,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func (cmd cmd) showAllLinks(withAddresses bool, filterByType ...string) error {
+func (cmd *cmd) showAllLinks(withAddresses bool, filterByType ...string) error {
 	links, err := netlink.LinkList()
 	if err != nil {
 		return fmt.Errorf("can't enumerate interfaces: %v", err)
@@ -33,7 +33,7 @@ func (cmd cmd) showAllLinks(withAddresses bool, filterByType ...string) error {
 	return cmd.showLinks(addresses, links, filterByType...)
 }
 
-func (cmd cmd) showLink(link netlink.Link, withAddresses bool, filterByType ...string) error {
+func (cmd *cmd) showLink(link netlink.Link, withAddresses bool, filterByType ...string) error {
 	addresses := make([][]netlink.Addr, 1)
 	if withAddresses {
 		addrs, err := netlink.AddrList(link, cmd.Family)
@@ -70,7 +70,7 @@ type AddrInfo struct {
 	PreferredLifeTime string `json:"preferred_life_time,omitempty"`
 }
 
-func (cmd cmd) showLinks(addresses [][]netlink.Addr, links []netlink.Link, filterByType ...string) error {
+func (cmd *cmd) showLinks(addresses [][]netlink.Addr, links []netlink.Link, filterByType ...string) error {
 	if cmd.Opts.JSON {
 		return cmd.printLinkJSON(links, addresses)
 	}
@@ -224,7 +224,7 @@ func (cmd cmd) showLinks(addresses [][]netlink.Addr, links []netlink.Link, filte
 	return nil
 }
 
-func (cmd cmd) printLinkJSON(links []netlink.Link, addresses [][]netlink.Addr) error {
+func (cmd *cmd) printLinkJSON(links []netlink.Link, addresses [][]netlink.Addr) error {
 	linkObs := make([]Link, 0)
 
 	for idx, v := range links {
@@ -284,10 +284,10 @@ func (cmd cmd) printLinkJSON(links []netlink.Link, addresses [][]netlink.Addr) e
 		linkObs = append(linkObs, link)
 	}
 
-	return printJSON(cmd, linkObs)
+	return printJSON(*cmd, linkObs)
 }
 
-func (cmd cmd) showLinkAddresses(addrs []netlink.Addr) error {
+func (cmd *cmd) showLinkAddresses(addrs []netlink.Addr) error {
 	for _, addr := range addrs {
 
 		var inet string

@@ -20,7 +20,7 @@ Where: USER  := { STRING | NUMBER }
        GROUP := { STRING | NUMBER }`
 )
 
-func (cmd cmd) tuntap() error {
+func (cmd *cmd) tuntap() error {
 	if !cmd.tokenRemains() {
 		return cmd.tuntapShow()
 	}
@@ -64,7 +64,7 @@ var defaultTuntapOptions = tuntapOptions{
 	Flags: netlink.TUNTAP_DEFAULTS,
 }
 
-func (cmd cmd) parseTunTap() (tuntapOptions, error) {
+func (cmd *cmd) parseTunTap() (tuntapOptions, error) {
 	var err error
 	options := defaultTuntapOptions
 
@@ -109,7 +109,7 @@ func (cmd cmd) parseTunTap() (tuntapOptions, error) {
 	return options, nil
 }
 
-func (cmd cmd) tuntapAdd(options tuntapOptions) error {
+func (cmd *cmd) tuntapAdd(options tuntapOptions) error {
 	link := &netlink.Tuntap{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: options.Name,
@@ -134,7 +134,7 @@ func (cmd cmd) tuntapAdd(options tuntapOptions) error {
 	return nil
 }
 
-func (cmd cmd) tuntapDel(options tuntapOptions) error {
+func (cmd *cmd) tuntapDel(options tuntapOptions) error {
 	links, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
@@ -184,7 +184,7 @@ type Tuntap struct {
 	Flags  []string `json:"flags"`
 }
 
-func (cmd cmd) tuntapShow() error {
+func (cmd *cmd) tuntapShow() error {
 	links, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ func (cmd cmd) tuntapShow() error {
 	return cmd.printTunTaps(links)
 }
 
-func (cmd cmd) printTunTaps(links []netlink.Link) error {
+func (cmd *cmd) printTunTaps(links []netlink.Link) error {
 	prints := make([]Tuntap, 0)
 
 	for _, link := range links {
@@ -240,7 +240,7 @@ func (cmd cmd) printTunTaps(links []netlink.Link) error {
 	}
 
 	if cmd.Opts.JSON {
-		return printJSON(cmd, prints)
+		return printJSON(*cmd, prints)
 	}
 
 	for _, print := range prints {

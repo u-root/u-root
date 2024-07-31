@@ -15,7 +15,7 @@ const tcpMetricsHelp = `Usage:	ip tcp_metrics/tcpmetrics { COMMAND | help }
 	ip tcp_metrics show SELECTOR
 SELECTOR := [ [ address ] PREFIX ]`
 
-func (cmd cmd) tcpMetrics() error {
+func (cmd *cmd) tcpMetrics() error {
 	if !cmd.tokenRemains() {
 		return cmd.showTCPMetrics(nil)
 	}
@@ -41,7 +41,7 @@ func (cmd cmd) tcpMetrics() error {
 	return cmd.usage()
 }
 
-func (cmd cmd) showTCPMetrics(address net.IP) error {
+func (cmd *cmd) showTCPMetrics(address net.IP) error {
 	if cmd.Family > 255 || cmd.Family < 0 {
 		return fmt.Errorf("invalid protocol family %v", cmd.Family)
 	}
@@ -55,7 +55,7 @@ func (cmd cmd) showTCPMetrics(address net.IP) error {
 	return nil
 }
 
-func (cmd cmd) printTCPMetrics(resp []*netlink.InetDiagTCPInfoResp, address net.IP) {
+func (cmd *cmd) printTCPMetrics(resp []*netlink.InetDiagTCPInfoResp, address net.IP) {
 	for _, v := range resp {
 		if v.InetDiagMsg.ID.Destination.IsUnspecified() || v.InetDiagMsg.ID.Source.IsUnspecified() || v.InetDiagMsg.ID.Source == nil || v.InetDiagMsg.ID.Destination == nil {
 			continue

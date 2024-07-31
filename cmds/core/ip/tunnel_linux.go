@@ -32,7 +32,7 @@ var (
 	allTunnelTypes = []string{"gre", "ipip", "ip6tln", "ip6gre", "vti", "vti6", "sit"}
 )
 
-func (cmd cmd) tunnel() error {
+func (cmd *cmd) tunnel() error {
 	if !cmd.tokenRemains() {
 		return cmd.showAllTunnels()
 	}
@@ -87,7 +87,7 @@ func defaultOptions() options {
 	}
 }
 
-func (cmd cmd) parseTunnel() (*options, error) {
+func (cmd *cmd) parseTunnel() (*options, error) {
 	options := defaultOptions()
 
 	for cmd.tokenRemains() {
@@ -153,11 +153,11 @@ func (cmd cmd) parseTunnel() (*options, error) {
 	return &options, nil
 }
 
-func (cmd cmd) showAllTunnels() error {
+func (cmd *cmd) showAllTunnels() error {
 	return cmd.showTunnels(&options{modes: allTunnelTypes})
 }
 
-func (cmd cmd) showTunnels(op *options) error {
+func (cmd *cmd) showTunnels(op *options) error {
 	links, err := netlink.LinkList()
 	if err != nil {
 		return fmt.Errorf("failed to list interfaces: %v", err)
@@ -228,7 +228,7 @@ type Tunnel struct {
 	TTL    string `json:"ttl,omitempty"`
 }
 
-func (cmd cmd) printTunnels(tunnels []netlink.Link) error {
+func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 	pTunnels := make([]Tunnel, 0, len(tunnels))
 
 	for _, t := range tunnels {
@@ -280,7 +280,7 @@ func (cmd cmd) printTunnels(tunnels []netlink.Link) error {
 	}
 
 	if cmd.Opts.JSON {
-		return printJSON(cmd, pTunnels)
+		return printJSON(*cmd, pTunnels)
 	}
 
 	for _, t := range pTunnels {
@@ -454,7 +454,7 @@ func normalizeOptsForAddingTunnel(op *options) error {
 	return nil
 }
 
-func (cmd cmd) tunnelAdd(op *options) error {
+func (cmd *cmd) tunnelAdd(op *options) error {
 	if err := normalizeOptsForAddingTunnel(op); err != nil {
 		return err
 	}
@@ -525,7 +525,7 @@ func (cmd cmd) tunnelAdd(op *options) error {
 	return nil
 }
 
-func (cmd cmd) tunnelDelete(op *options) error {
+func (cmd *cmd) tunnelDelete(op *options) error {
 	if op.name == "" {
 		return fmt.Errorf("tunnel name is required")
 	}

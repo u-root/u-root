@@ -14,7 +14,7 @@ const (
 	vrfHelp = `Usage:	ip vrf show [NAME] ...`
 )
 
-func (cmd cmd) vrf() error {
+func (cmd *cmd) vrf() error {
 	if !cmd.tokenRemains() {
 		return cmd.vrfShow()
 	}
@@ -35,7 +35,7 @@ type Vrf struct {
 	Table uint32 `json:"table"`
 }
 
-func (cmd cmd) vrfShow() error {
+func (cmd *cmd) vrfShow() error {
 	links, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func (cmd cmd) vrfShow() error {
 	return cmd.printVrf(links)
 }
 
-func (cmd cmd) printVrf(links []netlink.Link) error {
+func (cmd *cmd) printVrf(links []netlink.Link) error {
 	if cmd.Opts.JSON {
 		vrfs := make([]Vrf, 0, len(links))
 
@@ -60,7 +60,7 @@ func (cmd cmd) printVrf(links []netlink.Link) error {
 			})
 		}
 
-		return printJSON(cmd, vrfs)
+		return printJSON(*cmd, vrfs)
 	}
 
 	// Print header

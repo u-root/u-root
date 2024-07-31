@@ -28,7 +28,6 @@ func (cmd *cmd) currentToken() string {
 func (cmd *cmd) nextToken(expectedValues ...string) string {
 	cmd.ExpectedValues = expectedValues
 	cmd.Cursor++
-
 	return cmd.Args[cmd.Cursor]
 }
 
@@ -50,12 +49,11 @@ func (cmd *cmd) peekToken(expectedValues ...string) string {
 // findPrefix returns the prefix of the next token.
 // If the prefix is not found, an empty string is returned.
 func (cmd *cmd) findPrefix(expectedValue ...string) string {
-	cmd.ExpectedValues = expectedValue
-	cmd.Cursor++
+	token := cmd.nextToken(expectedValue...)
 	var x, n int
 
 	for i, v := range cmd.ExpectedValues {
-		if strings.HasPrefix(v, cmd.currentToken()) {
+		if strings.HasPrefix(v, token) {
 			n++
 			x = i
 		}
@@ -79,22 +77,22 @@ var ErrNotFound = fmt.Errorf("not found")
 func (cmd *cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
 	switch mandatory {
 	case true:
-		if cmd.nextToken("dev", "device name") == "dev" {
+		if cmd.nextToken("dev", "device-name") == "dev" {
 			cmd.Cursor++
 		}
 
-		cmd.ExpectedValues = []string{"device name"}
+		cmd.ExpectedValues = []string{"device-name"}
 		return netlink.LinkByName(cmd.currentToken())
 	default:
 		if !cmd.tokenRemains() {
 			return nil, ErrNotFound
 		}
 
-		if cmd.nextToken("dev", "device name") == "dev" {
+		if cmd.nextToken("dev", "device-name") == "dev" {
 			cmd.Cursor++
 		}
 
-		cmd.ExpectedValues = []string{"device name"}
+		cmd.ExpectedValues = []string{"device-name"}
 		return netlink.LinkByName(cmd.currentToken())
 	}
 }
@@ -191,10 +189,9 @@ func (cmd *cmd) parseBool(expectedTrue, expectedFalse string) (bool, error) {
 }
 
 func (cmd *cmd) parseName() string {
-	nextToken := cmd.nextToken("name", "device name")
-
+	nextToken := cmd.nextToken("name", "device-name")
 	if nextToken == "name" {
-		nextToken = cmd.nextToken("device name")
+		nextToken = cmd.nextToken("device-name")
 	}
 
 	return nextToken
