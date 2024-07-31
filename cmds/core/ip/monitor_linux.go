@@ -34,7 +34,7 @@ var (
 	routeLabel   string
 )
 
-func (cmd cmd) monitor() error {
+func (cmd *cmd) monitor() error {
 	addrUpdates := make(chan netlink.AddrUpdate)
 	linkUpdates := make(chan netlink.LinkUpdate)
 	neighUpdates := make(chan netlink.NeighUpdate)
@@ -116,7 +116,7 @@ func (cmd cmd) monitor() error {
 	return cmd.printUpdates(addrUpdates, linkUpdates, neighUpdates, routeUpdates, done, sig)
 }
 
-func (cmd cmd) printUpdates(addrUpdates chan netlink.AddrUpdate, linkUpdates chan netlink.LinkUpdate, neighUpdates chan netlink.NeighUpdate, routeUpdates chan netlink.RouteUpdate, done chan struct{}, sig chan os.Signal) error {
+func (cmd *cmd) printUpdates(addrUpdates chan netlink.AddrUpdate, linkUpdates chan netlink.LinkUpdate, neighUpdates chan netlink.NeighUpdate, routeUpdates chan netlink.RouteUpdate, done chan struct{}, sig chan os.Signal) error {
 	timestamp := ""
 
 	for {

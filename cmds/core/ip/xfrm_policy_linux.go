@@ -35,7 +35,7 @@ LEVEL := required | use
 `
 )
 
-func (cmd cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
+func (cmd *cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 	var err error
 
 	tmpl := &netlink.XfrmPolicyTmpl{}
@@ -90,7 +90,7 @@ func (cmd cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 	return tmpl, nil
 }
 
-func (cmd cmd) xfrmPolicy() error {
+func (cmd *cmd) xfrmPolicy() error {
 	switch cmd.findPrefix("add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help") {
 	case "add":
 		policy, err := cmd.parseXfrmPolicyAddUpdate()
@@ -166,7 +166,7 @@ func (cmd cmd) xfrmPolicy() error {
 	return nil
 }
 
-func (cmd cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
+func (cmd *cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 	var err error
 
 	policy := &netlink.XfrmPolicy{}
@@ -243,7 +243,7 @@ func (cmd cmd) parseXfrmPolicyAddUpdate() (*netlink.XfrmPolicy, error) {
 	return policy, nil
 }
 
-func (cmd cmd) parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
+func (cmd *cmd) parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 	var (
 		indexSpecified    bool
 		selectorSpecified bool
@@ -316,7 +316,7 @@ func (cmd cmd) parseXfrmPolicyDeleteGet() (*netlink.XfrmPolicy, error) {
 	return policy, nil
 }
 
-func (cmd cmd) parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
+func (cmd *cmd) parseXfrmPolicyListDeleteAll() (*netlink.XfrmPolicy, error) {
 	var err error
 
 	policy := &netlink.XfrmPolicy{}

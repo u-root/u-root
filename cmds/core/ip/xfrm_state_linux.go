@@ -36,7 +36,7 @@ LIMIT := { time-soft | time-hard | time-use-soft | time-use-hard } SECONDS |
 ENCAP := { espinudp | espinudp-nonike | espintcp } SPORT DPORT OADDR`
 )
 
-func (cmd cmd) xfrmState() error {
+func (cmd *cmd) xfrmState() error {
 	switch cmd.findPrefix("add", "update", "allocspi", "delete", "deleteall", "show", "list", "flush", "count", "help") {
 	case "add":
 		xfrmState, err := cmd.parseXfrmStateAddUpdate()
@@ -116,7 +116,7 @@ func (cmd cmd) xfrmState() error {
 	return nil
 }
 
-func (cmd cmd) xfrmStateFlush() error {
+func (cmd *cmd) xfrmStateFlush() error {
 	if !cmd.tokenRemains() {
 		return cmd.handle.XfrmStateFlush(0)
 	}
@@ -133,7 +133,7 @@ func (cmd cmd) xfrmStateFlush() error {
 	return cmd.handle.XfrmStateFlush(proto)
 }
 
-func (cmd cmd) xfrmStateDeleteAll() error {
+func (cmd *cmd) xfrmStateDeleteAll() error {
 	filter, noKeys, err := cmd.parseXfrmStateListDeleteAll()
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func (cmd cmd) xfrmStateDeleteAll() error {
 	return nil
 }
 
-func (cmd cmd) printFilteredXfrmStates(states []netlink.XfrmState, filter *netlink.XfrmState, noKeys bool) {
+func (cmd *cmd) printFilteredXfrmStates(states []netlink.XfrmState, filter *netlink.XfrmState, noKeys bool) {
 	for _, state := range states {
 		if filter != nil {
 			if filter.Src != nil && !filter.Src.Equal(state.Src) {
@@ -280,7 +280,7 @@ func printXfrmState(w io.Writer, state netlink.XfrmState, noKeys bool) {
 	fmt.Fprintf(w, "statistics: replay-window %d replay %d failed %d bytes %d packets %d\n", state.Statistics.ReplayWindow, state.Statistics.Replay, state.Statistics.Failed, state.Statistics.Bytes, state.Statistics.Packets)
 }
 
-func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
+func (cmd *cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 	var err error
 
 	state := &netlink.XfrmState{}
@@ -416,7 +416,7 @@ func (cmd cmd) parseXfrmStateAddUpdate() (*netlink.XfrmState, error) {
 	return state, nil
 }
 
-func (cmd cmd) parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
+func (cmd *cmd) parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
 	var err error
 
 	state := &netlink.XfrmState{}
@@ -466,7 +466,7 @@ func (cmd cmd) parseXfrmStateAllocSPI() (*netlink.XfrmState, error) {
 	return state, nil
 }
 
-func (cmd cmd) parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
+func (cmd *cmd) parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
 	var err error
 
 	state := &netlink.XfrmState{}
@@ -506,7 +506,7 @@ func (cmd cmd) parseXfrmStateDeleteGet() (*netlink.XfrmState, error) {
 	return state, nil
 }
 
-func (cmd cmd) parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
+func (cmd *cmd) parseXfrmStateListDeleteAll() (*netlink.XfrmState, bool, error) {
 	var (
 		noKeys bool
 		err    error

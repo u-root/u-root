@@ -90,7 +90,7 @@ var (
 // at each level parse off arg[0]. If it matches, continue. If it does not, all error with how far you got, what arg you saw,
 // and why it did not work out.
 
-func (cmd cmd) usage() error {
+func (cmd *cmd) usage() error {
 	return fmt.Errorf("this was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
 		cmd.Args[0:cmd.Cursor], cmd.Args[cmd.Cursor:], cmd.Args[cmd.Cursor], cmd.ExpectedValues)
 }
@@ -253,7 +253,7 @@ type cmd struct {
 	Family int
 }
 
-func (cmd cmd) run() error {
+func (cmd *cmd) run() error {
 	defer func() {
 		switch err := recover().(type) {
 		case nil:
@@ -278,7 +278,7 @@ func (cmd cmd) run() error {
 	return cmd.runSubCommand()
 }
 
-func (cmd cmd) batchCmds() error {
+func (cmd *cmd) batchCmds() error {
 	file, err := os.Open(cmd.Opts.Batch)
 	if err != nil {
 		log.Fatalf("Failed to open batch file: %v", err)
@@ -311,7 +311,7 @@ func (cmd cmd) batchCmds() error {
 	return nil
 }
 
-func (cmd cmd) runSubCommand() error {
+func (cmd *cmd) runSubCommand() error {
 	cmd.Cursor = 0
 
 	if !cmd.tokenRemains() {

@@ -59,7 +59,7 @@ TYPE := { bareudp | bond |bridge | dummy |
 
 `
 
-func (cmd cmd) linkSet() error {
+func (cmd *cmd) linkSet() error {
 	iface, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (cmd cmd) linkSet() error {
 	return nil
 }
 
-func (cmd cmd) setLinkHardwareAddress(iface netlink.Link) error {
+func (cmd *cmd) setLinkHardwareAddress(iface netlink.Link) error {
 	hwAddr, err := cmd.parseHardwareAddress()
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (cmd cmd) setLinkHardwareAddress(iface netlink.Link) error {
 	return nil
 }
 
-func (cmd cmd) setLinkMTU(iface netlink.Link) error {
+func (cmd *cmd) setLinkMTU(iface netlink.Link) error {
 	token := cmd.nextToken("MTU")
 
 	mtu, err := strconv.Atoi(token)
@@ -159,7 +159,7 @@ func (cmd cmd) setLinkMTU(iface netlink.Link) error {
 	return cmd.handle.LinkSetMTU(iface, mtu)
 }
 
-func (cmd cmd) setLinkGroup(iface netlink.Link) error {
+func (cmd *cmd) setLinkGroup(iface netlink.Link) error {
 	token := cmd.nextToken("GROUP")
 
 	group, err := strconv.Atoi(token)
@@ -170,15 +170,15 @@ func (cmd cmd) setLinkGroup(iface netlink.Link) error {
 	return cmd.handle.LinkSetMTU(iface, group)
 }
 
-func (cmd cmd) setLinkName(iface netlink.Link) error {
+func (cmd *cmd) setLinkName(iface netlink.Link) error {
 	return cmd.handle.LinkSetName(iface, cmd.nextToken("name"))
 }
 
-func (cmd cmd) setLinkAlias(iface netlink.Link) error {
+func (cmd *cmd) setLinkAlias(iface netlink.Link) error {
 	return cmd.handle.LinkSetAlias(iface, cmd.nextToken("<alias name>"))
 }
 
-func (cmd cmd) setLinkTxQLen(iface netlink.Link) error {
+func (cmd *cmd) setLinkTxQLen(iface netlink.Link) error {
 	token := cmd.nextToken("<qlen>")
 	qlen, err := strconv.Atoi(token)
 	if err != nil {
@@ -188,7 +188,7 @@ func (cmd cmd) setLinkTxQLen(iface netlink.Link) error {
 	return cmd.handle.LinkSetTxQLen(iface, qlen)
 }
 
-func (cmd cmd) setLinkNetns(iface netlink.Link) error {
+func (cmd *cmd) setLinkNetns(iface netlink.Link) error {
 	token := cmd.nextToken("PID", "NAME")
 
 	ns, err := strconv.Atoi(token)
@@ -205,7 +205,7 @@ func (cmd cmd) setLinkNetns(iface netlink.Link) error {
 	return nil
 }
 
-func (cmd cmd) setLinkVf(iface netlink.Link) error {
+func (cmd *cmd) setLinkVf(iface netlink.Link) error {
 	vf, err := cmd.parseInt("VF")
 	if err != nil {
 		return err
@@ -303,7 +303,7 @@ func (cmd cmd) setLinkVf(iface netlink.Link) error {
 	return cmd.usage()
 }
 
-func (cmd cmd) linkAdd() error {
+func (cmd *cmd) linkAdd() error {
 	typeName, attrs, err := cmd.parseLinkAttrs()
 	if err != nil {
 		return err
@@ -365,7 +365,7 @@ func (cmd cmd) linkAdd() error {
 	}
 }
 
-func (cmd cmd) parseLinkAttrs() (string, netlink.LinkAttrs, error) {
+func (cmd *cmd) parseLinkAttrs() (string, netlink.LinkAttrs, error) {
 	typeName := ""
 	attrs := netlink.LinkAttrs{Name: cmd.parseName()}
 
@@ -416,10 +416,14 @@ func (cmd cmd) parseLinkAttrs() (string, netlink.LinkAttrs, error) {
 		}
 	}
 
+	if typeName == "" {
+		return "", netlink.LinkAttrs{}, fmt.Errorf("type not specified")
+	}
+
 	return typeName, attrs, nil
 }
 
-func (cmd cmd) linkDel() error {
+func (cmd *cmd) linkDel() error {
 	link, err := cmd.parseDeviceName(true)
 	if err != nil {
 		return err
@@ -428,7 +432,7 @@ func (cmd cmd) linkDel() error {
 	return cmd.handle.LinkDel(link)
 }
 
-func (cmd cmd) linkShow() error {
+func (cmd *cmd) linkShow() error {
 	dev, typeName, err := cmd.parseLinkShow()
 	if err != nil {
 		return err
@@ -441,7 +445,7 @@ func (cmd cmd) linkShow() error {
 	return cmd.showLink(dev, false, typeName...)
 }
 
-func (cmd cmd) parseLinkShow() (netlink.Link, []string, error) {
+func (cmd *cmd) parseLinkShow() (netlink.Link, []string, error) {
 	var (
 		device netlink.Link
 		err    error
@@ -470,12 +474,13 @@ func (cmd cmd) parseLinkShow() (netlink.Link, []string, error) {
 	return device, typeNames, nil
 }
 
-func (cmd cmd) link() error {
+func (cmd *cmd) link() error {
 	if !cmd.tokenRemains() {
 		return cmd.linkShow()
 	}
 
-	switch cmd.findPrefix("show", "set", "add", "delete", "help") {
+	c := cmd.findPrefix("show", "set", "add", "delete", "help")
+	switch c {
 	case "show":
 		return cmd.linkShow()
 	case "set":
