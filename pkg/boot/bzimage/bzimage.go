@@ -56,7 +56,7 @@ var (
 		// XZ
 		// It would be nice to use a Go package instead of shelling out to 'unxz'.
 		// https://github.com/ulikunitz/xz fails to decompress the payloads and returns an error: "unsupported filter count"
-		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, []decompressor{stripSize(execer("unxz")), stripSize(unxz)}},
+		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, []decompressor{stripSize(unxz), stripSize(execer("unxz"))}},
 		// LZMA
 		{[]byte{0x5D, 0x00, 0x00}, []decompressor{stripSize(unlzma)}},
 		// LZO
@@ -198,12 +198,10 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		var buf bytes.Buffer
 		success := false
 		for _, decompressor := range decompressors {
-			if success {
-				break
-			}
 			if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err == nil {
 				success = true
 				b.KernelCode = buf.Bytes()
+				break
 			}
 		}
 		if !success {
