@@ -27,7 +27,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
+var (
 	// ResolvConfPath is the path to the resolv.conf file.
 	ResolvConfPath = "/etc/resolv.conf"
 )
@@ -104,7 +104,7 @@ func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 }
 
 // WriteDNSSettings writes the given nameservers, search list, and domain to the resolv.conf at the specified path.
-func WriteDNSSettings(ns []net.IP, sl []string, domain, resolvConfPath string) error {
+func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 	rc := &bytes.Buffer{}
 	if domain != "" {
 		rc.WriteString(fmt.Sprintf("domain %s\n", domain))
@@ -117,7 +117,7 @@ func WriteDNSSettings(ns []net.IP, sl []string, domain, resolvConfPath string) e
 		rc.WriteString(strings.Join(sl, " "))
 		rc.WriteString("\n")
 	}
-	return os.WriteFile(resolvConfPath, rc.Bytes(), 0o644)
+	return os.WriteFile(ResolvConfPath, rc.Bytes(), 0o644)
 }
 
 // Lease is a network configuration obtained by DHCP.

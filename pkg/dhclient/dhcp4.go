@@ -111,7 +111,7 @@ func (p *Packet4) Configure() error {
 	}
 
 	nameServers, searchList, domain := p.GatherDNSSettings()
-	if err := WriteDNSSettings(nameServers, searchList, domain, ResolvConfPath); err != nil {
+	if err := WriteDNSSettings(nameServers, searchList, domain); err != nil {
 		return err
 	}
 
