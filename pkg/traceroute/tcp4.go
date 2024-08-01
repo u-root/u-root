@@ -130,7 +130,7 @@ func (t *Trace) IPv4TCPPing(seq uint32, dport uint16) {
 
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", t.DestIP.String(), dport), time.Second*2)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 	conn.Close()
 	pbr := &Probe{

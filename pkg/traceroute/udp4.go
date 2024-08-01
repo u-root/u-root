@@ -7,7 +7,6 @@ package traceroute
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -27,15 +26,13 @@ func (t *Trace) SendTracesUDP4() {
 		for j := 0; j < t.TracesPerHop; j++ {
 			conn, err := net.ListenPacket("ip4:udp", "")
 			if err != nil {
-				log.Printf("net.ListenPacket() = %v", err)
-				return
+				log.Fatalf("net.ListenPacket() = %v", err)
 			}
 			defer conn.Close()
 
 			rSock, err := ipv4.NewRawConn(conn)
 			if err != nil {
-				log.Printf("ipv4.NewRawConn() = %v", err)
-				return
+				log.Fatalf("ipv4.NewRawConn() = %v", err)
 			}
 
 			pb := &Probe{
@@ -71,8 +68,7 @@ func (t *Trace) ReceiveTracesUDP4() {
 	buf := make([]byte, 1500)
 	n, raddr, err := recvICMPConn.ReadFrom(buf)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	icmpType := buf[0]

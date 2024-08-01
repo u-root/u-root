@@ -19,7 +19,7 @@ func TestParseFlags(t *testing.T) {
 		err     error
 	}{
 		{
-			name:    "Simple",
+			name:    "ModuleICMP4",
 			cmdline: []string{"progName", "-4", "-m", "icmp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -28,7 +28,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "DirectICMP4",
 			cmdline: []string{"progName", "-4", "--icmp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -37,7 +37,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "ModuleTCP4",
 			cmdline: []string{"progName", "-4", "-m", "tcp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -46,7 +46,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "DirectTCP4",
 			cmdline: []string{"progName", "-4", "--tcp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -55,7 +55,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "ModuleUDP4",
 			cmdline: []string{"progName", "-4", "-m", "udp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -64,7 +64,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "DirectUDP4",
 			cmdline: []string{"progName", "-4", "--udp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -73,7 +73,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "ModuleICMP6",
 			cmdline: []string{"progName", "-6", "-m", "icmp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -82,7 +82,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "DirectICMP6",
 			cmdline: []string{"progName", "-6", "--icmp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -91,7 +91,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "ModuleTCP6",
 			cmdline: []string{"progName", "-6", "-m", "tcp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -100,7 +100,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "DirectTCP6",
 			cmdline: []string{"progName", "-6", "--tcp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -109,7 +109,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "ModuleUDP6",
 			cmdline: []string{"progName", "-6", "-m", "udp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -118,7 +118,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "DirectUDP6",
 			cmdline: []string{"progName", "-6", "--udp", "www.google.com"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",
@@ -127,7 +127,7 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
-			name:    "Simple",
+			name:    "FailInvalidFlags",
 			cmdline: []string{"progName", "-6", "--udp", "www.google.com", "random stuff to error out", "somemore"},
 			exp: &traceroute.Flags{
 				Host:   "www.google.com",

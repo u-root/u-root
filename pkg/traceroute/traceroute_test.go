@@ -187,7 +187,7 @@ func TestFindDestinationTTL(t *testing.T) {
 			TTL: 14,
 		},
 	}
-	ttl := traceroute.FindDestinationTTL(pbMap)
+	ttl := traceroute.DestTTL(pbMap)
 
 	if ttl != 15 {
 		t.Errorf("FindDestinationTTL() = %d, not %d", ttl, 15)

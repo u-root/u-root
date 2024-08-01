@@ -65,25 +65,25 @@ func SrcAddr(proto string) (*net.IP, error) {
 	return &sAddr.(*net.UDPAddr).IP, nil
 }
 
-func FindDestinationTTL(printMap map[int]*Probe) int {
+func DestTTL(printMap map[int]*Probe) int {
 	icmp := false
 	destttl := 1
-	var icmpfinalpb *Probe
+	var icmpFinalPB *Probe
 	for _, pb := range printMap {
 		if destttl < pb.TTL {
 			destttl = pb.TTL
 		}
 		if pb.TTL == 0 {
 			// ICMP TCPProbe needs to increase return value by one
-			icmpfinalpb = pb
+			icmpFinalPB = pb
 			icmp = true
 		}
 	}
 
 	if icmp {
 		destttl++
-		newttl := destttl
-		icmpfinalpb.TTL = newttl
+		newTTL := destttl
+		icmpFinalPB.TTL = newTTL
 	}
 
 	return destttl

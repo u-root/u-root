@@ -57,7 +57,7 @@ func (t *Trace) ReceiveTracesTCP6() {
 	buf := make([]byte, 1500)
 	n, raddr, err := recvTCPConn.ReadFrom(buf)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	tcphdr, _ := ParseTCP(buf)
@@ -123,7 +123,7 @@ func (t *Trace) IPv6TCPPing(seq uint32, dport uint16) {
 
 	conn, err := net.DialTimeout("ip6:tcp", fmt.Sprintf("%s:%d", t.DestIP.String(), dport), time.Second*2)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 	conn.Close()
 

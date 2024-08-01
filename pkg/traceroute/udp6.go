@@ -7,7 +7,6 @@ package traceroute
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -26,8 +25,7 @@ func (t *Trace) SendTracesUDP6() {
 		for j := 0; j < t.TracesPerHop; j++ {
 			conn, err := net.ListenPacket("ip6:udp", "")
 			if err != nil {
-				log.Printf("net.ListenPacket() = %v", err)
-				return
+				log.Fatalf("net.ListenPacket() = %v", err)
 			}
 			defer conn.Close()
 
@@ -64,8 +62,7 @@ func (t *Trace) ReceiveTracesUDP6() {
 	buf := make([]byte, 1500)
 	n, raddr, err := recvICMPConn.ReadFrom(buf)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatal(err)
 	}
 
 	ip6hdr, _ := ipv6.ParseHeader(buf[8:])

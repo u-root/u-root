@@ -56,7 +56,7 @@ func RunTraceroute(f *Flags) error {
 
 	printMap := runTransmission(cc)
 
-	destTTL := FindDestinationTTL(printMap)
+	destTTL := DestTTL(printMap)
 	fmt.Printf("traceroute to %s (%s), %d hops max, %d byte packets\n",
 		f.Host,
 		dAddr.String(),
