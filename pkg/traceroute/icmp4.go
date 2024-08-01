@@ -62,7 +62,7 @@ func (t *Trace) ReceiveTracesICMP4() {
 	buf := make([]byte, 1500)
 	n, raddr, err := recvICMPConn.ReadFrom(buf)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 	icmpType := buf[0]
 

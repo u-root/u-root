@@ -16,7 +16,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-var errFlags = errors.New("invalid flag/arugment usage")
+var errFlags = errors.New("invalid flag/argument usage")
 
 func parseFlags(args []string) (*traceroute.Flags, error) {
 	flags := &traceroute.Flags{}
@@ -43,7 +43,7 @@ func parseFlags(args []string) (*traceroute.Flags, error) {
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
 	leftoverArgs := f.Args()
-	fmt.Println(len(leftoverArgs))
+
 	if len(leftoverArgs) > 1 {
 		// Error, print help and exit
 		f.Usage()
@@ -81,7 +81,7 @@ func run(args []string) error {
 		return err
 	}
 	// Pass execution to pkg/traceroute.
-	// Setup can be quite complexe with such amount of flags
+	// Setup can be quite complex with such amount of flags
 	// and the different modules.
 	return traceroute.RunTraceroute(flags)
 }

@@ -7,7 +7,6 @@ package traceroute
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -18,7 +17,7 @@ import (
 func (t *Trace) SendTracesICMP6() {
 	conn, err := net.ListenPacket("ip6:ipv6-icmp", t.SrcIP.String())
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	defer conn.Close()
 
