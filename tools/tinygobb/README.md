@@ -13,9 +13,9 @@ The neccessary additions to tinygo will be tracked in the according issue that t
 
 ## command list
 ### core
-41 tinygo build errors found.
+40 tinygo build errors found.
+
  - [ ] `bind`
- - [ ] `df`
  - [ ] `dhclient`
  - [ ] `dmesg`
  - [ ] `fusermount`
@@ -55,7 +55,7 @@ The neccessary additions to tinygo will be tracked in the according issue that t
  - [ ] `which`
  - [ ] `nohup`
 
-64 cmds build successful
+65 cmds build successful
 - [x] `backoff`
 - [x] `base64`
 - [x] `basename`
@@ -69,6 +69,7 @@ The neccessary additions to tinygo will be tracked in the according issue that t
 - [x] `cpio`
 - [x] `date`
 - [x] `dd`
+- [x] `df`
 - [x] `dirname`
 - [x] `echo`
 - [x] `false`
@@ -182,4 +183,3 @@ The neccessary additions to tinygo will be tracked in the according issue that t
 - [x] `watch`
 - [x] `zbi`
 - [x] `zimage`
-

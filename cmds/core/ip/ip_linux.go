@@ -6,19 +6,61 @@
 package main
 
 import (
-	"errors"
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
+	"golang.org/x/sys/unix"
 )
 
-var inet6 bool
+type flags struct {
+	Family         string
+	Inet4          bool
+	Inet6          bool
+	Bridge         bool
+	MPLS           bool
+	Link           bool
+	Details        bool
+	Stats          bool
+	Loops          int
+	HumanReadable  bool
+	Iec            bool
+	JSON           bool
+	Prettify       bool
+	Brief          bool
+	Resolve        bool
+	Color          string
+	RcvBuf         string
+	TimeStamp      bool
+	TimeStampShort bool
+	All            bool
+	Numeric        bool
+	Batch          string
+	Force          bool
+	Oneline        bool
+	Netns          string
+}
+
+const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
+where  OBJECT := { address |  help | link | monitor | neighbor | neighbour |
+				   route | rule | tap | tcpmetrics |
+                   token | tunnel | tuntap | vrf | xfrm }
+       OPTIONS := { -s[tatistics] | -d[etails] | -r[esolve] |
+                    -h[uman-readable] | -iec | -j[son] | -p[retty] |
+                    -f[amily] { inet | inet6 | mpls | bridge | link } |
+                    -4 | -6 | -M | -B | -0 |
+                    -l[oops] { maximum-addr-flush-attempts } | -br[ief] |
+                    -o[neline] | -t[imestamp] | -ts[hort] | -b[atch] [filename] |
+                    -rc[vbuf] [size] | -n[etns] name | -N[umeric] | -a[ll] |
+                    -c[olor]}`
 
 // The language implemented by the standard 'ip' is not super consistent
 // and has lots of convenience shortcuts.
@@ -40,363 +82,280 @@ var inet6 bool
 // RE: the use of globals. The reason is simple: we parse one command, do it, and quit.
 // It doesn't make sense to write this otherwise.
 var (
-	// Cursor is out next token pointer.
-	// The language of this command doesn't require much more.
-	cursor    int
-	arg       []string
-	whatIWant []string
-
-	addrScopes = map[netlink.Scope]string{
-		netlink.SCOPE_UNIVERSE: "global",
-		netlink.SCOPE_HOST:     "host",
-		netlink.SCOPE_SITE:     "site",
-		netlink.SCOPE_LINK:     "link",
-		netlink.SCOPE_NOWHERE:  "nowhere",
-	}
+// Cursor is out next token pointer.
+// The language of this command doesn't require much more.
 )
 
 // the pattern:
 // at each level parse off arg[0]. If it matches, continue. If it does not, all error with how far you got, what arg you saw,
 // and why it did not work out.
 
-func usage() error {
+func (cmd *cmd) usage() error {
 	return fmt.Errorf("this was fine: '%v', and this was left, '%v', and this was not understood, '%v'; only options are '%v'",
-		arg[0:cursor], arg[cursor:], arg[cursor], whatIWant)
+		cmd.Args[0:cmd.Cursor], cmd.Args[cmd.Cursor:], cmd.Args[cmd.Cursor], cmd.ExpectedValues)
 }
 
-func one(cmd string, cmds []string) string {
-	var x, n int
-	for i, v := range cmds {
-		if strings.HasPrefix(v, cmd) {
-			n++
-			x = i
+func parseFlags(args []string, out io.Writer) (cmd, error) {
+	cmd := cmd{
+		Out: out,
+	}
+
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs.StringVar(&cmd.Opts.Family, "f", "", "Specify family (inet, inet6, mpls, link)")
+	fs.StringVar(&cmd.Opts.Family, "family", "", "Specify family (inet, inet6, mpls, link)")
+	fs.BoolVar(&cmd.Opts.Resolve, "r", false, "Use system resolver to display DNS names")
+	fs.BoolVar(&cmd.Opts.Resolve, "resolve", false, "Use system resolver to display DNS names")
+	fs.BoolVar(&cmd.Opts.Inet4, "4", false, "Set protocol family to inet")
+	fs.BoolVar(&cmd.Opts.Inet6, "6", false, "Set protocol family to inet6")
+	fs.BoolVar(&cmd.Opts.Bridge, "B", false, "Set protocol family to bridge")
+	fs.BoolVar(&cmd.Opts.MPLS, "M", false, "Set protocol family to mpls")
+	fs.BoolVar(&cmd.Opts.Link, "0", false, "Set protocol family to link")
+	fs.BoolVar(&cmd.Opts.Details, "d", false, "Display details")
+	fs.BoolVar(&cmd.Opts.Details, "details", false, "Display details")
+	fs.BoolVar(&cmd.Opts.Stats, "s", false, "Display statistics")
+	fs.BoolVar(&cmd.Opts.Stats, "statistics", false, "Display statistics")
+	fs.IntVar(&cmd.Opts.Loops, "l", 0, "Set maximum number of attempts to flush all addresses")
+	fs.IntVar(&cmd.Opts.Loops, "loops", 1, "Set maximum number of attempts to flush all addresses")
+	fs.BoolVar(&cmd.Opts.HumanReadable, "h", false, "Display timings and sizes in human readable format")
+	fs.BoolVar(&cmd.Opts.HumanReadable, "humanreadable", false, "Display timings and sizes in human-readable format")
+	fs.BoolVar(&cmd.Opts.Iec, "iec", false, "Use 1024-based block sizes for human-readable sizes")
+	fs.BoolVar(&cmd.Opts.Brief, "br", false, "Brief output")
+	fs.BoolVar(&cmd.Opts.Brief, "brief", false, "Brief output")
+	fs.BoolVar(&cmd.Opts.JSON, "j", false, "Output in JSON format")
+	fs.BoolVar(&cmd.Opts.JSON, "json", false, "Output in JSON format")
+	fs.BoolVar(&cmd.Opts.Prettify, "p", false, "Make JSON output pretty")
+	fs.BoolVar(&cmd.Opts.Prettify, "pretty", false, "Make JSON output pretty")
+	fs.StringVar(&cmd.Opts.Color, "c", "", "Use color output")
+	fs.StringVar(&cmd.Opts.Color, "color", "", "Use color output")
+	fs.StringVar(&cmd.Opts.RcvBuf, "rc", "", "Set the netlink socket receive buffer size, defaults to 1MB")
+	fs.StringVar(&cmd.Opts.RcvBuf, "rcvbuf", "", "Set the netlink socket receive buffer size, defaults to 1MB")
+	fs.BoolVar(&cmd.Opts.TimeStamp, "t", false, "Display time stamps")
+	fs.BoolVar(&cmd.Opts.TimeStamp, "timestamp", false, "Display time stamps")
+	fs.BoolVar(&cmd.Opts.TimeStampShort, "ts", false, "Display short time stamps")
+	fs.BoolVar(&cmd.Opts.TimeStampShort, "tshort", false, "Display short time stamps")
+	fs.BoolVar(&cmd.Opts.All, "a", false, "Display all information")
+	fs.BoolVar(&cmd.Opts.All, "all", false, "Display all information")
+	fs.BoolVar(&cmd.Opts.Numeric, "N", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
+	fs.BoolVar(&cmd.Opts.Numeric, "numeric", false, "Print the number of protocol, scope, dsfield, etc directly instead of converting it to human readable name.")
+	fs.StringVar(&cmd.Opts.Batch, "b", "", "Read commands from a file")
+	fs.StringVar(&cmd.Opts.Batch, "batch", "", "Read commands from a file")
+	fs.BoolVar(&cmd.Opts.Force, "force", false, "Don't terminate ip on errors in batch mode.  If there were any errors during execution of the commands, the application return code will be non zero.")
+	fs.BoolVar(&cmd.Opts.Oneline, "o", false, "Output each record on a single line")
+	fs.BoolVar(&cmd.Opts.Oneline, "oneline", false, "Output each record on a single line")
+	fs.StringVar(&cmd.Opts.Netns, "n", "", "Switch to network namespace")
+	fs.StringVar(&cmd.Opts.Netns, "netns", "", "Switch to network namespace")
+
+	fs.Usage = func() {
+		fmt.Fprintf(out, "%s\n\n", ipHelp)
+
+		fs.PrintDefaults()
+	}
+
+	fs.Parse(unixflag.ArgsToGoArgs(args))
+
+	cmd.Args = fs.Args()
+
+	cmd.Family = netlink.FAMILY_ALL
+
+	if cmd.Opts.Inet4 {
+		cmd.Family = netlink.FAMILY_V4
+	}
+	if cmd.Opts.Inet6 {
+		cmd.Family = netlink.FAMILY_V6
+	}
+
+	if cmd.Opts.MPLS {
+		return cmd, fmt.Errorf("protocol family MPLS is not yet supported")
+	}
+
+	if cmd.Opts.Bridge {
+		return cmd, fmt.Errorf("protocol family bridge is not yet supported")
+	}
+
+	if cmd.Opts.Link {
+		cmd.Family = netlink.FAMILY_ALL
+	}
+
+	if cmd.Opts.Family != "" {
+		switch cmd.Opts.Family {
+		case "inet":
+			cmd.Family = netlink.FAMILY_V4
+		case "inet6":
+			cmd.Family = netlink.FAMILY_V6
+		default:
+			return cmd, fmt.Errorf("invalid family %q", cmd.Opts.Family)
 		}
 	}
-	if n == 1 {
-		return cmds[x]
-	}
-	return ""
-}
 
-// in the ip command, turns out 'dev' is a noise word.
-// The BNF it shows is not right in that case.
-// Always make 'dev' optional.
-func dev() (netlink.Link, error) {
-	cursor++
-	whatIWant = []string{"dev", "device name"}
-	if arg[cursor] == "dev" {
-		cursor++
+	if cmd.Opts.Resolve {
+		return cmd, fmt.Errorf("resolving DNS names is unsupported")
 	}
-	whatIWant = []string{"device name"}
-	return netlink.LinkByName(arg[cursor])
-}
 
-func maybename() (string, error) {
-	cursor++
-	whatIWant = []string{"name", "device name"}
-	if arg[cursor] == "name" {
-		cursor++
+	if cmd.Opts.Color != "" {
+		return cmd, fmt.Errorf("color output is unsupported")
 	}
-	whatIWant = []string{"device name"}
-	return arg[cursor], nil
-}
 
-func addrip(w io.Writer) error {
-	var err error
-	var addr *netlink.Addr
-	if len(arg) == 1 {
-		return showLinks(w, true)
+	if cmd.Opts.Oneline {
+		return cmd, fmt.Errorf("outputting each record on a single line is unsupported")
 	}
-	cursor++
-	whatIWant = []string{"add", "del"}
-	cmd := arg[cursor]
 
-	c := one(cmd, whatIWant)
-	switch c {
-	case "add", "del":
-		cursor++
-		whatIWant = []string{"CIDR format address"}
-		addr, err = netlink.ParseAddr(arg[cursor])
+	var (
+		err    error
+		handle *netlink.Handle
+	)
+
+	if cmd.Opts.Netns != "" {
+		nsHandle, err := netns.GetFromName(cmd.Opts.Netns)
 		if err != nil {
-			return err
+			return cmd, fmt.Errorf("failed to find network namespace %q: %v", cmd.Opts.Netns, err)
 		}
-	default:
-		return usage()
-	}
-	iface, err := dev()
-	if err != nil {
-		return err
-	}
-	switch c {
-	case "add":
-		if err := netlink.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("adding %v to %v failed: %v", arg[1], arg[2], err)
-		}
-	case "del":
-		if err := netlink.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("deleting %v from %v failed: %v", arg[1], arg[2], err)
-		}
-	default:
-		return fmt.Errorf("devip: arg[0] changed: can't happen")
-	}
-	return nil
-}
+		defer nsHandle.Close()
 
-func neigh(w io.Writer) error {
-	if len(arg) != 1 {
-		return errors.New("neigh subcommands not supported yet")
-	}
-	return showNeighbours(w, true)
-}
-
-func linkshow(w io.Writer) error {
-	cursor++
-	whatIWant = []string{"<nothing>", "<device name>"}
-	if len(arg[cursor:]) == 0 {
-		return showLinks(w, false)
-	}
-	return nil
-}
-
-func setHardwareAddress(iface netlink.Link) error {
-	cursor++
-	hwAddr, err := net.ParseMAC(arg[cursor])
-	if err != nil {
-		return fmt.Errorf("%v cant parse mac addr %v: %v", iface.Attrs().Name, hwAddr, err)
-	}
-	err = netlink.LinkSetHardwareAddr(iface, hwAddr)
-	if err != nil {
-		return fmt.Errorf("%v cant set mac addr %v: %v", iface.Attrs().Name, hwAddr, err)
-	}
-	return nil
-}
-
-func linkset() error {
-	iface, err := dev()
-	if err != nil {
-		return err
-	}
-
-	cursor++
-	whatIWant = []string{"address", "up", "down", "master"}
-	switch one(arg[cursor], whatIWant) {
-	case "address":
-		return setHardwareAddress(iface)
-	case "up":
-		if err := netlink.LinkSetUp(iface); err != nil {
-			return fmt.Errorf("%v can't make it up: %v", iface.Attrs().Name, err)
-		}
-	case "down":
-		if err := netlink.LinkSetDown(iface); err != nil {
-			return fmt.Errorf("%v can't make it down: %v", iface.Attrs().Name, err)
-		}
-	case "master":
-		cursor++
-		whatIWant = []string{"device name"}
-		master, err := netlink.LinkByName(arg[cursor])
+		handle, err = netlink.NewHandleAt(nsHandle, unix.NETLINK_ROUTE)
 		if err != nil {
-			return err
+			return cmd, fmt.Errorf("failed to create netlink handle in network namespace %q: %v", cmd.Opts.Netns, err)
 		}
-		return netlink.LinkSetMaster(iface, master)
-	default:
-		return usage()
-	}
-	return nil
-}
-
-func linkadd() error {
-	name, err := maybename()
-	if err != nil {
-		return err
-	}
-	attrs := netlink.LinkAttrs{Name: name}
-
-	cursor++
-	whatIWant = []string{"type"}
-	if arg[cursor] != "type" {
-		return usage()
-	}
-
-	cursor++
-	whatIWant = []string{"bridge"}
-	if arg[cursor] != "bridge" {
-		return usage()
-	}
-	return netlink.LinkAdd(&netlink.Bridge{LinkAttrs: attrs})
-}
-
-func link(w io.Writer) error {
-	if len(arg) == 1 {
-		return linkshow(w)
-	}
-
-	cursor++
-	whatIWant = []string{"show", "set", "add"}
-	cmd := arg[cursor]
-
-	switch one(cmd, whatIWant) {
-	case "show":
-		return linkshow(w)
-	case "set":
-		return linkset()
-	case "add":
-		return linkadd()
-	}
-	return usage()
-}
-
-func routeshow(w io.Writer) error {
-	return showRoutes(w, inet6)
-}
-
-func nodespec() string {
-	cursor++
-	whatIWant = []string{"default", "CIDR"}
-	return arg[cursor]
-}
-
-func nexthop() (string, net.IP, error) {
-	cursor++
-	whatIWant = []string{"via"}
-	if arg[cursor] != "via" {
-		return "", nil, usage()
-	}
-	nh := arg[cursor]
-	cursor++
-	whatIWant = []string{"Gateway CIDR"}
-	addr := net.ParseIP(arg[cursor])
-	if addr == nil {
-		return "", nil, fmt.Errorf("failed to parse gateway IP: %v", arg[cursor])
-	}
-	return nh, addr, nil
-}
-
-func routeadddefault(w io.Writer) error {
-	nh, nhval, err := nexthop()
-	if err != nil {
-		return err
-	}
-	// TODO: NHFLAGS.
-	l, err := dev()
-	if err != nil {
-		return err
-	}
-	switch nh {
-	case "via":
-		fmt.Fprintf(w, "Add default route %v via %v", nhval, l.Attrs().Name)
-		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
-		if err := netlink.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding default route to %v: %v", l.Attrs().Name, err)
-		}
-		return nil
-	}
-	return usage()
-}
-
-func routeadd(w io.Writer) error {
-	ns := nodespec()
-	switch ns {
-	case "default":
-		return routeadddefault(w)
-	default:
-		addr, err := netlink.ParseAddr(arg[cursor])
+	} else {
+		handle, err = netlink.NewHandle(unix.NETLINK_ROUTE)
 		if err != nil {
-			return usage()
+			return cmd, fmt.Errorf("failed to create netlink handle: %v", err)
 		}
-		d, err := dev()
+	}
+
+	if cmd.Opts.RcvBuf != "" {
+		bufSize, err := strconv.Atoi(cmd.Opts.RcvBuf)
 		if err != nil {
-			return usage()
+			return cmd, fmt.Errorf("failed to parse rcvbuf flag: %v", err)
 		}
-		r := &netlink.Route{LinkIndex: d.Attrs().Index, Dst: addr.IPNet}
-		if err := netlink.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding route %s -> %s: %v", addr, d.Attrs().Name, err)
-		}
-		return nil
+
+		handle.SetSocketReceiveBufferSize(bufSize, true)
 	}
+
+	cmd.handle = handle
+
+	return cmd, nil
 }
 
-func routedel() error {
-	cursor++
-	addr, err := netlink.ParseAddr(arg[cursor])
-	if err != nil {
-		return usage()
-	}
-	d, err := dev()
-	if err != nil {
-		return usage()
-	}
-	r := &netlink.Route{LinkIndex: d.Attrs().Index, Dst: addr.IPNet}
-	if err := netlink.RouteDel(r); err != nil {
-		return fmt.Errorf("error adding route %s -> %s: %v", addr, d.Attrs().Name, err)
-	}
-	return nil
+type cmd struct {
+	// Output writer
+	Out io.Writer
+	// Netlink handle for all netlink ops
+	handle *netlink.Handle
+	// Cursor is our next token pointer
+	Cursor int
+	// Options
+	Opts flags
+	// Arguments
+	Args []string
+	// Expected values for current token placement
+	ExpectedValues []string
+	// Selected protocol Family
+	Family int
 }
 
-func route(w io.Writer) error {
-	cursor++
-	if len(arg[cursor:]) == 0 {
-		return routeshow(w)
-	}
-
-	whatIWant = []string{"show", "add", "del"}
-	switch one(arg[cursor], whatIWant) {
-	case "add":
-		return routeadd(w)
-	case "del":
-		return routedel()
-	case "show":
-		return routeshow(w)
-	}
-	return usage()
-}
-
-func run(out io.Writer) error {
-	// When this is embedded in busybox we need to reinit some things.
-	whatIWant = []string{"address", "route", "link", "neigh"}
-	cursor = 0
-
-	defer func() error {
+func (cmd *cmd) run() error {
+	defer func() {
 		switch err := recover().(type) {
 		case nil:
 		case error:
 			if strings.Contains(err.Error(), "index out of range") {
-				return fmt.Errorf("args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.Args, cmd.Cursor, cmd.ExpectedValues)
 			} else if strings.Contains(err.Error(), "slice bounds out of range") {
-				return fmt.Errorf("args: %v, I got to arg %v, I wanted %v after that", arg, cursor, whatIWant)
+				log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.Args, cmd.Cursor, cmd.ExpectedValues)
 			}
-			return fmt.Errorf("bummer: %v", err)
+			log.Fatalf("ip: %v", err)
 		default:
-			return fmt.Errorf("unexpected panic value: %T(%v)", err, err)
+			log.Fatalf("ip: unexpected panic value: %T(%v)", err, err)
 		}
-		return nil
+
+		return
 	}()
 
-	// The ip command doesn't actually follow the BNF it prints on error.
-	// There are lots of handy shortcuts that people will expect.
-	var err error
-	switch one(arg[cursor], whatIWant) {
-	case "address":
-		err = addrip(out)
-	case "link":
-		err = link(out)
-	case "route":
-		err = route(out)
-	case "neigh":
-		err = neigh(out)
-	default:
-		err = usage()
+	if cmd.Opts.Batch != "" {
+		return cmd.batchCmds()
 	}
+
+	return cmd.runSubCommand()
+}
+
+func (cmd *cmd) batchCmds() error {
+	file, err := os.Open(cmd.Opts.Batch)
 	if err != nil {
-		return err
+		log.Fatalf("Failed to open batch file: %v", err)
 	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		cmd.Args = strings.Fields(line)
+
+		if len(cmd.Args) == 0 { // Skip empty lines
+			continue
+		}
+
+		err := cmd.runSubCommand()
+		if err != nil {
+			if cmd.Opts.Force {
+				log.Printf("Error (force mode on, continuing): Failed to run command '%s': %v", line, err)
+			} else {
+				return fmt.Errorf("failed to run command '%s': %v", line, err)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error reading batch file: %v", err)
+	}
+
 	return nil
 }
 
+func (cmd *cmd) runSubCommand() error {
+	cmd.Cursor = 0
+
+	if !cmd.tokenRemains() {
+		fmt.Fprint(cmd.Out, ipHelp)
+	}
+
+	switch c := cmd.findPrefix("address", "route", "link", "monitor", "neigh", "tunnel", "tuntap", "tap", "tcp_metrics", "tcpmetrics", "vrf", "xfrm", "help"); c {
+	case "address":
+		return cmd.address()
+	case "link":
+		return cmd.link()
+	case "route":
+		return cmd.route()
+	case "neigh":
+		return cmd.neigh()
+	case "monitor":
+		return cmd.monitor()
+	case "tunnel":
+		return cmd.tunnel()
+	case "tuntap", "tap":
+		return cmd.tuntap()
+	case "tcpmetrics", "tcp_metrics":
+		return cmd.tcpMetrics()
+	case "vrf":
+		return cmd.vrf()
+	case "xfrm":
+		return cmd.xfrm()
+	case "help":
+		fmt.Fprint(cmd.Out, ipHelp)
+
+		return nil
+	default:
+		return cmd.usage()
+	}
+}
+
 func main() {
-	flag.BoolVar(&inet6, "6", false, "use inet6")
-	flag.Parse()
-	arg = flag.Args()
-	if err := run(os.Stdout); err != nil {
+	cmd, err := parseFlags(os.Args, os.Stdout)
+	if err != nil {
+		log.Fatalf("ip: %v", err)
+	}
+
+	err = cmd.run()
+	if err != nil {
 		log.Fatalf("ip: %v", err)
 	}
 }
