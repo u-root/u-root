@@ -342,3 +342,80 @@ func TestPrintTunTaps(t *testing.T) {
 		})
 	}
 }
+
+func TestTunTapDevice(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  tuntapOptions
+		expected *netlink.Tuntap
+	}{
+		{
+			name: "Valid options",
+			options: tuntapOptions{
+				Name:  "test0",
+				Mode:  netlink.TUNTAP_MODE_TUN,
+				User:  1000,
+				Group: 1000,
+				Flags: netlink.TUNTAP_DEFAULTS,
+			},
+			expected: &netlink.Tuntap{
+				LinkAttrs: netlink.LinkAttrs{
+					Name: "test0",
+				},
+				Mode:  netlink.TUNTAP_MODE_TUN,
+				Owner: 1000,
+				Group: 1000,
+				Flags: netlink.TUNTAP_DEFAULTS,
+			},
+		},
+		{
+			name: "User out of range",
+			options: tuntapOptions{
+				Name:  "test1",
+				Mode:  netlink.TUNTAP_MODE_TUN,
+				User:  -1,
+				Group: 1000,
+				Flags: netlink.TUNTAP_DEFAULTS,
+			},
+			expected: &netlink.Tuntap{
+				LinkAttrs: netlink.LinkAttrs{
+					Name: "test1",
+				},
+				Mode:  netlink.TUNTAP_MODE_TUN,
+				Group: 1000,
+				Flags: netlink.TUNTAP_DEFAULTS,
+			},
+		},
+		{
+			name: "Group out of range",
+			options: tuntapOptions{
+				Name:  "test2",
+				Mode:  netlink.TUNTAP_MODE_TUN,
+				User:  1000,
+				Group: -1,
+				Flags: netlink.TUNTAP_DEFAULTS,
+			},
+			expected: &netlink.Tuntap{
+				LinkAttrs: netlink.LinkAttrs{
+					Name: "test2",
+				},
+				Mode:  netlink.TUNTAP_MODE_TUN,
+				Owner: 1000,
+				Flags: netlink.TUNTAP_DEFAULTS,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tunTapDevice(tt.options)
+			if result.LinkAttrs.Name != tt.expected.LinkAttrs.Name ||
+				result.Mode != tt.expected.Mode ||
+				result.Owner != tt.expected.Owner ||
+				result.Group != tt.expected.Group ||
+				result.Flags != tt.expected.Flags {
+				t.Errorf("tunTapDevice() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

@@ -110,6 +110,16 @@ func (cmd *cmd) parseTunTap() (tuntapOptions, error) {
 }
 
 func (cmd *cmd) tuntapAdd(options tuntapOptions) error {
+	link := tunTapDevice(options)
+
+	if err := cmd.handle.LinkAdd(link); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func tunTapDevice(options tuntapOptions) *netlink.Tuntap {
 	link := &netlink.Tuntap{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: options.Name,
@@ -127,11 +137,7 @@ func (cmd *cmd) tuntapAdd(options tuntapOptions) error {
 
 	link.Flags = options.Flags
 
-	if err := cmd.handle.LinkAdd(link); err != nil {
-		return err
-	}
-
-	return nil
+	return link
 }
 
 func (cmd *cmd) tuntapDel(options tuntapOptions) error {
