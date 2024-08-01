@@ -445,3 +445,47 @@ func TestNeighFlagState(t *testing.T) {
 		})
 	}
 }
+
+func TestParseNeighGet(t *testing.T) {
+	tests := []struct {
+		name    string
+		token   []string
+		wantIP  net.IP
+		wantIF  netlink.Link
+		wantErr bool
+	}{
+		{
+			name:    "Valid IP and interface",
+			token:   []string{"address", "192.168.0.2", "dev", "lo"},
+			wantErr: false,
+		},
+		{
+			name:  "Error in parseAddress",
+			token: []string{"abc"},
+
+			wantIP:  nil,
+			wantIF:  nil,
+			wantErr: true,
+		},
+		{
+			name:    "Error in parseDeviceName",
+			token:   []string{"address", "192.168.0.2", "xyz"},
+			wantIF:  nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := cmd{
+				Cursor: -1,
+				Args:   tt.token,
+			}
+			_, _, err := cmd.parseNeighGet()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseNeighGet() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}

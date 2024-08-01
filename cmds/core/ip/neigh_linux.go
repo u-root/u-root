@@ -51,12 +51,7 @@ func (cmd *cmd) neigh() error {
 	case "flush":
 		return cmd.neighFlush()
 	case "get":
-		ip, err := cmd.parseAddress()
-		if err != nil {
-			return err
-		}
-
-		iface, err := cmd.parseDeviceName(true)
+		ip, iface, err := cmd.parseNeighGet()
 		if err != nil {
 			return err
 		}
@@ -68,6 +63,20 @@ func (cmd *cmd) neigh() error {
 	}
 
 	return cmd.usage()
+}
+
+func (cmd cmd) parseNeighGet() (net.IP, netlink.Link, error) {
+	ip, err := cmd.parseAddress()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	iface, err := cmd.parseDeviceName(true)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ip, iface, nil
 }
 
 func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {

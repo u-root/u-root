@@ -552,6 +552,7 @@ func TestRun(t *testing.T) {
 		name     string
 		cmd      cmd
 		expected string
+		wantErr  bool
 	}{
 		{
 			name: "Normal execution",
@@ -560,6 +561,17 @@ func TestRun(t *testing.T) {
 				Cursor:         1,
 				ExpectedValues: []string{"arg1", "arg2"},
 			},
+			wantErr: true,
+		},
+		{
+			name: "Batch execution",
+			cmd: cmd{
+				Opts: flags{
+					Batch: "testdata/batch.txt",
+				},
+				Cursor: 0,
+			},
+			wantErr: true,
 		},
 	}
 
@@ -569,7 +581,11 @@ func TestRun(t *testing.T) {
 
 			test.cmd.Out = &out
 
-			_ = test.cmd.run()
+			err := test.cmd.run()
+
+			if test.wantErr && err == nil || !test.wantErr && err != nil {
+				t.Errorf("expected %v, got %v", test.wantErr, err)
+			}
 		})
 	}
 }

@@ -280,7 +280,7 @@ func (cmd *cmd) run() error {
 func (cmd *cmd) batchCmds() error {
 	file, err := os.Open(cmd.Opts.Batch)
 	if err != nil {
-		log.Fatalf("Failed to open batch file: %v", err)
+		return err
 	}
 	defer file.Close()
 
