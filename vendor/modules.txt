@@ -119,6 +119,10 @@ github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
+# github.com/gopacket/gopacket v1.2.0
+## explicit; go 1.20
+github.com/gopacket/gopacket
+github.com/gopacket/gopacket/layers
 # github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
 ## explicit; go 1.14
 github.com/hugelgupf/go-shlex
@@ -241,6 +245,10 @@ github.com/nanmu42/limitio
 # github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 ## explicit; go 1.14
 github.com/orangecms/go-framebuffer/framebuffer
+# github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
+## explicit; go 1.20
+github.com/packetcap/go-pcap
+github.com/packetcap/go-pcap/filter
 # github.com/peterh/liner v1.2.2
 ## explicit
 github.com/peterh/liner
@@ -269,6 +277,9 @@ github.com/safchain/ethtool
 # github.com/sahilm/fuzzy v0.1.0
 ## explicit
 github.com/sahilm/fuzzy
+# github.com/sirupsen/logrus v1.9.3
+## explicit; go 1.13
+github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
@@ -329,7 +340,7 @@ github.com/vtolstov/go-ioctl
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.21.0
+# golang.org/x/crypto v0.23.0
 ## explicit; go 1.18
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -352,7 +363,7 @@ golang.org/x/exp/maps
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.23.0
+# golang.org/x/net v0.25.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/icmp
@@ -365,16 +376,16 @@ golang.org/x/net/proxy
 # golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.19.0
+# golang.org/x/sys v0.20.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.18.0
+# golang.org/x/term v0.20.0
 ## explicit; go 1.18
 golang.org/x/term
-# golang.org/x/text v0.14.0
+# golang.org/x/text v0.15.0
 ## explicit; go 1.18
 golang.org/x/text/feature/plural
 golang.org/x/text/internal

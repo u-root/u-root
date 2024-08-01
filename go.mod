@@ -16,6 +16,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/uuid v1.3.0
+	github.com/gopacket/gopacket v1.2.0
 	github.com/hugelgupf/vmtest v0.0.0-20240228002643-de15f4612e10
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
@@ -27,6 +28,7 @@ require (
 	github.com/mdlayher/vsock v1.2.1
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
+	github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
 	github.com/peterh/liner v1.2.2
 	github.com/pierrec/lz4/v4 v4.1.14
 	github.com/rck/unit v0.0.3
@@ -42,17 +44,19 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.21.0
+	golang.org/x/crypto v0.23.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.23.0
-	golang.org/x/sys v0.19.0
-	golang.org/x/term v0.18.0
-	golang.org/x/text v0.14.0
+	golang.org/x/net v0.25.0
+	golang.org/x/sys v0.20.0
+	golang.org/x/term v0.20.0
+	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.18.0
 	gopkg.in/yaml.v2 v2.2.8
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
+
+require github.com/sirupsen/logrus v1.9.3
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
