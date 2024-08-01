@@ -53,7 +53,7 @@ var (
 	lock               = flag.Bool("lock", false, "Lock instead of unlocking")
 	salt               = flag.String("salt", hsskey.DefaultPasswordSalt, "Salt for password generation")
 	eepromPattern      = flag.String("eeprom-pattern", "", "The pattern used to match EEPROM sysfs paths where the Host Secret Seeds are located")
-	hssFiles           = flag.String("hss-files", "", "Comma deliminated paths to files containing a Host Secret Seed (HSS) to use")
+	hssFiles           = flag.String("hss-files", "", "Comma deliminated list of files or directories containing additional Host Secret Seed (HSS)")
 )
 
 func verboseLog(msg string) {
