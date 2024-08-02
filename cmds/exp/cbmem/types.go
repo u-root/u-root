@@ -263,6 +263,13 @@ type CMOSChecksum struct {
 	Type       uint32
 }
 
+type CFRRaw struct {
+	Header     CFRHeader
+	data       []byte
+	StringSize uint32
+	Strings    []byte
+}
+
 // CBmem is the set of all CBmem records in a coreboot image.
 type CBmem struct {
 	Memory           *memoryEntry
@@ -280,4 +287,12 @@ type CBmem struct {
 	VersionTimeStamp uint32
 	Unknown          []uint32
 	Ignored          []string
+	CFR              *CFR
+}
+
+type CFR struct{}
+
+type CFRHeader struct {
+	Tag  uint32
+	Size uint32
 }

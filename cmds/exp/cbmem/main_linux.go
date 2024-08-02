@@ -292,6 +292,11 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				c.Data = string(data)
 				cbmem.MemConsole = c
 
+			case LB_TAG_CFR:
+				if err := processCfrTable(f, r, j); err != nil {
+					return nil, found, err
+				}
+
 			case LB_TAG_FORWARD:
 				var newTable int64
 				if err := readOne(r, &newTable, j); err != nil {
@@ -314,6 +319,82 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 		}
 	}
 	return cbmem, found, nil
+}
+
+func processCfrTable(f *os.File, r *offsetReader, j int64) error {
+	var CFRTable int64
+	if err := readOne(r, &CFRTable, j); err != nil {
+		return err
+	}
+	log.Printf("CFR Table: %x", CFRTable)
+
+	rCFR, err := newOffsetReader(f, CFRTable, 0x08)
+	if err != nil {
+		return err
+	}
+
+	cfr := &CFRRaw{
+		Header: CFRHeader{},
+	}
+	if err := readOne(rCFR, &cfr.Header.Tag, CFRTable); err != nil {
+		return err
+	}
+
+	CFRTable += int64(reflect.TypeOf(cfr.Header.Tag).Size())
+	if err := readOne(rCFR, &cfr.Header.Size, CFRTable); err != nil {
+		return err
+	}
+	CFRTable += int64(reflect.TypeOf(cfr.Header.Size).Size())
+	log.Printf("CFR Header Entry: %+v", cfr.Header)
+
+	rCFR, err = newOffsetReader(f, CFRTable, int(cfr.Header.Size))
+	if err != nil {
+		return err
+	}
+
+	data := make([]byte, cfr.Header.Size)
+
+	log.Printf("Reading %d bytes at %x", cfr.Header.Size, CFRTable)
+	if err := readOneSize(rCFR, &data, CFRTable, int64(cfr.Header.Size)); err != nil {
+		log.Printf("Error reading data: %v", err)
+		return err
+	}
+	CFRTable += int64(cfr.Header.Size) -
+		int64(reflect.TypeOf(cfr.Header.Size).Size()) -
+		int64(reflect.TypeOf(cfr.Header.Tag).Size())
+
+	rCFR, err = newOffsetReader(f, CFRTable, 4)
+	if err != nil {
+		return err
+	}
+
+	var StringTableSize uint32
+	if err := readOne(rCFR, &StringTableSize, CFRTable); err != nil {
+		return err
+	}
+	log.Printf("String Table Size: %d", StringTableSize)
+
+	rCFR, err = newOffsetReader(f, CFRTable, int(StringTableSize))
+	if err != nil {
+		return err
+	}
+
+	StringTable := make([]byte, StringTableSize)
+	if err := readOneSize(rCFR, &StringTable, CFRTable, int64(StringTableSize)); err != nil {
+		return err
+	}
+	// CFRTable += int64(reflect.TypeOf(StringTableSize).Size())
+	// CFRTable += int64(StringTableSize)
+
+	log.Printf("Data:\n%X\n", data)
+	log.Printf("String Table:\n%x\n", StringTable)
+
+	return parseCFRTable(rCFR, CFRTable)
+}
+
+func parseCFRTable(r *offsetReader, j int64) error {
+	// TODO
+	return nil
 }
 
 // DumpMem prints the memory areas. If hexdump is set, it will hexdump
@@ -407,6 +488,9 @@ func cbMem(w io.Writer) error {
 		// Format in tab-separated columns with a tab stop of 8.
 		tw := tabwriter.NewWriter(os.Stdout, 0, 8, 0, '\t', 0)
 		freq := uint64(ts.TickFreqMHZ)
+		if freq == 0 {
+			freq = 1
+		}
 		debug("ts %#x freq %#x stamps %#x\n", ts, freq, ts.TS)
 		prev := ts.TS[0].EntryStamp
 		p := message.NewPrinter(language.English)
