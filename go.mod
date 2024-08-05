@@ -40,6 +40,7 @@ require (
 	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
@@ -80,8 +81,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/numcpus v0.8.0 // indirect
-	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/arch v0.2.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect

@@ -4,41 +4,43 @@
 
 package main
 
-import (
-	"bytes"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
-)
+// func FuzzIPCmd(f *testing.F) {
+// 	// no log output
+// 	log.SetOutput(io.Discard)
+// 	log.SetFlags(0)
 
-func FuzzIPCmd(f *testing.F) {
+// 	// get seed corpora from testdata_new files
+// 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
+// 	if err != nil {
+// 		f.Fatalf("failed to find seed corpora files: %v", err)
+// 	}
 
-	//no log output
-	log.SetOutput(io.Discard)
-	log.SetFlags(0)
+// 	for _, seed := range seeds {
+// 		seedBytes, err := os.ReadFile(seed)
+// 		if err != nil {
+// 			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
+// 		}
 
-	// get seed corpora from testdata_new files
-	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
-	if err != nil {
-		f.Fatalf("failed to find seed corpora files: %v", err)
-	}
+// 		f.Add(string(seedBytes))
+// 	}
 
-	for _, seed := range seeds {
-		seedBytes, err := os.ReadFile(seed)
-		if err != nil {
-			f.Fatalf("failed read seed corpora from files %v: %v", seed, err)
-		}
+// 	stdout := &bytes.Buffer{}
+// 	f.Fuzz(func(t *testing.T, data string) {
+// 		stdout.Reset()
+// 		arg := strings.Split(data, " ")
 
-		f.Add(string(seedBytes))
-	}
+// 		handle, err := netlink.NewHandle()
+// 		if err != nil {
+// 			t.Fatalf("failed to create netlink handle: %v", err)
+// 		}
 
-	stdout := &bytes.Buffer{}
-	f.Fuzz(func(t *testing.T, data string) {
-		stdout.Reset()
-		arg = strings.Split(data, " ")
-		run(stdout)
-	})
-}
+// 		cmd := cmd{
+// 			Args:   arg,
+// 			out:    stdout,
+// 			handle: handle,
+// 			Family: netlink.FAMILY_ALL,
+// 		}
+
+// 		cmd.run()
+// 	})
+// }

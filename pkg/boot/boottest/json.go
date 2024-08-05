@@ -138,6 +138,9 @@ func LinuxImageToJSON(li *boot.LinuxImage) map[string]interface{} {
 	if li.Initrd != nil {
 		m["initrd"] = module(li.Initrd)
 	}
+	if li.DTB != nil {
+		m["dtb"] = module(li.DTB)
+	}
 	return m
 }
 
