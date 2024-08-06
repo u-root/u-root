@@ -11,6 +11,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 )
 
+// dnsData returns a string representation of the DNS layer.
 func dnsData(layer *layers.DNS) string {
 	applicationData := fmt.Sprintf("%d", layer.ID)
 
