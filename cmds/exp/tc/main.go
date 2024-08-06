@@ -26,6 +26,7 @@ func run(args []string, stdout io.Writer) error {
 	cursor := 0
 	want := []string{
 		"qdisc",
+		"class",
 	}
 
 	rtnl, err := tc.Open(&tc.Config{})
@@ -43,6 +44,8 @@ func run(args []string, stdout io.Writer) error {
 	switch one(args[cursor], want) {
 	case "qdisc":
 		return runQdisc(args[cursor+1:], tctl, stdout)
+	case "class":
+		return runClass(args[cursor+1:], tctl, stdout)
 	}
 
 	return nil
@@ -99,6 +102,46 @@ func runQdisc(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) erro
 		return tctl.LinkQDisc(qArgs, stdout)
 	case "help":
 		trafficctl.PrintQdiscHelp(stdout)
+	}
+
+	return nil
+}
+
+func runClass(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) error {
+	cursor := 0
+	want := []string{
+		"show",
+		"list",
+		"add",
+		"del",
+		"change",
+		"replace",
+		"help",
+	}
+
+	var cArgs *trafficctl.CArgs
+	var err error
+	if len(args[1:]) > 1 {
+		cArgs, err = trafficctl.ParseClassArgs(args[1:], stdout)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch one(args[cursor], want) {
+	case "show", "list":
+		return tctl.ShowClass(cArgs, stdout)
+	case "add":
+		return tctl.AddClass(cArgs, stdout)
+	case "delete":
+		return tctl.DeleteClass(cArgs, stdout)
+	case "change":
+		return tctl.ChangeClass(cArgs, stdout)
+	case "replace":
+		return tctl.ReplaceClass(cArgs, stdout)
+	case "help":
+		trafficctl.PrintClassHelp(stdout)
+		return nil
 	}
 
 	return nil
