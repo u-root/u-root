@@ -1,13 +1,10 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-// ip manipulates network addresses, interfaces, routing, and other config.
 package main
 
 import (
 	"context"
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"io"
@@ -19,7 +16,6 @@ import (
 	"syscall"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 
 	"github.com/gopacket/gopacket"
 	pcap "github.com/packetcap/go-pcap"
@@ -57,9 +53,10 @@ type flags struct {
 	ether                  bool
 	filterFile             string
 	timeStampInNanoSeconds bool
+	icmpOnly               bool
 }
 
-const tcpdumpHelp = `       tcpdump [ -ADehnpqStvx# ] 
+const tcpdumpHelp = `       tcpdump [ -ADehnpqStvx# ] [ -icmp ]
                 [ -c count ] [ --count ] [ -F file ][ -i interface ]
 			    [ --number ] [ --print ] [ -Q in|out|inout ] [ -r file ] 
 				[ -s snaplen ][ -w file ] [ --nano ] [ expression ]`
@@ -73,16 +70,17 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 	fs.BoolVar(&opts.help, "h", false, "Print help message")
 	fs.StringVar(&opts.device, "i", "", "Listen on interface")
 	fs.StringVar(&opts.device, "interface", "", "Listen on interface")
-	fs.IntVar(&opts.snapshotLength, "s", 262144, "narf snaplen bytes of data from each packet rather than the default of 262144 bytes")
+	fs.IntVar(&opts.snapshotLength, "s", 262144, "snarf snaplen bytes of data from each packet rather than the default of 262144 bytes")
 	fs.IntVar(&opts.snapshotLength, "snapshot-length", 262144, "narf snaplen bytes of data from each packet rather than the default of 262144 bytes")
-	fs.BoolVar(&opts.noPromisc, "p", true, "Set non-promiscuous mode")
-	fs.BoolVar(&opts.noPromisc, "no-promiscuous-mode", true, "Set non-promiscuous mode")
+	fs.BoolVar(&opts.noPromisc, "p", false, "Set non-promiscuous mode")
+	fs.BoolVar(&opts.noPromisc, "no-promiscuous-mode", false, "Set non-promiscuous mode")
 	fs.BoolVar(&opts.count, "count", false, "Print only the number of packets captured")
 	fs.BoolVar(&opts.listDevices, "D", false, "Print  the  list of the network interfaces available on the system and on which tcpdump can capture packets")
 	fs.BoolVar(&opts.listDevices, "list-interfaces", false, "Print  the  list of the network interfaces available on the system and on which tcpdump can capture packets")
 	fs.BoolVar(&opts.numerical, "n", false, "Don't convert addresses (i.e., host addresses, port numbers, etc.) to names")
 	fs.BoolVar(&opts.number, "#", false, " Print an optional packet number at the beginning of the line")
 	fs.BoolVar(&opts.number, "number", false, " Print an optional packet number at the beginning of the line")
+	fs.BoolVar(&opts.icmpOnly, "icmp", false, "Only capture ICMP packets")
 	// TODO: Implement remaining flags
 	fs.BoolVar(&opts.t, "t", false, "Don't print a timestamp on each dump line")
 	fs.BoolVar(&opts.tt, "tt", false, "Print the timestamp, as seconds since January 1, 1970, 00:00:00, UTC, and fractions of a second since that time, on each dump line")
@@ -180,7 +178,7 @@ func (cmd *cmd) run() error {
 	packetSource := gopacket.NewPacketSource(src, layers.LinkTypeEthernet)
 	packetSource.NoCopy = true
 
-	fmt.Fprintf(cmd.out, "tcpdump: listening on %s, link-type %d, snapshot length %d bytes\n", cmd.Opts.device, src.LinkType(), cmd.Opts.snapshotLength)
+	fmt.Fprintf(cmd.out, "tcpdump: verbose output suppressed, use -v for full protocol decode\nlistening on %s, link-type %d, snapshot length %d bytes\n", cmd.Opts.device, src.LinkType(), cmd.Opts.snapshotLength)
 
 	capturedPackets := 0
 
@@ -204,20 +202,19 @@ func (cmd *cmd) run() error {
 	}
 }
 
-func listDevices() error {
-	links, err := netlink.LinkList()
-	if err != nil {
-		return err
-	}
-
-	for idx, link := range links {
-		fmt.Printf("%d.%s [%s]\n", idx, link.Attrs().Name, link.Attrs().OperState)
-	}
-
-	return nil
-}
-
 func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
+	var (
+		no      string
+		srcAddr string
+		srcPort string
+		dstAddr string
+		dstPort string
+	)
+
+	if cmd.Opts.number {
+		no = fmt.Sprintf("%d  ", num)
+	}
+
 	if packet == nil {
 		return
 	}
@@ -228,40 +225,49 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 		return
 	}
 
-	if packet.NetworkLayer() == nil || packet.TransportLayer() == nil {
+	networkLayer := packet.NetworkLayer()
+
+	if networkLayer == nil {
 		return
 	}
 
-	networkLayer := packet.NetworkLayer()
-	transportLayer := packet.TransportLayer()
-	applicationLayer := packet.ApplicationLayer()
-
 	networkSrc, networkDst := networkLayer.NetworkFlow().Endpoints()
-	transportSrc, transportDst := transportLayer.TransportFlow().Endpoints()
 
-	srcIP, dstIP := networkSrc.String(), cmd.wellKnownPorts(networkDst.String())
-	srcPort, dstPort := transportSrc.String(), cmd.wellKnownPorts(transportDst.String())
+	srcAddr, dstAddr = networkSrc.String(), networkDst.String()
 
-	srcHostnames, err := net.LookupAddr(srcIP)
-	if err != nil || len(srcHostnames) == 0 || cmd.Opts.numerical {
-		srcHostnames = []string{srcIP}
+	if srcHostNames, err := net.LookupAddr(srcAddr); err == nil && len(srcHostNames) > 0 && !cmd.Opts.numerical {
+		srcAddr = srcHostNames[0]
 	}
 
-	dstHostnames, err := net.LookupAddr(dstIP)
-	if err != nil || len(dstHostnames) == 0 || cmd.Opts.numerical {
-		dstHostnames = []string{dstIP}
+	if dstHostNames, err := net.LookupAddr(dstAddr); err == nil && len(dstHostNames) > 0 && !cmd.Opts.numerical {
+		dstAddr = dstHostNames[0]
 	}
 
-	// Check if the hostname does not end with a dot and add one if necessary
-	if !strings.HasSuffix(srcHostnames[0], ".") {
-		srcHostnames[0] += "."
+	// Append a dot to the end of the addresses if it doesn't have one
+	if !strings.HasSuffix(srcAddr, ".") {
+		srcAddr += "."
+	}
+	if !strings.HasSuffix(dstAddr, ".") {
+		dstAddr += "."
 	}
 
-	if !strings.HasSuffix(dstHostnames[0], ".") {
-		dstHostnames[0] += "."
+	data := parseICMP(packet)
+
+	if cmd.Opts.icmpOnly && data == "" {
+		return
 	}
 
-	data := ""
+	transportLayer := packet.TransportLayer()
+
+	// Set the source and destination ports, if a transport layer is present
+	if transportLayer != nil {
+		transportSrc, transportDst := transportLayer.TransportFlow().Endpoints()
+
+		srcPort, dstPort = transportSrc.String(), cmd.wellKnownPorts(transportDst.String())
+	}
+
+	// parse the application layer
+	applicationLayer := packet.ApplicationLayer()
 
 	if applicationLayer != nil {
 		switch layer := applicationLayer.(type) {
@@ -291,132 +297,16 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 		}
 	}
 
-	no := ""
-	if cmd.Opts.number {
-		no = fmt.Sprintf("%d  ", num)
-	}
-
 	fmt.Fprintf(cmd.out, "%s%s %s %s %s%s > %s%s: %s\n",
 		no,
 		packet.Metadata().Timestamp.Format("15:04:05.000000"),
 		networkLayer.NetworkFlow().EndpointType(),
 		cmd.Opts.device,
-		srcHostnames[0],
+		srcAddr,
 		srcPort,
-		dstHostnames[0],
+		dstAddr,
 		dstPort,
 		data)
-}
-
-func tcpData(layer *layers.TCP, length int) string {
-	var data string
-
-	flags := tcpFlags(*layer)
-	opts := tcpOptions(layer.Options)
-
-	data = fmt.Sprintf("Flags [%s], seq %d, ack %d, win %d, options [%s], length %d", flags, layer.Seq, layer.Ack, layer.Window, opts, length)
-
-	return data
-}
-
-func tcpFlags(layer layers.TCP) string {
-	var flags string
-	if layer.PSH {
-		flags += "P"
-	}
-	if layer.FIN {
-		flags += "F"
-	}
-	if layer.SYN {
-		flags += "S"
-	}
-	if layer.RST {
-		flags += "R"
-	}
-	if layer.URG {
-		flags += "U"
-	}
-	if layer.ECE {
-		flags += "E"
-	}
-	if layer.CWR {
-		flags += "C"
-	}
-	if layer.NS {
-		flags += "N"
-	}
-	if layer.ACK {
-		flags += "."
-	}
-
-	return flags
-}
-
-func tcpOptions(options []layers.TCPOption) string {
-	var opts string
-
-	for _, opt := range options {
-		opts += tcpOptionToString(opt) + ","
-	}
-
-	return strings.TrimRight(opts, ",")
-}
-
-func tcpOptionToString(opt layers.TCPOption) string {
-	switch opt.OptionType {
-	case layers.TCPOptionKindMSS:
-		if len(opt.OptionData) >= 2 {
-			return fmt.Sprintf("%s val %v",
-				opt.OptionType,
-				binary.BigEndian.Uint16(opt.OptionData))
-		}
-
-	case layers.TCPOptionKindTimestamps:
-		if len(opt.OptionData) == 8 {
-			return fmt.Sprintf("%s val %v",
-				opt.OptionType,
-				binary.BigEndian.Uint32(opt.OptionData[:4]))
-		}
-	}
-
-	return fmt.Sprintf("%s", opt.OptionType)
-}
-
-func dnsData(layer *layers.DNS) string {
-	applicationData := fmt.Sprintf("%d", layer.ID)
-
-	if layer.ResponseCode != layers.DNSResponseCodeNoErr {
-		applicationData += fmt.Sprintf(" %s", layer.ResponseCode.String())
-	}
-
-	if layer.AA {
-		applicationData += "*"
-	} else if layer.RD {
-		applicationData += "+"
-	}
-
-	if len(layer.Answers)+len(layer.Authorities)+len(layer.Additionals) > 1 {
-		applicationData += fmt.Sprintf(" %d/%d/%d ", len(layer.Answers), len(layer.Authorities), len(layer.Additionals))
-	}
-
-	if layer.ResponseCode == layers.DNSResponseCodeNoErr {
-
-		if len(layer.Answers) == 0 {
-			for _, question := range layer.Questions {
-				applicationData += fmt.Sprintf(" %s? %s, ", question.Type.String(), question.Name)
-			}
-		}
-
-		for _, answer := range layer.Answers {
-			applicationData += answer.String() + ", "
-		}
-
-		applicationData = strings.TrimRight(applicationData, ", ")
-	}
-
-	applicationData += fmt.Sprintf((" (%d)"), len(layer.Contents))
-
-	return applicationData
 }
 
 func main() {
@@ -432,34 +322,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("tcpdump: %v", err)
 	}
-}
-
-var wellKnownPortsMap = map[string]string{
-	"20":  "ftp-data",
-	"21":  "ftp",
-	"22":  "ssh-scp",
-	"23":  "telnet",
-	"25":  "smtp",
-	"53":  "domain",
-	"80":  "http",
-	"88":  "kerberos",
-	"110": "pop3",
-	"119": "nntp",
-	"123": "ntp",
-	"143": "imap",
-	"443": "https",
-	"465": "smtps",
-	"563": "nntps",
-	"989": "ftps-data",
-	"990": "ftps",
-	"993": "imaps",
-	"995": "pop3s",
-}
-
-func (cmd cmd) wellKnownPorts(port string) string {
-	if name, ok := wellKnownPortsMap[port]; ok && !cmd.Opts.numerical {
-		return name
-	}
-
-	return port
 }
