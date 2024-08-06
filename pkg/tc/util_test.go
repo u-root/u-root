@@ -132,7 +132,7 @@ func TestParseRate(t *testing.T) {
 		exp uint64
 		err error
 	}{
-		{arg: "5mbit", exp: 5000000},
+		{arg: "5mbit", exp: 625000},
 	} {
 		t.Run(tt.arg, func(t *testing.T) {
 			ret, err := trafficctl.ParseRate(tt.arg)
