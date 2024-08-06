@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
@@ -32,6 +33,7 @@ var wellKnownPortsMap = map[string]string{
 	"995": "pop3s",
 }
 
+// wellKnownPorts returns the well-known name of the port or the port number itself.
 func (cmd cmd) wellKnownPorts(port string) string {
 	if name, ok := wellKnownPortsMap[port]; ok && !cmd.Opts.numerical {
 		return name
@@ -40,6 +42,7 @@ func (cmd cmd) wellKnownPorts(port string) string {
 	return port
 }
 
+// listDevices lists all the network devices which can be listed to.
 func listDevices() error {
 	links, err := netlink.LinkList()
 	if err != nil {
@@ -51,4 +54,34 @@ func listDevices() error {
 	}
 
 	return nil
+}
+
+// parseTimeStamp returns the timestamp in the format specified by the user using the -t, -tt, -ttt, -tttt, -ttttt, -nano flags.
+func (cmd *cmd) parseTimeStamp(currentTimestamp, lastTimeStamp time.Time) (timeStamp string) {
+	switch {
+	case cmd.Opts.t:
+		return ""
+	case cmd.Opts.tt:
+		return fmt.Sprintf("%d", currentTimestamp.Unix())
+	case cmd.Opts.ttt, cmd.Opts.ttttt:
+		switch cmd.Opts.timeStampInNanoSeconds {
+		case true:
+			if !cmd.Opts.firstPacketProcessed {
+				cmd.Opts.firstPacketProcessed = true
+				return "00:00:00.000000000"
+			}
+			return time.Unix(0, 0).Add(currentTimestamp.Sub(lastTimeStamp)).Format("15:04:05.000000000")
+		default:
+			if !cmd.Opts.firstPacketProcessed {
+				cmd.Opts.firstPacketProcessed = true
+				return "00:00:00.000000"
+			}
+			return time.Unix(0, 0).Add(currentTimestamp.Sub(lastTimeStamp)).Format("15:04:05.000000")
+		}
+	case cmd.Opts.tttt:
+		midnight := time.Now().Truncate(24 * time.Hour)
+		return currentTimestamp.Sub(midnight).String()
+	}
+
+	return currentTimestamp.Format("15:04:05.000000")
 }

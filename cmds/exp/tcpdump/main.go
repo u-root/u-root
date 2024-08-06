@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -40,15 +41,11 @@ type flags struct {
 	ttt                    bool
 	tttt                   bool
 	ttttt                  bool
+	firstPacketProcessed   bool
 	verbose                bool
-	writeToFile            string
-	readFromFile           string
 	data                   bool
 	dataWithHeader         bool
-	absoluteTCPSeq         bool
 	quiet                  bool
-	direction              bool
-	alwaysPrint            bool
 	ascii                  bool
 	ether                  bool
 	filterFile             string
@@ -56,11 +53,16 @@ type flags struct {
 	icmpOnly               bool
 }
 
-const tcpdumpHelp = `       tcpdump [ -ADehnpqStvx# ] [ -icmp ]
+const tcpdumpHelp = `       tcpdump [ -ADehnpqtvx# ] [ -icmp ]
                 [ -c count ] [ --count ] [ -F file ][ -i interface ]
-			    [ --number ] [ --print ] [ -Q in|out|inout ] [ -r file ] 
-				[ -s snaplen ][ -w file ] [ --nano ] [ expression ]`
+			    [ --number ] [ --print ] [ -s snaplen ] [ --nano ] 
+				[ EXPRESSION ]
+	EXPRESSION := [ EXPRESSION ] [ and ] [ or ] [ not ] 
+				  [ gateway host ] [ proto protocol ] [ ether type ] [ src host ]
+				  [ dst host ] [ net net ] [ port port ] [ portrange X-Y ] 
+				  [ ip host ] [ ip4 ] [ ip6 ] [ tcp ] [ udp ]`
 
+// parseFlags parses the flags and returns the cmd.
 func parseFlags(args []string, out io.Writer) (cmd, error) {
 	opts := flags{}
 
@@ -81,28 +83,20 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 	fs.BoolVar(&opts.number, "#", false, " Print an optional packet number at the beginning of the line")
 	fs.BoolVar(&opts.number, "number", false, " Print an optional packet number at the beginning of the line")
 	fs.BoolVar(&opts.icmpOnly, "icmp", false, "Only capture ICMP packets")
-	// TODO: Implement remaining flags
+	fs.BoolVar(&opts.ether, "e", false, "Print the link-level header on each dump line.  This can be used, for example, to print MAC layer addresses for protocols such as Ethernet and IEEE 802.11.")
 	fs.BoolVar(&opts.t, "t", false, "Don't print a timestamp on each dump line")
 	fs.BoolVar(&opts.tt, "tt", false, "Print the timestamp, as seconds since January 1, 1970, 00:00:00, UTC, and fractions of a second since that time, on each dump line")
 	fs.BoolVar(&opts.ttt, "ttt", false, "Print a delta (microsecond or nanosecond resolution depending on the --time-stamp-precision option) between current and previous line on each dump line.  The default is microsecond resolution")
 	fs.BoolVar(&opts.tttt, "tttt", false, "Print a timestamp, as hours, minutes, seconds, and fractions of a second since midnight, preceded by the date, on each dump line")
 	fs.BoolVar(&opts.ttttt, "ttttt", false, "Print  a delta (microsecond or nanosecond resolution depending on the --time-stamp-precision option) between current and first line on each dump line.  The default is microsecond resolution")
-	fs.BoolVar(&opts.verbose, "v", false, "When parsing and printing, produce (slightly more) verbose output.  For example, the time to live, identification, total length and options in an IP packet are printed.  Also enables additional packet integrity checks such as verifying the IP and ICMP header checksum")
-	fs.BoolVar(&opts.verbose, "verbose", false, "When parsing and printing, produce (slightly more) verbose output.  For example, the time to live, identification, total length and options in an IP packet are printed.  Also enables additional packet integrity checks such as verifying the IP and ICMP header checksum")
-	fs.StringVar(&opts.writeToFile, "w", "", "Write the raw packets to file rather than parsing and printing them out.  They can later be printed with the -r option.  Standard output is used if file is ``-''")
+	fs.BoolVar(&opts.timeStampInNanoSeconds, "nano", false, "Print the timestamp in nanosecond resolution (instead of microseconds)")
 	fs.BoolVar(&opts.data, "x", false, "When parsing and printing, in addition to printing the headers of each packet, print the data of each packet (minus its link level header) in hex")
 	fs.BoolVar(&opts.dataWithHeader, "xx", false, "When parsing and printing, in addition to printing the headers of each packet, print the data of each packet (including its link level header) in hex")
-	fs.BoolVar(&opts.absoluteTCPSeq, "S", false, "Print absolute, rather than relative, TCP sequence numbers")
-	fs.BoolVar(&opts.absoluteTCPSeq, "absolute-tcp-sequence-numbers", false, "Print absolute, rather than relative, TCP sequence numbers")
-	fs.StringVar(&opts.readFromFile, "r", "", "Read packets from file (which was created with the -w option) rather than from a network interface")
-	fs.BoolVar(&opts.quiet, "q", false, "Quiet output. Print less protocol information so output lines are shorter")
-	fs.BoolVar(&opts.direction, "Q", false, "Choose send/receive direction direction for which packets should be captured. Possible values are `in', `out' and `inout'")
-	fs.BoolVar(&opts.direction, "direction", false, "Choose send/receive direction direction for which packets should be captured. Possible values are `in', `out' and `inout'")
-	fs.BoolVar(&opts.alwaysPrint, "print", false, "Print parsed packet output, even if the raw packets are being saved to a file with the -w flag.")
-	fs.BoolVar(&opts.ascii, "A", false, "Print each packet (minus its link level header) in ASCII.  Handy for capturing web pages")
-	fs.BoolVar(&opts.ether, "e", false, "Print the link-level header on each dump line.  This can be used, for example, to print MAC layer addresses for protocols such as Ethernet and IEEE 802.11.")
 	fs.StringVar(&opts.filterFile, "F", "", "Use file as input for the filter expression.  An additional expression given on the command line is ignored.")
-	fs.BoolVar(&opts.timeStampInNanoSeconds, "nano", false, "Print the timestamp in nanosecond resolution (instead of microseconds)")
+	fs.BoolVar(&opts.ascii, "A", false, "Print each packet (minus its link level header) in ASCII.  Handy for capturing web pages")
+	fs.BoolVar(&opts.quiet, "q", false, "Quiet output. Print less protocol information so output lines are shorter")
+	fs.BoolVar(&opts.verbose, "v", false, "When parsing and printing, produce (slightly more) verbose output.  For example, the time to live, identification, total length and options in an IP packet are printed.  Also enables additional packet integrity checks such as verifying the IP and ICMP header checksum")
+	fs.BoolVar(&opts.verbose, "verbose", false, "When parsing and printing, produce (slightly more) verbose output.  For example, the time to live, identification, total length and options in an IP packet are printed.  Also enables additional packet integrity checks such as verifying the IP and ICMP header checksum")
 
 	fs.Usage = func() {
 		fmt.Fprintf(out, "%s\n\n", tcpdumpHelp)
@@ -112,6 +106,10 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 
 	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
+	if opts.verbose && opts.quiet {
+		return cmd{}, fmt.Errorf("cannot use both -v and -q flags")
+	}
+
 	filter := ""
 	if fs.NArg() > 0 {
 		for _, arg := range fs.Args() {
@@ -120,6 +118,14 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 	}
 
 	opts.filter = filter
+
+	if opts.filterFile != "" {
+		if data, err := os.ReadFile(opts.filterFile); err == nil {
+			opts.filter = string(data)
+		} else {
+			return cmd{}, fmt.Errorf("failed to read filter file: %v", err)
+		}
+	}
 
 	return cmd{Opts: opts, out: out}, nil
 }
@@ -180,7 +186,13 @@ func (cmd *cmd) run() error {
 
 	fmt.Fprintf(cmd.out, "tcpdump: verbose output suppressed, use -v for full protocol decode\nlistening on %s, link-type %d, snapshot length %d bytes\n", cmd.Opts.device, src.LinkType(), cmd.Opts.snapshotLength)
 
-	capturedPackets := 0
+	var (
+		capturedPackets int
+		timeStamp       time.Time
+	)
+	if cmd.Opts.ttttt {
+		timeStamp = time.Now()
+	}
 
 	for {
 		select {
@@ -195,20 +207,27 @@ func (cmd *cmd) run() error {
 			}
 
 			if !cmd.Opts.count {
-				cmd.processPacket(packet, capturedPackets)
+				pkgTime := cmd.processPacket(packet, capturedPackets, timeStamp)
+
+				if cmd.Opts.ttt {
+					timeStamp = pkgTime
+				}
 			}
 
 		}
 	}
 }
 
-func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
+// processPacket processes a packet and prints the output to the output writer.
+// A timestamp of the packet is returned.
+func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp time.Time) time.Time {
 	var (
-		no      string
-		srcAddr string
-		srcPort string
-		dstAddr string
-		dstPort string
+		no        string
+		srcAddr   string
+		srcPort   string
+		dstAddr   string
+		dstPort   string
+		timeStamp string
 	)
 
 	if cmd.Opts.number {
@@ -216,19 +235,35 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 	}
 
 	if packet == nil {
-		return
+		return lastPkgTimeStamp
 	}
 
 	if err := packet.ErrorLayer(); err != nil {
 		fmt.Fprintf(cmd.out, "skipping packet no. %d: %v\n", num, err)
 
-		return
+		return lastPkgTimeStamp
+	}
+
+	ethernetLayer := packet.LinkLayer()
+	if ethernetLayer == nil {
+		return lastPkgTimeStamp
 	}
 
 	networkLayer := packet.NetworkLayer()
 
 	if networkLayer == nil {
-		return
+		return lastPkgTimeStamp
+	}
+
+	etherInfo := cmd.ethernetInfo(ethernetLayer, networkLayer)
+
+	if cmd.Opts.verbose {
+		switch layer := networkLayer.(type) {
+		case *layers.IPv4:
+			etherInfo += fmt.Sprintf(" (tos 0x%x, ttl %d, id %d, offset %d, flags [%s], proto %s (%d), length %d)\n", layer.TOS, layer.TTL, layer.Id, layer.FragOffset, layer.Flags, layer.Protocol, layer.Protocol, len(layer.Contents)+len(layer.Payload))
+		case *layers.IPv6:
+			etherInfo += fmt.Sprintf(" (flowlabel 0x%x, hlim %d, next-header %s (%d), payload length: %d)\n", layer.FlowLabel, layer.HopLimit, layer.NextHeader, layer.NextHeader, len(layer.Payload))
+		}
 	}
 
 	networkSrc, networkDst := networkLayer.NetworkFlow().Endpoints()
@@ -254,7 +289,7 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 	data := parseICMP(packet)
 
 	if cmd.Opts.icmpOnly && data == "" {
-		return
+		return lastPkgTimeStamp
 	}
 
 	transportLayer := packet.TransportLayer()
@@ -269,7 +304,7 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 	// parse the application layer
 	applicationLayer := packet.ApplicationLayer()
 
-	if applicationLayer != nil {
+	if applicationLayer != nil && !cmd.Opts.quiet {
 		switch layer := applicationLayer.(type) {
 		case *layers.DNS:
 			data = dnsData(layer)
@@ -287,7 +322,7 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 
 		switch layer := transportLayer.(type) {
 		case *layers.TCP:
-			data = tcpData(layer, length)
+			data = tcpData(layer, length, cmd.Opts.verbose, cmd.Opts.quiet)
 		case *layers.UDP:
 			data = fmt.Sprintf("UDP, length %d", length)
 		case *layers.UDPLite:
@@ -297,16 +332,52 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int) {
 		}
 	}
 
-	fmt.Fprintf(cmd.out, "%s%s %s %s %s%s > %s%s: %s\n",
+	pkgTimeStamp := packet.Metadata().Timestamp
+
+	timeStamp = cmd.parseTimeStamp(pkgTimeStamp, lastPkgTimeStamp)
+
+	fmt.Fprintf(cmd.out, "%s%s %s %s%s > %s%s: %s\n",
 		no,
-		packet.Metadata().Timestamp.Format("15:04:05.000000"),
-		networkLayer.NetworkFlow().EndpointType(),
-		cmd.Opts.device,
+		timeStamp,
+		etherInfo,
 		srcAddr,
 		srcPort,
 		dstAddr,
 		dstPort,
 		data)
+
+	switch {
+	case cmd.Opts.ascii:
+		fmt.Fprintf(cmd.out, "%s\n", applicationLayer.LayerContents())
+	case cmd.Opts.data:
+		fmt.Fprintf(cmd.out, "%s\n", formatPacketData(packet.Data()[14:]))
+	case cmd.Opts.dataWithHeader:
+		fmt.Fprintf(cmd.out, "%s\n", formatPacketData(packet.Data()))
+	}
+
+	return pkgTimeStamp
+}
+
+func formatPacketData(data []byte) string {
+	var result string
+	for i := 0; i < len(data); i += 16 {
+		// Print the offset
+		result += fmt.Sprintf("0x%04x:  ", i)
+
+		// Print the hex values
+		for j := 0; j < 16; j++ {
+			if i+j < len(data) {
+				result += fmt.Sprintf("%02x", data[i+j])
+			} else {
+				result += "  "
+			}
+			if j%2 == 1 {
+				result += " "
+			}
+		}
+		result += "\n"
+	}
+	return result
 }
 
 func main() {

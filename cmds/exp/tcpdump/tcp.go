@@ -12,17 +12,26 @@ import (
 	"github.com/gopacket/gopacket/layers"
 )
 
-func tcpData(layer *layers.TCP, length int) string {
-	var data string
-
+// tcpData returns a string representation of the TCP layer.
+func tcpData(layer *layers.TCP, length int, verbose, quiet bool) string {
 	flags := tcpFlags(*layer)
 	opts := tcpOptions(layer.Options)
 
-	data = fmt.Sprintf("Flags [%s], seq %d, ack %d, win %d, options [%s], length %d", flags, layer.Seq, layer.Ack, layer.Window, opts, length)
+	switch {
+	case quiet:
+		return fmt.Sprintf("TCP, length %d", length)
 
-	return data
+	case verbose:
+		return fmt.Sprintf("Flags [%s], cksum 0x%x, seq %d, ack %d, win %d, options [%s], length %d",
+			flags, layer.Checksum, layer.Seq, layer.Ack, layer.Window, opts, length)
+
+	default:
+		return fmt.Sprintf("Flags [%s], seq %d, ack %d, win %d, options [%s], length %d",
+			flags, layer.Seq, layer.Ack, layer.Window, opts, length)
+	}
 }
 
+// tcpFlags returns a string representation of the TCP flags.
 func tcpFlags(layer layers.TCP) string {
 	var flags string
 	if layer.PSH {
@@ -56,6 +65,7 @@ func tcpFlags(layer layers.TCP) string {
 	return flags
 }
 
+// tcpOptions returns a string representation of the TCP options.
 func tcpOptions(options []layers.TCPOption) string {
 	var opts string
 
@@ -66,6 +76,7 @@ func tcpOptions(options []layers.TCPOption) string {
 	return strings.TrimRight(opts, ",")
 }
 
+// tcpOptionToString returns a string representation of the TCP option.
 func tcpOptionToString(opt layers.TCPOption) string {
 	switch opt.OptionType {
 	case layers.TCPOptionKindMSS:
