@@ -151,8 +151,7 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args))
-
+	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
 	cmd.Args = fs.Args()
 
 	cmd.Family = netlink.FAMILY_ALL
@@ -281,7 +280,7 @@ func (cmd *cmd) run() error {
 func (cmd *cmd) batchCmds() error {
 	file, err := os.Open(cmd.Opts.Batch)
 	if err != nil {
-		log.Fatalf("Failed to open batch file: %v", err)
+		return err
 	}
 	defer file.Close()
 
@@ -312,7 +311,7 @@ func (cmd *cmd) batchCmds() error {
 }
 
 func (cmd *cmd) runSubCommand() error {
-	cmd.Cursor = 0
+	cmd.Cursor = -1
 
 	if !cmd.tokenRemains() {
 		fmt.Fprint(cmd.Out, ipHelp)

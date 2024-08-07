@@ -25,7 +25,7 @@ func TestParseFlags(t *testing.T) {
 	}{
 		{
 			name: "no args",
-			args: []string{},
+			args: []string{"ip"},
 			out:  &bytes.Buffer{},
 			wantCmd: cmd{
 				Opts: flags{
@@ -35,7 +35,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name: "inet4",
-			args: []string{"-4"},
+			args: []string{"ip", "-4"},
 			out:  &bytes.Buffer{},
 			wantCmd: cmd{
 				Opts: flags{
@@ -47,7 +47,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name: "inet6",
-			args: []string{"-6"},
+			args: []string{"ip", "-6"},
 			wantCmd: cmd{
 				Opts: flags{
 					Loops: 1,
@@ -58,17 +58,17 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:    "mpls",
-			args:    []string{"-M"},
+			args:    []string{"ip", "-M"},
 			wantErr: true,
 		},
 		{
 			name:    "bridge",
-			args:    []string{"-B"},
+			args:    []string{"ip", "-B"},
 			wantErr: true,
 		},
 		{
 			name: "link",
-			args: []string{"-0"},
+			args: []string{"ip", "-0"},
 			wantCmd: cmd{
 				Opts: flags{
 					Loops: 1,
@@ -79,7 +79,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name: "family",
-			args: []string{"--family=inet"},
+			args: []string{"ip", "--family=inet"},
 			wantCmd: cmd{
 				Opts: flags{
 					Loops:  1,
@@ -90,7 +90,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name: "family inet6",
-			args: []string{"--family=inet6"},
+			args: []string{"ip", "--family=inet6"},
 			wantCmd: cmd{
 				Opts: flags{
 					Loops:  1,
@@ -101,27 +101,27 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:    "family err",
-			args:    []string{"--family=abc"},
+			args:    []string{"ip", "--family=abc"},
 			wantErr: true,
 		},
 		{
 			name:    "resolve",
-			args:    []string{"-r"},
+			args:    []string{"ip", "-r"},
 			wantErr: true,
 		},
 		{
 			name:    "color",
-			args:    []string{"--color=all"},
+			args:    []string{"ip", "--color=all"},
 			wantErr: true,
 		},
 		{
 			name:    "oneline",
-			args:    []string{"-o"},
+			args:    []string{"ip", "-o"},
 			wantErr: true,
 		},
 		{
 			name: "rcvBuf",
-			args: []string{"--rcvbuf=100"},
+			args: []string{"ip", "--rcvbuf=100"},
 			wantCmd: cmd{
 				Opts: flags{
 					Loops:  1,
@@ -163,7 +163,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "Addr",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "addr", "help"},
+				Args:   []string{"addr", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -171,7 +171,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "Addr invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "addr", "invalid"},
+				Args:   []string{"addr", "invalid"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -180,7 +180,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "link",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "link", "help"},
+				Args:   []string{"link", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -188,7 +188,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "link invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "link", "invalid"},
+				Args:   []string{"link", "invalid"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -197,7 +197,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "route",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "route", "help"},
+				Args:   []string{"route", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -205,7 +205,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "route invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "route", "invalid"},
+				Args:   []string{"route", "invalid"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -214,7 +214,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "neigh",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "neigh", "help"},
+				Args:   []string{"neigh", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -222,7 +222,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "neigh invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "neigh", "invalid"},
+				Args:   []string{"neigh", "invalid"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -231,7 +231,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "monitor",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "monitor", "help"},
+				Args:   []string{"monitor", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -239,7 +239,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "monitor invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "monitor", "abc"},
+				Args:   []string{"monitor", "abc"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -248,7 +248,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tunnel",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tunnel", "help"},
+				Args:   []string{"tunnel", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -256,7 +256,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tunnel invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tunnel", "invalid"},
+				Args:   []string{"tunnel", "invalid"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -265,7 +265,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tuntap",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tuntap", "help"},
+				Args:   []string{"tuntap", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -273,7 +273,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tuntap invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tuntap", "ac"},
+				Args:   []string{"tuntap", "ac"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -282,7 +282,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tcpmetrics",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tcpmetrics", "help"},
+				Args:   []string{"tcpmetrics", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -290,7 +290,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tcpmetrics invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tcpmetrics", "abv"},
+				Args:   []string{"tcpmetrics", "abv"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -299,7 +299,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "VRF",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "vrf", "help"},
+				Args:   []string{"vrf", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -307,7 +307,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "VRF invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "vrf", "abc"},
+				Args:   []string{"vrf", "abc"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -316,7 +316,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "help"},
+				Args:   []string{"xfrm", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -324,7 +324,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "a"},
+				Args:   []string{"xfrm", "a"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -333,7 +333,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm monitor",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "monitor", "help"},
+				Args:   []string{"xfrm", "monitor", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -341,7 +341,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm monitor invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "monitor", "a"},
+				Args:   []string{"xfrm", "monitor", "a"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -350,7 +350,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm state",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "state", "help"},
+				Args:   []string{"xfrm", "state", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -358,7 +358,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm state invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "state", "s"},
+				Args:   []string{"xfrm", "state", "s"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -367,7 +367,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm policy",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "policy", "help"},
+				Args:   []string{"xfrm", "policy", "help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -375,7 +375,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm policy invalid",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "policy", "aa"},
+				Args:   []string{"xfrm", "policy", "aa"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -384,7 +384,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "Help",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "help"},
+				Args:   []string{"help"},
 				Out:    new(bytes.Buffer),
 			},
 		},
@@ -392,7 +392,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "Fail",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "yz"},
+				Args:   []string{"yz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -401,7 +401,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "Addr wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "addr", "xyz"},
+				Args:   []string{"addr", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -410,7 +410,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "link wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "link", "xyz"},
+				Args:   []string{"link", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -419,7 +419,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "route wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "route", "xyz"},
+				Args:   []string{"route", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -428,7 +428,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "neigh wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "neigh", "xyz"},
+				Args:   []string{"neigh", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -437,7 +437,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "monitor wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "monitor", "xyz"},
+				Args:   []string{"monitor", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -446,7 +446,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tunnel wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tunnel", "xyz"},
+				Args:   []string{"tunnel", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -455,7 +455,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tuntap wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tuntap", "xyz"},
+				Args:   []string{"tuntap", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -464,7 +464,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "tcpmetrics wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "tcpmetrics", "xyz"},
+				Args:   []string{"tcpmetrics", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -473,7 +473,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "VRF wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "vrf", "xyz"},
+				Args:   []string{"vrf", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -482,7 +482,7 @@ func TestRunSubCommand(t *testing.T) {
 			name: "xfrm wrong arg",
 			cmd: cmd{
 				Cursor: 0,
-				Args:   []string{"ip", "xfrm", "xyz"},
+				Args:   []string{"xfrm", "xyz"},
 				Out:    new(bytes.Buffer),
 			},
 			wantErr: true,
@@ -552,6 +552,7 @@ func TestRun(t *testing.T) {
 		name     string
 		cmd      cmd
 		expected string
+		wantErr  bool
 	}{
 		{
 			name: "Normal execution",
@@ -560,6 +561,17 @@ func TestRun(t *testing.T) {
 				Cursor:         1,
 				ExpectedValues: []string{"arg1", "arg2"},
 			},
+			wantErr: true,
+		},
+		{
+			name: "Batch execution",
+			cmd: cmd{
+				Opts: flags{
+					Batch: "testdata/batch.txt",
+				},
+				Cursor: 0,
+			},
+			wantErr: true,
 		},
 	}
 
@@ -569,7 +581,11 @@ func TestRun(t *testing.T) {
 
 			test.cmd.Out = &out
 
-			_ = test.cmd.run()
+			err := test.cmd.run()
+
+			if test.wantErr && err == nil || !test.wantErr && err != nil {
+				t.Errorf("expected %v, got %v", test.wantErr, err)
+			}
 		})
 	}
 }
