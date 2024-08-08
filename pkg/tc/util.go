@@ -5,6 +5,7 @@
 package trafficctl
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -102,6 +103,9 @@ func ParseClassID(p string) (uint32, error) {
 		return 0, err
 	}
 
+	if min == "" {
+		return uint32(major << 16), nil
+	}
 	minor, err := strconv.ParseUint(min, 16, 16)
 	if err != nil {
 		return 0, err
@@ -257,4 +261,61 @@ func getTickInUsec() (uint32, error) {
 	clockFactor := int64(clockRes / TimeUnitsPerSecs)
 
 	return uint32(float64(t2us)/float64(us2t)) * uint32(clockFactor), nil
+}
+
+var (
+	ErrNoValidProto = errors.New("invalid protocol name")
+)
+
+func parseProto(prot string) (uint32, error) {
+	for _, p := range []struct {
+		name string
+		prot uint32
+	}{
+		{"802_3", 0x0001},
+		{"802_2", 0x0004},
+		{"ip", 0x800},
+		{"arp", 0x806},
+		{"aarp", 0x80F3},
+		{"ipx", 0x8137},
+
+		{"ipv6", 0x86DD},
+	} {
+		if p.name == prot {
+			return p.prot, nil
+		}
+	}
+	return 0, ErrNoValidProto
+}
+
+func getProtoFromInfo(info uint32) string {
+	protoNr := uint16((info & 0x0000FFFF))
+
+	// htons for beggars
+	b := make([]byte, 2)
+	binary.LittleEndian.PutUint16(b, protoNr)
+	pNr := binary.BigEndian.Uint16(b)
+
+	for _, p := range []struct {
+		name string
+		prot uint32
+	}{
+		{"802_3", 0x0001},
+		{"802_2", 0x0004},
+		{"ip", 0x800},
+		{"arp", 0x806},
+		{"aarp", 0x80F3},
+		{"ipx", 0x8137},
+		{"ipv6", 0x86DD},
+	} {
+		if p.prot == uint32(pNr) {
+			return p.name
+		}
+	}
+
+	return ""
+}
+
+func getPrefFromInfo(info uint32) uint32 {
+	return (info & 0xFFFF_0000) >> 16
 }
