@@ -27,6 +27,7 @@ func run(args []string, stdout io.Writer) error {
 	want := []string{
 		"qdisc",
 		"class",
+		"filter",
 	}
 
 	rtnl, err := tc.Open(&tc.Config{})
@@ -46,6 +47,8 @@ func run(args []string, stdout io.Writer) error {
 		return runQdisc(args[cursor+1:], tctl, stdout)
 	case "class":
 		return runClass(args[cursor+1:], tctl, stdout)
+	case "filter":
+		return runFilter(args[cursor+1:], tctl, stdout)
 	}
 
 	return nil
@@ -147,3 +150,44 @@ func runClass(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) erro
 	return nil
 }
 
+func runFilter(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) error {
+	cursor := 0
+	want := []string{
+		"show",
+		"list",
+		"add",
+		"del",
+		"change",
+		"replace",
+		"get",
+		"help",
+	}
+
+	var fArgs *trafficctl.FArgs
+	var err error
+	if len(args[1:]) > 1 {
+		fArgs, err = trafficctl.ParseFilterArgs(args[1:], stdout)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch one(args[cursor], want) {
+	case "show", "list":
+		return tctl.ShowFilter(fArgs, stdout)
+	case "add":
+		return tctl.AddFilter(fArgs, stdout)
+	case "del":
+		return tctl.DeleteFilter(fArgs, stdout)
+	case "change":
+		return tctl.ChangeFilter(fArgs, stdout)
+	case "replace":
+		return tctl.ReplaceFilter(fArgs, stdout)
+	case "get":
+		return tctl.GetFilter(fArgs, stdout)
+	case "help":
+		trafficctl.PrintFilterHelp(stdout)
+	}
+
+	return nil
+}
