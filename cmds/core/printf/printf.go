@@ -36,7 +36,6 @@ import (
 
 func usage() {
 	log.Fatalf("usage: %s format [arg ...]\n", os.Args[0])
-	os.Exit(1)
 }
 
 func printf(format string, args []string) (string, error) {
@@ -115,10 +114,11 @@ func printf(format string, args []string) (string, error) {
 			}
 			i++
 		} else {
-			j := i
-			for ; j < len(format) && format[j] >= '0' && format[j] <= '9'; j++ {
+			for j := i; j < len(format) && format[j] >= '0' && format[j] <= '9'; j++ {
+				// No action required in the loop, j is incremented until non-digit is found
+				// Parsing happens after the loop ends
 			}
-			if j > i {
+			if j := i; j > i { // Perform the conversion after the loop
 				width, _ = strconv.Atoi(format[i:j])
 				i = j
 			}
@@ -136,8 +136,9 @@ func printf(format string, args []string) (string, error) {
 			} else {
 				j := i
 				for ; j < len(format) && format[j] >= '0' && format[j] <= '9'; j++ {
+					// No action required in the loop, j is incremented until non-digit is found
 				}
-				if j > i {
+				if j > i { // Perform the conversion after the loop
 					precision, _ = strconv.Atoi(format[i:j])
 					i = j
 				}
