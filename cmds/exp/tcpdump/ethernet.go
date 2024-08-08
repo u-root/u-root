@@ -10,8 +10,8 @@ import (
 )
 
 func (cmd cmd) ethernetInfo(ethernetLayer gopacket.LinkLayer, networkLayer gopacket.NetworkLayer) string {
-	if !cmd.Opts.ether {
-		return fmt.Sprintf("%s %s", networkLayer.NetworkFlow().EndpointType(), cmd.Opts.device)
+	if !cmd.Opts.Ether {
+		return fmt.Sprintf("%s %s", networkLayer.NetworkFlow().EndpointType(), cmd.Opts.Device)
 	}
 
 	src, dst := ethernetLayer.LinkFlow().Endpoints()
@@ -20,6 +20,7 @@ func (cmd cmd) ethernetInfo(ethernetLayer gopacket.LinkLayer, networkLayer gopac
 	if dstHost == "ff:ff:ff:ff:ff:ff" {
 		dstHost = "Broadcast"
 	}
+
 	length := len(ethernetLayer.LayerContents()) + len(ethernetLayer.LayerPayload())
 
 	return fmt.Sprintf("%s > %s, ethertype %s, length %d:", src, dstHost, networkLayer.NetworkFlow().EndpointType(), length)
