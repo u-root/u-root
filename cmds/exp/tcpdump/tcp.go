@@ -78,20 +78,16 @@ func tcpOptions(options []layers.TCPOption) string {
 
 // tcpOptionToString returns a string representation of the TCP option.
 func tcpOptionToString(opt layers.TCPOption) string {
-	switch opt.OptionType {
-	case layers.TCPOptionKindMSS:
-		if len(opt.OptionData) >= 2 {
-			return fmt.Sprintf("%s val %v",
-				opt.OptionType,
-				binary.BigEndian.Uint16(opt.OptionData))
-		}
+	if opt.OptionType == layers.TCPOptionKindMSS && len(opt.OptionData) == 2 {
+		return fmt.Sprintf("%s val %v",
+			opt.OptionType,
+			binary.BigEndian.Uint16(opt.OptionData))
+	}
 
-	case layers.TCPOptionKindTimestamps:
-		if len(opt.OptionData) == 8 {
-			return fmt.Sprintf("%s val %v",
-				opt.OptionType,
-				binary.BigEndian.Uint32(opt.OptionData[:4]))
-		}
+	if opt.OptionType == layers.TCPOptionKindTimestamps && len(opt.OptionData) == 8 {
+		return fmt.Sprintf("%s val %v",
+			opt.OptionType,
+			binary.BigEndian.Uint32(opt.OptionData[:4]))
 	}
 
 	return fmt.Sprintf("%s", opt.OptionType)
