@@ -17,7 +17,7 @@ import (
 func Reboot() error {
 	// Optionally disarm the watchdog.
 	if os.Getenv("UROOT_KEXEC_DISARM_WATCHDOG") == "1" {
-		d, err := watchdogd.NewClient()
+		d, err := watchdogd.New()
 		if err != nil {
 			log.Printf("Error dialing watchdog daemon: %v", err)
 		} else if err := d.Disarm(); err != nil {
