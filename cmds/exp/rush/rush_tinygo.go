@@ -6,7 +6,6 @@
 // It is replaced by the tinygobb tool.
 
 //go:build tinygo
-// +build tinygo
 
 package main
 

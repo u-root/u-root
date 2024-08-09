@@ -3,8 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && (amd64 || 386)
-// +build !tinygo
-// +build amd64 386
 
 package main
 

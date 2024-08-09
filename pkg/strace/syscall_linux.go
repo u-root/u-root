@@ -13,7 +13,6 @@
 // limitations under the License.
 
 //go:build arm64 || amd64 || riscv64
-// +build arm64 amd64 riscv64
 
 package strace
 

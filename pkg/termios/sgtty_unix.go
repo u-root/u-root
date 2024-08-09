@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !plan9 && !windows && !darwin && !freebsd && !openbsd && !netbsd
-// +build !plan9,!windows,!darwin,!freebsd,!openbsd,!netbsd
 
 package termios
 

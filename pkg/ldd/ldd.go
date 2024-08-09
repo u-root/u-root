@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build freebsd || linux || darwin
-// +build freebsd linux darwin
 
 // ldd returns library dependencies of an executable.
 //

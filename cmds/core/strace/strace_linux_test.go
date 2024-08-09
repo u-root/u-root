@@ -3,9 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && linux && (amd64 || riscv64 || arm64)
-// +build !tinygo
-// +build linux
-// +build amd64 riscv64 arm64
 
 package main
 

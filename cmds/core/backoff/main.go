@@ -26,7 +26,6 @@
 //	  2022/03/31 14:29:39 Error: exit status 1
 
 //go:build !test
-// +build !test
 
 package main
 

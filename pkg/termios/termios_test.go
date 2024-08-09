@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !plan9
-// +build !plan9
 
 // Package termios implements basic termios operations including getting
 // a termio struct, a winsize struct, and setting raw mode.

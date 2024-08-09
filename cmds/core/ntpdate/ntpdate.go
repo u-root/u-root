@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && !plan9
-// +build !tinygo,!plan9
 
 // ntpdate uses NTP to adjust the system clock.
 //

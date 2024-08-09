@@ -27,7 +27,6 @@ var (
 // license that can be found in the LICENSE file.
 
 //go:build tinygo
-// +build tinygo
 
 package bbrush
 

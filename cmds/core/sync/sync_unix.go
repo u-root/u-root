@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !linux && !plan9
-// +build !linux,!plan9
 
 package main
 
