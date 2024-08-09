@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo
+// +build !tinygo
+
 package gzip
 
 import (
@@ -11,9 +14,9 @@ import (
 )
 
 // Compress takes input from io.Reader and deflates it using pgzip
-// to io.Writer. Data is compressed in blocksize (KB) chunks using
-// upto the number of CPU cores specified.
-func Compress(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
+// to io.Writer. Data is compressed in block size (KB) chunks using
+// up to the number of CPU cores specified.
+func compress(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
 	zw, err := pgzip.NewWriterLevel(w, level)
 	if err != nil {
 		return err
