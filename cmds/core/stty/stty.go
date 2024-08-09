@@ -6,7 +6,6 @@
 // u-root does with the packages it uses.
 
 //go:build !tinygo && !plan9
-// +build !tinygo,!plan9
 
 // stty is an stty command in Go.
 // It follows many of the conventions of standard stty.

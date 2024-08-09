@@ -3,8 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && ((linux && arm64) || (linux && amd64) || (linux && riscv64))
-// +build !tinygo
-// +build linux,arm64 linux,amd64 linux,riscv64
 
 // syscallfilter runs a command with a possibly empty set of filters:
 //

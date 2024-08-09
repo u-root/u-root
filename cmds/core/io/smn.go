@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && amd64 && linux
-// +build !tinygo,amd64,linux
 
 // The System Management Network (SMN, try to say it fast)
 // is a parallel universe address space on newer AMD64 cpus.

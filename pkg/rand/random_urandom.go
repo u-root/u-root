@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build aix || darwin || dragonfly || freebsd || nacl || netbsd || openbsd || solaris || linux
-// +build aix darwin dragonfly freebsd nacl netbsd openbsd solaris linux
 
 package rand
 
