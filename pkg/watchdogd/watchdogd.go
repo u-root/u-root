@@ -1,3 +1,5 @@
+//go:build !tinygo
+
 // Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -20,7 +22,6 @@ package watchdogd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -33,23 +34,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const defaultUDS = "/tmp/watchdogd"
-
 const (
-	OpStop     = 'S' // Stop the watchdogd petting.
-	OpContinue = 'C' // Continue the watchdogd petting.
-	OpDisarm   = 'D' // Disarm the watchdog.
-	OpArm      = 'A' // Arm the watchdog.
-)
-
-const (
-	OpResultOk        = 'O' // Ok.
-	OpResultError     = 'E' // Error.
-	OpResultInvalidOp = 'I' // Invalid Op.
-)
-
-const (
-	opStopPettingTimeoutSeconds = 10
+	defaultUDS = "/tmp/watchdogd"
 )
 
 // Daemon contains running states of an instance of the daemon.
@@ -63,7 +49,7 @@ type Daemon struct {
 	CurrentWd *watchdog.Watchdog
 
 	// PettingOp syncs the signal to continue or stop petting the watchdog.
-	PettingOp chan int
+	PettingOp chan WatchdogOperation
 
 	// PettingOn indicate if there is an active petting session.
 	PettingOn bool
@@ -90,7 +76,7 @@ type DaemonOpts struct {
 
 // MonitorOops return an error if the kernel logs contain an oops.
 func MonitorOops() error {
-	dmesg := make([]byte, 256*1024)
+	dmesg := make([]byte, OopsBuffSize)
 	n, err := unix.Klogctl(unix.SYSLOG_ACTION_READ_ALL, dmesg)
 	if err != nil {
 		return fmt.Errorf("syslog failed: %v", err)
@@ -102,20 +88,25 @@ func MonitorOops() error {
 }
 
 // StartServing enters a loop of accepting and processing next incoming watchdogd operation call.
-func (d *Daemon) StartServing(l *net.UnixListener) {
-	for { // All requests are processed sequentially.
+func (d *Daemon) StartServing(l *net.UnixListener) error {
+	for {
+		// All requests are processed sequentially.
 		c, err := l.AcceptUnix()
 		if err != nil {
 			log.Printf("Failed to accept new request: %v", err)
 			continue
 		}
-		b := make([]byte, 1) // Expect single byte operation instruction.
+		b := make([]byte, 1)
 		if _, err := io.ReadAtLeast(c, b, 1); err != nil {
 			log.Printf("Failed to read operation bit, err: %v", err)
 		}
-		op := int(b[0])
+		op, err := NewWatchdogOperation(b[0])
+		if err != nil {
+			return err
+		}
+
 		log.Printf("New op received: %c", op)
-		var r rune
+		var r error
 		switch op {
 		case OpStop:
 			r = d.StopPetting()
@@ -148,50 +139,45 @@ func setupListener(uds string) (*net.UnixListener, func(), error) {
 }
 
 // armWatchdog starts watchdog timer.
-func (d *Daemon) ArmWatchdog() rune {
+func (d *Daemon) ArmWatchdog() error {
 	if d.CurrentOpts == nil {
-		log.Printf("Current daemon opts is nil, don't know how to arm Watchdog")
-		return OpResultError
+		return NewWatchdogError("Current daemon opts is nil, don't know how to arm Watchdog")
 	}
 	wd, err := watchdog.Open(d.CurrentOpts.Dev)
 	if err != nil {
 		// Most likely cause is /dev/watchdog does not exist.
 		// Second most likely cause is another process (perhaps
 		// another watchdogd?) has the file open.
-		log.Printf("Failed to arm: %v", err)
-		return OpResultError
+		return NewWatchdogErrorf("Failed to arm: %v", err)
 	}
 	if d.CurrentOpts.Timeout != nil {
 		if err := wd.SetTimeout(*d.CurrentOpts.Timeout); err != nil {
 			d.CurrentWd.Close()
-			log.Printf("Failed to set timeout: %v", err)
-			return OpResultError
+			return NewWatchdogErrorf("Failed to set timeout: %v", err)
 		}
 	}
 	if d.CurrentOpts.PreTimeout != nil {
 		if err := wd.SetPreTimeout(*d.CurrentOpts.PreTimeout); err != nil {
 			d.CurrentWd.Close()
-			log.Printf("Failed to set pretimeout: %v", err)
-			return OpResultError
+			return NewWatchdogErrorf("Failed to set pretimeout: %v", err)
 		}
 	}
 	d.CurrentWd = wd
 	log.Printf("Watchdog armed")
-	return OpResultOk
+	return nil
 }
 
 // disarmWatchdog disarm the watchdog if already armed.
-func (d *Daemon) DisarmWatchdog() rune {
+func (d *Daemon) DisarmWatchdog() error {
 	if d.CurrentWd == nil {
 		log.Printf("No armed Watchdog")
-		return OpResultOk
+		return nil
 	}
 	if err := d.CurrentWd.MagicClose(); err != nil {
-		log.Printf("Failed to disarm watchdog: %v", err)
-		return OpResultError
+		NewWatchdogErrorf("Failed to disarm watchdog: %v", err)
 	}
 	log.Println("Watchdog disarming request went through (Watchdog will not be disabled if CONFIG_WATCHDOG_NOWAYOUT is enabled).")
-	return OpResultOk
+	return nil
 }
 
 // doPetting sends keepalive signal to Watchdog when necessary.
@@ -200,22 +186,21 @@ func (d *Daemon) DisarmWatchdog() rune {
 // signal.
 func (d *Daemon) DoPetting() error {
 	if d.CurrentWd == nil {
-		return fmt.Errorf("no reference to any Watchdog")
+		return NewWatchdogError("no reference to any Watchdog")
 	}
 	if err := doMonitors(d.CurrentOpts.Monitors); err != nil {
-		return fmt.Errorf("won't keepalive since at least one of the custom monitors failed: %v", err)
+		return NewWatchdogErrorf("won't keepalive since at least one of the custom monitors failed: %v", err)
 	}
 	if err := d.CurrentWd.KeepAlive(); err != nil {
-		return err
+		return NewWatchdogErrorf("failed to keepalive: %w", err)
 	}
 	return nil
 }
 
 // startPetting starts Watchdog petting in a new goroutine.
-func (d *Daemon) StartPetting() rune {
+func (d *Daemon) StartPetting() error {
 	if d.PettingOn {
-		log.Printf("Petting ongoing")
-		return OpResultError
+		return NewWatchdogError("Petting ongoing")
 	}
 
 	go func() {
@@ -238,25 +223,26 @@ func (d *Daemon) StartPetting() rune {
 	}()
 
 	log.Println("Start petting watchdog.")
-	return OpResultOk
+	return nil
 }
 
 // stopPetting stops an ongoing petting process if there is.
-func (d *Daemon) StopPetting() rune {
+func (d *Daemon) StopPetting() error {
 	if !d.PettingOn {
-		return OpResultOk
-	} // No petting on, simply return.
-	r := OpResultOk
+		// No petting on, simply return.
+		return nil
+	}
+
+	var ret error = nil
 	erredOut := func() {
 		<-d.PettingOp
-		log.Printf("Stop petting times out after %d seconds", opStopPettingTimeoutSeconds)
-		r = OpResultError
+		ret = NewWatchdogErrorf("Stop petting times out after %d seconds", opStopPettingTimeoutSeconds)
 	}
 	// It will time out when there is no active petting.
 	t := time.AfterFunc(opStopPettingTimeoutSeconds*time.Second, erredOut)
 	defer t.Stop()
 	d.PettingOp <- OpStop
-	return r
+	return ret
 }
 
 // Run starts up the daemon.
@@ -268,6 +254,7 @@ func (d *Daemon) StopPetting() rune {
 func Run(ctx context.Context, opts *DaemonOpts) error {
 	log.SetPrefix("watchdogd: ")
 	defer log.Printf("Daemon quit")
+
 	d := NewDaemon(opts)
 	l, cleanup, err := setupListener(d.CurrentOpts.UDS)
 	if err != nil {
@@ -275,7 +262,7 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 	}
 	go func() {
 		log.Println("Start serving.")
-		d.StartServing(l)
+		err := d.StartServing(l)
 	}()
 
 	log.Println("Start arming watchdog initially.")
@@ -339,21 +326,27 @@ func (c *client) Arm() error {
 }
 
 // sendAndCheckResult sends operation bit and evaluates result.
-func sendAndCheckResult(c *net.UnixConn, op int) error {
-	n, err := c.Write([]byte{byte(op)})
+func sendAndCheckResult(con *net.UnixConn, op WatchdogOperation) error {
+	n, err := con.Write([]byte{byte(op)})
 	if err != nil {
 		return err
 	}
+
 	if n != 1 {
-		return errors.New("no error; but message not delivered neither")
+		return NewWatchdogError("no error; but message not delivered neither")
 	}
+
 	b := make([]byte, 1)
-	if _, err := io.ReadAtLeast(c, b, 1); err != nil {
+	if _, err := io.ReadAtLeast(con, b, 1); err != nil {
 		log.Printf("Failed to read operation bit from server: %v", err)
 	}
-	r := int(b[0])
-	if r != OpResultOk {
-		return fmt.Errorf("non-Ok op result: %c", r)
+	ret, err := NewWatchdogOperation(b[0])
+	if err != nil {
+		return err
+	}
+
+	if ret != OpResultOk {
+		return fmt.Errorf("non-Ok op result: %c", ret)
 	}
 	return nil
 }
