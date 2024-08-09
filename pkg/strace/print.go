@@ -15,7 +15,6 @@
 // Changes are Copyright 2018 the u-root Authors.
 
 //go:build (linux && arm64) || (linux && amd64) || (linux && riscv64)
-// +build linux,arm64 linux,amd64 linux,riscv64
 
 package strace
 

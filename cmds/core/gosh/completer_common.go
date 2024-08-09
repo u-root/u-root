@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && !plan9 && !goshsmall
-// +build !tinygo,!plan9,!goshsmall
 
 package main
 
