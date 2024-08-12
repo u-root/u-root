@@ -21,6 +21,9 @@ github.com/ProtonMail/go-crypto/openpgp/internal/ecc
 github.com/ProtonMail/go-crypto/openpgp/internal/encoding
 github.com/ProtonMail/go-crypto/openpgp/packet
 github.com/ProtonMail/go-crypto/openpgp/s2k
+# github.com/StackExchange/wmi v1.2.1
+## explicit; go 1.13
+github.com/StackExchange/wmi
 # github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 ## explicit; go 1.13
 github.com/anmitsu/go-shlex
@@ -93,9 +96,16 @@ github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.1
 ## explicit; go 1.16
 github.com/dustin/go-humanize
+# github.com/ghodss/yaml v1.0.0
+## explicit
+github.com/ghodss/yaml
 # github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 ## explicit
 github.com/gliderlabs/ssh
+# github.com/go-ole/go-ole v1.2.6
+## explicit; go 1.12
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/gojuno/minimock/v3 v3.0.8
 ## explicit; go 1.13
 github.com/gojuno/minimock/v3
@@ -164,6 +174,32 @@ github.com/intel-go/cpuid
 # github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 ## explicit; go 1.12
 github.com/ishidawataru/sctp
+# github.com/jaypipes/ghw v0.12.0
+## explicit; go 1.18
+github.com/jaypipes/ghw
+github.com/jaypipes/ghw/pkg/baseboard
+github.com/jaypipes/ghw/pkg/bios
+github.com/jaypipes/ghw/pkg/block
+github.com/jaypipes/ghw/pkg/chassis
+github.com/jaypipes/ghw/pkg/context
+github.com/jaypipes/ghw/pkg/cpu
+github.com/jaypipes/ghw/pkg/gpu
+github.com/jaypipes/ghw/pkg/linuxdmi
+github.com/jaypipes/ghw/pkg/linuxpath
+github.com/jaypipes/ghw/pkg/marshal
+github.com/jaypipes/ghw/pkg/memory
+github.com/jaypipes/ghw/pkg/net
+github.com/jaypipes/ghw/pkg/option
+github.com/jaypipes/ghw/pkg/pci
+github.com/jaypipes/ghw/pkg/pci/address
+github.com/jaypipes/ghw/pkg/product
+github.com/jaypipes/ghw/pkg/snapshot
+github.com/jaypipes/ghw/pkg/topology
+github.com/jaypipes/ghw/pkg/unitutil
+github.com/jaypipes/ghw/pkg/util
+# github.com/jaypipes/pcidb v1.0.0
+## explicit; go 1.17
+github.com/jaypipes/pcidb
 # github.com/josharian/native v1.1.0
 ## explicit; go 1.13
 github.com/josharian/native
@@ -223,6 +259,9 @@ github.com/mdlayher/socket
 # github.com/mdlayher/vsock v1.2.1
 ## explicit; go 1.20
 github.com/mdlayher/vsock
+# github.com/mitchellh/go-homedir v1.1.0
+## explicit
+github.com/mitchellh/go-homedir
 # github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
 ## explicit; go 1.17
 github.com/muesli/ansi
@@ -259,6 +298,9 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
@@ -424,12 +466,15 @@ golang.org/x/tools/internal/tokeninternal
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# gopkg.in/yaml.v2 v2.2.8
-## explicit
+# gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0
 ## explicit
 gopkg.in/yaml.v3
+# howett.net/plist v1.0.0
+## explicit; go 1.12
+howett.net/plist
 # mvdan.cc/sh/v3 v3.7.0
 ## explicit; go 1.19
 mvdan.cc/sh/v3/expand
