@@ -44,8 +44,8 @@ func TestWellKnownPorts(t *testing.T) {
 		{
 			name:     "Unknown port without numerical",
 			cmd:      cmd{Opts: flags{Numerical: false}},
-			port:     "8080",
-			expected: "8080",
+			port:     "666",
+			expected: "666",
 		},
 	}
 
