@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"regexp"
@@ -25,14 +26,14 @@ const (
 	EntryAddrPropertyName = "entry-start"
 )
 
-const sysfsCPUInfoPath = "/proc/cpuinfo"
+var sysfsCPUInfoPath = "/proc/cpuinfo"
 
 type FdtLoad struct {
 	Load       uint64
 	EntryStart uint64
 }
 
-// Device Tree Blob resides at the start of FIT binary. In order to
+// GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
 // get the expected load and entry point address, need to walk through
 // DTB to get value of properties 'load' and 'entry-start'.
 //
@@ -46,10 +47,22 @@ type FdtLoad struct {
 //	        }
 //	    }
 //	 }
-func getFdtInfo(name string) (*FdtLoad, error) {
-	fdt, err := dt.ReadFile(name)
+func GetFdtInfo(name string) (*FdtLoad, error) {
+	return getFdtInfo(name, nil)
+}
+
+func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
+	var fdt *dt.FDT
+	var err error
+
+	if dtb != nil {
+		fdt, err = dt.ReadFDT(io.NewSectionReader(dtb, 0, math.MaxInt64))
+	} else {
+		fdt, err = dt.ReadFile(name)
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to read fdt file:%s", name)
+		return nil, fmt.Errorf("failed to read fdt file: %s, err = %w", name, err)
 	}
 
 	firstLevelNode, succeed := fdt.NodeByName(FirstLevelNodeName)
@@ -59,7 +72,7 @@ func getFdtInfo(name string) (*FdtLoad, error) {
 
 	secondLevelNode, succeed := firstLevelNode.NodeByName(SecondLevelNodeName)
 	if succeed != true {
-		return nil, fmt.Errorf("failed to find '%s'' node", SecondLevelNodeName)
+		return nil, fmt.Errorf("failed to find '%s' node", SecondLevelNodeName)
 	}
 
 	loadAddrProp, succeed := secondLevelNode.LookProperty(LoadAddrPropertyName)
@@ -89,11 +102,11 @@ func getFdtInfo(name string) (*FdtLoad, error) {
 }
 
 // Get Physical Address size from sysfs node /proc/cpuinfo.
-// Both Phiscal and Virtual Address size will be prompted as format:
+// Both Physical and Virtual Address size will be prompted as format:
 // "address sizes	: 39 bits physical, 48 bits virtual"
-// Use regular experssion to fetch the interge of Physical Address
+// Use regular expression to fetch the integer of Physical Address
 // size before "bits physical" keyword
-func getPhysicalAddressSizes() (int, error) {
+func getPhysicalAddressSizes() (uint8, error) {
 	file, err := os.Open(sysfsCPUInfoPath)
 	if err != nil {
 		return 0, fmt.Errorf("failed to open %s: %v", sysfsCPUInfoPath, err)
@@ -112,8 +125,11 @@ func getPhysicalAddressSizes() (int, error) {
 			if err != nil {
 				return 0, fmt.Errorf("failed to parse physical bits size: %v", err)
 			}
-			// We only need the first match
-			return physicalBits, nil
+			// Check if the value is within the uint8 range
+			if physicalBits < 0 || physicalBits > 255 {
+				return 0, fmt.Errorf("phyAddrSize %v out of range for uint8", physicalBits)
+			}
+			return uint8(physicalBits), nil
 		}
 	}
 

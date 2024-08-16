@@ -228,7 +228,7 @@ func hobCreateEfiHobCPU() (*EfiHobCPU, error) {
 			HobType:   EfiHobTypeCPU,
 			HobLength: uint16(unsafe.Sizeof(EfiHobCPU{})),
 		},
-		SizeOfMemorySpace: uint8(phyAddrSize),
+		SizeOfMemorySpace: phyAddrSize,
 		SizeOfIOSpace:     DefaultIOAddressSize,
 	}, nil
 }
