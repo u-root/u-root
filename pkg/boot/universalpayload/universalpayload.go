@@ -45,6 +45,12 @@ const (
 	UniversalPayloadSmbiosTableRevision = 1
 )
 
+var (
+	kexecMemoryMapFromSysfsMemmap = kexec.MemoryMapFromSysfsMemmap
+	acpiGetRSDP                   = acpi.GetRSDP
+	smbiosSMBIOSBase              = smbios.SMBIOSBase
+)
+
 type UniversalPayloadGenericHeader struct {
 	Revision uint8
 	Reserved uint8
@@ -132,7 +138,7 @@ func constructUnivesralPayloadBase(addr uint64) *UniversalPayloadBase {
 }
 
 func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
-	rsdp, err := acpi.GetRSDP()
+	rsdp, err := acpiGetRSDP()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rdsp table")
 	}
@@ -147,7 +153,7 @@ func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
 }
 
 func constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
-	smbiosTableBase, _, err := smbios.SMBIOSBase()
+	smbiosTableBase, _, err := smbiosSMBIOSBase()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get smbios base")
 	}
@@ -163,7 +169,7 @@ func constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
 
 func appendMemMapHob(buf *bytes.Buffer, hobLen *uint64) error {
 	// Construct system memory resource Hob
-	memMap, err := kexec.MemoryMapFromSysfsMemmap()
+	memMap, err := kexecMemoryMapFromSysfsMemmap()
 	if err != nil {
 		return fmt.Errorf("failed to get memory map from sysfs")
 	}
@@ -346,22 +352,12 @@ func constructHobList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 	return nil
 }
 
-func Load(name string) error {
-	fdtLoad, err := getFdtInfo(name)
-	if err != nil {
-		return err
-	}
-
-	data, err := os.ReadFile(name)
-	if err != nil {
-		return fmt.Errorf("failed to read file: %s", name)
-	}
-
+func loadKexecMemWithHobs(fdtLoad *FdtLoad, fdtData []byte) (kexec.Memory, error) {
 	//Step 1, Prepare memory
 	mem := kexec.Memory{}
 
 	//Step 2, Insert tianocore raw binary
-	mem.Segments.Insert(kexec.NewSegment(data, kexec.Range{Start: uintptr(fdtLoad.Load), Size: uint(len(data))}))
+	mem.Segments.Insert(kexec.NewSegment(fdtData, kexec.Range{Start: uintptr(fdtLoad.Load), Size: uint(len(fdtData))}))
 
 	// Step 3, Prepare HobList
 	// TODO: remove hardcode HoB Address here
@@ -371,34 +367,54 @@ func Load(name string) error {
 	var hobLen uint64
 
 	if err := appendMemMapHob(hobBuf, &hobLen); err != nil {
-		return nil
+		return mem, err
 	}
 
 	if err := appendSerialPortHob(hobBuf, &hobLen); err != nil {
-		return nil
+		return mem, err
 	}
 
 	if err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad.Load); err != nil {
-		return nil
+		return mem, err
 	}
 
 	if err := appendAcpiTableHob(hobBuf, &hobLen); err != nil {
-		return nil
+		return mem, err
 	}
 
 	if err := appendSmbiosTableHob(hobBuf, &hobLen); err != nil {
-		return nil
+		return mem, err
 	}
 
 	if err := appendEfiCPUHob(hobBuf, &hobLen); err != nil {
-		return nil
+		return mem, err
 	}
 
 	if err := constructHobList(hobListBuf, hobBuf, &hobLen); err != nil {
-		return nil
+		return mem, err
 	}
 
 	mem.Segments.Insert(kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{Start: uintptr(hobAddr), Size: uint(hobLen)}))
+	return mem, nil
+}
+
+func Load(name string) error {
+	fdtLoad, err := GetFdtInfo(name)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %s", name)
+	}
+
+	// Prepare memory
+	mem, err := loadKexecMemWithHobs(fdtLoad, data)
+
+	if err != nil {
+		return err
+	}
 
 	if err := kexec.Load(uintptr(fdtLoad.EntryStart), mem.Segments, 0); err != nil {
 		return fmt.Errorf("kexec.Load() error: %v", err)
