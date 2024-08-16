@@ -4,7 +4,9 @@
 package main
 
 import (
+	"bytes"
 	"os"
+	"regexp"
 	"testing"
 )
 
@@ -57,6 +59,27 @@ func TestDU(t *testing.T) {
 
 		if blocks != 8 {
 			t.Errorf("expected 8 blocks, got %d", blocks)
+		}
+	})
+}
+
+func TestRun(t *testing.T) {
+	t.Run("empty folder", func(t *testing.T) {
+		dir := t.TempDir()
+		err := os.Chdir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		stdout := &bytes.Buffer{}
+		err = run(stdout)
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+
+		r := regexp.MustCompile(`^\d\t\.\n$`)
+		if !r.MatchString(stdout.String()) {
+			t.Error("expected number tab dot new-line")
 		}
 	})
 }
