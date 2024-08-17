@@ -1,7 +1,3 @@
-run:
-  skip-dirs:
-    - pkg/uroot/test
-
 linters:
   disable-all: true
   enable:
@@ -17,6 +13,8 @@ linters-settings:
     checks: ["all", "-ST1003"]
 
 issues:
+  exclude-dirs:
+    - pkg/uroot/test
   exclude-rules:
     - linters: revive
       text: "don't use underscores"
