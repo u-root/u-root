@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: BSD-3-Clause
 //
+//go:build !tinygo || tinygo.enable
 
 package main
 
