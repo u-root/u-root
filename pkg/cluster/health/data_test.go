@@ -1,6 +1,6 @@
 package health_test
 
-// This is from a very basic Goocle Cloud HPC cluster.
+// This is from a very basic Google Cloud HPC cluster using Cluster Toolkit.
 var data = `
 [
 	{

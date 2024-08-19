@@ -19,8 +19,8 @@ func TestList(t *testing.T) {
 	}{
 		{name: "bad command", cmd: "/dev/null", args: nil, err: os.ErrPermission},
 		{name: "no names", cmd: "echo", args: nil},
-		{name: "no names", cmd: "echo", args: []string{"1"}},
-		{name: "no names", cmd: "echo", args: []string{"b", "1", "z"}},
+		{name: "one name", cmd: "echo", args: []string{"1"}},
+		{name: "several names", cmd: "echo", args: []string{"b", "1", "z"}},
 	} {
 		c := health.NewNodeList(tt.cmd, tt.args...)
 		if err := c.Run(); !errors.Is(err, tt.err) {
@@ -57,24 +57,25 @@ func TestGather(t *testing.T) {
 		{name: "bad JSON", cmd: "echo", args: []string{"a"}},
 		{name: "no file", cmd: "cat", node: filepath.Join(d, "k"), args: nil},
 	} {
-		n := health.NewNodeList("echo", f)
-		if err := n.Run(); err != nil {
-			t.Errorf("%s:{%v}.Run(): %v != nil", tt.name, n, err)
-			continue
-		}
-		g := n.NewGather(tt.cmd, tt.args...)
-		stats, err := g.Run(tt.node, tt.nodeargs...)
-		if err != nil {
-			t.Errorf("{%v}.Run: got %v, want nil", g, err)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			n := health.NewNodeList("echo", f)
+			if err := n.Run(); err != nil {
+				t.Fatalf("%s:{%v}.Run(): %v != nil", tt.name, n, err)
+			}
+			g := n.NewGather(tt.cmd, tt.args...)
+			stats, err := g.Run(tt.node, tt.nodeargs...)
+			if err != nil {
+				t.Fatalf("{%v}.Run: got %v, want nil", g, err)
+			}
 
-		if len(stats) == 0 {
-			t.Errorf("stats: got %d, wanted at least 1", len(stats))
-		}
-		if len(stats[0].Err) == 0 && tt.err != nil {
-			t.Errorf("running %s %s %v: got %v, want %v", tt.cmd, tt.node, tt.args, stats[0].Err, tt.err)
-			continue
-		}
+			if len(stats) == 0 {
+				t.Fatalf("stats: got %d, wanted at least 1", len(stats))
+			}
+			if len(stats[0].Err) == 0 && tt.err != nil {
+				t.Fatalf("running %s %s %v: got %v, want %v", tt.cmd, tt.node, tt.args, stats[0].Err, tt.err)
+			}
+		})
 	}
 
 }
