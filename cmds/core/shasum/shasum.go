@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"flag"
 	"fmt"
 	"hash"
@@ -20,9 +21,10 @@ var algorithm int
 
 var usage = "Usage:\nshasum -a <algorithm> <File Name>"
 
-// shaPrinter prints sha1/sha256 of given data. The
+// shaPrinter prints sha1/sha256/sha512 of given data. The
 // value of algorithm is expected to be 1 for SHA1
-// and 256 for SHA256
+// 256 for SHA256
+// and 512 for SHA512
 func shaGenerator(w io.Writer, r io.Reader, algo int) ([]byte, error) {
 	var h hash.Hash
 	switch algo {
@@ -30,8 +32,10 @@ func shaGenerator(w io.Writer, r io.Reader, algo int) ([]byte, error) {
 		h = sha1.New()
 	case 256:
 		h = sha256.New()
+	case 512:
+		h = sha512.New()
 	default:
-		return nil, fmt.Errorf("invalid algorithm, only 1 or 256 are valid")
+		return nil, fmt.Errorf("invalid algorithm, only 1, 256 or 512 are valid:%w", os.ErrInvalid)
 	}
 	if _, err := io.Copy(h, r); err != nil {
 		return nil, err
@@ -65,8 +69,8 @@ func shasum(w io.Writer, r io.Reader, args ...string) error {
 }
 
 func main() {
-	flag.IntVar(&algorithm, "algorithm", 1, "SHA algorithm, valid args are 1 and 256")
-	flag.IntVar(&algorithm, "a", 1, "SHA algorithm, valid args are 1 and 256 (shorthand)")
+	flag.IntVar(&algorithm, "algorithm", 1, "SHA algorithm, valid args are 1, 256 and 512")
+	flag.IntVar(&algorithm, "a", 1, "SHA algorithm, valid args are 1, 256 and 512")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usage+"\n")
