@@ -7,6 +7,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -15,6 +16,8 @@ import (
 	"path/filepath"
 	"syscall"
 )
+
+var errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
 
 func run(stdout io.Writer, files ...string) error {
 	if len(files) == 0 {
@@ -42,7 +45,7 @@ func du(file string) (int64, error) {
 
 		st, ok := info.Sys().(*syscall.Stat_t)
 		if !ok {
-			return fmt.Errorf("can not stat: %v", path)
+			return fmt.Errorf("%v: %w", path, errNoStatInfo)
 		}
 
 		blocks += st.Blocks
