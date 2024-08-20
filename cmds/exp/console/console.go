@@ -1,7 +1,6 @@
 // Copyright 2015-2020 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//go:build !tinygo || tinygo.enable
 
 // console implements a basic console. It establishes a pair of files
 // to read from, the default being a UART at 0x3f8, but an alternative

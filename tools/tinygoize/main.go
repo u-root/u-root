@@ -29,6 +29,25 @@ import (
 const goBuild = "//go:build "
 const constraint = "!tinygo || tinygo.enable"
 
+// Additional tags required for specific commands. Assume command names unique
+// despite being in different directories.
+var addBuildTags = map[string]string{
+	"gzip":     "noasm",
+	"insmod":   "noasm",
+	"rmmod":    "noasm",
+	"bzimage":  "noasm",
+	"kconf":    "noasm",
+	"modprobe": "noasm",
+	"console":  "noasm",
+}
+
+func buildTags(dir string) (tags string) {
+	parts := strings.Split(dir, "/")
+	cmd := parts[len(parts)-1]
+	return addBuildTags[cmd]
+}
+
+// Track set of passing, failing, and excluded commands
 type BuildStatus struct {
 	passing  []string
 	failing  []string
@@ -47,12 +66,12 @@ func tinygoVersion(tinygo *string) string {
 // check (via `go build -n`) if a given directory would have been skipped
 // due to build constraints (e.g. cmds/core/bind only builds for plan9)
 func isExcluded(dir string) bool {
-
 	// to lazy to dynamically pull tags from `tinygo info`
 	tags := []string{
 		"tinygo",
 		"tinygo.enable",
 		"purego",
+		"osusergo",
 		"math_big_pure_go",
 		"gc.precise",
 		"scheduler.tasks",
@@ -70,7 +89,11 @@ func isExcluded(dir string) bool {
 
 // "tinygo build" in directory 'dir'
 func build(tinygo *string, dir string) (err error) {
-	c := exec.Command(*tinygo, "build", "-tags", "tinygo.enable")
+	tags := []string{"tinygo.enable"}
+	if addTags := buildTags(dir); addTags != "" {
+		tags = append(tags, addTags)
+	}
+	c := exec.Command(*tinygo, "build", "-tags", strings.Join(tags, ","))
 	c.Dir = dir
 	c.Stdout, c.Stderr = os.Stdout, os.Stderr
 	c.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0", "GOARCH=amd64")
@@ -229,7 +252,12 @@ The necessary additions to tinygo will be tracked in
 			fmt.Fprintf(file, "NONE\n")
 		}
 		for _, dir := range dirs {
-			fmt.Fprintf(file, " - %v\n", linkText(dir))
+			msg := fmt.Sprintf(" - %v", linkText(dir))
+			tags := buildTags(dir)
+			if len(tags) > 0 {
+				msg += fmt.Sprintf(" tags: %v", tags)
+			}
+			fmt.Fprintf(file, "%v\n", msg)
 		}
 
 	}

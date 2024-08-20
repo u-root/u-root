@@ -1,7 +1,6 @@
 // Copyright 2012-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//go:build !tinygo || tinygo.enable
 
 // bzImage is used to modify bzImage files.
 // It reads the image in, applies an operator, and writes a new one out.
