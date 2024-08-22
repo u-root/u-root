@@ -4,7 +4,7 @@ DO NOT EDIT.
 
 Generated via `go run tools/tinygoize/main.go`
 
-tinygo version 0.33.0 linux/arm64 (using go version go1.22.5 and LLVM version 18.1.2)
+tinygo version 0.34.0-dev-25fff6d0 linux/arm64 (using go version go1.22.5 and LLVM version 18.1.2)
 
 ---
 
@@ -32,10 +32,7 @@ The necessary additions to tinygo will be tracked in
 ### EXCLUDED (1 commands)
  - [cmds/core/bind](../../cmds/core/bind)
 
-### FAILING (38 commands)
- - [cmds/boot/boot](../../cmds/boot/boot)
- - [cmds/boot/fitboot](../../cmds/boot/fitboot)
- - [cmds/boot/pxeboot](../../cmds/boot/pxeboot)
+### FAILING (35 commands)
  - [cmds/core/dhclient](../../cmds/core/dhclient)
  - [cmds/core/gosh](../../cmds/core/gosh)
  - [cmds/core/gpgv](../../cmds/core/gpgv)

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // usage: invoke this with a list of directories. For each directory, it will
-// run `CGO_ENABLED=0 GOARCH=amd64 GOOS=linux tinygo build -tags tinygo.enable`
+// run `GOARCH=amd64 GOOS=linux tinygo build -tags tinygo.enable`
 // then attempt to fix-up the build tags by either adding or removing an
 // go:build expression `(!tinygo || tinygo.enable)`
 
@@ -39,8 +39,10 @@ var addBuildTags = map[string]string{
 	"kconf":    "noasm",
 	"modprobe": "noasm",
 	"console":  "noasm",
+	"init":     "noasm",
 }
 
+// returns the needed build-tags for a given package
 func buildTags(dir string) (tags string) {
 	parts := strings.Split(dir, "/")
 	cmd := parts[len(parts)-1]
@@ -55,18 +57,18 @@ type BuildStatus struct {
 }
 
 // return trimmed output of "tinygo version"
-func tinygoVersion(tinygo *string) string {
+func tinygoVersion(tinygo *string) (string, error) {
 	out, err := exec.Command(*tinygo, "version").CombinedOutput()
 	if nil != err {
-		log.Fatalf("version: %v", err)
+		return "", err
 	}
-	return strings.TrimSpace(string(out))
+	return strings.TrimSpace(string(out)), err
 }
 
 // check (via `go build -n`) if a given directory would have been skipped
 // due to build constraints (e.g. cmds/core/bind only builds for plan9)
 func isExcluded(dir string) bool {
-	// to lazy to dynamically pull tags from `tinygo info`
+	// too lazy to dynamically pull tags from `tinygo info`
 	tags := []string{
 		"tinygo",
 		"tinygo.enable",
@@ -81,7 +83,7 @@ func isExcluded(dir string) bool {
 		"-n",
 		"-tags", strings.Join(tags, ","),
 	)
-	c.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0", "GOARCH=amd64")
+	c.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
 	c.Dir = dir
 	out, _ := c.CombinedOutput()
 	return strings.Contains(string(out), "build constraints exclude all Go files in")
@@ -102,26 +104,37 @@ func build(tinygo *string, dir string) (err error) {
 
 // "tinygo build" in each of directories 'dirs'
 func buildDirs(tinygo *string, dirs []string) (status BuildStatus, err error) {
-
 	for _, dir := range dirs {
-		log.Printf("Building %s\n", dir)
-		if berr := build(tinygo, dir); berr != nil {
+		log.Printf("%s Building...\n", dir)
+		err = build(tinygo, dir)
+		if err == nil {
+			log.Printf("%v PASS\n", dir)
+			status.passing = append(status.passing, dir)
+		} else {
+			berr, ok := err.(*exec.ExitError)
+			if !ok {
+				break
+			}
+			err = nil
 			if isExcluded(dir) {
 				log.Printf("%v EXCLUDED\n", dir)
 				status.excluded = append(status.excluded, dir)
-				continue
+			} else {
+				log.Printf("%v FAILED %v\n", dir, berr)
+				status.failing = append(status.failing, dir)
 			}
-			log.Printf("%v FAILED %v\n", dir, berr)
-			status.failing = append(status.failing, dir)
-		} else {
-			status.passing = append(status.passing, dir)
 		}
 	}
 	return
 }
 
+// Modifies, adds, or removes //go:build line as appropriate to include / remove
+// '!tinygo || tinygo.enable' for all .go files in dir depending on whether it
+// 'builds' or not as previously tested.
+//
+// XXX (bug): if existing //go:build line not needed, replaces with '//' instead
+// of removing the line.
 func fixupConstraints(dir string, builds bool) (err error) {
-
 	p := printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 8}
 
 	files, err := filepath.Glob(filepath.Join(dir, "*"))
@@ -208,12 +221,12 @@ nextFile:
 	return
 }
 
-func writeMarkdown(file *os.File, pathMD *string, tinygo *string, status BuildStatus) (err error) {
-
+func writeMarkdown(file *os.File, pathMD *string, tgVersion *string, status BuildStatus) (err error) {
+	// (not string literal because conflict with markdown back-tick)
 	fmt.Fprintf(file, "---\n\n")
 	fmt.Fprintf(file, "DO NOT EDIT.\n\n")
 	fmt.Fprintf(file, "Generated via `go run tools/tinygoize/main.go`\n\n")
-	fmt.Fprintf(file, "%v\n\n", tinygoVersion(tinygo))
+	fmt.Fprintf(file, "%v\n\n", *tgVersion)
 	fmt.Fprintf(file, "---\n\n")
 
 	fmt.Fprintf(file, `# Status of u-root + tinygo
@@ -239,12 +252,13 @@ The necessary additions to tinygo will be tracked in
 `)
 
 	linkText := func(dir string) string {
+		// ignoring err here because pathMD already opened(exists) and
+		// dir already checked
 		relPath, _ := filepath.Rel(filepath.Dir(*pathMD), dir)
 		return fmt.Sprintf("[%v](%v)", dir, relPath)
 	}
 
 	processSet := func(header string, dirs []string) {
-
 		fmt.Fprintf(file, "\n### %v (%v commands)\n", header, len(dirs))
 		sort.Strings(dirs)
 
@@ -276,6 +290,13 @@ func main() {
 	flag.Parse()
 
 	var err error
+	tgVersion, err := tinygoVersion(tinygo)
+	log.Printf("%s\n", tgVersion)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	file := os.Stdout
 	if len(*pathMD) > 0 && *pathMD != "-" {
 		file, err = os.Create(*pathMD)
@@ -309,7 +330,7 @@ func main() {
 	}
 
 	// write markdown output
-	err = writeMarkdown(file, pathMD, tinygo, status)
+	err = writeMarkdown(file, pathMD, &tgVersion, status)
 	if nil != err {
 		log.Fatal(err)
 	}
