@@ -108,40 +108,38 @@ func generateCompressionTestData(data []byte) (map[string][]byte, error) {
 // Since we don't need to test the compression function, we just check
 // for validity of file extension detection.
 func TestCompression(t *testing.T) {
-	var (
-		err error
-		i   = 0
-	)
-
 	const compressionTestString = "test\x00"
 
 	tDir := t.TempDir()
-	tFd := make([]*os.File, 4)
+	tFd := make(map[string]*os.File, 4)
 	tFiles, err := generateCompressionTestData([]byte(compressionTestString))
 	if err != nil {
 		t.Fatalf("failed to generate test data: '%v'\n", err)
 	}
 
 	for name, data := range tFiles {
-		tFd[i], err = os.Create(path.Join(tDir, name))
+		tFd[name], err = os.Create(path.Join(tDir, name))
 		if err != nil {
 			t.Fatalf("failed to create test file %q: '%v'\n", name, err)
 		}
+		defer tFd[name].Close()
 
-		n, err := tFd[i].Write(data)
+		n, err := tFd[name].Write(data)
 		if err != nil {
 			t.Fatalf("failed to write to test file %q: '%v'\n", name, err)
 		}
 
-		if err = tFd[i].Sync(); err != nil {
+		if err = tFd[name].Sync(); err != nil {
 			t.Fatalf("failed to sync test file %q: '%v'\n", name, err)
+		}
+
+		if _, err := tFd[name].Seek(0, 0); err != nil {
+			t.Fatalf("failed to seek to beginning of test file %q: '%v'\n", name, err)
 		}
 
 		if n != len(data) {
 			t.Fatalf("failed to write all data to test file %q. Expected %d bytes, wrote %d\n", name, len(data), n)
 		}
-
-		i++
 	}
 
 	// defer func() {
@@ -157,25 +155,25 @@ func TestCompression(t *testing.T) {
 		err     error
 	}{
 		"test.xz": {
-			file:    tFd[0],
+			file:    tFd["test.xz"],
 			ext:     ".xz",
 			isError: false,
 			err:     nil,
 		},
 		"test.gz": {
-			file:    tFd[1],
+			file:    tFd["test.gz"],
 			ext:     ".gz",
 			isError: false,
 			err:     nil,
 		},
 		"test.zst": {
-			file:    tFd[2],
+			file:    tFd["test.zst"],
 			ext:     ".zst",
 			isError: false,
 			err:     nil,
 		},
 		"test.bad": {
-			file:    tFd[3],
+			file:    tFd["test.bad"],
 			ext:     ".bad",
 			isError: true,
 			err:     os.ErrNotExist,
