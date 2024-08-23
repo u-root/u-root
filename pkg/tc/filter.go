@@ -69,7 +69,7 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 			indirect := uint32(parent)
 			ret.parent = &indirect
 		case "protocol", "proto":
-			proto, err := parseProto(args[i+1])
+			proto, err := ParseProto(args[i+1])
 			if err != nil {
 				return nil, err
 			}
@@ -176,8 +176,8 @@ func (t *Trafficctl) ShowFilter(fargs *FArgs, stdout io.Writer) error {
 		var s strings.Builder
 		fmt.Fprintf(&s, "filter parent %d: protocol: %s pref %d %s chain %d ",
 			f.Parent>>16,
-			getProtoFromInfo(f.Info),
-			getPrefFromInfo(f.Info),
+			GetProtoFromInfo(f.Info),
+			GetPrefFromInfo(f.Info),
 			f.Kind,
 			*f.Chain)
 
@@ -193,7 +193,7 @@ func (t *Trafficctl) ShowFilter(fargs *FArgs, stdout io.Writer) error {
 				}
 			}
 		}
-		fmt.Printf("%s\n", s.String())
+		fmt.Fprintf(stdout, "%s\n", s.String())
 	}
 
 	return nil
