@@ -267,7 +267,7 @@ var (
 	ErrNoValidProto = errors.New("invalid protocol name")
 )
 
-func parseProto(prot string) (uint32, error) {
+func ParseProto(prot string) (uint32, error) {
 	for _, p := range []struct {
 		name string
 		prot uint32
@@ -288,7 +288,7 @@ func parseProto(prot string) (uint32, error) {
 	return 0, ErrNoValidProto
 }
 
-func getProtoFromInfo(info uint32) string {
+func GetProtoFromInfo(info uint32) string {
 	protoNr := uint16((info & 0x0000FFFF))
 
 	// htons for beggars
@@ -316,6 +316,6 @@ func getProtoFromInfo(info uint32) string {
 	return ""
 }
 
-func getPrefFromInfo(info uint32) uint32 {
+func GetPrefFromInfo(info uint32) uint32 {
 	return (info & 0xFFFF_0000) >> 16
 }
