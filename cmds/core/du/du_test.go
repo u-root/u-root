@@ -118,8 +118,8 @@ func TestRun(t *testing.T) {
 		}
 		lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
 
-		// should print dir and two files
-		if len(lines) != 3 {
+		// should print dir, subdir and two files
+		if len(lines) != 4 {
 			t.Errorf("expected file1, file2 and temp dir, but got %d lines", len(lines))
 		}
 	})
