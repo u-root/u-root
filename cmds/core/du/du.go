@@ -56,6 +56,19 @@ func (c *cmd) du(file string) (int64, error) {
 			return err
 		}
 
+		// report sub-folders and add number of blocks to overall count
+		if info.IsDir() && file != path {
+			dirBlocks, err := c.du(path)
+			if err != nil {
+				return err
+			}
+
+			blocks += dirBlocks
+
+			fmt.Fprintf(c.stdout, "%d\t%s\n", dirBlocks, path)
+			return fs.SkipDir
+		}
+
 		st, ok := info.Sys().(*syscall.Stat_t)
 		if !ok {
 			return fmt.Errorf("%v: %w", path, errNoStatInfo)
