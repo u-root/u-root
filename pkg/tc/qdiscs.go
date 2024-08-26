@@ -23,22 +23,16 @@ func ParseCodelArgs(out io.Writer, args []string) (*tc.Object, error) {
 	for i := 0; i < len(args); i = i + 2 {
 		switch args[i] {
 		case "limit":
-			val, err := strconv.Atoi(args[i+1])
+			val, err := strconv.ParseUint(args[i+1], 10, 32)
 			if err != nil {
 				return nil, err
-			}
-			if val < 0x0 || val >= 0x7FFFFFFF {
-				return nil, ErrOutOfBounds
 			}
 			indirect := uint32(val)
 			codel.Limit = &indirect
 		case "target":
-			val, err := strconv.Atoi(args[i+1])
+			val, err := strconv.ParseUint(args[i+1], 10, 32)
 			if err != nil {
 				return nil, err
-			}
-			if val < 0x0 || val >= 0x7FFFFFFF {
-				return nil, ErrOutOfBounds
 			}
 			indirect := uint32(val)
 			codel.Target = &indirect
@@ -173,6 +167,25 @@ func ParseHTBQDiscArgs(out io.Writer, args []string) (*tc.Object, error) {
 	return ret, nil
 }
 
-func ParseHFSCQDiscArgs(args []string, stdout io.Writer) (*tc.Object, error) {
-	return nil, nil
+func ParseHFSCQDiscArgs(stdout io.Writer, args []string) (*tc.Object, error) {
+	ret := &tc.Object{}
+	hfsc := &tc.HfscQOpt{}
+
+	for i := 0; i < len(args); i = i + 2 {
+		switch args[i] {
+		case "default":
+			defcls, err := strconv.ParseUint(args[i+1], 10, 16)
+			if err != nil {
+				return nil, err
+			}
+			hfsc.DefCls = uint16(defcls)
+		default:
+			// WHAT IS THIS?
+			return nil, ErrInvalidArg
+		}
+	}
+
+	ret.HfscQOpt = hfsc
+
+	return ret, nil
 }

@@ -15,23 +15,25 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// QArgs holds all possible args for qdisc subcommand
+// Args holds all possible args for qdisc subcommand
 // tc qdisc [ add | del | replace | change | show ] dev STRING
 // [ handle QHANDLE ] [ root | ingress | clsact | parent CLASSID ]
 // [ estimator INTERVAL TIME_CONSTANT ]
 // [ stab [ help | STAB_OPTIONS] ]
 // [ ingress_block BLOCK_INDEX ] [ egress_block BLOCK_INDEX ]
 // [ [ QDISC_KIND ] [ help | OPTIONS ] ]
-type QArgs struct {
+type Args struct {
 	dev    string
-	kind   *string
+	kind   string
 	parent *uint32
 	handle *uint32
 	obj    *tc.Object
 }
 
-func ParseQDiscArgs(stdout io.Writer, args []string) (*QArgs, error) {
-	ret := &QArgs{
+// ParseQDiscArgs takes an io.Writer and []string slice with arguments to parse.
+// It returns a structure of type Args for qdisc operation.
+func ParseQDiscArgs(stdout io.Writer, args []string) (*Args, error) {
+	ret := &Args{
 		obj: &tc.Object{},
 	}
 	if len(args) < 1 {
@@ -91,9 +93,6 @@ func ParseQDiscArgs(stdout io.Writer, args []string) (*QArgs, error) {
 			if err != nil {
 				return ret, err
 			}
-			if qdiscID >= 0x7FFFFFFF {
-				return nil, ErrOutOfBounds
-			}
 			indirect := uint32(qdiscID)
 			ret.parent = &indirect
 		case "estimator":
@@ -105,10 +104,8 @@ func ParseQDiscArgs(stdout io.Writer, args []string) (*QArgs, error) {
 		case "egress_block":
 			return nil, ErrNotImplemented
 		case "help":
-			PrintQdiscHelp(stdout)
+			fmt.Fprintf(stdout, "%s", QdiscHelp)
 		default:
-			fmt.Println(args[i:])
-			// Resolve Qdisc and parameters
 			var qdiscParseFn func(io.Writer, []string) (*tc.Object, error)
 			if qdiscParseFn = supportetQdisc(args[i]); qdiscParseFn == nil {
 				return nil, fmt.Errorf("%w: invalid qdisc: %s", ErrInvalidArg, args[i])
@@ -118,7 +115,7 @@ func ParseQDiscArgs(stdout io.Writer, args []string) (*QArgs, error) {
 			if err != nil {
 				return nil, err
 			}
-			ret.kind = &ret.obj.Kind
+			ret.kind = ret.obj.Kind
 
 			return ret, nil
 		}
@@ -145,11 +142,7 @@ const (
 	QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }`
 )
 
-func PrintQdiscHelp(stdout io.Writer) {
-	fmt.Fprintf(stdout, "%s", QdiscHelp)
-}
-
-func (t *Trafficctl) ShowQdisc(args *QArgs, stdout io.Writer) error {
+func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
 	qdiscs, err := t.Tc.Qdisc().Get()
 	if err != nil {
 		return err
@@ -172,8 +165,8 @@ func (t *Trafficctl) ShowQdisc(args *QArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) AddQdisc(args *QArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(args.dev)
+func (t *Trafficctl) AddQdisc(stdout io.Writer, args *Args) error {
+	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
 	}
@@ -197,8 +190,8 @@ func (t *Trafficctl) AddQdisc(args *QArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) DelQdisc(args *QArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(args.dev)
+func (t *Trafficctl) DelQdisc(stdout io.Writer, args *Args) error {
+	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
 	}
@@ -218,7 +211,7 @@ func (t *Trafficctl) DelQdisc(args *QArgs, stdout io.Writer) error {
 	}
 
 	if !found {
-		return fmt.Errorf("%w: qdisc: %s not found on device: %s", ErrInvalidArg, *args.kind, args.dev)
+		return fmt.Errorf("on device '%s' no qdisc '%s' was found: %w", args.dev, args.kind, ErrInvalidArg)
 	}
 
 	if err := t.Tc.Qdisc().Delete(&q); err != nil {
@@ -228,8 +221,8 @@ func (t *Trafficctl) DelQdisc(args *QArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) ReplaceQdisc(args *QArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(args.dev)
+func (t *Trafficctl) ReplaceQdisc(stdout io.Writer, args *Args) error {
+	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
 	}
@@ -252,8 +245,8 @@ func (t *Trafficctl) ReplaceQdisc(args *QArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) ChangeQDisc(args *QArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(args.dev)
+func (t *Trafficctl) ChangeQDisc(stdout io.Writer, args *Args) error {
+	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
 	}
@@ -277,7 +270,7 @@ func (t *Trafficctl) ChangeQDisc(args *QArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) LinkQDisc(args *QArgs, stdout io.Writer) error {
+func (t *Trafficctl) LinkQDisc(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
 

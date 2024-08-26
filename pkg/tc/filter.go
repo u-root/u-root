@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"strconv"
 	"strings"
 
@@ -88,12 +87,9 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 			indirect := uint32(major)
 			ret.handle = &indirect
 		case "preference", "pref", "priority":
-			val, err := strconv.Atoi(val)
+			val, err := strconv.ParseUint(val, 10, 32)
 			if err != nil {
 				return nil, err
-			}
-			if val < 0 || val >= 0x7FFFFFFF {
-				return nil, ErrOutOfBounds
 			}
 			indirect := uint32(val)
 			ret.pref = &indirect
@@ -134,7 +130,7 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 
 			i--
 		case "help":
-			PrintFilterHelp(stdout)
+			fmt.Fprint(stdout, Filterhelp)
 		default: // I hope we parsed all the stuff until here
 			// args[i] is the actual filter type
 			// Resolve Qdisc and parameters
@@ -156,8 +152,8 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 	return ret, nil
 }
 
-func (t *Trafficctl) ShowFilter(fargs *FArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(fargs.dev)
+func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
+	iface, err := getDevice(fArgs.dev)
 	if err != nil {
 		return err
 	}
@@ -199,16 +195,16 @@ func (t *Trafficctl) ShowFilter(fargs *FArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) AddFilter(fargs *FArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(fargs.dev)
+func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
+	iface, err := getDevice(fArgs.dev)
 	if err != nil {
 		return err
 	}
 
-	q := fargs.filterObj
+	q := fArgs.filterObj
 	q.Ifindex = uint32(iface.Index)
-	q.Handle = *fargs.handle
-	q.Msg.Info = core.BuildHandle(*fargs.pref<<16, *fargs.protocol)
+	q.Handle = *fArgs.handle
+	q.Msg.Info = core.BuildHandle(*fArgs.pref<<16, *fArgs.protocol)
 
 	fmt.Printf("%+v\n", q)
 
@@ -218,8 +214,8 @@ func (t *Trafficctl) AddFilter(fargs *FArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) DeleteFilter(fargs *FArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(fargs.dev)
+func (t *Trafficctl) DeleteFilter(stdout io.Writer, fArgs *FArgs) error {
+	iface, err := getDevice(fArgs.dev)
 	if err != nil {
 		return err
 	}
@@ -241,16 +237,16 @@ func (t *Trafficctl) DeleteFilter(fargs *FArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) ReplaceFilter(fargs *FArgs, stdout io.Writer) error {
-	return nil
+func (t *Trafficctl) ReplaceFilter(stdout io.Writer, fArgs *FArgs) error {
+	return ErrNotImplemented
 }
 
-func (t *Trafficctl) ChangeFilter(fargs *FArgs, stdout io.Writer) error {
-	return nil
+func (t *Trafficctl) ChangeFilter(stdout io.Writer, fArgs *FArgs) error {
+	return ErrNotImplemented
 }
 
-func (t *Trafficctl) GetFilter(fargs *FArgs, stdout io.Writer) error {
-	return nil
+func (t *Trafficctl) GetFilter(stdout io.Writer, fArgs *FArgs) error {
+	return ErrNotImplemented
 }
 
 const (
@@ -273,14 +269,9 @@ const (
 `
 )
 
-func PrintFilterHelp(stdout io.Writer) {
-	fmt.Fprint(stdout,
-		Filterhelp)
-}
-
 func supportedFilters(f string) func(io.Writer, []string) (*tc.Object, error) {
 	supported := map[string]func(io.Writer, []string) (*tc.Object, error){
-		"basic":    parseBasicParams,
+		"basic":    ParseBasicParams,
 		"bpf":      nil,
 		"cgroup":   nil,
 		"flow":     nil,

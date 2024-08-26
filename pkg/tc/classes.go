@@ -7,6 +7,7 @@ package trafficctl
 import (
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 
 	"github.com/florianl/go-tc"
@@ -79,26 +80,31 @@ func ParseHFSCClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 }
 
 func HFSCGetSC(args []string) (*tc.ServiceCurve, error) {
-	m1, d, m2, err := hfscGetSC1(args)
+	var sc *tc.ServiceCurve
+	sc1, err := hfscGetSC1(args)
 	if err != nil {
 		return nil, err
 	}
 
-	m1, d, m2, err = hfscGetSC2(args)
+	sc2, err := hfscGetSC2(args)
 	if err != nil {
 		return nil, err
 	}
 
-	return &tc.ServiceCurve{
-		M1: uint32(m1),
-		D:  d,
-		M2: uint32(m2),
-	}, nil
+	if sc1 != nil && sc2 == nil {
+		sc = sc1
+	} else if sc1 == nil && sc2 != nil {
+		sc = sc2
+	} else {
+		return nil, ErrInvalidArg
+	}
+
+	return sc, nil
 }
 
-func hfscGetSC1(args []string) (uint64, uint32, uint64, error) {
+func hfscGetSC1(args []string) (*tc.ServiceCurve, error) {
 	if len(args) < 2 {
-		return 0, 0, 0, ErrNotEnoughArgs
+		return nil, ErrNotEnoughArgs
 	}
 
 	var d uint32
@@ -109,35 +115,43 @@ func hfscGetSC1(args []string) (uint64, uint32, uint64, error) {
 		case "m1":
 			m1, err = ParseRate(args[i+1])
 			if err != nil {
-				return 0, 0, 0, err
+				return nil, err
 			}
 		case "d":
 			d, err = parseTime(args[i+1])
 			if err != nil {
-				return 0, 0, 0, err
+				return nil, err
 			}
 		case "m2":
 			m2, err = ParseRate(args[i+1])
 			if err != nil {
-				return 0, 0, 0, err
+				return nil, err
 			}
 		default:
 			// Fallthrough if umax,dmax, rate
 			if args[i] == "umax" || args[i] == "dmax" || args[i] == "rate" {
-				return m1, d, m2, nil
+				return nil, nil
 			}
-			return 0, 0, 0, ErrInvalidArg
+			return nil, ErrInvalidArg
 		}
 	}
-	return m1, d, m2, nil
+
+	cf, err := getClockfactor()
+	if err != nil {
+		return nil, err
+	}
+	sc := &tc.ServiceCurve{
+		M1: uint32(m1),
+		D:  cf * d,
+		M2: uint32(m2),
+	}
+
+	return sc, nil
 }
 
-func hfscGetSC2(args []string) (uint64, uint32, uint64, error) {
-	var m1, m2 uint64
+func hfscGetSC2(args []string) (*tc.ServiceCurve, error) {
 	var umax, rate uint64
 	var dmax uint32
-
-	var d uint32
 	var err error
 
 	for i := 0; i < len(args); i = i + 2 {
@@ -145,23 +159,41 @@ func hfscGetSC2(args []string) (uint64, uint32, uint64, error) {
 		case "umax":
 			umax, err = ParseSize(args[i+1])
 			if err != nil {
-				return 0, 0, 0, err
+				return nil, err
 			}
 		case "dmax":
 			dmax, err = parseTime(args[i+1])
 			if err != nil {
-				return 0, 0, 0, err
+				return nil, err
 			}
 		case "rate":
 			rate, err = ParseRate(args[i+1])
 			if err != nil {
-				return 0, 0, 0, err
+				return nil, err
 			}
 		default:
-			//What is this?
+			// Just exit without error
+			return nil, nil
 		}
 	}
-	return m1, d, m2, nil
+
+	sc := &tc.ServiceCurve{}
+	cf, err := getClockfactor()
+	if err != nil {
+		return nil, err
+	}
+
+	if dmax != 0 && math.Ceil(1.0*float64(umax)*TimeUnitsPerSecs/float64(dmax)) > float64(rate) {
+		sc.M1 = uint32(math.Ceil(1.0 * float64(umax) * TimeUnitsPerSecs / float64(dmax)))
+		sc.D = cf * dmax
+		sc.M2 = uint32(rate)
+	} else {
+		sc.M1 = 0
+		sc.D = uint32(float64(cf) * math.Ceil(float64(dmax)-float64(umax)*TimeUnitsPerSecs/float64(rate)))
+		sc.M2 = uint32(rate)
+	}
+
+	return sc, nil
 }
 
 func supportetClasses(cl string) func(io.Writer, []string) (*tc.Object, error) {
@@ -186,6 +218,8 @@ func supportetClasses(cl string) func(io.Writer, []string) (*tc.Object, error) {
 	return ret
 }
 
+// ParseHTBClassArgs parses the cmdline arguments for `tc qdisc add ... htb ...`
+// and returns a pointer to tc.Object.
 func ParseHTBClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 	const linkLayerMask = 0x0F
 	// rate <rate> and burst <bytes> is required

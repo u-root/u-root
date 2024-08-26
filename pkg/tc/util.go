@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,32 @@ import (
 const (
 	TimeUnitsPerSecs = 1000000
 )
+
+var (
+	ErrNoDevice = errors.New("no such device")
+)
+
+func getDevice(dev string) (net.Interface, error) {
+	var ret net.Interface
+	devs, err := net.Interfaces()
+	if err != nil {
+		return ret, err
+	}
+
+	var found bool
+	for _, iface := range devs {
+		if iface.Name == dev {
+			ret = iface
+			found = true
+		}
+	}
+
+	if !found {
+		return ret, fmt.Errorf("available devices: %q, but '%s': %w", devs, dev, ErrNoDevice)
+	}
+
+	return ret, nil
+}
 
 func parseTime(t string) (uint32, error) {
 	var cutstring string
@@ -100,7 +127,7 @@ func ParseClassID(p string) (uint32, error) {
 
 	major, err := strconv.ParseUint(maj, 16, 16)
 	if err != nil {
-		return 0, err
+		major = 0
 	}
 
 	if min == "" {
@@ -225,7 +252,6 @@ func GetHz() (int, error) {
 }
 
 func CalcXMitTime(rate uint64, size uint32) (uint32, error) {
-	const TimeUnitsPerSecs = float64(1000000)
 	ret := TimeUnitsPerSecs * (float64(size) / float64(rate))
 	if ret >= 0xFFFF_FFFF {
 		ret = maxUint32
@@ -261,6 +287,28 @@ func getTickInUsec() (uint32, error) {
 	clockFactor := int64(clockRes / TimeUnitsPerSecs)
 
 	return uint32(float64(t2us)/float64(us2t)) * uint32(clockFactor), nil
+}
+
+func getClockfactor() (uint32, error) {
+	psched, err := os.Open("/proc/net/psched")
+	if err != nil {
+		return 0, err
+	}
+	defer psched.Close()
+
+	var t2us, us2t, clockRes, gb int
+
+	fmt.Fscanf(psched, "%8x %8x %8x %8x",
+		&t2us,
+		&us2t,
+		&clockRes,
+		&gb)
+
+	if clockRes == 1000000000 {
+		t2us = us2t
+	}
+
+	return uint32(clockRes / TimeUnitsPerSecs), nil
 }
 
 var (

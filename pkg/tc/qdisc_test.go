@@ -97,6 +97,12 @@ func TestParseQdiscArgs(t *testing.T) {
 			},
 		},
 		{
+			name: "qdisc htb",
+			args: []string{
+				"htb",
+			},
+		},
+		{
 			name: "estimator",
 			args: []string{
 				"estimator",
@@ -167,15 +173,7 @@ func TestParseCodelArgs(t *testing.T) {
 				"limit",
 				"-1",
 			},
-			err: trafficctl.ErrOutOfBounds,
-		},
-		{
-			name: "limitInvalid",
-			args: []string{
-				"limit",
-				"2147483647",
-			},
-			err: trafficctl.ErrOutOfBounds,
+			err: strconv.ErrSyntax,
 		},
 		{
 			name: "target",
@@ -190,7 +188,7 @@ func TestParseCodelArgs(t *testing.T) {
 				"target",
 				"-1",
 			},
-			err: trafficctl.ErrOutOfBounds,
+			err: strconv.ErrSyntax,
 		},
 		{
 			name: "targetInvalid",
@@ -198,7 +196,6 @@ func TestParseCodelArgs(t *testing.T) {
 				"target",
 				"2147483647",
 			},
-			err: trafficctl.ErrOutOfBounds,
 		},
 		{
 			name: "interval s",
@@ -489,6 +486,37 @@ func TestParseHTBArgs(t *testing.T) {
 				if tt.expBuf != outBuf.String() {
 					t.Errorf("output !=  expected output")
 				}
+			}
+		})
+	}
+}
+
+func TestParseHFSCQdiscArgs(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		args []string
+		err  error
+	}{
+		{
+			name: "default",
+			args: []string{
+				"default",
+				"10",
+			},
+		},
+		{
+			name: "invalid",
+			args: []string{
+				"invalid",
+			},
+			err: trafficctl.ErrInvalidArg,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			var outbuf bytes.Buffer
+			if _, err := trafficctl.ParseHFSCQDiscArgs(&outbuf, tt.args); !errors.Is(err, tt.err) {
+				t.Errorf("ParseHFSCQdiscArgs() = %v, not %v", err, tt.err)
 			}
 		})
 	}

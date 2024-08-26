@@ -24,10 +24,12 @@ const (
 	GActPipe    = 3
 	GActTrap    = 8
 	GActJump    = 1 << 28
-	GactGoTo    = 2 << 28
+	GActGoTo    = 2 << 28
 )
 
-func ParseActionGAT(args []string, out io.Writer) (*[]*tc.Action, error) {
+// ParseActionGAT parses options of the filter action category and returns
+// a pointer to a slice of []*tc.Action
+func ParseActionGAT(out io.Writer, args []string) (*[]*tc.Action, error) {
 	if len(args) < 1 {
 		return nil, ErrNotEnoughArgs
 	}
@@ -49,7 +51,7 @@ func ParseActionGAT(args []string, out io.Writer) (*[]*tc.Action, error) {
 	case "pipe":
 		act = GActPipe
 	case "goto":
-		act = GactGoTo
+		act = GActGoTo
 	case "jump":
 		act = GActJump
 	case "trap":
@@ -59,7 +61,7 @@ func ParseActionGAT(args []string, out io.Writer) (*[]*tc.Action, error) {
 		return nil, nil
 	default:
 		fmt.Fprintf(out, "%s\n", gactHelp)
-		return nil, nil
+		return nil, ErrInvalidActionControl
 	}
 
 	gact := &tc.Gact{

@@ -98,15 +98,7 @@ func TestParseFilterArgs(t *testing.T) {
 				"preference",
 				"-1",
 			},
-			err: trafficctl.ErrOutOfBounds,
-		},
-		{
-			name: "preferenceInvalid",
-			args: []string{
-				"preference",
-				"2147483647",
-			},
-			err: trafficctl.ErrOutOfBounds,
+			err: strconv.ErrSyntax,
 		},
 		{
 			name: "root",
@@ -148,9 +140,10 @@ func TestParseFilterArgs(t *testing.T) {
 			err: trafficctl.ErrNotImplemented,
 		},
 		{
-			name: "basic filter",
+			name: "basic action drop",
 			args: []string{
 				"basic",
+				"action",
 				"drop",
 			},
 		},
@@ -172,6 +165,65 @@ func TestParseFilterArgs(t *testing.T) {
 			if tt.expBuf != "" {
 				if tt.expBuf != outbuf.String() {
 					t.Errorf("output !=  expected output")
+				}
+			}
+		})
+	}
+}
+
+func TestParseBasicParams(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		args   []string
+		err    error
+		expOut string
+	}{
+		{
+			name: "match",
+			args: []string{
+				"match",
+			},
+			err: trafficctl.ErrNotImplemented,
+		},
+		{
+			name: "action",
+			args: []string{
+				"action",
+				"drop",
+			},
+		},
+		{
+			name: "classid",
+			args: []string{
+				"classid",
+				":10",
+			},
+		},
+		{
+			name: "help",
+			args: []string{
+				"help",
+			},
+			expOut: trafficctl.BasicHelp,
+		},
+		{
+			name: "invalid",
+			args: []string{
+				"invalid",
+			},
+			err: trafficctl.ErrInvalidArg,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			var outbuf bytes.Buffer
+			if _, err := trafficctl.ParseBasicParams(&outbuf, tt.args); !errors.Is(err, tt.err) {
+				t.Errorf("ParseBasicParams() = %v, not %v", err, tt.err)
+			}
+
+			if tt.expOut != "" {
+				if tt.expOut != outbuf.String() {
+					t.Errorf("%s not equal: %s", outbuf.String(), tt.expOut)
 				}
 			}
 		})
