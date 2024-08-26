@@ -16,7 +16,7 @@ func TestParseClassArgs(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		cmdline []string
-		exp     *trafficctl.CArgs
+		exp     *trafficctl.Args
 		err     error
 	}{
 		{

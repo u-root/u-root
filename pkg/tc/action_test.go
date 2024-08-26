@@ -1,3 +1,7 @@
+// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package trafficctl_test
 
 import (
@@ -90,7 +94,7 @@ func TestParseActionGAT(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
 			var outBuf bytes.Buffer
-			if _, err := trafficctl.ParseActionGAT(tt.args, &outBuf); !errors.Is(err, tt.err) {
+			if _, err := trafficctl.ParseActionGAT(&outBuf, tt.args); !errors.Is(err, tt.err) {
 				t.Errorf("ParseActionGAT(%q) = %v, not %v", tt.args, err, tt.err)
 			}
 		})

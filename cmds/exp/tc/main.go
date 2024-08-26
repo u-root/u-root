@@ -43,11 +43,11 @@ func run(stdout io.Writer, args []string) error {
 
 	switch one(args[cursor], want) {
 	case "qdisc":
-		return runQdisc(args[cursor+1:], tctl, stdout)
+		return runQdisc(stdout, args[cursor+1:], tctl)
 	case "class":
-		return runClass(args[cursor+1:], tctl, stdout)
+		return runClass(stdout, args[cursor+1:], tctl)
 	case "filter":
-		return runFilter(args[cursor+1:], tctl, stdout)
+		return runFilter(stdout, args[cursor+1:], tctl)
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func one(cmd string, cmds []string) string {
 	return ""
 }
 
-func runQdisc(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) error {
+func runQdisc(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -80,10 +80,10 @@ func runQdisc(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) erro
 		"help",
 	}
 
-	qArgs := &trafficctl.QArgs{}
+	qArgs := &trafficctl.Args{}
 	var err error
 	if len(args[1:]) > 1 {
-		qArgs, err = trafficctl.ParseQDiscArgs(args[1:], os.Stdout)
+		qArgs, err = trafficctl.ParseQDiscArgs(os.Stdout, args[1:])
 		if err != nil {
 			return err
 		}
@@ -91,25 +91,25 @@ func runQdisc(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) erro
 
 	switch one(args[cursor], want) {
 	case "show", "list":
-		return tctl.ShowQdisc(qArgs, stdout)
+		return tctl.ShowQdisc(stdout, qArgs)
 	case "add":
-		return tctl.AddQdisc(qArgs, stdout)
+		return tctl.AddQdisc(stdout, qArgs)
 	case "del":
-		return tctl.DelQdisc(qArgs, stdout)
+		return tctl.DelQdisc(stdout, qArgs)
 	case "replace":
-		return tctl.ReplaceQdisc(qArgs, stdout)
+		return tctl.ReplaceQdisc(stdout, qArgs)
 	case "change":
-		return tctl.ChangeQDisc(qArgs, stdout)
+		return tctl.ChangeQDisc(stdout, qArgs)
 	case "link":
-		return tctl.LinkQDisc(qArgs, stdout)
+		return tctl.LinkQDisc(stdout, qArgs)
 	case "help":
-		trafficctl.PrintQdiscHelp(stdout)
+		fmt.Fprintf(stdout, "%s", trafficctl.QdiscHelp)
 	}
 
 	return nil
 }
 
-func runClass(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) error {
+func runClass(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -121,10 +121,10 @@ func runClass(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) erro
 		"help",
 	}
 
-	cArgs := &trafficctl.CArgs{}
+	cArgs := &trafficctl.Args{}
 	var err error
 	if len(args[1:]) > 1 {
-		cArgs, err = trafficctl.ParseClassArgs(args[1:], stdout)
+		cArgs, err = trafficctl.ParseClassArgs(stdout, args[1:])
 		if err != nil {
 			return err
 		}
@@ -132,24 +132,24 @@ func runClass(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) erro
 
 	switch one(args[cursor], want) {
 	case "show", "list":
-		return tctl.ShowClass(cArgs, stdout)
+		return tctl.ShowClass(stdout, cArgs)
 	case "add":
-		return tctl.AddClass(cArgs, stdout)
+		return tctl.AddClass(stdout, cArgs)
 	case "delete", "del":
-		return tctl.DeleteClass(cArgs, stdout)
+		return tctl.DeleteClass(stdout, cArgs)
 	case "change":
-		return tctl.ChangeClass(cArgs, stdout)
+		return tctl.ChangeClass(stdout, cArgs)
 	case "replace":
-		return tctl.ReplaceClass(cArgs, stdout)
+		return tctl.ReplaceClass(stdout, cArgs)
 	case "help":
-		trafficctl.PrintClassHelp(stdout)
+		fmt.Fprintf(stdout, "%s\n", trafficctl.ClassHelp)
 		return nil
 	}
 
 	return nil
 }
 
-func runFilter(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) error {
+func runFilter(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -165,7 +165,7 @@ func runFilter(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) err
 	fArgs := &trafficctl.FArgs{}
 	var err error
 	if len(args[1:]) > 1 {
-		fArgs, err = trafficctl.ParseFilterArgs(args[1:], stdout)
+		fArgs, err = trafficctl.ParseFilterArgs(stdout, args[1:])
 		if err != nil {
 			return err
 		}
@@ -173,19 +173,19 @@ func runFilter(args []string, tctl *trafficctl.Trafficctl, stdout io.Writer) err
 
 	switch one(args[cursor], want) {
 	case "show", "list":
-		return tctl.ShowFilter(fArgs, stdout)
+		return tctl.ShowFilter(stdout, fArgs)
 	case "add":
-		return tctl.AddFilter(fArgs, stdout)
+		return tctl.AddFilter(stdout, fArgs)
 	case "del":
-		return tctl.DeleteFilter(fArgs, stdout)
+		return tctl.DeleteFilter(stdout, fArgs)
 	case "change":
-		return tctl.ChangeFilter(fArgs, stdout)
+		return tctl.ChangeFilter(stdout, fArgs)
 	case "replace":
-		return tctl.ReplaceFilter(fArgs, stdout)
+		return tctl.ReplaceFilter(stdout, fArgs)
 	case "get":
-		return tctl.GetFilter(fArgs, stdout)
+		return tctl.GetFilter(stdout, fArgs)
 	case "help":
-		trafficctl.PrintFilterHelp(stdout)
+		fmt.Fprintf(stdout, "%s\n", trafficctl.Filterhelp)
 	}
 
 	return nil

@@ -7,12 +7,15 @@ package trafficctl
 import (
 	"fmt"
 	"io"
-	"strconv"
 
 	"github.com/florianl/go-tc"
 )
 
-func parseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
+const (
+	BasicHelp = `tc filter ... basic [ match EMATCH_TREE ] [ action ACTION_SPEC ] [ classid CLASSID ]`
+)
+
+func ParseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
 	b := &tc.Basic{}
 	var err error
 
@@ -22,25 +25,22 @@ func parseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
 			return nil, ErrNotImplemented
 		case "action":
 			// Only generic actions allowed here
-			b.Actions, err = ParseActionGAT(params[1:], out)
+			b.Actions, err = ParseActionGAT(out, params[1:])
 			if err != nil {
 				return nil, err
 			}
 		case "classid", "flowid":
-			id, err := strconv.Atoi(params[1])
+			id, err := ParseClassID(params[1])
 			if err != nil {
 				return nil, err
-			}
-			if id < 0x0 || id >= 0x7FFFFFFF {
-				return nil, ErrOutOfBounds
 			}
 			indirect := uint32(id)
 			b.ClassID = &indirect
 		case "help":
-			fmt.Fprintf(out, "%s\n", "tc filter ... basic [ match EMATCH_TREE ] [ action ACTION_SPEC ] [ classid CLASSID ]")
+			fmt.Fprintf(out, "%s", BasicHelp)
 			return nil, nil
 		default:
-			//not sure yet
+			return nil, ErrInvalidArg
 		}
 	}
 

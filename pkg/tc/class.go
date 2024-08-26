@@ -13,17 +13,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// possible args:
-// "dev DEV parent qdisc-id [ classid class-id ] qdisc [ qdisc specific parameters ]"
-type CArgs struct {
-	dev    *string
-	parent *uint32
-	handle *uint32
-	obj    *tc.Object
-}
-
-func ParseClassArgs(stdout io.Writer, args []string) (*CArgs, error) {
-	ret := &CArgs{}
+// ParseClassArgs takes an io.Writer for output operation and a []string with the provided
+// arguments to parse. It builds a struct of type Args for further operation.
+// Further more it selects the class and calls into the class related parsing function.
+func ParseClassArgs(stdout io.Writer, args []string) (*Args, error) {
+	ret := &Args{}
 	if len(args) < 1 {
 		return nil, fmt.Errorf("ParseClassArgs() = %v", ErrNotEnoughArgs)
 	}
@@ -33,10 +27,9 @@ func ParseClassArgs(stdout io.Writer, args []string) (*CArgs, error) {
 		if len(args[1:]) > i {
 			val = args[i+1]
 		}
-		fmt.Printf("args[%d]: %s\n", i, args[i])
 		switch args[i] {
 		case "dev":
-			ret.dev = &val
+			ret.dev = val
 		case "parent":
 			parent, err := ParseClassID(args[i+1])
 			if err != nil {
@@ -59,7 +52,7 @@ func ParseClassArgs(stdout io.Writer, args []string) (*CArgs, error) {
 		case "estimator":
 			return nil, ErrNotImplemented
 		case "help":
-			PrintClassHelp(stdout)
+			fmt.Fprintf(stdout, "%s", ClassHelp)
 			return nil, nil
 		default:
 			// Resolve Qdisc and parameters
@@ -80,16 +73,15 @@ func ParseClassArgs(stdout io.Writer, args []string) (*CArgs, error) {
 	return ret, nil
 }
 
-// possible args:
-// "tc class [ add | del | change | replace | show ] dev STRING [ classid CLASSID ] [ root | parent CLASSID ] [ [ QDISC_KIND ] [ help | OPTIONS ] ]"
-func (t *Trafficctl) ShowClass(cArgs *CArgs, stdout io.Writer) error {
+// ShowClass realizes the `tc class show dev <DEV>` functionality
+func (t *Trafficctl) ShowClass(stdout io.Writer, args *Args) error {
 	ifs, err := net.Interfaces()
 	if err != nil {
 		return err
 	}
 
 	for _, iface := range ifs {
-		if cArgs.dev != nil && iface.Name != *cArgs.dev {
+		if args.dev != "" && iface.Name != args.dev {
 			continue
 		}
 		msg := &tc.Msg{
@@ -115,8 +107,9 @@ func (t *Trafficctl) ShowClass(cArgs *CArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) AddClass(args *CArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(*args.dev)
+// AddClass realizes the `tc class add dev <DEV> ... ` functionality
+func (t *Trafficctl) AddClass(stdout io.Writer, args *Args) error {
+	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
 	}
@@ -146,8 +139,9 @@ func (t *Trafficctl) AddClass(args *CArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) DeleteClass(args *CArgs, stdout io.Writer) error {
-	iface, err := net.InterfaceByName(*args.dev)
+// DeleteClass realizes the `tc class del dev <DEV> ...` functionality
+func (t *Trafficctl) DeleteClass(stdout io.Writer, args *Args) error {
+	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
 	}
@@ -169,12 +163,12 @@ func (t *Trafficctl) DeleteClass(args *CArgs, stdout io.Writer) error {
 	return nil
 }
 
-func (t *Trafficctl) ChangeClass(args *CArgs, stdout io.Writer) error {
-	return nil
+func (t *Trafficctl) ChangeClass(stdout io.Writer, args *Args) error {
+	return ErrNotImplemented
 }
 
-func (t *Trafficctl) ReplaceClass(args *CArgs, stdout io.Writer) error {
-	return nil
+func (t *Trafficctl) ReplaceClass(stdout io.Writer, args *Args) error {
+	return ErrNotImplemented
 }
 
 const (
@@ -188,7 +182,3 @@ tc class [ add | del | change | replace | show ] dev STRING
 	QDISC_KIND := { prio | etc. }"
 	OPTIONS := ... try tc class add <desired QDISC_KIND> help`
 )
-
-func PrintClassHelp(stdout io.Writer) {
-	fmt.Fprintf(stdout, "%s", ClassHelp)
-}
