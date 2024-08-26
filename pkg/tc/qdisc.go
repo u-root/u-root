@@ -325,7 +325,7 @@ func supportetQdiscClassfull(qd string) func(io.Writer, []string) (*tc.Object, e
 		// Classful qdiscs
 		"cbs":      nil, // (not supported for adding byt go-tc library)
 		"htb":      ParseHTBQDiscArgs,
-		"hfsc":     ParseHFSCArgs,
+		"hfsc":     ParseHFSCQDiscArgs,
 		"hfscqopt": nil, // (not supported for adding byt go-tc library)
 		"dsmark":   nil, // (not supported for adding byt go-tc library)
 		"drr":      nil, // (not supported for adding byt go-tc library)

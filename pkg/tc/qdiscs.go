@@ -172,3 +172,7 @@ func ParseHTBQDiscArgs(out io.Writer, args []string) (*tc.Object, error) {
 	ret.Kind = "htb"
 	return ret, nil
 }
+
+func ParseHFSCQDiscArgs(args []string, stdout io.Writer) (*tc.Object, error) {
+	return nil, nil
+}

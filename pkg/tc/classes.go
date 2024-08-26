@@ -20,7 +20,61 @@ const (
 
 func ParseHFSCClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 	ret := &tc.Object{}
+	var fscOK, rscOK, uscOK bool
+	hfsc := &tc.Hfsc{}
+
+	if len(args) < 2 {
+		return nil, ErrNotEnoughArgs
+	}
+
+	for i := 0; i < len(args); i = i + 2 {
+		switch args[i] {
+		case "rt":
+			sc, err := HFSCGetSC(args[i+1:])
+			if err != nil {
+				return nil, err
+			}
+			hfsc.Rsc = sc
+			rscOK = true
+		case "ls":
+			sc, err := HFSCGetSC(args[i+1:])
+			if err != nil {
+				return nil, err
+			}
+			hfsc.Fsc = sc
+			fscOK = true
+		case "sc":
+			sc, err := HFSCGetSC(args[i+1:])
+			if err != nil {
+				return nil, err
+			}
+			hfsc.Fsc = sc
+			hfsc.Rsc = sc
+			rscOK = true
+			fscOK = true
+		case "ul":
+			sc, err := HFSCGetSC(args[i+1:])
+			if err != nil {
+				return nil, err
+			}
+			hfsc.Usc = sc
+			uscOK = true
+		case "help":
+		default:
+			// WHAT IS THIS??????
+		}
+	}
+
+	if !(rscOK || fscOK || uscOK) {
+		return nil, ErrInvalidArg
+	}
+
+	if uscOK && !fscOK {
+		return nil, ErrInvalidArg
+	}
+
 	ret.Kind = "hfsc"
+	ret.Hfsc = hfsc
 	return ret, nil
 }
 
@@ -115,7 +169,7 @@ func supportetClasses(cl string) func(io.Writer, []string) (*tc.Object, error) {
 		// Classful qdiscs
 		"cbs":      nil, // (not supported for adding byt go-tc library)
 		"htb":      ParseHTBClassArgs,
-		"hfsc":     nil,
+		"hfsc":     ParseHFSCClassArgs,
 		"hfscqopt": nil, // (not supported for adding byt go-tc library)
 		"dsmark":   nil, // (not supported for adding byt go-tc library)
 		"drr":      nil, // (not supported for adding byt go-tc library)
