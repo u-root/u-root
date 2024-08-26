@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -19,23 +20,35 @@ import (
 
 var errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
 
-func run(stdout io.Writer, files ...string) error {
+type cmd struct {
+	stdout      io.Writer
+	reportFiles bool
+}
+
+func command(stdout io.Writer, reportFiles bool) *cmd {
+	return &cmd{
+		stdout:      stdout,
+		reportFiles: reportFiles,
+	}
+}
+
+func (c *cmd) run(files ...string) error {
 	if len(files) == 0 {
 		files = append(files, ".")
 	}
 
 	for _, file := range files {
-		blocks, err := du(file)
+		blocks, err := c.du(file)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "%d\t%s\n", blocks, file)
+		fmt.Fprintf(c.stdout, "%d\t%s\n", blocks, file)
 	}
 
 	return nil
 }
 
-func du(file string) (int64, error) {
+func (c *cmd) du(file string) (int64, error) {
 	var blocks int64
 
 	filepath.Walk(file, func(path string, info fs.FileInfo, err error) error {
@@ -43,9 +56,26 @@ func du(file string) (int64, error) {
 			return err
 		}
 
+		// report sub-folders and add number of blocks to overall count
+		if info.IsDir() && file != path {
+			dirBlocks, err := c.du(path)
+			if err != nil {
+				return err
+			}
+
+			blocks += dirBlocks
+
+			fmt.Fprintf(c.stdout, "%d\t%s\n", dirBlocks, path)
+			return fs.SkipDir
+		}
+
 		st, ok := info.Sys().(*syscall.Stat_t)
 		if !ok {
 			return fmt.Errorf("%v: %w", path, errNoStatInfo)
+		}
+
+		if c.reportFiles && !info.IsDir() {
+			fmt.Fprintf(c.stdout, "%d\t%s\n", st.Blocks, path)
 		}
 
 		blocks += st.Blocks
@@ -56,7 +86,9 @@ func du(file string) (int64, error) {
 }
 
 func main() {
-	if err := run(os.Stdout, os.Args[1:]...); err != nil {
+	var reportFiles = flag.Bool("a", false, "report the size of each file not of type directory")
+	flag.Parse()
+	if err := command(os.Stdout, *reportFiles).run(flag.Args()...); err != nil {
 		log.Fatalf("du: %v", err)
 	}
 }

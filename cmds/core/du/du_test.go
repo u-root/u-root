@@ -5,8 +5,11 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -19,7 +22,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 8096))
 
-		blocks, err := du(f.Name())
+		blocks, err := command(io.Discard, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -35,7 +38,7 @@ func TestDU(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		blocks, err := du(f.Name())
+		blocks, err := command(io.Discard, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -52,7 +55,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 1))
 
-		blocks, err := du(f.Name())
+		blocks, err := command(io.Discard, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -72,7 +75,7 @@ func TestRun(t *testing.T) {
 		}
 
 		stdout := &bytes.Buffer{}
-		err = run(stdout)
+		err = command(stdout, false).run()
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -80,6 +83,44 @@ func TestRun(t *testing.T) {
 		r := regexp.MustCompile(`^\d\t\.\n$`)
 		if !r.MatchString(stdout.String()) {
 			t.Error("expected number tab dot new-line")
+		}
+	})
+	t.Run("report all files", func(t *testing.T) {
+		dir := t.TempDir()
+		err := os.Chdir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		f1, err := os.Create(filepath.Join(dir, "file1"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f1.Write(make([]byte, 4096))
+		dir1 := filepath.Join(dir, "dir1")
+		err = os.Mkdir(dir1, 0722)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f2, err := os.Create(filepath.Join(dir1, "file2"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f2.Write(make([]byte, 8012))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		stdout := &bytes.Buffer{}
+		err = command(stdout, true).run(dir)
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+		lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+
+		// should print dir, subdir and two files
+		if len(lines) != 4 {
+			t.Errorf("expected file1, file2 and temp dir, but got %d lines", len(lines))
 		}
 	})
 }
