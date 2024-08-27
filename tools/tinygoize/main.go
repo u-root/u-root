@@ -26,8 +26,10 @@ import (
 	"strings"
 )
 
-const goBuild = "//go:build "
-const constraint = "!tinygo || tinygo.enable"
+const (
+	goBuild    = "//go:build "
+	constraint = "!tinygo || tinygo.enable"
+)
 
 // Additional tags required for specific commands. Assume command names unique
 // despite being in different directories.
@@ -131,9 +133,6 @@ func buildDirs(tinygo *string, dirs []string) (status BuildStatus, err error) {
 // Modifies, adds, or removes //go:build line as appropriate to include / remove
 // '!tinygo || tinygo.enable' for all .go files in dir depending on whether it
 // 'builds' or not as previously tested.
-//
-// XXX (bug): if existing //go:build line not needed, replaces with '//' instead
-// of removing the line.
 func fixupConstraints(dir string, builds bool) (err error) {
 	p := printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 8}
 
@@ -183,7 +182,13 @@ nextFile:
 					// handle potentially now-empty build constraint
 					re = regexp.MustCompile(`^\s*//go:build\s*$`)
 					if re.MatchString(c.Text) {
-						c.Text = "//"
+						filtered := []*ast.Comment{}
+						for _, comment := range cg.List {
+							if !re.MatchString(comment.Text) {
+								filtered = append(filtered, comment)
+							}
+						}
+						cg.List = filtered
 					}
 				} else {
 					c.Text = goBuild + "(" + constraint + ") && (" + c.Text[len(goBuild):] + ")"
@@ -273,7 +278,6 @@ The necessary additions to tinygo will be tracked in
 			}
 			fmt.Fprintf(file, "%v\n", msg)
 		}
-
 	}
 
 	processSet("EXCLUDED", status.excluded)
