@@ -38,7 +38,7 @@ The test architecture, kernel and QEMU binary are set using environment
 variables, `VMTEST_ARCH`, `VMTEST_KERNEL`, and `VMTEST_QEMU`.
 
 The initramfs can come from the following sources:
-* Default: u-root initramfs built with `elvish` and `init`. Go test
+* Default: u-root initramfs built with `gosh` and `init`. Go test
   configuration can request more commands and files to be added.
 * User overridden: when the `VMTEST_INITRAMFS_OVERRIDE` environment variable is
   used to override the initramfs. The user is responsible for ensuring the

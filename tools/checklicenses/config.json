@@ -17,7 +17,6 @@
     ],
     "reject": [
         "vendor/.*",
-        "cmds/core/elvish/.*",
         "cmds/core/ping/.*",
         "cmds/exp/ectool/.*",
         "cmds/core/man/data/data.go"

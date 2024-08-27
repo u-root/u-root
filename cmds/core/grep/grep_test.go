@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -151,7 +152,13 @@ func TestStdinGrep(t *testing.T) {
 		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
 			var stdout bytes.Buffer
 			rc := io.NopCloser(strings.NewReader(test.input))
-			cmd := command(rc, &stdout, nil, test.p, test.args)
+			cmd := cmd{
+				stdin:  rc,
+				stdout: bufio.NewWriter(&stdout),
+				stderr: nil,
+				params: test.p,
+				args:   test.args,
+			}
 			err := cmd.run()
 			if err != test.err {
 				t.Errorf("got err %v, want %v", err, test.err)
@@ -262,7 +269,13 @@ func TestFilesGrep(t *testing.T) {
 		test := te
 		t.Run(fmt.Sprintf("case_%d", idx), func(t *testing.T) {
 			var stdout bytes.Buffer
-			cmd := command(nil, &stdout, &stdout, test.p, test.args)
+			cmd := cmd{
+				stdin:  nil,
+				stdout: bufio.NewWriter(&stdout),
+				stderr: &stdout,
+				params: test.p,
+				args:   test.args,
+			}
 			err := cmd.run()
 			if test.err == nil && err != nil {
 				t.Errorf("got %v, want nil", err)
@@ -281,33 +294,16 @@ func TestFilesGrep(t *testing.T) {
 }
 
 func TestDefaultParams(t *testing.T) {
-	p := parseParams()
+	var stdout bytes.Buffer
+	rc := io.NopCloser(strings.NewReader("hix\n"))
 
-	if p.expr != "" {
-		t.Errorf("got %v, want %v", p.expr, "")
+	err := run(rc, &stdout, &stdout, []string{"grep", "."})
+	if err != nil {
+		t.Errorf("got err %v, want %v", err, nil)
 	}
-	if p.headers != false {
-		t.Errorf("got %v, want %v", p.headers, false)
-	}
-	if p.invert != false {
-		t.Errorf("got %v, want %v", p.invert, false)
-	}
-	if p.recursive != false {
-		t.Errorf("got %v, want %v", p.recursive, false)
-	}
-	if p.noShowMatch != false {
-		t.Errorf("got %v, want %v", p.noShowMatch, false)
-	}
-	if p.count != false {
-		t.Errorf("got %v, want %v", p.count, false)
-	}
-	if p.caseInsensitive != false {
-		t.Errorf("got %v, want %v", p.caseInsensitive, false)
-	}
-	if p.fixed != false {
-		t.Errorf("got %v, want %v", p.fixed, false)
-	}
-	if p.quiet != false {
-		t.Errorf("got %v, want %v", p.quiet, false)
+
+	res := stdout.String()
+	if res != "hix\n" {
+		t.Errorf("got out %q, want %q", res, "hix\n")
 	}
 }

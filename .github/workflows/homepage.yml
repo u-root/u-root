@@ -21,3 +21,4 @@ jobs:
         with:
           publish_dir: ./docs/dist
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          cname: u-root.org

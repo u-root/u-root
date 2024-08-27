@@ -110,7 +110,7 @@ func (p *Process) readStat(s string) error {
 	p.Time = p.getTime()
 	p.Ctty = p.getCtty()
 	p.Cmd = strings.TrimSuffix(strings.TrimPrefix(p.Cmd, "("), ")")
-	if *x && p.cmdline != "" {
+	if x && p.cmdline != "" {
 		p.Cmd = p.cmdline
 	}
 
@@ -246,7 +246,7 @@ func (pT *ProcessTable) doTable(statFileNames []string) error {
 		if err != nil {
 			continue
 		}
-		if *x {
+		if x {
 			p.cmdline, err = file(filepath.Join(d, "cmdline"))
 			if err != nil {
 				continue

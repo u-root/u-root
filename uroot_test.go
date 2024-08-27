@@ -176,11 +176,7 @@ func TestUrootCmdline(t *testing.T) {
 			name: "dead_code_elimination",
 			args: []string{
 				// Build the world + test symbols, unstripped.
-				// Change default shell to gosh for this test as elvish uses the reflect package
-				"-defaultsh=/bbin/gosh", "-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
-				// These are known to disable DCE and need to be exluded.
-				// elvish uses reflect.Value.Call and is expected to not use DCE.
-				"-github.com/u-root/u-root/cmds/core/elvish",
+				"-no-strip", "world", "github.com/u-root/u-root/pkg/uroot/test/foo",
 			},
 			err: nil,
 			validators: []itest.ArchiveValidator{

@@ -28,12 +28,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/tarutil"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 type cmd struct {
@@ -130,17 +131,37 @@ func (c *cmd) run() error {
 }
 
 func main() {
-	create := flag.BoolP("create", "c", false, "create a new tar archive from the given directory")
-	extract := flag.BoolP("extract", "x", false, "extract a tar archive from the given directory")
-	file := flag.StringP("file", "f", "", "tar file")
-	list := flag.BoolP("list", "t", false, "list the contents of an archive")
-	noRecursion := flag.Bool("no-recursion", false, "do not automatically recurse into directories")
-	verbose := flag.BoolP("verbose", "v", false, "print each filename")
+	var (
+		create      bool
+		extract     bool
+		file        string
+		list        bool
+		noRecursion bool
+		verbose     bool
+	)
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	flag.Parse()
-	cmd, err := command(params{file: *file, create: *create, extract: *extract, list: *list, noRecursion: *noRecursion, verbose: *verbose}, flag.Args())
+	f.BoolVar(&create, "create", false, "create a new tar archive from the given directory")
+	f.BoolVar(&create, "c", false, "create a new tar archive from the given directory (shorthand)")
+
+	f.BoolVar(&extract, "extract", false, "extract a tar archive from the given directory")
+	f.BoolVar(&extract, "x", false, "extract a tar archive from the given directory (shorthand)")
+
+	f.StringVar(&file, "file", "", "tar file")
+	f.StringVar(&file, "f", "", "tar file (shorthand)")
+
+	f.BoolVar(&list, "list", false, "list the contents of an archive")
+	f.BoolVar(&list, "t", false, "list the contents of an archive (shorthand)")
+
+	f.BoolVar(&noRecursion, "no-recursion", false, "do not automatically recurse into directories")
+
+	f.BoolVar(&verbose, "verbose", false, "print each filename")
+	f.BoolVar(&verbose, "v", false, "print each filename (shorthand)")
+
+	f.Parse(unixflag.OSArgsToGoArgs())
+	cmd, err := command(params{file: file, create: create, extract: extract, list: list, noRecursion: noRecursion, verbose: verbose}, flag.Args())
 	if err != nil {
-		flag.Usage()
+		f.Usage()
 		log.Fatal(err)
 	}
 	if err := cmd.run(); err != nil {

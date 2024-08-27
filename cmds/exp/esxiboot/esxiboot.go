@@ -30,42 +30,37 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/esxi"
 	"github.com/u-root/u-root/pkg/mount"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-var (
-	cfg           = flag.StringP("config", "c", "", "ESXi config file")
-	cdrom         = flag.StringP("cdrom", "r", "", "ESXi CDROM boot device")
-	diskDev       = flag.StringP("device", "d", "", "ESXi disk boot device")
-	appendCmdline = flag.StringArray("append", nil, "Arguments to append to kernel cmdline")
-	dryRun        = flag.Bool("dry-run", false, "dry run (just mount + load the kernel, don't kexec)")
-)
+type cmd struct {
+	cfg           string
+	cdrom         string
+	diskDev       string
+	appendCmdline []string
+	dryRun        bool
+}
 
-func main() {
-	flag.Parse()
-	if *diskDev == "" && *cfg == "" && *cdrom == "" {
-		log.Printf("Either --config, --device, or --cdrom must be specified")
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	if len(*diskDev) > 0 {
-		imgs, mps, err := esxi.LoadDisk(*diskDev)
+func (c *cmd) run() error {
+	if len(c.diskDev) > 0 {
+		imgs, mps, err := esxi.LoadDisk(c.diskDev)
 		if err != nil {
-			log.Fatalf("Failed to load ESXi configuration: %v", err)
+			return fmt.Errorf("failed to load ESXi configuration: %w", err)
 		}
 
 		loaded := false
 		for _, img := range imgs {
-			if len(*appendCmdline) > 0 {
-				img.Cmdline = img.Cmdline + " " + strings.Join(*appendCmdline, " ")
+			if len(c.appendCmdline) > 0 {
+				img.Cmdline = img.Cmdline + " " + strings.Join(c.appendCmdline, " ")
 			}
 			if err := img.Load(); err != nil {
 				log.Printf("Failed to load ESXi image (%v) into memory: %v", img, err)
@@ -82,25 +77,25 @@ func main() {
 			}
 		}
 		if !loaded {
-			log.Fatalf("Failed to load all ESXi images found.")
+			return fmt.Errorf("failed to load all ESXi images found")
 		}
 	} else {
 		var err error
 		var img *boot.MultibootImage
 		var mp *mount.MountPoint
-		if len(*cfg) > 0 {
-			img, err = esxi.LoadConfig(*cfg)
-		} else if len(*cdrom) > 0 {
-			img, mp, err = esxi.LoadCDROM(*cdrom)
+		if len(c.cfg) > 0 {
+			img, err = esxi.LoadConfig(c.cfg)
+		} else if len(c.cdrom) > 0 {
+			img, mp, err = esxi.LoadCDROM(c.cdrom)
 		}
 		if err != nil {
-			log.Fatalf("Failed to load ESXi configuration: %v", err)
+			return fmt.Errorf("failed to load ESXi configuration: %w", err)
 		}
-		if len(*appendCmdline) > 0 {
-			img.Cmdline = img.Cmdline + " " + strings.Join(*appendCmdline, " ")
+		if len(c.appendCmdline) > 0 {
+			img.Cmdline = img.Cmdline + " " + strings.Join(c.appendCmdline, " ")
 		}
 		if err := img.Load(); err != nil {
-			log.Fatalf("Failed to load ESXi image (%v) into memory: %v", img, err)
+			return fmt.Errorf("failed to load ESXi image (%v) into memory: %w", img, err)
 		}
 		log.Printf("Loaded image: %v", img)
 		if mp != nil {
@@ -110,11 +105,45 @@ func main() {
 		}
 	}
 
-	if *dryRun {
+	if c.dryRun {
 		log.Printf("Dry run: not booting kernel.")
 		os.Exit(0)
 	}
 	if err := boot.Execute(); err != nil {
-		log.Fatalf("Failed to boot image: %v", err)
+		return fmt.Errorf("failed to boot image: %w", err)
+	}
+	return nil
+}
+
+func command(args []string) *cmd {
+	c := &cmd{}
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	f.StringVar(&c.cfg, "config", "", "ESXi config file")
+	f.StringVar(&c.cfg, "c", "", "ESXi config file (shorthand)")
+
+	f.StringVar(&c.cdrom, "cdrom", "", "ESXi CDROM boot device")
+	f.StringVar(&c.cdrom, "r", "", "ESXi CDROM boot device (shorthand)")
+
+	f.StringVar(&c.diskDev, "device", "", "ESXi disk boot device")
+	f.StringVar(&c.diskDev, "d", "", "ESXi disk boot device (shorthand)")
+
+	f.Var((*unixflag.StringArray)(&c.appendCmdline), "append", "Arguments to append to kernel cmdline")
+
+	f.BoolVar(&c.dryRun, "dry-run", false, "dry run (just mount + load the kernel, don't kexec)")
+
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	if c.diskDev == "" && c.cfg == "" && c.cdrom == "" {
+		log.Printf("Either --config, --device, or --cdrom must be specified")
+		f.PrintDefaults()
+		os.Exit(1)
+	}
+
+	return c
+}
+
+func main() {
+	if err := command(os.Args).run(); err != nil {
+		log.Fatal(err)
 	}
 }

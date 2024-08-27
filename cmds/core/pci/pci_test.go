@@ -6,89 +6,81 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/pci"
 )
 
-func TestPCIExecution(t *testing.T) {
+func TestRun(t *testing.T) {
 	// Cover the switch case
+	log.SetOutput(io.Discard)
 	for _, tt := range []struct {
-		name    string
-		hexdump int
+		name string
+		args []string
 	}{
 		{
-			name:    "switch hexdump case 1",
-			hexdump: 1,
+			name: "switch hexdump case 1",
+			args: []string{"-x", "1"},
 		},
 		{
-			name:    "switch hexdump case 2",
-			hexdump: 2,
+			name: "switch hexdump case 2",
+			args: []string{"-x", "2"},
 		},
 		{
-			name:    "switch hexdump case 3",
-			hexdump: 3,
+			name: "switch hexdump case 3",
+			args: []string{"-x", "3"},
 		},
 		{
-			name:    "switch hexdump case 4",
-			hexdump: 4,
+			name: "switch hexdump case 4",
+			args: []string{"-x", "4"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			*hexdump = tt.hexdump
-			pciExecution(io.Discard, []string{}...)
+			c := command(io.Discard, tt.args...)
+			c.run()
 		})
 	}
 	// Cover the rest
 	for _, tt := range []struct {
-		name      string
-		args      []string
-		numbers   bool
-		devs      string
-		dumpJSON  bool
-		verbosity int
-		readJSON  string
-		wantErr   string
+		name string
+		args []string
+		err  error
 	}{
 		{
-			name:     "readJSON true, without error",
-			readJSON: "testdata/testfile1.json",
+			name: "readJSON true, without error",
+			args: []string{"-J", "testdata/testfile1.json"},
 		},
 		{
-			name:     "readJSON true, error in os.ReadFile",
-			readJSON: "testdata/testfile.json",
-			wantErr:  "no such file or directory",
+			name: "readJSON true, error in os.ReadFile",
+			args: []string{"-J", "testdata/testfilex.json"},
+			err:  os.ErrNotExist,
 		},
 		{
-			name:     "readJSON true, error in json.Unmarshal",
-			readJSON: "testdata/testfile2.json",
-			wantErr:  "unexpected end of JSON input",
+			name: "readJSON true, error in json.Unmarshal",
+			args: []string{"-J", "testdata/testfile2.json"},
+			err:  errBadJSON,
 		},
 		{
-			name:     "dumpJSON",
-			readJSON: "testdata/testfile1.json",
-			dumpJSON: true,
+			name: "dumpJSON",
+			args: []string{"-J", "testdata/testfile1.json", "-j"},
 		},
 		{
 			name: "invoke registers",
 			args: []string{"examplearg"},
+			err:  strconv.ErrSyntax,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			*numbers = tt.numbers
-			*devs = tt.devs
-			*dumpJSON = tt.dumpJSON
-			*verbosity = tt.verbosity
-			*readJSON = tt.readJSON
-			if got := pciExecution(io.Discard, tt.args...); got != nil {
-				if !strings.Contains(got.Error(), tt.wantErr) {
-					t.Errorf("pciExecution() = %q, should contain: %q", got, tt.wantErr)
-				}
+			c := command(io.Discard, tt.args...)
+			if err := c.run(); !errors.Is(err, tt.err) {
+				t.Errorf("run() got %v, want %v", err, tt.err)
 			}
 		})
 	}
@@ -109,7 +101,7 @@ func TestRegisters(t *testing.T) {
 		name    string
 		devices pci.Devices
 		cmds    []string
-		wantErr string
+		err     error
 	}{
 		{
 			name: "trigger first log.Printf",
@@ -118,8 +110,8 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"cmd=cmd=cmd"},
-			wantErr: "only one = allowed",
+			cmds: []string{"cmd=cmd=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name: "trigger second log.Printf",
@@ -128,8 +120,8 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"c.m.d=cmd"},
-			wantErr: "only one . allowed",
+			cmds: []string{"c.m.d=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name: "error in first strconv.ParseUint satisfying l case",
@@ -138,8 +130,8 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"cmd.l=cmd"},
-			wantErr: "parsing \"cmd\": invalid syntax",
+			cmds: []string{"cmd.l=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name: "error in first strconv.ParseUint satisfying w case",
@@ -148,8 +140,8 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"cmd.w=cmd"},
-			wantErr: "parsing \"cmd\": invalid syntax",
+			cmds: []string{"cmd.w=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name: "error in first strconv.ParseUint satisfying b case",
@@ -158,8 +150,8 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"cmd.b=cmd"},
-			wantErr: "parsing \"cmd\": invalid syntax",
+			cmds: []string{"cmd.b=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name: "triggers Bad size log and satisfies the justCheck check",
@@ -168,18 +160,18 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"cmd.cmd=cmd", "cmd.b=cmd"},
-			wantErr: "Bad size",
+			cmds: []string{"cmd.cmd=cmd", "cmd.b=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
-			name: "triggers error, reading out of bounce, EOF",
+			name: "triggers error, reading out of bounds, EOF",
 			devices: []*pci.PCI{
 				{
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"10.b"},
-			wantErr: "EOF",
+			cmds: []string{"10.b"},
+			err:  io.EOF,
 		},
 		{
 			name: "reading works and write in PCI.ExtraInfo",
@@ -197,8 +189,8 @@ func TestRegisters(t *testing.T) {
 					FullPath: dir,
 				},
 			},
-			cmds:    []string{"0.w=cmd"},
-			wantErr: "parsing \"cmd\": invalid syntax",
+			cmds: []string{"0.w=cmd"},
+			err:  strconv.ErrSyntax,
 		},
 		{
 			name: "writing successful",
@@ -216,17 +208,68 @@ func TestRegisters(t *testing.T) {
 					Config: []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77},
 				},
 			},
-			cmds:    []string{"0.w=10"},
-			wantErr: "open config: no such file or directory",
+			cmds: []string{"0.w=10"},
+			err:  os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := &bytes.Buffer{}
 			log.SetOutput(buf)
-			registers(tt.devices, tt.cmds...)
-			if !strings.Contains(buf.String(), tt.wantErr) {
-				t.Errorf("registers() = %q, should contain: %q", buf.String(), tt.wantErr)
+			if err := registers(tt.devices, tt.cmds...); !errors.Is(err, tt.err) {
+				t.Errorf("registers(): got %v, want %v", err, tt.err)
 			}
 		})
+	}
+}
+
+// This test is here because of very strange encoding/json behavior.
+// Right now it works.
+// It stopped working with the JSON file that has been in use for 8 years.
+// How to see it yourself.
+// It seems the json package makes an effort to parse "Primary": "00" to a Uint8, but some usages
+// of the package cause a failure? it's very mysterious.
+//
+// go test, see it pass.
+// go test -test.run TestJSON
+// PASS
+// ok  	github.com/u-root/u-root/cmds/core/pci	0.002s
+// in the JSON file, change the JSON for Primary:
+// +               "Primary": "00",
+// -               "Primary": 55,
+// Watch it fail, even though it has worked for years.
+// --- FAIL: TestJSONWeirdness (0.00s)
+//
+//	pci_test.go:240: json: cannot unmarshal string into Go struct field PCI.Primary of type uint8
+//	pci_test.go:243: json: cannot unmarshal string into Go struct field PCI.Primary of type uint8
+//	pci_test.go:247: run() got json: cannot unmarshal string into Go struct field PCI.Primary of type uint8:JSON parsing failed, want nil
+//
+// Change the true to false on the if. So the code is removed at link time.
+// rminnich@pop-os:~/go/src/github.com/u-root/u-root/cmds/core/pci$ go test -test.run TestJSONWeirdness
+// PASS
+// ok  	github.com/u-root/u-root/cmds/core/pci	0.002s
+// NOTE, the JSON did not change between the bad and good run; only the way in which you called
+// Unmarshal.
+// So, just enabling those lines cause the PREVIOUS Unmarshal's to fail! Precrime!
+// tinygo and go see the same issue.
+// It's very hard to get this to repro, much less make a standalone repro, but hopefully this
+// test will help protect us in future.
+// And, the weirdest part:
+func TestJSONWeirdness(t *testing.T) {
+	var d pci.Devices
+	b, err := os.ReadFile("testdata/testfile1.json")
+	if err != nil {
+		t.Log(err)
+	}
+	if err := json.Unmarshal(b, &d); err != nil {
+		t.Log(err)
+	}
+	if err := json.Unmarshal(b, &d); err != nil {
+		t.Log(err)
+	}
+	if true {
+		c := command(io.Discard, "-J", "testdata/testfile1.json")
+		if err := c.run(); err != nil {
+			t.Errorf("run() got %v, want nil", err)
+		}
 	}
 }

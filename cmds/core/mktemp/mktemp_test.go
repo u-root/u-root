@@ -6,57 +6,53 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	flag "github.com/spf13/pflag"
 )
 
 type test struct {
-	flags flags
-	args  []string
-	out   string
-	err   error
+	cmdline []string
+	out     string
+	err     error
 }
 
 func TestMkTemp(t *testing.T) {
 	tmpDir := os.TempDir()
 	tests := []test{
 		{
-			flags: flags{},
-			out:   tmpDir,
-			err:   nil,
+			cmdline: []string{"mktemp"},
+			out:     tmpDir,
+			err:     nil,
 		},
 		{
-			flags: flags{d: true},
-			out:   tmpDir,
-			err:   nil,
+			cmdline: []string{"mktemp", "-d"},
+			out:     tmpDir,
+			err:     nil,
 		},
 		{
-			flags: flags{},
-			args:  []string{"foofoo.XXXX"},
-			out:   filepath.Join(tmpDir, "foofoo"),
-			err:   nil,
+			cmdline: []string{"mktemp", "foofoo.XXXX"},
+			out:     filepath.Join(tmpDir, "foofoo"),
+			err:     nil,
 		},
 		{
-			flags: flags{suffix: "baz"},
-			args:  []string{"foo.XXXX"},
-			out:   filepath.Join(tmpDir, "foo.baz"),
-			err:   nil,
+			cmdline: []string{"mktemp", "--suffix", "baz", "foo.XXXX"},
+			out:     filepath.Join(tmpDir, "foo.baz"),
+			err:     nil,
 		},
 		{
-			flags: flags{u: true, q: true},
-			out:   "",
-			err:   nil,
+			cmdline: []string{"mktemp", "-u"},
+			out:     "",
+			err:     nil,
 		},
 	}
 
 	// Table-driven testing
 	for _, tt := range tests {
 		var stdout bytes.Buffer
-		cmd := command(&stdout, tt.flags, tt.args)
+		cmd := command(&stdout, tt.cmdline)
 		err := cmd.run()
 		if err != tt.err {
 			t.Errorf("expected %v, got %v", tt.err, err)

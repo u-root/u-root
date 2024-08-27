@@ -6,6 +6,7 @@ package main
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -15,27 +16,27 @@ import (
 func TestRun(t *testing.T) {
 	for _, tt := range []struct {
 		name string
-		Flags
+		cmd
 		expErr error
 	}{
 		{
 			name:   "SucessSocketsDefault",
-			Flags:  Flags{},
+			cmd:    cmd{},
 			expErr: nil,
 		},
 		{
 			name:   "SucessSocketsIPv4",
-			Flags:  Flags{ipv4: true},
+			cmd:    cmd{ipv4: true},
 			expErr: nil,
 		},
 		{
 			name:   "SucessSocketsIPv6",
-			Flags:  Flags{ipv6: true},
+			cmd:    cmd{ipv6: true},
 			expErr: nil,
 		},
 		{
 			name: "SucessRoute",
-			Flags: Flags{
+			cmd: cmd{
 				route: true,
 				ipv4:  true,
 				ipv6:  true,
@@ -44,7 +45,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name: "FailRouteCacheIPv4",
-			Flags: Flags{
+			cmd: cmd{
 				route:      true,
 				routecache: true,
 				ipv4:       true,
@@ -53,17 +54,17 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "SuccessInterfaces",
-			Flags:  Flags{interfaces: true},
+			cmd:    cmd{interfaces: true},
 			expErr: nil,
 		},
 		{
 			name:   "SuccessIface_eth0",
-			Flags:  Flags{iface: "eth0"},
+			cmd:    cmd{iface: "eth0"},
 			expErr: nil,
 		},
 		{
 			name: "SuccessStats",
-			Flags: Flags{
+			cmd: cmd{
 				stats: true,
 				ipv4:  true,
 				ipv6:  true,
@@ -72,18 +73,38 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name: "Success_xorFlagsUsage",
-			Flags: Flags{
+			cmd: cmd{
 				stats: true,
 				route: true,
 				ipv4:  true,
 			},
-			expErr: nil,
+			expErr: errMutualExcludeFlags,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var out strings.Builder
-			if err := run(tt.Flags, &out); !errors.Is(err, tt.expErr) {
-				t.Errorf("evalFlags() failed: %v, want: %v", err, tt.expErr)
+			tt.cmd.out = &out
+			if err := tt.cmd.run(); !errors.Is(err, tt.expErr) {
+				t.Errorf("cmd.run() failed: %v, want: %v", err, tt.expErr)
+			}
+		})
+	}
+}
+
+func TestDefaultFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		cmdline []string
+		want    cmd
+	}{
+		{"No command", []string{"netstat"}, cmd{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := command(nil, test.cmdline)
+			if reflect.DeepEqual(cmd, test.want) {
+				t.Errorf("\ngot: %+v\nwant: %+v", cmd, test.want)
 			}
 		})
 	}

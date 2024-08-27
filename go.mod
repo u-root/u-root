@@ -16,16 +16,19 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
 	github.com/google/uuid v1.3.0
+	github.com/gopacket/gopacket v1.2.0
 	github.com/hugelgupf/vmtest v0.0.0-20240228002643-de15f4612e10
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
 	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
+	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.17.4
 	github.com/klauspost/pgzip v1.2.6
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
+	github.com/mdlayher/vsock v1.2.1
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
-	github.com/pborman/getopt/v2 v2.1.0
+	github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
 	github.com/peterh/liner v1.2.2
 	github.com/pierrec/lz4/v4 v4.1.14
 	github.com/rck/unit v0.0.3
@@ -39,18 +42,33 @@ require (
 	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.2.1-beta.2
+	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.21.0
+	golang.org/x/crypto v0.23.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.23.0
-	golang.org/x/sys v0.19.0
-	golang.org/x/term v0.18.0
-	golang.org/x/text v0.14.0
+	golang.org/x/net v0.25.0
+	golang.org/x/sys v0.20.0
+	golang.org/x/term v0.20.0
+	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.18.0
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.4.0
 	mvdan.cc/sh/v3 v3.7.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
-	src.elv.sh v0.16.0-rc1.0.20220116211855-fda62502ad7f
+)
+
+require (
+	github.com/jaypipes/ghw v0.12.0
+	github.com/sirupsen/logrus v1.9.3
+)
+
+require (
+	github.com/StackExchange/wmi v1.2.1 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/jaypipes/pcidb v1.0.0 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	howett.net/plist v1.0.0 // indirect
 )
 
 require (
@@ -80,11 +98,11 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/sahilm/fuzzy v0.1.0 // indirect
+	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/numcpus v0.8.0 // indirect
-	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/arch v0.2.0 // indirect
 	golang.org/x/mod v0.15.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sync v0.6.0
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 )
 

@@ -21,6 +21,9 @@ github.com/ProtonMail/go-crypto/openpgp/internal/ecc
 github.com/ProtonMail/go-crypto/openpgp/internal/encoding
 github.com/ProtonMail/go-crypto/openpgp/packet
 github.com/ProtonMail/go-crypto/openpgp/s2k
+# github.com/StackExchange/wmi v1.2.1
+## explicit; go 1.13
+github.com/StackExchange/wmi
 # github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 ## explicit; go 1.13
 github.com/anmitsu/go-shlex
@@ -93,9 +96,16 @@ github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.1
 ## explicit; go 1.16
 github.com/dustin/go-humanize
+# github.com/ghodss/yaml v1.0.0
+## explicit
+github.com/ghodss/yaml
 # github.com/gliderlabs/ssh v0.1.2-0.20181113160402-cbabf5414432
 ## explicit
 github.com/gliderlabs/ssh
+# github.com/go-ole/go-ole v1.2.6
+## explicit; go 1.12
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/gojuno/minimock/v3 v3.0.8
 ## explicit; go 1.13
 github.com/gojuno/minimock/v3
@@ -119,6 +129,10 @@ github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
+# github.com/gopacket/gopacket v1.2.0
+## explicit; go 1.20
+github.com/gopacket/gopacket
+github.com/gopacket/gopacket/layers
 # github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
 ## explicit; go 1.14
 github.com/hugelgupf/go-shlex
@@ -157,6 +171,35 @@ github.com/insomniacslk/dhcp/rfc1035label
 # github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 ## explicit
 github.com/intel-go/cpuid
+# github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
+## explicit; go 1.12
+github.com/ishidawataru/sctp
+# github.com/jaypipes/ghw v0.12.0
+## explicit; go 1.18
+github.com/jaypipes/ghw
+github.com/jaypipes/ghw/pkg/baseboard
+github.com/jaypipes/ghw/pkg/bios
+github.com/jaypipes/ghw/pkg/block
+github.com/jaypipes/ghw/pkg/chassis
+github.com/jaypipes/ghw/pkg/context
+github.com/jaypipes/ghw/pkg/cpu
+github.com/jaypipes/ghw/pkg/gpu
+github.com/jaypipes/ghw/pkg/linuxdmi
+github.com/jaypipes/ghw/pkg/linuxpath
+github.com/jaypipes/ghw/pkg/marshal
+github.com/jaypipes/ghw/pkg/memory
+github.com/jaypipes/ghw/pkg/net
+github.com/jaypipes/ghw/pkg/option
+github.com/jaypipes/ghw/pkg/pci
+github.com/jaypipes/ghw/pkg/pci/address
+github.com/jaypipes/ghw/pkg/product
+github.com/jaypipes/ghw/pkg/snapshot
+github.com/jaypipes/ghw/pkg/topology
+github.com/jaypipes/ghw/pkg/unitutil
+github.com/jaypipes/ghw/pkg/util
+# github.com/jaypipes/pcidb v1.0.0
+## explicit; go 1.17
+github.com/jaypipes/pcidb
 # github.com/josharian/native v1.1.0
 ## explicit; go 1.13
 github.com/josharian/native
@@ -213,6 +256,12 @@ github.com/mdlayher/packet
 # github.com/mdlayher/socket v0.5.0
 ## explicit; go 1.21
 github.com/mdlayher/socket
+# github.com/mdlayher/vsock v1.2.1
+## explicit; go 1.20
+github.com/mdlayher/vsock
+# github.com/mitchellh/go-homedir v1.1.0
+## explicit
+github.com/mitchellh/go-homedir
 # github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
 ## explicit; go 1.17
 github.com/muesli/ansi
@@ -235,9 +284,10 @@ github.com/nanmu42/limitio
 # github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 ## explicit; go 1.14
 github.com/orangecms/go-framebuffer/framebuffer
-# github.com/pborman/getopt/v2 v2.1.0
-## explicit; go 1.13
-github.com/pborman/getopt/v2
+# github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
+## explicit; go 1.20
+github.com/packetcap/go-pcap
+github.com/packetcap/go-pcap/filter
 # github.com/peterh/liner v1.2.2
 ## explicit
 github.com/peterh/liner
@@ -248,6 +298,9 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
@@ -266,9 +319,15 @@ github.com/safchain/ethtool
 # github.com/sahilm/fuzzy v0.1.0
 ## explicit
 github.com/sahilm/fuzzy
+# github.com/sirupsen/logrus v1.9.3
+## explicit; go 1.13
+github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
+# github.com/therootcompany/xz v1.0.1
+## explicit; go 1.15
+github.com/therootcompany/xz
 # github.com/tklauser/go-sysconf v0.3.14
 ## explicit; go 1.18
 github.com/tklauser/go-sysconf
@@ -323,7 +382,7 @@ github.com/vtolstov/go-ioctl
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.21.0
+# golang.org/x/crypto v0.23.0
 ## explicit; go 1.18
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -346,27 +405,29 @@ golang.org/x/exp/maps
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.23.0
+# golang.org/x/net v0.25.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/icmp
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
+golang.org/x/net/internal/socks
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
+golang.org/x/net/proxy
 # golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.19.0
+# golang.org/x/sys v0.20.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.18.0
+# golang.org/x/term v0.20.0
 ## explicit; go 1.18
 golang.org/x/term
-# golang.org/x/text v0.14.0
+# golang.org/x/text v0.15.0
 ## explicit; go 1.18
 golang.org/x/text/feature/plural
 golang.org/x/text/internal
@@ -405,12 +466,15 @@ golang.org/x/tools/internal/tokeninternal
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# gopkg.in/yaml.v2 v2.2.8
-## explicit
+# gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0
 ## explicit
 gopkg.in/yaml.v3
+# howett.net/plist v1.0.0
+## explicit; go 1.12
+howett.net/plist
 # mvdan.cc/sh/v3 v3.7.0
 ## explicit; go 1.19
 mvdan.cc/sh/v3/expand
@@ -423,57 +487,3 @@ mvdan.cc/sh/v3/syntax
 ## explicit
 pack.ag/tftp
 pack.ag/tftp/netascii
-# src.elv.sh v0.16.0-rc1.0.20220116211855-fda62502ad7f
-## explicit; go 1.16
-src.elv.sh/pkg/buildinfo
-src.elv.sh/pkg/cli
-src.elv.sh/pkg/cli/histutil
-src.elv.sh/pkg/cli/lscolors
-src.elv.sh/pkg/cli/modes
-src.elv.sh/pkg/cli/prompt
-src.elv.sh/pkg/cli/term
-src.elv.sh/pkg/cli/tk
-src.elv.sh/pkg/daemon/daemondefs
-src.elv.sh/pkg/diag
-src.elv.sh/pkg/edit
-src.elv.sh/pkg/edit/complete
-src.elv.sh/pkg/edit/filter
-src.elv.sh/pkg/edit/highlight
-src.elv.sh/pkg/env
-src.elv.sh/pkg/eval
-src.elv.sh/pkg/eval/errs
-src.elv.sh/pkg/eval/vals
-src.elv.sh/pkg/eval/vars
-src.elv.sh/pkg/fsutil
-src.elv.sh/pkg/getopt
-src.elv.sh/pkg/glob
-src.elv.sh/pkg/logutil
-src.elv.sh/pkg/mods
-src.elv.sh/pkg/mods/daemon
-src.elv.sh/pkg/mods/epm
-src.elv.sh/pkg/mods/file
-src.elv.sh/pkg/mods/flag
-src.elv.sh/pkg/mods/math
-src.elv.sh/pkg/mods/path
-src.elv.sh/pkg/mods/platform
-src.elv.sh/pkg/mods/re
-src.elv.sh/pkg/mods/readlinebinding
-src.elv.sh/pkg/mods/store
-src.elv.sh/pkg/mods/str
-src.elv.sh/pkg/mods/unix
-src.elv.sh/pkg/parse
-src.elv.sh/pkg/parse/cmpd
-src.elv.sh/pkg/parse/parseutil
-src.elv.sh/pkg/persistent/hash
-src.elv.sh/pkg/persistent/hashmap
-src.elv.sh/pkg/persistent/vector
-src.elv.sh/pkg/prog
-src.elv.sh/pkg/shell
-src.elv.sh/pkg/store/storedefs
-src.elv.sh/pkg/strutil
-src.elv.sh/pkg/sys
-src.elv.sh/pkg/sys/eunix
-src.elv.sh/pkg/sys/ewindows
-src.elv.sh/pkg/testutil
-src.elv.sh/pkg/ui
-src.elv.sh/pkg/wcwidth

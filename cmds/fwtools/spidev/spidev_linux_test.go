@@ -31,6 +31,11 @@ func TestRun(t *testing.T) {
 		err                error
 	}{
 		{
+			name: "no args",
+			args: []string{""},
+			err:  ErrCommand,
+		},
+		{
 			name:            "id",
 			args:            []string{"id"},
 			wantOutputRegex: regexp.MustCompile("[0-9a-fA-F]*\n"),
@@ -44,17 +49,22 @@ func TestRun(t *testing.T) {
 		{
 			name: "invalid arguments",
 			args: []string{"--invalid", "raw"},
-			err:  errFlag,
+			err:  ErrCommand,
+		},
+		{
+			name: "bad hex to raw command",
+			args: []string{"raw", "zrg"},
+			err:  ErrConvert,
 		},
 		{
 			name: "invalid subcommand",
 			args: []string{"potato"},
-			err:  errCommand,
+			err:  ErrCommand,
 		},
 		{
 			name: "too many arguments",
-			args: []string{"raw", "potato"},
-			err:  errCommand,
+			args: []string{"id", "potato"},
+			err:  ErrCommand,
 		},
 		{
 			name:         "open error",
@@ -116,12 +126,15 @@ func TestRun(t *testing.T) {
 			}
 
 			output := &bytes.Buffer{}
-			got := run(tt.args, openFakeSpi, bytes.NewBuffer(tt.input), output)
+			err := run(tt.args, openFakeSpi, bytes.NewBuffer(tt.input), output)
 
-			if !errors.Is(got, tt.err) {
-				t.Fatalf("run(): %v != %v", got, tt.err)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("run(): %v != %v", err, tt.err)
 			}
 
+			if err != nil {
+				return
+			}
 			gotOutputString := output.String()
 			if tt.wantOutputRegex != nil {
 				if !tt.wantOutputRegex.MatchString(gotOutputString) {

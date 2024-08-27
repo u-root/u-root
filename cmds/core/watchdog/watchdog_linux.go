@@ -22,37 +22,27 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/watchdog"
 )
 
-var dev = flag.String("dev", "/dev/watchdog", "device")
 var errUsage = errors.New("usage error")
 
-func usage() {
-	flag.Usage()
-	fmt.Print(`watchdog keepalive
-	Pet the watchdog. This resets the time left back to the timeout.
-watchdog set[pre]timeout DURATION
-	Set the watchdog timeout or pretimeout.
-watchdog get[pre]timeout
-	Print the watchdog timeout or pretimeout.
-watchdog gettimeleft
-	Print the amount of time left.
-`)
+type cmd struct {
+	dev string
 }
 
-func runCommand(dev string, args ...string) error {
+func (c cmd) run(args []string) error {
 	if len(args) < 1 {
 		return errUsage
 	}
 
-	wd, err := watchdog.Open(dev)
+	wd, err := watchdog.Open(c.dev)
 	if err != nil {
 		return err
 	}
@@ -125,13 +115,40 @@ func runCommand(dev string, args ...string) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
-	if err := runCommand(*dev, flag.Args()...); err != nil {
+func run(args []string) error {
+	var c cmd
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	f.StringVar(&c.dev, "dev", "/dev/watchdog", "watchdog device")
+
+	f.Usage = func() {
+		fmt.Fprintf(f.Output(), `Usage:
+watchdog [--dev=DEV] keepalive
+	Pet the watchdog. This resets the time left back to the timeout.
+watchdog [--dev=DEV] set[pre]timeout DURATION
+	Set the watchdog timeout or pretimeout.
+watchdog [--dev=DEV] get[pre]timeout
+	Print the watchdog timeout or pretimeout.
+watchdog [--dev=DEV] gettimeleft
+	Print the amount of time left.
+
+Options:
+`)
+		f.PrintDefaults()
+	}
+
+	f.Parse(args[1:])
+	err := c.run(f.Args())
+	if err != nil {
 		if errors.Is(err, errUsage) {
-			usage()
-			os.Exit(1)
+			f.Usage()
 		}
+		return err
+	}
+	return nil
+}
+
+func main() {
+	if err := run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && linux
-// +build !tinygo,linux
 
 // fusermount is a very limited replacement for the C fusermount.  It
 // is invoked by other programs, or interactively only to unmount.
@@ -26,14 +25,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"syscall"
-
-	flag "github.com/spf13/pflag"
 
 	"golang.org/x/sys/unix"
 )
@@ -45,25 +44,18 @@ const (
 )
 
 var (
-	unmount = flag.BoolP("unmount", "u", false, "unmount")
-	lazy    = flag.BoolP("lazy", "z", false, "lazy unmount")
-	verbose = flag.BoolP("verbose", "v", false, "verbose")
-	debug   = func(string, ...interface{}) {}
-	mpt     string
+	debug = func(string, ...interface{}) {}
+	mpt   string
 )
 
-const help = "usage: fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>"
+const usage = "usage: fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>"
 
-func usage() {
-	log.Fatalf(help)
-}
-
-func umount(n string) error {
+func umount(n string, lazy bool) error {
 	// we're not doing all the folderol of standard
 	// fusermount for euid() == 0.
 	// Let's see how that works out.
 	flags := 0
-	if *lazy {
+	if lazy {
 		flags |= unix.MNT_DETACH
 	}
 
@@ -156,17 +148,34 @@ func returnResult(cfd, ffd int, e error) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
+func run(out io.Writer, args []string) error {
+	var unmount, lazy, verbose bool
 
-	if *verbose {
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	f.BoolVar(&unmount, "unmount", false, "unmount")
+	f.BoolVar(&unmount, "u", false, "unmount (shorthand)")
+
+	f.BoolVar(&lazy, "lazy", false, "lazy unmount")
+	f.BoolVar(&lazy, "z", false, "lazy unmount (shorthand)")
+
+	f.BoolVar(&verbose, "verbose", false, "verbose")
+	f.BoolVar(&verbose, "v", false, "verbose (shorthand)")
+
+	f.Usage = func() {
+		fmt.Fprintf(f.Output(), usage+"\n")
+		f.PrintDefaults()
+	}
+
+	f.Parse(args[1:])
+
+	if verbose {
 		debug = log.Printf
 	}
 
-	if len(flag.Args()) != 1 {
-		usage()
+	if len(f.Args()) != 1 {
+		f.Usage()
 	}
-	mpt = flag.Arg(0)
+	mpt = f.Arg(0)
 	debug("mountpoint: %v", mpt)
 
 	// We let "ability to open /dev/fuse" stand in as an indicator or
@@ -180,37 +189,44 @@ func main() {
 
 	// Bad design. All they had to do was make a -z and -u and have
 	// them both mean unmount. Oh well.
-	if *lazy && !*unmount {
+	if lazy && !unmount {
 		log.Fatalf("-z can only be used with -u")
 	}
 
 	// Fuse has to be seen to be believed.
 	// The only interactive use of fusermount is to unmount
-	if *unmount {
-		if err := umount(mpt); err != nil {
-			log.Fatal(err)
+	if unmount {
+		if err := umount(mpt, lazy); err != nil {
+			return err
 		}
-		return
 	}
 
 	if err := MountPointOK(mpt); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if err := preMount(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	cfd, err := getCommFD()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if err := doMount(FuseFD); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if err := returnResult(cfd, FuseFD, err); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(os.Stdout, os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

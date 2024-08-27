@@ -10,14 +10,14 @@
 //
 // Options:
 //
-//	-a[ll]: show hidden files
-//	-h[uman-readable]: show human-readable sizes
-//	-d[irectory]: show directories but not their contents
-//	-F|classify: append indicator (, one of */=>@|) to entries
-//	-l[ong]: long form
-//	-Q|quote-name: quoted
-//	-R|recursive: equivalent to findutil's find
-//	-s[ize]: sort by size
+//	-a: show hidden files
+//	-h: show human-readable sizes
+//	-d: show directories but not their contents
+//	-F: append indicator (, one of */=>@|) to entries
+//	-l: long form
+//	-Q: quoted
+//	-R: equivalent to findutil's find
+//	-s: sort by size
 //
 // Bugs:
 //
@@ -26,6 +26,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -34,8 +35,8 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/ls"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 type cmd struct {
@@ -204,19 +205,25 @@ func (c cmd) list(names []string) error {
 	return nil
 }
 
-func main() {
+// run runs a command. args are as from os.Args, i.e., args[0] is the command name.
+func run(w io.Writer, args []string) error {
 	var c cmd
-	flag.BoolVarP(&c.all, "all", "a", false, "show hidden files")
-	flag.BoolVarP(&c.human, "human-readable", "h", false, "human readable sizes")
-	flag.BoolVarP(&c.directory, "directory", "d", false, "list directories but not their contents")
-	flag.BoolVarP(&c.long, "long", "l", false, "long form")
-	flag.BoolVarP(&c.quoted, "quote-name", "Q", false, "quoted")
-	flag.BoolVarP(&c.recurse, "recursive", "R", false, "equivalent to findutil's find")
-	flag.BoolVarP(&c.classify, "classify", "F", false, "append indicator (, one of */=>@|) to entries")
-	flag.BoolVarP(&c.size, "size", "S", false, "sort by size")
-	c.w = os.Stdout
-	flag.Parse()
-	if err := c.list(flag.Args()); err != nil {
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	f.BoolVar(&c.all, "a", false, "show hidden files")
+	f.BoolVar(&c.human, "h", false, "human readable sizes")
+	f.BoolVar(&c.directory, "d", false, "list directories but not their contents")
+	f.BoolVar(&c.long, "l", false, "long form")
+	f.BoolVar(&c.quoted, "Q", false, "quoted")
+	f.BoolVar(&c.recurse, "R", false, "equivalent to findutil's find")
+	f.BoolVar(&c.classify, "F", false, "append indicator (, one of */=>@|) to entries")
+	f.BoolVar(&c.size, "S", false, "sort by size")
+	c.w = w
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	return c.list(f.Args())
+}
+
+func main() {
+	if err := run(os.Stdout, os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

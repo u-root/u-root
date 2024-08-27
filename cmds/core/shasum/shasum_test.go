@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,13 +37,9 @@ func TestSHASum(t *testing.T) {
 		name      string
 		args      []string
 		algorithm int
-		help      bool
 		want      string
+		err       error
 	}{
-		{
-			name: "help true",
-			help: true,
-		},
 		{
 			name:      "bufIn as input with sha1 sum",
 			args:      []string{},
@@ -56,19 +53,25 @@ func TestSHASum(t *testing.T) {
 			want:      "ae0666f161fed1a5dde998bbd0e140550d2da0db27db1d0e31e370f2bd366a57 -\n",
 		},
 		{
+			name:      "bufIn as input with sha512 sum",
+			args:      []string{},
+			algorithm: 512,
+			want:      "624eb88c6f2be3e77b1306f976bf1fb7b48855701d3ed2198a15f38bb12d76d26e8eefe6457bc036a3f93f28dd05512f5a399a319d48a58c38c590e182fe8159 -\n",
+		},
+		{
 			name: "wrong path file",
 			args: []string{"testfile"},
-			want: "open testfile: no such file or directory",
+			err:  os.ErrNotExist,
 		},
 		{
 			name: "file1 as input with invalid algorithm",
 			args: []string{file1.Name()},
-			want: "invalid algorithm, only 1 or 256 are valid",
+			err:  os.ErrInvalid,
 		},
 		{
 			name: "stdin as input with invalid algorithm",
 			args: []string{},
-			want: "invalid algorithm, only 1 or 256 are valid",
+			err:  os.ErrInvalid,
 		},
 		{
 			name:      "file1 as input with sha1 sum",
@@ -101,20 +104,40 @@ func TestSHASum(t *testing.T) {
 			want: fmt.Sprintf("%s %s\n%s %s\n", "ae0666f161fed1a5dde998bbd0e140550d2da0db27db1d0e31e370f2bd366a57", file1.Name(),
 				"db296dd0bcb796df9b327f44104029da142c8fff313a25bd1ac7c3b7562caea9", file2.Name()),
 		},
+		{
+			name:      "file1 as input with sha512 sum",
+			args:      []string{file1.Name()},
+			algorithm: 512,
+			want:      fmt.Sprintf("%s %s\n", "624eb88c6f2be3e77b1306f976bf1fb7b48855701d3ed2198a15f38bb12d76d26e8eefe6457bc036a3f93f28dd05512f5a399a319d48a58c38c590e182fe8159", file1.Name()),
+		},
+		{
+			name:      "file2 as input with sha512 sum",
+			args:      []string{file2.Name()},
+			algorithm: 512,
+			want:      fmt.Sprintf("%s %s\n", "53eb6dc4fc160a443941c53b40cc1d08b212b140c8a5030bb3c035e184c74898155ab811aafde46f8f4c0989fe49ac6fd72fb13bafe21b1ea32a452bf3a01c6d", file2.Name()),
+		},
+		{
+			name:      "file1 and file 2 as input with sha512 sum",
+			args:      []string{file1.Name(), file2.Name()},
+			algorithm: 512,
+			want: fmt.Sprintf("%s %s\n%s %s\n",
+				"624eb88c6f2be3e77b1306f976bf1fb7b48855701d3ed2198a15f38bb12d76d26e8eefe6457bc036a3f93f28dd05512f5a399a319d48a58c38c590e182fe8159", file1.Name(),
+				"53eb6dc4fc160a443941c53b40cc1d08b212b140c8a5030bb3c035e184c74898155ab811aafde46f8f4c0989fe49ac6fd72fb13bafe21b1ea32a452bf3a01c6d", file2.Name()),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setting flags
-			*algorithm = tt.algorithm
-			*help = tt.help
+			algorithm = tt.algorithm
 			bufIn := &bytes.Buffer{}
 			if _, err := bufIn.WriteString("abcdef\n"); err != nil {
 				t.Errorf("failed to write string to bufIn: %v", err)
 			}
 			bufOut := &bytes.Buffer{}
 			if got := shasum(bufOut, bufIn, tt.args...); got != nil {
-				if got.Error() != tt.want {
-					t.Errorf("shasum() = %q, want: %q", got.Error(), tt.want)
+				if tt.err != nil && errors.Is(got, tt.err) {
+					return
 				}
+				t.Errorf("shasum() = %q, want: %q", got, tt.err)
 			} else {
 				if bufOut.String() != tt.want {
 					t.Errorf("shasum() = %q, want: %q", bufOut.String(), tt.want)

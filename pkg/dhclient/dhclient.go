@@ -27,6 +27,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const (
+	// ResolvConfPath is the path to the resolv.conf file.
+	ResolvConfPath = "/etc/resolv.conf"
+)
+
 // isIPv6LinkReady returns true if the interface has a link-local address
 // which is not tentative.
 func isIPv6LinkReady(l netlink.Link) (bool, error) {
@@ -98,8 +103,8 @@ func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 	return nil, fmt.Errorf("link %q still down after %v seconds", ifname, linkUpTimeout.Seconds())
 }
 
-// WriteDNSSettings writes the given nameservers, search list, and domain to resolv.conf.
-func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
+// WriteDNSSettings writes the given nameservers, search list, and domain to the resolv.conf at the specified path.
+func WriteDNSSettings(ns []net.IP, sl []string, domain, resolvConfPath string) error {
 	rc := &bytes.Buffer{}
 	if domain != "" {
 		rc.WriteString(fmt.Sprintf("domain %s\n", domain))
@@ -112,7 +117,7 @@ func WriteDNSSettings(ns []net.IP, sl []string, domain string) error {
 		rc.WriteString(strings.Join(sl, " "))
 		rc.WriteString("\n")
 	}
-	return os.WriteFile("/etc/resolv.conf", rc.Bytes(), 0o644)
+	return os.WriteFile(resolvConfPath, rc.Bytes(), 0o644)
 }
 
 // Lease is a network configuration obtained by DHCP.

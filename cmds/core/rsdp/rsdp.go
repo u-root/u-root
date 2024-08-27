@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !plan9
-// +build !plan9
 
 // rsdp allows to determine the ACPI RSDP structure address which could
 // be passed to the boot command later on
@@ -25,10 +24,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/acpi"
 )
 

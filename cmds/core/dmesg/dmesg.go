@@ -17,21 +17,28 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	flag "github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
 )
 
-var (
-	clear     = flag.Bool("clear", false, "Clear the log")
-	readClear = flag.BoolP("read-clear", "c", false, "Clear the log after printing")
-)
+type cmd struct {
+	clear     bool
+	readClear bool
+}
 
-func dmesg(writer io.Writer, clear, readClear bool) error {
+func run(out io.Writer, args []string) error {
+	var clear, readClear bool
+
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	f.BoolVar(&clear, "clear", false, "Clear the log")
+	f.BoolVar(&readClear, "read-clear", false, "Clear the log after printing")
+	f.Parse(args[1:])
+
 	if clear && readClear {
 		return fmt.Errorf("cannot specify both -clear and -read-clear:%w", os.ErrInvalid)
 	}
@@ -50,13 +57,12 @@ func dmesg(writer io.Writer, clear, readClear bool) error {
 		return fmt.Errorf("syslog failed: %w", err)
 	}
 
-	_, err = writer.Write(b[:amt])
+	_, err = out.Write(b[:amt])
 	return err
 }
 
 func main() {
-	flag.Parse()
-	if err := dmesg(os.Stdout, *clear, *readClear); err != nil {
+	if err := run(os.Stdout, os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

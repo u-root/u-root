@@ -3,19 +3,18 @@
 // license that can be found in the LICENSE file.
 
 //go:build plan9
-// +build plan9
 
 package main
 
 import (
+	"flag"
 	"fmt"
 	"strings"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/ls"
 )
 
-var final = flag.BoolP("print-last", "p", false, "Print only the final path element of each file name")
+var final = flag.Bool("p", false, "Print only the final path element of each file name")
 
 func (c cmd) printFile(stringer ls.Stringer, f file) {
 	if f.err != nil {

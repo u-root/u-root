@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !tinygo && !darwin && !dragonfly && !freebsd && !linux && !nacl && !netbsd && !openbsd && !solaris
-// +build !tinygo,!darwin,!dragonfly,!freebsd,!linux,!nacl,!netbsd,!openbsd,!solaris
 
 package main
 

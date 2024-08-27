@@ -21,6 +21,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -28,8 +29,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	flag "github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/cp"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 type flags struct {
@@ -38,24 +39,6 @@ type flags struct {
 	force            bool
 	verbose          bool
 	noFollowSymlinks bool
-}
-
-var (
-	f flags
-)
-
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = "cp [-wRrifvP] file[s] ... dest"
-		defUsage()
-	}
-	flag.BoolVarP(&f.recursive, "RECURSIVE", "R", false, "copy file hierarchies")
-	flag.BoolVarP(&f.recursive, "recursive", "r", false, "alias to -R recursive mode")
-	flag.BoolVarP(&f.ask, "interactive", "i", false, "prompt about overwriting file")
-	flag.BoolVarP(&f.force, "force", "f", false, "force overwrite files")
-	flag.BoolVarP(&f.verbose, "verbose", "v", false, "verbose copy mode")
-	flag.BoolVarP(&f.noFollowSymlinks, "no-dereference", "P", false, "don't follow symlinks")
 }
 
 // promptOverwrite ask if the user wants overwrite file
@@ -117,15 +100,49 @@ func setupPostCallback(verbose bool, w io.Writer) func(src, dst string) {
 	}
 }
 
-// run evaluates the args and makes decisions for copyfiles
-func run(args []string, f flags, w io.Writer, i *bufio.Reader) error {
+// run evaluates the falgs and args and makes decisions for copyfiles
+func run(args []string, w io.Writer, i *bufio.Reader) error {
+	var f flags
+
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	fs.BoolVar(&f.recursive, "RECURSIVE", false, "copy file hierarchies")
+	fs.BoolVar(&f.recursive, "R", false, "copy file hierarchies (shorthand)")
+
+	fs.BoolVar(&f.recursive, "recursive", false, "alias to -R recursive mode")
+	fs.BoolVar(&f.recursive, "r", false, "alias to -R recursive mode (shorthand)")
+
+	fs.BoolVar(&f.ask, "interactive", false, "prompt about overwriting file")
+	fs.BoolVar(&f.ask, "i", false, "prompt about overwriting file (shorthand)")
+
+	fs.BoolVar(&f.force, "force", false, "force overwrite files")
+	fs.BoolVar(&f.force, "f", false, "force overwrite files (shorthand)")
+
+	fs.BoolVar(&f.verbose, "verbose", false, "verbose copy mode")
+	fs.BoolVar(&f.verbose, "v", false, "verbose copy mode (shorthand)")
+
+	fs.BoolVar(&f.noFollowSymlinks, "no-dereference", false, "don't follow symlinks")
+	fs.BoolVar(&f.noFollowSymlinks, "P", false, "don't follow symlinks (shorthand)")
+
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: cp [-RrifvP] file[s] ... dest\n\n")
+		fs.PrintDefaults()
+	}
+
+	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	if fs.NArg() < 2 {
+		fs.Usage()
+		os.Exit(1)
+	}
+
 	todir := false
-	from, to := args[:len(args)-1], args[len(args)-1]
+	from, to := fs.Args()[:fs.NArg()-1], fs.Args()[fs.NArg()-1]
 	toStat, err := os.Stat(to)
 	if err == nil {
 		todir = toStat.IsDir()
 	}
-	if len(args) > 2 && !todir {
+	if fs.NArg() > 2 && !todir {
 		return eNotDir
 	}
 
@@ -158,13 +175,8 @@ func run(args []string, f flags, w io.Writer, i *bufio.Reader) error {
 }
 
 func main() {
-	flag.Parse()
-	if flag.NArg() < 2 {
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	if err := run(flag.Args(), f, os.Stderr, bufio.NewReader(os.Stdin)); err != nil {
+	err := run(os.Args, os.Stderr, bufio.NewReader(os.Stdin))
+	if err != nil {
 		log.Fatalf("%q", err)
 	}
 }

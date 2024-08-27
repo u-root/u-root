@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build (linux && arm64) || (linux && amd64) || (linux && riscv64)
-// +build linux,arm64 linux,amd64 linux,riscv64
 
 package strace
 
@@ -110,6 +109,16 @@ func TestMultiProcess(t *testing.T) {
 
 	var b bytes.Buffer
 	cmd := exec.Command("./test/fork")
+	cmd.Stdout = &b
+
+	runAndCollectTrace(t, cmd)
+}
+
+func TestAddrProcess(t *testing.T) {
+	prepareTestCmd(t, "./test/addr")
+
+	var b bytes.Buffer
+	cmd := exec.Command("./test/addr")
 	cmd.Stdout = &b
 
 	runAndCollectTrace(t, cmd)
