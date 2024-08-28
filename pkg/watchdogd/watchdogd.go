@@ -1,4 +1,4 @@
-// Copyright 2021 the u-root Authors. All rights reserved
+// Copyright 2021-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -16,11 +16,14 @@
 //     Disarmed | reboot the machine    | the machine
 //
 
+//go:build !tinygo
+
 package watchdogd
 
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -88,6 +91,17 @@ type DaemonOpts struct {
 	UDS string
 }
 
+// Abstract flag initialization to the DaemonOpts struct so we can separately define it for tinygo and non-tinygo builds.
+func (d *DaemonOpts) InitFlags() (fs *flag.FlagSet) {
+	fs = flag.NewFlagSet("run", flag.PanicOnError)
+	fs.StringVar(&d.Dev, "dev", watchdog.Dev, "device")
+	fs.DurationVar(d.Timeout, "timeout", -1, "duration before timing out")
+	fs.DurationVar(d.PreTimeout, "pre_timeout", -1, "duration for pretimeout")
+	fs.DurationVar(&d.KeepAlive, "keep_alive", 5*time.Second, "duration between issuing keepalive")
+	fs.StringVar(&d.UDS, "uds", defaultUDS, "unix domain socket")
+	return
+}
+
 // MonitorOops return an error if the kernel logs contain an oops.
 func MonitorOops() error {
 	dmesg := make([]byte, 256*1024)
@@ -137,7 +151,7 @@ func (d *Daemon) StartServing(l *net.UnixListener) {
 func setupListener(uds string) (*net.UnixListener, func(), error) {
 	os.Remove(uds)
 
-	l, err := net.ListenUnix("unix", &net.UnixAddr{uds, "unix"})
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: uds, Net: "unix"})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -230,7 +244,7 @@ func (d *Daemon) StartPetting() rune {
 				}
 			case <-time.After(d.CurrentOpts.KeepAlive):
 				if err := d.DoPetting(); err != nil {
-					log.Printf("Failed to keeplive: %v", err)
+					log.Printf("Failed to keep alive: %v", err)
 					// Keep trying to pet until the watchdog times out.
 				}
 			}
@@ -268,7 +282,7 @@ func (d *Daemon) StopPetting() rune {
 func Run(ctx context.Context, opts *DaemonOpts) error {
 	log.SetPrefix("watchdogd: ")
 	defer log.Printf("Daemon quit")
-	d := New(opts)
+	d := NewDaemon(opts)
 	l, cleanup, err := setupListener(d.CurrentOpts.UDS)
 	if err != nil {
 		return fmt.Errorf("failed to setup server: %v", err)
@@ -309,7 +323,7 @@ func doMonitors(monitors []func() error) error {
 	return nil
 }
 
-func New(opts *DaemonOpts) *Daemon {
+func NewDaemon(opts *DaemonOpts) *Daemon {
 	d := &Daemon{
 		CurrentOpts: opts,
 		PettingOp:   make(chan int),
@@ -359,13 +373,15 @@ func sendAndCheckResult(c *net.UnixConn, op int) error {
 }
 
 func NewClientFromUDS(uds string) (*client, error) {
-	conn, err := net.DialUnix("unix", nil, &net.UnixAddr{uds, "unix"})
+	conn, err := net.DialUnix("unix", nil, &net.UnixAddr{Name: uds, Net: "unix"})
 	if err != nil {
 		return nil, err
 	}
 	return &client{Conn: conn}, nil
 }
 
-func NewClient() (*client, error) {
+// Create a new client to communicate with the watchdog daemon.
+// In the previous implementation, the watchdog was created by finding the process id of the daemon called watchdogd.
+func New() (*client, error) {
 	return NewClientFromUDS(defaultUDS)
 }

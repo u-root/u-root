@@ -9,6 +9,8 @@
 //
 //	watchdogd run [OPTIONS]
 //	    Run the watchdogd in a child process (does not daemonize).
+//	watchtdog pid [tinygo only]
+//	    Print the PID of the running watchdog.
 //	watchdogd stop
 //	    Send a signal to arm the running watchdog.
 //	watchdogd continue
@@ -29,83 +31,57 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/u-root/u-root/pkg/watchdog"
 	"github.com/u-root/u-root/pkg/watchdogd"
 )
 
-func usage() {
-	fmt.Print(`watchdogd run [--dev DEV] [--timeout N] [--pre_timeout N] [--keep_alive N] [--monitors STRING]
-	Run the watchdogd daemon in a child process (does not daemonize).
-watchdogd stop
-	Send a signal to arm the running watchdogd.
-watchdogd continue
-	Send a signal to disarm the running watchdogd.
-watchdogd arm
-	Send a signal to arm the running watchdogd.
-watchdogd disarm
-	Send a signal to disarm the running watchdogd.
-`)
-	os.Exit(1)
-}
-
 func runCommand() error {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		usage()
+		watchdog.Usage()
+		os.Exit(1)
 	}
 	cmd, args := args[0], args[1:]
 
 	switch cmd {
 	case "run":
-		fs := flag.NewFlagSet("run", flag.PanicOnError)
-		var (
-			dev        = fs.String("dev", watchdog.Dev, "device")
-			timeout    = fs.Duration("timeout", -1, "duration before timing out")
-			preTimeout = fs.Duration("pre_timeout", -1, "duration for pretimeout")
-			keepAlive  = fs.Duration("keep_alive", 5*time.Second, "duration between issuing keepalive")
-			monitors   = fs.String("monitors", "", "comma seperated list of monitors, ex: oops")
-			uds        = fs.String("uds", "/tmp/watchdogd", "unix domain socket path for the daemon")
-		)
+		daemonOpts := &watchdogd.DaemonOpts{}
+		fs := daemonOpts.InitFlags()
+		monitor := fs.String("monitor", "oops", "comma separated list of monitors")
 		fs.Parse(args)
+
 		if fs.NArg() != 0 {
-			usage()
-		}
-		if *timeout == -1 {
-			timeout = nil
-		}
-		if *preTimeout == -1 {
-			preTimeout = nil
+			watchdog.Usage()
 		}
 
-		monitorFuncs := []func() error{}
-		for _, m := range strings.Split(*monitors, ",") {
+		if *daemonOpts.Timeout == -1 {
+			daemonOpts.Timeout = nil
+		}
+		if *daemonOpts.PreTimeout == -1 {
+			daemonOpts.PreTimeout = nil
+		}
+
+		daemonOpts.Monitors = []func() error{}
+		for _, m := range strings.Split(*monitor, ",") {
 			if m == "oops" {
-				monitorFuncs = append(monitorFuncs, watchdogd.MonitorOops)
+				daemonOpts.Monitors = append(daemonOpts.Monitors, watchdogd.MonitorOops)
 			} else {
 				return fmt.Errorf("unrecognized monitor: %v", m)
 			}
 		}
 
-		return watchdogd.Run(context.Background(), &watchdogd.DaemonOpts{
-			Dev:        *dev,
-			Timeout:    timeout,
-			PreTimeout: preTimeout,
-			KeepAlive:  *keepAlive,
-			Monitors:   monitorFuncs,
-			UDS:        *uds,
-		})
+		return watchdogd.Run(context.Background(), daemonOpts)
+
 	default:
 		if len(args) != 0 {
-			usage()
+			watchdog.Usage()
 		}
-		d, err := watchdogd.NewClient()
+		d, err := watchdogd.New()
 		if err != nil {
 			return fmt.Errorf("could not dial watchdog daemon: %v", err)
 		}
