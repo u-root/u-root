@@ -23,12 +23,14 @@ var errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
 type cmd struct {
 	stdout      io.Writer
 	reportFiles bool
+	kbUnit      bool
 }
 
-func command(stdout io.Writer, reportFiles bool) *cmd {
+func command(stdout io.Writer, reportFiles, kbUnit bool) *cmd {
 	return &cmd{
 		stdout:      stdout,
 		reportFiles: reportFiles,
+		kbUnit:      kbUnit,
 	}
 }
 
@@ -42,7 +44,7 @@ func (c *cmd) run(files ...string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(c.stdout, "%d\t%s\n", blocks, file)
+		c.print(blocks, file)
 	}
 
 	return nil
@@ -65,7 +67,7 @@ func (c *cmd) du(file string) (int64, error) {
 
 			blocks += dirBlocks
 
-			fmt.Fprintf(c.stdout, "%d\t%s\n", dirBlocks, path)
+			c.print(dirBlocks, path)
 			return fs.SkipDir
 		}
 
@@ -75,7 +77,7 @@ func (c *cmd) du(file string) (int64, error) {
 		}
 
 		if c.reportFiles && !info.IsDir() {
-			fmt.Fprintf(c.stdout, "%d\t%s\n", st.Blocks, path)
+			c.print(st.Blocks, path)
 		}
 
 		blocks += st.Blocks
@@ -85,10 +87,18 @@ func (c *cmd) du(file string) (int64, error) {
 	return blocks, nil
 }
 
+func (c *cmd) print(nblock int64, path string) {
+	if c.kbUnit {
+		nblock /= 2
+	}
+	fmt.Fprintf(c.stdout, "%d\t%s\n", nblock, path)
+}
+
 func main() {
 	var reportFiles = flag.Bool("a", false, "report the size of each file not of type directory")
+	var kbUnit = flag.Bool("k", false, "write the files sizes in units of 1024 bytes, rather than the default 512-byte units")
 	flag.Parse()
-	if err := command(os.Stdout, *reportFiles).run(flag.Args()...); err != nil {
+	if err := command(os.Stdout, *reportFiles, *kbUnit).run(flag.Args()...); err != nil {
 		log.Fatalf("du: %v", err)
 	}
 }
