@@ -183,7 +183,6 @@ func (t *Trafficctl) AddQdisc(stdout io.Writer, args *Args) error {
 		Attribute: args.obj.Attribute,
 	}
 
-	fmt.Printf("%v\n", obj.Attribute.Htb.Init.Defcls)
 	if err := t.Tc.Qdisc().Add(obj); err != nil {
 		return fmt.Errorf("Qdisc.Add() = %w", err)
 	}
