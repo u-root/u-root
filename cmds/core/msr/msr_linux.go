@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !tinygo && !plan9
+//go:build !plan9
 
 // msr reads and writes msrs using a Forth interpreter on argv
 //
@@ -53,10 +53,19 @@ import (
 	"github.com/u-root/u-root/pkg/msr"
 )
 
-// let's just do MSRs for now
-
+// flag parsing
 var (
 	debug = flag.Bool("d", false, "debug messages")
+)
+
+const (
+	MSR_READ  = "r"
+	MSR_WRITE = "w"
+	MSR_LOCK  = "lock"
+)
+
+// let's just do MSRs for now
+var (
 	words = []struct {
 		name string
 		w    []forth.Cell
@@ -149,10 +158,15 @@ func u64(f forth.Forth) {
 
 func rd(f forth.Forth) {
 	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
+	// c := f.Pop().(msr.CPUs)
+	c := f.Pop()
+	fmt.Print("c = %v\n", c)
+	c = c.(msr.CPUs)
+
 	forth.Debug("rd: cpus %v, msr %v", c, r)
 	data, errs := r.Read(c)
 	forth.Debug("data %v errs %v", data, errs)
+
 	if errs != nil {
 		panic(fmt.Sprintf("%v", errs))
 	}
@@ -220,8 +234,11 @@ func or(f forth.Forth) {
 	f.Push(m)
 }
 
-func main() {
-	flag.Parse()
+func run(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("no command supplied")
+	}
+
 	if *debug {
 		forth.Debug = log.Printf
 	}
@@ -240,49 +257,62 @@ func main() {
 	for _, w := range words {
 		forth.NewWord(f, w.name, w.w[0], w.w[1:]...)
 	}
-	a := flag.Args()
+
 	// If the first arg is r or w, we're going to assume they're not doing Forth.
 	// It is too confusing otherwise if they type a wrong r or w command and
 	// see the Forth stack and nothing else.
-	switch a[0] {
-	case "r":
-		if len(a) != 3 {
-			log.Fatal("Usage for r: r <msr-glob> <register>")
+	switch args[0] {
+	case MSR_READ:
+		if len(args) != 3 {
+			return fmt.Errorf("usage for r: r <msr-glob> <register>")
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg rd", a[1], a[2])); err != nil {
-			log.Fatal(err)
+		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg rd", args[1], args[2])); err != nil {
+			return fmt.Errorf("%w", err)
 		}
-	case "w":
-		if len(a) != 4 {
-			log.Fatal("Usage for w: w <msr-glob> <register> <value>")
+
+	case MSR_WRITE:
+		if len(args) != 4 {
+			return fmt.Errorf("usage for w: w <msr-glob> <register> <value>")
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
-		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg %s u64 swr", a[1], a[2], a[3])); err != nil {
-			log.Fatal(err)
+		// most common) gratuitously add a Forth ' before it (i.e. quote it).
+		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg %s u64 swr", args[1], args[2], args[3])); err != nil {
+			return fmt.Errorf("%w", err)
 		}
-	case "lock":
-		if len(a) != 4 {
-			log.Fatal("Usage for lock: lock <msr-glob> <register> <bit>")
+
+	case MSR_LOCK:
+		if len(args) != 4 {
+			return fmt.Errorf("usage for lock: lock <msr-glob> <register> <bit>")
 		}
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
-			log.Fatal(err)
+		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg '%s msr %s reg rd %s u64 or wr", args[1], args[2], args[1], args[2], args[3])); err != nil {
+			return fmt.Errorf("%w", err)
 		}
+
 	default:
 		for _, a := range flag.Args() {
 			if err := forth.EvalString(f, a); err != nil {
-				log.Fatal(err)
+				return fmt.Errorf("%w", err)
 			}
 			forth.Debug("%vOK\n", f.Stack())
 		}
 	}
+
 	// special case: if the length of stack is 1, just print out stack[0].
 	s := f.Stack()
 	if len(s) == 1 {
 		fmt.Printf("%v\n", s[0])
 	} else {
 		fmt.Printf("%v\n", s)
+	}
+
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	if err := run(flag.Args()); err != nil {
+		log.Fatal(err)
 	}
 }
