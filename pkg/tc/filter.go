@@ -203,7 +203,7 @@ func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
 
 	q := fArgs.filterObj
 	q.Ifindex = uint32(iface.Index)
-	q.Handle = *fArgs.handle
+	q.Parent = *fArgs.parent
 	q.Msg.Info = core.BuildHandle(*fArgs.pref<<16, *fArgs.protocol)
 
 	fmt.Printf("%+v\n", q)
