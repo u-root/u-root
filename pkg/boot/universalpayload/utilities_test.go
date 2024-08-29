@@ -6,9 +6,10 @@ package universalpayload
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/dt"
@@ -60,7 +61,7 @@ func TestGetFdtInfo(t *testing.T) {
 			name:    "testdata/not_exist_file.dtb",
 			fdt:     nil,
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to read fdt file: %s, err = %s", "testdata/not_exist_file.dtb", "open testdata/not_exist_file.dtb: no such file or directory"),
+			err:     ErrFailToReadFdtFile,
 		},
 		// CASE 3: missing first level node: /images
 		{
@@ -73,7 +74,7 @@ func TestGetFdtInfo(t *testing.T) {
 				)),
 			}),
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to find '%s' node", "images"),
+			err:     ErrNodeImagesNotFound,
 		},
 		// CASE 4: missing second level node: /images/tianocore
 		{
@@ -86,7 +87,7 @@ func TestGetFdtInfo(t *testing.T) {
 				)),
 			}),
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to find '%s' node", "tianocore"),
+			err:     ErrNodeTianocoreNotFound,
 		},
 		// CASE 5: failed to get /images/tianocore/load property
 		{
@@ -102,7 +103,7 @@ func TestGetFdtInfo(t *testing.T) {
 				)),
 			}),
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to find get '%s' property", LoadAddrPropertyName),
+			err:     ErrNodeLoadNotFound,
 		},
 		// CASE 6: failed to convert /images/tianocore/load property (type error)
 		{
@@ -118,7 +119,7 @@ func TestGetFdtInfo(t *testing.T) {
 				)),
 			}),
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to convert property '%s' to u64", LoadAddrPropertyName),
+			err:     ErrFailToConvertLoad,
 		},
 		// CASE 7: failed to get /images/tianocore/entry-start property
 		{
@@ -134,7 +135,7 @@ func TestGetFdtInfo(t *testing.T) {
 				)),
 			}),
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to find get '%s' property", EntryAddrPropertyName),
+			err:     ErrNodeEntryStartNotFound,
 		},
 		// CASE 8: failed to convert /images/tianocore/entry-start property (type error)
 		{
@@ -151,7 +152,7 @@ func TestGetFdtInfo(t *testing.T) {
 				)),
 			}),
 			fdtLoad: nil,
-			err:     fmt.Errorf("failed to convert property '%s' to u64", EntryAddrPropertyName),
+			err:     ErrFailToConvertEntryStart,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -160,7 +161,7 @@ func TestGetFdtInfo(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Expected error %q, got nil", tt.err)
 				}
-				if err.Error() != tt.err.Error() {
+				if !errors.Is(err, tt.err) {
 					t.Errorf("Unxpected error %q, want = %q", err.Error(), tt.err)
 				}
 			} else if err != nil {
@@ -205,7 +206,7 @@ func TestGetPhysicalAddressSizes(t *testing.T) {
 		name           string
 		cpuInfoContent string
 		expectedBits   uint8
-		expectedErr    string
+		expectedErr    error
 	}{
 		{
 			name: "Valid Address Size",
@@ -228,7 +229,7 @@ initial apicid	: 0
 address sizes	: 39 bits physical, 48 bits virtual
 `,
 			expectedBits: 39,
-			expectedErr:  "",
+			expectedErr:  nil,
 		},
 		{
 			name: "No Address Size Info",
@@ -240,7 +241,7 @@ model		: 142value out of range
 model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
 `,
 			expectedBits: 0,
-			expectedErr:  "address sizes information not found",
+			expectedErr:  ErrCPUAddressNotFound,
 		},
 		{
 			name: "Invalid Address Size",
@@ -249,7 +250,7 @@ model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
 address sizes	: 1000 bits physical, 48 bits virtual
 `,
 			expectedBits: 0,
-			expectedErr:  "phyAddrSize 1000 out of range for uint8",
+			expectedErr:  strconv.ErrRange,
 		},
 	}
 
@@ -260,7 +261,7 @@ address sizes	: 1000 bits physical, 48 bits virtual
 
 			physicalBits, err := getPhysicalAddressSizes()
 
-			if tt.expectedErr == "" {
+			if tt.expectedErr == nil {
 				// success validation
 				if err != nil {
 					t.Fatalf("Unexpected error: %+v", err)
@@ -273,8 +274,8 @@ address sizes	: 1000 bits physical, 48 bits virtual
 				if err == nil {
 					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
 				}
-				if err.Error()[:len(tt.expectedErr)] != tt.expectedErr {
-					t.Errorf("Unxpected error %q, want = %q", err.Error(), tt.expectedErr)
+				if !errors.Is(err, tt.expectedErr) {
+					t.Errorf("Unxpected error %+v, want = %q", err, tt.expectedErr)
 				}
 			}
 		})
