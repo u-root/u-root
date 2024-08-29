@@ -6,6 +6,7 @@ package trafficctl
 
 import (
 	"errors"
+	"io"
 
 	"github.com/florianl/go-tc"
 )
@@ -16,6 +17,26 @@ var (
 	ErrNotImplemented = errors.New("not implemented")
 	ErrOutOfBounds    = errors.New("integer argument out of bounds")
 )
+
+type Tctl interface {
+	ShowQdisc(io.Writer, *Args) error
+	AddQdisc(io.Writer, *Args) error
+	DeleteQdisc(io.Writer, *Args) error
+	ReplaceQdisc(io.Writer, *Args) error
+	ChangeQDisc(io.Writer, *Args) error
+	LinkQDisc(io.Writer, *Args) error
+	ShowClass(io.Writer, *Args) error
+	AddClass(io.Writer, *Args) error
+	DeleteClass(io.Writer, *Args) error
+	ReplaceClass(io.Writer, *Args) error
+	ChangeClass(io.Writer, *Args) error
+	ShowFilter(io.Writer, *FArgs) error
+	AddFilter(io.Writer, *FArgs) error
+	DeleteFilter(io.Writer, *FArgs) error
+	ReplaceFilter(io.Writer, *FArgs) error
+	ChangeFilter(io.Writer, *FArgs) error
+	GetFilter(io.Writer, *FArgs) error
+}
 
 type Trafficctl struct {
 	*tc.Tc
