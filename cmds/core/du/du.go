@@ -18,7 +18,10 @@ import (
 	"syscall"
 )
 
-var errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
+var (
+	errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
+	errUsage      = errors.New("usage: du [-k] [-a | -s] [file ...]")
+)
 
 type cmd struct {
 	stdout      io.Writer
@@ -37,6 +40,10 @@ func command(stdout io.Writer, reportFiles, kbUnit, totalSum bool) *cmd {
 }
 
 func (c *cmd) run(files ...string) error {
+	if c.totalSum && c.reportFiles {
+		return errUsage
+	}
+
 	if len(files) == 0 {
 		files = append(files, ".")
 	}
@@ -102,6 +109,10 @@ func main() {
 	var totalSum = flag.Bool("s", false, "report only the total sum for each of the specified files")
 	flag.Parse()
 	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum).run(flag.Args()...); err != nil {
+		if errors.Is(err, errUsage) {
+			fmt.Fprintln(os.Stderr, errUsage)
+			os.Exit(1)
+		}
 		log.Fatalf("du: %v", err)
 	}
 }

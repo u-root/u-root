@@ -129,6 +129,12 @@ func TestRun(t *testing.T) {
 			t.Errorf("expected one line per file with -s flag, got %d", len(lines))
 		}
 	})
+	t.Run("both -s and -a", func(t *testing.T) {
+		err := command(io.Discard, true, false, true).run("")
+		if err == nil {
+			t.Errorf("expected %v, got %v", errUsage, err)
+		}
+	})
 }
 
 func prepareDir(t *testing.T) string {
