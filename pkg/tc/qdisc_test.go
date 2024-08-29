@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -135,7 +135,7 @@ func TestParseQdiscArgs(t *testing.T) {
 			tt := tt
 			var buf bytes.Buffer
 
-			_, err := trafficctl.ParseQDiscArgs(&buf, tt.args)
+			_, err := trafficctl.ParseQdiscArgs(&buf, tt.args)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("ParseQDiscArgs = %v, not %v", err, tt.err)
 			}

@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -19,7 +19,7 @@ import (
 func ParseClassArgs(stdout io.Writer, args []string) (*Args, error) {
 	ret := &Args{}
 	if len(args) < 1 {
-		return nil, fmt.Errorf("ParseClassArgs() = %v", ErrNotEnoughArgs)
+		return nil, fmt.Errorf("ParseClassArgs() = %w", ErrNotEnoughArgs)
 	}
 
 	for i := 0; i <= len(args[1:]); i = i + 2 {
@@ -52,7 +52,7 @@ func ParseClassArgs(stdout io.Writer, args []string) (*Args, error) {
 		case "estimator":
 			return nil, ErrNotImplemented
 		case "help":
-			fmt.Fprintf(stdout, "%s", ClassHelp)
+			fmt.Fprint(stdout, ClassHelp)
 			return nil, nil
 		default:
 			// Resolve Qdisc and parameters

@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -51,7 +51,7 @@ func TestQDisc(t *testing.T) {
 	}
 
 	var outbuf bytes.Buffer
-	args, err := trafficctl.ParseQDiscArgs(&outbuf, argsStr)
+	args, err := trafficctl.ParseQdiscArgs(&outbuf, argsStr)
 	if err != nil {
 		t.Errorf("ParseQDiscArgs() = %v, not nil", err)
 	}
@@ -64,11 +64,11 @@ func TestQDisc(t *testing.T) {
 		t.Errorf("AddQdisc() = %v, not nil", err)
 	}
 
-	if err := tctl.ChangeQDisc(&outbuf, args); err != nil {
+	if err := tctl.ChangeQdisc(&outbuf, args); err != nil {
 		t.Errorf("AddQdisc() = %v, not nil", err)
 	}
 
-	if err := tctl.DelQdisc(&outbuf, args); err != nil {
+	if err := tctl.DeleteQdisc(&outbuf, args); err != nil {
 		t.Errorf("AddQdisc() = %v, not nil", err)
 	}
 }
@@ -96,7 +96,7 @@ func TestClass(t *testing.T) {
 	}
 
 	var outbuf bytes.Buffer
-	qargs, err := trafficctl.ParseQDiscArgs(&outbuf, htbQdiscStr)
+	qargs, err := trafficctl.ParseQdiscArgs(&outbuf, htbQdiscStr)
 	if err != nil {
 		t.Errorf("ParseQDiscArgs() = %v, not nil", err)
 	}
@@ -155,7 +155,7 @@ func TestClass(t *testing.T) {
 		t.Errorf("ParseClassArgs() = %v, not nil", err)
 	}
 
-	if err := tctl.DelQdisc(&outbuf, delArgs); err != nil {
+	if err := tctl.DeleteQdisc(&outbuf, delArgs); err != nil {
 		t.Errorf("DelClass() = %v, not nil", err)
 	}
 }
@@ -183,7 +183,7 @@ func TestFilter(t *testing.T) {
 	}
 
 	var outbuf bytes.Buffer
-	qargs, err := trafficctl.ParseQDiscArgs(&outbuf, htbQdiscStr)
+	qargs, err := trafficctl.ParseQdiscArgs(&outbuf, htbQdiscStr)
 	if err != nil {
 		t.Errorf("ParseQDiscArgs() = %v, not nil", err)
 	}
