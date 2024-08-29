@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build amd64 && linux
+//go:build (!tinygo || tinygo.enable) && amd64 && linux
 
 // The System Management Network (SMN, try to say it fast)
 // is a parallel universe address space on newer AMD64 cpus.

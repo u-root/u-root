@@ -4,7 +4,7 @@
 //
 // Derived work from Daniel Martí <mvdan@mvdan.cc>
 
-//go:build !plan9
+//go:build (!tinygo || tinygo.enable) && !plan9
 
 package main
 
