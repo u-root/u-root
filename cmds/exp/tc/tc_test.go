@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -27,10 +27,10 @@ func (d *DummyTctl) DeleteQdisc(io.Writer, *trafficctl.Args) error {
 func (d *DummyTctl) ReplaceQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
-func (d *DummyTctl) ChangeQDisc(io.Writer, *trafficctl.Args) error {
+func (d *DummyTctl) ChangeQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
-func (d *DummyTctl) LinkQDisc(io.Writer, *trafficctl.Args) error {
+func (d *DummyTctl) LinkQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
 func (d *DummyTctl) ShowClass(io.Writer, *trafficctl.Args) error {
@@ -222,8 +222,8 @@ func TestRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
 			var outbuf bytes.Buffer
-			if err := run(&outbuf, tt.args, d); !errors.Is(err, tt.err) {
-				t.Errorf("run() = ")
+			if err := run(&outbuf, d, tt.args); !errors.Is(err, tt.err) {
+				t.Errorf("run() = %v", err)
 			}
 
 			if tt.outStr != "" {

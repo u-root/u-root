@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -157,7 +157,7 @@ func ParseHTBQDiscArgs(out io.Writer, args []string) (*tc.Object, error) {
 		case "offload":
 			return nil, ErrNotImplemented
 		case "help":
-			fmt.Fprintf(out, "%s", HTBHelp)
+			fmt.Fprint(out, HTBHelp)
 		}
 	}
 

@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrNotEnoughArgs  = errors.New("not enough argument")
+	ErrNotEnoughArgs  = errors.New("not enough arguments")
 	ErrInvalidArg     = errors.New("invalid argument in list")
 	ErrNotImplemented = errors.New("not implemented")
 	ErrOutOfBounds    = errors.New("integer argument out of bounds")
@@ -23,8 +23,8 @@ type Tctl interface {
 	AddQdisc(io.Writer, *Args) error
 	DeleteQdisc(io.Writer, *Args) error
 	ReplaceQdisc(io.Writer, *Args) error
-	ChangeQDisc(io.Writer, *Args) error
-	LinkQDisc(io.Writer, *Args) error
+	ChangeQdisc(io.Writer, *Args) error
+	LinkQdisc(io.Writer, *Args) error
 	ShowClass(io.Writer, *Args) error
 	AddClass(io.Writer, *Args) error
 	DeleteClass(io.Writer, *Args) error

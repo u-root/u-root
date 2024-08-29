@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -164,7 +164,7 @@ func TestParseFilterArgs(t *testing.T) {
 
 			if tt.expBuf != "" {
 				if tt.expBuf != outbuf.String() {
-					t.Errorf("output !=  expected output")
+					t.Error("output != expected output")
 				}
 			}
 		})

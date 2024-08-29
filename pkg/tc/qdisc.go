@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -32,7 +32,7 @@ type Args struct {
 
 // ParseQDiscArgs takes an io.Writer and []string slice with arguments to parse.
 // It returns a structure of type Args for qdisc operation.
-func ParseQDiscArgs(stdout io.Writer, args []string) (*Args, error) {
+func ParseQdiscArgs(stdout io.Writer, args []string) (*Args, error) {
 	ret := &Args{
 		obj: &tc.Object{},
 	}
@@ -104,7 +104,7 @@ func ParseQDiscArgs(stdout io.Writer, args []string) (*Args, error) {
 		case "egress_block":
 			return nil, ErrNotImplemented
 		case "help":
-			fmt.Fprintf(stdout, "%s", QdiscHelp)
+			fmt.Fprint(stdout, QdiscHelp)
 		default:
 			var qdiscParseFn func(io.Writer, []string) (*tc.Object, error)
 			if qdiscParseFn = supportetQdisc(args[i]); qdiscParseFn == nil {
@@ -244,7 +244,7 @@ func (t *Trafficctl) ReplaceQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
-func (t *Trafficctl) ChangeQDisc(stdout io.Writer, args *Args) error {
+func (t *Trafficctl) ChangeQdisc(stdout io.Writer, args *Args) error {
 	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err
@@ -269,7 +269,7 @@ func (t *Trafficctl) ChangeQDisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
-func (t *Trafficctl) LinkQDisc(stdout io.Writer, args *Args) error {
+func (t *Trafficctl) LinkQdisc(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
 
@@ -307,9 +307,7 @@ func supportetQdisc(qd string) func(io.Writer, []string) (*tc.Object, error) {
 		return ret
 	}
 
-	ret = supportetQdiscClassfull(qd)
-
-	return ret
+	return supportetQdiscClassfull(qd)
 }
 
 func supportetQdiscClassfull(qd string) func(io.Writer, []string) (*tc.Object, error) {

@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -37,7 +37,7 @@ func ParseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
 			indirect := uint32(id)
 			b.ClassID = &indirect
 		case "help":
-			fmt.Fprintf(out, "%s", BasicHelp)
+			fmt.Fprint(out, BasicHelp)
 			return nil, nil
 		default:
 			return nil, ErrInvalidArg

@@ -1,4 +1,4 @@
-// Copyright 2012-20124 the u-root Authors. All rights reserved
+// Copyright 2012-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -17,8 +18,7 @@ import (
 func main() {
 	rtnl, err := tc.Open(&tc.Config{})
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 	defer func() {
 		if err := rtnl.Close(); err != nil {
@@ -27,13 +27,12 @@ func main() {
 	}()
 
 	tctl := &trafficctl.Trafficctl{Tc: rtnl}
-	if err := run(os.Stdout, os.Args[1:], tctl); err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+	if err := run(os.Stdout, tctl, os.Args[1:]); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func run(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
+func run(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 	cursor := 0
 	want := []string{
 		"qdisc",
@@ -43,11 +42,11 @@ func run(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 
 	switch one(args[cursor], want) {
 	case "qdisc":
-		return runQdisc(stdout, args[cursor+1:], tctl)
+		return runQdisc(stdout, tctl, args[cursor+1:])
 	case "class":
-		return runClass(stdout, args[cursor+1:], tctl)
+		return runClass(stdout, tctl, args[cursor+1:])
 	case "filter":
-		return runFilter(stdout, args[cursor+1:], tctl)
+		return runFilter(stdout, tctl, args[cursor+1:])
 	}
 
 	return nil
@@ -67,7 +66,7 @@ func one(cmd string, cmds []string) string {
 	return ""
 }
 
-func runQdisc(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
+func runQdisc(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -83,7 +82,7 @@ func runQdisc(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	qArgs := &trafficctl.Args{}
 	var err error
 	if len(args[1:]) > 1 {
-		qArgs, err = trafficctl.ParseQDiscArgs(os.Stdout, args[1:])
+		qArgs, err = trafficctl.ParseQdiscArgs(os.Stdout, args[1:])
 		if err != nil {
 			return err
 		}
@@ -99,17 +98,17 @@ func runQdisc(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	case "replace":
 		return tctl.ReplaceQdisc(stdout, qArgs)
 	case "change":
-		return tctl.ChangeQDisc(stdout, qArgs)
+		return tctl.ChangeQdisc(stdout, qArgs)
 	case "link":
-		return tctl.LinkQDisc(stdout, qArgs)
+		return tctl.LinkQdisc(stdout, qArgs)
 	case "help":
-		fmt.Fprintf(stdout, "%s", trafficctl.QdiscHelp)
+		fmt.Fprint(stdout, trafficctl.QdiscHelp)
 	}
 
 	return nil
 }
 
-func runClass(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
+func runClass(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -142,14 +141,14 @@ func runClass(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	case "replace":
 		return tctl.ReplaceClass(stdout, cArgs)
 	case "help":
-		fmt.Fprintf(stdout, "%s", trafficctl.ClassHelp)
+		fmt.Fprint(stdout, trafficctl.ClassHelp)
 		return nil
 	}
 
 	return nil
 }
 
-func runFilter(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
+func runFilter(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -185,7 +184,7 @@ func runFilter(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	case "get":
 		return tctl.GetFilter(stdout, fArgs)
 	case "help":
-		fmt.Fprintf(stdout, "%s", trafficctl.Filterhelp)
+		fmt.Fprint(stdout, trafficctl.Filterhelp)
 	}
 
 	return nil
