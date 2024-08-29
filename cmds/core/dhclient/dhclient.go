@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9
+//go:build (!tinygo || tinygo.enable) && !plan9
 
 // dhclient sets up network config using DHCP.
 //
