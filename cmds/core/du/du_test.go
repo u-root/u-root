@@ -22,7 +22,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 8096))
 
-		blocks, err := command(io.Discard, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -38,7 +38,7 @@ func TestDU(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		blocks, err := command(io.Discard, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -55,7 +55,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 1))
 
-		blocks, err := command(io.Discard, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -75,7 +75,7 @@ func TestRun(t *testing.T) {
 		}
 
 		stdout := &bytes.Buffer{}
-		err = command(stdout, false).run()
+		err = command(stdout, false, false).run()
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -112,7 +112,7 @@ func TestRun(t *testing.T) {
 		}
 
 		stdout := &bytes.Buffer{}
-		err = command(stdout, true).run(dir)
+		err = command(stdout, true, false).run(dir)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -121,6 +121,24 @@ func TestRun(t *testing.T) {
 		// should print dir, subdir and two files
 		if len(lines) != 4 {
 			t.Errorf("expected file1, file2 and temp dir, but got %d lines", len(lines))
+		}
+	})
+	t.Run("with -k flag", func(t *testing.T) {
+		dir := t.TempDir()
+		f, err := os.CreateTemp(dir, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Write(make([]byte, 4096))
+
+		stdout := &bytes.Buffer{}
+		err = command(stdout, false, true).run(f.Name())
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+
+		if stdout.String()[0] != '4' {
+			t.Errorf("expected 4 blocks with -k, got %q", stdout.String())
 		}
 	})
 }
