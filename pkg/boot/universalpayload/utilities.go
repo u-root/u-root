@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -32,6 +33,21 @@ type FdtLoad struct {
 	Load       uint64
 	EntryStart uint64
 }
+
+// Errors returned by utilities
+var (
+	ErrFailToReadFdtFile       = errors.New("failed to read fdt file")
+	ErrNodeImagesNotFound      = fmt.Errorf("failed to find '%s' node", FirstLevelNodeName)
+	ErrNodeTianocoreNotFound   = fmt.Errorf("failed to find '%s' node", SecondLevelNodeName)
+	ErrNodeLoadNotFound        = fmt.Errorf("failed to find get '%s' property", LoadAddrPropertyName)
+	ErrNodeEntryStartNotFound  = fmt.Errorf("failed to find get '%s' property", EntryAddrPropertyName)
+	ErrFailToConvertLoad       = fmt.Errorf("failed to convert property '%s' to u64", LoadAddrPropertyName)
+	ErrFailToConvertEntryStart = fmt.Errorf("failed to convert property '%s' to u64", EntryAddrPropertyName)
+	ErrCPUAddressNotFound      = errors.New("'address sizes' information not found")
+	ErrCPUAddressRead          = errors.New("failed to read 'address sizes'")
+	ErrCPUAddressConvert       = errors.New("failed to convert physical bits size")
+	ErrAlignPadRange           = errors.New("failed to align pad size, out of range")
+)
 
 // GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
 // get the expected load and entry point address, need to walk through
@@ -62,37 +78,37 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to read fdt file: %s, err = %w", name, err)
+		return nil, fmt.Errorf("%w: fdt file: %s, err: %w", ErrFailToReadFdtFile, name, err)
 	}
 
 	firstLevelNode, succeed := fdt.NodeByName(FirstLevelNodeName)
 	if succeed != true {
-		return nil, fmt.Errorf("failed to find '%s' node", FirstLevelNodeName)
+		return nil, ErrNodeImagesNotFound
 	}
 
 	secondLevelNode, succeed := firstLevelNode.NodeByName(SecondLevelNodeName)
 	if succeed != true {
-		return nil, fmt.Errorf("failed to find '%s' node", SecondLevelNodeName)
+		return nil, ErrNodeTianocoreNotFound
 	}
 
 	loadAddrProp, succeed := secondLevelNode.LookProperty(LoadAddrPropertyName)
 	if succeed != true {
-		return nil, fmt.Errorf("failed to find get '%s' property", LoadAddrPropertyName)
+		return nil, ErrNodeLoadNotFound
 	}
 
 	loadAddr, err := loadAddrProp.AsU64()
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert property '%s' to u64", LoadAddrPropertyName)
+		return nil, errors.Join(ErrFailToConvertLoad, err)
 	}
 
 	entryAddrProp, succeed := secondLevelNode.LookProperty(EntryAddrPropertyName)
 	if succeed != true {
-		return nil, fmt.Errorf("failed to find get '%s' property", EntryAddrPropertyName)
+		return nil, ErrNodeEntryStartNotFound
 	}
 
 	entryAddr, err := entryAddrProp.AsU64()
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert property '%s' to u64", EntryAddrPropertyName)
+		return nil, errors.Join(ErrFailToConvertEntryStart, err)
 	}
 
 	return &FdtLoad{
@@ -109,7 +125,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 func getPhysicalAddressSizes() (uint8, error) {
 	file, err := os.Open(sysfsCPUInfoPath)
 	if err != nil {
-		return 0, fmt.Errorf("failed to open %s: %v", sysfsCPUInfoPath, err)
+		return 0, fmt.Errorf("failed to open %s: %w", sysfsCPUInfoPath, err)
 	}
 	defer file.Close()
 
@@ -121,34 +137,30 @@ func getPhysicalAddressSizes() (uint8, error) {
 		line := scanner.Text()
 		if match := re.FindStringSubmatch(line); match != nil {
 			// Convert the physical bits size to integer
-			physicalBits, err := strconv.Atoi(match[1])
+			physicalBits, err := strconv.ParseUint(match[1], 10, 8)
 			if err != nil {
-				return 0, fmt.Errorf("failed to parse physical bits size: %v", err)
-			}
-			// Check if the value is within the uint8 range
-			if physicalBits < 0 || physicalBits > 255 {
-				return 0, fmt.Errorf("phyAddrSize %v out of range for uint8", physicalBits)
+				return 0, errors.Join(ErrCPUAddressConvert, err)
 			}
 			return uint8(physicalBits), nil
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("error reading %s: %v", sysfsCPUInfoPath, err)
+		return 0, fmt.Errorf("%w: file: %s, err: %w", ErrCPUAddressRead, sysfsCPUInfoPath, err)
 	}
 
-	return 0, fmt.Errorf("address sizes information not found")
+	return 0, ErrCPUAddressNotFound
 }
 
 // alignHOBLength writes pad bytes at the end of a HOB buf
 // It's because we calculate HOB length with golang, while write bytes to the buf with actual length
 func alignHOBLength(expectLen uint64, bufLen int, buf *bytes.Buffer) error {
 	if expectLen < uint64(bufLen) {
-		return fmt.Errorf("negative padding size")
+		return ErrAlignPadRange
 	}
 
 	if expectLen > math.MaxInt {
-		return fmt.Errorf("failed to align pad size, out of int range")
+		return ErrAlignPadRange
 	}
 	if padLen := int(expectLen) - bufLen; padLen > 0 {
 		pad := make([]byte, padLen)

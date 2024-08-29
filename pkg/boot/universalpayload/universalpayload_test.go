@@ -7,12 +7,13 @@ package universalpayload
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	guid "github.com/google/uuid"
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"log"
 	"os"
-	"strings"
+	"strconv"
 	"testing"
 	"unsafe"
 )
@@ -170,7 +171,7 @@ func TestConstructHobList(t *testing.T) {
 		wantHobLen uint64
 		efiTable   EfiHobHandoffInfoTable
 		endHeader  EfiHobGenericHeader
-		wantErr    string
+		wantErr    error
 	}{
 		{
 			name:   "CASE 1: success",
@@ -201,12 +202,10 @@ func TestConstructHobList(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := constructHobList(tt.dst, tt.src, &tt.hobLen)
-			if err != nil {
-				if len(tt.wantErr) == 0 || !strings.Contains(err.Error(), tt.wantErr) {
-					t.Fatal(err)
-				}
-			} else if len(tt.wantErr) > 0 {
-				t.Errorf("Expected err = %v", tt.wantErr)
+
+			expectErr(t, err, tt.wantErr)
+			if err != nil { // already checked in expectedErr
+				return
 			}
 
 			// hobLen should be updated as expected after construction
@@ -255,7 +254,7 @@ func TestAppendEfiCPUHob(t *testing.T) {
 		name           string
 		cpuInfoContent string
 		expectedBits   int
-		expectedErr    string
+		expectedErr    error
 		expectedHob    *EfiHobCPU
 	}{
 		{
@@ -279,7 +278,7 @@ initial apicid	: 0
 address sizes	: 39 bits physical, 48 bits virtual
 `,
 			expectedBits: 39,
-			expectedErr:  "",
+			expectedErr:  nil,
 			expectedHob: &EfiHobCPU{
 				Header: EfiHobGenericHeader{
 					HobType:   EfiHobTypeCPU,
@@ -299,7 +298,7 @@ model		: 142value out of range
 model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
 `,
 			expectedBits: 0,
-			expectedErr:  "address sizes information not found",
+			expectedErr:  ErrCPUAddressNotFound,
 		},
 		{
 			name: "Invalid Address Size",
@@ -308,7 +307,7 @@ model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
 address sizes	: 1000 bits physical, 48 bits virtual
 `,
 			expectedBits: 0,
-			expectedErr:  "phyAddrSize 1000 out of range for uint8",
+			expectedErr:  strconv.ErrRange,
 		},
 	}
 
@@ -321,29 +320,19 @@ address sizes	: 1000 bits physical, 48 bits virtual
 			var hobLen uint64
 			err := appendEfiCPUHob(hobBuf, &hobLen)
 
-			if tt.expectedErr == "" {
-				// success validation
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
+			expectErr(t, err, tt.expectedErr)
+			if err != nil { // already checked in expectedErr
+				return
+			}
 
-				// deserialize EfiHobCPU object from bytes
-				var efiHobCPU EfiHobCPU
-				err = binary.Read(hobBuf, binary.LittleEndian, &efiHobCPU)
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if *tt.expectedHob != efiHobCPU {
-					t.Errorf("Unexpected efiHobCPU = %v, want = %v", efiHobCPU, *tt.expectedHob)
-				}
-			} else {
-				// fault validation
-				if err == nil {
-					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
-				}
-				if err.Error()[:len(tt.expectedErr)] != tt.expectedErr {
-					t.Errorf("Unxpected error %q, want = %q", err.Error(), tt.expectedErr)
-				}
+			// deserialize EfiHobCPU object from bytes
+			var efiHobCPU EfiHobCPU
+			err = binary.Read(hobBuf, binary.LittleEndian, &efiHobCPU)
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if *tt.expectedHob != efiHobCPU {
+				t.Fatalf("Unexpected efiHobCPU = %v, want = %v", efiHobCPU, *tt.expectedHob)
 			}
 		})
 	}
@@ -360,14 +349,14 @@ func mockGetSMBIOSBase() (int64, int64, error) {
 func TestAppendAcpiTableHob(t *testing.T) {
 	tests := []struct {
 		name               string
-		expectedErr        string
+		expectedErr        error
 		expectedHobLen     uint64
 		expectedEfiHobGUID *EfiHobGUIDType
 		expectedAcpiTable  *UniversalPayloadAcpiTable
 	}{
 		{
 			name:           "CASE 1: success",
-			expectedErr:    "",
+			expectedErr:    nil,
 			expectedHobLen: uint64(unsafe.Sizeof(EfiHobGUIDType{}) + unsafe.Sizeof(UniversalPayloadSmbiosTable{})),
 			expectedEfiHobGUID: &EfiHobGUIDType{
 				Header: EfiHobGenericHeader{
@@ -395,44 +384,34 @@ func TestAppendAcpiTableHob(t *testing.T) {
 			var hobLen uint64
 			err := appendAcpiTableHob(hobBuf, &hobLen)
 
-			if tt.expectedErr == "" {
-				// success validation
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
+			expectErr(t, err, tt.expectedErr)
+			if err != nil { // already checked in expectedErr
+				return
+			}
 
-				// hobLen should be updated as expected after construction
-				if tt.expectedHobLen != hobLen {
-					t.Errorf("Unexpected hobLen = %v, want = %v", hobLen, tt.expectedHobLen)
-				}
+			// hobLen should be updated as expected after construction
+			if tt.expectedHobLen != hobLen {
+				t.Errorf("Unexpected hobLen = %v, want = %v", hobLen, tt.expectedHobLen)
+			}
 
-				// deserialize efiHobGUID object from bytes
-				var efiHobGUID EfiHobGUIDType
-				err = binary.Read(hobBuf, binary.LittleEndian, &efiHobGUID)
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if *tt.expectedEfiHobGUID != efiHobGUID {
-					t.Errorf("Unexpected efiHobCPU = %v, want = %v", efiHobGUID, *tt.expectedEfiHobGUID)
-				}
+			// deserialize efiHobGUID object from bytes
+			var efiHobGUID EfiHobGUIDType
+			err = binary.Read(hobBuf, binary.LittleEndian, &efiHobGUID)
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if *tt.expectedEfiHobGUID != efiHobGUID {
+				t.Errorf("Unexpected efiHobCPU = %v, want = %v", efiHobGUID, *tt.expectedEfiHobGUID)
+			}
 
-				// deserialize acpiTable object from bytes
-				var acpiTable UniversalPayloadAcpiTable
-				err = binary.Read(hobBuf, binary.LittleEndian, &acpiTable)
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if *tt.expectedAcpiTable != acpiTable {
-					t.Fatalf("Unexpected acpiTable = %v, want = %v", acpiTable, *tt.expectedAcpiTable)
-				}
-			} else {
-				// fault validation
-				if err == nil {
-					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
-				}
-				if err.Error()[:len(tt.expectedErr)] != tt.expectedErr {
-					t.Errorf("Unxpected error %q, want = %q", err.Error(), tt.expectedErr)
-				}
+			// deserialize acpiTable object from bytes
+			var acpiTable UniversalPayloadAcpiTable
+			err = binary.Read(hobBuf, binary.LittleEndian, &acpiTable)
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if *tt.expectedAcpiTable != acpiTable {
+				t.Fatalf("Unexpected acpiTable = %v, want = %v", acpiTable, *tt.expectedAcpiTable)
 			}
 		})
 	}
@@ -442,14 +421,14 @@ func TestAppendSmbiosTableHob(t *testing.T) {
 	smbiosBase, _, _ := mockGetSMBIOSBase()
 	tests := []struct {
 		name                   string
-		expectedErr            string
+		expectedErr            error
 		expectedHobLen         uint64
 		expectedEfiHobGUID     *EfiHobGUIDType
 		expectedUplSmbiosTable *UniversalPayloadSmbiosTable
 	}{
 		{
 			name:           "CASE 1: success",
-			expectedErr:    "",
+			expectedErr:    nil,
 			expectedHobLen: uint64(unsafe.Sizeof(EfiHobGUIDType{}) + unsafe.Sizeof(UniversalPayloadSmbiosTable{})),
 			expectedEfiHobGUID: &EfiHobGUIDType{
 				Header: EfiHobGenericHeader{
@@ -477,45 +456,50 @@ func TestAppendSmbiosTableHob(t *testing.T) {
 			var hobLen uint64
 			err := appendSmbiosTableHob(hobBuf, &hobLen)
 
-			if tt.expectedErr == "" {
-				// success validation
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
+			expectErr(t, err, tt.expectedErr)
+			if err != nil { // already checked in expectedErr
+				return
+			}
 
-				// hobLen should be updated as expected after construction
-				if tt.expectedHobLen != hobLen {
-					t.Errorf("Unexpected hobLen = %v, want = %v", hobLen, tt.expectedHobLen)
-				}
+			// hobLen should be updated as expected after construction
+			if tt.expectedHobLen != hobLen {
+				t.Errorf("Unexpected hobLen = %v, want = %v", hobLen, tt.expectedHobLen)
+			}
 
-				// deserialize efiHobGUID object from bytes
-				var efiHobGUID EfiHobGUIDType
-				err = binary.Read(hobBuf, binary.LittleEndian, &efiHobGUID)
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if *tt.expectedEfiHobGUID != efiHobGUID {
-					t.Errorf("Unexpected efiHobCPU = %v, want = %v", efiHobGUID, *tt.expectedEfiHobGUID)
-				}
+			// deserialize efiHobGUID object from bytes
+			var efiHobGUID EfiHobGUIDType
+			err = binary.Read(hobBuf, binary.LittleEndian, &efiHobGUID)
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if *tt.expectedEfiHobGUID != efiHobGUID {
+				t.Errorf("Unexpected efiHobCPU = %v, want = %v", efiHobGUID, *tt.expectedEfiHobGUID)
+			}
 
-				// deserialize smbiosTable object from bytes
-				var smbiosTable UniversalPayloadSmbiosTable
-				err = binary.Read(hobBuf, binary.LittleEndian, &smbiosTable)
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if *tt.expectedUplSmbiosTable != smbiosTable {
-					t.Fatalf("Unexpected smbiosTable = %v, want = %v", smbiosTable, *tt.expectedUplSmbiosTable)
-				}
-			} else {
-				// fault validation
-				if err == nil {
-					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
-				}
-				if err.Error()[:len(tt.expectedErr)] != tt.expectedErr {
-					t.Errorf("Unxpected error %q, want = %q", err.Error(), tt.expectedErr)
-				}
+			// deserialize smbiosTable object from bytes
+			var smbiosTable UniversalPayloadSmbiosTable
+			err = binary.Read(hobBuf, binary.LittleEndian, &smbiosTable)
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if *tt.expectedUplSmbiosTable != smbiosTable {
+				t.Fatalf("Unexpected smbiosTable = %v, want = %v", smbiosTable, *tt.expectedUplSmbiosTable)
 			}
 		})
+	}
+}
+
+func expectErr(t *testing.T, err error, expectedErr error) {
+	if expectedErr == nil {
+		if err != nil {
+			t.Fatalf("Unexpected error: %+v", err)
+		}
+	} else {
+		if err == nil {
+			t.Fatalf("Expected error %q, got nil", expectedErr)
+		}
+		if !errors.Is(err, expectedErr) {
+			t.Fatalf("Unxpected error %+v, want = %q", err, expectedErr)
+		}
 	}
 }

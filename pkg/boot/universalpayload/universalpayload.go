@@ -12,6 +12,7 @@ package universalpayload
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"unsafe"
@@ -95,13 +96,30 @@ var (
 	}
 )
 
+var (
+	ErrParseGUIDFail                   = errors.New("failed to parse GUID")
+	ErrFailToGetRSDPTable              = errors.New("failed to get RSDP table")
+	ErrFailToGetSmbiosTable            = errors.New("failed to get smbios base")
+	ErrReadGetMemoryMap                = errors.New("failed to get memory map from sysfs")
+	ErrWriteHobBufMemoryMap            = errors.New("failed to write memory map to buffer")
+	ErrWriteHobBufSerialPort           = errors.New("failed to append serial port hob to buffer")
+	ErrWriteHobBufUniversalPayloadBase = errors.New("failed to append universal payload base to buffer")
+	ErrWriteHobBufAcpiTable            = errors.New("failed to append acpi table to buffer")
+	ErrWriteHobSmbiosTable             = errors.New("failed to append smbios table to buffer")
+	ErrWriteHobEfiCPU                  = errors.New("failed to append CPU HOB to buffer")
+	ErrWriteHobBufList                 = errors.New("failed to append HOB list to buffer")
+	ErrWriteHobLengthNotMatch          = errors.New("length mismatch when appending")
+	ErrKexecLoadFailed                 = errors.New("kexec.Load() failed")
+	ErrKexecExecuteFailed              = errors.New("kexec.Execute() failed")
+)
+
 // Create GUID Hob with specified GUID string
 func constructGUIDHob(name string) (*EfiHobGUIDType, error) {
 	length := uint16(unsafe.Sizeof(EfiHobGUIDType{}) + guidToLength[name])
 
 	id, err := guid.Parse(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse guid:%s", name)
+		return nil, errors.Join(ErrParseGUIDFail, err)
 	}
 
 	return &EfiHobGUIDType{
@@ -140,7 +158,7 @@ func constructUnivesralPayloadBase(addr uint64) *UniversalPayloadBase {
 func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
 	rsdp, err := acpiGetRSDP()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get rdsp table")
+		return nil, errors.Join(ErrFailToGetRSDPTable, err)
 	}
 
 	return &UniversalPayloadAcpiTable{
@@ -155,7 +173,7 @@ func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
 func constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
 	smbiosTableBase, _, err := smbiosSMBIOSBase()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get smbios base")
+		return nil, errors.Join(ErrFailToGetSmbiosTable, err)
 	}
 
 	return &UniversalPayloadSmbiosTable{
@@ -171,12 +189,16 @@ func appendMemMapHob(buf *bytes.Buffer, hobLen *uint64) error {
 	// Construct system memory resource Hob
 	memMap, err := kexecMemoryMapFromSysfsMemmap()
 	if err != nil {
-		return fmt.Errorf("failed to get memory map from sysfs")
+		return errors.Join(ErrReadGetMemoryMap, err)
 	}
-
+	prev := buf.Len()
 	memHob, length := hobFromMemMap(memMap)
 	if err := binary.Write(buf, binary.LittleEndian, memHob); err != nil {
-		return fmt.Errorf("failed to write memory map to buffer")
+		return errors.Join(ErrWriteHobBufMemoryMap, err)
+	}
+
+	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
+		return errors.Join(ErrWriteHobLengthNotMatch, err)
 	}
 
 	*hobLen += length
@@ -196,15 +218,15 @@ func appendSerialPortHob(buf *bytes.Buffer, hobLen *uint64) error {
 	prev := buf.Len()
 
 	if err := binary.Write(buf, binary.LittleEndian, serialGUIDHob); err != nil {
-		return fmt.Errorf("failed to append serial port guid hob to buffer")
+		return errors.Join(ErrWriteHobBufSerialPort, err)
 	}
 
 	if err := binary.Write(buf, binary.LittleEndian, serialPortInfo); err != nil {
-		return fmt.Errorf("failed to append serial port info to buffer")
+		return errors.Join(ErrWriteHobBufSerialPort, err)
 	}
 
 	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("length mismatch when appending end hob")
+		return errors.Join(ErrWriteHobLengthNotMatch, err)
 	}
 
 	*hobLen += length
@@ -224,15 +246,15 @@ func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load uint64) 
 	prev := buf.Len()
 
 	if err := binary.Write(buf, binary.LittleEndian, uplBaseGUIDHob); err != nil {
-		return fmt.Errorf("failed to append universal payload base guid hob to buffer")
+		return errors.Join(ErrWriteHobBufUniversalPayloadBase, err)
 	}
 
 	if err := binary.Write(buf, binary.LittleEndian, uplBase); err != nil {
-		return fmt.Errorf("failed to append universal payload base to buffer")
+		return errors.Join(ErrWriteHobBufUniversalPayloadBase, err)
 	}
 
 	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("length mismatch when appending universal payload base")
+		return fmt.Errorf("%w, func = appendUniversalPayloadBase()", ErrWriteHobLengthNotMatch)
 	}
 
 	*hobLen += length
@@ -256,15 +278,15 @@ func appendAcpiTableHob(buf *bytes.Buffer, hobLen *uint64) error {
 	prev := buf.Len()
 
 	if err := binary.Write(buf, binary.LittleEndian, rsdpTableGUIDHob); err != nil {
-		return fmt.Errorf("failed to append acpi table guid to buffer")
+		return errors.Join(ErrWriteHobBufAcpiTable, err)
 	}
 
 	if err := binary.Write(buf, binary.LittleEndian, rsdpTable); err != nil {
-		return fmt.Errorf("failed to append acpi table to buffer")
+		return errors.Join(ErrWriteHobBufAcpiTable, err)
 	}
 
 	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("length mismatch when appending acpi table")
+		return fmt.Errorf("%w, func = appendAcpiTableHOB()", ErrWriteHobLengthNotMatch)
 	}
 
 	*hobLen += length
@@ -288,15 +310,15 @@ func appendSmbiosTableHob(buf *bytes.Buffer, hobLen *uint64) error {
 	prev := buf.Len()
 
 	if err := binary.Write(buf, binary.LittleEndian, smbiosTableGUIDHob); err != nil {
-		return fmt.Errorf("failed to append smbios table guid to buffer")
+		return errors.Join(ErrWriteHobSmbiosTable, err)
 	}
 
 	if err := binary.Write(buf, binary.LittleEndian, smbiosTable); err != nil {
-		return fmt.Errorf("failed to append smbios table to buffer")
+		return errors.Join(ErrWriteHobSmbiosTable, err)
 	}
 
 	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("length mismatch when appending smbios table")
+		return fmt.Errorf("%w, func = appendSmbiosTableHOB()", ErrWriteHobLengthNotMatch)
 	}
 
 	*hobLen += length
@@ -313,11 +335,11 @@ func appendEfiCPUHob(buf *bytes.Buffer, hobLen *uint64) error {
 	length := uint64(unsafe.Sizeof(EfiHobCPU{}))
 	prev := buf.Len()
 	if err := binary.Write(buf, binary.LittleEndian, cpuHob); err != nil {
-		return fmt.Errorf("failed to append cpu hob to buffer")
+		return errors.Join(ErrWriteHobEfiCPU, err)
 	}
 
 	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("length mismatch when appending cpu hob")
+		return fmt.Errorf("%w, func = appendEFICPUHOB()", ErrWriteHobLengthNotMatch)
 	}
 
 	*hobLen += length
@@ -328,11 +350,11 @@ func appendEfiCPUHob(buf *bytes.Buffer, hobLen *uint64) error {
 func constructHobList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) error {
 	handoffHob := hobCreateEfiHobHandoffInfoTable(*hobLen)
 	if err := binary.Write(dst, binary.LittleEndian, handoffHob); err != nil {
-		return fmt.Errorf("failed to append handoff hob to buffer")
+		return errors.Join(ErrWriteHobBufList, err)
 	}
 
 	if err := binary.Write(dst, binary.LittleEndian, src.Bytes()); err != nil {
-		return fmt.Errorf("failed to append hos list to buffer")
+		return errors.Join(ErrWriteHobBufList, err)
 	}
 
 	hobEndHeader := hobCreateEndHob()
@@ -340,11 +362,11 @@ func constructHobList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 	length := uint64(unsafe.Sizeof(EfiHobGenericHeader{}))
 
 	if err := binary.Write(dst, binary.LittleEndian, hobEndHeader); err != nil {
-		return fmt.Errorf("failed to append end hob")
+		return errors.Join(ErrWriteHobBufList, err)
 	}
 
 	if length != (uint64)(dst.Len()-prev) {
-		return fmt.Errorf("length mismatch when appending end hob")
+		return fmt.Errorf("%w, func = constructHOBList()", ErrWriteHobLengthNotMatch)
 	}
 
 	*hobLen += length
@@ -406,7 +428,7 @@ func Load(name string) error {
 
 	data, err := os.ReadFile(name)
 	if err != nil {
-		return fmt.Errorf("failed to read file: %s", name)
+		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
 	}
 
 	// Prepare memory
@@ -417,11 +439,11 @@ func Load(name string) error {
 	}
 
 	if err := kexec.Load(uintptr(fdtLoad.EntryStart), mem.Segments, 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
+		return errors.Join(ErrKexecLoadFailed, err)
 	}
 
 	if err := boot.Execute(); err != nil {
-		return fmt.Errorf("kexec.Execute() error: %v", err)
+		return errors.Join(ErrKexecExecuteFailed, err)
 	}
 
 	return nil
