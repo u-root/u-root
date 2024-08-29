@@ -189,7 +189,7 @@ func (t *Trafficctl) AddQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
-func (t *Trafficctl) DelQdisc(stdout io.Writer, args *Args) error {
+func (t *Trafficctl) DeleteQdisc(stdout io.Writer, args *Args) error {
 	iface, err := getDevice(args.dev)
 	if err != nil {
 		return err

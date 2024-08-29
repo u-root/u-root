@@ -15,23 +15,10 @@ import (
 )
 
 func main() {
-	if err := run(os.Stdout, os.Args[1:]); err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-}
-
-func run(stdout io.Writer, args []string) error {
-	cursor := 0
-	want := []string{
-		"qdisc",
-		"class",
-		"filter",
-	}
-
 	rtnl, err := tc.Open(&tc.Config{})
 	if err != nil {
-		return err
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := rtnl.Close(); err != nil {
@@ -40,6 +27,19 @@ func run(stdout io.Writer, args []string) error {
 	}()
 
 	tctl := &trafficctl.Trafficctl{Tc: rtnl}
+	if err := run(os.Stdout, os.Args[1:], tctl); err != nil {
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
+	cursor := 0
+	want := []string{
+		"qdisc",
+		"class",
+		"filter",
+	}
 
 	switch one(args[cursor], want) {
 	case "qdisc":
@@ -67,7 +67,7 @@ func one(cmd string, cmds []string) string {
 	return ""
 }
 
-func runQdisc(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) error {
+func runQdisc(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -95,7 +95,7 @@ func runQdisc(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) erro
 	case "add":
 		return tctl.AddQdisc(stdout, qArgs)
 	case "del":
-		return tctl.DelQdisc(stdout, qArgs)
+		return tctl.DeleteQdisc(stdout, qArgs)
 	case "replace":
 		return tctl.ReplaceQdisc(stdout, qArgs)
 	case "change":
@@ -109,7 +109,7 @@ func runQdisc(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) erro
 	return nil
 }
 
-func runClass(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) error {
+func runClass(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -142,14 +142,14 @@ func runClass(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) erro
 	case "replace":
 		return tctl.ReplaceClass(stdout, cArgs)
 	case "help":
-		fmt.Fprintf(stdout, "%s\n", trafficctl.ClassHelp)
+		fmt.Fprintf(stdout, "%s", trafficctl.ClassHelp)
 		return nil
 	}
 
 	return nil
 }
 
-func runFilter(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) error {
+func runFilter(stdout io.Writer, args []string, tctl trafficctl.Tctl) error {
 	cursor := 0
 	want := []string{
 		"show",
@@ -185,7 +185,7 @@ func runFilter(stdout io.Writer, args []string, tctl *trafficctl.Trafficctl) err
 	case "get":
 		return tctl.GetFilter(stdout, fArgs)
 	case "help":
-		fmt.Fprintf(stdout, "%s\n", trafficctl.Filterhelp)
+		fmt.Fprintf(stdout, "%s", trafficctl.Filterhelp)
 	}
 
 	return nil
