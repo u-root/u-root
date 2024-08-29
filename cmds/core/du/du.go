@@ -24,13 +24,15 @@ type cmd struct {
 	stdout      io.Writer
 	reportFiles bool
 	kbUnit      bool
+	totalSum    bool
 }
 
-func command(stdout io.Writer, reportFiles, kbUnit bool) *cmd {
+func command(stdout io.Writer, reportFiles, kbUnit, totalSum bool) *cmd {
 	return &cmd{
 		stdout:      stdout,
 		reportFiles: reportFiles,
 		kbUnit:      kbUnit,
+		totalSum:    totalSum,
 	}
 }
 
@@ -59,7 +61,7 @@ func (c *cmd) du(file string) (int64, error) {
 		}
 
 		// report sub-folders and add number of blocks to overall count
-		if info.IsDir() && file != path {
+		if info.IsDir() && file != path && !c.totalSum {
 			dirBlocks, err := c.du(path)
 			if err != nil {
 				return err
@@ -76,7 +78,7 @@ func (c *cmd) du(file string) (int64, error) {
 			return fmt.Errorf("%v: %w", path, errNoStatInfo)
 		}
 
-		if c.reportFiles && !info.IsDir() {
+		if c.reportFiles && !info.IsDir() && !c.totalSum {
 			c.print(st.Blocks, path)
 		}
 
@@ -97,8 +99,9 @@ func (c *cmd) print(nblock int64, path string) {
 func main() {
 	var reportFiles = flag.Bool("a", false, "report the size of each file not of type directory")
 	var kbUnit = flag.Bool("k", false, "write the files sizes in units of 1024 bytes, rather than the default 512-byte units")
+	var totalSum = flag.Bool("s", false, "report only the total sum for each of the specified files")
 	flag.Parse()
-	if err := command(os.Stdout, *reportFiles, *kbUnit).run(flag.Args()...); err != nil {
+	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum).run(flag.Args()...); err != nil {
 		log.Fatalf("du: %v", err)
 	}
 }
