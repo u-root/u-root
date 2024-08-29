@@ -22,7 +22,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 8096))
 
-		blocks, err := command(io.Discard, false, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -38,7 +38,7 @@ func TestDU(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		blocks, err := command(io.Discard, false, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -55,7 +55,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 1))
 
-		blocks, err := command(io.Discard, false, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -75,7 +75,7 @@ func TestRun(t *testing.T) {
 		}
 
 		stdout := &bytes.Buffer{}
-		err = command(stdout, false, false).run()
+		err = command(stdout, false, false, false).run()
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -86,33 +86,9 @@ func TestRun(t *testing.T) {
 		}
 	})
 	t.Run("report all files", func(t *testing.T) {
-		dir := t.TempDir()
-		err := os.Chdir(dir)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		f1, err := os.Create(filepath.Join(dir, "file1"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f1.Write(make([]byte, 4096))
-		dir1 := filepath.Join(dir, "dir1")
-		err = os.Mkdir(dir1, 0722)
-		if err != nil {
-			t.Fatal(err)
-		}
-		f2, err := os.Create(filepath.Join(dir1, "file2"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		f2.Write(make([]byte, 8012))
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		dir := prepareDir(t)
 		stdout := &bytes.Buffer{}
-		err = command(stdout, true, false).run(dir)
+		err := command(stdout, true, false, false).run(dir)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -132,7 +108,7 @@ func TestRun(t *testing.T) {
 		f.Write(make([]byte, 4096))
 
 		stdout := &bytes.Buffer{}
-		err = command(stdout, false, true).run(f.Name())
+		err = command(stdout, false, true, false).run(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -141,4 +117,46 @@ func TestRun(t *testing.T) {
 			t.Errorf("expected 4 blocks with -k, got %q", stdout.String())
 		}
 	})
+	t.Run("total sum", func(t *testing.T) {
+		dir := prepareDir(t)
+		stdout := &bytes.Buffer{}
+		err := command(stdout, false, false, true).run(dir)
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+		lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+		if len(lines) != 1 {
+			t.Errorf("expected one line per file with -s flag, got %d", len(lines))
+		}
+	})
+}
+
+func prepareDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	err := os.Chdir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f1, err := os.Create(filepath.Join(dir, "file1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f1.Write(make([]byte, 4096))
+	dir1 := filepath.Join(dir, "dir1")
+	err = os.Mkdir(dir1, 0722)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2, err := os.Create(filepath.Join(dir1, "file2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2.Write(make([]byte, 8012))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return dir
 }
