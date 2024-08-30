@@ -20,22 +20,24 @@ import (
 
 var (
 	errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
-	errUsage      = errors.New("usage: du [-k] [-a | -s] [file ...]")
+	errUsage      = errors.New("usage: du [-k] [-H] [-a | -s] [file ...]")
 )
 
 type cmd struct {
-	stdout      io.Writer
-	reportFiles bool
-	kbUnit      bool
-	totalSum    bool
+	stdout            io.Writer
+	reportFiles       bool
+	kbUnit            bool
+	totalSum          bool
+	followCMDSymLinks bool
 }
 
-func command(stdout io.Writer, reportFiles, kbUnit, totalSum bool) *cmd {
+func command(stdout io.Writer, reportFiles, kbUnit, totalSum, followCMDSymLinks bool) *cmd {
 	return &cmd{
-		stdout:      stdout,
-		reportFiles: reportFiles,
-		kbUnit:      kbUnit,
-		totalSum:    totalSum,
+		stdout:            stdout,
+		reportFiles:       reportFiles,
+		kbUnit:            kbUnit,
+		totalSum:          totalSum,
+		followCMDSymLinks: followCMDSymLinks,
 	}
 }
 
@@ -49,7 +51,22 @@ func (c *cmd) run(files ...string) error {
 	}
 
 	for _, file := range files {
-		blocks, err := c.du(file)
+		duPath := file
+		if c.followCMDSymLinks {
+			fi, err := os.Lstat(file)
+			if err != nil {
+				return err
+			}
+
+			if fi.Mode()&os.ModeSymlink != 0 {
+				duPath, err = os.Readlink(file)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		blocks, err := c.du(duPath)
 		if err != nil {
 			return err
 		}
@@ -107,8 +124,9 @@ func main() {
 	var reportFiles = flag.Bool("a", false, "report the size of each file not of type directory")
 	var kbUnit = flag.Bool("k", false, "write the files sizes in units of 1024 bytes, rather than the default 512-byte units")
 	var totalSum = flag.Bool("s", false, "report only the total sum for each of the specified files")
+	var followCMDSymLinks = flag.Bool("H", false, "follow symlink form [file...]")
 	flag.Parse()
-	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum).run(flag.Args()...); err != nil {
+	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum, *followCMDSymLinks).run(flag.Args()...); err != nil {
 		if errors.Is(err, errUsage) {
 			fmt.Fprintln(os.Stderr, errUsage)
 			os.Exit(1)

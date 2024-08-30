@@ -22,7 +22,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 8096))
 
-		blocks, err := command(io.Discard, false, false, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -38,7 +38,7 @@ func TestDU(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		blocks, err := command(io.Discard, false, false, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -55,7 +55,7 @@ func TestDU(t *testing.T) {
 		}
 		f.Write(make([]byte, 1))
 
-		blocks, err := command(io.Discard, false, false, false).du(f.Name())
+		blocks, err := command(io.Discard, false, false, false, false).du(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -75,7 +75,7 @@ func TestRun(t *testing.T) {
 		}
 
 		stdout := &bytes.Buffer{}
-		err = command(stdout, false, false, false).run()
+		err = command(stdout, false, false, false, false).run()
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -88,7 +88,7 @@ func TestRun(t *testing.T) {
 	t.Run("report all files", func(t *testing.T) {
 		dir := prepareDir(t)
 		stdout := &bytes.Buffer{}
-		err := command(stdout, true, false, false).run(dir)
+		err := command(stdout, true, false, false, false).run(dir)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -108,7 +108,7 @@ func TestRun(t *testing.T) {
 		f.Write(make([]byte, 4096))
 
 		stdout := &bytes.Buffer{}
-		err = command(stdout, false, true, false).run(f.Name())
+		err = command(stdout, false, true, false, false).run(f.Name())
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -120,7 +120,7 @@ func TestRun(t *testing.T) {
 	t.Run("total sum", func(t *testing.T) {
 		dir := prepareDir(t)
 		stdout := &bytes.Buffer{}
-		err := command(stdout, false, false, true).run(dir)
+		err := command(stdout, false, false, true, false).run(dir)
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
@@ -130,9 +130,37 @@ func TestRun(t *testing.T) {
 		}
 	})
 	t.Run("both -s and -a", func(t *testing.T) {
-		err := command(io.Discard, true, false, true).run("")
+		err := command(io.Discard, true, false, true, false).run("")
 		if err == nil {
 			t.Errorf("expected %v, got %v", errUsage, err)
+		}
+	})
+	t.Run("symlink with -h", func(t *testing.T) {
+		dir := prepareDir(t)
+		slDir := filepath.Join(t.TempDir(), "sl")
+		err := os.Symlink(dir, slDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		stdout := &bytes.Buffer{}
+		err = command(stdout, false, false, false, false).run(slDir)
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+		sp1 := strings.Fields(stdout.String())
+		if sp1[0] != "0" {
+			t.Errorf("expected 0 got %s", sp1[0])
+		}
+
+		stdout.Reset()
+		err = command(stdout, false, false, false, true).run(slDir)
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+		sp2 := strings.Fields(stdout.String())
+		if sp2[0] == "0" {
+			t.Error("expected du to follow symlink but value was 0")
 		}
 	})
 }
