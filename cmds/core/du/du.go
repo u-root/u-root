@@ -20,7 +20,7 @@ import (
 
 var (
 	errNoStatInfo = errors.New("os.FileInfo has no stat_t info")
-	errUsage      = errors.New("usage: du [-k] [-H] [-a | -s] [file ...]")
+	errUsage      = errors.New("usage: du [-k] [-H | -L] [-a | -s] [file ...]")
 )
 
 type cmd struct {
@@ -29,20 +29,26 @@ type cmd struct {
 	kbUnit            bool
 	totalSum          bool
 	followCMDSymLinks bool
+	followSymlinks    bool
 }
 
-func command(stdout io.Writer, reportFiles, kbUnit, totalSum, followCMDSymLinks bool) *cmd {
+func command(stdout io.Writer, reportFiles, kbUnit, totalSum, followCMDSymLinks, followSymLinks bool) *cmd {
 	return &cmd{
 		stdout:            stdout,
 		reportFiles:       reportFiles,
 		kbUnit:            kbUnit,
 		totalSum:          totalSum,
 		followCMDSymLinks: followCMDSymLinks,
+		followSymlinks:    followSymLinks,
 	}
 }
 
 func (c *cmd) run(files ...string) error {
 	if c.totalSum && c.reportFiles {
+		return errUsage
+	}
+
+	if c.followSymlinks && c.followCMDSymLinks {
 		return errUsage
 	}
 
@@ -82,6 +88,19 @@ func (c *cmd) du(file string) (int64, error) {
 	filepath.Walk(file, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+
+		if c.followSymlinks && (info.Mode()&os.ModeSymlink != 0) {
+			follow, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			symBlocks, err := c.du(follow)
+			if err != nil {
+				return err
+			}
+			blocks += symBlocks
+			return nil
 		}
 
 		// report sub-folders and add number of blocks to overall count
@@ -125,8 +144,9 @@ func main() {
 	var kbUnit = flag.Bool("k", false, "write the files sizes in units of 1024 bytes, rather than the default 512-byte units")
 	var totalSum = flag.Bool("s", false, "report only the total sum for each of the specified files")
 	var followCMDSymLinks = flag.Bool("H", false, "follow symlink form [file...]")
+	var followSymLinks = flag.Bool("L", false, "follow all symlinks")
 	flag.Parse()
-	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum, *followCMDSymLinks).run(flag.Args()...); err != nil {
+	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum, *followCMDSymLinks, *followSymLinks).run(flag.Args()...); err != nil {
 		if errors.Is(err, errUsage) {
 			fmt.Fprintln(os.Stderr, errUsage)
 			os.Exit(1)
