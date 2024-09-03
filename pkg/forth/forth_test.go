@@ -43,6 +43,8 @@ var forthTests = []forthTest{
 	{val: "5 5 + hostbase", res: "", err: strconv.ErrSyntax, empty: true},
 	{val: "1 1 '+ newword 1 1 '+ newword", res: "", err: ErrWordExist, empty: true},
 	{val: "1 4 bad newword", res: "", err: ErrNotEnoughElements, empty: false},
+	{val: "1 %d printf", res: "1\n", empty: true},
+	{val: "%d printf", res: "", err: ErrEmptyStack, empty: true},
 }
 
 func TestForth(t *testing.T) {

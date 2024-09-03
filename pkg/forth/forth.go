@@ -82,6 +82,7 @@ func init() {
 		"*":        times,
 		"/":        div,
 		"%":        mod,
+		"printf":   fmtprintf,
 		"swap":     swap,
 		"ifelse":   ifelse,
 		"hostname": hostname,
@@ -360,6 +361,13 @@ func roundup(f Forth) {
 	v := toInt(f)
 	v = ((v + rnd - 1) / rnd) * rnd
 	f.Push(v)
+}
+
+func fmtprintf(f Forth) {
+	x := f.Pop()
+	s := x.(string)
+	y := f.Pop()
+	f.Push(fmt.Sprintf(s, y))
 }
 
 func swap(f Forth) {

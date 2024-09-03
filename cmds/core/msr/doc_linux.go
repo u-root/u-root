@@ -17,7 +17,7 @@
 //
 //	To read the msrs for 0 (sorry, the command is msr and the forth command
 //	is msr, making this a bit confusing):
-//	sudo msr 0 msr 0x3a reg rd
+//	sudo msr 0 cpu 0x3a reg rd
 //	Breaking that down:
 //	0 - for cpu 0
 //	msr - for take the glob, in this case 0, and push all matching filenames on the stack
@@ -26,7 +26,7 @@
 //	rd - pop a 32-bit int and a []string and use them to read 1 or more MSRs
 //
 //	for all:
-//	sudo msr "'*" msr 0x3a reg rd
+//	sudo msr "'*" cpu 0x3a reg rd
 //
 //	The "'" is needed to quote the * so forth does not think we're multiplying.
 //

@@ -31,16 +31,27 @@
 //	r glob register -- read the MSR 'register' from cores matching 'glob'
 //	w glob register value -- write the value to 'register' on all cores matching 'glob'
 //
-// Examples:
+// Examples (NOTE: single ', since it is a forth literal! '* NOT '*'):
 //
 //	Show the IA32 feature MSR on all cores
-//	sudo fio READ_IA32_FEATURE_CONTROL
+//	sudo msr READ_IA32_FEATURE_CONTROL
 //	[[5 5 5 5]]
 //	lock the registers
-//	sudo fio LOCK_IA32_FEATURE_CONTROL
+//	sudo msr LOCK_IA32_FEATURE_CONTROL
 //	Just see it one core 0 and 1
-//	sudo ./fio '[01]' msr 0x3a reg rd
+//	sudo ./msr "'[01]" cpu 0x3a reg rd
 //	[[5 5]]
+//	Debug your cpu mask
+//	sudo ./msr "'1*" "cpu"
+//	1,10-19
+//	Debug your command stack
+//	sudo ./msr "'[01]" cpu 0x3a reg
+//	[0-1 0x3a]
+//
+//	For rd, if you want to see it in hex (which should be the default
+//	but it's complicated
+//	sudo ./msr "'[01]" cpu 0x10 reg rd %#x printf
+//	[0xf41c40e682bb8 0xf41c40e69876b]
 package main
 
 import (
@@ -154,7 +165,8 @@ func rd(f forth.Forth) {
 	data, errs := r.Read(c)
 	forth.Debug("data %v errs %v", data, errs)
 	if errs != nil {
-		panic(fmt.Sprintf("%v", errs))
+		f.Push(errs)
+		return
 	}
 	f.Push(data)
 }
@@ -166,7 +178,7 @@ func rd(f forth.Forth) {
 // modern world.
 // If you're determined to write a fixed value, the same
 // for all, it's easy:
-// fio "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
+// msr "'*'" cpu 0x3a reg rd 0 val and your-value new-val val or wr
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
 	v := f.Pop().([]uint64)
@@ -241,6 +253,9 @@ func main() {
 		forth.NewWord(f, w.name, w.w[0], w.w[1:]...)
 	}
 	a := flag.Args()
+	if len(a) == 0 {
+		return
+	}
 	// If the first arg is r or w, we're going to assume they're not doing Forth.
 	// It is too confusing otherwise if they type a wrong r or w command and
 	// see the Forth stack and nothing else.
@@ -267,7 +282,10 @@ func main() {
 		if len(a) != 4 {
 			log.Fatal("Usage for lock: lock <msr-glob> <register> <bit>")
 		}
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
+		cmd := fmt.Sprintf("'%s cpu %s reg '%s cpu %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])
+		forth.Debug("Lock:%q", cmd)
+
+		if err := forth.EvalString(f, cmd); err != nil {
 			log.Fatal(err)
 		}
 	default:
