@@ -5,6 +5,7 @@
 package health
 
 import (
+	"github.com/NVIDIA/go-dcgm/pkg/dcgm"
 	"github.com/jaypipes/ghw"
 )
 
@@ -18,10 +19,16 @@ type Kernel struct {
 	Drivers string `file:"/proc/devices"`
 }
 
+type NvidiaHealth struct {
+	dcgm.DeviceHealth
+	dcgm.DeviceStatus
+}
+
 type Stat struct {
 	Hostname string
 	Info     *ghw.HostInfo
 	Kernel   Kernel
+	NGPU     []NvidiaHealth
 	// This should be empty, but some packages behave badly.
 	Stderr string
 	Err    string

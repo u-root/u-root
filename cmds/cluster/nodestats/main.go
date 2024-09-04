@@ -6,6 +6,10 @@
 // It currently uses the jaypipes/ghw package, as well as
 // files in /sys and /proc.
 // Any errors encountered are recorded in the stats struct.
+// By default, the ghw package will run external tools.
+// To disable this behavior:
+// GHW_DISABLE_TOOLS=1 nodestats
+// or export GHW_DISABLE_TOOLS=1 && nodestats
 package main
 
 import (
@@ -69,6 +73,11 @@ func node() *health.Stat {
 	}
 
 	stats := &health.Stat{Hostname: hn, Info: host, Kernel: k, Stderr: string(Stderr[:n])}
+
+	if stats.NGPU, err = dcgmi(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if errs != nil {
 		stats.Err = errs.Error()
 	}
