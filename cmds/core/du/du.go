@@ -16,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 var (
@@ -25,6 +27,7 @@ var (
 
 type cmd struct {
 	stdout            io.Writer
+	files             []string
 	reportFiles       bool
 	kbUnit            bool
 	totalSum          bool
@@ -32,18 +35,24 @@ type cmd struct {
 	followSymlinks    bool
 }
 
-func command(stdout io.Writer, reportFiles, kbUnit, totalSum, followCMDSymLinks, followSymLinks bool) *cmd {
-	return &cmd{
-		stdout:            stdout,
-		reportFiles:       reportFiles,
-		kbUnit:            kbUnit,
-		totalSum:          totalSum,
-		followCMDSymLinks: followCMDSymLinks,
-		followSymlinks:    followSymLinks,
+func command(stdout io.Writer, args []string) *cmd {
+	c := cmd{
+		stdout: stdout,
 	}
+
+	f := flag.NewFlagSet(args[0], flag.ExitOnError)
+	f.BoolVar(&c.reportFiles, "a", false, "report the size of each file not of type directory")
+	f.BoolVar(&c.kbUnit, "k", false, "write the files sizes in units of 1024 bytes, rather than the default 512-byte units")
+	f.BoolVar(&c.totalSum, "s", false, "report only the total sum for each of the specified files")
+	f.BoolVar(&c.followCMDSymLinks, "H", false, "follow symlink form [file...]")
+	f.BoolVar(&c.followSymlinks, "L", false, "follow all symlinks")
+
+	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	c.files = f.Args()
+	return &c
 }
 
-func (c *cmd) run(files ...string) error {
+func (c *cmd) run() error {
 	if c.totalSum && c.reportFiles {
 		return errUsage
 	}
@@ -52,11 +61,11 @@ func (c *cmd) run(files ...string) error {
 		return errUsage
 	}
 
-	if len(files) == 0 {
-		files = append(files, ".")
+	if len(c.files) == 0 {
+		c.files = append(c.files, ".")
 	}
 
-	for _, file := range files {
+	for _, file := range c.files {
 		duPath := file
 		if c.followCMDSymLinks {
 			fi, err := os.Lstat(file)
@@ -140,13 +149,7 @@ func (c *cmd) print(nblock int64, path string) {
 }
 
 func main() {
-	var reportFiles = flag.Bool("a", false, "report the size of each file not of type directory")
-	var kbUnit = flag.Bool("k", false, "write the files sizes in units of 1024 bytes, rather than the default 512-byte units")
-	var totalSum = flag.Bool("s", false, "report only the total sum for each of the specified files")
-	var followCMDSymLinks = flag.Bool("H", false, "follow symlink form [file...]")
-	var followSymLinks = flag.Bool("L", false, "follow all symlinks")
-	flag.Parse()
-	if err := command(os.Stdout, *reportFiles, *kbUnit, *totalSum, *followCMDSymLinks, *followSymLinks).run(flag.Args()...); err != nil {
+	if err := command(os.Stdout, os.Args).run(); err != nil {
 		if errors.Is(err, errUsage) {
 			fmt.Fprintln(os.Stderr, errUsage)
 			os.Exit(1)
