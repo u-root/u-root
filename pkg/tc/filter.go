@@ -40,6 +40,8 @@ type FArgs struct {
 	filterObj *tc.Object
 }
 
+// ParseFilterArgs takes an io.Writer and []string with arguments from the commandline
+// and returns an *FArgs structure
 func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 	pref := uint32(0)
 	proto := uint32(0)
@@ -152,6 +154,7 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 	return ret, nil
 }
 
+// ShowFilter implements the functionality of `tc filter show ...`
 func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 	iface, err := getDevice(fArgs.dev)
 	if err != nil {
@@ -195,6 +198,7 @@ func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 	return nil
 }
 
+// AddFilter implements the functionality of `tc filter add ...`
 func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
 	iface, err := getDevice(fArgs.dev)
 	if err != nil {
@@ -214,6 +218,7 @@ func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
 	return nil
 }
 
+// DeleteFilter implements the functionality of `tc filter del ... `
 func (t *Trafficctl) DeleteFilter(stdout io.Writer, fArgs *FArgs) error {
 	iface, err := getDevice(fArgs.dev)
 	if err != nil {
@@ -237,14 +242,20 @@ func (t *Trafficctl) DeleteFilter(stdout io.Writer, fArgs *FArgs) error {
 	return nil
 }
 
+// ReplaceFilter implements the functionality of `tc filter replace ... `
+// Note: Not implemented yet
 func (t *Trafficctl) ReplaceFilter(stdout io.Writer, fArgs *FArgs) error {
 	return ErrNotImplemented
 }
 
+// ChangeFilter implements the functionality of `tc filter change ... `
+// Note: Not implemented yet
 func (t *Trafficctl) ChangeFilter(stdout io.Writer, fArgs *FArgs) error {
 	return ErrNotImplemented
 }
 
+// GetFilter implements the functionality of `tc filter get ... `
+// Note: Not implemented yet
 func (t *Trafficctl) GetFilter(stdout io.Writer, fArgs *FArgs) error {
 	return ErrNotImplemented
 }

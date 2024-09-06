@@ -95,6 +95,8 @@ func parseTime(t string) (uint32, error) {
 	return ret, nil
 }
 
+// ParseHandle takes a string in the form of XXXX: and returns the XXXX value as
+// uint32 type shifted left by 16 bits.
 func ParseHandle(h string) (uint32, error) {
 	// split the string at :
 	maj, _, ok := strings.Cut(h, ":")
@@ -110,6 +112,10 @@ func ParseHandle(h string) (uint32, error) {
 	return uint32(major) << 16, nil
 }
 
+// ParseClassID takes a string which can have three forms:
+// Form 1: "root", which returns tc.HandleRoot
+// Form 2: "none", which returns 0 as classid
+// Form 3: "XXXX:XXXX" (Major:Minor), will return uint32(major<<16)|uint32(minor)
 func ParseClassID(p string) (uint32, error) {
 	if p == "root" {
 		return tc.HandleRoot, nil
@@ -145,6 +151,8 @@ var (
 	ErrUnknownLinkLayer = errors.New("unknown linklayer value provided")
 )
 
+// ParseLinkLayer takes a string of LinkLayer name and returns the
+// equivalent uint8 representation.
 func ParseLinkLayer(l string) (uint8, error) {
 	for _, ll := range []struct {
 		name string
@@ -161,6 +169,8 @@ func ParseLinkLayer(l string) (uint8, error) {
 	return 0xFF, ErrUnknownLinkLayer
 }
 
+// ParseSize takes a string of the form `0123456789gkmbit` and returns
+// the equivalent size as uint64.
 func ParseSize(s string) (uint64, error) {
 	sizeStr := strings.TrimRight(s, "gkmbit")
 
@@ -189,6 +199,8 @@ func ParseSize(s string) (uint64, error) {
 	return sz, nil
 }
 
+// ParseRate takes a string of the form `0123456789bBgGKkMmTitps` and returns
+// the equivalent rate as uint64.
 func ParseRate(arg string) (uint64, error) {
 	unit := strings.TrimLeft(arg, "0123456789")
 
@@ -228,6 +240,7 @@ func ParseRate(arg string) (uint64, error) {
 	return 0, ErrInvalidArg
 }
 
+// GetHz reads the psched rate from /proc/net/psched and returns it.
 func GetHz() (int, error) {
 	const HZdef = 100
 	psched, err := os.Open("/proc/net/psched")
@@ -251,6 +264,7 @@ func GetHz() (int, error) {
 	return HZdef, nil
 }
 
+// CalcXMitTime takes a rate and size of uint64 and calculates the XMitTime.
 func CalcXMitTime(rate uint64, size uint32) (uint32, error) {
 	ret := TimeUnitsPerSecs * (float64(size) / float64(rate))
 	if ret >= 0xFFFF_FFFF {
@@ -315,6 +329,8 @@ var (
 	ErrNoValidProto = errors.New("invalid protocol name")
 )
 
+// ParseProto takes a protocol string and returns the equivalent
+// uint32 representation.
 func ParseProto(prot string) (uint32, error) {
 	for _, p := range []struct {
 		name string
@@ -336,6 +352,8 @@ func ParseProto(prot string) (uint32, error) {
 	return 0, ErrNoValidProto
 }
 
+// GetProtoFromInfo takes the uint32 representation of a protocol and
+// returns the equivalent string.
 func GetProtoFromInfo(info uint32) string {
 	protoNr := uint16((info & 0x0000FFFF))
 
@@ -364,6 +382,8 @@ func GetProtoFromInfo(info uint32) string {
 	return ""
 }
 
+// GetPrefFromInfo takes the uint32 representation of the info field of tc.Object
+// and returns the preference/priority value as uint32.
 func GetPrefFromInfo(info uint32) uint32 {
 	return (info & 0xFFFF_0000) >> 16
 }

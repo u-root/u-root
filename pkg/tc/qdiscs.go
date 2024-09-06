@@ -18,6 +18,8 @@ const (
 [ ce_threshold TIME ]`
 )
 
+// ParseCodelArgs parses a []string from the commandline for the codel qdisc.
+// and returns an *tc.Object accordingly.
 func ParseCodelArgs(out io.Writer, args []string) (*tc.Object, error) {
 	codel := &tc.Codel{}
 	for i := 0; i < len(args); i = i + 2 {
@@ -68,6 +70,8 @@ func ParseCodelArgs(out io.Writer, args []string) (*tc.Object, error) {
 	return ret, nil
 }
 
+// ParseQFQArgs parses a []string from the commandline for the qfq qdisc
+// via `tc qdisc ... qfq ...` and returns an *tc.Object accordingly.
 func ParseQFQArgs(out io.Writer, args []string) (*tc.Object, error) {
 	qfq := &tc.Qfq{}
 
@@ -124,6 +128,8 @@ prio     priority of leaf; lower are served first {0}
 quantum  how much bytes to serve from leaf at once {use r2q}`
 )
 
+// ParseHTBQDiscArgs parses a []string from the commandline for the HTB qdisc
+// via `tc qdisc ... htb ...` and returns an *tc.Object accordingly.
 func ParseHTBQDiscArgs(out io.Writer, args []string) (*tc.Object, error) {
 	htb := tc.Htb{
 		Init: &tc.HtbGlob{
@@ -167,6 +173,8 @@ func ParseHTBQDiscArgs(out io.Writer, args []string) (*tc.Object, error) {
 	return ret, nil
 }
 
+// ParseHFSCQDiscArgs parses a []string from the commandline for the HFSC qdisc via
+// `tc qdisc ... hfsc ...` and returns an *tc.Object accordingly.
 func ParseHFSCQDiscArgs(stdout io.Writer, args []string) (*tc.Object, error) {
 	ret := &tc.Object{}
 	hfsc := &tc.HfscQOpt{}
