@@ -142,6 +142,7 @@ const (
 	QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }`
 )
 
+// ShowQdisc implements the functionality of `tc qdisc show ... `
 func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
 	qdiscs, err := t.Tc.Qdisc().Get()
 	if err != nil {
@@ -165,6 +166,7 @@ func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
+// AddQdisc implements the functionality of `tc qdisc add ... `
 func (t *Trafficctl) AddQdisc(stdout io.Writer, args *Args) error {
 	iface, err := getDevice(args.dev)
 	if err != nil {
@@ -189,6 +191,7 @@ func (t *Trafficctl) AddQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
+// DeleteQdisc implements the functionality of `tc qdisc del ... `
 func (t *Trafficctl) DeleteQdisc(stdout io.Writer, args *Args) error {
 	iface, err := getDevice(args.dev)
 	if err != nil {
@@ -220,6 +223,7 @@ func (t *Trafficctl) DeleteQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
+// ReplaceQdisc implements the functionality of `tc qdisc replace ... `
 func (t *Trafficctl) ReplaceQdisc(stdout io.Writer, args *Args) error {
 	iface, err := getDevice(args.dev)
 	if err != nil {
@@ -244,6 +248,7 @@ func (t *Trafficctl) ReplaceQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
+// ChangeQdisc implements the functionality of `tc qdisc change ... `
 func (t *Trafficctl) ChangeQdisc(stdout io.Writer, args *Args) error {
 	iface, err := getDevice(args.dev)
 	if err != nil {
@@ -269,6 +274,8 @@ func (t *Trafficctl) ChangeQdisc(stdout io.Writer, args *Args) error {
 	return nil
 }
 
+// LinkQdisc implements the functionality of `tc qdisc link ... `
+// Note: Not implemented yet
 func (t *Trafficctl) LinkQdisc(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }

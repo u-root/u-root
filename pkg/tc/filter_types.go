@@ -15,6 +15,8 @@ const (
 	BasicHelp = `tc filter ... basic [ match EMATCH_TREE ] [ action ACTION_SPEC ] [ classid CLASSID ]`
 )
 
+// ParseBasicParams parses the cmdline arguments for `tc filter ... basic ...`
+// and returns a *tc.Object.
 func ParseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
 	b := &tc.Basic{}
 	var err error

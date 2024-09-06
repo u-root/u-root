@@ -19,6 +19,8 @@ const (
 	maxUint32 = 0xFFFF_FFFF
 )
 
+// ParseHFSCClassArgs parses the cmdline arguments for `tc class add ... hfsc ...`
+// and returns a *tc.Object.
 func ParseHFSCClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 	ret := &tc.Object{}
 	var fscOK, rscOK, uscOK bool
@@ -218,8 +220,8 @@ func supportetClasses(cl string) func(io.Writer, []string) (*tc.Object, error) {
 	return ret
 }
 
-// ParseHTBClassArgs parses the cmdline arguments for `tc qdisc add ... htb ...`
-// and returns a pointer to tc.Object.
+// ParseHTBClassArgs parses the cmdline arguments for `tc class add ... htb ...`
+// and returns a *tc.Object.
 func ParseHTBClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 	const linkLayerMask = 0x0F
 	// rate <rate> and burst <bytes> is required

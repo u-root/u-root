@@ -163,10 +163,12 @@ func (t *Trafficctl) DeleteClass(stdout io.Writer, args *Args) error {
 	return nil
 }
 
+// ChangeClass implements the changing of a classful qdisc with `tc class change ...`
 func (t *Trafficctl) ChangeClass(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
 
+// ReplaceClass implements the replacement of a classful qdisc with `tc class replace ...`
 func (t *Trafficctl) ReplaceClass(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
