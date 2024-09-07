@@ -81,7 +81,8 @@ func main() {
 	}
 
 	if !*noTPM {
-		rwc, err := tpm.OpenTPM(tpmDevice)
+		// rwc, err := tpm.OpenTPM(tpmDevice)
+		rwc, err := tpm.OpenTPMFile(tpmDevice)
 		if err != nil {
 			die(err)
 		}
