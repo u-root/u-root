@@ -9,8 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/testutil"
 )
 
 func TestDU(t *testing.T) {
@@ -96,11 +99,17 @@ func TestDU(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	t.Run("empty folder", func(t *testing.T) {
-		dir := t.TempDir()
-		err := os.Chdir(dir)
+		currDir, err := os.Getwd()
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		dir := t.TempDir()
+		err = os.Chdir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Chdir(currDir)
 
 		stdout := &bytes.Buffer{}
 		err = command(stdout, []string{"du"}).run()
@@ -182,9 +191,9 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
-		sp1 := strings.Fields(stdout.String())
-		if sp1[0] != "0" {
-			t.Errorf("expected 0 got %s", sp1[0])
+		r := parseBlocks(t, stdout)
+		if r != 0 {
+			t.Errorf("expected 0 got %d", r)
 		}
 
 		stdout.Reset()
@@ -192,20 +201,49 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil got %v", err)
 		}
-		sp2 := strings.Fields(stdout.String())
-		if sp2[0] == "0" {
+		if parseBlocks(t, stdout) == 0 {
 			t.Error("expected du to follow symlink but value was 0")
 		}
 	})
+	t.Run("relative symlinks", func(t *testing.T) {
+		testutil.SkipIfInVMTest(t)
+
+		stdout := &bytes.Buffer{}
+		err := command(stdout, []string{"du", "-s", "testdata/rel-symlinks"}).run()
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+
+		sizeWithoutL := parseBlocks(t, stdout)
+
+		stdout.Reset()
+		err = command(stdout, []string{"du", "-sL", "testdata/rel-symlinks"}).run()
+		if err != nil {
+			t.Fatalf("expected nil got %v", err)
+		}
+		sizeWithL := parseBlocks(t, stdout)
+
+		if sizeWithL <= sizeWithoutL {
+			t.Errorf("expected size with -L to be bigger, because to relative symlinks, got -s: %d, -sL: %d", sizeWithoutL, sizeWithL)
+		}
+	})
+}
+
+// parse first line of the output
+func parseBlocks(t *testing.T, stdout *bytes.Buffer) int64 {
+	t.Helper()
+	sp := strings.Fields(stdout.String())
+	r, err := strconv.ParseInt(sp[0], 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return r
 }
 
 func prepareDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	err := os.Chdir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	f1, err := os.Create(filepath.Join(dir, "file1"))
 	if err != nil {

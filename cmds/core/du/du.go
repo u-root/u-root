@@ -68,16 +68,10 @@ func (c *cmd) run() error {
 	for _, file := range c.files {
 		duPath := file
 		if c.followCMDSymLinks {
-			fi, err := os.Lstat(file)
+			var err error
+			duPath, err = c.evaluateSymlink(file)
 			if err != nil {
 				return err
-			}
-
-			if fi.Mode()&os.ModeSymlink != 0 {
-				duPath, err = os.Readlink(file)
-				if err != nil {
-					return err
-				}
 			}
 		}
 
@@ -100,7 +94,7 @@ func (c *cmd) du(file string) (int64, error) {
 		}
 
 		if c.followSymlinks && (info.Mode()&os.ModeSymlink != 0) {
-			follow, err := os.Readlink(path)
+			follow, err := c.evaluateSymlink(path)
 			if err != nil {
 				return err
 			}
@@ -146,6 +140,28 @@ func (c *cmd) print(nblock int64, path string) {
 		nblock /= 2
 	}
 	fmt.Fprintf(c.stdout, "%d\t%s\n", nblock, path)
+}
+
+func (c *cmd) evaluateSymlink(path string) (string, error) {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+
+	symPath := path
+	if fi.Mode()&os.ModeSymlink != 0 {
+		symPath, err = os.Readlink(path)
+		if err != nil {
+			return "", err
+		}
+
+		if !filepath.IsAbs(symPath) {
+			dir := filepath.Dir(path)
+			symPath = filepath.Join(dir, symPath)
+		}
+	}
+
+	return symPath, nil
 }
 
 func main() {
