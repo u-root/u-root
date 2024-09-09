@@ -85,7 +85,7 @@ func TestConstructURL(t *testing.T) {
 			port: "69",
 			dir:  "",
 			file: "abc.file",
-			exp:  "tftp://localhost:69/abc.file",
+			exp:  "localhost:69/abc.file",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

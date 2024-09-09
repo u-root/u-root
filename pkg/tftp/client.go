@@ -37,7 +37,7 @@ func (d *DummyResp) Size() (int64, error) {
 
 // Read mocks the Read function of tftp.Response for testing.
 func (d *DummyResp) Read(b []byte) (int, error) {
-	return 0, nil
+	return 0, io.EOF
 }
 
 // Get mocks the Get method of tftp.Client.
@@ -72,7 +72,7 @@ func (r *RealResponse) Size() (int64, error) {
 
 // NewClient sets up a new tftp.Client according to the given ClientCfg struct.
 func NewClient(ccfg *ClientCfg) (*Client, error) {
-	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, ccfg.Timeout)
+	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, tftp.ClientTransferSize(false), ccfg.Timeout)
 	return &Client{
 		Client: c,
 	}, err
