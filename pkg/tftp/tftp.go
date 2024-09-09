@@ -63,8 +63,8 @@ func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer)
 		Host:    ipHost,
 		Port:    port,
 		Mode:    tftp.ModeNetASCII,
-		Rexmt:   tftp.ClientRetransmit(10),
-		Timeout: tftp.ClientTimeout(1),
+		Rexmt:   tftp.ClientRetransmit(4),
+		Timeout: tftp.ClientTimeout(10),
 		Trace:   false,
 		Literal: f.Literal,
 	}
@@ -120,7 +120,7 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 
 		err = executePut(clientcfg.Client, clientcfg.Host, clientcfg.Port, input[1:])
 	case "connect":
-		if len(input) > 2 {
+		if len(input) > 1 {
 			clientcfg.Port = input[2]
 		}
 		clientcfg.Host = input[1]
@@ -160,7 +160,7 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 
 func constructURL(host, port, dir string, file string) string {
 	var s strings.Builder
-	fmt.Fprintf(&s, "tftp://%s:%s/", host, port)
+	fmt.Fprintf(&s, "%s:%s/", host, port)
 	if dir != "" {
 		fmt.Fprintf(&s, "%s/", dir)
 	}
@@ -284,8 +284,6 @@ type getCmd struct {
 	localfile   string
 }
 
-var errSizeNoMatch = errors.New("data size of read and write mismatch")
-
 func executeGet(client ClientIf, host, port string, files []string) error {
 	ret := &getCmd{}
 	switch len(files) {
@@ -303,6 +301,7 @@ func executeGet(client ClientIf, host, port string, files []string) error {
 	}
 
 	for _, file := range ret.remotefiles {
+		fmt.Println(constructURL(host, port, "", file))
 		resp, err := client.Get(constructURL(host, port, "", file))
 		if err != nil {
 			return err
@@ -321,25 +320,26 @@ func executeGet(client ClientIf, host, port string, files []string) error {
 			}
 		}
 
-		datalen, err := resp.Size()
+		nR := 0
+		data := make([]byte, 0)
+		for {
+			readData := make([]byte, 10)
+			rD, err := resp.Read(data)
+			if err != nil && !errors.Is(err, io.EOF) {
+				return err
+			}
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			nR += rD
+			data = append(data, readData...)
+		}
+
+		_, err = localfile.Write(data)
 		if err != nil {
 			return err
 		}
 
-		data := make([]byte, datalen)
-		nR, err := resp.Read(data)
-		if err != nil {
-			return err
-		}
-
-		nW, err := localfile.Write(data)
-		if err != nil {
-			return err
-		}
-
-		if nR != nW {
-			return errSizeNoMatch
-		}
 	}
 
 	return nil

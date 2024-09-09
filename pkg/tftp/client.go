@@ -72,7 +72,7 @@ func (r *RealResponse) Size() (int64, error) {
 
 // NewClient sets up a new tftp.Client according to the given ClientCfg struct.
 func NewClient(ccfg *ClientCfg) (*Client, error) {
-	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, ccfg.Timeout)
+	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, tftp.ClientTransferSize(false), ccfg.Timeout)
 	return &Client{
 		Client: c,
 	}, err
