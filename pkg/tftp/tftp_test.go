@@ -9,10 +9,37 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
 )
+
+// ClientMock serves as the Mock structure of Client for testing.
+type ClientMock struct{}
+
+// DummyResp serves as the mock structure of Response for testing.
+type DummyResp struct{}
+
+// Size mocks the Size function of tftp.Response for testing.
+func (d *DummyResp) Size() (int64, error) {
+	return 0, nil
+}
+
+// Read mocks the Read function of tftp.Response for testing.
+func (d *DummyResp) Read(b []byte) (int, error) {
+	return 0, io.EOF
+}
+
+// Get mocks the Get method of tftp.Client.
+func (c *ClientMock) Get(url string) (Response, error) {
+	return &DummyResp{}, nil
+}
+
+// Put mocks the Put method of tftp.Client.
+func (c *ClientMock) Put(url string, r io.Reader, size int64) error {
+	return nil
+}
 
 func TestReadInteractiveInput(t *testing.T) {
 	for _, tt := range []struct {
