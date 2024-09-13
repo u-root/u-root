@@ -11,16 +11,15 @@ import (
 	guid "github.com/google/uuid"
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"log"
 	"os"
 	"strconv"
 	"testing"
 	"unsafe"
 )
 
-func mockKexecMemoryMapFromSysfsMemmap() (kexec.MemoryMap, error) {
+func mockKexecMemoryMapFromIOMem() (kexec.MemoryMap, error) {
 	return kexec.MemoryMap{
-		{Range: kexec.Range{Start: 0, Size: 50}, Type: kexec.RangeRAM},
+		{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
 		{Range: kexec.Range{Start: 100, Size: 50}, Type: kexec.RangeACPI},
 	}, nil
 }
@@ -37,21 +36,14 @@ func mockGetSMBIOSBase() (int64, int64, error) {
 // to make sure there are no issues with the overall process
 func TestLoadKexecMemWithHOBs(t *testing.T) {
 	// mock data
-	name := "./testdata/upl.dtb"
-	fdtLoad, err := getFdtInfo(name, nil)
-	if err != nil {
-		t.Fatalf("Unexpected error: %+v", err)
-	}
-	data, _ := os.ReadFile(name)
-
 	defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
 	getSMBIOSBase = mockGetSMBIOSBase
 
 	defer func(old func() (*acpi.RSDP, error)) { getAcpiRSDP = old }(getAcpiRSDP)
 	getAcpiRSDP = mockGetRSDP
 
-	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromSysfsMemmap = old }(kexecMemoryMapFromSysfsMemmap)
-	kexecMemoryMapFromSysfsMemmap = mockKexecMemoryMapFromSysfsMemmap
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
+	kexecMemoryMapFromIOMem = mockKexecMemoryMapFromIOMem
 
 	tempFile := mockCPUTempInfoFile(t, `
 processor	: 0
@@ -64,40 +56,76 @@ address sizes	: 39 bits physical, 48 bits virtual
 	defer os.Remove(tempFile)
 	// end of mock data
 
-	mem, loadErr := loadKexecMemWithHOBs(fdtLoad, data)
-	if loadErr != nil {
-		t.Fatalf("Unexpected err: %+v", loadErr)
+	tests := []struct {
+		name            string
+		fdtLoad         *FdtLoad
+		data            []byte
+		mem             kexec.Memory
+		wantErr         error
+		wantAddr        uintptr
+		wantMemSegments []kexec.Range
+	}{
+		{
+			name:    "Valid case to relocate FIT image",
+			fdtLoad: &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800},
+			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
+				{".reloc", mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, 0x200)},
+			}),
+			mem: kexec.Memory{
+				Phys: kexec.MemoryMap{
+					{Range: kexec.Range{Start: 0x1000, Size: 0x500000}, Type: kexec.RangeRAM},
+					{Range: kexec.Range{Start: 100, Size: 50}, Type: kexec.RangeACPI},
+				},
+			},
+			wantErr:  nil,
+			wantAddr: 0x200000 + tmpEntryOffset,
+			wantMemSegments: []kexec.Range{
+				{Start: 0x200000, Size: 0},                                                   // HOBs for bootloader
+				{Start: 0x200000 + tmpHobSize, Size: 0},                                      // boot env (tmp stack)
+				{Start: 0x200000 + tmpEntryOffset, Size: 0},                                  // boot env (trampoline)
+				{Start: 0x200000 + tmpHobSize + tmpStackSize + trampolineSize, Size: 0x5100}, // FIT image
+			},
+		},
 	}
-	if mem.Segments == nil || len(mem.Segments) != 2 {
-		t.Fatalf("load memory Segments size = %v, want = 2", len(mem.Segments))
-	}
-	t.Logf("mem Segments: %v", mem.Segments.Phys())
 
-	fdLoadStart := fdtLoad.Load
-
-	// Check segment 0 (hob list for universal payload)
-	// Here we only validate segment.Start and ignore the content (bytes),
-	// since it's too difficult to split and deserialize hob list from bytes
-	hobListAddr := uintptr(fdLoadStart - 0x100000)
-	if mem.Segments.Phys()[0].Start != hobListAddr {
-		t.Fatalf("universalpayload hob list segment.Start = %v, want = %v", mem.Segments.Phys()[1], hobListAddr)
-	}
-	// Check segment 1 (fdLoad raw data)
-	var fdLoadRange = kexec.Range{Start: uintptr(fdLoadStart), Size: uint(len(data))}
-	if mem.Segments.Phys()[1] != fdLoadRange {
-		t.Fatalf("universalpayload fdLoad segment range error, range = %v, want = %v",
-			mem.Segments.Phys()[1], fdLoadRange)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr, err := loadKexecMemWithHOBs(tt.fdtLoad, tt.data, &tt.mem)
+			expectErr(t, err, tt.wantErr)
+			t.Logf("mem Segments: %v, want Segments: %v", tt.mem.Segments.Phys(), tt.wantMemSegments)
+			if tt.wantAddr != addr {
+				t.Fatalf("Unexpected target addr: %v, want: %v", addr, tt.wantAddr)
+			}
+			if tt.wantMemSegments != nil {
+				if len(tt.wantMemSegments) != len(tt.mem.Segments.Phys()) {
+					t.Fatalf("Unexpected mem segment size: %v, want: %v", len(tt.mem.Segments.Phys()), len(tt.wantMemSegments))
+				}
+				for i, r := range tt.wantMemSegments {
+					actualRange := tt.mem.Segments.Phys()[i]
+					if r.Start != actualRange.Start {
+						t.Fatalf("Unexpected mem segment Start: %v, want: %v", actualRange.Start, r.Start)
+					}
+				}
+			}
+		})
 	}
 }
 
 func TestAppendMemMapHOB(t *testing.T) {
-	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromSysfsMemmap = old }(kexecMemoryMapFromSysfsMemmap)
-	kexecMemoryMapFromSysfsMemmap = mockKexecMemoryMapFromSysfsMemmap
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
+	kexecMemoryMapFromIOMem = mockKexecMemoryMapFromIOMem
+
+	var memMap kexec.MemoryMap
+	if ioMem, err := kexecMemoryMapFromIOMem(); err != nil {
+		t.Fatal(err)
+	} else {
+		memMap = ioMem
+	}
+
 	hobBuf := &bytes.Buffer{}
 	var hobLen uint64
-	err := appendMemMapHOB(hobBuf, &hobLen)
-	if err != nil {
-		log.Fatal(err)
+	if err := appendMemMapHOB(hobBuf, &hobLen, memMap); err != nil {
+		t.Fatal(err)
 	}
 
 	var deserializedHOB EFIMemoryMapHOB
@@ -118,9 +146,8 @@ func TestAppendMemMapHOB(t *testing.T) {
 func TestAppendSerialPortHOB(t *testing.T) {
 	hobBuf := &bytes.Buffer{}
 	var hobLen uint64
-	err := appendSerialPortHOB(hobBuf, &hobLen)
-	if err != nil {
-		log.Fatal(err)
+	if err := appendSerialPortHOB(hobBuf, &hobLen); err != nil {
+		t.Fatal(err)
 	}
 
 	var serialPortInfo UniversalPayloadSerialPortInfo
@@ -141,9 +168,8 @@ func TestAppendUniversalPayloadBase(t *testing.T) {
 	hobBuf := &bytes.Buffer{}
 	var hobLen uint64
 	const fdtLoad = uint64(0x700000)
-	err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad)
-	if err != nil {
-		log.Fatal(err)
+	if err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad); err != nil {
+		t.Fatal(err)
 	}
 	var uplBase UniversalPayloadBase
 	var uplBaseGUIDHOB EFIHOBGUIDType
@@ -223,8 +249,7 @@ func TestConstructHOBList(t *testing.T) {
 
 			// deserialize hobList object from bytes
 			var efiTable EFIHOBHandoffInfoTable
-			err = binary.Read(tt.dst, binary.LittleEndian, &efiTable)
-			if err != nil {
+			if err := binary.Read(tt.dst, binary.LittleEndian, &efiTable); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if efiTable != tt.efiTable {
@@ -246,8 +271,7 @@ func TestConstructHOBList(t *testing.T) {
 
 			// end header
 			var endHeader EFIHOBGenericHeader
-			err = binary.Read(tt.dst, binary.LittleEndian, &endHeader)
-			if err != nil {
+			if err := binary.Read(tt.dst, binary.LittleEndian, &endHeader); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if endHeader != tt.endHeader {
@@ -335,8 +359,7 @@ address sizes	: 1000 bits physical, 48 bits virtual
 
 			// deserialize EFIHOBCPU object from bytes
 			var efiHOBCPU EFIHOBCPU
-			err = binary.Read(hobBuf, binary.LittleEndian, &efiHOBCPU)
-			if err != nil {
+			if err := binary.Read(hobBuf, binary.LittleEndian, &efiHOBCPU); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if *tt.expectedHOB != efiHOBCPU {
@@ -396,8 +419,7 @@ func TestAppendAcpiTableHOB(t *testing.T) {
 
 			// deserialize efiHOBGUID object from bytes
 			var efiHOBGUID EFIHOBGUIDType
-			err = binary.Read(hobBuf, binary.LittleEndian, &efiHOBGUID)
-			if err != nil {
+			if err := binary.Read(hobBuf, binary.LittleEndian, &efiHOBGUID); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if *tt.expectedEFIHOBGUID != efiHOBGUID {
@@ -406,8 +428,7 @@ func TestAppendAcpiTableHOB(t *testing.T) {
 
 			// deserialize acpiTable object from bytes
 			var acpiTable UniversalPayloadAcpiTable
-			err = binary.Read(hobBuf, binary.LittleEndian, &acpiTable)
-			if err != nil {
+			if err = binary.Read(hobBuf, binary.LittleEndian, &acpiTable); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if *tt.expectedAcpiTable != acpiTable {
@@ -468,8 +489,7 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 
 			// deserialize EFIHOBGUID object from bytes
 			var efiHOBGUID EFIHOBGUIDType
-			err = binary.Read(hobBuf, binary.LittleEndian, &efiHOBGUID)
-			if err != nil {
+			if err := binary.Read(hobBuf, binary.LittleEndian, &efiHOBGUID); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if *tt.expectedEFIHOBGUID != efiHOBGUID {
@@ -478,8 +498,7 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 
 			// deserialize smbiosTable object from bytes
 			var smbiosTable UniversalPayloadSmbiosTable
-			err = binary.Read(hobBuf, binary.LittleEndian, &smbiosTable)
-			if err != nil {
+			if err := binary.Read(hobBuf, binary.LittleEndian, &smbiosTable); err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			if *tt.expectedUplSmbiosTable != smbiosTable {
