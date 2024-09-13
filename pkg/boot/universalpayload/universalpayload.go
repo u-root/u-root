@@ -47,9 +47,9 @@ const (
 )
 
 var (
-	kexecMemoryMapFromSysfsMemmap = kexec.MemoryMapFromSysfsMemmap
-	getAcpiRSDP                   = acpi.GetRSDP
-	getSMBIOSBase                 = smbios.SMBIOSBase
+	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
+	getAcpiRSDP             = acpi.GetRSDP
+	getSMBIOSBase           = smbios.SMBIOSBase
 )
 
 type UniversalPayloadGenericHeader struct {
@@ -100,7 +100,6 @@ var (
 	ErrParseGUIDFail                   = errors.New("failed to parse GUID")
 	ErrFailToGetRSDPTable              = errors.New("failed to get RSDP table")
 	ErrFailToGetSmbiosTable            = errors.New("failed to get smbios base")
-	ErrReadGetMemoryMap                = errors.New("failed to get memory map from sysfs")
 	ErrWriteHOBBufMemoryMap            = errors.New("failed to write memory map to buffer")
 	ErrWriteHOBBufSerialPort           = errors.New("failed to append serial port hob to buffer")
 	ErrWriteHOBBufUniversalPayloadBase = errors.New("failed to append universal payload base to buffer")
@@ -111,6 +110,7 @@ var (
 	ErrWriteHOBLengthNotMatch          = errors.New("length mismatch when appending")
 	ErrKexecLoadFailed                 = errors.New("kexec.Load() failed")
 	ErrKexecExecuteFailed              = errors.New("kexec.Execute() failed")
+	ErrMemMapIoMemExecuteFailed        = errors.New("failed to get memory from /proc/iomem")
 )
 
 // Create GUID HOB with specified GUID string
@@ -189,11 +189,7 @@ func constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
 }
 
 // Construct system memory resource HOB
-func appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	memMap, err := kexecMemoryMapFromSysfsMemmap()
-	if err != nil {
-		return errors.Join(ErrReadGetMemoryMap, err)
-	}
+func appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64, memMap kexec.MemoryMap) error {
 	prev := buf.Len()
 	memHOB, length := hobFromMemMap(memMap)
 	if err := binary.Write(buf, binary.LittleEndian, memHOB); err != nil {
@@ -376,50 +372,137 @@ func constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 	return nil
 }
 
-func loadKexecMemWithHOBs(fdtLoad *FdtLoad, fdtData []byte) (kexec.Memory, error) {
-	//Step 1, Prepare memory
-	mem := kexec.Memory{}
+func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
+	stackBuffer := make([]byte, tmpStackSize)
 
-	//Step 2, Insert tianocore raw binary
-	mem.Segments.Insert(kexec.NewSegment(fdtData, kexec.Range{Start: uintptr(fdtLoad.Load), Size: uint(len(fdtData))}))
+	s := kexec.NewSegment(stackBuffer, kexec.Range{
+		Start: uintptr(hobAddr + tmpHobSize),
+		Size:  tmpStackSize,
+	})
+	mem.Segments.Insert(s)
 
-	// Step 3, Prepare HOB list
-	// TODO: remove hardcode HoB Address here
-	hobAddr := fdtLoad.Load - 0x100000
+	var trampoline []uint8
+	trampoline = constructTrampoline(trampoline, hobAddr, entry)
+
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, trampoline)
+
+	s = kexec.NewSegment(buf.Bytes(), kexec.Range{
+		Start: uintptr(hobAddr + tmpEntryOffset),
+		Size:  uint(buf.Len()),
+	})
+
+	mem.Segments.Insert(s)
+
+	return nil
+}
+
+func prepareHob(buf *bytes.Buffer, len *uint64, addr uint64, mem *kexec.Memory) error {
+	if err := appendMemMapHOB(buf, len, mem.Phys); err != nil {
+		return err
+	}
+
+	if err := appendSerialPortHOB(buf, len); err != nil {
+		return err
+	}
+
+	if err := appendUniversalPayloadBase(buf, len, addr); err != nil {
+		return err
+	}
+
+	if err := appendAcpiTableHOB(buf, len); err != nil {
+		return err
+	}
+
+	if err := appendSmbiosTableHOB(buf, len); err != nil {
+		return err
+	}
+
+	if err := appendEFICPUHOB(buf, len); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Memory) error {
 	hobBuf := &bytes.Buffer{}
 	hobListBuf := &bytes.Buffer{}
 	var hobLen uint64
 
-	if err := appendMemMapHOB(hobBuf, &hobLen); err != nil {
-		return mem, err
-	}
-
-	if err := appendSerialPortHOB(hobBuf, &hobLen); err != nil {
-		return mem, err
-	}
-
-	if err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad.Load); err != nil {
-		return mem, err
-	}
-
-	if err := appendAcpiTableHOB(hobBuf, &hobLen); err != nil {
-		return mem, err
-	}
-
-	if err := appendSmbiosTableHOB(hobBuf, &hobLen); err != nil {
-		return mem, err
-	}
-
-	if err := appendEFICPUHOB(hobBuf, &hobLen); err != nil {
-		return mem, err
+	if err := prepareHob(hobBuf, &hobLen, fdtLoad.Load, mem); err != nil {
+		return err
 	}
 
 	if err := constructHOBList(hobListBuf, hobBuf, &hobLen); err != nil {
-		return mem, err
+		return err
 	}
 
-	mem.Segments.Insert(kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{Start: uintptr(hobAddr), Size: uint(hobLen)}))
-	return mem, nil
+	s := kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{
+		Start: uintptr(loadAddr),
+		Size:  uint(hobListBuf.Len()),
+	})
+
+	mem.Segments.Insert(s)
+
+	return nil
+}
+
+func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) error {
+	if err := relocateFdtData(addr, fdt, data); err != nil {
+		return err
+	}
+
+	s := kexec.NewSegment(data, kexec.Range{
+		Start: uintptr(fdt.Load),
+		Size:  uint(len(data)),
+	})
+
+	mem.Segments.Insert(s)
+	return nil
+}
+
+func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr, error) {
+	mmRanges := mem.Phys.RAM()
+
+	fitOffset := tmpHobSize + tmpStackSize + trampolineSize
+	rangeLen := fitOffset + len(data)
+
+	// Try to find available Space to locate FIT image and HOB, stack and trampoline code.
+	// 2MB alignment will be easy for target OS/Bootloader to construct page table.
+	// The layout of this Space will be placed as following:
+	//
+	//  |------------------------|
+	//  |       FIT IMAGE        |
+	//  |------------------------|
+	//  |     TRAMPOLINE CODE    |
+	//  |------------------------|
+	//  |      TEMP STACK        |
+	//  |------------------------|
+	//  |  BOOTLOADER PARAMETER  |
+	//  |------------------------|
+	//
+	kernelRange, err := mmRanges.FindSpace(uint(rangeLen), kexec.WithAlignment(0x200000))
+	if err != nil {
+		return 0, err
+	}
+
+	targetAddr := uint64(kernelRange.Start)
+	fitImgAddr := targetAddr + uint64(fitOffset)
+
+	if err = prepareFdtData(fdt, data, fitImgAddr, mem); err != nil {
+		return 0, err
+	}
+
+	if err = prepareBootloaderParameter(fdt, targetAddr, mem); err != nil {
+		return 0, err
+	}
+
+	if err = prepareBootEnv(targetAddr, fdt.EntryStart, mem); err != nil {
+		return 0, err
+	}
+
+	return (uintptr)(targetAddr + tmpEntryOffset), nil
 }
 
 func Load(name string) error {
@@ -433,14 +516,23 @@ func Load(name string) error {
 		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
 	}
 
-	// Construct and write all HOBs into kexec.Memory
-	mem, err := loadKexecMemWithHOBs(fdtLoad, data)
+	// Prepare memory.
+	ioMem, err := kexecMemoryMapFromIOMem()
+	if err != nil {
+		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err)
+	}
 
+	mem := kexec.Memory{
+		Phys: ioMem,
+	}
+
+	// Prepare boot environment, including HoB, stack, bootloader parameter.
+	entry, err := loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
 		return err
 	}
 
-	if err := kexec.Load(uintptr(fdtLoad.EntryStart), mem.Segments, 0); err != nil {
+	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
 		return errors.Join(ErrKexecLoadFailed, err)
 	}
 
