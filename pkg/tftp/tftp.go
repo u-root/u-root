@@ -319,23 +319,7 @@ func executeGet(client ClientIf, host, port string, files []string) error {
 			}
 		}
 
-		nR := 0
-		data := make([]byte, 0)
-		for {
-			fmt.Println("loop")
-			readData := make([]byte, 10)
-			rD, err := resp.Read(data)
-			if err != nil && !errors.Is(err, io.EOF) {
-				return err
-			}
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			nR += rD
-			data = append(data, readData...)
-		}
-
-		_, err = localfile.Write(data)
+		_, err = io.Copy(localfile, resp)
 		if err != nil {
 			return err
 		}
