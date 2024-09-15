@@ -108,19 +108,18 @@ func handleVariableExpansion(b *bufio.Reader) string {
 			varName += string(nc)
 		}
 		return resolveEnvVariable(varName)
-	} else {
-		// It's a simple $VAR style
-		varName += string(c)
-		for {
-			c = next(b)
-			if c == 0 || strings.Contains(punct, string(c)) {
-				pushback(b)
-				break
-			}
-			varName += string(c)
-		}
-		return resolveEnvVariable(varName)
 	}
+	// It's a simple $VAR style
+	varName += string(c)
+	for {
+		c = next(b)
+		if c == 0 || strings.Contains(punct, string(c)) {
+			pushback(b)
+			break
+		}
+		varName += string(c)
+	}
+	return resolveEnvVariable(varName)
 }
 
 // Tokenize stuff coming in from the stream. For everything but an arg, the
@@ -183,7 +182,7 @@ func tok(b *bufio.Reader) (string, string) {
 }
 
 // get an ARG. It has to work.
-func getArg(b *bufio.Reader, what string) string {
+func getArg(b *bufio.Reader, _ string) string {
 	for {
 		nt, s := tok(b)
 		if nt == "EOF" || nt == "EOL" {

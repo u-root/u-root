@@ -8,10 +8,10 @@
 package main
 
 import (
-	"runtime"
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -67,7 +67,7 @@ func exit(c *Command) error {
 }
 
 // pwd command: print the current working directory
-func pwd(c *Command) error {
+func pwd(_ *Command) error {
 	dir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("pwd: %v", err)
