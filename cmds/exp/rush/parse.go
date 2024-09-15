@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -71,6 +72,57 @@ func next(b *bufio.Reader) byte {
 	return byte(c)
 }
 
+// Resolve variable value from environment
+func resolveEnvVariable(varName string) string {
+	if varName == "" {
+		return ""
+	}
+
+	// Handle default value using ${VARNAME:-default} syntax
+	if strings.Contains(varName, ":-") {
+		parts := strings.SplitN(varName, ":-", 2)
+		if len(parts) == 2 {
+			envVar := os.Getenv(parts[0])
+			if envVar == "" {
+				return parts[1]
+			}
+			return envVar
+		}
+	}
+
+	return os.Getenv(varName)
+}
+
+// Handle variable expansion for $ and ${} syntax
+func handleVariableExpansion(b *bufio.Reader) string {
+	varName := ""
+
+	c := next(b)
+	if c == '{' {
+		// It's a ${VARNAME} or ${VARNAME:-default} style
+		for {
+			nc := next(b)
+			if nc == '}' || nc == 0 {
+				break
+			}
+			varName += string(nc)
+		}
+		return resolveEnvVariable(varName)
+	} else {
+		// It's a simple $VAR style
+		varName += string(c)
+		for {
+			c = next(b)
+			if c == 0 || strings.Contains(punct, string(c)) {
+				pushback(b)
+				break
+			}
+			varName += string(c)
+		}
+		return resolveEnvVariable(varName)
+	}
+}
+
 // Tokenize stuff coming in from the stream. For everything but an arg, the
 // type is just the thing itself, since we can switch on strings.
 func tok(b *bufio.Reader) (string, string) {
@@ -84,26 +136,22 @@ func tok(b *bufio.Reader) (string, string) {
 		return "FD", "1"
 	case '<':
 		return "FD", "0"
-	// yes, I realize $ handling is still pretty hokey.
-	// And, again, this is a diagnostic tool now, not a general
-	// purpose shell, so the hell with it.
 	case '$':
-		arg = ""
-		return "ENV", arg
+		// Handle variable expansion
+		return "ARG", handleVariableExpansion(b)
 	case '\'':
 		for {
 			nc := next(b)
 			if nc == '\'' {
 				return "ARG", arg
 			}
-			arg = arg + string(nc)
+			arg += string(nc)
 		}
 	case ' ', '\t':
 		return "white", string(c)
 	case '\n', '\r':
 		return "EOL", ""
 	case '|', '&':
-		// peek ahead. We need the literal, so don't use next()
 		nc := one(b)
 		if nc == c {
 			return "LINK", string(c) + string(c)
@@ -128,10 +176,9 @@ func tok(b *bufio.Reader) (string, string) {
 				pushback(b)
 				return "ARG", arg
 			}
-			arg = arg + string(c)
+			arg += string(c)
 			c = next(b)
 		}
-
 	}
 }
 
@@ -140,13 +187,11 @@ func getArg(b *bufio.Reader, what string) string {
 	for {
 		nt, s := tok(b)
 		if nt == "EOF" || nt == "EOL" {
-			// We used to panic here, but what's the sense in that?
 			return ""
 		}
 		if nt == "white" {
 			continue
 		}
-		// It has to work, but if not ... too bad.
 		if nt != "ARG" {
 			return ""
 		}
@@ -154,6 +199,7 @@ func getArg(b *bufio.Reader, what string) string {
 	}
 }
 
+// Parse a command string into a Command object
 func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 	t, s := tok(b)
 	if s == "\n" || t == "EOF" || t == "EOL" {
@@ -161,9 +207,6 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 	}
 	for {
 		switch t {
-		// In old rush, env strings were substituted wholesale, and
-		// parsed in line. This was very useful, but nobody uses it so...
-		// for now, screw it. Do environment later.
 		case "ENV":
 		case "ARG":
 			c.Args = append(c.Args, arg{s, t})
@@ -174,9 +217,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 			if err != nil {
 				panic(fmt.Errorf("bad FD on redirect: %v, %v", s, err))
 			}
-			// whitespace is allowed
 			c.fdmap[x] = getArg(b, t)
-		// LINK and BG are similar save that LINK requires another command. If we don't get one, well.
 		case "LINK":
 			c.Link = s
 			return c, t
