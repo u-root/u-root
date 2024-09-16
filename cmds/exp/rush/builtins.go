@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// builtins: cd, exit, pwd, echo
-// extras: rushinfo
+// builtins: exit, pwd, echo
 
 package main
 
@@ -11,38 +10,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 )
 
-// Error messages
-var errCdUsage = errors.New("usage: cd <directory-to-change-to>")
 var errExitUsage = errors.New("usage: exit <|0-255|>")
 
 // Add builtins to the shell
 func init() {
-	_ = addBuiltIn("rushinfo", infocmd)
-	_ = addBuiltIn("cd", cd)
 	_ = addBuiltIn("exit", exit)
 	_ = addBuiltIn("pwd", pwd)
 	_ = addBuiltIn("echo", echo)
-}
-
-// rushinfo command: print info about the shell and its environment
-func infocmd(c *Command) error {
-	_, err := fmt.Fprintf(c.Stdout, "%s %s %s %q: builtins %v\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, os.Args, builtins)
-	return err
-}
-
-// cd command: change directory
-func cd(c *Command) error {
-	if len(c.argv) != 1 {
-		return errCdUsage
-	}
-
-	err := os.Chdir(c.argv[0])
-	return err
 }
 
 // exit command: exit the shell with a given exit code
