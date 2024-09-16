@@ -300,6 +300,24 @@ func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 
 	buf := bytes.NewReader(data[1:])
 
+	// The fourth byte of Chassis Status is optional (see p416 of the IPMI spec v2.0, https://www.intel.la/content/dam/www/public/us/en/documents/specification-updates/ipmi-intelligent-platform-mgt-interface-spec-2nd-gen-v2-0-spec-update.pdf)
+	// binary.Read won't do any parsing if it does not find all the needed bytes, so we sometimes read to a shortened
+	// struct instead.
+	if buf.Len() == 3 {
+		var shortened struct {
+			CurrentPowerState byte
+			LastPowerEvent    byte
+			MiscChassisState  byte
+		}
+		if err := binary.Read(buf, binary.LittleEndian, &shortened); err != nil {
+			return nil, err
+		}
+		return &ChassisStatus{
+			CurrentPowerState: shortened.CurrentPowerState,
+			LastPowerEvent:    shortened.LastPowerEvent,
+			MiscChassisState:  shortened.MiscChassisState,
+		}, nil
+	}
 	var status ChassisStatus
 	if err := binary.Read(buf, binary.LittleEndian, &status); err != nil {
 		return nil, err
