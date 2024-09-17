@@ -198,8 +198,8 @@ func main() {
 				}
 				break
 			}
-				if c.Link == "||" {
-					break
+			if c.Link == "||" {
+				break
 			}
 		}
 		if status == "EOF" {
