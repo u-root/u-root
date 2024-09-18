@@ -96,6 +96,11 @@ github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.1
 ## explicit; go 1.16
 github.com/dustin/go-humanize
+# github.com/florianl/go-tc v0.4.5-0.20240822175159-7926c32f7299
+## explicit; go 1.13
+github.com/florianl/go-tc
+github.com/florianl/go-tc/core
+github.com/florianl/go-tc/internal/unix
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
@@ -253,8 +258,8 @@ github.com/mdlayher/netlink/nlenc
 # github.com/mdlayher/packet v1.1.2
 ## explicit; go 1.20
 github.com/mdlayher/packet
-# github.com/mdlayher/socket v0.5.0
-## explicit; go 1.21
+# github.com/mdlayher/socket v0.5.1
+## explicit; go 1.20
 github.com/mdlayher/socket
 # github.com/mdlayher/vsock v1.2.1
 ## explicit; go 1.20
@@ -382,13 +387,12 @@ github.com/vtolstov/go-ioctl
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.23.0
-## explicit; go 1.18
+# golang.org/x/crypto v0.26.0
+## explicit; go 1.20
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
-golang.org/x/crypto/curve25519/internal/field
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
@@ -400,12 +404,12 @@ golang.org/x/crypto/ssh/knownhosts
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
-# golang.org/x/mod v0.15.0
+# golang.org/x/mod v0.17.0
 ## explicit; go 1.18
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.25.0
+# golang.org/x/net v0.28.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/icmp
@@ -415,19 +419,19 @@ golang.org/x/net/internal/socks
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
-# golang.org/x/sync v0.6.0
+# golang.org/x/sync v0.8.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.20.0
+# golang.org/x/sys v0.24.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.20.0
+# golang.org/x/term v0.23.0
 ## explicit; go 1.18
 golang.org/x/term
-# golang.org/x/text v0.15.0
+# golang.org/x/text v0.17.0
 ## explicit; go 1.18
 golang.org/x/text/feature/plural
 golang.org/x/text/internal
@@ -443,27 +447,27 @@ golang.org/x/text/message
 golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.18.0
-## explicit; go 1.18
+# golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
+## explicit; go 1.19
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/imports
+golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
 golang.org/x/tools/internal/event/label
-golang.org/x/tools/internal/event/tag
 golang.org/x/tools/internal/gcimporter
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/pkgbits
+golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/tokeninternal
-golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
 # gopkg.in/yaml.v2 v2.4.0
