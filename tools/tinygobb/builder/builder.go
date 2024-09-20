@@ -107,6 +107,13 @@ func (self *BuildResult) Delta(other *BuildResult) (BuildDelta, error) {
 		)
 	}
 
+	if self.buildJob.compiler == other.buildJob.compiler {
+		return BuildDelta{}, fmt.Errorf(
+			"cannot compare packages with same compiler '%v'",
+			self.buildJob.compiler,
+		)
+	}
+
 	return BuildDelta{
 		deltaSize: int64(self.binarySize) - int64(other.binarySize),
 		deltaTime: self.buildTime - other.buildTime,
@@ -207,7 +214,7 @@ func worker(jobq chan BuildJob, resultq chan BuildResult, errq chan BuildError, 
 
 		if err != nil {
 			// the subprocess failed with a non-zero exit code, so create BuildError
-			fmt.Printf("[%d] error building %v\n", id, job.goPkgPath)
+			fmt.Printf("[%d] error building %v:%v", id, job.goPkgPath, errBuf.String())
 			errq <- BuildError{
 				buildJob: job,
 				buildErr: errBuf.String(),
