@@ -4,6 +4,7 @@ package tpm2
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/elliptic"
 	"encoding/binary"
 	"reflect"
@@ -96,6 +97,20 @@ func (c TPMECCCurve) Curve() (elliptic.Curve, error) {
 	}
 }
 
+// ECDHCurve returns the ecdh.Curve associated with a TPMECCCurve.
+func (c TPMECCCurve) ECDHCurve() (ecdh.Curve, error) {
+	switch c {
+	case TPMECCNistP256:
+		return ecdh.P256(), nil
+	case TPMECCNistP384:
+		return ecdh.P384(), nil
+	case TPMECCNistP521:
+		return ecdh.P521(), nil
+	default:
+		return nil, fmt.Errorf("unsupported ECC curve: %v", c)
+	}
+}
+
 // HandleValue returns the handle value. This behavior is intended to satisfy
 // an interface that can be implemented by other, more complex types as well.
 func (h TPMHandle) HandleValue() uint32 {
@@ -107,14 +122,21 @@ func (h TPMHandle) HandleValue() uint32 {
 // only PCR, session, and permanent values have known constant Names.
 // See definition in part 1: Architecture, section 16.
 func (h TPMHandle) KnownName() *TPM2BName {
-	switch (byte)(h >> 24) {
-	case 0x00, 0x02, 0x03, 0x40:
+	switch (TPMHT)(h >> 24) {
+	case TPMHTPCR, TPMHTHMACSession, TPMHTPolicySession, TPMHTPermanent:
 		result := make([]byte, 4)
 		binary.BigEndian.PutUint32(result, h.HandleValue())
 		return &TPM2BName{Buffer: result}
-	default:
-		return nil
+	case TPMHTTransient:
+		// The Name of a sequence object is an Empty Buffer
+		// See part 1: Architecture, section 32.4.5
+		if h == TPMIDHSavedSequence {
+			return &TPM2BName{
+				Buffer: []byte{},
+			}
+		}
 	}
+	return nil
 }
 
 // TPMAAlgorithm represents a TPMA_ALGORITHM.
@@ -186,6 +208,9 @@ type TPMAObject struct {
 	// be with an HMAC session or with a password using the authValue
 	// of the object or a policy session.
 	AdminWithPolicy bool `gotpm:"bit=7"`
+	// SET (1): The object exists only within a firmware-limited hierarchy.
+	// CLEAR (0): The object can exist outside a firmware-limited hierarchy.
+	FirmwareLimited bool `gotpm:"bit=8"`
 	// SET (1): The object is not subject to dictionary attack
 	// protections.
 	// CLEAR (0): The object is subject to dictionary attack
@@ -526,6 +551,10 @@ type TPM2BMaxBuffer TPM2BData
 // TPM2BMaxNVBuffer represents a TPM2B_MAX_NV_BUFFER.
 // See definition in Part 2: Structures, section 10.4.9.
 type TPM2BMaxNVBuffer TPM2BData
+
+// TPM2BIV represents a TPM2B_IV.
+// See definition in Part 2: Structures, section 10.4.11.
+type TPM2BIV TPM2BData
 
 // TPM2BName represents a TPM2B_NAME.
 // See definition in Part 2: Structures, section 10.5.3.
@@ -2277,6 +2306,20 @@ type TPMTRSAScheme struct {
 	Details TPMUAsymScheme `gotpm:"tag=Scheme"`
 }
 
+// TPMIAlgRSADecrypt represents a TPMI_ALG_RSA_DECRYPT.
+// See definition in Part 2: Structures, section 11.2.4.3.
+type TPMIAlgRSADecrypt = TPMAlgID
+
+// TPMTRSADecrypt represents a TPMT_RSA_DECRYPT.
+// See definition in Part 2: Structures, section 11.2.4.4.
+type TPMTRSADecrypt struct {
+	marshalByReflection
+	// scheme selector
+	Scheme TPMIAlgRSADecrypt `gotpm:"nullable"`
+	// scheme parameters
+	Details TPMUAsymScheme `gotpm:"tag=Scheme"`
+}
+
 // TPM2BPublicKeyRSA represents a TPM2B_PUBLIC_KEY_RSA.
 // See definition in Part 2: Structures, section 11.2.4.5.
 type TPM2BPublicKeyRSA TPM2BData
@@ -2450,7 +2493,7 @@ func (u *TPMUSignature) ECDSA() (*TPMSSignatureECC, error) {
 
 // ECDAA returns the 'ecdaa' member of the union.
 func (u *TPMUSignature) ECDAA() (*TPMSSignatureECC, error) {
-	if u.selector == TPMAlgRSASSA {
+	if u.selector == TPMAlgECDAA {
 		return u.contents.(*TPMSSignatureECC), nil
 	}
 	return nil, fmt.Errorf("did not contain ecdaa (selector value was %v)", u.selector)
@@ -2758,6 +2801,16 @@ func (u *TPMUPublicParms) ECCDetail() (*TPMSECCParms, error) {
 		return u.contents.(*TPMSECCParms), nil
 	}
 	return nil, fmt.Errorf("did not contain eccDetail (selector value was %v)", u.selector)
+}
+
+// TPMTPublicParms represents a TPMT_PUBLIC_PARMS.
+// See definition in Part 2: Structures, section 12.2.3.8.
+type TPMTPublicParms struct {
+	marshalByReflection
+	// algorithm to be tested
+	Type TPMIAlgPublic
+	// algorithm details
+	Parameters TPMUPublicParms `gotpm:"tag=Type"`
 }
 
 // TPMTPublic represents a TPMT_PUBLIC.

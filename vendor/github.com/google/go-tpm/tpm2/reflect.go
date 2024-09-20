@@ -839,9 +839,9 @@ func marshalParameter[R any](buf *bytes.Buffer, cmd Command[R, *R], i int) error
 		return marshal(buf, reflect.ValueOf(TPMRHNull))
 	} else if parm.IsZero() && parm.Kind() == reflect.Uint16 && hasTag(field, "nullable") {
 		return marshal(buf, reflect.ValueOf(TPMAlgNull))
-	} else {
-		return marshal(buf, parm)
 	}
+
+	return marshal(buf, parm)
 }
 
 // cmdParameters returns the parameters area of the command.

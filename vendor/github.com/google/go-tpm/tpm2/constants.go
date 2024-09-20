@@ -182,7 +182,7 @@ const (
 	TPMCCPolicyPhysicalPresence     TPMCC = 0x00000187
 	TPMCCPolicyDuplicationSelect    TPMCC = 0x00000188
 	TPMCCPolicyGetDigest            TPMCC = 0x00000189
-	TPMCCTestParams                 TPMCC = 0x0000018A
+	TPMCCTestParms                  TPMCC = 0x0000018A
 	TPMCCCommit                     TPMCC = 0x0000018B
 	TPMCCPolicyPassword             TPMCC = 0x0000018C
 	TPMCCZGen2Phase                 TPMCC = 0x0000018D
@@ -634,19 +634,35 @@ const (
 	TPMHTAC            TPMHT = 0x90
 )
 
+// Saved Context transient object handles.
+// See definition in Part 2: Structures, section 14.6.2
+// Context Handle Values come from table 211
+const (
+	// an ordinary transient object
+	TPMIDHSavedTransient TPMIDHSaved = 0x80000000
+	// a sequence object
+	TPMIDHSavedSequence TPMIDHSaved = 0x80000001
+	// a transient object with the stClear attribute SET
+	TPMIDHSavedTransientClear TPMIDHSaved = 0x80000002
+)
+
 // TPMHandle represents a TPM_HANDLE.
 // See definition in Part 2: Structures, section 7.1.
 type TPMHandle uint32
 
 // TPMHandle values come from Part 2: Structures, section 7.4.
 const (
-	TPMRHOwner       TPMHandle = 0x40000001
-	TPMRHNull        TPMHandle = 0x40000007
-	TPMRSPW          TPMHandle = 0x40000009
-	TPMRHLockout     TPMHandle = 0x4000000A
-	TPMRHEndorsement TPMHandle = 0x4000000B
-	TPMRHPlatform    TPMHandle = 0x4000000C
-	TPMRHPlatformNV  TPMHandle = 0x4000000D
+	TPMRHOwner         TPMHandle = 0x40000001
+	TPMRHNull          TPMHandle = 0x40000007
+	TPMRSPW            TPMHandle = 0x40000009
+	TPMRHLockout       TPMHandle = 0x4000000A
+	TPMRHEndorsement   TPMHandle = 0x4000000B
+	TPMRHPlatform      TPMHandle = 0x4000000C
+	TPMRHPlatformNV    TPMHandle = 0x4000000D
+	TPMRHFWOwner       TPMHandle = 0x40000140
+	TPMRHFWEndorsement TPMHandle = 0x40000141
+	TPMRHFWPlatform    TPMHandle = 0x40000142
+	TPMRHFWNull        TPMHandle = 0x40000143
 )
 
 // TPMNT represents a TPM_NT.

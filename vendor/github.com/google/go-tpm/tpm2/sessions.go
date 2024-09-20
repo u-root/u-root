@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -425,24 +424,31 @@ func getEncryptedSaltRSA(nameAlg TPMIAlgHash, parms *TPMSRSAParms, pub *TPM2BPub
 
 // Part 1, 19.6.13
 func getEncryptedSaltECC(nameAlg TPMIAlgHash, parms *TPMSECCParms, pub *TPMSECCPoint) (*TPM2BEncryptedSecret, []byte, error) {
-	curve, err := parms.CurveID.Curve()
+	curve, err := parms.CurveID.ECDHCurve()
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not encrypt salt to ECC key: %w", err)
+		return nil, nil, fmt.Errorf("ecc salt: param curve: %w", err)
 	}
-	eccPub, err := ECCPub(parms, pub)
+	eccPub, err := ECDHPubKey(curve, pub)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not encrypt salt to ECC key: %w", err)
+		return nil, nil, fmt.Errorf("ecc salt: unmarshalling tpm ecc key: %w", err)
 	}
-	ephPriv, ephPubX, ephPubY, err := elliptic.GenerateKey(curve, rand.Reader)
+
+	// Generate new ECDH key
+	ephPriv, err := curve.GenerateKey(rand.Reader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not encrypt salt to ECC key: %w", err)
+		return nil, nil, fmt.Errorf("ecc salt: generating ecc private key: %w", err)
 	}
-	zx, _ := curve.Params().ScalarMult(eccPub.X, eccPub.Y, ephPriv)
-	// ScalarMult returns a big.Int, whose Bytes() function may return the
-	// compacted form. In our case, we want to left-pad zx to the size of
-	// the curve.
-	z := make([]byte, (curve.Params().BitSize+7)/8)
-	zx.FillBytes(z)
+	ephPubX, ephPubY, err := ECCPoint(ephPriv.PublicKey())
+	if err != nil {
+		return nil, nil, fmt.Errorf("ecc salt: ecc pubkey: %w", err)
+	}
+
+	// Calculate Z (ECDH key * TPM pub)
+	z, err := ephPriv.ECDH(eccPub)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ecc salt: z calc: %w", err)
+	}
+
 	ha, err := nameAlg.Hash()
 	if err != nil {
 		return nil, nil, err
