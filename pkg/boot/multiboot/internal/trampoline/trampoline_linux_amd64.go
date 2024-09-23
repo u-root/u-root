@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux && amd64 && !tinygo
+
 // Package trampoline sets machine to a specific state defined by multiboot v1
 // spec and jumps to the intended kernel.
 //
@@ -11,7 +13,6 @@ package trampoline
 import (
 	"encoding/binary"
 	"io"
-	"reflect"
 	"unsafe"
 )
 
@@ -68,14 +69,7 @@ func extract(path string) (uintptr, []byte, error) {
 }
 
 func ptrToSlice(ptr uintptr, size int) []byte {
-	var data []byte
-
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-	sh.Data = ptr
-	sh.Len = size
-	sh.Cap = size
-
-	return data
+	return unsafe.Slice((*byte)(unsafe.Add(unsafe.Pointer(nil), ptr)), size)
 }
 
 // patch patches the trampoline code to store value for multiboot info address,
