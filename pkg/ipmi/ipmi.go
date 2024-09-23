@@ -132,12 +132,12 @@ func (e *Event) marshall() ([]byte, error) {
 	}
 
 	// OEM timestamped
-	if buf.Bytes()[2] >= 0xC0 && buf.Bytes()[2] <= 0xDF {
+	if buf.Bytes()[2] >= 0xC0 {
 		copy(data[0:3], buf.Bytes()[0:3])
 		copy(data[3:16], buf.Bytes()[16:29])
 	}
 
-	// OEM non-timestamped [OxEO .. OxFF]
+	// OEM non-timestamped
 	if buf.Bytes()[2] >= 0xE0 {
 		copy(data[0:3], buf.Bytes()[0:3])
 		copy(data[3:16], buf.Bytes()[29:42])
