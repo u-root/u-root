@@ -24,5 +24,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.59.1
+          version: v1.60.3
           args: --out-format=line-number
