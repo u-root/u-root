@@ -58,7 +58,7 @@ type multiboot struct {
 	bootloader string
 
 	// trampoline is a path to an executable blob, which contains a trampoline segment.
-	// Trampoline sets machine to a specific state defined by multiboot v1 spec.
+	// The trampoline sets the machine to a specific state defined by multiboot v1 spec.
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 	trampoline string
 
@@ -517,7 +517,7 @@ func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 func (m *multiboot) addTrampoline(magic, infoAddr, kernelEntry uintptr) (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := trampoline.Setup(m.trampoline, magic, infoAddr, kernelEntry)
+	d, err := trampoline.Setup("", magic, infoAddr, kernelEntry)
 	if err != nil {
 		return 0, err
 	}
