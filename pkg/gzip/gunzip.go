@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo
+
 package gzip
 
 import (
@@ -11,9 +13,9 @@ import (
 )
 
 // Decompress takes gzip compressed input from io.Reader and expands it using pgzip
-// to io.Writer. Data is read in blocksize (KB) chunks using upto the number of
+// to io.Writer. Data is read in block size (KB) chunks using up to the number of
 // CPU cores specified.
-func Decompress(r io.Reader, w io.Writer, blocksize int, processes int) error {
+func decompress(r io.Reader, w io.Writer, blocksize int, processes int) error {
 	zr, err := pgzip.NewReaderN(r, blocksize*1024, processes)
 	if err != nil {
 		return err

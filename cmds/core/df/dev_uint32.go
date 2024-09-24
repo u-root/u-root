@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !tinygo && (mips || mips64 || mips64le || mipsle) && !plan9 && !windows
+//go:build (mips || mips64 || mips64le || mipsle) && !plan9 && !windows
 
 package main
 
