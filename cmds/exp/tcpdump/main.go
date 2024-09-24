@@ -329,6 +329,8 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 			data = fmt.Sprintf("UDP, length %d", length)
 		case *layers.UDPLite:
 			data = fmt.Sprintf("UDPLite, length %d", length)
+		case nil:
+			data = fmt.Sprintf("unknown transport layer, length %d", length)
 		default:
 			data = fmt.Sprintf("%s, length %d", layer.LayerType(), length)
 		}
