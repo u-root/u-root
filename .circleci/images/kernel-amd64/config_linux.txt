@@ -70,6 +70,11 @@ CONFIG_EFI=y
 CONFIG_FB_SIMPLE=y
 CONFIG_FB=y
 CONFIG_X86_SYSFB=y
+CONFIG_FB_EFI=y
+
+# Graphics support
+CONFIG_DRM=y
+CONFIG_DRM_BOCHS=y
 
 # Virtio Networking + random + storage
 CONFIG_VIRTIO_PCI=y
