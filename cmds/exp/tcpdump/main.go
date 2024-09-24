@@ -318,8 +318,6 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 
 		if applicationLayer != nil {
 			length = len(applicationLayer.LayerContents())
-		} else {
-			length = 0
 		}
 
 		switch layer := transportLayer.(type) {
