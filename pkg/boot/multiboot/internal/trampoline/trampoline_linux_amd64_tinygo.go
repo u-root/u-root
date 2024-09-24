@@ -22,108 +22,7 @@ package trampoline
 
 /*
 // "textflag.h" is provided by the gc compiler, tinygo does not have this
-#include <stdint.h>
-
-#define MSR_EFER    0xC0000080
-#define EFER_LME    0xFFFFFEFF
-#define CR0_PG      0x0FFFFFFF
-
-#define DATA_SEGMENT    0x00CF92000000FFFF
-#define CODE_SEGMENT    0x00CF9A000000FFFF
-
-uintptr_t addrOfStart() {
-	extern void start();
-	return (uintptr_t)start;
-}
-uintptr_t addrOfEnd() {
-	extern void end();
-	return (uintptr_t)end;
-}
-uintptr_t addrOfInfo() {
-	extern uint32_t info;
-	return (uintptr_t)&info;
-}
-uintptr_t addrOfMagic() {
-	extern uint32_t magic;
-	return (uintptr_t)&magic;
-}
-uintptr_t addrOfEntry() {
-	extern uint32_t entry;
-	return (uintptr_t)&entry;
-}
-void farjump32() {
-	asm volatile (
-		".byte 0xEA\n"
-		".long 0x0\n"
-		".word 0x18\n"
-	);
-}
-void farjump64() {
-	asm volatile (
-		".byte 0xFF, 0x2D\n"
-		".long 0x0\n"
-		".long 0x0\n"
-		".long 0x8\n"
-	);
-}
-void boot() {
-	asm volatile (
-		"movl %%cr0, %%eax\n"
-		"andl %0, %%eax\n"
-		"movl %%eax, %%cr0\n"
-		"movl %1, %%ecx\n"
-		"rdmsr\n"
-		"andl %2, %%eax\n"
-		"wrmsr\n"
-		"xorl %%eax, %%eax\n"
-		"movl %%eax, %%cr4\n"
-		"movl $0x10, %%eax\n"
-		"mov %%ax, %%ds\n"
-		"mov %%ax, %%es\n"
-		"mov %%ax, %%ss\n"
-		"mov %%ax, %%fs\n"
-		"mov %%ax, %%gs\n"
-		"movl %%esi, %%eax\n"
-		"jmp farjump32\n"
-		:
-		: "i"(CR0_PG), "i"(MSR_EFER), "i"(EFER_LME)
-		: "eax", "ecx"
-	);
-}
-void start() {
-	uint64_t gdt[4] = {0x0, CODE_SEGMENT, DATA_SEGMENT, CODE_SEGMENT};
-	uint64_t gdt_ptr[2];
-
-	gdt_ptr[0] = (sizeof(gdt) - 1) | ((uint64_t)(uintptr_t)gdt << 16);
-	gdt_ptr[1] = (uintptr_t)gdt >> 48;
-
-	asm volatile (
-		"lgdt (%0)\n"
-		:
-		: "r"(gdt_ptr)
-	);
-
-	extern uint32_t info;
-	extern uint32_t magic;
-	extern uint32_t entry;
-
-	asm volatile (
-		"movl %0, %%ebx\n"
-		"movl %1, %%esi\n"
-		"movl %2, %%eax\n"
-		"movl %%eax, farjump32+1\n"
-		"leaq boot, %%rcx\n"
-		"movl %%ecx, farjump64+6\n"
-		"jmp farjump64\n"
-		:
-		: "m"(info), "m"(magic), "m"(entry)
-		: "eax", "ebx", "esi", "ecx"
-	);
-}
-uint32_t info = 0x0;
-uint32_t entry = 0x0;
-uint32_t magic = 0x0;
-void end() {}
+#include "trampoline_tinygo.h"
 */
 import "C"
 
@@ -139,20 +38,20 @@ const (
 	trampolineMagic = "u-root-mb-magic"
 )
 
-// Setup scans file for trampoline code and sets
+// Setup scans memory for trampoline code and sets
 // values for multiboot info address and kernel entry point.
 func Setup(path string, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
-	trampolineStart, d, err := extract(path)
+	trampolineStart, d, err := locateTrampoline()
 	if err != nil {
 		return nil, err
 	}
 	return patch(trampolineStart, d, magic, infoAddr, entryPoint)
 }
 
-// extract extracts trampoline segment from file.
-// trampoline segment begins after "u-root-trampoline-begin" byte sequence + padding,
-// and ends at "u-root-trampoline-end" byte sequence.
-func extract(path string) (uintptr, []byte, error) {
+// locateTrampoline locates the trampoline segment from the loaded binary.
+// The trampoline segment begins after the "u-root-trampoline-begin" byte sequence + padding,
+// and ends at the "u-root-trampoline-end" byte sequence.
+func locateTrampoline() (uintptr, []byte, error) {
 	// TODO(https://github.com/golang/go/issues/35055): deal with
 	// potentially non-contiguous trampoline. Rather than locating start
 	// and end, we should locate start,boot,farjump{32,64},gdt,info,entry
@@ -164,8 +63,8 @@ func extract(path string) (uintptr, []byte, error) {
 	}
 	tramp := ptrToSlice(tbegin, int(tend-tbegin))
 
-	// tramp is read-only executable memory. So we gotta copy it to a
-	// slice. Gotta modify it later.
+	// Trampoline is read-only executable memory. So we have to copy it to a
+	// slice and modify it later.
 	cp := append([]byte(nil), tramp...)
 	return tbegin, cp, nil
 }
