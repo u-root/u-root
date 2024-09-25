@@ -395,7 +395,7 @@ func main() {
 	v("pflask: ptsopen")
 	controlPTY, processTTY, sname, err := ptsopen()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// child code. Not really. What really happens here is we set
