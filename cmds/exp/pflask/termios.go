@@ -14,10 +14,10 @@ func raw() {
 	// we don't set raw until the very last, so if they see an issue they can hit ^C
 	t, err := termios.GetTermios(1)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 	raw := termios.MakeRaw(t)
 	if err = termios.SetTermios(1, raw); err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 }

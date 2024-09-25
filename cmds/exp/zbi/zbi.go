@@ -34,7 +34,7 @@ func main() {
 
 	imageJSON, err := json.MarshalIndent(image, "", "  ")
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%s\n", string(imageJSON))
 }
