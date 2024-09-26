@@ -135,7 +135,7 @@ func doArgs(cmds []*Command) {
 // even for builtins, so for now, we do.
 // It will, however, do a path lookup, which we really don't need,
 // and we may change it later.
-func commands(cmds []*Command) error {
+func commands(cmds []*Command) {
 	for _, c := range cmds {
 		c.Cmd = exec.Command(c.cmd, c.argv[:]...)
 		// this is a Very Special Case related to a Go issue.
@@ -146,7 +146,6 @@ func commands(cmds []*Command) error {
 			builtinAttr(c)
 		}
 	}
-	return nil
 }
 
 func command(c *Command) error {
@@ -176,15 +175,15 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
+
 		doArgs(cmds)
-		if err := commands(cmds); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			continue
-		}
+		commands(cmds)
+
 		if err := wire(cmds); err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			continue
 		}
+
 		for _, c := range cmds {
 			if err := command(c); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)

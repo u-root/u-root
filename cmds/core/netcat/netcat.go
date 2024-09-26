@@ -337,14 +337,14 @@ type cmd struct {
 	args   []string
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
+func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) *cmd {
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,
 		stderr: stderr,
 		config: config,
 		args:   args,
-	}, nil
+	}
 }
 
 // From the prepared config generate a network connection that will be used for the netcat command
@@ -495,11 +495,7 @@ func run(args []string) error {
 		log.Fatalf("error: %v", err)
 	}
 
-	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
-
+	c := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
 	network, address, err := c.connection()
 	if err != nil {
 		return fmt.Errorf("failed to determine connection: %w", err)

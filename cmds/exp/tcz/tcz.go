@@ -79,7 +79,7 @@ func findloop() (name string, err error) {
 func clonetree(tree string) error {
 	debug("Clone tree %v", tree)
 	lt := len(tree)
-	err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
+	if err := filepath.Walk(tree, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -118,9 +118,8 @@ func clonetree(tree string) error {
 		}
 
 		return nil
-	})
-	if err != nil {
-		l.Fatalf("Clone tree: %v", err)
+	}); err != nil {
+		return fmt.Errorf("clone tree: %v", err)
 	}
 	return nil
 }
@@ -227,6 +226,9 @@ func installPackage(tczName string, deps map[string]bool) error {
 	return nil
 }
 
+// TODO: refactor to return error instead of logger.Fatalf
+//
+//nolint:unparam
 func setupPackages(tczName string, deps map[string]bool) error {
 	debug("setupPackages: @ %v deps %v\n", tczName, deps)
 	for v := range deps {

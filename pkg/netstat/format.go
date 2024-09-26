@@ -166,16 +166,26 @@ func convertUID(uid uint32) (string, error) {
 }
 
 func (o *Output) getNameFromInode(inode uint64) (string, error) {
-	var s strings.Builder
+	var (
+		s   strings.Builder
+		err error
+	)
+
 	pnote := o.ProgCache[int(inode)]
+
 	if pnote.PID == 0 {
-		s.WriteString("-")
+		if _, err = s.WriteString("-"); err != nil {
+			return "", err
+		}
 	} else {
-		s.WriteString(strconv.Itoa(pnote.PID))
-		s.WriteString("/")
+		if _, err = s.WriteString(strconv.Itoa(pnote.PID) + "/"); err != nil {
+			return "", err
+		}
 	}
 
-	s.WriteString(pnote.Name)
+	if _, err = s.WriteString(pnote.Name); err != nil {
+		return "", err
+	}
 	return s.String(), nil
 }
 
