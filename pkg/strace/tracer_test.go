@@ -56,7 +56,12 @@ func prepareTestCmd(t *testing.T, cmd string) {
 	wg.Wait()
 }
 
+// TODO The result of the collection is never compared or processed in any other
+// way. This should be reworked.
+//
+//nolint:unparam
 func runAndCollectTrace(t *testing.T, cmd *exec.Cmd) []*TraceRecord {
+	t.Helper()
 	// Write strace logs to t.Logf.
 	r, w := io.Pipe()
 	var wg sync.WaitGroup
@@ -101,7 +106,7 @@ func TestSingleThreaded(t *testing.T) {
 	cmd := exec.Command("./test/hello")
 	cmd.Stdout = &b
 
-	runAndCollectTrace(t, cmd)
+	_ = runAndCollectTrace(t, cmd)
 }
 
 func TestMultiProcess(t *testing.T) {
@@ -111,7 +116,7 @@ func TestMultiProcess(t *testing.T) {
 	cmd := exec.Command("./test/fork")
 	cmd.Stdout = &b
 
-	runAndCollectTrace(t, cmd)
+	_ = runAndCollectTrace(t, cmd)
 }
 
 func TestAddrProcess(t *testing.T) {
@@ -121,5 +126,5 @@ func TestAddrProcess(t *testing.T) {
 	cmd := exec.Command("./test/addr")
 	cmd.Stdout = &b
 
-	runAndCollectTrace(t, cmd)
+	_ = runAndCollectTrace(t, cmd)
 }
