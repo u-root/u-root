@@ -119,7 +119,7 @@ func clonetree(tree string) error {
 
 		return nil
 	}); err != nil {
-		return fmt.Errorf("clone tree: %v", err)
+		return fmt.Errorf("clone tree: %w", err)
 	}
 	return nil
 }

@@ -272,7 +272,9 @@ func (i *Image) readBootItems(f io.ReadSeeker) error {
 		i.BootItems = append(i.BootItems, item)
 
 		padding := align.Up(uint(item.Header.Length), 8)
-		f.Seek(int64(padding), io.SeekCurrent)
+		if _, err := f.Seek(int64(padding), io.SeekCurrent); err != nil {
+			return err
+		}
 	}
 }
 

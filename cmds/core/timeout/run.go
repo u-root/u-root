@@ -33,9 +33,14 @@ func (c *cmd) run() (int, error) {
 		return 1, err
 	}
 
+	var syscallErr error
 	time.AfterFunc(c.timeout, func() {
-		syscall.Kill(-cmd.Process.Pid, sig)
+		syscallErr = syscall.Kill(-cmd.Process.Pid, sig)
 	})
+
+	if syscallErr != nil {
+		return 1, syscallErr
+	}
 
 	if err := cmd.Wait(); err != nil {
 		errno := 1

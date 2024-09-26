@@ -83,7 +83,10 @@ func TestPxeboot4(t *testing.T) {
 	if err := serverVM.Kill(); err != nil {
 		t.Error(err)
 	}
-	serverVM.Wait()
+
+	if err := serverVM.Wait(); err != nil {
+		t.Error(err)
+	}
 
 	if err := clientVM.Wait(); err != nil {
 		t.Errorf("Client VM Wait: %v", err)

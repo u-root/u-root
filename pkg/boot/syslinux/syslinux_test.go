@@ -707,9 +707,7 @@ func TestParseURL(t *testing.T) {
 }
 
 func FuzzParseSyslinuxConfig(f *testing.F) {
-
 	dirPath := f.TempDir()
-
 	path := filepath.Join(dirPath, "isolinux.cfg")
 
 	log.SetOutput(io.Discard)
@@ -748,7 +746,9 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
-		ParseLocalConfig(context.Background(), dirPath)
+		if _, err := ParseLocalConfig(context.Background(), dirPath); err != nil {
+			t.Fatalf("failed to parse local config: %v", err)
+		}
 	})
 
 }

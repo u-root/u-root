@@ -47,7 +47,7 @@ type cmd struct {
 // "something went wrong" JSON parsing errors.
 var errBadJSON = errors.New("JSON parsing failed")
 
-func command(w io.Writer, args ...string) *cmd {
+func command(w io.Writer, args ...string) (*cmd, error) {
 	f := flag.NewFlagSet("pci", flag.ExitOnError)
 
 	c := &cmd{
@@ -62,9 +62,12 @@ func command(w io.Writer, args ...string) *cmd {
 	f.IntVar(&c.verbosity, "v", 0, "verbosity")
 	f.IntVar(&c.hexdump, "x", 0, "hexdump the config space")
 	f.StringVar(&c.readJSON, "J", "", "Read JSON in instead of /sys")
-	f.Parse(c.osargs)
+
+	if err := f.Parse(c.osargs); err != nil {
+		return nil, err
+	}
 	c.args = f.Args()
-	return c
+	return c, nil
 }
 
 var format = map[int]string{
@@ -210,7 +213,10 @@ func (c *cmd) run() error {
 }
 
 func main() {
-	c := command(os.Stdout, os.Args[1:]...)
+	c, err := command(os.Stdout, os.Args[1:]...)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if err := c.run(); err != nil {
 		log.Fatal(err)
 	}

@@ -28,6 +28,7 @@ package esxi
 import (
 	"bufio"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -85,7 +86,11 @@ func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error
 	imgs, err := getImages(device, opts5, opts6)
 	if err != nil {
 		for _, mp := range mps {
-			mp.Unmount(mount.MNT_DETACH)
+			if errMount := mp.Unmount(mount.MNT_DETACH); errMount != nil {
+				if errJoin := errors.Join(err, errMount); errJoin != nil {
+					return nil, nil, errJoin
+				}
+			}
 		}
 		return nil, nil, err
 	}
@@ -130,20 +135,30 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 	}
 	mp, err := mount.Mount(device, mountPoint, "iso9660", "", unix.MS_RDONLY|unix.MS_NOATIME)
 	if err != nil {
-		os.RemoveAll(mountPoint)
+		if errRemove := os.RemoveAll(mountPoint); err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errRemove)
+		}
 		return nil, nil, err
 	}
 
 	opts, err := parse(filepath.Join(mountPoint, "boot.cfg"))
 	if err != nil {
-		mp.Unmount(mount.MNT_DETACH)
-		os.RemoveAll(mountPoint)
+		if errUnmount := mp.Unmount(mount.MNT_DETACH); errUnmount != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errUnmount)
+		}
+		if errRemove := os.RemoveAll(mountPoint); errRemove != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errRemove)
+		}
 		return nil, nil, fmt.Errorf("cannot parse config from %s: %w", device, err)
 	}
 	img, err := getBootImage(opts, "", 0, device)
 	if err != nil {
-		mp.Unmount(mount.MNT_DETACH)
-		os.RemoveAll(mountPoint)
+		if errUnmount := mp.Unmount(mount.MNT_DETACH); errUnmount != nil {
+
+		}
+		if errRemove := os.RemoveAll(mountPoint); errRemove != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errRemove)
+		}
 		return nil, nil, err
 	}
 	return img, mp, nil
@@ -170,15 +185,21 @@ func mountPartition(parentdev string, partition int) (*options, *mount.MountPoin
 	}
 	mp, err := mount.Mount(dev, mountPoint, "vfat", "", unix.MS_RDONLY|unix.MS_NOATIME)
 	if err != nil {
-		os.RemoveAll(mountPoint)
+		if errRemove := os.RemoveAll(mountPoint); errRemove != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errRemove)
+		}
 		return nil, nil, err
 	}
 
 	configFile := filepath.Join(mountPoint, "boot.cfg")
 	opts, err := parse(configFile)
 	if err != nil {
-		mp.Unmount(mount.MNT_DETACH)
-		os.RemoveAll(mountPoint)
+		if errUnmount := mp.Unmount(mount.MNT_DETACH); errUnmount != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errUnmount)
+		}
+		if errRemove := os.RemoveAll(mountPoint); errRemove != nil {
+			return nil, nil, fmt.Errorf("%w: %w", err, errRemove)
+		}
 		return nil, nil, fmt.Errorf("cannot parse config at %s: %w", configFile, err)
 	}
 	return &opts, mp, nil

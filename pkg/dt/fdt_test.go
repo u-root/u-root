@@ -126,10 +126,13 @@ func TestParity(t *testing.T) {
 	}
 	cmd := exec.Command("fdtdump", dtb)
 	cmd.Stdout = f
-	err = cmd.Run()
-	f.Close()
-	if err != nil {
-		t.Fatal(err) // TODO: skip if system does not have fdtdump
+	errCmd := cmd.Run()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if errCmd != nil {
+		t.Fatal(errCmd) // TODO: skip if system does not have fdtdump
 	}
 
 	// This used to run diff, has to be done better. It's not even working now so.
@@ -137,7 +140,9 @@ func TestParity(t *testing.T) {
 		cmd = exec.Command("diff", "testdata/fdt.dts", "testdata/fdt2.dts")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		cmd.Run()
+		if err := cmd.Run(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

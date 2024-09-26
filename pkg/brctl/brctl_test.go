@@ -102,6 +102,8 @@ func interfacesExist(ifs []string) error {
 // This function should be called at the start of each test to ensure that the environment is clean.
 // It removes all bridges that were created during the test.
 // It is assumed, that all necessary bridges and interfaces will be added per test case.
+//
+//nolint:errcheck
 func clearEnv() error {
 	// Check if interfaces exist
 	if err := interfacesExist(BRCTL_TEST_IFACES); err != nil {

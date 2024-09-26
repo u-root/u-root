@@ -40,7 +40,7 @@ func ptsopen() (controlPTY, processTTY *os.File, ttyname string, err error) {
 		return
 	}
 
-	v("OpenFile %v %x\n", ttyname, os.O_RDWR|syscall.O_NOCTTY)
+	debugLog("OpenFile %v %x\n", ttyname, os.O_RDWR|syscall.O_NOCTTY)
 	t, err := os.OpenFile(ttyname, os.O_RDWR|syscall.O_NOCTTY, 0)
 	if err != nil {
 		return
@@ -188,24 +188,27 @@ func makeConsole(base, console string, unprivileged bool) {
 		log.Printf("%v", err)
 	}
 
-	nn := filepath.Join(base, "/dev/console")
+	consolePath := filepath.Join(base, "/dev/console")
 	mode, dev := modedev(st)
 	if unprivileged {
 		// In unprivileged uses, we can't mknod /dev/console, however,
 		// we can just create a file /dev/console and use bind mount on file.
-		if _, err := os.Stat(nn); err != nil {
-			os.WriteFile(nn, []byte{}, 0o600) // best effort, ignore error
+		if _, err := os.Stat(consolePath); err != nil {
+			// best effort, ignore error
+			if err := os.WriteFile(consolePath, []byte{}, 0o600); err != nil {
+				log.Printf("Error writing to file %v\n", consolePath)
+			}
 		}
 	} else {
-		if err := syscall.Mknod(nn, mode, dev); err != nil {
+		if err := syscall.Mknod(consolePath, mode, dev); err != nil {
 			log.Printf("%v", err)
 		}
 	}
 
 	// if any previous steps failed, this one will too, so we can bail here.
-	if err := syscall.Mount(console, nn, "", syscall.MS_BIND, ""); err != nil {
+	if err := syscall.Mount(console, consolePath, "", syscall.MS_BIND, ""); err != nil {
 		log.Fatalf("Mount :%s: on :%s: flags %v: %v",
-			console, nn, syscall.MS_BIND, err)
+			console, consolePath, syscall.MS_BIND, err)
 	}
 }
 
@@ -293,20 +296,21 @@ var (
 		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true, false},
 		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true, false},
 	}
-	v = func(string, ...interface{}) {}
+	debugLog = func(string, ...interface{}) {}
 )
 
 func main() {
 	flag.Parse()
 	if *debug {
-		v = log.Printf
+		debugLog = log.Printf
 	}
-	v("pflask: Let's go!")
 
 	if len(flag.Args()) < 1 {
-		v("pflask: no args given")
+		debugLog("pflask: no args given")
 		os.Exit(1)
 	}
+
+	debugLog("pflask: Let's go!")
 
 	// note the unshare system call worketh not for Go.
 	// So do it ourselves. We have to start ourselves up again,
@@ -320,16 +324,20 @@ func main() {
 	if a[len(a)-1][0] != '#' {
 		a = append(a, "#")
 		euid := syscall.Geteuid()
-		v("Running as user %v\n", euid)
+		debugLog("Running as user %v\n", euid)
 		if euid != 0 {
 			a[len(a)-1] = "#u"
 		}
 		if *debug {
 			testc := exec.Command("/bbin/echo", "    ===== cmd test")
 			testc.Stdout = os.Stdout
-			testc.Run()
+			if err := testc.Run(); err != nil {
+				log.Printf("Could not run:\n   %v\n    %v\n", testc, err.Error())
+			}
+
 			testc = exec.Command("/bbin/ls", a[0])
 			testc.Stdout = os.Stdout
+
 			testc.SysProcAttr = &syscall.SysProcAttr{Cloneflags: 0}
 			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWNS
 			testc.SysProcAttr.Cloneflags |= syscall.CLONE_NEWUTS
@@ -352,7 +360,8 @@ func main() {
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		v("pflask: respawning...")
+
+		debugLog("pflask: respawning...")
 		if err := c.Run(); err != nil {
 			log.Printf("Could not run:\n   %v\n    %v\n", c, err.Error())
 			if strings.Contains(err.Error(), "invalid argument") {
@@ -382,10 +391,10 @@ func main() {
 	}
 
 	a = flag.Args()
-	v("greetings %v\n", a)
+	debugLog("greetings %v\n", a)
 	a = a[:len(a)-1]
 
-	v("pflask: ptsopen")
+	debugLog("pflask: ptsopen")
 	controlPTY, processTTY, sname, err := ptsopen()
 	if err != nil {
 		log.Fatal(err)
@@ -397,21 +406,21 @@ func main() {
 	// how else to do it. This may require we set some things up first,
 	// esp. the network. But, it's all fun and games until someone loses
 	// an eye.
-	v("MountAll")
+	debugLog("MountAll")
 	MountAll(*chroot, unprivileged)
 
 	if !unprivileged {
-		v("copyNodes")
+		debugLog("copyNodes")
 		copyNodes(*chroot)
 	}
 
-	v("makePtmx")
+	debugLog("makePtmx")
 	makePtmx(*chroot)
 
-	v("makeSymlinks")
+	debugLog("makeSymlinks")
 	makeSymlinks(*chroot)
 
-	v("makeConsole")
+	debugLog("makeConsole")
 	makeConsole(*chroot, sname, unprivileged)
 
 	// umask(0022);
@@ -450,20 +459,20 @@ func main() {
 		for k, v := range e {
 			envs = append(envs, k+"="+v)
 		}
-		v("envs\n  %v\n", e)
-		v("-- chroot --")
+		debugLog("envs\n  %v\n", e)
+		debugLog("-- chroot --")
 		if err := syscall.Chroot(*chroot); err != nil {
 			log.Fatal(err)
 		}
-		v("--- chdir --")
+		debugLog("--- chdir --")
 		if err := syscall.Chdir(*chdir); err != nil {
 			log.Fatal(err)
 		}
-		v("---- exec --")
+		debugLog("---- exec --")
 		log.Fatal(syscall.Exec(a[0], a[1:], envs))
 	}
 
-	v("exec.Command")
+	debugLog("exec.Command")
 	c := exec.Command(a[0], a[1:]...)
 	c.Env = nil
 	for k, v := range e {
@@ -518,8 +527,13 @@ func main() {
 	raw()
 
 	go func() {
-		io.Copy(os.Stdout, controlPTY)
-		os.Exit(1)
+		if _, err := io.Copy(os.Stdout, controlPTY); err != nil {
+			log.Fatalf("Failed to copy data\n")
+		}
+		os.Exit(0)
 	}()
-	io.Copy(controlPTY, os.Stdin)
+
+	if _, err := io.Copy(controlPTY, os.Stdin); err != nil {
+		log.Fatalf("Failed to copy data\n")
+	}
 }

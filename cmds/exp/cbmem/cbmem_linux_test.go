@@ -76,14 +76,18 @@ func TestAPU2(t *testing.T) {
 		t.Fatalf("Reading coreboot table: got %v, want nil", err)
 	}
 	b := &bytes.Buffer{}
-	DumpMem(f, c, false, b)
+	if err := DumpMem(f, c, false, b); err != nil {
+		t.Fatalf("DumpMem: got %v, want nil", err)
+	}
 	t.Logf("%s", b.String())
 	o := b.String()
 	if o != apu2Mem {
 		t.Errorf("APU2 DumpMem: got \n%s\n, want \n%s\n", hex.Dump(b.Bytes()), hex.Dump([]byte(apu2Mem)))
 	}
 	b.Reset()
-	DumpMem(f, c, true, b)
+	if err := DumpMem(f, c, true, b); err != nil {
+		t.Fatalf("DumpMem: got %v, want nil", err)
+	}
 	t.Logf("2nd dump string is %s", b.String())
 	if b.Len() == len(apu2Mem) {
 		t.Errorf("APU2 DumpMem: got %d bytes output, want more", b.Len())
@@ -95,7 +99,9 @@ func TestAPU2(t *testing.T) {
 	}
 	// You can use this to generate new test data. It's a timesaver.
 	if false {
-		os.WriteFile("json", j, 0o666)
+		if err := os.WriteFile("json", j, 0o666); err != nil {
+			t.Fatalf("Writing json: %v", err)
+		}
 	}
 	if string(j) != apu2JSON {
 		t.Errorf("APU2 JSON: got %s, want %s", j, apu2JSON)

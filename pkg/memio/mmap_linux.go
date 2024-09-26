@@ -47,6 +47,8 @@ func (m *MMap) mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, o
 
 // ReadAt reads data from physical memory at address addr. On x86 platforms,
 // this uses the seek+read syscalls. On arm platforms, this uses mmap.
+//
+//nolint:errcheck
 func (m *MMap) ReadAt(addr int64, data UintN) error {
 	mem, offset, err := m.mmap(m.File, addr, data.Size(), syscall.PROT_READ)
 	if err != nil {
@@ -64,6 +66,9 @@ func (m *MMap) ReadAt(addr int64, data UintN) error {
 
 // WriteAt writes data to physical memory at address addr. On x86 platforms, this
 // uses the seek+read syscalls. On arm platforms, this uses mmap.
+// TODO: add async error handling
+//
+//nolint:errcheck
 func (m *MMap) WriteAt(addr int64, data UintN) error {
 	mem, offset, err := m.mmap(m.File, addr, data.Size(), syscall.PROT_WRITE)
 	if err != nil {

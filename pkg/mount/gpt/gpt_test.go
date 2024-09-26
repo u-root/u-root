@@ -219,6 +219,7 @@ func (d *iodisk) WriteAt(b []byte, offset int64) (int, error) {
 	return len(b), nil
 }
 
+//nolint:errcheck
 func TestWrite(t *testing.T) {
 	InstallGPT()
 	r := bytes.NewReader(disk)

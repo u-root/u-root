@@ -23,7 +23,9 @@ func TestDU(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 8096))
+		if _, err := f.Write(make([]byte, 8096)); err != nil {
+			t.Fatal(err)
+		}
 
 		cmd := &cmd{stdout: io.Discard}
 		blocks, err := cmd.du(f.Name())
@@ -58,7 +60,9 @@ func TestDU(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 1))
+		if _, err := f.Write(make([]byte, 1)); err != nil {
+			t.Fatal(err)
+		}
 
 		cmd := &cmd{stdout: io.Discard}
 		blocks, err := cmd.du(f.Name())
@@ -76,12 +80,13 @@ func TestDU(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 4096))
+		if _, err := f.Write(make([]byte, 4096)); err != nil {
+			t.Fatal(err)
+		}
 
 		d2 := t.TempDir()
 		sl := filepath.Join(d2, "symlink")
-		err = os.Symlink(f.Name(), sl)
-		if err != nil {
+		if err := os.Symlink(f.Name(), sl); err != nil {
 			t.Fatal(err)
 		}
 
@@ -142,7 +147,9 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 4096))
+		if _, err := f.Write(make([]byte, 4096)); err != nil {
+			t.Fatal(err)
+		}
 
 		stdout := &bytes.Buffer{}
 		err = command(stdout, []string{"du", "-k", f.Name()}).run()
@@ -249,18 +256,18 @@ func prepareDir(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f1.Write(make([]byte, 4096))
+	if _, err = f1.Write(make([]byte, 4096)); err != nil {
+		t.Fatal(err)
+	}
 	dir1 := filepath.Join(dir, "dir1")
-	err = os.Mkdir(dir1, 0722)
-	if err != nil {
+	if err = os.Mkdir(dir1, 0722); err != nil {
 		t.Fatal(err)
 	}
 	f2, err := os.Create(filepath.Join(dir1, "file2"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	f2.Write(make([]byte, 8012))
-	if err != nil {
+	if _, err = f2.Write(make([]byte, 8012)); err != nil {
 		t.Fatal(err)
 	}
 

@@ -434,7 +434,9 @@ func cbMem(w io.Writer) error {
 	// list is kind of misnamed I think. It really just prints
 	// memory table entries.
 	if list || hexdump {
-		DumpMem(f, cbmem, hexdump, os.Stdout)
+		if err := DumpMem(f, cbmem, hexdump, os.Stdout); err != nil {
+			return fmt.Errorf("dumping memory: %w", err)
+		}
 	}
 	if console && cbmem.MemConsole != nil {
 		fmt.Fprintf(w, "%s%s", cbmem.MemConsole.Data[cbmem.MemConsole.Cursor:], cbmem.MemConsole.Data[0:cbmem.MemConsole.Cursor])

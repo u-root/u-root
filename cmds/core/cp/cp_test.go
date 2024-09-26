@@ -42,7 +42,9 @@ func randomFile(fpath, prefix string) (*os.File, error) {
 	for i := 0; i < rand.Intn(maxSizeFile); i++ {
 		bytes = append(bytes, byte(i))
 	}
-	f.Write(bytes)
+	if _, err := f.Write(bytes); err != nil {
+		return nil, err
+	}
 
 	return f, nil
 }

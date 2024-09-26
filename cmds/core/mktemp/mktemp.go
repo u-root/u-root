@@ -130,7 +130,10 @@ func command(stdout io.Writer, args []string) *cmd {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	c.stdout = stdout
 	c.args = fs.Args()

@@ -30,12 +30,14 @@ func InMemArchive() *Archive {
 }
 
 // ArchiveFromRecords creates a new Archive from the records.
-func ArchiveFromRecords(rs []Record) *Archive {
+func ArchiveFromRecords(rs []Record) (*Archive, error) {
 	a := InMemArchive()
 	for _, r := range rs {
-		a.WriteRecord(r)
+		if err := a.WriteRecord(r); err != nil {
+			return nil, err
+		}
 	}
-	return a
+	return a, nil
 }
 
 // ArchiveFromReader reads records from r into a new Archive in memory.

@@ -27,8 +27,8 @@ var (
 )
 
 var (
-	groupedDeclOnlyIntf interface{}
-	nonConstantAssign   = fmt.Errorf("foo")
+	groupedDeclOnlyIntf  interface{}
+	errNonConstantAssign = fmt.Errorf("foo")
 )
 
 var (

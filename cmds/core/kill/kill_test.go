@@ -12,6 +12,7 @@ import (
 	"testing"
 )
 
+//nolint:errcheck
 func getUnusedPID() string {
 	cmd := exec.Command("true")
 	cmd.Start()

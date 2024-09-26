@@ -183,5 +183,7 @@ func TestDhclient6(t *testing.T) {
 		t.Errorf("Server VM could not be killed: %v", err)
 	}
 	// Would return signal: killed.
-	serverVM.Wait()
+	if err := serverVM.Wait(); err != nil {
+		t.Fatal(err)
+	}
 }

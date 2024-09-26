@@ -31,7 +31,9 @@ func run(stdin io.Reader, stdout io.Writer, args []string) error {
 		f.PrintDefaults()
 	}
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return fmt.Errorf("error parsing flags: %w", err)
+	}
 	if f.NArg() != 0 {
 		f.Usage()
 		return fmt.Errorf("invalid use")

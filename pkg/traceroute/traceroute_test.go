@@ -19,7 +19,9 @@ func TestUDP4Packet(t *testing.T) {
 		SrcIP:  net.IPv4(127, 0, 0, 1),
 	}
 
-	_, _ = tr.BuildUDP4Pkt(0, 0, 1, 0, 0)
+	if _, _, err := tr.BuildUDP4Pkt(0, 0, 1, 0, 0); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestUDP6Packet(t *testing.T) {
@@ -28,7 +30,9 @@ func TestUDP6Packet(t *testing.T) {
 		SrcIP:  net.IPv4(127, 0, 0, 1),
 	}
 
-	_, _ = tr.BuildUDP6Pkt(0, 0, 1, 0, 0)
+	if _, _, err := tr.BuildUDP6Pkt(0, 0, 1, 0, 0); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTCP4Packet(t *testing.T) {
@@ -37,7 +41,9 @@ func TestTCP4Packet(t *testing.T) {
 		SrcIP:  net.IPv4(127, 0, 0, 1),
 	}
 
-	_, _ = tr.BuildTCP4SYNPkt(0, 0, 1, 0, 0)
+	if _, _, err := tr.BuildTCP4SYNPkt(0, 0, 1, 0, 0); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTCP6Packet(t *testing.T) {
@@ -46,7 +52,9 @@ func TestTCP6Packet(t *testing.T) {
 		SrcIP:  net.IPv4(127, 0, 0, 1),
 	}
 
-	_, _ = tr.BuildTCP6SYNPkt(0, 0, 1, 0, 0)
+	if _, _, err := tr.BuildTCP6SYNPkt(0, 0, 1, 0, 0); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestICMP4Packet(t *testing.T) {
@@ -55,7 +63,9 @@ func TestICMP4Packet(t *testing.T) {
 		SrcIP:  net.IPv4(127, 0, 0, 1),
 	}
 
-	_, _ = tr.BuildICMP4Pkt(1, 0, 0, 0)
+	if _, _, err := tr.BuildICMP4Pkt(1, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestICMP6Packet(t *testing.T) {
@@ -64,7 +74,9 @@ func TestICMP6Packet(t *testing.T) {
 		SrcIP:  net.IPv4(127, 0, 0, 1),
 	}
 
-	_, _ = tr.BuildICMP6Pkt(1, 0, 0, 0)
+	if _, _, err := tr.BuildICMP6Pkt(1, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestNewTrace(t *testing.T) {
@@ -131,8 +143,9 @@ func TestParseTCP(t *testing.T) {
 	}
 
 	var data bytes.Buffer
-
-	binary.Write(&data, binary.BigEndian, hdr)
+	if err := binary.Write(&data, binary.BigEndian, hdr); err != nil {
+		t.Fatal(err)
+	}
 
 	newhdr, err := traceroute.ParseTCP(data.Bytes())
 	if err != nil {

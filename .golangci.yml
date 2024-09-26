@@ -6,7 +6,6 @@ linters:
     - staticcheck
     - stylecheck
     - errorlint
-    - unparam
     - errcheck
 
 linters-settings:

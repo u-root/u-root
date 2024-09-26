@@ -7,6 +7,7 @@ package memio
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -56,8 +57,12 @@ func TestIORealSyscalls(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			tmpFile.Write(make([]byte, 10000))
-			tmpFile.Close()
+			if _, err := tmpFile.Write(make([]byte, 10000)); err != nil {
+				t.Fatal(err)
+			}
+			if err := tmpFile.Close(); err != nil {
+				t.Fatal(err)
+			}
 			defer os.Remove(tmpFile.Name())
 			m, err := NewMMap(tmpFile.Name())
 			if err != nil {
@@ -92,8 +97,14 @@ func TestIORealSyscalls(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			tmpFile.Write(make([]byte, 10000))
-			tmpFile.Close()
+			if _, err := tmpFile.Write(make([]byte, 10000)); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := tmpFile.Close(); err != nil {
+				t.Fatal(err)
+			}
+
 			defer os.Remove(tmpFile.Name())
 			memPath = tmpFile.Name()
 			defer func() { memPath = "/dev/mem" }()
@@ -162,8 +173,13 @@ func TestMemIOAbstractSyscalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpFile.Write(make([]byte, 10000))
-	tmpFile.Close()
+	if _, err := tmpFile.Write(make([]byte, 10000)); err != nil {
+		log.Fatal(err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
 	defer os.Remove(tmpFile.Name())
 	m, err := NewMMap(tmpFile.Name())
 	if err != nil {

@@ -174,6 +174,8 @@ func FuzzParseGrubConfig(f *testing.F) {
 			t.Fatalf("Failed to create configfile '%v':%v", path, err)
 		}
 
-		ParseLocalConfig(context.Background(), baseDir, devices, mountPool)
+		if _, err := ParseLocalConfig(context.Background(), baseDir, devices, mountPool); err != nil {
+			t.Fatal(err)
+		}
 	})
 }

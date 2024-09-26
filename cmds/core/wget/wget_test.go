@@ -26,6 +26,7 @@ const content = "Very simple web server"
 
 type handler struct{}
 
+//nolint:errcheck
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
 	case "/", "/200", "/200/", "/200/index.html", "/200/300/":

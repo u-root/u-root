@@ -110,7 +110,18 @@ import (
 	"github.com/u-root/u-root/pkg/uzip"
 )
 
-var ErrUsage = errors.New("pox [-v] [-r] [-c]  [-f tcz-file] file [...file]")
+var (
+	errUsage = errors.New("pox [-v] [-r] [-c]  [-f tcz-file] file [...file]")
+)
+
+const (
+	extraUsage = `comma-separated list of extra directories to add (on create) and binds to do (on run).
+You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
+pox -c -e /tmp,/etc commands ....
+pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
+This can also be passed in with the POX_EXTRA variable.
+`
+)
 
 type mp struct {
 	source string
@@ -153,7 +164,7 @@ var chrootMounts = []mp{
 
 func (c cmd) poxCreate() error {
 	if len(c.args) == 0 {
-		return ErrUsage
+		return errUsage
 	}
 	names, err := ldd.List(c.args...)
 	if err != nil {
@@ -372,7 +383,7 @@ func (c cmd) start() error {
 		return err
 	}
 	if !c.create && !c.run {
-		return ErrUsage
+		return errUsage
 	}
 	if c.create {
 		if err := c.poxCreate(); err != nil {
@@ -385,32 +396,22 @@ func (c cmd) start() error {
 	return nil
 }
 
-func command(in io.Reader, out, err io.Writer, args []string) *cmd {
-	c := cmd{arg0: args[0], in: in, out: out, err: err}
+func command(in io.Reader, out, errOut io.Writer, args []string) *cmd {
+	c := cmd{arg0: args[0], in: in, out: out, err: errOut}
 
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-
 	f.BoolVar(&c.verbose, "v", false, "enable verbose prints")
-
 	f.BoolVar(&c.run, "r", false, "Run the first file argument")
-
 	f.BoolVar(&c.create, "c", false, "create it")
-
 	f.BoolVar(&c.zip, "z", false, "use zip instead of squashfs")
-
 	f.BoolVar(&c.self, "s", false, "use self-extracting zip")
-
 	f.StringVar(&c.file, "f", "/tmp/pox.tcz", "Output file")
-
-	const extraUsage = `comma-separated list of extra directories to add (on create) and binds to do (on run).
-You can specify what directories to add, and when you run, specify what directories are bound over them, e.g.:
-pox -c -e /tmp,/etc commands ....
-pox -r -e /a/b/c/tmp:/tmp,/etc:/etc commands ...
-This can also be passed in with the POX_EXTRA variable.
-`
 	f.StringVar(&c.extra, "e", "", extraUsage)
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(errOut, "%v", err)
+		os.Exit(1)
+	}
 
 	c.args = f.Args()
 	c.debug = func(string, ...interface{}) {}

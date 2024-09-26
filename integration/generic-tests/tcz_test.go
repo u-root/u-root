@@ -117,7 +117,10 @@ func TestTczclient(t *testing.T) {
 	if err := clientVM.Wait(); err != nil {
 		t.Errorf("Client Wait: %v", err)
 	}
-
-	serverVM.Kill()
-	serverVM.Wait()
+	if err := serverVM.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	if err := serverVM.Wait(); err != nil {
+		t.Fatal(err)
+	}
 }

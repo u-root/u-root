@@ -405,7 +405,10 @@ func command(out io.Writer, args []string) *cmd {
 
 	fs.Usage = printHelp
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		return nil
+	}
 
 	// Validate info source flags
 	// none or one allowed to be set

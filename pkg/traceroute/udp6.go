@@ -30,7 +30,9 @@ func (t *Trace) SendTracesUDP6() {
 			defer conn.Close()
 
 			rSock := ipv6.NewPacketConn(conn)
-			rSock.SetChecksum(true, 0x8)
+			if err := rSock.SetChecksum(true, 0x8); err != nil {
+				log.Fatal(err)
+			}
 
 			pb := &Probe{
 				ID:   uint32(id),
@@ -38,10 +40,16 @@ func (t *Trace) SendTracesUDP6() {
 				Port: dport,
 				TTL:  ttl,
 			}
-			cm, payload := t.BuildUDP6Pkt(sport, dport, uint8(ttl), id, 0)
+
+			cm, payload, err := t.BuildUDP6Pkt(sport, dport, uint8(ttl), id, 0)
+			if err != nil {
+				log.Fatalf("BuildUDP6Pkt() = %v", err)
+			}
 
 			pb.Sendtime = time.Now()
-			rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
+			if _, err := rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP}); err != nil {
+				log.Fatal(err)
+			}
 
 			t.SendChan <- pb
 			dport = uint16(int32(t.destPort) + rand.Int31n(64))
@@ -81,7 +89,9 @@ func (t *Trace) ReceiveTracesUDP6() {
 	}
 }
 
-func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int) (*ipv6.ControlMessage, []byte) {
+func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int) (*ipv6.ControlMessage, []byte, error) {
+	const payloadLen = 30
+
 	cm := &ipv6.ControlMessage{
 		HopLimit: int(ttl),
 	}
@@ -91,8 +101,8 @@ func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int)
 		Dst: dport,
 	}
 
-	payload := make([]byte, 30)
-	for i := 0; i < 30; i++ {
+	payload := make([]byte, payloadLen)
+	for i := 0; i < payloadLen; i++ {
 		payload[i] = uint8(i + 64)
 	}
 
@@ -104,7 +114,13 @@ func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int)
 	udphdr.Length = uint16(len(payload) + 8)
 
 	var b bytes.Buffer
-	binary.Write(&b, binary.BigEndian, &udphdr)
-	binary.Write(&b, binary.BigEndian, &payload)
-	return cm, b.Bytes()
+	if err := binary.Write(&b, binary.BigEndian, &udphdr); err != nil {
+		return nil, nil, err
+	}
+
+	if err := binary.Write(&b, binary.BigEndian, &payload); err != nil {
+		return nil, nil, err
+	}
+
+	return cm, b.Bytes(), nil
 }

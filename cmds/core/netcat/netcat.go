@@ -488,7 +488,9 @@ func run(args []string) error {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return err
+	}
 
 	config, err := evalParams(fs.Args(), f)
 	if err != nil {

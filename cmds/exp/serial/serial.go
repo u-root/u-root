@@ -78,7 +78,9 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		term.Restore(int(os.Stdin.Fd()), state)
+		if err := term.Restore(int(os.Stdin.Fd()), state); err != nil {
+			log.Fatalf("Failed to restore terminal: %v\n", err)
+		}
 		os.Exit(0)
 	}()
 
@@ -91,7 +93,11 @@ func main() {
 
 	port, err := serial.Open(p.device, mode)
 	if err != nil {
-		term.Restore(int(os.Stdin.Fd()), state)
+		if errRestore := term.Restore(int(os.Stdin.Fd()), state); errRestore != nil {
+			if errJoin := errors.Join(err, errRestore); errJoin != nil {
+				log.Fatal(errJoin)
+			}
+		}
 		log.Fatal(err)
 	}
 

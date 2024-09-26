@@ -191,7 +191,9 @@ func TestFilesGrep(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f4.Chmod(0o000)
+	if err := f4.Chmod(0o000); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = f1.WriteString("hix\nnix\n")
 	if err != nil {

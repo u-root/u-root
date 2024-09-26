@@ -103,7 +103,9 @@ func (c *cmd) run() error {
 }
 
 func (c *cmd) ping(addr *net.IPAddr, i uint64, waitFor time.Duration) (string, error) {
-	c.conn.SetDeadline(time.Now().Add(waitFor))
+	if err := c.conn.SetDeadline(time.Now().Add(waitFor)); err != nil {
+		return "", err
+	}
 
 	var echoRequestType icmp.Type = ipv4.ICMPTypeEcho
 	if c.net6 {

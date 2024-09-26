@@ -12,6 +12,7 @@
 package pty
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -61,7 +62,11 @@ func (p *Pty) Start() error {
 	}
 
 	if err := p.C.Start(); err != nil {
-		tty.Set(p.Restorer)
+		if errRestore := tty.Set(p.Restorer); errRestore != nil {
+			if errJoin := errors.Join(err, errRestore); errJoin != nil {
+				return errJoin
+			}
+		}
 		return err
 	}
 	p.Kid = p.C.Process.Pid
@@ -78,11 +83,14 @@ func (p *Pty) Start() error {
 
 // Run runs a Command attached to a Pty, waiting for completion and
 // managing stdio. It uses Wait to restore tty modes when it is done.
+//
+//nolint:errcheck
 func (p *Pty) Run() error {
 	if err := p.Start(); err != nil {
 		return err
 	}
 
+	// TODO: Handle go routine error handling
 	go io.Copy(p.TTY, p.Ptm)
 
 	// The 1 byte for IO may seem weird, but ptys are for human interaction
@@ -104,6 +112,9 @@ func (p *Pty) Run() error {
 
 // Wait waits for a previously started command to finish, and restores the
 // tty mode when it is done.
+// TODO: add async error handling
+//
+//nolint:errcheck
 func (p *Pty) Wait() error {
 	defer p.TTY.Set(p.Restorer)
 	return p.C.Wait()

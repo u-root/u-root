@@ -33,9 +33,9 @@ func (p *Property) String() string {
 	return fmt.Sprintf("%s[%#02x]%q{%#x}%s", p.Name, len(p.Value), p.Value[:l], p.Value[:l], more)
 }
 
+//nolint:errcheck
 func (n *Node) String() string {
-	var s string
-	var indent string
+	var s, indent string
 	n.Walk(func(n *Node) error {
 		i := indent
 		indent += "\t"

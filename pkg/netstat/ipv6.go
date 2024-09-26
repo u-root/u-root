@@ -208,7 +208,9 @@ func newSNMP6() (*SNMP6, error) {
 			}
 
 			var name, val string
-			fmt.Sscanf(cutstring, "%s %s", &name, &val)
+			if _, err := fmt.Sscanf(cutstring, "%s %s", &name, &val); err != nil {
+				return nil, err
+			}
 
 			var refVal reflect.Value
 			switch prefix {

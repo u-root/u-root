@@ -17,6 +17,9 @@ import (
 )
 
 // ToZip packs the all files at dir to a zip archive at dest.
+// TODO: async error handling
+//
+//nolint:errcheck
 func ToZip(dir, dest, comment string) (reterr error) {
 	if info, err := os.Stat(dir); err != nil {
 		return err
@@ -47,6 +50,9 @@ func ToZip(dir, dest, comment string) (reterr error) {
 }
 
 // AppendZip packs the all files at dir to a zip archive at dest.
+// TODO: async error handling
+//
+//nolint:errcheck
 func AppendZip(dir, dest, comment string) (reterr error) {
 	if info, err := os.Stat(dir); err != nil {
 		return err

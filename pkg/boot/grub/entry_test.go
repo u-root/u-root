@@ -67,6 +67,7 @@ initrd=initramfs.cpio`, wantEnv: nil, wantErr: fmt.Errorf(`error parsing "kernel
 	}
 }
 
+//nolint:errcheck
 func FuzzParseEnvFile(f *testing.F) {
 	f.Add([]byte(`kernel=bzImage
 		initrd=initramfs.cpio

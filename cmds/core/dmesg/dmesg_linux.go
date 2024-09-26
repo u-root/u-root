@@ -30,7 +30,9 @@ func run(out io.Writer, args []string) error {
 	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	f.BoolVar(&clr, "clear", false, "Clear the log")
 	f.BoolVar(&readClr, "read-clear", false, "Clear the log after printing")
-	f.Parse(args[1:])
+	if err := f.Parse(args[1:]); err != nil {
+		return err
+	}
 
 	if clr && readClr {
 		return fmt.Errorf("cannot specify both -clear and -read-clear:%w", os.ErrInvalid)

@@ -216,13 +216,16 @@ func (s *MockSPI) Transfer(transfers []spidev.Transfer) error {
 		}
 		s.IsWriteEnabled = false
 		s.WritePending = WriteWaitStates
+
 	case op.Read:
 		addr, addrLen := address(transfers, 1, s.Is4BA)
 		// Copy each byte from data to rx.
 		for i := int64(0); rx(transfers, int(1+addrLen+i), s.Data[addr+i]) == nil; i++ {
 		}
+
 	case op.WriteDisable:
 		s.IsWriteEnabled = false
+
 	case op.ReadStatus:
 		var statusReg uint8
 		if s.WritePending != 0 {
@@ -231,9 +234,13 @@ func (s *MockSPI) Transfer(transfers []spidev.Transfer) error {
 		if s.IsWriteEnabled {
 			statusReg |= 2
 		}
-		rx(transfers, 1, statusReg)
+		if err := rx(transfers, 1, statusReg); err != nil {
+			return err
+		}
+
 	case op.WriteEnable:
 		s.IsWriteEnabled = true
+
 	case op.SectorErase:
 		if !s.IsWriteEnabled {
 			break
@@ -242,18 +249,28 @@ func (s *MockSPI) Transfer(transfers []spidev.Transfer) error {
 		addr &= ^0xfff
 		copy(s.Data[addr:], bytes.Repeat([]byte{0xff}, 0x1000))
 		s.IsWriteEnabled = false
+
 	case op.ReadSFDP:
 		// ReadSFDP is always 3-byte addressing.
 		addr, addrLen := address(transfers, 1, false)
 		// Copy each byte from sfdp to rx.
 		for i := int64(0); rx(transfers, int(1+addrLen+1+i), s.SFDP[addr+i]) == nil; i++ {
 		}
+
 	case op.ReadJEDECID:
-		rx(transfers, 1, 0xc2)
-		rx(transfers, 2, 0x20)
-		rx(transfers, 3, 0x1a)
+		if err := rx(transfers, 1, 0xc2); err != nil {
+			return err
+		}
+		if err := rx(transfers, 2, 0x20); err != nil {
+			return err
+		}
+		if err := rx(transfers, 3, 0x1a); err != nil {
+			return err
+		}
+
 	case op.Enter4BA:
 		s.Is4BA = true
+
 	case op.BlockErase:
 		if !s.IsWriteEnabled {
 			break
@@ -262,9 +279,11 @@ func (s *MockSPI) Transfer(transfers []spidev.Transfer) error {
 		addr &= ^0x7fff
 		copy(s.Data[addr:], bytes.Repeat([]byte{0xff}, 0x8000))
 		s.IsWriteEnabled = false
+
 	case op.PRDRES:
 	case op.Exit4BA:
 		s.Is4BA = false
+
 	default:
 		return fmt.Errorf("unrecognized opcode %#02x", o)
 	}

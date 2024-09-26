@@ -54,7 +54,9 @@ func run(args []string) error {
 		daemonOpts := &watchdogd.DaemonOpts{}
 		fs := daemonOpts.InitFlags()
 		monitor := fs.String("monitors", "oops", "comma separated list of monitors")
-		fs.Parse(args)
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
 
 		if fs.NArg() != 0 {
 			watchdog.Usage()

@@ -47,7 +47,10 @@ func command(stdout io.Writer, args []string) *cmd {
 	f.BoolVar(&c.followCMDSymLinks, "H", false, "follow symlink form [file...]")
 	f.BoolVar(&c.followSymlinks, "L", false, "follow all symlinks")
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
+	}
 	c.files = f.Args()
 	return &c
 }

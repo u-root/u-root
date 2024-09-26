@@ -245,7 +245,9 @@ func TestChmod(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Chmod(f.Name(), tt.modeBefore)
+			if err := os.Chmod(f.Name(), tt.modeBefore); err != nil {
+				t.Fatal(err)
+			}
 			err := command(io.Discard, tt.recursive, tt.reference).run(tt.args...)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("chmod(%v, %q, %q) = %v, want %v", tt.recursive, tt.reference, tt.args, err, tt.err)

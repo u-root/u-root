@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -107,10 +108,12 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return cmd{}, fmt.Errorf("error parsing flags: %w", err)
+	}
 
 	if opts.Verbose && opts.Quiet {
-		return cmd{}, fmt.Errorf("cannot use both -v and -q flags")
+		return cmd{}, errors.New("cannot use both -v and -q flags")
 	}
 
 	filter := ""

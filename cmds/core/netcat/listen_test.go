@@ -621,6 +621,9 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 	}
 }
 
+// TODO: add async error checking
+//
+//nolint:errcheck
 func TestBroadcastMessage(t *testing.T) {
 	// Setup
 	connections := NewConnections()

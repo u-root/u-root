@@ -82,8 +82,13 @@ func (l *lpc) Command(c command, v version, idata []byte, outsize int, timeout t
 		return nil, err
 	}
 
-	l.Outb(l.cmd, uint8(c))
-	l.Outb(l.status, 0xa5)
+	if err := l.Outb(l.cmd, uint8(c)); err != nil {
+		return nil, err
+	}
+
+	if err := l.Outb(l.status, 0xa5); err != nil {
+		return nil, err
+	}
 
 	if err := l.Wait(10 * time.Second); err != nil {
 		return nil, errors.New("timeout waiting for EC response")

@@ -74,6 +74,8 @@ func openFUSE() (int, error) {
 
 // MountPointOK performs validation on the mountpoint.
 // Bury all your magic in here.
+// TODO: add async error checks
+
 func MountPointOK(mpt string) error {
 	// We wait until we can drop privs to test the mpt
 	// parameter, since ability to walk the path can
@@ -81,8 +83,11 @@ func MountPointOK(mpt string) error {
 	if err := dropPrivs(); err != nil {
 		return err
 	}
+
+	//nolint:errcheck
 	defer restorePrivs()
 	mpt = filepath.Clean(mpt)
+
 	r, err := filepath.EvalSymlinks(mpt)
 	if err != nil {
 		return err
@@ -170,7 +175,9 @@ func run(out io.Writer, args []string) error {
 		f.PrintDefaults()
 	}
 
-	f.Parse(args[1:])
+	if err := f.Parse(args[1:]); err != nil {
+		return fmt.Errorf("error parsing flags: %w", err)
+	}
 
 	if verbose {
 		debug = log.Printf

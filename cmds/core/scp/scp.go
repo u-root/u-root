@@ -119,11 +119,12 @@ func scpSink(w io.Writer, r io.Reader, path string) error {
 	return nil
 }
 
-//nolint:unparam
+//nolint:unparam,errcheck
 func reply(out io.Writer, r byte) {
 	out.Write([]byte{r})
 }
 
+//nolint:errcheck
 func response(in io.Reader) byte {
 	b := make([]byte, 1)
 	in.Read(b)

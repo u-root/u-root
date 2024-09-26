@@ -220,7 +220,10 @@ func run(w io.Writer, args []string) error {
 	f.BoolVar(&c.classify, "F", false, "append indicator (, one of */=>@|) to entries")
 	f.BoolVar(&c.size, "S", false, "sort by size")
 	c.w = w
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return fmt.Errorf("error parsing flags: %w", err)
+	}
 	return c.list(f.Args())
 }
 

@@ -309,7 +309,9 @@ func FuzzRun(f *testing.F) {
 		runner.Reset()
 		runner.Dir = dirPath
 
-		runReader(runner, strings.NewReader(stringifiedData), "fuzz")
+		if err := runReader(runner, strings.NewReader(stringifiedData), "fuzz"); err != nil {
+			t.Fatal(err)
+		}
 	})
 }
 

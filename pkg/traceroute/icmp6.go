@@ -27,8 +27,15 @@ func (t *Trace) SendTracesICMP6() {
 
 	for ttl := 1; ttl < int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			cm, payload := t.BuildICMP6Pkt(ttl, id, id, 0)
-			pktconn.WriteTo(payload, cm, &net.UDPAddr{IP: t.DestIP})
+			cm, payload, err := t.BuildICMP6Pkt(ttl, id, id, 0)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if _, err := pktconn.WriteTo(payload, cm, &net.UDPAddr{IP: t.DestIP}); err != nil {
+				log.Fatal(err)
+			}
+
 			pb := &Probe{
 				ID:       uint32(id),
 				Dest:     t.DestIP,
@@ -81,7 +88,7 @@ func (t *Trace) ReceiveTraceICMP6() {
 	}
 }
 
-func (t *Trace) BuildICMP6Pkt(ttl int, id uint16, seq uint16, tc int) (*ipv6.ControlMessage, []byte) {
+func (t *Trace) BuildICMP6Pkt(ttl int, id uint16, seq uint16, tc int) (*ipv6.ControlMessage, []byte, error) {
 	ctlmsg := &ipv6.ControlMessage{
 		TrafficClass: 0,
 		HopLimit:     int(ttl),
@@ -101,7 +108,13 @@ func (t *Trace) BuildICMP6Pkt(ttl int, id uint16, seq uint16, tc int) (*ipv6.Con
 	}
 
 	var b bytes.Buffer
-	binary.Write(&b, binary.BigEndian, icmppkt)
-	binary.Write(&b, binary.BigEndian, &payload)
-	return ctlmsg, b.Bytes()
+	if err := binary.Write(&b, binary.BigEndian, icmppkt); err != nil {
+		return nil, nil, err
+	}
+
+	if err := binary.Write(&b, binary.BigEndian, &payload); err != nil {
+		return nil, nil, err
+	}
+
+	return ctlmsg, b.Bytes(), nil
 }

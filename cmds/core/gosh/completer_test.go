@@ -77,13 +77,21 @@ func TestAutocomplete(t *testing.T) {
 	parser := syntax.NewParser()
 
 	p := t.TempDir()
-	os.WriteFile(filepath.Join(p, "echo"), nil, 0o777)
-	os.WriteFile(filepath.Join(p, "cat"), nil, 0o777)
+	if err := os.WriteFile(filepath.Join(p, "echo"), nil, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p, "cat"), nil, 0o777); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("PATH", p+":"+t.TempDir())
 
 	dir2Files := t.TempDir()
-	os.WriteFile(filepath.Join(dir2Files, "foo.txt"), nil, 0o777)
-	os.WriteFile(filepath.Join(dir2Files, "bar.txt"), nil, 0o777)
+	if err := os.WriteFile(filepath.Join(dir2Files, "foo.txt"), nil, 0o777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir2Files, "bar.txt"), nil, 0o777); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Setenv("GOSH_TEST", "1")
 
@@ -249,7 +257,10 @@ func TestAutocomplete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.cwd != "" {
 				pwd, _ := os.Getwd()
-				os.Chdir(tt.cwd)
+				if err := os.Chdir(tt.cwd); err != nil {
+					t.Fatal(err)
+				}
+				//nolint:errcheck
 				defer os.Chdir(pwd)
 			}
 			got := autocompleteLiner(parser)(tt.input)

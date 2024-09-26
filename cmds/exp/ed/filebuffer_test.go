@@ -547,6 +547,8 @@ func TestRead(t *testing.T) {
 }
 
 // Test ReadFile
+//
+//nolint:errcheck
 func CreateFile(name string) string {
 	f, err := os.Create(name)
 	if err != nil {

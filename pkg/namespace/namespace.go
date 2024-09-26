@@ -73,7 +73,9 @@ func buildNS(ns Namespace, nsfile, user string, clearns bool) error {
 		ns = DefaultNamespace
 	}
 	if clearns {
-		ns.Clear()
+		if err := ns.Clear(); err != nil {
+			return err
+		}
 	}
 	r, err := NewBuilder()
 	if err != nil {

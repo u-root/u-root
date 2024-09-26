@@ -158,7 +158,10 @@ func main() {
 	f.BoolVar(&verbose, "verbose", false, "print each filename")
 	f.BoolVar(&verbose, "v", false, "print each filename (shorthand)")
 
-	f.Parse(unixflag.OSArgsToGoArgs())
+	if err := f.Parse(unixflag.OSArgsToGoArgs()); err != nil {
+		log.Fatal(err)
+	}
+
 	cmd, err := command(params{file: file, create: create, extract: extract, list: list, noRecursion: noRecursion, verbose: verbose}, f.Args())
 	if err != nil {
 		f.Usage()

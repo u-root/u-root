@@ -104,7 +104,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		cpio.CreateFileInRoot(rec, tempDir, false)
+		if err := cpio.CreateFileInRoot(rec, tempDir, false); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	cmd, err := pty.New()
@@ -133,7 +135,12 @@ func main() {
 	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
-	go io.Copy(cmd.TTY, cmd.Ptm)
+
+	go func() {
+		if _, err := io.Copy(cmd.TTY, cmd.Ptm); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	// At this point you could use an array of commands/output templates to
 	// drive the test, and end with the exit command shown nere.

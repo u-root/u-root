@@ -212,8 +212,12 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 	if !opts.IgnoreProcMods {
 		fm, err := os.Open("/proc/modules")
 		if err == nil {
+			//nolint:errceck
 			defer fm.Close()
-			genLoadedMods(fm, deps)
+
+			if err := genLoadedMods(fm, deps); err != nil {
+				return nil, err
+			}
 		}
 	}
 

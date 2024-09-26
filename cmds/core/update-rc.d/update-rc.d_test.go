@@ -49,10 +49,16 @@ func TestDefaults(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				if err := os.MkdirAll(etcDir, 0755); err != nil {
+					t.Fatalf("failed to create etc directory: %v", err)
+				}
+				if err := os.MkdirAll(serviceDir, 0755); err != nil {
+					t.Fatalf("failed to create services directory: %v", err)
+				}
 				for i := 0; i <= 6; i++ {
-					os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0755)
+					if err := os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0755); err != nil {
+						t.Fatalf("failed to create rc directory: %v", err)
+					}
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir}
@@ -64,8 +70,12 @@ func TestDefaults(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				if err := os.MkdirAll(etcDir, 0755); err != nil {
+					t.Fatalf("failed to create etc directory: %v", err)
+				}
+				if err := os.MkdirAll(serviceDir, 0755); err != nil {
+					t.Fatalf("failed to create services directory: %v", err)
+				}
 				return options{etc: etcDir, serviceDir: serviceDir}
 			},
 			expectErr: true,
@@ -105,10 +115,16 @@ func TestDefaultsDisable(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				if err := os.MkdirAll(etcDir, 0755); err != nil {
+					t.Fatalf("failed to create etc directory: %v", err)
+				}
+				if err := os.MkdirAll(serviceDir, 0755); err != nil {
+					t.Fatalf("failed to create services directory: %v", err)
+				}
 				for i := 2; i <= 5; i++ {
-					os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0755)
+					if err := os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0755); err != nil {
+						t.Fatalf("failed to create rc directory: %v", err)
+					}
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir}
@@ -150,15 +166,23 @@ func TestDisable(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				if err := os.MkdirAll(etcDir, 0755); err != nil {
+					t.Fatalf("failed to create etc directory: %v", err)
+				}
+				if err := os.MkdirAll(serviceDir, 0755); err != nil {
+					t.Fatalf("failed to create services directory: %v", err)
+				}
 				for i := 0; i <= 6; i++ {
 					dir := filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i))
-					os.MkdirAll(dir, 0755)
-					os.Symlink(
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						t.Fatalf("failed to create rc directory: %v", err)
+					}
+					if err := os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "S30testscript"),
-					)
+					); err != nil {
+						t.Fatalf("failed to create symlink: %v", err)
+					}
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir}
@@ -200,15 +224,23 @@ func TestEnable(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				if err := os.MkdirAll(etcDir, 0755); err != nil {
+					t.Fatalf("failed to create etc directory: %v", err)
+				}
+				if err := os.MkdirAll(serviceDir, 0755); err != nil {
+					t.Fatalf("failed to create services directory: %v", err)
+				}
 				for i := 0; i <= 6; i++ {
 					dir := filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i))
-					os.MkdirAll(dir, 0755)
-					os.Symlink(
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						t.Fatalf("failed to create rc directory: %v", err)
+					}
+					if err := os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "K70testscript"),
-					)
+					); err != nil {
+						t.Fatalf("failed to create symlink: %v", err)
+					}
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir}
@@ -250,19 +282,29 @@ func TestRemove(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				if err := os.MkdirAll(etcDir, 0755); err != nil {
+					t.Fatalf("failed to create etc directory: %v", err)
+				}
+				if err := os.MkdirAll(serviceDir, 0755); err != nil {
+					t.Fatalf("failed to create services directory: %v", err)
+				}
 				for i := 0; i <= 6; i++ {
 					dir := filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i))
-					os.MkdirAll(dir, 0755)
-					os.Symlink(
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						t.Fatalf("failed to create rc directory: %v", err)
+					}
+					if err := os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "S30testscript"),
-					)
-					os.Symlink(
+					); err != nil {
+						t.Fatalf("failed to create symlink: %v", err)
+					}
+					if err := os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "K70testscript"),
-					)
+					); err != nil {
+						t.Fatalf("failed to create symlink: %v", err)
+					}
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir, force: true}

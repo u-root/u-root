@@ -22,7 +22,9 @@ func TestScpSource(t *testing.T) {
 		t.Fatalf("creating temp file: %v", err)
 	}
 	defer os.Remove(tf.Name())
-	tf.Write([]byte("test-file-contents"))
+	if _, err := tf.Write([]byte("test-file-contents")); err != nil {
+		t.Fatalf("writing to temp file: %v", err)
+	}
 
 	r.Write([]byte{0})
 	err = scpSource(&w, &r, tf.Name())

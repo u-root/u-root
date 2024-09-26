@@ -44,7 +44,9 @@ func testOutput(t *testing.T, dumpFile string, args []string, expectedOutFile st
 		return
 	}
 	if !bytes.Equal(actualOut, expectedOut) {
-		os.WriteFile(actualOutFile, actualOut, 0o644)
+		if err := os.WriteFile(actualOutFile, actualOut, 0o644); err != nil {
+			t.Fatal(err)
+		}
 		t.Errorf("%+v %+v %+v: output mismatch, see %s", dumpFile, args, expectedOutFile, actualOutFile)
 		diffOut, _ := exec.Command("diff", "-u", expectedOutFile, actualOutFile).CombinedOutput()
 		t.Errorf("%+v %+v %+v: diff:\n%s", dumpFile, args, expectedOutFile, string(diffOut))

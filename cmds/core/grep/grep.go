@@ -95,7 +95,9 @@ func run(stdin io.ReadCloser, stdout io.Writer, stderr io.Writer, args []string)
 		f.PrintDefaults()
 	}
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return err
+	}
 
 	c.args = f.Args()
 	c.stdin = stdin
@@ -149,7 +151,10 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 			if c.quiet {
 				return false
 			}
-			c.printMatch(f, line, lineNum+1, m)
+			if err := c.printMatch(f, line, lineNum+1, m); err != nil {
+				fmt.Fprintf(c.stderr, "error finding match: %v", err)
+				return false
+			}
 			if c.noShowMatch {
 				break
 			}
@@ -160,38 +165,50 @@ func (c *cmd) grep(f *grepCommand, re *regexp.Regexp) (ok bool) {
 	return true
 }
 
-func (c *cmd) printMatch(cmd *grepCommand, line string, lineNum int, match bool) {
+func (c *cmd) printMatch(cmd *grepCommand, line string, lineNum int, match bool) error {
 	if match == !c.invert {
 		c.matchCount++
 	}
 	if c.count {
-		return
+		return nil
 	}
 	// at this point, we have committed to writing a line
 	defer func() {
-		c.stdout.WriteByte('\n')
+		if err := c.stdout.WriteByte('\n'); err != nil {
+			fmt.Fprintf(os.Stderr, "printMatch: %v\n", err)
+		}
 	}()
 	// if showName, write name to stdout
 	if c.showName {
-		c.stdout.WriteString(cmd.name)
+		if _, err := c.stdout.WriteString(cmd.name); err != nil {
+			return fmt.Errorf("printMatch: %w", err)
+		}
 	}
 	// if dont show match, then newline and return, we are done
 	if c.noShowMatch {
-		return
+		return nil
 	}
 	if match == !c.invert {
 		// if showName, need a :
 		if c.showName {
-			c.stdout.WriteByte(':')
+			if err := c.stdout.WriteByte(':'); err != nil {
+				return err
+			}
 		}
 		// if showing line number, print the line number then a :
 		if c.number {
-			c.stdout.Write(strconv.AppendUint(nil, uint64(lineNum), 10))
-			c.stdout.WriteByte(':')
+			if _, err := c.stdout.Write(strconv.AppendUint(nil, uint64(lineNum), 10)); err != nil {
+				return err
+			}
+			if err := c.stdout.WriteByte(':'); err != nil {
+				return err
+			}
 		}
 		// now write the line to stdout
-		c.stdout.WriteString(line)
+		_, err := c.stdout.WriteString(line)
+		return err
 	}
+	return nil
 }
 
 func (c *cmd) run() error {
@@ -256,8 +273,10 @@ func (c *cmd) run() error {
 		return errQuiet
 	}
 	if c.count {
-		c.stdout.Write(strconv.AppendUint(nil, uint64(c.matchCount), 10))
-		c.stdout.WriteByte('\n')
+		if _, err := c.stdout.Write(strconv.AppendUint(nil, uint64(c.matchCount), 10)); err != nil {
+			return err
+		}
+		_ = c.stdout.WriteByte('\n')
 	}
 	return nil
 }

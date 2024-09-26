@@ -220,12 +220,14 @@ func evaluateHssPath(hssFiles string) ([]string, error) {
 	// Check if hssFiles is a directory or a file. Add all regular files in the base directory.
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		filepath.Walk(hssFiles, func(fpath string, info os.FileInfo, _ error) error {
+		if err := filepath.Walk(hssFiles, func(fpath string, info os.FileInfo, _ error) error {
 			if info.Mode().IsRegular() {
 				hssFileArr = append(hssFileArr, fpath)
 			}
 			return nil
-		})
+		}); err != nil {
+			return nil, err
+		}
 	case mode.IsRegular():
 		hssFileArr = append(hssFileArr, hssFiles)
 	}

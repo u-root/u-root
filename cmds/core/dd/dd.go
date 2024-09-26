@@ -262,7 +262,9 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	// convert the arguments and then run flag.Parse. Gross, but hey, it
 	// works.
 	args = convertArgs(args)
-	f.Parse(args)
+	if err := f.Parse(args); err != nil {
+		return err
+	}
 
 	if len(f.Args()) > 0 {
 		usage()

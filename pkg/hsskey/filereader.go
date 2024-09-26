@@ -152,7 +152,9 @@ func GetHssFromFile(warnings io.Writer, verboseDangerous bool, filePaths []strin
 				msg = msg + fmt.Sprintf("\nseed=%x, seed(octal escape sequence)=%s", hss,
 					toOctalEscapeSequence(hss))
 			}
-			io.WriteString(warnings, msg+"\n")
+			if _, err := io.WriteString(warnings, msg+"\n"); err != nil {
+				return nil, err
+			}
 		}
 		allHss = append(allHss, hssKeys...)
 	}
@@ -207,7 +209,9 @@ func WriteHssToFile(warnings io.Writer, verboseDangerous bool, file *os.File, hs
 					msg = msg + fmt.Sprintf("\nseed=%x, seed(octal escape sequence)=%s", hssKey,
 						toOctalEscapeSequence(hssKey))
 				}
-				io.WriteString(warnings, msg+"\n")
+				if _, err := io.WriteString(warnings, msg+"\n"); err != nil {
+					return err
+				}
 			}
 			continue
 		}
@@ -215,7 +219,9 @@ func WriteHssToFile(warnings io.Writer, verboseDangerous bool, file *os.File, hs
 		if verboseDangerous && warnings != nil {
 			msg := fmt.Sprintf("Writing HSS key to file=%s\nseed=%x, seed(octal escape sequence)=%s",
 				file.Name(), hssKey, toOctalEscapeSequence(hssKey))
-			io.WriteString(warnings, msg+"\n")
+			if _, err := io.WriteString(warnings, msg+"\n"); err != nil {
+				return err
+			}
 		}
 
 		n, err := file.Write(hssKey)

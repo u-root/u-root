@@ -12,6 +12,7 @@ import (
 	"github.com/u-root/u-root/pkg/ulog/ulogtest"
 )
 
+//nolint:errcheck
 func FuzzParseIpxeConfig(f *testing.F) {
 	seeds, err := filepath.Glob("testdata/fuzz/corpora/*.seed")
 	if err != nil {

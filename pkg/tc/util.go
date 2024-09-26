@@ -248,14 +248,15 @@ func GetHz() (int, error) {
 		return 0, err
 	}
 	defer psched.Close()
-
 	var gb1, gb2, nom, denom int
 
-	fmt.Fscanf(psched, "%8x %8x %8x %8x",
+	if _, err := fmt.Fscanf(psched, "%8x %8x %8x %8x",
 		&gb1,
 		&gb2,
 		&nom,
-		&denom)
+		&denom); err != nil {
+		return 0, err
+	}
 
 	if nom == 1000000 {
 		return denom, nil
@@ -285,14 +286,15 @@ func getTickInUsec() (uint32, error) {
 		return 0, err
 	}
 	defer psched.Close()
-
 	var t2us, us2t, clockRes, gb int
 
-	fmt.Fscanf(psched, "%8x %8x %8x %8x",
+	if _, err := fmt.Fscanf(psched, "%8x %8x %8x %8x",
 		&t2us,
 		&us2t,
 		&clockRes,
-		&gb)
+		&gb); err != nil {
+		return 0, err
+	}
 
 	if clockRes == 1000000000 {
 		t2us = us2t
@@ -312,11 +314,13 @@ func getClockfactor() (uint32, error) {
 
 	var t2us, us2t, clockRes, gb int
 
-	fmt.Fscanf(psched, "%8x %8x %8x %8x",
+	if _, err := fmt.Fscanf(psched, "%8x %8x %8x %8x",
 		&t2us,
 		&us2t,
 		&clockRes,
-		&gb)
+		&gb); err != nil {
+		return 0, err
+	}
 
 	if clockRes == 1000000000 {
 		t2us = us2t

@@ -179,7 +179,9 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 	}
 
 	if c.config.Timing.Timeout > 0 {
-		conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout))
+		if err := conn.SetDeadline(time.Now().Add(c.config.Timing.Timeout)); err != nil {
+			return nil, err
+		}
 	}
 
 	return conn, nil

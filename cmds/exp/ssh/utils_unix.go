@@ -22,7 +22,10 @@ var (
 	oldState *term.State
 )
 
-// cleanup returns the terminal to its original state
+// cleanup returns the terminal to its original state.
+// TODO: This function is used in a defer with async error handling.
+//
+//nolint:errcheck
 func cleanup(in *os.File) {
 	if oldState != nil {
 		term.Restore(int(in.Fd()), oldState)
