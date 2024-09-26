@@ -17,6 +17,7 @@
 //	RFC4880 in that it can't use a PublicSigningKey with 0 signatures. We
 //	use one from Eric Grosse instead.
 //
+// TODO: implement verbose flag
 // Options:
 //
 //	-v: verbose
@@ -40,14 +41,9 @@ import (
 )
 
 var (
-	verbose  bool
 	debug    = func(string, ...interface{}) {}
 	errUsage = errors.New("usage: boot-verify [-v] key sig content")
 )
-
-func init() {
-	flag.BoolVar(&verbose, "v", false, "verbose")
-}
 
 func readPublicSigningKey(keyf io.Reader) (*packet.PublicKey, error) {
 	keypackets := packet.NewReader(keyf)
@@ -93,7 +89,7 @@ func verifyDetachedSignature(key *packet.PublicKey, contentf, sigf io.Reader) er
 	return err
 }
 
-func runGPGV(w io.Writer, verbose bool, keyfile, sigfile, datafile string) error {
+func runGPGV(w io.Writer, keyfile, sigfile, datafile string) error {
 	if keyfile == "" || sigfile == "" || datafile == "" {
 		return errUsage
 	}
@@ -133,7 +129,7 @@ func main() {
 	if len(flag.Args()) != 3 {
 		log.Fatal(errUsage)
 	}
-	if err := runGPGV(os.Stdout, verbose, flag.Args()[0], flag.Args()[1], flag.Args()[2]); err != nil {
+	if err := runGPGV(os.Stdout, flag.Args()[0], flag.Args()[1], flag.Args()[2]); err != nil {
 		log.Fatal(err)
 	}
 }

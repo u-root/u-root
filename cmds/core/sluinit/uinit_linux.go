@@ -141,12 +141,11 @@ func collectMeasurements(p *policy.Policy) error {
 	for _, collector := range p.Collectors {
 		slaunch.Debug("Input Collector: %v", collector)
 		if err := collector.Collect(); err != nil {
-			log.Printf("Collector %v failed: %v", collector, err)
+			return fmt.Errorf("collector %v failed: %w", collector, err)
 		}
 	}
 
 	slaunch.Debug("Collectors completed")
-
 	return nil
 }
 

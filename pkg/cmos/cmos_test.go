@@ -17,6 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
+//nolint:unparam
 func newMock(errStr string, inBuf, outBuf io.ReadWriter, f *os.File) *Chip {
 	memPort := memio.NewMemIOPort(f)
 	return &Chip{
