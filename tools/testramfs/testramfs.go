@@ -104,7 +104,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		cpio.CreateFileInRoot(rec, tempDir, false)
+		if err := cpio.CreateFileInRoot(rec, tempDir, false); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	cmd, err := pty.New()

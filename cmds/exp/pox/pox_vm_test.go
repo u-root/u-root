@@ -51,14 +51,14 @@ func TestPox(t *testing.T) {
 			name:    "err in usage",
 			args:    []string{"/bin/bash"},
 			file:    f,
-			wantErr: ErrUsage.Error(),
+			wantErr: errUsage.Error(),
 		},
 		{
 			name:    "err in pox.Create",
 			args:    []string{},
 			create:  true,
 			file:    f,
-			wantErr: ErrUsage.Error(),
+			wantErr: errUsage.Error(),
 		},
 		{
 			name:    "err in extraMounts(*extra)",
@@ -117,7 +117,7 @@ func TestPoxCreate(t *testing.T) {
 		{
 			name:    "len(bin) == 0",
 			args:    []string{},
-			wantErr: ErrUsage.Error(),
+			wantErr: errUsage.Error(),
 		},
 		{
 			name:    "error in ldd.Ldd",

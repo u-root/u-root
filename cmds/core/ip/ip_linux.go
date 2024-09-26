@@ -148,15 +148,15 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 
 	fs.Usage = func() {
 		fmt.Fprintf(out, "%s\n\n", ipHelp)
-
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return cmd, fmt.Errorf("error parsing flags: %w", err)
+	}
+
 	cmd.Args = fs.Args()
-
 	cmd.Family = netlink.FAMILY_ALL
-
 	if cmd.Opts.Inet4 {
 		cmd.Family = netlink.FAMILY_V4
 	}
@@ -228,11 +228,12 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 			return cmd, fmt.Errorf("failed to parse rcvbuf flag: %v", err)
 		}
 
-		handle.SetSocketReceiveBufferSize(bufSize, true)
+		if err := handle.SetSocketReceiveBufferSize(bufSize, true); err != nil {
+			return cmd, fmt.Errorf("parseFlags: %w", err)
+		}
 	}
 
 	cmd.handle = handle
-
 	return cmd, nil
 }
 
@@ -267,8 +268,6 @@ func (cmd *cmd) run() error {
 		default:
 			log.Fatalf("ip: unexpected panic value: %T(%v)", err, err)
 		}
-
-		return
 	}()
 
 	if cmd.Opts.Batch != "" {

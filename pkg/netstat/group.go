@@ -93,12 +93,14 @@ func parseigmp() ([]member, error) {
 		var idx, count int
 		var iface, vstring string
 		line := s.Text()
-		fmt.Sscanf(line, "%d %s : %d %s",
+		if _, err := fmt.Sscanf(line, "%d %s : %d %s",
 			&idx,
 			&iface,
 			&count,
 			&vstring,
-		)
+		); err != nil {
+			return nil, err
+		}
 
 		for i := 0; i < count; i++ {
 			m := member{
@@ -106,14 +108,22 @@ func parseigmp() ([]member, error) {
 			}
 			s.Scan()
 			entryline := s.Text()
-			var mIP string
-			var users, time, rep uint32
-			fmt.Sscanf(entryline, "%s %d %s %d",
+
+			var (
+				mIP   string
+				users uint32
+				time  uint32
+				rep   uint32
+			)
+
+			if _, err := fmt.Sscanf(entryline, "%s %d %s %d",
 				&mIP,
 				&users,
 				&time,
 				&rep,
-			)
+			); err != nil {
+				return nil, err
+			}
 
 			ip, err := newIPAddress(mIP)
 			if err != nil {
@@ -141,14 +151,20 @@ func parseigmp6() ([]member, error) {
 	for s.Scan() {
 		m := member{}
 		line := s.Text()
-		var idx uint32
-		var grpaddr string
-		fmt.Sscanf(line, "%d %s %s %d",
+
+		var (
+			idx     uint32
+			grpaddr string
+		)
+
+		if _, err := fmt.Sscanf(line, "%d %s %s %d",
 			&idx,
 			&m.IFace,
 			&grpaddr,
 			&m.Users,
-		)
+		); err != nil {
+			return nil, err
+		}
 
 		ip, err := newIPAddress(grpaddr)
 		if err != nil {

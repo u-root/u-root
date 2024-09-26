@@ -41,7 +41,9 @@ func parseFlags(args []string) (*traceroute.Flags, error) {
 	f.BoolVar(&flags.TCP, "tcp", false, "Use TCP method. Same as -m tcp")
 	f.BoolVar(&flags.UDP, "udp", true, "Use UDP method. Same as -m udp")
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return nil, fmt.Errorf("error parsing flags: %w", err)
+	}
 
 	leftoverArgs := f.Args()
 

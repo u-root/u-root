@@ -129,7 +129,9 @@ func run(args []string, w io.Writer, i *bufio.Reader) error {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return err
+	}
 
 	if fs.NArg() < 2 {
 		fs.Usage()

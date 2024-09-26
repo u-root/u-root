@@ -302,6 +302,8 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 }
 
 // Write marshals the FDT to an io.Writer and returns the size.
+//
+//nolint:errcheck,unparam
 func (fdt *FDT) Write(f io.Writer) (int, error) {
 	// Create string block and offset map.
 	strs := []byte{}

@@ -28,6 +28,7 @@ package esxi
 import (
 	"bufio"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -85,7 +86,9 @@ func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error
 	imgs, err := getImages(device, opts5, opts6)
 	if err != nil {
 		for _, mp := range mps {
-			mp.Unmount(mount.MNT_DETACH)
+			if errMount := mp.Unmount(mount.MNT_DETACH); errMount != nil {
+				errors.Join(err, errMount)
+			}
 		}
 		return nil, nil, err
 	}

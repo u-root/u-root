@@ -98,16 +98,20 @@ func (c *cmd) offsetValue(l int) string {
 }
 
 func (c *cmd) stringsIO(r *bufio.Reader, w io.Writer) error {
-	var o []byte
+	var out []byte
 	for {
 		b, err := r.ReadByte()
 		if err == io.EOF {
-			if len(o) >= c.n {
+			if len(out) >= c.n {
 				if c.t != "" {
-					w.Write([]byte(c.offsetValue(len(o))))
+					if _, err := w.Write([]byte(c.offsetValue(len(out)))); err != nil {
+						return fmt.Errorf("stringsIO: %w", err)
+					}
 				}
-				w.Write(o)
-				w.Write([]byte{'\n'})
+				out = append(out, '\n')
+				if _, err := w.Write(out); err != nil {
+					return err
+				}
 			}
 			return nil
 		}
@@ -115,23 +119,26 @@ func (c *cmd) stringsIO(r *bufio.Reader, w io.Writer) error {
 			return err
 		}
 		if !asciiIsPrint(b) {
-			if len(o) >= c.n {
+			if len(out) >= c.n {
 				if c.t != "" {
-					w.Write([]byte(c.offsetValue(len(o))))
+					if _, err := w.Write([]byte(c.offsetValue(len(out)))); err != nil {
+						return fmt.Errorf("stringsIO: %w", err)
+					}
 				}
-				w.Write(o)
-				w.Write([]byte{'\n'})
+				if _, err := w.Write(append(out, byte('\n'))); err != nil {
+					return fmt.Errorf("stringsIO: %w", err)
+				}
 			}
-			o = o[:0]
+			out = out[:0]
 			c.offset++
 			continue
 		}
 		// Prevent the buffer from growing indefinitely.
-		if len(o) >= c.n+1024 {
-			w.Write(o[:1024])
-			o = o[1024:]
+		if len(out) >= c.n+1024 {
+			w.Write(out[:1024])
+			out = out[1024:]
 		}
-		o = append(o, b)
+		out = append(out, b)
 		c.offset++
 	}
 }
