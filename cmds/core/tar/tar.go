@@ -159,7 +159,7 @@ func main() {
 	f.BoolVar(&verbose, "v", false, "print each filename (shorthand)")
 
 	f.Parse(unixflag.OSArgsToGoArgs())
-	cmd, err := command(params{file: file, create: create, extract: extract, list: list, noRecursion: noRecursion, verbose: verbose}, flag.Args())
+	cmd, err := command(params{file: file, create: create, extract: extract, list: list, noRecursion: noRecursion, verbose: verbose}, f.Args())
 	if err != nil {
 		f.Usage()
 		log.Fatal(err)
