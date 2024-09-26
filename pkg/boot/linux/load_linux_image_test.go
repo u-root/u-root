@@ -17,6 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/dt"
 )
 
+//nolint:unparam
 func readFile(t *testing.T, path string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(path)
@@ -49,6 +50,7 @@ func closedFile(t *testing.T) *os.File {
 	return f
 }
 
+//nolint:unparam
 func openFile(t *testing.T, path string) *os.File {
 	t.Helper()
 	f, err := os.Open(path)
@@ -69,6 +71,7 @@ func fdtBytes(t *testing.T, fdt *dt.FDT) []byte {
 	return b.Bytes()
 }
 
+//nolint:unparam
 func fdtReader(t *testing.T, fdt *dt.FDT) io.ReaderAt {
 	t.Helper()
 	var b bytes.Buffer

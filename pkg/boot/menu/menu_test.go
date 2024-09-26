@@ -410,6 +410,7 @@ func TestShowMenuAndLoadFromFile(t *testing.T) {
 	}
 }
 
+//nolint:unparam
 func getEditSequence(append bool, bootnum string, cmdline string) []ReadLine {
 	var editOpt string
 	if append {

@@ -59,12 +59,9 @@ func TestShowLinkAddresses(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var out bytes.Buffer
-			cmd := cmd{Out: &out}
 
-			err := cmd.showLinkAddresses(tt.addrs)
-			if err != nil {
-				t.Fatalf("showLinkAddresses() error = %v", err)
-			}
+			cmd := cmd{Out: &out}
+			cmd.showLinkAddresses(tt.addrs)
 
 			if c := cmp.Diff(out.String(), tt.expected); c != "" {
 				t.Errorf("showLinkAddresses() = diff: %v", c)
