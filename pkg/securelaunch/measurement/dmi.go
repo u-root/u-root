@@ -94,9 +94,12 @@ var typeTable = map[string]uint8{
 func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 	types := map[smbios.TableType]bool{}
 	for _, ts := range typeStrings {
-		if tg, ok := typeTable[strings.ToLower(ts)]; ok {
-			types[smbios.TableType(tg)] = true
+		tg, ok := typeTable[strings.ToLower(ts)]
+		if !ok {
+			return nil, fmt.Errorf("parseTypeFilters: invalid type %v", ts)
 		}
+		types[smbios.TableType(tg)] = true
+
 	}
 	return types, nil
 }

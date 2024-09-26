@@ -56,6 +56,9 @@ func makeMemFile(t *testing.T, data []byte) *os.File {
 	return file
 }
 
+// this is a mock. it is always created tableAddr = 24
+//
+//nolint:unparam
 func mockEntry64Raw(t *testing.T, structMaxSize uint32, tableAddr uint64) []byte {
 	data, err := mockEntry64(t, structMaxSize, tableAddr).MarshalBinary()
 	if err != nil {
