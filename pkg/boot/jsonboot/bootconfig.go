@@ -143,7 +143,10 @@ func (bc *BootConfig) bytestream() []byte {
 // Boot tries to boot the kernel with optional initramfs and command line
 // options. If a device-tree is specified, that will be used too
 func (bc *BootConfig) Boot() error {
-	crypto.TryMeasureData(crypto.BootConfigPCR, bc.bytestream(), "bootconfig")
+	if err := crypto.TryMeasureData(crypto.BootConfigPCR, bc.bytestream(), "bootconfig"); err != nil {
+		return err
+	}
+
 	crypto.TryMeasureFiles(bc.FileNames()...)
 	if bc.Kernel != "" {
 		kernel, err := os.Open(bc.Kernel)

@@ -104,10 +104,16 @@ func (c *cmd) run() error {
 		}
 		if c.chr {
 			if unicode.IsPrint(r) {
-				b.WriteRune(r)
-				b.WriteString(" ")
+				if _, err := b.WriteRune(r); err != nil {
+					return err
+				}
+				if _, err := b.WriteString(" "); err != nil {
+					return err
+				}
 			} else {
-				b.WriteString("- ")
+				if _, err := b.WriteString("- "); err != nil {
+					return err
+				}
 			}
 		}
 		fmt.Fprintf(b, "%8d\n", c.freq[r])

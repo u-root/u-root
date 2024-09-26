@@ -362,7 +362,10 @@ func command(out io.Writer, args []string) *cmd {
 	fs.BoolVar(&c.all, "all", false, "display all sockets (default: connected)")
 	fs.BoolVar(&c.all, "a", false, "display all sockets (default: connected)")
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Validate info source flags
 	// none or one allowed to be set

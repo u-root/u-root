@@ -172,6 +172,7 @@ func (c *cmd) run() error {
 		if inRune == unicode.ReplacementChar {
 			// can skip error handling here, because
 			// previous operation was in.ReadRune()
+			//nolint:errcheck
 			in.UnreadRune()
 
 			b, err := in.ReadByte()

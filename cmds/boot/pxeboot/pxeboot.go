@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -138,15 +139,19 @@ func newManualLease() (dhclient.Lease, error) {
 	return dhclient.NewPacket4(filteredIfs[0], d), nil
 }
 
-func dumpNetDebugInfo() {
+func dumpNetDebugInfo() error {
 	log.Println("Dump debug info of network status")
 	commands := []string{"ip link", "ip addr", "ip route show table all", "ip -6 route show table all", "ip neigh"}
+
 	for _, cmd := range commands {
 		cmds := strings.Split(cmd, " ")
 		name := cmds[0]
 		args := cmds[1:]
-		sh.RunWithLogs(name, args...)
+		if err := sh.RunWithLogs(name, args...); err != nil {
+			return fmt.Errorf("dumpNetDebugInfo: %w", err)
+		}
 	}
+	return nil
 }
 
 func main() {
@@ -163,7 +168,9 @@ func main() {
 	if *bootfile == "" {
 		images, err = NetbootImages(ifName)
 		if err != nil {
-			dumpNetDebugInfo()
+			if errNet := dumpNetDebugInfo(); errNet != nil {
+				fmt.Fprintf(os.Stderr, "error dumping net debug info: %w", errNet)
+			}
 		}
 	} else {
 		log.Printf("Skipping DHCP for manual target..")

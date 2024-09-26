@@ -148,6 +148,8 @@ func (c *Cmd) handleEvent(t strace.Task, r *strace.TraceRecord, e []*event) erro
 // Run implements cmd.Run, filtering strace events
 // as created by AddActions. The slice can be empty, in which case the command
 // runs as normal.
+//
+//nolint:errcheck
 func (c *Cmd) Run() error {
 	// This wait may or may not be needed, since the process
 	// can end normally or be stopped by a filter. Hence,

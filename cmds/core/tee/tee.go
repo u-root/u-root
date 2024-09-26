@@ -87,9 +87,11 @@ func command(args []string) *cmd {
 	f.BoolVar(&c.ignore, "ignore-interrupts", false, "ignore the SIGINT signal")
 	f.BoolVar(&c.ignore, "i", false, "ignore the SIGINT signal")
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
-	c.args = f.Args()
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintln(c.stderr, "error parsing flags: %w", err)
+	}
 
+	c.args = f.Args()
 	return c
 }
 

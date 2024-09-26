@@ -80,8 +80,9 @@ func truncate(args ...string) error {
 			}
 		}
 
-		// intentionally ignore, like GNU truncate
-		os.Truncate(fname, final)
+		if err := os.Truncate(fname, final); err != nil {
+			return err
+		}
 	}
 	return nil
 }

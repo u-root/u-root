@@ -20,7 +20,9 @@ func TestDU(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 8096))
+		if _, err := f.Write(make([]byte, 8096)); err != nil {
+			t.Fatal(err)
+		}
 
 		cmd := &cmd{stdout: io.Discard}
 		blocks, err := cmd.du(f.Name())
@@ -55,7 +57,9 @@ func TestDU(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 1))
+		if _, err := f.Write(make([]byte, 1)); err != nil {
+			t.Fatal(err)
+		}
 
 		cmd := &cmd{stdout: io.Discard}
 		blocks, err := cmd.du(f.Name())
@@ -73,12 +77,13 @@ func TestDU(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 4096))
+		if _, err := f.Write(make([]byte, 4096)); err != nil {
+			t.Fatal(err)
+		}
 
 		d2 := t.TempDir()
 		sl := filepath.Join(d2, "symlink")
-		err = os.Symlink(f.Name(), sl)
-		if err != nil {
+		if err := os.Symlink(f.Name(), sl); err != nil {
 			t.Fatal(err)
 		}
 
@@ -133,7 +138,9 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write(make([]byte, 4096))
+		if _, err := f.Write(make([]byte, 4096)); err != nil {
+			t.Fatal(err)
+		}
 
 		stdout := &bytes.Buffer{}
 		err = command(stdout, []string{"du", "-k", f.Name()}).run()

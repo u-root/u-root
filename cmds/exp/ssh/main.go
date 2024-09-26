@@ -87,7 +87,9 @@ func knownHosts() (ssh.HostKeyCallback, error) {
 // we demand that stdin be a proper os.File because we need to be able to put it in raw mode
 func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) error {
 	flags.SetOutput(stderr)
-	flags.Parse(osArgs[1:])
+	if err := flags.Parse(osArgs[1:]); err != nil {
+		return err
+	}
 	if *debug {
 		v = log.Printf
 	}
@@ -194,7 +196,9 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 			log.Fatal("failed to start shell: ", err)
 		}
 		// Wait for the session to complete
-		session.Wait()
+		if err := session.Wait(); err != nil {
+			return fmt.Errorf("run: %w", err)
+		}
 	}
 	return nil
 }

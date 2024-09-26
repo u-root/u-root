@@ -148,7 +148,9 @@ func GetHssFromFile(warnings io.Writer, verboseDangerous bool, filePaths []strin
 				msg = msg + fmt.Sprintf("\nseed=%x, seed(octal escape sequence)=%s", hss,
 					toOctalEscapeSequence(hss))
 			}
-			io.WriteString(warnings, msg+"\n")
+			if _, err := io.WriteString(warnings, msg+"\n"); err != nil {
+				return nil, err
+			}
 		}
 		allHss = append(allHss, hssKeys...)
 	}

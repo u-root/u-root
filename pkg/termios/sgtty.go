@@ -15,6 +15,31 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	termOps = []string{
+		"~ignbrk",
+		"~brkint",
+		"~parmrk",
+		"~istrip",
+		"~inlcr",
+		"~igncr",
+		"~icrnl",
+		"~ixon",
+		"~opost",
+		"~echo",
+		"~echonl",
+		"~icanon",
+		"~isig",
+		"~iexten",
+		"~parenb",
+		/*"cs8", */
+		"min",
+		"1",
+		"time",
+		"0",
+	}
+)
+
 // GTTY returns the TTY struct for a given fd. It is like a New in
 // many packages but the name GTTY is a tradition.
 func GTTY(fd int) (*TTY, error) {
@@ -189,7 +214,9 @@ func Raw(fd int) (*TTY, error) {
 		return nil, err
 	}
 
-	t.SetOpts([]string{"~ignbrk", "~brkint", "~parmrk", "~istrip", "~inlcr", "~igncr", "~icrnl", "~ixon", "~opost", "~echo", "~echonl", "~icanon", "~isig", "~iexten", "~parenb" /*"cs8", */, "min", "1", "time", "0"})
+	if err := t.SetOpts(termOps); err != nil {
+		return nil, err
+	}
 
 	return t.STTY(fd)
 }

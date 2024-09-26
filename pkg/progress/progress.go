@@ -88,6 +88,8 @@ func (p *ProgressData) End() {
 // - Once at the beginning to appear responsive
 // - Every 1s afterwards
 // - Once at the end so the final value is accurate
+//
+//nolint:errcheck
 func (p *ProgressData) print(extra ...string) {
 	elapse := time.Since(p.start)
 	n := atomic.LoadInt64(p.variable)
@@ -96,6 +98,7 @@ func (p *ProgressData) print(extra ...string) {
 	const mb = 1000 * 1000
 	// The ANSI escape may be undesirable to some eyes.
 	if p.mode == "progress" {
+		// ignore potential write error for printing
 		p.w.Write([]byte("\033[2K\r"))
 	}
 	fmt.Fprintf(p.w, "%d bytes (%.3f MB, %.3f MiB) copied, %.3f s, %.3f MB/s",

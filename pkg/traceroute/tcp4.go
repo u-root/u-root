@@ -32,8 +32,15 @@ func (t *Trace) SendTracesTCP4() {
 	mod := uint32(1 << 30)
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			hdr, payload := t.BuildTCP4SYNPkt(sport, t.destPort, uint8(ttl), seq, 0)
-			rSocket.WriteTo(hdr, payload, nil)
+			hdr, payload, err := t.BuildTCP4SYNPkt(sport, t.destPort, uint8(ttl), seq, 0)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if err := rSocket.WriteTo(hdr, payload, nil); err != nil {
+				log.Fatal(err)
+			}
+
 			pb := &Probe{
 				ID:       seq,
 				Dest:     t.DestIP,
@@ -141,7 +148,7 @@ func (t *Trace) IPv4TCPPing(seq uint32, dport uint16) {
 	t.ReceiveChan <- pbr
 }
 
-func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq uint32, tos int) (*ipv4.Header, []byte) {
+func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq uint32, tos int) (*ipv4.Header, []byte, error) {
 	iph := &ipv4.Header{
 		Version:  ipv4.Version,
 		TOS:      tos,
@@ -159,10 +166,10 @@ func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq u
 
 	h, err := iph.Marshal()
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	iph.Checksum = int(checkSum(h))
 
+	iph.Checksum = int(checkSum(h))
 	tcp := TCPHeader{
 		Src:        srcPort,
 		Dst:        dstPort,
@@ -176,10 +183,18 @@ func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq u
 
 	//payload is TCP Optionheader
 	payload := []byte{0x02, 0x04, 0x05, 0xb4, 0x04, 0x02, 0x08, 0x0a, 0x7f, 0x73, 0xf9, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07}
-	tcp.checksum(iph, payload)
+	if err := tcp.checksum(iph, payload); err != nil {
+		return nil, nil, err
+	}
 
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, &tcp)
-	binary.Write(&buf, binary.BigEndian, &payload)
-	return iph, buf.Bytes()
+	if err := binary.Write(&buf, binary.BigEndian, &tcp); err != nil {
+		return nil, nil, err
+	}
+
+	if err := binary.Write(&buf, binary.BigEndian, &payload); err != nil {
+		return nil, nil, err
+	}
+
+	return iph, buf.Bytes(), nil
 }
