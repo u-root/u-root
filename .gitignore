@@ -41,6 +41,7 @@ initramfs.cpio
 bzImage
 vmlinux
 *.patch
+.gdb_history
 
 # Python Virtual Env
 *.env
