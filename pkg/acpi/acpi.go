@@ -24,8 +24,10 @@ const (
 	// checksum1 offset in RSDP struct.
 	cSUM1Off = 8
 	// cSUMOffset is the offset of the single byte checksum in *most* ACPI tables
+	//nolint:unused
 	cSUMOffset = 9
 	// minTableLength is the minimum length: 4 byte tag, 4 byte length, 1 byte revision, 1 byte checksum,
+	//nolint:unused
 	minTableLength = 10
 
 	// checksum2 offset in RSDP struct.
