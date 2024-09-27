@@ -6,13 +6,15 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 )
 
 type test struct {
-	flags []string
+	err   error
 	out   string
+	flags []string
 }
 
 func TestRun(t *testing.T) {
@@ -39,7 +41,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			flags: []string{},
-			out:   "Usage: basename NAME [SUFFIX]",
+			err:   errUsage,
 		},
 	}
 
@@ -47,7 +49,11 @@ func TestRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Using flags %s", tt.flags), func(t *testing.T) {
 			var out bytes.Buffer
-			run(&out, tt.flags)
+
+			err := run(&out, tt.flags)
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("got %v want %v", err, tt.err)
+			}
 
 			if out.String() != tt.out {
 				t.Errorf("stdout got:\n%s\nwant:\n%s", out.String(), tt.out)

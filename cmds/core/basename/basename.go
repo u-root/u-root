@@ -10,37 +10,37 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-const (
-	usageString = "Usage: basename NAME [SUFFIX]"
-)
+var errUsage = errors.New("usage: basename NAME [SUFFIX]")
 
-func usage(w io.Writer) {
-	fmt.Fprintf(w, "%s", usageString)
-}
-
-func run(w io.Writer, args []string) {
+func run(w io.Writer, args []string) error {
 	switch len(args) {
 	case 2:
 		fileName := filepath.Base(args[0])
 		if fileName != args[1] {
 			fileName = strings.TrimSuffix(fileName, args[1])
 		}
-		fmt.Fprintf(w, "%s\n", fileName)
+		_, err := fmt.Fprintf(w, "%s\n", fileName)
+		return err
 	case 1:
 		fileName := filepath.Base(args[0])
-		fmt.Fprintf(w, "%s\n", fileName)
+		_, err := fmt.Fprintf(w, "%s\n", fileName)
+		return err
 	default:
-		usage(w)
+		return errUsage
 	}
 }
 
 func main() {
-	run(os.Stdout, os.Args[1:])
+	if err := run(os.Stdout, os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
 }
