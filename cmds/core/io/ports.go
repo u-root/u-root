@@ -10,10 +10,14 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
-func init() {
-	usageMsg += `io (in{b,w,l} address)...
+const (
+	usagePorts = `io (in{b,w,l} address)...
 io (out{b,w,l} address value)...
 `
+)
+
+func init() {
+	usageMsg += usagePorts
 	addCmd(readCmds, "inb", &cmd{in, 16, 8})
 	addCmd(readCmds, "inw", &cmd{in, 16, 16})
 	addCmd(readCmds, "inl", &cmd{in, 16, 32})

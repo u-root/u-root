@@ -241,20 +241,6 @@ func (i *Image) readContainerHeader(f io.ReadSeeker) error {
 	return nil
 }
 
-// ZBIKernel abstracts an in-memory kernel entry.
-type ZBIKernel struct {
-	Entry             uint64
-	ReserveMemorySize uint64
-}
-
-// ZirconKernel is the whole contiguous image loaded into memory by the boot loader.
-type ZirconKernel struct {
-	HdrFile    Header
-	HdrKernel  Header
-	DataKernel ZBIKernel
-	contents   []uint8
-}
-
 func (i *Image) readBootItems(f io.ReadSeeker) error {
 	for {
 		item := BootItem{}

@@ -180,6 +180,8 @@ func TestErrorExitLogAll(t *testing.T) {
 // This is a simple example of how you might test the reboot command
 // without being root and without using qemu.
 // It is disabled because it's just a bit too dangerous.
+//
+//nolint:unused
 func testRebootOK(t *testing.T) {
 	filter := ".*reboot,error,0"
 	c := Command("reboot", "-f", "-f")
@@ -196,6 +198,7 @@ func testRebootOK(t *testing.T) {
 	t.Logf("stdout: %q, stderr: %q", stdout.String(), stderr.String())
 }
 
+//nolint:unused
 func testRebootFail(t *testing.T) {
 	if traced() {
 		t.Skipf("Skipping, we're being traced already")

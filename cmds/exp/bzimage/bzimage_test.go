@@ -14,6 +14,9 @@ import (
 	"github.com/u-root/u-root/pkg/boot/bzimage"
 )
 
+// TODO: get author review
+//
+//nolint:unused
 var (
 	testdataPath = "../../../pkg/boot/bzimage/testdata/"
 	// Test BzImage we are not using yet.

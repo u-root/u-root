@@ -27,29 +27,6 @@ var (
 	BRCTL_TEST_BRIDGES = []string{BRCTL_TEST_BR_0, BRCTL_TEST_BR_1}
 )
 
-var test_fd = []struct {
-	name    string
-	input   string
-	output  string
-	wanterr bool
-	err     error
-}{
-	{
-		"forward delay 0",
-		"0s",
-		"0",
-		false,
-		nil,
-	},
-	{
-		"forward delay 1",
-		"1s",
-		"100",
-		false,
-		nil,
-	},
-}
-
 var test_str_to_jiffies = []struct {
 	name     string
 	duration string

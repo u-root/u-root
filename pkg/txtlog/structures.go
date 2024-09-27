@@ -56,6 +56,8 @@ type EFIConfigurationTable struct {
 }
 
 // EFIDevicePath is an internal UEFI structure see [1]
+//
+//nolint:unused
 type EFIDevicePath struct {
 	pathType    uint8
 	pathSubType uint8
@@ -70,6 +72,8 @@ type TCGPCClientTaggedEvent struct {
 }
 
 // EFIImageLoadEvent is an internal UEFI structure see [1]
+//
+//nolint:unused
 type EFIImageLoadEvent struct {
 	imageLocationInMemory uint64
 	imageLengthInMemory   uint64
@@ -79,6 +83,8 @@ type EFIImageLoadEvent struct {
 }
 
 // EFIGptData is the GPT structure
+//
+//nolint:unused
 type EFIGptData struct {
 	uefiPartitionHeader gpt.Header
 	numberOfPartitions  uint64
@@ -144,6 +150,8 @@ type TcgEfiSpecIDEvent struct {
 }
 
 // TcgBiosSpecIDEvent is a TPM2 structure
+//
+//nolint:unused
 type TcgBiosSpecIDEvent struct {
 	signature        [16]byte
 	platformClass    uint32

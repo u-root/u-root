@@ -13,12 +13,16 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
-func init() {
-	usageMsg += `io (cr index)... # read from CMOS register index [14-127]
+const (
+	usageCMOS = `io (cr index)... # read from CMOS register index [14-127]
 io (cw index value)... # write value to CMOS register index [14-127]
 io (rtcr index)... # read from RTC register index [0-13]
 io (rtcw index value)... # write value to RTC register index [0-13]
 `
+)
+
+func init() {
+	usageMsg += usageCMOS
 	addCmd(readCmds, "cr", &cmd{cmosRead, 7, 8})
 	addCmd(readCmds, "rtcr", &cmd{rtcRead, 7, 8})
 	addCmd(writeCmds, "cw", &cmd{cmosWrite, 7, 8})

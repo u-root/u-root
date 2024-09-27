@@ -16,6 +16,7 @@ linters-settings:
 issues:
   exclude-dirs:
     - pkg/uroot/test
+    - cmds/exp
   exclude-rules:
     - linters: revive
       text: "don't use underscores"
