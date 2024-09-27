@@ -57,14 +57,6 @@ func (s signedFile) write(path string) error {
 	return nil
 }
 
-type normalFile struct {
-	content string
-}
-
-func (n normalFile) write(path string) error {
-	return os.WriteFile(path, []byte(n.content), 0o600)
-}
-
 func writeHashedFile(path, content string) ([]byte, error) {
 	c := []byte(content)
 	if err := os.WriteFile(path, c, 0o600); err != nil {

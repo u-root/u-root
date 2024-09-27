@@ -13,11 +13,7 @@ import (
 type cmd struct {
 	syscall syzcall
 	flag    mountflag
-
-	filename string
-	line     string
-
-	args []string
+	args    []string
 }
 
 // valid returns usages for these commands
@@ -26,33 +22,40 @@ func (c cmd) valid() error {
 	switch c.syscall {
 	case BIND:
 		if len(args) < 2 {
-			return errors.New("usage: bind [–abcC] new old")
+			return errors.New("usage: bind [-abcC] new old")
 		}
+
 	case MOUNT:
 		if len(args) < 2 {
-			return errors.New("usage: mount [–abcC] servename old [spec]")
+			return errors.New("usage: mount [-abcC] servename old [spec]")
 		}
+
 	case UNMOUNT:
 		if len(args) < 1 {
 			return errors.New("usage: unmount [ new ] old")
+
 		}
 	case RFORK:
 		// doesn't take args or flags, so always valid even if not.
 		return nil
+
 	case CHDIR:
 		if len(args) < 1 {
 			return errors.New("usage: cd dir")
 		}
+
 	case IMPORT:
 		if len(args) < 2 {
-			return errors.New("usage: import [–abc] host [remotepath] mountpoint")
+			return errors.New("usage: import [-abc] host [remotepath] mountpoint")
 		}
+
 	case INCLUDE:
 		if len(args) < 1 {
 			return errors.New("usage: . path")
 		}
+
 	default:
-		return fmt.Errorf("%d is not implmented", c.syscall)
+		return fmt.Errorf("%d is not implemented", c.syscall)
 	}
 	return nil
 }
@@ -120,7 +123,7 @@ func (c cmd) Modify(ns Namespace, b *Builder) error {
 		b.dir = nb.dir // if the new file has changed the directory we'd like to know
 		return nil
 	default:
-		return fmt.Errorf("%s not implmented", c.syscall)
+		return fmt.Errorf("%s not implemented", c.syscall)
 	}
 }
 

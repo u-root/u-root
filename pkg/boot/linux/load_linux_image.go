@@ -24,6 +24,9 @@ type kimage struct {
 	cleanup  []func() error
 }
 
+// TODO: get author review
+//
+//nolint:unused
 func (k kimage) clean() {
 	for _, c := range k.cleanup {
 		if err := c(); err != nil {

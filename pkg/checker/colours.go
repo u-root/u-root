@@ -34,14 +34,17 @@ func yellow(format string, args ...interface{}) string {
 	return colorize(ColorYellow, format, args...)
 }
 
+//nolint:unused
 func blue(format string, args ...interface{}) string {
 	return colorize(ColorBlue, format, args...)
 }
 
+//nolint:unused
 func magenta(format string, args ...interface{}) string {
 	return colorize(ColorMagenta, format, args...)
 }
 
+//nolint:unused
 func grey(format string, args ...interface{}) string {
 	return colorize(ColorGrey, format, args...)
 }

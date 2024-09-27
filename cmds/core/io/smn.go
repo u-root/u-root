@@ -16,25 +16,26 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
-type op func() error
-
 // This is a const at present but there are no guarantees.
-const pcibase = 0xe0000000
-
-func init() {
-	usageMsg += `io rs index # read from system management network on newer AMD CPUs.
+const (
+	pciBaseAddress = 0xe0000000
+	usageSMM       = `io rs index # read from system management network on newer AMD CPUs.
 io ws index value # write value to system management network on newer AMD CPUs.
 `
+)
+
+func init() {
+	usageMsg += usageSMM
 	addCmd(readCmds, "rs", &cmd{smnRead, 32, 32})
 	addCmd(writeCmds, "ws", &cmd{smnWrite, 32, 32})
 }
 
 func do(addr int64, data memio.UintN, op func(int64, memio.UintN) error) error {
 	a := newInt(uint64(addr), 32)
-	if err := memio.Write(pcibase+0xb8, a); err != nil {
+	if err := memio.Write(pciBaseAddress+0xb8, a); err != nil {
 		return err
 	}
-	return op(pcibase+0xbc, data)
+	return op(pciBaseAddress+0xbc, data)
 }
 
 func smnWrite(addr int64, data memio.UintN) error {

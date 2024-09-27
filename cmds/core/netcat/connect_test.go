@@ -20,24 +20,13 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
-// Mock for the net.Conn interface
-type mockConn struct {
-	net.Conn
-	read  func(b []byte) (n int, err error)
-	write func(b []byte) (n int, err error)
-	close func() error
+// mockWriter captures writes for verification
+type mockWriter struct {
+	bytes.Buffer
 }
 
-func (m *mockConn) Read(b []byte) (n int, err error) {
-	return m.read(b)
-}
-
-func (m *mockConn) Write(b []byte) (n int, err error) {
-	return m.write(b)
-}
-
-func (m *mockConn) Close() error {
-	return m.close()
+func (mw *mockWriter) Write(p []byte) (n int, err error) {
+	return mw.Buffer.Write(p)
 }
 
 func TestConnectMode(t *testing.T) {
@@ -440,15 +429,6 @@ func TestEstablishConnectionUnix(t *testing.T) {
 			wg.Wait()
 		})
 	}
-}
-
-// mockWriter captures writes for verification
-type mockWriter struct {
-	bytes.Buffer
-}
-
-func (mw *mockWriter) Write(p []byte) (n int, err error) {
-	return mw.Buffer.Write(p)
 }
 
 func TestWriteToRemote(t *testing.T) {

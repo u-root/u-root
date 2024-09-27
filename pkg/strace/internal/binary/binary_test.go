@@ -59,7 +59,6 @@ func TestMarshalUnmarshal(t *testing.T) {
 func TestUnexport(t *testing.T) {
 	type us struct {
 		I1 int32
-		u  ts
 		I2 int32
 	}
 

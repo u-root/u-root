@@ -7,8 +7,11 @@ package main
 
 /* Host communication command constants for Chrome EC */
 
-const (
+//nolint:unused
 
+// TODO: What is the status of this? Is this still experimental? The linter
+// says most of this is unused, so maybe rework or remove this?
+const (
 	/*
 	 * Current version of this protocol
 	 *
@@ -344,6 +347,7 @@ const (
 /* Host command response codes */
 type ecStatus uint8
 
+//nolint:unused
 const (
 	ecResSuccess          ecStatus = 0
 	ecResInvalidCommand   ecStatus = 1

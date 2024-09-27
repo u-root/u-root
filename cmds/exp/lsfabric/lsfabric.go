@@ -109,7 +109,7 @@ type Fabric struct {
 	InstanceID   nodeID
 	InstanceType instanceType
 	Enabled      bool
-	FabricID     uint8
+	FabricID     fabricID
 }
 
 func (f *Fabric) String() string {
@@ -264,7 +264,7 @@ func New(n uint8) (*DataFabric, error) {
 			continue
 		}
 		instanceID := uint(ids)
-		fabricID := uint8((ids >> 8) & 0x3f)
+		fabricID := fabricID((ids >> 8) & 0x3f)
 		if instanceID == 0 && len(d.Components) > 0 {
 			log.Printf("WTF")
 			continue

@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	bootParams = "/sys/kernel/boot_params/data"
+	bootParamsx86 = "/sys/kernel/boot_params/data"
 )
 
 // KexecLoad loads a bzImage-formated Linux kernel file as the to-be-kexeced
@@ -43,7 +43,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservat
 	// boot_params directory is x86 specific. So for now, following code only
 	// works on x86.
 	// https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-kernel-boot_params
-	bp, err := os.ReadFile("/sys/kernel/boot_params/data")
+	bp, err := os.ReadFile(bootParamsx86)
 	if err != nil {
 		return fmt.Errorf("reading boot_param data: %w", err)
 	}

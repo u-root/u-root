@@ -19,8 +19,6 @@ import (
 	"github.com/u-root/u-root/pkg/strace"
 )
 
-const cmdUsage = "Usage: strace [-o <outputfile>] <command> [args...]"
-
 type event struct {
 	Name   string
 	Pat    string
@@ -48,6 +46,9 @@ type Cmd struct {
 	cancel func()
 }
 
+// TODO: get author review
+//
+//nolint:unused
 var eventNames = map[string]strace.EventType{
 	"SyscallEnter": strace.SyscallEnter,
 	"SyscallExit":  strace.SyscallExit,

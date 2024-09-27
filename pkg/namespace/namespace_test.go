@@ -38,10 +38,6 @@ func checkArgs(t minimock.Tester, args arg, mod Modifier) error {
 }
 
 func TestOPS_NewNS(t *testing.T) {
-	type args struct {
-		ns Namespace
-		c  chan Modifier
-	}
 	tests := []struct {
 		name    string
 		init    func(t minimock.Tester) File

@@ -109,6 +109,7 @@ const (
 	ESXBOOTINFO_EFI_MMAP esxBootInfoEfiFlags = 1 << 2
 )
 
+//nolint:unused
 type esxBootInfoEfi struct {
 	flags  esxBootInfoEfiFlags
 	systab uint64
@@ -120,10 +121,16 @@ type esxBootInfoEfi struct {
 	memmapVersion  uint32
 }
 
+// TODO: get author review
+//
+//nolint:unused
 func (m esxBootInfoEfi) typ() esxBootInfoType {
 	return ESXBOOTINFO_EFI_TYPE
 }
 
+// TODO: get author review
+//
+//nolint:unused
 func (m *esxBootInfoEfi) marshal() []byte {
 	buf := uio.NewNativeEndianBuffer(nil)
 	buf.Write32(uint32(m.flags))

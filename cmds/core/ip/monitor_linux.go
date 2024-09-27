@@ -18,11 +18,15 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// TODO: get author review
+//
+//nolint:unused
 const monitorHelp = `Usage: ip monitor [ all | OBJECTS ] [ label ]
 OBJECTS :=  address | link | mroute | neigh | netconf |
             nexthop | nsid | prefix | route | rule
 `
 
+//nolint:unused
 var (
 	addressLabel string
 	linkLabel    string
