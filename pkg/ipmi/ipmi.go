@@ -6,6 +6,7 @@
 // interface.
 // For a detailed description of OpenIPMI, see
 // http://openipmi.sourceforge.net/IPMI.pdf
+// https://www.intel.com/content/dam/www/public/us/en/documents/specification-updates/ipmi-intelligent-platform-mgt-interface-spec-2nd-gen-v2-0-spec-update.pdf
 package ipmi
 
 import (
@@ -70,7 +71,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		case err == syscall.EINTR:
 			continue
 		case err != nil:
-			return nil, fmt.Errorf("ioctlSetReq failed with %v", err)
+			return nil, fmt.Errorf("ioctlSetReq: %w", err)
 		}
 		break
 	}
@@ -112,11 +113,7 @@ func (i *IPMI) ShutoffWatchdog() error {
 	data[5] = 0x0b // countdown msb - 5 mins
 
 	_, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_WATCHDOG_TIMER, data[:6])
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // marshall converts the Event struct to binary data and the content of returned data is based on the record type
@@ -140,8 +137,8 @@ func (e *Event) marshall() ([]byte, error) {
 		copy(data[3:16], buf.Bytes()[16:29])
 	}
 
-	// OEM non-timestamped
-	if buf.Bytes()[2] >= 0xE0 && buf.Bytes()[2] <= 0xFF {
+	// OEM non-timestamped [OxEO .. OxFF]
+	if buf.Bytes()[2] >= 0xE0 {
 		copy(data[0:3], buf.Bytes()[0:3])
 		copy(data[3:16], buf.Bytes()[29:42])
 	}
