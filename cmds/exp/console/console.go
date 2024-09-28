@@ -26,6 +26,9 @@ var (
 	setupRoot = flag.Bool("setuproot", false, "Set up a root file system")
 )
 
+// TODO: add async error handling for io.Copy()
+//
+//nolint:errcheck
 func main() {
 	fmt.Printf("console -- starting")
 	flag.Parse()
@@ -52,15 +55,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = p.Start()
-	if err != nil {
+	if err := p.Start(); err != nil {
 		log.Fatalf("Console exits: can't start %v: %v", a, err)
 	}
 	kid := p.C.Process.Pid
 
 	// You need the \r\n as we are now in raw mode!
 	fmt.Printf("Started %d\r\n", kid)
-
 	go io.Copy(out, p.Ptm)
 
 	go func() {

@@ -131,10 +131,14 @@ func writeCsv(cmds []string, gogcs []int, d csvDesc) {
 	// Write header.
 	header := make([]string, len(gogcs)+1)
 	header[0] = "cmd \\ gogc"
+
 	for i, gogc := range gogcs {
 		header[i+1] = fmt.Sprint(gogc)
 	}
-	w.Write(header)
+
+	if err := w.Write(header); err != nil {
+		fmt.Fprintf(os.Stderr, "error writing csvDesc %v\n", d.filename)
+	}
 
 	// Iterator over all the measurements.
 	row := 0
@@ -178,6 +182,7 @@ func main() {
 
 	wg.Add(len(descs))
 	for _, d := range descs {
+		// TODO: implement channels and context to catch csv write errors
 		go writeCsv(cmds, gogcs, d)
 	}
 

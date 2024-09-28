@@ -16,7 +16,11 @@ func TestArchiveMethods(t *testing.T) {
 	r2 := StaticFile("/bin/r2", "content2", 0755)
 	records := []Record{r1, r2}
 
-	ar1 := ArchiveFromRecords(records)
+	ar1, err := ArchiveFromRecords(records)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	r := ar1.Reader()
 	ar2, err := ArchiveFromReader(r)
 	if err != nil {
@@ -82,7 +86,11 @@ func FuzzWriteReadInMemArchive(f *testing.F) {
 			}))
 		}
 
-		arch := ArchiveFromRecords(recs)
+		arch, err := ArchiveFromRecords(recs)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		archReader := arch.Reader()
 
 		for _, rec := range recs {

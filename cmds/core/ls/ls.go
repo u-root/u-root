@@ -86,7 +86,7 @@ type file struct {
 func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 	var files []file
 
-	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
+	if err := filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
 		f := file{
 			path: path,
 			osfi: osfi,
@@ -117,7 +117,9 @@ func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 		}
 
 		return nil
-	})
+	}); err != nil && err != filepath.SkipDir {
+		return err
+	}
 
 	if c.size {
 		sort.SliceStable(files, func(i, j int) bool {
@@ -218,7 +220,10 @@ func run(w io.Writer, args []string) error {
 	f.BoolVar(&c.classify, "F", false, "append indicator (, one of */=>@|) to entries")
 	f.BoolVar(&c.size, "S", false, "sort by size")
 	c.w = w
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return fmt.Errorf("error parsing flags: %w", err)
+	}
 	return c.list(f.Args())
 }
 

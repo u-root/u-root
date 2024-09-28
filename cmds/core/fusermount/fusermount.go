@@ -25,6 +25,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -46,6 +47,8 @@ const (
 var (
 	debug = func(string, ...interface{}) {}
 	mpt   string
+
+	errLazy = errors.New("-z can only be used with -u")
 )
 
 const usage = "usage: fusermount [-u|--unmount] [-z|--lazy] [-v|--verbose] <mountpoint>"
@@ -71,6 +74,8 @@ func openFUSE() (int, error) {
 
 // MountPointOK performs validation on the mountpoint.
 // Bury all your magic in here.
+// TODO: add async error checks
+
 func MountPointOK(mpt string) error {
 	// We wait until we can drop privs to test the mpt
 	// parameter, since ability to walk the path can
@@ -78,8 +83,11 @@ func MountPointOK(mpt string) error {
 	if err := dropPrivs(); err != nil {
 		return err
 	}
+
+	//nolint:errcheck
 	defer restorePrivs()
 	mpt = filepath.Clean(mpt)
+
 	r, err := filepath.EvalSymlinks(mpt)
 	if err != nil {
 		return err
@@ -148,6 +156,7 @@ func returnResult(cfd, ffd int, e error) error {
 	return nil
 }
 
+// TODO: why do we use and out writer and a logger and the debug call? we should align this
 func run(out io.Writer, args []string) error {
 	var unmount, lazy, verbose bool
 
@@ -162,11 +171,13 @@ func run(out io.Writer, args []string) error {
 	f.BoolVar(&verbose, "v", false, "verbose (shorthand)")
 
 	f.Usage = func() {
-		fmt.Fprintf(f.Output(), usage+"\n")
+		fmt.Fprintf(out, usage+"\n")
 		f.PrintDefaults()
 	}
 
-	f.Parse(args[1:])
+	if err := f.Parse(args[1:]); err != nil {
+		return fmt.Errorf("error parsing flags: %w", err)
+	}
 
 	if verbose {
 		debug = log.Printf
@@ -190,7 +201,7 @@ func run(out io.Writer, args []string) error {
 	// Bad design. All they had to do was make a -z and -u and have
 	// them both mean unmount. Oh well.
 	if lazy && !unmount {
-		log.Fatalf("-z can only be used with -u")
+		return errLazy
 	}
 
 	// Fuse has to be seen to be believed.

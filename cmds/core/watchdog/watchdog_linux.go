@@ -136,9 +136,11 @@ Options:
 		f.PrintDefaults()
 	}
 
-	f.Parse(args[1:])
-	err := c.run(f.Args())
-	if err != nil {
+	if err := f.Parse(args[1:]); err != nil {
+		return err
+	}
+
+	if err := c.run(f.Args()); err != nil {
 		if errors.Is(err, errUsage) {
 			f.Usage()
 		}

@@ -92,8 +92,18 @@ func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, p params, args
 	}
 }
 
+// TODO: if we change the behavior to return an error, then inputting multiple
+// non-existing files will result in a premature exit and the behavior will
+// differ from the original implementation. This should be adjusted. Until then
+// disable the noparam linter to fail because we always return nil.
+//
+//nolint:unparam
 func (c *cmd) run() error {
-	var totals cnt
+	var (
+		totals cnt
+		err    error
+	)
+
 	if !c.lines && !c.words && !c.runes && !c.broken && !c.chars {
 		c.lines, c.words, c.chars = true, true, true
 	}
@@ -105,7 +115,8 @@ func (c *cmd) run() error {
 	}
 
 	for _, v := range c.args {
-		f, err := os.Open(v)
+		var f *os.File
+		f, err = os.Open(v)
 		if err != nil {
 			fmt.Fprintf(c.stderr, "wc: %s: %v\n", v, err)
 			continue
@@ -118,9 +129,12 @@ func (c *cmd) run() error {
 		totals.chars += res.chars
 		c.report(res, v)
 	}
+
 	if len(c.args) > 1 {
 		c.report(totals, "total")
 	}
+
+	// TOOD: return err
 	return nil
 }
 

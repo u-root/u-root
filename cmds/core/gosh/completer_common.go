@@ -19,6 +19,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
+//nolint:errcheck
 func lastStmt(parser *syntax.Parser, line string) *syntax.Stmt {
 	var s *syntax.Stmt
 	parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {

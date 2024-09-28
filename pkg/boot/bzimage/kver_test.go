@@ -9,8 +9,8 @@ package bzimage
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io"
-	"math/rand"
 	"testing"
 	"time"
 )
@@ -58,7 +58,10 @@ func sparseBuf(items []bufItem) (io.ReadSeeker, error) {
 	// make buffer a bit oversize
 	buf := make([]byte, last+64)
 	// write random data
-	rand.Read(buf)
+	if _, err := rand.Read(buf); err != nil {
+		return nil, err
+	}
+
 	// then write items
 	for _, i := range items {
 		copy(buf[i.off:], i.data)

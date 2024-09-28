@@ -53,7 +53,9 @@ func runCommand() error {
 		daemonOpts := &watchdogd.DaemonOpts{}
 		fs := daemonOpts.InitFlags()
 		monitor := fs.String("monitor", "oops", "comma separated list of monitors")
-		fs.Parse(args)
+		if err := fs.Parse(args); err != nil {
+			return fmt.Errorf("error parsing flags: %w", err)
+		}
 
 		if fs.NArg() != 0 {
 			watchdog.Usage()

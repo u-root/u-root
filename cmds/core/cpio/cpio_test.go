@@ -89,7 +89,9 @@ func prepareTestDir(t *testing.T, tempDir string) ([]dirEnt, *os.File) {
 			t.Fatalf("failed to write file path %v to input file: %v", ent.Name, err)
 		}
 	}
-	inputFile.Seek(0, 0)
+	if _, err := inputFile.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
 
 	return targets, inputFile
 }
@@ -122,6 +124,7 @@ func TestCpioList(t *testing.T) {
 	}
 }
 
+//nolint:errcheck
 func TestCpio(t *testing.T) {
 	debug = t.Logf
 	// Create a temporary directory
@@ -188,6 +191,7 @@ func TestCpio(t *testing.T) {
 	}
 }
 
+//nolint:errcheck
 func TestDirectoryHardLink(t *testing.T) {
 	// Open an archive containing two directories with the same inode (0).
 	// We're trying to test if having the same inode will trigger a hard link.

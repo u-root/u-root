@@ -80,7 +80,9 @@ func mkdir(mode string, mkall, verbose bool, args []string) error {
 			fmt.Printf("%v\n", name)
 		}
 		if mode != "" {
-			os.Chmod(name, createMode)
+			if err := os.Chmod(name, createMode); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

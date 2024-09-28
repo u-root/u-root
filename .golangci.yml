@@ -5,6 +5,8 @@ linters:
     - ineffassign
     - staticcheck
     - stylecheck
+    - unparam
+    - errcheck
 
 linters-settings:
   staticcheck:

@@ -74,7 +74,7 @@ func checkSum(buf []byte) uint16 {
 	return csum
 }
 
-func (u *UDPHeader) checksum(ip *ipv4.Header, payload []byte) {
+func (u *UDPHeader) checksum(ip *ipv4.Header, payload []byte) error {
 	var pseudoHeader []byte
 
 	pseudoHeader = append(pseudoHeader, ip.Src.To4()...)
@@ -86,13 +86,23 @@ func (u *UDPHeader) checksum(ip *ipv4.Header, payload []byte) {
 	}...)
 
 	var b bytes.Buffer
-	binary.Write(&b, binary.BigEndian, pseudoHeader)
-	binary.Write(&b, binary.BigEndian, u)
-	binary.Write(&b, binary.BigEndian, &payload)
+	if err := binary.Write(&b, binary.BigEndian, pseudoHeader); err != nil {
+		return err
+	}
+
+	if err := binary.Write(&b, binary.BigEndian, u); err != nil {
+		return err
+	}
+
+	if err := binary.Write(&b, binary.BigEndian, &payload); err != nil {
+		return err
+	}
+
 	u.Chksum = checkSum(b.Bytes())
+	return nil
 }
 
-func (t *TCPHeader) checksum(ip *ipv4.Header, payload []byte) {
+func (t *TCPHeader) checksum(ip *ipv4.Header, payload []byte) error {
 	var pseudoHeader []byte
 
 	pseudoHeader = append(pseudoHeader, ip.Src.To4()...)
@@ -104,10 +114,21 @@ func (t *TCPHeader) checksum(ip *ipv4.Header, payload []byte) {
 	}...)
 
 	var b bytes.Buffer
-	binary.Write(&b, binary.BigEndian, pseudoHeader)
-	binary.Write(&b, binary.BigEndian, t)
-	binary.Write(&b, binary.BigEndian, &payload)
+
+	if err := binary.Write(&b, binary.BigEndian, pseudoHeader); err != nil {
+		return err
+	}
+
+	if err := binary.Write(&b, binary.BigEndian, t); err != nil {
+		return err
+	}
+
+	if err := binary.Write(&b, binary.BigEndian, &payload); err != nil {
+		return err
+	}
+
 	t.Checksum = checkSum(b.Bytes())
+	return nil
 }
 
 func ParseTCP(data []byte) (*TCPHeader, error) {

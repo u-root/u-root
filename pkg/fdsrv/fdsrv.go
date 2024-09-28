@@ -68,7 +68,9 @@ func (fds *Server) handleConnection(uc *net.UnixConn) (bool, error) {
 	}
 	query := string(buf[:n])
 	if query != fds.nonce {
-		io.WriteString(uc, "BAD NONCE")
+		if _, err := io.WriteString(uc, "BAD NONCE"); err != nil {
+			return false, err
+		}
 		return false, nil
 	}
 	oob := syscall.UnixRights(fds.dupedFD)

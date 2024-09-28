@@ -105,7 +105,9 @@ func TestReadFrom(t *testing.T) {
 				flags:    0,
 			}
 			readFromBuffer := bytes.NewReader(tt.inputBuffer)
-			cBuffer.ReadFrom(readFromBuffer)
+			if _, err := cBuffer.ReadFrom(readFromBuffer); err != nil {
+				t.Fatal(err)
+			}
 
 			if !reflect.DeepEqual(cBuffer.data, tt.inputBuffer) {
 				t.Errorf("ReadFrom failed. Got: %v - want: %v", cBuffer.data, tt.inputBuffer)

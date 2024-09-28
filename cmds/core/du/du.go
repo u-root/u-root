@@ -47,7 +47,10 @@ func command(stdout io.Writer, args []string) *cmd {
 	f.BoolVar(&c.followCMDSymLinks, "H", false, "follow symlink form [file...]")
 	f.BoolVar(&c.followSymlinks, "L", false, "follow all symlinks")
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 	c.files = f.Args()
 	return &c
 }
@@ -92,9 +95,12 @@ func (c *cmd) run() error {
 }
 
 func (c *cmd) du(file string) (int64, error) {
-	var blocks int64
+	var (
+		blocks int64
+		err    error
+	)
 
-	filepath.Walk(file, func(path string, info fs.FileInfo, err error) error {
+	if err = filepath.Walk(file, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -136,7 +142,9 @@ func (c *cmd) du(file string) (int64, error) {
 
 		blocks += st.Blocks
 		return nil
-	})
+	}); err != nil {
+		return 0, err
+	}
 
 	return blocks, nil
 }

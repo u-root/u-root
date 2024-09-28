@@ -26,14 +26,22 @@ func (t *Trace) SendTracesTCP6() {
 	defer conn.Close()
 
 	rSocket := ipv6.NewPacketConn(conn)
-	rSocket.SetChecksum(true, 0x10)
+	if err := rSocket.SetChecksum(true, 0x10); err != nil {
+		log.Fatal(err)
+	}
 
 	seq := uint32(1000)
 	mod := uint32(1 << 30)
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			cm, payload := t.BuildTCP6SYNPkt(sport, t.destPort, uint16(ttl), seq, 0)
-			rSocket.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
+			cm, payload, err := t.BuildTCP6SYNPkt(sport, t.destPort, uint16(ttl), seq, 0)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if _, err := rSocket.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP}); err != nil {
+				log.Fatal(err)
+			}
 			pb := &Probe{
 				ID:       seq,
 				Dest:     t.DestIP,
@@ -136,7 +144,7 @@ func (t *Trace) IPv6TCPPing(seq uint32, dport uint16) {
 	t.ReceiveChan <- pbr
 }
 
-func (t *Trace) BuildTCP6SYNPkt(sport, dport, ttl uint16, seq uint32, tc int) (*ipv6.ControlMessage, []byte) {
+func (t *Trace) BuildTCP6SYNPkt(sport, dport, ttl uint16, seq uint32, tc int) (*ipv6.ControlMessage, []byte, error) {
 	cm := &ipv6.ControlMessage{
 		HopLimit: int(ttl),
 	}
@@ -156,8 +164,13 @@ func (t *Trace) BuildTCP6SYNPkt(sport, dport, ttl uint16, seq uint32, tc int) (*
 	payload := []byte{0x02, 0x04, 0x05, 0xb4, 0x04, 0x02, 0x08, 0x0a, 0x7f, 0x73, 0xf9, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07}
 
 	var ret bytes.Buffer
-	binary.Write(&ret, binary.BigEndian, &tcp)
-	binary.Write(&ret, binary.BigEndian, &payload)
+	if err := binary.Write(&ret, binary.BigEndian, &tcp); err != nil {
+		return nil, nil, err
+	}
 
-	return cm, ret.Bytes()
+	if err := binary.Write(&ret, binary.BigEndian, &payload); err != nil {
+		return nil, nil, err
+	}
+
+	return cm, ret.Bytes(), nil
 }

@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -113,7 +114,9 @@ func TestConnectMode(t *testing.T) {
 				if err != nil {
 					return
 				}
-				conn.Write([]byte(response))
+				if _, err := conn.Write([]byte(response)); err != nil {
+					log.Fatal(err)
+				}
 				conn.Close()
 			}()
 

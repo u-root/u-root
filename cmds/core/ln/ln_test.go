@@ -203,6 +203,8 @@ func testSymlink(linkName, linksTo string, t *testing.T) {
 
 // TestLn make a general tests based on
 // tabDriven tests (see loadTests())
+//
+//nolint:errcheck
 func TestLn(t *testing.T) {
 	tabDriven := loadTests()
 	testDir := t.TempDir()

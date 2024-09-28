@@ -116,8 +116,9 @@ func MonitorOops() error {
 }
 
 // StartServing enters a loop of accepting and processing next incoming watchdogd operation call.
-func (d *Daemon) StartServing(l *net.UnixListener) {
-	for { // All requests are processed sequentially.
+func (d *Daemon) StartServing(l *net.UnixListener, err error) {
+	// All requests are processed sequentially.
+	for {
 		c, err := l.AcceptUnix()
 		if err != nil {
 			log.Printf("Failed to accept new request: %v", err)
@@ -130,6 +131,7 @@ func (d *Daemon) StartServing(l *net.UnixListener) {
 		op := int(b[0])
 		log.Printf("New op received: %c", op)
 		var r rune
+
 		switch op {
 		case OpStop:
 			r = d.StopPetting()
@@ -142,8 +144,14 @@ func (d *Daemon) StartServing(l *net.UnixListener) {
 		default:
 			r = OpResultInvalidOp
 		}
-		c.Write([]byte{byte(r)})
-		c.Close()
+
+		if _, err := c.Write([]byte{byte(r)}); err != nil {
+			log.Printf("Failed to accept write: %v", err)
+		}
+
+		if err := c.Close(); err != nil {
+			log.Printf("Failed to close connection: %v", err)
+		}
 	}
 }
 
@@ -287,9 +295,10 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 	if err != nil {
 		return fmt.Errorf("failed to setup server: %v", err)
 	}
+
 	go func() {
 		log.Println("Start serving.")
-		d.StartServing(l)
+		d.StartServing(l, err)
 	}()
 
 	log.Println("Start arming watchdog initially.")

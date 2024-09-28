@@ -22,6 +22,7 @@ import (
 	"github.com/u-root/u-root/pkg/cluster/health"
 )
 
+//nolint:errcheck
 func node() *health.Stat {
 	// Some *packages* write to Stderr instead of returning
 	// an error. Further, the error may be a warning.
