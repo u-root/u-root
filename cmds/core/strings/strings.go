@@ -155,7 +155,7 @@ func main() {
 	f.IntVar(&n, "n", 4, "the minimum string length")
 	f.StringVar(&t, "t", "", "write each string preceded by its byte offset from the start of the file (d decimal, o octal, x hexadecimal)")
 	f.Parse(unixflag.OSArgsToGoArgs())
-	if err := command(os.Stdin, os.Stdout, params{n: n, t: t}, flag.Args()).run(); err != nil {
+	if err := command(os.Stdin, os.Stdout, params{n: n, t: t}, f.Args()).run(); err != nil {
 		log.Fatalf("strings: %v", err)
 	}
 }
