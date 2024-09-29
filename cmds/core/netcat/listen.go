@@ -91,7 +91,6 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 		}
 		return l(network, address)
 	}
-	return nil, fmt.Errorf("unexpected error")
 }
 
 // Connections holds all the active connections of a listener.
