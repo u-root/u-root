@@ -132,7 +132,7 @@ func diskUsage(mnt *mount) error {
 	mnt.Blocks = fs.Blocks * uint64(fs.Bsize) / units
 	mnt.Bsize = int64(fs.Bsize)
 	mnt.Total = fs.Blocks * uint64(fs.Bsize) / units
-	mnt.Avail = fs.Bavail * uint64(fs.Bsize) / units
+	mnt.Avail = uint64(fs.Bavail) * uint64(fs.Bsize) / units
 	mnt.Used = (fs.Blocks - fs.Bfree) * uint64(fs.Bsize) / units
 	pct := float64((fs.Blocks - fs.Bfree)) * 100 / float64(fs.Blocks)
 	mnt.PCT = uint8(math.Ceil(pct))
