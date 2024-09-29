@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -23,6 +24,8 @@ import (
 	"github.com/mdlayher/vsock"
 	"github.com/u-root/u-root/pkg/netcat"
 )
+
+var osConnectors = map[netcat.SocketType]func(string, string) (net.Conn, error){}
 
 func (c *cmd) connectMode(output io.Writer, network, address string) error {
 	if c.config.ConnectionModeOptions.ScanPorts && !c.config.ConnectionModeOptions.ZeroIO {
@@ -123,9 +126,6 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 				return nil, fmt.Errorf("failed to resolve source address %v", err)
 			}
 
-		case netcat.SOCKET_TYPE_SCTP:
-			return connectToSCTPSocket(network, address)
-
 		case netcat.SOCKET_TYPE_VSOCK:
 			cid, port, err := netcat.SplitVSockAddr(address)
 			if err != nil {
@@ -135,13 +135,14 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 			return vsock.Dial(cid, port, nil)
 
 		// unsupported socket types
-		case netcat.SOCKET_TYPE_UDP_VSOCK:
-			return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
-
-		case netcat.SOCKET_TYPE_NONE:
 		default:
-			return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+			osConn, ok := osConnectors[c.config.ProtocolOptions.SocketType]
+			if !ok {
+				return nil, fmt.Errorf("socket type %q:%w", c.config.ProtocolOptions.SocketType, os.ErrNotExist)
+			}
+			return osConn(network, address)
 		}
+
 	}
 
 	// Proxy Support

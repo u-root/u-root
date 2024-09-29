@@ -21,6 +21,8 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
+var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, error){}
+
 func (c *cmd) listenMode(output io.Writer, network, address string) error {
 	listener, err := c.setupListener(network, address)
 	if err != nil {
@@ -74,8 +76,6 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
 		return netcat.NewUDPListener(network, address, c.config.Output.Logger)
 
-	case netcat.SOCKET_TYPE_SCTP:
-		return listenToSCTPSocket(network, address)
 	case netcat.SOCKET_TYPE_VSOCK:
 		cid, port, err := netcat.SplitVSockAddr(address)
 		if err != nil {
@@ -84,15 +84,13 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 
 		return vsock.ListenContextID(cid, port, nil)
 
-	// unsupported socket types
-	case netcat.SOCKET_TYPE_UDP_VSOCK:
-		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
-
-	case netcat.SOCKET_TYPE_NONE:
 	default:
-		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+		l, ok := osListeners[c.config.ProtocolOptions.SocketType]
+		if !ok {
+			return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
+		}
+		return l(network, address)
 	}
-
 	return nil, fmt.Errorf("unexpected error")
 }
 
