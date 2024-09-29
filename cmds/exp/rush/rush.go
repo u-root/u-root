@@ -197,10 +197,9 @@ func main() {
 					break
 				}
 				break
-			} else {
-				if c.Link == "||" {
-					break
-				}
+			}
+			if c.Link == "||" {
+				break
 			}
 		}
 		if status == "EOF" {
