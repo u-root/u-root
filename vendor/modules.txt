@@ -236,9 +236,6 @@ github.com/knz/bubbline/computil
 github.com/knz/bubbline/editline
 github.com/knz/bubbline/editline/internal/textarea
 github.com/knz/bubbline/history
-# github.com/leongross/intel-go-cpuid v0.0.0
-## explicit
-github.com/leongross/intel-go-cpuid
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
@@ -339,6 +336,9 @@ github.com/tklauser/go-sysconf
 # github.com/tklauser/numcpus v0.8.0
 ## explicit; go 1.18
 github.com/tklauser/numcpus
+# github.com/u-root/cpuid v0.0.0
+## explicit
+github.com/u-root/cpuid
 # github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
 ## explicit; go 1.20
 github.com/u-root/gobusybox/src/pkg/bb
