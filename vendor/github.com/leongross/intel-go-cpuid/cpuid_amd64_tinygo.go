@@ -1,12 +1,43 @@
-// +build amd64
 // Copyright 2015 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build amd64 && tinygo
+
 package cpuid
 
-func cpuid_low(arg1, arg2 uint32) (eax, ebx, ecx, edx uint32) // implemented in cpuidlow_amd64.s
-func xgetbv_low(arg1 uint32) (eax, edx uint32)                // implemented in cpuidlow_amd64.s
+/*
+#include <stdint.h>
+
+void cpuid_low(uint32_t arg1, uint32_t arg2, uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx) {
+	asm volatile(
+		"cpuid"
+		: "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
+		: "a" (arg1), "c" (arg2)
+	);
+}
+
+void xgetbv_low(uint32_t arg1, uint32_t* eax, uint32_t* edx) {
+	asm volatile(
+		"xgetbv"
+		: "=a" (*eax), "=d" (*edx)
+		: "c" (arg1)
+	);
+}
+*/
+import "C"
+
+func cpuid_low(arg1, arg2 uint32) (eax, ebx, ecx, edx uint32) {
+	var _eax, _ebx, _ecx, _edx C.uint32_t
+	C.cpuid_low(C.uint32_t(arg1), C.uint32_t(arg2), &_eax, &_ebx, &_ecx, &_edx)
+	return uint32(_eax), uint32(_ebx), uint32(_ecx), uint32(_edx)
+}
+
+func xgetbv_low(arg1 uint32) (eax, edx uint32) {
+	var _eax, _edx C.uint32_t
+	C.xgetbv_low(C.uint32_t(arg1), &_eax, &_edx)
+	return uint32(_eax), uint32(_edx)
+}
 
 func init() {
 	detectFeatures()

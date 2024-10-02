@@ -20,7 +20,6 @@ require (
 	github.com/gopacket/gopacket v1.2.0
 	github.com/hugelgupf/vmtest v0.0.0-20240228002643-de15f4612e10
 	github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
-	github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/klauspost/compress v1.17.4
@@ -59,6 +58,7 @@ require (
 
 require (
 	github.com/jaypipes/ghw v0.12.0
+	github.com/leongross/intel-go-cpuid v0.0.0
 	github.com/sirupsen/logrus v1.9.3
 )
 

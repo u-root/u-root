@@ -274,7 +274,7 @@ func (m MSR) TestAndSet(c CPUs, clearMask uint64, setMask uint64) []error {
 // Locked verifies that for all MSRVal's for the CPU vendor, the MSRs are locked.
 // TODO: this is another Intel-specific function at present.
 func Locked() error {
-	vendor, err := cpuid.CPUManufacturerID()
+	vendor, err := cpuid.VendorIdentificatorString
 	if err != nil {
 		return err
 	}
