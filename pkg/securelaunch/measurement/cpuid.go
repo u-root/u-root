@@ -11,7 +11,7 @@ import (
 	"log"
 	"strings"
 
-	cpuid "github.com/leongross/intel-go-cpuid"
+	cpuid "github.com/u-root/cpuid"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )

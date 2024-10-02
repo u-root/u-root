@@ -58,8 +58,8 @@ require (
 
 require (
 	github.com/jaypipes/ghw v0.12.0
-	github.com/leongross/intel-go-cpuid v0.0.0
 	github.com/sirupsen/logrus v1.9.3
+	github.com/u-root/cpuid v0.0.0
 )
 
 require (
