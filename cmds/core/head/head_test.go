@@ -38,7 +38,7 @@ func TestHead(t *testing.T) {
 	}
 
 	t.Run("combine error", func(t *testing.T) {
-		err := run(nil, nil, 1, 1, f3.Name())
+		err := run(nil, nil, nil, 1, 1, f3.Name())
 		if !errors.Is(err, errCombine) {
 			t.Errorf("expected %v, got %v", errCombine, err)
 		}
@@ -46,7 +46,7 @@ func TestHead(t *testing.T) {
 
 	t.Run("one file print lines", func(t *testing.T) {
 		stdout := &bytes.Buffer{}
-		err := run(stdout, nil, 0, 2, f1.Name())
+		err := run(nil, stdout, nil, 0, 2, f1.Name())
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
@@ -59,7 +59,7 @@ func TestHead(t *testing.T) {
 
 	t.Run("one file default params", func(t *testing.T) {
 		stdout := &bytes.Buffer{}
-		err := run(stdout, nil, 0, 0, f2.Name())
+		err := run(nil, stdout, nil, 0, 0, f2.Name())
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
@@ -72,7 +72,7 @@ func TestHead(t *testing.T) {
 
 	t.Run("two files print bytes", func(t *testing.T) {
 		stdout := &bytes.Buffer{}
-		err := run(stdout, nil, 3, 0, f1.Name(), f2.Name())
+		err := run(nil, stdout, nil, 3, 0, f1.Name(), f2.Name())
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
@@ -87,7 +87,7 @@ func TestHead(t *testing.T) {
 
 	t.Run("request more bytes", func(t *testing.T) {
 		stdout := &bytes.Buffer{}
-		err := run(stdout, nil, 10000, 0, f1.Name())
+		err := run(nil, stdout, nil, 10000, 0, f1.Name())
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
@@ -101,13 +101,41 @@ func TestHead(t *testing.T) {
 
 	t.Run("file not exists", func(t *testing.T) {
 		stderr := &bytes.Buffer{}
-		err := run(nil, stderr, 0, 0, filepath.Join(dir, "filenotexists"))
+		err := run(nil, nil, stderr, 0, 0, filepath.Join(dir, "filenotexists"))
 		if err != nil {
 			t.Fatalf("expected nil, got %v", err)
 		}
 
 		if !strings.Contains(stderr.String(), "filenotexists") {
 			t.Errorf("expected file not exists in stderr, got %v", stderr.String())
+		}
+	})
+
+	t.Run("stdin bytes", func(t *testing.T) {
+		stdin := strings.NewReader("hello\n")
+		stdout := &bytes.Buffer{}
+
+		err := run(stdin, stdout, nil, 1, 0)
+		if err != nil {
+			t.Fatalf("expected nil, got %v", err)
+		}
+
+		if stdout.String() != "h" {
+			t.Errorf("expected 'h' got %q", stdout.String())
+		}
+	})
+
+	t.Run("stdin lines", func(t *testing.T) {
+		stdin := strings.NewReader("hello\nagain\n")
+		stdout := &bytes.Buffer{}
+
+		err := run(stdin, stdout, nil, 0, 1)
+		if err != nil {
+			t.Fatalf("expected nil, got %v", err)
+		}
+
+		if stdout.String() != "hello\n" {
+			t.Errorf("expected 'hello\n' got %q", stdout.String())
 		}
 	})
 }
