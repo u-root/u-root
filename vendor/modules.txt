@@ -173,9 +173,6 @@ github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
 github.com/insomniacslk/dhcp/netboot
 github.com/insomniacslk/dhcp/rfc1035label
-# github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
-## explicit
-github.com/intel-go/cpuid
 # github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 ## explicit; go 1.12
 github.com/ishidawataru/sctp
@@ -239,6 +236,9 @@ github.com/knz/bubbline/computil
 github.com/knz/bubbline/editline
 github.com/knz/bubbline/editline/internal/textarea
 github.com/knz/bubbline/history
+# github.com/leongross/intel-go-cpuid v0.0.0
+## explicit
+github.com/leongross/intel-go-cpuid
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful

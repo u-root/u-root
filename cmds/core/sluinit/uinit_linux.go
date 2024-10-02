@@ -1,6 +1,7 @@
-// Copyright 2019 the u-root Authors. All rights reserved
+// Copyright 2019-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
 //go:build !tinygo || tinygo.enable
 
 package main
@@ -23,10 +24,12 @@ import (
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
 
-var slDebug = flag.Bool("d", false, "enable debug logs")
+var (
+	slDebug = flag.Bool("d", false, "enable debug logs")
 
-// step keeps track of the current step (e.g., parse policy, measure).
-var step = 1
+	// step keeps track of the current step (e.g., parse policy, measure).
+	step = 1
+)
 
 // printStep prints a message for the next step.
 func printStep(msg string) {

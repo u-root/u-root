@@ -1,20 +1,15 @@
 # cpuid
 ### Intel CPUID library for Go Programming Language
 
+> [!NOTE]
+> This Project is a fork of the discontinued project [`intel-go/cpuid`](https://github.com/intel-go/cpuid).
+
 The cpuid package provides convenient and fast access to information from 
 the x86 CPUID instruction. 
 The package gathers all information during package initialization phase 
 so its public interface will not need to execute the CPUID instruction at runtime.
 Frequent calls to the CPUID instruction can hurt performance, 
 so this package makes it easier to do CPU-specific optimizations.
-
-[![GoDoc](https://godoc.org/github.com/intel-go/cpuid?status.svg)](https://godoc.org/github.com/intel-go/cpuid)
-
-### You can get it with
-
-```shell
-go get github.com/intel-go/cpuid
-```
 
 ### Example:
 
