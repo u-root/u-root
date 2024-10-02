@@ -18,7 +18,6 @@ import (
 	"time"
 	"unsafe"
 
-	// "github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/sys/unix"
 )
 
@@ -277,10 +276,8 @@ func makeSymlinks(base string) {
 var (
 	cgpath  = flag.String("cgpath", "/sys/fs/cgroup", "set the cgroups")
 	cgroup  = flag.String("cgroup", "", "set the cgroups")
-	mnt     = flag.String("mount", "", "define mounts")
 	chroot  = flag.String("chroot", "", "where to chroot to")
 	chdir   = flag.String("chdir", "/", "where to chrdir to in the chroot")
-	console = flag.String("console", "/dev/console", "where the console is")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
 	debug   = flag.Bool("d", false, "Enable debug logs")
 	env     = flag.String("env", "", "other environment variables")
@@ -355,10 +352,6 @@ func main() {
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
-		//t, err := termios.GetTermios(1)
-		//if err != nil {
-		//	log.Fatalf("Can't get termios on fd 1: %v", err)
-		//}
 		v("pflask: respawning...")
 		if err := c.Run(); err != nil {
 			log.Printf("Could not run:\n   %v\n    %v\n", c, err.Error())
@@ -382,7 +375,7 @@ func main() {
 	// If you make it /, strange things are bound to happen.
 	// if that is too limiting we'll have to change this.
 	if *chroot == "" {
-		log.Fatalf("you are required to set the chroot via -chroot")
+		log.Fatal("you are required to set the chroot via -chroot")
 	}
 	if *chroot == "/" {
 		log.Println("[WARN]: chroot set to /: strange things are bound to happen")
@@ -395,7 +388,7 @@ func main() {
 	v("pflask: ptsopen")
 	controlPTY, processTTY, sname, err := ptsopen()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// child code. Not really. What really happens here is we set
@@ -422,9 +415,7 @@ func main() {
 	makeConsole(*chroot, sname, unprivileged)
 
 	// umask(0022);
-
 	/* TODO: drop capabilities */
-
 	// do_user(user);
 
 	e := make(map[string]string)

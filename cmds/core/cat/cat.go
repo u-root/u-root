@@ -37,9 +37,7 @@ func cat(reader io.Reader, writer io.Writer) error {
 
 func run(stdin io.Reader, stdout io.Writer, args ...string) error {
 	if len(args) == 0 {
-		if err := cat(stdin, stdout); err != nil {
-			return err
-		}
+		return cat(stdin, stdout)
 	}
 	for _, file := range args {
 		if file == "-" {

@@ -1,6 +1,7 @@
 // Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // ip manipulates network addresses, interfaces, routing, and other config.
 package main

@@ -82,7 +82,7 @@ func run(stdout io.Writer, stderr io.Writer, args []string) error {
 
 func main() {
 	flag.Parse()
-	if err := run(os.Stdin, os.Stderr, flag.Args()); err != nil {
+	if err := run(os.Stdout, os.Stderr, flag.Args()); err != nil {
 		os.Exit(1)
 	}
 }

@@ -6,6 +6,7 @@
 // interface.
 // For a detailed description of OpenIPMI, see
 // http://openipmi.sourceforge.net/IPMI.pdf
+// https://www.intel.com/content/dam/www/public/us/en/documents/specification-updates/ipmi-intelligent-platform-mgt-interface-spec-2nd-gen-v2-0-spec-update.pdf
 package ipmi
 
 import (
@@ -26,6 +27,17 @@ var (
 	_IPMICTL_SEND_COMMAND      = ioctl.IOR(_IPMI_IOC_MAGIC, 13, uintptr(unsafe.Sizeof(request{})))
 
 	timeout = time.Second * 10
+
+	shutoffWatchdogCmd = [6]byte{
+		IPM_WATCHDOG_SMS_OS,
+		IPM_WATCHDOG_NO_ACTION,
+		0x00, // pre-timeout interval
+		IPM_WATCHDOG_CLEAR_SMS_OS,
+		0xb8, // countdown lsb (100 ms/count)
+		0x0b, // countdown msb - 5 mins
+	}
+
+	errNotEnoughParams = errors.New("not enough parameters given")
 )
 
 // IPMI represents access to the IPMI interface.
@@ -70,7 +82,7 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 		case err == syscall.EINTR:
 			continue
 		case err != nil:
-			return nil, fmt.Errorf("ioctlSetReq failed with %v", err)
+			return nil, fmt.Errorf("ioctlSetReq: %w", err)
 		}
 		break
 	}
@@ -89,6 +101,10 @@ func (i *IPMI) RawSendRecv(msg Msg) ([]byte, error) {
 	return i.dev.ReceiveResponse(req.msgid, recv, buf)
 }
 
+// WatchdogRunning checks if the watchdog timer is currently running.
+// It sends a command to the BMC to get the watchdog timer status.
+// Returns true if the watchdog timer is running, otherwise false.
+// If there is an error in sending or receiving the command, it returns the error.
 func (i *IPMI) WatchdogRunning() (bool, error) {
 	recv, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_WATCHDOG_TIMER, nil)
 	if err != nil {
@@ -102,29 +118,27 @@ func (i *IPMI) WatchdogRunning() (bool, error) {
 	return false, nil
 }
 
+// ShutoffWatchdog disables the watchdog timer on the IPMI device.
+// It sends a command to the BMC to set the watchdog timer to a shutoff state.
+// Returns an error if the command fails to send or receive a response.
 func (i *IPMI) ShutoffWatchdog() error {
-	var data [6]byte
-	data[0] = IPM_WATCHDOG_SMS_OS
-	data[1] = IPM_WATCHDOG_NO_ACTION
-	data[2] = 0x00 // pretimeout interval
-	data[3] = IPM_WATCHDOG_CLEAR_SMS_OS
-	data[4] = 0xb8 // countdown lsb (100 ms/count)
-	data[5] = 0x0b // countdown msb - 5 mins
-
-	_, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_WATCHDOG_TIMER, data[:6])
-	if err != nil {
+	if _, err := i.SendRecv(_IPMI_NETFN_APP, BMC_SET_WATCHDOG_TIMER, shutoffWatchdogCmd[:6]); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// marshall converts the Event struct to binary data and the content of returned data is based on the record type
+// marshall converts the Event struct to binary data.
+// The content of returned data is based on the record type.
 func (e *Event) marshall() ([]byte, error) {
 	buf := &bytes.Buffer{}
 
 	if err := binary.Write(buf, binary.LittleEndian, *e); err != nil {
 		return nil, err
+	}
+
+	if buf.Len() < 2 {
+		return nil, fmt.Errorf("marshall: cannot marshall data, need at least 2, got %d bytes", buf.Len())
 	}
 
 	data := make([]byte, 16)
@@ -141,7 +155,7 @@ func (e *Event) marshall() ([]byte, error) {
 	}
 
 	// OEM non-timestamped
-	if buf.Bytes()[2] >= 0xE0 && buf.Bytes()[2] <= 0xFF {
+	if buf.Bytes()[2] >= 0xE0 {
 		copy(data[0:3], buf.Bytes()[0:3])
 		copy(data[3:16], buf.Bytes()[29:42])
 	}
@@ -216,6 +230,24 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 	return nil
 }
 
+// GetDeviceID retrieves the device ID information from the IPMI interface.
+// It sends a command to the BMC to get the device ID and parses the response
+// into a DevID struct.
+//
+// Returns:
+//   - A pointer to a DevID struct containing the device ID information.
+//   - An error if there is any issue in sending the command or parsing the response.
+//
+// The function reads the following fields from the response data:
+//   - DeviceID
+//   - DeviceRevision
+//   - FwRev1
+//   - FwRev2
+//   - IpmiVersion
+//   - AdtlDeviceSupport
+//   - ManufacturerID
+//   - ProductID
+//   - AuxFwRev (conditionally, if additional bytes are present in the response)
 func (i *IPMI) GetDeviceID() (*DevID, error) {
 	data, err := i.SendRecv(_IPMI_NETFN_APP, BMC_GET_DEVICE_ID, nil)
 	if err != nil {
@@ -267,6 +299,10 @@ func (i *IPMI) getGlobalEnables() ([]byte, error) {
 	return i.SendRecv(_IPMI_NETFN_APP, BMC_GET_GLOBAL_ENABLES, nil)
 }
 
+// EnableSEL enables the System Event Log (SEL) if it is supported and not already enabled.
+// It first checks if the SEL device is supported by retrieving the device ID.
+// If supported, it then checks the current global enables to see if SEL is already enabled.
+// If SEL is not enabled, it enables SEL by setting the appropriate global enable flag.
 func (i *IPMI) EnableSEL() (bool, error) {
 	// Check if SEL device is supported or not
 	mcInfo, err := i.GetDeviceID()
@@ -292,6 +328,15 @@ func (i *IPMI) EnableSEL() (bool, error) {
 	return true, nil
 }
 
+// GetChassisStatus retrieves the chassis status from the IPMI interface.
+// It sends a command to the BMC to get the chassis status and parses the response.
+//
+// The response data is expected to be in a specific format as per the IPMI specification v2.0.
+// If the response data is shorter than expected, it will be parsed into a shortened struct.
+//
+// Returns:
+// - A pointer to a ChassisStatus struct containing the current power state, last power event, and miscellaneous chassis state.
+// - An error if there is an issue with sending/receiving the command or parsing the response data.
 func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 	data, err := i.SendRecv(_IPMI_NETFN_CHASSIS, BMC_GET_CHASSIS_STATUS, nil)
 	if err != nil {
@@ -300,6 +345,27 @@ func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 
 	buf := bytes.NewReader(data[1:])
 
+	// The fourth byte of Chassis Status is optional (see p416 of the IPMI spec v2.0,
+	// https://www.intel.la/content/dam/www/public/us/en/documents/specification-updates/ipmi-intelligent-platform-mgt-interface-spec-2nd-gen-v2-0-spec-update.pdf)
+	// binary.Read won't do any parsing if it does not find all the needed bytes, so we sometimes read to a shortened
+	// struct instead.
+	if buf.Len() == 3 {
+		var shortened struct {
+			CurrentPowerState byte
+			LastPowerEvent    byte
+			MiscChassisState  byte
+		}
+
+		if err := binary.Read(buf, binary.LittleEndian, &shortened); err != nil {
+			return nil, err
+		}
+
+		return &ChassisStatus{
+			CurrentPowerState: shortened.CurrentPowerState,
+			LastPowerEvent:    shortened.LastPowerEvent,
+			MiscChassisState:  shortened.MiscChassisState,
+		}, nil
+	}
 	var status ChassisStatus
 	if err := binary.Read(buf, binary.LittleEndian, &status); err != nil {
 		return nil, err
@@ -307,6 +373,12 @@ func (i *IPMI) GetChassisStatus() (*ChassisStatus, error) {
 	return &status, nil
 }
 
+// GetSELInfo retrieves the System Event Log (SEL) information from the IPMI interface.
+// It sends a command to the BMC to get the SEL info and parses the response into an SELInfo structure.
+//
+// Returns:
+//   - A pointer to an SELInfo structure containing the SEL information.
+//   - An error if there is an issue with sending the command, receiving the response, or parsing the data.
 func (i *IPMI) GetSELInfo() (*SELInfo, error) {
 	data, err := i.SendRecv(_IPMI_NETFN_STORAGE, BMC_GET_SEL_INFO, nil)
 	if err != nil {
@@ -322,31 +394,34 @@ func (i *IPMI) GetSELInfo() (*SELInfo, error) {
 	return &info, nil
 }
 
+// GetLanConfig retrieves the LAN configuration parameters for a specified channel.
 func (i *IPMI) GetLanConfig(channel byte, param byte) ([]byte, error) {
-	var data [4]byte
-	data[0] = channel
-	data[1] = param
-	data[2] = 0
-	data[3] = 0
+	data := [4]byte{
+		channel,
+		param,
+		0,
+		0,
+	}
 
 	return i.SendRecv(_IPMI_NETFN_TRANSPORT, BMC_GET_LAN_CONFIG, data[:4])
 }
 
+// RawCmd sends a raw IPMI command to the BMC.
 func (i *IPMI) RawCmd(param []byte) ([]byte, error) {
 	if len(param) < 2 {
-		return nil, errors.New("not enough parameters given")
+		return nil, errNotEnoughParams
 	}
 
 	msg := Msg{
 		Netfn: NetFn(param[0]),
 		Cmd:   Command(param[1]),
 	}
+
 	if len(param) > 2 {
 		msg.Data = unsafe.Pointer(&param[2])
 	}
 
 	msg.DataLen = uint16(len(param) - 2)
-
 	return i.RawSendRecv(msg)
 }
 

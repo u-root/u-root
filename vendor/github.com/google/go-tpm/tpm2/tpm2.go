@@ -387,6 +387,35 @@ type UnsealResponse struct {
 	OutData TPM2BSensitiveData
 }
 
+// ObjectChangeAuth is the input to TPM2_ObjectChangeAuth.
+// See definition in Part 3, Commands, section 12.8
+type ObjectChangeAuth struct {
+	// TPM handle of an object
+	ObjectHandle handle `gotpm:"handle,auth"`
+	// handle of the parent
+	ParentHandle handle `gotpm:"handle"`
+	// new authorization value
+	NewAuth TPM2BAuth
+}
+
+// Command implements the Command interface.
+func (ObjectChangeAuth) Command() TPMCC { return TPMCCObjectChangeAuth }
+
+// Execute executes the command and returns the response.
+func (cmd ObjectChangeAuth) Execute(t transport.TPM, s ...Session) (*ObjectChangeAuthResponse, error) {
+	var rsp ObjectChangeAuthResponse
+	if err := execute[ObjectChangeAuthResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// ObjectChangeAuthResponse the response from TPM2_ObjectChangeAuth.
+type ObjectChangeAuthResponse struct {
+	// private area containing the new authorization value
+	OutPrivate TPM2BPrivate
+}
+
 // CreateLoaded is the input to TPM2_CreateLoaded.
 // See definition in Part 3, Commands, section 12.9
 type CreateLoaded struct {
@@ -421,6 +450,97 @@ type CreateLoadedResponse struct {
 	OutPublic TPM2BPublic
 	// the name of the created object
 	Name TPM2BName
+}
+
+// EncryptDecrypt2 is the input to TPM2_EncryptDecrypt2
+type EncryptDecrypt2 struct {
+	// reference to public portion of symmetric key to use for encryption
+	KeyHandle handle `gotpm:"handle,auth"`
+	Message   TPM2BMaxBuffer
+	Decrypt   TPMIYesNo
+	Mode      TPMIAlgSymMode `gotpm:"nullable"`
+	IV        TPM2BIV
+}
+
+// Command implements the Command interface.
+func (EncryptDecrypt2) Command() TPMCC { return TPMCCEncryptDecrypt2 }
+
+// Execute executes the command and returns the response.
+func (cmd EncryptDecrypt2) Execute(t transport.TPM, s ...Session) (*EncryptDecrypt2Response, error) {
+	var rsp EncryptDecrypt2Response
+	err := execute[EncryptDecrypt2Response](t, cmd, &rsp, s...)
+	if err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// EncryptDecrypt2Response is the response from TPM2_EncryptDecrypt2.
+type EncryptDecrypt2Response struct {
+	OutData TPM2BMaxBuffer
+	IV      TPM2BIV
+}
+
+// RSAEncrypt is the input to TPM2_RSA_Encrypt
+// See definition in Part 3, Commands, section 14.2.
+type RSAEncrypt struct {
+	// reference to public portion of RSA key to use for encryption
+	KeyHandle handle `gotpm:"handle"`
+	// message to be encrypted
+	Message TPM2BPublicKeyRSA
+	// the padding scheme to use if scheme associated with keyHandle is TPM_ALG_NULL
+	InScheme TPMTRSADecrypt `gotpm:"nullable"`
+	// optional label L to be associated with the message
+	Label TPM2BData `gotpm:"optional"`
+}
+
+// Command implements the Command interface.
+func (RSAEncrypt) Command() TPMCC { return TPMCCRSAEncrypt }
+
+// Execute executes the command and returns the response.
+func (cmd RSAEncrypt) Execute(t transport.TPM, s ...Session) (*RSAEncryptResponse, error) {
+	var rsp RSAEncryptResponse
+	if err := execute[RSAEncryptResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// RSAEncryptResponse is the response from TPM2_RSA_Encrypt
+type RSAEncryptResponse struct {
+	// encrypted output
+	OutData TPM2BPublicKeyRSA
+}
+
+// RSADecrypt is the input to TPM2_RSA_Decrypt
+// See definition in Part 3, Commands, section 14.3.
+type RSADecrypt struct {
+	// RSA key to use for decryption
+	KeyHandle handle `gotpm:"handle,auth"`
+	// cipher text to be decrypted
+	CipherText TPM2BPublicKeyRSA
+	// the padding scheme to use if scheme associated with keyHandle is TPM_ALG_NULL
+	InScheme TPMTRSADecrypt `gotpm:"nullable"`
+	// label whose association with the message is to be verified
+	Label TPM2BData `gotpm:"optional"`
+}
+
+// Command implements the Command interface.
+func (RSADecrypt) Command() TPMCC { return TPMCCRSADecrypt }
+
+// Execute executes the command and returns the response.
+func (cmd RSADecrypt) Execute(t transport.TPM, s ...Session) (*RSADecryptResponse, error) {
+	var rsp RSADecryptResponse
+	if err := execute[RSADecryptResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// RSADecryptResponse is the response from TPM2_RSA_Decrypt
+type RSADecryptResponse struct {
+	// decrypted output
+	Message TPM2BPublicKeyRSA
 }
 
 // ECDHZGen is the input to TPM2_ECDHZGen.
@@ -533,6 +653,36 @@ func (cmd HashSequenceStart) Execute(t transport.TPM, s ...Session) (*HashSequen
 type HashSequenceStartResponse struct {
 	// a handle to reference the sequence
 	SequenceHandle TPMIDHObject
+}
+
+// HmacStart is the input to TPM2_HMAC_Start.
+// See definition in Part 3, Commands, section 17.2.2
+type HmacStart struct {
+	// HMAC key handle requiring an authorization session for the USER role
+	Handle AuthHandle `gotpm:"handle,auth"`
+	// authorization value for subsequent use of the sequence
+	Auth TPM2BAuth
+	// the hash algorithm to use for the hmac sequence
+	HashAlg TPMIAlgHash `gotpm:"nullable"`
+}
+
+// Command implements the Command interface.
+func (HmacStart) Command() TPMCC { return TPMCCHMACStart }
+
+// Execute executes the command and returns the response.
+func (cmd HmacStart) Execute(t transport.TPM, s ...Session) (*HmacStartResponse, error) {
+	var rsp HmacStartResponse
+	if err := execute[HmacStartResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// HmacStartResponse is the response from TPM2_HMAC_Start.
+// See definition in Part 3, Commands, section 17.2.2
+type HmacStartResponse struct {
+	// a handle to reference the sequence
+	SequenceHandle TPMIDHObject `gotpm:"handle"`
 }
 
 // SequenceUpdate is the input to TPM2_SequenceUpdate.
@@ -1095,6 +1245,68 @@ func (cmd PolicyPCR) Update(policy *PolicyCalculator) error {
 // PolicyPCRResponse is the response from TPM2_PolicyPCR.
 type PolicyPCRResponse struct{}
 
+// PolicyAuthValue is the input to TPM2_PolicyAuthValue.
+// See definition in Part 3, Commands, section 23.17.
+type PolicyAuthValue struct {
+	// handle for the policy session being extended
+	PolicySession handle `gotpm:"handle"`
+}
+
+// Command implements the Command interface.
+func (PolicyAuthValue) Command() TPMCC { return TPMCCPolicyAuthValue }
+
+// Execute executes the command and returns the response.
+func (cmd PolicyAuthValue) Execute(t transport.TPM, s ...Session) (*PolicyAuthValueResponse, error) {
+	var rsp PolicyAuthValueResponse
+	err := execute[PolicyAuthValueResponse](t, cmd, &rsp, s...)
+	if err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// Update implements the PolicyAuthValue interface.
+func (cmd PolicyAuthValue) Update(policy *PolicyCalculator) error {
+	return policy.Update(TPMCCPolicyAuthValue)
+}
+
+// PolicyAuthValueResponse is the response from TPM2_PolicyAuthValue.
+type PolicyAuthValueResponse struct{}
+
+// PolicyDuplicationSelect is the input to TPM2_PolicyDuplicationSelect.
+// See definition in Part 3, Commands, section 23.15.
+type PolicyDuplicationSelect struct {
+	// handle for the policy session being extended
+	PolicySession handle `gotpm:"handle"`
+	ObjectName    TPM2BName
+	NewParentName TPM2BName
+	IncludeObject TPMIYesNo
+}
+
+// Command implements the Command interface.
+func (PolicyDuplicationSelect) Command() TPMCC { return TPMCCPolicyDuplicationSelect }
+
+// Execute executes the command and returns the response.
+func (cmd PolicyDuplicationSelect) Execute(t transport.TPM, s ...Session) (*PolicyDuplicationSelectResponse, error) {
+	var rsp PolicyDuplicationSelectResponse
+	err := execute[PolicyDuplicationSelectResponse](t, cmd, &rsp, s...)
+	if err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// Update implements the PolicyDuplicationSelect interface.
+func (cmd PolicyDuplicationSelect) Update(policy *PolicyCalculator) error {
+	if cmd.IncludeObject {
+		return policy.Update(TPMCCPolicyDuplicationSelect, cmd.ObjectName.Buffer, cmd.NewParentName.Buffer, cmd.IncludeObject)
+	}
+	return policy.Update(TPMCCPolicyDuplicationSelect, cmd.NewParentName.Buffer, cmd.IncludeObject)
+}
+
+// PolicyDuplicationSelectResponse is the response from TPM2_PolicyDuplicationSelect.
+type PolicyDuplicationSelectResponse struct{}
+
 // PolicyNV is the input to TPM2_PolicyNV.
 // See definition in Part 3, Commands, section 23.9.
 type PolicyNV struct {
@@ -1331,7 +1543,8 @@ type PolicyAuthorizeNVResponse struct{}
 // See definition in Part 3, Commands, section 24.1
 type CreatePrimary struct {
 	// TPM_RH_ENDORSEMENT, TPM_RH_OWNER, TPM_RH_PLATFORM+{PP},
-	// or TPM_RH_NULL
+	// TPM_RH_NULL, TPM_RH_FW_ENDORSEMENT, TPM_RH_FW_OWNER
+	// TPM_RH_FW_PLATFORM+{PP}  or TPM_RH_FW_NULL
 	PrimaryHandle handle `gotpm:"handle,auth"`
 	// the sensitive data
 	InSensitive TPM2BSensitiveCreate
@@ -1396,6 +1609,30 @@ func (cmd Clear) Execute(t transport.TPM, s ...Session) (*ClearResponse, error) 
 
 // ClearResponse is the response from TPM2_Clear.
 type ClearResponse struct{}
+
+// HierarchyChangeAuth is the input to TPM2_HierarchyChangeAuth.
+// See definition in Part 3, Commands, section 24.8
+type HierarchyChangeAuth struct {
+	// TPM_RH_ENDORSEMENT, TPM_RH_LOCKOUT, TPM_RH_OWNER or TPM_RH_PLATFORM+{PP}
+	AuthHandle handle `gotpm:"handle,auth"`
+	// new authorization value
+	NewAuth TPM2BAuth
+}
+
+// Command implements the Command interface.
+func (HierarchyChangeAuth) Command() TPMCC { return TPMCCHierarchyChanegAuth }
+
+// Execute executes the command and returns the response.
+func (cmd HierarchyChangeAuth) Execute(t transport.TPM, s ...Session) (*HierarchyChangeAuthResponse, error) {
+	var rsp HierarchyChangeAuthResponse
+	if err := execute[HierarchyChangeAuthResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// HierarchyChangeAuthResponse is the response from TPM2_HierarchyChangeAuth.
+type HierarchyChangeAuthResponse struct{}
 
 // ContextSave is the input to TPM2_ContextSave.
 // See definition in Part 3, Commands, section 28.2
@@ -1493,6 +1730,53 @@ func (cmd EvictControl) Execute(t transport.TPM, s ...Session) (*EvictControlRes
 	return &rsp, nil
 }
 
+// Duplicate is the input to TPM2_Duplicate.
+// See definition in Part 3, Commands, section 13.1
+type Duplicate struct {
+	// ObjectHandle is the handle of the object to dupliate.
+	ObjectHandle handle `gotpm:"handle,auth"`
+
+	// NewParentHandle is the handle of the new parent.
+	NewParentHandle handle `gotpm:"handle"`
+
+	// EncryptionKeyIn is the optional symmetric encryption key used as the
+	// inner wrapper. If SymmetricAlg is TPM_ALG_NULL, then this parameter
+	// shall be the Empty Buffer.
+	EncryptionKeyIn TPM2BData
+
+	// Definition of the symmetric algorithm to use for the inner wrapper.
+	// It may be TPM_ALG_NULL if no inner wrapper is applied.
+	Symmetric TPMTSymDef
+}
+
+// DuplicateResponse is the response from TPM2_Duplicate.
+type DuplicateResponse struct {
+	// EncryptionKeyOut is the symmetric encryption key used as the
+	// inner wrapper. If SymmetricAlg is TPM_ALG_NULL, this value
+	// shall be the Empty Buffer.
+	EncryptionKeyOut TPM2BData
+
+	// Duplicate is the private area of the object. It may be encrypted by
+	// EncryptionKeyIn and may be doubly encrypted.
+	Duplicate TPM2BPrivate
+
+	// OutSymSeed is the seed protected by the asymmetric algorithms of new
+	// parent.
+	OutSymSeed TPM2BEncryptedSecret
+}
+
+// Command implements the Command interface.
+func (Duplicate) Command() TPMCC { return TPMCCDuplicate }
+
+// Execute executes the command and returns the response.
+func (cmd Duplicate) Execute(t transport.TPM, s ...Session) (*DuplicateResponse, error) {
+	var rsp DuplicateResponse
+	if err := execute[DuplicateResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
 // Import is the input to TPM2_Import.
 // See definition in Part 3, Commands, section 13.3
 type Import struct {
@@ -1565,6 +1849,28 @@ type GetCapabilityResponse struct {
 	// the capability data
 	CapabilityData TPMSCapabilityData
 }
+
+// TestParms is the input to TPM2_TestParms.
+// See definition in Part 3, Commands, section 30.3
+type TestParms struct {
+	// Algorithms parameters to be validates
+	Parameters TPMTPublicParms
+}
+
+// Command implements the Command interface.
+func (TestParms) Command() TPMCC { return TPMCCTestParms }
+
+// Execute executes the command and returns the response.
+func (cmd TestParms) Execute(t transport.TPM, s ...Session) (*TestParmsResponse, error) {
+	var rsp TestParmsResponse
+	if err := execute[TestParmsResponse](t, cmd, &rsp, s...); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// TestParmsResponse is the response from TPM2_TestParms.
+type TestParmsResponse struct{}
 
 // NVDefineSpace is the input to TPM2_NV_DefineSpace.
 // See definition in Part 3, Commands, section 31.3.

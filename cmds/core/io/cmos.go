@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !tinygo && (amd64 || 386)
+//go:build (!tinygo || tinygo.enable) && (amd64 || 386)
 
 package main
 

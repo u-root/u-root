@@ -26,7 +26,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"log"
 	"os"
 	"time"
@@ -34,7 +34,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const usageMessage = "shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]"
+var (
+	errUsageMessage = errors.New("shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]")
+)
 
 var (
 	opcodes = map[string]uint{
@@ -58,7 +60,7 @@ func shutdown(dryrun bool, args ...string) (uint, error) {
 	}
 	op, ok := opcodes[args[0]]
 	if !ok {
-		return 0, fmt.Errorf(usageMessage)
+		return 0, errUsageMessage
 	}
 	if len(args) < 2 {
 		args = append(args, "now")

@@ -1,6 +1,8 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
+
 package main
 
 import (
@@ -316,8 +318,6 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 
 		if applicationLayer != nil {
 			length = len(applicationLayer.LayerContents())
-		} else {
-			length = 0
 		}
 
 		switch layer := transportLayer.(type) {
@@ -327,6 +327,8 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 			data = fmt.Sprintf("UDP, length %d", length)
 		case *layers.UDPLite:
 			data = fmt.Sprintf("UDPLite, length %d", length)
+		case nil:
+			data = fmt.Sprintf("unknown transport layer, length %d", length)
 		default:
 			data = fmt.Sprintf("%s, length %d", layer.LayerType(), length)
 		}

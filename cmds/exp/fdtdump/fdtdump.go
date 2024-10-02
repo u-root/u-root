@@ -50,6 +50,7 @@ func main() {
 		}
 		fmt.Println(string(out))
 	} else {
+		//nolint:staticcheck
 		if err := fdt.PrintDTS(os.Stdout); err != nil {
 			log.Fatalf("error printing dts: %v", err)
 		}

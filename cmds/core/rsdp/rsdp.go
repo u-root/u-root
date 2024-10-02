@@ -34,7 +34,7 @@ import (
 var cmdUsage = "Usage: rsdp"
 
 func usage() {
-	log.Fatalf(cmdUsage)
+	log.Fatal(cmdUsage)
 }
 
 func main() {
