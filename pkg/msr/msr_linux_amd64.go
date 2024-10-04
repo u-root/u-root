@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/u-root/u-root/pkg/cpuid"
+	"github.com/u-root/cpuid"
 )
 
 // CPUs is a slice of the various cpus to read or write the MSR to.
@@ -274,13 +274,9 @@ func (m MSR) TestAndSet(c CPUs, clearMask uint64, setMask uint64) []error {
 // Locked verifies that for all MSRVal's for the CPU vendor, the MSRs are locked.
 // TODO: this is another Intel-specific function at present.
 func Locked() error {
-	vendor, err := cpuid.CPUManufacturerID()
-	if err != nil {
-		return err
-	}
-
+	vendor := cpuid.VendorIdentificatorString
 	// TODO: support more than Intel. Use the vendor id to look up msrs.
-	if vendor != cpuid.ManufacturerIDIntel {
+	if vendor != "GenuineIntel" {
 		return fmt.Errorf("sorry, this package only supports Intel at present")
 	}
 

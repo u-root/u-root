@@ -173,9 +173,6 @@ github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
 github.com/insomniacslk/dhcp/netboot
 github.com/insomniacslk/dhcp/rfc1035label
-# github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
-## explicit
-github.com/intel-go/cpuid
 # github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 ## explicit; go 1.12
 github.com/ishidawataru/sctp
@@ -339,6 +336,9 @@ github.com/tklauser/go-sysconf
 # github.com/tklauser/numcpus v0.8.0
 ## explicit; go 1.18
 github.com/tklauser/numcpus
+# github.com/u-root/cpuid v0.0.0
+## explicit
+github.com/u-root/cpuid
 # github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
 ## explicit; go 1.20
 github.com/u-root/gobusybox/src/pkg/bb
