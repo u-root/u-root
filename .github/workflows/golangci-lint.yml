@@ -25,4 +25,4 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.60.3
-          args: --out-format=line-number
+          args: --out-format=line-number --timeout=5m
