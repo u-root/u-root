@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"sort"
 	"strings"
-	"unsafe"
 
 	"github.com/u-root/u-root/pkg/align"
 )
@@ -137,17 +135,6 @@ func (r Range) IsSupersetOf(r2 Range) bool {
 // Disjunct returns true if r and r2 do not overlap.
 func (r Range) Disjunct(r2 Range) bool {
 	return !r.Overlaps(r2)
-}
-
-func (r Range) toSlice() []byte {
-	var data []byte
-
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-	sh.Data = r.Start
-	sh.Len = int(r.Size)
-	sh.Cap = int(r.Size)
-
-	return data
 }
 
 // Ranges is a list of non-overlapping ranges.

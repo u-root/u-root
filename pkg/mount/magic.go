@@ -131,6 +131,9 @@ var magics = []magic{
 	{magic: BTRFS, name: "btrfs", off: 0x10040},
 }
 
+// TODO: get author review
+//
+//nolint:unused
 var unknownMagics = []magic{
 	//
 	// here there be dragons.
