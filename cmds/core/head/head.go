@@ -26,7 +26,7 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, bytes, count int, 
 	var buffer []byte
 	if bytes > 0 {
 		printBytes = true
-		buffer = make([]byte, bytes)
+		buffer = make([]byte, 4096)
 	}
 
 	if count == 0 {
@@ -46,17 +46,27 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, bytes, count int, 
 			}
 		}
 		if printBytes {
-			n, err := io.ReadFull(r, buffer)
-			if err == io.ErrUnexpectedEOF {
-				// ignore if user request more bytes than file has
-			} else if err != nil {
-				errs = errors.Join(errs, fmt.Errorf("head: %w", err))
-			}
-			stdout.Write(buffer[:n])
+			c := bytes
+			for {
+				n, err := io.ReadFull(r, buffer)
+				if err == io.EOF {
+					break
+				}
+				if err != nil && err != io.ErrUnexpectedEOF {
+					return err
+				}
 
-			// cleanup stdin
-			if len(files) == 0 {
-				_, _ = bufio.NewReader(stdin).ReadString('\n')
+				stdout.Write(buffer[:min(c, n)])
+				c -= n
+				if c <= 0 {
+					break
+				}
+
+				// handle the case when user request more bytes that
+				// source have
+				if err == io.ErrUnexpectedEOF {
+					break
+				}
 			}
 		} else {
 			var c int
