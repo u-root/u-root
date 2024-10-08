@@ -288,10 +288,10 @@ func (cmd *cmd) printLinkJSON(links []netlink.Link, addresses [][]netlink.Addr) 
 	return printJSON(*cmd, linkObs)
 }
 
-func (cmd *cmd) showLinkAddresses(addrs []netlink.Addr) error {
+func (cmd *cmd) showLinkAddresses(addrs []netlink.Addr) {
 	for _, addr := range addrs {
-
 		var inet string
+
 		switch addr.IPNet.IP.To4() {
 		default:
 			inet = "inet"
@@ -323,5 +323,4 @@ func (cmd *cmd) showLinkAddresses(addrs []netlink.Addr) error {
 
 		fmt.Fprintf(cmd.Out, "       valid_lft %s preferred_lft %s\n", validLft, preferredLft)
 	}
-	return nil
 }

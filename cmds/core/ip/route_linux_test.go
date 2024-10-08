@@ -491,11 +491,7 @@ func TestMatchRoutes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := matchRoutes(tt.routes, tt.root, tt.match, tt.exact)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("matchRoutes() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := matchRoutes(tt.routes, tt.root, tt.match, tt.exact)
 			if len(got) != len(tt.want) {
 				t.Errorf("matchRoutes() = %v, want %v", got, tt.want)
 				return
