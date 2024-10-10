@@ -20,7 +20,6 @@
 uint32_t info = 0x0;
 uint32_t entry = 0x0;
 uint32_t magic = 0x0;
-void end() {}
 
 uintptr_t addrOfStart()
 {
@@ -73,22 +72,22 @@ void boot()
 {
 	asm volatile(
 		// disable paging
-		"movl %%cr0, %%eax\n"
-		"andl %0, %%eax\n"
-		"movl %%eax, %%cr0\n"
+		"mov %%cr0, %%rax\n"
+		"and %0, %%rax\n"
+		"mov %%rax, %%cr0\n"
 
 		// disable long mode
-		"movl %1, %%ecx\n"
+		"mov %1, %%rcx\n"
 		"rdmsr\n"
-		"andl %2, %%eax\n"
+		"and %2, %%rax\n"
 		"wrmsr\n"
 
 		// disable physical address extension (pae)
-		"xorl %%eax, %%eax\n"
-		"movl %%eax, %%cr4\n"
+		"xor %%rax, %%rax\n"
+		"mov %%rax, %%cr4\n"
 
 		// load data segments
-		"movl $0x10, %%eax\n"
+		"mov $0x10, %%rax\n"
 		"mov %%ax, %%ds\n"
 		"mov %%ax, %%es\n"
 		"mov %%ax, %%ss\n"
@@ -96,11 +95,11 @@ void boot()
 		"mov %%ax, %%gs\n"
 
 		// prepare long jump
-		"movl %%esi, %%eax\n"
+		"mov %%rsi, %%rax\n"
 		"jmp farjump32\n"
 		:
 		: "i"(CR0_PG), "i"(MSR_EFER), "i"(EFER_LME)
-		: "eax", "ecx");
+		: "rax", "rcx");
 }
 
 void start()
@@ -119,19 +118,21 @@ void start()
 	extern uint32_t magic;
 	extern uint32_t entry;
 
-	extern void farjump32();
-	extern void boot();
-	extern void farjump64();
+	uintptr_t farjump32_addr = (uintptr_t)farjump32;
+	uintptr_t boot_addr = (uintptr_t)boot;
+	uintptr_t farjump64_addr = (uintptr_t)farjump64;
 
 	asm volatile(
-		"movl %0, %%ebx\n"
-		"movl %1, %%esi\n"
-		"movl %2, %%eax\n"
-		"movl %%eax, farjump32+1\n"
-		"leaq boot, %%rcx\n"
-		"movl %%ecx, farjump64+6\n"
-		"jmp farjump64\n"
+		"mov %0, %%rbx\n"
+		"mov %1, %%rsi\n"
+		"mov %2, %%rax\n"
+		"mov %%rax, (%3)\n"
+		"lea (%4), %%rcx\n"
+		"mov %%rcx, 6(%5)\n"
+		"jmp *%5\n"
 		:
-		: "m"(info), "m"(magic), "m"(entry)
-		: "eax", "ebx", "esi", "ecx");
+		: "m"(info), "m"(magic), "m"(entry), "r"(farjump32_addr + 1), "r"(boot_addr), "r"(farjump64_addr)
+		: "rax", "rbx", "rsi", "rcx");
 }
+
+void end(void) {}

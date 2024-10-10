@@ -133,7 +133,7 @@ TEXT farjump32(SB),NOSPLIT,$0
 	WORD	$0x18 // code segment
 
 TEXT gdt(SB),NOSPLIT,$0
-	QUAD	$0x0			// 0x0 null entry
+	QUAD	$0x0		// 0x0 null entry
 	QUAD	$CODE_SEGMENT	// 0x8
 	QUAD	$DATA_SEGMENT	// 0x10
 	QUAD	$CODE_SEGMENT	// 0x18
