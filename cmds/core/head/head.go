@@ -12,12 +12,11 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 )
 
 var errCombine = fmt.Errorf("can't combine line and byte counts")
 
-func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, bytes, count int, files ...string) error {
+func run(stdin io.Reader, stdout, stderr io.Writer, bytes, count int, files ...string) error {
 	if bytes > 0 && count > 0 {
 		return errCombine
 	}
@@ -39,9 +38,9 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, bytes, count int, 
 	var handle = func(r io.Reader, name string) error {
 		if len(files) > 1 {
 			if newLineHeader {
-				fmt.Fprintf(stdout, "\n==> %s <==\n", filepath.Base(name))
+				fmt.Fprintf(stdout, "\n==> %s <==\n", name)
 			} else {
-				fmt.Fprintf(stdout, "==> %s <==\n", filepath.Base(name))
+				fmt.Fprintf(stdout, "==> %s <==\n", name)
 				newLineHeader = true
 			}
 		}
@@ -62,7 +61,7 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, bytes, count int, 
 					break
 				}
 
-				// handle the case when user request more bytes that
+				// handle the case when user request more bytes than
 				// source have
 				if err == io.ErrUnexpectedEOF {
 					break
@@ -79,7 +78,6 @@ func run(stdin io.Reader, stdout io.Writer, stderr io.Writer, bytes, count int, 
 				}
 			}
 		}
-
 		return nil
 	}
 

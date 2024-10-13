@@ -78,7 +78,7 @@ func TestHead(t *testing.T) {
 		}
 
 		expected := fmt.Sprintf("==> %s <==\nf11\n==> %s <==\nf21",
-			filepath.Base(f1.Name()), filepath.Base(f2.Name()))
+			f1.Name(), f2.Name())
 
 		if stdout.String() != expected {
 			t.Errorf("%v != %v", expected, stdout.String())
