@@ -5,7 +5,6 @@
 package universalpayload
 
 import (
-	"bufio"
 	"bytes"
 	"debug/pe"
 	"encoding/binary"
@@ -14,12 +13,12 @@ import (
 	"io"
 	"math"
 	"os"
-	"regexp"
-	"strconv"
-	"unsafe"
+	"testing"
 
 	"github.com/u-root/u-root/pkg/dt"
 )
+
+var sysfsCPUInfoPath = "/proc/cpuinfo"
 
 // Properties to be fetched from device tree.
 const (
@@ -45,12 +44,6 @@ const (
 	IMAGE_REL_BASED_HIGHLOW  = 3
 	IMAGE_REL_BASED_DIR64    = 10
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
-
-var sysfsCPUInfoPath = "/proc/cpuinfo"
 
 type FdtLoad struct {
 	Load       uint64
@@ -79,10 +72,10 @@ var (
 	ErrPeFailToGetRelocData    = fmt.Errorf("failed to get .reloc section data")
 	ErrPeUnsupportedPeHeader   = fmt.Errorf("unsupported pe header format")
 	ErrPeRelocOutOfBound       = fmt.Errorf("relocation address out of bounds during pe file relocation")
-	ErrCPUAddressNotFound      = errors.New("'address sizes' information not found")
-	ErrCPUAddressRead          = errors.New("failed to read 'address sizes'")
-	ErrCPUAddressConvert       = errors.New("failed to convert physical bits size")
 	ErrAlignPadRange           = errors.New("failed to align pad size, out of range")
+	ErrCPUAddressConvert       = errors.New("failed to convert physical bits size")
+	ErrCPUAddressRead          = errors.New("failed to read 'address sizes'")
+	ErrCPUAddressNotFound      = errors.New("'address sizes' information not found")
 )
 
 // GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
@@ -177,41 +170,6 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}, nil
 }
 
-// Get Physical Address size from sysfs node /proc/cpuinfo.
-// Both Physical and Virtual Address size will be prompted as format:
-// "address sizes	: 39 bits physical, 48 bits virtual"
-// Use regular expression to fetch the integer of Physical Address
-// size before "bits physical" keyword
-func getPhysicalAddressSizes() (uint8, error) {
-	file, err := os.Open(sysfsCPUInfoPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open %s: %w", sysfsCPUInfoPath, err)
-	}
-	defer file.Close()
-
-	// Regular expression to match the address size line
-	re := regexp.MustCompile(`address sizes\s*:\s*(\d+)\s+bits physical,\s*(\d+)\s+bits virtual`)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match := re.FindStringSubmatch(line); match != nil {
-			// Convert the physical bits size to integer
-			physicalBits, err := strconv.ParseUint(match[1], 10, 8)
-			if err != nil {
-				return 0, errors.Join(ErrCPUAddressConvert, err)
-			}
-			return uint8(physicalBits), nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("%w: file: %s, err: %w", ErrCPUAddressRead, sysfsCPUInfoPath, err)
-	}
-
-	return 0, ErrCPUAddressNotFound
-}
-
 // alignHOBLength writes pad bytes at the end of a HOB buf
 // It's because we calculate HOB length with golang, while write bytes to the buf with actual length
 func alignHOBLength(expectLen uint64, bufLen int, buf *bytes.Buffer) error {
@@ -229,46 +187,6 @@ func alignHOBLength(expectLen uint64, bufLen int, buf *bytes.Buffer) error {
 		}
 	}
 	return nil
-}
-
-// Constrcut trampoline code before jump to entry point of FIT image.
-// Due to lack of support to set value of General Purpose Registers in kexec,
-// bootloader parameter needs to be prepared in trampoline code.
-// Also stack is prepared in trampoline code snippet to ensure no data leak.
-func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
-	ptrToSlice := func(ptr uintptr, size int) []byte {
-		return unsafe.Slice((*byte)(unsafe.Pointer(ptr)), size)
-	}
-
-	trampBegin := addrOfStart()
-	trampStack := addrOfStackTop()
-	trampHob := addrOfHobAddr()
-
-	padLen := uint64(trampHob - trampStack - 8)
-
-	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
-
-	buf = append(buf, tramp...)
-
-	stackTop := hobAddr + tmpStackTop
-	appendUint64 := func(slice []uint8, value uint64) []uint8 {
-		tmpBytes := make([]uint8, 8)
-		binary.LittleEndian.PutUint64(tmpBytes, value)
-		return append(slice, tmpBytes...)
-	}
-
-	padWithLength := func(slice []uint8, len uint64) []uint8 {
-		tmpBytes := make([]uint8, len)
-		return append(slice, tmpBytes...)
-	}
-
-	buf = appendUint64(buf, stackTop)
-	buf = padWithLength(buf, padLen)
-	buf = appendUint64(buf, hobAddr)
-	buf = padWithLength(buf, padLen)
-	buf = appendUint64(buf, entry)
-
-	return buf
 }
 
 // Walk through .reloc section, update expected address to actual address
@@ -360,4 +278,21 @@ func relocateFdtData(dst uint64, fdtLoad *FdtLoad, data []byte) error {
 	fdtLoad.Load = dst
 
 	return nil
+}
+
+func mockCPUTempInfoFile(t *testing.T, content string) string {
+	tmpDir := t.TempDir()
+	tempFile, err := os.CreateTemp(tmpDir, "cpuinfo")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+
+	sysfsCPUInfoPath = tempFile.Name()
+
+	if _, err := tempFile.WriteString(content); err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+
+	tempFile.Close()
+	return tempFile.Name()
 }
