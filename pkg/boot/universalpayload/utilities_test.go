@@ -10,9 +10,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"os"
 	"reflect"
-	"strconv"
 	"testing"
 	"unsafe"
 
@@ -184,104 +182,6 @@ func TestGetFdtInfo(t *testing.T) {
 				}
 				if tt.fdtLoad.EntryStart != got.EntryStart {
 					t.Fatalf("getFdtInfo fdtLoad.EntryStart = %v, want = %v", got.EntryStart, tt.fdtLoad.EntryStart)
-				}
-			}
-		})
-	}
-}
-
-func mockCPUTempInfoFile(t *testing.T, content string) string {
-	tmpDir := t.TempDir()
-	tempFile, err := os.CreateTemp(tmpDir, "cpuinfo")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	sysfsCPUInfoPath = tempFile.Name()
-
-	if _, err := tempFile.WriteString(content); err != nil {
-		t.Fatalf("Failed to write to temp file: %v", err)
-	}
-
-	tempFile.Close()
-	return tempFile.Name()
-}
-
-func TestGetPhysicalAddressSizes(t *testing.T) {
-	tests := []struct {
-		name           string
-		cpuInfoContent string
-		expectedBits   uint8
-		expectedErr    error
-	}{
-		{
-			name: "Valid Address Size",
-			cpuInfoContent: `
-processor	: 0
-vendor_id	: GenuineIntel
-cpu family	: 6
-model		: 142
-model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
-stepping	: 10
-microcode	: 0xea
-cpu MHz		: 1992.000
-cache size	: 8192 KB
-physical id	: 0
-siblings	: 4
-core id		: 0
-cpu cores	: 2
-apicid		: 0
-initial apicid	: 0
-address sizes	: 39 bits physical, 48 bits virtual
-`,
-			expectedBits: 39,
-			expectedErr:  nil,
-		},
-		{
-			name: "No Address Size Info",
-			cpuInfoContent: `
-processor	: 0
-vendor_id	: GenuineIntel
-cpu family	: 6
-model		: 142value out of range
-model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
-`,
-			expectedBits: 0,
-			expectedErr:  ErrCPUAddressNotFound,
-		},
-		{
-			name: "Invalid Address Size",
-			// number value out of range
-			cpuInfoContent: `
-address sizes	: 1000 bits physical, 48 bits virtual
-`,
-			expectedBits: 0,
-			expectedErr:  strconv.ErrRange,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tempFile := mockCPUTempInfoFile(t, tt.cpuInfoContent)
-			defer os.Remove(tempFile)
-
-			physicalBits, err := getPhysicalAddressSizes()
-
-			if tt.expectedErr == nil {
-				// success validation
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if physicalBits != tt.expectedBits {
-					t.Errorf("Unexpected physical address size %d, want = %d", physicalBits, tt.expectedBits)
-				}
-			} else {
-				// fault validation
-				if err == nil {
-					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
-				}
-				if !errors.Is(err, tt.expectedErr) {
-					t.Errorf("Unxpected error %+v, want = %q", err, tt.expectedErr)
 				}
 			}
 		})
