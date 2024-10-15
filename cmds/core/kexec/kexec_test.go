@@ -117,6 +117,15 @@ func TestParseCmdline(t *testing.T) {
 			},
 		},
 		{
+			name: "Test append command line",
+			args: []string{"kexec", "-l", "--append", "${CMDLINE}", "/path/to/kernel"},
+			expected: options{
+				load:          true,
+				appendCmdline: "${CMDLINE}",
+				kernelpath:    "/path/to/kernel",
+			},
+		},
+		{
 			name: "Test all set",
 			args: []string{"kexec", "-c", "${CMDLINE}", "-d", "--dtb", "foo", "-e", "-x", "/some/file", "-i", "/path/to/initrd", "-l", "-L", "--module", "/mod1", "--reuse-cmdline", "/path/to/kernel"},
 			expected: options{
