@@ -18,18 +18,19 @@ import (
 )
 
 // setup writes a set of files, putting 1 byte in each file.
-func setup(t *testing.T, data []byte) (string, error) {
+func setup(t *testing.T, data []byte) string {
+	t.Helper()
 	t.Logf(":: Creating simulation data. ")
 	dir := t.TempDir()
 
 	for i, d := range data {
 		n := fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i)
 		if err := os.WriteFile(n, []byte{d}, 0o666); err != nil {
-			return "", err
+			t.Fatal(err)
 		}
 	}
 
-	return dir, nil
+	return dir
 }
 
 // TestCat test cat function against 4 files, in each file it is written a bit of someData
@@ -39,10 +40,7 @@ func TestCat(t *testing.T) {
 	var files []string
 	someData := []byte{'l', 2, 3, 4, 'd'}
 
-	dir, err := setup(t, someData)
-	if err != nil {
-		t.Fatalf("setup has failed, %v", err)
-	}
+	dir := setup(t, someData)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
@@ -76,10 +74,7 @@ func TestRunFiles(t *testing.T) {
 	var files []string
 	someData := []byte{'l', 2, 3, 4, 'd'}
 
-	dir, err := setup(t, someData)
-	if err != nil {
-		t.Fatalf("setup has failed, %v", err)
-	}
+	dir := setup(t, someData)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
@@ -98,10 +93,7 @@ func TestRunFilesError(t *testing.T) {
 	var files []string
 	someData := []byte{'l', 2, 3, 4, 'd'}
 
-	dir, err := setup(t, someData)
-	if err != nil {
-		t.Fatalf("setup has failed, %v", err)
-	}
+	dir := setup(t, someData)
 
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
