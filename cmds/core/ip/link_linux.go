@@ -128,7 +128,7 @@ func (cmd *cmd) linkSet() error {
 		case "txqueuelen", "txqlen":
 			return cmd.setLinkTxQLen(iface)
 		case "group":
-
+			return cmd.setLinkGroup(iface)
 		}
 	}
 
