@@ -17,26 +17,37 @@ import (
 	"os"
 )
 
-var algorithm int
+type Algorithm int
 
-var usage = "Usage:\nshasum -a <algorithm> <File Name>"
+const (
+	SHA1   Algorithm = 1
+	SHA256 Algorithm = 256
+	SHA512 Algorithm = 512
+	usage            = "Usage:\nshasum -a <algorithm> <File Name>"
+)
+
+var (
+	algorithm int
+)
 
 // shaPrinter prints sha1/sha256/sha512 of given data. The
 // value of algorithm is expected to be 1 for SHA1
 // 256 for SHA256
 // and 512 for SHA512
-func shaGenerator(w io.Writer, r io.Reader, algo int) ([]byte, error) {
+func shaGenerator(r io.Reader, algorithm Algorithm) ([]byte, error) {
 	var h hash.Hash
-	switch algo {
-	case 1:
+
+	switch algorithm {
+	case SHA1:
 		h = sha1.New()
-	case 256:
+	case SHA256:
 		h = sha256.New()
-	case 512:
+	case SHA512:
 		h = sha512.New()
 	default:
 		return nil, fmt.Errorf("invalid algorithm, only 1, 256 or 512 are valid:%w", os.ErrInvalid)
 	}
+
 	if _, err := io.Copy(h, r); err != nil {
 		return nil, err
 	}
@@ -48,7 +59,7 @@ func shasum(w io.Writer, r io.Reader, args ...string) error {
 	var err error
 	if len(args) == 0 {
 		buf := bufio.NewReader(r)
-		if hashbytes, err = shaGenerator(w, buf, algorithm); err != nil {
+		if hashbytes, err = shaGenerator(buf, Algorithm(algorithm)); err != nil {
 			return err
 		}
 		fmt.Fprintf(w, "%x -\n", hashbytes)
@@ -60,7 +71,7 @@ func shasum(w io.Writer, r io.Reader, args ...string) error {
 			return err
 		}
 		defer file.Close()
-		if hashbytes, err = shaGenerator(w, file, algorithm); err != nil {
+		if hashbytes, err = shaGenerator(file, Algorithm(algorithm)); err != nil {
 			return err
 		}
 		fmt.Fprintf(w, "%x %s\n", hashbytes, arg)
