@@ -112,6 +112,9 @@ func TestBusReadConfig(t *testing.T) {
 	}
 }
 
+// TODO: get author review
+//
+//nolint:unused
 func testBaseLimType(t *testing.T) {
 	tests := []struct {
 		bar    string
