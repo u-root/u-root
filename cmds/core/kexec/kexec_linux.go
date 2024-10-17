@@ -16,7 +16,7 @@
 //  -c, --cmdline string       Append to the kernel command line
 //  -d, --debug                Print debug info (default true)
 //  -e, --exec                 Execute a currently loaded kernel
-//  -x, --extra string         Add a cpio containing extra files
+//  -x, --extra string         Add one or more files to the initrd
 //      --initramfs string     Use file as the kernel's initial ramdisk
 //  -i, --initrd string        Use file as the kernel's initial ramdisk
 //  -l, --load                 Load the new kernel into the current kernel
@@ -78,8 +78,8 @@ func (o *options) parseCmdline(args []string, f *flag.FlagSet) {
 	f.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel")
 	f.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel (shorthand)")
 
-	f.StringVar(&o.extra, "extra", "", "Add a cpio containing extra files")
-	f.StringVar(&o.extra, "x", "", "Add a cpio containing extra files")
+	f.StringVar(&o.extra, "extra", "", "Add one or more files to the initrd")
+	f.StringVar(&o.extra, "x", "", "Add one or more files to the initrd")
 
 	f.StringVar(&o.initramfs, "initrd", "", "Use file as the kernel's initial ramdisk")
 	f.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk (shorthand)")
