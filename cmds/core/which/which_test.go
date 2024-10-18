@@ -43,26 +43,21 @@ var (
 	p = os.Getenv("PATH")
 )
 
-func setup() error {
+func setup(t *testing.T) {
 	var err error
 
-	for i, t := range tests {
-		tests[i].pathOnSys, err = exec.Command("which", "-a", t.name).Output()
+	for i, tt := range tests {
+		tests[i].pathOnSys, err = exec.Command("which", "-a", tt.name).Output()
 		if err != nil {
-			return err
+			t.Fatal(err)
 		}
 	}
-
-	return nil
 }
 
 // TestWhichUnique tests `which` command against one POSIX command that are included in Linux.
 // The output of which.go has to be exactly equal to the output of which itself.
 func TestWhichUnique(t *testing.T) {
-	err := setup()
-	if err != nil {
-		t.Fatalf("setup has failed, %v", err)
-	}
+	setup(t)
 
 	commands := []string{"cat"}
 	var b bytes.Buffer
@@ -80,10 +75,7 @@ func TestWhichUnique(t *testing.T) {
 // The output of which.go has to be exactly equal to the output of which itself. If it works with
 // three, it should work with more commands as well.
 func TestWhichMultiple(t *testing.T) {
-	err := setup()
-	if err != nil {
-		t.Fatalf("setup has failed, %v", err)
-	}
+	setup(t)
 
 	pathsCombined := []byte{}
 	commands := []string{}
