@@ -735,6 +735,8 @@ func TestParseRemoteAddr(t *testing.T) {
 }
 
 func isSubset(t *testing.T, gotAddress, wantAddress []string) bool {
+	t.Helper()
+
 	for _, want := range wantAddress {
 		found := false
 		for _, got := range gotAddress {
