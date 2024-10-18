@@ -37,8 +37,6 @@ var (
 	execute     = flag.Bool("e", true, "If true, kexec. If not true, just load kernel.")
 )
 
-var v = func(string, ...interface{}) {}
-
 func main() {
 	flag.Parse()
 	if len(flag.Args()) != 1 {

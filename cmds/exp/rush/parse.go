@@ -40,8 +40,7 @@ type Command struct {
 	argv []string
 }
 
-var (
-	cmds  []Command
+const (
 	punct = "<>|&$ \t\n"
 )
 

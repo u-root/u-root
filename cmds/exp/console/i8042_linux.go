@@ -5,6 +5,7 @@
 // This file contains support functions for i8042 io for Linux.
 package main
 
+//nolint:unused
 const (
 	i8042Data = 0x60 /* data port */
 
