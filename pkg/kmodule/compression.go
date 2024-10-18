@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/klauspost/pgzip"
+
 	"github.com/ulikunitz/xz"
 )
 
@@ -23,10 +23,12 @@ func compressionReader(file *os.File) (reader io.Reader, err error) {
 	ext := filepath.Ext(file.Name())
 
 	switch ext {
+	case ".ko":
+		return file, nil
 	case ".xz":
 		return xz.NewReader(file)
 	case ".gz":
-		return pgzip.NewReader(file)
+		return gzipit(file)
 	case ".zst":
 		return zstd.NewReader(file)
 	default:

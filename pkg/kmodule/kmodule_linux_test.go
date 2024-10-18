@@ -45,12 +45,13 @@ func TestGenLoadedMods(t *testing.T) {
 // There is also one file with a bad extension to test the error handling.
 // Testing compression itself is out of scope.
 func generateCompressionTestData(data []byte) (map[string][]byte, error) {
-	var (
-		compressionBuffer bytes.Buffer
-		err               error
-	)
+	var compressionBuffer bytes.Buffer
 
 	tData := make(map[string][]byte)
+
+	// 0. ko
+	tData["test.ko"] = make([]byte, len(data))
+	copy(tData["test.xz"], data)
 
 	// 1. xz
 	wXZ, err := xz.NewWriter(&compressionBuffer)
@@ -154,6 +155,12 @@ func TestCompression(t *testing.T) {
 		isError bool
 		err     error
 	}{
+		"test.ko": {
+			file:    tFd["test.ko"],
+			ext:     ".ko",
+			isError: false,
+			err:     nil,
+		},
 		"test.xz": {
 			file:    tFd["test.xz"],
 			ext:     ".xz",
