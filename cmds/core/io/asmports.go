@@ -10,12 +10,16 @@ import (
 	"github.com/u-root/u-root/pkg/memio"
 )
 
+const (
+	usageAsmPorts = `io (xin{b,w,l} address)...
+io (xout{b,w,l} address value)...
+`
+)
+
 // The xin* and xout* commands use iopl, and hence
 // must be run by root.
 func init() {
-	usageMsg += `io (xin{b,w,l} address)...
-io (xout{b,w,l} address value)...
-`
+	usageMsg += usageAsmPorts
 	addCmd(readCmds, "xinb", &cmd{xin, 16, 8})
 	addCmd(readCmds, "xinw", &cmd{xin, 16, 16})
 	addCmd(readCmds, "xinl", &cmd{xin, 16, 32})
