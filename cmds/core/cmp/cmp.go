@@ -87,19 +87,19 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 	case 3:
 		if v, err = off.ValueFromString(args[2]); err != nil {
 			fmt.Fprintf(stderr, "bad offset1: %s: %v", args[2], err)
-			return fmt.Errorf("%v:%w", err, ErrBadOffset)
+			return fmt.Errorf("%w:%w", err, ErrBadOffset)
 		}
 		offset[0] = v.Value
 	case 4:
 		if v, err = off.ValueFromString(args[2]); err != nil {
 			fmt.Fprintf(stderr, "bad offset1: %s: %v", args[2], err)
-			return fmt.Errorf("%v:%w", err, ErrBadOffset)
+			return fmt.Errorf("%w:%w", err, ErrBadOffset)
 		}
 		offset[0] = v.Value
 
 		if v, err = off.ValueFromString(args[3]); err != nil {
 			fmt.Fprintf(stderr, "bad offset2: %s: %v", args[3], err)
-			return fmt.Errorf("%v:%w", err, ErrBadOffset)
+			return fmt.Errorf("%w:%w", err, ErrBadOffset)
 		}
 		offset[1] = v.Value
 	default:
@@ -114,7 +114,7 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 			return fmt.Errorf("failed to open %s: %w", args[i], err)
 		}
 		if _, err := f.Seek(offset[i], 0); err != nil {
-			return fmt.Errorf("%v:%w", err, ErrBadOffset)
+			return fmt.Errorf("%w:%w", err, ErrBadOffset)
 		}
 		c[i] = bufio.NewReader(f)
 	}
