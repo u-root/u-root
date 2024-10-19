@@ -37,6 +37,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -211,11 +212,11 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 				if n > 0 {
 					readyBufs <- buf
 				}
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					return
 				}
 				if n == 0 || err != nil {
-					errs <- fmt.Errorf("input error: %v", err)
+					errs <- fmt.Errorf("input error: %w", err)
 					return
 				}
 			}
@@ -225,7 +226,7 @@ func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, 
 	var writeErr error
 	for buf := range readyBufs {
 		if n, err := buf.WriteTo(w); err != nil {
-			writeErr = fmt.Errorf("output error: %v", err)
+			writeErr = fmt.Errorf("output error: %w", err)
 			break
 		} else {
 			atomic.AddInt64(bytesWritten, n)
@@ -314,7 +315,7 @@ func inFile(stdin io.Reader, name string, inputBytes int64, skip int64, count in
 
 	in, err := os.Open(name)
 	if err != nil {
-		return nil, fmt.Errorf("error opening input file %q: %v", name, err)
+		return nil, fmt.Errorf("error opening input file %q: %w", name, err)
 	}
 	return io.NewSectionReader(in, inputBytes*skip, maxRead), nil
 }
@@ -328,12 +329,12 @@ func outFile(stdout io.WriteSeeker, name string, outputBytes int64, seek int64, 
 	} else {
 		perm := os.O_CREATE | os.O_WRONLY | (flags & allowedFlags)
 		if out, err = os.OpenFile(name, perm, 0o666); err != nil {
-			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
+			return nil, fmt.Errorf("error opening output file %q: %w", name, err)
 		}
 	}
 	if seek*outputBytes != 0 {
 		if _, err := out.Seek(seek*outputBytes, io.SeekCurrent); err != nil {
-			return nil, fmt.Errorf("error seeking output file: %v", err)
+			return nil, fmt.Errorf("error seeking output file: %w", err)
 		}
 	}
 	return out, nil
