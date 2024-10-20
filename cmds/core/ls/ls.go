@@ -86,7 +86,7 @@ type file struct {
 func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 	var files []file
 
-	filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
+	if err := filepath.Walk(d, func(path string, osfi os.FileInfo, err error) error {
 		f := file{
 			path: path,
 			osfi: osfi,
@@ -117,7 +117,9 @@ func (c cmd) listName(stringer ls.Stringer, d string, prefix bool) error {
 		}
 
 		return nil
-	})
+	}); err != nil && err != filepath.SkipDir {
+		return err
+	}
 
 	if c.size {
 		sort.SliceStable(files, func(i, j int) bool {

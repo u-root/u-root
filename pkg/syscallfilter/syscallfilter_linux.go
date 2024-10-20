@@ -112,6 +112,10 @@ func eventName(r *strace.TraceRecord) string {
 	return ""
 }
 
+// TODO: handleEvent does not interact with the strace.Task struct. This has to
+// be reworked.
+//
+//nolint:unparam
 func (c *Cmd) handleEvent(t strace.Task, r *strace.TraceRecord, e []*event) error {
 	// All attempts to use defer for printing got ... weird.
 	var ret error
