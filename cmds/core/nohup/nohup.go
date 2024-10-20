@@ -74,12 +74,12 @@ func run(args []string) error {
 
 	err := cmd.Start()
 	if err != nil {
-		return fmt.Errorf("%s: %w: %v", cmdName, errStart, err)
+		return fmt.Errorf("%s: %w: %w", cmdName, errStart, err)
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		return fmt.Errorf("%s: %w: %v", cmdName, errFinish, err)
+		return fmt.Errorf("%s: %w: %w", cmdName, errFinish, err)
 	}
 
 	return nil
