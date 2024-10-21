@@ -73,11 +73,11 @@ func (cmd *cmd) linkSet() error {
 			return cmd.setLinkHardwareAddress(iface)
 		case "up":
 			if err := cmd.handle.LinkSetUp(iface); err != nil {
-				return fmt.Errorf("%v can't make it up: %v", iface.Attrs().Name, err)
+				return fmt.Errorf("%v can't make it up: %w", iface.Attrs().Name, err)
 			}
 		case "down":
 			if err := cmd.handle.LinkSetDown(iface); err != nil {
-				return fmt.Errorf("%v can't make it down: %v", iface.Attrs().Name, err)
+				return fmt.Errorf("%v can't make it down: %w", iface.Attrs().Name, err)
 			}
 		case "arp":
 			switch cmd.nextToken("on", "off") {
@@ -143,7 +143,7 @@ func (cmd *cmd) setLinkHardwareAddress(iface netlink.Link) error {
 
 	err = cmd.handle.LinkSetHardwareAddr(iface, hwAddr)
 	if err != nil {
-		return fmt.Errorf("%v cant set mac addr %v: %v", iface.Attrs().Name, hwAddr, err)
+		return fmt.Errorf("%v cant set mac addr %v: %w", iface.Attrs().Name, hwAddr, err)
 	}
 
 	return nil
@@ -154,7 +154,7 @@ func (cmd *cmd) setLinkMTU(iface netlink.Link) error {
 
 	mtu, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid mtu %v: %v", token, err)
+		return fmt.Errorf("invalid mtu %v: %w", token, err)
 	}
 
 	return cmd.handle.LinkSetMTU(iface, mtu)
@@ -165,7 +165,7 @@ func (cmd *cmd) setLinkGroup(iface netlink.Link) error {
 
 	group, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid group %v: %v", token, err)
+		return fmt.Errorf("invalid group %v: %w", token, err)
 	}
 
 	return cmd.handle.LinkSetMTU(iface, group)
@@ -183,7 +183,7 @@ func (cmd *cmd) setLinkTxQLen(iface netlink.Link) error {
 	token := cmd.nextToken("<qlen>")
 	qlen, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid queuelen %v: %v", token, err)
+		return fmt.Errorf("invalid queuelen %v: %w", token, err)
 	}
 
 	return cmd.handle.LinkSetTxQLen(iface, qlen)
@@ -194,12 +194,12 @@ func (cmd *cmd) setLinkNetns(iface netlink.Link) error {
 
 	ns, err := strconv.Atoi(token)
 	if err != nil {
-		return fmt.Errorf("invalid int %v: %v", token, err)
+		return fmt.Errorf("invalid int %v: %w", token, err)
 	}
 
 	if err := cmd.handle.LinkSetNsPid(iface, ns); err != nil {
 		if err := cmd.handle.LinkSetNsFd(iface, ns); err != nil {
-			return fmt.Errorf("failed to set netns: %v", err)
+			return fmt.Errorf("failed to set netns: %w", err)
 		}
 	}
 
@@ -460,7 +460,7 @@ func (cmd *cmd) parseLinkShow() (netlink.Link, []string, error) {
 			devName := cmd.nextToken("device name")
 			device, err = netlink.LinkByName(devName)
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get link %v: %v", device, err)
+				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
 			}
 		case "type":
 			for cmd.tokenRemains() {
