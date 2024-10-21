@@ -24,12 +24,12 @@ func printJSON[T Printable](cmd cmd, data T) error {
 		jsonData, err = json.Marshal(data)
 	}
 	if err != nil {
-		return fmt.Errorf("error marshalling JSON data: %v", err)
+		return fmt.Errorf("error marshalling JSON data: %w", err)
 	}
 
 	_, err = cmd.Out.Write(jsonData)
 	if err != nil {
-		return fmt.Errorf("error writing JSON data to writer: %v", err)
+		return fmt.Errorf("error writing JSON data to writer: %w", err)
 	}
 
 	return nil
