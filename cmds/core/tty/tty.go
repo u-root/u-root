@@ -29,7 +29,10 @@ func run(stdout io.Writer) error {
 	return filepath.WalkDir("/dev", func(path string, dir os.DirEntry, _ error) error {
 		switch path {
 		case "/dev/fd":
-			return filepath.SkipDir
+			// fd can be a symbolic link in this case whole /dev dir will be skipped
+			if dir.IsDir() {
+				return filepath.SkipDir
+			}
 		case "/dev/stdin", "/dev/stdout", "/dev/stderr":
 			return nil
 		}
