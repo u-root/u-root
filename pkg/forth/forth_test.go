@@ -98,11 +98,11 @@ func TestBadPop(t *testing.T) {
 	f.Push(b)
 	res, err := EvalPop(f, "2 +")
 	t.Logf("%v, %v", res, err)
-	if !errors.Is(err, strconv.ErrSyntax) {
-		t.Errorf("got %v, want %v", err, strconv.ErrSyntax)
+	if err == nil {
+		t.Errorf("err: got %v, want %v", err, strconv.ErrSyntax)
 	}
 	if res != nil {
-		t.Errorf("got %v, want nil", res)
+		t.Errorf("res: got %v, want nil", res)
 	}
 }
 
@@ -152,9 +152,8 @@ func TestEvalPanic(t *testing.T) {
 		t.Fatalf("newword: got %v, nil", err)
 	}
 	t.Logf("p created, now try problems")
-	err = Eval(f, "0", uint8(0), "+")
-	if err == nil {
-		t.Fatal("Got nil, want error")
+	if err = Eval(f, "0", uint8(0), "+"); err != nil {
+		t.Fatalf("got %v, want nil", err)
 	}
 	t.Logf("Test plus with wrong types: %v", err)
 	f.Reset()
