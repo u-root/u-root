@@ -102,7 +102,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 			port, err := strconv.ParseUint(ports[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %v", err)
+				return nil, fmt.Errorf("invalid port: %w", err)
 			}
 
 			config.Port = port
@@ -113,7 +113,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 				config.ConnectionModeOptions.CurrentPort = port
 				port, err = strconv.ParseUint(ports[1], 10, 64)
 				if err != nil {
-					return nil, fmt.Errorf("invalid port: %v", err)
+					return nil, fmt.Errorf("invalid port: %w", err)
 				}
 				config.ConnectionModeOptions.EndPort = port
 			}
@@ -126,7 +126,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		if len(args) == 1 {
 			port, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %v", err)
+				return nil, fmt.Errorf("invalid port: %w", err)
 			}
 			config.Port = port
 		} else if len(args) >= 2 {
@@ -134,7 +134,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 			port, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %v", err)
+				return nil, fmt.Errorf("invalid port: %w", err)
 			}
 			config.Port = port
 		}
@@ -213,18 +213,18 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	// timing options
 	config.Timing.Delay, err = time.ParseDuration(f.timingDelay)
 	if err != nil {
-		return nil, fmt.Errorf("invalid delay: %v", err)
+		return nil, fmt.Errorf("invalid delay: %w", err)
 	}
 
 	config.Timing.Timeout, err = time.ParseDuration(f.timingTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("invalid timeout: %v", err)
+		return nil, fmt.Errorf("invalid timeout: %w", err)
 	}
 
 	if f.timingWait != "" {
 		config.Timing.Wait, err = time.ParseDuration(f.timingWait)
 		if err != nil {
-			return nil, fmt.Errorf("invalid wait: %v", err)
+			return nil, fmt.Errorf("invalid wait: %w", err)
 		}
 	}
 
@@ -340,12 +340,12 @@ func (c *cmd) connection() (string, string, error) {
 
 	network, err := c.config.ProtocolOptions.Network()
 	if err != nil {
-		return "", "", fmt.Errorf("connection: %v", err)
+		return "", "", fmt.Errorf("connection: %w", err)
 	}
 
 	address, err := c.config.Address()
 	if err != nil {
-		return "", "", fmt.Errorf("connection: %v", err)
+		return "", "", fmt.Errorf("connection: %w", err)
 	}
 
 	return network, address, nil
@@ -483,7 +483,7 @@ func run(args []string) error {
 
 	network, address, err := c.connection()
 	if err != nil {
-		return fmt.Errorf("failed to determine connection: %v", err)
+		return fmt.Errorf("failed to determine connection: %w", err)
 	}
 
 	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file

@@ -26,7 +26,7 @@ var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, erro
 func (c *cmd) listenMode(output io.Writer, network, address string) error {
 	listener, err := c.setupListener(network, address)
 	if err != nil {
-		return fmt.Errorf("failed to setup listener: %v", err)
+		return fmt.Errorf("failed to setup listener: %w", err)
 	}
 
 	return c.listenForConnections(output, listener)
@@ -64,7 +64,7 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
 			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
 			if err != nil {
-				return nil, fmt.Errorf("failed generating TLS configuration: %v", err)
+				return nil, fmt.Errorf("failed generating TLS configuration: %w", err)
 			}
 
 			return tls.Listen(network, address, tlsConfig)
@@ -79,7 +79,7 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	case netcat.SOCKET_TYPE_VSOCK:
 		cid, port, err := netcat.SplitVSockAddr(address)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve VSOCK address: %v", err)
+			return nil, fmt.Errorf("failed to resolve VSOCK address: %w", err)
 		}
 
 		return vsock.ListenContextID(cid, port, nil)

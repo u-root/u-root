@@ -38,7 +38,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 
 	conn, err := c.establishConnection(network, address)
 	if err != nil {
-		return fmt.Errorf("failed to establish connection: %v", err)
+		return fmt.Errorf("failed to establish connection: %w", err)
 	}
 
 	log.Printf("Connection to %s [%s] succeeded", address, network)
@@ -61,7 +61,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 		// prepare command execution on the server
 		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
 			if err := c.config.CommandExec.Execute(conn, io.MultiWriter(conn, output), c.stderr, c.config.Misc.EOL); err != nil {
-				return fmt.Errorf("run command: %v", err)
+				return fmt.Errorf("run command: %w", err)
 			}
 		}
 	}
@@ -78,7 +78,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 				continue
 			}
 
-			return fmt.Errorf("failed to write: %v", err)
+			return fmt.Errorf("failed to write: %w", err)
 		}
 
 		break
@@ -105,31 +105,31 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 		case netcat.SOCKET_TYPE_TCP:
 			dialer.LocalAddr, err = net.ResolveTCPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP:
 			dialer.LocalAddr, err = net.ResolveUDPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UNIX:
 			dialer.LocalAddr, err = net.ResolveUnixAddr(network, c.config.ConnectionModeOptions.SourceHost)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP_UNIX:
 			dialer.LocalAddr, err = net.ResolveUnixAddr(network, c.config.ConnectionModeOptions.SourceHost)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_VSOCK:
 			cid, port, err := netcat.SplitVSockAddr(address)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve VSOCK address: %v", err)
+				return nil, fmt.Errorf("failed to resolve VSOCK address: %w", err)
 			}
 
 			return vsock.Dial(cid, port, nil)
@@ -191,7 +191,7 @@ func (c *cmd) scanPorts() error {
 
 		network, address, err := c.connection()
 		if err != nil {
-			return fmt.Errorf("failed to parse connection: %v", err)
+			return fmt.Errorf("failed to parse connection: %w", err)
 		}
 
 		_, err = c.establishConnection(network, address)
@@ -215,7 +215,7 @@ func (c *cmd) proxyDialer(dialer proxy.Dialer) (proxy.Dialer, error) {
 	proxyAddr := fmt.Sprintf("%v://%v%v", c.config.ProxyConfig.Type, proxyAuth, c.config.ProxyConfig.Address)
 	proxyURL, err := url.Parse(proxyAddr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid proxy URL: %v", err)
+		return nil, fmt.Errorf("invalid proxy URL: %w", err)
 	}
 
 	return proxy.FromURL(proxyURL, dialer)
