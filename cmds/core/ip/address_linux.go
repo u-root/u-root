@@ -58,7 +58,7 @@ func (cmd *cmd) address() error {
 		}
 
 		if err := cmd.handle.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("adding %v to %v failed: %v", addr.IP, cmd.currentToken(), err)
+			return fmt.Errorf("adding %v to %v failed: %w", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
@@ -69,7 +69,7 @@ func (cmd *cmd) address() error {
 		}
 
 		if err := cmd.handle.AddrReplace(iface, addr); err != nil {
-			return fmt.Errorf("replacing %v on %v failed: %v", addr.IP, cmd.currentToken(), err)
+			return fmt.Errorf("replacing %v on %v failed: %w", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
@@ -80,7 +80,7 @@ func (cmd *cmd) address() error {
 		}
 
 		if err := cmd.handle.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("deleting %v from %v failed: %v", addr.IP, cmd.currentToken(), err)
+			return fmt.Errorf("deleting %v from %v failed: %w", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
@@ -214,7 +214,7 @@ func (cmd *cmd) addressFlush() error {
 					continue
 				}
 
-				return fmt.Errorf("deleting %v from %v failed: %v", a, iface, err)
+				return fmt.Errorf("deleting %v from %v failed: %w", a, iface, err)
 			}
 
 			break

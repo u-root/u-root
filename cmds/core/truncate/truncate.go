@@ -59,15 +59,15 @@ func truncate(args ...string) error {
 		st, err := os.Stat(fname)
 		if os.IsNotExist(err) && !*create {
 			if err = os.WriteFile(fname, []byte{}, 0o644); err != nil {
-				return fmt.Errorf("%v", err)
+				return fmt.Errorf("%w", err)
 			}
 			if st, err = os.Stat(fname); err != nil {
-				return fmt.Errorf("could not stat newly created file: %v", err)
+				return fmt.Errorf("could not stat newly created file: %w", err)
 			}
 		}
 		if *rfile != "" {
 			if st, err = os.Stat(*rfile); err != nil {
-				return fmt.Errorf("could not stat reference file: %v", err)
+				return fmt.Errorf("could not stat reference file: %w", err)
 			}
 			final = st.Size()
 		} else if size.IsSet {
