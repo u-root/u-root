@@ -253,6 +253,12 @@ func u64(f forth.Forth) {
 func cpumsr(f forth.Forth) (msr.CPUs, msr.MSR) {
 	m := MSR(f)
 	c := CPUs(f)
+	// It is proving to be much more convenient to always leave these
+	// at TOS. This allows sequences like
+	// msr 0 0x3a rd 1 and wr
+	// without having to repeat the cpu and msr all the time.
+	f.Push(c)
+	f.Push(m)
 	return c, m
 }
 
@@ -311,9 +317,17 @@ func swr(f forth.Forth) {
 	}
 }
 
+// Not needed after go1.23
+func clone(u []uint64) []uint64 {
+	n := make([]uint64, len(u))
+	copy(n, u)
+	return n
+}
+
 func and(f forth.Forth) {
 	v := tou64(f.Pop())
 	m := tou64slice(f.Pop())
+	m = clone(m)
 	forth.Debug("and: %v(%T) %v(%T)", m, m, v, v)
 	for i := range m {
 		m[i] &= v
@@ -325,6 +339,7 @@ func and(f forth.Forth) {
 func or(f forth.Forth) {
 	v := tou64(f.Pop())
 	m := tou64slice(f.Pop())
+	m = clone(m)
 	forth.Debug("or: %v(%T) %v(%T)", m, m, v, v)
 	for i := range m {
 		m[i] |= v
