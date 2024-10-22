@@ -110,6 +110,7 @@ var (
 		{name: "cpu", op: evalCPUs},
 		{name: "reg", op: evalMSR},
 		{name: "u64", op: u64},
+		{name: "u64slice", op: u64slice},
 		{name: "rd", op: rd},
 		{name: "wr", op: wr},
 		{name: "swr", op: swr},
@@ -182,6 +183,45 @@ func evalMSR(f forth.Forth) {
 func MSR(f forth.Forth) msr.MSR {
 	evalMSR(f)
 	return f.Pop().(msr.MSR)
+}
+
+func tou64slice(a any) []uint64 {
+	forth.Debug("tou64slice: %v:%T", a, a)
+	switch v := a.(type) {
+	case string:
+		n, err := strconv.ParseUint(v, 0, 64)
+		if err != nil {
+			panic(fmt.Sprintf("%q:%T:%v", v, v, err))
+		}
+		return []uint64{uint64(n)}
+	case []string:
+		u := make([]uint64, len(v))
+		for i, s := range v {
+			n, err := strconv.ParseUint(s, 0, 64)
+			if err != nil {
+				panic(fmt.Sprintf("%q:%T:%v", s, s, err))
+			}
+			u[i] = n
+		}
+	case uint64:
+		// no idea how long it should be, so ...
+		return []uint64{uint64(v)}
+	case uint32:
+		return []uint64{uint64(v)}[:]
+	case uint16:
+		return []uint64{uint64(v)}[:]
+	case uint8:
+		return []uint64{uint64(v)}[:]
+	case []uint64:
+		return v
+	default:
+		panic(fmt.Sprintf("can not convert %v:%T to uint64", a, a))
+	}
+	return nil
+}
+
+func u64slice(f forth.Forth) {
+	f.Push(tou64slice(f.Pop()))
 }
 
 func tou64(a any) uint64 {
@@ -272,22 +312,24 @@ func swr(f forth.Forth) {
 }
 
 func and(f forth.Forth) {
-	v := f.Pop().(uint64)
-	m := f.Pop().([]uint64)
+	v := tou64(f.Pop())
+	m := tou64slice(f.Pop())
 	forth.Debug("and: %v(%T) %v(%T)", m, m, v, v)
 	for i := range m {
 		m[i] &= v
 	}
+	forth.Debug("Result:%v:%T", m, m)
 	f.Push(m)
 }
 
 func or(f forth.Forth) {
-	v := f.Pop().(uint64)
-	m := f.Pop().([]uint64)
+	v := tou64(f.Pop())
+	m := tou64slice(f.Pop())
 	forth.Debug("or: %v(%T) %v(%T)", m, m, v, v)
 	for i := range m {
 		m[i] |= v
 	}
+	forth.Debug("Result:%v:%T", m, m)
 	f.Push(m)
 }
 
