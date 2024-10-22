@@ -15,10 +15,17 @@
 //
 //	msr provides a set of Forth words that let you manage MSRs.
 //	You can add new ones of your own.
+//	If you are going to use forth, the general pattern of arguments
+//	looks something like this:
+//	msr <glob pattern> cpu <msr-number> msr <opcode>
+//	e.g.,
+//	msr '*' cpu 0x3a msr rd
+//	Will read the 3a msr on all CPUs.
+//	You can build up the expressions bit by bit:
 //	For a start, it provides some pre-defined words for well-known MSRs
 //
 //	push a [] of MSR names and the 0x3a register on the stack
-//	IA32_FEATURE_CONTROL -- equivalent to * msr 0x3a reg
+//	IA32_FEATURE_CONTROL -- equivalent to * cpu 0x3a msr
 //	The next two commands use IA32_FEATURE_CONTROL:
 //	READ_IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd
 //	LOCK IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd IA32_FEATURE_CONTROL 1 u64 or wr
@@ -34,12 +41,12 @@
 // Examples:
 //
 //	Show the IA32 feature MSR on all cores
-//	sudo fio READ_IA32_FEATURE_CONTROL
+//	sudo msr READ_IA32_FEATURE_CONTROL
 //	[[5 5 5 5]]
 //	lock the registers
-//	sudo fio LOCK_IA32_FEATURE_CONTROL
+//	sudo msr LOCK_IA32_FEATURE_CONTROL
 //	Just see it one core 0 and 1
-//	sudo ./fio '[01]' msr 0x3a reg rd
+//	sudo ./msr '[01]' msr 0x3a reg rd
 //	[[5 5]]
 package main
 
@@ -100,8 +107,8 @@ var (
 		name string
 		op   forth.Op
 	}{
-		{name: "cpu", op: cpus},
-		{name: "reg", op: reg},
+		{name: "cpu", op: evalCPUs},
+		{name: "reg", op: evalMSR},
 		{name: "u64", op: u64},
 		{name: "rd", op: rd},
 		{name: "wr", op: wr},
@@ -118,40 +125,107 @@ var (
 // But parsers are special: using panic
 // in a parser makes the code tons cleaner.
 
+func parseCPUs(s string) msr.CPUs {
+	c, errs := msr.GlobCPUs(s)
+	if errs != nil {
+		panic(fmt.Sprintf("%q:%v", s, errs))
+	}
+	return c
+}
+
 // Note that if any type asserts fail the forth interpret loop catches
 // it. It also catches stack underflow, all that stuff.
-func cpus(f forth.Forth) {
+func evalCPUs(f forth.Forth) {
 	forth.Debug("cpu")
-	g := f.Pop().(string)
-	c, errs := msr.GlobCPUs(g)
-	if errs != nil {
-		panic(fmt.Sprintf("%v", errs))
+	r := f.Pop()
+	var c msr.CPUs
+	switch v := r.(type) {
+	case msr.CPUs:
+		c = v
+	case string:
+		c = parseCPUs(v)
+	default:
+		panic(fmt.Sprintf("%v(%T): can not convert to msr.MSR", r, f))
 	}
+
 	forth.Debug("CPUs are %v", c)
 	f.Push(c)
 }
 
-func reg(f forth.Forth) {
-	n, err := strconv.ParseUint(f.Pop().(string), 0, 32)
+func CPUs(f forth.Forth) msr.CPUs {
+	evalCPUs(f)
+	return f.Pop().(msr.CPUs)
+}
+
+func parseMSR(s string) msr.MSR {
+	n, err := strconv.ParseUint(s, 0, 32)
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
-	f.Push(msr.MSR(n))
+	return msr.MSR(n)
+}
+
+func evalMSR(f forth.Forth) {
+	r := f.Pop()
+	var m msr.MSR
+	switch v := r.(type) {
+	case msr.MSR:
+		m = v
+	case string:
+		m = parseMSR(v)
+	default:
+		panic(fmt.Sprintf("%v(%T): can not convert to msr.MSR", r, f))
+	}
+	f.Push(m)
+}
+
+func MSR(f forth.Forth) msr.MSR {
+	evalMSR(f)
+	return f.Pop().(msr.MSR)
+}
+
+func tou64(a any) uint64 {
+	var u uint64
+	switch v := a.(type) {
+	case string:
+		n, err := strconv.ParseUint(v, 0, 64)
+		if err != nil {
+			panic(fmt.Sprintf("%v", err))
+		}
+		u = n
+	case uint64:
+		u = v
+	case uint32:
+		u = uint64(v)
+	case uint16:
+		u = uint64(v)
+	case uint8:
+		u = uint64(v)
+	}
+	return u
+
 }
 
 func u64(f forth.Forth) {
-	n, err := strconv.ParseUint(f.Pop().(string), 0, 64)
-	if err != nil {
-		panic(fmt.Sprintf("%v", err))
-	}
-	f.Push(uint64(n))
+	f.Push(tou64(f.Pop()))
+}
+
+func cpumsr(f forth.Forth) (msr.CPUs, msr.MSR) {
+	m := MSR(f)
+	c := CPUs(f)
+	return c, m
+}
+
+func cpumsrval(f forth.Forth) (msr.CPUs, msr.MSR, uint64) {
+	c, m := cpumsr(f)
+	u := tou64(f)
+	return c, m, u
 }
 
 func rd(f forth.Forth) {
-	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
-	forth.Debug("rd: cpus %v, msr %v", c, r)
-	data, errs := r.Read(c)
+	c, m := cpumsr(f)
+	forth.Debug("rd: cpus %v, msr %v", c, m)
+	data, errs := m.Read(c)
 	forth.Debug("data %v errs %v", data, errs)
 	if errs != nil {
 		panic(fmt.Sprintf("%v", errs))
@@ -166,12 +240,11 @@ func rd(f forth.Forth) {
 // modern world.
 // If you're determined to write a fixed value, the same
 // for all, it's easy:
-// fio "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
+// msr "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
+	c, r := cpumsr(f)
 	v := f.Pop().([]uint64)
-	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
 	forth.Debug("wr: cpus %v, msr %v, values %v", c, r, v)
 	errs := r.Write(c, v...)
 	forth.Debug("errs %v", errs)
@@ -188,9 +261,7 @@ func wr(f forth.Forth) {
 //
 // Write now accepts a single value
 func swr(f forth.Forth) {
-	v := f.Pop().(uint64)
-	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
+	c, r, v := cpumsrval(f)
 
 	forth.Debug("swr: cpus %v, msr %v, %v", c, r, v)
 	errs := r.Write(c, v)
