@@ -92,6 +92,7 @@ func init() {
 		"drop":     drop,
 		"newword":  newword,
 		"words":    words,
+		"typeof":   typeOf,
 	}
 }
 
@@ -268,6 +269,15 @@ func String(f Forth) string {
 	default:
 		panic(fmt.Errorf("%v:%w", c, strconv.ErrSyntax))
 	}
+}
+
+// typeOf pops the stack, and replaces it with the
+// type as a string.
+func typeOf(f Forth) {
+	Debug("toint %v", f.Stack())
+	c := f.Pop()
+	Debug("%T", c)
+	f.Push(fmt.Sprintf("%T", c))
 }
 
 // toInt converts to int64.
