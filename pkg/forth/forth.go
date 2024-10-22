@@ -184,13 +184,18 @@ func (f *stack) Empty() bool {
 // otherwise.
 func errRecover(errp *error) {
 	e := recover()
+	Debug("pkg/forth:e is %v:%T", e, e)
 	if e != nil {
-		if _, ok := e.(runtime.Error); ok {
-			Debug("errRecover panics with a runtime error")
+		switch err := e.(type) {
+		case runtime.Error:
+			Debug("pkg/forth:errRecover panics with a runtime error")
 			panic(e)
+		case error:
+			*errp = fmt.Errorf("%w", err)
+		default:
+			*errp = fmt.Errorf("pkg/forth:%v", err)
 		}
-		Debug("errRecover returns %v", e)
-		*errp = e.(error)
+		Debug("pkg/forth:errRecover returns %v:%T", *errp, *errp)
 	}
 }
 
