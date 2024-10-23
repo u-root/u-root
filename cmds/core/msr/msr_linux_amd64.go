@@ -295,7 +295,7 @@ func rd(f forth.Forth) {
 // msr "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
-	v := f.Pop().([]uint64)
+	v := tou64slice(f.Pop())
 	c, r := cpumsr(f)
 	forth.Debug("wr: cpus %v, msr %v, values %v", c, r, v)
 	errs := r.Write(c, v...)
