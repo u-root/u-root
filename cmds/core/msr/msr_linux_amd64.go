@@ -412,10 +412,18 @@ func main() {
 			forth.Debug("%vOK\n", f.Stack())
 		}
 	}
-	// special case: if the length of stack is 1, just print out stack[0].
+	// special case: if the length of stack is 3, just print out stack[2].
+	// The reason being that TOS is always going to be cpus, msr, and value.
+	// We tried just printing out the whole stack but it's annoying.
+	// If you really want to see the whole stack you can force the issue
+	// by adding an extraneous word that makes the end result not 3, e.g.
+	// msr TOS 0 0x3a rd
+	// will show you all the stack.
+	// $ msr TOS [10] 0x3a rd
+	// [TOS 0-1 0x3a [5 5]]
 	s := f.Stack()
-	if len(s) == 1 {
-		fmt.Printf("%v\n", s[0])
+	if len(s) == 3 {
+		fmt.Printf("%v\n", s[2])
 	} else {
 		fmt.Printf("%v\n", s)
 	}
