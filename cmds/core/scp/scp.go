@@ -56,7 +56,7 @@ func scpSingleSource(w io.Writer, r io.Reader, pth string) error {
 	}
 	_, err = io.Copy(w, f)
 	if err != nil {
-		return fmt.Errorf("copy error: %v", err)
+		return fmt.Errorf("copy error: %w", err)
 	}
 	reply(w, SUCCESS)
 
@@ -78,18 +78,18 @@ func scpSingleSink(w io.Writer, r io.Reader, path string) error {
 		if err == io.ErrUnexpectedEOF {
 			return io.EOF
 		}
-		return fmt.Errorf("fscanf: %v", err)
+		return fmt.Errorf("fscanf: %w", err)
 	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, mode)
 	if err != nil {
-		return fmt.Errorf("open error: %v", err)
+		return fmt.Errorf("open error: %w", err)
 	}
 	reply(w, SUCCESS)
 	defer f.Close()
 
 	_, err = io.CopyN(f, r, size)
 	if err != nil {
-		return fmt.Errorf("copy error: %v", err)
+		return fmt.Errorf("copy error: %w", err)
 	}
 	if response(r) != SUCCESS {
 		return fmt.Errorf("response was not success")
