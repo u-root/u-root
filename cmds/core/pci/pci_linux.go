@@ -178,7 +178,7 @@ func (c *cmd) run() error {
 			return err
 		}
 		if err := json.Unmarshal(b, &d); err != nil {
-			return fmt.Errorf("%v:%w", err, errBadJSON)
+			return fmt.Errorf("%w:%w", err, errBadJSON)
 		}
 
 	} else {
