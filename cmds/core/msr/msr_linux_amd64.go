@@ -375,6 +375,10 @@ func main() {
 		forth.NewWord(f, w.name, w.w[0], w.w[1:]...)
 	}
 	a := flag.Args()
+	if len(a) == 0 {
+		flag.Usage()
+		return
+	}
 	// If the first arg is r or w, we're going to assume they're not doing Forth.
 	// It is too confusing otherwise if they type a wrong r or w command and
 	// see the Forth stack and nothing else.
