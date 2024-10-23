@@ -5,33 +5,51 @@
 package universalpayload
 
 import (
-	"bufio"
 	"bytes"
+	"debug/pe"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
-	"regexp"
-	"strconv"
+	"testing"
 
 	"github.com/u-root/u-root/pkg/dt"
 )
 
+var sysfsCPUInfoPath = "/proc/cpuinfo"
+
 // Properties to be fetched from device tree.
 const (
-	FirstLevelNodeName    = "images"
-	SecondLevelNodeName   = "tianocore"
-	LoadAddrPropertyName  = "load"
-	EntryAddrPropertyName = "entry-start"
+	FirstLevelNodeName     = "images"
+	SecondLevelNodeName    = "tianocore"
+	LoadAddrPropertyName   = "load"
+	EntryAddrPropertyName  = "entry-start"
+	DataOffsetPropertyName = "data-offset"
+	DataSizePropertyName   = "data-size"
 )
 
-var sysfsCPUInfoPath = "/proc/cpuinfo"
+const (
+	tmpHobSize     = 0x1000
+	tmpStackSize   = 0x1000
+	tmpStackTop    = 0x2000
+	tmpEntryOffset = 0x2000
+	trampolineSize = 0x1000
+)
+
+const (
+	// Relocation Types
+	IMAGE_REL_BASED_ABSOLUTE = 0
+	IMAGE_REL_BASED_HIGHLOW  = 3
+	IMAGE_REL_BASED_DIR64    = 10
+)
 
 type FdtLoad struct {
 	Load       uint64
 	EntryStart uint64
+	DataOffset uint32
+	DataSize   uint32
 }
 
 // Errors returned by utilities
@@ -41,12 +59,23 @@ var (
 	ErrNodeTianocoreNotFound   = fmt.Errorf("failed to find '%s' node", SecondLevelNodeName)
 	ErrNodeLoadNotFound        = fmt.Errorf("failed to find get '%s' property", LoadAddrPropertyName)
 	ErrNodeEntryStartNotFound  = fmt.Errorf("failed to find get '%s' property", EntryAddrPropertyName)
+	ErrNodeDataOffsetNotFound  = fmt.Errorf("failed to find get '%s' property", DataOffsetPropertyName)
+	ErrNodeDataSizeNotFound    = fmt.Errorf("failed to find get '%s' property", DataSizePropertyName)
 	ErrFailToConvertLoad       = fmt.Errorf("failed to convert property '%s' to u64", LoadAddrPropertyName)
 	ErrFailToConvertEntryStart = fmt.Errorf("failed to convert property '%s' to u64", EntryAddrPropertyName)
-	ErrCPUAddressNotFound      = errors.New("'address sizes' information not found")
-	ErrCPUAddressRead          = errors.New("failed to read 'address sizes'")
-	ErrCPUAddressConvert       = errors.New("failed to convert physical bits size")
+	ErrFailToConvertDataOffset = fmt.Errorf("failed to convert property '%s' to u32", DataOffsetPropertyName)
+	ErrFailToConvertDataSize   = fmt.Errorf("failed to convert property '%s' to u32", DataSizePropertyName)
+	ErrPeFailToGetPageRVA      = fmt.Errorf("failed to read pagerva during pe file relocation")
+	ErrPeFailToGetBlockSize    = fmt.Errorf("failed to read block size during pe file relocation")
+	ErrPeFailToGetEntry        = fmt.Errorf("failed to get entry during pe file relocation")
+	ErrPeFailToCreatePeFile    = fmt.Errorf("failed to create pe file")
+	ErrPeFailToGetRelocData    = fmt.Errorf("failed to get .reloc section data")
+	ErrPeUnsupportedPeHeader   = fmt.Errorf("unsupported pe header format")
+	ErrPeRelocOutOfBound       = fmt.Errorf("relocation address out of bounds during pe file relocation")
 	ErrAlignPadRange           = errors.New("failed to align pad size, out of range")
+	ErrCPUAddressConvert       = errors.New("failed to convert physical bits size")
+	ErrCPUAddressRead          = errors.New("failed to read 'address sizes'")
+	ErrCPUAddressNotFound      = errors.New("'address sizes' information not found")
 )
 
 // GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
@@ -58,6 +87,8 @@ var (
 //	/{
 //	    images {
 //	        tianocore {
+//	            data-offset = <0x00001000>;
+//	            data-size = <0x00010000>;
 //	            entry-start = <0x00000000 0x00805ac3>;
 //	            load = <0x00000000 0x00800000>;
 //	        }
@@ -111,45 +142,32 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 		return nil, errors.Join(ErrFailToConvertEntryStart, err)
 	}
 
+	dataOffsetProp, succeed := secondLevelNode.LookProperty(DataOffsetPropertyName)
+	if succeed != true {
+		return nil, ErrNodeDataOffsetNotFound
+	}
+
+	dataOffset, err := dataOffsetProp.AsU32()
+	if err != nil {
+		return nil, errors.Join(ErrFailToConvertDataOffset, err)
+	}
+
+	dataSizeProp, succeed := secondLevelNode.LookProperty(DataSizePropertyName)
+	if succeed != true {
+		return nil, ErrNodeDataSizeNotFound
+	}
+
+	dataSize, err := dataSizeProp.AsU32()
+	if err != nil {
+		return nil, errors.Join(ErrFailToConvertDataSize, err)
+	}
+
 	return &FdtLoad{
 		Load:       loadAddr,
 		EntryStart: entryAddr,
+		DataOffset: dataOffset,
+		DataSize:   dataSize,
 	}, nil
-}
-
-// Get Physical Address size from sysfs node /proc/cpuinfo.
-// Both Physical and Virtual Address size will be prompted as format:
-// "address sizes	: 39 bits physical, 48 bits virtual"
-// Use regular expression to fetch the integer of Physical Address
-// size before "bits physical" keyword
-func getPhysicalAddressSizes() (uint8, error) {
-	file, err := os.Open(sysfsCPUInfoPath)
-	if err != nil {
-		return 0, fmt.Errorf("failed to open %s: %w", sysfsCPUInfoPath, err)
-	}
-	defer file.Close()
-
-	// Regular expression to match the address size line
-	re := regexp.MustCompile(`address sizes\s*:\s*(\d+)\s+bits physical,\s*(\d+)\s+bits virtual`)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match := re.FindStringSubmatch(line); match != nil {
-			// Convert the physical bits size to integer
-			physicalBits, err := strconv.ParseUint(match[1], 10, 8)
-			if err != nil {
-				return 0, errors.Join(ErrCPUAddressConvert, err)
-			}
-			return uint8(physicalBits), nil
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("%w: file: %s, err: %w", ErrCPUAddressRead, sysfsCPUInfoPath, err)
-	}
-
-	return 0, ErrCPUAddressNotFound
 }
 
 // alignHOBLength writes pad bytes at the end of a HOB buf
@@ -169,4 +187,112 @@ func alignHOBLength(expectLen uint64, bufLen int, buf *bytes.Buffer) error {
 		}
 	}
 	return nil
+}
+
+// Walk through .reloc section, update expected address to actual address
+// which is calculated with recloation offset. Currently, only type of
+// IMAGE_REL_BASED_DIR64(10) found in .reloc setcion, update this type
+// of address only.
+func relocatePE(relocData []byte, delta uint64, data []byte) error {
+	r := bytes.NewReader(relocData)
+
+	for {
+		// Read relocation block header
+		var pageRVA uint32
+		var blockSize uint32
+
+		err := binary.Read(r, binary.LittleEndian, &pageRVA)
+		if err == io.EOF {
+			break // End of relocations
+		}
+		if err != nil {
+			return fmt.Errorf("%w: err: %w", ErrPeFailToGetPageRVA, err)
+		}
+		if err = binary.Read(r, binary.LittleEndian, &blockSize); err != nil {
+			return fmt.Errorf("%w: err: %w", ErrPeFailToGetBlockSize, err)
+		}
+
+		// Block size includes the header, so the number of entries is (blockSize - 8) / 2
+		entryCount := (blockSize - 8) / 2
+		for i := 0; i < int(entryCount); i++ {
+			var entry uint16
+			if err := binary.Read(r, binary.LittleEndian, &entry); err != nil {
+				return fmt.Errorf("%w: err: %w", ErrPeFailToGetEntry, err)
+			}
+
+			// Type is in the high 4 bits, offset is in the low 12 bits
+			entryType := entry >> 12
+			entryOffset := entry & 0xfff
+
+			// Only type IMAGE_REL_BASED_DIR64(10) found
+			if entryType == IMAGE_REL_BASED_DIR64 {
+				// Perform relocation
+				relocAddr := pageRVA + uint32(entryOffset)
+				if relocAddr >= uint32(len(data)) {
+					return ErrPeRelocOutOfBound
+				}
+				originalValue := binary.LittleEndian.Uint64(data[relocAddr:])
+				relocatedValue := originalValue + delta
+				binary.LittleEndian.PutUint64(data[relocAddr:], relocatedValue)
+			}
+		}
+	}
+	return nil
+}
+
+func relocateFdtData(dst uint64, fdtLoad *FdtLoad, data []byte) error {
+	// Get the region of universalpayload binary from FIT image
+	start := fdtLoad.DataOffset
+	end := fdtLoad.DataOffset + fdtLoad.DataSize
+
+	reader := bytes.NewReader(data[start:end])
+
+	peFile, err := pe.NewFile(reader)
+	if err != nil {
+		return ErrPeFailToCreatePeFile
+	}
+	defer peFile.Close()
+
+	optionalHeader, success := peFile.OptionalHeader.(*pe.OptionalHeader64)
+	if !success {
+		return ErrPeUnsupportedPeHeader
+	}
+
+	preBase := optionalHeader.ImageBase
+	delta := dst + uint64(fdtLoad.DataOffset) - preBase
+
+	for _, section := range peFile.Sections {
+		if section.Name == ".reloc" {
+			relocData, err := section.Data()
+			if err != nil {
+				return ErrPeFailToGetRelocData
+			}
+
+			if err := relocatePE(relocData, delta, data[start:end]); err != nil {
+				return err
+			}
+		}
+	}
+
+	fdtLoad.EntryStart = dst + (fdtLoad.EntryStart - fdtLoad.Load)
+	fdtLoad.Load = dst
+
+	return nil
+}
+
+func mockCPUTempInfoFile(t *testing.T, content string) string {
+	tmpDir := t.TempDir()
+	tempFile, err := os.CreateTemp(tmpDir, "cpuinfo")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+
+	sysfsCPUInfoPath = tempFile.Name()
+
+	if _, err := tempFile.WriteString(content); err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+
+	tempFile.Close()
+	return tempFile.Name()
 }

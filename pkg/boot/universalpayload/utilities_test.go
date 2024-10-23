@@ -6,11 +6,13 @@ package universalpayload
 
 import (
 	"bytes"
+	"debug/pe"
+	"encoding/binary"
 	"errors"
 	"io"
-	"os"
-	"strconv"
+	"reflect"
 	"testing"
+	"unsafe"
 
 	"github.com/u-root/u-root/pkg/dt"
 )
@@ -46,6 +48,8 @@ func TestGetFdtInfo(t *testing.T) {
 							dt.PropertyString("arch", "x86_64"),
 							dt.PropertyU64("entry-start", 0x00805ac3),
 							dt.PropertyU64("load", 0x00800000),
+							dt.PropertyU32("data-offset", 0x00001000),
+							dt.PropertyU32("data-size", 0x0000c000),
 						)),
 					)),
 				)),
@@ -184,104 +188,6 @@ func TestGetFdtInfo(t *testing.T) {
 	}
 }
 
-func mockCPUTempInfoFile(t *testing.T, content string) string {
-	tmpDir := t.TempDir()
-	tempFile, err := os.CreateTemp(tmpDir, "cpuinfo")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-
-	sysfsCPUInfoPath = tempFile.Name()
-
-	if _, err := tempFile.WriteString(content); err != nil {
-		t.Fatalf("Failed to write to temp file: %v", err)
-	}
-
-	tempFile.Close()
-	return tempFile.Name()
-}
-
-func TestGetPhysicalAddressSizes(t *testing.T) {
-	tests := []struct {
-		name           string
-		cpuInfoContent string
-		expectedBits   uint8
-		expectedErr    error
-	}{
-		{
-			name: "Valid Address Size",
-			cpuInfoContent: `
-processor	: 0
-vendor_id	: GenuineIntel
-cpu family	: 6
-model		: 142
-model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
-stepping	: 10
-microcode	: 0xea
-cpu MHz		: 1992.000
-cache size	: 8192 KB
-physical id	: 0
-siblings	: 4
-core id		: 0
-cpu cores	: 2
-apicid		: 0
-initial apicid	: 0
-address sizes	: 39 bits physical, 48 bits virtual
-`,
-			expectedBits: 39,
-			expectedErr:  nil,
-		},
-		{
-			name: "No Address Size Info",
-			cpuInfoContent: `
-processor	: 0
-vendor_id	: GenuineIntel
-cpu family	: 6
-model		: 142value out of range
-model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
-`,
-			expectedBits: 0,
-			expectedErr:  ErrCPUAddressNotFound,
-		},
-		{
-			name: "Invalid Address Size",
-			// number value out of range
-			cpuInfoContent: `
-address sizes	: 1000 bits physical, 48 bits virtual
-`,
-			expectedBits: 0,
-			expectedErr:  strconv.ErrRange,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tempFile := mockCPUTempInfoFile(t, tt.cpuInfoContent)
-			defer os.Remove(tempFile)
-
-			physicalBits, err := getPhysicalAddressSizes()
-
-			if tt.expectedErr == nil {
-				// success validation
-				if err != nil {
-					t.Fatalf("Unexpected error: %+v", err)
-				}
-				if physicalBits != tt.expectedBits {
-					t.Errorf("Unexpected physical address size %d, want = %d", physicalBits, tt.expectedBits)
-				}
-			} else {
-				// fault validation
-				if err == nil {
-					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
-				}
-				if !errors.Is(err, tt.expectedErr) {
-					t.Errorf("Unxpected error %+v, want = %q", err, tt.expectedErr)
-				}
-			}
-		})
-	}
-}
-
 func TestAlignHOBLength(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -328,6 +234,190 @@ func TestAlignHOBLength(t *testing.T) {
 				if !errors.Is(err, tt.expectedErr) {
 					t.Errorf("Unxpected error %+v, want = %q", err, tt.expectedErr)
 				}
+			}
+		})
+	}
+}
+
+type MockSection struct {
+	name string
+	data []byte
+}
+
+const (
+	peFileHeaderSize    = uint32(unsafe.Sizeof(pe.FileHeader{}))
+	peOptHeaderSize     = uint32(unsafe.Sizeof(pe.OptionalHeader64{}))
+	peSectionHeaderSize = uint32(unsafe.Sizeof(pe.SectionHeader32{}))
+	peSectionSize       = uint32(10) // for simplicity, use constant section size
+)
+
+func mockWritePeFileBinary(offset int, totalSize int, imageBase uint64, sections []*MockSection) []byte {
+	// Serialize the PE file data to bytes
+	var buf bytes.Buffer
+
+	// write offset pads
+	binary.Write(&buf, binary.LittleEndian, make([]byte, offset))
+
+	// write FileHeader
+	fileHeader := pe.FileHeader{
+		Machine:              pe.IMAGE_FILE_MACHINE_AMD64,
+		SizeOfOptionalHeader: uint16(peOptHeaderSize),
+		NumberOfSections:     uint16(len(sections)),
+	}
+	binary.Write(&buf, binary.LittleEndian, fileHeader)
+
+	// write OptionalHeader64
+	optionalHeader := pe.OptionalHeader64{
+		Magic:               0x20b,
+		ImageBase:           imageBase,
+		NumberOfRvaAndSizes: 16,
+	}
+	binary.Write(&buf, binary.LittleEndian, optionalHeader)
+
+	// write Sections
+	for i, section := range sections {
+		var nameArr [8]uint8
+		copy(nameArr[:], section.name)
+		sectionHeader := pe.SectionHeader32{
+			Name:          nameArr,
+			SizeOfRawData: uint32(len(section.data)),
+			PointerToRawData: peFileHeaderSize + peOptHeaderSize +
+				peSectionHeaderSize*uint32(i+1) + peSectionSize*uint32(i)}
+		binary.Write(&buf, binary.LittleEndian, sectionHeader)
+		binary.Write(&buf, binary.LittleEndian, section.data)
+	}
+
+	// write extra pads ( for relocation)
+	if totalSize-buf.Len() > 0 {
+		binary.Write(&buf, binary.LittleEndian, make([]byte, totalSize-buf.Len()))
+	}
+
+	return buf.Bytes()
+}
+
+func TestRelocateFdtData(t *testing.T) {
+	tests := []struct {
+		name        string
+		dst         uint64
+		fdtLoad     *FdtLoad
+		data        []byte
+		wantErr     error
+		wantFdtLoad *FdtLoad
+	}{
+		{
+			name:    "Valid PE relocation using mock struct",
+			dst:     0x2000,
+			fdtLoad: &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800},
+			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
+				{".reloc", mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, 0x200)},
+			}),
+			wantErr:     nil,
+			wantFdtLoad: &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x2000 + (0x1000 - 0x1800), Load: 0x2000},
+		},
+		{
+			name:    "Relocation address out of bounds",
+			dst:     0x6000,
+			fdtLoad: &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800},
+			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
+				{".reloc", mockRelocData(0x6000, IMAGE_REL_BASED_DIR64, 0x200)},
+			}),
+			wantErr:     ErrPeRelocOutOfBound,
+			wantFdtLoad: nil,
+		},
+		{
+			name:        "No .reloc section found in PE file",
+			dst:         0x2000,
+			fdtLoad:     &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800},
+			data:        mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{}),
+			wantErr:     nil,
+			wantFdtLoad: &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x2000 + (0x1000 - 0x1800), Load: 0x2000},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := relocateFdtData(tt.dst, tt.fdtLoad, tt.data)
+			expectErr(t, err, tt.wantErr)
+			if tt.wantFdtLoad != nil && !reflect.DeepEqual(tt.fdtLoad, tt.wantFdtLoad) {
+				t.Fatalf("Unexpected relocated FdtLoad: %v, want: %v", *tt.fdtLoad, *tt.wantFdtLoad)
+			}
+		})
+	}
+
+}
+
+// Helper function to mock relocData for test cases
+func mockRelocData(pageRVA uint32, entryType, entryOffset uint16) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, pageRVA)
+	binary.Write(buf, binary.LittleEndian, uint32(10)) // block size including header
+
+	// Type is in the high 4 bits, offset is in the low 12 bits
+	entry := (entryType << 12) | entryOffset
+	binary.Write(buf, binary.LittleEndian, entry)
+	return buf.Bytes()
+}
+
+// Helper function to mock data with specific content
+func mockData(size int, offset int, value uint64) []byte {
+	data := make([]byte, size)
+	binary.LittleEndian.PutUint64(data[offset:], value)
+	return data
+}
+
+// Helper function to mock expected data after relocation
+func mockExpectedData(size int, offset int, relocatedValue uint64) []byte {
+	data := make([]byte, size)
+	binary.LittleEndian.PutUint64(data[offset:], relocatedValue)
+	return data
+}
+
+func TestRelocatePE(t *testing.T) {
+	tests := []struct {
+		name      string
+		relocData []byte
+		delta     uint64
+		data      []byte
+		expected  []byte
+		wantErr   error
+	}{
+		{
+			name:      "Valid relocation",
+			relocData: mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, 0x200),
+			delta:     0x1000,
+			data:      mockData(0x10000, 0x1000+0x200, 0x4000),
+			expected:  mockExpectedData(0x10000, 0x1000+0x200, 0x4000+0x1000),
+			wantErr:   nil,
+		},
+		{
+			name:      "Out of bounds relocation",
+			relocData: mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, uint16(0x800)), // relocation out of bounds
+			delta:     0x1000,
+			data:      mockData(0x1500, 0x1000+0x200, 0x4000),
+			expected:  nil,
+			wantErr:   ErrPeRelocOutOfBound,
+		},
+		{
+			name:      "Fail to get block size",
+			relocData: []byte{0x01, 0x02, 0x03, 0x04}, // insufficient data
+			delta:     0x1000,
+			data:      mockData(0x1000, 0x200, 0x4000),
+			expected:  nil,
+			wantErr:   ErrPeFailToGetBlockSize,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dataCopy := make([]byte, len(tt.data))
+			copy(dataCopy, tt.data)
+
+			err := relocatePE(tt.relocData, tt.delta, dataCopy)
+
+			expectErr(t, err, tt.wantErr)
+
+			if tt.wantErr == nil && !bytes.Equal(dataCopy, tt.expected) {
+				t.Errorf("expected data %v, got %v", tt.expected, dataCopy)
 			}
 		})
 	}
