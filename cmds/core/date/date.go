@@ -244,7 +244,7 @@ func run(args []string, univ bool, ref string, clocksource Clock, w io.Writer) e
 			fmt.Fprintf(w, "%v\n", dateMap(t, z, a0[1:]))
 		} else {
 			if err := setDate(args[0], z, clocksource); err != nil {
-				return fmt.Errorf("%v: %v", a0, err)
+				return fmt.Errorf("%v: %w", a0, err)
 			}
 		}
 	default:
