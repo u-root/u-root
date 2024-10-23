@@ -89,7 +89,7 @@ func killProcess(w io.Writer, args ...string) error {
 		return nil
 	}
 	if err := kill(s, pids...); err != nil {
-		return fmt.Errorf("some processes could not be killed: %v", err)
+		return fmt.Errorf("some processes could not be killed: %w", err)
 	}
 	return nil
 }
