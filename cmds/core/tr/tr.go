@@ -176,16 +176,16 @@ func (c *cmd) run() error {
 
 			b, err := in.ReadByte()
 			if err != nil {
-				return fmt.Errorf("read error: %v", err)
+				return fmt.Errorf("read error: %w", err)
 			}
 
 			if err := out.WriteByte(b); err != nil {
-				return fmt.Errorf("write error: %v", err)
+				return fmt.Errorf("write error: %w", err)
 			}
 		} else if size > 0 {
 			if outRune := c.tr.transform(inRune); outRune != unicode.ReplacementChar {
 				if _, err := out.WriteRune(outRune); err != nil {
-					return fmt.Errorf("write error: %v", err)
+					return fmt.Errorf("write error: %w", err)
 				}
 			}
 		}
