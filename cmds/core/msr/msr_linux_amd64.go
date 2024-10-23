@@ -19,8 +19,11 @@
 //	looks something like this:
 //	msr <glob pattern> cpu <msr-number> msr <opcode>
 //	e.g.,
-//	msr '*' cpu 0x3a msr rd
+//	msr '*' 0x3a rd
 //	Will read the 3a msr on all CPUs.
+//	The two first items will remain at TOS. They are implicitly converted to
+//	msr.CPUs and msr.MSR when used. You can show how the will be converted with
+//	the cpu and reg works.
 //	You can build up the expressions bit by bit:
 //	For a start, it provides some pre-defined words for well-known MSRs
 //
@@ -46,7 +49,7 @@
 //	lock the registers
 //	sudo msr LOCK_IA32_FEATURE_CONTROL
 //	Just see it one core 0 and 1
-//	sudo ./msr '[01]' msr 0x3a reg rd
+//	sudo ./msr '[01]' 0x3a rd
 //	[[5 5]]
 package main
 
@@ -61,6 +64,8 @@ import (
 )
 
 // let's just do MSRs for now
+// NOTE: all these defines now take advantage of the fact that wr and commands
+// leave the msr.CPUs and msr.MSR on the stack.
 
 var (
 	debug = flag.Bool("d", false, "debug messages")
@@ -72,34 +77,34 @@ var (
 		// Enables features like VMX.
 		{name: "MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "cpu", "0x3a", "reg"}},
 		{name: "READ_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "rd"}},
-		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "u64", "or", "wr"}},
+		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "or", "wr"}},
 		// Silvermont, Airmont, Nehalem...
 		// Controls Processor C States.
 		{name: "MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "rd"}},
-		{name: "LOCK_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "READ_MSR_PKG_CST_CONFIG_CONTROL", uint64(1 << 15), "or", "wr"}},
+		{name: "LOCK_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"READ_MSR_PKG_CST_CONFIG_CONTROL", uint64(1 << 15), "or", "wr"}},
 		// Westmere onwards.
 		// Note that this turns on AES instructions, however
 		// 3 will turn off AES until reset.
 		{name: "MSR_FEATURE_CONFIG", w: []forth.Cell{"'*", "cpu", "0x13c", "reg"}},
 		{name: "READ_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "rd"}},
-		{name: "LOCK_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "READ_MSR_FEATURE_CONFIG", uint64(1 << 0), "or", "wr"}},
+		{name: "LOCK_MSR_FEATURE_CONFIG", w: []forth.Cell{"READ_MSR_FEATURE_CONFIG", uint64(1 << 0), "or", "wr"}},
 		// Goldmont, SandyBridge
 		// Controls DRAM power limits. See Intel SDM
 		{name: "MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"'*", "cpu", "0x618", "reg"}},
 		{name: "READ_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "rd"}},
-		{name: "LOCK_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "READ_MSR_DRAM_POWER_LIMIT", uint64(1 << 31), "or", "wr"}},
+		{name: "LOCK_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"READ_MSR_DRAM_POWER_LIMIT", uint64(1 << 31), "or", "wr"}},
 		// IvyBridge Onwards.
 		// Not much information in the SDM, seems to control power limits
 		{name: "MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "rd"}},
-		{name: "LOCK_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "READ_MSR_CONFIG_TDP_CONTROL", uint64(1 << 31), "or", "wr"}},
+		{name: "LOCK_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"READ_MSR_CONFIG_TDP_CONTROL", uint64(1 << 31), "or", "wr"}},
 		// Architectural MSR. All systems.
 		// This is the actual spelling of the MSR in the manual.
 		// Controls availability of silicon debug interfaces
 		{name: "IA32_DEBUG_INTERFACE", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "rd"}},
-		{name: "LOCK_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "READ_IA32_DEBUG_INTERFACE", uint64(1 << 15), "or", "wr"}},
+		{name: "LOCK_IA32_DEBUG_INTERFACE", w: []forth.Cell{"READ_IA32_DEBUG_INTERFACE", uint64(1 << 15), "or", "wr"}},
 		// Locks all known msrs to lock
 		{name: "LOCK_KNOWN_MSRS", w: []forth.Cell{"LOCK_MSR_IA32_FEATURE_CONTROL", "LOCK_MSR_PKG_CST_CONFIG_CONTROL", "LOCK_MSR_FEATURE_CONFIG", "LOCK_MSR_DRAM_POWER_LIMIT", "LOCK_MSR_CONFIG_TDP_CONTROL", "LOCK_IA32_DEBUG_INTERFACE"}},
 	}
@@ -259,12 +264,13 @@ func cpumsr(f forth.Forth) (msr.CPUs, msr.MSR) {
 	// without having to repeat the cpu and msr all the time.
 	f.Push(c)
 	f.Push(m)
+	forth.Debug("cpumsr: cpu %v msr %v", c, m)
 	return c, m
 }
 
 func cpumsrval(f forth.Forth) (msr.CPUs, msr.MSR, uint64) {
+	u := tou64(f.Pop())
 	c, m := cpumsr(f)
-	u := tou64(f)
 	return c, m, u
 }
 
@@ -289,8 +295,8 @@ func rd(f forth.Forth) {
 // msr "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
-	c, r := cpumsr(f)
 	v := f.Pop().([]uint64)
+	c, r := cpumsr(f)
 	forth.Debug("wr: cpus %v, msr %v, values %v", c, r, v)
 	errs := r.Write(c, v...)
 	forth.Debug("errs %v", errs)
@@ -379,7 +385,7 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg rd", a[1], a[2])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s %s rd", a[1], a[2])); err != nil {
 			log.Fatal(err)
 		}
 	case "w":
@@ -388,14 +394,14 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg %s u64 swr", a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s %s %s swr", a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	case "lock":
 		if len(a) != 4 {
 			log.Fatal("Usage for lock: lock <msr-glob> <register> <bit>")
 		}
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s %s rd %s or wr", a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	default:
