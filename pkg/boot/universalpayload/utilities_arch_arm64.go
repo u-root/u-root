@@ -51,7 +51,14 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return append(slice, tmpBytes...)
 	}
 
-	stackOffset := trampStack & 0xFFFF
+	// Due to Golang Plan9 Assembly support limitation, we can only
+	// fetch symbol address after relocated, and symbol address of
+	// trampBegin, trampStack, trampHob should not be larger than
+	// one page from PC address of trampoline entry point. If symbol
+	// address is larger than one page size from PC address of
+	// trampoline entry point, boot environment which is constructed
+	// for UPL will be overwritten by trampoline code.
+	stackOffset := trampStack & 0xFFF
 	gapLen := stackOffset - (trampStack - trampBegin)
 	buf = padWithLength(buf, uint64(gapLen))
 
