@@ -178,7 +178,7 @@ func passwdSame(u *Users, us passwd) error {
 	var err error
 	d, err = u.GetUID(us.name)
 	if err != nil {
-		return fmt.Errorf("failed to GetUID expected user %s: %v", us.name, err)
+		return fmt.Errorf("failed to GetUID expected user %s: %w", us.name, err)
 	}
 	if d != us.uid {
 		return fmt.Errorf("wrong UID for %s: got %d, expected %d", us.name, d, us.uid)
@@ -186,7 +186,7 @@ func passwdSame(u *Users, us passwd) error {
 
 	d, err = u.GetGID(us.uid)
 	if err != nil {
-		return fmt.Errorf("failed to GetGID expected uid %d: %v", us.uid, err)
+		return fmt.Errorf("failed to GetGID expected uid %d: %w", us.uid, err)
 	}
 	if d != us.gid {
 		return fmt.Errorf("wrong GID for uid %d: got %d, expected %d", us.uid, d, us.gid)
@@ -194,7 +194,7 @@ func passwdSame(u *Users, us passwd) error {
 
 	s, err = u.GetUser(us.uid)
 	if err != nil {
-		return fmt.Errorf("failed to GetUser expected user %s: %v", us.name, err)
+		return fmt.Errorf("failed to GetUser expected user %s: %w", us.name, err)
 	}
 	if s != us.name {
 		return fmt.Errorf("wrong username for %d: got %s, expected %s", us.uid, s, us.name)
@@ -263,7 +263,7 @@ func groupSame(g *Groups, gs group) error {
 
 	d, err = g.GetGID(gs.name)
 	if err != nil {
-		return fmt.Errorf("failed to GetGID expected group %s: %v", gs.name, err)
+		return fmt.Errorf("failed to GetGID expected group %s: %w", gs.name, err)
 	}
 	if d != gs.gid {
 		return fmt.Errorf("wrong GID for %s: got %d, expected %d", gs.name, d, gs.gid)
@@ -271,7 +271,7 @@ func groupSame(g *Groups, gs group) error {
 
 	s, err = g.GetGroup(gs.gid)
 	if err != nil {
-		return fmt.Errorf("failed to GetGroup expected group %s: %v", gs.name, err)
+		return fmt.Errorf("failed to GetGroup expected group %s: %w", gs.name, err)
 	}
 	if s != gs.name {
 		return fmt.Errorf("wrong groupname for %d: got %s, expected %s", gs.gid, s, gs.name)
