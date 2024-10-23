@@ -174,7 +174,7 @@ func df(w io.Writer, fargs flags, args []string) error {
 	}
 	mounts, err := mountinfo()
 	if err != nil {
-		return fmt.Errorf("mountinfo()=_,%q, want: _,nil", err)
+		return fmt.Errorf("mountinfo()=_,%w, want: _,nil", err)
 	}
 	blocksize := "1K"
 	if fargs.m {
