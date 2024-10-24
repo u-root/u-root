@@ -161,7 +161,7 @@ func (c cmd) poxCreate() error {
 		if eerr, ok := err.(*exec.ExitError); ok {
 			stderr = eerr.Stderr
 		}
-		return fmt.Errorf("running ldd on %v: %v %s", c.args, err, stderr)
+		return fmt.Errorf("running ldd on %v: %w %s", c.args, err, stderr)
 	}
 	// At some point the ldd API changed and it no longer includes the
 	// bins.
@@ -243,7 +243,7 @@ func (c cmd) poxCreate() error {
 		o, err := ec.CombinedOutput()
 		c.debug("%v", string(o))
 		if err != nil {
-			return fmt.Errorf("%v: %v: %v", ec.Args, string(o), err)
+			return fmt.Errorf("%v: %v: %w", ec.Args, string(o), err)
 		}
 	}
 

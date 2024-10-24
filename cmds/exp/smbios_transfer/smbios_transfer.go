@@ -38,15 +38,15 @@ var retries = flag.Int("num_retries", 2, "Number of times to retry transferring 
 func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr error) {
 	sessionID, err := h.BlobOpen(id, blobs.BMC_BLOB_OPEN_FLAG_WRITE)
 	if err != nil {
-		return fmt.Errorf("IPMI BlobOpen for %s failed: %v", id, err)
+		return fmt.Errorf("IPMI BlobOpen for %s failed: %w", id, err)
 	}
 	defer func() {
 		// If the function returned successfully but failed to close the blob,
 		// return an error.
 		if err := h.BlobClose(sessionID); err != nil {
-			err = fmt.Errorf("IPMI BlobClose %s failed: %v", id, err)
+			err = fmt.Errorf("IPMI BlobClose %s failed: %w", id, err)
 			if rerr != nil {
-				rerr = fmt.Errorf("%v; %v", rerr, err)
+				rerr = fmt.Errorf("%w; %w", rerr, err)
 				return
 			}
 			rerr = err
@@ -64,12 +64,12 @@ func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr 
 			end = dataLen
 		}
 		if err = h.BlobWrite(sessionID, offset, data[offset:end]); err != nil {
-			return fmt.Errorf("IPMI BlobWrite %s failed: %v", id, err)
+			return fmt.Errorf("IPMI BlobWrite %s failed: %w", id, err)
 		}
 	}
 
 	if err = h.BlobCommit(sessionID, []uint8{}); err != nil {
-		return fmt.Errorf("IPMI BlobCommit %s failed: %v", id, err)
+		return fmt.Errorf("IPMI BlobCommit %s failed: %w", id, err)
 	}
 
 	return nil
@@ -78,12 +78,12 @@ func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr 
 func getSmbiosData() ([]uint8, error) {
 	tables, err := os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 	if err != nil {
-		return nil, fmt.Errorf("error reading DMI data: %v", err)
+		return nil, fmt.Errorf("error reading DMI data: %w", err)
 	}
 
 	entryPoint, err := os.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 	if err != nil {
-		return nil, fmt.Errorf("error reading smbios_entry_point data: %v", err)
+		return nil, fmt.Errorf("error reading smbios_entry_point data: %w", err)
 	}
 
 	data := append(tables, entryPoint...)
@@ -103,14 +103,14 @@ func transferSmbiosData() error {
 
 	blobCount, err := h.BlobGetCount()
 	if err != nil {
-		return fmt.Errorf("failed to get blob count: %v", err)
+		return fmt.Errorf("failed to get blob count: %w", err)
 	}
 
 	seen := false
 	for j := 0; j < blobCount; j++ {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
-			return fmt.Errorf("failed to enumerate blob %d: %v", j, err)
+			return fmt.Errorf("failed to enumerate blob %d: %w", j, err)
 		}
 
 		if id != smbiosBlobID {
@@ -119,7 +119,7 @@ func transferSmbiosData() error {
 
 		seen = true
 		if err = writeCommitSmbiosBlob(id, data, h); err != nil {
-			return fmt.Errorf("failed to write and commit blob %s: %v", id, err)
+			return fmt.Errorf("failed to write and commit blob %s: %w", id, err)
 		}
 		break
 	}

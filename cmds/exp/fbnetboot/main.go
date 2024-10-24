@@ -172,13 +172,13 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		// send a netboot request via DHCP
 		bootconf, err = dhcp(ifname)
 		if err != nil {
-			return fmt.Errorf("DHCP: netboot request for interface %s failed: %v", ifname, err)
+			return fmt.Errorf("DHCP: netboot request for interface %s failed: %w", ifname, err)
 		}
 		debug("DHCP: network configuration: %+v", bootconf.NetConf)
 		if !*dryRun {
 			log.Printf("DHCP: configuring network interface %s with %v", ifname, bootconf.NetConf)
 			if err = netboot.ConfigureInterface(ifname, &bootconf.NetConf); err != nil {
-				return fmt.Errorf("DHCP: cannot configure interface %s: %v", ifname, err)
+				return fmt.Errorf("DHCP: cannot configure interface %s: %w", ifname, err)
 			}
 		}
 		if *overrideNetbootURL != "" {
@@ -196,7 +196,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	// check for supported schemes
 	scheme, err := getScheme(bootconf.BootfileURL)
 	if err != nil {
-		return fmt.Errorf("DHCP: cannot get scheme from URL: %v", err)
+		return fmt.Errorf("DHCP: cannot get scheme from URL: %w", err)
 	}
 	if scheme == "" {
 		return errors.New("DHCP: no valid scheme found in URL")
@@ -230,7 +230,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 
 	client, err := getClientForBootfile(bootconf.BootfileURL)
 	if err != nil {
-		return fmt.Errorf("DHCP: cannot get client for %s: %v", bootconf.BootfileURL, err)
+		return fmt.Errorf("DHCP: cannot get client for %s: %w", bootconf.BootfileURL, err)
 	}
 	log.Printf("DHCP: fetching boot file URL: %s", bootconf.BootfileURL)
 
@@ -242,7 +242,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 			log.Printf("netboot: attempt %d for http.Get", attempt+1)
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			if err != nil {
-				return nil, fmt.Errorf("could not build request for %q: %v", url, err)
+				return nil, fmt.Errorf("could not build request for %q: %w", url, err)
 			}
 			resp, err := client.Do(req)
 			if err == nil {
@@ -257,7 +257,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	resp, err := fetch(bootconf.BootfileURL)
 	if err != nil {
-		return fmt.Errorf("failed to fetch %q: %v", bootconf.BootfileURL, err)
+		return fmt.Errorf("failed to fetch %q: %w", bootconf.BootfileURL, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -265,12 +265,12 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("DHCP: cannot read boot file from the network: %v", err)
+		return fmt.Errorf("DHCP: cannot read boot file from the network: %w", err)
 	}
 	crypto.TryMeasureData(crypto.BootConfigPCR, body, bootconf.BootfileURL)
 	u, err := url.Parse(bootconf.BootfileURL)
 	if err != nil {
-		return fmt.Errorf("DHCP: cannot parse URL %s: %v", bootconf.BootfileURL, err)
+		return fmt.Errorf("DHCP: cannot parse URL %s: %w", bootconf.BootfileURL, err)
 	}
 	// extract file name component
 	if strings.HasSuffix(u.Path, "/") {
@@ -281,7 +281,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		return fmt.Errorf("invalid empty file name extracted from file path %s", u.Path)
 	}
 	if err = os.WriteFile(filename, body, 0o400); err != nil {
-		return fmt.Errorf("DHCP: cannot write to file %s: %v", filename, err)
+		return fmt.Errorf("DHCP: cannot write to file %s: %w", filename, err)
 	}
 	debug("DHCP: saved boot file to %s", filename)
 
@@ -290,13 +290,13 @@ func boot(ifname string, dhcp dhcpFunc) error {
 		log.Printf("DHCP: kexec'ing into %s (with arguments: \"%s\")", filename, cmdline)
 		kernel, err := os.OpenFile(filename, os.O_RDONLY, 0)
 		if err != nil {
-			return fmt.Errorf("DHCP: cannot open file %s: %v", filename, err)
+			return fmt.Errorf("DHCP: cannot open file %s: %w", filename, err)
 		}
 		if err = kexec.FileLoad(kernel, nil /* ramfs */, cmdline); err != nil {
-			return fmt.Errorf("DHCP: kexec.FileLoad failed: %v", err)
+			return fmt.Errorf("DHCP: kexec.FileLoad failed: %w", err)
 		}
 		if err = kexec.Reboot(); err != nil {
-			return fmt.Errorf("DHCP: kexec.Reboot failed: %v", err)
+			return fmt.Errorf("DHCP: kexec.Reboot failed: %w", err)
 		}
 	} else {
 		log.Printf("DHCP: I would've kexec into %s (with arguments: \"%s\") now unless the dry mode", filename, cmdline)
@@ -327,7 +327,7 @@ func loadCaCerts() (*x509.CertPool, error) {
 	}
 	caCerts, err := os.ReadFile(*caCertFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not find cert file '%v' - %v", *caCertFile, err)
+		return nil, fmt.Errorf("could not find cert file '%v' - %w", *caCertFile, err)
 	}
 	// TODO: Decide if this should also support compressed certs
 	// Might be better to have a generic compressed config API
@@ -390,7 +390,7 @@ func dhcp6(ifname string) (*netboot.BootConf, error) {
 	}
 	conversation, err := netboot.RequestNetbootv6(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	if err != nil {
-		return nil, fmt.Errorf("DHCPv6: netboot request for interface %s failed: %v", ifname, err)
+		return nil, fmt.Errorf("DHCPv6: netboot request for interface %s failed: %w", ifname, err)
 	}
 	for _, m := range conversation {
 		debug(m.Summary())
@@ -409,7 +409,7 @@ func dhcp4(ifname string) (*netboot.BootConf, error) {
 	}
 	conversation, err := netboot.RequestNetbootv4(ifname, time.Duration(*readTimeout)*time.Second, *dhcpRetries, modifiers...)
 	if err != nil {
-		return nil, fmt.Errorf("DHCPv4: netboot request for interface %s failed: %v", ifname, err)
+		return nil, fmt.Errorf("DHCPv4: netboot request for interface %s failed: %w", ifname, err)
 	}
 	for _, m := range conversation {
 		debug(m.Summary())

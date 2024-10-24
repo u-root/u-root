@@ -190,7 +190,7 @@ func BootPathMode(devices block.BlockDevices, baseMountpoint string, guid string
 		log.Printf("Dry-run, will not actually boot")
 	} else {
 		if err := cfg.Boot(); err != nil {
-			return fmt.Errorf("failed to boot kernel %s: %v", cfg.Kernel, err)
+			return fmt.Errorf("failed to boot kernel %s: %w", cfg.Kernel, err)
 		}
 	}
 	return nil

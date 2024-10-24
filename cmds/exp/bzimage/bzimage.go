@@ -110,7 +110,7 @@ func run(w io.Writer, args ...string) error {
 			return fmt.Errorf("there is no hope")
 		}
 		if err := os.WriteFile(args[2], o, 0o666); err != nil {
-			return fmt.Errorf("writing %v: %v", args[2], err)
+			return fmt.Errorf("writing %v: %w", args[2], err)
 		}
 	case "diff":
 		b2, err := os.ReadFile(args[2])
@@ -151,7 +151,7 @@ func run(w io.Writer, args ...string) error {
 				continue
 			}
 			if err := os.WriteFile(v.n, v.b, 0o666); err != nil {
-				return fmt.Errorf("writing %v: %v", v, err)
+				return fmt.Errorf("writing %v: %w", v, err)
 			}
 		}
 	case "initramfs":

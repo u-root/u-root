@@ -125,7 +125,7 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		if data, err := os.ReadFile(opts.FilterFile); err == nil {
 			opts.Filter = string(data)
 		} else {
-			return cmd{}, fmt.Errorf("failed to read filter file: %v", err)
+			return cmd{}, fmt.Errorf("failed to read filter file: %w", err)
 		}
 	}
 

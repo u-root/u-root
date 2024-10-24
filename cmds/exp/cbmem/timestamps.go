@@ -272,19 +272,19 @@ func (c *CBmem) readTimeStamps(f *os.File) (*TimeStamps, error) {
 	a := int64(c.TimeStampsTable.Addr)
 	r, err := newOffsetReader(f, a, int(unsafe.Sizeof(t)))
 	if err != nil {
-		return nil, fmt.Errorf("creating TSHeader offsetReader @ %#x: %v", a, err)
+		return nil, fmt.Errorf("creating TSHeader offsetReader @ %#x: %w", a, err)
 	}
 	if err := readOne(r, &t, a); err != nil {
-		return nil, fmt.Errorf("failed to read TSTable: %v", err)
+		return nil, fmt.Errorf("failed to read TSTable: %w", err)
 	}
 	a += int64(unsafe.Sizeof(t))
 	stamps := make([]TS, t.NumEntries)
 	ts := &TimeStamps{TS: []TS{{EntryID: 0, EntryStamp: t.BaseTime}}, TSHeader: t}
 	if r, err = newOffsetReader(f, a, len(stamps)*int(unsafe.Sizeof(stamps[0]))); err != nil {
-		return nil, fmt.Errorf("newOffsetReader for %d timestamps: %v", t.NumEntries, err)
+		return nil, fmt.Errorf("newOffsetReader for %d timestamps: %w", t.NumEntries, err)
 	}
 	if err := readOne(r, stamps, a); err != nil {
-		return nil, fmt.Errorf("failed to read %d stamps: %v", t.NumEntries, err)
+		return nil, fmt.Errorf("failed to read %d stamps: %w", t.NumEntries, err)
 	}
 	// Timestamps are unsigned. But we're seeing on one machine the first several
 	// timestamps have the high order 32 bits set (!). To adjust them, it seems the

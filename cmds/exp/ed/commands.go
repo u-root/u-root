@@ -318,7 +318,7 @@ func cmdEdit(ctx *Context) (e error) {
 			// this is not fatal, we just start with an empty buffer
 		}
 		if fh, e = os.Open(filename); e != nil {
-			e = fmt.Errorf("could not read file: %v", e)
+			e = fmt.Errorf("could not read file: %w", e)
 			return
 		}
 		state.fileName = filename

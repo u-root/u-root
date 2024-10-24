@@ -66,7 +66,7 @@ func getSysfsInfo(index string, field string) (string, error) {
 	path := fmt.Sprintf("/sys/class/nvme/nvme%s/%s", index, field)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("error reading sysfs info at path %s: %v", path, err)
+		return "", fmt.Errorf("error reading sysfs info at path %s: %w", path, err)
 	}
 	return strings.TrimSpace(string(data)), nil
 }
@@ -75,7 +75,7 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 	if disk == "" {
 		disks, err := finddrive.FindSlotType(finddrive.M2MKeySlotType)
 		if err != nil {
-			return fmt.Errorf("error finding boot disk: %v", err)
+			return fmt.Errorf("error finding boot disk: %w", err)
 		}
 		if len(disks) == 0 {
 			return fmt.Errorf("no boot disk found")
@@ -116,13 +116,13 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 
 	diskFd, err := os.Open(disk)
 	if err != nil {
-		return fmt.Errorf("error opening disk: %v", err)
+		return fmt.Errorf("error opening disk: %w", err)
 	}
 	defer diskFd.Close()
 
 	hssList, err := hsskey.GetAllHss(os.Stdout, verboseNoSanitize, *eepromPattern, *hssFiles)
 	if err != nil {
-		return fmt.Errorf("error getting HSS: %v", err)
+		return fmt.Errorf("error getting HSS: %w", err)
 	}
 
 	if len(hssList) == 0 {
@@ -186,11 +186,11 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 	}
 	diskdev, err := block.Device(disk)
 	if err != nil {
-		return fmt.Errorf("could not find %s: %v", disk, err)
+		return fmt.Errorf("could not find %s: %w", disk, err)
 	}
 
 	if err := diskdev.ReadPartitionTable(); err != nil && !lock {
-		return fmt.Errorf("could not re-read partition table: %v", err)
+		return fmt.Errorf("could not re-read partition table: %w", err)
 	}
 	return nil
 }

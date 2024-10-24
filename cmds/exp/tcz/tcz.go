@@ -114,7 +114,7 @@ func clonetree(tree string) error {
 		debug("Need to symlink %v to %v\n", path, path[lt:])
 
 		if err := os.Symlink(path, path[lt:]); err != nil {
-			return fmt.Errorf("symlink: %v", err)
+			return fmt.Errorf("symlink: %w", err)
 		}
 
 		return nil
