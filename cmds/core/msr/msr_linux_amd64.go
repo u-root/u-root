@@ -15,10 +15,20 @@
 //
 //	msr provides a set of Forth words that let you manage MSRs.
 //	You can add new ones of your own.
+//	If you are going to use forth, the general pattern of arguments
+//	looks something like this:
+//	msr <glob pattern> cpu <msr-number> msr <opcode>
+//	e.g.,
+//	msr '*' 0x3a rd
+//	Will read the 3a msr on all CPUs.
+//	The two first items will remain at TOS. They are implicitly converted to
+//	msr.CPUs and msr.MSR when used. You can show how the will be converted with
+//	the cpu and reg works.
+//	You can build up the expressions bit by bit:
 //	For a start, it provides some pre-defined words for well-known MSRs
 //
 //	push a [] of MSR names and the 0x3a register on the stack
-//	IA32_FEATURE_CONTROL -- equivalent to * msr 0x3a reg
+//	IA32_FEATURE_CONTROL -- equivalent to * cpu 0x3a msr
 //	The next two commands use IA32_FEATURE_CONTROL:
 //	READ_IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd
 //	LOCK IA32_FEATURE_CONTROL -- equivalent to IA32_FEATURE_CONTROL rd IA32_FEATURE_CONTROL 1 u64 or wr
@@ -34,12 +44,12 @@
 // Examples:
 //
 //	Show the IA32 feature MSR on all cores
-//	sudo fio READ_IA32_FEATURE_CONTROL
+//	sudo msr READ_IA32_FEATURE_CONTROL
 //	[[5 5 5 5]]
 //	lock the registers
-//	sudo fio LOCK_IA32_FEATURE_CONTROL
+//	sudo msr LOCK_IA32_FEATURE_CONTROL
 //	Just see it one core 0 and 1
-//	sudo ./fio '[01]' msr 0x3a reg rd
+//	sudo ./msr '[01]' 0x3a rd
 //	[[5 5]]
 package main
 
@@ -54,6 +64,8 @@ import (
 )
 
 // let's just do MSRs for now
+// NOTE: all these defines now take advantage of the fact that wr and commands
+// leave the msr.CPUs and msr.MSR on the stack.
 
 var (
 	debug = flag.Bool("d", false, "debug messages")
@@ -65,34 +77,34 @@ var (
 		// Enables features like VMX.
 		{name: "MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "cpu", "0x3a", "reg"}},
 		{name: "READ_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "rd"}},
-		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "u64", "or", "wr"}},
+		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "or", "wr"}},
 		// Silvermont, Airmont, Nehalem...
 		// Controls Processor C States.
 		{name: "MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "rd"}},
-		{name: "LOCK_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"MSR_PKG_CST_CONFIG_CONTROL", "READ_MSR_PKG_CST_CONFIG_CONTROL", uint64(1 << 15), "or", "wr"}},
+		{name: "LOCK_MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"READ_MSR_PKG_CST_CONFIG_CONTROL", uint64(1 << 15), "or", "wr"}},
 		// Westmere onwards.
 		// Note that this turns on AES instructions, however
 		// 3 will turn off AES until reset.
 		{name: "MSR_FEATURE_CONFIG", w: []forth.Cell{"'*", "cpu", "0x13c", "reg"}},
 		{name: "READ_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "rd"}},
-		{name: "LOCK_MSR_FEATURE_CONFIG", w: []forth.Cell{"MSR_FEATURE_CONFIG", "READ_MSR_FEATURE_CONFIG", uint64(1 << 0), "or", "wr"}},
+		{name: "LOCK_MSR_FEATURE_CONFIG", w: []forth.Cell{"READ_MSR_FEATURE_CONFIG", uint64(1 << 0), "or", "wr"}},
 		// Goldmont, SandyBridge
 		// Controls DRAM power limits. See Intel SDM
 		{name: "MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"'*", "cpu", "0x618", "reg"}},
 		{name: "READ_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "rd"}},
-		{name: "LOCK_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"MSR_DRAM_POWER_LIMIT", "READ_MSR_DRAM_POWER_LIMIT", uint64(1 << 31), "or", "wr"}},
+		{name: "LOCK_MSR_DRAM_POWER_LIMIT", w: []forth.Cell{"READ_MSR_DRAM_POWER_LIMIT", uint64(1 << 31), "or", "wr"}},
 		// IvyBridge Onwards.
 		// Not much information in the SDM, seems to control power limits
 		{name: "MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "rd"}},
-		{name: "LOCK_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"MSR_CONFIG_TDP_CONTROL", "READ_MSR_CONFIG_TDP_CONTROL", uint64(1 << 31), "or", "wr"}},
+		{name: "LOCK_MSR_CONFIG_TDP_CONTROL", w: []forth.Cell{"READ_MSR_CONFIG_TDP_CONTROL", uint64(1 << 31), "or", "wr"}},
 		// Architectural MSR. All systems.
 		// This is the actual spelling of the MSR in the manual.
 		// Controls availability of silicon debug interfaces
 		{name: "IA32_DEBUG_INTERFACE", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
 		{name: "READ_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "rd"}},
-		{name: "LOCK_IA32_DEBUG_INTERFACE", w: []forth.Cell{"IA32_DEBUG_INTERFACE", "READ_IA32_DEBUG_INTERFACE", uint64(1 << 15), "or", "wr"}},
+		{name: "LOCK_IA32_DEBUG_INTERFACE", w: []forth.Cell{"READ_IA32_DEBUG_INTERFACE", uint64(1 << 15), "or", "wr"}},
 		// Locks all known msrs to lock
 		{name: "LOCK_KNOWN_MSRS", w: []forth.Cell{"LOCK_MSR_IA32_FEATURE_CONTROL", "LOCK_MSR_PKG_CST_CONFIG_CONTROL", "LOCK_MSR_FEATURE_CONFIG", "LOCK_MSR_DRAM_POWER_LIMIT", "LOCK_MSR_CONFIG_TDP_CONTROL", "LOCK_IA32_DEBUG_INTERFACE"}},
 	}
@@ -100,9 +112,10 @@ var (
 		name string
 		op   forth.Op
 	}{
-		{name: "cpu", op: cpus},
-		{name: "reg", op: reg},
+		{name: "cpu", op: evalCPUs},
+		{name: "reg", op: evalMSR},
 		{name: "u64", op: u64},
+		{name: "u64slice", op: u64slice},
 		{name: "rd", op: rd},
 		{name: "wr", op: wr},
 		{name: "swr", op: swr},
@@ -118,40 +131,153 @@ var (
 // But parsers are special: using panic
 // in a parser makes the code tons cleaner.
 
+func parseCPUs(s string) msr.CPUs {
+	c, errs := msr.GlobCPUs(s)
+	if errs != nil {
+		panic(fmt.Sprintf("%q:%v", s, errs))
+	}
+	return c
+}
+
 // Note that if any type asserts fail the forth interpret loop catches
 // it. It also catches stack underflow, all that stuff.
-func cpus(f forth.Forth) {
+func evalCPUs(f forth.Forth) {
 	forth.Debug("cpu")
-	g := f.Pop().(string)
-	c, errs := msr.GlobCPUs(g)
-	if errs != nil {
-		panic(fmt.Sprintf("%v", errs))
+	r := f.Pop()
+	var c msr.CPUs
+	switch v := r.(type) {
+	case msr.CPUs:
+		c = v
+	case string:
+		c = parseCPUs(v)
+	default:
+		panic(fmt.Sprintf("%v(%T): can not convert to msr.MSR", r, f))
 	}
+
 	forth.Debug("CPUs are %v", c)
 	f.Push(c)
 }
 
-func reg(f forth.Forth) {
-	n, err := strconv.ParseUint(f.Pop().(string), 0, 32)
+func CPUs(f forth.Forth) msr.CPUs {
+	evalCPUs(f)
+	return f.Pop().(msr.CPUs)
+}
+
+func parseMSR(s string) msr.MSR {
+	n, err := strconv.ParseUint(s, 0, 32)
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
-	f.Push(msr.MSR(n))
+	return msr.MSR(n)
+}
+
+func evalMSR(f forth.Forth) {
+	r := f.Pop()
+	var m msr.MSR
+	switch v := r.(type) {
+	case msr.MSR:
+		m = v
+	case string:
+		m = parseMSR(v)
+	default:
+		panic(fmt.Sprintf("%v(%T): can not convert to msr.MSR", r, f))
+	}
+	f.Push(m)
+}
+
+func MSR(f forth.Forth) msr.MSR {
+	evalMSR(f)
+	return f.Pop().(msr.MSR)
+}
+
+func tou64slice(a any) []uint64 {
+	forth.Debug("tou64slice: %v:%T", a, a)
+	switch v := a.(type) {
+	case string:
+		n, err := strconv.ParseUint(v, 0, 64)
+		if err != nil {
+			panic(fmt.Sprintf("%q:%T:%v", v, v, err))
+		}
+		return []uint64{uint64(n)}
+	case []string:
+		u := make([]uint64, len(v))
+		for i, s := range v {
+			n, err := strconv.ParseUint(s, 0, 64)
+			if err != nil {
+				panic(fmt.Sprintf("%q:%T:%v", s, s, err))
+			}
+			u[i] = n
+		}
+	case uint64:
+		// no idea how long it should be, so ...
+		return []uint64{uint64(v)}
+	case uint32:
+		return []uint64{uint64(v)}[:]
+	case uint16:
+		return []uint64{uint64(v)}[:]
+	case uint8:
+		return []uint64{uint64(v)}[:]
+	case []uint64:
+		return v
+	default:
+		panic(fmt.Sprintf("can not convert %v:%T to uint64", a, a))
+	}
+	return nil
+}
+
+func u64slice(f forth.Forth) {
+	f.Push(tou64slice(f.Pop()))
+}
+
+func tou64(a any) uint64 {
+	var u uint64
+	switch v := a.(type) {
+	case string:
+		n, err := strconv.ParseUint(v, 0, 64)
+		if err != nil {
+			panic(fmt.Sprintf("%v", err))
+		}
+		u = n
+	case uint64:
+		u = v
+	case uint32:
+		u = uint64(v)
+	case uint16:
+		u = uint64(v)
+	case uint8:
+		u = uint64(v)
+	}
+	return u
+
 }
 
 func u64(f forth.Forth) {
-	n, err := strconv.ParseUint(f.Pop().(string), 0, 64)
-	if err != nil {
-		panic(fmt.Sprintf("%v", err))
-	}
-	f.Push(uint64(n))
+	f.Push(tou64(f.Pop()))
+}
+
+func cpumsr(f forth.Forth) (msr.CPUs, msr.MSR) {
+	m := MSR(f)
+	c := CPUs(f)
+	// It is proving to be much more convenient to always leave these
+	// at TOS. This allows sequences like
+	// msr 0 0x3a rd 1 and wr
+	// without having to repeat the cpu and msr all the time.
+	f.Push(c)
+	f.Push(m)
+	forth.Debug("cpumsr: cpu %v msr %v", c, m)
+	return c, m
+}
+
+func cpumsrval(f forth.Forth) (msr.CPUs, msr.MSR, uint64) {
+	u := tou64(f.Pop())
+	c, m := cpumsr(f)
+	return c, m, u
 }
 
 func rd(f forth.Forth) {
-	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
-	forth.Debug("rd: cpus %v, msr %v", c, r)
-	data, errs := r.Read(c)
+	c, m := cpumsr(f)
+	forth.Debug("rd: cpus %v, msr %v", c, m)
+	data, errs := m.Read(c)
 	forth.Debug("data %v errs %v", data, errs)
 	if errs != nil {
 		panic(fmt.Sprintf("%v", errs))
@@ -166,12 +292,11 @@ func rd(f forth.Forth) {
 // modern world.
 // If you're determined to write a fixed value, the same
 // for all, it's easy:
-// fio "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
+// msr "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
-	v := f.Pop().([]uint64)
-	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
+	v := tou64slice(f.Pop())
+	c, r := cpumsr(f)
 	forth.Debug("wr: cpus %v, msr %v, values %v", c, r, v)
 	errs := r.Write(c, v...)
 	forth.Debug("errs %v", errs)
@@ -188,9 +313,7 @@ func wr(f forth.Forth) {
 //
 // Write now accepts a single value
 func swr(f forth.Forth) {
-	v := f.Pop().(uint64)
-	r := f.Pop().(msr.MSR)
-	c := f.Pop().(msr.CPUs)
+	c, r, v := cpumsrval(f)
 
 	forth.Debug("swr: cpus %v, msr %v, %v", c, r, v)
 	errs := r.Write(c, v)
@@ -200,23 +323,34 @@ func swr(f forth.Forth) {
 	}
 }
 
+// Not needed after go1.23
+func clone(u []uint64) []uint64 {
+	n := make([]uint64, len(u))
+	copy(n, u)
+	return n
+}
+
 func and(f forth.Forth) {
-	v := f.Pop().(uint64)
-	m := f.Pop().([]uint64)
+	v := tou64(f.Pop())
+	m := tou64slice(f.Pop())
+	m = clone(m)
 	forth.Debug("and: %v(%T) %v(%T)", m, m, v, v)
 	for i := range m {
 		m[i] &= v
 	}
+	forth.Debug("Result:%v:%T", m, m)
 	f.Push(m)
 }
 
 func or(f forth.Forth) {
-	v := f.Pop().(uint64)
-	m := f.Pop().([]uint64)
+	v := tou64(f.Pop())
+	m := tou64slice(f.Pop())
+	m = clone(m)
 	forth.Debug("or: %v(%T) %v(%T)", m, m, v, v)
 	for i := range m {
 		m[i] |= v
 	}
+	forth.Debug("Result:%v:%T", m, m)
 	f.Push(m)
 }
 
@@ -241,6 +375,10 @@ func main() {
 		forth.NewWord(f, w.name, w.w[0], w.w[1:]...)
 	}
 	a := flag.Args()
+	if len(a) == 0 {
+		flag.Usage()
+		return
+	}
 	// If the first arg is r or w, we're going to assume they're not doing Forth.
 	// It is too confusing otherwise if they type a wrong r or w command and
 	// see the Forth stack and nothing else.
@@ -251,7 +389,7 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg rd", a[1], a[2])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s %s rd", a[1], a[2])); err != nil {
 			log.Fatal(err)
 		}
 	case "w":
@@ -260,14 +398,14 @@ func main() {
 		}
 		// Because the msr arg is a glob and may have things like * in it (* being the
 		// most common) gratuitiously add a Forth ' before it (i.e. quote it).
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg %s u64 swr", a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s %s %s swr", a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	case "lock":
 		if len(a) != 4 {
 			log.Fatal("Usage for lock: lock <msr-glob> <register> <bit>")
 		}
-		if err := forth.EvalString(f, fmt.Sprintf("'%s cpu %s reg '%s msr %s reg rd %s u64 or wr", a[1], a[2], a[1], a[2], a[3])); err != nil {
+		if err := forth.EvalString(f, fmt.Sprintf("'%s %s rd %s or wr", a[1], a[2], a[3])); err != nil {
 			log.Fatal(err)
 		}
 	default:
@@ -278,10 +416,18 @@ func main() {
 			forth.Debug("%vOK\n", f.Stack())
 		}
 	}
-	// special case: if the length of stack is 1, just print out stack[0].
+	// special case: if the length of stack is 3, just print out stack[2].
+	// The reason being that TOS is always going to be cpus, msr, and value.
+	// We tried just printing out the whole stack but it's annoying.
+	// If you really want to see the whole stack you can force the issue
+	// by adding an extraneous word that makes the end result not 3, e.g.
+	// msr TOS 0 0x3a rd
+	// will show you all the stack.
+	// $ msr TOS [10] 0x3a rd
+	// [TOS 0-1 0x3a [5 5]]
 	s := f.Stack()
-	if len(s) == 1 {
-		fmt.Printf("%v\n", s[0])
+	if len(s) == 3 {
+		fmt.Printf("%v\n", s[2])
 	} else {
 		fmt.Printf("%v\n", s)
 	}

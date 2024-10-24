@@ -92,6 +92,7 @@ func init() {
 		"drop":     drop,
 		"newword":  newword,
 		"words":    words,
+		"typeof":   typeOf,
 	}
 }
 
@@ -183,13 +184,18 @@ func (f *stack) Empty() bool {
 // otherwise.
 func errRecover(errp *error) {
 	e := recover()
+	Debug("pkg/forth:e is %v:%T", e, e)
 	if e != nil {
-		if _, ok := e.(runtime.Error); ok {
-			Debug("errRecover panics with a runtime error")
+		switch err := e.(type) {
+		case runtime.Error:
+			Debug("pkg/forth:errRecover panics with a runtime error")
 			panic(e)
+		case error:
+			*errp = err
+		default:
+			*errp = fmt.Errorf("pkg/forth:%v", err)
 		}
-		Debug("errRecover returns %v", e)
-		*errp = e.(error)
+		Debug("pkg/forth:errRecover returns %v:%T", *errp, *errp)
 	}
 }
 
@@ -268,6 +274,15 @@ func String(f Forth) string {
 	default:
 		panic(fmt.Errorf("%v:%w", c, strconv.ErrSyntax))
 	}
+}
+
+// typeOf pops the stack, and replaces it with the
+// type as a string.
+func typeOf(f Forth) {
+	Debug("toint %v", f.Stack())
+	c := f.Pop()
+	Debug("%T", c)
+	f.Push(fmt.Sprintf("%T", c))
 }
 
 // toInt converts to int64.
