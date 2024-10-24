@@ -36,6 +36,7 @@ package forth
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"runtime"
 	"strconv"
@@ -81,7 +82,8 @@ func init() {
 		"-":        sub,
 		"*":        times,
 		"/":        div,
-		"%":        mod,
+		"%":        rem,
+		"mod":      mod,
 		"swap":     swap,
 		"ifelse":   ifelse,
 		"hostname": hostname,
@@ -285,30 +287,43 @@ func typeOf(f Forth) {
 	f.Push(fmt.Sprintf("%T", c))
 }
 
-// toInt converts to int64.
-func toInt(f Forth) int64 {
+// toRat converts TOS to big.Rat.
+func toRat(f Forth) *big.Rat {
 	Debug("toint %v", f.Stack())
 	c := f.Pop()
 	Debug("%T", c)
+	r := new(big.Rat)
+	var num string
 	switch s := c.(type) {
 	case string:
-		i, err := strconv.ParseInt(s, 0, 64)
-		if err != nil {
-			panic(err)
-		}
-		return i
-	case int64:
+		num = s
+	case *big.Rat:
 		return s
 	default:
-		panic(fmt.Errorf("%v NaN: %T:%w", c, c, strconv.ErrSyntax))
+		num = fmt.Sprintf("%d", s)
 	}
+	if _, err := fmt.Sscan(num, r); err != nil {
+		// Older go versions of go big don't wrap the error
+		// So we must do it ourselves.
+		panic(strconv.ErrSyntax)
+	}
+	return r
+}
+
+// toInt converts TOS to a big.Int
+func toInt(f Forth) *big.Int {
+	r := toRat(f)
+	if !r.IsInt() {
+		panic(fmt.Errorf("%v: not an int:%w", r.String(), strconv.ErrSyntax))
+	}
+	return r.Num()
 }
 
 func plus(f Forth) {
-	x := toInt(f)
-	y := toInt(f)
-	z := x + y
-	f.Push(z)
+	x := toRat(f)
+	y := toRat(f)
+	x.Add(x, y)
+	f.Push(x)
 }
 
 func words(f Forth) {
@@ -323,7 +338,7 @@ func words(f Forth) {
 
 func newword(f Forth) {
 	s := String(f)
-	n := toInt(f)
+	n := toInt(f).Int64()
 	// Pop <n> Cells.
 	if int64(f.Length()) < n {
 		panic(fmt.Errorf("newword %s: stack is %d elements, need %d:%w", s, f.Length(), n, ErrNotEnoughElements))
@@ -343,37 +358,47 @@ func drop(f Forth) {
 }
 
 func times(f Forth) {
-	x := toInt(f)
-	y := toInt(f)
-	z := x * y
-	f.Push(z)
+	x := toRat(f)
+	y := toRat(f)
+	x.Mul(x, y)
+	f.Push(x)
 }
 
 func sub(f Forth) {
-	x := toInt(f)
-	y := toInt(f)
-	z := y - x
-	f.Push(z)
+	x := toRat(f)
+	y := toRat(f)
+	x.Sub(x, y)
+	f.Push(x)
 }
 
 func div(f Forth) {
-	x := toInt(f)
-	y := toInt(f)
-	z := y / x
-	f.Push(z)
+	x := toRat(f)
+	y := toRat(f)
+	x.Quo(x, y)
+	f.Push(x)
 }
 
 func mod(f Forth) {
 	x := toInt(f)
 	y := toInt(f)
-	z := y % x
-	f.Push(z)
+	x.Mod(x, y)
+	f.Push((&big.Rat{}).SetInt(x))
+}
+
+func rem(f Forth) {
+	x := toInt(f)
+	y := toInt(f)
+	x.Rem(x, y)
+	f.Push((&big.Rat{}).SetInt(x))
 }
 
 func roundup(f Forth) {
-	rnd := toInt(f)
-	v := toInt(f)
-	v = ((v + rnd - 1) / rnd) * rnd
+	rnd := toRat(f)
+	v := toRat(f)
+	v = v.Add(v, rnd)
+	v = v.Sub(v, big.NewRat(1, 1))
+	v = v.Quo(v, rnd)
+	v = v.Mul(v, rnd)
 	f.Push(v)
 }
 
@@ -400,7 +425,7 @@ func ifelse(f Forth) {
 	x := toInt(f)
 	y := f.Pop()
 	z := f.Pop()
-	if x != 0 {
+	if x.Cmp(big.NewInt(0)) == 0 {
 		f.Push(y)
 	} else {
 		f.Push(z)
