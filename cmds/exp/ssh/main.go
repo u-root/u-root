@@ -107,18 +107,18 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 
 	// Read the config file (if any)
 	if err := loadConfig(*configFile); err != nil {
-		return fmt.Errorf("config parse failed: %v", err)
+		return fmt.Errorf("config parse failed: %w", err)
 	}
 
 	// Parse out the destination
 	user, host, port, err := parseDest(dest)
 	if err != nil {
-		return fmt.Errorf("destination parse failed: %v", err)
+		return fmt.Errorf("destination parse failed: %w", err)
 	}
 
 	cb, err := knownHosts()
 	if err != nil {
-		return fmt.Errorf("known hosts:%v", err)
+		return fmt.Errorf("known hosts:%w", err)
 	}
 	// Build a client config with appropriate auth methods
 	config := &ssh.ClientConfig{
@@ -132,11 +132,11 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 		// The key exists
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
-			return fmt.Errorf("ParsePrivateKey %v: %v", kf, err)
+			return fmt.Errorf("ParsePrivateKey %v: %w", kf, err)
 		}
 		config.Auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
 	} else if err != nil && *keyFile != "" {
-		return fmt.Errorf("could not read user-specified keyfile %v: %v", kf, err)
+		return fmt.Errorf("could not read user-specified keyfile %v: %w", kf, err)
 	}
 	v("Config: %+v\n", config)
 	if term.IsTerminal(int(stdin.Fd())) {
@@ -149,13 +149,13 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 	// Now connect to the server
 	conn, err := ssh.Dial("tcp", net.JoinHostPort(host, port), config)
 	if err != nil {
-		return fmt.Errorf("unable to connect: %v", err)
+		return fmt.Errorf("unable to connect: %w", err)
 	}
 	defer conn.Close()
 	// Create a session on that connection
 	session, err := conn.NewSession()
 	if err != nil {
-		return fmt.Errorf("unable to create session: %v", err)
+		return fmt.Errorf("unable to create session: %w", err)
 	}
 	session.Stdin = stdin
 	session.Stdout = stdout
@@ -165,7 +165,7 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 	if len(args) > 0 {
 		// run the command
 		if err := session.Run(strings.Join(args, " ")); err != nil {
-			return fmt.Errorf("failed to run command: %v", err)
+			return fmt.Errorf("failed to run command: %w", err)
 		}
 	} else {
 		// Set up the terminal
@@ -182,7 +182,7 @@ func run(osArgs []string, stdin *os.File, stdout io.Writer, stderr io.Writer) er
 			// Try to figure out the terminal size
 			width, height, err := getSize(stdin)
 			if err != nil {
-				return fmt.Errorf("failed to get terminal size: %v", err)
+				return fmt.Errorf("failed to get terminal size: %w", err)
 			}
 			// Request pseudo terminal - "xterm" for now, may make this adjustable later.
 			if err := session.RequestPty("xterm", height, width, modes); err != nil {

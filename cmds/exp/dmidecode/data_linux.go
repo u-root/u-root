@@ -22,7 +22,7 @@ func getData(textOut io.Writer, dumpFile, sysfsPath string) ([]byte, []byte, err
 		fmt.Fprintf(textOut, "Reading SMBIOS/DMI data from file %s.\n", dumpFile)
 		data, err = os.ReadFile(dumpFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error reading dump: %v", err)
+			return nil, nil, fmt.Errorf("error reading dump: %w", err)
 		}
 		if len(data) < 36 {
 			return nil, nil, errors.New("dump is too short")
@@ -33,11 +33,11 @@ func getData(textOut io.Writer, dumpFile, sysfsPath string) ([]byte, []byte, err
 		fmt.Fprintf(textOut, "Reading SMBIOS/DMI data from sysfs.\n")
 		entry, err = os.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("error reading DMI data: %v", err)
+			return nil, nil, fmt.Errorf("error reading DMI data: %w", err)
 		}
 		data, err = os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("error reading DMI data: %v", err)
+			return nil, nil, fmt.Errorf("error reading DMI data: %w", err)
 		}
 	}
 	return entry, data, nil

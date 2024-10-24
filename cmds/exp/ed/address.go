@@ -153,7 +153,7 @@ func (f *FileBuffer) ResolveAddr(cmd string) (line, cmdOffset int, e error) {
 		}
 		var re *regexp.Regexp
 		if re, e = regexp.Compile(restr); e != nil {
-			e = fmt.Errorf("invalid regexp: %v", e)
+			e = fmt.Errorf("invalid regexp: %w", e)
 			return
 		}
 		var c int

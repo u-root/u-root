@@ -149,7 +149,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				LB_TAG_PLATFORM_BLOB_VERSION:
 				s, err := bufio.NewReader(io.NewSectionReader(r, j, 65536)).ReadString(0)
 				if err != nil {
-					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %w", n, err)
 				}
 				cbmem.StringVars[n] = s[:len(s)-1]
 			case LB_TAG_SERIAL:
@@ -210,11 +210,11 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 				cbmem.MainBoard.Record = rec
 				v, err := bufio.NewReader(io.NewSectionReader(r, j+2, 65536)).ReadString(0)
 				if err != nil {
-					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %w", n, err)
 				}
 				p, err := bufio.NewReader(io.NewSectionReader(r, j+2+int64(len(v)), 65536)).ReadString(0)
 				if err != nil {
-					return nil, false, fmt.Errorf("trying to read string for %s: %v", n, err)
+					return nil, false, fmt.Errorf("trying to read string for %s: %w", n, err)
 				}
 				cbmem.MainBoard.Vendor = v[:len(v)-1]
 				cbmem.MainBoard.PartNumber = p[:len(p)-1]
@@ -395,7 +395,7 @@ func cbMem(w io.Writer) error {
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("reading coreboot table: %v", err)
+		return fmt.Errorf("reading coreboot table: %w", err)
 	}
 	if !found {
 		return fmt.Errorf("no coreboot table found")
@@ -427,7 +427,7 @@ func cbMem(w io.Writer) error {
 	if dumpJSON {
 		b, err := json.MarshalIndent(cbmem, "", "\t")
 		if err != nil {
-			return fmt.Errorf("json marshal: %v", err)
+			return fmt.Errorf("json marshal: %w", err)
 		}
 		fmt.Fprintf(w, "%s\n", b)
 	}

@@ -130,7 +130,7 @@ func runEd(in io.Reader, out io.Writer, suppress bool, prompt, file string) erro
 		}
 	}
 	if inScan.Err() != nil {
-		return fmt.Errorf("error reading stdin: %v", inScan.Err())
+		return fmt.Errorf("error reading stdin: %w", inScan.Err())
 	}
 	return nil
 }

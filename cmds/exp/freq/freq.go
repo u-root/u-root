@@ -74,7 +74,7 @@ func (c *cmd) run() error {
 		for _, v := range c.args {
 			f, err := os.Open(v)
 			if err != nil {
-				return fmt.Errorf("open %s: %v", v, err)
+				return fmt.Errorf("open %s: %w", v, err)
 			}
 			c.doFreq(f)
 			f.Close()

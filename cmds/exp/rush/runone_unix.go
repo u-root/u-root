@@ -14,10 +14,10 @@ import (
 func runone(c *Command) error {
 	forkAttr(c)
 	if err := c.Start(); err != nil {
-		return fmt.Errorf("%v: Path %v", err, os.Getenv("PATH"))
+		return fmt.Errorf("%w: Path %v", err, os.Getenv("PATH"))
 	}
 	if err := c.Wait(); err != nil {
-		return fmt.Errorf("wait: %v", err)
+		return fmt.Errorf("wait: %w", err)
 	}
 	return nil
 }
