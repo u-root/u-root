@@ -191,7 +191,7 @@ func errRecover(errp *error) {
 			Debug("pkg/forth:errRecover panics with a runtime error")
 			panic(e)
 		case error:
-			*errp = fmt.Errorf("%w", err)
+			*errp = err
 		default:
 			*errp = fmt.Errorf("pkg/forth:%v", err)
 		}
