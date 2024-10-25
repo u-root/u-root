@@ -114,12 +114,12 @@ func Probe(name string, modParams string) error {
 func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	deps, err := genDeps(opts)
 	if err != nil {
-		return fmt.Errorf("could not generate dependency map %v", err)
+		return fmt.Errorf("could not generate dependency map %w", err)
 	}
 
 	modPath, err := findModPath(name, deps)
 	if err != nil {
-		return fmt.Errorf("could not find module path %q: %v", name, err)
+		return fmt.Errorf("could not find module path %q: %w", name, err)
 	}
 
 	dep := deps[modPath]
@@ -142,7 +142,7 @@ func checkBuiltin(moduleDir string, deps depMap) error {
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("could not open builtin file: %v", err)
+		return fmt.Errorf("could not open builtin file: %w", err)
 	}
 	defer f.Close()
 
@@ -166,7 +166,7 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 	if rel == "" {
 		var u unix.Utsname
 		if err := unix.Uname(&u); err != nil {
-			return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+			return nil, fmt.Errorf("could not get release (uname -r): %w", err)
 		}
 		rel = unix.ByteSliceToString(u.Release[:])
 	}
@@ -181,7 +181,7 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 
 	f, err := os.Open(filepath.Join(moduleDir, "modules.dep"))
 	if err != nil {
-		return nil, fmt.Errorf("could not open dependency file: %v", err)
+		return nil, fmt.Errorf("could not open dependency file: %w", err)
 	}
 	defer f.Close()
 
@@ -294,7 +294,7 @@ func genLoadedMods(r io.Reader, deps depMap) error {
 		name := arr[0]
 		modPath, err := findModPath(name, deps)
 		if err != nil {
-			return fmt.Errorf("could not find module path %q: %v", name, err)
+			return fmt.Errorf("could not find module path %q: %w", name, err)
 		}
 		if deps[modPath] == nil {
 			deps[modPath] = new(dependency)

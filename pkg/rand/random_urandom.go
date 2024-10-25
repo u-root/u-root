@@ -28,7 +28,7 @@ func (r *urandomReader) init() error {
 	r.once.Do(func() {
 		fd, err := unix.Open("/dev/urandom", unix.O_RDONLY, 0)
 		if err != nil {
-			realErr = fmt.Errorf("open(/dev/urandom): %v", err)
+			realErr = fmt.Errorf("open(/dev/urandom): %w", err)
 			return
 		}
 		r.fd = fd

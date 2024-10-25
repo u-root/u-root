@@ -47,7 +47,7 @@ func readAllPCRs20(tpm io.ReadWriter, alg tpm2.Algorithm) (map[uint32][]byte, er
 		// Ask the TPM for those PCR values.
 		ret, err := tpm2.ReadPCRs(tpm, sel)
 		if err != nil {
-			return nil, fmt.Errorf("tpm2.ReadPCRs(%+v) failed with err: %v", sel, err)
+			return nil, fmt.Errorf("tpm2.ReadPCRs(%+v) failed with err: %w", sel, err)
 		}
 		// Keep track of the PCRs we were actually given.
 		for pcr, digest := range ret {
@@ -73,7 +73,7 @@ func readAllPCRs12(rwc io.ReadWriter) (map[uint32][]byte, error) {
 		// Ask the TPM for those PCR values.
 		pcr, err := tpm.ReadPCR(rwc, uint32(i))
 		if err != nil {
-			return nil, fmt.Errorf("tpm.ReadPCR(%d) failed with err: %v", i, err)
+			return nil, fmt.Errorf("tpm.ReadPCR(%d) failed with err: %w", i, err)
 		}
 		out[uint32(i)] = pcr
 		if len(out) == numPCRs {

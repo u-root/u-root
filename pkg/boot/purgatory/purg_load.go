@@ -68,7 +68,7 @@ func Select(name string) error {
 func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 	elfFile, err := elf.NewFile(bytes.NewReader(curPurgatory.Code))
 	if err != nil {
-		return 0, fmt.Errorf("parse purgatory ELF file from ELF buffer: %v", err)
+		return 0, fmt.Errorf("parse purgatory ELF file from ELF buffer: %w", err)
 	}
 
 	log.Printf("Elf file: %#v, %d Progs", elfFile, len(elfFile.Progs))
@@ -96,7 +96,7 @@ func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 
 	phyRange, err := kmem.ReservePhys(uint(len(b)), kexec.RangeFromInterval(min, max))
 	if err != nil {
-		return 0, fmt.Errorf("purgatory: reserve phys ram of size %d between range(%d, %d): %v", len(b), min, max, err)
+		return 0, fmt.Errorf("purgatory: reserve phys ram of size %d between range(%d, %d): %w", len(b), min, max, err)
 	}
 	kmem.Segments.Insert(kexec.NewSegment(b, phyRange))
 	return elfEntry, nil

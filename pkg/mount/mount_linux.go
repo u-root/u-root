@@ -63,7 +63,7 @@ func (mp *MountPoint) Unmount(flags uintptr) error {
 		return &os.PathError{
 			Op:   "unmount",
 			Path: mp.Path,
-			Err:  fmt.Errorf("flags %#x: %v", flags, err),
+			Err:  fmt.Errorf("flags %#x: %w", flags, err),
 		}
 	}
 	return nil
@@ -91,7 +91,7 @@ func Mount(dev, path, fsType, data string, flags uintptr, opts ...func() error) 
 		return nil, &os.PathError{
 			Op:   "mount",
 			Path: path,
-			Err:  fmt.Errorf("from device %q (fs type %s, flags %#x): %v", dev, fsType, flags, err),
+			Err:  fmt.Errorf("from device %q (fs type %s, flags %#x): %w", dev, fsType, flags, err),
 		}
 	}
 	return &MountPoint{
@@ -138,7 +138,7 @@ func Unmount(path string, force, lazy bool) error {
 		flags |= unix.MNT_DETACH
 	}
 	if err := unix.Unmount(path, flags); err != nil {
-		return fmt.Errorf("umount %q flags %x: %v", path, flags, err)
+		return fmt.Errorf("umount %q flags %x: %w", path, flags, err)
 	}
 	return nil
 }
@@ -167,7 +167,7 @@ func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
 	if p.tmpDir == "" {
 		tmpDir, err := os.MkdirTemp("", "u-root-mounts")
 		if err != nil {
-			return nil, fmt.Errorf("cannot create tmpdir: %v", err)
+			return nil, fmt.Errorf("cannot create tmpdir: %w", err)
 		}
 		p.tmpDir = tmpDir
 	}

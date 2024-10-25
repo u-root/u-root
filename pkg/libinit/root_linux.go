@@ -254,7 +254,7 @@ func (i *InitModuleLoader) IsExcluded(mod string) bool {
 func (i *InitModuleLoader) LoadModule(mod string) error {
 	flags := i.Cmdline.FlagsForModule(mod)
 	if err := i.Prober(mod, flags); err != nil {
-		return fmt.Errorf("failed to load module: %s", err)
+		return fmt.Errorf("failed to load module: %w", err)
 	}
 	return nil
 }

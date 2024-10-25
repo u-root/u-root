@@ -39,7 +39,7 @@ func (s *SSLOptions) GenerateTLSConfiguration() (*tls.Config, error) {
 
 	cer, err := tls.LoadX509KeyPair(s.CertFilePath, s.KeyFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("connection: %v", err)
+		return nil, fmt.Errorf("connection: %w", err)
 	}
 
 	tlsConfig.Certificates = []tls.Certificate{cer}
@@ -47,7 +47,7 @@ func (s *SSLOptions) GenerateTLSConfiguration() (*tls.Config, error) {
 	if s.VerifyTrust {
 		caCert, err := os.ReadFile(s.TrustFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read CA certificate: %v", err)
+			return nil, fmt.Errorf("cannot read CA certificate: %w", err)
 		}
 		caCertPool := x509.NewCertPool()
 		if !caCertPool.AppendCertsFromPEM(caCert) {

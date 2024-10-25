@@ -30,7 +30,7 @@ func ParseInfo(entryData, tableData []byte) (*Info, error) {
 	var err error
 	info.Entry32, info.Entry64, err = ParseEntry(entryData)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing entry point structure: %v", err)
+		return nil, fmt.Errorf("error parsing entry point structure: %w", err)
 	}
 	for len(tableData) > 0 {
 		t, remainder, err := ParseTable(tableData)

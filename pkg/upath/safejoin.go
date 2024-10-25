@@ -17,7 +17,7 @@ import (
 func SafeFilepathJoin(path1, path2 string) (string, error) {
 	relPath, err := filepath.Rel(".", path2)
 	if err != nil || strings.HasPrefix(relPath, "..") {
-		return "", fmt.Errorf("(zipslip) filepath is unsafe %q: %v", path2, err)
+		return "", fmt.Errorf("(zipslip) filepath is unsafe %q: %w", path2, err)
 	}
 	if path1 == "" {
 		path1 = "."

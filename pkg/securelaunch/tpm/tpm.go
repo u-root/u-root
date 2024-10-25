@@ -95,7 +95,7 @@ func hashReader(f io.Reader) []byte {
 func New() error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
-		return fmt.Errorf("couldn't talk to TPM Device: err=%v", err)
+		return fmt.Errorf("couldn't talk to TPM Device: err=%w", err)
 	}
 
 	tpmHandle = tpm
@@ -118,7 +118,7 @@ func readPCR(pcr uint32) ([]byte, error) {
 
 	val, err := tpmHandle.ReadPCR(pcr)
 	if err != nil {
-		return nil, fmt.Errorf("can't read PCR %d, err= %v", pcr, err)
+		return nil, fmt.Errorf("can't read PCR %d, err= %w", pcr, err)
 	}
 	return val, nil
 }
@@ -141,7 +141,7 @@ func extendPCR(pcr uint32, hash []byte) error {
 func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 	oldPCRValue, err := readPCR(pcr)
 	if err != nil {
-		return fmt.Errorf("readPCR failed, err=%v", err)
+		return fmt.Errorf("readPCR failed, err=%w", err)
 	}
 	slaunch.Debug("ExtendPCRDebug: oldPCRValue = [%x]", oldPCRValue)
 
@@ -149,7 +149,7 @@ func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 
 	slaunch.Debug("Adding hash=[%x] to PCR #%d", hash, pcr)
 	if e := extendPCR(pcr, hash); e != nil {
-		return fmt.Errorf("can't extend PCR %d, err=%v", pcr, e)
+		return fmt.Errorf("can't extend PCR %d, err=%w", pcr, e)
 	}
 	slaunch.Debug(eventDesc)
 
@@ -158,7 +158,7 @@ func ExtendPCRDebug(pcr uint32, data io.Reader, eventDesc string) error {
 
 	newPCRValue, err := readPCR(pcr)
 	if err != nil {
-		return fmt.Errorf("readPCR failed, err=%v", err)
+		return fmt.Errorf("readPCR failed, err=%w", err)
 	}
 	slaunch.Debug("ExtendPCRDebug: newPCRValue = [%x]", newPCRValue)
 

@@ -63,13 +63,13 @@ func (e ErrWrongSigner) Error() string {
 func GetKeyRing(keyPath string) (openpgp.KeyRing, error) {
 	key, err := os.Open(keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not open pub key: %v", err)
+		return nil, fmt.Errorf("could not open pub key: %w", err)
 	}
 	defer key.Close()
 
 	ring, err := openpgp.ReadKeyRing(key)
 	if err != nil {
-		return nil, fmt.Errorf("could not read pub key: %v", err)
+		return nil, fmt.Errorf("could not read pub key: %w", err)
 	}
 	return ring, nil
 }

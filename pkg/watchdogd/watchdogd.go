@@ -107,7 +107,7 @@ func MonitorOops() error {
 	dmesg := make([]byte, 256*1024)
 	n, err := unix.Klogctl(unix.SYSLOG_ACTION_READ_ALL, dmesg)
 	if err != nil {
-		return fmt.Errorf("syslog failed: %v", err)
+		return fmt.Errorf("syslog failed: %w", err)
 	}
 	if strings.Contains(string(dmesg[:n]), "Oops:") {
 		return fmt.Errorf("founds Oops in dmesg")
@@ -217,7 +217,7 @@ func (d *Daemon) DoPetting() error {
 		return fmt.Errorf("no reference to any Watchdog")
 	}
 	if err := doMonitors(d.CurrentOpts.Monitors); err != nil {
-		return fmt.Errorf("won't keepalive since at least one of the custom monitors failed: %v", err)
+		return fmt.Errorf("won't keepalive since at least one of the custom monitors failed: %w", err)
 	}
 	if err := d.CurrentWd.KeepAlive(); err != nil {
 		return err
@@ -285,7 +285,7 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 	d := NewDaemon(opts)
 	l, cleanup, err := setupListener(d.CurrentOpts.UDS)
 	if err != nil {
-		return fmt.Errorf("failed to setup server: %v", err)
+		return fmt.Errorf("failed to setup server: %w", err)
 	}
 	go func() {
 		log.Println("Start serving.")

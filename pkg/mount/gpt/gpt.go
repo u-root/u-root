@@ -237,7 +237,7 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 	partBlocks := make([]byte, int64(g.NPart)*s)
 	n, err := r.ReadAt(partBlocks, int64(g.PartStart)*BlockSize)
 	if n != len(partBlocks) || err != nil {
-		return nil, fmt.Errorf("%s Reading partitions: Wanted %d bytes, got %d: %v", which, n, len(partBlocks), err)
+		return nil, fmt.Errorf("%s Reading partitions: Wanted %d bytes, got %d: %w", which, n, len(partBlocks), err)
 	}
 	if h := crc32.ChecksumIEEE(partBlocks); h != g.PartCRC {
 		return g, fmt.Errorf("%s Partition CRC: Header %v, computed checksum is %08x, header has %08x", which, g, h, g.PartCRC)
@@ -246,7 +246,7 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 	hdr := make([]byte, g.HeaderSize)
 	n, err = r.ReadAt(hdr, off)
 	if n != len(hdr) || err != nil {
-		return nil, fmt.Errorf("%s Reading Header: Wanted %d bytes, got %d: %v", which, n, len(hdr), err)
+		return nil, fmt.Errorf("%s Reading Header: Wanted %d bytes, got %d: %w", which, n, len(hdr), err)
 	}
 	// Zap the checksum in the header to 0.
 	copy(hdr[16:], []byte{0, 0, 0, 0})
@@ -259,7 +259,7 @@ func Table(r io.ReaderAt, off int64) (*GPT, error) {
 
 	for i := range g.Parts {
 		if err := binary.Read(io.NewSectionReader(r, int64(g.PartStart*BlockSize)+int64(i)*s, s), binary.LittleEndian, &g.Parts[i]); err != nil {
-			return nil, fmt.Errorf("%s GPT partition %d failed: %v", which, i, err)
+			return nil, fmt.Errorf("%s GPT partition %d failed: %w", which, i, err)
 		}
 	}
 
@@ -296,7 +296,7 @@ func writeGPT(w io.WriterAt, g *GPT) error {
 
 	ps := int64(g.PartStart * BlockSize)
 	if _, err := w.WriteAt(h, ps); err != nil {
-		return fmt.Errorf("writing %d bytes of partition table at %v: %v", len(h), ps, err)
+		return fmt.Errorf("writing %d bytes of partition table at %v: %w", len(h), ps, err)
 	}
 
 	g.PartCRC = crc32.ChecksumIEEE(h[:])
@@ -350,7 +350,7 @@ func New(r io.ReaderAt) (*PartitionTable, error) {
 	}
 
 	if err := EqualHeader(g.Header, b.Header); err != nil {
-		return p, fmt.Errorf("primary GPT and backup GPT header differ: %v", err)
+		return p, fmt.Errorf("primary GPT and backup GPT header differ: %w", err)
 	}
 
 	if g.CRC == b.CRC {

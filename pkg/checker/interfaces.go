@@ -120,7 +120,7 @@ func InterfaceRemediate(ifname string) Remediator {
 		// TODO implement driver loading logic
 		dmesg, err := getDmesg()
 		if err != nil {
-			return fmt.Errorf("cannot read dmesg to look for NIC driver information: %v", err)
+			return fmt.Errorf("cannot read dmesg to look for NIC driver information: %w", err)
 		}
 		lines := grep(dmesg, ifname)
 		if len(lines) == 0 {

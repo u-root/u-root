@@ -50,14 +50,14 @@ func HashFile(inputVal string) error {
 	mntFilePath, e := slaunch.GetMountedFilePath(inputVal, mount.MS_RDONLY)
 	if e != nil {
 		log.Printf("HashFile: GetMountedFilePath err=%v", e)
-		return fmt.Errorf("failed to get mount path, err=%v", e)
+		return fmt.Errorf("failed to get mount path, err=%w", e)
 	}
 	slaunch.Debug("File Collector: Reading file=%s", mntFilePath)
 
 	slaunch.Debug("File Collector: fileP=%s\n", mntFilePath)
 	d, err := os.ReadFile(mntFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to read target file: filePath=%s, inputVal=%s, err=%v",
+		return fmt.Errorf("failed to read target file: filePath=%s, inputVal=%s, err=%w",
 			mntFilePath, inputVal, err)
 	}
 

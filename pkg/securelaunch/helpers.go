@@ -66,7 +66,7 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 	Debug("WriteToFile: target=%s", target)
 	err = os.WriteFile(target, data, 0o644)
 	if err != nil {
-		return "", fmt.Errorf("failed to write date to file =%s, err=%v", target, err)
+		return "", fmt.Errorf("failed to write date to file =%s, err=%w", target, err)
 	}
 	Debug("WriteToFile: exit w success data written to target=%s", target)
 	return target, nil
@@ -77,7 +77,7 @@ func WriteToFile(data []byte, dst, defFileName string) (string, error) {
 func persist(data []byte, targetPath string, defaultFile string) error {
 	filePath, r := GetMountedFilePath(targetPath, 0) // 0 is flag for rw mount option
 	if r != nil {
-		return fmt.Errorf("persist: err: input %s could NOT be located, err=%v", targetPath, r)
+		return fmt.Errorf("persist: err: input %s could NOT be located, err=%w", targetPath, r)
 	}
 
 	dst := filePath // /tmp/boot-733276578/cpuid
@@ -111,7 +111,7 @@ func ClearPersistQueue() error {
 
 func getDeviceFromUUID(uuid string) (*block.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
-		return nil, fmt.Errorf("fn GetBlkInfo err=%s", e)
+		return nil, fmt.Errorf("fn GetBlkInfo err=%w", e)
 	}
 	devices := StorageBlkDevices.FilterFSUUID(uuid)
 	Debug("%d device(s) matched with UUID=%s", len(devices), uuid)
@@ -124,7 +124,7 @@ func getDeviceFromUUID(uuid string) (*block.BlockDev, error) {
 
 func getDeviceFromName(name string) (*block.BlockDev, error) {
 	if e := GetBlkInfo(); e != nil {
-		return nil, fmt.Errorf("fn GetBlkInfo err=%s", e)
+		return nil, fmt.Errorf("fn GetBlkInfo err=%w", e)
 	}
 	devices := StorageBlkDevices.FilterName(name)
 	Debug("%d device(s) matched with Name=%s", len(devices), name)
@@ -142,7 +142,7 @@ func GetStorageDevice(input string) (*block.BlockDev, error) {
 	if e != nil {
 		d2, e2 := getDeviceFromName(input)
 		if e2 != nil {
-			return nil, fmt.Errorf("getDeviceFromUUID: err=%v, getDeviceFromName: err=%v", e, e2)
+			return nil, fmt.Errorf("getDeviceFromUUID: err=%w, getDeviceFromName: err=%w", e, e2)
 		}
 		device = d2
 	}
@@ -207,11 +207,11 @@ func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
 	Debug("MountDevice: Attempting to mount %s with flags %d", devName, flags)
 	mountPath, err := os.MkdirTemp("/tmp", "slaunch-")
 	if err != nil {
-		return "", fmt.Errorf("failed to create tmp mount directory: %v", err)
+		return "", fmt.Errorf("failed to create tmp mount directory: %w", err)
 	}
 
 	if _, err := device.Mount(mountPath, flags); err != nil {
-		return "", fmt.Errorf("failed to mount %s, flags %d, err=%v", devName, flags, err)
+		return "", fmt.Errorf("failed to mount %s, flags %d, err=%w", devName, flags, err)
 	}
 
 	Debug("MountDevice: Mounted %s with flags %d", devName, flags)
@@ -231,13 +231,13 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	// s[0] can be sda or UUID.
 	device, err := GetStorageDevice(s[0])
 	if err != nil {
-		return "", fmt.Errorf("fn GetStorageDevice: err = %v", err)
+		return "", fmt.Errorf("fn GetStorageDevice: err = %w", err)
 	}
 
 	devName := device.Name
 	mountPath, err := MountDevice(device, flags)
 	if err != nil {
-		return "", fmt.Errorf("failed to mount %s , flags=%v, err=%v", devName, flags, err)
+		return "", fmt.Errorf("failed to mount %s , flags=%v, err=%w", devName, flags, err)
 	}
 
 	fPath := filepath.Join(mountPath, s[1])
@@ -272,7 +272,7 @@ func GetBlkInfo() error {
 		Debug("getBlkInfo: expensive function call to get block stats from storage pkg")
 		StorageBlkDevices, err = block.GetBlockDevices()
 		if err != nil {
-			return fmt.Errorf("getBlkInfo: storage.GetBlockDevices err=%v. Exiting", err)
+			return fmt.Errorf("getBlkInfo: storage.GetBlockDevices err=%w. Exiting", err)
 		}
 		// no block devices exist on the system.
 		if len(StorageBlkDevices) == 0 {

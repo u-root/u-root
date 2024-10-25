@@ -27,7 +27,7 @@ func loopbackUp() error {
 	}
 
 	if err := netlink.LinkSetUp(lo); err != nil {
-		return fmt.Errorf("couldn't set link loopback up: %v", err)
+		return fmt.Errorf("couldn't set link loopback up: %w", err)
 	}
 	return nil
 }

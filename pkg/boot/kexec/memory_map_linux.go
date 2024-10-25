@@ -245,7 +245,7 @@ func memoryMapFromSysfsMemmap(memoryMapDir string) (MemoryMap, error) {
 
 		b, err := os.ReadFile(name)
 		if err != nil {
-			return fmt.Errorf("error reading file %q: %v", name, err)
+			return fmt.Errorf("error reading file %q: %w", name, err)
 		}
 
 		data := strings.TrimSpace(string(b))

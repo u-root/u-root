@@ -202,7 +202,7 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 	defer f.Close()
 	block := make([]byte, blocksize*2)
 	if _, err := io.ReadAtLeast(f, block, len(block)); err != nil {
-		return "", 0, fmt.Errorf("no suitable filesystem for %q: %v", n, err)
+		return "", 0, fmt.Errorf("no suitable filesystem for %q: %w", n, err)
 	}
 
 	magics := FindMagics(block)

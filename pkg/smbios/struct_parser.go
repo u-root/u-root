@@ -96,7 +96,7 @@ func parseStruct(t *Table, off int, complete bool, sp interface{}) (int, error) 
 			return off, fmt.Errorf("%s.%s: unsupported type %s", svtn, f.Name, fv.Kind())
 		}
 		if verr != nil {
-			return off, fmt.Errorf("failed to parse %s.%s: %s", svtn, f.Name, verr)
+			return off, fmt.Errorf("failed to parse %s.%s: %w", svtn, f.Name, verr)
 		}
 	}
 	if complete && i < sv.NumField() {

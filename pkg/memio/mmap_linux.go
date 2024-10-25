@@ -50,14 +50,14 @@ func (m *MMap) mmap(f *os.File, addr int64, size int64, prot int) (mem []byte, o
 func (m *MMap) ReadAt(addr int64, data UintN) error {
 	mem, offset, err := m.mmap(m.File, addr, data.Size(), syscall.PROT_READ)
 	if err != nil {
-		return fmt.Errorf("reading %#x/%d: %v", addr, data.Size(), err)
+		return fmt.Errorf("reading %#x/%d: %w", addr, data.Size(), err)
 	}
 	defer m.Munmap(mem)
 
 	// MMIO makes this a bit tricky. Reads must be conducted in one load
 	// operation. Review the generated assembly to make sure.
 	if err := data.read(unsafe.Pointer(&mem[offset])); err != nil {
-		return fmt.Errorf("reading %#x/%d: %v", addr, data.Size(), err)
+		return fmt.Errorf("reading %#x/%d: %w", addr, data.Size(), err)
 	}
 	return nil
 }

@@ -83,7 +83,7 @@ const (
 // specified will be printed to console by the kernel.
 func (k *KLog) SetConsoleLogLevel(level KLogLevel) error {
 	if _, _, err := unix.Syscall(unix.SYS_SYSLOG, unix.SYSLOG_ACTION_CONSOLE_LEVEL, 0, uintptr(level)); err != 0 {
-		return fmt.Errorf("could not set syslog level to %d: %v", level, err)
+		return fmt.Errorf("could not set syslog level to %d: %w", level, err)
 	}
 	return nil
 }

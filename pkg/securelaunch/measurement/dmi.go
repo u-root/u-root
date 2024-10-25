@@ -121,14 +121,14 @@ func (s *DmiCollector) Collect() error {
 	// lables would be []{BIOS, Chassis, Processor}
 	typeFilter, err := parseTypeFilter(labels)
 	if err != nil {
-		return fmt.Errorf("invalid --type: %v", err)
+		return fmt.Errorf("invalid --type: %w", err)
 	}
 
 	slaunch.Debug("DMI Collector: len(typeFilter)=%d", len(typeFilter))
 
 	si, err := smbios.FromSysfs()
 	if err != nil {
-		return fmt.Errorf("error parsing data: %v", err)
+		return fmt.Errorf("error parsing data: %w", err)
 	}
 
 	slaunch.Debug("DMI Collector: len(si.Tables)=%d", len(si.Tables))

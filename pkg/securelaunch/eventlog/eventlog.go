@@ -59,7 +59,7 @@ func ParseEventLog() error {
 	tcpaLog, err := txtlog.ParseLog(firmware, tpmSpecVersion)
 	if err != nil {
 		log.Printf("eventlog: ERR: could not parse eventlog file '%s': %v", eventLogFile, err)
-		return fmt.Errorf("could not parse eventlog file '%s': %v", eventLogFile, err)
+		return fmt.Errorf("could not parse eventlog file '%s': %w", eventLogFile, err)
 	}
 
 	var dataStr strings.Builder

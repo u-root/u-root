@@ -85,7 +85,7 @@ func (c *parser) getAndParseFile(ctx context.Context, u *url.URL) error {
 func (c *parser) getFile(surl string) (io.ReaderAt, error) {
 	u, err := parseURL(surl, c.wd)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
+		return nil, fmt.Errorf("could not parse URL %q: %w", surl, err)
 	}
 	// Cache content read from http body into a tmpfs file, other
 	// than in heap. This cuts down ram consumption and help boot
@@ -119,7 +119,7 @@ func (c *parser) getFile(surl string) (io.ReaderAt, error) {
 func (c *parser) getFileWithoutCache(surl string) (io.Reader, error) {
 	u, err := parseURL(surl, c.wd)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
+		return nil, fmt.Errorf("could not parse URL %q: %w", surl, err)
 	}
 	return c.schemes.LazyFetchWithoutCache(u)
 }
@@ -127,7 +127,7 @@ func (c *parser) getFileWithoutCache(surl string) (io.Reader, error) {
 func parseURL(name string, wd *url.URL) (*url.URL, error) {
 	u, err := url.Parse(name)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", name, err)
+		return nil, fmt.Errorf("could not parse URL %q: %w", name, err)
 	}
 
 	// If it parsed, but it didn't have a Scheme or Host, use the working
