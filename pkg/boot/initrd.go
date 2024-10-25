@@ -42,7 +42,7 @@ func CatInitrdsWithFileCache(initrds ...io.Reader) io.ReaderAt {
 					return nil, err
 				}
 				if nr != len(padding) {
-					return nil, fmt.Errorf("write padding: %v", err)
+					return nil, fmt.Errorf("write padding: %w", err)
 				}
 			}
 		}
@@ -98,14 +98,14 @@ func CreateInitrd(files ...string) (io.ReaderAt, error) {
 	for _, n := range files {
 		rec, err := cr.GetRecord(n)
 		if err != nil {
-			return nil, fmt.Errorf("getting record of %q failed: %v", n, err)
+			return nil, fmt.Errorf("getting record of %q failed: %w", n, err)
 		}
 		if err := w.WriteRecord(rec); err != nil {
-			return nil, fmt.Errorf("writing record %q failed: %v", n, err)
+			return nil, fmt.Errorf("writing record %q failed: %w", n, err)
 		}
 	}
 	if err := cpio.WriteTrailer(w); err != nil {
-		return nil, fmt.Errorf("error writing trailer record: %v", err)
+		return nil, fmt.Errorf("error writing trailer record: %w", err)
 	}
 	return bytes.NewReader(b.Bytes()), nil
 }

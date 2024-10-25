@@ -169,7 +169,7 @@ func (fv *FVImage) Load(verbose bool) error {
 	}
 
 	if err := kexecLoad(fv.ImageBase+uintptr(fv.entryAddress), fv.mem.Segments, 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
+		return fmt.Errorf("kexec.Load() error: %w", err)
 	}
 
 	return nil

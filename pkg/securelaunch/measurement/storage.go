@@ -43,7 +43,7 @@ func measureStorageDevice(blkDevicePath string) error {
 	log.Printf("Storage Collector: Measuring block device %s\n", blkDevicePath)
 	file, err := os.Open(blkDevicePath)
 	if err != nil {
-		return fmt.Errorf("couldn't open disk=%s err=%v", blkDevicePath, err)
+		return fmt.Errorf("couldn't open disk=%s err=%w", blkDevicePath, err)
 	}
 
 	eventDesc := fmt.Sprintf("Storage Collector: Measured %s", blkDevicePath)

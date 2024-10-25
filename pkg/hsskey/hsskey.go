@@ -48,19 +48,19 @@ const (
 func readHssBlob(id string, h blobReader) (data []uint8, rerr error) {
 	sessionID, err := h.BlobOpen(id, blobs.BMC_BLOB_OPEN_FLAG_READ)
 	if err != nil {
-		return nil, fmt.Errorf("IPMI BlobOpen for %s failed: %v", id, err)
+		return nil, fmt.Errorf("IPMI BlobOpen for %s failed: %w", id, err)
 	}
 	defer func() {
 		// If the function returned successfully but failed to close the blob,
 		// return an error.
 		if err := h.BlobClose(sessionID); err != nil && rerr == nil {
-			rerr = fmt.Errorf("IPMI BlobClose %s failed: %v", id, err)
+			rerr = fmt.Errorf("IPMI BlobClose %s failed: %w", id, err)
 		}
 	}()
 
 	data, err = h.BlobRead(sessionID, 0, hostSecretSeedLen)
 	if err != nil {
-		return nil, fmt.Errorf("IPMI BlobRead %s failed: %v", id, err)
+		return nil, fmt.Errorf("IPMI BlobRead %s failed: %w", id, err)
 	}
 
 	if len(data) != hostSecretSeedLen {
@@ -93,7 +93,7 @@ func getHssFromIpmi(warnings io.Writer, verboseDangerous bool) ([][]uint8, error
 	for j := 0; j < blobCount; j++ {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
-			return nil, fmt.Errorf("failed to enumerate blob %d: %v", j, err)
+			return nil, fmt.Errorf("failed to enumerate blob %d: %w", j, err)
 		}
 
 		// Ignore entries with a trailing /, which don't actually represent a HSS

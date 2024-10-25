@@ -15,7 +15,7 @@ import (
 func exitStatus(exitErr *exec.ExitError) (int, error) {
 	ws, ok := exitErr.Sys().(syscall.WaitStatus)
 	if !ok {
-		return 0, fmt.Errorf("sys() is not a syscall WaitStatus: %v", exitErr)
+		return 0, fmt.Errorf("sys() is not a syscall WaitStatus: %w", exitErr)
 	}
 	return ws.ExitStatus(), nil
 }

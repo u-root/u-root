@@ -95,5 +95,5 @@ func ObjectNewFile(r io.ReaderAt) (Object, error) {
 	if err9 == nil {
 		return &aout9Object{f: f9}, nil
 	}
-	return nil, fmt.Errorf("ELF: %v, plan9obj: %v", errELF, err9)
+	return nil, fmt.Errorf("ELF: %w, plan9obj: %w", errELF, err9)
 }

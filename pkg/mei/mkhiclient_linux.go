@@ -119,7 +119,7 @@ const (
 func OpenMKHI(meiPath string) (*MKHIClient, error) {
 	m, err := OpenMEI(meiPath, MKHIGuid)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open MKHI client: %v", err)
+		return nil, fmt.Errorf("failed to open MKHI client: %w", err)
 	}
 	return &MKHIClient{MEI: m}, nil
 }
@@ -143,14 +143,14 @@ func (m *MKHIClient) IsHMRFPOEnableAllowed() (bool, error) {
 	 */
 	meiDev, err := GetMeiPciDevice()
 	if err != nil {
-		return false, fmt.Errorf("failed to get PCI MEI device: %v", err)
+		return false, fmt.Errorf("failed to get PCI MEI device: %w", err)
 	}
 	log.Printf("MEI Device found: %s", meiDev)
 
 	// check that CSE's current working state is normal
 	cs, err := meiDev.ReadConfigRegister(pciMEHfsts1, 32)
 	if err != nil {
-		return false, fmt.Errorf("PCI config read failed: %v", err)
+		return false, fmt.Errorf("PCI config read failed: %w", err)
 	}
 	// check that the current working state is ME_HFS1_CWS_NORMAL (0x05) and
 	// current operation mode is ME_HFS1_COM_NORMAL (0x0).
@@ -162,7 +162,7 @@ func (m *MKHIClient) IsHMRFPOEnableAllowed() (bool, error) {
 	// current operation mode is Soft Temp Disable.
 	cs, err = meiDev.ReadConfigRegister(pciMEHfsts3, 32)
 	if err != nil {
-		return false, fmt.Errorf("PCI config read failed: %v", err)
+		return false, fmt.Errorf("PCI config read failed: %w", err)
 	}
 	// fw_sku is in bits 5-7 . ME_HFS3_FW_SKU_CUSTOM is 0x5
 	if (cs>>4)&0x7 == meHfs3FwSkuCustom {
@@ -225,7 +225,7 @@ func (m *MKHIClient) EnableHMRFPO() error {
 	hdr.SetCommand(mkhiHMRFPOEnable)
 	canEnable, err := m.IsHMRFPOEnableAllowed()
 	if err != nil {
-		return fmt.Errorf("enabling HMRFPO failed: %v", err)
+		return fmt.Errorf("enabling HMRFPO failed: %w", err)
 	}
 	if !canEnable {
 		return fmt.Errorf("enabling HMRFPO is not allowed")
@@ -235,16 +235,16 @@ func (m *MKHIClient) EnableHMRFPO() error {
 		nonce:  0,
 	}
 	if _, err := m.MEI.Write(msg.ToBytes()); err != nil {
-		return fmt.Errorf("write to MEI failed: %v", err)
+		return fmt.Errorf("write to MEI failed: %w", err)
 	}
 	buf := make([]byte, m.MEI.ClientProperties.MaxMsgLength())
 	n, err := m.MEI.Read(buf)
 	if err != nil {
-		return fmt.Errorf("read from MEI failed: %v", err)
+		return fmt.Errorf("read from MEI failed: %w", err)
 	}
 	resp, err := hmrfpoEnableResponseFromBytes(buf[:n])
 	if err != nil {
-		return fmt.Errorf("failed to parse HMRFPOEnableResponse: %v", err)
+		return fmt.Errorf("failed to parse HMRFPOEnableResponse: %w", err)
 	}
 	if resp.Header.Result() != 0 {
 		return fmt.Errorf("failed to enable HMRFPO, request result is 0x%02x, want 0x0", resp.Header.Result())
@@ -260,11 +260,11 @@ func (m *MKHIClient) EnableHMRFPO() error {
 func GetMeiPciDevice() (*pci.PCI, error) {
 	br, err := pci.NewBusReader()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create PCI bus reader: %v", err)
+		return nil, fmt.Errorf("failed to create PCI bus reader: %w", err)
 	}
 	devices, err := br.Read()
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan PCI bus: %v", err)
+		return nil, fmt.Errorf("failed to scan PCI bus: %w", err)
 	}
 	for _, device := range devices {
 		// look for vendor ID 8086 (Intel)

@@ -72,7 +72,7 @@ func LoadDisk(device string) ([]*boot.MultibootImage, []*mount.MountPoint, error
 	opts5, mp5, err5 := mountPartition(device, 5)
 	opts6, mp6, err6 := mountPartition(device, 6)
 	if err5 != nil && err6 != nil {
-		return nil, nil, fmt.Errorf("could not mount or read either partition 5 (%v) or partition 6 (%v)", err5, err6)
+		return nil, nil, fmt.Errorf("could not mount or read either partition 5 (%w) or partition 6 (%w)", err5, err6)
 	}
 	var mps []*mount.MountPoint
 	if mp5 != nil {
@@ -106,7 +106,7 @@ func getImages(device string, opts5, opts6 *options) ([]*boot.MultibootImage, er
 		img6, err6 = getBootImage(*opts6, device, 6, name)
 	}
 	if img5 == nil && img6 == nil {
-		return nil, fmt.Errorf("could not read boot configs on partition 5 (%v) or partition 6 (%v)", err5, err6)
+		return nil, fmt.Errorf("could not read boot configs on partition 5 (%w) or partition 6 (%w)", err5, err6)
 	}
 
 	if img5 != nil && img6 != nil {
@@ -138,7 +138,7 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 	if err != nil {
 		mp.Unmount(mount.MNT_DETACH)
 		os.RemoveAll(mountPoint)
-		return nil, nil, fmt.Errorf("cannot parse config from %s: %v", device, err)
+		return nil, nil, fmt.Errorf("cannot parse config from %s: %w", device, err)
 	}
 	img, err := getBootImage(opts, "", 0, device)
 	if err != nil {
@@ -153,7 +153,7 @@ func LoadCDROM(device string) (*boot.MultibootImage, *mount.MountPoint, error) {
 func LoadConfig(configFile string) (*boot.MultibootImage, error) {
 	opts, err := parse(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
+		return nil, fmt.Errorf("cannot parse config at %s: %w", configFile, err)
 	}
 	return getBootImage(opts, "", 0, fmt.Sprintf("config file %s", configFile))
 }
@@ -179,7 +179,7 @@ func mountPartition(parentdev string, partition int) (*options, *mount.MountPoin
 	if err != nil {
 		mp.Unmount(mount.MNT_DETACH)
 		os.RemoveAll(mountPoint)
-		return nil, nil, fmt.Errorf("cannot parse config at %s: %v", configFile, err)
+		return nil, nil, fmt.Errorf("cannot parse config at %s: %w", configFile, err)
 	}
 	return &opts, mp, nil
 }
@@ -219,7 +219,7 @@ func getBootImage(opts options, device string, partition int, name string) (*boo
 
 	if len(device) > 0 {
 		if err := opts.addUUID(device, partition); err != nil {
-			return nil, fmt.Errorf("cannot add boot uuid of %s: %v", device, err)
+			return nil, fmt.Errorf("cannot add boot uuid of %s: %w", device, err)
 		}
 	}
 

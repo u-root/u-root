@@ -55,7 +55,7 @@ func guidParse(v string) ([]string, *guid.UUID, error) {
 	}
 	g, err := guid.Parse(vs[1])
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w:%v", ErrBadGUID, err)
+		return nil, nil, fmt.Errorf("%w:%w", ErrBadGUID, err)
 	}
 	return vs, &g, nil
 }

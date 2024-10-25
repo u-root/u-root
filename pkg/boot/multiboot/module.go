@@ -99,7 +99,7 @@ func loadModules(rmods []Module) (loaded modules, data []byte, err error) {
 
 	for i, rmod := range rmods {
 		if err := loaded[i].loadModule(&buf, rmod.Module); err != nil {
-			return nil, nil, fmt.Errorf("error adding module %v: %v", rmod.Name(), err)
+			return nil, nil, fmt.Errorf("error adding module %v: %w", rmod.Name(), err)
 		}
 	}
 	return loaded, buf.Bytes(), nil

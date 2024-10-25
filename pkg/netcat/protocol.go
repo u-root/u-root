@@ -139,12 +139,12 @@ func SplitVSockAddr(addr string) (uint32, uint32, error) {
 
 	cid, err := strconv.ParseUint(splitAddr[0], 10, 32)
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to parse vsock CID %q: %v", splitAddr[0], err)
+		return 0, 0, fmt.Errorf("failed to parse vsock CID %q: %w", splitAddr[0], err)
 	}
 
 	port, err := strconv.ParseUint(splitAddr[1], 10, 32)
 	if err != nil {
-		return 0, 0, fmt.Errorf("failed to parse vsock port %q: %v", splitAddr[1], err)
+		return 0, 0, fmt.Errorf("failed to parse vsock port %q: %w", splitAddr[1], err)
 	}
 
 	return uint32(cid), uint32(port), nil

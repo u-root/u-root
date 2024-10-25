@@ -91,7 +91,7 @@ func getHssEepromPaths(basePattern string, busDevicePattern string) ([]string, e
 	fullPathGlob := fmt.Sprintf(basePattern, busDevicePattern)
 	matches, err := filepath.Glob(fullPathGlob)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search the file path %v", err)
+		return nil, fmt.Errorf("failed to search the file path %w", err)
 	}
 	if len(matches) == 0 {
 		return nil, fmt.Errorf("no matching path found for glob pattern %s", fullPathGlob)
@@ -105,7 +105,7 @@ func ReadHssFromFile(filePath string, minHssPerFile int) ([][]byte, error) {
 	minValidLen := hostSecretSeedStructSize * minHssPerFile
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %v", err)
+		return nil, fmt.Errorf("failed to read file %w", err)
 	}
 
 	if len(data) < minValidLen {
@@ -164,7 +164,7 @@ func GetHssFromFile(warnings io.Writer, verboseDangerous bool, filePaths []strin
 func WriteHssToTempFile(warnings io.Writer, verboseDangerous bool, hss [][]byte) (string, error) {
 	file, err := os.CreateTemp("", "hss_*")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp file %v", err)
+		return "", fmt.Errorf("failed to create temp file %w", err)
 	}
 
 	err = WriteHssToFile(warnings, verboseDangerous, file, hss)

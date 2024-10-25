@@ -26,7 +26,7 @@ func ParseEntry(data []byte) (*Entry32, *Entry64, error) {
 	if err32 := e32.UnmarshalBinary(data); err32 != nil {
 		var e64 Entry64
 		if err64 := e64.UnmarshalBinary(data); err64 != nil {
-			return nil, nil, fmt.Errorf("%s / %s", err32, err64)
+			return nil, nil, fmt.Errorf("%w / %w", err32, err64)
 		}
 		return nil, &e64, nil
 	}

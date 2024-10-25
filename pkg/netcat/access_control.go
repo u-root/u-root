@@ -59,7 +59,7 @@ func ParseAccessControl(connectionAllowFile string, connectionAllowList []string
 	if connectionDenyFile != "" {
 		denyFile, err := os.Open(connectionDenyFile)
 		if err != nil {
-			return accessControl, fmt.Errorf("failed to open deny file: %v", err)
+			return accessControl, fmt.Errorf("failed to open deny file: %w", err)
 		}
 		defer denyFile.Close()
 
@@ -70,7 +70,7 @@ func ParseAccessControl(connectionAllowFile string, connectionAllowList []string
 		}
 
 		if err := scanner.Err(); err != nil {
-			return accessControl, fmt.Errorf("failed to read deny file: %v", err)
+			return accessControl, fmt.Errorf("failed to read deny file: %w", err)
 		}
 	}
 
@@ -86,7 +86,7 @@ func ParseAccessControl(connectionAllowFile string, connectionAllowList []string
 	if connectionAllowFile != "" {
 		allowFile, err := os.Open(connectionAllowFile)
 		if err != nil {
-			return accessControl, fmt.Errorf("failed to open allow file: %v", err)
+			return accessControl, fmt.Errorf("failed to open allow file: %w", err)
 		}
 		defer allowFile.Close()
 
@@ -97,7 +97,7 @@ func ParseAccessControl(connectionAllowFile string, connectionAllowList []string
 		}
 
 		if err := scanner.Err(); err != nil {
-			return accessControl, fmt.Errorf("failed to read allow file: %v", err)
+			return accessControl, fmt.Errorf("failed to read allow file: %w", err)
 		}
 	}
 

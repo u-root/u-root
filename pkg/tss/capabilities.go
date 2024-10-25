@@ -37,7 +37,7 @@ func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 	for i := 0; i < 4; i++ {
 		caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.VendorString1)+uint32(i))
 		if err != nil {
-			return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_VENDOR_STRING_%d) failed: %v", i+1, err)
+			return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_VENDOR_STRING_%d) failed: %w", i+1, err)
 		}
 		subset, ok := caps[0].(tpm2.TaggedProperty)
 		if !ok {
@@ -54,7 +54,7 @@ func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 
 	caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.Manufacturer))
 	if err != nil {
-		return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_MANUFACTURER) failed: %v", err)
+		return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_MANUFACTURER) failed: %w", err)
 	}
 	manu, ok := caps[0].(tpm2.TaggedProperty)
 	if !ok {
@@ -63,7 +63,7 @@ func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 
 	caps, _, err = tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.FirmwareVersion1))
 	if err != nil {
-		return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_FIRMWARE_VERSION_1) failed: %v", err)
+		return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_FIRMWARE_VERSION_1) failed: %w", err)
 	}
 	fw, ok := caps[0].(tpm2.TaggedProperty)
 	if !ok {

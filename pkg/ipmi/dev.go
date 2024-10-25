@@ -68,7 +68,7 @@ func (d *dev) SendRequest(req *request) error {
 	_, _, err := d.syscall(unix.SYS_IOCTL, d.File().Fd(), _IPMICTL_SEND_COMMAND, uintptr(unsafe.Pointer(req)))
 	runtime.KeepAlive(req)
 	if err != 0 {
-		return fmt.Errorf("syscall failed with: %v", err)
+		return fmt.Errorf("syscall failed with: %w", err)
 	}
 	return nil
 }
@@ -82,7 +82,7 @@ func (d *dev) ReceiveResponse(msgID int64, resp *response, buf []byte) ([]byte, 
 		_, _, errno := d.syscall(unix.SYS_IOCTL, d.File().Fd(), _IPMICTL_RECEIVE_MSG_TRUNC, uintptr(unsafe.Pointer(resp)))
 		runtime.KeepAlive(resp)
 		if errno != 0 {
-			rerr = fmt.Errorf("ioctlGetRecv failed with %v", errno)
+			rerr = fmt.Errorf("ioctlGetRecv failed with %w", errno)
 			return false
 		}
 
@@ -105,13 +105,13 @@ func (d *dev) ReceiveResponse(msgID int64, resp *response, buf []byte) ([]byte, 
 	// Read response.
 	conn, err := d.fileSyscallConn(d.File())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get file rawconn: %v", err)
+		return nil, fmt.Errorf("failed to get file rawconn: %w", err)
 	}
 	if err := d.fileSetReadDeadline(d.File(), timeout); err != nil {
-		return nil, fmt.Errorf("failed to set read deadline: %v", err)
+		return nil, fmt.Errorf("failed to set read deadline: %w", err)
 	}
 	if err := d.connRead(readMsg, conn); err != nil {
-		return nil, fmt.Errorf("failed to read rawconn: %v", err)
+		return nil, fmt.Errorf("failed to read rawconn: %w", err)
 	}
 
 	return result, rerr

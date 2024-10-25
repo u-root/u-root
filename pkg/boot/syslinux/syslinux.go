@@ -207,7 +207,7 @@ func newParser(rootdir *url.URL, wd string, s curl.Schemes) *parser {
 func parseURL(name string, rootdir *url.URL, wd string) (*url.URL, error) {
 	u, err := url.Parse(name)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", name, err)
+		return nil, fmt.Errorf("could not parse URL %q: %w", name, err)
 	}
 
 	// If it parsed, but it didn't have a Scheme or Host, use the working

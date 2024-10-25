@@ -26,7 +26,7 @@ func Reboot() error {
 	}
 
 	if err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_KEXEC); err != nil {
-		return fmt.Errorf("sys_reboot(..., kexec) = %v", err)
+		return fmt.Errorf("sys_reboot(..., kexec) = %w", err)
 	}
 	return nil
 }

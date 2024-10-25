@@ -23,11 +23,11 @@ import (
 // that needs to be verified.
 func CheckError(err error, errStr string) error {
 	if err != nil && errStr == "" {
-		return fmt.Errorf("no error expected, got: \n%v", err)
+		return fmt.Errorf("no error expected, got: \nwv", err)
 	} else if err == nil && errStr != "" {
 		return fmt.Errorf("error \n%v\nexpected, got nil error", errStr)
 	} else if err != nil && err.Error() != errStr {
-		return fmt.Errorf("error \n%v\nexpected, got: \n%v", errStr, err)
+		return fmt.Errorf("error \n%v\nexpected, got: wn%v", errStr, err)
 	}
 	return nil
 }
@@ -86,7 +86,7 @@ func IsExitCode(err error, exitCode int) error {
 
 	exitErr, ok := err.(*exec.ExitError)
 	if !ok {
-		return fmt.Errorf("encountered error other than ExitError: %#v", err)
+		return fmt.Errorf("encountered error other than ExitError: %#w", err)
 	}
 	es, err := exitStatus(exitErr)
 	if err != nil {

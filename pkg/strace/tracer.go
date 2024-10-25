@@ -127,7 +127,7 @@ func (p *process) Read(addr Addr, v interface{}) (int, error) {
 func (p *process) cont(signal unix.Signal) error {
 	// Event has been processed. Restart 'em.
 	if err := unix.PtraceSyscall(p.pid, int(signal)); err != nil {
-		return os.NewSyscallError("ptrace(PTRACE_SYSCALL)", fmt.Errorf("on pid %d: %v", p.pid, err))
+		return os.NewSyscallError("ptrace(PTRACE_SYSCALL)", fmt.Errorf("on pid %d: %w", p.pid, err))
 	}
 	return nil
 }
@@ -231,7 +231,7 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 	if err := unix.PtraceSyscall(c.Process.Pid, 0); err != nil {
 		return &TraceError{
 			PID: c.Process.Pid,
-			Err: fmt.Errorf("failed to resume: %v", err),
+			Err: fmt.Errorf("failed to resume: %w", err),
 		}
 	}
 
@@ -563,7 +563,7 @@ func ReadStringVector(t Task, addr Addr, maxsize, maxno int) ([]string, error) {
 		var a uint64
 		n, err := t.Read(addr, &a)
 		if err != nil {
-			return nil, fmt.Errorf("could not read vector element at %#x: %v", addr, err)
+			return nil, fmt.Errorf("could not read vector element at %#x: %w", addr, err)
 		}
 		if a == 0 {
 			break
@@ -575,7 +575,7 @@ func ReadStringVector(t Task, addr Addr, maxsize, maxno int) ([]string, error) {
 	for _, a := range v {
 		s, err := ReadString(t, a, maxsize)
 		if err != nil {
-			return vs, fmt.Errorf("could not read string at %#x: %v", a, err)
+			return vs, fmt.Errorf("could not read string at %#x: %w", a, err)
 		}
 		vs = append(vs, s)
 	}
