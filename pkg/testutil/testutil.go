@@ -23,11 +23,11 @@ import (
 // that needs to be verified.
 func CheckError(err error, errStr string) error {
 	if err != nil && errStr == "" {
-		return fmt.Errorf("no error expected, got: \nwv", err)
+		return fmt.Errorf("no error expected, got: \n%w", err)
 	} else if err == nil && errStr != "" {
 		return fmt.Errorf("error \n%v\nexpected, got nil error", errStr)
 	} else if err != nil && err.Error() != errStr {
-		return fmt.Errorf("error \n%v\nexpected, got: wn%v", errStr, err)
+		return fmt.Errorf("error \n%v\nexpected, got: \n%w", errStr, err)
 	}
 	return nil
 }
