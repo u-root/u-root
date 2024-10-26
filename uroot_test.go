@@ -56,7 +56,7 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 	cmd := gbbgolang.Default().GoCmd("tool", "nm", tf.Name())
 	nmOutput, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run nm: %s %s", err, nmOutput)
+		return fmt.Errorf("failed to run nm: %w %s", err, nmOutput)
 	}
 	symScanner := bufio.NewScanner(bytes.NewBuffer(nmOutput))
 	syms := map[string]bool{}
@@ -332,7 +332,7 @@ func buildIt(t *testing.T, args, env []string, want error) (*os.File, []byte, er
 	t.Logf("Commandline: %v u-root %v", strings.Join(env, " "), strings.Join(arg, " "))
 	c.Env = append(c.Env, env...)
 	if out, err := c.CombinedOutput(); err != want {
-		return nil, nil, fmt.Errorf("Error: %v\nOutput:\n%s", err, out)
+		return nil, nil, fmt.Errorf("Error: %w\nOutput:\n%s", err, out)
 	} else if err != nil {
 		h1 := sha256.New()
 		if _, err := io.Copy(h1, f); err != nil {
