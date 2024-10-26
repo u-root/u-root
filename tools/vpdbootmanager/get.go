@@ -64,7 +64,7 @@ func (g *Getter) Print(key string) error {
 				return nil
 			}
 			// otherwise print one or both errors.
-			return fmt.Errorf("failed to read variable '%s': RO: %v, RW: %v", key, errRO, errRW)
+			return fmt.Errorf("failed to read variable '%s': RO: %w, RW: %w", key, errRO, errRW)
 		}
 	}
 	for k, v := range allVars[true] {
