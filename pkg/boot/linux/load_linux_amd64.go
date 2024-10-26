@@ -77,7 +77,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservat
 	// kexec.Memory, as it does not depend on specific boot.
 	mm, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
-		return fmt.Errorf("parse memory map: %v", err)
+		return fmt.Errorf("parse memory map: %w", err)
 	}
 	for _, r := range reservations {
 		mm.Insert(kexec.TypedRange{Range: r, Type: kexec.RangeReserved})
@@ -129,7 +129,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservat
 		// Cmdline must be null-terminated.
 		cmdlineBytes := []byte(cmdline + "\x00")
 		if cmdlineRange, err = kmem.AddKexecSegment(cmdlineBytes); err != nil {
-			return fmt.Errorf("add cmdline segment: %v", err)
+			return fmt.Errorf("add cmdline segment: %w", err)
 		}
 		Debug("Added %d byte of cmdline at %s", len(cmdlineBytes), cmdlineRange)
 		lp.CLPtr = uint32(cmdlineRange.Start)      // 2.02+
@@ -166,7 +166,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservat
 		//
 	)
 	if err != nil {
-		return fmt.Errorf("add real mode data and cmdline: %v", err)
+		return fmt.Errorf("add real mode data and cmdline: %w", err)
 	}
 
 	Debug("Loaded real mode data and cmdline at: %v", setupRange)
