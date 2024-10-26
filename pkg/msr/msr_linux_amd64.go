@@ -36,17 +36,17 @@ func parseCPUs(s string) (CPUs, error) {
 		case 1:
 			u, err := strconv.ParseUint(cs[0], 0, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %w", r, err)
 			}
 			cpus = append(cpus, uint64(u))
 		case 2:
 			ul, err := strconv.ParseUint(cs[0], 0, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %w", r, err)
 			}
 			uh, err := strconv.ParseUint(cs[1], 0, 64)
 			if err != nil {
-				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %v", r, err)
+				return nil, fmt.Errorf("unknown cpu range: %v, failed to parse %w", r, err)
 			}
 			if ul > uh {
 				return nil, fmt.Errorf("invalid cpu range, upper bound greater than lower: %v", r)
@@ -332,7 +332,7 @@ func openAll(m []string, o int) ([]*os.File, []error) {
 
 func doIO(msr *os.File, addr MSR, f func(*os.File) error) error {
 	if _, err := msr.Seek(int64(addr), 0); err != nil {
-		return fmt.Errorf("bad address %v: %v", addr, err)
+		return fmt.Errorf("bad address %v: %w", addr, err)
 	}
 	return f(msr)
 }
