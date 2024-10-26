@@ -183,11 +183,11 @@ func New(n uint8) (*DataFabric, error) {
 	devName := fmt.Sprintf("0000:00:%02x.4", n+0x18)
 	r, err := pci.NewBusReader(devName)
 	if err != nil {
-		return nil, fmt.Errorf("NewBusReader: %v", err)
+		return nil, fmt.Errorf("NewBusReader: %w", err)
 	}
 	devs, err := r.Read()
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %v", devName, err)
+		return nil, fmt.Errorf("reading %s: %w", devName, err)
 	}
 	if len(devs) != 1 {
 		return nil, fmt.Errorf("%q matches more than one device", devName)
@@ -209,7 +209,7 @@ func New(n uint8) (*DataFabric, error) {
 	v("config is %#x", c)
 	d.Config = cfg(c).Unmarshal()
 	if c, err = d.ReadBroadcast(0, 0x40); err != nil {
-		return nil, fmt.Errorf("read TotalCount: %v", err)
+		return nil, fmt.Errorf("read TotalCount: %w", err)
 	}
 	d.TotalCount = uint(uint8(c))
 	v("Reg 40 is %#x, totalcount %d", c, d.TotalCount)
