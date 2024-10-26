@@ -66,6 +66,7 @@ func node() *health.Stat {
 	var Stderr [65536]byte
 	n, err := r.Read(Stderr[:])
 	if err != nil && err != io.EOF {
+		//nolint:errorlint
 		errs = errors.Join(errs, fmt.Errorf("stderr read %d bytes, got %v but not %v or nil", n, err, io.EOF))
 	}
 
