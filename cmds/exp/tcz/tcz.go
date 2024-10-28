@@ -284,10 +284,6 @@ func setupPackages(tczName string, deps map[string]bool) error {
 	return nil
 }
 
-func usage() string {
-	return "tcz [-v version] [-a architecture] [-h hostname] [-p host port] [-d debug prints] PROGRAM..."
-}
-
 func init() {
 	defUsage := flag.Usage
 	flag.Usage = func() {

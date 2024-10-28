@@ -30,22 +30,22 @@ type cmd struct {
 }
 
 func run(out io.Writer, args []string) error {
-	var clear, readClear bool
+	var cmd cmd
 
 	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	f.BoolVar(&clear, "clear", false, "Clear the log")
-	f.BoolVar(&readClear, "read-clear", false, "Clear the log after printing")
+	f.BoolVar(&cmd.clear, "clear", false, "Clear the log")
+	f.BoolVar(&cmd.readClear, "read-clear", false, "Clear the log after printing")
 	f.Parse(args[1:])
 
-	if clear && readClear {
+	if cmd.clear && cmd.readClear {
 		return fmt.Errorf("cannot specify both -clear and -read-clear:%w", os.ErrInvalid)
 	}
 
 	level := unix.SYSLOG_ACTION_READ_ALL
-	if clear {
+	if cmd.clear {
 		level = unix.SYSLOG_ACTION_CLEAR
 	}
-	if readClear {
+	if cmd.readClear {
 		level = unix.SYSLOG_ACTION_READ_CLEAR
 	}
 

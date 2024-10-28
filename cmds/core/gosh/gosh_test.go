@@ -305,13 +305,6 @@ func FuzzRun(f *testing.F) {
 
 type consoleAction func(*expect.Console) error
 
-func expectOpts(o ...expect.ExpectOpt) consoleAction {
-	return func(c *expect.Console) error {
-		_, err := c.Expect(o...)
-		return err
-	}
-}
-
 func expectString(s string) consoleAction {
 	return func(c *expect.Console) error {
 		_, err := c.ExpectString(s)

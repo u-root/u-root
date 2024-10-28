@@ -190,6 +190,7 @@ type hmrfpoEnableResponse struct {
 	FctBase  uint32
 	FctLimit uint32
 	Status   uint8
+	//nolint:unused
 	reserved [3]byte
 }
 

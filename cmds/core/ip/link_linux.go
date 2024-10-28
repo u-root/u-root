@@ -160,6 +160,9 @@ func (cmd *cmd) setLinkMTU(iface netlink.Link) error {
 	return cmd.handle.LinkSetMTU(iface, mtu)
 }
 
+// TODO: get author review
+//
+//nolint:unused
 func (cmd *cmd) setLinkGroup(iface netlink.Link) error {
 	token := cmd.nextToken("GROUP")
 

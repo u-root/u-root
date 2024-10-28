@@ -49,10 +49,6 @@ var (
 	write = flag.Bool("w", false, "Write a value")
 )
 
-func usage() {
-	log.Fatal("Usage: smn [-w] [-d glob] address [# 32-words to read | 32-bit value to write]")
-}
-
 func main() {
 	flag.Parse()
 	r, err := pci.NewBusReader(strings.Split(*devs, ",")...)
@@ -69,11 +65,13 @@ func main() {
 	if uint32(*val>>32) != 0 {
 		log.Fatalf("Value:%#x is not a 32-bit number", *val)
 	}
+
 	for i := range a {
 		addr, err := strconv.ParseUint(a[i], 16, 32)
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		switch *write {
 		case true:
 			if err := d.WriteConfigRegister(regIndex, 32, addr); err != nil {
@@ -82,6 +80,7 @@ func main() {
 			if err := d.WriteConfigRegister(regData, 32, *val); err != nil {
 				log.Fatal(err)
 			}
+
 		case false:
 			for i := addr; i < addr+uint64(*n); i += 4 {
 				if err := d.WriteConfigRegister(regIndex, 32, i); err != nil {

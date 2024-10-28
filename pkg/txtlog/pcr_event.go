@@ -12,51 +12,6 @@ import (
 	"strings"
 )
 
-func parseTcgBiosSpecIDEvent(handle io.Reader) (*TcgBiosSpecIDEvent, error) {
-	var endianness binary.ByteOrder = binary.LittleEndian
-	var biosSpecEvent TcgBiosSpecIDEvent
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.signature); err != nil {
-		return nil, err
-	}
-
-	identifier := string(bytes.Trim(biosSpecEvent.signature[:], "\x00"))
-	if string(identifier) != TCGOldEfiFormatID {
-		return nil, nil
-	}
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.platformClass); err != nil {
-		return nil, err
-	}
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.specVersionMinor); err != nil {
-		return nil, err
-	}
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.specVersionMajor); err != nil {
-		return nil, err
-	}
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.specErrata); err != nil {
-		return nil, err
-	}
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.uintnSize); err != nil {
-		return nil, err
-	}
-
-	if err := binary.Read(handle, endianness, &biosSpecEvent.vendorInfoSize); err != nil {
-		return nil, err
-	}
-
-	biosSpecEvent.vendorInfo = make([]byte, biosSpecEvent.vendorInfoSize)
-	if err := binary.Read(handle, endianness, &biosSpecEvent.vendorInfo); err != nil {
-		return nil, err
-	}
-
-	return &biosSpecEvent, nil
-}
-
 func parseEfiSpecEvent(handle io.Reader) (*TcgEfiSpecIDEvent, error) {
 	var endianness binary.ByteOrder = binary.LittleEndian
 	var efiSpecEvent TcgEfiSpecIDEvent

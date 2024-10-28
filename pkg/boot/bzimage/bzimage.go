@@ -29,8 +29,6 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
-const minBootParamLen = 616
-
 // A decompressor is a function which reads compressed bytes via the io.Reader and
 // writes the uncompressed bytes to the io.Writer.
 type decompressor func(w io.Writer, r io.Reader) error

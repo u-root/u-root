@@ -17,6 +17,7 @@ import (
 	"unsafe"
 )
 
+//nolint:unused
 const (
 	trampolineEntry = "u-root-entry-long"
 	trampolineInfo  = "u-root-info-long"
