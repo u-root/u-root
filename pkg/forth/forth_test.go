@@ -26,6 +26,8 @@ var forthTests = []forthTest{
 	{val: "4 2 *", res: "8", empty: true},
 	{val: "4 2 /", res: "2", empty: true},
 	{val: "5 2 %", res: "1", empty: true},
+	{val: "347 32 mod", res: "27", empty: true},
+	{val: "32 347 mod", res: "32", empty: true},
 	{val: "sb43 hostbase", res: "43", empty: true},
 	{val: "sb43 hostbase dup 20 / swap 20 % dup ifelse", res: "3", empty: true},
 	{val: "sb40 hostbase dup 20 / swap 20 % dup ifelse", res: "2", empty: true},
