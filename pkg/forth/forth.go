@@ -20,8 +20,8 @@
 // push hostname, strip alpha characters to produce a number. If your
 // hostname is sb47, top of stack will be left with 47.
 // hostname  hostbase
-// Get the hostbase, if it is 0 mod 20, return the hostbase / 20,
-// else return hostbase mod 20
+// Get the hostbase, if it is 0 % 20, return the hostbase / 20,
+// else return hostbase % 20
 //
 // hostname hostbase dup 20 / swap 20 % dup ifelse
 //
