@@ -79,6 +79,24 @@ func autocompleteBubb(val [][]rune, line, col int) (msg string, completions edit
 	return "", nil
 }
 
+func chdir(dir string) error {
+	dir = strings.TrimLeft(dir, " ")
+	switch dir {
+	case "", "~":
+		dir = os.Getenv("HOME")
+	case "-":
+		dir = os.Getenv("OLDPWD")
+	}
+
+	err := os.Chdir(dir)
+	if err == nil {
+		pwd, _ := os.Getwd()
+		os.Setenv("OLDPWD", os.Getenv("PWD"))
+		os.Setenv("PWD", pwd)
+	}
+	return err
+}
+
 func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr io.Writer) error {
 	input := bubbline.New()
 	// Set default window size to 80x24 in case ioctl isn't able to detect the actual window size
@@ -144,6 +162,13 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 		if line != "" {
 			if err := input.AddHistory(line); err != nil {
 				fmt.Fprintf(stdout, "unable to add %s to history: %v\n", line, err)
+			}
+			line1 := strings.TrimLeft(line, " ")
+			if line1 == "cd" || strings.HasPrefix(line1, "cd ") {
+				if err := chdir(line1[2:]); err != nil {
+					fmt.Fprintf(stdout, "unable to change working dir '%s', error: %v\n", line, err)
+				}
+				continue
 			}
 		}
 
