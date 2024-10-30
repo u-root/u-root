@@ -109,6 +109,7 @@ type process struct {
 	// syscall-enter-stop or syscall-exit-stop. You gotta keep track of
 	// that shit your own self.
 	lastSyscallStop *TraceRecord
+	SecComp         atomic.Bool
 }
 
 // Name implements Task.Name.
@@ -126,6 +127,14 @@ func (p *process) Read(addr Addr, v interface{}) (int, error) {
 
 func (p *process) cont(signal unix.Signal) error {
 	// Event has been processed. Restart 'em.
+	if p.SecComp.Load() {
+		// If seccomp is enabled, continue the process without stopping at each syscall.
+		if err := unix.PtraceCont(p.pid, int(signal)); err != nil {
+			return os.NewSyscallError("ptrace(PTRACE_SYSCALL)", fmt.Errorf("on pid %d: %w", p.pid, err))
+		}
+		return nil
+	}
+	// If seccomp is not enabled, continue the process and stop at each syscall.
 	if err := unix.PtraceSyscall(p.pid, int(signal)); err != nil {
 		return os.NewSyscallError("ptrace(PTRACE_SYSCALL)", fmt.Errorf("on pid %d: %w", p.pid, err))
 	}
@@ -215,6 +224,8 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 	if err := unix.PtraceSetOptions(c.Process.Pid,
 		// Tells ptrace to generate a SIGTRAP signal immediately before a new program is executed with the execve system call.
 		unix.PTRACE_O_TRACEEXEC|
+			// Tells ptrace to generate a SIGTRAP signal for seccomp events.
+			unix.PTRACE_O_TRACESECCOMP|
 			// Make it easy to distinguish syscall-stops from other SIGTRAPS.
 			unix.PTRACE_O_TRACESYSGOOD|
 			// Kill tracee if tracer exits.
@@ -368,6 +379,12 @@ func (t *tracer) runLoop() error {
 			// Either a regular signal-delivery-stop, or a PTRACE_EVENT stop.
 			case syscall.SIGTRAP:
 				switch tc := status.TrapCause(); tc {
+				case unix.PTRACE_EVENT_SECCOMP:
+					// Handle seccomp event by continuing the syscall.
+					if err := syscall.PtraceSyscall(pid, 0); err != nil {
+						return os.NewSyscallError("ptrace(PTRACE_SYSCALL)", fmt.Errorf("on pid %d: %w", p.pid, err))
+					}
+					continue
 				// This is a PTRACE_EVENT stop.
 				case unix.PTRACE_EVENT_CLONE, unix.PTRACE_EVENT_FORK, unix.PTRACE_EVENT_VFORK:
 					childPID, err := unix.PtraceGetEventMsg(pid)
