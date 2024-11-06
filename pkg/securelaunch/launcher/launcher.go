@@ -8,8 +8,10 @@ package launcher
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"unicode"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -36,6 +38,9 @@ type Launcher struct {
 	Type        string               `json:"type"`
 	BootEntries map[string]BootEntry `json:"boot entries"`
 }
+
+// ErrBootNotSelected means a boot was not selected and it must be
+var ErrBootNotSelected = errors.New("boot entry not yet selected")
 
 // bootEntry points to the target BootEntry to use.
 var bootEntry *BootEntry
@@ -81,7 +86,7 @@ func measureFile(fileName string, fileBytes []byte) error {
 // MeasureKernel hashes the kernel and extends the measurement into a TPM PCR.
 func MeasureKernel() error {
 	if bootEntry == nil {
-		return fmt.Errorf("boot entry not yet selected")
+		return ErrBootNotSelected
 	}
 
 	return measureFile(bootEntry.KernelName, bootEntry.KernelBytes)
@@ -90,7 +95,7 @@ func MeasureKernel() error {
 // MeasureInitrd hashes the initrd and extends the measurement into a TPM PCR.
 func MeasureInitrd() error {
 	if bootEntry == nil {
-		return fmt.Errorf("boot entry not yet selected")
+		return ErrBootNotSelected
 	}
 
 	return measureFile(bootEntry.InitrdName, bootEntry.InitrdBytes)
@@ -169,13 +174,12 @@ func MatchBootEntry(entryName string, bootEntries map[string]BootEntry) error {
 // - if kexec fails
 func (l *Launcher) Boot() error {
 	if l.Type != "kexec" {
-		log.Printf("launcher: ERR: Unsupported launcher type '%s'", l.Type)
-		return fmt.Errorf("unsupported launcher type '%s'", l.Type)
+		return fmt.Errorf("unsupported launcher type %q:%w", l.Type, os.ErrInvalid)
 	}
 	slaunch.Debug("Identified Launcher Type = Kexec")
 
 	if bootEntry == nil {
-		return fmt.Errorf("boot entry not yet selected")
+		return ErrBootNotSelected
 	}
 
 	slaunch.Debug("Calling kexec")
@@ -186,13 +190,11 @@ func (l *Launcher) Boot() error {
 	}
 
 	if err := image.Load(); err != nil {
-		log.Printf("launcher: ERR: kexec -l failed. err: %v", err)
-		return fmt.Errorf("kexec -l failed: %w", err)
+		return fmt.Errorf("kexec -l failed:%w", err)
 	}
 
 	if err := kexec.Reboot(); err != nil {
-		log.Printf("launcher: ERR: kexec reboot failed: %v", err)
-		return fmt.Errorf("kexec reboot failed: %w", err)
+		return fmt.Errorf("kexec reboot failed:%w", err)
 	}
 
 	return nil
