@@ -86,7 +86,7 @@ func TestParseFlags(t *testing.T) {
 			}
 
 			if !tt.expectedErr {
-				if diff := cmp.Diff(tt.expectedCmd, cmd, cmpopts.IgnoreFields(cmd, "Out")); diff != "" {
+				if diff := cmp.Diff(tt.expectedCmd, cmd, cmpopts.IgnoreFields(cmd, "Out", "usage")); diff != "" {
 					t.Errorf("parseFlags() mismatch (-want +got):\n%s", diff)
 				}
 			}
