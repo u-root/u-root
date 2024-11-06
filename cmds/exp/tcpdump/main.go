@@ -350,7 +350,11 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 
 	switch {
 	case cmd.Opts.ASCII:
-		fmt.Fprintf(cmd.Out, "%s\n", applicationLayer.LayerContents())
+		content := []byte("")
+		if applicationLayer != nil {
+			content = applicationLayer.LayerContents()
+		}
+		fmt.Fprintf(cmd.Out, "%s\n", content)
 	case cmd.Opts.Data:
 		fmt.Fprintf(cmd.Out, "%s\n", formatPacketData(packet.Data()[14:]))
 	case cmd.Opts.DataWithHeader:
