@@ -6,9 +6,9 @@
 package securelaunch
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +37,9 @@ type mountCacheType struct {
 	mu sync.RWMutex
 }
 
+// ErrUsage indicates a usage error.
+var ErrUsage = errors.New("incorrect usage")
+
 // mountCache is used by sluinit to reduce number of mount/unmount operations
 var mountCache = mountCacheType{m: make(map[string]mountCacheData)}
 
@@ -56,14 +59,14 @@ var Debug = func(string, ...interface{}) {}
 func ReadFile(fileLocation string) ([]byte, error) {
 	mountedFilePath, err := GetMountedFilePath(fileLocation, mount.MS_RDONLY)
 	if err != nil {
-		return "", fmt.Errorf("failed to write date to file =%q, err=%w", target, err)
+		return nil, fmt.Errorf("writing to %q:%w", fileLocation, err)
 	}
 
-	Debug("ReadFile: reading file '%s' (mounted at '%s')", fileLocation, mountedFilePath)
+	Debug("ReadFile: reading %q (mounted at %q):%w", fileLocation, mountedFilePath, err)
 
 	fileBytes, err := os.ReadFile(mountedFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read file '%s' (mounted at '%s')", fileLocation, mountedFilePath)
+		return nil, fmt.Errorf("%q (mounted at %q):%w", fileLocation, mountedFilePath, err)
 	}
 
 	return fileBytes, nil
@@ -75,11 +78,11 @@ func WriteFile(data []byte, fileLocation string) error {
 		return err
 	}
 
-	Debug("WriteFile: writing file '%s' (mounted at '%s')", fileLocation, mountedFilePath)
+	Debug("WriteFile: writing file %q (mounted at %q)", fileLocation, mountedFilePath)
 
 	err = os.WriteFile(mountedFilePath, data, 0o644)
 	if err != nil {
-		return fmt.Errorf("failed to write file '%s': %w", mountedFilePath, err)
+		return fmt.Errorf("failed to write file %q: %w", mountedFilePath, err)
 	}
 
 	return nil
@@ -92,24 +95,23 @@ func WriteFile(data []byte, fileLocation string) error {
 func persist(data []byte, targetPath string, defaultFileName string) error {
 	mountedFilePath, err := GetMountedFilePath(targetPath, 0) // 0 is flag for rw mount option
 	if err != nil {
-		return fmt.Errorf("failed to locate file '%s' for writing: %w", targetPath, err)
+		return fmt.Errorf("failed to locate file %q for writing: %w", targetPath, err)
 	}
 
 	// Check if a file name was provided or just the path. If just the path,
 	// add the provided default file name.
 	mountedFilePathInfo, err := os.Stat(mountedFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to stat file '%s' (mounted at '%s'): %w", targetPath, mountedFilePath, err)
+		return fmt.Errorf("failed to stat file %q (mounted at %q): %w", targetPath, mountedFilePath, err)
 	}
 	if mountedFilePathInfo.IsDir() {
-		Debug("persist: No file name provided, adding default name '%s'", defaultFileName)
+		Debug("persist: No file name provided, adding default name %q", defaultFileName)
 		targetPath = filepath.Join(targetPath, defaultFileName)
-		Debug("persist: New file path: '%s'", targetPath)
+		Debug("persist: New file path: %q", targetPath)
 	}
 
 	// Write the file.
 	if err := WriteFile(data, targetPath); err != nil {
-		log.Printf("persist: err=%s", err)
 		return err
 	}
 
@@ -205,7 +207,7 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 		Debug("mountCache: need to mount the same device with different flags")
 		Debug("mountCache: Unmounting %s first", cachedMountPath)
 		if err := mount.Unmount(cachedMountPath, true, false); err != nil {
-			return "", fmt.Errorf("failed to unmount '%s': %w", cachedMountPath, err)
+			return "", fmt.Errorf("failed to unmount %q: %w", cachedMountPath, err)
 		}
 		Debug("mountCache: unmount successfull. lets delete entry in map")
 		deleteEntryMountCache(key)
@@ -223,22 +225,21 @@ func MountDevice(device *block.BlockDev, flags uintptr) (string, error) {
 	Debug("MountDevice: Checking cache first for %s", devName)
 	cachedMountPath, err := getMountCacheData(devName, flags)
 	if err == nil {
-		log.Printf("getMountCacheData succeeded for %s", devName)
 		return cachedMountPath, nil
 	}
-	Debug("MountDevice: cache lookup failed for %s", devName)
+	Debug("MountDevice: cache lookup failed for %q", devName)
 
-	Debug("MountDevice: Attempting to mount %s with flags %d", devName, flags)
+	Debug("MountDevice: Attempting to mount %q with flags %#x", devName, flags)
 	mountPath, err := os.MkdirTemp("/tmp", "slaunch-")
 	if err != nil {
-		return "", fmt.Errorf("failed to create tmp mount directory: %w", err)
+		return "", fmt.Errorf("create tmp mount directory: %w", err)
 	}
 
 	if _, err := device.Mount(mountPath, flags); err != nil {
-		return "", fmt.Errorf("failed to mount %s, flags %d, err=%w", devName, flags, err)
+		return "", fmt.Errorf("mount %q, flags %#x:%w", devName, flags, err)
 	}
 
-	Debug("MountDevice: Mounted %s with flags %d", devName, flags)
+	Debug("MountDevice: Mounted %q with flags %#x", devName, flags)
 	setMountCache(devName, mountCacheData{flags: flags, mountPath: mountPath}) // update cache
 	return mountPath, nil
 }
@@ -255,7 +256,7 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	// s[0] can be sda or UUID.
 	device, err := GetStorageDevice(s[0])
 	if err != nil {
-		return "", fmt.Errorf("fn GetStorageDevice: err = %w", err)
+		return "", fmt.Errorf("GetStorageDevice:%w", err)
 	}
 
 	devName := device.Name
@@ -275,7 +276,7 @@ func UnmountAll() error {
 		cachedMountPath := mountCacheData.mountPath
 		Debug("UnmountAll: Unmounting %s", cachedMountPath)
 		if err := mount.Unmount(cachedMountPath, true, false); err != nil {
-			return fmt.Errorf("failed to unmount '%s': %w", cachedMountPath, err)
+			return fmt.Errorf("failed to unmount %q: %w", cachedMountPath, err)
 		}
 		Debug("UnmountAll: Unmounted %s", cachedMountPath)
 		deleteEntryMountCache(key)
@@ -316,15 +317,13 @@ func GetBlkInfo() error {
 func GetFileBytes(fileName string) ([]byte, error) {
 	filePath, err := GetMountedFilePath(fileName, mount.MS_RDONLY)
 	if err != nil {
-		log.Printf("GetFileBytes: ERR: Could not get mounted file path '%s': %v", fileName, err)
-		return nil, fmt.Errorf("could not get mounted file path '%s': %w", fileName, err)
+		return nil, fmt.Errorf("could not get mounted file path %q: %w", fileName, err)
 	}
-	Debug("GetFileBytes: file path = '%s'", filePath)
+	Debug("GetFileBytes: file path = %q", filePath)
 
 	fileBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Printf("GetFileBytes: ERR: Could not read file '%s': %v", filePath, err)
-		return nil, fmt.Errorf("could not read file '%s': %w", filePath, err)
+		return nil, fmt.Errorf("could not read file %q: %w", filePath, err)
 	}
 
 	return fileBytes, nil
