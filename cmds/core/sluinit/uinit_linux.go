@@ -6,11 +6,13 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -48,6 +50,12 @@ const policyLocationFlag = "securelaunch_policy"
 // pubkeyIndex hold the TPM index where the public key hash is stored.
 const pubkeyHashIndex = uint32(0x01800180)
 
+// ErrFlagNotSet indicates a required flag is not set.
+var ErrFlagNotSet = errors.New("flag is not set")
+
+// ErrInvalidCharacters indicates a name contains an unallowed character.
+var ErrInvalidCharacters = errors.New("invalid character in name")
+
 var slDebug = flag.Bool("d", false, "enable debug logs")
 
 // step keeps track of the current step (e.g., parse policy, measure).
@@ -75,7 +83,7 @@ func printStepDisabled(msg string) {
 func checkPolicyLocationFlag() (string, error) {
 	location, present := cmdline.Flag(policyLocationFlag)
 	if !present {
-		return "", fmt.Errorf("'%s' command line flag is not set", policyLocationFlag)
+		return "", fmt.Errorf("%q:%w", policyLocationFlag, ErrFlagNotSet)
 	}
 
 	return location, nil
@@ -108,7 +116,7 @@ func parseBootEntryFlag() (string, error) {
 	}
 
 	if !launcher.IsValidBootEntry(bootEntry) {
-		return "", fmt.Errorf("boot entry contains bad characters: '%s'", bootEntry)
+		return "", fmt.Errorf("%q:%w", bootEntry, ErrInvalidCharacters)
 	}
 
 	slaunch.Debug("boot entry: %s", bootEntry)
@@ -179,7 +187,7 @@ func initialize(policyLocation string) error {
 
 	// Write out all the PCRs values.
 	pcrSelection := []uint32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}
-	pcrLogLocation := policyLocation + "/" + pcrLogFilename
+	pcrLogLocation := filepath.Join(policyLocation, pcrLogFilename)
 
 	if err := tpm.LogPCRs(pcrSelection, pcrLogLocation); err != nil {
 		return fmt.Errorf("failed to log PCR values: %w", err)
@@ -194,9 +202,9 @@ func initialize(policyLocation string) error {
 func verifyAndParsePolicy(policyLocation string) (*policy.Policy, error) {
 	printStep("Verify and parse SL policy")
 
-	policyFileLocation := policyLocation + "/" + policyFilename
-	pubkeyFileLocation := policyLocation + "/" + pubkeyFilename
-	signatureFileLocation := policyLocation + "/" + signatureFilename
+	policyFileLocation := filepath.Join(policyLocation, policyFilename)
+	pubkeyFileLocation := filepath.Join(policyLocation, pubkeyFilename)
+	signatureFileLocation := filepath.Join(policyLocation, signatureFilename)
 
 	if err := policy.Load(policyFileLocation, pubkeyFileLocation, signatureFileLocation); err != nil {
 		return nil, fmt.Errorf("failed to load policy file: %w", err)
