@@ -58,7 +58,9 @@ func main() {
 			for _, s := range m.Steps {
 				log.Printf("MultiOsArch:%s(%s,%s)", s.Name, os, arch)
 				// todo: GoVersion
-				c := exec.Command("bash", "-c", s.Run)
+				// The Run uses a template but not that will work so well with Go
+				// templates.
+				c := exec.Command("bash", "-c", "go build .")
 				c.Env = append(c.Env, "GOOS="+os, "GOARCH="+arch)
 				if out, err := c.CombinedOutput(); err != nil {
 					log.Printf("MultiOsArch:%s(%s)(%s,%s) failed:(%s,%v)", s.Name, s.Run, os, arch, string(out), err)

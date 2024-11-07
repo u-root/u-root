@@ -261,3 +261,4 @@ func main() {
 		log.Fatalf("date: %v", err)
 	}
 }
+bad
