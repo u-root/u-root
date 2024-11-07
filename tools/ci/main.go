@@ -50,4 +50,21 @@ func main() {
 		}
 		log.Printf("Badbuild %s:OK", s.Name)
 	}
+
+	//
+	m := ci.Jobs.MultiOsArch
+	for _, os := range m.Strategy.Matrix.Os {
+		for _, arch := range m.Strategy.Matrix.Arch {
+			for _, s := range m.Steps {
+				log.Printf("MultiOsArch:%s(%s,%s)", s.Name, os, arch)
+				// todo: GoVersion
+				c := exec.Command("bash", "-c", s.Run)
+				c.Env = append(c.Env, "GOOS="+os, "GOARCH="+arch)
+				if out, err := c.CombinedOutput(); err != nil {
+					log.Printf("MultiOsArch:%s(%s)(%s,%s) failed:(%s,%v)", s.Name, s.Run, os, arch, string(out), err)
+				}
+				log.Printf("MultiOsArch:%s(%s,%s):OK", s.Name, os, arch)
+			}
+		}
+	}
 }
