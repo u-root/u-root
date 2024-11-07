@@ -8,7 +8,6 @@ package securelaunch
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -321,7 +320,7 @@ func GetFileBytes(fileName string) ([]byte, error) {
 	}
 	Debug("GetFileBytes: file path = %q", filePath)
 
-	fileBytes, err := ioutil.ReadFile(filePath)
+	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file %q: %w", filePath, err)
 	}
