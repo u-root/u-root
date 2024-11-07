@@ -455,7 +455,12 @@ func (cmd *cmd) parseLinkShow() (netlink.Link, []string, error) {
 	typeNames := []string{}
 
 	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("device", "type"); c {
+		switch c := cmd.nextToken("device name", "dev", "type"); c {
+		default:
+			device, err = netlink.LinkByName(c)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
+			}
 		case "dev":
 			devName := cmd.nextToken("device name")
 			device, err = netlink.LinkByName(devName)

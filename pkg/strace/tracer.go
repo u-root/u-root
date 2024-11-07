@@ -164,6 +164,11 @@ var traceActive uint32
 // recordCallback is called every time a process event happens with the process
 // in a stopped state.
 func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
+	return New(c, false, recordCallback...)
+}
+
+// New traces `c` and any children c clones with the option to enable seccomp.
+func New(c *exec.Cmd, secComp bool, recordCallback ...EventCallback) error {
 	if !atomic.CompareAndSwapUint32(&traceActive, 0, 1) {
 		return fmt.Errorf("a process trace is already active in this process")
 	}
@@ -219,7 +224,7 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 	} else if ws.TrapCause() != 0 {
 		return fmt.Errorf("wait(pid=%d): got %v, want stopped process", c.Process.Pid, ws)
 	}
-	tracer.addProcess(c.Process.Pid, SyscallExit)
+	tracer.addProcess(c.Process.Pid, SyscallExit, secComp)
 
 	if err := unix.PtraceSetOptions(c.Process.Pid,
 		// Tells ptrace to generate a SIGTRAP signal immediately before a new program is executed with the execve system call.
@@ -249,13 +254,17 @@ func Trace(c *exec.Cmd, recordCallback ...EventCallback) error {
 	return tracer.runLoop()
 }
 
-func (t *tracer) addProcess(pid int, event EventType) {
+func (t *tracer) addProcess(pid int, event EventType, secComp bool) {
 	t.processes[pid] = &process{
-		pid: pid,
+		pid:     pid,
+		SecComp: atomic.Bool{},
 		lastSyscallStop: &TraceRecord{
 			Event: event,
 			Time:  time.Now(),
 		},
+	}
+	if secComp {
+		t.processes[pid].SecComp.Store(true) // Use the atomic method to set the value
 	}
 }
 
@@ -396,7 +405,7 @@ func (t *tracer) runLoop() error {
 					}
 					// The first event will be an Enter syscall, so
 					// set the last event to an exit.
-					t.addProcess(int(childPID), SyscallExit)
+					t.addProcess(int(childPID), SyscallExit, p.SecComp.Load())
 
 					rec.Event = NewChild
 					rec.NewChild = &NewChildEvent{
