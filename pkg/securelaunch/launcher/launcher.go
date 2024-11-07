@@ -76,11 +76,7 @@ func measureFile(fileName string, fileBytes []byte) error {
 	}
 
 	eventDesc := fmt.Sprintf("File Collector: measured %s", fileName)
-	if err := measurement.HashBytes(fileBytes, eventDesc); err != nil {
-		return err
-	}
-
-	return nil
+	return measurement.HashBytes(fileBytes, eventDesc)
 }
 
 // MeasureKernel hashes the kernel and extends the measurement into a TPM PCR.
