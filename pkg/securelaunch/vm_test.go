@@ -8,6 +8,7 @@ package securelaunch
 
 import (
 	"bytes"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -102,9 +103,8 @@ func TestMountDevice(t *testing.T) {
 
 func TestWriteFile(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skip("Find out what on earth this test needs from sda1:")
-
-	tempFile := "sda1:" + "/testfile"
+	d := t.TempDir()
+	tempFile := filepath.Join(d, "sda1:", "/testfile")
 	dataStr := "Hello World!"
 
 	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
@@ -115,8 +115,8 @@ func TestWriteFile(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
-	t.Skip("Find out what on earth this test needs from sda1:")
-	tempFile := "sda1:" + "/testfile"
+	d := t.TempDir()
+	tempFile := filepath.Join(d, "sda1:", "/testfile")
 	dataStr := "Hello World!"
 
 	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
@@ -135,11 +135,10 @@ func TestReadFile(t *testing.T) {
 
 func TestGetFileBytes(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skip("Find out what on earth this test needs from sda1:")
+	d := t.TempDir()
+	file := filepath.Join(d, "sda1:", "/file.out")
 
-	file := "sda1:" + "/file.out"
-	fileStr := "Hello, World!"
-	fileBytes := []byte(fileStr)
+	fileBytes := []byte("Hello, World!")
 
 	if err := WriteFile(fileBytes, file); err != nil {
 		t.Fatalf(`WriteFile(str, file) = %v, not nil`, err)
