@@ -27,13 +27,27 @@ func main() {
 		fmt.Printf("Unmarshal: %v", err)
 	}
 
-	l := ci.Jobs.Linters
-	for _, s := range l.Steps {
-
+	for _, s := range ci.Jobs.Linters.Steps {
+		log.Printf("Linter %s: run %s", s.Name, s.Run)
 		if out, err := exec.Command("bash", "-c", s.Run).CombinedOutput(); err != nil {
-			log.Printf("Linter %s failed:%s:%v", s, string(out), err)
+			log.Printf("Linter %s failed:%s:%v", s.Name, string(out), err)
 		}
-		log.Printf("Linter %s:OK", s)
+		log.Printf("Linter %s:OK", s.Name)
+	}
 
+	for _, s := range ci.Jobs.Build.Steps {
+		log.Printf("Build %s: run %s", s.Name, s.Run)
+		if out, err := exec.Command("bash", "-c", s.Run).CombinedOutput(); err != nil {
+			log.Printf("Build %s failed:%s:%v", s.Name, string(out), err)
+		}
+		log.Printf("Build %s:OK", s.Name)
+	}
+
+	for _, s := range ci.Jobs.Badbuild.Steps {
+		log.Printf("Badbuild %s: run %s", s.Name, s.Run)
+		if out, err := exec.Command("bash", "-c", s.Run).CombinedOutput(); err == nil {
+			log.Printf("Badbuild %s did not fail though it should:%s", s.Name, string(out))
+		}
+		log.Printf("Badbuild %s:OK", s.Name)
 	}
 }
