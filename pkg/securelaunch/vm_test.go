@@ -7,6 +7,7 @@
 package securelaunch
 
 import (
+	"bytes"
 	"regexp"
 	"testing"
 	"time"
@@ -96,5 +97,60 @@ func TestMountDevice(t *testing.T) {
 	}
 	if !mounted {
 		t.Skip("Skipping since no suitable block device was found to mount")
+	}
+}
+
+func TestWriteFile(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+	t.Skip("Find out what on earth this test needs from sda1:")
+
+	tempFile := "sda1:" + "/testfile"
+	dataStr := "Hello World!"
+
+	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
+		t.Fatalf(`WriteFile(dataStr.bytes, tempFile) = %v, not nil`, err)
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	t.Skip("Find out what on earth this test needs from sda1:")
+	tempFile := "sda1:" + "/testfile"
+	dataStr := "Hello World!"
+
+	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
+		t.Fatalf(`WriteFile(dataStr.bytes, tempFile) = %v, not nil`, err)
+	}
+
+	readBytes, err := ReadFile(tempFile)
+	if err != nil {
+		t.Fatalf(`ReadFile(tempFile) = %v, not nil`, err)
+	}
+
+	if bytes.Compare(readBytes, []byte(dataStr)) != 0 {
+		t.Fatalf(`ReadFile(tempFile) returned %q, not %q`, readBytes, []byte(dataStr))
+	}
+}
+
+func TestGetFileBytes(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+	t.Skip("Find out what on earth this test needs from sda1:")
+
+	file := "sda1:" + "/file.out"
+	fileStr := "Hello, World!"
+	fileBytes := []byte(fileStr)
+
+	if err := WriteFile(fileBytes, file); err != nil {
+		t.Fatalf(`WriteFile(str, file) = %v, not nil`, err)
+	}
+
+	readBytes, err := GetFileBytes(file)
+	if err != nil {
+		t.Fatalf(`GetFileBytes(file) = %v, not nil`, err)
+	}
+
+	if !bytes.Equal(fileBytes, readBytes) {
+		t.Fatalf(`GetFileBytes(file) got '%v', want '%v'`, readBytes, fileBytes)
 	}
 }
