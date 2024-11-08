@@ -102,7 +102,6 @@ func TestMountDevice(t *testing.T) {
 
 func TestWriteFile(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skip("Find out what on earth this test needs from sda1:")
 
 	tempFile := "sda1:" + "/testfile"
 	dataStr := "Hello World!"
@@ -115,7 +114,6 @@ func TestWriteFile(t *testing.T) {
 func TestReadFile(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
-	t.Skip("Find out what on earth this test needs from sda1:")
 	tempFile := "sda1:" + "/testfile"
 	dataStr := "Hello World!"
 
@@ -135,7 +133,6 @@ func TestReadFile(t *testing.T) {
 
 func TestGetFileBytes(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skip("Find out what on earth this test needs from sda1:")
 
 	file := "sda1:" + "/file.out"
 	fileStr := "Hello, World!"
