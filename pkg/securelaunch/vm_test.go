@@ -8,6 +8,8 @@ package securelaunch
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -62,19 +64,18 @@ func TestVM(t *testing.T) {
 	)
 }
 
-func TestMountDevice(t *testing.T) {
-	guest.SkipIfNotInVM(t)
-
+func mountMountDevice(t *testing.T) error {
+	t.Helper()
 	if err := GetBlkInfo(); err != nil {
-		t.Fatalf("GetBlkInfo() = %v, not nil", err)
+		return fmt.Errorf("GetBlkInfo() = %w, not nil", err)
 	}
 
 	if len(StorageBlkDevices) == 0 {
-		t.Fatal("len(StorageBlockDevices) = 0, not > 0")
+		return fmt.Errorf("len(StorageBlockDevices) = 0, not > 0")
 	}
 
-	mounted := false
 	matchExpr := regexp.MustCompile(`[hsv]d[a-z]\d+`)
+	t.Logf("Searching for storage in %v with regexp %s", StorageBlkDevices, `[hsv]d[a-z]\d+`)
 	for _, device := range StorageBlkDevices {
 		if matchExpr.MatchString(device.Name) {
 			mountPath, err := MountDevice(device, mount.MS_RDONLY)
@@ -91,18 +92,20 @@ func TestMountDevice(t *testing.T) {
 				continue
 			}
 
-			mounted = true
-			break
+			return nil
 		}
 	}
-	if !mounted {
-		t.Skip("Skipping since no suitable block device was found to mount")
-	}
+	return fmt.Errorf("Skipping since no suitable block device was found to mount:%w", os.ErrNotExist)
 }
 
 func TestWriteFile(t *testing.T) {
 	guest.SkipIfNotInVM(t)
+
 	Debug = t.Logf
+	if err := mountMountDevice(t); err != nil {
+
+		t.Skipf("no mountable device for test:%v", err)
+	}
 
 	tempFile := "sda1:" + "/testfile"
 	dataStr := "Hello World!"
@@ -116,6 +119,11 @@ func TestReadFile(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
 	Debug = t.Logf
+
+	if err := mountMountDevice(t); err != nil {
+		t.Skipf("no mountable device for test:%v", err)
+	}
+
 	tempFile := "sda1:" + "/testfile"
 	dataStr := "Hello World!"
 
@@ -137,6 +145,11 @@ func TestGetFileBytes(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
 	Debug = t.Logf
+
+	if err := mountMountDevice(t); err != nil {
+		t.Skipf("no mountable device for test:%v", err)
+	}
+
 	file := "sda1:" + "/file.out"
 	fileStr := "Hello, World!"
 	fileBytes := []byte(fileStr)
