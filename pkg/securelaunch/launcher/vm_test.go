@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
@@ -58,17 +58,18 @@ const initrdHashStr = "0853abe9bab31dbaf174a66f7e1215d2fc0dee37a8ad2b6d215749dab
 var bootEntries = make(map[string]BootEntry)
 
 func TestVM(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/securelaunch/launcher"},
-		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+	govmtest.Run(t, "vm",
+		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch/launcher"),
+		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			// CONFIG_ATA_PIIX is required for this option to work.
 			qemu.ArbitraryArgs("-hda", "../testdata/mbrdisk"),
 
 			// With NVMe devices enabled, kernel crashes when not using q35 machine model.
 			qemu.ArbitraryArgs("-machine", "q35"),
-		)),
+		),
 	)
 }
 
