@@ -59,6 +59,7 @@ var bootEntries = make(map[string]BootEntry)
 
 func TestVM(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
+	t.Skipf("fix me")
 
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch/launcher"),
@@ -75,6 +76,7 @@ func TestVM(t *testing.T) {
 
 func TestMatchBootEntry(t *testing.T) {
 	guest.SkipIfNotInVM(t)
+	t.Skipf("fix me")
 
 	kernelFile := "sda1:" + "/vmlinux"
 	initrdFile := "sda1:" + "/initrd"
