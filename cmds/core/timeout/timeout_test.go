@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -20,7 +21,8 @@ func TestBadInvocation(t *testing.T) {
 		err   error
 		errno int
 	}{
-		{cmd: cmd{args: []string{}}, err: errNoArgs, errno: 1},
+		{cmd: cmd{args: []string{}, signal: "KILL"}, err: errNoArgs, errno: 1},
+		{cmd: cmd{args: []string{"echo", "WOO"}, signal: "WOO"}, err: os.ErrInvalid, errno: 1},
 	}
 
 	for _, v := range tests {
@@ -40,8 +42,8 @@ func TestRun(t *testing.T) {
 		cmd cmd
 		ok  bool
 	}{
-		{cmd: cmd{args: []string{"sleep", "4"}, timeout: 2 * time.Minute}, ok: true},
-		{cmd: cmd{args: []string{"sleep", "30"}, timeout: time.Second}},
+		{cmd: cmd{args: []string{"sleep", "4"}, timeout: 2 * time.Minute, signal: "KILL"}, ok: true},
+		{cmd: cmd{args: []string{"sleep", "30"}, timeout: time.Second, signal: "KILL"}},
 	}
 	for _, v := range tests {
 		t.Logf("Run %v", v.cmd)
