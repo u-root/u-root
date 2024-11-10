@@ -6,10 +6,13 @@ package policy
 
 import (
 	"encoding/hex"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/hugelgupf/vmtest"
+	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
@@ -111,26 +114,53 @@ const signatureStr = "" +
 
 // VM setup:
 //
-//  /dev/sda is ./testdata/mbrdisk
-//	  /dev/sda1 is ext4
-//	  /dev/sda2 is vfat
-//	  /dev/sda3 is fat32
-//	  /dev/sda4 is xfs
+//	 /dev/sda is ../testdata/mbrdisk
+//	 it must be copied because there is another test that uses it and
+//	 qemu will fail if they run at the same time.
+//		  /dev/sda1 is ext4
+//		  /dev/sda2 is vfat
+//		  /dev/sda3 is fat32
+//		  /dev/sda4 is xfs
 //
-//   ARM tests will load drives as virtio-blk devices (/dev/vd*)
+//	  ARM tests will load drives as virtio-blk devices (/dev/vd*)
+const mbrFile = "../testdata/mbrdisk"
+
+func mbr(t *testing.T) (string, error) {
+	t.Helper()
+
+	d := t.TempDir()
+
+	b, err := os.ReadFile(mbrFile)
+	if err != nil {
+		return "", fmt.Errorf("reading  MBR file for policy:%w", err)
+	}
+
+	disk := filepath.Join(d, "disk")
+	if err := os.WriteFile(disk, b, 0666); err != nil {
+		return "", fmt.Errorf("writing MBR file for policy:%w", err)
+	}
+
+	return disk, nil
+}
 
 func TestVM(t *testing.T) {
-	vmtest.SkipIfNotArch(t, qemu.ArchAMD64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
-	vmtest.RunGoTestsInVM(t, []string{"github.com/u-root/u-root/pkg/securelaunch/policy"},
-		vmtest.WithVMOpt(vmtest.WithQEMUFn(
+	disk, err := mbr(t)
+	if err != nil {
+		t.Fatalf("create mbr disk file: got %v, want nil", err)
+	}
+
+	govmtest.Run(t, "vmpolicy",
+		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch/policy"),
+		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			// CONFIG_ATA_PIIX is required for this option to work.
-			qemu.ArbitraryArgs("-hda", "../testdata/mbrdisk"),
+			qemu.ArbitraryArgs("-hda", disk),
 
 			// With NVMe devices enabled, kernel crashes when not using q35 machine model.
 			qemu.ArbitraryArgs("-machine", "q35"),
-		)),
+		),
 	)
 }
 
