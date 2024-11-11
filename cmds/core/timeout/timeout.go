@@ -51,11 +51,6 @@ var (
 	errNoArgs = errors.New("need at least a command to run")
 )
 
-var sigmap = map[string]syscall.Signal{
-	"KILL": syscall.SIGKILL,
-	"TERM": syscall.SIGTERM,
-}
-
 func (c *cmd) run() (int, error) {
 	if len(c.args) == 0 {
 		return 1, errNoArgs
