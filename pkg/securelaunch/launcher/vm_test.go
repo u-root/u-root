@@ -6,12 +6,14 @@ package launcher
 
 import (
 	"encoding/hex"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/u-root/u-root/pkg/cp"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 )
 
@@ -57,16 +59,21 @@ const initrdHashStr = "0853abe9bab31dbaf174a66f7e1215d2fc0dee37a8ad2b6d215749dab
 
 var bootEntries = make(map[string]BootEntry)
 
-func TestVM(t *testing.T) {
+func TestSecureLaunchLauncherVM(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
-	t.Skipf("fix me")
+
+	d := t.TempDir()
+	mbrdisk := filepath.Join(d, "mbrdisk")
+	if err := cp.Default.Copy("testdata/mbrdisk", mbrdisk); err != nil {
+		t.Fatalf("copying testdata/mbrdisk to %q:got %v, want nil", mbrdisk, err)
+	}
 
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch/launcher"),
 		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			// CONFIG_ATA_PIIX is required for this option to work.
-			qemu.ArbitraryArgs("-hda", "../testdata/mbrdisk"),
+			qemu.ArbitraryArgs("-hda", mbrdisk),
 
 			// With NVMe devices enabled, kernel crashes when not using q35 machine model.
 			qemu.ArbitraryArgs("-machine", "q35"),
@@ -74,12 +81,18 @@ func TestVM(t *testing.T) {
 	)
 }
 
-func TestMatchBootEntry(t *testing.T) {
+func TestSecureLaunchLauncherMatchBootEntry(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skipf("fix me")
 
-	kernelFile := "sda1:" + "/vmlinux"
-	initrdFile := "sda1:" + "/initrd"
+	const blk = "sda1"
+
+	slaunch.Debug = t.Logf
+	if _, err := slaunch.GetStorageDevice("sda1"); err != nil {
+		t.Skipf("no devices match %v:%v", blk, err)
+	}
+
+	kernelFile := blk + ":" + "/vmlinux"
+	initrdFile := blk + ":" + "/initrd"
 
 	kernelBytes, err := hex.DecodeString(kernelStr)
 	if err != nil {

@@ -6,9 +6,6 @@ package policy
 
 import (
 	"encoding/hex"
-	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,6 +14,8 @@ import (
 	"github.com/hugelgupf/vmtest/qemu"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
 )
+
+const blk = "sda1"
 
 const policyStr = `{
     "collectors": [
@@ -123,42 +122,16 @@ const signatureStr = "" +
 //		  /dev/sda4 is xfs
 //
 //	  ARM tests will load drives as virtio-blk devices (/dev/vd*)
-const mbrFile = "../testdata/mbrdisk"
-
-func mbr(t *testing.T) (string, error) {
-	t.Helper()
-	t.Skipf("fix me")
-
-	d := t.TempDir()
-
-	b, err := os.ReadFile(mbrFile)
-	if err != nil {
-		return "", fmt.Errorf("reading  MBR file for policy:%w", err)
-	}
-
-	disk := filepath.Join(d, "disk")
-	if err := os.WriteFile(disk, b, 0666); err != nil {
-		return "", fmt.Errorf("writing MBR file for policy:%w", err)
-	}
-
-	return disk, nil
-}
 
 func TestVM(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
-	t.Skipf("fix me")
-
-	disk, err := mbr(t)
-	if err != nil {
-		t.Fatalf("create mbr disk file: got %v, want nil", err)
-	}
 
 	govmtest.Run(t, "vmpolicy",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch/policy"),
 		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			// CONFIG_ATA_PIIX is required for this option to work.
-			qemu.ArbitraryArgs("-hda", disk),
+			qemu.ArbitraryArgs("-hda", "testdata/mbrdisk"),
 
 			// With NVMe devices enabled, kernel crashes when not using q35 machine model.
 			qemu.ArbitraryArgs("-machine", "q35"),
@@ -168,9 +141,13 @@ func TestVM(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skipf("fix me")
 
-	policyFile := "sda1:" + "/policy"
+	slaunch.Debug = t.Logf
+	if _, err := slaunch.GetStorageDevice(blk); err != nil {
+		t.Skipf("no devices match %v:%v", blk, err)
+	}
+
+	policyFile := blk + ":" + "/policy"
 
 	if err := slaunch.WriteFile([]byte(policyStr), policyFile); err != nil {
 		t.Fatalf(`WriteFile(policyStr.bytes, tempFile) = %v, not nil`, err)
@@ -191,11 +168,15 @@ func TestParse(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	guest.SkipIfNotInVM(t)
-	t.Skipf("fix me")
 
-	policyFile := "sda1:" + "/securelaunch.policy"
-	pubkeyFile := "sda1:" + "/securelaunch.pubkey"
-	signatureFile := "sda1:" + "/securelaunch.sig"
+	slaunch.Debug = t.Logf
+	if _, err := slaunch.GetStorageDevice(blk); err != nil {
+		t.Skipf("no devices match %v:%v", blk, err)
+	}
+
+	policyFile := blk + ":" + "/securelaunch.policy"
+	pubkeyFile := blk + ":" + "/securelaunch.pubkey"
+	signatureFile := blk + ":" + "/securelaunch.sig"
 
 	if err := slaunch.WriteFile([]byte(policyStr), policyFile); err != nil {
 		t.Fatalf(`WriteFile(policyStr.bytes, policyFile) = %v, not nil`, err)
