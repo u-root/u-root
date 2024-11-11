@@ -154,7 +154,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	}
 
 	// Socket Types
-	config.ProtocolOptions.SocketType, err = netcat.ParseSocketType(f.udpSocket, f.sctpSocket, f.unixSocket, f.virtualSocket)
+	config.ProtocolOptions.SocketType, err = netcat.ParseSocketType(f.udpSocket, f.unixSocket, f.virtualSocket, f.sctpSocket)
 	if err != nil {
 		return nil, err
 	}
