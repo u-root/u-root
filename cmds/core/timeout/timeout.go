@@ -30,11 +30,8 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"os"
-	"os/exec"
-	"syscall"
 	"time"
 )
 
@@ -50,40 +47,6 @@ var (
 	signal    = flag.String("signal", "TERM", "specify the signal to be sent on timeout")
 	errNoArgs = errors.New("need at least a command to run")
 )
-
-func (c *cmd) run() (int, error) {
-	if len(c.args) == 0 {
-		return 1, errNoArgs
-	}
-
-	sig, ok := sigmap[c.signal]
-	if !ok {
-		return 1, fmt.Errorf("unknown signal: %q: %w", c.signal, os.ErrInvalid)
-	}
-
-	cmd := exec.Command(c.args[0], c.args[1:]...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = c.in, c.out, c.err
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	if err := cmd.Start(); err != nil {
-		return 1, err
-	}
-
-	time.AfterFunc(c.timeout, func() {
-		syscall.Kill(-cmd.Process.Pid, sig)
-	})
-
-	if err := cmd.Wait(); err != nil {
-		errno := 1
-		var e *exec.ExitError
-		if errors.As(err, &e) {
-			errno = e.ExitCode()
-		}
-		return errno, err
-	}
-
-	return 0, nil
-}
 
 func main() {
 	flag.Parse()
