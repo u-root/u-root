@@ -414,8 +414,8 @@ and other config files to make the transition to LinuxBoot easier.
 
 More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the
-[LinuxBoot book](https://github.com/linuxboot/book) chapter about
-[LinuxBoot using coreboot, u-root and systemboot](https://github.com/linuxboot/book/blob/master/coreboot.u-root.systemboot/README.md).
+[LinuxBoot book](https://book.linuxboot.org) chapter about
+[LinuxBoot using coreboot, u-root and systemboot](https://book.linuxboot.org/coreboot.u-root.systemboot/index.html).
 
 This project started as a loose collection of programs in u-root by various
 LinuxBoot contributors, as well as a personal experiment by
