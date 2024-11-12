@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/mount"
 )
 
@@ -44,13 +46,18 @@ import (
 func TestVM(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
+	d := t.TempDir()
+	mbrdisk := filepath.Join(d, "mbrdisk")
+	if err := cp.Default.Copy("testdata/mbrdisk", mbrdisk); err != nil {
+		t.Fatalf("copying testdata/mbrdisk to %q:got %v, want nil", mbrdisk, err)
+	}
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch"),
 		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 
 			// CONFIG_ATA_PIIX is required for this option to work.
-			qemu.ArbitraryArgs("-hda", "testdata/mbrdisk"),
+			qemu.ArbitraryArgs("-hda", mbrdisk),
 			qemu.ArbitraryArgs("-hdb", "testdata/12Kzeros"),
 			qemu.ArbitraryArgs("-hdc", "testdata/gptdisk"),
 			qemu.ArbitraryArgs("-hdd", "testdata/gptdisk_label"),
