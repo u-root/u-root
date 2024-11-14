@@ -90,7 +90,7 @@ func (cmd *cmd) monitor() error {
 		case "mroute", "netconf", "nexthop", "nsid", "prefix", "rule":
 			return fmt.Errorf("monitoring %s is not yet supported", cmd.currentToken())
 		case "help":
-			fmt.Fprint(cmd.Out, tunnelHelp)
+			fmt.Fprint(cmd.Out, monitorHelp)
 			return nil
 		default:
 			return cmd.usage()
