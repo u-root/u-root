@@ -78,6 +78,12 @@ func TestRun(t *testing.T) {
 		outStr string
 	}{
 		{
+			name: "Show help",
+			args: []string{
+				"help",
+			},
+		},
+		{
 			name: "Show Qdisc",
 			args: []string{
 				"qdisc",

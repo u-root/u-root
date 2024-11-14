@@ -16,6 +16,10 @@ import (
 	trafficctl "github.com/u-root/u-root/pkg/tc"
 )
 
+var cmdHelp = `Usage:	tc OBJECT { COMMAND | help }
+		where  OBJECT := { qdisc | class | filter }
+`
+
 func main() {
 	rtnl, err := tc.Open(&tc.Config{})
 	if err != nil {
@@ -39,6 +43,7 @@ func run(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 		"qdisc",
 		"class",
 		"filter",
+		"help",
 	}
 
 	switch one(args[cursor], want) {
@@ -48,6 +53,8 @@ func run(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 		return runClass(stdout, tctl, args[cursor+1:])
 	case "filter":
 		return runFilter(stdout, tctl, args[cursor+1:])
+	case "help":
+		fmt.Fprint(stdout, cmdHelp)
 	}
 
 	return nil
