@@ -51,12 +51,7 @@ const linkHelp = `Usage: ip link add  [ name ] NAME
 
 	ip link help
 
-TYPE := { bareudp | bond |bridge | dummy |
-          geneve | gre | gretap | ifb |
-          ip6gre | ip6gretap | ip6tnl | ipip |
-          ipoib | ipvlan | ipvtap | macvlan |
-          macvlan | sit | vlan | vrf |
-          vti | vxlan | xfrm }
+TYPE := { bareudp | bond |bridge | dummy | ifb | vxlan }
 
 `
 
