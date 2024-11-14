@@ -19,7 +19,7 @@ import (
 
 const (
 	xfrmHelp = `Usage: ip xfrm XFRM-OBJECT { COMMAND | help }
-where  XFRM-OBJECT := state | policy | monitor`
+where  XFRM-OBJECT := policy | monitor`
 
 	xfrmMonitorHelp = `Usage: ip xfrm monitor [ nokeys ] [ all | OBJECTS | help ]
 OBJECTS := { acquire | expire | SA | aevent | policy | report }`
