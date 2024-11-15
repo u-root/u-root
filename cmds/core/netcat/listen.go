@@ -173,9 +173,11 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 			continue
 		}
 
-		if !c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
-			defer conn.Close()
-			break
+		if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_TCP {
+			if !c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
+				defer conn.Close()
+				break
+			}
 		}
 
 		go once.Do(func() {
