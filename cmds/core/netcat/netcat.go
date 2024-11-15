@@ -230,6 +230,8 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 	// Misc Options
 	// EOL
+	config.Misc.EOL = netcat.DEFAULT_LF
+
 	if f.eolCRLF {
 		config.Misc.EOL = netcat.LINE_FEED_CRLF
 	}
