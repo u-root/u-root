@@ -230,6 +230,8 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 	// Misc Options
 	// EOL
+	config.Misc.EOL = netcat.DEFAULT_LF
+
 	if f.eolCRLF {
 		config.Misc.EOL = netcat.LINE_FEED_CRLF
 	}
@@ -445,8 +447,8 @@ func run(args []string) error {
 	// Allowlist
 	fs.StringVar(&f.connectionAllowList, "allow", "", "Allow only comma-separated list of IP addresses")
 	fs.StringVar(&f.connectionAllowFile, "allowfile", "", "A file of hosts allowed to connect to Ncat")
-	fs.StringVar(&f.connectionDenyList, "deny", "", "Deny given hosts from connecting to Ncat")
-	fs.StringVar(&f.connectionDenyFile, "denyfile", "", "A file of hosts denied from connecting to Ncat")
+	fs.StringVar(&f.connectionDenyList, "deny", "", "Deny given hosts from sending data to Ncat. Connections will be accepted but no data will be sent back")
+	fs.StringVar(&f.connectionDenyFile, "denyfile", "", "A file of hosts denied from sending data to Ncat. Connections will be accepted but no data will be sent back")
 
 	// proxy
 	fs.StringVar(&f.proxyAddress, "proxy", "", "Specify address of host to proxy through (<addr[:port]> )")

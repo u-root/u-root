@@ -52,8 +52,7 @@ type flags struct {
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
 where  OBJECT := { address |  help | link | monitor | neighbor | neighbour |
-				   route | rule | tap | tcpmetrics |
-                   token | tunnel | tuntap | vrf | xfrm }
+				   route | tap | tcpmetrics | tunnel | tuntap | vrf | xfrm }
        OPTIONS := { -s[tatistics] | -d[etails] | -r[esolve] |
                     -h[uman-readable] | -iec | -j[son] | -p[retty] |
                     -f[amily] { inet | inet6 | mpls | bridge | link } |
