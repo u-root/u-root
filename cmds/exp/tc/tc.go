@@ -38,6 +38,11 @@ func main() {
 }
 
 func run(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
+	if len(args) == 0 {
+		fmt.Fprint(stdout, cmdHelp)
+		return nil
+	}
+
 	cursor := 0
 	want := []string{
 		"qdisc",
@@ -54,6 +59,8 @@ func run(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 	case "filter":
 		return runFilter(stdout, tctl, args[cursor+1:])
 	case "help":
+		fmt.Fprint(stdout, cmdHelp)
+	default:
 		fmt.Fprint(stdout, cmdHelp)
 	}
 
