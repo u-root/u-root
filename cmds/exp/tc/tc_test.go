@@ -82,6 +82,12 @@ func TestRun(t *testing.T) {
 			args: []string{
 				"help",
 			},
+			outStr: cmdHelp,
+		},
+		{
+			name:   "Show help no args",
+			args:   nil,
+			outStr: cmdHelp,
 		},
 		{
 			name: "Show Qdisc",
