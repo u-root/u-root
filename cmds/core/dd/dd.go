@@ -72,6 +72,18 @@ func dd(r io.Reader, w io.Writer, inBufSize, outBufSize int64, bytesWritten *int
 	if inBufSize == 0 {
 		return fmt.Errorf("inBufSize is not allowed to be zero")
 	}
+	// There is an optimization in the Go runtime for zero-copy,
+	// which we can use when inBufSize == outBufSize.
+	for inBufSize == outBufSize {
+		amt, err := io.CopyN(w, r, inBufSize)
+		*bytesWritten += int64(amt)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
 	dat := &bytes.Buffer{}
 
 	for {
