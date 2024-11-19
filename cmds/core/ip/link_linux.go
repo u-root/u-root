@@ -51,12 +51,7 @@ const linkHelp = `Usage: ip link add  [ name ] NAME
 
 	ip link help
 
-TYPE := { bareudp | bond |bridge | dummy |
-          geneve | gre | gretap | ifb |
-          ip6gre | ip6gretap | ip6tnl | ipip |
-          ipoib | ipvlan | ipvtap | macvlan |
-          macvlan | sit | vlan | vrf |
-          vti | vxlan | xfrm }
+TYPE := { bareudp | bond |bridge | dummy | ifb | vxlan }
 
 `
 
@@ -455,7 +450,12 @@ func (cmd *cmd) parseLinkShow() (netlink.Link, []string, error) {
 	typeNames := []string{}
 
 	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("device", "type"); c {
+		switch c := cmd.nextToken("device name", "dev", "type"); c {
+		default:
+			device, err = netlink.LinkByName(c)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
+			}
 		case "dev":
 			devName := cmd.nextToken("device name")
 			device, err = netlink.LinkByName(devName)

@@ -16,9 +16,7 @@ const (
 	xfrmPolicyHelp = `Usage: ip xfrm policy { add | update } SELECTOR dir DIR
 	[ mark MARK [ mask MASK ] ] [ index INDEX ] [ ptype PTYPE ]
 	[ action ACTION ] [ priority PRIORITY ] [ if_id IF_ID ] [ TMPL-LIST ]
-Usage: ip xfrm policy { delete | get } { SELECTOR | index INDEX } dir DIR
-	[ mark MARK [ mask MASK ] ] [ if_id IF_ID ]
-Usage: ip xfrm policy { deleteall | list }[ SELECTOR ] [ dir DIR ]
+Usage: ip xfrm policy { list }[ SELECTOR ] [ dir DIR ]
 	[ index INDEX ][ action ACTION ] [ priority PRIORITY ]
 Usage: ip xfrm policy flush 
 Usage: ip xfrm policy count
@@ -92,7 +90,7 @@ func (cmd *cmd) parseXfrmPolicyTmpl() (*netlink.XfrmPolicyTmpl, error) {
 }
 
 func (cmd *cmd) xfrmPolicy() error {
-	switch cmd.findPrefix("add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help") {
+	switch cmd.nextToken("add", "update", "delete", "get", "deleteall", "show", "list", "flush", "count", "set", "help") {
 	case "add":
 		policy, err := cmd.parseXfrmPolicyAddUpdate()
 		if err != nil {

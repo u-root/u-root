@@ -173,9 +173,11 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 			continue
 		}
 
-		if !c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
-			defer conn.Close()
-			break
+		if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_TCP {
+			if !c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
+				defer conn.Close()
+				break
+			}
 		}
 
 		go once.Do(func() {
@@ -220,7 +222,11 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 			} else {
 				// without broker mode, read from the connection and write to the output
 				for {
-					if _, err = io.Copy(output, connections.Connections[id]); err != nil {
+					connections.mutex.Lock()
+					connection := connections.Connections[id]
+					connections.mutex.Unlock()
+
+					if _, err = io.Copy(output, connection); err != nil {
 						if errors.Is(err, io.ErrShortWrite) {
 							continue
 						}

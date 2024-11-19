@@ -41,7 +41,7 @@
 //	r glob register -- read the MSR 'register' from cores matching 'glob'
 //	w glob register value -- write the value to 'register' on all cores matching 'glob'
 //
-// Examples:
+// Examples (NOTE: single ', since it is a forth literal! '* NOT '*'):
 //
 //	Show the IA32 feature MSR on all cores
 //	sudo msr READ_IA32_FEATURE_CONTROL
@@ -51,6 +51,17 @@
 //	Just see it one core 0 and 1
 //	sudo ./msr '[01]' 0x3a rd
 //	[[5 5]]
+//	Debug your cpu mask
+//	sudo ./msr "'1*" "cpu"
+//	1,10-19
+//	Debug your command stack
+//	sudo ./msr "'[01]" cpu 0x3a reg
+//	[0-1 0x3a]
+//
+//	For rd, if you want to see it in hex (which should be the default
+//	but it's complicated
+//	sudo ./msr "'[01]" cpu 0x10 reg rd %#x printf
+//	[0xf41c40e682bb8 0xf41c40e69876b]
 package main
 
 import (
@@ -78,6 +89,9 @@ var (
 		{name: "MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"'*", "cpu", "0x3a", "reg"}},
 		{name: "READ_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "rd"}},
 		{name: "LOCK_MSR_IA32_FEATURE_CONTROL", w: []forth.Cell{"MSR_IA32_FEATURE_CONTROL", "READ_MSR_IA32_FEATURE_CONTROL", "1", "or", "wr"}},
+		// PM ENABLE
+		{name: "MSR_IA32_PM_ENABLE", w: []forth.Cell{"'*", "0x770"}},
+		{name: "READ_MSR_IA32_PM_ENABLE", w: []forth.Cell{"MSR_IA32_PM_ENABLE", "rd"}},
 		// Silvermont, Airmont, Nehalem...
 		// Controls Processor C States.
 		{name: "MSR_PKG_CST_CONFIG_CONTROL", w: []forth.Cell{"'*", "cpu", "0xe2", "reg"}},
@@ -292,7 +306,7 @@ func rd(f forth.Forth) {
 // modern world.
 // If you're determined to write a fixed value, the same
 // for all, it's easy:
-// msr "'"* msr 0x3a reg rd 0 val and your-value new-val val or wr
+// msr "'"* 0x3a rd 0 and new-val val or val wr
 // Then you'll have a fixed value.
 func wr(f forth.Forth) {
 	v := tou64slice(f.Pop())
