@@ -9,6 +9,7 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
@@ -193,7 +194,7 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 				EFIResourceAttributeWriteThroughCacheable |
 				EFIResourceAttributeWriteBackCacheable,
 			PhysicalStart:  EFIPhysicalAddress(entry.Start),
-			ResourceLength: uint64(entry.Size),
+			ResourceLength: uint64(align.UpPage(entry.Size)),
 		})
 		length += uint64(unsafe.Sizeof(EFIHOBResourceDescriptor{}))
 	}
