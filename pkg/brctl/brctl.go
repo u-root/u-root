@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -146,7 +147,7 @@ func showBridge(name string, out io.Writer) {
 		ifaceString += iface + " "
 	}
 
-	fmt.Fprintf(out, "%s\t\t%s\t\t%v\t\t%v\n", info.Name, info.BridgeID, info.StpState, ifaceString)
+	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpState, ifaceString)
 }
 
 // Showmacs shows a list of learned MAC addresses for this bridge.
@@ -177,9 +178,12 @@ func Showmacs(bridge string, out io.Writer) error {
 	return nil
 }
 
+const ShowBridgeFmt = "%-15s %23s %15v %20v\n"
+
 // Show will show some information on the bridge and its attached ports.
 func Show(out io.Writer, names ...string) error {
-	fmt.Fprint(out, "bridge name\tbridge id\tSTP enabled\t\tinterfaces")
+	fmt.Fprintf(out, ShowBridgeFmt, "bridge name", "bridge id", "STP enabled", "interfaces")
+
 	if len(names) == 0 {
 		devices, err := os.ReadDir(BRCTL_SYS_NET)
 		if err != nil {
@@ -188,7 +192,7 @@ func Show(out io.Writer, names ...string) error {
 
 		for _, bridge := range devices {
 			// check if device is bridge, aka if it has a bridge directory
-			_, err := os.Stat(BRCTL_SYS_NET + bridge.Name() + "/bridge/")
+			_, err := os.Stat(filepath.Join(BRCTL_SYS_NET, bridge.Name(), "bridge"))
 			if err == nil {
 				showBridge(bridge.Name(), out)
 			}
