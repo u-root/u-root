@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
-	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/smbios"
@@ -48,7 +47,6 @@ const (
 
 var (
 	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
-	getAcpiRSDP             = acpi.GetRSDP
 	getSMBIOSBase           = smbios.SMBIOSBase
 )
 
@@ -98,7 +96,6 @@ var (
 
 var (
 	ErrParseGUIDFail                   = errors.New("failed to parse GUID")
-	ErrFailToGetRSDPTable              = errors.New("failed to get RSDP table")
 	ErrFailToGetSmbiosTable            = errors.New("failed to get smbios base")
 	ErrWriteHOBBufMemoryMap            = errors.New("failed to write memory map to buffer")
 	ErrWriteHOBBufSerialPort           = errors.New("failed to append serial port hob to buffer")
@@ -154,22 +151,6 @@ func constructUniversalPayloadBase(addr uint64) *UniversalPayloadBase {
 		},
 		Entry: EFIPhysicalAddress(addr),
 	}
-}
-
-// Construct UniversalPayloadAcpiTable HOB
-func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
-	rsdp, err := getAcpiRSDP()
-	if err != nil {
-		return nil, errors.Join(ErrFailToGetRSDPTable, err)
-	}
-
-	return &UniversalPayloadAcpiTable{
-		Header: UniversalPayloadGenericHeader{
-			Revision: UniversalPayloadAcpiTableRevision,
-			Length:   uint16(unsafe.Sizeof(UniversalPayloadAcpiTable{})),
-		},
-		Rsdp: EFIPhysicalAddress(rsdp.RSDPAddr()),
-	}, nil
 }
 
 // Construct UniversalPayloadSmbiosTable HOB
@@ -253,38 +234,6 @@ func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load uint64) 
 
 	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
 		return fmt.Errorf("%w, func = appendUniversalPayloadBase()", ErrWriteHOBLengthNotMatch)
-	}
-
-	*hobLen += length
-
-	return nil
-}
-
-func appendAcpiTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	// Construct universal payload ACPI (RSDP) table HOB
-	rsdpTable, err := constructRSDPTable()
-	if err != nil {
-		return err
-	}
-
-	rsdpTableGUIDHOB, err := constructGUIDHOB(UniversalPayloadAcpiTableGUID)
-	if err != nil {
-		return err
-	}
-
-	length := uint64(unsafe.Sizeof(EFIHOBGUIDType{}) + unsafe.Sizeof(UniversalPayloadAcpiTable{}))
-	prev := buf.Len()
-
-	if err := binary.Write(buf, binary.LittleEndian, rsdpTableGUIDHOB); err != nil {
-		return errors.Join(ErrWriteHOBBufAcpiTable, err)
-	}
-
-	if err := binary.Write(buf, binary.LittleEndian, rsdpTable); err != nil {
-		return errors.Join(ErrWriteHOBBufAcpiTable, err)
-	}
-
-	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("%w, func = appendAcpiTableHOB()", ErrWriteHOBLengthNotMatch)
 	}
 
 	*hobLen += length
@@ -410,10 +359,6 @@ func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memor
 		return err
 	}
 
-	if err := appendAcpiTableHOB(buf, length); err != nil {
-		return err
-	}
-
 	if err := appendSmbiosTableHOB(buf, length); err != nil {
 		return err
 	}
@@ -439,11 +384,15 @@ func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Me
 	})
 	mem.Segments.Insert(s)
 
-	s = kexec.NewSegment(rsdpData, kexec.Range{
-		Start: uintptr(loadAddr + rsdpTableOffset),
-		Size:  uint(len(rsdpData)),
-	})
-	mem.Segments.Insert(s)
+	// If rsdpData contains data, we need to copy data to specified location.
+	// Otherwise, we will leave it alone, and UPL will handle it.
+	if rsdpData != nil {
+		s = kexec.NewSegment(rsdpData, kexec.Range{
+			Start: uintptr(loadAddr + rsdpTableOffset),
+			Size:  uint(len(rsdpData)),
+		})
+		mem.Segments.Insert(s)
+	}
 
 	hobBuf := &bytes.Buffer{}
 	hobListBuf := &bytes.Buffer{}
