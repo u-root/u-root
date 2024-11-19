@@ -48,6 +48,8 @@ var forthTests = []forthTest{
 	{val: "typeof", res: "", err: ErrEmptyStack, empty: true},
 	{val: "1 typeof", res: "string", err: nil, empty: true},
 	{val: "zardoz typeof", res: "", err: nil, empty: true},
+	{val: "1 %d printf", res: "1\n", empty: true},
+	{val: "%d printf", res: "", err: ErrEmptyStack, empty: true},
 }
 
 func TestForth(t *testing.T) {

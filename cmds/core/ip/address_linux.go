@@ -6,7 +6,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -139,24 +138,63 @@ func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 func (cmd *cmd) addressShow() error {
 	device, typeName, err := cmd.parseAddrShow()
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return cmd.showAllLinks(true)
-		}
-
 		return err
 	}
 
-	return cmd.showLink(device, true, typeName)
+	if device != nil {
+		if typeName == "" {
+			return cmd.showLink(device, true)
+		}
+
+		return cmd.showLink(device, true, typeName)
+	}
+
+	if typeName == "" {
+		return cmd.showAllLinks(true)
+	}
+
+	return cmd.showAllLinks(true, typeName)
 }
 
 func (cmd *cmd) parseAddrShow() (netlink.Link, string, error) {
-	device, err := cmd.parseDeviceName(false)
-	if err != nil {
-		return nil, "", err
+	var (
+		device     netlink.Link
+		deviceName string
+		typeName   string
+		err        error
+		devFound   bool
+	)
+
+	if !cmd.tokenRemains() {
+		return nil, "", nil
 	}
-	typeName, err := cmd.parseType()
-	if err != nil {
-		return nil, "", err
+
+	for cmd.tokenRemains() {
+		switch c := cmd.nextToken("dev", "type"); c {
+		case "dev":
+			if devFound {
+				return nil, "", fmt.Errorf("multiple devices specified")
+			}
+
+			deviceName = cmd.nextToken("device-name")
+			devFound = true
+		case "type":
+			typeName = cmd.nextToken("TYPE")
+		default:
+			if devFound {
+				return nil, "", fmt.Errorf("multiple devices specified")
+			}
+
+			deviceName = c
+			devFound = true
+		}
+	}
+
+	if deviceName != "" {
+		device, err = netlink.LinkByName(deviceName)
+		if err != nil {
+			return nil, "", fmt.Errorf("device %v not found: %w", deviceName, err)
+		}
 	}
 
 	return device, typeName, nil

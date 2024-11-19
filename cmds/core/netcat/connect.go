@@ -40,6 +40,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 	if err != nil {
 		return fmt.Errorf("failed to establish connection: %w", err)
 	}
+	defer conn.Close()
 
 	log.Printf("Connection to %s [%s] succeeded", address, network)
 
@@ -60,9 +61,11 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 
 		// prepare command execution on the server
 		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
-			if err := c.config.CommandExec.Execute(conn, io.MultiWriter(conn, output), c.stderr, c.config.Misc.EOL); err != nil {
+			if err := c.config.CommandExec.Execute(conn, c.stderr, c.config.Misc.EOL); err != nil {
 				return fmt.Errorf("run command: %w", err)
 			}
+
+			return nil
 		}
 	}
 
@@ -142,7 +145,6 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 			}
 			return osConn(network, address)
 		}
-
 	}
 
 	// Proxy Support

@@ -78,6 +78,18 @@ func TestRun(t *testing.T) {
 		outStr string
 	}{
 		{
+			name: "Show help",
+			args: []string{
+				"help",
+			},
+			outStr: cmdHelp,
+		},
+		{
+			name:   "Show help no args",
+			args:   nil,
+			outStr: cmdHelp,
+		},
+		{
 			name: "Show Qdisc",
 			args: []string{
 				"qdisc",

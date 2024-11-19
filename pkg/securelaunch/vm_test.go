@@ -7,6 +7,10 @@
 package securelaunch
 
 import (
+	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
@@ -14,6 +18,7 @@ import (
 	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
+	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/mount"
 )
 
@@ -41,13 +46,18 @@ import (
 func TestVM(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 
+	d := t.TempDir()
+	mbrdisk := filepath.Join(d, "mbrdisk")
+	if err := cp.Default.Copy("testdata/mbrdisk", mbrdisk); err != nil {
+		t.Fatalf("copying testdata/mbrdisk to %q:got %v, want nil", mbrdisk, err)
+	}
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/securelaunch"),
 		govmtest.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 
 			// CONFIG_ATA_PIIX is required for this option to work.
-			qemu.ArbitraryArgs("-hda", "testdata/mbrdisk"),
+			qemu.ArbitraryArgs("-hda", mbrdisk),
 			qemu.ArbitraryArgs("-hdb", "testdata/12Kzeros"),
 			qemu.ArbitraryArgs("-hdc", "testdata/gptdisk"),
 			qemu.ArbitraryArgs("-hdd", "testdata/gptdisk_label"),
@@ -61,19 +71,18 @@ func TestVM(t *testing.T) {
 	)
 }
 
-func TestMountDevice(t *testing.T) {
-	guest.SkipIfNotInVM(t)
-
+func mountMountDevice(t *testing.T) error {
+	t.Helper()
 	if err := GetBlkInfo(); err != nil {
-		t.Fatalf("GetBlkInfo() = %v, not nil", err)
+		return fmt.Errorf("GetBlkInfo() = %w, not nil", err)
 	}
 
 	if len(StorageBlkDevices) == 0 {
-		t.Fatal("len(StorageBlockDevices) = 0, not > 0")
+		return fmt.Errorf("len(StorageBlockDevices) = 0, not > 0")
 	}
 
-	mounted := false
 	matchExpr := regexp.MustCompile(`[hsv]d[a-z]\d+`)
+	t.Logf("Searching for storage in %v with regexp %s", StorageBlkDevices, `[hsv]d[a-z]\d+`)
 	for _, device := range StorageBlkDevices {
 		if matchExpr.MatchString(device.Name) {
 			mountPath, err := MountDevice(device, mount.MS_RDONLY)
@@ -90,11 +99,78 @@ func TestMountDevice(t *testing.T) {
 				continue
 			}
 
-			mounted = true
-			break
+			return nil
 		}
 	}
-	if !mounted {
-		t.Skip("Skipping since no suitable block device was found to mount")
+	return fmt.Errorf("Skipping since no suitable block device was found to mount:%w", os.ErrNotExist)
+}
+
+func TestWriteFile(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	Debug = t.Logf
+	if err := mountMountDevice(t); err != nil {
+
+		t.Skipf("no mountable device for test:%v", err)
+	}
+
+	tempFile := "sda1:" + "/testfile"
+	dataStr := "Hello World!"
+
+	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
+		t.Fatalf(`WriteFile(dataStr.bytes, tempFile) = %v, not nil`, err)
+	}
+}
+
+func TestReadFile(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	Debug = t.Logf
+
+	if err := mountMountDevice(t); err != nil {
+		t.Skipf("no mountable device for test:%v", err)
+	}
+
+	tempFile := "sda1:" + "/testfile"
+	dataStr := "Hello World!"
+
+	if err := WriteFile([]byte(dataStr), tempFile); err != nil {
+		t.Fatalf(`WriteFile(dataStr.bytes, tempFile) = %v, not nil`, err)
+	}
+
+	readBytes, err := ReadFile(tempFile)
+	if err != nil {
+		t.Fatalf(`ReadFile(tempFile) = %v, not nil`, err)
+	}
+
+	if bytes.Compare(readBytes, []byte(dataStr)) != 0 {
+		t.Fatalf(`ReadFile(tempFile) returned %q, not %q`, readBytes, []byte(dataStr))
+	}
+}
+
+func TestGetFileBytes(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	Debug = t.Logf
+
+	if err := mountMountDevice(t); err != nil {
+		t.Skipf("no mountable device for test:%v", err)
+	}
+
+	file := "sda1:" + "/file.out"
+	fileStr := "Hello, World!"
+	fileBytes := []byte(fileStr)
+
+	if err := WriteFile(fileBytes, file); err != nil {
+		t.Fatalf(`WriteFile(str, file) = %v, not nil`, err)
+	}
+
+	readBytes, err := GetFileBytes(file)
+	if err != nil {
+		t.Fatalf(`GetFileBytes(file) = %v, not nil`, err)
+	}
+
+	if !bytes.Equal(fileBytes, readBytes) {
+		t.Fatalf(`GetFileBytes(file) got '%v', want '%v'`, readBytes, fileBytes)
 	}
 }

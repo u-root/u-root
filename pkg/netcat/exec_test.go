@@ -125,11 +125,10 @@ func TestExec_Execute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdin := bytes.NewBufferString(tt.stdin)
 			stdout := &bytes.Buffer{}
 			stderr := &bytes.Buffer{}
 
-			err := tt.exec.Execute(stdin, stdout, stderr, tt.eol)
+			err := tt.exec.Execute(stdout, stderr, tt.eol)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Exec.Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}

@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	guid "github.com/google/uuid"
-	"github.com/u-root/u-root/pkg/acpi"
-	"github.com/u-root/u-root/pkg/boot/kexec"
 	"os"
 	"testing"
 	"unsafe"
+
+	guid "github.com/google/uuid"
+	"github.com/u-root/u-root/pkg/acpi"
+	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
 func mockKexecMemoryMapFromIOMem() (kexec.MemoryMap, error) {

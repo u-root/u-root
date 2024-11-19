@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	tunnelHelp = `Usage: ip tunnel { add  | del | show } [ NAME ]
+	tunnelHelp = `Usage: ip tunnel { show } [ NAME ]
         [ mode { gre | ipip | sit | vti } ]
         [ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
         [ ttl TTL ] [ tos TOS ] [ [no]pmtudisc ] [ dev PHYS_DEV ]
