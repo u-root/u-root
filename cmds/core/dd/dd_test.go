@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -535,7 +534,6 @@ type testBS struct {
 
 // Write implements write.
 func (t *testBS) Write(b []byte) (int, error) {
-	log.Printf("Write:%d", len(b))
 	if t.sz < t.obs && int64(len(b)) == t.sz {
 		return len(b), nil
 	}
@@ -546,7 +544,6 @@ func (t *testBS) Write(b []byte) (int, error) {
 }
 
 func (t *testBS) Read(b []byte) (int, error) {
-	log.Printf("Read:%d", len(b))
 	if int64(len(b)) != t.ibs {
 		return -1, fmt.Errorf("%s: read len is %d want %d:%w", t.name, len(b), t.obs, os.ErrInvalid)
 	}
