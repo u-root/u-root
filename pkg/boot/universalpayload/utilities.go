@@ -170,6 +170,7 @@ var (
 	ErrGfxReadSubSysDeviceIDFailed = fmt.Errorf("failed to read subsystem device id")
 	ErrGfxNoDeviceInfoFound        = fmt.Errorf("no graphic device info found")
 	ErrDTRsdpLenOverBound          = fmt.Errorf("rsdp table length too large")
+	ErrDTRsdpTableNotFound         = fmt.Errorf("no acpi rsdp table found")
 	ErrAlignPadRange               = errors.New("failed to align pad size, out of range")
 	ErrCPUAddressConvert           = errors.New("failed to convert physical bits size")
 	ErrCPUAddressRead              = errors.New("failed to read 'address sizes'")
@@ -637,17 +638,23 @@ func constructPciNode() *dt.Node {
 
 func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte, error) {
 	memNodes := buildDtMemoryNode(mem)
-	rsdp, _ := getAcpiRSDP()
-	rsdpLen := rsdp.Len()
+	rsdpBase, rsdpData, err := getAcpiRsdpData()
 
-	if rsdpLen > uint32(pageSize) {
-		return nil, ErrDTRsdpLenOverBound
+	if err != nil {
+		return nil, fmt.Errorf("failed get rsdp table data: %w", err)
+	}
+
+	// rsdpBase indicates whether we need to copy RSDP table data to specified
+	// location. If rsdpBase equals to zero, then we need to copy data to
+	// specified address, otherwise, we will use rsdpBase directly.
+	if rsdpBase == 0 {
+		rsdpBase = addr + rsdpTableOffset
 	}
 
 	rsvdMemNode := dt.NewNode("reserved-memory", dt.WithChildren(
 		dt.NewNode("acpi", dt.WithProperty(
 			dt.PropertyString("compatible", "acpi"),
-			dt.PropertyRegion("reg", addr+rsdpTableOffset, uint64(pageSize)),
+			dt.PropertyRegion("reg", rsdpBase, uint64(pageSize)),
 		)),
 	))
 
@@ -710,7 +717,7 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte,
 		return nil, fmt.Errorf("failed to write FDT: %w", err)
 	}
 
-	return rsdp.AllData(), nil
+	return rsdpData, nil
 }
 
 func mockCPUTempInfoFile(t *testing.T, content string) string {

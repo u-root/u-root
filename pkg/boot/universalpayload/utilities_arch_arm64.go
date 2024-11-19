@@ -7,8 +7,13 @@
 package universalpayload
 
 import (
+	"bufio"
 	"encoding/binary"
+	"fmt"
+	"os"
 	"reflect"
+	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -78,4 +83,39 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	buf = appendUint64(buf, entry)
 
 	return buf
+}
+
+// Get the base address and data from RDSP table
+func getAcpiRsdpData() (uint64, []byte, error) {
+	// Finds the RSDP in the EFI System Table.
+	file, err := os.Open("/sys/firmware/efi/systab")
+	if err != nil {
+		return 0, nil, err
+	}
+	defer file.Close()
+
+	const acpi20 = "ACPI20="
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		start := ""
+		if strings.HasPrefix(line, acpi20) {
+			start = strings.TrimPrefix(line, acpi20)
+		}
+		if start == "" {
+			continue
+		}
+		base, err := strconv.ParseInt(start, 0, 63)
+		if err != nil {
+			continue
+		}
+		return uint64(base), nil, nil
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("error while reading efi systab: %v", err)
+	}
+
+	return 0xFFFFFFFF, nil, ErrDTRsdpTableNotFound
 }
