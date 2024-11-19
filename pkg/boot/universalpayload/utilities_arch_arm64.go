@@ -6,13 +6,7 @@ package universalpayload
 
 import (
 	"encoding/binary"
-	"reflect"
-	"unsafe"
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
 
 func getPhysicalAddressSizes() (uint8, error) {
 	// Return hardcode for arm64
@@ -25,55 +19,51 @@ func getPhysicalAddressSizes() (uint8, error) {
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
 func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
-	ptrToSlice := func(ptr uintptr, size int) []byte {
-		var data []byte
+	// In order to support Position Indepent Execution, we need to update actual
+	// physical address of HoB list, stack, and entry point of UPL FIT image.
+	//
+	// Due to Plan 9 Assembly limitation, we can only get symbol address instead
+	// of relative address when updating address HoB list, stack, and entry
+	// point of UPL FIT image. In this case, the gap of symbols might be changed
+	// when using different version of GoLang toolchain, and we cannot ensure
+	// that gap size of sybmols will never exceed the Trampoline region size.
+	// To fix this unpredicted behavior, use opcode instead to ensure everything
+	// is under control.
 
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-		sh.Data = ptr
-		sh.Len = size
-		sh.Cap = size
+	// Trampoline code snippet is prepared as following:
+	//
+	//	buf[0 - 3]   : 0x580000c4 - ldr x4, #0x18 (PC relative: buf[24 - 31])
+	//	buf[4 - 7]   : 0x580000e0 - ldr x0, #0x1c (PC relative: buf[32 - 39])
+	//	buf[8 - 11]  : 0xaa1f03e1 - mov x1, xzr
+	//	buf[12 - 15] : 0x580000e2 - ldr x2, #0x1c (PC relative: buf[40 - 47])
+	//	buf[16 - 19] : 0x9100005f - mov sp, x2
+	//	buf[20 - 23] : 0xd61f0080 - br  x4
+	//	buf[24 - 27] : uint32(uint64(entry)&0xffffffff))
+	//	buf[28 - 31] : uint32(uint64(entry)>>32))
+	//	buf[32 - 35] : uint32(uint64(hobAddr)&0xffffffff))
+	//	buf[36 - 39] : uint32(uint64(hobAddr)>>32))
+	//	buf[40 - 43] : uint32(uint64(stackTop)&0xffffffff))
 
-		return data
-	}
-
-	trampBegin := addrOfStart()
-	trampStack := addrOfStackTop()
-	trampHob := addrOfHobAddr()
-
-	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
-
-	buf = append(buf, tramp...)
-
-	padWithLength := func(slice []uint8, len uint64) []uint8 {
-		tmpBytes := make([]uint8, len)
+	appendUint32 := func(slice []uint8, value uint32) []uint8 {
+		tmpBytes := make([]uint8, 4)
+		binary.LittleEndian.PutUint32(tmpBytes, value)
 		return append(slice, tmpBytes...)
 	}
-
-	// Due to Golang Plan9 Assembly support limitation, we can only
-	// fetch symbol address after relocated, and symbol address of
-	// trampBegin, trampStack, trampHob should not be larger than
-	// one page from PC address of trampoline entry point. If symbol
-	// address is larger than one page size from PC address of
-	// trampoline entry point, boot environment which is constructed
-	// for UPL will be overwritten by trampoline code.
-	stackOffset := trampStack & 0xFFF
-	gapLen := stackOffset - (trampStack - trampBegin)
-	buf = padWithLength(buf, uint64(gapLen))
 
 	stackTop := hobAddr + tmpStackTop
-	appendUint64 := func(slice []uint8, value uint64) []uint8 {
-		tmpBytes := make([]uint8, 8)
-		binary.LittleEndian.PutUint64(tmpBytes, value)
-		return append(slice, tmpBytes...)
-	}
 
-	padLen := uint64(trampHob - trampStack - 8)
-
-	buf = appendUint64(buf, stackTop)
-	buf = padWithLength(buf, padLen)
-	buf = appendUint64(buf, hobAddr)
-	buf = padWithLength(buf, padLen)
-	buf = appendUint64(buf, entry)
+	buf = appendUint32(buf, 0x580000c4)
+	buf = appendUint32(buf, 0x580000e0)
+	buf = appendUint32(buf, 0xaa1f03e1)
+	buf = appendUint32(buf, 0x580000e2)
+	buf = appendUint32(buf, 0x9100005f)
+	buf = appendUint32(buf, 0xd61f0080)
+	buf = appendUint32(buf, uint32(uint64(entry)&0xffffffff))
+	buf = appendUint32(buf, uint32(uint64(entry)>>32))
+	buf = appendUint32(buf, uint32(uint64(hobAddr)&0xffffffff))
+	buf = appendUint32(buf, uint32(uint64(hobAddr)>>32))
+	buf = appendUint32(buf, uint32(uint64(stackTop)&0xffffffff))
+	buf = appendUint32(buf, uint32(uint64(stackTop)>>32))
 
 	return buf
 }
