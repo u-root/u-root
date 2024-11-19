@@ -7,8 +7,10 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -36,183 +38,6 @@ func (w *ws) Seek(offset int64, _ int) (int64, error) {
 		}
 	}
 	return offset, nil
-}
-
-func TestNewChunkedBuffer(t *testing.T) {
-	tests := []struct {
-		name         string
-		BufferSize   int64
-		outChunkSize int64
-		flags        int
-	}{
-		{
-			name:         "Empty buffer with length zero",
-			BufferSize:   0,
-			outChunkSize: 2,
-			flags:        0,
-		},
-		{
-			name:         "Normal buffer",
-			BufferSize:   16,
-			outChunkSize: 2,
-			flags:        0,
-		},
-		{
-			name:         "non-zero flag",
-			BufferSize:   16,
-			outChunkSize: 2,
-			flags:        3,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			newIntermediateBufferInterface := newChunkedBuffer(tt.BufferSize, tt.outChunkSize, tt.flags)
-			newIntermediateBuffer := newIntermediateBufferInterface.(*chunkedBuffer)
-
-			if (int64(len(newIntermediateBuffer.data)) != tt.BufferSize) || (newIntermediateBuffer.outChunk != tt.outChunkSize) ||
-				(newIntermediateBuffer.flags != tt.flags) {
-				t.Errorf("Test failed - got: {%v, %v, %v} want {%v, %v, %v}",
-					len(newIntermediateBuffer.data), newIntermediateBuffer.outChunk, newIntermediateBuffer.flags,
-					tt.BufferSize, tt.outChunkSize, tt.flags)
-			}
-		})
-	}
-}
-
-func TestReadFrom(t *testing.T) {
-	tests := []struct {
-		name        string
-		inputBuffer []byte
-		wantError   bool
-	}{
-		{
-			name:        "Read From",
-			inputBuffer: []byte("ABC"),
-		},
-		{
-			name:        "Empty Buffer",
-			inputBuffer: []byte{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cBuffer := &chunkedBuffer{
-				outChunk: 1,
-				length:   0,
-				data:     make([]byte, len(tt.inputBuffer)),
-				flags:    0,
-			}
-			readFromBuffer := bytes.NewReader(tt.inputBuffer)
-			cBuffer.ReadFrom(readFromBuffer)
-
-			if !reflect.DeepEqual(cBuffer.data, tt.inputBuffer) {
-				t.Errorf("ReadFrom failed. Got: %v - want: %v", cBuffer.data, tt.inputBuffer)
-			}
-		})
-	}
-}
-
-func TestWriteTo(t *testing.T) {
-	tests := []struct {
-		name          string
-		initialBuffer []byte
-		wantError     bool
-	}{
-		{
-			name:          "WriteTo",
-			initialBuffer: []byte("ABC"),
-		},
-		{
-			name:          "Empty Buffer",
-			initialBuffer: []byte{},
-		},
-		{
-			name:          "Bigger Buffer",
-			initialBuffer: []byte("This is madness. We need to turn this into happiness."),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cBuffer := &chunkedBuffer{
-				outChunk: 16,
-				length:   int64(len(tt.initialBuffer)),
-				data:     tt.initialBuffer,
-				flags:    0,
-			}
-
-			p := make([]byte, 0)
-			b := bytes.NewBuffer(p)
-			buffer := bufio.NewWriter(b)
-
-			n, err := cBuffer.WriteTo(buffer)
-			if err != nil || n != int64(len(tt.initialBuffer)) {
-				t.Errorf("Unable to write to buffer: %v. Wrote %d bytes.", err, n)
-			}
-
-			err = buffer.Flush()
-			if err != nil {
-				t.Errorf("Unable to flush buffer: %v", err)
-			}
-
-			if !reflect.DeepEqual(b.Bytes(), tt.initialBuffer) {
-				t.Errorf("WriteTo failed. Got: %v - want: %v", b.Bytes(), tt.initialBuffer)
-			}
-		})
-	}
-}
-
-func TestParallelChunkedCopy(t *testing.T) {
-	tests := []struct {
-		name        string
-		inputBuffer []byte
-		outBufSize  int
-		wantError   bool
-	}{
-		{
-			name:        "Copy 8 bytes",
-			inputBuffer: []byte("ABCDEFGH"),
-			outBufSize:  16,
-		},
-		{
-			name:        "No bytes to copy",
-			inputBuffer: []byte{},
-			outBufSize:  16,
-			wantError:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// We need to set up an output buffer
-			outBuf := make([]byte, 0)
-
-			// Make it a Writer
-			b := bytes.NewBuffer(outBuf)
-			writeBuf := bufio.NewWriter(b)
-
-			// Now we need a readbuffer
-			readBuf := bytes.NewReader(tt.inputBuffer)
-
-			var bytesWritten int64
-			err := parallelChunkedCopy(readBuf, writeBuf, int64(len(tt.inputBuffer)), 8, &bytesWritten, 0)
-
-			if err != nil && !tt.wantError {
-				t.Errorf("parallelChunkedCopy failed with %v", err)
-			}
-
-			err = writeBuf.Flush()
-			if err != nil {
-				t.Errorf("Unable to flush writeBuffer: %v", err)
-			}
-
-			if !reflect.DeepEqual(b.Bytes(), tt.inputBuffer) {
-				t.Errorf("ParallelChunkedCopies are not equal. Got: %v - want: %v", b.Bytes(), tt.inputBuffer)
-			}
-		})
-	}
 }
 
 func TestRead(t *testing.T) {
@@ -694,6 +519,80 @@ func TestFiles(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tt.expected, got) {
 				t.Errorf("expected %q, got %q", tt.expected, got)
+			}
+		})
+	}
+}
+
+type testBS struct {
+	name string
+	dat  *bytes.Buffer
+	sz   int64
+	ibs  int64
+	obs  int64
+	err  error
+}
+
+// Write implements write.
+func (t *testBS) Write(b []byte) (int, error) {
+	log.Printf("Write:%d", len(b))
+	if t.sz < t.obs && int64(len(b)) == t.sz {
+		return len(b), nil
+	}
+	if int64(len(b)) != t.obs {
+		return -1, fmt.Errorf("%s: write len is %d want %d:%w", t.name, len(b), t.obs, os.ErrInvalid)
+	}
+	return len(b), nil
+}
+
+func (t *testBS) Read(b []byte) (int, error) {
+	log.Printf("Read:%d", len(b))
+	if int64(len(b)) != t.ibs {
+		return -1, fmt.Errorf("%s: read len is %d want %d:%w", t.name, len(b), t.obs, os.ErrInvalid)
+	}
+	return t.dat.Read(b)
+}
+
+func TestBS(t *testing.T) {
+	for _, tt := range []testBS{
+		{
+			name: "dat 128 ibs 128 obs 128",
+			dat:  bytes.NewBuffer(make([]byte, 128)),
+			sz:   128,
+			ibs:  128,
+			obs:  128,
+			err:  nil,
+		},
+		{
+			name: "dat 26 ibs 26 obs 13",
+			dat:  bytes.NewBuffer(make([]byte, 26)),
+			sz:   26,
+			ibs:  26,
+			obs:  13,
+			err:  nil,
+		},
+		{
+			name: "dat 26 ibs 13 obs 26",
+			dat:  bytes.NewBuffer(make([]byte, 26)),
+			sz:   26,
+			ibs:  13,
+			obs:  26,
+			err:  nil,
+		},
+		{
+			name: "dat 14 ibs 14 obs 26",
+			dat:  bytes.NewBuffer(make([]byte, 14)),
+			sz:   14,
+			ibs:  14,
+			obs:  26,
+			err:  nil,
+		},
+	} {
+
+		t.Run(tt.name, func(t *testing.T) {
+			var bw int64
+			if err := dd(&tt, &tt, tt.ibs, tt.obs, &bw, 0); !errors.Is(err, tt.err) {
+				t.Fatalf("got %v, want %v", err, tt.err)
 			}
 		})
 	}
