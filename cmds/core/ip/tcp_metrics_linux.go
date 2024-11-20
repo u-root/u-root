@@ -14,7 +14,8 @@ import (
 
 const tcpMetricsHelp = `Usage:	ip tcp_metrics/tcpmetrics { COMMAND | help }
 	ip tcp_metrics show SELECTOR
-SELECTOR := [ [ address ] PREFIX ]`
+SELECTOR := [ [ address ] PREFIX ]
+`
 
 func (cmd *cmd) tcpMetrics() error {
 	if !cmd.tokenRemains() {
