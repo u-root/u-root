@@ -68,7 +68,7 @@ var flagMap = map[string]bitClearAndSet{
 
 var allowedFlags = os.O_TRUNC | os.O_SYNC
 
-func dd(r io.Reader, w io.Writer, inBufSize, outBufSize int64, bytesWritten *int64, flags int) error {
+func dd(r io.Reader, w io.Writer, inBufSize, outBufSize int64, bytesWritten *int64) error {
 	if inBufSize == 0 {
 		return fmt.Errorf("inBufSize is not allowed to be zero")
 	}
@@ -317,7 +317,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	if err != nil {
 		return err
 	}
-	if err := dd(in, out, ibs.Value, obs.Value, &bytesWritten, flags); err != nil {
+	if err := dd(in, out, ibs.Value, obs.Value, &bytesWritten); err != nil {
 		return err
 	}
 

@@ -588,7 +588,7 @@ func TestBS(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			var bw int64
-			if err := dd(&tt, &tt, tt.ibs, tt.obs, &bw, 0); !errors.Is(err, tt.err) {
+			if err := dd(&tt, &tt, tt.ibs, tt.obs, &bw); !errors.Is(err, tt.err) {
 				t.Fatalf("got %v, want %v", err, tt.err)
 			}
 		})
