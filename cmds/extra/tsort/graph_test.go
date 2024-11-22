@@ -140,11 +140,3 @@ func testRemoveEdge(t *testing.T, g *graph) {
 			g.inDegree("e"))
 	}
 }
-
-func setOf(values ...string) set {
-	s := make(set)
-	for _, v := range values {
-		s.add(v)
-	}
-	return s
-}

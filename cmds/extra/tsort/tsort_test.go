@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
@@ -395,6 +396,48 @@ func TestTsort(t *testing.T) {
 	})
 }
 
+var rndAcyclicGraph = func() string {
+	rnd := rand.New(rand.NewSource(1))
+	var result strings.Builder
+	n := 10_000
+	for range 100 * n {
+		x := rnd.Intn(n + 1)
+		y := rnd.Intn(n + 1)
+		_, _ = fmt.Fprintln(&result, min(x, y), max(x, y))
+	}
+	return result.String()
+}()
+
+var rndCyclicGraph = func() string {
+	rnd := rand.New(rand.NewSource(1))
+	var result strings.Builder
+	n := 200
+	for range 100 * n {
+		x := rnd.Intn(n + 1)
+		y := rnd.Intn(n + 1)
+		_, _ = fmt.Fprintln(&result, x, y)
+	}
+	return result.String()
+}()
+
+func BenchmarkTsortAcyclicGraph(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		err := run(strings.NewReader(rndAcyclicGraph), io.Discard, io.Discard)
+		if err != nil {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
+func BenchmarkTsortCyclicGraph(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		err := run(strings.NewReader(rndCyclicGraph), io.Discard, io.Discard)
+		if err != nil && !errors.Is(err, errNonFatal) {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
 func tempFile(t *testing.T, contents string) (file string) {
 	dir := t.TempDir()
 	n := filepath.Join(dir, "file")
@@ -554,7 +597,7 @@ func checkValidTopologicalOrdering(
 
 func nodes(graph string) []string {
 	fields := strings.Fields(graph)
-	s := make(set)
+	s := makeSet()
 
 	var result []string
 	for _, value := range fields {
@@ -587,7 +630,7 @@ func orderInsensitiveDiff(a []string, b []string) string {
 }
 
 func hasDuplicates(values []string) bool {
-	s := make(set)
+	s := makeSet()
 	for _, value := range values {
 		if s.has(value) {
 			return true
