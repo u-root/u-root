@@ -214,7 +214,7 @@ func TestGetState(t *testing.T) {
 		{0x20, "FAILED"},
 		{0x40, "NOARP"},
 		{0x80, "PERMANENT"},
-		{0x00, "UNKNOWN"},
+		{0x00, "NONE"},
 	}
 
 	for _, tt := range tests {
