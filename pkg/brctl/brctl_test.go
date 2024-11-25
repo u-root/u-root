@@ -266,6 +266,33 @@ func TestShow(t *testing.T) {
 	}
 }
 
+func TestShowSTP(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	if err := clearEnv(); err != nil {
+		t.Skip(err)
+	}
+
+	if err := Addbr(BRCTL_TEST_BR_0); err != nil {
+		t.Fatalf("AddBr(%q) = %v, want nil", BRCTL_TEST_BR_0, err)
+	}
+
+	if err := Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0); err != nil {
+		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
+	}
+
+	// Enable STP
+	err := Stp(BRCTL_TEST_BR_0, "on")
+	if err != nil {
+		t.Fatalf("Stp(%q, \"on\") = %v, want nil", BRCTL_TEST_BR_0, err)
+	}
+
+	var bufOut bytes.Buffer
+	if err := ShowStp(&bufOut, BRCTL_TEST_BR_0); err != nil {
+		t.Errorf("Show(%q, %q)= %v", &bufOut, BRCTL_TEST_BR_0, err)
+	}
+}
+
 func TestScpt(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
