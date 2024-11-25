@@ -87,6 +87,10 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	// The port is optional as the second argument.
 	switch config.ConnectionMode {
 	case netcat.CONNECTION_MODE_CONNECT:
+		if f.sourcePort == "" {
+			f.sourcePort = netcat.DEFAULT_SOURCE_PORT
+		}
+
 		if len(args) < 1 {
 			return nil, fmt.Errorf("missing host")
 		}
@@ -102,7 +106,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 			port, err := strconv.ParseUint(ports[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %w", err)
+				return nil, fmt.Errorf("invalid port: %v", ports[0])
 			}
 
 			config.Port = port
@@ -113,7 +117,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 				config.ConnectionModeOptions.CurrentPort = port
 				port, err = strconv.ParseUint(ports[1], 10, 64)
 				if err != nil {
-					return nil, fmt.Errorf("invalid port: %w", err)
+					return nil, fmt.Errorf("invalid port: %v", ports[1])
 				}
 				config.ConnectionModeOptions.EndPort = port
 			}
@@ -126,15 +130,29 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		if len(args) == 1 {
 			port, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %w", err)
+				config.Host = args[0]
+
+				if f.sourcePort != "" {
+					port, err := strconv.ParseUint(f.sourcePort, 10, 64)
+					if err != nil {
+						return nil, fmt.Errorf("invalid port: %w", err)
+					}
+					config.Port = port
+				}
+			} else {
+				config.Port = port
 			}
-			config.Port = port
 		} else if len(args) >= 2 {
+
+			if f.sourcePort != "" {
+				return nil, fmt.Errorf("got more than one port specification")
+			}
+
 			config.Host = args[0]
 
 			port, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %w", err)
+				return nil, fmt.Errorf("invalid port: %v", args[1])
 			}
 			config.Port = port
 		}
@@ -386,8 +404,8 @@ func run(args []string) error {
 	// connection mode options
 	fs.BoolVar(&f.zeroIo, "z", false, "zero-I/O mode, report connection status only")
 
-	fs.StringVar(&f.sourcePort, "source-port", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use")
-	fs.StringVar(&f.sourcePort, "p", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use (shorthand)")
+	fs.StringVar(&f.sourcePort, "source-port", "", "Specify source port to use")
+	fs.StringVar(&f.sourcePort, "p", "", "Specify source port to use (shorthand)")
 
 	fs.StringVar(&f.sourceAddress, "source", "", "Specify source address to use")
 	fs.StringVar(&f.sourceAddress, "s", "", "Specify source address to use (shorthand)")
