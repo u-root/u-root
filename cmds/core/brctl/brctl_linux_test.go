@@ -23,6 +23,10 @@ func TestRun(t *testing.T) {
 		forceVM bool
 	}{
 		{
+			name: "help",
+			argv: []string{"help"},
+		},
+		{
 			name:   "addbr",
 			argv:   []string{"addbr", "bridge0"},
 			skipVM: true,
