@@ -34,6 +34,7 @@ const linkHelp = `Usage: ip link add  [ name ] NAME
 		[ name NEWNAME ]
 		[ address LLADDR ]
 		[ mtu MTU ]
+		[ group GROUP ]
 		[ netns { PID | NAME } ]
 		[ alias NAME ]
 		[ vf NUM [ mac LLADDR ]
@@ -47,7 +48,7 @@ const linkHelp = `Usage: ip link add  [ name ] NAME
 			 [ node_guid EUI64 ]
 			 [ port_guid EUI64 ] ]
 
-	ip link show [ DEVICE | group GROUP ] [type TYPE]
+	ip link show [ DEVICE ] [type TYPE]
 
 	ip link help
 
@@ -158,6 +159,10 @@ func (cmd *cmd) linkSet() error {
 			if err := cmd.setLinkTxQLen(iface); err != nil {
 				return fmt.Errorf("%v can't set txqueuelen: %w", iface.Attrs().Name, err)
 			}
+		case "group":
+			if err := cmd.setLinkGroup(iface); err != nil {
+				return fmt.Errorf("%v can't set group: %w", iface.Attrs().Name, err)
+			}
 		}
 	}
 
@@ -197,7 +202,7 @@ func (cmd *cmd) setLinkGroup(iface netlink.Link) error {
 		return fmt.Errorf("invalid group %v: %w", token, err)
 	}
 
-	return cmd.handle.LinkSetMTU(iface, group)
+	return cmd.handle.LinkSetGroup(iface, group)
 }
 
 func (cmd *cmd) setLinkName(iface netlink.Link) error {
