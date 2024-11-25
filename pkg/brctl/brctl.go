@@ -99,20 +99,130 @@ func Delif(bridge string, iface string) error {
 // All bridges are in the virtfs under /sys/class/net/<name>/bridge/<item>, read info from there
 // Update this function if BridgeInfo struct changes
 func getBridgeInfo(name string) (BridgeInfo, error) {
+	ret := BridgeInfo{
+		Name: name,
+	}
+	var err error
+
 	basePath := path.Join(BRCTL_SYS_NET, name, "bridge")
-	bridgeID, err := os.ReadFile(path.Join(basePath, BRCTL_BRIDGEID))
+
+	// Read designated Root
+	ret.DesignatedRoot, err = readID(basePath, BRCTL_DESIGNATED_ROOT)
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("os.ReadFile: %w", err)
+		return BridgeInfo{}, err
 	}
 
-	stpEnabledRaw, err := os.ReadFile(path.Join(basePath, BRCTL_STP_STATE))
+	// Read bridge id
+	ret.BridgeID, err = readID(basePath, BRCTL_BRIDGEID)
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("os.ReadFile: %w", err)
+		return BridgeInfo{}, err
 	}
 
-	stpEnabled, err := strconv.ParseBool(strings.TrimSuffix(string(stpEnabledRaw), "\n"))
+	// Read root path cost
+	ret.RootPathCost, err = readInt(basePath, BRCTL_ROOT_PATH_COST)
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("strconv.ParseBool: %w", err)
+		return BridgeInfo{}, err
+	}
+
+	// Read max age
+	ret.MaxAge, err = readTimeVal(basePath, BRCTL_MAX_AGE)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read bridge max age
+	ret.BridgeMaxAge, err = readTimeVal(basePath, BRCTL_MAX_AGE)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read hello time
+	ret.HelloTime, err = readTimeVal(basePath, BRCTL_HELLO_TIME)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read bridge hello time
+	ret.BridgeHelloTime, err = readTimeVal(basePath, BRCTL_HELLO_TIME)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read forward delay
+	ret.ForwardDelay, err = readTimeVal(basePath, BRCTL_FORWARD_DELAY)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read bridge forward delay
+	ret.BridgeForwardDelay, err = readTimeVal(basePath, BRCTL_FORWARD_DELAY)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read aging time
+	ret.AgingTime, err = readTimeVal(basePath, BRCTL_AGEING_TIME)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read hello timer value
+	ret.HelloTimerValue, err = readTimeVal(basePath, BRCTL_HELLO_TIMER_VALUE)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read tcn timer value
+	ret.TCNTimerValue, err = readTimeVal(basePath, BRCTL_TCN_TIMER)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read Topology change timer
+	ret.TopologyChangeTimerValue, err = readTimeVal(basePath, BRCTL_TOPOLOGY_CHANGE_TIMER)
+	if err != nil {
+		return BridgeInfo{}, nil
+	}
+
+	// Read GC Timer
+	ret.GCTimerValue, err = readTimeVal(basePath, BRCTL_GC_TIMER_VALUE)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read root port
+	rport, err := readInt(basePath, BRCTL_ROOT_PORT)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	if rport > 0xFFFF {
+		return BridgeInfo{}, strconv.ErrRange
+	}
+	ret.RootPort = uint16(rport)
+
+	// Read STP state
+	ret.StpEnabled, err = readBool(basePath, BRCTL_STP_STATE)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read trill enabled
+	// ret.TrillEnabled, err = readBool(basePath, BRCTL_TRILL_ENABLED)
+	// if err != nil {
+	//  	return BridgeInfo{}, err
+	// }
+
+	// Read topology change
+	ret.TopologyChange, err = readBool(basePath, BRCTL_TOPOLOGY_CHANGE)
+	if err != nil {
+		return BridgeInfo{}, err
+	}
+
+	// Read topology change detected
+	ret.TopologyChangeDetected, err = readBool(basePath, BRCTL_TOPOLOGY_CHANGE_DETECTED)
+	if err != nil {
+		return BridgeInfo{}, err
 	}
 
 	// get interfaceDir from sysfs
@@ -121,17 +231,12 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 		return BridgeInfo{}, fmt.Errorf("os.ReadDir: %w", err)
 	}
 
-	interfaces := []string{}
+	ret.Interfaces = make([]string, 0)
 	for i := range interfaceDir {
-		interfaces = append(interfaces, interfaceDir[i].Name())
+		ret.Interfaces = append(ret.Interfaces, interfaceDir[i].Name())
 	}
 
-	return BridgeInfo{
-		Name:       name,
-		BridgeID:   strings.TrimSuffix(string(bridgeID), "\n"),
-		StpState:   stpEnabled,
-		Interfaces: interfaces,
-	}, nil
+	return ret, nil
 
 }
 
@@ -147,7 +252,7 @@ func showBridge(name string, out io.Writer) {
 		ifaceString += iface + " "
 	}
 
-	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpState, ifaceString)
+	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpEnabled, ifaceString)
 }
 
 // Showmacs shows a list of learned MAC addresses for this bridge.
@@ -338,6 +443,44 @@ func Hairpin(bridge string, port string, hairpinmode string) error {
 	if err := setPortBrportValue(port, BRCTL_HAIRPIN, []byte(hairpinMode)); err != nil {
 		return fmt.Errorf("setPortBrportValue: %w", err)
 	}
+
+	return nil
+}
+
+func ShowStp(out io.Writer, bridge string) error {
+	bridgeInfo, err := getBridgeInfo(bridge)
+	if err != nil {
+		return err
+	}
+
+	var s strings.Builder
+
+	fmt.Fprintf(&s, "%s\n", bridge)
+	fmt.Fprintf(&s, " bridge id\t\t%s\n", bridgeInfo.BridgeID)
+	fmt.Fprintf(&s, " designated root\t%s\n", bridgeInfo.DesignatedRoot)
+	fmt.Fprintf(&s, " root port\t\t   %d\t\t\t", bridgeInfo.RootPort)
+	fmt.Fprintf(&s, "path cost\t\t   %d\n", bridgeInfo.RootPathCost)
+	fmt.Fprintf(&s, " max age\t\t%s", timerToString(bridgeInfo.MaxAge))
+	fmt.Fprintf(&s, "\t\t\tbridge max age\t\t%s\n", timerToString(bridgeInfo.BridgeMaxAge))
+	fmt.Fprintf(&s, " hello time\t\t%s", timerToString(bridgeInfo.HelloTime))
+	fmt.Fprintf(&s, "\t\t\tbridge hello time\t%s\n", timerToString(bridgeInfo.BridgeHelloTime))
+	fmt.Fprintf(&s, " forward delay\t\t%s", timerToString(bridgeInfo.ForwardDelay))
+	fmt.Fprintf(&s, "\t\t\tbridge forward delay\t%s\n", timerToString(bridgeInfo.BridgeForwardDelay))
+	fmt.Fprintf(&s, " aging time\t\t%s\n", timerToString(bridgeInfo.AgingTime))
+	fmt.Fprintf(&s, " hello timer\t\t%s", timerToString(bridgeInfo.HelloTimerValue))
+	fmt.Fprintf(&s, "\t\t\ttcn timer\t\t%s\n", timerToString(bridgeInfo.TCNTimerValue))
+	fmt.Fprintf(&s, " topology change timer\t%s", timerToString(bridgeInfo.TopologyChangeTimerValue))
+	fmt.Fprintf(&s, "\t\t\tgc timer\t\t%s\n", timerToString(bridgeInfo.GCTimerValue))
+	fmt.Fprintf(&s, " flags\t\t\t")
+	if bridgeInfo.TopologyChange {
+		fmt.Fprintf(&s, "TOPOLOGY_CHANGE ")
+	}
+	if bridgeInfo.TopologyChangeDetected {
+		fmt.Fprintf(&s, "TOPOLOGY_CHANGE_DETECTED ")
+	}
+	fmt.Fprint(&s, "\n\n\n")
+
+	fmt.Fprintf(out, "%s", s.String())
 
 	return nil
 }

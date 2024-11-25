@@ -35,6 +35,7 @@ brctl setageingtime <brname> <time>	sets the ethernet (MAC) address ageing time,
 
 SPANNING TREE PROTOCOL (IEEE 802.1d):
 brctl stp <bridge> <state>			controls this bridge instance's participation in the spanning tree protocol.
+brctl showstp <bridge>				shows stp related information of <bridge>.
 brctl setbridgeprio <bridge> <priority>		sets the bridge's priority to <priority>
 brctl setfd <bridge> <time>			sets the bridge's 'bridge forward delay' to <time> seconds
 brctl sethello <bridge> <time>			sets the bridge's 'bridge hello time' to <time> seconds
@@ -99,6 +100,12 @@ func run(out io.Writer, argv []string) error {
 			return errFewArgs
 		}
 		err = brctl.Stp(args[0], args[1])
+
+	case "showstp":
+		if len(args) != 1 {
+			return errFewArgs
+		}
+		err = brctl.ShowStp(out, args[0])
 
 	case "setbridgeprio":
 		if len(args) != 2 {
