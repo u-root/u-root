@@ -94,6 +94,16 @@ func TestRun(t *testing.T) {
 			expErr: nil,
 		},
 		{
+			name:   "showstp",
+			argv:   []string{"showstp", "bridge0"},
+			expErr: os.ErrNotExist,
+		},
+		{
+			name:   "showstp",
+			argv:   []string{"showstp"},
+			expErr: errFewArgs,
+		},
+		{
 			name:   "showmacs",
 			argv:   []string{"showmacs", "eth0"},
 			expErr: os.ErrNotExist,
