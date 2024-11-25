@@ -1,0 +1,10 @@
+{
+  "account": "",
+  "client_id": "xxxxxxxxxxxx-yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy.apps.googleusercontent.com",
+  "client_secret": "secret",
+  "quota_project_id": "project",
+  "refresh_token": "token",
+  "type": "type",
+  "universe_domain": "googleapis.com"
+}
+
