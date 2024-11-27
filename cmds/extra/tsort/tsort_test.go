@@ -396,9 +396,9 @@ func TestTsort(t *testing.T) {
 	})
 }
 
-var rndAcyclicGraph = func() string {
-	rnd := rand.New(rand.NewSource(1))
+var acyclicGraph = func() string {
 	var result strings.Builder
+	rnd := rand.New(rand.NewSource(1))
 	n := 10_000
 	for range 100 * n {
 		x := rnd.Intn(n + 1)
@@ -408,9 +408,9 @@ var rndAcyclicGraph = func() string {
 	return result.String()
 }()
 
-var rndCyclicGraph = func() string {
-	rnd := rand.New(rand.NewSource(1))
+var cyclicGraph = func() string {
 	var result strings.Builder
+	rnd := rand.New(rand.NewSource(1))
 	n := 200
 	for range 100 * n {
 		x := rnd.Intn(n + 1)
@@ -422,7 +422,7 @@ var rndCyclicGraph = func() string {
 
 func BenchmarkTsortAcyclicGraph(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		err := run(strings.NewReader(rndAcyclicGraph), io.Discard, io.Discard)
+		err := run(strings.NewReader(acyclicGraph), io.Discard, io.Discard)
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)
 		}
@@ -431,7 +431,7 @@ func BenchmarkTsortAcyclicGraph(b *testing.B) {
 
 func BenchmarkTsortCyclicGraph(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		err := run(strings.NewReader(rndCyclicGraph), io.Discard, io.Discard)
+		err := run(strings.NewReader(cyclicGraph), io.Discard, io.Discard)
 		if err != nil && !errors.Is(err, errNonFatal) {
 			b.Fatalf("unexpected error: %v", err)
 		}
