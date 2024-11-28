@@ -86,7 +86,7 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 }
 
 // Get the base address and data from RDSP table
-func getAcpiRsdpData() (uint64, []byte, error) {
+func archGetAcpiRsdpData() (uint64, []byte, error) {
 	// Finds the RSDP in the EFI System Table.
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {

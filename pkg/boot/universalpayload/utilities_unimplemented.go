@@ -13,3 +13,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	return nil
 }
+
+func archGetAcpiRsdpData() (uint64, []byte, error) {
+	return 0xDEADBEEF, nil, nil
+}

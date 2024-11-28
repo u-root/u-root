@@ -48,6 +48,7 @@ const (
 var (
 	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
 	getSMBIOSBase           = smbios.SMBIOSBase
+	getAcpiRsdpData         = archGetAcpiRsdpData
 )
 
 type UniversalPayloadGenericHeader struct {
