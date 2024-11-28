@@ -25,7 +25,7 @@ import (
 	"mvdan.cc/sh/v3/shell"
 )
 
-func addPkg(l ulog.Logger, plist []*packages.Package, p *packages.Package) ([]*packages.Package, error) {
+func addPkg(plist []*packages.Package, p *packages.Package) ([]*packages.Package, error) {
 	if len(p.Errors) > 0 {
 		var merr error
 		for _, e := range p.Errors {
@@ -61,7 +61,7 @@ func newPackages(l ulog.Logger, genv *golang.Environ, env Env, patterns ...strin
 	}
 	var pkgs []*packages.Package
 	for _, p := range importPkgs {
-		pkgs, err = addPkg(l, pkgs, p)
+		pkgs, err = addPkg(pkgs, p)
 		if err != nil {
 			return nil, err
 		}
@@ -286,15 +286,16 @@ func filterGoPaths(l ulog.Logger, env *golang.Environ, gopathIncludes, gopathExc
 
 var errNoMatch = fmt.Errorf("no Go commands match the given patterns")
 
-func findDirectoryMatches(l ulog.Logger, env Env, pattern string) (bool, []string) {
-	prefixes := append([]string{""}, env.GBBPath...)
+// Glob evaluates the given pattern.
+func (e Env) Glob(l ulog.Logger, pattern string) (isPath bool, absPaths []string) {
+	prefixes := append([]string{""}, e.GBBPath...)
 
 	// Special sauce for backwards compatibility with old u-root behavior:
 	// if urootSource is set, try to catch Go package paths and convert
 	// them to file system lookups.
-	if len(env.URootSource) > 0 {
+	if len(e.URootSource) > 0 {
 		// Prefer urootSource to gbbPaths in this case.
-		prefixes = append([]string{"", env.URootSource}, env.GBBPath...)
+		prefixes = append([]string{"", e.URootSource}, e.GBBPath...)
 		pattern = strings.TrimPrefix(pattern, "github.com/u-root/u-root/")
 	}
 
@@ -370,6 +371,45 @@ func DefaultEnv() Env {
 	}
 }
 
+func splitExclusions(patterns []string) (include []string, exclude []string) {
+	for _, pattern := range patterns {
+		isExclude := strings.HasPrefix(pattern, "-")
+		if isExclude {
+			exclude = append(exclude, pattern[1:])
+		} else {
+			include = append(include, pattern)
+		}
+	}
+	return
+}
+
+func expand(patterns []string) []string {
+	var p []string
+	for _, pattern := range patterns {
+		fields, err := shell.Fields(pattern, func(_ string) string {
+			return ""
+		})
+		if err != nil {
+			p = append(p, pattern)
+		} else {
+			p = append(p, fields...)
+		}
+	}
+	return p
+}
+
+func glob(l ulog.Logger, env Env, patterns []string) []string {
+	var ret []string
+	for _, pattern := range patterns {
+		if match, directories := env.Glob(l, pattern); len(directories) > 0 {
+			ret = append(ret, directories...)
+		} else if !match {
+			ret = append(ret, pattern)
+		}
+	}
+	return ret
+}
+
 // ResolveGlobs takes a list of Go paths and directories that may
 // include globs and returns a valid list of Go commands (either addressed by
 // Go package path or directory path).
@@ -383,42 +423,15 @@ func DefaultEnv() Env {
 // ResolveGlobs should work in all cases that `go list` works.
 //
 // See NewPackages for allowed formats.
-func ResolveGlobs(logger ulog.Logger, genv *golang.Environ, env Env, patterns []string) ([]string, error) {
+func ResolveGlobs(l ulog.Logger, genv *golang.Environ, env Env, patterns []string) ([]string, error) {
 	if genv == nil {
 		return nil, fmt.Errorf("Go build environment must be specified")
 	}
-	var includes []string
-	var excludes []string
-	for _, pattern := range patterns {
-		isExclude := strings.HasPrefix(pattern, "-")
-		if isExclude {
-			pattern = pattern[1:]
-		}
+	includes, excludes := splitExclusions(patterns)
+	includes = glob(l, env, expand(includes))
+	excludes = glob(l, env, expand(excludes))
 
-		fields, err := shell.Fields(pattern, func(_ string) string {
-			return ""
-		})
-		if err != nil {
-			fields = []string{pattern}
-		}
-		for _, field := range fields {
-			if match, directories := findDirectoryMatches(logger, env, field); len(directories) > 0 {
-				if !isExclude {
-					includes = append(includes, directories...)
-				} else {
-					excludes = append(excludes, directories...)
-				}
-			} else if !match {
-				if !isExclude {
-					includes = append(includes, field)
-				} else {
-					excludes = append(excludes, field)
-				}
-			}
-		}
-	}
-
-	paths, err := filterGoPaths(logger, genv, includes, excludes)
+	paths, err := filterGoPaths(l, genv, includes, excludes)
 	if err != nil {
 		if strings.Contains(err.Error(), "go.mod file not found") {
 			return nil, fmt.Errorf("%w: gobusybox has removed previous multi-module functionality in favor of Go workspaces -- read https://github.com/u-root/gobusybox#path-resolution--multi-module-builds for more", err)
@@ -431,4 +444,54 @@ func ResolveGlobs(logger ulog.Logger, genv *golang.Environ, env Env, patterns []
 	}
 	sort.Strings(paths)
 	return paths, nil
+}
+
+// Modules returns a list of module directories => directories of packages
+// inside that module as well as packages that have no discernible module.
+//
+// The module for a package is determined by the **first** parent directory
+// that contains a go.mod.
+func Modules(paths []string) (map[string][]string, []string) {
+	// list of module directory => directories of packages it likely contains
+	moduledPackages := make(map[string][]string)
+	var noModulePkgs []string
+	for _, fullPath := range paths {
+		components := strings.Split(fullPath, "/")
+
+		inModule := false
+		for i := len(components); i >= 1; i-- {
+			prefixPath := "/" + filepath.Join(components[:i]...)
+			if _, err := os.Stat(filepath.Join(prefixPath, "go.mod")); err == nil {
+				moduledPackages[prefixPath] = append(moduledPackages[prefixPath], fullPath)
+				inModule = true
+				break
+			}
+		}
+		if !inModule {
+			noModulePkgs = append(noModulePkgs, fullPath)
+		}
+	}
+	return moduledPackages, noModulePkgs
+}
+
+func globPaths(l ulog.Logger, env Env, patterns []string) []string {
+	var ret []string
+	for _, pattern := range patterns {
+		if match, directories := env.Glob(l, pattern); len(directories) > 0 {
+			ret = append(ret, directories...)
+		} else if !match {
+			l.Printf("No match found for %v", pattern)
+		}
+	}
+	return ret
+}
+
+// GlobPaths resolves file path globs in env with exclusions and shell
+// expansions.
+func GlobPaths(l ulog.Logger, env Env, patterns ...string) []string {
+	includes, excludes := splitExclusions(patterns)
+	includes = globPaths(l, env, expand(includes))
+	excludes = globPaths(l, env, expand(excludes))
+	paths := excludePaths(includes, excludes)
+	return paths
 }

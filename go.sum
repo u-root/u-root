@@ -284,12 +284,12 @@ github.com/tklauser/numcpus v0.8.0/go.mod h1:ZJZlAY+dmR4eut8epnzf0u/VwodKmryxR8t
 github.com/twitchtv/twirp v5.8.0+incompatible/go.mod h1:RRJoFSAmTEh2weEqWtpPE3vFK5YBhA6bqp2l1kfCC5A=
 github.com/u-root/cpuid v0.0.0 h1:A9eFi+//FIyc5+7iRSnsz+vkYVRH/NqiQIxyUjUa5uo=
 github.com/u-root/cpuid v0.0.0/go.mod h1:4cKsFal/qG5riWG/6IGedb2y53cl1xdcbSszYjM6IrY=
-github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a h1:eg5FkNoQp76ZsswyGZ+TjYqA/rhKefxK8BW7XOlQsxo=
-github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a/go.mod h1:e/8TmrdreH0sZOw2DFKBaUV7bvDWRq6SeM9PzkuVM68=
+github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49 h1:Ajo25H4yhdgtbflwzhbhUu8TgMvsnTrMwdJa4KMukmo=
+github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49/go.mod h1:PW3wGFCHjdHxAhra5FKvcARbCGqGfentYuPKmuhv8DY=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eVd21MOEatnh2pfAAwZaEPSIEEsjctQ=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
-github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a h1:PsI71z55OoumrXP01sYr+cV3Ab4pL7Y2QW/ftMKG7CY=
-github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a/go.mod h1:Yqr8aXRStz71Z1JVz2bUut8Xt9wmBijQIVOSn3eYEIw=
+github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89 h1:FRnlWD2ASaDRW7C9EDUud6gVybF1WA9bfDc53DNXl2Q=
+github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89/go.mod h1:qzJqwYSsU0kBkl1bX/s93hfd64WbL+CP7AobQdvJb9A=
 github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a h1:BH1SOPEvehD2kVrndDnGJiUF0TrBpNs+iyYocu6h0og=
 github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a/go.mod h1:P3a5rG4X7tI17Nn3aOIAYr5HbIMukwXG0urG0WuL8OA=
 github.com/ulikunitz/xz v0.5.11 h1:kpFauv27b6ynzBNT/Xy+1k+fK4WswhN/6PN5WhFAGw8=

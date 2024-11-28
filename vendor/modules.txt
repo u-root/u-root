@@ -339,7 +339,7 @@ github.com/tklauser/numcpus
 # github.com/u-root/cpuid v0.0.0
 ## explicit
 github.com/u-root/cpuid
-# github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
+# github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49
 ## explicit; go 1.20
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
@@ -349,7 +349,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
+# github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89
 ## explicit; go 1.21
 github.com/u-root/mkuimage/cpio
 github.com/u-root/mkuimage/cpio/internal/upath
