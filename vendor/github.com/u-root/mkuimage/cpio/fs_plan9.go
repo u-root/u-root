@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/u-root/mkuimage/cpio/internal/upath"
 	"github.com/u-root/uio/uio"
