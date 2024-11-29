@@ -95,7 +95,7 @@ jobs:
       run: |
         GOOS=windows GOARCH=amd64 go build .
         go build .
-        GOOS=windows GOARCH=amd64 ./u-root
+        GOOS=windows GOARCH=amd64 ./u-root -initcmd=""
 
     - name: Build
       run: |
