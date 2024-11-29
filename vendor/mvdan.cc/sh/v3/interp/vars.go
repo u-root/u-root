@@ -5,8 +5,10 @@ package interp
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -31,21 +33,19 @@ func (o *overlayEnviron) Get(name string) expand.Variable {
 }
 
 func (o *overlayEnviron) Set(name string, vr expand.Variable) error {
-	// Manipulation of a global var inside a function
+	// Manipulation of a global var inside a function.
 	if o.funcScope && !vr.Local && !o.values[name].Local {
-		// "foo=bar" on a global var in a function updates the global scope
 		if vr.IsSet() {
-			return o.parent.(expand.WriteEnviron).Set(name, vr)
-		}
-		// "foo=bar" followed by "export foo" or "readonly foo"
-		if vr.Exported || vr.ReadOnly {
+			// "foo=bar" on a global var in a function updates the global scope
+		} else if vr.Exported || vr.ReadOnly {
+			// "foo=bar" followed by "export foo" or "readonly foo"
 			prev := o.Get(name)
 			prev.Exported = prev.Exported || vr.Exported
 			prev.ReadOnly = prev.ReadOnly || vr.ReadOnly
 			vr = prev
-			return o.parent.(expand.WriteEnviron).Set(name, vr)
 		}
-		// "unset" is handled below
+		// In a function, the parent environment is ours, so it's always read-write.
+		return o.parent.(expand.WriteEnviron).Set(name, vr)
 	}
 
 	prev := o.Get(name)
@@ -71,10 +71,6 @@ func (o *overlayEnviron) Set(name string, vr expand.Variable) error {
 			return nil
 		}
 		delete(o.values, name)
-		if writeEnv, _ := o.parent.(expand.WriteEnviron); writeEnv != nil {
-			writeEnv.Set(name, vr)
-			return nil
-		}
 	} else if prev.Exported {
 		// variable is set and was marked as exported
 		vr.Exported = true
@@ -234,7 +230,8 @@ func (r *Runner) setVar(name string, index syntax.ArithmExpr, vr expand.Variable
 	case expand.String:
 		list = append(list, cur.Str)
 	case expand.Indexed:
-		list = cur.List
+		// TODO: only clone when inside a subshell and getting a var from outside for the first time
+		list = slices.Clone(cur.List)
 	case expand.Associative:
 		// if the existing variable is already an AssocArray, try our
 		// best to convert the key to a string
@@ -243,6 +240,9 @@ func (r *Runner) setVar(name string, index syntax.ArithmExpr, vr expand.Variable
 			return
 		}
 		k := r.literal(w)
+
+		// TODO: only clone when inside a subshell and getting a var from outside for the first time
+		cur.Map = maps.Clone(cur.Map)
 		cur.Map[k] = valStr
 		r.setVarInternal(name, cur)
 		return
@@ -351,9 +351,7 @@ func (r *Runner) assignVal(as *syntax.Assign, valType string) expand.Variable {
 		}
 		elemValues[i].index = index
 		index += len(elemValues[i].values)
-		if index > maxIndex {
-			maxIndex = index
-		}
+		maxIndex = max(maxIndex, index)
 	}
 	// Flatten down the values.
 	strs := make([]string, maxIndex)

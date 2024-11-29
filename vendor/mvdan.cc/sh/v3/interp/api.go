@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"maps"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -83,12 +85,12 @@ type Runner struct {
 
 	// readDirHandler is a function responsible for reading directories during
 	// glob expansion. It must be non-nil.
-	readDirHandler ReadDirHandlerFunc
+	readDirHandler ReadDirHandlerFunc2
 
 	// statHandler is a function responsible for getting file stat. It must be non-nil.
 	statHandler StatHandlerFunc
 
-	stdin  io.Reader
+	stdin  *os.File // e.g. the read end of a pipe
 	stdout io.Writer
 	stderr io.Writer
 
@@ -142,7 +144,7 @@ type Runner struct {
 	origDir    string
 	origParams []string
 	origOpts   runnerOpts
-	origStdin  io.Reader
+	origStdin  *os.File
 	origStdout io.Writer
 	origStderr io.Writer
 
@@ -186,19 +188,19 @@ func New(opts ...RunnerOption) (*Runner, error) {
 	r := &Runner{
 		usedNew:        true,
 		openHandler:    DefaultOpenHandler(),
-		readDirHandler: DefaultReadDirHandler(),
+		readDirHandler: DefaultReadDirHandler2(),
 		statHandler:    DefaultStatHandler(),
 	}
 	r.dirStack = r.dirBootstrap[:0]
+	// turn "on" the default Bash options
+	for i, opt := range bashOptsTable {
+		r.opts[len(shellOptsTable)+i] = opt.defaultState
+	}
+
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return nil, err
 		}
-	}
-
-	// turn "on" the default Bash options
-	for i, opt := range bashOptsTable {
-		r.opts[len(shellOptsTable)+i] = opt.defaultState
 	}
 
 	// Set the default fallbacks, if necessary.
@@ -220,8 +222,9 @@ func New(opts ...RunnerOption) (*Runner, error) {
 // It can also be applied directly on an existing Runner,
 // such as interp.Params("-e")(runner).
 // Note that options cannot be applied once Run or Reset have been called.
-// TODO: enforce that rule via didReset.
 type RunnerOption func(*Runner) error
+
+// TODO: enforce the rule above via didReset.
 
 // Env sets the interpreter's environment. If nil, a copy of the current
 // process's environment is used.
@@ -259,6 +262,16 @@ func Dir(path string) RunnerOption {
 			return fmt.Errorf("%s is not a directory", path)
 		}
 		r.Dir = path
+		return nil
+	}
+}
+
+// Interactive configures the interpreter to behave like an interactive shell,
+// akin to Bash. Currently, this only enables the expansion of aliases,
+// but later on it should also change other behavior.
+func Interactive(enabled bool) RunnerOption {
+	return func(r *Runner) error {
+		r.opts[optExpandAliases] = enabled
 		return nil
 	}
 }
@@ -383,7 +396,27 @@ func OpenHandler(f OpenHandlerFunc) RunnerOption {
 }
 
 // ReadDirHandler sets the read directory handler. See [ReadDirHandlerFunc] for more info.
+//
+// Deprecated: use [ReadDirHandler2].
 func ReadDirHandler(f ReadDirHandlerFunc) RunnerOption {
+	return func(r *Runner) error {
+		r.readDirHandler = func(ctx context.Context, path string) ([]fs.DirEntry, error) {
+			infos, err := f(ctx, path)
+			if err != nil {
+				return nil, err
+			}
+			entries := make([]fs.DirEntry, len(infos))
+			for i, info := range infos {
+				entries[i] = fs.FileInfoToDirEntry(info)
+			}
+			return entries, nil
+		}
+		return nil
+	}
+}
+
+// ReadDirHandler2 sets the read directory handler. See [ReadDirHandlerFunc2] for more info.
+func ReadDirHandler2(f ReadDirHandlerFunc2) RunnerOption {
 	return func(r *Runner) error {
 		r.readDirHandler = f
 		return nil
@@ -398,12 +431,40 @@ func StatHandler(f StatHandlerFunc) RunnerOption {
 	}
 }
 
+func stdinFile(r io.Reader) (*os.File, error) {
+	switch r := r.(type) {
+	case *os.File:
+		return r, nil
+	case nil:
+		return nil, nil
+	default:
+		pr, pw, err := os.Pipe()
+		if err != nil {
+			return nil, err
+		}
+		go func() {
+			io.Copy(pw, r)
+			pw.Close()
+		}()
+		return pr, nil
+	}
+}
+
 // StdIO configures an interpreter's standard input, standard output, and
 // standard error. If out or err are nil, they default to a writer that discards
 // the output.
+//
+// Note that providing a non-nil standard input other than [os.File] will require
+// an [os.Pipe] and spawning a goroutine to copy into it,
+// as an [os.File] is the only way to share a reader with subprocesses.
+// See [os/exec.Cmd.Stdin].
 func StdIO(in io.Reader, out, err io.Writer) RunnerOption {
 	return func(r *Runner) error {
-		r.stdin = in
+		stdin, _err := stdinFile(in)
+		if _err != nil {
+			return _err
+		}
+		r.stdin = stdin
 		if out == nil {
 			out = io.Discard
 		}
@@ -468,6 +529,11 @@ var bashOptsTable = [...]bashOpt{
 	},
 	{
 		name:         "globstar",
+		defaultState: false,
+		supported:    true,
+	},
+	{
+		name:         "nocaseglob",
 		defaultState: false,
 		supported:    true,
 	},
@@ -543,7 +609,6 @@ var bashOptsTable = [...]bashOpt{
 	{name: "login_shell"},
 	{name: "mailwarn"},
 	{name: "no_empty_cmd_completion"},
-	{name: "nocaseglob"},
 	{name: "nocasematch"},
 	{
 		name:         "progcomp",
@@ -567,6 +632,7 @@ var bashOptsTable = [...]bashOpt{
 // know which option we're after at compile time. First come the shell options,
 // then the bash options.
 const (
+	// These correspond to indexes in shellOptsTable
 	optAllExport = iota
 	optErrExit
 	optNoExec
@@ -575,8 +641,11 @@ const (
 	optXTrace
 	optPipeFail
 
+	// These correspond to indexes (offset by the above seven items) of
+	// supported options in bashOptsTable
 	optExpandAliases
 	optGlobStar
+	optNoCaseGlob
 	optNullGlob
 )
 
@@ -646,9 +715,7 @@ func (r *Runner) Reset() {
 	if r.Vars == nil {
 		r.Vars = make(map[string]expand.Variable)
 	} else {
-		for k := range r.Vars {
-			delete(r.Vars, k)
-		}
+		clear(r.Vars)
 	}
 	// TODO(v4): Use the supplied Env directly if it implements enough methods.
 	r.writeEnv = &overlayEnviron{parent: r.Env}
@@ -723,19 +790,19 @@ func (r *Runner) Run(ctx context.Context, node syntax.Node) error {
 	r.err = nil
 	r.shellExited = false
 	r.filename = ""
-	switch x := node.(type) {
+	switch node := node.(type) {
 	case *syntax.File:
-		r.filename = x.Name
-		r.stmts(ctx, x.Stmts)
+		r.filename = node.Name
+		r.stmts(ctx, node.Stmts)
 		if !r.shellExited {
 			r.exitShell(ctx, r.exit)
 		}
 	case *syntax.Stmt:
-		r.stmt(ctx, x)
+		r.stmt(ctx, node)
 	case syntax.Command:
-		r.cmd(ctx, x)
+		r.cmd(ctx, node)
 	default:
-		return fmt.Errorf("node can only be File, Stmt, or Command: %T", x)
+		return fmt.Errorf("node can only be File, Stmt, or Command: %T", node)
 	}
 	if r.exit != 0 {
 		r.setErr(NewExitStatus(uint8(r.exit)))
@@ -793,39 +860,13 @@ func (r *Runner) Subshell() *Runner {
 
 		origStdout: r.origStdout, // used for process substitutions
 	}
-	// Env vars and funcs are copied, since they might be modified.
-	// TODO(v4): lazy copying? it would probably be enough to add a
-	// copyOnWrite bool field to Variable, then a Modify method that must be
-	// used when one needs to modify a variable. ideally with some way to
-	// catch direct modifications without the use of Modify and panic,
-	// perhaps via a check when getting or setting vars at some level.
-	oenv := &overlayEnviron{parent: expand.ListEnviron()}
-	r.writeEnv.Each(func(name string, vr expand.Variable) bool {
-		vr2 := vr
-		// Make deeper copies of List and Map, but ensure that they remain nil
-		// if they are nil in vr.
-		vr2.List = append([]string(nil), vr.List...)
-		if vr.Map != nil {
-			vr2.Map = make(map[string]string, len(vr.Map))
-			for k, vr := range vr.Map {
-				vr2.Map[k] = vr
-			}
-		}
-		oenv.Set(name, vr2)
-		return true
-	})
+	// Funcs are copied, since they might be modified.
+	// Env vars aren't copied; setVar will copy lists and maps as needed.
+	oenv := &overlayEnviron{parent: r.writeEnv}
 	r2.writeEnv = oenv
-	r2.Funcs = make(map[string]*syntax.Stmt, len(r.Funcs))
-	for k, v := range r.Funcs {
-		r2.Funcs[k] = v
-	}
+	r2.Funcs = maps.Clone(r.Funcs)
 	r2.Vars = make(map[string]expand.Variable)
-	if l := len(r.alias); l > 0 {
-		r2.alias = make(map[string]alias, l)
-		for k, v := range r.alias {
-			r2.alias[k] = v
-		}
-	}
+	r2.alias = maps.Clone(r.alias)
 
 	r2.dirStack = append(r2.dirBootstrap[:0], r.dirStack...)
 	r2.fillExpandConfig(r.ectx)
