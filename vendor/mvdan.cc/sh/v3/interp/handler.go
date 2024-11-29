@@ -7,13 +7,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
 	"mvdan.cc/sh/v3/expand"
@@ -132,20 +132,17 @@ func DefaultExecHandler(killTimeout time.Duration) ExecHandlerFunc {
 			err = cmd.Wait()
 		}
 
-		switch x := err.(type) {
+		switch err := err.(type) {
 		case *exec.ExitError:
-			// started, but errored - default to 1 if OS
-			// doesn't have exit statuses
-			if status, ok := x.Sys().(syscall.WaitStatus); ok {
-				if status.Signaled() {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					return NewExitStatus(uint8(128 + status.Signal()))
+			// Windows and Plan9 do not have support for syscall.WaitStatus
+			// with methods like Signaled and Signal, so for those, waitStatus is a no-op.
+			if status, ok := err.Sys().(waitStatus); ok && status.Signaled() {
+				if ctx.Err() != nil {
+					return ctx.Err()
 				}
-				return NewExitStatus(uint8(status.ExitStatus()))
+				return NewExitStatus(uint8(128 + status.Signal()))
 			}
-			return NewExitStatus(1)
+			return NewExitStatus(uint8(err.ExitCode()))
 		case *exec.Error:
 			// did not start
 			fmt.Fprintf(hc.Stderr, "%v\n", err)
@@ -294,6 +291,9 @@ func pathExts(env expand.Environ) []string {
 // Use a return error of type [*os.PathError] to have the error printed to
 // stderr and the exit status set to 1. If the error is of any other type, the
 // interpreter will come to a stop.
+//
+// Note that implementations which do not return [os.File] will cause
+// extra files and goroutines for input redirections; see [StdIO].
 type OpenHandlerFunc func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error)
 
 // DefaultOpenHandler returns the [OpenHandlerFunc] used by default.
@@ -308,27 +308,37 @@ func DefaultOpenHandler() OpenHandlerFunc {
 	}
 }
 
+// TODO(v4): if this is kept in v4, it most likely needs to use [io/fs.DirEntry] for efficiency
+
 // ReadDirHandlerFunc is a handler which reads directories. It is called during
 // shell globbing, if enabled.
-//
-// TODO(v4): if this is kept in v4, it most likely needs to use [io/fs.DirEntry] for efficiency
-type ReadDirHandlerFunc func(ctx context.Context, path string) ([]os.FileInfo, error)
+type ReadDirHandlerFunc func(ctx context.Context, path string) ([]fs.FileInfo, error)
+
+type ReadDirHandlerFunc2 func(ctx context.Context, path string) ([]fs.DirEntry, error)
 
 // DefaultReadDirHandler returns the [ReadDirHandlerFunc] used by default.
 // It makes use of [ioutil.ReadDir].
 func DefaultReadDirHandler() ReadDirHandlerFunc {
-	return func(ctx context.Context, path string) ([]os.FileInfo, error) {
+	return func(ctx context.Context, path string) ([]fs.FileInfo, error) {
 		return ioutil.ReadDir(path)
 	}
 }
 
+// DefaultReadDirHandler2 returns the [ReadDirHandlerFunc2] used by default.
+// It uses [os.ReadDir].
+func DefaultReadDirHandler2() ReadDirHandlerFunc2 {
+	return func(ctx context.Context, path string) ([]fs.DirEntry, error) {
+		return os.ReadDir(path)
+	}
+}
+
 // StatHandlerFunc is a handler which gets a file's information.
-type StatHandlerFunc func(ctx context.Context, name string, followSymlinks bool) (os.FileInfo, error)
+type StatHandlerFunc func(ctx context.Context, name string, followSymlinks bool) (fs.FileInfo, error)
 
 // DefaultStatHandler returns the [StatHandlerFunc] used by default.
 // It makes use of [os.Stat] and [os.Lstat], depending on followSymlinks.
 func DefaultStatHandler() StatHandlerFunc {
-	return func(ctx context.Context, path string, followSymlinks bool) (os.FileInfo, error) {
+	return func(ctx context.Context, path string, followSymlinks bool) (fs.FileInfo, error) {
 		if !followSymlinks {
 			return os.Lstat(path)
 		} else {

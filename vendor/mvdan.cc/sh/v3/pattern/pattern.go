@@ -34,6 +34,7 @@ const (
 	Filenames                     // "*" and "?" don't match slashes; only "**" does
 	Braces                        // support "{a,b}" and "{1..4}"
 	EntireString                  // match the entire string using ^$ delimiters
+	NoGlobCase                    // Do case-insensitive match (that is, use (?i) in the regexp)
 )
 
 var numRange = regexp.MustCompile(`^([+-]?\d+)\.\.([+-]?\d+)}`)
@@ -68,6 +69,9 @@ noopLoop:
 	// Enable matching `\n` with the `.` metacharacter as globs match `\n`
 	buf.WriteString("(?s)")
 	dotMeta := false
+	if mode&NoGlobCase != 0 {
+		buf.WriteString("(?i)")
+	}
 	if mode&EntireString != 0 {
 		buf.WriteString("^")
 	}
@@ -242,7 +246,7 @@ writeLoop:
 	if mode&EntireString != 0 {
 		buf.WriteString("$")
 	}
-	// No `.` metacharacters were used, so don't return the flag.
+	// No `.` metacharacters were used, so don't return the (?s) flag.
 	if !dotMeta {
 		return string(buf.Bytes()[4:]), nil
 	}
@@ -319,17 +323,17 @@ loop:
 	if !needsEscaping { // short-cut without a string copy
 		return pat
 	}
-	var buf bytes.Buffer
+	var sb strings.Builder
 	for _, r := range pat {
 		switch r {
 		case '*', '?', '[', '\\':
-			buf.WriteByte('\\')
+			sb.WriteByte('\\')
 		case '{':
 			if mode&Braces != 0 {
-				buf.WriteByte('\\')
+				sb.WriteByte('\\')
 			}
 		}
-		buf.WriteRune(r)
+		sb.WriteRune(r)
 	}
-	return buf.String()
+	return sb.String()
 }
