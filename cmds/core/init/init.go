@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !windows
+
 // init is u-root's standard userspace init process.
 //
 // init is intended to be the first process run by the kernel when it boots up.
