@@ -5,10 +5,11 @@
 package main
 
 import (
-	"os"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
-func setDate(d string, z *time.Location, clocksource Clock) error {
-	return os.ErrPermission
+func setDate(_ string, _ *time.Location, _ Clock) error {
+	return windows.ERROR_NOT_SUPPORTED
 }
