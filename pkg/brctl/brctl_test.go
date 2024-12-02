@@ -27,29 +27,6 @@ var (
 	BRCTL_TEST_BRIDGES = []string{BRCTL_TEST_BR_0, BRCTL_TEST_BR_1}
 )
 
-var test_fd = []struct {
-	name    string
-	input   string
-	output  string
-	wanterr bool
-	err     error
-}{
-	{
-		"forward delay 0",
-		"0s",
-		"0",
-		false,
-		nil,
-	},
-	{
-		"forward delay 1",
-		"1s",
-		"100",
-		false,
-		nil,
-	},
-}
-
 var test_str_to_jiffies = []struct {
 	name     string
 	duration string
@@ -266,6 +243,33 @@ func TestShow(t *testing.T) {
 	}
 }
 
+func TestShowSTP(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
+	if err := clearEnv(); err != nil {
+		t.Skip(err)
+	}
+
+	if err := Addbr(BRCTL_TEST_BR_0); err != nil {
+		t.Fatalf("AddBr(%q) = %v, want nil", BRCTL_TEST_BR_0, err)
+	}
+
+	if err := Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0); err != nil {
+		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
+	}
+
+	// Enable STP
+	err := Stp(BRCTL_TEST_BR_0, "on")
+	if err != nil {
+		t.Fatalf("Stp(%q, \"on\") = %v, want nil", BRCTL_TEST_BR_0, err)
+	}
+
+	var bufOut bytes.Buffer
+	if err := ShowStp(&bufOut, BRCTL_TEST_BR_0); err != nil {
+		t.Errorf("Show(%q, %q)= %v", &bufOut, BRCTL_TEST_BR_0, err)
+	}
+}
+
 func TestScpt(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
@@ -340,46 +344,6 @@ func TestSetbridgeprio(t *testing.T) {
 		}
 	}
 }
-
-/*
-func TestSetfd(t *testing.T) {
-	if err := clearEnv(); err != nil {
-		t.Skip(err)
-	}
-
-	// Add bridges
-	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Addbr(bridge)
-		if err != nil {
-			t.Fatalf("AddBr(%q) = %v, want nil", bridge, err)
-		}
-	}
-
-	for _, bridge := range BRCTL_TEST_BRIDGES {
-		for _, tt := range test_fd {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Logf("Setfd(%q, %q) -> %q", bridge, tt.input, tt.output)
-				err := Setfd(bridge, tt.input)
-				if err != nil {
-					t.Fatalf("Setfd(%q, %q) = %v, want nil", tt.input, tt.output, err)
-				}
-
-				// Check sysfs for forward delay
-				for _, bridge := range BRCTL_TEST_BRIDGES {
-					fd, err := getBridgeValue(bridge, BRCTL_FORWARD_DELAY)
-					if err != nil {
-						t.Fatalf("br_get_val(%q, \"forward_delay\") = %v, want nil", bridge, err)
-					}
-
-					if fd != tt.output {
-						t.Fatalf("br_get_val(%q, \"forward_delay\") = %q, want %q", bridge, fd, tt.output)
-					}
-				}
-			})
-		}
-	}
-}
-*/
 
 func TestSetfd(t *testing.T) {
 	guest.SkipIfNotInVM(t)

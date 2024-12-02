@@ -247,6 +247,9 @@ func (cmd *cmd) addressFlush() error {
 		}
 
 		for idx := 1; idx <= cmd.Opts.Loops; idx++ {
+
+			fmt.Printf("Deleting %v from %v\n", a, iface.Attrs().Name)
+
 			if err := cmd.handle.AddrDel(iface, &a); err != nil {
 				if idx != cmd.Opts.Loops {
 					continue
@@ -263,11 +266,11 @@ func (cmd *cmd) addressFlush() error {
 }
 
 func skipAddr(addr netlink.Addr, filter netlink.Addr) bool {
-	if addr.Scope != 0 && addr.Scope != filter.Scope {
+	if filter.Scope != 0 && addr.Scope != filter.Scope {
 		return true
 	}
 
-	if addr.Label != "" && addr.Label != filter.Label {
+	if filter.Label != "" && addr.Label != filter.Label {
 		return true
 	}
 

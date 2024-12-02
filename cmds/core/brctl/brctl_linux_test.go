@@ -23,6 +23,10 @@ func TestRun(t *testing.T) {
 		forceVM bool
 	}{
 		{
+			name: "help",
+			argv: []string{"help"},
+		},
+		{
 			name:   "addbr",
 			argv:   []string{"addbr", "bridge0"},
 			skipVM: true,
@@ -92,6 +96,16 @@ func TestRun(t *testing.T) {
 			name:   "show",
 			argv:   []string{"show"},
 			expErr: nil,
+		},
+		{
+			name:   "showstp",
+			argv:   []string{"showstp", "bridge0"},
+			expErr: os.ErrNotExist,
+		},
+		{
+			name:   "showstp",
+			argv:   []string{"showstp"},
+			expErr: errFewArgs,
 		},
 		{
 			name:   "showmacs",

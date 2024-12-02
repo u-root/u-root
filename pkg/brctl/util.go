@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -25,10 +26,27 @@ var errno0 = syscall.Errno(0)
 // This information is not exhaustive, only the most important fields are included
 // Feel free to add more fields if needed.
 type BridgeInfo struct {
-	Name       string
-	BridgeID   string
-	StpState   bool
-	Interfaces []string
+	Name                     string
+	DesignatedRoot           string
+	BridgeID                 string
+	RootPathCost             int
+	MaxAge                   unix.Timeval
+	HelloTime                unix.Timeval
+	ForwardDelay             unix.Timeval
+	BridgeMaxAge             unix.Timeval
+	BridgeHelloTime          unix.Timeval
+	BridgeForwardDelay       unix.Timeval
+	RootPort                 uint16
+	StpEnabled               bool
+	TrillEnabled             bool
+	TopologyChange           bool
+	TopologyChangeDetected   bool
+	AgingTime                unix.Timeval
+	HelloTimerValue          unix.Timeval
+	TCNTimerValue            unix.Timeval
+	TopologyChangeTimerValue unix.Timeval
+	GCTimerValue             unix.Timeval
+	Interfaces               []string
 }
 
 func sysconfhz() (int, error) {
@@ -121,4 +139,39 @@ func stringToJiffies(in string) (int, error) {
 	}
 
 	return int(tv.Seconds() * float64(hz)), nil
+}
+
+func readID(p string, obj string) (string, error) {
+	ret, err := os.ReadFile(path.Join(p, obj))
+	if err != nil {
+		return "", fmt.Errorf("os.ReadFile: %w", err)
+	}
+
+	return strings.TrimSuffix(string(ret), "\n"), nil
+}
+
+func readBool(p string, obj string) (bool, error) {
+	valRaw, err := os.ReadFile(path.Join(p, obj))
+	if err != nil {
+		return false, fmt.Errorf("os.ReadFile: %w", err)
+	}
+
+	return strconv.ParseBool(strings.TrimSuffix(string(valRaw), "\n"))
+}
+
+func readInt(p string, obj string) (int, error) {
+	valRaw, err := os.ReadFile(path.Join(p, obj))
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.Atoi(strings.TrimSuffix(string(valRaw), "\n"))
+}
+
+func timerToString(t unix.Timeval) string {
+	var s strings.Builder
+
+	fmt.Fprintf(&s, "%4.2d.%-2.2d", t.Sec, t.Usec/10000)
+
+	return s.String()
 }

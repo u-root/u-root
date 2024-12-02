@@ -87,8 +87,8 @@ github.com/cloudflare/circl/sign/ed448
 # github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/creack/pty v1.1.21
-## explicit; go 1.13
+# github.com/creack/pty v1.1.24
+## explicit; go 1.18
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
@@ -339,7 +339,7 @@ github.com/tklauser/numcpus
 # github.com/u-root/cpuid v0.0.0
 ## explicit
 github.com/u-root/cpuid
-# github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
+# github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49
 ## explicit; go 1.20
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
@@ -349,7 +349,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
+# github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89
 ## explicit; go 1.21
 github.com/u-root/mkuimage/cpio
 github.com/u-root/mkuimage/cpio/internal/upath
@@ -387,7 +387,7 @@ github.com/vtolstov/go-ioctl
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.26.0
+# golang.org/x/crypto v0.29.0
 ## explicit; go 1.20
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -404,12 +404,12 @@ golang.org/x/crypto/ssh/knownhosts
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
-# golang.org/x/mod v0.17.0
-## explicit; go 1.18
+# golang.org/x/mod v0.22.0
+## explicit; go 1.22.0
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.28.0
+# golang.org/x/net v0.31.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/icmp
@@ -419,19 +419,19 @@ golang.org/x/net/internal/socks
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
-# golang.org/x/sync v0.8.0
+# golang.org/x/sync v0.9.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.24.0
+# golang.org/x/sys v0.27.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.23.0
+# golang.org/x/term v0.26.0
 ## explicit; go 1.18
 golang.org/x/term
-# golang.org/x/text v0.17.0
+# golang.org/x/text v0.20.0
 ## explicit; go 1.18
 golang.org/x/text/feature/plural
 golang.org/x/text/internal
@@ -447,13 +447,13 @@ golang.org/x/text/message
 golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
-## explicit; go 1.19
+# golang.org/x/tools v0.27.0
+## explicit; go 1.22.0
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/imports
 golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
@@ -467,7 +467,7 @@ golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/pkgbits
 golang.org/x/tools/internal/stdlib
-golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
 # gopkg.in/yaml.v2 v2.4.0
@@ -479,8 +479,8 @@ gopkg.in/yaml.v3
 # howett.net/plist v1.0.0
 ## explicit; go 1.12
 howett.net/plist
-# mvdan.cc/sh/v3 v3.7.0
-## explicit; go 1.19
+# mvdan.cc/sh/v3 v3.10.1-0.20241129174306-6042a7fe4e04
+## explicit; go 1.22.0
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/interp

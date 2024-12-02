@@ -6,6 +6,7 @@ package interp
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
+
+	"github.com/muesli/cancelreader"
+	"golang.org/x/term"
 
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
@@ -560,9 +566,12 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 	case "read":
 		var prompt string
 		raw := false
+		silent := false
 		fp := flagParser{remaining: args}
 		for fp.more() {
 			switch flag := fp.flag(); flag {
+			case "-s":
+				silent = true
 			case "-r":
 				raw = true
 			case "-p":
@@ -589,9 +598,12 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			r.out(prompt)
 		}
 
-		line, err := r.readLine(raw)
-		if err != nil {
-			return 1
+		var line []byte
+		var err error
+		if silent {
+			line, err = term.ReadPassword(int(syscall.Stdin))
+		} else {
+			line, err = r.readLine(ctx, raw)
 		}
 		if len(args) == 0 {
 			args = append(args, shellReplyVar)
@@ -604,6 +616,12 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 				val = values[i]
 			}
 			r.setVarString(name, val)
+		}
+
+		// We can get data back from readLine and an error at the same time, so
+		// check err after we process the data.
+		if err != nil {
+			return 1
 		}
 
 		return 0
@@ -917,7 +935,7 @@ func (r *Runner) printOptLine(name string, enabled, supported bool) {
 	r.outf("%s\t%s\t(%q not supported)\n", name, state, r.optStatusText(!enabled))
 }
 
-func (r *Runner) readLine(raw bool) ([]byte, error) {
+func (r *Runner) readLine(ctx context.Context, raw bool) ([]byte, error) {
 	if r.stdin == nil {
 		return nil, errors.New("interp: can't read, there's no stdin")
 	}
@@ -925,9 +943,43 @@ func (r *Runner) readLine(raw bool) ([]byte, error) {
 	var line []byte
 	esc := false
 
+	stdin := io.Reader(r.stdin)
+	// [cancelreader.NewReader] may fail under some circumstances, such as r.stdin being
+	// a regular file on Linux, in which case epoll returns an "operation not permitted" error
+	// given that regular files can always be read immediately. Polling them makes no sense.
+	// As such, if cancelreader fails, fall back to no cancellation, meaning this is best-effort.
+	//
+	// TODO: it would be nice if the cancelreader library classified errors so that we could
+	// safely handle "this file does not need polling" by skipping the polling as we do below
+	// but still fail on other errors, which may be unexpected or hide bugs.
+	// See the upstream issue: https://github.com/muesli/cancelreader/issues/23
+	if cr, err := cancelreader.NewReader(r.stdin); err == nil {
+		done := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			select {
+			case <-ctx.Done():
+				cr.Cancel()
+			case <-done:
+			}
+			wg.Done()
+		}()
+		defer func() {
+			close(done)
+			wg.Wait()
+			// Could put the Close in the above goroutine, but if "read" is
+			// immediately called again, the Close might overlap with creating a
+			// new cancelreader. Want this cancelreader to be completely closed
+			// by the time readLine returns.
+			cr.Close()
+		}()
+		stdin = cr
+	}
+
 	for {
 		var buf [1]byte
-		n, err := r.stdin.Read(buf[:])
+		n, err := stdin.Read(buf[:])
 		if n > 0 {
 			b := buf[0]
 			switch {
@@ -945,25 +997,20 @@ func (r *Runner) readLine(raw bool) ([]byte, error) {
 				esc = false
 			}
 		}
-		if err == io.EOF && len(line) > 0 {
-			return line, nil
-		}
 		if err != nil {
-			return nil, err
+			return line, err
 		}
 	}
 }
 
 func (r *Runner) changeDir(ctx context.Context, path string) int {
-	if path == "" {
-		path = "."
-	}
+	path = cmp.Or(path, ".")
 	path = r.absPath(path)
 	info, err := r.stat(ctx, path)
 	if err != nil || !info.IsDir() {
 		return 1
 	}
-	if !hasPermissionToDir(info) {
+	if !hasPermissionToDir(path) {
 		return 1
 	}
 	r.Dir = path

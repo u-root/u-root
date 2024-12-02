@@ -199,7 +199,7 @@ var neighStatesMap = map[string]int{
 func getState(state int) string {
 	ret := make([]string, 0)
 	for st, name := range neighStates {
-		if state&st != 0 {
+		if state == st {
 			ret = append(ret, name)
 		}
 	}
