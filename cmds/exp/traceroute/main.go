@@ -45,7 +45,7 @@ func parseFlags(args []string) (*traceroute.Flags, error) {
 
 	leftoverArgs := f.Args()
 
-	if len(leftoverArgs) > 1 {
+	if len(leftoverArgs) != 1 {
 		// Error, print help and exit
 		f.Usage()
 		return nil, errFlags
