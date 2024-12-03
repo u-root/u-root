@@ -18,6 +18,47 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
+var (
+	help = `usage: netstat [-vWeenNcCF] [<Af>] -r         netstat {-V|--version|-h|--help}
+       netstat [-vWnNcaeol] [<Socket> ...]
+       netstat { [-vWeenNac] -I[<Iface>] | [-veenNac] -i | [-cnNe] -M | -s [-6tuw] } [delay]
+
+        -r, --route              display routing table
+        -I, --interfaces=<Iface> display interface table for <Iface>
+        -i, --interfaces         display interface table
+        -g, --groups             display multicast group memberships
+        -s, --statistics         display networking statistics (like SNMP)
+        -M, --masquerade         display masqueraded connections
+
+        -v, --verbose            be verbose
+        -W, --wide               don't truncate IP addresses
+        -n, --numeric            don't resolve names
+        --numeric-hosts          don't resolve host names
+        --numeric-ports          don't resolve port names
+        --numeric-users          don't resolve user names
+        -N, --symbolic           resolve hardware names
+        -e, --extend             display other/more information
+        -p, --programs           display PID/Program name for sockets
+        -o, --timers             display timers
+        -c, --continuous         continuous listing
+
+        -l, --listening          display listening server sockets
+        -a, --all                display all sockets (default: connected)
+        -F, --fib                display Forwarding Information Base (default)
+        -C, --cache              display routing cache instead of FIB
+        -Z, --context            display SELinux security context for sockets
+
+  <Socket>={-t|--tcp} {-u|--udp} {-U|--udplite} {-S|--sctp} {-w|--raw}
+           {-x|--unix} --ax25 --ipx --netrom
+  <AF>=Use '-6|-4' or '-A <af>' or '--<af>'; default: inet
+  List of possible address families (which support routing):
+    inet (DARPA Internet) inet6 (IPv6)`
+)
+
+func printHelp() {
+	fmt.Printf("%s\n", help)
+}
+
 // cmd groups the available functionality of netstat.
 // More information is given in the main function down below.
 type cmd struct {
@@ -362,12 +403,15 @@ func command(out io.Writer, args []string) *cmd {
 	fs.BoolVar(&c.all, "all", false, "display all sockets (default: connected)")
 	fs.BoolVar(&c.all, "a", false, "display all sockets (default: connected)")
 
+	fs.Usage = printHelp
+
 	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
 	// Validate info source flags
 	// none or one allowed to be set
 	if !xorFlags(c.route, c.interfaces, c.groups, c.stats, c.iface != "") {
-		fs.Usage()
+		fmt.Printf("%s\n", help)
+		return nil
 	}
 
 	c.out = out
