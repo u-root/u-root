@@ -27,6 +27,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"syscall"
 	"time"
 )
@@ -123,18 +124,16 @@ func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint)
 	// for each block, count how many new lines, until they add up to `numLines`
 	for pos != 0 {
 		var thisChunkSize int64
-		if pos < blkSize {
-			thisChunkSize = pos
-		} else {
-			thisChunkSize = blkSize
-		}
+		thisChunkSize = min(pos, blkSize)
 		pos -= thisChunkSize
 		n, err := input.ReadAt(buf, pos)
 		if err != nil && err != io.EOF {
 			return err
 		}
+		// avoid problems where `n` is smaller or bigger than `thisChunkSize`
+		n = min(n, int(thisChunkSize))
 		// merge this block to what was read so far
-		readData = append(buf[:n], readData...)
+		readData = slices.Concat(buf[:n], readData)
 		// count how many lines we have so far, and stop reading if we have
 		// enough
 		foundLines += uint(bytes.Count(buf[:n], []byte{'\n'}))

@@ -6,7 +6,7 @@ package expand
 import (
 	"fmt"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -167,6 +167,7 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 				}
 			}
 		case pe.Index != nil && vr.Kind == Associative:
+			// TODO: use maps.Keys
 			for k := range vr.Map {
 				strs = append(strs, k)
 			}
@@ -178,7 +179,7 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 			vr = cfg.Env.Get(str)
 			strs = append(strs, vr.String())
 		}
-		sort.Strings(strs)
+		slices.Sort(strs)
 		str = strings.Join(strs, " ")
 	case pe.Slice != nil:
 		if callVarInd {
@@ -205,6 +206,9 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if orig == "" {
+			break // nothing to replace
+		}
 		with, err := Literal(cfg, pe.Repl.With)
 		if err != nil {
 			return "", err
@@ -214,15 +218,15 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 			n = -1
 		}
 		locs := findAllIndex(orig, str, n)
-		buf := cfg.strBuilder()
+		sb := cfg.strBuilder()
 		last := 0
 		for _, loc := range locs {
-			buf.WriteString(str[last:loc[0]])
-			buf.WriteString(with)
+			sb.WriteString(str[last:loc[0]])
+			sb.WriteString(with)
 			last = loc[1]
 		}
-		buf.WriteString(str[last:])
-		str = buf.String()
+		sb.WriteString(str[last:])
+		str = sb.String()
 	case pe.Exp != nil:
 		arg, err := Literal(cfg, pe.Exp.Word)
 		if err != nil {
@@ -397,10 +401,11 @@ func (cfg *Config) varInd(vr Variable, idx syntax.ArithmExpr) (string, error) {
 		switch lit := nodeLit(idx); lit {
 		case "@", "*":
 			strs := make([]string, 0, len(vr.Map))
+			// TODO: use maps.Values
 			for _, val := range vr.Map {
 				strs = append(strs, val)
 			}
-			sort.Strings(strs)
+			slices.Sort(strs)
 			if lit == "*" {
 				return cfg.ifsJoin(strs), nil
 			}

@@ -4,8 +4,9 @@
 package expand
 
 import (
+	"cmp"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -152,7 +153,7 @@ func ListEnviron(pairs ...string) Environ {
 // listEnvironWithUpper implements ListEnviron, but letting the tests specify
 // whether to uppercase all names or not.
 func listEnvironWithUpper(upper bool, pairs ...string) Environ {
-	list := append([]string{}, pairs...)
+	list := slices.Clone(pairs)
 	if upper {
 		// Uppercase before sorting, so that we can remove duplicates
 		// without the need for linear search nor a map.
@@ -163,9 +164,9 @@ func listEnvironWithUpper(upper bool, pairs ...string) Environ {
 		}
 	}
 
-	sort.SliceStable(list, func(i, j int) bool {
-		isep := strings.IndexByte(list[i], '=')
-		jsep := strings.IndexByte(list[j], '=')
+	slices.SortStableFunc(list, func(a, b string) int {
+		isep := strings.IndexByte(a, '=')
+		jsep := strings.IndexByte(b, '=')
 		if isep < 0 {
 			isep = 0
 		} else {
@@ -176,7 +177,7 @@ func listEnvironWithUpper(upper bool, pairs ...string) Environ {
 		} else {
 			jsep += 1
 		}
-		return list[i][:isep] < list[j][:jsep]
+		return strings.Compare(a[:isep], b[:jsep])
 	})
 
 	last := ""
@@ -204,10 +205,23 @@ func listEnvironWithUpper(upper bool, pairs ...string) Environ {
 type listEnviron []string
 
 func (l listEnviron) Get(name string) Variable {
-	prefix := name + "="
-	i := sort.SearchStrings(l, prefix)
-	if i < len(l) && strings.HasPrefix(l[i], prefix) {
-		return Variable{Exported: true, Kind: String, Str: strings.TrimPrefix(l[i], prefix)}
+	eqpos := len(name)
+	endpos := len(name) + 1
+	i, ok := slices.BinarySearchFunc(l, name, func(l, name string) int {
+		if len(l) < endpos {
+			// Too short; see if we are before or after the name.
+			return strings.Compare(l, name)
+		}
+		// Compare the name prefix, then the equal character.
+		c := strings.Compare(l[:eqpos], name)
+		eq := l[eqpos]
+		if c == 0 {
+			return cmp.Compare(eq, '=')
+		}
+		return c
+	})
+	if ok {
+		return Variable{Exported: true, Kind: String, Str: l[i][endpos:]}
 	}
 	return Variable{}
 }

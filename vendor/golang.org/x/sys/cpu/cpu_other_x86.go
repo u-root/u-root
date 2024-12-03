@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.19
-// +build go1.19
+//go:build 386 || amd64p32 || (amd64 && (!darwin || !gc))
 
-package versions
+package cpu
 
-func init() {
-	if Compare(toolchain, Go1_19) < 0 {
-		toolchain = Go1_19
-	}
+func darwinSupportsAVX512() bool {
+	panic("only implemented for gc && amd64 && darwin")
 }
