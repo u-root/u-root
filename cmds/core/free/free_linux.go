@@ -32,6 +32,9 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
+
+	"github.com/dustin/go-humanize"
 )
 
 var (
@@ -196,40 +199,12 @@ func missingRequiredFields(m meminfomap, fields []string) bool {
 	return false
 }
 
-// humanReadableValue returns a string representing the input value, treated as
-// a size in bytes, interpreted in a human readable form. E.g. the number 10240
-// woud return the string "10 kB". Note that the decimal part is truncated, not
-// rounded, so the values are guaranteed to be "at least X"
-func humanReadableValue(value uint64) string {
-	v := value
-	// bits to shift. 0 means bytes, 10 means kB, and so on. 40 is the highest
-	// and it means tB
-	var shift uint
-	for shift < uint(len(units)*10) {
-		if v/1024 < 1 {
-			break
-		}
-		v /= 1024
-		shift += 10
-	}
-	var decimal uint64
-	if shift > 0 {
-		// no rounding. Is there a better way to do this?
-		decimal = ((value - (value >> shift << shift)) >> (shift - 10)) * 1000 / 1024 / 100
-	}
-	return fmt.Sprintf("%v.%v%v",
-		value>>shift,
-		decimal,
-		units[shift/10],
-	)
-}
-
 // formatValueByConfig formats a size in bytes in the appropriate unit,
 // depending on whether FreeConfig specifies a human-readable format or a
 // specific unit
 func (c *cmd) formatValueByConfig(value uint64) string {
 	if c.human {
-		return humanReadableValue(value)
+		return strings.ReplaceAll(humanize.IBytes(value), " ", "")
 	}
 	// units and decimal part are not printed when a unit is explicitly specified
 	return fmt.Sprintf("%v", value>>c.unit)
