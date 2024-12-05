@@ -199,8 +199,8 @@ SReclaimable:     179852 kB`)
 		},
 		{
 			o:                 options{human: true},
-			expectedTotalMem:  "7.6G",
-			expectedTotalSwap: "7.8G",
+			expectedTotalMem:  "7.7GiB",
+			expectedTotalSwap: "7.9GiB",
 		},
 	}
 
