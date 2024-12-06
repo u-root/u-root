@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build arm64 && !tinygo
+//go:build arm64 && tinygo
 
 package universalpayload
+
+/*
+// "textflag.h" is provided by the gc compiler, tinygo does not have this
+#include "trampoline_tinygo_arm64.h"
+*/
+import "C"
 
 import (
 	"encoding/binary"
 	"reflect"
 	"unsafe"
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
 
 func getPhysicalAddressSizes() (uint8, error) {
 	// Return hardcode for arm64
@@ -38,9 +40,9 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return data
 	}
 
-	trampBegin := addrOfStart()
-	trampStack := addrOfStackTop()
-	trampHob := addrOfHobAddr()
+	trampBegin := C.addrOfStartU()
+	trampStack := C.addrOfStackTopU()
+	trampHob := C.addrOfHobAddrU()
 
 	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
 
