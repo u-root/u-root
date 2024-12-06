@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build amd64 && !tinygo
+//go:build amd64 && tinygo
 
 package universalpayload
+
+/*
+// "textflag.h" is provided by the gc compiler, tinygo does not have this
+#include "trampoline_tinygo_amd64.h"
+*/
+import "C"
 
 import (
 	"bufio"
@@ -17,10 +23,6 @@ import (
 	"strconv"
 	"unsafe"
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
 
 // Get Physical Address size from sysfs node /proc/cpuinfo.
 // Both Physical and Virtual Address size will be prompted as format:
@@ -73,9 +75,9 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return data
 	}
 
-	trampBegin := addrOfStart()
-	trampStack := addrOfStackTop()
-	trampHob := addrOfHobAddr()
+	trampBegin := C.addrOfStartU()
+	trampStack := C.addrOfStackTopU()
+	trampHob := C.addrOfHobAddrU()
 
 	padLen := uint64(trampHob - trampStack - 8)
 
