@@ -91,6 +91,12 @@ jobs:
       with:
         go-version: "1.22.x"
 
+    - name: BuildWindows u-root and initramfs
+      run: |
+        GOOS=windows GOARCH=amd64 go build .
+        go build .
+        GOOS=windows GOARCH=amd64 ./u-root -initcmd=""
+
     - name: Build
       run: |
         go build .

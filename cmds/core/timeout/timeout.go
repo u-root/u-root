@@ -23,7 +23,7 @@
 //	$./timeout  -t 5s bash -c 'sleep 1'
 //	$
 
-//go:build !test
+//go:build !test && !windows
 
 package main
 

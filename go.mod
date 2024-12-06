@@ -1,6 +1,8 @@
 module github.com/u-root/u-root
 
-go 1.22
+go 1.22.0
+
+toolchain go1.22.6
 
 require (
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
@@ -8,7 +10,7 @@ require (
 	github.com/beevik/ntp v0.3.0
 	github.com/bobuhiro11/gokvm v0.0.8-0.20231003020000-f53faca69d28
 	github.com/cenkalti/backoff/v4 v4.1.3
-	github.com/creack/pty v1.1.21
+	github.com/creack/pty v1.1.24
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/florianl/go-tc v0.4.5-0.20240822175159-7926c32f7299
@@ -36,23 +38,23 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
 	github.com/tklauser/go-sysconf v0.3.14
-	github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
+	github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
+	github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89
 	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.26.0
+	golang.org/x/crypto v0.29.0
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	golang.org/x/net v0.28.0
-	golang.org/x/sys v0.24.0
-	golang.org/x/term v0.23.0
-	golang.org/x/text v0.17.0
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
+	golang.org/x/net v0.31.0
+	golang.org/x/sys v0.27.0
+	golang.org/x/term v0.26.0
+	golang.org/x/text v0.20.0
+	golang.org/x/tools v0.27.0
 	gopkg.in/yaml.v2 v2.4.0
-	mvdan.cc/sh/v3 v3.7.0
+	mvdan.cc/sh/v3 v3.10.1-0.20241129174306-6042a7fe4e04
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
 
@@ -60,6 +62,7 @@ require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpuid v0.0.0
+	github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89
 )
 
 require (
@@ -102,8 +105,8 @@ require (
 	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/sync v0.8.0
+	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/sync v0.9.0
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 )
 

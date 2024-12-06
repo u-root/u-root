@@ -58,13 +58,13 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"slices"
+	"strings"
 )
 
 var errNonFatal = errors.New("non-fatal")
@@ -76,9 +76,9 @@ func run(
 	stderr io.Writer,
 	args ...string,
 ) error {
+	var err error
 	in := io.NopCloser(stdin)
 	if len(args) >= 1 {
-		var err error
 		in, err = os.Open(args[0])
 		if err != nil {
 			return err
@@ -86,16 +86,18 @@ func run(
 	}
 	defer in.Close()
 
-	scanner := bufio.NewScanner(in)
-	scanner.Split(bufio.ScanWords)
-
-	g := newGraph()
-
-	if err := parseInto(scanner, g); err != nil {
+	var buf strings.Builder
+	_, err = io.Copy(&buf, in)
+	if err != nil {
 		return err
 	}
 
-	var err error
+	g := newGraph()
+
+	if err = parseInto(buf.String(), g); err != nil {
+		return err
+	}
+
 	topologicalOrdering(
 		g,
 		func(node string) {
@@ -111,15 +113,19 @@ func run(
 	return err
 }
 
-func parseInto(scanner *bufio.Scanner, g *graph) error {
+func parseInto(buf string, g *graph) error {
+	fields := strings.Fields(buf)
+	var i int
 	var odd bool
 
 	next := func() (string, bool) {
-		if !scanner.Scan() {
+		if i == len(fields) {
 			return "", false
 		}
 		odd = !odd
-		return scanner.Text(), true
+		result := fields[i]
+		i++
+		return result, true
 	}
 
 	for {
@@ -127,6 +133,7 @@ func parseInto(scanner *bufio.Scanner, g *graph) error {
 		if !ok {
 			break
 		}
+
 		b, ok := next()
 		if !ok {
 			break
@@ -137,10 +144,6 @@ func parseInto(scanner *bufio.Scanner, g *graph) error {
 		} else {
 			g.putEdge(a, b)
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
 	}
 
 	if odd {
@@ -194,7 +197,7 @@ func topologicalOrdering(
 
 func rootsOf(g *graph) queue {
 	result := queue{}
-	for node := range g.nodes {
+	for node := range g.nodeToData {
 		if g.inDegree(node) == 0 {
 			result.enqueue(node)
 		}
@@ -204,7 +207,7 @@ func rootsOf(g *graph) queue {
 
 func nonRootsOf(g *graph) multiset {
 	result := newMultiset()
-	for node := range g.nodes {
+	for node := range g.nodeToData {
 		if g.inDegree(node) > 0 {
 			result.add(node, g.inDegree(node))
 		}
@@ -214,7 +217,7 @@ func nonRootsOf(g *graph) multiset {
 
 func cycleStartingAt(g *graph, node string) []string {
 	stack := []string{node}
-	inStack := make(set)
+	inStack := makeSet()
 	inStack.add(node)
 	popStack := func() string {
 		var result string
@@ -243,7 +246,7 @@ func cycleStartingAt(g *graph, node string) []string {
 			}
 		}
 
-		delete(inStack, popStack())
+		inStack.remove(popStack())
 		return false
 	}
 	dfs()

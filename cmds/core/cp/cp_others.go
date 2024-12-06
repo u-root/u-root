@@ -6,6 +6,6 @@
 
 package main
 
-import "golang.org/x/sys/unix"
+import "syscall"
 
-const eNotDir = unix.ENOTDIR
+const eNotDir = syscall.ENOTDIR

@@ -6,6 +6,10 @@ package main
 
 type set map[string]struct{}
 
+func makeSet() set {
+	return make(set)
+}
+
 func (s set) add(value string) {
 	s[value] = struct{}{}
 }
@@ -13,4 +17,8 @@ func (s set) add(value string) {
 func (s set) has(value string) bool {
 	_, ok := s[value]
 	return ok
+}
+
+func (s set) remove(value string) {
+	delete(s, value)
 }

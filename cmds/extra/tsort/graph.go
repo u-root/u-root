@@ -6,63 +6,64 @@ package main
 
 func newGraph() *graph {
 	return &graph{
-		nodes:            make(set),
-		nodeToInDegree:   newMultiset(),
-		nodeToSuccessors: make(map[string]set),
+		nodeToData: make(map[string]*nodeData),
 	}
 }
 
 type graph struct {
-	nodes            set
-	nodeToInDegree   multiset
-	nodeToSuccessors map[string]set
+	nodeToData map[string]*nodeData
+}
+
+type nodeData struct {
+	inDegree   int
+	successors set
 }
 
 func (g *graph) addNode(node string) {
-	g.nodes.add(node)
+	if _, ok := g.nodeToData[node]; !ok {
+		g.nodeToData[node] = &nodeData{
+			inDegree:   0,
+			successors: makeSet(),
+		}
+	}
 }
 
 func (g *graph) putEdge(source, target string) {
 	g.addNode(source)
 	g.addNode(target)
 
-	successors, ok := g.nodeToSuccessors[source]
-	if !ok {
-		successors = make(set)
-		g.nodeToSuccessors[source] = successors
-	}
+	successors := g.nodeToData[source].successors
 	if !successors.has(target) {
 		successors.add(target)
-		g.nodeToInDegree.add(target, 1)
+		g.nodeToData[target].inDegree++
 	}
 }
 
 func (g *graph) successors(node string) set {
-	if !g.nodes.has(node) {
+	n, ok := g.nodeToData[node]
+	if !ok {
 		panic("node is not in graph")
 	}
 
-	return g.nodeToSuccessors[node]
+	return n.successors
 }
 
 func (g *graph) removeEdge(source, target string) {
-	if !g.nodes.has(source) {
+	if _, ok := g.nodeToData[source]; !ok {
 		panic("source node is not in graph")
 	}
-	if !g.nodes.has(target) {
+	if _, ok := g.nodeToData[target]; !ok {
 		panic("target node is not in graph")
 	}
 
-	successors := g.nodeToSuccessors[source]
-
-	delete(successors, target)
-	if len(successors) == 0 {
-		delete(g.nodeToSuccessors, source)
-	}
-
-	g.nodeToInDegree.removeOne(target)
+	g.nodeToData[source].successors.remove(target)
+	g.nodeToData[target].inDegree--
 }
 
 func (g *graph) inDegree(node string) int {
-	return g.nodeToInDegree.count(node)
+	n, ok := g.nodeToData[node]
+	if !ok {
+		return 0
+	}
+	return n.inDegree
 }
