@@ -473,13 +473,6 @@ func (m multiboot) memoryBoundaries() (lower, upper uint32) {
 	return
 }
 
-func min(a, b uint32) uint32 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
