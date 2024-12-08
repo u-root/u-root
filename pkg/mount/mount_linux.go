@@ -108,6 +108,13 @@ func Mount(dev, path, fsType, data string, flags uintptr, opts ...func() error) 
 func TryMount(device, path, data string, flags uintptr, opts ...func() error) (*MountPoint, error) {
 	fstype, extraflags, err := FSFromBlock(device)
 	if err != nil {
+		// try statfs
+		var statErr error
+		fstype, extraflags, statErr = FromStatFS(device)
+		if statErr == nil {
+			return Mount(device, path, fstype, data, flags|extraflags, opts...)
+		}
+
 		return nil, err
 	}
 
