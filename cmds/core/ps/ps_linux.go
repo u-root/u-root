@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -373,17 +374,6 @@ func (pT ProcessTable) Swap(i, j int) {
 	pT.table[i], pT.table[j] = pT.table[j], pT.table[i]
 }
 
-// Return the biggest value in a slice of ints.
-func max(slice []int) int {
-	max := slice[0]
-	for _, value := range slice {
-		if value > max {
-			max = value
-		}
-	}
-	return max
-}
-
 // MaxLength returns the longest string of a field of ProcessTable
 func (pT ProcessTable) MaxLength(field string) int {
 	slice := make([]int, 0)
@@ -391,7 +381,7 @@ func (pT ProcessTable) MaxLength(field string) int {
 		slice = append(slice, len(p.Search(field)))
 	}
 
-	return max(slice)
+	return slices.Max(slice)
 }
 
 // PrintHeader prints the header for ps, with correct spacing.
