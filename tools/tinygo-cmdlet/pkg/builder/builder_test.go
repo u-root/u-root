@@ -23,8 +23,8 @@ func TestBuildJob(t *testing.T) {
 		t.Fatalf("want nil, got %v\n", err)
 	}
 
-	if abs != buildJob.goPkgPath {
-		t.Fatalf("%v != %v\n", abs, buildJob.goPkgPath)
+	if abs != buildJob.GoPkgPath {
+		t.Fatalf("%v != %v\n", abs, buildJob.GoPkgPath)
 	}
 
 	// invalid build dir
@@ -47,43 +47,43 @@ func TestBuildJobShouldFail(t *testing.T) {
 
 func TestDelta(t *testing.T) {
 	buildJobGo := BuildJob{
-		goPkgPath:    "test",
-		compiler:     "go",
-		buildCommand: "go build",
+		GoPkgPath:    "test",
+		Compiler:     "go",
+		BuildCommand: "go build",
 	}
 
 	buildJobTinyGo := BuildJob{
-		goPkgPath:    "test",
-		compiler:     "tinygo",
-		buildCommand: "tinygo build",
+		GoPkgPath:    "test",
+		Compiler:     "tinygo",
+		BuildCommand: "tinygo build",
 	}
 
 	b0 := BuildResult{
-		buildJob:   buildJobGo,
-		buildTime:  time.Duration(time.Second * 2),
-		binarySize: 1337,
+		BuildJob:   buildJobGo,
+		BuildTime:  time.Duration(time.Second * 2),
+		BinarySize: 1337,
 	}
 
 	b1 := BuildResult{
-		buildJob:   buildJobTinyGo,
-		buildTime:  time.Duration(time.Second * 2),
-		binarySize: 123,
+		BuildJob:   buildJobTinyGo,
+		BuildTime:  time.Duration(time.Second * 2),
+		BinarySize: 123,
 	}
 
 	b2 := b1
-	b2.buildJob.goPkgPath = "other"
+	b2.BuildJob.GoPkgPath = "other"
 
 	delta, err := b0.Delta(&b1)
 	if err != nil {
 		t.Fatalf("want nil, got %v", err)
 	}
 
-	wantDeltaSize := int64(b0.binarySize) - int64(b1.binarySize)
+	wantDeltaSize := int64(b0.BinarySize) - int64(b1.BinarySize)
 	if delta.deltaSize != wantDeltaSize {
 		t.Fatalf("want delta size == %v, got %v", wantDeltaSize, delta.deltaSize)
 	}
 
-	wantDeltaTime := b0.buildTime - b1.buildTime
+	wantDeltaTime := b0.BuildTime - b1.BuildTime
 	if delta.deltaTime != wantDeltaTime {
 		t.Fatalf("want delta size == %v, got %v", wantDeltaSize, delta.deltaTime)
 	}

@@ -26,9 +26,9 @@ var (
 // executed by the work function. It has all necessary information
 // to execute the build and gather error logs.
 type BuildJob struct {
-	goPkgPath    string   // the path to the go package that is build
-	compiler     string   // compiler used to build the pkg, probably go or tinygo. TODO: refactor to enum
-	buildCommand string   // complete build command issues by builder
+	GoPkgPath    string   // the path to the go package that is build
+	Compiler     string   // compiler used to build the pkg, probably go or tinygo. TODO: refactor to enum
+	BuildCommand string   // complete build command issues by builder
 	buildDir     *string  // directory where the build binary should be put in the context of go/tinygo this means -o <buildDir>
 	env          []string // environment that the execution worker should use additionally
 }
@@ -42,8 +42,7 @@ func NewBuildJob(goPkgPath string, compiler string, buildDir *string) (BuildJob,
 		return BuildJob{}, fmt.Errorf("buildjob: %w", err)
 	}
 
-	_, err = os.Stat(absPath)
-	if err != nil {
+	if _, err = os.Stat(absPath); err != nil {
 		return BuildJob{}, fmt.Errorf("buildjob: file %v not found: %w", absPath, err)
 	}
 
@@ -53,9 +52,9 @@ func NewBuildJob(goPkgPath string, compiler string, buildDir *string) (BuildJob,
 
 	// verify it is a buildable go command, aka see if the package is main
 	return BuildJob{
-		goPkgPath:    absPath,
-		compiler:     compiler,
-		buildCommand: compiler + " build ",
+		GoPkgPath:    absPath,
+		Compiler:     compiler,
+		BuildCommand: compiler + " build ",
 		buildDir:     buildDir,
 		env:          nil,
 	}, nil
@@ -66,24 +65,24 @@ func NewBuildJob(goPkgPath string, compiler string, buildDir *string) (BuildJob,
 // BuildResults are always valid and do not contain any error information.
 // If errors are encountered during the build process, a BuildError is returned.
 type BuildResult struct {
-	buildJob   BuildJob      // copy of the original build job
-	buildTime  time.Duration // time it took to build the pkg
-	binarySize uint64        // size of the binary in bytes
+	BuildJob   BuildJob      // copy of the original build job
+	BuildTime  time.Duration // time it took to build the pkg
+	BinarySize uint64        // size of the binary in bytes
 }
 
 // When the build of a command fails, a BuildError is emitted.
 type BuildError struct {
-	buildJob BuildJob // copy of the original build job
-	buildErr string   // error message encountered during build
+	BuildJob BuildJob // copy of the original build job
+	BuildErr string   // error message encountered during build
 }
 
 func (b *BuildError) String() string {
-	return fmt.Sprintf("%v: %v", b.buildJob.buildCommand, b.buildErr)
+	return fmt.Sprintf("%v: %v", b.BuildJob.BuildCommand, b.BuildErr)
 }
 
 // Implement error interface over BuildError
 func (b *BuildError) Error() string {
-	return fmt.Sprintf("%v: %v", b.buildJob.buildCommand, b.buildErr)
+	return fmt.Sprintf("%v: %v", b.BuildJob.BuildCommand, b.BuildErr)
 }
 
 // BuildDelta provides comparative information about two BuildResults.
@@ -99,24 +98,24 @@ type BuildDelta struct {
 // of the self object. The goPkgPath of the jobs have to be the same to
 // be comparable; this will be ensured.
 func (self *BuildResult) Delta(other *BuildResult) (BuildDelta, error) {
-	if self.buildJob.goPkgPath != other.buildJob.goPkgPath {
+	if self.BuildJob.GoPkgPath != other.BuildJob.GoPkgPath {
 		return BuildDelta{}, fmt.Errorf(
 			"cannot compare packages '%v' and %v",
-			self.buildJob.goPkgPath,
-			other.buildJob.goPkgPath,
+			self.BuildJob.GoPkgPath,
+			other.BuildJob.GoPkgPath,
 		)
 	}
 
-	if self.buildJob.compiler == other.buildJob.compiler {
+	if self.BuildJob.Compiler == other.BuildJob.Compiler {
 		return BuildDelta{}, fmt.Errorf(
 			"cannot compare packages with same compiler '%v'",
-			self.buildJob.compiler,
+			self.BuildJob.Compiler,
 		)
 	}
 
 	return BuildDelta{
-		deltaSize: int64(self.binarySize) - int64(other.binarySize),
-		deltaTime: self.buildTime - other.buildTime,
+		deltaSize: int64(self.BinarySize) - int64(other.BinarySize),
+		deltaTime: self.BuildTime - other.BuildTime,
 	}, nil
 }
 
@@ -169,8 +168,8 @@ func (b *Builder) AddJob(job BuildJob) error {
 		return fmt.Errorf("job: builder in invalid state, cannot add new job")
 	}
 
-	if job.goPkgPath == "" {
-		return fmt.Errorf("job: invalid gopkg, cannot add '%v'", job.goPkgPath)
+	if job.GoPkgPath == "" {
+		return fmt.Errorf("job: invalid gopkg, cannot add '%v'", job.GoPkgPath)
 	}
 
 	b.jobs = append(b.jobs, job)
@@ -188,41 +187,37 @@ func (b *Builder) SetLogger(logger *log.Logger) {
 // TODO: how about the mutex syncing for the logger? maybe just leave it out for now
 // func worker(jobq chan BuildJob, resultq chan BuildResult, errq chan BuildError, id uint, logger *log.Logger) {
 func worker(jobq chan BuildJob, resultq chan BuildResult, errq chan BuildError, id uint) {
-	fmt.Printf("[%d] spawned worker %d\n", id, id)
 	for {
 		job, ok := <-jobq
 		if !ok {
-			fmt.Printf("[%d] finish worker %d\n", id, id)
+			// fmt.Printf("[%d] finish worker %d\n", id, id)
 			return
 		}
 
 		var errBuf bytes.Buffer
 
 		// run the build process
-		fields := strings.Fields(job.buildCommand)
-		fields = append(fields, "-o", *job.buildDir)
+		fields := strings.Fields(job.BuildCommand)
+		fields = append(fields, "-o", *job.buildDir+"/"+filepath.Base(job.GoPkgPath))
 
 		c := exec.Command(fields[0], fields[1:]...)
 		c.Env = append(os.Environ(), job.env...)
-		c.Dir = job.goPkgPath
+		c.Dir = job.GoPkgPath
 		c.Stderr = &errBuf
 
-		fmt.Printf("[%d] running '%v'\n", id, c)
 		t0 := time.Now()
 		err := c.Run()
 		t1 := time.Now()
 
 		if err != nil {
 			// the subprocess failed with a non-zero exit code, so create BuildError
-			fmt.Printf("[%d] error building %v:%v", id, job.goPkgPath, errBuf.String())
 			errq <- BuildError{
-				buildJob: job,
-				buildErr: errBuf.String(),
+				BuildJob: job,
+				BuildErr: errBuf.String(),
 			}
 		} else {
-			fmt.Printf("[%d] built %v\n", id, job.goPkgPath)
-			pkgNameToken := strings.Split(job.goPkgPath, "/")
-			binPath := job.goPkgPath + "/" + pkgNameToken[len(pkgNameToken)-1]
+			pkgNameToken := strings.Split(job.GoPkgPath, "/")
+			binPath := job.GoPkgPath + "/" + pkgNameToken[len(pkgNameToken)-1]
 
 			f, err := os.Stat(binPath)
 			if err != nil {
@@ -230,9 +225,9 @@ func worker(jobq chan BuildJob, resultq chan BuildResult, errq chan BuildError, 
 			}
 
 			resultq <- BuildResult{
-				buildJob:   job,
-				buildTime:  t1.Sub(t0),
-				binarySize: uint64(f.Size()),
+				BuildJob:   job,
+				BuildTime:  t1.Sub(t0),
+				BinarySize: uint64(f.Size()),
 			}
 		}
 	}
@@ -253,10 +248,10 @@ func (b *Builder) Run() error {
 	nJobs := len(b.jobs)
 
 	// spawn the workers
-	for id := range b.worker {
-		b.logger.Printf("spawning %d workers", b.worker)
+	// requires GOVER >= go1.22
+	for id := 0; id < int(b.worker); id++ {
 		// go worker(b.jobQueue, b.resultQueue, b.errQueue, id, b.logger)
-		go worker(b.jobQueue, b.resultQueue, b.errQueue, id)
+		go worker(b.jobQueue, b.resultQueue, b.errQueue, uint(id))
 	}
 
 	// make sure all the workers are spawned and ready.
@@ -264,17 +259,12 @@ func (b *Builder) Run() error {
 	time.Sleep(time.Second)
 
 	for {
-		// time.Sleep(time.Second)
-		// fmt.Printf("res = %d err = %d\n", len(b.resultQueue), len(b.jobQueue))
 		select {
 		case res := <-b.resultQueue:
 			b.results = append(b.results, res)
-			b.logger.Printf("job finished [%d/%d]\n", len(b.results), nJobs)
 
 		case err := <-b.errQueue:
 			b.errors = append(b.errors, err)
-			// TODO: why does logger not have Warn or Error?
-			b.logger.Printf("job finished [%d/%d]\n", len(b.errors), nJobs)
 
 		default:
 			// check if all jobs of the jobQueue were sent out. Then stop scheduling
@@ -296,7 +286,6 @@ func (b *Builder) Run() error {
 					close(b.errQueue)
 					return nil
 				}
-				// b.logger.Printf("waiting for %d build results\n", remaining)
 				continue
 
 			} else {
