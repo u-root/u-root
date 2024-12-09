@@ -169,6 +169,7 @@ var unknownMagics = []magic{
 	{magic: UBIFS, name: "ubifs", flags: MS_RDONLY, off: -1},
 	{magic: UDF, name: "udf", off: -1, magicInt: unix.UDF_SUPER_MAGIC},
 	{magic: ZONEFS, name: "zonefs", off: -1, magicInt: unix.ZONEFS_MAGIC},
+	{magic: TMPFS, name: "tmpfs", off: -1, magicInt: unix.TMPFS_MAGIC},
 }
 
 // FindMagics finds all the magics matching a magic number.

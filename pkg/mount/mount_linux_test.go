@@ -81,8 +81,11 @@ func TestTryMount(t *testing.T) {
 
 	sdb1 := filepath.Join(d, prefix+"b1")
 	devb1 := fmt.Sprintf("/dev/%sb1", prefix)
-	if _, err := mount.TryMount(devb1, sdb1, "", mount.ReadOnly, func() error { return os.MkdirAll(sdb1, 0o666) }); !strings.Contains(err.Error(), "no suitable filesystem") {
-		t.Errorf("TryMount(%s) = %v, want an error containing 'no suitable filesystem'", devb1, err)
+	_, err := mount.TryMount(devb1, sdb1, "", mount.ReadOnly, func() error { return os.MkdirAll(sdb1, 0o666) })
+	if err == nil || !strings.Contains(err.Error(), "no suitable filesystem") {
+		fsbBlock, flagBlock, errBlock := mount.FSFromBlock(devb1)
+		fsStat, flagStat, errStat := mount.FromStatFS(devb1)
+		t.Errorf("TryMount(%s) = %v, want an error containing 'no suitable filesystem': FSFromBlock returns (%q,%x,%v), FSFromStatFS returns (%s,%x,%v)", devb1, err, fsbBlock, flagBlock, errBlock, fsStat, flagStat, errStat)
 	}
 
 	sdz1 := filepath.Join(d, prefix+"z1")
