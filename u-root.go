@@ -81,6 +81,7 @@ func main() {
 		uimage.WithBaseArchive(uimage.DefaultRamfs()),
 		uimage.WithCPIOOutput(defaultFile(env)),
 		uimage.WithInit("init"),
+		uimage.WithShellBang(false),
 	}
 	if golang.Default().GOOS != "plan9" {
 		m = append(m, uimage.WithShell("gosh"))
