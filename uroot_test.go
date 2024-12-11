@@ -113,7 +113,7 @@ func TestUrootCmdline(t *testing.T) {
 	noCmdTests := []testCase{
 		{
 			name: "include one extra file",
-			args: []string{"-nocmd", "-files=/bin/bash"},
+			args: []string{"-nocmd", "-defaultsh=", "-initcmd=", "-files=/bin/bash"},
 			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
@@ -122,7 +122,7 @@ func TestUrootCmdline(t *testing.T) {
 		},
 		{
 			name: "fix usage of an absolute path",
-			args: []string{"-nocmd", fmt.Sprintf("-files=%s:/bin", sampledir)},
+			args: []string{"-nocmd", "-defaultsh=", "-initcmd=", fmt.Sprintf("-files=%s:/bin", sampledir)},
 			env:  []string{"GO111MODULE=off"},
 			err:  nil,
 			validators: []itest.ArchiveValidator{
@@ -132,7 +132,7 @@ func TestUrootCmdline(t *testing.T) {
 		},
 		{
 			name: "include multiple extra files",
-			args: []string{"-nocmd", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
+			args: []string{"-nocmd", "-defaultsh=", "-initcmd=", "-files=/bin/bash", "-files=/bin/ls", fmt.Sprintf("-files=%s", samplef.Name())},
 			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
@@ -142,7 +142,7 @@ func TestUrootCmdline(t *testing.T) {
 		},
 		{
 			name: "include one extra file with rename",
-			args: []string{"-nocmd", "-files=/bin/bash:bin/bush"},
+			args: []string{"-nocmd", "-defaultsh=", "-initcmd=", "-files=/bin/bash:bin/bush"},
 			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bush"},
@@ -150,7 +150,7 @@ func TestUrootCmdline(t *testing.T) {
 		},
 		{
 			name: "supplied file can be uinit",
-			args: []string{"-nocmd", "-files=/bin/bash:bin/bash", "-uinitcmd=/bin/bash"},
+			args: []string{"-nocmd", "-defaultsh=", "-initcmd=", "-files=/bin/bash:bin/bash", "-uinitcmd=/bin/bash"},
 			env:  []string{"GO111MODULE=off"},
 			validators: []itest.ArchiveValidator{
 				itest.HasFile{"bin/bash"},
