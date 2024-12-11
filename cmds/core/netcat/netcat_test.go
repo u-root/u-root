@@ -29,6 +29,10 @@ func TestEvalParams(t *testing.T) {
 	hostSet := netcat.DefaultConfig()
 	hostSet.Host = "testhost"
 
+	hostSetListen := netcat.DefaultConfig()
+	hostSetListen.Host = "testhost"
+	hostSetListen.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
+
 	portScan := netcat.DefaultConfig()
 	portScan.Host = "testhost"
 	portScan.Port = 1234
@@ -38,8 +42,22 @@ func TestEvalParams(t *testing.T) {
 
 	portSet := netcat.DefaultConfig()
 	portSet.Host = "testhost"
-	portSet.Host = "testhost"
 	portSet.Port = 1234
+
+	onlyPortSet := netcat.DefaultConfig()
+	onlyPortSet.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
+	onlyPortSet.Port = 1234
+
+	portSetListen := netcat.DefaultConfig()
+	portSetListen.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
+	portSetListen.Host = "testhost"
+	portSetListen.Port = 1234
+
+	sourcePortSetListen := netcat.DefaultConfig()
+	sourcePortSetListen.ConnectionMode = netcat.CONNECTION_MODE_LISTEN
+	sourcePortSetListen.Host = "testhost"
+	sourcePortSetListen.Port = 3333
+	sourcePortSetListen.ConnectionModeOptions.SourcePort = "3333"
 
 	ipv4Set := netcat.DefaultConfig()
 	ipv4Set.Host = "testhost"
@@ -103,11 +121,80 @@ func TestEvalParams(t *testing.T) {
 			wantErr:    false,
 		},
 		{
+			name: "host set in listen mode",
+			args: []string{"testhost"},
+			modify: func(f flags) flags {
+				f.listen = true
+				return f
+			},
+			wantConfig: &hostSetListen,
+			wantErr:    false,
+		},
+		{
 			name:       "port set",
 			args:       []string{"testhost", "1234"},
 			modify:     func(f flags) flags { return f },
 			wantConfig: &portSet,
 			wantErr:    false,
+		},
+		{
+			name: "port set in listen mode",
+			args: []string{"testhost", "1234"},
+			modify: func(f flags) flags {
+				f.listen = true
+				f.sourcePort = ""
+				return f
+			},
+			wantConfig: &portSetListen,
+			wantErr:    false,
+		},
+		{
+			name: "source port set in listen mode",
+			args: []string{"testhost"},
+			modify: func(f flags) flags {
+				f.listen = true
+				f.sourcePort = "3333"
+				return f
+			},
+			wantConfig: &sourcePortSetListen,
+			wantErr:    false,
+		},
+		{
+			name: "port in listen mode",
+			args: []string{"1234"},
+			modify: func(f flags) flags {
+				f.listen = true
+				return f
+			},
+			wantConfig: &onlyPortSet,
+		},
+		{
+			name: "invalid source port set in listen mode",
+			args: []string{"testhost"},
+			modify: func(f flags) flags {
+				f.listen = true
+				f.sourcePort = "abc"
+				return f
+			},
+			wantErr: true,
+		},
+		{
+			name: "port set invalid",
+			args: []string{"testhost", "1234-"},
+			modify: func(f flags) flags {
+				f.listen = true
+				return f
+			},
+			wantConfig: &hostSet,
+			wantErr:    true,
+		},
+		{
+			name: "port set invalid connection mode",
+			args: []string{"testhost", "1234--"},
+			modify: func(f flags) flags {
+				return f
+			},
+			wantErr: true,
 		},
 		{
 			name: "ipv4 set",
@@ -287,6 +374,18 @@ func TestEvalParams(t *testing.T) {
 			wantConfig: &portScan,
 			wantErr:    false,
 		},
+		{
+			name:    "invalid port scan",
+			args:    []string{"testhost", "12aa34-1345"},
+			modify:  func(f flags) flags { return f },
+			wantErr: true,
+		},
+		{
+			name:    "invalid port scan array",
+			args:    []string{"testhost", "1234-1345-333"},
+			modify:  func(f flags) flags { return f },
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -303,9 +402,11 @@ func TestEvalParams(t *testing.T) {
 			}
 
 			// Assert config
-			diff := cmp.Diff(gotConfig, tt.wantConfig, cmpopts.IgnoreFields(netcat.Config{}, "Output.OutFileMutex", "Output.OutFileHexMutex", "Output.Logger"))
-			if diff != "" {
-				t.Errorf("evalParams() diff : %v", diff)
+			if !tt.wantErr {
+				diff := cmp.Diff(gotConfig, tt.wantConfig, cmpopts.IgnoreFields(netcat.Config{}, "Output.OutFileMutex", "Output.OutFileHexMutex", "Output.Logger"))
+				if diff != "" {
+					t.Errorf("evalParams() diff : %v", diff)
+				}
 			}
 		})
 	}
