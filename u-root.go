@@ -12,6 +12,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"runtime"
 
 	"github.com/dustin/go-humanize"
 	"github.com/u-root/gobusybox/src/pkg/golang"
@@ -81,6 +82,7 @@ func main() {
 		uimage.WithBaseArchive(uimage.DefaultRamfs()),
 		uimage.WithCPIOOutput(defaultFile(env)),
 		uimage.WithInit("init"),
+		uimage.WithShellBang(runtime.GOOS == "plan9" || os.Getenv("GOOS") == "plan9"),
 	}
 	if golang.Default().GOOS != "plan9" {
 		m = append(m, uimage.WithShell("gosh"))
