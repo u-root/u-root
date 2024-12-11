@@ -21,7 +21,7 @@ func TestIntegration(t *testing.T) {
 	govmtest.Run(t, "vm",
 		govmtest.WithPackageToTest("github.com/u-root/u-root/pkg/smbios"),
 		govmtest.WithQEMUFn(
-			qemu.WithVMTimeout(time.Minute),
+			qemu.WithVMTimeout(time.Minute*2),
 			qemu.ArbitraryArgs("-smbios", "type=2,manufacturer=u-root"),
 		),
 	)

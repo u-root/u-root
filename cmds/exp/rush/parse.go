@@ -172,7 +172,7 @@ func parsestring(b *bufio.Reader, c *Command) (*Command, string) {
 			x := 0
 			_, err := fmt.Sscanf(s, "%v", &x)
 			if err != nil {
-				panic(fmt.Errorf("bad FD on redirect: %v, %v", s, err))
+				panic(fmt.Errorf("bad FD on redirect: %v, %w", s, err))
 			}
 			// whitespace is allowed
 			c.fdmap[x] = getArg(b, t)

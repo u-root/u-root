@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -92,7 +93,7 @@ func (cmd *cmd) routeAdddefault() error {
 		fmt.Fprintf(cmd.Out, "Add default route %v via %v", nhval, l.Attrs().Name)
 		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
 		if err := cmd.handle.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding default route to %v: %v", l.Attrs().Name, err)
+			return fmt.Errorf("error adding default route to %v: %w", l.Attrs().Name, err)
 		}
 		return nil
 	}
@@ -112,13 +113,13 @@ func (cmd *cmd) routeAdd() error {
 
 		link, err := netlink.LinkByName(d)
 		if err != nil {
-			return fmt.Errorf("error getting link %s: %v", d, err)
+			return fmt.Errorf("error getting link %s: %w", d, err)
 		}
 
 		route.LinkIndex = link.Attrs().Index
 
 		if err := cmd.handle.RouteAdd(route); err != nil {
-			return fmt.Errorf("error adding route %s -> %s: %v", route.Dst.IP, d, err)
+			return fmt.Errorf("error adding route %s -> %s: %w", route.Dst.IP, d, err)
 		}
 		return nil
 	}
@@ -133,13 +134,13 @@ func (cmd *cmd) routeAppend() error {
 
 	link, err := netlink.LinkByName(d)
 	if err != nil {
-		return fmt.Errorf("error getting link %s: %v", d, err)
+		return fmt.Errorf("error getting link %s: %w", d, err)
 	}
 
 	route.LinkIndex = link.Attrs().Index
 
 	if err := cmd.handle.RouteAppend(route); err != nil {
-		return fmt.Errorf("error appending route %s -> %s: %v", route.Dst.IP, d, err)
+		return fmt.Errorf("error appending route %s -> %s: %w", route.Dst.IP, d, err)
 	}
 	return nil
 }
@@ -153,13 +154,13 @@ func (cmd *cmd) routeReplace() error {
 
 	link, err := netlink.LinkByName(d)
 	if err != nil {
-		return fmt.Errorf("error getting link %s: %v", d, err)
+		return fmt.Errorf("error getting link %s: %w", d, err)
 	}
 
 	route.LinkIndex = link.Attrs().Index
 
 	if err := cmd.handle.RouteReplace(route); err != nil {
-		return fmt.Errorf("error appending route %s -> %s: %v", route.Dst.IP, d, err)
+		return fmt.Errorf("error appending route %s -> %s: %w", route.Dst.IP, d, err)
 	}
 	return nil
 }
@@ -173,13 +174,13 @@ func (cmd *cmd) routeDel() error {
 
 	link, err := netlink.LinkByName(d)
 	if err != nil {
-		return fmt.Errorf("error getting link %s: %v", d, err)
+		return fmt.Errorf("error getting link %s: %w", d, err)
 	}
 
 	route.LinkIndex = link.Attrs().Index
 
 	if err := cmd.handle.RouteDel(route); err != nil {
-		return fmt.Errorf("error deleting route %s -> %s: %v", route.Dst.IP, d, err)
+		return fmt.Errorf("error deleting route %s -> %s: %w", route.Dst.IP, d, err)
 	}
 	return nil
 }

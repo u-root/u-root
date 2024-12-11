@@ -1,6 +1,7 @@
 // Copyright 2013-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // Tee transcribes the standard input to the standard output and makes copies
 // in the files.
@@ -50,7 +51,7 @@ func (c *cmd) run() error {
 	for _, fname := range c.args {
 		f, err := os.OpenFile(fname, oflags, 0o666)
 		if err != nil {
-			return fmt.Errorf("error opening %s: %v", fname, err)
+			return fmt.Errorf("error opening %s: %w", fname, err)
 		}
 		files = append(files, f)
 		writers = append(writers, f)
@@ -59,7 +60,7 @@ func (c *cmd) run() error {
 
 	mw := io.MultiWriter(writers...)
 	if _, err := io.Copy(mw, c.stdin); err != nil {
-		return fmt.Errorf("error: %v", err)
+		return fmt.Errorf("error: %w", err)
 	}
 
 	for _, f := range files {

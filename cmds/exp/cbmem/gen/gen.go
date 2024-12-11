@@ -43,7 +43,7 @@ func genAPU2(n string) ([]byte, error) {
 	} {
 		b, err := syscall.Mmap(int(f.Fd()), m.offset, int(m.size), syscall.PROT_READ, syscall.MAP_SHARED)
 		if err != nil {
-			return nil, fmt.Errorf("mmap %d bytes at %#x: %v", m.size, m.offset, err)
+			return nil, fmt.Errorf("mmap %d bytes at %#x: %w", m.size, m.offset, err)
 		}
 		fmt.Fprintf(out, "{off: %#x, dat:[]byte{\n", m.offset)
 		for i := 0; i < len(b); i += 8 {

@@ -18,11 +18,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/uio/uio"
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -134,7 +134,7 @@ func TestRunSimple(t *testing.T) {
 		{
 			name:    "NoFlags-ToManyArgs-",
 			args:    []string{"cp", file1.Name(), "dst", "src"},
-			wantErr: unix.ENOTDIR,
+			wantErr: syscall.ENOTDIR,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

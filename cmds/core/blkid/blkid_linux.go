@@ -14,21 +14,21 @@ import (
 	"github.com/u-root/u-root/pkg/mount/block"
 )
 
-func run(getBlock func() (block.BlockDevices, error), out io.ReadWriter) error {
+func run(getBlock func() (block.BlockDevices, error), out io.Writer) error {
 	devices, err := getBlock()
 	if err != nil {
-		return fmt.Errorf("error getting Block devices: %v", err)
+		return fmt.Errorf("error getting Block devices: %w", err)
 	}
 
 	for _, device := range devices {
-		fmt.Print(device.DevicePath())
+		fmt.Fprint(out, device.DevicePath())
 		if device.FsUUID != "" {
-			fmt.Fprintf(out, ` UUID="%s"`, device.FsUUID)
+			fmt.Fprintf(out, " UUID=%q", device.FsUUID)
 		}
 		if device.FSType != "" {
-			fmt.Fprintf(out, ` TYPE="%s"`, device.FSType)
+			fmt.Fprintf(out, " TYPE=%q", device.FSType)
 		}
-		fmt.Println()
+		fmt.Fprintln(out)
 	}
 	return nil
 }

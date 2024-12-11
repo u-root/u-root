@@ -1,6 +1,7 @@
 // Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // ip manipulates network addresses, interfaces, routing, and other config.
 package main
@@ -51,8 +52,7 @@ type flags struct {
 
 const ipHelp = `Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
 where  OBJECT := { address |  help | link | monitor | neighbor | neighbour |
-				   route | rule | tap | tcpmetrics |
-                   token | tunnel | tuntap | vrf | xfrm }
+				   route | tap | tcpmetrics | tunnel | tuntap | vrf | xfrm }
        OPTIONS := { -s[tatistics] | -d[etails] | -r[esolve] |
                     -h[uman-readable] | -iec | -j[son] | -p[retty] |
                     -f[amily] { inet | inet6 | mpls | bridge | link } |
@@ -206,25 +206,25 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 	if cmd.Opts.Netns != "" {
 		nsHandle, err := netns.GetFromName(cmd.Opts.Netns)
 		if err != nil {
-			return cmd, fmt.Errorf("failed to find network namespace %q: %v", cmd.Opts.Netns, err)
+			return cmd, fmt.Errorf("failed to find network namespace %q: %w", cmd.Opts.Netns, err)
 		}
 		defer nsHandle.Close()
 
 		handle, err = netlink.NewHandleAt(nsHandle, unix.NETLINK_ROUTE)
 		if err != nil {
-			return cmd, fmt.Errorf("failed to create netlink handle in network namespace %q: %v", cmd.Opts.Netns, err)
+			return cmd, fmt.Errorf("failed to create netlink handle in network namespace %q: %w", cmd.Opts.Netns, err)
 		}
 	} else {
 		handle, err = netlink.NewHandle(unix.NETLINK_ROUTE)
 		if err != nil {
-			return cmd, fmt.Errorf("failed to create netlink handle: %v", err)
+			return cmd, fmt.Errorf("failed to create netlink handle: %w", err)
 		}
 	}
 
 	if cmd.Opts.RcvBuf != "" {
 		bufSize, err := strconv.Atoi(cmd.Opts.RcvBuf)
 		if err != nil {
-			return cmd, fmt.Errorf("failed to parse rcvbuf flag: %v", err)
+			return cmd, fmt.Errorf("failed to parse rcvbuf flag: %w", err)
 		}
 
 		handle.SetSocketReceiveBufferSize(bufSize, true)
@@ -298,7 +298,7 @@ func (cmd *cmd) batchCmds() error {
 			if cmd.Opts.Force {
 				log.Printf("Error (force mode on, continuing): Failed to run command '%s': %v", line, err)
 			} else {
-				return fmt.Errorf("failed to run command '%s': %v", line, err)
+				return fmt.Errorf("failed to run command '%s': %w", line, err)
 			}
 		}
 	}

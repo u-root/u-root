@@ -1,6 +1,7 @@
 // Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -15,7 +16,7 @@ import (
 func (cmd *cmd) showAllLinks(withAddresses bool, filterByType ...string) error {
 	links, err := netlink.LinkList()
 	if err != nil {
-		return fmt.Errorf("can't enumerate interfaces: %v", err)
+		return fmt.Errorf("can't enumerate interfaces: %w", err)
 	}
 
 	addresses := make([][]netlink.Addr, len(links))
@@ -23,7 +24,7 @@ func (cmd *cmd) showAllLinks(withAddresses bool, filterByType ...string) error {
 		for idx, link := range links {
 			addrs, err := netlink.AddrList(link, cmd.Family)
 			if err != nil {
-				return fmt.Errorf("can't get addresses for link %s: %v", link.Attrs().Name, err)
+				return fmt.Errorf("can't get addresses for link %s: %w", link.Attrs().Name, err)
 			}
 
 			addresses[idx] = addrs
@@ -38,7 +39,7 @@ func (cmd *cmd) showLink(link netlink.Link, withAddresses bool, filterByType ...
 	if withAddresses {
 		addrs, err := netlink.AddrList(link, cmd.Family)
 		if err != nil {
-			return fmt.Errorf("can't get addresses for link %s: %v", link.Attrs().Name, err)
+			return fmt.Errorf("can't get addresses for link %s: %w", link.Attrs().Name, err)
 		}
 		addresses[0] = addrs
 	}
@@ -124,7 +125,7 @@ func (cmd *cmd) showLinks(addresses [][]netlink.Addr, links []netlink.Link, filt
 		if l.MasterIndex != 0 {
 			link, err := netlink.LinkByIndex(l.MasterIndex)
 			if err != nil {
-				return fmt.Errorf("can't get link with index %d: %v", l.MasterIndex, err)
+				return fmt.Errorf("can't get link with index %d: %w", l.MasterIndex, err)
 			}
 			master = fmt.Sprintf("master %s ", link.Attrs().Name)
 		}

@@ -72,7 +72,7 @@ func extractMan(name string) (string, error) {
 func walk(mans map[string]string, root string) (err error) {
 	re, err := regexp.Compile(`_.*\.go$`)
 	if err != nil {
-		return fmt.Errorf("error compiling regexp: %v", err)
+		return fmt.Errorf("error compiling regexp: %w", err)
 	}
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -101,7 +101,7 @@ func walk(mans map[string]string, root string) (err error) {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error walking the path %q: %v", root, err)
+		return fmt.Errorf("error walking the path %q: %w", root, err)
 	}
 	return nil
 }

@@ -61,7 +61,7 @@ func (mi *MultibootImage) Load(opts ...LoadOption) error {
 		return nil
 	}
 	if err := kexec.Load(entryPoint, segments, 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
+		return fmt.Errorf("kexec.Load() error: %w", err)
 	}
 	return nil
 }

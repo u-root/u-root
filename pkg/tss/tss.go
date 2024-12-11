@@ -75,14 +75,14 @@ func (t *TPM) ReadPCRs() ([]PCR, error) {
 	case TPMVersion12:
 		PCRs, err = readAllPCRs12(t.RWC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read PCRs: %v", err)
+			return nil, fmt.Errorf("failed to read PCRs: %w", err)
 		}
 		alg = crypto.SHA1
 
 	case TPMVersion20:
 		PCRs, err = readAllPCRs20(t.RWC, tpm2.AlgSHA256)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read PCRs: %v", err)
+			return nil, fmt.Errorf("failed to read PCRs: %w", err)
 		}
 		alg = crypto.SHA1
 

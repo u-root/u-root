@@ -1,6 +1,8 @@
 // Copyright 2012-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
+
 package main
 
 import (
@@ -19,10 +21,12 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
+var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, error){}
+
 func (c *cmd) listenMode(output io.Writer, network, address string) error {
 	listener, err := c.setupListener(network, address)
 	if err != nil {
-		return fmt.Errorf("failed to setup listener: %v", err)
+		return fmt.Errorf("failed to setup listener: %w", err)
 	}
 
 	return c.listenForConnections(output, listener)
@@ -60,7 +64,7 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
 			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
 			if err != nil {
-				return nil, fmt.Errorf("failed generating TLS configuration: %v", err)
+				return nil, fmt.Errorf("failed generating TLS configuration: %w", err)
 			}
 
 			return tls.Listen(network, address, tlsConfig)
@@ -72,26 +76,21 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
 		return netcat.NewUDPListener(network, address, c.config.Output.Logger)
 
-	case netcat.SOCKET_TYPE_SCTP:
-		return listenToSCTPSocket(network, address)
 	case netcat.SOCKET_TYPE_VSOCK:
 		cid, port, err := netcat.SplitVSockAddr(address)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve VSOCK address: %v", err)
+			return nil, fmt.Errorf("failed to resolve VSOCK address: %w", err)
 		}
 
 		return vsock.ListenContextID(cid, port, nil)
 
-	// unsupported socket types
-	case netcat.SOCKET_TYPE_UDP_VSOCK:
-		return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
-
-	case netcat.SOCKET_TYPE_NONE:
 	default:
-		return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+		l, ok := osListeners[c.config.ProtocolOptions.SocketType]
+		if !ok {
+			return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
+		}
+		return l(network, address)
 	}
-
-	return nil, fmt.Errorf("unexpected error")
 }
 
 // Connections holds all the active connections of a listener.
@@ -174,9 +173,11 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 			continue
 		}
 
-		if !c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
-			defer conn.Close()
-			break
+		if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_TCP {
+			if !c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
+				defer conn.Close()
+				break
+			}
 		}
 
 		go once.Do(func() {
@@ -221,7 +222,11 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 			} else {
 				// without broker mode, read from the connection and write to the output
 				for {
-					if _, err = io.Copy(output, connections.Connections[id]); err != nil {
+					connections.mutex.Lock()
+					connection := connections.Connections[id]
+					connections.mutex.Unlock()
+
+					if _, err = io.Copy(output, connection); err != nil {
 						if errors.Is(err, io.ErrShortWrite) {
 							continue
 						}

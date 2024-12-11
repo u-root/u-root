@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9
+//go:build !plan9 && !windows
 
 // Kill kills processes.
 //
@@ -89,7 +89,7 @@ func killProcess(w io.Writer, args ...string) error {
 		return nil
 	}
 	if err := kill(s, pids...); err != nil {
-		return fmt.Errorf("some processes could not be killed: %v", err)
+		return fmt.Errorf("some processes could not be killed: %w", err)
 	}
 	return nil
 }

@@ -1,8 +1,11 @@
 package tpm2
 
 import (
+	"crypto/ecdh"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
+	"fmt"
 	"math/big"
 )
 
@@ -21,23 +24,53 @@ func RSAPub(parms *TPMSRSAParms, pub *TPM2BPublicKeyRSA) (*rsa.PublicKey, error)
 	return &result, nil
 }
 
-// ECDHPub is a convenience wrapper around the necessary info to perform point
-// multiplication with the elliptic package.
-type ECDHPub struct {
-	Curve elliptic.Curve
-	X, Y  *big.Int
-}
+// ECDHPubKey converts a TPM ECC public key into one recognized by the ecdh package
+func ECDHPubKey(curve ecdh.Curve, pub *TPMSECCPoint) (*ecdh.PublicKey, error) {
 
-// ECCPub converts a TPM ECC public key into one recognized by the elliptic
-// package's point-multiplication functions, for use in ECDH.
-func ECCPub(parms *TPMSECCParms, pub *TPMSECCPoint) (*ECDHPub, error) {
-	curve, err := parms.CurveID.Curve()
-	if err != nil {
-		return nil, err
+	var c elliptic.Curve
+	switch curve {
+	case ecdh.P256():
+		c = elliptic.P256()
+	case ecdh.P384():
+		c = elliptic.P384()
+	case ecdh.P521():
+		c = elliptic.P521()
+	default:
+		return nil, fmt.Errorf("unknown curve: %v", curve)
 	}
-	return &ECDHPub{
-		Curve: curve,
+
+	pubKey := ecdsa.PublicKey{
+		Curve: c,
 		X:     big.NewInt(0).SetBytes(pub.X.Buffer),
 		Y:     big.NewInt(0).SetBytes(pub.Y.Buffer),
-	}, nil
+	}
+
+	return pubKey.ECDH()
+}
+
+// ECCPoint returns an uncompressed ECC Point
+func ECCPoint(pubKey *ecdh.PublicKey) (*big.Int, *big.Int, error) {
+	b := pubKey.Bytes()
+	size, err := elementLength(pubKey.Curve())
+	if err != nil {
+		return nil, nil, fmt.Errorf("ECCPoint: %w", err)
+	}
+	return big.NewInt(0).SetBytes(b[1 : size+1]),
+		big.NewInt(0).SetBytes(b[size+1:]), nil
+}
+
+func elementLength(c ecdh.Curve) (int, error) {
+	switch c {
+	case ecdh.P256():
+		// crypto/internal/nistec/fiat.p256ElementLen
+		return 32, nil
+	case ecdh.P384():
+		// crypto/internal/nistec/fiat.p384ElementLen
+		return 48, nil
+	case ecdh.P521():
+		// crypto/internal/nistec/fiat.p521ElementLen
+		return 66, nil
+	default:
+		return 0, fmt.Errorf("unknown element length for curve: %v", c)
+	}
 }

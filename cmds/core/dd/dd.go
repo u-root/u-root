@@ -37,6 +37,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -44,8 +45,6 @@ import (
 	"math"
 	"os"
 	"strings"
-	"sync"
-	"sync/atomic"
 
 	"github.com/rck/unit"
 	"github.com/u-root/u-root/pkg/progress"
@@ -69,182 +68,44 @@ var flagMap = map[string]bitClearAndSet{
 
 var allowedFlags = os.O_TRUNC | os.O_SYNC
 
-// intermediateBuffer is a buffer that one can write to and read from.
-type intermediateBuffer interface {
-	io.ReaderFrom
-	io.WriterTo
-}
-
-// chunkedBuffer is an intermediateBuffer with a specific size.
-type chunkedBuffer struct {
-	outChunk int64
-	length   int64
-	data     []byte
-	flags    int
-}
-
-// newChunkedBuffer returns an intermediateBuffer that stores inChunkSize-sized
-// chunks of data and writes them to writers in outChunkSize-sized chunks.
-func newChunkedBuffer(inChunkSize int64, outChunkSize int64, flags int) intermediateBuffer {
-	return &chunkedBuffer{
-		outChunk: outChunkSize,
-		length:   0,
-		data:     make([]byte, inChunkSize),
-		flags:    flags,
-	}
-}
-
-// ReadFrom reads an inChunkSize-sized chunk from r into the buffer.
-func (cb *chunkedBuffer) ReadFrom(r io.Reader) (int64, error) {
-	n, err := r.Read(cb.data)
-	cb.length = int64(n)
-
-	// Convert to EOF explicitly.
-	if n == 0 && err == nil {
-		return 0, io.EOF
-	}
-	return int64(n), err
-}
-
-// WriteTo writes from the buffer to w in outChunkSize-sized chunks.
-func (cb *chunkedBuffer) WriteTo(w io.Writer) (int64, error) {
-	var i int64
-	for i = 0; i < int64(cb.length); {
-		chunk := cb.outChunk
-		if i+chunk > cb.length {
-			chunk = cb.length - i
-		}
-		block := cb.data[i : i+chunk]
-		got, err := w.Write(block)
-
-		// Ugh, Go cruft: io.Writer.Write returns (int, error).
-		// io.WriterTo.WriteTo returns (int64, error). So we have to
-		// cast.
-		i += int64(got)
-		if err != nil {
-			return i, err
-		}
-		if int64(got) != chunk {
-			return 0, io.ErrShortWrite
-		}
-	}
-	return i, nil
-}
-
-// bufferPool is a pool of intermediateBuffers.
-type bufferPool struct {
-	f func() intermediateBuffer
-	c chan intermediateBuffer
-}
-
-func newBufferPool(size int64, f func() intermediateBuffer) bufferPool {
-	return bufferPool{
-		f: f,
-		c: make(chan intermediateBuffer, size),
-	}
-}
-
-// Put returns a buffer to the pool for later use.
-func (bp bufferPool) Put(b intermediateBuffer) {
-	// Non-blocking write in case pool has filled up (too many buffers
-	// returned, none being used).
-	select {
-	case bp.c <- b:
-	default:
-	}
-}
-
-// Get returns a buffer from the pool or allocates a new buffer if none is
-// available.
-func (bp bufferPool) Get() intermediateBuffer {
-	select {
-	case buf := <-bp.c:
-		return buf
-	default:
-		return bp.f()
-	}
-}
-
-func (bp bufferPool) Destroy() {
-	close(bp.c)
-}
-
-func parallelChunkedCopy(r io.Reader, w io.Writer, inBufSize, outBufSize int64, bytesWritten *int64, flags int) error {
+func dd(r io.Reader, w io.Writer, inBufSize, outBufSize int64, bytesWritten *int64) error {
 	if inBufSize == 0 {
 		return fmt.Errorf("inBufSize is not allowed to be zero")
 	}
-
-	// Make the channels deep enough to hold a total of 1GiB of data.
-	depth := (1024 * 1024 * 1024) / inBufSize
-	// But keep it reasonable!
-	if depth > 8192 {
-		depth = 8192
+	// There is an optimization in the Go runtime for zero-copy,
+	// which we can use when inBufSize == outBufSize.
+	for inBufSize == outBufSize {
+		amt, err := io.CopyN(w, r, inBufSize)
+		*bytesWritten += int64(amt)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 	}
+	dat := &bytes.Buffer{}
 
-	readyBufs := make(chan intermediateBuffer, depth)
-	pool := newBufferPool(depth, func() intermediateBuffer {
-		return newChunkedBuffer(inBufSize, outBufSize, flags)
-	})
-	defer pool.Destroy()
-
-	// Closing quit makes both goroutines below exit.
-	quit := make(chan struct{})
-
-	// errs contains the error value to be returned.
-	errs := make(chan error, 1)
-	defer close(errs)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		// Closing this unblocks the writing for-loop below.
-		defer close(readyBufs)
-		defer wg.Done()
-
-		for {
-			select {
-			case <-quit:
-				return
-			default:
-				buf := pool.Get()
-				n, err := buf.ReadFrom(r)
-				if n > 0 {
-					readyBufs <- buf
-				}
-				if err == io.EOF {
-					return
-				}
-				if n == 0 || err != nil {
-					errs <- fmt.Errorf("input error: %v", err)
-					return
-				}
+	for {
+		for int64(dat.Len()) > outBufSize {
+			if _, err := io.CopyN(w, dat, outBufSize); err != nil {
+				return err
 			}
 		}
-	}()
-
-	var writeErr error
-	for buf := range readyBufs {
-		if n, err := buf.WriteTo(w); err != nil {
-			writeErr = fmt.Errorf("output error: %v", err)
-			break
-		} else {
-			atomic.AddInt64(bytesWritten, n)
+		if _, err := io.CopyN(dat, r, inBufSize); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
 		}
-		pool.Put(buf)
+
 	}
-
-	// This will force the goroutine to quit if an error occurred writing.
-	close(quit)
-
-	// Wait for goroutine to exit.
-	wg.Wait()
-
-	select {
-	case readErr := <-errs:
-		return readErr
-	default:
-		return writeErr
+	for dat.Len() > 0 {
+		if _, err := io.CopyN(w, dat, outBufSize); err != nil && err != io.EOF {
+			return err
+		}
 	}
+	return nil
 }
 
 // sectionReader implements a SectionReader on an underlying implementation of
@@ -314,7 +175,7 @@ func inFile(stdin io.Reader, name string, inputBytes int64, skip int64, count in
 
 	in, err := os.Open(name)
 	if err != nil {
-		return nil, fmt.Errorf("error opening input file %q: %v", name, err)
+		return nil, fmt.Errorf("error opening input file %q: %w", name, err)
 	}
 	return io.NewSectionReader(in, inputBytes*skip, maxRead), nil
 }
@@ -328,12 +189,12 @@ func outFile(stdout io.WriteSeeker, name string, outputBytes int64, seek int64, 
 	} else {
 		perm := os.O_CREATE | os.O_WRONLY | (flags & allowedFlags)
 		if out, err = os.OpenFile(name, perm, 0o666); err != nil {
-			return nil, fmt.Errorf("error opening output file %q: %v", name, err)
+			return nil, fmt.Errorf("error opening output file %q: %w", name, err)
 		}
 	}
 	if seek*outputBytes != 0 {
 		if _, err := out.Seek(seek*outputBytes, io.SeekCurrent); err != nil {
-			return nil, fmt.Errorf("error seeking output file: %v", err)
+			return nil, fmt.Errorf("error seeking output file: %w", err)
 		}
 	}
 	return out, nil
@@ -388,9 +249,9 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	delete(ddUnits, "B")
 
 	var (
-		ibs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
-		obs = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
-		bs  = unit.MustNewUnit(ddUnits).MustNewValue(512, unit.None)
+		ibs = unit.MustNewUnit(ddUnits).MustNewValue(math.MaxInt64, unit.None)
+		obs = unit.MustNewUnit(ddUnits).MustNewValue(math.MaxInt64, unit.None)
+		bs  = unit.MustNewUnit(ddUnits).MustNewValue(math.MaxInt64, unit.None)
 	)
 	f.Var(ibs, "ibs", "Default input block size")
 	f.Var(obs, "obs", "Default output block size")
@@ -456,7 +317,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	if err != nil {
 		return err
 	}
-	if err := parallelChunkedCopy(in, out, ibs.Value, obs.Value, &bytesWritten, flags); err != nil {
+	if err := dd(in, out, ibs.Value, obs.Value, &bytesWritten); err != nil {
 		return err
 	}
 

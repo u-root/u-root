@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	tunnelHelp = `Usage: ip tunnel { add  | del | show } [ NAME ]
+	tunnelHelp = `Usage: ip tunnel { show } [ NAME ]
         [ mode { gre | ipip | sit | vti } ]
         [ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
         [ ttl TTL ] [ tos TOS ] [ [no]pmtudisc ] [ dev PHYS_DEV ]
@@ -160,7 +161,7 @@ func (cmd *cmd) showAllTunnels() error {
 func (cmd *cmd) showTunnels(op *options) error {
 	links, err := netlink.LinkList()
 	if err != nil {
-		return fmt.Errorf("failed to list interfaces: %v", err)
+		return fmt.Errorf("failed to list interfaces: %w", err)
 	}
 
 	return cmd.printTunnels(filterTunnels(links, op))
@@ -519,7 +520,7 @@ func (cmd *cmd) tunnelAdd(op *options) error {
 	}
 
 	if err := cmd.handle.LinkAdd(link); err != nil {
-		return fmt.Errorf("failed to add tunnel: %v", err)
+		return fmt.Errorf("failed to add tunnel: %w", err)
 	}
 
 	return nil
@@ -532,7 +533,7 @@ func (cmd *cmd) tunnelDelete(op *options) error {
 
 	link, err := cmd.handle.LinkByName(op.name)
 	if err != nil {
-		return fmt.Errorf("failed to find tunnel %s: %v", op.name, err)
+		return fmt.Errorf("failed to find tunnel %s: %w", op.name, err)
 	}
 
 	valid := true
@@ -548,7 +549,7 @@ func (cmd *cmd) tunnelDelete(op *options) error {
 	}
 
 	if err := cmd.handle.LinkDel(link); err != nil {
-		return fmt.Errorf("failed to delete tunnel %s: %v", op.name, err)
+		return fmt.Errorf("failed to delete tunnel %s: %w", op.name, err)
 	}
 
 	return nil

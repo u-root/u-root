@@ -6,52 +6,42 @@
 package interp
 
 import (
-	"os"
+	"context"
 	"os/user"
 	"strconv"
 	"syscall"
 
 	"golang.org/x/sys/unix"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 func mkfifo(path string, mode uint32) error {
 	return unix.Mkfifo(path, mode)
 }
 
-// hasPermissionToDir returns if the OS current user has execute permission
-// to the given directory
-func hasPermissionToDir(info os.FileInfo) bool {
-	user, err := user.Current()
-	if err != nil {
-		return false // unknown user; assume no permissions
-	}
-	uid, err := strconv.Atoi(user.Uid)
-	if err != nil {
-		return false // on POSIX systems, Uid should always be a decimal number
-	}
-	if uid == 0 {
-		return true // super-user
-	}
-
-	st, _ := info.Sys().(*syscall.Stat_t)
-	if st == nil {
-		panic("unexpected info.Sys type")
-	}
-	perm := info.Mode().Perm()
-	// user (u)
-	if perm&0o100 != 0 && st.Uid == uint32(uid) {
-		return true
-	}
-
-	gid, _ := strconv.Atoi(user.Gid)
-	// other users in group (g)
-	if perm&0o010 != 0 && st.Uid != uint32(uid) && st.Gid == uint32(gid) {
-		return true
-	}
-	// remaining users (o)
-	if perm&0o001 != 0 && st.Uid != uint32(uid) && st.Gid != uint32(gid) {
-		return true
-	}
-
-	return false
+// hasPermissionToDir returns true if the OS current user has execute
+// permission to the given directory
+func hasPermissionToDir(path string) bool {
+	return unix.Access(path, unix.X_OK) == nil
 }
+
+// unTestOwnOrGrp implements the -O and -G unary tests. If the file does not
+// exist, or the current user cannot be retrieved, returns false.
+func (r *Runner) unTestOwnOrGrp(ctx context.Context, op syntax.UnTestOperator, x string) bool {
+	info, err := r.stat(ctx, x)
+	if err != nil {
+		return false
+	}
+	u, err := user.Current()
+	if err != nil {
+		return false
+	}
+	if op == syntax.TsUsrOwn {
+		uid, _ := strconv.Atoi(u.Uid)
+		return uint32(uid) == info.Sys().(*syscall.Stat_t).Uid
+	}
+	gid, _ := strconv.Atoi(u.Gid)
+	return uint32(gid) == info.Sys().(*syscall.Stat_t).Gid
+}
+
+type waitStatus = syscall.WaitStatus

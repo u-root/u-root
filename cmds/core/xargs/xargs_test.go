@@ -93,3 +93,17 @@ func TestDefaultParams(t *testing.T) {
 		t.Errorf("expected %t, got %t", false, p.prompt)
 	}
 }
+
+func TestNullDelimiter(t *testing.T) {
+	stdin := strings.NewReader("hello\x00world")
+	stdout := &bytes.Buffer{}
+	c := command(stdin, stdout, nil, params{maxArgs: defaultMaxArgs, null: true})
+	err := c.run()
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+
+	if stdout.String() != "hello world\n" {
+		t.Errorf("expected 'hello world', got %q", stdout.String())
+	}
+}

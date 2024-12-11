@@ -1,6 +1,7 @@
 // Copyright 2012-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -14,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -22,6 +24,8 @@ import (
 	"github.com/mdlayher/vsock"
 	"github.com/u-root/u-root/pkg/netcat"
 )
+
+var osConnectors = map[netcat.SocketType]func(string, string) (net.Conn, error){}
 
 func (c *cmd) connectMode(output io.Writer, network, address string) error {
 	if c.config.ConnectionModeOptions.ScanPorts && !c.config.ConnectionModeOptions.ZeroIO {
@@ -34,8 +38,9 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 
 	conn, err := c.establishConnection(network, address)
 	if err != nil {
-		return fmt.Errorf("failed to establish connection: %v", err)
+		return fmt.Errorf("failed to establish connection: %w", err)
 	}
+	defer conn.Close()
 
 	log.Printf("Connection to %s [%s] succeeded", address, network)
 
@@ -56,9 +61,11 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 
 		// prepare command execution on the server
 		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
-			if err := c.config.CommandExec.Execute(conn, io.MultiWriter(conn, output), c.stderr, c.config.Misc.EOL); err != nil {
-				return fmt.Errorf("run command: %v", err)
+			if err := c.config.CommandExec.Execute(conn, c.stderr, c.config.Misc.EOL); err != nil {
+				return fmt.Errorf("run command: %w", err)
 			}
+
+			return nil
 		}
 	}
 
@@ -74,7 +81,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 				continue
 			}
 
-			return fmt.Errorf("failed to write: %v", err)
+			return fmt.Errorf("failed to write: %w", err)
 		}
 
 		break
@@ -101,45 +108,42 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 		case netcat.SOCKET_TYPE_TCP:
 			dialer.LocalAddr, err = net.ResolveTCPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP:
 			dialer.LocalAddr, err = net.ResolveUDPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UNIX:
 			dialer.LocalAddr, err = net.ResolveUnixAddr(network, c.config.ConnectionModeOptions.SourceHost)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP_UNIX:
 			dialer.LocalAddr, err = net.ResolveUnixAddr(network, c.config.ConnectionModeOptions.SourceHost)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve source address %v", err)
+				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
-
-		case netcat.SOCKET_TYPE_SCTP:
-			return connectToSCTPSocket(network, address)
 
 		case netcat.SOCKET_TYPE_VSOCK:
 			cid, port, err := netcat.SplitVSockAddr(address)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve VSOCK address: %v", err)
+				return nil, fmt.Errorf("failed to resolve VSOCK address: %w", err)
 			}
 
 			return vsock.Dial(cid, port, nil)
 
 		// unsupported socket types
-		case netcat.SOCKET_TYPE_UDP_VSOCK:
-			return nil, fmt.Errorf("currently unsupported socket type %q", c.config.ProtocolOptions.SocketType)
-
-		case netcat.SOCKET_TYPE_NONE:
 		default:
-			return nil, fmt.Errorf("undefined socket type %q", c.config.ProtocolOptions.SocketType)
+			osConn, ok := osConnectors[c.config.ProtocolOptions.SocketType]
+			if !ok {
+				return nil, fmt.Errorf("socket type %q:%w", c.config.ProtocolOptions.SocketType, os.ErrNotExist)
+			}
+			return osConn(network, address)
 		}
 	}
 
@@ -189,7 +193,7 @@ func (c *cmd) scanPorts() error {
 
 		network, address, err := c.connection()
 		if err != nil {
-			return fmt.Errorf("failed to parse connection: %v", err)
+			return fmt.Errorf("failed to parse connection: %w", err)
 		}
 
 		_, err = c.establishConnection(network, address)
@@ -213,7 +217,7 @@ func (c *cmd) proxyDialer(dialer proxy.Dialer) (proxy.Dialer, error) {
 	proxyAddr := fmt.Sprintf("%v://%v%v", c.config.ProxyConfig.Type, proxyAuth, c.config.ProxyConfig.Address)
 	proxyURL, err := url.Parse(proxyAddr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid proxy URL: %v", err)
+		return nil, fmt.Errorf("invalid proxy URL: %w", err)
 	}
 
 	return proxy.FromURL(proxyURL, dialer)

@@ -63,7 +63,7 @@ func dumpBin(textOut io.Writer, entryData, tableData []byte, fileName string) *d
 	// Need to rewrite address to be compatible with dmidecode(8).
 	e32, e64, err := smbios.ParseEntry(entryData)
 	if err != nil {
-		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing entry point structure: %v", err)}
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing entry point structure: %w", err)}
 	}
 	var edata []byte
 	switch {
@@ -76,21 +76,21 @@ func dumpBin(textOut io.Writer, entryData, tableData []byte, fileName string) *d
 	}
 	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
-		return &dmiDecodeError{code: 1, error: fmt.Errorf("error opening file for writing: %v", err)}
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error opening file for writing: %w", err)}
 	}
 	defer f.Close()
 	fmt.Fprintf(textOut, "# Writing %d bytes to %s.\n", len(edata), fileName)
 	if _, err := f.Write(edata); err != nil {
-		return &dmiDecodeError{code: 1, error: fmt.Errorf("error writing entry: %v", err)}
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error writing entry: %w", err)}
 	}
 	for i := len(edata); i < 0x20; i++ {
 		if _, err := f.Write([]byte{0}); err != nil {
-			return &dmiDecodeError{code: 1, error: fmt.Errorf("error writing entry: %v", err)}
+			return &dmiDecodeError{code: 1, error: fmt.Errorf("error writing entry: %w", err)}
 		}
 	}
 	fmt.Fprintf(textOut, "# Writing %d bytes to %s.\n", len(tableData), fileName)
 	if _, err := f.Write(tableData); err != nil {
-		return &dmiDecodeError{code: 1, error: fmt.Errorf("error writing table data: %v", err)}
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error writing table data: %w", err)}
 	}
 	return nil
 }
@@ -98,19 +98,19 @@ func dumpBin(textOut io.Writer, entryData, tableData []byte, fileName string) *d
 func dmiDecode(textOut io.Writer) *dmiDecodeError {
 	typeFilter, err := parseTypeFilter(flagType)
 	if err != nil {
-		return &dmiDecodeError{code: 2, error: fmt.Errorf("invalid --type: %v", err)}
+		return &dmiDecodeError{code: 2, error: fmt.Errorf("invalid --type: %w", err)}
 	}
 	fmt.Fprintf(textOut, "# dmidecode-go\n") // TODO: version.
 	entryData, tableData, err := getData(textOut, flagFromDump, "/sys/firmware/dmi/tables")
 	if err != nil {
-		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing loading data: %v", err)}
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing loading data: %w", err)}
 	}
 	if flagDumpBin != "" {
 		return dumpBin(textOut, entryData, tableData, flagDumpBin)
 	}
 	si, err := smbios.ParseInfo(entryData, tableData)
 	if err != nil {
-		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing data: %v", err)}
+		return &dmiDecodeError{code: 1, error: fmt.Errorf("error parsing data: %w", err)}
 	}
 	if si.Entry64 != nil {
 		fmt.Fprintf(textOut, "SMBIOS %d.%d.%d present.\n", si.MajorVersion(), si.MinorVersion(), si.DocRev())

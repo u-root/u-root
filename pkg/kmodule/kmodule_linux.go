@@ -17,9 +17,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/klauspost/compress/zstd"
-	"github.com/klauspost/pgzip"
-	"github.com/ulikunitz/xz"
 	"golang.org/x/sys/unix"
 )
 
@@ -31,59 +28,6 @@ const (
 	// Ignore kernel version magic.
 	MODULE_INIT_IGNORE_VERMAGIC = 0x2
 )
-
-// Init loads the kernel module given by image with the given options.
-func Init(image []byte, opts string) error {
-	return unix.InitModule(image, opts)
-}
-
-// FileInit loads the kernel module contained by `f` with the given opts and
-// flags. Uncompresses modules with a .xz and .gz suffix before loading.
-//
-// FileInit falls back to init_module(2) via Init when the finit_module(2)
-// syscall is not available and when loading compressed modules.
-func FileInit(f *os.File, opts string, flags uintptr) error {
-	var r io.Reader
-	var err error
-	switch filepath.Ext(f.Name()) {
-	case ".xz":
-		if r, err = xz.NewReader(f); err != nil {
-			return err
-		}
-	case ".gz":
-		if r, err = pgzip.NewReader(f); err != nil {
-			return err
-		}
-	case ".zst":
-		if r, err = zstd.NewReader(f); err != nil {
-			return err
-		}
-	}
-
-	if r == nil {
-		err := unix.FinitModule(int(f.Fd()), opts, int(flags))
-		if err == unix.ENOSYS {
-			if flags != 0 {
-				return err
-			}
-			// Fall back to init_module(2).
-			r = f
-		} else {
-			return err
-		}
-	}
-
-	img, err := io.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	return Init(img, opts)
-}
-
-// Delete removes a kernel module.
-func Delete(name string, flags uintptr) error {
-	return unix.DeleteModule(name, int(flags))
-}
 
 type modState uint8
 
@@ -111,6 +55,54 @@ type ProbeOpts struct {
 	IgnoreProcMods bool
 }
 
+// Init loads the kernel module given by image with the given options.
+func Init(image []byte, opts string) error {
+	return unix.InitModule(image, opts)
+}
+
+// Wrapper for the compression readers
+func CompressionReader(file *os.File) (reader io.Reader, err error) {
+	return compressionReader(file)
+}
+
+// FileInit loads the kernel module contained by `f` with the given opts and
+// flags. Uncompresses modules with a .xz and .gz suffix before loading.
+//
+// FileInit falls back to init_module(2) via Init when the finit_module(2)
+// syscall is not available and when loading compressed modules.
+func FileInit(f *os.File, opts string, flags uintptr) error {
+	var r io.Reader
+	var err error
+
+	if r, err = CompressionReader(f); err != nil {
+		return err
+	}
+
+	if r == nil {
+		err := unix.FinitModule(int(f.Fd()), opts, int(flags))
+		if err == unix.ENOSYS {
+			if flags != 0 {
+				return err
+			}
+			// Fall back to init_module(2).
+			r = f
+		} else {
+			return err
+		}
+	}
+
+	img, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	return Init(img, opts)
+}
+
+// Delete removes a kernel module.
+func Delete(name string, flags uintptr) error {
+	return unix.DeleteModule(name, int(flags))
+}
+
 // Probe loads the given kernel module and its dependencies.
 // It is calls ProbeOptions with the default ProbeOpts.
 func Probe(name string, modParams string) error {
@@ -122,12 +114,12 @@ func Probe(name string, modParams string) error {
 func ProbeOptions(name, modParams string, opts ProbeOpts) error {
 	deps, err := genDeps(opts)
 	if err != nil {
-		return fmt.Errorf("could not generate dependency map %v", err)
+		return fmt.Errorf("could not generate dependency map %w", err)
 	}
 
 	modPath, err := findModPath(name, deps)
 	if err != nil {
-		return fmt.Errorf("could not find module path %q: %v", name, err)
+		return fmt.Errorf("could not find module path %q: %w", name, err)
 	}
 
 	dep := deps[modPath]
@@ -150,7 +142,7 @@ func checkBuiltin(moduleDir string, deps depMap) error {
 	if os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("could not open builtin file: %v", err)
+		return fmt.Errorf("could not open builtin file: %w", err)
 	}
 	defer f.Close()
 
@@ -174,7 +166,7 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 	if rel == "" {
 		var u unix.Utsname
 		if err := unix.Uname(&u); err != nil {
-			return nil, fmt.Errorf("could not get release (uname -r): %v", err)
+			return nil, fmt.Errorf("could not get release (uname -r): %w", err)
 		}
 		rel = unix.ByteSliceToString(u.Release[:])
 	}
@@ -189,7 +181,7 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 
 	f, err := os.Open(filepath.Join(moduleDir, "modules.dep"))
 	if err != nil {
-		return nil, fmt.Errorf("could not open dependency file: %v", err)
+		return nil, fmt.Errorf("could not open dependency file: %w", err)
 	}
 	defer f.Close()
 
@@ -302,7 +294,7 @@ func genLoadedMods(r io.Reader, deps depMap) error {
 		name := arr[0]
 		modPath, err := findModPath(name, deps)
 		if err != nil {
-			return fmt.Errorf("could not find module path %q: %v", name, err)
+			return fmt.Errorf("could not find module path %q: %w", name, err)
 		}
 		if deps[modPath] == nil {
 			deps[modPath] = new(dependency)

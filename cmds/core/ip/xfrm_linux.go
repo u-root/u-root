@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -18,7 +19,7 @@ import (
 
 const (
 	xfrmHelp = `Usage: ip xfrm XFRM-OBJECT { COMMAND | help }
-where  XFRM-OBJECT := state | policy | monitor`
+where  XFRM-OBJECT := policy | monitor`
 
 	xfrmMonitorHelp = `Usage: ip xfrm monitor [ nokeys ] [ all | OBJECTS | help ]
 OBJECTS := { acquire | expire | SA | aevent | policy | report }`

@@ -1,6 +1,7 @@
 // Copyright 2012-2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // netcat creates arbitrary TCP and UDP connections and listens and sends arbitrary data.
 package main
@@ -101,7 +102,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 			port, err := strconv.ParseUint(ports[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %v", err)
+				return nil, fmt.Errorf("invalid port: %w", err)
 			}
 
 			config.Port = port
@@ -112,7 +113,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 				config.ConnectionModeOptions.CurrentPort = port
 				port, err = strconv.ParseUint(ports[1], 10, 64)
 				if err != nil {
-					return nil, fmt.Errorf("invalid port: %v", err)
+					return nil, fmt.Errorf("invalid port: %w", err)
 				}
 				config.ConnectionModeOptions.EndPort = port
 			}
@@ -125,7 +126,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		if len(args) == 1 {
 			port, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %v", err)
+				return nil, fmt.Errorf("invalid port: %w", err)
 			}
 			config.Port = port
 		} else if len(args) >= 2 {
@@ -133,7 +134,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 			port, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %v", err)
+				return nil, fmt.Errorf("invalid port: %w", err)
 			}
 			config.Port = port
 		}
@@ -153,7 +154,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	}
 
 	// Socket Types
-	config.ProtocolOptions.SocketType, err = netcat.ParseSocketType(f.udpSocket, f.sctpSocket, f.unixSocket, f.virtualSocket)
+	config.ProtocolOptions.SocketType, err = netcat.ParseSocketType(f.udpSocket, f.unixSocket, f.virtualSocket, f.sctpSocket)
 	if err != nil {
 		return nil, err
 	}
@@ -212,23 +213,25 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	// timing options
 	config.Timing.Delay, err = time.ParseDuration(f.timingDelay)
 	if err != nil {
-		return nil, fmt.Errorf("invalid delay: %v", err)
+		return nil, fmt.Errorf("invalid delay: %w", err)
 	}
 
 	config.Timing.Timeout, err = time.ParseDuration(f.timingTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("invalid timeout: %v", err)
+		return nil, fmt.Errorf("invalid timeout: %w", err)
 	}
 
 	if f.timingWait != "" {
 		config.Timing.Wait, err = time.ParseDuration(f.timingWait)
 		if err != nil {
-			return nil, fmt.Errorf("invalid wait: %v", err)
+			return nil, fmt.Errorf("invalid wait: %w", err)
 		}
 	}
 
 	// Misc Options
 	// EOL
+	config.Misc.EOL = netcat.DEFAULT_LF
+
 	if f.eolCRLF {
 		config.Misc.EOL = netcat.LINE_FEED_CRLF
 	}
@@ -339,12 +342,12 @@ func (c *cmd) connection() (string, string, error) {
 
 	network, err := c.config.ProtocolOptions.Network()
 	if err != nil {
-		return "", "", fmt.Errorf("connection: %v", err)
+		return "", "", fmt.Errorf("connection: %w", err)
 	}
 
 	address, err := c.config.Address()
 	if err != nil {
-		return "", "", fmt.Errorf("connection: %v", err)
+		return "", "", fmt.Errorf("connection: %w", err)
 	}
 
 	return network, address, nil
@@ -444,8 +447,8 @@ func run(args []string) error {
 	// Allowlist
 	fs.StringVar(&f.connectionAllowList, "allow", "", "Allow only comma-separated list of IP addresses")
 	fs.StringVar(&f.connectionAllowFile, "allowfile", "", "A file of hosts allowed to connect to Ncat")
-	fs.StringVar(&f.connectionDenyList, "deny", "", "Deny given hosts from connecting to Ncat")
-	fs.StringVar(&f.connectionDenyFile, "denyfile", "", "A file of hosts denied from connecting to Ncat")
+	fs.StringVar(&f.connectionDenyList, "deny", "", "Deny given hosts from sending data to Ncat. Connections will be accepted but no data will be sent back")
+	fs.StringVar(&f.connectionDenyFile, "denyfile", "", "A file of hosts denied from sending data to Ncat. Connections will be accepted but no data will be sent back")
 
 	// proxy
 	fs.StringVar(&f.proxyAddress, "proxy", "", "Specify address of host to proxy through (<addr[:port]> )")
@@ -482,7 +485,7 @@ func run(args []string) error {
 
 	network, address, err := c.connection()
 	if err != nil {
-		return fmt.Errorf("failed to determine connection: %v", err)
+		return fmt.Errorf("failed to determine connection: %w", err)
 	}
 
 	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file

@@ -237,7 +237,7 @@ func (f *FileBuffer) Read(line int, r io.Reader) (e error) {
 func (f *FileBuffer) ReadFile(line int, file string) (e error) {
 	var fh *os.File
 	if fh, e = os.Open(file); e != nil {
-		e = fmt.Errorf("could not read file: %v", e)
+		e = fmt.Errorf("could not read file: %w", e)
 		return
 	}
 	defer fh.Close()

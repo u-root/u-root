@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 //
 // Derived work from Daniel Martí <mvdan@mvdan.cc>
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -54,8 +55,13 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var in, out, err bytes.Buffer
-			if err := run(&in, &out, &err, tt.command, tt.args...); err != nil {
+			// gosh, since 63f3119ec, can no longer safely use a bytes.Buffer
+			// for stdin. There may be a better fix, but for now we create an
+			// io.pipe and close the write side, passing the read side to run.
+			inr, inw := io.Pipe()
+			inw.Close()
+			var out, err bytes.Buffer
+			if err := run(inr, &out, &err, tt.command, tt.args...); err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 			t.Logf("out: %s", out.Bytes())
@@ -81,7 +87,12 @@ func TestRunFail(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(&bytes.Buffer{}, &bytes.Buffer{}, &bytes.Buffer{}, "", tt.args...); err == nil {
+			// gosh, since 63f3119ec, can no longer safely use a bytes.Buffer
+			// for stdin. There may be a better fix, but for now we create an
+			// io.pipe and close the write side, passing the read side to run.
+			inr, inw := io.Pipe()
+			inw.Close()
+			if err := run(inr, &bytes.Buffer{}, &bytes.Buffer{}, "", tt.args...); err == nil {
 				t.Errorf("want err, got nil")
 			}
 		})

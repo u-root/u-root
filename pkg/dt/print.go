@@ -12,6 +12,8 @@ import (
 
 // PrintDTS prints the FDT in the .dts format.
 // TODO: not yet implemented
+//
+//nolint:staticcheck
 func (fdt *FDT) PrintDTS(f io.Writer) error {
 	return errors.New("not yet implemented")
 }

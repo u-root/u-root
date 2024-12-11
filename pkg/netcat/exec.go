@@ -5,11 +5,8 @@
 package netcat
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"strings"
 )
@@ -61,11 +58,8 @@ func ParseCommands(execs ...Exec) (Exec, error) {
 // stdout of the command is send to to the connection
 // stderr of the command is displayed on stdout of the host
 // The host process exits with the exit code of the command unless --keep-open is specified
-func (n *Exec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer, eol []byte) error {
-	var (
-		cmd    *exec.Cmd
-		buffer bytes.Buffer
-	)
+func (n *Exec) Execute(stdout io.Writer, stderr io.Writer, eol []byte) error {
+	var cmd *exec.Cmd
 
 	if n.Command == "" {
 		return fmt.Errorf("empty command")
@@ -86,23 +80,8 @@ func (n *Exec) Execute(stdin io.ReadWriter, stdout io.Writer, stderr io.Writer, 
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	scanner := bufio.NewScanner(stdin)
-	for scanner.Scan() {
-		buffer.WriteString(scanner.Text())
-		buffer.Write(eol)
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
-	cmd.Stdin = &buffer
-
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("exec start: %w", err)
-	}
-
-	// Wait waits for the command to exit and waits for any copying to stdin or copying from stdout or stderr to complete.
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("exec wait: %w", err)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("exec run: %w", err)
 	}
 
 	return nil

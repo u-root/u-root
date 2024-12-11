@@ -112,7 +112,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		for _, a := range fs.Args()[1:] {
 			b, err := hex.DecodeString(a)
 			if err != nil {
-				return fmt.Errorf("%v:%w", err, ErrConvert)
+				return fmt.Errorf("%w:%w", err, ErrConvert)
 			}
 			transfers := []spidev.Transfer{
 				{
@@ -160,7 +160,7 @@ func run(args []string, spiOpen spiOpenFunc, input io.Reader, output io.Writer) 
 		return f.SFDP().PrettyPrint(output, sfdp.BasicTableLookup)
 
 	default:
-		return fmt.Errorf("%s:%w:%v", cmd, ErrCommand, err)
+		return fmt.Errorf("%s:%w:%w", cmd, ErrCommand, err)
 	}
 }
 

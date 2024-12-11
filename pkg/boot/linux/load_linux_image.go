@@ -175,7 +175,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 
 	var dtbBuffer bytes.Buffer
 	if _, err := fdt.Write(&dtbBuffer); err != nil {
-		return nil, fmt.Errorf("flattening device tree: %v", err)
+		return nil, fmt.Errorf("flattening device tree: %w", err)
 	}
 	dtbBuf := dtbBuffer.Bytes()
 	dtbRange, err := kmem.AddKexecSegment(dtbBuf)
@@ -215,7 +215,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 
 	var trampolineBuffer bytes.Buffer
 	if err := binary.Write(&trampolineBuffer, binary.LittleEndian, trampoline); err != nil {
-		return nil, fmt.Errorf("make trampoline: %v", err)
+		return nil, fmt.Errorf("make trampoline: %w", err)
 	}
 	Debug("trampoline bytes %x", trampolineBuffer.Bytes())
 	trampolineRange, err := kmem.AddKexecSegment(trampolineBuffer.Bytes())

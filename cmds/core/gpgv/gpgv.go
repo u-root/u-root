@@ -118,11 +118,11 @@ func runGPGV(w io.Writer, verbose bool, keyfile, sigfile, datafile string) error
 
 	key, err := readPublicSigningKey(keyf)
 	if err != nil {
-		return fmt.Errorf("key: %v ", err)
+		return fmt.Errorf("key: %w ", err)
 	}
 
 	if err = verifyDetachedSignature(key, contentf, sigf); err != nil {
-		return fmt.Errorf("verify: %v", err)
+		return fmt.Errorf("verify: %w", err)
 	}
 	fmt.Fprintf(w, "OK")
 	return nil

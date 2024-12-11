@@ -17,9 +17,9 @@ type MSRVal struct {
 	// Clear are bits to clear in TestAndSet and Test.
 	Clear uint64
 	// Set are bits to set in TestAndSet and Test; or the value to write
-	// if the MSR is writeonly.
+	// if the MSR is write-only.
 	Set uint64
-	// WriteOnly indicats an MSR is writeonly.
+	// WriteOnly indicates an MSR is write-only.
 	WriteOnly bool
 }
 
@@ -28,7 +28,7 @@ func (m MSRVal) String() string {
 	return m.Name
 }
 
-// Debug can be set for debug prints on MSR operaitons.
+// Debug can be set for debug prints on MSR operations.
 // It can be set to, e.g., log.Printf.
 // It's default action is to do nothing.
 var Debug = func(string, ...interface{}) {}

@@ -24,32 +24,6 @@ type ClientIf interface {
 	Get(string) (Response, error)
 }
 
-// ClientMock serves as the Mock structure of Client for testing.
-type ClientMock struct{}
-
-// DummyResp serves as the mock structure of Response for testing.
-type DummyResp struct{}
-
-// Size mocks the Size function of tftp.Response for testing.
-func (d *DummyResp) Size() (int64, error) {
-	return 0, nil
-}
-
-// Read mocks the Read function of tftp.Response for testing.
-func (d *DummyResp) Read(b []byte) (int, error) {
-	return 0, nil
-}
-
-// Get mocks the Get method of tftp.Client.
-func (c *ClientMock) Get(url string) (Response, error) {
-	return &DummyResp{}, nil
-}
-
-// Put mocks the Put method of tftp.Client.
-func (c *ClientMock) Put(url string, r io.Reader, size int64) error {
-	return nil
-}
-
 // Client implements the ClientIf and uses the tftp.Client as member to interact with the real library.
 type Client struct {
 	*tftp.Client
@@ -72,7 +46,7 @@ func (r *RealResponse) Size() (int64, error) {
 
 // NewClient sets up a new tftp.Client according to the given ClientCfg struct.
 func NewClient(ccfg *ClientCfg) (*Client, error) {
-	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, ccfg.Timeout)
+	c, err := tftp.NewClient(tftp.ClientMode(ccfg.Mode), ccfg.Rexmt, tftp.ClientTransferSize(false), ccfg.Timeout)
 	return &Client{
 		Client: c,
 	}, err

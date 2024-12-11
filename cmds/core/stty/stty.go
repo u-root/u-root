@@ -5,7 +5,7 @@
 // This tag may be temporary. It depends on how much
 // u-root does with the packages it uses.
 
-//go:build !tinygo && !plan9
+//go:build !plan9 && !windows
 
 // stty is an stty command in Go.
 // It follows many of the conventions of standard stty.

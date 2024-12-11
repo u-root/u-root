@@ -280,7 +280,7 @@ func (s *SGDisk) operate(p *packet) error {
 		return &os.PathError{
 			Op:   "ioctl SG_IO",
 			Path: s.f.Name(),
-			Err:  fmt.Errorf("SCSI generic error %v and drive error status %#02x", errno, sb),
+			Err:  fmt.Errorf("SCSI generic error %w and drive error status %#02x", errno, sb),
 		}
 	}
 	w, err := p.block.toWordBlock()

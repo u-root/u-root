@@ -31,9 +31,10 @@ func TestBlkid(t *testing.T) {
 					FsUUID: "4c8c-8597",
 				},
 			},
-			wantString: ` UUID="51820b9c-d640-4c8c-8597-188689253e69" UUID="4c8c-8597"`,
+			wantString: "/dev/nvme0n1p1 UUID=\"51820b9c-d640-4c8c-8597-188689253e69\"\n/dev/sda UUID=\"4c8c-8597\"\n",
 			want:       nil,
-		}, {
+		},
+		{
 			name: "Error Block Devices",
 			BlockDevices: []*block.BlockDev{
 				{
@@ -58,7 +59,7 @@ func TestBlkid(t *testing.T) {
 					FsUUID: "4c8c-8597",
 				},
 			},
-			wantString: ` UUID="51820b9c-d640-4c8c-8597-188689253e69" TYPE="Ext4" UUID="4c8c-8597"`,
+			wantString: "/dev/nvme0n1p1 UUID=\"51820b9c-d640-4c8c-8597-188689253e69\" TYPE=\"Ext4\"\n/dev/sda UUID=\"4c8c-8597\"\n",
 			want:       nil,
 		},
 	} {

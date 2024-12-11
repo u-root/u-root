@@ -18,11 +18,11 @@ func FromSysfs() (*Info, error) {
 func fromSysfs(sysfsPath string) (*Info, error) {
 	entry, err := os.ReadFile(filepath.Join(sysfsPath, "smbios_entry_point"))
 	if err != nil {
-		return nil, fmt.Errorf("error reading SMBIOS entry data: %v", err)
+		return nil, fmt.Errorf("error reading SMBIOS entry data: %w", err)
 	}
 	data, err := os.ReadFile(filepath.Join(sysfsPath, "DMI"))
 	if err != nil {
-		return nil, fmt.Errorf("error reading DMI data: %v", err)
+		return nil, fmt.Errorf("error reading DMI data: %w", err)
 	}
 	return ParseInfo(entry, data)
 }

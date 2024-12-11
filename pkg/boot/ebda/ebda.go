@@ -31,12 +31,12 @@ type EBDA struct {
 func findEBDAOffset(f io.ReadSeeker) (int64, error) {
 	var ep uint16
 	if _, err := f.Seek(EBDAAddressOffset, io.SeekStart); err != nil {
-		return 0, fmt.Errorf("error seeking to memory offset %#X for the EBDA pointer, got: %v", EBDAAddressOffset, err)
+		return 0, fmt.Errorf("error seeking to memory offset %#X for the EBDA pointer, got: %w", EBDAAddressOffset, err)
 	}
 
 	// read the ebda pointer
 	if err := binary.Read(f, binary.LittleEndian, &ep); err != nil {
-		return 0, fmt.Errorf("unable to read EBDA Pointer: %v", err)
+		return 0, fmt.Errorf("unable to read EBDA Pointer: %w", err)
 	}
 
 	if ep == 0 {
@@ -59,12 +59,12 @@ func ReadEBDA(f io.ReadSeeker) (*EBDA, error) {
 	}
 
 	if _, err = f.Seek(e.BaseOffset, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("error seeking to memory offset %#X for the start of the EBDA, got: %v", e.BaseOffset, err)
+		return nil, fmt.Errorf("error seeking to memory offset %#X for the start of the EBDA, got: %w", e.BaseOffset, err)
 	}
 
 	// Read length
 	if err := binary.Read(f, binary.LittleEndian, &eSize); err != nil {
-		return nil, fmt.Errorf("error reading EBDA length, got: %v", err)
+		return nil, fmt.Errorf("error reading EBDA length, got: %w", err)
 	}
 	e.Length = int64(eSize) << 10
 
@@ -78,10 +78,10 @@ func ReadEBDA(f io.ReadSeeker) (*EBDA, error) {
 	e.Data = make([]byte, e.Length)
 
 	if _, err = f.Seek(e.BaseOffset, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("error seeking to memory offset %#X for the start of the EBDA, got: %v", e.BaseOffset, err)
+		return nil, fmt.Errorf("error seeking to memory offset %#X for the start of the EBDA, got: %w", e.BaseOffset, err)
 	}
 	if err = binary.Read(f, binary.LittleEndian, e.Data); err != nil {
-		return nil, fmt.Errorf("error reading EBDA region, tried to read from %#X of size %#X, got %v", e.BaseOffset, e.Length, err)
+		return nil, fmt.Errorf("error reading EBDA region, tried to read from %#X of size %#X, got %w", e.BaseOffset, e.Length, err)
 	}
 
 	return e, nil
@@ -116,7 +116,7 @@ func WriteEBDA(e *EBDA, f io.ReadWriteSeeker) error {
 	e.Data[0] = byte(eLen)
 
 	if _, err = f.Seek(e.BaseOffset, io.SeekStart); err != nil {
-		return fmt.Errorf("error seeking to memory offset %#X for the start of the EBDA, got: %v", e.BaseOffset, err)
+		return fmt.Errorf("error seeking to memory offset %#X for the start of the EBDA, got: %w", e.BaseOffset, err)
 	}
 
 	return binary.Write(f, binary.LittleEndian, e.Data)

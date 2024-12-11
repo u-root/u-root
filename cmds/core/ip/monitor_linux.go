@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -59,22 +60,22 @@ func (cmd *cmd) monitor() error {
 		case "address":
 			singleOptionSelected = true
 			if err := netlink.AddrSubscribe(addrUpdates, done); err != nil {
-				return fmt.Errorf("failed to subscribe to address updates: %v", err)
+				return fmt.Errorf("failed to subscribe to address updates: %w", err)
 			}
 		case "link":
 			singleOptionSelected = true
 			if err := netlink.LinkSubscribe(linkUpdates, done); err != nil {
-				return fmt.Errorf("failed to subscribe to link updates: %v", err)
+				return fmt.Errorf("failed to subscribe to link updates: %w", err)
 			}
 		case "neigh":
 			singleOptionSelected = true
 			if err := netlink.NeighSubscribe(neighUpdates, done); err != nil {
-				return fmt.Errorf("failed to subscribe to neigh updates: %v", err)
+				return fmt.Errorf("failed to subscribe to neigh updates: %w", err)
 			}
 		case "route":
 			singleOptionSelected = true
 			if err := netlink.RouteSubscribe(routeUpdates, done); err != nil {
-				return fmt.Errorf("failed to subscribe to route updates: %v", err)
+				return fmt.Errorf("failed to subscribe to route updates: %w", err)
 			}
 		case "label":
 			addressLabel = "[ADDR]"
@@ -89,7 +90,7 @@ func (cmd *cmd) monitor() error {
 		case "mroute", "netconf", "nexthop", "nsid", "prefix", "rule":
 			return fmt.Errorf("monitoring %s is not yet supported", cmd.currentToken())
 		case "help":
-			fmt.Fprint(cmd.Out, tunnelHelp)
+			fmt.Fprint(cmd.Out, monitorHelp)
 			return nil
 		default:
 			return cmd.usage()
@@ -100,16 +101,16 @@ func (cmd *cmd) monitor() error {
 	// if either the all option was selected or no option was selected, subscribe to all
 	if !singleOptionSelected {
 		if err := netlink.AddrSubscribe(addrUpdates, done); err != nil {
-			return fmt.Errorf("failed to subscribe to address updates: %v", err)
+			return fmt.Errorf("failed to subscribe to address updates: %w", err)
 		}
 		if err := netlink.LinkSubscribe(linkUpdates, done); err != nil {
-			return fmt.Errorf("failed to subscribe to link updates: %v", err)
+			return fmt.Errorf("failed to subscribe to link updates: %w", err)
 		}
 		if err := netlink.NeighSubscribe(neighUpdates, done); err != nil {
-			return fmt.Errorf("failed to subscribe to neigh updates: %v", err)
+			return fmt.Errorf("failed to subscribe to neigh updates: %w", err)
 		}
 		if err := netlink.RouteSubscribe(routeUpdates, done); err != nil {
-			return fmt.Errorf("failed to subscribe to route updates: %v", err)
+			return fmt.Errorf("failed to subscribe to route updates: %w", err)
 		}
 	}
 
@@ -134,7 +135,7 @@ func (cmd *cmd) printUpdates(addrUpdates chan netlink.AddrUpdate, linkUpdates ch
 
 			link, err := netlink.LinkByIndex(update.LinkIndex)
 			if err != nil {
-				return fmt.Errorf("failed to get link by index %d: %v", update.LinkIndex, err)
+				return fmt.Errorf("failed to get link by index %d: %w", update.LinkIndex, err)
 			}
 
 			var action string
@@ -166,7 +167,7 @@ func (cmd *cmd) printUpdates(addrUpdates chan netlink.AddrUpdate, linkUpdates ch
 
 			link, err := netlink.LinkByIndex(update.Neigh.LinkIndex)
 			if err != nil {
-				return fmt.Errorf("failed to get link by index %d: %v", update.Neigh.LinkIndex, err)
+				return fmt.Errorf("failed to get link by index %d: %w", update.Neigh.LinkIndex, err)
 			}
 
 			fmt.Fprintf(cmd.Out, "%s%s%s%s dev %v lladdr %s %v\n", timestamp, neighLabel, action, update.Neigh.IP, link.Attrs().Name, update.Neigh.HardwareAddr.String(), neighStateToString(update.Neigh.State))
@@ -182,7 +183,7 @@ func (cmd *cmd) printUpdates(addrUpdates chan netlink.AddrUpdate, linkUpdates ch
 
 			link, err := netlink.LinkByIndex(update.Route.LinkIndex)
 			if err != nil {
-				return fmt.Errorf("failed to get link by index %d: %v", update.Route.LinkIndex, err)
+				return fmt.Errorf("failed to get link by index %d: %w", update.Route.LinkIndex, err)
 			}
 
 			fmt.Fprintf(cmd.Out, "%s%s%s %s dev %s table %d proto %s scope %s src %s\n", timestamp, routeLabel, action, update.Route.Dst, link.Attrs().Name, update.Route.Table, update.Route.Protocol.String(), update.Route.Scope.String(), update.Route.Src)

@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // nohup – invoke a utility immune to hangups.
 //
@@ -73,12 +74,12 @@ func run(args []string) error {
 
 	err := cmd.Start()
 	if err != nil {
-		return fmt.Errorf("%s: %w: %v", cmdName, errStart, err)
+		return fmt.Errorf("%s: %w: %w", cmdName, errStart, err)
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		return fmt.Errorf("%s: %w: %v", cmdName, errFinish, err)
+		return fmt.Errorf("%s: %w: %w", cmdName, errFinish, err)
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -13,7 +14,8 @@ import (
 
 const tcpMetricsHelp = `Usage:	ip tcp_metrics/tcpmetrics { COMMAND | help }
 	ip tcp_metrics show SELECTOR
-SELECTOR := [ [ address ] PREFIX ]`
+SELECTOR := [ [ address ] PREFIX ]
+`
 
 func (cmd *cmd) tcpMetrics() error {
 	if !cmd.tokenRemains() {
@@ -42,13 +44,32 @@ func (cmd *cmd) tcpMetrics() error {
 }
 
 func (cmd *cmd) showTCPMetrics(address net.IP) error {
+	var (
+		resp []*netlink.InetDiagTCPInfoResp
+		err  error
+	)
+
 	if cmd.Family > 255 || cmd.Family < 0 {
 		return fmt.Errorf("invalid protocol family %v", cmd.Family)
 	}
 
-	resp, err := netlink.SocketDiagTCPInfo(uint8(cmd.Family))
-	if err != nil {
-		return err
+	if cmd.Family == netlink.FAMILY_ALL {
+		responseIP4, err := netlink.SocketDiagTCPInfo(uint8(netlink.FAMILY_V4))
+		if err != nil {
+			return fmt.Errorf("failed to get TCP metrics: %w", err)
+		}
+
+		responseIP6, err := netlink.SocketDiagTCPInfo(uint8(netlink.FAMILY_V6))
+		if err != nil {
+			return fmt.Errorf("failed to get TCP metrics: %w", err)
+		}
+
+		resp = append(responseIP4, responseIP6...)
+	} else {
+		resp, err = netlink.SocketDiagTCPInfo(uint8(cmd.Family))
+		if err != nil {
+			return fmt.Errorf("failed to get TCP metrics: %w", err)
+		}
 	}
 
 	cmd.printTCPMetrics(resp, address)

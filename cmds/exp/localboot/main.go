@@ -1,6 +1,7 @@
 // Copyright 2017-2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -189,7 +190,7 @@ func BootPathMode(devices block.BlockDevices, baseMountpoint string, guid string
 		log.Printf("Dry-run, will not actually boot")
 	} else {
 		if err := cfg.Boot(); err != nil {
-			return fmt.Errorf("failed to boot kernel %s: %v", cfg.Kernel, err)
+			return fmt.Errorf("failed to boot kernel %s: %w", cfg.Kernel, err)
 		}
 	}
 	return nil

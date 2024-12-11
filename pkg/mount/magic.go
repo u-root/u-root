@@ -100,10 +100,11 @@ var (
 )
 
 type magic struct {
-	magic []byte
-	off   int64
-	name  string
-	flags uintptr
+	magic    []byte
+	off      int64
+	name     string
+	flags    uintptr
+	magicInt int64
 }
 
 // magics is just a list of magic structs.
@@ -118,56 +119,56 @@ type magic struct {
 var magics = []magic{
 	// From the filesystems magic:
 	// 0x438   leshort         0xEF53          Linux
-	{magic: EXT4, name: "ext4", off: 0x438},
-	{magic: EXT3, name: "ext3", off: 0x438},
-	{magic: EXT2, name: "ext2", off: 0x438},
+	{magic: EXT4, name: "ext4", off: 0x438, magicInt: unix.EXT4_SUPER_MAGIC},
+	{magic: EXT3, name: "ext3", off: 0x438, magicInt: unix.EXT3_SUPER_MAGIC},
+	{magic: EXT2, name: "ext2", off: 0x438, magicInt: unix.EXT2_SUPER_MAGIC},
 	// We will always mount vfat; it's backward compatible (we think?)
-	{magic: MSDOS, name: "vfat", off: 0},
-	{magic: SQUASHFS, name: "squashfs", flags: MS_RDONLY, off: 0},
-	{magic: ISOFS, name: "iso9660", flags: MS_RDONLY, off: 32768},
+	{magic: MSDOS, name: "vfat", off: 0, magicInt: unix.MSDOS_SUPER_MAGIC},
+	{magic: SQUASHFS, name: "squashfs", flags: MS_RDONLY, off: 0, magicInt: unix.SQUASHFS_MAGIC},
+	{magic: ISOFS, name: "iso9660", flags: MS_RDONLY, off: 32768, magicInt: unix.ISOFS_SUPER_MAGIC},
 	{magic: VFAT, name: "vfat", off: 0},
 	{magic: VVFAT, name: "vfat", off: 0},
-	{magic: XFS, name: "xfs", off: 0},
-	{magic: BTRFS, name: "btrfs", off: 0x10040},
+	{magic: XFS, name: "xfs", off: 0, magicInt: unix.XFS_SUPER_MAGIC},
+	{magic: BTRFS, name: "btrfs", off: 0x10040, magicInt: unix.BTRFS_SUPER_MAGIC},
 }
 
 var unknownMagics = []magic{
 	//
 	// here there be dragons.
 	//
-	{magic: V9FS, name: "9p", off: -1},
-	{magic: ADFS, name: "adfs", off: -1},
-	{magic: AFFS, name: "affs", off: -1},
-	{magic: SMB, name: "cifs", off: -1},
+	{magic: V9FS, name: "9p", off: -1, magicInt: unix.V9FS_MAGIC},
+	{magic: ADFS, name: "adfs", off: -1, magicInt: unix.ADFS_SUPER_MAGIC},
+	{magic: AFFS, name: "affs", off: -1, magicInt: unix.AFFS_SUPER_MAGIC},
+	{magic: SMB, name: "cifs", off: -1, magicInt: unix.CIFS_SUPER_MAGIC},
 	{magic: SMB, name: "smb3", off: -1},
-	{magic: CODA, name: "coda", off: -1},
-	{magic: DEVPTS, name: "devpts", off: -1},
-	{magic: ECRYPTFS, name: "ecryptfs", off: -1},
-	{magic: EFIVARFS, name: "efivarfs", off: -1},
-	{magic: EFS, name: "efs", off: -1},
-	{magic: F2FS, name: "f2fs", off: -1},
-	{magic: FUSE, name: "fuse", off: -1},
+	{magic: CODA, name: "coda", off: -1, magicInt: unix.CODA_SUPER_MAGIC},
+	{magic: DEVPTS, name: "devpts", off: -1, magicInt: unix.DEVPTS_SUPER_MAGIC},
+	{magic: ECRYPTFS, name: "ecryptfs", off: -1, magicInt: unix.ECRYPTFS_SUPER_MAGIC},
+	{magic: EFIVARFS, name: "efivarfs", off: -1, magicInt: unix.EFIVARFS_MAGIC},
+	{magic: EFS, name: "efs", off: -1, magicInt: unix.EFS_SUPER_MAGIC},
+	{magic: F2FS, name: "f2fs", off: -1, magicInt: unix.F2FS_SUPER_MAGIC},
+	{magic: FUSE, name: "fuse", off: -1, magicInt: unix.FUSE_SUPER_MAGIC},
 	// ?? {magic: GFS2, name: "gfs2", off: -1},
 	// who care ... {magic: HFSPLUS_VOLHEAD_SIG, name: "hfsplus", off: -1},
-	{magic: HOSTFS, name: "hostfs", off: -1},
-	{magic: HPFS, name: "hpfs", off: -1},
-	{magic: HUGETLBFS, name: "hugetlbfs", off: -1},
-	{magic: JFFS2, name: "jffs2", off: -1},
+	{magic: HOSTFS, name: "hostfs", off: -1, magicInt: unix.HOSTFS_SUPER_MAGIC},
+	{magic: HPFS, name: "hpfs", off: -1, magicInt: unix.HPFS_SUPER_MAGIC},
+	{magic: HUGETLBFS, name: "hugetlbfs", off: -1, magicInt: unix.HUGETLBFS_MAGIC},
+	{magic: JFFS2, name: "jffs2", off: -1, magicInt: unix.JFFS2_SUPER_MAGIC},
 	{magic: JFS, name: "jfs", off: -1},
-	{magic: NFS, name: "nfs", off: -1},
+	{magic: NFS, name: "nfs", off: -1, magicInt: unix.NFS_SUPER_MAGIC},
 	{magic: NTFS, name: "ntfs", off: -1},
-	{magic: OPENPROM, name: "openpromfs", off: -1},
-	{magic: OVERLAYFS, name: "overlay", off: -1},
-	{magic: PIPEFS, name: "pipefs", off: -1},
-	{magic: PROC, name: "proc", flags: MS_RDONLY, off: -1},
-	{magic: PSTOREFS, name: "pstore", off: -1},
-	{magic: QNX4, name: "qnx4", off: -1},
-	{magic: QNX6, name: "qnx6", off: -1},
-	{magic: RAMFS, name: "ramfs", off: -1},
+	{magic: OPENPROM, name: "openpromfs", off: -1, magicInt: unix.OPENPROM_SUPER_MAGIC},
+	{magic: OVERLAYFS, name: "overlay", off: -1, magicInt: unix.OVERLAYFS_SUPER_MAGIC},
+	{magic: PIPEFS, name: "pipefs", off: -1, magicInt: unix.PIPEFS_MAGIC},
+	{magic: PROC, name: "proc", flags: MS_RDONLY, off: -1, magicInt: unix.PROC_SUPER_MAGIC},
+	{magic: PSTOREFS, name: "pstore", off: -1, magicInt: unix.PSTOREFS_MAGIC},
+	{magic: QNX4, name: "qnx4", off: -1, magicInt: unix.QNX4_SUPER_MAGIC},
+	{magic: QNX6, name: "qnx6", off: -1, magicInt: unix.QNX6_SUPER_MAGIC},
+	{magic: RAMFS, name: "ramfs", off: -1, magicInt: unix.RAMFS_MAGIC},
 	{magic: ROMFS, name: "romfs", flags: MS_RDONLY, off: -1},
 	{magic: UBIFS, name: "ubifs", flags: MS_RDONLY, off: -1},
-	{magic: UDF, name: "udf", off: -1},
-	{magic: ZONEFS, name: "zonefs", off: -1},
+	{magic: UDF, name: "udf", off: -1, magicInt: unix.UDF_SUPER_MAGIC},
+	{magic: ZONEFS, name: "zonefs", off: -1, magicInt: unix.ZONEFS_MAGIC},
 }
 
 // FindMagics finds all the magics matching a magic number.
@@ -202,7 +203,7 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 	defer f.Close()
 	block := make([]byte, blocksize*2)
 	if _, err := io.ReadAtLeast(f, block, len(block)); err != nil {
-		return "", 0, fmt.Errorf("no suitable filesystem for %q: %v", n, err)
+		return "", 0, fmt.Errorf("no suitable filesystem for %q: %w", n, err)
 	}
 
 	magics := FindMagics(block)
@@ -216,6 +217,26 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 		}
 	}
 	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", n, magics)
+}
+
+func FromStatFS(path string) (fs string, flags uintptr, err error) {
+	var s unix.Statfs_t
+	if err := unix.Statfs(path, &s); err != nil {
+		return "", 0, fmt.Errorf("statfs %s: %w", path, err)
+	}
+
+	for _, m := range magics {
+		if m.magicInt == int64(s.Type) {
+			return m.name, m.flags, nil
+		}
+	}
+
+	for _, m := range unknownMagics {
+		if m.magicInt == int64(s.Type) {
+			return m.name, m.flags, nil
+		}
+	}
+	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", path, magics)
 }
 
 // IsTmpRamfs tells if the file path given is under a tmpfs or ramfs.

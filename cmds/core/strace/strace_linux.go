@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !tinygo && linux && (amd64 || riscv64 || arm64)
+//go:build (!tinygo || tinygo.enable) && linux && (amd64 || riscv64 || arm64)
 
 // strace is a simple multi-process syscall & signal tracer.
 //
 // Synopsis:
 //
-//	strace <command> [args...]
+//	strace [-o output_file] <command> [args...]
 //
 // Description:
 //
-//	trace a single process given a command name.
+//	trace a single process and its children given a command name.
 package main
 
 import (
@@ -43,6 +43,7 @@ func run(stdin io.Reader, stdout, stderr io.Writer, p params, args ...string) er
 
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin, c.Stdout, c.Stderr = stdin, stdout, stderr
+	output := c.Stderr
 
 	if p.output != "" {
 		f, err := os.Create(p.output)
@@ -50,14 +51,14 @@ func run(stdin io.Reader, stdout, stderr io.Writer, p params, args ...string) er
 			return fmt.Errorf("creating output file: %s: %w", p.output, err)
 		}
 		defer f.Close()
-		c.Stderr = f
+		output = f
 	}
 
-	return strace.Strace(c, c.Stderr)
+	return strace.Strace(c, output)
 }
 
 func main() {
-	output := flag.String("o", "", "write output to file (if empty, stdout)")
+	output := flag.String("o", "", "write output to file (if empty, stderr)")
 	flag.Parse()
 
 	if err := run(os.Stdin, os.Stdout, os.Stderr, params{output: *output}, flag.Args()...); err != nil {

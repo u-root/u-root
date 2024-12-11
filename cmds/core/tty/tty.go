@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9
+//go:build !plan9 && !windows
 
 package main
 
@@ -29,7 +29,11 @@ func run(stdout io.Writer) error {
 	return filepath.WalkDir("/dev", func(path string, dir os.DirEntry, _ error) error {
 		switch path {
 		case "/dev/fd":
-			return filepath.SkipDir
+			// On some systems, /dev/fd is a directory. On Linux, /dev/fd is a symlink.
+			// If /dev/fd is a directory, it should not be walked, so return file path.SkipDir.
+			if dir.IsDir() {
+				return filepath.SkipDir
+			}
 		case "/dev/stdin", "/dev/stdout", "/dev/stderr":
 			return nil
 		}

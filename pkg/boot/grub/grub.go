@@ -282,11 +282,11 @@ func newParser(root *url.URL, devices block.BlockDevices, mountPool *mount.Pool,
 func parseURL(surl string, root string) (*url.URL, error) {
 	u, err := url.Parse(surl)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", surl, err)
+		return nil, fmt.Errorf("could not parse URL %q: %w", surl, err)
 	}
 	ru, err := url.Parse(root)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse URL %q: %v", root, err)
+		return nil, fmt.Errorf("could not parse URL %q: %w", root, err)
 	}
 
 	if len(u.Scheme) == 0 {

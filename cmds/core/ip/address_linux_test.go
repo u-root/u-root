@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -118,7 +119,6 @@ func TestParseAddrShow(t *testing.T) {
 				Args:   []string{"ip", "addr", "show"},
 				Out:    new(bytes.Buffer),
 			},
-			wantErr: true,
 		},
 		{
 			name: "values",
@@ -130,6 +130,33 @@ func TestParseAddrShow(t *testing.T) {
 			dev:      "lo",
 			typeName: "bridge",
 		},
+		{
+			name: "fail on dev",
+			cmd: cmd{
+				Cursor: 2,
+				Args:   []string{"ip", "addr", "show", "deva"},
+				Out:    new(bytes.Buffer),
+			},
+			wantErr: true,
+		},
+		{
+			name: "fail on double dev",
+			cmd: cmd{
+				Cursor: 2,
+				Args:   []string{"ip", "addr", "show", "dev", "lo", "123"},
+				Out:    new(bytes.Buffer),
+			},
+			wantErr: true,
+		},
+		{
+			name: "fail on second dev",
+			cmd: cmd{
+				Cursor: 2,
+				Args:   []string{"ip", "addr", "show", "dev", "lo", "dev", "lo2"},
+				Out:    new(bytes.Buffer),
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -139,7 +166,7 @@ func TestParseAddrShow(t *testing.T) {
 				t.Errorf("parseAddrShow() error = %v, wantErr %t", err, tt.wantErr)
 			}
 
-			if !tt.wantErr {
+			if !tt.wantErr && link != nil {
 				if link.Attrs().Name != tt.dev {
 					t.Errorf("link.Name = %v, want %s", link.Attrs().Name, tt.dev)
 				}

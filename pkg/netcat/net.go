@@ -34,12 +34,12 @@ func NewUDPListener(network, addr string, _ ulog.Logger) (*UDPListener, error) {
 	case "unixgram":
 		unixgramAddr, err := net.ResolveUnixAddr(network, addr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve Unixgram address: %v", err)
+			return nil, fmt.Errorf("failed to resolve Unixgram address: %w", err)
 		}
 
 		conn, err = net.ListenUnixgram(network, unixgramAddr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to listen on Unixgram address: %v", err)
+			return nil, fmt.Errorf("failed to listen on Unixgram address: %w", err)
 		}
 	}
 	return &UDPListener{conn: conn}, nil

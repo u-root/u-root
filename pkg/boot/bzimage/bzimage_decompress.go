@@ -138,7 +138,7 @@ func unxz(w io.Writer, r io.Reader) error {
 	}
 
 	if _, err := io.Copy(w, unxzReader); err != nil {
-		return fmt.Errorf("failed writing decompressed bytes to writer: %v", err)
+		return fmt.Errorf("failed writing decompressed bytes to writer: %w", err)
 	}
 	return nil
 }

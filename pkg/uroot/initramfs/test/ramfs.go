@@ -53,7 +53,7 @@ func (hc HasContent) Validate(a *cpio.Archive) error {
 		return fmt.Errorf("archive does not contain %s, but should", hc.Path)
 	}
 	if c, err := uio.ReadAll(r); err != nil {
-		return fmt.Errorf("reading record %s failed: %v", hc.Path, err)
+		return fmt.Errorf("reading record %s failed: %w", hc.Path, err)
 	} else if string(c) != hc.Content {
 		return fmt.Errorf("content of %s is %s, want %s", hc.Path, string(c), hc.Content)
 	}

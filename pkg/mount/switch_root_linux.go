@@ -174,12 +174,12 @@ func SwitchRoot(newRootDir string, init string) error {
 func newRoot(newRootDir string) error {
 	log.Printf("switch_root: moving mounts")
 	if err := addSpecialMounts(newRootDir); err != nil {
-		return fmt.Errorf("switch_root: moving mounts failed %v", err)
+		return fmt.Errorf("switch_root: moving mounts failed %w", err)
 	}
 
 	log.Printf("switch_root: Changing directory")
 	if err := unix.Chdir(newRootDir); err != nil {
-		return fmt.Errorf("switch_root: failed change directory to new_root %v", err)
+		return fmt.Errorf("switch_root: failed change directory to new_root %w", err)
 	}
 
 	// Open "/" now, we need the file descriptor later.
@@ -196,7 +196,7 @@ func newRoot(newRootDir string) error {
 
 	log.Printf("switch_root: Changing root!")
 	if err := unix.Chroot("."); err != nil {
-		return fmt.Errorf("switch_root: fatal chroot error %v", err)
+		return fmt.Errorf("switch_root: fatal chroot error %w", err)
 	}
 
 	log.Printf("switch_root: Deleting old /")
@@ -209,7 +209,7 @@ func newRoot(newRootDir string) error {
 func execInit(init string) error {
 	log.Printf("switch_root: executing init")
 	if err := unix.Exec(init, []string{init}, []string{}); err != nil {
-		return fmt.Errorf("switch_root: exec failed %v", err)
+		return fmt.Errorf("switch_root: exec failed %w", err)
 	}
 	return nil
 }

@@ -87,8 +87,8 @@ github.com/cloudflare/circl/sign/ed448
 # github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/creack/pty v1.1.21
-## explicit; go 1.13
+# github.com/creack/pty v1.1.24
+## explicit; go 1.18
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
@@ -96,6 +96,11 @@ github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.1
 ## explicit; go 1.16
 github.com/dustin/go-humanize
+# github.com/florianl/go-tc v0.4.5-0.20240822175159-7926c32f7299
+## explicit; go 1.13
+github.com/florianl/go-tc
+github.com/florianl/go-tc/core
+github.com/florianl/go-tc/internal/unix
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
@@ -117,8 +122,8 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-tpm v0.9.1-0.20230914180155-ee6cbcd136f8
-## explicit; go 1.20
+# github.com/google/go-tpm v0.9.2-0.20240919181259-d96ccf715685
+## explicit; go 1.22
 github.com/google/go-tpm/legacy/tpm2
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
@@ -168,9 +173,6 @@ github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
 github.com/insomniacslk/dhcp/netboot
 github.com/insomniacslk/dhcp/rfc1035label
-# github.com/intel-go/cpuid v0.0.0-20200819041909-2aa72927c3e2
-## explicit
-github.com/intel-go/cpuid
 # github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 ## explicit; go 1.12
 github.com/ishidawataru/sctp
@@ -253,8 +255,8 @@ github.com/mdlayher/netlink/nlenc
 # github.com/mdlayher/packet v1.1.2
 ## explicit; go 1.20
 github.com/mdlayher/packet
-# github.com/mdlayher/socket v0.5.0
-## explicit; go 1.21
+# github.com/mdlayher/socket v0.5.1
+## explicit; go 1.20
 github.com/mdlayher/socket
 # github.com/mdlayher/vsock v1.2.1
 ## explicit; go 1.20
@@ -334,7 +336,10 @@ github.com/tklauser/go-sysconf
 # github.com/tklauser/numcpus v0.8.0
 ## explicit; go 1.18
 github.com/tklauser/numcpus
-# github.com/u-root/gobusybox/src v0.0.0-20240225013946-a274a8d5d83a
+# github.com/u-root/cpuid v0.0.0
+## explicit
+github.com/u-root/cpuid
+# github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49
 ## explicit; go 1.20
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
@@ -344,7 +349,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/mkuimage v0.0.0-20240225063926-11a3bcc79c2a
+# github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89
 ## explicit; go 1.21
 github.com/u-root/mkuimage/cpio
 github.com/u-root/mkuimage/cpio/internal/upath
@@ -382,13 +387,12 @@ github.com/vtolstov/go-ioctl
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.23.0
-## explicit; go 1.18
+# golang.org/x/crypto v0.29.0
+## explicit; go 1.20
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
-golang.org/x/crypto/curve25519/internal/field
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
@@ -400,12 +404,12 @@ golang.org/x/crypto/ssh/knownhosts
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
-# golang.org/x/mod v0.15.0
-## explicit; go 1.18
+# golang.org/x/mod v0.22.0
+## explicit; go 1.22.0
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.25.0
+# golang.org/x/net v0.31.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/icmp
@@ -415,19 +419,19 @@ golang.org/x/net/internal/socks
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
-# golang.org/x/sync v0.6.0
+# golang.org/x/sync v0.9.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.20.0
+# golang.org/x/sys v0.27.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.20.0
+# golang.org/x/term v0.26.0
 ## explicit; go 1.18
 golang.org/x/term
-# golang.org/x/text v0.15.0
+# golang.org/x/text v0.20.0
 ## explicit; go 1.18
 golang.org/x/text/feature/plural
 golang.org/x/text/internal
@@ -443,26 +447,26 @@ golang.org/x/text/message
 golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.18.0
-## explicit; go 1.18
+# golang.org/x/tools v0.27.0
+## explicit; go 1.22.0
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/imports
+golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
 golang.org/x/tools/internal/event/label
-golang.org/x/tools/internal/event/tag
 golang.org/x/tools/internal/gcimporter
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/pkgbits
-golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
@@ -475,8 +479,8 @@ gopkg.in/yaml.v3
 # howett.net/plist v1.0.0
 ## explicit; go 1.12
 howett.net/plist
-# mvdan.cc/sh/v3 v3.7.0
-## explicit; go 1.19
+# mvdan.cc/sh/v3 v3.10.1-0.20241129174306-6042a7fe4e04
+## explicit; go 1.22.0
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/interp

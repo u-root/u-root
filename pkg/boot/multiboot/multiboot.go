@@ -58,7 +58,7 @@ type multiboot struct {
 	bootloader string
 
 	// trampoline is a path to an executable blob, which contains a trampoline segment.
-	// Trampoline sets machine to a specific state defined by multiboot v1 spec.
+	// The trampoline sets the machine to a specific state defined by multiboot v1 spec.
 	// https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state.
 	trampoline string
 
@@ -146,11 +146,11 @@ func newMB(kernel io.ReaderAt, cmdLine string, modules []Module) (*multiboot, er
 	// Trampoline should be a part of current binary.
 	p, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("cannot find current executable path: %v", err)
+		return nil, fmt.Errorf("cannot find current executable path: %w", err)
 	}
 	trampoline, err := filepath.EvalSymlinks(p)
 	if err != nil {
-		return nil, fmt.Errorf("cannot eval symlinks for %v: %v", p, err)
+		return nil, fmt.Errorf("cannot eval symlinks for %v: %w", p, err)
 	}
 
 	return &multiboot{
@@ -178,7 +178,7 @@ func Load(debug bool, kernel io.ReaderAt, cmdline string, modules []Module, ibft
 		return err
 	}
 	if err := kexec.Load(entryPoint, segments, 0); err != nil {
-		return fmt.Errorf("kexec.Load() error: %v", err)
+		return fmt.Errorf("kexec.Load() error: %w", err)
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func OpenModules(cmds []string) (Modules, error) {
 		f, err := os.Open(name)
 		if err != nil {
 			// TODO close already open files
-			return nil, fmt.Errorf("error opening module %v: %v", name, err)
+			return nil, fmt.Errorf("error opening module %v: %w", name, err)
 		}
 		modules[i].Module = f
 	}
@@ -272,26 +272,26 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		header = esxBootInfoHeader
 	}
 	if err != nil {
-		return fmt.Errorf("error parsing headers: %v", err)
+		return fmt.Errorf("error parsing headers: %w", err)
 	}
 	log.Printf("Found %s image", header.name())
 
 	log.Printf("Getting kernel entry point")
 	kernelEntry, err := getEntryPoint(m.kernel)
 	if err != nil {
-		return fmt.Errorf("error getting kernel entry point: %v", err)
+		return fmt.Errorf("error getting kernel entry point: %w", err)
 	}
 	log.Printf("Kernel entry point at %#x", kernelEntry)
 
 	log.Printf("Parsing ELF segments")
 	if _, err := m.mem.LoadElfSegments(m.kernel); err != nil {
-		return fmt.Errorf("error loading ELF segments: %v", err)
+		return fmt.Errorf("error loading ELF segments: %w", err)
 	}
 
 	log.Printf("Parsing memory map")
 	memmap, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
-		return fmt.Errorf("error parsing memory map: %v", err)
+		return fmt.Errorf("error parsing memory map: %w", err)
 	}
 	m.mem.Phys = memmap
 
@@ -308,7 +308,7 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 		}
 		r, err := m.mem.ReservePhys(uint(len(ibuf)), allowedRange)
 		if err != nil {
-			return fmt.Errorf("reserving space for the iBFT in %s failed: %v", allowedRange, err)
+			return fmt.Errorf("reserving space for the iBFT in %s failed: %w", allowedRange, err)
 		}
 		log.Printf("iBFT was allocated at %s: %#v", r, ibft)
 		m.mem.Segments.Insert(kexec.NewSegment(ibuf, r))
@@ -317,12 +317,12 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 	log.Printf("Preparing %s info", header.name())
 	infoAddr, err := header.addInfo(m)
 	if err != nil {
-		return fmt.Errorf("error preparing %s info: %v", header.name(), err)
+		return fmt.Errorf("error preparing %s info: %w", header.name(), err)
 	}
 
 	log.Printf("Adding trampoline")
 	if m.entryPoint, err = m.addTrampoline(header.bootMagic(), infoAddr, kernelEntry); err != nil {
-		return fmt.Errorf("error adding trampoline: %v", err)
+		return fmt.Errorf("error adding trampoline: %w", err)
 	}
 	log.Printf("Trampoline entry point at %#x", m.entryPoint)
 
@@ -473,13 +473,6 @@ func (m multiboot) memoryBoundaries() (lower, upper uint32) {
 	return
 }
 
-func min(a, b uint32) uint32 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 	mmapAddr, mmapSize, err := m.addMmap()
 	if err != nil {
@@ -517,7 +510,7 @@ func (h *header) newMultibootInfo(m *multiboot) (*infoWrapper, error) {
 func (m *multiboot) addTrampoline(magic, infoAddr, kernelEntry uintptr) (entry uintptr, err error) {
 	// Trampoline setups the machine registers to desired state
 	// and executes the loaded kernel.
-	d, err := trampoline.Setup(m.trampoline, magic, infoAddr, kernelEntry)
+	d, err := trampoline.Setup("", magic, infoAddr, kernelEntry)
 	if err != nil {
 		return 0, err
 	}

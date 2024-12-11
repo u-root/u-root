@@ -1,6 +1,7 @@
 // Copyright 2009 The Go Authors.  All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // Send icmp packets to a server to test network connectivity.
 //
@@ -62,7 +63,7 @@ func command(stdin io.Writer, p params) (*cmd, error) {
 	}
 	conn, err := icmp.ListenPacket(netname, address)
 	if err != nil {
-		return nil, fmt.Errorf("can't setup %s socket on %s: %v", netname, address, err)
+		return nil, fmt.Errorf("can't setup %s socket on %s: %w", netname, address, err)
 	}
 
 	return &cmd{stdin, conn, p}, nil
@@ -81,7 +82,7 @@ func (c *cmd) run() error {
 
 	addr, err := net.ResolveIPAddr(network, c.host)
 	if err != nil {
-		return fmt.Errorf("failed to resolve address: %v", err)
+		return fmt.Errorf("failed to resolve address: %w", err)
 	}
 
 	interval := time.Duration(c.intv)
@@ -89,7 +90,7 @@ func (c *cmd) run() error {
 	for i := uint64(0); i < c.iter; i++ {
 		msg, err := c.ping(addr, i+1, waitFor)
 		if err != nil {
-			return fmt.Errorf("ping failed: %v", err)
+			return fmt.Errorf("ping failed: %w", err)
 		}
 		if c.audible {
 			msg = "\a" + msg
@@ -116,19 +117,19 @@ func (c *cmd) ping(addr *net.IPAddr, i uint64, waitFor time.Duration) (string, e
 	}
 	wb, err := wm.Marshal(nil)
 	if err != nil {
-		return "", fmt.Errorf("icmp.Message.Marshal failed: %v", err)
+		return "", fmt.Errorf("icmp.Message.Marshal failed: %w", err)
 	}
 
 	startTime := time.Now()
 	_, err = c.conn.WriteTo(wb, addr)
 	if err != nil {
-		return "", fmt.Errorf("conn.Write failed: %v", err)
+		return "", fmt.Errorf("conn.Write failed: %w", err)
 	}
 
 	rb := make([]byte, 1500)
 	n, _, err := c.conn.ReadFrom(rb)
 	if err != nil {
-		return "", fmt.Errorf("conn.Read failed: %v", err)
+		return "", fmt.Errorf("conn.Read failed: %w", err)
 	}
 
 	latency := time.Since(startTime)
@@ -140,7 +141,7 @@ func (c *cmd) ping(addr *net.IPAddr, i uint64, waitFor time.Duration) (string, e
 
 	msg, err := icmp.ParseMessage(echoReplyType.Protocol(), rb[:n])
 	if err != nil {
-		return "", fmt.Errorf("icmp.ParseMessage failed: %v", err)
+		return "", fmt.Errorf("icmp.ParseMessage failed: %w", err)
 	}
 
 	echoReply, ok := msg.Body.(*icmp.Echo)

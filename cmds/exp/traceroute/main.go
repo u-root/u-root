@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -44,7 +45,7 @@ func parseFlags(args []string) (*traceroute.Flags, error) {
 
 	leftoverArgs := f.Args()
 
-	if len(leftoverArgs) > 1 {
+	if len(leftoverArgs) != 1 {
 		// Error, print help and exit
 		f.Usage()
 		return nil, errFlags

@@ -1,6 +1,7 @@
 // Copyright 2015-2018 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // kexec executes a new kernel over the running kernel (u-root).
 //
@@ -11,11 +12,11 @@
 //		 Loads a kernel for later execution.
 //
 // Options:
-//      --append string        Append to the kernel command line
-//  -c, --cmdline string       Append to the kernel command line
+//      --append string        Append to the kernel command line. Implies --reuse-cmdline
+//  -c, --cmdline string       Set the kernel command line
 //  -d, --debug                Print debug info (default true)
 //  -e, --exec                 Execute a currently loaded kernel
-//  -x, --extra string         Add a cpio containing extra files
+//  -x, --extra string         Add one or more files to the initrd
 //      --initramfs string     Use file as the kernel's initial ramdisk
 //  -i, --initrd string        Use file as the kernel's initial ramdisk
 //  -l, --load                 Load the new kernel into the current kernel
@@ -40,6 +41,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 	"github.com/u-root/u-root/pkg/boot/purgatory"
+	"github.com/u-root/u-root/pkg/boot/universalpayload"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 	"github.com/u-root/uio/uio"
@@ -49,38 +51,39 @@ type options struct {
 	kernelpath string
 
 	// Flags
-	cmdline      string
-	debug        bool
-	dtb          string
-	exec         bool
-	extra        string
-	initramfs    string
-	load         bool
-	loadSyscall  bool
-	modules      []string
-	purgatory    string
-	reuseCmdline bool
+	cmdline       string
+	appendCmdline string
+	debug         bool
+	dtb           string
+	exec          bool
+	extra         string
+	initramfs     string
+	load          bool
+	loadSyscall   bool
+	modules       []string
+	purgatory     string
+	reuseCmdline  bool
 }
 
 func (o *options) parseCmdline(args []string, f *flag.FlagSet) {
-	f.StringVar(&o.cmdline, "cmdline", "", "Append to the kernel command line")
-	f.StringVar(&o.cmdline, "c", "", "Append to the kernel command line (shorthand)")
+	f.StringVar(&o.cmdline, "cmdline", "", "Set the kernel command line")
+	f.StringVar(&o.cmdline, "c", "", "Set the kernel command line")
 
-	f.StringVar(&o.cmdline, "append", "", "Append to the kernel command line")
+	f.StringVar(&o.appendCmdline, "append", "", "Append to the kernel command line. Implies --reuse-cmdline")
 
 	f.BoolVar(&o.debug, "debug", false, "Print debug info")
-	f.BoolVar(&o.debug, "d", false, "Print debug info (shorthand)")
+	f.BoolVar(&o.debug, "d", false, "Print debug info")
 
 	f.StringVar(&o.dtb, "dtb", "", "FILE used as the flatten device tree blob")
 
 	f.BoolVar(&o.exec, "exec", false, "Execute a currently loaded kernel")
-	f.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel (shorthand)")
+	f.BoolVar(&o.exec, "e", false, "Execute a currently loaded kernel")
 
-	f.StringVar(&o.extra, "extra", "", "Add a cpio containing extra files")
-	f.StringVar(&o.extra, "x", "", "Add a cpio containing extra files")
+	f.StringVar(&o.extra, "extra", "", "Add one or more files to the initrd")
+	f.StringVar(&o.extra, "x", "", "Add one or more files to the initrd")
 
 	f.StringVar(&o.initramfs, "initrd", "", "Use file as the kernel's initial ramdisk")
-	f.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk (shorthand)")
+	f.StringVar(&o.initramfs, "i", "", "Use file as the kernel's initial ramdisk")
 
 	f.StringVar(&o.initramfs, "initramfs", "", "Use file as the kernel's initial ramdisk")
 
@@ -171,6 +174,10 @@ func run(args []string) error {
 		return fmt.Errorf("usage: kexec [fs] kernelname OR kexec -e")
 	}
 
+	if err := universalpayload.Load(opts.kernelpath); err != nil {
+		log.Printf("Failed to load universalpayload, try legacy kernel..")
+	}
+
 	if opts.cmdline != "" && opts.reuseCmdline {
 		f.PrintDefaults()
 		return fmt.Errorf("--reuse-cmdline and other command line options are mutually exclusive")
@@ -182,12 +189,12 @@ func run(args []string) error {
 	}
 
 	newCmdline := opts.cmdline
-	if opts.reuseCmdline {
+	if opts.reuseCmdline || len(opts.appendCmdline) != 0 {
 		procCmdLine := cmdline.NewCmdLine()
 		if procCmdLine.Err != nil {
 			return fmt.Errorf("couldn't read /proc/cmdline")
 		}
-		newCmdline = procCmdLine.Raw
+		newCmdline = procCmdLine.Raw + " " + opts.appendCmdline
 
 	}
 

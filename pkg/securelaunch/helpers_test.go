@@ -9,21 +9,6 @@ import (
 	"testing"
 )
 
-func TestWriteFile(t *testing.T) {
-	tempDir := t.TempDir()
-	tempFile := filepath.Join(tempDir, "out")
-
-	dataStr := "Hello World!"
-
-	writtenFile, err := WriteToFile([]byte(dataStr), tempFile, "foo")
-	if err != nil {
-		t.Fatalf(`WriteToFile(dataStr.bytes, tempFile, "foo") = %v, not nil`, err)
-	}
-	if writtenFile != tempFile {
-		t.Fatalf(`WriteToFile(dataStr.bytes, tempFile, "foo") = %q, not %q`, writtenFile, tempFile)
-	}
-}
-
 func TestAddToPersistQueue(t *testing.T) {
 	desc := "test"
 

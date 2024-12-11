@@ -1,6 +1,7 @@
 // Copyright 2012 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
@@ -113,7 +114,7 @@ func clonetree(tree string) error {
 		debug("Need to symlink %v to %v\n", path, path[lt:])
 
 		if err := os.Symlink(path, path[lt:]); err != nil {
-			return fmt.Errorf("symlink: %v", err)
+			return fmt.Errorf("symlink: %w", err)
 		}
 
 		return nil

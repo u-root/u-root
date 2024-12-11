@@ -144,7 +144,7 @@ func (b *Builder) Parse(file string) error {
 func (b *Builder) buildNS(ns Namespace) error {
 	for _, c := range b.file {
 		if err := c.Modify(ns, b); err != nil {
-			return fmt.Errorf("newns failed to perform %s failed: %v", c, err)
+			return fmt.Errorf("newns failed to perform %s failed: %w", c, err)
 		}
 	}
 	return nil

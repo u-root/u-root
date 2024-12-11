@@ -1,6 +1,8 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
+
 package main
 
 import (
@@ -84,7 +86,7 @@ func TestParseFlags(t *testing.T) {
 			}
 
 			if !tt.expectedErr {
-				if diff := cmp.Diff(tt.expectedCmd, cmd, cmpopts.IgnoreFields(cmd, "Out")); diff != "" {
+				if diff := cmp.Diff(tt.expectedCmd, cmd, cmpopts.IgnoreFields(cmd, "Out", "usage")); diff != "" {
 					t.Errorf("parseFlags() mismatch (-want +got):\n%s", diff)
 				}
 			}
@@ -130,6 +132,21 @@ func TestProcessPacket(t *testing.T) {
 			lastPkgTimeStamp: time.Now(),
 			opts:             flags{Quiet: true, Device: "eth0", Numerical: true},
 			expectedOutput:   "00:00:00.000000 IPv4 eth0 192.168.0.104.80 > 192.168.0.1.80: TCP, length 0\n",
+		},
+		{
+			name: "IPv4 TCP packet with ASCII flag",
+			packetData: []byte{
+				// Ethernet header
+				0x00, 0x1c, 0x42, 0x00, 0x00, 0x08, 0x00, 0x1c, 0x42, 0x00, 0x00, 0x01, 0x08, 0x00,
+				// IPv4 header
+				0x45, 0x00, 0x00, 0x3c, 0x1c, 0x46, 0x40, 0x00, 0x40, 0x06, 0xb1, 0xe6, 0xc0, 0xa8, 0x00, 0x68, 0xc0, 0xa8, 0x00, 0x01,
+				// TCP header
+				0x00, 0x50, 0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x02, 0x20, 0x00, 0x91, 0x7c, 0x00, 0x00,
+			},
+			num:              1,
+			lastPkgTimeStamp: time.Now(),
+			opts:             flags{ASCII: true, Device: "eth0", Numerical: true},
+			expectedOutput:   "00:00:00.000000 IPv4 eth0 192.168.0.104.80 > 192.168.0.1.80: Flags [S], seq 0, ack 0, win 8192, options [], length 0\n\n",
 		},
 		{
 			name: "IPv4 UDP packet",

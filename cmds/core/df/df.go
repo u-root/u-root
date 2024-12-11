@@ -132,7 +132,7 @@ func diskUsage(mnt *mount) error {
 	mnt.Blocks = fs.Blocks * uint64(fs.Bsize) / units
 	mnt.Bsize = int64(fs.Bsize)
 	mnt.Total = fs.Blocks * uint64(fs.Bsize) / units
-	mnt.Avail = fs.Bavail * uint64(fs.Bsize) / units
+	mnt.Avail = uint64(fs.Bavail) * uint64(fs.Bsize) / units
 	mnt.Used = (fs.Blocks - fs.Bfree) * uint64(fs.Bsize) / units
 	pct := float64((fs.Blocks - fs.Bfree)) * 100 / float64(fs.Blocks)
 	mnt.PCT = uint8(math.Ceil(pct))
@@ -174,7 +174,7 @@ func df(w io.Writer, fargs flags, args []string) error {
 	}
 	mounts, err := mountinfo()
 	if err != nil {
-		return fmt.Errorf("mountinfo()=_,%q, want: _,nil", err)
+		return fmt.Errorf("mountinfo()=_,%w, want: _,nil", err)
 	}
 	blocksize := "1K"
 	if fargs.m {

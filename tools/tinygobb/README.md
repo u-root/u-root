@@ -1,185 +1,208 @@
-# Status of tinygo in u-root
+# Status of u-root + tinygo
+This document aims to track the progress of building all u-root commands
+with tinygo. It will be updated as more commands can be built.
 
-Currently, many of the busybox commands fail to build using tinygo.
-This document aims to cover the current process of enabling all subcommands to be built using tinygo.
-While enabling more and more commands the list of working commands in this document will be updated.
+Commands that cannot be built with tinygo have a \"(!tinygo || tinygo.enable)\"
+build constraint. Specify the "tinygo.enable" build tag to (attempt to) build
+them.
 
-## building
-Since currently the tinygo support is lacking, many commands got the `!tinygo` build tag.
-This prohibits building, so anyone recreating the build steps should be aware that this has to be removed for each command.
-The list below is the result of building each subcommand individually for x86_64 linux.
+    tinygo build -tags tinygo.enable cmds/core/ls
 
-The neccessary additions to tinygo will be tracked in the according issue that this document is based on [#2979](https://github.com/u-root/u-root/issues/2979).
+Some commands require additional tags to be built. The required tags are listed
+below, e.g. `cmds/core/init` and others require `-tags noasm`.
 
-## command list
-### core
-40 tinygo build errors found.
+The list below is the result of building each command for Linux, x86_64 with
+tinygo version 0.33.0.
 
- - [ ] `bind`
- - [ ] `dhclient`
- - [ ] `dmesg`
- - [ ] `fusermount`
- - [ ] `gosh`
- - [ ] `gpgv`
- - [ ] `gzip`
- - [ ] `hostname`
- - [ ] `hwclock`
- - [ ] `init`
- - [ ] `insmod`
- - [ ] `ip`
- - [ ] `kexec`
- - [ ] `lockmsrs`
- - [ ] `losetup`
- - [ ] `mkfifo`
- - [ ] `mknod`
- - [ ] `mount`
- - [ ] `msr`
- - [ ] `netcat`
- - [ ] `ntpdate`
- - [ ] `ping`
- - [ ] `poweroff`
- - [ ] `rmmod`
- - [ ] `shutdown`
- - [ ] `sluinit`
- - [ ] `sshd`
- - [ ] `strace`
- - [ ] `stty`
- - [ ] `switch_root`
- - [ ] `tee`
- - [ ] `truncate`
- - [ ] `umount`
- - [ ] `uname`
- - [ ] `watchdog`
- - [ ] `watchdogd`
- - [ ] `wget`
- - [ ] `which`
- - [ ] `nohup`
+The necessary additions to tinygo will be tracked in
+[#2979](https://github.com/u-root/u-root/issues/2979).
 
-65 cmds build successful
-- [x] `backoff`
-- [x] `base64`
-- [x] `basename`
-- [x] `blkid`
-- [x] `cat`
-- [x] `chmod`
-- [x] `chroot`
-- [x] `cmp`
-- [x] `comm`
-- [x] `cp`
-- [x] `cpio`
-- [x] `date`
-- [x] `dd`
-- [x] `df`
-- [x] `dirname`
-- [x] `echo`
-- [x] `false`
-- [x] `find`
-- [x] `free`
-- [x] `gpt`
-- [x] `grep`
-- [x] `hexdump`
-- [x] `id`
-- [x] `io`
-- [x] `kill`
-- [x] `lddfiles`
-- [x] `ln`
-- [x] `ls`
-- [x] `lsdrivers`
-- [x] `lsmod`
-- [x] `man`
-- [x] `md5sum`
-- [x] `mkdir`
-- [x] `mktemp`
-- [x] `more`
-- [x] `mv`
-- [x] `pci`
-- [x] `printenv`
-- [x] `ps`
-- [x] `pwd`
-- [x] `readlink`
-- [x] `rm`
-- [x] `rsdp`
-- [x] `scp`
-- [x] `seq`
-- [x] `shasum`
-- [x] `sleep`
-- [x] `sort`
-- [x] `strings`
-- [x] `sync`
-- [x] `tail`
-- [x] `tar`
-- [x] `time`
-- [x] `timeout`
-- [x] `touch`
-- [x] `tr`
-- [x] `true`
-- [x] `ts`
-- [x] `uniq`
-- [x] `unmount`
-- [x] `unshare`
-- [x] `uptime`
-- [x] `wc`
-- [x] `xargs`
-- [x] `yes`
+---
 
-### exp
-30 tinygo build errors found.
- - [ ] `bootvars`
- - [ ] `bzimage`
- - [ ] `console`
- - [ ] `disk_unlock`
- - [ ] `efivarfs`
- - [ ] `esxiboot`
- - [ ] `getty`
- - [ ] `hdparm`
- - [ ] `ipmidump`
- - [ ] `kconf`
- - [ ] `modprobe`
- - [ ] `netbootxyz`
- - [ ] `newsshd`
- - [ ] `nvme_unlock`
- - [ ] `page`
- - [ ] `partprobe`
- - [ ] `pflask`
- - [ ] `pox`
- - [ ] `pxeserver`
- - [ ] `run`
- - [ ] `smbios_transfer`
- - [ ] `ssh`
- - [ ] `syscallfilter`
- - [ ] `uefiboot`
- - [ ] `vboot`
- - [ ] `vmboot`
- - [ ] `dumpmemmap`
- - [ ] `fbnetboot`
- - [ ] `localboot`
- - [ ] `systemboot`
+## Commands Build Status
 
-27 cmds build successful
-- [x] `acpicat`
-- [x] `acpigrep`
-- [x] `ansi`
-- [x] `cbmem`
-- [x] `crc`
-- [x] `dmidecode`
-- [x] `dumpebda`
-- [x] `ectool`
-- [x] `ed`
-- [x] `fbsplash`
-- [x] `fdtdump`
-- [x] `field`
-- [x] `fixrsdp`
-- [x] `forth`
-- [x] `freq`
-- [x] `lsfabric`
-- [x] `madeye`
-- [x] `readelf`
-- [x] `readpe`
-- [x] `rush`
-- [x] `smn`
-- [x] `srvfiles`
-- [x] `tac`
-- [x] `tcz`
-- [x] `watch`
-- [x] `zbi`
-- [x] `zimage`
+### EXCLUDED (1 commands)
+ - [cmds/core/bind](../../cmds/core/bind)
+
+### FAILING (43 commands)
+ - [cmds/boot/boot](../../cmds/boot/boot)
+ - [cmds/boot/fitboot](../../cmds/boot/fitboot)
+ - [cmds/boot/pxeboot](../../cmds/boot/pxeboot)
+ - [cmds/cluster/nodestats](../../cmds/cluster/nodestats)
+ - [cmds/core/dhclient](../../cmds/core/dhclient)
+ - [cmds/core/gosh](../../cmds/core/gosh)
+ - [cmds/core/io](../../cmds/core/io)
+ - [cmds/core/ip](../../cmds/core/ip)
+ - [cmds/core/kexec](../../cmds/core/kexec)
+ - [cmds/core/lockmsrs](../../cmds/core/lockmsrs)
+ - [cmds/core/msr](../../cmds/core/msr)
+ - [cmds/core/netcat](../../cmds/core/netcat)
+ - [cmds/core/netstat](../../cmds/core/netstat)
+ - [cmds/core/nohup](../../cmds/core/nohup)
+ - [cmds/core/ntpdate](../../cmds/core/ntpdate)
+ - [cmds/core/ping](../../cmds/core/ping)
+ - [cmds/core/sluinit](../../cmds/core/sluinit)
+ - [cmds/core/sshd](../../cmds/core/sshd)
+ - [cmds/core/strace](../../cmds/core/strace)
+ - [cmds/core/tee](../../cmds/core/tee)
+ - [cmds/core/watchdogd](../../cmds/core/watchdogd)
+ - [cmds/core/wget](../../cmds/core/wget)
+ - [cmds/exp/efivarfs](../../cmds/exp/efivarfs)
+ - [cmds/exp/esxiboot](../../cmds/exp/esxiboot)
+ - [cmds/exp/fbnetboot](../../cmds/exp/fbnetboot)
+ - [cmds/exp/localboot](../../cmds/exp/localboot)
+ - [cmds/exp/netbootxyz](../../cmds/exp/netbootxyz)
+ - [cmds/exp/newsshd](../../cmds/exp/newsshd)
+ - [cmds/exp/pxeserver](../../cmds/exp/pxeserver)
+ - [cmds/exp/srvfiles](../../cmds/exp/srvfiles)
+ - [cmds/exp/ssh](../../cmds/exp/ssh)
+ - [cmds/exp/syscallfilter](../../cmds/exp/syscallfilter)
+ - [cmds/exp/systemboot](../../cmds/exp/systemboot)
+ - [cmds/exp/tc](../../cmds/exp/tc)
+ - [cmds/exp/tcpdump](../../cmds/exp/tcpdump)
+ - [cmds/exp/tcz](../../cmds/exp/tcz)
+ - [cmds/exp/tftp](../../cmds/exp/tftp)
+ - [cmds/exp/traceroute](../../cmds/exp/traceroute)
+ - [cmds/exp/tsort](../../cmds/exp/tsort)
+ - [cmds/exp/uefiboot](../../cmds/exp/uefiboot)
+ - [cmds/exp/vboot](../../cmds/exp/vboot)
+ - [cmds/exp/vmboot](../../cmds/exp/vmboot)
+ - [cmds/fwtools/flash](../../cmds/fwtools/flash)
+
+### PASSING (136 commands)
+ - [cmds/contrib/fbptcat](../../cmds/contrib/fbptcat)
+ - [cmds/core/backoff](../../cmds/core/backoff)
+ - [cmds/core/base64](../../cmds/core/base64)
+ - [cmds/core/basename](../../cmds/core/basename)
+ - [cmds/core/blkid](../../cmds/core/blkid)
+ - [cmds/core/brctl](../../cmds/core/brctl)
+ - [cmds/core/cat](../../cmds/core/cat)
+ - [cmds/core/chmod](../../cmds/core/chmod)
+ - [cmds/core/chroot](../../cmds/core/chroot)
+ - [cmds/core/cmp](../../cmds/core/cmp)
+ - [cmds/core/comm](../../cmds/core/comm)
+ - [cmds/core/cp](../../cmds/core/cp)
+ - [cmds/core/cpio](../../cmds/core/cpio)
+ - [cmds/core/date](../../cmds/core/date)
+ - [cmds/core/dd](../../cmds/core/dd)
+ - [cmds/core/df](../../cmds/core/df)
+ - [cmds/core/dirname](../../cmds/core/dirname)
+ - [cmds/core/dmesg](../../cmds/core/dmesg)
+ - [cmds/core/du](../../cmds/core/du)
+ - [cmds/core/echo](../../cmds/core/echo)
+ - [cmds/core/false](../../cmds/core/false)
+ - [cmds/core/find](../../cmds/core/find)
+ - [cmds/core/free](../../cmds/core/free)
+ - [cmds/core/fusermount](../../cmds/core/fusermount)
+ - [cmds/core/gpgv](../../cmds/core/gpgv)
+ - [cmds/core/gpt](../../cmds/core/gpt)
+ - [cmds/core/grep](../../cmds/core/grep)
+ - [cmds/core/gzip](../../cmds/core/gzip) tags: noasm
+ - [cmds/core/head](../../cmds/core/head)
+ - [cmds/core/hexdump](../../cmds/core/hexdump)
+ - [cmds/core/hostname](../../cmds/core/hostname)
+ - [cmds/core/hwclock](../../cmds/core/hwclock)
+ - [cmds/core/id](../../cmds/core/id)
+ - [cmds/core/init](../../cmds/core/init) tags: noasm
+ - [cmds/core/insmod](../../cmds/core/insmod) tags: noasm
+ - [cmds/core/kill](../../cmds/core/kill)
+ - [cmds/core/lddfiles](../../cmds/core/lddfiles)
+ - [cmds/core/ln](../../cmds/core/ln)
+ - [cmds/core/losetup](../../cmds/core/losetup)
+ - [cmds/core/ls](../../cmds/core/ls)
+ - [cmds/core/lsdrivers](../../cmds/core/lsdrivers)
+ - [cmds/core/lsmod](../../cmds/core/lsmod)
+ - [cmds/core/man](../../cmds/core/man)
+ - [cmds/core/md5sum](../../cmds/core/md5sum)
+ - [cmds/core/mkdir](../../cmds/core/mkdir)
+ - [cmds/core/mkfifo](../../cmds/core/mkfifo)
+ - [cmds/core/mknod](../../cmds/core/mknod)
+ - [cmds/core/mktemp](../../cmds/core/mktemp)
+ - [cmds/core/more](../../cmds/core/more)
+ - [cmds/core/mount](../../cmds/core/mount)
+ - [cmds/core/mv](../../cmds/core/mv)
+ - [cmds/core/pci](../../cmds/core/pci)
+ - [cmds/core/poweroff](../../cmds/core/poweroff)
+ - [cmds/core/printenv](../../cmds/core/printenv)
+ - [cmds/core/ps](../../cmds/core/ps)
+ - [cmds/core/pwd](../../cmds/core/pwd)
+ - [cmds/core/readlink](../../cmds/core/readlink)
+ - [cmds/core/realpath](../../cmds/core/realpath)
+ - [cmds/core/rm](../../cmds/core/rm)
+ - [cmds/core/rmmod](../../cmds/core/rmmod) tags: noasm
+ - [cmds/core/rsdp](../../cmds/core/rsdp)
+ - [cmds/core/scp](../../cmds/core/scp)
+ - [cmds/core/seq](../../cmds/core/seq)
+ - [cmds/core/shasum](../../cmds/core/shasum)
+ - [cmds/core/shutdown](../../cmds/core/shutdown)
+ - [cmds/core/sleep](../../cmds/core/sleep)
+ - [cmds/core/sort](../../cmds/core/sort)
+ - [cmds/core/strings](../../cmds/core/strings)
+ - [cmds/core/stty](../../cmds/core/stty)
+ - [cmds/core/switch_root](../../cmds/core/switch_root)
+ - [cmds/core/sync](../../cmds/core/sync)
+ - [cmds/core/tail](../../cmds/core/tail)
+ - [cmds/core/tar](../../cmds/core/tar)
+ - [cmds/core/time](../../cmds/core/time)
+ - [cmds/core/timeout](../../cmds/core/timeout)
+ - [cmds/core/touch](../../cmds/core/touch)
+ - [cmds/core/tr](../../cmds/core/tr)
+ - [cmds/core/true](../../cmds/core/true)
+ - [cmds/core/truncate](../../cmds/core/truncate)
+ - [cmds/core/ts](../../cmds/core/ts)
+ - [cmds/core/tty](../../cmds/core/tty)
+ - [cmds/core/umount](../../cmds/core/umount)
+ - [cmds/core/uname](../../cmds/core/uname)
+ - [cmds/core/uniq](../../cmds/core/uniq)
+ - [cmds/core/unmount](../../cmds/core/unmount)
+ - [cmds/core/unshare](../../cmds/core/unshare)
+ - [cmds/core/uptime](../../cmds/core/uptime)
+ - [cmds/core/watchdog](../../cmds/core/watchdog)
+ - [cmds/core/wc](../../cmds/core/wc)
+ - [cmds/core/which](../../cmds/core/which)
+ - [cmds/core/xargs](../../cmds/core/xargs)
+ - [cmds/core/yes](../../cmds/core/yes)
+ - [cmds/exp/acpicat](../../cmds/exp/acpicat)
+ - [cmds/exp/acpigrep](../../cmds/exp/acpigrep)
+ - [cmds/exp/ansi](../../cmds/exp/ansi)
+ - [cmds/exp/bootvars](../../cmds/exp/bootvars)
+ - [cmds/exp/bzimage](../../cmds/exp/bzimage) tags: noasm
+ - [cmds/exp/cbmem](../../cmds/exp/cbmem)
+ - [cmds/exp/console](../../cmds/exp/console) tags: noasm
+ - [cmds/exp/crc](../../cmds/exp/crc)
+ - [cmds/exp/disk_unlock](../../cmds/exp/disk_unlock)
+ - [cmds/exp/dmidecode](../../cmds/exp/dmidecode)
+ - [cmds/exp/dumpebda](../../cmds/exp/dumpebda)
+ - [cmds/exp/dumpmemmap](../../cmds/exp/dumpmemmap)
+ - [cmds/exp/ectool](../../cmds/exp/ectool)
+ - [cmds/exp/ed](../../cmds/exp/ed)
+ - [cmds/exp/fbsplash](../../cmds/exp/fbsplash)
+ - [cmds/exp/fdtdump](../../cmds/exp/fdtdump)
+ - [cmds/exp/field](../../cmds/exp/field)
+ - [cmds/exp/fixrsdp](../../cmds/exp/fixrsdp)
+ - [cmds/exp/forth](../../cmds/exp/forth)
+ - [cmds/exp/freq](../../cmds/exp/freq)
+ - [cmds/exp/getty](../../cmds/exp/getty)
+ - [cmds/exp/hdparm](../../cmds/exp/hdparm)
+ - [cmds/exp/ipmidump](../../cmds/exp/ipmidump)
+ - [cmds/exp/kconf](../../cmds/exp/kconf) tags: noasm
+ - [cmds/exp/lsfabric](../../cmds/exp/lsfabric)
+ - [cmds/exp/madeye](../../cmds/exp/madeye)
+ - [cmds/exp/modprobe](../../cmds/exp/modprobe) tags: noasm
+ - [cmds/exp/nvme_unlock](../../cmds/exp/nvme_unlock)
+ - [cmds/exp/page](../../cmds/exp/page)
+ - [cmds/exp/partprobe](../../cmds/exp/partprobe)
+ - [cmds/exp/pflask](../../cmds/exp/pflask)
+ - [cmds/exp/pox](../../cmds/exp/pox)
+ - [cmds/exp/readelf](../../cmds/exp/readelf)
+ - [cmds/exp/readpe](../../cmds/exp/readpe)
+ - [cmds/exp/run](../../cmds/exp/run)
+ - [cmds/exp/rush](../../cmds/exp/rush)
+ - [cmds/exp/smbios_transfer](../../cmds/exp/smbios_transfer)
+ - [cmds/exp/smn](../../cmds/exp/smn)
+ - [cmds/exp/tac](../../cmds/exp/tac)
+ - [cmds/exp/watch](../../cmds/exp/watch)
+ - [cmds/exp/zbi](../../cmds/exp/zbi)
+ - [cmds/exp/zimage](../../cmds/exp/zimage)
+ - [cmds/extra/tsort](../../cmds/extra/tsort)
+ - [cmds/fwtools/spidev](../../cmds/fwtools/spidev)

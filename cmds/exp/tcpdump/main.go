@@ -1,6 +1,8 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
+
 package main
 
 import (
@@ -101,6 +103,7 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 	fs.Usage = func() {
 		fmt.Fprintf(out, "%s\n\n", tcpdumpHelp)
 
+		fs.SetOutput(out)
 		fs.PrintDefaults()
 	}
 
@@ -123,16 +126,18 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		if data, err := os.ReadFile(opts.FilterFile); err == nil {
 			opts.Filter = string(data)
 		} else {
-			return cmd{}, fmt.Errorf("failed to read filter file: %v", err)
+			return cmd{}, fmt.Errorf("failed to read filter file: %w", err)
 		}
 	}
 
-	return cmd{Opts: opts, Out: out}, nil
+	return cmd{Opts: opts, Out: out, usage: fs.Usage}, nil
 }
 
 type cmd struct {
 	Out  io.Writer
 	Opts flags
+
+	usage func()
 }
 
 func (cmd *cmd) run() error {
@@ -142,7 +147,7 @@ func (cmd *cmd) run() error {
 	)
 
 	if cmd.Opts.Help {
-		fmt.Println(tcpdumpHelp)
+		cmd.usage()
 
 		return nil
 	}
@@ -316,8 +321,6 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 
 		if applicationLayer != nil {
 			length = len(applicationLayer.LayerContents())
-		} else {
-			length = 0
 		}
 
 		switch layer := transportLayer.(type) {
@@ -327,6 +330,8 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 			data = fmt.Sprintf("UDP, length %d", length)
 		case *layers.UDPLite:
 			data = fmt.Sprintf("UDPLite, length %d", length)
+		case nil:
+			data = fmt.Sprintf("unknown transport layer, length %d", length)
 		default:
 			data = fmt.Sprintf("%s, length %d", layer.LayerType(), length)
 		}
@@ -348,7 +353,11 @@ func (cmd *cmd) processPacket(packet gopacket.Packet, num int, lastPkgTimeStamp 
 
 	switch {
 	case cmd.Opts.ASCII:
-		fmt.Fprintf(cmd.Out, "%s\n", applicationLayer.LayerContents())
+		content := []byte("")
+		if applicationLayer != nil {
+			content = applicationLayer.LayerContents()
+		}
+		fmt.Fprintf(cmd.Out, "%s\n", content)
 	case cmd.Opts.Data:
 		fmt.Fprintf(cmd.Out, "%s\n", formatPacketData(packet.Data()[14:]))
 	case cmd.Opts.DataWithHeader:

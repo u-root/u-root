@@ -69,7 +69,7 @@ func OpenMEI(meiPath string, guid ClientGUID) (*MEI, error) {
 	}
 	data := [16]byte(guid)
 	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), IoctlMEIConnectClient, uintptr(unsafe.Pointer(&data))); err != 0 {
-		return nil, fmt.Errorf("ioctl IOCTL_MEI_CONNECT_CLIENT failed: %v", err)
+		return nil, fmt.Errorf("ioctl IOCTL_MEI_CONNECT_CLIENT failed: %w", err)
 	}
 	// can be racy, unless protected by a mutex
 	m.fd = &fd

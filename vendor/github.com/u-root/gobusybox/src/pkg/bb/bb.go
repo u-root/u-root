@@ -38,7 +38,15 @@ import (
 	"github.com/u-root/gobusybox/src/pkg/bb/findpkg"
 	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/uio/ulog"
+
+	_ "embed"
 )
+
+//go:embed bbmain/cmd/main.go
+var bbMainSource []byte
+
+//go:embed bbmain/register.go
+var bbRegisterSource []byte
 
 func checkDuplicate(cmds []*bbinternal.Package) error {
 	seen := make(map[string]string)

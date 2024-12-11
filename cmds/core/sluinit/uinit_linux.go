@@ -1,15 +1,18 @@
 // Copyright 2019 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -17,10 +20,41 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/dhclient"
 	slaunch "github.com/u-root/u-root/pkg/securelaunch"
+	"github.com/u-root/u-root/pkg/securelaunch/config"
 	"github.com/u-root/u-root/pkg/securelaunch/eventlog"
+	"github.com/u-root/u-root/pkg/securelaunch/launcher"
 	"github.com/u-root/u-root/pkg/securelaunch/policy"
 	"github.com/u-root/u-root/pkg/securelaunch/tpm"
 )
+
+// booEntryFlag holds the name of the flag pointing to the boot entry to load.
+const bootEntryFlag = "securelaunch_entry"
+
+// pcrLogFilename holds the name of the file to dump PCR values to. This is
+// used when provisioning the system to seal secrets to the correct values.
+const pcrLogFilename = "securelaunch.dat"
+
+// policyFilename is the filename to use for the policy file.
+const policyFilename = "securelaunch.policy"
+
+// pubkeyFilename is the filename to use for the policy public key file.
+const pubkeyFilename = "securelaunch.pubkey"
+
+// policyFilename is the filename to use for the policy signature file.
+const signatureFilename = "securelaunch.sig"
+
+// policyLocationFlag holds the name of the flag to specify where to find
+// the securelaunch policy file.
+const policyLocationFlag = "securelaunch_policy"
+
+// pubkeyIndex hold the TPM index where the public key hash is stored.
+const pubkeyHashIndex = uint32(0x01800180)
+
+// ErrFlagNotSet indicates a required flag is not set.
+var ErrFlagNotSet = errors.New("flag is not set")
+
+// ErrInvalidCharacters indicates a name contains an unallowed character.
+var ErrInvalidCharacters = errors.New("invalid character in name")
 
 var slDebug = flag.Bool("d", false, "enable debug logs")
 
@@ -31,6 +65,28 @@ var step = 1
 func printStep(msg string) {
 	slaunch.Debug("******** Step %d: %s ********", step, msg)
 	step++
+}
+
+// printStepDisabled prints a message for a disabled step.
+func printStepDisabled(msg string) {
+	slaunch.Debug("******** %s disabled in config ********", msg)
+}
+
+// checkPolicyLocationFlag checks the kernel cmdline for the policyLocationFlag
+// flag. It provides the location of the policy file on disk. If it isn't set,
+// an error is returned.
+//
+// The flag takes an argument formatted as `<block device id>:<path>`
+//
+//	e.g., sda1:/boot/securelaunch.policy
+//	e.g., 4qccd342-12zr-4e99-9ze7-1234cb1234c4:/securelaunch.policy
+func checkPolicyLocationFlag() (string, error) {
+	location, present := cmdline.Flag(policyLocationFlag)
+	if !present {
+		return "", fmt.Errorf("%q:%w", policyLocationFlag, ErrFlagNotSet)
+	}
+
+	return location, nil
 }
 
 // checkDebugFlag checks if `uroot.uinitargs=-d` is set on the kernel cmdline.
@@ -51,6 +107,21 @@ func checkDebugFlag() {
 		slaunch.Debug = log.Printf
 		slaunch.Debug("debug flag is set. Logging Enabled.")
 	}
+}
+
+func parseBootEntryFlag() (string, error) {
+	bootEntry, present := cmdline.Flag(bootEntryFlag)
+	if !present {
+		return "", fmt.Errorf("no boot entry found")
+	}
+
+	if !launcher.IsValidBootEntry(bootEntry) {
+		return "", fmt.Errorf("%q:%w", bootEntry, ErrInvalidCharacters)
+	}
+
+	slaunch.Debug("boot entry: %s", bootEntry)
+
+	return bootEntry, nil
 }
 
 // iscsiSpecified checks if iscsi has been set on the kernel command line.
@@ -100,7 +171,7 @@ func scanIscsiDrives() error {
 }
 
 // initialize sets up the environment.
-func initialize() error {
+func initialize(policyLocation string) error {
 	printStep("Initialization")
 
 	// Check if an iSCSI drive was specified and if so, mount it.
@@ -114,92 +185,146 @@ func initialize() error {
 		return fmt.Errorf("failed to get TPM device: %w", err)
 	}
 
+	// Write out all the PCRs values.
+	pcrSelection := []uint32{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23}
+	pcrLogLocation := filepath.Join(policyLocation, pcrLogFilename)
+
+	if err := tpm.LogPCRs(pcrSelection, pcrLogLocation); err != nil {
+		return fmt.Errorf("failed to log PCR values: %w", err)
+	}
+
 	slaunch.Debug("Initialization successfully completed")
 
 	return nil
 }
 
-// parsePolicy parses and gets the policy file.
-func parsePolicy() (*policy.Policy, error) {
-	printStep("Locate and parse SL policy")
+// verifyAndParsePolicy loads, verifies, and parses and gets the policy file.
+func verifyAndParsePolicy(policyLocation string) (*policy.Policy, error) {
+	printStep("Verify and parse SL policy")
 
-	p, err := policy.Get()
+	policyFileLocation := filepath.Join(policyLocation, policyFilename)
+	pubkeyFileLocation := filepath.Join(policyLocation, pubkeyFilename)
+	signatureFileLocation := filepath.Join(policyLocation, signatureFilename)
+
+	if err := policy.Load(policyFileLocation, pubkeyFileLocation, signatureFileLocation); err != nil {
+		return nil, fmt.Errorf("failed to load policy file: %w", err)
+	}
+
+	tpmPubkeyHashBytes, err := tpm.ReadValue32(pubkeyHashIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public key hash from TPM: %w", err)
+	}
+
+	if err := policy.VerifyPubkey(tpmPubkeyHashBytes); err != nil {
+		return nil, fmt.Errorf("failed to verify public key file: %w", err)
+	}
+
+	if err := policy.Verify(); err != nil {
+		return nil, fmt.Errorf("failed to verify policy file: %w", err)
+	}
+
+	policy, err := policy.Parse()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse policy file: %w", err)
 	}
 
-	slaunch.Debug("Policy file successfully parsed")
+	slaunch.Debug("Policy file successfully verified and parsed")
 
-	return p, nil
+	return policy, nil
+}
+
+// loadAndVerifyBootEntry loads the specified boot entry and checks the hashes
+// of the kernel and initrd files against the expected values.
+func loadAndVerifyBootEntry(bootEntry string, bootEntries map[string]launcher.BootEntry) error {
+	if err := launcher.MatchBootEntry(bootEntry, bootEntries); err != nil {
+		return fmt.Errorf("could not find matching boot entry or hash checks failed: %w", err)
+	}
+
+	return nil
 }
 
 // collectMeasurements runs any measurements specified in the policy file.
 func collectMeasurements(p *policy.Policy) error {
-	printStep("Collect evidence")
+	if config.Conf.Collectors {
+		printStep("Collect evidence")
 
-	for _, collector := range p.Collectors {
-		slaunch.Debug("Input Collector: %v", collector)
-		if err := collector.Collect(); err != nil {
-			log.Printf("Collector %v failed: %v", collector, err)
+		for _, collector := range p.Collectors {
+			slaunch.Debug("Input Collector: %v", collector)
+			if err := collector.Collect(); err != nil {
+				log.Printf("Collector %v failed: %v", collector, err)
+			}
 		}
-	}
 
-	slaunch.Debug("Collectors completed")
+		slaunch.Debug("Collectors completed")
+	} else {
+		printStepDisabled("Collect evidence")
+	}
 
 	return nil
 }
 
 // measureFiles measures relevant files (e.g., policy, kernel, initrd).
 func measureFiles(p *policy.Policy) error {
-	printStep("Measure files")
+	if config.Conf.Measurements {
+		printStep("Measure files")
 
-	if err := policy.Measure(); err != nil {
-		return fmt.Errorf("failed to measure policy file: %w", err)
-	}
+		if err := policy.Measure(); err != nil {
+			return fmt.Errorf("failed to measure policy file: %w", err)
+		}
 
-	if p.Launcher.Params["kernel"] != "" {
-		if err := p.Launcher.MeasureKernel(); err != nil {
+		if err := launcher.MeasureKernel(); err != nil {
 			return fmt.Errorf("failed to measure target kernel: %w", err)
 		}
-	}
 
-	if p.Launcher.Params["initrd"] != "" {
-		if err := p.Launcher.MeasureInitrd(); err != nil {
-			return fmt.Errorf("failed to measure target initrd: %w", err)
+		// It's possible to not have an initrd (e.g., if it's embedded).
+		if launcher.IsInitrdSet() {
+			if err := launcher.MeasureInitrd(); err != nil {
+				return fmt.Errorf("failed to measure target initrd: %w", err)
+			}
 		}
-	}
 
-	slaunch.Debug("Files successfully measured")
+		slaunch.Debug("Files successfully measured")
+	} else {
+		printStepDisabled("Measure files")
+	}
 
 	return nil
 }
 
 // parseEventLog parses the TPM event log.
 func parseEventLog(p *policy.Policy) error {
-	printStep("Parse event log")
+	if config.Conf.EventLog {
+		printStep("Parse event log")
 
-	if err := p.EventLog.Parse(); err != nil {
-		return fmt.Errorf("failed to parse event log: %w", err)
+		if err := p.EventLog.Parse(); err != nil {
+			return fmt.Errorf("failed to parse event log: %w", err)
+		}
+
+		slaunch.Debug("Event log successfully parsed")
+	} else {
+		printStepDisabled("Parse event log")
 	}
-
-	slaunch.Debug("Event log successfully parsed")
 
 	return nil
 }
 
 // dumpLogs writes out any pending logs to a file on disk.
 func dumpLogs() error {
-	printStep("Dump logs to disk")
+	if config.Conf.Collectors || config.Conf.EventLog {
+		printStep("Dump logs to disk")
 
-	if err := eventlog.ParseEventLog(); err != nil {
-		return fmt.Errorf("failed to parse event log: %w", err)
+		if err := eventlog.ParseEventLog(); err != nil {
+			return fmt.Errorf("failed to parse event log: %w", err)
+		}
+
+		if err := slaunch.ClearPersistQueue(); err != nil {
+			return fmt.Errorf("failed to clear persist queue: %w", err)
+		}
+
+		slaunch.Debug("Logs successfully dumped to disk")
+	} else {
+		printStepDisabled("Dump logs to disk")
 	}
-
-	if err := slaunch.ClearPersistQueue(); err != nil {
-		return fmt.Errorf("failed to clear persist queue: %w", err)
-	}
-
-	slaunch.Debug("Logs successfully dumped to disk")
 
 	return nil
 }
@@ -270,16 +395,30 @@ func main() {
 
 	checkDebugFlag()
 
-	if err := initialize(); err != nil {
+	policyLocation, err := checkPolicyLocationFlag()
+	if err != nil {
 		exit(err)
 	}
 
-	p, err := parsePolicy()
+	bootEntry, err := parseBootEntryFlag()
+	if err != nil {
+		exit(err)
+	}
+
+	if err := initialize(policyLocation); err != nil {
+		exit(err)
+	}
+
+	p, err := verifyAndParsePolicy(policyLocation)
 	if err != nil {
 		exit(err)
 	}
 
 	if err := parseEventLog(p); err != nil {
+		exit(err)
+	}
+
+	if err := loadAndVerifyBootEntry(bootEntry, p.Launcher.BootEntries); err != nil {
 		exit(err)
 	}
 

@@ -1,11 +1,11 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -57,7 +57,7 @@ func (cmd *cmd) address() error {
 		}
 
 		if err := cmd.handle.AddrAdd(iface, addr); err != nil {
-			return fmt.Errorf("adding %v to %v failed: %v", addr.IP, cmd.currentToken(), err)
+			return fmt.Errorf("adding %v to %v failed: %w", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
@@ -68,7 +68,7 @@ func (cmd *cmd) address() error {
 		}
 
 		if err := cmd.handle.AddrReplace(iface, addr); err != nil {
-			return fmt.Errorf("replacing %v on %v failed: %v", addr.IP, cmd.currentToken(), err)
+			return fmt.Errorf("replacing %v on %v failed: %w", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
@@ -79,7 +79,7 @@ func (cmd *cmd) address() error {
 		}
 
 		if err := cmd.handle.AddrDel(iface, addr); err != nil {
-			return fmt.Errorf("deleting %v from %v failed: %v", addr.IP, cmd.currentToken(), err)
+			return fmt.Errorf("deleting %v from %v failed: %w", addr.IP, cmd.currentToken(), err)
 		}
 
 		return nil
@@ -138,24 +138,63 @@ func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 func (cmd *cmd) addressShow() error {
 	device, typeName, err := cmd.parseAddrShow()
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return cmd.showAllLinks(true)
-		}
-
 		return err
 	}
 
-	return cmd.showLink(device, true, typeName)
+	if device != nil {
+		if typeName == "" {
+			return cmd.showLink(device, true)
+		}
+
+		return cmd.showLink(device, true, typeName)
+	}
+
+	if typeName == "" {
+		return cmd.showAllLinks(true)
+	}
+
+	return cmd.showAllLinks(true, typeName)
 }
 
 func (cmd *cmd) parseAddrShow() (netlink.Link, string, error) {
-	device, err := cmd.parseDeviceName(false)
-	if err != nil {
-		return nil, "", err
+	var (
+		device     netlink.Link
+		deviceName string
+		typeName   string
+		err        error
+		devFound   bool
+	)
+
+	if !cmd.tokenRemains() {
+		return nil, "", nil
 	}
-	typeName, err := cmd.parseType()
-	if err != nil {
-		return nil, "", err
+
+	for cmd.tokenRemains() {
+		switch c := cmd.nextToken("dev", "type"); c {
+		case "dev":
+			if devFound {
+				return nil, "", fmt.Errorf("multiple devices specified")
+			}
+
+			deviceName = cmd.nextToken("device-name")
+			devFound = true
+		case "type":
+			typeName = cmd.nextToken("TYPE")
+		default:
+			if devFound {
+				return nil, "", fmt.Errorf("multiple devices specified")
+			}
+
+			deviceName = c
+			devFound = true
+		}
+	}
+
+	if deviceName != "" {
+		device, err = netlink.LinkByName(deviceName)
+		if err != nil {
+			return nil, "", fmt.Errorf("device %v not found: %w", deviceName, err)
+		}
 	}
 
 	return device, typeName, nil
@@ -208,12 +247,15 @@ func (cmd *cmd) addressFlush() error {
 		}
 
 		for idx := 1; idx <= cmd.Opts.Loops; idx++ {
+
+			fmt.Printf("Deleting %v from %v\n", a, iface.Attrs().Name)
+
 			if err := cmd.handle.AddrDel(iface, &a); err != nil {
 				if idx != cmd.Opts.Loops {
 					continue
 				}
 
-				return fmt.Errorf("deleting %v from %v failed: %v", a, iface, err)
+				return fmt.Errorf("deleting %v from %v failed: %w", a, iface, err)
 			}
 
 			break
@@ -224,11 +266,11 @@ func (cmd *cmd) addressFlush() error {
 }
 
 func skipAddr(addr netlink.Addr, filter netlink.Addr) bool {
-	if addr.Scope != 0 && addr.Scope != filter.Scope {
+	if filter.Scope != 0 && addr.Scope != filter.Scope {
 		return true
 	}
 
-	if addr.Label != "" && addr.Label != filter.Label {
+	if filter.Label != "" && addr.Label != filter.Label {
 		return true
 	}
 

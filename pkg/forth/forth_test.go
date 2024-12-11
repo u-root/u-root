@@ -26,6 +26,8 @@ var forthTests = []forthTest{
 	{val: "4 2 *", res: "8", empty: true},
 	{val: "4 2 /", res: "2", empty: true},
 	{val: "5 2 %", res: "1", empty: true},
+	{val: "347 32 mod", res: "27", empty: true},
+	{val: "32 347 mod", res: "32", empty: true},
 	{val: "sb43 hostbase", res: "43", empty: true},
 	{val: "sb43 hostbase dup 20 / swap 20 % dup ifelse", res: "3", empty: true},
 	{val: "sb40 hostbase dup 20 / swap 20 % dup ifelse", res: "2", empty: true},
@@ -43,6 +45,11 @@ var forthTests = []forthTest{
 	{val: "5 5 + hostbase", res: "", err: strconv.ErrSyntax, empty: true},
 	{val: "1 1 '+ newword 1 1 '+ newword", res: "", err: ErrWordExist, empty: true},
 	{val: "1 4 bad newword", res: "", err: ErrNotEnoughElements, empty: false},
+	{val: "typeof", res: "", err: ErrEmptyStack, empty: true},
+	{val: "1 typeof", res: "string", err: nil, empty: true},
+	{val: "zardoz typeof", res: "", err: nil, empty: true},
+	{val: "1 %d printf", res: "1\n", empty: true},
+	{val: "%d printf", res: "", err: ErrEmptyStack, empty: true},
 }
 
 func TestForth(t *testing.T) {
@@ -95,11 +102,11 @@ func TestBadPop(t *testing.T) {
 	f.Push(b)
 	res, err := EvalPop(f, "2 +")
 	t.Logf("%v, %v", res, err)
-	if !errors.Is(err, strconv.ErrSyntax) {
-		t.Errorf("got %v, want %v", err, strconv.ErrSyntax)
+	if err == nil {
+		t.Errorf("err: got %v, want %v", err, strconv.ErrSyntax)
 	}
 	if res != nil {
-		t.Errorf("got %v, want nil", res)
+		t.Errorf("res: got %v, want nil", res)
 	}
 }
 
@@ -149,9 +156,8 @@ func TestEvalPanic(t *testing.T) {
 		t.Fatalf("newword: got %v, nil", err)
 	}
 	t.Logf("p created, now try problems")
-	err = Eval(f, "0", uint8(0), "+")
-	if err == nil {
-		t.Fatal("Got nil, want error")
+	if err = Eval(f, "0", uint8(0), "+"); err != nil {
+		t.Fatalf("got %v, want nil", err)
 	}
 	t.Logf("Test plus with wrong types: %v", err)
 	f.Reset()

@@ -40,7 +40,7 @@ func GetBlockFilesystems() (fstypes []string, err error) {
 func internalGetFilesystems(file string) (fstypes []string, err error) {
 	var bytes []byte
 	if bytes, err = os.ReadFile(file); err != nil {
-		return nil, fmt.Errorf("failed to read supported file systems: %v", err)
+		return nil, fmt.Errorf("failed to read supported file systems: %w", err)
 	}
 	for _, line := range strings.Split(string(bytes), "\n") {
 		// len(fields)==1, 2 possibilites for fs: "nodev" fs and

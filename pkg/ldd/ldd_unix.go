@@ -48,7 +48,7 @@ func runinterp(interp, file string) ([]string, error) {
 	o, err := exec.Command(interp, "--list", file).Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("%s: %s", err, ee.Stderr)
+			return nil, fmt.Errorf("%w: %s", err, ee.Stderr)
 		}
 		return nil, err
 	}

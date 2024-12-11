@@ -5,12 +5,17 @@ linters:
     - ineffassign
     - staticcheck
     - stylecheck
+    - errorlint
 
 linters-settings:
   staticcheck:
     checks: ["all", "-SA1019"]
   stylecheck:
     checks: ["all", "-ST1003"]
+  errorlint:
+    errorf: true
+    asserts: false
+    comparison: false
 
 issues:
   exclude-dirs:

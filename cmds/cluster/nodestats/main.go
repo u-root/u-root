@@ -1,6 +1,7 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
 
 // nodestats prints out vital statistics about a node as JSON.
 // It currently uses the jaypipes/ghw package, as well as
@@ -65,7 +66,7 @@ func node() *health.Stat {
 	var Stderr [65536]byte
 	n, err := r.Read(Stderr[:])
 	if err != nil && err != io.EOF {
-		errs = errors.Join(errs, fmt.Errorf("stderr read %d bytes, got %v but not %v or nil", n, err, io.EOF))
+		errs = errors.Join(errs, fmt.Errorf("stderr read %d bytes, got %w but not io.EOF or nil", n, err))
 	}
 
 	stats := &health.Stat{Hostname: hn, Info: host, Kernel: k, Stderr: string(Stderr[:n])}

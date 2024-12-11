@@ -43,6 +43,12 @@ func FromReadWriter(rw io.ReadWriter) TPM {
 	return &wrappedRW{transport: rw}
 }
 
+// FromReadWriteCloser takes in a io.ReadWriteCloser and returns a
+// transport.TPMCloser wrapping the io.ReadWriteCloser.
+func FromReadWriteCloser(rwc io.ReadWriteCloser) TPMCloser {
+	return &wrappedRWC{transport: rwc}
+}
+
 // ToReadWriter takes in a transport TPM and returns an
 // io.ReadWriter wrapping the transport TPM.
 func ToReadWriter(tpm TPM) io.ReadWriter {

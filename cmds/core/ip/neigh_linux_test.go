@@ -1,6 +1,8 @@
 // Copyright 2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//go:build !tinygo || tinygo.enable
+
 package main
 
 import (
@@ -212,7 +214,7 @@ func TestGetState(t *testing.T) {
 		{0x20, "FAILED"},
 		{0x40, "NOARP"},
 		{0x80, "PERMANENT"},
-		{0x00, "UNKNOWN"},
+		{0x00, "NONE"},
 	}
 
 	for _, tt := range tests {

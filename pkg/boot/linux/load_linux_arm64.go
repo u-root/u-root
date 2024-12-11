@@ -24,7 +24,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reserved
 	}
 	defer img.clean()
 	if err = kexec.Load(img.entry, img.segments, 0); err != nil {
-		return fmt.Errorf("kexec Load(%v, %v, %d) = %v", img.entry, img.segments, 0, err)
+		return fmt.Errorf("kexec Load(%v, %v, %d) = %w", img.entry, img.segments, 0, err)
 	}
 	return nil
 }
