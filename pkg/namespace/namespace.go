@@ -65,14 +65,14 @@ func NewNS(nsfile string, user string) error { return buildNS(nil, nsfile, user,
 // space rather than starting from scratch.
 func AddNS(nsfile string, user string) error { return buildNS(nil, nsfile, user, false) }
 
-func buildNS(ns Namespace, nsfile, user string, new bool) error {
+func buildNS(ns Namespace, nsfile, user string, clear bool) error {
 	if err := os.Setenv("user", user); err != nil {
 		return err
 	}
 	if ns == nil {
 		ns = DefaultNamespace
 	}
-	if new {
+	if clear {
 		ns.Clear()
 	}
 	r, err := NewBuilder()
