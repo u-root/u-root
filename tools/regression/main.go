@@ -158,12 +158,12 @@ func (cmd *cmd) run() error {
 		return err
 	}
 
-	buildErrors, err := b.GetErrors()
+	buildErrors, err := b.Errors()
 	if err != nil {
 		return err
 	}
 
-	buildResults, err := b.GetResults()
+	buildResults, err := b.Results()
 	if err != nil {
 		return err
 	}
