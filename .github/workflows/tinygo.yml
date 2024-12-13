@@ -26,10 +26,10 @@ jobs:
           git clone https://github.com/tinygo-org/tinygo.git
           cd tinygo
           git submodule update --init --recursive
-          make llvm-source
-          make llvm-build
+          make llvm-source -j $(($(nproc) - 1))
+          make llvm-build $(($(nproc) - 1))
           git checkout e12da15f7d230874ca95a257c50bca0fc39f262c
-          make
+          make $(($(nproc) - 1))
           go install
           cd ..
           TINYGO=$(realpath tinygo/build/tinygo)
