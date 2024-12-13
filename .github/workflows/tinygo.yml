@@ -1,0 +1,43 @@
+---
+name: TinyGo regression test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.x'
+      # install tinygo via a provided commit hash as an input
+      - name: Install tinygo from commit
+        run: |
+          git clone https://github.com/tinygo-org/tinygo.git
+          cd tinygo
+          git submodule update --init --recursive
+          git checkout e12da15f7d230874ca95a257c50bca0fc39f262c
+          make
+          export PATH=$PATH:$(pwd)/build/
+
+      - name: Run tinygo-cmdlet
+        run: |
+          TINYGO=/path/to/tinygo/build/tinygo 
+          TINYGOVER=$(/path/to/tinygo/build/tinygo version | awk {'print $3'})
+          GOVER=$(go version | awk {'print $3'} )
+
+          go run tools/regression/main.go \
+              -tinygo $TINYGO \
+              -commit-tinygo $TINYGOVER \
+              -commit-uroot $(git rev-parse HEAD) \
+              -version-go $(GOVER) \
+              cmds/core/ls* cmds/core/sshd $GITHUB_STEP_SUMMARY
