@@ -198,7 +198,7 @@ func (b *Builder) Run() error {
 	for _, job := range b.jobs {
 		// run the build process
 		fields := strings.Fields(job.BuildCommand)
-		fields = append(fields, "-o", *job.buildDir+"/"+filepath.Base(job.GoPkgPath))
+		fields = append(fields, "-o", filepath.Join(*job.buildDir, filepath.Base(job.GoPkgPath)))
 
 		c := exec.Command(fields[0], fields[1:]...)
 		c.Env = append(os.Environ(), job.env...)
@@ -217,7 +217,7 @@ func (b *Builder) Run() error {
 			})
 		} else {
 			pkgNameToken := strings.Split(job.GoPkgPath, "/")
-			binPath := job.GoPkgPath + "/" + pkgNameToken[len(pkgNameToken)-1]
+			binPath := filepath.Join(job.GoPkgPath, pkgNameToken[len(pkgNameToken)-1])
 
 			f, err := os.Stat(binPath)
 			if err != nil {
@@ -238,7 +238,7 @@ func (b *Builder) Run() error {
 
 // Retrieve the BuildResults from the finished builder.
 // If the builder is in an invalid state, return error.
-func (b *Builder) GetResults() ([]BuildResult, error) {
+func (b *Builder) Results() ([]BuildResult, error) {
 	if b.state != Stopped {
 		return nil, fmt.Errorf("results: builder in invalid state")
 	}
@@ -247,7 +247,7 @@ func (b *Builder) GetResults() ([]BuildResult, error) {
 
 // Retrieve the BuildResults from the finished builder.
 // If the builder is in an invalid state, return error.
-func (b *Builder) GetErrors() ([]BuildError, error) {
+func (b *Builder) Errors() ([]BuildError, error) {
 	if b.state != Stopped {
 		return nil, fmt.Errorf("errors: builder in invalid state")
 	}
