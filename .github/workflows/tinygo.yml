@@ -22,22 +22,23 @@ jobs:
       # install tinygo via a provided commit hash as an input
       - name: Install tinygo from commit
         run: |
+          sudo apt-get update && sudo apt-get install -y make cmake ninja-build
           git clone https://github.com/tinygo-org/tinygo.git
           cd tinygo
           git submodule update --init --recursive
+          make llvm-source
+          make llvm-build
           git checkout e12da15f7d230874ca95a257c50bca0fc39f262c
           make
-          export PATH=$PATH:$(pwd)/build/
-
-      - name: Run tinygo-cmdlet
-        run: |
-          TINYGO=/path/to/tinygo/build/tinygo 
-          TINYGOVER=$(/path/to/tinygo/build/tinygo version | awk {'print $3'})
+          go install
+          cd ..
+          TINYGO=$(realpath tinygo/build/tinygo)
+          TINYGOVER=$($TINYGO version | awk {'print $3'})
           GOVER=$(go version | awk {'print $3'} )
 
           go run tools/regression/main.go \
               -tinygo $TINYGO \
               -commit-tinygo $TINYGOVER \
               -commit-uroot $(git rev-parse HEAD) \
-              -version-go $(GOVER) \
-              cmds/core/ls* cmds/core/sshd $GITHUB_STEP_SUMMARY
+              -version-go $GOVER \
+              cmds/core/* cmds/exp/* > $GITHUB_STEP_SUMMARY

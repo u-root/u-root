@@ -27,9 +27,9 @@ var (
 type outputFormat string
 
 const (
-	JSON outputFormat = "json"
-	CSV               = "csv"
-	GH                = "gh"
+	// JSON outputFormat = "json"
+	// CSV               = "csv"
+	GH = "gh"
 )
 
 const (
@@ -116,16 +116,11 @@ func generateReport(format outputFormat, results []builder.BuildResult, errors [
 	}
 
 	switch format {
-	case CSV:
-		return reportCSV(r)
 	case GH:
 		return reportGH(r)
-	case JSON:
 	default:
 		return ErrFormatNotSupported
 	}
-
-	return nil
 }
 
 func (cmd *cmd) run() error {
@@ -133,7 +128,7 @@ func (cmd *cmd) run() error {
 	if cmd.flags.CmdletOutputDirBase == "" {
 		dir, err := os.MkdirTemp("", "tinygo-cmdlet")
 		if err != nil {
-
+			return err
 		}
 		log.Printf("temporary directory %s", dir)
 		cmd.flags.CmdletOutputDirBase = dir

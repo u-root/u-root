@@ -97,25 +97,25 @@ type BuildDelta struct {
 // The BuildDelta will be documented from the perspective
 // of the self object. The goPkgPath of the jobs have to be the same to
 // be comparable; this will be ensured.
-func (self *BuildResult) Delta(other *BuildResult) (BuildDelta, error) {
-	if self.BuildJob.GoPkgPath != other.BuildJob.GoPkgPath {
+func (b *BuildResult) Delta(o *BuildResult) (BuildDelta, error) {
+	if b.BuildJob.GoPkgPath != o.BuildJob.GoPkgPath {
 		return BuildDelta{}, fmt.Errorf(
 			"cannot compare packages '%v' and %v",
-			self.BuildJob.GoPkgPath,
-			other.BuildJob.GoPkgPath,
+			b.BuildJob.GoPkgPath,
+			o.BuildJob.GoPkgPath,
 		)
 	}
 
-	if self.BuildJob.Compiler == other.BuildJob.Compiler {
+	if b.BuildJob.Compiler == o.BuildJob.Compiler {
 		return BuildDelta{}, fmt.Errorf(
 			"cannot compare packages with same compiler '%v'",
-			self.BuildJob.Compiler,
+			b.BuildJob.Compiler,
 		)
 	}
 
 	return BuildDelta{
-		deltaSize: int64(self.BinarySize) - int64(other.BinarySize),
-		deltaTime: self.BuildTime - other.BuildTime,
+		deltaSize: int64(b.BinarySize) - int64(o.BinarySize),
+		deltaTime: b.BuildTime - o.BuildTime,
 	}, nil
 }
 
