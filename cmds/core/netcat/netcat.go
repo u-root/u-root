@@ -87,8 +87,12 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	// The port is optional as the second argument.
 	switch config.ConnectionMode {
 	case netcat.CONNECTION_MODE_CONNECT:
+		if f.sourcePort == "" {
+			f.sourcePort = netcat.DEFAULT_SOURCE_PORT
+		}
+
 		if len(args) < 1 {
-			return nil, fmt.Errorf("missing host")
+			return nil, fmt.Errorf("%w: missing host", os.ErrInvalid)
 		}
 
 		config.Host = args[0]
@@ -97,12 +101,12 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 			ports := strings.SplitN(args[1], "-", 2)
 
 			if len(ports) > 2 {
-				return nil, fmt.Errorf("too many arguments")
+				return nil, fmt.Errorf("%w: too many arguments", os.ErrInvalid)
 			}
 
 			port, err := strconv.ParseUint(ports[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %w", err)
+				return nil, fmt.Errorf("%w: invalid port: %v", os.ErrInvalid, ports[0])
 			}
 
 			config.Port = port
@@ -113,7 +117,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 				config.ConnectionModeOptions.CurrentPort = port
 				port, err = strconv.ParseUint(ports[1], 10, 64)
 				if err != nil {
-					return nil, fmt.Errorf("invalid port: %w", err)
+					return nil, fmt.Errorf("%w: invalid port: %v", os.ErrInvalid, ports[1])
 				}
 				config.ConnectionModeOptions.EndPort = port
 			}
@@ -126,15 +130,29 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		if len(args) == 1 {
 			port, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %w", err)
+				config.Host = args[0]
+
+				if f.sourcePort != "" {
+					port, err := strconv.ParseUint(f.sourcePort, 10, 64)
+					if err != nil {
+						return nil, fmt.Errorf("%w: invalid port: %w", os.ErrInvalid, err)
+					}
+					config.Port = port
+				}
+			} else {
+				config.Port = port
 			}
-			config.Port = port
 		} else if len(args) >= 2 {
+
+			if f.sourcePort != "" {
+				return nil, fmt.Errorf("%w: got more than one port specification", os.ErrInvalid)
+			}
+
 			config.Host = args[0]
 
 			port, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port: %w", err)
+				return nil, fmt.Errorf("%w: invalid port: %v", os.ErrInvalid, args[1])
 			}
 			config.Port = port
 		}
@@ -142,7 +160,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 	// IP Type
 	if f.ipv4 && f.ipv6 {
-		return nil, fmt.Errorf("cannot specify both IPv4 and IPv6 explicitly")
+		return nil, fmt.Errorf("%w: cannot specify both IPv4 and IPv6 explicitly", os.ErrInvalid)
 	}
 
 	if f.ipv4 {
@@ -173,12 +191,12 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 			Command: f.execLua,
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", os.ErrInvalid, err)
 	}
 
 	// Loose source routing
 	if f.looseSourcePointer != 0 || len(f.looseSourceRouterPoints) > 0 {
-		return nil, fmt.Errorf("loose source routing is not yet supported")
+		return nil, fmt.Errorf("%w: loose source routing is not yet supported", os.ErrInvalid)
 	}
 
 	config.ConnectionModeOptions.SourceHost = f.sourceAddress
@@ -213,18 +231,18 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	// timing options
 	config.Timing.Delay, err = time.ParseDuration(f.timingDelay)
 	if err != nil {
-		return nil, fmt.Errorf("invalid delay: %w", err)
+		return nil, fmt.Errorf("%w: invalid delay: %w", os.ErrInvalid, err)
 	}
 
 	config.Timing.Timeout, err = time.ParseDuration(f.timingTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("invalid timeout: %w", err)
+		return nil, fmt.Errorf("%w: invalid timeout: %w", os.ErrInvalid, err)
 	}
 
 	if f.timingWait != "" {
 		config.Timing.Wait, err = time.ParseDuration(f.timingWait)
 		if err != nil {
-			return nil, fmt.Errorf("invalid wait: %w", err)
+			return nil, fmt.Errorf("%w: invalid wait: %w", os.ErrInvalid, err)
 		}
 	}
 
@@ -255,15 +273,15 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 	config.AccessControl, err = netcat.ParseAccessControl(f.connectionAllowFile, connectionAllowList, f.connectionDenyFile, connectionDenyList)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", os.ErrInvalid, err)
 	}
 
 	if f.proxyAddress != "" && f.sslEnabled || f.proxyAddress != "" && f.sslVerifyTrust {
-		return nil, fmt.Errorf("proxy and SSL cannot be used together")
+		return nil, fmt.Errorf("%w: proxy and SSL cannot be used together", os.ErrInvalid)
 	}
 
 	if (f.proxyAddress == "" && f.proxyType != "") || (f.proxyAddress != "" && f.proxyType == "") {
-		return nil, fmt.Errorf("proxy address and type must be specified together")
+		return nil, fmt.Errorf("%w: proxy address and type must be specified together", os.ErrInvalid)
 	}
 
 	if f.proxyAddress != "" {
@@ -274,16 +292,16 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		config.ProxyConfig.DNSType = netcat.ProxyDNSTypeFromString(f.proxydns)
 
 		if netcat.ProxyTypeFromString(f.proxyType) != netcat.PROXY_TYPE_SOCKS5 {
-			return nil, fmt.Errorf("only SOCKS5 proxy type is supported")
+			return nil, fmt.Errorf("%w: only SOCKS5 proxy type is supported", os.ErrInvalid)
 		}
 
 		if config.ProxyConfig.DNSType != netcat.PROXY_DNS_NONE {
-			return nil, fmt.Errorf("unsupported proxy DNS type")
+			return nil, fmt.Errorf("%w: unsupported proxy DNS type", os.ErrInvalid)
 		}
 	}
 
 	if !reflect.DeepEqual(f.sslCiphers, "") {
-		return nil, fmt.Errorf("selection of ssl-ciphers are not yet supported")
+		return nil, fmt.Errorf("%w: selection of ssl-ciphers are not yet supported", os.ErrInvalid)
 	}
 
 	config.SSLConfig.Enabled = f.sslEnabled
@@ -299,13 +317,13 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 	if config.SSLConfig.CertFilePath != "" {
 		if _, err := os.Stat(config.SSLConfig.CertFilePath); err != nil {
-			return nil, fmt.Errorf("certificate file does not exist")
+			return nil, fmt.Errorf("%w: certificate file does not exist", os.ErrInvalid)
 		}
 	}
 
 	if config.SSLConfig.KeyFilePath != "" {
 		if _, err := os.Stat(config.SSLConfig.KeyFilePath); err != nil {
-			return nil, fmt.Errorf("key file does not exist")
+			return nil, fmt.Errorf("%w: key file does not exist", os.ErrInvalid)
 		}
 	}
 
@@ -386,8 +404,8 @@ func run(args []string) error {
 	// connection mode options
 	fs.BoolVar(&f.zeroIo, "z", false, "zero-I/O mode, report connection status only")
 
-	fs.StringVar(&f.sourcePort, "source-port", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use")
-	fs.StringVar(&f.sourcePort, "p", netcat.DEFAULT_SOURCE_PORT, "Specify source port to use (shorthand)")
+	fs.StringVar(&f.sourcePort, "source-port", "", "Specify source port to use")
+	fs.StringVar(&f.sourcePort, "p", "", "Specify source port to use (shorthand)")
 
 	fs.StringVar(&f.sourceAddress, "source", "", "Specify source address to use")
 	fs.StringVar(&f.sourceAddress, "s", "", "Specify source address to use (shorthand)")
