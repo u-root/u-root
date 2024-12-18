@@ -32,11 +32,11 @@ type File []Modifier
 // except that no translation of the final path element is done.
 type Namespace interface {
 	// Bind binds new on old.
-	Bind(new, old string, flag mountflag) error
+	Bind(name, old string, flag mountflag) error
 	// Mount mounts servename on old.
 	Mount(servername, old, spec string, flag mountflag) error
 	// Unmount unmounts new from old, or everything mounted on old if new is missing.
-	Unmount(new, old string) error
+	Unmount(name, old string) error
 	// Clear clears the name space with rfork(RFCNAMEG).
 	Clear() error
 	// Chdir changes the working directory to dir.
@@ -65,14 +65,14 @@ func NewNS(nsfile string, user string) error { return buildNS(nil, nsfile, user,
 // space rather than starting from scratch.
 func AddNS(nsfile string, user string) error { return buildNS(nil, nsfile, user, false) }
 
-func buildNS(ns Namespace, nsfile, user string, clear bool) error {
+func buildNS(ns Namespace, nsfile, user string, clearns bool) error {
 	if err := os.Setenv("user", user); err != nil {
 		return err
 	}
 	if ns == nil {
 		ns = DefaultNamespace
 	}
-	if clear {
+	if clearns {
 		ns.Clear()
 	}
 	r, err := NewBuilder()
