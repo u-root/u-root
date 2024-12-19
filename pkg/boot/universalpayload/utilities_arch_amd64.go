@@ -90,8 +90,8 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return append(slice, tmpBytes...)
 	}
 
-	padWithLength := func(slice []uint8, len uint64) []uint8 {
-		tmpBytes := make([]uint8, len)
+	padWithLength := func(slice []uint8, length uint64) []uint8 {
+		tmpBytes := make([]uint8, length)
 		return append(slice, tmpBytes...)
 	}
 

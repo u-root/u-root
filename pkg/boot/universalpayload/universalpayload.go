@@ -397,28 +397,28 @@ func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
 	return nil
 }
 
-func prepareHob(buf *bytes.Buffer, len *uint64, addr uint64, mem *kexec.Memory) error {
-	if err := appendMemMapHOB(buf, len, mem.Phys); err != nil {
+func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memory) error {
+	if err := appendMemMapHOB(buf, length, mem.Phys); err != nil {
 		return err
 	}
 
-	if err := appendSerialPortHOB(buf, len); err != nil {
+	if err := appendSerialPortHOB(buf, length); err != nil {
 		return err
 	}
 
-	if err := appendUniversalPayloadBase(buf, len, addr); err != nil {
+	if err := appendUniversalPayloadBase(buf, length, addr); err != nil {
 		return err
 	}
 
-	if err := appendAcpiTableHOB(buf, len); err != nil {
+	if err := appendAcpiTableHOB(buf, length); err != nil {
 		return err
 	}
 
-	if err := appendSmbiosTableHOB(buf, len); err != nil {
+	if err := appendSmbiosTableHOB(buf, length); err != nil {
 		return err
 	}
 
-	if err := appendEFICPUHOB(buf, len); err != nil {
+	if err := appendEFICPUHOB(buf, length); err != nil {
 		return err
 	}
 
