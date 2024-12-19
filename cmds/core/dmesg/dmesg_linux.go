@@ -24,11 +24,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type cmd struct {
-	clr     bool
-	readClr bool
-}
-
 func run(out io.Writer, args []string) error {
 	var clr, readClr bool
 
