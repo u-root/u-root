@@ -14,7 +14,7 @@ import (
 	tpmutil "github.com/google/go-tpm/tpmutil"
 )
 
-func nvRead12(rwc io.ReadWriteCloser, index, offset, len uint32, auth string) ([]byte, error) {
+func nvRead12(rwc io.ReadWriteCloser, index, offset, length uint32, auth string) ([]byte, error) {
 	var ownAuth [20]byte // owner well known
 	if auth != "" {
 		ownAuth = sha1.Sum([]byte(auth))
@@ -36,11 +36,11 @@ func nvRead12(rwc io.ReadWriteCloser, index, offset, len uint32, auth string) ([
 
 	if needAuthData == 0 {
 		if authread != 0 {
-			return tpm1.NVReadValue(rwc, index, offset, len, ownAuth[:])
+			return tpm1.NVReadValue(rwc, index, offset, length, ownAuth[:])
 		}
-		return tpm1.NVReadValueAuth(rwc, index, offset, len, ownAuth[:])
+		return tpm1.NVReadValueAuth(rwc, index, offset, length, ownAuth[:])
 	}
-	return tpm1.NVReadValue(rwc, index, offset, len, nil)
+	return tpm1.NVReadValue(rwc, index, offset, length, nil)
 }
 
 func nvRead20(rwc io.ReadWriteCloser, index, authHandle tpmutil.Handle, password string, blocksize int) ([]byte, error) {

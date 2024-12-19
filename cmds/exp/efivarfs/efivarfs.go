@@ -37,16 +37,16 @@ func main() {
 	}
 }
 
-func runpath(out io.Writer, p string, list bool, read, delete, write, content string) error {
+func runpath(out io.Writer, p string, list bool, read, remove, write, content string) error {
 	e, err := efivarfs.NewPath(p)
 	if err != nil {
 		return err
 	}
 
-	return run(out, e, list, read, delete, write, content)
+	return run(out, e, list, read, remove, write, content)
 }
 
-func run(out io.Writer, e efivarfs.EFIVar, list bool, read, delete, write, content string) error {
+func run(out io.Writer, e efivarfs.EFIVar, list bool, read, remove, write, content string) error {
 	if list {
 		l, err := efivarfs.SimpleListVariables(e)
 		if err != nil {
@@ -69,8 +69,8 @@ func run(out io.Writer, e efivarfs.EFIVar, list bool, read, delete, write, conte
 		fmt.Fprintf(out, "Name: %s, Attributes: %d, Data: %s", read, attr, b)
 	}
 
-	if delete != "" {
-		if err := efivarfs.SimpleRemoveVariable(e, delete); err != nil {
+	if remove != "" {
+		if err := efivarfs.SimpleRemoveVariable(e, remove); err != nil {
 			return fmt.Errorf("delete failed: %w", err)
 		}
 	}

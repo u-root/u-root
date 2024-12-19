@@ -146,8 +146,8 @@ func (s *sectionReader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 
-	if max := s.limit - s.offset; int64(len(p)) > max {
-		p = p[0:max]
+	if mx := s.limit - s.offset; int64(len(p)) > mx {
+		p = p[0:mx]
 	}
 
 	n, err := s.Reader.Read(p)

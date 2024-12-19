@@ -23,14 +23,14 @@ type RSDP struct {
 
 // NewRSDP returns a new and partially initialized RSDP, setting only
 // the defaultRSDP values, address, length, and signature.
-func NewRSDP(addr uintptr, len uint) []byte {
+func NewRSDP(addr uintptr, length uint) []byte {
 	var r [headerLength]byte
 	copy(r[:], defaultRSDP)
 
 	// This is a bit of a cheat. All the fields are 0.  So we get a
 	// checksum, set up the XSDT fields, get the second checksum.
 	r[cSUM1Off] = gencsum(r[:])
-	binary.LittleEndian.PutUint32(r[xSDTLenOff:], uint32(len))
+	binary.LittleEndian.PutUint32(r[xSDTLenOff:], uint32(length))
 	binary.LittleEndian.PutUint64(r[xSDTAddrOff:], uint64(addr))
 	r[cSUM2Off] = gencsum(r[:])
 	return r[:]
