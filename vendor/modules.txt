@@ -87,6 +87,9 @@ github.com/cloudflare/circl/sign/ed448
 # github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5
 ## explicit; go 1.13
 github.com/containerd/console
+# github.com/creack/goselect v0.1.2
+## explicit; go 1.13
+github.com/creack/goselect
 # github.com/creack/pty v1.1.24
 ## explicit; go 1.18
 github.com/creack/pty
@@ -384,6 +387,10 @@ github.com/vishvananda/netns
 # github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
 ## explicit
 github.com/vtolstov/go-ioctl
+# go.bug.st/serial v1.6.2
+## explicit; go 1.17
+go.bug.st/serial
+go.bug.st/serial/unixutils
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
