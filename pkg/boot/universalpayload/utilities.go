@@ -603,37 +603,17 @@ func buildGraphicNode() (*dt.Node, error) {
 	)), nil
 }
 
-func constructPciNode() *dt.Node {
-	gmaNode, err := buildGraphicNode()
-	if err != nil {
-		// If there is no Graphic Node detected, prompt error message to
-		// indicate error message, and continue construct DTB.
-		fmt.Printf("WARNING: Failed to build Graphic Node (%v)\n", err)
-	}
-
+func constructSerialPortNode() *dt.Node {
 	// Serial port settings
 	var isIOPort uint32 = 0x1
 	var baudRate uint32 = UniversalPayloadSerialPortBaudRate
 	var regBase uint32 = UniversalPayloadSerialPortRegisterBase
-	var pciNode *dt.Node
 
-	var serialNode = dt.NewNode("serial@", dt.WithProperty(
+	return dt.NewNode("serial@", dt.WithProperty(
 		dt.PropertyString("compatible", "isa"),
 		dt.PropertyU32("current-speed", baudRate),
 		dt.PropertyU32Array("reg", []uint32{isIOPort, regBase}),
 	))
-
-	if gmaNode != nil {
-		pciNode = dt.NewNode("pci-rb", dt.WithProperty(
-			dt.PropertyString("compatible", "none")),
-			dt.WithChildren(serialNode, gmaNode))
-	} else {
-		pciNode = dt.NewNode("pci-rb", dt.WithProperty(
-			dt.PropertyString("compatible", "none")),
-			dt.WithChildren(serialNode))
-	}
-
-	return pciNode
 }
 
 func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte, error) {
@@ -676,7 +656,11 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte,
 		)),
 	))
 
-	pciNode := constructPciNode()
+	gmaNode, err := buildGraphicNode()
+	if err != nil {
+		fmt.Printf("WARNING: Failed to build Graphic Device Node (%v)\n", err)
+	}
+
 	fbNode, err := buildFrameBufferNode()
 	if err != nil {
 		// If we failed to retrieve Frame Buffer configurations, prompt error
@@ -684,14 +668,19 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte,
 		fmt.Printf("WARNING: Failed to build Frame Buffer Node (%v)\n", err)
 	}
 
+	serialPortNode := constructSerialPortNode()
+
 	dtNodes := append(memNodes, rsvdMemNode)
+	dtNodes = append(dtNodes, serialPortNode)
 	dtNodes = append(dtNodes, optionsNode)
 
 	if fbNode != nil {
 		dtNodes = append(dtNodes, fbNode)
 	}
 
-	dtNodes = append(dtNodes, pciNode)
+	if gmaNode != nil {
+		dtNodes = append(dtNodes, gmaNode)
+	}
 
 	dtHeader := dt.Header{
 		Magic:           dt.Magic,
