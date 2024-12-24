@@ -7,8 +7,13 @@
 package universalpayload
 
 import (
+	"bufio"
 	"encoding/binary"
+	"fmt"
+	"os"
 	"reflect"
+	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -51,7 +56,14 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return append(slice, tmpBytes...)
 	}
 
-	stackOffset := trampStack & 0xFFFF
+	// Due to Golang Plan9 Assembly support limitation, we can only
+	// fetch symbol address after relocated, and symbol address of
+	// trampBegin, trampStack, trampHob should not be larger than
+	// one page from PC address of trampoline entry point. If symbol
+	// address is larger than one page size from PC address of
+	// trampoline entry point, boot environment which is constructed
+	// for UPL will be overwritten by trampoline code.
+	stackOffset := trampStack & 0xFFF
 	gapLen := stackOffset - (trampStack - trampBegin)
 	buf = padWithLength(buf, uint64(gapLen))
 
@@ -71,4 +83,39 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	buf = appendUint64(buf, entry)
 
 	return buf
+}
+
+// Get the base address and data from RDSP table
+func archGetAcpiRsdpData() (uint64, []byte, error) {
+	// Finds the RSDP in the EFI System Table.
+	file, err := os.Open("/sys/firmware/efi/systab")
+	if err != nil {
+		return 0, nil, err
+	}
+	defer file.Close()
+
+	const acpi20 = "ACPI20="
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		start := ""
+		if strings.HasPrefix(line, acpi20) {
+			start = strings.TrimPrefix(line, acpi20)
+		}
+		if start == "" {
+			continue
+		}
+		base, err := strconv.ParseInt(start, 0, 63)
+		if err != nil {
+			continue
+		}
+		return uint64(base), nil, nil
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("error while reading efi systab: %v", err)
+	}
+
+	return 0xFFFFFFFF, nil, ErrDTRsdpTableNotFound
 }

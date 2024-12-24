@@ -9,6 +9,7 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
@@ -164,30 +165,38 @@ type EFIMemoryMapHOB []EFIHOBResourceDescriptor
 func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 	var memMapHOB EFIMemoryMapHOB
 	var length uint64
+	var resourceType EFIResourceType
 
 	for _, entry := range memMap {
 
 		memType := strings.TrimSpace(string(entry.Type))
 
 		if memType == kexec.RangeRAM.String() {
-			memMapHOB = append(memMapHOB, EFIHOBResourceDescriptor{
-				Header: EFIHOBGenericHeader{
-					HOBType:   EFIHOBTypeResourceDescriptor,
-					HOBLength: EFIHOBLength(unsafe.Sizeof(EFIHOBResourceDescriptor{})),
-				},
-				ResourceType: EFIResourceSystemMemory,
-				ResourceAttribute: EFIResourceAttributePresent |
-					EFIResourceAttributeInitialized |
-					EFIResourceAttributeTested |
-					EFIResourceAttributeUncacheable |
-					EFIResourceAttributeWriteCombineable |
-					EFIResourceAttributeWriteThroughCacheable |
-					EFIResourceAttributeWriteBackCacheable,
-				PhysicalStart:  EFIPhysicalAddress(entry.Start),
-				ResourceLength: uint64(entry.Size),
-			})
-			length += uint64(unsafe.Sizeof(EFIHOBResourceDescriptor{}))
+			resourceType = EFIResourceSystemMemory
+		} else if memType == kexec.RangeReserved.String() {
+			resourceType = EFIResourceMemoryReserved
+		} else {
+			// Treat all other types to be mapped device MMIO address
+			resourceType = EFIResourceMemoryMappedIO
 		}
+
+		memMapHOB = append(memMapHOB, EFIHOBResourceDescriptor{
+			Header: EFIHOBGenericHeader{
+				HOBType:   EFIHOBTypeResourceDescriptor,
+				HOBLength: EFIHOBLength(unsafe.Sizeof(EFIHOBResourceDescriptor{})),
+			},
+			ResourceType: resourceType,
+			ResourceAttribute: EFIResourceAttributePresent |
+				EFIResourceAttributeInitialized |
+				EFIResourceAttributeTested |
+				EFIResourceAttributeUncacheable |
+				EFIResourceAttributeWriteCombineable |
+				EFIResourceAttributeWriteThroughCacheable |
+				EFIResourceAttributeWriteBackCacheable,
+			PhysicalStart:  EFIPhysicalAddress(entry.Start),
+			ResourceLength: uint64(align.UpPage(entry.Size)),
+		})
+		length += uint64(unsafe.Sizeof(EFIHOBResourceDescriptor{}))
 	}
 
 	return memMapHOB, length

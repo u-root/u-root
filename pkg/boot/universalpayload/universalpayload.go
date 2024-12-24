@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
-	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/smbios"
@@ -48,8 +47,8 @@ const (
 
 var (
 	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
-	getAcpiRSDP             = acpi.GetRSDP
 	getSMBIOSBase           = smbios.SMBIOSBase
+	getAcpiRsdpData         = archGetAcpiRsdpData
 )
 
 type UniversalPayloadGenericHeader struct {
@@ -98,7 +97,6 @@ var (
 
 var (
 	ErrParseGUIDFail                   = errors.New("failed to parse GUID")
-	ErrFailToGetRSDPTable              = errors.New("failed to get RSDP table")
 	ErrFailToGetSmbiosTable            = errors.New("failed to get smbios base")
 	ErrWriteHOBBufMemoryMap            = errors.New("failed to write memory map to buffer")
 	ErrWriteHOBBufSerialPort           = errors.New("failed to append serial port hob to buffer")
@@ -154,22 +152,6 @@ func constructUniversalPayloadBase(addr uint64) *UniversalPayloadBase {
 		},
 		Entry: EFIPhysicalAddress(addr),
 	}
-}
-
-// Construct UniversalPayloadAcpiTable HOB
-func constructRSDPTable() (*UniversalPayloadAcpiTable, error) {
-	rsdp, err := getAcpiRSDP()
-	if err != nil {
-		return nil, errors.Join(ErrFailToGetRSDPTable, err)
-	}
-
-	return &UniversalPayloadAcpiTable{
-		Header: UniversalPayloadGenericHeader{
-			Revision: UniversalPayloadAcpiTableRevision,
-			Length:   uint16(unsafe.Sizeof(UniversalPayloadAcpiTable{})),
-		},
-		Rsdp: EFIPhysicalAddress(rsdp.RSDPAddr()),
-	}, nil
 }
 
 // Construct UniversalPayloadSmbiosTable HOB
@@ -260,38 +242,6 @@ func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load uint64) 
 	return nil
 }
 
-func appendAcpiTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	// Construct universal payload ACPI (RSDP) table HOB
-	rsdpTable, err := constructRSDPTable()
-	if err != nil {
-		return err
-	}
-
-	rsdpTableGUIDHOB, err := constructGUIDHOB(UniversalPayloadAcpiTableGUID)
-	if err != nil {
-		return err
-	}
-
-	length := uint64(unsafe.Sizeof(EFIHOBGUIDType{}) + unsafe.Sizeof(UniversalPayloadAcpiTable{}))
-	prev := buf.Len()
-
-	if err := binary.Write(buf, binary.LittleEndian, rsdpTableGUIDHOB); err != nil {
-		return errors.Join(ErrWriteHOBBufAcpiTable, err)
-	}
-
-	if err := binary.Write(buf, binary.LittleEndian, rsdpTable); err != nil {
-		return errors.Join(ErrWriteHOBBufAcpiTable, err)
-	}
-
-	if err := alignHOBLength(length, buf.Len()-prev, buf); err != nil {
-		return fmt.Errorf("%w, func = appendAcpiTableHOB()", ErrWriteHOBLengthNotMatch)
-	}
-
-	*hobLen += length
-
-	return nil
-}
-
 func appendSmbiosTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	// Construct SMBIOS HOB
 	smbiosTable, err := constructSmbiosTable()
@@ -373,11 +323,11 @@ func constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 }
 
 func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
-	stackBuffer := make([]byte, tmpStackSize)
+	stackBuffer := make([]byte, pageSize)
 
 	s := kexec.NewSegment(stackBuffer, kexec.Range{
-		Start: uintptr(hobAddr + tmpHobSize),
-		Size:  tmpStackSize,
+		Start: uintptr(hobAddr + tmpStackOffset),
+		Size:  pageSize,
 	})
 	mem.Segments.Insert(s)
 
@@ -388,7 +338,7 @@ func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
 	binary.Write(&buf, binary.LittleEndian, trampoline)
 
 	s = kexec.NewSegment(buf.Bytes(), kexec.Range{
-		Start: uintptr(hobAddr + tmpEntryOffset),
+		Start: uintptr(hobAddr + trampolineOffset),
 		Size:  uint(buf.Len()),
 	})
 
@@ -410,10 +360,6 @@ func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memor
 		return err
 	}
 
-	if err := appendAcpiTableHOB(buf, length); err != nil {
-		return err
-	}
-
 	if err := appendSmbiosTableHOB(buf, length); err != nil {
 		return err
 	}
@@ -426,6 +372,29 @@ func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memor
 }
 
 func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Memory) error {
+	dtBuf := &bytes.Buffer{}
+
+	rsdpData, err := buildDeviceTreeInfo(dtBuf, mem, loadAddr)
+	if err != nil {
+		return err
+	}
+
+	s := kexec.NewSegment(dtBuf.Bytes(), kexec.Range{
+		Start: uintptr(loadAddr),
+		Size:  uint(dtBuf.Len()),
+	})
+	mem.Segments.Insert(s)
+
+	// If rsdpData contains data, we need to copy data to specified location.
+	// Otherwise, we will leave it alone, and UPL will handle it.
+	if rsdpData != nil {
+		s = kexec.NewSegment(rsdpData, kexec.Range{
+			Start: uintptr(loadAddr + rsdpTableOffset),
+			Size:  uint(len(rsdpData)),
+		})
+		mem.Segments.Insert(s)
+	}
+
 	hobBuf := &bytes.Buffer{}
 	hobListBuf := &bytes.Buffer{}
 	var hobLen uint64
@@ -438,8 +407,8 @@ func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Me
 		return err
 	}
 
-	s := kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{
-		Start: uintptr(loadAddr),
+	s = kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{
+		Start: uintptr(loadAddr + tmpHobOffset),
 		Size:  uint(hobListBuf.Len()),
 	})
 
@@ -465,10 +434,10 @@ func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) e
 func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr, error) {
 	mmRanges := mem.Phys.RAM()
 
-	fitOffset := tmpHobSize + tmpStackSize + trampolineSize
-	rangeLen := fitOffset + len(data)
+	rangeLen := uplImageOffset + len(data)
 
-	// Try to find available Space to locate FIT image and HOB, stack and trampoline code.
+	// Try to find available Space to locate FIT image and HOB, stack and trampoline code,
+	// Device Tree information, and ACPI DATA.
 	// 2MB alignment will be easy for target OS/Bootloader to construct page table.
 	// The layout of this Space will be placed as following:
 	//
@@ -481,6 +450,10 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	//  |------------------------|
 	//  |  BOOTLOADER PARAMETER  |
 	//  |------------------------|
+	//  |       ACPI DATA        |
+	//  |------------------------|
+	//  |    Device Tree Info    |
+	//  |------------------------|
 	//
 	kernelRange, err := mmRanges.FindSpace(uint(rangeLen), kexec.WithAlignment(0x200000))
 	if err != nil {
@@ -488,7 +461,7 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	}
 
 	targetAddr := uint64(kernelRange.Start)
-	fitImgAddr := targetAddr + uint64(fitOffset)
+	fitImgAddr := targetAddr + uint64(uplImageOffset)
 
 	if err = prepareFdtData(fdt, data, fitImgAddr, mem); err != nil {
 		return 0, err
@@ -502,7 +475,7 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 		return 0, err
 	}
 
-	return (uintptr)(targetAddr + tmpEntryOffset), nil
+	return (uintptr)(targetAddr + trampolineOffset), nil
 }
 
 func Load(name string) error {
