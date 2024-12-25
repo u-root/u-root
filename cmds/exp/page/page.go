@@ -21,6 +21,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/termios"
 )
@@ -96,11 +98,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() {
+	var restore = func() {
 		if err := t.Set(c); err != nil {
 			log.Printf("Restoring modes failed; sorry (%v)", err)
 		}
+	}
+	defer restore()
+
+	cc := make(chan os.Signal, 1)
+	signal.Notify(cc, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-cc
+		restore()
+		os.Exit(1)
 	}()
+
 	if err := page(t, in, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
