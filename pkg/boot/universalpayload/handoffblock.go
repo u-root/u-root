@@ -171,6 +171,12 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 
 		memType := strings.TrimSpace(string(entry.Type))
 
+		// Skip resource region of PCI Bus. UniversalPayload utilizes its own
+		// PciHostBridgeDxe to enumerate all Root Bridges in PCI Bus.
+		if strings.Contains(memType, "PCI Bus") {
+			continue
+		}
+
 		if memType == kexec.RangeRAM.String() {
 			resourceType = EFIResourceSystemMemory
 		} else if memType == kexec.RangeReserved.String() {
