@@ -10,6 +10,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/u-root/gobusybox/src/pkg/bb/bbmain"
 	// There MUST NOT be any other dependencies here.
@@ -68,9 +70,43 @@ func ResolveUntilLastSymlink(p string) string {
 }
 
 func run() {
+	// For shellbang files, the os.Arg[0] for different kernels is not always
+	// consistent. In the case of most Unix, it is /bbin/bb; for Plan 9, it is the
+	// base of the shellbang file path.
+	// so, e.g, if /bbin/date is this:
+	// #!/bbin/bb #!/bbin/date
+	// on Plan 9, argv is
+	// date #!/bbin/date /bbin/date
+	// On most Unix, argv is
+	// /bbin/bb #!/bbin/date /bbin/date
+	// You can not just use os.Args[0] on Plan 9, because the first bbmain.Run below
+	// will succeed, with two additional arguments, and the other two arguments will confuse it:
+	// term% /bbin/date
+	// Usage of date [-u] [-d FILE] [format] ...
+	//
+	// However:
+	// u-root shellbang files have one argument for the interpreter: a string beginning
+	// with #!, as above:
+	// #!/bbin/bb #!/bbin/date
+	// os.Args[2], for all kernels, is the full path or base of the command.
+	// I.e., if we are pretty sure it is a shellbang, we can use os.Args[2].
+	// So, if os.Args[1] is a shellbang, discard the first two arguments.
+	// This was all explained several years ago in the first shellbang commit,
+	// but that was discarded at some point. Please don't discard that again.
+	//
+	// Also, N.B.: the runtime.GOOS == "plan9" test will cause this
+	// code to be elided by the toolchain. So don't worry about
+	// some comparison happening here for all non-Plan 9 kernels.
+	// This code won't make it into the final binary if it is not built for Plan 9.
+	if runtime.GOOS == "plan9" && len(os.Args) > 2 && strings.HasPrefix(os.Args[1], "#!") {
+		os.Args = os.Args[2:]
+	}
+
 	name := filepath.Base(os.Args[0])
 	err := bbmain.Run(name)
-	if errors.Is(err, bbmain.ErrNotRegistered) {
+
+	// This test should not run on Plan 9.
+	if runtime.GOOS != "plan9" && errors.Is(err, bbmain.ErrNotRegistered) {
 		if len(os.Args) > 1 {
 			os.Args = os.Args[1:]
 			err = bbmain.Run(filepath.Base(os.Args[0]))

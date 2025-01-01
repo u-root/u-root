@@ -118,8 +118,8 @@ func main() {
 		}
 
 		for i := 0; i < n; i++ {
-			// Control-C to quit
-			if buf[i] == 0x03 {
+			// Control-X to quit
+			if buf[i] == 0x18 {
 				c <- os.Interrupt
 			}
 		}

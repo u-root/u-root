@@ -38,7 +38,6 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/spf13/pflag v1.0.5
 	github.com/tklauser/go-sysconf v0.3.14
-	github.com/u-root/gobusybox/src v0.0.0-20240226024758-7e6217d0eb49
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/mkuimage v0.0.0-20241128172401-dc7520ecaa89
 	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a
@@ -62,6 +61,8 @@ require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpuid v0.0.0
+	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
+	go.bug.st/serial v1.6.2
 )
 
 require (
@@ -72,7 +73,6 @@ require (
 	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	go.bug.st/serial v1.6.2 // indirect
 	howett.net/plist v1.0.0 // indirect
 )
 
