@@ -513,6 +513,23 @@ u-root also still supports `GO111MODULE=off` builds.
 If you want to see u-root on real hardware, this
 [board](https://www.pcengines.ch/apu2.htm) is a good start.
 
+# Using with Plan 9
+U-root works with Plan 9. The best distro to use for it is 9front, as the
+9front cpiofs works with newc-format cpio (the format of Linux initramfs, which
+u-root generates).
+
+Here is a script for Plan 9. Once this script runs, all the u-root commands
+appear in /bin. You will need to have go1.22 installed on Plan 9; or
+create the u-root initramfs on some other system and copy it to Plan 9.
+
+```
+#!/bin/rc
+u-root '-defaultsh=' '-initcmd=' '-shellbang=true'
+fs/cpiofs /tmp/initram*cpio
+bind -a /n/tapefs /
+bind -a /bbin /bin
+```
+
 # Contributions
 
 For information about contributing, including how we sign off commits, please
