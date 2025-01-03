@@ -217,7 +217,7 @@ func (b *Builder) Run() error {
 			})
 		} else {
 			pkgNameToken := strings.Split(job.GoPkgPath, "/")
-			binPath := filepath.Join(job.GoPkgPath, pkgNameToken[len(pkgNameToken)-1])
+			binPath := filepath.Join(*job.buildDir, pkgNameToken[len(pkgNameToken)-1])
 
 			f, err := os.Stat(binPath)
 			if err != nil {
