@@ -36,12 +36,15 @@ jobs:
           git config --global --add safe.directory /__w/u-root/u-root          
 
           # $GITHUB_STEP_SUMMARY upload aborted, supports content up to a size 
-          # of 1024k, got 1309k. For more information see: 
+          # of 1024k, got 1309k. For more information see:
+
+          mkdir -p $PWD/out
           go run tools/regression/main.go \
               -tinygo $TINYGO \
               -commit-tinygo $TINYGOVER \
               -commit-uroot $(git rev-parse HEAD) \
               -version-go $GOVER \
+              -cmdout $PWD/out \
               cmds/core/* > $GITHUB_STEP_SUMMARY
       
       - name: Run regression builder exp
