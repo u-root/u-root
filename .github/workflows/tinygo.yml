@@ -14,25 +14,20 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: tinygo/tinygo-dev:sha-0426a5f90247b29a8960702e680b23b66f3af17d
     steps:
+      - name: Install actions dependencies into tinygo container (Debain)
+        run: |
+          apt-get update
+          apt-get install -y nodejs
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: '1.23.x'
-      # install tinygo via a provided commit hash as an input
-      - name: Install tinygo from commit
+      - name: Run regression builder
         run: |
-          sudo apt-get update && sudo apt-get install -y make cmake ninja-build
-          git clone https://github.com/tinygo-org/tinygo.git
-          cd tinygo
-          git submodule update --init --recursive
-          make llvm-source -j $(($(nproc) - 1))
-          make llvm-build $(($(nproc) - 1))
-          git checkout e12da15f7d230874ca95a257c50bca0fc39f262c
-          make $(($(nproc) - 1))
-          go install
-          cd ..
-          TINYGO=$(realpath tinygo/build/tinygo)
+          # the docker image adds tinygo to the path
+          TINYGO=$(which tinygo)
           TINYGOVER=$($TINYGO version | awk {'print $3'})
           GOVER=$(go version | awk {'print $3'} )
 
