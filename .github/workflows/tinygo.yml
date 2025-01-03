@@ -24,7 +24,27 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '1.23.x'
-      - name: Run regression builder
+      - name: Run regression builder core
+        run: |
+          # the docker image adds tinygo to the path
+          TINYGO=$(which tinygo)
+          TINYGOVER=$($TINYGO version | awk {'print $3'})
+          GOVER=$(go version | awk {'print $3'} )
+
+          # fatal: detected dubious ownership in repository at '/__w/u-root/u-root'
+          # To add an exception for this directory, call:
+          git config --global --add safe.directory /__w/u-root/u-root          
+
+          # $GITHUB_STEP_SUMMARY upload aborted, supports content up to a size 
+          # of 1024k, got 1309k. For more information see: 
+          go run tools/regression/main.go \
+              -tinygo $TINYGO \
+              -commit-tinygo $TINYGOVER \
+              -commit-uroot $(git rev-parse HEAD) \
+              -version-go $GOVER \
+              cmds/core/* > $GITHUB_STEP_SUMMARY
+      
+      - name: Run regression builder exp
         run: |
           # the docker image adds tinygo to the path
           TINYGO=$(which tinygo)
@@ -36,4 +56,4 @@ jobs:
               -commit-tinygo $TINYGOVER \
               -commit-uroot $(git rev-parse HEAD) \
               -version-go $GOVER \
-              cmds/core/* cmds/exp/* > $GITHUB_STEP_SUMMARY
+              cmds/exp/* > $GITHUB_STEP_SUMMARY
