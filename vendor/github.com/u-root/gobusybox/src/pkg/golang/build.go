@@ -9,9 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
-	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -36,6 +34,8 @@ type Environ struct {
 	GO111MODULE string
 	Mod         ModBehavior
 	GBBDEBUG    bool
+
+	Compiler Compiler
 }
 
 // Copy makes a copy of Environ with the given changes.
@@ -45,6 +45,7 @@ func (c *Environ) Copy(opts ...Opt) *Environ {
 		GO111MODULE: c.GO111MODULE,
 		Mod:         c.Mod,
 		GBBDEBUG:    c.GBBDEBUG,
+		Compiler:    c.Compiler,
 	}
 	e.Apply(opts...)
 	return e
@@ -54,6 +55,8 @@ func (c *Environ) Copy(opts ...Opt) *Environ {
 func (c *Environ) RegisterFlags(f *flag.FlagSet) {
 	f.Var((*uflag.Strings)(&c.BuildTags), "go-build-tags", "Go build tags")
 	f.StringVar((*string)(&c.Mod), "go-mod", string(c.Mod), "Value of -mod to go commands (allowed: (empty), vendor, mod, readonly)")
+	f.StringVar((*string)(&c.Compiler.Path), "compiler", "",
+		"override go compiler used (e.g. \"/path/to/tinygo\")")
 }
 
 // Valid returns an error if GOARCH, GOROOT, or GOOS are unset.
@@ -176,6 +179,12 @@ func (c *Environ) Apply(opts ...Opt) {
 
 // Lookup looks up packages by patterns relative to dir, using the Go environment from c.
 func (c *Environ) Lookup(mode packages.LoadMode, patterns ...string) ([]*packages.Package, error) {
+
+	// required to compute compiler build tags
+	if err := c.CompilerInit(); err != nil {
+		return nil, err
+	}
+
 	cfg := &packages.Config{
 		Mode: mode,
 		Env:  append(os.Environ(), c.Env()...),
@@ -189,34 +198,6 @@ func (c *Environ) Lookup(mode packages.LoadMode, patterns ...string) ([]*package
 		cfg.BuildFlags = append(cfg.BuildFlags, "-mod", string(c.Mod))
 	}
 	return packages.Load(cfg, patterns...)
-}
-
-// GoCmd runs a go command in the environment.
-func (c Environ) GoCmd(gocmd string, args ...string) *exec.Cmd {
-	goBin := filepath.Join(c.GOROOT, "bin", "go")
-	args = append([]string{gocmd}, args...)
-	cmd := exec.Command(goBin, args...)
-	if c.GBBDEBUG {
-		log.Printf("GBB Go invocation: %s %s %#v", c, goBin, args)
-	}
-	cmd.Dir = c.Dir
-	cmd.Env = append(os.Environ(), c.Env()...)
-	return cmd
-}
-
-// Version returns the Go version string that runtime.Version would return for
-// the Go compiler in this environ.
-func (c Environ) Version() (string, error) {
-	cmd := c.GoCmd("version")
-	v, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-	s := strings.Fields(string(v))
-	if len(s) < 3 {
-		return "", fmt.Errorf("unknown go version, tool returned weird output for 'go version': %v", string(v))
-	}
-	return s[2], nil
 }
 
 func (c Environ) envCommon() []string {
@@ -298,54 +279,6 @@ func (b *BuildOpts) RegisterFlags(f *flag.FlagSet) {
 	f.BoolVar(&b.EnableInlining, "go-enable-inlining", false, "Enable inlining (will likely produce a larger binary)")
 	f.BoolVar(&b.NoTrimPath, "go-no-trimpath", false, "Disable -trimpath (will not produce a reproducible binary)")
 	f.Var((*uflag.Strings)(&b.ExtraArgs), "go-extra-args", "Extra args to 'go build'")
-}
-
-func (c Environ) build(dirPath string, binaryPath string, pattern []string, opts *BuildOpts) error {
-	args := []string{
-		// Force rebuilding of packages.
-		"-a",
-
-		"-o", binaryPath,
-	}
-	if c.GO111MODULE != "off" && len(c.Mod) > 0 {
-		args = append(args, "-mod", string(c.Mod))
-	}
-	if c.InstallSuffix != "" {
-		args = append(args, "-installsuffix", c.Context.InstallSuffix)
-	}
-	if opts == nil || !opts.EnableInlining {
-		// Disable "function inlining" to get a (likely) smaller binary.
-		args = append(args, "-gcflags=all=-l")
-	}
-	if opts == nil || !opts.NoStrip {
-		// Strip all symbols, and don't embed a Go build ID to be reproducible.
-		args = append(args, "-ldflags", "-s -w -buildid=")
-	}
-	if opts == nil || !opts.NoTrimPath {
-		// Reproducible builds: Trim any GOPATHs out of the executable's
-		// debugging information.
-		//
-		// E.g. Trim /tmp/bb-*/ from /tmp/bb-12345567/src/github.com/...
-		args = append(args, "-trimpath")
-	}
-	if opts != nil {
-		args = append(args, opts.ExtraArgs...)
-	}
-
-	if len(c.BuildTags) > 0 {
-		args = append(args, []string{"-tags", strings.Join(c.BuildTags, " ")}...)
-	}
-	args = append(args, pattern...)
-
-	cmd := c.GoCmd("build", args...)
-	if dirPath != "" {
-		cmd.Dir = dirPath
-	}
-
-	if o, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("error building go package in %q: %v, %v", dirPath, string(o), err)
-	}
-	return nil
 }
 
 // BuildDir compiles the package in the directory `dirPath`, writing the build

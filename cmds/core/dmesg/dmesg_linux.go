@@ -24,28 +24,23 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type cmd struct {
-	clear     bool
-	readClear bool
-}
-
 func run(out io.Writer, args []string) error {
-	var clear, readClear bool
+	var clr, readClr bool
 
 	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	f.BoolVar(&clear, "clear", false, "Clear the log")
-	f.BoolVar(&readClear, "read-clear", false, "Clear the log after printing")
+	f.BoolVar(&clr, "clear", false, "Clear the log")
+	f.BoolVar(&readClr, "read-clear", false, "Clear the log after printing")
 	f.Parse(args[1:])
 
-	if clear && readClear {
+	if clr && readClr {
 		return fmt.Errorf("cannot specify both -clear and -read-clear:%w", os.ErrInvalid)
 	}
 
 	level := unix.SYSLOG_ACTION_READ_ALL
-	if clear {
+	if clr {
 		level = unix.SYSLOG_ACTION_CLEAR
 	}
-	if readClear {
+	if readClr {
 		level = unix.SYSLOG_ACTION_READ_CLEAR
 	}
 

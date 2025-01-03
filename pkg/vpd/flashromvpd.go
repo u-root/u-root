@@ -18,9 +18,9 @@ func handler(c <-chan os.Signal) {
 	}
 }
 
-// Set RW_VPD key-value via flashrom and vpd executables, delete set to false would set or add the key,
+// Set RW_VPD key-value via flashrom and vpd executables, remove set to false would set or add the key,
 // delete set to true would delete an existing key.
-func FlashromRWVpdSet(key string, value []byte, delete bool) error {
+func FlashromRWVpdSet(key string, value []byte, remove bool) error {
 	file, err := os.CreateTemp("/tmp", "rwvpd*.bin")
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func FlashromRWVpdSet(key string, value []byte, delete bool) error {
 		return err
 	}
 
-	if delete {
+	if remove {
 		cmd = exec.Command("vpd", "-f", file.Name(), "-d", key)
 		if err = cmd.Run(); err != nil {
 			log.Printf("vpd failed to delete key: %v, err: %v", key, err)

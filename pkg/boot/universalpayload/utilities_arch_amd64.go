@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build amd64 && !tinygo
+
 package universalpayload
 
 import (
@@ -14,11 +16,15 @@ import (
 	"regexp"
 	"strconv"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/acpi"
 )
 
 func addrOfStart() uintptr
 func addrOfStackTop() uintptr
 func addrOfHobAddr() uintptr
+
+var getAcpiRsdp = acpi.GetRSDP
 
 // Get Physical Address size from sysfs node /proc/cpuinfo.
 // Both Physical and Virtual Address size will be prompted as format:
@@ -88,8 +94,8 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return append(slice, tmpBytes...)
 	}
 
-	padWithLength := func(slice []uint8, len uint64) []uint8 {
-		tmpBytes := make([]uint8, len)
+	padWithLength := func(slice []uint8, length uint64) []uint8 {
+		tmpBytes := make([]uint8, length)
 		return append(slice, tmpBytes...)
 	}
 
@@ -100,4 +106,16 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	buf = appendUint64(buf, entry)
 
 	return buf
+}
+
+// Get the base address and data from RDSP table
+func archGetAcpiRsdpData() (uint64, []byte, error) {
+	rsdp, _ := getAcpiRsdp()
+	rsdpLen := rsdp.Len()
+
+	if rsdpLen > uint32(pageSize) {
+		return 0, nil, ErrDTRsdpLenOverBound
+	}
+
+	return 0, rsdp.AllData(), nil
 }

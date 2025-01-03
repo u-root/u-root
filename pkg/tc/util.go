@@ -126,20 +126,20 @@ func ParseClassID(p string) (uint32, error) {
 	}
 
 	// split the string at :
-	maj, min, ok := strings.Cut(p, ":")
+	mj, mn, ok := strings.Cut(p, ":")
 	if !ok {
 		return 0, ErrInvalidArg
 	}
 
-	major, err := strconv.ParseUint(maj, 16, 16)
+	major, err := strconv.ParseUint(mj, 16, 16)
 	if err != nil {
 		major = 0
 	}
 
-	if min == "" {
+	if mn == "" {
 		return uint32(major << 16), nil
 	}
-	minor, err := strconv.ParseUint(min, 16, 16)
+	minor, err := strconv.ParseUint(mn, 16, 16)
 	if err != nil {
 		return 0, err
 	}

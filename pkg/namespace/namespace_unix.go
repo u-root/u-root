@@ -62,7 +62,7 @@ const (
 type unixnamespace struct{}
 
 // Bind binds new on old.
-func (ns *unixnamespace) Bind(new string, old string, flag mountflag) error {
+func (ns *unixnamespace) Bind(name string, old string, flag mountflag) error {
 	panic("not implemented") // TODO: Implement
 }
 
@@ -72,7 +72,7 @@ func (ns *unixnamespace) Mount(servername string, old string, spec string, flag 
 }
 
 // Unmount unmounts new from old, or everything mounted on old if new is missing.
-func (ns *unixnamespace) Unmount(new string, old string) error {
+func (ns *unixnamespace) Unmount(name string, old string) error {
 	panic("not implemented") // TODO: Implement
 }
 

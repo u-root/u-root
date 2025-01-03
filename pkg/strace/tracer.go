@@ -557,13 +557,13 @@ func (p *procIO) Read(b []byte) (int, error) {
 
 // ReadString reads a null-terminated string from the process
 // at Addr and any errors.
-func ReadString(t Task, addr Addr, max int) (string, error) {
+func ReadString(t Task, addr Addr, maximum int) (string, error) {
 	if addr == 0 {
 		return "<nil>", nil
 	}
 	var s string
 	var b [1]byte
-	for len(s) < max {
+	for len(s) < maximum {
 		if _, err := t.Read(addr, b[:]); err != nil {
 			return "", err
 		}

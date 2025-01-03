@@ -107,9 +107,9 @@ type mockNS struct {
 	calls chan Modifier
 }
 
-func (m *mockNS) Bind(new string, old string, option mountflag) error {
+func (m *mockNS) Bind(name string, old string, option mountflag) error {
 	return checkArgs(m.t, arg{
-		args: []string{new, old},
+		args: []string{name, old},
 		flag: option,
 		call: BIND,
 	}, <-m.calls)
@@ -123,9 +123,9 @@ func (m *mockNS) Mount(servername, old, spec string, option mountflag) error {
 	}, <-m.calls)
 }
 
-func (m *mockNS) Unmount(new string, old string) error {
+func (m *mockNS) Unmount(name string, old string) error {
 	return checkArgs(m.t, arg{
-		args: []string{new, old},
+		args: []string{name, old},
 		flag: 0,
 		call: UNMOUNT,
 	}, <-m.calls)

@@ -105,9 +105,9 @@ func TestBuilder_buildNS(t *testing.T) {
 
 type noopNS struct{}
 
-func (m *noopNS) Bind(new string, old string, option mountflag) error        { return nil }
-func (m *noopNS) Mount(servername, old, spec string, option mountflag) error { return nil }
-func (m *noopNS) Unmount(new string, old string) error                       { return nil }
+func (m *noopNS) Bind(newname string, oldname string, option mountflag) error { return nil }
+func (m *noopNS) Mount(servername, old, spec string, option mountflag) error  { return nil }
+func (m *noopNS) Unmount(newname string, oldname string) error                { return nil }
 func (m *noopNS) Import(host string, remotepath string, mountpoint string, options mountflag) error {
 	return nil
 }

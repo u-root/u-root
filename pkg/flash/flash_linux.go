@@ -122,13 +122,6 @@ func (f *Flash) Size() int64 {
 
 const maxTransferSize = 4096
 
-func min(x, y int64) int64 {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 // prepareAddress converts an address to the 3- or 4-byte addressing mode.
 func (f *Flash) prepareAddress(addr int64) []byte {
 	data := make([]byte, 4)

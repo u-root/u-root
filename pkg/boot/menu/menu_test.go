@@ -410,9 +410,9 @@ func TestShowMenuAndLoadFromFile(t *testing.T) {
 	}
 }
 
-func getEditSequence(append bool, bootnum string, cmdline string) []ReadLine {
+func getEditSequence(add bool, bootnum string, cmdline string) []ReadLine {
 	var editOpt string
-	if append {
+	if add {
 		editOpt = "a"
 	} else {
 		editOpt = "o"
