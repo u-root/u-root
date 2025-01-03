@@ -222,6 +222,16 @@ func (b *Builder) Run() error {
 			f, err := os.Stat(binPath)
 			if err != nil {
 				fmt.Printf("worker: could not find file %v\n", binPath)
+				b.errors = append(b.errors, BuildError{
+					BuildJob: job,
+					BuildErr: err.Error(),
+				})
+				continue
+			}
+
+			if f == nil {
+				fmt.Printf("worker: could not find file %v, handle is nil\n", binPath)
+				continue
 			}
 
 			b.results = append(b.results, BuildResult{
