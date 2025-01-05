@@ -247,7 +247,7 @@ func (u *UnixSockets) readData() error {
 	for s.Scan() {
 		e := unixSocket{}
 		line := s.Text()
-		if _, err := fmt.Sscanf(line, "%X: %d %d %x %d %d %d %s",
+		if _, err := fmt.Sscanf(line, "%X: %x %d %x %d %d %d %s",
 			&e.Num,
 			&e.RefCnt,
 			&e.Proto,
