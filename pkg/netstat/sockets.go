@@ -247,17 +247,12 @@ func (u *UnixSockets) readData() error {
 	for s.Scan() {
 		e := unixSocket{}
 		line := s.Text()
-		if _, err := fmt.Sscanf(line, "%X: %d %d %x %d %d %d %s",
-			&e.Num,
-			&e.RefCnt,
-			&e.Proto,
-			&e.Flags,
-			&e.Type,
-			&e.St,
-			&e.Inode,
-			&e.Path,
-		); err != nil && !errors.Is(err, io.EOF) {
-			return err
+		// Per the source: the format is %pK: %08X %08X %08X %04X %02X %5lu
+		// e.g. '0000000000000000: 0000000B 00000000 00000000 0002 03  3238 /run/systemd/journal/socket'
+		// The original code assumed some fields were decimal. Be careful!
+		const fmtString = "%X: %X %X %X %X %X %d %s"
+		if _, err := fmt.Sscanf(line, fmtString, &e.Num, &e.RefCnt, &e.Proto, &e.Flags, &e.Type, &e.St, &e.Inode, &e.Path); err != nil && !errors.Is(err, io.EOF) {
+			return fmt.Errorf("converting %q with %q:%w", line, fmtString, err)
 		}
 
 		u.Entries = append(u.Entries, e)
