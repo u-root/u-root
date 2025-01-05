@@ -123,8 +123,7 @@ func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint)
 	var foundLines uint
 	// for each block, count how many new lines, until they add up to `numLines`
 	for pos != 0 {
-		var thisChunkSize int64
-		thisChunkSize = min(pos, blkSize)
+		thisChunkSize := min(pos, blkSize)
 		pos -= thisChunkSize
 		n, err := input.ReadAt(buf, pos)
 		if err != nil && err != io.EOF {
