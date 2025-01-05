@@ -522,7 +522,7 @@ Here is a script for Plan 9. Once this script runs, all the u-root commands
 appear in /bin. You will need to have go1.22 installed on Plan 9; or
 create the u-root initramfs on some other system and copy it to Plan 9.
 
-```
+```shell
 #!/bin/rc
 u-root '-defaultsh=' '-initcmd=' '-shellbang=true'
 fs/cpiofs /tmp/initram*cpio
