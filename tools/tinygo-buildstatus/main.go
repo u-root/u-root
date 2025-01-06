@@ -12,11 +12,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	builder "github.com/u-root/u-root/tools/regression/pkg"
+	builder "github.com/u-root/u-root/tools/tinygo-buildstatus/pkg"
 )
 
 var (
-	fs                    = flag.NewFlagSet("tinygo cmdlet builder", flag.ExitOnError)
+	fs = flag.NewFlagSet("tinygo cmdlet builder", flag.ExitOnError)
+
 	ErrFormatNotSupported = fmt.Errorf("unsupported output format")
 
 	CommitTinygo  string // commit hash of the tinygo binary
@@ -75,8 +76,8 @@ type report struct {
 	Success      int
 	Failed       int
 	SuccessRate  float64
-	Results      []builder.BuildResult
-	Errors       []builder.BuildError
+	Results      []builder.Result
+	Errors       []builder.Error
 }
 
 func reportCSV(r report) error {
@@ -85,27 +86,26 @@ func reportCSV(r report) error {
 
 // reportGH generates a report in the github format (markdown)
 // write the report to the stdout so it can be redirected to > $GITHUB_STEP_SUMMARY
-// TODO: use io.Writer here?
 func reportGH(r report) error {
 	var s strings.Builder
 
 	// preamble
 	s.WriteString(fmt.Sprintf(reportPreamble, r.TotalCmdlets, r.Success, r.Failed, r.SuccessRate, CommitTinygo, VersionGolang, CommitUroot))
 	for _, res := range r.Results {
-		s.WriteString(fmt.Sprintf("| %s | %s | %d |\n", res.BuildJob.GoPkgPath, res.BuildTime, res.BinarySize))
+		s.WriteString(fmt.Sprintf("| %s | %s | %d |\n", res.Job.GoPkgPath, res.BuildTime, res.BinarySize))
 	}
 
 	s.WriteString("\n\n### Errors\n")
 	for _, err := range r.Errors {
-		s.WriteString(fmt.Sprintf("### %s\n", err.BuildJob.GoPkgPath))
-		s.WriteString(fmt.Sprintf("```\n%s\n```\n", err.BuildErr))
+		s.WriteString(fmt.Sprintf("### %s\n", err.Job.GoPkgPath))
+		s.WriteString(fmt.Sprintf("```\n%s\n```\n", err.Err))
 	}
 
 	fmt.Println(s.String())
 	return nil
 }
 
-func generateReport(format outputFormat, results []builder.BuildResult, errors []builder.BuildError) error {
+func generateReport(format outputFormat, results []builder.Result, errors []builder.Error) error {
 	r := report{
 		TotalCmdlets: len(results) + len(errors),
 		Success:      len(results),
@@ -121,6 +121,44 @@ func generateReport(format outputFormat, results []builder.BuildResult, errors [
 	default:
 		return ErrFormatNotSupported
 	}
+}
+
+// verifyStatusQuo checks if the status quo is satisfied
+// if the status quo is not satisfied, return an error
+// if the status quo is satisfied, return nil
+func verifyStatusQuo(results []builder.Result, errors []builder.Error, compare []string) error {
+	unmatchedResults := make([]string, 0)
+	unmatchedErrors := make([]string, 0)
+
+	for _, res := range results {
+		base := filepath.Base(res.Job.GoPkgPath)
+		found := false
+		for _, c := range compare {
+			if base == c {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			unmatchedResults = append(unmatchedResults, base)
+		}
+	}
+
+	// verify that none of the errors are in the compare list
+	for _, err := range errors {
+		base := filepath.Base(err.Job.GoPkgPath)
+		for _, c := range compare {
+			if base == c {
+				unmatchedErrors = append(unmatchedErrors, base)
+			}
+		}
+	}
+
+	if len(unmatchedResults) > 0 || len(unmatchedErrors) > 0 {
+		return fmt.Errorf("status quo not satisfied: results: %v, errors: %v", unmatchedResults, unmatchedErrors)
+	}
+	return nil
 }
 
 func (cmd *cmd) run() error {
@@ -145,7 +183,7 @@ func (cmd *cmd) run() error {
 
 	// enqueue the build jobs
 	for _, goPkg := range cmd.cmdPaths {
-		j, err := builder.NewBuildJob(goPkg, cmd.flags.TinygoPath, &cmd.flags.CmdletOutputDirBase)
+		j, err := builder.NewJob(goPkg, cmd.flags.TinygoPath, &cmd.flags.CmdletOutputDirBase)
 		if err != nil {
 			return err
 		}
@@ -178,7 +216,8 @@ func (cmd *cmd) run() error {
 			return err
 		}
 	}
-	return nil
+
+	return verifyStatusQuo(buildResults, buildErrors, StatusQuo)
 }
 
 func parseFlags(args []string) (cmd, error) {
