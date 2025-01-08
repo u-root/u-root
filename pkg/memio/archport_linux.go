@@ -30,10 +30,6 @@ func iopl() error {
 	return ioplError.err
 }
 
-func archInl(uint16) uint32
-func archInw(uint16) uint16
-func archInb(uint16) uint8
-
 // In reads data from the x86 port at address addr. Data must be Uint8, Uint16,
 // Uint32, but not Uint64.
 func (a *ArchPort) In(addr uint16, data UintN) error {
@@ -53,10 +49,6 @@ func (a *ArchPort) In(addr uint16, data UintN) error {
 	}
 	return nil
 }
-
-func archOutl(uint16, uint32)
-func archOutw(uint16, uint16)
-func archOutb(uint16, uint8)
 
 // Out writes data to the x86 port at address addr. data must be Uint8, Uint16
 // uint32, but not Uint64.
