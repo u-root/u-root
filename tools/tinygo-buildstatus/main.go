@@ -19,6 +19,7 @@ var (
 	fs = flag.NewFlagSet("tinygo cmdlet builder", flag.ExitOnError)
 
 	ErrFormatNotSupported = fmt.Errorf("unsupported output format")
+	ErrStatusQuoViolated  = fmt.Errorf("status quo violated")
 
 	CommitTinygo  string // commit hash of the tinygo binary
 	CommitUroot   string // commit hash of the u-root binary
@@ -155,9 +156,16 @@ func verifyStatusQuo(results []builder.Result, errors []builder.Error, compare [
 		}
 	}
 
-	if len(unmatchedResults) > 0 || len(unmatchedErrors) > 0 {
-		return fmt.Errorf("status quo not satisfied: results: %v, errors: %v", unmatchedResults, unmatchedErrors)
+	if len(unmatchedResults) > 0 {
+		log.Printf("These successful builds are not in the status quo. Maybe consider adding them? %v\n", unmatchedResults)
+		return ErrStatusQuoViolated
 	}
+
+	if len(unmatchedErrors) > 0 {
+		log.Printf("These cmdlets were expected to build but failed %v\n", unmatchedErrors)
+		return ErrStatusQuoViolated
+	}
+
 	return nil
 }
 
