@@ -52,7 +52,7 @@ var (
 		"id",
 		"init",
 		"insmod",
-		// "io",
+		"io",
 		"ip",
 		// "kexec",
 		"kill",
