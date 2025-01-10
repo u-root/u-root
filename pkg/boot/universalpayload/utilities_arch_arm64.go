@@ -11,15 +11,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"unsafe"
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
 
 func getPhysicalAddressSizes() (uint8, error) {
 	// Return hardcode for arm64
@@ -33,14 +28,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
 func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	ptrToSlice := func(ptr uintptr, size int) []byte {
-		var data []byte
-
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-		sh.Data = ptr
-		sh.Len = size
-		sh.Cap = size
-
-		return data
+		return unsafe.Slice((*byte)(unsafe.Pointer(ptr)), size)
 	}
 
 	trampBegin := addrOfStart()
