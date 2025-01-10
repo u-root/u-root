@@ -220,9 +220,68 @@ func TestGetHssEepromPaths(t *testing.T) {
 			pattern: "0-0050",
 			allFiles: []string{
 				"/sys/bus/i2c/devices/0-0070/eeprom",
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
 			},
 			expectedFiles: []string{},
 			isErr:         true,
+		},
+		{
+			name:    "Matching other sysfs",
+			pattern: "*",
+			allFiles: []string{
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/power",
+				"/sys/bus/foo/devices/hoth_mailbox0/foo",
+			},
+			expectedFiles: []string{
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/foo",
+				"/sys/bus/foo/devices/hoth_mailbox0/foo",
+			},
+			isErr: false,
+		},
+		{
+			name:    "Matching SKM FOOs",
+			pattern: "skm_eeprom*",
+			allFiles: []string{
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/power",
+				"/sys/bus/foo/devices/hoth_mailbox0/foo",
+			},
+			expectedFiles: []string{
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/foo",
+			},
+			isErr: false,
+		},
+		{
+			name:    "Matching One SKM FOO",
+			pattern: "skm_eeprom1*",
+			allFiles: []string{
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/foo",
+				"/sys/bus/foo/devices/skm_eeprom1/power",
+				"/sys/bus/foo/devices/hoth_mailbox0/foo",
+			},
+			expectedFiles: []string{
+				"/sys/bus/foo/devices/skm_eeprom1/foo",
+			},
+			isErr: false,
+		},
+		{
+			name:    "Matching both i2c and foo",
+			pattern: "*0",
+			allFiles: []string{
+				"/sys/bus/i2c/devices/0-0070/eeprom",
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+			},
+			expectedFiles: []string{
+				"/sys/bus/i2c/devices/0-0070/eeprom",
+				"/sys/bus/foo/devices/skm_eeprom0/foo",
+			},
+			isErr: false,
 		},
 	}
 
@@ -244,8 +303,9 @@ func TestGetHssEepromPaths(t *testing.T) {
 			}
 
 			// Use temp dir to create base sysfs pattern
-			testBaseSysfsPattern := filepath.Join(tempDir, baseSysfsPattern)
-			result, err := getHssEepromPaths(testBaseSysfsPattern, tt.pattern)
+			testBaseI2cSysfsPattern := filepath.Join(tempDir, BaseSysfsPattern)
+			testBaseNvmemSysfsPattern := filepath.Join(tempDir, "/sys/bus/foo/devices/%s/foo")
+			result, err := getHssEepromPaths([]string{testBaseI2cSysfsPattern, testBaseNvmemSysfsPattern}, tt.pattern)
 
 			// Check if error matches expectation
 			if err != nil && !tt.isErr {
