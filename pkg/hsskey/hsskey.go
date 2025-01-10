@@ -147,6 +147,13 @@ func getHssFromIpmi(warnings io.Writer, verboseDangerous bool) ([][]uint8, error
 //     For example, 0-005*
 //     An empty string "" will skip the attempt to read from EEPROM.
 func GetAllHss(warnings io.Writer, verboseDangerous bool, eepromPattern string, hssFiles string) ([][]uint8, error) {
+	return GetAllHssWithPaths(warnings, verboseDangerous, []string{BaseSysfsPattern}, eepromPattern, hssFiles)
+}
+
+// GetAllHssWithPaths reads all host secret seeds from IMPI or any given sysfs paths.
+//   - sysFsPatterns: A list of sysfs path to search in.
+//   - eepromPattern: A string pattern to find EEPROMs in the sysfs paths.
+func GetAllHssWithPaths(warnings io.Writer, verboseDangerous bool, sysFsPatterns []string, eepromPattern string, hssFiles string) ([][]uint8, error) {
 	// Attempt to get HSS from IPMI.
 	hssList, err := getHssFromIpmi(warnings, verboseDangerous)
 	if err != nil || len(hssList) == 0 {
@@ -155,7 +162,7 @@ func GetAllHss(warnings io.Writer, verboseDangerous bool, eepromPattern string, 
 
 	// Attempt to get HSS from EEPROM.
 	if eepromPattern != "" {
-		filePaths, err := getHssEepromPaths(baseSysfsPattern, eepromPattern)
+		filePaths, err := getHssEepromPaths(sysFsPatterns, eepromPattern)
 		if err != nil {
 			fmt.Fprintf(warnings, "Failed to find HSS EEPROM paths: %v\n", err)
 		}

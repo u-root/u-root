@@ -12,10 +12,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
-	baseSysfsPattern = "/sys/bus/i2c/devices/%s/eeprom"
+	BaseSysfsPattern = "/sys/bus/i2c/devices/%s/eeprom"
 )
 
 // toOctalEscapeSequence converts a byte slice into similar format as C++ protobuf DebugString()
@@ -82,19 +83,22 @@ func deduplicate(data [][]byte) [][]byte {
 	return result
 }
 
-// getHssEepromPaths takes a glob pattern for EEPROM sysfs paths and return all the matching paths.
-// This function will return error if the provided glob pattern doesn't match any existing path.
+// getHssEepromPaths takes glob patterns for EEPROM sysfs paths and returns all the matching paths.
+// This function will return error if the provided glob patterns don't match any existing path.
 //
-// For example, if busDevicePattern is "0-007[01]", this function will look for all the paths
-// matching "/sys/bus/i2c/devices/0-007[01]/eeprom"
-func getHssEepromPaths(basePattern string, busDevicePattern string) ([]string, error) {
-	fullPathGlob := fmt.Sprintf(basePattern, busDevicePattern)
-	matches, err := filepath.Glob(fullPathGlob)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search the file path %w", err)
+// For example, if busDevicePattern is "0-007[01]" and basePatterns is ["/sys/bus/i2c/devices/*/eeprom"]
+// this function will look for all the paths matching "/sys/bus/i2c/devices/0-007[01]/eeprom"
+func getHssEepromPaths(basePatterns []string, busDevicePattern string) ([]string, error) {
+	matches := []string{}
+	globs := []string{}
+	for _, pattern := range basePatterns {
+		fullPathGlob := fmt.Sprintf(pattern, busDevicePattern)
+		m, _ := filepath.Glob(fullPathGlob)
+		globs = append(globs, fullPathGlob)
+		matches = append(matches, m...)
 	}
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("no matching path found for glob pattern %s", fullPathGlob)
+		return nil, fmt.Errorf("no matching path found for glob pattern %s", strings.Join(globs, ","))
 	}
 	return matches, nil
 }
