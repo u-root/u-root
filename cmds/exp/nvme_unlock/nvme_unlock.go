@@ -52,6 +52,7 @@ var (
 	noRereadPartitions = flag.Bool("no-reread-partitions", false, "Only attempt to unlock the disk, don't re-read the partition table.")
 	lock               = flag.Bool("lock", false, "Lock instead of unlocking")
 	salt               = flag.String("salt", hsskey.DefaultPasswordSalt, "Salt for password generation")
+	eepromSysfwPath    = flag.String("eeprom-sysfs-path", "", "Additional path (relative to /sys/bus) used with eeprom-pattern to locate the Host Secret Seeds")
 	eepromPattern      = flag.String("eeprom-pattern", "", "The pattern used to match EEPROM sysfs paths where the Host Secret Seeds are located")
 	hssFiles           = flag.String("hss-files", "", "Comma deliminated list of files or directories containing additional Host Secret Seed (HSS)")
 )
@@ -120,7 +121,14 @@ func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions b
 	}
 	defer diskFd.Close()
 
-	hssList, err := hsskey.GetAllHss(os.Stdout, verboseNoSanitize, *eepromPattern, *hssFiles)
+	sysfsPaths := []string{hsskey.BaseSysfsPattern}
+	if eepromSysfwPath != nil {
+		sysfsPaths = append(sysfsPaths, fmt.Sprintf("/sys/bus/%s", *eepromSysfwPath))
+	}
+
+	hssList, err := hsskey.GetAllHssWithPaths(os.Stdout, verboseNoSanitize,
+		sysfsPaths,
+		*eepromPattern, *hssFiles)
 	if err != nil {
 		return fmt.Errorf("error getting HSS: %w", err)
 	}
