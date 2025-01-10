@@ -69,10 +69,12 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	trampStack := addrOfStackTop()
 	trampHob := addrOfHobAddr()
 
+	if trampBegin == uintptr(0) || trampStack == uintptr(0) || trampHob == uintptr(0) {
+		panic("trampoline address is not set")
+	}
+
 	padLen := uint64(trampHob - trampStack - 8)
-
 	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
-
 	buf = append(buf, tramp...)
 
 	stackTop := hobAddr + tmpStackTop
