@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build amd64 && !tinygo
+//go:build amd64
 
 package universalpayload
 
@@ -19,10 +19,6 @@ import (
 
 	"github.com/u-root/u-root/pkg/acpi"
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
 
 var getAcpiRsdp = acpi.GetRSDP
 
