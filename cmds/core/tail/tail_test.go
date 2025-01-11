@@ -6,11 +6,28 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"testing"
 	"time"
 )
+
+func tempFile(t *testing.T, content string) *os.File {
+	t.Helper()
+	dir := t.TempDir()
+	f, err := os.CreateTemp(dir, "tailRunTest")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.WriteString(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return f
+}
 
 func TestTailReadBackwards(t *testing.T) {
 	input, err := os.Open("./testdata/read_backwards.txt")
@@ -69,20 +86,11 @@ func TestTailReadFromBeginning(t *testing.T) {
 }
 
 func TestTailRun(t *testing.T) {
-	f, err := os.CreateTemp("", "tailRunTest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(f.Name())
-
 	input := "a\nb\nc\n"
-	_, err = f.WriteString(input)
-	if err != nil {
-		t.Fatal(err)
-	}
+	f := tempFile(t, input)
 
 	var b bytes.Buffer
-	err = run(os.Stdin, &b, false, 10, time.Second, []string{f.Name()})
+	err := run(os.Stdin, &b, false, 10, time.Second, []string{f.Name()})
 	if err != nil {
 		t.Error(err)
 	}
@@ -91,9 +99,9 @@ func TestTailRun(t *testing.T) {
 		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
 	}
 
-	err = run(nil, nil, false, 10, time.Second, []string{"a", "b"})
+	err = run(nil, nil, true, 10, time.Second, []string{"a", "b"})
 	if err == nil {
-		t.Error("tail should return an error if more than one file specified")
+		t.Error("tail should return an error if more than one file specified if follow true")
 	}
 
 	b.Truncate(0)
@@ -104,6 +112,23 @@ func TestTailRun(t *testing.T) {
 
 	if b.String() != "c\n" {
 		t.Errorf("tail output does not match, want %q, got %q", input, b.String())
+	}
+}
+
+func TestTailMultipleFiles(t *testing.T) {
+	f1 := tempFile(t, "f1")
+	f2 := tempFile(t, "f2")
+
+	var b bytes.Buffer
+	err := run(os.Stdin, &b, false, 10, time.Second, []string{
+		f1.Name(), f2.Name()})
+	if err != nil {
+		t.Error(err)
+	}
+
+	ex := fmt.Sprintf("==> %s <==\nf1\n==> %s <==\nf2", f1.Name(), f2.Name())
+	if ex != b.String() {
+		t.Errorf("%v != %v", ex, b.String())
 	}
 }
 

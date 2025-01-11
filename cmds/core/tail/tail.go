@@ -267,18 +267,6 @@ func run(reader *os.File, writer io.Writer, follow bool, numLines int, followDur
 		inFile *os.File
 		err    error
 	)
-	switch len(args) {
-	case 0:
-		inFile = reader
-	case 1:
-		inFile, err = os.Open(args[0])
-		if err != nil {
-			return err
-		}
-	default:
-		// TODO support multiple files
-		return fmt.Errorf("tail: can only read one file at a time")
-	}
 
 	// TODO: add support for parsing + (from beggining of the file)
 	// negative sign is the same as none
@@ -286,7 +274,37 @@ func run(reader *os.File, writer io.Writer, follow bool, numLines int, followDur
 		numLines = -1 * numLines
 	}
 	config := tailConfig{follow: follow, numLines: uint(numLines), followDuration: followDuration}
-	return tail(inFile, writer, config)
+
+	switch len(args) {
+	case 0:
+		return tail(reader, writer, config)
+	default:
+		if follow {
+			return fmt.Errorf("tail: can only read one file at a time if follow true")
+		}
+	}
+
+	for i, file := range args {
+		if len(args) > 1 {
+			fmt.Fprintf(writer, "==> %s <==\n", file)
+		}
+
+		inFile, err = os.Open(file)
+		if err != nil {
+			return err
+		}
+
+		err := tail(inFile, writer, config)
+		if err != nil {
+			return err
+		}
+
+		if len(args) > 1 && i < len(args)-1 {
+			fmt.Fprintln(writer)
+		}
+	}
+
+	return nil
 }
 
 func main() {
