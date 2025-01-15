@@ -1,4 +1,7 @@
-// Package chattr implements the chattr unix command.
+// Copyright 2025 the u-root Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package chattr
 
 import (
@@ -30,7 +33,7 @@ func SetAttr(file *os.File, attrStr string) error {
 	case "-a":
 		attr = -FS_APPEND_FL
 	default:
-		return fmt.Errorf("Invalid attribute. Use +i, +a, -i, or -a")
+		return fmt.Errorf("invalid attribute. Use +i, +a, -i, or -a")
 	}
 
 	currentAttr, err := GetAttr(file)
