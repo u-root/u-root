@@ -5,7 +5,6 @@
 package chattr
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -19,7 +18,8 @@ func TestSetAttr(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
 	// Create a temporary file
-	file, err := ioutil.TempFile("", "chattr_test")
+	dir := os.TempDir()
+	file, err := os.CreateTemp(dir, "chattr_test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,8 @@ func TestSetAttr(t *testing.T) {
 func TestGetAttr(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 	// Create a temporary file
-	file, err := ioutil.TempFile("", "chattr_test")
+	dir := os.TempDir()
+	file, err := os.CreateTemp(dir, "chattr_test")
 	if err != nil {
 		t.Fatal(err)
 	}
