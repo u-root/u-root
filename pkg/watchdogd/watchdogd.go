@@ -36,6 +36,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	timeoutIgnore = time.Duration(-1)
+)
+
 const defaultUDS = "/tmp/watchdogd"
 
 const (
@@ -77,8 +81,9 @@ type DaemonOpts struct {
 	// Dev is the watchdog device. Ex: /dev/watchdog
 	Dev string
 
-	// nil uses the preset values. 0 disables the timeout.
-	Timeout, PreTimeout *time.Duration
+	// timeout of -1 means ignore the timeout.
+	Timeout    time.Duration
+	PreTimeout time.Duration
 
 	// KeepAlive is the length of the keep alive interval.
 	KeepAlive time.Duration
@@ -95,8 +100,8 @@ type DaemonOpts struct {
 func (d *DaemonOpts) InitFlags() (fs *flag.FlagSet) {
 	fs = flag.NewFlagSet("run", flag.PanicOnError)
 	fs.StringVar(&d.Dev, "dev", watchdog.Dev, "device")
-	fs.DurationVar(d.Timeout, "timeout", -1, "duration before timing out")
-	fs.DurationVar(d.PreTimeout, "pre_timeout", -1, "duration for pretimeout")
+	fs.DurationVar(&d.Timeout, "timeout", timeoutIgnore, "duration before timing out")
+	fs.DurationVar(&d.PreTimeout, "pre_timeout", timeoutIgnore, "duration for pretimeout")
 	fs.DurationVar(&d.KeepAlive, "keep_alive", 5*time.Second, "duration between issuing keepalive")
 	fs.StringVar(&d.UDS, "uds", defaultUDS, "unix domain socket")
 	return
@@ -175,15 +180,16 @@ func (d *Daemon) ArmWatchdog() rune {
 		log.Printf("Failed to arm: %v", err)
 		return OpResultError
 	}
-	if d.CurrentOpts.Timeout != nil {
-		if err := wd.SetTimeout(*d.CurrentOpts.Timeout); err != nil {
+
+	if d.CurrentOpts.Timeout != timeoutIgnore {
+		if err := wd.SetTimeout(d.CurrentOpts.Timeout); err != nil {
 			d.CurrentWd.Close()
 			log.Printf("Failed to set timeout: %v", err)
 			return OpResultError
 		}
 	}
-	if d.CurrentOpts.PreTimeout != nil {
-		if err := wd.SetPreTimeout(*d.CurrentOpts.PreTimeout); err != nil {
+	if d.CurrentOpts.PreTimeout != timeoutIgnore {
+		if err := wd.SetPreTimeout(d.CurrentOpts.PreTimeout); err != nil {
 			d.CurrentWd.Close()
 			log.Printf("Failed to set pretimeout: %v", err)
 			return OpResultError

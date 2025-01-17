@@ -46,6 +46,7 @@ func runCommand() error {
 		watchdog.Usage()
 		os.Exit(1)
 	}
+
 	cmd, args := args[0], args[1:]
 
 	switch cmd {
@@ -57,13 +58,6 @@ func runCommand() error {
 
 		if fs.NArg() != 0 {
 			watchdog.Usage()
-		}
-
-		if *daemonOpts.Timeout == -1 {
-			daemonOpts.Timeout = nil
-		}
-		if *daemonOpts.PreTimeout == -1 {
-			daemonOpts.PreTimeout = nil
 		}
 
 		daemonOpts.Monitors = []func() error{}
