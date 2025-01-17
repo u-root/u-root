@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build arm64 && !tinygo
+//go:build arm64
 
 package universalpayload
 
@@ -11,15 +11,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"unsafe"
 )
-
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
 
 func getPhysicalAddressSizes() (uint8, error) {
 	// Return hardcode for arm64
@@ -33,24 +28,19 @@ func getPhysicalAddressSizes() (uint8, error) {
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
 func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	ptrToSlice := func(ptr uintptr, size int) []byte {
-		var data []byte
-
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(&data))
-		sh.Data = ptr
-		sh.Len = size
-		sh.Cap = size
-
-		return data
+		return unsafe.Slice((*byte)(unsafe.Pointer(ptr)), size)
 	}
 
 	trampBegin := addrOfStart()
 	trampStack := addrOfStackTop()
 	trampHob := addrOfHobAddr()
 
+	if trampBegin == uintptr(0) || trampStack == uintptr(0) || trampHob == uintptr(0) {
+		panic("trampoline address is not set")
+	}
+
 	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
-
 	buf = append(buf, tramp...)
-
 	padWithLength := func(slice []uint8, len uint64) []uint8 {
 		tmpBytes := make([]uint8, len)
 		return append(slice, tmpBytes...)

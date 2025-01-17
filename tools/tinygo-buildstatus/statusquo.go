@@ -54,7 +54,7 @@ var (
 		"insmod",
 		"io",
 		"ip",
-		// "kexec",
+		"kexec",
 		"kill",
 		"lddfiles",
 		"ln",
