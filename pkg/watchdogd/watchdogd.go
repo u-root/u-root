@@ -1,4 +1,6 @@
-// Copyright 2021-2024 the u-root Authors. All rights reserved
+//go:build !tinygo
+
+// Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -15,8 +17,6 @@
 //     Watchdog | a hang will not       | a hang will not reboot
 //     Disarmed | reboot the machine    | the machine
 //
-
-//go:build !tinygo
 
 package watchdogd
 
