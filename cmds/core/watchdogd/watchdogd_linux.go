@@ -59,13 +59,6 @@ func runCommand() error {
 			watchdog.Usage()
 		}
 
-		if *daemonOpts.Timeout == -1 {
-			daemonOpts.Timeout = nil
-		}
-		if *daemonOpts.PreTimeout == -1 {
-			daemonOpts.PreTimeout = nil
-		}
-
 		daemonOpts.Monitors = []func() error{}
 		for _, m := range strings.Split(*monitor, ",") {
 			if m == "oops" {
