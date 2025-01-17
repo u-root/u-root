@@ -61,20 +61,16 @@ func getPhysicalAddressSizes() (uint8, error) {
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
 func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
-	ptrToSlice := func(ptr uintptr, size int) []byte {
-		return unsafe.Slice((*byte)(unsafe.Pointer(ptr)), size)
-	}
-
 	trampBegin := addrOfStart()
 	trampStack := addrOfStackTop()
 	trampHob := addrOfHobAddr()
 
-	if trampBegin == uintptr(0) || trampStack == uintptr(0) || trampHob == uintptr(0) {
+	if trampBegin == nil || trampStack == nil || trampHob == nil {
 		panic("trampoline address is not set")
 	}
 
-	padLen := uint64(trampHob - trampStack - 8)
-	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
+	padLen := uint64((uintptr)(unsafe.Pointer(trampHob)) - (uintptr)(unsafe.Pointer(trampStack)) - 8)
+	tramp := unsafe.Slice(trampBegin, int((uintptr)(unsafe.Pointer(trampStack))-(uintptr)(unsafe.Pointer(trampBegin))))
 	buf = append(buf, tramp...)
 
 	stackTop := hobAddr + tmpStackTop

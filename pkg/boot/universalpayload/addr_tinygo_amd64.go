@@ -11,14 +11,14 @@ package universalpayload
 */
 import "C"
 
-func addrOfStart() uintptr {
+func addrOfStart() *byte {
 	return C.addrOfStartU()
 }
 
-func addrOfStackTop() uintptr {
+func addrOfStackTop() *byte {
 	return C.addrOfStackTopU()
 }
 
-func addrOfHobAddr() uintptr {
+func addrOfHobAddr() *byte {
 	return C.addrOfHobAddrU()
 }
