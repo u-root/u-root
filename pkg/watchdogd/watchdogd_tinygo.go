@@ -47,6 +47,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	timeoutIgnore = time.Duration(-1)
+)
+
 const (
 	// DaemonProcess is the name of the daemon process.
 	DaemonProcess = "watchdogd"
@@ -64,7 +68,8 @@ type DaemonOpts struct {
 	Dev string
 
 	// nil uses the preset values. 0 disables the timeout.
-	Timeout, PreTimeout *time.Duration
+	Timeout    time.Duration
+	PreTimeout time.Duration
 
 	// KeepAlive is the length of the keep alive interval.
 	KeepAlive time.Duration
@@ -78,8 +83,8 @@ type DaemonOpts struct {
 func (d *DaemonOpts) InitFlags() (fs *flag.FlagSet) {
 	fs = flag.NewFlagSet("run", flag.PanicOnError)
 	fs.StringVar(&d.Dev, "dev", watchdog.Dev, "device")
-	fs.DurationVar(d.Timeout, "timeout", -1, "duration before timing out")
-	fs.DurationVar(d.PreTimeout, "pre_timeout", -1, "duration for pretimeout")
+	fs.DurationVar(&d.Timeout, "timeout", timeoutIgnore, "duration before timing out")
+	fs.DurationVar(&d.PreTimeout, "pre_timeout", timeoutIgnore, "duration for pretimeout")
 	fs.DurationVar(&d.KeepAlive, "keep_alive", 5*time.Second, "duration between issuing keepalive")
 	return
 }
@@ -116,14 +121,14 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 			// another watchdogd?) has the file open.
 			return fmt.Errorf("watchdog: Failed to arm: %v", err)
 		}
-		if opts.Timeout != nil {
-			if err := wd.SetTimeout(*opts.Timeout); err != nil {
+		if opts.Timeout != timeoutIgnore {
+			if err := wd.SetTimeout(opts.Timeout); err != nil {
 				wd.Close()
 				return fmt.Errorf("watchdog: Failed to set timeout: %v", err)
 			}
 		}
-		if opts.PreTimeout != nil {
-			if err := wd.SetPreTimeout(*opts.PreTimeout); err != nil {
+		if opts.PreTimeout != timeoutIgnore {
+			if err := wd.SetPreTimeout(opts.PreTimeout); err != nil {
 				wd.Close()
 				return fmt.Errorf("watchdog: Failed to set pretimeout: %v", err)
 			}
