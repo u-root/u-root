@@ -6,6 +6,6 @@
 
 package universalpayload
 
-func addrOfStart() uintptr
-func addrOfStackTop() uintptr
-func addrOfHobAddr() uintptr
+func addrOfStart() *byte
+func addrOfStackTop() *byte
+func addrOfHobAddr() *byte

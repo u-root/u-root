@@ -9,22 +9,22 @@ long stack_top = 0xdeadbeef;
 long hob_addr = 0xdeadbeef;
 long entry_point = 0xdeadbeef;
 
-uintptr_t addrOfStartU()
+void *addrOfStartU()
 {
     extern void trampoline_startU();
-    return (uintptr_t)trampoline_startU;
+    return trampoline_startU;
 }
 
-uintptr_t addrOfStackTopU()
+void *addrOfStackTopU()
 {
     extern long stack_top;
-    return (uintptr_t)&stack_top;
+    return &stack_top;
 }
 
-uintptr_t addrOfHobAddrU()
+void *addrOfHobAddrU()
 {
     extern long hob_addr;
-    return (uintptr_t)&hob_addr;
+    return &hob_addr;
 }
 
 void trampoline_startU()

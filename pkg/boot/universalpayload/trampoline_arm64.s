@@ -4,19 +4,19 @@
 
 #include "textflag.h"
 
-// func addrOfStart() uintptr
+// func addrOfStart() *byte
 TEXT ·addrOfStart(SB), $0-8
 	MOVD	$trampoline_start(SB), R0
 	MOVD	R0, ret+0(FP)
 	RET
 
-// func addrOfStackTop() uintptr
+// func addrOfStackTop() *byte
 TEXT ·addrOfStackTop(SB), $0-8
 	MOVD	$stack_top(SB), R0
 	MOVD	R0, ret+0(FP)
 	RET
 
-// func addrOfHobAddr() uintptr
+// func addrOfHobAddr() *byte
 TEXT ·addrOfHobAddr(SB), $0-8
 	MOVD	$hob_addr(SB), R0
 	MOVD	R0, ret+0(FP)

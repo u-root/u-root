@@ -27,19 +27,16 @@ func getPhysicalAddressSizes() (uint8, error) {
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
 func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
-	ptrToSlice := func(ptr uintptr, size int) []byte {
-		return unsafe.Slice((*byte)(unsafe.Pointer(ptr)), size)
-	}
-
 	trampBegin := addrOfStart()
 	trampStack := addrOfStackTop()
 	trampHob := addrOfHobAddr()
 
-	if trampBegin == uintptr(0) || trampStack == uintptr(0) || trampHob == uintptr(0) {
+	if trampBegin == nil || trampStack == nil || trampHob == nil {
 		panic("trampoline address is not set")
 	}
 
-	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
+	// tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
+	tramp := unsafe.Slice(trampBegin, int((uintptr)(unsafe.Pointer(trampStack))-(uintptr)(unsafe.Pointer(trampBegin))))
 	buf = append(buf, tramp...)
 	padWithLength := func(slice []uint8, len uint64) []uint8 {
 		tmpBytes := make([]uint8, len)
@@ -53,8 +50,8 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	// address is larger than one page size from PC address of
 	// trampoline entry point, boot environment which is constructed
 	// for UPL will be overwritten by trampoline code.
-	stackOffset := trampStack & 0xFFF
-	gapLen := stackOffset - (trampStack - trampBegin)
+	stackOffset := (uintptr)(unsafe.Pointer(trampStack)) & 0xFFF
+	gapLen := stackOffset - ((uintptr)(unsafe.Pointer(trampStack)) - (uintptr)(unsafe.Pointer(trampBegin)))
 	buf = padWithLength(buf, uint64(gapLen))
 
 	stackTop := hobAddr + tmpStackTop
@@ -64,7 +61,7 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return append(slice, tmpBytes...)
 	}
 
-	padLen := uint64(trampHob - trampStack - 8)
+	padLen := uint64((uintptr)(unsafe.Pointer(trampHob)) - (uintptr)(unsafe.Pointer(trampStack)) - 8)
 
 	buf = appendUint64(buf, stackTop)
 	buf = padWithLength(buf, padLen)
