@@ -36,12 +36,11 @@ var commands = map[string]string{
 
 func ansi(w io.Writer, args []string) error {
 	for _, arg := range args {
-		_, exists := commands[arg]
-		if exists {
-			fmt.Fprintf(w, commands[arg])
-		} else {
-			return fmt.Errorf("command ANSI '%v' don't exists", arg)
+		c, ok := commands[arg]
+		if !ok {
+			return fmt.Errorf("command ANSI %q don't exists", arg)
 		}
+		fmt.Fprint(w, c)
 	}
 	return nil
 }

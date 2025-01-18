@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"io"
-	"reflect"
 	"testing"
 )
 
@@ -25,14 +24,20 @@ func TestAnsiCommands(t *testing.T) {
 	for _, tst := range tsts {
 		cmd, wants := tst[0], []byte(tst[1])
 		b := &bytes.Buffer{}
-		w := io.Writer(b)
-		if err := ansi(w, []string{cmd}); err != nil {
+		if err := ansi(b, []string{cmd}); err != nil {
 			t.Error(err)
 		}
 
 		out := b.Bytes()
-		if !reflect.DeepEqual(out, wants) {
+		if !bytes.Equal(out, wants) {
 			t.Fatalf("'%v' escape code mismatch; got %v, wants %v", cmd, out, wants)
 		}
+	}
+}
+
+func TestMissingCmd(t *testing.T) {
+	err := ansi(io.Discard, []string{"ansi", "missing"})
+	if err == nil {
+		t.Error("expected error got nil")
 	}
 }
