@@ -101,13 +101,12 @@ func run(ctx context.Context, args []string) error {
 }
 
 func readLSBScriptMeta(script string) (*lsb.InitScript, error) {
-	content, err := os.ReadFile(script)
+	f, err := os.Open(script)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read script %q: %w", script, err)
+		return nil, fmt.Errorf("failed to open script file %q: %w", script, err)
 	}
 	meta := &lsb.InitScript{}
-	err = meta.Unmarshal(string(content))
-	if err != nil {
+	if err := meta.Unmarshal(f); err != nil {
 		return nil, fmt.Errorf("failed to parse LSB metadata: %w", err)
 	}
 	return meta, nil

@@ -14,14 +14,12 @@ import (
 func TestStatusAll(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name        string
+	for name, tc := range map[string]struct {
 		setupDir    func(t *testing.T) string
 		expectErr   bool
 		outputCheck func(t *testing.T, output string)
 	}{
-		{
-			name: "all services report status successfully",
+		"all services report status successfully": {
 			setupDir: func(t *testing.T) string {
 				dir := t.TempDir()
 				createSampleScript(t, dir, "service1.sh")
@@ -35,27 +33,31 @@ func TestStatusAll(t *testing.T) {
 				}
 			},
 		},
-		{
-			name: "directory not found",
+		"directory not found": {
 			setupDir: func(t *testing.T) string {
 				return "/nonexistent/directory"
 			},
 			expectErr:   true,
 			outputCheck: nil, // no output to check since it fails immediately
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			serviceDir := tt.setupDir(t)
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			serviceDir := tc.setupDir(t)
 
 			ctx := context.Background()
 			err := statusAll(ctx, serviceDir)
 
-			if tt.expectErr && err == nil {
-				t.Errorf("expected error but got none")
-			} else if !tt.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+			if tc.expectErr && err == nil {
+				t.Fatalf(
+					"statusAll(ctx, %q) = nil, wanted error",
+					serviceDir,
+				)
+			} else if !tc.expectErr && err != nil {
+				t.Fatalf(
+					"statusAll(ctx, %q) = %v, wanted nil",
+					serviceDir, err,
+				)
 			}
 		})
 	}
@@ -64,14 +66,12 @@ func TestStatusAll(t *testing.T) {
 func TestFullRestart(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name        string
+	for name, tc := range map[string]struct {
 		setupDir    func(t *testing.T) string
 		expectErr   bool
 		outputCheck func(t *testing.T, output string)
 	}{
-		{
-			name: "all services restart successfully",
+		"all services restart successfully": {
 			setupDir: func(t *testing.T) string {
 				dir := t.TempDir()
 				createSampleScript(t, dir, "service1.sh")
@@ -85,27 +85,31 @@ func TestFullRestart(t *testing.T) {
 				}
 			},
 		},
-		{
-			name: "directory not found",
+		"directory not found": {
 			setupDir: func(t *testing.T) string {
 				return "/nonexistent/directory"
 			},
 			expectErr:   true,
 			outputCheck: nil, // no output to check since it fails immediately
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			serviceDir := tt.setupDir(t)
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			serviceDir := tc.setupDir(t)
 
 			ctx := context.Background()
 			err := fullRestart(ctx, serviceDir)
 
-			if tt.expectErr && err == nil {
-				t.Errorf("expected error but got none")
-			} else if !tt.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+			if tc.expectErr && err == nil {
+				t.Fatalf(
+					"fullRestart(ctx, %q) = nil, wanted error",
+					serviceDir,
+				)
+			} else if !tc.expectErr && err != nil {
+				t.Fatalf(
+					"fullRestart(ctx, %q) = %v, wanted nil",
+					serviceDir, err,
+				)
 			}
 		})
 	}

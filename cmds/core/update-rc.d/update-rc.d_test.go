@@ -79,9 +79,15 @@ func TestDefaults(t *testing.T) {
 			err := defaults(ctx, "testscript", opts)
 
 			if tc.expectErr && err == nil {
-				t.Errorf("expected error but got none")
+				t.Fatalf(
+					"defaults(ctx, \"testscript\", %v) = nil, wanted error",
+					opts,
+				)
 			} else if !tc.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+				t.Fatalf(
+					"defaults(ctx, \"testscript\", %v) = %v, wanted nil",
+					opts, err,
+				)
 			}
 		})
 	}
@@ -118,9 +124,15 @@ func TestDefaultsDisable(t *testing.T) {
 			err := defaultsDisable(ctx, "testscript", opts)
 
 			if tc.expectErr && err == nil {
-				t.Errorf("expected error but got none")
+				t.Fatalf(
+					"defaultsDisable(ctx, \"testscript\", %v) = nil, wanted error",
+					opts,
+				)
 			} else if !tc.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+				t.Fatalf(
+					"defaultsDisable(ctx, \"testscript\", %v) = %v, wanted nil",
+					opts, err,
+				)
 			}
 		})
 	}
@@ -162,9 +174,15 @@ func TestDisable(t *testing.T) {
 			err := disable(ctx, "testscript", opts)
 
 			if tc.expectErr && err == nil {
-				t.Errorf("expected error but got none")
+				t.Fatalf(
+					"disable(ctx, \"testscript\", %v) = nil, wanted error",
+					opts,
+				)
 			} else if !tc.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+				t.Fatalf(
+					"disable(ctx, \"testscript\", %v) = %v, wanted nil",
+					opts, err,
+				)
 			}
 		})
 	}
@@ -206,9 +224,15 @@ func TestEnable(t *testing.T) {
 			err := enable(ctx, "testscript", opts)
 
 			if tc.expectErr && err == nil {
-				t.Errorf("expected error but got none")
+				t.Fatalf(
+					"enable(ctx, \"testscript\", %v) = nil, wanted error",
+					opts,
+				)
 			} else if !tc.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+				t.Fatalf(
+					"enable(ctx, \"testscript\", %v) = %v, wanted nil",
+					opts, err,
+				)
 			}
 		})
 	}
@@ -254,9 +278,15 @@ func TestRemove(t *testing.T) {
 			err := remove(ctx, "testscript", opts)
 
 			if tc.expectErr && err == nil {
-				t.Errorf("expected error but got none")
+				t.Fatalf(
+					"remove(ctx, \"testscript\", %v) = nil, wanted error",
+					opts,
+				)
 			} else if !tc.expectErr && err != nil {
-				t.Errorf("did not expect error but got: %v", err)
+				t.Fatalf(
+					"remove(ctx, \"testscript\", %v) = %v, wanted nil",
+					opts, err,
+				)
 			}
 		})
 	}
