@@ -9,7 +9,9 @@ package lsb
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,6 +20,11 @@ import (
 const (
 	blockStartMarker = "### BEGIN INIT INFO"
 	blockEndMarker   = "### END INIT INFO"
+)
+
+var (
+	ErrMarkerMissing = errors.New("lsb block marker missing")
+	ErrNilData       = errors.New("data cannot be nil")
 )
 
 type (
@@ -89,19 +96,29 @@ func (s *InitScript) Marshal() (string, error) {
 }
 
 // Unmarshal decodes a string into an InitScript.
-func (s *InitScript) Unmarshal(data string) error {
-	scanner := bufio.NewScanner(strings.NewReader(data))
+func (s *InitScript) Unmarshal(data io.Reader) error {
+	if data == nil {
+		return ErrNilData
+	}
+	scanner := bufio.NewScanner(data)
 	inBlock := false
 
 	typeOfScript := reflect.TypeOf(*s)
 	valueOfScript := reflect.ValueOf(s).Elem()
 
+	var (
+		foundStart = false
+		foundEnd   = false
+	)
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == blockStartMarker {
 			inBlock = true
+			foundStart = true
 			continue
 		} else if line == blockEndMarker {
+			foundEnd = true
 			break
 		}
 
@@ -153,10 +170,18 @@ func (s *InitScript) Unmarshal(data string) error {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return err
+	var reterr error
+	if !foundStart {
+		reterr = errors.Join(reterr, fmt.Errorf("%w: %q", ErrMarkerMissing, blockStartMarker))
 	}
-	return nil
+	if !foundEnd {
+		reterr = errors.Join(reterr, fmt.Errorf("%w: %q", ErrMarkerMissing, blockEndMarker))
+	}
+
+	if err := scanner.Err(); err != nil {
+		return errors.Join(reterr, err)
+	}
+	return reterr
 }
 
 // SequenceNumber calculates sequence number. It prioritizes scripts with fewer dependencies first.
