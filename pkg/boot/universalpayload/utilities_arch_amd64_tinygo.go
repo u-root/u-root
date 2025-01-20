@@ -75,32 +75,23 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 		return data
 	}
 
-	trampBegin := C.addrOfStartU()
-	trampStack := C.addrOfStackTopU()
-	trampHob := C.addrOfHobAddrU()
-
-	padLen := uint64(trampHob - trampStack - 8)
-
-	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
-
-	buf = append(buf, tramp...)
-
-	stackTop := hobAddr + tmpStackTop
 	appendUint64 := func(slice []uint8, value uint64) []uint8 {
 		tmpBytes := make([]uint8, 8)
 		binary.LittleEndian.PutUint64(tmpBytes, value)
 		return append(slice, tmpBytes...)
 	}
 
-	padWithLength := func(slice []uint8, len uint64) []uint8 {
-		tmpBytes := make([]uint8, len)
-		return append(slice, tmpBytes...)
-	}
+	trampBegin := C.addrOfStartU()
 
+	// Please keep 'size' parameter of 'ptrToSlice" align with implementation of
+	// trampoline_startU in trampoline_tinygo_amd64.h
+	tramp := ptrToSlice(trampBegin, 32)
+
+	buf = append(buf, tramp...)
+
+	stackTop := hobAddr + tmpStackTop
 	buf = appendUint64(buf, stackTop)
-	buf = padWithLength(buf, padLen)
 	buf = appendUint64(buf, hobAddr)
-	buf = padWithLength(buf, padLen)
 	buf = appendUint64(buf, entry)
 
 	return buf

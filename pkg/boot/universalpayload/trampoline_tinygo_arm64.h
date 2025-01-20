@@ -4,52 +4,47 @@
 
 #include <stdint.h>
 
-// globals; initial values taken from pkg/boot/universalpayload/trampoline_amd64.go
-long stack_top;
-long hob_addr;
-long entry_point;
-
 uintptr_t addrOfStartU()
 {
     extern void trampoline_startU();
     return (uintptr_t)trampoline_startU;
 }
 
-uintptr_t addrOfStackTopU()
-{
-    extern long stack_top;
-    return (uintptr_t)&stack_top;
-}
-
-uintptr_t addrOfHobAddrU()
-{
-    extern long hob_addr;
-    return (uintptr_t)&hob_addr;
-}
-
 void trampoline_startU()
 {
-    asm volatile(
-        // Load the address of entry_point into x4 and dereference it
-        "adrp    x4, entry_point\n"
-        "add     x4, x4, #:lo12:entry_point\n" // use lower 12 bits of entry_point for page alignment
-        "ldr     x4, [x4]\n"
+    // We are using inline assembly code to implement ARM64 trampoline
+    // bootstrap code. In inline assembly code, we use pc-relative addressing
+    // to fetch corresponding value of stack top, boot parameter and the
+    // real entry point of Universal Payload FIT image.
+    //
+    // In this way, we need to update the actual value of stack, parameter
+    // and entry point after relocation.
+    //
+    // trampoline[32 - 55] will be filled in utilities_arch_arm64_tinygo.go,
+    // keep them here for easy understanding.
+    //
+    // trampoline[0 - 3]   : ldr x4, #0x30 (PC relative: buf[48 - 55], entry_point)
+    // trampoline[4 - 7]   : ldr x0, #0x24 (PC relative: buf[40 - 47], hob_addr)
+    // trampoline[8 - 11]  : clear x1
+    // trampoline[12 - 15] : ldr x2, #0x14 (PC relative: buf[32 - 39], stack_top)
+    // trampoline[16 - 19] : mov sp, x2
+    // trampoline[20 - 23] : clear x2
+    // trampoline[24 - 27] : clear x3
+    // trampoline[28 - 31] : br x4
+    // trampoline[32 - 39] : Top of stack address
+    // trampoline[40 - 47] : Base address of bootloader parameter
+    // trampoline[48 - 55] : Entry point of FIT image
 
-        // Load the address of hob_addr into x0 and dereference it
-        "adrp    x0, hob_addr\n"
-        "add     x0, x0, #:lo12:hob_addr\n"
-        "ldr     x0, [x0]\n"
-
-        // Load the address of stack_top into x2, dereference it, and set the stack pointer
-        "adrp    x2, stack_top\n"
-        "add     x2, x2, #:lo12:stack_top\n"
-        "ldr     x2, [x2]\n"
-        "mov     sp, x2\n"
-
-        // Jump to the address stored in x4
-        "br      x4\n"
-        :
-        : "m"(stack_top), "m"(hob_addr), "m"(entry_point)
-        : "x0", "x2", "x4" // Clobbered registers
+	__asm__ __volatile__ (
+        "ldr x4, [pc, #0x30]\n\t"
+        "ldr x0, [pc, #0x24]\n\t"
+        "mov x1, xzr\n\t"
+        "ldr x2, [pc, #0x14]\n\t"
+        "mov sp, x2\n\t"
+        "mov x2, xzr\n\t"
+        "mov x3, xzr\n\t"
+        "br  x4\n\t"
+        ::: "x0", "x1", "x2", "x3", "x4", "sp"    // Clobbered registers
     );
+
 }
