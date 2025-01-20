@@ -38,7 +38,7 @@ func NewOutput(
 	if flags.ProgNames {
 		cache, err := readProgFS()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read /proc filesystem: %w", err)
 		}
 		ret.ProgCache = cache
 	}

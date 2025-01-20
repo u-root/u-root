@@ -33,7 +33,7 @@ func (i *IPv6) RoutesFormatString(cache bool) (string, error) {
 	for s.Scan() {
 		r, err := parseRoutev6(s.Text())
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to parse route: %w", err)
 		}
 		if cache {
 			if strings.Contains(r.Flags, "C") {

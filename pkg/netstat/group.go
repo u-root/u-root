@@ -50,7 +50,7 @@ func PrintMulticastGroups(ipv4, ipv6 bool, out io.Writer) error {
 	if ipv4 {
 		members, err := parseigmp()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse igmp: %w", err)
 		}
 		g = append(g, members...)
 		fmt.Fprintf(out, "%s", "IPv4")
@@ -59,7 +59,7 @@ func PrintMulticastGroups(ipv4, ipv6 bool, out io.Writer) error {
 	if ipv6 {
 		members, err := parseigmp6()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse igmp6: %w", err)
 		}
 		g = append(g, members...)
 		if ipv4 {

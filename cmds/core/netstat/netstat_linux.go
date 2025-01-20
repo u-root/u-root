@@ -135,7 +135,7 @@ func (c cmd) run() error {
 		c.ipv6,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not evaluate protocols: %w", err)
 	}
 
 	// numeric groups the format functionality of numeric-hosts, numeric-ports and numeric-users.
@@ -261,7 +261,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if tcp && ipv4 {
 		t, err := netstat.NewSocket(netstat.PROT_TCP)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create TCP socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -269,7 +269,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if tcp && ipv6 {
 		t, err := netstat.NewSocket(netstat.PROT_TCP6)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create TCP6 socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -277,7 +277,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if udp && ipv4 {
 		t, err := netstat.NewSocket(netstat.PROT_UDP)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create UDP socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -285,7 +285,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if udp && ipv6 {
 		t, err := netstat.NewSocket(netstat.PROT_UDP6)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create UDP6 socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -293,7 +293,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if udpl && ipv4 {
 		t, err := netstat.NewSocket(netstat.PROT_UDPL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create UDPL socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -301,7 +301,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if udpl && ipv6 {
 		t, err := netstat.NewSocket(netstat.PROT_UDPL6)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create UDPL6 socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -309,7 +309,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if raw && ipv4 {
 		t, err := netstat.NewSocket(netstat.PROT_RAW)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create RAW socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -317,7 +317,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if raw && ipv6 {
 		t, err := netstat.NewSocket(netstat.PROT_RAW6)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create RAW6 socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
@@ -325,7 +325,7 @@ func evalProtocols(tcp, udp, udpl, raw, unix, ipv4, ipv6 bool) ([]netstat.Socket
 	if unix {
 		t, err := netstat.NewSocket(netstat.PROT_UNIX)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not create UNIX socket: %w", err)
 		}
 		retProtos = append(retProtos, t)
 	}
