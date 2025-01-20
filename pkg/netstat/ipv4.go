@@ -53,7 +53,7 @@ func (i *IPv4) RoutesFormatString(_ bool) (string, error) {
 	for s.Scan() {
 		r, err := parseRoutev4(s.Text())
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to parse route: %w", err)
 		}
 
 		i.Output.AddRoute4(*r)
