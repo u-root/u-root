@@ -39,7 +39,7 @@ func PrintInterfaceTable(ifstr string, cont bool, out io.Writer) error {
 
 		ifdata, err := readProcNetDevData()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read net device: %w", err)
 		}
 
 		for _, iface := range ifdata {
@@ -71,22 +71,22 @@ func PrintInterfaceTable(ifstr string, cont bool, out io.Writer) error {
 
 type ifData struct {
 	IfName    string
-	RxBytes   uint32
-	RxPackets uint32
-	RxErrs    uint32
-	RxDrops   uint32
-	RxFifo    uint32
-	RxFrame   uint32
-	RxCompr   uint32
-	RxMulti   uint32
-	TxBytes   uint32
-	TxPackets uint32
-	TxErrs    uint32
-	TxDrops   uint32
-	TxFifo    uint32
-	TxColls   uint32
-	TxCarrier uint32
-	TxCompr   uint32
+	RxBytes   uint64
+	RxPackets uint64
+	RxErrs    uint64
+	RxDrops   uint64
+	RxFifo    uint64
+	RxFrame   uint64
+	RxCompr   uint64
+	RxMulti   uint64
+	TxBytes   uint64
+	TxPackets uint64
+	TxErrs    uint64
+	TxDrops   uint64
+	TxFifo    uint64
+	TxColls   uint64
+	TxCarrier uint64
+	TxCompr   uint64
 	MTU       uint32
 	Flags     string
 }
@@ -133,7 +133,7 @@ func readProcNetDevData() ([]ifData, error) {
 			&d.TxCompr,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse line: %w", err)
 		}
 
 		// Remove : from Ifname

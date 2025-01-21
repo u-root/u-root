@@ -1,4 +1,4 @@
-// Copyright 2015-2024 the u-root Authors. All rights reserved
+// Copyright 2015-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -17,7 +17,7 @@ import (
 func Reboot() error {
 	// Optionally disarm the watchdog.
 	if os.Getenv("UROOT_KEXEC_DISARM_WATCHDOG") == "1" {
-		d, err := watchdogd.New()
+		d, err := watchdogd.NewClient()
 		if err != nil {
 			log.Printf("Error dialing watchdog daemon: %v", err)
 		} else if err := d.Disarm(); err != nil {
