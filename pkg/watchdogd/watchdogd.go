@@ -40,6 +40,11 @@ var (
 	timeoutIgnore = time.Duration(-1)
 )
 
+var (
+	ErrInvalidMonitor     = errors.New("unrecognized monitor")
+	ErrNoCommandSpecified = errors.New("no command specified")
+)
+
 const defaultUDS = "/tmp/watchdogd"
 
 const (

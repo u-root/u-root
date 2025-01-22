@@ -1,6 +1,7 @@
-// Copyright 2021 the u-root Authors. All rights reserved
+// Copyright 2021-2024 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
 //go:build !tinygo || tinygo.enable
 
 // watchdogd is a background daemon for petting the watchdog.
@@ -40,14 +41,13 @@ import (
 	"github.com/u-root/u-root/pkg/watchdogd"
 )
 
-func runCommand() error {
-	args := os.Args[1:]
+func run(args []string) error {
 	if len(args) == 0 {
 		watchdog.Usage()
-		os.Exit(1)
+		return watchdogd.ErrNoCommandSpecified
 	}
-	cmd, args := args[0], args[1:]
 
+	cmd, args := args[0], args[1:]
 	switch cmd {
 	case "run":
 		daemonOpts := &watchdogd.DaemonOpts{}
@@ -64,7 +64,7 @@ func runCommand() error {
 			if m == "oops" {
 				daemonOpts.Monitors = append(daemonOpts.Monitors, watchdogd.MonitorOops)
 			} else {
-				return fmt.Errorf("unrecognized monitor: %v", m)
+				return fmt.Errorf("%w: %v", watchdogd.ErrInvalidMonitor, m)
 			}
 		}
 
@@ -85,14 +85,14 @@ func runCommand() error {
 			"disarm":   d.Disarm,
 		}[cmd]
 		if !ok {
-			return fmt.Errorf("unrecognized command %q", cmd)
+			return watchdogd.ErrNoCommandSpecified
 		}
 		return f()
 	}
 }
 
 func main() {
-	if err := runCommand(); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
 }
