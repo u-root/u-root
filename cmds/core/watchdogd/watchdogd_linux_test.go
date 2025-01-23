@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo || tinygo.enable
+
 package main
 
 import (
@@ -74,17 +76,17 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:          "run_monitors",
-			argv:          []string{"run", "--monitor", "oops"},
+			argv:          []string{"run", "--monitors", "oops"},
 			expectedError: nil,
 		},
 		{
 			name:          "run_monitors_invalid",
-			argv:          []string{"run", "--monitor", "invalid"},
+			argv:          []string{"run", "--monitors", "invalid"},
 			expectedError: fmt.Errorf("%w: %v", watchdogd.ErrInvalidMonitor, "invalid"),
 		},
 		{
 			name:          "run_full",
-			argv:          []string{"run", "--dev", "/dev/watchdog", "--timeout", "1s", "--pre_timeout", "1s", "--keep_alive", "1s", "--monitor", "oops"},
+			argv:          []string{"run", "--dev", "/dev/watchdog", "--timeout", "1s", "--pre_timeout", "1s", "--keep_alive", "1s", "--monitors", "oops"},
 			expectedError: nil,
 		},
 		{

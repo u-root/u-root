@@ -55,6 +55,8 @@ var (
 var (
 	ErrInvalidMonitor     = errors.New("unrecognized monitor")
 	ErrNoCommandSpecified = errors.New("no command specified")
+	ErrMissingArgument    = errors.New("missing argument")
+	ErrTooManyArguments   = errors.New("too many arguments")
 )
 
 const (
@@ -84,6 +86,9 @@ type DaemonOpts struct {
 	// function returns an error, the .
 	Monitors []func() error
 }
+
+// Daemon represents a daemon running in a separate process.
+type Daemon os.Process
 
 // Abstract flag initialization to the DaemonOpts struct so we can separately define it for tinygo and non-tinygo builds.
 func (d *DaemonOpts) InitFlags() (fs *flag.FlagSet) {
@@ -203,15 +208,13 @@ func doMonitors(monitors []func() error) {
 	}
 }
 
-// Daemon represents a daemon running in a separate process.
-type Daemon os.Process
-
 // Find returns the process id of the daemon called watchdogd.
 func New() (*Daemon, error) {
 	files, err := filepath.Glob(ProcessGlob)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, f := range files {
 		// Ignore errors since /proc changes frequently.
 		comm, _ := ioutil.ReadFile(f)
