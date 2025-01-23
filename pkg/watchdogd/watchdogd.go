@@ -43,6 +43,8 @@ var (
 var (
 	ErrInvalidMonitor     = errors.New("unrecognized monitor")
 	ErrNoCommandSpecified = errors.New("no command specified")
+	ErrMissingArgument    = errors.New("missing argument")
+	ErrTooManyArguments   = errors.New("too many arguments")
 )
 
 const defaultUDS = "/tmp/watchdogd"
