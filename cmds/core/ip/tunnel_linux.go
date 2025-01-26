@@ -8,7 +8,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"reflect"
 	"strconv"
 
 	"github.com/vishvananda/netlink"
@@ -147,7 +146,7 @@ func (cmd *cmd) parseTunnel() (*options, error) {
 		}
 	}
 
-	if reflect.DeepEqual(options.modes, []string{}) {
+	if len(options.modes) == 0 {
 		options.modes = allTunnelTypes
 	}
 
