@@ -39,7 +39,7 @@ func PrintInterfaceTable(ifstr string, cont bool, out io.Writer) error {
 
 		ifdata, err := readProcNetDevData()
 		if err != nil {
-			return fmt.Errorf("failed to read net device: %w", err)
+			return fmt.Errorf("read network device: %w", err)
 		}
 
 		for _, iface := range ifdata {
@@ -133,7 +133,7 @@ func readProcNetDevData() ([]ifData, error) {
 			&d.TxCompr,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse line: %w", err)
+			return nil, fmt.Errorf("parse line: %w", err)
 		}
 
 		// Remove : from Ifname
