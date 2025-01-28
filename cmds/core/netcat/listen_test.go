@@ -692,23 +692,18 @@ func TestParseRemoteAddr(t *testing.T) {
 			remoteAddr:  "127.0.0.1",
 			wantAddress: []string{"127.0.0.1", "localhost"},
 		},
-		/*
-			This whole test strategy needs to be redone -- this can't every
-			work -- we're seeing very different results on each different machine
-			now
-			{
-				socketType:  netcat.SOCKET_TYPE_TCP,
-				name:        "IPv6 and Port",
-				remoteAddr:  "[::1]:80",
-				wantAddress: []string{"[::1]:80", "::1", "localhost"},
-			},
-			{
-				socketType:  netcat.SOCKET_TYPE_TCP,
-				name:        "IPv6",
-				remoteAddr:  "::1",
-				wantAddress: []string{"::1", "localhost"},
-			},
-		*/
+		{
+			socketType:  netcat.SOCKET_TYPE_TCP,
+			name:        "IPv6 and Port",
+			remoteAddr:  "[::1]:80",
+			wantAddress: []string{"[::1]:80", "::1"},
+		},
+		{
+			socketType:  netcat.SOCKET_TYPE_TCP,
+			name:        "IPv6",
+			remoteAddr:  "::1",
+			wantAddress: []string{"::1"},
+		},
 		{
 			socketType:  netcat.SOCKET_TYPE_UNIX,
 			name:        "Unix Socket",
