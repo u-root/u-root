@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -300,7 +299,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		}
 	}
 
-	if !reflect.DeepEqual(f.sslCiphers, "") {
+	if f.sslCiphers != "" {
 		return nil, fmt.Errorf("%w: selection of ssl-ciphers are not yet supported", os.ErrInvalid)
 	}
 
