@@ -696,13 +696,13 @@ func TestParseRemoteAddr(t *testing.T) {
 			socketType:  netcat.SOCKET_TYPE_TCP,
 			name:        "IPv6 and Port",
 			remoteAddr:  "[::1]:80",
-			wantAddress: []string{"[::1]:80", "::1", "ip6-localhost"},
+			wantAddress: []string{"[::1]:80", "::1"},
 		},
 		{
 			socketType:  netcat.SOCKET_TYPE_TCP,
 			name:        "IPv6",
 			remoteAddr:  "::1",
-			wantAddress: []string{"::1", "ip6-localhost"},
+			wantAddress: []string{"::1"},
 		},
 		{
 			socketType:  netcat.SOCKET_TYPE_UNIX,
