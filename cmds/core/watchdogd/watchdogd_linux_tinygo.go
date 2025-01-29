@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux && !tinygo
+//go:build linux && tinygo
 
 // watchdogd is a background daemon for petting the watchdog.
 //
@@ -28,7 +28,6 @@
 //	--pre_timeout: Duration for pretimeout (default -1)
 //	--keep_alive: Duration between issuing keepalive (default 10)
 //	--monitors: comma separated list of monitors, ex: oops
-
 package main
 
 import (
@@ -72,6 +71,19 @@ func run(args []string) error {
 
 		return watchdogd.Run(context.Background(), daemonOpts)
 
+	case "pid":
+		if len(args) != 0 {
+			watchdog.Usage()
+			return watchdogd.ErrTooManyArguments
+		}
+
+		daemon, err := watchdogd.New()
+		if err != nil {
+			return fmt.Errorf("could not find watchdog daemon: %w", err)
+		}
+
+		fmt.Println(daemon.Pid)
+
 	default:
 		if len(args) != 0 {
 			watchdog.Usage()
@@ -93,6 +105,8 @@ func run(args []string) error {
 		}
 		return f()
 	}
+
+	return nil
 }
 
 func main() {
