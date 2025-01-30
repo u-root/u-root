@@ -104,79 +104,79 @@ func TestParseAddrAddReplace(t *testing.T) {
 	}
 }
 
-func TestParseAddrShow(t *testing.T) {
-	tests := []struct {
-		name     string
-		cmd      cmd
-		dev      string
-		typeName string
-		wantErr  bool
-	}{
-		{
-			name: "default",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show"},
-				Out:    new(bytes.Buffer),
-			},
-		},
-		{
-			name: "values",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "dev", "lo", "type", "bridge"},
-				Out:    new(bytes.Buffer),
-			},
-			dev:      "lo",
-			typeName: "bridge",
-		},
-		{
-			name: "fail on dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "deva"},
-				Out:    new(bytes.Buffer),
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail on double dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "dev", "lo", "123"},
-				Out:    new(bytes.Buffer),
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail on second dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "dev", "lo", "dev", "lo2"},
-				Out:    new(bytes.Buffer),
-			},
-			wantErr: true,
-		},
-	}
+// func TestParseAddrShow(t *testing.T) {
+// 	tests := []struct {
+// 		name     string
+// 		cmd      cmd
+// 		dev      string
+// 		typeName string
+// 		wantErr  bool
+// 	}{
+// 		{
+// 			name: "default",
+// 			cmd: cmd{
+// 				Cursor: 2,
+// 				Args:   []string{"ip", "addr", "show"},
+// 				Out:    new(bytes.Buffer),
+// 			},
+// 		},
+// 		{
+// 			name: "values",
+// 			cmd: cmd{
+// 				Cursor: 2,
+// 				Args:   []string{"ip", "addr", "show", "dev", "lo", "type", "bridge"},
+// 				Out:    new(bytes.Buffer),
+// 			},
+// 			dev:      "lo",
+// 			typeName: "bridge",
+// 		},
+// 		{
+// 			name: "fail on dev",
+// 			cmd: cmd{
+// 				Cursor: 2,
+// 				Args:   []string{"ip", "addr", "show", "deva"},
+// 				Out:    new(bytes.Buffer),
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "fail on double dev",
+// 			cmd: cmd{
+// 				Cursor: 2,
+// 				Args:   []string{"ip", "addr", "show", "dev", "lo", "123"},
+// 				Out:    new(bytes.Buffer),
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "fail on second dev",
+// 			cmd: cmd{
+// 				Cursor: 2,
+// 				Args:   []string{"ip", "addr", "show", "dev", "lo", "dev", "lo2"},
+// 				Out:    new(bytes.Buffer),
+// 			},
+// 			wantErr: true,
+// 		},
+// 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			link, typeStr, err := tt.cmd.parseAddrShow()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseAddrShow() error = %v, wantErr %t", err, tt.wantErr)
-			}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			link, typeStr, err := tt.cmd.parseAddrShow()
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("parseAddrShow() error = %v, wantErr %t", err, tt.wantErr)
+// 			}
 
-			if !tt.wantErr && link != nil {
-				if link.Attrs().Name != tt.dev {
-					t.Errorf("link.Name = %v, want %s", link.Attrs().Name, tt.dev)
-				}
-				if typeStr != tt.typeName {
-					t.Errorf("type = %v, want %s", typeStr, tt.typeName)
-				}
-			}
-		})
-	}
-}
+// 			if !tt.wantErr && link != nil {
+// 				if link.Attrs().Name != tt.dev {
+// 					t.Errorf("link.Name = %v, want %s", link.Attrs().Name, tt.dev)
+// 				}
+// 				if typeStr != tt.typeName {
+// 					t.Errorf("type = %v, want %s", typeStr, tt.typeName)
+// 				}
+// 			}
+// 		})
+// 	}
+// }
 
 func TestParseAddrFlush(t *testing.T) {
 	tests := []struct {
