@@ -218,7 +218,8 @@ func (cmd *cmd) showAllNeighbours(nud int, proxy bool) error {
 	return cmd.showNeighbours(nud, proxy, nil, ifaces...)
 }
 
-type Neigh struct {
+// NeighJSON represents a neighbor object for JSON output format.
+type NeighJSON struct {
 	Dst    net.IP `json:"dst"`
 	Dev    string `json:"dev"`
 	LLAddr string `json:"lladdr,omitempty"`
@@ -277,10 +278,10 @@ func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP
 
 func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
 	if cmd.Opts.JSON {
-		pNeighs := make([]Neigh, 0, len(neighs))
+		pNeighs := make([]NeighJSON, 0, len(neighs))
 
 		for idx, v := range neighs {
-			neigh := Neigh{
+			neigh := NeighJSON{
 				Dst:    v.IP,
 				Dev:    ifacesNames[idx],
 				LLAddr: v.HardwareAddr.String(),

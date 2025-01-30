@@ -6,7 +6,7 @@
 package main
 
 import (
-	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/vishvananda/netlink"
@@ -15,78 +15,54 @@ import (
 func TestParseAddrAddReplace(t *testing.T) {
 	tests := []struct {
 		name             string
-		cmd              cmd
+		Args             []string
 		wantValidLft     int
 		wantPreferredLft int
 		wantErr          bool
 	}{
 		{
 			name: "default",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo"},
-				Out:    new(bytes.Buffer),
-			},
+			Args: []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo"},
 		},
 		{
 			name: "frv lfts",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "forever", "preferred_lft", "forever"},
-				Out:    new(bytes.Buffer),
-			},
+			Args: []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "forever", "preferred_lft", "forever"},
 		},
 		{
-			name: "10 lfts",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "10", "preferred_lft", "10"},
-				Out:    new(bytes.Buffer),
-			},
+			name:             "10 lfts",
+			Args:             []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "10", "preferred_lft", "10"},
 			wantValidLft:     10,
 			wantPreferredLft: 10,
 		},
 		{
-			name: "invalid valid_lft",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "abc", "preferred_lft", "abc"},
-				Out:    new(bytes.Buffer),
-			},
+			name:    "invalid valid_lft",
+			Args:    []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "abc", "preferred_lft", "abc"},
 			wantErr: true,
 		},
 		{
-			name: "invalid lft",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "10", "preferred_lft", "abc"},
-				Out:    new(bytes.Buffer),
-			},
+			name:    "invalid lft",
+			Args:    []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "lo", "valid_lft", "10", "preferred_lft", "abc"},
 			wantErr: true,
 		},
 		{
-			name: "invalid addr",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "abcde"},
-				Out:    new(bytes.Buffer),
-			},
+			name:    "invalid addr",
+			Args:    []string{"ip", "addr", "add", "abcde"},
 			wantErr: true,
 		},
 		{
-			name: "invalid dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "fjghyy"},
-				Out:    new(bytes.Buffer),
-			},
+			name:    "invalid dev",
+			Args:    []string{"ip", "addr", "add", "127.0.0.1/24", "dev", "fjghyy"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, addr, err := tt.cmd.parseAddrAddReplace()
+			cmd := cmd{
+				Cursor: 2,
+				Args:   tt.Args,
+			}
+			_, addr, err := cmd.parseAddrAddReplace()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("vrf() = %v, want %t", err, tt.wantErr)
 			}
@@ -104,137 +80,47 @@ func TestParseAddrAddReplace(t *testing.T) {
 	}
 }
 
-func TestParseAddrShow(t *testing.T) {
-	tests := []struct {
-		name     string
-		cmd      cmd
-		dev      string
-		typeName string
-		wantErr  bool
-	}{
-		{
-			name: "default",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show"},
-				Out:    new(bytes.Buffer),
-			},
-		},
-		{
-			name: "values",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "dev", "lo", "type", "bridge"},
-				Out:    new(bytes.Buffer),
-			},
-			dev:      "lo",
-			typeName: "bridge",
-		},
-		{
-			name: "fail on dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "deva"},
-				Out:    new(bytes.Buffer),
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail on double dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "dev", "lo", "123"},
-				Out:    new(bytes.Buffer),
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail on second dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "show", "dev", "lo", "dev", "lo2"},
-				Out:    new(bytes.Buffer),
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			link, typeStr, err := tt.cmd.parseAddrShow()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseAddrShow() error = %v, wantErr %t", err, tt.wantErr)
-			}
-
-			if !tt.wantErr && link != nil {
-				if link.Attrs().Name != tt.dev {
-					t.Errorf("link.Name = %v, want %s", link.Attrs().Name, tt.dev)
-				}
-				if typeStr != tt.typeName {
-					t.Errorf("type = %v, want %s", typeStr, tt.typeName)
-				}
-			}
-		})
-	}
-}
-
 func TestParseAddrFlush(t *testing.T) {
 	tests := []struct {
 		name    string
-		cmd     cmd
+		Args    []string
 		dev     string
 		wantErr bool
 	}{
 		{
 			name: "default",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "flush", "dev", "lo"},
-				Out:    new(bytes.Buffer),
-			},
-			dev: "lo",
+			Args: []string{"ip", "addr", "flush", "dev", "lo"},
+			dev:  "lo",
 		},
 		{
 			name: "values",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "flush", "dev", "lo", "scope", "host", "label", "label"},
-				Out:    new(bytes.Buffer),
-			},
-			dev: "lo",
+			Args: []string{"ip", "addr", "flush", "dev", "lo", "scope", "host", "label", "label"},
+			dev:  "lo",
 		},
 		{
-			name: "fail on dev",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "flush", "deva"},
-				Out:    new(bytes.Buffer),
-			},
+			name:    "fail on dev",
+			Args:    []string{"ip", "addr", "flush", "deva"},
 			wantErr: true,
 		},
 		{
 			name: "integer scope",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "flush", "dev", "lo", "scope", "2", "label", "label"},
-				Out:    new(bytes.Buffer),
-			},
-			dev: "lo",
+			Args: []string{"ip", "addr", "flush", "dev", "lo", "scope", "2", "label", "label"},
+			dev:  "lo",
 		},
 		{
-			name: "scope wrong arg",
-			cmd: cmd{
-				Cursor: 2,
-				Args:   []string{"ip", "addr", "flush", "dev", "lo", "scope", "abcdef", "label", "label"},
-				Out:    new(bytes.Buffer),
-			},
+			name:    "scope wrong arg",
+			Args:    []string{"ip", "addr", "flush", "dev", "lo", "scope", "abcdef", "label", "label"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			link, _, err := tt.cmd.parseAddrFlush()
+			cmd := cmd{
+				Cursor: 2,
+				Args:   tt.Args,
+			}
+			link, _, err := cmd.parseAddrFlush()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseAddrShow() error = %v, wantErr %t", err, tt.wantErr)
 			}
@@ -243,6 +129,80 @@ func TestParseAddrFlush(t *testing.T) {
 				if link.Attrs().Name != tt.dev {
 					t.Errorf("link.Name = %v, want %s", link.Attrs().Name, tt.dev)
 				}
+			}
+		})
+	}
+}
+
+func TestParseAddrShow(t *testing.T) {
+	tests := []struct {
+		name      string
+		Args      []string
+		wantName  string
+		wantTypes []string
+	}{
+		{
+			name:     "Show address with device name",
+			Args:     []string{"ip", "addr", "show", "eth0"},
+			wantName: "eth0",
+		},
+		{
+			name:      "Show address with type",
+			Args:      []string{"ip", "addr", "show", "type", "dummy"},
+			wantTypes: []string{"dummy"},
+		},
+		{
+			name:      "Show address with device name and type",
+			Args:      []string{"ip", "addr", "show", "eth0", "type", "dummy"},
+			wantName:  "eth0",
+			wantTypes: []string{"dummy"},
+		},
+		{
+			name:      "Show address with multiple types",
+			Args:      []string{"ip", "addr", "show", "type", "dummy", "veth"},
+			wantTypes: []string{"dummy", "veth"},
+		},
+		{
+			name:     "Show address with device name using 'dev'",
+			Args:     []string{"ip", "addr", "show", "dev", "eth0"},
+			wantName: "eth0",
+		},
+		{
+			name:      "Show address with device name using 'dev' and type",
+			Args:      []string{"ip", "addr", "show", "dev", "eth0", "type", "dummy"},
+			wantName:  "eth0",
+			wantTypes: []string{"dummy"},
+		},
+		{
+			name:      "Show address with type and device name using 'dev'",
+			Args:      []string{"ip", "addr", "show", "type", "dummy", "dev", "eth0"},
+			wantName:  "eth0",
+			wantTypes: []string{"dummy"},
+		},
+		{
+			name:     "Show address with multiple device names",
+			Args:     []string{"ip", "addr", "show", "eth0", "eth1"},
+			wantName: "eth0",
+		},
+		{
+			name:     "Show address with multiple device names using 'dev'",
+			Args:     []string{"ip", "addr", "show", "dev", "eth0", "dev", "eth1"},
+			wantName: "eth0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := cmd{
+				Cursor: 2,
+				Args:   tt.Args,
+			}
+			gotName, gotTypes := cmd.parseAddrShow()
+			if gotName != tt.wantName {
+				t.Errorf("parseAddrShow() gotName = %v, want %v", gotName, tt.wantName)
+			}
+			if !reflect.DeepEqual(gotTypes, tt.wantTypes) {
+				t.Errorf("parseAddrShow() gotTypes = %v, want %v", gotTypes, tt.wantTypes)
 			}
 		})
 	}

@@ -6,8 +6,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"math"
+	"net"
 	"strconv"
+	"strings"
 
 	"github.com/vishvananda/netlink"
 )
@@ -56,6 +61,31 @@ TYPE := { bareudp | bond |bridge | dummy | ifb | vxlan }
 
 `
 
+// link is the entry point for 'ip link' command.
+func (cmd *cmd) link() error {
+	if !cmd.tokenRemains() {
+		return cmd.linkShow()
+	}
+
+	c := cmd.findPrefix("show", "set", "add", "delete", "help")
+	switch c {
+	case "show":
+		return cmd.linkShow()
+	case "set":
+		return cmd.linkSet()
+	case "add":
+		return cmd.linkAdd()
+	case "delete":
+		return cmd.linkDel()
+	case "help":
+		fmt.Fprint(cmd.Out, linkHelp)
+		return nil
+	default:
+		return cmd.usage()
+	}
+}
+
+// linkSet performs 'ip link set' command.
 func (cmd *cmd) linkSet() error {
 	iface, err := cmd.parseDeviceName(true)
 	if err != nil {
@@ -338,8 +368,9 @@ func (cmd *cmd) setLinkVf(iface netlink.Link) error {
 	return cmd.usage()
 }
 
+// linkAdd performs 'ip link add' command.
 func (cmd *cmd) linkAdd() error {
-	typeName, attrs, err := cmd.parseLinkAttrs()
+	typeName, attrs, err := cmd.parseLinkAdd()
 	if err != nil {
 		return err
 	}
@@ -400,7 +431,8 @@ func (cmd *cmd) linkAdd() error {
 	}
 }
 
-func (cmd *cmd) parseLinkAttrs() (string, netlink.LinkAttrs, error) {
+// parseLinkAdd returns arguments to 'ip link add' from the cmdline.
+func (cmd *cmd) parseLinkAdd() (string, netlink.LinkAttrs, error) {
 	typeName := ""
 	attrs := netlink.LinkAttrs{Name: cmd.parseName()}
 
@@ -458,6 +490,7 @@ func (cmd *cmd) parseLinkAttrs() (string, netlink.LinkAttrs, error) {
 	return typeName, attrs, nil
 }
 
+// linkDel performs 'ip link delete' command.
 func (cmd *cmd) linkDel() error {
 	link, err := cmd.parseDeviceName(true)
 	if err != nil {
@@ -467,72 +500,478 @@ func (cmd *cmd) linkDel() error {
 	return cmd.handle.LinkDel(link)
 }
 
+// linkShow performs 'ip link show' command.
 func (cmd *cmd) linkShow() error {
-	dev, typeName, err := cmd.parseLinkShow()
+	name, types := cmd.parseLinkShow()
+
+	links, err := cmd.getLinkDevices(false, linkNameFilter([]string{name}), linkTypeFilter(types))
 	if err != nil {
-		return err
+		return fmt.Errorf("link show: %w", err)
 	}
 
-	if dev == nil {
-		return cmd.showAllLinks(false, typeName...)
+	err = cmd.printLinks(false, links)
+	if err != nil {
+		return fmt.Errorf("link show: %w", err)
 	}
 
-	return cmd.showLink(dev, false, typeName...)
+	return nil
 }
 
-func (cmd *cmd) parseLinkShow() (netlink.Link, []string, error) {
-	var (
-		device netlink.Link
-		err    error
-	)
-
-	typeNames := []string{}
+// parseLinkShow returns arguments to 'ip link show' from the cmdline.
+func (cmd *cmd) parseLinkShow() (name string, types []string) {
+	devSeen := false
 
 	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("device name", "dev", "type"); c {
-		default:
-			device, err = netlink.LinkByName(c)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
-			}
+		switch c := cmd.nextToken("DEVICE", "dev", "type"); c {
 		case "dev":
-			devName := cmd.nextToken("device name")
-			device, err = netlink.LinkByName(devName)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
+			if !devSeen {
+				name = cmd.nextToken("DEVICE")
+				devSeen = true
 			}
 		case "type":
 			for cmd.tokenRemains() {
 				if cmd.peekToken("dev") == "dev" {
 					break
 				}
-				typeNames = append(typeNames, cmd.nextToken("type name"))
+				types = append(types, cmd.nextToken("TYPE"))
+			}
+		default:
+			if name != "" {
+				continue // ignore multiple link device names, taking the first one only
+			}
+			name = c
+		}
+	}
+
+	return
+}
+
+// linkData contains information about a link device.
+type linkData struct {
+	attrs      *netlink.LinkAttrs
+	typeName   string
+	masterName string
+	addresses  []netlink.Addr
+	// concreteDevice can be any of the netlink.Link types. It can be casted to access the type-specific fields.
+	specificDevice any
+}
+
+// getLinkDevices performs system I/O  to enumerate a list of link devices that match the given filters.
+// If no error occurs, at least one linke device was found and the returned linkData objects have a non-nil attrs field.
+// The addresses field is only populated if withAddresses is true.
+func (cmd *cmd) getLinkDevices(withAddresses bool, filter ...linkfilter) ([]linkData, error) {
+	links, err := netlink.LinkList()
+	if err != nil {
+		return nil, fmt.Errorf("get link device list: %w", err)
+	}
+
+	links = filterLinks(links, filter)
+
+	list := make([]linkData, 0, len(links))
+
+	for _, link := range links {
+		attrs := link.Attrs()
+		if attrs == nil {
+			return nil, errors.New("link device found, but does not provide any attributes")
+		}
+
+		// Get the master device name.
+		var masterName string
+		if attrs.MasterIndex != 0 {
+			master, err := netlink.LinkByIndex(attrs.MasterIndex)
+			if err != nil {
+				return nil, fmt.Errorf("get master device for link device %q: %w", attrs.Name, err)
+			}
+			masterName = master.Attrs().Name
+		}
+
+		// Get the addresses for the link.
+		var addresses []netlink.Addr
+		if withAddresses {
+			addresses, err = netlink.AddrList(link, cmd.Family)
+			if err != nil {
+				return nil, fmt.Errorf("get addresses for link device %q: %w", attrs.Name, err)
+			}
+		}
+
+		list = append(list, linkData{
+			attrs:          attrs,
+			masterName:     masterName,
+			addresses:      addresses,
+			specificDevice: link,
+		})
+	}
+
+	return list, nil
+}
+
+type linkfilter func(link netlink.Link) bool
+
+// linkTypeFilter returns a linkfilter that filters links by type.
+func linkTypeFilter(linkTypes []string) linkfilter {
+	return func(link netlink.Link) bool {
+		if len(linkTypes) == 0 {
+			return true
+		}
+		for _, linkType := range linkTypes {
+			if linkType == "" || link.Type() == linkType {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// linkNameFilter returns a linkfilter that filters links by name.
+func linkNameFilter(linkNames []string) linkfilter {
+	return func(link netlink.Link) bool {
+		if len(linkNames) == 0 {
+			return true
+		}
+		for _, linkName := range linkNames {
+			if linkName == "" || link.Attrs().Name == linkName {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// filterLinks applies the given filters to the list of links.
+func filterLinks(links []netlink.Link, lf []linkfilter) []netlink.Link {
+	var (
+		unfilteredLinks []netlink.Link
+		filteredLinks   []netlink.Link
+	)
+
+	filteredLinks = links
+
+	if len(lf) > 0 {
+		for _, filter := range lf {
+			unfilteredLinks = filteredLinks
+			filteredLinks = make([]netlink.Link, 0)
+			for _, link := range unfilteredLinks {
+				if filter(link) {
+					filteredLinks = append(filteredLinks, link)
+				}
 			}
 		}
 	}
 
-	return device, typeNames, nil
+	return filteredLinks
 }
 
-func (cmd *cmd) link() error {
-	if !cmd.tokenRemains() {
-		return cmd.linkShow()
+// printLinks prints the list of links. If withAddresses is true, the link's IP
+// addresses are printed as well.
+func (cmd *cmd) printLinks(withAddresses bool, links []linkData) error {
+	if cmd.Opts.JSON {
+		return cmd.printLinkJSON(links)
 	}
 
-	c := cmd.findPrefix("show", "set", "add", "delete", "help")
-	switch c {
-	case "show":
-		return cmd.linkShow()
-	case "set":
-		return cmd.linkSet()
-	case "add":
-		return cmd.linkAdd()
-	case "delete":
-		return cmd.linkDel()
-	case "help":
-		fmt.Fprint(cmd.Out, linkHelp)
-		return nil
-	default:
-		return cmd.usage()
+	p := linkPrinter{
+		out:           cmd.Out,
+		data:          links,
+		withStats:     cmd.Opts.Stats,
+		withDetails:   cmd.Opts.Details,
+		withAddresses: withAddresses,
+		numeric:       cmd.Opts.Numeric,
 	}
+
+	switch {
+	case cmd.Opts.Brief:
+		p.printBrief()
+	default:
+		p.printDefault()
+	}
+
+	return nil
+}
+
+type linkPrinter struct {
+	out           io.Writer
+	data          []linkData
+	withStats     bool
+	withDetails   bool
+	withAddresses bool
+	numeric       bool
+}
+
+func (p *linkPrinter) printDefault() {
+	for _, link := range p.data {
+		if link.attrs == nil {
+			continue
+		}
+
+		var line string
+
+		line = fmt.Sprintf("%d: %s: <%s> mtu %d", link.attrs.Index, link.attrs.Name, p.flagsStr(link.attrs.Flags), link.attrs.MTU)
+		if link.masterName != "" {
+			line += fmt.Sprintf(" master %s", link.masterName)
+		}
+		line += fmt.Sprintf(" state %s group %s", p.operStateStr(link.attrs.OperState), p.groupStr(link.attrs.Group))
+		fmt.Fprintln(p.out, line)
+
+		line = fmt.Sprintf("    link/%s %s", link.attrs.EncapType, link.attrs.HardwareAddr)
+		fmt.Fprintln(p.out, line)
+
+		if p.withDetails {
+			if line := p.deviceDetailsLine(link.specificDevice); line != "" {
+				fmt.Fprintln(p.out, line)
+			}
+		}
+
+		if p.withAddresses {
+			for _, addr := range link.addresses {
+				line = fmt.Sprintf("    %s %s", p.ipNetStr(addr), addr.IPNet)
+				if addr.IP.To4() != nil {
+					line += fmt.Sprintf(" brd %s", addr.Broadcast)
+				}
+				line += fmt.Sprintf(" scope %s %s", addrScopeStr(netlink.Scope(addr.Scope)), addr.Label)
+				fmt.Fprintln(p.out, line)
+
+				line = fmt.Sprintf("       valid_lft %s preferred_lft %s",
+					p.lifetimeStr(addr.ValidLft), p.lifetimeStr(addr.PreferedLft))
+				fmt.Fprintln(p.out, line)
+			}
+		}
+
+		if p.withStats && link.attrs.Statistics != nil {
+			stats := link.attrs.Statistics
+			line = fmt.Sprintf("    RX:  bytes  packets errors dropped  missed   mcast")
+			fmt.Fprintln(p.out, line)
+			line = fmt.Sprintf("%14d %7d %6d %7d %7d %7d",
+				stats.RxBytes, stats.RxPackets, stats.RxErrors, stats.RxDropped, stats.RxMissedErrors, stats.Multicast)
+			fmt.Fprintln(p.out, line)
+
+			line = fmt.Sprintf("    TX:  bytes  packets errors dropped carrier collsns")
+			fmt.Fprintln(p.out, line)
+			line = fmt.Sprintf("%14d %7d %6d %7d %7d %7d",
+				stats.TxBytes, stats.TxPackets, stats.TxErrors, stats.TxDropped, stats.TxCarrierErrors, stats.Collisions)
+			fmt.Fprintln(p.out, line)
+		}
+	}
+}
+
+func (p *linkPrinter) printBrief() {
+	for _, link := range p.data {
+		if link.attrs == nil {
+			continue
+		}
+
+		var line string
+
+		line = fmt.Sprintf("%-20s %-10s", link.attrs.Name, p.operStateStr(link.attrs.OperState))
+		if p.withAddresses {
+			for _, addr := range link.addresses {
+				line += fmt.Sprintf(" %s", addr.IPNet)
+			}
+		} else {
+			line += fmt.Sprintf(" %-20s <%s>", link.attrs.HardwareAddr, p.flagsStr(link.attrs.Flags))
+		}
+		fmt.Fprintln(p.out, line)
+	}
+}
+
+func (p *linkPrinter) groupStr(group uint32) string {
+	if group == 0 && !p.numeric {
+		return "default"
+	}
+
+	return strconv.Itoa(int(group))
+}
+
+func (p *linkPrinter) flagsStr(flags net.Flags) string {
+	return strings.Replace(strings.ToUpper(flags.String()), "|", ",", -1)
+}
+
+func (p *linkPrinter) operStateStr(state netlink.LinkOperState) string {
+	return strings.ToUpper(state.String())
+}
+
+func (p *linkPrinter) ipNetStr(addr netlink.Addr) string {
+	if addr.IPNet != nil {
+		if addr.IPNet.IP.To4() != nil {
+			return "inet"
+		}
+		if addr.IPNet.IP.To16() != nil {
+			return "inet6"
+		}
+	}
+
+	return ""
+}
+
+func (p *linkPrinter) lifetimeStr(lft int) string {
+	// fix vishnavanda/netlink. *Lft should be uint32, not int.
+	if uint32(lft) == math.MaxUint32 {
+		return "forever"
+	}
+
+	return fmt.Sprintf("%dsec", lft)
+}
+
+func (p *linkPrinter) deviceDetailsLine(t any) string {
+	var line string
+
+	b2int := func(b bool) int8 {
+		if b {
+			return 1
+		}
+		return 0
+	}
+
+	switch dev := t.(type) {
+	case *netlink.Bridge:
+		line = fmt.Sprintf("    bridge hello_time %d ageing_time %d vlan_filtering %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			*dev.HelloTime, *dev.AgeingTime, b2int(*dev.VlanFiltering), dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Vlan:
+		line = fmt.Sprintf("    vlan %s vlan-id %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.VlanProtocol, dev.VlanId, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Macvlan:
+		line = fmt.Sprintf("    macvlan mode %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Mode, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Macvtap:
+		line = fmt.Sprintf("    macvtap mode %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Mode, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Tuntap:
+		line = fmt.Sprintf("    tuntap mode %s owner %d group %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Mode, dev.Owner, dev.Group, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Veth:
+		line = fmt.Sprintf("    peer %s peer-address %s numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.PeerName, dev.PeerHardwareAddr, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Vxlan:
+		line = fmt.Sprintf("    vxlan id %d src %s group %s ttl %d tos %d learning %t proxy %t rsc %t age %d limit %d port %d port-low %d port-high %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.VxlanId, dev.SrcAddr, dev.Group, dev.TTL, dev.TOS, dev.Learning, dev.Proxy, dev.RSC, dev.Age, dev.Limit, dev.Port, dev.PortLow, dev.PortHigh, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.IPVlan:
+		line = fmt.Sprintf("    ipvlan mode %d flags %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Mode, dev.Flags, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.IPVtap:
+		line = fmt.Sprintf("    ipvtap mode %d flags %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Mode, dev.Flags, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Bond:
+		line = fmt.Sprintf("    bond mode active slave %d %d miimon %d updelay %d downdelay %d use_carrier %d arp_interval %d arp_validate %s arp_all_targets %s primary %d primary_reselect %s fail_over_mac %s %s resend_igmp %d num_peer_notif %d all_slaves_active %d min_links %d lp_interval %d packets_per_slave %d lacp_rate %s ad_select %s numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Mode, dev.ActiveSlave, dev.Miimon, dev.UpDelay, dev.DownDelay, dev.UseCarrier, dev.ArpInterval, dev.ArpValidate, dev.ArpAllTargets, dev.Primary, dev.PrimaryReselect, dev.FailOverMac, dev.XmitHashPolicy, dev.ResendIgmp, dev.NumPeerNotif, dev.AllSlavesActive, dev.MinLinks, dev.LpInterval, dev.PacketsPerSlave, dev.LacpRate, dev.AdSelect, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Geneve:
+		line = fmt.Sprintf("    geneve id %d remote %s ttl %d tos %d dport %d udpcsum %d udp_zero_csum_6TX %d udp_zero_csum_6RX %d link %d flow_based %t numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.ID, dev.Remote, dev.Ttl, dev.Tos, dev.Dport, dev.UdpCsum, dev.UdpZeroCsum6Tx, dev.UdpZeroCsum6Rx, dev.Link, dev.FlowBased, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Gretap:
+		line = fmt.Sprintf("    gretap i_key %d o_key %d encap_src_port %d encap_dst_port %d local %s remote %s iflags %d oflags %d pmtudisc %d ttl %d tos %d encap_type %d encap_flags %d link %d flow_based %t numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.IKey, dev.OKey, dev.EncapSport, dev.EncapDport, dev.Local, dev.Remote, dev.IFlags, dev.OFlags, dev.PMtuDisc, dev.Ttl, dev.Tos, dev.EncapType, dev.EncapFlags, dev.Link, dev.FlowBased, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Iptun:
+		line = fmt.Sprintf("    iptun local %s remote %s encap_type %d encap_flags %d link %d flow_based %t numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Local, dev.Remote, dev.EncapType, dev.EncapFlags, dev.Link, dev.FlowBased, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Ip6tnl:
+		line = fmt.Sprintf("    ip6tnl local %s remote %s ttl %d tos %d proto %d flow_info %d encap_limit %d encap_type %d encap_src_port %d encap_dst_port %d encap_flags %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Local, dev.Remote, dev.Ttl, dev.Tos, dev.Proto, dev.FlowInfo, dev.EncapLimit, dev.EncapType, dev.EncapSport, dev.EncapDport, dev.EncapFlags, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Sittun:
+		line = fmt.Sprintf("    sittun local %s remote %s ttl %d tos %d proto %d encap_limit %d encap_type %d encap_src_port %d encap_dst_port %d encap_flags %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Local, dev.Remote, dev.Ttl, dev.Tos, dev.Proto, dev.EncapLimit, dev.EncapType, dev.EncapSport, dev.EncapDport, dev.EncapFlags, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Vti:
+		line = fmt.Sprintf("    vti local %s remote %s ikey %d okey %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Local, dev.Remote, dev.IKey, dev.OKey, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Gretun:
+		line = fmt.Sprintf("    gretun local %s remote %s ttl %d tos %d ptmudisc %d encap_type %d encap_src_port %d encap_dst_port %d encap_flags %d ikey %d okey %d numtxqueues %d numrxqueues %d gso_max_size %d gso_max_segs %d",
+			dev.Local, dev.Remote, dev.Ttl, dev.Tos, dev.PMtuDisc, dev.EncapType, dev.EncapSport, dev.EncapDport, dev.EncapFlags, dev.IKey, dev.OKey, dev.NumTxQueues, dev.NumRxQueues, dev.GSOMaxSize, dev.GSOMaxSegs)
+	case *netlink.Xfrmi:
+		line = fmt.Sprintf("    xfrmi if_id %d", dev.Ifid)
+	case *netlink.Can:
+		line = fmt.Sprintf("    can state %d bitrate %d sample-point %d tq %d prop-seg %d phase-seg1 %d phase-seg2 %d",
+			dev.State, dev.BitRate, dev.SamplePoint, dev.TimeQuanta, dev.PropagationSegment, dev.PhaseSegment1, dev.PhaseSegment2)
+	case *netlink.IPoIB:
+		line = fmt.Sprintf("    ipoib pkey %d mode %d umcast %d", dev.Pkey, dev.Mode, dev.Umcast)
+	case *netlink.BareUDP:
+		line = fmt.Sprintf("    port %d ethertype %d srcport %d min multi_proto %t", dev.Port, dev.EtherType, dev.SrcPortMin, dev.MultiProto)
+	}
+
+	return line
+}
+
+// LinkJSON represents a link device for JSON output format.
+type LinkJSON struct {
+	IfIndex   int        `json:"ifindex,omitempty"`
+	IfName    string     `json:"ifname"`
+	Flags     []string   `json:"flags"`
+	MTU       int        `json:"mtu,omitempty"`
+	Operstate string     `json:"operstate"`
+	Group     string     `json:"group,omitempty"`
+	Txqlen    int        `json:"txqlen,omitempty"`
+	LinkType  string     `json:"link_type,omitempty"`
+	Address   string     `json:"address"`
+	AddrInfo  []AddrJSON `json:"addr_info,omitempty"`
+}
+
+// AddrInfo represents an address for JSON output format.
+type AddrJSON struct {
+	Family            string `json:"ip,omitempty"`
+	Local             string `json:"local"`
+	PrefixLen         string `json:"prefixlen"`
+	Broadcast         string `json:"broadcast,omitempty"`
+	Scope             string `json:"scope,omitempty"`
+	Label             string `json:"label,omitempty"`
+	ValidLifeTime     string `json:"valid_life_time,omitempty"`
+	PreferredLifeTime string `json:"preferred_life_time,omitempty"`
+}
+
+func (cmd *cmd) printLinkJSON(links []linkData) error {
+	linkObs := make([]LinkJSON, 0)
+
+	for _, v := range links {
+		link := LinkJSON{
+			IfName:    v.attrs.Name,
+			Flags:     strings.Split(v.attrs.Flags.String(), "|"),
+			Operstate: v.attrs.OperState.String(),
+			Address:   v.attrs.HardwareAddr.String(),
+		}
+
+		if !cmd.Opts.Brief {
+			link.IfIndex = v.attrs.Index
+			link.MTU = v.attrs.MTU
+			link.LinkType = v.typeName
+			link.Group = fmt.Sprintf("%v", v.attrs.Group)
+
+			if !cmd.Opts.Numeric && v.attrs.Group == 0 {
+				link.Group = "default"
+			}
+
+			link.Txqlen = v.attrs.TxQLen
+		}
+
+		if v.addresses != nil {
+			link.AddrInfo = make([]AddrJSON, 0)
+
+			for _, addr := range v.addresses {
+
+				family := "inet"
+				if addr.IP.To4() == nil {
+					family = "inet6"
+				}
+
+				ip := strings.Split(addr.IPNet.String(), "/")[0]
+				prefixlen := strings.Split(addr.IPNet.String(), "/")[1]
+
+				addrInfo := AddrJSON{
+					Local:     ip,
+					PrefixLen: prefixlen,
+				}
+
+				if !cmd.Opts.Brief {
+					addrInfo.Family = family
+					addrInfo.Scope = addrScopeStr(netlink.Scope(addr.Scope))
+					addrInfo.Label = addr.Label
+					addrInfo.ValidLifeTime = fmt.Sprintf("%dsec", addr.ValidLft)
+					addrInfo.PreferredLifeTime = fmt.Sprintf("%dsec", addr.PreferedLft)
+
+					if addr.Broadcast != nil {
+						addrInfo.Broadcast = addr.Broadcast.String()
+					}
+				}
+
+				link.AddrInfo = append(link.AddrInfo, addrInfo)
+
+			}
+		}
+		linkObs = append(linkObs, link)
+	}
+
+	return printJSON(*cmd, linkObs)
 }
