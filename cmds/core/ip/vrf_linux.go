@@ -31,7 +31,8 @@ func (cmd *cmd) vrf() error {
 	return cmd.usage()
 }
 
-type Vrf struct {
+// VrfJSON represents a VRF entry for JSON output format.
+type VrfJSON struct {
 	Name  string `json:"name"`
 	Table uint32 `json:"table"`
 }
@@ -47,7 +48,7 @@ func (cmd *cmd) vrfShow() error {
 
 func (cmd *cmd) printVrf(links []netlink.Link) error {
 	if cmd.Opts.JSON {
-		vrfs := make([]Vrf, 0, len(links))
+		vrfs := make([]VrfJSON, 0, len(links))
 
 		for _, link := range links {
 			vrf, ok := link.(*netlink.Vrf)
@@ -55,7 +56,7 @@ func (cmd *cmd) printVrf(links []netlink.Link) error {
 				continue
 			}
 
-			vrfs = append(vrfs, Vrf{
+			vrfs = append(vrfs, VrfJSON{
 				Name:  vrf.Name,
 				Table: vrf.Table,
 			})
