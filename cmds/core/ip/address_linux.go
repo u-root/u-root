@@ -41,9 +41,10 @@ var stringScope = map[string]netlink.Scope{
 	"link":   netlink.SCOPE_LINK,
 }
 
+// address is the entry point for 'ip address' subcommand.
 func (cmd *cmd) address() error {
 	if !cmd.tokenRemains() {
-		return cmd.showAllLinks(true)
+		return cmd.addressShow()
 	}
 
 	c := cmd.findPrefix("add", "replace", "del", "show", "flush", "help")
@@ -93,6 +94,7 @@ func (cmd *cmd) address() error {
 	}
 }
 
+// parseAddrAddReplace returns arguments to 'ip addr add' or 'ip addr replace' from the cmdline.
 func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 	tokenAddr := cmd.nextToken("CIDR format address")
 	addr, err := netlink.ParseAddr(tokenAddr)
@@ -135,71 +137,29 @@ func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 	return iface, addr, nil
 }
 
+// addressShow performs 'ip address show' command.
 func (cmd *cmd) addressShow() error {
-	device, typeName, err := cmd.parseAddrShow()
+	name, types := cmd.parseAddrShow()
+
+	links, err := cmd.getLinkDevices(true, linkNameFilter([]string{name}), linkTypeFilter(types))
 	if err != nil {
-		return err
+		return fmt.Errorf("address show: %w", err)
 	}
 
-	if device != nil {
-		if typeName == "" {
-			return cmd.showLink(device, true)
-		}
-
-		return cmd.showLink(device, true, typeName)
+	err = cmd.printLinks(true, links)
+	if err != nil {
+		return fmt.Errorf("address show: %w", err)
 	}
 
-	if typeName == "" {
-		return cmd.showAllLinks(true)
-	}
-
-	return cmd.showAllLinks(true, typeName)
+	return nil
 }
 
-func (cmd *cmd) parseAddrShow() (netlink.Link, string, error) {
-	var (
-		device     netlink.Link
-		deviceName string
-		typeName   string
-		err        error
-		devFound   bool
-	)
-
-	if !cmd.tokenRemains() {
-		return nil, "", nil
-	}
-
-	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("dev", "type"); c {
-		case "dev":
-			if devFound {
-				return nil, "", fmt.Errorf("multiple devices specified")
-			}
-
-			deviceName = cmd.nextToken("device-name")
-			devFound = true
-		case "type":
-			typeName = cmd.nextToken("TYPE")
-		default:
-			if devFound {
-				return nil, "", fmt.Errorf("multiple devices specified")
-			}
-
-			deviceName = c
-			devFound = true
-		}
-	}
-
-	if deviceName != "" {
-		device, err = netlink.LinkByName(deviceName)
-		if err != nil {
-			return nil, "", fmt.Errorf("device %v not found: %w", deviceName, err)
-		}
-	}
-
-	return device, typeName, nil
+// parseAddrShow returns arguments to 'ip addr show' from the cmdline.
+func (cmd *cmd) parseAddrShow() (linkName string, types []string) {
+	return cmd.parseLinkShow() // same remaining cmdline syntax
 }
 
+// parseAddrFlush returns arguments to 'ip addr flush' from the cmdline.
 func (cmd *cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {
 	var addr netlink.Addr
 
@@ -230,6 +190,7 @@ func (cmd *cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {
 	return iface, addr, nil
 }
 
+// addressFlush performs 'ip address flush' command.
 func (cmd *cmd) addressFlush() error {
 	iface, addr, err := cmd.parseAddrFlush()
 	if err != nil {

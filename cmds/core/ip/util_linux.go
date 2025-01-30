@@ -11,7 +11,7 @@ import (
 )
 
 type Printable interface {
-	Link | []Link | Vrf | []Vrf | Neigh | []Neigh | Route | []Route | Tunnel | []Tunnel | Tuntap | []Tuntap
+	LinkJSON | []LinkJSON | VrfJSON | []VrfJSON | NeighJSON | []NeighJSON | RouteJSON | []RouteJSON | Tunnel | []Tunnel | Tuntap | []Tuntap
 }
 
 func printJSON[T Printable](cmd cmd, data T) error {

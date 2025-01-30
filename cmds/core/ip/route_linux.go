@@ -47,27 +47,26 @@ BOOL := [1|0]
 OPTIONS := OPTION [ OPTIONS ]
 `
 
-var (
-	routeTypes = map[string]int{
-		"unicast":     unix.RTN_UNICAST,
-		"local":       unix.RTN_LOCAL,
-		"broadcast":   unix.RTN_BROADCAST,
-		"multicast":   unix.RTN_MULTICAST,
-		"throw":       unix.RTN_THROW,
-		"unreachable": unix.RTN_UNREACHABLE,
-		"prohibit":    unix.RTN_PROHIBIT,
-		"blackhole":   unix.RTN_BLACKHOLE,
-		"nat":         unix.RTN_NAT,
-	}
+var routeTypes = map[string]int{
+	"unicast":     unix.RTN_UNICAST,
+	"local":       unix.RTN_LOCAL,
+	"broadcast":   unix.RTN_BROADCAST,
+	"multicast":   unix.RTN_MULTICAST,
+	"throw":       unix.RTN_THROW,
+	"unreachable": unix.RTN_UNREACHABLE,
+	"prohibit":    unix.RTN_PROHIBIT,
+	"blackhole":   unix.RTN_BLACKHOLE,
+	"nat":         unix.RTN_NAT,
+}
 
-	addrScopes = map[netlink.Scope]string{
-		netlink.SCOPE_UNIVERSE: "global",
-		netlink.SCOPE_HOST:     "host",
-		netlink.SCOPE_SITE:     "site",
-		netlink.SCOPE_LINK:     "link",
-		netlink.SCOPE_NOWHERE:  "nowhere",
+func addrScopeStr(scope netlink.Scope) string {
+	switch scope {
+	case netlink.SCOPE_UNIVERSE:
+		return "global"
+	default:
+		return scope.String()
 	}
-)
+}
 
 func routeTypeToString(routeType int) string {
 	for key, value := range routeTypes {
@@ -453,7 +452,8 @@ func (cmd *cmd) parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *
 	return &filter, filterMask, root, match, exact, nil
 }
 
-type Route struct {
+// RouteJSON represents a route entry for JSON output format.
+type RouteJSON struct {
 	Dst      string   `json:"dst"`
 	Dev      string   `json:"dev"`
 	Protocol string   `json:"protocol"`
@@ -465,11 +465,11 @@ type Route struct {
 // showRoutes prints the routes in the system.
 func (cmd *cmd) showRoutes(routes []netlink.Route, ifaceNames []string) error {
 	if cmd.Opts.JSON {
-		obj := make([]Route, 0, len(routes))
+		obj := make([]RouteJSON, 0, len(routes))
 
 		for idx, route := range routes {
 
-			pRoute := Route{
+			pRoute := RouteJSON{
 				Dst:   route.Dst.String(),
 				Dev:   ifaceNames[idx],
 				Scope: route.Scope.String(),
@@ -662,7 +662,7 @@ func (cmd *cmd) printIPv4Route(r netlink.Route, name string) {
 
 	if !cmd.Opts.Numeric {
 		proto = rtProto[int(r.Protocol)]
-		scope = addrScopes[r.Scope]
+		scope = addrScopeStr(r.Scope)
 	} else {
 		proto = fmt.Sprintf("%d", r.Protocol)
 		scope = fmt.Sprintf("%d", r.Scope)
