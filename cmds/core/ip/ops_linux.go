@@ -13,38 +13,83 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func (cmd *cmd) showAllLinks(withAddresses bool, filterByType ...string) error {
+func (cmd *cmd) getLinkDevices(withAddresses bool, filter ...linkfilter) ([]netlink.Link, [][]netlink.Addr, error) {
 	links, err := netlink.LinkList()
 	if err != nil {
-		return fmt.Errorf("can't enumerate interfaces: %w", err)
+		return nil, nil, fmt.Errorf("get link device list: %w", err)
 	}
+
+	links = filterLinks(links, filter)
 
 	addresses := make([][]netlink.Addr, len(links))
 	if withAddresses {
 		for idx, link := range links {
 			addrs, err := netlink.AddrList(link, cmd.Family)
 			if err != nil {
-				return fmt.Errorf("can't get addresses for link %s: %w", link.Attrs().Name, err)
+				return nil, nil, fmt.Errorf("get addresses for link device %q: %w", link.Attrs().Name, err)
 			}
 
 			addresses[idx] = addrs
 		}
 	}
 
-	return cmd.showLinks(addresses, links, filterByType...)
+	return links, addresses, nil
 }
 
-func (cmd *cmd) showLink(link netlink.Link, withAddresses bool, filterByType ...string) error {
-	addresses := make([][]netlink.Addr, 1)
-	if withAddresses {
-		addrs, err := netlink.AddrList(link, cmd.Family)
-		if err != nil {
-			return fmt.Errorf("can't get addresses for link %s: %w", link.Attrs().Name, err)
+type linkfilter func(link netlink.Link) bool
+
+// linkTypeFilter returns a linkfilter that filters links by type.
+func linkTypeFilter(linkTypes []string) linkfilter {
+	return func(link netlink.Link) bool {
+		if len(linkTypes) == 0 {
+			return true
 		}
-		addresses[0] = addrs
+		for _, linkType := range linkTypes {
+			if linkType == "" || link.Type() == linkType {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// linkNameFilter returns a linkfilter that filters links by name.
+func linkNameFilter(linkNames []string) linkfilter {
+	return func(link netlink.Link) bool {
+		if len(linkNames) == 0 {
+			return true
+		}
+		for _, linkName := range linkNames {
+			if linkName == "" || link.Attrs().Name == linkName {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// filterLinks applies the given filters to the list of links.
+func filterLinks(links []netlink.Link, lf []linkfilter) []netlink.Link {
+	var (
+		unfilteredLinks []netlink.Link
+		filteredLinks   []netlink.Link
+	)
+
+	filteredLinks = links
+
+	if len(lf) > 0 {
+		for _, filter := range lf {
+			unfilteredLinks = filteredLinks
+			filteredLinks = make([]netlink.Link, 0)
+			for _, link := range unfilteredLinks {
+				if filter(link) {
+					filteredLinks = append(filteredLinks, link)
+				}
+			}
+		}
 	}
 
-	return cmd.showLinks(addresses, []netlink.Link{link}, filterByType...)
+	return filteredLinks
 }
 
 type Link struct {
@@ -71,29 +116,14 @@ type AddrInfo struct {
 	PreferredLifeTime string `json:"preferred_life_time,omitempty"`
 }
 
-func (cmd *cmd) showLinks(addresses [][]netlink.Addr, links []netlink.Link, filterByType ...string) error {
+// printLinks prints the list of links. If addresses is not nil, it prints the
+// the link's addresses as well.
+func (cmd *cmd) printLinks(links []netlink.Link, addresses [][]netlink.Addr) error {
 	if cmd.Opts.JSON {
 		return cmd.printLinkJSON(links, addresses)
 	}
 
 	for idx, v := range links {
-		found := true
-
-		// check if the link type is in the filter list if the filter list is not empty
-		if len(filterByType) > 0 {
-			found = false
-		}
-
-		for _, t := range filterByType {
-			if v.Type() == t {
-				found = true
-			}
-		}
-
-		if !found {
-			continue
-		}
-
 		l := v.Attrs()
 
 		if cmd.Opts.Brief {
@@ -219,7 +249,7 @@ func (cmd *cmd) showLinks(addresses [][]netlink.Addr, links []netlink.Link, filt
 		}
 
 		if addresses[idx] != nil {
-			cmd.showLinkAddresses(addresses[idx])
+			cmd.printLinkAddresses(addresses[idx])
 		}
 	}
 	return nil
@@ -288,7 +318,7 @@ func (cmd *cmd) printLinkJSON(links []netlink.Link, addresses [][]netlink.Addr) 
 	return printJSON(*cmd, linkObs)
 }
 
-func (cmd *cmd) showLinkAddresses(addrs []netlink.Addr) error {
+func (cmd *cmd) printLinkAddresses(addrs []netlink.Addr) error {
 	for _, addr := range addrs {
 
 		var inet string

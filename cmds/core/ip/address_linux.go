@@ -43,7 +43,7 @@ var stringScope = map[string]netlink.Scope{
 
 func (cmd *cmd) address() error {
 	if !cmd.tokenRemains() {
-		return cmd.showAllLinks(true)
+		return cmd.addressShow()
 	}
 
 	c := cmd.findPrefix("add", "replace", "del", "show", "flush", "help")
@@ -136,68 +136,23 @@ func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 }
 
 func (cmd *cmd) addressShow() error {
-	device, typeName, err := cmd.parseAddrShow()
+	name, types := cmd.parseAddrShow()
+
+	links, addresses, err := cmd.getLinkDevices(true, linkNameFilter([]string{name}), linkTypeFilter(types))
 	if err != nil {
-		return err
+		return fmt.Errorf("address show: %w", err)
 	}
 
-	if device != nil {
-		if typeName == "" {
-			return cmd.showLink(device, true)
-		}
-
-		return cmd.showLink(device, true, typeName)
+	err = cmd.printLinks(links, addresses)
+	if err != nil {
+		return fmt.Errorf("address show: %w", err)
 	}
 
-	if typeName == "" {
-		return cmd.showAllLinks(true)
-	}
-
-	return cmd.showAllLinks(true, typeName)
+	return nil
 }
 
-func (cmd *cmd) parseAddrShow() (netlink.Link, string, error) {
-	var (
-		device     netlink.Link
-		deviceName string
-		typeName   string
-		err        error
-		devFound   bool
-	)
-
-	if !cmd.tokenRemains() {
-		return nil, "", nil
-	}
-
-	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("dev", "type"); c {
-		case "dev":
-			if devFound {
-				return nil, "", fmt.Errorf("multiple devices specified")
-			}
-
-			deviceName = cmd.nextToken("device-name")
-			devFound = true
-		case "type":
-			typeName = cmd.nextToken("TYPE")
-		default:
-			if devFound {
-				return nil, "", fmt.Errorf("multiple devices specified")
-			}
-
-			deviceName = c
-			devFound = true
-		}
-	}
-
-	if deviceName != "" {
-		device, err = netlink.LinkByName(deviceName)
-		if err != nil {
-			return nil, "", fmt.Errorf("device %v not found: %w", deviceName, err)
-		}
-	}
-
-	return device, typeName, nil
+func (cmd *cmd) parseAddrShow() (linkName string, types []string) {
+	return cmd.parseLinkShow() // same remaining cmdline syntax
 }
 
 func (cmd *cmd) parseAddrFlush() (netlink.Link, netlink.Addr, error) {

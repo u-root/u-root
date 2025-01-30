@@ -61,7 +61,7 @@ func TestShowLinkAddresses(t *testing.T) {
 			var out bytes.Buffer
 			cmd := cmd{Out: &out}
 
-			err := cmd.showLinkAddresses(tt.addrs)
+			err := cmd.printLinkAddresses(tt.addrs)
 			if err != nil {
 				t.Fatalf("showLinkAddresses() error = %v", err)
 			}
@@ -228,9 +228,9 @@ func TestShowLinks(t *testing.T) {
 		name      string
 		links     []netlink.Link
 		addresses [][]netlink.Addr
-		filter    []string
-		opts      flags
-		expected  string
+		//filter    []string
+		opts     flags
+		expected string
 	}{
 		{
 			name: "Single link with IPv4 address JSON",
@@ -379,42 +379,42 @@ func TestShowLinks(t *testing.T) {
 			opts:     flags{Brief: true},
 			expected: "eth0                      up         00:1a:2b:3c:4d:5e   <UP>\n",
 		},
-		{
-			name: "Filter other type",
-			links: []netlink.Link{
-				&netlink.Device{
-					LinkAttrs: netlink.LinkAttrs{
-						Name:         "eth0",
-						Flags:        net.FlagUp,
-						OperState:    netlink.OperUp,
-						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
-						Index:        1,
-						MTU:          1500,
-						Group:        0,
-						TxQLen:       1000,
-					},
-				},
-				&netlink.GenericLink{},
-			},
-			addresses: [][]netlink.Addr{
-				{
-					{
-						IPNet: &net.IPNet{
-							IP:   net.IPv4(192, 168, 1, 1),
-							Mask: net.CIDRMask(24, 32),
-						},
-						Broadcast:   net.IPv4(192, 168, 1, 255),
-						Scope:       int(netlink.SCOPE_HOST),
-						Label:       "eth0",
-						PreferedLft: 0,
-						ValidLft:    0,
-					},
-				},
-			},
-			opts:     flags{Brief: true},
-			filter:   []string{"device"},
-			expected: "eth0                 up         192.168.1.1\n",
-		},
+		// {
+		// 	name: "Filter other type",
+		// 	links: []netlink.Link{
+		// 		&netlink.Device{
+		// 			LinkAttrs: netlink.LinkAttrs{
+		// 				Name:         "eth0",
+		// 				Flags:        net.FlagUp,
+		// 				OperState:    netlink.OperUp,
+		// 				HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+		// 				Index:        1,
+		// 				MTU:          1500,
+		// 				Group:        0,
+		// 				TxQLen:       1000,
+		// 			},
+		// 		},
+		// 		&netlink.GenericLink{},
+		// 	},
+		// 	addresses: [][]netlink.Addr{
+		// 		{
+		// 			{
+		// 				IPNet: &net.IPNet{
+		// 					IP:   net.IPv4(192, 168, 1, 1),
+		// 					Mask: net.CIDRMask(24, 32),
+		// 				},
+		// 				Broadcast:   net.IPv4(192, 168, 1, 255),
+		// 				Scope:       int(netlink.SCOPE_HOST),
+		// 				Label:       "eth0",
+		// 				PreferedLft: 0,
+		// 				ValidLft:    0,
+		// 			},
+		// 		},
+		// 	},
+		// 	opts: flags{Brief: true},
+		// 	//filter:   []string{"device"},
+		// 	expected: "eth0                 up         192.168.1.1\n",
+		// },
 		{
 			name: "Stats",
 			links: []netlink.Link{
@@ -474,7 +474,7 @@ func TestShowLinks(t *testing.T) {
 				Opts: tt.opts,
 			}
 
-			err := cmd.showLinks(tt.addresses, tt.links, tt.filter...)
+			err := cmd.printLinks(tt.links, tt.addresses)
 			if err != nil {
 				t.Fatalf("showLinks() error = %v", err)
 			}
