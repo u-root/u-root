@@ -24,6 +24,27 @@ import (
 var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, error){}
 
 func (c *cmd) listenMode(output io.Writer, network, address string) error {
+	if network == "tcp" || network == "udp" {
+		err4 := c.listen(output, network+"4", address)
+		if err4 == nil {
+			return nil
+		}
+		err6 := c.listen(output, network+"6", address)
+		if err6 == nil {
+			return nil
+		}
+		return fmt.Errorf("listen mode: %w", errors.Join(err4, err6))
+	}
+
+	return c.listen(output, network, address)
+}
+
+func (c *cmd) listen(output io.Writer, network, address string) error {
+	// listenStubFn is used for testing purposes
+	if c.listenStubFn != nil {
+		return c.listenStubFn(output, network, address)
+	}
+
 	listener, err := c.setupListener(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to setup listener: %w", err)
@@ -164,7 +185,7 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 	for atomic.LoadUint32(&connectionsHandled) < maxConnections {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Error accepting connection: %v", err)
+			log.Printf("wait for connection: %v", err)
 			continue
 		}
 
@@ -177,7 +198,7 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 
 		go once.Do(func() {
 			if _, err := io.Copy(conn, c.stdin); err != nil {
-				log.Printf("failed to write to connection: %v", err)
+				log.Printf("write to connection: %v", err)
 			}
 		})
 
@@ -212,7 +233,7 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 				}
 
 				if err := scanner.Err(); err != nil {
-					log.Printf("failed to read from connection: %v", err)
+					log.Printf("read from connection: %v", err)
 				}
 			} else {
 				// without broker mode, read from the connection and write to the output
@@ -226,7 +247,7 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 							continue
 						}
 
-						log.Printf("failed to write to output: %v", err)
+						log.Printf("output: %v", err)
 					}
 
 					break
