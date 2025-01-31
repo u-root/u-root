@@ -24,6 +24,24 @@ import (
 var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, error){}
 
 func (c *cmd) listenMode(output io.Writer, network, address string) error {
+	if network == "tcp" || network == "udp" {
+		network4 := network + "4"
+		err4 := c.listen(output, network4, address)
+		if err4 == nil {
+			return nil
+		}
+		network6 := network + "6"
+		err6 := c.listen(output, network6, address)
+		if err6 == nil {
+			return nil
+		}
+		return fmt.Errorf("listen IPv4: %w\nlisten IPv6: %wgi", err4, err6)
+	}
+
+	return c.listen(output, network, address)
+}
+
+func (c *cmd) listen(output io.Writer, network, address string) error {
 	listener, err := c.setupListener(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to setup listener: %w", err)
