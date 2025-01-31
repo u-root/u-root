@@ -28,6 +28,24 @@ import (
 var osConnectors = map[netcat.SocketType]func(string, string) (net.Conn, error){}
 
 func (c *cmd) connectMode(output io.Writer, network, address string) error {
+	if network == "tcp" || network == "udp" {
+		network4 := network + "4"
+		err4 := c.connect(output, network4, address)
+		if err4 == nil {
+			return nil
+		}
+		network6 := network + "6"
+		err6 := c.connect(output, network6, address)
+		if err6 == nil {
+			return nil
+		}
+		return fmt.Errorf("connect IPv4: %w\nconnect IPv6: %w", err4, err6)
+	}
+
+	return c.connect(output, network, address)
+}
+
+func (c *cmd) connect(output io.Writer, network, address string) error {
 	if c.config.ConnectionModeOptions.ScanPorts && !c.config.ConnectionModeOptions.ZeroIO {
 		return fmt.Errorf("scanning ports is only supported in Zero-I/O mode")
 	}
