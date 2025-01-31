@@ -8,6 +8,8 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -19,6 +21,113 @@ import (
 
 	"github.com/u-root/u-root/pkg/netcat"
 )
+
+func TestConnectMode(t *testing.T) {
+	tests := []struct {
+		name        string
+		network     string
+		address     string
+		connectFunc func(output io.Writer, network, address string) error
+		expectError bool
+	}{
+		{
+			name:    "TCPv4 success",
+			network: "tcp",
+			address: "localhost:8080",
+			connectFunc: func(output io.Writer, network, address string) error {
+				if network == "tcp4" {
+					return nil
+				}
+				return errors.New("failed to connect")
+			},
+			expectError: false,
+		},
+		{
+			name:    "TCPv6 success",
+			network: "tcp",
+			address: "localhost:8080",
+			connectFunc: func(output io.Writer, network, address string) error {
+				if network == "tcp6" {
+					return nil
+				}
+				return errors.New("failed to connect")
+			},
+			expectError: false,
+		},
+		{
+			name:    "UDPv4 success",
+			network: "udp",
+			address: "localhost:8080",
+			connectFunc: func(output io.Writer, network, address string) error {
+				if network == "udp4" {
+					return nil
+				}
+				return errors.New("failed to connect")
+			},
+			expectError: false,
+		},
+		{
+			name:    "UDPv6 success",
+			network: "udp",
+			address: "localhost:8080",
+			connectFunc: func(output io.Writer, network, address string) error {
+				if network == "udp6" {
+					return nil
+				}
+				return errors.New("failed to connect")
+			},
+			expectError: false,
+		},
+		{
+			name:    "TCPv4 and TCPv6 failure",
+			network: "tcp",
+			address: "localhost:8080",
+			connectFunc: func(output io.Writer, network, address string) error {
+				return errors.New("failed to connect")
+			},
+			expectError: true,
+		},
+		{
+			name:    "UDPv4 and UDPv6 failure",
+			network: "udp",
+			address: "localhost:8080",
+			connectFunc: func(output io.Writer, network, address string) error {
+				return errors.New("failed to connect")
+			},
+			expectError: true,
+		},
+		{
+			name:    "Other network success",
+			network: "unix",
+			address: "/tmp/socket",
+			connectFunc: func(output io.Writer, network, address string) error {
+				if network == "unix" {
+					return nil
+				}
+				return errors.New("failed to connect")
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cmd{
+				connectStubFn: tt.connectFunc,
+			}
+			err := cmd.connectMode(io.Discard, tt.network, tt.address)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected an error, but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, but got %v", err)
+				}
+			}
+		})
+	}
+}
 
 // Mock for the net.Conn interface
 type mockConn struct {
@@ -40,7 +149,7 @@ func (m *mockConn) Close() error {
 	return m.close()
 }
 
-func TestConnectMode(t *testing.T) {
+func TestConnect(t *testing.T) {
 	response := "World"
 	tests := []struct {
 		name        string
@@ -125,7 +234,7 @@ func TestConnectMode(t *testing.T) {
 			}
 
 			var output bytes.Buffer
-			err = c.connectMode(&output, "tcp", "127.0.0.1:8080")
+			err = c.connect(&output, "tcp", "127.0.0.1:8080")
 			if err != nil {
 				if !tt.expectError {
 					return
