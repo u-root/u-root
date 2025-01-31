@@ -335,6 +335,10 @@ type cmd struct {
 	stderr io.Writer
 	config *netcat.Config
 	args   []string
+
+	// only for testing
+	connectStubFn func(output io.Writer, network, address string) error
+	listenStubFn  func(output io.Writer, network, address string) error
 }
 
 func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
