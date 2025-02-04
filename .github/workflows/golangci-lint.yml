@@ -13,8 +13,11 @@ permissions:
 
 jobs:
   golangci:
-    name: lint
+    name: name: lint-${{ matrix.arch }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
