@@ -15,7 +15,7 @@ func TestPrintJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		cmd     cmd
-		data    Vrf
+		data    VrfJSON
 		want    string
 		wantErr bool
 	}{
@@ -27,7 +27,7 @@ func TestPrintJSON(t *testing.T) {
 				},
 				Out: &bytes.Buffer{},
 			},
-			data:    Vrf{Name: "Test", Table: 2},
+			data:    VrfJSON{Name: "Test", Table: 2},
 			want:    "{\n    \"name\": \"Test\",\n    \"table\": 2\n}",
 			wantErr: false,
 		},
@@ -39,7 +39,7 @@ func TestPrintJSON(t *testing.T) {
 				},
 				Out: &bytes.Buffer{},
 			},
-			data:    Vrf{Name: "Test", Table: 2},
+			data:    VrfJSON{Name: "Test", Table: 2},
 			want:    "{\"name\":\"Test\",\"table\":2}",
 			wantErr: false,
 		},

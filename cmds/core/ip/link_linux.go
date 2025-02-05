@@ -467,53 +467,48 @@ func (cmd *cmd) linkDel() error {
 	return cmd.handle.LinkDel(link)
 }
 
+// linkShow performs 'ip link show' command.
 func (cmd *cmd) linkShow() error {
-	dev, typeName, err := cmd.parseLinkShow()
+	name, types := cmd.parseLinkShow()
+
+	links, err := cmd.getLinkDevices(false, linkNameFilter([]string{name}), linkTypeFilter(types))
 	if err != nil {
-		return err
+		return fmt.Errorf("link show: %w", err)
 	}
 
-	if dev == nil {
-		return cmd.showAllLinks(false, typeName...)
+	err = cmd.printLinks(false, links)
+	if err != nil {
+		return fmt.Errorf("link show: %w", err)
 	}
 
-	return cmd.showLink(dev, false, typeName...)
+	return nil
 }
 
-func (cmd *cmd) parseLinkShow() (netlink.Link, []string, error) {
-	var (
-		device netlink.Link
-		err    error
-	)
-
-	typeNames := []string{}
-
+// parseLinkShow returns arguments to 'ip link show' from the cmdline.
+func (cmd *cmd) parseLinkShow() (name string, types []string) {
 	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("device name", "dev", "type"); c {
-		default:
-			device, err = netlink.LinkByName(c)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
-			}
+		switch c := cmd.nextToken("DEVICE", "dev", "type"); c {
 		case "dev":
-			devName := cmd.nextToken("device name")
-			device, err = netlink.LinkByName(devName)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get link %v: %w", device, err)
-			}
+			name = cmd.nextToken("DEVICE")
 		case "type":
 			for cmd.tokenRemains() {
 				if cmd.peekToken("dev") == "dev" {
 					break
 				}
-				typeNames = append(typeNames, cmd.nextToken("type name"))
+				types = append(types, cmd.nextToken("TYPE"))
 			}
+		default:
+			if name != "" {
+				continue // ignore multiple link device names, taking the first one only
+			}
+			name = c
 		}
 	}
 
-	return device, typeNames, nil
+	return
 }
 
+// link is the entry point for 'ip link' command.
 func (cmd *cmd) link() error {
 	if !cmd.tokenRemains() {
 		return cmd.linkShow()
