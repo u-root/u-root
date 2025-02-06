@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/align"
 )
 
 func addrOfStart() uintptr
@@ -118,4 +120,71 @@ func archGetAcpiRsdpData() (uint64, []byte, error) {
 	}
 
 	return 0xFFFFFFFF, nil, ErrDTRsdpTableNotFound
+}
+
+// According to Arm Server Base System Architecture 7.2 (DEN00291) chapter 1.2.7
+// "Peripheral subsystems" for Level 3:
+// " The base server system must implement a UART as specified by B_PER_O5 in
+// Peripheral subsystems section from Arm BSA [4]. "
+// Due to limitation of memoryMapFromIOMem, memory region of UART device cannot
+// be parsed, we append memory region of UART device here.
+func appendUARTMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
+	f, err := os.Open("/proc/iomem")
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+
+	b := bufio.NewScanner(f)
+	for b.Scan() {
+		var start uint64
+		var end uint64
+		content := b.Text()
+
+		if strings.Contains(content, "ARMH0011") {
+			els := strings.Split(content, ":")
+			addrs := strings.Split(strings.TrimSpace(els[0]), "-")
+			if len(addrs) != 2 {
+				fmt.Printf("Address format incorrect for device 'ARMH0011'\n")
+				continue
+			}
+
+			start, err = strconv.ParseUint(addrs[0], 16, 64)
+			if err != nil {
+				fmt.Printf("Failed to parse start address for device 'ARMH0011'\n")
+				continue
+			}
+
+			end, err = strconv.ParseUint(addrs[1], 16, 64)
+			if err != nil {
+				fmt.Printf("Failed to parse end address for device 'ARMH0011'\n")
+				continue
+			}
+
+			*memMapHOB = append(*memMapHOB, EFIHOBResourceDescriptor{
+				Header: EFIHOBGenericHeader{
+					HOBType:   EFIHOBTypeResourceDescriptor,
+					HOBLength: EFIHOBLength(unsafe.Sizeof(EFIHOBResourceDescriptor{})),
+				},
+				ResourceType: EFIResourceMemoryMappedIO,
+				ResourceAttribute: EFIResourceAttributePresent |
+					EFIResourceAttributeInitialized |
+					EFIResourceAttributeTested |
+					EFIResourceAttributeUncacheable |
+					EFIResourceAttributeWriteCombineable |
+					EFIResourceAttributeWriteThroughCacheable |
+					EFIResourceAttributeWriteBackCacheable,
+				PhysicalStart:  EFIPhysicalAddress(start),
+				ResourceLength: uint64(align.UpPage(end - start)),
+			})
+
+			return uint64(unsafe.Sizeof(EFIHOBResourceDescriptor{}))
+		}
+	}
+
+	return 0
+}
+
+func appendAddonMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
+	return appendUARTMemMap(memMapHOB)
 }
