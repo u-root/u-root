@@ -96,3 +96,7 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 
 	return buf
 }
+
+func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
+	return 0
+}
