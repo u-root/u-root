@@ -63,11 +63,7 @@ func (s *mockSpidev) syscall(trap, a1, a2 uintptr, a3 unsafe.Pointer) (r1, r2 ui
 		}
 
 		// Re-create the slice from the pointer.
-		s.transfers = make([]iocTransfer, 0, 0)
-		sh := (*reflect.SliceHeader)(unsafe.Pointer(&s.transfers))
-		sh.Data = uintptr(a3)
-		sh.Len = size / binary.Size(iocTransfer{})
-		sh.Cap = size / binary.Size(iocTransfer{})
+		s.transfers = unsafe.Slice((*iocTransfer)(a3), size/binary.Size(iocTransfer{}))
 
 		// Make sure the original pointer is not freed up until this point.
 		runtime.KeepAlive(a3)
