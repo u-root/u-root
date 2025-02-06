@@ -119,3 +119,7 @@ func archGetAcpiRsdpData() (uint64, []byte, error) {
 
 	return 0, rsdp.AllData(), nil
 }
+
+func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
+	return 0
+}

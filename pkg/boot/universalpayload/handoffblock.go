@@ -205,6 +205,8 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 		length += uint64(unsafe.Sizeof(EFIHOBResourceDescriptor{}))
 	}
 
+	length += appendAddonMemMap(&memMapHOB)
+
 	return memMapHOB, length
 }
 
