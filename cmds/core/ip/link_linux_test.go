@@ -674,6 +674,261 @@ func TestPrintLinks(t *testing.T) {
 			opts:           flags{Brief: true},
 			expectedValues: []string{"eth0", "UP", "00:1a:2b:3c:4d:5e", "eth1", "UP", "00:1a:2b:3c:4d:5f"},
 		},
+		// Oneline Format
+		{
+			name:          "Single link without addresses, oneline format",
+			withAddresses: false,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+				},
+			},
+			opts:           flags{Oneline: true},
+			expectedValues: []string{"eth0", "UP", "mtu 1500"},
+		},
+		{
+			name:          "Single link with addresses, oneline format",
+			withAddresses: true,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+					addresses: []netlink.Addr{
+						{
+							IPNet: &net.IPNet{
+								IP:   net.IPv4(192, 168, 1, 1),
+								Mask: net.CIDRMask(24, 32),
+							},
+							Broadcast:   net.IPv4(192, 168, 1, 255),
+							Scope:       int(netlink.SCOPE_HOST),
+							Label:       "eth0-label",
+							PreferedLft: 0,
+							ValidLft:    0,
+						},
+					},
+				},
+			},
+			opts:           flags{Oneline: true},
+			expectedValues: []string{"eth0", "192.168.1.1/24", "eth0-label"},
+		},
+		{
+			name:          "Single link with addresses, oneline format, IPv4 address with broadcast",
+			withAddresses: true,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+					addresses: []netlink.Addr{
+						{
+							IPNet: &net.IPNet{
+								IP:   net.IPv4(192, 168, 1, 1),
+								Mask: net.CIDRMask(24, 32),
+							},
+							Broadcast:   net.IPv4(192, 168, 1, 255),
+							Scope:       int(netlink.SCOPE_HOST),
+							Label:       "eth0-label",
+							PreferedLft: 0,
+							ValidLft:    0,
+						},
+					},
+				},
+			},
+			opts:           flags{Oneline: true},
+			expectedValues: []string{"eth0", "192.168.1.1/24", "brd 192.168.1.255", "eth0-label"},
+		},
+		{
+			name:          "Single link with addresses, oneline format, IPv6 address without broadcast",
+			withAddresses: true,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+					addresses: []netlink.Addr{
+						{
+							IPNet: &net.IPNet{
+								IP:   net.ParseIP("2001:db8::1"),
+								Mask: net.CIDRMask(64, 128),
+							},
+							Broadcast:   nil,
+							Scope:       int(netlink.SCOPE_HOST),
+							Label:       "eth0-label",
+							PreferedLft: 3600,
+							ValidLft:    7200,
+						},
+					},
+				},
+			},
+			opts:           flags{Oneline: true},
+			expectedValues: []string{"eth0", "2001:db8::1/64", "eth0-label"},
+		},
+		{
+			name:          "Single link with master name, oneline format",
+			withAddresses: false,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName:   "device",
+					masterName: "bridge0",
+				},
+			},
+			opts:           flags{Oneline: true},
+			expectedValues: []string{"eth0", "UP", "mtu 1500", "master bridge0"},
+		},
+		{
+			name:          "Single link with numeric option, oneline format",
+			withAddresses: false,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+				},
+			},
+			opts:           flags{Oneline: true, Numeric: true},
+			expectedValues: []string{"eth0", "UP", "mtu 1500", "group 0"},
+		},
+		{
+			name:          "Single link with details, oneline format",
+			withAddresses: false,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName:       "device",
+					specificDevice: &netlink.Dummy{},
+				},
+			},
+			opts:           flags{Oneline: true, Details: true},
+			expectedValues: []string{"eth0", "UP", "mtu 1500"},
+		},
+		{
+			name:          "Single link with statistics, oneline format",
+			withAddresses: false,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+						Statistics: &netlink.LinkStatistics{
+							RxPackets: 100,
+							TxPackets: 200,
+							RxBytes:   1000,
+							TxBytes:   2000,
+							RxErrors:  10,
+							TxErrors:  20,
+							RxDropped: 1,
+							TxDropped: 2,
+						},
+					},
+					typeName: "device",
+				},
+			},
+			opts:           flags{Oneline: true, Stats: true},
+			expectedValues: []string{"eth0", "UP", "mtu 1500", "RX:  bytes  packets errors dropped  missed   mcast", "1000", "100", "10", "1", "TX:  bytes  packets errors dropped carrier collsns", "2000", "200", "20", "2"},
+		},
+		{
+			name:          "Multiple links, oneline format",
+			withAddresses: false,
+			links: []linkData{
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth0",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e},
+						Index:        1,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+				},
+				{
+					attrs: &netlink.LinkAttrs{
+						Name:         "eth1",
+						Flags:        net.FlagUp,
+						OperState:    netlink.OperUp,
+						HardwareAddr: net.HardwareAddr{0x00, 0x1a, 0x2b, 0x3c, 0x4d, 0x5f},
+						Index:        2,
+						MTU:          1500,
+						Group:        0,
+						TxQLen:       1000,
+					},
+					typeName: "device",
+				},
+			},
+			opts:           flags{Oneline: true},
+			expectedValues: []string{"eth0", "UP", "mtu 1500", "eth1", "UP", "mtu 1500"},
+		},
+
 		// Edge Cases
 		{
 			name:          "Single link with ValidLft set to max uint32 (forever)",
