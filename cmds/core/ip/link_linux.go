@@ -680,6 +680,8 @@ func (cmd *cmd) printLinks(withAddresses bool, links []linkData) error {
 	switch {
 	case cmd.Opts.Brief:
 		p.printBrief()
+	case cmd.Opts.Oneline:
+		p.printOneline()
 	default:
 		p.printDefault()
 	}
@@ -729,8 +731,7 @@ func (p *linkPrinter) printDefault() {
 				line += fmt.Sprintf(" scope %s %s", addrScopeStr(netlink.Scope(addr.Scope)), addr.Label)
 				fmt.Fprintln(p.out, line)
 
-				line = fmt.Sprintf("       valid_lft %s preferred_lft %s",
-					p.lifetimeStr(addr.ValidLft), p.lifetimeStr(addr.PreferedLft))
+				line = fmt.Sprintf("       valid_lft %s preferred_lft %s", p.lifetimeStr(addr.ValidLft), p.lifetimeStr(addr.PreferedLft))
 				fmt.Fprintln(p.out, line)
 			}
 		}
@@ -747,6 +748,53 @@ func (p *linkPrinter) printDefault() {
 			fmt.Fprintln(p.out, line)
 			line = fmt.Sprintf("%14d %7d %6d %7d %7d %7d",
 				stats.TxBytes, stats.TxPackets, stats.TxErrors, stats.TxDropped, stats.TxCarrierErrors, stats.Collisions)
+			fmt.Fprintln(p.out, line)
+		}
+	}
+}
+
+func (p *linkPrinter) printOneline() {
+	for _, link := range p.data {
+		if link.attrs == nil {
+			continue
+		}
+
+		var line string
+
+		if p.withAddresses {
+			for _, addr := range link.addresses {
+				line = fmt.Sprintf("%d: %s    %s %s", link.attrs.Index, link.attrs.Name, p.ipNetStr(addr), addr.IPNet)
+				if addr.IP.To4() != nil {
+					line += fmt.Sprintf(" brd %s", addr.Broadcast)
+				}
+				line += fmt.Sprintf(" scope %s %s", addrScopeStr(netlink.Scope(addr.Scope)), addr.Label)
+				line += fmt.Sprintf("\\       valid_lft %s preferred_lft %s", p.lifetimeStr(addr.ValidLft), p.lifetimeStr(addr.PreferedLft))
+				fmt.Fprintln(p.out, line)
+			}
+		} else {
+			line = fmt.Sprintf("%d: %s: <%s> mtu %d", link.attrs.Index, link.attrs.Name, p.flagsStr(link.attrs.Flags), link.attrs.MTU)
+			if link.masterName != "" {
+				line += fmt.Sprintf(" master %s", link.masterName)
+			}
+			line += fmt.Sprintf(" state %s group %s", p.operStateStr(link.attrs.OperState), p.groupStr(link.attrs.Group))
+			line += fmt.Sprintf("\\    link/%s %s", link.attrs.EncapType, link.attrs.HardwareAddr)
+
+			if p.withDetails {
+				if details := p.deviceDetailsLine(link.specificDevice); details != "" {
+					line += fmt.Sprintf("\\ %s", details)
+				}
+			}
+
+			if p.withStats && link.attrs.Statistics != nil {
+				stats := link.attrs.Statistics
+				line += fmt.Sprintf("\\    RX:  bytes  packets errors dropped  missed   mcast")
+				line += fmt.Sprintf("\\%14d %7d %6d %7d %7d %7d",
+					stats.RxBytes, stats.RxPackets, stats.RxErrors, stats.RxDropped, stats.RxMissedErrors, stats.Multicast)
+
+				line += fmt.Sprintf("\\    TX:  bytes  packets errors dropped carrier collsns")
+				line += fmt.Sprintf("\\%14d %7d %6d %7d %7d %7d",
+					stats.TxBytes, stats.TxPackets, stats.TxErrors, stats.TxDropped, stats.TxCarrierErrors, stats.Collisions)
+			}
 			fmt.Fprintln(p.out, line)
 		}
 	}
