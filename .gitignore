@@ -56,3 +56,6 @@ tools/checklicenses/checklicenses
 
 # JetBrains IDEs
 /.idea/
+
+# Visual Studio Code
+.vscode/
