@@ -194,10 +194,6 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		return cmd, fmt.Errorf("color output is unsupported")
 	}
 
-	if cmd.Opts.Oneline {
-		return cmd, fmt.Errorf("outputting each record on a single line is unsupported")
-	}
-
 	var (
 		err    error
 		handle *netlink.Handle
