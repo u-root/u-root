@@ -6,7 +6,7 @@
 //
 // Synopsis:
 //
-//	gpgv [-v] KEY SIG CONTENT
+//	gpgv KEY SIG CONTENT
 //
 // Description:
 //
@@ -17,37 +17,26 @@
 //	RFC4880 in that it can't use a PublicSigningKey with 0 signatures. We
 //	use one from Eric Grosse instead.
 //
-// Options:
-//
-//	-v: verbose
-//
 // Author:
 //
 //	grosse@gmail.com.
 package main
 
 import (
-	"crypto"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	gpgerror "github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 var (
-	verbose  bool
-	debug    = func(string, ...interface{}) {}
-	errUsage = errors.New("usage: boot-verify [-v] key sig content")
+	errUsage            = errors.New("usage: gpgv key sig content")
+	errUnknownSignature = errors.New("unknown signature")
+	errExpectedPacket   = errors.New("expected first packet to be PublicKey")
 )
-
-func init() {
-	flag.BoolVar(&verbose, "v", false, "verbose")
-}
 
 func readPublicSigningKey(keyf io.Reader) (*packet.PublicKey, error) {
 	keypackets := packet.NewReader(keyf)
@@ -55,45 +44,35 @@ func readPublicSigningKey(keyf io.Reader) (*packet.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	switch pkt := p.(type) {
-	case *packet.PublicKey:
-		debug("key: ", pkt)
-		return pkt, nil
-	default:
-		log.Printf("ReadPublicSigningKey: got %T, want *packet.PublicKey", pkt)
+
+	pkt, ok := p.(*packet.PublicKey)
+	if !ok {
+		return nil, errExpectedPacket
 	}
-	return nil, gpgerror.StructuralError("expected first packet to be PublicKey")
+	return pkt, nil
 }
 
 func verifyDetachedSignature(key *packet.PublicKey, contentf, sigf io.Reader) error {
-	var hashFunc crypto.Hash
-
 	packets := packet.NewReader(sigf)
 	p, err := packets.Next()
 	if err != nil {
 		return err
 	}
-	switch sig := p.(type) {
-	case *packet.Signature:
-		hashFunc = sig.Hash
-	default:
-		return gpgerror.UnsupportedError("unrecognized signature")
+
+	sig, ok := p.(*packet.Signature)
+	if !ok {
+		return errUnknownSignature
 	}
 
-	h := hashFunc.New()
+	h := sig.Hash.New()
 	if _, err := io.Copy(h, contentf); err != nil && err != io.EOF {
 		return err
 	}
-	switch sig := p.(type) {
-	case *packet.Signature:
-		err = key.VerifySignature(h, sig)
-	default:
-		return fmt.Errorf("unknown signature")
-	}
-	return err
+
+	return key.VerifySignature(h, sig)
 }
 
-func runGPGV(w io.Writer, verbose bool, keyfile, sigfile, datafile string) error {
+func runGPGV(w io.Writer, keyfile, sigfile, datafile string) error {
 	if keyfile == "" || sigfile == "" || datafile == "" {
 		return errUsage
 	}
@@ -129,11 +108,10 @@ func runGPGV(w io.Writer, verbose bool, keyfile, sigfile, datafile string) error
 }
 
 func main() {
-	flag.Parse()
-	if len(flag.Args()) != 3 {
+	if len(os.Args) != 4 {
 		log.Fatal(errUsage)
 	}
-	if err := runGPGV(os.Stdout, verbose, flag.Args()[0], flag.Args()[1], flag.Args()[2]); err != nil {
+	if err := runGPGV(os.Stdout, os.Args[1], os.Args[2], os.Args[3]); err != nil {
 		log.Fatal(err)
 	}
 }

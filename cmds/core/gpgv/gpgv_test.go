@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
@@ -17,7 +18,6 @@ func TestRunGPGV(t *testing.T) {
 		keyfile  string
 		sigfile  string
 		datafile string
-		verbose  bool
 		wantErr  error
 	}{
 		{
@@ -25,14 +25,12 @@ func TestRunGPGV(t *testing.T) {
 			keyfile:  "testdata/key.pub",
 			sigfile:  "testdata/datafile.sig",
 			datafile: "testdata/datafile.txt",
-			verbose:  true,
 		},
 		{
 			name:     "UsageErrorMissingDatafile",
 			keyfile:  "testdata/key.pub",
 			sigfile:  "testdata/datafile.sig",
 			datafile: "",
-			verbose:  true,
 			wantErr:  errUsage,
 		},
 		{
@@ -40,7 +38,6 @@ func TestRunGPGV(t *testing.T) {
 			keyfile:  "testdata/key.pub",
 			sigfile:  "",
 			datafile: "testdata/datafile.txt",
-			verbose:  true,
 			wantErr:  errUsage,
 		},
 		{
@@ -48,7 +45,6 @@ func TestRunGPGV(t *testing.T) {
 			keyfile:  "",
 			sigfile:  "testdata/datafile.sig",
 			datafile: "testdata/datafile.txt",
-			verbose:  true,
 			wantErr:  errUsage,
 		},
 		{
@@ -56,7 +52,6 @@ func TestRunGPGV(t *testing.T) {
 			keyfile:  "",
 			sigfile:  "",
 			datafile: "",
-			verbose:  true,
 			wantErr:  errUsage,
 		},
 		{
@@ -64,7 +59,6 @@ func TestRunGPGV(t *testing.T) {
 			keyfile:  "testdata/datafile.txt",
 			sigfile:  "testdata/datafile.sig",
 			datafile: "testdata/datafile.txt",
-			verbose:  true,
 			wantErr:  fmt.Errorf("tag byte does not have MSB set"),
 		},
 		{
@@ -72,22 +66,41 @@ func TestRunGPGV(t *testing.T) {
 			keyfile:  "testdata/private.key",
 			sigfile:  "testdata/datafile.sig",
 			datafile: "testdata/datafile.txt",
-			verbose:  true,
-			wantErr:  fmt.Errorf("openpgp: invalid data: expected first packet to be PublicKey"),
+			wantErr:  errExpectedPacket,
 		},
 		{
 			name:     "InvalidSignatureFile",
 			keyfile:  "testdata/key.pub",
 			sigfile:  "testdata/datafile.txt",
 			datafile: "testdata/datafile.txt",
-			verbose:  true,
 			wantErr:  fmt.Errorf("tag byte does not have MSB set"),
+		},
+		{
+			name:     "KeyFileIsNotExists",
+			keyfile:  "testdata/missing",
+			sigfile:  "testdata/datafile.sig",
+			datafile: "testdata/datafile.txt",
+			wantErr:  os.ErrNotExist,
+		},
+		{
+			name:     "SigFileIsNotExists",
+			keyfile:  "testdata/key.pub",
+			sigfile:  "testdata/missing",
+			datafile: "testdata/datafile.txt",
+			wantErr:  os.ErrNotExist,
+		},
+		{
+			name:     "DataFileIsNotExists",
+			keyfile:  "testdata/key.pub",
+			sigfile:  "testdata/datafile.sig",
+			datafile: "testdata/missing",
+			wantErr:  os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 
-			if err := runGPGV(&buf, tt.verbose, tt.keyfile, tt.sigfile, tt.datafile); !errors.Is(err, tt.wantErr) {
+			if err := runGPGV(&buf, tt.keyfile, tt.sigfile, tt.datafile); !errors.Is(err, tt.wantErr) {
 				if !strings.Contains(err.Error(), tt.wantErr.Error()) {
 					t.Errorf("runGPGV(&buf, verbose, args):= %q, want %q", err, tt.wantErr)
 				}
