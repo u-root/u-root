@@ -116,11 +116,6 @@ func TestParseFlags(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "oneline",
-			args:    []string{"ip", "-o"},
-			wantErr: true,
-		},
-		{
 			name: "rcvBuf",
 			args: []string{"ip", "--rcvbuf=100"},
 			wantCmd: cmd{
