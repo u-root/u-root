@@ -140,7 +140,9 @@ var ClassNames = map[uint32]string{
 	0x010400: "StorageRAID",
 	0x010500: "StorageATA",
 	0x010600: "StorageSATA",
+	0x010601: "StorageAHCI",
 	0x010700: "StorageSAS",
+	0x010802: "StorageNVMHCI",
 	0x018000: "StorageOther",
 
 	0x02:     "Network",
