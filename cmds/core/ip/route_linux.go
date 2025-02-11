@@ -99,6 +99,7 @@ func (cmd *cmd) routeAdddefault() error {
 	return cmd.usage()
 }
 
+// routeAdd performs the 'ip route add' command.
 func (cmd *cmd) routeAdd() error {
 	ns := cmd.nextToken("default", "CIDR")
 	switch ns {
@@ -124,6 +125,7 @@ func (cmd *cmd) routeAdd() error {
 	}
 }
 
+// routeAppend performs the 'ip route append' command.
 func (cmd *cmd) routeAppend() error {
 	ns := cmd.nextToken("default", "CIDR")
 	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
@@ -144,6 +146,7 @@ func (cmd *cmd) routeAppend() error {
 	return nil
 }
 
+// routeReplace performs the 'ip route replace' command.
 func (cmd *cmd) routeReplace() error {
 	ns := cmd.nextToken("default", "CIDR")
 	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
@@ -164,6 +167,7 @@ func (cmd *cmd) routeReplace() error {
 	return nil
 }
 
+// routeDel performs the 'ip route del' command.
 func (cmd *cmd) routeDel() error {
 	ns := cmd.nextToken("default", "CIDR")
 	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
@@ -184,6 +188,8 @@ func (cmd *cmd) routeDel() error {
 	return nil
 }
 
+// parseRouteAddAppendReplaceDel parses the arguments to 'ip route add', 'ip route append',
+// 'ip route replace' or 'ip route delete' from the cmdline.
 func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string, error) {
 	var err error
 
@@ -336,6 +342,7 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string
 	return route, d, nil
 }
 
+// routeShow performs the 'ip route show' command.
 func (cmd *cmd) routeShow() error {
 	filter, filterMask, root, match, exact, err := cmd.parseRouteShowListFlush()
 	if err != nil {
@@ -347,7 +354,7 @@ func (cmd *cmd) routeShow() error {
 		return err
 	}
 
-	return cmd.showRoutes(routeList, ifaceNames)
+	return cmd.printRoutes(routeList, ifaceNames)
 }
 
 func (cmd *cmd) showAllRoutes() error {
@@ -356,9 +363,10 @@ func (cmd *cmd) showAllRoutes() error {
 		return err
 	}
 
-	return cmd.showRoutes(routeList, ifaceNames)
+	return cmd.printRoutes(routeList, ifaceNames)
 }
 
+// routeFlush performs the 'ip route flush' command.
 func (cmd *cmd) routeFlush() error {
 	filter, filterMask, root, match, exact, err := cmd.parseRouteShowListFlush()
 	if err != nil {
@@ -379,6 +387,7 @@ func (cmd *cmd) routeFlush() error {
 	return nil
 }
 
+// parseRouteShowListFlush parses the arguments to 'ip route show', 'ip route list' or 'ip route flush' from the cmdline.
 func (cmd *cmd) parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *net.IPNet, *net.IPNet, error) {
 	var (
 		filterMask uint64
@@ -462,8 +471,8 @@ type RouteJSON struct {
 	Flags    []string `json:"flags,omitempty"`
 }
 
-// showRoutes prints the routes in the system.
-func (cmd *cmd) showRoutes(routes []netlink.Route, ifaceNames []string) error {
+// printRoutes prints the routes in the system.
+func (cmd *cmd) printRoutes(routes []netlink.Route, ifaceNames []string) error {
 	if cmd.Opts.JSON {
 		obj := make([]RouteJSON, 0, len(routes))
 
@@ -501,7 +510,7 @@ func (cmd *cmd) showRoutes(routes []netlink.Route, ifaceNames []string) error {
 		if route.Dst == nil {
 			cmd.defaultRoute(route, ifaceNames[idx])
 		} else {
-			cmd.showRoute(route, ifaceNames[idx])
+			cmd.printRoute(route, ifaceNames[idx])
 		}
 	}
 	return nil
@@ -574,7 +583,7 @@ func (cmd *cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptio
 		if route.Dst == nil {
 			cmd.defaultRoute(route, link.Attrs().Name)
 		} else {
-			cmd.showRoute(route, link.Attrs().Name)
+			cmd.printRoute(route, link.Attrs().Name)
 		}
 	}
 	return nil
@@ -636,7 +645,7 @@ func (cmd *cmd) defaultRoute(r netlink.Route, name string) {
 	fmt.Fprintf(cmd.Out, defaultFmt, detail, gw, name, proto, metric)
 }
 
-func (cmd *cmd) showRoute(r netlink.Route, name string) {
+func (cmd *cmd) printRoute(r netlink.Route, name string) {
 	switch cmd.Family {
 	// print only ipv4 per default
 	case netlink.FAMILY_ALL, netlink.FAMILY_V4:
@@ -707,6 +716,7 @@ func (cmd *cmd) printIPv6Route(r netlink.Route, name string) {
 	}
 }
 
+// routeGet is the entry point for 'ip route get' command.
 func (cmd *cmd) routeGet() error {
 	addr, err := cmd.parseAddress()
 	if err != nil {
@@ -721,6 +731,7 @@ func (cmd *cmd) routeGet() error {
 	return cmd.showRoutesForAddress(addr, options)
 }
 
+// parseRouteGet parses the arguments to 'ip route get' from the comdline.
 func (cmd *cmd) parseRouteGet() (*netlink.RouteGetOptions, error) {
 	var opts netlink.RouteGetOptions
 	for cmd.tokenRemains() {
@@ -742,6 +753,7 @@ func (cmd *cmd) parseRouteGet() (*netlink.RouteGetOptions, error) {
 	return &opts, nil
 }
 
+// route is the entry point for 'ip route' command.
 func (cmd *cmd) route() error {
 	if !cmd.tokenRemains() {
 		return cmd.showAllRoutes()
