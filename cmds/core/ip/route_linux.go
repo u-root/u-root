@@ -357,15 +357,6 @@ func (cmd *cmd) routeShow() error {
 	return cmd.printRoutes(routeList, ifaceNames)
 }
 
-func (cmd *cmd) showAllRoutes() error {
-	routeList, ifaceNames, err := cmd.filteredRouteList(nil, 0, nil, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return cmd.printRoutes(routeList, ifaceNames)
-}
-
 // routeFlush performs the 'ip route flush' command.
 func (cmd *cmd) routeFlush() error {
 	filter, filterMask, root, match, exact, err := cmd.parseRouteShowListFlush()
@@ -756,7 +747,7 @@ func (cmd *cmd) parseRouteGet() (*netlink.RouteGetOptions, error) {
 // route is the entry point for 'ip route' command.
 func (cmd *cmd) route() error {
 	if !cmd.tokenRemains() {
-		return cmd.showAllRoutes()
+		return cmd.routeShow()
 	}
 
 	switch cmd.findPrefix("show", "add", "append", "replace", "del", "list", "flush", "get", "help") {
@@ -777,6 +768,7 @@ func (cmd *cmd) route() error {
 	case "help":
 		fmt.Fprint(cmd.Out, routeHelp)
 		return nil
+	default:
+		return cmd.usage()
 	}
-	return cmd.usage()
 }
