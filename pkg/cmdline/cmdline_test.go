@@ -182,6 +182,46 @@ func TestCmdLineClassic(t *testing.T) {
 	GetInitFlagMap()
 	Flag("noflag")
 	ContainsFlag("noflag")
+	Consoles()
+}
+
+func TestConsoles(t *testing.T) {
+	tests := []struct {
+		name    string
+		cmdLine string
+		want    []string
+	}{
+		{
+			name:    "single console",
+			cmdLine: `console=tty0`,
+			want:    []string{"tty0"},
+		},
+		{
+			name:    "multiple consoles",
+			cmdLine: `console=tty0 console=ttyS0,115200`,
+			want:    []string{"tty0", "ttyS0"},
+		},
+		{
+			name:    "no consoles",
+			cmdLine: `ro test-flag test2-flag=8`,
+			want:    []string{},
+		},
+		{
+			name:    "mixed flags",
+			cmdLine: `console=tty0 ro console=ttyS0,115200 test-flag`,
+			want:    []string{"tty0", "ttyS0"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := CmdLine{Raw: tt.cmdLine}
+			got := c.Consoles()
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Consoles() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 type badreader struct{}
