@@ -5,6 +5,7 @@
 package libinit
 
 import (
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -38,6 +39,21 @@ func WithTTYControl(ctty bool) CommandModifier {
 		}
 		c.SysProcAttr.Setctty = ctty
 		c.SysProcAttr.Setsid = ctty
+	}
+}
+
+func WithMultiTTY(mtty bool, openFn func([]string) ([]io.Writer, error), ttyNames []string) CommandModifier {
+	return func(c *exec.Cmd) {
+		if mtty {
+			ww, err := openFn(ttyNames)
+			if err != nil {
+				log.Printf("%q: open devices for multi-TTY output: %v", c.Path, err)
+				log.Printf("falling back to default stdout and stderr")
+				return
+			}
+			c.Stdout = io.MultiWriter(ww...)
+			c.Stderr = io.MultiWriter(ww...)
+		}
 	}
 }
 

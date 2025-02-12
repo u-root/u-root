@@ -37,6 +37,9 @@ func osInitGo() *initCmds {
 	// Turn off job control when test mode is on.
 	ctty := libinit.WithTTYControl(!*test)
 
+	// Output to all consoles if requested.
+	mtty := libinit.WithMultiTTY(*kerneltty, libinit.OpenTTYDevices, cmdline.Consoles())
+
 	// Install modules before exec-ing into user mode below
 	if err := libinit.InstallAllModules(); err != nil {
 		log.Println(err)
@@ -76,14 +79,14 @@ func osInitGo() *initCmds {
 			// has a /init. The name inito means "original /init" There may
 			// be an inito if we are building on an existing initramfs. All
 			// initos need their own pid space.
-			libinit.Command("/inito", libinit.WithCloneFlags(syscall.CLONE_NEWPID), ctty),
+			libinit.Command("/inito", libinit.WithCloneFlags(syscall.CLONE_NEWPID), ctty, mtty),
 
-			libinit.Command("/bbin/uinit", ctty, uinitArgs),
-			libinit.Command("/bin/uinit", ctty, uinitArgs),
-			libinit.Command("/buildbin/uinit", ctty, uinitArgs),
+			libinit.Command("/bbin/uinit", ctty, mtty, uinitArgs),
+			libinit.Command("/bin/uinit", ctty, mtty, uinitArgs),
+			libinit.Command("/buildbin/uinit", ctty, mtty, uinitArgs),
 
-			libinit.Command("/bin/defaultsh", ctty),
-			libinit.Command("/bin/sh", ctty),
+			libinit.Command("/bin/defaultsh", ctty, mtty),
+			libinit.Command("/bin/sh", ctty, mtty),
 		},
 	}
 }
