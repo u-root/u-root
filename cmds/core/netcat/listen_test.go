@@ -22,11 +22,11 @@ func TestListenMode(t *testing.T) {
 	listenErr := errors.New("failed to listen")
 
 	tests := []struct {
-		name          string
-		network       string
-		address       string
-		listenFunc    func(output io.Writer, network, address string) error
-		expectedError error
+		name       string
+		network    string
+		address    string
+		listenFunc func(output io.Writer, network, address string) error
+		err        error
 	}{
 		{
 			name:    "TCPv4 success",
@@ -38,7 +38,7 @@ func TestListenMode(t *testing.T) {
 				}
 				return listenErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "TCPv6 success",
@@ -50,7 +50,7 @@ func TestListenMode(t *testing.T) {
 				}
 				return listenErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "UDPv4 success",
@@ -62,7 +62,7 @@ func TestListenMode(t *testing.T) {
 				}
 				return listenErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "UDPv6 success",
@@ -74,7 +74,7 @@ func TestListenMode(t *testing.T) {
 				}
 				return listenErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "TCPv4 and TCPv6 failure",
@@ -83,7 +83,7 @@ func TestListenMode(t *testing.T) {
 			listenFunc: func(output io.Writer, network, address string) error {
 				return listenErr
 			},
-			expectedError: listenErr,
+			err: listenErr,
 		},
 		{
 			name:    "UDPv4 and UDPv6 failure",
@@ -92,7 +92,7 @@ func TestListenMode(t *testing.T) {
 			listenFunc: func(output io.Writer, network, address string) error {
 				return listenErr
 			},
-			expectedError: listenErr,
+			err: listenErr,
 		},
 		{
 			name:    "Other network success",
@@ -104,7 +104,7 @@ func TestListenMode(t *testing.T) {
 				}
 				return listenErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 	}
 
@@ -114,8 +114,8 @@ func TestListenMode(t *testing.T) {
 				listenStubFn: tt.listenFunc,
 			}
 			err := cmd.listenMode(io.Discard, tt.network, tt.address)
-			if !errors.Is(err, tt.expectedError) {
-				t.Errorf("Expected error %v, got %v", tt.expectedError, err)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %v, want %v", err, tt.err)
 			}
 		})
 	}
