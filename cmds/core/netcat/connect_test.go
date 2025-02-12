@@ -26,11 +26,11 @@ func TestConnectMode(t *testing.T) {
 	connectErr := errors.New("failed to connect")
 
 	tests := []struct {
-		name          string
-		network       string
-		address       string
-		connectFunc   func(output io.Writer, network, address string) error
-		expectedError error
+		name        string
+		network     string
+		address     string
+		connectFunc func(output io.Writer, network, address string) error
+		err         error
 	}{
 		{
 			name:    "TCPv4 success",
@@ -42,7 +42,7 @@ func TestConnectMode(t *testing.T) {
 				}
 				return connectErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "TCPv6 success",
@@ -54,7 +54,7 @@ func TestConnectMode(t *testing.T) {
 				}
 				return connectErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "UDPv4 success",
@@ -66,7 +66,7 @@ func TestConnectMode(t *testing.T) {
 				}
 				return connectErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "UDPv6 success",
@@ -78,7 +78,7 @@ func TestConnectMode(t *testing.T) {
 				}
 				return connectErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 		{
 			name:    "TCPv4 and TCPv6 failure",
@@ -87,7 +87,7 @@ func TestConnectMode(t *testing.T) {
 			connectFunc: func(output io.Writer, network, address string) error {
 				return connectErr
 			},
-			expectedError: connectErr,
+			err: connectErr,
 		},
 		{
 			name:    "UDPv4 and UDPv6 failure",
@@ -96,7 +96,7 @@ func TestConnectMode(t *testing.T) {
 			connectFunc: func(output io.Writer, network, address string) error {
 				return connectErr
 			},
-			expectedError: connectErr,
+			err: connectErr,
 		},
 		{
 			name:    "Other network success",
@@ -108,7 +108,7 @@ func TestConnectMode(t *testing.T) {
 				}
 				return connectErr
 			},
-			expectedError: nil,
+			err: nil,
 		},
 	}
 
@@ -118,8 +118,8 @@ func TestConnectMode(t *testing.T) {
 				connectStubFn: tt.connectFunc,
 			}
 			err := cmd.connectMode(io.Discard, tt.network, tt.address)
-			if !errors.Is(err, tt.expectedError) {
-				t.Errorf("Expected error %v, got %v", tt.expectedError, err)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %v, want %v", err, tt.err)
 			}
 		})
 	}
