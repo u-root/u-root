@@ -6,8 +6,10 @@ package libinit
 
 import (
 	"io"
+	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/upath"
 )
@@ -51,7 +53,16 @@ func WithStderr(w io.Writer) CommandModifier {
 func Command(bin string, m ...CommandModifier) *exec.Cmd {
 	bin = upath.UrootPath(bin)
 	cmd := exec.Command(bin)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	// cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	log.Printf("hacking /dev/ttyS0 in %s", filepath.Base(bin))
+	ttys0, err := os.OpenFile("/dev/ttyS0", os.O_RDWR, 0)
+	if err != nil {
+		log.Printf("Error opening /dev/ttyS0: %v", err)
+	}
+	stdout := io.MultiWriter(os.Stdout, ttys0)
+	stderr := io.MultiWriter(os.Stderr, ttys0)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, stdout, stderr
+
 	osDefault(cmd)
 	for _, mod := range m {
 		mod(cmd)
