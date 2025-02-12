@@ -5,9 +5,12 @@
 package libinit
 
 import (
+	"errors"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"golang.org/x/sys/unix"
 )
@@ -39,6 +42,52 @@ func WithTTYControl(ctty bool) CommandModifier {
 		c.SysProcAttr.Setctty = ctty
 		c.SysProcAttr.Setsid = ctty
 	}
+}
+
+// WithKernelConsoles makes sure that the cmds stout and stderr is forwarded to
+// all consoles names in the kernel command line.
+func WithMultiTTYOutput(ttyNames []string) CommandModifier {
+	log.Printf("WithMultiTTYOutput: %v", ttyNames)
+	return func(c *exec.Cmd) {
+		if len(ttyNames) == 0 {
+			return
+		}
+
+		outs, err := openTTYDevices(ttyNames)
+		if err != nil {
+			log.Printf("open TTY devices: %v", err)
+			return
+		}
+		stdout := io.MultiWriter(outs...)
+		stderr := io.MultiWriter(outs...)
+		c.Stdout = stdout
+		c.Stderr = stderr
+	}
+}
+
+func openTTYDevices(names []string) ([]io.Writer, error) {
+	var err error
+	files := make([]io.Writer, 0, len(names))
+
+	if len(names) == 0 {
+		return files, nil
+	}
+
+	for _, name := range names {
+		f, e := os.OpenFile(filepath.Join("/dev", name), os.O_RDWR, 0)
+		if e != nil {
+			err = errors.Join(err, e)
+			continue
+		}
+		files = append(files, f)
+	}
+
+	if len(files) == 0 {
+		return files, err
+	}
+
+	return files, nil
+
 }
 
 // WithCloneFlags adds clone(2) flags to the *exec.Cmd.
