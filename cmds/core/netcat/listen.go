@@ -69,9 +69,8 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 
 			return tls.Listen(network, address, tlsConfig)
 
-		} else {
-			return net.Listen(network, address)
 		}
+		return net.Listen(network, address)
 
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
 		return netcat.NewUDPListener(network, address, c.config.Output.Logger)
@@ -162,11 +161,7 @@ func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) erro
 
 	maxConnections := c.config.ListenModeOptions.MaxConnections
 
-	for {
-		if atomic.LoadUint32(&connectionsHandled) >= maxConnections {
-			break // Stop accepting new connections if max is reached
-		}
-
+	for atomic.LoadUint32(&connectionsHandled) < maxConnections {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("Error accepting connection: %v", err)
