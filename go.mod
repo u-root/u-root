@@ -1,8 +1,6 @@
 module github.com/u-root/u-root
 
-go 1.22.0
-
-toolchain go1.22.6
+go 1.23.0
 
 require (
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
@@ -60,7 +58,7 @@ require (
 require (
 	github.com/jaypipes/ghw v0.12.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/u-root/cpuid v0.0.0
+	github.com/u-root/cpuid v0.0.1-0.20250214143632-f87d088388e5
 	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
 	go.bug.st/serial v1.6.2
 )
