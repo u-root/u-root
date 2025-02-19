@@ -9,6 +9,13 @@ import (
 	"net"
 
 	"github.com/u-root/u-root/pkg/ulog"
+
+	// To build the dependencies of this package with TinyGo, we need to include
+	// the cpuid package, since tinygo does not support the asm code in the
+	// cpuid package. The cpuid package will use the tinygo bridge to get the
+	// CPU information. For further information see
+	// github.com/u-root/cpuid/cpuid_amd64_tinygo_bridge.go
+	_ "github.com/u-root/cpuid"
 )
 
 // UDPListener implements net.UDPListener for UDP
