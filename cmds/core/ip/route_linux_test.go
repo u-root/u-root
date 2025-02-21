@@ -740,7 +740,7 @@ func TestShowRoute(t *testing.T) {
 		var out bytes.Buffer
 		t.Run(tt.name, func(t *testing.T) {
 			tt.cmd.Out = &out
-			tt.cmd.showRoute(tt.route, tt.linkName)
+			tt.cmd.printRoute(tt.route, tt.linkName)
 			if got := out.String(); got != tt.expected {
 				t.Errorf("showRoute() = %v, want %v", got, tt.expected)
 			}
@@ -785,7 +785,7 @@ func TestParseRouteGet(t *testing.T) {
 	}
 }
 
-func TestShowRoutes(t *testing.T) {
+func TestPrintRoutes(t *testing.T) {
 	tests := []struct {
 		name       string
 		opts       flags
@@ -859,7 +859,7 @@ func TestShowRoutes(t *testing.T) {
 				Out:  &out,
 			}
 
-			err := cmd.showRoutes(tt.routes, tt.ifaceNames)
+			err := cmd.printRoutes(tt.routes, tt.ifaceNames)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("showRoutes() error = %v, wantErr %v", err, tt.wantErr)
 				return

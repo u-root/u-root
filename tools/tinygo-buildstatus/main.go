@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	builder "github.com/u-root/u-root/tools/tinygo-buildstatus/pkg"
@@ -189,8 +190,23 @@ func (cmd *cmd) run() error {
 		return err
 	}
 
-	// enqueue the build jobs
+	// enqueue the build jobs adn ignore packages if pre-defined for target OS
+	ignorePk := false
 	for _, goPkg := range cmd.cmdPaths {
+		if oses, ok := Ignore[filepath.Base(goPkg)]; ok {
+			for _, os := range oses {
+				if runtime.GOOS == os {
+					log.Printf("ignoring '%s' for '%s'", filepath.Base(goPkg), os)
+					ignorePk = true
+					continue
+				}
+			}
+		}
+		if ignorePk {
+			ignorePk = false
+			continue
+		}
+
 		j, err := builder.NewJob(goPkg, cmd.flags.TinygoPath, &cmd.flags.CmdletOutputDirBase)
 		if err != nil {
 			return err

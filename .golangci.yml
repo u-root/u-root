@@ -21,17 +21,17 @@ issues:
   exclude-dirs:
     - pkg/uroot/test
   exclude-rules:
-    - linters: revive
+    - linters: [revive]
       text: "don't use underscores"
-    - linters: revive
+    - linters: [revive]
       text: "don't use ALL_CAPS"
-    - linters: revive
+    - linters: [revive]
       text: "stutter"
-    - linters: revive
+    - linters: [revive]
       text: "unexported-return"
-    - linters: revive
+    - linters: [revive]
       text: "unused-parameter"
-    - linters: revive
+    - linters: [revive]
       text: "superfluous-else"
-    - linters: revive
+    - linters: [revive]
       text: "empty-block"

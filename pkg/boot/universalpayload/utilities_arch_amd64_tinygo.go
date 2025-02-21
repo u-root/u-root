@@ -22,7 +22,11 @@ import (
 	"regexp"
 	"strconv"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/acpi"
 )
+
+var getAcpiRsdp = acpi.GetRSDP
 
 // Get Physical Address size from sysfs node /proc/cpuinfo.
 // Both Physical and Virtual Address size will be prompted as format:
@@ -95,6 +99,18 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	buf = appendUint64(buf, entry)
 
 	return buf
+}
+
+// Get the base address and data from RDSP table
+func archGetAcpiRsdpData() (uint64, []byte, error) {
+	rsdp, _ := getAcpiRsdp()
+	rsdpLen := rsdp.Len()
+
+	if rsdpLen > uint32(pageSize) {
+		return 0, nil, ErrDTRsdpLenOverBound
+	}
+
+	return 0, rsdp.AllData(), nil
 }
 
 func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
