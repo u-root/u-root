@@ -18,6 +18,109 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
+func TestListenMode(t *testing.T) {
+	listenErr := errors.New("failed to listen")
+
+	tests := []struct {
+		name       string
+		network    string
+		address    string
+		listenFunc func(output io.Writer, network, address string) error
+		err        error
+	}{
+		{
+			name:    "TCPv4 success",
+			network: "tcp",
+			address: "localhost:8080",
+			listenFunc: func(output io.Writer, network, address string) error {
+				if network == "tcp4" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "TCPv6 success",
+			network: "tcp",
+			address: "localhost:8080",
+			listenFunc: func(output io.Writer, network, address string) error {
+				if network == "tcp6" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "UDPv4 success",
+			network: "udp",
+			address: "localhost:8080",
+			listenFunc: func(output io.Writer, network, address string) error {
+				if network == "udp4" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "UDPv6 success",
+			network: "udp",
+			address: "localhost:8080",
+			listenFunc: func(output io.Writer, network, address string) error {
+				if network == "udp6" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "TCPv4 and TCPv6 failure",
+			network: "tcp",
+			address: "localhost:8080",
+			listenFunc: func(output io.Writer, network, address string) error {
+				return listenErr
+			},
+			err: listenErr,
+		},
+		{
+			name:    "UDPv4 and UDPv6 failure",
+			network: "udp",
+			address: "localhost:8080",
+			listenFunc: func(output io.Writer, network, address string) error {
+				return listenErr
+			},
+			err: listenErr,
+		},
+		{
+			name:    "Other network success",
+			network: "unix",
+			address: "/tmp/socket",
+			listenFunc: func(output io.Writer, network, address string) error {
+				if network == "unix" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cmd{
+				listenStubFn: tt.listenFunc,
+			}
+			err := cmd.listenMode(io.Discard, tt.network, tt.address)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %v, want %v", err, tt.err)
+			}
+		})
+	}
+}
+
 // Define a struct for your test cases
 type setupListenerTestCase struct {
 	name     string
