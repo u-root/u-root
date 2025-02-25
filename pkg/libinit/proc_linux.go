@@ -42,7 +42,7 @@ func WithTTYControl(ctty bool) CommandModifier {
 	}
 }
 
-func WithMultiTTY(mtty bool, openFn func([]string) ([]io.Writer, error), ttyNames []string) CommandModifier {
+func WithMultiTTY(mtty bool, openFn func([]string) ([]*os.File, error), ttyNames []string) CommandModifier {
 	return func(c *exec.Cmd) {
 		if mtty {
 			ww, err := openFn(ttyNames)
@@ -51,8 +51,29 @@ func WithMultiTTY(mtty bool, openFn func([]string) ([]io.Writer, error), ttyName
 				log.Printf("falling back to default stdout and stderr")
 				return
 			}
-			c.Stdout = io.MultiWriter(ww...)
-			c.Stderr = io.MultiWriter(ww...)
+
+			if len(ww) >= 1 {
+				writers := make([]io.Writer, len(ww))
+				for i, w := range ww {
+					writers[i] = w
+				}
+				c.Stdout = io.MultiWriter(writers...)
+				c.Stderr = io.MultiWriter(writers...)
+
+				// Set the last TTY as the controlling TTY for input
+				ctty := ww[len(ww)-1]
+				c.Stdin = ctty
+
+				// Copy input from all other TTYs to the controlling TTY
+				for i := 0; i < len(ww)-1; i++ {
+					go func(r io.Reader) {
+						_, err := io.Copy(ctty, r)
+						if err != nil {
+							log.Printf("Error copying input from TTY: %v", err)
+						}
+					}(ww[i])
+				}
+			}
 		}
 	}
 }
