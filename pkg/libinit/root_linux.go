@@ -402,3 +402,35 @@ func GetModulesFromCmdline(m *InitModuleLoader) ([]string, error) {
 	}
 	return ret, nil
 }
+
+// OpenTTYDevices opens the TTY devices with the given names in /dev.
+// It uses a best-effort approach, returning the devices that could be opened.
+// If no devices could be opened, it returns an error.
+func OpenTTYDevices(names []string) ([]*os.File, error) {
+	return openTTYDevices("/dev", names)
+}
+
+func openTTYDevices(prefix string, names []string) ([]*os.File, error) {
+	var err error
+	devs := make([]*os.File, 0, len(names))
+
+	if len(names) == 0 {
+		return devs, nil
+	}
+
+	for _, name := range names {
+		d, e := os.OpenFile(filepath.Join(prefix, name), unix.O_RDWR|unix.O_NONBLOCK, 0o620)
+		if e != nil {
+			ulog.KernelLog.Printf("open TTY: %v", e)
+			err = errors.Join(err, e)
+			continue
+		}
+		devs = append(devs, d)
+	}
+
+	if len(devs) == 0 {
+		return devs, err
+	}
+
+	return devs, nil
+}
