@@ -28,9 +28,10 @@ type initCmds struct {
 }
 
 var (
-	verbose = flag.Bool("v", false, "Enable libinit debugging (includes showing commands that are run)")
-	test    = flag.Bool("test", false, "Test mode: don't try to set control tty")
-	debug   = func(string, ...interface{}) {}
+	kerneltty = flag.Bool("kerneltty", false, "stdout and stderr of all commands started by init will be sent to the tty devices named in the kernel command line")
+	verbose   = flag.Bool("v", false, "Enable libinit debugging (includes showing commands that are run)")
+	test      = flag.Bool("test", false, "Test mode: don't try to set control tty")
+	debug     = func(string, ...interface{}) {}
 )
 
 func main() {

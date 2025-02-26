@@ -6,6 +6,7 @@ package libinit
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -116,5 +117,74 @@ func TestCmdline(t *testing.T) {
 
 	if diff := cmp.Diff(expectedModules, loadedModules); diff != "" {
 		t.Fatalf("unexpected difference of loaded modules (-want, +got): %v", diff)
+	}
+}
+
+func TestOpenTTYDevices(t *testing.T) {
+	tests := []struct {
+		name      string
+		ttyNames  []string
+		numWriter int
+		err       error
+	}{
+		{
+			name:      "No TTY devices",
+			ttyNames:  []string{},
+			err:       nil,
+			numWriter: 0,
+		},
+		{
+			name:      "Single TTY device",
+			ttyNames:  []string{"tty0"},
+			err:       nil,
+			numWriter: 1,
+		},
+		{
+			name:      "Multiple TTY devices",
+			ttyNames:  []string{"tty0", "ttyS0"},
+			err:       nil,
+			numWriter: 2,
+		},
+		{
+			name:      "Non-existent TTY device",
+			ttyNames:  []string{"nonexistent"},
+			err:       os.ErrNotExist,
+			numWriter: 0,
+		},
+		{
+			name:      "Existent and non-existent TTY devices",
+			ttyNames:  []string{"tty0", "nonexistent"},
+			err:       nil,
+			numWriter: 1,
+		},
+		{
+			name:      "All TTY devices not existent",
+			ttyNames:  []string{"nonexistent1", "nonexistent2"},
+			err:       os.ErrNotExist,
+			numWriter: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+
+			// Create dummy device files
+			for _, tty := range tt.ttyNames {
+				if !strings.HasPrefix(tty, "nonexistent") {
+					if _, err := os.Create(filepath.Join(tmpDir, tty)); err != nil {
+						t.Fatalf("create dummy device file %s: %v", tty, err)
+					}
+				}
+			}
+
+			writers, err := openTTYDevices(tmpDir, tt.ttyNames)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got error %v, want %v", err, tt.err)
+			}
+			if len(writers) != tt.numWriter {
+				t.Errorf("got %d writers, want %d", len(writers), tt.numWriter)
+			}
+		})
 	}
 }
