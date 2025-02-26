@@ -38,7 +38,7 @@ func osInitGo() *initCmds {
 	ctty := libinit.WithTTYControl(!*test)
 
 	// Output to all consoles if requested.
-	mtty := libinit.WithMultiTTY(*kerneltty, libinit.OpenTTYDevices, cmdline.Consoles())
+	mtty := libinit.WithMultiTTY(!*test, libinit.OpenTTYDevices, cmdline.Consoles())
 
 	// Install modules before exec-ing into user mode below
 	if err := libinit.InstallAllModules(); err != nil {
