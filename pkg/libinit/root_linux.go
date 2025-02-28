@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -407,20 +406,20 @@ func GetModulesFromCmdline(m *InitModuleLoader) ([]string, error) {
 // OpenTTYDevices opens the TTY devices with the given names in /dev.
 // It uses a best-effort approach, returning the devices that could be opened.
 // If no devices could be opened, it returns an error.
-func OpenTTYDevices(names []string) ([]io.Writer, error) {
+func OpenTTYDevices(names []string) ([]*os.File, error) {
 	return openTTYDevices("/dev", names)
 }
 
-func openTTYDevices(prefix string, names []string) ([]io.Writer, error) {
+func openTTYDevices(prefix string, names []string) ([]*os.File, error) {
 	var err error
-	devs := make([]io.Writer, 0, len(names))
+	devs := make([]*os.File, 0, len(names))
 
 	if len(names) == 0 {
 		return devs, nil
 	}
 
 	for _, name := range names {
-		d, e := os.OpenFile(filepath.Join(prefix, name), os.O_RDWR, 0)
+		d, e := os.OpenFile(filepath.Join(prefix, name), unix.O_RDWR|unix.O_NONBLOCK, 0o620)
 		if e != nil {
 			ulog.KernelLog.Printf("open TTY: %v", e)
 			err = errors.Join(err, e)
