@@ -48,7 +48,7 @@ type tailConfig struct {
 	follow bool
 
 	// specifies the number of lines to print (-n)
-	numLines uint
+	numLines int
 
 	// time to wait for new write in follow mode
 	followDuration time.Duration
@@ -56,7 +56,7 @@ type tailConfig struct {
 
 // getBlockSize returns the number of bytes to read for each ReadAt call. This
 // helps minimize the number of syscalls to get the last N lines of the file.
-func getBlockSize(numLines uint) int64 {
+func getBlockSize(numLines int) int64 {
 	// This is currently computed as 81 * N, where N is the requested number of
 	// lines, and 81 is a relatively generous estimation of the average line
 	// length.
@@ -66,7 +66,7 @@ func getBlockSize(numLines uint) int64 {
 // lastNLines finds the n-th-to-last line in `buf`, and returns a new slice
 // containing only the last `n` lines. If less lines are found, the input slice
 // is returned unmodified.
-func lastNLines(buf []byte, n uint) []byte {
+func lastNLines(buf []byte, n int) []byte {
 	slice := buf
 	// `data` contains up to `n` lines of the file
 	var data []byte
@@ -76,7 +76,7 @@ func lastNLines(buf []byte, n uint) []byte {
 			slice = slice[:len(slice)-1]
 		}
 		var (
-			foundLines uint
+			foundLines int
 			idx        int
 		)
 		for foundLines < n {
@@ -109,7 +109,7 @@ func lastNLines(buf []byte, n uint) []byte {
 // on stdin). For non-seekable files see readLastLinesFromBeginning.
 // It returns an error, if any. If no error is encountered, the File object's
 // offset is positioned after the last read location.
-func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint) error {
+func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines int) error {
 	blkSize := getBlockSize(numLines)
 	// go to the end of the file
 	lastPos, err := input.Seek(0, io.SeekEnd)
@@ -120,7 +120,7 @@ func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint)
 	readData := make([]byte, 0)
 	buf := make([]byte, blkSize)
 	pos := lastPos
-	var foundLines uint
+	var foundLines int
 	// for each block, count how many new lines, until they add up to `numLines`
 	for pos != 0 {
 		thisChunkSize := min(pos, blkSize)
@@ -135,7 +135,7 @@ func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint)
 		readData = slices.Concat(buf[:n], readData)
 		// count how many lines we have so far, and stop reading if we have
 		// enough
-		foundLines += uint(bytes.Count(buf[:n], []byte{'\n'}))
+		foundLines += bytes.Count(buf[:n], []byte{'\n'})
 		if foundLines >= numLines {
 			break
 		}
@@ -159,13 +159,13 @@ func readLastLinesBackwards(input readAtSeeker, writer io.Writer, numLines uint)
 // readLastLinesBackwards.
 // It returns an error, if any. If no error is encountered, the File object's
 // offset is positioned after the last read location.
-func readLastLinesFromBeginning(input io.ReadSeeker, writer io.Writer, numLines uint) error {
+func readLastLinesFromBeginning(input io.ReadSeeker, writer io.Writer, numLines int) error {
 	blkSize := getBlockSize(numLines)
 	// read block by block until EOF and store a reference to the last lines
 	buf := make([]byte, blkSize)
 	var (
 		slice      []byte // will hold the final data, after moving line by line
-		foundLines uint
+		foundLines int
 	)
 	for {
 		n, err := io.ReadFull(input, buf)
@@ -179,7 +179,7 @@ func readLastLinesFromBeginning(input io.ReadSeeker, writer io.Writer, numLines 
 		}
 		// look for newlines and keep a slice starting at the n-th to last line
 		// (no further than numLines)
-		foundLines += uint(bytes.Count(buf[:n], []byte{'\n'}))
+		foundLines += bytes.Count(buf[:n], []byte{'\n'})
 		slice = append(slice, buf[:n]...) // this is the slice that points to the wanted lines
 		// process the current slice
 		slice = lastNLines(slice, numLines)
@@ -273,11 +273,12 @@ func run(reader *os.File, writer io.Writer, follow bool, numLines int, followDur
 	if numLines < 0 {
 		numLines = -1 * numLines
 	}
-	config := tailConfig{follow: follow, numLines: uint(numLines), followDuration: followDuration}
+	config := tailConfig{follow: follow, numLines: numLines, followDuration: followDuration}
 
 	switch len(args) {
 	case 0:
 		return tail(reader, writer, config)
+	case 1:
 	default:
 		if follow {
 			return fmt.Errorf("tail: can only read one file at a time if follow true")
