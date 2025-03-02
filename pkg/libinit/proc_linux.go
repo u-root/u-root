@@ -53,8 +53,6 @@ func WithMultiTTY(mtty bool, openFn func([]string) ([]*os.File, error), ttyNames
 		if mtty {
 			ww, err := openFn(ttyNames)
 			if err != nil {
-				log.Printf("%q: open devices for multi-TTY output: %v", c.Path, err)
-				log.Printf("falling back to default stdout and stderr")
 				return
 			}
 
@@ -167,7 +165,7 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		// Set up PTM
 		m, s, err := NewPTMS()
 		if err != nil {
-			log.Printf("Error getting PTY: %v", err)
+			debug("Error getting PTY: %v", err)
 			return 0
 		}
 
@@ -183,20 +181,19 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 				// Open the TTY
 				t, err := os.OpenFile(tty, os.O_RDWR, 0)
 				if err != nil {
-					log.Printf("Error opening TTY: %v", err)
+					debug("Error opening TTY: %v", err)
 					continue
 				}
 
 				// Set to Raw mode
 				if err := Raw(t); err != nil {
 					// Let's still continue if we can't set the TTY to raw mode
-					log.Printf("Error setting TTY to raw mode: %v", err)
+					debug("Error setting TTY to raw mode: %v", err)
 				}
 
 				go func() {
 					for {
-						_, err := io.Copy(m, t)
-						if err != nil {
+						if _, err := io.Copy(m, t); err != nil {
 							log.Printf("Error copying output from command to PTM: %v", err)
 						}
 					}
@@ -246,7 +243,7 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 
 // This comes from the pty package
 func ioctl(f *os.File, cmd, ptr uintptr) error {
-	return ioctlInner(f.Fd(), cmd, ptr) // Fall back to blocking io.
+	return ioctlInner(f.Fd(), cmd, ptr)
 }
 
 func ioctlInner(fd, cmd, ptr uintptr) error {
@@ -259,8 +256,7 @@ func ioctlInner(fd, cmd, ptr uintptr) error {
 
 func ptsname(f *os.File) (string, error) {
 	var n uint32
-	err := ioctl(f, syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n))) //nolint:gosec // Expected unsafe pointer for Syscall call.
-	if err != nil {
+	if err := ioctl(f, syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n))); err != nil {
 		return "", err
 	}
 	return "/dev/pts/" + strconv.Itoa(int(n)), nil
