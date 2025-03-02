@@ -187,7 +187,7 @@ func TestLastNLines(t *testing.T) {
 	tests := []struct {
 		input  []byte
 		output []byte
-		n      uint
+		n      int
 	}{
 		{
 			input:  []byte{'a', '\n', '\n', 'b', '\n'},
