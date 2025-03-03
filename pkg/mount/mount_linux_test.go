@@ -143,6 +143,7 @@ func TestMountPool(t *testing.T) {
 	}
 }
 
+//nolint:errcheck
 func TestIsTmpRamfs(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 

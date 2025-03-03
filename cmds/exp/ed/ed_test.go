@@ -198,8 +198,12 @@ func TestEdCommandsNonInput(t *testing.T) {
 				t.Errorf("os.CreateTemp(tmpdir, `testfile-`)=file, %q, want file, nil", err)
 			}
 			var in, out bytes.Buffer
-			in.WriteString(tt.cmd)
-			tmpFile.WriteString(testdata)
+			if _, err := in.WriteString(tt.cmd); err != nil {
+				t.Errorf("in.WriteString(tt.cmd)=_, %q, want _, nil", err)
+			}
+			if _, err := tmpFile.WriteString(testdata); err != nil {
+				t.Errorf("tmpFile.WriteString(testdata)=_, %q, want _, nil", err)
+			}
 			if err := runEd(&in, &out, tt.suppress, tt.prompt, tmpFile.Name()); err != nil {
 				t.Errorf(`runEd(&in, &out, tt.suppress, tt.prompt, "")=%q, want nil`, err)
 			}

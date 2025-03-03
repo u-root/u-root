@@ -332,6 +332,8 @@ func FuzzParse(f *testing.F) {
 			return
 		}
 
-		parse(string(data))
+		if _, err := parse(string(data)); err != nil {
+			t.Fatalf("parse(%s) = %v, want nil", data, err)
+		}
 	})
 }

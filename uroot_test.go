@@ -45,8 +45,12 @@ func (v noDeadCode) Validate(a *cpio.Archive) error {
 		return err
 	}
 	bbData, _ := uio.ReadAll(bbRecord)
-	tf.Write(bbData)
-	tf.Close()
+	if _, err := tf.Write(bbData); err != nil {
+		return err
+	}
+	if err := tf.Close(); err != nil {
+		return err
+	}
 	defer func() {
 		if delFiles {
 			os.RemoveAll(tf.Name())

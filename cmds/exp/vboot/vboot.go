@@ -87,8 +87,12 @@ func main() {
 			die(err)
 		}
 
-		tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestKernel)
-		tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestInitrd)
+		if _, err := tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestKernel); err != nil {
+			die(err)
+		}
+		if _, err := tpm.PcrExtend(rwc, uint32(*pcr), pcrDigestInitrd); err != nil {
+			die(err)
+		}
 	}
 
 	binary, lookErr := exec.LookPath("kexec")

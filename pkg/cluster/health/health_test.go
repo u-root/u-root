@@ -46,7 +46,9 @@ func TestList(t *testing.T) {
 func TestGather(t *testing.T) {
 	d := t.TempDir()
 	f := filepath.Join(d, "json")
-	os.WriteFile(f, []byte(data), 0666)
+	if err := os.WriteFile(f, []byte(data), 0666); err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	health.V = t.Logf
 	for _, tt := range []struct {

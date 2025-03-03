@@ -263,11 +263,16 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code is not 200 OK: %d", resp.StatusCode)
 	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("DHCP: cannot read boot file from the network: %w", err)
 	}
-	crypto.TryMeasureData(crypto.BootConfigPCR, body, bootconf.BootfileURL)
+
+	if err := crypto.TryMeasureData(crypto.BootConfigPCR, body, bootconf.BootfileURL); err != nil {
+		return fmt.Errorf("boot: %w", err)
+	}
+
 	u, err := url.Parse(bootconf.BootfileURL)
 	if err != nil {
 		return fmt.Errorf("DHCP: cannot parse URL %s: %w", bootconf.BootfileURL, err)

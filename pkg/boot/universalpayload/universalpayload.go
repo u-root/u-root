@@ -335,7 +335,9 @@ func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
 	trampoline = constructTrampoline(trampoline, hobAddr, entry)
 
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, trampoline)
+	if err := binary.Write(&buf, binary.LittleEndian, trampoline); err != nil {
+		return err
+	}
 
 	s = kexec.NewSegment(buf.Bytes(), kexec.Range{
 		Start: uintptr(hobAddr + trampolineOffset),
@@ -343,7 +345,6 @@ func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
 	})
 
 	mem.Segments.Insert(s)
-
 	return nil
 }
 

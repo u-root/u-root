@@ -48,6 +48,9 @@ var (
 
 // start a command
 // TODO: use /etc/passwd, but the Go support for that is incomplete
+// TODO: improve async error handling for Wait() and io.Copy()
+//
+//nolint:errcheck
 func runCommand(c ssh.Channel, p *pty.Pty, cmd string, args ...string) error {
 	var ps *os.ProcessState
 	defer c.Close()
@@ -136,7 +139,10 @@ func session(chans <-chan ssh.NewChannel) {
 		// "session" and ServerShell may be used to present a simple
 		// terminal interface.
 		if newChannel.ChannelType() != "session" {
-			newChannel.Reject(ssh.UnknownChannelType, "unknown channel type")
+			// TODO: add async error checking
+			if err := newChannel.Reject(ssh.UnknownChannelType, "unknown channel type"); err != nil {
+				log.Printf("Could not reject channel: %v", err)
+			}
 			continue
 		}
 		channel, requests, err := newChannel.Accept()
@@ -148,6 +154,9 @@ func session(chans <-chan ssh.NewChannel) {
 		// Sessions have out-of-band requests such as "shell",
 		// "pty-req" and "env".  Here we handle only the
 		// "shell" request.
+		// TODO: add async error handling
+		//
+		//nolint:errcheck
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
 				dprintf("Request %v", req.Type)

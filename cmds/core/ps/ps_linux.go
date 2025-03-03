@@ -524,7 +524,10 @@ func main() {
 	f.BoolVar(&nSidTty, "anSIDTTY", false, "Print all process except whose are session leaders or unlinked with terminal")
 	f.BoolVar(&nSidTty, "a", false, "Print all process except whose are session leaders or unlinked with terminal (shorthand)")
 
-	f.Parse(unixflag.OSArgsToGoArgs())
+	if err := f.Parse(unixflag.OSArgsToGoArgs()); err != nil {
+		log.Fatal(err)
+	}
+
 	if err := ps(os.Stdout, f.Args()...); err != nil {
 		log.Fatal(err)
 	}

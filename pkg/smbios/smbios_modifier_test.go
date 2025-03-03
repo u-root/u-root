@@ -56,6 +56,9 @@ func makeMemFile(t *testing.T, data []byte) *os.File {
 	return file
 }
 
+// this is a mock. it is always created tableAddr = 24
+//
+//nolint:unparam
 func mockEntry64Raw(t *testing.T, structMaxSize uint32, tableAddr uint64) []byte {
 	data, err := mockEntry64(t, structMaxSize, tableAddr).MarshalBinary()
 	if err != nil {
@@ -73,6 +76,8 @@ func mockEntry32Raw(t *testing.T, maxSize uint16, tableLength uint16, tableAddr 
 }
 
 // mockEntry64 creates a valid Entry64 with custom attributes
+//
+//nolint:errcheck
 func mockEntry64(t *testing.T, structMaxSize uint32, tableAddr uint64) *Entry64 {
 	t.Helper()
 	e64 := defaultEntry64()
@@ -89,6 +94,8 @@ func mockEntry64(t *testing.T, structMaxSize uint32, tableAddr uint64) *Entry64 
 }
 
 // mockEntry32 creates a valid Entry32 with custom attributes
+//
+//nolint:errcheck
 func mockEntry32(t *testing.T, maxSize uint16, tableLength uint16, tableAddr uint32, numberOfStructs uint16) *Entry32 {
 	t.Helper()
 	e32 := defaultEntry32()
@@ -133,6 +140,7 @@ func readFileFromStart(f *os.File, size int64) ([]byte, error) {
 	return buf, nil
 }
 
+//nolint:errcheck
 func TestModifySystemInfo(t *testing.T) {
 	tests := []struct {
 		name                                             string

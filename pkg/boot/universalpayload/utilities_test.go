@@ -256,7 +256,7 @@ func mockWritePeFileBinary(offset int, totalSize int, imageBase uint64, sections
 	var buf bytes.Buffer
 
 	// write offset pads
-	binary.Write(&buf, binary.LittleEndian, make([]byte, offset))
+	_ = binary.Write(&buf, binary.LittleEndian, make([]byte, offset))
 
 	// write FileHeader
 	fileHeader := pe.FileHeader{
@@ -264,7 +264,7 @@ func mockWritePeFileBinary(offset int, totalSize int, imageBase uint64, sections
 		SizeOfOptionalHeader: uint16(peOptHeaderSize),
 		NumberOfSections:     uint16(len(sections)),
 	}
-	binary.Write(&buf, binary.LittleEndian, fileHeader)
+	_ = binary.Write(&buf, binary.LittleEndian, fileHeader)
 
 	// write OptionalHeader64
 	optionalHeader := pe.OptionalHeader64{
@@ -272,7 +272,7 @@ func mockWritePeFileBinary(offset int, totalSize int, imageBase uint64, sections
 		ImageBase:           imageBase,
 		NumberOfRvaAndSizes: 16,
 	}
-	binary.Write(&buf, binary.LittleEndian, optionalHeader)
+	_ = binary.Write(&buf, binary.LittleEndian, optionalHeader)
 
 	// write Sections
 	for i, section := range sections {
@@ -283,13 +283,13 @@ func mockWritePeFileBinary(offset int, totalSize int, imageBase uint64, sections
 			SizeOfRawData: uint32(len(section.data)),
 			PointerToRawData: peFileHeaderSize + peOptHeaderSize +
 				peSectionHeaderSize*uint32(i+1) + peSectionSize*uint32(i)}
-		binary.Write(&buf, binary.LittleEndian, sectionHeader)
-		binary.Write(&buf, binary.LittleEndian, section.data)
+		_ = binary.Write(&buf, binary.LittleEndian, sectionHeader)
+		_ = binary.Write(&buf, binary.LittleEndian, section.data)
 	}
 
 	// write extra pads ( for relocation)
 	if totalSize-buf.Len() > 0 {
-		binary.Write(&buf, binary.LittleEndian, make([]byte, totalSize-buf.Len()))
+		_ = binary.Write(&buf, binary.LittleEndian, make([]byte, totalSize-buf.Len()))
 	}
 
 	return buf.Bytes()
@@ -349,12 +349,12 @@ func TestRelocateFdtData(t *testing.T) {
 // Helper function to mock relocData for test cases
 func mockRelocData(pageRVA uint32, entryType, entryOffset uint16) []byte {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, pageRVA)
-	binary.Write(buf, binary.LittleEndian, uint32(10)) // block size including header
+	_ = binary.Write(buf, binary.LittleEndian, pageRVA)
+	_ = binary.Write(buf, binary.LittleEndian, uint32(10)) // block size including header
 
 	// Type is in the high 4 bits, offset is in the low 12 bits
 	entry := (entryType << 12) | entryOffset
-	binary.Write(buf, binary.LittleEndian, entry)
+	_ = binary.Write(buf, binary.LittleEndian, entry)
 	return buf.Bytes()
 }
 

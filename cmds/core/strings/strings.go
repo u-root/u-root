@@ -98,16 +98,20 @@ func (c *cmd) offsetValue(l int) string {
 }
 
 func (c *cmd) stringsIO(r *bufio.Reader, w io.Writer) error {
-	var o []byte
+	var out []byte
 	for {
 		b, err := r.ReadByte()
 		if err == io.EOF {
-			if len(o) >= c.n {
+			if len(out) >= c.n {
 				if c.t != "" {
-					w.Write([]byte(c.offsetValue(len(o))))
+					if _, err := w.Write([]byte(c.offsetValue(len(out)))); err != nil {
+						return fmt.Errorf("stringsIO: %w", err)
+					}
 				}
-				w.Write(o)
-				w.Write([]byte{'\n'})
+				out = append(out, '\n')
+				if _, err := w.Write(out); err != nil {
+					return err
+				}
 			}
 			return nil
 		}
@@ -115,23 +119,28 @@ func (c *cmd) stringsIO(r *bufio.Reader, w io.Writer) error {
 			return err
 		}
 		if !asciiIsPrint(b) {
-			if len(o) >= c.n {
+			if len(out) >= c.n {
 				if c.t != "" {
-					w.Write([]byte(c.offsetValue(len(o))))
+					if _, err := w.Write([]byte(c.offsetValue(len(out)))); err != nil {
+						return fmt.Errorf("stringsIO: %w", err)
+					}
 				}
-				w.Write(o)
-				w.Write([]byte{'\n'})
+				if _, err := w.Write(append(out, byte('\n'))); err != nil {
+					return fmt.Errorf("stringsIO: %w", err)
+				}
 			}
-			o = o[:0]
+			out = out[:0]
 			c.offset++
 			continue
 		}
 		// Prevent the buffer from growing indefinitely.
-		if len(o) >= c.n+1024 {
-			w.Write(o[:1024])
-			o = o[1024:]
+		if len(out) >= c.n+1024 {
+			if _, err := w.Write(out[:1024]); err != nil {
+				return err
+			}
+			out = out[1024:]
 		}
-		o = append(o, b)
+		out = append(out, b)
 		c.offset++
 	}
 }
@@ -154,7 +163,10 @@ func main() {
 	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	f.IntVar(&n, "n", 4, "the minimum string length")
 	f.StringVar(&t, "t", "", "write each string preceded by its byte offset from the start of the file (d decimal, o octal, x hexadecimal)")
-	f.Parse(unixflag.OSArgsToGoArgs())
+	if err := f.Parse(unixflag.OSArgsToGoArgs()); err != nil {
+		log.Fatalf("strings: %v", err)
+	}
+
 	if err := command(os.Stdin, os.Stdout, params{n: n, t: t}, f.Args()).run(); err != nil {
 		log.Fatalf("strings: %v", err)
 	}

@@ -16,6 +16,8 @@ import (
 )
 
 // SendTrace in a routine
+// TODO: This is run in a go routine, so we cannot trivially propagate the
+// errors up.
 func (t *Trace) SendTracesUDP4() {
 	id := uint16(1)
 	dport := uint16(int32(t.destPort) + rand.Int31n(64))
@@ -41,7 +43,10 @@ func (t *Trace) SendTracesUDP4() {
 				Port: dport,
 				TTL:  ttl,
 			}
-			hdr, pl := t.BuildUDP4Pkt(sport, dport, uint8(ttl), id, 0)
+			hdr, pl, err := t.BuildUDP4Pkt(sport, dport, uint8(ttl), id, 0)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			pb.Sendtime = time.Now()
 			if err := rSock.WriteTo(hdr, pl, nil); err != nil {
@@ -89,7 +94,7 @@ func (t *Trace) ReceiveTracesUDP4() {
 	}
 }
 
-func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint16, tos int) (*ipv4.Header, []byte) {
+func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint16, tos int) (*ipv4.Header, []byte, error) {
 	iph := &ipv4.Header{
 		Version:  ipv4.Version,
 		TOS:      tos,
@@ -107,10 +112,10 @@ func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint1
 
 	h, err := iph.Marshal()
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	iph.Checksum = int(checkSum(h))
 
+	iph.Checksum = int(checkSum(h))
 	udp := UDPHeader{
 		Src: srcPort,
 		Dst: dstPort,
@@ -120,11 +125,20 @@ func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint1
 	for i := 0; i < 32; i++ {
 		payload[i] = uint8(i + 64)
 	}
+
 	udp.Length = uint16(len(payload) + 8)
-	udp.checksum(iph, payload)
+	if err := udp.checksum(iph, payload); err != nil {
+		return nil, nil, err
+	}
 
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, &udp)
-	binary.Write(&buf, binary.BigEndian, &payload)
-	return iph, buf.Bytes()
+	if err := binary.Write(&buf, binary.BigEndian, &udp); err != nil {
+		return nil, nil, err
+	}
+
+	if err := binary.Write(&buf, binary.BigEndian, &payload); err != nil {
+		return nil, nil, err
+	}
+
+	return iph, buf.Bytes(), nil
 }

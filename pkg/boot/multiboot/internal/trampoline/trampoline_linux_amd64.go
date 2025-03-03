@@ -52,6 +52,8 @@ func Setup(path string, magic, infoAddr, entryPoint uintptr) ([]byte, error) {
 // extract extracts trampoline segment from file.
 // trampoline segment begins after "u-root-trampoline-begin" byte sequence + padding,
 // and ends at "u-root-trampoline-end" byte sequence.
+//
+//nolint:unparam
 func extract(path string) (uintptr, []byte, error) {
 	// TODO(https://github.com/golang/go/issues/35055): deal with
 	// potentially non-contiguous trampoline. Rather than locating start

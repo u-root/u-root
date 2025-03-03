@@ -364,7 +364,9 @@ func exit(mainErr error) {
 	}
 
 	// Umount anything that might be mounted.
-	slaunch.UnmountAll()
+	if err := slaunch.UnmountAll(); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Could not unmount all devices: %v\n", err)
+	}
 
 	// Close the connection to the TPM if it was opened.
 	tpm.Close()

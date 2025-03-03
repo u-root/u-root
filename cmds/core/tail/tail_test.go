@@ -145,6 +145,7 @@ func (sw *syncWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+//nolint:errcheck
 func TestTailFollow(t *testing.T) {
 	dir := t.TempDir()
 	f, err := os.CreateTemp(dir, "follow")

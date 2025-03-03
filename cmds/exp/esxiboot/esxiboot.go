@@ -132,7 +132,10 @@ func command(args []string) *cmd {
 
 	f.BoolVar(&c.dryRun, "dry-run", false, "dry run (just mount + load the kernel, don't kexec)")
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	if c.diskDev == "" && c.cfg == "" && c.cdrom == "" {
 		log.Printf("Either --config, --device, or --cdrom must be specified")

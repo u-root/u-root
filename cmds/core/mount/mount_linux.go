@@ -120,7 +120,9 @@ func (c *cmd) run(args ...string) error {
 	if len(args) == 0 {
 		for _, p := range c.mountsPath {
 			if b, err := os.ReadFile(p); err == nil {
-				c.stdout.Write(b)
+				if _, err := c.stdout.Write(b); err != nil {
+					return err
+				}
 				return nil
 			}
 		}

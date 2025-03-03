@@ -36,12 +36,15 @@ func handler(s ssh.Session) {
 		}
 		go func() {
 			for win := range winCh {
+				//nolint:errcheck
 				pty.Setsize(f, &pty.Winsize{Rows: uint16(win.Height), Cols: uint16(win.Width)})
 			}
 		}()
 		go func() {
+			//nolint:errcheck
 			io.Copy(f, s) // stdin
 		}()
+		//nolint:errcheck
 		io.Copy(s, f) // stdout
 	} else {
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = s, s, s
@@ -85,7 +88,9 @@ func (c *cmd) run() error {
 		Handler: handler,
 	}
 
-	server.SetOption(ssh.HostKeyFile(c.hostKeyFile))
+	if err := server.SetOption(ssh.HostKeyFile(c.hostKeyFile)); err != nil {
+		return err
+	}
 	log.Println("starting ssh server on port " + c.port)
 
 	return (server.ListenAndServe())
@@ -103,7 +108,10 @@ func command(args []string) *cmd {
 	f.StringVar(&c.port, "port", "2222", "default port")
 	f.StringVar(&c.port, "p", "2222", "default port (shorthand)")
 
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := f.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	return c
 }

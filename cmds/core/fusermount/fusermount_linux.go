@@ -4,7 +4,11 @@
 
 package main
 
-import "golang.org/x/sys/unix"
+import (
+	"errors"
+
+	"golang.org/x/sys/unix"
+)
 
 var fileSystemUID, fileSystemGID int
 
@@ -23,13 +27,17 @@ func dropPrivs() error {
 	return err
 }
 
-func restorePrivs() {
+func restorePrivs() error {
 	if unix.Getuid() == 0 {
-		return
+		return nil
 	}
+
 	// We're exiting, if there's an error, not much to do.
-	unix.Setfsuid(fileSystemUID)
-	unix.Setfsgid(fileSystemGID)
+	err := unix.Setfsuid(fileSystemUID)
+	if gidErr := unix.Setfsgid(fileSystemGID); gidErr != nil {
+		err = errors.Join(err, gidErr)
+	}
+	return err
 }
 
 func preMount() error {

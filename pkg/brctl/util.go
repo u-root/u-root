@@ -57,6 +57,7 @@ func sysconfhz() (int, error) {
 	return int(clktck), nil
 }
 
+//nolint:unparam
 func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	localBytes := append([]byte(raw), 0)
 	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&localBytes[0])))

@@ -24,7 +24,9 @@ func TestParseFlags(t *testing.T) {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
 
-	tmp.Write([]byte("tcp port 80"))
+	if _, err := tmp.Write([]byte("tcp port 80")); err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name        string

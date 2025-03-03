@@ -43,8 +43,13 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			c := command(io.Discard, tt.args...)
-			c.run()
+			c, err := command(io.Discard, tt.args...)
+			if err != nil {
+				t.Errorf("got %v, want nil", err)
+			}
+			if err := c.run(); err != nil {
+				t.Errorf("got %v, want nil", err)
+			}
 		})
 	}
 	// Cover the rest
@@ -78,7 +83,10 @@ func TestRun(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			c := command(io.Discard, tt.args...)
+			c, err := command(io.Discard, tt.args...)
+			if err != nil {
+				t.Errorf("got %v, want nil", err)
+			}
 			if err := c.run(); !errors.Is(err, tt.err) {
 				t.Errorf("run() got %v, want %v", err, tt.err)
 			}
@@ -267,7 +275,10 @@ func TestJSONWeirdness(t *testing.T) {
 		t.Log(err)
 	}
 	if true {
-		c := command(io.Discard, "-J", "testdata/testfile1.json")
+		c, err := command(io.Discard, "-J", "testdata/testfile1.json")
+		if err != nil {
+			t.Errorf("got %v, want nil", err)
+		}
 		if err := c.run(); err != nil {
 			t.Errorf("run() got %v, want nil", err)
 		}

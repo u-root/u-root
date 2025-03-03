@@ -111,7 +111,10 @@ func (o *options) parseCmdline(args []string, f *flag.FlagSet) {
 	unixargs := unixflag.ArgsToGoArgs(args[1:])
 	hackedArgs := hackLoadFlagValue(unixargs)
 
-	f.Parse(hackedArgs)
+	if err := f.Parse(hackedArgs); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing flags: %v", err)
+		os.Exit(1)
+	}
 
 	if loadFlagPath != "" {
 		o.load = true

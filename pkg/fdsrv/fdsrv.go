@@ -68,7 +68,9 @@ func (fds *Server) handleConnection(uc *net.UnixConn) (bool, error) {
 	}
 	query := string(buf[:n])
 	if query != fds.nonce {
-		io.WriteString(uc, "BAD NONCE")
+		if _, err := io.WriteString(uc, "BAD NONCE"); err != nil {
+			return false, err
+		}
 		return false, nil
 	}
 	oob := syscall.UnixRights(fds.dupedFD)
@@ -153,7 +155,9 @@ func (fds *Server) Serve() error {
 	if fds.timeout != 0 {
 		deadline = time.Now().Add(fds.timeout)
 	}
-	fds.listener.SetDeadline(deadline)
+	if err := fds.listener.SetDeadline(deadline); err != nil {
+		return err
+	}
 	for {
 		conn, err := fds.listener.AcceptUnix()
 		// Clean up after ourselves, since we are initiating our own
@@ -166,7 +170,9 @@ func (fds *Server) Serve() error {
 		} else if err != nil {
 			return err
 		}
-		conn.SetDeadline(deadline)
+		if err := conn.SetDeadline(deadline); err != nil {
+			return err
+		}
 		succeeded, err := fds.handleConnection(conn)
 		if err != nil {
 			return err

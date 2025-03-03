@@ -470,7 +470,7 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 	// for an authoritative list of which file formats require the extra 4 bytes appended (look for
 	// "_with_size").
 	buf := bytes.NewBuffer(dat)
-	if binary.Write(buf, binary.LittleEndian, uint32(len(b))); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(b))); err != nil {
 		return nil, fmt.Errorf("failed to append the uncompressed size: %w", err)
 	}
 	return buf.Bytes(), nil

@@ -25,11 +25,13 @@ func genAPU2(n string) ([]byte, error) {
 	// mmap(NULL, 392, PROT_READ, MAP_SHARED, 3, 0x77fae000) = 0x7fa13d64c000
 	// mmap(NULL, 8, PROT_READ, MAP_SHARED, 3, 0x77fdf000) = 0x7fa13d64f000
 	// mmap(NULL, 65, PROT_READ, MAP_SHARED, 3, 0x77fdf000) = 0x7fa13d64f000
-	f, err := os.Open("/dev/mem")
+	memFile, err := os.Open("/dev/mem")
 	if err != nil {
 		return nil, err
 	}
-	out := bytes.NewBuffer([]byte("package main\nvar apu2 = []seg {\n"))
+
+	codeGen := fmt.Sprintf("package main\nvar %s = []seg {\n", n)
+	out := bytes.NewBuffer([]byte(codeGen))
 	for _, m := range []struct {
 		offset int64
 		size   int64
@@ -41,10 +43,11 @@ func genAPU2(n string) ([]byte, error) {
 		{size: 8, offset: 0x77fdf000},
 		{size: 65, offset: 0x77fdf000},
 	} {
-		b, err := syscall.Mmap(int(f.Fd()), m.offset, int(m.size), syscall.PROT_READ, syscall.MAP_SHARED)
+		b, err := syscall.Mmap(int(memFile.Fd()), m.offset, int(m.size), syscall.PROT_READ, syscall.MAP_SHARED)
 		if err != nil {
 			return nil, fmt.Errorf("mmap %d bytes at %#x: %w", m.size, m.offset, err)
 		}
+
 		fmt.Fprintf(out, "{off: %#x, dat:[]byte{\n", m.offset)
 		for i := 0; i < len(b); i += 8 {
 			fmt.Fprintf(out, "\t/*%#08x*/\t", m.offset+int64(i))

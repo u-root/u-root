@@ -63,7 +63,9 @@ func (g *Gather) Run(cmd string, args ...string) ([]Stat, error) {
 		})
 	}
 
-	eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return nil, fmt.Errorf("Run: %w", err)
+	}
 	close(c)
 
 	V("all returned")

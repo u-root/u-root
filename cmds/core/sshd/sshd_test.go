@@ -49,17 +49,18 @@ func TestConfigErrors(t *testing.T) {
 	t.Run("authorized_keys file don't have public keys", func(t *testing.T) {
 		tf, err := os.CreateTemp("", "")
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("want nil, got %v", err)
 		}
 		defer os.Remove(tf.Name())
-		tf.WriteString("keys")
+		if _, err := tf.WriteString("keys"); err != nil {
+			t.Fatalf("want nil, got %v", err)
+		}
 
 		cmd := command(params{
 			keys: tf.Name(),
 		})
 
-		err = cmd.run()
-		if err == nil {
+		if err = cmd.run(); err == nil {
 			t.Errorf("expected ssh: no key found, got nil")
 		}
 	})
@@ -77,18 +78,19 @@ func TestConfigErrors(t *testing.T) {
 	t.Run("privete key file does have private key", func(t *testing.T) {
 		tf, err := os.CreateTemp("", "")
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("want nil, got %v", err)
 		}
 		defer os.Remove(tf.Name())
-		tf.WriteString("privatekey")
+		if _, err := tf.WriteString("privatekey"); err != nil {
+			t.Fatalf("want nil, got %v", err)
+		}
 
 		cmd := command(params{
 			privkey: tf.Name(),
 			keys:    "./testdata/id_rsa.pub",
 		})
 
-		err = cmd.run()
-		if err == nil {
+        if err = cmd.run(); err == nil {
 			t.Error("expected ssh: no key found, got nil")
 		}
 	})
@@ -134,7 +136,11 @@ func TestSessionRun(t *testing.T) {
 		debug:   true,
 	})
 
-	go cmd.run()
+	go func() {
+		if err := cmd.run(); err != nil {
+			t.Errorf("want nil, got %v", err)
+		}
+	}()
 
 	pk, err := os.ReadFile("./testdata/id_rsa")
 	if err != nil {
@@ -172,7 +178,9 @@ func TestSessionRun(t *testing.T) {
 		t.Fatalf("can't pipe output: %v", err)
 	}
 
-	session.Run("echo hello u-root")
+	if err := session.Run("echo hello u-root"); err != nil {
+		t.Fatalf("can't run command: %v", err)
+	}
 
 	b := make([]byte, 128)
 	n, err := output.Read(b)

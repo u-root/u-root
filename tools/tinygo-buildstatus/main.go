@@ -260,7 +260,9 @@ func parseFlags(args []string) (cmd, error) {
 	fs.StringVar(&CommitUroot, "commit-uroot", "", "commit hash of the u-root binary")
 	fs.StringVar(&VersionGolang, "version-go", "", "version of the go compiler")
 
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return c, err
+	}
 
 	if len(args) == 0 {
 		fs.Usage()

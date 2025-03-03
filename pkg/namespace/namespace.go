@@ -73,7 +73,9 @@ func buildNS(ns Namespace, nsfile, user string, clearns bool) error {
 		ns = DefaultNamespace
 	}
 	if clearns {
-		ns.Clear()
+		if err := ns.Clear(); err != nil {
+			return err
+		}
 	}
 	r, err := NewBuilder()
 	if err != nil {
@@ -120,11 +122,11 @@ func NewBuilder() (*Builder, error) {
 	}, nil
 }
 
-func newBuilder(wd string, b OpenFunc) (*Builder, error) {
+func newBuilder(wd string, b OpenFunc) *Builder {
 	return &Builder{
 		dir:  wd,
 		open: b,
-	}, nil
+	}
 }
 
 // Parse takes a path and parses the namespace file

@@ -180,14 +180,23 @@ func (p *Pool) Mount(mounter Mounter, flags uintptr) (*MountPoint, error) {
 	}
 
 	path := filepath.Join(p.tmpDir, mounter.DevName())
-	os.MkdirAll(path, 0o777)
+	if err := os.MkdirAll(path, 0o777); err != nil {
+		return nil, err
+	}
+
 	m, err := mounter.Mount(path, flags)
 	if err != nil {
 		// unix.Rmdir is used (instead of os.RemoveAll) because it
 		// fails when the directory is non-empty. It would be a bit
 		// dangerous to use os.RemoveAll because it could accidentally
 		// delete everything in a mount.
-		unix.Rmdir(path)
+		errDir := unix.Rmdir(path)
+		if errDir != nil {
+			// we can't loop over errors.Join, handle it by printing
+			if err := errors.Join(err, errDir); err != nil {
+				fmt.Fprint(os.Stderr, err)
+			}
+		}
 		return nil, err
 	}
 	p.MountPoints = append(p.MountPoints, m)
@@ -219,7 +228,9 @@ func (p *Pool) UnmountAll(flags uintptr) error {
 		// fails when the directory is non-empty. It would be a bit
 		// dangerous to use os.RemoveAll because it could accidentally
 		// delete everything in a mount.
-		unix.Rmdir(m.Path)
+		if err := unix.Rmdir(m.Path); err != nil {
+			return fmt.Errorf("(Rmdir): %w", err)
+		}
 	}
 
 	if returnErr == nil && p.tmpDir != "" {
