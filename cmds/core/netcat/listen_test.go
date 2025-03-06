@@ -110,10 +110,8 @@ func TestListenMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := &cmd{
-				listenStubFn: tt.listenFunc,
-			}
-			err := cmd.listenMode(io.Discard, tt.network, tt.address)
+			cmd := &cmd{}
+			err := cmd.listenMode(io.Discard, tt.network, tt.address, tt.listenFunc)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("got %v, want %v", err, tt.err)
 			}
