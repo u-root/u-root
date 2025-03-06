@@ -114,10 +114,8 @@ func TestConnectMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := &cmd{
-				connectStubFn: tt.connectFunc,
-			}
-			err := cmd.connectMode(io.Discard, tt.network, tt.address)
+			cmd := &cmd{}
+			err := cmd.connectMode(io.Discard, tt.network, tt.address, tt.connectFunc)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("got %v, want %v", err, tt.err)
 			}

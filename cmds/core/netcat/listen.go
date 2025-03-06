@@ -23,28 +23,25 @@ import (
 
 var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, error){}
 
-func (c *cmd) listenMode(output io.Writer, network, address string) error {
+type listenFn func(output io.Writer, network, address string) error
+
+func (c *cmd) listenMode(output io.Writer, network, address string, listen listenFn) error {
 	if network == "tcp" || network == "udp" {
-		err4 := c.listen(output, network+"4", address)
+		err4 := listen(output, network+"4", address)
 		if err4 == nil {
 			return nil
 		}
-		err6 := c.listen(output, network+"6", address)
+		err6 := listen(output, network+"6", address)
 		if err6 == nil {
 			return nil
 		}
 		return fmt.Errorf("listen mode: %w", errors.Join(err4, err6))
 	}
 
-	return c.listen(output, network, address)
+	return listen(output, network, address)
 }
 
 func (c *cmd) listen(output io.Writer, network, address string) error {
-	// listenStubFn is used for testing purposes
-	if c.listenStubFn != nil {
-		return c.listenStubFn(output, network, address)
-	}
-
 	listener, err := c.setupListener(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to setup listener: %w", err)

@@ -335,10 +335,6 @@ type cmd struct {
 	stderr io.Writer
 	config *netcat.Config
 	args   []string
-
-	// only for testing
-	connectStubFn func(output io.Writer, network, address string) error
-	listenStubFn  func(output io.Writer, network, address string) error
 }
 
 func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
@@ -513,10 +509,10 @@ func run(args []string) error {
 	output := io.MultiWriter(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(netcat.NewConcurrentWriter(output), network, address)
+		return c.listenMode(netcat.NewConcurrentWriter(output), network, address, c.listen)
 	}
 
-	return c.connectMode(output, network, address)
+	return c.connectMode(output, network, address, c.connect)
 }
 
 func main() {
