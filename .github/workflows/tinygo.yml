@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: tinygo/tinygo-dev:sha-ec0a142190bd21ecefd91868f36df70e92e9ac2c
+    container: ghcr.io/u-root/tinygo-net-experimental:sha-285badd3fd3bd3827f01cf8033105635abea3611
     steps:
       - name: Install actions dependencies into tinygo container (Debain)
         run: |
@@ -38,14 +38,12 @@ jobs:
           # $GITHUB_STEP_SUMMARY upload aborted, supports content up to a size 
           # of 1024k, got 1309k. For more information see:
 
-          mkdir -p $PWD/out
           go run tools/tinygo-buildstatus/main.go \
               tools/tinygo-buildstatus/statusquo.go \
               -tinygo $TINYGO \
               -commit-tinygo $TINYGOVER \
               -commit-uroot $(git rev-parse HEAD) \
               -version-go $GOVER \
-              -cmdout $PWD/out \
               cmds/core/* > $GITHUB_STEP_SUMMARY
       
       - name: Run regression builder exp
