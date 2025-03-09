@@ -99,6 +99,7 @@ var (
 		// "sluinit",
 		"sort",
 		"sshd",
+		"stat",
 		"strace",
 		"strings",
 		"stty",
