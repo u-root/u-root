@@ -33,7 +33,7 @@ func run(stdout io.Writer, stderr io.Writer, files ...string) int {
 
 		stat, ok := fi.Sys().(*syscall.Stat_t)
 		if !ok {
-			fmt.Fprintf(stderr, "stat: %v", err)
+			fmt.Fprintf(stderr, "stat: missing fileinfo")
 			errCode = 1
 			continue
 		}
