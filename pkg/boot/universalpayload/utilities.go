@@ -41,10 +41,10 @@ const (
 const (
 	rsdpTableOffset  = 0x1000
 	tmpHobOffset     = 0x2000
-	tmpStackOffset   = 0x3000
-	tmpStackTop      = 0x4000
-	trampolineOffset = 0x4000
-	uplImageOffset   = 0x5000
+	tmpStackOffset   = 0x4000
+	tmpStackTop      = 0x5000
+	trampolineOffset = 0x5000
+	uplImageOffset   = 0x6000
 )
 
 const (
