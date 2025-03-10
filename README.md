@@ -76,6 +76,9 @@ u-root core -cmds/core/{ls,losetup}
 > [!IMPORTANT]
 >
 > `u-root` works exactly when `go build` and `go list` work as well.
+>
+> See also the section below discussing the
+> [AMD64 architecture level](#amd64-architecture-level).
 
 > [!NOTE]
 >
@@ -308,6 +311,33 @@ qemu-system-x86_64 -kernel $KERNEL -initrd /tmp/initramfs.linux_amd64.cpio -nogr
 
 (It fails to do that because some initialization is missing when the shell is
 started without a proper init.)
+
+## AMD64 Architecture Level
+
+Before building an initramfs for AMD64 with `u-root`, verify that the command
+
+```shell
+go env GOAMD64
+```
+
+prints `v1`. A [`GOAMD64` setting](https://go.dev/wiki/MinimumRequirements#amd64)
+of any higher version may produce such binaries that don't execute on old AMD64
+processors (including the default CPU model of QEMU).
+
+`GOAMD64` can be reset to `v1` with one of the following methods:
+
+*   through the `GOAMD64` environment variable:
+
+    ```shell
+    export GOAMD64=v1
+    ```
+
+*   through `go env` (only takes effect if the `GOAMD64` environment variable
+    is not set):
+
+    ```shell
+    go env -w GOAMD64=v1
+    ```
 
 ## Cross Compilation (targeting different architectures and OSes)
 
