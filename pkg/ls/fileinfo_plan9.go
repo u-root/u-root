@@ -9,16 +9,12 @@ package ls
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"syscall"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
 )
-
-// Matches characters which would interfere with ls's formatting.
-var unprintableRe = regexp.MustCompile("[[:cntrl:]\n]")
 
 // FileInfo holds file metadata.
 //
@@ -44,41 +40,6 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		Size:  fi.Size(),
 		MTime: fi.ModTime(),
 	}
-}
-
-// PrintableName returns a printable file name.
-func (fi FileInfo) PrintableName() string {
-	return unprintableRe.ReplaceAllLiteralString(fi.Name, "?")
-}
-
-// Stringer provides a consistent way to format FileInfo.
-type Stringer interface {
-	// FileString formats a FileInfo.
-	FileString(fi FileInfo) string
-}
-
-// NameStringer is a Stringer implementation that just prints the name.
-type NameStringer struct{}
-
-// FileString implements Stringer.FileString and just returns fi's name.
-func (ns NameStringer) FileString(fi FileInfo) string {
-	return fi.PrintableName()
-}
-
-// QuotedStringer is a Stringer that returns the file name surrounded by qutoes
-// with escaped control characters.
-type QuotedStringer struct{}
-
-// FileString returns the name surrounded by quotes with escaped control characters.
-func (qs QuotedStringer) FileString(fi FileInfo) string {
-	return fmt.Sprintf("%#v", fi.Name)
-}
-
-// LongStringer is a Stringer that returns the file info formatted in `ls -l`
-// long format.
-type LongStringer struct {
-	Human bool
-	Name  Stringer
 }
 
 // FileString implements Stringer.FileString.
