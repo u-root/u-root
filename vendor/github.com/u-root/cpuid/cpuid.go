@@ -1,4 +1,5 @@
 // Copyright 2015 Intel Corporation.
+// Copyright 2025 the u-root Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -41,9 +42,11 @@ var InitialAPICId uint32
 
 // Cache descriptor's array
 // You can iterate like there:
-// 	for _, cacheDescription := range cpuid.CacheDescriptors {
+//
+//	for _, cacheDescription := range cpuid.CacheDescriptors {
 //		fmt.Printf("CacheDescriptor: %v\n", cacheDescription)
 //	}
+//
 // See CacheDescriptor type for more information
 var CacheDescriptors []CacheDescriptor
 
@@ -182,29 +185,29 @@ var ThermalAndPowerFeatureNames = map[uint32]string{ // From leaf06
 }
 
 var ExtendedFeatureNames = map[uint64]string{ // From leaf07
-	FSGSBASE:        "FSGSBASE",
-	IA32_TSC_ADJUST: "IA32_TSC_ADJUST",
-	BMI1:            "BMI1",
-	HLE:             "HLE",
-	AVX2:            "AVX2",
-	SMEP:            "SMEP",
-	BMI2:            "BMI2",
-	ERMS:            "ERMS",
-	INVPCID:         "INVPCID",
-	RTM:             "RTM",
-	PQM:             "PQM",
-	DFPUCDS:         "DFPUCDS",
-	MPX:             "MPX",
-	PQE:             "PQE",
-	AVX512F:         "AVX512F",
-	AVX512DQ:        "AVX512DQ",
-	RDSEED:          "RDSEED",
-	ADX:             "ADX",
-	SMAP:            "SMAP",
-	AVX512IFMA:      "AVX512IFMA",
-	PCOMMIT:         "PCOMMIT",
-	CLFLUSHOPT:      "CLFLUSHOPT",
-	CLWB:            "CLWB",
+	FSGSBASE:              "FSGSBASE",
+	IA32_TSC_ADJUST:       "IA32_TSC_ADJUST",
+	BMI1:                  "BMI1",
+	HLE:                   "HLE",
+	AVX2:                  "AVX2",
+	SMEP:                  "SMEP",
+	BMI2:                  "BMI2",
+	ERMS:                  "ERMS",
+	INVPCID:               "INVPCID",
+	RTM:                   "RTM",
+	PQM:                   "PQM",
+	DFPUCDS:               "DFPUCDS",
+	MPX:                   "MPX",
+	PQE:                   "PQE",
+	AVX512F:               "AVX512F",
+	AVX512DQ:              "AVX512DQ",
+	RDSEED:                "RDSEED",
+	ADX:                   "ADX",
+	SMAP:                  "SMAP",
+	AVX512IFMA:            "AVX512IFMA",
+	PCOMMIT:               "PCOMMIT",
+	CLFLUSHOPT:            "CLFLUSHOPT",
+	CLWB:                  "CLWB",
 	INTEL_PROCESSOR_TRACE: "INTEL_PROCESSOR_TRACE",
 	AVX512PF:              "AVX512PF",
 	AVX512ER:              "AVX512ER",
@@ -294,16 +297,22 @@ var brandStrings = map[string]int{
 	"XenVMMXenVMM": XEN,
 }
 
-var maxInputValue uint32
-var maxExtendedInputValue uint32
-var extendedModelId uint32
-var extendedFamilyId uint32
-var brandIndex uint32
-var brandId int
-var featureFlags uint64
-var thermalAndPowerFeatureFlags uint32
-var extendedFeatureFlags uint64
-var extraFeatureFlags uint64
+// golanci-lint triggers false positives for ”unused” variables
+var (
+	maxInputValue         uint32
+	maxExtendedInputValue uint32
+	//nolint:unused
+	extendedModelId uint32
+	//nolint:unused
+	extendedFamilyId uint32
+	//nolint:unused
+	brandIndex                  uint32
+	brandId                     int
+	featureFlags                uint64
+	thermalAndPowerFeatureFlags uint32
+	extendedFeatureFlags        uint64
+	extraFeatureFlags           uint64
+)
 
 const (
 	UKNOWN = iota
