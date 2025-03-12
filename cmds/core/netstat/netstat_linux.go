@@ -404,23 +404,19 @@ func command(out io.Writer, args []string) *cmd {
 	fs.BoolVar(&c.all, "a", false, "display all sockets (default: connected)")
 
 	fs.Usage = printHelp
-
 	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
-
-	// Validate info source flags
-	// none or one allowed to be set
-	if !xorFlags(c.route, c.interfaces, c.groups, c.stats, c.iface != "") {
-		fmt.Printf("%s\n", help)
-		return nil
-	}
-
 	c.out = out
-
 	return &c
 }
 
 func main() {
-	if err := command(os.Stdout, os.Args).run(); err != nil {
+	switch err := command(os.Stdout, os.Args).run(); err {
+	case nil:
+	case errMutualExcludeFlags:
+		printHelp()
+		log.Print(err)
+		os.Exit(2)
+	default:
 		log.Fatal(err)
 	}
 }
