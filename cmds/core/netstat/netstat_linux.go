@@ -24,7 +24,7 @@ var (
        netstat { [-vWeenNac] -I[<Iface>] | [-veenNac] -i | [-cnNe] -M | -s [-6tuw] } [delay]
 
         -r, --route              display routing table
-        -I, --interfaces=<Iface> display interface table for <Iface>
+        -I, --interface=<Iface> display interface table for <Iface>
         -i, --interfaces         display interface table
         -g, --groups             display multicast group memberships
         -s, --statistics         display networking statistics (like SNMP)
