@@ -7,6 +7,7 @@
 package brctl
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -61,7 +62,7 @@ func executeIoctlStr(fd int, req uint, raw string) (int, error) {
 	localBytes := append([]byte(raw), 0)
 	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&localBytes[0])))
 	if errno != 0 {
-		return 0, fmt.Errorf("syscall.Syscall: %w", errno)
+		return 0, errno
 	}
 	return 0, nil
 }
@@ -84,7 +85,7 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 
 	ifrIfindex := ifreq.Uint32()
 	if ifrIfindex == 0 {
-		return 0, fmt.Errorf("interface %s not found", ifname)
+		return 0, errors.New("interface has invalid index 0")
 	}
 
 	return int(ifrIfindex), nil

@@ -168,6 +168,6 @@ func main() {
 	}
 
 	if err := run(os.Stdout, argv[1:]); err != nil {
-		log.Fatalf("brctl: %v", err)
+		log.Fatal(err)
 	}
 }
