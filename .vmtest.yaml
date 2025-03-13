@@ -1,7 +1,7 @@
 amd64:
   VMTEST_QEMU:
     container: "ghcr.io/hugelgupf/vmtest/qemu:main"
-    template: "{{.qemu}}/bin/qemu-system-x86_64 -L {{.qemu}}/pc-bios -m 1G"
+    template: "{{.qemu}}/bin/qemu-system-x86_64 -L {{.qemu}}/pc-bios -m 1G -cpu max"
     directories:
       qemu: "/zqemu"
 
