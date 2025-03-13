@@ -6,6 +6,7 @@ package brctl
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,83 +15,100 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
 
 // Addbr adds a bridge with the provided name.
 func Addbr(name string) error {
+	if len(name) >= unix.IFNAMSIZ {
+		return fmt.Errorf("bridge name too long, %d bytes allowed", unix.IFNAMSIZ-1)
+	}
+
 	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("unix.Socket: %w", err)
+		return fmt.Errorf("open unix socket: %w", err)
 	}
 
 	if _, err := executeIoctlStr(brctlSocket, unix.SIOCBRADDBR, name); err != nil {
-		return fmt.Errorf("executeIoctlStr: %w", err)
+		return fmt.Errorf("can't add bridge %q: %w", name, err)
 	}
 
 	return nil
 }
 
-// Delbr deletes a bridge with the name provided.
+// Delbr deletes a bridge with the provided name.
 func Delbr(name string) error {
 	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("unix.Socket: %w", err)
+		return fmt.Errorf("open unix socket: %w", err)
 	}
 
 	if _, err := executeIoctlStr(brctlSocket, unix.SIOCBRDELBR, name); err != nil {
-		return fmt.Errorf("executeIoctlStr: %w", err)
+		return fmt.Errorf("can't delete bridge %q: %w", name, err)
 	}
 
 	return nil
 }
 
-// Addif adds an interface to the bridge provided
+// Addif adds an interface to bridge.
 func Addif(bridge string, iface string) error {
 	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("unix.Socket: %w", err)
+		return fmt.Errorf("open unix socket: %w", err)
 	}
 
 	ifr, err := unix.NewIfreq(bridge)
 	if err != nil {
-		return fmt.Errorf("unix.NewIfreq: %w", err)
+		return fmt.Errorf("bridge name exceeds max length of %d", unix.IFNAMSIZ-1)
 	}
 
 	ifIndex, err := getIndexFromInterfaceName(iface)
 	if err != nil {
-		return fmt.Errorf("getIndexFromInterfaceName: %w", err)
+		return fmt.Errorf("interface %q: %w", iface, err)
 	}
 	ifr.SetUint32(uint32(ifIndex))
 
 	if err := unix.IoctlIfreq(brctlSocket, unix.SIOCBRADDIF, ifr); err != nil {
-		return fmt.Errorf("unix.IoctlIfreq: %w", err)
+		if errors.Is(err, syscall.ENODEV) { // no such device
+			return fmt.Errorf("bridge %q: %w", bridge, err)
+		}
+		if errors.Is(err, syscall.EBUSY) { // resource busy
+			return fmt.Errorf("device %q is already a member of a bridge; can't add it to bridge %q", iface, bridge)
+		}
+		return fmt.Errorf("can't add %q to bridge %q: %w", iface, bridge, err)
 	}
 
 	return nil
 }
 
-// Delif deleted a given interface from the bridge
+// Delif deletes an interface from bridge.
 func Delif(bridge string, iface string) error {
 	brctlSocket, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
-		return fmt.Errorf("unix.Socket: %w", err)
+		return fmt.Errorf("open unix socket: %w", err)
 	}
 
 	ifr, err := unix.NewIfreq(bridge)
 	if err != nil {
-		return fmt.Errorf("unix.NewIfreq: %w", err)
+		return fmt.Errorf("bridge name exceeds max length of %d", unix.IFNAMSIZ-1)
 	}
 
 	ifIndex, err := getIndexFromInterfaceName(iface)
-	if err != nil || ifIndex == 0 {
-		return fmt.Errorf("getIndexFromInterfaceName: %w", err)
+	if err != nil {
+		return fmt.Errorf("interface %q: %w", iface, err)
 	}
 	ifr.SetUint32(uint32(ifIndex))
 
 	if err := unix.IoctlIfreq(brctlSocket, unix.SIOCBRDELIF, ifr); err != nil {
-		return fmt.Errorf("unix.IoctlIfreq: %w", err)
+		if errors.Is(err, syscall.ENODEV) { // no such device
+			return fmt.Errorf("bridge %q: %w", bridge, err)
+		}
+		if errors.Is(err, syscall.EINVAL) { // invalid argument
+			return fmt.Errorf("device %q is not a member of bridge %q", iface, bridge)
+		}
+		return fmt.Errorf("can't delete %q to bridge %q: %w", iface, bridge, err)
 	}
 
 	return nil
