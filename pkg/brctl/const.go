@@ -42,5 +42,6 @@ const (
 	BRCTL_HAIRPIN                  = "hairpin_mode"
 	BRCTL_BRFORWARD                = "brforward"
 	BRCTL_BRIDGEID                 = "bridge_id"
-	BRCTL_BRIDGE_INTERFACE         = "brif"
+	BRCTL_BRIDGE_DIR               = "bridge"
+	BRCTL_BRIDGE_INTERFACE_DIR     = "brif"
 )

@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -94,7 +94,7 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 // set values for the bridge
 // all values in the sysfs are of type <bytes> + '\n'
 func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
-	err := os.WriteFile(path.Join(BRCTL_SYS_NET, bridge, "bridge", name), append(value, BRCTL_SYS_SUFFIX), 0)
+	err := os.WriteFile(filepath.Join(BRCTL_SYS_NET, bridge, "bridge", name), append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
 // Get values for the bridge
 // For some reason these values have a '\n' (0x0a) as a suffix, so we need to trim it
 func getBridgeValue(bridge string, name string) (string, error) {
-	out, err := os.ReadFile(path.Join(BRCTL_SYS_NET, bridge, "bridge", name))
+	out, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, bridge, "bridge", name))
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +112,7 @@ func getBridgeValue(bridge string, name string) (string, error) {
 }
 
 func setPortBrportValue(port string, name string, value []byte) error {
-	err := os.WriteFile(path.Join(BRCTL_SYS_NET, port, "brport", name), append(value, BRCTL_SYS_SUFFIX), 0)
+	err := os.WriteFile(filepath.Join(BRCTL_SYS_NET, port, "brport", name), append(value, BRCTL_SYS_SUFFIX), 0)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func setPortBrportValue(port string, name string, value []byte) error {
 }
 
 func getPortBrportValue(port string, name string) (string, error) {
-	out, err := os.ReadFile(path.Join(BRCTL_SYS_NET, port, "brport", name))
+	out, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, port, "brport", name))
 	if err != nil {
 		return "", err
 	}
@@ -143,7 +143,7 @@ func stringToJiffies(in string) (int, error) {
 }
 
 func readID(p string, obj string) (string, error) {
-	ret, err := os.ReadFile(path.Join(p, obj))
+	ret, err := os.ReadFile(filepath.Join(p, obj))
 	if err != nil {
 		return "", fmt.Errorf("os.ReadFile: %w", err)
 	}
@@ -152,7 +152,7 @@ func readID(p string, obj string) (string, error) {
 }
 
 func readBool(p string, obj string) (bool, error) {
-	valRaw, err := os.ReadFile(path.Join(p, obj))
+	valRaw, err := os.ReadFile(filepath.Join(p, obj))
 	if err != nil {
 		return false, fmt.Errorf("os.ReadFile: %w", err)
 	}
@@ -161,7 +161,7 @@ func readBool(p string, obj string) (bool, error) {
 }
 
 func readInt(p string, obj string) (int, error) {
-	valRaw, err := os.ReadFile(path.Join(p, obj))
+	valRaw, err := os.ReadFile(filepath.Join(p, obj))
 	if err != nil {
 		return 0, err
 	}

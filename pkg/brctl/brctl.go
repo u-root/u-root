@@ -9,9 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -122,7 +120,7 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 	}
 	var err error
 
-	basePath := path.Join(BRCTL_SYS_NET, name, "bridge")
+	basePath := filepath.Join(BRCTL_SYS_NET, name, BRCTL_BRIDGE_DIR)
 
 	// Read designated Root
 	ret.DesignatedRoot, err = readID(basePath, BRCTL_DESIGNATED_ROOT)
@@ -244,9 +242,9 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 	}
 
 	// get interfaceDir from sysfs
-	interfaceDir, err := os.ReadDir(path.Join(BRCTL_SYS_NET, name, BRCTL_BRIDGE_INTERFACE))
+	interfaceDir, err := os.ReadDir(filepath.Join(BRCTL_SYS_NET, name, BRCTL_BRIDGE_INTERFACE_DIR))
 	if err != nil {
-		return BridgeInfo{}, fmt.Errorf("os.ReadDir: %w", err)
+		return BridgeInfo{}, fmt.Errorf("listing bridge interfaces: %w", err)
 	}
 
 	ret.Interfaces = make([]string, 0)
@@ -258,19 +256,24 @@ func getBridgeInfo(name string) (BridgeInfo, error) {
 
 }
 
-// for now, only show essentials: bridge name, bridge id interfaces.
-func showBridge(name string, out io.Writer) {
+// print a line to out with essential bridge information
+func showBridge(name string, out io.Writer) error {
 	info, err := getBridgeInfo(name)
 	if err != nil {
-		log.Fatalf("show_bridge: %v", err)
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("bridge %q does not exist", name)
+		}
+		return fmt.Errorf("read info for bridge %q: %w", name, err)
 	}
 
-	ifaceString := ""
-	for _, iface := range info.Interfaces {
-		ifaceString += iface + " "
+	ifStr := ""
+	for _, s := range info.Interfaces {
+		ifStr += s + " "
 	}
 
-	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpEnabled, ifaceString)
+	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpEnabled, ifStr)
+
+	return nil
 }
 
 // Showmacs shows a list of learned MAC addresses for this bridge.
@@ -282,9 +285,9 @@ func showBridge(name string, out io.Writer) {
 // 11-15: timeval (ignored for now)
 func Showmacs(bridge string, out io.Writer) error {
 	// parse sysf into 0x10 byte chunks
-	brforward, err := os.ReadFile(path.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD))
+	brforward, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD))
 	if err != nil {
-		return fmt.Errorf("Readfile(%q): %w", path.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD), err)
+		return fmt.Errorf("Readfile(%q): %w", filepath.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD), err)
 	}
 
 	fmt.Fprintf(out, "port no\tmac addr\t\tis_local?\n")
@@ -303,26 +306,31 @@ func Showmacs(bridge string, out io.Writer) error {
 
 const ShowBridgeFmt = "%-15s %23s %15v %20v\n"
 
-// Show will show some information on the bridge and its attached ports.
+// Show performs the brctl show command.
+// If no names are provided, it will show all bridges.
+// If names are provided, it will show the specified bridges.
 func Show(out io.Writer, names ...string) error {
 	fmt.Fprintf(out, ShowBridgeFmt, "bridge name", "bridge id", "STP enabled", "interfaces")
 
 	if len(names) == 0 {
 		devices, err := os.ReadDir(BRCTL_SYS_NET)
 		if err != nil {
-			return fmt.Errorf("ReadDir(%q)= %w", BRCTL_SYS_NET, err)
+			return fmt.Errorf("listing devices (%q): %w", BRCTL_SYS_NET, err)
 		}
 
-		for _, bridge := range devices {
-			// check if device is bridge, aka if it has a bridge directory
-			_, err := os.Stat(filepath.Join(BRCTL_SYS_NET, bridge.Name(), "bridge"))
-			if err == nil {
-				showBridge(bridge.Name(), out)
+		for _, dev := range devices {
+			// check if device is bridge, thus if it has a bridge directory
+			if _, err := os.Stat(filepath.Join(BRCTL_SYS_NET, dev.Name(), BRCTL_BRIDGE_DIR)); err == nil {
+				if err = showBridge(dev.Name(), out); err != nil {
+					return fmt.Errorf("show bridge %q: %w", dev.Name(), err)
+				}
 			}
 		}
 	} else {
 		for _, name := range names {
-			showBridge(name, out)
+			if err := showBridge(name, out); err != nil {
+				return fmt.Errorf("show bridge %q: %w", name, err)
+			}
 		}
 	}
 	return nil
