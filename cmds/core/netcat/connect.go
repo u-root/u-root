@@ -27,7 +27,25 @@ import (
 
 var osConnectors = map[netcat.SocketType]func(string, string) (net.Conn, error){}
 
-func (c *cmd) connectMode(output io.Writer, network, address string) error {
+type connectFn func(output io.Writer, network, address string) error
+
+func (c *cmd) connectMode(output io.Writer, network, address string, connect connectFn) error {
+	if network == "tcp" || network == "udp" {
+		err4 := connect(output, network+"4", address)
+		if err4 == nil {
+			return nil
+		}
+		err6 := connect(output, network+"6", address)
+		if err6 == nil {
+			return nil
+		}
+		return fmt.Errorf("connect mode: %w", errors.Join(err4, err6))
+	}
+
+	return connect(output, network, address)
+}
+
+func (c *cmd) connect(output io.Writer, network, address string) error {
 	if c.config.ConnectionModeOptions.ScanPorts && !c.config.ConnectionModeOptions.ZeroIO {
 		return fmt.Errorf("scanning ports is only supported in Zero-I/O mode")
 	}
@@ -42,7 +60,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 	}
 	defer conn.Close()
 
-	log.Printf("Connection to %s [%s] succeeded", address, network)
+	log.Printf("connected to %s [%s]", conn.RemoteAddr(), network)
 
 	// Return immediately if Zero-I/O mode is enabled and connection is established
 	if c.config.ConnectionModeOptions.ZeroIO {

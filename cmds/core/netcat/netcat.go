@@ -509,10 +509,10 @@ func run(args []string) error {
 	output := io.MultiWriter(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(netcat.NewConcurrentWriter(output), network, address)
+		return c.listenMode(netcat.NewConcurrentWriter(output), network, address, c.listen)
 	}
 
-	return c.connectMode(output, network, address)
+	return c.connectMode(output, network, address, c.connect)
 }
 
 func main() {
