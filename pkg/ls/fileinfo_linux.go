@@ -1,8 +1,8 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2025 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !tamago && !linux && !openbsd
+//go:build linux
 
 package ls
 
@@ -30,7 +30,6 @@ type FileInfo struct {
 	ATime         time.Time
 	MTime         time.Time
 	CTime         time.Time
-	BirthTime     time.Time
 	SymlinkTarget string
 	Dev           uint64
 	Ino           uint64
@@ -45,19 +44,18 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	// in sys not being the right type.
 	// This turns out to be surprisingly messy to test.
 	uid, gid, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
-	var aTime, cTime, birthTime time.Time
+	var aTime, cTime time.Time
 	var dev, ino, nLink uint64
 	var blkSize, blocks int64
 	if s, ok := fi.Sys().(*syscall.Stat_t); ok {
 		uid, gid, rdev = s.Uid, s.Gid, uint64(s.Rdev)
-		aTime = time.Unix(int64(s.Atimespec.Sec), int64(s.Atimespec.Nsec))
-		cTime = time.Unix(int64(s.Ctimespec.Sec), int64(s.Ctimespec.Nsec))
-		birthTime = time.Unix(int64(s.Birthtimespec.Sec), int64(s.Birthtimespec.Nsec))
+		aTime = time.Unix(int64(s.Atim.Sec), int64(s.Atim.Nsec))
+		cTime = time.Unix(int64(s.Ctim.Sec), int64(s.Ctim.Nsec))
 		dev = uint64(s.Dev)
 		ino = s.Ino
-		nLink = uint64(s.Nlink)
+		nLink = uint64(s.Nlink) // s.Nlink can be uint32
 		blkSize = int64(s.Blksize)
-		blocks = int64(blocks)
+		blocks = s.Blocks
 	}
 
 	if fi.Mode()&os.ModeType == os.ModeSymlink {
@@ -77,10 +75,9 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		Size:          fi.Size(),
 		BlkSize:       blkSize,
 		Blocks:        blocks,
-		MTime:         fi.ModTime(),
 		ATime:         aTime,
 		CTime:         cTime,
-		BirthTime:     birthTime,
+		MTime:         fi.ModTime(),
 		SymlinkTarget: link,
 		Dev:           dev,
 		Ino:           ino,

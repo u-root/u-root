@@ -1,8 +1,8 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2025 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !tamago && !linux && !openbsd
+//go:build openbsd
 
 package ls
 
@@ -27,10 +27,7 @@ type FileInfo struct {
 	Size          int64
 	BlkSize       int64
 	Blocks        int64
-	ATime         time.Time
 	MTime         time.Time
-	CTime         time.Time
-	BirthTime     time.Time
 	SymlinkTarget string
 	Dev           uint64
 	Ino           uint64
@@ -45,14 +42,10 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	// in sys not being the right type.
 	// This turns out to be surprisingly messy to test.
 	uid, gid, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
-	var aTime, cTime, birthTime time.Time
 	var dev, ino, nLink uint64
 	var blkSize, blocks int64
 	if s, ok := fi.Sys().(*syscall.Stat_t); ok {
 		uid, gid, rdev = s.Uid, s.Gid, uint64(s.Rdev)
-		aTime = time.Unix(int64(s.Atimespec.Sec), int64(s.Atimespec.Nsec))
-		cTime = time.Unix(int64(s.Ctimespec.Sec), int64(s.Ctimespec.Nsec))
-		birthTime = time.Unix(int64(s.Birthtimespec.Sec), int64(s.Birthtimespec.Nsec))
 		dev = uint64(s.Dev)
 		ino = s.Ino
 		nLink = uint64(s.Nlink)
@@ -78,9 +71,6 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		BlkSize:       blkSize,
 		Blocks:        blocks,
 		MTime:         fi.ModTime(),
-		ATime:         aTime,
-		CTime:         cTime,
-		BirthTime:     birthTime,
 		SymlinkTarget: link,
 		Dev:           dev,
 		Ino:           ino,
