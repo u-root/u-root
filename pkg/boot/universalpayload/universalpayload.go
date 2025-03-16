@@ -111,6 +111,10 @@ var (
 	ErrMemMapIoMemExecuteFailed        = errors.New("failed to get memory from /proc/iomem")
 )
 
+var (
+	debug = func(string, ...interface{}) {}
+)
+
 // Create GUID HOB with specified GUID string
 func constructGUIDHOB(name string) (*EFIHOBGUIDType, error) {
 	length := uint16(unsafe.Sizeof(EFIHOBGUIDType{}) + guidToLength[name])
@@ -376,6 +380,7 @@ func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Me
 
 	rsdpData, err := buildDeviceTreeInfo(dtBuf, mem, loadAddr)
 	if err != nil {
+		debug("universalpayload: failed to build FDT (%v)\n", err)
 		return err
 	}
 
@@ -400,10 +405,12 @@ func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Me
 	var hobLen uint64
 
 	if err := prepareHob(hobBuf, &hobLen, fdtLoad.Load, mem); err != nil {
+		debug("universalpayload: failed to construct HoBs (%v)\n", err)
 		return err
 	}
 
 	if err := constructHOBList(hobListBuf, hobBuf, &hobLen); err != nil {
+		debug("universalpayload: failed to construct HoBList (%v)\n", err)
 		return err
 	}
 
@@ -419,6 +426,7 @@ func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Me
 
 func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) error {
 	if err := relocateFdtData(addr, fdt, data); err != nil {
+		debug("universalpayload: failed to relocate FIT image (%v)\n", err)
 		return err
 	}
 
@@ -457,6 +465,7 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	//
 	kernelRange, err := mmRanges.FindSpace(uint(rangeLen), kexec.WithAlignment(0x200000))
 	if err != nil {
+		debug("universalpayload: failed to find 2MB aligned space (%v)\n", err)
 		return 0, err
 	}
 
@@ -464,10 +473,12 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	fitImgAddr := targetAddr + uint64(uplImageOffset)
 
 	if err = prepareFdtData(fdt, data, fitImgAddr, mem); err != nil {
+		debug("universalpayload: failed to prepare FDT data (%v)\n", err)
 		return 0, err
 	}
 
 	if err = prepareBootloaderParameter(fdt, targetAddr, mem); err != nil {
+		debug("universalpayload: failed to prepare boot parameters (%v)\n", err)
 		return 0, err
 	}
 
@@ -478,20 +489,30 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	return (uintptr)(targetAddr + trampolineOffset), nil
 }
 
-func Load(name string) error {
+func Load(name string, dbg func(string, ...interface{})) error {
+	if dbg != nil {
+		debug = dbg
+	}
+
+	debug("universalpayload: Try to get FDT information from:%s\n", name)
 	fdtLoad, err := GetFdtInfo(name)
 	if err != nil {
+		debug("universalpayload: Failed to get FDT information (%v)\n", err)
 		return err
 	}
 
+	debug("universalpayload: Try to fetch file content\n")
 	data, err := os.ReadFile(name)
 	if err != nil {
+		debug("universalpayload: Failed to fetch file content (%v)\n", err)
 		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
 	}
 
 	// Prepare memory.
+	debug("universalpayload: Try to get Memory Map from IOMem\n")
 	ioMem, err := kexecMemoryMapFromIOMem()
 	if err != nil {
+		debug("universalpayload: Failed to get Memory Map from IOMem\n")
 		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err)
 	}
 
@@ -500,16 +521,22 @@ func Load(name string) error {
 	}
 
 	// Prepare boot environment, including HoB, stack, bootloader parameter.
+	debug("universalpayload: Try to prepare required stuffs\n")
 	entry, err := loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
+		debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
 		return err
 	}
 
+	debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
 	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
+		debug("universalpayload: Failed to load segments with error (%v)\n", err)
 		return errors.Join(ErrKexecLoadFailed, err)
 	}
 
+	debug("universalpayload: boot trampoline code at:%x\n", entry)
 	if err := boot.Execute(); err != nil {
+		debug("universalpayload: Failed to execute with error (%v)\n", err)
 		return errors.Join(ErrKexecExecuteFailed, err)
 	}
 
