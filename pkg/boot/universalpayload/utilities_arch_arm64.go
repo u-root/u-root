@@ -33,7 +33,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 // Due to lack of support to set value of Registers in kexec,
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
-func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
+func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	ptrToSlice := func(ptr uintptr, size int) []byte {
 		var data []byte
 
@@ -69,7 +69,6 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	gapLen := stackOffset - (trampStack - trampBegin)
 	buf = padWithLength(buf, uint64(gapLen))
 
-	stackTop := hobAddr + tmpStackTop
 	appendUint64 := func(slice []uint8, value uint64) []uint8 {
 		tmpBytes := make([]uint8, 8)
 		binary.LittleEndian.PutUint64(tmpBytes, value)
@@ -78,9 +77,11 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 
 	padLen := uint64(trampHob - trampStack - 8)
 
-	buf = appendUint64(buf, stackTop)
+	// Update temporary stack top
+	buf = appendUint64(buf, addr+trampolineOffset)
 	buf = padWithLength(buf, padLen)
-	buf = appendUint64(buf, hobAddr)
+	// Update FDT DTB info address
+	buf = appendUint64(buf, addr+fdtDtbOffset)
 	buf = padWithLength(buf, padLen)
 	buf = appendUint64(buf, entry)
 
