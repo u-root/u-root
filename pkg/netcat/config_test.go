@@ -268,6 +268,30 @@ func TestAddressListenMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name: "Explicit pathname for UNIX domain socket (stream)",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "/tmp/stream.sock",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_UNIX,
+				},
+			},
+			wantAddr: "/tmp/stream.sock",
+			wantErr:  false,
+		},
+		{
+			name: "Explicit pathname for UNIX domain socket (datagram)",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "/tmp/datagram.sock",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_UDP_UNIX,
+				},
+			},
+			wantAddr: "/tmp/datagram.sock",
+			wantErr:  false,
+		},
+		{
 			name: "Unsupported Socket Type",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
