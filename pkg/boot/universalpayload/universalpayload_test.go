@@ -14,6 +14,7 @@ import (
 
 	guid "github.com/google/uuid"
 	"github.com/u-root/u-root/pkg/acpi"
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 )
 
@@ -57,6 +58,30 @@ address sizes	: 39 bits physical, 48 bits virtual
 	defer os.Remove(tempFile)
 	// end of mock data
 
+	// Follow components layout which is defined in utilities.go to place corresponding components
+	// |------------------------| <-- Memory Region top
+	// |     TRAMPOLINE CODE    |
+	// |------------------------| <-- loadAddr + trampolineOffset
+	// |      TEMP STACK        |
+	// |------------------------| <-- loadAddr + tmpStackOffset
+	// |    Device Tree Info    |
+	// |------------------------| <-- loadAddr + fdtDtbOffset
+	// |  BOOTLOADER PARAMETER  |
+	// |  HoBs (Handoff Blocks) |
+	// |------------------------| <-- loadAddr + tmpHobOffset
+	// |       ACPI DATA        |
+	// |------------------------| <-- loadAddr + rsdpTableOffset
+	// |     UPL FIT IMAGE      |
+	// |------------------------| <-- loadAddr which is 2MB aligned
+	// 1 Page size for each component is enough in out positive test case.
+	fdtInfo := &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800}
+	imgSize := fdtInfo.DataOffset + fdtInfo.DataSize
+	rsdpOff := (uintptr)(align.UpPage(imgSize))
+	hobsOff := rsdpOff + uintptr(pageSize)
+	fdtOff := hobsOff + uintptr(pageSize)
+	stackOff := fdtOff + uintptr(pageSize)
+	trampOff := stackOff + uintptr(pageSize)
+
 	tests := []struct {
 		name            string
 		fdtLoad         *FdtLoad
@@ -68,7 +93,7 @@ address sizes	: 39 bits physical, 48 bits virtual
 	}{
 		{
 			name:    "Valid case to relocate FIT image",
-			fdtLoad: &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800},
+			fdtLoad: fdtInfo,
 			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
 				{".reloc", mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, 0x200)},
 			}),
@@ -79,14 +104,14 @@ address sizes	: 39 bits physical, 48 bits virtual
 				},
 			},
 			wantErr:  nil,
-			wantAddr: 0x200000 + trampolineOffset,
+			wantAddr: 0x200000 + 0xa000,
 			wantMemSegments: []kexec.Range{
-				{Start: 0x200000, Size: 0},                       // Device Tree Info
-				{Start: 0x200000 + rsdpTableOffset, Size: 0},     // ACPI Data
-				{Start: 0x200000 + tmpHobOffset, Size: 0},        // HOBs for bootloader
-				{Start: 0x200000 + tmpStackOffset, Size: 0},      // boot env (tmp stack)
-				{Start: 0x200000 + trampolineOffset, Size: 0},    // boot env (trampoline)
-				{Start: 0x200000 + uplImageOffset, Size: 0x5100}, // FIT image
+				{Start: 0x200000, Size: (uint)(imgSize)}, // PeFileBinary
+				{Start: 0x200000 + rsdpOff, Size: 0},     // ACPI Data
+				{Start: 0x200000 + hobsOff, Size: 0},     // HOBs for bootloader
+				{Start: 0x200000 + fdtOff, Size: 0},      // Device Tree Info
+				{Start: 0x200000 + stackOff, Size: 0},    // boot env (tmp stack)
+				{Start: 0x200000 + trampOff, Size: 0},    // boot env (trampoline)
 			},
 		},
 	}
