@@ -193,7 +193,7 @@ func TestAddressListenMode(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "TCP Connect with valid host",
+			name: "TCP Listen with valid host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
 				Host:           "127.0.0.1",
@@ -206,7 +206,7 @@ func TestAddressListenMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "TCP Connect with valid host and default port",
+			name: "TCP Listen with valid host and default port",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
 				Host:           "127.0.0.1",
