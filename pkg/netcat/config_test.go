@@ -51,6 +51,19 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name: "TCPv6 Connect with valid host",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				Port:           8080,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:8080",
+			wantErr:  false,
+		},
+		{
 			name: "TCPv4 Connect with no DNS host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
@@ -64,6 +77,22 @@ func TestAddressConnectMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:8080",
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Connect with no DNS host",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				Port:           8080,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+				Misc: MiscOptions{
+					NoDNS: true,
+				},
+			},
+			wantAddr: "[::1]:8080",
 			wantErr:  false,
 		},
 		{
@@ -91,6 +120,18 @@ func TestAddressConnectMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:0", // Assuming default port is 0 when not specified
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Connect with valid host and default port",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:0", // Assuming default port is 0 when not specified
 			wantErr:  false,
 		},
 
@@ -142,6 +183,18 @@ func TestAddressConnectMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:8080",
+		},
+		{
+			name: "SCTPv6",
+			config: &Config{
+				Host:           "::1",
+				Port:           8080,
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_SCTP,
+				},
+			},
+			wantAddr: "[::1]:8080",
 		},
 		{
 			name: "VSOCK",
