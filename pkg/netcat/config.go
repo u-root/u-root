@@ -150,7 +150,7 @@ func (c *Config) Address() (string, error) {
 				return c.Host + ":" + strconv.FormatUint(port, 10), nil
 			}
 
-			return c.Host + ":" + strconv.FormatUint(c.Port, 10), nil
+			return net.JoinHostPort(c.Host, strconv.FormatUint(c.Port, 10)), nil
 		}
 	case CONNECTION_MODE_LISTEN:
 		var address string
