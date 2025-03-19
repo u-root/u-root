@@ -41,11 +41,11 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	// A filesystem with a bug will result
 	// in sys not being the right type.
 	// This turns out to be surprisingly messy to test.
-	uid, gid, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
+	uID, gID, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
 	var dev, ino, nLink uint64
 	var blkSize, blocks int64
 	if s, ok := fi.Sys().(*syscall.Stat_t); ok {
-		uid, gid, rdev = s.Uid, s.Gid, uint64(s.Rdev)
+		uID, gID, rdev = s.Uid, s.Gid, uint64(s.Rdev)
 		dev = uint64(s.Dev)
 		ino = s.Ino
 		nLink = uint64(s.Nlink)
@@ -65,8 +65,8 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		Name:          fi.Name(),
 		Mode:          fi.Mode(),
 		Rdev:          rdev,
-		UID:           uid,
-		GID:           gid,
+		UID:           uID,
+		GID:           gID,
 		Size:          fi.Size(),
 		BlkSize:       blkSize,
 		Blocks:        blocks,
