@@ -147,7 +147,7 @@ func (c *Config) Address() (string, error) {
 
 			if c.ConnectionModeOptions.CurrentPort != 0 {
 				port := c.ConnectionModeOptions.CurrentPort
-				return c.Host + ":" + strconv.FormatUint(port, 10), nil
+				return net.JoinHostPort(c.Host, strconv.FormatUint(port, 10)), nil
 			}
 
 			return net.JoinHostPort(c.Host, strconv.FormatUint(c.Port, 10)), nil
