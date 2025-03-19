@@ -206,6 +206,19 @@ func TestAddressListenMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name: "TCPv6 Listen with valid host",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "::1",
+				Port:           8080,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:8080",
+			wantErr:  false,
+		},
+		{
 			name: "TCPv4 Listen with valid host and default port",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
@@ -215,6 +228,18 @@ func TestAddressListenMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:0", // Assuming default port is 0 when not specified
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Listen with valid host and default port",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "::1",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:0", // Assuming default port is 0 when not specified
 			wantErr:  false,
 		},
 		{
@@ -253,7 +278,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V6,
 				},
 			},
-			wantAddr: fmt.Sprintf("%s:%d", DEFAULT_IPV6_ADDRESS, DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("[%s]:%d", DEFAULT_IPV6_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{

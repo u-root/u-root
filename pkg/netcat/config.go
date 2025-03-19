@@ -181,7 +181,7 @@ func (c *Config) Address() (string, error) {
 		if c.ProtocolOptions.SocketType == SOCKET_TYPE_UNIX || c.ProtocolOptions.SocketType == SOCKET_TYPE_UDP_UNIX {
 			return address, nil
 		}
-		return address + ":" + strconv.FormatUint(c.Port, 10), nil
+		return net.JoinHostPort(address, strconv.FormatUint(c.Port, 10)), nil
 	default:
 		return "", fmt.Errorf("invalid connection mode %v", c.ConnectionMode)
 	}
