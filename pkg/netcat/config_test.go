@@ -193,7 +193,7 @@ func TestAddressListenMode(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "TCP Listen with valid host",
+			name: "TCPv4 Listen with valid host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
 				Host:           "127.0.0.1",
@@ -206,7 +206,7 @@ func TestAddressListenMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "TCP Listen with valid host and default port",
+			name: "TCPv4 Listen with valid host and default port",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
 				Host:           "127.0.0.1",
@@ -227,7 +227,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V4_V6,
 				},
 			},
-			wantAddr: DEFAULT_IPV4_ADDRESS + fmt.Sprintf(":%d", DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("%s:%d", DEFAULT_IPV4_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{
@@ -240,7 +240,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V4,
 				},
 			},
-			wantAddr: DEFAULT_IPV4_ADDRESS + fmt.Sprintf(":%d", DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("%s:%d", DEFAULT_IPV4_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{
@@ -253,7 +253,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V6,
 				},
 			},
-			wantAddr: DEFAULT_IPV6_ADDRESS + fmt.Sprintf(":%d", DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("%s:%d", DEFAULT_IPV6_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{
