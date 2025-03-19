@@ -38,7 +38,7 @@ func TestAddressConnectMode(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "TCP Connect with valid host",
+			name: "TCPv4 Connect with valid host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				Host:           "127.0.0.1",
@@ -51,7 +51,7 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "TCP Connect with no DNS host",
+			name: "TCPv4 Connect with no DNS host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				Host:           "127.0.0.1",
@@ -82,7 +82,7 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "TCP Connect with valid host and default port",
+			name: "TCPv4 Connect with valid host and default port",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				Host:           "127.0.0.1",
@@ -132,7 +132,7 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "SCTP",
+			name: "SCTPv4",
 			config: &Config{
 				Host:           "127.0.0.1",
 				Port:           8080,
