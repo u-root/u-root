@@ -96,6 +96,43 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name: "TCPv4 Portscan",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "127.0.0.1",
+				Port:           1234,
+				ConnectionModeOptions: ConnectModeOptions{
+					ScanPorts:   true,
+					CurrentPort: 2345,
+					EndPort:     3456,
+				},
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "127.0.0.1:2345",
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Portscan",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				Port:           1234,
+				ConnectionModeOptions: ConnectModeOptions{
+					ScanPorts:   true,
+					CurrentPort: 2345,
+					EndPort:     3456,
+				},
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:2345",
+			wantErr:  false,
+		},
+
+		{
 			name: "TCP Connect with no DNS host failing",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
