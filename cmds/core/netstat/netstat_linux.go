@@ -202,7 +202,7 @@ func (c cmd) run() error {
 	}
 
 	if c.groups {
-		return netstat.PrintMulticastGroups(c.ipv4, c.ipv6, c.out)
+		return netstat.PrintMulticastGroups(true, true, c.out)
 	}
 
 	if c.stats {
