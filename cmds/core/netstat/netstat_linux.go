@@ -75,6 +75,7 @@ type cmd struct {
 	// AF Flags
 	ipv4 bool
 	ipv6 bool
+	af   string
 
 	// Route type flag
 	routecache bool
@@ -363,6 +364,9 @@ func command(out io.Writer, args []string) *cmd {
 
 	fs.BoolVar(&c.ipv4, "4", false, "IPv4 fs. default: false")
 	fs.BoolVar(&c.ipv6, "6", false, "IPv6 fs. default: false")
+	fs.BoolVar(&c.ipv4, "inet", false, "IPv4 fs. default: false")     // alternative af setting, see help text
+	fs.BoolVar(&c.ipv6, "inet6", false, "IPv6 fs. default: false")    // alternative af setting, see help text
+	fs.StringVar(&c.af, "A", "", "Address family, 'inet' or 'inet6'") // alternative af setting, see help text
 
 	fs.BoolVar(&c.routecache, "cache", false, "")
 	fs.BoolVar(&c.routecache, "C", false, "")
@@ -400,6 +404,15 @@ func command(out io.Writer, args []string) *cmd {
 
 	fs.Usage = printHelp
 	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	// Apply alternative address family setting
+	switch c.af {
+	case "inet":
+		c.ipv4 = true
+	case "inet6":
+		c.ipv6 = true
+	}
+
 	c.out = out
 	return &c
 }
