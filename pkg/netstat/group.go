@@ -23,11 +23,6 @@ type Groups []member
 func (g *Groups) String() string {
 	var s strings.Builder
 
-	fmt.Fprintf(&s, "%-20s %-10s %s\n",
-		"Interface",
-		"RefCnt",
-		"Group",
-	)
 	for _, mem := range *g {
 		fmt.Fprintf(&s, "%-20s %-10d %s\n",
 			mem.IFace,
@@ -68,7 +63,8 @@ func PrintMulticastGroups(ipv4, ipv6 bool, out io.Writer) error {
 		fmt.Fprintf(out, "%s", "IPv6")
 	}
 
-	fmt.Fprintf(out, "%s\n\n", " Group memberships")
+	fmt.Fprintf(out, "%s\n", " Group memberships")
+	fmt.Fprintf(out, "%-20s %-10s %s\n", "Interface", "RefCnt", "Group")
 	fmt.Fprintf(out, "%-20s %-10s %s\n", "------------------", "---------", "---------")
 
 	fmt.Fprintf(out, "%s\n", g.String())
