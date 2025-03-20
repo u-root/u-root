@@ -509,12 +509,27 @@ func TestAddressFamiliy(t *testing.T) {
 }
 
 func TestGroupString(t *testing.T) {
-	grp := netstat.Groups{}
+	grp := netstat.Groups{
+		{
+			IFace: "eth0",
+			Grp:   net.IPv4(224, 0, 0, 1),
+			Users: 5,
+		},
+		{
+			IFace: "eth0",
+			Grp:   net.ParseIP("ff02::1"),
+			Users: 2,
+		},
+	}
 
 	str := grp.String()
 
 	if !(len(str) > 0) {
 		t.Error("length of groups string is zero")
+	}
+
+	if !strings.Contains(str, "224.0.0.1") || !strings.Contains(str, "ff02::1") {
+		t.Error("formatted output string does not contain expected group addresses")
 	}
 }
 
