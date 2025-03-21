@@ -60,7 +60,8 @@ jobs:
           mkdir gocov
           VMTEST_GOCOVERDIR=$(pwd)/gocov \
             VMTEST_GO_PROFILE=vmcoverage.txt runvmtest -- \
-            go test -v -covermode=atomic ${{ matrix.extra-arg }} \
+            go test -v -timeout=15m \
+            -covermode=atomic ${{ matrix.extra-arg }} \
             -coverprofile=coverage.txt ./${{ matrix.pattern }}
 
       - name: Convert GOCOVERDIR coverage data
