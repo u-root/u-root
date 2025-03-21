@@ -19,18 +19,16 @@ import (
 )
 
 var (
-	help = `usage: netstat [-vWeenNcCF] [<Af>] -r         netstat {-V|--version|-h|--help}
-       netstat [-vWnNcaeol] [<Socket> ...]
-       netstat { [-vWeenNac] -I[<Iface>] | [-veenNac] -i | [-cnNe] -M | -s [-6tuw] } [delay]
+	help = `usage: netstat [-WeenNC] [<Af>] -r         netstat {-h|--help}
+       netstat [-WnNaeol] [<Socket> ...]
+       netstat { [-WeenNa] -I[<Iface>] | [-eenNa] -i | [-cnNe] | -s [-6tuw] } [delay]
 
         -r, --route             display routing table
         -I, --interface=<Iface> display interface table for <Iface>
         -i, --interfaces        display interface table
         -g, --groups            display multicast group memberships
         -s, --statistics        display networking statistics (like SNMP)
-        -M, --masquerade        display masqueraded connections
 
-        -v, --verbose           be verbose
         -W, --wide              don't truncate IP addresses
         -n, --numeric           don't resolve names
         --numeric-hosts         don't resolve host names
@@ -44,12 +42,9 @@ var (
 
         -l, --listening         display listening server sockets
         -a, --all               display all sockets (default: connected)
-        -F, --fib               display Forwarding Information Base (default)
         -C, --cache             display routing cache instead of FIB
-        -Z, --context           display SELinux security context for sockets
 
-  <Socket>={-t|--tcp} {-u|--udp} {-U|--udplite} {-S|--sctp} {-w|--raw}
-           {-x|--unix} --ax25 --ipx --netrom
+  <Socket>={-t|--tcp} {-u|--udp} {-U|--udplite} {-w|--raw} {-x|--unix}
   <AF>=Use '-6|-4' or '-A <af>' or '--<af>'; default: inet
   List of possible address families (which support routing):
     inet (DARPA Internet) inet6 (IPv6)`
@@ -80,6 +75,7 @@ type cmd struct {
 	// AF Flags
 	ipv4 bool
 	ipv6 bool
+	af   string
 
 	// Route type flag
 	routecache bool
@@ -206,7 +202,7 @@ func (c cmd) run() error {
 	}
 
 	if c.groups {
-		return netstat.PrintMulticastGroups(c.ipv4, c.ipv6, c.out)
+		return netstat.PrintMulticastGroups(true, true, c.out)
 	}
 
 	if c.stats {
@@ -368,6 +364,9 @@ func command(out io.Writer, args []string) *cmd {
 
 	fs.BoolVar(&c.ipv4, "4", false, "IPv4 fs. default: false")
 	fs.BoolVar(&c.ipv6, "6", false, "IPv6 fs. default: false")
+	fs.BoolVar(&c.ipv4, "inet", false, "IPv4 fs. default: false")     // alternative af setting, see help text
+	fs.BoolVar(&c.ipv6, "inet6", false, "IPv6 fs. default: false")    // alternative af setting, see help text
+	fs.StringVar(&c.af, "A", "", "Address family, 'inet' or 'inet6'") // alternative af setting, see help text
 
 	fs.BoolVar(&c.routecache, "cache", false, "")
 	fs.BoolVar(&c.routecache, "C", false, "")
@@ -405,6 +404,15 @@ func command(out io.Writer, args []string) *cmd {
 
 	fs.Usage = printHelp
 	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+
+	// Apply alternative address family setting
+	switch c.af {
+	case "inet":
+		c.ipv4 = true
+	case "inet6":
+		c.ipv6 = true
+	}
+
 	c.out = out
 	return &c
 }
