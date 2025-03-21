@@ -211,5 +211,4 @@ func TestNetstat(t *testing.T) {
 	if err := vm.Wait(); err != nil {
 		t.Errorf("Wait: %v", err)
 	}
-	_ = vm.Wait()
 }
