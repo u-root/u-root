@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -199,7 +200,7 @@ func TestSetageingTime(t *testing.T) {
 
 	// Set ageing time
 	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Setageingtime(bridge, TEST_AGETIME_STR)
+		err := SetAgeingTime(bridge, TEST_AGETIME_STR)
 		if err != nil {
 			t.Fatalf("Setageingtime(%q, %q) = '%v', want nil", bridge, TEST_AGETIME_INT, err)
 		}
@@ -207,7 +208,7 @@ func TestSetageingTime(t *testing.T) {
 
 	// Check sysfs for ageing time
 	for _, bridge := range BRCTL_TEST_BRIDGES {
-		ageingTime, err := getBridgeValue(bridge, BRCTL_AGEING_TIME)
+		ageingTime, err := getBridgeValue(t, bridge, BRCTL_AGEING_TIME)
 		if err != nil {
 			t.Fatalf("br_get_val(%q, \"ageing_time\") = %v, want nil", bridge, err)
 		}
@@ -259,7 +260,7 @@ func TestShowSTP(t *testing.T) {
 	}
 
 	// Enable STP
-	err := Stp(BRCTL_TEST_BR_0, "on")
+	err := SetSTP(BRCTL_TEST_BR_0, "on")
 	if err != nil {
 		t.Fatalf("Stp(%q, \"on\") = %v, want nil", BRCTL_TEST_BR_0, err)
 	}
@@ -286,7 +287,7 @@ func TestScpt(t *testing.T) {
 	}
 
 	for _, bridge := range BRCTL_TEST_BRIDGES {
-		stp, err := getBridgeValue(bridge, BRCTL_STP_STATE)
+		stp, err := getBridgeValue(t, bridge, BRCTL_STP_STATE)
 		if err != nil {
 			t.Fatalf("br_get_val(%q, \"stp_state\") = %v, want nil", bridge, err)
 		}
@@ -297,12 +298,12 @@ func TestScpt(t *testing.T) {
 		}
 
 		// Enable STP
-		err = Stp(bridge, "on")
+		err = SetSTP(bridge, "on")
 		if err != nil {
 			t.Fatalf("Stp(%q, \"on\") = %v, want nil", bridge, err)
 		}
 
-		stp, err = getBridgeValue(bridge, BRCTL_STP_STATE)
+		stp, err = getBridgeValue(t, bridge, BRCTL_STP_STATE)
 		if err != nil {
 			t.Fatalf("br_get_val(%q, \"stp_state\") = %v, want nil", bridge, err)
 		}
@@ -329,12 +330,12 @@ func TestSetbridgeprio(t *testing.T) {
 
 	for _, bridge := range BRCTL_TEST_BRIDGES {
 		// Set it to 0
-		err := Setbridgeprio(bridge, "0")
+		err := SetBridgePrio(bridge, "0")
 		if err != nil {
 			t.Fatalf("Setbridgeprio(%q, \"0\") = %v, want nil", bridge, err)
 		}
 
-		prio, err := getBridgeValue(bridge, BRCTL_BRIDGE_PRIO)
+		prio, err := getBridgeValue(t, bridge, BRCTL_BRIDGE_PRIO)
 		if err != nil {
 			t.Fatalf("br_get_val(%q, \"bridge_priority\") = %v, want nil", bridge, err)
 		}
@@ -367,13 +368,13 @@ func TestSetfd(t *testing.T) {
 	}
 	TEST_FD_JIFFIES_STR := strconv.Itoa(TEST_FD_JIFFIES)
 
-	err = Setfd(BRCTL_TEST_BR_0, TEST_FD)
+	err = SetForwardDelay(BRCTL_TEST_BR_0, TEST_FD)
 	if err != nil {
 		t.Fatalf("err = %v, want nil", err)
 	}
 
 	// Check sysfs for forward delay
-	fd, err := getBridgeValue(BRCTL_TEST_BR_0, BRCTL_FORWARD_DELAY)
+	fd, err := getBridgeValue(t, BRCTL_TEST_BR_0, BRCTL_FORWARD_DELAY)
 	if err != nil {
 		t.Fatalf("br_get_val(%q, \"forward_delay\") = %v, want nil, err = %v", BRCTL_TEST_BR_0, fd, err)
 	}
@@ -405,12 +406,12 @@ func TestSethello(t *testing.T) {
 	}
 
 	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Sethello(bridge, TEST_SETHELLO_TIME)
+		err := SetHello(bridge, TEST_SETHELLO_TIME)
 		if err != nil {
 			t.Fatalf("Sethello(%q, %q) = %v, want nil", bridge, TEST_SETHELLO_TIME, err)
 		}
 
-		hello, err := getBridgeValue(bridge, BRCTL_HELLO_TIME)
+		hello, err := getBridgeValue(t, bridge, BRCTL_HELLO_TIME)
 		if err != nil {
 			t.Fatalf("br_get_val(%q, \"hello_time\") = %v, want nil", bridge, err)
 		}
@@ -439,12 +440,12 @@ func TestSetmaxage(t *testing.T) {
 	}
 
 	for _, bridge := range BRCTL_TEST_BRIDGES {
-		err := Setmaxage(bridge, "1s")
+		err := SetMaxAge(bridge, "1s")
 		if err != nil {
 			t.Fatalf("Setmaxage(%q, \"1\") = %v, want nil", bridge, err)
 		}
 
-		maxAge, err := getBridgeValue(bridge, BRCTL_MAX_AGE)
+		maxAge, err := getBridgeValue(t, bridge, BRCTL_MAX_AGE)
 		if err != nil {
 			t.Fatalf("br_get_val(%q, \"max_age\") = %v, want nil", bridge, err)
 		}
@@ -479,7 +480,7 @@ func TestSetpathcost(t *testing.T) {
 	TEST_PORT := BRCTL_TEST_IFACE_0
 	TEST_COST := "1"
 
-	err = Setpathcost(TEST_BRIDGE, TEST_PORT, TEST_COST)
+	err = SetPathCost(TEST_BRIDGE, TEST_PORT, TEST_COST)
 	if err != nil {
 		t.Fatalf("Setpathcost(%q, %q, %v) = %v, want nil", TEST_BRIDGE, TEST_PORT, TEST_COST, err)
 	}
@@ -518,12 +519,12 @@ func TestSetportprio(t *testing.T) {
 
 	}
 
-	err = Setportprio(TEST_BRIDGE, TEST_PORT, TEST_PRIO)
+	err = SetPortPrio(TEST_BRIDGE, TEST_PORT, TEST_PRIO)
 	if err != nil {
 		t.Fatalf("Setportprio(%q, %q, %v) = %v, want nil", TEST_BRIDGE, TEST_PORT, TEST_PRIO, err)
 	}
 
-	prio, err := getPortBrportValue(TEST_PORT, BRCTL_PRIORITY)
+	prio, err := getPortValue(t, TEST_PORT, BRCTL_PRIORITY)
 	if err != nil {
 		t.Fatalf("br_get_val(%q, \"port_priority\") = %v, want nil", TEST_BRIDGE, err)
 	}
@@ -561,7 +562,7 @@ func TestHairpin(t *testing.T) {
 		t.Fatalf("Hairpin(%q, %q, \"on\") = %v, want nil", TEST_BRIDGE, TEST_PORT, err)
 	}
 
-	hairpin, err := getPortBrportValue(TEST_PORT, BRCTL_HAIRPIN)
+	hairpin, err := getPortValue(t, TEST_PORT, BRCTL_HAIRPIN)
 	if err != nil {
 		t.Fatalf("br_get_val(%q, \"hairpin_mode\") = %v, want nil", TEST_BRIDGE, err)
 	}
@@ -569,4 +570,25 @@ func TestHairpin(t *testing.T) {
 	if strings.TrimSuffix(hairpin, "\n") != TEST_VALUE {
 		t.Fatalf("br_get_val(%q, \"hairpin_mode\") = %q, want %q", TEST_BRIDGE, hairpin, TEST_VALUE)
 	}
+}
+
+func getBridgeValue(t *testing.T, bridge string, setting string) (string, error) {
+	t.Helper()
+
+	out, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, bridge, "bridge", setting))
+	if err != nil {
+		return "", err
+	}
+	// For some reason these values have a '\n' (0x0a) as a suffix, so we need to trim it
+	return strings.TrimSuffix(string(out), "\n"), nil
+}
+
+func getPortValue(t *testing.T, port string, setting string) (string, error) {
+	t.Helper()
+
+	out, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, port, "brport", setting))
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }

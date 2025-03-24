@@ -336,27 +336,27 @@ func Show(out io.Writer, names ...string) error {
 	return nil
 }
 
-// Setageingtime sets the ethernet (MAC) address ageing time, in seconds.
+// SetAgeingTime sets the ethernet (MAC) address ageing time, in seconds.
 // After <time> seconds of not having seen a frame coming from a certain address,
 // the bridge will time out (delete) that address from the Forwarding DataBase (fdb).
-func Setageingtime(name string, time string) error {
+func SetAgeingTime(name string, time string) error {
 	ageingTime, err := stringToJiffies(time)
 	if err != nil {
-		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
+		return fmt.Errorf("convert time (%q): %w", time, err)
 	}
 
 	if err = setBridgeValue(name, BRCTL_AGEING_TIME, []byte(strconv.Itoa(ageingTime)), uint64(BRCTL_SET_AEGING_TIME)); err != nil {
-		return fmt.Errorf("setBridgeValue: %w", err)
+		return fmt.Errorf("set ageing time: %w", err)
 	}
 	return nil
 }
 
-// Stp set the STP state of the bridge to on or off
+// SetSTP set the STP state of the bridge to on or off
 // Enable using "on" or "yes", disable by providing anything else
 // The manpage states:
 // > If <state> is "on" or "yes"  the STP  will  be turned on, otherwise it will be turned off
 // So this is actually the described behavior, not checking for "off" and "no"
-func Stp(bridge string, state string) error {
+func SetSTP(bridge string, state string) error {
 	var stpState int
 	if state == "on" || state == "yes" {
 		stpState = 1
@@ -365,96 +365,102 @@ func Stp(bridge string, state string) error {
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_STP_STATE, []byte(strconv.Itoa(stpState)), uint64(BRCTL_SET_BRIDGE_PRIORITY)); err != nil {
-		return fmt.Errorf("setBridgeValue: %w", err)
+		return fmt.Errorf("set STP: %w", err)
 	}
 
 	return nil
 }
 
-// Setbridgeprio sets the port <port>'s priority to <priority>.
+// SetBridgePrio sets the port <port>'s priority to <priority>.
 // The priority value is an unsigned 8-bit quantity (a number between 0 and 255),
 // and has no dimension. This metric is used in the designated port and root port selection algorithms.
-func Setbridgeprio(bridge string, bridgePriority string) error {
-	// parse bridgePriority to int
+func SetBridgePrio(bridge string, bridgePriority string) error {
 	prio, err := strconv.Atoi(bridgePriority)
 	if err != nil {
 		return err
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_BRIDGE_PRIO, []byte(strconv.Itoa(prio)), 0); err != nil {
-		return fmt.Errorf("setBridgeValue %w", err)
+		return fmt.Errorf("set bridge prio: %w", err)
 	}
 
 	return nil
 }
 
-// Setfd sets the bridge's 'bridge forward delay' to <time> seconds.
-func Setfd(bridge string, time string) error {
+// SetForwardDelay sets the bridge's 'bridge forward delay' to <time> seconds.
+func SetForwardDelay(bridge string, time string) error {
 	forwardDelay, err := stringToJiffies(time)
 	if err != nil {
-		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
+		return fmt.Errorf("convert time (%q): %w", time, err)
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_FORWARD_DELAY, []byte(strconv.Itoa(forwardDelay)), 0); err != nil {
-		return fmt.Errorf("setBridgeValue: %w", err)
+		return fmt.Errorf("set forward delay: %w", err)
 	}
 
 	return nil
 }
 
-// Sethello sets the bridge's 'bridge hello time' to <time> seconds.
-func Sethello(bridge string, time string) error {
+// SetHello sets the bridge's 'bridge hello time' to <time> seconds.
+func SetHello(bridge string, time string) error {
 	helloTime, err := stringToJiffies(time)
 	if err != nil {
-		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
+		return fmt.Errorf("convert time (%q): %w", time, err)
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_HELLO_TIME, []byte(strconv.Itoa(helloTime)), 0); err != nil {
-		return fmt.Errorf("setBridgeValue: %w", err)
+		return fmt.Errorf("set hello time: %w", err)
 	}
 
 	return nil
 }
 
-// Setmaxage sets the bridge's 'maximum message age' to <time> seconds.
-func Setmaxage(bridge string, time string) error {
+// SetMaxAge sets the bridge's 'maximum message age' to <time> seconds.
+func SetMaxAge(bridge string, time string) error {
 	maxAge, err := stringToJiffies(time)
 	if err != nil {
-		return fmt.Errorf("stringToJiffies(%q) = %w", time, err)
+		return fmt.Errorf("convert time (%q): %w", time, err)
 	}
 
 	if err := setBridgeValue(bridge, BRCTL_MAX_AGE, []byte(strconv.Itoa(maxAge)), 0); err != nil {
-		return fmt.Errorf("setBridgeValue: %w", err)
+		return fmt.Errorf("set max age: %w", err)
 	}
 
 	return nil
 }
+
+var errBadValue = errors.New("bad value")
 
 // Setpathcost sets the port cost of the port <port> to <cost>. This is a dimensionless metric.
-func Setpathcost(bridge string, port string, cost string) error {
+func SetPathCost(bridge string, port string, cost string) error {
 	pathCost, err := strconv.ParseUint(cost, 10, 64)
 	if err != nil {
-		return err
+		return fmt.Errorf("set path cost: %w", errBadValue)
 	}
 
-	err = setPortBrportValue(port, BRCTL_PATH_COST, append([]byte(strconv.FormatUint(pathCost, 10)), BRCTL_SYS_SUFFIX))
+	err = setPortValue(port, BRCTL_PATH_COST, append([]byte(strconv.FormatUint(pathCost, 10)), BRCTL_SYS_SUFFIX))
 	if err != nil {
-		return fmt.Errorf("setPortBrportValue: %w", err)
+		return fmt.Errorf("set path cost: %w", err)
 	}
 
 	return nil
 }
 
-// Setportprio sets the port <port>'s priority to <priority>.
+// SetPortPrio sets the port <port>'s priority to <priority>.
 // The priority value is an unsigned 8-bit quantity (a number between 0 and 255),
 // and has no dimension. This metric is used in the designated port and root port selection algorithms.
-func Setportprio(bridge string, port string, prio string) error {
+func SetPortPrio(bridge string, port string, prio string) error {
 	portPriority, err := strconv.Atoi(prio)
 	if err != nil {
-		return err
+		return fmt.Errorf("set port prio: %w", errBadValue)
 	}
 
-	return setPortBrportValue(port, BRCTL_PRIORITY, []byte(strconv.Itoa(portPriority)))
+	err = setPortValue(port, BRCTL_PRIORITY, []byte(strconv.Itoa(portPriority)))
+	if err != nil {
+		return fmt.Errorf("set port prio: %w", err)
+	}
+
+	return nil
 }
 
 // Hairpin sets the hairpin mode of the <port> attached to <bridge>
@@ -466,8 +472,9 @@ func Hairpin(bridge string, port string, hairpinmode string) error {
 		hairpinMode = "0"
 	}
 
-	if err := setPortBrportValue(port, BRCTL_HAIRPIN, []byte(hairpinMode)); err != nil {
-		return fmt.Errorf("setPortBrportValue: %w", err)
+	err := setPortValue(port, BRCTL_HAIRPIN, []byte(hairpinMode))
+	if err != nil {
+		return fmt.Errorf("set hairpin mode: %w", err)
 	}
 
 	return nil

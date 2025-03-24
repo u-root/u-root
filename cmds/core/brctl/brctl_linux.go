@@ -20,29 +20,32 @@ Usage: brctl [commands]
 commands:
 
 INSTANCES:
-brctl addbr <name>		creates a new instance of the ethernet bridge
-brctl delbr <name>		deletes the instance <name> of the ethernet bridge
+brctl addbr <name>	creates a new instance of the ethernet bridge
+brctl delbr <name>	deletes the instance <name> of the ethernet bridge
 brctl show			show current instance(s) of the ethernet bridge
 
 PORTS:
-brctl addif <brname> <ifname>	will make the interface <ifname> a port of the bridge <brname>
-brctl delif <brname> <ifname>	will detach the interface <ifname> from the bridge <brname>
-brctl show <brname>		will show some information on the bridge and its attached ports
+brctl addif <brname> <ifname>				will make the interface <ifname> a port of the bridge <brname>
+brctl delif <brname> <ifname>				will detach the interface <ifname> from the bridge <brname>
+brctl show <brname>							will show some information on the bridge and its attached ports
+brctl hairpin <bridge> <port> {on | off}	enable/disable hairpin mode on the port <port> of the bridge <bridge>
 
 AGEING:
-brctl showmacs <brname> 		shows a list of learned MAC addresses for this bridge
-brctl setageingtime <brname> <time>	sets the ethernet (MAC) address ageing time, in seconds [OPT]
+brctl showmacs <brname>					shows a list of learned MAC addresses for this bridge
+brctl setageing <brname> <time>			sets the ethernet (MAC) address ageing to <time> seconds
 
 SPANNING TREE PROTOCOL (IEEE 802.1d):
-brctl stp <bridge> <state>			controls this bridge instance's participation in the spanning tree protocol.
-brctl showstp <bridge>				shows stp related information of <bridge>.
-brctl setbridgeprio <bridge> <priority>		sets the bridge's priority to <priority>
-brctl setfd <bridge> <time>			sets the bridge's 'bridge forward delay' to <time> seconds
-brctl sethello <bridge> <time>			sets the bridge's 'bridge hello time' to <time> seconds
-brctl setmaxage <bridge> <time>			sets the bridge's 'maximum message age' to <time> seconds.
-brctl setpathcost <bridge> <port> <cost>	sets the port cost of the port <port> to <cost>. This is a dimensionless metric
-brctl setportprio <bridge> <port> <priority>	sets the port <port>'s priority to <priority>
-brctl hairpin <bridge> <port> <state>		enable/disable hairpin mode on the port <port> of the bridge <bridge>
+brctl stp <bridge> {on | off | yes | no}		controls the bridge participation in the spanning tree protocol
+brctl showstp <bridge>							shows stp related information of <bridge>
+brctl setbridgeprio <bridge> <PRIORITY>			sets the bridge's priority to <priority>
+brctl setfd <bridge> <time>						sets the bridge's 'bridge forward delay' to <time> seconds
+brctl sethello <bridge> <time>					sets the bridge's 'bridge hello time' to <time> seconds
+brctl setmaxage <bridge> <time>					sets the bridge's 'maximum message age' to <time> seconds
+brctl setpathcost <bridge> <port> <COST>		sets the port cost of the port <port> to <cost>
+brctl setportprio <bridge> <port> <PRIORITY>	sets the port's priority to <priority>
+
+COST is a dimensionless metric (from 1 to 65535, default is 100).
+PRIORITY is a number from 0 (min) to 63 (max), default is 32, and has no dimension.
 `
 
 var (
@@ -89,17 +92,17 @@ func run(out io.Writer, argv []string) error {
 		}
 		err = brctl.Showmacs(args[0], out)
 
-	case "setageingtime":
+	case "setageing":
 		if len(args) != 2 {
 			return errFewArgs
 		}
-		err = brctl.Setageingtime(args[0], args[1])
+		err = brctl.SetAgeingTime(args[0], args[1])
 
 	case "stp":
 		if len(args) != 2 {
 			return errFewArgs
 		}
-		err = brctl.Stp(args[0], args[1])
+		err = brctl.SetSTP(args[0], args[1])
 
 	case "showstp":
 		if len(args) != 1 {
@@ -111,37 +114,37 @@ func run(out io.Writer, argv []string) error {
 		if len(args) != 2 {
 			return errFewArgs
 		}
-		err = brctl.Setbridgeprio(args[0], args[1])
+		err = brctl.SetBridgePrio(args[0], args[1])
 
 	case "setfd":
 		if len(args) != 2 {
 			return errFewArgs
 		}
-		err = brctl.Setfd(args[0], args[1])
+		err = brctl.SetForwardDelay(args[0], args[1])
 
 	case "sethello":
 		if len(args) != 2 {
 			return errFewArgs
 		}
-		err = brctl.Sethello(args[0], args[1])
+		err = brctl.SetHello(args[0], args[1])
 
 	case "setmaxage":
 		if len(args) != 2 {
 			return errFewArgs
 		}
-		err = brctl.Setmaxage(args[0], args[1])
+		err = brctl.SetMaxAge(args[0], args[1])
 
 	case "setpathcost":
 		if len(args) != 3 {
 			return errFewArgs
 		}
-		err = brctl.Setpathcost(args[0], args[1], args[2])
+		err = brctl.SetPathCost(args[0], args[1], args[2])
 
 	case "setportprio":
 		if len(args) != 3 {
 			return errFewArgs
 		}
-		err = brctl.Setportprio(args[0], args[1], args[2])
+		err = brctl.SetPortPrio(args[0], args[1], args[2])
 
 	case "hairpin":
 		if len(args) != 3 {
