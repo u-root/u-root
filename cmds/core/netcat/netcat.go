@@ -516,7 +516,7 @@ func run(args []string) error {
 	output := netcat.NewTeeWriteCloser(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(netcat.NewConcurrentWriter(output), network, address, c.listen)
+		return c.listenMode(netcat.NewConcurrentWriteCloser(output), network, address, c.listen)
 	}
 
 	return c.connectMode(output, network, address, c.connect)
