@@ -62,6 +62,20 @@ func (sw *ConcurrentWriter) Write(p []byte) (n int, err error) {
 	return sw.writer.Write(p)
 }
 
+type ConcurrentWriteCloser struct {
+	ConcurrentWriter
+}
+
+func NewConcurrentWriteCloser(wc io.WriteCloser) *ConcurrentWriteCloser {
+	return &ConcurrentWriteCloser{ConcurrentWriter{writer: wc}}
+}
+
+func (swc *ConcurrentWriteCloser) Close() error {
+	swc.ConcurrentWriter.mu.Lock()
+	defer swc.ConcurrentWriter.mu.Unlock()
+	return swc.ConcurrentWriter.writer.(io.WriteCloser).Close()
+}
+
 // StdoutWriteCloser wraps os.Stdout such that it satisfy the io.WriteCloser
 // interface, *but* with a special Close. Per POSIX, fd#1 should always remain
 // open:
