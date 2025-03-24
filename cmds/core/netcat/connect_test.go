@@ -22,6 +22,16 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
+type closableDiscard struct{}
+
+func (cd *closableDiscard) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
+func (cd *closableDiscard) Close() error {
+	return nil
+}
+
 func TestConnectMode(t *testing.T) {
 	connectErr := errors.New("failed to connect")
 
@@ -29,14 +39,14 @@ func TestConnectMode(t *testing.T) {
 		name        string
 		network     string
 		address     string
-		connectFunc func(output io.Writer, network, address string) error
+		connectFunc func(output io.WriteCloser, network, address string) error
 		err         error
 	}{
 		{
 			name:    "TCPv4 success",
 			network: "tcp",
 			address: "localhost:8080",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "tcp4" {
 					return nil
 				}
@@ -48,7 +58,7 @@ func TestConnectMode(t *testing.T) {
 			name:    "TCPv6 success",
 			network: "tcp",
 			address: "localhost:8080",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "tcp6" {
 					return nil
 				}
@@ -60,7 +70,7 @@ func TestConnectMode(t *testing.T) {
 			name:    "UDPv4 success",
 			network: "udp",
 			address: "localhost:8080",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "udp4" {
 					return nil
 				}
@@ -72,7 +82,7 @@ func TestConnectMode(t *testing.T) {
 			name:    "UDPv6 success",
 			network: "udp",
 			address: "localhost:8080",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "udp6" {
 					return nil
 				}
@@ -84,7 +94,7 @@ func TestConnectMode(t *testing.T) {
 			name:    "TCPv4 and TCPv6 failure",
 			network: "tcp",
 			address: "localhost:8080",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				return connectErr
 			},
 			err: connectErr,
@@ -93,7 +103,7 @@ func TestConnectMode(t *testing.T) {
 			name:    "UDPv4 and UDPv6 failure",
 			network: "udp",
 			address: "localhost:8080",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				return connectErr
 			},
 			err: connectErr,
@@ -102,7 +112,7 @@ func TestConnectMode(t *testing.T) {
 			name:    "Other network success",
 			network: "unix",
 			address: "/tmp/socket",
-			connectFunc: func(output io.Writer, network, address string) error {
+			connectFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "unix" {
 					return nil
 				}
@@ -115,7 +125,7 @@ func TestConnectMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := &cmd{}
-			err := cmd.connectMode(io.Discard, tt.network, tt.address, tt.connectFunc)
+			err := cmd.connectMode(&closableDiscard{}, tt.network, tt.address, tt.connectFunc)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("got %v, want %v", err, tt.err)
 			}
@@ -228,7 +238,7 @@ func TestConnect(t *testing.T) {
 				config: tt.config,
 			}
 
-			var output bytes.Buffer
+			var output closableBuffer
 			err = c.connect(&output, "tcp", "127.0.0.1:8080")
 			if err != nil {
 				if !tt.expectError {
