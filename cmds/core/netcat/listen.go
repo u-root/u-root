@@ -23,9 +23,9 @@ import (
 
 var osListeners = map[netcat.SocketType]func(string, string) (net.Listener, error){}
 
-type listenFn func(output io.Writer, network, address string) error
+type listenFn func(output io.WriteCloser, network, address string) error
 
-func (c *cmd) listenMode(output io.Writer, network, address string, listen listenFn) error {
+func (c *cmd) listenMode(output io.WriteCloser, network, address string, listen listenFn) error {
 	if network == "tcp" || network == "udp" {
 		err4 := listen(output, network+"4", address)
 		if err4 == nil {
@@ -41,7 +41,7 @@ func (c *cmd) listenMode(output io.Writer, network, address string, listen liste
 	return listen(output, network, address)
 }
 
-func (c *cmd) listen(output io.Writer, network, address string) error {
+func (c *cmd) listen(output io.WriteCloser, network, address string) error {
 	listener, err := c.setupListener(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to setup listener: %w", err)
@@ -168,7 +168,7 @@ func (c *Connections) Broadcast(output io.Writer, senderID uint32, message strin
 //   - output: The io.Writer object to which the function writes the data read from the connections.
 //   - listener: The net.Listener object on which the function listens for incoming connections. This listener should already be initialized
 //     and listening on the desired port.
-func (c *cmd) listenForConnections(output io.Writer, listener net.Listener) error {
+func (c *cmd) listenForConnections(output io.WriteCloser, listener net.Listener) error {
 	var (
 		connectionsHandled uint32
 		wg                 sync.WaitGroup

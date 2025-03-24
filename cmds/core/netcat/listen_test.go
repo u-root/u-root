@@ -25,14 +25,14 @@ func TestListenMode(t *testing.T) {
 		name       string
 		network    string
 		address    string
-		listenFunc func(output io.Writer, network, address string) error
+		listenFunc func(output io.WriteCloser, network, address string) error
 		err        error
 	}{
 		{
 			name:    "TCPv4 success",
 			network: "tcp",
 			address: "localhost:8080",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "tcp4" {
 					return nil
 				}
@@ -44,7 +44,7 @@ func TestListenMode(t *testing.T) {
 			name:    "TCPv6 success",
 			network: "tcp",
 			address: "localhost:8080",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "tcp6" {
 					return nil
 				}
@@ -56,7 +56,7 @@ func TestListenMode(t *testing.T) {
 			name:    "UDPv4 success",
 			network: "udp",
 			address: "localhost:8080",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "udp4" {
 					return nil
 				}
@@ -68,7 +68,7 @@ func TestListenMode(t *testing.T) {
 			name:    "UDPv6 success",
 			network: "udp",
 			address: "localhost:8080",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "udp6" {
 					return nil
 				}
@@ -80,7 +80,7 @@ func TestListenMode(t *testing.T) {
 			name:    "TCPv4 and TCPv6 failure",
 			network: "tcp",
 			address: "localhost:8080",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				return listenErr
 			},
 			err: listenErr,
@@ -89,7 +89,7 @@ func TestListenMode(t *testing.T) {
 			name:    "UDPv4 and UDPv6 failure",
 			network: "udp",
 			address: "localhost:8080",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				return listenErr
 			},
 			err: listenErr,
@@ -98,7 +98,7 @@ func TestListenMode(t *testing.T) {
 			name:    "Other network success",
 			network: "unix",
 			address: "/tmp/socket",
-			listenFunc: func(output io.Writer, network, address string) error {
+			listenFunc: func(output io.WriteCloser, network, address string) error {
 				if network == "unix" {
 					return nil
 				}
@@ -111,7 +111,7 @@ func TestListenMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := &cmd{}
-			err := cmd.listenMode(io.Discard, tt.network, tt.address, tt.listenFunc)
+			err := cmd.listenMode(&closableDiscard{}, tt.network, tt.address, tt.listenFunc)
 			if !errors.Is(err, tt.err) {
 				t.Errorf("got %v, want %v", err, tt.err)
 			}
@@ -621,13 +621,13 @@ func TestListenForConnections(t *testing.T) {
 				},
 			}
 
-			output := &bytes.Buffer{}
+			output := &closableBuffer{}
 			cmd := &cmd{
 				stdin:  &bytes.Buffer{},
 				config: tt.config,
 			}
 
-			err := cmd.listenForConnections(netcat.NewConcurrentWriter(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
@@ -698,13 +698,13 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 				},
 			}
 
-			output := &bytes.Buffer{}
+			output := &closableBuffer{}
 			cmd := &cmd{
 				stdin:  bytes.NewBufferString(tt.expectedOutput),
 				config: tt.config,
 			}
 
-			err := cmd.listenForConnections(netcat.NewConcurrentWriter(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
