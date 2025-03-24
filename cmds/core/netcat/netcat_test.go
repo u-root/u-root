@@ -412,10 +412,18 @@ func TestEvalParams(t *testing.T) {
 	}
 }
 
+type closableBuffer struct {
+	bytes.Buffer
+}
+
+func (cb *closableBuffer) Close() error {
+	return nil
+}
+
 func TestCommand(t *testing.T) {
 	// Mock inputs
 	stdin := bytes.NewBufferString("input data")
-	stdout := new(bytes.Buffer)
+	stdout := new(closableBuffer)
 	stderr := new(bytes.Buffer)
 	config := &netcat.Config{} // Assuming Config is a struct within the netcat package
 	args := []string{"arg1", "arg2"}

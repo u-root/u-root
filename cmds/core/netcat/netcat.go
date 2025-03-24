@@ -338,13 +338,13 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 type cmd struct {
 	stdin  io.Reader
-	stdout io.Writer
+	stdout io.WriteCloser
 	stderr io.Writer
 	config *netcat.Config
 	args   []string
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
+func command(stdin io.Reader, stdout io.WriteCloser, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,
