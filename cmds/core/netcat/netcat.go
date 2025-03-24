@@ -512,8 +512,8 @@ func run(args []string) error {
 		return fmt.Errorf("failed to determine connection: %w", err)
 	}
 
-	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
-	output := io.MultiWriter(c.stdout, &c.config.Output)
+	// io.Copy will block until the connection is closed, use a TeeWriteCloser to write to stdout and the output file
+	output := netcat.NewTeeWriteCloser(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
 		return c.listenMode(netcat.NewConcurrentWriter(output), network, address, c.listen)
