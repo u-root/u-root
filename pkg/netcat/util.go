@@ -7,6 +7,7 @@ package netcat
 import (
 	"bytes"
 	"io"
+	"os"
 	"sync"
 )
 
@@ -59,4 +60,29 @@ func (sw *ConcurrentWriter) Write(p []byte) (n int, err error) {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
 	return sw.writer.Write(p)
+}
+
+// StdoutWriteCloser wraps os.Stdout such that it satisfy the io.WriteCloser
+// interface, *but* with a special Close. Per POSIX, fd#1 should always remain
+// open:
+//
+// https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#tag_19_09_01_05
+// https://pubs.opengroup.org/onlinepubs/9799919799/functions/exec.html#tag_17_129_03
+// https://pubs.opengroup.org/onlinepubs/9799919799/functions/close.html#tag_17_81_07
+//
+// Thus, we can't close os.Stdout, even temporarily.
+//
+// What we actually need to do is decrement the reference count on the file
+// description that underlies file descriptor #1, without closing file
+// descriptor #1. That's only doable with dup2(). Therefore, duplicate
+// "/dev/null" over fd#1.
+//
+// On any GOOS that does not conform to POSIX (by certificate or by intent),
+// StdoutWriteCloser.Close() is a no-op, as the well-known file handles
+// shouldn't be closed in any case. (See e.g. <https://pkg.go.dev/os#Stderr>.)
+type StdoutWriteCloser struct{}
+
+// Write implements io.WriteCloser.Write.
+func (swc *StdoutWriteCloser) Write(b []byte) (n int, err error) {
+	return os.Stdout.Write(b)
 }
