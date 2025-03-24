@@ -502,7 +502,7 @@ func run(args []string) error {
 		log.Fatalf("error: %v", err)
 	}
 
-	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
+	c, err := command(os.Stdin, &netcat.StdoutWriteCloser{}, os.Stderr, config, flag.Args())
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
