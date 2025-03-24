@@ -91,52 +91,64 @@ func getIndexFromInterfaceName(ifname string) (int, error) {
 	return int(ifrIfindex), nil
 }
 
-// set values for the bridge
-// all values in the sysfs are of type <bytes> + '\n'
-func setBridgeValue(bridge string, name string, value []byte, _ uint64) error {
-	err := os.WriteFile(filepath.Join(BRCTL_SYS_NET, bridge, "bridge", name), append(value, BRCTL_SYS_SUFFIX), 0)
-	if err != nil {
-		return err
+var ErrBridgeNotExist = errors.New("bridge does not exist")
+
+// setBridgeValue sets the value of a bridge setting in the sysfs.
+func setBridgeValue(bridge string, setting string, value []byte, _ uint64) error {
+	bridgePath := filepath.Join(BRCTL_SYS_NET, bridge)
+	settingPath := filepath.Join(bridgePath, "bridge", setting)
+	val := append(value, BRCTL_SYS_SUFFIX) // values in sysfs are <bytes> + '\n'
+
+	if _, err := os.Stat(bridgePath); err != nil {
+		return ErrBridgeNotExist
 	}
-	return nil
+
+	if _, err := os.Stat(settingPath); err != nil {
+		return fmt.Errorf("invalid setting %q", setting)
+	}
+
+	err := os.WriteFile(settingPath, val, 0)
+	if errors.Is(err, os.ErrPermission) {
+		return errors.New("permission denied")
+	}
+
+	return err
 }
 
-// Get values for the bridge
-// For some reason these values have a '\n' (0x0a) as a suffix, so we need to trim it
-func getBridgeValue(bridge string, name string) (string, error) {
-	out, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, bridge, "bridge", name))
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSuffix(string(out), "\n"), nil
-}
+var ErrPortNotExist = errors.New("port does not exist")
 
-func setPortBrportValue(port string, name string, value []byte) error {
-	err := os.WriteFile(filepath.Join(BRCTL_SYS_NET, port, "brport", name), append(value, BRCTL_SYS_SUFFIX), 0)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// setPortValue sets the value of a port setting in the sysfs.
+func setPortValue(port string, setting string, value []byte) error {
+	ifacePath := filepath.Join(BRCTL_SYS_NET, port)
+	settingPath := filepath.Join(ifacePath, "brport", setting)
+	val := append(value, BRCTL_SYS_SUFFIX) // values in sysfs are <bytes> + '\n'
 
-func getPortBrportValue(port string, name string) (string, error) {
-	out, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, port, "brport", name))
-	if err != nil {
-		return "", err
+	if _, err := os.Stat(ifacePath); err != nil {
+		return ErrPortNotExist
 	}
-	return string(out), nil
+
+	if _, err := os.Stat(settingPath); err != nil {
+		return fmt.Errorf("invalid setting %q", setting)
+	}
+
+	err := os.WriteFile(settingPath, val, 0)
+	if errors.Is(err, os.ErrPermission) {
+		return errors.New("permission denied")
+	}
+
+	return err
 }
 
 // Convert a string representation of a time.Duration to jiffies
 func stringToJiffies(in string) (int, error) {
 	hz, err := sysconfhz()
 	if err != nil {
-		return 0, fmt.Errorf("sysconfhz():%w", err)
+		return 0, fmt.Errorf("eval system clock frequency :%w", err)
 	}
 
 	tv, err := time.ParseDuration(in)
 	if err != nil {
-		return 0, fmt.Errorf("ParseDuration(%q) = %w", in, err)
+		return 0, fmt.Errorf("parse duration (%q): %w", in, err)
 	}
 
 	return int(tv.Seconds() * float64(hz)), nil
