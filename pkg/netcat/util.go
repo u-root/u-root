@@ -86,3 +86,34 @@ type StdoutWriteCloser struct{}
 func (swc *StdoutWriteCloser) Write(b []byte) (n int, err error) {
 	return os.Stdout.Write(b)
 }
+
+// TeeWriteCloser is a simplistic crossing between io.MultiWriter and
+// io.WriteCloser.
+type TeeWriteCloser struct {
+	wc1 io.WriteCloser
+	wc2 io.WriteCloser
+}
+
+func NewTeeWriteCloser(wc1 io.WriteCloser, wc2 io.WriteCloser) *TeeWriteCloser {
+	return &TeeWriteCloser{wc1: wc1, wc2: wc2}
+}
+
+// Write doesn't continue past the first write error, similarly to
+// io.MultiWriter's Write.
+func (twc *TeeWriteCloser) Write(b []byte) (n int, err error) {
+	if n, err = twc.wc1.Write(b); err != nil {
+		return
+	}
+	return twc.wc2.Write(b)
+}
+
+// Close closes both io.WriteCloser objects in all cases, and returns the first
+// error (if any).
+func (twc *TeeWriteCloser) Close() error {
+	err1 := twc.wc1.Close()
+	err2 := twc.wc2.Close()
+	if err1 != nil {
+		return err1
+	}
+	return err2
+}
