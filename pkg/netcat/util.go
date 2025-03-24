@@ -6,7 +6,9 @@ package netcat
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io"
+	"net"
 	"os"
 	"sync"
 )
@@ -130,4 +132,32 @@ func (twc *TeeWriteCloser) Close() error {
 		return err1
 	}
 	return err2
+}
+
+// CloseWrite is a convenience wrapper that calls CloseWrite on an io.Writer
+// that is a TLS connection, a TCP connection, or a UNIX domain connection.
+func CloseWrite(writerToClose io.Writer) error {
+	writer := writerToClose
+
+	if tlsConn, ok := writer.(*tls.Conn); ok {
+		// If handshake has completed, shut down the writing side of
+		// the TLS session.
+		if tlsConn.ConnectionState().HandshakeComplete {
+			if err := tlsConn.CloseWrite(); err != nil {
+				return err
+			}
+		}
+		// Fall through to shutting down the underlying transport.
+		writer = tlsConn.NetConn()
+	}
+
+	if tcpConn, ok := writer.(*net.TCPConn); ok {
+		return tcpConn.CloseWrite()
+	}
+
+	if unixConn, ok := writer.(*net.UnixConn); ok {
+		return unixConn.CloseWrite()
+	}
+
+	return nil
 }
