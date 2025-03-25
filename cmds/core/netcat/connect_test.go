@@ -571,7 +571,6 @@ func TestWriteToRemote(t *testing.T) {
 		input      string
 		delay      time.Duration
 		eol        []byte
-		noShutdown bool
 		expected   string
 		expectHang bool
 	}{
@@ -602,12 +601,6 @@ func TestWriteToRemote(t *testing.T) {
 			delay:      500 * time.Millisecond,
 			expectHang: true,
 		},
-		{
-			name:       "No shutdown",
-			input:      "test",
-			noShutdown: true,
-			expectHang: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -617,8 +610,7 @@ func TestWriteToRemote(t *testing.T) {
 				stdin: strings.NewReader(tt.input),
 				config: &netcat.Config{
 					Misc: netcat.MiscOptions{
-						EOL:        tt.eol,
-						NoShutdown: tt.noShutdown,
+						EOL: tt.eol,
 					},
 					Timing: netcat.TimingOptions{
 						Delay: tt.delay,

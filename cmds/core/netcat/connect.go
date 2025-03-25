@@ -102,6 +102,10 @@ func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 			return fmt.Errorf("failed to write: %w", err)
 		}
 
+		if err = output.Close(); err != nil {
+			log.Printf("failed to close output: %v", err)
+		}
+
 		break
 	}
 
@@ -279,9 +283,9 @@ func (c *cmd) writeToRemote(conn io.Writer) {
 	}
 
 	// do not shutdown the connection if the no-shutdown flag is set
-	if c.config.Misc.NoShutdown {
-		for {
-			time.Sleep(1 * time.Hour)
+	if !c.config.Misc.NoShutdown {
+		if err := netcat.CloseWrite(conn); err != nil {
+			log.Printf("failed to shut down socket for writing: %v", err)
 		}
 	}
 }
