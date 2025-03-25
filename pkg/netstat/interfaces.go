@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -64,6 +65,7 @@ func PrintInterfaceTable(ifstr string, cont bool, out io.Writer) error {
 		if !cont {
 			break
 		}
+		time.Sleep(2 * time.Second)
 	}
 
 	return nil

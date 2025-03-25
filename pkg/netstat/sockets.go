@@ -58,7 +58,6 @@ type netSocket struct {
 	Timeout     uint64
 	Inode       uint64
 	Ref         uint64
-	Pointer     uint64
 }
 
 func (n *NetSockets) readData() error {
@@ -80,7 +79,7 @@ func (n *NetSockets) readData() error {
 	for scanner.Scan() {
 		line := scanner.Text()
 		entry := netSocket{}
-		_, err := fmt.Sscanf(line, "%d: %s %s %X %X:%X %d:%X %X %d %d %d %d %X",
+		_, err := fmt.Sscanf(line, "%d: %s %s %X %X:%X %d:%X %X %d %d %d %d",
 			&entry.Index,
 			&localAddr,
 			&remAddr,
@@ -94,7 +93,6 @@ func (n *NetSockets) readData() error {
 			&entry.Timeout,
 			&entry.Inode,
 			&entry.Ref,
-			&entry.Pointer,
 		)
 		if err != nil {
 			return err
@@ -162,7 +160,6 @@ type UnixSockets struct {
 }
 
 type unixSocket struct {
-	Num    uint64
 	RefCnt uint32
 	Proto  uint32
 	Flags  uint32
@@ -250,8 +247,9 @@ func (u *UnixSockets) readData() error {
 		// Per the source: the format is %pK: %08X %08X %08X %04X %02X %5lu
 		// e.g. '0000000000000000: 0000000B 00000000 00000000 0002 03  3238 /run/systemd/journal/socket'
 		// The original code assumed some fields were decimal. Be careful!
-		const fmtString = "%X: %X %X %X %X %X %d %s"
-		if _, err := fmt.Sscanf(line, fmtString, &e.Num, &e.RefCnt, &e.Proto, &e.Flags, &e.Type, &e.St, &e.Inode, &e.Path); err != nil && !errors.Is(err, io.EOF) {
+		const fmtString = "%s %X %X %X %X %X %d %s"
+		var dummy string
+		if _, err := fmt.Sscanf(line, fmtString, &dummy, &e.RefCnt, &e.Proto, &e.Flags, &e.Type, &e.St, &e.Inode, &e.Path); err != nil && !errors.Is(err, io.EOF) {
 			return fmt.Errorf("converting %q with %q:%w", line, fmtString, err)
 		}
 

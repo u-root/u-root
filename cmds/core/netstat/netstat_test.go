@@ -160,3 +160,39 @@ func TestEvalProtocols(t *testing.T) {
 		})
 	}
 }
+
+func TestAddressFamilyFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		cmdline  []string
+		wantIPv4 bool
+		wantIPv6 bool
+	}{
+		{"IPv4 flag", []string{"netstat", "-4"}, true, false},
+		{"IPv6 flag", []string{"netstat", "-6"}, false, true},
+		{"--inet flag", []string{"netstat", "--inet"}, true, false},
+		{"--inet6 flag", []string{"netstat", "--inet6"}, false, true},
+		{"-A inet flag", []string{"netstat", "-A", "inet"}, true, false},
+		{"-A inet6 flag", []string{"netstat", "-A", "inet6"}, false, true},
+		{"IPv4 and IPv6 flags", []string{"netstat", "-4", "-6"}, true, true},
+		{"--inet and --inet6 flags", []string{"netstat", "--inet", "--inet6"}, true, true},
+		{"Mixed IPv4 and IPv6 flags", []string{"netstat", "-4", "--inet6"}, true, true},
+		{"Mixed -A inet and --inet6 flags", []string{"netstat", "-A", "inet", "--inet6"}, true, true},
+		{"IPv4 with --inet", []string{"netstat", "-4", "--inet"}, true, false},
+		{"IPv6 with --inet6", []string{"netstat", "-6", "--inet6"}, false, true},
+		{"IPv4 with -A inet", []string{"netstat", "-4", "-A", "inet"}, true, false},
+		{"IPv6 with -A inet6", []string{"netstat", "-6", "-A", "inet6"}, false, true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := command(nil, test.cmdline)
+			if cmd.ipv4 != test.wantIPv4 {
+				t.Errorf("got IPv4: %v, want: %v", cmd.ipv4, test.wantIPv4)
+			}
+			if cmd.ipv6 != test.wantIPv6 {
+				t.Errorf("got IPv6: %v, want: %v", cmd.ipv6, test.wantIPv6)
+			}
+		})
+	}
+}

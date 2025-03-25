@@ -1,4 +1,5 @@
 // Copyright 2015 Intel Corporation.
+// Copyright 2025 the u-root Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -67,17 +68,6 @@ func detectFeatures() {
 			EnabledAVX512 = true
 		}
 	}
-}
-
-var leaf02Names = [...]string{
-	"NULL",
-	"DATA_CACHE",
-	"INSTRUCTION_CACHE",
-	"UNIFIED_CACHE",
-	"TLB",
-	"DTLB",
-	"STLB",
-	"PREFETCH",
 }
 
 func leaf0() {
