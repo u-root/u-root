@@ -38,7 +38,7 @@ var test_str_to_jiffies = []struct {
 }{
 	{
 		"1 second",
-		"1s",
+		"1",
 		100,
 		100,
 		false,
@@ -46,27 +46,11 @@ var test_str_to_jiffies = []struct {
 	},
 	{
 		"1.5 seconds",
-		"1.5s",
+		"1.5",
 		100,
 		150,
 		false,
 		nil,
-	},
-	{
-		"1 minute",
-		"1m",
-		100,
-		6000,
-		false,
-		nil,
-	},
-	{
-		"1.5 minutes err",
-		"1.5",
-		100,
-		0,
-		true,
-		fmt.Errorf("ParseDuration(\"1.5\") = time: missing unit in duration \"1.5\""),
 	},
 }
 
@@ -180,7 +164,7 @@ func TestSetageingTime(t *testing.T) {
 		t.Skip(err)
 	}
 
-	TEST_AGETIME_STR := "1s"
+	TEST_AGETIME_STR := "1"
 	TEST_AGETIME_INT := "1"
 
 	TEST_AGETIME_JIFFIES_INT, err := stringToJiffies(TEST_AGETIME_STR)
@@ -360,7 +344,7 @@ func TestSetfd(t *testing.T) {
 		}
 	}
 
-	TEST_FD := "1s"
+	TEST_FD := "1"
 	TEST_FD_JIFFIES, err := stringToJiffies(TEST_FD)
 	if err != nil {
 		t.Fatalf("stringToJiffies(%q) = %v, want nil", TEST_FD, err)
@@ -387,7 +371,7 @@ func TestSetfd(t *testing.T) {
 func TestSethello(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 
-	TEST_SETHELLO_TIME := "1s"
+	TEST_SETHELLO_TIME := "1"
 	TEST_SETHELLO_JIFFIES, err := stringToJiffies(TEST_SETHELLO_TIME)
 	if err != nil {
 		t.Fatalf("stringToJiffies(%q) = %v, want nil", TEST_SETHELLO_TIME, err)

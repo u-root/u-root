@@ -146,7 +146,7 @@ func stringToJiffies(in string) (int, error) {
 		return 0, fmt.Errorf("eval system clock frequency :%w", err)
 	}
 
-	tv, err := time.ParseDuration(in)
+	tv, err := time.ParseDuration(in + "s") // add 's' for a valid duration, brctl expects seconds on all time values
 	if err != nil {
 		return 0, fmt.Errorf("parse duration (%q): %w", in, err)
 	}

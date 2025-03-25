@@ -121,22 +121,22 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "setageing",
-			argv:   []string{"setageing", "bridge0", "10ms"},
+			argv:   []string{"setageing", "bridge0", "10"},
 			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "setageing",
-			argv:   []string{"setageing", "bridge0", "10ms", "garbage"},
+			argv:   []string{"setageing", "bridge0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
 		{
 			name:   "stp",
-			argv:   []string{"stp", "bridge0", "10ms"},
+			argv:   []string{"stp", "bridge0", "10"},
 			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "stp_fewArgs",
-			argv:   []string{"stp", "bridge0", "10ms", "garbage"},
+			argv:   []string{"stp", "bridge0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
 		{
@@ -151,7 +151,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "setfd",
-			argv:   []string{"setfd", "bridge0", "10ms"},
+			argv:   []string{"setfd", "bridge0", "10"},
 			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
@@ -161,7 +161,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "sethello",
-			argv:   []string{"sethello", "bridge0", "10ms"},
+			argv:   []string{"sethello", "bridge0", "10"},
 			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
@@ -171,7 +171,7 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "setmaxage",
-			argv:   []string{"setmaxage", "bridge0", "10ms"},
+			argv:   []string{"setmaxage", "bridge0", "10"},
 			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
