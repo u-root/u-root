@@ -635,7 +635,7 @@ func TestWriteToRemote(t *testing.T) {
 			select {
 			case <-done:
 				if tt.expectHang {
-					t.Errorf("Expected writeToRemote to hang due to no-shutdown, but it did not")
+					t.Errorf("Expected writeToRemote to hang, but it did not")
 				}
 			case <-time.After(100 * time.Millisecond):
 				if !tt.expectHang {
