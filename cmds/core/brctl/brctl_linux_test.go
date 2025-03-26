@@ -112,7 +112,7 @@ func TestRun(t *testing.T) {
 		{
 			name:   "showmacs",
 			argv:   []string{"showmacs", "eth0"},
-			expErr: os.ErrNotExist,
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "showmacs_fewArgs",

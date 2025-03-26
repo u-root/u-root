@@ -90,7 +90,7 @@ func run(out io.Writer, argv []string) error {
 		if len(args) != 1 {
 			return errFewArgs
 		}
-		err = brctl.Showmacs(args[0], out)
+		err = brctl.ShowMACs(args[0], out)
 
 	case "setageing":
 		if len(args) != 2 {
