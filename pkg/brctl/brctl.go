@@ -276,29 +276,41 @@ func showBridge(name string, out io.Writer) error {
 	return nil
 }
 
-// Showmacs shows a list of learned MAC addresses for this bridge.
-// The mac addresses are stored in the first 6 bytes of /sys/class/net/<name>/brforward,
-// The following format applies:
-// 00-05: MAC address
-// 06-08: port number
-// 09-10: is_local
-// 11-15: timeval (ignored for now)
-func Showmacs(bridge string, out io.Writer) error {
-	// parse sysf into 0x10 byte chunks
-	brforward, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD))
-	if err != nil {
-		return fmt.Errorf("Readfile(%q): %w", filepath.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD), err)
+// ShowMACs shows a list of learned MAC addresses for this bridge.
+// The following byte format applies according to the kernel source [1]
+// 0-5:   MAC address
+// 6:     port number
+// 7:     is_local
+// 8-11:  ageing timer
+// 12-15: unused in this context
+//
+// [1] https://github.com/torvalds/linux/blob/master/include/uapi/linux/if_bridge.h#L93
+func ShowMACs(bridge string, out io.Writer) error {
+	b2str := func(b bool) string {
+		if b {
+			return "yes"
+		}
+		return "no"
 	}
 
-	fmt.Fprintf(out, "port no\tmac addr\t\tis_local?\n")
+	brforward, err := os.ReadFile(filepath.Join(BRCTL_SYS_NET, bridge, BRCTL_BRFORWARD))
+	if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read forward table: %w", ErrBridgeNotExist)
+	} else if err != nil {
+		return fmt.Errorf("read forward table: %w", err)
+	}
 
+	fmt.Fprintf(out, "port no\tmac addr\t\tis_local?\tageing timer\n")
+
+	// parse sysf in 16 byte chunks
 	for i := 0; i < len(brforward); i += 0x10 {
 		chunk := brforward[i : i+0x10]
 		mac := chunk[0:6]
-		portNo := uint16(binary.BigEndian.Uint16(chunk[6:8]))
-		isLocal := uint8(chunk[9]) != 0
+		portNo := chunk[6]
+		isLocal := chunk[7] != 0
+		ageingTimer := uint16(binary.BigEndian.Uint16(chunk[8:12]))
 
-		fmt.Fprintf(out, "%3d\t%2x:%2x:%2x:%2x:%2x:%2x\t%v\n", portNo, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], isLocal)
+		fmt.Fprintf(out, "%3d\t%02x:%02x:%02x:%02x:%02x:%02x\t%s\t\t%.2f\n", portNo, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], b2str(isLocal), float64(ageingTimer)/100)
 	}
 
 	return nil
