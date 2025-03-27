@@ -156,16 +156,17 @@ func TestNetstat(t *testing.T) {
 			echo ::1 localhost6
 		} >>/etc/hosts
 
-		netcat --keep-open --listen -4                 127.0.0.1 5005 </dev/null >/dev/null &
-		netcat --keep-open --listen -4         --udp   127.0.0.1 5005 </dev/null >/dev/null &
-		netcat --keep-open --listen -6                 ::1       5005 </dev/null >/dev/null &
-		netcat --keep-open --listen -6         --udp   ::1       5005 </dev/null >/dev/null &
-		netcat --keep-open --listen --unixsock         stream.sock    </dev/null >/dev/null &
-		netcat --keep-open --listen --unixsock --udp   datagram.sock  </dev/null >/dev/null &
-		sleep 2
-
 		mkfifo fifo
 		sleep 3600 >fifo &
+
+		netcat --listen -4		   127.0.0.1 5005 <fifo >/dev/null &
+		netcat --listen -4	   --udp   127.0.0.1 5005 <fifo >/dev/null &
+		netcat --listen -6		   ::1       5005 <fifo >/dev/null &
+		netcat --listen -6	   --udp   ::1       5005 <fifo >/dev/null &
+		netcat --listen --unixsock	   stream.sock    <fifo >/dev/null &
+		netcat --listen --unixsock --udp   datagram.sock  <fifo >/dev/null &
+		sleep 2
+
 		netcat -4                 127.0.0.1 5005 <fifo >/dev/null &
 		netcat -4         --udp   127.0.0.1 5005 <fifo >/dev/null &
 		netcat -6                 ::1       5005 <fifo >/dev/null &

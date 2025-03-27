@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -45,7 +46,7 @@ func (c *cmd) listen(output io.WriteCloser, network, address string) error {
 		return fmt.Errorf("failed to setup listener: %w", err)
 	}
 
-	return c.listenForConnections(output, listener)
+	return c.listenForConnections(output, listener, 0)
 }
 
 // setupListener initializes a network listener based on the configuration provided in the cmd struct.
@@ -108,23 +109,78 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	}
 }
 
-// Connections holds all the active connections of a listener.
-type Connections struct {
-	Connections map[uint32]net.Conn
-	mutex       sync.Mutex
+// acceptAllowed accepts a connection from listener such that the peer address
+// is permitted by the allow list. acceptAllowed drops connections from
+// forbidden peers transparently (apart from counting test attempts during unit
+// testing).
+func (c *cmd) acceptAllowed(listener net.Listener, testLimit uint32, testID *uint32) (net.Conn, error) {
+	for testLimit == 0 || *testID < testLimit {
+		conn, err := listener.Accept()
+
+		if testLimit > 0 {
+			(*testID)++
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_TCP &&
+			!c.config.AccessControl.IsAllowed(parseRemoteAddr(c.config.ProtocolOptions.SocketType, conn.RemoteAddr().String())) {
+			conn.Close()
+			continue
+		}
+		return conn, nil
+	}
+	return nil, errors.New("testLimit exhausted")
 }
 
-func NewConnections() *Connections {
-	return &Connections{
+// fullCopy copies src to dst with io.Copy, transparently retrying on
+// io.ErrShortWrite.
+func fullCopy(dst io.Writer, src io.Reader) error {
+	var err error
+	for {
+		_, err = io.Copy(dst, src)
+		if err != nil && errors.Is(err, io.ErrShortWrite) {
+			continue
+		}
+		break
+	}
+	return err
+}
+
+// Connections holds all the active connections of a listener.
+type Connections struct {
+	capacity    uint32
+	used        uint32
+	Connections map[uint32]net.Conn
+	mutex       sync.Mutex
+	isAvailable *sync.Cond
+	isEmpty     *sync.Cond
+}
+
+func NewConnections(capacity uint32) *Connections {
+	conns := Connections{
+		capacity:    capacity,
 		Connections: make(map[uint32]net.Conn),
 		mutex:       sync.Mutex{},
 	}
+	conns.isAvailable = sync.NewCond(&conns.mutex)
+	conns.isEmpty = sync.NewCond(&conns.mutex)
+	return &conns
 }
 
+// Add adds a new connection. If the number of concurrent connections has
+// reached the maximum (i.e., capacity has been exhausted) before entry to the
+// function, Add blocks until another goroutine calls Delete.
 func (c *Connections) Add(id uint32, conn net.Conn) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	for c.used == c.capacity {
+		c.isAvailable.Wait()
+	}
+	c.used++
 	c.Connections[id] = conn
 }
 
@@ -132,7 +188,24 @@ func (c *Connections) Delete(id uint32) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	if c.used == c.capacity {
+		c.isAvailable.Signal()
+	}
+	c.Connections[id].Close()
 	delete(c.Connections, id)
+	c.used--
+	if c.used == 0 {
+		c.isEmpty.Signal()
+	}
+}
+
+func (c *Connections) Drain() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for c.used > 0 {
+		c.isEmpty.Wait()
+	}
 }
 
 // Broadcast sends a message to all connections in the Connections object (except the sender) and the output writer.
@@ -154,6 +227,173 @@ func (c *Connections) Broadcast(output io.Writer, senderID uint32, message strin
 			break
 		}
 	}
+}
+
+// acceptSingle is the main transfer routine for listen mode if neither
+// keep-open nor broker mode is enabled. The logic here reflects connect mode:
+// after accepting a single connection, acceptSingle copies stdin to socket,
+// and copies socket to output. In both directions, acceptSingle propagates
+// EOF. acceptSingle returns when transfers have completed in both directions.
+func (c *cmd) acceptSingle(output io.WriteCloser, listener net.Listener) error {
+	conn, err := c.acceptAllowed(listener, 0, nil)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	stdinToConnErrChan := make(chan error)
+	go func() {
+		innerErr := fullCopy(conn, c.stdin)
+		if innerErr == nil && !c.config.Misc.NoShutdown {
+			innerErr = netcat.CloseWrite(conn)
+		}
+		stdinToConnErrChan <- innerErr
+	}()
+
+	err = fullCopy(output, conn)
+	if err == nil {
+		err = output.Close()
+	}
+
+	stdinToConnErr := <-stdinToConnErrChan
+
+	if stdinToConnErr != nil {
+		return stdinToConnErr
+	}
+	return err
+}
+
+// acceptForever is the main transfer routine for listen mode if keep-open or
+// broker mode is enabled. The function never returns (unless "testLimit" is
+// set to a positive value, for unit testing).
+//
+// acceptForever keeps accepting new connections. Each connection is handled
+// (i.e., read) in a separate goroutine, concurrently with the others. Whenever
+// the maximum number of simultaneous connections is reached, acceptForever
+// doesn't proceed with another connection until one of the existent
+// connections completes (for some definition of "completes"; see below).
+//
+// In broker mode:
+//
+// (1) acceptForever does not read stdin.
+//
+// (2) For each connection, in separation:
+//
+// (2.1) acceptForever keeps reading another line of data, and writes it out to
+// every different connection, plus "output". With chat mode enabled,
+// acceptForever prefixes each line written with the identifier of the source
+// connection (i.e., where the line has been read from). These prefixes are
+// 1-based, not 0-based.
+//
+// (2.2) acceptForever completes (closes and deletes) the connection when EOF
+// is read from the connection.
+//
+// (3) acceptForever never propagates EOF to any connection or to output, as
+// connections accepted in the future can always send data to current
+// connections and to output.
+//
+// In keep-open mode:
+//
+// (1) For each connection, in separation:
+//
+// (1.1) acceptForever copies all data from the connection to output.
+//
+// (1.2) For the first connection accepted, acceptForever copies all data from
+// stdin, and propagates EOF, to the connection.
+//
+// (1.3) For connections accepted after the first one, acceptForever sends an
+// EOF at once.
+//
+// (1.4) acceptForever completes (closes and deletes) the connection when
+// transfers have completed in both directions.
+//
+// (2) acceptForever never propagates EOF to output, as connections accepted in
+// the future can always send data to output.
+func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
+	testLimit uint32) error {
+	var testID uint32
+	var connID uint32
+
+	conns := NewConnections(c.config.ListenModeOptions.MaxConnections)
+	for testLimit == 0 || testID < testLimit {
+		conn, err := c.acceptAllowed(listener, testLimit, &testID)
+		if err != nil {
+			log.Printf("wait for connection: %v", err)
+			continue
+		}
+
+		conns.Add(connID, conn)
+
+		go func(myConnID uint32, myConn net.Conn) {
+			defer conns.Delete(myConnID)
+
+			var myConnErr error
+
+			if c.config.ListenModeOptions.BrokerMode {
+				scanner := bufio.NewScanner(myConn)
+				for scanner.Scan() {
+					line := scanner.Text()
+
+					var formattedLine string
+					if c.config.ListenModeOptions.ChatMode {
+						formattedLine = fmt.Sprintf("user<%d>: %s\n", myConnID+1, line)
+					} else {
+						formattedLine = fmt.Sprintf("%s\n", line)
+					}
+
+					conns.Broadcast(output, myConnID, formattedLine)
+				}
+
+				myConnErr = scanner.Err()
+				if myConnErr != nil {
+					log.Printf("failed to scan connection: %v", myConnErr)
+				}
+
+				return
+			}
+
+			stdinToConnErrChan := make(chan error)
+			go func() {
+				var innerErr error
+				if myConnID == 0 {
+					innerErr = fullCopy(myConn, c.stdin)
+				}
+				if innerErr == nil && !c.config.Misc.NoShutdown {
+					innerErr = netcat.CloseWrite(myConn)
+				}
+				stdinToConnErrChan <- innerErr
+			}()
+
+			myConnErr = fullCopy(output, myConn)
+			if myConnErr != nil {
+				log.Printf("failed to copy connection to output: %v", myConnErr)
+			}
+
+			myConnErr = <-stdinToConnErrChan
+			if myConnErr != nil {
+				log.Printf("failed to send on connection: %v", myConnErr)
+			}
+		}(connID, conn)
+
+		connID++
+	}
+
+	conns.Drain()
+	return nil
+}
+
+// listenForConnections listens for incoming connections on a specified listener and reads data from these.
+// Arguments:
+//   - output: The io.Writer object to which the function writes the data read from the connections.
+//   - listener: The net.Listener object on which the function listens for incoming connections. This listener should already be initialized
+//     and listening on the desired port.
+//   - testLimit: in keep-open or broker mode, stop accepting connections after
+//     this many connections have been accepted
+func (c *cmd) listenForConnections(output io.WriteCloser, listener net.Listener, testLimit uint32) error {
+	if c.config.ListenModeOptions.KeepOpen || c.config.ListenModeOptions.BrokerMode {
+		return c.acceptForever(output, listener, testLimit)
+	}
+	return c.acceptSingle(output, listener)
 }
 
 // parseRemoteAddr parses the remote address of a connection and returns a list of possible addresses.
