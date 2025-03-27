@@ -276,13 +276,14 @@ func (m *MockConn) Write(b []byte) (int, error) {
 	return m.Output.Write(b)
 }
 
-// Do not set maxConnections higher than the number of mockConns or else the function will run indefinitely waiting for more connections
+// Do not set testLimit higher than the number of mockConns or else the function will run indefinitely waiting for more connections
 func TestListenForConnections(t *testing.T) {
 	partialData := "partial data"
 	tests := []struct {
 		name           string
 		mockConns      []*MockConn
 		config         *netcat.Config
+		testLimit      uint32
 		expectedOutput []string
 		expectError    bool
 	}{
@@ -301,12 +302,7 @@ func TestListenForConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{
-				ListenModeOptions: netcat.ListenModeOptions{
-					KeepOpen:       false,
-					MaxConnections: 1,
-				},
-			},
+			config:         &netcat.Config{},
 			expectedOutput: []string{""},
 			expectError:    false,
 		},
@@ -327,12 +323,7 @@ func TestListenForConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{
-				ListenModeOptions: netcat.ListenModeOptions{
-					KeepOpen:       false,
-					MaxConnections: 1,
-				},
-			},
+			config:      &netcat.Config{},
 			expectError: false,
 		},
 		{
@@ -386,9 +377,10 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 		{
@@ -442,11 +434,12 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 					ChatMode:       true,
 					BrokerMode:     true,
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 		{
@@ -484,11 +477,12 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 2,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 					ChatMode:       false,
 					BrokerMode:     true,
 				},
 			},
+			testLimit:   2,
 			expectError: false,
 		},
 		{
@@ -538,7 +532,7 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 				},
 				AccessControl: netcat.AccessControlOptions{
 					ConnectionList: map[string]bool{
@@ -546,6 +540,7 @@ func TestListenForConnections(t *testing.T) {
 					},
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 		{
@@ -592,14 +587,17 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 				},
 				AccessControl: netcat.AccessControlOptions{
 					ConnectionList: map[string]bool{
-						"localhost": false,
+						"127.0.0.1": false,
+						"127.0.0.2": false,
+						"127.0.0.3": false,
 					},
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 	}
@@ -627,7 +625,7 @@ func TestListenForConnections(t *testing.T) {
 				config: tt.config,
 			}
 
-			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener, tt.testLimit)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
@@ -658,13 +656,8 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 		mockConns      []*MockConn // Ensure this is defined and includes at least one mock connection
 	}{
 		{
-			name: "Successful write",
-			config: &netcat.Config{
-				ListenModeOptions: netcat.ListenModeOptions{
-					KeepOpen:       false,
-					MaxConnections: 1,
-				},
-			},
+			name:           "Successful write",
+			config:         &netcat.Config{},
 			expectedOutput: "abc",
 			expectError:    false,
 			mockConns: []*MockConn{
@@ -704,7 +697,7 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 				config: tt.config,
 			}
 
-			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener, 0)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
@@ -724,7 +717,7 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 
 func TestBroadcastMessage(t *testing.T) {
 	// Setup
-	connections := NewConnections()
+	connections := NewConnections(2)
 
 	senderConn, receiverConn := net.Pipe()
 	defer senderConn.Close()
