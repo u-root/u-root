@@ -33,6 +33,7 @@ const minBootParamLen = 616
 type decompressor func(w io.Writer, r io.Reader) error
 
 type magic struct {
+	name          string
 	signature     []byte
 	decompressors []decompressor
 }
@@ -49,24 +50,26 @@ var (
 	// shell script, which won't work in u-root.
 	magics = []*magic{
 		// GZIP
-		{[]byte{0x1F, 0x8B}, []decompressor{gunzip}},
+		{"gunzip", []byte{0x1F, 0x8B}, []decompressor{gunzip}},
 		// XZ
 		// It would be nice to use a Go package instead of shelling out to 'unxz'.
 		// https://github.com/ulikunitz/xz fails to decompress the payloads and returns an error: "unsupported filter count"
-		{[]byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, []decompressor{stripSize(unxz), stripSize(execer("unxz"))}},
+		{"unxz", []byte{0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00}, []decompressor{stripSize(unxz), stripSize(execer("unxz"))}},
 		// LZMA
-		{[]byte{0x5D, 0x00, 0x00}, []decompressor{stripSize(unlzma)}},
+		{"unlzma", []byte{0x5D, 0x00, 0x00}, []decompressor{stripSize(unlzma)}},
 		// LZO
-		{[]byte{0x89, 0x4C, 0x5A, 0x4F, 0x00, 0x0D, 0x0A, 0x1A, 0x0A}, []decompressor{stripSize(execer("lzop", "-c", "-d"))}},
+		{"lzop", []byte{0x89, 0x4C, 0x5A, 0x4F, 0x00, 0x0D, 0x0A, 0x1A, 0x0A}, []decompressor{stripSize(execer("lzop", "-c", "-d"))}},
 		// ZSTD
-		{[]byte{0x28, 0xB5, 0x2F, 0xFD}, []decompressor{stripSize(unzstd)}},
+		{"unzstd", []byte{0x28, 0xB5, 0x2F, 0xFD}, []decompressor{stripSize(unzstd)}},
 		// BZIP2
-		{[]byte{0x42, 0x5A, 0x68}, []decompressor{stripSize(unbzip2)}},
+		{"unbzip2", []byte{0x42, 0x5A, 0x68}, []decompressor{stripSize(unbzip2)}},
 		// LZ4 - Note that there are *two* file formats for LZ4 (http://fileformats.archiveteam.org/wiki/LZ4).
 		// The Linux boot process uses the legacy 02 21 4C 18 magic bytes, while newer systems
 		// use 04 22 4D 18
-		{[]byte{0x02, 0x21, 0x4C, 0x18}, []decompressor{stripSize(unlz4)}},
+		{"unlz4", []byte{0x02, 0x21, 0x4C, 0x18}, []decompressor{stripSize(unlz4)}},
 	}
+
+	ErrNoMagic = errors.New("magic is not known")
 
 	// Debug is a function used to log debug information. It
 	// can be set to, for example, log.Printf.
@@ -77,13 +80,13 @@ var (
 // unpacking bzimage is a mess, so for now, this is a mess.
 
 // decompressor finds a decompressor by scanning a []byte for a tag.
-func findDecompressors(b []byte) ([]decompressor, error) {
+func findDecompressors(b []byte) (*magic, error) {
 	for _, m := range magics {
 		if bytes.Index(b, m.signature) == 0 {
-			return m.decompressors, nil
+			return m, nil
 		}
 	}
-	return nil, fmt.Errorf("can't find any known magic string in compressed bytes (0x%016x)", b[0:16])
+	return nil, fmt.Errorf("%#x:%w", b[:16], ErrNoMagic)
 }
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -164,7 +167,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 	if _, err := r.Read(b.compressed); err != nil {
 		return fmt.Errorf("can't read KernelCode: %w", err)
 	}
-	decompressors, err := findDecompressors(b.compressed)
+	m, err := findDecompressors(b.compressed)
 	if err != nil {
 		return err
 	}
@@ -194,12 +197,15 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		// Use the decompressor and write the decompressed payload into b.KernelCode.
 		var buf bytes.Buffer
 		success := false
-		for _, decompressor := range decompressors {
-			if err := decompressor(&buf, bytes.NewBuffer(b.compressed)); err == nil {
+		var err error
+		for _, decompressor := range m.decompressors {
+			e := decompressor(&buf, bytes.NewBuffer(b.compressed))
+			if e == nil {
 				success = true
 				b.KernelCode = buf.Bytes()
 				break
 			}
+			err = errors.Join(err, fmt.Errorf("%s:%w", m.name, e))
 		}
 		if !success {
 			return fmt.Errorf("error decompressing payload: %w", err)
