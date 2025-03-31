@@ -6,7 +6,6 @@ package memio
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -51,7 +50,7 @@ func TestIORealSyscalls(t *testing.T) {
 			readData:  &[]ByteSlice{make([]byte, 5)}[0],
 		},
 	} {
-		t.Run(fmt.Sprintf(tt.name), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			tmpFile, err := os.CreateTemp("", "io_test")
 			if err != nil {
 				t.Fatal(err)
