@@ -13,6 +13,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -27,13 +28,15 @@ import (
 
 const (
 	// shellReplyPS3Var, or PS3, is a special variable in Bash used by the select command,
-	// while the shell is awaiting for input. the default value is shellDefaultPS3
+	// while the shell is awaiting for input. the default value is [shellDefaultPS3]
 	shellReplyPS3Var = "PS3"
 	// shellDefaultPS3, or #?, is PS3's default value
 	shellDefaultPS3 = "#? "
 	// shellReplyVar, or REPLY, is a special variable in Bash that is used to store the result of
 	// the select command or of the read command, when no variable name is specified
 	shellReplyVar = "REPLY"
+
+	fifoNamePrefix = "sh-interp-"
 )
 
 func (r *Runner) fillExpandConfig(ctx context.Context) {
@@ -75,16 +78,15 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 			if r.rand == nil {
 				r.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 			}
-			dir := os.TempDir()
 
 			// We can't atomically create a random unused temporary FIFO.
-			// Similar to os.CreateTemp,
+			// Similar to [os.CreateTemp],
 			// keep trying new random paths until one does not exist.
 			// We use a uint64 because a uint32 easily runs into retries.
 			var path string
 			try := 0
 			for {
-				path = fmt.Sprintf("%s/sh-interp-%x", dir, r.rand.Uint64())
+				path = filepath.Join(r.tempDir, fifoNamePrefix+strconv.FormatUint(r.rand.Uint64(), 16))
 				err := mkfifo(path, 0o666)
 				if err == nil {
 					break
@@ -99,9 +101,11 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 
 			r2 := r.Subshell()
 			stdout := r.origStdout
-			r.wgProcSubsts.Add(1)
+			// TODO: note that `man bash` mentions that `wait` only waits for the last
+			// process substitution; the logic here would mean we wait for all of them.
+			r.bgShells.Add(1)
 			go func() {
-				defer r.wgProcSubsts.Done()
+				defer r.bgShells.Done()
 				switch ps.Op {
 				case syntax.CmdIn:
 					f, err := os.OpenFile(path, os.O_WRONLY, 0)
@@ -217,7 +221,7 @@ func (r *Runner) pattern(word *syntax.Word) string {
 	return str
 }
 
-// expandEnviron exposes Runner's variables to the expand package.
+// expandEnviron exposes [Runner]'s variables to the expand package.
 type expandEnv struct {
 	r *Runner
 }
@@ -229,7 +233,7 @@ func (e expandEnv) Get(name string) expand.Variable {
 }
 
 func (e expandEnv) Set(name string, vr expand.Variable) error {
-	e.r.setVarInternal(name, vr)
+	e.r.setVar(name, vr)
 	return nil // TODO: return any errors
 }
 
@@ -291,9 +295,11 @@ func (r *Runner) stmt(ctx context.Context, st *syntax.Stmt) {
 		r2 := r.Subshell()
 		st2 := *st
 		st2.Background = false
-		r.bgShells.Go(func() error {
-			return r2.Run(ctx, &st2)
-		})
+		r.bgShells.Add(1)
+		go func() {
+			r2.Run(ctx, &st2)
+			r.bgShells.Done()
+		}()
 	} else {
 		r.stmtSync(ctx, st)
 	}
@@ -301,7 +307,6 @@ func (r *Runner) stmt(ctx context.Context, st *syntax.Stmt) {
 }
 
 func (r *Runner) stmtSync(ctx context.Context, st *syntax.Stmt) {
-	defer r.wgProcSubsts.Wait()
 	oldIn, oldOut, oldErr := r.stdin, r.stdout, r.stderr
 	for _, rd := range st.Redirs {
 		cls, err := r.redir(ctx, rd)
@@ -371,8 +376,9 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		fields := r.fields(args...)
 		if len(fields) == 0 {
 			for _, as := range cm.Assigns {
-				vr := r.assignVal(as, "")
-				r.setVar(as.Name.Value, as.Index, vr)
+				prev := r.lookupVar(as.Name.Value)
+				vr := r.assignVal(prev, as, "")
+				r.setVarWithIndex(prev, as.Name.Value, as.Index, vr)
 
 				if !tracingEnabled {
 					continue
@@ -409,15 +415,15 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 
 		for _, as := range cm.Assigns {
 			name := as.Name.Value
-			origVr := r.lookupVar(name)
+			prev := r.lookupVar(name)
 
-			vr := r.assignVal(as, "")
+			vr := r.assignVal(prev, as, "")
 			// Inline command vars are always exported.
 			vr.Exported = true
 
-			restores = append(restores, restoreVar{name, origVr})
+			restores = append(restores, restoreVar{name, prev})
 
-			r.setVarInternal(name, vr)
+			r.setVar(name, vr)
 		}
 
 		trace.call(fields[0], fields[1:]...)
@@ -425,7 +431,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 
 		r.call(ctx, cm.Args[0].Pos(), fields)
 		for _, restore := range restores {
-			r.setVarInternal(restore.name, restore.vr)
+			r.setVar(restore.name, restore.vr)
 		}
 	case *syntax.BinaryCmd:
 		switch cm.Op {
@@ -670,9 +676,15 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 					r.exit = 1
 					return
 				}
-				var vr expand.Variable
-				if !as.Naked {
-					vr = r.assignVal(as, valType)
+				vr := r.lookupVar(as.Name.Value)
+				if as.Naked {
+					if valType == "-A" {
+						vr.Kind = expand.Associative
+					} else {
+						vr.Kind = expand.KeepValue
+					}
+				} else {
+					vr = r.assignVal(vr, as, valType)
 				}
 				if global {
 					vr.Local = false
@@ -687,13 +699,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 						vr.ReadOnly = true
 					}
 				}
-				if as.Naked {
-					if vr.Exported || vr.Local || vr.ReadOnly {
-						r.setVarInternal(name, vr)
-					}
-				} else {
-					r.setVar(name, as.Index, vr)
-				}
+				r.setVar(name, vr)
 			}
 		}
 	case *syntax.TimeClause:
@@ -987,7 +993,7 @@ func (r *Runner) call(ctx context.Context, pos syntax.Pos, args []string) {
 		r.inFunc = true
 
 		// Functions run in a nested scope.
-		// Note that Runner.exec below does something similar.
+		// Note that [Runner.exec] below does something similar.
 		origEnv := r.writeEnv
 		r.writeEnv = &overlayEnviron{parent: r.writeEnv, funcScope: true}
 
@@ -1025,6 +1031,19 @@ func (r *Runner) exec(ctx context.Context, args []string) {
 }
 
 func (r *Runner) open(ctx context.Context, path string, flags int, mode os.FileMode, print bool) (io.ReadWriteCloser, error) {
+	// If we are opening a FIFO temporary file created by the interpreter itself,
+	// don't pass this along to the open handler as it will not work at all
+	// unless [os.OpenFile] is used directly with it.
+	// Matching by directory and basename prefix isn't perfect, but works.
+	//
+	// If we want FIFOs to use a handler in the future, they probably
+	// need their own separate handler API matching Unix-like semantics.
+	dir, name := filepath.Split(path)
+	dir = strings.TrimSuffix(dir, "/")
+	if dir == r.tempDir && strings.HasPrefix(name, fifoNamePrefix) {
+		return os.OpenFile(path, flags, mode)
+	}
+
 	f, err := r.openHandler(r.handlerCtx(ctx), path, flags, mode)
 	// TODO: support wrapped PathError returned from openHandler.
 	switch err.(type) {
