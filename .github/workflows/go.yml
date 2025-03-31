@@ -16,7 +16,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22.x'
+        go-version: '1.24.x'
     - name: Check vendored dependencies
       run: |
         go mod tidy
@@ -41,7 +41,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22.x'
+        go-version: '1.24.x'
 
     - name: Build
       run: go build -mod=mod -v ./...
@@ -61,7 +61,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22.x'
+        go-version: '1.24.x'
 
     - name: Build fail
       id: buildfail
@@ -89,7 +89,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: "1.22.x"
+        go-version: "1.24.x"
 
     - name: BuildWindows u-root and initramfs
       run: |
