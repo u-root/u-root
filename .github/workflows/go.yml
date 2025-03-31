@@ -25,7 +25,7 @@ jobs:
         git status
         if [[ -n "$(git status --porcelain vendor)" ]]; then
           echo 'vendor/ is out-of-date: run `go mod tidy && go mod vendor` and then check in the changes'
-          echo 'If `go mod tidy && go mod vendor` results in no changes, make sure you are using the latest relase of Go'
+          echo 'If `go mod tidy && go mod vendor` results in no changes, make sure you are using the latest release of Go'
           git status --porcelain vendor
           exit 1
         fi

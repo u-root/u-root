@@ -1,4 +1,3 @@
----
 name: TinyGo regression test
 
 on:
@@ -12,9 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  tinygo-build:
     runs-on: ubuntu-latest
-    container: tinygo/tinygo-dev:sha-ec0a142190bd21ecefd91868f36df70e92e9ac2c
+    container: tinygo/tinygo-dev:sha-f02c56c9e0ce0a863df4a388057e6228aa7e3643
     steps:
       - name: Install actions dependencies into tinygo container (Debain)
         run: |
@@ -30,14 +29,11 @@ jobs:
           TINYGO=$(which tinygo)
           TINYGOVER=$($TINYGO version | awk {'print $3'})
           GOVER=$(go version | awk {'print $3'} )
-
           # fatal: detected dubious ownership in repository at '/__w/u-root/u-root'
           # To add an exception for this directory, call:
           git config --global --add safe.directory /__w/u-root/u-root          
-
           # $GITHUB_STEP_SUMMARY upload aborted, supports content up to a size 
           # of 1024k, got 1309k. For more information see:
-
           mkdir -p $PWD/out
           go run tools/tinygo-buildstatus/main.go \
               tools/tinygo-buildstatus/statusquo.go \
@@ -54,7 +50,6 @@ jobs:
           TINYGO=$(which tinygo)
           TINYGOVER=$($TINYGO version | awk {'print $3'})
           GOVER=$(go version | awk {'print $3'} )
-
           go run tools/tinygo-buildstatus/main.go \
               tools/tinygo-buildstatus/statusquo.go \
               -tinygo $TINYGO \
@@ -62,3 +57,25 @@ jobs:
               -commit-uroot $(git rev-parse HEAD) \
               -version-go $GOVER \
               cmds/exp/* > $GITHUB_STEP_SUMMARY
+  
+  tinygo-test:
+    runs-on: ubuntu-latest
+    container: tinygo/tinygo-dev:sha-ec0a142190bd21ecefd91868f36df70e92e9ac2c
+    steps:
+      - name: Install actions dependencies into tinygo container (Debain)
+        run: |
+          apt-get update
+          apt-get install -y nodejs
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.x'
+
+      - name: Tinygo Test
+        run: |
+          git config --global --add safe.directory /__w/u-root/u-root
+          tinygo test -tags netgo,purego,noasm,tinygo.enable -v ./pkg/...
+          tinygo test -tags netgo,purego,noasm,tinygo.enable -v ./pkg/uroot/...
+          tinygo test -tags netgo,purego,noasm,tinygo.enable -v ./cmds/...
