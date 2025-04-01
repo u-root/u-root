@@ -5,6 +5,7 @@ package expand
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strconv"
@@ -65,13 +66,13 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 		// This is the only parameter expansion that the environment
 		// interface cannot satisfy.
 		line := uint64(cfg.curParam.Pos().Line())
-		vr = Variable{Kind: String, Str: strconv.FormatUint(line, 10)}
+		vr = Variable{Set: true, Kind: String, Str: strconv.FormatUint(line, 10)}
 	default:
 		vr = cfg.Env.Get(name)
 	}
 	orig := vr
 	_, vr = vr.Resolve(cfg.Env)
-	if cfg.NoUnset && vr.Kind == Unset && !overridingUnset(pe) {
+	if cfg.NoUnset && !vr.IsSet() && !overridingUnset(pe) {
 		return "", UnsetParameterError{
 			Node:    pe,
 			Message: "unbound variable",
@@ -106,7 +107,7 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 	switch nodeLit(index) {
 	case "@", "*":
 		switch vr.Kind {
-		case Unset:
+		case Unknown:
 			elems = nil
 			indexAllElements = true
 		case Indexed:
@@ -167,11 +168,8 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 				}
 			}
 		case pe.Index != nil && vr.Kind == Associative:
-			// TODO: use maps.Keys
-			for k := range vr.Map {
-				strs = append(strs, k)
-			}
-		case vr.Kind == Unset:
+			strs = slices.AppendSeq(strs, maps.Keys(vr.Map))
+		case !vr.IsSet():
 			return "", fmt.Errorf("invalid indirect expansion")
 		case str == "":
 			return "", nil
@@ -400,12 +398,7 @@ func (cfg *Config) varInd(vr Variable, idx syntax.ArithmExpr) (string, error) {
 	case Associative:
 		switch lit := nodeLit(idx); lit {
 		case "@", "*":
-			strs := make([]string, 0, len(vr.Map))
-			// TODO: use maps.Values
-			for _, val := range vr.Map {
-				strs = append(strs, val)
-			}
-			slices.Sort(strs)
+			strs := slices.Sorted(maps.Values(vr.Map))
 			if lit == "*" {
 				return cfg.ifsJoin(strs), nil
 			}
@@ -422,11 +415,10 @@ func (cfg *Config) varInd(vr Variable, idx syntax.ArithmExpr) (string, error) {
 
 func (cfg *Config) namesByPrefix(prefix string) []string {
 	var names []string
-	cfg.Env.Each(func(name string, vr Variable) bool {
+	for name := range cfg.Env.Each {
 		if strings.HasPrefix(name, prefix) {
 			names = append(names, name)
 		}
-		return true
-	})
+	}
 	return names
 }
