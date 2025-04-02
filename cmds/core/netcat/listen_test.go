@@ -717,15 +717,15 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 
 func TestBroadcastMessage(t *testing.T) {
 	// Setup
-	connections := NewConnections(2)
+	connections := newConnections(2)
 
 	senderConn, receiverConn := net.Pipe()
 	defer senderConn.Close()
 	defer receiverConn.Close()
 
 	// Add connections
-	connections.Add(1, senderConn)
-	connections.Add(2, receiverConn)
+	connections.add(1, senderConn)
+	connections.add(2, receiverConn)
 
 	// Prepare a buffer to capture the broadcast output for the receiver
 	var (
@@ -748,7 +748,7 @@ func TestBroadcastMessage(t *testing.T) {
 	}()
 
 	message := "Broadcasted Message!"
-	connections.Broadcast(netcat.NewConcurrentWriter(&outputBuffer), 2, message)
+	connections.broadcast(netcat.NewConcurrentWriter(&outputBuffer), 2, message)
 	senderConn.Close()
 	receiverConn.Close()
 

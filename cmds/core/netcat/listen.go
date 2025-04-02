@@ -149,20 +149,20 @@ func fullCopy(dst io.Writer, src io.Reader) error {
 	return err
 }
 
-// Connections holds all the active connections of a listener.
-type Connections struct {
+// connections holds all the active connections of a listener.
+type connections struct {
 	capacity    uint32
 	used        uint32
-	Connections map[uint32]net.Conn
+	connections map[uint32]net.Conn
 	mutex       sync.Mutex
 	isAvailable *sync.Cond
 	isEmpty     *sync.Cond
 }
 
-func NewConnections(capacity uint32) *Connections {
-	conns := Connections{
+func newConnections(capacity uint32) *connections {
+	conns := connections{
 		capacity:    capacity,
-		Connections: make(map[uint32]net.Conn),
+		connections: make(map[uint32]net.Conn),
 		mutex:       sync.Mutex{},
 	}
 	conns.isAvailable = sync.NewCond(&conns.mutex)
@@ -170,10 +170,10 @@ func NewConnections(capacity uint32) *Connections {
 	return &conns
 }
 
-// Add adds a new connection. If the number of concurrent connections has
+// add adds a new connection. If the number of concurrent connections has
 // reached the maximum (i.e., capacity has been exhausted) before entry to the
-// function, Add blocks until another goroutine calls Delete.
-func (c *Connections) Add(id uint32, conn net.Conn) {
+// function, add blocks until another goroutine calls delete.
+func (c *connections) add(id uint32, conn net.Conn) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -181,25 +181,25 @@ func (c *Connections) Add(id uint32, conn net.Conn) {
 		c.isAvailable.Wait()
 	}
 	c.used++
-	c.Connections[id] = conn
+	c.connections[id] = conn
 }
 
-func (c *Connections) Delete(id uint32) {
+func (c *connections) delete(id uint32) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	if c.used == c.capacity {
 		c.isAvailable.Signal()
 	}
-	c.Connections[id].Close()
-	delete(c.Connections, id)
+	c.connections[id].Close()
+	delete(c.connections, id)
 	c.used--
 	if c.used == 0 {
 		c.isEmpty.Signal()
 	}
 }
 
-func (c *Connections) Drain() {
+func (c *connections) drain() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -208,8 +208,8 @@ func (c *Connections) Drain() {
 	}
 }
 
-// Broadcast sends a message to all connections in the Connections object (except the sender) and the output writer.
-func (c *Connections) Broadcast(output io.Writer, senderID uint32, message string) {
+// broadcast sends a message to all connections in the connections object (except the sender) and the output writer.
+func (c *connections) broadcast(output io.Writer, senderID uint32, message string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -217,7 +217,7 @@ func (c *Connections) Broadcast(output io.Writer, senderID uint32, message strin
 		log.Printf("failed to write to output: %v", err)
 	}
 
-	for id, conn := range c.Connections {
+	for id, conn := range c.connections {
 		if id == senderID {
 			continue
 		}
@@ -314,7 +314,7 @@ func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
 	var testID uint32
 	var connID uint32
 
-	conns := NewConnections(c.config.ListenModeOptions.MaxConnections)
+	conns := newConnections(c.config.ListenModeOptions.MaxConnections)
 	for testLimit == 0 || testID < testLimit {
 		conn, err := c.acceptAllowed(listener, testLimit, &testID)
 		if err != nil {
@@ -322,10 +322,10 @@ func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
 			continue
 		}
 
-		conns.Add(connID, conn)
+		conns.add(connID, conn)
 
 		go func(myConnID uint32, myConn net.Conn) {
-			defer conns.Delete(myConnID)
+			defer conns.delete(myConnID)
 
 			var myConnErr error
 
@@ -341,7 +341,7 @@ func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
 						formattedLine = fmt.Sprintf("%s\n", line)
 					}
 
-					conns.Broadcast(output, myConnID, formattedLine)
+					conns.broadcast(output, myConnID, formattedLine)
 				}
 
 				myConnErr = scanner.Err()
@@ -378,7 +378,7 @@ func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
 		connID++
 	}
 
-	conns.Drain()
+	conns.drain()
 	return nil
 }
 
