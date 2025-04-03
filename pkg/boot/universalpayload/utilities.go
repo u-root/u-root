@@ -212,6 +212,7 @@ var (
 	ErrGfxReadSubSysVendorIDFailed = fmt.Errorf("failed to read subsystem vendor id")
 	ErrGfxReadSubSysDeviceIDFailed = fmt.Errorf("failed to read subsystem device id")
 	ErrGfxNoDeviceInfoFound        = fmt.Errorf("no graphic device info found")
+	ErrSMBIOS3NotFound             = fmt.Errorf("no smbios3 region found")
 	ErrDTRsdpLenOverBound          = fmt.Errorf("rsdp table length too large")
 	ErrDTRsdpTableNotFound         = fmt.Errorf("no acpi rsdp table found")
 	ErrAlignPadRange               = errors.New("failed to align pad size, out of range")
@@ -659,22 +660,13 @@ func constructSerialPortNode() *dt.Node {
 	))
 }
 
-func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
-	memNodes := buildDtMemoryNode(mem)
-
-	rsvdMemNode := dt.NewNode("reserved-memory", dt.WithChildren(
-		dt.NewNode("acpi", dt.WithProperty(
-			dt.PropertyString("compatible", "acpi"),
-			dt.PropertyRegion("reg", rsdpBase, uint64(pageSize)),
-		)),
-	))
-
+func constructOptionNode(loadAddr uint64) (*dt.Node, error) {
 	phyAddrSize, err := getPhysicalAddressSizes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	optionsNode := dt.NewNode("options", dt.WithChildren(
+	return dt.NewNode("options", dt.WithChildren(
 		dt.NewNode("upl-images@", dt.WithProperty(
 			dt.PropertyU64("addr", loadAddr+uplImageOffset),
 		)),
@@ -685,7 +677,55 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 		dt.NewNode("upl-custom", dt.WithProperty(
 			dt.PropertyU64("hoblistptr", loadAddr+tmpHobOffset),
 		)),
+	)), nil
+}
+
+func constructSMBIOS3Node() (*dt.Node, error) {
+	smbiosTableBase, size, err := getSMBIOSBase()
+
+	// According to EDK2 UPL implementation, only SMBIOS3 is supported in FDT.
+	if (err != nil) || (size != getSMBIOS3HdrSize()) {
+		return nil, errors.Join(ErrSMBIOS3NotFound, err)
+	}
+
+	return dt.NewNode("smbios", dt.WithProperty(
+		dt.PropertyString("compatible", "smbios"),
+		dt.PropertyRegion("reg", uint64(smbiosTableBase), uint64(pageSize)),
+	)), nil
+}
+
+func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
+	var rsvdNodes []*dt.Node
+
+	acpiChildNode := dt.NewNode("acpi", dt.WithProperty(
+		dt.PropertyString("compatible", "acpi"),
+		dt.PropertyRegion("reg", rsdpBase, uint64(pageSize)),
 	))
+
+	rsvdNodes = append(rsvdNodes, acpiChildNode)
+
+	if smbios3ChildNode, err := constructSMBIOS3Node(); err != nil {
+		// If we failed to retrieve SMBIOS3 information, prompt error
+		// message to indicate error message, and continue construct DTB.
+		fmt.Printf("WARNING: Failed to build SMBIOS3 Node (%v)\n", err)
+	} else {
+		rsvdNodes = append(rsvdNodes, smbios3ChildNode)
+	}
+
+	return dt.NewNode("reserved-memory", dt.WithChildren(rsvdNodes...))
+}
+
+func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
+	memNodes := buildDtMemoryNode(mem)
+
+	rsvdMemNode := constructReservedMemoryNode(rsdpBase)
+
+	optionsNode, err := constructOptionNode(loadAddr)
+	if err != nil {
+		// Break here if failed to construct option node since option node
+		// is required to boot UPL.
+		return err
+	}
 
 	gmaNode, err := buildGraphicNode()
 	if err != nil {

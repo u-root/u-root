@@ -49,6 +49,7 @@ const (
 var (
 	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
 	getSMBIOSBase           = smbios.SMBIOSBase
+	getSMBIOS3HdrSize       = smbios.SMBIOS3HeaderSize
 	getAcpiRsdpData         = archGetAcpiRsdpData
 )
 
