@@ -502,6 +502,22 @@ func TestEstablishConnectionUnix(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:    "Successful Unix connection (unnamed client socket)",
+			network: "unix",
+			address: socketPath,
+			config: &netcat.Config{
+				ProtocolOptions: netcat.ProtocolOptions{
+					SocketType: netcat.SOCKET_TYPE_UNIX,
+				},
+				Timing: netcat.TimingOptions{
+					Wait:    5 * time.Second,
+					Timeout: 5 * time.Second,
+				},
+			},
+
+			expectError: false,
+		},
+		{
 			name:    "Successful UDP Unix connection",
 			network: "unixgram",
 			address: socketPath,
@@ -509,6 +525,22 @@ func TestEstablishConnectionUnix(t *testing.T) {
 				ConnectionModeOptions: netcat.ConnectModeOptions{
 					SourceHost: sourcePath,
 				},
+				ProtocolOptions: netcat.ProtocolOptions{
+					SocketType: netcat.SOCKET_TYPE_UDP_UNIX,
+				},
+				Timing: netcat.TimingOptions{
+					Wait:    5 * time.Second,
+					Timeout: 5 * time.Second,
+				},
+			},
+
+			expectError: false,
+		},
+		{
+			name:    "Successful UDP Unix connection  (temporary client socket)",
+			network: "unixgram",
+			address: socketPath,
+			config: &netcat.Config{
 				ProtocolOptions: netcat.ProtocolOptions{
 					SocketType: netcat.SOCKET_TYPE_UDP_UNIX,
 				},

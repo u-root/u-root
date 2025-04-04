@@ -382,6 +382,17 @@ func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
 	return nil
 }
 
+// acceptSingleUDP is the transfer routine for listen mode with UDP.
+func (c *cmd) acceptSingleUDP(output io.Writer, listener net.Listener) error {
+	conn, err := listener.Accept()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	return c.transferPackets(output, conn.(net.PacketConn), true)
+}
+
 // listenForConnections listens for incoming connections on a specified listener and reads data from these.
 // Arguments:
 //   - output: The io.Writer object to which the function writes the data read from the connections.
@@ -392,6 +403,10 @@ func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
 func (c *cmd) listenForConnections(output io.WriteCloser, listener net.Listener, testLimit uint32) error {
 	if c.config.ListenModeOptions.KeepOpen || c.config.ListenModeOptions.BrokerMode {
 		return c.acceptForever(output, listener, testLimit)
+	}
+	if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP ||
+		c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP_UNIX {
+		return c.acceptSingleUDP(output, listener)
 	}
 	return c.acceptSingle(output, listener)
 }
