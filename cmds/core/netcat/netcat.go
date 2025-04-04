@@ -223,6 +223,10 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	config.Output.AppendOutput = f.appendOutput
 
 	// Listen Mode Options
+	if (f.keepOpen || f.brokerMode || f.chatMode) && f.udpSocket {
+		return nil, fmt.Errorf("%w: keep-open mode and broker mode are unavailable with UDP", os.ErrInvalid)
+	}
+
 	config.ListenModeOptions.MaxConnections = uint32(f.maxConnections)
 	config.ListenModeOptions.KeepOpen = f.keepOpen
 	config.ListenModeOptions.BrokerMode = f.brokerMode
