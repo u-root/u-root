@@ -38,13 +38,56 @@ const (
 	DataSizePropertyName   = "data-size"
 )
 
+// Memory Region layout when loading universalpayload image.
+// Please do not change the layout, since components have dependencies:
+//   TRAMPOLINE CODE depends on base address of:
+//     TEMP STACK, Device Tree Info, ACPI DATA, UPL FIT IMAGE
+//   Device Tree Info depends on base address of:
+//     HoBs, ACPI DATA, UPL FIT IMAGE
+//
+// |------------------------| <-- Memory Region top
+// |     TRAMPOLINE CODE    |
+// |------------------------| <-- loadAddr + trampolineOffset
+// |      TEMP STACK        |
+// |------------------------| <-- loadAddr + tmpStackOffset
+// |    Device Tree Info    |
+// |------------------------| <-- loadAddr + fdtDtbOffset
+// |  BOOTLOADER PARAMETER  |
+// |  HoBs (Handoff Blocks) |
+// |------------------------| <-- loadAddr + tmpHobOffset
+// |       ACPI DATA        |
+// |------------------------| <-- loadAddr + rsdpTableOffset
+// |     UPL FIT IMAGE      |
+// |------------------------| <-- loadAddr which is 2MB aligned
+//
+// During runtime, we need to find a available Memory Region to place all
+// above components, size of each components should be updated at runtime.
+//
+// uplImageOffset is always set to be Zero. We keep it here in case
+// anything more needs to be placed before UPL Image.
+// Components should be placed by above sequence, once component is placed,
+// offset of next component should be updated at once to ensure all offset
+// information are updated correctly.
+
+var (
+	uplImageOffset   uint64
+	rsdpTableOffset  uint64
+	tmpHobOffset     uint64
+	fdtDtbOffset     uint64
+	tmpStackOffset   uint64
+	trampolineOffset uint64
+)
+
+// componentsSize is used to check whether reversed size, which is defined in
+// const variable 'sizeForComponents', is enough for us to place all required
+// components.
+var (
+	componentsSize uint
+)
+
 const (
-	rsdpTableOffset  = 0x1000
-	tmpHobOffset     = 0x2000
-	tmpStackOffset   = 0x4000
-	tmpStackTop      = 0x5000
-	trampolineOffset = 0x5000
-	uplImageOffset   = 0x6000
+	sizeForComponents int  = 0x100000
+	uplImageAlignment uint = 0x200000
 )
 
 const (
@@ -616,20 +659,8 @@ func constructSerialPortNode() *dt.Node {
 	))
 }
 
-func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte, error) {
+func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
 	memNodes := buildDtMemoryNode(mem)
-	rsdpBase, rsdpData, err := getAcpiRsdpData()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed get rsdp table data: %w", err)
-	}
-
-	// rsdpBase indicates whether we need to copy RSDP table data to specified
-	// location. If rsdpBase equals to zero, then we need to copy data to
-	// specified address, otherwise, we will use rsdpBase directly.
-	if rsdpBase == 0 {
-		rsdpBase = addr + rsdpTableOffset
-	}
 
 	rsvdMemNode := dt.NewNode("reserved-memory", dt.WithChildren(
 		dt.NewNode("acpi", dt.WithProperty(
@@ -640,19 +671,19 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte,
 
 	phyAddrSize, err := getPhysicalAddressSizes()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	optionsNode := dt.NewNode("options", dt.WithChildren(
 		dt.NewNode("upl-images@", dt.WithProperty(
-			dt.PropertyU64("addr", addr+uplImageOffset),
+			dt.PropertyU64("addr", loadAddr+uplImageOffset),
 		)),
 		dt.NewNode("upl-params", dt.WithProperty(
 			dt.PropertyU32("addr-width", uint32(phyAddrSize)),
 			dt.PropertyString("boot-mode", "normal"),
 		)),
 		dt.NewNode("upl-custom", dt.WithProperty(
-			dt.PropertyU64("hoblistptr", addr+tmpHobOffset),
+			dt.PropertyU64("hoblistptr", loadAddr+tmpHobOffset),
 		)),
 	))
 
@@ -703,10 +734,10 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte,
 	// Write the FDT to the provided io.Writer
 	_, err = fdt.Write(buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write FDT: %w", err)
+		return fmt.Errorf("failed to write FDT: %w", err)
 	}
 
-	return rsdpData, nil
+	return nil
 }
 
 func mockCPUTempInfoFile(t *testing.T, content string) string {
