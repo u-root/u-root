@@ -152,7 +152,7 @@ func run(out io.Writer, argv []string) error {
 		}
 		err = brctl.Hairpin(args[0], args[1], args[2])
 
-	case "help":
+	case "help", "-h", "--help":
 		fmt.Fprintf(out, "%s\n", usage)
 		return nil
 
