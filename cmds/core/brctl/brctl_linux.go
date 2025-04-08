@@ -20,29 +20,29 @@ Usage: brctl [commands]
 commands:
 
 INSTANCES:
-brctl addbr <name>	creates a new instance of the ethernet bridge
-brctl delbr <name>	deletes the instance <name> of the ethernet bridge
-brctl show			show current instance(s) of the ethernet bridge
+brctl addbr <name>   creates a new instance of the ethernet bridge
+brctl delbr <name>   deletes the instance <name> of the ethernet bridge
+brctl show           show current instance(s) of the ethernet bridge
 
 PORTS:
-brctl addif <brname> <ifname>				will make the interface <ifname> a port of the bridge <brname>
-brctl delif <brname> <ifname>				will detach the interface <ifname> from the bridge <brname>
-brctl show <brname>							will show some information on the bridge and its attached ports
-brctl hairpin <bridge> <port> {on | off}	enable/disable hairpin mode on the port <port> of the bridge <bridge>
+brctl addif <brname> <ifname>              will make the interface <ifname> a port of the bridge <brname>
+brctl delif <brname> <ifname>              will detach the interface <ifname> from the bridge <brname>
+brctl show <brname>                        will show some information on the bridge and its attached ports
+brctl hairpin <bridge> <port> {on | off}   enable/disable hairpin mode on the port <port> of the bridge <bridge>
 
 AGEING:
-brctl showmacs <brname>					shows a list of learned MAC addresses for this bridge
-brctl setageing <brname> <time>			sets the ethernet (MAC) address ageing to <time> seconds
+brctl showmacs <brname>           shows a list of learned MAC addresses for this bridge
+brctl setageing <brname> <time>   sets the ethernet (MAC) address ageing to <time> seconds
 
 SPANNING TREE PROTOCOL (IEEE 802.1d):
-brctl stp <bridge> {on | off | yes | no}		controls the bridge participation in the spanning tree protocol
-brctl showstp <bridge>							shows stp related information of <bridge>
-brctl setbridgeprio <bridge> <PRIORITY>			sets the bridge's priority to <priority>
-brctl setfd <bridge> <time>						sets the bridge's 'bridge forward delay' to <time> seconds
-brctl sethello <bridge> <time>					sets the bridge's 'bridge hello time' to <time> seconds
-brctl setmaxage <bridge> <time>					sets the bridge's 'maximum message age' to <time> seconds
-brctl setpathcost <bridge> <port> <COST>		sets the port cost of the port <port> to <cost>
-brctl setportprio <bridge> <port> <PRIORITY>	sets the port's priority to <priority>
+brctl stp <bridge> {on | off | yes | no}       controls the bridge participation in the spanning tree protocol
+brctl showstp <bridge>                         shows stp related information of <bridge>
+brctl setbridgeprio <bridge> <PRIORITY>        sets the bridge's priority to <priority>
+brctl setfd <bridge> <time>                    sets the bridge's 'bridge forward delay' to <time> seconds
+brctl sethello <bridge> <time>                 sets the bridge's 'bridge hello time' to <time> seconds
+brctl setmaxage <bridge> <time>                sets the bridge's 'maximum message age' to <time> seconds
+brctl setpathcost <bridge> <port> <COST>       sets the port cost of the port <port> to <cost>
+brctl setportprio <bridge> <port> <PRIORITY>   sets the port's priority to <priority>
 
 COST is a dimensionless metric (from 1 to 65535, default is 100).
 PRIORITY is a number from 0 (min) to 63 (max), default is 32, and has no dimension.
@@ -152,7 +152,7 @@ func run(out io.Writer, argv []string) error {
 		}
 		err = brctl.Hairpin(args[0], args[1], args[2])
 
-	case "help":
+	case "help", "-h", "--help":
 		fmt.Fprintf(out, "%s\n", usage)
 		return nil
 
