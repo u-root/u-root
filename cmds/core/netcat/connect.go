@@ -27,9 +27,9 @@ import (
 
 var osConnectors = map[netcat.SocketType]func(string, string) (net.Conn, error){}
 
-type connectFn func(output io.Writer, network, address string) error
+type connectFn func(output io.WriteCloser, network, address string) error
 
-func (c *cmd) connectMode(output io.Writer, network, address string, connect connectFn) error {
+func (c *cmd) connectMode(output io.WriteCloser, network, address string, connect connectFn) error {
 	if network == "tcp" || network == "udp" {
 		err4 := connect(output, network+"4", address)
 		if err4 == nil {
@@ -45,7 +45,7 @@ func (c *cmd) connectMode(output io.Writer, network, address string, connect con
 	return connect(output, network, address)
 }
 
-func (c *cmd) connect(output io.Writer, network, address string) error {
+func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 	if c.config.ConnectionModeOptions.ScanPorts && !c.config.ConnectionModeOptions.ZeroIO {
 		return fmt.Errorf("scanning ports is only supported in Zero-I/O mode")
 	}
@@ -100,6 +100,10 @@ func (c *cmd) connect(output io.Writer, network, address string) error {
 			}
 
 			return fmt.Errorf("failed to write: %w", err)
+		}
+
+		if err = output.Close(); err != nil {
+			log.Printf("failed to close output: %v", err)
 		}
 
 		break
@@ -279,9 +283,9 @@ func (c *cmd) writeToRemote(conn io.Writer) {
 	}
 
 	// do not shutdown the connection if the no-shutdown flag is set
-	if c.config.Misc.NoShutdown {
-		for {
-			time.Sleep(1 * time.Hour)
+	if !c.config.Misc.NoShutdown {
+		if err := netcat.CloseWrite(conn); err != nil {
+			log.Printf("failed to shut down socket for writing: %v", err)
 		}
 	}
 }

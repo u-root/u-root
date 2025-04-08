@@ -156,25 +156,23 @@ func TestNetstat(t *testing.T) {
 			echo ::1 localhost6
 		} >>/etc/hosts
 
-		{
-			netcat --keep-open --listen -4                 127.0.0.1 5005 &
-			netcat --keep-open --listen -4         --udp   127.0.0.1 5005 &
-			netcat --keep-open --listen -6                 ::1       5005 &
-			netcat --keep-open --listen -6         --udp   ::1       5005 &
-			netcat --keep-open --listen --unixsock         stream.sock    &
-			netcat --keep-open --listen --unixsock --udp   datagram.sock  &
-		} </dev/null >/dev/null
+		mkfifo fifo
+		sleep 3600 >fifo &
+
+		netcat --listen -4		   127.0.0.1 5005 <fifo >/dev/null &
+		netcat --listen -4	   --udp   127.0.0.1 5005 <fifo >/dev/null &
+		netcat --listen -6		   ::1       5005 <fifo >/dev/null &
+		netcat --listen -6	   --udp   ::1       5005 <fifo >/dev/null &
+		netcat --listen --unixsock	   stream.sock    <fifo >/dev/null &
+		netcat --listen --unixsock --udp   datagram.sock  <fifo >/dev/null &
 		sleep 2
 
-		sleep 3600 \
-		| {
-			netcat -4                 127.0.0.1 5005 &
-			netcat -4         --udp   127.0.0.1 5005 &
-			netcat -6                 ::1       5005 &
-			netcat -6         --udp   ::1       5005 &
-			netcat --unixsock         stream.sock    &
-			netcat --unixsock --udp   datagram.sock  &
-		} >/dev/null &
+		netcat -4                 127.0.0.1 5005 <fifo >/dev/null &
+		netcat -4         --udp   127.0.0.1 5005 <fifo >/dev/null &
+		netcat -6                 ::1       5005 <fifo >/dev/null &
+		netcat -6         --udp   ::1       5005 <fifo >/dev/null &
+		netcat --unixsock         stream.sock    <fifo >/dev/null &
+		netcat --unixsock --udp   datagram.sock  <fifo >/dev/null &
 		sleep 2
 	`)
 	for _, test := range tests {
@@ -186,6 +184,7 @@ func TestNetstat(t *testing.T) {
 			uimage.WithBusyboxCommands(
 				"github.com/u-root/u-root/cmds/core/echo",
 				"github.com/u-root/u-root/cmds/core/ip",
+				"github.com/u-root/u-root/cmds/core/mkfifo",
 				"github.com/u-root/u-root/cmds/core/netcat",
 				"github.com/u-root/u-root/cmds/core/ping",
 				"github.com/u-root/u-root/cmds/core/sleep",

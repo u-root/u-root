@@ -41,10 +41,10 @@ func Run(checklist []Check) error {
 			} else {
 				msg := fmt.Sprintf(" -> no remediation found for %s", check.Name)
 				if check.StopOnError {
-					fmt.Println(yellow(msg + ", stop on error requested. Exiting."))
+					fmt.Println(yellow("%s , stop on error requested. Exiting.", msg))
 					return checkErr
 				}
-				fmt.Println(yellow(msg + ", skipping."))
+				fmt.Println(yellow("%s, skipping.", msg))
 			}
 		} else {
 			fmt.Println(green("OK"))

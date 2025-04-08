@@ -8,10 +8,12 @@ package llog
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"math"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -37,6 +39,32 @@ type Printf func(format string, v ...any)
 // Printfer is an interface implementing Printf.
 type Printfer interface {
 	Printf(format string, v ...any)
+}
+
+func lineSprintf(format string, v ...any) string {
+	s := fmt.Sprintf(format, v...)
+	if strings.HasSuffix(s, "\n") {
+		return s
+	}
+	return s + "\n"
+}
+
+// WritePrintf is a Printf that prints lines to w.
+func WritePrintf(w io.Writer) Printf {
+	return func(format string, v ...any) {
+		_, _ = io.WriteString(w, lineSprintf(format, v...))
+	}
+}
+
+// MultiPrintf is a Printf that prints to all given p.
+func MultiPrintf(p ...Printf) Printf {
+	return func(format string, v ...any) {
+		for _, q := range p {
+			if q != nil {
+				q(format, v...)
+			}
+		}
+	}
 }
 
 // Sink is the output for Logger.

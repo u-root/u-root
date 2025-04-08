@@ -153,7 +153,7 @@ func dumpNetDebugInfo() {
 func main() {
 	flag.Parse()
 	if len(flag.Args()) > 1 {
-		log.Fatalf("Only one regexp-style argument is allowed, e.g.: " + ifName)
+		log.Fatalf("Only one regexp-style argument is allowed, e.g.: %s", ifName)
 	}
 	if len(flag.Args()) > 0 {
 		ifName = flag.Args()[0]

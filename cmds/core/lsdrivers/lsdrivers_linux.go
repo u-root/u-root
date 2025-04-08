@@ -61,7 +61,7 @@ func lsdrivers(bus string, unused bool) ([]string, error) {
 		for _, driver := range drivers {
 			n := filepath.Join(bus, f.Name(), "drivers", driver.Name())
 			if hasDevices(n) != unused {
-				d = append(d, fmt.Sprintf(f.Name()+"."+driver.Name()))
+				d = append(d, fmt.Sprintf("%s.%s", f.Name(), driver.Name()))
 			}
 		}
 	}

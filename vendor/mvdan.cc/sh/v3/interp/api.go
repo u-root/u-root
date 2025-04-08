@@ -23,11 +23,10 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/syntax"
@@ -45,17 +44,26 @@ import (
 // once a Runner has been created, the fields should be treated as read-only.
 type Runner struct {
 	// Env specifies the initial environment for the interpreter, which must
-	// be non-nil.
+	// not be nil. It can only be set via [Env].
+	//
+	// If it includes a TMPDIR variable describing an absolute directory,
+	// it is used as the directory in which to create temporary files needed
+	// for the interpreter's use, such as named pipes for process substitutions.
+	// Otherwise, [os.TempDir] is used.
 	Env expand.Environ
 
 	writeEnv expand.WriteEnviron
 
 	// Dir specifies the working directory of the command, which must be an
-	// absolute path.
+	// absolute path. It can only be set via [Dir].
 	Dir string
+
+	// tempDir is either $TMPDIR from [Runner.Env], or [os.TempDir].
+	tempDir string
 
 	// Params are the current shell parameters, e.g. from running a shell
 	// file or calling a function. Accessible via the $@/$* family of vars.
+	// It can only be set via [Params].
 	Params []string
 
 	// Separate maps - note that bash allows a name to be both a var and a
@@ -75,7 +83,7 @@ type Runner struct {
 	// execHandler is responsible for executing programs. It must not be nil.
 	execHandler ExecHandlerFunc
 
-	// execMiddlewares grows with calls to ExecHandlers,
+	// execMiddlewares grows with calls to [ExecHandlers],
 	// and is used to construct execHandler when Reset is first called.
 	// The slice is needed to preserve the relative order of middlewares.
 	execMiddlewares []func(ExecHandlerFunc) ExecHandlerFunc
@@ -109,10 +117,6 @@ type Runner struct {
 	// rand is used mainly to generate temporary files.
 	rand *rand.Rand
 
-	// wgProcSubsts allows waiting for any process substitution sub-shells
-	// to finish running.
-	wgProcSubsts sync.WaitGroup
-
 	filename string // only if Node was a File
 
 	// >0 to break or continue out of N enclosing loops
@@ -137,7 +141,7 @@ type Runner struct {
 	exit     int
 	lastExit int
 
-	bgShells errgroup.Group
+	bgShells sync.WaitGroup
 
 	opts runnerOpts
 
@@ -379,12 +383,12 @@ func ExecHandlers(middlewares ...func(next ExecHandlerFunc) ExecHandlerFunc) Run
 	}
 }
 
-// TODO: consider porting the middleware API in ExecHandlers to OpenHandler,
+// TODO: consider porting the middleware API in [ExecHandlers] to [OpenHandler],
 // ReadDirHandler, and StatHandler.
 
-// TODO(v4): now that ExecHandlers allows calling a next handler with changed
-// arguments, one of the two advantages of CallHandler is gone. The other is the
-// ability to work with builtins; if we make ExecHandlers work with builtins, we
+// TODO(v4): now that [ExecHandlers] allows calling a next handler with changed
+// arguments, one of the two advantages of [CallHandler] is gone. The other is the
+// ability to work with builtins; if we make [ExecHandlers] work with builtins, we
 // could join both APIs.
 
 // OpenHandler sets file open handler. See [OpenHandlerFunc] for more info.
@@ -454,10 +458,15 @@ func stdinFile(r io.Reader) (*os.File, error) {
 // standard error. If out or err are nil, they default to a writer that discards
 // the output.
 //
-// Note that providing a non-nil standard input other than [os.File] will require
+// Note that providing a non-nil standard input other than [*os.File] will require
 // an [os.Pipe] and spawning a goroutine to copy into it,
 // as an [os.File] is the only way to share a reader with subprocesses.
+// This may cause the interpreter to consume the entire reader.
 // See [os/exec.Cmd.Stdin].
+//
+// When providing an [*os.File] as standard input, consider using an [os.Pipe]
+// as it has the best chance to support cancellable reads via [os.File.SetReadDeadline],
+// so that cancelling the runner's context can stop a blocked standard input read.
 func StdIO(in io.Reader, out, err io.Writer) RunnerOption {
 	return func(r *Runner) error {
 		stdin, _err := stdinFile(in)
@@ -632,7 +641,7 @@ var bashOptsTable = [...]bashOpt{
 // know which option we're after at compile time. First come the shell options,
 // then the bash options.
 const (
-	// These correspond to indexes in shellOptsTable
+	// These correspond to indexes in [shellOptsTable]
 	optAllExport = iota
 	optErrExit
 	optNoExec
@@ -642,7 +651,7 @@ const (
 	optPipeFail
 
 	// These correspond to indexes (offset by the above seven items) of
-	// supported options in bashOptsTable
+	// supported options in [bashOptsTable]
 	optExpandAliases
 	optGlobStar
 	optNoCaseGlob
@@ -676,21 +685,29 @@ func (r *Runner) Reset() {
 		}
 		// Middlewares are chained from first to last, and each can call the
 		// next in the chain, so we need to construct the chain backwards.
-		for i := len(r.execMiddlewares) - 1; i >= 0; i-- {
-			middleware := r.execMiddlewares[i]
-			r.execHandler = middleware(r.execHandler)
+		for _, mw := range slices.Backward(r.execMiddlewares) {
+			r.execHandler = mw(r.execHandler)
 		}
+		// Fill tempDir; only need to do this once given that Env will not change.
+		if dir := r.Env.Get("TMPDIR").String(); filepath.IsAbs(dir) {
+			r.tempDir = dir
+		} else {
+			r.tempDir = os.TempDir()
+		}
+		// Clean it as we will later do a string prefix match.
+		r.tempDir = filepath.Clean(r.tempDir)
 	}
 	// reset the internal state
 	*r = Runner{
 		Env:            r.Env,
+		tempDir:        r.tempDir,
 		callHandler:    r.callHandler,
 		execHandler:    r.execHandler,
 		openHandler:    r.openHandler,
 		readDirHandler: r.readDirHandler,
 		statHandler:    r.statHandler,
 
-		// These can be set by functions like Dir or Params, but
+		// These can be set by functions like [Dir] or [Params], but
 		// builtins can overwrite them; reset the fields to whatever the
 		// constructor set up.
 		Dir:    r.origDir,
@@ -724,21 +741,24 @@ func (r *Runner) Reset() {
 		r.setVarString("HOME", home)
 	}
 	if !r.writeEnv.Get("UID").IsSet() {
-		r.setVar("UID", nil, expand.Variable{
+		r.setVar("UID", expand.Variable{
+			Set:      true,
 			Kind:     expand.String,
 			ReadOnly: true,
 			Str:      strconv.Itoa(os.Getuid()),
 		})
 	}
 	if !r.writeEnv.Get("EUID").IsSet() {
-		r.setVar("EUID", nil, expand.Variable{
+		r.setVar("EUID", expand.Variable{
+			Set:      true,
 			Kind:     expand.String,
 			ReadOnly: true,
 			Str:      strconv.Itoa(os.Geteuid()),
 		})
 	}
 	if !r.writeEnv.Get("GID").IsSet() {
-		r.setVar("GID", nil, expand.Variable{
+		r.setVar("GID", expand.Variable{
+			Set:      true,
 			Kind:     expand.String,
 			ReadOnly: true,
 			Str:      strconv.Itoa(os.Getgid()),
@@ -772,15 +792,15 @@ func IsExitStatus(err error) (status uint8, ok bool) {
 	return 0, false
 }
 
-// Run interprets a node, which can be a *File, *Stmt, or Command. If a non-nil
+// Run interprets a node, which can be a [*File], [*Stmt], or [Command]. If a non-nil
 // error is returned, it will typically contain a command's exit status, which
-// can be retrieved with IsExitStatus.
+// can be retrieved with [IsExitStatus].
 //
 // Run can be called multiple times synchronously to interpret programs
-// incrementally. To reuse a Runner without keeping the internal shell state,
+// incrementally. To reuse a [Runner] without keeping the internal shell state,
 // call Reset.
 //
-// Calling Run on an entire *File implies an exit, meaning that an exit trap may
+// Calling Run on an entire [*File] implies an exit, meaning that an exit trap may
 // run.
 func (r *Runner) Run(ctx context.Context, node syntax.Node) error {
 	if !r.didReset {
@@ -808,10 +828,7 @@ func (r *Runner) Run(ctx context.Context, node syntax.Node) error {
 		r.setErr(NewExitStatus(uint8(r.exit)))
 	}
 	if r.Vars != nil {
-		r.writeEnv.Each(func(name string, vr expand.Variable) bool {
-			r.Vars[name] = vr
-			return true
-		})
+		maps.Insert(r.Vars, r.writeEnv.Each)
 	}
 	return r.err
 }
@@ -825,12 +842,12 @@ func (r *Runner) Exited() bool {
 	return r.shellExited
 }
 
-// Subshell makes a copy of the given Runner, suitable for use concurrently
+// Subshell makes a copy of the given [Runner], suitable for use concurrently
 // with the original. The copy will have the same environment, including
 // variables and functions, but they can all be modified without affecting the
 // original.
 //
-// Subshell is not safe to use concurrently with Run. Orchestrating this is
+// Subshell is not safe to use concurrently with [Run]. Orchestrating this is
 // left up to the caller; no locking is performed.
 //
 // To replace e.g. stdin/out/err, do StdIO(r.stdin, r.stdout, r.stderr)(r) on
@@ -840,9 +857,10 @@ func (r *Runner) Subshell() *Runner {
 		r.Reset()
 	}
 	// Keep in sync with the Runner type. Manually copy fields, to not copy
-	// sensitive ones like errgroup.Group, and to do deep copies of slices.
+	// sensitive ones like [errgroup.Group], and to do deep copies of slices.
 	r2 := &Runner{
 		Dir:            r.Dir,
+		tempDir:        r.tempDir,
 		Params:         r.Params,
 		callHandler:    r.callHandler,
 		execHandler:    r.execHandler,

@@ -6,6 +6,8 @@ package syntax
 import (
 	"fmt"
 	"io"
+	"iter"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -143,6 +145,26 @@ func StopAt(word string) ParserOption {
 	return func(p *Parser) { p.stopAt = []byte(word) }
 }
 
+// RecoverErrors allows the parser to skip up to a maximum number of
+// errors in the given input on a best-effort basis.
+// This can be useful to tab-complete an interactive shell prompt,
+// or when providing diagnostics on slightly incomplete shell source.
+//
+// Currently, this only helps with mandatory tokens from the shell grammar
+// which are not present in the input. They result in position fields
+// or nodes whose position report [Pos.IsRecovered] as true.
+//
+// For example, given the input
+//
+//	(foo |
+//
+// the result will contain two recovered positions; first, the pipe requires
+// a statement to follow, and as [Stmt.Pos] reports, the entire node is recovered.
+// Second, the subshell needs to be closed, so [Subshell.Rparen] is recovered.
+func RecoverErrors(maximum int) ParserOption {
+	return func(p *Parser) { p.recoverErrorsMax = maximum }
+}
+
 // NewParser allocates a new [Parser] and applies any number of options.
 func NewParser(options ...ParserOption) *Parser {
 	p := &Parser{}
@@ -267,9 +289,20 @@ func (p *Parser) Interactive(r io.Reader, fn func([]*Stmt) bool) error {
 	})
 }
 
-// Words reads and parses words one at a time, calling a function each time one
-// is parsed. If the function returns false, parsing is stopped and the function
-// is not called again.
+// Words is a pre-iterators API which now wraps [Parser.WordsSeq].
+func (p *Parser) Words(r io.Reader, fn func(*Word) bool) error {
+	for w, err := range p.WordsSeq(r) {
+		if err != nil {
+			return err
+		}
+		if !fn(w) {
+			break
+		}
+	}
+	return nil
+}
+
+// WordsSeq reads and parses a sequence of words alongside any error encountered.
 //
 // Newlines are skipped, meaning that multi-line input will work fine. If the
 // parser encounters a token that isn't a word, such as a semicolon, an error
@@ -278,23 +311,28 @@ func (p *Parser) Interactive(r io.Reader, fn func([]*Stmt) bool) error {
 // Note that the lexer doesn't currently tokenize spaces, so it may need to read
 // a non-space byte such as a newline or a letter before finishing the parsing
 // of a word. This will be fixed in the future.
-func (p *Parser) Words(r io.Reader, fn func(*Word) bool) error {
+func (p *Parser) WordsSeq(r io.Reader) iter.Seq2[*Word, error] {
 	p.reset()
 	p.f = &File{}
 	p.src = r
-	p.rune()
-	p.next()
-	for {
-		p.got(_Newl)
-		w := p.getWord()
-		if w == nil {
-			if p.tok != _EOF {
-				p.curErr("%s is not a valid word", p.tok)
+	return func(yield func(*Word, error) bool) {
+		p.rune()
+		p.next()
+		for {
+			p.got(_Newl)
+			w := p.getWord()
+			if w == nil {
+				if p.tok != _EOF {
+					p.curErr("%s is not a valid word", p.tok)
+				}
+				if p.err != nil {
+					yield(nil, p.err)
+				}
+				return
 			}
-			return p.err
-		}
-		if !fn(w) {
-			return nil
+			if !yield(w, nil) {
+				return
+			}
 		}
 	}
 }
@@ -364,6 +402,9 @@ type Parser struct {
 
 	stopAt []byte
 
+	recoveredErrors  int
+	recoverErrorsMax int
+
 	forbidNested bool
 
 	// list of pending heredoc bodies
@@ -374,10 +415,10 @@ type Parser struct {
 
 	parsingDoc bool // true if using Parser.Document
 
-	// openStmts is how many entire statements we're currently parsing. A
-	// non-zero number means that we require certain tokens or words before
-	// reaching EOF.
-	openStmts int
+	// openNodes tracks how many entire statements or words we're currently parsing.
+	// A non-zero number means that we require certain tokens or words before
+	// reaching EOF, used for [Parser.Incomplete].
+	openNodes int
 	// openBquotes is how many levels of backquotes are open at the moment.
 	openBquotes int
 
@@ -398,17 +439,15 @@ type Parser struct {
 	litBs   []byte
 }
 
-// Incomplete reports whether the parser is waiting to read more bytes because
-// it needs to finish properly parsing a statement.
+// Incomplete reports whether the parser needs more input bytes
+// to finish properly parsing a statement or word.
 //
 // It is only safe to call while the parser is blocked on a read. For an example
 // use case, see [Parser.Interactive].
 func (p *Parser) Incomplete() bool {
-	// If we're in a quote state other than noState, we're parsing a node
-	// such as a double-quoted string.
-	// If there are any open statements, we need to finish them.
+	// If there are any open nodes, we need to finish them.
 	// If we're constructing a literal, we need to finish it.
-	return p.quote != noState || p.openStmts > 0 || p.litBs != nil
+	return p.openNodes > 0 || len(p.litBs) > 0
 }
 
 const bufSize = 1 << 10
@@ -421,7 +460,8 @@ func (p *Parser) reset() {
 	p.r, p.w = 0, 0
 	p.err, p.readErr = nil, nil
 	p.quote, p.forbidNested = noState, false
-	p.openStmts = 0
+	p.openNodes = 0
+	p.recoveredErrors = 0
 	p.heredocs, p.buriedHdocs = p.heredocs[:0], 0
 	p.hdocStops = nil
 	p.parsingDoc = false
@@ -649,6 +689,14 @@ func (p *Parser) gotRsrv(val string) (Pos, bool) {
 	return pos, false
 }
 
+func (p *Parser) recoverError() bool {
+	if p.recoveredErrors < p.recoverErrorsMax {
+		p.recoveredErrors++
+		return true
+	}
+	return false
+}
+
 func readableStr(s string) string {
 	// don't quote tokens like & or }
 	if s != "" && s[0] >= 'a' && s[0] <= 'z' {
@@ -675,6 +723,9 @@ func (p *Parser) follow(lpos Pos, left string, tok token) {
 func (p *Parser) followRsrv(lpos Pos, left, val string) Pos {
 	pos, ok := p.gotRsrv(val)
 	if !ok {
+		if p.recoverError() {
+			return recoveredPos
+		}
 		p.followErr(lpos, left, fmt.Sprintf("%q", val))
 	}
 	return pos
@@ -687,6 +738,9 @@ func (p *Parser) followStmts(left string, lpos Pos, stops ...string) ([]*Stmt, [
 	newLine := p.got(_Newl)
 	stmts, last := p.stmtList(stops...)
 	if len(stmts) < 1 && !newLine {
+		if p.recoverError() {
+			return []*Stmt{{Position: recoveredPos}}, nil
+		}
 		p.followErr(lpos, left, "a statement list")
 	}
 	return stmts, last
@@ -695,6 +749,9 @@ func (p *Parser) followStmts(left string, lpos Pos, stops ...string) ([]*Stmt, [
 func (p *Parser) followWordTok(tok token, pos Pos) *Word {
 	w := p.getWord()
 	if w == nil {
+		if p.recoverError() {
+			return p.wordOne(&Lit{ValuePos: recoveredPos})
+		}
 		p.followErr(pos, tok.String(), "a word")
 	}
 	return w
@@ -703,6 +760,9 @@ func (p *Parser) followWordTok(tok token, pos Pos) *Word {
 func (p *Parser) stmtEnd(n Node, start, end string) Pos {
 	pos, ok := p.gotRsrv(end)
 	if !ok {
+		if p.recoverError() {
+			return recoveredPos
+		}
 		p.posErr(n.Pos(), "%s statement must end with %q", start, end)
 	}
 	return pos
@@ -721,6 +781,9 @@ func (p *Parser) matchingErr(lpos Pos, left, right any) {
 func (p *Parser) matched(lpos Pos, left, right token) Pos {
 	pos := p.pos
 	if !p.got(right) {
+		if p.recoverError() {
+			return recoveredPos
+		}
 		p.matchingErr(lpos, left, right)
 	}
 	return pos
@@ -798,8 +861,13 @@ func (e ParseError) Error() string {
 type LangError struct {
 	Filename string
 	Pos      Pos
-	Feature  string
-	Langs    []LangVariant
+
+	// Feature briefly describes which language feature caused the error.
+	Feature string
+	// Langs lists some of the language variants which support the feature.
+	Langs []LangVariant
+	// LangUsed is the language variant used which led to the error.
+	LangUsed LangVariant
 }
 
 func (e LangError) Error() string {
@@ -820,7 +888,8 @@ func (e LangError) Error() string {
 		}
 		sb.WriteString(lang.String())
 	}
-	sb.WriteString(" feature")
+	sb.WriteString(" feature; tried parsing as ")
+	sb.WriteString(e.LangUsed.String())
 	return sb.String()
 }
 
@@ -843,6 +912,7 @@ func (p *Parser) langErr(pos Pos, feature string, langs ...LangVariant) {
 		Pos:      pos,
 		Feature:  feature,
 		Langs:    langs,
+		LangUsed: p.lang,
 	})
 }
 
@@ -878,9 +948,9 @@ loop:
 		if p.tok == _EOF {
 			break
 		}
-		p.openStmts++
+		p.openNodes++
 		s := p.getStmt(true, false, false)
-		p.openStmts--
+		p.openNodes--
 		if s == nil {
 			p.invalidStmtStart()
 			break
@@ -912,8 +982,7 @@ func (p *Parser) stmtList(stops ...string) ([]*Stmt, []Comment) {
 		//     fi
 		// TODO(mvdan): look into deduplicating this with similar logic
 		// in caseItems.
-		for i := len(p.accComs) - 1; i >= 0; i-- {
-			c := p.accComs[i]
+		for i, c := range slices.Backward(p.accComs) {
 			if c.Pos().Col() != p.pos.Col() {
 				break
 			}
@@ -957,7 +1026,9 @@ func (p *Parser) getLit() *Lit {
 
 func (p *Parser) wordParts(wps []WordPart) []WordPart {
 	for {
+		p.openNodes++
 		n := p.wordPart()
+		p.openNodes--
 		if n == nil {
 			if len(wps) == 0 {
 				return nil // normalize empty lists into nil
@@ -988,12 +1059,12 @@ func (p *Parser) wordPart() WordPart {
 		switch p.r {
 		case '|':
 			if p.lang != LangMirBSDKorn {
-				p.curErr(`"${|stmts;}" is a mksh feature`)
+				p.langErr(p.pos, `"${|stmts;}"`, LangMirBSDKorn)
 			}
 			fallthrough
 		case ' ', '\t', '\n':
 			if p.lang != LangMirBSDKorn {
-				p.curErr(`"${ stmts;}" is a mksh feature`)
+				p.langErr(p.pos, `"${ stmts;}"`, LangMirBSDKorn)
 			}
 			cs := &CmdSubst{
 				Left:     p.pos,
@@ -1107,6 +1178,10 @@ func (p *Parser) wordPart() WordPart {
 				p.litBs = append(p.litBs, '\\', '\n')
 			case utf8.RuneSelf:
 				p.tok = _EOF
+				if p.recoverError() {
+					sq.Right = recoveredPos
+					return sq
+				}
 				p.quoteErr(sq.Pos(), sglQuote)
 				return nil
 			}
@@ -1144,7 +1219,11 @@ func (p *Parser) wordPart() WordPart {
 		// Like above, the lexer didn't call p.rune for us.
 		p.rune()
 		if !p.got(bckQuote) {
-			p.quoteErr(cs.Pos(), bckQuote)
+			if p.recoverError() {
+				cs.Right = recoveredPos
+			} else {
+				p.quoteErr(cs.Pos(), bckQuote)
+			}
 		}
 		return cs
 	case globQuest, globStar, globPlus, globAt, globExcl:
@@ -1194,7 +1273,11 @@ func (p *Parser) dblQuoted() *DblQuoted {
 	p.quote = old
 	q.Right = p.pos
 	if !p.got(dblQuote) {
-		p.quoteErr(q.Pos(), dblQuote)
+		if p.recoverError() {
+			q.Right = recoveredPos
+		} else {
+			p.quoteErr(q.Pos(), dblQuote)
+		}
 	}
 	return q
 }
@@ -1227,7 +1310,7 @@ func (p *Parser) paramExp() *ParamExp {
 		}
 	case perc:
 		if p.lang != LangMirBSDKorn {
-			p.posErr(pe.Pos(), `"${%%foo}" is a mksh feature`)
+			p.langErr(pe.Pos(), `"${%foo}"`, LangMirBSDKorn)
 		}
 		if paramNameOp(p.r) {
 			pe.Width = true
@@ -1267,7 +1350,7 @@ func (p *Parser) paramExp() *ParamExp {
 		p.curErr("%s cannot be followed by a word", op)
 	case rightBrace:
 		if pe.Excl && p.lang == LangPOSIX {
-			p.posErr(pe.Pos(), `"${!foo}" is a bash/mksh feature`)
+			p.langErr(pe.Pos(), `"${!foo}"`, LangBash, LangMirBSDKorn)
 		}
 		pe.Rbrace = p.pos
 		p.quote = old
@@ -1340,7 +1423,7 @@ func (p *Parser) paramExp() *ParamExp {
 			p.curErr("not a valid parameter expansion operator: %v", p.tok)
 		case pe.Excl && p.r == '}':
 			if !p.lang.isBash() {
-				p.posErr(pe.Pos(), `"${!foo%s}" is a bash feature`, p.tok)
+				p.langErr(pe.Pos(), fmt.Sprintf(`"${!foo%s}"`, p.tok), LangBash)
 			}
 			pe.Names = ParNamesOperator(p.tok)
 			p.next()
@@ -1661,8 +1744,12 @@ func (p *Parser) getStmt(readEnd, binCmd, fnBody bool) *Stmt {
 		p.got(_Newl)
 		b.Y = p.getStmt(false, true, false)
 		if b.Y == nil || p.err != nil {
-			p.followErr(b.OpPos, b.Op.String(), "a statement")
-			return nil
+			if p.recoverError() {
+				b.Y = &Stmt{Position: recoveredPos}
+			} else {
+				p.followErr(b.OpPos, b.Op.String(), "a statement")
+				return nil
+			}
 		}
 		s = &Stmt{Position: s.Position}
 		s.Cmd = b
@@ -1834,8 +1921,12 @@ func (p *Parser) gotStmtPipe(s *Stmt, binCmd bool) *Stmt {
 		p.next()
 		p.got(_Newl)
 		if b.Y = p.gotStmtPipe(&Stmt{Position: p.pos}, true); b.Y == nil || p.err != nil {
-			p.followErr(b.OpPos, b.Op.String(), "a statement")
-			break
+			if p.recoverError() {
+				b.Y = &Stmt{Position: recoveredPos}
+			} else {
+				p.followErr(b.OpPos, b.Op.String(), "a statement")
+				break
+			}
 		}
 		s = &Stmt{Position: s.Position}
 		s.Cmd = b
@@ -1876,9 +1967,11 @@ func (p *Parser) block(s *Stmt) {
 	b := &Block{Lbrace: p.pos}
 	p.next()
 	b.Stmts, b.Last = p.stmtList("}")
-	pos, ok := p.gotRsrv("}")
-	b.Rbrace = pos
-	if !ok {
+	if pos, ok := p.gotRsrv("}"); ok {
+		b.Rbrace = pos
+	} else if p.recoverError() {
+		b.Rbrace = recoveredPos
+	} else {
 		p.matchingErr(b.Lbrace, "{", "}")
 	}
 	s.Cmd = b
@@ -2037,7 +2130,7 @@ func (p *Parser) caseClause(s *Stmt) {
 		cc.In = pos
 		cc.Braces = true
 		if p.lang != LangMirBSDKorn {
-			p.posErr(cc.Pos(), `"case i {" is a mksh feature`)
+			p.langErr(cc.Pos(), `"case i {"`, LangMirBSDKorn)
 		}
 		end = "}"
 	} else {
@@ -2097,8 +2190,7 @@ func (p *Parser) caseItems(stop string) (items []*CaseItem) {
 		// b)
 		//   [...]
 		split := len(p.accComs)
-		for i := len(p.accComs) - 1; i >= 0; i-- {
-			c := p.accComs[i]
+		for i, c := range slices.Backward(p.accComs) {
 			if c.Pos().Col() != p.pos.Col() {
 				break
 			}
@@ -2395,7 +2487,7 @@ loop:
 			}
 			// Avoid failing later with the confusing "} can only be used to close a block".
 			if p.lang == LangPOSIX && p.val == "{" && w != nil && w.Lit() == "function" {
-				p.curErr("the %q builtin is a bash feature; tried parsing as posix", "function")
+				p.langErr(p.pos, `the "function" builtin`, LangBash)
 			}
 			ce.Args = append(ce.Args, p.wordOne(p.lit(p.pos, p.val)))
 			p.next()
@@ -2428,7 +2520,7 @@ loop:
 			// Note that we'll only keep the first error that happens.
 			if len(ce.Args) > 0 {
 				if cmd := ce.Args[0].Lit(); p.lang == LangPOSIX && isBashCompoundCommand(_LitWord, cmd) {
-					p.curErr("the %q builtin is a bash feature; tried parsing as posix", cmd)
+					p.langErr(p.pos, fmt.Sprintf("the %q builtin", cmd), LangBash)
 				}
 			}
 			p.curErr("a command can only contain words and redirects; encountered %s", p.tok)

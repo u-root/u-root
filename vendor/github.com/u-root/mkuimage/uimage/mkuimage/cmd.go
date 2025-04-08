@@ -5,12 +5,15 @@
 package mkuimage
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 
+	"github.com/u-root/gobusybox/src/pkg/golang"
 	"github.com/u-root/mkuimage/uimage"
 	"github.com/u-root/mkuimage/uimage/builder"
 	"github.com/u-root/mkuimage/uimage/templates"
@@ -56,6 +59,32 @@ func uimageOpts(l *llog.Logger, m []uimage.Modifier, tpl *templates.Templates, f
 	return uimage.OptionsFor(append(m, more...)...)
 }
 
+func checkAmd64Level(l *llog.Logger, env *golang.Environ) {
+	if env.GOARCH != "amd64" {
+		return
+	}
+
+	// Looking for "amd64.v2" in "env.ToolTags" is unreliable; see
+	// <https://github.com/golang/go/issues/72791>. Invoke "go env" instead.
+	var bad string
+	abiLevel, err := exec.Command("go", "env", "GOAMD64").Output()
+	if err == nil {
+		if bytes.Equal(abiLevel, []byte("v1\n")) {
+			return
+		}
+		bad = "is not"
+	} else {
+		if exerr, isExErr := err.(*exec.ExitError); isExErr {
+			l.Warnf("\"go env\" failed: %s", exerr.Stderr)
+		} else {
+			l.Warnf("couldn't execute \"go env\": %s", err)
+		}
+		bad = "may not be"
+	}
+	l.Warnf("GOAMD64 %s set to v1; on older CPUs, binaries built into " +
+		"the initrd may crash or refuse to run.", bad)
+}
+
 // CreateUimage creates a uimage with the given base modifiers and flags, using args as the list of commands.
 func CreateUimage(l *llog.Logger, base []uimage.Modifier, tf *TemplateFlags, f *Flags, args []string) error {
 	tpl, err := tf.Get()
@@ -94,6 +123,8 @@ func CreateUimage(l *llog.Logger, base []uimage.Modifier, tf *TemplateFlags, f *
 	if env.GOOS != "linux" {
 		l.Warnf("GOOS is not linux. Did you mean to set GOOS=linux?")
 	}
+
+	checkAmd64Level(l, env);
 
 	v, err := env.Version()
 	if err != nil {

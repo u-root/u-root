@@ -72,3 +72,9 @@ func (n *OutputOptions) Write(data []byte) (int, error) {
 
 	return len(data), nil
 }
+
+// Close does nothing: Write already closes any underlying files. Close exists
+// only to implement the io.WriteCloser interface with OutputOptions.
+func (n *OutputOptions) Close() error {
+	return nil
+}

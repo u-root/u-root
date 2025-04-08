@@ -338,13 +338,13 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 type cmd struct {
 	stdin  io.Reader
-	stdout io.Writer
+	stdout io.WriteCloser
 	stderr io.Writer
 	config *netcat.Config
 	args   []string
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
+func command(stdin io.Reader, stdout io.WriteCloser, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,
@@ -502,7 +502,7 @@ func run(args []string) error {
 		log.Fatalf("error: %v", err)
 	}
 
-	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
+	c, err := command(os.Stdin, &netcat.StdoutWriteCloser{}, os.Stderr, config, flag.Args())
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -512,11 +512,11 @@ func run(args []string) error {
 		return fmt.Errorf("failed to determine connection: %w", err)
 	}
 
-	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
-	output := io.MultiWriter(c.stdout, &c.config.Output)
+	// io.Copy will block until the connection is closed, use a TeeWriteCloser to write to stdout and the output file
+	output := netcat.NewTeeWriteCloser(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(netcat.NewConcurrentWriter(output), network, address, c.listen)
+		return c.listenMode(netcat.NewConcurrentWriteCloser(output), network, address, c.listen)
 	}
 
 	return c.connectMode(output, network, address, c.connect)

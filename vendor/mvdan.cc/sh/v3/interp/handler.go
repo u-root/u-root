@@ -42,7 +42,11 @@ type HandlerContext struct {
 	// Dir is the interpreter's current directory.
 	Dir string
 
+	// TODO(v4): use an os.File for stdin below directly.
+
 	// Stdin is the interpreter's current standard input reader.
+	// It is always an [*os.File], but the type here remains an [io.Reader]
+	// due to backwards compatibility.
 	Stdin io.Reader
 	// Stdout is the interpreter's current standard output writer.
 	Stdout io.Writer
@@ -109,33 +113,27 @@ func DefaultExecHandler(killTimeout time.Duration) ExecHandlerFunc {
 
 		err = cmd.Start()
 		if err == nil {
-			if done := ctx.Done(); done != nil {
-				go func() {
-					<-done
-
-					if killTimeout <= 0 || runtime.GOOS == "windows" {
-						_ = cmd.Process.Signal(os.Kill)
-						return
-					}
-
-					// TODO: don't temporarily leak this goroutine
-					// if the program stops itself with the
-					// interrupt.
-					go func() {
-						time.Sleep(killTimeout)
-						_ = cmd.Process.Signal(os.Kill)
-					}()
-					_ = cmd.Process.Signal(os.Interrupt)
-				}()
-			}
+			stopf := context.AfterFunc(ctx, func() {
+				if killTimeout <= 0 || runtime.GOOS == "windows" {
+					_ = cmd.Process.Signal(os.Kill)
+					return
+				}
+				_ = cmd.Process.Signal(os.Interrupt)
+				// TODO: don't sleep in this goroutine if the program
+				// stops itself with the interrupt above.
+				time.Sleep(killTimeout)
+				_ = cmd.Process.Signal(os.Kill)
+			})
+			defer stopf()
 
 			err = cmd.Wait()
 		}
 
 		switch err := err.(type) {
 		case *exec.ExitError:
-			// Windows and Plan9 do not have support for syscall.WaitStatus
-			// with methods like Signaled and Signal, so for those, waitStatus is a no-op.
+			// Windows and Plan9 do not have support for [syscall.WaitStatus]
+			// with methods like Signaled and Signal, so for those, [waitStatus] is a no-op.
+			// Note: [waitStatus] is an alias [syscall.WaitStatus]
 			if status, ok := err.Sys().(waitStatus); ok && status.Signaled() {
 				if ctx.Err() != nil {
 					return ctx.Err()
@@ -218,7 +216,7 @@ func LookPathDir(cwd string, env expand.Environ, file string) (string, error) {
 	return lookPathDir(cwd, env, file, findExecutable)
 }
 
-// findAny defines a function to pass to lookPathDir.
+// findAny defines a function to pass to [lookPathDir].
 type findAny = func(dir string, file string, exts []string) (string, error)
 
 func lookPathDir(cwd string, env expand.Environ, file string, find findAny) (string, error) {
@@ -254,7 +252,7 @@ func lookPathDir(cwd string, env expand.Environ, file string, find findAny) (str
 	return "", fmt.Errorf("%q: executable file not found in $PATH", file)
 }
 
-// scriptFromPathDir is similar to LookPathDir, with the difference that it looks
+// scriptFromPathDir is similar to [LookPathDir], with the difference that it looks
 // for both executable and non-executable files.
 func scriptFromPathDir(cwd string, env expand.Environ, file string) (string, error) {
 	return lookPathDir(cwd, env, file, findFile)
@@ -281,9 +279,10 @@ func pathExts(env expand.Environ) []string {
 	return exts
 }
 
-// OpenHandlerFunc is a handler which opens files. It is
-// called for all files that are opened directly by the shell, such as
-// in redirects. Files opened by executed programs are not included.
+// OpenHandlerFunc is a handler which opens files.
+// It is called for all files that are opened directly by the shell,
+// such as in redirects, except for named pipes created by process substitutions.
+// Files opened by executed programs are not included.
 //
 // The path parameter may be relative to the current directory,
 // which can be fetched via [HandlerCtx].
@@ -296,12 +295,22 @@ func pathExts(env expand.Environ) []string {
 // extra files and goroutines for input redirections; see [StdIO].
 type OpenHandlerFunc func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error)
 
+// TODO: paths passed to [OpenHandlerFunc] should be cleaned.
+
 // DefaultOpenHandler returns the [OpenHandlerFunc] used by default.
 // It uses [os.OpenFile] to open files.
+//
+// For the sake of portability, /dev/null opens NUL on Windows.
 func DefaultOpenHandler() OpenHandlerFunc {
 	return func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error) {
 		mc := HandlerCtx(ctx)
-		if path != "" && !filepath.IsAbs(path) {
+		if runtime.GOOS == "windows" && path == "/dev/null" {
+			path = "NUL"
+			// Work around https://go.dev/issue/71752, where Go 1.24 started giving
+			// "Invalid handle" errors when opening "NUL" with O_TRUNC.
+			// TODO: hopefully remove this in the future once the bug is fixed.
+			flag &^= os.O_TRUNC
+		} else if path != "" && !filepath.IsAbs(path) {
 			path = filepath.Join(mc.Dir, path)
 		}
 		return os.OpenFile(path, flag, perm)
