@@ -128,13 +128,13 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 		switch c.config.ProtocolOptions.SocketType {
 
 		case netcat.SOCKET_TYPE_TCP:
-			dialer.LocalAddr, err = net.ResolveTCPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
+			dialer.LocalAddr, err = net.ResolveTCPAddr(network, net.JoinHostPort(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP:
-			dialer.LocalAddr, err = net.ResolveUDPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
+			dialer.LocalAddr, err = net.ResolveUDPAddr(network, net.JoinHostPort(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
