@@ -32,6 +32,7 @@ jobs:
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
       - CGO_ENABLED: 1
+      - NETCAT_CONNECT_TEST_DISABLE_IPV6: 1
     steps:
       - checkout
       - run:
