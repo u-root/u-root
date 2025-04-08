@@ -66,10 +66,10 @@ func TestRun(t *testing.T) {
 			}
 			t.Logf("out: %s", out.Bytes())
 			t.Logf("err: %s", err.Bytes())
-			if gotOut := string(out.Bytes()); gotOut != tt.wantOut {
+			if gotOut := out.String(); gotOut != tt.wantOut {
 				t.Errorf("Stdout = %s, want %s", gotOut, tt.wantOut)
 			}
-			if gotErr := string(err.Bytes()); gotErr != tt.wantErr {
+			if gotErr := err.String(); gotErr != tt.wantErr {
 				t.Errorf("Stderr = %s, want %s", gotErr, tt.wantErr)
 			}
 		})
@@ -557,7 +557,7 @@ func TestGoshInvocation(t *testing.T) {
 			} else if err != nil {
 				t.Error(err)
 			}
-			if got := string(b.Bytes()); got != tt.stdout {
+			if got := b.String(); got != tt.stdout {
 				t.Errorf("gosh = %s, want %s", got, tt.stdout)
 			}
 		})
