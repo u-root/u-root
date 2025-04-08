@@ -27,9 +27,8 @@ func netcatVM(t *testing.T, name, script string, net *qnetwork.InterVM) *qemu.VM
 				"github.com/u-root/u-root/cmds/core/grep",
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/kill",
-				// loopback tests disabled due to https://github.com/mvdan/sh/issues/1142
-				// "github.com/u-root/u-root/cmds/core/mkfifo",
-				// "github.com/u-root/u-root/cmds/core/rm",
+				"github.com/u-root/u-root/cmds/core/mkfifo",
+				"github.com/u-root/u-root/cmds/core/rm",
 				"github.com/u-root/u-root/cmds/core/seq",
 				"github.com/u-root/u-root/cmds/core/shasum",
 				"github.com/u-root/u-root/cmds/core/sleep",
@@ -320,6 +319,180 @@ func TestNetcatStream(t *testing.T) {
 		# verify files from unix server
 		grep -q a7ffaef825af40e08daef5a1e0804d851904b5aa stream-2.client.out
 		grep -q a7ffaef825af40e08daef5a1e0804d851904b5aa stream-3.client.out
+	`
+
+	serverVM := netcatVM(t, "netcat_server", serverScript, net)
+	clientVM := netcatVM(t, "netcat_client", clientScript, net)
+
+	if _, err := serverVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("serverVM: %v", err)
+	}
+	if _, err := clientVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("clientVM: %v", err)
+	}
+
+	clientVM.Wait()
+	serverVM.Wait()
+}
+
+func TestNetcatDatagram(t *testing.T) {
+	net := qnetwork.NewInterVM()
+
+	serverScript := `
+		# Disable IPv6 Duplicate Address Discovery. We don't need it on this virtual
+		# network, and it will only prevent netcat from binding our unique local
+		# address (ULA) for several seconds.
+		echo 0 >/proc/sys/net/ipv6/conf/eth0/accept_dad
+
+		ip    addr add 192.168.0.2/24        dev eth0
+		ip -6 addr add fd51:3681:1eb4::2/126 dev eth0
+		ip link set eth0 up
+		ip    route add 0.0.0.0/0 dev eth0
+		ip -6 route add ::/0      dev eth0
+		echo "192.168.0.1       netcat_client" >>/etc/hosts
+		echo "fd51:3681:1eb4::1 netcat_client" >>/etc/hosts
+		echo "192.168.0.2       netcat_server" >>/etc/hosts
+		echo "fd51:3681:1eb4::2 netcat_server" >>/etc/hosts
+
+		# Start four simple "echo servers", and let them run for 30 seconds. (There
+		# is no EOF propagation over datagram sockets, and so these netcat servers
+		# would run forever; we need to kill them manually.)
+		function reply
+		(
+			while read CLIENT_MSG; do
+				echo "back from server: $CLIENT_MSG"
+			done <netcat.$1.out.fifo >netcat.$1.in.fifo
+		)
+		for ((K=0; K<4; K++)); do
+			mkfifo netcat.$K.{in,out}.fifo
+		done
+
+		# gosh bug: when starting a background command in a loop using variable
+		# substitution, gosh does not seem to perform the substitution *first*.
+		# Instead, each command running in the background sees the loop variable
+		# continue changing. O_o ... fixed in upstream gosh commit 87e88a4ca0ba
+		# ("interp: make a full copy of the environment for background subshells",
+		# 2025-03-29)
+		reply 0 &
+		reply 1 &
+		reply 2 &
+		reply 3 &
+
+		# Listen on port 5005.
+		netcat --listen --udp 192.168.0.2       5005 >netcat.0.out.fifo <netcat.0.in.fifo &
+		netcat --listen --udp fd51:3681:1eb4::2 5005 >netcat.1.out.fifo <netcat.1.in.fifo &
+
+		# Listen on port 5006.
+		netcat --listen --udp 192.168.0.2       5006 >netcat.2.out.fifo <netcat.2.in.fifo &
+		netcat --listen --udp fd51:3681:1eb4::2 5006 >netcat.3.out.fifo <netcat.3.in.fifo &
+
+		sleep 30
+		grep -l netcat /proc/*/comm |
+			while read P; do
+				kill $(basename $(dirname $P))
+			done
+		wait
+	`
+	clientScript := `
+		# Disable IPv6 Duplicate Address Discovery. We don't need it on this virtual
+		# network, and it will only prevent netcat from binding our unique local
+		# address (ULA) for several seconds.
+		echo 0 >/proc/sys/net/ipv6/conf/eth0/accept_dad
+
+		ip    addr add 192.168.0.1/24        dev eth0
+		ip -6 addr add fd51:3681:1eb4::1/126 dev eth0
+		ip link set eth0 up
+		ip    route add 0.0.0.0/0 dev eth0
+		ip -6 route add ::/0      dev eth0
+		echo "192.168.0.1       netcat_client" >>/etc/hosts
+		echo "fd51:3681:1eb4::1 netcat_client" >>/etc/hosts
+		echo "192.168.0.2       netcat_server" >>/etc/hosts
+		echo "fd51:3681:1eb4::2 netcat_server" >>/etc/hosts
+
+		# wait a bit for the server to come up
+		sleep 3
+
+		# Produce three lines of output, sleeping 1 second aftrer each, for two
+		# purposes: (a) each netcat client below should read each line separately,
+		# and send it to the corresponding netcat server in a separate datagram, (b)
+		# we should give enough time to the server for responding to each datagram.
+		# (The netcat datagram client does exit upon EOF from stdin.)
+		function hello_single
+		{
+			echo "hello-$1"
+			sleep 1
+		}
+		function hello
+		{
+			hello_single 1
+			hello_single 2
+			hello_single 3
+		}
+		expected=$(
+			echo 'back from server: hello-1'
+			echo 'back from server: hello-2'
+			echo 'back from server: hello-3'
+		)
+
+		# Trigger echoes from the first two servers using fixed source ports. Each
+		# server locks on to the source address:port of the first datagram that it
+		# receives. Because we use fixed source ports, we can use distinct netcat
+		# client processes for sending the datagrams, and still satisfy the servers.
+		(
+			hello_single 1 | netcat --udp --source 192.168.0.1       --source-port 12345 192.168.0.2       5005 >>netcat.0.out
+			hello_single 2 | netcat --udp --source 192.168.0.1       --source-port 12345 192.168.0.2       5005 >>netcat.0.out
+			hello_single 3 | netcat --udp --source 192.168.0.1       --source-port 12345 192.168.0.2       5005 >>netcat.0.out
+		) &
+		(
+			hello_single 1 | netcat --udp --source fd51:3681:1eb4::1 --source-port 12345 fd51:3681:1eb4::2 5005 >>netcat.1.out
+			hello_single 2 | netcat --udp --source fd51:3681:1eb4::1 --source-port 12345 fd51:3681:1eb4::2 5005 >>netcat.1.out
+			hello_single 3 | netcat --udp --source fd51:3681:1eb4::1 --source-port 12345 fd51:3681:1eb4::2 5005 >>netcat.1.out
+		) &
+		wait
+
+		# Trigger echoes from the last two servers using OS-assigned source ports.
+		hello | netcat --udp 192.168.0.2       5006 >netcat.2.out &
+		hello | netcat --udp fd51:3681:1eb4::2 5006 >netcat.3.out &
+		wait
+
+		# Repeat the same tests locally, with unix domain datagram sockets.
+		function reply
+		(
+			while read CLIENT_MSG; do
+				echo "back from server: $CLIENT_MSG"
+			done <netcat.$1.out.fifo >netcat.$1.in.fifo
+		)
+
+		mkfifo netcat.4.{in,out}.fifo
+		mkfifo netcat.5.{in,out}.fifo
+		reply 4 &
+		reply 5 &
+		netcat --listen --udp --unixsock dgram.4.sock >netcat.4.out.fifo <netcat.4.in.fifo &
+		netcat --listen --udp --unixsock dgram.5.sock >netcat.5.out.fifo <netcat.5.in.fifo &
+
+		sleep 1
+
+		hello_single 1 | netcat --udp --unixsock --source source.dgram.sock dgram.4.sock >>netcat.4.out
+		rm source.dgram.sock
+		hello_single 2 | netcat --udp --unixsock --source source.dgram.sock dgram.4.sock >>netcat.4.out
+		rm source.dgram.sock
+		hello_single 3 | netcat --udp --unixsock --source source.dgram.sock dgram.4.sock >>netcat.4.out
+		rm source.dgram.sock
+		hello          | netcat --udp --unixsock                            dgram.5.sock >>netcat.5.out
+
+		# Kill the local servers.
+		grep -l netcat /proc/*/comm |
+			while read P; do
+				kill $(basename $(dirname $P))
+			done
+		wait
+		rm dgram.4.sock dgram.5.sock
+
+		# Verify replies.
+		for ((K=0; K<6; K++)); do
+			got=$(cat netcat.$K.out)
+			test "$expected" = "$got"
+		done
 	`
 
 	serverVM := netcatVM(t, "netcat_server", serverScript, net)
