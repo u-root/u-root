@@ -2,6 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// package brctl provides a Go interface to the Linux bridge control
+// (brctl) command. It allows you to manage Ethernet bridges and their
+// interfaces, including adding and deleting bridges, adding and
+// deleting interfaces, and configuring various bridge parameters.
+//
+// The original C implementation offers the ability to issue the bridge
+// configuration in 2 ways: 1. `ioctl` and 2. `sysfs`. Since all modern
+// systems deploy the `sysfs` we use it to configure the bridges whenever
+// possible. The create and deletion of bridges and their interfaces is
+// achieved via `ioctl`.
 package brctl
 
 import (
