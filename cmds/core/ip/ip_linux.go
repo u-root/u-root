@@ -78,14 +78,7 @@ where  OBJECT := { address |  help | link | monitor | neighbor | neighbour |
 // which just dumps a whole (incorrect) BNF at you when you do anything wrong.
 // To handle errors in too few arguments, we just do a recover block. That lets us blindly
 // reference the arg[] array without having to check the length everywhere.
-
-// RE: the use of globals. The reason is simple: we parse one command, do it, and quit.
-// It doesn't make sense to write this otherwise.
-var (
-// Cursor is out next token pointer.
-// The language of this command doesn't require much more.
-)
-
+//
 // the pattern:
 // at each level parse off arg[0]. If it matches, continue. If it does not, all error with how far you got, what arg you saw,
 // and why it did not work out.
