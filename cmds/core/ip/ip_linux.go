@@ -262,8 +262,6 @@ func (cmd *cmd) run() error {
 		default:
 			log.Fatalf("ip: unexpected panic value: %T(%v)", err, err)
 		}
-
-		return
 	}()
 
 	if cmd.Opts.Batch != "" {

@@ -738,14 +738,12 @@ func (p *linkPrinter) printDefault() {
 
 		if p.withStats && link.attrs.Statistics != nil {
 			stats := link.attrs.Statistics
-			line = fmt.Sprintf("    RX:  bytes  packets errors dropped  missed   mcast")
-			fmt.Fprintln(p.out, line)
+			fmt.Fprintln(p.out, "    RX:  bytes  packets errors dropped  missed   mcast")
 			line = fmt.Sprintf("%14d %7d %6d %7d %7d %7d",
 				stats.RxBytes, stats.RxPackets, stats.RxErrors, stats.RxDropped, stats.RxMissedErrors, stats.Multicast)
 			fmt.Fprintln(p.out, line)
 
-			line = fmt.Sprintf("    TX:  bytes  packets errors dropped carrier collsns")
-			fmt.Fprintln(p.out, line)
+			fmt.Fprintln(p.out, "    TX:  bytes  packets errors dropped carrier collsns")
 			line = fmt.Sprintf("%14d %7d %6d %7d %7d %7d",
 				stats.TxBytes, stats.TxPackets, stats.TxErrors, stats.TxDropped, stats.TxCarrierErrors, stats.Collisions)
 			fmt.Fprintln(p.out, line)
@@ -787,11 +785,11 @@ func (p *linkPrinter) printOneline() {
 
 			if p.withStats && link.attrs.Statistics != nil {
 				stats := link.attrs.Statistics
-				line += fmt.Sprintf("\\    RX:  bytes  packets errors dropped  missed   mcast")
+				line += "\\    RX:  bytes  packets errors dropped  missed   mcast"
 				line += fmt.Sprintf("\\%14d %7d %6d %7d %7d %7d",
 					stats.RxBytes, stats.RxPackets, stats.RxErrors, stats.RxDropped, stats.RxMissedErrors, stats.Multicast)
 
-				line += fmt.Sprintf("\\    TX:  bytes  packets errors dropped carrier collsns")
+				line += "\\    TX:  bytes  packets errors dropped carrier collsns"
 				line += fmt.Sprintf("\\%14d %7d %6d %7d %7d %7d",
 					stats.TxBytes, stats.TxPackets, stats.TxErrors, stats.TxDropped, stats.TxCarrierErrors, stats.Collisions)
 			}
