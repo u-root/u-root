@@ -13,11 +13,11 @@ import (
 	"testing"
 )
 
-func newPortMock(f *os.File) (PortReadWriter, error) {
+func newPortMock(f *os.File) PortReadWriter {
 	memPort := NewMemIOPort(f)
 	return &LinuxPort{
 		ReadWriteCloser: memPort,
-	}, nil
+	}
 }
 
 func TestLinuxPort(t *testing.T) {
@@ -30,7 +30,7 @@ func TestLinuxPort(t *testing.T) {
 	if _, err := f.Write(fdata); err != nil {
 		t.Errorf("TestPortDev failed: %q", err)
 	}
-	port, err := newPortMock(f)
+	port := newPortMock(f)
 	if err != nil {
 		t.Fatalf("TestPortDev failed: %q", err)
 	}

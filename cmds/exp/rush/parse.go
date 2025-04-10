@@ -136,6 +136,9 @@ func tok(b *bufio.Reader) (string, string) {
 }
 
 // get an ARG. It has to work.
+// TODO: rework 'what' parameter, maybe remove it?
+//
+//nolint:unparam
 func getArg(b *bufio.Reader, what string) string {
 	for {
 		nt, s := tok(b)

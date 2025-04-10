@@ -134,6 +134,10 @@ func ataString(a []byte) string {
 }
 
 // unpackIdentify unpacks a wordBlock into an Info.
+// TODO: I am not sure what the status block is passed here and if it is really
+// necessary, this should be audited
+//
+//nolint:unparam
 func unpackIdentify(s statusBlock, d dataBlock, w wordBlock) *Info {
 	var info Info
 	info.NumberSectors = binary.LittleEndian.Uint64(d[200:208])

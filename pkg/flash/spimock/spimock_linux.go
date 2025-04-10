@@ -172,6 +172,8 @@ func rx(transfers []spidev.Transfer, n int, val byte) error {
 
 // address returns an address from the given tx offset in transfers and given
 // addressing mode. The second return value is the 3 or 4 for the addressing mode.
+//
+//nolint:unparam
 func address(transfers []spidev.Transfer, off int, is4BA bool) (int64, int64) {
 	tx0 := func(n int) int64 {
 		b, _ := tx(transfers, n)

@@ -355,7 +355,7 @@ func command(stdin io.Reader, stdout io.WriteCloser, stderr io.Writer, config *n
 		stderr: stderr,
 		config: config,
 		args:   args,
-	}, nil
+	}
 }
 
 // From the prepared config generate a network connection that will be used for the netcat command

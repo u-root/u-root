@@ -519,10 +519,7 @@ func (cmd *cmd) filteredRouteList(route *netlink.Route, filterMask uint64, root,
 	if root == nil && match == nil && exact == nil {
 		matchedRoutes = routes
 	} else {
-		matchedRoutes, err = matchRoutes(routes, root, match, exact)
-		if err != nil {
-			return matchedRoutes, nil, err
-		}
+		matchedRoutes = matchRoutes(routes, root, match, exact)
 	}
 
 	for _, route := range matchedRoutes {
@@ -538,7 +535,7 @@ func (cmd *cmd) filteredRouteList(route *netlink.Route, filterMask uint64, root,
 }
 
 // matchRoutes matches routes against a given prefix.
-func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netlink.Route, error) {
+func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) []netlink.Route {
 	matchedRoutes := []netlink.Route{}
 
 	for _, route := range routes {
@@ -557,7 +554,7 @@ func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netli
 		matchedRoutes = append(matchedRoutes, route)
 	}
 
-	return matchedRoutes, nil
+	return matchedRoutes
 }
 
 func (cmd *cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptions) error {
