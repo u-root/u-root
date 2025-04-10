@@ -368,6 +368,33 @@ func TestEvalParams(t *testing.T) {
 			wantConfig: &chatModeConfig,
 		},
 		{
+			name: "invalid keep-open mode",
+			modify: func(f flags) flags {
+				f.udpSocket = true
+				f.keepOpen = true
+				return f
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid broker mode",
+			modify: func(f flags) flags {
+				f.udpSocket = true
+				f.brokerMode = true
+				return f
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid chat mode",
+			modify: func(f flags) flags {
+				f.udpSocket = true
+				f.chatMode = true
+				return f
+			},
+			wantErr: true,
+		},
+		{
 			name:       "port scan",
 			args:       []string{"testhost", "1234-1345"},
 			modify:     func(f flags) flags { return f },

@@ -13,9 +13,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -54,6 +56,12 @@ func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 		return c.scanPorts()
 	}
 
+	if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP_UNIX &&
+		c.config.ConnectionModeOptions.SourceHost == "" {
+		c.config.ConnectionModeOptions.SourceHost = filepath.Join(os.TempDir(), fmt.Sprintf("netcat.%x.sock", rand.Uint64()))
+		defer os.Remove(c.config.ConnectionModeOptions.SourceHost)
+	}
+
 	conn, err := c.establishConnection(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to establish connection: %w", err)
@@ -65,6 +73,11 @@ func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 	// Return immediately if Zero-I/O mode is enabled and connection is established
 	if c.config.ConnectionModeOptions.ZeroIO {
 		return nil
+	}
+
+	if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP ||
+		c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP_UNIX {
+		return c.transferPackets(output, conn.(net.PacketConn), false)
 	}
 
 	var wg sync.WaitGroup
@@ -128,13 +141,13 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 		switch c.config.ProtocolOptions.SocketType {
 
 		case netcat.SOCKET_TYPE_TCP:
-			dialer.LocalAddr, err = net.ResolveTCPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
+			dialer.LocalAddr, err = net.ResolveTCPAddr(network, net.JoinHostPort(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP:
-			dialer.LocalAddr, err = net.ResolveUDPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
+			dialer.LocalAddr, err = net.ResolveUDPAddr(network, net.JoinHostPort(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
