@@ -77,6 +77,7 @@ func routeTypeToString(routeType int) string {
 	return "unknown"
 }
 
+// TODO: Remove this function once parseRouteAddAppendReplaceDel is fixed.
 func (cmd *cmd) routeAdddefault() error {
 	nh, nhval, err := cmd.parseNextHop()
 	if err != nil {
@@ -101,103 +102,84 @@ func (cmd *cmd) routeAdddefault() error {
 
 // routeAdd performs the 'ip route add' command.
 func (cmd *cmd) routeAdd() error {
-	ns := cmd.nextToken("default", "CIDR")
-	switch ns {
-	case "default":
-		return cmd.routeAdddefault()
-	default:
-		route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
-		if err != nil {
-			return err
-		}
-
-		link, err := netlink.LinkByName(d)
-		if err != nil {
-			return fmt.Errorf("error getting link %s: %w", d, err)
-		}
-
-		route.LinkIndex = link.Attrs().Index
-
-		if err := cmd.handle.RouteAdd(route); err != nil {
-			return fmt.Errorf("error adding route %s -> %s: %w", route.Dst.IP, d, err)
-		}
-		return nil
-	}
-}
-
-// routeAppend performs the 'ip route append' command.
-func (cmd *cmd) routeAppend() error {
-	ns := cmd.nextToken("default", "CIDR")
-	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
 		return err
 	}
 
-	link, err := netlink.LinkByName(d)
+	if err := cmd.handle.RouteAdd(route); err != nil {
+		return fmt.Errorf("adding route for %s: %w", route.Dst.IP, err)
+	}
+	return nil
+}
+
+// routeAppend performs the 'ip route append' command.
+func (cmd *cmd) routeAppend() error {
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
-		return fmt.Errorf("error getting link %s: %w", d, err)
+		return err
 	}
 
-	route.LinkIndex = link.Attrs().Index
-
 	if err := cmd.handle.RouteAppend(route); err != nil {
-		return fmt.Errorf("error appending route %s -> %s: %w", route.Dst.IP, d, err)
+		return fmt.Errorf("appending route for %s: %w", route.Dst.IP, err)
 	}
 	return nil
 }
 
 // routeReplace performs the 'ip route replace' command.
 func (cmd *cmd) routeReplace() error {
-	ns := cmd.nextToken("default", "CIDR")
-	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
 		return err
 	}
 
-	link, err := netlink.LinkByName(d)
-	if err != nil {
-		return fmt.Errorf("error getting link %s: %w", d, err)
-	}
-
-	route.LinkIndex = link.Attrs().Index
-
 	if err := cmd.handle.RouteReplace(route); err != nil {
-		return fmt.Errorf("error appending route %s -> %s: %w", route.Dst.IP, d, err)
+		return fmt.Errorf("appending route for %s: %w", route.Dst.IP, err)
 	}
 	return nil
 }
 
 // routeDel performs the 'ip route del' command.
 func (cmd *cmd) routeDel() error {
-	ns := cmd.nextToken("default", "CIDR")
-	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
 		return err
 	}
 
-	link, err := netlink.LinkByName(d)
-	if err != nil {
-		return fmt.Errorf("error getting link %s: %w", d, err)
-	}
-
-	route.LinkIndex = link.Attrs().Index
-
 	if err := cmd.handle.RouteDel(route); err != nil {
-		return fmt.Errorf("error deleting route %s -> %s: %w", route.Dst.IP, d, err)
+		return fmt.Errorf("deleting route for %s: %w", route.Dst.IP, err)
 	}
 	return nil
 }
 
+// defaultLinkIdxResolver is a function that resolves the link index by name.
+// It is used by all all functions that call parseRouteAddAppendReplaceDel.
+// It is a separate function to allow for testing with a mock implementation.
+func defaultLinkIdxResolver(name string) (int, error) {
+	iface, err := netlink.LinkByName(name)
+	if err != nil {
+		return 0, fmt.Errorf("link %q not found: %w", name, err)
+	}
+	return iface.Attrs().Index, nil
+}
+
 // parseRouteAddAppendReplaceDel parses the arguments to 'ip route add', 'ip route append',
 // 'ip route replace' or 'ip route delete' from the cmdline.
-func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string, error) {
+func (cmd *cmd) parseRouteAddAppendReplaceDel(resolveLinkIdxFn func(string) (int, error)) (*netlink.Route, error) {
 	var err error
+
+	if resolveLinkIdxFn == nil {
+		return nil, fmt.Errorf("internal parser error: resolveLinkFn is not set")
+	}
 
 	route := &netlink.Route{}
 
-	_, route.Dst, err = net.ParseCIDR(ns)
-	if err != nil {
-		return nil, "", err
+	ns := cmd.nextToken("default", "CIDR")
+	if ns != "default" {
+		_, route.Dst, err = net.ParseCIDR(ns)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	d := cmd.nextToken("dev", "device-name")
@@ -205,24 +187,29 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string
 		d = cmd.nextToken("device-name")
 	}
 
+	route.LinkIndex, err = resolveLinkIdxFn(d)
+	if err != nil {
+		return nil, fmt.Errorf("resolve link device %q: %w", d, err)
+	}
+
 	for cmd.tokenRemains() {
 		switch cmd.nextToken("type", "tos", "table", "proto", "scope", "metric", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "congctl", "features", "quickack", "fastopen_no_cookie") {
 		case "tos":
 			route.Tos, err = cmd.parseInt("TOS")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 
 		case "table":
 			route.Table, err = cmd.parseInt("TABLE_ID")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 
 		case "proto":
 			proto, err := cmd.parseInt("RTPROTO")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 
 			route.Protocol = netlink.RouteProtocol(proto)
@@ -230,91 +217,91 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string
 		case "scope":
 			scope, err := cmd.parseUint8("SCOPE")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 			route.Scope = netlink.Scope(scope)
 		case "metric":
 			route.Priority, err = cmd.parseInt("METRIC")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "mtu":
 			route.MTU, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "advmss":
 			route.AdvMSS, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "rtt":
 			route.Rtt, err = cmd.parseInt("TIME")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "rttvar":
 			route.RttVar, err = cmd.parseInt("TIME")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "reordering":
 			route.Reordering, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "window":
 			route.Window, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "cwnd":
 			route.Cwnd, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "initcwnd":
 			route.InitCwnd, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "ssthresh":
 			route.Ssthresh, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "realms":
 			route.Realm, err = cmd.parseInt("REALM")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "src":
 			token := cmd.nextToken("ADDRESS")
 			route.Src = net.ParseIP(token)
 			if route.Src == nil {
-				return nil, "", fmt.Errorf("invalid source address: %v", token)
+				return nil, fmt.Errorf("invalid source address: %v", token)
 			}
 		case "rto_min":
 			route.RtoMin, err = cmd.parseInt("TIME")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "hoplimit":
 			route.Hoplimit, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "initrwnd":
 			route.InitRwnd, err = cmd.parseInt("NUMBER")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "congctl":
 			route.Congctl = cmd.nextToken("NAME")
 		case "features":
 			route.Features, err = cmd.parseInt("FEATURES")
 			if err != nil {
-				return nil, "", err
+				return nil, err
 			}
 		case "quickack":
 			switch cmd.nextToken("0", "1") {
@@ -323,7 +310,7 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string
 			case "0":
 				route.QuickACK = 0
 			default:
-				return nil, "", cmd.usage()
+				return nil, cmd.usage()
 			}
 		case "fastopen_no_cookie":
 			switch cmd.nextToken("0", "1") {
@@ -332,14 +319,14 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string
 			case "0":
 				route.FastOpenNoCookie = 0
 			default:
-				return nil, "", cmd.usage()
+				return nil, cmd.usage()
 			}
 		default:
-			return nil, "", cmd.usage()
+			return nil, cmd.usage()
 		}
 	}
 
-	return route, d, nil
+	return route, nil
 }
 
 // routeShow performs the 'ip route show' command.
