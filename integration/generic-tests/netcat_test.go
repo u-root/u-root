@@ -508,3 +508,113 @@ func TestNetcatDatagram(t *testing.T) {
 	clientVM.Wait()
 	serverVM.Wait()
 }
+
+func TestNetcatExec(t *testing.T) {
+	net := qnetwork.NewInterVM()
+
+	serverScript := `
+		# Disable IPv6 Duplicate Address Discovery. We don't need it on this virtual
+		# network, and it will only prevent netcat from binding our unique local
+		# address (ULA) for several seconds.
+		echo 0 >/proc/sys/net/ipv6/conf/eth0/accept_dad
+
+		ip    addr add 192.168.0.2/24        dev eth0
+		ip -6 addr add fd51:3681:1eb4::2/126 dev eth0
+		ip link set eth0 up
+		ip    route add 0.0.0.0/0 dev eth0
+		ip -6 route add ::/0      dev eth0
+		echo "192.168.0.1       netcat_client" >>/etc/hosts
+		echo "fd51:3681:1eb4::1 netcat_client" >>/etc/hosts
+		echo "192.168.0.2       netcat_server" >>/etc/hosts
+		echo "fd51:3681:1eb4::2 netcat_server" >>/etc/hosts
+
+		# Launch four netcat servers; two for a single reception each, and two for
+		# multiple receptions each. Kill the latter after 30 seconds.
+		netcat -l    192.168.0.2       5005 </dev/null >5005.out   &
+		netcat -l    fd51:3681:1eb4::2 5005 </dev/null >5005-6.out &
+		netcat -l -k 192.168.0.2       5006 </dev/null >5006.out   &
+		netcat -l -k fd51:3681:1eb4::2 5006 </dev/null >5006-6.out &
+
+		sleep 30
+		grep -l netcat /proc/*/comm |
+			while read P; do
+				kill $(basename $(dirname $P))
+			done
+		wait
+
+		# Check outputs.
+		expected_double=$(
+			echo 'hello world'
+			echo 'hello world'
+		)
+
+		test "$(<5005.out)"   = "hello world"
+		test "$(<5005-6.out)" = "hello world"
+		test "$(<5006.out)"   = "$expected_double"
+		test "$(<5006-6.out)" = "$expected_double"
+	`
+	clientScript := `
+		# Disable IPv6 Duplicate Address Discovery. We don't need it on this virtual
+		# network, and it will only prevent netcat from binding our unique local
+		# address (ULA) for several seconds.
+		echo 0 >/proc/sys/net/ipv6/conf/eth0/accept_dad
+
+		ip    addr add 192.168.0.1/24        dev eth0
+		ip -6 addr add fd51:3681:1eb4::1/126 dev eth0
+		ip link set eth0 up
+		ip    route add 0.0.0.0/0 dev eth0
+		ip -6 route add ::/0      dev eth0
+		echo "192.168.0.1       netcat_client" >>/etc/hosts
+		echo "fd51:3681:1eb4::1 netcat_client" >>/etc/hosts
+		echo "192.168.0.2       netcat_server" >>/etc/hosts
+		echo "fd51:3681:1eb4::2 netcat_server" >>/etc/hosts
+
+		# wait a bit for the server to come up
+		sleep 3
+
+		# Single sends.
+		netcat --exec 'echo hello world' 192.168.0.2       5005
+		netcat --exec 'echo hello world' fd51:3681:1eb4::2 5005
+
+		# Repeated sends.
+		netcat --exec 'echo hello world' 192.168.0.2       5006
+		netcat --exec 'echo hello world' 192.168.0.2       5006
+		netcat --exec 'echo hello world' fd51:3681:1eb4::2 5006
+		netcat --exec 'echo hello world' fd51:3681:1eb4::2 5006
+
+		# Repeat the tests locally.
+		netcat -l    -U netcat-1.sock </dev/null >netcat-1.out &
+		netcat -l -k -U netcat-2.sock </dev/null >netcat-2.out &
+		sleep 1
+		netcat --exec 'echo hello world' -U netcat-1.sock
+		netcat --exec 'echo hello world' -U netcat-2.sock
+		netcat --exec 'echo hello world' -U netcat-2.sock
+		sleep 2
+		grep -l netcat /proc/*/comm |
+			while read P; do
+				kill $(basename $(dirname $P))
+			done
+		wait
+		rm netcat-1.sock netcat-2.sock
+
+		expected_double=$(
+			echo 'hello world'
+			echo 'hello world'
+		)
+		test "$(<netcat-1.out)" = "hello world"
+		test "$(<netcat-2.out)" = "$expected_double"
+	`
+
+	serverVM := netcatVM(t, "netcat_server", serverScript, net)
+	clientVM := netcatVM(t, "netcat_client", clientScript, net)
+
+	if _, err := serverVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("serverVM: %v", err)
+	}
+	if _, err := clientVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("clientVM: %v", err)
+	}
+
+	clientVM.Wait()
+	serverVM.Wait()
+}

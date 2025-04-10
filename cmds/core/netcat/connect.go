@@ -83,13 +83,6 @@ func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 	var wg sync.WaitGroup
 
 	if !c.config.Misc.ReceiveOnly {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-			c.writeToRemote(conn)
-		}()
-
 		// prepare command execution on the server
 		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
 			if err := c.config.CommandExec.Execute(conn, c.stderr, c.config.Misc.EOL); err != nil {
@@ -98,6 +91,12 @@ func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 
 			return nil
 		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.writeToRemote(conn)
+		}()
 	}
 
 	// in send-only mode ignore incoming data
