@@ -65,7 +65,7 @@ func ReadVariable(e EFIVar, desc VariableDescriptor) (VariableAttributes, []byte
 	return e.Get(desc)
 }
 
-// SimpleReadVariable is like ReadVariables but takes the combined name and guid string
+// SimpleReadVariable is like ReadVariable but takes the combined name and guid string
 // of the form name-guid and returns a bytes.Reader instead of a []byte.
 func SimpleReadVariable(e EFIVar, v string) (VariableAttributes, *bytes.Reader, error) {
 	vs, g, err := guidParse(v)
@@ -86,8 +86,8 @@ func WriteVariable(e EFIVar, desc VariableDescriptor, attrs VariableAttributes, 
 	return e.Set(desc, attrs, data)
 }
 
-// SimpleWriteVariable is like WriteVariables but takes the combined name and guid string
-// of the form name-guid and returns a bytes.Buffer instead of a []byte.
+// SimpleWriteVariable is like WriteVariable but takes the combined name and guid string
+// of the form name-guid.
 func SimpleWriteVariable(e EFIVar, v string, attrs VariableAttributes, data *bytes.Buffer) error {
 	vs, g, err := guidParse(v)
 	if err != nil {
