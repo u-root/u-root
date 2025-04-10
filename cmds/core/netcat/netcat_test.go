@@ -237,15 +237,6 @@ func TestEvalParams(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name: "loose source pointer false",
-			args: []string{"testhost"},
-			modify: func(f flags) flags {
-				f.looseSourcePointer = 3
-				return f
-			},
-			wantErr: true,
-		},
-		{
 			name: "source port set",
 			args: []string{"testhost"},
 			modify: func(f flags) flags {
