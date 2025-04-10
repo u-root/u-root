@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"testing"
 
@@ -49,35 +50,43 @@ func TestParseRouteAddAppendReplaceDel(t *testing.T) {
 		t.Fatalf("Failed to parse CIDR: %v", err)
 	}
 
+	linkToIdx := map[string]int{
+		"lo":   1,
+		"eth0": 2,
+	}
+
+	stubLinkIdxResolver := func(name string) (int, error) {
+		if idx, ok := linkToIdx[name]; ok {
+			return idx, nil
+		}
+		return 0, fmt.Errorf("test error: link %s not found", name)
+	}
+
 	tests := []struct {
-		name         string
-		args         []string
-		addr         string
-		expected     netlink.Route
-		expectedLink string
-		wantErr      bool
+		name     string
+		args     []string
+		expected netlink.Route
+		wantErr  bool
 	}{
 		{
 			name:    "fail to parse dst",
-			addr:    "abc",
+			args:    []string{"abc"},
 			wantErr: true,
 		},
 		{
-			name:         "Add route with valid arguments",
-			addr:         "192.0.0.2/24",
-			args:         []string{"dev", "lo"},
-			expectedLink: "lo",
+			name: "Add route with valid arguments",
+			args: []string{"192.0.0.2/24", "dev", "lo"},
 			expected: netlink.Route{
-				Dst: dst,
+				LinkIndex: linkToIdx["lo"],
+				Dst:       dst,
 			},
 			wantErr: false,
 		},
 		{
-			name:         "all opts",
-			addr:         "192.0.0.2/24",
-			args:         []string{"dev", "lo", "tos", "1", "table", "1", "proto", "1", "scope", "1", "metric", "1", "mtu", "1", "advmss", "1", "rtt", "1", "rttvar", "1", "reordering", "1", "window", "1", "cwnd", "1", "initcwnd", "1", "ssthresh", "1", "initrwnd", "1", "realms", "1", "src", "127.0.0.2", "rto_min", "1", "hoplimit", "1", "congctl", "a", "features", "1", "quickack", "1", "fastopen_no_cookie", "1"},
-			expectedLink: "lo",
+			name: "all opts",
+			args: []string{"192.0.0.2/24", "dev", "lo", "tos", "1", "table", "1", "proto", "1", "scope", "1", "metric", "1", "mtu", "1", "advmss", "1", "rtt", "1", "rttvar", "1", "reordering", "1", "window", "1", "cwnd", "1", "initcwnd", "1", "ssthresh", "1", "initrwnd", "1", "realms", "1", "src", "127.0.0.2", "rto_min", "1", "hoplimit", "1", "congctl", "a", "features", "1", "quickack", "1", "fastopen_no_cookie", "1"},
 			expected: netlink.Route{
+				LinkIndex:        linkToIdx["lo"],
 				Dst:              dst,
 				Tos:              1,
 				Table:            1,
@@ -105,22 +114,20 @@ func TestParseRouteAddAppendReplaceDel(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "quickack 0",
-			addr:         "192.0.0.2/24",
-			args:         []string{"dev", "lo", "quickack", "0"},
-			expectedLink: "lo",
+			name: "quickack 0",
+			args: []string{"192.0.0.2/24", "dev", "lo", "quickack", "0"},
 			expected: netlink.Route{
-				Dst:      dst,
-				QuickACK: 0,
+				LinkIndex: linkToIdx["lo"],
+				Dst:       dst,
+				QuickACK:  0,
 			},
 			wantErr: false,
 		},
 		{
-			name:         "fastopen_no_cookie 0",
-			addr:         "192.0.0.2/24",
-			args:         []string{"dev", "lo", "fastopen_no_cookie", "0"},
-			expectedLink: "lo",
+			name: "fastopen_no_cookie 0",
+			args: []string{"192.0.0.2/24", "dev", "lo", "fastopen_no_cookie", "0"},
 			expected: netlink.Route{
+				LinkIndex:        linkToIdx["lo"],
 				Dst:              dst,
 				FastOpenNoCookie: 0,
 			},
@@ -128,140 +135,117 @@ func TestParseRouteAddAppendReplaceDel(t *testing.T) {
 		},
 		{
 			name:    "invalid arg",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "abc"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "abc"},
 			wantErr: true,
 		},
 		{
 			name:    "fastopen_no_cookie invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "fastopen_no_cookie", "2"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "fastopen_no_cookie", "2"},
 			wantErr: true,
 		},
 		{
 			name:    "quickack invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "quickack", "2"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "quickack", "2"},
 			wantErr: true,
 		},
 		{
 			name:    "features invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "features", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "features", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "initrwnd invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "initrwnd", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "initrwnd", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "hoplimit invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "hoplimit", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "hoplimit", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "rto_min invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "rto_min", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "rto_min", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "src invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "src", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "src", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "realms invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "realms", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "realms", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "ssthresh invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "ssthresh", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "ssthresh", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "initcwnd invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "initcwnd", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "initcwnd", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "cwnd invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "cwnd", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "cwnd", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "window invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "window", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "window", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "reordering invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "reordering", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "reordering", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "rttvar invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "rttvar", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "rttvar", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "rtt invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "rtt", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "rtt", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "advmss invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "advmss", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "advmss", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "mtu invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "mtu", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "mtu", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "metric invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "metric", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "metric", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "scope invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "scope", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "scope", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "proto invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "proto", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "proto", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "table invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "table", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "table", "ac"},
 			wantErr: true,
 		},
 		{
 			name:    "tos invalid",
-			addr:    "192.0.0.2/24",
-			args:    []string{"dev", "lo", "tos", "ac"},
+			args:    []string{"192.0.0.2/24", "dev", "lo", "tos", "ac"},
 			wantErr: true,
 		},
 	}
@@ -274,16 +258,12 @@ func TestParseRouteAddAppendReplaceDel(t *testing.T) {
 				Args:   tt.args,
 				Out:    &out,
 			}
-			route, link, err := cmd.parseRouteAddAppendReplaceDel(tt.addr)
+			route, err := cmd.parseRouteAddAppendReplaceDel(stubLinkIdxResolver)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseRouteAddAppendReplaceDel() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr {
-				if link != tt.expectedLink {
-					t.Errorf("parseRouteAddAppendReplaceDel() = %v, want %v", link, tt.expectedLink)
-				}
-
 				if diff := cmp.Diff(*route, tt.expected); diff != "" {
 					t.Errorf("parseRouteAddAppendReplaceDel() = %v", diff)
 				}
