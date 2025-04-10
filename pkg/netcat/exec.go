@@ -45,7 +45,7 @@ func ParseCommands(execs ...Exec) (Exec, error) {
 	}
 
 	if cmds > 1 {
-		return Exec{}, fmt.Errorf("only one of --exec, --sh-exec, and --lua-exec is allowed")
+		return Exec{}, fmt.Errorf("cannot do both, --exec and --sh-exec")
 	}
 
 	return Exec{
