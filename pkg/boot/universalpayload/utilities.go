@@ -707,7 +707,7 @@ func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	if smbios3ChildNode, err := constructSMBIOS3Node(); err != nil {
 		// If we failed to retrieve SMBIOS3 information, prompt error
 		// message to indicate error message, and continue construct DTB.
-		fmt.Printf("WARNING: Failed to build SMBIOS3 Node (%v)\n", err)
+		warningMsg = append(warningMsg, err)
 	} else {
 		rsvdNodes = append(rsvdNodes, smbios3ChildNode)
 	}
@@ -729,14 +729,14 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 
 	gmaNode, err := buildGraphicNode()
 	if err != nil {
-		fmt.Printf("WARNING: Failed to build Graphic Device Node (%v)\n", err)
+		warningMsg = append(warningMsg, err)
 	}
 
 	fbNode, err := buildFrameBufferNode()
 	if err != nil {
 		// If we failed to retrieve Frame Buffer configurations, prompt error
 		// message to indicate error message, and continue construct DTB.
-		fmt.Printf("WARNING: Failed to build Frame Buffer Node (%v)\n", err)
+		warningMsg = append(warningMsg, err)
 	}
 
 	serialPortNode := constructSerialPortNode()
