@@ -598,8 +598,12 @@ func Load(name string, dbg func(string, ...interface{})) error {
 	}
 
 	debug("universalpayload: boot trampoline code at:%x\n", entry)
+
+	return nil
+}
+
+func Exec() error {
 	if err := boot.Execute(); err != nil {
-		debug("universalpayload: Failed to execute with error (%v)\n", err)
 		return errors.Join(ErrKexecExecuteFailed, err)
 	}
 

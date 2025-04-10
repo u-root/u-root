@@ -176,6 +176,10 @@ func run(args []string) error {
 
 	if err := universalpayload.Load(opts.kernelpath, linux.Debug); err != nil {
 		log.Printf("Failed to load universalpayload (%v), try legacy kernel..", err)
+	} else {
+		if err := universalpayload.Exec(); err != nil {
+			log.Printf("Failed to execute universalpayload (%v), try legacy kernel..", err)
+		}
 	}
 
 	if opts.cmdline != "" && opts.reuseCmdline {
