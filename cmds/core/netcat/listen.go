@@ -77,7 +77,7 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 	}
 
 	switch c.config.ProtocolOptions.SocketType {
-	case netcat.SOCKET_TYPE_TCP, netcat.SOCKET_TYPE_UNIX:
+	case netcat.SOCKET_TYPE_TCP:
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
 			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
 			if err != nil {
@@ -87,6 +87,9 @@ func (c *cmd) setupListener(network, address string) (net.Listener, error) {
 			return tls.Listen(network, address, tlsConfig)
 
 		}
+		fallthrough
+
+	case netcat.SOCKET_TYPE_UNIX:
 		return net.Listen(network, address)
 
 	case netcat.SOCKET_TYPE_UDP, netcat.SOCKET_TYPE_UDP_UNIX:
