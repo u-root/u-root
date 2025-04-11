@@ -195,7 +195,7 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 	} else {
 		// TLS Support
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
+			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration(false)
 			if err != nil {
 				return nil, err
 			}
