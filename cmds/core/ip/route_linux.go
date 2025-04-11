@@ -59,16 +59,7 @@ var routeTypes = map[string]int{
 	"nat":         unix.RTN_NAT,
 }
 
-func addrScopeStr(scope netlink.Scope) string {
-	switch scope {
-	case netlink.SCOPE_UNIVERSE:
-		return "global"
-	default:
-		return scope.String()
-	}
-}
-
-func routeTypeToString(routeType int) string {
+func routeTypeStr(routeType int) string {
 	for key, value := range routeTypes {
 		if value == routeType {
 			return key
@@ -77,27 +68,33 @@ func routeTypeToString(routeType int) string {
 	return "unknown"
 }
 
-// TODO: Remove this function once parseRouteAddAppendReplaceDel is fixed.
-func (cmd *cmd) routeAdddefault() error {
-	nh, nhval, err := cmd.parseNextHop()
-	if err != nil {
-		return err
+// route is the entry point for 'ip route' command.
+func (cmd *cmd) route() error {
+	if !cmd.tokenRemains() {
+		return cmd.routeShow()
 	}
-	// TODO: NHFLAGS.
-	l, err := cmd.parseDeviceName(true)
-	if err != nil {
-		return err
-	}
-	switch nh {
-	case "via":
-		fmt.Fprintf(cmd.Out, "Add default route %v via %v\n", nhval, l.Attrs().Name)
-		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
-		if err := cmd.handle.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding default route to %v: %w", l.Attrs().Name, err)
-		}
+
+	switch cmd.findPrefix("show", "add", "append", "replace", "del", "list", "flush", "get", "help") {
+	case "add":
+		return cmd.routeAdd()
+	case "append":
+		return cmd.routeAppend()
+	case "replace":
+		return cmd.routeReplace()
+	case "del":
+		return cmd.routeDel()
+	case "show", "list":
+		return cmd.routeShow()
+	case "flush":
+		return cmd.routeFlush()
+	case "get":
+		return cmd.routeGet()
+	case "help":
+		fmt.Fprint(cmd.Out, routeHelp)
 		return nil
+	default:
+		return cmd.usage()
 	}
-	return cmd.usage()
 }
 
 // routeAdd performs the 'ip route add' command.
@@ -152,7 +149,7 @@ func (cmd *cmd) routeDel() error {
 	return nil
 }
 
-// defaultLinkIdxResolver is a function that resolves the link index by name.
+// defaultLinkIdxResolver resolves the link index by name.
 // It is used by all all functions that call parseRouteAddAppendReplaceDel.
 // It is a separate function to allow for testing with a mock implementation.
 func defaultLinkIdxResolver(name string) (int, error) {
@@ -329,6 +326,29 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(resolveLinkIdxFn func(string) (int
 	return route, nil
 }
 
+// TODO: Remove this function once parseRouteAddAppendReplaceDel is fixed.
+func (cmd *cmd) routeAdddefault() error {
+	nh, nhval, err := cmd.parseNextHop()
+	if err != nil {
+		return err
+	}
+	// TODO: NHFLAGS.
+	l, err := cmd.parseDeviceName(true)
+	if err != nil {
+		return err
+	}
+	switch nh {
+	case "via":
+		fmt.Fprintf(cmd.Out, "Add default route %v via %v/n", nhval, l.Attrs().Name)
+		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
+		if err := cmd.handle.RouteAdd(r); err != nil {
+			return fmt.Errorf("error adding default route to %v: %w", l.Attrs().Name, err)
+		}
+		return nil
+	}
+	return cmd.usage()
+}
+
 // routeShow performs the 'ip route show' command.
 func (cmd *cmd) routeShow() error {
 	filter, filterMask, root, match, exact, err := cmd.parseRouteShowListFlush()
@@ -439,61 +459,6 @@ func (cmd *cmd) parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *
 	return &filter, filterMask, root, match, exact, nil
 }
 
-// RouteJSON represents a route entry for JSON output format.
-type RouteJSON struct {
-	Dst      string   `json:"dst"`
-	Dev      string   `json:"dev"`
-	Protocol string   `json:"protocol"`
-	Scope    string   `json:"scope"`
-	PrefSrc  string   `json:"prefsrc"`
-	Flags    []string `json:"flags,omitempty"`
-}
-
-// printRoutes prints the routes in the system.
-func (cmd *cmd) printRoutes(routes []netlink.Route, ifaceNames []string) error {
-	if cmd.Opts.JSON {
-		obj := make([]RouteJSON, 0, len(routes))
-
-		for idx, route := range routes {
-
-			pRoute := RouteJSON{
-				Dst:   route.Dst.String(),
-				Dev:   ifaceNames[idx],
-				Scope: route.Scope.String(),
-			}
-
-			if !cmd.Opts.Numeric {
-				pRoute.Protocol = rtProto[int(route.Protocol)]
-				pRoute.Scope = route.Scope.String()
-			} else {
-				pRoute.Protocol = fmt.Sprintf("%d", route.Protocol)
-				pRoute.Scope = fmt.Sprintf("%d", route.Scope)
-			}
-
-			if route.Src != nil {
-				pRoute.PrefSrc = route.Src.String()
-			}
-
-			if len(route.ListFlags()) != 0 {
-				pRoute.Flags = route.ListFlags()
-			}
-
-			obj = append(obj, pRoute)
-		}
-
-		return printJSON(*cmd, obj)
-	}
-
-	for idx, route := range routes {
-		if route.Dst == nil {
-			cmd.defaultRoute(route, ifaceNames[idx])
-		} else {
-			cmd.printRoute(route, ifaceNames[idx])
-		}
-	}
-	return nil
-}
-
 func (cmd *cmd) filteredRouteList(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) ([]netlink.Route, []string, error) {
 	var matchedRoutes []netlink.Route
 	var ifaceNames []string
@@ -547,21 +512,56 @@ func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netli
 	return matchedRoutes, nil
 }
 
-func (cmd *cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptions) error {
-	routes, err := cmd.handle.RouteGetWithOptions(addr, options)
-	if err != nil {
-		return err
+// RouteJSON represents a route entry for JSON output format.
+type RouteJSON struct {
+	Dst      string   `json:"dst"`
+	Dev      string   `json:"dev"`
+	Protocol string   `json:"protocol"`
+	Scope    string   `json:"scope"`
+	PrefSrc  string   `json:"prefsrc"`
+	Flags    []string `json:"flags,omitempty"`
+}
+
+// printRoutes prints the routes in the system.
+func (cmd *cmd) printRoutes(routes []netlink.Route, ifaceNames []string) error {
+	if cmd.Opts.JSON {
+		obj := make([]RouteJSON, 0, len(routes))
+
+		for idx, route := range routes {
+
+			pRoute := RouteJSON{
+				Dst:   route.Dst.String(),
+				Dev:   ifaceNames[idx],
+				Scope: route.Scope.String(),
+			}
+
+			if !cmd.Opts.Numeric {
+				pRoute.Protocol = rtProto[int(route.Protocol)]
+				pRoute.Scope = route.Scope.String()
+			} else {
+				pRoute.Protocol = fmt.Sprintf("%d", route.Protocol)
+				pRoute.Scope = fmt.Sprintf("%d", route.Scope)
+			}
+
+			if route.Src != nil {
+				pRoute.PrefSrc = route.Src.String()
+			}
+
+			if len(route.ListFlags()) != 0 {
+				pRoute.Flags = route.ListFlags()
+			}
+
+			obj = append(obj, pRoute)
+		}
+
+		return printJSON(*cmd, obj)
 	}
 
-	for _, route := range routes {
-		link, err := cmd.handle.LinkByIndex(route.LinkIndex)
-		if err != nil {
-			return err
-		}
+	for idx, route := range routes {
 		if route.Dst == nil {
-			cmd.defaultRoute(route, link.Attrs().Name)
+			cmd.printDefaultRoute(route, ifaceNames[idx])
 		} else {
-			cmd.printRoute(route, link.Attrs().Name)
+			cmd.printRoute(route, ifaceNames[idx])
 		}
 	}
 	return nil
@@ -601,7 +601,7 @@ const (
 	routeVia6Fmt = "%v%s via %s dev %s proto %s metric %d\n"
 )
 
-func (cmd *cmd) defaultRoute(r netlink.Route, name string) {
+func (cmd *cmd) printDefaultRoute(r netlink.Route, name string) {
 	gw := r.Gw
 
 	var proto string
@@ -617,7 +617,7 @@ func (cmd *cmd) defaultRoute(r netlink.Route, name string) {
 	var detail string
 
 	if cmd.Opts.Details {
-		detail = routeTypeToString(r.Type) + " "
+		detail = routeTypeStr(r.Type) + " "
 	}
 
 	fmt.Fprintf(cmd.Out, defaultFmt, detail, gw, name, proto, metric)
@@ -661,7 +661,7 @@ func (cmd *cmd) printIPv4Route(r netlink.Route, name string) {
 	var detail string
 
 	if cmd.Opts.Details {
-		detail = routeTypeToString(r.Type) + " "
+		detail = routeTypeStr(r.Type) + " "
 	}
 
 	fmt.Fprintf(cmd.Out, routeFmt, detail, dest, name, proto, scope, src, metric)
@@ -683,7 +683,7 @@ func (cmd *cmd) printIPv6Route(r netlink.Route, name string) {
 	var detail string
 
 	if cmd.Opts.Details {
-		detail = routeTypeToString(r.Type) + " "
+		detail = routeTypeStr(r.Type) + " "
 	}
 
 	if r.Gw != nil {
@@ -691,6 +691,15 @@ func (cmd *cmd) printIPv6Route(r netlink.Route, name string) {
 		fmt.Fprintf(cmd.Out, routeVia6Fmt, detail, dest, gw, name, proto, metric)
 	} else {
 		fmt.Fprintf(cmd.Out, route6Fmt, detail, dest, name, proto, metric)
+	}
+}
+
+func addrScopeStr(scope netlink.Scope) string {
+	switch scope {
+	case netlink.SCOPE_UNIVERSE:
+		return "global"
+	default:
+		return scope.String()
 	}
 }
 
@@ -731,31 +740,22 @@ func (cmd *cmd) parseRouteGet() (*netlink.RouteGetOptions, error) {
 	return &opts, nil
 }
 
-// route is the entry point for 'ip route' command.
-func (cmd *cmd) route() error {
-	if !cmd.tokenRemains() {
-		return cmd.routeShow()
+func (cmd *cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptions) error {
+	routes, err := cmd.handle.RouteGetWithOptions(addr, options)
+	if err != nil {
+		return err
 	}
 
-	switch cmd.findPrefix("show", "add", "append", "replace", "del", "list", "flush", "get", "help") {
-	case "add":
-		return cmd.routeAdd()
-	case "append":
-		return cmd.routeAppend()
-	case "replace":
-		return cmd.routeReplace()
-	case "del":
-		return cmd.routeDel()
-	case "show", "list":
-		return cmd.routeShow()
-	case "flush":
-		return cmd.routeFlush()
-	case "get":
-		return cmd.routeGet()
-	case "help":
-		fmt.Fprint(cmd.Out, routeHelp)
-		return nil
-	default:
-		return cmd.usage()
+	for _, route := range routes {
+		link, err := cmd.handle.LinkByIndex(route.LinkIndex)
+		if err != nil {
+			return err
+		}
+		if route.Dst == nil {
+			cmd.printDefaultRoute(route, link.Attrs().Name)
+		} else {
+			cmd.printRoute(route, link.Attrs().Name)
+		}
 	}
+	return nil
 }
