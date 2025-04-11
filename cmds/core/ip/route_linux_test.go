@@ -36,7 +36,7 @@ func TestRouteTypeToString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
-			result := routeTypeToString(tt.routeType)
+			result := routeTypeStr(tt.routeType)
 			if result != tt.expected {
 				t.Errorf("routeTypeToString(%d) = %s; want %s", tt.routeType, result, tt.expected)
 			}
@@ -548,7 +548,7 @@ func TestDefaultRoute(t *testing.T) {
 			var out bytes.Buffer
 			tt.cmd.Out = &out
 
-			tt.cmd.defaultRoute(tt.route, tt.linkName)
+			tt.cmd.printDefaultRoute(tt.route, tt.linkName)
 			if got := out.String(); got != tt.expected {
 				t.Errorf("defaultRoute() = %v, want %v", got, tt.expected)
 			}
