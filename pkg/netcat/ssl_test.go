@@ -5,7 +5,7 @@ package netcat
 
 import (
 	"crypto/tls"
-	"fmt"
+	"errors"
 	"os"
 	"reflect"
 	"testing"
@@ -83,61 +83,597 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 
 	tests := []struct {
 		name      string
+		listen    bool
 		opts      SSLOptions
 		wantErr   bool
 		checkFunc func(*tls.Config) error // Function to perform additional checks on tls.Config
 	}{
 		{
-			name: "Valid certificate and key",
+			name: "(0) client, cert missing, key missing",
 			opts: SSLOptions{
-				Enabled:      true,
-				CertFilePath: certFile.Name(),
-				KeyFilePath:  keyFile.Name(),
+				Enabled: true,
 			},
-
-			wantErr: false,
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
 		},
 		{
-			name: "Missing certificate",
+			name: "(1) client, cert missing, key missing, ALPN set",
+			opts: SSLOptions{
+				Enabled: true,
+				ALPN:    []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(2) client, cert missing, key missing, SNI set",
+			opts: SSLOptions{
+				Enabled: true,
+				SNI:     "example.com",
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(3) client, cert missing, key missing, SNI set, ALPN set",
+			opts: SSLOptions{
+				Enabled: true,
+				SNI:     "example.com",
+				ALPN:    []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(4) client, cert missing, key missing, verify server cert",
 			opts: SSLOptions{
 				Enabled:     true,
-				KeyFilePath: keyFile.Name(),
+				VerifyTrust: true,
 			},
-
-			wantErr: true,
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
 		},
 		{
-			name: "Missing key",
+			name: "(5) client, cert missing, key missing, verify server cert, ALPN set",
 			opts: SSLOptions{
-				Enabled:      true,
-				CertFilePath: certFile.Name(),
+				Enabled:     true,
+				VerifyTrust: true,
+				ALPN:        []string{"http/1.1", "h2"},
 			},
-
-			wantErr: true,
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
 		},
 		{
-			name: "Fail to parse cert / key",
+			name: "(6) client, cert missing, key missing, verify server cert, SNI set",
 			opts: SSLOptions{
-				Enabled:      true,
-				KeyFilePath:  certFile.Name(),
-				CertFilePath: keyFile.Name(),
+				Enabled:     true,
+				VerifyTrust: true,
+				SNI:         "example.com",
 			},
-
-			wantErr: true,
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
 		},
 		{
-			name: "VerifyTrust with wrong CA certificate",
+			name: "(7) client, cert missing, key missing, verify server cert, SNI set, ALPN set",
+			opts: SSLOptions{
+				Enabled:     true,
+				VerifyTrust: true,
+				SNI:         "example.com",
+				ALPN:        []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(8) client, cert missing, key missing, verify server cert, CA/server certs unresolvable",
 			opts: SSLOptions{
 				Enabled:       true,
-				CertFilePath:  certFile.Name(),
-				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: "nonexistent_ca.pem",
+			},
+			wantErr: true,
+		},
+		{
+			name: "(9) client, cert missing, key missing, verify server cert, CA/server certs invalid",
+			opts: SSLOptions{
+				Enabled:       true,
 				VerifyTrust:   true,
 				TrustFilePath: keyFile.Name(),
 			},
 			wantErr: true,
 		},
 		{
-			name: "VerifyTrust with nonexistent CA certificate",
+			name: "(10) client, cert missing, key missing, verify server cert, CA/server certs valid",
+			opts: SSLOptions{
+				Enabled:       true,
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(11) client, cert missing, key missing, verify server cert, CA/server certs valid, ALPN set",
+			opts: SSLOptions{
+				Enabled:       true,
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+				ALPN:          []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(12) client, cert missing, key missing, verify server cert, CA/server certs valid, SNI set",
+			opts: SSLOptions{
+				Enabled:       true,
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+				SNI:           "example.com",
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(13) client, cert missing, key missing, verify server cert, CA/server certs valid, SNI set, ALPN set",
+			opts: SSLOptions{
+				Enabled:       true,
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+				SNI:           "example.com",
+				ALPN:          []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates != nil {
+					return errors.New("Certificates should be clear")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(14) client, cert missing",
+			opts: SSLOptions{
+				Enabled:     true,
+				KeyFilePath: keyFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "(15) client, key missing",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "(16) client, cert invalid",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: keyFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "(17) client, key invalid",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  certFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "(18) client",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(19) client, ALPN set",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				ALPN:         []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(20) client, SNI set",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				SNI:          "example.com",
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(21) client, SNI set, ALPN set",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				SNI:          "example.com",
+				ALPN:         []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if !cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be set")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(22) client, verify server cert",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				VerifyTrust:  true,
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(23) client, verify server cert, ALPN set",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				VerifyTrust:  true,
+				ALPN:         []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(24) client, verify server cert, SNI set",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				VerifyTrust:  true,
+				SNI:          "example.com",
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(25) client, verify server cert, SNI set, ALPN set",
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+				VerifyTrust:  true,
+				SNI:          "example.com",
+				ALPN:         []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(26) client, verify server cert, CA/server certs unresolvable",
 			opts: SSLOptions{
 				Enabled:       true,
 				CertFilePath:  certFile.Name(),
@@ -148,7 +684,18 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "VerifyTrust with valid CA certificate",
+			name: "(27) client, verify server cert, CA/server certs invalid",
+			opts: SSLOptions{
+				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: keyFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "(28) client, verify server cert, CA/server certs valid",
 			opts: SSLOptions{
 				Enabled:       true,
 				CertFilePath:  certFile.Name(),
@@ -156,36 +703,210 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				VerifyTrust:   true,
 				TrustFilePath: certFile.Name(),
 			},
-			wantErr: false,
-		},
-		{
-			name: "SNI is set",
-			opts: SSLOptions{
-				Enabled:      true,
-				CertFilePath: certFile.Name(),
-				KeyFilePath:  keyFile.Name(),
-				SNI:          "example.com",
-			},
-			wantErr: false,
 			checkFunc: func(cfg *tls.Config) error {
-				if cfg.ServerName != "example.com" {
-					return fmt.Errorf("expected ServerName to be 'example.com', got %s", cfg.ServerName)
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
 				}
 				return nil
 			},
 		},
 		{
-			name: "ALPN is set",
+			name: "(29) client, verify server cert, CA/server certs valid, ALPN set",
+			opts: SSLOptions{
+				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+				ALPN:          []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(30) client, verify server cert, CA/server certs valid, SNI set",
+			opts: SSLOptions{
+				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+				SNI:           "example.com",
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name: "(31) client, verify server cert, CA/server certs valid, SNI set, ALPN set",
+			opts: SSLOptions{
+				Enabled:       true,
+				CertFilePath:  certFile.Name(),
+				KeyFilePath:   keyFile.Name(),
+				VerifyTrust:   true,
+				TrustFilePath: certFile.Name(),
+				SNI:           "example.com",
+				ALPN:          []string{"http/1.1", "h2"},
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs == nil {
+					return errors.New("RootCAs should be set")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "example.com" {
+					return errors.New("ServerName should be set to \"example.com\"")
+				}
+				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
+				}
+				return nil
+			},
+		},
+		{
+			name:   "(32) server, cert missing, key missing",
+			listen: true,
+			opts: SSLOptions{
+				Enabled: true,
+			},
+			wantErr: true,
+		},
+		{
+			name:   "(33) server, cert missing",
+			listen: true,
+			opts: SSLOptions{
+				Enabled:     true,
+				KeyFilePath: keyFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name:   "(34) server, key missing",
+			listen: true,
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name:   "(35) server, cert invalid",
+			listen: true,
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: keyFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name:   "(36) server, key invalid",
+			listen: true,
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  certFile.Name(),
+			},
+			wantErr: true,
+		},
+		{
+			name:   "(37) server",
+			listen: true,
+			opts: SSLOptions{
+				Enabled:      true,
+				CertFilePath: certFile.Name(),
+				KeyFilePath:  keyFile.Name(),
+			},
+			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
+				if cfg.NextProtos != nil {
+					return errors.New("NextProtos should be clear")
+				}
+				return nil
+			},
+		},
+		{
+			name:   "(38) server, ALPN set",
+			listen: true,
 			opts: SSLOptions{
 				Enabled:      true,
 				CertFilePath: certFile.Name(),
 				KeyFilePath:  keyFile.Name(),
 				ALPN:         []string{"http/1.1", "h2"},
 			},
-			wantErr: false,
 			checkFunc: func(cfg *tls.Config) error {
+				if cfg.Certificates == nil {
+					return errors.New("Certificates should be set")
+				}
+				if cfg.RootCAs != nil {
+					return errors.New("RootCAs should be clear")
+				}
+				if cfg.InsecureSkipVerify {
+					return errors.New("InsecureSkipVerify should be clear")
+				}
+				if cfg.ServerName != "" {
+					return errors.New("ServerName should be clear")
+				}
 				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
-					return fmt.Errorf("expected NextProtos to be ['http/1.1', 'h2'], got %v", cfg.NextProtos)
+					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
 			},
@@ -193,7 +914,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.opts.GenerateTLSConfiguration()
+			got, err := tt.opts.GenerateTLSConfiguration(tt.listen)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateTLSConfiguration() error = %v, wantErr %v", err, tt.wantErr)
 				return

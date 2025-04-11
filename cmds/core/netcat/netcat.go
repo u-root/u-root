@@ -486,12 +486,13 @@ func run(args []string) error {
 
 	// ssl
 	fs.BoolVar(&f.sslEnabled, "ssl", false, "Connect or listen with SSL")
-	fs.StringVar(&f.sslCertFilePath, "ssl-cert", "", "Specify SSL certificate file (PEM) for listening")
-	fs.StringVar(&f.sslKeyFilePath, "ssl-key", "", "Specify SSL private key file (PEM) for listening")
-	fs.BoolVar(&f.sslVerifyTrust, "ssl-verify", false, "Verify trust and domain name of certificates")
-	fs.StringVar(&f.sslTrustFilePath, "ssl-trustfile", "", "PEM file containing trusted SSL certificates")
+	fs.StringVar(&f.sslCertFilePath, "ssl-cert", "", "Specify SSL certificate file (PEM); required when listening, optional otherwise")
+	fs.StringVar(&f.sslKeyFilePath, "ssl-key", "", "Specify SSL private key file (PEM); required when listening, optional otherwise")
+	fs.BoolVar(&f.sslVerifyTrust, "ssl-verify", false, "Verify server certificate; implies connecting with SSL (only effective when connecting)")
+	fs.StringVar(&f.sslTrustFilePath, "ssl-trustfile", "", "Trust CA and/or server certs from this PEM file rather than the host's root CA set"+
+		" (only effective when verifying server certificate)")
 	fs.StringVar(&f.sslCiphers, "ssl-ciphers", "", "Cipherlist containing SSL ciphers to use")
-	fs.StringVar(&f.sslSNI, "ssl-servername", "", "Request distinct server name (SNI)")
+	fs.StringVar(&f.sslSNI, "ssl-servername", "", "Request distinct server name (SNI); only effective when connecting")
 	fs.StringVar(&f.sslALPN, "ssl-alpn", "", "List of protocols to send via ALPN")
 
 	fs.Usage = func() {
