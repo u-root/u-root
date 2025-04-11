@@ -143,7 +143,7 @@ func TestReadFile(t *testing.T) {
 		t.Fatalf(`ReadFile(tempFile) = %v, not nil`, err)
 	}
 
-	if bytes.Compare(readBytes, []byte(dataStr)) != 0 {
+	if !bytes.Equal(readBytes, []byte(dataStr)) {
 		t.Fatalf(`ReadFile(tempFile) returned %q, not %q`, readBytes, []byte(dataStr))
 	}
 }
