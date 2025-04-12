@@ -263,17 +263,17 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	firstLevelNode, succeed := fdt.NodeByName(FirstLevelNodeName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeImagesNotFound
 	}
 
 	secondLevelNode, succeed := firstLevelNode.NodeByName(SecondLevelNodeName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeTianocoreNotFound
 	}
 
 	loadAddrProp, succeed := secondLevelNode.LookProperty(LoadAddrPropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeLoadNotFound
 	}
 
@@ -283,7 +283,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	entryAddrProp, succeed := secondLevelNode.LookProperty(EntryAddrPropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeEntryStartNotFound
 	}
 
@@ -293,7 +293,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	dataOffsetProp, succeed := secondLevelNode.LookProperty(DataOffsetPropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeDataOffsetNotFound
 	}
 
@@ -303,7 +303,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	dataSizeProp, succeed := secondLevelNode.LookProperty(DataSizePropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeDataSizeNotFound
 	}
 
