@@ -91,5 +91,5 @@ func tcpOptionToString(opt layers.TCPOption) string {
 			binary.BigEndian.Uint32(opt.OptionData[:4]))
 	}
 
-	return fmt.Sprintf("%s", opt.OptionType)
+	return opt.OptionType.String()
 }
