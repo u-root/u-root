@@ -117,7 +117,7 @@ func (o OSEndpoint) Label() string {
 
 // Load - Load data into kexec
 func (o OSEndpoint) Load() error {
-	if o.onlyLabel == true {
+	if o.onlyLabel {
 		subMenu = nil
 		if o.Name == "Other" {
 			// Load all other OS's
@@ -206,9 +206,7 @@ func (o OSEndpoint) IsDefault() bool {
 }
 
 // Edit - Edit something
-func (o OSEndpoint) Edit(func(cmdline string) string) {
-	return
-}
+func (o OSEndpoint) Edit(func(cmdline string) string) {}
 
 // indexOf - Returns index of an element in an array
 func indexOf(element string, data []string) int {
