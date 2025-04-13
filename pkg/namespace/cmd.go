@@ -106,11 +106,7 @@ func (c cmd) Modify(ns Namespace, b *Builder) error {
 		}
 		return ns.Import(host, remotepath, mountpoint, c.flag)
 	case INCLUDE:
-		var nb *Builder
-		nb, err := newBuilder(b.dir, b.open)
-		if err != nil {
-			return err
-		}
+		nb := newBuilder(b.dir, b.open)
 		if err := nb.Parse(args[0]); err != nil {
 			return err
 		}

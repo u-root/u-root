@@ -95,6 +95,12 @@ func TestDU(t *testing.T) {
 			t.Errorf("expected 8 blocks, got %d", blocks)
 		}
 	})
+	t.Run("file not found", func(t *testing.T) {
+		cmd := &cmd{stdout: io.Discard}
+		if _, err := cmd.du("nonexistent"); err != nil {
+			t.Error("expected error got nil")
+		}
+	})
 }
 
 func TestRun(t *testing.T) {

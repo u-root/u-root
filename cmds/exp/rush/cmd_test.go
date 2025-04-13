@@ -36,10 +36,8 @@ func TestCmd(t *testing.T) {
 		// We don't test broken parsing here, just that we get some expected
 		// arrays
 		doArgs(c)
-		if err := commands(c); err != nil {
-			t.Errorf("commands: %v != nil", err)
-			continue
-		}
+		commands(c)
+
 		t.Logf("cmd %q", c)
 		// We don't do pipelines in this test.
 		// We don't usually care about output.

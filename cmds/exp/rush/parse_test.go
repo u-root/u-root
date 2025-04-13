@@ -127,10 +127,8 @@ func TestParsing(t *testing.T) {
 		// We don't test broken parsing here, just that we get some expected
 		// arrays
 		doArgs(c)
-		if err := commands(c); err != nil {
-			t.Errorf("commands: %v != nil", err)
-			continue
-		}
+		commands(c)
+
 		if err := wire(c); err != nil {
 			t.Errorf("wire: %v != nil", err)
 			continue

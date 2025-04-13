@@ -43,6 +43,11 @@ func fakeEBDA(sizeKB int) []byte {
 	return b
 }
 
+// currently the only offset passed to fakeDevMemEBDA is 0x9000
+// hardcoding seems not be a good idea since we may need this function for
+// future testing
+//
+//nolint:unparam
 func fakeDevMemEBDA(offset, sizeKB int) []byte {
 	b := make([]byte, offset)
 	binOffset := uint16(offset >> 4)

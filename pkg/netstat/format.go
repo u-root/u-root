@@ -167,15 +167,16 @@ func convertUID(uid uint32) (string, error) {
 
 func (o *Output) getNameFromInode(inode uint64) (string, error) {
 	var s strings.Builder
+
 	pnote := o.ProgCache[int(inode)]
+
 	if pnote.PID == 0 {
-		s.WriteString("-")
+		_, _ = s.WriteString("-")
 	} else {
-		s.WriteString(strconv.Itoa(pnote.PID))
-		s.WriteString("/")
+		_, _ = s.WriteString(strconv.Itoa(pnote.PID) + "/")
 	}
 
-	s.WriteString(pnote.Name)
+	_, _ = s.WriteString(pnote.Name)
 	return s.String(), nil
 }
 

@@ -465,12 +465,7 @@ func TestCommand(t *testing.T) {
 	}
 
 	// Call the function
-	resultCmd, err := command(stdin, stdout, stderr, config, args)
-	// Verify no error is returned
-	if err != nil {
-		t.Errorf("command() error = %v, wantErr %v", err, nil)
-	}
-
+	resultCmd := command(stdin, stdout, stderr, config, args)
 	// Verify the result
 	if !reflect.DeepEqual(resultCmd, expectedCmd) {
 		t.Errorf("command() = %v, want %v", resultCmd, expectedCmd)
