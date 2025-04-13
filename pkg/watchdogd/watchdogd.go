@@ -313,12 +313,9 @@ func Run(ctx context.Context, opts *DaemonOpts) error {
 		return fmt.Errorf("start petting failed")
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			cleanup()
-		}
-	}
+	<-ctx.Done()
+	cleanup()
+	return nil
 }
 
 // doMonitors is a helper function to run the monitors.
