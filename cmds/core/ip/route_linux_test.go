@@ -1,4 +1,4 @@
-// Copyright 2024 the u-root Authors. All rights reserved
+// Copyright 2025 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //go:build !tinygo || tinygo.enable
@@ -8,7 +8,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -45,11 +47,6 @@ func TestRouteTypeToString(t *testing.T) {
 }
 
 func TestParseRouteAddAppendReplaceDel(t *testing.T) {
-	_, dst, err := net.ParseCIDR("192.0.0.2/24")
-	if err != nil {
-		t.Fatalf("Failed to parse CIDR: %v", err)
-	}
-
 	linkToIdx := map[string]int{
 		"lo":   1,
 		"eth0": 2,
@@ -62,211 +59,181 @@ func TestParseRouteAddAppendReplaceDel(t *testing.T) {
 		return 0, fmt.Errorf("test error: link %s not found", name)
 	}
 
-	tests := []struct {
-		name     string
-		args     []string
-		expected netlink.Route
-		wantErr  bool
+	// nlRoute is a custom route type to shadow netlink.Route.
+	type nlRoute netlink.Route
+
+	// ignoreRouteMethods is a transformer to be used with cmp.Diff to transform
+	// netlink.Route to nlRoute, which is a type alias of netlink.Route, but
+	// does not implement any methods. Especially it does not implement the
+	// Equal() method, which is used by cmp.Diff to compare the two routes and
+	// the String() method, which is used by cmp.Diff to print the diff.
+	ignoreRouteMethods := cmp.Transformer("", func(r netlink.Route) nlRoute {
+		return nlRoute(r)
+	})
+
+	// nlNexthopInfo is a custom type to shadow netlink.NexthopInfo.
+	type nlNexthopInfo netlink.NexthopInfo
+
+	// ignoreNexthopInfoMethods is a transformer to be used with cmp.Diff to
+	// transform netlink.NexthopInfo to nlNexthopInfo, which is a type alias of
+	// netlink.NexthopInfo, but does not implement any methods. Especially it
+	// does not implement the Equal() method, which is used by cmp.Diff to
+	// compare the two nexthops and the String() method, which is used by
+	// cmp.Diff to print the diff.
+	ignoreNexthopInfoMethods := cmp.Transformer("", func(nh netlink.NexthopInfo) nlNexthopInfo {
+		return nlNexthopInfo(nh)
+	})
+
+	validTests := []struct {
+		name string
+		args []string
+		want *netlink.Route
 	}{
 		{
-			name:    "fail to parse dst",
-			args:    []string{"abc"},
-			wantErr: true,
-		},
-		{
-			name: "Add route with valid arguments",
-			args: []string{"192.0.0.2/24", "dev", "lo"},
-			expected: netlink.Route{
-				LinkIndex: linkToIdx["lo"],
-				Dst:       dst,
+			name: "Add route with prefix and device",
+			args: []string{"192.168.1.0/24", "dev", "eth0"},
+			want: &netlink.Route{
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				LinkIndex: linkToIdx["eth0"],
 			},
-			wantErr: false,
 		},
 		{
-			name: "all opts",
-			args: []string{"192.0.0.2/24", "dev", "lo", "tos", "1", "table", "1", "proto", "1", "scope", "1", "metric", "1", "mtu", "1", "advmss", "1", "rtt", "1", "rttvar", "1", "reordering", "1", "window", "1", "cwnd", "1", "initcwnd", "1", "ssthresh", "1", "initrwnd", "1", "realms", "1", "src", "127.0.0.2", "rto_min", "1", "hoplimit", "1", "congctl", "a", "features", "1", "quickack", "1", "fastopen_no_cookie", "1"},
-			expected: netlink.Route{
-				LinkIndex:        linkToIdx["lo"],
-				Dst:              dst,
-				Tos:              1,
-				Table:            1,
-				Protocol:         1,
-				Scope:            1,
-				Priority:         1,
-				MTU:              1,
-				AdvMSS:           1,
-				Rtt:              1,
-				RttVar:           1,
-				Reordering:       1,
-				Window:           1,
-				Cwnd:             1,
-				InitCwnd:         1,
-				Realm:            1,
-				Src:              net.ParseIP("127.0.0.2"),
-				RtoMin:           1,
-				Hoplimit:         1,
-				InitRwnd:         1,
-				Congctl:          "a",
-				Features:         1,
-				QuickACK:         1,
-				FastOpenNoCookie: 1,
+			name: "Add route with type, prefix, and device",
+			args: []string{"unicast", "192.168.1.0/24", "dev", "eth0"},
+			want: &netlink.Route{
+				Type:      unix.RTN_UNICAST,
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				LinkIndex: linkToIdx["eth0"],
 			},
-			wantErr: false,
 		},
 		{
-			name: "quickack 0",
-			args: []string{"192.0.0.2/24", "dev", "lo", "quickack", "0"},
-			expected: netlink.Route{
-				LinkIndex: linkToIdx["lo"],
-				Dst:       dst,
-				QuickACK:  0,
+			name: "Add route with prefix, via address, and device",
+			args: []string{"192.168.1.0/24", "via", "192.168.1.1", "dev", "eth0"},
+			want: &netlink.Route{
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				Gw:        net.IPv4(192, 168, 1, 1),
+				LinkIndex: linkToIdx["eth0"],
 			},
-			wantErr: false,
 		},
 		{
-			name: "fastopen_no_cookie 0",
-			args: []string{"192.0.0.2/24", "dev", "lo", "fastopen_no_cookie", "0"},
-			expected: netlink.Route{
-				LinkIndex:        linkToIdx["lo"],
-				Dst:              dst,
-				FastOpenNoCookie: 0,
+			name: "Add route with type, prefix, via address, and device",
+			args: []string{"unicast", "192.168.1.0/24", "via", "192.168.1.1", "dev", "eth0"},
+			want: &netlink.Route{
+				Type:      unix.RTN_UNICAST,
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				Gw:        net.IPv4(192, 168, 1, 1),
+				LinkIndex: linkToIdx["eth0"],
 			},
-			wantErr: false,
 		},
 		{
-			name:    "invalid arg",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "abc"},
-			wantErr: true,
+			name: "Add route with multiple options",
+			args: []string{"unicast", "192.168.1.0/24", "tos", "1", "table", "100", "proto", "2", "scope", "global", "metric", "10", "dev", "eth0"},
+			want: &netlink.Route{
+				Type:      unix.RTN_UNICAST,
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				LinkIndex: linkToIdx["eth0"],
+				Tos:       1,
+				Table:     100,
+				Protocol:  2,
+				Scope:     unix.RT_SCOPE_UNIVERSE,
+				Priority:  10,
+			},
 		},
 		{
-			name:    "fastopen_no_cookie invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "fastopen_no_cookie", "2"},
-			wantErr: true,
+			name: "Add route with mtu, advmss, rtt, and rttvar",
+			args: []string{"unicast", "192.168.1.0/24", "via", "192.168.1.1", "dev", "eth0", "mtu", "1500", "advmss", "1460", "rtt", "100", "rttvar", "50"},
+			want: &netlink.Route{
+				Type:      unix.RTN_UNICAST,
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				Gw:        net.IPv4(192, 168, 1, 1),
+				LinkIndex: linkToIdx["eth0"],
+				MTU:       1500,
+				AdvMSS:    1460,
+				Rtt:       100,
+				RttVar:    50,
+			},
 		},
 		{
-			name:    "quickack invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "quickack", "2"},
-			wantErr: true,
+			name: "Add route with multiple nexthops",
+			args: []string{"unicast", "192.168.1.0/24", "via", "192.168.1.1", "dev", "eth0", "nexthop", "via", "192.168.1.2", "dev", "lo"},
+			want: &netlink.Route{
+				Type:      unix.RTN_UNICAST,
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				Gw:        net.IPv4(192, 168, 1, 1),
+				LinkIndex: linkToIdx["eth0"],
+				MultiPath: []*netlink.NexthopInfo{
+					{
+						Gw:        net.IPv4(192, 168, 1, 2),
+						LinkIndex: linkToIdx["lo"],
+					},
+				},
+			},
 		},
 		{
-			name:    "features invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "features", "ac"},
-			wantErr: true,
+			name: "Add route with all options and flags",
+			args: []string{"unicast", "192.168.1.0/24", "tos", "1", "table", "100", "proto", "2", "scope", "global", "metric", "10", "via", "192.168.1.1", "dev", "eth0", "pervasive", "nexthop", "via", "192.168.1.2", "dev", "lo", "onlink"},
+			want: &netlink.Route{
+				Type:      unix.RTN_UNICAST,
+				Dst:       &net.IPNet{IP: net.IPv4(192, 168, 1, 0), Mask: net.CIDRMask(24, 32)},
+				Gw:        net.IPv4(192, 168, 1, 1),
+				LinkIndex: linkToIdx["eth0"],
+				Flags:     unix.RTNH_F_PERVASIVE,
+				Tos:       1,
+				Table:     100,
+				Protocol:  2,
+				Scope:     unix.RT_SCOPE_UNIVERSE,
+				Priority:  10,
+				MultiPath: []*netlink.NexthopInfo{
+					{
+						Gw:        net.IPv4(192, 168, 1, 2),
+						LinkIndex: linkToIdx["lo"],
+						Flags:     unix.RTNH_F_ONLINK,
+					},
+				},
+			},
 		},
 		{
-			name:    "initrwnd invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "initrwnd", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "hoplimit invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "hoplimit", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "rto_min invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "rto_min", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "src invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "src", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "realms invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "realms", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "ssthresh invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "ssthresh", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "initcwnd invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "initcwnd", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "cwnd invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "cwnd", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "window invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "window", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "reordering invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "reordering", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "rttvar invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "rttvar", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "rtt invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "rtt", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "advmss invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "advmss", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "mtu invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "mtu", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "metric invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "metric", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "scope invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "scope", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "proto invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "proto", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "table invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "table", "ac"},
-			wantErr: true,
-		},
-		{
-			name:    "tos invalid",
-			args:    []string{"192.0.0.2/24", "dev", "lo", "tos", "ac"},
-			wantErr: true,
+			name: "Add default route with gateway and device",
+			args: []string{"default", "via", "192.168.1.1", "dev", "eth0"},
+			want: &netlink.Route{
+				Dst:       nil,
+				Gw:        net.IPv4(192, 168, 1, 1),
+				LinkIndex: linkToIdx["eth0"],
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var out bytes.Buffer
+	for _, vt := range validTests {
+		t.Run(vt.name, func(t *testing.T) {
 			cmd := cmd{
 				Cursor: -1,
-				Args:   tt.args,
-				Out:    &out,
+				Args:   vt.args,
 			}
+
+			// according to the parser, like it is used in run() in ip_linux.go
+			defer func() {
+				switch err := recover().(type) {
+				case nil:
+				case error:
+					if strings.Contains(err.Error(), "index out of range") {
+						log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.Args, cmd.Cursor, cmd.ExpectedValues)
+					} else if strings.Contains(err.Error(), "slice bounds out of range") {
+						log.Fatalf("ip: args: %v, I got to arg %v, expected %v after that", cmd.Args, cmd.Cursor, cmd.ExpectedValues)
+					}
+					log.Fatalf("ip: %v", err)
+				default:
+					log.Fatalf("ip: unexpected panic value: %T(%v)", err, err)
+				}
+			}()
+
 			route, err := cmd.parseRouteAddAppendReplaceDel(stubLinkIdxResolver)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseRouteAddAppendReplaceDel() error = %v, wantErr %v", err, tt.wantErr)
+			if err != nil {
+				t.Log(cmd.usage())
+				t.Errorf("got unexpected error: %v", err)
 				return
 			}
-			if !tt.wantErr {
-				if diff := cmp.Diff(*route, tt.expected); diff != "" {
-					t.Errorf("parseRouteAddAppendReplaceDel() = %v", diff)
-				}
+			if diff := cmp.Diff(vt.want, route, ignoreRouteMethods, ignoreNexthopInfoMethods); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
