@@ -1,0 +1,24 @@
+# This file was produced with the following command:
+# openssl x509 -req -CAcreateserial -in /tmp/tmp.faIyG5IglC/csr -days 36500 \
+# -extfile - -CA ssl_u_root_netcat_CA.crt -CAkey /tmp/tmp.faIyG5IglC/ca.key \
+# -out ssl_netcat6.crt -CAserial /tmp/tmp.faIyG5IglC/ca.srl <<< \
+# subjectAltName=DNS:netcat6
+-----BEGIN CERTIFICATE-----
+MIIDEzCCAfugAwIBAgIUYy4yetRI27nwa15shrvM2WUMsgwwDQYJKoZIhvcNAQEL
+BQAwGzEZMBcGA1UEAwwQdV9yb290X25ldGNhdF9DQTAgFw0yNTA0MTQxMjE5MTha
+GA8yMTI1MDMyMTEyMTkxOFowEjEQMA4GA1UEAwwHbmV0Y2F0NjCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAL9zTRRYytrb2rYtaM1+FLJs0W90SIKe3GT4
+uYFENRXOBjLyqANPBVYyS3rFR65iyBIf5M37FTyQJFwP4ONy0itgybUhDSzp5sPD
+eiZFVxgyIyVWtZWHZ/w0vidW/IzxnQ0znXfGAUZU/RRwHVxeJm9Vd9B38ZKhZtMT
+dHFTkFbBdSWQyfnSOYMU0J+re7O9i2ansClwX61yPqB3vspXe9gstSJwKD31Al0u
+r9moRY8i9+X6GYcOtCgqqapV6W+yXaUQCf2qhqOcsHj6w9TUkdqVUYHXYRmKzMGw
+z68MWRg2YiiNwghWKWfrDWU2hnPK2UUelFTnEvsa87ZlxWnRAc0CAwEAAaNWMFQw
+EgYDVR0RBAswCYIHbmV0Y2F0NjAdBgNVHQ4EFgQU0rb73rueBm+DRS6dCqSn6kBk
+C7owHwYDVR0jBBgwFoAUf1dDMvN7A+TxcUxvTTNouxA/qsUwDQYJKoZIhvcNAQEL
+BQADggEBAJOAuy4o72IJbanI/ZZsXdqtGPQ6wr+nZX1mYaNNYJPTF7t6Rb5aoO0A
+IIlv6M6Bgy4TdRWTtH4d2+fRAxV1ygECpaR8I0XEpgTPciKuJbbSQuXYyDKDBvFD
+kvEuvqQ82a4zLMjravXkFMABxcitRtRjYrchBuf0uhEACxhCoPtNi/cpu+UOepmC
+u3tm001rcRy9N1wmPBbZCa8ehcg7jAW2l4A+YDlAT6LJT4eqJRP6EN/E4mmr2x9n
+fNKc8nhpwU8DXw1tDxqIR0W4ROA7s4ZyZqexM3k13akC9btPcSg/6GI4tlreRMcC
+yr27WQul2HhDEI9O+KFTlXS03UEx+rI=
+-----END CERTIFICATE-----
