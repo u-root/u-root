@@ -620,3 +620,189 @@ func TestNetcatExec(t *testing.T) {
 	clientVM.Wait()
 	serverVM.Wait()
 }
+
+func TestNetcatSSL(t *testing.T) {
+	net := qnetwork.NewInterVM()
+
+	serverFiles := uimage.WithFiles(
+		"testdata/netcat/ssl_192_168_0_2.crt:ssl_192_168_0_2.crt",
+		"testdata/netcat/ssl_192_168_0_2.key:ssl_192_168_0_2.key",
+		"testdata/netcat/ssl_fd51_3681_1eb4__2.crt:ssl_fd51_3681_1eb4__2.crt",
+		"testdata/netcat/ssl_fd51_3681_1eb4__2.key:ssl_fd51_3681_1eb4__2.key",
+		"testdata/netcat/ssl_netcat4.crt:ssl_netcat4.crt",
+		"testdata/netcat/ssl_netcat4.key:ssl_netcat4.key",
+		"testdata/netcat/ssl_netcat4_192_168_0_2.crt:ssl_netcat4_192_168_0_2.crt",
+		"testdata/netcat/ssl_netcat4_192_168_0_2.key:ssl_netcat4_192_168_0_2.key",
+		"testdata/netcat/ssl_netcat6.crt:ssl_netcat6.crt",
+		"testdata/netcat/ssl_netcat6.key:ssl_netcat6.key",
+		"testdata/netcat/ssl_netcat6_fd51_3681_1eb4__2.crt:ssl_netcat6_fd51_3681_1eb4__2.crt",
+		"testdata/netcat/ssl_netcat6_fd51_3681_1eb4__2.key:ssl_netcat6_fd51_3681_1eb4__2.key",
+	)
+	clientFiles := uimage.WithFiles("testdata/netcat/ssl_u_root_netcat_CA.crt:ssl_u_root_netcat_CA.crt")
+
+	serverScript := `
+		# Disable IPv6 Duplicate Address Discovery. We don't need it on this virtual
+		# network, and it will only prevent netcat from binding our unique local
+		# address (ULA) for several seconds.
+		echo 0 >/proc/sys/net/ipv6/conf/eth0/accept_dad
+
+		ip    addr add 192.168.0.2/24        dev eth0
+		ip -6 addr add fd51:3681:1eb4::2/126 dev eth0
+		ip link set eth0 up
+		ip    route add 0.0.0.0/0 dev eth0
+		ip -6 route add ::/0      dev eth0
+		echo "192.168.0.1       netcat_client" >>/etc/hosts
+		echo "fd51:3681:1eb4::1 netcat_client" >>/etc/hosts
+		echo "192.168.0.2       netcat4"       >>/etc/hosts
+		echo "fd51:3681:1eb4::2 netcat6"       >>/etc/hosts
+
+		seq -w 0 99999 >input.txt
+
+		# The TLS client in modern Go ignores the Subject / Common Name (CN) element
+		# in a server certificate, for authentication purposes. The TLS client
+		# demands a match between the host name in the requested URL and an entry in
+		# the X509v3 Subject Alternative Name (SAN) extension element in the server
+		# certificate. If the URL names a DNS domain name as host name, then the SAN
+		# is required to include a "DNS"-type entry with the same name. If the URL
+		# names an IPv4 or IPv6 address, then the SAN is required to include an
+		# "IP"-type entry with the same address.
+		#
+		# We use three types of certificates (for each of IPv4 and IPv6, separately),
+		# for integration testing:
+		#
+		# (a) CN = IP address literal; SAN includes only IP:<IP address literal>,
+		#
+		# (b) CN = DNS domain name; SAN includes only DNS:<DNS domain name>,
+		#
+		# (c) CN = DNS domain name; SAN includes both IP:<IP address literal> and
+		#     DNS:<DNS domain name>.
+		#
+		# For each certificate type, and for each IP address family, start 2 servers
+		# (i.e., 3*2*2=12 servers). For certificate type (a), we expect one
+		# connection (by IP address) where the client accepts the server's
+		# authentication, and another connection (by DNS domain name) where the
+		# client refuses to authenticate the server. For type (b), we expect the
+		# same, just in reverse. For type (c), we expect both connections (by DNS
+		# name and by IP address) to succeed.
+		#
+		# In addition, start 1 server per IP address family, using certificate type
+		# (c). Clients are expected to refuse authenticating these servers due to not
+		# having access to the CA certificate that issued (signed) the server
+		# certificates.
+		#
+		# In total, the above means 14 servers. First, launch the group of 8 servers
+		# of which every member's client is expected to authenticate the server
+		# successfully.
+		netcat --listen --ssl --ssl-cert ssl_192_168_0_2.crt               --ssl-key ssl_192_168_0_2.key               netcat4 5000 <input.txt | shasum >5000-4.out &
+		netcat --listen --ssl --ssl-cert ssl_fd51_3681_1eb4__2.crt         --ssl-key ssl_fd51_3681_1eb4__2.key         netcat6 5000 <input.txt | shasum >5000-6.out &
+		netcat --listen --ssl --ssl-cert ssl_netcat4.crt                   --ssl-key ssl_netcat4.key                   netcat4 5001 <input.txt | shasum >5001-4.out &
+		netcat --listen --ssl --ssl-cert ssl_netcat6.crt                   --ssl-key ssl_netcat6.key                   netcat6 5001 <input.txt | shasum >5001-6.out &
+		netcat --listen --ssl --ssl-cert ssl_netcat4_192_168_0_2.crt       --ssl-key ssl_netcat4_192_168_0_2.key       netcat4 5002 <input.txt | shasum >5002-4.out &
+		netcat --listen --ssl --ssl-cert ssl_netcat6_fd51_3681_1eb4__2.crt --ssl-key ssl_netcat6_fd51_3681_1eb4__2.key netcat6 5002 <input.txt | shasum >5002-6.out &
+		netcat --listen --ssl --ssl-cert ssl_netcat4_192_168_0_2.crt       --ssl-key ssl_netcat4_192_168_0_2.key       netcat4 5003 <input.txt | shasum >5003-4.out &
+		netcat --listen --ssl --ssl-cert ssl_netcat6_fd51_3681_1eb4__2.crt --ssl-key ssl_netcat6_fd51_3681_1eb4__2.key netcat6 5003 <input.txt | shasum >5003-6.out &
+
+		wait
+		for port in 5000 5001 5002 5003; do
+			for ipv in 4 6; do
+				grep -q a7ffaef825af40e08daef5a1e0804d851904b5aa $port-$ipv.out
+			done
+		done
+
+		# Now start the 6 remaining servers, which are expected to be rejected by
+		# their corresponding clients.
+		netcat --listen --ssl --ssl-cert ssl_192_168_0_2.crt               --ssl-key ssl_192_168_0_2.key               netcat4 5004 </dev/null &
+		netcat --listen --ssl --ssl-cert ssl_fd51_3681_1eb4__2.crt         --ssl-key ssl_fd51_3681_1eb4__2.key         netcat6 5004 </dev/null &
+		netcat --listen --ssl --ssl-cert ssl_netcat4.crt                   --ssl-key ssl_netcat4.key                   netcat4 5005 </dev/null &
+		netcat --listen --ssl --ssl-cert ssl_netcat6.crt                   --ssl-key ssl_netcat6.key                   netcat6 5005 </dev/null &
+
+		netcat --listen --ssl --ssl-cert ssl_netcat4_192_168_0_2.crt       --ssl-key ssl_netcat4_192_168_0_2.key       netcat4 5006 </dev/null &
+		netcat --listen --ssl --ssl-cert ssl_netcat6_fd51_3681_1eb4__2.crt --ssl-key ssl_netcat6_fd51_3681_1eb4__2.key netcat6 5006 </dev/null &
+
+		sleep 20
+		grep -l netcat /proc/*/comm |
+			while read P; do
+				kill $(basename $(dirname $P))
+			done
+		wait
+	`
+	clientScript := `
+		# Disable IPv6 Duplicate Address Discovery. We don't need it on this virtual
+		# network, and it will only prevent netcat from binding our unique local
+		# address (ULA) for several seconds.
+		echo 0 >/proc/sys/net/ipv6/conf/eth0/accept_dad
+
+		ip    addr add 192.168.0.1/24        dev eth0
+		ip -6 addr add fd51:3681:1eb4::1/126 dev eth0
+		ip link set eth0 up
+		ip    route add 0.0.0.0/0 dev eth0
+		ip -6 route add ::/0      dev eth0
+		echo "192.168.0.1       netcat_client" >>/etc/hosts
+		echo "fd51:3681:1eb4::1 netcat_client" >>/etc/hosts
+		echo "192.168.0.2       netcat4"       >>/etc/hosts
+		echo "fd51:3681:1eb4::2 netcat6"       >>/etc/hosts
+
+		seq -w 0 99999 >input.txt
+
+		# wait a bit for the server to come up
+		sleep 4
+
+		# The following client commands authenticate the corresponding servers
+		# successfully.
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt 192.168.0.2       5000 <input.txt | shasum >5000-4.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt fd51:3681:1eb4::2 5000 <input.txt | shasum >5000-6.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt netcat4           5001 <input.txt | shasum >5001-4.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt netcat6           5001 <input.txt | shasum >5001-6.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt 192.168.0.2       5002 <input.txt | shasum >5002-4.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt fd51:3681:1eb4::2 5002 <input.txt | shasum >5002-6.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt netcat4           5003 <input.txt | shasum >5003-4.out
+		netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt netcat6           5003 <input.txt | shasum >5003-6.out
+
+		for port in 5000 5001 5002 5003; do
+			for ipv in 4 6; do
+				grep -q a7ffaef825af40e08daef5a1e0804d851904b5aa $port-$ipv.out
+			done
+		done
+
+		# wait a bit for the second wave of server processes to come up
+		sleep 4
+
+		# The clients below reject the servers due to the certificate SANs not
+		# matching the URLs.
+		#
+		# (gosh bug: redirecting the standard error for a command also redirects
+		# gosh's own "set -x" output (which hides the command from the test log).
+		# Work it around by pushing the command (including the redirection) down to a
+		# different shell (note that the subshell parens "(" and ")" don't help).)
+		! gosh -c 'netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt netcat4           5004 2>5004-4.err' || false
+		! gosh -c 'netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt netcat6 	  5004 2>5004-6.err' || false
+		! gosh -c 'netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt 192.168.0.2	  5005 2>5005-4.err' || false
+		! gosh -c 'netcat --ssl-verify --ssl-trustfile ssl_u_root_netcat_CA.crt fd51:3681:1eb4::2 5005 2>5005-6.err' || false
+
+		# The following clients reject the servers because, while the SANs match the
+		# URLs, the CA behind the server certificates is unknown (included neither
+		# among the system-wide CA certs nor on the command line).
+		! gosh -c 'netcat --ssl-verify netcat4 5006 2>5006-4.err' || false
+		! gosh -c 'netcat --ssl-verify netcat6 5006 2>5006-6.err' || false
+
+		grep -F -q "certificate is not valid for any names, but wanted to match netcat4"                      5004-4.err
+		grep -F -q "certificate is not valid for any names, but wanted to match netcat6"                      5004-6.err
+		grep -F -q "cannot validate certificate for 192.168.0.2 because it doesn't contain any IP SANs"       5005-4.err
+		grep -F -q "cannot validate certificate for fd51:3681:1eb4::2 because it doesn't contain any IP SANs" 5005-6.err
+		grep -F -q "certificate signed by unknown authority"                                                  5006-4.err
+		grep -F -q "certificate signed by unknown authority"                                                  5006-6.err
+	`
+
+	serverVM := netcatVM(t, "netcat_server", serverScript, net, serverFiles)
+	clientVM := netcatVM(t, "netcat_client", clientScript, net, clientFiles)
+
+	if _, err := serverVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("serverVM: %v", err)
+	}
+	if _, err := clientVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
+		t.Errorf("clientVM: %v", err)
+	}
+
+	clientVM.Wait()
+	serverVM.Wait()
+}
