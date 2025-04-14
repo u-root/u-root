@@ -16,27 +16,29 @@ import (
 	"github.com/u-root/mkuimage/uimage"
 )
 
-func netcatVM(t *testing.T, name, script string, net *qnetwork.InterVM) *qemu.VM {
-	return scriptvm.Start(t, name, script,
-		scriptvm.WithUimage(
-			uimage.WithBusyboxCommands(
-				"github.com/u-root/u-root/cmds/core/basename",
-				"github.com/u-root/u-root/cmds/core/cat",
-				"github.com/u-root/u-root/cmds/core/dirname",
-				"github.com/u-root/u-root/cmds/core/echo",
-				"github.com/u-root/u-root/cmds/core/grep",
-				"github.com/u-root/u-root/cmds/core/ip",
-				"github.com/u-root/u-root/cmds/core/kill",
-				"github.com/u-root/u-root/cmds/core/mkfifo",
-				"github.com/u-root/u-root/cmds/core/rm",
-				"github.com/u-root/u-root/cmds/core/seq",
-				"github.com/u-root/u-root/cmds/core/shasum",
-				"github.com/u-root/u-root/cmds/core/sleep",
-			),
-			uimage.WithCoveredCommands(
-				"github.com/u-root/u-root/cmds/core/netcat",
-			),
+func netcatVM(t *testing.T, name, script string, net *qnetwork.InterVM, mods ...uimage.Modifier) *qemu.VM {
+	fixedMods := []uimage.Modifier{
+		uimage.WithBusyboxCommands(
+			"github.com/u-root/u-root/cmds/core/basename",
+			"github.com/u-root/u-root/cmds/core/cat",
+			"github.com/u-root/u-root/cmds/core/dirname",
+			"github.com/u-root/u-root/cmds/core/echo",
+			"github.com/u-root/u-root/cmds/core/grep",
+			"github.com/u-root/u-root/cmds/core/ip",
+			"github.com/u-root/u-root/cmds/core/kill",
+			"github.com/u-root/u-root/cmds/core/mkfifo",
+			"github.com/u-root/u-root/cmds/core/rm",
+			"github.com/u-root/u-root/cmds/core/seq",
+			"github.com/u-root/u-root/cmds/core/shasum",
+			"github.com/u-root/u-root/cmds/core/sleep",
 		),
+		uimage.WithCoveredCommands(
+			"github.com/u-root/u-root/cmds/core/netcat",
+		),
+	}
+
+	return scriptvm.Start(t, name, script,
+		scriptvm.WithUimage(append(fixedMods, mods...)...),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(2*time.Minute),
 			net.NewVM(),
