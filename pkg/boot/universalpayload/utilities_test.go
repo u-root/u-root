@@ -422,3 +422,35 @@ func TestRelocatePE(t *testing.T) {
 		})
 	}
 }
+
+func mockGetSMBIOS3Base() (int64, int64, error) {
+	return 0x100, 0x200, nil
+}
+
+func TestConstructSMBIOS3Node(t *testing.T) {
+	// mock data
+	defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
+	getSMBIOSBase = mockGetSMBIOS3Base
+
+	tests := []struct {
+		name     string
+		wantNode *dt.Node
+		wantErr  error
+	}{
+		{
+			name:     "Invalid SMBIOS3 Header size",
+			wantNode: nil,
+			wantErr:  ErrSMBIOS3NotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			smbiosNode, err := constructSMBIOS3Node()
+			expectErr(t, err, tt.wantErr)
+			if smbiosNode != tt.wantNode {
+				t.Fatalf("Unexpected smbios Node: actual(%v) vs. expected(nil)", smbiosNode)
+			}
+		})
+	}
+}
