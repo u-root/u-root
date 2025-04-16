@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strconv"
 
 	"github.com/florianl/go-tc"
 	"github.com/florianl/go-tc/core"
@@ -89,11 +88,11 @@ func ParseQdiscArgs(stdout io.Writer, args []string) (*Args, error) {
 			ret.handle = &indirectHan
 			i--
 		case "parent":
-			qdiscID, err := strconv.ParseUint(val, 16, 32)
+			parent, err := ParseClassID(val)
 			if err != nil {
-				return ret, err
+				return nil, err
 			}
-			indirect := uint32(qdiscID)
+			indirect := uint32(parent)
 			ret.parent = &indirect
 		case "estimator":
 			return nil, ErrNotImplemented

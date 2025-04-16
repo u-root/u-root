@@ -63,7 +63,7 @@ func TestParseQdiscArgs(t *testing.T) {
 			name: "parent",
 			args: []string{
 				"parent",
-				"FFFF",
+				"1:10",
 			},
 		},
 		{
