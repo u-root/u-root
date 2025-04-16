@@ -88,7 +88,7 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 
 			indirect := uint32(major)
 			ret.handle = &indirect
-		case "preference", "pref", "priority":
+		case "preference", "pref", "priority", "prio":
 			val, err := strconv.ParseUint(val, 10, 32)
 			if err != nil {
 				return nil, err
