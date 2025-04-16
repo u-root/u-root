@@ -1,0 +1,10 @@
+filter parent 1: protocol ip pref 1 u32 chain 0
+filter parent 1: protocol ip pref 1 u32 chain 0 handle 0x80000000
+filter parent 1: protocol ip pref 1 u32 chain 0 handle 0x80000800 flowid 1:10
+  match 05000000/0f000000 at 0
+  match 00060000/00ff0000 at 8
+  match 00000050/0000ffff at 20
+filter parent 1: protocol ip pref 1 u32 chain 0 handle 0x80000801 flowid 1:20
+  match 05000000/0f000000 at 0
+  match 00060000/00ff0000 at 8
+  match 00190000/ffff0000 at 20

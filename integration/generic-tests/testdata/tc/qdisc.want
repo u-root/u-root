@@ -1,0 +1,4 @@
+                eth0	qdisc htb 1: root r2q 10 default 0x30 direct_qlen 1000
+                eth0	qdisc qfq 30: parent 1:30
+                eth0	qdisc qfq 10: parent 1:10
+                eth0	qdisc qfq 20: parent 1:20
