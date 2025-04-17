@@ -219,13 +219,11 @@ func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string
 						}
 					}
 					cmdlines = append(cmdlines, value)
-					break
 				case "$tuned_params":
 					if value, err = getGrubvalue(variables, "tuned_params"); err != nil {
 						return nil, fmt.Errorf("variables map is nil for $tuned_params")
 					}
 					cmdlines = append(cmdlines, value)
-					break
 				default:
 					cmdlines = append(cmdlines, w)
 				}
