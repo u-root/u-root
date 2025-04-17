@@ -453,3 +453,27 @@ func NToHS(netShort uint16) uint16 {
 	// parse netBytes into native value (this is where bytes may be swapped)
 	return binary.BigEndian.Uint16(netBytes)
 }
+
+// HToNL converts a uint32 value from host (native) byte order to network (big
+// endian) byte order.
+func HToNL(hostLong uint32) uint32 {
+	netBytes := make([]byte, 4)
+
+	// serialize hostLong into netBytes (this is where bytes may be swapped)
+	binary.BigEndian.PutUint32(netBytes, hostLong)
+
+	// reinterpret netBytes as a native value
+	return binary.NativeEndian.Uint32(netBytes)
+}
+
+// NToHL converts a uint32 value from network (big endian) byte order to host
+// (native) byte order.
+func NToHL(netLong uint32) uint32 {
+	netBytes := make([]byte, 4)
+
+	// serialize netLong transparently
+	binary.NativeEndian.PutUint32(netBytes, netLong)
+
+	// parse netBytes into native value (this is where bytes may be swapped)
+	return binary.BigEndian.Uint32(netBytes)
+}

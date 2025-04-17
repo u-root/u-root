@@ -192,6 +192,16 @@ func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 				}
 			}
 		}
+		if f.U32 != nil {
+			if f.U32.ClassID != nil {
+				fmt.Fprintf(&s, " flowid %s", RenderClassID(*f.U32.ClassID, false))
+			}
+			if f.U32.Sel != nil {
+				for _, key := range f.U32.Sel.Keys {
+					fmt.Fprintf(&s, "\n  match %08x/%08x at %d", NToHL(key.Val), NToHL(key.Mask), key.Off)
+				}
+			}
+		}
 		fmt.Fprintf(stdout, "%s\n", s.String())
 	}
 
@@ -287,7 +297,7 @@ func supportedFilters(f string) func(io.Writer, []string) (*tc.Object, error) {
 		"flower":   nil,
 		"fw":       nil,
 		"route":    nil,
-		"u32":      nil,
+		"u32":      ParseU32Params,
 		"matchall": nil,
 	}
 
