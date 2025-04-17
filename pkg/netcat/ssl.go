@@ -28,37 +28,42 @@ type SSLOptions struct {
 	ALPN    []string // List of protocols to send via the Application-Layer Protocol Negotiation
 }
 
-func (s *SSLOptions) GenerateTLSConfiguration() (*tls.Config, error) {
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !s.VerifyTrust,
-	}
+func (s *SSLOptions) GenerateTLSConfiguration(listen bool) (*tls.Config, error) {
+	tlsConfig := &tls.Config{}
 
-	if s.CertFilePath == "" || s.KeyFilePath == "" {
-		return nil, fmt.Errorf("both  certificate and key file must be provided")
-	}
-
-	cer, err := tls.LoadX509KeyPair(s.CertFilePath, s.KeyFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("connection: %w", err)
-	}
-
-	tlsConfig.Certificates = []tls.Certificate{cer}
-
-	if s.VerifyTrust {
-		caCert, err := os.ReadFile(s.TrustFilePath)
+	if s.CertFilePath != "" && s.KeyFilePath != "" {
+		cer, err := tls.LoadX509KeyPair(s.CertFilePath, s.KeyFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read CA certificate: %w", err)
+			return nil, fmt.Errorf("loading keypair: %w", err)
 		}
-		caCertPool := x509.NewCertPool()
-		if !caCertPool.AppendCertsFromPEM(caCert) {
-			return nil, fmt.Errorf("cannot append CA certificate to pool")
-		}
-
-		tlsConfig.RootCAs = caCertPool
+		tlsConfig.Certificates = []tls.Certificate{cer}
+	} else if s.CertFilePath != "" || s.KeyFilePath != "" {
+		return nil, fmt.Errorf("either both or neither halves of an SSL keypair must be specified")
+	} else if listen {
+		return nil, fmt.Errorf("listen mode requires an SSL keypair")
 	}
 
-	if s.SNI != "" {
-		tlsConfig.ServerName = s.SNI
+	if !listen {
+		if s.VerifyTrust {
+			if s.TrustFilePath != "" {
+				caCert, err := os.ReadFile(s.TrustFilePath)
+				if err != nil {
+					return nil, fmt.Errorf("cannot read CA certificate: %w", err)
+				}
+				caCertPool := x509.NewCertPool()
+				if !caCertPool.AppendCertsFromPEM(caCert) {
+					return nil, fmt.Errorf("cannot append CA certificate to pool")
+				}
+
+				tlsConfig.RootCAs = caCertPool
+			}
+		} else {
+			tlsConfig.InsecureSkipVerify = true
+		}
+
+		if s.SNI != "" {
+			tlsConfig.ServerName = s.SNI
+		}
 	}
 
 	if s.ALPN != nil {

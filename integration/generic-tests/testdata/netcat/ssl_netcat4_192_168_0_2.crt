@@ -1,0 +1,24 @@
+# This file was produced with the following command:
+# openssl x509 -req -CAcreateserial -in /tmp/tmp.faIyG5IglC/csr -days 36500 \
+# -extfile - -CA ssl_u_root_netcat_CA.crt -CAkey /tmp/tmp.faIyG5IglC/ca.key \
+# -out ssl_netcat4_192_168_0_2.crt -CAserial /tmp/tmp.faIyG5IglC/ca.srl <<< \
+# subjectAltName=DNS:netcat4,IP:192.168.0.2
+-----BEGIN CERTIFICATE-----
+MIIDGTCCAgGgAwIBAgIUYy4yetRI27nwa15shrvM2WUMsgowDQYJKoZIhvcNAQEL
+BQAwGzEZMBcGA1UEAwwQdV9yb290X25ldGNhdF9DQTAgFw0yNTA0MTQxMjE5MTha
+GA8yMTI1MDMyMTEyMTkxOFowEjEQMA4GA1UEAwwHbmV0Y2F0NDCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAIgejALpBduFp2UuqA9YW6liiFvPCcBJg8sJ
+AKL6BCx0lFPXrl9yowUC/5qjyu3HvaeynCMlv3xZ1mxKzbcXFcJDgAnviSY7toBa
+l9JDZSln94BViXajLNvajYFhxvTCgJm4g5iewANtlDxJNrvc+2WUrm95w1OjGL1f
++OnJS4S+ff3uzDt22zaNmZRwxptmmU2tmTWSkwyO2VNHzBZm507nBQzwPgoUJymo
+INpgVQs9uNns66OCdA58+WOUaHo+R1Qte+a9h24p8YAdBkP2N3RE+xrUbEDm5mL6
+TYHD8rpSGm1r5B/u+qK+mQ1H/+7RmCZMKNSOxrkCK6tuQCJwjcUCAwEAAaNcMFow
+GAYDVR0RBBEwD4IHbmV0Y2F0NIcEwKgAAjAdBgNVHQ4EFgQUOMcXmVSurD/hrb0A
+wGut7f5DxlowHwYDVR0jBBgwFoAUf1dDMvN7A+TxcUxvTTNouxA/qsUwDQYJKoZI
+hvcNAQELBQADggEBAJPNdmyj5BXWNGdt2HK+IecByJOibLRxKbvx/cIe2O2j3/NU
+mInWULHLzG3h2j+wON7NiVY7WpckkpO5SeM0uNaEToLr7AN/CmhbhL3Hb0DjYs6m
+TW3HAbPFb53wKanfnBwynks+iNPBb9b3jDeqRM691E1RZIVJItljCTjTNeIf7w7Z
+FYm6QufrnXjAB2qOYoi1XOWzR29ex72j1m51hriDpSxM803Gq3YEwOO+rKsUd0oN
+cvWGE9j9OetlKd5cbRh1MrXTI7tM5ktMxiTTyJB0SGYPPUsI3rA+zL+p4bkTeOx3
+ywLRlg8YYD7EESPcnNZYBRyFbxzRAs9QJWYpokc=
+-----END CERTIFICATE-----
