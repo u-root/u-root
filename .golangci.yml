@@ -6,6 +6,7 @@ linters:
     - staticcheck
     - stylecheck
     - errorlint
+    - gosimple
 
 linters-settings:
   staticcheck:
