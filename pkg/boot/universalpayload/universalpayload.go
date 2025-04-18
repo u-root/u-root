@@ -49,6 +49,7 @@ const (
 var (
 	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
 	getSMBIOSBase           = smbios.SMBIOSBase
+	getSMBIOS3HdrSize       = smbios.SMBIOS3HeaderSize
 	getAcpiRsdpData         = archGetAcpiRsdpData
 )
 
@@ -114,7 +115,8 @@ var (
 )
 
 var (
-	debug = func(string, ...interface{}) {}
+	debug      = func(string, ...interface{}) {}
+	warningMsg []error
 )
 
 // Create GUID HOB with specified GUID string
@@ -551,7 +553,7 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	return (uintptr)(loadAddr + uint64(trampolineOffset)), nil
 }
 
-func Load(name string, dbg func(string, ...interface{})) error {
+func Load(name string, dbg func(string, ...interface{})) (error, error) {
 	if dbg != nil {
 		debug = dbg
 	}
@@ -560,14 +562,14 @@ func Load(name string, dbg func(string, ...interface{})) error {
 	fdtLoad, err := GetFdtInfo(name)
 	if err != nil {
 		debug("universalpayload: Failed to get FDT information (%v)\n", err)
-		return err
+		return err, errors.Join(warningMsg...)
 	}
 
 	debug("universalpayload: Try to fetch file content\n")
 	data, err := os.ReadFile(name)
 	if err != nil {
 		debug("universalpayload: Failed to fetch file content (%v)\n", err)
-		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
+		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err), errors.Join(warningMsg...)
 	}
 
 	// Prepare memory.
@@ -575,7 +577,7 @@ func Load(name string, dbg func(string, ...interface{})) error {
 	ioMem, err := kexecMemoryMapFromIOMem()
 	if err != nil {
 		debug("universalpayload: Failed to get Memory Map from IOMem\n")
-		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err)
+		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(warningMsg...)
 	}
 
 	mem := kexec.Memory{
@@ -587,18 +589,22 @@ func Load(name string, dbg func(string, ...interface{})) error {
 	entry, err := loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
 		debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
-		return err
+		return err, errors.Join(warningMsg...)
 	}
 
 	debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
 	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
 		debug("universalpayload: Failed to load segments with error (%v)\n", err)
-		return errors.Join(ErrKexecLoadFailed, err)
+		return errors.Join(ErrKexecLoadFailed, err), errors.Join(warningMsg...)
 	}
 
 	debug("universalpayload: boot trampoline code at:%x\n", entry)
+
+	return nil, errors.Join(warningMsg...)
+}
+
+func Exec() error {
 	if err := boot.Execute(); err != nil {
-		debug("universalpayload: Failed to execute with error (%v)\n", err)
 		return errors.Join(ErrKexecExecuteFailed, err)
 	}
 
