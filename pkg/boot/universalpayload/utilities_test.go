@@ -10,7 +10,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -453,4 +456,407 @@ func TestConstructSMBIOS3Node(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFetchACPIMCFGDataNegative(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr error
+	}{
+		{
+			name: "MCFG Data length short",
+			data: []byte{
+				'M', 'C', 'F', 'G', // Signature
+				0x3c, 0x00, 0x00, 0x00, // Length
+				0x01,                         // Revision
+				0x00,                         // Checksum (ignored)
+				'u', '-', 'r', 'o', 'o', 't', // OemId
+				'F', 'A', 'K', 'E', 'T', 'a', 'b', 'l', // OemTableId
+				0x01, 0x00, 0x00, 0x00, // OemRevision
+				'U', 'R', 'O', 'T', // CreatorId
+				0x01, 0x00, 0x00, 0x00, // CreatorRevision
+				0x00, 0x00, 0x00, 0x00, // Reserved
+			},
+			wantErr: ErrMcfgDataLenthTooShort,
+		},
+		{
+			name: "MCFG Data magic mismatch",
+			data: []byte{
+				'G', 'F', 'C', 'M', // Signature (Invalid Magic)
+				0x3c, 0x00, 0x00, 0x00, // Length
+				0x01,                         // Revision
+				0x00,                         // Checksum (ignored)
+				'u', '-', 'r', 'o', 'o', 't', // OemId
+				'F', 'A', 'K', 'E', 'T', 'a', 'b', 'l', // OemTableId
+				0x01, 0x00, 0x00, 0x00, // OemRevision
+				'U', 'R', 'O', 'T', // CreatorId
+				0x01, 0x00, 0x00, 0x00, // CreatorRevision
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0xE0, // Base Address low parts
+				0x00, 0x00, 0x00, 0x00, // Base Address high parts
+				0x00, 0x00, // Pci Segment Group Number
+				0x00,                   // Start Bus Number
+				0xFF,                   // End Bus Number
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0x00, // Reserved
+			},
+			wantErr: ErrMcfgSignatureMismatch,
+		},
+		{
+			name: "MCFG Data Base Address Allocation corrupt",
+			data: []byte{
+				'M', 'C', 'F', 'G', // Signature
+				0x3c, 0x00, 0x00, 0x00, // Length
+				0x01,                         // Revision
+				0x00,                         // Checksum (ignored)
+				'u', '-', 'r', 'o', 'o', 't', // OemId
+				'F', 'A', 'K', 'E', 'T', 'a', 'b', 'l', // OemTableId
+				0x01, 0x00, 0x00, 0x00, // OemRevision
+				'U', 'R', 'O', 'T', // CreatorId
+				0x01, 0x00, 0x00, 0x00, // CreatorRevision
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0xE0, // Base Address low parts
+				0x00, 0x00, 0x00, 0x00, // Base Address high parts
+				0x00, 0x00, // Pci Segment Group Number
+				0x00,                   // Start Bus Number
+				0xFF,                   // End Bus Number
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x08, 0xE0, // Base Address low parts -- Invalid
+			},
+			wantErr: ErrMcfgBaseAddrAllocCorrupt,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mcfgData, err := fetchACPIMCFGData(tt.data)
+			expectErr(t, err, tt.wantErr)
+			if mcfgData != nil {
+				t.Fatalf("Invalid return value with %s, expected(nil)", tt.name)
+			}
+		})
+	}
+}
+
+func TestFetchACPIMCFGData(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		mcfgData []MCFGBaseAddressAllocation
+	}{
+		{
+			name: "MCFG Data single segment",
+			data: []byte{
+				'M', 'C', 'F', 'G', // Signature
+				0x3c, 0x00, 0x00, 0x00, // Length
+				0x01,                         // Revision
+				0x00,                         // Checksum (ignored)
+				'u', '-', 'r', 'o', 'o', 't', // OemId
+				'F', 'A', 'K', 'E', 'T', 'a', 'b', 'l', // OemTableId
+				0x01, 0x00, 0x00, 0x00, // OemRevision
+				'U', 'R', 'O', 'T', // CreatorId
+				0x01, 0x00, 0x00, 0x00, // CreatorRevision
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0xE0, // Base Address low parts
+				0x00, 0x00, 0x00, 0x00, // Base Address high parts
+				0x00, 0x00, // Pci Segment Group Number
+				0x00,                   // Start Bus Number
+				0xFF,                   // End Bus Number
+				0x00, 0x00, 0x00, 0x00, // Reserved
+			},
+			mcfgData: []MCFGBaseAddressAllocation{
+				{
+					BaseAddr:  0xE000_0000,
+					PCISegGrp: 0x00,
+					StartBus:  0x00,
+					EndBus:    0xFF,
+					Reserved:  0x00,
+				},
+			},
+		},
+		{
+			name: "MCFG Data multiple segments",
+			data: []byte{
+				'M', 'C', 'F', 'G', // Signature
+				0x3c, 0x00, 0x00, 0x00, // Length
+				0x01,                         // Revision
+				0x00,                         // Checksum (ignored)
+				'u', '-', 'r', 'o', 'o', 't', // OemId
+				'F', 'A', 'K', 'E', 'T', 'a', 'b', 'l', // OemTableId
+				0x01, 0x00, 0x00, 0x00, // OemRevision
+				'U', 'R', 'O', 'T', // CreatorId
+				0x01, 0x00, 0x00, 0x00, // CreatorRevision
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0xE0, // Base Address low parts
+				0x00, 0x00, 0x00, 0x00, // Base Address high parts
+				0x00, 0x00, // Pci Segment Group Number
+				0x00,                   // Start Bus Number
+				0xFF,                   // End Bus Number
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0xE8, // Base Address low parts
+				0x00, 0x00, 0x00, 0x00, // Base Address high parts
+				0x01, 0x00, // Pci Segment Group Number
+				0x10,                   // Start Bus Number
+				0xE0,                   // End Bus Number
+				0x00, 0x00, 0x00, 0x00, // Reserved
+				0x00, 0x00, 0x00, 0xEC, // Base Address low parts
+				0x00, 0x00, 0x00, 0x00, // Base Address high parts
+				0x04, 0x00, // Pci Segment Group Number
+				0x18,                   // Start Bus Number
+				0xC8,                   // End Bus Number
+				0x00, 0x00, 0x00, 0x00, // Reserved
+			},
+			mcfgData: []MCFGBaseAddressAllocation{
+				{
+					BaseAddr:  0xE000_0000,
+					PCISegGrp: 0x00,
+					StartBus:  0x00,
+					EndBus:    0xFF,
+					Reserved:  0x00,
+				},
+				{
+					BaseAddr:  0xE800_0000,
+					PCISegGrp: 0x01,
+					StartBus:  0x10,
+					EndBus:    0xE0,
+					Reserved:  0x00,
+				},
+				{
+					BaseAddr:  0xEC00_0000,
+					PCISegGrp: 0x04,
+					StartBus:  0x18,
+					EndBus:    0xC8,
+					Reserved:  0x00,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if mcfgData, err := fetchACPIMCFGData(tt.data); err != nil {
+				t.Fatalf("Unexpected error:%v", err)
+			} else {
+				if !reflect.DeepEqual(mcfgData, tt.mcfgData) {
+					t.Errorf("got %+v, want %+v", mcfgData, tt.mcfgData)
+				}
+
+			}
+		})
+	}
+}
+
+func TestRetrieveRootBridgeResources(t *testing.T) {
+	mcfgData := []MCFGBaseAddressAllocation{
+		{
+			BaseAddr:  0xB000_0000,
+			PCISegGrp: 0x00,
+			StartBus:  0x10,
+			EndBus:    0xE0,
+			Reserved:  0x00,
+		},
+		{
+			BaseAddr:  0xA000_0000,
+			PCISegGrp: 0x02,
+			StartBus:  0x00,
+			EndBus:    0xFF,
+			Reserved:  0x00,
+		},
+	}
+
+	subFolder := []string{
+		"0000:00:00.0", // Out of Bus range
+		"0000:01:02.0", // Out of Bus range
+		"0000:15:00.0", // Valid Bus
+		"0000:15:02.0", // Valid Bus
+		"0000:c8:00.0", // Valid Bus
+		"0000:e1:00.0", // Out of Bus range
+		"0000:ff:00.0", // Out of Bus range
+		"0002:00:00.0", // Valid Bus
+		"0002:00:02.0", // Valid Bus
+		"0002:1f:00.0", // Valid Bus
+		"0002:af:00.0", // Valid Bus
+		"0002:ff:00.0", // Valid Bus
+	}
+
+	resourceContent := [][]string{
+		{
+			// Content for "0000:00:00.0"
+			"0x00000000DF000000 0x00000000DFFFFFFF 0x0000000000040200\n",
+		},
+		{
+			// Content for "0000:01:02.0"
+			"0x00000000E0000000 0x00000000E0FFFFFF 0x0000000000040200\n",
+		},
+		{
+			// Content for "0000:15:00.0"
+			"0x00000000DE000000 0x00000000DEFFFFFF 0x0000000000040200\n",
+			"0x00000000C0000000 0x00000000CFFFFFFF 0x0000000000040200\n",
+			"0x000000000000F000 0x000000000000FFFF 0x0000000000040101\n",
+			"0x00000000000C0000 0x00000000000DFFFF 0x0000000000000212\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000800000000 0x0000000800EFFFFF 0x0000000000140204\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "0000:15:02.0"
+			"0x00000000B8000000 0x00000000B87FFFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "0000:C8:00.0"
+			"0x00000000B8800000 0x00000000B8FFFFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x000000000000E000 0x000000000000E03F 0x0000000000040101\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000800F00000 0x0000000800FFFFFF 0x0000000000140204\n",
+		},
+		{
+			// Content for "0000:E1:00.0"
+			"0x00000000B0000000 0x00000000B0FFFFFF 0x0000000000040200\n",
+			"0x0000000801000000 0x0000000801FFFFFF 0x0000000000140204\n",
+		},
+		{
+			// Content for "0000:FF:00.0"
+			"0x00000000A8000000 0x00000000AFFFFFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "0002:00:00.0"
+			"0x0000000810000000 0x000000081000FFFF 0x0000000000140204\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "0002:00:02.0"
+			"0x00000000A0070000 0x00000000A07FFFFF 0x0000000000040200\n",
+			"0x000000000000B000 0x000000000000BFFF 0x0000000000040101\n",
+			"0x00000000000C0000 0x00000000000DFFFF 0x0000000000000212\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000810010000 0x000000081001FFFF 0x0000000000140204\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "0002:1f:00.0"
+			"0x00000000A0080000 0x00000000A09FFFFF 0x0000000000046200\n",
+			"0x00000000A0040000 0x00000000A004FFFF 0x0000000000040200\n",
+			"0x00000000A0060000 0x00000000A006FFFF 0x0000000000040200\n",
+			"0x0000000070000000 0x00000008101FFFFF 0x0000000000140204\n",
+		},
+		{
+			// Content for "0002:af:00.0"
+			"0x00000000A0030000 0x00000000A003FFFF 0x0000000000040200\n",
+			"0x0000000810020000 0x00000008103FFFFF 0x0000000000140204\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "0002:ff:00.0"
+			"0x00000000A0000000 0x00000000A000FFFF 0x0000000000040200\n",
+			"0x000000000000A000 0x000000000000A03F 0x0000000000040101\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+	}
+
+	expectedResourceRegion := []ResourceRegions{
+		{
+			MMIO64Base:  0x0000_0008_0000_0000,
+			MMIO64Limit: 0x0000_0000_0100_0000,
+			MMIO32Base:  0x0000_0000_B800_0000,
+			MMIO32Limit: 0x0000_0000_2700_0000,
+			IOPortBase:  0x0000_0000_0000_E000,
+			IOPortLimit: 0x0000_0000_0000_2000,
+		},
+		{
+			MMIO64Base:  0x0000_0008_1000_0000,
+			MMIO64Limit: 0x0000_0000_0040_0000,
+			MMIO32Base:  0x0000_0000_A000_0000,
+			MMIO32Limit: 0x0000_0000_0080_0000,
+			IOPortBase:  0x0000_0000_0000_A000,
+			IOPortLimit: 0x0000_0000_0000_2000,
+		},
+	}
+
+	expectedRbNodes := []*dt.Node{
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x10, 0xE0}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0x0000_0008, 0x0000_0000, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0100_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xB800_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x2700_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0000_E000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_2000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x00, 0xFF}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0x0000_0008, 0x1000_0000, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0040_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA000_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0080_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0000_A000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_2000, // IOPort Limit high and low
+			}),
+		)),
+	}
+
+	// Create temp folder for testing
+	tmpDir := t.TempDir()
+
+	// Write data to files:
+	// /$TMPDIR/$DOMAIN_ID:$BUS_ID:$DEVICE_ID.$FUNCTION_ID/resource
+	for i, folderName := range subFolder {
+		subFolderPath := filepath.Join(tmpDir, folderName)
+		if err := os.MkdirAll(subFolderPath, 0755); err != nil {
+			t.Fatalf("Error creating subfolder %s: %v\n", subFolderPath, err)
+		}
+
+		filePath := filepath.Join(subFolderPath, "resource")
+		data := strings.Join(resourceContent[i], "")
+
+		if err := os.WriteFile(filePath, []byte(data), 0644); err != nil {
+			t.Fatalf("Error writing to file %s: %v\n", filePath, err)
+		}
+	}
+
+	for idx, item := range mcfgData {
+		resource, err := retrieveRootBridgeResources(tmpDir, item)
+		if err != nil {
+			t.Fatalf("Failed to retrieve RB resource %v\n", err)
+		}
+
+		if !reflect.DeepEqual(*resource, expectedResourceRegion[idx]) {
+			t.Errorf("got %+v, want %+v", resource, expectedResourceRegion[idx])
+		}
+
+		rbNode, err := createPCIRootBridgeNode(tmpDir, item)
+		if err != nil {
+			t.Fatalf("Failed to create RB node %v\n", err)
+		}
+
+		if !reflect.DeepEqual(rbNode, expectedRbNodes[idx]) {
+			t.Errorf("\ngot %+v, want %+v", rbNode, expectedRbNodes[idx])
+		}
+	}
+
 }
