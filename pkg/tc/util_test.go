@@ -174,28 +174,28 @@ func TestParseLinkLayer(t *testing.T) {
 func TestParseProto(t *testing.T) {
 	for _, tt := range []struct {
 		proto string
-		exp   uint32
+		exp   uint16
 		err   error
 	}{
 		{
 			proto: "802_3",
-			exp:   0x0001,
+			exp:   trafficctl.HToNS(0x0001),
 		},
 		{
 			proto: "802_2",
-			exp:   0x0004,
+			exp:   trafficctl.HToNS(0x0004),
 		},
 		{
 			proto: "ip",
-			exp:   0x800,
+			exp:   trafficctl.HToNS(0x800),
 		},
 		{
 			proto: "arp",
-			exp:   0x806,
+			exp:   trafficctl.HToNS(0x806),
 		},
 		{
 			proto: "aarp",
-			exp:   0x80F3,
+			exp:   trafficctl.HToNS(0x80F3),
 		},
 		{
 			proto: "invalid",
@@ -217,13 +217,13 @@ func TestParseProto(t *testing.T) {
 	}
 }
 
-func TestGetProtoFromInfo(t *testing.T) {
+func TestRenderProto(t *testing.T) {
 	for _, tt := range []struct {
-		input uint32
+		input uint16
 		proto string
 	}{
 		{
-			input: 8,
+			input: trafficctl.HToNS(0x800),
 			proto: "ip",
 		},
 		{
@@ -233,9 +233,9 @@ func TestGetProtoFromInfo(t *testing.T) {
 	} {
 		t.Run(tt.proto, func(t *testing.T) {
 			tt := tt
-			ret := trafficctl.GetProtoFromInfo(tt.input)
+			ret := trafficctl.RenderProto(tt.input)
 			if ret != tt.proto {
-				t.Errorf("GetProtoFromInfo(%q) = %s, not %s", tt.input, ret, tt.proto)
+				t.Errorf("RenderProto(%q) = %s, not %s", tt.input, ret, tt.proto)
 			}
 		})
 	}

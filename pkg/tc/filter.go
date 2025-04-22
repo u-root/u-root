@@ -35,16 +35,16 @@ type FArgs struct {
 	kind      *string
 	parent    *uint32
 	handle    *uint32
-	protocol  *uint32
-	pref      *uint32
+	protocol  *uint16
+	pref      *uint16
 	filterObj *tc.Object
 }
 
 // ParseFilterArgs takes an io.Writer and []string with arguments from the commandline
 // and returns an *FArgs structure
 func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
-	pref := uint32(0)
-	proto := uint32(0)
+	pref := uint16(0)
+	proto := uint16(0)
 	ret := &FArgs{
 		pref:     &pref,
 		protocol: &proto,
@@ -89,11 +89,11 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 			indirect := uint32(major)
 			ret.handle = &indirect
 		case "preference", "pref", "priority", "prio":
-			val, err := strconv.ParseUint(val, 10, 32)
+			val, err := strconv.ParseUint(val, 10, 16)
 			if err != nil {
 				return nil, err
 			}
-			indirect := uint32(val)
+			indirect := uint16(val)
 			ret.pref = &indirect
 		case "block":
 			return nil, ErrNotImplemented
@@ -175,7 +175,7 @@ func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 		var s strings.Builder
 		fmt.Fprintf(&s, "filter parent %d: protocol: %s pref %d %s chain %d ",
 			f.Parent>>16,
-			GetProtoFromInfo(f.Info),
+			RenderProto(GetProtoFromInfo(f.Info)),
 			GetPrefFromInfo(f.Info),
 			f.Kind,
 			*f.Chain)
@@ -208,7 +208,7 @@ func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
 	q := fArgs.filterObj
 	q.Ifindex = uint32(iface.Index)
 	q.Parent = *fArgs.parent
-	q.Msg.Info = core.BuildHandle(*fArgs.pref<<16, *fArgs.protocol)
+	q.Msg.Info = GetInfoFromPrefAndProto(*fArgs.pref, *fArgs.protocol)
 
 	fmt.Printf("%+v\n", q)
 
