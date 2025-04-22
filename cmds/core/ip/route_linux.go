@@ -89,7 +89,7 @@ func (cmd *cmd) routeAdddefault() error {
 	}
 	switch nh {
 	case "via":
-		fmt.Fprintf(cmd.Out, "Add default route %v via %v", nhval, l.Attrs().Name)
+		fmt.Fprintf(cmd.Out, "Add default route %v via %v\n", nhval, l.Attrs().Name)
 		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
 		if err := cmd.handle.RouteAdd(r); err != nil {
 			return fmt.Errorf("error adding default route to %v: %w", l.Attrs().Name, err)
