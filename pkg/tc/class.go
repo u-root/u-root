@@ -99,7 +99,12 @@ func (t *Trafficctl) ShowClass(stdout io.Writer, args *Args) error {
 
 		for _, class := range classes {
 			if class.Ifindex == uint32(iface.Index) {
-				fmt.Fprintf(stdout, "%20s\t%s\n", iface.Name, class.Kind)
+				fmt.Fprintf(stdout, "%20s\tclass %s %s %s",
+					iface.Name, class.Kind,
+					RenderClassID(class.Handle, false),
+					RenderClassID(class.Parent, true),
+				)
+				fmt.Fprintf(stdout, "\n")
 			}
 		}
 	}
