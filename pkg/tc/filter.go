@@ -173,7 +173,7 @@ func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 
 	for _, f := range filters {
 		var s strings.Builder
-		fmt.Fprintf(&s, "filter parent %d: protocol: %s pref %d %s chain %d ",
+		fmt.Fprintf(&s, "filter parent %d: protocol %s pref %d %s chain %d",
 			f.Parent>>16,
 			RenderProto(GetProtoFromInfo(f.Info)),
 			GetPrefFromInfo(f.Info),
@@ -181,13 +181,13 @@ func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 			*f.Chain)
 
 		if f.Handle != 0 {
-			fmt.Fprintf(&s, "handle 0x%x\n", f.Handle)
+			fmt.Fprintf(&s, " handle 0x%x", f.Handle)
 		}
 
 		if f.Basic != nil {
 			if f.Basic.Actions != nil {
 				for _, act := range *f.Basic.Actions {
-					fmt.Fprintf(&s, "\t\taction order %d: %s action %d\n",
+					fmt.Fprintf(&s, "\n\t\taction order %d: %s action %d",
 						act.Index, act.Kind, act.Gact.Parms.Action)
 				}
 			}
