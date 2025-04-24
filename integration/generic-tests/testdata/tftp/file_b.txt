@@ -1,0 +1,1 @@
+This is test file B for TFTP multi-file tests
