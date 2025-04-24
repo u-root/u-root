@@ -155,7 +155,12 @@ func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
 		}
 
 		if args.dev == "" || args.dev == iface.Name {
-			fmt.Fprintf(stdout, "%20s\t%s\n", iface.Name, qdisc.Kind)
+			fmt.Fprintf(stdout, "%20s\tqdisc %s %s %s",
+				iface.Name, qdisc.Kind,
+				RenderClassID(qdisc.Handle, false),
+				RenderClassID(qdisc.Parent, true),
+			)
+			fmt.Fprintf(stdout, "\n")
 		}
 	}
 	return nil
