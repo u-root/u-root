@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"strconv"
@@ -298,10 +299,10 @@ func CalcXMitTime(rate uint64, size uint32) (uint32, error) {
 		return 0, err
 	}
 
-	return uint32(ret) * tickInUsec, nil
+	return uint32(math.Ceil(ret * tickInUsec)), nil
 }
 
-func getTickInUsec() (uint32, error) {
+func getTickInUsec() (float64, error) {
 	psched, err := os.Open("/proc/net/psched")
 	if err != nil {
 		return 0, err
@@ -320,9 +321,9 @@ func getTickInUsec() (uint32, error) {
 		t2us = us2t
 	}
 
-	clockFactor := int64(clockRes / TimeUnitsPerSecs)
+	clockFactor := float64(clockRes) / float64(TimeUnitsPerSecs)
 
-	return uint32(float64(t2us)/float64(us2t)) * uint32(clockFactor), nil
+	return float64(t2us) / float64(us2t) * clockFactor, nil
 }
 
 func getClockfactor() (uint32, error) {
