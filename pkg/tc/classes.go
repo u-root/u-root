@@ -379,7 +379,5 @@ func ParseHTBClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 	ret.Htb.Rate64 = &rate64
 	ret.Htb.Ceil64 = &ceil64
 
-	fmt.Printf("%v\n", opt.Buffer)
-
 	return ret, nil
 }
