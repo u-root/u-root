@@ -210,8 +210,6 @@ func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
 	q.Parent = *fArgs.parent
 	q.Msg.Info = GetInfoFromPrefAndProto(*fArgs.pref, *fArgs.protocol)
 
-	fmt.Printf("%+v\n", q)
-
 	if err := t.Tc.Filter().Add(q); err != nil {
 		return err
 	}
