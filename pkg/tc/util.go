@@ -151,6 +151,28 @@ var (
 	ErrUnknownLinkLayer = errors.New("unknown linklayer value provided")
 )
 
+// RenderClassID is the inverse of ParseClassID.
+func RenderClassID(classID uint32, printParent bool) string {
+	if classID == tc.HandleRoot {
+		return "root"
+	}
+
+	var parent string
+	if printParent {
+		parent = "parent "
+	} else {
+		parent = ""
+	}
+
+	major := classID >> 16
+	minor := classID & 0xFFFF
+	if minor == 0 {
+		return fmt.Sprintf("%s%x:", parent, major)
+	}
+
+	return fmt.Sprintf("%s%x:%x", parent, major, minor)
+}
+
 // ParseLinkLayer takes a string of LinkLayer name and returns the
 // equivalent uint8 representation.
 func ParseLinkLayer(l string) (uint8, error) {
