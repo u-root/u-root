@@ -92,9 +92,9 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 		return true, nil
 	case "h", "help", "?":
 		fmt.Fprintf(stdout, "%s", printHelp())
-	case "ascii":
+	case "ascii", "netascii":
 		clientcfg.Mode, _ = ValidateMode("ascii")
-	case "binary":
+	case "binary", "octet":
 		clientcfg.Mode, _ = ValidateMode("binary")
 	case "mode":
 		if len(input) > 1 {
@@ -219,12 +219,12 @@ var ErrInvalidTransferMode = errors.New("invalid transfer mode")
 func ValidateMode(mode string) (tftp.TransferMode, error) {
 	var ret tftp.TransferMode
 	switch tftp.TransferMode(mode) {
-	case "ascii":
+	case "ascii", "netascii":
 		ret = tftp.ModeNetASCII
-	case "binary":
+	case "binary", "octet":
 		ret = tftp.ModeOctet
 	default:
-		return ret, ErrInvalidTransferMode
+		return ret, fmt.Errorf("%w: %s", ErrInvalidTransferMode, mode)
 	}
 	return ret, nil
 }
