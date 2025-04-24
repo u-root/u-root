@@ -104,6 +104,25 @@ func (t *Trafficctl) ShowClass(stdout io.Writer, args *Args) error {
 					RenderClassID(class.Handle, false),
 					RenderClassID(class.Parent, true),
 				)
+				if class.Kind == "htb" && class.Htb.Parms != nil {
+					parms := class.Htb.Parms
+
+					burst, err := CalcXMitSize(uint64(parms.Rate.Rate), parms.Buffer)
+					if err != nil {
+						return err
+					}
+
+					cburst, err := CalcXMitSize(uint64(parms.Ceil.Rate), parms.Cbuffer)
+					if err != nil {
+						return err
+					}
+
+					fmt.Fprintf(stdout,
+						" prio %d rate %db ceil %db burst %db cburst %db",
+						parms.Prio, parms.Rate.Rate, parms.Ceil.Rate, burst, cburst,
+					)
+
+				}
 				fmt.Fprintf(stdout, "\n")
 			}
 		}

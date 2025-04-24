@@ -302,6 +302,16 @@ func CalcXMitTime(rate uint64, size uint32) (uint32, error) {
 	return uint32(math.Ceil(ret * tickInUsec)), nil
 }
 
+// CalcXMitSize is the inverse of CalcXMitTime
+func CalcXMitSize(rate uint64, ticks uint32) (uint32, error) {
+	tickInUsec, err := getTickInUsec()
+	if err != nil {
+		return 0, err
+	}
+	usecs := float64(ticks) / tickInUsec
+	return uint32(float64(rate) * usecs / TimeUnitsPerSecs), nil
+}
+
 func getTickInUsec() (float64, error) {
 	psched, err := os.Open("/proc/net/psched")
 	if err != nil {
