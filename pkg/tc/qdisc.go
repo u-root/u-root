@@ -160,6 +160,15 @@ func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
 				RenderClassID(qdisc.Handle, false),
 				RenderClassID(qdisc.Parent, true),
 			)
+			if qdisc.Kind == "htb" {
+				htb := qdisc.Htb
+				if htb.Init != nil {
+					fmt.Fprintf(stdout, " r2q %d default 0x%x", htb.Init.Rate2Quantum, htb.Init.Defcls)
+				}
+				if htb.DirectQlen != nil {
+					fmt.Fprintf(stdout, " direct_qlen %d", *htb.DirectQlen)
+				}
+			}
 			fmt.Fprintf(stdout, "\n")
 		}
 	}
