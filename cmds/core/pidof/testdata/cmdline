@@ -1,0 +1,1 @@
+BOOT_IMAGE=/boot/vmlinuz-6.1.0-31-cloud-arm64 root=PARTUUID=9a3266b2-6a70-485e-99a7-1a2d3801ce8f ro

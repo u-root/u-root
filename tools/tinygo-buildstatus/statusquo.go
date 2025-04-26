@@ -169,6 +169,7 @@ var (
 		"page",
 		"partprobe",
 		"pflask",
+		"pidof",
 		"pox",
 		// "pxeserver",
 		"readelf",
