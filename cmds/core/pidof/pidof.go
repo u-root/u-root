@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux
+
 package main
 
 import (
@@ -10,43 +12,28 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 )
 
-const proc = "/proc"
-
 var errNotFound = errors.New("pid name not found")
 
-func run(stdout io.Writer, proc string, args []string) error {
-	entries, err := os.ReadDir(proc)
+type proc struct {
+	comm string
+	pid  string
+}
+
+func run(stdout io.Writer, procPath string, args []string) error {
+	procs, err := collect(procPath)
 	if err != nil {
 		return err
 	}
 
 	var pids []string
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
 
-		name := entry.Name()
-		_, err := strconv.Atoi(name)
-		if err != nil {
-			continue
-		}
-
-		b, err := os.ReadFile(filepath.Join(proc, name, "comm"))
-		if err != nil {
-			continue
-		}
-
-		comm := strings.TrimSuffix(string(b), "\n")
-
+	for _, proc := range procs {
 		for _, arg := range args {
-			if comm == arg {
-				pids = append(pids, name)
+			if proc.comm == arg {
+				pids = append(pids, proc.pid)
 			}
 		}
 	}
@@ -60,7 +47,7 @@ func run(stdout io.Writer, proc string, args []string) error {
 }
 
 func main() {
-	if err := run(os.Stdout, proc, os.Args[1:]); err != nil {
+	if err := run(os.Stdout, procPath, os.Args[1:]); err != nil {
 		if errors.Is(err, errNotFound) {
 			os.Exit(1)
 		}
