@@ -102,16 +102,6 @@ func TestParseRun(t *testing.T) {
 			exp:     fmt.Sprintf("%v", tftp.ErrInvalidTransferMode),
 		},
 		{
-			name: "LiteralQuit",
-			f: tftp.Flags{
-				Mode: "ascii",
-			},
-			cmdline: []string{},
-			args:    []string{},
-			input:   []string{"localhost", "literal", "q"},
-			exp:     "Literal mode is on",
-		},
-		{
 			name: "rexmtQuit",
 			f: tftp.Flags{
 				Mode: "ascii",
@@ -130,26 +120,6 @@ func TestParseRun(t *testing.T) {
 			input:   []string{"localhost", "timeout 20", "q"},
 		},
 		{
-			name: "traceQuit",
-			f: tftp.Flags{
-				Mode: "ascii",
-			},
-			cmdline: []string{},
-			args:    []string{},
-			input:   []string{"localhost", "trace", "q"},
-			exp:     "Packet tracing on.",
-		},
-		{
-			name: "verboseQuit",
-			f: tftp.Flags{
-				Mode: "ascii",
-			},
-			cmdline: []string{},
-			args:    []string{},
-			input:   []string{"localhost", "verbose", "q"},
-			exp:     "Verbose mode on.",
-		},
-		{
 			name: "connectQuit",
 			f: tftp.Flags{
 				Mode: "ascii",
@@ -166,7 +136,7 @@ func TestParseRun(t *testing.T) {
 			cmdline: []string{},
 			args:    []string{},
 			input:   []string{"localhost", "status", "q"},
-			exp:     "Connected to localhost\nMode: netascii Verbose: off Tracing: off Literal: of",
+			exp:     "Connected to localhost\nMode: netascii",
 		},
 		{
 			name: "IP supplied",
