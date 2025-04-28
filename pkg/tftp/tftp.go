@@ -247,8 +247,8 @@ func executePut(client ClientIf, host, port string, files []string) error {
 		// files[1] == remotefile
 		ret.remotefile = files[1]
 	default:
-		// files[:len(files)-2] == localfiles,
-		ret.localfiles = append(ret.localfiles, files[:len(files)-2]...)
+		// files[:len(files)-1] == localfiles,
+		ret.localfiles = append(ret.localfiles, files[:len(files)-1]...)
 		// files[len(files)-1] == remote-directory
 		ret.remotedir = files[len(files)-1]
 	}
