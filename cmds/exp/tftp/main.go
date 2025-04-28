@@ -127,7 +127,7 @@ func splitArgs(cmdline, args []string) ([]string, []string) {
 func getIPPort(ipPort []string) (string, string) {
 	const defaultPort = "69"
 	if len(ipPort) == 2 {
-		return ipPort[0], ipPort[0]
+		return ipPort[0], ipPort[1]
 	}
 	return ipPort[0], defaultPort
 }
