@@ -49,8 +49,6 @@ func ParseClassArgs(stdout io.Writer, args []string) (*Args, error) {
 			}
 			indirect := uint32(classid)
 			ret.handle = &indirect
-		case "estimator":
-			return nil, ErrNotImplemented
 		case "help":
 			fmt.Fprint(stdout, ClassHelp)
 			return nil, nil
@@ -197,14 +195,22 @@ func (t *Trafficctl) ReplaceClass(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
 
-const (
-	ClassHelp = `Usage:
-tc class [ add | del | change | replace | show ] dev STRING
+// Origianlly from tc:
+// Usage: tc class [ add | del | change | replace | show ] dev STRING
+//        [ classid CLASSID ] [ root | parent CLASSID ]
+//        [ [ QDISC_KIND ] [ help | OPTIONS ] ]
+
+//        tc class show [ dev STRING ] [ root | parent CLASSID ]
+// Where:
+// QDISC_KIND := { prio | cbq | etc. }
+// OPTIONS := ... try tc class add <desired QDISC_KIND> help
+
+const ClassHelp = `Usage: tc class [ add | del | show ] dev STRING
 	[ classid CLASSID ] [ root | parent CLASSID ]
 	[ [ QDISC_KIND ] [ help | OPTIONS ] ]
 
 	tc class show [ dev STRING ] [ root | parent CLASSID ]
-	"Where:
-	QDISC_KIND := { prio | etc. }"
-	OPTIONS := ... try tc class add <desired QDISC_KIND> help`
-)
+Where:
+	QDISC_KIND := { htb | hfcs }
+	OPTIONS := ... try tc class add <desired QDISC_KIND> help
+	`

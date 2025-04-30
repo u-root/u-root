@@ -229,7 +229,7 @@ func TestRun(t *testing.T) {
 				"filter",
 				"help",
 			},
-			outStr: trafficctl.Filterhelp,
+			outStr: trafficctl.FilterHelp,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

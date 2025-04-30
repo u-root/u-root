@@ -132,7 +132,7 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 
 			i--
 		case "help":
-			fmt.Fprint(stdout, Filterhelp)
+			fmt.Fprint(stdout, FilterHelp)
 		default: // I hope we parsed all the stuff until here
 			// args[i] is the actual filter type
 			// Resolve Qdisc and parameters
@@ -268,25 +268,31 @@ func (t *Trafficctl) GetFilter(stdout io.Writer, fArgs *FArgs) error {
 	return ErrNotImplemented
 }
 
-const (
-	Filterhelp = `Usage:
-	tc filter [ add | del | change | replace | show ] [ dev STRING ]
-	tc filter [ add | del | change | replace | show ] [ block BLOCK_INDEX ]
-	tc filter get dev STRING parent CLASSID protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
-	tc filter get block BLOCK_INDEX protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
-		[ pref PRIO ] protocol PROTO [ chain CHAIN_INDEX ]
-		[ estimator INTERVAL TIME_CONSTANT ]
-		[ root | ingress | egress | parent CLASSID ]
-		[ handle FILTERID ] [ [ FILTER_TYPE ] [ help | OPTIONS ] ]
-	tc filter show [ dev STRING ] [ root | ingress | egress | parent CLASSID ]
-	tc filter show [ block BLOCK_INDEX ]
+// Origianlly from tc:
+// Usage: tc filter [ add | del | change | replace | show ] [ dev STRING ]
+//        tc filter [ add | del | change | replace | show ] [ block BLOCK_INDEX ]
+//        tc filter get dev STRING parent CLASSID protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
+//        tc filter get block BLOCK_INDEX protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
+//        [ pref PRIO ] protocol PROTO [ chain CHAIN_INDEX ]
+//        [ estimator INTERVAL TIME_CONSTANT ]
+//        [ root | ingress | egress | parent CLASSID ]
+//        [ handle FILTERID ] [ [ FILTER_TYPE ] [ help | OPTIONS ] ]
 
-	Where:
-	FILTER_TYPE := { u32 | bpf | fw | route | etc. }
-	FILTERID := ... format depends on classifier, see there
+//        tc filter show [ dev STRING ] [ root | ingress | egress | parent CLASSID ]
+//        tc filter show [ block BLOCK_INDEX ]
+// Where:
+// FILTER_TYPE := { rsvp | u32 | bpf | fw | route | etc. }
+// FILTERID := ... format depends on classifier, see there
+// OPTIONS := ... try tc filter add <desired FILTER_KIND> help
+
+const FilterHelp = `Usage: tc filter [ add | del | show ] [ dev STRING ]
+
+	tc filter show [ dev STRING ] [ root | ingress | egress | parent CLASSID ]
+
+Where:
+	FILTER_TYPE := { u32 | basic }
 	OPTIONS := ... try tc filter add <desired FILTER_KIND> help
 `
-)
 
 func supportedFilters(f string) func(io.Writer, []string) (*tc.Object, error) {
 	supported := map[string]func(io.Writer, []string) (*tc.Object, error){
