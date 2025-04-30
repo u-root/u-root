@@ -12,11 +12,18 @@ import (
 	"github.com/florianl/go-tc"
 )
 
-const (
-	BasicHelp     = `tc filter ... basic [ match EMATCH_TREE ] [ action ACTION_SPEC ] [ classid CLASSID ]`
-	U32Help       = `tc filter ... u32 { match u32 VALUE MASK at OFFSET } [ classid CLASSID ]`
-	TCU32Terminal = 1
-)
+// Originally from tc filter basic help
+// Usage: ... basic [ match EMATCH_TREE ]
+//                  [ action ACTION_SPEC ] [ classid CLASSID ]
+
+// Where:	SELECTOR := SAMPLE SAMPLE ...
+// 	FILTERID := X:Y:Z
+// 	ACTION_SPEC := ... look at individual actions
+
+// NOTE: CLASSID is parsed as hexadecimal input.
+
+const BasicHelp = `Usage: ... basic [ action ACTION_SPEC ] [ classid CLASSID | flowid CLASSID ]
+`
 
 // ParseBasicParams parses the cmdline arguments for `tc filter ... basic ...`
 // and returns a *tc.Object.
@@ -43,7 +50,7 @@ func ParseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
 			b.ClassID = &indirect
 		case "help":
 			fmt.Fprint(out, BasicHelp)
-			return nil, nil
+			return nil, ErrExitAfterHelp
 		default:
 			return nil, ErrInvalidArg
 		}
@@ -55,6 +62,26 @@ func ParseBasicParams(out io.Writer, params []string) (*tc.Object, error) {
 
 	return ret, nil
 }
+
+// Originally from tc filter u32 help
+// Usage: ... u32 [ match SELECTOR ... ] [ link HTID ] [ classid CLASSID ]
+//                [ action ACTION_SPEC ] [ offset OFFSET_SPEC ]
+//                [ ht HTID ] [ hashkey HASHKEY_SPEC ]
+//                [ sample SAMPLE ] [skip_hw | skip_sw]
+// or         u32 divisor DIVISOR
+
+// Where: SELECTOR := SAMPLE SAMPLE ...
+//        SAMPLE := { ip | ip6 | udp | tcp | icmp | u{32|16|8} | mark }
+//                  SAMPLE_ARGS [ divisor DIVISOR ]
+//        FILTERID := X:Y:Z
+
+// NOTE: CLASSID is parsed at hexadecimal input.
+
+const U32Help = `Usage ... u32 [ match ...] [ classid CLASSID | flowid CLASSID ]
+For further information see https://linux-tc-notes.sourceforge.net/tc/doc/cls_u32.txt
+`
+
+const TCU32Terminal = 1
 
 // ParseU32Params parses the cmdline arguments for `tc filter ... u32 ...` and
 // returns a *tc.Object. ParseU32Params recognizes a limited sub-language of
@@ -114,7 +141,7 @@ func ParseU32Params(out io.Writer, params []string) (*tc.Object, error) {
 			i = i + 6
 		case "help":
 			fmt.Fprint(out, U32Help)
-			return nil, nil
+			return nil, ErrExitAfterHelp
 		default:
 			return nil, ErrInvalidArg
 		}

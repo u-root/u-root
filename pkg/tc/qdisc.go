@@ -123,23 +123,32 @@ func ParseQdiscArgs(stdout io.Writer, args []string) (*Args, error) {
 	return ret, nil
 }
 
-const (
-	QdiscHelp = `Usage:
-	tc qdisc [ add | del | replace | change | show ] dev STRING
+// Originally from tc:
+// Usage: tc qdisc [ add | del | replace | change | show ] dev STRING
+//        [ handle QHANDLE ] [ root | ingress | clsact | parent CLASSID ]
+//        [ estimator INTERVAL TIME_CONSTANT ]
+//        [ stab [ help | STAB_OPTIONS] ]
+//        [ ingress_block BLOCK_INDEX ] [ egress_block BLOCK_INDEX ]
+//        [ [ QDISC_KIND ] [ help | OPTIONS ] ]
+
+//        tc qdisc { show | list } [ dev STRING ] [ QDISC_ID ] [ invisible ]
+// Where:
+// QDISC_KIND := { [p|b]fifo | tbf | prio | cbq | red | etc. }
+// OPTIONS := ... try tc qdisc add <desired QDISC_KIND> help
+// STAB_OPTIONS := ... try tc qdisc add stab help
+// QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }
+
+const QdiscHelp = `Usage: tc qdisc [ add | del | replace | change | show ] dev STRING
    		[ handle QHANDLE ] [ root | ingress | clsact | parent CLASSID ]
-   		[ estimator INTERVAL TIME_CONSTANT ]
-  		[ stab [ help | STAB_OPTIONS] ]
-  		[ ingress_block BLOCK_INDEX ] [ egress_block BLOCK_INDEX ]
   		[ [ QDISC_KIND ] [ help | OPTIONS ] ]
 
-	tc qdisc { show | list } [ dev STRING ] [ QDISC_ID ] [ invisible ]
+	tc qdisc show [ dev STRING ] [ QDISC_ID ]
 
-	Where:
-	QDISC_KIND := { [p|b]fifo | tbf | prio | red | etc. }
+Where:
+	QDISC_KIND := { codel | qfq | htb | hfsc }
 	OPTIONS := ... try tc qdisc add <desired QDISC_KIND> help
-	STAB_OPTIONS := ... try tc qdisc add stab help
-	QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }`
-)
+	QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }
+`
 
 // ShowQdisc implements the functionality of `tc qdisc show ... `
 func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
@@ -281,12 +290,6 @@ func (t *Trafficctl) ChangeQdisc(stdout io.Writer, args *Args) error {
 	}
 
 	return nil
-}
-
-// LinkQdisc implements the functionality of `tc qdisc link ... `
-// Note: Not implemented yet
-func (t *Trafficctl) LinkQdisc(stdout io.Writer, args *Args) error {
-	return ErrNotImplemented
 }
 
 func supportetQdisc(qd string) func(io.Writer, []string) (*tc.Object, error) {
