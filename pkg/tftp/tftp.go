@@ -22,8 +22,6 @@ type Flags struct {
 	Cmd       string
 	Mode      string
 	PortRange string
-	Literal   bool
-	Verbose   bool
 }
 
 // ClientCfg holds all configuration values of a client.
@@ -34,9 +32,9 @@ type ClientCfg struct {
 	Mode    tftp.TransferMode
 	Rexmt   tftp.ClientOpt
 	Timeout tftp.ClientOpt
-	Trace   bool
-	Literal bool
-	Verbose bool
+	// Trace   bool // not supported by pack.ag/tftp
+	// Literal bool // not implemented
+	// Verbose bool // not implemented
 }
 
 // RunInteractive starts the internal interactive command loop, where the user provides input to control
@@ -65,8 +63,6 @@ func RunInteractive(f Flags, ipPort []string, stdin io.Reader, stdout io.Writer)
 		Mode:    tftp.ModeNetASCII,
 		Rexmt:   tftp.ClientRetransmit(4),
 		Timeout: tftp.ClientTimeout(10),
-		Trace:   false,
-		Literal: f.Literal,
 	}
 
 	for {
@@ -92,9 +88,9 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 		return true, nil
 	case "h", "help", "?":
 		fmt.Fprintf(stdout, "%s", printHelp())
-	case "ascii":
+	case "ascii", "netascii":
 		clientcfg.Mode, _ = ValidateMode("ascii")
-	case "binary":
+	case "binary", "octet":
 		clientcfg.Mode, _ = ValidateMode("binary")
 	case "mode":
 		if len(input) > 1 {
@@ -124,9 +120,6 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 			clientcfg.Port = input[2]
 		}
 		clientcfg.Host = input[1]
-	case "literal":
-		clientcfg.Literal = !clientcfg.Literal
-		fmt.Fprintf(stdout, "Literal mode is %s\n", statusString(clientcfg.Literal))
 	case "rexmt":
 		var val int
 		val, err = strconv.Atoi(input[1])
@@ -134,23 +127,14 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 		clientcfg.Rexmt = tftp.ClientRetransmit(val)
 	case "status":
 		fmt.Fprintf(stdout, "Connected to %s\n", clientcfg.Host)
-		fmt.Fprintf(stdout, "Mode: %s Verbose: %s Tracing: %s Literal: %s\n",
+		fmt.Fprintf(stdout, "Mode: %s \n",
 			clientcfg.Mode,
-			statusString(clientcfg.Verbose),
-			statusString(clientcfg.Trace),
-			statusString(clientcfg.Literal),
 		)
 	case "timeout":
 		var val int
 		val, err = strconv.Atoi(input[1])
 
 		clientcfg.Timeout = tftp.ClientTimeout(val)
-	case "trace":
-		clientcfg.Trace = !clientcfg.Trace
-		fmt.Fprintf(stdout, "Packet tracing %s.\n", statusString(clientcfg.Trace))
-	case "verbose":
-		clientcfg.Verbose = !clientcfg.Verbose
-		fmt.Fprintf(stdout, "Verbose mode %s.\n", statusString(clientcfg.Verbose))
 	}
 	if err != nil {
 		fmt.Fprintf(stdout, "%v\n", err)
@@ -185,14 +169,11 @@ func printHelp() string {
 	fmt.Fprintf(&s, "put\tsend file\n")
 	fmt.Fprintf(&s, "get\treceive file\n")
 	fmt.Fprintf(&s, "quit\texit tftp\n")
-	fmt.Fprintf(&s, "verbose\ttoggle verbose mode (no functionality implemented)\n")
-	fmt.Fprintf(&s, "trace\ttoggle packet tracing (no functionality implemented)")
-	fmt.Fprintf(&s, "literal\ttoggle literal mode (no functionality implemented)\n")
 	fmt.Fprintf(&s, "status\tshow current status\n")
-	fmt.Fprintf(&s, "binary\tset mode to octet\n")
-	fmt.Fprintf(&s, "ascii\tset mode to netascii\n")
-	fmt.Fprintf(&s, "rexmt\tset per-packet transmission timeout\n")
-	fmt.Fprintf(&s, "timeout\tset total retransmission timeout\n")
+	fmt.Fprintf(&s, "binary / octet\tset mode to octet\n")
+	fmt.Fprintf(&s, "ascii / netascii\tset mode to netascii\n")
+	fmt.Fprintf(&s, "rexmt\tset per-packet transmission timeout in seconds\n")
+	fmt.Fprintf(&s, "timeout\tset total retransmission timeout in seconds\n")
 	fmt.Fprintf(&s, "?\t\tprint help information\n")
 	fmt.Fprintf(&s, "help\tprint help information\n")
 	return s.String()
@@ -219,12 +200,12 @@ var ErrInvalidTransferMode = errors.New("invalid transfer mode")
 func ValidateMode(mode string) (tftp.TransferMode, error) {
 	var ret tftp.TransferMode
 	switch tftp.TransferMode(mode) {
-	case "ascii":
+	case "ascii", "netascii":
 		ret = tftp.ModeNetASCII
-	case "binary":
+	case "binary", "octet":
 		ret = tftp.ModeOctet
 	default:
-		return ret, ErrInvalidTransferMode
+		return ret, fmt.Errorf("%w: %s", ErrInvalidTransferMode, mode)
 	}
 	return ret, nil
 }
@@ -247,8 +228,8 @@ func executePut(client ClientIf, host, port string, files []string) error {
 		// files[1] == remotefile
 		ret.remotefile = files[1]
 	default:
-		// files[:len(files)-2] == localfiles,
-		ret.localfiles = append(ret.localfiles, files[:len(files)-2]...)
+		// files[:len(files)-1] == localfiles,
+		ret.localfiles = append(ret.localfiles, files[:len(files)-1]...)
 		// files[len(files)-1] == remote-directory
 		ret.remotedir = files[len(files)-1]
 	}

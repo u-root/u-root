@@ -36,18 +36,12 @@
 //			- puts the localfile to the host under the remotefile name.
 //		put file1, file2, file3..., remote-directory
 //			- puts the files in the remote-directory on the host.
-//		literal
-//			- activates literal mode filename/path handling (not implemented).
 //		rexmt <int>
 //			- Sets the per-packet retransmission attemts to <int>. Default: 10.
 //		status
 //			- Prints the program/client configuration
 //		timeout <int>
 //			- Sets the total transmission timeout to <int> seconds. Default: 1
-//		trace
-//			- Activates packet tracing (not implemented)
-//		verbose
-//			- Activates verbose mode (not implemented)
 
 package main
 
@@ -94,9 +88,6 @@ func run(f tftppkg.Flags, cmdline, args []string, stdin io.Reader, stdout io.Wri
 		Mode:    m,
 		Rexmt:   tftp.ClientRetransmit(10),
 		Timeout: tftp.ClientTimeout(1),
-		Trace:   false,
-		Literal: f.Literal,
-		Verbose: f.Verbose,
 	}
 
 	input := make([]string, 0)
@@ -127,7 +118,7 @@ func splitArgs(cmdline, args []string) ([]string, []string) {
 func getIPPort(ipPort []string) (string, string) {
 	const defaultPort = "69"
 	if len(ipPort) == 2 {
-		return ipPort[0], ipPort[0]
+		return ipPort[0], ipPort[1]
 	}
 	return ipPort[0], defaultPort
 }
