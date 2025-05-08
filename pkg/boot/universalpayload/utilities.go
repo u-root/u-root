@@ -263,6 +263,7 @@ var (
 	ErrSMBIOS3NotFound             = fmt.Errorf("no smbios3 region found")
 	ErrDTRsdpLenOverBound          = fmt.Errorf("rsdp table length too large")
 	ErrDTRsdpTableNotFound         = fmt.Errorf("no acpi rsdp table found")
+	ErrRsvdMemoryMapNotFound       = fmt.Errorf("failed to retrieve reserved memory map")
 	ErrAlignPadRange               = errors.New("failed to align pad size, out of range")
 	ErrCPUAddressConvert           = errors.New("failed to convert physical bits size")
 	ErrCPUAddressRead              = errors.New("failed to read 'address sizes'")
@@ -768,6 +769,58 @@ func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	return dt.NewNode("reserved-memory", dt.WithChildren(rsvdNodes...))
 }
 
+func getReservedMemoryMap() (kexec.MemoryMap, error) {
+	var rsvd kexec.MemoryMap
+
+	mm, err := kexecMemoryMapFromIOMem()
+	if err != nil {
+		return nil, ErrRsvdMemoryMapNotFound
+	}
+
+	for _, m := range mm {
+		if m.Type.String() == "Reserved" {
+			rsvd = append(rsvd, m)
+		}
+	}
+
+	return rsvd, nil
+}
+
+func skipReservedRange(mm kexec.MemoryMap, base uint64, attr uint64) bool {
+	// Skip ReadOnly MMIO, this is ROM region
+	if attr&PCIMMIOReadOnly != 0 {
+		fmt.Printf("Skip base:%x due to RO\n", base)
+		return true
+	}
+
+	// Some platform provides 64-bit MMIO with all zero in high 32 bits,
+	// it leads to huge MMIO region for 64-bit, and triggers assertation
+	// in EDK2 since it is actual a 32-bit address, not a 64-bit address.
+	//
+	// Skip this scenario to address above issue.
+	if (attr&PCIMMIO64Attr == PCIMMIO64Attr) && (base>>32 == 0) {
+		fmt.Printf("Skip 64-bit base:%x due to all zero at high part\n", base)
+		return true
+	}
+
+	// MemoryMap passed in is types of Reserved Memory, we need to skip
+	// memory region which is exposed by PCI device BAR address if thi
+	// memory region resides in Reserved Memory Maps.
+	//
+	// This case happens in following scenario:
+	// 1. Memory region which is exposed in PCI device BAR address and
+	// indicated its available
+	// 2. Firmware or BIOS reserved above memory region as "Reserved" type.
+	for _, m := range mm {
+		if m.Range.Contains(uintptr(base)) {
+			fmt.Printf("Skip base:%x due to Reserved\n", base)
+			return true
+		}
+	}
+
+	return false
+}
+
 func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) (*ResourceRegions, error) {
 	domainIDHex := fmt.Sprintf("%04x", item.PCISegGrp)
 
@@ -778,7 +831,12 @@ func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) (*
 	var mmio32End uint64
 	var ioPortEnd uint64
 
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	rsvdMem, err := getReservedMemoryMap()
+	if err != nil {
+		return nil, err
+	}
+
+	err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -801,7 +859,7 @@ func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) (*
 			return err
 		} else if (bus >= uint64(item.StartBus)) && (bus <= uint64(item.EndBus)) {
 			resourcePath := filepath.Join(path, "resource")
-			resources, err := retrieveDeviceResources(resourcePath)
+			resources, err := retrieveDeviceResources(resourcePath, rsvdMem)
 			if err != nil {
 				return nil // Continue scanning other devices
 			}
@@ -846,7 +904,7 @@ func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) (*
 	}, nil
 }
 
-func retrieveDeviceResources(resourcePath string) ([]ResourceInfo, error) {
+func retrieveDeviceResources(resourcePath string, mm kexec.MemoryMap) ([]ResourceInfo, error) {
 	contentBytes, err := os.ReadFile(resourcePath)
 	if err != nil {
 		return nil, err
@@ -873,23 +931,18 @@ func retrieveDeviceResources(resourcePath string) ([]ResourceInfo, error) {
 				continue
 			} else {
 				var resourceType string
-				if attrInt&PCIMMIOReadOnly != 0 {
-					// Skip ReadOnly MMIO, this is ROM region
+
+				base64, err := strconv.ParseUint(base, 0, 64)
+				if err != nil {
+					continue
+				}
+
+				// Skip corner case when parsing resource region and attribute.
+				if skip := skipReservedRange(mm, base64, attrInt); skip == true {
 					continue
 				}
 
 				if attrInt&PCIMMIO64Attr == PCIMMIO64Attr {
-					base64, err := strconv.ParseUint(base, 0, 64)
-					if err == nil {
-						// Some platform provides 64-bit MMIO with all zero in high 32 bits,
-						// it leads to huge MMIO region for 64-bit, and triggers assertation
-						// in EDK2 since it is actual a 32-bit address, not a 64-bit address.
-						//
-						// Skip this scenario to address above issue.
-						if base64>>32 == 0 {
-							continue
-						}
-					}
 					resourceType = PCIMMIO64Type
 				} else if attrInt&PCIMMIO32Attr == PCIMMIO32Attr {
 					resourceType = PCIMMIO32Type
