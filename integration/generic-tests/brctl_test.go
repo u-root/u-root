@@ -16,7 +16,7 @@ import (
 	"github.com/u-root/mkuimage/uimage"
 )
 
-func vm(t *testing.T, name, script string, net *qnetwork.InterVM) *qemu.VM {
+func brctlVM(t *testing.T, name, script string, net *qnetwork.InterVM) *qemu.VM {
 	return scriptvm.Start(t, name, script,
 		scriptvm.WithUimage(
 			uimage.WithBusyboxCommands(
@@ -179,7 +179,7 @@ func TestBrctl(t *testing.T) {
 		echo "TESTS PASSED MARKER"
 	`
 
-	vm := vm(t, "brctl_test", script, net)
+	vm := brctlVM(t, "brctl_test", script, net)
 
 	if _, err := vm.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
 		t.Errorf("brctl_test: %v", err)

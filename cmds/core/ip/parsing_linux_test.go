@@ -115,32 +115,6 @@ func TestFindPrefix(t *testing.T) {
 	}
 }
 
-func TestParseType(t *testing.T) {
-	tests := []struct {
-		name    string
-		cmd     cmd
-		want    string
-		wantErr bool
-	}{
-		{"No token", cmd{Args: []string{"cmd"}}, "", true},
-		{"Invalid token", cmd{Args: []string{"cmd", "invalid"}}, "", true},
-		{"Valid type", cmd{Args: []string{"cmd", "type", "loopback"}}, "loopback", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.cmd.parseType()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseType() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("parseType() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestParseAddress(t *testing.T) {
 	tests := []struct {
 		name    string
