@@ -24,11 +24,14 @@ type BiosTable struct {
 // i.e. it goes straight to memory and gets them there. We optimistically
 // hope the bios has not stomped around in low memory messing around.
 func ReadBiosTables() (*BiosTable, error) {
-	r, err := GetRSDPEBDA()
+	r, err := GetRSDPEFI()
 	if err != nil {
-		r, err = GetRSDPMem()
+		r, err = GetRSDPEBDA()
 		if err != nil {
-			return nil, err
+			r, err = GetRSDPMem()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	Debug("Found an RSDP at %#x", r.base)
