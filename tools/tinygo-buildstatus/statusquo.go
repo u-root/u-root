@@ -161,6 +161,7 @@ var (
 		"kconf",
 		"localboot",
 		"lsfabric",
+		"lsfd",
 		"madeye",
 		"modprobe",
 		// "netbootxyz",
