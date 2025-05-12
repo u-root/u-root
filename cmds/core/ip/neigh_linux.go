@@ -6,9 +6,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"net"
+	"sort"
 	"strings"
 
 	"github.com/vishvananda/netlink"
@@ -276,7 +278,19 @@ func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP
 	return filtered, filteredLinkNames
 }
 
+var flagOrder = []int{
+	netlink.NTF_ROUTER, // Display first
+	netlink.NTF_EXT_LEARNED,
+}
+
+var flagToString = map[int]string{
+	netlink.NTF_EXT_LEARNED: "extern_learn",
+	netlink.NTF_ROUTER:      "router",
+}
+
 func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
+	neighs, ifacesNames = sortedNeighs(neighs, ifacesNames)
+
 	if cmd.Opts.JSON {
 		pNeighs := make([]NeighJSON, 0, len(neighs))
 
@@ -304,21 +318,59 @@ func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error 
 			fmt.Fprintf(cmd.Out, neighBriefFmt, v.IP, ifacesNames[idx], v.HardwareAddr)
 		} else {
 			llAddr := ""
-			routerStr := ""
+			flags := ""
 
 			if v.HardwareAddr != nil {
 				llAddr = fmt.Sprintf(" lladdr %s", v.HardwareAddr)
 			}
 
-			if v.Flags&netlink.NTF_ROUTER != 0 {
-				routerStr = " router"
+			for _, flag := range flagOrder {
+				if v.Flags&flag != 0 {
+					flags += fmt.Sprintf(" %s", flagToString[flag])
+				}
 			}
 
-			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, routerStr, getState(v.State))
+			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, flags, getState(v.State))
 		}
 	}
 
 	return nil
+}
+
+func sortedNeighs(neighs []netlink.Neigh, ifacesNames []string) ([]netlink.Neigh, []string) {
+	type pair struct {
+		neigh     netlink.Neigh
+		ifaceName string
+	}
+
+	pairs := make([]pair, len(neighs))
+	for i := range neighs {
+		pairs[i] = pair{neighs[i], ifacesNames[i]}
+	}
+
+	sort.SliceStable(pairs, func(i, j int) bool {
+		// First priority: IPv4 before IPv6
+		isIPv4_i := pairs[i].neigh.IP.To4() != nil
+		isIPv4_j := pairs[j].neigh.IP.To4() != nil
+		if isIPv4_i != isIPv4_j {
+			return isIPv4_i 
+		}
+
+		// Second priority: By device index (hardware order)
+		if pairs[i].neigh.LinkIndex != pairs[j].neigh.LinkIndex {
+			return pairs[i].neigh.LinkIndex < pairs[j].neigh.LinkIndex
+		}
+
+		// Third: Use address comparison
+		return bytes.Compare(pairs[i].neigh.IP, pairs[j].neigh.IP) < 0
+	})
+
+	for i, p := range pairs {
+		neighs[i] = p.neigh
+		ifacesNames[i] = p.ifaceName
+	}
+
+	return neighs, ifacesNames
 }
 
 func (cmd *cmd) neighShow() error {
