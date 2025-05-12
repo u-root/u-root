@@ -11,6 +11,7 @@ import (
 	"math"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/vishvananda/netlink"
@@ -110,7 +111,7 @@ func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 				return nil, err
 			}
 		case "nud":
-			state, err = cmd.parseInt("STATE")
+			state, err = parseNUD(cmd.nextToken("STATE"))
 			if err != nil {
 				return nil, err
 			}
@@ -146,8 +147,6 @@ func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 func (cmd *cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) {
 	nud = -1
 
-	var ok bool
-
 	for cmd.tokenRemains() {
 		switch c := cmd.nextToken("dev", "proxy", "nud"); c {
 		case "dev":
@@ -159,11 +158,9 @@ func (cmd *cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, 
 		case "proxy":
 			proxy = true
 		case "nud":
-			nudStr := cmd.nextToken("STATE")
-
-			nud, ok = neighStatesMap[strings.ToLower(nudStr)]
-			if !ok {
-				return nil, false, 0, fmt.Errorf("invalid state %q", nudStr)
+			nud, err = parseNUD(cmd.nextToken("STATE"))
+			if err != nil {
+				return nil, false, 0, err
 			}
 
 		default:
@@ -196,6 +193,29 @@ var neighStatesMap = map[string]int{
 	"failed":     netlink.NUD_FAILED,
 	"noarp":      netlink.NUD_NOARP,
 	"permanent":  netlink.NUD_PERMANENT,
+}
+
+func parseNUD(input string) (int, error) {
+	var nud int
+
+	if val, ok := neighStatesMap[strings.ToLower(input)]; ok {
+		nud = val
+	} else {
+		var err error
+		nudInt64, err := strconv.ParseInt(input, 10, 0)
+		if err != nil {
+			return nud, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
+		}
+
+		nud = int(nudInt64)
+
+		if _, ok := neighStates[nud]; !ok {
+			return nud, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
+		}
+
+	}
+
+	return nud, nil
 }
 
 func getState(state int) string {
@@ -353,7 +373,7 @@ func sortedNeighs(neighs []netlink.Neigh, ifacesNames []string) ([]netlink.Neigh
 		isIPv4_i := pairs[i].neigh.IP.To4() != nil
 		isIPv4_j := pairs[j].neigh.IP.To4() != nil
 		if isIPv4_i != isIPv4_j {
-			return isIPv4_i 
+			return isIPv4_i
 		}
 
 		// Second priority: By device index (hardware order)
