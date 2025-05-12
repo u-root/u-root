@@ -75,6 +75,18 @@ func TestIP(t *testing.T) {
 		cat /proc/net/route
 		#! grep -iq "$hex_destination" /proc/net/route || exit 1
 
+        # Add a neighbor (ARP entry) on eth0
+		cat /proc/net/arp
+		ip neigh add 192.168.1.2 lladdr 00:11:22:33:44:55 dev eth0 || exit 1
+		sleep 1
+		cat /proc/net/arp
+		grep -q "192.168.1.2" /proc/net/arp || exit 1
+
+		# Delete the neighbor
+		ip neigh del 192.168.1.2 dev eth0 || exit 1
+		cat /proc/net/arp
+		! grep -q "192.168.1.2" /proc/net/arp || exit 1
+
 		# Bring the eth0 interface down
 		ip link set eth0 down || exit 1
 		sleep 2
@@ -84,7 +96,6 @@ func TestIP(t *testing.T) {
 		# Delete the IP address from eth0
 		ip addr del 192.168.1.1/24 dev eth0 || exit 1
 		! grep -q "192.168.1.1" /proc/net/fib_trie || exit 1
-
 
 		echo "TESTS PASSED MARKER"
 	`
