@@ -165,6 +165,17 @@ func TestIP(t *testing.T) {
         ip link set ipip_tunnel down || exit 1
         ip tunnel del ipip_tunnel || exit 1
         ! grep -q "ipip_tunnel" /proc/net/dev || exit 1
+        # Add a neighbor (ARP entry) on eth0
+		cat /proc/net/arp
+		ip neigh add 192.168.1.2 lladdr 00:11:22:33:44:55 dev eth0 || exit 1
+		sleep 1
+		cat /proc/net/arp
+		grep -q "192.168.1.2" /proc/net/arp || exit 1
+
+		# Delete the neighbor
+		ip neigh del 192.168.1.2 dev eth0 || exit 1
+		cat /proc/net/arp
+		! grep -q "192.168.1.2" /proc/net/arp || exit 1
 
 		# Bring the eth0 interface down
 		ip link set eth0 down || exit 1
