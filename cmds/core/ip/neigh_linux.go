@@ -90,7 +90,7 @@ func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		iface       netlink.Link
 		llAddr      net.HardwareAddr
 		deviceFound bool
-		state       int
+		state       int = netlink.NUD_PERMANENT
 		flag        int
 	)
 
