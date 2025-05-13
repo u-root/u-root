@@ -156,7 +156,7 @@ func TestFilterTunnels(t *testing.T) {
 		expected []netlink.Link
 	}{
 		{
-			name: "Filter by opts",
+			name: "Filter by opts 1",
 			links: []netlink.Link{
 				&greTun,
 				&greTun8,
@@ -173,7 +173,7 @@ func TestFilterTunnels(t *testing.T) {
 			},
 		},
 		{
-			name: "Filter by opts",
+			name: "Filter by opts 2",
 			links: []netlink.Link{
 				&greTun,
 				&ipTun,
@@ -189,7 +189,7 @@ func TestFilterTunnels(t *testing.T) {
 				modes:  []string{"gre"},
 				remote: "126.0.0.2",
 				local:  "127.0.0.2",
-				dev:    "link1",
+				name:   "link1",
 				ttl:    9,
 			},
 			expected: []netlink.Link{
@@ -826,7 +826,7 @@ func TestPrintTunnels(t *testing.T) {
 				},
 			},
 			json: false,
-			want: "gre0 gre/ip remote 192.168.1.2 local 192.168.1.1 ttl 64\n",
+			want: "gre0: gre/ip remote 192.168.1.2 local 192.168.1.1 ttl 64\n",
 		},
 		{
 			name: "Single IP tunnel",
@@ -839,7 +839,7 @@ func TestPrintTunnels(t *testing.T) {
 				},
 			},
 			json: false,
-			want: "ip0 ip/ip remote 192.168.1.2 local 192.168.1.1 ttl 64\n",
+			want: "ip0: any/ip remote 192.168.1.2 local 192.168.1.1 ttl 64\n",
 		},
 		{
 			name: "Single IPv6 tunnel",
@@ -852,7 +852,7 @@ func TestPrintTunnels(t *testing.T) {
 				},
 			},
 			json: false,
-			want: "ipv60 ipv6/ip remote ::2 local ::1 ttl 64\n",
+			want: "ipv60: ip6tln/ip remote ::2 local ::1 ttl 64\n",
 		},
 		{
 			name: "Single VTI tunnel",
@@ -864,7 +864,7 @@ func TestPrintTunnels(t *testing.T) {
 				},
 			},
 			json: false,
-			want: "vti0 ip/ip remote 192.168.1.2 local 192.168.1.1\n",
+			want: "vti0: ip/ip remote 192.168.1.2 local 192.168.1.1 ttl inherit\n",
 		},
 		{
 			name: "Single SIT tunnel",
@@ -877,7 +877,7 @@ func TestPrintTunnels(t *testing.T) {
 				},
 			},
 			json: false,
-			want: "sit0 ipv6/ip remote 192.168.1.2 local 192.168.1.1 ttl 64\n",
+			want: "sit0: sit/ip remote 192.168.1.2 local 192.168.1.1 ttl 64\n",
 		},
 		{
 			name: "Unsupported tunnel type",
