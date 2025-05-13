@@ -123,6 +123,26 @@ func (cmd *cmd) parseIPNet() (*net.IPNet, error) {
 	return ipNet, nil
 }
 
+func (cmd *cmd) parseAddressorCIDR() (net.IP, *net.IPNet, error) {
+	addrStr := cmd.nextToken("PREFIX")
+
+	// Check if it's a CIDR notation
+	if strings.Contains(addrStr, "/") {
+		ip, ipNet, err := net.ParseCIDR(addrStr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse address: %s", addrStr)
+		}
+		return ip, ipNet, nil
+	}
+
+	// Regular IP address
+	ip := net.ParseIP(addrStr)
+	if ip == nil {
+		return nil, nil, fmt.Errorf("failed to parse address: %s", addrStr)
+	}
+	return ip, nil, nil
+}
+
 func (cmd *cmd) parseHardwareAddress() (net.HardwareAddr, error) {
 	return net.ParseMAC(cmd.nextToken("<MAC-ADDR>"))
 }
