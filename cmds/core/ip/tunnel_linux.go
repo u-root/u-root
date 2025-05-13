@@ -139,6 +139,14 @@ func (cmd *cmd) parseTunnel() (*options, error) {
 			}
 
 			options.oKey = int(oKey)
+		case "key":
+			key, err := cmd.parseUint16("KEY")
+			if err != nil {
+				return nil, err
+			}
+
+			options.iKey = int(key)
+			options.oKey = int(key)
 		case "dev":
 			options.dev = cmd.nextToken("PHYS_DEV")
 		default:
