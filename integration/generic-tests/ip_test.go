@@ -169,7 +169,6 @@ func TestIP(t *testing.T) {
         # Add a neighbor (ARP entry) on eth0
 		cat /proc/net/arp
 		ip neigh add 192.168.1.2 lladdr 00:11:22:33:44:55 dev eth0 || exit 1
-		sleep 1
 		cat /proc/net/arp
 		grep -q "192.168.1.2" /proc/net/arp || exit 1
 
@@ -177,6 +176,16 @@ func TestIP(t *testing.T) {
 		ip neigh show dev eth0 || exit 1
 		neigh_entry=$(ip neigh show dev eth0 | grep "192.168.1.2")
 		test "$neigh_entry" = "192.168.1.2 dev eth0 lladdr 00:11:22:33:44:55 PERMANENT" || exit 1
+
+		# Replace the entry with different flags
+		ip neigh replace 192.168.1.2 lladdr 11:22:33:44:55:66 dev eth0 nud stale router || exit 1
+
+		# Verify the modified flags
+		ip neigh show dev eth0 || exit 1
+		modified_entry=$(ip neigh show dev eth0 | grep "192.168.1.2")
+		test "$modified_entry" = "192.168.1.2 dev eth0 lladdr 11:22:33:44:55:66 router STALE" || exit 1
+		echo "Modified neighbor entry verified with router flag and STALE state"
+
 
 		# Delete the neighbor
 		ip neigh del 192.168.1.2 dev eth0 || exit 1
