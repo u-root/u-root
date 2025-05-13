@@ -543,7 +543,7 @@ func (cmd *cmd) tunnelDelete(op *options) error {
 		return fmt.Errorf("failed to find tunnel %s: %w", op.name, err)
 	}
 
-	valid := true
+	valid := false
 	for _, t := range allTunnelTypes {
 		if link.Type() == t {
 			valid = true
