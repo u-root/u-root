@@ -228,12 +228,16 @@ func filterTunnels(links []netlink.Link, op *options) []netlink.Link {
 	return tunnels
 }
 
+// Add key fields to the Tunnel struct
 type Tunnel struct {
 	IfName string `json:"ifname"`
 	Mode   string `json:"mode"`
 	Remote string `json:"remote"`
 	Local  string `json:"local"`
 	TTL    string `json:"ttl,omitempty"`
+	TOS    uint8  `json:"tos,omitempty"`
+	IKey   uint32 `json:"ikey,omitempty"`
+	OKey   uint32 `json:"okey,omitempty"`
 }
 
 func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
@@ -249,25 +253,35 @@ func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 			tunnel.Local = v.Local.String()
 			tunnel.Mode = "gre"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
+			tunnel.TOS = v.Tos
+			tunnel.IKey = v.IKey
+			tunnel.OKey = v.OKey
 		case *netlink.Iptun:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
-			tunnel.Mode = "ipip"
+			tunnel.Mode = "any"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
+			tunnel.TOS = v.Tos
 		case *netlink.Ip6tnl:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
 			tunnel.Mode = "ip6tln"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
+			tunnel.TOS = v.Tos
 		case *netlink.Vti:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
 			tunnel.Mode = "ip"
+			tunnel.TTL = "inherit"
+			tunnel.IKey = v.IKey
+			tunnel.OKey = v.OKey
 		case *netlink.Sittun:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
-			tunnel.Mode = "ipv6"
+			tunnel.Mode = "sit"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
+			tunnel.TOS = v.Tos
+
 		default:
 			return fmt.Errorf("unsupported tunnel type %s", t.Type())
 		}
@@ -292,11 +306,28 @@ func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 	}
 
 	for _, t := range pTunnels {
-		ttlStr := ""
+		optsString := ""
 		if t.TTL != "" {
-			ttlStr = fmt.Sprintf(" ttl %s", t.TTL)
+			optsString = fmt.Sprintf(" ttl %s", t.TTL)
 		}
-		fmt.Fprintf(cmd.Out, "%s %s/ip remote %s local %s%s\n", t.IfName, t.Mode, t.Remote, t.Local, ttlStr)
+
+		if t.TOS != 0 {
+			optsString += fmt.Sprintf(" tos 0x%x", t.TOS)
+		}
+
+		if t.IKey == t.OKey && t.IKey != 0 {
+			optsString += fmt.Sprintf(" key %d", t.IKey)
+		} else {
+			if t.IKey != 0 {
+				optsString += fmt.Sprintf(" ikey %d", t.IKey)
+			}
+			if t.OKey != 0 {
+				optsString += fmt.Sprintf(" okey %d", t.OKey)
+			}
+		}
+
+		fmt.Fprintf(cmd.Out, "%s: %s/ip remote %s local %s%s\n",
+			t.IfName, t.Mode, t.Remote, t.Local, optsString)
 	}
 
 	return nil
