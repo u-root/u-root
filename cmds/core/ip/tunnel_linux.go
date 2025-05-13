@@ -17,7 +17,7 @@ const (
 	tunnelHelp = `Usage: ip tunnel { show } [ NAME ]
         [ mode { gre | ipip | sit | vti } ]
         [ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
-        [ ttl TTL ] [ tos TOS ] [ [no]pmtudisc ] [ dev PHYS_DEV ]
+        [ ttl TTL ] [ tos TOS ] [ dev PHYS_DEV ]
 
 Where: NAME := STRING
        ADDR := { IP_ADDRESS | any }
