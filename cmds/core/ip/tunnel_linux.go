@@ -252,12 +252,12 @@ func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 		case *netlink.Iptun:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
-			tunnel.Mode = "ip"
+			tunnel.Mode = "ipip"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 		case *netlink.Ip6tnl:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
-			tunnel.Mode = "ipv6"
+			tunnel.Mode = "ip6tln"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 		case *netlink.Vti:
 			tunnel.Remote = v.Remote.String()
