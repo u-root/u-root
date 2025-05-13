@@ -32,8 +32,8 @@ func (cmd *cmd) neigh() error {
 		return cmd.showAllNeighbours(nil, nil, -1, false)
 	}
 
-	switch c := cmd.findPrefix("show", "add", "del", "replace", "flush", "get", "help"); c {
-	case "add", "del", "replace":
+	switch c := cmd.findPrefix("show", "add", "delete", "replace", "flush", "get", "help"); c {
+	case "add", "delete", "replace":
 		neigh, err := cmd.parseNeighAddDelReplaceParams()
 		if err != nil {
 			return err
@@ -42,10 +42,13 @@ func (cmd *cmd) neigh() error {
 		switch c {
 		case "add":
 			return cmd.handle.NeighAdd(neigh)
-		case "del":
+		case "delete":
 			return cmd.handle.NeighDel(neigh)
 		case "replace":
 			return cmd.handle.NeighSet(neigh)
+		default:
+			fmt.Fprint(cmd.Out, neighHelp)
+			return nil
 		}
 
 	case "show":
