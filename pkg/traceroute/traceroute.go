@@ -88,9 +88,7 @@ func runTransmission(cc Coms) map[int]*Probe {
 		select {
 		case p = <-cc.SendChan:
 			sendProbes = append(sendProbes, p)
-			//fmt.Println(p.id)
 		case p = <-cc.RecvChan:
-			//fmt.Println(p.id)
 			for i, sp := range sendProbes {
 				if sp.ID == p.ID {
 					sendProbes[i].RecvTime = p.RecvTime
