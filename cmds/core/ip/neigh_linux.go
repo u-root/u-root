@@ -17,18 +17,14 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const neighHelp = `Usage: ip neigh { add | del | replace }
-                ADDR [ lladdr LLADDR ] [ nud STATE ] 
-                [ dev DEV ] [ router ] [ extern_learn ] 
+const neighHelp = `Usage: 	ip neigh { add | del | replace }
+            ADDR [ lladdr LLADDR ] [ nud STATE ] [ dev DEV ] [ router ] [ extern_learn ] 
 
-       ip neigh show  [ to PREFIX ] [ dev DEV ] [ nud STATE ]
-	   ip neigh flush [ proxy ][ dev DEV ] [ nud STATE ]
+	ip neigh { show | flush } [ proxy ] [ to PREFIX ] [ dev DEV ] [ nud STATE ]
 
+	ip neigh get ADDR dev DEV
 
-       ip neigh get ADDR dev DEV
-
-STATE := { delay | failed | incomplete | noarp | none |
-           permanent | probe | reachable | stale }
+STATE := { delay | failed | incomplete | noarp | none | permanent | probe | reachable | stale }
 `
 
 func (cmd *cmd) neigh() error {
@@ -306,7 +302,10 @@ func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP
 
 		if neigh.State != netlink.NUD_NOARP {
 			filtered = append(filtered, neigh)
-			filteredLinkNames = append(filteredLinkNames, linkNames[idx])
+
+			if linkNames != nil {
+				filteredLinkNames = append(filteredLinkNames, linkNames[idx])
+			}
 		}
 	}
 	return filtered, filteredLinkNames
@@ -427,9 +426,14 @@ func (cmd *cmd) neighFlush() error {
 		state  uint16
 	)
 
-	_, _, iface, proxy, nud, err := cmd.parseNeighShowFlush()
+	address, subNet, iface, proxy, nud, err := cmd.parseNeighShowFlush()
 	if err != nil {
 		return err
+	}
+
+	if address == nil && subNet == nil && iface == nil && !proxy && nud == -1 {
+		//nolint:revive,staticcheck // This message is analog to the one in iproute2
+		return fmt.Errorf("Flush requires arguments.")
 	}
 
 	if iface == nil {
@@ -460,7 +464,19 @@ func (cmd *cmd) neighFlush() error {
 			return fmt.Errorf("failed to list neighbors: %w", err)
 		}
 
+		// Filter neighbors based on NUD state (keep specific state or exclude PERMANENT and NOARP when no state specified)
+		filteredForStates := make([]netlink.Neigh, 0, len(neighbors))
 		for _, neigh := range neighbors {
+			if (nud != -1 && neigh.State == nud) || (nud == -1 && neigh.State != netlink.NUD_PERMANENT && neigh.State != netlink.NUD_NOARP) {
+				filteredForStates = append(filteredForStates, neigh)
+			}
+		}
+
+		neighbors = filteredForStates
+
+		filteredNeighs, _ := filterNeighsByAddr(neighbors, nil, &address, subNet)
+
+		for _, neigh := range filteredNeighs {
 			if err := cmd.handle.NeighDel(&neigh); err != nil {
 				return fmt.Errorf("failed to delete neighbor: %w", err)
 			}
