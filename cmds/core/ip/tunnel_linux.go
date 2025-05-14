@@ -14,16 +14,22 @@ import (
 )
 
 const (
-	tunnelHelp = `Usage: ip tunnel { show } [ NAME ]
-        [ mode { gre | ipip | sit | vti } ]
-        [ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
-        [ ttl TTL ] [ tos TOS ] [ dev PHYS_DEV ]
+	tunnelHelp = `Usage: ip tunnel show [ NAME ] 
+	[ mode { gre | ipip | sit | vti } ]
+	[ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
+	[ ttl TTL ] [ tos TOS ] [ dev PHYS_DEV ]
+
+       ip tunnel { add | del } [ NAME ]
+	[ mode { gre | ipip | sit | vti } ]
+	[ remote ADDR ] [ local ADDR ] [ [i|o]key KEY ]
+	[ ttl TTL ] [ tos TOS ] 
 
 Where: NAME := STRING
-       ADDR := { IP_ADDRESS | any }
-       TOS  := { 1..255 }
-       TTL  := { 1..255 | inherit }
-       KEY  := { NUMBER }
+	   ADDR := { IP_ADDRESS | any }
+	   TOS  := { 1..255 }
+	   TTL  := { 1..255 | inherit }
+	   KEY  := { NUMBER }
+	   PHYS_DEV := STRING
 `
 )
 
@@ -39,8 +45,8 @@ func (cmd *cmd) tunnel() error {
 
 	var c string
 
-	switch c = cmd.findPrefix("add", "del", "show", "help"); c {
-	case "show", "add", "del":
+	switch c = cmd.findPrefix("add", "delete", "show", "help"); c {
+	case "show", "add", "delete":
 		options, err := cmd.parseTunnel()
 		if err != nil {
 			return err
@@ -49,7 +55,7 @@ func (cmd *cmd) tunnel() error {
 		switch c {
 		case "add":
 			return cmd.tunnelAdd(options)
-		case "del":
+		case "delete":
 			return cmd.tunnelDelete(options)
 		case "show":
 			return cmd.showTunnels(options)
@@ -202,8 +208,16 @@ func filterTunnels(links []netlink.Link, op *options) []netlink.Link {
 			continue
 		}
 
-		if op.dev != "" && l.Attrs().Name != op.dev {
-			continue
+		if op.dev != "" {
+			dev, err := netlink.LinkByName(op.dev)
+			if err != nil {
+				return []netlink.Link{}
+			}
+
+			// Check if the tunnel's parent index matches the physical device
+			if l.Attrs().ParentIndex != dev.Attrs().Index {
+				continue
+			}
 		}
 
 		if !equalTOS(l, op.tos) {
@@ -234,6 +248,7 @@ type Tunnel struct {
 	Mode   string `json:"mode"`
 	Remote string `json:"remote"`
 	Local  string `json:"local"`
+	Dev    string `json:"dev,omitempty"`
 	TTL    string `json:"ttl,omitempty"`
 	TOS    uint8  `json:"tos,omitempty"`
 	IKey   uint32 `json:"ikey,omitempty"`
@@ -246,6 +261,14 @@ func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 	for _, t := range tunnels {
 		var tunnel Tunnel
 		tunnel.IfName = t.Attrs().Name
+
+		if t.Attrs().ParentIndex != 0 {
+			parent, err := cmd.handle.LinkByIndex(t.Attrs().ParentIndex)
+			if err != nil {
+				return fmt.Errorf("failed to get parent link: %w", err)
+			}
+			tunnel.Dev = parent.Attrs().Name
+		}
 
 		switch v := t.(type) {
 		case *netlink.Gretun:
@@ -307,8 +330,12 @@ func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 
 	for _, t := range pTunnels {
 		optsString := ""
+		if t.Dev != "" {
+			optsString = fmt.Sprintf(" dev %s", t.Dev)
+		}
+
 		if t.TTL != "" {
-			optsString = fmt.Sprintf(" ttl %s", t.TTL)
+			optsString += fmt.Sprintf(" ttl %s", t.TTL)
 		}
 
 		if t.TOS != 0 {
