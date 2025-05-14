@@ -39,11 +39,11 @@ func TestIP(t *testing.T) {
 	script := `
 		# Function to convert dotted decimal IP to byte-swapped hex
 		ip_to_route_hex() {
-  			local ip=$1
-  			# Split the IP into octets
-  			IFS='.' read -r o1 o2 o3 o4 <<< "$ip"
-  			# Convert to hex, pad with zeros, and swap the byte order
-  			printf "%02x%02x%02x%02x" $o4 $o3 $o2 $o1
+			local ip=$1
+			# Split the IP into octets
+			IFS='.' read -r o1 o2 o3 o4 <<< "$ip"
+			# Convert to hex, pad with zeros, and swap the byte order
+			printf "%02x%02x%02x%02x" $o4 $o3 $o2 $o1
 		}
 
 		# Verify that eth0 and lo exist
@@ -74,6 +74,26 @@ func TestIP(t *testing.T) {
 		ip route del 192.168.2.0/24 || exit 1
 		cat /proc/net/route
 		#! grep -iq "$hex_destination" /proc/net/route || exit 1
+
+		# Add a tunnel
+		ip tunnel add my_test_tunnel mode sit remote 192.168.2.1 local 192.168.1.1 ttl 64
+
+		# Verify tunnel exists in /proc/net/dev
+		grep -q "my_test_tunnel" /proc/net/dev || exit 1
+
+		# Verify the tunnel is created and has the right parameters
+		ip tunnel show my_test_tunnel || exit 1
+		tunnel_info=$(ip tunnel show my_test_tunnel)
+		echo "$tunnel_info" | grep -q "my_test_tunnel:" || exit 1
+		echo "$tunnel_info" | grep -q "remote 192.168.2.1" || exit 1
+		echo "$tunnel_info" | grep -q "local 192.168.1.1" || exit 1
+		echo "$tunnel_info" | grep -q "ttl 64" || exit 1
+
+		# Delete the tunnel
+		ip tunnel del my_test_tunnel
+
+		# Verify tunnel no longer exists in /proc/net/dev
+		! grep -q "my_test_tunnel" /proc/net/dev || exit 1
 
 		# Bring the eth0 interface down
 		ip link set eth0 down || exit 1
