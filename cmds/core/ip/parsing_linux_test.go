@@ -218,6 +218,13 @@ func TestParseAddressorCIDR(t *testing.T) {
 			wantIPNet: nil,
 			wantErr:   true,
 		},
+		{
+			name:      "Invalid IPv6 CIDR",
+			cmd:       cmd{Args: []string{"cmd", "fe80::/invalid"}},
+			wantIP:    nil,
+			wantIPNet: nil,
+			wantErr:   true,
+		},
 	}
 
 	for _, tt := range tests {
