@@ -61,18 +61,14 @@ func TestIP(t *testing.T) {
 		grep -q "192.168.1.1" /proc/net/fib_trie || exit 1
 
 		# Add a route via eth0
-		cat /proc/net/route
 		ip route add 192.168.2.0/24 via 192.168.1.1 dev eth0 || exit 1
-		cat /proc/net/route
 		hex_destination=$(ip_to_route_hex "192.168.2.0")
 		hex_gateway=$(ip_to_route_hex "192.168.1.1")
 		grep -iq "$hex_destination" /proc/net/route || exit 1
 		grep -iq "$hex_gateway" /proc/net/route || exit 1
 
 		# Delete the route
-		cat /proc/net/route
 		ip route del 192.168.2.0/24 || exit 1
-		cat /proc/net/route
 		#! grep -iq "$hex_destination" /proc/net/route || exit 1
 
 		# Add a tunnel
@@ -167,9 +163,7 @@ func TestIP(t *testing.T) {
         ! grep -q "ipip_tunnel" /proc/net/dev || exit 1
 
         # Add a neighbor (ARP entry) on eth0
-		cat /proc/net/arp
 		ip neigh add 192.168.1.2 lladdr 00:11:22:33:44:55 dev eth0 || exit 1
-		cat /proc/net/arp
 		grep -q "192.168.1.2" /proc/net/arp || exit 1
 
 		# Verify the neighbor entry
@@ -177,7 +171,7 @@ func TestIP(t *testing.T) {
 		neigh_entry=$(ip neigh show dev eth0 | grep "192.168.1.2")
 		test "$neigh_entry" = "192.168.1.2 dev eth0 lladdr 00:11:22:33:44:55 PERMANENT" || exit 1
 
-		# Replace the entry with different flags
+		# Replace the entry with another hwaddress, nud state and router flag
 		ip neigh replace 192.168.1.2 lladdr 11:22:33:44:55:66 dev eth0 nud stale router || exit 1
 
 		# Verify the modified flags
@@ -186,10 +180,8 @@ func TestIP(t *testing.T) {
 		test "$modified_entry" = "192.168.1.2 dev eth0 lladdr 11:22:33:44:55:66 router STALE" || exit 1
 		echo "Modified neighbor entry verified with router flag and STALE state"
 
-
 		# Delete the neighbor
 		ip neigh del 192.168.1.2 dev eth0 || exit 1
-		cat /proc/net/arp
 		! grep -q "192.168.1.2" /proc/net/arp || exit 1
 
 		# Bring the eth0 interface down
