@@ -6,7 +6,7 @@ amd64:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:f27fc07be718df785b2ce4a21a6eece6daf0532f7c971cec279d84806b0f04c3"
+    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:3fa8c30357d6351a5e91e1f0cf6ed00368d56d98908a39e594c2dcfcd5f110c9"
     template: "{{.bzImage}}"
     files:
       bzImage: "/bzImage"
@@ -31,7 +31,7 @@ arm:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:9877321ee56df88e1cd9a19a3431d0952f27a997a5c182f66007ebc8b94df4e8"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:b4f28a8c0766271dc2998b8836cbd22f1a7ddf3927109d87049124b5858a5cbe"
     template: "{{.zImage}}"
     files:
       zImage: "/zImage"
@@ -44,7 +44,7 @@ arm64:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm64@sha256:9e861fbab497a182c8397a34d371d6924ac65e8a3f044343d87f3cdfaa8ae4a4"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm64@sha256:2396e788e4cfb5689f4df27986f78f053befbe325aed4e9651910fe720b2d606"
     template: "{{.Image}}"
     files:
       Image: "/Image"
