@@ -39,11 +39,11 @@ func TestIP(t *testing.T) {
 	script := `
 		# Function to convert dotted decimal IP to byte-swapped hex
 		ip_to_route_hex() {
-  			local ip=$1
-  			# Split the IP into octets
-  			IFS='.' read -r o1 o2 o3 o4 <<< "$ip"
-  			# Convert to hex, pad with zeros, and swap the byte order
-  			printf "%02x%02x%02x%02x" $o4 $o3 $o2 $o1
+			local ip=$1
+			# Split the IP into octets
+			IFS='.' read -r o1 o2 o3 o4 <<< "$ip"
+			# Convert to hex, pad with zeros, and swap the byte order
+			printf "%02x%02x%02x%02x" $o4 $o3 $o2 $o1
 		}
 
 		# Verify that eth0 and lo exist
@@ -75,6 +75,97 @@ func TestIP(t *testing.T) {
 		cat /proc/net/route
 		#! grep -iq "$hex_destination" /proc/net/route || exit 1
 
+		# Add a tunnel
+		ip tunnel add my_test_tunnel mode sit remote 192.168.2.1 local 192.168.1.1 ttl 64
+
+		# Verify tunnel exists in /proc/net/dev
+		grep -q "my_test_tunnel" /proc/net/dev || exit 1
+
+		# Verify the tunnel is created and has the right parameters
+		ip tunnel show my_test_tunnel || exit 1
+		tunnel_info=$(ip tunnel show my_test_tunnel)
+		echo "$tunnel_info" | grep -q "my_test_tunnel:" || exit 1
+		echo "$tunnel_info" | grep -q "remote 192.168.2.1" || exit 1
+		echo "$tunnel_info" | grep -q "local 192.168.1.1" || exit 1
+		echo "$tunnel_info" | grep -q "ttl 64" || exit 1
+
+		# Delete the tunnel
+		ip tunnel del my_test_tunnel
+
+		# Verify tunnel no longer exists in /proc/net/dev
+		! grep -q "my_test_tunnel" /proc/net/dev || exit 1
+
+		# Add a GRE tunnel with key and tos options
+		ip tunnel add gre_tunnel mode gre remote 192.168.2.2 local 192.168.1.1 ttl 128 key 1234 tos 10
+
+		# Verify GRE tunnel exists in /proc/net/dev
+		grep -q "gre_tunnel" /proc/net/dev || exit 1
+
+		# Verify GRE tunnel parameters
+		gre_info=$(ip tunnel show gre_tunnel)
+		echo "$gre_info" | grep -q "gre_tunnel:" || exit 1
+		echo "$gre_info" | grep -q "remote 192.168.2.2" || exit 1
+		echo "$gre_info" | grep -q "local 192.168.1.1" || exit 1
+		echo "$gre_info" | grep -q "ttl 128" || exit 1
+		echo "$gre_info" | grep -q "key 1234" || exit 1
+		echo "$gre_info" | grep -q "tos 0xa" || exit 1
+
+		# Configure GRE tunnel
+		ip link set gre_tunnel up || exit 1
+		ip addr add 10.0.0.1/24 dev gre_tunnel || exit 1
+		grep -q "10.0.0.1" /proc/net/fib_trie || exit 1
+
+		# Delete GRE tunnel
+		ip link set gre_tunnel down || exit 1
+		ip tunnel del gre_tunnel || exit 1
+		! grep -q "gre_tunnel" /proc/net/dev || exit 1
+
+		# Add a VTI tunnel
+		ip tunnel add vti_tunnel mode vti remote 192.168.2.3 local 192.168.1.1 key 5678 
+
+		# Verify VTI tunnel exists in /proc/net/dev
+		grep -q "vti_tunnel" /proc/net/dev || exit 1
+
+		# Verify VTI tunnel parameters
+		vti_info=$(ip tunnel show vti_tunnel)
+		echo "$vti_info" | grep -q "vti_tunnel:" || exit 1
+		echo "$vti_info" | grep -q "remote 192.168.2.3" || exit 1
+		echo "$vti_info" | grep -q "local 192.168.1.1" || exit 1
+		echo "$vti_info" | grep -q "key 5678" || exit 1
+
+		# Configure VTI tunnel
+		ip link set vti_tunnel up || exit 1
+		ip addr add 172.16.0.1/30 dev vti_tunnel || exit 1
+		grep -q "172.16.0.1" /proc/net/fib_trie || exit 1
+
+		# Delete VTI tunnel
+		ip link set vti_tunnel down || exit 1
+		ip tunnel del vti_tunnel || exit 1
+		! grep -q "vti_tunnel" /proc/net/dev || exit 1
+
+        # Add an IPIP tunnel 
+        ip tunnel add ipip_tunnel mode ipip remote 192.168.3.1 local 192.168.1.1 ttl 64
+
+        # Verify IPIP tunnel exists in /proc/net/dev
+        grep -q "ipip_tunnel" /proc/net/dev || exit 1
+
+        # Verify IPIP tunnel parameters
+        ipip_info=$(ip tunnel show ipip_tunnel)
+        echo "$ipip_info" | grep -q "ipip_tunnel:" || exit 1
+        echo "$ipip_info" | grep -q "remote 192.168.3.1" || exit 1
+        echo "$ipip_info" | grep -q "local 192.168.1.1" || exit 1
+        echo "$ipip_info" | grep -q "ttl 64" || exit 1
+
+        # Configure IPIP tunnel
+        ip link set ipip_tunnel up || exit 1
+        ip addr add 172.17.0.1/30 dev ipip_tunnel || exit 1
+        grep -q "172.17.0.1" /proc/net/fib_trie || exit 1
+
+        # Delete IPIP tunnel
+        ip link set ipip_tunnel down || exit 1
+        ip tunnel del ipip_tunnel || exit 1
+        ! grep -q "ipip_tunnel" /proc/net/dev || exit 1
+
 		# Bring the eth0 interface down
 		ip link set eth0 down || exit 1
 		sleep 2
@@ -84,7 +175,6 @@ func TestIP(t *testing.T) {
 		# Delete the IP address from eth0
 		ip addr del 192.168.1.1/24 dev eth0 || exit 1
 		! grep -q "192.168.1.1" /proc/net/fib_trie || exit 1
-
 
 		echo "TESTS PASSED MARKER"
 	`
