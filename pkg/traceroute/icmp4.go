@@ -25,11 +25,17 @@ func (t *Trace) SendTracesICMP4() {
 	if err != nil {
 		log.Fatal("can not create raw socket:", err)
 	}
+
 	id := uint16(1)
+	seq := id
+	if t.DestPort != 0 {
+		seq = t.DestPort
+	}
 	mod := uint16(1 << 15)
+
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			hdr, payload := t.BuildICMP4Pkt(uint8(ttl), id, id, 0)
+			hdr, payload := t.BuildICMP4Pkt(uint8(ttl), id, seq, 0)
 			rSocket.WriteTo(hdr, payload, nil)
 			pb := &Probe{
 				ID:       uint32(hdr.ID),
@@ -39,6 +45,7 @@ func (t *Trace) SendTracesICMP4() {
 			}
 			t.SendChan <- pb
 			id = (id + 1) % mod
+			seq = (seq + 1) % mod
 			go t.ReceiveTracesICMP4()
 			time.Sleep(time.Microsecond * time.Duration(100000/t.PacketRate))
 		}

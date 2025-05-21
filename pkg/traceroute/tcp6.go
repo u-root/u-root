@@ -32,13 +32,14 @@ func (t *Trace) SendTracesTCP6() {
 	mod := uint32(1 << 30)
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			cm, payload := t.BuildTCP6SYNPkt(sport, t.destPort, uint16(ttl), seq, 0)
+			cm, payload := t.BuildTCP6SYNPkt(sport, t.DestPort, uint16(ttl), seq, 0)
 			rSocket.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
 			pb := &Probe{
 				ID:       seq,
 				Dest:     t.DestIP,
 				TTL:      ttl,
 				Sendtime: time.Now(),
+				Port:     t.DestPort,
 			}
 			t.SendChan <- pb
 			seq = (seq + 4) % mod
