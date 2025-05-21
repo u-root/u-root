@@ -32,13 +32,14 @@ func (t *Trace) SendTracesTCP4() {
 	mod := uint32(1 << 30)
 	for ttl := 1; ttl <= int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			hdr, payload := t.BuildTCP4SYNPkt(sport, t.destPort, uint8(ttl), seq, 0)
+			hdr, payload := t.BuildTCP4SYNPkt(sport, t.DestPort, uint8(ttl), seq, 0)
 			rSocket.WriteTo(hdr, payload, nil)
 			pb := &Probe{
 				ID:       seq,
 				Dest:     t.DestIP,
 				TTL:      ttl,
 				Sendtime: time.Now(),
+				Port:     t.DestPort,
 			}
 			t.SendChan <- pb
 			seq = (seq + 4) % mod

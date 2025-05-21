@@ -18,7 +18,7 @@ import (
 // SendTrace in a routine
 func (t *Trace) SendTracesUDP4() {
 	id := uint16(1)
-	dport := uint16(int32(t.destPort) + rand.Int31n(64))
+	dport := uint16(int32(t.DestPort) + rand.Int31n(64))
 	sport := uint16(1000 + t.PortOffset + rand.Int31n(500))
 	mod := uint16(1 << 15)
 
@@ -49,7 +49,8 @@ func (t *Trace) SendTracesUDP4() {
 			}
 
 			t.SendChan <- pb
-			dport = uint16(int32(t.destPort) + rand.Int31n(64))
+
+			dport = uint16(int32(t.DestPort) + rand.Int31n(64))
 			id = (id + 1) % mod
 			go t.ReceiveTracesUDP4()
 			time.Sleep(time.Microsecond * time.Duration(100000))

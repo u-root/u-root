@@ -17,7 +17,7 @@ import (
 
 func (t *Trace) SendTracesUDP6() {
 	id := uint16(1)
-	dport := uint16(int32(t.destPort) + rand.Int31n(64))
+	dport := uint16(int32(t.DestPort) + rand.Int31n(64))
 	sport := uint16(1000 + t.PortOffset + rand.Int31n(500))
 	mod := uint16(1 << 15)
 
@@ -44,7 +44,8 @@ func (t *Trace) SendTracesUDP6() {
 			rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
 
 			t.SendChan <- pb
-			dport = uint16(int32(t.destPort) + rand.Int31n(64))
+
+			dport = uint16(int32(t.DestPort) + rand.Int31n(64))
 			id = (id + 1) % mod
 			go t.ReceiveTracesUDP6()
 			time.Sleep(time.Microsecond * time.Duration(100000))
