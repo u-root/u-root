@@ -184,6 +184,26 @@ func TestIP(t *testing.T) {
 		ip neigh del 192.168.1.2 dev eth0 || exit 1
 		! grep -q "192.168.1.2" /proc/net/arp || exit 1
 
+
+		# Test IP Neighbor flush capability
+		# Add 3 neighbors
+		ip neigh add 192.168.1.5 lladdr aa:bb:cc:dd:ee:ff nud stale dev eth0 || exit 1
+		ip neigh add 192.168.1.6 lladdr aa:bb:cc:11:22:33 nud stale dev eth0 || exit 1
+		ip neigh add 192.168.1.7 lladdr aa:bb:cc:44:55:66 dev eth0 || exit 1
+
+		# Verify all entries exist
+		grep -q "192.168.1.5" /proc/net/arp || exit 1
+		grep -q "192.168.1.6" /proc/net/arp || exit 1
+		grep -q "192.168.1.7" /proc/net/arp || exit 1
+
+		# Flush the 2 stale neighbors from the table for eth0
+		ip neigh flush dev eth0 || exit 1
+
+		# Verify the 2 stale entries are gone, the permanent one remains
+		! grep -q "192.168.1.5" /proc/net/arp || exit 1
+		! grep -q "192.168.1.6" /proc/net/arp || exit 1
+		grep -q "192.168.1.7" /proc/net/arp || exit 1
+
 		# Bring the eth0 interface down
 		ip link set eth0 down || exit 1
 		sleep 2
