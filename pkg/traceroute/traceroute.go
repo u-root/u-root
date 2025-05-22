@@ -52,6 +52,8 @@ func RunTraceroute(f *Flags) error {
 		go mod.SendTracesTCP6()
 	case "icmp6":
 		go mod.SendTracesICMP6()
+	default:
+		return fmt.Errorf("unsupported protocol: %s", f.Proto)
 	}
 
 	printMap := runTransmission(cc)
