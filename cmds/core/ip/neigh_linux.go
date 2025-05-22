@@ -213,6 +213,10 @@ func parseNUD(input string) (int, error) {
 			return nud, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
 		}
 
+		if nudInt64 < 0 {
+			return 0, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
+		}
+
 		nud = int(nudInt64)
 
 		if _, ok := neighStates[nud]; !ok {
