@@ -1,6 +1,6 @@
 module github.com/u-root/u-root
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
