@@ -11,7 +11,6 @@ package multiboot
 
 import (
 	"bytes"
-	"debug/elf"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -338,11 +337,11 @@ func (m *multiboot) load(debug bool, ibft *ibft.IBFT) error {
 }
 
 func getEntryPoint(r io.ReaderAt) (uintptr, error) {
-	f, err := elf.NewFile(r)
+	o, err := kexec.ObjectNewFile(r)
 	if err != nil {
 		return 0, err
 	}
-	return uintptr(f.Entry), err
+	return uintptr(o.Entry()), nil
 }
 
 // addInfo collects and adds multiboot info into the relocations/segments.
