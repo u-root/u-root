@@ -98,21 +98,6 @@ func (cmd *cmd) parseDeviceName(mandatory bool) (netlink.Link, error) {
 	}
 }
 
-// parseType parses the type of the command.
-// The type is the next argument after the 'type' keyword.
-// The type is optional in some commands, hence an `ErrNotFound` is returned if the type is not found.
-func (cmd *cmd) parseType() (string, error) {
-	if !cmd.tokenRemains() {
-		return "", ErrNotFound
-	}
-
-	if cmd.nextToken("type") != "type" {
-		return "", ErrNotFound
-	}
-
-	return cmd.nextToken("type name"), nil
-}
-
 func (cmd *cmd) parseAddress() (net.IP, error) {
 	token := cmd.nextToken("address", "PREFIX")
 	if token == "address" {
@@ -136,6 +121,26 @@ func (cmd *cmd) parseIPNet() (*net.IPNet, error) {
 	}
 
 	return ipNet, nil
+}
+
+func (cmd *cmd) parseAddressorCIDR() (net.IP, *net.IPNet, error) {
+	addrStr := cmd.nextToken("PREFIX")
+
+	// Check if it's a CIDR notation
+	if strings.Contains(addrStr, "/") {
+		ip, ipNet, err := net.ParseCIDR(addrStr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse address: %s", addrStr)
+		}
+		return ip, ipNet, nil
+	}
+
+	// Regular IP address
+	ip := net.ParseIP(addrStr)
+	if ip == nil {
+		return nil, nil, fmt.Errorf("failed to parse address: %s", addrStr)
+	}
+	return ip, nil, nil
 }
 
 func (cmd *cmd) parseHardwareAddress() (net.HardwareAddr, error) {

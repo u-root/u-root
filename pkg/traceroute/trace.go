@@ -7,40 +7,49 @@ package traceroute
 import "net"
 
 type Trace struct {
-	DestIP   net.IP
-	destPort uint16
-	SrcIP    net.IP
-	//srcPort     uint16
+	DestIP net.IP
+
+	// See --port in traceroute(8):
+	// For UDP tracing, specifies the destination port base traceroute will use (the destination port number
+	// will be incremented by each probe).
+	// For ICMP tracing, specifies the initial ICMP sequence value (incremented by each probe too).
+	// For TCP and others specifies just the (constant) destination port to connect.
+	DestPort uint16
+
+	SrcIP        net.IP
 	PortOffset   int32
 	MaxHops      int
 	SendChan     chan<- *Probe
 	ReceiveChan  chan<- *Probe
 	TracesPerHop int
 	PacketRate   int
+	ICMPSeqStart uint16
 }
 
 func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc Coms, f *Flags) *Trace {
-	var ret *Trace
-	var destAddr, srcAddr net.IP
-	var dPort uint16
+	var (
+		ret               *Trace
+		destAddr, srcAddr net.IP
+		dPort             uint16
+	)
 
 	switch proto {
 	case "udp4":
 		destAddr = dAddr.To4()
 		srcAddr = sAddr.To4()
-		dPort = 33434
+		dPort = UDPDEFPORT
 	case "udp6":
 		destAddr = dAddr.To16()
 		srcAddr = sAddr.To16()
-		dPort = 33434
+		dPort = UDPDEFPORT
 	case "tcp4":
 		destAddr = dAddr.To4()
 		srcAddr = sAddr.To4()
-		dPort = 443
+		dPort = TCPDEFPORT
 	case "tcp6":
 		destAddr = dAddr.To16()
 		srcAddr = sAddr.To16()
-		dPort = 443
+		dPort = TCPDEFPORT
 	case "icmp4":
 		destAddr = dAddr.To4()
 		srcAddr = sAddr.To4()
@@ -51,9 +60,14 @@ func NewTrace(proto string, dAddr net.IP, sAddr net.IP, cc Coms, f *Flags) *Trac
 		dPort = 0
 	}
 
+	// update only when the user specifies a port and it is not already 0 (icmp)
+	if f.DestPortSeq != 0 {
+		dPort = uint16(f.DestPortSeq)
+	}
+
 	ret = &Trace{
 		DestIP:       destAddr,
-		destPort:     dPort,
+		DestPort:     dPort,
 		SrcIP:        srcAddr,
 		PortOffset:   0,
 		MaxHops:      DEFNUMHOPS,

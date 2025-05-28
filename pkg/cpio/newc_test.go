@@ -490,6 +490,7 @@ func TestPipeWriteRead(t *testing.T) {
 }
 
 func TestReadWrite(t *testing.T) {
+	Debug = t.Logf
 	r := Newc.Reader(bytes.NewReader(testCPIO))
 	files, err := ReadAllRecords(r)
 	if err != nil {
