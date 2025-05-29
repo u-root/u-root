@@ -52,6 +52,7 @@ func parseFlags(args []string) (*traceroute.Flags, error) {
 	}
 
 	trargs.Host = leftoverArgs[0]
+
 	flags.Host = trargs.Host
 
 	// Evaluate AF and Module
