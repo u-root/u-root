@@ -42,7 +42,6 @@ func (t *Trace) SendTracesUDP6() {
 
 			pb.Sendtime = time.Now()
 			rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
-
 			t.SendChan <- pb
 
 			dport = uint16(int32(t.DestPort) + rand.Int31n(64))
@@ -103,6 +102,9 @@ func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int)
 	payload = append(payload, idBin...)
 
 	udphdr.Length = uint16(len(payload) + 8)
+
+	// Set the checksum to 0xffff, which indicates that it should be calculated.
+	udphdr.Chksum = 0xffff
 
 	var b bytes.Buffer
 	binary.Write(&b, binary.BigEndian, &udphdr)
