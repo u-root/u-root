@@ -128,7 +128,6 @@ func (t *Trace) IPv6TCPPing(seq uint32, dport uint16) {
 	}
 	conn.Close()
 
-	fmt.Println("tcp probe")
 	pbr := &Probe{
 		ID:       seq,
 		Saddr:    t.DestIP,

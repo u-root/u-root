@@ -123,6 +123,12 @@ func TestTraceroute(t *testing.T) {
 		traceroute -6 -m icmp -p 2 `+hostCIPv6+` | tail -n 1 | grep -q --regexp "`+tcpTestRegexHostCIPv6+`" || exit 1
 
 		echo "ALL TESTS PASSED MARKER"
+
+		# signal the other VMs that the tests are done
+		echo "TESTDONE" | netcat `+hostBGatewayAv4+` 22222 || exit 1
+		echo "TESTDONE" | netcat `+hostCIPv4+` 22222 || exit 1
+
+		echo "ALL TESTS PASSED MARKER"
 		`)
 
 	fmt.Fprint(&scriptHostB, `
@@ -154,9 +160,11 @@ func TestTraceroute(t *testing.T) {
 		echo "`+hostAIPv6+`	vmA" >> /etc/hosts
 		echo "`+hostCIPv6+`	vmC" >> /etc/hosts
 
+		# wait for done signal from vmA
+		netcat -l `+hostBGatewayAv4+` 22222 | grep -q "TESTDONE" && echo "ALL TESTS PASSED MARKER" || exit 1 
+
 		# idle
-		sleep 120
-		echo "ALL TESTS PASSED MARKER"
+		#sleep 300
 	`)
 
 	fmt.Fprint(&scriptHostC, `
@@ -211,8 +219,8 @@ func TestTraceroute(t *testing.T) {
 		netcat -l `+hostCIPv6+` 33434 &
 		netcat -l `+hostCIPv6+` 31337 &
 
-		sleep 300
-		echo "ALL TESTS PASSED MARKER"
+		netcat -l `+hostCIPv4+` 22222 | grep -q "TESTDONE" && echo "ALL TESTS PASSED MARKER" || exit 1
+		#sleep 300
 	`)
 
 	vmA := scriptvm.Start(t, "vmA", scriptHostA.String(),
@@ -230,7 +238,7 @@ func TestTraceroute(t *testing.T) {
 			),
 		),
 		scriptvm.WithQEMUFn(
-			qemu.WithVMTimeout(2*time.Minute),
+			qemu.WithVMTimeout(3*time.Minute),
 			qemu.ArbitraryArgs("-nic", "socket,listen=:"+qemuSocketPortAB),
 		),
 	)
@@ -242,10 +250,12 @@ func TestTraceroute(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/ip",
 				"github.com/u-root/u-root/cmds/core/sleep",
 				"github.com/u-root/u-root/cmds/core/ping",
+				"github.com/u-root/u-root/cmds/core/netcat",
+				"github.com/u-root/u-root/cmds/core/grep",
 			),
 		),
 		scriptvm.WithQEMUFn(
-			qemu.WithVMTimeout(2*time.Minute),
+			qemu.WithVMTimeout(3*time.Minute),
 			qemu.ArbitraryArgs("-nic", "socket,connect="+qemuSocketHost+":"+qemuSocketPortAB),
 			qemu.ArbitraryArgs("-nic", "socket,listen=:"+qemuSocketPortBC),
 			// NAT to the outside world
@@ -268,7 +278,7 @@ func TestTraceroute(t *testing.T) {
 			),
 		),
 		scriptvm.WithQEMUFn(
-			qemu.WithVMTimeout(2*time.Minute),
+			qemu.WithVMTimeout(3*time.Minute),
 			qemu.ArbitraryArgs("-nic", "socket,connect="+qemuSocketHost+":"+qemuSocketPortBC),
 		),
 	)
