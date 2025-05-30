@@ -41,7 +41,6 @@ func TestTraceroute(t *testing.T) {
 		hostBGatewayAv4 = "192.168.10.1"
 		hostBGatewayCv4 = "192.168.20.1"
 		hostCIPv4       = "192.168.20.10"
-		hostsv4         = hostAIPv4 + "vmA\n" + hostCIPv4 + "vmC\n"
 
 		hostAIPv6         = "fd51:3681:1eb4::2"
 		hostBGatewayAIPv6 = "fd51:3681:1eb4::1"
