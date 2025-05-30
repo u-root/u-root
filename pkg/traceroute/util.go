@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+const (
+	DNSIPv6        = "[2001:4860:4860::8844]"
+	DNSIPv4        = "8.8.8.8"
+	virtNetDevPath = "/sys/devices/virtual/net/"
+)
+
 type Coms struct {
 	SendChan chan *Probe
 	RecvChan chan *Probe
@@ -47,7 +53,7 @@ func DestAddr(dest, proto string) (net.IP, error) {
 }
 
 func isVirtual(iface net.Interface) bool {
-	dev := "/sys/devices/virtual/net/" + iface.Name
+	dev := virtNetDevPath + iface.Name
 	if _, err := os.Stat(dev); err == nil {
 		return true
 	}
@@ -60,11 +66,11 @@ func SrcAddr(proto string) (*net.IP, error) {
 
 	if strings.Contains(proto, "6") {
 		// this assumes connection to a well-known DNS server
-		conn, err := net.Dial("udp6", "[2001:4860:4860::8844]:53")
+		conn, err := net.Dial("udp6", DNSIPv6+":53")
 		if err != nil {
 			ifaces, err := net.Interfaces()
 			if err != nil {
-				return nil, fmt.Errorf("failed to get interfaces: %v", err)
+				return nil, fmt.Errorf("failed to get interfaces: %w", err)
 			}
 
 			for _, i := range ifaces {
@@ -78,15 +84,19 @@ func SrcAddr(proto string) (*net.IP, error) {
 				}
 				for _, addr := range addrs {
 					var ip net.IP
-					if addr.(*net.IPNet).IP.To4() != nil || isVirtual(i) {
-						continue // skip IPv4 addresses
-					}
 
 					switch v := addr.(type) {
 					case *net.IPNet:
+						if addr.(*net.IPNet).IP.To4() != nil || isVirtual(i) {
+							continue
+						}
 						ip = v.IP
 						found = true
+
 					case *net.IPAddr:
+						if v.IP.To4() != nil || isVirtual(i) {
+							continue
+						}
 						ip = v.IP
 						found = true
 					}
@@ -97,14 +107,14 @@ func SrcAddr(proto string) (*net.IP, error) {
 				}
 			}
 			if !found {
-				return nil, fmt.Errorf("no suitable IPv6 address found for traceroute")
+				return nil, fmt.Errorf("no suitable source IPv6 address found for traceroute")
 			}
 		} else {
 			sAddr = conn.LocalAddr().(*net.UDPAddr)
 			conn.Close()
 		}
 	} else {
-		conn, err := net.Dial("udp", "8.8.8.8:53")
+		conn, err := net.Dial("udp", DNSIPv4+":53")
 		if err != nil {
 			return nil, err
 		}
