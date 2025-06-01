@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +23,7 @@ type proc struct {
 	pid  string
 }
 
-func run(stdout io.Writer, procPath string, args []string) error {
+func run(stdout io.Writer, procPath string, single bool, args []string) error {
 	procs, err := collect(procPath)
 	if err != nil {
 		return err
@@ -33,6 +34,10 @@ func run(stdout io.Writer, procPath string, args []string) error {
 	for _, proc := range procs {
 		for _, arg := range args {
 			if proc.comm == arg {
+				if single {
+					fmt.Fprintln(stdout, proc.pid)
+					return nil
+				}
 				pids = append(pids, proc.pid)
 			}
 		}
@@ -47,7 +52,9 @@ func run(stdout io.Writer, procPath string, args []string) error {
 }
 
 func main() {
-	if err := run(os.Stdout, procPath, os.Args[1:]); err != nil {
+	single := flag.Bool("s", false, "single shot - this instructs the program to only return one pid")
+	flag.Parse()
+	if err := run(os.Stdout, procPath, *single, os.Args[1:]); err != nil {
 		if errors.Is(err, errNotFound) {
 			os.Exit(1)
 		}

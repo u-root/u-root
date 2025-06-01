@@ -11,22 +11,47 @@ import (
 )
 
 func TestPidof(t *testing.T) {
-	stdout := bytes.Buffer{}
-
-	err := run(&stdout, "./testdata", []string{"init", "bash"})
-	if err != nil {
-		t.Fatalf("expected nil got %v", err)
+	tests := []struct {
+		name     string
+		procDir  string
+		expected string
+		args     []string
+		single   bool
+	}{
+		{
+			name:     "multiple processes",
+			procDir:  "./testdata",
+			args:     []string{"init", "bash"},
+			expected: "1 2\n",
+		},
+		{
+			name:     "multiple pids with single flag",
+			procDir:  "./testdata",
+			single:   true,
+			args:     []string{"process"},
+			expected: "3\n",
+		},
 	}
 
-	expected := "1 2\n"
-	if stdout.String() != "1 2\n" {
-		t.Errorf("expeted %q, got %q", expected, stdout.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout := bytes.Buffer{}
+
+			err := run(&stdout, tt.procDir, tt.single, tt.args)
+			if err != nil {
+				t.Fatalf("expected nil got %v", err)
+			}
+
+			if stdout.String() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, stdout.String())
+			}
+		})
 	}
 }
 
 func TestPidofMissing(t *testing.T) {
 	stdout := bytes.Buffer{}
-	err := run(&stdout, "./testdata", []string{"goooo"})
+	err := run(&stdout, "./testdata", false, []string{"goooo"})
 	if !errors.Is(err, errNotFound) {
 		t.Fatalf("expected %v got %v", errNotFound, err)
 	}
