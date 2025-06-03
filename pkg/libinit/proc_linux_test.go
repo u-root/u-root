@@ -100,7 +100,7 @@ func TestWithMultiTTY(t *testing.T) {
 				return []io.Writer{}, nil
 			},
 			ttyNames:  nil,
-			expectErr: true,
+			expectErr: false,
 		},
 		{
 			name: "MultiTTY enabled with single writer",

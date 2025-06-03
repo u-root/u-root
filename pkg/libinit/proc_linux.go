@@ -44,6 +44,11 @@ func WithTTYControl(ctty bool) CommandModifier {
 
 func WithMultiTTY(mtty bool, openFn func([]string) ([]io.Writer, error), ttyNames []string) CommandModifier {
 	return func(c *exec.Cmd) {
+		if len(ttyNames) == 0 {
+			c.Stdout = os.Stdout
+			c.Stderr = os.Stderr
+			return
+		}
 		if mtty {
 			ww, err := openFn(ttyNames)
 			if err != nil {
@@ -57,6 +62,12 @@ func WithMultiTTY(mtty bool, openFn func([]string) ([]io.Writer, error), ttyName
 				return
 			}
 
+			// Special case: if there is only 1, then do not
+			// start a multiwriter
+			if len(ww) == 1 {
+				c.Stdout, c.Stderr = ww[0], ww[0]
+				return
+			}
 			c.Stdout = io.MultiWriter(ww...)
 			c.Stderr = io.MultiWriter(ww...)
 		}
