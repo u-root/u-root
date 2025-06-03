@@ -56,7 +56,12 @@ func WithMultiTTY(mtty bool, openFn func([]string) ([]*os.File, error), ttyNames
 				return
 			}
 
-			if len(ww) >= 1 {
+			switch len(ww) {
+			case 0:
+				c.Stdout, c.Stderr = os.Stdout, os.Stderr
+			case 1:
+				c.Stdout, c.Stderr = ww[0], ww[0]
+			default:
 				writers := make([]io.Writer, len(ww))
 				for i, w := range ww {
 					writers[i] = w
