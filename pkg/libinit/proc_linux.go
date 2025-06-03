@@ -10,12 +10,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
-	"syscall"
-	"time"
-	"unsafe"
 
+	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/sys/unix"
 )
 
@@ -99,57 +97,6 @@ func linuxDefault(c *exec.Cmd) {
 	}
 }
 
-func Raw(r *os.File) error {
-	termios, err := unix.IoctlGetTermios(int(r.Fd()), unix.TCGETS)
-	if err != nil {
-		return err
-	}
-
-	termios.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
-	termios.Oflag &^= unix.OPOST
-	termios.Lflag &^= unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN
-	termios.Cflag &^= unix.CSIZE | unix.PARENB
-	termios.Cflag |= unix.CS8
-	termios.Cc[unix.VMIN] = 1
-	termios.Cc[unix.VTIME] = 0
-
-	if err = unix.IoctlSetTermios(int(r.Fd()), unix.TCSETS, termios); err != nil {
-		return err
-	}
-	if err = syscall.SetNonblock(int(r.Fd()), true); err != nil {
-		return err
-	}
-	return nil
-}
-
-func NewPTMS() (*os.File, *os.File, error) {
-	p, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
-	if err != nil {
-		time.Sleep(1 * time.Second)
-		return nil, nil, err
-	}
-
-	// unlock
-	var u int32
-	// use TIOCSPTLCK with a pointer to zero to clear the lock.
-	err = ioctl(p, syscall.TIOCSPTLCK, uintptr(unsafe.Pointer(&u))) //nolint:gosec // Expected unsafe pointer for Syscall call.
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sname, err := ptsname(p)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	t, err := os.OpenFile(sname, os.O_RDWR|syscall.O_NOCTTY|syscall.O_NONBLOCK, 0o620) //nolint:gosec // Expected Open from a variable.
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return p, t, nil
-}
-
 // FIX ME: make it not linux-specific
 // RunCommands runs commands in sequence.
 //
@@ -168,7 +115,7 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		debug("Trying to run %v", cmd)
 
 		// Set up PTM
-		m, s, err := NewPTMS()
+		m, s, err := pty.NewPTMS()
 		if err != nil {
 			debug("Error getting PTY: %v", err)
 			return 0
@@ -191,7 +138,7 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 				}
 
 				// Set to Raw mode
-				if err := Raw(t); err != nil {
+				if err := termios.MakeRawFile(t); err != nil {
 					// Let's still continue if we can't set the TTY to raw mode
 					debug("Error setting TTY to raw mode: %v", err)
 				}
@@ -199,7 +146,7 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 				go func() {
 					for {
 						if _, err := io.Copy(m, t); err != nil {
-							log.Printf("Error copying output from command to PTM: %v", err)
+							debug("Error copying output from command to PTM: %v", err)
 						}
 					}
 				}()
@@ -244,25 +191,4 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 		}
 	}
 	return cmdCount
-}
-
-// This comes from the pty package
-func ioctl(f *os.File, cmd, ptr uintptr) error {
-	return ioctlInner(f.Fd(), cmd, ptr)
-}
-
-func ioctlInner(fd, cmd, ptr uintptr) error {
-	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, fd, cmd, ptr)
-	if e != 0 {
-		return e
-	}
-	return nil
-}
-
-func ptsname(f *os.File) (string, error) {
-	var n uint32
-	if err := ioctl(f, syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n))); err != nil {
-		return "", err
-	}
-	return "/dev/pts/" + strconv.Itoa(int(n)), nil
 }
