@@ -218,7 +218,7 @@ func TestConsoles(t *testing.T) {
 			c := CmdLine{Raw: tt.cmdLine}
 			got := c.Consoles()
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Consoles() = %v, want %v", got, tt.want)
+				t.Errorf("Consoles() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
