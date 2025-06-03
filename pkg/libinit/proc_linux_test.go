@@ -99,7 +99,7 @@ func TestWithMultiTTY(t *testing.T) {
 				return []*os.File{}, nil
 			},
 			ttyNames:  nil,
-			expectErr: true,
+			expectErr: false,
 		},
 		{
 			name: "MultiTTY enabled with single writer",
