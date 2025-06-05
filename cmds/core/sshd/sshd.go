@@ -119,14 +119,6 @@ func newPTY(b []byte) (*pty.Pty, error) {
 	return p, nil
 }
 
-func init() {
-	for _, s := range shells {
-		if _, err := exec.LookPath(s); err == nil {
-			shell = s
-		}
-	}
-}
-
 func session(chans <-chan ssh.NewChannel) {
 	var p *pty.Pty
 	// Service the incoming Channel channel.
