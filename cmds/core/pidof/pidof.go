@@ -54,7 +54,7 @@ func run(stdout io.Writer, procPath string, single bool, args []string) error {
 func main() {
 	single := flag.Bool("s", false, "single shot - this instructs the program to only return one pid")
 	flag.Parse()
-	if err := run(os.Stdout, procPath, *single, os.Args[1:]); err != nil {
+	if err := run(os.Stdout, procPath, *single, flag.Args()); err != nil {
 		if errors.Is(err, errNotFound) {
 			os.Exit(1)
 		}
