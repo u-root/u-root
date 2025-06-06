@@ -204,7 +204,7 @@ func TestConsoles(t *testing.T) {
 		{
 			name:    "no consoles",
 			cmdLine: `ro test-flag test2-flag=8`,
-			want:    []string{},
+			want:    []string(nil),
 		},
 		{
 			name:    "mixed flags",
@@ -218,7 +218,7 @@ func TestConsoles(t *testing.T) {
 			c := CmdLine{Raw: tt.cmdLine}
 			got := c.Consoles()
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Consoles() = %v, want %v", got, tt.want)
+				t.Errorf("Consoles() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
