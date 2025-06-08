@@ -196,7 +196,10 @@ func (cmd *cmd) parseRouteAddAppendReplaceDel(resolveLinkIdxFn func(string) (int
 	// PREFIX
 	dest := cmd.nextToken("default", "PREFIX (in CIDR notation)")
 	if dest == "default" {
-		route.Dst = nil
+		route.Dst = &net.IPNet{
+			IP:   net.IPv4zero,
+			Mask: net.CIDRMask(0, 32),
+		}
 	} else {
 		_, route.Dst, err = net.ParseCIDR(dest)
 		if err != nil {
