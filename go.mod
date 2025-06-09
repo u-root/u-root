@@ -57,6 +57,7 @@ require (
 
 require (
 	github.com/jaypipes/ghw v0.12.0
+	github.com/pkg/sftp v1.13.9
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
@@ -69,6 +70,7 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	howett.net/plist v1.0.0 // indirect
