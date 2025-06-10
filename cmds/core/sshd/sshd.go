@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/pkg/sftp"
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
 )
@@ -119,12 +120,30 @@ func newPTY(b []byte) (*pty.Pty, error) {
 	return p, nil
 }
 
-func init() {
-	for _, s := range shells {
-		if _, err := exec.LookPath(s); err == nil {
-			shell = s
-		}
+func handleSftp(req *ssh.Request, channel ssh.Channel) error {
+	s, err := sftp.NewServer(channel, sftp.WithServerWorkingDirectory("/"))
+	if err != nil {
+		req.Reply(false, nil)
+		return err
 	}
+	if err := s.Serve(); err != nil {
+		req.Reply(false, nil)
+		return err
+	}
+
+	req.Reply(true, nil)
+
+	// Need to tell the client that the operations was a success (0) and
+	// kill the connection by any means necessary.  You may see stuff like
+	// "read failed... Broken pipe", but that's OK!  (probably).
+	//
+	// An openssh server will send a msgChannelEOF (96),
+	// msgChannelRequest(exit-status) (98), and then msgChannelClose (97).
+	channel.CloseWrite() // EOF
+	channel.SendRequest("exit-status", false, ssh.Marshal(exitStatusReq{0}))
+	channel.Close()
+
+	return nil
 }
 
 func session(chans <-chan ssh.NewChannel) {
@@ -168,6 +187,20 @@ func session(chans <-chan ssh.NewChannel) {
 				case "pty-req":
 					p, err = newPTY(req.Payload)
 					req.Reply(err == nil, nil)
+				case "subsystem":
+					switch {
+					case string(req.Payload[4:]) == "sftp":
+						// This handles the req.Reply
+						// and may close the channel
+						err := handleSftp(req, channel)
+						if err != nil {
+							log.Printf("sshd: sftp: %v", err)
+						}
+					default:
+						log.Printf("Not handling subsystem req %v %q",
+							req, string(req.Payload))
+						req.Reply(false, nil)
+					}
 				default:
 					log.Printf("Not handling req %v %q", req, string(req.Payload))
 					req.Reply(false, nil)

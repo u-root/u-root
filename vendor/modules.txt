@@ -239,6 +239,9 @@ github.com/knz/bubbline/computil
 github.com/knz/bubbline/editline
 github.com/knz/bubbline/editline/internal/textarea
 github.com/knz/bubbline/history
+# github.com/kr/fs v0.1.0
+## explicit
+github.com/kr/fs
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
@@ -306,6 +309,11 @@ github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/pkg/sftp v1.13.9
+## explicit; go 1.15
+github.com/pkg/sftp
+github.com/pkg/sftp/internal/encoding/ssh/filexfer
+github.com/pkg/sftp/internal/encoding/ssh/filexfer/openssh
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
