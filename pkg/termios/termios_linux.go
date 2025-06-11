@@ -121,6 +121,31 @@ func MakeRaw(term *Termios) *Termios {
 	return &raw
 }
 
+// MakeRawFile is similar to MakeRaw but operates on os.MakeRawFile
+// TODO: Potentially merge into MakeRaw?
+func MakeRawFile(r *os.File) error {
+	termios, err := unix.IoctlGetTermios(int(r.Fd()), unix.TCGETS)
+	if err != nil {
+		return err
+	}
+
+	termios.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
+	termios.Oflag &^= unix.OPOST
+	termios.Lflag &^= unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN
+	termios.Cflag &^= unix.CSIZE | unix.PARENB
+	termios.Cflag |= unix.CS8
+	termios.Cc[unix.VMIN] = 1
+	termios.Cc[unix.VTIME] = 0
+
+	if err = unix.IoctlSetTermios(int(r.Fd()), unix.TCSETS, termios); err != nil {
+		return err
+	}
+	if err = syscall.SetNonblock(int(r.Fd()), true); err != nil {
+		return err
+	}
+	return nil
+}
+
 // MakeSerialBaud updates the Termios to set the baudrate
 func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 	t := *term
