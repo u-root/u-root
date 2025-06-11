@@ -196,7 +196,10 @@ func TestParseRouteAddAppendReplaceDel(t *testing.T) {
 			name: "Add default route with gateway and device",
 			args: []string{"default", "via", "192.168.1.1", "dev", "eth0"},
 			want: &netlink.Route{
-				Dst:       nil,
+				Dst: &net.IPNet{
+					IP:   net.IPv4zero,
+					Mask: net.CIDRMask(0, 32),
+				},
 				Gw:        net.IPv4(192, 168, 1, 1),
 				LinkIndex: linkToIdx["eth0"],
 			},
