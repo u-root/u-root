@@ -23,7 +23,7 @@ type proc struct {
 	pid  string
 }
 
-func run(stdout io.Writer, procPath string, single bool, args []string) error {
+func run(stdout io.Writer, procPath string, single, quiet bool, args []string) error {
 	procs, err := collect(procPath)
 	if err != nil {
 		return err
@@ -35,7 +35,9 @@ func run(stdout io.Writer, procPath string, single bool, args []string) error {
 		for _, arg := range args {
 			if proc.comm == arg {
 				if single {
-					fmt.Fprintln(stdout, proc.pid)
+					if !quiet {
+						fmt.Fprintln(stdout, proc.pid)
+					}
 					return nil
 				}
 				pids = append(pids, proc.pid)
@@ -47,14 +49,17 @@ func run(stdout io.Writer, procPath string, single bool, args []string) error {
 		return errNotFound
 	}
 
-	fmt.Fprintln(stdout, strings.Join(pids, " "))
+	if !quiet {
+		fmt.Fprintln(stdout, strings.Join(pids, " "))
+	}
 	return nil
 }
 
 func main() {
 	single := flag.Bool("s", false, "single shot - this instructs the program to only return one pid")
+	quiet := flag.Bool("q", false, "do not display matched PIDs to standard out")
 	flag.Parse()
-	if err := run(os.Stdout, procPath, *single, flag.Args()); err != nil {
+	if err := run(os.Stdout, procPath, *single, *quiet, flag.Args()); err != nil {
 		if errors.Is(err, errNotFound) {
 			os.Exit(1)
 		}
