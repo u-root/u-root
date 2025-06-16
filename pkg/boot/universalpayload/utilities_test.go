@@ -17,6 +17,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/u-root/u-root/pkg/dt"
 )
 
@@ -669,69 +670,160 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 	}
 
 	subFolder := []string{
-		"0000:00:00.0", // Out of Bus range
-		"0000:01:02.0", // Out of Bus range
-		"0000:15:00.0", // Valid Bus
-		"0000:15:02.0", // Valid Bus
-		"0000:c8:00.0", // Valid Bus
-		"0000:e1:00.0", // Out of Bus range
-		"0000:ff:00.0", // Out of Bus range
-		"0002:00:00.0", // Valid Bus
-		"0002:00:02.0", // Valid Bus
-		"0002:1f:00.0", // Valid Bus
-		"0002:af:00.0", // Valid Bus
-		"0002:ff:00.0", // Valid Bus
+		"pci0000:00/0000:00:00.0",                           // Out of Bus range
+		"pci0000:01/0000:01:02.0",                           // Out of Bus range
+		"pci0000:14/0000:14:00.0",                           // Valid Bus
+		"pci0000:14/0000:14:02.0",                           // Valid Bus
+		"pci0000:16/0000:16:00.0",                           // Valid Bus
+		"pci0000:16/0000:16:01.0",                           // Valid Bus
+		"pci0000:16/0000:16:01.0/0000:17:00.0",              // Valid Bus
+		"pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:01.0", // Valid Bus
+		"pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:02.0", // Valid Bus
+		"pci0000:16/0000:16:02.0/0000:19:00.1",              // Valid Bus
+		"pci0000:16/0000:16:03.0",                           // Valid Bus
+		"pci0000:1a/0000:1a:00.0",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.1",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.2",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.3",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.4",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.5",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.6",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.7",                           // Valid Bus with Invalid Resource
+		"pci0000:c8/0000:c8:00.0",                           // Valid Bus
+		"pci0000:e1/0000:e1:00.0",                           // Out of Bus range
+		"pci0000:ff/0000:ff:00.0",                           // Out of Bus range
+		"pci0002:00/0002:00:00.0",                           // Valid Bus
+		"pci0002:00/0002:00:02.0",                           // Valid Bus
+		"pci0002:1f/0002:1f:00.0",                           // Valid Bus
+		"pci0002:af/0002:af:00.0",                           // Valid Bus
+		"pci0002:ff/0002:ff:00.0",                           // Valid Bus
+
 	}
 
 	resourceContent := [][]string{
 		{
-			// Content for "0000:00:00.0"
+			// Content for "pci0000:00/0000:00:00.0" // Out of Bus range
 			"0x00000000DF000000 0x00000000DFFFFFFF 0x0000000000040200\n",
 		},
 		{
-			// Content for "0000:01:02.0"
+			// Content for "pci0000:01/0000:01:02.0" // Out of Bus range
 			"0x00000000E0000000 0x00000000E0FFFFFF 0x0000000000040200\n",
 		},
 		{
-			// Content for "0000:15:00.0"
+			// Content for "pci0000:14/0000:14:00.0" // Valid Bus
 			"0x00000000DE000000 0x00000000DEFFFFFF 0x0000000000040200\n",
 			"0x00000000C0000000 0x00000000CFFFFFFF 0x0000000000040200\n",
-			"0x000000000000F000 0x000000000000FFFF 0x0000000000040101\n",
+			"0x000000000000E000 0x000000000000EFFF 0x0000000000040101\n",
 			"0x00000000000C0000 0x00000000000DFFFF 0x0000000000000212\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x0000000800000000 0x0000000800EFFFFF 0x0000000000140204\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0000:15:02.0"
-			"0x00000000B8000000 0x00000000B87FFFFF 0x0000000000040200\n",
+			// Content for "pci0000:14/0000:14:02.0" // Valid Bus
+			"0x00000000DC000000 0x00000000DC00FFFF 0x0000000000040200\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0000:C8:00.0"
-			"0x00000000B8800000 0x00000000B8FFFFFF 0x0000000000040200\n",
+			// Content for "pci0000:16/0000:16:00.0" // Valid Bus
+			"0x00000000B8800000 0x00000000B8803FFF 0x0000000000040200\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
-			"0x000000000000E000 0x000000000000E03F 0x0000000000040101\n",
+		},
+
+		{
+			// Content for "pci0000:16/0000:16:01.0" // Valid Bus
+			"0x00000000B8804000 0x00000000B880FFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000010000 0x0000000000011FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:01.0/0000:17:00.0" // Valid Bus
+			"0x00000000B8804000 0x00000000B880FFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000010000 0x0000000000011FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:01.0" // Valid Bus
+			"0x00000000B8804000 0x00000000B8807FFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x00000000B8809000 0x00000000B880EFFF 0x0000000000040200\n",
+			"0x0000000000010000 0x0000000000010FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:02.0" // Valid Bus
+			"0x00000000B8808000 0x00000000B8808FFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x00000000B880F000 0x00000000B880FFFF 0x0000000000040200\n",
+			"0x0000000000011000 0x0000000000011FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:02.0/0000:19:00.1" // Valid Bus
+			"0x00000000B8810000 0x00000000B8813FFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000012000 0x0000000000012FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:03.0“ // Valid Bus
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.0" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.1" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.2" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.3" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.4" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.5" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.6" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.7" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:c8/0000:c8:00.0" // Valid Bus
+			"0x00000000B0800000 0x00000000B0FFFFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x000000000000D000 0x000000000000D03F 0x0000000000040101\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x0000000800F00000 0x0000000800FFFFFF 0x0000000000140204\n",
 		},
 		{
-			// Content for "0000:E1:00.0"
+			// Content for "pci0000:e1/0000:e1:00.0" // Out of Bus range
 			"0x00000000B0000000 0x00000000B0FFFFFF 0x0000000000040200\n",
 			"0x0000000801000000 0x0000000801FFFFFF 0x0000000000140204\n",
 		},
 		{
-			// Content for "0000:FF:00.0"
+			// Content for "pci0000:ff/0000:ff:00.0" // Out of Bus range
 			"0x00000000A8000000 0x00000000AFFFFFFF 0x0000000000040200\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:00:00.0"
+			// Content for "pci0002:00/0002:00:00.0" // Valid Bus
 			"0x0000000810000000 0x000000081000FFFF 0x0000000000140204\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:00:02.0"
+			// Content for "pci0002:00/0002:00:02.0" // Valid Bus
 			"0x00000000A0070000 0x00000000A07FFFFF 0x0000000000040200\n",
 			"0x000000000000B000 0x000000000000BFFF 0x0000000000040101\n",
 			"0x00000000000C0000 0x00000000000DFFFF 0x0000000000000212\n",
@@ -740,42 +832,23 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:1f:00.0"
-			"0x00000000A0080000 0x00000000A09FFFFF 0x0000000000046200\n",
+			// Content for "pci0002:1f/0002:1f:00.0" // Valid Bus
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x00000000A0040000 0x00000000A004FFFF 0x0000000000040200\n",
 			"0x00000000A0060000 0x00000000A006FFFF 0x0000000000040200\n",
-			"0x0000000070000000 0x00000008101FFFFF 0x0000000000140204\n",
+			"0x00000000A0050000 0x00000000A005FFFF 0x0000000000140204\n",
 		},
 		{
-			// Content for "0002:af:00.0"
-			"0x00000000A0030000 0x00000000A003FFFF 0x0000000000040200\n",
-			"0x0000000810020000 0x00000008103FFFFF 0x0000000000140204\n",
+			// Content for "pci0002:af/0002:af:00.0" // Valid Bus
+			"0x00000000A0030000 0x00000000A0037FFF 0x0000000000040200\n",
+			"0x00000000A0038000 0x00000000A003FFFF 0x0000000000140204\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:ff:00.0"
+			// Content for "pci0002:ff/0002:ff:00.0" // Valid Bus
 			"0x00000000A0000000 0x00000000A000FFFF 0x0000000000040200\n",
 			"0x000000000000A000 0x000000000000A03F 0x0000000000040101\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
-		},
-	}
-
-	expectedResourceRegion := []ResourceRegions{
-		{
-			MMIO64Base:  0x0000_0008_0000_0000,
-			MMIO64Limit: 0x0000_0000_0100_0000,
-			MMIO32Base:  0x0000_0000_B800_0000,
-			MMIO32Limit: 0x0000_0000_2700_0000,
-			IOPortBase:  0x0000_0000_0000_E000,
-			IOPortLimit: 0x0000_0000_0000_2000,
-		},
-		{
-			MMIO64Base:  0x0000_0008_1000_0000,
-			MMIO64Limit: 0x0000_0000_0040_0000,
-			MMIO32Base:  0x0000_0000_A000_0000,
-			MMIO32Limit: 0x0000_0000_0080_0000,
-			IOPortBase:  0x0000_0000_0000_A000,
-			IOPortLimit: 0x0000_0000_0000_2000,
 		},
 	}
 
@@ -783,39 +856,153 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 		dt.NewNode("pci-rb", dt.WithProperty(
 			dt.PropertyString("compatible", "pci-rb"),
 			dt.PropertyU64("reg", 0xB000_0000),
-			dt.PropertyU32Array("bus-range", []uint32{0x10, 0xE0}),
+			dt.PropertyU32Array("bus-range", []uint32{0x14, 0x14}),
 			dt.PropertyU32Array("ranges", []uint32{
 				0x300_0000,               // 64BITS
 				0x0000_0008, 0x0000_0000, // MMIO64 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0100_0000, // MMIO64 Limit high and low
+				0x0000_0000, 0x00F0_0000, // MMIO64 Limit high and low
 				0x200_0000,               // 32BITS
-				0x0000_0000, 0xB800_0000, // MMIO32 Base high and low
+				0x0000_0000, 0xC000_0000, // MMIO32 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x2700_0000, // MMIO32 Limit high and low
+				0x0000_0000, 0x1F00_0000, // MMIO32 Limit high and low
 				0x100_0000,               // IOPort
 				0x0000_0000, 0x0000_E000, // IOPort Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0000_2000, // IOPort Limit high and low
+				0x0000_0000, 0x0000_1000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x16, 0x19}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xB880_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0001_4000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0001_0000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_3000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x1A, 0x1A}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0xFFFF_FFFF, 0xFFFF_FFFF, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0xC8, 0xC8}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0x0000_0008, 0x00F0_0000, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0010_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xB080_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0080_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0000_D000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0040, // IOPort Limit high and low
 			}),
 		)),
 		dt.NewNode("pci-rb", dt.WithProperty(
 			dt.PropertyString("compatible", "pci-rb"),
 			dt.PropertyU64("reg", 0xA000_0000),
-			dt.PropertyU32Array("bus-range", []uint32{0x00, 0xFF}),
+			dt.PropertyU32Array("bus-range", []uint32{0x00, 0x00}),
 			dt.PropertyU32Array("ranges", []uint32{
 				0x300_0000,               // 64BITS
 				0x0000_0008, 0x1000_0000, // MMIO64 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0040_0000, // MMIO64 Limit high and low
+				0x0000_0000, 0x0002_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA007_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0079_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0000_B000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_1000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x1F, 0x1F}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA004_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0003_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0xFFFF_FFFF, 0xFFFF_FFFF, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0xAF, 0xAF}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA003_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0001_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0xFFFF_FFFF, 0xFFFF_FFFF, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0xFF, 0xFF}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
 				0x200_0000,               // 32BITS
 				0x0000_0000, 0xA000_0000, // MMIO32 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0080_0000, // MMIO32 Limit high and low
+				0x0000_0000, 0x0001_0000, // MMIO32 Limit high and low
 				0x100_0000,               // IOPort
 				0x0000_0000, 0x0000_A000, // IOPort Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0000_2000, // IOPort Limit high and low
+				0x0000_0000, 0x0000_0040, // IOPort Limit high and low
 			}),
 		)),
 	}
@@ -839,23 +1026,20 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 		}
 	}
 
-	for idx, item := range mcfgData {
-		resource, err := retrieveRootBridgeResources(tmpDir, item)
-		if err != nil {
-			t.Fatalf("Failed to retrieve RB resource %v\n", err)
-		}
-
-		if !reflect.DeepEqual(*resource, expectedResourceRegion[idx]) {
-			t.Errorf("got %+v, want %+v", resource, expectedResourceRegion[idx])
-		}
-
-		rbNode, err := createPCIRootBridgeNode(tmpDir, item)
+	var idx uint32
+	for _, item := range mcfgData {
+		rbNodes, err := createPCIRootBridgeNode(tmpDir, item)
 		if err != nil {
 			t.Fatalf("Failed to create RB node %v\n", err)
 		}
 
-		if !reflect.DeepEqual(rbNode, expectedRbNodes[idx]) {
-			t.Errorf("\ngot %+v, want %+v", rbNode, expectedRbNodes[idx])
+		for _, rbNode := range rbNodes {
+			expected := expectedRbNodes[idx]
+			diff := cmp.Diff(expected, rbNode)
+			if diff != "" {
+				t.Errorf("Index:%x Mismatch (-expected +rbNode):\n%s\n", idx, diff)
+			}
+			idx++
 		}
 	}
 

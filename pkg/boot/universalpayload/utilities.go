@@ -770,13 +770,8 @@ func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	return dt.NewNode("reserved-memory", dt.WithChildren(rsvdNodes...))
 }
 
-func getReservedMemoryMap() (kexec.MemoryMap, error) {
+func getReservedMemoryMap(mm kexec.MemoryMap) (kexec.MemoryMap, error) {
 	var rsvd kexec.MemoryMap
-
-	mm, err := kexecMemoryMapFromIOMem()
-	if err != nil {
-		return nil, ErrRsvdMemoryMapNotFound
-	}
 
 	for _, m := range mm {
 		if m.Type.String() == "Reserved" {
@@ -971,7 +966,12 @@ func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) ([
 	domainIDHex := fmt.Sprintf("%04x", item.PCISegGrp)
 	var resourceRegions []*ResourceRegions
 
-	rsvdMem, err := getReservedMemoryMap()
+	mm, err := kexecMemoryMapFromIOMem()
+	if err != nil {
+		return nil, ErrRsvdMemoryMapNotFound
+	}
+
+	rsvdMem, err := getReservedMemoryMap(mm)
 	if err != nil {
 		return nil, err
 	}
