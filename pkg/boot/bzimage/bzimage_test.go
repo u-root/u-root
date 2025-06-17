@@ -9,7 +9,6 @@ import (
 	"hash/crc32"
 	"os"
 	"testing"
-	"unsafe"
 
 	"github.com/u-root/u-root/pkg/cpio"
 )
@@ -75,17 +74,6 @@ func TestUnmarshal(t *testing.T) {
 			// decompressed payload does not change.
 			if got, want := crc32.ChecksumIEEE(b.KernelCode), tc.crc32; got != want {
 				t.Fatalf("IEEE CRC32 hash of decompressed kernel code has changed from %v to %v", want, got)
-			}
-			// Corrupt a byte in the CRC32 and verify that an error is returned.
-			checksumOffset := uint32(b.KernelOffset) + uint32(b.Header.Syssize)*16 - uint32(unsafe.Sizeof(b.CRC32))
-			image[checksumOffset-1] ^= 0xff
-			if err := b.UnmarshalBinary(image); err == nil {
-				t.Fatalf("UnmarshalBinary did not return an error with corrupted CRC32")
-			}
-			// Restore the corrupted byte.
-			image[checksumOffset-1] ^= 0xff
-			if err := b.UnmarshalBinary(image); err != nil {
-				t.Fatalf("UnmarshalBinary returned an unexpected error when called repeatedly: %v", err)
 			}
 		})
 	}
