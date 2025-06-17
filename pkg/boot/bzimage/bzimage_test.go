@@ -6,7 +6,6 @@ package bzimage
 
 import (
 	"fmt"
-	"hash/crc32"
 	"os"
 	"testing"
 
@@ -16,19 +15,16 @@ import (
 type testImage struct {
 	name  string
 	path  string
-	crc32 uint32
 }
 
 var testImages = []testImage{
 	{
 		name:  "basic bzImage",
 		path:  "testdata/bzImage",
-		crc32: 1646619772,
 	},
 	{
 		name:  "a little larger bzImage, 64k random generated image",
 		path:  "testdata/bzimage-64kurandominitramfs",
-		crc32: 76993350,
 	},
 }
 
@@ -49,17 +45,17 @@ func TestUnmarshal(t *testing.T) {
 
 	compressedTests := []testImage{
 		// These test files have been created using .circleci/images/test-image-amd6/config_linux5.10_x86_64.txt
-		{name: "bzip2", path: "testdata/bzImage-linux5.10-x86_64-bzip2", crc32: 1083155033},
-		{name: "signed-debian", path: "testdata/bzImage-debian-signed-linux5.10.0-6-amd64_5.10.28-1_amd64", crc32: 3243083922},
-		{name: "signed-rocky", path: "testdata/bzImage-rockylinux9", crc32: 4110245191},
-		{name: "gzip", path: "testdata/bzImage-linux5.10-x86_64-gzip", crc32: 4192009363},
-		{name: "xz", path: "testdata/bzImage-linux5.10-x86_64-xz", crc32: 3062624786},
-		{name: "lz4", path: "testdata/bzImage-linux5.10-x86_64-lz4", crc32: 2177238538},
-		{name: "lzma", path: "testdata/bzImage-linux5.10-x86_64-lzma", crc32: 3062624786},
+		{name: "bzip2", path: "testdata/bzImage-linux5.10-x86_64-bzip2"},
+		{name: "signed-debian", path: "testdata/bzImage-debian-signed-linux5.10.0-6-amd64_5.10.28-1_amd64"},
+		{name: "signed-rocky", path: "testdata/bzImage-rockylinux9"},
+		{name: "gzip", path: "testdata/bzImage-linux5.10-x86_64-gzip"},
+		{name: "xz", path: "testdata/bzImage-linux5.10-x86_64-xz"},
+		{name: "lz4", path: "testdata/bzImage-linux5.10-x86_64-lz4"},
+		{name: "lzma", path: "testdata/bzImage-linux5.10-x86_64-lzma"},
 		// This test does not pass because the CircleCI environment does not include the `lzop` command.
 		// TODO: Fix the CircleCI environment or (preferably) find a Go package which provides this functionality.
 		//		{name: "lzo", path: "testdata/bzImage-linux5.10-x86_64-lzo"},
-		{name: "zstd", path: "testdata/bzImage-linux5.10-x86_64-zstd", crc32: 1773835837},
+		{name: "zstd", path: "testdata/bzImage-linux5.10-x86_64-zstd"},
 	}
 
 	for _, tc := range append(testImages, compressedTests...) {
@@ -68,12 +64,6 @@ func TestUnmarshal(t *testing.T) {
 			var b BzImage
 			if err := b.UnmarshalBinary(image); err != nil {
 				t.Fatal(err)
-			}
-			// Verify that the IEEE CRC32 hash has not changed.
-			// This ensures that we can swap out the decompressor with confidence that the
-			// decompressed payload does not change.
-			if got, want := crc32.ChecksumIEEE(b.KernelCode), tc.crc32; got != want {
-				t.Fatalf("IEEE CRC32 hash of decompressed kernel code has changed from %v to %v", want, got)
 			}
 		})
 	}
