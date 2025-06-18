@@ -61,8 +61,8 @@ func (e *aout9Object) Progs() []*elf.Prog {
 				Type:   elf.PT_LOAD,
 				Flags:  elf.PF_X | elf.PF_R,
 				Filesz: uint64(e.f.Sections[0].Size),
-
-				Paddr: e.f.LoadAddress,
+				Memsz:  uint64(e.f.Sections[0].Size),
+				Paddr:  e.f.LoadAddress,
 			},
 			ReaderAt: e.f.Sections[0].ReaderAt,
 		},
@@ -71,6 +71,7 @@ func (e *aout9Object) Progs() []*elf.Prog {
 				Type:   elf.PT_LOAD,
 				Flags:  elf.PF_W | elf.PF_R,
 				Filesz: uint64(e.f.Sections[1].Size),
+				Memsz:  uint64(e.f.Sections[1].Size),
 				Paddr:  uint64(align.UpPage(uint(e.f.LoadAddress + uint64(e.f.Sections[0].Size)))),
 			},
 			ReaderAt: e.f.Sections[1].ReaderAt,
@@ -93,6 +94,13 @@ func ObjectNewFile(r io.ReaderAt) (Object, error) {
 	}
 	f9, err9 := plan9obj.NewFile(r)
 	if err9 == nil {
+		// Adjust things that the package gets wrong.
+		// Entry needs to be & 0x7fffffff, it's physical.
+		// load address is entry address.
+		if f9.Magic&plan9obj.Magic64 == plan9obj.Magic64 {
+			f9.Entry = f9.Entry & uint64(0x7fffffff)
+			f9.LoadAddress = f9.Entry
+		}
 		return &aout9Object{f: f9}, nil
 	}
 	return nil, fmt.Errorf("ELF: %w, plan9obj: %w", errELF, err9)
