@@ -13,18 +13,18 @@ import (
 )
 
 type testImage struct {
-	name  string
-	path  string
+	name string
+	path string
 }
 
 var testImages = []testImage{
 	{
-		name:  "basic bzImage",
-		path:  "testdata/bzImage",
+		name: "basic bzImage",
+		path: "testdata/bzImage",
 	},
 	{
-		name:  "a little larger bzImage, 64k random generated image",
-		path:  "testdata/bzimage-64kurandominitramfs",
+		name: "a little larger bzImage, 64k random generated image",
+		path: "testdata/bzimage-64kurandominitramfs",
 	},
 }
 
