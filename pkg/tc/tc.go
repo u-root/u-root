@@ -16,6 +16,7 @@ var (
 	ErrInvalidArg     = errors.New("invalid argument in list")
 	ErrNotImplemented = errors.New("not implemented")
 	ErrOutOfBounds    = errors.New("integer argument out of bounds")
+	ErrExitAfterHelp  = errors.New("exit after help message")
 )
 
 type Tctl interface {
@@ -24,7 +25,6 @@ type Tctl interface {
 	DeleteQdisc(io.Writer, *Args) error
 	ReplaceQdisc(io.Writer, *Args) error
 	ChangeQdisc(io.Writer, *Args) error
-	LinkQdisc(io.Writer, *Args) error
 	ShowClass(io.Writer, *Args) error
 	AddClass(io.Writer, *Args) error
 	DeleteClass(io.Writer, *Args) error

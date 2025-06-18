@@ -38,7 +38,7 @@ func TestAddressConnectMode(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "TCP Connect with valid host",
+			name: "TCPv4 Connect with valid host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				Host:           "127.0.0.1",
@@ -51,7 +51,20 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "TCP Connect with no DNS host",
+			name: "TCPv6 Connect with valid host",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				Port:           8080,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:8080",
+			wantErr:  false,
+		},
+		{
+			name: "TCPv4 Connect with no DNS host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				Host:           "127.0.0.1",
@@ -66,6 +79,59 @@ func TestAddressConnectMode(t *testing.T) {
 			wantAddr: "127.0.0.1:8080",
 			wantErr:  false,
 		},
+		{
+			name: "TCPv6 Connect with no DNS host",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				Port:           8080,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+				Misc: MiscOptions{
+					NoDNS: true,
+				},
+			},
+			wantAddr: "[::1]:8080",
+			wantErr:  false,
+		},
+		{
+			name: "TCPv4 Portscan",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "127.0.0.1",
+				Port:           1234,
+				ConnectionModeOptions: ConnectModeOptions{
+					ScanPorts:   true,
+					CurrentPort: 2345,
+					EndPort:     3456,
+				},
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "127.0.0.1:2345",
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Portscan",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				Port:           1234,
+				ConnectionModeOptions: ConnectModeOptions{
+					ScanPorts:   true,
+					CurrentPort: 2345,
+					EndPort:     3456,
+				},
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:2345",
+			wantErr:  false,
+		},
+
 		{
 			name: "TCP Connect with no DNS host failing",
 			config: &Config{
@@ -82,7 +148,7 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "TCP Connect with valid host and default port",
+			name: "TCPv4 Connect with valid host and default port",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_CONNECT,
 				Host:           "127.0.0.1",
@@ -91,6 +157,18 @@ func TestAddressConnectMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:0", // Assuming default port is 0 when not specified
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Connect with valid host and default port",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				Host:           "::1",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:0", // Assuming default port is 0 when not specified
 			wantErr:  false,
 		},
 
@@ -132,7 +210,7 @@ func TestAddressConnectMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "SCTP",
+			name: "SCTPv4",
 			config: &Config{
 				Host:           "127.0.0.1",
 				Port:           8080,
@@ -142,6 +220,18 @@ func TestAddressConnectMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:8080",
+		},
+		{
+			name: "SCTPv6",
+			config: &Config{
+				Host:           "::1",
+				Port:           8080,
+				ConnectionMode: CONNECTION_MODE_CONNECT,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_SCTP,
+				},
+			},
+			wantAddr: "[::1]:8080",
 		},
 		{
 			name: "VSOCK",
@@ -193,7 +283,7 @@ func TestAddressListenMode(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "TCP Connect with valid host",
+			name: "TCPv4 Listen with valid host",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
 				Host:           "127.0.0.1",
@@ -206,7 +296,20 @@ func TestAddressListenMode(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name: "TCP Connect with valid host and default port",
+			name: "TCPv6 Listen with valid host",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "::1",
+				Port:           8080,
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:8080",
+			wantErr:  false,
+		},
+		{
+			name: "TCPv4 Listen with valid host and default port",
 			config: &Config{
 				ConnectionMode: CONNECTION_MODE_LISTEN,
 				Host:           "127.0.0.1",
@@ -215,6 +318,18 @@ func TestAddressListenMode(t *testing.T) {
 				},
 			},
 			wantAddr: "127.0.0.1:0", // Assuming default port is 0 when not specified
+			wantErr:  false,
+		},
+		{
+			name: "TCPv6 Listen with valid host and default port",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "::1",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_TCP,
+				},
+			},
+			wantAddr: "[::1]:0", // Assuming default port is 0 when not specified
 			wantErr:  false,
 		},
 		{
@@ -227,7 +342,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V4_V6,
 				},
 			},
-			wantAddr: DEFAULT_IPV4_ADDRESS + fmt.Sprintf(":%d", DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("%s:%d", DEFAULT_IPV4_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{
@@ -240,7 +355,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V4,
 				},
 			},
-			wantAddr: DEFAULT_IPV4_ADDRESS + fmt.Sprintf(":%d", DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("%s:%d", DEFAULT_IPV4_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{
@@ -253,7 +368,7 @@ func TestAddressListenMode(t *testing.T) {
 					IPType:     IP_V6,
 				},
 			},
-			wantAddr: DEFAULT_IPV6_ADDRESS + fmt.Sprintf(":%d", DEFAULT_PORT),
+			wantAddr: fmt.Sprintf("[%s]:%d", DEFAULT_IPV6_ADDRESS, DEFAULT_PORT),
 			wantErr:  false,
 		},
 		{
@@ -265,6 +380,30 @@ func TestAddressListenMode(t *testing.T) {
 				},
 			},
 			wantAddr: DEFAULT_UNIX_SOCKET,
+			wantErr:  false,
+		},
+		{
+			name: "Explicit pathname for UNIX domain socket (stream)",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "/tmp/stream.sock",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_UNIX,
+				},
+			},
+			wantAddr: "/tmp/stream.sock",
+			wantErr:  false,
+		},
+		{
+			name: "Explicit pathname for UNIX domain socket (datagram)",
+			config: &Config{
+				ConnectionMode: CONNECTION_MODE_LISTEN,
+				Host:           "/tmp/datagram.sock",
+				ProtocolOptions: ProtocolOptions{
+					SocketType: SOCKET_TYPE_UDP_UNIX,
+				},
+			},
+			wantAddr: "/tmp/datagram.sock",
 			wantErr:  false,
 		},
 		{

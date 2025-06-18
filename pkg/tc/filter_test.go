@@ -25,7 +25,7 @@ func TestParseFilterArgs(t *testing.T) {
 			args: []string{
 				"help",
 			},
-			expBuf: trafficctl.Filterhelp,
+			expBuf: trafficctl.FilterHelp,
 		},
 		{
 			name: "dev",
@@ -205,6 +205,7 @@ func TestParseBasicParams(t *testing.T) {
 				"help",
 			},
 			expOut: trafficctl.BasicHelp,
+			err:    trafficctl.ErrExitAfterHelp,
 		},
 		{
 			name: "invalid",

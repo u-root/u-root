@@ -6,33 +6,34 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"net"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/vishvananda/netlink"
 )
 
-const neighHelp = `Usage: ip neigh { add | del | replace }
-                ADDR [ lladdr LLADDR ] [ nud STATE ] 
-                [ dev DEV ] [ router ] [ extern_learn ] 
+const neighHelp = `Usage: 	ip neigh { add | del | replace }
+            ADDR [ lladdr LLADDR ] [ nud STATE ] [ dev DEV ] [ router ] [ extern_learn ] 
 
-       ip neigh { show | flush } [ proxy ] [ dev DEV ] [ nud STATE ]
+	ip neigh { show | flush } [ proxy ] [ to PREFIX ] [ dev DEV ] [ nud STATE ]
 
-       ip neigh get ADDR dev DEV
+	ip neigh get ADDR dev DEV
 
-STATE := { delay | failed | incomplete | noarp | none |
-           permanent | probe | reachable | stale }
+STATE := { delay | failed | incomplete | noarp | none | permanent | probe | reachable | stale }
 `
 
 func (cmd *cmd) neigh() error {
 	if !cmd.tokenRemains() {
-		return cmd.showAllNeighbours(-1, false)
+		return cmd.showAllNeighbours(nil, nil, -1, false)
 	}
 
-	switch c := cmd.findPrefix("show", "add", "del", "replace", "flush", "get", "help"); c {
-	case "add", "del", "replace":
+	switch c := cmd.findPrefix("show", "add", "delete", "replace", "flush", "get", "help"); c {
+	case "add", "delete", "replace":
 		neigh, err := cmd.parseNeighAddDelReplaceParams()
 		if err != nil {
 			return err
@@ -41,10 +42,13 @@ func (cmd *cmd) neigh() error {
 		switch c {
 		case "add":
 			return cmd.handle.NeighAdd(neigh)
-		case "del":
+		case "delete":
 			return cmd.handle.NeighDel(neigh)
 		case "replace":
 			return cmd.handle.NeighSet(neigh)
+		default:
+			fmt.Fprint(cmd.Out, neighHelp)
+			return nil
 		}
 
 	case "show":
@@ -57,7 +61,7 @@ func (cmd *cmd) neigh() error {
 			return err
 		}
 
-		return cmd.showNeighbours(-1, false, &ip, iface)
+		return cmd.showNeighbours(-1, false, &ip, nil, iface)
 	case "help":
 		fmt.Fprint(cmd.Out, neighHelp)
 		return nil
@@ -90,7 +94,7 @@ func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 		iface       netlink.Link
 		llAddr      net.HardwareAddr
 		deviceFound bool
-		state       int
+		state       int = netlink.NUD_PERMANENT
 		flag        int
 	)
 
@@ -108,7 +112,7 @@ func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 				return nil, err
 			}
 		case "nud":
-			state, err = cmd.parseInt("STATE")
+			state, err = parseNUD(cmd.nextToken("STATE"))
 			if err != nil {
 				return nil, err
 			}
@@ -141,35 +145,36 @@ func (cmd *cmd) parseNeighAddDelReplaceParams() (*netlink.Neigh, error) {
 	}, nil
 }
 
-func (cmd *cmd) parseNeighShowFlush() (iface netlink.Link, proxy bool, nud int, err error) {
+func (cmd *cmd) parseNeighShowFlush() (addr net.IP, subNet *net.IPNet, iface netlink.Link, proxy bool, nud int, err error) {
 	nud = -1
 
-	var ok bool
-
 	for cmd.tokenRemains() {
-		switch c := cmd.nextToken("dev", "proxy", "nud"); c {
+		switch c := cmd.nextToken("dev", "proxy", "nud", "to"); c {
+		case "to":
+			addr, subNet, err = cmd.parseAddressorCIDR()
+			if err != nil {
+				return nil, nil, nil, false, 0, err
+			}
 		case "dev":
 			dev, err := cmd.parseDeviceName(true)
 			iface = dev
 			if err != nil {
-				return nil, false, 0, err
+				return nil, nil, nil, false, 0, err
 			}
 		case "proxy":
 			proxy = true
 		case "nud":
-			nudStr := cmd.nextToken("STATE")
-
-			nud, ok = neighStatesMap[strings.ToLower(nudStr)]
-			if !ok {
-				return nil, false, 0, fmt.Errorf("invalid state %q", nudStr)
+			nud, err = parseNUD(cmd.nextToken("STATE"))
+			if err != nil {
+				return nil, nil, nil, false, 0, err
 			}
 
 		default:
-			return nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.ExpectedValues)
+			return nil, nil, nil, false, 0, fmt.Errorf("unsupported option %q, expected: %v", c, cmd.ExpectedValues)
 		}
 	}
 
-	return iface, proxy, nud, nil
+	return addr, subNet, iface, proxy, nud, nil
 }
 
 var neighStates = map[int]string{
@@ -196,6 +201,33 @@ var neighStatesMap = map[string]int{
 	"permanent":  netlink.NUD_PERMANENT,
 }
 
+func parseNUD(input string) (int, error) {
+	var nud int
+
+	if val, ok := neighStatesMap[strings.ToLower(input)]; ok {
+		nud = val
+	} else {
+		var err error
+		nudInt64, err := strconv.ParseInt(input, 10, 0)
+		if err != nil {
+			return nud, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
+		}
+
+		if nudInt64 < 0 {
+			return 0, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
+		}
+
+		nud = int(nudInt64)
+
+		if _, ok := neighStates[nud]; !ok {
+			return nud, fmt.Errorf(`argument "%v" is wrong: nud state is bad`, input)
+		}
+
+	}
+
+	return nud, nil
+}
+
 func getState(state int) string {
 	ret := make([]string, 0)
 	for st, name := range neighStates {
@@ -209,13 +241,13 @@ func getState(state int) string {
 	return strings.Join(ret, ",")
 }
 
-func (cmd *cmd) showAllNeighbours(nud int, proxy bool) error {
+func (cmd *cmd) showAllNeighbours(address net.IP, subNet *net.IPNet, nud int, proxy bool) error {
 	ifaces, err := cmd.handle.LinkList()
 	if err != nil {
 		return err
 	}
 
-	return cmd.showNeighbours(nud, proxy, nil, ifaces...)
+	return cmd.showNeighbours(nud, proxy, &address, subNet, ifaces...)
 }
 
 // NeighJSON represents a neighbor object for JSON output format.
@@ -226,7 +258,7 @@ type NeighJSON struct {
 	State  string `json:"state,omitempty"`
 }
 
-func (cmd *cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...netlink.Link) error {
+func (cmd *cmd) showNeighbours(nud int, proxy bool, address *net.IP, subNet *net.IPNet, ifaces ...netlink.Link) error {
 	flags, state, err := cmd.neighFlagState(proxy, nud)
 	if err != nil {
 		return err
@@ -253,30 +285,52 @@ func (cmd *cmd) showNeighbours(nud int, proxy bool, address *net.IP, ifaces ...n
 		}
 	}
 
-	filteredNeighs, filteredLinkNames := filterNeighsByAddr(neighs, linkNames, address)
+	filteredNeighs, filteredLinkNames := filterNeighsByAddr(neighs, linkNames, address, subNet)
 
 	return cmd.printNeighs(filteredNeighs, filteredLinkNames)
 }
 
-func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP) ([]netlink.Neigh, []string) {
+func filterNeighsByAddr(neighs []netlink.Neigh, linkNames []string, addr *net.IP, network *net.IPNet) ([]netlink.Neigh, []string) {
 	filtered := make([]netlink.Neigh, 0)
 	filteredLinkNames := make([]string, 0)
 
 	for idx, neigh := range neighs {
-		if addr != nil {
-			if *addr != nil && !neigh.IP.Equal(*addr) {
+		// If network is specified, check if IP is in the subnet
+		if network != nil {
+			if !network.Contains(neigh.IP) {
+				continue
+			}
+		} else if addr != nil && *addr != nil {
+			// Otherwise do exact IP matching
+			if !neigh.IP.Equal(*addr) {
 				continue
 			}
 		}
+
 		if neigh.State != netlink.NUD_NOARP {
 			filtered = append(filtered, neigh)
-			filteredLinkNames = append(filteredLinkNames, linkNames[idx])
+
+			if linkNames != nil {
+				filteredLinkNames = append(filteredLinkNames, linkNames[idx])
+			}
 		}
 	}
 	return filtered, filteredLinkNames
 }
 
+var flagOrder = []int{
+	netlink.NTF_ROUTER, // Display first
+	netlink.NTF_EXT_LEARNED,
+}
+
+var flagToString = map[int]string{
+	netlink.NTF_EXT_LEARNED: "extern_learn",
+	netlink.NTF_ROUTER:      "router",
+}
+
 func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error {
+	neighs, ifacesNames = sortedNeighs(neighs, ifacesNames)
+
 	if cmd.Opts.JSON {
 		pNeighs := make([]NeighJSON, 0, len(neighs))
 
@@ -304,34 +358,72 @@ func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error 
 			fmt.Fprintf(cmd.Out, neighBriefFmt, v.IP, ifacesNames[idx], v.HardwareAddr)
 		} else {
 			llAddr := ""
-			routerStr := ""
+			flags := ""
 
 			if v.HardwareAddr != nil {
 				llAddr = fmt.Sprintf(" lladdr %s", v.HardwareAddr)
 			}
 
-			if v.Flags&netlink.NTF_ROUTER != 0 {
-				routerStr = " router"
+			for _, flag := range flagOrder {
+				if v.Flags&flag != 0 {
+					flags += fmt.Sprintf(" %s", flagToString[flag])
+				}
 			}
 
-			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, routerStr, getState(v.State))
+			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, flags, getState(v.State))
 		}
 	}
 
 	return nil
 }
 
+func sortedNeighs(neighs []netlink.Neigh, ifacesNames []string) ([]netlink.Neigh, []string) {
+	type pair struct {
+		neigh     netlink.Neigh
+		ifaceName string
+	}
+
+	pairs := make([]pair, len(neighs))
+	for i := range neighs {
+		pairs[i] = pair{neighs[i], ifacesNames[i]}
+	}
+
+	sort.SliceStable(pairs, func(i, j int) bool {
+		// First priority: IPv4 before IPv6
+		isIPv4_i := pairs[i].neigh.IP.To4() != nil
+		isIPv4_j := pairs[j].neigh.IP.To4() != nil
+		if isIPv4_i != isIPv4_j {
+			return isIPv4_i
+		}
+
+		// Second priority: By device index (hardware order)
+		if pairs[i].neigh.LinkIndex != pairs[j].neigh.LinkIndex {
+			return pairs[i].neigh.LinkIndex < pairs[j].neigh.LinkIndex
+		}
+
+		// Third: Use address comparison
+		return bytes.Compare(pairs[i].neigh.IP, pairs[j].neigh.IP) < 0
+	})
+
+	for i, p := range pairs {
+		neighs[i] = p.neigh
+		ifacesNames[i] = p.ifaceName
+	}
+
+	return neighs, ifacesNames
+}
+
 func (cmd *cmd) neighShow() error {
-	iface, proxy, nud, err := cmd.parseNeighShowFlush()
+	addr, subNet, iface, proxy, nud, err := cmd.parseNeighShowFlush()
 	if err != nil {
 		return err
 	}
 
 	if iface != nil {
-		return cmd.showNeighbours(nud, proxy, nil, iface)
+		return cmd.showNeighbours(nud, proxy, &addr, subNet, iface)
 	}
 
-	return cmd.showAllNeighbours(nud, proxy)
+	return cmd.showAllNeighbours(addr, subNet, nud, proxy)
 }
 
 func (cmd *cmd) neighFlush() error {
@@ -341,9 +433,14 @@ func (cmd *cmd) neighFlush() error {
 		state  uint16
 	)
 
-	iface, proxy, nud, err := cmd.parseNeighShowFlush()
+	address, subNet, iface, proxy, nud, err := cmd.parseNeighShowFlush()
 	if err != nil {
 		return err
+	}
+
+	if address == nil && subNet == nil && iface == nil && !proxy && nud == -1 {
+		//nolint:revive,staticcheck // This message is analog to the one in iproute2
+		return fmt.Errorf("Flush requires arguments.")
 	}
 
 	if iface == nil {
@@ -374,7 +471,19 @@ func (cmd *cmd) neighFlush() error {
 			return fmt.Errorf("failed to list neighbors: %w", err)
 		}
 
+		// Filter neighbors based on NUD state (keep specific state or exclude PERMANENT and NOARP when no state specified)
+		filteredForStates := make([]netlink.Neigh, 0, len(neighbors))
 		for _, neigh := range neighbors {
+			if (nud != -1 && neigh.State == nud) || (nud == -1 && neigh.State != netlink.NUD_PERMANENT && neigh.State != netlink.NUD_NOARP) {
+				filteredForStates = append(filteredForStates, neigh)
+			}
+		}
+
+		neighbors = filteredForStates
+
+		filteredNeighs, _ := filterNeighsByAddr(neighbors, nil, &address, subNet)
+
+		for _, neigh := range filteredNeighs {
 			if err := cmd.handle.NeighDel(&neigh); err != nil {
 				return fmt.Errorf("failed to delete neighbor: %w", err)
 			}

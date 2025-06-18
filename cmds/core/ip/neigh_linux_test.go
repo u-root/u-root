@@ -129,9 +129,16 @@ func TestParseNeighAddDelReplaceParam(t *testing.T) {
 }
 
 func TestParseNeighShowFlush(t *testing.T) {
+	validIP, validSubNet, err := net.ParseCIDR("192.168.187.0/8")
+	if err != nil {
+		t.Fatalf("failed to parse CIDR: %v", err)
+	}
+
 	tests := []struct {
 		name         string
 		cmd          cmd
+		wantAddr     net.IP
+		wantSubNet   *net.IPNet
 		wantLinkName string
 		wantProxy    bool
 		wantNud      int
@@ -141,12 +148,48 @@ func TestParseNeighShowFlush(t *testing.T) {
 			name: "all opts",
 			cmd: cmd{
 				Cursor: 2,
-				Args:   []string{"ip", "neigh", "show", "dev", "lo", "nud", "none", "proxy"},
+				Args:   []string{"ip", "neigh", "show", "to", "192.6.6.6", "dev", "lo", "nud", "none", "proxy"},
 				Out:    new(bytes.Buffer),
 			},
+			wantAddr:     net.ParseIP("192.6.6.6"),
 			wantLinkName: "lo",
 			wantProxy:    true,
 			wantNud:      netlink.NUD_NONE,
+		},
+		{
+			name: "subnet",
+			cmd: cmd{
+				Cursor: 2,
+				Args:   []string{"ip", "neigh", "show", "to", "192.168.187.0/8", "dev", "lo", "nud", "none", "proxy"},
+				Out:    new(bytes.Buffer),
+			},
+			wantAddr:     validIP,
+			wantSubNet:   validSubNet,
+			wantLinkName: "lo",
+			wantProxy:    true,
+			wantNud:      netlink.NUD_NONE,
+		},
+		{
+			name: "subnet with IPv6",
+			cmd: cmd{
+				Cursor: 2,
+				Args:   []string{"ip", "neigh", "show", "to", "::/64", "dev", "lo", "nud", "none", "proxy"},
+				Out:    new(bytes.Buffer),
+			},
+			wantAddr:     net.ParseIP("::"),
+			wantSubNet:   &net.IPNet{IP: net.ParseIP("::"), Mask: net.CIDRMask(64, 128)},
+			wantLinkName: "lo",
+			wantProxy:    true,
+			wantNud:      netlink.NUD_NONE,
+		},
+		{
+			name: "invalid ip",
+			cmd: cmd{
+				Cursor: 2,
+				Args:   []string{"ip", "neigh", "show", "to", "abc"},
+				Out:    new(bytes.Buffer),
+			},
+			wantErr: true,
 		},
 		{
 			name: "invalid nud",
@@ -179,12 +222,20 @@ func TestParseNeighShowFlush(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			iface, proxy, nud, err := tt.cmd.parseNeighShowFlush()
+			addr, subNet, iface, proxy, nud, err := tt.cmd.parseNeighShowFlush()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("vrf() = %v, want %t", err, tt.wantErr)
 			}
 
 			if !tt.wantErr {
+				if addr != nil && addr.String() != tt.wantAddr.String() {
+					t.Errorf("unexpected result (-want +got):\n%s", cmp.Diff(addr, tt.wantAddr))
+				}
+
+				if subNet != nil && subNet.String() != tt.wantSubNet.String() {
+					t.Errorf("unexpected result (-want +got):\n%s", cmp.Diff(subNet, tt.wantSubNet))
+				}
+
 				if iface.Attrs().Name != tt.wantLinkName {
 					t.Errorf("unexpected result (-want +got):\n%s", cmp.Diff(iface, tt.wantLinkName))
 				}
@@ -228,10 +279,16 @@ func TestGetState(t *testing.T) {
 }
 
 func TestFilterNeighsByAddr(t *testing.T) {
+	_, validSubNet, err := net.ParseCIDR("192.168.1.0/24")
+	if err != nil {
+		t.Fatalf("failed to parse CIDR: %v", err)
+	}
+
 	tests := []struct {
 		name              string
 		neighs            []netlink.Neigh
 		address           net.IP
+		subNet            *net.IPNet
 		expected          []netlink.Neigh
 		linkNames         []string
 		expectedLinkNames []string
@@ -280,11 +337,70 @@ func TestFilterNeighsByAddr(t *testing.T) {
 			linkNames:         []string{},
 			expectedLinkNames: []string{},
 		},
+		{
+			name: "Filter by subnet /24",
+			neighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("192.168.1.2")},
+				{IP: net.ParseIP("10.0.0.1")},
+			},
+			subNet:            validSubNet,
+			expected:          []netlink.Neigh{{IP: net.ParseIP("192.168.1.1")}, {IP: net.ParseIP("192.168.1.2")}},
+			linkNames:         []string{"eth0", "eth1", "eth2"},
+			expectedLinkNames: []string{"eth0", "eth1"},
+		},
+		{
+			name: "Filter by subnet /16",
+			neighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("192.168.2.1")},
+				{IP: net.ParseIP("10.0.0.1")},
+			},
+			subNet:            mustParseCIDR("192.168.0.0/16"),
+			expected:          []netlink.Neigh{{IP: net.ParseIP("192.168.1.1")}, {IP: net.ParseIP("192.168.2.1")}},
+			linkNames:         []string{"eth0", "eth1", "eth2"},
+			expectedLinkNames: []string{"eth0", "eth1"},
+		},
+		{
+			name: "Filter by IPv6 subnet",
+			neighs: []netlink.Neigh{
+				{IP: net.ParseIP("2001:db8::1")},
+				{IP: net.ParseIP("2001:db8::2")},
+				{IP: net.ParseIP("fe80::1")},
+			},
+			subNet:            mustParseCIDR("2001:db8::/64"),
+			expected:          []netlink.Neigh{{IP: net.ParseIP("2001:db8::1")}, {IP: net.ParseIP("2001:db8::2")}},
+			linkNames:         []string{"eth0", "eth1", "eth2"},
+			expectedLinkNames: []string{"eth0", "eth1"},
+		},
+		{
+			name: "Filter by subnet with no matches",
+			neighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("192.168.1.2")},
+			},
+			subNet:            mustParseCIDR("10.0.0.0/8"),
+			expected:          []netlink.Neigh{},
+			linkNames:         []string{"eth0", "eth1"},
+			expectedLinkNames: []string{},
+		},
+		{
+			name: "Mix of NUD_NOARP and subnet filter",
+			neighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1"), State: netlink.NUD_NOARP},
+				{IP: net.ParseIP("192.168.1.2")},
+				{IP: net.ParseIP("192.168.1.3")},
+			},
+			subNet:            mustParseCIDR("192.168.1.0/24"),
+			expected:          []netlink.Neigh{{IP: net.ParseIP("192.168.1.2")}, {IP: net.ParseIP("192.168.1.3")}},
+			linkNames:         []string{"eth0", "eth1", "eth2"},
+			expectedLinkNames: []string{"eth1", "eth2"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, linkNames := filterNeighsByAddr(tt.neighs, tt.linkNames, &tt.address)
+			result, linkNames := filterNeighsByAddr(tt.neighs, tt.linkNames, &tt.address, tt.subNet)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Test %s failed: expected neighbors %v, got %v", tt.name, tt.expected, result)
 			}
@@ -487,6 +603,238 @@ func TestParseNeighGet(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseNeighGet() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+		})
+	}
+}
+
+func TestParseNUD(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    int
+		wantErr bool
+	}{
+		{
+			name:    "valid text state - none",
+			input:   "none",
+			want:    netlink.NUD_NONE,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - incomplete",
+			input:   "incomplete",
+			want:    netlink.NUD_INCOMPLETE,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - reachable",
+			input:   "reachable",
+			want:    netlink.NUD_REACHABLE,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - stale",
+			input:   "stale",
+			want:    netlink.NUD_STALE,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - delay",
+			input:   "delay",
+			want:    netlink.NUD_DELAY,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - probe",
+			input:   "probe",
+			want:    netlink.NUD_PROBE,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - failed",
+			input:   "failed",
+			want:    netlink.NUD_FAILED,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - noarp",
+			input:   "noarp",
+			want:    netlink.NUD_NOARP,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - permanent",
+			input:   "permanent",
+			want:    netlink.NUD_PERMANENT,
+			wantErr: false,
+		},
+		{
+			name:    "valid text state - mixed case",
+			input:   "PeRmAnEnT",
+			want:    netlink.NUD_PERMANENT,
+			wantErr: false,
+		},
+		{
+			name:    "valid numeric state - 0",
+			input:   "0",
+			want:    netlink.NUD_NONE,
+			wantErr: false,
+		},
+		{
+			name:    "valid numeric state - 2",
+			input:   "2",
+			want:    netlink.NUD_REACHABLE,
+			wantErr: false,
+		},
+		{
+			name:    "valid numeric state - 128",
+			input:   "128",
+			want:    netlink.NUD_PERMANENT,
+			wantErr: false,
+		},
+		{
+			name:    "invalid text state",
+			input:   "unknown",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "invalid numeric state - negative",
+			input:   "-1",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "invalid numeric state - not defined",
+			input:   "3",
+			want:    3,
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseNUD(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseNUD() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("parseNUD() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSortNeighs(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           []netlink.Neigh
+		ifacesNames     []string
+		wantNeighs      []netlink.Neigh
+		wantIfacesNames []string
+	}{
+		{
+			name: "Sort by IP address",
+			input: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.2")},
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("10.0.0.1")},
+			},
+			ifacesNames: []string{"eth1", "eth0", "eth2"},
+			wantNeighs: []netlink.Neigh{
+				{IP: net.ParseIP("10.0.0.1")},
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("192.168.1.2")},
+			},
+			wantIfacesNames: []string{"eth2", "eth0", "eth1"},
+		},
+		{
+			name: "Sort with IPv4 and IPv6 addresses",
+			input: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("::1")},
+				{IP: net.ParseIP("10.0.0.1")},
+				{IP: net.ParseIP("2001:db8::1")},
+			},
+			ifacesNames: []string{"eth1", "eth0", "eth2", "eth3"},
+			wantNeighs: []netlink.Neigh{
+				{IP: net.ParseIP("10.0.0.1")},
+				{IP: net.ParseIP("192.168.1.1")},
+				{IP: net.ParseIP("::1")},
+				{IP: net.ParseIP("2001:db8::1")},
+			},
+			wantIfacesNames: []string{"eth2", "eth1", "eth0", "eth3"},
+		},
+		{
+			name:       "Empty list",
+			input:      []netlink.Neigh{},
+			wantNeighs: []netlink.Neigh{},
+		},
+		{
+			name: "Single element",
+			input: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1")},
+			},
+			ifacesNames: []string{"eth0"},
+			wantNeighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1")},
+			},
+			wantIfacesNames: []string{"eth0"},
+		},
+		{
+			name: "Sort by link index",
+			input: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 3},
+				{IP: net.ParseIP("192.168.1.2"), LinkIndex: 1},
+				{IP: net.ParseIP("192.168.1.3"), LinkIndex: 2},
+			},
+			ifacesNames: []string{"eth2", "eth0", "eth1"},
+			wantNeighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.2"), LinkIndex: 1},
+				{IP: net.ParseIP("192.168.1.3"), LinkIndex: 2},
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 3},
+			},
+			wantIfacesNames: []string{"eth0", "eth1", "eth2"},
+		},
+		{
+			name: "Same IP different link indexes",
+			input: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 3},
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 1},
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 2},
+			},
+			ifacesNames: []string{"eth2", "eth0", "eth1"},
+			wantNeighs: []netlink.Neigh{
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 1},
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 2},
+				{IP: net.ParseIP("192.168.1.1"), LinkIndex: 3},
+			},
+			wantIfacesNames: []string{"eth0", "eth1", "eth2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			neighs, ifaceNames := sortedNeighs(tt.input, tt.ifacesNames)
+
+			if len(neighs) != len(tt.wantNeighs) {
+				t.Errorf("Expected %d elements, got %d", len(tt.wantNeighs), len(neighs))
+			}
+
+			if diff := cmp.Diff(neighs, tt.wantNeighs); diff != "" {
+				t.Errorf("Unexpected sorted neighbors result (-got +want):\n%s", diff)
+			}
+
+			if diff := cmp.Diff(ifaceNames, tt.wantIfacesNames); diff != "" {
+				t.Errorf("Unexpected sorted interface names result (-got +want):\n%s", diff)
 			}
 		})
 	}

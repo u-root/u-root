@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hugelgupf/vmtest/guest"
+	"github.com/u-root/u-root/pkg/brctl"
 	"golang.org/x/sys/unix"
 )
 
@@ -75,12 +76,13 @@ func TestRun(t *testing.T) {
 			argv:   []string{"addif", "bridge0", "eth0", "eth1"},
 			expErr: errFewArgs,
 		},
-		{
-			name:   "delif",
-			argv:   []string{"delif", "bridge0", "eth0"},
-			expErr: unix.ENODEV,
-			skipVM: true,
-		},
+		// see https://github.com/hugelgupf/vmtest/issues/130
+		// {
+		// 	name:   "delif",
+		// 	argv:   []string{"delif", "bridge0", "eth0"},
+		// 	expErr: unix.ENODEV,
+		// 	skipVM: true,
+		// },
 		{
 			name:    "delif_VM",
 			argv:    []string{"delif", "bridge0", "eth0"},
@@ -110,7 +112,7 @@ func TestRun(t *testing.T) {
 		{
 			name:   "showmacs",
 			argv:   []string{"showmacs", "eth0"},
-			expErr: os.ErrNotExist,
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "showmacs_fewArgs",
@@ -118,29 +120,29 @@ func TestRun(t *testing.T) {
 			expErr: errFewArgs,
 		},
 		{
-			name:   "setageingtime",
-			argv:   []string{"setageingtime", "bridge0", "10ms"},
-			expErr: os.ErrNotExist,
+			name:   "setageing",
+			argv:   []string{"setageing", "bridge0", "10"},
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
-			name:   "setageingtime",
-			argv:   []string{"setageingtime", "bridge0", "10ms", "garbage"},
+			name:   "setageing",
+			argv:   []string{"setageing", "bridge0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
 		{
 			name:   "stp",
-			argv:   []string{"stp", "bridge0", "10ms"},
-			expErr: os.ErrNotExist,
+			argv:   []string{"stp", "bridge0", "10"},
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "stp_fewArgs",
-			argv:   []string{"stp", "bridge0", "10ms", "garbage"},
+			argv:   []string{"stp", "bridge0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
 		{
 			name:   "setbridgeprio",
 			argv:   []string{"setbridgeprio", "bridge0", "10"},
-			expErr: os.ErrNotExist,
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "setbridgeprio_fewArgs",
@@ -149,8 +151,8 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "setfd",
-			argv:   []string{"setfd", "bridge0", "10ms"},
-			expErr: os.ErrNotExist,
+			argv:   []string{"setfd", "bridge0", "10"},
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "setfd_fewArgs",
@@ -159,8 +161,8 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "sethello",
-			argv:   []string{"sethello", "bridge0", "10ms"},
-			expErr: os.ErrNotExist,
+			argv:   []string{"sethello", "bridge0", "10"},
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "sethello_fewArgs",
@@ -169,39 +171,45 @@ func TestRun(t *testing.T) {
 		},
 		{
 			name:   "setmaxage",
-			argv:   []string{"setmaxage", "bridge0", "10ms"},
-			expErr: os.ErrNotExist,
+			argv:   []string{"setmaxage", "bridge0", "10"},
+			expErr: brctl.ErrBridgeNotExist,
 		},
 		{
 			name:   "setmaxage_fewArgs",
 			argv:   []string{"setmaxage", "bridge0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
-		{
-			name:   "setpathcost",
-			argv:   []string{"setpathcost", "bridge0", "eth0", "10"},
-			expErr: os.ErrNotExist,
-		},
+		// see https://github.com/hugelgupf/vmtest/issues/130
+		// {
+		// 	name:   "setpathcost",
+		// 	argv:   []string{"setpathcost", "bridge0", "eth0", "10"},
+		// 	expErr: brctl.ErrPortNotExist,
+		// 	skipVM: true,
+		// },
 		{
 			name:   "setpathcost_fewArgs",
 			argv:   []string{"setpathcost", "bridge0", "eth0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
-		{
-			name:   "setportprio",
-			argv:   []string{"setportprio", "bridge0", "eth0", "10"},
-			expErr: os.ErrNotExist,
-		},
+		// see https://github.com/hugelgupf/vmtest/issues/130
+		// {
+		// 	name:   "setportprio",
+		// 	argv:   []string{"setportprio", "bridge0", "eth0", "10"},
+		// 	expErr: brctl.ErrPortNotExist,
+		// 	skipVM: true,
+		// },
 		{
 			name:   "setportprio_fewArgs",
 			argv:   []string{"setportprio", "bridge0", "eth0", "10", "garbage"},
 			expErr: errFewArgs,
 		},
-		{
-			name:   "hairpin",
-			argv:   []string{"hairpin", "bridge0", "eth0", "enable"},
-			expErr: os.ErrNotExist,
-		},
+		// see https://github.com/hugelgupf/vmtest/issues/130
+		// {
+		// 	name:   "hairpin",
+		// 	argv:   []string{"hairpin", "bridge0", "eth0", "enable"},
+		// 	expErr: brctl.ErrPortNotExist,
+		// 	skipVM: true,
+		// },
 		{
 			name:   "hairpin_fewArgs",
 			argv:   []string{"hairpin", "bridge0", "eth0", "enable", "garbage"},

@@ -19,37 +19,32 @@ import (
 )
 
 var (
-	help = `usage: netstat [-vWeenNcCF] [<Af>] -r         netstat {-V|--version|-h|--help}
-       netstat [-vWnNcaeol] [<Socket> ...]
-       netstat { [-vWeenNac] -I[<Iface>] | [-veenNac] -i | [-cnNe] -M | -s [-6tuw] } [delay]
+	help = `usage: netstat [-WeenNC] [<Af>] -r         netstat {-h|--help}
+       netstat [-WnNaeol] [<Socket> ...]
+       netstat { [-WeenNa] -I[<Iface>] | [-eenNa] -i | [-cnNe] | -s [-6tuw] } [delay]
 
-        -r, --route              display routing table
-        -I, --interfaces=<Iface> display interface table for <Iface>
-        -i, --interfaces         display interface table
-        -g, --groups             display multicast group memberships
-        -s, --statistics         display networking statistics (like SNMP)
-        -M, --masquerade         display masqueraded connections
+        -r, --route             display routing table
+        -I, --interface=<Iface> display interface table for <Iface>
+        -i, --interfaces        display interface table
+        -g, --groups            display multicast group memberships
+        -s, --statistics        display networking statistics (like SNMP)
 
-        -v, --verbose            be verbose
-        -W, --wide               don't truncate IP addresses
-        -n, --numeric            don't resolve names
-        --numeric-hosts          don't resolve host names
-        --numeric-ports          don't resolve port names
-        --numeric-users          don't resolve user names
-        -N, --symbolic           resolve hardware names
-        -e, --extend             display other/more information
-        -p, --programs           display PID/Program name for sockets
-        -o, --timers             display timers
-        -c, --continuous         continuous listing
+        -W, --wide              don't truncate IP addresses
+        -n, --numeric           don't resolve names
+        --numeric-hosts         don't resolve host names
+        --numeric-ports         don't resolve port names
+        --numeric-users         don't resolve user names
+        -N, --symbolic          resolve hardware names
+        -e, --extend            display other/more information
+        -p, --programs          display PID/Program name for sockets
+        -o, --timers            display timers
+        -c, --continuous        continuous listing
 
-        -l, --listening          display listening server sockets
-        -a, --all                display all sockets (default: connected)
-        -F, --fib                display Forwarding Information Base (default)
-        -C, --cache              display routing cache instead of FIB
-        -Z, --context            display SELinux security context for sockets
+        -l, --listening         display listening server sockets
+        -a, --all               display all sockets (default: connected)
+        -C, --cache             display routing cache instead of FIB
 
-  <Socket>={-t|--tcp} {-u|--udp} {-U|--udplite} {-S|--sctp} {-w|--raw}
-           {-x|--unix} --ax25 --ipx --netrom
+  <Socket>={-t|--tcp} {-u|--udp} {-U|--udplite} {-w|--raw} {-x|--unix}
   <AF>=Use '-6|-4' or '-A <af>' or '--<af>'; default: inet
   List of possible address families (which support routing):
     inet (DARPA Internet) inet6 (IPv6)`
@@ -80,6 +75,7 @@ type cmd struct {
 	// AF Flags
 	ipv4 bool
 	ipv6 bool
+	af   string
 
 	// Route type flag
 	routecache bool
@@ -206,7 +202,7 @@ func (c cmd) run() error {
 	}
 
 	if c.groups {
-		return netstat.PrintMulticastGroups(c.ipv4, c.ipv6, c.out)
+		return netstat.PrintMulticastGroups(true, true, c.out)
 	}
 
 	if c.stats {
@@ -368,6 +364,9 @@ func command(out io.Writer, args []string) *cmd {
 
 	fs.BoolVar(&c.ipv4, "4", false, "IPv4 fs. default: false")
 	fs.BoolVar(&c.ipv6, "6", false, "IPv6 fs. default: false")
+	fs.BoolVar(&c.ipv4, "inet", false, "IPv4 fs. default: false")     // alternative af setting, see help text
+	fs.BoolVar(&c.ipv6, "inet6", false, "IPv6 fs. default: false")    // alternative af setting, see help text
+	fs.StringVar(&c.af, "A", "", "Address family, 'inet' or 'inet6'") // alternative af setting, see help text
 
 	fs.BoolVar(&c.routecache, "cache", false, "")
 	fs.BoolVar(&c.routecache, "C", false, "")
@@ -404,23 +403,28 @@ func command(out io.Writer, args []string) *cmd {
 	fs.BoolVar(&c.all, "a", false, "display all sockets (default: connected)")
 
 	fs.Usage = printHelp
-
 	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
-	// Validate info source flags
-	// none or one allowed to be set
-	if !xorFlags(c.route, c.interfaces, c.groups, c.stats, c.iface != "") {
-		fmt.Printf("%s\n", help)
-		return nil
+	// Apply alternative address family setting
+	switch c.af {
+	case "inet":
+		c.ipv4 = true
+	case "inet6":
+		c.ipv6 = true
 	}
 
 	c.out = out
-
 	return &c
 }
 
 func main() {
-	if err := command(os.Stdout, os.Args).run(); err != nil {
+	switch err := command(os.Stdout, os.Args).run(); err {
+	case nil:
+	case errMutualExcludeFlags:
+		printHelp()
+		log.Print(err)
+		os.Exit(2)
+	default:
 		log.Fatal(err)
 	}
 }

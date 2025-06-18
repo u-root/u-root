@@ -1,0 +1,3 @@
+This is a small test file for TFTP transfer.
+It contains multiple lines of text.
+The purpose is to test basic file transfers.

@@ -174,8 +174,17 @@ func run(args []string) error {
 		return fmt.Errorf("usage: kexec [fs] kernelname OR kexec -e")
 	}
 
-	if err := universalpayload.Load(opts.kernelpath); err != nil {
-		log.Printf("Failed to load universalpayload, try legacy kernel..")
+	if err, warningMsg := universalpayload.Load(opts.kernelpath, linux.Debug); err != nil {
+		log.Printf("Failed to load universalpayload (%v), try legacy kernel..", err)
+	} else {
+		// universalpayload package suppresses warning message, we print messages here.
+		if warningMsg != nil {
+			log.Printf("Warning messages from universalpayload:\n%v\n", warningMsg)
+		}
+
+		if err := universalpayload.Exec(); err != nil {
+			log.Printf("Failed to execute universalpayload (%v), try legacy kernel..", err)
+		}
 	}
 
 	if opts.cmdline != "" && opts.reuseCmdline {

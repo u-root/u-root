@@ -35,7 +35,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 // Due to lack of support to set value of Registers in kexec,
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
-func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
+func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	ptrToSlice := func(ptr uintptr, size int) []byte {
 		var data []byte
 
@@ -61,9 +61,8 @@ func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 
 	buf = append(buf, tramp...)
 
-	stackTop := hobAddr + tmpStackTop
-	buf = appendUint64(buf, stackTop)
-	buf = appendUint64(buf, hobAddr)
+	buf = appendUint64(buf, addr+trampolineOffse)
+	buf = appendUint64(buf, addr+fdtDtbOffset)
 	buf = appendUint64(buf, entry)
 
 	return buf

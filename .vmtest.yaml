@@ -1,12 +1,12 @@
 amd64:
   VMTEST_QEMU:
-    container: "ghcr.io/hugelgupf/vmtest/qemu:main"
+    container: "ghcr.io/hugelgupf/vmtest/qemu:main@sha256:d5b3d31f39edb6394d20bdd76027512f956d78af9c6e49ecf2ab9ab59944638a"
     template: "{{.qemu}}/bin/qemu-system-x86_64 -L {{.qemu}}/pc-bios -m 1G"
     directories:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:0b4f399fd61f2f5e060c86216150ec12439851101921337add61402c185e8007"
+    container: "ghcr.io/u-root/u-root/test-kernel-amd64@sha256:8b6e8c08724ef0aa2809685c7adb98e1b9b000f79fa790ec254c3176ecc5ec93"
     template: "{{.bzImage}}"
     files:
       bzImage: "/bzImage"
@@ -25,26 +25,26 @@ amd64:
 
 arm:
   VMTEST_QEMU:
-    container: "ghcr.io/hugelgupf/vmtest/qemu:main"
+    container: "ghcr.io/hugelgupf/vmtest/qemu:main@sha256:d5b3d31f39edb6394d20bdd76027512f956d78af9c6e49ecf2ab9ab59944638a"
     template: "{{.qemu}}/bin/qemu-system-arm -M virt,highmem=off -L {{.qemu}}/pc-bios"
     directories:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:0429fa0ab8dbc4d1913f1c2b8ccc45fa8000897c801ed90b90c14a15e1f32020"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:a3df0094d89dda04a3eb08d3c8df538b3d2cb3019962cbd8f8886ac624cc8838"
     template: "{{.zImage}}"
     files:
       zImage: "/zImage"
 
 arm64:
   VMTEST_QEMU:
-    container: "ghcr.io/hugelgupf/vmtest/qemu:main"
+    container: "ghcr.io/hugelgupf/vmtest/qemu:main@sha256:d5b3d31f39edb6394d20bdd76027512f956d78af9c6e49ecf2ab9ab59944638a"
     template: "{{.qemu}}/bin/qemu-system-aarch64 -machine virt -cpu max -m 1G -L {{.qemu}}/pc-bios"
     directories:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm64@sha256:e48f32266071edaec44445da98375fe512b1532640e256f9f7138633e0000866"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm64@sha256:d0b65ec5584fef929828324b0f998ad7e853c95bcc2288a163ebdf64401fe5a0"
     template: "{{.Image}}"
     files:
       Image: "/Image"

@@ -380,7 +380,7 @@ func TestShowMenuAndLoadFromFile(t *testing.T) {
 				entry <- showMenuAndLoadFromFile(slave, true, entries...)
 			}()
 
-			if tt.userEntry != nil && len(tt.userEntry) > 0 {
+			if len(tt.userEntry) > 0 {
 				// We have to wait until Choose has actually started trying to read, as
 				// ttys are asynchronous.
 				//

@@ -8,6 +8,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"io"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -19,6 +22,118 @@ import (
 
 	"github.com/u-root/u-root/pkg/netcat"
 )
+
+type closableDiscard struct{}
+
+func (cd *closableDiscard) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
+func (cd *closableDiscard) Close() error {
+	return nil
+}
+
+func TestConnectMode(t *testing.T) {
+	connectErr := errors.New("failed to connect")
+
+	tests := []struct {
+		name        string
+		network     string
+		address     string
+		connectFunc func(output io.WriteCloser, network, address string) error
+		err         error
+	}{
+		{
+			name:    "TCPv4 success",
+			network: "tcp",
+			address: "localhost:8080",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "tcp4" {
+					return nil
+				}
+				return connectErr
+			},
+			err: nil,
+		},
+		{
+			name:    "TCPv6 success",
+			network: "tcp",
+			address: "localhost:8080",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "tcp6" {
+					return nil
+				}
+				return connectErr
+			},
+			err: nil,
+		},
+		{
+			name:    "UDPv4 success",
+			network: "udp",
+			address: "localhost:8080",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "udp4" {
+					return nil
+				}
+				return connectErr
+			},
+			err: nil,
+		},
+		{
+			name:    "UDPv6 success",
+			network: "udp",
+			address: "localhost:8080",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "udp6" {
+					return nil
+				}
+				return connectErr
+			},
+			err: nil,
+		},
+		{
+			name:    "TCPv4 and TCPv6 failure",
+			network: "tcp",
+			address: "localhost:8080",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				return connectErr
+			},
+			err: connectErr,
+		},
+		{
+			name:    "UDPv4 and UDPv6 failure",
+			network: "udp",
+			address: "localhost:8080",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				return connectErr
+			},
+			err: connectErr,
+		},
+		{
+			name:    "Other network success",
+			network: "unix",
+			address: "/tmp/socket",
+			connectFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "unix" {
+					return nil
+				}
+				return connectErr
+			},
+			err: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cmd{}
+			err := cmd.connectMode(&closableDiscard{}, tt.network, tt.address, tt.connectFunc)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %v, want %v", err, tt.err)
+			}
+		})
+	}
+
+}
 
 // Mock for the net.Conn interface
 type mockConn struct {
@@ -40,7 +155,7 @@ func (m *mockConn) Close() error {
 	return m.close()
 }
 
-func TestConnectMode(t *testing.T) {
+func TestConnect(t *testing.T) {
 	response := "World"
 	tests := []struct {
 		name        string
@@ -124,8 +239,8 @@ func TestConnectMode(t *testing.T) {
 				config: tt.config,
 			}
 
-			var output bytes.Buffer
-			err = c.connectMode(&output, "tcp", "127.0.0.1:8080")
+			var output closableBuffer
+			err = c.connect(&output, "tcp", "127.0.0.1:8080")
 			if err != nil {
 				if !tt.expectError {
 					return
@@ -144,6 +259,7 @@ func TestConnectMode(t *testing.T) {
 
 func TestEstablishConnection(t *testing.T) {
 	addr := "localhost:3000"
+	addr6 := "[::1]:3000"
 
 	tests := []struct {
 		name        string
@@ -159,6 +275,26 @@ func TestEstablishConnection(t *testing.T) {
 			config: &netcat.Config{
 				ConnectionModeOptions: netcat.ConnectModeOptions{
 					SourceHost: "localhost",
+					SourcePort: "8081",
+				},
+				ProtocolOptions: netcat.ProtocolOptions{
+					SocketType: netcat.SOCKET_TYPE_TCP,
+				},
+				Timing: netcat.TimingOptions{
+					Wait:    5 * time.Second,
+					Timeout: 5 * time.Second,
+				},
+			},
+
+			expectError: false,
+		},
+		{
+			name:    "Successful TCPv6 connection",
+			network: "tcp6",
+			address: addr6,
+			config: &netcat.Config{
+				ConnectionModeOptions: netcat.ConnectModeOptions{
+					SourceHost: "::1",
 					SourcePort: "8081",
 				},
 				ProtocolOptions: netcat.ProtocolOptions{
@@ -212,6 +348,25 @@ func TestEstablishConnection(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:    "Successful UDPv6 connection",
+			network: "udp6",
+			address: addr6,
+			config: &netcat.Config{
+				ConnectionModeOptions: netcat.ConnectModeOptions{
+					SourceHost: "::1",
+					SourcePort: "8081",
+				},
+				ProtocolOptions: netcat.ProtocolOptions{
+					SocketType: netcat.SOCKET_TYPE_UDP,
+				},
+				Timing: netcat.TimingOptions{
+					Wait:    5 * time.Second,
+					Timeout: 5 * time.Second,
+				},
+			},
+			expectError: false,
+		},
+		{
 			name:    "unimplemented socket",
 			network: "unix",
 			address: "localhost:3077",
@@ -237,11 +392,26 @@ func TestEstablishConnection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var listenAddr string
 			var wg sync.WaitGroup
 
+			// github does not enable IPv6 for docker containers
+			if tt.network == "tcp6" || tt.network == "udp6" {
+				_, disable_ipv6 := os.LookupEnv("NETCAT_CONNECT_TEST_DISABLE_IPV6")
+				if disable_ipv6 {
+					log.Printf("skipping %s", tt.name)
+					return
+				}
+			}
+
 			switch tt.network {
-			case "tcp":
-				l, err := net.Listen(tt.network, addr)
+			case "tcp", "tcp6":
+				if tt.network == "tcp" {
+					listenAddr = addr
+				} else {
+					listenAddr = addr6
+				}
+				l, err := net.Listen(tt.network, listenAddr)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -262,8 +432,13 @@ func TestEstablishConnection(t *testing.T) {
 
 					defer conn.Close()
 				}()
-			case "udp":
-				l, err := net.ListenPacket(tt.network, addr)
+			case "udp", "udp6":
+				if tt.network == "udp" {
+					listenAddr = addr
+				} else {
+					listenAddr = addr6
+				}
+				l, err := net.ListenPacket(tt.network, listenAddr)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -327,6 +502,22 @@ func TestEstablishConnectionUnix(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:    "Successful Unix connection (unnamed client socket)",
+			network: "unix",
+			address: socketPath,
+			config: &netcat.Config{
+				ProtocolOptions: netcat.ProtocolOptions{
+					SocketType: netcat.SOCKET_TYPE_UNIX,
+				},
+				Timing: netcat.TimingOptions{
+					Wait:    5 * time.Second,
+					Timeout: 5 * time.Second,
+				},
+			},
+
+			expectError: false,
+		},
+		{
 			name:    "Successful UDP Unix connection",
 			network: "unixgram",
 			address: socketPath,
@@ -334,6 +525,22 @@ func TestEstablishConnectionUnix(t *testing.T) {
 				ConnectionModeOptions: netcat.ConnectModeOptions{
 					SourceHost: sourcePath,
 				},
+				ProtocolOptions: netcat.ProtocolOptions{
+					SocketType: netcat.SOCKET_TYPE_UDP_UNIX,
+				},
+				Timing: netcat.TimingOptions{
+					Wait:    5 * time.Second,
+					Timeout: 5 * time.Second,
+				},
+			},
+
+			expectError: false,
+		},
+		{
+			name:    "Successful UDP Unix connection  (temporary client socket)",
+			network: "unixgram",
+			address: socketPath,
+			config: &netcat.Config{
 				ProtocolOptions: netcat.ProtocolOptions{
 					SocketType: netcat.SOCKET_TYPE_UDP_UNIX,
 				},
@@ -457,7 +664,6 @@ func TestWriteToRemote(t *testing.T) {
 		input      string
 		delay      time.Duration
 		eol        []byte
-		noShutdown bool
 		expected   string
 		expectHang bool
 	}{
@@ -488,12 +694,6 @@ func TestWriteToRemote(t *testing.T) {
 			delay:      500 * time.Millisecond,
 			expectHang: true,
 		},
-		{
-			name:       "No shutdown",
-			input:      "test",
-			noShutdown: true,
-			expectHang: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -503,8 +703,7 @@ func TestWriteToRemote(t *testing.T) {
 				stdin: strings.NewReader(tt.input),
 				config: &netcat.Config{
 					Misc: netcat.MiscOptions{
-						EOL:        tt.eol,
-						NoShutdown: tt.noShutdown,
+						EOL: tt.eol,
 					},
 					Timing: netcat.TimingOptions{
 						Delay: tt.delay,
@@ -521,7 +720,7 @@ func TestWriteToRemote(t *testing.T) {
 			select {
 			case <-done:
 				if tt.expectHang {
-					t.Errorf("Expected writeToRemote to hang due to no-shutdown, but it did not")
+					t.Errorf("Expected writeToRemote to hang, but it did not")
 				}
 			case <-time.After(100 * time.Millisecond):
 				if !tt.expectHang {

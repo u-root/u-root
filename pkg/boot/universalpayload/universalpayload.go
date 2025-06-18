@@ -18,6 +18,7 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
+	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/smbios"
@@ -48,6 +49,7 @@ const (
 var (
 	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
 	getSMBIOSBase           = smbios.SMBIOSBase
+	getSMBIOS3HdrSize       = smbios.SMBIOS3HeaderSize
 	getAcpiRsdpData         = archGetAcpiRsdpData
 )
 
@@ -109,6 +111,12 @@ var (
 	ErrKexecLoadFailed                 = errors.New("kexec.Load() failed")
 	ErrKexecExecuteFailed              = errors.New("kexec.Execute() failed")
 	ErrMemMapIoMemExecuteFailed        = errors.New("failed to get memory from /proc/iomem")
+	ErrComponentsSizeOverflow          = errors.New("reserved components size overflow")
+)
+
+var (
+	debug      = func(string, ...interface{}) {}
+	warningMsg []error
 )
 
 // Create GUID HOB with specified GUID string
@@ -215,8 +223,8 @@ func appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	return nil
 }
 
-func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load uint64) error {
-	uplBase := constructUniversalPayloadBase(load)
+func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, loadAddr uint64) error {
+	uplBase := constructUniversalPayloadBase(loadAddr)
 	uplBaseGUIDHOB, err := constructGUIDHOB(UniversalPayloadBaseGUID)
 	if err != nil {
 		return err
@@ -322,23 +330,46 @@ func constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 	return nil
 }
 
-func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
-	stackBuffer := make([]byte, pageSize)
+func checkComponentsSize(appendSize uint) error {
+	componentsSize = componentsSize + appendSize
 
+	debug("Current components size:%X vs. reserved size:%X\n", componentsSize, sizeForComponents)
+	if componentsSize > uint(sizeForComponents) {
+		return fmt.Errorf("components size check failure:%w", ErrComponentsSizeOverflow)
+	}
+
+	return nil
+}
+
+func prepareBootEnv(loadAddr uint64, entry uint64, mem *kexec.Memory) error {
+	stackSize := pageSize
+	stackBuffer := make([]byte, stackSize)
+
+	// Check whether reserved components size is overflowed.
+	if err := checkComponentsSize(stackSize); err != nil {
+		return err
+	}
 	s := kexec.NewSegment(stackBuffer, kexec.Range{
-		Start: uintptr(hobAddr + tmpStackOffset),
-		Size:  pageSize,
+		Start: uintptr(loadAddr + tmpStackOffset),
+		Size:  stackSize,
 	})
 	mem.Segments.Insert(s)
 
+	// Next step, trampoline code will be placed.
+	trampolineOffset = tmpStackOffset + uint64(stackSize)
+
 	var trampoline []uint8
-	trampoline = constructTrampoline(trampoline, hobAddr, entry)
+	trampoline = constructTrampoline(trampoline, loadAddr, entry)
 
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.LittleEndian, trampoline)
 
+	// Check whether reserved components size is overflowed.
+	if err := checkComponentsSize(uint(buf.Len())); err != nil {
+		return err
+	}
 	s = kexec.NewSegment(buf.Bytes(), kexec.Range{
-		Start: uintptr(hobAddr + trampolineOffset),
+		Start: uintptr(loadAddr + trampolineOffset),
 		Size:  uint(buf.Len()),
 	})
 
@@ -347,7 +378,7 @@ func prepareBootEnv(hobAddr uint64, entry uint64, mem *kexec.Memory) error {
 	return nil
 }
 
-func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memory) error {
+func prepareHob(buf *bytes.Buffer, length *uint64, loadAddr uint64, mem *kexec.Memory) error {
 	if err := appendMemMapHOB(buf, length, mem.Phys); err != nil {
 		return err
 	}
@@ -356,7 +387,7 @@ func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memor
 		return err
 	}
 
-	if err := appendUniversalPayloadBase(buf, length, addr); err != nil {
+	if err := appendUniversalPayloadBase(buf, length, loadAddr); err != nil {
 		return err
 	}
 
@@ -372,53 +403,89 @@ func prepareHob(buf *bytes.Buffer, length *uint64, addr uint64, mem *kexec.Memor
 }
 
 func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Memory) error {
-	dtBuf := &bytes.Buffer{}
+	rsdpBase, rsdpData, err := getAcpiRsdpData()
 
-	rsdpData, err := buildDeviceTreeInfo(dtBuf, mem, loadAddr)
 	if err != nil {
+		debug("universalpayload: failed to get RSDP table data (%v)\n", err)
 		return err
 	}
 
-	s := kexec.NewSegment(dtBuf.Bytes(), kexec.Range{
-		Start: uintptr(loadAddr),
-		Size:  uint(dtBuf.Len()),
-	})
-	mem.Segments.Insert(s)
-
-	// If rsdpData contains data, we need to copy data to specified location.
-	// Otherwise, we will leave it alone, and UPL will handle it.
-	if rsdpData != nil {
-		s = kexec.NewSegment(rsdpData, kexec.Range{
+	// rsdpBase indicates whether we need to copy RSDP table data to specified
+	// location. If rsdpBase equals to zero, then we need to copy data to
+	// specified address, otherwise, we will use rsdpBase directly.
+	if rsdpBase == 0 {
+		// Check whether reserved components size is overflowed.
+		if err := checkComponentsSize(align.UpPage(uint(len(rsdpData)))); err != nil {
+			return err
+		}
+		s := kexec.NewSegment(rsdpData, kexec.Range{
 			Start: uintptr(loadAddr + rsdpTableOffset),
 			Size:  uint(len(rsdpData)),
 		})
+
 		mem.Segments.Insert(s)
+
+		rsdpBase = loadAddr + rsdpTableOffset
 	}
+
+	// Next step, Handoff Blocks will be placed
+	tmpHobOffset = rsdpTableOffset + uint64(align.UpPage(uint64(len(rsdpData))))
 
 	hobBuf := &bytes.Buffer{}
 	hobListBuf := &bytes.Buffer{}
 	var hobLen uint64
 
 	if err := prepareHob(hobBuf, &hobLen, fdtLoad.Load, mem); err != nil {
+		debug("universalpayload: failed to construct HoBs (%v)\n", err)
 		return err
 	}
 
 	if err := constructHOBList(hobListBuf, hobBuf, &hobLen); err != nil {
+		debug("universalpayload: failed to construct HoBList (%v)\n", err)
 		return err
 	}
 
-	s = kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{
+	// Check whether reserved components size is overflowed.
+	if err := checkComponentsSize(align.UpPage(uint(hobListBuf.Len()))); err != nil {
+		return err
+	}
+	s := kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{
 		Start: uintptr(loadAddr + tmpHobOffset),
 		Size:  uint(hobListBuf.Len()),
 	})
 
 	mem.Segments.Insert(s)
 
+	// Next step, FDT DTB info will be placed
+	fdtDtbOffset = tmpHobOffset + uint64(align.UpPage(uint64(hobListBuf.Len())))
+
+	dtBuf := &bytes.Buffer{}
+
+	err = buildDeviceTreeInfo(dtBuf, mem, loadAddr, rsdpBase)
+	if err != nil {
+		debug("universalpayload: failed to build FDT (%v)\n", err)
+		return err
+	}
+
+	// Check whether reserved components size is overflowed.
+	if err := checkComponentsSize(align.UpPage(uint(dtBuf.Len()))); err != nil {
+		return err
+	}
+	s = kexec.NewSegment(dtBuf.Bytes(), kexec.Range{
+		Start: uintptr(loadAddr + fdtDtbOffset),
+		Size:  uint(dtBuf.Len()),
+	})
+	mem.Segments.Insert(s)
+
+	// Next step, temporary stack for trampoline code will be placed
+	tmpStackOffset = fdtDtbOffset + uint64(align.UpPage(uint64(dtBuf.Len())))
+
 	return nil
 }
 
 func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) error {
-	if err := relocateFdtData(addr, fdt, data); err != nil {
+	if err := relocateFdtData(addr+uplImageOffset, fdt, data); err != nil {
+		debug("universalpayload: failed to relocate FIT image (%v)\n", err)
 		return err
 	}
 
@@ -428,71 +495,89 @@ func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) e
 	})
 
 	mem.Segments.Insert(s)
+
+	// Next step, ACPI RSDP table content will be placed
+	rsdpTableOffset = uplImageOffset + uint64(align.UpPage(uint64(len(data))))
+
 	return nil
 }
 
 func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr, error) {
 	mmRanges := mem.Phys.RAM()
 
-	rangeLen := uplImageOffset + len(data)
+	// Reserved 1MB additional space which is used to place Device Tree info, Handoff Blocks,
+	// temporary stack and trampoline code.
+	rangeLen := len(data) + int(sizeForComponents)
 
 	// Try to find available Space to locate FIT image and HOB, stack and trampoline code,
 	// Device Tree information, and ACPI DATA.
 	// 2MB alignment will be easy for target OS/Bootloader to construct page table.
 	// The layout of this Space will be placed as following:
 	//
-	//  |------------------------|
-	//  |       FIT IMAGE        |
-	//  |------------------------|
+	//  |------------------------|  <-- Memory Region top
 	//  |     TRAMPOLINE CODE    |
 	//  |------------------------|
 	//  |      TEMP STACK        |
+	//  |------------------------|
+	//  |    Device Tree Info    |
 	//  |------------------------|
 	//  |  BOOTLOADER PARAMETER  |
 	//  |------------------------|
 	//  |       ACPI DATA        |
 	//  |------------------------|
-	//  |    Device Tree Info    |
-	//  |------------------------|
+	//  |       FIT IMAGE        |
+	//  |------------------------|  <-- Memory Region bottom
 	//
-	kernelRange, err := mmRanges.FindSpace(uint(rangeLen), kexec.WithAlignment(0x200000))
+	kernelRange, err := mmRanges.FindSpace(uint(rangeLen), kexec.WithAlignment(uplImageAlignment))
 	if err != nil {
+		debug("universalpayload: failed to find 2MB aligned space (%v)\n", err)
 		return 0, err
 	}
 
-	targetAddr := uint64(kernelRange.Start)
-	fitImgAddr := targetAddr + uint64(uplImageOffset)
+	loadAddr := uint64(kernelRange.Start)
 
-	if err = prepareFdtData(fdt, data, fitImgAddr, mem); err != nil {
+	if err = prepareFdtData(fdt, data, loadAddr, mem); err != nil {
+		debug("universalpayload: failed to prepare FDT data (%v)\n", err)
 		return 0, err
 	}
 
-	if err = prepareBootloaderParameter(fdt, targetAddr, mem); err != nil {
+	if err = prepareBootloaderParameter(fdt, loadAddr, mem); err != nil {
+		debug("universalpayload: failed to prepare boot parameters (%v)\n", err)
 		return 0, err
 	}
 
-	if err = prepareBootEnv(targetAddr, fdt.EntryStart, mem); err != nil {
+	if err = prepareBootEnv(loadAddr, fdt.EntryStart, mem); err != nil {
 		return 0, err
 	}
 
-	return (uintptr)(targetAddr + trampolineOffset), nil
+	return (uintptr)(loadAddr + uint64(trampolineOffset)), nil
 }
 
-func Load(name string) error {
-	fdtLoad, err := GetFdtInfo(name)
-	if err != nil {
-		return err
+func Load(name string, dbg func(string, ...interface{})) (error, error) {
+	if dbg != nil {
+		debug = dbg
 	}
 
+	debug("universalpayload: Try to get FDT information from:%s\n", name)
+	fdtLoad, err := GetFdtInfo(name)
+	if err != nil {
+		debug("universalpayload: Failed to get FDT information (%v)\n", err)
+		return err, errors.Join(warningMsg...)
+	}
+
+	debug("universalpayload: Try to fetch file content\n")
 	data, err := os.ReadFile(name)
 	if err != nil {
-		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
+		debug("universalpayload: Failed to fetch file content (%v)\n", err)
+		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err), errors.Join(warningMsg...)
 	}
 
 	// Prepare memory.
+	debug("universalpayload: Try to get Memory Map from IOMem\n")
 	ioMem, err := kexecMemoryMapFromIOMem()
 	if err != nil {
-		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err)
+		debug("universalpayload: Failed to get Memory Map from IOMem\n")
+		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(warningMsg...)
 	}
 
 	mem := kexec.Memory{
@@ -500,15 +585,25 @@ func Load(name string) error {
 	}
 
 	// Prepare boot environment, including HoB, stack, bootloader parameter.
+	debug("universalpayload: Try to prepare required stuffs\n")
 	entry, err := loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
-		return err
+		debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
+		return err, errors.Join(warningMsg...)
 	}
 
+	debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
 	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
-		return errors.Join(ErrKexecLoadFailed, err)
+		debug("universalpayload: Failed to load segments with error (%v)\n", err)
+		return errors.Join(ErrKexecLoadFailed, err), errors.Join(warningMsg...)
 	}
 
+	debug("universalpayload: boot trampoline code at:%x\n", entry)
+
+	return nil, errors.Join(warningMsg...)
+}
+
+func Exec() error {
 	if err := boot.Execute(); err != nil {
 		return errors.Join(ErrKexecExecuteFailed, err)
 	}

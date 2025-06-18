@@ -2,27 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !tamago
+//go:build !plan9 && !windows && !tamago && !linux && !openbsd
 
 package ls
 
 import (
-	"fmt"
 	"math"
 	"os"
-	"os/user"
-	"regexp"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
-
-	humanize "github.com/dustin/go-humanize"
-	"golang.org/x/sys/unix"
 )
-
-// Matches characters which would interfere with ls's formatting.
-var unprintableRe = regexp.MustCompile("[[:cntrl:]\n]")
 
 // FileInfo holds file metadata.
 //
@@ -36,8 +25,16 @@ type FileInfo struct {
 	Rdev          uint64
 	UID, GID      uint32
 	Size          int64
+	BlkSize       int64
+	Blocks        int64
+	ATime         time.Time
 	MTime         time.Time
+	CTime         time.Time
+	BirthTime     time.Time
 	SymlinkTarget string
+	Dev           uint64
+	Ino           uint64
+	NLink         uint64
 }
 
 // FromOSFileInfo converts os.FileInfo to an ls.FileInfo.
@@ -47,9 +44,20 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	// A filesystem with a bug will result
 	// in sys not being the right type.
 	// This turns out to be surprisingly messy to test.
-	UID, GID, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
+	uID, gID, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
+	var aTime, cTime, birthTime time.Time
+	var dev, ino, nLink uint64
+	var blkSize, blocks int64
 	if s, ok := fi.Sys().(*syscall.Stat_t); ok {
-		UID, GID, rdev = s.Uid, s.Gid, uint64(s.Rdev)
+		uID, gID, rdev = s.Uid, s.Gid, uint64(s.Rdev)
+		aTime = time.Unix(int64(s.Atimespec.Sec), int64(s.Atimespec.Nsec))
+		cTime = time.Unix(int64(s.Ctimespec.Sec), int64(s.Ctimespec.Nsec))
+		birthTime = time.Unix(int64(s.Birthtimespec.Sec), int64(s.Birthtimespec.Nsec))
+		dev = uint64(s.Dev)
+		ino = s.Ino
+		nLink = uint64(s.Nlink)
+		blkSize = int64(s.Blksize)
+		blocks = int64(blocks)
 	}
 
 	if fi.Mode()&os.ModeType == os.ModeSymlink {
@@ -64,113 +72,18 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		Name:          fi.Name(),
 		Mode:          fi.Mode(),
 		Rdev:          rdev,
-		UID:           UID,
-		GID:           GID,
+		UID:           uID,
+		GID:           gID,
 		Size:          fi.Size(),
+		BlkSize:       blkSize,
+		Blocks:        blocks,
 		MTime:         fi.ModTime(),
+		ATime:         aTime,
+		CTime:         cTime,
+		BirthTime:     birthTime,
 		SymlinkTarget: link,
+		Dev:           dev,
+		Ino:           ino,
+		NLink:         nLink,
 	}
-}
-
-// PrintableName returns a printable file name.
-func (fi FileInfo) PrintableName() string {
-	return unprintableRe.ReplaceAllLiteralString(fi.Name, "?")
-}
-
-// Without this cache, `ls -l` is orders of magnitude slower.
-var (
-	uidCache = map[uint32]string{}
-	gidCache = map[uint32]string{}
-)
-
-// Convert uid to username, or return uid on error.
-func lookupUserName(id uint32) string {
-	if s, ok := uidCache[id]; ok {
-		return s
-	}
-	s := fmt.Sprint(id)
-	if u, err := user.LookupId(s); err == nil {
-		s = u.Username
-	}
-	uidCache[id] = s
-	return s
-}
-
-// Convert gid to group name, or return gid on error.
-func lookupGroupName(id uint32) string {
-	if s, ok := gidCache[id]; ok {
-		return s
-	}
-	s := fmt.Sprint(id)
-	if g, err := user.LookupGroupId(s); err == nil {
-		s = g.Name
-	}
-	gidCache[id] = s
-	return s
-}
-
-// Stringer provides a consistent way to format FileInfo.
-type Stringer interface {
-	// FileString formats a FileInfo.
-	FileString(fi FileInfo) string
-}
-
-// NameStringer is a Stringer implementation that just prints the name.
-type NameStringer struct{}
-
-// FileString implements Stringer.FileString and just returns fi's name.
-func (ns NameStringer) FileString(fi FileInfo) string {
-	return fi.PrintableName()
-}
-
-// QuotedStringer is a Stringer that returns the file name surrounded by qutoes
-// with escaped control characters.
-type QuotedStringer struct{}
-
-// FileString returns the name surrounded by quotes with escaped control characters.
-func (qs QuotedStringer) FileString(fi FileInfo) string {
-	return fmt.Sprintf("%#v", fi.Name)
-}
-
-// LongStringer is a Stringer that returns the file info formatted in `ls -l`
-// long format.
-type LongStringer struct {
-	Human bool
-	Name  Stringer
-}
-
-// FileString implements Stringer.FileString.
-func (ls LongStringer) FileString(fi FileInfo) string {
-	// Golang's FileMode.String() is almost sufficient, except we would
-	// rather use b and c for devices.
-	replacer := strings.NewReplacer("Dc", "c", "D", "b")
-
-	// Ex: crw-rw-rw-  root  root  1, 3  Feb 6 09:31  null
-	pattern := "%[1]s\t%[2]s\t%[3]s\t%[4]d, %[5]d\t%[7]v\t%[8]s"
-	if fi.Mode&os.ModeDevice == 0 && fi.Mode&os.ModeCharDevice == 0 {
-		// Ex: -rw-rw----  myuser  myuser  1256  Feb 6 09:31  recipes.txt
-		pattern = "%[1]s\t%[2]s\t%[3]s\t%[6]s\t%[7]v\t%[8]s"
-	}
-
-	var size string
-	if ls.Human {
-		size = humanize.Bytes(uint64(fi.Size))
-	} else {
-		size = strconv.FormatInt(fi.Size, 10)
-	}
-
-	s := fmt.Sprintf(pattern,
-		replacer.Replace(fi.Mode.String()),
-		lookupUserName(fi.UID),
-		lookupGroupName(fi.GID),
-		unix.Major(fi.Rdev),
-		unix.Minor(fi.Rdev),
-		size,
-		fi.MTime.Format("Jan _2 15:04"),
-		ls.Name.FileString(fi))
-
-	if fi.Mode&os.ModeType == os.ModeSymlink {
-		s += fmt.Sprintf(" -> %v", fi.SymlinkTarget)
-	}
-	return s
 }

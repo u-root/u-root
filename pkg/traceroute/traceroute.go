@@ -52,6 +52,8 @@ func RunTraceroute(f *Flags) error {
 		go mod.SendTracesTCP6()
 	case "icmp6":
 		go mod.SendTracesICMP6()
+	default:
+		return fmt.Errorf("unsupported protocol: %s", f.Proto)
 	}
 
 	printMap := runTransmission(cc)
@@ -86,9 +88,7 @@ func runTransmission(cc Coms) map[int]*Probe {
 		select {
 		case p = <-cc.SendChan:
 			sendProbes = append(sendProbes, p)
-			//fmt.Println(p.id)
 		case p = <-cc.RecvChan:
-			//fmt.Println(p.id)
 			for i, sp := range sendProbes {
 				if sp.ID == p.ID {
 					sendProbes[i].RecvTime = p.RecvTime

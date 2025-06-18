@@ -115,32 +115,6 @@ func TestFindPrefix(t *testing.T) {
 	}
 }
 
-func TestParseType(t *testing.T) {
-	tests := []struct {
-		name    string
-		cmd     cmd
-		want    string
-		wantErr bool
-	}{
-		{"No token", cmd{Args: []string{"cmd"}}, "", true},
-		{"Invalid token", cmd{Args: []string{"cmd", "invalid"}}, "", true},
-		{"Valid type", cmd{Args: []string{"cmd", "type", "loopback"}}, "loopback", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.cmd.parseType()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseType() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("parseType() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestParseAddress(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -189,6 +163,82 @@ func TestParseIPNet(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseIPNet() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseAddressorCIDR(t *testing.T) {
+	tests := []struct {
+		name      string
+		cmd       cmd
+		wantIP    net.IP
+		wantIPNet *net.IPNet
+		wantErr   bool
+	}{
+		{
+			name:      "Valid IPv4",
+			cmd:       cmd{Args: []string{"cmd", "192.168.1.1"}},
+			wantIP:    net.ParseIP("192.168.1.1"),
+			wantIPNet: nil,
+			wantErr:   false,
+		},
+		{
+			name:      "Valid IPv6",
+			cmd:       cmd{Args: []string{"cmd", "fe80::1"}},
+			wantIP:    net.ParseIP("fe80::1"),
+			wantIPNet: nil,
+			wantErr:   false,
+		},
+		{
+			name:      "Valid IPv4 CIDR",
+			cmd:       cmd{Args: []string{"cmd", "192.168.1.0/24"}},
+			wantIP:    net.ParseIP("192.168.1.0"),
+			wantIPNet: mustParseCIDR("192.168.1.0/24"),
+			wantErr:   false,
+		},
+		{
+			name:      "Valid IPv6 CIDR",
+			cmd:       cmd{Args: []string{"cmd", "fe80::/64"}},
+			wantIP:    net.ParseIP("fe80::"),
+			wantIPNet: mustParseCIDR("fe80::/64"),
+			wantErr:   false,
+		},
+		{
+			name:      "Invalid address",
+			cmd:       cmd{Args: []string{"cmd", "invalid"}},
+			wantIP:    nil,
+			wantIPNet: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "Invalid CIDR",
+			cmd:       cmd{Args: []string{"cmd", "192.168.1.1/invalid"}},
+			wantIP:    nil,
+			wantIPNet: nil,
+			wantErr:   true,
+		},
+		{
+			name:      "Invalid IPv6 CIDR",
+			cmd:       cmd{Args: []string{"cmd", "fe80::/invalid"}},
+			wantIP:    nil,
+			wantIPNet: nil,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotIP, gotIPNet, err := tt.cmd.parseAddressorCIDR()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseAddressorCIDR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotIP, tt.wantIP) {
+				t.Errorf("parseAddressorCIDR() gotIP = %v, want %v", gotIP, tt.wantIP)
+			}
+			if !reflect.DeepEqual(gotIPNet, tt.wantIPNet) {
+				t.Errorf("parseAddressorCIDR() gotIPNet = %v, want %v", gotIPNet, tt.wantIPNet)
 			}
 		})
 	}

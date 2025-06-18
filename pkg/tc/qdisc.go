@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strconv"
 
 	"github.com/florianl/go-tc"
 	"github.com/florianl/go-tc/core"
@@ -89,11 +88,11 @@ func ParseQdiscArgs(stdout io.Writer, args []string) (*Args, error) {
 			ret.handle = &indirectHan
 			i--
 		case "parent":
-			qdiscID, err := strconv.ParseUint(val, 16, 32)
+			parent, err := ParseClassID(val)
 			if err != nil {
-				return ret, err
+				return nil, err
 			}
-			indirect := uint32(qdiscID)
+			indirect := uint32(parent)
 			ret.parent = &indirect
 		case "estimator":
 			return nil, ErrNotImplemented
@@ -124,23 +123,32 @@ func ParseQdiscArgs(stdout io.Writer, args []string) (*Args, error) {
 	return ret, nil
 }
 
-const (
-	QdiscHelp = `Usage:
-	tc qdisc [ add | del | replace | change | show ] dev STRING
+// Originally from tc:
+// Usage: tc qdisc [ add | del | replace | change | show ] dev STRING
+//        [ handle QHANDLE ] [ root | ingress | clsact | parent CLASSID ]
+//        [ estimator INTERVAL TIME_CONSTANT ]
+//        [ stab [ help | STAB_OPTIONS] ]
+//        [ ingress_block BLOCK_INDEX ] [ egress_block BLOCK_INDEX ]
+//        [ [ QDISC_KIND ] [ help | OPTIONS ] ]
+
+//        tc qdisc { show | list } [ dev STRING ] [ QDISC_ID ] [ invisible ]
+// Where:
+// QDISC_KIND := { [p|b]fifo | tbf | prio | cbq | red | etc. }
+// OPTIONS := ... try tc qdisc add <desired QDISC_KIND> help
+// STAB_OPTIONS := ... try tc qdisc add stab help
+// QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }
+
+const QdiscHelp = `Usage: tc qdisc [ add | del | replace | change | show ] dev STRING
    		[ handle QHANDLE ] [ root | ingress | clsact | parent CLASSID ]
-   		[ estimator INTERVAL TIME_CONSTANT ]
-  		[ stab [ help | STAB_OPTIONS] ]
-  		[ ingress_block BLOCK_INDEX ] [ egress_block BLOCK_INDEX ]
   		[ [ QDISC_KIND ] [ help | OPTIONS ] ]
 
-	tc qdisc { show | list } [ dev STRING ] [ QDISC_ID ] [ invisible ]
+	tc qdisc show [ dev STRING ] [ QDISC_ID ]
 
-	Where:
-	QDISC_KIND := { [p|b]fifo | tbf | prio | red | etc. }
+Where:
+	QDISC_KIND := { codel | qfq | htb | hfsc }
 	OPTIONS := ... try tc qdisc add <desired QDISC_KIND> help
-	STAB_OPTIONS := ... try tc qdisc add stab help
-	QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }`
-)
+	QDISC_ID := { root | ingress | handle QHANDLE | parent CLASSID }
+`
 
 // ShowQdisc implements the functionality of `tc qdisc show ... `
 func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
@@ -155,13 +163,23 @@ func (t *Trafficctl) ShowQdisc(stdout io.Writer, args *Args) error {
 			return err
 		}
 
-		if args.dev != "" {
-			if args.dev == iface.Name {
-				fmt.Fprintf(stdout, "%20s\t%s\n", iface.Name, qdisc.Kind)
+		if args.dev == "" || args.dev == iface.Name {
+			fmt.Fprintf(stdout, "%20s\tqdisc %s %s %s",
+				iface.Name, qdisc.Kind,
+				RenderClassID(qdisc.Handle, false),
+				RenderClassID(qdisc.Parent, true),
+			)
+			if qdisc.Kind == "htb" {
+				htb := qdisc.Htb
+				if htb.Init != nil {
+					fmt.Fprintf(stdout, " r2q %d default 0x%x", htb.Init.Rate2Quantum, htb.Init.Defcls)
+				}
+				if htb.DirectQlen != nil {
+					fmt.Fprintf(stdout, " direct_qlen %d", *htb.DirectQlen)
+				}
 			}
-			continue
+			fmt.Fprintf(stdout, "\n")
 		}
-		fmt.Fprintf(stdout, "%20s\t%s\n", iface.Name, qdisc.Kind)
 	}
 	return nil
 }
@@ -272,12 +290,6 @@ func (t *Trafficctl) ChangeQdisc(stdout io.Writer, args *Args) error {
 	}
 
 	return nil
-}
-
-// LinkQdisc implements the functionality of `tc qdisc link ... `
-// Note: Not implemented yet
-func (t *Trafficctl) LinkQdisc(stdout io.Writer, args *Args) error {
-	return ErrNotImplemented
 }
 
 func supportetQdisc(qd string) func(io.Writer, []string) (*tc.Object, error) {

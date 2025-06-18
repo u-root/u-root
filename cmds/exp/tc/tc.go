@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,10 +15,17 @@ import (
 
 	"github.com/florianl/go-tc"
 	trafficctl "github.com/u-root/u-root/pkg/tc"
+
+	// To build the dependencies of this package with TinyGo, we need to include
+	// the cpuid package, since tinygo does not support the asm code in the
+	// cpuid package. The cpuid package will use the tinygo bridge to get the
+	// CPU information. For further information see
+	// github.com/u-root/cpuid/cpuid_amd64_tinygo_bridge.go
+	_ "github.com/u-root/cpuid"
 )
 
 var cmdHelp = `Usage:	tc OBJECT { COMMAND | help }
-		where  OBJECT := { qdisc | class | filter }
+where  OBJECT := { qdisc | class | filter }
 `
 
 func main() {
@@ -51,20 +59,25 @@ func run(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 		"help",
 	}
 
+	var err error
+
 	switch one(args[cursor], want) {
 	case "qdisc":
-		return runQdisc(stdout, tctl, args[cursor+1:])
+		err = runQdisc(stdout, tctl, args[cursor+1:])
 	case "class":
-		return runClass(stdout, tctl, args[cursor+1:])
+		err = runClass(stdout, tctl, args[cursor+1:])
 	case "filter":
-		return runFilter(stdout, tctl, args[cursor+1:])
+		err = runFilter(stdout, tctl, args[cursor+1:])
 	case "help":
 		fmt.Fprint(stdout, cmdHelp)
 	default:
 		fmt.Fprint(stdout, cmdHelp)
 	}
+	if errors.Is(err, trafficctl.ErrExitAfterHelp) {
+		return nil
+	}
 
-	return nil
+	return err
 }
 
 func one(cmd string, cmds []string) string {
@@ -114,8 +127,6 @@ func runQdisc(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 		return tctl.ReplaceQdisc(stdout, qArgs)
 	case "change":
 		return tctl.ChangeQdisc(stdout, qArgs)
-	case "link":
-		return tctl.LinkQdisc(stdout, qArgs)
 	case "help":
 		fmt.Fprint(stdout, trafficctl.QdiscHelp)
 	}
@@ -199,7 +210,7 @@ func runFilter(stdout io.Writer, tctl trafficctl.Tctl, args []string) error {
 	case "get":
 		return tctl.GetFilter(stdout, fArgs)
 	case "help":
-		fmt.Fprint(stdout, trafficctl.Filterhelp)
+		fmt.Fprint(stdout, trafficctl.FilterHelp)
 	}
 
 	return nil

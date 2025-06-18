@@ -12,11 +12,10 @@ import (
 	"github.com/florianl/go-tc"
 )
 
-const (
-	CodelHelp = `Usage: ... codel [ limit PACKETS ] [ target TIME ]
-[ interval TIME ] [ ecn | noecn ]
-[ ce_threshold TIME ]`
-)
+const CodelHelp = `Usage: ... codel [ limit PACKETS ] [ target TIME ]
+		 [ interval TIME ] [ ecn | noecn ]
+		 [ ce_threshold TIME ]
+`
 
 // ParseCodelArgs parses a []string from the commandline for the codel qdisc.
 // and returns an *tc.Object accordingly.
@@ -62,6 +61,7 @@ func ParseCodelArgs(out io.Writer, args []string) (*tc.Object, error) {
 			i--
 		case "help":
 			fmt.Fprintf(out, "%s", CodelHelp)
+			return nil, ErrExitAfterHelp
 		}
 	}
 	ret := &tc.Object{}
@@ -69,6 +69,9 @@ func ParseCodelArgs(out io.Writer, args []string) (*tc.Object, error) {
 	ret.Codel = codel
 	return ret, nil
 }
+
+const QFQHelp = `Usage: ... qfq [ weight N ] [ maxpkt N ]
+`
 
 // ParseQFQArgs parses a []string from the commandline for the qfq qdisc
 // via `tc qdisc ... qfq ...` and returns an *tc.Object accordingly.
@@ -93,6 +96,7 @@ func ParseQFQArgs(out io.Writer, args []string) (*tc.Object, error) {
 			qfq.Lmax = &indirect
 		case "help":
 			fmt.Fprintf(out, "%s\n", QFQHelp)
+			return nil, ErrExitAfterHelp
 		}
 	}
 
@@ -103,13 +107,11 @@ func ParseQFQArgs(out io.Writer, args []string) (*tc.Object, error) {
 	return ret, nil
 }
 
-const (
-	HTBHelp = `Usage: ... qdisc add ... htb [default N] [r2q N]
-	[direct_qlen P] [offload]
+const HTBHelp = `Usage: ... qdisc add ... htb [default N] [r2q N]
+	[direct_qlen P]
 
 default  minor id of class to which unclassified packets are sent {0}
 r2q      DRR quantums are computed as rate in Bps/r2q {10}
-debug    string of 16 numbers each 0-3 {0}\n
 direct_qlen  Limit of the direct queue {in packets}
 offload  enable hardware offload
 
@@ -125,8 +127,8 @@ ceil     definite upper class rate (no borrows) {rate}
 cburst   burst but for ceil {computed}
 mtu      max packet size we create rate map for {1600}
 prio     priority of leaf; lower are served first {0}
-quantum  how much bytes to serve from leaf at once {use r2q}`
-)
+quantum  how much bytes to serve from leaf at once {use r2q}
+`
 
 // ParseHTBQDiscArgs parses a []string from the commandline for the HTB qdisc
 // via `tc qdisc ... htb ...` and returns an *tc.Object accordingly.
@@ -172,6 +174,11 @@ func ParseHTBQDiscArgs(out io.Writer, args []string) (*tc.Object, error) {
 	ret.Kind = "htb"
 	return ret, nil
 }
+
+const HFSCHelp = `Usage: ... hfsc [ default CLASSID ]
+
+ default: default class for unclassified packets
+ `
 
 // ParseHFSCQDiscArgs parses a []string from the commandline for the HFSC qdisc via
 // `tc qdisc ... hfsc ...` and returns an *tc.Object accordingly.

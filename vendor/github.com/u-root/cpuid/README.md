@@ -3,6 +3,12 @@
 
 > [!NOTE]
 > This Project is a fork of the discontinued project [`intel-go/cpuid`](https://github.com/intel-go/cpuid).
+> Further, it adds new features that enable cpuid builds for tinygo based applications
+
+> [!WARNING]
+> When building this package with tinygo, it will re-link into your dependecies, namely
+> cpuid  -> vendor/golang.org/x/sys/cpu.cpuid
+> xgetbv -> vendor/golang.org/x/sys/cpu.xgetbv
 
 The cpuid package provides convenient and fast access to information from 
 the x86 CPUID instruction. 
@@ -17,7 +23,7 @@ so this package makes it easier to do CPU-specific optimizations.
 package main
 
 import (
-    "github.com/intel-go/cpuid"
+    "github.com/u-root/cpuid"
     "fmt"
 )
 

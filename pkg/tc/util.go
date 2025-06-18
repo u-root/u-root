@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"strconv"
@@ -151,6 +152,28 @@ var (
 	ErrUnknownLinkLayer = errors.New("unknown linklayer value provided")
 )
 
+// RenderClassID is the inverse of ParseClassID.
+func RenderClassID(classID uint32, printParent bool) string {
+	if classID == tc.HandleRoot {
+		return "root"
+	}
+
+	var parent string
+	if printParent {
+		parent = "parent "
+	} else {
+		parent = ""
+	}
+
+	major := classID >> 16
+	minor := classID & 0xFFFF
+	if minor == 0 {
+		return fmt.Sprintf("%s%x:", parent, major)
+	}
+
+	return fmt.Sprintf("%s%x:%x", parent, major, minor)
+}
+
 // ParseLinkLayer takes a string of LinkLayer name and returns the
 // equivalent uint8 representation.
 func ParseLinkLayer(l string) (uint8, error) {
@@ -276,10 +299,20 @@ func CalcXMitTime(rate uint64, size uint32) (uint32, error) {
 		return 0, err
 	}
 
-	return uint32(ret) * tickInUsec, nil
+	return uint32(math.Ceil(ret * tickInUsec)), nil
 }
 
-func getTickInUsec() (uint32, error) {
+// CalcXMitSize is the inverse of CalcXMitTime
+func CalcXMitSize(rate uint64, ticks uint32) (uint32, error) {
+	tickInUsec, err := getTickInUsec()
+	if err != nil {
+		return 0, err
+	}
+	usecs := float64(ticks) / tickInUsec
+	return uint32(float64(rate) * usecs / TimeUnitsPerSecs), nil
+}
+
+func getTickInUsec() (float64, error) {
 	psched, err := os.Open("/proc/net/psched")
 	if err != nil {
 		return 0, err
@@ -298,9 +331,9 @@ func getTickInUsec() (uint32, error) {
 		t2us = us2t
 	}
 
-	clockFactor := int64(clockRes / TimeUnitsPerSecs)
+	clockFactor := float64(clockRes) / float64(TimeUnitsPerSecs)
 
-	return uint32(float64(t2us)/float64(us2t)) * uint32(clockFactor), nil
+	return float64(t2us) / float64(us2t) * clockFactor, nil
 }
 
 func getClockfactor() (uint32, error) {
@@ -329,12 +362,12 @@ var (
 	ErrNoValidProto = errors.New("invalid protocol name")
 )
 
-// ParseProto takes a protocol string and returns the equivalent
-// uint32 representation.
-func ParseProto(prot string) (uint32, error) {
+// ParseProto takes an EtherType protocol string and returns the equivalent
+// uint16 representation in network byte order.
+func ParseProto(prot string) (uint16, error) {
 	for _, p := range []struct {
 		name string
-		prot uint32
+		prot uint16
 	}{
 		{"802_3", 0x0001},
 		{"802_2", 0x0004},
@@ -346,25 +379,26 @@ func ParseProto(prot string) (uint32, error) {
 		{"ipv6", 0x86DD},
 	} {
 		if p.name == prot {
-			return p.prot, nil
+			return HToNS(p.prot), nil
 		}
 	}
 	return 0, ErrNoValidProto
 }
 
-// GetProtoFromInfo takes the uint32 representation of a protocol and
-// returns the equivalent string.
-func GetProtoFromInfo(info uint32) string {
-	protoNr := uint16((info & 0x0000FFFF))
+// GetProtoFromInfo extracts the uint16 EtherType protocol value (in network
+// byte order) from the tc.Object's Info field.
+func GetProtoFromInfo(info uint32) uint16 {
+	return uint16(info & 0xFFFF)
+}
 
-	// htons for beggars
-	b := make([]byte, 2)
-	binary.LittleEndian.PutUint16(b, protoNr)
-	pNr := binary.BigEndian.Uint16(b)
+// RenderProto takes the uint16 representation of an EtherType protocol in
+// network byte order and returns the equivalent string.
+func RenderProto(proto uint16) string {
+	pNr := NToHS(proto)
 
 	for _, p := range []struct {
 		name string
-		prot uint32
+		prot uint16
 	}{
 		{"802_3", 0x0001},
 		{"802_2", 0x0004},
@@ -374,7 +408,7 @@ func GetProtoFromInfo(info uint32) string {
 		{"ipx", 0x8137},
 		{"ipv6", 0x86DD},
 	} {
-		if p.prot == uint32(pNr) {
+		if p.prot == pNr {
 			return p.name
 		}
 	}
@@ -382,8 +416,64 @@ func GetProtoFromInfo(info uint32) string {
 	return ""
 }
 
-// GetPrefFromInfo takes the uint32 representation of the info field of tc.Object
-// and returns the preference/priority value as uint32.
-func GetPrefFromInfo(info uint32) uint32 {
-	return (info & 0xFFFF_0000) >> 16
+// GetPrefFromInfo takes the uint32 representation of the Info field of
+// tc.Object and returns the preference/priority value as uint16.
+func GetPrefFromInfo(info uint32) uint16 {
+	return uint16(info >> 16)
+}
+
+// GetInfoFromPrefAndProto combines the uint16 preference/priority value (in
+// host byte order) and the uint16 EtherType protocol value (in network byte
+// order) such that the combined value can be stored in the Info field of
+// tc.Object.
+func GetInfoFromPrefAndProto(hostPref, netProto uint16) uint32 {
+	return (uint32(hostPref) << 16) | uint32(netProto)
+}
+
+// HToNS converts a uint16 value from host (native) byte order to network (big
+// endian) byte order.
+func HToNS(hostShort uint16) uint16 {
+	netBytes := make([]byte, 2)
+
+	// serialize hostShort into netBytes (this is where bytes may be swapped)
+	binary.BigEndian.PutUint16(netBytes, hostShort)
+
+	// reinterpret netBytes as a native value
+	return binary.NativeEndian.Uint16(netBytes)
+}
+
+// NToHS converts a uint16 value from network (big endian) byte order to host
+// (native) byte order.
+func NToHS(netShort uint16) uint16 {
+	netBytes := make([]byte, 2)
+
+	// serialize netShort transparently
+	binary.NativeEndian.PutUint16(netBytes, netShort)
+
+	// parse netBytes into native value (this is where bytes may be swapped)
+	return binary.BigEndian.Uint16(netBytes)
+}
+
+// HToNL converts a uint32 value from host (native) byte order to network (big
+// endian) byte order.
+func HToNL(hostLong uint32) uint32 {
+	netBytes := make([]byte, 4)
+
+	// serialize hostLong into netBytes (this is where bytes may be swapped)
+	binary.BigEndian.PutUint32(netBytes, hostLong)
+
+	// reinterpret netBytes as a native value
+	return binary.NativeEndian.Uint32(netBytes)
+}
+
+// NToHL converts a uint32 value from network (big endian) byte order to host
+// (native) byte order.
+func NToHL(netLong uint32) uint32 {
+	netBytes := make([]byte, 4)
+
+	// serialize netLong transparently
+	binary.NativeEndian.PutUint32(netBytes, netLong)
+
+	// parse netBytes into native value (this is where bytes may be swapped)
+	return binary.BigEndian.Uint32(netBytes)
 }

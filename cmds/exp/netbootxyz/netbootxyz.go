@@ -18,6 +18,13 @@ import (
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"gopkg.in/yaml.v2"
+
+	// To build the dependencies of this package with TinyGo, we need to include
+	// the cpuid package, since tinygo does not support the asm code in the
+	// cpuid package. The cpuid package will use the tinygo bridge to get the
+	// CPU information. For further information see
+	// github.com/u-root/cpuid/cpuid_amd64_tinygo_bridge.go
+	_ "github.com/u-root/cpuid"
 )
 
 var (
@@ -110,7 +117,7 @@ func (o OSEndpoint) Label() string {
 
 // Load - Load data into kexec
 func (o OSEndpoint) Load() error {
-	if o.onlyLabel == true {
+	if o.onlyLabel {
 		subMenu = nil
 		if o.Name == "Other" {
 			// Load all other OS's
@@ -199,9 +206,7 @@ func (o OSEndpoint) IsDefault() bool {
 }
 
 // Edit - Edit something
-func (o OSEndpoint) Edit(func(cmdline string) string) {
-	return
-}
+func (o OSEndpoint) Edit(func(cmdline string) string) {}
 
 // indexOf - Returns index of an element in an array
 func indexOf(element string, data []string) int {

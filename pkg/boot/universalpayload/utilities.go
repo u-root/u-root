@@ -38,13 +38,56 @@ const (
 	DataSizePropertyName   = "data-size"
 )
 
+// Memory Region layout when loading universalpayload image.
+// Please do not change the layout, since components have dependencies:
+//   TRAMPOLINE CODE depends on base address of:
+//     TEMP STACK, Device Tree Info, ACPI DATA, UPL FIT IMAGE
+//   Device Tree Info depends on base address of:
+//     HoBs, ACPI DATA, UPL FIT IMAGE
+//
+// |------------------------| <-- Memory Region top
+// |     TRAMPOLINE CODE    |
+// |------------------------| <-- loadAddr + trampolineOffset
+// |      TEMP STACK        |
+// |------------------------| <-- loadAddr + tmpStackOffset
+// |    Device Tree Info    |
+// |------------------------| <-- loadAddr + fdtDtbOffset
+// |  BOOTLOADER PARAMETER  |
+// |  HoBs (Handoff Blocks) |
+// |------------------------| <-- loadAddr + tmpHobOffset
+// |       ACPI DATA        |
+// |------------------------| <-- loadAddr + rsdpTableOffset
+// |     UPL FIT IMAGE      |
+// |------------------------| <-- loadAddr which is 2MB aligned
+//
+// During runtime, we need to find a available Memory Region to place all
+// above components, size of each components should be updated at runtime.
+//
+// uplImageOffset is always set to be Zero. We keep it here in case
+// anything more needs to be placed before UPL Image.
+// Components should be placed by above sequence, once component is placed,
+// offset of next component should be updated at once to ensure all offset
+// information are updated correctly.
+
+var (
+	uplImageOffset   uint64
+	rsdpTableOffset  uint64
+	tmpHobOffset     uint64
+	fdtDtbOffset     uint64
+	tmpStackOffset   uint64
+	trampolineOffset uint64
+)
+
+// componentsSize is used to check whether reversed size, which is defined in
+// const variable 'sizeForComponents', is enough for us to place all required
+// components.
+var (
+	componentsSize uint
+)
+
 const (
-	rsdpTableOffset  = 0x1000
-	tmpHobOffset     = 0x2000
-	tmpStackOffset   = 0x3000
-	tmpStackTop      = 0x4000
-	trampolineOffset = 0x4000
-	uplImageOffset   = 0x5000
+	sizeForComponents int  = 0x100000
+	uplImageAlignment uint = 0x200000
 )
 
 const (
@@ -131,6 +174,54 @@ type FbFixScreenInfo struct {
 	Reserved     [2]uint16
 }
 
+type MCFGBaseAddressAllocation struct {
+	BaseAddr  EFIPhysicalAddress
+	PCISegGrp uint16
+	StartBus  uint8
+	EndBus    uint8
+	Reserved  uint32
+}
+
+type ResourceInfo struct {
+	Type        string
+	BaseAddress string
+	EndAddress  string
+	Attributes  string
+}
+
+type ResourceRegions struct {
+	MMIO64Base  uint64
+	MMIO64Limit uint64
+	MMIO32Base  uint64
+	MMIO32Limit uint64
+	IOPortBase  uint64
+	IOPortLimit uint64
+}
+
+const (
+	ACPIMCFGSysFilePath                 = "/sys/firmware/acpi/tables/MCFG"
+	ACPIMCFGPciSegInfoStructureSize     = 0xC
+	ACPIMCFGPciSegInfoDataLength        = 0xA
+	ACPIMCFGBaseAddressAllocationLenth  = 0x10
+	ACPIMCFGBaseAddressAllocationOffset = 0x2c
+	ACPIMCFGSignature                   = "MCFG"
+)
+
+const (
+	PCISearchPath   = "/sys/bus/pci/devices/"
+	PCIMMIO64Attr   = 0x140204
+	PCIMMIO32Attr   = 0x40200
+	PCIIOPortAttr   = 0x40100
+	PCIMMIOReadOnly = 0x4000
+	PCIMMIO64Type   = "MMIO64"
+	PCIMMIO32Type   = "MMIO32"
+	PCIIOPortType   = "IOPORT"
+
+	PCIMMIO64InvalidBase = 0xFFFF_FFFF_FFFF_FFFF
+	PCIMMIO32InvalidBase = 0xFFFF_FFFF
+	PCIIOPortInvalidBase = 0xFFFF
+)
+
 type FdtLoad struct {
 	Load       uint64
 	EntryStart uint64
@@ -169,12 +260,17 @@ var (
 	ErrGfxReadSubSysVendorIDFailed = fmt.Errorf("failed to read subsystem vendor id")
 	ErrGfxReadSubSysDeviceIDFailed = fmt.Errorf("failed to read subsystem device id")
 	ErrGfxNoDeviceInfoFound        = fmt.Errorf("no graphic device info found")
+	ErrSMBIOS3NotFound             = fmt.Errorf("no smbios3 region found")
 	ErrDTRsdpLenOverBound          = fmt.Errorf("rsdp table length too large")
 	ErrDTRsdpTableNotFound         = fmt.Errorf("no acpi rsdp table found")
 	ErrAlignPadRange               = errors.New("failed to align pad size, out of range")
 	ErrCPUAddressConvert           = errors.New("failed to convert physical bits size")
 	ErrCPUAddressRead              = errors.New("failed to read 'address sizes'")
 	ErrCPUAddressNotFound          = errors.New("'address sizes' information not found")
+	ErrMcfgDataLenthTooShort       = errors.New("acpi mcfg data lenth too short")
+	ErrMcfgSignatureMismatch       = errors.New("acpi mcfg signature mismatch")
+	ErrMcfgBaseAddrAllocCorrupt    = errors.New("acpi mcfg base address allocation data corrupt")
+	ErrMcfgBaseAddrAllocDecode     = errors.New("failed to decode mcfg base address allocation structure")
 )
 
 func parseUint64ToUint32(val uint64) uint32 {
@@ -220,17 +316,17 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	firstLevelNode, succeed := fdt.NodeByName(FirstLevelNodeName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeImagesNotFound
 	}
 
 	secondLevelNode, succeed := firstLevelNode.NodeByName(SecondLevelNodeName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeTianocoreNotFound
 	}
 
 	loadAddrProp, succeed := secondLevelNode.LookProperty(LoadAddrPropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeLoadNotFound
 	}
 
@@ -240,7 +336,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	entryAddrProp, succeed := secondLevelNode.LookProperty(EntryAddrPropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeEntryStartNotFound
 	}
 
@@ -250,7 +346,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	dataOffsetProp, succeed := secondLevelNode.LookProperty(DataOffsetPropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeDataOffsetNotFound
 	}
 
@@ -260,7 +356,7 @@ func getFdtInfo(name string, dtb io.ReaderAt) (*FdtLoad, error) {
 	}
 
 	dataSizeProp, succeed := secondLevelNode.LookProperty(DataSizePropertyName)
-	if succeed != true {
+	if !succeed {
 		return nil, ErrNodeDataSizeNotFound
 	}
 
@@ -616,70 +712,345 @@ func constructSerialPortNode() *dt.Node {
 	))
 }
 
-func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte, error) {
-	memNodes := buildDtMemoryNode(mem)
-	rsdpBase, rsdpData, err := getAcpiRsdpData()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed get rsdp table data: %w", err)
-	}
-
-	// rsdpBase indicates whether we need to copy RSDP table data to specified
-	// location. If rsdpBase equals to zero, then we need to copy data to
-	// specified address, otherwise, we will use rsdpBase directly.
-	if rsdpBase == 0 {
-		rsdpBase = addr + rsdpTableOffset
-	}
-
-	rsvdMemNode := dt.NewNode("reserved-memory", dt.WithChildren(
-		dt.NewNode("acpi", dt.WithProperty(
-			dt.PropertyString("compatible", "acpi"),
-			dt.PropertyRegion("reg", rsdpBase, uint64(pageSize)),
-		)),
-	))
-
+func constructOptionNode(loadAddr uint64) (*dt.Node, error) {
 	phyAddrSize, err := getPhysicalAddressSizes()
 	if err != nil {
 		return nil, err
 	}
 
-	optionsNode := dt.NewNode("options", dt.WithChildren(
+	return dt.NewNode("options", dt.WithChildren(
 		dt.NewNode("upl-images@", dt.WithProperty(
-			dt.PropertyU64("addr", addr+uplImageOffset),
+			dt.PropertyU64("addr", loadAddr+uplImageOffset),
 		)),
 		dt.NewNode("upl-params", dt.WithProperty(
 			dt.PropertyU32("addr-width", uint32(phyAddrSize)),
+			dt.PropertyU32("pci-enum-done", 1),
 			dt.PropertyString("boot-mode", "normal"),
 		)),
 		dt.NewNode("upl-custom", dt.WithProperty(
-			dt.PropertyU64("hoblistptr", addr+tmpHobOffset),
+			dt.PropertyU64("hoblistptr", loadAddr+tmpHobOffset),
 		)),
-	))
+	)), nil
+}
 
-	gmaNode, err := buildGraphicNode()
-	if err != nil {
-		fmt.Printf("WARNING: Failed to build Graphic Device Node (%v)\n", err)
+func constructSMBIOS3Node() (*dt.Node, error) {
+	smbiosTableBase, size, err := getSMBIOSBase()
+
+	// According to EDK2 UPL implementation, only SMBIOS3 is supported in FDT.
+	if (err != nil) || (size != getSMBIOS3HdrSize()) {
+		return nil, errors.Join(ErrSMBIOS3NotFound, err)
 	}
 
-	fbNode, err := buildFrameBufferNode()
-	if err != nil {
-		// If we failed to retrieve Frame Buffer configurations, prompt error
+	return dt.NewNode("smbios", dt.WithProperty(
+		dt.PropertyString("compatible", "smbios"),
+		dt.PropertyRegion("reg", uint64(smbiosTableBase), uint64(pageSize)),
+	)), nil
+}
+
+func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
+	var rsvdNodes []*dt.Node
+
+	acpiChildNode := dt.NewNode("acpi", dt.WithProperty(
+		dt.PropertyString("compatible", "acpi"),
+		dt.PropertyRegion("reg", rsdpBase, uint64(pageSize)),
+	))
+
+	rsvdNodes = append(rsvdNodes, acpiChildNode)
+
+	if smbios3ChildNode, err := constructSMBIOS3Node(); err != nil {
+		// If we failed to retrieve SMBIOS3 information, prompt error
 		// message to indicate error message, and continue construct DTB.
-		fmt.Printf("WARNING: Failed to build Frame Buffer Node (%v)\n", err)
+		warningMsg = append(warningMsg, err)
+	} else {
+		rsvdNodes = append(rsvdNodes, smbios3ChildNode)
+	}
+
+	return dt.NewNode("reserved-memory", dt.WithChildren(rsvdNodes...))
+}
+
+func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) (*ResourceRegions, error) {
+	domainIDHex := fmt.Sprintf("%04x", item.PCISegGrp)
+
+	var MMIO64Base uint64 = PCIMMIO64InvalidBase
+	var MMIO32Base uint64 = PCIMMIO32InvalidBase
+	var IOPortBase uint64 = PCIIOPortInvalidBase
+	var mmio64End uint64
+	var mmio32End uint64
+	var ioPortEnd uint64
+
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		deviceName := filepath.Base(path)
+		parts := strings.Split(deviceName, ":")
+		// deviceName fetched from filepath can be separated into 3 parts:
+		// 0000:00:00.0 which is DOMAIN_ID:BUS_ID:DEVICE_ID:FUNCTION_ID
+		// To retrieve the memory resource regions for 64-bit/32-bit MMIO
+		// and IO, we need to ensure:
+		// 1. Domain ID matches
+		// 2. Bus ID is valid
+		if len(parts) != 3 || parts[0] != domainIDHex {
+			// Skip unmatched Bus number
+			return nil
+		}
+
+		if bus, err := strconv.ParseUint(parts[1], 16, 64); err != nil {
+			// Should not happen, if failed to parse Bus number, return error directly
+			return err
+		} else if (bus >= uint64(item.StartBus)) && (bus <= uint64(item.EndBus)) {
+			resourcePath := filepath.Join(path, "resource")
+			resources, err := retrieveDeviceResources(resourcePath)
+			if err != nil {
+				return nil // Continue scanning other devices
+			}
+			for _, res := range resources {
+				if base, err := strconv.ParseUint(res.BaseAddress, 0, 64); err != nil {
+					// Should not happen, if failed to parse uint, skip this region
+					continue
+				} else if end, err := strconv.ParseUint(res.EndAddress, 0, 64); err != nil {
+					// Should not happen, if failed to parse uint, skip this region
+					continue
+				} else {
+					// Region found, merge it to domain resource region
+					switch res.Type {
+					case PCIMMIO64Type:
+						MMIO64Base = min(base, MMIO64Base)
+						mmio64End = max(end, mmio64End)
+					case PCIMMIO32Type:
+						MMIO32Base = min(base, MMIO32Base)
+						mmio32End = max(end, mmio32End)
+					case PCIIOPortType:
+						IOPortBase = min(base, IOPortBase)
+						ioPortEnd = max(end, ioPortEnd)
+					}
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResourceRegions{
+		MMIO64Base:  MMIO64Base,
+		MMIO64Limit: mmio64End - MMIO64Base + 1,
+		MMIO32Base:  MMIO32Base,
+		MMIO32Limit: mmio32End - MMIO32Base + 1,
+		IOPortBase:  IOPortBase,
+		IOPortLimit: ioPortEnd - IOPortBase + 1,
+	}, nil
+}
+
+func retrieveDeviceResources(resourcePath string) ([]ResourceInfo, error) {
+	contentBytes, err := os.ReadFile(resourcePath)
+	if err != nil {
+		return nil, err
+	}
+
+	content := string(contentBytes)
+	lines := strings.Split(content, "\n")
+	var resources []ResourceInfo
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, " ")
+
+		if len(parts) == 3 {
+			base := strings.TrimSpace(parts[0])
+			end := strings.TrimSpace(parts[1])
+			attr := strings.TrimSpace(parts[2])
+
+			if attrInt, err := strconv.ParseUint(attr, 0, 64); err != nil {
+				// Should not happen, skip this line in case it happens
+				continue
+			} else {
+				var resourceType string
+				if attrInt&PCIMMIOReadOnly != 0 {
+					// Skip ReadOnly MMIO, this is ROM region
+					continue
+				}
+
+				if attrInt&PCIMMIO64Attr == PCIMMIO64Attr {
+					base64, err := strconv.ParseUint(base, 0, 64)
+					if err == nil {
+						// Some platform provides 64-bit MMIO with all zero in high 32 bits,
+						// it leads to huge MMIO region for 64-bit, and triggers assertation
+						// in EDK2 since it is actual a 32-bit address, not a 64-bit address.
+						//
+						// Skip this scenario to address above issue.
+						if base64>>32 == 0 {
+							continue
+						}
+					}
+					resourceType = PCIMMIO64Type
+				} else if attrInt&PCIMMIO32Attr == PCIMMIO32Attr {
+					resourceType = PCIMMIO32Type
+				} else if attrInt&PCIIOPortAttr == PCIIOPortAttr {
+					// Do not care about IRQ specific bits (BITS 0~5)
+					resourceType = PCIIOPortType
+				} else {
+					continue // Skip unknown resource types
+				}
+
+				resources = append(resources, ResourceInfo{
+					Type:        resourceType,
+					BaseAddress: base,
+					EndAddress:  end,
+					Attributes:  attr,
+				})
+			}
+		}
+	}
+	return resources, nil
+}
+
+func fetchACPIMCFGData(data []byte) ([]MCFGBaseAddressAllocation, error) {
+	var mcfgDataArray []MCFGBaseAddressAllocation
+
+	// Check if the data is long enough to contain data from offset 0x2c.
+	if len(data) <= ACPIMCFGBaseAddressAllocationOffset {
+		return nil, ErrMcfgDataLenthTooShort
+	}
+
+	// Check if the magic word is "MCFG".
+	if !bytes.Equal(data[:4], []byte(ACPIMCFGSignature)) {
+		return nil, ErrMcfgSignatureMismatch
+	}
+
+	segInfoContent := data[ACPIMCFGBaseAddressAllocationOffset:]
+
+	// Check whether content in Base Address Allocation Structure is valid
+	if len(segInfoContent)%ACPIMCFGBaseAddressAllocationLenth != 0 {
+		return nil, ErrMcfgBaseAddrAllocCorrupt
+	}
+
+	for i := 0; i < len(segInfoContent); i += ACPIMCFGBaseAddressAllocationLenth {
+		mcfgDataBytes := segInfoContent[i : i+ACPIMCFGBaseAddressAllocationLenth]
+		mcfgData := MCFGBaseAddressAllocation{}
+		reader := bytes.NewReader(mcfgDataBytes)
+
+		err := binary.Read(reader, binary.LittleEndian, &mcfgData)
+		if err != nil {
+			return nil, ErrMcfgBaseAddrAllocDecode
+		}
+
+		mcfgDataArray = append(mcfgDataArray, mcfgData)
+	}
+	return mcfgDataArray, nil
+}
+
+func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) (*dt.Node, error) {
+	high64 := func(val uint64) uint32 {
+		return uint32(val >> 32)
+	}
+
+	low64 := func(val uint64) uint32 {
+		return uint32(val & 0x0000_0000_FFFF_FFFF)
+	}
+
+	resource, err := retrieveRootBridgeResources(path, item)
+	if err != nil {
+		return nil, err
+	}
+
+	return dt.NewNode("pci-rb", dt.WithProperty(
+		dt.PropertyString("compatible", "pci-rb"),
+		dt.PropertyU64("reg", uint64(item.BaseAddr)),
+		dt.PropertyU32Array("bus-range", []uint32{uint32(item.StartBus), uint32(item.EndBus)}),
+		dt.PropertyU32Array("ranges", []uint32{
+			0x300_0000, // 64BITS
+			high64(resource.MMIO64Base), low64(resource.MMIO64Base),
+			0x0, 0x0,
+			high64(resource.MMIO64Limit), low64(resource.MMIO64Limit),
+			0x200_0000, // 32BITS
+			high64(resource.MMIO32Base), low64(resource.MMIO32Base),
+			0x0, 0x0,
+			high64(resource.MMIO32Limit), low64(resource.MMIO32Limit),
+			0x100_0000, // IO
+			high64(resource.IOPortBase), low64(resource.IOPortBase),
+			0x0, 0x0,
+			high64(resource.IOPortLimit), low64(resource.IOPortLimit),
+		}),
+	)), nil
+}
+
+func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
+	var rbNodes []*dt.Node
+
+	fileData, err := os.ReadFile(ACPIMCFGSysFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	mcfgData, err := fetchACPIMCFGData(fileData)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range mcfgData {
+		rbNode, err := createPCIRootBridgeNode(PCISearchPath, item)
+		if err != nil {
+			return nil, err
+		}
+
+		rbNodes = append(rbNodes, rbNode)
+
+	}
+	return rbNodes, nil
+}
+
+func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
+	memNodes := buildDtMemoryNode(mem)
+
+	rsvdMemNode := constructReservedMemoryNode(rsdpBase)
+
+	optionsNode, err := constructOptionNode(loadAddr)
+	if err != nil {
+		// Break here if failed to construct option node since option node
+		// is required to boot UPL.
+		return err
 	}
 
 	serialPortNode := constructSerialPortNode()
 
 	dtNodes := append(memNodes, rsvdMemNode)
-	dtNodes = append(dtNodes, serialPortNode)
 	dtNodes = append(dtNodes, optionsNode)
+	dtNodes = append(dtNodes, serialPortNode)
 
-	if fbNode != nil {
-		dtNodes = append(dtNodes, fbNode)
+	if gmaNode, err := buildGraphicNode(); err != nil {
+		// If we failed to retrieve Graphic configurations, prompt error
+		// message to indicate error message, and continue construct DTB.
+		warningMsg = append(warningMsg, err)
+	} else {
+		dtNodes = append(dtNodes, gmaNode)
 	}
 
-	if gmaNode != nil {
-		dtNodes = append(dtNodes, gmaNode)
+	if fbNode, err := buildFrameBufferNode(); err != nil {
+		// If we failed to retrieve Frame Buffer configurations, prompt error
+		// message to indicate error message, and continue construct DTB.
+		warningMsg = append(warningMsg, err)
+	} else {
+		dtNodes = append(dtNodes, fbNode)
+
+	}
+
+	if pciRbNodes, err := constructPCIRootBridgeNodes(); err != nil {
+		// If we failed to construct PCI Root Bridge info, prompt error
+		// message to indicate error message, and continue construct DTB.
+		// In this case, allows UPL to scan PCI Bus itself.
+		warningMsg = append(warningMsg, err)
+	} else {
+		if pciRbNodes != nil {
+			dtNodes = append(dtNodes, pciRbNodes...)
+		}
 	}
 
 	dtHeader := dt.Header{
@@ -703,10 +1074,10 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, addr uint64) ([]byte,
 	// Write the FDT to the provided io.Writer
 	_, err = fdt.Write(buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write FDT: %w", err)
+		return fmt.Errorf("failed to write FDT: %w", err)
 	}
 
-	return rsdpData, nil
+	return nil
 }
 
 func mockCPUTempInfoFile(t *testing.T, content string) string {

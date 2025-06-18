@@ -73,7 +73,7 @@ func main() {
 	flag.IntVar(&algorithm, "a", 1, "SHA algorithm, valid args are 1, 256 and 512")
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), usage+"\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "%s\n", usage)
 		flag.PrintDefaults()
 	}
 

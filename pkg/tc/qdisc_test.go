@@ -63,7 +63,7 @@ func TestParseQdiscArgs(t *testing.T) {
 			name: "parent",
 			args: []string{
 				"parent",
-				"FFFF",
+				"1:10",
 			},
 		},
 		{
@@ -357,6 +357,7 @@ func TestParseCodelArgs(t *testing.T) {
 				"help",
 			},
 			expBuf: trafficctl.CodelHelp,
+			err:    trafficctl.ErrExitAfterHelp,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -406,6 +407,7 @@ func TestParseQFQArgs(t *testing.T) {
 			args: []string{
 				"help",
 			},
+			err: trafficctl.ErrExitAfterHelp,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

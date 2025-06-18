@@ -13,15 +13,15 @@ import (
 	"github.com/florianl/go-tc"
 )
 
-const (
-	QFQHelp = `Usage: ... qfq weight NUMBER maxpkt BYTES`
-
-	maxUint32 = 0xFFFF_FFFF
-)
+const maxUint32 = 0xFFFF_FFFF
 
 // ParseHFSCClassArgs parses the cmdline arguments for `tc class add ... hfsc ...`
 // and returns a *tc.Object.
 func ParseHFSCClassArgs(out io.Writer, args []string) (*tc.Object, error) {
+	if len(args) > 0 && args[0] == "help" {
+		fmt.Fprint(out, HFSCHelp)
+		return nil, ErrExitAfterHelp
+	}
 	ret := &tc.Object{}
 	var fscOK, rscOK, uscOK bool
 	hfsc := &tc.Hfsc{}
@@ -223,6 +223,10 @@ func supportetClasses(cl string) func(io.Writer, []string) (*tc.Object, error) {
 // ParseHTBClassArgs parses the cmdline arguments for `tc class add ... htb ...`
 // and returns a *tc.Object.
 func ParseHTBClassArgs(out io.Writer, args []string) (*tc.Object, error) {
+	if len(args) > 0 && args[0] == "help" {
+		fmt.Fprint(out, HTBHelp)
+		return nil, ErrExitAfterHelp
+	}
 	const linkLayerMask = 0x0F
 	// rate <rate> and burst <bytes> is required
 	if len(args) < 4 {
@@ -307,8 +311,8 @@ func ParseHTBClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 				return nil, err
 			}
 			rate64 = r
-		case "help":
-			fmt.Fprint(out, HTBHelp)
+		default:
+			return nil, ErrInvalidArg
 		}
 	}
 
@@ -378,8 +382,6 @@ func ParseHTBClassArgs(out io.Writer, args []string) (*tc.Object, error) {
 
 	ret.Htb.Rate64 = &rate64
 	ret.Htb.Ceil64 = &ceil64
-
-	fmt.Printf("%v\n", opt.Buffer)
 
 	return ret, nil
 }

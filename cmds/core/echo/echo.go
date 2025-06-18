@@ -28,7 +28,6 @@ var (
     \a     alert (BEL)
     \b     backspace
     \c     produce no further output
-    \e     escape
     \f     form feed
     \n     new line
     \r     carriage return
@@ -49,7 +48,7 @@ func escapeString(s string) (string, error) {
 	}
 
 	s = strings.Split(s, "\\c")[0]
-	s = strings.Replace(s, "\\0", "\\", -1)
+	s = strings.ReplaceAll(s, "\\0", "\\")
 
 	// Quote the string and scan it through %q to interpret backslash escapes
 	s = fmt.Sprintf("\"%s\"", s)

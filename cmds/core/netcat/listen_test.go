@@ -18,6 +18,107 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 )
 
+func TestListenMode(t *testing.T) {
+	listenErr := errors.New("failed to listen")
+
+	tests := []struct {
+		name       string
+		network    string
+		address    string
+		listenFunc func(output io.WriteCloser, network, address string) error
+		err        error
+	}{
+		{
+			name:    "TCPv4 success",
+			network: "tcp",
+			address: "localhost:8080",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "tcp4" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "TCPv6 success",
+			network: "tcp",
+			address: "localhost:8080",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "tcp6" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "UDPv4 success",
+			network: "udp",
+			address: "localhost:8080",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "udp4" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "UDPv6 success",
+			network: "udp",
+			address: "localhost:8080",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "udp6" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+		{
+			name:    "TCPv4 and TCPv6 failure",
+			network: "tcp",
+			address: "localhost:8080",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				return listenErr
+			},
+			err: listenErr,
+		},
+		{
+			name:    "UDPv4 and UDPv6 failure",
+			network: "udp",
+			address: "localhost:8080",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				return listenErr
+			},
+			err: listenErr,
+		},
+		{
+			name:    "Other network success",
+			network: "unix",
+			address: "/tmp/socket",
+			listenFunc: func(output io.WriteCloser, network, address string) error {
+				if network == "unix" {
+					return nil
+				}
+				return listenErr
+			},
+			err: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cmd{}
+			err := cmd.listenMode(&closableDiscard{}, tt.network, tt.address, tt.listenFunc)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %v, want %v", err, tt.err)
+			}
+		})
+	}
+}
+
 // Define a struct for your test cases
 type setupListenerTestCase struct {
 	name     string
@@ -175,13 +276,14 @@ func (m *MockConn) Write(b []byte) (int, error) {
 	return m.Output.Write(b)
 }
 
-// Do not set maxConnections higher than the number of mockConns or else the function will run indefinitely waiting for more connections
+// Do not set testLimit higher than the number of mockConns or else the function will run indefinitely waiting for more connections
 func TestListenForConnections(t *testing.T) {
 	partialData := "partial data"
 	tests := []struct {
 		name           string
 		mockConns      []*MockConn
 		config         *netcat.Config
+		testLimit      uint32
 		expectedOutput []string
 		expectError    bool
 	}{
@@ -200,12 +302,7 @@ func TestListenForConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{
-				ListenModeOptions: netcat.ListenModeOptions{
-					KeepOpen:       false,
-					MaxConnections: 1,
-				},
-			},
+			config:         &netcat.Config{},
 			expectedOutput: []string{""},
 			expectError:    false,
 		},
@@ -226,12 +323,7 @@ func TestListenForConnections(t *testing.T) {
 					},
 				},
 			},
-			config: &netcat.Config{
-				ListenModeOptions: netcat.ListenModeOptions{
-					KeepOpen:       false,
-					MaxConnections: 1,
-				},
-			},
+			config:      &netcat.Config{},
 			expectError: false,
 		},
 		{
@@ -285,9 +377,10 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 		{
@@ -341,11 +434,12 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 					ChatMode:       true,
 					BrokerMode:     true,
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 		{
@@ -383,11 +477,12 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 2,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 					ChatMode:       false,
 					BrokerMode:     true,
 				},
 			},
+			testLimit:   2,
 			expectError: false,
 		},
 		{
@@ -437,7 +532,7 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 				},
 				AccessControl: netcat.AccessControlOptions{
 					ConnectionList: map[string]bool{
@@ -445,6 +540,7 @@ func TestListenForConnections(t *testing.T) {
 					},
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 		{
@@ -491,14 +587,17 @@ func TestListenForConnections(t *testing.T) {
 			config: &netcat.Config{
 				ListenModeOptions: netcat.ListenModeOptions{
 					KeepOpen:       true,
-					MaxConnections: 3,
+					MaxConnections: netcat.DEFAULT_CONNECTION_MAX,
 				},
 				AccessControl: netcat.AccessControlOptions{
 					ConnectionList: map[string]bool{
-						"localhost": false,
+						"127.0.0.1": false,
+						"127.0.0.2": false,
+						"127.0.0.3": false,
 					},
 				},
 			},
+			testLimit:   3,
 			expectError: false,
 		},
 	}
@@ -520,13 +619,13 @@ func TestListenForConnections(t *testing.T) {
 				},
 			}
 
-			output := &bytes.Buffer{}
+			output := &closableBuffer{}
 			cmd := &cmd{
 				stdin:  &bytes.Buffer{},
 				config: tt.config,
 			}
 
-			err := cmd.listenForConnections(netcat.NewConcurrentWriter(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener, tt.testLimit)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
@@ -557,13 +656,8 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 		mockConns      []*MockConn // Ensure this is defined and includes at least one mock connection
 	}{
 		{
-			name: "Successful write",
-			config: &netcat.Config{
-				ListenModeOptions: netcat.ListenModeOptions{
-					KeepOpen:       false,
-					MaxConnections: 1,
-				},
-			},
+			name:           "Successful write",
+			config:         &netcat.Config{},
 			expectedOutput: "abc",
 			expectError:    false,
 			mockConns: []*MockConn{
@@ -597,13 +691,13 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 				},
 			}
 
-			output := &bytes.Buffer{}
+			output := &closableBuffer{}
 			cmd := &cmd{
 				stdin:  bytes.NewBufferString(tt.expectedOutput),
 				config: tt.config,
 			}
 
-			err := cmd.listenForConnections(netcat.NewConcurrentWriter(output), mockListener)
+			err := cmd.listenForConnections(netcat.NewConcurrentWriteCloser(output), mockListener, 0)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("Expected error: %v, got: %v", tt.expectError, err != nil)
 			}
@@ -623,15 +717,15 @@ func TestWriteFromListenerToConnection(t *testing.T) {
 
 func TestBroadcastMessage(t *testing.T) {
 	// Setup
-	connections := NewConnections()
+	connections := newConnections(2)
 
 	senderConn, receiverConn := net.Pipe()
 	defer senderConn.Close()
 	defer receiverConn.Close()
 
 	// Add connections
-	connections.Add(1, senderConn)
-	connections.Add(2, receiverConn)
+	connections.add(1, senderConn)
+	connections.add(2, receiverConn)
 
 	// Prepare a buffer to capture the broadcast output for the receiver
 	var (
@@ -654,7 +748,7 @@ func TestBroadcastMessage(t *testing.T) {
 	}()
 
 	message := "Broadcasted Message!"
-	connections.Broadcast(netcat.NewConcurrentWriter(&outputBuffer), 2, message)
+	connections.broadcast(netcat.NewConcurrentWriter(&outputBuffer), 2, message)
 	senderConn.Close()
 	receiverConn.Close()
 

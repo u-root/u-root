@@ -1,0 +1,4 @@
+                eth0	class htb 1:1 root prio 0 rate 750000b ceil 750000b burst 15360b cburst 4600b
+                eth0	class htb 1:10 parent 1:1 prio 0 rate 625000b ceil 625000b burst 15360b cburst 4100b
+                eth0	class htb 1:20 parent 1:1 prio 0 rate 375000b ceil 750000b burst 15360b cburst 4600b
+                eth0	class htb 1:30 parent 1:1 prio 0 rate 125b ceil 750000b burst 15360b cburst 4600b

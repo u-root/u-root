@@ -19,57 +19,68 @@ import (
 	"github.com/u-root/u-root/pkg/netcat"
 	"github.com/u-root/u-root/pkg/ulog"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
+
+	// To build the dependencies of this package with TinyGo, we need to include
+	// the cpuid package, since tinygo does not support the asm code in the
+	// cpuid package. The cpuid package will use the tinygo bridge to get the
+	// CPU information. For further information see
+	// github.com/u-root/cpuid/cpuid_amd64_tinygo_bridge.go
+	_ "github.com/u-root/cpuid"
 )
 
 type flags struct {
-	verbose                 bool
-	timingDelay             string
-	timingTimeout           string
-	timingWait              string
-	ipv4                    bool
-	ipv6                    bool
-	unixSocket              bool
-	virtualSocket           bool
-	eolCRLF                 bool
-	execNative              string
-	execSh                  string
-	execLua                 string
-	looseSourcePointer      uint
-	looseSourceRouterPoints string
-	sourcePort              string
-	sourceAddress           string
-	listen                  bool
-	udpSocket               bool
-	sctpSocket              bool
-	zeroIo                  bool
-	connectionAllowList     string
-	connectionAllowFile     string
-	connectionDenyList      string
-	connectionDenyFile      string
-	proxyAddress            string
-	proxydns                string
-	proxyType               string
-	proxyAuth               string
-	maxConnections          uint64
-	keepOpen                bool
-	noDNS                   bool
-	telnet                  bool
-	outFilePath             string
-	outFileHexPath          string
-	appendOutput            bool
-	sendOnly                bool
-	receiveOnly             bool
-	noShutdown              bool
-	brokerMode              bool
-	chatMode                bool
-	sslEnabled              bool
-	sslCertFilePath         string
-	sslKeyFilePath          string
-	sslVerifyTrust          bool
-	sslTrustFilePath        string
-	sslCiphers              string
-	sslSNI                  string
-	sslALPN                 string
+	verbose             bool
+	timingDelay         string
+	timingTimeout       string
+	timingWait          string
+	ipv4                bool
+	ipv6                bool
+	unixSocket          bool
+	eolCRLF             bool
+	execNative          string
+	execSh              string
+	sourcePort          string
+	sourceAddress       string
+	listen              bool
+	udpSocket           bool
+	zeroIo              bool
+	connectionAllowList string
+	connectionAllowFile string
+	connectionDenyList  string
+	connectionDenyFile  string
+	maxConnections      uint64
+	keepOpen            bool
+	outFilePath         string
+	outFileHexPath      string
+	appendOutput        bool
+	sendOnly            bool
+	receiveOnly         bool
+	noShutdown          bool
+	brokerMode          bool
+	chatMode            bool
+	sslEnabled          bool
+	sslCertFilePath     string
+	sslKeyFilePath      string
+	sslVerifyTrust      bool
+	sslTrustFilePath    string
+	sslCiphers          string
+	sslSNI              string
+	sslALPN             string
+
+	// Experimental
+	proxyAddress string
+	proxydns     string
+	proxyType    string
+	proxyAuth    string
+
+	// Not implemented
+	//virtualSocket           bool
+	//execLua                 string
+	//looseSourcePointer      uint
+	//looseSourceRouterPoints string
+	//sctpSocket              bool
+	//noDNS                   bool
+	//telnet                  bool
 }
 
 func evalParams(args []string, f flags) (*netcat.Config, error) {
@@ -171,7 +182,7 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	}
 
 	// Socket Types
-	config.ProtocolOptions.SocketType, err = netcat.ParseSocketType(f.udpSocket, f.unixSocket, f.virtualSocket, f.sctpSocket)
+	config.ProtocolOptions.SocketType, err = netcat.ParseSocketType(f.udpSocket, f.unixSocket, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -184,18 +195,9 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		netcat.Exec{
 			Type:    netcat.EXEC_TYPE_SHELL,
 			Command: f.execSh,
-		},
-		netcat.Exec{
-			Type:    netcat.EXEC_TYPE_LUA,
-			Command: f.execLua,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", os.ErrInvalid, err)
-	}
-
-	// Loose source routing
-	if f.looseSourcePointer != 0 || len(f.looseSourceRouterPoints) > 0 {
-		return nil, fmt.Errorf("%w: loose source routing is not yet supported", os.ErrInvalid)
 	}
 
 	config.ConnectionModeOptions.SourceHost = f.sourceAddress
@@ -216,6 +218,10 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 	config.Output.AppendOutput = f.appendOutput
 
 	// Listen Mode Options
+	if (f.keepOpen || f.brokerMode || f.chatMode) && f.udpSocket {
+		return nil, fmt.Errorf("%w: keep-open mode and broker mode are unavailable with UDP", os.ErrInvalid)
+	}
+
 	config.ListenModeOptions.MaxConnections = uint32(f.maxConnections)
 	config.ListenModeOptions.KeepOpen = f.keepOpen
 	config.ListenModeOptions.BrokerMode = f.brokerMode
@@ -253,8 +259,6 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 		config.Misc.EOL = netcat.LINE_FEED_CRLF
 	}
 
-	config.Misc.NoDNS = f.noDNS
-	config.Misc.Telnet = f.telnet
 	config.Misc.SendOnly = f.sendOnly
 	config.Misc.ReceiveOnly = f.receiveOnly
 	config.Misc.NoShutdown = f.noShutdown
@@ -331,13 +335,13 @@ func evalParams(args []string, f flags) (*netcat.Config, error) {
 
 type cmd struct {
 	stdin  io.Reader
-	stdout io.Writer
+	stdout io.WriteCloser
 	stderr io.Writer
 	config *netcat.Config
 	args   []string
 }
 
-func command(stdin io.Reader, stdout io.Writer, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
+func command(stdin io.Reader, stdout io.WriteCloser, stderr io.Writer, config *netcat.Config, args []string) (*cmd, error) {
 	return &cmd{
 		stdin:  stdin,
 		stdout: stdout,
@@ -384,12 +388,12 @@ func run(args []string) error {
 	fs.BoolVar(&f.udpSocket, "udp", false, "Use UDP instead of default TCP")
 	fs.BoolVar(&f.udpSocket, "u", false, "Use UDP instead of default TCP (shorthand)")
 
-	fs.BoolVar(&f.sctpSocket, "sctp", false, "Use SCTP instead of default TCP")
-
 	fs.BoolVar(&f.unixSocket, "unixsock", false, "Use Unix domain sockets only")
 	fs.BoolVar(&f.unixSocket, "U", false, "Use Unix domain sockets only (shorthand)")
 
-	fs.BoolVar(&f.virtualSocket, "vsock", false, "Use virtual circuit (stream) sockets only")
+	// Not implemented socket types
+	//fs.BoolVar(&f.sctpSocket, "sctp", false, "Use SCTP instead of default TCP")
+	//fs.BoolVar(&f.virtualSocket, "vsock", false, "Use virtual circuit (stream) sockets only")
 
 	// exec
 	fs.StringVar(&f.execNative, "exec", "", "Executes the given command")          // EXEC_TYPE_NATIVE
@@ -397,8 +401,8 @@ func run(args []string) error {
 
 	fs.StringVar(&f.execSh, "sh-exec", "", "Executes the given command via /bin/sh")       // EXEC_TYPE_SHELL
 	fs.StringVar(&f.execSh, "c", "", "Executes the given command via /bin/sh (shorthand)") // EXEC_TYPE_SHELL
-
-	fs.StringVar(&f.execLua, "lua-exec", "", "Executes the given Lua script (filepath argument)") // EXEC_TYPE_LUA
+	// Not implemented
+	//fs.StringVar(&f.execLua, "lua-exec", "", "Executes the given Lua script (filepath argument)") // EXEC_TYPE_LUA
 
 	// connection mode options
 	fs.BoolVar(&f.zeroIo, "z", false, "zero-I/O mode, report connection status only")
@@ -409,8 +413,9 @@ func run(args []string) error {
 	fs.StringVar(&f.sourceAddress, "source", "", "Specify source address to use")
 	fs.StringVar(&f.sourceAddress, "s", "", "Specify source address to use (shorthand)")
 
-	fs.StringVar(&f.looseSourceRouterPoints, "g", "", "Loose source routing hop points (8 max)")
-	fs.UintVar(&f.looseSourcePointer, "G", 0, "Loose source routing hop pointer (<n>)")
+	// Not implemented
+	//fs.StringVar(&f.looseSourceRouterPoints, "g", "", "Loose source routing hop points (8 max)")
+	//fs.UintVar(&f.looseSourcePointer, "G", 0, "Loose source routing hop pointer (<n>)")
 
 	// output options
 	fs.BoolVar(&f.verbose, "verbose", false, "Set verbosity level (can not be used several times)")
@@ -451,11 +456,13 @@ func run(args []string) error {
 	fs.BoolVar(&f.eolCRLF, "crlf", false, "Use CRLF for EOL sequence")
 	fs.BoolVar(&f.eolCRLF, "C", false, "Use CRLF for EOL sequence")
 
-	fs.BoolVar(&f.noDNS, "nodns", false, "Do not resolve hostnames via DNS")
-	fs.BoolVar(&f.noDNS, "n", false, "Do not resolve hostnames via DNS (shorthand)")
+	// Not implemented
+	//fs.BoolVar(&f.noDNS, "nodns", false, "Do not resolve hostnames via DNS")
+	//fs.BoolVar(&f.noDNS, "n", false, "Do not resolve hostnames via DNS (shorthand)")
 
-	fs.BoolVar(&f.telnet, "telnet", false, "Answer Telnet negotiations")
-	fs.BoolVar(&f.telnet, "t", false, "Answer Telnet negotiations (shorthand)")
+	// Not implemented
+	//fs.BoolVar(&f.telnet, "telnet", false, "Answer Telnet negotiations")
+	//fs.BoolVar(&f.telnet, "t", false, "Answer Telnet negotiations (shorthand)")
 
 	fs.BoolVar(&f.sendOnly, "send-only", false, "Only send data, ignoring received; quit on EOF")
 	fs.BoolVar(&f.receiveOnly, "recv-only", false, "Only receive data, never send anything")
@@ -467,20 +474,21 @@ func run(args []string) error {
 	fs.StringVar(&f.connectionDenyList, "deny", "", "Deny given hosts from sending data to Ncat. Connections will be accepted but no data will be sent back")
 	fs.StringVar(&f.connectionDenyFile, "denyfile", "", "A file of hosts denied from sending data to Ncat. Connections will be accepted but no data will be sent back")
 
-	// proxy
-	fs.StringVar(&f.proxyAddress, "proxy", "", "Specify address of host to proxy through (<addr[:port]> )")
-	fs.StringVar(&f.proxydns, "proxy-dns", "", "Specify where to resolve proxy destination")
-	fs.StringVar(&f.proxyType, "proxy-type", "", "Specify proxy type ('http', 'socks4', 'socks5')")
-	fs.StringVar(&f.proxyAuth, "proxy-auth", "", "Authenticate with HTTP or SOCKS proxy server")
+	// Proxy feature is experimental
+	//fs.StringVar(&f.proxyAddress, "proxy", "", "Specify address of host to proxy through (<addr[:port]> )")
+	//fs.StringVar(&f.proxydns, "proxy-dns", "", "Specify where to resolve proxy destination")
+	//fs.StringVar(&f.proxyType, "proxy-type", "", "Specify proxy type ('http', 'socks4', 'socks5')")
+	//fs.StringVar(&f.proxyAuth, "proxy-auth", "", "Authenticate with HTTP or SOCKS proxy server")
 
 	// ssl
 	fs.BoolVar(&f.sslEnabled, "ssl", false, "Connect or listen with SSL")
-	fs.StringVar(&f.sslCertFilePath, "ssl-cert", "", "Specify SSL certificate file (PEM) for listening")
-	fs.StringVar(&f.sslKeyFilePath, "ssl-key", "", "Specify SSL private key file (PEM) for listening")
-	fs.BoolVar(&f.sslVerifyTrust, "ssl-verify", false, "Verify trust and domain name of certificates")
-	fs.StringVar(&f.sslTrustFilePath, "ssl-trustfile", "", "PEM file containing trusted SSL certificates")
+	fs.StringVar(&f.sslCertFilePath, "ssl-cert", "", "Specify SSL certificate file (PEM); required when listening, optional otherwise")
+	fs.StringVar(&f.sslKeyFilePath, "ssl-key", "", "Specify SSL private key file (PEM); required when listening, optional otherwise")
+	fs.BoolVar(&f.sslVerifyTrust, "ssl-verify", false, "Verify server certificate; implies connecting with SSL (only effective when connecting)")
+	fs.StringVar(&f.sslTrustFilePath, "ssl-trustfile", "", "Trust CA and/or server certs from this PEM file rather than the host's root CA set"+
+		" (only effective when verifying server certificate)")
 	fs.StringVar(&f.sslCiphers, "ssl-ciphers", "", "Cipherlist containing SSL ciphers to use")
-	fs.StringVar(&f.sslSNI, "ssl-servername", "", "Request distinct server name (SNI)")
+	fs.StringVar(&f.sslSNI, "ssl-servername", "", "Request distinct server name (SNI); only effective when connecting")
 	fs.StringVar(&f.sslALPN, "ssl-alpn", "", "List of protocols to send via ALPN")
 
 	fs.Usage = func() {
@@ -495,7 +503,7 @@ func run(args []string) error {
 		log.Fatalf("error: %v", err)
 	}
 
-	c, err := command(os.Stdin, os.Stdout, os.Stderr, config, flag.Args())
+	c, err := command(os.Stdin, &netcat.StdoutWriteCloser{}, os.Stderr, config, flag.Args())
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -505,14 +513,14 @@ func run(args []string) error {
 		return fmt.Errorf("failed to determine connection: %w", err)
 	}
 
-	// io.Copy will block until the connection is closed, use a MultiWriter to write to stdout and the output file
-	output := io.MultiWriter(c.stdout, &c.config.Output)
+	// io.Copy will block until the connection is closed, use a TeeWriteCloser to write to stdout and the output file
+	output := netcat.NewTeeWriteCloser(c.stdout, &c.config.Output)
 
 	if c.config.ConnectionMode == netcat.CONNECTION_MODE_LISTEN {
-		return c.listenMode(netcat.NewConcurrentWriter(output), network, address)
+		return c.listenMode(netcat.NewConcurrentWriteCloser(output), network, address, c.listen)
 	}
 
-	return c.connectMode(output, network, address)
+	return c.connectMode(output, network, address, c.connect)
 }
 
 func main() {

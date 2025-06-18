@@ -1,37 +1,46 @@
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - revive
-    - ineffassign
-    - staticcheck
-    - stylecheck
     - errorlint
-
-linters-settings:
-  staticcheck:
-    checks: ["all", "-SA1019"]
-  stylecheck:
-    checks: ["all", "-ST1003"]
-  errorlint:
-    errorf: true
-    asserts: false
-    comparison: false
-
-issues:
-  exclude-dirs:
-    - pkg/uroot/test
-  exclude-rules:
-    - linters: [revive]
-      text: "don't use underscores"
-    - linters: [revive]
-      text: "don't use ALL_CAPS"
-    - linters: [revive]
-      text: "stutter"
-    - linters: [revive]
-      text: "unexported-return"
-    - linters: [revive]
-      text: "unused-parameter"
-    - linters: [revive]
-      text: "superfluous-else"
-    - linters: [revive]
-      text: "empty-block"
+    - ineffassign
+    - revive
+    - staticcheck
+  settings:
+    errorlint:
+      errorf: true
+      asserts: false
+      comparison: false
+    staticcheck:
+      checks:
+        - all
+        - -SA1019
+        - -ST1003
+        - -QF*
+  exclusions:
+    presets:
+      - comments
+    rules:
+      - linters:
+          - revive
+        text: don't use underscores
+      - linters:
+          - revive
+        text: don't use ALL_CAPS
+      - linters:
+          - revive
+        text: stutter
+      - linters:
+          - revive
+        text: unexported-return
+      - linters:
+          - revive
+        text: unused-parameter
+      - linters:
+          - revive
+        text: superfluous-else
+      - linters:
+          - revive
+        text: empty-block
+    paths:
+      - pkg/uroot/test

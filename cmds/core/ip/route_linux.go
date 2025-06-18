@@ -1,4 +1,4 @@
-// Copyright 2024 the u-root Authors. All rights reserved
+// Copyright 2025 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //go:build !tinygo || tinygo.enable
@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -22,29 +23,43 @@ const routeHelp = `Usage: ip route { list | flush } SELECTOR
        ip route { add | del | append | replace } ROUTE
 
 	   ip route help
+
 SELECTOR := [ root PREFIX ] [ match PREFIX ] [ exact PREFIX ]
             [ table TABLE_ID ] [ proto RTPROTO ]
             [ type TYPE ] [ scope SCOPE ]
+
 ROUTE := NODE_SPEC [ INFO_SPEC ]
+
 NODE_SPEC := [ TYPE ] PREFIX [ tos TOS ]
              [ table TABLE_ID ] [ proto RTPROTO ]
-             [ scope SCOPE ] [ metric METRIC ] OPTIONS
-INFO_SPEC := [ nexthop NH ]...
-NH := [ via ADDRESS ]
-FAMILY := [ inet | inet6 | mpls | bridge | link ]
-OPTIONS := FLAGS [ mtu NUMBER ] [ advmss NUMBER ]
+             [ scope SCOPE ] [ metric NUMBER ]
+
+INFO_SPEC := NH OPTIONS [ nexthop NH ]...
+
+NH := [ via [ FAMILY ] ADDRESS ] [ dev STRING ] NHFLAGS
+
+FAMILY := [ inet | inet6 | mpls ]
+
+OPTIONS := [ mtu NUMBER ] [ advmss NUMBER ]
            [ rtt TIME ] [ rttvar TIME ] [ reordering NUMBER ]
            [ window NUMBER ] [ cwnd NUMBER ] [ initcwnd NUMBER ]
            [ ssthresh NUMBER ] [ realms REALM ] [ src ADDRESS ]
            [ rto_min TIME ] [ hoplimit NUMBER ] [ initrwnd NUMBER ]
            [ features FEATURES ] [ quickack BOOL ] [ congctl NAME ]
 		   [ fastopen_no_cookie BOOL ]
+
 TYPE := { unicast | local | broadcast | multicast | throw |
           unreachable | prohibit | blackhole | nat }
-TABLE_ID := [ local | main | default | all | NUMBER ]
+
+TABLE_ID := [ local | main | default | NUMBER ]
+
 SCOPE := [ host | link | global | NUMBER ]
+
+NHFLAGS := [ onlink | pervasive ]
+
+RTPROTO := [ kernel | boot | static | NUMBER ]
+
 BOOL := [1|0]
-OPTIONS := OPTION [ OPTIONS ]
 `
 
 var routeTypes = map[string]int{
@@ -59,16 +74,7 @@ var routeTypes = map[string]int{
 	"nat":         unix.RTN_NAT,
 }
 
-func addrScopeStr(scope netlink.Scope) string {
-	switch scope {
-	case netlink.SCOPE_UNIVERSE:
-		return "global"
-	default:
-		return scope.String()
-	}
-}
-
-func routeTypeToString(routeType int) string {
+func routeTypeStr(routeType int) string {
 	for key, value := range routeTypes {
 		if value == routeType {
 			return key
@@ -77,269 +83,532 @@ func routeTypeToString(routeType int) string {
 	return "unknown"
 }
 
-func (cmd *cmd) routeAdddefault() error {
-	nh, nhval, err := cmd.parseNextHop()
-	if err != nil {
-		return err
+// route is the entry point for 'ip route' command.
+func (cmd *cmd) route() error {
+	if !cmd.tokenRemains() {
+		return cmd.routeShow()
 	}
-	// TODO: NHFLAGS.
-	l, err := cmd.parseDeviceName(true)
-	if err != nil {
-		return err
-	}
-	switch nh {
-	case "via":
-		fmt.Fprintf(cmd.Out, "Add default route %v via %v", nhval, l.Attrs().Name)
-		r := &netlink.Route{LinkIndex: l.Attrs().Index, Gw: nhval}
-		if err := cmd.handle.RouteAdd(r); err != nil {
-			return fmt.Errorf("error adding default route to %v: %w", l.Attrs().Name, err)
-		}
+
+	switch cmd.findPrefix("show", "add", "append", "replace", "del", "list", "flush", "get", "help") {
+	case "add":
+		return cmd.routeAdd()
+	case "append":
+		return cmd.routeAppend()
+	case "replace":
+		return cmd.routeReplace()
+	case "del":
+		return cmd.routeDel()
+	case "show", "list":
+		return cmd.routeShow()
+	case "flush":
+		return cmd.routeFlush()
+	case "get":
+		return cmd.routeGet()
+	case "help":
+		fmt.Fprint(cmd.Out, routeHelp)
 		return nil
+	default:
+		return cmd.usage()
 	}
-	return cmd.usage()
 }
 
 // routeAdd performs the 'ip route add' command.
 func (cmd *cmd) routeAdd() error {
-	ns := cmd.nextToken("default", "CIDR")
-	switch ns {
-	case "default":
-		return cmd.routeAdddefault()
-	default:
-		route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
-		if err != nil {
-			return err
-		}
-
-		link, err := netlink.LinkByName(d)
-		if err != nil {
-			return fmt.Errorf("error getting link %s: %w", d, err)
-		}
-
-		route.LinkIndex = link.Attrs().Index
-
-		if err := cmd.handle.RouteAdd(route); err != nil {
-			return fmt.Errorf("error adding route %s -> %s: %w", route.Dst.IP, d, err)
-		}
-		return nil
-	}
-}
-
-// routeAppend performs the 'ip route append' command.
-func (cmd *cmd) routeAppend() error {
-	ns := cmd.nextToken("default", "CIDR")
-	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
 		return err
 	}
 
-	link, err := netlink.LinkByName(d)
+	if err := cmd.handle.RouteAdd(route); err != nil {
+		return fmt.Errorf("adding route for %s: %w", route.Dst.IP, err)
+	}
+	return nil
+}
+
+// routeAppend performs the 'ip route append' command.
+func (cmd *cmd) routeAppend() error {
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
-		return fmt.Errorf("error getting link %s: %w", d, err)
+		return err
 	}
 
-	route.LinkIndex = link.Attrs().Index
-
 	if err := cmd.handle.RouteAppend(route); err != nil {
-		return fmt.Errorf("error appending route %s -> %s: %w", route.Dst.IP, d, err)
+		return fmt.Errorf("appending route for %s: %w", route.Dst.IP, err)
 	}
 	return nil
 }
 
 // routeReplace performs the 'ip route replace' command.
 func (cmd *cmd) routeReplace() error {
-	ns := cmd.nextToken("default", "CIDR")
-	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
 		return err
 	}
 
-	link, err := netlink.LinkByName(d)
-	if err != nil {
-		return fmt.Errorf("error getting link %s: %w", d, err)
-	}
-
-	route.LinkIndex = link.Attrs().Index
-
 	if err := cmd.handle.RouteReplace(route); err != nil {
-		return fmt.Errorf("error appending route %s -> %s: %w", route.Dst.IP, d, err)
+		return fmt.Errorf("appending route for %s: %w", route.Dst.IP, err)
 	}
 	return nil
 }
 
 // routeDel performs the 'ip route del' command.
 func (cmd *cmd) routeDel() error {
-	ns := cmd.nextToken("default", "CIDR")
-	route, d, err := cmd.parseRouteAddAppendReplaceDel(ns)
+	route, err := cmd.parseRouteAddAppendReplaceDel(defaultLinkIdxResolver)
 	if err != nil {
 		return err
 	}
 
-	link, err := netlink.LinkByName(d)
-	if err != nil {
-		return fmt.Errorf("error getting link %s: %w", d, err)
-	}
-
-	route.LinkIndex = link.Attrs().Index
-
 	if err := cmd.handle.RouteDel(route); err != nil {
-		return fmt.Errorf("error deleting route %s -> %s: %w", route.Dst.IP, d, err)
+		return fmt.Errorf("deleting route for %s: %w", route.Dst.IP, err)
 	}
 	return nil
 }
 
+// defaultLinkIdxResolver resolves the link index by name.
+// It is used by all all functions that call parseRouteAddAppendReplaceDel.
+// It is a separate function to allow for testing with a mock implementation.
+func defaultLinkIdxResolver(name string) (int, error) {
+	iface, err := netlink.LinkByName(name)
+	if err != nil {
+		return 0, fmt.Errorf("link %q not found: %w", name, err)
+	}
+	return iface.Attrs().Index, nil
+}
+
 // parseRouteAddAppendReplaceDel parses the arguments to 'ip route add', 'ip route append',
 // 'ip route replace' or 'ip route delete' from the cmdline.
-func (cmd *cmd) parseRouteAddAppendReplaceDel(ns string) (*netlink.Route, string, error) {
-	var err error
-
-	route := &netlink.Route{}
-
-	_, route.Dst, err = net.ParseCIDR(ns)
-	if err != nil {
-		return nil, "", err
+func (cmd *cmd) parseRouteAddAppendReplaceDel(resolveLinkIdxFn func(string) (int, error)) (*netlink.Route, error) {
+	if resolveLinkIdxFn == nil {
+		return nil, fmt.Errorf("internal parser error: resolveLinkFn is not set")
 	}
 
-	d := cmd.nextToken("dev", "device-name")
-	if d == "dev" {
-		d = cmd.nextToken("device-name")
+	var (
+		route = netlink.Route{}
+		err   error
+	)
+
+	// TYPE
+	if routeType, ok := probeRouteType(cmd.peekToken("TYPE")); ok {
+		cmd.Cursor++
+		route.Type = int(routeType)
 	}
 
-	for cmd.tokenRemains() {
-		switch cmd.nextToken("type", "tos", "table", "proto", "scope", "metric", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "congctl", "features", "quickack", "fastopen_no_cookie") {
-		case "tos":
-			route.Tos, err = cmd.parseInt("TOS")
-			if err != nil {
-				return nil, "", err
-			}
-
-		case "table":
-			route.Table, err = cmd.parseInt("TABLE_ID")
-			if err != nil {
-				return nil, "", err
-			}
-
-		case "proto":
-			proto, err := cmd.parseInt("RTPROTO")
-			if err != nil {
-				return nil, "", err
-			}
-
-			route.Protocol = netlink.RouteProtocol(proto)
-
-		case "scope":
-			scope, err := cmd.parseUint8("SCOPE")
-			if err != nil {
-				return nil, "", err
-			}
-			route.Scope = netlink.Scope(scope)
-		case "metric":
-			route.Priority, err = cmd.parseInt("METRIC")
-			if err != nil {
-				return nil, "", err
-			}
-		case "mtu":
-			route.MTU, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "advmss":
-			route.AdvMSS, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "rtt":
-			route.Rtt, err = cmd.parseInt("TIME")
-			if err != nil {
-				return nil, "", err
-			}
-		case "rttvar":
-			route.RttVar, err = cmd.parseInt("TIME")
-			if err != nil {
-				return nil, "", err
-			}
-		case "reordering":
-			route.Reordering, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "window":
-			route.Window, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "cwnd":
-			route.Cwnd, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "initcwnd":
-			route.InitCwnd, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "ssthresh":
-			route.Ssthresh, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "realms":
-			route.Realm, err = cmd.parseInt("REALM")
-			if err != nil {
-				return nil, "", err
-			}
-		case "src":
-			token := cmd.nextToken("ADDRESS")
-			route.Src = net.ParseIP(token)
-			if route.Src == nil {
-				return nil, "", fmt.Errorf("invalid source address: %v", token)
-			}
-		case "rto_min":
-			route.RtoMin, err = cmd.parseInt("TIME")
-			if err != nil {
-				return nil, "", err
-			}
-		case "hoplimit":
-			route.Hoplimit, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "initrwnd":
-			route.InitRwnd, err = cmd.parseInt("NUMBER")
-			if err != nil {
-				return nil, "", err
-			}
-		case "congctl":
-			route.Congctl = cmd.nextToken("NAME")
-		case "features":
-			route.Features, err = cmd.parseInt("FEATURES")
-			if err != nil {
-				return nil, "", err
-			}
-		case "quickack":
-			switch cmd.nextToken("0", "1") {
-			case "1":
-				route.QuickACK = 1
-			case "0":
-				route.QuickACK = 0
-			default:
-				return nil, "", cmd.usage()
-			}
-		case "fastopen_no_cookie":
-			switch cmd.nextToken("0", "1") {
-			case "1":
-				route.FastOpenNoCookie = 1
-			case "0":
-				route.FastOpenNoCookie = 0
-			default:
-				return nil, "", cmd.usage()
-			}
-		default:
-			return nil, "", cmd.usage()
+	// PREFIX
+	dest := cmd.nextToken("default", "PREFIX (in CIDR notation)")
+	if dest == "default" {
+		route.Dst = nil
+	} else {
+		_, route.Dst, err = net.ParseCIDR(dest)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return route, d, nil
+	// Eventually further specification of the destination address
+	// (e.g. tos, table, proto, scope, metric, etc.)
+	// Otherwise, NH (via or dev)
+LOOP:
+	for cmd.tokenRemains() {
+		token := cmd.nextToken("dev", "via", "tos", "table", "proto", "scope", "metric")
+		switch token {
+		case "via", "dev":
+			cmd.Cursor--
+			break LOOP // handled below
+		case "tos":
+			token = cmd.nextToken("TOS")
+			route.Tos, err = parseTOS(token)
+			if err != nil {
+				return nil, err
+			}
+		case "table":
+			token = cmd.nextToken("local", "main", "default", "all", "NUMBER")
+			route.Table, err = parseTable(token)
+			if err != nil {
+				return nil, err
+			}
+		case "proto":
+			token = cmd.nextToken("kernel", "boot", "static", "NUMBER")
+			route.Protocol, err = parseProto(token)
+			if err != nil {
+				return nil, err
+			}
+		case "scope":
+			token = cmd.nextToken("host", "link", "global", "NUMBER")
+			route.Scope, err = parseScope(token)
+			if err != nil {
+				return nil, err
+			}
+		case "metric":
+			token = cmd.nextToken("NUMBER")
+			route.Priority, err = parseMetric(token)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, cmd.usage()
+		}
+	}
+
+	// NH (next hop)
+
+	// "dev" or "via" must be present otherwise the loop above would not have exited. So there will be at least one
+	// NexthopInfo item in the route.MultiPath slice. The NexthopInfo will be populated with the information from
+	// the "dev" or "via" token in the loop below.
+	// Furhter NexthopInfo items will be appended if "nexthop" token is found in the loop below.
+
+	nextHopIdx := -1
+
+	for cmd.tokenRemains() {
+		token := cmd.nextToken("dev", "via", "nexthop", "mtu", "advmss", "rtt", "rttvar", "reordering", "window", "cwnd", "initcwnd", "ssthresh", "realms", "src", "rto_min", "hoplimit", "initrwnd", "features", "quickack", "congctl", "fastopen_no_cookie")
+		switch token {
+		case "dev":
+			token = cmd.nextToken("DEVICE")
+			idx, err := resolveLinkIdxFn(token)
+			if err != nil {
+				return nil, err
+			}
+			if nextHopIdx < 0 { // first nexthop item is stored in the top-level route fields
+				route.LinkIndex = idx
+				//NHFLAGS
+				if cmd.tokenRemains() {
+					if nhFlags, ok := probeNHFlags(cmd.peekToken("NHFLAGS")); ok {
+						cmd.Cursor++
+						route.Flags = int(nhFlags)
+					}
+				}
+			} else { // next hop item is a nexthop item and is stored in the MultiPath slice
+				route.MultiPath[nextHopIdx].LinkIndex = idx
+				//NHFLAGS
+				if cmd.tokenRemains() {
+					if nhFlags, ok := probeNHFlags(cmd.peekToken("NHFLAGS")); ok {
+						cmd.Cursor++
+						route.MultiPath[nextHopIdx].Flags = int(nhFlags)
+					}
+				}
+			}
+
+		case "via":
+			if family, ok := probeFamily(cmd.peekToken("FAMILY")); ok {
+				cmd.Cursor++
+				route.Family = family
+			}
+			token = cmd.nextToken("ADDRESS")
+			gw := net.ParseIP(token)
+			if gw == nil {
+				return nil, fmt.Errorf("invalid address: %s", token)
+			}
+			if nextHopIdx < 0 { // first nexthop item is stored in the top-level route fields
+				route.Gw = gw
+			} else { // next hop item is a nexthop item and is stored in the MultiPath slice
+				route.MultiPath[nextHopIdx].Gw = gw
+			}
+		case "nexthop":
+			route.MultiPath = append(route.MultiPath, &netlink.NexthopInfo{})
+			nextHopIdx++
+			continue
+		case "mtu":
+			token = cmd.nextToken("NUMBER")
+			num, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.MTU = int(num)
+		case "advmss":
+			token = cmd.nextToken("NUMBER")
+			num, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.AdvMSS = int(num)
+		case "rtt":
+			token = cmd.nextToken("TIME")
+			route.Rtt, err = parseTime(token)
+			if err != nil {
+				return nil, err
+			}
+		case "rttvar":
+			token = cmd.nextToken("TIME")
+			route.RttVar, err = parseTime(token)
+			if err != nil {
+				return nil, err
+			}
+		case "reordering":
+			token = cmd.nextToken("NUMBER")
+			reordering, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Reordering = int(reordering)
+		case "window":
+			token = cmd.nextToken("NUMBER")
+			window, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Window = int(window)
+		case "cwnd":
+			token = cmd.nextToken("NUMBER")
+			cwnd, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Cwnd = int(cwnd)
+		case "initcwnd":
+			token = cmd.nextToken("NUMBER")
+			initcwnd, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.InitCwnd = int(initcwnd)
+		case "ssthresh":
+			token = cmd.nextToken("NUMBER")
+			sshresh, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Ssthresh = int(sshresh)
+		case "realms":
+			token = cmd.nextToken("NUMBER")
+			realms, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Realm = int(realms)
+		case "src":
+			token = cmd.nextToken("ADDRESS")
+			route.Src = net.ParseIP(token)
+			if route.Src == nil {
+				return nil, fmt.Errorf("invalid src address: %s", token)
+			}
+		case "rto_min":
+			token = cmd.nextToken("NUMBER")
+			route.RtoMin, err = parseTime(token)
+			if err != nil {
+				return nil, err
+			}
+		case "hoplimit":
+			token = cmd.nextToken("NUMBER")
+			hoplimit, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Hoplimit = int(hoplimit)
+		case "initrwnd":
+			token = cmd.nextToken("NUMBER")
+			initrwnd, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.InitRwnd = int(initrwnd)
+		case "features":
+			token = cmd.nextToken("NUMBER")
+			features, err := strconv.ParseInt(token, 10, 0)
+			if err != nil {
+				return nil, err
+			}
+			route.Features = int(features)
+		case "quickack":
+			token = cmd.nextToken("BOOL 0 | 1")
+			// according to the SYNAPSYS documentation, this is a boolean value taking 0 or 1,
+			// so use ParseBool to prevent other numbers from being accepted
+			quickack, err := strconv.ParseBool(token)
+			if err != nil {
+				return nil, err
+			}
+			// netlink.Route.QuickACK is an int, so convert the boolean back to 0 or 1
+			if quickack {
+				route.QuickACK = 1
+			}
+		case "congctl":
+			token = cmd.nextToken("NAME")
+			route.Congctl = token
+		case "fastopen_no_cookie":
+			token = cmd.nextToken("BOOL 0 | 1")
+			// according to the SYNAPSYS documentation, this is a boolean value taking 0 or 1,
+			// so use ParseBool to prevent other numbers from being accepted
+			fastopenNoCookie, err := strconv.ParseBool(token)
+			if err != nil {
+				return nil, err
+			}
+			// netlink.Route.FastOpenNoCookie is an int, so convert the boolean back to 0 or 1
+			if fastopenNoCookie {
+				route.FastOpenNoCookie = 1
+			}
+		default:
+			return nil, cmd.usage()
+		}
+	}
+
+	return &route, nil
+}
+
+func probeRouteType(token string) (uint32, bool) {
+	// The netlink package itself does not define these constants, but it uses e.g.
+	// unix.RTN_UNICAST in the code as default in some cases. So netlink.Route.Type value is
+	// set using the unix package constants. As the unix package does not document these values properly,
+	// values are chosen with reference to https://manpages.debian.org/testing/manpages/rtnetlink.7.en.html.
+	switch token {
+	case "unicast":
+		return unix.RTN_UNICAST, true
+	case "local":
+		return unix.RTN_LOCAL, true
+	case "broadcast":
+		return unix.RTN_BROADCAST, true
+	case "multicast":
+		return unix.RTN_MULTICAST, true
+	case "throw":
+		return unix.RTN_THROW, true
+	case "unreachable":
+		return unix.RTN_UNREACHABLE, true
+	case "prohibit":
+		return unix.RTN_PROHIBIT, true
+	case "blackhole":
+		return unix.RTN_BLACKHOLE, true
+	case "nat":
+		return unix.RTN_NAT, true
+	default:
+		return 0, false
+	}
+}
+
+func probeFamily(token string) (int, bool) {
+	switch token {
+	case "inet":
+		return netlink.FAMILY_V4, true
+	case "inet6":
+		return netlink.FAMILY_V6, true
+	case "mpls":
+		return netlink.FAMILY_MPLS, true
+	// case "bridge": // netlink.FAMILY_BRIDGE is not defined in the netlink package
+	// 	return ??, true
+	// case "link":  // netlink.FAMILY_LINK is not defined in the netlink package
+	// 	return ??, true
+	default:
+		return 0, false
+	}
+}
+
+func probeNHFlags(token string) (netlink.NextHopFlag, bool) {
+	switch token {
+	case "onlink":
+		return netlink.FLAG_ONLINK, true
+	case "pervasive":
+		return netlink.FLAG_PERVASIVE, true
+	default:
+		return 0, false
+	}
+}
+
+func parseTOS(token string) (int, error) {
+	// According to the documentation, the TOS value is a 8 bit hexadecimal number.
+	// https://manpages.debian.org/bookworm/iproute2/ip-route.8.en.html#tos
+	n, err := strconv.ParseInt(token, 16, 8)
+	if err != nil {
+		// However, also allow decimal numbers.
+		n, err = strconv.ParseInt(token, 10, 8)
+		if err != nil {
+			return 0, fmt.Errorf("invalid TOS value %q: %w", token, err)
+		}
+	}
+	return int(n), nil
+}
+
+func parseTable(token string) (int, error) {
+	// The netlink package itself does not define these constants, but it uses e.g.
+	// unix.RT_TABLE_UNSPEC in the code . So netlink.Route.Table value is set using
+	// the unix package constants. As the unix package does not document these values properly,
+	// values are chosen with reference to https://manpages.debian.org/testing/manpages/rtnetlink.7.en.html.
+	switch token {
+	case "local":
+		return unix.RT_TABLE_LOCAL, nil
+	case "main":
+		return unix.RT_TABLE_MAIN, nil
+	case "default":
+		return unix.RT_TABLE_DEFAULT, nil
+	default:
+		n, err := strconv.ParseInt(token, 10, 0)
+		if err != nil {
+			return 0, fmt.Errorf("invalid table id %q: %w", token, err)
+		}
+		return int(n), nil
+	}
+}
+func parseProto(token string) (netlink.RouteProtocol, error) {
+	// The netlink package itself does not define these constants, but it uses the respective unix constants e.g.
+	// in netlink.RouteProtocol.String().
+	switch token {
+	case "kernel":
+		return unix.RTPROT_KERNEL, nil
+	case "boot":
+		return unix.RTPROT_BOOT, nil
+	case "static":
+		return unix.RTPROT_STATIC, nil
+	default:
+		n, err := strconv.ParseInt(token, 10, 0)
+		if err != nil {
+			return 0, fmt.Errorf("invalid protocol %q: %w", token, err)
+		}
+		return netlink.RouteProtocol(n), nil
+	}
+}
+func parseScope(token string) (netlink.Scope, error) {
+	// The netlink package itself does not define these constants, but it uses the respective unix constants e.g.
+	// in netlink.Scope.String().
+	switch token {
+	case "host":
+		return netlink.SCOPE_HOST, nil
+	case "link":
+		return netlink.SCOPE_LINK, nil
+	case "global":
+		return netlink.SCOPE_UNIVERSE, nil
+	default:
+		n, err := strconv.ParseInt(token, 10, 8)
+		if err != nil {
+			return 0, fmt.Errorf("invalid scope %q: %w", token, err)
+		}
+		return netlink.Scope(n), nil
+	}
+}
+
+func parseMetric(token string) (int, error) {
+	n, err := strconv.ParseInt(token, 10, 0)
+	if err != nil {
+		return 0, fmt.Errorf("invalid metric %q: %w", token, err)
+	}
+	return int(n), nil
+}
+
+func parseTime(token string) (int, error) {
+	// val, err := time.ParseDuration(token)
+	// var parseError *time.ParseError
+	// if errors.As(err, &parseError) {
+	// 	raw, err := strconv.ParseInt(token, 10, 0)
+	// 	if err != nil {
+	// 		return 0, err
+	// 	}
+	// 	return int(raw), nil
+	// } else if err != nil {
+	// 	return 0, err
+	// }
+
+	// The man page for iproute2 states:
+	// "If no suffix is specified the units are raw values passed directly to
+	// the routing code to maintain compatibility with previous releases.
+	// Otherwise if a suffix of s, sec or secs is used to specify seconds and
+	// ms, msec or msecs to specify milliseconds."
+	// https://manpages.debian.org/bookworm/iproute2/ip-route.8.en.html#rtt
+	//
+	// So actually the above code would be smart. However the documentation misses
+	// the importatnt part of what time unit the raw value is in. Casting time.Duration
+	// to int will give the value in nanoseconds. Not sure if this is the correct.
+	// Therefore only support the compatibility mode for now.
+
+	val, err := strconv.ParseInt(token, 10, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(val), nil
 }
 
 // routeShow performs the 'ip route show' command.
@@ -452,61 +721,6 @@ func (cmd *cmd) parseRouteShowListFlush() (*netlink.Route, uint64, *net.IPNet, *
 	return &filter, filterMask, root, match, exact, nil
 }
 
-// RouteJSON represents a route entry for JSON output format.
-type RouteJSON struct {
-	Dst      string   `json:"dst"`
-	Dev      string   `json:"dev"`
-	Protocol string   `json:"protocol"`
-	Scope    string   `json:"scope"`
-	PrefSrc  string   `json:"prefsrc"`
-	Flags    []string `json:"flags,omitempty"`
-}
-
-// printRoutes prints the routes in the system.
-func (cmd *cmd) printRoutes(routes []netlink.Route, ifaceNames []string) error {
-	if cmd.Opts.JSON {
-		obj := make([]RouteJSON, 0, len(routes))
-
-		for idx, route := range routes {
-
-			pRoute := RouteJSON{
-				Dst:   route.Dst.String(),
-				Dev:   ifaceNames[idx],
-				Scope: route.Scope.String(),
-			}
-
-			if !cmd.Opts.Numeric {
-				pRoute.Protocol = rtProto[int(route.Protocol)]
-				pRoute.Scope = route.Scope.String()
-			} else {
-				pRoute.Protocol = fmt.Sprintf("%d", route.Protocol)
-				pRoute.Scope = fmt.Sprintf("%d", route.Scope)
-			}
-
-			if route.Src != nil {
-				pRoute.PrefSrc = route.Src.String()
-			}
-
-			if len(route.ListFlags()) != 0 {
-				pRoute.Flags = route.ListFlags()
-			}
-
-			obj = append(obj, pRoute)
-		}
-
-		return printJSON(*cmd, obj)
-	}
-
-	for idx, route := range routes {
-		if route.Dst == nil {
-			cmd.defaultRoute(route, ifaceNames[idx])
-		} else {
-			cmd.printRoute(route, ifaceNames[idx])
-		}
-	}
-	return nil
-}
-
 func (cmd *cmd) filteredRouteList(route *netlink.Route, filterMask uint64, root, match, exact *net.IPNet) ([]netlink.Route, []string, error) {
 	var matchedRoutes []netlink.Route
 	var ifaceNames []string
@@ -560,21 +774,56 @@ func matchRoutes(routes []netlink.Route, root, match, exact *net.IPNet) ([]netli
 	return matchedRoutes, nil
 }
 
-func (cmd *cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptions) error {
-	routes, err := cmd.handle.RouteGetWithOptions(addr, options)
-	if err != nil {
-		return err
+// RouteJSON represents a route entry for JSON output format.
+type RouteJSON struct {
+	Dst      string   `json:"dst"`
+	Dev      string   `json:"dev"`
+	Protocol string   `json:"protocol"`
+	Scope    string   `json:"scope"`
+	PrefSrc  string   `json:"prefsrc"`
+	Flags    []string `json:"flags,omitempty"`
+}
+
+// printRoutes prints the routes in the system.
+func (cmd *cmd) printRoutes(routes []netlink.Route, ifaceNames []string) error {
+	if cmd.Opts.JSON {
+		obj := make([]RouteJSON, 0, len(routes))
+
+		for idx, route := range routes {
+
+			pRoute := RouteJSON{
+				Dst:   route.Dst.String(),
+				Dev:   ifaceNames[idx],
+				Scope: route.Scope.String(),
+			}
+
+			if !cmd.Opts.Numeric {
+				pRoute.Protocol = rtProto[int(route.Protocol)]
+				pRoute.Scope = route.Scope.String()
+			} else {
+				pRoute.Protocol = fmt.Sprintf("%d", route.Protocol)
+				pRoute.Scope = fmt.Sprintf("%d", route.Scope)
+			}
+
+			if route.Src != nil {
+				pRoute.PrefSrc = route.Src.String()
+			}
+
+			if len(route.ListFlags()) != 0 {
+				pRoute.Flags = route.ListFlags()
+			}
+
+			obj = append(obj, pRoute)
+		}
+
+		return printJSON(*cmd, obj)
 	}
 
-	for _, route := range routes {
-		link, err := cmd.handle.LinkByIndex(route.LinkIndex)
-		if err != nil {
-			return err
-		}
+	for idx, route := range routes {
 		if route.Dst == nil {
-			cmd.defaultRoute(route, link.Attrs().Name)
+			cmd.printDefaultRoute(route, ifaceNames[idx])
 		} else {
-			cmd.printRoute(route, link.Attrs().Name)
+			cmd.printRoute(route, ifaceNames[idx])
 		}
 	}
 	return nil
@@ -614,7 +863,7 @@ const (
 	routeVia6Fmt = "%v%s via %s dev %s proto %s metric %d\n"
 )
 
-func (cmd *cmd) defaultRoute(r netlink.Route, name string) {
+func (cmd *cmd) printDefaultRoute(r netlink.Route, name string) {
 	gw := r.Gw
 
 	var proto string
@@ -630,7 +879,7 @@ func (cmd *cmd) defaultRoute(r netlink.Route, name string) {
 	var detail string
 
 	if cmd.Opts.Details {
-		detail = routeTypeToString(r.Type) + " "
+		detail = routeTypeStr(r.Type) + " "
 	}
 
 	fmt.Fprintf(cmd.Out, defaultFmt, detail, gw, name, proto, metric)
@@ -674,7 +923,7 @@ func (cmd *cmd) printIPv4Route(r netlink.Route, name string) {
 	var detail string
 
 	if cmd.Opts.Details {
-		detail = routeTypeToString(r.Type) + " "
+		detail = routeTypeStr(r.Type) + " "
 	}
 
 	fmt.Fprintf(cmd.Out, routeFmt, detail, dest, name, proto, scope, src, metric)
@@ -696,7 +945,7 @@ func (cmd *cmd) printIPv6Route(r netlink.Route, name string) {
 	var detail string
 
 	if cmd.Opts.Details {
-		detail = routeTypeToString(r.Type) + " "
+		detail = routeTypeStr(r.Type) + " "
 	}
 
 	if r.Gw != nil {
@@ -704,6 +953,15 @@ func (cmd *cmd) printIPv6Route(r netlink.Route, name string) {
 		fmt.Fprintf(cmd.Out, routeVia6Fmt, detail, dest, gw, name, proto, metric)
 	} else {
 		fmt.Fprintf(cmd.Out, route6Fmt, detail, dest, name, proto, metric)
+	}
+}
+
+func addrScopeStr(scope netlink.Scope) string {
+	switch scope {
+	case netlink.SCOPE_UNIVERSE:
+		return "global"
+	default:
+		return scope.String()
 	}
 }
 
@@ -744,31 +1002,22 @@ func (cmd *cmd) parseRouteGet() (*netlink.RouteGetOptions, error) {
 	return &opts, nil
 }
 
-// route is the entry point for 'ip route' command.
-func (cmd *cmd) route() error {
-	if !cmd.tokenRemains() {
-		return cmd.routeShow()
+func (cmd *cmd) showRoutesForAddress(addr net.IP, options *netlink.RouteGetOptions) error {
+	routes, err := cmd.handle.RouteGetWithOptions(addr, options)
+	if err != nil {
+		return err
 	}
 
-	switch cmd.findPrefix("show", "add", "append", "replace", "del", "list", "flush", "get", "help") {
-	case "add":
-		return cmd.routeAdd()
-	case "append":
-		return cmd.routeAppend()
-	case "replace":
-		return cmd.routeReplace()
-	case "del":
-		return cmd.routeDel()
-	case "show", "list":
-		return cmd.routeShow()
-	case "flush":
-		return cmd.routeFlush()
-	case "get":
-		return cmd.routeGet()
-	case "help":
-		fmt.Fprint(cmd.Out, routeHelp)
-		return nil
-	default:
-		return cmd.usage()
+	for _, route := range routes {
+		link, err := cmd.handle.LinkByIndex(route.LinkIndex)
+		if err != nil {
+			return err
+		}
+		if route.Dst == nil {
+			cmd.printDefaultRoute(route, link.Attrs().Name)
+		} else {
+			cmd.printRoute(route, link.Attrs().Name)
+		}
 	}
+	return nil
 }

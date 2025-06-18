@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-FROM ubuntu:rolling as base
+FROM ubuntu:22.04 as base
 
 # Install dependencies
 RUN apt-get update &&                          \

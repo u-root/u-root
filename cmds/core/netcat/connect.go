@@ -13,9 +13,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -27,7 +29,25 @@ import (
 
 var osConnectors = map[netcat.SocketType]func(string, string) (net.Conn, error){}
 
-func (c *cmd) connectMode(output io.Writer, network, address string) error {
+type connectFn func(output io.WriteCloser, network, address string) error
+
+func (c *cmd) connectMode(output io.WriteCloser, network, address string, connect connectFn) error {
+	if network == "tcp" || network == "udp" {
+		err4 := connect(output, network+"4", address)
+		if err4 == nil {
+			return nil
+		}
+		err6 := connect(output, network+"6", address)
+		if err6 == nil {
+			return nil
+		}
+		return fmt.Errorf("connect mode: %w", errors.Join(err4, err6))
+	}
+
+	return connect(output, network, address)
+}
+
+func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 	if c.config.ConnectionModeOptions.ScanPorts && !c.config.ConnectionModeOptions.ZeroIO {
 		return fmt.Errorf("scanning ports is only supported in Zero-I/O mode")
 	}
@@ -36,29 +56,33 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 		return c.scanPorts()
 	}
 
+	if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP_UNIX &&
+		c.config.ConnectionModeOptions.SourceHost == "" {
+		c.config.ConnectionModeOptions.SourceHost = filepath.Join(os.TempDir(), fmt.Sprintf("netcat.%x.sock", rand.Uint64()))
+		defer os.Remove(c.config.ConnectionModeOptions.SourceHost)
+	}
+
 	conn, err := c.establishConnection(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to establish connection: %w", err)
 	}
 	defer conn.Close()
 
-	log.Printf("Connection to %s [%s] succeeded", address, network)
+	log.Printf("connected to %s [%s]", conn.RemoteAddr(), network)
 
 	// Return immediately if Zero-I/O mode is enabled and connection is established
 	if c.config.ConnectionModeOptions.ZeroIO {
 		return nil
 	}
 
+	if c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP ||
+		c.config.ProtocolOptions.SocketType == netcat.SOCKET_TYPE_UDP_UNIX {
+		return c.transferPackets(output, conn.(net.PacketConn), false)
+	}
+
 	var wg sync.WaitGroup
 
 	if !c.config.Misc.ReceiveOnly {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-			c.writeToRemote(conn)
-		}()
-
 		// prepare command execution on the server
 		if c.config.CommandExec.Type != netcat.EXEC_TYPE_NONE {
 			if err := c.config.CommandExec.Execute(conn, c.stderr, c.config.Misc.EOL); err != nil {
@@ -67,6 +91,12 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 
 			return nil
 		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.writeToRemote(conn)
+		}()
 	}
 
 	// in send-only mode ignore incoming data
@@ -82,6 +112,10 @@ func (c *cmd) connectMode(output io.Writer, network, address string) error {
 			}
 
 			return fmt.Errorf("failed to write: %w", err)
+		}
+
+		if err = output.Close(); err != nil {
+			log.Printf("failed to close output: %v", err)
 		}
 
 		break
@@ -106,13 +140,13 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 		switch c.config.ProtocolOptions.SocketType {
 
 		case netcat.SOCKET_TYPE_TCP:
-			dialer.LocalAddr, err = net.ResolveTCPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
+			dialer.LocalAddr, err = net.ResolveTCPAddr(network, net.JoinHostPort(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
 
 		case netcat.SOCKET_TYPE_UDP:
-			dialer.LocalAddr, err = net.ResolveUDPAddr(network, fmt.Sprintf("%v:%v", c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
+			dialer.LocalAddr, err = net.ResolveUDPAddr(network, net.JoinHostPort(c.config.ConnectionModeOptions.SourceHost, c.config.ConnectionModeOptions.SourcePort))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve source address %w", err)
 			}
@@ -161,7 +195,7 @@ func (c *cmd) establishConnection(network, address string) (net.Conn, error) {
 	} else {
 		// TLS Support
 		if c.config.SSLConfig.Enabled || c.config.SSLConfig.VerifyTrust {
-			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration()
+			tlsConfig, err := c.config.SSLConfig.GenerateTLSConfiguration(false)
 			if err != nil {
 				return nil, err
 			}
@@ -261,9 +295,9 @@ func (c *cmd) writeToRemote(conn io.Writer) {
 	}
 
 	// do not shutdown the connection if the no-shutdown flag is set
-	if c.config.Misc.NoShutdown {
-		for {
-			time.Sleep(1 * time.Hour)
+	if !c.config.Misc.NoShutdown {
+		if err := netcat.CloseWrite(conn); err != nil {
+			log.Printf("failed to shut down socket for writing: %v", err)
 		}
 	}
 }

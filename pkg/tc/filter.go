@@ -35,16 +35,16 @@ type FArgs struct {
 	kind      *string
 	parent    *uint32
 	handle    *uint32
-	protocol  *uint32
-	pref      *uint32
+	protocol  *uint16
+	pref      *uint16
 	filterObj *tc.Object
 }
 
 // ParseFilterArgs takes an io.Writer and []string with arguments from the commandline
 // and returns an *FArgs structure
 func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
-	pref := uint32(0)
-	proto := uint32(0)
+	pref := uint16(0)
+	proto := uint16(0)
 	ret := &FArgs{
 		pref:     &pref,
 		protocol: &proto,
@@ -88,12 +88,12 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 
 			indirect := uint32(major)
 			ret.handle = &indirect
-		case "preference", "pref", "priority":
-			val, err := strconv.ParseUint(val, 10, 32)
+		case "preference", "pref", "priority", "prio":
+			val, err := strconv.ParseUint(val, 10, 16)
 			if err != nil {
 				return nil, err
 			}
-			indirect := uint32(val)
+			indirect := uint16(val)
 			ret.pref = &indirect
 		case "block":
 			return nil, ErrNotImplemented
@@ -132,7 +132,7 @@ func ParseFilterArgs(stdout io.Writer, args []string) (*FArgs, error) {
 
 			i--
 		case "help":
-			fmt.Fprint(stdout, Filterhelp)
+			fmt.Fprint(stdout, FilterHelp)
 		default: // I hope we parsed all the stuff until here
 			// args[i] is the actual filter type
 			// Resolve Qdisc and parameters
@@ -173,22 +173,32 @@ func (t *Trafficctl) ShowFilter(stdout io.Writer, fArgs *FArgs) error {
 
 	for _, f := range filters {
 		var s strings.Builder
-		fmt.Fprintf(&s, "filter parent %d: protocol: %s pref %d %s chain %d ",
+		fmt.Fprintf(&s, "filter parent %d: protocol %s pref %d %s chain %d",
 			f.Parent>>16,
-			GetProtoFromInfo(f.Info),
+			RenderProto(GetProtoFromInfo(f.Info)),
 			GetPrefFromInfo(f.Info),
 			f.Kind,
 			*f.Chain)
 
 		if f.Handle != 0 {
-			fmt.Fprintf(&s, "handle 0x%x\n", f.Handle)
+			fmt.Fprintf(&s, " handle 0x%x", f.Handle)
 		}
 
 		if f.Basic != nil {
 			if f.Basic.Actions != nil {
 				for _, act := range *f.Basic.Actions {
-					fmt.Fprintf(&s, "\t\taction order %d: %s action %d\n",
+					fmt.Fprintf(&s, "\n\t\taction order %d: %s action %d",
 						act.Index, act.Kind, act.Gact.Parms.Action)
+				}
+			}
+		}
+		if f.U32 != nil {
+			if f.U32.ClassID != nil {
+				fmt.Fprintf(&s, " flowid %s", RenderClassID(*f.U32.ClassID, false))
+			}
+			if f.U32.Sel != nil {
+				for _, key := range f.U32.Sel.Keys {
+					fmt.Fprintf(&s, "\n  match %08x/%08x at %d", NToHL(key.Val), NToHL(key.Mask), key.Off)
 				}
 			}
 		}
@@ -208,9 +218,7 @@ func (t *Trafficctl) AddFilter(stdout io.Writer, fArgs *FArgs) error {
 	q := fArgs.filterObj
 	q.Ifindex = uint32(iface.Index)
 	q.Parent = *fArgs.parent
-	q.Msg.Info = core.BuildHandle(*fArgs.pref<<16, *fArgs.protocol)
-
-	fmt.Printf("%+v\n", q)
+	q.Msg.Info = GetInfoFromPrefAndProto(*fArgs.pref, *fArgs.protocol)
 
 	if err := t.Tc.Filter().Add(q); err != nil {
 		return err
@@ -260,25 +268,31 @@ func (t *Trafficctl) GetFilter(stdout io.Writer, fArgs *FArgs) error {
 	return ErrNotImplemented
 }
 
-const (
-	Filterhelp = `Usage:
-	tc filter [ add | del | change | replace | show ] [ dev STRING ]
-	tc filter [ add | del | change | replace | show ] [ block BLOCK_INDEX ]
-	tc filter get dev STRING parent CLASSID protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
-	tc filter get block BLOCK_INDEX protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
-		[ pref PRIO ] protocol PROTO [ chain CHAIN_INDEX ]
-		[ estimator INTERVAL TIME_CONSTANT ]
-		[ root | ingress | egress | parent CLASSID ]
-		[ handle FILTERID ] [ [ FILTER_TYPE ] [ help | OPTIONS ] ]
-	tc filter show [ dev STRING ] [ root | ingress | egress | parent CLASSID ]
-	tc filter show [ block BLOCK_INDEX ]
+// Origianlly from tc:
+// Usage: tc filter [ add | del | change | replace | show ] [ dev STRING ]
+//        tc filter [ add | del | change | replace | show ] [ block BLOCK_INDEX ]
+//        tc filter get dev STRING parent CLASSID protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
+//        tc filter get block BLOCK_INDEX protocol PROTO handle FILTERID pref PRIO FILTER_TYPE
+//        [ pref PRIO ] protocol PROTO [ chain CHAIN_INDEX ]
+//        [ estimator INTERVAL TIME_CONSTANT ]
+//        [ root | ingress | egress | parent CLASSID ]
+//        [ handle FILTERID ] [ [ FILTER_TYPE ] [ help | OPTIONS ] ]
 
-	Where:
-	FILTER_TYPE := { u32 | bpf | fw | route | etc. }
-	FILTERID := ... format depends on classifier, see there
+//        tc filter show [ dev STRING ] [ root | ingress | egress | parent CLASSID ]
+//        tc filter show [ block BLOCK_INDEX ]
+// Where:
+// FILTER_TYPE := { rsvp | u32 | bpf | fw | route | etc. }
+// FILTERID := ... format depends on classifier, see there
+// OPTIONS := ... try tc filter add <desired FILTER_KIND> help
+
+const FilterHelp = `Usage: tc filter [ add | del | show ] [ dev STRING ]
+
+	tc filter show [ dev STRING ] [ root | ingress | egress | parent CLASSID ]
+
+Where:
+	FILTER_TYPE := { u32 | basic }
 	OPTIONS := ... try tc filter add <desired FILTER_KIND> help
 `
-)
 
 func supportedFilters(f string) func(io.Writer, []string) (*tc.Object, error) {
 	supported := map[string]func(io.Writer, []string) (*tc.Object, error){
@@ -289,7 +303,7 @@ func supportedFilters(f string) func(io.Writer, []string) (*tc.Object, error) {
 		"flower":   nil,
 		"fw":       nil,
 		"route":    nil,
-		"u32":      nil,
+		"u32":      ParseU32Params,
 		"matchall": nil,
 	}
 

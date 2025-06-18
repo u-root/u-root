@@ -219,3 +219,19 @@ func (c *CmdLine) FlagsForModule(name string) string {
 func FlagsForModule(name string) string {
 	return getCmdLine().FlagsForModule(name)
 }
+
+// Consoles returns the list of all `console=` values in the kernel command line.
+func (c *CmdLine) Consoles() []string {
+	consoles := make([]string, 0)
+	for _, part := range strings.Fields(c.Raw) {
+		if strings.HasPrefix(part, "console=") {
+			consoles = append(consoles, strings.Split(strings.TrimPrefix(part, "console="), ",")[0])
+		}
+	}
+	return consoles
+}
+
+// Consoles returns the list of all `console=` values in the kernel command line.
+func Consoles() []string {
+	return getCmdLine().Consoles()
+}

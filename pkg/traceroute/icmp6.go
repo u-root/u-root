@@ -23,11 +23,15 @@ func (t *Trace) SendTracesICMP6() {
 
 	pktconn := ipv6.NewPacketConn(conn)
 	id := uint16(1)
+	seq := id
+	if t.DestPort != 0 {
+		seq = t.DestPort
+	}
 	mod := uint16(1 << 15)
 
 	for ttl := 1; ttl < int(t.MaxHops); ttl++ {
 		for j := 0; j < t.TracesPerHop; j++ {
-			cm, payload := t.BuildICMP6Pkt(ttl, id, id, 0)
+			cm, payload := t.BuildICMP6Pkt(ttl, id, seq, 0)
 			pktconn.WriteTo(payload, cm, &net.UDPAddr{IP: t.DestIP})
 			pb := &Probe{
 				ID:       uint32(id),
@@ -37,6 +41,7 @@ func (t *Trace) SendTracesICMP6() {
 			}
 			t.SendChan <- pb
 			id = (id + 1) % mod
+			seq = (seq + 1) % mod
 			go t.ReceiveTraceICMP6()
 			time.Sleep(time.Microsecond * time.Duration(100000/t.PacketRate))
 		}
@@ -67,7 +72,6 @@ func (t *Trace) ReceiveTraceICMP6() {
 	if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { // destination unreachable or ttl exceed in transit
 
 		id := binary.BigEndian.Uint16(buf[14+ipv6.HeaderLen : 16+ipv6.HeaderLen])
-		//fmt.Printf("%v\n", id)
 		ipv6hdr, _ := ipv6.ParseHeader(buf[8:])
 		if ipv6hdr.Dst.Equal(t.DestIP) {
 			pb := &Probe{

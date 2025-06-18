@@ -49,8 +49,6 @@ func ParseClassArgs(stdout io.Writer, args []string) (*Args, error) {
 			}
 			indirect := uint32(classid)
 			ret.handle = &indirect
-		case "estimator":
-			return nil, ErrNotImplemented
 		case "help":
 			fmt.Fprint(stdout, ClassHelp)
 			return nil, nil
@@ -99,7 +97,31 @@ func (t *Trafficctl) ShowClass(stdout io.Writer, args *Args) error {
 
 		for _, class := range classes {
 			if class.Ifindex == uint32(iface.Index) {
-				fmt.Fprintf(stdout, "%20s\t%s\n", iface.Name, class.Kind)
+				fmt.Fprintf(stdout, "%20s\tclass %s %s %s",
+					iface.Name, class.Kind,
+					RenderClassID(class.Handle, false),
+					RenderClassID(class.Parent, true),
+				)
+				if class.Kind == "htb" && class.Htb.Parms != nil {
+					parms := class.Htb.Parms
+
+					burst, err := CalcXMitSize(uint64(parms.Rate.Rate), parms.Buffer)
+					if err != nil {
+						return err
+					}
+
+					cburst, err := CalcXMitSize(uint64(parms.Ceil.Rate), parms.Cbuffer)
+					if err != nil {
+						return err
+					}
+
+					fmt.Fprintf(stdout,
+						" prio %d rate %db ceil %db burst %db cburst %db",
+						parms.Prio, parms.Rate.Rate, parms.Ceil.Rate, burst, cburst,
+					)
+
+				}
+				fmt.Fprintf(stdout, "\n")
 			}
 		}
 	}
@@ -173,14 +195,22 @@ func (t *Trafficctl) ReplaceClass(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
 
-const (
-	ClassHelp = `Usage:
-tc class [ add | del | change | replace | show ] dev STRING
+// Origianlly from tc:
+// Usage: tc class [ add | del | change | replace | show ] dev STRING
+//        [ classid CLASSID ] [ root | parent CLASSID ]
+//        [ [ QDISC_KIND ] [ help | OPTIONS ] ]
+
+//        tc class show [ dev STRING ] [ root | parent CLASSID ]
+// Where:
+// QDISC_KIND := { prio | cbq | etc. }
+// OPTIONS := ... try tc class add <desired QDISC_KIND> help
+
+const ClassHelp = `Usage: tc class [ add | del | show ] dev STRING
 	[ classid CLASSID ] [ root | parent CLASSID ]
 	[ [ QDISC_KIND ] [ help | OPTIONS ] ]
 
 	tc class show [ dev STRING ] [ root | parent CLASSID ]
-	"Where:
-	QDISC_KIND := { prio | etc. }"
-	OPTIONS := ... try tc class add <desired QDISC_KIND> help`
-)
+Where:
+	QDISC_KIND := { htb | hfcs }
+	OPTIONS := ... try tc class add <desired QDISC_KIND> help
+	`

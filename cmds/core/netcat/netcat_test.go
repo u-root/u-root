@@ -237,15 +237,6 @@ func TestEvalParams(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name: "loose source pointer false",
-			args: []string{"testhost"},
-			modify: func(f flags) flags {
-				f.looseSourcePointer = 3
-				return f
-			},
-			wantErr: true,
-		},
-		{
 			name: "source port set",
 			args: []string{"testhost"},
 			modify: func(f flags) flags {
@@ -368,6 +359,33 @@ func TestEvalParams(t *testing.T) {
 			wantConfig: &chatModeConfig,
 		},
 		{
+			name: "invalid keep-open mode",
+			modify: func(f flags) flags {
+				f.udpSocket = true
+				f.keepOpen = true
+				return f
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid broker mode",
+			modify: func(f flags) flags {
+				f.udpSocket = true
+				f.brokerMode = true
+				return f
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid chat mode",
+			modify: func(f flags) flags {
+				f.udpSocket = true
+				f.chatMode = true
+				return f
+			},
+			wantErr: true,
+		},
+		{
 			name:       "port scan",
 			args:       []string{"testhost", "1234-1345"},
 			modify:     func(f flags) flags { return f },
@@ -412,10 +430,18 @@ func TestEvalParams(t *testing.T) {
 	}
 }
 
+type closableBuffer struct {
+	bytes.Buffer
+}
+
+func (cb *closableBuffer) Close() error {
+	return nil
+}
+
 func TestCommand(t *testing.T) {
 	// Mock inputs
 	stdin := bytes.NewBufferString("input data")
-	stdout := new(bytes.Buffer)
+	stdout := new(closableBuffer)
 	stderr := new(bytes.Buffer)
 	config := &netcat.Config{} // Assuming Config is a struct within the netcat package
 	args := []string{"arg1", "arg2"}

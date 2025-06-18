@@ -62,10 +62,7 @@ func validateChecksum(data []byte) bool {
 	table := crc32.MakeTable(crc32.Castagnoli)
 	computedChecksum := crc32.Checksum(mainPart, table)
 
-	if computedChecksum != checksum {
-		return false
-	}
-	return true
+	return computedChecksum == checksum
 }
 
 // deduplicate removes duplicate entries from a slice of byte slices.
