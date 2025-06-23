@@ -55,6 +55,7 @@ var (
 	ECRYPTFS    = []byte{0xf1, 0x5f}
 	EFIVARFS    = []byte{0xde, 0x5e, 0x81, 0xe4}
 	EFS         = []byte{0x41, 0x4A, 0x53}
+	EROFS       = []byte{0xE0, 0xF5, 0xE1, 0xE2}
 	// EXFAT seems to be a samsung file system.
 	// EXFAT       = []byte{0x53, 0xef}
 	F2FS      = []byte{0xF2, 0xF5, 0x20, 0x10}
@@ -130,6 +131,7 @@ var magics = []magic{
 	{magic: VVFAT, name: "vfat", off: 0},
 	{magic: XFS, name: "xfs", off: 0, magicInt: unix.XFS_SUPER_MAGIC},
 	{magic: BTRFS, name: "btrfs", off: 0x10040, magicInt: unix.BTRFS_SUPER_MAGIC},
+	{magic: EROFS, name: "erofs", flags: MS_RDONLY, off: 0, magicInt: unix.EROFS_SUPER_MAGIC_V1},
 }
 
 var unknownMagics = []magic{
