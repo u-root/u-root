@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -116,5 +117,50 @@ func TestBadUsage(t *testing.T) {
 		if err := run(nil, nil, false, tt.args...); !errors.Is(err, tt.err) {
 			t.Errorf(`run(nil, nil, false, %q): got %v, want %v`, tt.args, err, tt.err)
 		}
+	}
+}
+
+func TestDo(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+
+		{
+			name:  "single character",
+			input: "a",
+		},
+		{
+			name:  "four bytes",
+			input: "abcd",
+		},
+		{
+			name:  "five bytes",
+			input: "abcde",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// encode first
+			var encoded bytes.Buffer
+			err := do(strings.NewReader(tt.input), &encoded, false)
+			if err != nil {
+				t.Fatalf("encoding failed: %v", err)
+			}
+
+			// then decode
+			var decoded bytes.Buffer
+			err = do(bytes.NewReader(encoded.Bytes()), &decoded, true)
+			if err != nil {
+				t.Fatalf("decoding failed: %v", err)
+			}
+
+			d := decoded.String()
+			if d != tt.input {
+				t.Errorf("encode/decode failed:\noriginal: %q\ndecoded:  %q", tt.input, d)
+			}
+		})
 	}
 }
