@@ -30,16 +30,21 @@ var (
 )
 
 func do(r io.Reader, w io.Writer, decode bool) error {
-	op := "decoding"
 	if decode {
 		r = base64.NewDecoder(base64.RawStdEncoding, r)
-	} else {
-		op = "encoding"
-		w = base64.NewEncoder(base64.RawStdEncoding, w)
+		if _, err := io.Copy(w, r); err != nil {
+			return fmt.Errorf("base64: error decoding %w", err)
+		}
+		return nil
 	}
 
-	if _, err := io.Copy(w, r); err != nil {
-		return fmt.Errorf("error %s the data: %w", op, err)
+	// WriteCloser is important here, from NewEncoder documentation:
+	// when finished writing, the caller must Close the returned encoder
+	// to flush any partially written blocks.
+	wc := base64.NewEncoder(base64.RawStdEncoding, w)
+	defer wc.Close()
+	if _, err := io.Copy(wc, r); err != nil {
+		return fmt.Errorf("base64: error encoding %w", err)
 	}
 	return nil
 }
