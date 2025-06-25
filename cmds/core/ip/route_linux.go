@@ -120,7 +120,7 @@ func (cmd *cmd) routeAdd() error {
 	}
 
 	if err := cmd.handle.RouteAdd(route); err != nil {
-		return fmt.Errorf("adding route for %s: %w", route.Dst.IP, err)
+		return fmt.Errorf("adding route for %s: %w", route.Dst, err)
 	}
 	return nil
 }
