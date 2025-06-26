@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build plan9
-
 package termios
 
 import (
@@ -12,8 +10,18 @@ import (
 	"path/filepath"
 )
 
+const reset = "rawoff\nholdoff\n"
+
 // Termios is used to manipulate the control channel of a kernel.
-type Termios struct{}
+type Termios struct {
+	mode string
+	// ctl is used to set raw mode.
+	// It may not exist, but IO to the tty
+	// may still work. Hence, it is not opened
+	// until needed. Once opened, it is left open,
+	// as the modes reset once it is closed.
+	*os.File
+}
 
 // Winsize holds the window size information, it is modeled on unix.Winsize.
 type Winsize struct {
@@ -28,7 +36,7 @@ type TTYIO struct {
 	f *os.File
 }
 
-// New creates a new TTYIO using /dev/tty
+// New creates a new TTYIO using /dev/cons
 func New() (*TTYIO, error) {
 	return NewWithDev("/dev/cons")
 }
@@ -44,7 +52,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 
 // NewTTYS returns a new TTYIO.
 func NewTTYS(port string) (*TTYIO, error) {
-	f, err := os.OpenFile(filepath.Join("/dev", port), os.O_RDWR, 0o620)
+	f, err := os.OpenFile(filepath.Join("/dev", port), os.O_RDWR, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -52,28 +60,47 @@ func NewTTYS(port string) (*TTYIO, error) {
 }
 
 // GetTermios returns a filled-in Termios, from an fd.
+// And, sorry, on Plan 9, there seems to be no way to
+// find out if it is in hold/raw mode. Odd.
+// Because the ctl file is separate, do not open
+// it until it is needed.
 func GetTermios(fd uintptr) (*Termios, error) {
-	return &Termios{}, nil
+	f, err := consctlFile("/", fd)
+	if err != nil {
+		return nil, err
+	}
+	return &Termios{mode: reset, File: f}, nil
 }
 
-// Get terms a Termios from a TTYIO.
+// Get a Termios from a TTYIO.
 func (t *TTYIO) Get() (*Termios, error) {
 	return GetTermios(t.f.Fd())
 }
 
 // SetTermios sets tty parameters for an fd from a Termios.
-func SetTermios(fd uintptr, ti *Termios) error {
-	return fmt.Errorf("Plan 9: not yet")
+// The only thing we can do is write the mode to the ctl.
+func SetTermios(_ uintptr, t *Termios) error {
+	if t.File == nil {
+		return fmt.Errorf("termios ctl is not set up:%w", os.ErrInvalid)
+	}
+	if _, err := t.Write([]byte(t.mode)); err != nil {
+		return fmt.Errorf("writing %q to %v: %w", t.mode, t.Name(), err)
+	}
+	return nil
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
-func (t *TTYIO) Set(ti *Termios) error {
-	return SetTermios(t.f.Fd(), ti)
+func (*TTYIO) Set(ti *Termios) error {
+	return SetTermios(0, ti)
 }
 
 // GetWinSize gets window size from an fd.
-func GetWinSize(fd uintptr) (*Winsize, error) {
-	return nil, fmt.Errorf("Plan 9: not yet")
+func GetWinSize(_ uintptr) (*Winsize, error) {
+	r, c, err := readWinSize("/dev/wctl")
+	if err != nil {
+		return nil, err
+	}
+	return &Winsize{Row: r, Col: c}, nil
 }
 
 // GetWinSize gets window size from a TTYIO.
@@ -82,8 +109,8 @@ func (t *TTYIO) GetWinSize() (*Winsize, error) {
 }
 
 // SetWinSize sets window size for an fd from a Winsize.
-func SetWinSize(fd uintptr, w *Winsize) error {
-	return fmt.Errorf("Plan 9: not yet")
+func SetWinSize(_ uintptr, _ *Winsize) error {
+	return fmt.Errorf("plan 9: not yet")
 }
 
 // SetWinSize sets window size for a TTYIO from a Winsize.
@@ -94,13 +121,13 @@ func (t *TTYIO) SetWinSize(w *Winsize) error {
 // MakeRaw modifies Termio state so, if it used for an fd or tty, it will set it to raw mode.
 func MakeRaw(term *Termios) *Termios {
 	raw := *term
+	raw.mode = "rawon"
 	return &raw
 }
 
 // MakeSerialBaud updates the Termios to set the baudrate
 func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 	t := *term
-
 	return &t, nil
 }
 
