@@ -1146,3 +1146,145 @@ func TestGetReservedMemoryMap(t *testing.T) {
 		})
 	}
 }
+
+func TestSkipReservedRange(t *testing.T) {
+	// Create a test memory map with reserved regions only
+	testMemoryMap := kexec.MemoryMap{
+		kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+		kexec.TypedRange{Range: kexec.Range{Start: 0x800000, Size: 0x50000}, Type: kexec.RangeReserved},
+	}
+
+	tests := []struct {
+		name           string
+		memoryMap      kexec.MemoryMap
+		base           uintptr
+		attr           uint64
+		expectedResult bool
+		description    string
+	}{
+		{
+			name:           "IOPort resource should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x100, // PCIIOPortRes
+			expectedResult: false,
+			description:    "IOPort resources should never be skipped regardless of memory map",
+		},
+		{
+			name:           "IOPort resource with other bitsshould not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x500000,
+			attr:           0x40100, // PCIIOPortAttr (includes PCIIOPortRes)
+			expectedResult: false,
+			description:    "IOPort resources should never be skipped even if in reserved memory",
+		},
+		{
+			name:           "ReadOnly MMIO should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x4000, // PCIMMIOReadOnly
+			expectedResult: true,
+			description:    "ReadOnly MMIO should always be skipped",
+		},
+		{
+			name:           "ReadOnly MMIO with other bits should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x44000, // PCIMMIOReadOnly + other bits
+			expectedResult: true,
+			description:    "ReadOnly MMIO should always be skipped even with other attribute bits",
+		},
+		{
+			name:           "Base in reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x500000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address within reserved memory region should be skipped",
+		},
+		{
+			name:           "Base at start of reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x500000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address at start of reserved memory region should be skipped",
+		},
+		{
+			name:           "Base at end of reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x5FFFFF, // 0x500000 + 0x100000 - 1
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address at end of reserved memory region should be skipped",
+		},
+		{
+			name:           "Base in middle of reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x550000, // Middle of 0x500000-0x600000 range
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address in middle of reserved memory region should be skipped",
+		},
+		{
+			name:           "Base in second reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x800000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address within second reserved memory region should be skipped",
+		},
+		{
+			name:           "Base not in any reserved memory region should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address not in any reserved memory region should not be skipped",
+		},
+		{
+			name:           "Base between reserved regions should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x700000, // Between 0x500000-0x600000 and 0x800000-0x850000
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address between reserved memory regions should not be skipped",
+		},
+		{
+			name:           "Base outside all reserved memory regions should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x900000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address outside all reserved memory regions should not be skipped",
+		},
+		{
+			name:           "Empty memory map should not skip",
+			memoryMap:      kexec.MemoryMap{},
+			base:           0x500000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "With empty memory map, should not skip any addresses",
+		},
+		{
+			name:           "Base at boundary of reserved region should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x600000, // End of first reserved region (0x500000 + 0x100000)
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address at boundary of reserved region should not be skipped if not in reserved region",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := skipReservedRange(tt.memoryMap, tt.base, tt.attr)
+
+			if result != tt.expectedResult {
+				t.Errorf("skipReservedRange:\n%v, (base: 0x%x, attr: 0x%x) = %v, want %v\nDescription: %s",
+					tt.memoryMap, tt.base, tt.attr, result, tt.expectedResult, tt.description)
+			}
+		})
+	}
+
+}
