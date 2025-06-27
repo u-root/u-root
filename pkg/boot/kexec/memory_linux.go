@@ -72,7 +72,7 @@ func (r Range) Adjacent(r2 Range) bool {
 	return r2.End() == r.Start || r.End() == r2.Start
 }
 
-// Contains returns true iff p is in the interval described by r.
+// Contains returns true if p is in the interval described by r.
 func (r Range) Contains(p uintptr) bool {
 	return r.Start <= p && p < r.End()
 }

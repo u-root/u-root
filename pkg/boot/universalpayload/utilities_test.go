@@ -17,6 +17,8 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
 )
 
@@ -651,6 +653,16 @@ func TestFetchACPIMCFGData(t *testing.T) {
 }
 
 func TestRetrieveRootBridgeResources(t *testing.T) {
+	// Mock the kexecMemoryMapFromIOMem function to return a test memory map
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
+	kexecMemoryMapFromIOMem = func() (kexec.MemoryMap, error) {
+		return kexec.MemoryMap{
+			kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
+			kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+			kexec.TypedRange{Range: kexec.Range{Start: 0x600000, Size: 0x200000}, Type: kexec.RangeACPI},
+		}, nil
+	}
+
 	mcfgData := []MCFGBaseAddressAllocation{
 		{
 			BaseAddr:  0xB000_0000,
@@ -669,69 +681,160 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 	}
 
 	subFolder := []string{
-		"0000:00:00.0", // Out of Bus range
-		"0000:01:02.0", // Out of Bus range
-		"0000:15:00.0", // Valid Bus
-		"0000:15:02.0", // Valid Bus
-		"0000:c8:00.0", // Valid Bus
-		"0000:e1:00.0", // Out of Bus range
-		"0000:ff:00.0", // Out of Bus range
-		"0002:00:00.0", // Valid Bus
-		"0002:00:02.0", // Valid Bus
-		"0002:1f:00.0", // Valid Bus
-		"0002:af:00.0", // Valid Bus
-		"0002:ff:00.0", // Valid Bus
+		"pci0000:00/0000:00:00.0",                           // Out of Bus range
+		"pci0000:01/0000:01:02.0",                           // Out of Bus range
+		"pci0000:14/0000:14:00.0",                           // Valid Bus
+		"pci0000:14/0000:14:02.0",                           // Valid Bus
+		"pci0000:16/0000:16:00.0",                           // Valid Bus
+		"pci0000:16/0000:16:01.0",                           // Valid Bus
+		"pci0000:16/0000:16:01.0/0000:17:00.0",              // Valid Bus
+		"pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:01.0", // Valid Bus
+		"pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:02.0", // Valid Bus
+		"pci0000:16/0000:16:02.0/0000:19:00.1",              // Valid Bus
+		"pci0000:16/0000:16:03.0",                           // Valid Bus
+		"pci0000:1a/0000:1a:00.0",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.1",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.2",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.3",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.4",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.5",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.6",                           // Valid Bus with Invalid Resource
+		"pci0000:1a/0000:1a:00.7",                           // Valid Bus with Invalid Resource
+		"pci0000:c8/0000:c8:00.0",                           // Valid Bus
+		"pci0000:e1/0000:e1:00.0",                           // Out of Bus range
+		"pci0000:ff/0000:ff:00.0",                           // Out of Bus range
+		"pci0002:00/0002:00:00.0",                           // Valid Bus
+		"pci0002:00/0002:00:02.0",                           // Valid Bus
+		"pci0002:1f/0002:1f:00.0",                           // Valid Bus
+		"pci0002:af/0002:af:00.0",                           // Valid Bus
+		"pci0002:ff/0002:ff:00.0",                           // Valid Bus
+
 	}
 
 	resourceContent := [][]string{
 		{
-			// Content for "0000:00:00.0"
+			// Content for "pci0000:00/0000:00:00.0" // Out of Bus range
 			"0x00000000DF000000 0x00000000DFFFFFFF 0x0000000000040200\n",
 		},
 		{
-			// Content for "0000:01:02.0"
+			// Content for "pci0000:01/0000:01:02.0" // Out of Bus range
 			"0x00000000E0000000 0x00000000E0FFFFFF 0x0000000000040200\n",
 		},
 		{
-			// Content for "0000:15:00.0"
+			// Content for "pci0000:14/0000:14:00.0" // Valid Bus
 			"0x00000000DE000000 0x00000000DEFFFFFF 0x0000000000040200\n",
 			"0x00000000C0000000 0x00000000CFFFFFFF 0x0000000000040200\n",
-			"0x000000000000F000 0x000000000000FFFF 0x0000000000040101\n",
+			"0x000000000000E000 0x000000000000EFFF 0x0000000000040101\n",
 			"0x00000000000C0000 0x00000000000DFFFF 0x0000000000000212\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x0000000800000000 0x0000000800EFFFFF 0x0000000000140204\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0000:15:02.0"
-			"0x00000000B8000000 0x00000000B87FFFFF 0x0000000000040200\n",
+			// Content for "pci0000:14/0000:14:02.0" // Valid Bus
+			"0x00000000DC000000 0x00000000DC00FFFF 0x0000000000040200\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0000:C8:00.0"
-			"0x00000000B8800000 0x00000000B8FFFFFF 0x0000000000040200\n",
+			// Content for "pci0000:16/0000:16:00.0" // Valid Bus
+			"0x00000000B8800000 0x00000000B8803FFF 0x0000000000040200\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
-			"0x000000000000E000 0x000000000000E03F 0x0000000000040101\n",
+		},
+
+		{
+			// Content for "pci0000:16/0000:16:01.0" // Valid Bus
+			"0x00000000B8804000 0x00000000B880FFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000010000 0x0000000000011FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:01.0/0000:17:00.0" // Valid Bus
+			"0x00000000B8804000 0x00000000B880FFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000010000 0x0000000000011FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:01.0" // Valid Bus
+			"0x00000000B8804000 0x00000000B8807FFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x00000000B8809000 0x00000000B880EFFF 0x0000000000040200\n",
+			"0x0000000000010000 0x0000000000010FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:01.0/0000:17:00.0/0000:18:02.0" // Valid Bus
+			"0x00000000B8808000 0x00000000B8808FFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x00000000B880F000 0x00000000B880FFFF 0x0000000000040200\n",
+			"0x0000000000011000 0x0000000000011FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:02.0/0000:19:00.1" // Valid Bus
+			"0x00000000B8810000 0x00000000B8813FFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000012000 0x0000000000012FFF 0x0000000000040101\n",
+		},
+		{
+			// Content for "pci0000:16/0000:16:03.0" // Valid Bus
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.0" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.1" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.2" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.3" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.4" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.5" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.6" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:1a/0000:1a:00.7" // Valid Bus with Invalid Resource
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+		},
+		{
+			// Content for "pci0000:c8/0000:c8:00.0" // Valid Bus
+			"0x00000000B0800000 0x00000000B0FFFFFF 0x0000000000040200\n",
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
+			"0x000000000000D000 0x000000000000D03F 0x0000000000040101\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x0000000800F00000 0x0000000800FFFFFF 0x0000000000140204\n",
 		},
 		{
-			// Content for "0000:E1:00.0"
+			// Content for "pci0000:e1/0000:e1:00.0" // Out of Bus range
 			"0x00000000B0000000 0x00000000B0FFFFFF 0x0000000000040200\n",
 			"0x0000000801000000 0x0000000801FFFFFF 0x0000000000140204\n",
 		},
 		{
-			// Content for "0000:FF:00.0"
+			// Content for "pci0000:ff/0000:ff:00.0" // Out of Bus range
 			"0x00000000A8000000 0x00000000AFFFFFFF 0x0000000000040200\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:00:00.0"
+			// Content for "pci0002:00/0002:00:00.0" // Valid Bus
 			"0x0000000810000000 0x000000081000FFFF 0x0000000000140204\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:00:02.0"
+			// Content for "pci0002:00/0002:00:02.0" // Valid Bus
 			"0x00000000A0070000 0x00000000A07FFFFF 0x0000000000040200\n",
 			"0x000000000000B000 0x000000000000BFFF 0x0000000000040101\n",
 			"0x00000000000C0000 0x00000000000DFFFF 0x0000000000000212\n",
@@ -740,42 +843,23 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:1f:00.0"
-			"0x00000000A0080000 0x00000000A09FFFFF 0x0000000000046200\n",
+			// Content for "pci0002:1f/0002:1f:00.0" // Valid Bus
+			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x00000000A0040000 0x00000000A004FFFF 0x0000000000040200\n",
 			"0x00000000A0060000 0x00000000A006FFFF 0x0000000000040200\n",
-			"0x0000000070000000 0x00000008101FFFFF 0x0000000000140204\n",
+			"0x00000000A0050000 0x00000000A005FFFF 0x0000000000140204\n",
 		},
 		{
-			// Content for "0002:af:00.0"
-			"0x00000000A0030000 0x00000000A003FFFF 0x0000000000040200\n",
-			"0x0000000810020000 0x00000008103FFFFF 0x0000000000140204\n",
+			// Content for "pci0002:af/0002:af:00.0" // Valid Bus
+			"0x00000000A0030000 0x00000000A0037FFF 0x0000000000040200\n",
+			"0x00000000A0038000 0x00000000A003FFFF 0x0000000000140204\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
 		{
-			// Content for "0002:ff:00.0"
+			// Content for "pci0002:ff/0002:ff:00.0" // Valid Bus
 			"0x00000000A0000000 0x00000000A000FFFF 0x0000000000040200\n",
 			"0x000000000000A000 0x000000000000A03F 0x0000000000040101\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
-		},
-	}
-
-	expectedResourceRegion := []ResourceRegions{
-		{
-			MMIO64Base:  0x0000_0008_0000_0000,
-			MMIO64Limit: 0x0000_0000_0100_0000,
-			MMIO32Base:  0x0000_0000_B800_0000,
-			MMIO32Limit: 0x0000_0000_2700_0000,
-			IOPortBase:  0x0000_0000_0000_E000,
-			IOPortLimit: 0x0000_0000_0000_2000,
-		},
-		{
-			MMIO64Base:  0x0000_0008_1000_0000,
-			MMIO64Limit: 0x0000_0000_0040_0000,
-			MMIO32Base:  0x0000_0000_A000_0000,
-			MMIO32Limit: 0x0000_0000_0080_0000,
-			IOPortBase:  0x0000_0000_0000_A000,
-			IOPortLimit: 0x0000_0000_0000_2000,
 		},
 	}
 
@@ -783,39 +867,153 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 		dt.NewNode("pci-rb", dt.WithProperty(
 			dt.PropertyString("compatible", "pci-rb"),
 			dt.PropertyU64("reg", 0xB000_0000),
-			dt.PropertyU32Array("bus-range", []uint32{0x10, 0xE0}),
+			dt.PropertyU32Array("bus-range", []uint32{0x14, 0x14}),
 			dt.PropertyU32Array("ranges", []uint32{
 				0x300_0000,               // 64BITS
 				0x0000_0008, 0x0000_0000, // MMIO64 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0100_0000, // MMIO64 Limit high and low
+				0x0000_0000, 0x00F0_0000, // MMIO64 Limit high and low
 				0x200_0000,               // 32BITS
-				0x0000_0000, 0xB800_0000, // MMIO32 Base high and low
+				0x0000_0000, 0xC000_0000, // MMIO32 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x2700_0000, // MMIO32 Limit high and low
+				0x0000_0000, 0x1F00_0000, // MMIO32 Limit high and low
 				0x100_0000,               // IOPort
 				0x0000_0000, 0x0000_E000, // IOPort Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0000_2000, // IOPort Limit high and low
+				0x0000_0000, 0x0000_1000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x16, 0x19}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xB880_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0001_4000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0001_0000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_3000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x1A, 0x1A}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0xFFFF_FFFF, 0xFFFF_FFFF, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xB000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0xC8, 0xC8}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0x0000_0008, 0x00F0_0000, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0010_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xB080_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0080_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0000_D000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0040, // IOPort Limit high and low
 			}),
 		)),
 		dt.NewNode("pci-rb", dt.WithProperty(
 			dt.PropertyString("compatible", "pci-rb"),
 			dt.PropertyU64("reg", 0xA000_0000),
-			dt.PropertyU32Array("bus-range", []uint32{0x00, 0xFF}),
+			dt.PropertyU32Array("bus-range", []uint32{0x00, 0x00}),
 			dt.PropertyU32Array("ranges", []uint32{
 				0x300_0000,               // 64BITS
 				0x0000_0008, 0x1000_0000, // MMIO64 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0040_0000, // MMIO64 Limit high and low
+				0x0000_0000, 0x0002_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA007_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0079_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0x0000_0000, 0x0000_B000, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_1000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0x1F, 0x1F}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA004_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0003_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0xFFFF_FFFF, 0xFFFF_FFFF, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0xAF, 0xAF}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
+				0x200_0000,               // 32BITS
+				0x0000_0000, 0xA003_0000, // MMIO32 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0001_0000, // MMIO32 Limit high and low
+				0x100_0000,               // IOPort
+				0xFFFF_FFFF, 0xFFFF_FFFF, // IOPort Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // IOPort Limit high and low
+			}),
+		)),
+		dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", 0xA000_0000),
+			dt.PropertyU32Array("bus-range", []uint32{0xFF, 0xFF}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000,               // 64BITS
+				0xFFFF_FFFF, 0xFFFF_FFFF, // MMIO64 Base high and low
+				0x0, 0x0,
+				0x0000_0000, 0x0000_0000, // MMIO64 Limit high and low
 				0x200_0000,               // 32BITS
 				0x0000_0000, 0xA000_0000, // MMIO32 Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0080_0000, // MMIO32 Limit high and low
+				0x0000_0000, 0x0001_0000, // MMIO32 Limit high and low
 				0x100_0000,               // IOPort
 				0x0000_0000, 0x0000_A000, // IOPort Base high and low
 				0x0, 0x0,
-				0x0000_0000, 0x0000_2000, // IOPort Limit high and low
+				0x0000_0000, 0x0000_0040, // IOPort Limit high and low
 			}),
 		)),
 	}
@@ -839,24 +1037,254 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 		}
 	}
 
-	for idx, item := range mcfgData {
-		resource, err := retrieveRootBridgeResources(tmpDir, item)
-		if err != nil {
-			t.Fatalf("Failed to retrieve RB resource %v\n", err)
-		}
-
-		if !reflect.DeepEqual(*resource, expectedResourceRegion[idx]) {
-			t.Errorf("got %+v, want %+v", resource, expectedResourceRegion[idx])
-		}
-
-		rbNode, err := createPCIRootBridgeNode(tmpDir, item)
+	var idx uint32
+	for _, item := range mcfgData {
+		rbNodes, err := createPCIRootBridgeNode(tmpDir, item)
 		if err != nil {
 			t.Fatalf("Failed to create RB node %v\n", err)
 		}
 
-		if !reflect.DeepEqual(rbNode, expectedRbNodes[idx]) {
-			t.Errorf("\ngot %+v, want %+v", rbNode, expectedRbNodes[idx])
+		for _, rbNode := range rbNodes {
+			expected := expectedRbNodes[idx]
+			diff := cmp.Diff(expected, rbNode)
+			if diff != "" {
+				t.Errorf("Index:%x Mismatch (-expected +rbNode):\n%s\n", idx, diff)
+			}
+			idx++
 		}
+	}
+
+}
+
+func TestGetReservedMemoryMap(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputMemoryMap kexec.MemoryMap
+		expectedResult kexec.MemoryMap
+		expectedError  error
+	}{
+		{
+			name: "Success with reserved memory regions",
+			inputMemoryMap: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x600000, Size: 0x200000}, Type: kexec.RangeACPI},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x800000, Size: 0x50000}, Type: kexec.RangeReserved},
+			},
+			expectedResult: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x800000, Size: 0x50000}, Type: kexec.RangeReserved},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "No reserved memory regions",
+			inputMemoryMap: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeACPI},
+			},
+			expectedResult: nil,
+			expectedError:  nil,
+		},
+		{
+			name:           "Empty memory map",
+			inputMemoryMap: kexec.MemoryMap{},
+			expectedResult: nil,
+			expectedError:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Call the function under test
+			result, err := getReservedMemoryMap(tt.inputMemoryMap)
+
+			// Check error
+			if tt.expectedError != nil {
+				if err == nil {
+					t.Fatalf("Expected error %q, got nil", tt.expectedError)
+				}
+				if !errors.Is(err, tt.expectedError) {
+					t.Errorf("Unexpected error %q, want = %q", err.Error(), tt.expectedError)
+				}
+			} else if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			// Check result
+			if tt.expectedResult == nil {
+				if result != nil {
+					t.Fatalf("Expected nil result, got %v", result)
+				}
+			} else {
+				if result == nil {
+					t.Fatalf("Expected result %v, got nil", tt.expectedResult)
+				}
+
+				// Compare the memory maps
+				if len(result) != len(tt.expectedResult) {
+					t.Fatalf("Expected %d reserved memory regions, got %d", len(tt.expectedResult), len(result))
+				}
+
+				for i, expectedRegion := range tt.expectedResult {
+					if i >= len(result) {
+						t.Fatalf("Missing memory region at index %d", i)
+					}
+
+					actualRegion := result[i]
+					if expectedRegion.Range.Start != actualRegion.Range.Start {
+						t.Errorf("Memory region %d: expected Start = 0x%x, got 0x%x", i, expectedRegion.Range.Start, actualRegion.Range.Start)
+					}
+					if expectedRegion.Range.Size != actualRegion.Range.Size {
+						t.Errorf("Memory region %d: expected Size = 0x%x, got 0x%x", i, expectedRegion.Range.Size, actualRegion.Range.Size)
+					}
+					if expectedRegion.Type != actualRegion.Type {
+						t.Errorf("Memory region %d: expected Type = %v, got %v", i, expectedRegion.Type, actualRegion.Type)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestSkipReservedRange(t *testing.T) {
+	// Create a test memory map with reserved regions only
+	testMemoryMap := kexec.MemoryMap{
+		kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+		kexec.TypedRange{Range: kexec.Range{Start: 0x800000, Size: 0x50000}, Type: kexec.RangeReserved},
+	}
+
+	tests := []struct {
+		name           string
+		memoryMap      kexec.MemoryMap
+		base           uintptr
+		attr           uint64
+		expectedResult bool
+		description    string
+	}{
+		{
+			name:           "IOPort resource should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x100, // PCIIOPortRes
+			expectedResult: false,
+			description:    "IOPort resources should never be skipped regardless of memory map",
+		},
+		{
+			name:           "IOPort resource with other bitsshould not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x500000,
+			attr:           0x40100, // PCIIOPortAttr (includes PCIIOPortRes)
+			expectedResult: false,
+			description:    "IOPort resources should never be skipped even if in reserved memory",
+		},
+		{
+			name:           "ReadOnly MMIO should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x4000, // PCIMMIOReadOnly
+			expectedResult: true,
+			description:    "ReadOnly MMIO should always be skipped",
+		},
+		{
+			name:           "ReadOnly MMIO with other bits should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x44000, // PCIMMIOReadOnly + other bits
+			expectedResult: true,
+			description:    "ReadOnly MMIO should always be skipped even with other attribute bits",
+		},
+		{
+			name:           "Base in reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x500000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address within reserved memory region should be skipped",
+		},
+		{
+			name:           "Base at start of reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x500000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address at start of reserved memory region should be skipped",
+		},
+		{
+			name:           "Base at end of reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x5FFFFF, // 0x500000 + 0x100000 - 1
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address at end of reserved memory region should be skipped",
+		},
+		{
+			name:           "Base in middle of reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x550000, // Middle of 0x500000-0x600000 range
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address in middle of reserved memory region should be skipped",
+		},
+		{
+			name:           "Base in second reserved memory region should skip",
+			memoryMap:      testMemoryMap,
+			base:           0x800000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: true,
+			description:    "Base address within second reserved memory region should be skipped",
+		},
+		{
+			name:           "Base not in any reserved memory region should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x1000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address not in any reserved memory region should not be skipped",
+		},
+		{
+			name:           "Base between reserved regions should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x700000, // Between 0x500000-0x600000 and 0x800000-0x850000
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address between reserved memory regions should not be skipped",
+		},
+		{
+			name:           "Base outside all reserved memory regions should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x900000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address outside all reserved memory regions should not be skipped",
+		},
+		{
+			name:           "Empty memory map should not skip",
+			memoryMap:      kexec.MemoryMap{},
+			base:           0x500000,
+			attr:           0x40200, // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "With empty memory map, should not skip any addresses",
+		},
+		{
+			name:           "Base at boundary of reserved region should not skip",
+			memoryMap:      testMemoryMap,
+			base:           0x600000, // End of first reserved region (0x500000 + 0x100000)
+			attr:           0x40200,  // PCIMMIO32Attr
+			expectedResult: false,
+			description:    "Base address at boundary of reserved region should not be skipped if not in reserved region",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := skipReservedRange(tt.memoryMap, tt.base, tt.attr)
+
+			if result != tt.expectedResult {
+				t.Errorf("skipReservedRange:\n%v, (base: 0x%x, attr: 0x%x) = %v, want %v\nDescription: %s",
+					tt.memoryMap, tt.base, tt.attr, result, tt.expectedResult, tt.description)
+			}
+		})
 	}
 
 }
