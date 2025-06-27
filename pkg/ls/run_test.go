@@ -132,12 +132,12 @@ func TestRun(t *testing.T) {
 		prefix bool
 	}{
 		{
-			name: "input empty, quoted = true, long = true",
+			name: "exist, input empty, quoted = true, long = true",
 			args: []string{"ls", "-Ql"},
 			err:  nil,
 		},
 		{
-			name: "input empty, quoted = true, long = true",
+			name: "not exist, input empty, quoted = true, long = true",
 			args: []string{"ls", "-Ql", "dir"},
 			err:  os.ErrNotExist,
 		},
@@ -147,20 +147,22 @@ func TestRun(t *testing.T) {
 				if !errors.Is(err, tt.err) {
 					t.Errorf("list() = '%v', want: '%v'", err, tt.err)
 				}
+			} else if tt.err != nil {
+				t.Errorf("expected error \"%v\", got nil", tt.err)
 			}
-			tterrs := fmt.Sprintln(tt.err)
+			var tterrs string
+			if tt.err != nil {
+				tterrs = fmt.Sprintln(tt.err)
+			}
 			stderr := &bytes.Buffer{}
 			params := run.Params{Stdout: io.Discard, Stderr: stderr}
 			code := RunMain(params, tt.args)
 			stderrs := stderr.String()
-			if tt.err != nil && code == 0 {
-				t.Errorf("expected error '%s', got exit code 0. stderr: '%s'", tt.err, stderrs)
+			if tt.err != nil && code == 0 || tterrs != stderrs {
+				t.Errorf("expected error message %#v, got exit code %d, stderr: %#v", tterrs, code, stderrs)
 			}
 			if tt.err == nil && code != 0 {
-				t.Errorf("expected no error, got exit code %d. stderr: '%s'", code, stderrs)
-			}
-			if tterrs != stderrs {
-				t.Errorf("expected error '%s', got '%s'", tterrs, stderrs)
+				t.Errorf("expected no error message, got exit code %d, stderr: %#v", code, stderrs)
 			}
 		})
 	}
