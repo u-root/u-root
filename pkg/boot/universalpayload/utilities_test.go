@@ -18,6 +18,7 @@ import (
 	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
 )
 
@@ -652,6 +653,16 @@ func TestFetchACPIMCFGData(t *testing.T) {
 }
 
 func TestRetrieveRootBridgeResources(t *testing.T) {
+	// Mock the kexecMemoryMapFromIOMem function to return a test memory map
+	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
+	kexecMemoryMapFromIOMem = func() (kexec.MemoryMap, error) {
+		return kexec.MemoryMap{
+			kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
+			kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+			kexec.TypedRange{Range: kexec.Range{Start: 0x600000, Size: 0x200000}, Type: kexec.RangeACPI},
+		}, nil
+	}
+
 	mcfgData := []MCFGBaseAddressAllocation{
 		{
 			BaseAddr:  0xB000_0000,
@@ -763,7 +774,7 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 			"0x0000000000012000 0x0000000000012FFF 0x0000000000040101\n",
 		},
 		{
-			// Content for "pci0000:16/0000:16:03.0“ // Valid Bus
+			// Content for "pci0000:16/0000:16:03.0" // Valid Bus
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 			"0x0000000000000000 0x0000000000000000 0x0000000000000000\n",
 		},
@@ -1043,4 +1054,95 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 		}
 	}
 
+}
+
+func TestGetReservedMemoryMap(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputMemoryMap kexec.MemoryMap
+		expectedResult kexec.MemoryMap
+		expectedError  error
+	}{
+		{
+			name: "Success with reserved memory regions",
+			inputMemoryMap: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x600000, Size: 0x200000}, Type: kexec.RangeACPI},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x800000, Size: 0x50000}, Type: kexec.RangeReserved},
+			},
+			expectedResult: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x800000, Size: 0x50000}, Type: kexec.RangeReserved},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "No reserved memory regions",
+			inputMemoryMap: kexec.MemoryMap{
+				kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
+				kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeACPI},
+			},
+			expectedResult: nil,
+			expectedError:  nil,
+		},
+		{
+			name:           "Empty memory map",
+			inputMemoryMap: kexec.MemoryMap{},
+			expectedResult: nil,
+			expectedError:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Call the function under test
+			result, err := getReservedMemoryMap(tt.inputMemoryMap)
+
+			// Check error
+			if tt.expectedError != nil {
+				if err == nil {
+					t.Fatalf("Expected error %q, got nil", tt.expectedError)
+				}
+				if !errors.Is(err, tt.expectedError) {
+					t.Errorf("Unexpected error %q, want = %q", err.Error(), tt.expectedError)
+				}
+			} else if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			// Check result
+			if tt.expectedResult == nil {
+				if result != nil {
+					t.Fatalf("Expected nil result, got %v", result)
+				}
+			} else {
+				if result == nil {
+					t.Fatalf("Expected result %v, got nil", tt.expectedResult)
+				}
+
+				// Compare the memory maps
+				if len(result) != len(tt.expectedResult) {
+					t.Fatalf("Expected %d reserved memory regions, got %d", len(tt.expectedResult), len(result))
+				}
+
+				for i, expectedRegion := range tt.expectedResult {
+					if i >= len(result) {
+						t.Fatalf("Missing memory region at index %d", i)
+					}
+
+					actualRegion := result[i]
+					if expectedRegion.Range.Start != actualRegion.Range.Start {
+						t.Errorf("Memory region %d: expected Start = 0x%x, got 0x%x", i, expectedRegion.Range.Start, actualRegion.Range.Start)
+					}
+					if expectedRegion.Range.Size != actualRegion.Range.Size {
+						t.Errorf("Memory region %d: expected Size = 0x%x, got 0x%x", i, expectedRegion.Range.Size, actualRegion.Range.Size)
+					}
+					if expectedRegion.Type != actualRegion.Type {
+						t.Errorf("Memory region %d: expected Type = %v, got %v", i, expectedRegion.Type, actualRegion.Type)
+					}
+				}
+			}
+		})
+	}
 }
