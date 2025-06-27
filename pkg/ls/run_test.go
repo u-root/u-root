@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package ls
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,8 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/u-root/u-root/pkg/ls"
-	"golang.org/x/sys/unix"
+	"github.com/u-root/u-root/pkg"
 )
 
 // Test listName func
@@ -106,12 +106,12 @@ func TestListName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write output in buffer.
 			var buf bytes.Buffer
-			var s ls.Stringer = ls.NameStringer{}
+			var s Stringer = NameStringer{}
 			if tt.flag.quoted {
-				s = ls.QuotedStringer{}
+				s = QuotedStringer{}
 			}
 			if tt.flag.long {
-				s = ls.LongStringer{Human: tt.flag.human, Name: s}
+				s = LongStringer{Human: tt.flag.human, Name: s}
 			}
 			tt.flag.w = &buf
 			if err := tt.flag.listName(s, tt.input, tt.prefix); err != nil {
@@ -133,21 +133,41 @@ func TestRun(t *testing.T) {
 		prefix bool
 	}{
 		{
-			name: "input empty, quoted = true, long = true",
+			name: "exist, input empty, quoted = true, long = true",
 			args: []string{"ls", "-Ql"},
 			err:  nil,
 		},
 		{
-			name: "input empty, quoted = true, long = true",
+			name: "not exist, input empty, quoted = true, long = true",
 			args: []string{"ls", "-Ql", "dir"},
 			err:  os.ErrNotExist,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := run(io.Discard, tt.args); err != nil {
+			wd, _ := os.Getwd()
+			if err := Run(io.Discard, wd, tt.args); err != nil {
 				if !errors.Is(err, tt.err) {
 					t.Errorf("list() = '%v', want: '%v'", err, tt.err)
 				}
+			} else if tt.err != nil {
+				t.Errorf("expected error \"%v\", got nil", tt.err)
+			}
+			var tterrs string
+			if tt.err != nil {
+				tterrs = fmt.Sprintln(tt.err)
+			}
+			stderr := &bytes.Buffer{}
+			ctx, err := pkg.CustomContext(context.Background(), wd, nil, &bytes.Reader{}, io.Discard, stderr)
+			if err != nil {
+				t.Errorf("failed to create custom context: %v", err)
+			}
+			code := RunMain(ctx, tt.args)
+			stderrs := stderr.String()
+			if tt.err != nil && code == 0 || tterrs != stderrs {
+				t.Errorf("expected error message %#v, got exit code %d, stderr: %#v", tterrs, code, stderrs)
+			}
+			if tt.err == nil && code != 0 {
+				t.Errorf("expected no error message, got exit code %d, stderr: %#v", code, stderrs)
 			}
 		})
 	}
@@ -157,41 +177,41 @@ func TestRun(t *testing.T) {
 func TestIndicator(t *testing.T) {
 	// Creating test table
 	for _, test := range []struct {
-		lsInfo ls.FileInfo
+		lsInfo FileInfo
 		symbol string
 	}{
 		{
-			ls.FileInfo{
+			FileInfo{
 				Mode: os.ModeDir,
 			},
 			"/",
 		},
 		{
-			ls.FileInfo{
+			FileInfo{
 				Mode: os.ModeNamedPipe,
 			},
 			"|",
 		},
 		{
-			ls.FileInfo{
+			FileInfo{
 				Mode: os.ModeSymlink,
 			},
 			"@",
 		},
 		{
-			ls.FileInfo{
+			FileInfo{
 				Mode: os.ModeSocket,
 			},
 			"=",
 		},
 		{
-			ls.FileInfo{
+			FileInfo{
 				Mode: 0b110110100,
 			},
 			"",
 		},
 		{
-			ls.FileInfo{
+			FileInfo{
 				Mode: 0b111111101,
 			},
 			"*",
@@ -224,29 +244,12 @@ func TestPermHandling(t *testing.T) {
 	b := &bytes.Buffer{}
 	var c = cmd{w: b}
 
-	if err := c.listName(ls.NameStringer{}, d, false); err != nil {
-		t.Fatalf("listName(ls.NameString{}, %q, w, false): %v != nil", d, err)
+	if err := c.listName(NameStringer{}, d, false); err != nil {
+		t.Fatalf("listName(NameString{}, %q, w, false): %v != nil", d, err)
 	}
 	// the output varies very widely between kernels and Go versions :-(
 	// Just look for 'permission denied' and more than 6 lines of output ...
 	if !strings.Contains(b.String(), "0\n1\n2\na\nb\nc\nd\n") {
 		t.Errorf("ls %q: output %q did not contain %q", d, b.String(), "0\n1\n2\na\nb\nc\nd\n")
-	}
-}
-
-func TestNotExist(t *testing.T) {
-	d := t.TempDir()
-	b := &bytes.Buffer{}
-	var c = cmd{w: b}
-	if err := c.listName(ls.NameStringer{}, filepath.Join(d, "b"), false); err != nil {
-		t.Fatalf("listName(ls.NameString{}, %q/b, w, false): nil != %v", d, err)
-	}
-	// yeesh.
-	// errors not consistent and ... the error has this gratuitous 'lstat ' in front
-	// of the filename ...
-	eexist := fmt.Sprintf("%s:%v", filepath.Join(d, "b"), os.ErrNotExist)
-	enoent := fmt.Sprintf("%s: %v", filepath.Join(d, "b"), unix.ENOENT)
-	if !strings.Contains(b.String(), eexist) && !strings.Contains(b.String(), enoent) {
-		t.Fatalf("ls of bad name: %q does not contain %q or %q", b.String(), eexist, enoent)
 	}
 }

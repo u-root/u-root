@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package ls
 
 import (
 	"bytes"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/hugelgupf/vmtest/guest"
-	"github.com/u-root/u-root/pkg/ls"
 	"golang.org/x/sys/unix"
 )
 
@@ -41,16 +42,33 @@ func TestListNameLinux(t *testing.T) {
 	// Running the tests
 	// Write output in buffer.
 	var buf bytes.Buffer
-	var s ls.Stringer = ls.NameStringer{}
+	var s Stringer = NameStringer{}
 	if c.quoted {
-		s = ls.QuotedStringer{}
+		s = QuotedStringer{}
 	}
 	if c.long {
-		s = ls.LongStringer{Human: c.human, Name: s}
+		s = LongStringer{Human: c.human, Name: s}
 	}
 	c.w = &buf
 	_ = c.listName(s, d, false)
 	if !strings.Contains(buf.String(), "1110, 74616") {
 		t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
+	}
+}
+
+func TestNotExist(t *testing.T) {
+	d := t.TempDir()
+	b := &bytes.Buffer{}
+	var c = cmd{w: b}
+	if err := c.listName(NameStringer{}, filepath.Join(d, "b"), false); err != nil {
+		t.Fatalf("listName(NameString{}, %q/b, w, false): nil != %v", d, err)
+	}
+	// yeesh.
+	// errors not consistent and ... the error has this gratuitous 'lstat ' in front
+	// of the filename ...
+	eexist := fmt.Sprintf("%s:%v", filepath.Join(d, "b"), os.ErrNotExist)
+	enoent := fmt.Sprintf("%s: %v", filepath.Join(d, "b"), unix.ENOENT)
+	if !strings.Contains(b.String(), eexist) && !strings.Contains(b.String(), enoent) {
+		t.Fatalf("ls of bad name: %q does not contain %q or %q", b.String(), eexist, enoent)
 	}
 }

@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package ls
 
 import (
 	"flag"
 	"fmt"
 	"strings"
-
-	"github.com/u-root/u-root/pkg/ls"
 )
 
 var final = flag.Bool("p", false, "Print only the final path element of each file name")
 
-func (c cmd) printFile(stringer ls.Stringer, f file) {
+func (c cmd) printFile(stringer Stringer, f file) {
 	if f.err != nil {
 		fmt.Fprintln(c.w, f.err)
 		return
