@@ -7,7 +7,6 @@
 package main
 
 import (
-	"log"
 	"syscall"
 	"time"
 )
@@ -15,7 +14,7 @@ import (
 func setDate(d string, z *time.Location, clocksource Clock) error {
 	t, err := getTime(z, d, clocksource)
 	if err != nil {
-		log.Fatalf("%v: %v", d, err)
+		return err
 	}
 	tv := syscall.NsecToTimeval(t.UnixNano())
 	return syscall.Settimeofday(&tv)
