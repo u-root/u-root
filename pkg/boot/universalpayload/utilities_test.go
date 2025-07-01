@@ -1462,3 +1462,298 @@ func TestIsValidPCIDeviceName(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateResourceRanges(t *testing.T) {
+	tests := []struct {
+		name           string
+		initialRegion  *ResourceRegions
+		resType        string
+		base           uint64
+		end            uint64
+		expectedRegion *ResourceRegions
+		description    string
+	}{
+		// MMIO64 tests
+		{
+			name: "MMIO64 First resource with invalid base",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0x1000000,
+			end:     0x1000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000,
+				MMIO64End:  0x1000FFF, // align.UpPage(0x1000FFF) - 1 = 0x1001FFF
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "First MMIO64 resource should set both base and end",
+		},
+		{
+			name: "MMIO64 Update base to lower value",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: 0x2000000,
+				MMIO64End:  0x2001FFF,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0x1000000,
+			end:     0x1000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000, // min(0x1000000, 0x2000000)
+				MMIO64End:  0x2001FFF, // max(0x1001FFF, 0x2001FFF)
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "MMIO64 base should be updated to lower value, end to higher value",
+		},
+		{
+			name: "MMIO64 Update end to higher value",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000,
+				MMIO64End:  0x1001FFF,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0x2000000,
+			end:     0x2000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000, // min(0x2000000, 0x1000000)
+				MMIO64End:  0x2000FFF, // max(0x2000FFF, 0x1001FFF)
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "MMIO64 end should be updated to higher value, base remains lower",
+		},
+		{
+			name: "MMIO64 Page alignment test",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0x1000000,
+			end:     0x1000ABC, // Not page aligned
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000,
+				MMIO64End:  0x1000FFF, // align.UpPage(0x1000ABC) - 1
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "MMIO64 end should be page aligned up then decremented by 1",
+		},
+
+		// MMIO32 tests
+		{
+			name: "MMIO32 First resource with invalid base",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO32Type,
+			base:    0x8000000,
+			end:     0x8000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: 0x8000000,
+				MMIO32End:  0x8000FFF, // align.UpPage(0x8000FFF) - 1
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "First MMIO32 resource should set both base and end",
+		},
+		{
+			name: "MMIO32 Update base to lower value",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: 0x9000000,
+				MMIO32End:  0x9001FFF,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO32Type,
+			base:    0x8000000,
+			end:     0x8000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: 0x8000000,
+				MMIO32End:  0x9001FFF,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "MMIO32 base should be updated to lower value, end to higher value",
+		},
+
+		// IOPort tests
+		{
+			name: "IOPort First resource with invalid base",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIIOPortType,
+			base:    0x1000,
+			end:     0x10FF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: 0x1000,
+				IOPortEnd:  0x10FF, // No page alignment for IOPort
+			},
+			description: "First IOPort resource should set both base and end without page alignment",
+		},
+		{
+			name: "IOPort Update base to lower value",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: 0x2000,
+				IOPortEnd:  0x20FF,
+			},
+			resType: PCIIOPortType,
+			base:    0x1000,
+			end:     0x10FF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: 0x1000, // min(0x1000, 0x2000)
+				IOPortEnd:  0x20FF, // max(0x10FF, 0x20FF)
+			},
+			description: "IOPort base should be updated to lower value, end to higher value",
+		},
+		{
+			name: "IOPort Update end to higher value",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: 0x1000,
+				IOPortEnd:  0x10FF,
+			},
+			resType: PCIIOPortType,
+			base:    0x2000,
+			end:     0x20FF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: 0x1000,
+				IOPortEnd:  0x20FF,
+			},
+			description: "IOPort end should be updated to higher value, base remains lower",
+		},
+
+		// Unknown resource type test
+		{
+			name: "Unknown resource type",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000,
+				MMIO64End:  0x1001FFF,
+				MMIO32Base: 0x8000000,
+				MMIO32End:  0x8001FFF,
+				IOPortBase: 0x1000,
+				IOPortEnd:  0x10FF,
+			},
+			resType: "UNKNOWN",
+			base:    0x3000000,
+			end:     0x3000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000, // Unchanged
+				MMIO64End:  0x1001FFF, // Unchanged
+				MMIO32Base: 0x8000000, // Unchanged
+				MMIO32End:  0x8001FFF, // Unchanged
+				IOPortBase: 0x1000,    // Unchanged
+				IOPortEnd:  0x10FF,    // Unchanged
+			},
+			description: "Unknown resource type should not modify any fields",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a copy of the initial region to avoid modifying the test data
+			resourceRegion := &ResourceRegions{
+				MMIO64Base: tt.initialRegion.MMIO64Base,
+				MMIO64End:  tt.initialRegion.MMIO64End,
+				MMIO32Base: tt.initialRegion.MMIO32Base,
+				MMIO32End:  tt.initialRegion.MMIO32End,
+				IOPortBase: tt.initialRegion.IOPortBase,
+				IOPortEnd:  tt.initialRegion.IOPortEnd,
+				StartBus:   tt.initialRegion.StartBus,
+				EndBus:     tt.initialRegion.EndBus,
+			}
+
+			// Call the function under test
+			updateResourceRanges(resourceRegion, tt.resType, tt.base, tt.end)
+
+			// Compare results
+			if resourceRegion.MMIO64Base != tt.expectedRegion.MMIO64Base {
+				t.Errorf("MMIO64Base = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.MMIO64Base, tt.expectedRegion.MMIO64Base, tt.description)
+			}
+			if resourceRegion.MMIO64End != tt.expectedRegion.MMIO64End {
+				t.Errorf("MMIO64End = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.MMIO64End, tt.expectedRegion.MMIO64End, tt.description)
+			}
+			if resourceRegion.MMIO32Base != tt.expectedRegion.MMIO32Base {
+				t.Errorf("MMIO32Base = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.MMIO32Base, tt.expectedRegion.MMIO32Base, tt.description)
+			}
+			if resourceRegion.MMIO32End != tt.expectedRegion.MMIO32End {
+				t.Errorf("MMIO32End = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.MMIO32End, tt.expectedRegion.MMIO32End, tt.description)
+			}
+			if resourceRegion.IOPortBase != tt.expectedRegion.IOPortBase {
+				t.Errorf("IOPortBase = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.IOPortBase, tt.expectedRegion.IOPortBase, tt.description)
+			}
+			if resourceRegion.IOPortEnd != tt.expectedRegion.IOPortEnd {
+				t.Errorf("IOPortEnd = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.IOPortEnd, tt.expectedRegion.IOPortEnd, tt.description)
+			}
+		})
+	}
+}
