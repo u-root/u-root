@@ -104,11 +104,7 @@ func dateMap(t time.Time, z *time.Location, format string) string {
 			toReplace = dateMap(t, z, "%m/%d/%y")
 		case match == "%j":
 			// Day of the year as a decimal number [001,366]."
-			year, weekYear := d.ISOWeek()
-			firstWeekDay := time.Date(year, 1, 1, 1, 1, 1, 1, time.UTC).Weekday()
-			weekDay := d.Weekday()
-			dayYear := int(weekYear)*7 - (int(firstWeekDay) - 1) + int(weekDay)
-			toReplace = strconv.Itoa(dayYear)
+			toReplace = strconv.Itoa(d.YearDay())
 		case match == "%n":
 			// A <newline>.
 			toReplace = "\n"
