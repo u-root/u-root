@@ -1288,3 +1288,177 @@ func TestSkipReservedRange(t *testing.T) {
 	}
 
 }
+
+func TestIsValidPCIDeviceName(t *testing.T) {
+	tests := []struct {
+		name           string
+		deviceName     string
+		expectedResult bool
+		description    string
+	}{
+		// Positive test cases - valid PCI device names
+		{
+			name:           "Valid PCI device name with all zeros",
+			deviceName:     "0000:00:00.0",
+			expectedResult: true,
+			description:    "Standard valid PCI device name with all zero values",
+		},
+		{
+			name:           "Valid PCI device name with hex values",
+			deviceName:     "0001:0a:1f.3",
+			expectedResult: true,
+			description:    "Valid PCI device name with non-zero hex values",
+		},
+		{
+			name:           "Valid PCI device name with maximum values",
+			deviceName:     "ffff:ff:ff.f",
+			expectedResult: true,
+			description:    "Valid PCI device name with maximum hex values",
+		},
+		{
+			name:           "Valid PCI device name with mixed case hex",
+			deviceName:     "aBcD:1f:2e.5",
+			expectedResult: true,
+			description:    "Valid PCI device name with mixed case hex characters",
+		},
+		{
+			name:           "Valid PCI device name with function 0",
+			deviceName:     "0000:01:02.0",
+			expectedResult: true,
+			description:    "Valid PCI device name with function number 0",
+		},
+		{
+			name:           "Valid PCI device name with function 7",
+			deviceName:     "0000:01:02.7",
+			expectedResult: true,
+			description:    "Valid PCI device name with function number 7",
+		},
+		{
+			name:           "Valid PCI device name with function f",
+			deviceName:     "0000:01:02.f",
+			expectedResult: true,
+			description:    "Valid PCI device name with function number f (15)",
+		},
+
+		// Negative test cases - invalid PCI device names
+		{
+			name:           "Empty string",
+			deviceName:     "",
+			expectedResult: false,
+			description:    "Empty string should be invalid",
+		},
+		{
+			name:           "Too short - missing parts",
+			deviceName:     "0000:00",
+			expectedResult: false,
+			description:    "Device name too short, missing device.function part",
+		},
+		{
+			name:           "Too long - extra parts",
+			deviceName:     "0000:00:00.0:extra",
+			expectedResult: false,
+			description:    "Device name too long, has extra parts",
+		},
+		{
+			name:           "Wrong length - 11 characters",
+			deviceName:     "000:00:00.0",
+			expectedResult: false,
+			description:    "Device name with wrong total length (11 instead of 12)",
+		},
+		{
+			name:           "Wrong length - 13 characters",
+			deviceName:     "0000:00:00.00",
+			expectedResult: false,
+			description:    "Device name with wrong total length (13 instead of 12)",
+		},
+		{
+			name:           "Domain too short",
+			deviceName:     "000:00:00.0",
+			expectedResult: false,
+			description:    "Domain part too short (3 chars instead of 4)",
+		},
+		{
+			name:           "Domain too long",
+			deviceName:     "00000:00:00.0",
+			expectedResult: false,
+			description:    "Domain part too long (5 chars instead of 4)",
+		},
+		{
+			name:           "Bus too short",
+			deviceName:     "0000:0:00.0",
+			expectedResult: false,
+			description:    "Bus part too short (1 char instead of 2)",
+		},
+		{
+			name:           "Bus too long",
+			deviceName:     "0000:000:00.0",
+			expectedResult: false,
+			description:    "Bus part too long (3 chars instead of 2)",
+		},
+		{
+			name:           "Device part too short",
+			deviceName:     "0000:00:0.0",
+			expectedResult: false,
+			description:    "Device part too short (1 char instead of 2)",
+		},
+		{
+			name:           "Device part too long",
+			deviceName:     "0000:00:000.0",
+			expectedResult: false,
+			description:    "Device part too long (3 chars instead of 2)",
+		},
+		{
+			name:           "Function part too short",
+			deviceName:     "0000:00:00.",
+			expectedResult: false,
+			description:    "Function part missing (0 chars instead of 1)",
+		},
+		{
+			name:           "Function part too long",
+			deviceName:     "0000:00:00.00",
+			expectedResult: false,
+			description:    "Function part too long (2 chars instead of 1)",
+		},
+		{
+			name:           "Missing first colon",
+			deviceName:     "000000:00.0",
+			expectedResult: false,
+			description:    "Missing first colon separator",
+		},
+		{
+			name:           "Missing second colon",
+			deviceName:     "0000:0000.0",
+			expectedResult: false,
+			description:    "Missing second colon separator",
+		},
+		{
+			name:           "Missing dot separator",
+			deviceName:     "0000:00:000",
+			expectedResult: false,
+			description:    "Missing dot separator between device and function",
+		},
+		{
+			name:           "Extra separators",
+			deviceName:     "0000::00:00.0",
+			expectedResult: false,
+			description:    "Extra colon separator",
+		},
+		{
+			name:           "PCI bridge device info",
+			deviceName:     "0000:00:1c.0:pcie002",
+			expectedResult: false,
+			description:    "Not a valid PCI device name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidPCIDeviceName(tt.deviceName)
+
+			if result != tt.expectedResult {
+				t.Errorf("isValidPCIDeviceName(%q) = %v, want %v\nDescription: %s",
+					tt.deviceName, result, tt.expectedResult, tt.description)
+			}
+		})
+	}
+}
