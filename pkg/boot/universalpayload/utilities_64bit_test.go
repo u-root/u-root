@@ -82,3 +82,114 @@ func TestSkipReservedRange64Bit(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateResourceRanges64Bits(t *testing.T) {
+	tests := []struct {
+		name           string
+		initialRegion  *ResourceRegions
+		resType        string
+		base           uint64
+		end            uint64
+		expectedRegion *ResourceRegions
+		description    string
+	}{
+		{
+			name: "MMIO64 High 64-bit address range",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0x1000000000000000, // 64-bit address above 32-bit range
+			end:     0x1000000000000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000000000000,
+				MMIO64End:  0x1000000000000FFF,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "MMIO64 resource with high 64-bit address should be handled correctly",
+		},
+		{
+			name: "MMIO64 Multiple 64-bit address ranges",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: 0x2000000000000000,
+				MMIO64End:  0x2000000000001FFF,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0x1000000000000000, // Lower 64-bit address
+			end:     0x1000000000000FFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0x1000000000000000, // min(0x1000000000000000, 0x2000000000000000)
+				MMIO64End:  0x2000000000001FFF, // max(0x1000000000000FFF, 0x2000000000001FFF)
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "MMIO64 resource ranges should update base to lower and end to higher",
+		},
+		{
+			name: "Maximum values",
+			initialRegion: &ResourceRegions{
+				MMIO64Base: PCIInvalidBase,
+				MMIO64End:  0,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			resType: PCIMMIO64Type,
+			base:    0xFFFFFFFFFFFFFFFF,
+			end:     0xFFFFFFFFFFFFFFFF,
+			expectedRegion: &ResourceRegions{
+				MMIO64Base: 0xFFFFFFFFFFFFFFFF,
+				MMIO64End:  0xFFFFFFFFFFFFFFFF,
+				MMIO32Base: PCIInvalidBase,
+				MMIO32End:  0,
+				IOPortBase: PCIInvalidBase,
+				IOPortEnd:  0,
+			},
+			description: "Maximum uint64 values should be handled correctly",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a copy of the initial region to avoid modifying the test data
+			resourceRegion := &ResourceRegions{
+				MMIO64Base: tt.initialRegion.MMIO64Base,
+				MMIO64End:  tt.initialRegion.MMIO64End,
+				MMIO32Base: tt.initialRegion.MMIO32Base,
+				MMIO32End:  tt.initialRegion.MMIO32End,
+				IOPortBase: tt.initialRegion.IOPortBase,
+				IOPortEnd:  tt.initialRegion.IOPortEnd,
+				StartBus:   tt.initialRegion.StartBus,
+				EndBus:     tt.initialRegion.EndBus,
+			}
+
+			// Call the function under test
+			updateResourceRanges(resourceRegion, tt.resType, tt.base, tt.end)
+
+			// Compare results
+			if resourceRegion.MMIO64Base != tt.expectedRegion.MMIO64Base {
+				t.Errorf("MMIO64Base = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.MMIO64Base, tt.expectedRegion.MMIO64Base, tt.description)
+			}
+			if resourceRegion.MMIO64End != tt.expectedRegion.MMIO64End {
+				t.Errorf("MMIO64End = 0x%x, want 0x%x\nDescription: %s",
+					resourceRegion.MMIO64End, tt.expectedRegion.MMIO64End, tt.description)
+			}
+		})
+	}
+}
