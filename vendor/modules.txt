@@ -360,7 +360,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/mkuimage v0.0.0-20250320091346-62f0448bbe27
+# github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f
 ## explicit; go 1.21
 github.com/u-root/mkuimage/cpio
 github.com/u-root/mkuimage/cpio/internal/upath
