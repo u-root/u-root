@@ -299,6 +299,8 @@ github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eV
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
 github.com/u-root/mkuimage v0.0.0-20250320091346-62f0448bbe27 h1:NG6l5wKVA/Pf2DZ4BLWFlFP5JH4PPIyOMv+qnTtS7Vg=
 github.com/u-root/mkuimage v0.0.0-20250320091346-62f0448bbe27/go.mod h1:qzJqwYSsU0kBkl1bX/s93hfd64WbL+CP7AobQdvJb9A=
+github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f h1:TYTO6Hvj2BrRRpWOqL/K2A8tIelVyP+wTbpkWygGRkg=
+github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f/go.mod h1:qzJqwYSsU0kBkl1bX/s93hfd64WbL+CP7AobQdvJb9A=
 github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 h1:pyC9PaHYZFgEKFdlp3G8RaCKgVpHZnecvArXvPXcFkM=
 github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701/go.mod h1:P3a5rG4X7tI17Nn3aOIAYr5HbIMukwXG0urG0WuL8OA=
 github.com/ulikunitz/xz v0.5.11 h1:kpFauv27b6ynzBNT/Xy+1k+fK4WswhN/6PN5WhFAGw8=

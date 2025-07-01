@@ -151,12 +151,11 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 			}
 			if long {
 				fmt.Fprintf(stdout, "%8d %#.2o %#.2o\n", charno, b1, b2)
-				goto skip
+			} else {
+				fmt.Fprintf(stdout, "%s %s: char %d", args[0], args[1], charno)
+				return ErrDiffer
 			}
-			fmt.Fprintf(stdout, "%s %s: char %d", args[0], args[1], charno)
-			return ErrDiffer
 		}
-	skip:
 		charno++
 		if b1 == '\n' {
 			lineno++

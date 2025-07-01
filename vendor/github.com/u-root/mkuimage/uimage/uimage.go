@@ -798,7 +798,7 @@ func ParseExtraFiles(l *llog.Logger, archive *initramfs.Files, extraFiles []stri
 		if err != nil {
 			return fmt.Errorf("couldn't find absolute path for %q: %w", src, err)
 		}
-		if err := archive.AddFile(src, dst); err != nil {
+		if err := archive.AddFileNoFollow(src, dst); err != nil {
 			return fmt.Errorf("couldn't add %q to archive: %w", file, err)
 		}
 
