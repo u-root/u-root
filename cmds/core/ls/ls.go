@@ -25,13 +25,12 @@
 package main
 
 import (
-	"context"
 	"os"
 
-	"github.com/u-root/u-root/pkg"
 	"github.com/u-root/u-root/pkg/ls"
 )
 
 func main() {
-	os.Exit(ls.RunMain(pkg.OsContext(context.Background()), os.Args))
+	wd, _ := os.Getwd()
+	os.Exit(ls.Command(os.Stdout, os.Stderr, wd).Run(os.Args...))
 }

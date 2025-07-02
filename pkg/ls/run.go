@@ -25,6 +25,7 @@
 package ls
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -38,8 +39,16 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
+func Command(stdout, stderr io.Writer, dir string) pkg.Runnable {
+	return &cmd{stdout: stdout, stderr: stderr, dir: dir}
+}
+
 type cmd struct {
-	w         io.Writer
+	stdout io.Writer
+	stderr io.Writer
+	dir    string
+	ctx    context.Context
+
 	all       bool
 	human     bool
 	directory bool
@@ -48,6 +57,31 @@ type cmd struct {
 	recurse   bool
 	classify  bool
 	size      bool
+}
+
+func (c *cmd) Run(args ...string) int { return c.RunContext(context.Background(), args...) }
+func (c *cmd) RunContext(ctx context.Context, args ...string) int {
+	c.ctx = ctx
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	f.BoolVar(&c.all, "a", false, "show hidden files")
+	f.BoolVar(&c.human, "h", false, "human readable sizes")
+	f.BoolVar(&c.directory, "d", false, "list directories but not their contents")
+	f.BoolVar(&c.long, "l", false, "long form")
+	f.BoolVar(&c.quoted, "Q", false, "quoted")
+	f.BoolVar(&c.recurse, "R", false, "equivalent to findutil's find")
+	f.BoolVar(&c.classify, "F", false, "append indicator (, one of */=>@|) to entries")
+	f.BoolVar(&c.size, "S", false, "sort by size")
+	err := f.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err != nil {
+		fmt.Fprintln(c.stderr, err)
+		return 1
+	}
+	err = c.list(f.Args())
+	if err != nil {
+		fmt.Fprintln(c.stderr, err)
+		return 1
+	}
+	return 0
 }
 
 // file describes a file, its name, attributes, and the error
@@ -80,6 +114,41 @@ type file struct {
 	osfi os.FileInfo
 	lsfi FileInfo
 	err  error
+}
+
+func (c cmd) list(names []string) error {
+	if len(names) == 0 {
+		names = []string{"."}
+	}
+	// Write output in tabular form.
+	tw := &tabwriter.Writer{}
+	tw.Init(c.stdout, 0, 0, 1, ' ', 0)
+	c.stdout = tw
+	defer tw.Flush()
+
+	var s Stringer = NameStringer{}
+	if c.quoted {
+		s = QuotedStringer{}
+	}
+	if c.long {
+		s = LongStringer{Human: c.human, Name: s}
+	}
+	// Is a name a directory? If so, list it in its own section.
+	prefix := len(names) > 1
+	for _, d := range names {
+		if !filepath.IsAbs(d) {
+			var err error
+			d, err = filepath.Abs(filepath.Join(c.dir, d))
+			if err != nil {
+				return err
+			}
+		}
+		if err := c.listName(s, d, prefix); err != nil {
+			return fmt.Errorf("error while listing %q: %w", d, err)
+		}
+		tw.Flush()
+	}
+	return nil
 }
 
 func (c cmd) listName(stringer Stringer, d string, prefix bool) error {
@@ -138,7 +207,7 @@ func (c cmd) listName(stringer Stringer, d string, prefix bool) error {
 			f.lsfi.Name = f.path
 		} else if f.path == d {
 			if c.directory {
-				fmt.Fprintln(c.w, stringer.FileString(f.lsfi))
+				fmt.Fprintln(c.stdout, stringer.FileString(f.lsfi))
 				continue
 			}
 
@@ -147,9 +216,9 @@ func (c cmd) listName(stringer Stringer, d string, prefix bool) error {
 				f.lsfi.Name = "."
 				if prefix {
 					if c.quoted {
-						fmt.Fprintf(c.w, "%q:\n", d)
+						fmt.Fprintf(c.stdout, "%q:\n", d)
 					} else {
-						fmt.Fprintf(c.w, "%v:\n", d)
+						fmt.Fprintf(c.stdout, "%v:\n", d)
 					}
 				}
 			}
@@ -179,71 +248,3 @@ func indicator(fi FileInfo) string {
 	}
 	return ""
 }
-
-func (c cmd) list(dir string, names []string) error {
-	if len(names) == 0 {
-		names = []string{"."}
-	}
-	// Write output in tabular form.
-	tw := &tabwriter.Writer{}
-	tw.Init(c.w, 0, 0, 1, ' ', 0)
-	c.w = tw
-	defer tw.Flush()
-
-	var s Stringer = NameStringer{}
-	if c.quoted {
-		s = QuotedStringer{}
-	}
-	if c.long {
-		s = LongStringer{Human: c.human, Name: s}
-	}
-	// Is a name a directory? If so, list it in its own section.
-	prefix := len(names) > 1
-	for _, d := range names {
-		if !filepath.IsAbs(d) {
-			var err error
-			d, err = filepath.Abs(filepath.Join(dir, d))
-			if err != nil {
-				return err
-			}
-		}
-		if err := c.listName(s, d, prefix); err != nil {
-			return fmt.Errorf("error while listing %q: %w", d, err)
-		}
-		tw.Flush()
-	}
-	return nil
-}
-
-// Run executes ls with provided args and writes output to o.
-// args are as from os.Args where args[0] is the command name.
-func Run(o io.Writer, dir string, args []string) error {
-	var c cmd
-	f := flag.NewFlagSet(args[0], flag.ExitOnError)
-	f.BoolVar(&c.all, "a", false, "show hidden files")
-	f.BoolVar(&c.human, "h", false, "human readable sizes")
-	f.BoolVar(&c.directory, "d", false, "list directories but not their contents")
-	f.BoolVar(&c.long, "l", false, "long form")
-	f.BoolVar(&c.quoted, "Q", false, "quoted")
-	f.BoolVar(&c.recurse, "R", false, "equivalent to findutil's find")
-	f.BoolVar(&c.classify, "F", false, "append indicator (, one of */=>@|) to entries")
-	f.BoolVar(&c.size, "S", false, "sort by size")
-	c.w = o
-	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
-	return c.list(dir, f.Args())
-}
-
-// RunMain executes ls with args as if it were a main func,
-// utilizing the Stdout and Stderr fields from Params.
-func RunMain(ctx pkg.ExecContext, args []string) int {
-	if wd, err := ctx.Getwd(); err != nil {
-		fmt.Fprintln(ctx.Stderr(), err)
-		return 1
-	} else if err = Run(ctx.Stdout(), wd, args); err != nil {
-		fmt.Fprintln(ctx.Stderr(), err)
-		return 1
-	}
-	return 0
-}
-
-var _ pkg.RunMain = RunMain

@@ -49,7 +49,7 @@ func TestListNameLinux(t *testing.T) {
 	if c.long {
 		s = LongStringer{Human: c.human, Name: s}
 	}
-	c.w = &buf
+	c.stdout = &buf
 	_ = c.listName(s, d, false)
 	if !strings.Contains(buf.String(), "1110, 74616") {
 		t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
@@ -59,7 +59,7 @@ func TestListNameLinux(t *testing.T) {
 func TestNotExist(t *testing.T) {
 	d := t.TempDir()
 	b := &bytes.Buffer{}
-	var c = cmd{w: b}
+	var c = cmd{stdout: b}
 	if err := c.listName(NameStringer{}, filepath.Join(d, "b"), false); err != nil {
 		t.Fatalf("listName(NameString{}, %q/b, w, false): nil != %v", d, err)
 	}
