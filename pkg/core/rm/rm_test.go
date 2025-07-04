@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package rm
 
 import (
 	"bytes"
@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/rm"
 )
 
 func setup(t *testing.T) string {
@@ -71,7 +69,7 @@ func TestRm(t *testing.T) {
 		{
 			name: "no args",
 			args: []string{"rm"},
-			want: "rm [-Rrvif] file...",
+			want: usage,
 		},
 		{
 			name: "rm one file",
@@ -123,12 +121,13 @@ func TestRm(t *testing.T) {
 		d := setup(t)
 
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := rm.New()
+			cmd := New()
 			var stdout, stderr bytes.Buffer
 			var stdin bytes.Buffer
 			stdin.WriteString(tt.iString)
 
 			cmd.SetIO(&stdin, &stdout, &stderr)
+			cmd.SetWorkingDir(d)
 
 			// Update args to use absolute paths for files
 			args := make([]string, len(tt.args))
@@ -160,5 +159,77 @@ func TestRm(t *testing.T) {
 				t.Errorf("Expected verbose output, got none")
 			}
 		})
+	}
+}
+
+func TestRmWorkingDir(t *testing.T) {
+	d := setup(t)
+
+	// Test that working directory is respected
+	cmd := New()
+	var stdout, stderr bytes.Buffer
+	var stdin bytes.Buffer
+
+	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetWorkingDir(d)
+
+	// Remove file using relative path
+	exitCode, err := cmd.Run(context.Background(), "rm", "go.txt")
+	if err != nil {
+		t.Errorf("Run() = %v, want nil", err)
+	}
+	if exitCode != 0 {
+		t.Errorf("Run() exit code = %d, want 0", exitCode)
+	}
+
+	// Verify file was removed
+	if _, err := os.Stat(filepath.Join(d, "go.txt")); !os.IsNotExist(err) {
+		t.Errorf("File should have been removed")
+	}
+}
+
+func TestRmInteractive(t *testing.T) {
+	d := setup(t)
+
+	// Test interactive mode with "no" response
+	cmd := New()
+	var stdout, stderr bytes.Buffer
+	var stdin bytes.Buffer
+	stdin.WriteString("n\n")
+
+	cmd.SetIO(&stdin, &stdout, &stderr)
+
+	exitCode, err := cmd.Run(context.Background(), "rm", "-i", filepath.Join(d, "go.txt"))
+	if err != nil {
+		t.Errorf("Run() = %v, want nil", err)
+	}
+	if exitCode != 0 {
+		t.Errorf("Run() exit code = %d, want 0", exitCode)
+	}
+
+	// Verify file was NOT removed
+	if _, err := os.Stat(filepath.Join(d, "go.txt")); os.IsNotExist(err) {
+		t.Errorf("File should not have been removed")
+	}
+
+	// Test interactive mode with "yes" response
+	cmd2 := New()
+	var stdout2, stderr2 bytes.Buffer
+	var stdin2 bytes.Buffer
+	stdin2.WriteString("y\n")
+
+	cmd2.SetIO(&stdin2, &stdout2, &stderr2)
+
+	exitCode, err = cmd2.Run(context.Background(), "rm", "-i", filepath.Join(d, "go.txt"))
+	if err != nil {
+		t.Errorf("Run() = %v, want nil", err)
+	}
+	if exitCode != 0 {
+		t.Errorf("Run() exit code = %d, want 0", exitCode)
+	}
+
+	// Verify file was removed
+	if _, err := os.Stat(filepath.Join(d, "go.txt")); !os.IsNotExist(err) {
+		t.Errorf("File should have been removed")
 	}
 }
