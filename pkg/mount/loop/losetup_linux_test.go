@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/hugelgupf/vmtest/guest"
-	"github.com/u-root/u-root/pkg/cp"
+	"github.com/u-root/u-root/pkg/core/cp"
 	"golang.org/x/sys/unix"
 )
 
