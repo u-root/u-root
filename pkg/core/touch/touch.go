@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/u-root/u-root/pkg/core"
@@ -43,14 +42,6 @@ type params struct {
 	create       bool
 }
 
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
-
 // parseParams parses the command parameters and returns a params struct.
 func (c *Command) parseParams(dateTime string, access, modification, create bool) (params, error) {
 	t := time.Now()
@@ -73,7 +64,7 @@ func (c *Command) parseParams(dateTime string, access, modification, create bool
 func (c *Command) touchFiles(p params, args []string) error {
 	var errs error
 	for _, arg := range args {
-		resolvedArg := c.resolvePath(arg)
+		resolvedArg := c.ResolvePath(arg)
 		_, existsErr := os.Stat(resolvedArg)
 		notExist := os.IsNotExist(existsErr)
 		if notExist {

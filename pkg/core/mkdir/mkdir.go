@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/u-root/u-root/pkg/core"
@@ -40,14 +39,6 @@ const (
 	sgidBit             = 0o2000
 	suidBit             = 0o4000
 )
-
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
 
 // parseMode parses the mode string and returns the appropriate FileMode.
 func (c *Command) parseMode(mode string) (os.FileMode, error) {
@@ -89,7 +80,7 @@ func (c *Command) mkdirFiles(f flags, args []string) error {
 	}
 
 	for _, name := range args {
-		resolvedName := c.resolvePath(name)
+		resolvedName := c.ResolvePath(name)
 		if err := mkdirFunc(resolvedName, createMode); err != nil {
 			fmt.Fprintf(c.Stderr, "%v: %v\n", name, err)
 			continue

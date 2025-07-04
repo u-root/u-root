@@ -76,17 +76,9 @@ type file struct {
 	err  error
 }
 
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
-
 func (c *Command) listName(stringer ls.Stringer, d string, prefix bool, f flags) {
 	var files []file
-	resolvedPath := c.resolvePath(d)
+	resolvedPath := c.ResolvePath(d)
 
 	filepath.Walk(resolvedPath, func(path string, osfi os.FileInfo, err error) error {
 		file := file{
