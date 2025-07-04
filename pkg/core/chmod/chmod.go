@@ -40,16 +40,8 @@ type flags struct {
 	reference string
 }
 
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
-
 func (c *Command) changeMode(path string, mode os.FileMode, octval uint64, mask uint64, operator string) error {
-	path = c.resolvePath(path)
+	path = c.ResolvePath(path)
 
 	// A special value for mask means the mode is fully described
 	if mask == special {
@@ -187,7 +179,7 @@ func (c *Command) run(args []string, f flags) error {
 	)
 
 	if f.reference != "" {
-		refPath := c.resolvePath(f.reference)
+		refPath := c.ResolvePath(f.reference)
 		fi, err := os.Stat(refPath)
 		if err != nil {
 			return fmt.Errorf("bad reference file: %w", err)
@@ -208,7 +200,7 @@ func (c *Command) run(args []string, f flags) error {
 
 	for _, name := range fileList {
 		if f.recursive {
-			err := filepath.Walk(c.resolvePath(name), func(path string, _ os.FileInfo, err error) error {
+			err := filepath.Walk(c.ResolvePath(name), func(path string, _ os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
