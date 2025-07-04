@@ -3,6 +3,7 @@ package core
 import (
 	"io"
 	"os"
+	"path/filepath"
 )
 
 // Base is a struct that holds common fields for commands.
@@ -45,4 +46,12 @@ func (b *Base) SetLookupEnv(lookupEnv LookupEnvFunc) {
 func (b *Base) Getenv(key string) string {
 	v, _ := b.LookupEnv(key)
 	return v
+}
+
+// ResolvePath resolves a path relative to the working directory.
+func (b *Base) ResolvePath(path string) string {
+	if filepath.IsAbs(path) || b.WorkingDir == "" {
+		return path
+	}
+	return filepath.Join(b.WorkingDir, path)
 }
