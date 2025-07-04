@@ -33,17 +33,9 @@ type flags struct {
 	noClobber bool
 }
 
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
-
 func (c *Command) moveFile(source string, dest string, update bool, noClobber bool) error {
-	source = c.resolvePath(source)
-	dest = c.resolvePath(dest)
+	source = c.ResolvePath(source)
+	dest = c.ResolvePath(dest)
 
 	if noClobber {
 		_, err := os.Lstat(dest)
@@ -99,7 +91,7 @@ func (c *Command) mv(files []string, update, noClobber, todir bool) error {
 func (c *Command) move(files []string, update, noClobber bool) error {
 	var todir bool
 	dest := files[len(files)-1]
-	dest = c.resolvePath(dest)
+	dest = c.ResolvePath(dest)
 	if destdir, err := os.Lstat(dest); err == nil {
 		todir = destdir.IsDir()
 	}

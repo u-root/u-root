@@ -40,14 +40,6 @@ type flags struct {
 
 const usage = "rm [-Rrvif] file..."
 
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
-
 // promptRemove asks the user if they want to remove the file.
 func (c *Command) promptRemove(file string) (bool, error) {
 	fmt.Fprintf(c.Stderr, "rm: remove '%v'? ", file)
@@ -84,7 +76,7 @@ func (c *Command) removeFiles(files []string, f flags) error {
 	}
 
 	for _, file := range files {
-		resolvedFile := c.resolvePath(file)
+		resolvedFile := c.ResolvePath(file)
 
 		if f.interactive {
 			shouldRemove, err := c.promptRemove(file)

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/core"
 )
@@ -33,14 +32,6 @@ type flags struct {
 }
 
 var errCopy = fmt.Errorf("error concatenating stdin to stdout")
-
-// resolvePath resolves a path relative to the working directory.
-func (c *Command) resolvePath(path string) string {
-	if filepath.IsAbs(path) || c.WorkingDir == "" {
-		return path
-	}
-	return filepath.Join(c.WorkingDir, path)
-}
 
 // cat copies data from reader to writer.
 func (c *Command) cat(reader io.Reader, writer io.Writer) error {
@@ -65,7 +56,7 @@ func (c *Command) runCat(args []string) error {
 			continue
 		}
 
-		resolvedFile := c.resolvePath(file)
+		resolvedFile := c.ResolvePath(file)
 		f, err := os.Open(resolvedFile)
 		if err != nil {
 			return err
