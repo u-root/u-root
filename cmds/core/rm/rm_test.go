@@ -139,7 +139,7 @@ func TestRm(t *testing.T) {
 				}
 			}
 
-			exitCode, err := cmd.Run(context.Background(), args...)
+			err := cmd.Run(context.Background(), args...)
 
 			if tt.want != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.want) {
@@ -150,9 +150,6 @@ func TestRm(t *testing.T) {
 
 			if err != nil {
 				t.Errorf("Run() = %v, want nil", err)
-			}
-			if exitCode != 0 {
-				t.Errorf("Run() exit code = %d, want 0", exitCode)
 			}
 
 			// Check verbose output

@@ -238,7 +238,7 @@ func (c *Command) setupPostCallback(verbose bool) func(src, dst string) {
 }
 
 // Run executes the cp command.
-func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
+func (c *Command) Run(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("cp", flag.ContinueOnError)
@@ -268,12 +268,12 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	}
 
 	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
-		return 1, err
+		return err
 	}
 
 	if fs.NArg() < 2 {
 		fs.Usage()
-		return 1, fmt.Errorf("insufficient arguments")
+		return fmt.Errorf("insufficient arguments")
 	}
 
 	todir := false
@@ -284,7 +284,7 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 		todir = toStat.IsDir()
 	}
 	if fs.NArg() > 2 && !todir {
-		return 1, fmt.Errorf("target %q is not a directory", to)
+		return fmt.Errorf("target %q is not a directory", to)
 	}
 
 	opts := Options{
@@ -308,9 +308,9 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	}
 
 	if lastErr != nil {
-		return 1, lastErr
+		return lastErr
 	}
-	return 0, nil
+	return nil
 }
 
 // Copy src file to dst file using Default's config.
