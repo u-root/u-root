@@ -16,7 +16,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/mv"
@@ -26,7 +26,7 @@ func main() {
 	cmd := mv.New()
 	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		log.Fatalf("%v", err)
+		fmt.Fprintf(os.Stderr, "mv: %v\n", err)
 	}
 	os.Exit(exitCode)
 }
