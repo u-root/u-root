@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package find searches for files in a directory hierarchy recursively.
-//
-// find can filter out files by file names, paths, and modes.
+// Package find implements the find core utility.
 package find
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
+	"github.com/u-root/u-root/pkg/core"
 	"github.com/u-root/u-root/pkg/ls"
 )
 
@@ -189,4 +190,112 @@ func Find(ctx context.Context, opt ...Set) <-chan *File {
 	}(f)
 
 	return f.files
+}
+
+// Command implements the find core utility.
+type Command struct {
+	core.Base
+}
+
+// New creates a new find command.
+func New() core.Command {
+	c := &Command{}
+	c.Init()
+	return c
+}
+
+type flags struct {
+	fileType string
+	name     string
+	perm     int
+	long     bool
+	debug    bool
+}
+
+// Run executes the find command.
+func (c *Command) Run(ctx context.Context, args ...string) error {
+	var f flags
+
+	fs := flag.NewFlagSet("find", flag.ContinueOnError)
+	fs.SetOutput(c.Stderr)
+
+	fs.StringVar(&f.fileType, "type", "", "file type")
+	fs.StringVar(&f.name, "name", "", "glob for name")
+	fs.IntVar(&f.perm, "mode", -1, "permissions")
+	fs.BoolVar(&f.long, "l", false, "long listing")
+	fs.BoolVar(&f.debug, "d", false, "enable debugging in the find package")
+
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: find [opts] starting-at-path\n\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if fs.NArg() != 1 {
+		fs.Usage()
+		return fmt.Errorf("insufficient arguments")
+	}
+
+	root := c.ResolvePath(fs.Args()[0])
+
+	fileTypes := map[string]os.FileMode{
+		"f":         0,
+		"file":      0,
+		"d":         os.ModeDir,
+		"directory": os.ModeDir,
+		"s":         os.ModeSocket,
+		"p":         os.ModeNamedPipe,
+		"l":         os.ModeSymlink,
+		"c":         os.ModeCharDevice | os.ModeDevice,
+		"b":         os.ModeDevice,
+	}
+
+	var mask, mode os.FileMode
+	if f.perm != -1 {
+		mask = os.ModePerm
+		mode = os.FileMode(f.perm)
+	}
+	if f.fileType != "" {
+		intType, ok := fileTypes[f.fileType]
+		if !ok {
+			var keys []string
+			for key := range fileTypes {
+				keys = append(keys, key)
+			}
+			return fmt.Errorf("%v is not a valid file type\n valid types are %v", f.fileType, strings.Join(keys, ","))
+		}
+		mode |= intType
+		mask |= os.ModeType
+	}
+
+	debugLog := func(string, ...any) {}
+	if f.debug {
+		debugLog = func(format string, args ...any) {
+			fmt.Fprintf(c.Stderr, format+"\n", args...)
+		}
+	}
+
+	names := Find(ctx,
+		WithRoot(root),
+		WithModeMatch(mode, mask),
+		WithFilenameMatch(f.name),
+		WithDebugLog(debugLog),
+	)
+
+	for l := range names {
+		if l.Err != nil {
+			fmt.Fprintf(c.Stderr, "%s: %v\n", l.Name, l.Err)
+			continue
+		}
+		if f.long {
+			fmt.Fprintf(c.Stdout, "%s\n", l)
+			continue
+		}
+		fmt.Fprintf(c.Stdout, "%s\n", l.Name)
+	}
+
+	return nil
 }
