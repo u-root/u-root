@@ -30,7 +30,7 @@ import (
 
 func main() {
 	cmd := touch.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args...)
+	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatalf("touch: %v", err)
 	}
