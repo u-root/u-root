@@ -85,29 +85,29 @@ func TestRunSimple(t *testing.T) {
 	}{
 		{
 			name: "NoFlags-Success-",
-			args: []string{"cp", file1.Name(), filepath.Join(tmpDir, "destination")},
+			args: []string{file1.Name(), filepath.Join(tmpDir, "destination")},
 		},
 		{
 			name:  "AskYes-Success-",
-			args:  []string{"cp", "-i", file1.Name(), filepath.Join(tmpDir, "destination")},
+			args:  []string{"-i", file1.Name(), filepath.Join(tmpDir, "destination")},
 			input: "yes\n",
 		},
 		{
 			name:  "AskNo-Skip-",
-			args:  []string{"cp", "-i", file1.Name(), filepath.Join(tmpDir, "destination")},
+			args:  []string{"-i", file1.Name(), filepath.Join(tmpDir, "destination")},
 			input: "no\n",
 		},
 		{
 			name: "Verbose",
-			args: []string{"cp", "-v", file1.Name(), filepath.Join(tmpDir, "destination")},
+			args: []string{"-v", file1.Name(), filepath.Join(tmpDir, "destination")},
 		},
 		{
 			name: "SameFile-NoFlags",
-			args: []string{"cp", file1.Name(), file1.Name()},
+			args: []string{file1.Name(), file1.Name()},
 		},
 		{
 			name:    "NoFlags-Fail-SrcNotExist",
-			args:    []string{"cp", "src", filepath.Join(tmpDir, "destination")},
+			args:    []string{"src", filepath.Join(tmpDir, "destination")},
 			wantErr: fs.ErrNotExist,
 		},
 	} {
@@ -148,7 +148,7 @@ func TestCpSrcDirectory(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), "cp", tempDir, tempDirTwo)
+	exitCode, err := cmd.Run(context.Background(), tempDir, tempDirTwo)
 	if err != nil {
 		t.Fatalf("Run() = %v, want nil", err)
 	}
@@ -189,7 +189,7 @@ func TestCpRecursive(t *testing.T) {
 		var stdin bytes.Buffer
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
-		exitCode, err := cmd.Run(context.Background(), "cp", "-r", srcDir, dstDir)
+		exitCode, err := cmd.Run(context.Background(), "-r", srcDir, dstDir)
 		if err != nil {
 			t.Fatalf("Run() = %v, want nil", err)
 		}
@@ -211,7 +211,7 @@ func TestCpRecursive(t *testing.T) {
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
 		notExistDstDir := filepath.Join(tempDir, "dst-does-not-exist")
-		exitCode, err := cmd.Run(context.Background(), "cp", "-r", srcDir, notExistDstDir)
+		exitCode, err := cmd.Run(context.Background(), "-r", srcDir, notExistDstDir)
 		if err != nil {
 			t.Fatalf("Run() = %v, want nil", err)
 		}

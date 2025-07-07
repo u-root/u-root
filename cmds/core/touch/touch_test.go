@@ -23,7 +23,7 @@ func TestParseParamsDate(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test valid date
-	exitCode, err := cmd.Run(context.Background(), "touch", "-d", "2021-01-01T00:00:00Z", "/tmp/test_touch_date")
+	exitCode, err := cmd.Run(context.Background(), "-d", "2021-01-01T00:00:00Z", "/tmp/test_touch_date")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -40,7 +40,7 @@ func TestParseParamsDate(t *testing.T) {
 	var stdin2 bytes.Buffer
 	cmd2.SetIO(&stdin2, &stdout2, &stderr2)
 
-	exitCode, err = cmd2.Run(context.Background(), "touch", "-d", "invalid", "/tmp/test_touch_invalid")
+	exitCode, err = cmd2.Run(context.Background(), "-d", "invalid", "/tmp/test_touch_invalid")
 	if err == nil {
 		t.Error("expected error for invalid date, got nil")
 	}
@@ -56,15 +56,15 @@ var tests = []struct {
 }{
 	{
 		name: "create is true, no new files created",
-		args: []string{"touch", "-c", "a1", "a2"},
+		args: []string{"-c", "a1", "a2"},
 	},
 	{
 		name: "create is false, files should be created",
-		args: []string{"touch", "a1", "a2"},
+		args: []string{"a1", "a2"},
 	},
 	{
 		name: "no such file or directory",
-		args: []string{"touch", "no/such/file/or/direcotry"},
+		args: []string{"no/such/file/or/direcotry"},
 		err:  os.ErrNotExist,
 	},
 }
