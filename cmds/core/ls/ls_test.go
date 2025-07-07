@@ -46,49 +46,49 @@ func TestListName(t *testing.T) {
 			name:  "ls without arguments",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s\n%s\n%s\n%s\n", "d1", "f1", "f2", "f3?line 2"),
-			args:  []string{"ls"},
+			args:  nil,
 		},
 		{
 			name:  "ls osfi.IsDir() path, quoted = true",
 			input: tmpDir,
 			want:  fmt.Sprintf("\"%s\"\n\"%s\"\n\"%s\"\n\"%s\"\n", "d1", "f1", "f2", "f3\\nline 2"),
-			args:  []string{"ls", "-Q"},
+			args:  []string{"-Q"},
 		},
 		{
 			name:  "ls osfi.IsDir() path, quoted = true, prefix = true ",
 			input: tmpDir,
 			want:  fmt.Sprintf("\"%s\":\n\"%s\"\n\"%s\"\n\"%s\"\n\"%s\"\n", tmpDir, "d1", "f1", "f2", "f3\\nline 2"),
-			args:  []string{"ls", "-Q"},
+			args:  []string{"-Q"},
 		},
 		{
 			name:  "ls osfi.IsDir() path, quoted = false, prefix = true ",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s:\n%s\n%s\n%s\n%s\n", tmpDir, "d1", "f1", "f2", "f3?line 2"),
-			args:  []string{"ls"},
+			args:  nil,
 		},
 		{
 			name:  "ls recurse = true",
 			input: tmpDir,
 			want: fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n", tmpDir, filepath.Join(tmpDir, ".f4"), filepath.Join(tmpDir, "d1"),
 				filepath.Join(tmpDir, "d1/f4"), filepath.Join(tmpDir, "f1"), filepath.Join(tmpDir, "f2"), filepath.Join(tmpDir, "f3?line 2")),
-			args: []string{"ls", "-aR"},
+			args: []string{"-aR"},
 		},
 		{
 			name:  "ls directory = true",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s\n", "tmpDir"),
-			args:  []string{"ls", "-d"},
+			args:  []string{"-d"},
 		},
 		{
 			name:  "ls classify = true",
 			input: tmpDir,
 			want:  fmt.Sprintf("%s\n%s\n%s\n%s\n", "d1/", "f1", "f2", "f3?line 2"),
-			args:  []string{"ls", "-F"},
+			args:  []string{"-F"},
 		},
 		{
 			name:  "file does not exist",
 			input: "dir",
-			args:  []string{"ls"},
+			args:  nil,
 		},
 	} {
 		// Running the tests
@@ -156,12 +156,12 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			name:    "input empty, quoted = true, long = true",
-			args:    []string{"ls", "-Ql"},
+			args:    []string{"-Ql"},
 			wantErr: false,
 		},
 		{
 			name:    "input empty, quoted = true, long = true",
-			args:    []string{"ls", "-Ql", "dir"},
+			args:    []string{"-Ql", "dir"},
 			wantErr: false, // ls prints error but doesn't exit with error
 		},
 	} {
@@ -260,7 +260,7 @@ func TestPermHandling(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, b, b)
 
-	_, err := cmd.Run(context.Background(), "ls", d)
+	_, err := cmd.Run(context.Background(), d)
 	if err != nil {
 		t.Fatalf("ls %q: %v != nil", d, err)
 	}
@@ -277,7 +277,7 @@ func TestNotExist(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, b, b)
 
-	exitCode, err := cmd.Run(context.Background(), "ls", filepath.Join(d, "b"))
+	exitCode, err := cmd.Run(context.Background(), filepath.Join(d, "b"))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

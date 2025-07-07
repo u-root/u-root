@@ -241,7 +241,7 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	// Parse arguments manually to handle mode strings that start with - or +
 	var parsedArgs []string
 	var i int
-	for i = 1; i < len(args); i++ {
+	for i = 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
 			i++

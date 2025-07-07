@@ -24,7 +24,7 @@ import (
 
 func main() {
 	cmd := mv.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args...)
+	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}

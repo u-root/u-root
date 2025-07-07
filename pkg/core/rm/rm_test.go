@@ -68,53 +68,53 @@ func TestRm(t *testing.T) {
 	}{
 		{
 			name: "no args",
-			args: []string{"rm"},
+			args: nil,
 			want: usage,
 		},
 		{
 			name: "rm one file",
-			args: []string{"rm", "go.txt"},
+			args: []string{"go.txt"},
 			want: "",
 		},
 		{
 			name:    "rm one file verbose",
-			args:    []string{"rm", "-v", "go.txt"},
+			args:    []string{"-v", "go.txt"},
 			verbose: true,
 			want:    "",
 		},
 		{
 			name: "fail to rm one file",
-			args: []string{"rm", "go"},
+			args: []string{"go"},
 			want: "no such file or directory",
 		},
 		{
 			name:  "fail to rm one file forced to trigger continue",
-			args:  []string{"rm", "-f", "go"},
+			args:  []string{"-f", "go"},
 			force: true,
 			want:  "",
 		},
 		{
 			name:        "rm one file interactive",
-			args:        []string{"rm", "-i", "go.txt"},
+			args:        []string{"-i", "go.txt"},
 			interactive: true,
 			iString:     "y\n",
 			want:        "",
 		},
 		{
 			name:        "rm one file interactive continue triggered",
-			args:        []string{"rm", "-i", "go.txt"},
+			args:        []string{"-i", "go.txt"},
 			interactive: true,
 			iString:     "\n",
 			want:        "",
 		},
 		{
 			name:      "rm dir recursively",
-			args:      []string{"rm", "-r", "hi"},
+			args:      []string{"-r", "hi"},
 			recursive: true,
 		},
 		{
 			name: "rm dir not recursively",
-			args: []string{"rm", "hi"},
+			args: []string{"hi"},
 			want: "directory not empty",
 		},
 	} {
@@ -132,7 +132,7 @@ func TestRm(t *testing.T) {
 			// Update args to use absolute paths for files
 			args := make([]string, len(tt.args))
 			copy(args, tt.args)
-			for i := 1; i < len(args); i++ {
+			for i := 0; i < len(args); i++ {
 				if !strings.HasPrefix(args[i], "-") {
 					args[i] = filepath.Join(d, args[i])
 				}
@@ -174,7 +174,7 @@ func TestRmWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(d)
 
 	// Remove file using relative path
-	exitCode, err := cmd.Run(context.Background(), "rm", "go.txt")
+	exitCode, err := cmd.Run(context.Background(), "go.txt")
 	if err != nil {
 		t.Errorf("Run() = %v, want nil", err)
 	}
@@ -199,7 +199,7 @@ func TestRmInteractive(t *testing.T) {
 
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), "rm", "-i", filepath.Join(d, "go.txt"))
+	exitCode, err := cmd.Run(context.Background(), "-i", filepath.Join(d, "go.txt"))
 	if err != nil {
 		t.Errorf("Run() = %v, want nil", err)
 	}
@@ -220,7 +220,7 @@ func TestRmInteractive(t *testing.T) {
 
 	cmd2.SetIO(&stdin2, &stdout2, &stderr2)
 
-	exitCode, err = cmd2.Run(context.Background(), "rm", "-i", filepath.Join(d, "go.txt"))
+	exitCode, err = cmd2.Run(context.Background(), "-i", filepath.Join(d, "go.txt"))
 	if err != nil {
 		t.Errorf("Run() = %v, want nil", err)
 	}

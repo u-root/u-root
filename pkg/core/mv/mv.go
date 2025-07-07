@@ -116,7 +116,7 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
 		return 1, err
 	}
 

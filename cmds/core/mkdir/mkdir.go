@@ -25,7 +25,7 @@ import (
 
 func main() {
 	cmd := mkdir.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args...)
+	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatal(err)
 	}

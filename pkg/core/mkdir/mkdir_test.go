@@ -183,7 +183,7 @@ func TestMkdirCommand(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test creating a new directory
-	exitCode, err := cmd.Run(context.Background(), "mkdir", testDir)
+	exitCode, err := cmd.Run(context.Background(), testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -209,7 +209,7 @@ func TestMkdirCommandWithMode(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with specific mode
-	exitCode, err := cmd.Run(context.Background(), "mkdir", "-m", "755", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-m", "755", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -239,7 +239,7 @@ func TestMkdirCommandVerbose(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with verbose flag
-	exitCode, err := cmd.Run(context.Background(), "mkdir", "-v", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-v", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -263,7 +263,7 @@ func TestMkdirCommandParents(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with -p flag (create parents)
-	exitCode, err := cmd.Run(context.Background(), "mkdir", "-p", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-p", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -286,7 +286,7 @@ func TestMkdirCommandNoArgs(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with no arguments
-	exitCode, err := cmd.Run(context.Background(), "mkdir")
+	exitCode, err := cmd.Run(context.Background())
 	if err == nil {
 		t.Error("Expected error for no arguments")
 	}
@@ -306,7 +306,7 @@ func TestMkdirWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
-	exitCode, err := cmd.Run(context.Background(), "mkdir", testDir)
+	exitCode, err := cmd.Run(context.Background(), testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -333,7 +333,7 @@ func TestMkdirInvalidMode(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with invalid mode
-	exitCode, err := cmd.Run(context.Background(), "mkdir", "-m", "invalid", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-m", "invalid", testDir)
 	if err == nil {
 		t.Error("Expected error for invalid mode")
 	}
