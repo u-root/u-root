@@ -22,7 +22,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/touch"
@@ -32,7 +32,7 @@ func main() {
 	cmd := touch.New()
 	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		log.Fatalf("touch: %v", err)
+		fmt.Fprintf(os.Stderr, "touch: %v\n", err)
 	}
 	os.Exit(exitCode)
 }

@@ -19,7 +19,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/cat"
@@ -29,7 +29,7 @@ func main() {
 	cmd := cat.New()
 	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		log.Fatalf("cat failed with: %v", err)
+		fmt.Fprintf(os.Stderr, "cat: %v\n", err)
 	}
 	os.Exit(exitCode)
 }

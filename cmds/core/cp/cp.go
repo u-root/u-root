@@ -21,7 +21,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/cp"
@@ -31,7 +31,7 @@ func main() {
 	cmd := cp.New()
 	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		log.Fatalf("%v", err)
+		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 	}
 	os.Exit(exitCode)
 }

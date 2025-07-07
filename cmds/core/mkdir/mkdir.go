@@ -17,7 +17,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/mkdir"
@@ -27,7 +27,7 @@ func main() {
 	cmd := mkdir.New()
 	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "mkdir: %v\n", err)
 	}
 	os.Exit(exitCode)
 }
