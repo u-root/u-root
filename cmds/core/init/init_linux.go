@@ -20,6 +20,7 @@ import (
 func quiet() {
 	if !*verbose {
 		// Only messages more severe than "notice" are printed.
+		log.Printf("Setting console log level to %d...", ulog.KLogNotice)
 		if err := ulog.KernelLog.SetConsoleLogLevel(ulog.KLogNotice); err != nil {
 			log.Printf("Could not set log level: %v", err)
 		}
