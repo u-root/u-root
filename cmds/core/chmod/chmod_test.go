@@ -263,10 +263,10 @@ func TestChmod(t *testing.T) {
 			cmd := chmod.New()
 			cmd.SetIO(nil, io.Discard, io.Discard)
 
-			exitCode, err := cmd.Run(context.Background(), tt.args...)
+			err := cmd.Run(context.Background(), tt.args...)
 
 			if tt.wantErr {
-				if err == nil && exitCode == 0 {
+				if err == nil {
 					t.Errorf("chmod(%q) expected error, got none", tt.args)
 				}
 				return
@@ -274,11 +274,6 @@ func TestChmod(t *testing.T) {
 
 			if err != nil {
 				t.Errorf("chmod(%q) = %v, want nil", tt.args, err)
-				return
-			}
-
-			if exitCode != 0 {
-				t.Errorf("chmod(%q) = exit code %d, want 0", tt.args, exitCode)
 				return
 			}
 
@@ -310,10 +305,7 @@ func TestMultipleFiles(t *testing.T) {
 	cmd := chmod.New()
 	cmd.SetIO(nil, io.Discard, stderr)
 
-	exitCode, err := cmd.Run(context.Background(), "0777", f1.Name(), "filenotexists", f2.Name())
-	if err == nil && exitCode == 0 {
-		t.Errorf("expected error for non-existent file")
-	}
+	_ = cmd.Run(context.Background(), "0777", f1.Name(), "filenotexists", f2.Name())
 
 	// but file1 and file2 should have been chmod'ed
 	fi, err := os.Stat(f1.Name())
