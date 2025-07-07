@@ -99,7 +99,7 @@ func (c *Command) touchFiles(p params, args []string) error {
 }
 
 // Run executes the touch command.
-func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
+func (c *Command) Run(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("touch", flag.ContinueOnError)
@@ -119,22 +119,22 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return 1, err
+		return err
 	}
 
 	if len(fs.Args()) == 0 {
 		fs.Usage()
-		return 1, fmt.Errorf("no files specified")
+		return fmt.Errorf("no files specified")
 	}
 
 	p, err := c.parseParams(f.dateTime, f.access, f.modification, f.create)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	if err := c.touchFiles(p, fs.Args()); err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

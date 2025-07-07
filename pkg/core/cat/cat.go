@@ -72,7 +72,7 @@ func (c *Command) runCat(args []string) error {
 }
 
 // Run executes the cat command.
-func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
+func (c *Command) Run(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("cat", flag.ContinueOnError)
@@ -89,12 +89,12 @@ func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return 1, err
+		return err
 	}
 
 	if err := c.runCat(fs.Args()); err != nil {
-		return 1, err
+		return err
 	}
 
-	return 0, nil
+	return nil
 }

@@ -158,18 +158,12 @@ func TestMkdir(t *testing.T) {
 			}
 			args = append(args, tt.args...)
 
-			exitCode, got := cmd.Run(context.Background(), args...)
+			got := cmd.Run(context.Background(), args...)
 			if got != nil {
 				if tt.want == nil || got.Error() != tt.want.Error() {
 					t.Errorf("Run() = '%v', want: '%v'", got, tt.want)
 				}
-				if exitCode == 0 {
-					t.Error("Expected non-zero exit code for error case")
-				}
 			} else {
-				if exitCode != 0 {
-					t.Errorf("Expected exit code 0, got %d", exitCode)
-				}
 				if stderr.String() != "" {
 					if !strings.Contains(stderr.String(), "file exist") {
 						t.Errorf("Stderr = '%v', want to contain 'file exist'", stderr.String())

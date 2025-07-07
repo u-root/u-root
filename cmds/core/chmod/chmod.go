@@ -23,9 +23,8 @@ import (
 
 func main() {
 	cmd := chmod.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
+	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "chmod: %v\n", err)
 	}
-	os.Exit(exitCode)
 }

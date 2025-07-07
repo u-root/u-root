@@ -88,10 +88,10 @@ func TestMove(t *testing.T) {
 			var stderr bytes.Buffer
 			cmd.SetIO(nil, io.Discard, &stderr)
 
-			exitCode, err := cmd.Run(context.Background(), tt.args...)
+			err := cmd.Run(context.Background(), tt.args...)
 
 			if tt.wantErr {
-				if err == nil && exitCode == 0 {
+				if err == nil {
 					t.Errorf("Expected error, got none")
 				}
 				if tt.errCheck != nil {
@@ -106,9 +106,6 @@ func TestMove(t *testing.T) {
 			} else {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
-				}
-				if exitCode != 0 {
-					t.Errorf("Expected exit code 0, got %d", exitCode)
 				}
 			}
 		})
@@ -162,18 +159,15 @@ func TestMvFlags(t *testing.T) {
 			var stderr bytes.Buffer
 			cmd.SetIO(nil, io.Discard, &stderr)
 
-			exitCode, err := cmd.Run(context.Background(), tt.args(d)...)
+			err := cmd.Run(context.Background(), tt.args(d)...)
 
 			if tt.wantErr {
-				if err == nil && exitCode == 0 {
+				if err == nil {
 					t.Errorf("Expected error, got none")
 				}
 			} else {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
-				}
-				if exitCode != 0 {
-					t.Errorf("Expected exit code 0, got %d", exitCode)
 				}
 				if tt.check != nil && !tt.check(d) {
 					t.Errorf("Post-move check failed")
@@ -198,12 +192,9 @@ func TestMvToDirectory(t *testing.T) {
 
 	// Move multiple files to directory
 	args := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), subdir}
-	exitCode, err := cmd.Run(context.Background(), args...)
+	err := cmd.Run(context.Background(), args...)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
-	}
-	if exitCode != 0 {
-		t.Errorf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Check that files were moved to the directory

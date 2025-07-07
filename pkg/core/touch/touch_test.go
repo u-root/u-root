@@ -186,12 +186,9 @@ func TestTouchCommand(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test creating a new file
-	exitCode, err := cmd.Run(context.Background(), testFile)
+	err := cmd.Run(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify file was created
@@ -210,12 +207,9 @@ func TestTouchCommandWithDate(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with specific date
-	exitCode, err := cmd.Run(context.Background(), "-d", "2021-01-01T00:00:00Z", testFile)
+	err := cmd.Run(context.Background(), "-d", "2021-01-01T00:00:00Z", testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify file was created with correct time
@@ -240,12 +234,9 @@ func TestTouchCommandNoCreate(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with -c flag (don't create)
-	exitCode, err := cmd.Run(context.Background(), "-c", testFile)
+	err := cmd.Run(context.Background(), "-c", testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify file was NOT created
@@ -261,12 +252,9 @@ func TestTouchCommandNoArgs(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with no arguments
-	exitCode, err := cmd.Run(context.Background())
+	err := cmd.Run(context.Background())
 	if err == nil {
 		t.Error("Expected error for no arguments")
-	}
-	if exitCode == 0 {
-		t.Error("Expected non-zero exit code")
 	}
 }
 
@@ -281,12 +269,9 @@ func TestTouchWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
-	exitCode, err := cmd.Run(context.Background(), testFile)
+	err := cmd.Run(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify file was created in the working directory

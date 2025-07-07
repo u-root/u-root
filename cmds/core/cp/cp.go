@@ -29,9 +29,8 @@ import (
 
 func main() {
 	cmd := cp.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
+	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cp: %v\n", err)
 	}
-	os.Exit(exitCode)
 }

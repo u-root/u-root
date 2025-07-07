@@ -119,7 +119,7 @@ func TestRunSimple(t *testing.T) {
 
 			cmd.SetIO(&stdin, &stdout, &stderr)
 
-			exitCode, err := cmd.Run(context.Background(), tt.args...)
+			err := cmd.Run(context.Background(), tt.args...)
 			if tt.wantErr != nil {
 				if err == nil || !errors.Is(err, tt.wantErr) {
 					t.Errorf("Run() = %v, want error %v", err, tt.wantErr)
@@ -129,9 +129,6 @@ func TestRunSimple(t *testing.T) {
 
 			if err != nil {
 				t.Errorf("Run() = %v, want nil", err)
-			}
-			if exitCode != 0 {
-				t.Errorf("Run() exit code = %d, want 0", exitCode)
 			}
 		})
 	}
@@ -148,12 +145,9 @@ func TestCpSrcDirectory(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), tempDir, tempDirTwo)
+	err := cmd.Run(context.Background(), tempDir, tempDirTwo)
 	if err != nil {
 		t.Fatalf("Run() = %v, want nil", err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("Run() exit code = %d, want 0", exitCode)
 	}
 
 	outString := fmt.Sprintf("cp: -r not specified, omitting directory %s", tempDir)
@@ -189,12 +183,9 @@ func TestCpRecursive(t *testing.T) {
 		var stdin bytes.Buffer
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
-		exitCode, err := cmd.Run(context.Background(), "-r", srcDir, dstDir)
+		err := cmd.Run(context.Background(), "-r", srcDir, dstDir)
 		if err != nil {
 			t.Fatalf("Run() = %v, want nil", err)
-		}
-		if exitCode != 0 {
-			t.Fatalf("Run() exit code = %d, want 0", exitCode)
 		}
 
 		// Because dstDir already existed, a new dir was created inside it.
@@ -211,12 +202,9 @@ func TestCpRecursive(t *testing.T) {
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
 		notExistDstDir := filepath.Join(tempDir, "dst-does-not-exist")
-		exitCode, err := cmd.Run(context.Background(), "-r", srcDir, notExistDstDir)
+		err := cmd.Run(context.Background(), "-r", srcDir, notExistDstDir)
 		if err != nil {
 			t.Fatalf("Run() = %v, want nil", err)
-		}
-		if exitCode != 0 {
-			t.Fatalf("Run() exit code = %d, want 0", exitCode)
 		}
 
 		if err := IsEqualTree(cp.Options{}, srcDir, notExistDstDir); err != nil {
