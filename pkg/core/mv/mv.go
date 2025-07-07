@@ -39,8 +39,12 @@ func (c *Command) moveFile(source string, dest string, update bool, noClobber bo
 
 	if noClobber {
 		_, err := os.Lstat(dest)
+		if err == nil {
+			// Destination exists and noClobber is true, so don't overwrite
+			return nil
+		}
 		if !os.IsNotExist(err) {
-			// This is either a real error if something unexpected happen during Lstat or nil
+			// This is a real error (not just "file doesn't exist")
 			return err
 		}
 	}
