@@ -199,8 +199,13 @@ func (c *Command) list(names []string, f flags) error {
 	return nil
 }
 
-// Run executes the ls command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+// Run executes the command with a `context.Background()`.
+func (c *Command) Run(args ...string) error {
+	return c.RunContext(context.Background(), args...)
+}
+
+// Run executes the command.
+func (c *Command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("ls", flag.ContinueOnError)

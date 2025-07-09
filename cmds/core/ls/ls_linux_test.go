@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -42,7 +41,7 @@ func TestListNameLinux(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, &buf, &buf)
 
-	err := cmd.Run(context.Background(), "-l", d)
+	err := cmd.Run("-l", d)
 	if err != nil {
 		t.Fatalf("ls -l %q: %v", d, err)
 	}

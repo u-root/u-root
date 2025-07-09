@@ -21,7 +21,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 
@@ -34,7 +33,7 @@ func init() {
 
 func main() {
 	cmd := touch.New()
-	err := cmd.Run(context.Background(), os.Args[1:]...)
+	err := cmd.Run(os.Args[1:]...)
 	if err != nil {
 		log.Fatal("touch: ", err)
 	}

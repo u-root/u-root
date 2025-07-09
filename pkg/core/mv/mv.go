@@ -105,8 +105,13 @@ func (c *Command) move(files []string, update, noClobber bool) error {
 	return c.mv(files, update, noClobber, todir)
 }
 
-// Run executes the mv command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+// Run executes the command with a `context.Background()`.
+func (c *Command) Run(args ...string) error {
+	return c.RunContext(context.Background(), args...)
+}
+
+// Run executes the command.
+func (c *Command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("mv", flag.ContinueOnError)

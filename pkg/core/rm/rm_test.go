@@ -6,7 +6,6 @@ package rm
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,7 +137,7 @@ func TestRm(t *testing.T) {
 				}
 			}
 
-			err := cmd.Run(context.Background(), args...)
+			err := cmd.Run(args...)
 
 			if tt.want != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.want) {
@@ -171,7 +170,7 @@ func TestRmWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(d)
 
 	// Remove file using relative path
-	err := cmd.Run(context.Background(), "go.txt")
+	err := cmd.Run("go.txt")
 	if err != nil {
 		t.Errorf("Run() = %v, want nil", err)
 	}
@@ -193,7 +192,7 @@ func TestRmInteractive(t *testing.T) {
 
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(context.Background(), "-i", filepath.Join(d, "go.txt"))
+	err := cmd.Run("-i", filepath.Join(d, "go.txt"))
 	if err != nil {
 		t.Errorf("Run() = %v, want nil", err)
 	}
@@ -211,7 +210,7 @@ func TestRmInteractive(t *testing.T) {
 
 	cmd2.SetIO(&stdin2, &stdout2, &stderr2)
 
-	err = cmd2.Run(context.Background(), "-i", filepath.Join(d, "go.txt"))
+	err = cmd2.Run("-i", filepath.Join(d, "go.txt"))
 	if err != nil {
 		t.Errorf("Run() = %v, want nil", err)
 	}
