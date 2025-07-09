@@ -98,8 +98,13 @@ func (c *Command) touchFiles(p params, args []string) error {
 	return errs
 }
 
-// Run executes the touch command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+// Run executes the command with a `context.Background()`.
+func (c *Command) Run(args ...string) error {
+	return c.RunContext(context.Background(), args...)
+}
+
+// Run executes the command.
+func (c *Command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("touch", flag.ContinueOnError)
