@@ -19,16 +19,20 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/rm"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func main() {
 	cmd := rm.New()
 	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "rm: %v\n", err)
+		log.Fatal("rm: ", err)
 	}
 }

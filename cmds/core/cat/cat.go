@@ -19,16 +19,20 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/cat"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func main() {
 	cmd := cat.New()
 	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "cat: %v\n", err)
+		log.Fatal("cat: ", err)
 	}
 }

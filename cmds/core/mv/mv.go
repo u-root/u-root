@@ -16,16 +16,20 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/mv"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func main() {
 	cmd := mv.New()
 	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "mv: %v\n", err)
+		log.Fatal("mv: ", err)
 	}
 }
