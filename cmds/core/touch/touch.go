@@ -22,16 +22,20 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/touch"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func main() {
 	cmd := touch.New()
 	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "touch: %v\n", err)
+		log.Fatal("touch: ", err)
 	}
 }
