@@ -19,17 +19,20 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/u-root/u-root/pkg/core/xargs"
 )
 
+func init() {
+	log.SetFlags(0)
+}
+
 func main() {
 	cmd := xargs.New()
 	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "xargs: %v\n", err)
-		os.Exit(1)
+		log.Fatal("xargs: ", err)
 	}
 }
