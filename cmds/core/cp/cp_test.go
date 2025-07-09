@@ -8,7 +8,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -119,7 +118,7 @@ func TestRunSimple(t *testing.T) {
 
 			cmd.SetIO(&stdin, &stdout, &stderr)
 
-			err := cmd.Run(context.Background(), tt.args...)
+			err := cmd.Run(tt.args...)
 			if tt.wantErr != nil {
 				if err == nil || !errors.Is(err, tt.wantErr) {
 					t.Errorf("Run() = %v, want error %v", err, tt.wantErr)
@@ -145,7 +144,7 @@ func TestCpSrcDirectory(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(context.Background(), tempDir, tempDirTwo)
+	err := cmd.Run(tempDir, tempDirTwo)
 	if err != nil {
 		t.Fatalf("Run() = %v, want nil", err)
 	}
@@ -183,7 +182,7 @@ func TestCpRecursive(t *testing.T) {
 		var stdin bytes.Buffer
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
-		err := cmd.Run(context.Background(), "-r", srcDir, dstDir)
+		err := cmd.Run("-r", srcDir, dstDir)
 		if err != nil {
 			t.Fatalf("Run() = %v, want nil", err)
 		}
@@ -202,7 +201,7 @@ func TestCpRecursive(t *testing.T) {
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
 		notExistDstDir := filepath.Join(tempDir, "dst-does-not-exist")
-		err := cmd.Run(context.Background(), "-r", srcDir, notExistDstDir)
+		err := cmd.Run("-r", srcDir, notExistDstDir)
 		if err != nil {
 			t.Fatalf("Run() = %v, want nil", err)
 		}

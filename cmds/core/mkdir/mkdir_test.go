@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -158,7 +157,7 @@ func TestMkdir(t *testing.T) {
 			}
 			args = append(args, tt.args...)
 
-			got := cmd.Run(context.Background(), args...)
+			got := cmd.Run(args...)
 			if got != nil {
 				if tt.want == nil || got.Error() != tt.want.Error() {
 					t.Errorf("Run() = '%v', want: '%v'", got, tt.want)

@@ -6,7 +6,6 @@ package mkdir
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -183,7 +182,7 @@ func TestMkdirCommand(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test creating a new directory
-	err := cmd.Run(context.Background(), testDir)
+	err := cmd.Run(testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -206,7 +205,7 @@ func TestMkdirCommandWithMode(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with specific mode
-	err := cmd.Run(context.Background(), "-m", "755", testDir)
+	err := cmd.Run("-m", "755", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -233,7 +232,7 @@ func TestMkdirCommandVerbose(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with verbose flag
-	err := cmd.Run(context.Background(), "-v", testDir)
+	err := cmd.Run("-v", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -254,7 +253,7 @@ func TestMkdirCommandParents(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with -p flag (create parents)
-	err := cmd.Run(context.Background(), "-p", testDir)
+	err := cmd.Run("-p", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -274,7 +273,7 @@ func TestMkdirCommandNoArgs(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with no arguments
-	err := cmd.Run(context.Background())
+	err := cmd.Run()
 	if err == nil {
 		t.Error("Expected error for no arguments")
 	}
@@ -291,7 +290,7 @@ func TestMkdirWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
-	err := cmd.Run(context.Background(), testDir)
+	err := cmd.Run(testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -315,7 +314,7 @@ func TestMkdirInvalidMode(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with invalid mode
-	err := cmd.Run(context.Background(), "-m", "invalid", testDir)
+	err := cmd.Run("-m", "invalid", testDir)
 	if err == nil {
 		t.Error("Expected error for invalid mode")
 	}

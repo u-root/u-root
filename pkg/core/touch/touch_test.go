@@ -6,7 +6,6 @@ package touch
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -186,7 +185,7 @@ func TestTouchCommand(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test creating a new file
-	err := cmd.Run(context.Background(), testFile)
+	err := cmd.Run(testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -207,7 +206,7 @@ func TestTouchCommandWithDate(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with specific date
-	err := cmd.Run(context.Background(), "-d", "2021-01-01T00:00:00Z", testFile)
+	err := cmd.Run("-d", "2021-01-01T00:00:00Z", testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -234,7 +233,7 @@ func TestTouchCommandNoCreate(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with -c flag (don't create)
-	err := cmd.Run(context.Background(), "-c", testFile)
+	err := cmd.Run("-c", testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -252,7 +251,7 @@ func TestTouchCommandNoArgs(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with no arguments
-	err := cmd.Run(context.Background())
+	err := cmd.Run()
 	if err == nil {
 		t.Error("Expected error for no arguments")
 	}
@@ -269,7 +268,7 @@ func TestTouchWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
-	err := cmd.Run(context.Background(), testFile)
+	err := cmd.Run(testFile)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

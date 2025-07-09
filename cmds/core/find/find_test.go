@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -106,7 +105,7 @@ func TestFind(t *testing.T) {
 			var stderr bytes.Buffer
 			cmd := find.New()
 			cmd.SetIO(nil, &stdout, &stderr)
-			err := cmd.Run(context.Background(), tt.args...)
+			err := cmd.Run(tt.args...)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("want error got nil")
@@ -132,7 +131,7 @@ func TestFindLong(t *testing.T) {
 	var stderr bytes.Buffer
 	cmd := find.New()
 	cmd.SetIO(nil, &stdout, &stderr)
-	err := cmd.Run(context.Background(), "-l", filepath.Join(tmpDir, "file1"))
+	err := cmd.Run("-l", filepath.Join(tmpDir, "file1"))
 	if err != nil {
 		t.Fatal(err)
 	}

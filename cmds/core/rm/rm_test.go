@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,7 +138,7 @@ func TestRm(t *testing.T) {
 				}
 			}
 
-			err := cmd.Run(context.Background(), args...)
+			err := cmd.Run(args...)
 
 			if tt.want != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.want) {
