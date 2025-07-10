@@ -18,8 +18,7 @@ import (
 func TestParseParamsDate(t *testing.T) {
 	cmd := touch.New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 	// Test valid date
 	err := cmd.Run("-d", "2021-01-01T00:00:00Z", "/tmp/test_touch_date")
@@ -78,8 +77,7 @@ func TestTouchEmptyDir(t *testing.T) {
 
 		cmd := touch.New()
 		var stdout, stderr bytes.Buffer
-		var stdin bytes.Buffer
-		cmd.SetIO(&stdin, &stdout, &stderr)
+		cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 		err := cmd.Run(args...)
 		if test.err != nil {
