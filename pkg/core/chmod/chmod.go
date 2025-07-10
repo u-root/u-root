@@ -23,14 +23,14 @@ const special = 99999
 
 var errBadUsage = errors.New("chmod: chmod [mode] filepath")
 
-// Command implements the chmod command.
-type Command struct {
+// command implements the chmod command.
+type command struct {
 	core.Base
 }
 
 // New creates a new chmod command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -40,7 +40,7 @@ type flags struct {
 	reference string
 }
 
-func (c *Command) changeMode(path string, mode os.FileMode, octval uint64, mask uint64, operator string) error {
+func (c *command) changeMode(path string, mode os.FileMode, octval uint64, mask uint64, operator string) error {
 	path = c.ResolvePath(path)
 
 	// A special value for mask means the mode is fully described
@@ -77,7 +77,7 @@ func (c *Command) changeMode(path string, mode os.FileMode, octval uint64, mask 
 	return nil
 }
 
-func (c *Command) calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uint64, operator string, err error) {
+func (c *command) calculateMode(modeString string) (mode os.FileMode, octval uint64, mask uint64, operator string, err error) {
 	octval, err = strconv.ParseUint(modeString, 8, 32)
 	if err == nil {
 		if octval > 0o777 {
@@ -162,7 +162,7 @@ func (c *Command) calculateMode(modeString string) (mode os.FileMode, octval uin
 	return mode, octval, mask, operator, nil
 }
 
-func (c *Command) run(args []string, f flags) error {
+func (c *command) run(args []string, f flags) error {
 	var mode os.FileMode
 	if len(args) < 1 {
 		return errBadUsage
@@ -223,12 +223,12 @@ func (c *Command) run(args []string, f flags) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("chmod", flag.ContinueOnError)

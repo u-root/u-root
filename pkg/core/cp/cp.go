@@ -54,14 +54,14 @@ var NoFollowSymlinks = Options{
 	NoFollowSymlinks: true,
 }
 
-// Command implements the cp core utility.
-type Command struct {
+// command implements the cp core utility.
+type command struct {
 	core.Base
 }
 
 // New creates a new cp command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -178,7 +178,7 @@ func copyRegularFile(src, dst string, srcfi os.FileInfo) error {
 }
 
 // promptOverwrite ask if the user wants overwrite file
-func (c *Command) promptOverwrite(dst string) (bool, error) {
+func (c *command) promptOverwrite(dst string) (bool, error) {
 	fmt.Fprintf(c.Stderr, "cp: overwrite %q? ", dst)
 	reader := bufio.NewReader(c.Stdin)
 	answer, err := reader.ReadString('\n')
@@ -193,7 +193,7 @@ func (c *Command) promptOverwrite(dst string) (bool, error) {
 	return true, nil
 }
 
-func (c *Command) setupPreCallback(recursive, ask, force bool) func(string, string, os.FileInfo) error {
+func (c *command) setupPreCallback(recursive, ask, force bool) func(string, string, os.FileInfo) error {
 	return func(src, dst string, srcfi os.FileInfo) error {
 		// check if src is dir
 		if !recursive && srcfi.IsDir() {
@@ -229,7 +229,7 @@ func (c *Command) setupPreCallback(recursive, ask, force bool) func(string, stri
 	}
 }
 
-func (c *Command) setupPostCallback(verbose bool) func(src, dst string) {
+func (c *command) setupPostCallback(verbose bool) func(src, dst string) {
 	return func(src, dst string) {
 		if verbose {
 			fmt.Fprintf(c.Stdout, "%q -> %q\n", src, dst)
@@ -238,12 +238,12 @@ func (c *Command) setupPostCallback(verbose bool) func(src, dst string) {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("cp", flag.ContinueOnError)

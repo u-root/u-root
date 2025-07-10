@@ -16,14 +16,14 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-// Command implements the mv command.
-type Command struct {
+// command implements the mv command.
+type command struct {
 	core.Base
 }
 
 // New creates a new mv command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -33,7 +33,7 @@ type flags struct {
 	noClobber bool
 }
 
-func (c *Command) moveFile(source string, dest string, update bool, noClobber bool) error {
+func (c *command) moveFile(source string, dest string, update bool, noClobber bool) error {
 	source = c.ResolvePath(source)
 	dest = c.ResolvePath(dest)
 
@@ -73,7 +73,7 @@ func (c *Command) moveFile(source string, dest string, update bool, noClobber bo
 	return nil
 }
 
-func (c *Command) mv(files []string, update, noClobber, todir bool) error {
+func (c *command) mv(files []string, update, noClobber, todir bool) error {
 	if len(files) == 2 && !todir {
 		// Rename/move a single file
 		if err := c.moveFile(files[0], files[1], update, noClobber); err != nil {
@@ -92,7 +92,7 @@ func (c *Command) mv(files []string, update, noClobber, todir bool) error {
 	return nil
 }
 
-func (c *Command) move(files []string, update, noClobber bool) error {
+func (c *command) move(files []string, update, noClobber bool) error {
 	var todir bool
 	dest := files[len(files)-1]
 	dest = c.ResolvePath(dest)
@@ -106,12 +106,12 @@ func (c *Command) move(files []string, update, noClobber bool) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("mv", flag.ContinueOnError)

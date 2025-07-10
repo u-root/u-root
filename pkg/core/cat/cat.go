@@ -15,14 +15,14 @@ import (
 	"github.com/u-root/u-root/pkg/core"
 )
 
-// Command implements the cat core utility.
-type Command struct {
+// command implements the cat core utility.
+type command struct {
 	core.Base
 }
 
 // New creates a new cat command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -34,7 +34,7 @@ type flags struct {
 var errCopy = fmt.Errorf("error concatenating stdin to stdout")
 
 // cat copies data from reader to writer.
-func (c *Command) cat(reader io.Reader, writer io.Writer) error {
+func (c *command) cat(reader io.Reader, writer io.Writer) error {
 	if _, err := io.Copy(writer, reader); err != nil {
 		return errCopy
 	}
@@ -42,7 +42,7 @@ func (c *Command) cat(reader io.Reader, writer io.Writer) error {
 }
 
 // runCat processes the files and concatenates them to stdout.
-func (c *Command) runCat(args []string) error {
+func (c *command) runCat(args []string) error {
 	if len(args) == 0 {
 		return c.cat(c.Stdin, c.Stdout)
 	}
@@ -72,12 +72,12 @@ func (c *Command) runCat(args []string) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // RunContext executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("cat", flag.ContinueOnError)
