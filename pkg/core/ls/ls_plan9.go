@@ -13,11 +13,11 @@ import (
 )
 
 // addOSSpecificFlags adds OS-specific flags to the flag set.
-func (c *Command) addOSSpecificFlags(fs *flag.FlagSet, f *flags) {
+func (c *command) addOSSpecificFlags(fs *flag.FlagSet, f *flags) {
 	fs.BoolVar(&f.final, "p", false, "Print only the final path element of each file name")
 }
 
-func (c *Command) printFile(stringer ls.Stringer, f file, flags flags) {
+func (c *command) printFile(stringer ls.Stringer, f file, flags flags) {
 	if f.err != nil {
 		fmt.Fprintln(c.Stdout, f.err)
 		return

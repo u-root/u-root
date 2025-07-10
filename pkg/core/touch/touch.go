@@ -16,14 +16,14 @@ import (
 	"github.com/u-root/u-root/pkg/core"
 )
 
-// Command implements the touch core utility.
-type Command struct {
+// command implements the touch core utility.
+type command struct {
 	core.Base
 }
 
 // New creates a new touch command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -43,7 +43,7 @@ type params struct {
 }
 
 // parseParams parses the command parameters and returns a params struct.
-func (c *Command) parseParams(dateTime string, access, modification, create bool) (params, error) {
+func (c *command) parseParams(dateTime string, access, modification, create bool) (params, error) {
 	t := time.Now()
 	if dateTime != "" {
 		var err error
@@ -61,7 +61,7 @@ func (c *Command) parseParams(dateTime string, access, modification, create bool
 }
 
 // touchFiles processes the files according to the parameters.
-func (c *Command) touchFiles(p params, args []string) error {
+func (c *command) touchFiles(p params, args []string) error {
 	var errs error
 	for _, arg := range args {
 		resolvedArg := c.ResolvePath(arg)
@@ -99,12 +99,12 @@ func (c *Command) touchFiles(p params, args []string) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("touch", flag.ContinueOnError)
