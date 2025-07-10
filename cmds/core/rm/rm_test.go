@@ -124,10 +124,7 @@ func TestRm(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := rm.New()
 			var stdout, stderr bytes.Buffer
-			var stdin bytes.Buffer
-			stdin.WriteString(tt.iString)
-
-			cmd.SetIO(&stdin, &stdout, &stderr)
+			cmd.SetIO(strings.NewReader(tt.iString), &stdout, &stderr)
 
 			// Update args to use absolute paths for files
 			args := make([]string, len(tt.args))

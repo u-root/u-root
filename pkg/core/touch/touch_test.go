@@ -181,8 +181,7 @@ func TestTouchCommand(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 	// Test creating a new file
 	err := cmd.Run(testFile)
@@ -202,8 +201,7 @@ func TestTouchCommandWithDate(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 	// Test with specific date
 	err := cmd.Run("-d", "2021-01-01T00:00:00Z", testFile)
@@ -229,8 +227,7 @@ func TestTouchCommandNoCreate(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 	// Test with -c flag (don't create)
 	err := cmd.Run("-c", testFile)
@@ -247,8 +244,7 @@ func TestTouchCommandNoCreate(t *testing.T) {
 func TestTouchCommandNoArgs(t *testing.T) {
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 	// Test with no arguments
 	err := cmd.Run()
@@ -263,8 +259,7 @@ func TestTouchWorkingDir(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
