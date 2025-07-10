@@ -67,8 +67,8 @@ func TestEchoPrompt(t *testing.T) {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
-	cmd := xargs.New().(*xargs.Command)
-	cmd.SetTTY(path)
+	cmd := xargs.New()
+	xargs.SetTTY(cmd, path)
 	cmd.SetIO(strings.NewReader("a b c"), &stdout, &stderr)
 	err = cmd.Run("-n", "1", "-p")
 	if err != nil {

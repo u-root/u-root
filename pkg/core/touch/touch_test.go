@@ -14,7 +14,7 @@ import (
 )
 
 func TestParseParamsDate(t *testing.T) {
-	cmd := New().(*Command)
+	cmd := New().(*command)
 	date := "2021-01-01T00:00:00Z"
 	expected, err := time.Parse(time.RFC3339, date)
 	if err != nil {
@@ -38,7 +38,7 @@ func TestParseParamsDate(t *testing.T) {
 }
 
 func TestParseParams(t *testing.T) {
-	cmd := New().(*Command)
+	cmd := New().(*command)
 	tests := []struct {
 		expected     params
 		access       bool
@@ -140,7 +140,7 @@ func TestTouchEmptyDir(t *testing.T) {
 			args = append(args, filepath.Join(temp, arg))
 		}
 
-		cmd := New().(*Command)
+		cmd := New().(*command)
 		err := cmd.touchFiles(test.p, args)
 		if !errors.Is(err, test.err) {
 			t.Fatalf("touchFiles() expected %v, got %v", test.err, err)

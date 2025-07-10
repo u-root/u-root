@@ -18,14 +18,14 @@ import (
 	"github.com/u-root/u-root/pkg/core"
 )
 
-// Command implements the rm core utility.
-type Command struct {
+// command implements the rm core utility.
+type command struct {
 	core.Base
 }
 
 // New creates a new rm command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -41,7 +41,7 @@ type flags struct {
 const usage = "rm [-Rrvif] file..."
 
 // promptRemove asks the user if they want to remove the file.
-func (c *Command) promptRemove(file string) (bool, error) {
+func (c *command) promptRemove(file string) (bool, error) {
 	fmt.Fprintf(c.Stderr, "rm: remove '%v'? ", file)
 	reader := bufio.NewReader(c.Stdin)
 	answer, err := reader.ReadString('\n')
@@ -52,7 +52,7 @@ func (c *Command) promptRemove(file string) (bool, error) {
 }
 
 // removeFiles removes the specified files according to the flags.
-func (c *Command) removeFiles(files []string, f flags) error {
+func (c *command) removeFiles(files []string, f flags) error {
 	if len(files) < 1 {
 		return fmt.Errorf("%v", usage)
 	}
@@ -107,12 +107,12 @@ func (c *Command) removeFiles(files []string, f flags) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("rm", flag.ContinueOnError)

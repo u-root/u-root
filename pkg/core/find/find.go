@@ -192,14 +192,14 @@ func Find(ctx context.Context, opt ...Set) <-chan *File {
 	return f.files
 }
 
-// Command implements the find core utility.
-type Command struct {
+// command implements the find core utility.
+type command struct {
 	core.Base
 }
 
 // New creates a new find command.
 func New() core.Command {
-	c := &Command{}
+	c := &command{}
 	c.Init()
 	return c
 }
@@ -213,12 +213,12 @@ type flags struct {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
+func (c *command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("find", flag.ContinueOnError)

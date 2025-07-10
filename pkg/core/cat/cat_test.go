@@ -63,7 +63,7 @@ func TestCat(t *testing.T) {
 }
 
 func TestCatPipe(t *testing.T) {
-	cmd := New().(*Command) // Type assertion to access internal methods
+	cmd := New().(*command) // Type assertion to access internal methods
 	var inputbuf bytes.Buffer
 	teststring := "testdata"
 	fmt.Fprintf(&inputbuf, "%s", teststring)
