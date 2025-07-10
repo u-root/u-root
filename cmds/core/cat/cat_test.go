@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/iotest"
 
@@ -113,17 +114,14 @@ func TestRunFilesError(t *testing.T) {
 func TestRunNoArgs(t *testing.T) {
 	cmd := cat.New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	inputdata := "teststring"
-	fmt.Fprintf(&stdin, "%s", inputdata)
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(strings.NewReader("teststring"), &stdout, &stderr)
 
 	err := cmd.Run()
 	if err != nil {
 		t.Error(err)
 	}
-	if stdout.String() != inputdata {
-		t.Errorf("Want: %q Got: %q", inputdata, stdout.String())
+	if stdout.String() != "teststring" {
+		t.Errorf("Want: %q Got: %q", "teststring", stdout.String())
 	}
 }
 
@@ -166,9 +164,7 @@ func TestCatDash(t *testing.T) {
 
 	cmd := cat.New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	stdin.WriteString("line3\n")
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(strings.NewReader("line3\n"), &stdout, &stderr)
 
 	err = cmd.Run(f1, "-", f2)
 	if err != nil {

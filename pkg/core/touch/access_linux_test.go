@@ -28,8 +28,7 @@ func TestAccess(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 
 	err = cmd.Run("-a", "-d", "2023-01-01T00:00:00Z", f.Name())
 	if err != nil {
