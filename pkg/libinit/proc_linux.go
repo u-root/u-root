@@ -5,11 +5,15 @@
 package libinit
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
+	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/sys/unix"
 )
 
@@ -42,23 +46,32 @@ func WithTTYControl(ctty bool) CommandModifier {
 	}
 }
 
-func WithMultiTTY(mtty bool, openFn func([]string) ([]io.Writer, error), ttyNames []string) CommandModifier {
+func WithMultiTTY(mtty bool, openFn func([]string) ([]*os.File, error), ttyNames []string) CommandModifier {
 	return func(c *exec.Cmd) {
 		if mtty {
 			ww, err := openFn(ttyNames)
 			if err != nil {
-				log.Printf("%q: open devices for multi-TTY output: %v", c.Path, err)
-				log.Printf("falling back to default stdout and stderr")
 				return
 			}
 
-			// If no TTYs are available, just return.
-			if len(ww) == 0 {
-				return
-			}
+			switch len(ww) {
+			case 0:
+				c.Stdout, c.Stderr = os.Stdout, os.Stderr
+			case 1:
+				c.Stdout, c.Stderr = ww[0], ww[0]
+			default:
+				writers := make([]io.Writer, len(ww))
+				for i, w := range ww {
+					writers[i] = w
+				}
+				c.Stdout = io.MultiWriter(writers...)
+				c.Stderr = io.MultiWriter(writers...)
 
-			c.Stdout = io.MultiWriter(ww...)
-			c.Stderr = io.MultiWriter(ww...)
+				// Save this for later use
+				for i := 0; i < len(ww); i++ {
+					c.Env = append(c.Env, fmt.Sprintf("tty%d=%s", i, ww[i].Name()))
+				}
+			}
 		}
 	}
 }
@@ -100,10 +113,65 @@ func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int 
 
 		cmdCount++
 		debug("Trying to run %v", cmd)
+
+		// Set up PTM
+		m, s, err := pty.NewPTMS()
+		if err != nil {
+			debug("Error getting PTY: %v", err)
+			return 0
+		}
+
+		cmd.Stdin = s
+
+		// Launch go routine to copy output from the command to the PTM
+		for _, r := range cmd.Env {
+			if strings.HasPrefix(r, "tty") {
+				tty := strings.Split(r, "=")[1]
+
+				debug("Opening TTY %v", tty)
+
+				// Open the TTY
+				t, err := os.OpenFile(tty, os.O_RDWR, 0)
+				if err != nil {
+					debug("Error opening TTY: %v", err)
+					continue
+				}
+
+				// Set to Raw mode
+				if err := termios.MakeRawFile(t); err != nil {
+					// Let's still continue if we can't set the TTY to raw mode
+					debug("Error setting TTY to raw mode: %v", err)
+				}
+
+				go func() {
+					for {
+						if _, err := io.Copy(m, t); err != nil {
+							debug("Error copying output from command to PTM: %v", err)
+						}
+					}
+				}()
+			}
+		}
+
+		if len(cmd.Env) > 0 {
+			// clear the environment, otherwise $PATH is not correctly set.
+			cmd.Env = nil
+		} else {
+			// If no tty has been set, lets fall back to os.Stdin
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		}
+
 		if err := cmd.Start(); err != nil {
 			log.Printf("Error starting %v: %v", cmd, err)
 			continue
 		}
+
+		// Close the PTM and PTS after the command exits
+		go func() {
+			cmd.Wait()
+			m.Close()
+			s.Close()
+		}()
 
 		for {
 			var s unix.WaitStatus
