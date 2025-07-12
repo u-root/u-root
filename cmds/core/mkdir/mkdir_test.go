@@ -7,12 +7,12 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/u-root/u-root/pkg/core/mkdir"
 	"golang.org/x/sys/unix"
 )
 
@@ -125,14 +125,16 @@ func TestMkdir(t *testing.T) {
 			wantMode: "dutrwxrwxrwx",
 		},
 		{
-			name:     "Default createtion mode",
+			name:     "Default creation mode",
 			args:     []string{filepath.Join(d, "stub14")},
 			wantMode: "drwxr-xr-x",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf = bytes.NewBuffer(nil)
-			log.SetOutput(buf)
+			cmd := mkdir.New()
+			var stdout, stderr bytes.Buffer
+			cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+
 			// don't depend on system umask value, if mode is not specified
 			if tt.flags.mode == "" {
 				m := unix.Umask(unix.S_IWGRP | unix.S_IWOTH)
@@ -140,14 +142,29 @@ func TestMkdir(t *testing.T) {
 					unix.Umask(m)
 				}()
 			}
-			if got := mkdir(tt.flags.mode, tt.flags.mkall, tt.flags.verbose, tt.args); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("mkdir() = '%v', want: '%v'", got, tt.want)
+
+			// Build command arguments
+			var args []string
+			if tt.flags.mode != "" {
+				args = append(args, "-m", tt.flags.mode)
+			}
+			if tt.flags.mkall {
+				args = append(args, "-p")
+			}
+			if tt.flags.verbose {
+				args = append(args, "-v")
+			}
+			args = append(args, tt.args...)
+
+			got := cmd.Run(args...)
+			if got != nil {
+				if tt.want == nil || got.Error() != tt.want.Error() {
+					t.Errorf("Run() = '%v', want: '%v'", got, tt.want)
 				}
 			} else {
-				if buf.String() != "" {
-					if !strings.Contains(buf.String(), fmt.Sprintf("%s: file exist", filepath.Join(d, "stub0"))) {
-						t.Errorf("Stdout = '%v', want: 'Date + Timestamp' '%v'", buf.String(), tt.wantPrint)
+				if stderr.String() != "" {
+					if !strings.Contains(stderr.String(), "file exist") {
+						t.Errorf("Stderr = '%v', want to contain 'file exist'", stderr.String())
 					}
 				}
 				for _, name := range tt.args {

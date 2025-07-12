@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/hugelgupf/vmtest/guest"
-	"github.com/u-root/u-root/pkg/ls"
+	lscore "github.com/u-root/u-root/pkg/core/ls"
 	"golang.org/x/sys/unix"
 )
 
@@ -35,21 +35,17 @@ func TestListNameLinux(t *testing.T) {
 		t.Fatalf("err in unix.Mknod: %v", err)
 	}
 
-	var c cmd
-	// Setting the flags
-	c.long = true
 	// Running the tests
 	// Write output in buffer.
 	var buf bytes.Buffer
-	var s ls.Stringer = ls.NameStringer{}
-	if c.quoted {
-		s = ls.QuotedStringer{}
+	cmd := lscore.New()
+	cmd.SetIO(nil, &buf, &buf)
+
+	err := cmd.Run("-l", d)
+	if err != nil {
+		t.Fatalf("ls -l %q: %v", d, err)
 	}
-	if c.long {
-		s = ls.LongStringer{Human: c.human, Name: s}
-	}
-	c.w = &buf
-	_ = c.listName(s, d, false)
+
 	if !strings.Contains(buf.String(), "1110, 74616") {
 		t.Errorf("Expected value: %s, got: %s", "1110, 74616", buf.String())
 	}

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package xargs
 
 import (
 	"bytes"
@@ -12,13 +12,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/xargs"
 )
 
 func TestCommandNotFound(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
+	cmd := New()
 	cmd.SetIO(strings.NewReader("hello world"), &stdout, &stderr)
 	err := cmd.Run("-n", "1", "commandnotfound", "arg1")
 	if !errors.Is(err, exec.ErrNotFound) {
@@ -28,7 +26,7 @@ func TestCommandNotFound(t *testing.T) {
 
 func TestEcho(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
+	cmd := New()
 	cmd.SetIO(strings.NewReader("hello world"), &stdout, &stderr)
 	err := cmd.Run()
 	if err != nil {
@@ -42,7 +40,7 @@ func TestEcho(t *testing.T) {
 
 func TestEchoWithMaxArgs(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
+	cmd := New()
 	cmd.SetIO(strings.NewReader("a b c d e f g"), &stdout, &stderr)
 	err := cmd.Run("-n", "3", "-t")
 	if err != nil {
@@ -67,8 +65,8 @@ func TestEchoPrompt(t *testing.T) {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
-	cmd := xargs.New()
-	xargs.SetTTY(cmd, path)
+	cmd := New().(*command)
+	SetTTY(cmd, path)
 	cmd.SetIO(strings.NewReader("a b c"), &stdout, &stderr)
 	err = cmd.Run("-n", "1", "-p")
 	if err != nil {
@@ -82,7 +80,7 @@ func TestEchoPrompt(t *testing.T) {
 
 func TestNullDelimiter(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
+	cmd := New()
 	cmd.SetIO(strings.NewReader("hello\x00world"), &stdout, &stderr)
 	err := cmd.Run("-0")
 	if err != nil {
