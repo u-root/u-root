@@ -190,12 +190,14 @@ type ResourceInfo struct {
 }
 
 type ResourceRegions struct {
-	MMIO64Base  uint64
-	MMIO64Limit uint64
-	MMIO32Base  uint64
-	MMIO32Limit uint64
-	IOPortBase  uint64
-	IOPortLimit uint64
+	MMIO64Base uint64
+	MMIO64End  uint64
+	MMIO32Base uint64
+	MMIO32End  uint64
+	IOPortBase uint64
+	IOPortEnd  uint64
+	StartBus   uint32
+	EndBus     uint32
 }
 
 const (
@@ -208,18 +210,17 @@ const (
 )
 
 const (
-	PCISearchPath   = "/sys/bus/pci/devices/"
+	PCISearchPath   = "/sys/devices/"
 	PCIMMIO64Attr   = 0x140204
 	PCIMMIO32Attr   = 0x40200
 	PCIIOPortAttr   = 0x40100
+	PCIIOPortRes    = 0x100
 	PCIMMIOReadOnly = 0x4000
 	PCIMMIO64Type   = "MMIO64"
 	PCIMMIO32Type   = "MMIO32"
 	PCIIOPortType   = "IOPORT"
 
-	PCIMMIO64InvalidBase = 0xFFFF_FFFF_FFFF_FFFF
-	PCIMMIO32InvalidBase = 0xFFFF_FFFF
-	PCIIOPortInvalidBase = 0xFFFF
+	PCIInvalidBase = 0xFFFF_FFFF_FFFF_FFFF
 )
 
 type FdtLoad struct {
@@ -263,6 +264,7 @@ var (
 	ErrSMBIOS3NotFound             = fmt.Errorf("no smbios3 region found")
 	ErrDTRsdpLenOverBound          = fmt.Errorf("rsdp table length too large")
 	ErrDTRsdpTableNotFound         = fmt.Errorf("no acpi rsdp table found")
+	ErrRsvdMemoryMapNotFound       = fmt.Errorf("failed to retrieve reserved memory map")
 	ErrAlignPadRange               = errors.New("failed to align pad size, out of range")
 	ErrCPUAddressConvert           = errors.New("failed to convert physical bits size")
 	ErrCPUAddressRead              = errors.New("failed to read 'address sizes'")
@@ -768,85 +770,249 @@ func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	return dt.NewNode("reserved-memory", dt.WithChildren(rsvdNodes...))
 }
 
-func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) (*ResourceRegions, error) {
-	domainIDHex := fmt.Sprintf("%04x", item.PCISegGrp)
+func getReservedMemoryMap(mm kexec.MemoryMap) (kexec.MemoryMap, error) {
+	var rsvd kexec.MemoryMap
 
-	var MMIO64Base uint64 = PCIMMIO64InvalidBase
-	var MMIO32Base uint64 = PCIMMIO32InvalidBase
-	var IOPortBase uint64 = PCIIOPortInvalidBase
-	var mmio64End uint64
-	var mmio32End uint64
-	var ioPortEnd uint64
-
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	for _, m := range mm {
+		if m.Type.String() == "Reserved" {
+			rsvd = append(rsvd, m)
 		}
+	}
 
-		deviceName := filepath.Base(path)
-		parts := strings.Split(deviceName, ":")
-		// deviceName fetched from filepath can be separated into 3 parts:
-		// 0000:00:00.0 which is DOMAIN_ID:BUS_ID:DEVICE_ID:FUNCTION_ID
-		// To retrieve the memory resource regions for 64-bit/32-bit MMIO
-		// and IO, we need to ensure:
-		// 1. Domain ID matches
-		// 2. Bus ID is valid
-		if len(parts) != 3 || parts[0] != domainIDHex {
-			// Skip unmatched Bus number
-			return nil
+	return rsvd, nil
+}
+
+func getBusNumber(bus uint64) uint32 {
+	//According to PCI spec, bus number never exceeds 255
+	//Its safe to get low 32-bit value for bus number
+	return uint32(bus & 0x0000_0000_FFFF_FFFF)
+}
+
+func skipReservedRange(mm kexec.MemoryMap, base uintptr, attr uint64) bool {
+	if attr&PCIIOPortRes == PCIIOPortRes {
+		return false
+	}
+
+	// Skip ReadOnly MMIO, this is ROM region
+	if attr&PCIMMIOReadOnly == PCIMMIOReadOnly {
+		return true
+	}
+
+	// MemoryMap passed in is types of Reserved Memory, we need to skip
+	// memory region which is exposed by PCI device BAR address if this
+	// memory region resides in Reserved Memory Maps.
+	//
+	// This case happens in following scenario:
+	// 1. Memory region which is exposed in PCI device BAR address and
+	// indicated its available
+	// 2. Firmware or BIOS reserved above memory region as "Reserved" type.
+	for _, m := range mm {
+		// It safe to convert base from uint64 to uintptr, since uintptr covers
+		// 64-bits as described in buildin.go:
+		// uintptr is an integer type that is large enough to hold the bit pattern of
+		// any pointer.
+		if m.Range.Contains(base) {
+			return true
 		}
+	}
 
-		if bus, err := strconv.ParseUint(parts[1], 16, 64); err != nil {
-			// Should not happen, if failed to parse Bus number, return error directly
-			return err
-		} else if (bus >= uint64(item.StartBus)) && (bus <= uint64(item.EndBus)) {
-			resourcePath := filepath.Join(path, "resource")
-			resources, err := retrieveDeviceResources(resourcePath)
-			if err != nil {
-				return nil // Continue scanning other devices
+	return false
+}
+
+// isValidPCIDeviceName validates if folder name is a valid PCI BDF format
+func isValidPCIDeviceName(name string) bool {
+	// In /sys/devices/pci$DOMAINID:$BUSID, there exists two types of folders,
+	// if current device is a PCI bridge device, there exists a folder named
+	// as BDF:pciexx folder, and also next BUS ID.
+	// For instance, 0000:00:1c.0 is a PCI bridge device, it contains folders:
+	//     0000:00:1c.0:pcie002
+	//     0000:00:1c.0:pcie010
+	//     0000:01:00.0
+	// And the PCI hierarchy is like:
+	// -[0000:00]-+-00.0
+	//            ... (omitted)
+	//            +-1c.0-[01]----00.0
+	// In above case, 0000:00:1c.0:pcie002 is not a valid PCI device name.
+	if len(name) != 12 {
+		return false
+	}
+
+	parts := strings.Split(name, ":")
+	if len(parts) != 3 {
+		return false
+	}
+
+	// Validate each part of the name
+	if len(parts[0]) != 4 || // domain (32 bits)
+		len(parts[1]) != 2 || // bus (16 bits)
+		len(parts[2]) != 4 { // device.function (8bits.4bits format)
+		return false
+	}
+
+	// Validate device.function format
+	devFunc := strings.Split(parts[2], ".")
+	return len(devFunc) == 2 && len(devFunc[0]) == 2 && len(devFunc[1]) == 1
+}
+
+// updateResourceRanges updates the resource ranges based on the resource type
+func updateResourceRanges(resourceRegion *ResourceRegions, resType string, base, end uint64) {
+	switch resType {
+	case PCIMMIO64Type:
+		resourceRegion.MMIO64Base = min(base, resourceRegion.MMIO64Base)
+		resourceRegion.MMIO64End = max(align.UpPage(end)-1, resourceRegion.MMIO64End)
+	case PCIMMIO32Type:
+		resourceRegion.MMIO32Base = min(base, resourceRegion.MMIO32Base)
+		resourceRegion.MMIO32End = max(align.UpPage(end)-1, resourceRegion.MMIO32End)
+	case PCIIOPortType:
+		resourceRegion.IOPortBase = min(base, resourceRegion.IOPortBase)
+		resourceRegion.IOPortEnd = max(end, resourceRegion.IOPortEnd)
+	}
+}
+
+// processDeviceResources processes the resources of a device and updates the resource ranges
+func processDeviceResources(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
+	resourcePath := filepath.Join(dirPath, "resource")
+	resources, err := retrieveDeviceResources(resourcePath, rsvdMem)
+	if err != nil {
+		return nil // Continue scanning other devices
+	}
+
+	// Update resource ranges
+	for _, res := range resources {
+		if base, err := strconv.ParseUint(res.BaseAddress, 0, 64); err != nil {
+			continue
+		} else if end, err := strconv.ParseUint(res.EndAddress, 0, 64); err != nil {
+			continue
+		} else {
+			// This scenario occurs when the 'base, end and attribute' are all zero.
+			// If base and end are all zero, it means no resource assigned to this device.
+			if (base != 0) && (end != 0) {
+				updateResourceRanges(resourceRegion, res.Type, base, end)
 			}
-			for _, res := range resources {
-				if base, err := strconv.ParseUint(res.BaseAddress, 0, 64); err != nil {
-					// Should not happen, if failed to parse uint, skip this region
-					continue
-				} else if end, err := strconv.ParseUint(res.EndAddress, 0, 64); err != nil {
-					// Should not happen, if failed to parse uint, skip this region
-					continue
-				} else {
-					// Region found, merge it to domain resource region
-					switch res.Type {
-					case PCIMMIO64Type:
-						MMIO64Base = min(base, MMIO64Base)
-						mmio64End = max(end, mmio64End)
-					case PCIMMIO32Type:
-						MMIO32Base = min(base, MMIO32Base)
-						mmio32End = max(end, mmio32End)
-					case PCIIOPortType:
-						IOPortBase = min(base, IOPortBase)
-						ioPortEnd = max(end, ioPortEnd)
-					}
-				}
-			}
 		}
+	}
+	return nil
+}
 
+// processSubdirectories processes all subdirectories of a given path
+func processSubdirectories(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
+	subDirs, err := os.ReadDir(dirPath)
+	if err != nil {
 		return nil
-	})
+	}
 
+	for _, subDir := range subDirs {
+		if !subDir.IsDir() {
+			continue
+		}
+
+		subName := subDir.Name()
+		if !isValidPCIDeviceName(subName) {
+			continue
+		}
+
+		// Parse bus ID and update EndBus if needed
+		parts := strings.Split(subName, ":")
+		if bus, err := strconv.ParseUint(parts[1], 16, 64); err == nil {
+			if getBusNumber(bus) > resourceRegion.EndBus {
+				resourceRegion.EndBus = getBusNumber(bus)
+			}
+		}
+
+		// Process resources from subdirectory
+		if err := processDeviceResources(filepath.Join(dirPath, subName), resourceRegion, rsvdMem); err != nil {
+			continue
+		}
+
+		// Recursively process the subdirectory
+		if err := processDir(filepath.Join(dirPath, subName), resourceRegion, rsvdMem); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// processDir processes a single directory and its contents
+func processDir(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
+	deviceName := filepath.Base(dirPath)
+	parts := strings.Split(deviceName, ":")
+
+	// Skip if not a valid PCI device name format
+	if len(parts) != 3 || len(deviceName) != 12 {
+		return nil
+	}
+
+	// Parse bus ID and update EndBus if needed
+	bus, err := strconv.ParseUint(parts[1], 16, 64)
+	if err != nil {
+		return err
+	}
+
+	// Update EndBus if this bus is higher
+	if getBusNumber(bus) > resourceRegion.EndBus {
+		resourceRegion.EndBus = getBusNumber(bus)
+	}
+
+	// Process resources from current directory
+	if err := processDeviceResources(dirPath, resourceRegion, rsvdMem); err != nil {
+		return err
+	}
+
+	// Process subdirectories
+	return processSubdirectories(dirPath, resourceRegion, rsvdMem)
+}
+
+func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) ([]*ResourceRegions, error) {
+	domainIDHex := fmt.Sprintf("%04x", item.PCISegGrp)
+	var resourceRegions []*ResourceRegions
+
+	mm, err := kexecMemoryMapFromIOMem()
+	if err != nil {
+		return nil, ErrRsvdMemoryMapNotFound
+	}
+
+	rsvdMem, err := getReservedMemoryMap(mm)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResourceRegions{
-		MMIO64Base:  MMIO64Base,
-		MMIO64Limit: mmio64End - MMIO64Base + 1,
-		MMIO32Base:  MMIO32Base,
-		MMIO32Limit: mmio32End - MMIO32Base + 1,
-		IOPortBase:  IOPortBase,
-		IOPortLimit: ioPortEnd - IOPortBase + 1,
-	}, nil
+	// Start processing from /sys/devices/pci$DOMAINID:$BUSID
+	for bus := uint32(item.StartBus); bus <= uint32(item.EndBus); bus++ {
+		pciPath := filepath.Join(path, fmt.Sprintf("pci%s:%02x", domainIDHex, bus))
+
+		// Check if the bus directory exists
+		if _, err := os.Stat(pciPath); os.IsNotExist(err) {
+			continue
+		}
+
+		// Create a new resource region for this bus
+		resourceRegion := &ResourceRegions{
+			MMIO64Base: PCIInvalidBase,
+			MMIO32Base: PCIInvalidBase,
+			IOPortBase: PCIInvalidBase,
+			StartBus:   bus,
+			EndBus:     bus,
+		}
+
+		// Start processing from the root path
+		if err = filepath.Walk(pciPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			return processDir(path, resourceRegion, rsvdMem)
+		}); err != nil {
+			return nil, err
+		}
+
+		// Add the resource region to our collection
+		resourceRegions = append(resourceRegions, resourceRegion)
+	}
+
+	return resourceRegions, nil
 }
 
-func retrieveDeviceResources(resourcePath string) ([]ResourceInfo, error) {
+func retrieveDeviceResources(resourcePath string, mm kexec.MemoryMap) ([]ResourceInfo, error) {
 	contentBytes, err := os.ReadFile(resourcePath)
 	if err != nil {
 		return nil, err
@@ -873,23 +1039,27 @@ func retrieveDeviceResources(resourcePath string) ([]ResourceInfo, error) {
 				continue
 			} else {
 				var resourceType string
-				if attrInt&PCIMMIOReadOnly != 0 {
-					// Skip ReadOnly MMIO, this is ROM region
+				base64, err := strconv.ParseUint(base, 0, 64)
+				if err != nil || base64 == 0 {
 					continue
 				}
 
+				// Skip corner case when parsing resource region and attribute.
+				if skip := skipReservedRange(mm, uintptr(base64), attrInt); skip {
+					continue
+				}
+
+				// Special case to adapt TianoCore EDK2 logic:
+				// Base address of memory region with attribute of '64bit' or '64bit pref'
+				// should be higher than 32bit, however, some platforms provide 64-bit MMIO
+				// with all zero in high 32 bits, it triggers assertation in EDK2 since this
+				// base address is actual a 32-bit address. To resolve this issue, convert
+				// attribute from 64bit to 32bit, and merge it with other 32bit memory regions.
+				if (attrInt&PCIMMIO64Attr == PCIMMIO64Attr) && (base64>>32 == 0) {
+					attrInt = PCIMMIO32Attr
+				}
+
 				if attrInt&PCIMMIO64Attr == PCIMMIO64Attr {
-					base64, err := strconv.ParseUint(base, 0, 64)
-					if err == nil {
-						// Some platform provides 64-bit MMIO with all zero in high 32 bits,
-						// it leads to huge MMIO region for 64-bit, and triggers assertation
-						// in EDK2 since it is actual a 32-bit address, not a 64-bit address.
-						//
-						// Skip this scenario to address above issue.
-						if base64>>32 == 0 {
-							continue
-						}
-					}
 					resourceType = PCIMMIO64Type
 				} else if attrInt&PCIMMIO32Attr == PCIMMIO32Attr {
 					resourceType = PCIMMIO32Type
@@ -947,7 +1117,7 @@ func fetchACPIMCFGData(data []byte) ([]MCFGBaseAddressAllocation, error) {
 	return mcfgDataArray, nil
 }
 
-func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) (*dt.Node, error) {
+func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) ([]*dt.Node, error) {
 	high64 := func(val uint64) uint32 {
 		return uint32(val >> 32)
 	}
@@ -956,30 +1126,57 @@ func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) (*dt.N
 		return uint32(val & 0x0000_0000_FFFF_FFFF)
 	}
 
-	resource, err := retrieveRootBridgeResources(path, item)
+	resources, err := retrieveRootBridgeResources(path, item)
 	if err != nil {
 		return nil, err
 	}
 
-	return dt.NewNode("pci-rb", dt.WithProperty(
-		dt.PropertyString("compatible", "pci-rb"),
-		dt.PropertyU64("reg", uint64(item.BaseAddr)),
-		dt.PropertyU32Array("bus-range", []uint32{uint32(item.StartBus), uint32(item.EndBus)}),
-		dt.PropertyU32Array("ranges", []uint32{
-			0x300_0000, // 64BITS
-			high64(resource.MMIO64Base), low64(resource.MMIO64Base),
-			0x0, 0x0,
-			high64(resource.MMIO64Limit), low64(resource.MMIO64Limit),
-			0x200_0000, // 32BITS
-			high64(resource.MMIO32Base), low64(resource.MMIO32Base),
-			0x0, 0x0,
-			high64(resource.MMIO32Limit), low64(resource.MMIO32Limit),
-			0x100_0000, // IO
-			high64(resource.IOPortBase), low64(resource.IOPortBase),
-			0x0, 0x0,
-			high64(resource.IOPortLimit), low64(resource.IOPortLimit),
-		}),
-	)), nil
+	var nodes []*dt.Node
+	for _, resource := range resources {
+		// The initial value of MMIO64Base, MMIO32Base, IOPortBase is set
+		// as invalid value. If the base address is valid, the limit is
+		// calculated as end address - base address + 1. Otherwise, the
+		// limit is set as 0.
+		var MMIO64Limit uint64
+		var MMIO32Limit uint64
+		var IOPortLimit uint64
+
+		if resource.MMIO64Base != PCIInvalidBase {
+			MMIO64Limit = resource.MMIO64End - resource.MMIO64Base + 1
+		}
+
+		if resource.MMIO32Base != PCIInvalidBase {
+			MMIO32Limit = resource.MMIO32End - resource.MMIO32Base + 1
+		}
+
+		if resource.IOPortBase != PCIInvalidBase {
+			IOPortLimit = resource.IOPortEnd - resource.IOPortBase + 1
+		}
+
+		node := dt.NewNode("pci-rb", dt.WithProperty(
+			dt.PropertyString("compatible", "pci-rb"),
+			dt.PropertyU64("reg", uint64(item.BaseAddr)),
+			dt.PropertyU32Array("bus-range", []uint32{uint32(resource.StartBus), uint32(resource.EndBus)}),
+			dt.PropertyU32Array("ranges", []uint32{
+				0x300_0000, // 64BITS
+				high64(resource.MMIO64Base), low64(resource.MMIO64Base),
+				0x0, 0x0,
+				high64(MMIO64Limit), low64(MMIO64Limit),
+				0x200_0000, // 32BITS
+				high64(resource.MMIO32Base), low64(resource.MMIO32Base),
+				0x0, 0x0,
+				high64(MMIO32Limit), low64(MMIO32Limit),
+				0x100_0000, // IO
+				high64(resource.IOPortBase), low64(resource.IOPortBase),
+				0x0, 0x0,
+				high64(IOPortLimit), low64(IOPortLimit),
+			}),
+		))
+
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
 }
 
 func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
@@ -995,13 +1192,35 @@ func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 		return nil, err
 	}
 
+	/*
+	 * Create PCI Root Bridge nodes based on information retrieved from device hierarchy
+	 * information from /sys/devices/pci*.
+	 *
+	 * Command 'lspci -t' can be used to get the hierarchy of PCI devices, for instance:
+	 * Some information is omitted for brevity.
+	 * \-[0000:00]-+-00.0
+	 *      +-1c.0-[01]--+-00.0
+	 *                   \-00.1
+	 *      +-1c.5-[03-04]----00.0-[04]----00.0
+	 * In above case:
+	 *	bus 01 is connected to bus 00 via device 0000:00.1c.0 (bridge device)
+	 *	bus 03 and 04 are connected to bus 00 via device 0000:00.1c.5 (bridge device)
+	 *
+	 * Corresponding device node layout in /sys/devices/pci* is as follows:
+	 *  /sys/devices/pci0000:00/0000:00:1c.0/0000:01:00.0
+	 *  /sys/devices/pci0000:00/0000:00:1c.5/0000:03:00.0/0000:04:00.0
+	 *
+	 * In this case, we need to recrusively process the subdirectory of
+	 * /sys/devices/pci0000:00 to retrieve the resource region information
+	 * about MMIO64/MMIO32/IOPort, and the bus region information.
+	 */
 	for _, item := range mcfgData {
 		rbNode, err := createPCIRootBridgeNode(PCISearchPath, item)
 		if err != nil {
 			return nil, err
 		}
 
-		rbNodes = append(rbNodes, rbNode)
+		rbNodes = append(rbNodes, rbNode...)
 
 	}
 	return rbNodes, nil
