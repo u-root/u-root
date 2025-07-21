@@ -92,7 +92,7 @@ func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int)
 	}
 
 	payload := make([]byte, 30)
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		payload[i] = uint8(i + 64)
 	}
 

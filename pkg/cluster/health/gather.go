@@ -38,7 +38,6 @@ func (g *Gather) Run(cmd string, args ...string) ([]Stat, error) {
 	c := make(chan Stat, len(g.Nodes.List))
 	V("gather: run node %v, %v via scheduler %v", cmd, args, g.cmd)
 	for _, node := range g.Nodes.List {
-		node := node
 		V("Run on %v", node)
 		eg.Go(func() error {
 			cmdargs := append(append(g.args, node, cmd), args...)

@@ -19,7 +19,7 @@ import (
 //
 // It puts your information somewhere for safekeeping.
 type Logger interface {
-	Printf(format string, v ...interface{})
+	Printf(format string, v ...any)
 }
 
 // Log is a Logger that prints to stderr, like the default log package.
@@ -27,7 +27,7 @@ var Log Logger = log.New(os.Stderr, "", log.LstdFlags)
 
 type emptyLogger struct{}
 
-func (emptyLogger) Printf(format string, v ...interface{}) {}
+func (emptyLogger) Printf(format string, v ...any) {}
 
 // Null is a logger that prints nothing.
 var Null Logger = emptyLogger{}

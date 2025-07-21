@@ -118,7 +118,7 @@ func (p *PartitionTable) String() string {
 	return string(b)
 }
 
-func errAppend(err error, s string, a ...interface{}) error {
+func errAppend(err error, s string, a ...any) error {
 	var p string
 	if err != nil {
 		p = err.Error() + "; "

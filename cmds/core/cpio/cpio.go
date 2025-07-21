@@ -39,7 +39,7 @@ import (
 )
 
 var (
-	debug  = func(string, ...interface{}) {}
+	debug  = func(string, ...any) {}
 	d      = flag.Bool("v", false, "Debug prints")
 	format = flag.String("H", "newc", "format")
 

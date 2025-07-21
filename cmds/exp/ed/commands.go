@@ -117,10 +117,7 @@ func cmdScroll(ctx *Context) (e error) {
 		}
 		state.winSize = win
 	}
-	end := start + state.winSize - 1
-	if end > buffer.Len()-1 {
-		end = buffer.Len() - 1
-	}
+	end := min(start+state.winSize-1, buffer.Len()-1)
 	var ls []string
 	if ls, e = buffer.Get([2]int{start, end}); e != nil {
 		return

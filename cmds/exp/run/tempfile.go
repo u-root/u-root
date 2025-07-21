@@ -53,7 +53,7 @@ func TempFile(dir, format string) (f *os.File, err error) {
 	}
 
 	nconflict := 0
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		name := fmt.Sprintf(format, nextSuffix())
 		name = filepath.Join(dir, name)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)

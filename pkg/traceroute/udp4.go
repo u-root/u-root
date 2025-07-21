@@ -118,7 +118,7 @@ func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint1
 	}
 
 	payload := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		payload[i] = uint8(i + 64)
 	}
 	udp.Length = uint16(len(payload) + 8)

@@ -27,12 +27,12 @@ var (
 )
 
 var (
-	groupedDeclOnlyIntf interface{}
+	groupedDeclOnlyIntf any
 	nonConstantAssign   = fmt.Errorf("foo")
 )
 
 var (
-	nil1 interface{} = nil
+	nil1 any = nil
 )
 
 var (
@@ -45,7 +45,7 @@ func debug() string {
 	return "hahaha"
 }
 
-type someStuff interface{}
+type someStuff any
 type someStruct struct{}
 
 var (
@@ -133,7 +133,7 @@ func verify() error {
 		return fmt.Errorf("f3 is non-nil, want nil")
 	}
 
-	if nil1 != interface{}(nil) {
+	if nil1 != any(nil) {
 		return fmt.Errorf("nil1 is %v, want nil interface", nil1)
 	}
 

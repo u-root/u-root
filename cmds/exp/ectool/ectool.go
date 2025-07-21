@@ -19,7 +19,7 @@ var (
 	chip        = newLPC
 )
 
-func debug(s string, v ...interface{}) {
+func debug(s string, v ...any) {
 	fmt.Printf(s, v...)
 }
 

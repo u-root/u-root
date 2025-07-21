@@ -84,10 +84,7 @@ func (b *BzImage) KVer() (string, error) {
 	if bcoffs >= bclen {
 		return "", ErrParse
 	}
-	end := bcoffs + kverMax
-	if end > bclen {
-		end = bclen
-	}
+	end := min(bcoffs+kverMax, bclen)
 	return nullterm(b.BootCode[bcoffs:end]), nil
 }
 

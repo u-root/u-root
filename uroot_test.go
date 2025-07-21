@@ -249,7 +249,6 @@ func TestUrootCmdline(t *testing.T) {
 	}
 
 	for _, tt := range append(noCmdTests, bbTests...) {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			delFiles := true
 			var (

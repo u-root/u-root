@@ -47,7 +47,7 @@ func (u *userSpec) Set(s string) error {
 	return nil
 }
 
-func (u *userSpec) Get() interface{} {
+func (u *userSpec) Get() any {
 	return *u
 }
 
@@ -83,7 +83,7 @@ func (g *groupsSpec) Set(s string) error {
 	return nil
 }
 
-func (g *groupsSpec) Get() interface{} {
+func (g *groupsSpec) Get() any {
 	return *g
 }
 

@@ -73,7 +73,7 @@ var (
 
 	// Debug is a function used to log debug information. It
 	// can be set to, for example, log.Printf.
-	Debug = func(string, ...interface{}) {}
+	Debug = func(string, ...any) {}
 )
 
 // This is all C to Go and it reads like it, sorry

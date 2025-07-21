@@ -123,10 +123,7 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 	}
 
 	for i := 0; i < len(xArgs); i += f.maxArgs {
-		m := len(xArgs)
-		if i+f.maxArgs < m {
-			m = i + f.maxArgs
-		}
+		m := min(i+f.maxArgs, len(xArgs))
 		cmdArgs = append(cmdArgs, xArgs[i:m]...)
 
 		cmd := exec.CommandContext(ctx, cmdArgs[0], cmdArgs[1:]...)

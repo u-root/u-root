@@ -85,7 +85,7 @@ func parsePingLines(t *testing.T, output []byte) []pingOutputLine {
 	t.Helper()
 	var lines []pingOutputLine
 
-	for _, line := range bytes.Split(output, []byte("\n")) {
+	for line := range bytes.SplitSeq(output, []byte("\n")) {
 		if len(line) == 0 {
 			continue
 		}

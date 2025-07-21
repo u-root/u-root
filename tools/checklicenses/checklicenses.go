@@ -112,10 +112,10 @@ func main() {
 	if err != nil {
 		log.Fatalln("error running git ls-files:", err)
 	}
-	files := strings.Fields(string(out))
+	files := strings.FieldsSeq(string(out))
 
 	// Iterate over files.
-	for _, file := range files {
+	for file := range files {
 		// Test rules.
 		trimmedPath := strings.TrimPrefix(file, pkgPath)
 		foundAccept, foundReject := false, false
