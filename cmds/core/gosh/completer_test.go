@@ -222,7 +222,7 @@ func TestAutocomplete(t *testing.T) {
 			name:  "redirect",
 			input: `echo "foo" > ./testdata/`,
 			// want: ignore directories like fuzz
-			//want:  []string{`echo "foo" > ./testdata/fuzz`},
+			// want:  []string{`echo "foo" > ./testdata/fuzz`},
 		},
 		{
 			name:  "multistatement with &",

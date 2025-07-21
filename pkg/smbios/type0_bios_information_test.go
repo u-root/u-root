@@ -9,9 +9,7 @@ import (
 	"testing"
 )
 
-var (
-	validType0BIOSInfoData = []byte{0, 26, 0, 0, 1, 2, 0, 0, 3, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-)
+var validType0BIOSInfoData = []byte{0, 26, 0, 0, 1, 2, 0, 0, 3, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func validType0BIOSInfoRaw(t *testing.T) []byte {
 	return joinBytesT(
@@ -105,7 +103,7 @@ func TestBIOSCharacteristicsExt1String(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var testVal = BIOSCharacteristicsExt1(tt.val)
+			testVal := BIOSCharacteristicsExt1(tt.val)
 
 			resultString := testVal.String()
 
@@ -135,7 +133,7 @@ func TestBIOSCharacteristicsExt2String(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var testVal = BIOSCharacteristicsExt2(tt.val)
+			testVal := BIOSCharacteristicsExt2(tt.val)
 
 			resultString := testVal.String()
 
@@ -218,10 +216,12 @@ func TestGetROMSizeBytes(t *testing.T) {
 			val: BIOSInfo{
 				ROMSize: 0xFF,
 				Table: Table{
-					data: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+					data: []byte{
+						0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 						0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
 						0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-						0x1a},
+						0x1a,
+					},
 				},
 				ExtendedROMSize: 0xFFFF,
 			},
@@ -254,10 +254,12 @@ func TestParseBIOSInfo(t *testing.T) {
 				Header: Header{
 					Type: TableTypeBIOSInfo,
 				},
-				data: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+				data: []byte{
+					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 					0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
 					0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-					0x1a},
+					0x1a,
+				},
 			},
 		},
 		{
@@ -278,10 +280,12 @@ func TestParseBIOSInfo(t *testing.T) {
 				Header: Header{
 					Type: TableTypeBIOSInfo,
 				},
-				data: []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+				data: []byte{
+					0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 					0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
 					0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-					0x1a},
+					0x1a,
+				},
 			},
 			want: fmt.Errorf("error parsing data"),
 		},

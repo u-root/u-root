@@ -49,7 +49,6 @@ func Test64MajorVersion(t *testing.T) {
 }
 
 func Test64MinorVersion(t *testing.T) {
-
 	info, err := setupMockData()
 	if err != nil {
 		t.Errorf("error parsing info data: %v", err)
@@ -60,7 +59,6 @@ func Test64MinorVersion(t *testing.T) {
 }
 
 func Test64DocRev(t *testing.T) {
-
 	info, err := setupMockData()
 	if err != nil {
 		t.Errorf("error parsing info data: %v", err)
@@ -71,7 +69,6 @@ func Test64DocRev(t *testing.T) {
 }
 
 func Test64GetTablesByType(t *testing.T) {
-
 	info, err := setupMockData()
 	if err != nil {
 		t.Errorf("error parsing info data: %v", err)
@@ -244,7 +241,6 @@ func FuzzParseInfo(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-
 		if len(data) < 64 || len(data) > 4096 {
 			return
 		}
@@ -262,7 +258,6 @@ func FuzzParseInfo(f *testing.F) {
 			entry, err = info.Entry32.MarshalBinary()
 		} else if info.Entry64 != nil {
 			entry, err = info.Entry64.MarshalBinary()
-
 		} else {
 			t.Fatalf("expected a SMBIOS 32-Bit or 64-Bit entry point but got none")
 		}

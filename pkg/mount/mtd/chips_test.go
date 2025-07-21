@@ -119,7 +119,6 @@ func TestChipFromVIDID(t *testing.T) {
 			if chip.ID() != tt.cid {
 				t.Errorf("chip.ID()= %x, want %x", chip.ID(), tt.cid)
 			}
-
 		})
 		t.Run("Lookup VendorFromName: "+string(tt.vname), func(t *testing.T) {
 			vendor, err := VendorFromName(tt.vname)

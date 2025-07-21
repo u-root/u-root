@@ -68,7 +68,7 @@ func (t *Trace) ReceiveTracesUDP6() {
 	ip6hdr, _ := ipv6.ParseHeader(buf[8:])
 
 	icmpType := buf[0]
-	if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { //TTL Exceeded or Port Unreachable
+	if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { // TTL Exceeded or Port Unreachable
 		id := binary.BigEndian.Uint16(buf[46+ipv6.HeaderLen : 48+ipv6.HeaderLen])
 		if ip6hdr.Dst.Equal(t.DestIP) { // && dstPort == t.dstPort {
 			recvProbe := &Probe{

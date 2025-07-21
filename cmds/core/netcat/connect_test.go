@@ -132,7 +132,6 @@ func TestConnectMode(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // Mock for the net.Conn interface

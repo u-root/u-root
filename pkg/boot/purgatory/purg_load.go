@@ -86,7 +86,7 @@ func Load(kmem *kexec.Memory, entry, rsi uintptr) (uintptr, error) {
 	}
 	elfEntry := uintptr(elfFile.Entry)
 
-	//Debug("Start is %#x, param is %#x", start, param)
+	// Debug("Start is %#x, param is %#x", start, param)
 	binary.LittleEndian.PutUint64(b[8:], uint64(entry))
 	binary.LittleEndian.PutUint64(b[16:], uint64(rsi))
 

@@ -107,7 +107,6 @@ func TestGetDeviceIDQemu(t *testing.T) {
 	if !bytes.Equal(id.ProductID[:], []byte{0x0, 0x0}) {
 		t.Errorf("ProductID: %q, want: %q", id.ProductID, []byte{0x0, 0x0})
 	}
-
 }
 
 func TestEnableSELQemu(t *testing.T) {
@@ -153,7 +152,6 @@ func TestGetSELInfoQemu(t *testing.T) {
 	if info.OpSupport != 0x2 {
 		t.Errorf("Version = %q, want %q", info.Version, 0x2)
 	}
-
 }
 
 func TestGetLanConfigQemu(t *testing.T) {

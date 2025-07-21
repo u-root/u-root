@@ -305,7 +305,6 @@ func TestCopy(t *testing.T) {
 				if !reflect.DeepEqual(err.Error(), tt.exp.Error()) {
 					t.Errorf("Expected value: %v, got: %v", tt.exp, err)
 				}
-
 			}
 		})
 	}
@@ -590,7 +589,6 @@ func TestReadFile(t *testing.T) {
 				}
 			}
 			os.Remove(tt.methodin2)
-
 		})
 	}
 }

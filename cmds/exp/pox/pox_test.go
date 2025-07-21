@@ -26,7 +26,8 @@ func TestExtraMounts(t *testing.T) {
 		},
 		{
 			name:  "switch case 1",
-			extra: "/tmp, /etc"},
+			extra: "/tmp, /etc",
+		},
 		{
 			name:  "switch case 2",
 			extra: "/tmp:/tmp,/etc:/etc",

@@ -71,7 +71,7 @@ func TestWriteRecordsAndDirs(t *testing.T) {
 	if err := WriteRecordsAndDirs(&bad{}, nil); !errors.Is(err, os.ErrInvalid) {
 		t.Errorf("WriteRecordsAndDirs(&bad{}, nil): got %v, want %v", err, os.ErrInvalid)
 	}
-	var paths = []struct {
+	paths := []struct {
 		name string
 		err  error
 	}{
@@ -82,7 +82,7 @@ func TestWriteRecordsAndDirs(t *testing.T) {
 
 	recs := make([]Record, 0)
 	for _, p := range paths {
-		recs = append(recs, Directory(p.name, 0777))
+		recs = append(recs, Directory(p.name, 0o777))
 	}
 	var b bytes.Buffer
 	w := Newc.Writer(&b)
@@ -101,7 +101,6 @@ func TestWriteRecordsAndDirs(t *testing.T) {
 	if err := WriteRecordsAndDirs(&bad{err: fs.ErrInvalid}, recs); !errors.Is(err, fs.ErrInvalid) {
 		t.Fatalf("Writing %d records: got %v, want %v", len(recs), err, fs.ErrInvalid)
 	}
-
 }
 
 func TestEqualAll(t *testing.T) {
@@ -145,13 +144,13 @@ func TestCharDev(t *testing.T) {
 	}{
 		{
 			name:  "name",
-			perm:  0777,
+			perm:  0o777,
 			major: 8,
 			minor: 1,
 		},
 		{
 			name:  "name",
-			perm:  0644,
+			perm:  0o644,
 			major: 8,
 			minor: 1,
 		},

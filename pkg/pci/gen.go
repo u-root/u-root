@@ -95,5 +95,5 @@ func main() {
 		code += fmt.Sprintf("},\n},\n")
 	}
 	code += fmt.Sprintf("}\n")
-	err = ioutil.WriteFile("pciids.go", []byte(code), 0666)
+	err = ioutil.WriteFile("pciids.go", []byte(code), 0o666)
 }

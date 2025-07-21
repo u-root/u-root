@@ -55,7 +55,7 @@ func TestRunIt(t *testing.T) {
 
 // TestOK for now just runs a simple successful test with 0 args or more than one arg.
 func TestOK(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		args   []string
 		stdout string
 		stderr string

@@ -70,7 +70,7 @@ func main() {
 	rushdir := filepath.Join(build[0], "src/github.com/u-root/u-root/cmds/exp/rush/")
 
 	// Fixup rush.
-	if err := os.WriteFile(filepath.Join(rushdir, "rush_tinygo.go"), []byte(code), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(rushdir, "rush_tinygo.go"), []byte(code), 0o644); err != nil {
 		log.Fatal(err)
 	}
 
@@ -92,7 +92,7 @@ func main() {
 		}
 		s := strings.ReplaceAll(string(b), "os.Exit", "//.Exit")
 		log.Printf("replaced os.Exit in %q, output %s", path, s)
-		if err := os.WriteFile(path, []byte(s), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(s), 0o644); err != nil {
 			return err
 		}
 		return nil
@@ -133,5 +133,4 @@ func main() {
 	}
 
 	log.Printf("The binary is: %q, info %v", bin, fi)
-
 }

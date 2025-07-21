@@ -33,7 +33,6 @@ func TestArgsToGoArgs(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestOSArgsToGoArgs(t *testing.T) {

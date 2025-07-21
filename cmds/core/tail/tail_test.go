@@ -121,7 +121,8 @@ func TestTailMultipleFiles(t *testing.T) {
 
 	var b bytes.Buffer
 	err := run(os.Stdin, &b, false, 10, time.Second, []string{
-		f1.Name(), f2.Name()})
+		f1.Name(), f2.Name(),
+	})
 	if err != nil {
 		t.Error(err)
 	}
@@ -160,7 +161,7 @@ func TestTailFollow(t *testing.T) {
 	go func() {
 		run(f, sw, true, 10, 100*time.Millisecond, nil)
 	}()
-	ff, err := os.OpenFile(f.Name(), os.O_RDWR, 0644)
+	ff, err := os.OpenFile(f.Name(), os.O_RDWR, 0o644)
 	if err != nil {
 		t.Fatalf("can't open temp file: %v", err)
 	}

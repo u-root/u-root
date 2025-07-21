@@ -43,9 +43,9 @@ func compare(got, want []*Command) error {
 	}
 	return nil
 }
-func TestParsing(t *testing.T) {
 
-	var tests = []struct {
+func TestParsing(t *testing.T) {
+	tests := []struct {
 		name string
 		line string
 		c    []*Command

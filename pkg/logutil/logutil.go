@@ -17,7 +17,7 @@ import (
 
 // NewWriterToFile creates a Writer that writes out output to a file path up to a maximum limit maxSize.
 func NewWriterToFile(maxSize int, path string) (io.Writer, error) {
-	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	logFile, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o666)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,6 @@ func NewWriterToFile(maxSize int, path string) (io.Writer, error) {
 	lw := limitio.NewWriter(logFile, maxSize-(int)(fi.Size()), true)
 
 	return lw, nil
-
 }
 
 // TeeOutput tees out output to a file path specified by env var `UROOT_LOG_PATH` and sets the log output to the newly created writer.
@@ -48,7 +47,7 @@ func CreateTeeWriter(writer io.Writer, logPath string, maxSize int) (io.Writer, 
 		return nil, fmt.Errorf("empty log path")
 	}
 	dir := filepath.Dir(logPath)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
 	lw, err := NewWriterToFile(maxSize, logPath)

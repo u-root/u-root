@@ -32,9 +32,7 @@ type IPv4 struct {
 	*Output
 }
 
-var (
-	ProcNetRoutePath4 = "/proc/net/route"
-)
+var ProcNetRoutePath4 = "/proc/net/route"
 
 func (i *IPv4) RoutesFormatString(_ bool) (string, error) {
 	i.Output.InitRoute4Titel()
@@ -142,9 +140,7 @@ func (i *IPv4) PrintStatistics(out io.Writer) error {
 	return nil
 }
 
-var (
-	errUnknownPrefix = errors.New("unknown prefix found")
-)
+var errUnknownPrefix = errors.New("unknown prefix found")
 
 func newSNMP() (*SNMP, error) {
 	ret := &SNMP{}

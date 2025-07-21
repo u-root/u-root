@@ -404,7 +404,6 @@ func prepareHob(buf *bytes.Buffer, length *uint64, loadAddr uint64, mem *kexec.M
 
 func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Memory) error {
 	rsdpBase, rsdpData, err := getAcpiRsdpData()
-
 	if err != nil {
 		debug("universalpayload: failed to get RSDP table data (%v)\n", err)
 		return err

@@ -48,5 +48,4 @@ func TestYes(t *testing.T) {
 			}
 		})
 	}
-
 }

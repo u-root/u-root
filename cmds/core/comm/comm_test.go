@@ -26,7 +26,6 @@ func TestComm(t *testing.T) {
 		err   error
 		want  string
 	}{
-
 		{
 			name: "only one arguement",
 			args: []string{"onearg"},
@@ -88,11 +87,10 @@ func TestComm(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-
-			if err := os.WriteFile(filepath.Join(tmpdir, "file1"), []byte(tt.file1), 0644); err != nil {
+			if err := os.WriteFile(filepath.Join(tmpdir, "file1"), []byte(tt.file1), 0o644); err != nil {
 				t.Errorf("failed to create file1: %v", err)
 			}
-			if err := os.WriteFile(filepath.Join(tmpdir, "file2"), []byte(tt.file2), 0644); err != nil {
+			if err := os.WriteFile(filepath.Join(tmpdir, "file2"), []byte(tt.file2), 0o644); err != nil {
 				t.Errorf("failed to create file1: %v", err)
 			}
 
@@ -105,5 +103,4 @@ func TestComm(t *testing.T) {
 			}
 		})
 	}
-
 }

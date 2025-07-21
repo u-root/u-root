@@ -24,7 +24,7 @@ const (
 // If it is non-printable or non-ASCII, add it as octal notation
 // This is used for comparing output from C++ tool for debugging purpose.
 func toOctalEscapeSequence(b []byte) string {
-	var shortHandNotions = map[string]string{
+	shortHandNotions := map[string]string{
 		"\011": "\\t",
 		"\015": "\\r",
 	}

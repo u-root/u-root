@@ -173,7 +173,7 @@ func (h *FileWriteHandler) ReceiveTFTP(w tftp.WriteRequest) {
 	}
 
 	// Create directory if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(realPath), 0755)
+	err = os.MkdirAll(filepath.Dir(realPath), 0o755)
 	if err != nil {
 		w.WriteError(tftp.ErrCodeAccessViolation, "Cannot create directory")
 		return

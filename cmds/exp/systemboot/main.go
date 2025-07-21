@@ -302,7 +302,7 @@ func main() {
                     |____/ \__, |___/\__\___|_| |_| |_|_.__/ \___/ \___/ \__|
                            |___/
 `)
-	var l = ulog.Null
+	l := ulog.Null
 	if debugEnabled {
 		l = ulog.Log
 	}
@@ -359,7 +359,7 @@ func main() {
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
-					//MJ TODO - Need a fix for booters with menues that fail and drop to menu.
+					// MJ TODO - Need a fix for booters with menues that fail and drop to menu.
 					log.Printf("Error executing %v: %v", cmd, err)
 					if !selRecorded {
 						addSEL(bootcmd[0])

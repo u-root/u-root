@@ -6,6 +6,4 @@
 
 package main
 
-var (
-	shell = "/bin/sh"
-)
+var shell = "/bin/sh"

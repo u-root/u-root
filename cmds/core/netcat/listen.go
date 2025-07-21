@@ -313,7 +313,8 @@ func (c *cmd) acceptSingle(output io.WriteCloser, listener net.Listener) error {
 // (2) acceptForever never propagates EOF to output, as connections accepted in
 // the future can always send data to output.
 func (c *cmd) acceptForever(output io.WriteCloser, listener net.Listener,
-	testLimit uint32) error {
+	testLimit uint32,
+) error {
 	var testID uint32
 	var connID uint32
 

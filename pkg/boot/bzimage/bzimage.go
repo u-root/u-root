@@ -262,9 +262,9 @@ func stripSignature(image []byte) ([]byte, error) {
 	d := make([]byte, len(image))
 	copy(d, image)
 
-	var dosMagic = []byte("MZ")
-	var peMagic = []byte("PE\x00\x00")
-	var peSignaturePtr = 0x3C
+	dosMagic := []byte("MZ")
+	peMagic := []byte("PE\x00\x00")
+	peSignaturePtr := 0x3C
 
 	// Verify that the image has a MS DOS Stub.
 	if bytes.Index(d, dosMagic) != 0 {

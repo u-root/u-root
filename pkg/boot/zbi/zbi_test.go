@@ -21,7 +21,6 @@ var testData = map[string]*Image{
 		Bootable: true,
 	},
 	"x86-boot-shim-tests.zbi": {
-
 		Header: NewContainerHeader(264008),
 		BootItems: []BootItem{
 			{

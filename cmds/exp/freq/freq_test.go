@@ -37,7 +37,7 @@ o        1
 	t.Run("test file", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		path := filepath.Join(tmpDir, "input.txt")
-		err := os.WriteFile(path, []byte("hello\n"), 0644)
+		err := os.WriteFile(path, []byte("hello\n"), 0o644)
 		if err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}

@@ -11,7 +11,7 @@ import (
 )
 
 func TestRecord(t *testing.T) {
-	r := StaticFile("file", "hello", 0644)
+	r := StaticFile("file", "hello", 0o644)
 	toFileMode(r)
 }
 
@@ -33,7 +33,7 @@ func TestFormatInit(t *testing.T) {
 }
 
 func TestFormatInfo(t *testing.T) {
-	f := StaticFile("file", "hello", 0644)
+	f := StaticFile("file", "hello", 0o644)
 	s := f.Info.String()
 
 	if !strings.HasPrefix(s, "file") {

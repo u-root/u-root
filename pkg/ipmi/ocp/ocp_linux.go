@@ -121,7 +121,6 @@ func SendOemIpmiBootDriveInfo(i *ipmi.IPMI, info *BootDriveInfo) error {
 	var data []byte
 	buf := &bytes.Buffer{}
 	err := binary.Write(buf, binary.LittleEndian, *info)
-
 	if err != nil {
 		return err
 	}

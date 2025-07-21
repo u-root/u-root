@@ -5,9 +5,7 @@ package smbios
 
 import "testing"
 
-var (
-	validTableHeaderRaw = []byte{0x0, 0xFF, 0xBE, 0xEF}
-)
+var validTableHeaderRaw = []byte{0x0, 0xFF, 0xBE, 0xEF}
 
 func TestParseTableHeader(t *testing.T) {
 	var h Header

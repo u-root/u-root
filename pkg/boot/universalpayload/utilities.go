@@ -114,9 +114,7 @@ const (
 	bootPhysicalCPUID = 0x0
 )
 
-var (
-	pageSize = uint(os.Getpagesize())
-)
+var pageSize = uint(os.Getpagesize())
 
 type FbBitfield struct {
 	Offset   uint32 // beginning of bitfield
@@ -280,7 +278,6 @@ func parseUint64ToUint32(val uint64) uint32 {
 		return uint32(val)
 	}
 	return math.MaxUint32
-
 }
 
 // GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
@@ -783,8 +780,8 @@ func getReservedMemoryMap(mm kexec.MemoryMap) (kexec.MemoryMap, error) {
 }
 
 func getBusNumber(bus uint64) uint32 {
-	//According to PCI spec, bus number never exceeds 255
-	//Its safe to get low 32-bit value for bus number
+	// According to PCI spec, bus number never exceeds 255
+	// Its safe to get low 32-bit value for bus number
 	return uint32(bus & 0x0000_0000_FFFF_FFFF)
 }
 
@@ -1258,7 +1255,6 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 		warningMsg = append(warningMsg, err)
 	} else {
 		dtNodes = append(dtNodes, fbNode)
-
 	}
 
 	if pciRbNodes, err := constructPCIRootBridgeNodes(); err != nil {
@@ -1280,7 +1276,7 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 		Version:         currentVersion,
 		LastCompVersion: lastCompVersion,
 		BootCpuidPhys:   bootPhysicalCPUID,
-		//SizeDtStruct: 0x310,
+		// SizeDtStruct: 0x310,
 	}
 
 	dtRootNode := dt.NewNode("/", dt.WithChildren(dtNodes...))

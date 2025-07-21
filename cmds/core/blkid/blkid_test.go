@@ -75,7 +75,6 @@ func TestBlkid(t *testing.T) {
 			if outBuf.String() != tt.wantString {
 				t.Errorf("Blkid.run() = '%s', want: '%s'", outBuf.String(), tt.wantString)
 			}
-
 		})
 	}
 }

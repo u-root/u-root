@@ -15,9 +15,7 @@ import (
 	"github.com/florianl/go-tc/core"
 )
 
-var (
-	ErrInvalidFilterType = errors.New("invalid filtertype")
-)
+var ErrInvalidFilterType = errors.New("invalid filtertype")
 
 // FArgs hold all possible args for qdisc subcommand
 // tc filter [ add | del | change | replace | show ] [ dev STRING ]

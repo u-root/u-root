@@ -58,7 +58,7 @@ func TestGetKeyFile(t *testing.T) {
 	confPath := filepath.Join(dir, "sshconfig")
 	conf := []byte(`Host foo
 	IdentityFile bar_key`)
-	if err := os.WriteFile(confPath, conf, 0600); err != nil {
+	if err := os.WriteFile(confPath, conf, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := loadConfig(confPath); err != nil {
@@ -112,7 +112,7 @@ func genPrivKey(t *testing.T) string {
 
 	dir := t.TempDir()
 	kf := filepath.Join(dir, "kf")
-	f, err := os.OpenFile(kf, os.O_RDWR|os.O_CREATE, 0600)
+	f, err := os.OpenFile(kf, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -107,7 +107,7 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test",
 			file2:  "hello\nthiz is a text",
 			long:   true,
-			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
+			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0o163, 0o172, 19, 0o163, 0o170),
 		},
 		{
 			name:   "cmp two files, flag long = true, first file ends first",
@@ -116,7 +116,7 @@ func TestCmp(t *testing.T) {
 			file2:  "hello\nthiz is a text",
 			long:   true,
 			err:    io.EOF,
-			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
+			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0o163, 0o172, 19, 0o163, 0o170),
 			stderr: fmt.Sprintf("%s:%v", filepath.Join(tmpdir, "file1"), io.EOF),
 		},
 		{
@@ -126,17 +126,17 @@ func TestCmp(t *testing.T) {
 			file2:  "hello\nthiz is a tex",
 			long:   true,
 			err:    io.EOF,
-			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0163, 0172, 19, 0163, 0170),
+			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0o163, 0o172, 19, 0o163, 0o170),
 			stderr: fmt.Sprintf("%s:%v", filepath.Join(tmpdir, "file2"), io.EOF),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f1 := filepath.Join(tmpdir, "file1")
-			if err := os.WriteFile(f1, []byte(tt.file1), 0666); err != nil {
+			if err := os.WriteFile(f1, []byte(tt.file1), 0o666); err != nil {
 				t.Fatal(err)
 			}
 			f2 := filepath.Join(tmpdir, "file2")
-			if err := os.WriteFile(f2, []byte(tt.file2), 0666); err != nil {
+			if err := os.WriteFile(f2, []byte(tt.file2), 0o666); err != nil {
 				t.Fatal(err)
 			}
 

@@ -18,12 +18,12 @@ import (
 )
 
 func TestBadFiles(t *testing.T) {
-	var flags = &flags{}
+	flags := &flags{}
 
 	d := t.TempDir()
 	n := filepath.Join(d, "nosuchfile")
 	f := filepath.Join(d, "afile")
-	if err := os.WriteFile(f, []byte{}, 0666); err != nil {
+	if err := os.WriteFile(f, []byte{}, 0o666); err != nil {
 		t.Fatalf("writing %q: want nil, got %v", f, err)
 	}
 	if err := run(io.Discard, "root", flags, n, f); !errors.Is(err, os.ErrNotExist) {

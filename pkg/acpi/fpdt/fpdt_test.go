@@ -59,5 +59,4 @@ func TestFBPTAddress(t *testing.T) {
 	if string(fbptSig[:]) != "FBPT" {
 		t.Fatalf("FBPT structure signature check failed. Expected: FBPT, Got: %s", string(fbptSig[:]))
 	}
-
 }

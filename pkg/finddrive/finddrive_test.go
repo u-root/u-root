@@ -66,7 +66,6 @@ func TestFindSlotType(t *testing.T) {
 	slots := []*smbios.SystemSlots{&nonMatchingSlot, &matchingSlot, &nonMatchingSlot, &matchingSlot, &nonMatchingSlot}
 
 	paths, err := findSlotType(sysDir, slots, matchingSlotType)
-
 	if err != nil {
 		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, matchingSlotType, err)
 	}
@@ -80,7 +79,6 @@ func TestFindSlotTypeMissing(t *testing.T) {
 	slots := []*smbios.SystemSlots{&nonMatchingSlot, &matchingSlot, &nonMatchingSlot, &matchingSlot, &nonMatchingSlot}
 
 	paths, err := findSlotType(sysDir, slots, missingSlotType)
-
 	if err != nil {
 		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, missingSlotType, err)
 	}
@@ -94,7 +92,6 @@ func TestFindSlotTypeNoSlots(t *testing.T) {
 	slots := []*smbios.SystemSlots{}
 
 	paths, err := findSlotType(sysDir, slots, matchingSlotType)
-
 	if err != nil {
 		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, matchingSlotType, err)
 	}

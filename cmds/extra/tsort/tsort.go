@@ -67,8 +67,10 @@ import (
 	"strings"
 )
 
-var errNonFatal = errors.New("non-fatal")
-var errOddDataCount = errors.New("odd data count")
+var (
+	errNonFatal     = errors.New("non-fatal")
+	errOddDataCount = errors.New("odd data count")
+)
 
 func run(
 	stdin io.Reader,

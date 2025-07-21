@@ -72,7 +72,7 @@ func flags(args ...string) (string, string, error) {
 	}
 
 	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	var outPath = f.String("O", "", "output file")
+	outPath := f.String("O", "", "output file")
 
 	if err := f.Parse(args[1:]); err != nil {
 		return "", "", err

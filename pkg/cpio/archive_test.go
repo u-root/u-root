@@ -12,8 +12,8 @@ import (
 )
 
 func TestArchiveMethods(t *testing.T) {
-	r1 := StaticFile("/bin/r1", "content1", 0644)
-	r2 := StaticFile("/bin/r2", "content2", 0755)
+	r1 := StaticFile("/bin/r1", "content1", 0o644)
+	r2 := StaticFile("/bin/r2", "content2", 0o755)
 	records := []Record{r1, r2}
 
 	ar1 := ArchiveFromRecords(records)
@@ -54,8 +54,8 @@ func TestArchiveMethods(t *testing.T) {
 
 func FuzzWriteReadInMemArchive(f *testing.F) {
 	var fileCount uint64 = 4
-	var content = []byte("Content")
-	var name = "fileName"
+	content := []byte("Content")
+	name := "fileName"
 	var ino, mode, uid, gid, nlink, mtime, major, minor, rmajor, rminor uint64 = 1, S_IFREG | 2, 3, 4, 5, 6, 7, 8, 9, 10
 	f.Add(fileCount, content, name, ino, mode, uid, gid, nlink, mtime, major, minor, rmajor, rminor)
 	f.Fuzz(func(t *testing.T, fileCount uint64, content []byte, name string, ino uint64, mode uint64, uid uint64, gid uint64, nlink uint64, mtime uint64, major uint64, minor uint64, rmajor uint64, rminor uint64) {
@@ -65,7 +65,6 @@ func FuzzWriteReadInMemArchive(f *testing.F) {
 		recs := []Record{}
 		var i uint64
 		for i = range fileCount {
-
 			recs = append(recs, StaticRecord(content, Info{
 				Ino:      ino | i,
 				Mode:     syscall.S_IFREG | mode | i,
@@ -87,7 +86,6 @@ func FuzzWriteReadInMemArchive(f *testing.F) {
 
 		for _, rec := range recs {
 			readRec, err := archReader.ReadRecord()
-
 			if err != nil {
 				t.Fatalf("failed to read record from archive")
 			}
@@ -100,6 +98,5 @@ func FuzzWriteReadInMemArchive(f *testing.F) {
 				t.Fatalf("record not in archive %v %#v", rec, arch)
 			}
 		}
-
 	})
 }

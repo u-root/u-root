@@ -192,6 +192,7 @@ func TestBadRunPath(t *testing.T) {
 		t.Errorf(`runpath(os.Stdout, "/tmp", false, "", "", "", "", ""): %v != %v`, err, efivarfs.ErrNoFS)
 	}
 }
+
 func TestGoodRunPath(t *testing.T) {
 	if _, err := os.Stat(efivarfs.DefaultVarFS); err != nil {
 		t.Skipf("%q: %v, skipping test", efivarfs.DefaultVarFS, err)

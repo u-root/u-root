@@ -28,14 +28,18 @@ func (h *mockBlobReader) BlobClose(sid blobs.SessionID) error {
 }
 
 func TestGenPassword(t *testing.T) {
-	mockHss := []byte{0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
+	mockHss := []byte{
 		0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
 		0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
-		0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55}
+		0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
+		0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55,
+	}
 
-	expected := []byte{175, 97, 131, 232, 89, 61, 152, 29, 245,
+	expected := []byte{
+		175, 97, 131, 232, 89, 61, 152, 29, 245,
 		45, 164, 141, 98, 78, 7, 243, 120, 96, 179, 166, 18,
-		59, 22, 172, 16, 151, 191, 99, 141, 25, 35, 246}
+		59, 22, 172, 16, 151, 191, 99, 141, 25, 35, 246,
+	}
 
 	key, err := GenPassword(mockHss, DefaultPasswordSalt, "a", "b")
 
@@ -57,7 +61,6 @@ func TestReadHssBlob(t *testing.T) {
 	data := [hostSecretSeedLen]uint8{}
 	h := mockBlobReader{data: data[:]}
 	_, err := readHssBlob("", &h)
-
 	if err != nil {
 		t.Fatalf("Expected success, got err: %v", err)
 	}

@@ -110,10 +110,12 @@ func (c *cmd) ping(addr *net.IPAddr, i uint64, waitFor time.Duration) (string, e
 		echoRequestType = ipv6.ICMPTypeEchoRequest
 	}
 
-	wm := icmp.Message{Type: echoRequestType, Code: 0, Body: &icmp.Echo{
-		ID:   os.Getpid() & 0xffff,
-		Seq:  int(i),
-		Data: bytes.Repeat([]byte{1}, c.packetSize)},
+	wm := icmp.Message{
+		Type: echoRequestType, Code: 0, Body: &icmp.Echo{
+			ID:   os.Getpid() & 0xffff,
+			Seq:  int(i),
+			Data: bytes.Repeat([]byte{1}, c.packetSize),
+		},
 	}
 	wb, err := wm.Marshal(nil)
 	if err != nil {

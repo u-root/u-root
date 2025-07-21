@@ -171,7 +171,6 @@ func NewInfo(name string) (Info, error) {
 	}
 
 	return info, nil
-
 }
 
 type PortInfo struct {

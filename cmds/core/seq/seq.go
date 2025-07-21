@@ -36,9 +36,11 @@ import (
 
 const cmd = "seq [-f format] [-w] [-s separator] [start [step [end]]]"
 
-var format = flag.String("f", "%v", "use printf style floating-point FORMAT")
-var separator = flag.String("s", "\n", "use STRING to separate numbers")
-var widthEqual = flag.Bool("w", false, "equalize width by padding with leading zeroes")
+var (
+	format     = flag.String("f", "%v", "use printf style floating-point FORMAT")
+	separator  = flag.String("s", "\n", "use STRING to separate numbers")
+	widthEqual = flag.Bool("w", false, "equalize width by padding with leading zeroes")
+)
 
 func init() {
 	defUsage := flag.Usage

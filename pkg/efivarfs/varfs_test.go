@@ -214,7 +214,7 @@ func TestSet(t *testing.T) {
 			setup: func(path string, t *testing.T) {
 				t.Helper()
 				f := createTestVar(path, "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350", t)
-				if err := f.Chmod(0222); err != nil {
+				if err := f.Chmod(0o222); err != nil {
 					t.Errorf("Failed changing permissions: %v", err)
 				}
 				if err := f.Close(); err != nil {
@@ -312,7 +312,7 @@ func TestRemove(t *testing.T) {
 			setup: func(path string, t *testing.T) {
 				t.Helper()
 				f := createTestVar(path, "TestVar-bc54d3fb-ed45-462d-9df8-b9f736228350", t)
-				if err := f.Chmod(0444); err != nil {
+				if err := f.Chmod(0o444); err != nil {
 					t.Errorf("Failed changing permissions: %v", err)
 				}
 				if err := f.Close(); err != nil {
@@ -419,7 +419,7 @@ func TestList(t *testing.T) {
 			dir: t.TempDir(),
 			setup: func(path string, t *testing.T) {
 				t.Helper()
-				if err := os.Mkdir(filepath.Join(path, "testdir"), 0644); err != nil {
+				if err := os.Mkdir(filepath.Join(path, "testdir"), 0o644); err != nil {
 					t.Errorf("Failed to create directory: %v", err)
 				}
 			},
@@ -437,7 +437,7 @@ func TestList(t *testing.T) {
 			dir: t.TempDir(),
 			setup: func(path string, t *testing.T) {
 				t.Helper()
-				if err := os.Chmod(path, 0222); err != nil {
+				if err := os.Chmod(path, 0o222); err != nil {
 					t.Errorf("Failed changing permissions: %v", err)
 				}
 			},

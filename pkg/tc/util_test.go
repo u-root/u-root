@@ -39,7 +39,6 @@ func TestParseHandle(t *testing.T) {
 			if ret != tt.exp {
 				t.Errorf("created handle not expected")
 			}
-
 		})
 	}
 }
@@ -71,7 +70,6 @@ func TestParseClassID(t *testing.T) {
 			if ret != tt.exp {
 				t.Errorf("created handle not expected")
 			}
-
 		})
 	}
 }

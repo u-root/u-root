@@ -126,7 +126,7 @@ case "$1" in
   *) echo "Invalid command"; exit 1;;
 esac`
 	path := filepath.Join(dir, name)
-	err := os.WriteFile(path, []byte(scriptContent), 0755)
+	err := os.WriteFile(path, []byte(scriptContent), 0o755)
 	if err != nil {
 		t.Fatalf("failed to create sample script: %v", err)
 	}

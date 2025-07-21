@@ -34,20 +34,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var (
-	errUsageMessage = errors.New("shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]")
-)
+var errUsageMessage = errors.New("shutdown [<-h|-r|-s|halt|reboot|suspend> [time [message...]]]")
 
-var (
-	opcodes = map[string]uint{
-		"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
-		"-h":      unix.LINUX_REBOOT_CMD_POWER_OFF,
-		"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
-		"-r":      unix.LINUX_REBOOT_CMD_RESTART,
-		"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
-		"-s":      unix.LINUX_REBOOT_CMD_SW_SUSPEND,
-	}
-)
+var opcodes = map[string]uint{
+	"halt":    unix.LINUX_REBOOT_CMD_POWER_OFF,
+	"-h":      unix.LINUX_REBOOT_CMD_POWER_OFF,
+	"reboot":  unix.LINUX_REBOOT_CMD_RESTART,
+	"-r":      unix.LINUX_REBOOT_CMD_RESTART,
+	"suspend": unix.LINUX_REBOOT_CMD_SW_SUSPEND,
+	"-s":      unix.LINUX_REBOOT_CMD_SW_SUSPEND,
+}
 
 // shutdown calls unix.Reboot, with the type of shutdown defined in args, currently
 // halt, reboot, or suspend. A time may be specified as "now",

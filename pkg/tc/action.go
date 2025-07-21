@@ -12,9 +12,7 @@ import (
 	"github.com/florianl/go-tc"
 )
 
-var (
-	ErrInvalidActionControl = errors.New("invalid action control parameter")
-)
+var ErrInvalidActionControl = errors.New("invalid action control parameter")
 
 const (
 	GActUnspec  = -1

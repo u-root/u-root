@@ -234,7 +234,7 @@ func run(w io.Writer, name string, f *flags, passwd, group string) error {
 }
 
 func main() {
-	var flags = &flags{}
+	flags := &flags{}
 	flag.BoolVar(&flags.group, "g", false, "print only the effective group ID")
 	flag.BoolVar(&flags.groups, "G", false, "print all group IDs")
 	flag.BoolVar(&flags.name, "n", false, "print a name instead of a number, for -ugG")
@@ -245,5 +245,4 @@ func main() {
 	if err := run(os.Stdout, flag.Arg(0), flags, passwdFile, groupFile); err != nil {
 		log.Fatalf("%v", err)
 	}
-
 }

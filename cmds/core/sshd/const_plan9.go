@@ -6,6 +6,4 @@
 
 package main
 
-var (
-	shell = "/bin/rc"
-)
+var shell = "/bin/rc"

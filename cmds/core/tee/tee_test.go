@@ -46,7 +46,7 @@ func TestTee(t *testing.T) {
 
 			if test.append {
 				for _, arg := range test.args {
-					err := os.WriteFile(arg, []byte(test.appendContent), 0666)
+					err := os.WriteFile(arg, []byte(test.appendContent), 0o666)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -55,7 +55,7 @@ func TestTee(t *testing.T) {
 
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
-			//cmd := command(test.append, false, test.args)
+			// cmd := command(test.append, false, test.args)
 			cmd := &cmd{
 				stdin:  strings.NewReader(test.input),
 				stdout: &stdout,

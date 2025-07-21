@@ -14,7 +14,7 @@ import (
 
 func TestTac(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tac1")
-	err := os.WriteFile(path, []byte("hello\nworld\n"), 0644)
+	err := os.WriteFile(path, []byte("hello\nworld\n"), 0o644)
 	if err != nil {
 		t.Fatalf(`os.WriteFile(%q, []byte("hello\nworld\n"), 0644) = %v, want nil`, path, err)
 	}

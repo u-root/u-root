@@ -13,7 +13,6 @@ import (
 )
 
 func deviceNumber(path string) (uint64, error) {
-
 	// stat()
 	fi, err := os.Stat(path)
 	if err != nil {

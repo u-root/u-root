@@ -313,7 +313,7 @@ func (r *reader) ReadRecord() (Record, error) {
 	recLen := uint64(r.pos - recPos)
 	filePos := r.pos
 
-	//TODO: check if hdr.FileSize is equal to the actual fileSize of the record
+	// TODO: check if hdr.FileSize is equal to the actual fileSize of the record
 	content := io.NewSectionReader(r.r, r.pos, int64(hdr.FileSize))
 	r.pos = round4(r.pos + int64(hdr.FileSize))
 	return Record{

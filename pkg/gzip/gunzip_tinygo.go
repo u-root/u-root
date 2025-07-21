@@ -7,9 +7,8 @@
 package gzip
 
 import (
-	"io"
-
 	"compress/gzip"
+	"io"
 )
 
 // Decompress takes gzip compressed input from io.Reader and expands it using pgzip

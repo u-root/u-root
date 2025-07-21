@@ -359,5 +359,4 @@ func TestCheckPath(t *testing.T) {
 	if err := f.CheckOutputPath(); err != nil {
 		t.Logf("f.CheckOutputPath(): got %v, want nil", err)
 	}
-
 }

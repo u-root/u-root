@@ -43,5 +43,4 @@ func TestAttr(t *testing.T) {
 	if c.Cmd.SysProcAttr.Cloneflags&syscall.CLONE_NEWNS != syscall.CLONE_NEWNS {
 		t.Errorf("builtinAttr(&c): c.Cmd.SysProcAttr.Cloneflags did not have syscall.CLONE_NEWNS set")
 	}
-
 }

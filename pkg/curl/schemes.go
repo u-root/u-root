@@ -225,7 +225,8 @@ func (s Schemes) LazyFetchWithoutCache(u *url.URL) (FileWithoutCache, error) {
 				return nil, &URLError{URL: u, Err: err}
 			}
 			return r, nil
-		})}, nil
+		}),
+	}, nil
 }
 
 // LazyFetch calls LazyFetch on DefaultSchemes.

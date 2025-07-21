@@ -11,9 +11,7 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 )
 
-var (
-	force = flag.Bool("f", false, "Force unmount")
-)
+var force = flag.Bool("f", false, "Force unmount")
 
 func umount() error {
 	flag.Parse()

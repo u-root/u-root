@@ -28,7 +28,7 @@ func TestMore(t *testing.T) {
 	t.Run("one screen file", func(t *testing.T) {
 		content := "line1\nline2\nline3\n"
 		path := filepath.Join(t.TempDir(), "file1")
-		err := os.WriteFile(path, []byte(content), 0644)
+		err := os.WriteFile(path, []byte(content), 0o644)
 		if err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}
@@ -50,7 +50,7 @@ func TestMore(t *testing.T) {
 		// '\n' comes from 'enter'
 		expectedOutput := "line1\nline2\nline3line4\nline5\n"
 		path := filepath.Join(t.TempDir(), "file1")
-		err := os.WriteFile(path, []byte(content), 0644)
+		err := os.WriteFile(path, []byte(content), 0o644)
 		if err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}

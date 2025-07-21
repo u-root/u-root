@@ -28,9 +28,7 @@ const (
 	PROT_UNIX  Protocol = "unix"
 )
 
-var (
-	ProcnetPath = "/proc/net"
-)
+var ProcnetPath = "/proc/net"
 
 type NetState uint8
 

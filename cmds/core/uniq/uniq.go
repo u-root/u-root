@@ -109,6 +109,7 @@ func uniq(r io.Reader, w io.Writer, unique, duplicates, count bool, equal func(a
 	}
 	fmt.Fprintf(w, "%s\n", line)
 }
+
 func run(stdin io.Reader, stdout io.Writer, unique, duplicates, count, ignoreCase bool, args []string) error {
 	var eq func(a, b []byte) bool
 	if ignoreCase {
@@ -131,6 +132,7 @@ func run(stdin io.Reader, stdout io.Writer, unique, duplicates, count, ignoreCas
 	}
 	return nil
 }
+
 func main() {
 	flag.Parse()
 	if err := run(os.Stdin, os.Stdout, *unique, *duplicates, *count, *ignoreCase, flag.Args()); err != nil {

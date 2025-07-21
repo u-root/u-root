@@ -53,7 +53,7 @@ var wellKnownPortsMap = map[string]string{
 	content += "}"
 
 	// Write the content to the Go file
-	if err := os.WriteFile("well_known_ports.go", []byte(content), 0644); err != nil {
+	if err := os.WriteFile("well_known_ports.go", []byte(content), 0o644); err != nil {
 		log.Fatalf("Error writing file: %v", err)
 	}
 

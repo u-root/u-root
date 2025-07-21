@@ -110,7 +110,6 @@ func TestWriteFile(t *testing.T) {
 
 	Debug = t.Logf
 	if err := mountMountDevice(t); err != nil {
-
 		t.Skipf("no mountable device for test:%v", err)
 	}
 

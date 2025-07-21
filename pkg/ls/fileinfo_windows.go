@@ -32,7 +32,7 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	return FileInfo{
 		Name:  fi.Name(),
 		Mode:  fi.Mode(),
-		UID:   "bill gates", //fi.Sys().(*syscall.Dir).Uid,
+		UID:   "bill gates", // fi.Sys().(*syscall.Dir).Uid,
 		Size:  fi.Size(),
 		MTime: fi.ModTime(),
 	}
