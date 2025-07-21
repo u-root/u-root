@@ -107,7 +107,6 @@ type MeasurementRecord struct {
 }
 
 func verifyFBPTSignature(mem io.ReadSeeker, fbptAddr uint64) (uint32, error) {
-
 	// Read & confirm FBPT struct signature
 	if _, err := mem.Seek(int64(fbptAddr), io.SeekStart); err != nil {
 		return 0, err
@@ -147,7 +146,7 @@ func FindAllFBPTRecords(FBPTAddr uint64) (int, []MeasurementRecord, EfiAcpi6_5Fp
 	}
 
 	// iterate through FBPT table
-	var measurementRecords = make([]MeasurementRecord, maxNumberOfFBPTPerfRecords)
+	measurementRecords := make([]MeasurementRecord, maxNumberOfFBPTPerfRecords)
 	var index int
 	var tableBytesRead uint32
 	var HeaderInfo efiAcpi5_0FpdtPerformanceRecordHeader
@@ -161,7 +160,7 @@ func FindAllFBPTRecords(FBPTAddr uint64) (int, []MeasurementRecord, EfiAcpi6_5Fp
 			}
 			index++
 		} else if HeaderInfo.Type == efiAcpi6_5FpdtFirmwareBasicBootRecordIdentifier {
-			//skip reserved section before Firmware Basic Boot Performance Record
+			// skip reserved section before Firmware Basic Boot Performance Record
 			if _, err := f.Seek(4, io.SeekCurrent); err != nil {
 				return index, nil, basicBootRecord, err
 			}

@@ -45,9 +45,7 @@ var commands = map[string]subcommand{
 	},
 }
 
-var (
-	force bool
-)
+var force bool
 
 type options struct {
 	etc        string

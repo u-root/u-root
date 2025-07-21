@@ -21,8 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/util"
 )
 
-var (
-	usage = `echo:
+var usage = `echo:
   If -e is in effect, the following sequences are recognized:
     \\     backslash
     \a     alert (BEL)
@@ -35,7 +34,7 @@ var (
     \v     vertical tab
     \0NNN  byte with octal value NNN (1 to 3 digits)
     \xHH   byte with hexadecimal value HH (1 to 2 digits)`
-)
+
 var (
 	noNewline                 = flag.Bool("n", false, "suppress newline")
 	interpretEscapes          = flag.Bool("e", true, "enable interpretation of backslash escapes (default)")

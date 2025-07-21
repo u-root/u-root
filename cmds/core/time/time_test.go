@@ -13,7 +13,7 @@ import (
 )
 
 func TestTime(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		args []string
 		want string
 		err  error

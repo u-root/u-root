@@ -69,7 +69,6 @@ func TestParseStructSupported(t *testing.T) {
 }
 
 func TestParseStructWithTPMDevice(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		buffer   []byte
@@ -89,7 +88,7 @@ func TestParseStructWithTPMDevice(t *testing.T) {
 				0x03,       // Minor
 				0x01, 0x00, // FirmwareVersion1
 				0x02, 0x00, // FirmwareVersion1
-				0x00, 0x00, 0x00, 0x00, //FirmwareVersion2
+				0x00, 0x00, 0x00, 0x00, // FirmwareVersion2
 				0x01,                   // String Index
 				1 << 3,                 // Characteristics
 				0x78, 0x56, 0x34, 0x12, // OEMDefined
@@ -119,7 +118,7 @@ func TestParseStructWithTPMDevice(t *testing.T) {
 				0x03,       // Minor
 				0x01, 0x00, // FirmwareVersion1
 				0x02, 0x00, // FirmwareVersion1
-				0x00, 0x00, 0x00, 0x00, //FirmwareVersion2
+				0x00, 0x00, 0x00, 0x00, // FirmwareVersion2
 				0x01,   // String Index
 				1 << 3, // Characteristics
 			},
@@ -201,5 +200,4 @@ func TestParseStructWithTPMDevice(t *testing.T) {
 			}
 		})
 	}
-
 }

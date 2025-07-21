@@ -83,7 +83,8 @@ func TestSupportedVersions(t *testing.T) {
 		{
 			version: 0x0208,
 			wantErr: false,
-		}, {
+		},
+		{
 			version: 0x0209,
 			wantErr: false,
 		},
@@ -247,7 +248,6 @@ func TestAddInitRAMFS(t *testing.T) {
 	if err := (&BzImage{}).UnmarshalBinary(d); err != nil {
 		t.Fatalf("unable to unmarshal the marshal'd image: %v", err)
 	}
-
 }
 
 func TestHeaderString(t *testing.T) {

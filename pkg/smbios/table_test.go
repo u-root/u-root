@@ -11,9 +11,7 @@ import (
 	"testing"
 )
 
-var (
-	testbinary = "testdata/satellite_pro_l70_testdata.bin"
-)
+var testbinary = "testdata/satellite_pro_l70_testdata.bin"
 
 func checkError(got error, want error) bool {
 	if got != nil && want != nil {
@@ -43,7 +41,6 @@ func TestParseSMBIOS(t *testing.T) {
 
 func Test64Len(t *testing.T) {
 	info, err := setupMockData()
-
 	if err != nil {
 		t.Errorf("error parsing info data: %v", err)
 	}
@@ -56,7 +53,6 @@ func Test64Len(t *testing.T) {
 }
 
 func Test64String(t *testing.T) {
-
 	tableString := `Handle 0x0000, DMI type 222, 14 bytes
 OEM-specific Type
 	Header and Data:
@@ -67,7 +63,6 @@ OEM-specific Type
 		BIOS Boot Complete`
 
 	info, err := setupMockData()
-
 	if err != nil {
 		t.Errorf("error parsing info data: %v", err)
 	}
@@ -225,7 +220,6 @@ func Test64GetBytesAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			resultBytes, err := testStruct.GetBytesAt(tt.offset, tt.length)
 
 			if !checkError(err, tt.want) {
@@ -277,7 +271,6 @@ func Test64GetWordAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			resultBytes, err := testStruct.GetWordAt(tt.offset)
 			if !checkError(err, tt.want) {
 				t.Errorf("GetBytesAt(): '%v', want '%v'", err, tt.want)
@@ -328,7 +321,6 @@ func Test64GetDWordAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			resultBytes, err := testStruct.GetDWordAt(tt.offset)
 			if !checkError(err, tt.want) {
 				t.Errorf("GetBytesAt(): '%v', want '%v'", err, tt.want)
@@ -391,7 +383,6 @@ func Test64GetQWordAt(t *testing.T) {
 }
 
 func TestKmgt(t *testing.T) {
-
 	tests := []struct {
 		name   string
 		value  uint64
@@ -434,7 +425,6 @@ func TestKmgt(t *testing.T) {
 }
 
 func Test64GetStringAt(t *testing.T) {
-
 	testStruct := Table{
 		Header: Header{
 			Type:   TableTypeBIOSInfo,

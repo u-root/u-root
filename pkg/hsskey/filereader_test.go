@@ -292,7 +292,7 @@ func TestGetHssEepromPaths(t *testing.T) {
 			// Create all files
 			for _, path := range tt.allFiles {
 				fullPath := filepath.Join(tempDir, path)
-				err := os.MkdirAll(filepath.Dir(fullPath), 0755)
+				err := os.MkdirAll(filepath.Dir(fullPath), 0o755)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -352,28 +352,36 @@ func TestReadHssFromFile(t *testing.T) {
 		{
 			name:     "Four valid hss blocks",
 			fileData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2},
-			expectedData: [][]byte{validHssBlock1[:32], validHssBlock1[:32], validHssBlock2[:32],
-				validHssBlock2[:32]},
+			expectedData: [][]byte{
+				validHssBlock1[:32], validHssBlock1[:32], validHssBlock2[:32],
+				validHssBlock2[:32],
+			},
 			expectErr: false,
 		},
 		{
 			name: "Two valid and two invalid",
-			fileData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
-				invalidChecksumHssBlock2},
+			fileData: [][]byte{
+				validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2,
+			},
 			expectedData: [][]byte{validHssBlock1[:32], validHssBlock2[:32]},
 			expectErr:    false,
 		},
 		{
 			name: "Mix invalid block",
-			fileData: [][]byte{make([]byte, 5), validHssBlock1, validHssBlock1, validHssBlock1,
-				validHssBlock1},
+			fileData: [][]byte{
+				make([]byte, 5), validHssBlock1, validHssBlock1, validHssBlock1,
+				validHssBlock1,
+			},
 			expectedData: nil,
 			expectErr:    true,
 		},
 		{
 			name: "File length is longer than 4 blocks",
-			fileData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2, validHssBlock2,
-				validHssBlock2},
+			fileData: [][]byte{
+				validHssBlock1, invalidChecksumHssBlock1, validHssBlock2, validHssBlock2,
+				validHssBlock2,
+			},
 			expectedData: [][]byte{validHssBlock1[:32], validHssBlock2[:32], validHssBlock2[:32]},
 			expectErr:    false,
 		},
@@ -398,7 +406,7 @@ func TestReadHssFromFile(t *testing.T) {
 			for _, bytes := range tt.fileData {
 				fileContent = append(fileContent, bytes...)
 			}
-			if err := os.WriteFile(tempFile.Name(), fileContent, 0644); err != nil {
+			if err := os.WriteFile(tempFile.Name(), fileContent, 0o644); err != nil {
 				t.Fatalf("Failed to write test file: %v", err)
 			}
 
@@ -443,7 +451,7 @@ func TestGetHssFromFile(t *testing.T) {
 	f1td2 := createDummyHssData()
 	fileContent1 = append(fileContent1, f1td2...)
 	fileContent1 = append(fileContent1, f1td2...)
-	if err := os.WriteFile(tempFile1.Name(), fileContent1, 0644); err != nil {
+	if err := os.WriteFile(tempFile1.Name(), fileContent1, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -458,7 +466,7 @@ func TestGetHssFromFile(t *testing.T) {
 	fileContent2 = append(fileContent2, f2td2...)
 	f2td3 := createDummyHssData()
 	fileContent2 = append(fileContent2, f2td3...)
-	if err := os.WriteFile(tempFile2.Name(), fileContent2, 0644); err != nil {
+	if err := os.WriteFile(tempFile2.Name(), fileContent2, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -491,14 +499,18 @@ func TestWriteHssToFile(t *testing.T) {
 		{
 			name:      "Four valid hss blocks",
 			writeData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2},
-			expectedData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2,
-				validHssBlock2},
+			expectedData: [][]byte{
+				validHssBlock1, validHssBlock1, validHssBlock2,
+				validHssBlock2,
+			},
 			expectErr: false,
 		},
 		{
 			name: "Two valid and two invalid",
-			writeData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
-				invalidChecksumHssBlock2},
+			writeData: [][]byte{
+				validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2,
+			},
 			expectedData: [][]byte{validHssBlock1, validHssBlock2},
 			expectErr:    false,
 		},
@@ -563,16 +575,20 @@ func TestWriteHssToTempFile(t *testing.T) {
 		{
 			name:      "Four valid hss blocks",
 			writeData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2},
-			expectedData: [][]byte{validHssBlock1, validHssBlock1, validHssBlock2,
-				validHssBlock2},
+			expectedData: [][]byte{
+				validHssBlock1, validHssBlock1, validHssBlock2,
+				validHssBlock2,
+			},
 			expectErr:     false,
 			warnings:      os.Stdout,
 			dangerVerbose: true,
 		},
 		{
 			name: "Two valid and two invalid",
-			writeData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
-				invalidChecksumHssBlock2},
+			writeData: [][]byte{
+				validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2,
+			},
 			expectedData:  [][]byte{validHssBlock1, validHssBlock2},
 			expectErr:     false,
 			warnings:      os.Stdout,
@@ -588,8 +604,10 @@ func TestWriteHssToTempFile(t *testing.T) {
 		},
 		{
 			name: "Two valid and two invalid skipping warnings",
-			writeData: [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
-				invalidChecksumHssBlock2},
+			writeData: [][]byte{
+				validHssBlock1, invalidChecksumHssBlock1, validHssBlock2,
+				invalidChecksumHssBlock2,
+			},
 			expectedData:  [][]byte{validHssBlock1, validHssBlock2},
 			expectErr:     false,
 			warnings:      nil,

@@ -191,7 +191,6 @@ func (i *Image) LoadConfig() (string, string, error) {
 	configs := i.Root.Root().Walk("configurations")
 	config := configs.Walk(tc)
 	_, err = config.AsString()
-
 	if err != nil {
 		return "", "", err
 	}

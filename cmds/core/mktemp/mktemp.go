@@ -102,7 +102,6 @@ func (f *flags) register(fs *flag.FlagSet) {
 
 	fs.StringVar(&f.dir, "tmpdir", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
 	fs.StringVar(&f.dir, "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp (shorthand)")
-
 }
 
 func command(stdout io.Writer, args []string) *cmd {

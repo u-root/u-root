@@ -14,8 +14,7 @@ import (
 
 // TestCmd tests the implementation of builtin commands.
 func TestCmd(t *testing.T) {
-
-	var tests = []struct {
+	tests := []struct {
 		name string
 		line string
 		out  string

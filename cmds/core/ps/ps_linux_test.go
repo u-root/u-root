@@ -67,7 +67,6 @@ func TestPs(t *testing.T) {
 						t.Errorf("ps() = %q, want to contain: %q", buf.String(), tt.want)
 					}
 				}
-
 			}
 		})
 	}
@@ -160,5 +159,4 @@ nonvoluntary_ctxt_switches:	3746
 			}
 		})
 	}
-
 }

@@ -18,8 +18,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-var (
-	help = `usage: netstat [-WeenNC] [<Af>] -r         netstat {-h|--help}
+var help = `usage: netstat [-WeenNC] [<Af>] -r         netstat {-h|--help}
        netstat [-WnNaeol] [<Socket> ...]
        netstat { [-WeenNa] -I[<Iface>] | [-eenNa] -i | [-cnNe] | -s [-6tuw] } [delay]
 
@@ -48,7 +47,6 @@ var (
   <AF>=Use '-6|-4' or '-A <af>' or '--<af>'; default: inet
   List of possible address families (which support routing):
     inet (DARPA Internet) inet6 (IPv6)`
-)
 
 func printHelp() {
 	fmt.Printf("%s\n", help)
@@ -187,7 +185,6 @@ func (c cmd) run() error {
 				af.ClearOutput()
 				time.Sleep(2 * time.Second)
 			}
-
 		}
 
 		return err

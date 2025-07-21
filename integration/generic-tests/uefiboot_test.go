@@ -72,5 +72,4 @@ func TestUEFIBoot(t *testing.T) {
 		t.Errorf("Wait: %v", err)
 	}
 	_ = vm.Wait()
-
 }

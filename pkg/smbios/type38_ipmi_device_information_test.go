@@ -89,7 +89,8 @@ BIOS Information
 	Interrupt Polarity: Active High
 	Interrupt Trigger Mode: Edge`,
 		},
-		{name: "I/O mapped,32bit Boundaries, Interrupt Active High Level Interrupt 1",
+		{
+			name: "I/O mapped,32bit Boundaries, Interrupt Active High Level Interrupt 1",
 			IPMIDev: IPMIDeviceInfo{
 				BaseAddress:                      0x1,
 				BaseAddressModifierInterruptInfo: 0x89,

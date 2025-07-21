@@ -90,7 +90,7 @@ func main() {
 
 	log.Printf("Booting from the following block devices: %v", blockDevs)
 
-	var l = ulog.Null
+	l := ulog.Null
 	if *verbose {
 		l = ulog.Log
 	}

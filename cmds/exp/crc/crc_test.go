@@ -38,7 +38,7 @@ func TestCRC(t *testing.T) {
 	t.Run("test file", func(t *testing.T) {
 		tmp := t.TempDir()
 		path := filepath.Join(tmp, "file")
-		err := os.WriteFile(path, []byte("test\n"), 0644)
+		err := os.WriteFile(path, []byte("test\n"), 0o644)
 		if err != nil {
 			t.Fatalf("cannot create file: %v", err)
 		}

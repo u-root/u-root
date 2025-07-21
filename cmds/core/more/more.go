@@ -29,8 +29,10 @@ import (
 	"os"
 )
 
-var lines = flag.Int("lines", 40, "screen size in number of lines")
-var errLinesMustBePositive = fmt.Errorf("lines must be positive")
+var (
+	lines                  = flag.Int("lines", 40, "screen size in number of lines")
+	errLinesMustBePositive = fmt.Errorf("lines must be positive")
+)
 
 func run(stdin io.Reader, stdout io.Writer, lines int, args []string) error {
 	if lines <= 0 {

@@ -56,10 +56,10 @@ func parseParams(device, parity string, baud uint, databits int) (params, error)
 }
 
 func main() {
-	var device = flag.String("D", "", "device: -D=/dev/tty")
-	var baud = flag.Uint("b", 115200, "baud: -b=115200")
-	var parity = flag.String("p", "no", "parity: -p=no|even|odd")
-	var databits = flag.Int("d", 8, "databits: -d=5|6|7|8")
+	device := flag.String("D", "", "device: -D=/dev/tty")
+	baud := flag.Uint("b", 115200, "baud: -b=115200")
+	parity := flag.String("p", "no", "parity: -p=no|even|odd")
+	databits := flag.Int("d", 8, "databits: -d=5|6|7|8")
 
 	flag.Parse()
 	p, err := parseParams(*device, *parity, *baud, *databits)

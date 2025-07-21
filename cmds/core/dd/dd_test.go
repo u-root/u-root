@@ -585,7 +585,6 @@ func TestBS(t *testing.T) {
 			err:  nil,
 		},
 	} {
-
 		t.Run(tt.name, func(t *testing.T) {
 			var bw int64
 			if err := dd(&tt, &tt, tt.ibs, tt.obs, &bw); !errors.Is(err, tt.err) {

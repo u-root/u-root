@@ -269,7 +269,7 @@ LOOP:
 			}
 			if nextHopIdx < 0 { // first nexthop item is stored in the top-level route fields
 				route.LinkIndex = idx
-				//NHFLAGS
+				// NHFLAGS
 				if cmd.tokenRemains() {
 					if nhFlags, ok := probeNHFlags(cmd.peekToken("NHFLAGS")); ok {
 						cmd.Cursor++
@@ -278,7 +278,7 @@ LOOP:
 				}
 			} else { // next hop item is a nexthop item and is stored in the MultiPath slice
 				route.MultiPath[nextHopIdx].LinkIndex = idx
-				//NHFLAGS
+				// NHFLAGS
 				if cmd.tokenRemains() {
 					if nhFlags, ok := probeNHFlags(cmd.peekToken("NHFLAGS")); ok {
 						cmd.Cursor++
@@ -533,6 +533,7 @@ func parseTable(token string) (int, error) {
 		return int(n), nil
 	}
 }
+
 func parseProto(token string) (netlink.RouteProtocol, error) {
 	// The netlink package itself does not define these constants, but it uses the respective unix constants e.g.
 	// in netlink.RouteProtocol.String().
@@ -551,6 +552,7 @@ func parseProto(token string) (netlink.RouteProtocol, error) {
 		return netlink.RouteProtocol(n), nil
 	}
 }
+
 func parseScope(token string) (netlink.Scope, error) {
 	// The netlink package itself does not define these constants, but it uses the respective unix constants e.g.
 	// in netlink.Scope.String().

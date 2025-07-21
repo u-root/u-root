@@ -66,7 +66,6 @@ func TestBlockDevString(t *testing.T) {
 					t.Errorf("String() = %s, does not contain %s", got, w)
 				}
 			}
-
 		})
 	}
 }
@@ -188,7 +187,6 @@ func TestBlockDevPCIInfoError(t *testing.T) {
 }
 
 func TestBlockDevicesFilterName(t *testing.T) {
-
 	devs := BlockDevices{
 		&BlockDev{Name: "devA", FsUUID: "1234-abcd"},
 		&BlockDev{Name: "devB", FsUUID: "abcd-1234"},
@@ -206,7 +204,6 @@ func TestBlockDevicesFilterName(t *testing.T) {
 }
 
 func TestBlockDevicesFilterNames(t *testing.T) {
-
 	devs := BlockDevices{
 		&BlockDev{Name: "devA", FsUUID: "1234-abcd"},
 		&BlockDev{Name: "devB", FsUUID: "abcd-1234"},
@@ -225,7 +222,6 @@ func TestBlockDevicesFilterNames(t *testing.T) {
 }
 
 func TestBlockDevicesFilterFSUUID(t *testing.T) {
-
 	devs := BlockDevices{
 		&BlockDev{Name: "devA", FsUUID: "1234-abcd"},
 		&BlockDev{Name: "devB", FsUUID: "abcd-1234"},

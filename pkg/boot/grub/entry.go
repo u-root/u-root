@@ -68,7 +68,7 @@ func ParseEnvFile(r io.Reader) (*EnvFile, error) {
 	s := bufio.NewScanner(r)
 	conf := NewEnvFile()
 
-	var replacer = strings.NewReplacer(
+	replacer := strings.NewReplacer(
 		"\n", "",
 		"\r", "",
 	)

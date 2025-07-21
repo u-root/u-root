@@ -505,7 +505,6 @@ func TestAddressFamiliy(t *testing.T) {
 	}
 	_ = netstat.NewAddressFamily(false, fmt)
 	_ = netstat.NewAddressFamily(true, fmt)
-
 }
 
 func TestGroupString(t *testing.T) {
@@ -547,7 +546,8 @@ func TestIPv4(t *testing.T) {
 	fmt, err := netstat.NewOutput(netstat.FmtFlags{
 		NumHosts: true,
 		NumPorts: true,
-		NumUsers: true})
+		NumUsers: true,
+	})
 	if err != nil {
 		t.Error(err)
 	}
@@ -665,7 +665,8 @@ func TestPrintNetFiles(t *testing.T) {
 	output, err := netstat.NewOutput(netstat.FmtFlags{
 		NumHosts: true,
 		NumPorts: true,
-		NumUsers: true})
+		NumUsers: true,
+	})
 	if err != nil {
 		t.Error(err)
 	}

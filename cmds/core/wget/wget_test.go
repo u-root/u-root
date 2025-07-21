@@ -47,7 +47,7 @@ func TestWget(t *testing.T) {
 	srv := httptest.NewServer(handler{})
 	defer srv.Close()
 
-	var tests = []struct {
+	tests := []struct {
 		name           string
 		url            string // in
 		wantContent    string // out
@@ -191,7 +191,6 @@ func TestNoServer(t *testing.T) {
 	if err := c.run(); err == nil {
 		t.Fatalf("run:got nil, want err")
 	}
-
 }
 
 func TestFlags(t *testing.T) {
@@ -220,7 +219,6 @@ func TestFlags(t *testing.T) {
 				t.Errorf("url:got %q,want %q", u, tt.url)
 			}
 		})
-
 	}
 }
 

@@ -157,7 +157,6 @@ func TestSessionRun(t *testing.T) {
 	session, err := clt.NewSession()
 	if err != nil {
 		t.Fatalf("can't create session: %v", err)
-
 	}
 	defer session.Close()
 

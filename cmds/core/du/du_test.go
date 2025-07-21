@@ -251,7 +251,7 @@ func prepareDir(t *testing.T) string {
 	}
 	f1.Write(make([]byte, 4096))
 	dir1 := filepath.Join(dir, "dir1")
-	err = os.Mkdir(dir1, 0722)
+	err = os.Mkdir(dir1, 0o722)
 	if err != nil {
 		t.Fatal(err)
 	}

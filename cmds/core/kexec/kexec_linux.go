@@ -28,13 +28,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
-
-	"flag"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -141,7 +140,7 @@ func hackLoadFlagValue(in []string) []string {
 	var out []string
 	for n := 0; n <= len(in)-2; n++ {
 		current := n
-		//next := n + 1
+		// next := n + 1
 		if (in[current] == "-l" || in[current] == "--load") && strings.HasPrefix(in[current+1], "-") {
 			out = append(out, in[current], setButEmpty)
 		} else {

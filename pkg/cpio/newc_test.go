@@ -306,29 +306,29 @@ var (
 	}
 
 	testResult = []Record{
-		{Info: Info{Name: ".", Ino: 3204033, Mode: 040775, UID: 1000, GID: 1000, NLink: 9, MTime: 1485152334, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "etc", Ino: 3204037, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "etc/localtime", Ino: 3195404, Mode: 0100644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 118, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "etc/resolv.conf", Ino: 3177229, Mode: 0100644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 81, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "lib64", Ino: 3204043, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "tcz", Ino: 3204036, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "bin", Ino: 3204044, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "tmp", Ino: 3204045, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "dev", Ino: 3204038, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "dev/console", Ino: 3197985, Mode: 020644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 5, Rminor: 1}},
-		{Info: Info{Name: "dev/ttyS0", Ino: 3197986, Mode: 020644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 4, Rminor: 64}},
-		{Info: Info{Name: "dev/loop2", Ino: 3197987, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 2}},
-		{Info: Info{Name: "dev/loop-control", Ino: 3197983, Mode: 020600, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 10, Rminor: 237}},
-		{Info: Info{Name: "dev/loop7", Ino: 3197984, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 7}},
-		{Info: Info{Name: "dev/loop6", Ino: 3197975, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 6}},
-		{Info: Info{Name: "dev/loop4", Ino: 3197979, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 4}},
-		{Info: Info{Name: "dev/loop1", Ino: 3197981, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 1}},
-		{Info: Info{Name: "dev/loop5", Ino: 3197982, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 5}},
-		{Info: Info{Name: "dev/null", Ino: 3197988, Mode: 020644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 1, Rminor: 3}},
-		{Info: Info{Name: "dev/loop0", Ino: 3197976, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 0}},
-		{Info: Info{Name: "dev/loop3", Ino: 3197980, Mode: 060660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 3}},
-		{Info: Info{Name: "usr", Ino: 3204041, Mode: 040755, UID: 0, GID: 0, NLink: 3, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
-		{Info: Info{Name: "usr/lib", Ino: 3204042, Mode: 040755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: ".", Ino: 3204033, Mode: 0o40775, UID: 1000, GID: 1000, NLink: 9, MTime: 1485152334, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "etc", Ino: 3204037, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "etc/localtime", Ino: 3195404, Mode: 0o100644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 118, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "etc/resolv.conf", Ino: 3177229, Mode: 0o100644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 81, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "lib64", Ino: 3204043, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "tcz", Ino: 3204036, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "bin", Ino: 3204044, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "tmp", Ino: 3204045, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "dev", Ino: 3204038, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "dev/console", Ino: 3197985, Mode: 0o20644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 5, Rminor: 1}},
+		{Info: Info{Name: "dev/ttyS0", Ino: 3197986, Mode: 0o20644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 4, Rminor: 64}},
+		{Info: Info{Name: "dev/loop2", Ino: 3197987, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 2}},
+		{Info: Info{Name: "dev/loop-control", Ino: 3197983, Mode: 0o20600, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 10, Rminor: 237}},
+		{Info: Info{Name: "dev/loop7", Ino: 3197984, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 7}},
+		{Info: Info{Name: "dev/loop6", Ino: 3197975, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 6}},
+		{Info: Info{Name: "dev/loop4", Ino: 3197979, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 4}},
+		{Info: Info{Name: "dev/loop1", Ino: 3197981, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 1}},
+		{Info: Info{Name: "dev/loop5", Ino: 3197982, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 5}},
+		{Info: Info{Name: "dev/null", Ino: 3197988, Mode: 0o20644, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 1, Rminor: 3}},
+		{Info: Info{Name: "dev/loop0", Ino: 3197976, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 0}},
+		{Info: Info{Name: "dev/loop3", Ino: 3197980, Mode: 0o60660, UID: 0, GID: 0, NLink: 1, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 7, Rminor: 3}},
+		{Info: Info{Name: "usr", Ino: 3204041, Mode: 0o40755, UID: 0, GID: 0, NLink: 3, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
+		{Info: Info{Name: "usr/lib", Ino: 3204042, Mode: 0o40755, UID: 0, GID: 0, NLink: 2, MTime: 1485152330, FileSize: 0, Major: 252, Minor: 0, Rmajor: 0, Rminor: 0}},
 	}
 )
 
@@ -617,7 +617,6 @@ func TestReproducible(t *testing.T) {
 }
 
 func FuzzReadWriteNewc(f *testing.F) {
-
 	f.Add(testCPIO)
 	f.Add([]byte("070701000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"))
 	f.Add([]byte("07070100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000//000"))
@@ -710,7 +709,7 @@ func (e EmptyReaderAt) ReadAt(p []byte, off int64) (int, error) {
 func TestReproducibleWrite(t *testing.T) {
 	d := t.TempDir()
 	for _, n := range []string{"a", "b"} {
-		if err := os.WriteFile(filepath.Join(d, n), []byte{}, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(d, n), []byte{}, 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}

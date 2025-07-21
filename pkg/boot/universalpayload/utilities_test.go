@@ -287,7 +287,8 @@ func mockWritePeFileBinary(offset int, totalSize int, imageBase uint64, sections
 			Name:          nameArr,
 			SizeOfRawData: uint32(len(section.data)),
 			PointerToRawData: peFileHeaderSize + peOptHeaderSize +
-				peSectionHeaderSize*uint32(i+1) + peSectionSize*uint32(i)}
+				peSectionHeaderSize*uint32(i+1) + peSectionSize*uint32(i),
+		}
 		binary.Write(&buf, binary.LittleEndian, sectionHeader)
 		binary.Write(&buf, binary.LittleEndian, section.data)
 	}
@@ -348,7 +349,6 @@ func TestRelocateFdtData(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // Helper function to mock relocData for test cases
@@ -646,7 +646,6 @@ func TestFetchACPIMCFGData(t *testing.T) {
 				if !reflect.DeepEqual(mcfgData, tt.mcfgData) {
 					t.Errorf("got %+v, want %+v", mcfgData, tt.mcfgData)
 				}
-
 			}
 		})
 	}
@@ -1025,14 +1024,14 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 	// /$TMPDIR/$DOMAIN_ID:$BUS_ID:$DEVICE_ID.$FUNCTION_ID/resource
 	for i, folderName := range subFolder {
 		subFolderPath := filepath.Join(tmpDir, folderName)
-		if err := os.MkdirAll(subFolderPath, 0755); err != nil {
+		if err := os.MkdirAll(subFolderPath, 0o755); err != nil {
 			t.Fatalf("Error creating subfolder %s: %v\n", subFolderPath, err)
 		}
 
 		filePath := filepath.Join(subFolderPath, "resource")
 		data := strings.Join(resourceContent[i], "")
 
-		if err := os.WriteFile(filePath, []byte(data), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte(data), 0o644); err != nil {
 			t.Fatalf("Error writing to file %s: %v\n", filePath, err)
 		}
 	}
@@ -1053,7 +1052,6 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 			idx++
 		}
 	}
-
 }
 
 func TestGetReservedMemoryMap(t *testing.T) {
@@ -1286,7 +1284,6 @@ func TestSkipReservedRange(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestIsValidPCIDeviceName(t *testing.T) {

@@ -331,7 +331,6 @@ func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
 	}
 
 	newTable, err := opt(oldTable)
-
 	if err != nil {
 		t.Fatalf("opt should pass but returned error: %v", err)
 	}
@@ -387,7 +386,6 @@ func TestRemoveBaseboardInfoPass(t *testing.T) {
 	wantTable := []*Table{}
 
 	newTable, err := opt(oldTable)
-
 	if err != nil {
 		t.Fatalf("opt should pass but returned error: %v", err)
 	}

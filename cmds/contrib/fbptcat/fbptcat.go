@@ -45,5 +45,4 @@ func main() {
 		}
 		fmt.Printf("Index: %d,Hook Type: %s, Processor Identifier/APIC ID: %d, Timestamp: %d, Guid: %s, Description: %s\n", i, measurementRecord.HookType, measurementRecord.ProcessorIdentifier, measurementRecord.Timestamp, measurementRecord.GUID.String(), measurementRecord.Description)
 	}
-
 }

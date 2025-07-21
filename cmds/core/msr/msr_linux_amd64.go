@@ -262,7 +262,6 @@ func tou64(a any) uint64 {
 		u = uint64(v)
 	}
 	return u
-
 }
 
 func u64(f forth.Forth) {

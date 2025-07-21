@@ -37,7 +37,6 @@ func TestList(t *testing.T) {
 			continue
 		}
 	}
-
 }
 
 // TestGather is a bit challenging, but a good test.
@@ -46,7 +45,7 @@ func TestList(t *testing.T) {
 func TestGather(t *testing.T) {
 	d := t.TempDir()
 	f := filepath.Join(d, "json")
-	os.WriteFile(f, []byte(data), 0666)
+	os.WriteFile(f, []byte(data), 0o666)
 
 	health.V = t.Logf
 	for _, tt := range []struct {
@@ -80,5 +79,4 @@ func TestGather(t *testing.T) {
 			continue
 		}
 	}
-
 }

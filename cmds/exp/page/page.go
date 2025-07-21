@@ -98,7 +98,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var restore = func() {
+	restore := func() {
 		if err := t.Set(c); err != nil {
 			log.Printf("Restoring modes failed; sorry (%v)", err)
 		}

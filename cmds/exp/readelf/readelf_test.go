@@ -28,7 +28,7 @@ func TestRead(t *testing.T) {
 		t.Errorf("Opening nonexistent file: got nil, want err")
 	}
 
-	if err := os.WriteFile(f, elfFile, 0666); err != nil {
+	if err := os.WriteFile(f, elfFile, 0o666); err != nil {
 		t.Fatalf("Writing data: %v", err)
 	}
 
@@ -46,7 +46,7 @@ func TestRead(t *testing.T) {
 	}
 
 	// short file
-	if err := os.WriteFile(f, elfFile[:64], 0666); err != nil {
+	if err := os.WriteFile(f, elfFile[:64], 0o666); err != nil {
 		t.Fatalf("Writing data: %v", err)
 	}
 
@@ -56,7 +56,7 @@ func TestRead(t *testing.T) {
 
 	// corrupt header
 	elfFile[1] = ^elfFile[1]
-	if err := os.WriteFile(f, elfFile, 0666); err != nil {
+	if err := os.WriteFile(f, elfFile, 0o666); err != nil {
 		t.Fatalf("Writing data: %v", err)
 	}
 

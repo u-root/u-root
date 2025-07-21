@@ -232,7 +232,6 @@ type LinuxParams struct {
 	// we lie.
 	_      [48]uint8         `offset:"0xed0"` // `offset:"0xcd0"`
 	EDDBuf [EDDMaxNR]EDDInfo `offset:"0xf00"` // `offset:"0xd00"`
-
 }
 
 var (

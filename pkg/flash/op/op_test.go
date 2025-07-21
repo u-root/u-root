@@ -89,5 +89,4 @@ func TestStatusBus(t *testing.T) {
 			t.Errorf("%d:%#x: got %v, want %v", i, tt.name, busy, tt.out)
 		}
 	}
-
 }

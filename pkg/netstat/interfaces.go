@@ -15,9 +15,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var (
-	ProcNetDevPath = "/proc/net/dev"
-)
+var ProcNetDevPath = "/proc/net/dev"
 
 func PrintInterfaceTable(ifstr string, cont bool, out io.Writer) error {
 	for {

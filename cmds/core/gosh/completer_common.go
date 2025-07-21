@@ -90,7 +90,7 @@ func lastWord(parser *syntax.Parser, line string) (bool, int, string) {
 		return true, pos, ""
 	}
 
-	//syntax.DebugPrint(os.Stderr, stmt)
+	// syntax.DebugPrint(os.Stderr, stmt)
 	isCmd, pos, word := word(stmt, trailingSpaces)
 	if pos == -1 {
 		return false, -1, ""

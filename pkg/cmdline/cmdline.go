@@ -37,7 +37,7 @@ func FullCmdLine() string {
 
 // parse returns the current command line, trimmed
 func parse(cmdlineReader io.Reader) *CmdLine {
-	var line = &CmdLine{}
+	line := &CmdLine{}
 	raw, err := io.ReadAll(cmdlineReader)
 	line.Err = err
 	// This works because string(nil) is ""

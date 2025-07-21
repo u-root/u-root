@@ -141,7 +141,7 @@ func (v *EFIVarFS) Set(desc VariableDescriptor, attrs VariableAttributes, data [
 		defer restoreImmutable()
 	}
 
-	write, err := os.OpenFile(path, flags, 0644)
+	write, err := os.OpenFile(path, flags, 0o644)
 	switch {
 	case os.IsNotExist(err):
 		return ErrVarNotExist

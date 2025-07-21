@@ -37,7 +37,7 @@ func run(stdout io.Writer, args ...string) error {
 }
 
 func main() {
-	var q = flag.Bool("q", false, "quiet mode")
+	q := flag.Bool("q", false, "quiet mode")
 	flag.Parse()
 	if err := run(os.Stdout, flag.Args()...); err != nil {
 		if *q {

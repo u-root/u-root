@@ -210,7 +210,6 @@ func TestDirectoryHardLink(t *testing.T) {
 
 	want := &bytes.Buffer{}
 	err = run([]string{"i"}, archiveFile, want, true, "newc")
-
 	if err != nil {
 		t.Fatalf("Extraction failed:\n%v\n%v\n", want, err)
 	}

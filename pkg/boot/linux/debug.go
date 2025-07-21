@@ -4,10 +4,8 @@
 
 package linux
 
-var (
-	// Debug is called to print out verbose debug info.
-	//
-	// Set this to appropriate output stream for display
-	// of useful debug info.
-	Debug = func(string, ...interface{}) {}
-)
+// Debug is called to print out verbose debug info.
+//
+// Set this to appropriate output stream for display
+// of useful debug info.
+var Debug = func(string, ...interface{}) {}

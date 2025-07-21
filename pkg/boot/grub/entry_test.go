@@ -42,12 +42,15 @@ func TestParseEnvFile(t *testing.T) {
 		{file: `kernel=bzImage
 initrd=initramfs.cpio`, wantEnv: &EnvFile{map[string]string{
 			"kernel": "bzImage",
-			"initrd": "initramfs.cpio"}}},
+			"initrd": "initramfs.cpio",
+		}}},
 		{file: `kernel=
 initrd=initramfs.cpio`, wantEnv: nil, wantErr: fmt.Errorf(`error parsing "kernel=": either the key or value is empty: "kernel" = ""`)},
-		{file: `kernel`,
+		{
+			file:    `kernel`,
 			wantEnv: nil,
-			wantErr: fmt.Errorf(`error parsing "kernel": must find = or # and key + values in each line`)},
+			wantErr: fmt.Errorf(`error parsing "kernel": must find = or # and key + values in each line`),
+		},
 	}
 	for _, tt := range testcases {
 		gotEnv, err := ParseEnvFile(bytes.NewBufferString(tt.file))
@@ -91,5 +94,4 @@ func FuzzParseEnvFile(f *testing.F) {
 			t.Fatalf("Env files do not match: %#v - %#v", readEnv, rereadEnv)
 		}
 	})
-
 }

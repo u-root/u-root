@@ -140,7 +140,6 @@ func TestGroupsSpecGet(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Get() = %q, want: %q", got, want)
 	}
-
 }
 
 func TestGroupsString(t *testing.T) {

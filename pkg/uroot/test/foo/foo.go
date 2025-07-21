@@ -11,9 +11,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/test/bar"
 )
 
-var (
-	assignedTwice = "foo"
-)
+var assignedTwice = "foo"
 
 var assignWithoutType = "bla"
 
@@ -31,9 +29,7 @@ var (
 	nonConstantAssign   = fmt.Errorf("foo")
 )
 
-var (
-	nil1 any = nil
-)
+var nil1 any = nil
 
 var (
 	f1 func() string
@@ -45,8 +41,10 @@ func debug() string {
 	return "hahaha"
 }
 
-type someStuff any
-type someStruct struct{}
+type (
+	someStuff  any
+	someStruct struct{}
+)
 
 var (
 	_ someStuff = &someStruct{}

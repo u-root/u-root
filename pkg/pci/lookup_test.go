@@ -115,7 +115,6 @@ func TestLookup(t *testing.T) {
 			if DeviceNameGot != tt.DeviceNameWant {
 				t.Errorf("Device mismatch, got: '%s', want: '%s'\n", DeviceNameGot, tt.DeviceNameWant)
 			}
-
 		})
 	}
 }

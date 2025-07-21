@@ -18,7 +18,7 @@ import (
 func TestSRVFiles(t *testing.T) {
 	dir := t.TempDir()
 	content := []byte("hello world")
-	err := os.WriteFile(filepath.Join(dir, "hello"), content, 0644)
+	err := os.WriteFile(filepath.Join(dir, "hello"), content, 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write file: %v", err)
 	}

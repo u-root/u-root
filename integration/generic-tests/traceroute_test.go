@@ -56,9 +56,7 @@ func TestTraceroute(t *testing.T) {
 		tcpTestRegexHostCIPv6 = "TTL: 2+[[:space:]]+" + hostCIPv6 + "+[[:space:]]+\\([0-9]+(\\.[0-9]+)?[[:space:]]*(ms|us|μs|s)\\)"
 	)
 
-	var (
-		scriptHostA, scriptHostB, scriptHostC strings.Builder
-	)
+	var scriptHostA, scriptHostB, scriptHostC strings.Builder
 
 	fmt.Fprint(&scriptHostA, `
 		sleep 30

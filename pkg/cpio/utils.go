@@ -187,7 +187,7 @@ func WriteRecordsAndDirs(rw RecordWriter, files []Record) error {
 		els := strings.Split(path.Dir(f.Name), "/")
 		for i := range els {
 			d := path.Join(els[:i+1]...)
-			recs = append(recs, Directory(d, 0777))
+			recs = append(recs, Directory(d, 0o777))
 		}
 		recs = append(recs, f)
 		if err := WriteRecords(rw, recs); err != nil {

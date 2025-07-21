@@ -230,7 +230,7 @@ func main() {
 }
 
 func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, args []string) error {
-	var f = flag.NewFlagSet(name, flag.ExitOnError)
+	f := flag.NewFlagSet(name, flag.ExitOnError)
 
 	var (
 		skip    = f.Int64("skip", 0, "skip N ibs-sized blocks before reading")

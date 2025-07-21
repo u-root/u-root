@@ -55,7 +55,6 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 		}
 
 		line, err := input.Prompt("$ ")
-
 		if err != nil {
 			if err == io.EOF {
 				break // maybe we should continue instead of break

@@ -282,7 +282,6 @@ func TestSetTimeoutError(t *testing.T) {
 		return
 	}
 	t.Error("TestSetTimeout succeeded but shouldnt")
-
 }
 
 func TestSetPreTimeoutError(t *testing.T) {
@@ -310,5 +309,4 @@ func TestSetPreTimeoutError(t *testing.T) {
 		return
 	}
 	t.Error("TestSetTimeout succeeded but shouldnt")
-
 }
