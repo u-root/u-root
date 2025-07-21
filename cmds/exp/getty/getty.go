@@ -26,7 +26,7 @@ import (
 
 var (
 	verbose = flag.Bool("v", false, "verbose log")
-	debug   = func(string, ...interface{}) {}
+	debug   = func(string, ...any) {}
 	cmdList []string
 	envs    []string
 )

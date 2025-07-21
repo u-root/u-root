@@ -29,7 +29,7 @@ func TestScpSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	expected := []byte(fmt.Sprintf("C0600 18 %s\ntest-file-contents", path.Base(tf.Name())))
+	expected := fmt.Appendf(nil, "C0600 18 %s\ntest-file-contents", path.Base(tf.Name()))
 	expected = append(expected, 0)
 	if string(expected) != w.String() {
 		t.Fatalf("Got: %v\nExpected: %v", w.String(), string(expected))

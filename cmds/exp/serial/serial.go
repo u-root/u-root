@@ -117,7 +117,7 @@ func main() {
 			c <- os.Interrupt
 		}
 
-		for i := 0; i < n; i++ {
+		for i := range n {
 			// Control-X to quit
 			if buf[i] == 0x18 {
 				c <- os.Interrupt

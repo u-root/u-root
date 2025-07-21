@@ -120,7 +120,7 @@ func (t *Trace) BuildICMP4Pkt(ttl uint8, id, seq uint16, tos int) (*ipv4.Header,
 	}
 
 	payload := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		payload[i] = uint8(i + 64)
 	}
 

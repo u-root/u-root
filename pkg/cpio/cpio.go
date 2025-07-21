@@ -44,7 +44,7 @@ var (
 
 	// Debug can be set e.g. to log.Printf to enable debug prints from
 	// marshaling/unmarshaling cpio archives.
-	Debug = func(string, ...interface{}) {}
+	Debug = func(string, ...any) {}
 )
 
 // Record represents a CPIO record, which represents a Unix file.

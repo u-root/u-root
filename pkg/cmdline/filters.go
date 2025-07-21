@@ -6,6 +6,7 @@ package cmdline
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -21,13 +22,7 @@ func removeFilter(input string, variables []string) string {
 	}
 
 	doParse(input, func(flag, key, canonicalKey, value, trimmedValue string) {
-		skip := false
-		for _, v := range variables {
-			if canonicalKey == v {
-				skip = true
-				break
-			}
-		}
+		skip := slices.Contains(variables, canonicalKey)
 		if skip {
 			return
 		}

@@ -64,7 +64,7 @@ func FuzzWriteReadInMemArchive(f *testing.F) {
 		}
 		recs := []Record{}
 		var i uint64
-		for i = 0; i < fileCount; i++ {
+		for i = range fileCount {
 
 			recs = append(recs, StaticRecord(content, Info{
 				Ino:      ino | i,

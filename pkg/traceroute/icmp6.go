@@ -100,7 +100,7 @@ func (t *Trace) BuildICMP6Pkt(ttl int, id uint16, seq uint16, tc int) (*ipv6.Con
 	}
 
 	payload := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		payload[i] = uint8(i + 64)
 	}
 

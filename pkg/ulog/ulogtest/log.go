@@ -15,6 +15,6 @@ type Logger struct {
 }
 
 // Printf formats according to the format specifier and prints to a unit test's log.
-func (tl Logger) Printf(format string, v ...interface{}) {
+func (tl Logger) Printf(format string, v ...any) {
 	tl.TB.Logf(format, v...)
 }

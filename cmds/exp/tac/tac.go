@@ -61,10 +61,7 @@ func tacOne(w io.Writer, r ReadAtSeeker) error {
 	}(c, w)
 
 	for loc > 0 {
-		n := ReadSize
-		if loc < ReadSize {
-			n = loc
-		}
+		n := min(loc, ReadSize)
 
 		amt, err := r.ReadAt(b[:n], loc-int64(n))
 		if err != nil && err != io.EOF {

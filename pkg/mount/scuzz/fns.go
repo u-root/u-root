@@ -5,4 +5,4 @@
 package scuzz
 
 // Debug is an empty function you can replace with, e.g., log.Printf
-var Debug = func(string, ...interface{}) {}
+var Debug = func(string, ...any) {}

@@ -79,8 +79,8 @@ func NewGroups(file string) (g *Groups, e error) {
 		g.gidToGroup[groupNum] = groupInfo[0]
 		g.groupToGID[groupInfo[0]] = groupNum
 
-		users := strings.Split(groupInfo[3], ",")
-		for _, u := range users {
+		users := strings.SplitSeq(groupInfo[3], ",")
+		for u := range users {
 			g.userToGIDs[u] = append(g.userToGIDs[u], groupNum)
 			g.gidToUsers[groupNum] = append(g.gidToUsers[groupNum], u)
 		}

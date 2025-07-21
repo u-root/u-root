@@ -635,7 +635,7 @@ func FuzzReadWriteNewc(f *testing.F) {
 	}
 
 	// Cannot log when fuzzing
-	Debug = func(s string, i ...interface{}) {}
+	Debug = func(s string, i ...any) {}
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
 

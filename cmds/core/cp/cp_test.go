@@ -58,7 +58,7 @@ func createFilesTree(root string, maxDepth, depth int) error {
 		}
 	}
 	// generate random files
-	for i := 0; i < maxFiles; i++ {
+	for i := range maxFiles {
 		f, err := randomFile(root, fmt.Sprintf("cpfile_%d_", i))
 		if err != nil {
 			return err

@@ -109,7 +109,7 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 
 	c := make([]io.Reader, 2)
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if f, err = readFileOrStdin(os.Stdin, args[i]); err != nil {
 			return fmt.Errorf("failed to open %s: %w", args[i], err)
 		}

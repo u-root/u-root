@@ -4,6 +4,8 @@
 
 package mtd
 
+import "slices"
+
 import "fmt"
 
 // VendorFromID returns a Vendor or error given a VendorID.
@@ -19,10 +21,8 @@ func VendorFromID(v VendorID) (Vendor, error) {
 // VendorFromName returns a Vendor or error given a VendorName.
 func VendorFromName(v VendorName) (Vendor, error) {
 	for _, vendor := range vendors {
-		for _, n := range vendor.names {
-			if n == v {
-				return &vendor, nil
-			}
+		if slices.Contains(vendor.names, v) {
+			return &vendor, nil
 		}
 	}
 	return nil, fmt.Errorf("%v: not a known vendor", v)
