@@ -7,13 +7,13 @@ package find
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/core"
 	"github.com/u-root/u-root/pkg/ls"
 )
@@ -221,7 +221,7 @@ func (c *command) Run(args ...string) error {
 func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
-	fs := flag.NewFlagSet("find", flag.ContinueOnError)
+	fs := pflag.NewFlagSet("find", pflag.ContinueOnError)
 	fs.SetOutput(c.Stderr)
 
 	fs.StringVar(&f.fileType, "type", "", "file type")
@@ -235,7 +235,7 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(convertFlags(args)); err != nil {
 		return err
 	}
 
@@ -303,4 +303,16 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 	}
 
 	return nil
+}
+
+// convertFlags converts single-dash flags to double-dash flags.
+// This is needed because "find" uses single-dash full flags, but pflag would
+// parse that as shortants.
+func convertFlags(args []string) []string {
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			args[i] = "-" + arg
+		}
+	}
+	return args
 }
