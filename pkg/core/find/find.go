@@ -7,13 +7,13 @@ package find
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/core"
 	"github.com/u-root/u-root/pkg/ls"
 )
@@ -221,7 +221,7 @@ func (c *command) Run(args ...string) error {
 func (c *command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
-	fs := pflag.NewFlagSet("find", pflag.ContinueOnError)
+	fs := flag.NewFlagSet("find", flag.ContinueOnError)
 	fs.SetOutput(c.Stderr)
 
 	fs.StringVar(&f.fileType, "type", "", "file type")
@@ -235,7 +235,7 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(convertFlags(args)); err != nil {
+	if err := fs.Parse(reorderArgs(args)); err != nil {
 		return err
 	}
 
@@ -305,14 +305,39 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 	return nil
 }
 
-// convertFlags converts single-dash flags to double-dash flags.
-// This is needed because "find" uses single-dash full flags, but pflag would
-// parse that as shortants.
-func convertFlags(args []string) []string {
-	for i, arg := range args {
-		if strings.HasPrefix(arg, "-") {
-			args[i] = "-" + arg
+// reorderArgs reorders arguments so flags are moved to the front, which is the
+// way the "flag" package can parse them.
+func reorderArgs(args []string) []string {
+	var (
+		newArgs []string
+		i       int
+	)
+
+	for i < len(args) {
+		var (
+			arg          = args[i]
+			expectsValue = arg == "-name" || arg == "-type" || arg == "-mode"
+			hasNext      = i+1 < len(args)
+			isFlag       = strings.HasPrefix(arg, "-")
+		)
+
+		prepend := func(args ...string) {
+			newArgs = append(args, newArgs...)
+		}
+
+		switch {
+		case expectsValue && hasNext:
+			next := args[i+1]
+			prepend(arg, next)
+			i += 2
+		case isFlag:
+			prepend(arg)
+			i++
+		default:
+			newArgs = append(newArgs, arg)
+			i++
 		}
 	}
-	return args
+
+	return newArgs
 }
