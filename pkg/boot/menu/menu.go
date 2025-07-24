@@ -79,11 +79,12 @@ func SetInitialTimeout(timeout time.Duration) {
 //
 //	not support SetTimeout/SetDeadline.
 func Choose(term MenuTerminal, allowEdit bool, entries ...Entry) Entry {
-	fmt.Println("")
+	// Ensure all menu output goes through the 'term' object for consistent flushing.
+	fmt.Fprintln(term, "")
 	for i, e := range entries {
-		fmt.Printf("%02d. %s\r\n\r\n", i+1, e.Label())
+		fmt.Fprintf(term, "%02d. %s\r\n\r\n", i+1, e.Label())
 	}
-	fmt.Println("\r")
+	fmt.Fprintln(term, "\r")
 
 	err := term.SetTimeout(initialTimeout)
 	if err != nil {
@@ -195,19 +196,24 @@ func ShowMenuAndLoad(allowEdit bool, entries ...Entry) Entry {
 //
 // The user is left to call Entry.Exec when this function returns.
 func showMenuAndLoadFromFile(file *os.File, allowEdit bool, entries ...Entry) Entry {
+	// Create the terminal once before the loop.
+	// This ensures all output is routed through the same terminal object.
+	t := NewTerminal(file)
+	defer func() {
+		if err := t.Close(); err != nil {
+			log.Printf("Failed to close terminal made from file %s (desc %d): %v", file.Name(), file.Fd(), err)
+		}
+	}()
+
 	// Clear the screen (ANSI terminal escape code for screen clear).
-	fmt.Printf("\033[1;1H\033[2J\n\n")
-	fmt.Printf("Welcome to LinuxBoot's Menu\r\n\n")
-	fmt.Printf("Enter a number to boot a kernel:\r\n")
+	// All initial output should now go through the 't' (MenuTerminal) object.
+	fmt.Fprintf(t, "\033[1;1H\033[2J\n\n")
+	fmt.Fprintf(t, "Welcome to LinuxBoot's Menu\n\r\n")
+	fmt.Fprintf(t, "Enter a number to boot a kernel:\r\n")
 
 	for {
-		t := NewTerminal(file)
 		// Allow the user to choose.
 		entry := Choose(t, allowEdit, entries...)
-		if err := t.Close(); err != nil {
-			log.Printf("Failed to close terminal made from file %s "+
-				"(desc %d): %v", file.Name(), file.Fd(), err)
-		}
 
 		if entry == nil {
 			// This only returns something if the user explicitly
@@ -227,7 +233,7 @@ func showMenuAndLoadFromFile(file *os.File, allowEdit bool, entries ...Entry) En
 		return entry
 	}
 
-	fmt.Println("")
+	fmt.Fprintf(t, "\r\n")
 
 	// We only get one shot at actually booting, so boot the first kernel
 	// that can be loaded correctly.
@@ -235,7 +241,7 @@ func showMenuAndLoadFromFile(file *os.File, allowEdit bool, entries ...Entry) En
 		// Only perform actions that are default actions. I.e. don't
 		// drop to shell.
 		if e.IsDefault() {
-			fmt.Printf("Attempting to boot %s.\n\n", ExtendedLabel(e))
+			fmt.Fprintf(t, "Attempting to boot %s.\n\n", ExtendedLabel(e))
 
 			if err := e.Load(); err != nil {
 				log.Printf("Failed to load %s: %v", e.Label(), err)
