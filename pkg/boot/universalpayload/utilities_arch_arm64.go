@@ -26,7 +26,15 @@ func addrOfHobAddr() uintptr
 func getPhysicalAddressSizes() (uint8, error) {
 	// Return hardcode for arm64
 	// Please update to actual physical address size
-	return 44, nil
+	physicalAddrSize := os.Getenv("UROOT_PHYS_ADDR_SIZE")
+	if physicalAddrSize != "" {
+		if num, err := strconv.ParseUint(physicalAddrSize, 10, 8); err == nil {
+			return uint8(num), nil
+		} else {
+			return 0, fmt.Errorf("Malformed UROOT_PHYS_ADDR_SIZE value \"%s\": %v\n", physicalAddrSize, err)
+		}
+	}
+	return 48, nil
 }
 
 // Construct trampoline code before jump to entry point of FIT image.
