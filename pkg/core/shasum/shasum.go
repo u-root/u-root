@@ -41,7 +41,7 @@ type flags struct {
 // value of algorithm is expected to be 1 for SHA1
 // 256 for SHA256
 // and 512 for SHA512
-func (c *command) shaGenerator(w io.Writer, r io.Reader, algo int) ([]byte, error) {
+func (c *command) shaGenerator(r io.Reader, algo int) ([]byte, error) {
 	var h hash.Hash
 	switch algo {
 	case 1:
@@ -65,7 +65,7 @@ func (c *command) runShasum(algorithm int, args []string) error {
 	var err error
 	if len(args) == 0 {
 		buf := bufio.NewReader(c.Stdin)
-		if hashbytes, err = c.shaGenerator(c.Stdout, buf, algorithm); err != nil {
+		if hashbytes, err = c.shaGenerator(buf, algorithm); err != nil {
 			return err
 		}
 		fmt.Fprintf(c.Stdout, "%x -\n", hashbytes)
@@ -78,7 +78,7 @@ func (c *command) runShasum(algorithm int, args []string) error {
 			return err
 		}
 		defer file.Close()
-		if hashbytes, err = c.shaGenerator(c.Stdout, file, algorithm); err != nil {
+		if hashbytes, err = c.shaGenerator(file, algorithm); err != nil {
 			return err
 		}
 		fmt.Fprintf(c.Stdout, "%x %s\n", hashbytes, arg)
