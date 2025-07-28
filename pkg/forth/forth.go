@@ -239,7 +239,7 @@ func Eval(f Forth, cells ...Cell) (err error) {
 // EvalString takes a Forth and string and splits the string on space
 // characters, calling Eval for each one.
 func EvalString(f Forth, s string) (err error) {
-	for c := range strings.FieldsSeq(s) {
+	for _, c := range strings.Fields(s) {
 		if err = Eval(f, c); err != nil {
 			return
 		}
