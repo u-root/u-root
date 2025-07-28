@@ -421,7 +421,7 @@ var cyclicGraph = func() string {
 }()
 
 func BenchmarkTsortAcyclicGraph(b *testing.B) {
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		err := run(strings.NewReader(acyclicGraph), io.Discard, io.Discard)
 		if err != nil {
 			b.Fatalf("unexpected error: %v", err)
@@ -430,7 +430,7 @@ func BenchmarkTsortAcyclicGraph(b *testing.B) {
 }
 
 func BenchmarkTsortCyclicGraph(b *testing.B) {
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		err := run(strings.NewReader(cyclicGraph), io.Discard, io.Discard)
 		if err != nil && !errors.Is(err, errNonFatal) {
 			b.Fatalf("unexpected error: %v", err)
