@@ -271,7 +271,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	// Convert conv argument to bit set.
 	flags := os.O_TRUNC
 	if *conv != "none" {
-		for c := range strings.SplitSeq(*conv, ",") {
+		for _, c := range strings.Split(*conv, ",") {
 			if v, ok := convMap[c]; ok {
 				flags &= ^v.clear
 				flags |= v.set
@@ -284,7 +284,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 
 	// Convert oflag argument to bit set.
 	if *oFlag != "none" {
-		for f := range strings.SplitSeq(*oFlag, ",") {
+		for _, f := range strings.Split(*oFlag, ",") {
 			if v, ok := flagMap[f]; ok {
 				flags &= ^v.clear
 				flags |= v.set
