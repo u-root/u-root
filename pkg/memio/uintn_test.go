@@ -104,7 +104,6 @@ func TestUint64(t *testing.T) {
 		expString string
 		expSize   int64
 	}{
-
 		{
 			name:      "uint64",
 			value:     Uint64(45),

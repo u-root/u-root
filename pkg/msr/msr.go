@@ -31,4 +31,4 @@ func (m MSRVal) String() string {
 // Debug can be set for debug prints on MSR operations.
 // It can be set to, e.g., log.Printf.
 // It's default action is to do nothing.
-var Debug = func(string, ...interface{}) {}
+var Debug = func(string, ...any) {}

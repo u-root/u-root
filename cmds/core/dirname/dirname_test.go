@@ -28,7 +28,7 @@ var dirnameTests = []test{
 
 func TestDirName(t *testing.T) {
 	// Table-driven testing
-	var out = bytes.NewBuffer(nil)
+	out := bytes.NewBuffer(nil)
 
 	for _, tt := range dirnameTests {
 		out.Reset()

@@ -11,9 +11,7 @@ import (
 	"os"
 )
 
-var (
-	linuxPath = "/dev/port"
-)
+var linuxPath = "/dev/port"
 
 // LinuxPort implements ReadWriteCloser for Linux devices.
 type LinuxPort struct {
@@ -38,7 +36,6 @@ func (p *LinuxPort) Out(addr uint16, data UintN) error {
 		return fmt.Errorf("/dev/port data must be 8 bits on Linux")
 	}
 	return p.ReadWriteCloser.Write(data, int64(addr))
-
 }
 
 // Close implements Close.

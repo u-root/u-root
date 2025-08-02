@@ -35,7 +35,7 @@ func run(stdin io.Reader, stdout, stderr io.Writer, bytes, count int, files ...s
 	var newLineHeader bool
 	var errs error
 
-	var handle = func(r io.Reader, name string) error {
+	handle := func(r io.Reader, name string) error {
 		if len(files) > 1 {
 			if newLineHeader {
 				fmt.Fprintf(stdout, "\n==> %s <==\n", name)
@@ -105,8 +105,8 @@ func run(stdin io.Reader, stdout, stderr io.Writer, bytes, count int, files ...s
 }
 
 func main() {
-	var c = flag.Int("c", 0, "Print bytes of each of the specified files")
-	var n = flag.Int("n", 0, "Print count lines of each of the specified files")
+	c := flag.Int("c", 0, "Print bytes of each of the specified files")
+	n := flag.Int("n", 0, "Print count lines of each of the specified files")
 
 	flag.Parse()
 	if err := run(os.Stdin, os.Stdout, os.Stderr, *c, *n, flag.Args()...); err != nil {

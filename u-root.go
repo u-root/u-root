@@ -21,9 +21,7 @@ import (
 	"github.com/u-root/uio/llog"
 )
 
-var (
-	errEmptyFilesArg = errors.New("empty argument to -files")
-)
+var errEmptyFilesArg = errors.New("empty argument to -files")
 
 // checkArgs checks for common mistakes that cause confusion.
 //  1. -files as the last argument

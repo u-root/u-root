@@ -106,7 +106,7 @@ var names = []string{
 
 func (status Status) String() string {
 	var s string
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if byte(status)&(1<<i) != 0 {
 			s = s + names[i] + "|"
 		}

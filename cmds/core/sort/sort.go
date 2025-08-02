@@ -262,8 +262,10 @@ func (c *cmd) writeOutput(w io.Writer, s string) error {
 
 func main() {
 	flag.Parse()
-	p := params{reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique,
-		ignoreCase: *ignoreCase, ignoreBlanks: *ignoreBlanks, numeric: *numeric}
+	p := params{
+		reverse: *reverse, ordered: *ordered, outputFile: *outputFile, unique: *unique,
+		ignoreCase: *ignoreCase, ignoreBlanks: *ignoreBlanks, numeric: *numeric,
+	}
 	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
 		if err == errNotOrdered {
 			os.Exit(1)

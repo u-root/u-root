@@ -55,7 +55,7 @@ type (
 	// they feel it's fine for parsers.
 	Op func(f Forth)
 	// Cell is a stack element.
-	Cell interface{}
+	Cell any
 
 	stack struct {
 		stack []Cell
@@ -65,7 +65,7 @@ type (
 var (
 	// Debug is an empty function that can be set to, e.g.,
 	// fmt.Printf or log.Printf for debugging.
-	Debug   = func(string, ...interface{}) {}
+	Debug   = func(string, ...any) {}
 	opmap   map[string]Op
 	mapLock sync.Mutex
 	// EmptyStack means we wanted something and ... nothing there.
@@ -239,7 +239,7 @@ func Eval(f Forth, cells ...Cell) (err error) {
 // EvalString takes a Forth and string and splits the string on space
 // characters, calling Eval for each one.
 func EvalString(f Forth, s string) (err error) {
-	for _, c := range strings.Fields(s) {
+	for c := range strings.FieldsSeq(s) {
 		if err = Eval(f, c); err != nil {
 			return
 		}

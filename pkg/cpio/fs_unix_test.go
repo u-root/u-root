@@ -16,7 +16,7 @@ func TestCreateFileInRoot(t *testing.T) {
 	tmp := t.TempDir()
 	fileName := "file"
 	content := "content"
-	r := StaticFile(fileName, content, 0644)
+	r := StaticFile(fileName, content, 0o644)
 	err := CreateFileInRoot(r, tmp, false)
 	if err != nil {
 		t.Fatalf("expected nil got %v", err)

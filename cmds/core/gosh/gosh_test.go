@@ -102,7 +102,7 @@ func TestRunFail(t *testing.T) {
 func TestRunScript(t *testing.T) {
 	d := t.TempDir()
 	script := filepath.Join(d, "a.sh")
-	if err := os.WriteFile(script, []byte("echo hi\n"), 0666); err != nil {
+	if err := os.WriteFile(script, []byte("echo hi\n"), 0o666); err != nil {
 		t.Fatalf("Writing %q: got %v, want nil", script, err)
 	}
 
@@ -111,7 +111,6 @@ func TestRunScript(t *testing.T) {
 		pairs []string
 		err   error
 	}{
-
 		{
 			name: "bad file",
 			pairs: []string{
@@ -237,7 +236,8 @@ func FuzzRun(f *testing.F) {
 		"unhandled unary test op",
 		"unhandled word part",
 		"variable name must not be empty",
-		"wait with args not handled yet"}
+		"wait with args not handled yet",
+	}
 	re := strings.NewReplacer("\x22", "", "\x24", "", "\x26", "", "\x27", "", "\x28", "", "\x29", "", "\x2A", "", "\x3C", "", "\x3E", "", "\x3F", "", "\x5C", "", "\x7C", "")
 
 	dirPath := f.TempDir()

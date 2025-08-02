@@ -42,7 +42,6 @@ func TestGetAddress(t *testing.T) {
 			t.Errorf("%s:got FullAddress %s, want %s", tt.name, f.String(), tt.f.String())
 		}
 	}
-
 }
 
 func TestFullAddressStringer(t *testing.T) {
@@ -56,5 +55,4 @@ func TestFullAddressStringer(t *testing.T) {
 	if s != "unix:0xdead" {
 		t.Errorf("String: got %q, want %q", s, "unix:0xdead")
 	}
-
 }

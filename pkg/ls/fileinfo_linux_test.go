@@ -15,8 +15,10 @@ import (
 	"time"
 )
 
-const lsregex string = "^([rwxSTstdcb\\-lp?]{10})\\s+(\\d+)?\\s?(\\S+)\\s+(\\S+)\\s+([0-9,]+)?\\s+(\\d+)?(\\D+)?(\\d{1,2}\\D\\d{1,2}\\D\\d{1,2})?(\\D{4})?([\\D|\\d]*)"
-const tDelta time.Duration = 1 * time.Second
+const (
+	lsregex string        = "^([rwxSTstdcb\\-lp?]{10})\\s+(\\d+)?\\s?(\\S+)\\s+(\\S+)\\s+([0-9,]+)?\\s+(\\d+)?(\\D+)?(\\d{1,2}\\D\\d{1,2}\\D\\d{1,2})?(\\D{4})?([\\D|\\d]*)"
+	tDelta  time.Duration = 1 * time.Second
+)
 
 // badSys implements os.FileInfo but can return a sys that is NOT syscall.Stat_t.
 // This can happen with broken file system implementations, in which a stat
@@ -59,7 +61,7 @@ func (b *badSys) Sys() any {
 		Dev:     0,
 		Ino:     1,
 		Nlink:   2,
-		Mode:    0744,
+		Mode:    0o744,
 		Uid:     2,
 		Gid:     3,
 		Rdev:    4,
@@ -77,7 +79,6 @@ func TestFileInfoBadSys(t *testing.T) {
 	b := &badSys{beBad: true, dir: false}
 	fi := FromOSFileInfo("sobad", b)
 	t.Logf("fi %v", fi)
-
 }
 
 func TestFileInfo(t *testing.T) {

@@ -201,7 +201,7 @@ func genCRC(data []uint8) uint16 {
 	kExtraRounds := 2
 
 	for i := 0; i < len(data)+kExtraRounds; i++ {
-		for j := 0; j < 8; j++ {
+		for j := range 8 {
 			xorFlag := false
 			if (crc & kLeftBit) != 0 {
 				xorFlag = true
@@ -242,7 +242,7 @@ func verifyCRC(buf []uint8) error {
 }
 
 // Convert all args to little endian format and append to the given buffer.
-func appendLittleEndian(buf []uint8, args ...interface{}) ([]uint8, error) {
+func appendLittleEndian(buf []uint8, args ...any) ([]uint8, error) {
 	for _, arg := range args {
 		data := new(bytes.Buffer)
 		err := binary.Write(data, binary.LittleEndian, arg)

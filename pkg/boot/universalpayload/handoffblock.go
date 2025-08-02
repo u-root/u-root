@@ -14,9 +14,11 @@ import (
 )
 
 // EFIHOBGenericHeader types
-type EFIHOBType uint16
-type EFIHOBLength uint16
-type EFIHOBReserved uint32
+type (
+	EFIHOBType     uint16
+	EFIHOBLength   uint16
+	EFIHOBReserved uint32
+)
 
 // EFIHOBGenericHeader describes the format and size of the data inside the HOB
 type EFIHOBGenericHeader struct {
@@ -92,9 +94,11 @@ const (
 	EFIResourceAttributeMoreReliable          EFIResourceAttributeType = 0x02000000
 )
 
-type EFIPhysicalAddress uint64
-type EFIHOBHandOffBootModeType uint32
-type EFIHOBHandoffInfoVersionType uint32
+type (
+	EFIPhysicalAddress           uint64
+	EFIHOBHandOffBootModeType    uint32
+	EFIHOBHandoffInfoVersionType uint32
+)
 
 // EFIHOBHandoffInfoTable values
 const (

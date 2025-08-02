@@ -34,10 +34,10 @@ func TestLoadModule(t *testing.T) {
 }
 
 func TestModuleConf(t *testing.T) {
-	var toBytes = func(s string) []byte {
+	toBytes := func(s string) []byte {
 		return bytes.NewBufferString(s).Bytes()
 	}
-	var files = []struct {
+	files := []struct {
 		Name    string
 		Content string
 		Modules []string

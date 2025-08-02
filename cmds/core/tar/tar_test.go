@@ -104,7 +104,7 @@ func TestTar(t *testing.T) {
 }
 
 func TestCommandErrors(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		err  error
 		args []string
 		p    params

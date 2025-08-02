@@ -32,8 +32,10 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-var errInvalidFormatArgument = fmt.Errorf("invalid argument to option -t")
-var errInvalidMinLength = fmt.Errorf("invalid minimum string length -n")
+var (
+	errInvalidFormatArgument = fmt.Errorf("invalid argument to option -t")
+	errInvalidMinLength      = fmt.Errorf("invalid minimum string length -n")
+)
 
 type cmd struct {
 	stdin  io.Reader

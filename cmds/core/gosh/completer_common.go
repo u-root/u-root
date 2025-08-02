@@ -90,7 +90,7 @@ func lastWord(parser *syntax.Parser, line string) (bool, int, string) {
 		return true, pos, ""
 	}
 
-	//syntax.DebugPrint(os.Stderr, stmt)
+	// syntax.DebugPrint(os.Stderr, stmt)
 	isCmd, pos, word := word(stmt, trailingSpaces)
 	if pos == -1 {
 		return false, -1, ""
@@ -160,7 +160,7 @@ func filepathCompleter(input string) []string {
 func commandCompleter(input string) []string {
 	var candidates []string
 
-	for _, path := range strings.Split(os.Getenv("PATH"), ":") {
+	for path := range strings.SplitSeq(os.Getenv("PATH"), ":") {
 		if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 			if d != nil && !d.IsDir() && strings.HasPrefix(d.Name(), input) {
 				// Is executable?

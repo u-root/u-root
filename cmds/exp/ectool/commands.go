@@ -1058,8 +1058,10 @@ type ecResponseFlashProtect struct {
  */
 
 /* Get the region offset/size */
-const ecCmdFlashRegionInfo = 0x16
-const ecVerFlashRegionInfo = 1
+const (
+	ecCmdFlashRegionInfo = 0x16
+	ecVerFlashRegionInfo = 1
+)
 
 type ecFlashRegion uint8
 
@@ -1615,8 +1617,10 @@ const (
  * If one of these is specified, the EC will automatically update offset and
  * size to the correct values for the specified image (RO or RW).
  */
-const ecVbootHashOffsetRo = 0xfffffffe
-const ecVbootHashOffsetRw = 0xfffffffd
+const (
+	ecVbootHashOffsetRo = 0xfffffffe
+	ecVbootHashOffsetRw = 0xfffffffd
+)
 
 /*****************************************************************************/
 /*
@@ -1887,12 +1891,16 @@ type ecResponseRtc struct {
 }
 
 /* These use ecResponseRtc */
-const ecCmdRtcGetValue = 0x44
-const ecCmdRtcGetAlarm = 0x45
+const (
+	ecCmdRtcGetValue = 0x44
+	ecCmdRtcGetAlarm = 0x45
+)
 
 /* These all use ecParamsRtc */
-const ecCmdRtcSetValue = 0x46
-const ecCmdRtcSetAlarm = 0x47
+const (
+	ecCmdRtcSetValue = 0x46
+	ecCmdRtcSetAlarm = 0x47
+)
 
 /*****************************************************************************/
 /* Port80 log access */
@@ -1901,8 +1909,10 @@ const ecCmdRtcSetAlarm = 0x47
 const ecPort80SizeMax = 32
 
 /* Get last port80 code from previous boot */
-const ecCmdPort80LastBoot = 0x48
-const ecCmdPort80Read = 0x48
+const (
+	ecCmdPort80LastBoot = 0x48
+	ecCmdPort80Read     = 0x48
+)
 
 type ecPort80Subcmd uint8
 
@@ -2022,8 +2032,10 @@ type ecParamsAutoFanCtrlV1 struct {
 }
 
 /* Get/Set TMP006 calibration data */
-const ecCmdTmp006GetCalibration = 0x53
-const ecCmdTmp006SetCalibration = 0x54
+const (
+	ecCmdTmp006GetCalibration = 0x53
+	ecCmdTmp006SetCalibration = 0x54
+)
 
 /* TYPE */
 /*
@@ -2117,8 +2129,10 @@ type ecParamsMkbpSimulateKey struct {
 }
 
 /* Configure keyboard scanning */
-const ecCmdMkbpSetConfig = 0x64
-const ecCmdMkbpGetConfig = 0x65
+const (
+	ecCmdMkbpSetConfig = 0x64
+	ecCmdMkbpGetConfig = 0x65
+)
 
 /* flags */
 type mkbpConfigFlags uint8
@@ -2334,8 +2348,10 @@ type ecParamsSwitchEnableBacklight struct {
 }
 
 /* Enable/disable WLAN/Bluetooth */
-const ecCmdSwitchEnableWireless = 0x91
-const ecVerSwitchEnableWireless = 1
+const (
+	ecCmdSwitchEnableWireless = 0x91
+	ecVerSwitchEnableWireless = 1
+)
 
 /* TYPE */
 /* Version 0 params; no response */
@@ -2471,8 +2487,10 @@ type ecParamsI2cWrite struct {
 /* Force charge state machine to stop charging the battery or force it to
  * discharge the battery.
  */
-const ecCmdChargeControl = 0x96
-const ecVerChargeControl = 1
+const (
+	ecCmdChargeControl = 0x96
+	ecVerChargeControl = 1
+)
 
 type ecChargeControlMode uint8
 
@@ -2788,14 +2806,18 @@ type ecParamsExtPowerCurrentLimit struct {
 /* Smart battery pass-through */
 
 /* Get / Set 16-bit smart battery registers */
-const ecCmdSbReadWord = 0xb0
-const ecCmdSbWriteWord = 0xb1
+const (
+	ecCmdSbReadWord  = 0xb0
+	ecCmdSbWriteWord = 0xb1
+)
 
 /* Get / Set string smart battery parameters
  * formatted as SMBUS "block".
  */
-const ecCmdSbReadBlock = 0xb2
-const ecCmdSbWriteBlock = 0xb3
+const (
+	ecCmdSbReadBlock  = 0xb2
+	ecCmdSbWriteBlock = 0xb3
+)
 
 /* TYPE */
 type ecParamsSbRd struct {
@@ -2950,8 +2972,9 @@ const (
 )
 
 /* Flags for ecParamsRebootEc.rebootFlags */
-const ecRebootFlagReserved0 = (1 << 0)    /* Was recovery request */
-const ecRebootFlagOnApShutdown = (1 << 1) /* Reboot after AP shutdown */
+const (
+	ecRebootFlagReserved0    = (1 << 0) /* Was recovery request */
+	ecRebootFlagOnApShutdown = (1 << 1) /* Reboot after AP shutdown */)
 
 /* TYPE */
 type ecParamsRebootEc struct {
@@ -3290,8 +3313,10 @@ const (
 )
 
 /* PD power supply events */
-const pdEventPsBase = 0x40
-const pdEventPsFault = (pdEventPsBase + 0)
+const (
+	pdEventPsBase  = 0x40
+	pdEventPsFault = (pdEventPsBase + 0)
+)
 
 /* PD video dongles events */
 const (
@@ -3318,8 +3343,10 @@ const chargeFlagsDelayedOverride = (1 << 14)
 const chargeFlagsOverride = (1 << 13)
 
 /* Charger type */
-const chargeFlagsTypeShift = 3
-const chargeFlagsTypeMask = (0xF << chargeFlagsTypeShift)
+const (
+	chargeFlagsTypeShift = 3
+	chargeFlagsTypeMask  = (0xF << chargeFlagsTypeShift)
+)
 
 /* Power delivery role */
 const chargeFlagsRoleMask = (7 << 0)

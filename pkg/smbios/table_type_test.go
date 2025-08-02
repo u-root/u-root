@@ -7,7 +7,6 @@ package smbios
 import "testing"
 
 func TestTableTypeString(t *testing.T) {
-
 	tests := []struct {
 		tableType TableType
 		want      string

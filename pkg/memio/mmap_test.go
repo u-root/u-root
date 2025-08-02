@@ -122,6 +122,7 @@ func TestIORealSyscalls(t *testing.T) {
 		})
 	}
 }
+
 func TestNetMMapFail(t *testing.T) {
 	_, err := NewMMap("file-does-not-exist")
 	if !errors.Is(err, os.ErrNotExist) {
@@ -200,5 +201,4 @@ func TestMemIOAbstractSyscalls(t *testing.T) {
 			})
 		}
 	}
-
 }

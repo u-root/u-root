@@ -240,7 +240,6 @@ func TestPCIWriteConfigRegister(t *testing.T) {
 			if hex.EncodeToString(got) != tt.want {
 				t.Fatalf("Config file contains = %q, want: %q", hex.EncodeToString(got), tt.want)
 			}
-
 		})
 	}
 }

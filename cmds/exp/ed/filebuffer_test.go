@@ -19,7 +19,7 @@ import (
 var testTableInt = []struct {
 	name   string
 	in     *FileBuffer
-	exp    interface{}
+	exp    any
 	method func(f *FileBuffer) int
 }{
 	{
@@ -69,7 +69,7 @@ func TestBasicFuncsInt(t *testing.T) {
 var testTableDirty = []struct {
 	name   string
 	in     *FileBuffer
-	exp    interface{}
+	exp    any
 	method func(f *FileBuffer) bool
 }{
 	{
@@ -101,7 +101,7 @@ func TestDirty(t *testing.T) {
 var testTable = []struct {
 	name   string
 	in     *FileBuffer
-	exp    interface{}
+	exp    any
 	method func(f *FileBuffer)
 }{
 	{
@@ -175,7 +175,7 @@ func TestNewFileBuffer(t *testing.T) {
 var testTableOOB = []struct {
 	name     string
 	in       *FileBuffer
-	exp      interface{}
+	exp      any
 	methodin int
 }{
 	{
@@ -261,8 +261,8 @@ func TestGet(t *testing.T) {
 			got, err := tt.in.Get(tt.methodin)
 			if err != nil {
 				// Using cmp pkf with weird opt because reflect.DeepEqual does not work for empty string arrays
-				alwaysEqual := cmp.Comparer(func(_, _ interface{}) bool { return true })
-				opt := cmp.FilterValues(func(x, y interface{}) bool {
+				alwaysEqual := cmp.Comparer(func(_, _ any) bool { return true })
+				opt := cmp.FilterValues(func(x, y any) bool {
 					vx, vy := reflect.ValueOf(x), reflect.ValueOf(y)
 					return (vx.IsValid() && vy.IsValid() && vx.Type() == vy.Type()) &&
 						(vx.Kind() == reflect.Slice || vx.Kind() == reflect.Map) &&
@@ -305,7 +305,6 @@ func TestCopy(t *testing.T) {
 				if !reflect.DeepEqual(err.Error(), tt.exp.Error()) {
 					t.Errorf("Expected value: %v, got: %v", tt.exp, err)
 				}
-
 			}
 		})
 	}
@@ -590,7 +589,6 @@ func TestReadFile(t *testing.T) {
 				}
 			}
 			os.Remove(tt.methodin2)
-
 		})
 	}
 }

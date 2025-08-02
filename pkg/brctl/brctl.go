@@ -394,7 +394,7 @@ func ShowStp(out io.Writer, bridge string) error {
 	for _, portInfo := range bridgeInfo.Interfaces {
 		fmt.Fprintf(&s, "%s (%d)\n", portInfo.Name, portInfo.PortNumber)
 		fmt.Fprintf(&s, " port id\t\t%s", portInfo.PortID)
-		fmt.Fprintf(&s, "\t\t\tport state\t\t  %d\n", portInfo.State) //TODO: How is the mapping to string (disabled, blocking, listening, learning, forwarding)?
+		fmt.Fprintf(&s, "\t\t\tport state\t\t  %d\n", portInfo.State) // TODO: How is the mapping to string (disabled, blocking, listening, learning, forwarding)?
 		fmt.Fprintf(&s, " designated root\t%s", portInfo.DesignatedRoot)
 		fmt.Fprintf(&s, "\tpath cost\t\t  %d\n", portInfo.PathCost)
 		fmt.Fprintf(&s, " designated bridge\t%s", portInfo.DesignatedBridge)

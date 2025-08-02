@@ -10,10 +10,8 @@ import (
 	"testing"
 )
 
-var (
-	testdata = `To be fair, this is just random weirdo stuff going on.
+var testdata = `To be fair, this is just random weirdo stuff going on.
 We learn something new every day.`
-)
 
 // TestEDCOmmandsNonInput tests ed without commands which invoke input mode.
 // Input mode requires a different, more complex test setup to work.

@@ -46,8 +46,8 @@ func run(in io.ReaderAt, out io.Writer, args ...string) error {
 			if e != nil {
 				// Until CI gets to go1.21, just break
 				// on an error.
-				//err = errors.Join(err, e)
-				//continue
+				// err = errors.Join(err, e)
+				// continue
 				return e
 			}
 			files[i] = f

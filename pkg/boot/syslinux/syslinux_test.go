@@ -707,7 +707,6 @@ func TestParseURL(t *testing.T) {
 }
 
 func FuzzParseSyslinuxConfig(f *testing.F) {
-
 	dirPath := f.TempDir()
 
 	path := filepath.Join(dirPath, "isolinux.cfg")
@@ -733,7 +732,6 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 	f.Add([]byte("lABel 0\nAppend initrd"))
 	f.Add([]byte("lABel 0\nkernel mboot.c32\nAppend ---"))
 	f.Fuzz(func(t *testing.T, data []byte) {
-
 		if len(data) > 4096 {
 			return
 		}
@@ -750,5 +748,4 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 
 		ParseLocalConfig(context.Background(), dirPath)
 	})
-
 }

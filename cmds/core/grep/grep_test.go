@@ -186,12 +186,6 @@ func TestFilesGrep(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tmpDir2 := t.TempDir()
-	f4, err := os.CreateTemp(tmpDir2, "f4")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f4.Chmod(0o000)
 
 	_, err = f1.WriteString("hix\nnix\n")
 	if err != nil {
@@ -256,13 +250,6 @@ func TestFilesGrep(t *testing.T) {
 			p:       params{quiet: true},
 			args:    []string{"nix", tmpDir + "1"},
 		},
-		//{
-		//	output:  fmt.Sprintf("can't open %s", f4.Name()),
-		//	partial: true,
-		//	err:     errQuite,
-		//	p:       params{quiet: true},
-		//	args:    []string{"nix", f4.Name()},
-		//},
 	}
 
 	for idx, te := range tests {

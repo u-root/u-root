@@ -73,10 +73,10 @@ func (t *Trace) ReceiveTracesICMP4() {
 	}
 	icmpType := buf[0]
 
-	if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { //TTL Exceeded or Port Unreachable
+	if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { // TTL Exceeded or Port Unreachable
 		id := binary.BigEndian.Uint16(buf[32:34])
 		dstip := net.IP(buf[24:28])
-		//srcip := net.IP(buf[20:24])
+		// srcip := net.IP(buf[20:24])
 
 		if dstip.Equal(t.DestIP) {
 			pb := &Probe{
@@ -112,7 +112,7 @@ func (t *Trace) BuildICMP4Pkt(ttl uint8, id, seq uint16, tos int) (*ipv4.Header,
 	iph.Checksum = int(checkSum(h))
 
 	icmp := ICMPHeader{
-		IType:    8, //Echo
+		IType:    8, // Echo
 		ICode:    0,
 		Checksum: 0,
 		ID:       id,
@@ -120,7 +120,7 @@ func (t *Trace) BuildICMP4Pkt(ttl uint8, id, seq uint16, tos int) (*ipv4.Header,
 	}
 
 	payload := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		payload[i] = uint8(i + 64)
 	}
 

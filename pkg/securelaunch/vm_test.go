@@ -18,7 +18,7 @@ import (
 	"github.com/hugelgupf/vmtest/govmtest"
 	"github.com/hugelgupf/vmtest/guest"
 	"github.com/hugelgupf/vmtest/qemu"
-	"github.com/u-root/u-root/pkg/cp"
+	"github.com/u-root/u-root/pkg/core/cp"
 	"github.com/u-root/u-root/pkg/mount"
 )
 
@@ -110,7 +110,6 @@ func TestWriteFile(t *testing.T) {
 
 	Debug = t.Logf
 	if err := mountMountDevice(t); err != nil {
-
 		t.Skipf("no mountable device for test:%v", err)
 	}
 

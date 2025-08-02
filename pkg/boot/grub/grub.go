@@ -44,6 +44,7 @@ var probeGrubFiles = []string{
 	"grub2/grub.cfg",
 	"boot/grub2/grub.cfg",
 }
+
 var probeGrubEnvFiles = []string{
 	"EFI/*/grubenv",
 	"boot/grub/grubenv",
@@ -65,8 +66,10 @@ var probeGrubEnvFiles = []string{
 //	hello \xff xfg
 //
 // Their default installations depend on this functionality.
-var hexEscape = regexp.MustCompile(`\\x[0-9a-fA-F]{2}`)
-var anyEscape = regexp.MustCompile(`\\.{0,3}`)
+var (
+	hexEscape = regexp.MustCompile(`\\x[0-9a-fA-F]{2}`)
+	anyEscape = regexp.MustCompile(`\\.{0,3}`)
+)
 
 // mountFlags are the flags this grub interpreter uses to mount partitions.
 var mountFlags = uintptr(mount.ReadOnly)

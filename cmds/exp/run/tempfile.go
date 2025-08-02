@@ -19,8 +19,10 @@ import (
 // We generate random temporary file names so that there's a good
 // chance the file doesn't exist yet - keeps the number of tries in
 // TempFile to a minimum.
-var rand uint32
-var randmu sync.Mutex
+var (
+	rand   uint32
+	randmu sync.Mutex
+)
 
 func reseed() uint32 {
 	return uint32(time.Now().UnixNano() + int64(os.Getpid()))
@@ -53,7 +55,7 @@ func TempFile(dir, format string) (f *os.File, err error) {
 	}
 
 	nconflict := 0
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		name := fmt.Sprintf(format, nextSuffix())
 		name = filepath.Join(dir, name)
 		f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)

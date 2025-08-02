@@ -16,7 +16,7 @@ import (
 )
 
 func TestBadInvocation(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		cmd   cmd
 		err   error
 		errno int
@@ -38,7 +38,7 @@ func TestRun(t *testing.T) {
 		t.Skipf("Skipping this test as sleep is not in the path")
 	}
 
-	var tests = []struct {
+	tests := []struct {
 		cmd cmd
 		ok  bool
 	}{
@@ -53,7 +53,6 @@ func TestRun(t *testing.T) {
 			t.Errorf("run %v: got %v, want %v", v.cmd, err == nil, v.ok)
 		}
 	}
-
 }
 
 // Test real execution. Why do this if we covered all the code above?
@@ -102,7 +101,6 @@ func TestBashExit(t *testing.T) {
 	if errno != 20 {
 		t.Fatalf(`Running "bash", "-c", "exit 20": got %d, want 20`, errno)
 	}
-
 }
 
 func TestMain(m *testing.M) {

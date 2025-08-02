@@ -10,9 +10,7 @@ import (
 	"testing"
 )
 
-var (
-	testString = "This is just a test string"
-)
+var testString = "This is just a test string"
 
 func TestOpen(t *testing.T) {
 	m, err := NewDev(DevName)

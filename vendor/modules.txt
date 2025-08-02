@@ -70,8 +70,8 @@ github.com/charmbracelet/bubbletea
 # github.com/charmbracelet/lipgloss v0.7.1
 ## explicit; go 1.17
 github.com/charmbracelet/lipgloss
-# github.com/cloudflare/circl v1.3.7
-## explicit; go 1.19
+# github.com/cloudflare/circl v1.6.1
+## explicit; go 1.22.0
 github.com/cloudflare/circl/dh/x25519
 github.com/cloudflare/circl/dh/x448
 github.com/cloudflare/circl/ecc/goldilocks
@@ -239,6 +239,9 @@ github.com/knz/bubbline/computil
 github.com/knz/bubbline/editline
 github.com/knz/bubbline/editline/internal/textarea
 github.com/knz/bubbline/history
+# github.com/kr/fs v0.1.0
+## explicit
+github.com/kr/fs
 # github.com/lucasb-eyer/go-colorful v1.2.0
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
@@ -306,6 +309,11 @@ github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/pkg/sftp v1.13.9
+## explicit; go 1.15
+github.com/pkg/sftp
+github.com/pkg/sftp/internal/encoding/ssh/filexfer
+github.com/pkg/sftp/internal/encoding/ssh/filexfer/openssh
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
@@ -327,7 +335,7 @@ github.com/sahilm/fuzzy
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/spf13/pflag v1.0.5
+# github.com/spf13/pflag v1.0.7
 ## explicit; go 1.12
 github.com/spf13/pflag
 # github.com/therootcompany/xz v1.0.1
@@ -352,7 +360,7 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/mkuimage v0.0.0-20250320091346-62f0448bbe27
+# github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f
 ## explicit; go 1.21
 github.com/u-root/mkuimage/cpio
 github.com/u-root/mkuimage/cpio/internal/upath
@@ -399,6 +407,8 @@ golang.org/x/arch/x86/x86asm
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf

@@ -32,7 +32,6 @@ func (f *fake) Remove(desc VariableDescriptor) error {
 var fakeGUID = guid.MustParse("bc54d3fb-ed45-462d-9df8-b9f736228350")
 
 func (f *fake) List() ([]VariableDescriptor, error) {
-
 	return []VariableDescriptor{
 		{Name: "fake", GUID: fakeGUID},
 	}, f.err
@@ -47,7 +46,7 @@ func TestReadVariableErrNoFS(t *testing.T) {
 }
 
 func TestSimpleReadVariable(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		val    string
 		err    error
@@ -85,11 +84,10 @@ func TestSimpleReadVariable(t *testing.T) {
 			t.Errorf("SimpleReadVariable(tt.efivar, %s): %v != %v", tt.val, err, tt.err)
 		}
 	}
-
 }
 
 func TestSimpleWriteVariable(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		val    string
 		err    error
@@ -121,11 +119,10 @@ func TestSimpleWriteVariable(t *testing.T) {
 			t.Errorf("SimpleWriteVariable(tt.efivar, %s): %v != %v", tt.val, err, tt.err)
 		}
 	}
-
 }
 
 func TestSimpleRemoveVariable(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		val    string
 		err    error
@@ -157,11 +154,10 @@ func TestSimpleRemoveVariable(t *testing.T) {
 			t.Errorf("SimpleRemoveVariable(tt.efivar, %s): %v != %v", tt.val, err, tt.err)
 		}
 	}
-
 }
 
 func TestSimpleListVariable(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name   string
 		err    error
 		efivar EFIVar
@@ -184,5 +180,4 @@ func TestSimpleListVariable(t *testing.T) {
 			t.Errorf("SimpleListVariable(tt.efivar): %v != %v", err, tt.err)
 		}
 	}
-
 }

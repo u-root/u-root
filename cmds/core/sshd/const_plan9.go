@@ -6,7 +6,4 @@
 
 package main
 
-var (
-	shells = [...]string{"rc"}
-	shell  = "/bin/rc"
-)
+var shell = "/bin/rc"

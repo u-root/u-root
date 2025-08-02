@@ -75,7 +75,7 @@ func (t *Trace) ReceiveTracesTCP6() {
 }
 
 func (t *Trace) ReceiveTracesTCP6ICMP() {
-	//laddr := &net.IPAddr{IP: t.SrcIP}
+	// laddr := &net.IPAddr{IP: t.SrcIP}
 	recvICMPConn, err := net.ListenIP("ip6:ipv6-icmp", &net.IPAddr{IP: t.SrcIP})
 	if err != nil {
 		log.Fatal("bind failure:", err)
@@ -88,7 +88,7 @@ func (t *Trace) ReceiveTracesTCP6ICMP() {
 		}
 
 		icmpType := buf[0]
-		if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { //TTL Exceeded or Port Unreachable
+		if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { // TTL Exceeded or Port Unreachable
 			ipv6hdr, _ := ipv6.ParseHeader(buf[8:])
 			tcphdr, _ := ParseTCP(buf[8+ipv6.HeaderLen : 48+ipv6.HeaderLen])
 			if ipv6hdr.Dst.Equal(t.DestIP) { // && dstPort == t.dstPort {
@@ -128,7 +128,6 @@ func (t *Trace) IPv6TCPPing(seq uint32, dport uint16) {
 	}
 	conn.Close()
 
-	fmt.Println("tcp probe")
 	pbr := &Probe{
 		ID:       seq,
 		Saddr:    t.DestIP,
@@ -153,7 +152,7 @@ func (t *Trace) BuildTCP6SYNPkt(sport, dport, ttl uint16, seq uint32, tc int) (*
 		Urgent:     0,
 	}
 
-	//payload is TCP Optionheader
+	// payload is TCP Optionheader
 	payload := []byte{0x02, 0x04, 0x05, 0xb4, 0x04, 0x02, 0x08, 0x0a, 0x7f, 0x73, 0xf9, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07}
 
 	var ret bytes.Buffer

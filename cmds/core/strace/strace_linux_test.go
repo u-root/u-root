@@ -52,5 +52,4 @@ func TestRun(t *testing.T) {
 			t.Fatalf("expected %v, got %v", test.err, err)
 		}
 	}
-
 }

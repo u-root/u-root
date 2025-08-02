@@ -39,7 +39,6 @@ func ReadACPIFPDTTable() (acpi.Table, error) {
 		}
 	}
 	return nil, errors.New("unable to find FPDT")
-
 }
 
 // FindFBPTTableAdrr finds FPBT Table Address

@@ -47,7 +47,6 @@ func (t *Trace) SendTracesTCP4() {
 			go t.ReceiveTracesTCP4()
 			time.Sleep(time.Microsecond * time.Duration(200000/t.PacketRate))
 		}
-
 	}
 }
 
@@ -64,9 +63,9 @@ func (t *Trace) ReceiveTracesTCP4() {
 
 	if (n >= 20) && (n <= 100) {
 		if (buf[13] == TCP_ACK+TCP_SYN) && (raddr.String() == t.DestIP.String()) {
-			//no need to generate RST message, Linux will automatically send rst
-			//sport := binary.BigEndian.Uint16(buf[0:2])
-			//dport := binary.BigEndian.Uint16(buf[2:4])
+			// no need to generate RST message, Linux will automatically send rst
+			// sport := binary.BigEndian.Uint16(buf[0:2])
+			// dport := binary.BigEndian.Uint16(buf[2:4])
 			ack := binary.BigEndian.Uint32(buf[8:12]) - 1
 			pb := &Probe{
 				ID:       ack,
@@ -91,12 +90,12 @@ func (t *Trace) ReceiveTracesTCP4ICMP() {
 		}
 
 		icmpType := buf[0]
-		if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { //TTL Exceeded or Port Unreachable
+		if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { // TTL Exceeded or Port Unreachable
 			seq := binary.BigEndian.Uint32(buf[32:36])
 			dstip := net.IP(buf[24:28])
-			//srcip := net.IP(buf[20:24])
-			//srcPort := binary.BigEndian.Uint16(buf[28:30])
-			//dstPort := binary.BigEndian.Uint16(buf[30:32])
+			// srcip := net.IP(buf[20:24])
+			// srcPort := binary.BigEndian.Uint16(buf[28:30])
+			// dstPort := binary.BigEndian.Uint16(buf[30:32])
 			if dstip.Equal(t.DestIP) { // && dstPort == t.dstPort {
 				pb := &Probe{
 					ID:       seq,
@@ -117,7 +116,6 @@ func (t *Trace) IPv4TCPProbe(dport uint16) {
 		seq = (seq + 4) % mod
 		time.Sleep(time.Microsecond * time.Duration(200000/t.PacketRate))
 	}
-
 }
 
 func (t *Trace) IPv4TCPPing(seq uint32, dport uint16) {
@@ -175,7 +173,7 @@ func (t *Trace) BuildTCP4SYNPkt(srcPort uint16, dstPort uint16, ttl uint8, seq u
 		Urgent:     0,
 	}
 
-	//payload is TCP Optionheader
+	// payload is TCP Optionheader
 	payload := []byte{0x02, 0x04, 0x05, 0xb4, 0x04, 0x02, 0x08, 0x0a, 0x7f, 0x73, 0xf9, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0x03, 0x07}
 	tcp.checksum(iph, payload)
 

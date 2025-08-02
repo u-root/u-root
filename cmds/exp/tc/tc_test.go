@@ -19,51 +19,67 @@ type DummyTctl struct{}
 func (d *DummyTctl) ShowQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) AddQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) DeleteQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) ReplaceQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) ChangeQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) LinkQdisc(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) ShowClass(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) AddClass(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) DeleteClass(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) ReplaceClass(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) ChangeClass(io.Writer, *trafficctl.Args) error {
 	return nil
 }
+
 func (d *DummyTctl) ShowFilter(io.Writer, *trafficctl.FArgs) error {
 	return nil
 }
+
 func (d *DummyTctl) AddFilter(io.Writer, *trafficctl.FArgs) error {
 	return nil
 }
+
 func (d *DummyTctl) DeleteFilter(io.Writer, *trafficctl.FArgs) error {
 	return nil
 }
+
 func (d *DummyTctl) ReplaceFilter(io.Writer, *trafficctl.FArgs) error {
 	return nil
 }
+
 func (d *DummyTctl) ChangeFilter(io.Writer, *trafficctl.FArgs) error {
 	return nil
 }
+
 func (d *DummyTctl) GetFilter(io.Writer, *trafficctl.FArgs) error {
 	return nil
 }

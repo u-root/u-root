@@ -6,7 +6,4 @@
 
 package main
 
-var (
-	shells = [...]string{"bash", "zsh", "gosh"}
-	shell  = "/bin/sh"
-)
+var shell = "/bin/sh"

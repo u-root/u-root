@@ -102,7 +102,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/u-root/u-root/pkg/cp"
+	"github.com/u-root/u-root/pkg/core/cp"
 	"github.com/u-root/u-root/pkg/ldd"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/loop"
@@ -122,7 +122,7 @@ type mp struct {
 }
 
 type cmd struct {
-	//flag
+	// flag
 	verbose bool
 	run     bool
 	create  bool
@@ -149,7 +149,8 @@ var chrootMounts = []mp{
 	// mount -t proc /proc /chroot/proc
 	{"/proc", "/proc", "proc", 0, "", 0o555},
 	// mount --bind /dev /chroot/dev
-	{"/dev", "/dev", "", mount.MS_BIND, "", 0o755}}
+	{"/dev", "/dev", "", mount.MS_BIND, "", 0o755},
+}
 
 func (c cmd) poxCreate() error {
 	if len(c.args) == 0 {

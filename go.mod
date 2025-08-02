@@ -34,10 +34,9 @@ require (
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.7
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
-	github.com/u-root/mkuimage v0.0.0-20250320091346-62f0448bbe27
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701
 	github.com/ulikunitz/xz v0.5.11
 	github.com/vishvananda/netlink v1.3.0
@@ -57,9 +56,11 @@ require (
 
 require (
 	github.com/jaypipes/ghw v0.12.0
+	github.com/pkg/sftp v1.13.9
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
+	github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f
 	go.bug.st/serial v1.6.2
 )
 
@@ -69,6 +70,7 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	howett.net/plist v1.0.0 // indirect
@@ -81,7 +83,7 @@ require (
 	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
 	github.com/charmbracelet/bubbletea v0.24.1 // indirect
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
 	github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa // indirect
 	github.com/josharian/native v1.1.0 // indirect

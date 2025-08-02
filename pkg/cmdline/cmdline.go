@@ -37,7 +37,7 @@ func FullCmdLine() string {
 
 // parse returns the current command line, trimmed
 func parse(cmdlineReader io.Reader) *CmdLine {
-	var line = &CmdLine{}
+	line := &CmdLine{}
 	raw, err := io.ReadAll(cmdlineReader)
 	line.Err = err
 	// This works because string(nil) is ""
@@ -223,9 +223,9 @@ func FlagsForModule(name string) string {
 // Consoles returns the list of all `console=` values in the kernel command line.
 func (c *CmdLine) Consoles() []string {
 	consoles := make([]string, 0)
-	for _, part := range strings.Fields(c.Raw) {
-		if strings.HasPrefix(part, "console=") {
-			consoles = append(consoles, strings.Split(strings.TrimPrefix(part, "console="), ",")[0])
+	for part := range strings.FieldsSeq(c.Raw) {
+		if after, ok := strings.CutPrefix(part, "console="); ok {
+			consoles = append(consoles, strings.Split(after, ",")[0])
 		}
 	}
 	return consoles

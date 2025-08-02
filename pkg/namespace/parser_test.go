@@ -205,7 +205,6 @@ func TestParse(t *testing.T) {
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf(`Parse(%v) = _, %v, want not nil`, tArgs.r, err)
-
 				}
 				if tt.inspectErr != nil {
 					tt.inspectErr(err, t)

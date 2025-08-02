@@ -31,7 +31,7 @@ case "$1" in
   *) echo "Invalid command"; exit 1;;
 esac`
 
-	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0755); err != nil {
+	if err := os.WriteFile(scriptPath, []byte(scriptContent), 0o755); err != nil {
 		t.Fatalf("failed to create script: %v", err)
 	}
 	return scriptPath
@@ -49,10 +49,10 @@ func TestDefaults(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				os.MkdirAll(etcDir, 0o755)
+				os.MkdirAll(serviceDir, 0o755)
 				for i := 0; i <= 6; i++ {
-					os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0755)
+					os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0o755)
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir}
@@ -64,8 +64,8 @@ func TestDefaults(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				os.MkdirAll(etcDir, 0o755)
+				os.MkdirAll(serviceDir, 0o755)
 				return options{etc: etcDir, serviceDir: serviceDir}
 			},
 			expectErr: true,
@@ -105,10 +105,10 @@ func TestDefaultsDisable(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				os.MkdirAll(etcDir, 0o755)
+				os.MkdirAll(serviceDir, 0o755)
 				for i := 2; i <= 5; i++ {
-					os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0755)
+					os.MkdirAll(filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i)), 0o755)
 				}
 				createSampleScript(t, serviceDir, "testscript")
 				return options{etc: etcDir, serviceDir: serviceDir}
@@ -150,11 +150,11 @@ func TestDisable(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				os.MkdirAll(etcDir, 0o755)
+				os.MkdirAll(serviceDir, 0o755)
 				for i := 0; i <= 6; i++ {
 					dir := filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i))
-					os.MkdirAll(dir, 0755)
+					os.MkdirAll(dir, 0o755)
 					os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "S30testscript"),
@@ -200,11 +200,11 @@ func TestEnable(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				os.MkdirAll(etcDir, 0o755)
+				os.MkdirAll(serviceDir, 0o755)
 				for i := 0; i <= 6; i++ {
 					dir := filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i))
-					os.MkdirAll(dir, 0755)
+					os.MkdirAll(dir, 0o755)
 					os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "K70testscript"),
@@ -250,11 +250,11 @@ func TestRemove(t *testing.T) {
 				tmpDir := t.TempDir()
 				etcDir := filepath.Join(tmpDir, "etc")
 				serviceDir := filepath.Join(tmpDir, "services")
-				os.MkdirAll(etcDir, 0755)
-				os.MkdirAll(serviceDir, 0755)
+				os.MkdirAll(etcDir, 0o755)
+				os.MkdirAll(serviceDir, 0o755)
 				for i := 0; i <= 6; i++ {
 					dir := filepath.Join(etcDir, fmt.Sprintf("rc%d.d", i))
-					os.MkdirAll(dir, 0755)
+					os.MkdirAll(dir, 0o755)
 					os.Symlink(
 						filepath.Join(serviceDir, "testscript"),
 						filepath.Join(dir, "S30testscript"),

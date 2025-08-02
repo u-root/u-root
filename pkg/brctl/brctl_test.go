@@ -348,7 +348,6 @@ func TestSetfd(t *testing.T) {
 	TEST_FD_JIFFIES, err := stringToJiffies(TEST_FD)
 	if err != nil {
 		t.Fatalf("stringToJiffies(%q) = %v, want nil", TEST_FD, err)
-
 	}
 	TEST_FD_JIFFIES_STR := strconv.Itoa(TEST_FD_JIFFIES)
 
@@ -456,7 +455,6 @@ func TestSetpathcost(t *testing.T) {
 	err = Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0)
 	if err != nil {
 		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
-
 	}
 
 	// Set Port for test
@@ -500,7 +498,6 @@ func TestSetportprio(t *testing.T) {
 	err = Addif(TEST_BRIDGE, BRCTL_TEST_IFACE_0)
 	if err != nil {
 		t.Fatalf("Addif(%q, %q) = %v, want nil", TEST_BRIDGE, BRCTL_TEST_IFACE_0, err)
-
 	}
 
 	err = SetPortPrio(TEST_BRIDGE, TEST_PORT, TEST_PRIO)
@@ -538,7 +535,6 @@ func TestHairpin(t *testing.T) {
 	err = Addif(BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0)
 	if err != nil {
 		t.Fatalf("Addif(%q, %q) = %v, want nil", BRCTL_TEST_BR_0, BRCTL_TEST_IFACE_0, err)
-
 	}
 
 	err = Hairpin(TEST_BRIDGE, TEST_PORT, "on")

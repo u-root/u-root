@@ -97,7 +97,6 @@ func ExecuteOp(input []string, clientcfg *ClientCfg, stdout io.Writer) (bool, er
 			clientcfg.Mode, err = ValidateMode(input[1])
 			if err != nil {
 				fmt.Fprintf(stdout, "%v", err)
-
 			}
 		}
 		fmt.Fprintf(stdout, "Using %s mode to transfer files.\n", clientcfg.Mode)

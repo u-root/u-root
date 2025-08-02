@@ -230,7 +230,7 @@ func main() {
 }
 
 func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, args []string) error {
-	var f = flag.NewFlagSet(name, flag.ExitOnError)
+	f := flag.NewFlagSet(name, flag.ExitOnError)
 
 	var (
 		skip    = f.Int64("skip", 0, "skip N ibs-sized blocks before reading")
@@ -271,7 +271,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 	// Convert conv argument to bit set.
 	flags := os.O_TRUNC
 	if *conv != "none" {
-		for _, c := range strings.Split(*conv, ",") {
+		for c := range strings.SplitSeq(*conv, ",") {
 			if v, ok := convMap[c]; ok {
 				flags &= ^v.clear
 				flags |= v.set
@@ -284,7 +284,7 @@ func run(stdin io.Reader, stdout io.WriteSeeker, stderr io.Writer, name string, 
 
 	// Convert oflag argument to bit set.
 	if *oFlag != "none" {
-		for _, f := range strings.Split(*oFlag, ",") {
+		for f := range strings.SplitSeq(*oFlag, ",") {
 			if v, ok := flagMap[f]; ok {
 				flags &= ^v.clear
 				flags |= v.set

@@ -18,7 +18,7 @@ func TestHexdump(t *testing.T) {
 	// Creating file and write content into it for testing purposes
 	d := t.TempDir()
 	n := filepath.Join(d, "testfile")
-	if err := os.WriteFile(n, []byte(testString), 0644); err != nil {
+	if err := os.WriteFile(n, []byte(testString), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -60,8 +60,8 @@ func TestHexdump(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var readBuf = &bytes.Buffer{}
-			var writeBuf = &bytes.Buffer{}
+			readBuf := &bytes.Buffer{}
+			writeBuf := &bytes.Buffer{}
 			readBuf.WriteString(tt.readInput)
 			if got := hexdump(tt.filenames, readBuf, writeBuf); got != nil {
 				// Different Go compilers deliver

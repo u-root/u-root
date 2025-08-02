@@ -14,36 +14,34 @@ import (
 	"testing"
 )
 
-var (
-	cases = []struct {
-		name   string
-		input  string
-		output []string
-	}{
-		{
-			name:   "single vdso entry",
-			input:  `	linux-vdso.so.1`,
-			output: []string{},
-		},
-		{
-			name:   "duplicate vdso symlink",
-			input:  `	linux-vdso.so.1 => linux-vdso.so.1`,
-			output: []string{},
-		},
-		{
-			name: "multiple entries",
-			input: `	linux-vdso.so.1 => linux-vdso.so.1
+var cases = []struct {
+	name   string
+	input  string
+	output []string
+}{
+	{
+		name:   "single vdso entry",
+		input:  `	linux-vdso.so.1`,
+		output: []string{},
+	},
+	{
+		name:   "duplicate vdso symlink",
+		input:  `	linux-vdso.so.1 => linux-vdso.so.1`,
+		output: []string{},
+	},
+	{
+		name: "multiple entries",
+		input: `	linux-vdso.so.1 => linux-vdso.so.1
 	libc.so.6 => /usr/lib/libc.so.6
 	/lib64/ld-linux-x86-64.so.2 => /usr/lib64/ld-linux-x86-64.so.2`,
-			output: []string{"/usr/lib/libc.so.6", "/usr/lib64/ld-linux-x86-64.so.2"},
-		},
-		{
-			name:   "entry with memory address",
-			input:  `linux-vdso.so.1 => (0x00007ffe4972d000)`,
-			output: []string{},
-		},
-	}
-)
+		output: []string{"/usr/lib/libc.so.6", "/usr/lib64/ld-linux-x86-64.so.2"},
+	},
+	{
+		name:   "entry with memory address",
+		input:  `linux-vdso.so.1 => (0x00007ffe4972d000)`,
+		output: []string{},
+	},
+}
 
 func cmp(a, b []string) bool {
 	if len(a) != len(b) {

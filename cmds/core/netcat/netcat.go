@@ -74,13 +74,13 @@ type flags struct {
 	proxyAuth    string
 
 	// Not implemented
-	//virtualSocket           bool
-	//execLua                 string
-	//looseSourcePointer      uint
-	//looseSourceRouterPoints string
-	//sctpSocket              bool
-	//noDNS                   bool
-	//telnet                  bool
+	// virtualSocket           bool
+	// execLua                 string
+	// looseSourcePointer      uint
+	// looseSourceRouterPoints string
+	// sctpSocket              bool
+	// noDNS                   bool
+	// telnet                  bool
 }
 
 func evalParams(args []string, f flags) (*netcat.Config, error) {
@@ -392,8 +392,8 @@ func run(args []string) error {
 	fs.BoolVar(&f.unixSocket, "U", false, "Use Unix domain sockets only (shorthand)")
 
 	// Not implemented socket types
-	//fs.BoolVar(&f.sctpSocket, "sctp", false, "Use SCTP instead of default TCP")
-	//fs.BoolVar(&f.virtualSocket, "vsock", false, "Use virtual circuit (stream) sockets only")
+	// fs.BoolVar(&f.sctpSocket, "sctp", false, "Use SCTP instead of default TCP")
+	// fs.BoolVar(&f.virtualSocket, "vsock", false, "Use virtual circuit (stream) sockets only")
 
 	// exec
 	fs.StringVar(&f.execNative, "exec", "", "Executes the given command")          // EXEC_TYPE_NATIVE
@@ -402,7 +402,7 @@ func run(args []string) error {
 	fs.StringVar(&f.execSh, "sh-exec", "", "Executes the given command via /bin/sh")       // EXEC_TYPE_SHELL
 	fs.StringVar(&f.execSh, "c", "", "Executes the given command via /bin/sh (shorthand)") // EXEC_TYPE_SHELL
 	// Not implemented
-	//fs.StringVar(&f.execLua, "lua-exec", "", "Executes the given Lua script (filepath argument)") // EXEC_TYPE_LUA
+	// fs.StringVar(&f.execLua, "lua-exec", "", "Executes the given Lua script (filepath argument)") // EXEC_TYPE_LUA
 
 	// connection mode options
 	fs.BoolVar(&f.zeroIo, "z", false, "zero-I/O mode, report connection status only")
@@ -414,8 +414,8 @@ func run(args []string) error {
 	fs.StringVar(&f.sourceAddress, "s", "", "Specify source address to use (shorthand)")
 
 	// Not implemented
-	//fs.StringVar(&f.looseSourceRouterPoints, "g", "", "Loose source routing hop points (8 max)")
-	//fs.UintVar(&f.looseSourcePointer, "G", 0, "Loose source routing hop pointer (<n>)")
+	// fs.StringVar(&f.looseSourceRouterPoints, "g", "", "Loose source routing hop points (8 max)")
+	// fs.UintVar(&f.looseSourcePointer, "G", 0, "Loose source routing hop pointer (<n>)")
 
 	// output options
 	fs.BoolVar(&f.verbose, "verbose", false, "Set verbosity level (can not be used several times)")
@@ -457,12 +457,12 @@ func run(args []string) error {
 	fs.BoolVar(&f.eolCRLF, "C", false, "Use CRLF for EOL sequence")
 
 	// Not implemented
-	//fs.BoolVar(&f.noDNS, "nodns", false, "Do not resolve hostnames via DNS")
-	//fs.BoolVar(&f.noDNS, "n", false, "Do not resolve hostnames via DNS (shorthand)")
+	// fs.BoolVar(&f.noDNS, "nodns", false, "Do not resolve hostnames via DNS")
+	// fs.BoolVar(&f.noDNS, "n", false, "Do not resolve hostnames via DNS (shorthand)")
 
 	// Not implemented
-	//fs.BoolVar(&f.telnet, "telnet", false, "Answer Telnet negotiations")
-	//fs.BoolVar(&f.telnet, "t", false, "Answer Telnet negotiations (shorthand)")
+	// fs.BoolVar(&f.telnet, "telnet", false, "Answer Telnet negotiations")
+	// fs.BoolVar(&f.telnet, "t", false, "Answer Telnet negotiations (shorthand)")
 
 	fs.BoolVar(&f.sendOnly, "send-only", false, "Only send data, ignoring received; quit on EOF")
 	fs.BoolVar(&f.receiveOnly, "recv-only", false, "Only receive data, never send anything")
@@ -475,10 +475,10 @@ func run(args []string) error {
 	fs.StringVar(&f.connectionDenyFile, "denyfile", "", "A file of hosts denied from sending data to Ncat. Connections will be accepted but no data will be sent back")
 
 	// Proxy feature is experimental
-	//fs.StringVar(&f.proxyAddress, "proxy", "", "Specify address of host to proxy through (<addr[:port]> )")
-	//fs.StringVar(&f.proxydns, "proxy-dns", "", "Specify where to resolve proxy destination")
-	//fs.StringVar(&f.proxyType, "proxy-type", "", "Specify proxy type ('http', 'socks4', 'socks5')")
-	//fs.StringVar(&f.proxyAuth, "proxy-auth", "", "Authenticate with HTTP or SOCKS proxy server")
+	// fs.StringVar(&f.proxyAddress, "proxy", "", "Specify address of host to proxy through (<addr[:port]> )")
+	// fs.StringVar(&f.proxydns, "proxy-dns", "", "Specify where to resolve proxy destination")
+	// fs.StringVar(&f.proxyType, "proxy-type", "", "Specify proxy type ('http', 'socks4', 'socks5')")
+	// fs.StringVar(&f.proxyAuth, "proxy-auth", "", "Authenticate with HTTP or SOCKS proxy server")
 
 	// ssl
 	fs.BoolVar(&f.sslEnabled, "ssl", false, "Connect or listen with SSL")

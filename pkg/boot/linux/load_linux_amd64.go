@@ -47,7 +47,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservat
 	if err != nil {
 		return fmt.Errorf("reading boot_param data: %w", err)
 	}
-	var lp = &bzimage.LinuxParams{}
+	lp := &bzimage.LinuxParams{}
 	if err := lp.UnmarshalBinary(bp); err != nil {
 		return fmt.Errorf("unmarshaling header: %w", err)
 	}

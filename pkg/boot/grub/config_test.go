@@ -111,7 +111,6 @@ func TestConfigs(t *testing.T) {
 }
 
 func FuzzParseGrubConfig(f *testing.F) {
-
 	baseDir := f.TempDir()
 
 	dirPath := filepath.Join(baseDir, "EFI", "uefi")
@@ -133,7 +132,7 @@ func FuzzParseGrubConfig(f *testing.F) {
 		FSType: "test",
 	})
 
-	//no log output
+	// no log output
 	log.SetOutput(io.Discard)
 	log.SetFlags(0)
 

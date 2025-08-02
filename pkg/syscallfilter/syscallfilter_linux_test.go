@@ -30,7 +30,7 @@ func traced() bool {
 	// and the bit after, included the value of TracerPid.
 	// If we can't find this then we have no way to know.
 	// Assume traced: somebody could be messing with us.
-	//log.Printf("split %s", s)
+	// log.Printf("split %s", s)
 	if len(s) < 2 {
 		return true
 	}
@@ -45,7 +45,7 @@ func traced() bool {
 }
 
 func TestEventMap(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		v    string
 		find string
 		err  error

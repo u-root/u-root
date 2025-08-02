@@ -11,9 +11,7 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/test/bar"
 )
 
-var (
-	assignedTwice = "foo"
-)
+var assignedTwice = "foo"
 
 var assignWithoutType = "bla"
 
@@ -27,13 +25,11 @@ var (
 )
 
 var (
-	groupedDeclOnlyIntf interface{}
+	groupedDeclOnlyIntf any
 	nonConstantAssign   = fmt.Errorf("foo")
 )
 
-var (
-	nil1 interface{} = nil
-)
+var nil1 any = nil
 
 var (
 	f1 func() string
@@ -45,8 +41,10 @@ func debug() string {
 	return "hahaha"
 }
 
-type someStuff interface{}
-type someStruct struct{}
+type (
+	someStuff  any
+	someStruct struct{}
+)
 
 var (
 	_ someStuff = &someStruct{}
@@ -133,7 +131,7 @@ func verify() error {
 		return fmt.Errorf("f3 is non-nil, want nil")
 	}
 
-	if nil1 != interface{}(nil) {
+	if nil1 != any(nil) {
 		return fmt.Errorf("nil1 is %v, want nil interface", nil1)
 	}
 

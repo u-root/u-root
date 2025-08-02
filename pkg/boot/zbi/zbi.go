@@ -105,42 +105,40 @@ const (
 	ZBITypeSecureEntropy ZBIType = 0x444e4152
 )
 
-var (
-	// ZBITypes is a ZBIType to ZBITypeMetadata mapping.
-	ZBITypes = map[ZBIType]ZBITypeMetadata{
-		ZBITypeContainer:            {Name: "CONTAINER", Extention: ".bin"},
-		ZBITypeKernelX64:            {Name: "KERNEL_X64", Extention: ".bin"},
-		ZBITypeKernelArm64:          {Name: "KERNEL_ARM64", Extention: ".bin"},
-		ZBITypeDiscard:              {Name: "DISCARD", Extention: ".bin"},
-		ZBITypeStorageKernel:        {Name: "KERNEL", Extention: ".bin"},
-		ZBITypeStorageRamdisk:       {Name: "RAMDISK", Extention: ".bin"},
-		ZBITypeStorageBootfs:        {Name: "BOOTFS", Extention: ".bin"},
-		ZBITypeStorageBootfsFactory: {Name: "BOOTFS_FACTORY", Extention: ".bin"},
-		ZBITypeCmdline:              {Name: "CMDLINE", Extention: ".txt"},
-		ZBITypeCrashlog:             {Name: "CRASHLOG", Extention: ".bin"},
-		ZBITypeNvram:                {Name: "NVRAM", Extention: ".bin"},
-		ZBITypePlatformID:           {Name: "PLATFORM_ID", Extention: ".bin"},
-		ZBITypeCPUConfig:            {Name: "CPU_CONFIG", Extention: ".bin"},
-		ZBITypeCPUTopology:          {Name: "CPU_TOPOLOGY", Extention: ".bin"},
-		ZBITypeMemConfig:            {Name: "MEM_CONFIG", Extention: ".bin"},
-		ZBITypeKernelDriver:         {Name: "KERNEL_DRIVER", Extention: ".bin"},
-		ZBITypeAcpiRsdp:             {Name: "ACPI_RSDP", Extention: ".bin"},
-		ZBITypeSMBios:               {Name: "SMBIOS", Extention: ".bin"},
-		ZBITypeEFISystemTable:       {Name: "EFI_SYSTEM_TABLE", Extention: ".bin"},
-		ZBITypeFramebuffer:          {Name: "FRAMEBUFFER", Extention: ".bin"},
-		ZBITypeImageArgs:            {Name: "IMAGE_ARGS", Extention: ".txt"},
-		ZBITypeBootVersion:          {Name: "BOOT_VERSION", Extention: ".bin"},
-		ZBITypeDrvBoardInfo:         {Name: "DRV_BOARD_INFO", Extention: ".bin"},
-		ZBITypeDrvMacAddress:        {Name: "DRV_MAC_ADDRESS", Extention: ".bin"},
-		ZBITypeDrvPartitionMap:      {Name: "DRV_PARTITION_MAP", Extention: ""},
-		ZBITypeDrvBoardPrivate:      {Name: "DRV_BOARD_PRIVATE", Extention: ""},
-		ZBITypeHwRebootReason:       {Name: "HW_REBOOT_REASON", Extention: ".bin"},
-		ZBITypeSerialNumber:         {Name: "SERIAL_NUMBER", Extention: ".txt"},
-		ZBITypeBootloaderFile:       {Name: "BOOTLOADER_FILE", Extention: ".bin"},
-		ZBITypeDevicetree:           {Name: "DEVICETREE", Extention: ".dtb"},
-		ZBITypeSecureEntropy:        {Name: "ENTROPY", Extention: ".bin"},
-	}
-)
+// ZBITypes is a ZBIType to ZBITypeMetadata mapping.
+var ZBITypes = map[ZBIType]ZBITypeMetadata{
+	ZBITypeContainer:            {Name: "CONTAINER", Extention: ".bin"},
+	ZBITypeKernelX64:            {Name: "KERNEL_X64", Extention: ".bin"},
+	ZBITypeKernelArm64:          {Name: "KERNEL_ARM64", Extention: ".bin"},
+	ZBITypeDiscard:              {Name: "DISCARD", Extention: ".bin"},
+	ZBITypeStorageKernel:        {Name: "KERNEL", Extention: ".bin"},
+	ZBITypeStorageRamdisk:       {Name: "RAMDISK", Extention: ".bin"},
+	ZBITypeStorageBootfs:        {Name: "BOOTFS", Extention: ".bin"},
+	ZBITypeStorageBootfsFactory: {Name: "BOOTFS_FACTORY", Extention: ".bin"},
+	ZBITypeCmdline:              {Name: "CMDLINE", Extention: ".txt"},
+	ZBITypeCrashlog:             {Name: "CRASHLOG", Extention: ".bin"},
+	ZBITypeNvram:                {Name: "NVRAM", Extention: ".bin"},
+	ZBITypePlatformID:           {Name: "PLATFORM_ID", Extention: ".bin"},
+	ZBITypeCPUConfig:            {Name: "CPU_CONFIG", Extention: ".bin"},
+	ZBITypeCPUTopology:          {Name: "CPU_TOPOLOGY", Extention: ".bin"},
+	ZBITypeMemConfig:            {Name: "MEM_CONFIG", Extention: ".bin"},
+	ZBITypeKernelDriver:         {Name: "KERNEL_DRIVER", Extention: ".bin"},
+	ZBITypeAcpiRsdp:             {Name: "ACPI_RSDP", Extention: ".bin"},
+	ZBITypeSMBios:               {Name: "SMBIOS", Extention: ".bin"},
+	ZBITypeEFISystemTable:       {Name: "EFI_SYSTEM_TABLE", Extention: ".bin"},
+	ZBITypeFramebuffer:          {Name: "FRAMEBUFFER", Extention: ".bin"},
+	ZBITypeImageArgs:            {Name: "IMAGE_ARGS", Extention: ".txt"},
+	ZBITypeBootVersion:          {Name: "BOOT_VERSION", Extention: ".bin"},
+	ZBITypeDrvBoardInfo:         {Name: "DRV_BOARD_INFO", Extention: ".bin"},
+	ZBITypeDrvMacAddress:        {Name: "DRV_MAC_ADDRESS", Extention: ".bin"},
+	ZBITypeDrvPartitionMap:      {Name: "DRV_PARTITION_MAP", Extention: ""},
+	ZBITypeDrvBoardPrivate:      {Name: "DRV_BOARD_PRIVATE", Extention: ""},
+	ZBITypeHwRebootReason:       {Name: "HW_REBOOT_REASON", Extention: ".bin"},
+	ZBITypeSerialNumber:         {Name: "SERIAL_NUMBER", Extention: ".txt"},
+	ZBITypeBootloaderFile:       {Name: "BOOTLOADER_FILE", Extention: ".bin"},
+	ZBITypeDevicetree:           {Name: "DEVICETREE", Extention: ".dtb"},
+	ZBITypeSecureEntropy:        {Name: "ENTROPY", Extention: ".bin"},
+}
 
 // IsKernel tells if current ZBIType is kernel.
 func (it *ZBIType) IsKernel() bool {

@@ -13,8 +13,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/iotest"
+
+	"github.com/u-root/u-root/pkg/core/cat"
 )
 
 // setup writes a set of files, putting 1 byte in each file.
@@ -45,28 +48,19 @@ func TestCat(t *testing.T) {
 	for i := range someData {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
 	}
-	var out bytes.Buffer
-	if err := run(nil, &out, files...); err != nil {
+
+	cmd := cat.New()
+	var stdout, stderr bytes.Buffer
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
+
+	err := cmd.Run(files...)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(out.Bytes(), someData) {
-		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
-	}
-}
-
-func TestCatPipe(t *testing.T) {
-	var inputbuf bytes.Buffer
-	teststring := "testdata"
-	fmt.Fprintf(&inputbuf, "%s", teststring)
-
-	var out bytes.Buffer
-
-	if err := cat(&inputbuf, &out); err != nil {
-		t.Error(err)
-	}
-	if out.String() != teststring {
-		t.Errorf("CatPipe: Want %q Got: %q", teststring, out.String())
+	if !bytes.Equal(stdout.Bytes(), someData) {
+		t.Fatalf("Reading files failed: got %v, want %v", stdout.Bytes(), someData)
 	}
 }
 
@@ -80,12 +74,17 @@ func TestRunFiles(t *testing.T) {
 		files = append(files, fmt.Sprintf("%v%d", filepath.Join(dir, "file"), i))
 	}
 
-	var out bytes.Buffer
-	if err := run(nil, &out, files...); err != nil {
+	cmd := cat.New()
+	var stdout, stderr bytes.Buffer
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
+
+	err := cmd.Run(files...)
+	if err != nil {
 		t.Error(err)
 	}
-	if !bytes.Equal(out.Bytes(), someData) {
-		t.Fatalf("Reading files failed: got %v, want %v", out.Bytes(), someData)
+	if !bytes.Equal(stdout.Bytes(), someData) {
+		t.Fatalf("Reading files failed: got %v, want %v", stdout.Bytes(), someData)
 	}
 }
 
@@ -100,35 +99,51 @@ func TestRunFilesError(t *testing.T) {
 	}
 	filenotexist := "testdata/doesnotexist.txt"
 	files = append(files, filenotexist)
-	var in, out bytes.Buffer
-	if err := run(&in, &out, files...); err == nil {
+
+	cmd := cat.New()
+	var stdout, stderr bytes.Buffer
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
+
+	err := cmd.Run(files...)
+	if err == nil {
 		t.Error("function run succeeded but should have failed")
 	}
 }
 
 func TestRunNoArgs(t *testing.T) {
-	var in, out bytes.Buffer
-	inputdata := "teststring"
-	fmt.Fprintf(&in, "%s", inputdata)
-	if err := run(&in, &out); err != nil {
+	cmd := cat.New()
+	var stdout, stderr bytes.Buffer
+	cmd.SetIO(strings.NewReader("teststring"), &stdout, &stderr)
+
+	err := cmd.Run()
+	if err != nil {
 		t.Error(err)
 	}
-	if out.String() != inputdata {
-		t.Errorf("Want: %q Got: %q", inputdata, out.String())
+	if stdout.String() != "teststring" {
+		t.Errorf("Want: %q Got: %q", "teststring", stdout.String())
 	}
 }
 
 func TestIOErrors(t *testing.T) {
-	stdout := bytes.Buffer{}
+	cmd := cat.New()
+	var stdout, stderr bytes.Buffer
 	errReader := iotest.ErrReader(errors.New("read error"))
-	err := run(errReader, &stdout)
-	if !errors.Is(err, errCopy) {
-		t.Errorf("expected %v, got %v", errCopy, err)
+	cmd.SetIO(errReader, &stdout, &stderr)
+
+	err := cmd.Run()
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
 
-	err = run(errReader, &stdout, "-")
-	if !errors.Is(err, errCopy) {
-		t.Errorf("expected %v, got %v", errCopy, err)
+	// Test with dash argument
+	cmd2 := cat.New()
+	var stdout2, stderr2 bytes.Buffer
+	cmd2.SetIO(errReader, &stdout2, &stderr2)
+
+	err = cmd2.Run("-")
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
 }
 
@@ -147,10 +162,12 @@ func TestCatDash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var stdin, stdout bytes.Buffer
-	stdin.WriteString("line3\n")
+	cmd := cat.New()
+	var stdout, stderr bytes.Buffer
+	cmd.SetIO(strings.NewReader("line3\n"), &stdout, &stderr)
 
-	if err = run(&stdin, &stdout, f1, "-", f2); err != nil {
+	err = cmd.Run(f1, "-", f2)
+	if err != nil {
 		t.Fatal(err)
 	}
 

@@ -36,9 +36,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var (
-	timeoutIgnore = time.Duration(-1)
-)
+var timeoutIgnore = time.Duration(-1)
 
 var (
 	ErrInvalidMonitor     = errors.New("unrecognized monitor")

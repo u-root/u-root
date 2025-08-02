@@ -73,7 +73,7 @@ var (
 
 	// Debug is a function used to log debug information. It
 	// can be set to, for example, log.Printf.
-	Debug = func(string, ...interface{}) {}
+	Debug = func(string, ...any) {}
 )
 
 // This is all C to Go and it reads like it, sorry
@@ -236,30 +236,6 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 		return fmt.Errorf("can't read TailCode: %w", err)
 	}
 
-	// Generate the CRC checksum of the entire image until the end of sys_size.
-	//
-	// Per https://www.kernel.org/doc/html/v5.4/x86/boot.html#the-image-checksum
-	// "From boot protocol version 2.08 onwards the CRC-32 is calculated over the
-	//  entire file using the characteristic polynomial 0x04C11DB7 and an initial
-	//  remainder of 0xffffffff. The checksum is appended to the file; therefore
-	//  the CRC of the file up to the limit specified in the syssize field of the
-	//  header is always 0"
-	//
-	// We can't checksum the entire file because the kernel signing process
-	// appends certificate/signing information after sys_size.
-	// See https://github.com/phrack/sbsigntools/blob/master/src/image.c#L669 for the
-	// kernel signing code.
-	//
-	// Syssize is multiplied by 16 because it is "the size of the protected-mode code
-	// in units of 16-byte paragraphs." per https://www.kernel.org/doc/html/v5.4/x86/boot.html
-	// This can be confirmed in code at: https://github.com/torvalds/linux/blob/master/arch/x86/boot/tools/build.c#L429-L430
-	generatedCRC := crc32.ChecksumIEEE(d[0:uint32(b.KernelOffset)+uint32(b.Header.Syssize)*16]) ^ (0xffffffff)
-	Debug("Generated CRC is: 0x%08x", generatedCRC)
-
-	if generatedCRC != 0 {
-		return fmt.Errorf("generated CRC (0x%08x) does not match", generatedCRC)
-	}
-
 	b.KernelBase = uintptr(0x100000)
 	if b.Header.RamdiskImage == 0 {
 		return nil
@@ -286,9 +262,9 @@ func stripSignature(image []byte) ([]byte, error) {
 	d := make([]byte, len(image))
 	copy(d, image)
 
-	var dosMagic = []byte("MZ")
-	var peMagic = []byte("PE\x00\x00")
-	var peSignaturePtr = 0x3C
+	dosMagic := []byte("MZ")
+	peMagic := []byte("PE\x00\x00")
+	peSignaturePtr := 0x3C
 
 	// Verify that the image has a MS DOS Stub.
 	if bytes.Index(d, dosMagic) != 0 {

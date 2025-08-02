@@ -6,9 +6,7 @@ package smbios
 
 import "testing"
 
-var (
-	validEndOfTableData = []byte{127, 4, 255, 254}
-)
+var validEndOfTableData = []byte{127, 4, 255, 254}
 
 func validEndOfTableRaw(t *testing.T) []byte {
 	return joinBytesT(t,

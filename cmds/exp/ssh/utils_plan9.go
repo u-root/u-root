@@ -25,7 +25,7 @@ var (
 func init() {
 	// We have to hold consctl open so we can mess with raw mode.
 	var err error
-	consctl, err = os.OpenFile("/dev/consctl", os.O_WRONLY, 0755)
+	consctl, err = os.OpenFile("/dev/consctl", os.O_WRONLY, 0o755)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func cooked() (err error) {
 func readPassword(in *os.File, out io.Writer) (string, error) {
 	fmt.Fprintf(out, "Password: ")
 	raw(in)
-	cons, err := os.OpenFile("/dev/cons", os.O_RDWR, 0755)
+	cons, err := os.OpenFile("/dev/cons", os.O_RDWR, 0o755)
 	if err != nil {
 		return "", err
 	}

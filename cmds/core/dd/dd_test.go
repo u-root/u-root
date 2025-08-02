@@ -31,7 +31,7 @@ func (w *ws) Write(b []byte) (int, error) {
 // whence is ignored. That is ok, because
 // all the tests start from the start of the file.
 func (w *ws) Seek(offset int64, _ int) (int64, error) {
-	for i := int64(0); i < offset; i++ {
+	for range offset {
 		if _, err := w.Write([]byte{1}[:]); err != nil {
 			return -1, err
 		}
@@ -405,7 +405,7 @@ func byteCount(i io.Reader, o []byte, n int64) error {
 		if err != nil || read == 0 {
 			break
 		}
-		for z := 0; z < read; z++ {
+		for z := range read {
 			if buf[z] == o[0] {
 				count++
 			} else {
@@ -585,7 +585,6 @@ func TestBS(t *testing.T) {
 			err:  nil,
 		},
 	} {
-
 		t.Run(tt.name, func(t *testing.T) {
 			var bw int64
 			if err := dd(&tt, &tt, tt.ibs, tt.obs, &bw); !errors.Is(err, tt.err) {

@@ -75,7 +75,7 @@ func TestArgs(t *testing.T) {
 				t.Fatalf("Fusermount %v %v: want '%v', got '%v'", v.n, v.a, v.o, o)
 			}
 			out := string(o[len("2018/12/20 16:54:31 "):])
-			//if out != v.o {
+			// if out != v.o {
 			if !strings.Contains(out, v.o) {
 				t.Fatalf("Fusermount %v %v: want at least'%v', got '%v'", v.n, v.a, v.o, out)
 			}

@@ -46,7 +46,7 @@ func main() {
 		src := filepath.Join(d, asm.name) + ".S"
 		dst := filepath.Join(d, asm.name) + ".o"
 		out := filepath.Join(d, asm.name) + ".out"
-		if err := ioutil.WriteFile(src, []byte(asm.code), 0666); err != nil {
+		if err := ioutil.WriteFile(src, []byte(asm.code), 0o666); err != nil {
 			log.Fatal(err)
 		}
 

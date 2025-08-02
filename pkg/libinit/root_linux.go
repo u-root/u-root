@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/cmdline"
-	"github.com/u-root/u-root/pkg/cp"
+	"github.com/u-root/u-root/pkg/core/cp"
 	"github.com/u-root/u-root/pkg/kmodule"
 	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"

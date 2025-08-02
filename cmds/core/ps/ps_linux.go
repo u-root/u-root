@@ -336,6 +336,7 @@ func (pT *ProcessTable) LoadTable() error {
 	}
 	return pT.doTable(n)
 }
+
 func usage() {
 	defUsage := flag.Usage
 	flag.Usage = func() {

@@ -153,7 +153,7 @@ func TestCreateInitrd(t *testing.T) {
 				if err != nil {
 					t.Errorf("CreateInitrd(%v): CreateTemp errored: %v", tt.files, err)
 				}
-				err = os.WriteFile(tmpFile.Name(), f.content, 0666)
+				err = os.WriteFile(tmpFile.Name(), f.content, 0o666)
 				if err != nil {
 					t.Errorf("CreateInitrd(%v): Writing to tmpfile errored: %v", tt.files, err)
 				}
@@ -172,5 +172,4 @@ func TestCreateInitrd(t *testing.T) {
 			}
 		})
 	}
-
 }

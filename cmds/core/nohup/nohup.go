@@ -54,7 +54,7 @@ func run(args []string) error {
 	stderrIsTerminal := term.IsTerminal(int(os.Stderr.Fd()))
 
 	if stdoutIsTerminal {
-		outputFile, err := os.OpenFile("nohup.out", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		outputFile, err := os.OpenFile("nohup.out", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			return fmt.Errorf("error opening file: %w", err)
 		}

@@ -221,7 +221,7 @@ func newSNMP6() (*SNMP6, error) {
 			case "UdpLite6":
 				refVal = reflect.ValueOf(ul)
 			default:
-				//We skip UdpLite for now
+				// We skip UdpLite for now
 				continue
 			}
 

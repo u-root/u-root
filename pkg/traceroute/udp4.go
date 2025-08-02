@@ -73,10 +73,10 @@ func (t *Trace) ReceiveTracesUDP4() {
 	}
 
 	icmpType := buf[0]
-	if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { //TTL Exceeded or Port Unreachable
+	if (icmpType == 11 || (icmpType == 3 && buf[1] == 3)) && (n >= 36) { // TTL Exceeded or Port Unreachable
 		id := binary.BigEndian.Uint16(buf[12:14])
 		dstip := net.IP(buf[24:28])
-		//srcip := net.IP(buf[20:24])
+		// srcip := net.IP(buf[20:24])
 		_ = binary.BigEndian.Uint16(buf[28:30])
 		_ = binary.BigEndian.Uint16(buf[30:32])
 		if dstip.Equal(dest) { // && dstPort == t.dstPort {
@@ -118,7 +118,7 @@ func (t *Trace) BuildUDP4Pkt(srcPort uint16, dstPort uint16, ttl uint8, id uint1
 	}
 
 	payload := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		payload[i] = uint8(i + 64)
 	}
 	udp.Length = uint16(len(payload) + 8)

@@ -5,10 +5,14 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/core/mv"
 )
 
 func setup(t *testing.T) string {
@@ -51,112 +55,160 @@ func TestMove(t *testing.T) {
 	d := setup(t)
 
 	for _, tt := range []struct {
-		want  error
-		name  string
-		files []string
+		name     string
+		args     []string
+		wantErr  bool
+		errCheck func(string) bool
 	}{
 		{
-			name:  "Is a directory",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1.txt")},
-			want:  fmt.Errorf("not a directory: %s", filepath.Join(d, "hi1.txt")),
+			name:    "Multiple files to non-directory",
+			args:    []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), filepath.Join(d, "old.txt")},
+			wantErr: true,
+			errCheck: func(err string) bool {
+				return strings.Contains(err, "not a directory")
+			},
 		},
 		{
-			name:  "Is not a directory",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt"), "d"},
-			want:  fmt.Errorf("not a directory: %s", "d"),
+			name:    "Source file does not exist",
+			args:    []string{filepath.Join(d, "nonexistent.txt"), filepath.Join(d, "hi2.txt")},
+			wantErr: true,
+			errCheck: func(err string) bool {
+				return strings.Contains(err, "no such file or directory")
+			},
 		},
 		{
-			name:  "mv logFatalf err",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt")},
-			want:  fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+			name:    "Simple move",
+			args:    []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "moved.txt")},
+			wantErr: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := move(tt.files, true, false); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("move() = '%v', want: '%v'", got, tt.want)
+			cmd := mv.New()
+			var stderr bytes.Buffer
+			cmd.SetIO(nil, io.Discard, &stderr)
+
+			err := cmd.Run(tt.args...)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Expected error, got none")
+				}
+				if tt.errCheck != nil {
+					errOutput := stderr.String()
+					if err != nil {
+						errOutput += err.Error()
+					}
+					if !tt.errCheck(errOutput) {
+						t.Errorf("Error check failed for output: %q", errOutput)
+					}
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
 				}
 			}
 		})
 	}
-
 }
 
-func TestMv(t *testing.T) {
-	d := setup(t)
-
+func TestMvFlags(t *testing.T) {
 	for _, tt := range []struct {
-		want      error
-		name      string
-		files     []string
-		update    bool
-		noClobber bool
-		todir     bool
+		name    string
+		args    func(string) []string // Function that takes temp dir and returns args
+		wantErr bool
+		setup   func(string)      // Additional setup for the test, takes temp dir
+		check   func(string) bool // Check the result, takes temp dir
 	}{
 		{
-			name:   "len(files) > 2",
-			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), d},
-			update: true,
+			name: "Update flag - newer source",
+			args: func(d string) []string {
+				return []string{"-u", filepath.Join(d, "new.txt"), filepath.Join(d, "old.txt")}
+			},
+			wantErr: false,
+			check: func(d string) bool {
+				// Check that the file was moved (new.txt should not exist, old.txt should have "new" content)
+				if _, err := os.Stat(filepath.Join(d, "new.txt")); !os.IsNotExist(err) {
+					return false
+				}
+				content, err := os.ReadFile(filepath.Join(d, "old.txt"))
+				return err == nil && string(content) == "new"
+			},
 		},
 		{
-			name:   "len(files) > 2 && d does not exist",
-			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), "d"},
-			want:   fmt.Errorf("lstat %s: no such file or directory", filepath.Join("d", "hi1.txt")),
-			update: true,
-		},
-		{
-			name:   "len(files) = 2",
-			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt")},
-			update: true,
+			name: "No clobber flag",
+			args: func(d string) []string {
+				return []string{"-n", filepath.Join(d, "hi2.txt"), filepath.Join(d, "old.txt")}
+			},
+			wantErr: false,
+			check: func(d string) bool {
+				// Check that old.txt still has "old" content (wasn't overwritten)
+				content, err := os.ReadFile(filepath.Join(d, "old.txt"))
+				return err == nil && string(content) == "old"
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mv(tt.files, tt.update, tt.noClobber, tt.todir); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("mv() = '%v', want: '%v'", got, tt.want)
-				}
+			d := setup(t) // Each subtest gets its own fresh setup
+
+			if tt.setup != nil {
+				tt.setup(d)
 			}
 
+			cmd := mv.New()
+			var stderr bytes.Buffer
+			cmd.SetIO(nil, io.Discard, &stderr)
+
+			err := cmd.Run(tt.args(d)...)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("Expected error, got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if tt.check != nil && !tt.check(d) {
+					t.Errorf("Post-move check failed")
+				}
+			}
 		})
 	}
 }
 
-func TestMoveFile(t *testing.T) {
+func TestMvToDirectory(t *testing.T) {
 	d := setup(t)
 
-	var testTable = []struct {
-		want error
-		name string
-		src  string
-		dst  string
-	}{
-		{
-			name: "first file in update path does not exist",
-			src:  filepath.Join(d, "hi3.txt"),
-			dst:  filepath.Join(d, "hi2.txt"),
-			want: fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
-		},
-		{
-			name: "second file in update path does not exist",
-			src:  filepath.Join(d, "hi2.txt"),
-			dst:  filepath.Join(d, "hi3.txt"),
-			want: fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
-		},
+	// Create a directory
+	subdir := filepath.Join(d, "subdir")
+	if err := os.Mkdir(subdir, 0o755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
-	for _, tt := range testTable {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := moveFile(tt.src, tt.dst, true, false); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("moveFile() = '%v', want: '%v'", got, tt.want)
-				}
-			}
-		})
+	cmd := mv.New()
+	var stderr bytes.Buffer
+	cmd.SetIO(nil, io.Discard, &stderr)
+
+	// Move multiple files to directory
+	args := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), subdir}
+	err := cmd.Run(args...)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
 	}
 
-	t.Run("test for noClobber", func(t *testing.T) {
-		if err := moveFile(testTable[0].src, testTable[0].dst, false, true); err != nil {
-			t.Errorf("Expected err: %v, got: %v", err, testTable[0].want)
-		}
-	})
+	// Check that files were moved to the directory
+	if _, err := os.Stat(filepath.Join(subdir, "hi1.txt")); err != nil {
+		t.Errorf("hi1.txt was not moved to directory: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(subdir, "hi2.txt")); err != nil {
+		t.Errorf("hi2.txt was not moved to directory: %v", err)
+	}
+
+	// Check that original files no longer exist
+	if _, err := os.Stat(filepath.Join(d, "hi1.txt")); !os.IsNotExist(err) {
+		t.Errorf("Original hi1.txt still exists")
+	}
+	if _, err := os.Stat(filepath.Join(d, "hi2.txt")); !os.IsNotExist(err) {
+		t.Errorf("Original hi2.txt still exists")
+	}
 }

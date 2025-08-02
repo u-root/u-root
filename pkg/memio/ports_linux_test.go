@@ -138,5 +138,4 @@ func TestNewPortSucceed(t *testing.T) {
 		t.Errorf("TestNewPortFail failed: %q", err)
 	}
 	defer port.Close()
-
 }

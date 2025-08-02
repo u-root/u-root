@@ -21,9 +21,7 @@ const (
 	TimeUnitsPerSecs = 1000000
 )
 
-var (
-	ErrNoDevice = errors.New("no such device")
-)
+var ErrNoDevice = errors.New("no such device")
 
 func getDevice(dev string) (net.Interface, error) {
 	var ret net.Interface
@@ -148,9 +146,7 @@ func ParseClassID(p string) (uint32, error) {
 	return uint32(major<<16) | uint32(minor), nil
 }
 
-var (
-	ErrUnknownLinkLayer = errors.New("unknown linklayer value provided")
-)
+var ErrUnknownLinkLayer = errors.New("unknown linklayer value provided")
 
 // RenderClassID is the inverse of ParseClassID.
 func RenderClassID(classID uint32, printParent bool) string {
@@ -358,9 +354,7 @@ func getClockfactor() (uint32, error) {
 	return uint32(clockRes / TimeUnitsPerSecs), nil
 }
 
-var (
-	ErrNoValidProto = errors.New("invalid protocol name")
-)
+var ErrNoValidProto = errors.New("invalid protocol name")
 
 // ParseProto takes an EtherType protocol string and returns the equivalent
 // uint16 representation in network byte order.

@@ -42,7 +42,6 @@ func (t *Trace) SendTracesUDP6() {
 
 			pb.Sendtime = time.Now()
 			rSock.WriteTo(payload, cm, &net.IPAddr{IP: t.DestIP})
-
 			t.SendChan <- pb
 
 			dport = uint16(int32(t.DestPort) + rand.Int31n(64))
@@ -69,7 +68,7 @@ func (t *Trace) ReceiveTracesUDP6() {
 	ip6hdr, _ := ipv6.ParseHeader(buf[8:])
 
 	icmpType := buf[0]
-	if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { //TTL Exceeded or Port Unreachable
+	if (icmpType == 1 || (icmpType == 3 && buf[1] == 0)) && (n >= 36) { // TTL Exceeded or Port Unreachable
 		id := binary.BigEndian.Uint16(buf[46+ipv6.HeaderLen : 48+ipv6.HeaderLen])
 		if ip6hdr.Dst.Equal(t.DestIP) { // && dstPort == t.dstPort {
 			recvProbe := &Probe{
@@ -93,7 +92,7 @@ func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int)
 	}
 
 	payload := make([]byte, 30)
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		payload[i] = uint8(i + 64)
 	}
 
@@ -103,6 +102,9 @@ func (t *Trace) BuildUDP6Pkt(sport, dport uint16, ttl uint8, id uint16, tos int)
 	payload = append(payload, idBin...)
 
 	udphdr.Length = uint16(len(payload) + 8)
+
+	// Set the checksum to 0xffff, which indicates that it should be calculated.
+	udphdr.Chksum = 0xffff
 
 	var b bytes.Buffer
 	binary.Write(&b, binary.BigEndian, &udphdr)
