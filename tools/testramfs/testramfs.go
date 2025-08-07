@@ -6,12 +6,12 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"log"
 	"os"
 	"syscall"
 
-	flag "github.com/spf13/pflag"
 	"golang.org/x/sys/unix"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -30,19 +30,24 @@ const (
 		syscall.CLONE_NEWUTS
 )
 
-var (
-	noremove    = flag.BoolP("noremove", "n", false, "remove tempdir when done")
-	interactive = flag.BoolP("interactive", "i", false, "interactive mode")
-)
-
 func main() {
-	flag.Parse()
+	var (
+		noremove    bool
+		interactive bool
+	)
 
-	if flag.NArg() != 1 {
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs.BoolVar(&noremove, "noremove", false, "remove tempdir when done")
+	fs.BoolVar(&noremove, "n", false, "remove tempdir when done")
+	fs.BoolVar(&interactive, "interactive", false, "interactive mode")
+	fs.BoolVar(&interactive, "i", false, "interactive mode")
+	fs.Parse(os.Args[1:])
+
+	if fs.NArg() != 1 {
 		log.Fatalf("usage: %s <cpio-path>", os.Args[0])
 	}
 
-	c := flag.Args()[0]
+	c := fs.Args()[0]
 
 	f, err := os.Open(c)
 	if err != nil {
@@ -70,7 +75,7 @@ func main() {
 	}
 	// Don't do a RemoveAll. This should be empty and
 	// an error can tell us we got something wrong.
-	if !*noremove {
+	if !noremove {
 		defer func(n string) {
 			log.Printf("Removing %v", n)
 			if err := os.Remove(n); err != nil {
@@ -81,7 +86,7 @@ func main() {
 	if err := syscall.Mount("testramfs.tmpfs", tempDir, "tmpfs", 0, ""); err != nil {
 		log.Fatal(err)
 	}
-	if !*noremove {
+	if !noremove {
 		defer func(n string) {
 			log.Printf("Unmounting %v", n)
 			if err := syscall.Unmount(n, syscall.MNT_DETACH); err != nil {
@@ -115,7 +120,7 @@ func main() {
 	cmd.C.SysProcAttr.Chroot = tempDir
 	cmd.C.SysProcAttr.Cloneflags = cloneFlags
 	cmd.C.SysProcAttr.Unshareflags = unshareFlags
-	if *interactive {
+	if interactive {
 		t, err := termios.GetTermios(0)
 		if err != nil {
 			log.Fatal("Getting Termios")
