@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package base64
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -35,7 +36,8 @@ func TestBase64(t *testing.T) {
 
        Mandatory arguments to long options are mandatory for short options too.
 `),
-			out: []byte(`REVTQ1JJUFRJT04KICAgICAgIEJhc2U2NCBlbmNvZGUgb3IgZGVjb2RlIEZJTEUsIG9yIHN0YW5kYXJkIGlucHV0LCB0byBzdGFuZGFyZCBvdXRwdXQuCgogICAgICAgV2l0aCBubyBGSUxFLCBvciB3aGVuIEZJTEUgaXMgLSwgcmVhZCBzdGFuZGFyZCBpbnB1dC4KCiAgICAgICBNYW5kYXRvcnkgYXJndW1lbnRzIHRvIGxvbmcgb3B0aW9ucyBhcmUgbWFuZGF0b3J5IGZvciBzaG9ydCBvcHRpb25zIHRvby4K`),
+			out: []byte(`REVTQ1JJUFRJT04KICAgICAgIEJhc2U2NCBlbmNvZGUgb3IgZGVjb2RlIEZJTEUsIG9yIHN0YW5kYXJkIGlucHV0LCB0byBzdGFuZGFyZCBvdXRwdXQuCgogICAgICAgV2l0aCBubyBGSUxFLCBvciB3aGVuIEZJTEUgaXMgLSwgcmVhZCBzdGFuZGFyZCBpbnB1dC4KCiAgICAgICBNYW5kYXRvcnkgYXJndW1lbnRzIHRvIGxvbmcgb3B0aW9ucyBhcmUgbWFuZGF0b3J5IGZvciBzaG9ydCBvcHRpb25zIHRvby4K
+`),
 		},
 	}
 	d := t.TempDir()
@@ -52,9 +54,10 @@ func TestBase64(t *testing.T) {
 		// Loop over encodes, then loop over decodes
 		for _, n := range [][]string{{nin}, {}} {
 			t.Run(fmt.Sprintf("run with file name %q", n), func(t *testing.T) {
+				cmd := New()
 				var o bytes.Buffer
-				// n.b. the bytes.NewBuffer is ignored in all but one case ...
-				if err := run(bytes.NewBuffer(tt.in), &o, false, n...); err != nil {
+				cmd.SetIO(bytes.NewBuffer(tt.in), &o, &bytes.Buffer{})
+				if err := cmd.Run(n...); err != nil {
 					t.Errorf("Encode: got %v, want nil", err)
 					return
 				}
@@ -66,9 +69,10 @@ func TestBase64(t *testing.T) {
 
 		for _, n := range [][]string{{nout}, {}} {
 			t.Run(fmt.Sprintf("run with file name %q", n), func(t *testing.T) {
+				cmd := New()
 				var o bytes.Buffer
-				// n.b. the bytes.NewBuffer is ignored in all but one case ...
-				if err := run(bytes.NewBuffer(tt.out), &o, true, n...); err != nil {
+				cmd.SetIO(bytes.NewBuffer(tt.out), &o, &bytes.Buffer{})
+				if err := cmd.Run(append([]string{"-d"}, n...)...); err != nil {
 					t.Errorf("Decode: got %v, want nil", err)
 					return
 				}
@@ -81,26 +85,29 @@ func TestBase64(t *testing.T) {
 	// Try opening a file we know does not exist.
 	n := filepath.Join(d, "nosuchfile")
 	t.Run(fmt.Sprintf("bad file %q", n), func(t *testing.T) {
-		// n.b. the bytes.NewBuffer is ignored in all but one case ...
-		if err := run(nil, nil, false, n); err == nil {
-			t.Errorf("run(%q, nil, nil, false): nil != an error", n)
+		cmd := New()
+		if err := cmd.Run(n); err == nil {
+			t.Errorf("run(%q): nil != an error", n)
 		}
 	})
 
 	// Try with a bad length
 	t.Run("bad data", func(t *testing.T) {
+		cmd := New()
 		bad := bytes.NewBuffer([]byte{'t'})
 		var o bytes.Buffer
-		// n.b. the bytes.NewBuffer is ignored in all but one case ...
-		if err := run(bad, &o, true); err == nil {
-			t.Errorf(`run("", zero-length buffer, zero-length-buffer, false): nil != an error`)
+		cmd.SetIO(bad, &o, &bytes.Buffer{})
+		if err := cmd.Run("-d"); err == nil {
+			t.Errorf(`run("-d"): nil != an error`)
 		}
 	})
 }
 
 func TestBadWriter(t *testing.T) {
-	if err := run(bytes.NewBufferString("hi there"), failer{}, false); !errors.Is(err, os.ErrInvalid) {
-		t.Errorf(`bytes.NewBufferString("hi there"), failer{}, false): got %v, want %v`, err, os.ErrInvalid)
+	cmd := New()
+	cmd.SetIO(bytes.NewBufferString("hi there"), failer{}, &bytes.Buffer{})
+	if err := cmd.Run(); !errors.Is(err, os.ErrInvalid) {
+		t.Errorf(`Run(): got %v, want %v`, err, os.ErrInvalid)
 	}
 }
 
@@ -113,8 +120,9 @@ func TestBadUsage(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if err := run(nil, nil, false, tt.args...); !errors.Is(err, tt.err) {
-			t.Errorf(`run(nil, nil, false, %q): got %v, want %v`, tt.args, err, tt.err)
+		cmd := New()
+		if err := cmd.Run(tt.args...); !errors.Is(err, tt.err) {
+			t.Errorf(`Run(%q): got %v, want %v`, tt.args, err, tt.err)
 		}
 	}
 }
@@ -140,16 +148,21 @@ func TestDo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			cmd := New()
+
 			// encode first
 			var encoded bytes.Buffer
-			err := do(strings.NewReader(tt.input), &encoded, false)
+			cmd.SetIO(strings.NewReader(tt.input), &encoded, &bytes.Buffer{})
+			err := cmd.Run()
 			if err != nil {
 				t.Fatalf("encoding failed: %v", err)
 			}
 
 			// then decode
+			cmd2 := New()
 			var decoded bytes.Buffer
-			err = do(bytes.NewReader(encoded.Bytes()), &decoded, true)
+			cmd2.SetIO(bytes.NewReader(encoded.Bytes()), &decoded, &bytes.Buffer{})
+			err = cmd2.Run("-d")
 			if err != nil {
 				t.Fatalf("decoding failed: %v", err)
 			}
@@ -159,5 +172,21 @@ func TestDo(t *testing.T) {
 				t.Errorf("encode/decode failed:\noriginal: %q\ndecoded:  %q", tt.input, d)
 			}
 		})
+	}
+}
+
+func TestRunContext(t *testing.T) {
+	cmd := New()
+	var o bytes.Buffer
+	cmd.SetIO(strings.NewReader("hello"), &o, &bytes.Buffer{})
+
+	ctx := context.Background()
+	err := cmd.RunContext(ctx, []string{}...)
+	if err != nil {
+		t.Errorf("RunContext failed: %v", err)
+	}
+
+	if o.Len() == 0 {
+		t.Error("RunContext produced no output")
 	}
 }
