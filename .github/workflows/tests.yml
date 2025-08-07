@@ -35,11 +35,6 @@ jobs:
             vmarch: 'amd64'
             pattern: '.'
 
-          # QEMU's -M virt only supports GOARM=5, so add goarm=5 only for
-          # arm configs
-          - vmarch: arm
-            goarm: '5'
-
     env:
       GO_VERSION: ${{ matrix.go-version }}
       VMTEST_ARCH: ${{ matrix.vmarch }}
