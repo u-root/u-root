@@ -31,7 +31,7 @@ arm:
       qemu: "/zqemu"
 
   VMTEST_KERNEL:
-    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:a3df0094d89dda04a3eb08d3c8df538b3d2cb3019962cbd8f8886ac624cc8838"
+    container: "ghcr.io/u-root/u-root/test-kernel-arm@sha256:0550f61f1a620033fc20ec642361f53c00fa8d02b077a637bef41fe62b71461a"
     template: "{{.zImage}}"
     files:
       zImage: "/zImage"
