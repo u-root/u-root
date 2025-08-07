@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package shasum
 
 import (
 	"bytes"
@@ -11,8 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/shasum"
 )
 
 func TestSHASum(t *testing.T) {
@@ -128,7 +126,7 @@ func TestSHASum(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := shasum.New()
+			cmd := New()
 			bufIn := &bytes.Buffer{}
 			if _, err := bufIn.WriteString("abcdef\n"); err != nil {
 				t.Errorf("failed to write string to bufIn: %v", err)
