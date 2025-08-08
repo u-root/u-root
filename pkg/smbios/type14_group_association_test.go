@@ -202,4 +202,3 @@ func TestGroupAssociationToTableFail(t *testing.T) {
 		}
 	}
 }
-
