@@ -365,34 +365,138 @@ func TestReplaceBaseboardInfoMotherboardFail(t *testing.T) {
 	}
 }
 
-func TestRemoveBaseboardInfoPass(t *testing.T) {
-	opt := RemoveBaseboardInfo(BoardTypeSystemManagementModule)
-
-	oldTable := []*Table{
+func TestRemoveBaseboardInfo(t *testing.T) {
+	tests := []struct {
+		name       string
+		oldTables  []*Table
+		wantTables []*Table
+	}{
 		{
-			Header: Header{
-				Type:   TableTypeBaseboardInfo,
-				Length: 17,
-				Handle: 0,
+			name: "RemoveBaseboardInfoSimple",
+			oldTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 0,
+					},
+					data: []byte{
+						2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
 			},
-			data: []byte{
-				2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
-				byte(BoardTypeSystemManagementModule),
-				1, 10, 0,
+			wantTables: []*Table{},
+		},
+		{
+			name: "RemoveMultipleBaseboardInfo",
+			oldTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 0,
+					},
+					data: []byte{
+						2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 1,
+					},
+					data: []byte{
+						2, 17, 1, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
 			},
-			strings: []string{"-", "-", "-", "-", "-", "-"},
+			wantTables: []*Table{},
+		},
+		{
+			name: "RemoveBaseboardInfoWithGroupAssociation",
+			oldTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 0,
+					},
+					data: []byte{
+						2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 1,
+					},
+					data: []byte{
+						2, 17, 1, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
+				{
+					Header: Header{
+						Type:   TableTypeGroupAssociation,
+						Length: 11,
+						Handle: 2,
+					},
+					data: []byte{
+						14, 11, 2, 0, // Header
+						1,       // string number
+						2, 0, 0, // ItemType, ItemHandle
+						2, 1, 0,
+					},
+					strings: []string{"Group"},
+				},
+			},
+			wantTables: []*Table{{
+				Header: Header{
+					Type:   TableTypeGroupAssociation,
+					Length: 5,
+					Handle: 2, // Note: The handle is re-indexed to 0
+				},
+				data: []byte{
+					14, 5, 2, 0, // Header
+					1, // string number
+				},
+				strings: []string{"Group"},
+			}},
 		},
 	}
-	wantTable := []*Table{}
 
-	newTable, err := opt(oldTable)
-	if err != nil {
-		t.Fatalf("opt should pass but returned error: %v", err)
-	}
-	for i := 0; i < len(newTable); i++ {
-		if !reflect.DeepEqual(newTable[i], wantTable[i]) {
-			t.Errorf("opt return incorrect table, got %+v, want %+v", newTable[i], wantTable[i])
-		}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opt := RemoveBaseboardInfo(BoardTypeSystemManagementModule)
+			newTables, err := opt(tc.oldTables)
+
+			if err != nil {
+				t.Fatalf("opt should pass but returned an error: %v", err)
+			}
+
+			for i := 0; i < len(newTables); i++ {
+				// Using reflect.DeepEqual for a comprehensive comparison of the entire slice
+				if !reflect.DeepEqual(newTables[i], tc.wantTables[i]) {
+					t.Errorf("opt returned incorrect table, got %+v, want %+v", newTables[i], tc.wantTables[i])
+				}
+			}
+		})
 	}
 }
 
