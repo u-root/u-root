@@ -46,23 +46,24 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"log"
 	"os"
 
-	flag "github.com/spf13/pflag"
 	tftppkg "github.com/u-root/u-root/pkg/tftp"
 	"pack.ag/tftp"
 )
 
 func main() {
 	f := tftppkg.Flags{}
-	flag.StringVarP(&f.Cmd, "c", "c", "", "Execute command as if it had been entered on the tftp prompt.  Must be specified last on the command line.")
-	flag.StringVarP(&f.Mode, "m", "m", "netascii", "Set the default transfer mode to mode.  This is usually used with -c.")
+	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs.StringVar(&f.Cmd, "c", "", "Execute command as if it had been entered on the tftp prompt.  Must be specified last on the command line.")
+	fs.StringVar(&f.Mode, "m", "netascii", "Set the default transfer mode to mode.  This is usually used with -c.")
 
-	flag.Parse()
+	fs.Parse(os.Args[1:])
 
-	if err := run(f, os.Args[1:], flag.Args(), os.Stdin, os.Stdout); err != nil {
+	if err := run(f, os.Args[1:], fs.Args(), os.Stdin, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }
