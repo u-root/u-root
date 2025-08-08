@@ -7,6 +7,7 @@ package smbios
 import (
 	"fmt"
 	"os"
+	"slices"
 )
 
 // Modifier modifies the SMBIOS data
@@ -39,6 +40,23 @@ func getEntries(smbiosBase func() (int64, int64, error), memFile *os.File) (*Ent
 
 	e32, e64, err := ParseEntry(entryData)
 	return e32, e64, entryAddr, err
+}
+
+func getBoardTypeHandles(tables []*Table, boardType BoardType) ([]uint16, error) {
+	var handles []uint16
+	for _, t := range tables {
+		if t.Type != TableTypeBaseboardInfo {
+			continue
+		}
+		bi, err := ParseBaseboardInfo(t)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse baseboard info: %w", err)
+		}
+		if bi.BoardType == boardType {
+			handles = append(handles, bi.Header.Handle)
+		}
+	}
+	return handles, nil
 }
 
 // OverrideOpt is a function return overridden tables given another tables the marshaler
@@ -160,7 +178,35 @@ func ReplaceBaseboardInfoMotherboard(manufacturer, product, version, serialNumbe
 func RemoveBaseboardInfo(boardType BoardType) OverrideOpt {
 	return func(tables []*Table) ([]*Table, error) {
 		var result []*Table
+		baseboardHandles, err := getBoardTypeHandles(tables, boardType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get board type handles: %w", err)
+		}
 		for _, t := range tables {
+			if t.Type == TableTypeGroupAssociation {
+				var newItemHandle []uint16
+				var newItemTypes []TableType
+				ga, err := ParseGroupAssociation(t)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse group association: %w", err)
+				}
+				for i, handle := range ga.ItemHandle {
+					if slices.Contains(baseboardHandles, handle) {
+						continue
+					}
+					newItemHandle = append(newItemHandle, handle)
+					newItemTypes = append(newItemTypes, ga.ItemType[i])
+				}
+				ga.ItemHandle = newItemHandle
+				ga.ItemType = newItemTypes
+				ga.Length = uint8((len(newItemHandle) * 3) + 5)
+				gaT, err := ga.toTable()
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert group association to table: %w", err)
+				}
+				result = append(result, gaT)
+				continue
+			}
 			if t.Type != TableTypeBaseboardInfo {
 				result = append(result, t)
 				continue
@@ -171,7 +217,21 @@ func RemoveBaseboardInfo(boardType BoardType) OverrideOpt {
 				return nil, fmt.Errorf("failed to parse generic table into BaseboardInfo table: %w", err)
 			}
 			if bi.BoardType != boardType {
-				result = append(result, t)
+				// Check if the baseboard is a contained object of the group association table.
+				var newContainedObjectHandles []uint16
+				for _, handle := range bi.ContainedObjectHandles {
+					if slices.Contains(baseboardHandles, handle) {
+						bi.NumberOfContainedObjectHandles--
+						continue
+					}
+					newContainedObjectHandles = append(newContainedObjectHandles, handle)
+				}
+				bi.ContainedObjectHandles = newContainedObjectHandles
+				biT, err := bi.toTable()
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert baseboard info to table: %w", err)
+				}
+				result = append(result, biT)
 			}
 		}
 		return result, nil
