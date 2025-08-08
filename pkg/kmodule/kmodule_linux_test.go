@@ -63,16 +63,17 @@ func TestParallelLoad(t *testing.T) {
 
 	var eg errgroup.Group
 
-	// Wait time encourages racing between dependencies.
-	slow_opts := ProbeOpts{DryRunCB: func(path string) { time.Sleep(loadTime) }}
+	prober := Prober{
+		deps: m,
+		// Wait time encourages racing between dependencies.
+		opts: ProbeOpts{DryRunCB: func(path string) { time.Sleep(loadTime) }},
+	}
 
 	eg.Go(func() error {
-		return parallelProbeDep(
-			m, "/lib/modules/6.6.6-generic/kernel/tests/depmod.ko", "", slow_opts, []string{})
+		return prober.Probe("depmod", "")
 	})
 	eg.Go(func() error {
-		return parallelProbeDep(
-			m, "/lib/modules/6.6.6-generic/kernel/tests/depmod2.ko", "", slow_opts, []string{})
+		return prober.Probe("depmod2", "")
 	})
 
 	start := time.Now()
@@ -110,10 +111,12 @@ func TestInvalidCircularLoad(t *testing.T) {
 		},
 	}
 
-	noop_opts := ProbeOpts{DryRunCB: func(path string) {}}
+	prober := Prober{
+		deps: m,
+		opts: ProbeOpts{DryRunCB: func(path string) {}},
+	}
 
-	err := parallelProbeDep(
-		m, "/lib/modules/6.6.6-generic/kernel/tests/depmod.ko", "", noop_opts, []string{})
+	err := prober.Probe("depmod", "")
 
 	if err == nil {
 		// If we reach this, we're probably hung.

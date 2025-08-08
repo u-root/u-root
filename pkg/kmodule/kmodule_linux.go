@@ -40,6 +40,7 @@ const (
 	builtin
 )
 
+// concurrency: struct must be read-only outside of `loadOnce`
 type dependency struct {
 	state    modState
 	deps     []string
@@ -57,6 +58,14 @@ type ProbeOpts struct {
 	RootDir        string
 	KVer           string
 	IgnoreProcMods bool
+}
+
+// Prober provides a concurrent-safe interface for probing modules.
+//
+// concurrency: `deps` and `opts` must be treated as read-only.
+type Prober struct {
+	deps depMap
+	opts ProbeOpts
 }
 
 // Init loads the kernel module given by image with the given options.
@@ -155,14 +164,27 @@ func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts
 	return dep.err
 }
 
-// parallelProbe translates to modPath then calls parallelProbeDep
-func parallelProbe(deps depMap, name string, params string, opts ProbeOpts) error {
-	modPath, err := findModPath(name, deps)
+// NewProber looks up current module state and provides Prober
+func NewProber(opts ProbeOpts) (*Prober, error) {
+	deps, err := genDeps(opts)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate dependency map %w", err)
+	}
+
+	return &Prober{
+		deps: deps,
+		opts: opts,
+	}, nil
+}
+
+// Probe loads the given kernel module and its dependencies.
+func (p Prober) Probe(name string, modParams string) error {
+	modPath, err := findModPath(name, p.deps)
 	if err != nil {
 		return fmt.Errorf("could not find module path %q: %w", name, err)
 	}
 
-	return parallelProbeDep(deps, modPath, params, opts, []string{})
+	return parallelProbeDep(p.deps, modPath, modParams, p.opts, []string{})
 }
 
 // Probe loads the given kernel module and its dependencies.
@@ -174,12 +196,12 @@ func Probe(name string, modParams string) error {
 // ProbeOptions loads the given kernel module and its dependencies.
 // This functions takes ProbeOpts.
 func ProbeOptions(name, modParams string, opts ProbeOpts) error {
-	deps, err := genDeps(opts)
+	p, err := NewProber(opts)
 	if err != nil {
-		return fmt.Errorf("could not generate dependency map %w", err)
+		return err
 	}
 
-	return parallelProbe(deps, name, modParams, opts)
+	return p.Probe(name, modParams)
 }
 
 func checkBuiltin(moduleDir string, deps depMap) error {
