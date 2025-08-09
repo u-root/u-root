@@ -321,11 +321,11 @@ func TestSplitArgs(t *testing.T) {
 			cmdArgs, host := splitArgs(tt.cmdline, tt.args)
 
 			if !eqStringSlice(cmdArgs, tt.expCmdArgs) {
-				t.Errorf("cmdsArgs: %s not equal expeted: %s", cmdArgs, tt.expCmdArgs)
+				t.Errorf("cmdsArgs: %s not equal expected: %s", cmdArgs, tt.expCmdArgs)
 			}
 
 			if !eqStringSlice(host, tt.expHost) {
-				t.Errorf("host: %s not equal expeted: %s", host, tt.expHost)
+				t.Errorf("host: %s not equal expected: %s", host, tt.expHost)
 			}
 		})
 	}
