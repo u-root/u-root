@@ -16,6 +16,7 @@ package grub
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -26,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spf13/pflag"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bls"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
@@ -411,21 +411,29 @@ func (c *parser) append(ctx context.Context, config string) error {
 		case "search":
 			// Parses a line with this format:
 			//   search [--file|--label|--fs-uuid] [--set [var]] [--no-floppy] name
-			fs := pflag.NewFlagSet("grub.search", pflag.ContinueOnError)
-			searchUUID := fs.BoolP("fs-uuid", "u", false, "")
-			searchLabel := fs.BoolP("fs-label", "l", false, "")
-			searchFile := fs.BoolP("file", "f", false, "")
+			fs := flag.NewFlagSet("grub.search", flag.ContinueOnError)
+			searchUUID := fs.Bool("fs-uuid", false, "")
+			searchLabel := fs.Bool("fs-label", false, "")
+			searchFile := fs.Bool("file", false, "")
+			fs.BoolVar(searchUUID, "u", false, "")
+			fs.BoolVar(searchLabel, "l", false, "")
+			fs.BoolVar(searchFile, "f", false, "")
 			setVar := fs.String("set", "root", "")
 			// Ignored flags
 			fs.String("no-floppy", "", "ignored")
 			fs.String("hint", "", "ignored")
-			fs.SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-				// Everything that begins with "hint" is ignored.
-				if strings.HasPrefix(name, "hint") {
-					name = "hint"
+			// Everything that begins with "hint" is ignored.
+			// This was slightly cleaner with pflag, but, at the same time,
+			// we're unlikely to see --hint used as anything but a flag.
+			// The real args we need to fix start at kv[1].
+			// kv[0] can not possibly start with --hint,
+			// and this makes the range simpler, so we do not worry
+			// about an extra loop iterator.
+			for i := range kv {
+				if strings.HasPrefix(kv[i], "--hint") {
+					kv[i] = "--hint"
 				}
-				return pflag.NormalizedName(name)
-			})
+			}
 
 			if err := fs.Parse(kv[1:]); err != nil || fs.NArg() != 1 {
 				log.Printf("Warning: Grub parser could not parse %q", kv)
