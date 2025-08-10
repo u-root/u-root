@@ -96,16 +96,29 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 	}
 	sort.Strings(programmerList)
 
-	// Parse args.
-	fs := flag.NewFlagSet("flash", flag.ContinueOnError)
 	var (
-		e    = fs.BoolP("erase", "e", false, "erase the flash part")
-		p    = fs.StringP("programmer", "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
-		r    = fs.StringP("read", "r", "", "read flash data into the file")
-		w    = fs.StringP("write", "w", "", "write the file to flash")
-		off  = fs.Int64P("offset", "o", 0, "off at which to write")
-		size = fs.Int64P("size", "s", math.MaxInt64, "number of bytes")
+		e    bool
+		p    string
+		r    string
+		w    string
+		off  int64
+		size int64 = math.MaxInt64
 	)
+
+	fs := flag.NewFlagSet("flash", flag.ContinueOnError)
+	fs.BoolVar(&e, "erase", false, "erase the flash part")
+	fs.BoolVar(&e, "e", false, "erase the flash part")
+	fs.StringVar(&p, "programmer", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
+	fs.StringVar(&p, "p", "", fmt.Sprintf("programmer (%s)", strings.Join(programmerList, ",")))
+	fs.StringVar(&r, "read", "", "read flash data into the file")
+	fs.StringVar(&r, "r", "", "read flash data into the file")
+	fs.StringVar(&w, "write", "", "write the file to flash")
+	fs.StringVar(&w, "w", "", "write the file to flash")
+	fs.Int64Var(&off, "offset", 0, "off at which to write")
+	fs.Int64Var(&off, "o", 0, "off at which to write")
+	fs.Int64Var(&size, "size", math.MaxInt64, "number of bytes")
+	fs.Int64Var(&size, "s", math.MaxInt64, "number of bytes")
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -114,18 +127,18 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		return errors.New("unexpected positional arguments")
 	}
 
-	if *p == "" {
+	if p == "" {
 		return errors.New("-p needs to be set")
 	}
 
-	if *r == "" && *w == "" && !*e {
+	if r == "" && w == "" && !e {
 		return errors.New("at least one of -e, -r or -w need to be set")
 	}
-	if *r != "" && *w != "" {
+	if r != "" && w != "" {
 		return errors.New("both -r and -w cannot be set")
 	}
 
-	programmerName, params := parseProgrammerParams(*p)
+	programmerName, params := parseProgrammerParams(p)
 	init, ok := supportedProgrammers[programmerName]
 	if !ok {
 		return fmt.Errorf("unrecognized programmer %q", programmerName)
@@ -142,19 +155,19 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 		}
 	}()
 
-	if *e {
-		n, err := programmer.EraseAt(min(*size, programmer.Size()), *off)
+	if e {
+		n, err := programmer.EraseAt(min(size, programmer.Size()), off)
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Erased %#x bytes @ %#x", n, *off)
+		log.Printf("Erased %#x bytes @ %#x", n, off)
 	}
 
 	// Create a buffer to hold the contents of the image.
 
-	if *r != "" {
-		buf := make([]byte, min(*size, programmer.Size()))
-		f, err := os.Create(*r)
+	if r != "" {
+		buf := make([]byte, min(size, programmer.Size()))
+		f, err := os.Create(r)
 		if err != nil {
 			return err
 		}
@@ -164,19 +177,19 @@ func run(args []string, supportedProgrammers map[string]programmerInit) (reterr 
 				reterr = err
 			}
 		}()
-		if _, err := programmer.ReadAt(buf, *off); err != nil {
+		if _, err := programmer.ReadAt(buf, off); err != nil {
 			return err
 		}
 		if _, err := f.Write(buf); err != nil {
 			return err
 		}
-	} else if *w != "" {
-		buf, err := os.ReadFile(*w)
+	} else if w != "" {
+		buf, err := os.ReadFile(w)
 		if err != nil {
 			return err
 		}
-		buf = buf[:min(int64(len(buf)), *size)]
-		amt, err := programmer.WriteAt(buf, *off)
+		buf = buf[:min(int64(len(buf)), size)]
+		amt, err := programmer.WriteAt(buf, off)
 		if err != nil {
 			return fmt.Errorf("writing %d bytes to dev %v:%w", len(buf), programmer, err)
 		}
