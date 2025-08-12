@@ -16,7 +16,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
 )
 
@@ -38,9 +40,12 @@ const (
 	builtin
 )
 
+// concurrency: struct must be read-only outside of `loadOnce`
 type dependency struct {
-	state modState
-	deps  []string
+	state    modState
+	deps     []string
+	loadOnce sync.Once
+	err      error
 }
 
 type depMap map[string]*dependency
@@ -53,6 +58,14 @@ type ProbeOpts struct {
 	RootDir        string
 	KVer           string
 	IgnoreProcMods bool
+}
+
+// Prober provides a concurrent-safe interface for probing modules.
+//
+// concurrency: `deps` and `opts` must be treated as read-only.
+type Prober struct {
+	deps depMap
+	opts ProbeOpts
 }
 
 // Init loads the kernel module given by image with the given options.
@@ -103,6 +116,77 @@ func Delete(name string, flags uintptr) error {
 	return unix.DeleteModule(name, int(flags))
 }
 
+// parallelProbeDep loads a module and its dependencies
+// Returns once module is loaded.
+func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts, modStack []string) error {
+	dep, present := deps[modPath]
+	if !present {
+		return fmt.Errorf("module not in depmap %s", modPath)
+	}
+
+	for _, seenMod := range modStack {
+		if seenMod == modPath {
+			return fmt.Errorf("circular dependency detected when loading %s", modPath)
+		}
+	}
+
+	dep.loadOnce.Do(func() {
+		var eg errgroup.Group
+
+		// If it's already loaded, don't try to load again
+		if dep.state == builtin || dep.state == loaded {
+			return
+		}
+
+		dep.state = loading
+
+		for _, dep := range dep.deps {
+			dep := dep
+			eg.Go(func() error {
+				return parallelProbeDep(deps, dep, "", opts, append(modStack, modPath))
+			})
+		}
+
+		err := eg.Wait()
+		if err != nil {
+			dep.err = err
+			return
+		}
+
+		err = loadModule(modPath, params, opts)
+		if err != nil {
+			dep.err = err
+			return
+		}
+		dep.state = loaded
+		dep.err = nil
+	})
+	return dep.err
+}
+
+// NewProber looks up current module state and provides Prober
+func NewProber(opts ProbeOpts) (*Prober, error) {
+	deps, err := genDeps(opts)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate dependency map %w", err)
+	}
+
+	return &Prober{
+		deps: deps,
+		opts: opts,
+	}, nil
+}
+
+// Probe loads the given kernel module and its dependencies.
+func (p Prober) Probe(name string, modParams string) error {
+	modPath, err := findModPath(name, p.deps)
+	if err != nil {
+		return fmt.Errorf("could not find module path %q: %w", name, err)
+	}
+
+	return parallelProbeDep(p.deps, modPath, modParams, p.opts, []string{})
+}
+
 // Probe loads the given kernel module and its dependencies.
 // It is calls ProbeOptions with the default ProbeOpts.
 func Probe(name string, modParams string) error {
@@ -112,29 +196,12 @@ func Probe(name string, modParams string) error {
 // ProbeOptions loads the given kernel module and its dependencies.
 // This functions takes ProbeOpts.
 func ProbeOptions(name, modParams string, opts ProbeOpts) error {
-	deps, err := genDeps(opts)
+	p, err := NewProber(opts)
 	if err != nil {
-		return fmt.Errorf("could not generate dependency map %w", err)
+		return err
 	}
 
-	modPath, err := findModPath(name, deps)
-	if err != nil {
-		return fmt.Errorf("could not find module path %q: %w", name, err)
-	}
-
-	dep := deps[modPath]
-
-	if dep.state == builtin || dep.state == loaded {
-		return nil
-	}
-
-	dep.state = loading
-	for _, d := range dep.deps {
-		if err := loadDeps(d, deps, opts); err != nil {
-			return err
-		}
-	}
-	return loadModule(modPath, modParams, opts)
+	return p.Probe(name, modParams)
 }
 
 func checkBuiltin(moduleDir string, deps depMap) error {
@@ -237,35 +304,6 @@ func findModPath(name string, m depMap) (string, error) {
 	}
 
 	return "", fmt.Errorf("could not find path for module %q", name)
-}
-
-func loadDeps(path string, m depMap, opts ProbeOpts) error {
-	dependency, ok := m[path]
-	if !ok {
-		return fmt.Errorf("could not find dependency %q", path)
-	}
-
-	if dependency.state == loading {
-		return fmt.Errorf("circular dependency! %q already LOADING", path)
-	} else if (dependency.state == loaded) || (dependency.state == builtin) {
-		return nil
-	}
-
-	m[path].state = loading
-
-	for _, dep := range dependency.deps {
-		if err := loadDeps(dep, m, opts); err != nil {
-			return err
-		}
-	}
-
-	// done with dependencies, load module
-	if err := loadModule(path, "", opts); err != nil {
-		return err
-	}
-	m[path].state = loaded
-
-	return nil
 }
 
 func loadModule(path, modParams string, opts ProbeOpts) error {
