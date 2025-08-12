@@ -394,7 +394,7 @@ OEM-specific Type
 		00 00 00 00 26 00 00 00 76 50 72 6F 00 00 00 00
 
 Handle 0x001F, DMI type 14, 20 bytes
-Unsupported
+Group Associations
 	Header and Data:
 		0E 14 1F 00 01 DD 12 00 DD 19 00 DD 1A 00 DD 1B
 		00 DD 1C 00
