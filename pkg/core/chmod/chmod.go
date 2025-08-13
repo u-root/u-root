@@ -277,6 +277,9 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 				break
 			}
 		}
+		if a, ok := strings.CutPrefix(arg, "-"); ok {
+			return fmt.Errorf("flag provided but not defined: %s", a)
+		}
 		// All other arguments are positional
 		parsedArgs = append(parsedArgs, arg)
 		i++
