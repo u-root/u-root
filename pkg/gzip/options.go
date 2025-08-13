@@ -39,7 +39,7 @@ type Options struct {
 
 // ParseArgs takes CLI args and parses them via a Flagset into fields in
 // the Options struct. Returns any errors from parsing and validating options.
-func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
+func (o *Options) ParseArgs(cmd string, args []string, cmdLine *flag.FlagSet) error {
 	var levels [10]bool
 
 	cmdLine.IntVar(&o.Blocksize, "b", 128, "Set compression block size in KiB")
@@ -65,7 +65,7 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 	cmdLine.BoolVar(&levels[8], "8", false, "Compression Level 8")
 	cmdLine.BoolVar(&levels[9], "9", false, "Compression Level 9")
 
-	if err := cmdLine.Parse(args[1:]); err != nil {
+	if err := cmdLine.Parse(args); err != nil {
 		return err
 	}
 
@@ -75,14 +75,20 @@ func (o *Options) ParseArgs(args []string, cmdLine *flag.FlagSet) error {
 		return err
 	}
 
-	return o.modify(args[0], len(cmdLine.Args()) > 0)
+	moreArgs := len(cmdLine.Args()) > 0
+
+	if !moreArgs {
+		o.Stdin = true
+	}
+
+	return o.modify(cmd, moreArgs)
 }
 
 // modify updates options if needed
 // Forces decompression to be enabled when test mode is enabled.
 // It further modifies options if the running binary is named
 // gunzip or gzcat to allow for expected behavior. Checks if there is piped stdin data.
-func (o *Options) modify(arg0 string, moreArgs bool) error {
+func (o *Options) modify(cmd string, moreArgs bool) error {
 	if o.Help {
 		// Return an empty errorString so the CLI app does not continue
 		return ErrHelp
@@ -97,9 +103,10 @@ func (o *Options) modify(arg0 string, moreArgs bool) error {
 	}
 
 	// Support gunzip and gzcat symlinks
-	if filepath.Base(arg0) == "gunzip" {
+	switch filepath.Base(cmd) {
+	case "gunzip":
 		o.Decompress = true
-	} else if filepath.Base(arg0) == "gzcat" {
+	case "gzcat":
 		o.Decompress = true
 		o.Stdout = true
 	}

@@ -36,7 +36,7 @@ func TestGzipWithKeep(t *testing.T) {
 	gzip := New().(*Gzip)
 
 	// Compress the file with force and keep flags
-	err = gzip.Run("gzip", "-f", "-k", filePath)
+	err = gzip.Run("-f", "-k", filePath)
 	if err != nil {
 		t.Fatalf("gzip.Run(gzip, -f, -k, %v) = %v, want nil", filePath, err)
 	}
@@ -55,7 +55,7 @@ func TestGzipWithKeep(t *testing.T) {
 	}
 
 	// Decompress the file with force and keep flags
-	err = gzip.Run("gzip", "-d", "-f", "-k", compressedPath)
+	err = gzip.Run("-d", "-f", "-k", compressedPath)
 	if err != nil {
 		t.Fatalf("gzip.Run(gzip, -d, -f, -k, %v) = %v, want nil", compressedPath, err)
 	}
@@ -104,7 +104,7 @@ func TestGzipWithWorkingDir(t *testing.T) {
 	gzip.SetWorkingDir(tmpDir)
 
 	// Compress the file using a relative path with force and keep flags
-	err = gzip.Run("gzip", "-f", "-k", "subdir/file.txt")
+	err = gzip.Run("-f", "-k", "subdir/file.txt")
 	if err != nil {
 		t.Fatalf("gzip.Run(gzip, -f, -k, subdir/file.txt) = %v, want nil", err)
 	}
@@ -123,7 +123,7 @@ func TestGzipWithWorkingDir(t *testing.T) {
 	}
 
 	// Decompress the file with force and keep flags
-	err = gzip.Run("gzip", "-d", "-f", "-k", "subdir/file.txt.gz")
+	err = gzip.Run("-d", "-f", "-k", "subdir/file.txt.gz")
 	if err != nil {
 		t.Fatalf("gzip.Run(gzip, -d, -f, -k, subdir/file.txt.gz) = %v, want nil", err)
 	}
