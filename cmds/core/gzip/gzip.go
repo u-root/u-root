@@ -14,7 +14,7 @@ import (
 
 func main() {
 	cmd := gzip.New()
-	if err := cmd.Run(os.Args...); err != nil {
+	if err := cmd.Run(os.Args[1:]...); err != nil {
 		log.Fatalf("gzip: %v", err)
 	}
 }
