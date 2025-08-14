@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/core"
@@ -46,13 +45,8 @@ func (g *Gzip) RunContext(ctx context.Context, args ...string) error {
 	g.cmdLine.SetOutput(g.Stderr)
 	g.cmdLine.Usage = g.usage
 
-	// Handle the case when args is empty (for tests)
-	if len(args) == 0 {
-		args = []string{"gzip"}
-	}
-
 	var opts pkggzip.Options
-	if err := opts.ParseArgs(args, g.cmdLine); err != nil {
+	if err := opts.ParseArgs("gzip", args, g.cmdLine); err != nil {
 		if errors.Is(err, pkggzip.ErrStdoutNoForce) {
 			return fmt.Errorf("gzip: %w", err)
 		}
@@ -69,7 +63,7 @@ func (g *Gzip) RunContext(ctx context.Context, args ...string) error {
 }
 
 func (g *Gzip) usage() {
-	fmt.Fprintf(g.Stderr, "Usage of %s:\n", filepath.Base(os.Args[0]))
+	fmt.Fprintf(g.Stderr, "Usage of gzip:\n")
 	g.cmdLine.PrintDefaults()
 }
 
