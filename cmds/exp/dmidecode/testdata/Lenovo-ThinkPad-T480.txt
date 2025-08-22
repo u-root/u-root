@@ -12,7 +12,7 @@ OEM-specific Type
 		BIOS Boot Complete
 
 Handle 0x0001, DMI type 14, 8 bytes
-Unsupported
+Group Associations
 	Header and Data:
 		0E 08 01 00 01 DE 00 00
 	Strings:
@@ -569,7 +569,7 @@ OEM-specific Type
 		00 00
 
 Handle 0x003C, DMI type 14, 8 bytes
-Unsupported
+Group Associations
 	Header and Data:
 		0E 08 3C 00 01 DB 00 00
 	Strings:

@@ -11,9 +11,11 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
+	"golang.org/x/sync/errgroup"
 )
 
 var procModsMock = `hid_generic 16384 0 - Live 0x0000000000000000
@@ -36,6 +38,89 @@ func TestGenLoadedMods(t *testing.T) {
 		if d.state != loaded {
 			t.Fatalf("mod %q should have been loaded", path.Base(mod))
 		}
+	}
+}
+
+func TestParallelLoad(t *testing.T) {
+	loadTime := 100 * time.Millisecond
+
+	m := depMap{
+		"/lib/modules/6.6.6-generic/kernel/drivers/hid/hid-generic.ko":   &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko": &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko":                &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/tests/depmod.ko": &dependency{
+			deps: []string{"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/hid-generic.ko",
+			},
+		},
+		"/lib/modules/6.6.6-generic/kernel/tests/depmod2.ko": &dependency{
+			deps: []string{"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko",
+			},
+		},
+	}
+
+	var eg errgroup.Group
+
+	prober := Prober{
+		deps: m,
+		// Wait time encourages racing between dependencies.
+		opts: ProbeOpts{DryRunCB: func(path string) { time.Sleep(loadTime) }},
+	}
+
+	eg.Go(func() error {
+		return prober.Probe("depmod", "")
+	})
+	eg.Go(func() error {
+		return prober.Probe("depmod2", "")
+	})
+
+	start := time.Now()
+	err := eg.Wait()
+
+	if err != nil {
+		t.Fatalf("Probing failed: %v", err)
+	}
+
+	// Racy... longest parallel chain is 2, and we load 5 total modules.
+	if time.Since(start) > loadTime*3 {
+		t.Fatalf("module loading slow")
+	}
+
+	for mod, d := range m {
+		if d.state != loaded {
+			t.Fatalf("mod %q should have been loaded", path.Base(mod))
+		}
+	}
+}
+
+func TestInvalidCircularLoad(t *testing.T) {
+	m := depMap{
+		"/lib/modules/6.6.6-generic/kernel/drivers/hid/hid-generic.ko":   &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko": &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko":                &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/tests/circlemod.ko": &dependency{
+			deps: []string{"/lib/modules/6.6.6-generic/kernel/tests/depmod.ko"},
+		},
+		"/lib/modules/6.6.6-generic/kernel/tests/depmod.ko": &dependency{
+			deps: []string{"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko",
+				"/lib/modules/6.6.6-generic/kernel/tests/circlemod.ko",
+			},
+		},
+	}
+
+	prober := Prober{
+		deps: m,
+		opts: ProbeOpts{DryRunCB: func(path string) {}},
+	}
+
+	err := prober.Probe("depmod", "")
+
+	if err == nil {
+		// If we reach this, we're probably hung.
+		t.Fatalf("Circular dep should have errored...")
 	}
 }
 

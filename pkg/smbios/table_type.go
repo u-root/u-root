@@ -14,18 +14,19 @@ type TableType uint8
 
 // Supported table types.
 const (
-	TableTypeBIOSInfo       TableType = 0
-	TableTypeSystemInfo     TableType = 1
-	TableTypeBaseboardInfo  TableType = 2
-	TableTypeChassisInfo    TableType = 3
-	TableTypeProcessorInfo  TableType = 4
-	TableTypeCacheInfo      TableType = 7
-	TableTypeSystemSlots    TableType = 9
-	TableTypeMemoryDevice   TableType = 17
-	TableTypeIPMIDeviceInfo TableType = 38
-	TableTypeTPMDevice      TableType = 43
-	TableTypeInactive       TableType = 126
-	TableTypeEndOfTable     TableType = 127
+	TableTypeBIOSInfo         TableType = 0
+	TableTypeSystemInfo       TableType = 1
+	TableTypeBaseboardInfo    TableType = 2
+	TableTypeChassisInfo      TableType = 3
+	TableTypeProcessorInfo    TableType = 4
+	TableTypeCacheInfo        TableType = 7
+	TableTypeSystemSlots      TableType = 9
+	TableTypeGroupAssociation TableType = 14
+	TableTypeMemoryDevice     TableType = 17
+	TableTypeIPMIDeviceInfo   TableType = 38
+	TableTypeTPMDevice        TableType = 43
+	TableTypeInactive         TableType = 126
+	TableTypeEndOfTable       TableType = 127
 )
 
 func (t TableType) String() string {
@@ -42,6 +43,8 @@ func (t TableType) String() string {
 		return "Processor Information"
 	case TableTypeCacheInfo:
 		return "Cache Information"
+	case TableTypeGroupAssociation:
+		return "Group Associations"
 	case TableTypeSystemSlots:
 		return "System Slots"
 	case TableTypeMemoryDevice:
