@@ -182,7 +182,8 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 		}
 
 		if memType == kexec.RangeRAM.String() {
-			resourceType = EFIResourceSystemMemory
+			// Skip system memory since they have been constructed at DTB
+			continue
 		} else if memType == kexec.RangeReserved.String() {
 			resourceType = EFIResourceMemoryReserved
 		} else {

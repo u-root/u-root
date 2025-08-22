@@ -166,10 +166,10 @@ func TestAppendMemMapHOB(t *testing.T) {
 		deserializedHOB = append(deserializedHOB, hob)
 	}
 
-	// We will pass all memory regions info to UPL, update to the actual
+	// We will pass all non system memory regions info to UPL, update to the actual
 	// memory region numbers provided in test case.
-	if len(deserializedHOB) != 2 {
-		t.Fatalf("Unexpected hob size = %d, want = %d", len(deserializedHOB), 2)
+	if len(deserializedHOB) != 1 {
+		t.Fatalf("Unexpected hob size = %d, want = %d", len(deserializedHOB), 1)
 	}
 }
 
