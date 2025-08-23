@@ -21,14 +21,20 @@ import (
 // Gzip implements the gzip command.
 type Gzip struct {
 	core.Base
+	cmd     string
 	cmdLine *flag.FlagSet
 }
 
 // New returns a new Gzip command.
 func New() core.Command {
-	g := &Gzip{
-		cmdLine: flag.NewFlagSet("gzip", flag.ContinueOnError),
-	}
+	g := &Gzip{cmd: "gzip"}
+	g.Init()
+	return g
+}
+
+// NewGzcat returns a new Gzip command.
+func NewGzcat() core.Command {
+	g := &Gzip{cmd: "gzcat"}
 	g.Init()
 	return g
 }
@@ -41,14 +47,14 @@ func (g *Gzip) Run(args ...string) error {
 // RunContext executes the gzip command with the given arguments and context.
 func (g *Gzip) RunContext(ctx context.Context, args ...string) error {
 	// Create a new flag set for each run to avoid flag redefinition errors
-	g.cmdLine = flag.NewFlagSet("gzip", flag.ContinueOnError)
+	g.cmdLine = flag.NewFlagSet(g.cmd, flag.ContinueOnError)
 	g.cmdLine.SetOutput(g.Stderr)
 	g.cmdLine.Usage = g.usage
 
 	var opts pkggzip.Options
-	if err := opts.ParseArgs("gzip", args, g.cmdLine); err != nil {
+	if err := opts.ParseArgs(g.cmd, args, g.cmdLine); err != nil {
 		if errors.Is(err, pkggzip.ErrStdoutNoForce) {
-			return fmt.Errorf("gzip: %w", err)
+			return fmt.Errorf("%s: %w", g.cmd, err)
 		}
 		if errors.Is(err, pkggzip.ErrHelp) {
 			g.cmdLine.Usage()
@@ -63,7 +69,7 @@ func (g *Gzip) RunContext(ctx context.Context, args ...string) error {
 }
 
 func (g *Gzip) usage() {
-	fmt.Fprintf(g.Stderr, "Usage of gzip:\n")
+	fmt.Fprintf(g.Stderr, "Usage of %s:\n", g.cmd)
 	g.cmdLine.PrintDefaults()
 }
 
