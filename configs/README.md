@@ -1,7 +1,11 @@
 # Kernel Configs
 
-These configurations define the core variables you need to make a kernel
-for u-root.  To build a small, flash-ready kernel, you would do something like:
+These configurations define the core Kconfig options you need for a kernel that
+supports the Go runtime, and thus u-root.
+See also: <https://go.dev/wiki/MinimumRequirements>
+
+To build a small, flash-ready kernel, you would start from a minimal defconfig,
+something like:
 
 ```shell
 make tinyconfig
@@ -12,7 +16,7 @@ make
 
 Or some similar sequence (it has changed over the 15 years of this project).
 
-The exact process is not important, what is important is that you need the variables
+The exact process is not important, what is important is that you need the options
 from these examples to make Go work. For one simple example, Go needs futex and that
 is not included in the tinyconfig default.
 
