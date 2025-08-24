@@ -28,6 +28,11 @@ u-root embodies four different projects.
     kernels such as ESXi, Xen, or tboot. They are meant to be used with
     [LinuxBoot](https://www.linuxboot.org).
 
+## Requirements
+
+For u-root on Linux, certain Kconfig options are necessary. Basic defconfigs are
+in [`configs/`](configs/). See also the [configs README](configs/README.md).
+
 # Usage
 
 Make sure your Go version is >= 1.21.
