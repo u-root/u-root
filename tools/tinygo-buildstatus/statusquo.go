@@ -45,6 +45,7 @@ var (
 		"gpt",
 		"grep",
 		"gzip",
+		"gzcat",
 		"head",
 		"hexdump",
 		"hostname",
