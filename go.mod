@@ -60,7 +60,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
-	github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f
+	github.com/u-root/mkuimage v0.0.0-20250905073043-9a40452f5d3b
 	go.bug.st/serial v1.6.2
 )
 
