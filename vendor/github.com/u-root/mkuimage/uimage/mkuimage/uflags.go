@@ -110,7 +110,8 @@ type Flags struct {
 	Uinit *string
 	Shell *string
 
-	Files []string
+	Files   []string
+	SkipLDD bool
 
 	BaseArchive     string
 	ArchiveFormat   string
@@ -125,6 +126,9 @@ func (f *Flags) Modifiers(packages ...string) ([]uimage.Modifier, error) {
 	m := []uimage.Modifier{
 		uimage.WithFiles(f.Files...),
 		uimage.WithExistingInit(f.UseExistingInit),
+	}
+	if f.SkipLDD {
+		m = append(m, uimage.WithSkipLDD())
 	}
 	if f.TempDir != nil {
 		m = append(m, uimage.WithTempDir(*f.TempDir))
@@ -167,6 +171,7 @@ func (f *Flags) RegisterFlags(fs *flag.FlagSet) {
 	fs.Var(&optionalStringVar{&f.Shell}, "defaultsh", "Default shell. Can be an absolute path or a Go command name. Use defaultsh=\"\" if you don't want the symlink.")
 
 	fs.Var((*uflag.Strings)(&f.Files), "files", "Additional files, directories, and binaries (with their ldd dependencies) to add to archive. Can be specified multiple times.")
+	fs.BoolVar(&f.SkipLDD, "skip-ldd", f.SkipLDD, "Skip automatic shared library dependency resolution for files. You must manually specify all required libraries.")
 
 	fs.StringVar(&f.BaseArchive, "base", f.BaseArchive, "Base archive to add files to. By default, this is a couple of directories like /bin, /etc, etc. Has a default internally supplied set of files; use base=/dev/null if you don't want any base files.")
 	fs.StringVar(&f.ArchiveFormat, "format", f.ArchiveFormat, "Archival input (for -base) and output (for -o) format.")
