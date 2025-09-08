@@ -238,6 +238,29 @@ func RemoveBaseboardInfo(boardType BoardType) OverrideOpt {
 	}
 }
 
+// RemoveSystemSlotInfo returns override options that remove any Type 9 (System Slots) table
+// with a matching SlotDesignation.
+func RemoveSystemSlotInfo(slotDesignation string) OverrideOpt {
+	return func(tables []*Table) ([]*Table, error) {
+		var result []*Table
+		for _, t := range tables {
+			if t.Type != TableTypeSystemSlots {
+				result = append(result, t)
+				continue
+			}
+			ss, err := ParseSystemSlots(t)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse system slots: %w", err)
+			}
+			if ss.SlotDesignation == slotDesignation {
+				continue
+			}
+			result = append(result, t)
+		}
+		return result, nil
+	}
+}
+
 // Modify modifies SMBIOS tables in system memory given override options
 func (m *Modifier) Modify(opts ...OverrideOpt) error {
 	entry, tables, err := m.Info.Marshal(opts...)
