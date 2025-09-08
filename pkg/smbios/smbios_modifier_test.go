@@ -524,3 +524,116 @@ func TestRemoveBaseboardInfoFail(t *testing.T) {
 		t.Fatalf("opt should fail but returned nil error")
 	}
 }
+
+func TestRemoveSystemSlotInfo(t *testing.T) {
+	smbiosType9Data := []byte{
+		0x09, 0x0B, 0x00, 0x00, // Header: Type 9, Length 26, Handle 0
+		0x01,       // Slot Designation (string reference 1)
+		0x0b,       // Slot Type: PCI Express
+		0x0a,       // Slot Data Bus Width: x16
+		0x02,       // Current Usage: In Use
+		0x03,       // Slot Length: Long
+		0x01, 0x00, // Slot ID: 0x0001
+		0x04,       // Slot Characteristics 1: PME signal support
+		0x00,       // Slot Characteristics 2
+		0x00, 0x00, // Segment Group Number: 0
+		0x00, // Bus Number
+		0x01, // Device/Function Number
+	}
+	tests := []struct {
+		name       string
+		oldTables  []*Table
+		wantTables []*Table
+	}{
+		{
+			name: "RemoveSystemSlotInfoSimple",
+			oldTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeSystemSlots,
+						Length: 26,
+						Handle: 0,
+					},
+					data:    smbiosType9Data,
+					strings: []string{"REMOVE"},
+				},
+			},
+			wantTables: []*Table{},
+		},
+		{
+			name: "RemoveNone",
+			oldTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeSystemSlots,
+						Length: 26,
+						Handle: 0,
+					},
+					data:    smbiosType9Data,
+					strings: []string{"KEEP"},
+				},
+			},
+			wantTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeSystemSlots,
+						Length: 26,
+						Handle: 0,
+					},
+					data:    smbiosType9Data,
+					strings: []string{"KEEP"},
+				},
+			},
+		},
+		{
+			name: "SkipOtherTableTypes",
+			oldTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 0,
+					},
+					data: []byte{
+						2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
+			},
+			wantTables: []*Table{
+				{
+					Header: Header{
+						Type:   TableTypeBaseboardInfo,
+						Length: 17,
+						Handle: 0,
+					},
+					data: []byte{
+						2, 17, 0, 0, 1, 2, 3, 4, 5, 0, 6, 0, 0,
+						byte(BoardTypeSystemManagementModule),
+						1, 10, 0,
+					},
+					strings: []string{"-", "-", "-", "-", "-", "-"},
+				},
+			},
+		},
+	}
+	opt := RemoveSystemSlotInfo("REMOVE")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			newTables, err := opt(tc.oldTables)
+			if err != nil {
+				t.Fatalf("opt should pass but returned an error: %v", err)
+			}
+			if len(newTables) != len(tc.wantTables) {
+				t.Errorf("opt returned incorrect number of tables, got %d, want %d", len(newTables), len(tc.wantTables))
+			}
+			for i := 0; i < len(newTables); i++ {
+				if !reflect.DeepEqual(newTables[i], tc.wantTables[i]) {
+					t.Errorf("opt returned incorrect table, got %+v, want %+v", newTables[i], tc.wantTables[i])
+				}
+			}
+		})
+	}
+}
