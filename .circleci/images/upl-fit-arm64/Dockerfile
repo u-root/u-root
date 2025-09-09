@@ -7,10 +7,10 @@ FROM ubuntu:rolling AS base
 # Install dependencies
 RUN apt-get update &&                          \
     apt-get install -y --no-install-recommends \
-        ca-certificates                             \
+        ca-certificates                        \
         git;
 
-RUN git clone --branch master --recursive https://github.com/tianocore/edk2 upl-fit;
+RUN git clone --branch edk2-stable202508 --recursive https://github.com/tianocore/edk2 upl-fit;
 
 RUN apt-get install -y --no-install-recommends \
         make             \
@@ -34,9 +34,9 @@ RUN cd upl-fit;                                                              \
     export GCC5_AARCH64_PREFIX=aarch64-linux-gnu-;                           \
     source ./edksetup.sh;                                                    \
     make -C BaseTools;                                                       \
-	python3 UefiPayloadPkg/UniversalPayloadBuild.py -a AARCH64 -t GCC5       \
+    python3 UefiPayloadPkg/UniversalPayloadBuild.py -a AARCH64 -t GCC5       \
       -b DEBUG --Fit -DHAND_OFF_FDT_ENABLE=TRUE;                             \
-	cp /upl-fit/Build/UefiPayloadPkgAARCH64/UniversalPayload.fit /UplFitARM64.fit;
+    cp /upl-fit/Build/UefiPayloadPkgAARCH64/UniversalPayload.fit /UplFitARM64.fit;
 
 FROM scratch
 COPY --from=base /upl-fit/Build/UefiPayloadPkgAARCH64/UniversalPayload.fit /UplFitARM64.fit
