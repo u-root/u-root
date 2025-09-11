@@ -38,7 +38,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701
-	github.com/ulikunitz/xz v0.5.11
+	github.com/ulikunitz/xz v0.5.15
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
@@ -60,7 +60,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
-	github.com/u-root/mkuimage v0.0.0-20250701161901-6a9871f2e64f
+	github.com/u-root/mkuimage v0.0.0-20250905073043-9a40452f5d3b
 	go.bug.st/serial v1.6.2
 )
 

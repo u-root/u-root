@@ -28,6 +28,11 @@ u-root embodies four different projects.
     kernels such as ESXi, Xen, or tboot. They are meant to be used with
     [LinuxBoot](https://www.linuxboot.org).
 
+## Requirements
+
+For u-root on Linux, certain Kconfig options are necessary. Basic defconfigs are
+in [`configs/`](configs/). See also the [configs README](configs/README.md).
+
 # Usage
 
 Make sure your Go version is >= 1.21.
@@ -150,7 +155,7 @@ names.
 You may also include additional files in the initramfs using the `-files` flag.
 
 If you add binaries with `-files` are listed, their ldd dependencies will be
-included as well.
+included as well by default. See below for how to disable.
 
 ```shell
 $ u-root -files /bin/bash
@@ -187,6 +192,11 @@ executing your currently booted kernel:
 $ u-root -files "$HOME/hello.ko:etc/hello.ko" -files "$HOME/hello2.ko:etc/hello2.ko"
 $ qemu-system-x86_64 -kernel /boot/vmlinuz-$(uname -r) -initrd /tmp/initramfs.linux_amd64.cpio
 ```
+
+Use `-skip-ldd` to not automatically include ldd dependencies for binary files. This can be useful for
+- Reproducible Builds: Ensures builds don't depend on the host system's libraries
+- Cross-compilation: When host libraries are incompatible with target architecture
+- Controlled Dependencies: When you want to manually specify exact library versions
 
 ## Init and Uinit
 

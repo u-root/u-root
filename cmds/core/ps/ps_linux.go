@@ -150,7 +150,7 @@ func (p *Process) readStat(s string) error {
 	p.Ctty = p.getCtty()
 	p.Cmd = strings.TrimSuffix(strings.TrimPrefix(p.Cmd, "("), ")")
 	if x && p.cmdline != "" {
-		p.Cmd = p.cmdline
+		p.Cmd = strings.ReplaceAll(p.cmdline, "\x00", " ")
 	}
 
 	return nil
