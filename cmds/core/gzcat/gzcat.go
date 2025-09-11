@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// gzip compresses files using gzip compression.
+// gzcat cats gzip compressed files.
 package main
 
 import (
@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	cmd := gzip.New()
+	cmd := gzip.NewGzcat()
 	if err := cmd.Run(os.Args[1:]...); err != nil {
-		log.Fatalf("gzip: %v", err)
+		log.Fatalf("gzcat: %v", err)
 	}
 }
