@@ -3,6 +3,8 @@ package ssh
 import (
 	"crypto/subtle"
 	"net"
+
+	gossh "golang.org/x/crypto/ssh"
 )
 
 type Signal string
@@ -39,19 +41,32 @@ type PublicKeyHandler func(ctx Context, key PublicKey) bool
 // PasswordHandler is a callback for performing password authentication.
 type PasswordHandler func(ctx Context, password string) bool
 
+// KeyboardInteractiveHandler is a callback for performing keyboard-interactive authentication.
+type KeyboardInteractiveHandler func(ctx Context, challenger gossh.KeyboardInteractiveChallenge) bool
+
 // PtyCallback is a hook for allowing PTY sessions.
 type PtyCallback func(ctx Context, pty Pty) bool
+
+// SessionRequestCallback is a callback for allowing or denying SSH sessions.
+type SessionRequestCallback func(sess Session, requestType string) bool
 
 // ConnCallback is a hook for new connections before handling.
 // It allows wrapping for timeouts and limiting by returning
 // the net.Conn that will be used as the underlying connection.
-type ConnCallback func(conn net.Conn) net.Conn
+type ConnCallback func(ctx Context, conn net.Conn) net.Conn
 
 // LocalPortForwardingCallback is a hook for allowing port forwarding
 type LocalPortForwardingCallback func(ctx Context, destinationHost string, destinationPort uint32) bool
 
 // ReversePortForwardingCallback is a hook for allowing reverse port forwarding
 type ReversePortForwardingCallback func(ctx Context, bindHost string, bindPort uint32) bool
+
+// ServerConfigCallback is a hook for creating custom default server configs
+type ServerConfigCallback func(ctx Context) *gossh.ServerConfig
+
+// ConnectionFailedCallback is a hook for reporting failed connections
+// Please note: the net.Conn is likely to be closed at this point
+type ConnectionFailedCallback func(conn net.Conn, err error)
 
 // Window represents the size of a PTY window.
 type Window struct {
