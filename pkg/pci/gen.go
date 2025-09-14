@@ -10,16 +10,19 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"go/format"
+	"io"
 	"log"
+	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/u-root/u-root/pkg/pci"
 )
 
 var (
-	pciidspath = [...]string{"/usr/share/misc/pci.ids"}
-	code       = `// Copyright 2012-2017 the u-root Authors. All rights reserved
+	pciidsurl = "https://raw.githubusercontent.com/pciutils/pciids/refs/heads/master/pci.ids"
+	header    = `// Copyright 2012-2017 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -75,25 +78,39 @@ func main() {
 	var (
 		b   []byte
 		err error
+		buf bytes.Buffer
 	)
-	for _, p := range pciidspath {
-		b, err = ioutil.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
+
+	resp, err := http.Get(pciidsurl)
 	if err != nil {
-		log.Fatal("can not find a file in %q", pciidspath)
+		log.Fatalf("unable to download pciids from github:%v", err)
 	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	b, err = io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("unable to consume pciids body from github:%v", err)
+	}
+
 	ids := parse(b)
+
+	fmt.Fprint(&buf, header)
+
 	for _, vendor := range ids {
-		code += fmt.Sprintf("Vendor{ID: %#04x, ", vendor.ID)
-		code += fmt.Sprintf("Name: %q, Devices: []Device{\n", vendor.Name)
+		fmt.Fprintf(&buf, "{ID: %#04x, Name: %q, Devices: []Device{\n", vendor.ID, vendor.Name)
 		for _, dev := range vendor.Devices {
-			code += fmt.Sprintf("Device{ID:%#04x, Name:%q,},\n", dev.ID, dev.Name)
+			fmt.Fprintf(&buf, "{ID:%#04x, Name:%q,},\n", dev.ID, dev.Name)
 		}
-		code += fmt.Sprintf("},\n},\n")
+		fmt.Fprintf(&buf, "},\n},\n")
 	}
-	code += fmt.Sprintf("}\n")
-	err = ioutil.WriteFile("pciids.go", []byte(code), 0o666)
+	fmt.Fprintf(&buf, "}\n")
+
+	p, err := format.Source(buf.Bytes())
+	if err != nil {
+		log.Fatalf("unable to format source: %v", err)
+	}
+
+	err = os.WriteFile("pciids.go", p, 0o666)
 }
