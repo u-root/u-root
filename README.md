@@ -408,8 +408,16 @@ For a list of modes, refer to the
 
 ### Entropy / Random Number Generator
 
-Some utilities, e.g., `dhclient`, require entropy to be present. For a speedy
-virtualized random number generator, the kernel should have the following:
+Some utilities, such as `dhclient`, require entropy to be present. Without
+sufficient entropy, they may take a while to succeed, possibly half a minute.
+
+If your platform has a hardware random number generator, enable it with
+`CONFIG_ARCH_RANDOM` and trust it with `CONFIG_RANDOM_TRUST_CPU`.
+Otherwise, add `uroot.nohwrng` to your kernel command line so u-root uses a
+non-blocking software random number generator implementation.
+
+For a speedy virtualized random number generator, the kernel should have the
+following:
 
 ```shell
 CONFIG_VIRTIO_PCI=y
