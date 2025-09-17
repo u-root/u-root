@@ -41,7 +41,7 @@ func TestCPUAMD64(t *testing.T) {
 	// TODO: for all the tests, we need start only one VM. Even for kexec,
 	// since it just starts a new kernel, and we can have that kernel use
 	// the initramfs that runs cpud.
-	n, err := vm.Uroot(d)
+	n, err := i.Uroot(d)
 	if err != nil {
 		t.Skipf("skipping this test as we have no uroot command")
 	}

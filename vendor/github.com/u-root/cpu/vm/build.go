@@ -40,19 +40,19 @@ var builds = []build{
 	},
 	{
 		os:        "linux",
+		arch:      "arm",
+		kernel:    "zImage",
+		container: "ghcr.io/hugelgupf/vmtest/kernel-arm:main",
+		env:       []string{"GOARCH=arm", "GOARM=5"},
+		cmd:       []string{},
+	},
+	{
+		os:        "linux",
 		arch:      "arm64",
 		version:   "v1",
 		kernel:    "Image",
 		container: "ghcr.io/hugelgupf/vmtest/kernel-arm64:main",
 		env:       []string{"GOARCH=arm64"},
-		cmd:       []string{},
-	},
-	{
-		os:        "linux",
-		arch:      "arm",
-		kernel:    "zImage",
-		container: "ghcr.io/hugelgupf/vmtest/kernel-arm:main",
-		env:       []string{"GOARCH=arm", "GOARM=5"},
 		cmd:       []string{},
 	},
 	{
@@ -66,6 +66,8 @@ var builds = []build{
 }
 
 func main() {
+	_, verbose := os.LookupEnv("VM_VERBOSE")
+
 	env := []string{"CGO_ENABLED=0"}
 	for _, b := range builds {
 		log.Printf("Build %v", b)
@@ -130,12 +132,15 @@ func main() {
 		if len(b.container) == 0 {
 			continue
 		}
-		ref, err := name.ParseReference(b.container)
-		if err != nil {
-			log.Fatal(err)
-		}
+		if verbose {
+			ref, err := name.ParseReference(b.container, name.Insecure)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		img, err := crane.Pull(ref.Name())
+			fmt.Printf("parse %s to %s", b.container, ref.Name())
+		}
+		img, err := crane.Pull(b.container)
 		if err != nil {
 			log.Fatal(err)
 		}
