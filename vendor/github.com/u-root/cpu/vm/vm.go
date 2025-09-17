@@ -51,25 +51,34 @@ type Image struct {
 	Cmd       []string
 	Env       []string
 	dir       string
+	GOOS      string
+	GOARCH    string
+	Opts      []string
+}
+
+func (i *Image) String() string {
+	return fmt.Sprintf("Image for %s:%s(%s): Cmd %s, Env %s", i.GOOS, i.GOARCH, i.Opts, i.Cmd, i.Env)
 }
 
 var images = map[string]Image{
-	"linux_amd64":   {Kernel: kernel_linux_amd64, InitRAMFS: linux_amd64, Cmd: []string{"qemu-system-x86_64", "-m", "1G"}},
+	"linux_amd64":   {Kernel: kernel_linux_amd64, InitRAMFS: linux_amd64, Cmd: []string{"qemu-system-x86_64", "-m", "4G"}},
 	"linux_arm64":   {Kernel: kernel_linux_arm64, InitRAMFS: linux_arm64, Cmd: []string{"qemu-system-aarch64", "-machine", "virt", "-cpu", "max", "-m", "1G"}},
-	"linux_arm":     {Kernel: kernel_linux_arm, InitRAMFS: linux_arm, Cmd: []string{"qemu-system-arm", "-M", "virt,highmem=off"}},
+	"linux_arm":     {Kernel: kernel_linux_arm, InitRAMFS: linux_arm, Cmd: []string{"qemu-system-arm", "-M", "virt,highmem=off"}, Opts: []string{"GOARM=5"}},
 	"linux_riscv64": {Kernel: kernel_linux_riscv64, InitRAMFS: linux_riscv64, Cmd: []string{"qemu-system-riscv64", "-M", "virt", "-cpu", "rv64", "-m", "1G"}},
 }
 
 // New creates an Image, using the kernel and arch to select the Image.
 // It will return an error if there is a problem uncompressing
 // the kernel and initramfs.
-func New(kernel, arch string) (*Image, error) {
+func New(goos, arch string) (*Image, error) {
 	common := []string{
 		"-nographic",
 		"-netdev", "user,id=net0,ipv4=on,hostfwd=tcp::17010-:17010",
 		// required for mac. No idea why. Should work on linux. If not, we'll need a bit
 		// more logic.
 		"-device", "e1000-82545em,netdev=net0,id=net0,mac=52:54:00:c9:18:27",
+		"-netdev", "user,id=net1",
+		"-device", "e1000-82545em,netdev=net1,id=net1,mac=52:54:00:c9:18:28",
 		// No password needed, you're just a guest vm ...
 		// The kernel may not understand ip=dhcp, in which case it just ends up
 		// in init's environment.
@@ -77,10 +86,10 @@ func New(kernel, arch string) (*Image, error) {
 		"--append", "ip=dhcp init=/init -pk \"\"",
 	}
 	env := []string{}
-	n := fmt.Sprintf("%s_%s", kernel, arch)
+	n := fmt.Sprintf("%s_%s", goos, arch)
 	im, ok := images[n]
 	if !ok {
-		return nil, fmt.Errorf("(%q,%q): %w", kernel, arch, os.ErrNotExist)
+		return nil, fmt.Errorf("(%q,%q): %w", goos, arch, os.ErrNotExist)
 	}
 
 	r, err := gzip.NewReader(bufio.NewReader(bytes.NewBuffer(im.InitRAMFS)))
@@ -101,19 +110,25 @@ func New(kernel, arch string) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unzipped %d bytes: %w", len(k), err)
 	}
-	return &Image{Kernel: k, InitRAMFS: i, Cmd: append(im.Cmd, common...), Env: append(env, im.Env...)}, nil
+	return &Image{Kernel: k, InitRAMFS: i, Cmd: append(im.Cmd, common...), Env: append(env, im.Env...), GOOS: goos, GOARCH: arch, Opts: im.Opts}, nil
 }
 
 // Uroot builds a uroot cpio into the a directory.
 // It returns the full path of the file, or an error.
-func Uroot(d string) (string, error) {
-	c := exec.Command("u-root", "-o", filepath.Join(d, "uroot.cpio"))
-	c.Env = append(os.Environ(), "CGO_ENABLED=0")
+func Uroot(d, GOOS, GOARCH string, opts ...string) (string, error) {
+	out := filepath.Join(d, GOOS+"_"+GOARCH+".cpio")
+	c := exec.Command("u-root", "-o", out)
+	c.Env = append(append(os.Environ(), "CGO_ENABLED=0", "GOARCH="+GOARCH, "GOOS="+GOOS), opts...)
 	if out, err := c.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("u-root initramfs:%q:%w", out, err)
 	}
-	return filepath.Join(d, "uroot.cpio"), nil
+	return out, nil
 
+}
+
+// Uroot builds a uroot cpio for an Image
+func (i *Image) Uroot(d string) (string, error) {
+	return Uroot(d, i.GOOS, i.GOARCH, i.Opts...)
 }
 
 // CommandContext starts qemu, given a context, directory in which to
