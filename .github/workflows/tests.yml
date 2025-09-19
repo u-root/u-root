@@ -35,6 +35,11 @@ jobs:
             vmarch: 'amd64'
             pattern: '.'
 
+          # Only run UPL ARM64 test with VM arch arm64 for now.
+          - go-version: '1.24.x'
+            vmarch: 'arm64'
+            pattern: 'integration/generic-tests/universalpayload_arm64_test.go'
+
     env:
       GO_VERSION: ${{ matrix.go-version }}
       VMTEST_ARCH: ${{ matrix.vmarch }}

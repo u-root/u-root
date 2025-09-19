@@ -23,6 +23,18 @@ amd64:
     files:
       payload: "/UEFIPAYLOAD.fd"
 
+  VMTEST_OVMF:
+    container: "ghcr.io/u-root/u-root/test-ovmf-amd64@sha256:8852700b3d5f030918b9e5710b422edc5ab09579245eb566568953756815ecbb"
+    template: "{{.ovmf}}"
+    files:
+      ovmf: "/OVMF.fd"
+  
+  UROOT_TEST_UPLFIT:
+    container: "ghcr.io/u-root/u-root/test-upl-fit-amd64@sha256:1133b7242c7b91cd75e6f232a9a099e7ed6e343aaa19b61517a5cce69f40375f"
+    template: "{{.uplfit}}"
+    files:
+      uplfit: "/UplFitX64.fit"
+
 arm:
   VMTEST_QEMU:
     container: "ghcr.io/hugelgupf/vmtest/qemu:main@sha256:d5b3d31f39edb6394d20bdd76027512f956d78af9c6e49ecf2ab9ab59944638a"
@@ -48,3 +60,15 @@ arm64:
     template: "{{.Image}}"
     files:
       Image: "/Image"
+  
+  VMTEST_OVMF:
+    container: "ghcr.io/u-root/u-root/test-ovmf-arm64@sha256:eb0616a30523707fed22e7ca739ec04fcf60005847fc35b1a52732dbeb4340da"
+    template: "{{.ovmf}}"
+    files:
+      ovmf: "/QEMU_EFI.fd"
+  
+  UROOT_TEST_UPLFIT:
+    container: "ghcr.io/u-root/u-root/test-upl-fit-arm64@sha256:4dc0bd2393ebbec53e2b4855ebeb338f4458cfb9b4c3d5091bc9d7863365b2ee"
+    template: "{{.uplfit}}"
+    files:
+      uplfit: "/UplFitARM64.fit"
