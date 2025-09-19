@@ -181,7 +181,7 @@ var (
 		"smbios_transfer",
 		"smn",
 		"srvfiles",
-		"ssh",
+		//"ssh",
 		"syscallfilter",
 		"systemboot",
 		"tac",
