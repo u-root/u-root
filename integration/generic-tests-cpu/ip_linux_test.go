@@ -195,6 +195,7 @@ func TestIP(t *testing.T) {
 			default:
 				t.Fatalf("tt.cmd.Type(): type %T, want string or []string", tt.cmd)
 			}
+			t.Logf("Run %s", cmd)
 			cpu, err := i.CPUCommand(cmd[0], cmd[1:]...)
 			if err != nil {
 				t.Errorf("CPUCommand: got %v, want nil", err)
@@ -217,10 +218,10 @@ func TestIP(t *testing.T) {
 			}
 			//t.Logf("%q, includes %s?", string(b), tt.includes)
 			if !all(string(b), tt.includes) {
-				t.Fatalf("%s: got %s..., does not contain all of %s", cmd, string(b), tt.includes)
+				t.Fatalf("%s: got %s, does not contain all of %s", cmd, string(b), tt.includes)
 			}
 			if some(string(b), tt.excludes) {
-				t.Fatalf("%s:got %s..., contains some of %s and should not", cmd, string(b), tt.excludes)
+				t.Fatalf("%s:got %s, contains some of %s and should not", cmd, string(b), tt.excludes)
 			}
 			if tt.delay > 0 {
 				time.Sleep(tt.delay)
