@@ -110,7 +110,7 @@ func TestIP(t *testing.T) {
 			{cmd: "cat /proc/net/dev", excludes: []string{"gre_tunnel"}},
 		},
 		{
-			{cmd: "ip tunnel add vti_tunnel mode vti remote 192.168.242.3 local 192.168.241.1 key 5678", failok: true},
+			{cmd: "ip tunnel add vti_tunnel mode vti remote 192.168.242.3 local 192.168.241.1 key 5678", failok: false},
 
 			// Verify VTI tunnel exists in /proc/net/dev
 			{cmd: "cat /proc/net/dev", includes: []string{"vti_tunnel"}},
@@ -125,7 +125,7 @@ func TestIP(t *testing.T) {
 			{cmd: "cat /proc/net/dev", excludes: []string{"vti_tunnel"}},
 		},
 		{
-			{cmd: "ip tunnel add ipip_tunnel mode ipip remote 192.168.243.1 local 192.168.241.1 ttl 64", failok: true},
+			{cmd: "ip tunnel add ipip_tunnel mode ipip remote 192.168.243.1 local 192.168.241.1 ttl 64", failok: false},
 
 			// Verify IPIP tunnel exists in /proc/net/dev
 			{cmd: "cat /proc/net/dev", includes: []string{"ipip_tunnel"}},
@@ -211,13 +211,19 @@ func TestIP(t *testing.T) {
 					t.Logf("%s: got %v, want nil, skipping rest of tests in slice", cmd, err)
 					break
 				}
+	t.Errorf("sleep 5 m")
+	time.Sleep(5 * time.Minute)
 				t.Fatalf("%s: got %v, want nil", cmd, err)
 			}
 			//t.Logf("%q, includes %s?", string(b), tt.includes)
 			if !all(string(b), tt.includes) {
+	t.Errorf("sleep 5 m")
+	time.Sleep(5 * time.Minute)
 				t.Fatalf("%s: got %s, does not contain all of %s", cmd, string(b), tt.includes)
 			}
 			if some(string(b), tt.excludes) {
+	t.Errorf("sleep 5 m")
+	time.Sleep(5 * time.Minute)
 				t.Fatalf("%s:got %s, contains some of %s and should not", cmd, string(b), tt.excludes)
 			}
 			if tt.delay > 0 {
@@ -225,4 +231,6 @@ func TestIP(t *testing.T) {
 			}
 		}
 	}
+	t.Errorf("sleep 5 m")
+	time.Sleep(5 * time.Minute)
 }
