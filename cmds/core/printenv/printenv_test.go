@@ -18,14 +18,26 @@ func TestPrintenv(t *testing.T) {
 	os.Setenv("GOPHER", "go")
 	os.Setenv("PENGUIN", "linux")
 
-	var buf bytes.Buffer
-	want := os.Environ()
-	printenv(&buf)
-	found := strings.Split(buf.String(), "\n")
+	t.Run("all", func(t *testing.T) {
+		var buf bytes.Buffer
+		want := os.Environ()
+		printenv(&buf)
+		found := strings.Split(buf.String(), "\n")
 
-	for i, v := range want {
-		if v != found[i] {
-			t.Fatalf("want %s, got %s", v, found[i])
+		for i, v := range want {
+			if v != found[i] {
+				t.Fatalf("want %s, got %s", v, found[i])
+			}
 		}
-	}
+	})
+
+	t.Run("arg", func(t *testing.T) {
+		var buf bytes.Buffer
+		printenv(&buf, "GOPHER")
+		r := buf.String()
+
+		if r != "go\n" {
+			t.Errorf("want `go\n`, got %s", r)
+		}
+	})
 }
