@@ -33,7 +33,7 @@ func TestGzipWithKeep(t *testing.T) {
 	}
 
 	// Create a new gzip command
-	gzip := New().(*Gzip)
+	gzip := New("gzip").(*Gzip)
 
 	// Compress the file with force and keep flags
 	err = gzip.Run("-f", "-k", filePath)
@@ -100,7 +100,7 @@ func TestGzipWithWorkingDir(t *testing.T) {
 	}
 
 	// Create a new gzip command with working directory set to tmpDir
-	gzip := New().(*Gzip)
+	gzip := New("gzip").(*Gzip)
 	gzip.SetWorkingDir(tmpDir)
 
 	// Compress the file using a relative path with force and keep flags
