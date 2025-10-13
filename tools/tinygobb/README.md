@@ -204,5 +204,5 @@ The necessary additions to tinygo will be tracked in
  - [cmds/exp/watch](../../cmds/exp/watch)
  - [cmds/exp/zbi](../../cmds/exp/zbi)
  - [cmds/exp/zimage](../../cmds/exp/zimage)
- - [cmds/extra/tsort](../../cmds/extra/tsort)
+ - [cmds/core/tsort](../../cmds/extra/tsort)
  - [cmds/fwtools/spidev](../../cmds/fwtools/spidev)
