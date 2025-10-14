@@ -15,14 +15,24 @@ import (
 	"os"
 )
 
-func printenv(w io.Writer) {
-	e := os.Environ()
+func printenv(w io.Writer, args ...string) {
+	if len(args) == 0 {
+		e := os.Environ()
 
-	for _, v := range e {
-		fmt.Fprintf(w, "%v\n", v)
+		for _, v := range e {
+			fmt.Fprintf(w, "%v\n", v)
+		}
+		return
+	}
+
+	for _, arg := range args {
+		v, ok := os.LookupEnv(arg)
+		if ok {
+			fmt.Fprintln(w, v)
+		}
 	}
 }
 
 func main() {
-	printenv(os.Stdout)
+	printenv(os.Stdout, os.Args[1:]...)
 }
