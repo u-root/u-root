@@ -114,6 +114,7 @@ var (
 		"true",
 		"truncate",
 		"ts",
+		"tsort",
 		"tty",
 		"umount",
 		"uname",
