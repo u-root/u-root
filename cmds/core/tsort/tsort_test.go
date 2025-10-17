@@ -22,6 +22,7 @@ import (
 var errDiskCrashed = errors.New("disk crashed")
 
 func TestTsort(t *testing.T) {
+	dir := t.TempDir()
 	tests := []struct {
 		name       string
 		args       []string
@@ -150,7 +151,7 @@ func TestTsort(t *testing.T) {
 		},
 		{
 			name:       "file: line: a b b c c d",
-			args:       []string{tempFile(t, "a b b c c d")},
+			args:       []string{tempFile(t, dir, "a b b c c d")},
 			wantStdout: "a\nb\nc\nd\n",
 		},
 	}
@@ -421,6 +422,7 @@ var cyclicGraph = func() string {
 }()
 
 func BenchmarkTsortAcyclicGraph(b *testing.B) {
+	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
 	for b.Loop() {
 		err := run(strings.NewReader(acyclicGraph), io.Discard, io.Discard)
 		if err != nil {
@@ -430,6 +432,7 @@ func BenchmarkTsortAcyclicGraph(b *testing.B) {
 }
 
 func BenchmarkTsortCyclicGraph(b *testing.B) {
+	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
 	for b.Loop() {
 		err := run(strings.NewReader(cyclicGraph), io.Discard, io.Discard)
 		if err != nil && !errors.Is(err, errNonFatal) {
@@ -438,9 +441,8 @@ func BenchmarkTsortCyclicGraph(b *testing.B) {
 	}
 }
 
-func tempFile(t *testing.T, contents string) (file string) {
-	dir := t.TempDir()
-	n := filepath.Join(dir, "file")
+func tempFile(t *testing.T, dir, contents string) (file string) {
+	n := filepath.Join(dir, contents)
 	if err := os.WriteFile(n, []byte(contents), 0o666); err != nil {
 		t.Fatalf("temp file not created: %v", err)
 	}
