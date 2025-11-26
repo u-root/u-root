@@ -178,6 +178,24 @@ func convertResourceType(memType string) EFIResourceType {
 	if strings.Contains(memType, "HPET") {
 		return EFIResourceMemoryReserved
 	}
+	// MMCONFIG (until kernel 6.7)/ ECAM (6.8+) must be reserved,
+	// otherwise PCIe functionality won't work in the OS.
+	if strings.HasPrefix(memType, "PCI MMCONFIG") || strings.HasPrefix(memType, "PCI ECAM") {
+		return EFIResourceMemoryReserved
+	}
+	// ACPI Tables should be reported as reserved.
+	// They could be reported as RAM with memory allocation of
+	// EfiACPIReclaimMemory, but that would be much bigger change,
+	// and Linux does not reuse ACPI tables memory anyway.
+	if memType == "ACPI Tables" {
+		return EFIResourceMemoryReserved
+	}
+	// ACPI NVS storage should be reported as reserved.
+	// Like the ACPI tables it could be reported as memory allocation with
+	// type EfiACPIMemoryNVS instead.
+	if memType == "ACPI Non-volatile Storage" {
+		return EFIResourceMemoryReserved
+	}
 	// Treat all other types to be mapped device MMIO address
 	return EFIResourceMemoryMappedIO
 }
