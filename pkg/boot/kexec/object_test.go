@@ -6,6 +6,8 @@ package kexec
 
 import (
 	"bytes"
+	"debug/plan9obj"
+	"encoding/binary"
 	"os"
 	"testing"
 )
@@ -27,6 +29,9 @@ func TestObject(t *testing.T) {
 		t.Fatalf("ObjectNewFile(%v): %v != nil", f, err)
 	}
 	// Now try a plan 9 object
+	aout64 := make([]byte, len(emptyAout))
+	copy(aout64, emptyAout)
+
 	o, err := ObjectNewFile(bytes.NewReader(emptyAout))
 	if err != nil {
 		t.Fatalf("ObjectNewFile(%#x): %v != nil", emptyAout[:64], err)
@@ -39,12 +44,34 @@ func TestObject(t *testing.T) {
 		t.Errorf("p.f.Sections[0].LoadAddress: %#x != 0x2000", p[1].Paddr)
 	}
 	if o.Entry() != 0x1023 {
-		t.Errorf("o.Entry(): %#x != 0x2000", o.Entry())
+		t.Errorf("o.Entry(): %#x != 0x1023", o.Entry())
 	}
 
 	if _, err := ObjectNewFile(bytes.NewReader(bogus)); err == nil {
 		t.Fatalf("ObjectNewFile(%#x): nil != err", bogus[:64])
 	}
+
+	// adjust the a.out so it is amd64
+	binary.BigEndian.PutUint32(aout64, plan9obj.MagicAMD64)
+	o, err = ObjectNewFile(bytes.NewReader(aout64))
+	if err != nil {
+		t.Fatalf("ObjectNewFile(%#x): %v != nil", emptyAout[:64], err)
+	}
+	p = o.Progs()
+	if p[0].Paddr != 0x110100 {
+		t.Errorf("p.f.Sections[0].LoadAddress: %#x != 0x110100", p[0].Paddr)
+	}
+	if p[1].Paddr != 0x111000 {
+		t.Errorf("p.f.Sections[0].LoadAddress: %#x != 0x111000", p[1].Paddr)
+	}
+	if o.Entry() != 0x110100 {
+		t.Errorf("o.Entry(): %#x != 0x1023", o.Entry())
+	}
+
+	if _, err := ObjectNewFile(bytes.NewReader(bogus)); err == nil {
+		t.Fatalf("ObjectNewFile(%#x): nil != err", bogus[:64])
+	}
+
 }
 
 var bogus = []byte{1, 2, 3, 4}
@@ -58,7 +85,7 @@ var emptyAout = []byte{
 	0x00, 0x00, 0x01, 0xeb, 0x00, 0x00, 0x04, 0xb3, 0x00, 0x00, 0x00, 0x20,
 	0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x08, 0x86, 0x00, 0x00, 0x10, 0x23,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x6e, 0x31, 0xc0, 0xc3, 0x83,
-	0xec, 0x48, 0x89, 0x05, 0x04, 0x20, 0x00, 0x00, 0x8d, 0x44, 0x24, 0x08,
+	0x00, 0x11, 0x01, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x8d, 0x44, 0x24, 0x08,
 	0x89, 0x05, 0x0c, 0x20, 0x00, 0x00, 0xc7, 0x05, 0x08, 0x20, 0x00, 0x00,
 	0x10, 0x00, 0x00, 0x00, 0x8b, 0x44, 0x24, 0x48, 0x89, 0x04, 0x24, 0x8d,
 	0x44, 0x24, 0x4c, 0x89, 0x44, 0x24, 0x04, 0xe8, 0xcc, 0xff, 0xff, 0xff,
