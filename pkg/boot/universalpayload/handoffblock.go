@@ -178,11 +178,11 @@ func convertResourceType(memType string) EFIResourceType {
 	if strings.Contains(memType, "HPET") {
 		return EFIResourceMemoryReserved
 	}
-	// MMCONFIG (until kernel 6.7)/ ECAM (6.8+) must be reserved,
-	// otherwise PCIe functionality won't work in the OS.
-	if strings.HasPrefix(memType, "PCI MMCONFIG") || strings.HasPrefix(memType, "PCI ECAM") {
+
+	if isMemReserved(memType) {
 		return EFIResourceMemoryReserved
 	}
+
 	// ACPI Tables should be reported as reserved.
 	// They could be reported as RAM with memory allocation of
 	// EfiACPIReclaimMemory, but that would be much bigger change,

@@ -21,3 +21,7 @@ func archGetAcpiRsdpData() (uint64, []byte, error) {
 func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
 	return 0
 }
+
+func isMemReserved(memType string) bool {
+	return false
+}

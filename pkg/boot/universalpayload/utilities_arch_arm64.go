@@ -197,3 +197,7 @@ func appendUARTMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
 func appendAddonMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
 	return appendUARTMemMap(memMapHOB)
 }
+
+func isMemReserved(memType string) bool {
+	return false
+}
