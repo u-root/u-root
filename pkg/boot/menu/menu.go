@@ -7,6 +7,7 @@
 package menu
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -79,11 +80,16 @@ func SetInitialTimeout(timeout time.Duration) {
 //
 //	not support SetTimeout/SetDeadline.
 func Choose(term MenuTerminal, allowEdit bool, entries ...Entry) Entry {
-	fmt.Println("")
+	// Use a buffered writer to explicitly flush menu content before
+	// the terminal is put into raw mode for the prompt.
+	w := bufio.NewWriter(os.Stdout)
+	fmt.Fprintln(w, "")
 	for i, e := range entries {
-		fmt.Printf("%02d. %s\r\n\r\n", i+1, e.Label())
+		fmt.Fprintf(w, "%02d. %s\r\n\n", i+1, e.Label())
 	}
-	fmt.Println("\r")
+	fmt.Fprintln(w, "\r")
+	w.Flush()
+	time.Sleep(100 * time.Millisecond)
 
 	err := term.SetTimeout(initialTimeout)
 	if err != nil {
