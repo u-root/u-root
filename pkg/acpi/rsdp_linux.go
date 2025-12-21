@@ -29,14 +29,12 @@ func GetRSDPEFI() (*RSDP, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		start := ""
-		if strings.HasPrefix(line, acpi20) {
-			start = strings.TrimPrefix(line, acpi20)
+		prefixFound := false
+		start, prefixFound := strings.CutPrefix(line, acpi20)
+		if !prefixFound {
+			start, prefixFound = strings.CutPrefix(line, acpi)
 		}
-		if strings.HasPrefix(line, acpi) {
-			start = strings.TrimPrefix(line, acpi)
-		}
-		if start == "" {
+		if !prefixFound {
 			continue
 		}
 		base, err := strconv.ParseInt(start, 0, 63)
