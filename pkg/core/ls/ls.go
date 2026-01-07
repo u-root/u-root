@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/u-root/u-root/pkg/core"
@@ -74,6 +76,25 @@ type file struct {
 	osfi os.FileInfo
 	lsfi ls.FileInfo
 	err  error
+}
+
+func (c *command) printFile(stringer ls.Stringer, f file, flags flags) {
+	if f.err != nil {
+		fmt.Fprintln(c.Stdout, f.err)
+		return
+	}
+	// Hide .files unless -a was given
+	if flags.all || !strings.HasPrefix(f.lsfi.Name, ".") {
+		// On Plan9/Windows, unless they said -p, we always print the full path.
+		// On Unix, preserve the original behavior of printing just the name.
+		if (runtime.GOOS == "plan9" || runtime.GOOS == "windows") && !flags.final {
+			f.lsfi.Name = f.path
+		}
+		if flags.classify {
+			f.lsfi.Name = f.lsfi.Name + indicator(f.lsfi)
+		}
+		fmt.Fprintln(c.Stdout, stringer.FileString(f.lsfi))
+	}
 }
 
 func (c *command) listName(stringer ls.Stringer, d string, prefix bool, f flags) {
@@ -221,7 +242,9 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 	fs.BoolVar(&f.size, "S", false, "sort by size")
 
 	// OS-specific flags
-	c.addOSSpecificFlags(fs, &f)
+	if runtime.GOOS == "plan9" || runtime.GOOS == "windows" {
+		fs.BoolVar(&f.final, "p", false, "Print only the final path element of each file name")
+	}
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "Usage: ls [OPTIONS] [DIRS]...\n\n")
