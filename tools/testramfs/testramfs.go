@@ -74,10 +74,7 @@ func Execute(stdin io.Reader, stdout io.Writer, stderr io.Writer, goos, goarch s
 	if err := vmi.StartVM(c); err != nil {
 		return err
 	}
-	if err := c.Wait(); err != nil {
-		return err
-	}
-	return nil
+	return c.Wait()
 }
 
 func main() {
