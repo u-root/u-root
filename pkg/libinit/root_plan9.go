@@ -88,3 +88,7 @@ func SetEnv() {
 // CreateRootfs creates the default u-root file system.
 func CreateRootfs() {
 }
+
+// RedirectOutputToConsoles is a no-op on Plan 9. Multi-console output
+// multiplexing is only implemented for Linux.
+func RedirectOutputToConsoles() {}

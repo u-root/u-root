@@ -237,6 +237,10 @@ func CreateRootfs() {
 	}
 }
 
+// RedirectOutputToConsoles is a no-op on FreeBSD. Multi-console output
+// multiplexing is only implemented for Linux.
+func RedirectOutputToConsoles() {}
+
 // InitModuleLoader wraps the resources we need for early module loading
 type InitModuleLoader struct {
 	Cmdline      *cmdline.CmdLine
