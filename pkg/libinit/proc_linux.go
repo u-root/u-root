@@ -48,29 +48,12 @@ func WithTTYControl(ctty bool) CommandModifier {
 
 func WithMultiTTY(mtty bool, openFn func([]string) ([]*os.File, error), ttyNames []string) CommandModifier {
 	return func(c *exec.Cmd) {
-		if mtty {
-			ww, err := openFn(ttyNames)
-			if err != nil {
-				return
-			}
-
-			switch len(ww) {
-			case 0:
-				c.Stdout, c.Stderr = os.Stdout, os.Stderr
-			case 1:
-				c.Stdout, c.Stderr = ww[0], ww[0]
-			default:
-				writers := make([]io.Writer, len(ww))
-				for i, w := range ww {
-					writers[i] = w
-				}
-				c.Stdout = io.MultiWriter(writers...)
-				c.Stderr = io.MultiWriter(writers...)
-
-				// Save this for later use
-				for i := 0; i < len(ww); i++ {
-					c.Env = append(c.Env, fmt.Sprintf("tty%d=%s", i, ww[i].Name()))
-				}
+		if mtty && len(ttyNames) > 0 {
+			// Save tty names for later use in RunCommands
+			// We don't open them here because we need to set them to raw mode
+			// and multiplex I/O through a PTY
+			for i, name := range ttyNames {
+				c.Env = append(c.Env, fmt.Sprintf("tty%d=/dev/%s", i, name))
 			}
 		}
 	}
@@ -114,65 +97,187 @@ func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 		cmdCount++
 		debug("Trying to run %v", cmd)
 
-		// Set up PTM
-		m, s, err := pty.NewPTMS()
-		if err != nil {
-			debug("Error getting PTY: %v", err)
-			return 0
-		}
-
-		cmd.Stdin = s
-
-		// Launch go routine to copy output from the command to the PTM
-		for _, r := range cmd.Env {
-			if strings.HasPrefix(r, "tty") {
-				tty := strings.Split(r, "=")[1]
-
-				debug("Opening TTY %v", tty)
-
-				// Open the TTY
-				t, err := os.OpenFile(tty, os.O_RDWR, 0)
-				if err != nil {
-					debug("Error opening TTY: %v", err)
-					continue
+		// Collect TTY names from environment
+		var ttyNames []string
+		var cleanEnv []string
+		for _, envVar := range cmd.Env {
+			if strings.HasPrefix(envVar, "tty") && strings.Contains(envVar, "=") {
+				parts := strings.SplitN(envVar, "=", 2)
+				if len(parts) == 2 {
+					ttyNames = append(ttyNames, parts[1])
 				}
-
-				// Set to Raw mode
-				if err := termios.MakeRawFile(t); err != nil {
-					// Let's still continue if we can't set the TTY to raw mode
-					debug("Error setting TTY to raw mode: %v", err)
-				}
-
-				go func() {
-					for {
-						if _, err := io.Copy(m, t); err != nil {
-							debug("Error copying output from command to PTM: %v", err)
-						}
-					}
-				}()
+			} else {
+				cleanEnv = append(cleanEnv, envVar)
 			}
 		}
 
-		if len(cmd.Env) > 0 {
-			// clear the environment, otherwise $PATH is not correctly set.
-			cmd.Env = nil
+		// If we have TTYs from kernel cmdline, use PTY multiplexing like the shell tool
+		if len(ttyNames) > 0 {
+			debug("Setting up multi-TTY with %v", ttyNames)
+
+			// Open and configure all TTYs
+			var ttys []*os.File
+			for _, ttyName := range ttyNames {
+				debug("Opening TTY %v", ttyName)
+				tty, err := os.OpenFile(ttyName, os.O_RDWR, 0)
+				if err != nil {
+					debug("Error opening TTY %v: %v", ttyName, err)
+					continue
+				}
+
+				// Set to raw mode - critical for serial console to work properly
+				// Without raw mode, serial has line buffering, echo, and flow control
+				if err := termios.MakeRawFile(tty); err != nil {
+					debug("Error setting TTY %v to raw mode: %v", ttyName, err)
+					// Continue anyway - better to have non-raw than nothing
+				}
+
+				ttys = append(ttys, tty)
+			}
+
+			if len(ttys) == 0 {
+				debug("No TTYs could be opened, falling back to default")
+				cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+			} else {
+				// Create PTY for the command
+				ptmx, pts, err := pty.NewPTMS()
+				if err != nil {
+					debug("Error creating PTY: %v", err)
+					return 0
+				}
+
+				// Connect command to PTS
+				cmd.Stdin, cmd.Stdout, cmd.Stderr = pts, pts, pts
+
+				// Create channels for clean shutdown and input buffering
+				done := make(chan struct{})
+
+				// Create buffered channels for input from each TTY to prevent input loss
+				// due to goroutine scheduling. Direct io.Copy can lose characters.
+				inputChans := make([]chan []byte, len(ttys))
+				for i := range inputChans {
+					inputChans[i] = make(chan []byte, 1024)
+				}
+
+				// Read from each TTY into its buffered channel
+				for i, tty := range ttys {
+					t := tty // capture for goroutine
+					ch := inputChans[i]
+					go func() {
+						buf := make([]byte, 1024)
+						for {
+							select {
+							case <-done:
+								close(ch)
+								return
+							default:
+							}
+							n, err := t.Read(buf)
+							if err != nil {
+								if err != io.EOF {
+									select {
+									case <-done:
+										// Shutting down, ignore error
+									default:
+										debug("TTY read error: %v", err)
+									}
+								}
+								close(ch)
+								return
+							}
+							if n > 0 {
+								data := make([]byte, n)
+								copy(data, buf[:n])
+								ch <- data
+							}
+						}
+					}()
+				}
+
+				// Multiplex input from all TTY channels to PTM
+				go func() {
+					for {
+						for i, ch := range inputChans {
+							select {
+							case data, ok := <-ch:
+								if !ok {
+									inputChans[i] = nil
+									continue
+								}
+								ptmx.Write(data)
+							default:
+								// Non-blocking, check next channel
+							}
+						}
+
+						// Check if all channels are closed
+						allClosed := true
+						for _, ch := range inputChans {
+							if ch != nil {
+								allClosed = false
+								break
+							}
+						}
+						if allClosed {
+							return
+						}
+					}
+				}()
+
+				// Multiplex output: PTM → all TTYs (fan-out)
+				go func() {
+					buf := make([]byte, 1024)
+					for {
+						select {
+						case <-done:
+							return
+						default:
+						}
+						n, err := ptmx.Read(buf)
+						if err != nil {
+							if err != io.EOF {
+								select {
+								case <-done:
+									// Shutting down, ignore error
+								default:
+									debug("PTY read error: %v", err)
+								}
+							}
+							return
+						}
+						if n > 0 {
+							// Fan out to all TTYs
+							for _, tty := range ttys {
+								tty.Write(buf[:n])
+							}
+						}
+					}
+				}()
+
+				// Clean up when command exits
+				defer func() {
+					close(done)
+					for _, tty := range ttys {
+						tty.Close()
+					}
+					ptmx.Close()
+					pts.Close()
+				}()
+			}
 		} else {
-			// If no tty has been set, lets fall back to os.Stdin
+			// No multi-TTY, use default I/O
 			cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		}
+
+		// Clear tty environment variables and restore clean environment
+		cmd.Env = cleanEnv
 
 		if err := cmd.Start(); err != nil {
 			log.Printf("Error starting %v: %v", cmd, err)
 			continue
 		}
 
-		// Close the PTM and PTS after the command exits
-		go func() {
-			cmd.Wait()
-			m.Close()
-			s.Close()
-		}()
-
+		// Wait for command and reap orphans
 		for {
 			var s unix.WaitStatus
 			var r unix.Rusage
