@@ -36,6 +36,11 @@ var (
 func main() {
 	flag.Parse()
 
+	// Redirect early output to all consoles if we have multiple consoles configured
+	if !*test {
+		libinit.RedirectOutputToConsoles()
+	}
+
 	log.Printf("Welcome to u-root!")
 	fmt.Println(`                              _`)
 	fmt.Println(`   _   _      _ __ ___   ___ | |_`)

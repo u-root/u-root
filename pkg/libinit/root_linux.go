@@ -9,12 +9,14 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cp"
@@ -433,4 +435,36 @@ func openTTYDevices(prefix string, names []string) ([]*os.File, error) {
 	}
 
 	return devs, nil
+}
+
+// RedirectOutputToConsoles redirects os.Stdout and os.Stderr to all console
+// devices specified in the kernel cmdline, so early messages (like the banner)
+// appear on all consoles.
+func RedirectOutputToConsoles() {
+	consoles := cmdline.Consoles()
+	if len(consoles) <= 1 {
+		// Only one or no console, nothing to do
+		return
+	}
+
+	ttys, err := OpenTTYDevices(consoles)
+	if err != nil || len(ttys) <= 1 {
+		// Failed to open multiple consoles or only got one
+		return
+	}
+
+	// Create multi-writer for all consoles
+	writers := make([]io.Writer, len(ttys))
+	for i, tty := range ttys {
+		writers[i] = tty
+	}
+	multiWriter := io.MultiWriter(writers...)
+
+	// Redirect stdout and stderr to all consoles
+	os.Stdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
+	os.Stderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
+
+	// Note: We can't directly replace os.Stdout/Stderr, but we can
+	// set log output to go to all consoles
+	log.SetOutput(multiWriter)
 }

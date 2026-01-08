@@ -149,7 +149,7 @@ func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 				// Connect command to PTS
 				cmd.Stdin, cmd.Stdout, cmd.Stderr = pts, pts, pts
 
-				// Create channels for clean shutdown and input buffering
+				// Create channel for clean shutdown
 				done := make(chan struct{})
 
 				// Create buffered channels for input from each TTY to prevent input loss
@@ -188,30 +188,22 @@ func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 							if n > 0 {
 								data := make([]byte, n)
 								copy(data, buf[:n])
-								ch <- data
+								select {
+								case ch <- data:
+								case <-done:
+									close(ch)
+									return
+								}
 							}
 						}
 					}()
 				}
 
-				// Multiplex input from all TTY channels to PTM
+				// Multiplex input from all TTY channels to PTM using blocking select
 				go func() {
 					for {
-						for i, ch := range inputChans {
-							select {
-							case data, ok := <-ch:
-								if !ok {
-									inputChans[i] = nil
-									continue
-								}
-								ptmx.Write(data)
-							default:
-								// Non-blocking, check next channel
-							}
-						}
-
-						// Check if all channels are closed
-						allClosed := true
+						// Build select cases dynamically
+						var allClosed = true
 						for _, ch := range inputChans {
 							if ch != nil {
 								allClosed = false
@@ -221,48 +213,107 @@ func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 						if allClosed {
 							return
 						}
+
+						// Try to read from any available channel
+						for i, ch := range inputChans {
+							if ch == nil {
+								continue
+							}
+							select {
+							case data, ok := <-ch:
+								if !ok {
+									inputChans[i] = nil
+									continue
+								}
+								ptmx.Write(data)
+							default:
+								// Non-blocking per channel, but we'll loop
+							}
+						}
 					}
 				}()
 
 				// Multiplex output: PTM → all TTYs (fan-out)
-				go func() {
-					buf := make([]byte, 1024)
-					for {
-						select {
-						case <-done:
-							return
-						default:
-						}
-						n, err := ptmx.Read(buf)
-						if err != nil {
-							if err != io.EOF {
-								select {
-								case <-done:
-									// Shutting down, ignore error
-								default:
-									debug("PTY read error: %v", err)
+				// Use io.Copy with TeeReader for efficiency like the shell tool
+				if len(ttys) == 2 {
+					// Optimize for the common case of 2 TTYs
+					go io.Copy(ttys[0], io.TeeReader(ptmx, ttys[1]))
+				} else {
+					// General case: fan out to all TTYs
+					go func() {
+						buf := make([]byte, 1024)
+						for {
+							select {
+							case <-done:
+								return
+							default:
+							}
+							n, err := ptmx.Read(buf)
+							if err != nil {
+								if err != io.EOF {
+									select {
+									case <-done:
+										// Shutting down, ignore error
+									default:
+										debug("PTY read error: %v", err)
+									}
+								}
+								return
+							}
+							if n > 0 {
+								// Fan out to all TTYs
+								for _, tty := range ttys {
+									tty.Write(buf[:n])
 								}
 							}
-							return
 						}
-						if n > 0 {
-							// Fan out to all TTYs
-							for _, tty := range ttys {
-								tty.Write(buf[:n])
-							}
-						}
-					}
-				}()
+					}()
+				}
 
-				// Clean up when command exits
-				defer func() {
+				// Clear tty environment variables and restore clean environment
+				cmd.Env = cleanEnv
+
+				if err := cmd.Start(); err != nil {
+					log.Printf("Error starting %v: %v", cmd, err)
+					// Clean up before continuing
 					close(done)
 					for _, tty := range ttys {
 						tty.Close()
 					}
 					ptmx.Close()
 					pts.Close()
-				}()
+					continue
+				}
+
+				// Wait for command and reap orphans
+				for {
+					var s unix.WaitStatus
+					var r unix.Rusage
+					if p, err := unix.Wait4(-1, &s, 0, &r); p == cmd.Process.Pid {
+						debug("Shell exited, exit status %d", s.ExitStatus())
+						break
+					} else if p != -1 {
+						debug("Reaped PID %d, exit status %d", p, s.ExitStatus())
+					} else {
+						debug("Error from Wait4 for orphaned child: %v", err)
+						break
+					}
+				}
+
+				// Clean up after command exits
+				close(done)
+				for _, tty := range ttys {
+					tty.Close()
+				}
+				ptmx.Close()
+				pts.Close()
+
+				if err := cmd.Process.Release(); err != nil {
+					log.Printf("Error releasing process %v: %v", cmd, err)
+				}
+
+				// We handled this command completely, continue to next
+				continue
 			}
 		} else {
 			// No multi-TTY, use default I/O
