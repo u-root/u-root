@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/u-root/cpu/vm"
 )
@@ -52,12 +53,16 @@ func Execute(stdin io.Reader, stdout io.Writer, stderr io.Writer, goos, goarch s
 	}
 	ramfs := filepath.Join(cwd, fmt.Sprintf("initramfs.%s_%s.cpio", goos, goarch))
 
+	start := time.Now()
 	c := exec.Command("u-root", append([]string{"-o", ramfs}, args...)...)
 	c.Stdout, c.Stderr = os.Stdout, os.Stderr
 	c.Dir = dir
 	if err := c.Run(); err != nil {
 		return err
 	}
+	fmt.Fprintf(os.Stderr, "************************************************\n")
+	fmt.Fprintf(os.Stderr, "u-root build took %v seconds\n", time.Since(start).Seconds())
+	fmt.Fprintf(os.Stderr, "************************************************\n")
 
 	// This will write files for the kernel into cwd.
 	// as a side effect, it provides users with a kernel they can use.
