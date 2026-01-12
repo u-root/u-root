@@ -33,6 +33,9 @@ u-root embodies four different projects.
 For u-root on Linux, certain Kconfig options are necessary. Basic defconfigs are
 in [`configs/`](configs/). See also the [configs README](configs/README.md).
 
+# Demo
+[View Demo](https://htmlpreview.github.io/?https://github.com/u-root/u-root/blob/main/tools/testramfs/cinema/index.html)
+
 # Usage
 
 Make sure your Go version is >= 1.21.
