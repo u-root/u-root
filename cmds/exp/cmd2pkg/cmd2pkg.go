@@ -14,36 +14,36 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
-func main() {
-	var (
-		debug = flag.Bool("d", false, "Turn on forth package debugging using log.Printf")
-		dir   = flag.String("dir", "", "Temp directory, if not set, os.MkdirTemp is used")
-		l     = ulog.Log
-		err   error
-		v     = func(string, ...any) {}
-	)
-	flag.Parse()
-	if *debug {
-		v = log.Printf
-	}
-	v("Starting ...")
+type command struct {
+	dir string
+	l   ulog.Logger
+}
 
-	if len(*dir) == 0 {
-		*dir, err = os.MkdirTemp("", "cmd2pkg-")
-		if err != nil {
-			log.Fatal(err)
-		}
+func (c *command) execute(args ...string) error {
+	var err error
+
+	if len(c.dir) == 0 {
+		c.dir, err = os.MkdirTemp("", "cmd2pkg-")
+		return err
 	}
 
 	opts := &Opts{
 		Env:          golang.Default(),
-		GenSrcDir:    *dir,
-		CommandPaths: flag.Args(),
+		GenSrcDir:    c.dir,
+		CommandPaths: args,
 	}
 
-	if err := BuildBusybox(l, opts); err != nil {
-		log.Print(err)
+	if err := BuildBusybox(c.l, opts); err != nil {
+		return err
 	}
 
-	log.Printf("Check your output (if any ...) in %s", *dir)
+	return nil
+}
+
+func main() {
+	var dir = flag.String("dir", "", "Temp directory, if not set, os.MkdirTemp is used")
+	flag.Parse()
+	if err := (&command{l: ulog.Log, dir: *dir}).execute(flag.Args()...); err != nil {
+		log.Fatal(err)
+	}
 }
