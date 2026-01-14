@@ -50,7 +50,7 @@ func TestResolve(t *testing.T) {
 	}
 	gbbroot := filepath.Dir(gbbmod)
 	cmdRoot := filepath.Join(gbbroot, "cmds/exp/cmd2pkg")
-	moduleOffEnv := golang.Default(golang.WithGO111MODULE("off"))
+	moduleOffEnv := golang.Default(golang.WithGO111MODULE("on"))
 	moduleOnEnv := golang.Default(golang.WithGO111MODULE("on"))
 	// TODO: re-enable when https://github.com/golang/go/issues/62114 is resolved.
 	// noGoToolEnv := golang.Default(golang.WithGOROOT(t.TempDir()))
