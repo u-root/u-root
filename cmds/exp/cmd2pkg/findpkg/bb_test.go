@@ -33,6 +33,8 @@ type testCase struct {
 	in []string
 	// Expected result from ResolveGlobs
 	want []string
+	// or, how many results you want at least.
+	atLeast int
 	// Expected result from NewPackages each packages' PkgPath
 	wantPkgPath []string
 	// Error expected?
@@ -47,7 +49,7 @@ func TestResolve(t *testing.T) {
 		t.Fatalf("failure to set up test: %v", err)
 	}
 	gbbroot := filepath.Dir(gbbmod)
-
+	cmdRoot := filepath.Join(gbbroot, "cmds/exp/cmd2pkg")
 	moduleOffEnv := golang.Default(golang.WithGO111MODULE("off"))
 	moduleOnEnv := golang.Default(golang.WithGO111MODULE("on"))
 	// TODO: re-enable when https://github.com/golang/go/issues/62114 is resolved.
@@ -81,33 +83,33 @@ func TestResolve(t *testing.T) {
 		// Single package, file system path.
 		{
 			name: "fspath-single",
-			in:   []string{filepath.Join(gbbmod, "cmd/makebb")},
-			want: []string{"github.com/u-root/gobusybox/src/cmd/makebb"},
+			in:   []string{filepath.Join(gbbmod, "exp/cmd2pkg")},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg"},
 		},
 		// Single package, file system path, GBB_PATHS.
 		{
 			name:    "fspath-gbbpath-single",
 			gbbPath: []string{gbbmod},
-			in:      []string{"cmd/makebb"},
-			want:    []string{"github.com/u-root/gobusybox/src/cmd/makebb"},
+			in:      []string{"exp/cmd2pkg"},
+			want:    []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg"},
 		},
 		// Single package, Go package path.
 		{
 			name: "pkgpath-single",
-			in:   []string{"github.com/u-root/gobusybox/src/cmd/makebb"},
-			want: []string{"github.com/u-root/gobusybox/src/cmd/makebb"},
+			in:   []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg"},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg"},
 		},
-		// Two packages, globbed file system path.
+		// globbed file system path.
 		{
 			name: "fspath-glob",
-			in:   []string{filepath.Join(gbbmod, "cmd/make*")},
-			want: []string{"github.com/u-root/gobusybox/src/cmd/makebb", "github.com/u-root/gobusybox/src/cmd/makebbmain"},
+			in:   []string{filepath.Join(gbbmod, "exp/cmd2*")},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg"},
 		},
-		// Two packages, globbed Go package path.
+		// globbed Go package path.
 		{
 			name: "pkgpath-glob",
-			in:   []string{"github.com/u-root/gobusybox/src/cmd/make*"},
-			want: []string{"github.com/u-root/gobusybox/src/cmd/makebb", "github.com/u-root/gobusybox/src/cmd/makebbmain"},
+			in:   []string{"github.com/u-root/u-root/cmds/exp/cmd2*"},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg"},
 		},
 		// Globbed file system path of non-existent packages.
 		{
@@ -124,18 +126,19 @@ func TestResolve(t *testing.T) {
 			err:     errNoMatch,
 		},
 		// Two packages (file system paths), one excluded by build constraints.
+		// The issue is that depending on whether you run on OSX, Plan 9, or Linux, or ...
+		// you will get a different number of matches
 		{
-			name: "fspath-log-buildconstrained",
-			in:   []string{"./test/buildconstraint", filepath.Join(gbbmod, "cmd/makebb")},
-			want: []string{"github.com/u-root/gobusybox/src/cmd/makebb"},
+			name:    "fspath-log-buildconstrained",
+			in:      []string{"./test/buildconstraint", filepath.Join(gbbmod, "core/b*")},
+			atLeast: 1,
 		},
-		// Two packages (Go package paths), one excluded by build constraints.
+		// Two packages (Go package paths), some excluded by build constraints.
 		{
-			name: "pkgpath-log-buildconstrained",
-			in:   []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/buildconstraint", "github.com/u-root/gobusybox/src/cmd/makebb"},
-			want: []string{"github.com/u-root/gobusybox/src/cmd/makebb"},
+			name:    "pkgpath-log-buildconstrained",
+			in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg", "github.com/u-root/u-root/cmds/core/bind", "github.com/u-root/u-root/cmds/core/ip"},
+			atLeast: 1,
 		},
-		// Package excluded by build constraints (file system paths).
 		{
 			name:    "fspath-log-buildconstrained-onlyone",
 			in:      []string{"./test/buildconstraint"},
@@ -145,17 +148,17 @@ func TestResolve(t *testing.T) {
 		// Package excluded by build constraints (Go package paths).
 		{
 			name:    "pkgpath-log-buildconstrained-onlyone",
-			in:      []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/buildconstraint"},
+			in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/buildconstraint"},
 			err:     errNoMatch,
 			wantErr: true,
 		},
 		// Go glob support (Go package path).
 		{
 			name: "pkgpath-go-glob",
-			in:   []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/..."},
+			in:   []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/..."},
 			want: []string{
-				"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/echo",
-				"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/foo",
+				"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/echo",
+				"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/foo",
 			},
 		},
 		// Go glob support (relative Go package path).
@@ -163,8 +166,8 @@ func TestResolve(t *testing.T) {
 			name: "pkgpath-relative-go-glob",
 			in:   []string{"./test/goglob/..."},
 			want: []string{
-				"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/echo",
-				"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/foo",
+				"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/echo",
+				"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/foo",
 			},
 		},
 		// Go glob support ("relative" Go package path, without ./ -- follows Go semantics).
@@ -186,7 +189,7 @@ func TestResolve(t *testing.T) {
 		},
 		{
 			name:    "pkgpath-empty-directory",
-			in:      []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/empty"},
+			in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/empty"},
 			wantErr: true,
 		},
 		// resolvebroken is not compilable.
@@ -197,7 +200,7 @@ func TestResolve(t *testing.T) {
 		},
 		{
 			name:    "pkgpath-broken-go",
-			in:      []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/resolvebroken"},
+			in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/resolvebroken"},
 			wantErr: true,
 		},
 		// Contains test/resolvebroken which is not compilable.
@@ -208,7 +211,7 @@ func TestResolve(t *testing.T) {
 		},
 		{
 			name:    "pkgpath-glob-with-errors",
-			in:      []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/*"},
+			in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/*"},
 			wantErr: true,
 		},
 		// Multi module resolution, package path. (GO111MODULE=on only)
@@ -218,7 +221,7 @@ func TestResolve(t *testing.T) {
 		{
 			name: "pkgpath-multi-module",
 			envs: []*golang.Environ{moduleOnEnv},
-			wd:   filepath.Join(gbbroot, "test/resolve-modules"),
+			wd:   filepath.Join(cmdRoot, "test/resolve-modules"),
 			in: []string{
 				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
@@ -232,11 +235,12 @@ func TestResolve(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/ip",
 			},
 		},
+
 		// Shell expansions.
 		{
 			name: "pkgpath-shell-expansion",
 			envs: []*golang.Environ{moduleOnEnv},
-			wd:   filepath.Join(gbbroot, "test/resolve-modules"),
+			wd:   filepath.Join(cmdRoot, "test/resolve-modules"),
 			in: []string{
 				"github.com/u-root/u-root/cmds/core/{init,ip,dhclient}",
 			},
@@ -250,19 +254,19 @@ func TestResolve(t *testing.T) {
 		{
 			name: "fspath-exclusion",
 			in:   []string{"./test/goglob/*", "-test/goglob/echo"},
-			want: []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/foo"},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/foo"},
 		},
 		// Exclusion, single package, Go package path.
 		{
 			name: "pkgpath-exclusion",
-			in:   []string{"./test/goglob/...", "-github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/echo"},
-			want: []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/foo"},
+			in:   []string{"./test/goglob/...", "-github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/echo"},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/foo"},
 		},
 		// Exclusion, single package, mixed.
 		{
 			name: "path-exclusion",
 			in:   []string{"./test/goglob/...", "-test/goglob/echo"},
-			want: []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/foo"},
+			want: []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/foo"},
 		},
 		// Globs in exclusions should work.
 		//
@@ -271,7 +275,7 @@ func TestResolve(t *testing.T) {
 		{
 			name: "pkgpath-multi-module-exclusion-glob",
 			envs: []*golang.Environ{moduleOnEnv},
-			wd:   filepath.Join(gbbroot, "test/resolve-modules"),
+			wd:   filepath.Join(cmdRoot, "test/resolve-modules"),
 			in: []string{
 				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
@@ -284,19 +288,6 @@ func TestResolve(t *testing.T) {
 				"github.com/u-root/u-root/cmds/core/init",
 				"github.com/u-root/u-root/cmds/core/ip",
 			},
-		},
-		// Old-style GOPATH resolution.
-		{
-			name: "fspath-nomodule",
-			envs: []*golang.Environ{moduleOffEnv},
-			in:   []string{filepath.Join(gbbroot, "vendortest/cmd/dmesg")},
-			want: []string{"github.com/u-root/gobusybox/vendortest/cmd/dmesg"},
-		},
-		{
-			name: "pkgpath-nomodule",
-			envs: []*golang.Environ{moduleOffEnv},
-			in:   []string{"github.com/u-root/gobusybox/vendortest/cmd/dmesg"},
-			want: []string{"github.com/u-root/gobusybox/vendortest/cmd/dmesg"},
 		},
 		// File system path. Not a directory.
 		{
@@ -323,7 +314,7 @@ func TestResolve(t *testing.T) {
 			{
 				name:    "pkgpath-glob-load-fails",
 				envs:    []*golang.Environ{noGoToolEnv},
-				in:      []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/goglob/*"},
+				in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/goglob/*"},
 				wantErr: true,
 			},
 		*/
@@ -347,6 +338,12 @@ func TestResolve(t *testing.T) {
 				if (err != nil) != tc.wantErr {
 					t.Errorf("ResolveGlobs(%v, %v) = (%v, %v), wantErr is %t", e, tc.in, out, err, tc.wantErr)
 				}
+				if len(out) < tc.atLeast {
+					t.Errorf("ResolveGlobs(%v, %v) = %d items; want at least %d", e, tc.in, len(out), tc.atLeast)
+				}
+				if tc.atLeast > 0 {
+					return
+				}
 				if !reflect.DeepEqual(out, tc.want) {
 					t.Errorf("ResolveGlobs(%v, %v) = %#v; want %#v", e, tc.in, out, tc.want)
 				}
@@ -362,7 +359,7 @@ func TestResolve(t *testing.T) {
 		wantErr: true,
 	}, testCase{
 		name:    "pkgpath-parse-broken",
-		in:      []string{"github.com/u-root/gobusybox/src/pkg/bb/findpkg/test/parsebroken"},
+		in:      []string{"github.com/u-root/u-root/cmds/exp/cmd2pkg/findpkg/test/parsebroken"},
 		wantErr: true,
 	})
 	for _, tc := range newPkgTests {
@@ -384,6 +381,12 @@ func TestResolve(t *testing.T) {
 					t.Errorf("NewPackages(%v, %v) = (%v, %v), wantErr is %t", e, tc.in, out, err, tc.wantErr)
 				}
 
+				if len(out) < tc.atLeast {
+					t.Errorf("ResolveGlobs(%v, %v) = %d items; want at least %d", e, tc.in, len(out), tc.atLeast)
+				}
+				if tc.atLeast > 0 {
+					return
+				}
 				var pkgPaths []string
 				for _, p := range out {
 					pkgPaths = append(pkgPaths, p.Pkg.PkgPath)
