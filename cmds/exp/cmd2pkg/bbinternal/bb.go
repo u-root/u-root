@@ -516,7 +516,7 @@ func (p *Package) Rewrite(destDir string) error {
 func writeFile(path string, fset *token.FileSet, f *ast.File) error {
 	var buf bytes.Buffer
 	if err := format.Node(&buf, fset, f); err != nil {
-		return fmt.Errorf("error formatting Go file %q: %v", path, err)
+		return fmt.Errorf("error formatting Go file %q: %w", path, err)
 	}
 	return writeGoFile(path, buf.Bytes())
 }
@@ -532,11 +532,11 @@ func writeGoFile(path string, code []byte) error {
 	}
 	code, err := imports.Process("commandline", code, &opts)
 	if err != nil {
-		return fmt.Errorf("bad parse while processing imports %q: %v", path, err)
+		return fmt.Errorf("bad parse while processing imports %q: %w", path, err)
 	}
 
 	if err := ioutil.WriteFile(path, code, 0644); err != nil {
-		return fmt.Errorf("error writing Go file to %q: %v", path, err)
+		return fmt.Errorf("error writing Go file to %q: %w", path, err)
 	}
 	return nil
 }
