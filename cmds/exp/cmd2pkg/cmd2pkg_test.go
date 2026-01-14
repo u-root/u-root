@@ -29,7 +29,7 @@ func main() {
 }
 `
 
-func TestCmd2PkgDate(t *testing.T) {
+func TestCmd2Pkg(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 

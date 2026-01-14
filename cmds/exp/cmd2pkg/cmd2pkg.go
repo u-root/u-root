@@ -24,7 +24,9 @@ func (c *command) execute(args ...string) error {
 
 	if len(c.dir) == 0 {
 		c.dir, err = os.MkdirTemp("", "cmd2pkg-")
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	opts := &Opts{
