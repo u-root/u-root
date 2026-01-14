@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -44,6 +45,10 @@ type testCase struct {
 }
 
 func TestResolve(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skipf("no go compiler: %v", err)
+	}
+
 	gbbmod, err := filepath.Abs("../../../")
 	if err != nil {
 		t.Fatalf("failure to set up test: %v", err)
@@ -402,6 +407,9 @@ func TestResolve(t *testing.T) {
 }
 
 func TestDefaultEnv(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skipf("no go compiler: %v", err)
+	}
 	for _, tc := range []struct {
 		GBB_PATH     string
 		UROOT_SOURCE string
@@ -444,6 +452,9 @@ func TestDefaultEnv(t *testing.T) {
 }
 
 func TestModules(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skipf("no go compiler: %v", err)
+	}
 	dir := t.TempDir()
 
 	_ = os.MkdirAll(filepath.Join(dir, "mod1/cmd/cmd1"), 0755)

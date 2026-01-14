@@ -30,6 +30,10 @@ func main() {
 `
 
 func TestCmd2Pkg(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skipf("no go compiler: %v", err)
+	}
+
 	dir := t.TempDir()
 	t.Chdir(dir)
 
