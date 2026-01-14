@@ -123,7 +123,7 @@ func newPackages(l ulog.Logger, genv *golang.Environ, env Env, patterns ...strin
 //   - UROOT_SOURCE=$HOME/u-root github.com/u-root/u-root/cmds/core/ip
 func NewPackages(l ulog.Logger, genv *golang.Environ, env Env, names ...string) ([]*bbinternal.Package, error) {
 	if genv == nil {
-		return nil, fmt.Errorf("Go build environment must be specified")
+		return nil, fmt.Errorf("go build environment must be specified")
 	}
 	ps, err := newPackages(l, genv, env, names...)
 	if err != nil {
@@ -425,7 +425,7 @@ func glob(l ulog.Logger, env Env, patterns []string) []string {
 // See NewPackages for allowed formats.
 func ResolveGlobs(l ulog.Logger, genv *golang.Environ, env Env, patterns []string) ([]string, error) {
 	if genv == nil {
-		return nil, fmt.Errorf("Go build environment must be specified")
+		return nil, fmt.Errorf("go build environment must be specified")
 	}
 	includes, excludes := splitExclusions(patterns)
 	includes = glob(l, env, expand(includes))
