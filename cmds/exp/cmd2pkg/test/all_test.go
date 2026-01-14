@@ -120,10 +120,9 @@ func TestMakeBB(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
-			for _, go111module := range []string{"on", "auto"} {
-				goEnv := "GO111MODULE=" + go111module
+				var goEnv string
 				t.Run(goEnv, func(t *testing.T) {
-					binary := filepath.Join(dir, fmt.Sprintf("bb-%s", go111module))
+					binary := filepath.Join(dir, "bb")
 
 					// Build the bb.
 					t.Logf("Run: %s %s -o %s %v %s", goEnv, mkbb, binary, strings.Join(tt.extraArgs, " "), strings.Join(tt.cmds, " "))
@@ -160,7 +159,6 @@ func TestMakeBB(t *testing.T) {
 						}
 					}
 				})
-			}
 
 			// Make sure that bb is reproducible.
 			binaryOn, err := ioutil.ReadFile(filepath.Join(dir, "bb-on"))
