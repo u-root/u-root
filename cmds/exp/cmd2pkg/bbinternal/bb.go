@@ -51,7 +51,7 @@ func ParseAST(name string, files []string) (*token.FileSet, []*ast.File, []strin
 		if src, err := parser.ParseFile(fset, path, nil, parser.ParseComments); err == nil && src.Name.Name == name {
 			astFiles[path] = src
 		} else if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to parse AST in file %q: %v", path, err)
+			return nil, nil, nil, fmt.Errorf("failed to parse AST in file %q: %w", path, err)
 		}
 	}
 
@@ -425,7 +425,7 @@ func WritePkg(p *packages.Package, destDir string) error {
 
 	for _, fp := range p.OtherFiles {
 		if err := cp.Copy(fp, filepath.Join(destDir, filepath.Base(fp))); err != nil {
-			return fmt.Errorf("copy failed: %v", err)
+			return fmt.Errorf("copy failed: %w", err)
 		}
 	}
 
@@ -454,7 +454,7 @@ func WritePkg(p *packages.Package, destDir string) error {
 		}
 		os.MkdirAll(filepath.Join(destDir, filepath.Dir(relPath)), 0755)
 		if err := cp.Copy(fp, filepath.Join(destDir, relPath)); err != nil {
-			return fmt.Errorf("copy failed: %v", err)
+			return fmt.Errorf("copy failed: %w", err)
 		}
 	}
 

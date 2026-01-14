@@ -94,7 +94,7 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	if opts == nil {
 		return fmt.Errorf("no options given for busybox build")
 	} else if opts.Env == nil {
-		return fmt.Errorf("Go build environment unspecified for busybox build")
+		return fmt.Errorf("go build environment unspecified for busybox build")
 	} else if err := opts.Env.Valid(); err != nil {
 		return err
 	}
@@ -156,8 +156,6 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 		return fmt.Errorf("gobusybox does not support mixed module/non-module compilation -- commands contain main modules %v", strings.Join(maps.Keys(modules), ", "))
 	}
 
-	// List of packages to import in the real main file.
-	var bbImports []string
 	// Rewrite commands to packages.
 	for _, cmd := range cmds {
 		destination := filepath.Join(pkgDir, cmd.Pkg.PkgPath)
@@ -165,7 +163,6 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 		if err := cmd.Rewrite(destination); err != nil {
 			return fmt.Errorf("rewriting command %q failed: %v", cmd.Pkg.PkgPath, err)
 		}
-		bbImports = append(bbImports, cmd.Pkg.PkgPath)
 	}
 
 	// Collect and write dependencies into pkgDir.
