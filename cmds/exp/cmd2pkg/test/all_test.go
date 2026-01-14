@@ -120,45 +120,45 @@ func TestMakeBB(t *testing.T) {
 			}
 			defer os.RemoveAll(dir)
 
-				var goEnv string
-				t.Run(goEnv, func(t *testing.T) {
-					binary := filepath.Join(dir, "bb")
+			var goEnv string
+			t.Run(goEnv, func(t *testing.T) {
+				binary := filepath.Join(dir, "bb")
 
-					// Build the bb.
-					t.Logf("Run: %s %s -o %s %v %s", goEnv, mkbb, binary, strings.Join(tt.extraArgs, " "), strings.Join(tt.cmds, " "))
-					args := append([]string{"-o", binary}, tt.extraArgs...)
-					cmd := exec.Command(mkbb, append(args, tt.cmds...)...)
-					cmd.Dir = tt.wd
-					cmd.Env = append(os.Environ(), goEnv)
-					out, err := cmd.CombinedOutput()
+				// Build the bb.
+				t.Logf("Run: %s %s -o %s %v %s", goEnv, mkbb, binary, strings.Join(tt.extraArgs, " "), strings.Join(tt.cmds, " "))
+				args := append([]string{"-o", binary}, tt.extraArgs...)
+				cmd := exec.Command(mkbb, append(args, tt.cmds...)...)
+				cmd.Dir = tt.wd
+				cmd.Env = append(os.Environ(), goEnv)
+				out, err := cmd.CombinedOutput()
+				if err != nil {
+					t.Logf("makebb: %s", string(out))
+					t.Fatalf("cmd: %v", err)
+				}
+
+				// There are some builds for which we
+				// don't check the output since it's
+				// unpredictable. We at least want to
+				// check the binary exists.
+				if _, err := os.Stat(binary); err != nil {
+					t.Fatalf("Busybox binary does not exist: %v", err)
+				}
+
+				// Make sure that the bb contains all
+				// the commands it's supposed to by
+				// invoking them and checking their
+				// output.
+				for cmdName, want := range tt.want {
+					t.Logf("Run: %s %s", binary, cmdName)
+					out, err = exec.Command(binary, cmdName).CombinedOutput()
 					if err != nil {
-						t.Logf("makebb: %s", string(out))
 						t.Fatalf("cmd: %v", err)
 					}
-
-					// There are some builds for which we
-					// don't check the output since it's
-					// unpredictable. We at least want to
-					// check the binary exists.
-					if _, err := os.Stat(binary); err != nil {
-						t.Fatalf("Busybox binary does not exist: %v", err)
+					if got := string(out); got != want {
+						t.Errorf("Output of %s = %v, want %v", cmdName, got, want)
 					}
-
-					// Make sure that the bb contains all
-					// the commands it's supposed to by
-					// invoking them and checking their
-					// output.
-					for cmdName, want := range tt.want {
-						t.Logf("Run: %s %s", binary, cmdName)
-						out, err = exec.Command(binary, cmdName).CombinedOutput()
-						if err != nil {
-							t.Fatalf("cmd: %v", err)
-						}
-						if got := string(out); got != want {
-							t.Errorf("Output of %s = %v, want %v", cmdName, got, want)
-						}
-					}
-				})
+				}
+			})
 
 			// Make sure that bb is reproducible.
 			binaryOn, err := ioutil.ReadFile(filepath.Join(dir, "bb-on"))
