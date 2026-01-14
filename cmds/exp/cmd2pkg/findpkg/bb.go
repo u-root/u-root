@@ -57,7 +57,7 @@ func newPackages(l ulog.Logger, genv *golang.Environ, env Env, patterns ...strin
 	// Step 2.
 	importPkgs, err := loadPkgs(genv, paths...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load package %v: %v", paths, err)
+		return nil, fmt.Errorf("failed to load package %v: %w", paths, err)
 	}
 	var pkgs []*packages.Package
 	for _, p := range importPkgs {
@@ -215,14 +215,14 @@ func lookupPkgsWithGlob(env *golang.Environ, pattern string) ([]*packages.Packag
 
 	pkgs, err := lookupPkgNameAndFiles(env, nonGlobPath)
 	if err != nil {
-		return nil, fmt.Errorf("%q is neither package or path/glob -- could not lookup %q (import path globs have to be within modules): %v", pattern, nonGlobPath, err)
+		return nil, fmt.Errorf("%q is neither package or path/glob -- could not lookup %q (import path globs have to be within modules): %w", pattern, nonGlobPath, err)
 	}
 
 	// Apply the glob.
 	var filteredPkgs []*packages.Package
 	for _, p := range pkgs {
 		if matched, err := path.Match(pattern, p.PkgPath); err != nil {
-			return nil, fmt.Errorf("could not match %q to %q: %v", pattern, p.PkgPath, err)
+			return nil, fmt.Errorf("could not match %q to %q: %w", pattern, p.PkgPath, err)
 		} else if matched {
 			filteredPkgs = append(filteredPkgs, p)
 		}
