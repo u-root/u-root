@@ -116,7 +116,7 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	}
 	absDir, err := filepath.Abs(relTmpDir)
 	if err != nil {
-		return fmt.Errorf("busybox gen src dir %s could not be made absolute: %v", relTmpDir, err)
+		return fmt.Errorf("busybox gen src dir %s could not be made absolute: %w", relTmpDir, err)
 	}
 	tmpDir = absDir
 
@@ -132,7 +132,7 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 	// Ask go about all the commands in one batch for dependency caching.
 	cmds, err := findpkg.NewPackages(l, opts.Env, lookupEnv, opts.CommandPaths...)
 	if err != nil {
-		return fmt.Errorf("finding packages failed: %v", err)
+		return fmt.Errorf("finding packages failed: %w", err)
 	}
 	if len(cmds) == 0 {
 		return fmt.Errorf("no valid commands given")
@@ -161,13 +161,13 @@ func BuildBusybox(l ulog.Logger, opts *Opts) (nerr error) {
 		destination := filepath.Join(pkgDir, cmd.Pkg.PkgPath)
 
 		if err := cmd.Rewrite(destination); err != nil {
-			return fmt.Errorf("rewriting command %q failed: %v", cmd.Pkg.PkgPath, err)
+			return fmt.Errorf("rewriting command %q failed: %w", cmd.Pkg.PkgPath, err)
 		}
 	}
 
 	// Collect and write dependencies into pkgDir.
 	if err := copyAllDeps(l, opts.Env, tmpDir, pkgDir, cmds); err != nil {
-		return fmt.Errorf("collecting and putting dependencies in place failed: %v", err)
+		return fmt.Errorf("collecting and putting dependencies in place failed: %w", err)
 	}
 
 	return nil
@@ -202,7 +202,7 @@ func copyAllDeps(l ulog.Logger, env *golang.Environ, tmpDir, pkgDir string, main
 	for _, p := range deps {
 		if _, ok := seenIDs[p.ID]; !ok {
 			if err := bbinternal.WritePkg(p, filepath.Join(pkgDir, p.PkgPath)); err != nil {
-				return fmt.Errorf("writing package %s failed: %v", p, err)
+				return fmt.Errorf("writing package %s failed: %w", p, err)
 			}
 			seenIDs[p.ID] = struct{}{}
 		}
