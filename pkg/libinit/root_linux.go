@@ -21,8 +21,6 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/kmodule"
-	"github.com/u-root/u-root/pkg/pty"
-	"github.com/u-root/u-root/pkg/termios"
 	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
 )
@@ -439,10 +437,14 @@ func openTTYDevices(prefix string, names []string) ([]*os.File, error) {
 	return devs, nil
 }
 
-// RedirectOutputToConsoles sets up full PTY multiplexing for all console
-// devices specified in the kernel cmdline, then redirects init's FDs 0, 1, 2
-// to the PTY slave. This ensures all early messages (banner, logs) and input
-// go through the PTY multiplexer to all consoles, with proper raw mode handling.
+// RedirectOutputToConsoles sets up output multiplexing for all console
+// devices specified in the kernel cmdline. This ensures early messages
+// (banner, logs) appear on all consoles.
+//
+// This uses a simple approach: stdout/stderr are redirected to a MultiWriter
+// that writes to all consoles. stdin is left unchanged (reads from primary
+// console only). This avoids the complexity of PTY multiplexing which can
+// interfere with interactive programs.
 func RedirectOutputToConsoles() {
 	consoles := cmdline.Consoles()
 	if len(consoles) <= 1 {
@@ -450,28 +452,15 @@ func RedirectOutputToConsoles() {
 		return
 	}
 
-	// Build full paths
-	ttyPaths := make([]string, len(consoles))
-	for i, name := range consoles {
-		ttyPaths[i] = "/dev/" + name
-	}
-
-	// Open and configure all TTYs
+	// Open all TTYs for output
 	var ttys []*os.File
-	for _, ttyPath := range ttyPaths {
+	for _, name := range consoles {
+		ttyPath := "/dev/" + name
 		tty, err := os.OpenFile(ttyPath, os.O_RDWR, 0)
 		if err != nil {
 			ulog.KernelLog.Printf("Error opening TTY %v: %v", ttyPath, err)
 			continue
 		}
-
-		// Set to raw mode - critical for serial console to work properly
-		// Without raw mode, serial has line buffering, echo, and flow control
-		if err := termios.MakeRawFile(tty); err != nil {
-			ulog.KernelLog.Printf("Error setting TTY %v to raw mode: %v", ttyPath, err)
-			// Continue anyway - better to have non-raw than nothing
-		}
-
 		ttys = append(ttys, tty)
 	}
 
@@ -483,161 +472,56 @@ func RedirectOutputToConsoles() {
 		return
 	}
 
-	// Create PTY for init itself
-	ptmx, pts, err := pty.NewPTMS()
+	// Create MultiWriter for output to all consoles
+	writers := make([]io.Writer, len(ttys))
+	for i, tty := range ttys {
+		writers[i] = tty
+	}
+	multiWriter := io.MultiWriter(writers...)
+
+	// Create a pipe for stdout redirection
+	// We use a pipe so that writes to os.Stdout go through our multiplexer
+	stdoutR, stdoutW, err := os.Pipe()
 	if err != nil {
-		ulog.KernelLog.Printf("Error creating PTY for init: %v", err)
-		for _, tty := range ttys {
-			tty.Close()
-		}
+		ulog.KernelLog.Printf("Error creating stdout pipe: %v", err)
 		return
 	}
 
-	// Redirect FDs 0, 1, 2 to the PTY slave
-	// This makes the PTS the default stdin/stdout/stderr for init
-	if err := unix.Dup2(int(pts.Fd()), syscall.Stdin); err != nil {
-		ulog.KernelLog.Printf("Failed to dup2 stdin: %v", err)
+	// Create a pipe for stderr redirection
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		ulog.KernelLog.Printf("Error creating stderr pipe: %v", err)
+		stdoutR.Close()
+		stdoutW.Close()
 		return
 	}
-	if err := unix.Dup2(int(pts.Fd()), syscall.Stdout); err != nil {
+
+	// Redirect stdout and stderr to the pipes
+	if err := unix.Dup2(int(stdoutW.Fd()), syscall.Stdout); err != nil {
 		ulog.KernelLog.Printf("Failed to dup2 stdout: %v", err)
 		return
 	}
-	if err := unix.Dup2(int(pts.Fd()), syscall.Stderr); err != nil {
+	if err := unix.Dup2(int(stderrW.Fd()), syscall.Stderr); err != nil {
 		ulog.KernelLog.Printf("Failed to dup2 stderr: %v", err)
 		return
 	}
 
-	// Update Go's os.Stdin/Stdout/Stderr to point to the new FDs
-	os.Stdin = os.NewFile(uintptr(syscall.Stdin), "/dev/stdin")
+	// Update Go's os.Stdout/Stderr to point to the new FDs
 	os.Stdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
 	os.Stderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
 	log.SetOutput(os.Stderr)
 
-	// We can close the original pts file descriptor since we've dup'd it
-	pts.Close()
+	// Close write ends after dup2 (the FDs are duplicated)
+	stdoutW.Close()
+	stderrW.Close()
 
-	// Create channel for clean shutdown (though init runs forever)
-	done := make(chan struct{})
+	// Copy stdout pipe to all TTYs
+	go io.Copy(multiWriter, stdoutR)
 
-	// Create buffered channels for input from each TTY to prevent input loss
-	// due to goroutine scheduling. Direct io.Copy can lose characters.
-	inputChans := make([]chan []byte, len(ttys))
-	for i := range inputChans {
-		inputChans[i] = make(chan []byte, 1024)
-	}
+	// Copy stderr pipe to all TTYs
+	go io.Copy(multiWriter, stderrR)
 
-	// Read from each TTY into its buffered channel
-	for i, tty := range ttys {
-		t := tty // capture for goroutine
-		ch := inputChans[i]
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				select {
-				case <-done:
-					close(ch)
-					return
-				default:
-				}
-				n, err := t.Read(buf)
-				if err != nil {
-					if err != io.EOF {
-						select {
-						case <-done:
-							// Shutting down, ignore error
-						default:
-							ulog.KernelLog.Printf("TTY read error: %v", err)
-						}
-					}
-					close(ch)
-					return
-				}
-				if n > 0 {
-					data := make([]byte, n)
-					copy(data, buf[:n])
-					select {
-					case ch <- data:
-					case <-done:
-						close(ch)
-						return
-					}
-				}
-			}
-		}()
-	}
-
-	// Multiplex input from all TTY channels to PTM
-	go func() {
-		for {
-			// Check if all channels are closed
-			var allClosed = true
-			for _, ch := range inputChans {
-				if ch != nil {
-					allClosed = false
-					break
-				}
-			}
-			if allClosed {
-				return
-			}
-
-			// Try to read from any available channel
-			for i, ch := range inputChans {
-				if ch == nil {
-					continue
-				}
-				select {
-				case data, ok := <-ch:
-					if !ok {
-						inputChans[i] = nil
-						continue
-					}
-					ptmx.Write(data)
-				default:
-					// Non-blocking per channel, but we'll loop
-				}
-			}
-		}
-	}()
-
-	// Multiplex output: PTM → all TTYs (fan-out)
-	// Use io.Copy with TeeReader for efficiency like the shell tool
-	if len(ttys) == 2 {
-		// Optimize for the common case of 2 TTYs
-		go io.Copy(ttys[0], io.TeeReader(ptmx, ttys[1]))
-	} else {
-		// General case: fan out to all TTYs
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				select {
-				case <-done:
-					return
-				default:
-				}
-				n, err := ptmx.Read(buf)
-				if err != nil {
-					if err != io.EOF {
-						select {
-						case <-done:
-							// Shutting down, ignore error
-						default:
-							ulog.KernelLog.Printf("PTY read error: %v", err)
-						}
-					}
-					return
-				}
-				if n > 0 {
-					// Fan out to all TTYs
-					for _, tty := range ttys {
-						tty.Write(buf[:n])
-					}
-				}
-			}
-		}()
-	}
-
-	// Note: We don't close anything or call close(done) because init runs forever
-	// The PTY and TTYs stay open for the lifetime of the init process
+	// Note: stdin is intentionally left unchanged - it reads from the
+	// primary console only. This keeps things simple and avoids the
+	// complexity of input multiplexing which can break interactive programs.
 }
