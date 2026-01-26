@@ -80,10 +80,8 @@ func TestReadBootVar(t *testing.T) {
 		}
 		strs = append(strs, b.String())
 	}
-	if t.Failed() {
-		for _, s := range strs {
-			t.Log(s)
-		}
+	for _, s := range strs {
+		t.Log(s)
 	}
 }
 
@@ -100,18 +98,19 @@ func TestAllBootEntryVars(t *testing.T) {
 
 // func AllBootVars() (list EfiVars)
 func TestAllBootVars(t *testing.T) {
-	n := 14
+	n := 15
 	bvs := AllBootVars()
 	if len(bvs) != n {
 		t.Errorf("expected %d boot vars, got %d", n, len(bvs))
 	}
 	be := bvs.Filter(BootEntryFilter)
-	if len(be) != n-3 {
-		t.Errorf("expected %d entries, got %d", n-3, len(be))
+	if len(be) != n-4 {
+		// Should filter out BootCurrent, BootOptionSupport, BootNeBootOrderxt, BootNext
+		t.Errorf("expected %d entries, got %d", n-4, len(be))
 	}
 	// find boot vars that are not boot entries
 	nbe := bvs.Filter(uefivars.NotFilter(BootEntryFilter))
-	want := []string{"BootCurrent", "BootOptionSupport", "BootOrder"}
+	want := []string{"BootCurrent", "BootNext", "BootOptionSupport", "BootOrder"}
 	if len(nbe) != len(want) {
 		t.Fatalf("want %d got %d", len(want), len(nbe))
 	}
@@ -136,9 +135,23 @@ func TestReadCurrentBootVar(t *testing.T) {
 	if v.Number != 10 {
 		t.Errorf("expected 10, got %d", v.Number)
 	}
-	if t.Failed() {
-		t.Log(v)
+	t.Log(v)
+}
+
+// func ReadBootNextVar() (*BootEntryVar, error)
+func TestReadNextBootVar(t *testing.T) {
+	v, err := ReadNextBootVar()
+	if err != nil {
+		t.Error(err)
 	}
+
+	if v == nil {
+		t.Fatal("nil")
+	}
+	if v.Number != 2 {
+		t.Errorf("expected 2, got %d", v.Number)
+	}
+	t.Log(v)
 }
 
 // func BootCurrent(vars uefivars.EfiVars) *BootCurrentVar
@@ -150,5 +163,17 @@ func TestBootCurrent(t *testing.T) {
 	var want uint16 = 10
 	if bc.Current != want {
 		t.Errorf("want %d got %d", want, bc.Current)
+	}
+}
+
+// func BootNext(vars uefivars.EfiVars) *BootNextVar
+func TestBootNext(t *testing.T) {
+	bc := BootNext(AllBootVars())
+	if bc == nil {
+		t.Fatal("nil")
+	}
+	var want uint16 = 2
+	if bc.Next != want {
+		t.Errorf("want %d got %d", want, bc.Next)
 	}
 }
