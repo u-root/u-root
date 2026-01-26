@@ -75,3 +75,71 @@ func TestParseFilePathList(t *testing.T) {
 		t.Errorf("\nwant %s\n got %s", expectedOutput, output)
 	}
 }
+
+func TestFindContainsNode(t *testing.T) {
+	hddnode := &DppMediaHDD{
+		Hdr: EfiDevicePathProtocolHdr{
+			ProtoType:    4,
+			ProtoSubType: 1,
+		},
+	}
+	filenode := &DppMediaFilePath{
+		Hdr: EfiDevicePathProtocolHdr{
+			ProtoType:    4,
+			ProtoSubType: 4,
+		},
+	}
+	testcases := []struct {
+		name     string
+		dp       EfiDevicePathProtocolList
+		t        EfiDevPathProtoType
+		st       uint8
+		wantNode EfiDevicePathProtocol
+		wantOk   bool
+	}{
+		{
+			name: "find hdd",
+			dp: EfiDevicePathProtocolList{
+				hddnode,
+				filenode,
+			},
+			t:        4,
+			st:       1,
+			wantNode: hddnode,
+			wantOk:   true,
+		},
+		{
+			name: "don't find CD",
+			dp: EfiDevicePathProtocolList{
+				hddnode,
+				filenode,
+			},
+			t:      4,
+			st:     2,
+			wantOk: false,
+		},
+		{
+			name:   "find on empty path",
+			dp:     EfiDevicePathProtocolList{},
+			t:      4,
+			st:     2,
+			wantOk: false,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := tc.dp.FindNode(tc.t, tc.st)
+			if ok != tc.wantOk {
+				t.Errorf("FindNode(%v, %v) returned ok=%v, wanted: %v", tc.t, tc.st, ok, tc.wantOk)
+			}
+			if got != tc.wantNode || ok != tc.wantOk {
+				t.Errorf("FindNode(%v, %v) = %v, %v, want: %v, %v", tc.t, tc.st, got, ok, tc.wantNode, tc.wantOk)
+			}
+			ok = tc.dp.ContainsNode(tc.t, tc.st)
+			if ok != tc.wantOk {
+				t.Errorf("ContainsNode(%v, %v) returned ok=%v, wanted: %v", tc.t, tc.st, ok, tc.wantOk)
+			}
+		})
+	}
+}
