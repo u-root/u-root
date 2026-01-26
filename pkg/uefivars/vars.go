@@ -8,11 +8,13 @@
 package uefivars
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
-	fp "path/filepath"
+	"path/filepath"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -20,21 +22,76 @@ import (
 
 // http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
 
-// EfiVarDir is the sysfs /sys/firmware/efi/vars directory, which can be overridden for testing.
+// EfiVarDir is the older kernel sysfs /sys/firmware/efi/vars directory, which can be overridden for testing. Each variable is represented by a directory. Superceded by efivarfs (see below)
 var EfiVarDir = "/sys/firmware/efi/vars"
+
+// EFIVarfsDir is the kernel efivarfs /sys/firmware/efi/efivars directory, which can be overridden for testing. Each variable is represented by a file.
+var EfiVarfsDir = "/sys/firmware/efi/efivars"
 
 // EfiVar is a generic efi var.
 type EfiVar struct {
 	UUID, Name string
+	Attributes [4]byte
 	Data       []byte
 }
 type EfiVars []EfiVar
 
 func ReadVar(uuid, name string) (e EfiVar, err error) {
-	path := fp.Join(EfiVarDir, name+"-"+uuid, "data")
+	var path string
+	_, err = os.Stat(EfiVarfsDir)
+	if err == nil {
+		path = filepath.Join(EfiVarfsDir, name+"-"+uuid)
+		e.Data, err = os.ReadFile(path)
+		if err == nil && len(e.Data) > 4 {
+			// first 4 bytes are UEFI variable attributes
+			e.Attributes = [4]byte(e.Data[:4])
+			e.Data = e.Data[4:]
+			e.UUID = uuid
+			e.Name = name
+			return
+		}
+	}
+	// fallback to efivars
+	path = filepath.Join(EfiVarDir, name+"-"+uuid, "data")
+	e.Data, err = os.ReadFile(path)
+	if err != nil {
+		err = fmt.Errorf("could not find EFI variable in either sysfs or efivarfs kernel interface: %w", err)
+		return
+	}
 	e.UUID = uuid
 	e.Name = name
-	e.Data, err = os.ReadFile(path)
+
+	// read attributes
+	var attr uint32
+	path = filepath.Join(EfiVarDir, name+"-"+uuid, "attributes")
+	file, err := os.Open(path)
+	if err != nil {
+		err = fmt.Errorf("could not read EFI variable attributes for variable %s-%s through sysfs interface: %w", name, uuid, err)
+		return
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// see section 8.2.1, GetVariable() of the UEFI specification
+		switch line {
+		case "EFI_VARIABLE_NON_VOLATILE":
+			attr |= 0x00000001
+		case "EFI_VARIABLE_BOOTSERVICE_ACCESS":
+			attr |= 0x00000002
+		case "EFI_VARIABLE_RUNTIME_ACCESS":
+			attr |= 0x00000004
+		case "EFI_VARIABLE_HARDWARE_ERROR_RECORD":
+			attr |= 0x00000008
+		case "EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS":
+			attr |= 0x00000020
+		case "EFI_VARIABLE_APPEND_WRITE":
+			attr |= 0x00000040
+		case "EFI_VARIABLE_ENHANCED_AUTHENTICATED_ACCESS":
+			attr |= 0x00000080
+		}
+	}
+	binary.LittleEndian.PutUint32(e.Attributes[:], attr)
 	return
 }
 
@@ -43,31 +100,26 @@ func AllVars() (vars EfiVars) { return ReadVars(nil) }
 
 // ReadVars returns efi variables matching filter
 func ReadVars(filt VarFilter) (vars EfiVars) {
-	entries, err := fp.Glob(fp.Join(EfiVarDir, "*-*"))
-	if err != nil {
-		log.Printf("error reading efi vars: %s", err)
-		return
+	entries, _ := filepath.Glob(filepath.Join(EfiVarfsDir, "*-*"))
+	if len(entries) == 0 {
+		// fallback to efivar
+		entries, _ = filepath.Glob(filepath.Join(EfiVarDir, "*-*"))
 	}
 	for _, entry := range entries {
-		base := fp.Base(entry)
+		base := filepath.Base(entry)
 		n := strings.Count(base, "-")
 		if n < 5 {
-			log.Printf("skipping %s - not a valid var?", base)
 			continue
 		}
 		components := strings.SplitN(base, "-", 2)
 		if filt != nil && !filt(components[1], components[0]) {
 			continue
 		}
-		info, err := os.Stat(entry)
-		if err == nil && info.IsDir() {
-			v, err := ReadVar(components[1], components[0])
-			if err != nil {
-				log.Printf("reading efi var %s: %s", base, err)
-				continue
-			}
-			vars = append(vars, v)
+		v, err := ReadVar(components[1], components[0])
+		if err != nil {
+			continue
 		}
+		vars = append(vars, v)
 	}
 	return
 }
