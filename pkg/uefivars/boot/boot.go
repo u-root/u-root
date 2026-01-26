@@ -66,6 +66,15 @@ func ReadCurrentBootVar() (*BootEntryVar, error) {
 	return ReadBootVar(curr.Current)
 }
 
+// Reads BootNext, and from there gets the BootXXXX variable referenced
+func ReadNextBootVar() (*BootEntryVar, error) {
+	curr := ReadBootNext()
+	if curr == nil {
+		return nil, nil
+	}
+	return ReadBootVar(curr.Next)
+}
+
 func (b BootEntryVar) String() string {
 	opts, err := uefivars.DecodeUTF16(b.OptionalData)
 	if err != nil {
@@ -167,6 +176,25 @@ func BootCurrent(vars uefivars.EfiVars) *BootCurrentVar {
 	return nil
 }
 
+// BootNextVar represents the UEFI BootCurrent var.
+type BootNextVar struct {
+	uefivars.EfiVar
+	Next uint16
+}
+
+// BootNext returns the BootNext var, if any, from the given list.
+func BootNext(vars uefivars.EfiVars) *BootNextVar {
+	for _, v := range vars {
+		if v.Name == "BootNext" {
+			return &BootNextVar{
+				EfiVar: v,
+				Next:   uint16(v.Data[1])<<8 | uint16(v.Data[0]),
+			}
+		}
+	}
+	return nil
+}
+
 // ReadBootCurrent reads and returns the BootCurrent var.
 func ReadBootCurrent() *BootCurrentVar {
 	v, err := uefivars.ReadVar(BootUUID, "BootCurrent")
@@ -177,6 +205,18 @@ func ReadBootCurrent() *BootCurrentVar {
 	return &BootCurrentVar{
 		EfiVar:  v,
 		Current: uint16(v.Data[1])<<8 | uint16(v.Data[0]),
+	}
+}
+
+func ReadBootNext() *BootNextVar {
+	v, err := uefivars.ReadVar(BootUUID, "BootNext")
+	if err != nil {
+		log.Printf("reading uefi BootNext var: %s", err)
+		return nil
+	}
+	return &BootNextVar{
+		EfiVar: v,
+		Next:   uint16(v.Data[1])<<8 | uint16(v.Data[0]),
 	}
 }
 
