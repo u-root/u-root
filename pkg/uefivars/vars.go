@@ -21,20 +21,39 @@ import (
 // http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
 
 // EfiVarDir is the sysfs /sys/firmware/efi/vars directory, which can be overridden for testing.
+// Superceded by efivarfs (see below)
 var EfiVarDir = "/sys/firmware/efi/vars"
+var EfiVarfsDir = "/sys/firmware/efi/efivars"
 
 // EfiVar is a generic efi var.
 type EfiVar struct {
 	UUID, Name string
+	Attributes [4]byte
 	Data       []byte
 }
 type EfiVars []EfiVar
 
 func ReadVar(uuid, name string) (e EfiVar, err error) {
-	path := fp.Join(EfiVarDir, name+"-"+uuid, "data")
+	var path string
+	_, err = os.Stat(EfiVarfsDir)
+	if err == nil {
+		path = fp.Join(EfiVarfsDir, name+"-"+uuid)
+		e.Data, err = os.ReadFile(path)
+		if err == nil && len(e.Data) > 4 {
+			// first 4 bytes are UEFI variable attributes
+			e.Attributes = [4]byte(e.Data[:4])
+			e.Data = e.Data[4:]
+			e.UUID = uuid
+			e.Name = name
+			return
+		}
+		log.Printf("error reading efivarfs vars: %s", err)
+	}
+	// fallback to efivars
+	path = fp.Join(EfiVarDir, name+"-"+uuid, "data")
+	e.Data, err = os.ReadFile(path)
 	e.UUID = uuid
 	e.Name = name
-	e.Data, err = os.ReadFile(path)
 	return
 }
 
@@ -43,10 +62,10 @@ func AllVars() (vars EfiVars) { return ReadVars(nil) }
 
 // ReadVars returns efi variables matching filter
 func ReadVars(filt VarFilter) (vars EfiVars) {
-	entries, err := fp.Glob(fp.Join(EfiVarDir, "*-*"))
-	if err != nil {
-		log.Printf("error reading efi vars: %s", err)
-		return
+	entries, _ := fp.Glob(fp.Join(EfiVarfsDir, "*-*"))
+	if len(entries) == 0 {
+		// fallback to efivar
+		entries, _ = fp.Glob(fp.Join(EfiVarDir, "*-*"))
 	}
 	for _, entry := range entries {
 		base := fp.Base(entry)
@@ -59,15 +78,12 @@ func ReadVars(filt VarFilter) (vars EfiVars) {
 		if filt != nil && !filt(components[1], components[0]) {
 			continue
 		}
-		info, err := os.Stat(entry)
-		if err == nil && info.IsDir() {
-			v, err := ReadVar(components[1], components[0])
-			if err != nil {
-				log.Printf("reading efi var %s: %s", base, err)
-				continue
-			}
-			vars = append(vars, v)
+		v, err := ReadVar(components[1], components[0])
+		if err != nil {
+			log.Printf("reading efi var %s: %s", base, err)
+			continue
 		}
+		vars = append(vars, v)
 	}
 	return
 }

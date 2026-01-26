@@ -9,6 +9,7 @@ package uefivars
 
 import (
 	"os"
+	fp "path/filepath"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/uefivars/vartest"
@@ -17,12 +18,77 @@ import (
 // main is needed to extract the testdata from a zip to temp dir, and to clean
 // up the temp dir after
 func TestMain(m *testing.M) {
-	efiVarDir, cleanup, err := vartest.SetupVarZip("testdata/sys_fw_efi_vars.zip")
-	if err != nil {
-		panic(err)
+	var setups = []struct {
+		name      string
+		zippath   string
+		testevd   bool
+		testevfsd bool
+	}{
+		{
+			name:      "test efivars backend",
+			zippath:   "testdata/sys_fw_efi_vars.zip",
+			testevd:   true,
+			testevfsd: false,
+		},
+		{
+			name:      "test efivarfs backend",
+			zippath:   "testdata/sys_fw_efivarfs.zip",
+			testevd:   false,
+			testevfsd: true,
+		},
 	}
-	EfiVarDir = efiVarDir
-	rc := m.Run()
-	cleanup()
-	os.Exit(rc)
+	for _, w := range setups {
+		efiVarDir, cleanup, err := vartest.SetupVarZip(w.zippath)
+		if err != nil {
+			panic(err)
+		}
+
+		// If there is only one directory in the zip, use that as the root.
+		if entries, err := os.ReadDir(efiVarDir); err == nil && len(entries) == 1 && entries[0].IsDir() {
+			efiVarDir = fp.Join(efiVarDir, entries[0].Name())
+		}
+
+		EfiVarDir = "/tmp/invalid"
+		EfiVarfsDir = "/tmp/invalid"
+		if w.testevd {
+			EfiVarDir = efiVarDir
+		}
+		if w.testevfsd {
+			EfiVarfsDir = efiVarDir
+		}
+		rc := m.Run()
+
+		cleanup()
+		if rc != 0 {
+			os.Exit(rc)
+		}
+
+	}
+	os.Exit(0)
 }
+
+// // runs tests with older efivars directories/files
+// func TestEfivarfs(m *testing.M, zippath string) {
+// 	efiVarDir, cleanup, err := vartest.SetupVarZip(zippath)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	EfiVarDir = efiVarDir
+// 	EfiVarfsDir = "/tmp/invalid"
+// 	rc := m.Run()
+// 	cleanup()
+// 	os.Exit(rc)
+// }
+
+// // runs tests with efivarfs files
+// func TestEfivars(m *testing.M, zippath string) {
+// 	efiVarDir, cleanup, err := vartest.SetupVarZip(zippath)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	EfiVarDir = "/tmp/invalid"
+// 	EfiVarfsDir = efiVarDir
+// 	rc := m.Run()
+// 	cleanup()
+// 	os.Exit(rc)
+// }
