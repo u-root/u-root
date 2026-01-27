@@ -69,7 +69,12 @@ var (
 		{"unlz4", []byte{0x02, 0x21, 0x4C, 0x18}, []decompressor{stripSize(unlz4)}},
 	}
 
+	// ErrNoMagic means the magic was not found in magics.
 	ErrNoMagic = errors.New("magic is not known")
+
+	// ErrWillNotFit indicates that the compressed image will not fit between the head
+	// and tail of the bzImage file.
+	ErrWillNotFit = errors.New("payload is too big for available space in bzImage")
 
 	// Debug is a function used to log debug information. It
 	// can be set to, for example, log.Printf.
@@ -354,7 +359,7 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	if len(dat) > len(b.compressed) {
-		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d", len(b.compressed), len(dat))
+		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d:%w", len(b.compressed), len(dat), ErrWillNotFit)
 	}
 	Debug("b.compressed len %#x dat len %#x pad it out", len(b.compressed), len(dat))
 
