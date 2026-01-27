@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/boot/linux"
+	"github.com/u-root/u-root/pkg/boot/pez"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/uio/uio"
@@ -199,7 +201,17 @@ func (li *LinuxImage) loadImage(loadOpts *loadOptions) (*os.File, *os.File, erro
 		return nil, nil, errNilKernel
 	}
 
-	k, err := CopyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), loadOpts.verbose)
+	image := util.TryGzipFilter(li.Kernel)
+
+	if runtime.GOARCH == "arm64" {
+		// On arm64, the Image kernel can be encapsulated in a PE file.
+		// Try to extract the payload from the PE file.
+		if payload, err := pez.Extract(image); err == nil {
+			image = payload
+		}
+	}
+
+	k, err := CopyToFileIfNotRegular(image, loadOpts.verbose)
 	if err != nil {
 		return nil, nil, err
 	}
