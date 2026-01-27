@@ -91,7 +91,7 @@ func findDecompressors(b []byte) (*magic, error) {
 			return m, nil
 		}
 	}
-	return nil, fmt.Errorf("%#x:%w", b[:16], ErrNoMagic)
+	return nil, fmt.Errorf("%#x: %w", b[:16], ErrNoMagic)
 }
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
@@ -210,7 +210,7 @@ func (b *BzImage) UnmarshalBinary(d []byte) error {
 				b.KernelCode = buf.Bytes()
 				break
 			}
-			err = errors.Join(err, fmt.Errorf("%s:%w", m.name, e))
+			err = errors.Join(err, fmt.Errorf("%s: %w", m.name, e))
 		}
 		if !success {
 			return fmt.Errorf("error decompressing payload: %w", err)
@@ -359,7 +359,7 @@ func (b *BzImage) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	if len(dat) > len(b.compressed) {
-		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d:%w", len(b.compressed), len(dat), ErrWillNotFit)
+		return nil, fmt.Errorf("marshal: compressed KernelCode too big: was %d, now %d: %w", len(b.compressed), len(dat), ErrWillNotFit)
 	}
 	Debug("b.compressed len %#x dat len %#x pad it out", len(b.compressed), len(dat))
 
