@@ -5,6 +5,7 @@
 package bzimage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -109,6 +110,9 @@ func TestSupportedVersions(t *testing.T) {
 
 			// Marshal the image with the test version.
 			modifiedImage, err := bzImage.MarshalBinary()
+			if errors.Is(err, ErrWillNotFit) {
+				t.Skipf("skip this test: uncompressed image, when recompressed, is too big, probably due to newer xz version: %v", ErrWillNotFit)
+			}
 			if err != nil {
 				t.Fatalf("failed to marshal image with the new version: %v", err)
 			}
@@ -133,6 +137,9 @@ func TestMarshal(t *testing.T) {
 			}
 			t.Logf("b header is %s", b.Header.String())
 			image, err := b.MarshalBinary()
+			if errors.Is(err, ErrWillNotFit) {
+				t.Skipf("skip this test: uncompressed image, when recompressed, is too big, probably due to newer xz version: %v", ErrWillNotFit)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
