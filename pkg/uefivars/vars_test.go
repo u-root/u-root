@@ -16,7 +16,7 @@ func TestAllVars(t *testing.T) {
 	n := 32
 	vars := AllVars()
 	if len(vars) != n {
-		t.Errorf("expect %d vars, got %d", n, len(vars))
+		t.Errorf("expect %d vars, got %d with backend ", n, len(vars))
 	}
 }
 
