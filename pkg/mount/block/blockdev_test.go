@@ -5,8 +5,10 @@
 package block
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -235,6 +237,57 @@ func TestBlockDevicesFilterFSUUID(t *testing.T) {
 	}
 	if !reflect.DeepEqual(devs, want) {
 		t.Fatalf("Filtered block devices: \n\t%v \nwant: \n\t%v", devs, want)
+	}
+}
+
+// createFakeMBRFile creates a 512-byte file with MBR data.
+func createFakeMBRFile(t *testing.T, dir, name string, sig uint32, bootable bool) {
+	t.Helper()
+	mbr := make([]byte, 512)
+	binary.LittleEndian.PutUint32(mbr[0x1b8:], sig)
+	if bootable {
+		mbr[510] = 0x55
+		mbr[511] = 0xaa
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), mbr, 0644); err != nil {
+		t.Fatalf("Failed to write fake MBR file: %v", err)
+	}
+}
+
+func TestFilterMBRSig(t *testing.T) {
+	// Setup test files in a temp directory
+	tempDir := t.TempDir()
+	const goodSig = 0x12345678
+	const badSig = 0xdeadbeef
+
+	createFakeMBRFile(t, tempDir, "disk1_good", goodSig, true)
+	createFakeMBRFile(t, tempDir, "disk2_bad_sig", badSig, true)
+	createFakeMBRFile(t, tempDir, "disk3_not_bootable", goodSig, false)
+	createFakeMBRFile(t, tempDir, "disk4_good_dup", goodSig, true)
+
+	// Override devRoot for this test
+	oldDevRoot := devRoot
+	devRoot = tempDir
+	defer func() {
+		devRoot = oldDevRoot
+	}()
+
+	devs := BlockDevices{
+		&BlockDev{Name: "disk1_good"},
+		&BlockDev{Name: "disk2_bad_sig"},
+		&BlockDev{Name: "disk3_not_bootable"},
+		&BlockDev{Name: "disk4_good_dup"},
+		&BlockDev{Name: "disk5_no_file"}, // Device with no backing file
+	}
+
+	got := devs.filterMBRSig(goodSig)
+	want := BlockDevices{
+		&BlockDev{Name: "disk1_good"},
+		&BlockDev{Name: "disk4_good_dup"},
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("filterMBRSig(%x) = %v, want %v", goodSig, got, want)
 	}
 }
 

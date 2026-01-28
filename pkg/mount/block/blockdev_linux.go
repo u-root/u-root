@@ -21,6 +21,7 @@ import (
 
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
+	urgpt "github.com/u-root/u-root/pkg/mount/gpt"
 	"github.com/u-root/u-root/pkg/pci"
 	"golang.org/x/sys/unix"
 )
@@ -43,6 +44,12 @@ var (
 	})
 
 	ErrListFormat = errors.New("device list needs to be of format vendor1:device1,vendor2:device2")
+
+	// Static signature stored at the end of every valid MBR.
+	// Little endian, so this is equivalent to 0xAA55 when decoded as a uint16
+	MBRFormatSignature = [2]byte{0x55, 0xaa}
+
+	devRoot = "/dev"
 )
 
 // BlockDev maps a device name to a BlockStat structure for a given block device
@@ -79,7 +86,7 @@ func (b *BlockDev) String() string {
 
 // DevicePath is the path to the actual device.
 func (b BlockDev) DevicePath() string {
-	return filepath.Join("/dev/", b.Name)
+	return filepath.Join(devRoot, b.Name)
 }
 
 // Name implements mount.Mounter.
@@ -495,6 +502,44 @@ func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
 		}
 	}
 	return devices
+}
+
+// filterMBRSig returns disks (not disk partitions!) with the same MBR partition table signature
+// refactored zero size check to improve testability
+func (b BlockDevices) filterMBRSig(signature uint32) BlockDevices {
+	var names []string
+	for _, device := range b {
+		fp, err := os.Open(device.DevicePath())
+		if err != nil {
+			continue
+		}
+		// urgpt.New will still return what data it could decipher (including the MBR)
+		// even if err is not nil
+		// so we check the MBR contents first before checking if there was an error parsing the GPT table
+		pt, _ := urgpt.New(fp)
+		if pt == nil {
+			continue
+		}
+		if len(pt.MasterBootRecord) != 512 {
+			continue
+		}
+		// check if MBR format signature exists
+		if *(*[2]byte)(pt.MasterBootRecord[510:512]) != MBRFormatSignature {
+			continue
+		}
+		sigbytes := pt.MasterBootRecord[0x1b8:0x1bc]
+		disksig := binary.LittleEndian.Uint32(sigbytes)
+		if disksig != signature {
+			continue
+		}
+		names = append(names, device.Name)
+	}
+	return b.FilterNames(names...)
+}
+
+// FilterMBRSig returns disks (not disk partitions!) with the same MBR partition table signature
+func (b BlockDevices) FilterMBRSig(signature uint32) BlockDevices {
+	return b.FilterZeroSize().filterMBRSig(signature)
 }
 
 // FilterPartID returns partitions with the given partition ID GUID.
