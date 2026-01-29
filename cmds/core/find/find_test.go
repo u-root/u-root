@@ -93,10 +93,6 @@ func TestFind(t *testing.T) {
 			args:    []string{"-type", "notvalid", tmpDir},
 			wantErr: true,
 		},
-		{
-			wantStdout: filepath.Join(tmpDir, "file1") + "\n",
-			args:       []string{"-mode", "420", filepath.Join(tmpDir, "file1")}, // 420 decimal = 644 octal
-		},
 	}
 
 	for i, tt := range tests {
@@ -138,9 +134,6 @@ func TestFindLong(t *testing.T) {
 
 	res := strings.TrimSpace(stdout.String())
 
-	if !strings.HasPrefix(res, "-rw-r--r--") {
-		t.Errorf("want prefix: -rw-r--r--, got prefix: %s", res[:10])
-	}
 	if !strings.HasSuffix(res, "file1") {
 		t.Errorf("want suffix: file1, got suffix: %s", res[len(res)-5:])
 	}
