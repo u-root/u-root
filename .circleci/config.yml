@@ -1,10 +1,13 @@
-version: 2
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@5
+  go: circleci/go@3
 
 templates:
-  golang-template:
-    &golang-template
+  golang-template: &golang-template
     docker:
-      - image: cimg/go:1.21
+      - image: cimg/go:1.24
     working_directory: /home/circleci/go/src/github.com/u-root/u-root
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
@@ -12,19 +15,9 @@ templates:
       # x7 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 7
 
-  beefy-template:
-    &beefy-template
+  beefy-template: &beefy-template
     <<: *golang-template
     resource_class: large
-
-workflows:
-  version: 2
-  build_and_test:
-    jobs:
-      - race
-      - compile_cmds
-      - check_templates
-      - check_licenses
 
 jobs:
   race:
@@ -76,3 +69,86 @@ jobs:
             $goruncmd world
             $goruncmd all core
             GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
+
+  test:
+    parameters:
+      go-version:
+        type: string
+        default: "1.24.8"
+      vmarch:
+        type: string
+      pattern:
+        type: string
+      extra-arg:
+        type: string
+        default: ""
+
+    machine: # executor type
+      image: ubuntu-2204:current
+    resource_class: large
+    environment:
+      GO_VERSION: << parameters.go-version >>
+      VMTEST_ARCH: << parameters.vmarch >>
+      CODECOV_TOKEN: 0ecf29bb-15fb-46f2-8c7d-0fb610d79f71
+    steps:
+      - checkout
+      - go/install:
+          version: << parameters.go-version >>
+      - run:
+          name: Build runvm tool
+          command: |
+            go install github.com/hugelgupf/vmtest/tools/runvmtest@latest
+      - run:
+          name: Test
+          command: |
+            mkdir gocov
+            VMTEST_GOCOVERDIR=$(pwd)/gocov \
+              VMTEST_GO_PROFILE=vmcoverage.txt runvmtest -- \
+              go test -v -timeout=40m \
+              -covermode=atomic << parameters.extra-arg >> \
+              -coverprofile=coverage.txt ./<< parameters.pattern >>
+      - run:
+          name: Convert GOCOVERDIR coverage data
+          command: go tool covdata textfmt -i=gocov -o vmintcoverage.txt
+      - codecov/upload:
+          flags: << parameters.pattern >>-<< parameters.vmarch >>
+          verbose: true
+          fail_on_error: true
+          env: GO_VERSION,VMTEST_ARCH
+
+workflows:
+  version: 2
+
+  build_and_test:
+    jobs:
+      - race
+      - compile_cmds
+      - check_templates
+      - check_licenses
+
+  tests:
+    jobs:
+      - test:
+          name: test-<< matrix.pattern >>-<< matrix.vmarch >>
+          matrix:
+            parameters:
+              vmarch: ["amd64", "arm", "arm64"]
+              pattern:
+                ["integration/generic-tests/...", "integration/gotests/..."]
+      - test:
+          name: test-cmds-amd64
+          vmarch: "amd64"
+          pattern: "cmds/..."
+      - test:
+          name: test-pkg-amd64
+          vmarch: "amd64"
+          pattern: "pkg/..."
+          extra-arg: "-coverpkg=./pkg/..."
+      - test:
+          name: test-root-amd64
+          vmarch: "amd64"
+          pattern: "."
+      - test:
+          name: test-upl-arm64
+          vmarch: "arm64"
+          pattern: "integration/generic-tests/universalpayload_arm64_test.go"
