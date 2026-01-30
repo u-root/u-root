@@ -9,9 +9,13 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	"github.com/hugelgupf/vmtest/guest"
 )
 
 func TestNewBusReaderNoGlob(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	n, err := NewBusReader()
 	if err != nil {
 		t.Fatal(err)
@@ -32,6 +36,8 @@ func TestNewBusReaderNoGlob(t *testing.T) {
 }
 
 func TestBusReader(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	n, err := NewBusReader()
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +88,8 @@ func TestBusReader(t *testing.T) {
 }
 
 func TestBusReadConfig(t *testing.T) {
+	guest.SkipIfNotInVM(t)
+
 	var fullread bool
 	if os.Getuid() == 0 {
 		fullread = true
