@@ -8,6 +8,7 @@
 package boot
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/uefivars"
@@ -52,12 +53,14 @@ func TestParseFilePathList(t *testing.T) {
 	// These entries are safe to ignore, unless you ran as root (!) in which
 	// case the devices ought to be readable.
 	tests := []struct {
-		name           string
-		e              uefivars.EfiVar
-		wantpath       string
-		wantstr        string
-		wantdesc       string
-		expectedOutput string
+		name              string
+		e                 uefivars.EfiVar
+		wantpath          string
+		wantpathlen       int
+		wantstr           string
+		wantdesc          string
+		wantResolveError  []error
+		wantResolveOutput []string
 	}{
 		{
 			name: "GPT file path test",
@@ -67,10 +70,12 @@ func TestParseFilePathList(t *testing.T) {
 				Data: boot7,
 			},
 			// same as efibootmgr output, except using forward slashes
-			wantpath:       "HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI)",
-			wantstr:        `Boot0007: attrs=0x1, desc="UEFI OS", path=HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
-			wantdesc:       `Boot0007: attrs=0x1, desc="UEFI OS", path=HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
-			expectedOutput: "described device not found\n/EFI/BOOT/BOOTX64.EFI\n",
+			wantpath:          "HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI)",
+			wantpathlen:       2,
+			wantstr:           `Boot0007: attrs=0x1, desc="UEFI OS", path=HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
+			wantdesc:          `Boot0007: attrs=0x1, desc="UEFI OS", path=HD(1,GPT,81635ccd-1b4f-4d3f-b7b8-f78a5b029f35,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
+			wantResolveError:  []error{ErrNotFound, nil},
+			wantResolveOutput: []string{"", "/EFI/BOOT/BOOTX64.EFI"},
 		},
 		{
 			name: "MBR file path test",
@@ -80,10 +85,12 @@ func TestParseFilePathList(t *testing.T) {
 				Data: boot8,
 			},
 			// same as efibootmgr output, except using forward slashes
-			wantpath:       "HD(2,MBR,deef-adde,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI)",
-			wantstr:        `Boot0008: attrs=0x1, desc="UEFI OS", path=HD(2,MBR,deef-adde,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
-			wantdesc:       `Boot0008: attrs=0x1, desc="UEFI OS", path=HD(2,MBR,deef-adde,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
-			expectedOutput: "described device not found\n/EFI/BOOT/BOOTX64.EFI\n",
+			wantpath:          "HD(2,MBR,deef-adde,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI)",
+			wantpathlen:       2,
+			wantstr:           `Boot0008: attrs=0x1, desc="UEFI OS", path=HD(2,MBR,deef-adde,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
+			wantdesc:          `Boot0008: attrs=0x1, desc="UEFI OS", path=HD(2,MBR,deef-adde,0x40,0xf000)/File(/EFI/BOOT/BOOTX64.EFI), opts=00e4bd82`,
+			wantResolveError:  []error{ErrNotFound, nil},
+			wantResolveOutput: []string{"", "/EFI/BOOT/BOOTX64.EFI"},
 		},
 	}
 
@@ -105,23 +112,27 @@ func TestParseFilePathList(t *testing.T) {
 			t.Errorf("mismatch\nwant %s\n got %s", tc.wantdesc, gotdesc)
 		}
 
-		resolveFailed := false
-		var output string
-		for _, p := range b.FilePathList {
+		if len(b.FilePathList) != tc.wantpathlen {
+			t.Errorf("mismatch\nwant pathlen %d\n got pathlen %d", tc.wantpathlen, len(b.FilePathList))
+		}
+
+		for n, p := range b.FilePathList {
 			r, err := p.Resolver()
 			if err != nil {
-				resolveFailed = true
-				output += err.Error() + "\n"
+				if tc.wantResolveError[n] == nil {
+					t.Errorf("mismatch\nwant no error, got %s", err)
+				}
+				if !errors.Is(err, tc.wantResolveError[n]) {
+					t.Errorf("mismatch\nwant error %s, got %s", tc.wantResolveError[n], err)
+				}
 			} else {
-				output += r.String() + "\n"
+				if tc.wantResolveError[n] != nil {
+					t.Errorf("mismatch\nwant %s, got no error", tc.wantResolveError[n])
+				}
+				if r.String() != tc.wantResolveOutput[n] {
+					t.Errorf("mismatch\nwant %s, got %s", tc.wantResolveOutput[n], r.String())
+				}
 			}
 		}
-		if !resolveFailed {
-			t.Error("resolve should fail - the chances of a device matching the guid are infinitesimally small")
-		}
-		if output != tc.expectedOutput {
-			t.Errorf("\nwant %s\n got %s", tc.expectedOutput, output)
-		}
 	}
-
 }
