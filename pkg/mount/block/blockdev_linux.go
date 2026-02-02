@@ -7,6 +7,7 @@ package block
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -21,7 +22,6 @@ import (
 
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
-	urgpt "github.com/u-root/u-root/pkg/mount/gpt"
 	"github.com/u-root/u-root/pkg/pci"
 	"golang.org/x/sys/unix"
 )
@@ -48,6 +48,8 @@ var (
 	// Static signature stored at the end of every valid MBR.
 	// Little endian, so this is equivalent to 0xAA55 when decoded as a uint16
 	MBRFormatSignature = [2]byte{0x55, 0xaa}
+
+	MBRSize = 512
 
 	devRoot = "/dev"
 )
@@ -508,26 +510,22 @@ func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
 // refactored zero size check to improve testability
 func (b BlockDevices) filterMBRSig(signature uint32) BlockDevices {
 	var names []string
+	var mbr [512]byte
 	for _, device := range b {
 		fp, err := os.Open(device.DevicePath())
 		if err != nil {
 			continue
 		}
-		// urgpt.New will still return what data it could decipher (including the MBR)
-		// even if err is not nil
-		// so we check the MBR contents first before checking if there was an error parsing the GPT table
-		pt, _ := urgpt.New(fp)
-		if pt == nil {
+		n, err := fp.ReadAt(mbr[:], 0)
+		if n != MBRSize || err != nil {
 			continue
 		}
-		if len(pt.MasterBootRecord) != 512 {
+		// check if MBR format signature is present in the last 2 bytes of the MBR
+		if !bytes.HasSuffix(mbr[:], MBRFormatSignature[:]) {
 			continue
 		}
-		// check if MBR format signature exists
-		if *(*[2]byte)(pt.MasterBootRecord[510:512]) != MBRFormatSignature {
-			continue
-		}
-		sigbytes := pt.MasterBootRecord[0x1b8:0x1bc]
+		// compare per-disk unique 32-bit MBR signature
+		sigbytes := mbr[0x1b8:0x1bc]
 		disksig := binary.LittleEndian.Uint32(sigbytes)
 		if disksig != signature {
 			continue
