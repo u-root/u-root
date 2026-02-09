@@ -507,7 +507,6 @@ func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
 }
 
 // filterMBRSig returns disks (not disk partitions!) with the same MBR partition table signature
-// refactored zero size check to improve testability
 func (b BlockDevices) filterMBRSig(signature uint32) BlockDevices {
 	var names []string
 	var mbr [512]byte
@@ -537,6 +536,7 @@ func (b BlockDevices) filterMBRSig(signature uint32) BlockDevices {
 
 // FilterMBRSig returns disks (not disk partitions!) with the same MBR partition table signature
 func (b BlockDevices) FilterMBRSig(signature uint32) BlockDevices {
+	// zero size check is here to improve testability
 	return b.FilterZeroSize().filterMBRSig(signature)
 }
 
