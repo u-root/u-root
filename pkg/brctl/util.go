@@ -15,7 +15,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
@@ -277,15 +276,6 @@ func sysconfhz() (int, error) {
 		return 0, err
 	}
 	return int(clktck), nil
-}
-
-func executeIoctlStr(fd int, req uint, raw string) (int, error) {
-	localBytes := append([]byte(raw), 0)
-	_, _, errno := syscall.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&localBytes[0])))
-	if errno != 0 {
-		return 0, errno
-	}
-	return 0, nil
 }
 
 func getIndexFromInterfaceName(ifname string) (int, error) {
