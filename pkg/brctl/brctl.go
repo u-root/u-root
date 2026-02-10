@@ -39,7 +39,7 @@ func Addbr(name string) error {
 		return fmt.Errorf("open unix socket: %w", err)
 	}
 
-	if _, err := executeIoctlStr(brctlSocket, unix.SIOCBRADDBR, name); err != nil {
+	if err := unix.IoctlSetString(brctlSocket, unix.SIOCBRADDBR, name); err != nil {
 		return fmt.Errorf("can't add bridge %q: %w", name, err)
 	}
 
@@ -53,7 +53,7 @@ func Delbr(name string) error {
 		return fmt.Errorf("open unix socket: %w", err)
 	}
 
-	if _, err := executeIoctlStr(brctlSocket, unix.SIOCBRDELBR, name); err != nil {
+	if err := unix.IoctlSetString(brctlSocket, unix.SIOCBRDELBR, name); err != nil {
 		return fmt.Errorf("can't delete bridge %q: %w", name, err)
 	}
 
