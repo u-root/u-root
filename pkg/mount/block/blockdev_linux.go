@@ -7,6 +7,7 @@ package block
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -43,6 +44,14 @@ var (
 	})
 
 	ErrListFormat = errors.New("device list needs to be of format vendor1:device1,vendor2:device2")
+
+	// Static signature stored at the end of every valid MBR.
+	// Little endian, so this is equivalent to 0xAA55 when decoded as a uint16
+	MBRFormatSignature = [2]byte{0x55, 0xaa}
+
+	MBRSize = 512
+
+	devRoot = "/dev"
 )
 
 // BlockDev maps a device name to a BlockStat structure for a given block device
@@ -79,7 +88,7 @@ func (b *BlockDev) String() string {
 
 // DevicePath is the path to the actual device.
 func (b BlockDev) DevicePath() string {
-	return filepath.Join("/dev/", b.Name)
+	return filepath.Join(devRoot, b.Name)
 }
 
 // Name implements mount.Mounter.
@@ -495,6 +504,40 @@ func (b BlockDevices) FilterHavingPartitions(parts []int) BlockDevices {
 		}
 	}
 	return devices
+}
+
+// filterMBRSig returns disks (not disk partitions!) with the same MBR partition table signature
+func (b BlockDevices) filterMBRSig(signature uint32) BlockDevices {
+	var names []string
+	var mbr [512]byte
+	for _, device := range b {
+		fp, err := os.Open(device.DevicePath())
+		if err != nil {
+			continue
+		}
+		n, err := fp.ReadAt(mbr[:], 0)
+		if n != MBRSize || err != nil {
+			continue
+		}
+		// check if MBR format signature is present in the last 2 bytes of the MBR
+		if !bytes.HasSuffix(mbr[:], MBRFormatSignature[:]) {
+			continue
+		}
+		// compare per-disk unique 32-bit MBR signature
+		sigbytes := mbr[0x1b8:0x1bc]
+		disksig := binary.LittleEndian.Uint32(sigbytes)
+		if disksig != signature {
+			continue
+		}
+		names = append(names, device.Name)
+	}
+	return b.FilterNames(names...)
+}
+
+// FilterMBRSig returns disks (not disk partitions!) with the same MBR partition table signature
+func (b BlockDevices) FilterMBRSig(signature uint32) BlockDevices {
+	// zero size check is here to improve testability
+	return b.FilterZeroSize().filterMBRSig(signature)
 }
 
 // FilterPartID returns partitions with the given partition ID GUID.
