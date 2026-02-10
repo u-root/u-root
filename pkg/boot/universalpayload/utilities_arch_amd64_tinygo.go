@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/acpi"
@@ -114,4 +115,11 @@ func archGetAcpiRsdpData() (uint64, []byte, error) {
 
 func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
 	return 0
+}
+
+func isMemReserved(memType string) bool {
+	if strings.HasPrefix(memType, "PCI MMCONFIG") || strings.HasPrefix(memType, "PCI ECAM") {
+		return true
+	}
+	return false
 }

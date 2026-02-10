@@ -33,6 +33,27 @@ u-root embodies four different projects.
 For u-root on Linux, certain Kconfig options are necessary. Basic defconfigs are
 in [`configs/`](configs/). See also the [configs README](configs/README.md).
 
+# Demo
+
+Below is a demo of what it looks like, on OSX (but tested on Linux too).
+To recreate this demo:
+```shell
+git clone --depth 1 https://github.com/u-root/u-root
+cd u-root/tools/testramfs
+go build
+GOARCH=amd64 GOOS=linux ./testramfs ../.. # ../.. is the path to u-root source
+```
+
+It goes by quickly, but the process of rewriting 115 commands into Go packages,
+via the Go AST package (i.e. compiler front end); and recompiling all that
+into one command and generating an initramfs, takes 7 seconds.
+For arm64 and riscv64, the time is also about 7 seconds.
+The entire set of commands, including VM boot and exit, is 31 seconds.
+Note: you do not need to supply an amd64, arm64, or riscv64 kernel; it is
+built-in to the package. GOARCH=arm64 and GOARCH=riscv64 work too.
+
+[View Demo](https://htmlpreview.github.io/?https://github.com/u-root/u-root/blob/main/tools/testramfs/cinema/index.html)
+
 # Usage
 
 Make sure your Go version is >= 1.21.

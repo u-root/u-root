@@ -165,6 +165,41 @@ const (
 
 type EFIMemoryMapHOB []EFIHOBResourceDescriptor
 
+// convertResourceType determines the EFI resource type based on the memory type string.
+// It returns EFIResourceMemoryReserved for reserved memory types, IOAPIC, and HPET regions.
+// All other types are treated as memory-mapped I/O.
+func convertResourceType(memType string) EFIResourceType {
+	if memType == kexec.RangeReserved.String() {
+		return EFIResourceMemoryReserved
+	}
+	if strings.Contains(memType, "IOAPIC") {
+		return EFIResourceMemoryReserved
+	}
+	if strings.Contains(memType, "HPET") {
+		return EFIResourceMemoryReserved
+	}
+
+	if isMemReserved(memType) {
+		return EFIResourceMemoryReserved
+	}
+
+	// ACPI Tables should be reported as reserved.
+	// They could be reported as RAM with memory allocation of
+	// EfiACPIReclaimMemory, but that would be much bigger change,
+	// and Linux does not reuse ACPI tables memory anyway.
+	if memType == "ACPI Tables" {
+		return EFIResourceMemoryReserved
+	}
+	// ACPI NVS storage should be reported as reserved.
+	// Like the ACPI tables it could be reported as memory allocation with
+	// type EfiACPIMemoryNVS instead.
+	if memType == "ACPI Non-volatile Storage" {
+		return EFIResourceMemoryReserved
+	}
+	// Treat all other types to be mapped device MMIO address
+	return EFIResourceMemoryMappedIO
+}
+
 // Translate System Map with "System RAM" type to Resource code HOBs.
 func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 	var memMapHOB EFIMemoryMapHOB
@@ -184,12 +219,9 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 		if memType == kexec.RangeRAM.String() {
 			// Skip system memory since they have been constructed at DTB
 			continue
-		} else if memType == kexec.RangeReserved.String() {
-			resourceType = EFIResourceMemoryReserved
-		} else {
-			// Treat all other types to be mapped device MMIO address
-			resourceType = EFIResourceMemoryMappedIO
 		}
+
+		resourceType = convertResourceType(memType)
 
 		memMapHOB = append(memMapHOB, EFIHOBResourceDescriptor{
 			Header: EFIHOBGenericHeader{

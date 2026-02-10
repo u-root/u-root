@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/asciinema-player@3.14.0/dist/bundle/asciinema-player.min.css" rel="stylesheet">
+</head>
+<body>
+  <div id="demo"></div>
+  <script type="module">
+    const scr = document.createElement("script");
+    scr.setAttribute("type", "module");
+    scr.innerText = `
+    import * as asciinemaPlayer from 'https://cdn.jsdelivr.net/npm/asciinema-player@3.14.0/+esm';
+    asciinemaPlayer.create('https://raw.githubusercontent.com/u-root/u-root/main/tools/testramfs/cinema/linux_amd64.cast', document.getElementById('demo'));
+    `;
+    document.body.appendChild(scr);
+  </script>
+</body>
+</html>
