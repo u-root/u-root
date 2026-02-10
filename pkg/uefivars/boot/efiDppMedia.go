@@ -110,9 +110,15 @@ func (e *DppMediaHDD) Resolver() (EfiPathSegmentResolver, error) {
 		blocks = allBlocks.FilterPartID(guid)
 	} else if e.SigType == 1 {
 		// use MBR ID (e.PartSig[:4]) and partition number (e.PartNum)
-		// see PartSig comments and UEFI documentation for location of MBR ID
-		log.Printf("Sig Type 1: unimplemented/cannot identify")
-		return nil, ErrNotFound
+		mbrsig := binary.LittleEndian.Uint32(e.PartSig[:4]) // last 12 bytes should be initialized to 0
+		// gets parent disk
+		blocks = allBlocks.FilterMBRSig(mbrsig)
+		if len(blocks) != 1 {
+			return nil, ErrNotFound
+		}
+		// get name of specific partition
+		partname := block.ComposePartName(blocks[0].Name, int(e.PartNum))
+		blocks = allBlocks.FilterName(partname)
 	} else {
 		// SigType==0: no sig, would need to compare partition #/start/len
 		log.Printf("Sig Type %d: unimplemented/cannot identify", e.SigType)
@@ -141,7 +147,9 @@ func (e *DppMediaHDD) pttype() string {
 func (e *DppMediaHDD) sig() string {
 	switch e.SigType {
 	case 1: // 32-bit MBR sig
-		return fmt.Sprintf("%x", binary.LittleEndian.Uint32(e.PartSig[:4]))
+		// efibootmgr reports the MBR signature in 0123-abcd format
+		mbrsig := binary.LittleEndian.Uint32(e.PartSig[:4])
+		return fmt.Sprintf("%04x-%04x", mbrsig>>16, mbrsig&0xFFFF)
 	case 2: // GUID
 		return e.PartSig.ToStdEnc().String()
 	default:

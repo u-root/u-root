@@ -192,6 +192,24 @@ func (list EfiDevicePathProtocolList) String() string {
 	return strings.Trim(res, "/")
 }
 
+// Returns the first device path node that matches the given type and subtype.
+// takes a uint8 for the subtype since each device path type has its own go types defined for the subtype
+func (list EfiDevicePathProtocolList) FindNode(t EfiDevPathProtoType, st uint8) (EfiDevicePathProtocol, bool) {
+	for _, dp := range list {
+		if dp.Header().ProtoType == t && uint8(dp.Header().ProtoSubType) == st {
+			return dp, true
+		}
+	}
+	return nil, false
+}
+
+// Returns true if the device path contains a node with the given type and subtype, false otherwise.
+// takes a uint8 for the subtype since each device path type has its own go types defined for the subtype
+func (list EfiDevicePathProtocolList) ContainsNode(t EfiDevPathProtoType, st uint8) bool {
+	_, ok := list.FindNode(t, st)
+	return ok
+}
+
 // EfiDevicePathProtocolHdr is three one-byte fields that all DevicePathProtocol
 // entries begin with.
 //
