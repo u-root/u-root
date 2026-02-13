@@ -10,7 +10,6 @@ package boot
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -54,23 +53,23 @@ func ReadBootVar(num uint16) (*BootEntryVar, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading var Boot%04X: %w", num, err)
 	}
-	return BootVar(v), nil
+	return BootVar(v)
 }
 
 // Reads BootCurrent, and from there gets the BootXXXX var referenced.
 func ReadCurrentBootVar() (*BootEntryVar, error) {
-	curr := ReadBootCurrent()
-	if curr == nil {
-		return nil, nil
+	curr, err := ReadBootCurrent()
+	if err != nil {
+		return nil, err
 	}
 	return ReadBootVar(curr.Current)
 }
 
 // Reads BootNext, and from there gets the BootXXXX variable referenced
 func ReadNextBootVar() (*BootEntryVar, error) {
-	curr := ReadBootNext()
-	if curr == nil {
-		return nil, nil
+	curr, err := ReadBootNext()
+	if err != nil {
+		return nil, err
 	}
 	return ReadBootVar(curr.Next)
 }
@@ -127,10 +126,11 @@ func BootEntryFilter(uuid, name string) bool {
 }
 
 // BootVar decodes an efivar as a boot entry. use IsBootEntry() to screen first.
-func BootVar(v uefivars.EfiVar) (b *BootEntryVar) {
+func BootVar(v uefivars.EfiVar) (b *BootEntryVar, err error) {
 	num, err := strconv.ParseUint(v.Name[4:], 16, 16)
 	if err != nil {
-		log.Printf("error parsing boot var %s: %s", v.Name, err)
+		err = fmt.Errorf("error parsing boot var %s: %w", v.Name, err)
+		return
 	}
 	b = new(BootEntryVar)
 	b.Number = uint16(num)
@@ -146,13 +146,15 @@ func BootVar(v uefivars.EfiVar) (b *BootEntryVar) {
 	}
 	b.Description, err = uefivars.DecodeUTF16(v.Data[6:i])
 	if err != nil {
-		log.Printf("reading description: %s (%d -> %x)", err, i, v.Data[6:i])
+		err = fmt.Errorf("error decoding description (%d -> %x): %w ", i, v.Data[6:i], err)
+		return
 	}
 	b.OptionalData = v.Data[i+2+b.FilePathListLength:]
 
 	b.FilePathList, err = ParseFilePathList(v.Data[i+2 : i+2+b.FilePathListLength])
 	if err != nil {
-		log.Printf("parsing FilePathList in %s: %s", b.String(), err)
+		err = fmt.Errorf("error parsing FilePathList in %s: %w", b.String(), err)
+		return
 	}
 	return
 }
@@ -196,28 +198,26 @@ func BootNext(vars uefivars.EfiVars) *BootNextVar {
 }
 
 // ReadBootCurrent reads and returns the BootCurrent var.
-func ReadBootCurrent() *BootCurrentVar {
+func ReadBootCurrent() (*BootCurrentVar, error) {
 	v, err := uefivars.ReadVar(BootUUID, "BootCurrent")
 	if err != nil {
-		log.Printf("reading uefi BootCurrent var: %s", err)
-		return nil
+		return nil, fmt.Errorf("error reading uefi BootCurrent var: %w", err)
 	}
 	return &BootCurrentVar{
 		EfiVar:  v,
 		Current: uint16(v.Data[1])<<8 | uint16(v.Data[0]),
-	}
+	}, nil
 }
 
-func ReadBootNext() *BootNextVar {
+func ReadBootNext() (*BootNextVar, error) {
 	v, err := uefivars.ReadVar(BootUUID, "BootNext")
 	if err != nil {
-		log.Printf("reading uefi BootNext var: %s", err)
-		return nil
+		return nil, fmt.Errorf("error reading uefi BootNext var: %w", err)
 	}
 	return &BootNextVar{
 		EfiVar: v,
 		Next:   uint16(v.Data[1])<<8 | uint16(v.Data[0]),
-	}
+	}, nil
 }
 
 // BootEntries takes a list of efi vars and parses any that are boot entries,
@@ -225,7 +225,11 @@ func ReadBootNext() *BootNextVar {
 func BootEntries(vars uefivars.EfiVars) (bootvars BootEntryVars) {
 	for _, v := range vars {
 		if IsBootEntry(v) {
-			bootvars = append(bootvars, BootVar(v))
+			e, err := BootVar(v)
+			if err != nil {
+				continue
+			}
+			bootvars = append(bootvars, e)
 		}
 	}
 	return
