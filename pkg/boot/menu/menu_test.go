@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -274,12 +275,7 @@ func errorOn(index int, arr []ReadLine) []ReadLine {
 }
 
 func contains(s []string, t string) bool {
-	for _, u := range s {
-		if u == t {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, t)
 }
 
 func TestShowMenuAndLoadFromFile(t *testing.T) {
