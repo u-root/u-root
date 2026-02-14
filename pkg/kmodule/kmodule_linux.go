@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -124,10 +125,8 @@ func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts
 		return fmt.Errorf("module not in depmap %s", modPath)
 	}
 
-	for _, seenMod := range modStack {
-		if seenMod == modPath {
-			return fmt.Errorf("circular dependency detected when loading %s", modPath)
-		}
+	if slices.Contains(modStack, modPath) {
+		return fmt.Errorf("circular dependency detected when loading %s", modPath)
 	}
 
 	dep.loadOnce.Do(func() {

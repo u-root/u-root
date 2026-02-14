@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -47,12 +48,7 @@ var (
 )
 
 func isGrubSearchDir(dirname string) bool {
-	for _, dir := range GrubSearchDirectories {
-		if dirname == dir {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(GrubSearchDirectories, dirname)
 }
 
 // ParseGrubCfg parses the content of a grub.cfg and returns a list of

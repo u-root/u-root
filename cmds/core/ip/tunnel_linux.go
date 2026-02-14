@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"slices"
 	"strconv"
 
 	"github.com/vishvananda/netlink"
@@ -601,13 +602,7 @@ func (cmd *cmd) tunnelDelete(op *options) error {
 		return fmt.Errorf("failed to find tunnel %s: %w", op.name, err)
 	}
 
-	valid := false
-	for _, t := range allTunnelTypes {
-		if link.Type() == t {
-			valid = true
-			break
-		}
-	}
+	valid := slices.Contains(allTunnelTypes, link.Type())
 
 	if !valid {
 		return fmt.Errorf("%s is not a tunnel device", op.name)
