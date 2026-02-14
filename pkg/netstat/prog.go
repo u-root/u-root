@@ -49,10 +49,7 @@ func readProgFS() (map[int]ProcNode, error) {
 		splitcmdline := strings.Split(string(cmdline), "/")
 		lencmd := len(splitcmdline)
 		cmdName := splitcmdline[lencmd-1]
-		lencmd = len(cmdName) - 1
-		if lencmd > 20 {
-			lencmd = 20
-		}
+		lencmd = min(len(cmdName)-1, 20)
 
 		fdpath := path.Join(procFS, entry.Name(), "fd")
 		fddir, err := os.ReadDir(fdpath)

@@ -59,10 +59,7 @@ func writeCommitSmbiosBlob(id string, data []uint8, h *blobs.BlobHandler) (rerr 
 	// Read/write longer than the limit will be requested in multiple IPMI
 	// commands.
 	for offset := uint32(0); offset < dataLen; offset += maxWriteSize {
-		end := offset + maxWriteSize
-		if end > dataLen {
-			end = dataLen
-		}
+		end := min(offset+maxWriteSize, dataLen)
 		if err = h.BlobWrite(sessionID, offset, data[offset:end]); err != nil {
 			return fmt.Errorf("IPMI BlobWrite %s failed: %w", id, err)
 		}
