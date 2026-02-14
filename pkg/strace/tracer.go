@@ -119,7 +119,7 @@ func (p *process) Name() string {
 
 // Read reads from the process at Addr to the interface{}
 // and returns a byte count and error.
-func (p *process) Read(addr Addr, v interface{}) (int, error) {
+func (p *process) Read(addr Addr, v any) (int, error) {
 	r := newProcReader(p.pid, uintptr(addr))
 	err := binary.Read(r, binary.NativeEndian, v)
 	return r.bytes, err

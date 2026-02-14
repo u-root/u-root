@@ -38,7 +38,7 @@ func TestNotFound(t *testing.T) {
 	}
 }
 
-func genFile(f *os.File, p func(string, ...interface{}), s []seg) error {
+func genFile(f *os.File, p func(string, ...any), s []seg) error {
 	// Extend the test file to the full 4G, to match hardware.
 	if _, err := f.WriteAt([]byte{1}[:], 0xffffffff); err != nil {
 		return err

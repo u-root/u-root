@@ -56,8 +56,8 @@ func makeFileRel(u *url.URL) (*url.URL, error) {
 	return relU, nil
 }
 
-func module(r io.ReaderAt) map[string]interface{} {
-	m := make(map[string]interface{})
+func module(r io.ReaderAt) map[string]any {
+	m := make(map[string]any)
 	if f, ok := r.(curl.File); ok {
 		url, err := makeFileRel(f.URL())
 		if err != nil {
@@ -79,7 +79,7 @@ func module(r io.ReaderAt) map[string]interface{} {
 //
 // You can obtain such a JSON encoding with ToJSONFile.
 func CompareImagesToJSON(imgs []boot.OSImage, jsonEncoded []byte) error {
-	var want interface{}
+	var want any
 	if err := json.Unmarshal(jsonEncoded, &want); err != nil {
 		return fmt.Errorf("failed to unmarshall test json %q: %w", jsonEncoded, err)
 	}
@@ -109,8 +109,8 @@ func ToJSONFile(imgs []boot.OSImage, filename string) error {
 // The JSON representation for boot.OSImages is special because the built-in
 // json.Marshal function cannot marshal interfaces such as io.ReaderAt nicely,
 // especially when the underlying structs used are not exported.
-func ImagesToJSONLike(imgs []boot.OSImage) []interface{} {
-	var infs []interface{}
+func ImagesToJSONLike(imgs []boot.OSImage) []any {
+	var infs []any
 	for _, img := range imgs {
 		if l, ok := img.(*boot.LinuxImage); ok {
 			infs = append(infs, LinuxImageToJSON(l))
@@ -126,8 +126,8 @@ func ImagesToJSONLike(imgs []boot.OSImage) []interface{} {
 // tests.
 //
 // It should be json-encodable and decodable.
-func LinuxImageToJSON(li *boot.LinuxImage) map[string]interface{} {
-	m := make(map[string]interface{})
+func LinuxImageToJSON(li *boot.LinuxImage) map[string]any {
+	m := make(map[string]any)
 	m["image_type"] = "linux"
 	m["name"] = li.Name
 	m["cmdline"] = li.Cmdline
@@ -148,8 +148,8 @@ func LinuxImageToJSON(li *boot.LinuxImage) map[string]interface{} {
 // in tests.
 //
 // It should be json-encodable and decodable.
-func MultibootImageToJSON(mi *boot.MultibootImage) map[string]interface{} {
-	m := make(map[string]interface{})
+func MultibootImageToJSON(mi *boot.MultibootImage) map[string]any {
+	m := make(map[string]any)
 	m["image_type"] = "multiboot"
 	m["name"] = mi.Name
 	m["cmdline"] = mi.Cmdline
@@ -158,7 +158,7 @@ func MultibootImageToJSON(mi *boot.MultibootImage) map[string]interface{} {
 		m["kernel"] = module(mi.Kernel)
 	}
 
-	var modules []interface{}
+	var modules []any
 	for _, mod := range mi.Modules {
 		mmod := module(mod.Module)
 		mmod["cmdline"] = mod.Cmdline

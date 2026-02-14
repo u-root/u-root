@@ -35,7 +35,7 @@ func TestExtraMounts(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			c := cmd{
-				debug: func(s string, i ...interface{}) {},
+				debug: func(s string, i ...any) {},
 				extra: tt.extra,
 			}
 			if got := c.extraMounts(tt.extra); got != nil {

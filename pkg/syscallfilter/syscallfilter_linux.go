@@ -57,7 +57,7 @@ var eventNames = map[string]strace.EventType{
 	"NewChild":     strace.NewChild,
 }
 
-var allActions = map[string]interface{}{
+var allActions = map[string]any{
 	// Error will end the strace, expeditiously, unless the value is 0
 	"error": nil,
 	// log will log the record

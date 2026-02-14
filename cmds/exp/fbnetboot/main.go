@@ -78,7 +78,7 @@ var banner = `
                 ||     ||
 
 `
-var debug = func(string, ...interface{}) {}
+var debug = func(string, ...any) {}
 
 func main() {
 	flag.Parse()

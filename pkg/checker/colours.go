@@ -18,30 +18,30 @@ const (
 	ColorNone    = "\x1b[0m"
 )
 
-func colorize(col, f string, a ...interface{}) string {
+func colorize(col, f string, a ...any) string {
 	return col + fmt.Sprintf(f, a...) + ColorNone
 }
 
-func red(format string, args ...interface{}) string {
+func red(format string, args ...any) string {
 	return colorize(ColorRed, format, args...)
 }
 
-func green(format string, args ...interface{}) string {
+func green(format string, args ...any) string {
 	return colorize(ColorGreen, format, args...)
 }
 
-func yellow(format string, args ...interface{}) string {
+func yellow(format string, args ...any) string {
 	return colorize(ColorYellow, format, args...)
 }
 
-func blue(format string, args ...interface{}) string {
+func blue(format string, args ...any) string {
 	return colorize(ColorBlue, format, args...)
 }
 
-func magenta(format string, args ...interface{}) string {
+func magenta(format string, args ...any) string {
 	return colorize(ColorMagenta, format, args...)
 }
 
-func grey(format string, args ...interface{}) string {
+func grey(format string, args ...any) string {
 	return colorize(ColorGrey, format, args...)
 }

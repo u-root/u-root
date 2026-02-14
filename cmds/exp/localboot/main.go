@@ -32,7 +32,7 @@ var (
 	flagDeviceGUID     = flag.String("guid", "", "GUID of the device where the kernel (and optionally initramfs) are located. Ignored if -grub is set or if -kernel is not specified")
 )
 
-var debug = func(string, ...interface{}) {}
+var debug = func(string, ...any) {}
 
 // mountByGUID looks for a partition with the given GUID, and tries to mount it
 // in a subdirectory under the specified mount point. The subdirectory has the

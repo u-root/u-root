@@ -50,7 +50,7 @@ type named interface {
 	Name() string
 }
 
-func stringer(mod interface{}) string {
+func stringer(mod any) string {
 	if s, ok := mod.(fmt.Stringer); ok {
 		return s.String()
 	}

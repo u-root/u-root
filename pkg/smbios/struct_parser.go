@@ -20,7 +20,7 @@ var (
 	fieldParserInterfaceType = reflect.TypeOf((*fieldParser)(nil)).Elem()
 )
 
-func parseStruct(t *Table, off int, complete bool, sp interface{}) (int, error) {
+func parseStruct(t *Table, off int, complete bool, sp any) (int, error) {
 	var err error
 	var ok bool
 	var sv reflect.Value

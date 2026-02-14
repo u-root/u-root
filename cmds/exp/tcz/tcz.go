@@ -61,7 +61,7 @@ var (
 	tczRoot            = flag.String("r", "/tcz", "tcz root directory")
 	debugPrint         = flag.Bool("d", false, "Enable debug prints")
 	skip               = flag.String("skip", "", "Packages to skip")
-	debug              = func(f string, s ...interface{}) {}
+	debug              = func(f string, s ...any) {}
 	tczServerDir       string
 	tczLocalPackageDir string
 	ignorePackage      = make(map[string]struct{})
