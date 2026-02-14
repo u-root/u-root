@@ -51,6 +51,14 @@ func TestTee(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
+			} else {
+				for _, arg := range test.args {
+					// size should be more then input
+					err := os.WriteFile(arg, []byte("O_TRUNC"), 0o666)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
 			}
 
 			var stdout bytes.Buffer

@@ -40,6 +40,8 @@ func (c *cmd) run() error {
 	oflags := os.O_WRONLY | os.O_CREATE
 	if c.cat {
 		oflags |= os.O_APPEND
+	} else {
+		oflags |= os.O_TRUNC
 	}
 
 	if c.ignore {
