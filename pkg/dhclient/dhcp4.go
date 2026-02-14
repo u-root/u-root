@@ -212,6 +212,6 @@ func (p *Packet4) ISCSIBoot() (*net.TCPAddr, string, error) {
 }
 
 // Response returns the DHCP response
-func (p *Packet4) Response() interface{} {
+func (p *Packet4) Response() any {
 	return p.P
 }

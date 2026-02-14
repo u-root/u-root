@@ -44,7 +44,7 @@ var (
 	privkey = flag.String("privatekey", "id_rsa", "Path of private key")
 	ip      = flag.String("ip", "0.0.0.0", "ip address to listen on")
 	port    = flag.String("port", "2022", "port to listen on")
-	dprintf = func(string, ...interface{}) {}
+	dprintf = func(string, ...any) {}
 )
 
 // start a command

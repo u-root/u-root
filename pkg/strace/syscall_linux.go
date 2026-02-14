@@ -32,7 +32,7 @@ import (
 type Task interface {
 	// Read reads from the process at Addr to the interface{}
 	// and returns a byte count and error.
-	Read(addr Addr, v interface{}) (int, error)
+	Read(addr Addr, v any) (int, error)
 
 	// Name is a human-readable process identifier. E.g. PID or argv[0].
 	Name() string

@@ -56,7 +56,7 @@ func (k *KLog) writeString(s string) bool {
 }
 
 // Printf formats according to a format specifier and writes to kernel logging.
-func (k *KLog) Printf(format string, v ...interface{}) {
+func (k *KLog) Printf(format string, v ...any) {
 	if !k.writeString(fmt.Sprintf(format, v...)) {
 		Log.Printf(format, v...)
 	}

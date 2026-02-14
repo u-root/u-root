@@ -293,7 +293,7 @@ var (
 		{"tmpfs", "/dev/shm", "tmpfs", "mode=1777", syscall.MS_NOSUID | syscall.MS_STRICTATIME | syscall.MS_NODEV, true, false},
 		{"tmpfs", "/run", "tmpfs", "mode=755", syscall.MS_NOSUID | syscall.MS_NODEV | syscall.MS_STRICTATIME, true, false},
 	}
-	v = func(string, ...interface{}) {}
+	v = func(string, ...any) {}
 )
 
 func main() {

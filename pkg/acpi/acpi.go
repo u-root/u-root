@@ -59,7 +59,7 @@ type (
 )
 
 // Debug enables various debug prints. External code can set it to, e.g., log.Printf
-var Debug = func(string, ...interface{}) {}
+var Debug = func(string, ...any) {}
 
 // gencsum generates a uint8 checksum of a []uint8
 func gencsum(b []uint8) uint8 {

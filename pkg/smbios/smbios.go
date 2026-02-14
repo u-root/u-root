@@ -10,7 +10,7 @@ const (
 )
 
 // We need this for testing
-type parseStructure func(t *Table, off int, complete bool, sp interface{}) (int, error)
+type parseStructure func(t *Table, off int, complete bool, sp any) (int, error)
 
 // SMBIOSBase returns SMBIOS Table's base pointer.
 func SMBIOSBase() (int64, int64, error) {

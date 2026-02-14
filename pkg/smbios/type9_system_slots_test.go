@@ -79,7 +79,7 @@ func TestParseSystemSlots(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parseStruct := func(t *Table, off int, complete bool, sp interface{}) (int, error) {
+			parseStruct := func(t *Table, off int, complete bool, sp any) (int, error) {
 				return 0, tt.want
 			}
 			_, err := parseSystemSlots(parseStruct, &tt.table)

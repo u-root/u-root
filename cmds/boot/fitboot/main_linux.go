@@ -28,7 +28,7 @@ var (
 	rsdpLookup = flag.Bool("rsdp", false, "Derrive RSDP table pointer from environment")
 )
 
-var v = func(string, ...interface{}) {}
+var v = func(string, ...any) {}
 
 func main() {
 	flag.Parse()
