@@ -358,7 +358,7 @@ func (n NetworkProtocol) String() string {
 	case NetBoth:
 		return "IPv4+IPv6"
 	}
-	return fmt.Sprintf("unknown network protocol (%#x)", n)
+	return fmt.Sprintf("unknown network protocol (%d)", n)
 }
 
 // Result is the result of a particular DHCP attempt.
