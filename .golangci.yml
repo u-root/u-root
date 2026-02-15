@@ -29,6 +29,9 @@ linters:
         text: don't use ALL_CAPS
       - linters:
           - revive
+        text: avoid meaningless package names
+      - linters:
+          - revive
         text: stutter
       - linters:
           - revive
