@@ -76,7 +76,7 @@ func newOffsetReader(f *os.File, off int64, sz int) (*offsetReader, error) {
 // the console log only, though we know of no case in which it is
 // larger than 1M. We really want the SectionReader as a way to ReadAt
 // for the binary.Read. Any meaningful limit will be enforced by the kernel.
-func readOneSize(r io.ReaderAt, i interface{}, o int64, n int64) error {
+func readOneSize(r io.ReaderAt, i any, o int64, n int64) error {
 	err := binary.Read(io.NewSectionReader(r, o, n), binary.LittleEndian, i)
 	if err != nil {
 		return fmt.Errorf("trying to read section for %T: %w", r, err)
@@ -85,6 +85,6 @@ func readOneSize(r io.ReaderAt, i interface{}, o int64, n int64) error {
 }
 
 // readOneSize reads an entry of any type, limited to 64K.
-func readOne(r io.ReaderAt, i interface{}, o int64) error {
+func readOne(r io.ReaderAt, i any, o int64) error {
 	return readOneSize(r, i, o, 65536)
 }

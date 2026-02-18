@@ -135,7 +135,7 @@ type cmd struct {
 	args       []string
 	pathInRoot string
 	// verbose output
-	debug func(string, ...interface{})
+	debug func(string, ...any)
 	// io
 	in  io.Reader
 	out io.Writer
@@ -414,7 +414,7 @@ This can also be passed in with the POX_EXTRA variable.
 	f.Parse(unixflag.ArgsToGoArgs(args[1:]))
 
 	c.args = f.Args()
-	c.debug = func(string, ...interface{}) {}
+	c.debug = func(string, ...any) {}
 
 	return &c
 }

@@ -32,7 +32,7 @@ import (
 type Task interface {
 	// Read reads from the process at Addr to the interface{}
 	// and returns a byte count and error.
-	Read(addr Addr, v interface{}) (int, error)
+	Read(addr Addr, v any) (int, error)
 
 	// Name is a human-readable process identifier. E.g. PID or argv[0].
 	Name() string
@@ -247,10 +247,7 @@ func (i *SyscallInfo) post(t Task, args SyscallArguments, rval SyscallArgument, 
 		case ReadBuffer:
 			output[arg] = dump(t, args[arg].Pointer(), uint(rval.Uint64()), maximumBlobSize)
 		case ReadIOVec:
-			printLength := rval.Uint()
-			if printLength > uint32(maximumBlobSize) {
-				printLength = uint32(maximumBlobSize)
-			}
+			printLength := min(rval.Uint(), uint32(maximumBlobSize))
 			output[arg] = iovecs(t, args[arg].Pointer(), int(args[arg+1].Int()), true /* content */, uint64(printLength))
 		case WriteIOVec, IOVec, WriteBuffer:
 			// We already have a big blast from write.

@@ -44,7 +44,7 @@ const (
 )
 
 var (
-	debug = func(string, ...interface{}) {}
+	debug = func(string, ...any) {}
 	mpt   string
 )
 

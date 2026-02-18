@@ -47,7 +47,7 @@ import (
 var (
 	v     = flag.Bool("v", false, "Only non-matching signatures will be kept")
 	d     = flag.Bool("d", false, "Print debug messages")
-	debug = func(string, ...interface{}) {}
+	debug = func(string, ...any) {}
 )
 
 func main() {

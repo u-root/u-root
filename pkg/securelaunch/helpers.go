@@ -47,7 +47,7 @@ var StorageBlkDevices block.BlockDevices
 
 // Debug enables verbose logs if kernel cmd line has uroot.uinitargs=-d flag set.
 // kernel cmdline is checked in sluinit.
-var Debug = func(string, ...interface{}) {}
+var Debug = func(string, ...any) {}
 
 // ReadFile reads a file into a byte slice. It mounts the disk if necessary.
 //

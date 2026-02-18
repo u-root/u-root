@@ -90,7 +90,7 @@ func linuxDefault(c *exec.Cmd) {
 // RunCommands returns how many commands existed and were attempted to run.
 //
 // commands must refer to absolute paths at the moment.
-func RunCommands(debug func(string, ...interface{}), commands ...*exec.Cmd) int {
+func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 	var cmdCount int
 	for _, cmd := range commands {
 		if _, err := os.Stat(cmd.Path); os.IsNotExist(err) {

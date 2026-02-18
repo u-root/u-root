@@ -31,7 +31,7 @@ var (
 	LinuxMountsPath = "/proc/mounts"
 
 	// Debug function to override for verbose logging.
-	Debug = func(string, ...interface{}) {}
+	Debug = func(string, ...any) {}
 
 	// SystemPartitionGUID is the GUID of EFI system partitions
 	// EFI System partitions have GUID C12A7328-F81F-11D2-BA4B-00A0C93EC93B

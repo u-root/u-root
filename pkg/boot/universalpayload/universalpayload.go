@@ -115,7 +115,7 @@ var (
 )
 
 var (
-	debug      = func(string, ...interface{}) {}
+	debug      = func(string, ...any) {}
 	warningMsg []error
 )
 
@@ -552,7 +552,7 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	return (uintptr)(loadAddr + uint64(trampolineOffset)), nil
 }
 
-func Load(name string, dbg func(string, ...interface{})) (error, error) {
+func Load(name string, dbg func(string, ...any)) (error, error) {
 	if dbg != nil {
 		debug = dbg
 	}

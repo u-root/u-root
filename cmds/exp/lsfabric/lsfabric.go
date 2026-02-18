@@ -76,7 +76,7 @@ func (i *instanceType) String() string {
 	case UNKNOWN:
 		return "UNKNOWN"
 	default:
-		return fmt.Sprintf("Invalid type %#x", i)
+		return fmt.Sprintf("Invalid type %#x", *i)
 	}
 }
 

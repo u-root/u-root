@@ -25,7 +25,7 @@ import (
 
 var (
 	mem                 = flag.String("mem", "/dev/mem", "file for coreboot image")
-	debug               = func(string, ...interface{}) {}
+	debug               = func(string, ...any) {}
 	addr                int64
 	size                int
 	console             bool

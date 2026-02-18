@@ -77,7 +77,7 @@ func TestPox(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			c := cmd{
-				debug:   func(s string, i ...interface{}) {},
+				debug:   func(s string, i ...any) {},
 				verbose: tt.verbose,
 				run:     tt.run,
 				create:  tt.create,
@@ -159,7 +159,7 @@ func TestPoxCreate(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			c := cmd{
-				debug: func(s string, i ...interface{}) {},
+				debug: func(s string, i ...any) {},
 				zip:   tt.zip,
 				self:  tt.self,
 				file:  tt.file,
@@ -204,7 +204,7 @@ func TestPoxRun(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			c := cmd{
-				debug: func(s string, i ...interface{}) {},
+				debug: func(s string, i ...any) {},
 				zip:   tt.zip,
 				file:  tt.file,
 				args:  tt.args,

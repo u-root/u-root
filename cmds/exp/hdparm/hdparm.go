@@ -37,7 +37,7 @@ type op func(scuzz.Disk) (string, error)
 
 var (
 	verbose         = flag.Bool("v", false, "verbose log")
-	debug           = func(string, ...interface{}) {}
+	debug           = func(string, ...any) {}
 	unlock          = flag.String("security-unlock", "", "Unlock the drive with a password")
 	identify        = flag.Bool("i", false, "Get drive identifying information")
 	admin           = flag.Bool("user-master", false, "Unlock admin (true) or user (false)")
