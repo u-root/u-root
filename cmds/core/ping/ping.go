@@ -19,6 +19,14 @@
 //	-w: wait time in milliseconds (default: 1000)
 //	-a: Audible rings a bell when a packet is received
 //	-h: help
+//
+// Description:
+//
+// This is a simplified implementation compared to iputils-ping.
+// Notable differences:
+//   - The -w flag sets a per-packet response timeout, not an overall deadline.
+//   - No summary statistics are printed at the end.
+//   - Exits with an error if a packet times out.
 package main
 
 import (
