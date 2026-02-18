@@ -133,7 +133,7 @@ func TestPing(t *testing.T) {
 			host:       "1.1.1.1",
 			packetSize: 56,
 			intv:       1000,
-			wtf:        100,
+			wtf:        1000,
 			iter:       1,
 			net6:       false,
 			audible:    true,
@@ -171,7 +171,7 @@ func TestRawPing(t *testing.T) {
 		packetSize: 56,
 		host:       "127.0.0.1",
 		intv:       1000,
-		wtf:        100,
+		wtf:        1000,
 		iter:       1,
 	})
 	if err != nil {
