@@ -11,6 +11,7 @@
 // Options:
 //
 //	-s: size in bytes
+//	-o: treat SIZE as number of IO blocks instead of bytes (1 block = 512 bytes)
 //	-r: reference file for size
 //	-c: do not create any files
 //
@@ -31,10 +32,13 @@ import (
 
 const usage = "truncate [-c] -s size file..."
 
+const ioBlockSize = 512
+
 var (
-	create = flag.Bool("c", false, "Do not create files.")
-	size   = unit.MustNewUnit(unit.DefaultUnits).MustNewValue(1, unit.None)
-	rfile  = flag.String("r", "", "Reference file for size")
+	create   = flag.Bool("c", false, "Do not create files.")
+	ioBlocks = flag.Bool("o", false, "Treat SIZE as number of IO blocks instead of bytes.")
+	size     = unit.MustNewUnit(unit.DefaultUnits).MustNewValue(1, unit.None)
+	rfile    = flag.String("r", "", "Reference file for size")
 )
 
 func init() {
@@ -72,6 +76,9 @@ func truncate(args ...string) error {
 			final = st.Size()
 		} else if size.IsSet {
 			final = size.Value // base case
+			if *ioBlocks {
+				final *= ioBlockSize
+			}
 			if size.ExplicitSign != unit.None {
 				final += st.Size() // in case of '-', size.Value is already negative
 			}
