@@ -14,6 +14,14 @@ import (
 	"testing"
 )
 
+func TestTooSmall(t *testing.T) {
+	cmd := New()
+	err := cmd.Run("-n", "0")
+	if !errors.Is(err, errTooSmall) {
+		t.Errorf("expected %v, got %v", errTooSmall, err)
+	}
+}
+
 func TestCommandNotFound(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	cmd := New()
