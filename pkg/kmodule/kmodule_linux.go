@@ -44,6 +44,7 @@ const (
 // concurrency: struct must be read-only outside of `loadOnce`
 type dependency struct {
 	state    modState
+	params   string
 	deps     []string
 	loadOnce sync.Once
 	err      error
@@ -119,7 +120,7 @@ func Delete(name string, flags uintptr) error {
 
 // parallelProbeDep loads a module and its dependencies
 // Returns once module is loaded.
-func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts, modStack []string) error {
+func parallelProbeDep(deps depMap, modPath string, opts ProbeOpts, modStack []string) error {
 	dep, present := deps[modPath]
 	if !present {
 		return fmt.Errorf("module not in depmap %s", modPath)
@@ -142,7 +143,7 @@ func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts
 		for _, dep := range dep.deps {
 			dep := dep
 			eg.Go(func() error {
-				return parallelProbeDep(deps, dep, "", opts, append(modStack, modPath))
+				return parallelProbeDep(deps, dep, opts, append(modStack, modPath))
 			})
 		}
 
@@ -152,7 +153,7 @@ func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts
 			return
 		}
 
-		err = loadModule(modPath, params, opts)
+		err = loadModule(modPath, dep.params, opts)
 		if err != nil {
 			dep.err = err
 			return
@@ -176,14 +177,46 @@ func NewProber(opts ProbeOpts) (*Prober, error) {
 	}, nil
 }
 
-// Probe loads the given kernel module and its dependencies.
-func (p Prober) Probe(name string, modParams string) error {
+func (p Prober) PrepareProbe(name string, modParams string) error {
 	modPath, err := findModPath(name, p.deps)
 	if err != nil {
 		return fmt.Errorf("could not find module path %q: %w", name, err)
 	}
 
-	return parallelProbeDep(p.deps, modPath, modParams, p.opts, []string{})
+	dep, present := p.deps[modPath]
+	if !present {
+		return fmt.Errorf("module not in depmap %s", modPath)
+	}
+
+	if dep.state != unloaded {
+		if dep.params != modParams {
+			return fmt.Errorf(
+				"module %s already loaded, cannot change parameters", name)
+		}
+		return nil
+	}
+
+	dep.params = modParams
+	return nil
+}
+
+func (p Prober) FinishProbe(name string) error {
+	modPath, err := findModPath(name, p.deps)
+	if err != nil {
+		return fmt.Errorf("could not find module path %q: %w", name, err)
+	}
+
+	return parallelProbeDep(p.deps, modPath, p.opts, []string{})
+}
+
+// Probe loads the given kernel module and its dependencies.
+func (p Prober) Probe(name string, modParams string) error {
+	err := p.PrepareProbe(name, modParams)
+	if err != nil {
+		return err
+	}
+
+	return p.FinishProbe(name)
 }
 
 // Probe loads the given kernel module and its dependencies.
