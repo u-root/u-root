@@ -16,27 +16,27 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.24.x' ]
+        go-version: ['1.25.x' ]
         vmarch: [ 'amd64', 'arm', 'arm64' ]
         pattern: [ 'integration/generic-tests/...', 'integration/gotests/...' ]
         include:
           # Only run these with VM arch amd64 for now.
-          - go-version: '1.24.x'
+          - go-version: '1.25.x'
             vmarch: 'amd64'
             pattern: 'cmds/...'
 
-          - go-version: '1.24.x'
+          - go-version: '1.25.x'
             vmarch: 'amd64'
             pattern: 'pkg/...'
             extra-arg: '-coverpkg=./pkg/...'
 
           # Root dir tests
-          - go-version: '1.24.x'
+          - go-version: '1.25.x'
             vmarch: 'amd64'
             pattern: '.'
 
           # Only run UPL ARM64 test with VM arch arm64 for now.
-          - go-version: '1.24.x'
+          - go-version: '1.25.x'
             vmarch: 'arm64'
             pattern: 'integration/generic-tests/universalpayload_arm64_test.go'
 
