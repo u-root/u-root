@@ -24,6 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
+	"github.com/u-root/u-root/pkg/efivarfs"
 )
 
 var sysfsCPUInfoPath = "/proc/cpuinfo"
@@ -97,9 +98,11 @@ const (
 	IMAGE_REL_BASED_DIR64    = 10
 )
 
-const (
-	sysfsFbPath  = "/dev/fb0"
-	sysfsDrmPath = "/sys/class/drm"
+var (
+	sysfsFbPath      = "/dev/fb0"
+	sysfsDrmPath     = "/sys/class/drm"
+	efiVarsPath      = "/sys/firmware/efi/efivars"
+	uRootEFIVarMagic = "u-root-efivar-v1"
 )
 
 // Definitions for ioctl and framebuffer structures in Go
@@ -198,8 +201,11 @@ type ResourceRegions struct {
 	EndBus     uint32
 }
 
+var (
+	ACPIMCFGSysFilePath = "/sys/firmware/acpi/tables/MCFG"
+)
+
 const (
-	ACPIMCFGSysFilePath                 = "/sys/firmware/acpi/tables/MCFG"
 	ACPIMCFGPciSegInfoStructureSize     = 0xC
 	ACPIMCFGPciSegInfoDataLength        = 0xA
 	ACPIMCFGBaseAddressAllocationLenth  = 0x10
@@ -207,8 +213,11 @@ const (
 	ACPIMCFGSignature                   = "MCFG"
 )
 
+var (
+	PCISearchPath = "/sys/devices/"
+)
+
 const (
-	PCISearchPath   = "/sys/devices/"
 	PCIMMIO64Attr   = 0x140204
 	PCIMMIO32Attr   = 0x40200
 	PCIIOPortAttr   = 0x40100
@@ -271,6 +280,8 @@ var (
 	ErrMcfgSignatureMismatch       = errors.New("acpi mcfg signature mismatch")
 	ErrMcfgBaseAddrAllocCorrupt    = errors.New("acpi mcfg base address allocation data corrupt")
 	ErrMcfgBaseAddrAllocDecode     = errors.New("failed to decode mcfg base address allocation structure")
+	ErrEFIVarsOpenFailed           = errors.New("failed to open efivars directory")
+	ErrEFIVarsReadFailed           = errors.New("failed to read efivar")
 )
 
 func parseUint64ToUint32(val uint64) uint32 {
@@ -1223,6 +1234,62 @@ func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	return rbNodes, nil
 }
 
+var efiVarFSCreator = func(path string) (efivarfs.EFIVar, error) {
+	return efivarfs.NewPath(path)
+}
+
+// buildEFIVariableNodes creates device tree nodes for all EFI variables
+// found in /sys/firmware/efi/efivars. Each node contains the variable name,
+// GUID, attributes, and data.
+func buildEFIVariableNodes() ([]*dt.Node, error) {
+	var efiVarNodes []*dt.Node
+
+	// Open the efivarfs directory
+	efiVarFS, err := efiVarFSCreator(efiVarsPath)
+	if err != nil {
+		// If efivarfs is not available, return empty list (not an error)
+		// This allows the code to continue even if EFI variables are not accessible
+		return nil, fmt.Errorf("failed to open efivarfs directory: %w", err)
+	}
+
+	// List all EFI variables
+	descriptors, err := efiVarFS.List()
+	if err != nil {
+		// If listing fails, return empty list (not an error)
+		return nil, fmt.Errorf("failed to list EFI variables: %w", err)
+	}
+
+	// Create a node for each EFI variable
+	for _, desc := range descriptors {
+		// Read the variable attributes and data
+		attrs, data, err := efiVarFS.Get(desc)
+		if err != nil {
+			// Skip variables that can't be read
+			continue
+		}
+
+		// Create node name with "efivar@" prefix for consistency
+		// The @ symbol is commonly used in device tree for unit addresses
+		nodeName := fmt.Sprintf("efivar@%s", desc.Name)
+
+		// Create the node with properties
+		node := dt.NewNode(nodeName, dt.WithProperty(
+			dt.PropertyString("magic", uRootEFIVarMagic),
+			dt.PropertyString("name", desc.Name),
+			dt.PropertyString("guid", desc.GUID.String()),
+			dt.PropertyU32("attributes", uint32(attrs)),
+			dt.Property{
+				Name:  "data",
+				Value: data,
+			},
+		))
+
+		efiVarNodes = append(efiVarNodes, node)
+	}
+
+	return efiVarNodes, nil
+}
+
 func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
 	memNodes := buildDtMemoryNode(mem)
 
@@ -1265,6 +1332,16 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 	} else {
 		if pciRbNodes != nil {
 			dtNodes = append(dtNodes, pciRbNodes...)
+		}
+	}
+
+	if efiVarNodes, err := buildEFIVariableNodes(); err != nil {
+		// If we failed to construct EFI variable nodes, prompt error
+		// message to indicate error message, and continue construct DTB.
+		warningMsg = append(warningMsg, err)
+	} else {
+		if efiVarNodes != nil {
+			dtNodes = append(dtNodes, efiVarNodes...)
 		}
 	}
 
