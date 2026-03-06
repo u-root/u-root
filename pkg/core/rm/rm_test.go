@@ -132,7 +132,7 @@ func TestRm(t *testing.T) {
 			// Update args to use absolute paths for files
 			args := make([]string, len(tt.args))
 			copy(args, tt.args)
-			for i := range args {
+			for i := 0; i < len(args); i++ {
 				if !strings.HasPrefix(args[i], "-") {
 					args[i] = filepath.Join(d, args[i])
 				}
