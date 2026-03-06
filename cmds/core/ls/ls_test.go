@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -98,7 +99,7 @@ func TestListName(t *testing.T) {
 			cmd.SetIO(nil, &buf, &buf)
 
 			args := append(tt.args, tt.input)
-			err := cmd.Run(args...)
+			err := cmd.Run(context.Background(), args...)
 
 			// For non-existent files, we expect an error to be printed but no exit error
 			if tt.input == "dir" {
@@ -124,7 +125,7 @@ func TestListName(t *testing.T) {
 				cmd = lscore.New()
 				cmd.SetIO(nil, &buf, &buf)
 				buf.Reset()
-				_ = cmd.Run(args...)
+				_ = cmd.Run(context.Background(), args...)
 			}
 
 			// Note: exact output matching is difficult due to OS differences
@@ -160,7 +161,7 @@ func TestRun(t *testing.T) {
 			cmd := lscore.New()
 			cmd.SetIO(nil, io.Discard, io.Discard)
 
-			err := cmd.Run(tt.args...)
+			err := cmd.Run(context.Background(), tt.args...)
 
 			if tt.wantErr {
 				if err == nil {
@@ -248,7 +249,7 @@ func TestPermHandling(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, b, b)
 
-	err := cmd.Run(d)
+	err := cmd.Run(context.Background(), d)
 	if err != nil {
 		t.Fatalf("ls %q: %v != nil", d, err)
 	}
@@ -265,7 +266,7 @@ func TestNotExist(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, b, b)
 
-	err := cmd.Run(filepath.Join(d, "b"))
+	err := cmd.Run(context.Background(), filepath.Join(d, "b"))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

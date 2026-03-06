@@ -18,6 +18,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -30,7 +31,7 @@ func init() {
 
 func main() {
 	cmd := xargs.New()
-	err := cmd.Run(os.Args[1:]...)
+	err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatal("xargs: ", err)
 	}

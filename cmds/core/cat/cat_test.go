@@ -8,6 +8,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -53,7 +54,7 @@ func TestCat(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(files...)
+	err := cmd.Run(context.Background(), files...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestRunFiles(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(files...)
+	err := cmd.Run(context.Background(), files...)
 	if err != nil {
 		t.Error(err)
 	}
@@ -104,7 +105,7 @@ func TestRunFilesError(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(files...)
+	err := cmd.Run(context.Background(), files...)
 	if err == nil {
 		t.Error("function run succeeded but should have failed")
 	}
@@ -118,7 +119,7 @@ func TestRunNoArgs(t *testing.T) {
 	fmt.Fprintf(&stdin, "%s", inputdata)
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run()
+	err := cmd.Run(context.Background())
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,7 +134,7 @@ func TestIOErrors(t *testing.T) {
 	errReader := iotest.ErrReader(errors.New("read error"))
 	cmd.SetIO(errReader, &stdout, &stderr)
 
-	err := cmd.Run()
+	err := cmd.Run(context.Background())
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -143,7 +144,7 @@ func TestIOErrors(t *testing.T) {
 	var stdout2, stderr2 bytes.Buffer
 	cmd2.SetIO(errReader, &stdout2, &stderr2)
 
-	err = cmd2.Run("-")
+	err = cmd2.Run(context.Background(), "-")
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -170,7 +171,7 @@ func TestCatDash(t *testing.T) {
 	stdin.WriteString("line3\n")
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err = cmd.Run(f1, "-", f2)
+	err = cmd.Run(context.Background(), f1, "-", f2)
 	if err != nil {
 		t.Fatal(err)
 	}

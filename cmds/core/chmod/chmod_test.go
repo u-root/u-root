@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -262,7 +263,7 @@ func TestChmod(t *testing.T) {
 			cmd := chmod.New()
 			cmd.SetIO(nil, io.Discard, io.Discard)
 
-			err := cmd.Run(tt.args...)
+			err := cmd.Run(context.Background(), tt.args...)
 
 			if tt.wantErr {
 				if err == nil {
@@ -304,7 +305,7 @@ func TestMultipleFiles(t *testing.T) {
 	cmd := chmod.New()
 	cmd.SetIO(nil, io.Discard, stderr)
 
-	_ = cmd.Run("0777", f1.Name(), "filenotexists", f2.Name())
+	_ = cmd.Run(context.Background(), "0777", f1.Name(), "filenotexists", f2.Name())
 
 	// but file1 and file2 should have been chmod'ed
 	fi, err := os.Stat(f1.Name())

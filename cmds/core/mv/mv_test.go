@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -87,7 +88,7 @@ func TestMove(t *testing.T) {
 			var stderr bytes.Buffer
 			cmd.SetIO(nil, io.Discard, &stderr)
 
-			err := cmd.Run(tt.args...)
+			err := cmd.Run(context.Background(), tt.args...)
 
 			if tt.wantErr {
 				if err == nil {
@@ -158,7 +159,7 @@ func TestMvFlags(t *testing.T) {
 			var stderr bytes.Buffer
 			cmd.SetIO(nil, io.Discard, &stderr)
 
-			err := cmd.Run(tt.args(d)...)
+			err := cmd.Run(context.Background(), tt.args(d)...)
 
 			if tt.wantErr {
 				if err == nil {
@@ -191,7 +192,7 @@ func TestMvToDirectory(t *testing.T) {
 
 	// Move multiple files to directory
 	args := []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), subdir}
-	err := cmd.Run(args...)
+	err := cmd.Run(context.Background(), args...)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

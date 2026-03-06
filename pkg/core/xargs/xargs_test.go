@@ -6,6 +6,7 @@ package xargs
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -18,7 +19,7 @@ func TestCommandNotFound(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	cmd := New()
 	cmd.SetIO(strings.NewReader("hello world"), &stdout, &stderr)
-	err := cmd.Run("-n", "1", "commandnotfound", "arg1")
+	err := cmd.Run(context.Background(), "-n", "1", "commandnotfound", "arg1")
 	if !errors.Is(err, exec.ErrNotFound) {
 		t.Errorf("expected %v, got %v", exec.ErrNotFound, err)
 	}
@@ -28,7 +29,7 @@ func TestEcho(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	cmd := New()
 	cmd.SetIO(strings.NewReader("hello world"), &stdout, &stderr)
-	err := cmd.Run()
+	err := cmd.Run(context.Background())
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -42,7 +43,7 @@ func TestEchoWithMaxArgs(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	cmd := New()
 	cmd.SetIO(strings.NewReader("a b c d e f g"), &stdout, &stderr)
-	err := cmd.Run("-n", "3", "-t")
+	err := cmd.Run(context.Background(), "-n", "3", "-t")
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -68,7 +69,7 @@ func TestEchoPrompt(t *testing.T) {
 	cmd := New().(*Command)
 	cmd.SetTTY(path)
 	cmd.SetIO(strings.NewReader("a b c"), &stdout, &stderr)
-	err = cmd.Run("-n", "1", "-p")
+	err = cmd.Run(context.Background(), "-n", "1", "-p")
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -82,7 +83,7 @@ func TestNullDelimiter(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	cmd := New()
 	cmd.SetIO(strings.NewReader("hello\x00world"), &stdout, &stderr)
-	err := cmd.Run("-0")
+	err := cmd.Run(context.Background(), "-0")
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}

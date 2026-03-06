@@ -16,6 +16,5 @@ type Command interface {
 	SetIO(stdin io.Reader, stdout io.Writer, stderr io.Writer)
 	SetWorkingDir(workingDir string)
 	SetLookupEnv(lookupEnv LookupEnvFunc)
-	Run(args ...string) error
-	RunContext(ctx context.Context, args ...string) error
+	Run(ctx context.Context, args ...string) error
 }

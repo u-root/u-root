@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ func TestParseParamsDate(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test valid date
-	err := cmd.Run("-d", "2021-01-01T00:00:00Z", "/tmp/test_touch_date")
+	err := cmd.Run(context.Background(), "-d", "2021-01-01T00:00:00Z", "/tmp/test_touch_date")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -36,7 +37,7 @@ func TestParseParamsDate(t *testing.T) {
 	var stdin2 bytes.Buffer
 	cmd2.SetIO(&stdin2, &stdout2, &stderr2)
 
-	err = cmd2.Run("-d", "invalid", "/tmp/test_touch_invalid")
+	err = cmd2.Run(context.Background(), "-d", "invalid", "/tmp/test_touch_invalid")
 	if err == nil {
 		t.Error("expected error for invalid date, got nil")
 	}
@@ -81,7 +82,7 @@ func TestTouchEmptyDir(t *testing.T) {
 		var stdin bytes.Buffer
 		cmd.SetIO(&stdin, &stdout, &stderr)
 
-		err := cmd.Run(args...)
+		err := cmd.Run(context.Background(), args...)
 		if test.err != nil {
 			if !errors.Is(err, test.err) {
 				t.Fatalf("Run() expected %v, got %v", test.err, err)

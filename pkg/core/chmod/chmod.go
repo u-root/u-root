@@ -222,13 +222,8 @@ func (c *Command) run(args []string, f flags) error {
 	return finalErr
 }
 
-// Run executes the command with a `context.Background()`.
-func (c *Command) Run(args ...string) error {
-	return c.RunContext(context.Background(), args...)
-}
-
-// Run executes the command.
-func (c *Command) RunContext(ctx context.Context, args ...string) error {
+// Run executes the chmod command.
+func (c *Command) Run(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("chmod", flag.ContinueOnError)
