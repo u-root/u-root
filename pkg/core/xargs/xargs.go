@@ -8,7 +8,6 @@ package xargs
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -24,8 +23,6 @@ const (
 	defaultMaxArgs = 5000
 	defaultTTY     = "/dev/tty"
 )
-
-var errTooSmall = errors.New("too small")
 
 // command implements the xargs core utility.
 type command struct {
@@ -74,10 +71,6 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 
 	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
 		return err
-	}
-
-	if f.maxArgs <= 0 {
-		return fmt.Errorf("-n %d: %w", f.maxArgs, errTooSmall)
 	}
 
 	// Enable trace if prompt is enabled
