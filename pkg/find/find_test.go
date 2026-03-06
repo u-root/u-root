@@ -6,6 +6,7 @@ package find
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -62,7 +63,7 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name:  "file by name with debug log",
-			opts:  []Set{WithFilenameMatch("*file"), WithDebugLog(func(string, ...interface{}) {})},
+			opts:  []Set{WithFilenameMatch("*file"), WithDebugLog(log.Printf)},
 			names: []string{"/root/xyz/file"},
 		},
 		{
