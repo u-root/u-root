@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/core"
-	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 // command implements the rm core utility.
@@ -130,7 +129,7 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
+	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
