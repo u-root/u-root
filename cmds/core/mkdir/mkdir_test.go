@@ -133,7 +133,8 @@ func TestMkdir(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := mkdir.New()
 			var stdout, stderr bytes.Buffer
-			cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+			var stdin bytes.Buffer
+			cmd.SetIO(&stdin, &stdout, &stderr)
 
 			// don't depend on system umask value, if mode is not specified
 			if tt.flags.mode == "" {

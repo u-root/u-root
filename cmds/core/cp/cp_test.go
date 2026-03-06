@@ -113,7 +113,10 @@ func TestRunSimple(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := cp.New()
 			var stdout, stderr bytes.Buffer
-			cmd.SetIO(strings.NewReader(tt.input), &stdout, &stderr)
+			var stdin bytes.Buffer
+			fmt.Fprintf(&stdin, "%s", tt.input)
+
+			cmd.SetIO(&stdin, &stdout, &stderr)
 
 			err := cmd.Run(tt.args...)
 			if tt.wantErr != nil {

@@ -132,7 +132,8 @@ func TestMkdir(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := New().(*Command)
 			var stdout, stderr bytes.Buffer
-			cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+			var stdin bytes.Buffer
+			cmd.SetIO(&stdin, &stdout, &stderr)
 
 			// don't depend on system umask value, if mode is not specified
 			if tt.flags.mode == "" {
@@ -177,7 +178,8 @@ func TestMkdirCommand(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test creating a new directory
 	err := cmd.Run(testDir)
@@ -199,7 +201,8 @@ func TestMkdirCommandWithMode(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with specific mode
 	err := cmd.Run("-m", "755", testDir)
@@ -225,7 +228,8 @@ func TestMkdirCommandVerbose(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with verbose flag
 	err := cmd.Run("-v", testDir)
@@ -245,7 +249,8 @@ func TestMkdirCommandParents(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with -p flag (create parents)
 	err := cmd.Run("-p", testDir)
@@ -264,7 +269,8 @@ func TestMkdirCommandParents(t *testing.T) {
 func TestMkdirCommandNoArgs(t *testing.T) {
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with no arguments
 	err := cmd.Run()
@@ -279,7 +285,8 @@ func TestMkdirWorkingDir(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
@@ -303,7 +310,8 @@ func TestMkdirInvalidMode(t *testing.T) {
 
 	cmd := New()
 	var stdout, stderr bytes.Buffer
-	cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
+	var stdin bytes.Buffer
+	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with invalid mode
 	err := cmd.Run("-m", "invalid", testDir)
