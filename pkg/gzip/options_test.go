@@ -17,7 +17,6 @@ import (
 func TestOptionsParseArgs(t *testing.T) {
 	type args struct {
 		cmdLine *flag.FlagSet
-		cmd     string
 		args    []string
 	}
 	tests := []struct {
@@ -30,8 +29,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "default values no flags",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzip",
-				args:    []string{"file.txt"},
+				args:    []string{"gzip", "file.txt"},
 			},
 			wantOption: Options{
 				Blocksize: 128,
@@ -44,8 +42,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "set level 7",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzip",
-				args:    []string{"-7", "file.txt"},
+				args:    []string{"gzip", "-7", "file.txt"},
 			},
 			wantOption: Options{
 				Blocksize: 128,
@@ -58,8 +55,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "stdin/stdout with force",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzip",
-				args:    []string{"-f"},
+				args:    []string{"gzip", "-f"},
 			},
 			wantOption: Options{
 				Blocksize: 128,
@@ -75,8 +71,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "with test decompress should be true",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzip",
-				args:    []string{"-t", "file.txt"},
+				args:    []string{"gzip", "-t", "file.txt"},
 			},
 			wantOption: Options{
 				Blocksize:  128,
@@ -91,8 +86,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "symlink to gunzip",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gunzip",
-				args:    []string{"file.gz"},
+				args:    []string{"gunzip", "file.gz"},
 			},
 			wantOption: Options{
 				Blocksize:  128,
@@ -106,8 +100,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "symlink to gunzip",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gunzip",
-				args:    []string{"file.gz"},
+				args:    []string{"gunzip", "file.gz"},
 			},
 			wantOption: Options{
 				Blocksize:  128,
@@ -121,8 +114,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "symlink to gzcat",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzcat",
-				args:    []string{"file.gz"},
+				args:    []string{"gzcat", "file.gz"},
 			},
 			wantOption: Options{
 				Blocksize:  128,
@@ -137,8 +129,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "no args and no force",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzip",
-				args:    nil,
+				args:    []string{"gzip"},
 			},
 			wantErr: ErrStdoutNoForce,
 		},
@@ -146,8 +137,7 @@ func TestOptionsParseArgs(t *testing.T) {
 			name: "request for help",
 			args: args{
 				cmdLine: flag.NewFlagSet("test", flag.ContinueOnError),
-				cmd:     "gzip",
-				args:    []string{"-h"},
+				args:    []string{"gzip", "-h"},
 			},
 			wantErr: ErrHelp,
 		},
@@ -155,7 +145,7 @@ func TestOptionsParseArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			o := &Options{}
-			err := o.ParseArgs(tt.args.cmd, tt.args.args, tt.args.cmdLine)
+			err := o.ParseArgs(tt.args.args, tt.args.cmdLine)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("Options.ParseArgs() error = %v, wantErr %v", err, tt.wantErr)
 			}
