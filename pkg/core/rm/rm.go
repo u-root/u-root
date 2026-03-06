@@ -8,7 +8,6 @@ package rm
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -91,7 +90,7 @@ func (c *command) removeFiles(files []string, f flags) error {
 		}
 
 		if err := removeFunc(resolvedFile); err != nil {
-			if f.force && isIgnorableError(err) {
+			if f.force && os.IsNotExist(err) {
 				continue
 			}
 			return err
@@ -140,14 +139,4 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 	}
 
 	return nil
-}
-
-func isIgnorableError(err error) bool {
-	if errors.Is(err, os.ErrNotExist) {
-		return true
-	}
-	if _, ok := err.(*os.PathError); ok {
-		return true
-	}
-	return false
 }
