@@ -28,7 +28,7 @@ func init() {
 
 func main() {
 	cmd := mv.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
+	exitCode, err := cmd.Run(context.Background(), os.Args...)
 	if err != nil {
 		log.Fatal("mv: ", err)
 	}

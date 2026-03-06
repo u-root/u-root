@@ -54,7 +54,8 @@ func TestCat(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), files...)
+	args := append([]string{"cat"}, files...)
+	exitCode, err := cmd.Run(context.Background(), args...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +83,8 @@ func TestRunFiles(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), files...)
+	args := append([]string{"cat"}, files...)
+	exitCode, err := cmd.Run(context.Background(), args...)
 	if err != nil {
 		t.Error(err)
 	}
@@ -111,7 +113,8 @@ func TestRunFilesError(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), files...)
+	args := append([]string{"cat"}, files...)
+	exitCode, err := cmd.Run(context.Background(), args...)
 	if err == nil {
 		t.Error("function run succeeded but should have failed")
 	}
@@ -128,7 +131,7 @@ func TestRunNoArgs(t *testing.T) {
 	fmt.Fprintf(&stdin, "%s", inputdata)
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background())
+	exitCode, err := cmd.Run(context.Background(), "cat")
 	if err != nil {
 		t.Error(err)
 	}
@@ -146,7 +149,7 @@ func TestIOErrors(t *testing.T) {
 	errReader := iotest.ErrReader(errors.New("read error"))
 	cmd.SetIO(errReader, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background())
+	exitCode, err := cmd.Run(context.Background(), "cat")
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -159,7 +162,7 @@ func TestIOErrors(t *testing.T) {
 	var stdout2, stderr2 bytes.Buffer
 	cmd2.SetIO(errReader, &stdout2, &stderr2)
 
-	exitCode, err = cmd2.Run(context.Background(), "-")
+	exitCode, err = cmd2.Run(context.Background(), "cat", "-")
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -189,7 +192,7 @@ func TestCatDash(t *testing.T) {
 	stdin.WriteString("line3\n")
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	exitCode, err := cmd.Run(context.Background(), f1, "-", f2)
+	exitCode, err := cmd.Run(context.Background(), "cat", f1, "-", f2)
 	if err != nil {
 		t.Fatal(err)
 	}

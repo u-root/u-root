@@ -146,7 +146,7 @@ func TestMkdir(t *testing.T) {
 			}
 
 			// Build command arguments
-			var args []string
+			args := []string{"mkdir"}
 			if tt.flags.mode != "" {
 				args = append(args, "-m", tt.flags.mode)
 			}

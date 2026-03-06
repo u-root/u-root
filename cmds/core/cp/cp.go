@@ -33,7 +33,7 @@ func init() {
 
 func main() {
 	cmd := cp.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
+	exitCode, err := cmd.Run(context.Background(), os.Args...)
 	if err != nil {
 		log.Fatal("cp: ", err)
 	}

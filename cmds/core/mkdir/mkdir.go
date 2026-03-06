@@ -29,7 +29,7 @@ func init() {
 
 func main() {
 	cmd := mkdir.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
+	exitCode, err := cmd.Run(context.Background(), os.Args...)
 	if err != nil {
 		log.Fatal("mkdir: ", err)
 	}

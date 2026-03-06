@@ -70,53 +70,53 @@ func TestRm(t *testing.T) {
 	}{
 		{
 			name: "no args",
-			args: nil,
+			args: []string{"rm"},
 			want: "rm [-Rrvif] file...",
 		},
 		{
 			name: "rm one file",
-			args: []string{"go.txt"},
+			args: []string{"rm", "go.txt"},
 			want: "",
 		},
 		{
 			name:    "rm one file verbose",
-			args:    []string{"-v", "go.txt"},
+			args:    []string{"rm", "-v", "go.txt"},
 			verbose: true,
 			want:    "",
 		},
 		{
 			name: "fail to rm one file",
-			args: []string{"go"},
+			args: []string{"rm", "go"},
 			want: "no such file or directory",
 		},
 		{
 			name:  "fail to rm one file forced to trigger continue",
-			args:  []string{"-f", "go"},
+			args:  []string{"rm", "-f", "go"},
 			force: true,
 			want:  "",
 		},
 		{
 			name:        "rm one file interactive",
-			args:        []string{"-i", "go.txt"},
+			args:        []string{"rm", "-i", "go.txt"},
 			interactive: true,
 			iString:     "y\n",
 			want:        "",
 		},
 		{
 			name:        "rm one file interactive continue triggered",
-			args:        []string{"-i", "go.txt"},
+			args:        []string{"rm", "-i", "go.txt"},
 			interactive: true,
 			iString:     "\n",
 			want:        "",
 		},
 		{
 			name:      "rm dir recursively",
-			args:      []string{"-r", "hi"},
+			args:      []string{"rm", "-r", "hi"},
 			recursive: true,
 		},
 		{
 			name: "rm dir not recursively",
-			args: []string{"hi"},
+			args: []string{"rm", "hi"},
 			want: "directory not empty",
 		},
 	} {
@@ -133,7 +133,7 @@ func TestRm(t *testing.T) {
 			// Update args to use absolute paths for files
 			args := make([]string, len(tt.args))
 			copy(args, tt.args)
-			for i := 0; i < len(args); i++ {
+			for i := 1; i < len(args); i++ {
 				if !strings.HasPrefix(args[i], "-") {
 					args[i] = filepath.Join(d, args[i])
 				}
