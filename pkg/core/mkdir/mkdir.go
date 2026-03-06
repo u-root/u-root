@@ -15,14 +15,14 @@ import (
 	"github.com/u-root/u-root/pkg/core"
 )
 
-// command implements the mkdir core utility.
-type command struct {
+// Command implements the mkdir core utility.
+type Command struct {
 	core.Base
 }
 
 // New creates a new mkdir command.
 func New() core.Command {
-	c := &command{}
+	c := &Command{}
 	c.Init()
 	return c
 }
@@ -41,7 +41,7 @@ const (
 )
 
 // parseMode parses the mode string and returns the appropriate FileMode.
-func (c *command) parseMode(mode string) (os.FileMode, error) {
+func (c *Command) parseMode(mode string) (os.FileMode, error) {
 	var m uint64
 	var err error
 	if mode == "" {
@@ -68,7 +68,7 @@ func (c *command) parseMode(mode string) (os.FileMode, error) {
 }
 
 // mkdirFiles creates directories according to the flags.
-func (c *command) mkdirFiles(f flags, args []string) error {
+func (c *Command) mkdirFiles(f flags, args []string) error {
 	mkdirFunc := os.Mkdir
 	if f.mkall {
 		mkdirFunc = os.MkdirAll
@@ -96,12 +96,12 @@ func (c *command) mkdirFiles(f flags, args []string) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *command) Run(args ...string) error {
+func (c *Command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *command) RunContext(ctx context.Context, args ...string) error {
+func (c *Command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("mkdir", flag.ContinueOnError)

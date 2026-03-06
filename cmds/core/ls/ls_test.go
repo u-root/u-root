@@ -220,7 +220,8 @@ func TestIndicator(t *testing.T) {
 		},
 	} {
 		// Run tests
-		got := lscore.TestIndicator(test.lsInfo)
+		cmd := lscore.New().(*lscore.Command)
+		got := cmd.TestIndicator(test.lsInfo)
 		if got != test.symbol {
 			t.Errorf("for mode '%b' expected '%q', got '%q'", test.lsInfo.Mode, test.symbol, got)
 		}

@@ -130,7 +130,7 @@ func TestMkdir(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := New().(*command)
+			cmd := New().(*Command)
 			var stdout, stderr bytes.Buffer
 			cmd.SetIO(bytes.NewReader(nil), &stdout, &stderr)
 

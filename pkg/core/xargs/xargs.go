@@ -23,15 +23,15 @@ const (
 	defaultTTY     = "/dev/tty"
 )
 
-// command implements the xargs core utility.
-type command struct {
+// Command implements the xargs core utility.
+type Command struct {
 	core.Base
 	tty string
 }
 
 // New creates a new xargs command.
 func New() core.Command {
-	c := &command{
+	c := &Command{
 		tty: defaultTTY,
 	}
 	c.Init()
@@ -46,12 +46,12 @@ type flags struct {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *command) Run(args ...string) error {
+func (c *Command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *command) RunContext(ctx context.Context, args ...string) error {
+func (c *Command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("xargs", flag.ContinueOnError)
@@ -158,7 +158,6 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 }
 
 // SetTTY sets the TTY device path for prompt mode.
-func SetTTY(c core.Command, tty string) {
-	cmd := c.(*command)
-	cmd.tty = tty
+func (c *Command) SetTTY(tty string) {
+	c.tty = tty
 }

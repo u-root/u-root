@@ -20,14 +20,14 @@ import (
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-// command implements the ls command.
-type command struct {
+// Command implements the ls command.
+type Command struct {
 	core.Base
 }
 
 // New creates a new ls command.
 func New() core.Command {
-	c := &command{}
+	c := &Command{}
 	c.Init()
 	return c
 }
@@ -76,7 +76,7 @@ type file struct {
 	err  error
 }
 
-func (c *command) listName(stringer ls.Stringer, d string, prefix bool, f flags) {
+func (c *Command) listName(stringer ls.Stringer, d string, prefix bool, f flags) {
 	var files []file
 	resolvedPath := c.ResolvePath(d)
 
@@ -169,7 +169,7 @@ func indicator(fi ls.FileInfo) string {
 	return ""
 }
 
-func (c *command) list(names []string, f flags) error {
+func (c *Command) list(names []string, f flags) error {
 	if len(names) == 0 {
 		names = []string{"."}
 	}
@@ -200,12 +200,12 @@ func (c *command) list(names []string, f flags) error {
 }
 
 // Run executes the command with a `context.Background()`.
-func (c *command) Run(args ...string) error {
+func (c *Command) Run(args ...string) error {
 	return c.RunContext(context.Background(), args...)
 }
 
 // Run executes the command.
-func (c *command) RunContext(ctx context.Context, args ...string) error {
+func (c *Command) RunContext(ctx context.Context, args ...string) error {
 	var f flags
 
 	fs := flag.NewFlagSet("ls", flag.ContinueOnError)
@@ -241,11 +241,6 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 }
 
 // TestIndicator exposes the indicator function for testing.
-func (c *command) TestIndicator(fi ls.FileInfo) string {
-	return indicator(fi)
-}
-
-// TestIndicator exposes the indicator function for external testing.
-func TestIndicator(fi ls.FileInfo) string {
+func (c *Command) TestIndicator(fi ls.FileInfo) string {
 	return indicator(fi)
 }
