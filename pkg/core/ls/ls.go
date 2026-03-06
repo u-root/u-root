@@ -200,7 +200,7 @@ func (c *Command) list(names []string, f flags) error {
 }
 
 // Run executes the ls command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	var f flags
 
 	fs := flag.NewFlagSet("ls", flag.ContinueOnError)
@@ -225,14 +225,14 @@ func (c *Command) Run(ctx context.Context, args ...string) error {
 	}
 
 	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
-		return err
+		return 1, err
 	}
 
 	if err := c.list(fs.Args(), f); err != nil {
-		return err
+		return 1, err
 	}
 
-	return nil
+	return 0, nil
 }
 
 // TestIndicator exposes the indicator function for testing.

@@ -34,8 +34,9 @@ func init() {
 
 func main() {
 	cmd := touch.New()
-	err := cmd.Run(context.Background(), os.Args[1:]...)
+	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatal("touch: ", err)
 	}
+	os.Exit(exitCode)
 }

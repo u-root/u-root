@@ -107,7 +107,7 @@ func (c *Command) removeFiles(files []string, f flags) error {
 }
 
 // Run executes the rm command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	var f flags
 
 	fs := flag.NewFlagSet("rm", flag.ContinueOnError)
@@ -125,12 +125,12 @@ func (c *Command) Run(ctx context.Context, args ...string) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return err
+		return 1, err
 	}
 
 	if err := c.removeFiles(fs.Args(), f); err != nil {
-		return err
+		return 1, err
 	}
 
-	return nil
+	return 0, nil
 }

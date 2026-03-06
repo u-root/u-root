@@ -31,8 +31,9 @@ func init() {
 
 func main() {
 	cmd := cat.New()
-	err := cmd.Run(context.Background(), os.Args[1:]...)
+	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatal("cat: ", err)
 	}
+	os.Exit(exitCode)
 }

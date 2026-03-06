@@ -106,7 +106,7 @@ func (c *Command) move(files []string, update, noClobber bool) error {
 }
 
 // Run executes the mv command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	var f flags
 
 	fs := flag.NewFlagSet("mv", flag.ContinueOnError)
@@ -121,17 +121,17 @@ func (c *Command) Run(ctx context.Context, args ...string) error {
 	}
 
 	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
-		return err
+		return 1, err
 	}
 
 	if fs.NArg() < 2 {
 		fs.Usage()
-		return fmt.Errorf("insufficient arguments")
+		return 1, fmt.Errorf("insufficient arguments")
 	}
 
 	if err := c.move(fs.Args(), f.update, f.noClobber); err != nil {
-		return err
+		return 1, err
 	}
 
-	return nil
+	return 0, nil
 }

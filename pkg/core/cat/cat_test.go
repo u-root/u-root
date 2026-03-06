@@ -52,9 +52,12 @@ func TestCat(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(context.Background(), files...)
+	exitCode, err := cmd.Run(context.Background(), files...)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	if !bytes.Equal(stdout.Bytes(), someData) {
@@ -94,9 +97,12 @@ func TestRunFiles(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(context.Background(), files...)
+	exitCode, err := cmd.Run(context.Background(), files...)
 	if err != nil {
 		t.Error(err)
+	}
+	if exitCode != 0 {
+		t.Errorf("Expected exit code 0, got %d", exitCode)
 	}
 	if !bytes.Equal(stdout.Bytes(), someData) {
 		t.Fatalf("Reading files failed: got %v, want %v", stdout.Bytes(), someData)
@@ -120,9 +126,12 @@ func TestRunFilesError(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(context.Background(), files...)
+	exitCode, err := cmd.Run(context.Background(), files...)
 	if err == nil {
 		t.Error("function run succeeded but should have failed")
+	}
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code")
 	}
 }
 
@@ -134,9 +143,12 @@ func TestRunNoArgs(t *testing.T) {
 	fmt.Fprintf(&stdin, "%s", inputdata)
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err := cmd.Run(context.Background())
+	exitCode, err := cmd.Run(context.Background())
 	if err != nil {
 		t.Error(err)
+	}
+	if exitCode != 0 {
+		t.Errorf("Expected exit code 0, got %d", exitCode)
 	}
 	if stdout.String() != inputdata {
 		t.Errorf("Want: %q Got: %q", inputdata, stdout.String())
@@ -149,9 +161,12 @@ func TestIOErrors(t *testing.T) {
 	errReader := iotest.ErrReader(errors.New("read error"))
 	cmd.SetIO(errReader, &stdout, &stderr)
 
-	err := cmd.Run(context.Background())
+	exitCode, err := cmd.Run(context.Background())
 	if !errors.Is(err, errCopy) {
 		t.Errorf("expected %v, got %v", errCopy, err)
+	}
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code")
 	}
 
 	// Test with dash argument
@@ -159,9 +174,12 @@ func TestIOErrors(t *testing.T) {
 	var stdout2, stderr2 bytes.Buffer
 	cmd2.SetIO(errReader, &stdout2, &stderr2)
 
-	err = cmd2.Run(context.Background(), "-")
+	exitCode, err = cmd2.Run(context.Background(), "-")
 	if !errors.Is(err, errCopy) {
 		t.Errorf("expected %v, got %v", errCopy, err)
+	}
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code")
 	}
 }
 
@@ -186,9 +204,12 @@ func TestCatDash(t *testing.T) {
 	stdin.WriteString("line3\n")
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err = cmd.Run(context.Background(), f1, "-", f2)
+	exitCode, err := cmd.Run(context.Background(), f1, "-", f2)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	want := "line1\nline2\nline3\nline4\nline5\n"
@@ -216,9 +237,12 @@ func TestCatWorkingDir(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 	cmd.SetWorkingDir(tempDir)
 
-	err = cmd.Run(context.Background(), testFile)
+	exitCode, err := cmd.Run(context.Background(), testFile)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	if stdout.String() != testContent {

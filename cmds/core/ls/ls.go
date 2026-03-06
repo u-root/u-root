@@ -38,8 +38,9 @@ func init() {
 
 func main() {
 	cmd := ls.New()
-	err := cmd.Run(context.Background(), os.Args[1:]...)
+	exitCode, err := cmd.Run(context.Background(), os.Args[1:]...)
 	if err != nil {
 		log.Fatal("ls: ", err)
 	}
+	os.Exit(exitCode)
 }

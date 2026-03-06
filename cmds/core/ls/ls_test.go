@@ -99,12 +99,15 @@ func TestListName(t *testing.T) {
 			cmd.SetIO(nil, &buf, &buf)
 
 			args := append(tt.args, tt.input)
-			err := cmd.Run(context.Background(), args...)
+			exitCode, err := cmd.Run(context.Background(), args...)
 
 			// For non-existent files, we expect an error to be printed but no exit error
 			if tt.input == "dir" {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
+				}
+				if exitCode != 0 {
+					t.Errorf("Expected exit code 0, got %d", exitCode)
 				}
 				// Check that error was printed to output
 				output := buf.String()
@@ -119,13 +122,18 @@ func TestListName(t *testing.T) {
 				return
 			}
 
+			if exitCode != 0 {
+				t.Errorf("Expected exit code 0, got %d", exitCode)
+				return
+			}
+
 			// For prefix tests, we need multiple arguments
 			if tt.prefix {
 				args = append(tt.args, tt.input, tt.input+"2")
 				cmd = lscore.New()
 				cmd.SetIO(nil, &buf, &buf)
 				buf.Reset()
-				_ = cmd.Run(context.Background(), args...)
+				_, _ = cmd.Run(context.Background(), args...)
 			}
 
 			// Note: exact output matching is difficult due to OS differences
@@ -161,15 +169,18 @@ func TestRun(t *testing.T) {
 			cmd := lscore.New()
 			cmd.SetIO(nil, io.Discard, io.Discard)
 
-			err := cmd.Run(context.Background(), tt.args...)
+			exitCode, err := cmd.Run(context.Background(), tt.args...)
 
 			if tt.wantErr {
-				if err == nil {
+				if err == nil && exitCode == 0 {
 					t.Errorf("Expected error, got none")
 				}
 			} else {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
+				}
+				if exitCode != 0 {
+					t.Errorf("Expected exit code 0, got %d", exitCode)
 				}
 			}
 		})
@@ -249,7 +260,7 @@ func TestPermHandling(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, b, b)
 
-	err := cmd.Run(context.Background(), d)
+	_, err := cmd.Run(context.Background(), d)
 	if err != nil {
 		t.Fatalf("ls %q: %v != nil", d, err)
 	}
@@ -266,9 +277,12 @@ func TestNotExist(t *testing.T) {
 	cmd := lscore.New()
 	cmd.SetIO(nil, b, b)
 
-	err := cmd.Run(context.Background(), filepath.Join(d, "b"))
+	exitCode, err := cmd.Run(context.Background(), filepath.Join(d, "b"))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 	// yeesh.
 	// errors not consistent and ... the error has this gratuitous 'lstat ' in front

@@ -34,9 +34,12 @@ func TestAccess(t *testing.T) {
 	var stdin bytes.Buffer
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
-	err = cmd.Run(context.Background(), "-a", "-d", "2023-01-01T00:00:00Z", f.Name())
+	exitCode, err := cmd.Run(context.Background(), "-a", "-d", "2023-01-01T00:00:00Z", f.Name())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	mfi, err := f.Stat()

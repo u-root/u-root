@@ -96,7 +96,7 @@ func (c *Command) mkdirFiles(f flags, args []string) error {
 }
 
 // Run executes the mkdir command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	var f flags
 
 	fs := flag.NewFlagSet("mkdir", flag.ContinueOnError)
@@ -114,17 +114,17 @@ func (c *Command) Run(ctx context.Context, args ...string) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
-		return err
+		return 1, err
 	}
 
 	if len(fs.Args()) < 1 {
 		fs.Usage()
-		return fmt.Errorf("no directories specified")
+		return 1, fmt.Errorf("no directories specified")
 	}
 
 	if err := c.mkdirFiles(f, fs.Args()); err != nil {
-		return err
+		return 1, err
 	}
 
-	return nil
+	return 0, nil
 }

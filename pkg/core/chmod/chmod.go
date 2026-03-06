@@ -223,7 +223,7 @@ func (c *Command) run(args []string, f flags) error {
 }
 
 // Run executes the chmod command.
-func (c *Command) Run(ctx context.Context, args ...string) error {
+func (c *Command) Run(ctx context.Context, args ...string) (int, error) {
 	var f flags
 
 	fs := flag.NewFlagSet("chmod", flag.ContinueOnError)
@@ -257,7 +257,7 @@ func (c *Command) Run(ctx context.Context, args ...string) error {
 				i++
 				continue
 			}
-			return fmt.Errorf("flag needs an argument: %s", arg)
+			return 1, fmt.Errorf("flag needs an argument: %s", arg)
 		}
 		if strings.HasPrefix(arg, "-reference=") || strings.HasPrefix(arg, "--reference=") {
 			f.reference = strings.SplitN(arg, "=", 2)[1]
@@ -284,8 +284,8 @@ func (c *Command) Run(ctx context.Context, args ...string) error {
 	}
 
 	if err := c.run(parsedArgs, f); err != nil {
-		return err
+		return 1, err
 	}
 
-	return nil
+	return 0, nil
 }

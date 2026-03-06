@@ -183,9 +183,12 @@ func TestMkdirCommand(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test creating a new directory
-	err := cmd.Run(context.Background(), testDir)
+	exitCode, err := cmd.Run(context.Background(), testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify directory was created
@@ -206,9 +209,12 @@ func TestMkdirCommandWithMode(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with specific mode
-	err := cmd.Run(context.Background(), "-m", "755", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-m", "755", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify directory was created with correct mode
@@ -233,9 +239,12 @@ func TestMkdirCommandVerbose(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with verbose flag
-	err := cmd.Run(context.Background(), "-v", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-v", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify verbose output
@@ -254,9 +263,12 @@ func TestMkdirCommandParents(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with -p flag (create parents)
-	err := cmd.Run(context.Background(), "-p", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-p", testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify directory was created
@@ -274,9 +286,12 @@ func TestMkdirCommandNoArgs(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with no arguments
-	err := cmd.Run(context.Background())
+	exitCode, err := cmd.Run(context.Background())
 	if err == nil {
 		t.Error("Expected error for no arguments")
+	}
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code")
 	}
 }
 
@@ -291,9 +306,12 @@ func TestMkdirWorkingDir(t *testing.T) {
 	cmd.SetWorkingDir(tempDir)
 
 	// Test with relative path
-	err := cmd.Run(context.Background(), testDir)
+	exitCode, err := cmd.Run(context.Background(), testDir)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	// Verify directory was created in the working directory
@@ -315,8 +333,11 @@ func TestMkdirInvalidMode(t *testing.T) {
 	cmd.SetIO(&stdin, &stdout, &stderr)
 
 	// Test with invalid mode
-	err := cmd.Run(context.Background(), "-m", "invalid", testDir)
+	exitCode, err := cmd.Run(context.Background(), "-m", "invalid", testDir)
 	if err == nil {
 		t.Error("Expected error for invalid mode")
+	}
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code for invalid mode")
 	}
 }
