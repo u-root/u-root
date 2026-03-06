@@ -18,22 +18,50 @@
 package main
 
 import (
-	"context"
+	"flag"
+	"fmt"
+	"io"
 	"log"
 	"os"
-
-	"github.com/u-root/u-root/pkg/core/cat"
 )
 
-func init() {
-	log.SetFlags(0)
+var _ = flag.Bool("u", false, "ignored")
+var errCopy = fmt.Errorf("error concatenating stdin to stdout")
+
+func cat(reader io.Reader, writer io.Writer) error {
+	if _, err := io.Copy(writer, reader); err != nil {
+		return errCopy
+	}
+	return nil
+}
+
+func run(stdin io.Reader, stdout io.Writer, args ...string) error {
+	if len(args) == 0 {
+		return cat(stdin, stdout)
+	}
+	for _, file := range args {
+		if file == "-" {
+			err := cat(stdin, stdout)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		if err := cat(f, stdout); err != nil {
+			return fmt.Errorf("failed to concatenate file %s to given writer", f.Name())
+		}
+		f.Close()
+	}
+	return nil
 }
 
 func main() {
-	cmd := cat.New()
-	exitCode, err := cmd.Run(context.Background(), os.Args...)
-	if err != nil {
-		log.Fatal("cat: ", err)
+	flag.Parse()
+	if err := run(os.Stdin, os.Stdout, flag.Args()...); err != nil {
+		log.Fatalf("cat failed with: %v", err)
 	}
-	os.Exit(exitCode)
 }
