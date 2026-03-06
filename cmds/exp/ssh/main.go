@@ -45,7 +45,7 @@ var (
 	keyFile    = flags.String("i", "", "key file")
 	configFile = flags.String("F", defaultConfigFile, "config file")
 
-	v = func(string, ...any) {}
+	v = func(string, ...interface{}) {}
 
 	// ssh config file
 	cfg *sshconfig.Config

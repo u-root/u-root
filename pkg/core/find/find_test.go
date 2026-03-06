@@ -62,7 +62,7 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name:  "file by name with debug log",
-			opts:  []Set{WithFilenameMatch("*file"), WithDebugLog(func(string, ...any) {})},
+			opts:  []Set{WithFilenameMatch("*file"), WithDebugLog(func(string, ...interface{}) {})},
 			names: []string{"/root/xyz/file"},
 		},
 		{

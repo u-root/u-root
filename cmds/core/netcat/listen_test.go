@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"reflect"
-	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -127,7 +126,7 @@ type setupListenerTestCase struct {
 	network  string
 	address  string
 	wantErr  bool
-	wantType any
+	wantType interface{}
 }
 
 // Example test cases
@@ -633,7 +632,13 @@ func TestListenForConnections(t *testing.T) {
 
 			// The output may appear in different order as the io.Copy from the connections are executed concurrently
 			// So we check if the output is a permutation of the connection reads
-			matchFound := slices.Contains(tt.expectedOutput, output.String())
+			matchFound := false
+			for _, expected := range tt.expectedOutput {
+				if output.String() == expected {
+					matchFound = true
+					break
+				}
+			}
 
 			if !matchFound {
 				t.Errorf("Expected output:\n'%v', got:\n'%v'", tt.expectedOutput, output.String())
@@ -825,7 +830,13 @@ func TestParseRemoteAddr(t *testing.T) {
 
 func isSubset(t *testing.T, gotAddress, wantAddress []string) bool {
 	for _, want := range wantAddress {
-		found := slices.Contains(gotAddress, want)
+		found := false
+		for _, got := range gotAddress {
+			if want == got {
+				found = true
+				break
+			}
+		}
 		if !found {
 			return false
 		}

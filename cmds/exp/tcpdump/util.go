@@ -67,7 +67,7 @@ func formatPacketData(data []byte) string {
 		result += fmt.Sprintf("0x%04x:  ", i)
 
 		// Print the hex values
-		for j := range 16 {
+		for j := 0; j < 16; j++ {
 			if i+j < len(data) {
 				result += fmt.Sprintf("%02x", data[i+j])
 			} else {

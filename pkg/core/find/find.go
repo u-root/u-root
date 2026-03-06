@@ -50,7 +50,7 @@ type finder struct {
 	match      func(pattern string, name string) (bool, error)
 	mode       os.FileMode
 	modeMask   os.FileMode
-	debug      func(string, ...any)
+	debug      func(string, ...interface{})
 	files      chan *File
 	sendErrors bool
 }
@@ -113,7 +113,7 @@ func WithModeMatch(mode, modeMask os.FileMode) Set {
 }
 
 // WithDebugLog logs messages to l.
-func WithDebugLog(l func(string, ...any)) Set {
+func WithDebugLog(l func(string, ...interface{})) Set {
 	return func(f *finder) {
 		f.debug = l
 	}
@@ -131,7 +131,7 @@ func WithDebugLog(l func(string, ...any)) Set {
 func Find(ctx context.Context, opt ...Set) <-chan *File {
 	f := &finder{
 		root:       "/",
-		debug:      func(string, ...any) {},
+		debug:      func(string, ...interface{}) {},
 		files:      make(chan *File, 128),
 		match:      filepath.Match,
 		sendErrors: true,

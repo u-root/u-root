@@ -21,7 +21,7 @@ import (
 
 const DefaultNTPConfig = "/etc/ntp.conf"
 
-var Debug = func(string, ...any) {}
+var Debug = func(string, ...interface{}) {}
 
 func parseServers(r *bufio.Reader) []string {
 	var uri []string

@@ -145,7 +145,10 @@ func runesToRunes(in []rune, out ...rune) *transformer {
 	convs := make(map[rune]rune)
 	l := len(out)
 	for i, r := range in {
-		ind := min(i, l-1)
+		ind := i
+		if i > l-1 {
+			ind = l - 1
+		}
 		convs[r] = out[ind]
 	}
 	return &transformer{

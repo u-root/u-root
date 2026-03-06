@@ -103,7 +103,7 @@ func TestConcurrentWriter(t *testing.T) {
 	data := []byte("data")
 
 	wg.Add(writeCount)
-	for range writeCount {
+	for i := 0; i < writeCount; i++ {
 		go func() {
 			defer wg.Done()
 			if _, err := cw.Write(data); err != nil {

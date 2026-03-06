@@ -321,7 +321,7 @@ func (p *Property) PredictType() PropertyType {
 //	AsType(fdt.PropEncodedArrayType) -> []byte
 //	AsType(fdt.PHandleType)          -> fdt.PHandle
 //	AsType(fdt.StringListType)       -> []string
-func (p *Property) AsType(val PropertyType) (any, error) {
+func (p *Property) AsType(val PropertyType) (interface{}, error) {
 	switch val {
 	case EmptyType:
 		return p.AsEmpty()

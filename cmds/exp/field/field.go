@@ -384,7 +384,7 @@ func pprefix(prefix string) {
 	}
 }
 
-func fatal(format string, a ...any) {
+func fatal(format string, a ...interface{}) {
 	fmt.Fprintf(os.Stderr, format+"\n", a...)
 	flag.Usage()
 	os.Exit(1)

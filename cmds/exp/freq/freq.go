@@ -33,7 +33,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"slices"
+	"sort"
 	"unicode"
 )
 
@@ -87,7 +87,9 @@ func (c *cmd) run() error {
 	for k := range c.freq {
 		keys = append(keys, k)
 	}
-	slices.Sort(keys)
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
 
 	b := bufio.NewWriterSize(c.stdout, 8192*4)
 	for _, r := range keys {

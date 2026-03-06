@@ -44,7 +44,7 @@ import (
 )
 
 var (
-	debug = func(string, ...any) {}
+	debug = func(string, ...interface{}) {}
 	d     = flag.Bool("v", false, "Debug prints")
 	arch  = map[string]string{
 		"initramfs.linux_amd64.cpio":   "amd64",

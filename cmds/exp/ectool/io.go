@@ -23,9 +23,9 @@ type ioport interface {
 	// In(ioaddr, interface{}) (int, error)
 }
 
-type debugf func(string, ...any)
+type debugf func(string, ...interface{})
 
-func nodebugf(string, ...any) {}
+func nodebugf(string, ...interface{}) {}
 
 type devports struct {
 	*os.File

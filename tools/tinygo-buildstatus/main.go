@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 
 	builder "github.com/u-root/u-root/tools/tinygo-buildstatus/pkg"
@@ -135,7 +134,13 @@ func verifyStatusQuo(results []builder.Result, errors []builder.Error, compare [
 
 	for _, res := range results {
 		base := filepath.Base(res.Job.GoPkgPath)
-		found := slices.Contains(compare, base)
+		found := false
+		for _, c := range compare {
+			if base == c {
+				found = true
+				break
+			}
+		}
 
 		if !found {
 			unmatchedResults = append(unmatchedResults, base)

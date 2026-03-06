@@ -23,8 +23,8 @@ func ArgsToGoArgs(args []string) []string {
 			continue
 		}
 		if strings.HasPrefix(f, "-") {
-			fs := strings.SplitSeq(f[1:], "")
-			for ff := range fs {
+			fs := strings.Split(f[1:], "")
+			for _, ff := range fs {
 				out = append(out, "-"+ff)
 			}
 			continue
@@ -67,7 +67,7 @@ type StringSlice []string
 
 // Set implements flag.Value.Set.
 func (s *StringSlice) Set(value string) error {
-	for v := range strings.SplitSeq(value, ",") {
+	for _, v := range strings.Split(value, ",") {
 		*s = append(*s, v)
 	}
 	return nil

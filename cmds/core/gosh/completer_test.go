@@ -50,14 +50,14 @@ func completionsEqual(numCat, numEnt int, want []string, got editline.Completion
 		return false
 	}
 
-	for i := range numCat {
+	for i := 0; i < numCat; i++ {
 		if got.NumEntries(i) < numEnt {
 			return false
 		}
 	}
 
-	for j := range numCat {
-		for i := range numEnt {
+	for j := 0; j < numCat; j++ {
+		for i := 0; i < numEnt; i++ {
 			found := false
 			for _, entry := range want {
 				if entry == got.Entry(j, i).Title() {

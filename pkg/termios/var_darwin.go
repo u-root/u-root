@@ -5,7 +5,6 @@
 package termios
 
 import (
-	"maps"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -41,7 +40,9 @@ func init() {
 		"ofill": {word: O, mask: syscall.OFILL},
 		"ofdel": {word: O, mask: syscall.OFDEL},
 	}
-	maps.Copy(boolFields, extra)
+	for k, v := range extra {
+		boolFields[k] = v
+	}
 }
 
 func toTermiosCflag(r uint64) uint64 { return r }

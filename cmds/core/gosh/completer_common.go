@@ -160,7 +160,7 @@ func filepathCompleter(input string) []string {
 func commandCompleter(input string) []string {
 	var candidates []string
 
-	for path := range strings.SplitSeq(os.Getenv("PATH"), ":") {
+	for _, path := range strings.Split(os.Getenv("PATH"), ":") {
 		if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 			if d != nil && !d.IsDir() && strings.HasPrefix(d.Name(), input) {
 				// Is executable?

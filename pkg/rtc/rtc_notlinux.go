@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type syscalls any
+type syscalls interface{}
 
 type realSyscalls struct{}
 
