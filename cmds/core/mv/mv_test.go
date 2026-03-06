@@ -79,6 +79,7 @@ func TestMove(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func TestMv(t *testing.T) {
@@ -115,6 +116,7 @@ func TestMv(t *testing.T) {
 					t.Errorf("mv() = '%v', want: '%v'", got, tt.want)
 				}
 			}
+
 		})
 	}
 }
@@ -122,7 +124,7 @@ func TestMv(t *testing.T) {
 func TestMoveFile(t *testing.T) {
 	d := setup(t)
 
-	testTable := []struct {
+	var testTable = []struct {
 		want error
 		name string
 		src  string
