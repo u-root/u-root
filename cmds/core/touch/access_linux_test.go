@@ -7,14 +7,10 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"os"
 	"syscall"
 	"testing"
 	"time"
-
-	"github.com/u-root/u-root/pkg/core/touch"
 )
 
 func TestAccess(t *testing.T) {
@@ -29,17 +25,10 @@ func TestAccess(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	cmd := touch.New()
-	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
-
-	exitCode, err := cmd.Run(context.Background(), "touch", "-a", "-d", "2023-01-01T00:00:00Z", f.Name())
+	cmd := command(params{time: accessDate, access: true}, f.Name())
+	err = cmd.run()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
-	}
-	if exitCode != 0 {
-		t.Fatalf("Expected exit code 0, got %d", exitCode)
 	}
 
 	mfi, err := f.Stat()

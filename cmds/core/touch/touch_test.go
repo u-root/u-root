@@ -1,71 +1,129 @@
 // Copyright 2023 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
 package main
 
 import (
-	"bytes"
-	"context"
 	"errors"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/touch"
+	"time"
 )
 
 func TestParseParamsDate(t *testing.T) {
-	cmd := touch.New()
-	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
-
-	// Test valid date
-	exitCode, err := cmd.Run(context.Background(), "touch", "-d", "2021-01-01T00:00:00Z", "/tmp/test_touch_date")
+	date := "2021-01-01T00:00:00Z"
+	expected, err := time.Parse(time.RFC3339, date)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if exitCode != 0 {
-		t.Fatalf("Expected exit code 0, got %d", exitCode)
+
+	p, err := parseParams(date, false, false, false)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 
-	// Clean up
-	os.Remove("/tmp/test_touch_date")
+	if !expected.Equal(p.time) {
+		t.Errorf("expected %v, got %v", expected, p.time)
+	}
 
-	// Test invalid date
-	cmd2 := touch.New()
-	var stdout2, stderr2 bytes.Buffer
-	var stdin2 bytes.Buffer
-	cmd2.SetIO(&stdin2, &stdout2, &stderr2)
-
-	exitCode, err = cmd2.Run(context.Background(), "touch", "-d", "invalid", "/tmp/test_touch_invalid")
+	date = "invalid"
+	_, err = parseParams(date, false, false, false)
 	if err == nil {
-		t.Error("expected error for invalid date, got nil")
+		t.Errorf("expected error, got nil")
 	}
-	if exitCode == 0 {
-		t.Error("Expected non-zero exit code for invalid date")
+}
+
+func TestParseParams(t *testing.T) {
+	var tests = []struct {
+		expected     params
+		access       bool
+		modification bool
+		create       bool
+	}{
+		{
+			access:       false,
+			modification: false,
+			create:       false,
+			expected: params{
+				access:       true,
+				modification: true,
+				create:       false,
+			},
+		},
+		{
+			access:       true,
+			modification: false,
+			create:       false,
+			expected: params{
+				access:       true,
+				modification: false,
+				create:       false,
+			},
+		},
+		{
+			access:       false,
+			modification: true,
+			create:       true,
+			expected: params{
+				access:       false,
+				modification: true,
+				create:       true,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		p, err := parseParams("", test.access, test.modification, test.create)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if p.access != test.expected.access {
+			t.Errorf("expected %v, got %v", test.expected.access, p.access)
+		}
+		if p.modification != test.expected.modification {
+			t.Errorf("expected %v, got %v", test.expected.modification, p.modification)
+		}
+		if p.create != test.expected.create {
+			t.Errorf("expected %v, got %v", test.expected.create, p.create)
+		}
 	}
 }
 
 var tests = []struct {
 	err  error
+	p    params
 	name string
 	args []string
 }{
 	{
 		name: "create is true, no new files created",
-		args: []string{"touch", "-c", "a1", "a2"},
+		args: []string{"a1", "a2"},
+		p: params{
+			access:       true,
+			modification: true,
+			create:       true,
+			time:         time.Now(),
+		},
 	},
 	{
 		name: "create is false, files should be created",
-		args: []string{"touch", "a1", "a2"},
+		args: []string{"a1", "a2"},
+		p: params{
+			access:       true,
+			modification: true,
+			create:       false,
+			time:         time.Now(),
+		},
 	},
 	{
 		name: "no such file or directory",
-		args: []string{"touch", "no/such/file/or/direcotry"},
-		err:  os.ErrNotExist,
+		args: []string{"no/such/file/or/direcotry"},
+		p: params{
+			create: false,
+			time:   time.Now(),
+		},
+		err: os.ErrNotExist,
 	},
 }
 
@@ -73,57 +131,40 @@ func TestTouchEmptyDir(t *testing.T) {
 	for _, test := range tests {
 		temp := t.TempDir()
 		var args []string
-		args = append(args, test.args[0]) // "touch"
-		for i := 1; i < len(test.args); i++ {
-			arg := test.args[i]
-			if !strings.HasPrefix(arg, "-") {
-				args = append(args, filepath.Join(temp, arg))
-			} else {
-				args = append(args, arg)
-			}
+		for _, arg := range test.args {
+			args = append(args, temp+arg)
 		}
-
-		cmd := touch.New()
-		var stdout, stderr bytes.Buffer
-		var stdin bytes.Buffer
-		cmd.SetIO(&stdin, &stdout, &stderr)
-
-		exitCode, err := cmd.Run(context.Background(), args...)
+		err := command(test.p, args...).run()
+		if !errors.Is(err, test.err) {
+			t.Fatalf("command() expected %v, got %v", test.err, err)
+		}
 		if test.err != nil {
-			if !errors.Is(err, test.err) {
-				t.Fatalf("Run() expected %v, got %v", test.err, err)
-			}
-			if exitCode == 0 {
-				t.Error("Expected non-zero exit code for error case")
-			}
 			continue
 		}
 
-		if err != nil {
-			t.Fatalf("Run() expected no error, got %v", err)
-		}
-		if exitCode != 0 {
-			t.Fatalf("Expected exit code 0, got %d", exitCode)
-		}
+		for _, arg := range args {
+			_, err := os.Stat(arg)
+			if test.p.create {
+				if !os.IsNotExist(err) {
+					t.Errorf("expected %s to not exist", arg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected %s to exist, got %v", arg, err)
+				}
 
-		// Check if files were created (only for non-error cases)
-		for i := 1; i < len(test.args); i++ {
-			arg := test.args[i]
-			if !strings.HasPrefix(arg, "-") {
-				fullPath := filepath.Join(temp, arg)
-				_, err := os.Stat(fullPath)
-				if strings.Contains(test.name, "create is true") {
-					// With -c flag, files should not be created if they don't exist
-					if !os.IsNotExist(err) {
-						t.Errorf("expected %s to not exist", fullPath)
-					}
-				} else {
-					// Without -c flag, files should be created
-					if err != nil {
-						t.Errorf("expected %s to exist, got %v", fullPath, err)
+				stat, err := os.Stat(arg)
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+
+				if test.p.modification {
+					if stat.ModTime().Unix() != test.p.time.Unix() {
+						t.Errorf("expected %s to have mod time %v, got %v", arg, test.p.time, stat.ModTime())
 					}
 				}
 			}
+
 		}
 	}
 }
