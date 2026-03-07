@@ -93,10 +93,9 @@ func (u *User) Groups() map[int]string {
 	return u.groups
 }
 
-// GIDName returns the group name for a user's UID
+// GIDName returns the group name for a user's GID
 func (u *User) GIDName() string {
-	val := u.Groups()[u.UID()]
-	return val
+	return u.Groups()[u.GID()]
 }
 
 // NewUser is a factory method for the User type.
