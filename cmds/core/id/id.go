@@ -93,10 +93,9 @@ func (u *User) Groups() map[int]string {
 	return u.groups
 }
 
-// GIDName returns the group name for a user's UID
+// GIDName returns the group name for a user's GID
 func (u *User) GIDName() string {
-	val := u.Groups()[u.UID()]
-	return val
+	return u.Groups()[u.GID()]
 }
 
 // NewUser is a factory method for the User type.
@@ -183,7 +182,7 @@ func IDCommand(w io.Writer, flags *flags, u User) {
 	sort.Ints(gids)
 
 	var groupOutput []string
-	for id := range gids {
+	for _, id := range gids {
 		gid, name := id, u.Groups()[id]
 		if !flags.groups {
 			groupOutput = append(groupOutput, fmt.Sprintf("%d(%s)", gid, name))

@@ -43,11 +43,11 @@ func TestGoodFiles(t *testing.T) {
 		flags          flags
 	}{
 		{
-			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
-			groupContent:   "root:x:0:",
+			passwdContent:  "root:x:0:10:root:/root:/bin/bash",
+			groupContent:   "root:x:10:\n",
 			userName:       "root",
 			flags:          flags{},
-			expectedOutput: "uid=0(root) gid=0(root) groups=0(root)\n",
+			expectedOutput: "uid=0(root) gid=10(root) groups=10(root)\n",
 		},
 		{
 			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
@@ -72,10 +72,10 @@ func TestGoodFiles(t *testing.T) {
 		},
 		{
 			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
-			groupContent:   "root:x:0:\nother:x:1:root",
+			groupContent:   "root:x:0:\nother:x:25:root",
 			userName:       "root",
 			flags:          flags{groups: true},
-			expectedOutput: "0 1 \n",
+			expectedOutput: "0 25 \n",
 		},
 		{
 			passwdContent:  "root:x:0:0:root:/root:/bin/bash",
