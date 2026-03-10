@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"unsafe"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/efivarfs"
 )
 
 func mockKexecMemoryMapFromIOMem() (kexec.MemoryMap, error) {
@@ -32,6 +34,65 @@ func mockGetRSDP() (uint64, []byte, error) {
 
 func mockGetSMBIOSBase() (int64, int64, error) {
 	return 100, 200, nil
+}
+
+// mockEFIVarFS implements efivarfs.EFIVar for testing
+type mockEFIVarFS struct {
+	vars map[efivarfs.VariableDescriptor]struct {
+		attrs efivarfs.VariableAttributes
+		data  []byte
+	}
+}
+
+func (m *mockEFIVarFS) Get(desc efivarfs.VariableDescriptor) (efivarfs.VariableAttributes, []byte, error) {
+	v, ok := m.vars[desc]
+	if !ok {
+		return 0, nil, os.ErrNotExist
+	}
+	return v.attrs, v.data, nil
+}
+
+func (m *mockEFIVarFS) List() ([]efivarfs.VariableDescriptor, error) {
+	var descs []efivarfs.VariableDescriptor
+	for d := range m.vars {
+		descs = append(descs, d)
+	}
+	return descs, nil
+}
+
+func (m *mockEFIVarFS) Remove(desc efivarfs.VariableDescriptor) error {
+	delete(m.vars, desc)
+	return nil
+}
+
+func (m *mockEFIVarFS) Set(desc efivarfs.VariableDescriptor, attrs efivarfs.VariableAttributes, data []byte) error {
+	m.vars[desc] = struct {
+		attrs efivarfs.VariableAttributes
+		data  []byte
+	}{attrs, data}
+	return nil
+}
+
+func mockEFIVars(t *testing.T) {
+	mockFS := &mockEFIVarFS{
+		vars: make(map[efivarfs.VariableDescriptor]struct {
+			attrs efivarfs.VariableAttributes
+			data  []byte
+		}),
+	}
+
+	guidStr := "8be4df61-93ca-11d2-aa0d-00e098032b8c"
+	g, _ := guid.Parse(guidStr)
+
+	mockFS.Set(efivarfs.VariableDescriptor{Name: "Setup", GUID: g}, 0x07, []byte{0x01, 0x02, 0x03, 0x04})
+	mockFS.Set(efivarfs.VariableDescriptor{Name: "BootOrder", GUID: g}, 0x07, []byte{0x00, 0x00, 0x01, 0x00})
+	mockFS.Set(efivarfs.VariableDescriptor{Name: "OsSecureBootEnforce", GUID: g}, 0x07, []byte{0x01})
+	mockFS.Set(efivarfs.VariableDescriptor{Name: "Timeout", GUID: g}, 0x07, []byte{0x05, 0x00})
+	mockFS.Set(efivarfs.VariableDescriptor{Name: "PlatformLang", GUID: g}, 0x07, []byte{'e', 'n', '-', 'U', 'S', 0x00})
+
+	efiVarFSCreator = func(path string) (efivarfs.EFIVar, error) {
+		return mockFS, nil
+	}
 }
 
 // Main test for constructing HOB list,
@@ -56,6 +117,19 @@ model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
 address sizes	: 39 bits physical, 48 bits virtual
 `)
 	defer os.Remove(tempFile)
+
+	// Mock system paths to ensure deterministic tests across environments
+	defer func(old func(string) (efivarfs.EFIVar, error)) { efiVarFSCreator = old }(efiVarFSCreator)
+	defer func(old string) { sysfsFbPath = old }(sysfsFbPath)
+	defer func(old string) { sysfsDrmPath = old }(sysfsDrmPath)
+	defer func(old string) { ACPIMCFGSysFilePath = old }(ACPIMCFGSysFilePath)
+	defer func(old string) { PCISearchPath = old }(PCISearchPath)
+
+	emptyDir := t.TempDir()
+	sysfsFbPath = filepath.Join(emptyDir, "fb0")
+	sysfsDrmPath = filepath.Join(emptyDir, "drm")
+	ACPIMCFGSysFilePath = filepath.Join(emptyDir, "MCFG")
+	PCISearchPath = filepath.Join(emptyDir, "pci")
 	// end of mock data
 
 	// Follow components layout which is defined in utilities.go to place corresponding components
@@ -84,6 +158,7 @@ address sizes	: 39 bits physical, 48 bits virtual
 
 	tests := []struct {
 		name            string
+		setupMock       func()
 		fdtLoad         *FdtLoad
 		data            []byte
 		mem             kexec.Memory
@@ -92,7 +167,38 @@ address sizes	: 39 bits physical, 48 bits virtual
 		wantMemSegments []kexec.Range
 	}{
 		{
-			name:    "Valid case to relocate FIT image",
+			name: "Valid case to relocate FIT image without EFI vars",
+			setupMock: func() {
+				efiVarFSCreator = func(path string) (efivarfs.EFIVar, error) {
+					return nil, os.ErrNotExist
+				}
+			},
+			fdtLoad: fdtInfo,
+			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
+				{".reloc", mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, 0x200)},
+			}),
+			mem: kexec.Memory{
+				Phys: kexec.MemoryMap{
+					{Range: kexec.Range{Start: 0x1000, Size: 0x500000}, Type: kexec.RangeRAM},
+					{Range: kexec.Range{Start: 100, Size: 50}, Type: kexec.RangeACPI},
+				},
+			},
+			wantErr:  nil,
+			wantAddr: 0x200000 + 0xa000,
+			wantMemSegments: []kexec.Range{
+				{Start: 0x200000, Size: (uint)(imgSize)}, // PeFileBinary
+				{Start: 0x200000 + rsdpOff, Size: 0},     // ACPI Data
+				{Start: 0x200000 + hobsOff, Size: 0},     // HOBs for bootloader
+				{Start: 0x200000 + fdtOff, Size: 0},      // Device Tree Info
+				{Start: 0x200000 + stackOff, Size: 0},    // boot env (tmp stack)
+				{Start: 0x200000 + trampOff, Size: 0},    // boot env (trampoline)
+			},
+		},
+		{
+			name: "Valid case to relocate FIT image with mocked EFI vars",
+			setupMock: func() {
+				mockEFIVars(t)
+			},
 			fdtLoad: fdtInfo,
 			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
 				{".reloc", mockRelocData(0x1000, IMAGE_REL_BASED_DIR64, 0x200)},
@@ -118,20 +224,23 @@ address sizes	: 39 bits physical, 48 bits virtual
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.setupMock != nil {
+				tt.setupMock()
+			}
 			addr, err := loadKexecMemWithHOBs(tt.fdtLoad, tt.data, &tt.mem)
 			expectErr(t, err, tt.wantErr)
-			t.Logf("mem Segments: %v, want Segments: %v", tt.mem.Segments.Phys(), tt.wantMemSegments)
+			t.Logf("\nmem Segments:  %v\nwant Segments: %v", tt.mem.Segments.Phys(), tt.wantMemSegments)
 			if tt.wantAddr != addr {
-				t.Fatalf("Unexpected target addr: %v, want: %v", addr, tt.wantAddr)
+				t.Fatalf("Unexpected target addr: %x, want: %x", addr, tt.wantAddr)
 			}
 			if tt.wantMemSegments != nil {
 				if len(tt.wantMemSegments) != len(tt.mem.Segments.Phys()) {
-					t.Fatalf("Unexpected mem segment size: %v, want: %v", len(tt.mem.Segments.Phys()), len(tt.wantMemSegments))
+					t.Fatalf("Unexpected mem segment size: %x, want: %x", len(tt.mem.Segments.Phys()), len(tt.wantMemSegments))
 				}
 				for i, r := range tt.wantMemSegments {
 					actualRange := tt.mem.Segments.Phys()[i]
 					if r.Start != actualRange.Start {
-						t.Fatalf("Unexpected mem segment Start: %v, want: %v", actualRange.Start, r.Start)
+						t.Fatalf("Unexpected mem segment Start: %x, want: %x", actualRange.Start, r.Start)
 					}
 				}
 			}

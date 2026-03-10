@@ -95,7 +95,10 @@ func TestParseFilePathList(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		b := BootVar(tc.e)
+		b, err := BootVar(tc.e)
+		if err != nil {
+			t.Errorf("%s: error parsing boot variable", tc.name)
+		}
 
 		gotpath := b.FilePathList.String()
 		if gotpath != tc.wantpath {

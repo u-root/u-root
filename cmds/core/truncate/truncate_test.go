@@ -18,6 +18,7 @@ func TestTruncate(t *testing.T) {
 		name     string
 		args     []string
 		create   bool
+		ioBlocks bool
 		size     unit.Value
 		sizeWant int64
 		rfile    string
@@ -75,9 +76,21 @@ func TestTruncate(t *testing.T) {
 			sizeWant: 50,
 			args:     []string{filepath.Join(tmpdir, "file1")},
 		},
+		{
+			name:   "truncate with io blocks flag",
+			create: false,
+			size: unit.Value{
+				Value: 2,
+				IsSet: true,
+			},
+			ioBlocks: true,
+			sizeWant: 1024,
+			args:     []string{filepath.Join(tmpdir, "file1")},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			*create = tt.create
+			*ioBlocks = tt.ioBlocks
 			*size = tt.size
 			*rfile = tt.rfile
 			if got := truncate(tt.args...); got != nil {
