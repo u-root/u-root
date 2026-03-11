@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -47,6 +48,70 @@ func TestSeqDefault(t *testing.T) {
 		{
 			args:   []string{"1", "0.5", "3"},
 			expect: "1.0\n1.5\n2.0\n2.5\n3.0\n",
+		},
+		{
+			args:   []string{"3"},
+			expect: "1\n2\n3\n",
+		},
+		{
+			args: []string{"1", "2", "3", "4"},
+			err:  errUsage,
+		},
+		{
+			args:   []string{"3", "1"},
+			expect: "3\n2\n1\n",
+		},
+		{
+			args:   []string{"5", "-2", "1"},
+			expect: "5\n3\n1\n",
+		},
+		{
+			args:   []string{"-2"},
+			expect: "1\n0\n-1\n-2\n",
+		},
+		{
+			args: []string{"1", "-1", "2"},
+			err:  errPositiveInc,
+		},
+		{
+			args: []string{"10", "1", "2"},
+			err:  errNegativeDec,
+		},
+		{
+			args: []string{"10", "0", "2"},
+			err:  errZeroDec,
+		},
+		{
+			args:   []string{"5", "-1", "5"},
+			expect: "5\n",
+		},
+		{
+			args:   []string{"5", "1", "5"},
+			expect: "5\n",
+		},
+		{
+			args: []string{"hello", "2"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"2", "hello"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"hello"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"hello", "1", "2"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"1", "hello", "2"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"1", "2", "hello"},
+			err:  strconv.ErrSyntax,
 		},
 	}
 
