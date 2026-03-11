@@ -31,6 +31,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -50,59 +51,120 @@ func init() {
 	}
 }
 
-func seq(w io.Writer, format string, separator string, widthEqual bool, args []string) error {
-	var (
-		stt   = 1.0
-		stp   = 1.0
-		end   float64
-		width int
-	)
+var (
+	errUsage       = errors.New(cmd)
+	errNegativeDec = errors.New("needs negative decrement")
+	errPositiveInc = errors.New("needs positive increment")
+	errZeroDec     = errors.New("zero decrement")
+)
 
-	argv, argc := args, len(args)
-	if argc < 1 || argc > 4 {
-		return fmt.Errorf("mismatch n args; got %v, wants 1 >= n args >= 3", argc)
-	}
+type s struct {
+	first  float64
+	incr   float64
+	last   float64
+	format string
+}
 
-	// loading step value if args is <start> <step> <end>
-	if argc == 3 {
-		_, err := fmt.Sscanf(argv[1], "%v", &stp)
-		if stp-float64(int(stp)) > 0 && format == "%v" {
-			d := len(fmt.Sprintf("%v", stp-float64(int(stp)))) - 2 // get the nums of y.xx decimal part
-			format = fmt.Sprintf("%%.%df", d)
-		}
-		if stp == 0.0 {
-			return errors.New("step value should be != 0")
-		}
-
+func parse(format string, args []string) (s, error) {
+	s1 := s{format: format, first: 1, incr: 1}
+	argc := len(args)
+	switch argc {
+	case 3: // first, incr, last
+		first, err := strconv.ParseFloat(args[0], 64)
 		if err != nil {
-			return err
+			return s1, err
 		}
+		s1.first = first
+
+		incr, err := strconv.ParseFloat(args[1], 64)
+		if err != nil {
+			return s1, err
+		}
+		s1.incr = incr
+
+		if s1.incr-float64(int(s1.incr)) > 0 && format == "%v" {
+			d := len(fmt.Sprintf("%v", s1.incr-float64(int(s1.incr)))) - 2 // get the nums of y.xx decimal part
+			s1.format = fmt.Sprintf("%%.%df", d)
+		}
+
+		last, err := strconv.ParseFloat(args[2], 64)
+		if err != nil {
+			return s1, err
+		}
+		s1.last = last
+
+		// handle wrong inc errors
+		if s1.incr == 0 {
+			return s1, errZeroDec
+		}
+		if s1.first > s1.last && s1.incr >= 0 {
+			return s1, errNegativeDec
+		}
+		if s1.first < s1.last && s1.incr <= 0 {
+			return s1, errPositiveInc
+		}
+	case 2: // first, last
+		first, err := strconv.ParseFloat(args[0], 64)
+		if err != nil {
+			return s1, err
+		}
+		s1.first = first
+		last, err := strconv.ParseFloat(args[1], 64)
+		if err != nil {
+			return s1, err
+		}
+		s1.last = last
+	case 1: // last
+		last, err := strconv.ParseFloat(args[0], 64)
+		if err != nil {
+			return s1, err
+		}
+		s1.last = last
+	default:
+		return s1, errUsage
 	}
 
-	if argc >= 2 { // cases: start + end || start + step + end
-		if _, err := fmt.Sscanf(argv[0]+" "+argv[argc-1], "%v %v", &stt, &end); err != nil {
-			return err
-		}
-	} else { // only <end>
-		if _, err := fmt.Sscanf(argv[0], "%v", &end); err != nil {
-			return err
-		}
+	return s1, nil
+}
+
+func seq(w io.Writer, format string, separator string, widthEqual bool, args []string) error {
+	s1, err := parse(format, args)
+	if err != nil {
+		return err
 	}
 
-	format = strings.Replace(format, "%", "%0*", 1) // support widthEqual
+	// set default inc if needed
+	if s1.first > s1.last && s1.incr == 1 {
+		s1.incr = -1
+	}
+
+	format = strings.Replace(s1.format, "%", "%0*", 1) // support widthEqual
+	var width int
 	if widthEqual {
-		width = len(fmt.Sprintf(format, 0, end))
+		width = len(fmt.Sprintf(format, 0, s1.last))
 	}
 
-	defer fmt.Fprint(w, "\n") // last char is always '\n'
-	for stt <= end {
-		fmt.Fprintf(w, format, width, stt)
-		stt += stp
-		if stt <= end { // print only between the values
-			fmt.Fprint(w, separator)
+	if s1.first < s1.last {
+		for s1.first <= s1.last {
+			fmt.Fprintf(w, format, width, s1.first)
+			s1.first += s1.incr
+			if s1.first <= s1.last { // print only between the values
+				fmt.Fprint(w, separator)
+			}
 		}
+	} else if s1.first > s1.last {
+		for s1.first >= s1.last {
+			fmt.Fprintf(w, format, width, s1.first)
+			s1.first += s1.incr
+			if s1.first >= s1.last { // print only between the values
+				fmt.Fprint(w, separator)
+			}
+		}
+	} else {
+		fmt.Fprintf(w, format, width, s1.first)
 	}
 
+	fmt.Fprint(w, "\n") // last char is always '\n'
 	return nil
 }
 
