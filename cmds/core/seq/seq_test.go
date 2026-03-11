@@ -8,30 +8,31 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type test struct {
 	expect string
+	err    error
 	args   []string
 }
 
-func testseq(tests []test, format, sep string, width bool, t *testing.T) {
-	for _, tst := range tests {
+func testseq(t *testing.T, tests []test, format, sep string, width bool) {
+	for _, tt := range tests {
 		b := bytes.Buffer{}
 		w := io.Writer(&b)
-		if err := seq(w, format, sep, width, tst.args); err != nil {
-			t.Error(err)
+		err := seq(w, format, sep, width, tt.args)
+
+		if !errors.Is(err, tt.err) {
+			t.Fatalf("expected %v, got %v", tt.err, err)
 		}
 
-		got := b.Bytes()
-		want := []byte(tst.expect)
-
-		if !bytes.Equal(got, want) {
-			t.Logf("Got: \n%v\n", string(got))
-			t.Logf("Expect: \n%v\n", tst.expect)
-			t.Error("Mismatching output")
+		if diff := cmp.Diff(b.String(), tt.expect); diff != "" {
+			t.Errorf("unexpected result (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -49,7 +50,7 @@ func TestSeqDefault(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%v", "\n", false, t)
+	testseq(t, tests, "%v", "\n", false)
 }
 
 // test seq fixed width with leading zeros
@@ -65,7 +66,7 @@ func TestSeqWidthEqual(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%v", "\n", true, t)
+	testseq(t, tests, "%v", "\n", true)
 }
 
 func TestSeqCustomFormat(t *testing.T) {
@@ -80,7 +81,7 @@ func TestSeqCustomFormat(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%.2f", "\n", true, t)
+	testseq(t, tests, "%.2f", "\n", true)
 }
 
 func TestSeqSeparator(t *testing.T) {
@@ -95,5 +96,5 @@ func TestSeqSeparator(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%v", "->", false, t)
+	testseq(t, tests, "%v", "->", false)
 }
