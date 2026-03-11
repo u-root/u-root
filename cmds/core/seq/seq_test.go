@@ -163,3 +163,30 @@ func TestSeqSeparator(t *testing.T) {
 
 	testseq(t, tests, "%v", "->", false)
 }
+
+func TestMaxDecimalPlaces(t *testing.T) {
+	tests := []struct {
+		args     []string
+		expected int
+	}{
+		{
+			args:     []string{"10", "2", "8"},
+			expected: 0,
+		},
+		{
+			args:     []string{"10.1", "2", "8"},
+			expected: 1,
+		},
+		{
+			args:     []string{"10.1", "2.02", "8.003"},
+			expected: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		res := maxDecimalPlaces(tt.args)
+		if res != tt.expected {
+			t.Errorf("expected %v got %v", tt.expected, res)
+		}
+	}
+}

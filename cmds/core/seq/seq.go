@@ -65,6 +65,16 @@ type s struct {
 	format string
 }
 
+func maxDecimalPlaces(args []string) int {
+	m := 0
+	for _, a := range args {
+		if i := strings.Index(a, "."); i >= 0 {
+			m = max(m, len(a)-i-1)
+		}
+	}
+	return m
+}
+
 func parse(format string, args []string) (s, error) {
 	s1 := s{format: format, first: 1, incr: 1}
 	argc := len(args)
@@ -82,9 +92,11 @@ func parse(format string, args []string) (s, error) {
 		}
 		s1.incr = incr
 
-		if s1.incr-float64(int(s1.incr)) > 0 && format == "%v" {
-			d := len(fmt.Sprintf("%v", s1.incr-float64(int(s1.incr)))) - 2 // get the nums of y.xx decimal part
-			s1.format = fmt.Sprintf("%%.%df", d)
+		if format == "%v" {
+			d := maxDecimalPlaces(args)
+			if d > 0 {
+				s1.format = fmt.Sprintf("%%.%df", d)
+			}
 		}
 
 		last, err := strconv.ParseFloat(args[2], 64)
