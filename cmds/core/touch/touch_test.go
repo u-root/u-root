@@ -65,8 +65,7 @@ func TestTouchEmptyDir(t *testing.T) {
 	for _, test := range tests {
 		temp := t.TempDir()
 		var args []string
-		args = append(args, test.args[0]) // "touch"
-		for i := 1; i < len(test.args); i++ {
+		for i := 0; i < len(test.args); i++ {
 			arg := test.args[i]
 			if !strings.HasPrefix(arg, "-") {
 				args = append(args, filepath.Join(temp, arg))
@@ -82,17 +81,17 @@ func TestTouchEmptyDir(t *testing.T) {
 		err := cmd.Run(args...)
 		if test.err != nil {
 			if !errors.Is(err, test.err) {
-				t.Fatalf("Run() expected %v, got %v", test.err, err)
+				t.Fatalf("%s: Run() expected %v, got %v", test.name, test.err, err)
 			}
 			continue
 		}
 
 		if err != nil {
-			t.Fatalf("Run() expected no error, got %v", err)
+			t.Fatalf("%s: Run() expected no error, got %v", test.name, err)
 		}
 
 		// Check if files were created (only for non-error cases)
-		for i := 1; i < len(test.args); i++ {
+		for i := 0; i < len(test.args); i++ {
 			arg := test.args[i]
 			if !strings.HasPrefix(arg, "-") {
 				fullPath := filepath.Join(temp, arg)
