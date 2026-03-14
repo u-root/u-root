@@ -98,7 +98,7 @@ func (c cgroupname) Create(s, name string) {
 
 func (c cgroupname) Attach(s, name string, pid int) {
 	t := filepath.Join(string(c), s, name, "tasks")
-	b := []byte(fmt.Sprintf("%v", pid))
+	b := fmt.Appendf(nil, "%v", pid)
 	if err := os.WriteFile(t, b, 0o600); err != nil {
 		log.Fatal(err)
 	}
