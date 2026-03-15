@@ -111,8 +111,8 @@ func archGetAcpiRsdpData() (uint64, []byte, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		start := ""
-		if strings.HasPrefix(line, acpi20) {
-			start = strings.TrimPrefix(line, acpi20)
+		if after, ok := strings.CutPrefix(line, acpi20); ok {
+			start = after
 		}
 		if start == "" {
 			continue

@@ -128,13 +128,13 @@ func (s *InitScript) Unmarshal(data io.Reader) error {
 
 		line = strings.TrimPrefix(line, "#")
 		line = strings.TrimSpace(line)
-		colonIndex := strings.Index(line, ":")
-		if colonIndex == -1 {
+		before, after, ok := strings.Cut(line, ":")
+		if !ok {
 			continue
 		}
 
-		tag := strings.TrimSpace(line[:colonIndex])
-		value := strings.TrimSpace(line[colonIndex+1:])
+		tag := strings.TrimSpace(before)
+		value := strings.TrimSpace(after)
 
 		for i := 0; i < typeOfScript.NumField(); i++ {
 			field := typeOfScript.Field(i)
