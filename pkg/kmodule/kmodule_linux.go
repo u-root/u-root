@@ -140,7 +140,6 @@ func parallelProbeDep(deps depMap, modPath string, params string, opts ProbeOpts
 		dep.state = loading
 
 		for _, dep := range dep.deps {
-			dep := dep
 			eg.Go(func() error {
 				return parallelProbeDep(deps, dep, "", opts, append(modStack, modPath))
 			})
