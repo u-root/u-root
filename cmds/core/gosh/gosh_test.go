@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 //
 // Derived work from Daniel Martí <mvdan@mvdan.cc>
-//go:build !tinygo || tinygo.enable
+//go:build (!tinygo || tinygo.enable) && !plan9
 
 package main
 
@@ -343,10 +343,10 @@ func TestInteractiveBubbline(t *testing.T) {
 	dir := t.TempDir()
 	execPath := filepath.Join(dir, "gosh")
 
-	var opts *golang.BuildOpts
 	// Setting -cover without GOCOVERDIR adds extra warning output, which changes the result of the test.
+	opts := &golang.BuildOpts{ExtraArgs: []string{"-tags=goshbubble"}}
 	if os.Getenv("GOCOVERDIR") != "" {
-		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
+		opts.ExtraArgs = append(opts.ExtraArgs, "-covermode=atomic")
 	}
 	// Build the stuff.
 	if err := golang.Default(golang.DisableCGO()).BuildDir("", execPath, opts); err != nil {
@@ -418,7 +418,7 @@ func TestInteractiveLiner(t *testing.T) {
 		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
 	}
 	// Build the stuff.
-	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("goshliner")).BuildDir("", execPath, opts); err != nil {
+	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("!goshbubble")).BuildDir("", execPath, opts); err != nil {
 		t.Fatal(err)
 	}
 
