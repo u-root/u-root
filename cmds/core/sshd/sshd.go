@@ -173,7 +173,7 @@ func session(chans <-chan ssh.NewChannel) {
 				switch req.Type {
 				case "shell":
 					err := runCommand(channel, p, shell)
-					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
+					req.Reply(true, fmt.Appendf(nil, "%v", err))
 				case "exec":
 					e := &execReq{}
 					if err := ssh.Unmarshal(req.Payload, e); err != nil {
@@ -183,7 +183,7 @@ func session(chans <-chan ssh.NewChannel) {
 					// Execute command using user's shell. This is what OpenSSH does
 					// so it's the least surprising to the user.
 					err := runCommand(channel, p, shell, "-c", e.Command)
-					req.Reply(true, []byte(fmt.Sprintf("%v", err)))
+					req.Reply(true, fmt.Appendf(nil, "%v", err))
 				case "pty-req":
 					p, err = newPTY(req.Payload)
 					req.Reply(err == nil, nil)
