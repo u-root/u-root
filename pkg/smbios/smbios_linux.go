@@ -33,12 +33,12 @@ func SMBIOSBaseEFI() (base int64, size int64, err error) {
 		line := scanner.Text()
 		start := ""
 		size := int64(0)
-		if strings.HasPrefix(line, smbios3) {
-			start = strings.TrimPrefix(line, smbios3)
+		if after, ok := strings.CutPrefix(line, smbios3); ok {
+			start = after
 			size = smbios3HeaderSize
 		}
-		if strings.HasPrefix(line, smbios) {
-			start = strings.TrimPrefix(line, smbios)
+		if after, ok := strings.CutPrefix(line, smbios); ok {
+			start = after
 			size = smbios2HeaderSize
 		}
 		if start == "" {
