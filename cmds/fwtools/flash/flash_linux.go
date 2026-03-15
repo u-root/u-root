@@ -73,19 +73,19 @@ var supportedProgrammers = map[string]programmerInit{}
 func parseProgrammerParams(arg string) (string, map[string]string) {
 	params := map[string]string{}
 
-	colon := strings.IndexByte(arg, ':')
-	if colon == -1 {
+	before, after, ok := strings.Cut(arg, ":")
+	if !ok {
 		return arg, params
 	}
-	for _, p := range strings.Split(arg[colon+1:], ",") {
-		equal := strings.IndexByte(p, '=')
-		if equal == -1 {
+	for _, p := range strings.Split(after, ",") {
+		before, after, ok := strings.Cut(p, "=")
+		if !ok {
 			params[p] = ""
 			continue
 		}
-		params[p[:equal]] = p[equal+1:]
+		params[before] = after
 	}
-	return arg[:colon], params
+	return before, params
 }
 
 func run(args []string, supportedProgrammers map[string]programmerInit) (reterr error) {
