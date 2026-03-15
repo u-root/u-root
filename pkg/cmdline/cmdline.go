@@ -110,18 +110,18 @@ func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedV
 		// names. We will replace dashes with underscores for processing.
 
 		// Split the flag into a key and value, setting value="1" if none
-		split := strings.Index(flag, "=")
+		before, after, ok := strings.Cut(flag, "=")
 
 		if len(flag) == 0 {
 			continue
 		}
 		var key, value string
-		if split == -1 {
+		if !ok {
 			key = flag
 			value = "1"
 		} else {
-			key = flag[:split]
-			value = flag[split+1:]
+			key = before
+			value = after
 		}
 		canonicalKey := strings.Replace(key, "-", "_", -1)
 		trimmedValue := dequote(value)
