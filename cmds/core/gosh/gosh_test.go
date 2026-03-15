@@ -418,7 +418,7 @@ func TestInteractiveLiner(t *testing.T) {
 		opts = &golang.BuildOpts{ExtraArgs: []string{"-covermode=atomic"}}
 	}
 	// Build the stuff.
-	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("goshliner")).BuildDir("", execPath, opts); err != nil {
+	if err := golang.Default(golang.DisableCGO(), golang.WithBuildTag("!goshbubble")).BuildDir("", execPath, opts); err != nil {
 		t.Fatal(err)
 	}
 
