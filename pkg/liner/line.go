@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -117,7 +118,7 @@ const (
 
 func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 	if s.columns == 0 {
-		return ErrInternal
+		return fmt.Errorf("refresh: s.Columns is 0: %w", os.ErrInvalid)
 	}
 
 	s.needRefresh = false
