@@ -29,6 +29,7 @@ package liner
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
@@ -132,7 +133,7 @@ func (s *State) nextPending(timeout <-chan time.Time) (rune, error) {
 	select {
 	case thing, ok := <-s.next:
 		if !ok {
-			return 0, ErrInternal
+			return 0, fmt.Errorf("nextPending:%w", ErrInternal)
 		}
 		if thing.err != nil {
 			return 0, thing.err
@@ -156,7 +157,7 @@ func (s *State) readNext() (interface{}, error) {
 	select {
 	case thing, ok := <-s.next:
 		if !ok {
-			return 0, ErrInternal
+			return 0, fmt.Errorf("readNext: %w", ErrInternal)
 		}
 		if thing.err != nil {
 			return nil, thing.err
