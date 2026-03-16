@@ -27,12 +27,10 @@
 package liner
 
 import (
-	"bufio"
 	"container/ring"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -634,10 +632,6 @@ func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (strin
 		return s.promptUnsupported(prompt)
 	}
 	p := []rune(prompt)
-	const minWorkingSpace = 10
-	if s.columns < countGlyphs(p)+minWorkingSpace {
-		return s.tooNarrow(prompt)
-	}
 
 	s.historyMutex.RLock()
 	defer s.historyMutex.RUnlock()
@@ -1121,23 +1115,6 @@ mainLoop:
 		}
 	}
 	return string(line), nil
-}
-
-func (s *State) tooNarrow(prompt string) (string, error) {
-	// Docker and OpenWRT and etc sometimes return 0 column width
-	// Reset mode temporarily. Restore baked mode in case the terminal
-	// is wide enough for the next Prompt attempt.
-	m, merr := TerminalMode()
-	s.origMode.ApplyMode()
-	if merr == nil {
-		defer m.ApplyMode()
-	}
-	if s.r == nil {
-		// Windows does not always set s.r
-		s.r = bufio.NewReader(os.Stdin)
-		defer func() { s.r = nil }()
-	}
-	return s.promptUnsupported(prompt)
 }
 
 func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, int) {
