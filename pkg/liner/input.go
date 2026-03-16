@@ -65,13 +65,10 @@ func NewLiner() *State {
 	} else {
 		s.inputRedirected = true
 	}
-	if _, err := getMode(syscall.Stdout); err != nil {
-		s.outputRedirected = true
-	}
-	if s.inputRedirected && s.outputRedirected {
+	if s.inputRedirected {
 		s.terminalSupported = false
 	}
-	if s.terminalSupported && !s.inputRedirected && !s.outputRedirected {
+	if s.terminalSupported && !s.inputRedirected {
 		mode := s.origMode
 		mode.Iflag &^= icrnl | inpck | istrip | ixon
 		mode.Cflag |= cs8
@@ -85,10 +82,6 @@ func NewLiner() *State {
 		s.winch = winch
 
 		s.checkOutput()
-	}
-
-	if !s.outputRedirected {
-		s.outputRedirected = !s.getColumns()
 	}
 
 	return &s

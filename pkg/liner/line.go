@@ -638,9 +638,6 @@ func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (strin
 	if s.columns < countGlyphs(p)+minWorkingSpace {
 		return s.tooNarrow(prompt)
 	}
-	if s.outputRedirected {
-		return "", ErrNotTerminalOutput
-	}
 
 	s.historyMutex.RLock()
 	defer s.historyMutex.RUnlock()
@@ -1048,9 +1045,6 @@ func (s *State) PasswordPrompt(prompt string) (string, error) {
 	}
 	if s.inputRedirected {
 		return s.promptUnsupported(prompt)
-	}
-	if s.outputRedirected {
-		return "", ErrNotTerminalOutput
 	}
 
 	p := []rune(prompt)
