@@ -45,6 +45,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 	input.SetCtrlCAborts(true)
 	if *completion {
 		input.SetCompleter(autocompleteLiner(parser))
+		input.SetTabCompletionStyle(liner.TabPrints)
 	}
 
 	var runErr error
