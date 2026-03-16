@@ -32,7 +32,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 	input := liner.NewLiner()
 	defer input.Close()
 
-	f, err := os.OpenFile(HistFile, os.O_RDWR|os.O_CREATE, 0)
+	f, err := os.OpenFile(HistFile, os.O_RDWR|os.O_CREATE, 0600)
 	if err == nil {
 		input.ReadHistory(f)
 	} else if f, err = os.Open(HistFile); err != nil {
