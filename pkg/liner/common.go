@@ -41,7 +41,6 @@ import (
 
 type commonState struct {
 	terminalSupported bool
-	outputRedirected  bool
 	inputRedirected   bool
 	history           []string
 	historyMutex      sync.RWMutex
