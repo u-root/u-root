@@ -46,12 +46,12 @@ type nexter struct {
 // State represents an open terminal
 type State struct {
 	commonState
-	origMode    termios
+	origMode   termios
 	promptMode termios
-	next        <-chan nexter
-	winch       chan os.Signal
-	pending     []rune
-	useCHA      bool
+	next       <-chan nexter
+	winch      chan os.Signal
+	pending    []rune
+	useCHA     bool
 }
 
 // NewLiner initializes a new *State, and sets the terminal into raw mode. To
