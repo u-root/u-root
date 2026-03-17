@@ -27,11 +27,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (s *State) getColumns() bool {
+// getColumns gets the width. It will set 80 if the call fails.
+func (s *State) getColumns() {
 	ws, err := unix.IoctlGetWinsize(unix.Stdout, unix.TIOCGWINSZ)
-	if err != nil {
-		return false
+	if err != nil || int(ws.col) == 0 {
+		s.columns = 80
+		return
 	}
 	s.columns = int(ws.Col)
-	return true
 }

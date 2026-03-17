@@ -31,13 +31,13 @@ import (
 	"unsafe"
 )
 
-func (s *State) getColumns() bool {
+// getColumns gets the width. It will set 80 if the call fails.
+func (s *State) getColumns() {
 	var ws winSize
-	ok, _, _ := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdout),
-		syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws)))
-	if int(ok) < 0 {
-		return false
+	ok, _, _ := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdout), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws)))
+	if int(ok) < 0 || int(ws.col) == 0 {
+		s.columns = 80
+		return
 	}
 	s.columns = int(ws.col)
-	return true
 }
