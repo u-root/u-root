@@ -91,7 +91,7 @@ func (s *State) emitNewLine() {
 func (s *State) getColumns() {
 	var sbi consoleScreenBufferInfo
 	procGetConsoleScreenBufferInfo.Call(uintptr(s.hOut), uintptr(unsafe.Pointer(&sbi)))
-	if int(sbi.dwSize) == 0 {
+	if int(sbi.dwSize.x) == 0 {
 		s.columns = 80
 		return
 	}
