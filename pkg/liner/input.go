@@ -125,7 +125,7 @@ func (s *State) restartPrompt() {
 
 func (s *State) stopPrompt() {
 	if s.terminalSupported {
-		s.defaultMode.ApplyMode()
+		s.origMode.ApplyMode()
 	}
 }
 
