@@ -375,9 +375,6 @@ github.com/orangecms/go-framebuffer/framebuffer
 ## explicit; go 1.20
 github.com/packetcap/go-pcap
 github.com/packetcap/go-pcap/filter
-# github.com/peterh/liner v1.2.2
-## explicit
-github.com/peterh/liner
 # github.com/pierrec/lz4/v4 v4.1.22
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4
