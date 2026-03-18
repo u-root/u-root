@@ -77,7 +77,7 @@ func parseProgrammerParams(arg string) (string, map[string]string) {
 	if !ok {
 		return arg, params
 	}
-	for _, p := range strings.Split(after, ",") {
+	for p := range strings.SplitSeq(after, ",") {
 		before, after, ok := strings.Cut(p, "=")
 		if !ok {
 			params[p] = ""

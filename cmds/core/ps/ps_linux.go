@@ -196,8 +196,8 @@ func (p *Process) Search(field string) string {
 
 // GetUID gets the UID of the process from the status string
 func (p Process) GetUID() (int, error) {
-	lines := strings.Split(p.status, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(p.status, "\n")
+	for line := range lines {
 		if strings.Contains(line, "Uid") {
 			fields := strings.Split(line, "\t")
 			return strconv.Atoi(fields[1])

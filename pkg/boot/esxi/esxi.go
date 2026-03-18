@@ -401,7 +401,7 @@ func parse(configFile string) (options, error) {
 				}
 			}
 		case "modules":
-			for _, tok := range strings.Split(val, sep) {
+			for tok := range strings.SplitSeq(val, sep) {
 				// Each module is "filename arg0 arg1 arg2" and
 				// the filename is relative to the directory
 				// the module is in.

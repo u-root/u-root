@@ -17,7 +17,7 @@ import (
 
 func parseinterp(input string) ([]string, error) {
 	var names []string
-	for _, p := range strings.Split(input, "\n") {
+	for p := range strings.SplitSeq(input, "\n") {
 		f := strings.Fields(p)
 		if len(f) < 3 {
 			continue

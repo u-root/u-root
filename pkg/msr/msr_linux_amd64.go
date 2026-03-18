@@ -25,8 +25,8 @@ func parseCPUs(s string) (CPUs, error) {
 	// We expect the format to be "0-5,7-8..." or we could also get just one cpu.
 	// We're unlikely to get more than one range since we're looking at present cpus,
 	// but handle it just in case.
-	ranges := strings.Split(strings.TrimSpace(s), ",")
-	for _, r := range ranges {
+	ranges := strings.SplitSeq(strings.TrimSpace(s), ",")
+	for r := range ranges {
 		if len(r) == 0 {
 			continue
 		}

@@ -205,7 +205,7 @@ func installPackage(tczName string, deps map[string]bool) error {
 	}
 	debug("deplist for %v is :%v:\n", depName, deplist)
 	realDepList := ""
-	for _, v := range strings.Split(string(deplist), "\n") {
+	for v := range strings.SplitSeq(string(deplist), "\n") {
 		// split("name\n") gets you a 2-element array with second
 		// element the empty string
 		if len(v) == 0 {
