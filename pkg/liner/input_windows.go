@@ -1,3 +1,26 @@
+// SPDX-License-Identifier: MIT
+
+// Copyright © 2012 Peter Harris
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice (including the next
+// paragraph) shall be included in all copies or substantial portions of the
+// Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
 package liner
 
 import (
@@ -35,12 +58,12 @@ type inputMode uint32
 // State represents an open terminal
 type State struct {
 	commonState
-	handle      syscall.Handle
-	hOut        syscall.Handle
-	origMode    inputMode
-	defaultMode inputMode
-	key         interface{}
-	repeat      uint16
+	handle     syscall.Handle
+	hOut       syscall.Handle
+	origMode   inputMode
+	promptMode inputMode
+	key        interface{}
+	repeat     uint16
 }
 
 const (
@@ -72,13 +95,13 @@ func NewLiner() *State {
 		mode &^= enableMouseInput
 		mode |= enableWindowInput
 		mode.ApplyMode()
+		s.promptMode = mode
 	} else {
 		s.inputRedirected = true
 		s.r = bufio.NewReader(os.Stdin)
 	}
 
 	s.getColumns()
-	s.outputRedirected = s.columns <= 0
 
 	return &s
 }
@@ -314,9 +337,8 @@ func (s *State) Close() error {
 }
 
 func (s *State) startPrompt() {
-	if m, err := TerminalMode(); err == nil {
-		s.defaultMode = m.(inputMode)
-		mode := s.defaultMode
+	if _, err := TerminalMode(); err == nil {
+		mode := s.promptMode
 		mode &^= enableProcessedInput
 		mode.ApplyMode()
 	}
@@ -326,7 +348,7 @@ func (s *State) restartPrompt() {
 }
 
 func (s *State) stopPrompt() {
-	s.defaultMode.ApplyMode()
+	s.origMode.ApplyMode()
 }
 
 // TerminalSupported returns true because line editing is always

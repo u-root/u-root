@@ -216,10 +216,10 @@ func TestMemoryMapFromSysfsMemmap(t *testing.T) {
 		if err := os.Mkdir(p, 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path.Join(p, "start"), []byte(fmt.Sprintf("%#x\n", start)), 0o655); err != nil {
+		if err := os.WriteFile(path.Join(p, "start"), fmt.Appendf(nil, "%#x\n", start), 0o655); err != nil {
 			return err
 		}
-		if err := os.WriteFile(path.Join(p, "end"), []byte(fmt.Sprintf("%#x\n", end)), 0o655); err != nil {
+		if err := os.WriteFile(path.Join(p, "end"), fmt.Appendf(nil, "%#x\n", end), 0o655); err != nil {
 			return err
 		}
 		return os.WriteFile(path.Join(p, "type"), append([]byte(typ), '\n'), 0o655)

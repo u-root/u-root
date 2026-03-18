@@ -1,7 +1,7 @@
 // Copyright 2021 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-//go:build !tinygo || tinygo.enable
+//go:build (!tinygo || tinygo.enable) && !plan9
 
 package main
 
@@ -102,23 +102,14 @@ func TestAutocomplete(t *testing.T) {
 			name:  "cwd",
 			input: "./c",
 			want: []string{
-				"./completer.go",
-				"./completer_common.go",
-				"./completer_liner.go",
-				"./completer_nobuild.go",
-				"./completer_test.go",
+				"./completer.go", "./completer_bubbline.go", "./completer_common.go", "./completer_liner.go", "./completer_nobuild.go", "./completer_test.go",
 			},
 		},
 		{
 			name:  "path",
 			input: "../gosh/c",
 			want: []string{
-				"../gosh/completer.go",
-				"../gosh/completer_common.go",
-				"../gosh/completer_liner.go",
-				"../gosh/completer_nobuild.go",
-				"../gosh/completer_test.go",
-			},
+				"../gosh/completer.go", "../gosh/completer_bubbline.go", "../gosh/completer_common.go", "../gosh/completer_liner.go", "../gosh/completer_nobuild.go", "../gosh/completer_test.go"},
 		},
 		{
 			name:  "directory",

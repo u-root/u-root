@@ -6,6 +6,7 @@ linters:
     - ineffassign
     - revive
     - staticcheck
+    - modernize
   settings:
     errorlint:
       errorf: true
@@ -16,6 +17,7 @@ linters:
         - all
         - -SA1019
         - -ST1003
+        - -SA5011
         - -QF*
   exclusions:
     presets:
@@ -27,6 +29,9 @@ linters:
       - linters:
           - revive
         text: don't use ALL_CAPS
+      - linters:
+          - revive
+        text: avoid meaningless package names
       - linters:
           - revive
         text: stutter
@@ -42,5 +47,38 @@ linters:
       - linters:
           - revive
         text: empty-block
+      - linters:
+          - modernize
+        text: 'rangeint:'
+      - linters:
+          - modernize
+        text: 'stringsseq:'
+      - linters:
+          - modernize
+        text: 'waitgroup:'
+      - linters:
+          - modernize
+        text: 'stringsbuilder:'
+      - linters:
+          - modernize
+        text: 'any:'
+      - linters:
+          - modernize
+        text: 'slicessort:'
+      - linters:
+          - modernize
+        text: 'unsafefuncs:'
+      - linters:
+          - modernize
+        text: 'forvar:'
+      - linters:
+          - modernize
+        text: 'reflecttypefor:'
+      - linters:
+          - modernize
+        text: 'stringscut:'
+      - linters:
+          - modernize
+        text: 'testingcontext:'
     paths:
       - pkg/uroot/test

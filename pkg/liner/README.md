@@ -1,3 +1,9 @@
+This code was forked to u-root in March 2026, as its last commit
+was 5 years ago; it works well for our needs; and it has a serious
+bug around output redirection (it refuses to tab-complete when
+output is redirected, which makes no sense and fails with our
+multiconsole support).
+
 Liner
 =====
 

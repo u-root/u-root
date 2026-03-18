@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build (!tinygo || tinygo.enable) && !plan9 && !goshsmall && goshliner
+//go:build (!tinygo || tinygo.enable) && !plan9 && !goshsmall && !goshbubble
 
 package main
 
@@ -14,17 +14,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/peterh/liner"
+	"github.com/u-root/u-root/pkg/liner"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
-
-// HistFile is the history file.
-// This might, possibly, use GetPid to avoid gosh'es writing over each other
-var HistFile = filepath.Join(os.TempDir(), "gosh.history")
 
 var completion = flag.Bool("comp", true, "Enable tabcompletion and a more feature rich editline implementation")
 
@@ -32,7 +27,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 	input := liner.NewLiner()
 	defer input.Close()
 
-	f, err := os.OpenFile(HistFile, os.O_RDWR|os.O_CREATE, 0)
+	f, err := os.OpenFile(HistFile, os.O_RDWR|os.O_CREATE, 0600)
 	if err == nil {
 		input.ReadHistory(f)
 	} else if f, err = os.Open(HistFile); err != nil {
@@ -45,6 +40,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 	input.SetCtrlCAborts(true)
 	if *completion {
 		input.SetCompleter(autocompleteLiner(parser))
+		input.SetTabCompletionStyle(liner.TabPrints)
 	}
 
 	var runErr error

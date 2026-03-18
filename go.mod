@@ -1,6 +1,6 @@
 module github.com/u-root/u-root
 
-go 1.24.0
+go 1.25.7
 
 require (
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
@@ -29,7 +29,6 @@ require (
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
-	github.com/peterh/liner v1.2.2
 	github.com/pierrec/lz4/v4 v4.1.22
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
@@ -109,7 +108,7 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.14
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/packet v1.1.2 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect

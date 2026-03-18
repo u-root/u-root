@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -33,8 +32,7 @@ func TestCPUAMD64(t *testing.T) {
 	}
 
 	// Cancel before wg.Wait(), so goroutine can exit.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// TODO: have a one-time helper that builds a full u-root image once,
 	// that all tests can use.
