@@ -8,30 +8,32 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
+	"strconv"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 type test struct {
 	expect string
+	err    error
 	args   []string
 }
 
-func testseq(tests []test, format, sep string, width bool, t *testing.T) {
-	for _, tst := range tests {
+func testseq(t *testing.T, tests []test, format, sep string, width bool) {
+	for _, tt := range tests {
 		b := bytes.Buffer{}
 		w := io.Writer(&b)
-		if err := seq(w, format, sep, width, tst.args); err != nil {
-			t.Error(err)
+		err := seq(w, format, sep, width, tt.args)
+
+		if !errors.Is(err, tt.err) {
+			t.Fatalf("expected %v, got %v", tt.err, err)
 		}
 
-		got := b.Bytes()
-		want := []byte(tst.expect)
-
-		if !bytes.Equal(got, want) {
-			t.Logf("Got: \n%v\n", string(got))
-			t.Logf("Expect: \n%v\n", tst.expect)
-			t.Error("Mismatching output")
+		if diff := cmp.Diff(b.String(), tt.expect); diff != "" {
+			t.Errorf("unexpected result (-want +got):\n%s", diff)
 		}
 	}
 }
@@ -47,9 +49,73 @@ func TestSeqDefault(t *testing.T) {
 			args:   []string{"1", "0.5", "3"},
 			expect: "1.0\n1.5\n2.0\n2.5\n3.0\n",
 		},
+		{
+			args:   []string{"3"},
+			expect: "1\n2\n3\n",
+		},
+		{
+			args: []string{"1", "2", "3", "4"},
+			err:  errUsage,
+		},
+		{
+			args:   []string{"3", "1"},
+			expect: "3\n2\n1\n",
+		},
+		{
+			args:   []string{"5", "-2", "1"},
+			expect: "5\n3\n1\n",
+		},
+		{
+			args:   []string{"-2"},
+			expect: "1\n0\n-1\n-2\n",
+		},
+		{
+			args: []string{"1", "-1", "2"},
+			err:  errPositiveInc,
+		},
+		{
+			args: []string{"10", "1", "2"},
+			err:  errNegativeDec,
+		},
+		{
+			args: []string{"10", "0", "2"},
+			err:  errZeroDec,
+		},
+		{
+			args:   []string{"5", "-1", "5"},
+			expect: "5\n",
+		},
+		{
+			args:   []string{"5", "1", "5"},
+			expect: "5\n",
+		},
+		{
+			args: []string{"hello", "2"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"2", "hello"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"hello"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"hello", "1", "2"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"1", "hello", "2"},
+			err:  strconv.ErrSyntax,
+		},
+		{
+			args: []string{"1", "2", "hello"},
+			err:  strconv.ErrSyntax,
+		},
 	}
 
-	testseq(tests, "%v", "\n", false, t)
+	testseq(t, tests, "%v", "\n", false)
 }
 
 // test seq fixed width with leading zeros
@@ -65,7 +131,7 @@ func TestSeqWidthEqual(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%v", "\n", true, t)
+	testseq(t, tests, "%v", "\n", true)
 }
 
 func TestSeqCustomFormat(t *testing.T) {
@@ -80,7 +146,7 @@ func TestSeqCustomFormat(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%.2f", "\n", true, t)
+	testseq(t, tests, "%.2f", "\n", true)
 }
 
 func TestSeqSeparator(t *testing.T) {
@@ -95,5 +161,32 @@ func TestSeqSeparator(t *testing.T) {
 		},
 	}
 
-	testseq(tests, "%v", "->", false, t)
+	testseq(t, tests, "%v", "->", false)
+}
+
+func TestMaxDecimalPlaces(t *testing.T) {
+	tests := []struct {
+		args     []string
+		expected int
+	}{
+		{
+			args:     []string{"10", "2", "8"},
+			expected: 0,
+		},
+		{
+			args:     []string{"10.1", "2", "8"},
+			expected: 1,
+		},
+		{
+			args:     []string{"10.1", "2.02", "8.003"},
+			expected: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		res := maxDecimalPlaces(tt.args)
+		if res != tt.expected {
+			t.Errorf("expected %v got %v", tt.expected, res)
+		}
+	}
 }

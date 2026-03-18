@@ -93,10 +93,9 @@ func (u *User) Groups() map[int]string {
 	return u.groups
 }
 
-// GIDName returns the group name for a user's UID
+// GIDName returns the group name for a user's GID
 func (u *User) GIDName() string {
-	val := u.Groups()[u.UID()]
-	return val
+	return u.Groups()[u.GID()]
 }
 
 // NewUser is a factory method for the User type.
@@ -106,11 +105,11 @@ func NewUser(flags *flags, username string, users *Users, groups *Groups) (*User
 	u := &User{groups: make(map[int]string)}
 	if len(username) == 0 { // no username provided, get current
 		if flags.real {
-			u.uid = syscall.Geteuid()
-			u.gid = syscall.Getegid()
-		} else {
 			u.uid = syscall.Getuid()
 			u.gid = syscall.Getgid()
+		} else {
+			u.uid = syscall.Geteuid()
+			u.gid = syscall.Getegid()
 		}
 		groupsNumbers, _ = syscall.Getgroups()
 		if v, err := users.GetUser(u.uid); err == nil {
@@ -183,7 +182,7 @@ func IDCommand(w io.Writer, flags *flags, u User) {
 	sort.Ints(gids)
 
 	var groupOutput []string
-	for id := range gids {
+	for _, id := range gids {
 		gid, name := id, u.Groups()[id]
 		if !flags.groups {
 			groupOutput = append(groupOutput, fmt.Sprintf("%d(%s)", gid, name))

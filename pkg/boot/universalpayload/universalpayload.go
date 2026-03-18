@@ -572,15 +572,19 @@ func Load(name string, dbg func(string, ...any)) (error, error) {
 	}
 
 	// Prepare memory.
-	debug("universalpayload: Try to get Memory Map from IOMem\n")
-	ioMem, err := kexecMemoryMapFromIOMem()
+	memmap, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
-		debug("universalpayload: Failed to get Memory Map from IOMem\n")
-		return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(warningMsg...)
+		debug("universalpayload: Failed to get Memory map from SysfsMemmap\n")
+		debug("universalpayload: Try to get Memory Map from IOMem\n")
+		memmap, err = kexecMemoryMapFromIOMem()
+		if err != nil {
+			debug("universalpayload: Failed to get Memory Map from IOMem\n")
+			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(warningMsg...)
+		}
 	}
 
 	mem := kexec.Memory{
-		Phys: ioMem,
+		Phys: memmap,
 	}
 
 	// Prepare boot environment, including HoB, stack, bootloader parameter.
