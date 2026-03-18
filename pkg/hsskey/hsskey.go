@@ -178,7 +178,7 @@ func GetAllHssWithPaths(warnings io.Writer, verboseDangerous bool, sysFsPatterns
 	if hssFiles != "" {
 		hssFileArr := []string{}
 		// Parse if list of paths were given.
-		for _, hssFile := range strings.Split(strings.TrimSpace(hssFiles), ",") {
+		for hssFile := range strings.SplitSeq(strings.TrimSpace(hssFiles), ",") {
 			hssFile, err := evaluateHssPath(hssFile)
 			if err != nil {
 				fmt.Fprintf(warnings, "Error parsing path %s for file: %v\n", hssFile, err)
