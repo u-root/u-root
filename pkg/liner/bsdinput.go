@@ -22,7 +22,6 @@
 // DEALINGS IN THE SOFTWARE.
 
 //go:build openbsd || freebsd || netbsd
-// +build openbsd freebsd netbsd
 
 package liner
 

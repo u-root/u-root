@@ -22,13 +22,13 @@
 // DEALINGS IN THE SOFTWARE.
 
 //go:build linux || darwin || openbsd || freebsd || netbsd || solaris
-// +build linux darwin openbsd freebsd netbsd solaris
 
 package liner
 
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
@@ -45,12 +45,12 @@ type nexter struct {
 // State represents an open terminal
 type State struct {
 	commonState
-	origMode    termios
-	defaultMode termios
-	next        <-chan nexter
-	winch       chan os.Signal
-	pending     []rune
-	useCHA      bool
+	origMode   termios
+	promptMode termios
+	next       <-chan nexter
+	winch      chan os.Signal
+	pending    []rune
+	useCHA     bool
 }
 
 // NewLiner initializes a new *State, and sets the terminal into raw mode. To
@@ -65,13 +65,10 @@ func NewLiner() *State {
 	} else {
 		s.inputRedirected = true
 	}
-	if _, err := getMode(syscall.Stdout); err != nil {
-		s.outputRedirected = true
-	}
-	if s.inputRedirected && s.outputRedirected {
+	if s.inputRedirected {
 		s.terminalSupported = false
 	}
-	if s.terminalSupported && !s.inputRedirected && !s.outputRedirected {
+	if s.terminalSupported && !s.inputRedirected {
 		mode := s.origMode
 		mode.Iflag &^= icrnl | inpck | istrip | ixon
 		mode.Cflag |= cs8
@@ -79,16 +76,13 @@ func NewLiner() *State {
 		mode.Cc[syscall.VMIN] = 1
 		mode.Cc[syscall.VTIME] = 0
 		mode.ApplyMode()
+		s.promptMode = mode
 
 		winch := make(chan os.Signal, 1)
 		signal.Notify(winch, syscall.SIGWINCH)
 		s.winch = winch
 
 		s.checkOutput()
-	}
-
-	if !s.outputRedirected {
-		s.outputRedirected = !s.getColumns()
 	}
 
 	return &s
@@ -98,9 +92,8 @@ var errTimedOut = errors.New("timeout")
 
 func (s *State) startPrompt() {
 	if s.terminalSupported {
-		if m, err := TerminalMode(); err == nil {
-			s.defaultMode = *m.(*termios)
-			mode := s.defaultMode
+		if _, err := TerminalMode(); err == nil {
+			mode := s.promptMode
 			mode.Lflag &^= isig
 			mode.ApplyMode()
 		}
@@ -131,7 +124,7 @@ func (s *State) restartPrompt() {
 
 func (s *State) stopPrompt() {
 	if s.terminalSupported {
-		s.defaultMode.ApplyMode()
+		s.origMode.ApplyMode()
 	}
 }
 
@@ -139,7 +132,7 @@ func (s *State) nextPending(timeout <-chan time.Time) (rune, error) {
 	select {
 	case thing, ok := <-s.next:
 		if !ok {
-			return 0, ErrInternal
+			return 0, fmt.Errorf("nextPending:%w", ErrInternal)
 		}
 		if thing.err != nil {
 			return 0, thing.err
@@ -163,7 +156,7 @@ func (s *State) readNext() (interface{}, error) {
 	select {
 	case thing, ok := <-s.next:
 		if !ok {
-			return 0, ErrInternal
+			return 0, fmt.Errorf("readNext: %w", ErrInternal)
 		}
 		if thing.err != nil {
 			return nil, thing.err

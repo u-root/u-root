@@ -22,12 +22,10 @@
 // DEALINGS IN THE SOFTWARE.
 
 //go:build windows || linux || darwin || openbsd || freebsd || netbsd || solaris
-// +build windows linux darwin openbsd freebsd netbsd solaris
 
 package liner
 
 import (
-	"bufio"
 	"container/ring"
 	"errors"
 	"fmt"
@@ -119,7 +117,7 @@ const (
 
 func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 	if s.columns == 0 {
-		return ErrInternal
+		return fmt.Errorf("refresh: s.Columns is 0: %w", os.ErrInvalid)
 	}
 
 	s.needRefresh = false
@@ -634,13 +632,6 @@ func (s *State) PromptWithSuggestion(prompt string, text string, pos int) (strin
 		return s.promptUnsupported(prompt)
 	}
 	p := []rune(prompt)
-	const minWorkingSpace = 10
-	if s.columns < countGlyphs(p)+minWorkingSpace {
-		return s.tooNarrow(prompt)
-	}
-	if s.outputRedirected {
-		return "", ErrNotTerminalOutput
-	}
 
 	s.historyMutex.RLock()
 	defer s.historyMutex.RUnlock()
@@ -1049,9 +1040,6 @@ func (s *State) PasswordPrompt(prompt string) (string, error) {
 	if s.inputRedirected {
 		return s.promptUnsupported(prompt)
 	}
-	if s.outputRedirected {
-		return "", ErrNotTerminalOutput
-	}
 
 	p := []rune(prompt)
 
@@ -1127,23 +1115,6 @@ mainLoop:
 		}
 	}
 	return string(line), nil
-}
-
-func (s *State) tooNarrow(prompt string) (string, error) {
-	// Docker and OpenWRT and etc sometimes return 0 column width
-	// Reset mode temporarily. Restore baked mode in case the terminal
-	// is wide enough for the next Prompt attempt.
-	m, merr := TerminalMode()
-	s.origMode.ApplyMode()
-	if merr == nil {
-		defer m.ApplyMode()
-	}
-	if s.r == nil {
-		// Windows does not always set s.r
-		s.r = bufio.NewReader(os.Stdin)
-		defer func() { s.r = nil }()
-	}
-	return s.promptUnsupported(prompt)
 }
 
 func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, int) {

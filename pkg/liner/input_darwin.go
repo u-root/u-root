@@ -22,7 +22,6 @@
 // DEALINGS IN THE SOFTWARE.
 
 //go:build darwin
-// +build darwin
 
 package liner
 
