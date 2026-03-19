@@ -283,7 +283,7 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 // Append parses `config` and adds the respective configuration to `c`.
 func (c *parser) append(ctx context.Context, config string) error {
 	// Here's a shitty parser.
-	for _, line := range strings.Split(config, "\n") {
+	for line := range strings.SplitSeq(config, "\n") {
 		// This is stupid. There should be a FieldsN(...).
 		kv := strings.Fields(line)
 		if len(kv) <= 1 {
@@ -380,7 +380,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				// https://wiki.syslinux.org/wiki/index.php?title=Directives/append
 				// Multiple initrds are comma-separated
 				var initrds []io.Reader
-				for _, f := range strings.Split(arg, ",") {
+				for f := range strings.SplitSeq(arg, ",") {
 					i, err := c.getFileWithoutCache(f)
 					if err != nil {
 						return err
@@ -482,7 +482,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			continue
 		}
 
-		for _, opt := range strings.Fields(label.Cmdline) {
+		for opt := range strings.FieldsSeq(label.Cmdline) {
 			optkv := strings.Split(opt, "=")
 			if len(optkv) != 2 || optkv[0] != "initrd" {
 				continue

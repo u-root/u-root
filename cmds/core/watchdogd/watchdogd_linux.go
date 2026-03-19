@@ -62,7 +62,7 @@ func run(args []string) error {
 		}
 
 		daemonOpts.Monitors = []func() error{}
-		for _, m := range strings.Split(*monitor, ",") {
+		for m := range strings.SplitSeq(*monitor, ",") {
 			if m == "oops" {
 				daemonOpts.Monitors = append(daemonOpts.Monitors, watchdogd.MonitorOops)
 			} else {

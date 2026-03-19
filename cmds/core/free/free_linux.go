@@ -108,7 +108,7 @@ func meminfo() (meminfomap, error) {
 // byte stream with a content compatible with /proc/meminfo
 func meminfoFromBytes(buf []byte) (meminfomap, error) {
 	ret := make(meminfomap)
-	for _, line := range bytes.Split(buf, []byte{'\n'}) {
+	for line := range bytes.SplitSeq(buf, []byte{'\n'}) {
 		kv := bytes.SplitN(line, []byte{':'}, 2)
 		if len(kv) != 2 {
 			// invalid line?
