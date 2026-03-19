@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/term"
@@ -24,6 +25,10 @@ import (
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
+
+// HistFile is the history file.
+// This might, possibly, use GetPid to avoid gosh'es writing over each other
+var HistFile = filepath.Join(os.TempDir(), "gosh.history")
 
 var command = flag.String("c", "", "Command to run")
 

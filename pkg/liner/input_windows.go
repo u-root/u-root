@@ -58,12 +58,12 @@ type inputMode uint32
 // State represents an open terminal
 type State struct {
 	commonState
-	handle      syscall.Handle
-	hOut        syscall.Handle
-	origMode    inputMode
-	defaultMode inputMode
-	key         interface{}
-	repeat      uint16
+	handle     syscall.Handle
+	hOut       syscall.Handle
+	origMode   inputMode
+	promptMode inputMode
+	key        interface{}
+	repeat     uint16
 }
 
 const (
@@ -95,13 +95,13 @@ func NewLiner() *State {
 		mode &^= enableMouseInput
 		mode |= enableWindowInput
 		mode.ApplyMode()
+		s.promptMode = mode
 	} else {
 		s.inputRedirected = true
 		s.r = bufio.NewReader(os.Stdin)
 	}
 
 	s.getColumns()
-	s.outputRedirected = s.columns <= 0
 
 	return &s
 }
@@ -337,9 +337,8 @@ func (s *State) Close() error {
 }
 
 func (s *State) startPrompt() {
-	if m, err := TerminalMode(); err == nil {
-		s.defaultMode = m.(inputMode)
-		mode := s.defaultMode
+	if _, err := TerminalMode(); err == nil {
+		mode := s.promptMode
 		mode &^= enableProcessedInput
 		mode.ApplyMode()
 	}
@@ -349,7 +348,7 @@ func (s *State) restartPrompt() {
 }
 
 func (s *State) stopPrompt() {
-	s.defaultMode.ApplyMode()
+	s.origMode.ApplyMode()
 }
 
 // TerminalSupported returns true because line editing is always

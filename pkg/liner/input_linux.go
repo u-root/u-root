@@ -22,7 +22,6 @@
 // DEALINGS IN THE SOFTWARE.
 
 //go:build linux
-// +build linux
 
 package liner
 

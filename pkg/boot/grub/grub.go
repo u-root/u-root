@@ -153,7 +153,7 @@ func findkeywordGrubEnv(file string, fsRoot string, key string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("[grubenv]:%w", err)
 	}
-	for _, line := range strings.Split(string(grubenv), "\n") {
+	for line := range strings.SplitSeq(string(grubenv), "\n") {
 		vals := strings.SplitN(line, "=", 2)
 		if vals[0] == key {
 			return vals[1], nil
@@ -372,7 +372,7 @@ func cmdlineQuote(args []string) string {
 // then we can do a rewrite.
 func (c *parser) append(ctx context.Context, config string) error {
 	// Here's a shitty parser.
-	for _, line := range strings.Split(config, "\n") {
+	for line := range strings.SplitSeq(config, "\n") {
 		// Add extra backslash for OpenSUSE/Fedora/RHEL use case. shlex
 		// will convert it back to a single backslash.
 		line = hexEscape.ReplaceAllString(line, `\\$0`)

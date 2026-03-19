@@ -259,7 +259,7 @@ func genDeps(opts ProbeOpts) (depMap, error) {
 
 		var dependency dependency
 		if len(modDeps) > 0 {
-			for _, dep := range strings.Split(strings.TrimSpace(modDeps), " ") {
+			for dep := range strings.SplitSeq(strings.TrimSpace(modDeps), " ") {
 				dependency.deps = append(dependency.deps, filepath.Join(moduleDir, dep))
 			}
 		}

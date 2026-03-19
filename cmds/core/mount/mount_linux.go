@@ -39,7 +39,7 @@ func (o *mountOptions) String() string {
 }
 
 func (o *mountOptions) Set(value string) error {
-	for _, option := range strings.Split(value, ",") {
+	for option := range strings.SplitSeq(value, ",") {
 		*o = append(*o, option)
 	}
 	return nil
@@ -91,7 +91,7 @@ func (c *cmd) getSupportedFilesystem(originFS string) ([]string, bool, error) {
 		return nil, known, err
 	}
 	var returnValue []string
-	for _, f := range strings.Split(string(fs), "\n") {
+	for f := range strings.SplitSeq(string(fs), "\n") {
 		n := strings.Fields(f)
 		last := len(n) - 1
 		if last < 0 {

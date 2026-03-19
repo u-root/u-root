@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build (!tinygo || tinygo.enable) && !plan9 && !goshsmall && goshliner
+//go:build (!tinygo || tinygo.enable) && !plan9 && !goshsmall && !goshbubble
 
 package main
 
@@ -14,17 +14,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/liner"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
-
-// HistFile is the history file.
-// This might, possibly, use GetPid to avoid gosh'es writing over each other
-var HistFile = filepath.Join(os.TempDir(), "gosh.history")
 
 var completion = flag.Bool("comp", true, "Enable tabcompletion and a more feature rich editline implementation")
 

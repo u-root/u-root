@@ -38,7 +38,7 @@ func parseStruct(t *Table, off int, complete bool, sp any) (int, error) {
 		// fmt.Printf("XX %02Xh f %s t %s k %s %s\n", off, f.Name, f.Type.Name(), fv.Kind(), tags)
 		// Check tags first
 		ignore := false
-		for _, tag := range strings.Split(tags, ",") {
+		for tag := range strings.SplitSeq(tags, ",") {
 			tp := strings.Split(tag, "=")
 			switch tp[0] {
 			case "-":

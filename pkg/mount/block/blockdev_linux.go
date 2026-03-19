@@ -700,8 +700,8 @@ func (b BlockDevices) FilterBlockPCI(blocklist pci.Devices) BlockDevices {
 // and returns a list of PCI devices containing the vendor and device pairs.
 func parsePCIList(parseList string) (pci.Devices, error) {
 	pciList := pci.Devices{}
-	bL := strings.Split(parseList, ",")
-	for _, b := range bL {
+	bL := strings.SplitSeq(parseList, ",")
+	for b := range bL {
 		p := strings.Split(b, ":")
 		if len(p) != 2 {
 			return nil, fmt.Errorf("parsing device list %q: %w", parseList, ErrListFormat)
