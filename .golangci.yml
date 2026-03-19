@@ -74,8 +74,5 @@ linters:
       - linters:
           - modernize
         text: 'stringscut:'
-      - linters:
-          - modernize
-        text: 'testingcontext:'
     paths:
       - pkg/uroot/test
