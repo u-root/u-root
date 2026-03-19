@@ -74,7 +74,7 @@ func (c cgroupname) apply(s string, f func(s string)) {
 	if s == "" {
 		return
 	}
-	for _, g := range strings.Split(s, ",") {
+	for g := range strings.SplitSeq(s, ",") {
 		p := filepath.Join(g)
 		f(p)
 	}
@@ -434,7 +434,7 @@ func main() {
 	e["HOME"] = "/root"
 
 	if *env != "" {
-		for _, c := range strings.Split(*env, ",") {
+		for c := range strings.SplitSeq(*env, ",") {
 			k := strings.SplitN(c, "=", 2)
 			if len(k) != 2 {
 				log.Printf("Bogus environment string %v", c)

@@ -23,7 +23,7 @@ func FindFileSystem(fstype string) error {
 }
 
 func internalFindFileSystem(content string, fstype string) error {
-	for _, l := range strings.Split(content, "\n") {
+	for l := range strings.SplitSeq(content, "\n") {
 		f := strings.Fields(l)
 		if (len(f) > 1 && f[0] == "nodev" && f[1] == fstype) || (len(f) > 0 && f[0] != "nodev" && f[0] == fstype) {
 			return nil
@@ -42,7 +42,7 @@ func internalGetFilesystems(file string) (fstypes []string, err error) {
 	if bytes, err = os.ReadFile(file); err != nil {
 		return nil, fmt.Errorf("failed to read supported file systems: %w", err)
 	}
-	for _, line := range strings.Split(string(bytes), "\n") {
+	for line := range strings.SplitSeq(string(bytes), "\n") {
 		// len(fields)==1, 2 possibilites for fs: "nodev" fs and
 		// fs's. "nodev" fs cannot be mounted through devices.
 		// len(fields)==1 prevents this from occurring.

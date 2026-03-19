@@ -232,7 +232,7 @@ func run(args []string) error {
 				files = append(files, initrd)
 			}
 			if opts.initramfs != "" {
-				for _, n := range strings.Fields(opts.initramfs) {
+				for n := range strings.FieldsSeq(opts.initramfs) {
 					files = append(files, uio.NewLazyFile(n))
 				}
 			}

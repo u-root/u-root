@@ -325,7 +325,7 @@ func (c cmd) extraMounts(mountList string) error {
 	}
 	c.debug("Extra mounts: %q", mountList)
 	// We have to specify the extra directories and do the create here b/c it is a squashfs. Sorry.
-	for _, e := range strings.Split(mountList, ",") {
+	for e := range strings.SplitSeq(mountList, ",") {
 		m := mp{flags: mount.MS_BIND, perm: 0o755}
 		mp := strings.Split(e, ":")
 		switch len(mp) {

@@ -67,7 +67,7 @@ func ParseGrubCfg(ver grubVersion, devices block.BlockDevices, grubcfg string, b
 	bootconfigs := make([]jsonboot.BootConfig, 0)
 	inMenuEntry := false
 	var cfg *jsonboot.BootConfig
-	for _, line := range strings.Split(grubcfg, "\n") {
+	for line := range strings.SplitSeq(grubcfg, "\n") {
 		// remove all leading spaces as they are not relevant for the config
 		// line
 		line = strings.TrimLeft(line, " ")
@@ -165,7 +165,7 @@ func ParseGrubCfg(ver grubVersion, devices block.BlockDevices, grubcfg string, b
 }
 
 func isValidFsUUID(uuid string) bool {
-	for _, h := range strings.Split(uuid, "-") {
+	for h := range strings.SplitSeq(uuid, "-") {
 		if _, err := hex.DecodeString(h); err != nil {
 			return false
 		}
