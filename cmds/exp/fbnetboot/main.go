@@ -211,7 +211,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 
 	if *ntpEnable {
 		var servers []string
-		for _, s := range strings.Split(*ntpServers, ",") {
+		for s := range strings.SplitSeq(*ntpServers, ",") {
 			if len(s) == 0 {
 				continue
 			}

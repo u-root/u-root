@@ -162,7 +162,7 @@ func (c *parser) parseIpxe(config string) error {
 	c.bootImage = &boot.LinuxImage{}
 
 	var initrds []io.Reader
-	for _, line := range strings.Split(config, "\n") {
+	for line := range strings.SplitSeq(config, "\n") {
 		// Skip blank lines and comment lines.
 		line = strings.TrimSpace(line)
 		if line == "" || line[0] == '#' {
@@ -192,7 +192,7 @@ func (c *parser) parseIpxe(config string) error {
 
 		case "initrd":
 			if len(args) > 1 {
-				for _, f := range strings.Split(args[1], ",") {
+				for f := range strings.SplitSeq(args[1], ",") {
 					i, err := c.getFileWithoutCache(f)
 					if err != nil {
 						return err

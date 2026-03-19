@@ -95,7 +95,7 @@ func mountinfo() (mountinfomap, error) {
 // to exclude cgroup, procfs and sysfs types
 func mountinfoFromBytes(buf []byte) (mountinfomap, error) {
 	ret := make(mountinfomap)
-	for _, line := range bytes.Split(buf, []byte{'\n'}) {
+	for line := range bytes.SplitSeq(buf, []byte{'\n'}) {
 		kv := bytes.SplitN(line, []byte{' '}, 6)
 		if len(kv) != 6 {
 			// can't interpret this

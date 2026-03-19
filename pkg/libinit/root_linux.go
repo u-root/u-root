@@ -397,7 +397,7 @@ func GetModulesFromCmdline(m *InitModuleLoader) ([]string, error) {
 		return nil, nil
 	}
 
-	for _, moduleName := range strings.Split(modules, ",") {
+	for moduleName := range strings.SplitSeq(modules, ",") {
 		moduleName = strings.TrimSpace(moduleName)
 		ret = append(ret, moduleName)
 	}
