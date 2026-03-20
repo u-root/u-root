@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -61,7 +61,7 @@ func parseCPUs(s string) (CPUs, error) {
 	if len(cpus) == 0 {
 		return nil, fmt.Errorf("no cpus found, input was %v", s)
 	}
-	sort.Slice(cpus, func(i, j int) bool { return cpus[i] < cpus[j] })
+	slices.Sort(cpus)
 	// Remove duplicates
 	for i := 0; i < len(cpus)-1; i++ {
 		if cpus[i] == cpus[i+1] {
@@ -115,7 +115,7 @@ func (c CPUs) String() string {
 	if len(c) == 0 {
 		return "nil"
 	}
-	sort.Slice(c, func(i, j int) bool { return c[i] < c[j] })
+	slices.Sort(c)
 
 	var s []string
 	for i := 0; i < len(c); i++ {

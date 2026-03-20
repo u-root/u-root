@@ -58,9 +58,6 @@ linters:
         text: 'stringsbuilder:'
       - linters:
           - modernize
-        text: 'slicessort:'
-      - linters:
-          - modernize
         text: 'unsafefuncs:'
       - linters:
           - modernize
