@@ -7,7 +7,6 @@
 package integration
 
 import (
-	"context"
 	"os"
 	"strings"
 	"testing"
@@ -50,8 +49,7 @@ func TestIP(t *testing.T) {
 			t.Fatalf("Testing kernel=linux arch=%s: got %v, want nil", arch, err)
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+		ctx := t.Context()
 
 		t.Logf("image:%s", i)
 		n, err := i.Uroot(d)
