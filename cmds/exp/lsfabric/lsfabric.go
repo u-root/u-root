@@ -85,7 +85,7 @@ type cfg uint32
 var (
 	node  = flag.Uint("node", 0, "which node")
 	debug = flag.Bool("d", false, "debug prints")
-	v     = func(string, ...interface{}) {}
+	v     = func(string, ...any) {}
 )
 
 type config struct {

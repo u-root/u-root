@@ -146,7 +146,7 @@ func (s *State) nextPending(timeout <-chan time.Time) (rune, error) {
 	}
 }
 
-func (s *State) readNext() (interface{}, error) {
+func (s *State) readNext() (any, error) {
 	if len(s.pending) > 0 {
 		rv := s.pending[0]
 		s.pending = s.pending[1:]
