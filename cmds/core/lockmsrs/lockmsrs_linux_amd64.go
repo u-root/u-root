@@ -22,7 +22,7 @@ import (
 var (
 	verbose = flag.Bool("v", false, "verbose mode")
 	verify  = flag.Bool("V", false, "Verify, do not write")
-	debug   = func(string, ...interface{}) {}
+	debug   = func(string, ...any) {}
 )
 
 func main() {
