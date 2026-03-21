@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
 	"golang.org/x/sys/unix"
 )
@@ -95,8 +96,9 @@ func (t *TTY) STTY(fd int) (*TTY, error) {
 // boolean options which are clear, printed as ~name, sorted by name
 // This ordering makes it a bit more readable: integer value, sorted set values, sorted clear values
 func (t *TTY) String() string {
-	s := fmt.Sprintf("speed:%v ", t.Ispeed)
-	s += fmt.Sprintf("rows:%d cols:%d", t.Row, t.Col)
+	var s strings.Builder
+	s.WriteString(fmt.Sprintf("speed:%v ", t.Ispeed))
+	s.WriteString(fmt.Sprintf("rows:%d cols:%d", t.Row, t.Col))
 
 	var intopts []string
 	for n, c := range t.CC {
@@ -116,9 +118,9 @@ func (t *TTY) String() string {
 	sort.Strings(falseopts)
 
 	for _, v := range append(intopts, append(trueopts, falseopts...)...) {
-		s += fmt.Sprintf(" %s", v)
+		s.WriteString(fmt.Sprintf(" %s", v))
 	}
-	return s
+	return s.String()
 }
 
 func intarg(s []string, bits int) (int, error) {

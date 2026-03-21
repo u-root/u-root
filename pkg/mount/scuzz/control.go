@@ -7,6 +7,7 @@ package scuzz
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -93,13 +94,14 @@ func (d DiskSecurityStatus) SecurityCountExpired() bool {
 }
 
 func (d DiskSecurityStatus) String() string {
-	s := "Security Status: "
+	var s strings.Builder
+	s.WriteString("Security Status: ")
 	for v, name := range securityStatusStrings {
 		if d&v != 0 {
-			s += name + ", "
+			s.WriteString(name + ", ")
 		}
 	}
-	return s
+	return s.String()
 }
 
 // String prints a nice JSON-formatted info.

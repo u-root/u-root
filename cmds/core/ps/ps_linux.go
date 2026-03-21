@@ -387,27 +387,27 @@ func (pT ProcessTable) MaxLength(field string) int {
 
 // PrintHeader prints the header for ps, with correct spacing.
 func (pT ProcessTable) PrintHeader(w io.Writer) {
-	var row string
+	var row strings.Builder
 	for index, field := range pT.headers {
 		formated := pT.fstring[index]
-		row += fmt.Sprintf(formated, field)
+		row.WriteString(fmt.Sprintf(formated, field))
 	}
 
-	fmt.Fprintf(w, "%v\n", row)
+	fmt.Fprintf(w, "%v\n", row.String())
 }
 
 // PrintProcess prints information about one process.
 func (pT ProcessTable) PrintProcess(index int, w io.Writer) {
-	var row string
+	var row strings.Builder
 	p := pT.table[index]
 	for index, f := range pT.fields {
 		field := p.Search(f)
 		formated := pT.fstring[index]
-		row += fmt.Sprintf(formated, field)
+		row.WriteString(fmt.Sprintf(formated, field))
 
 	}
 
-	fmt.Fprintf(w, "%v\n", row)
+	fmt.Fprintf(w, "%v\n", row.String())
 }
 
 // PrepareString figures out how to lay out a process table print

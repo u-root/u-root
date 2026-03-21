@@ -68,13 +68,13 @@ func tcpFlags(layer layers.TCP) string {
 
 // tcpOptions returns a string representation of the TCP options.
 func tcpOptions(options []layers.TCPOption) string {
-	var opts string
+	var opts strings.Builder
 
 	for _, opt := range options {
-		opts += tcpOptionToString(opt) + ","
+		opts.WriteString(tcpOptionToString(opt) + ",")
 	}
 
-	return strings.TrimRight(opts, ",")
+	return strings.TrimRight(opts.String(), ",")
 }
 
 // tcpOptionToString returns a string representation of the TCP option.

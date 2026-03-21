@@ -9,6 +9,7 @@ package main
 import (
 	"io"
 	"os/exec"
+	"strings"
 )
 
 const (
@@ -30,16 +31,16 @@ type System struct {
 func (s *System) Run() (e error) {
 	s.cmdSane = rxSanitize.ReplaceAllString(s.Cmd, "..")
 	idx := rxCmdSub.FindAllStringIndex(s.cmdSane, -1)
-	fCmd := ""
+	var fCmd strings.Builder
 	oCmd := 0
 	for _, m := range idx {
-		fCmd += s.Cmd[oCmd:m[0]]
-		fCmd += state.fileName
+		fCmd.WriteString(s.Cmd[oCmd:m[0]])
+		fCmd.WriteString(state.fileName)
 		oCmd = m[1]
 	}
-	fCmd += s.Cmd[oCmd:]
+	fCmd.WriteString(s.Cmd[oCmd:])
 
-	cmd := exec.Command(shellpath, shellopts, fCmd)
+	cmd := exec.Command(shellpath, shellopts, fCmd.String())
 	cmd.Stdin = s.Stdin
 	cmd.Stdout = s.Stdout
 	cmd.Stderr = s.Stderr

@@ -55,9 +55,6 @@ linters:
         text: 'waitgroup:'
       - linters:
           - modernize
-        text: 'stringsbuilder:'
-      - linters:
-          - modernize
         text: 'unsafefuncs:'
       - linters:
           - modernize

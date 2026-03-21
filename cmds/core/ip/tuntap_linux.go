@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/vishvananda/netlink"
 )
@@ -251,13 +252,14 @@ func (cmd *cmd) printTunTaps(links []netlink.Link) error {
 	}
 
 	for _, print := range prints {
-		output := fmt.Sprintf("%s:", print.IfName)
+		var output strings.Builder
+		output.WriteString(fmt.Sprintf("%s:", print.IfName))
 
 		for _, flag := range print.Flags {
-			output += fmt.Sprintf(" %s", flag)
+			output.WriteString(fmt.Sprintf(" %s", flag))
 		}
 
-		fmt.Fprintln(cmd.Out, output)
+		fmt.Fprintln(cmd.Out, output.String())
 	}
 
 	return nil

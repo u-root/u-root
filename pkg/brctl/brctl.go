@@ -132,12 +132,12 @@ func showBridge(name string, out io.Writer) error {
 		return fmt.Errorf("read info for bridge %q: %w", name, err)
 	}
 
-	ifStr := ""
+	var ifStr strings.Builder
 	for _, s := range info.Interfaces {
-		ifStr += s.Name + " "
+		ifStr.WriteString(s.Name + " ")
 	}
 
-	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpEnabled, ifStr)
+	fmt.Fprintf(out, ShowBridgeFmt, info.Name, info.BridgeID, info.StpEnabled, ifStr.String())
 
 	return nil
 }

@@ -79,11 +79,11 @@ func (vid TPMDeviceVendorID) String() string {
 	if vid[0] == 0 && vid[1] == 'X' && vid[2] == 'F' && vid[3] == 'I' {
 		return "IFX"
 	}
-	s := ""
+	var s strings.Builder
 	for i := 0; i < 4 && vid[i] != 0; i++ {
-		s += string(vid[i])
+		s.WriteString(string(vid[i]))
 	}
-	return s
+	return s.String()
 }
 
 // TPMDeviceCharacteristics is defined in DSP0134 7.44.1.

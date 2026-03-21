@@ -56,17 +56,17 @@ func extractMan(name string) (string, error) {
 	if len(src.Comments) == 0 {
 		return "", fmt.Errorf("file doesn't contain comments")
 	}
-	var man string
+	var man strings.Builder
 	// First comment group is expected to be copyright notice.
 	for _, cg := range src.Comments[1:] {
 		for _, comment := range cg.List {
 			if comment.Slash > src.Name.Pos() {
 				break
 			}
-			man += comment.Text + "\n"
+			man.WriteString(comment.Text + "\n")
 		}
 	}
-	return uncomment(man), nil
+	return uncomment(man.String()), nil
 }
 
 func walk(mans map[string]string, root string) (err error) {

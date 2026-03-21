@@ -358,7 +358,7 @@ func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error 
 			fmt.Fprintf(cmd.Out, neighBriefFmt, v.IP, ifacesNames[idx], v.HardwareAddr)
 		} else {
 			llAddr := ""
-			flags := ""
+			var flags strings.Builder
 
 			if v.HardwareAddr != nil {
 				llAddr = fmt.Sprintf(" lladdr %s", v.HardwareAddr)
@@ -366,11 +366,11 @@ func (cmd *cmd) printNeighs(neighs []netlink.Neigh, ifacesNames []string) error 
 
 			for _, flag := range flagOrder {
 				if v.Flags&flag != 0 {
-					flags += fmt.Sprintf(" %s", flagToString[flag])
+					flags.WriteString(fmt.Sprintf(" %s", flagToString[flag]))
 				}
 			}
 
-			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, flags, getState(v.State))
+			fmt.Fprintf(cmd.Out, neighFmt, v.IP, ifacesNames[idx], llAddr, flags.String(), getState(v.State))
 		}
 	}
 
