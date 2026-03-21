@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // PrintDTS prints the FDT in the .dts format.
@@ -34,18 +35,18 @@ func (p *Property) String() string {
 }
 
 func (n *Node) String() string {
-	var s string
+	var s strings.Builder
 	var indent string
 	n.Walk(func(n *Node) error {
 		i := indent
 		indent += "\t"
-		s += fmt.Sprintf("%s%s: [", indent, n.Name)
+		s.WriteString(fmt.Sprintf("%s%s: [", indent, n.Name))
 		for _, p := range n.Properties {
-			s += fmt.Sprintf("%s, ", &p)
+			s.WriteString(fmt.Sprintf("%s, ", &p))
 		}
-		s += "]\n"
+		s.WriteString("]\n")
 		indent = i
 		return nil
 	})
-	return s
+	return s.String()
 }

@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/vishvananda/netlink"
@@ -61,23 +62,23 @@ func (cmd *cmd) parseTimeStamp(currentTimestamp, lastTimeStamp time.Time) string
 }
 
 func formatPacketData(data []byte) string {
-	var result string
+	var result strings.Builder
 	for i := 0; i < len(data); i += 16 {
 		// Print the offset
-		result += fmt.Sprintf("0x%04x:  ", i)
+		result.WriteString(fmt.Sprintf("0x%04x:  ", i))
 
 		// Print the hex values
 		for j := range 16 {
 			if i+j < len(data) {
-				result += fmt.Sprintf("%02x", data[i+j])
+				result.WriteString(fmt.Sprintf("%02x", data[i+j]))
 			} else {
-				result += "  "
+				result.WriteString("  ")
 			}
 			if j%2 == 1 {
-				result += " "
+				result.WriteString(" ")
 			}
 		}
-		result += "\n"
+		result.WriteString("\n")
 	}
-	return result
+	return result.String()
 }

@@ -285,7 +285,7 @@ func Locked() error {
 		return err
 	}
 
-	var allerrors string
+	var allerrors strings.Builder
 	for _, m := range LockIntel {
 		Debug("MSR %v on cpus %v, clearmask 0x%8x, setmask 0x%8x", m.Addr, cpus, m.Clear, m.Set)
 		if m.WriteOnly {
@@ -295,13 +295,13 @@ func Locked() error {
 
 		for i, e := range errs {
 			if e != nil {
-				allerrors += fmt.Sprintf("[cpu%d(%s)%v ", cpus[i], m.String(), e)
+				allerrors.WriteString(fmt.Sprintf("[cpu%d(%s)%v ", cpus[i], m.String(), e))
 			}
 		}
 	}
 
-	if allerrors != "" {
-		return fmt.Errorf("%s: %v", vendor, allerrors)
+	if allerrors.String() != "" {
+		return fmt.Errorf("%s: %v", vendor, allerrors.String())
 	}
 	return nil
 }

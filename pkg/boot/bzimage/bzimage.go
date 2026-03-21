@@ -575,15 +575,15 @@ func (h *LinuxParams) Show() []string {
 // Diff is a convenience function that returns a string showing
 // differences between a header and another header.
 func (h *LinuxHeader) Diff(i *LinuxHeader) string {
-	var s string
+	var s strings.Builder
 	hs := h.Show()
 	is := i.Show()
 	for i := range hs {
 		if hs[i] != is[i] {
-			s += fmt.Sprintf("%s != %s", hs[i], is[i])
+			s.WriteString(fmt.Sprintf("%s != %s", hs[i], is[i]))
 		}
 	}
-	return s
+	return s.String()
 }
 
 // Diff is a convenience function that returns a string showing

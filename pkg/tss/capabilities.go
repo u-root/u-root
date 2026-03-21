@@ -29,7 +29,7 @@ func readTPM12Information(rwc io.ReadWriter) (TPMInfo, error) {
 }
 
 func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
-	var vendorInfo string
+	var vendorInfo strings.Builder
 	// The Vendor String is split up into 4 sections of 4 bytes,
 	// for a maximum length of 16 octets of ASCII text. We iterate
 	// through the 4 indexes to get all 16 bytes & construct vendorInfo.
@@ -44,12 +44,12 @@ func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 			return TPMInfo{}, fmt.Errorf("got capability of type %T, want tpm2.TaggedProperty", caps[0])
 		}
 		// Reconstruct the 4 ASCII octets from the uint32 value.
-		vendorInfo += string([]byte{
+		vendorInfo.WriteString(string([]byte{
 			byte(subset.Value >> 24),
 			byte(subset.Value >> 16),
 			byte(subset.Value >> 8),
 			byte(subset.Value),
-		})
+		}))
 	}
 
 	caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.Manufacturer))
@@ -71,7 +71,7 @@ func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 	}
 
 	return TPMInfo{
-		VendorInfo:           strings.Trim(vendorInfo, "\x00"),
+		VendorInfo:           strings.Trim(vendorInfo.String(), "\x00"),
 		Manufacturer:         TCGVendorID(manu.Value),
 		FirmwareVersionMajor: int((fw.Value & 0xffff0000) >> 16),
 		FirmwareVersionMinor: int(fw.Value & 0x0000ffff),

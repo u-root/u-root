@@ -364,14 +364,14 @@ func cmdJoin(ctx *Context) (e error) {
 		return
 	}
 
-	joined := ""
+	var joined strings.Builder
 	for l := r[0]; l <= r[1]; l++ {
-		joined += buffer.GetMust(l, false)
+		joined.WriteString(buffer.GetMust(l, false))
 	}
 	if e = buffer.Delete(r); e != nil {
 		return
 	}
-	e = buffer.Insert(r[0], []string{joined})
+	e = buffer.Insert(r[0], []string{joined.String()})
 	return
 }
 
@@ -556,7 +556,7 @@ func cmdSub(ctx *Context) (e error) {
 			}
 		}
 		// we have matches, deal with them
-		fLin := ""
+		var fLin strings.Builder
 		oLin := 0
 		for _, m := range matches {
 			nMatch++
@@ -565,36 +565,36 @@ func cmdSub(ctx *Context) (e error) {
 
 			// Fill backrefs
 			oRep := 0
-			fRep := ""
+			var fRep strings.Builder
 			for _, r := range refs {
 				if rep[r[0]:r[1]] == "&" {
-					fRep += rep[oRep:r[0]]
-					fRep += l[m[0]:m[1]]
+					fRep.WriteString(rep[oRep:r[0]])
+					fRep.WriteString(l[m[0]:m[1]])
 					oRep = r[1]
 				} else {
 					i, _ := strconv.Atoi(rep[r[2]:r[3]])
 					if i > len(m)/2-1 { // not enough submatches for backref
 						return fmt.Errorf("invalid backref")
 					}
-					fRep += rep[oRep:r[0]]
-					fRep += l[m[2*i]:m[2*i+1]]
+					fRep.WriteString(rep[oRep:r[0]])
+					fRep.WriteString(l[m[2*i]:m[2*i+1]])
 					oRep = r[1]
 				}
 			}
-			fRep += rep[oRep:]
+			fRep.WriteString(rep[oRep:])
 
-			fLin += l[oLin:m[0]]
-			fLin += fRep
+			fLin.WriteString(l[oLin:m[0]])
+			fLin.WriteString(fRep.String())
 			oLin = m[1]
 		}
-		fLin += l[oLin:]
+		fLin.WriteString(l[oLin:])
 		if e = buffer.Delete([2]int{ln, ln}); e != nil {
 			return
 		}
-		if e = buffer.Insert(ln, []string{fLin}); e != nil {
+		if e = buffer.Insert(ln, []string{fLin.String()}); e != nil {
 			return
 		}
-		last = fLin
+		last = fLin.String()
 		lastN = ln
 	}
 	if nMatch == 0 {

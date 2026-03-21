@@ -28,19 +28,19 @@ func toOctalEscapeSequence(b []byte) string {
 		"\011": "\\t",
 		"\015": "\\r",
 	}
-	octalEscape := ""
+	var octalEscape strings.Builder
 	for _, v := range b {
 		octalChar := fmt.Sprintf("\\%03o", v)
 		if v >= 32 && v <= 126 {
-			octalEscape += string(v)
+			octalEscape.WriteString(string(v))
 		} else if notion, ok := shortHandNotions[string(v)]; ok {
 			// DebugString prints these characters as shorthand notations
-			octalEscape += notion
+			octalEscape.WriteString(notion)
 		} else {
-			octalEscape += octalChar
+			octalEscape.WriteString(octalChar)
 		}
 	}
-	return octalEscape
+	return octalEscape.String()
 }
 
 // validateChecksum check if HSS data is valid based on the checksum value stored in the last 4

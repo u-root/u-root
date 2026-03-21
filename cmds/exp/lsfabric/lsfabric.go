@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/pci"
 )
@@ -133,12 +134,13 @@ type DataFabric struct {
 }
 
 func (d *DataFabric) String() string {
-	s := fmt.Sprintf("Node %d TotalCount %d PIECount %d IOMSCount %d DiesPerSocket %d CCM0InstanceID %d Config %s",
-		d.Node, d.TotalCount, d.PIECount, d.IOMSCount, d.DiesPerSocket, d.CCM0InstanceID, d.Config)
+	var s strings.Builder
+	s.WriteString(fmt.Sprintf("Node %d TotalCount %d PIECount %d IOMSCount %d DiesPerSocket %d CCM0InstanceID %d Config %s",
+		d.Node, d.TotalCount, d.PIECount, d.IOMSCount, d.DiesPerSocket, d.CCM0InstanceID, d.Config))
 	for _, f := range d.Components {
-		s += "\n" + f.String()
+		s.WriteString("\n" + f.String())
 	}
-	return s
+	return s.String()
 }
 
 func (d *DataFabric) address(id nodeID, fun uint8, off uint16) error {

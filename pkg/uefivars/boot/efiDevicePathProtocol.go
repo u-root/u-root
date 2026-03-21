@@ -182,14 +182,14 @@ type EfiDevicePathProtocol interface {
 type EfiDevicePathProtocolList []EfiDevicePathProtocol
 
 func (list EfiDevicePathProtocolList) String() string {
-	var res string
+	var res strings.Builder
 	for n, dpp := range list {
 		if dpp == nil {
 			log.Fatalf("nil dpp %d %#v", n, list)
 		}
-		res += dpp.String() + "/"
+		res.WriteString(dpp.String() + "/")
 	}
-	return strings.Trim(res, "/")
+	return strings.Trim(res.String(), "/")
 }
 
 // Returns the first device path node that matches the given type and subtype.

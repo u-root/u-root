@@ -113,14 +113,14 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		return cmd{}, fmt.Errorf("cannot use both -v and -q flags")
 	}
 
-	filter := ""
+	var filter strings.Builder
 	if fs.NArg() > 0 {
 		for _, arg := range fs.Args() {
-			filter += arg + " "
+			filter.WriteString(arg + " ")
 		}
 	}
 
-	opts.Filter = filter
+	opts.Filter = filter.String()
 
 	if opts.FilterFile != "" {
 		if data, err := os.ReadFile(opts.FilterFile); err == nil {

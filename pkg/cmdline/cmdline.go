@@ -198,7 +198,7 @@ func GetUinitArgs() []string {
 // and returns them as a space-seperated string designed to be passed to insmod
 // Note that similarly to flags, module names with - and _ are treated the same.
 func (c *CmdLine) FlagsForModule(name string) string {
-	var ret string
+	var ret strings.Builder
 	flagsAdded := make(map[string]bool) // Ensures duplicate flags aren't both added
 	// Module flags come as moduleName.flag in /proc/cmdline
 	prefix := strings.Replace(name, "-", "_", -1) + "."
@@ -207,10 +207,10 @@ func (c *CmdLine) FlagsForModule(name string) string {
 		if !flagsAdded[canonicalFlag] && strings.HasPrefix(canonicalFlag, prefix) {
 			flagsAdded[canonicalFlag] = true
 			// They are passed to insmod space seperated as flag=val
-			ret += strings.TrimPrefix(canonicalFlag, prefix) + "=" + val + " "
+			ret.WriteString(strings.TrimPrefix(canonicalFlag, prefix) + "=" + val + " ")
 		}
 	}
-	return ret
+	return ret.String()
 }
 
 // FlagsForModule gets all flags for a designated module

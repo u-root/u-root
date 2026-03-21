@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"text/tabwriter"
 
 	"golang.org/x/text/language"
@@ -47,7 +48,7 @@ func init() {
 	const longfmt = "-%s | --%s:%s%s (default %v)\n"
 	var (
 		ushort = "Usage: cbmem [h?"
-		ulong  string
+		ulong  strings.Builder
 	)
 
 	for _, f := range []struct {
@@ -71,10 +72,10 @@ func init() {
 		flag.BoolVar(f.b, f.short, f.def, f.help)
 		flag.BoolVar(f.b, f.long, f.def, f.help)
 		ushort += f.short
-		ulong += fmt.Sprintf(longfmt, f.short, f.long, f.tab, f.help, f.def)
+		ulong.WriteString(fmt.Sprintf(longfmt, f.short, f.long, f.tab, f.help, f.def))
 	}
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s]\n\n%s", ushort, ulong)
+		fmt.Fprintf(os.Stderr, "%s]\n\n%s", ushort, ulong.String())
 		os.Exit(1)
 	}
 }
