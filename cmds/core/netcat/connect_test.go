@@ -220,16 +220,14 @@ func TestConnect(t *testing.T) {
 				l.Close()
 			})
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				conn, err := l.Accept()
 				if err != nil {
 					return
 				}
 				conn.Write([]byte(response))
 				conn.Close()
-			}()
+			})
 
 			stdin := strings.NewReader(tt.stdin)
 
@@ -421,16 +419,14 @@ func TestEstablishConnection(t *testing.T) {
 					l.Close()
 				})
 
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					conn, err := l.Accept()
 					if err != nil {
 						return
 					}
 
 					defer conn.Close()
-				}()
+				})
 			case "udp", "udp6":
 				if tt.network == "udp" {
 					listenAddr = addr
@@ -600,15 +596,13 @@ func TestEstablishConnectionUnix(t *testing.T) {
 					unixL.Close()
 				})
 
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
+				wg.Go(func() {
 					conn, err := unixL.Accept()
 					if err != nil {
 						return
 					}
 					defer conn.Close()
-				}()
+				})
 			case "unixgram":
 				unixL, err := net.ListenPacket(tt.network, socketPath)
 				if err != nil {

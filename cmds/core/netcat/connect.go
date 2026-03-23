@@ -92,11 +92,9 @@ func (c *cmd) connect(output io.WriteCloser, network, address string) error {
 			return nil
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			c.writeToRemote(conn)
-		}()
+		})
 	}
 
 	// in send-only mode ignore incoming data
