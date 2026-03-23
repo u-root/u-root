@@ -730,17 +730,13 @@ func TestBroadcastMessage(t *testing.T) {
 		receiverBuffer bytes.Buffer
 	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		io.Copy(&receiverBuffer, receiverConn)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		io.Copy(&senderBuffer, senderConn)
-	}()
+	})
 
 	message := "Broadcasted Message!"
 	connections.broadcast(netcat.NewConcurrentWriter(&outputBuffer), 2, message)
