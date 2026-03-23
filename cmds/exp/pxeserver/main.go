@@ -210,9 +210,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	if len(*tftpDir) != 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			server, err := tftp.NewServer(fmt.Sprintf(":%d", *tftpPort))
 			if err != nil {
 				log.Fatalf("Could not start TFTP server: %v", err)
@@ -221,21 +219,17 @@ func main() {
 			log.Println("starting file server")
 			server.ReadHandler(tftp.FileServer(*tftpDir))
 			log.Fatal(server.ListenAndServe())
-		}()
+		})
 	}
 	if len(*httpDir) != 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			http.Handle("/", http.FileServer(http.Dir(*httpDir)))
 			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *httpPort), nil))
-		}()
+		})
 	}
 
 	if *ipv4 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			s := &dserver4{
 				mac:          maca,
 				self:         net.ParseIP(*selfIP),
@@ -253,13 +247,11 @@ func main() {
 			if err := server.Serve(); err != nil {
 				log.Fatal(err)
 			}
-		}()
+		})
 	}
 
 	if *ipv6 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			s := &dserver6{
 				mac:         maca,
@@ -279,7 +271,7 @@ func main() {
 			if err := server.Serve(); err != nil {
 				log.Fatal(err)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

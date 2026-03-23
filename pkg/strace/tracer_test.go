@@ -36,14 +36,12 @@ func prepareTestCmd(t *testing.T, cmd string) {
 
 	r, w := io.Pipe()
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		s := bufio.NewScanner(r)
 		for s.Scan() {
 			t.Logf("Output: %s", s.Text())
 		}
-		wg.Done()
-	}()
+	})
 
 	c := exec.CommandContext(ctx, "make", "all")
 	c.Stdout = w
@@ -60,14 +58,12 @@ func runAndCollectTrace(t *testing.T, cmd *exec.Cmd) []*TraceRecord {
 	// Write strace logs to t.Logf.
 	r, w := io.Pipe()
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		s := bufio.NewScanner(r)
 		for s.Scan() {
 			t.Logf("Output: %s", s.Text())
 		}
-		wg.Done()
-	}()
+	})
 
 	traceChan := make(chan *TraceRecord)
 	done := make(chan error, 1)
