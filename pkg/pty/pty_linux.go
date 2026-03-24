@@ -48,7 +48,7 @@ func New() (*Pty, error) {
 	// It can take a non-zero time for a pts to appear, it seems.
 	// Ten tries is reported to be far more than enough.
 	// We could consider something like inotify rather than polling?
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		_, err := os.Stat(sname)
 		if err == nil {
 			break

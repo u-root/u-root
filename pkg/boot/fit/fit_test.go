@@ -202,7 +202,7 @@ func compareImage(t *testing.T, name string, wantFill string, image io.ReaderAt)
 		t.Errorf("failed reading %s passed to loadImage: bytes got %v bytes, want %v of pattern %s.\nReturned image:\t%v", name, gotSize, imageSize, wantFill, gotImage)
 	} else {
 		fill := []byte(wantFill)
-		for i := 0; i < gotSize; i++ {
+		for i := range gotSize {
 			if gotImage[i] != fill[i%len(fill)] {
 				t.Errorf("loadImage gave %s: %v, want pattern: \"%v...\". Mismatch at index %d: want %d, got %d", name, gotImage, wantFill, i, gotImage[i], fill[i%len(fill)])
 			}

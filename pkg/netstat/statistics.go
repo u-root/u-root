@@ -474,7 +474,7 @@ func parseFromTags(t reflect.Type, v reflect.Value, w io.Writer) {
 	numFields := t.NumField()
 
 	fmt.Fprintf(w, "%s:\n", t.Name())
-	for j := 0; j < numFields; j++ {
+	for j := range numFields {
 		field := t.Field(j)
 		outputfmt := field.Tag.Get("text")
 		refFieldVal := v.Field(j).String()

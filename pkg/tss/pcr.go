@@ -34,11 +34,11 @@ func readAllPCRs20(tpm io.ReadWriter, alg tpm2.Algorithm) (map[uint32][]byte, er
 	// The TPM 2.0 spec says that the TPM can partially fulfill the
 	// request. As such, we repeat the command up to 8 times to get all
 	// 24 PCRs.
-	for i := 0; i < numPCRs; i++ {
+	for range numPCRs {
 		// Build a selection structure, specifying all PCRs we do
 		// not have the value for.
 		sel := tpm2.PCRSelection{Hash: alg}
-		for pcr := 0; pcr < numPCRs; pcr++ {
+		for pcr := range numPCRs {
 			if _, present := out[uint32(pcr)]; !present {
 				sel.PCRs = append(sel.PCRs, pcr)
 			}
@@ -69,7 +69,7 @@ func readAllPCRs12(rwc io.ReadWriter) (map[uint32][]byte, error) {
 	numPCRs := 24
 	out := map[uint32][]byte{}
 
-	for i := 0; i < numPCRs; i++ {
+	for i := range numPCRs {
 		// Ask the TPM for those PCR values.
 		pcr, err := tpm.ReadPCR(rwc, uint32(i))
 		if err != nil {

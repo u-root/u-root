@@ -242,7 +242,7 @@ func boot(ifname string, dhcp dhcpFunc) error {
 	log.Printf("DHCP: fetching boot file URL: %s", bootconf.BootfileURL)
 
 	fetch := func(url string) (*http.Response, error) {
-		for attempt := 0; attempt < maxHTTPAttempts; attempt++ {
+		for attempt := range maxHTTPAttempts {
 			if attempt > 1 {
 				time.Sleep(retryInterval)
 			}

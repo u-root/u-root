@@ -334,7 +334,7 @@ func TestReplaceBaseboardInfoMotherboardPass(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opt should pass but returned error: %v", err)
 	}
-	for i := 0; i < len(newTable); i++ {
+	for i := range newTable {
 		if !reflect.DeepEqual(newTable[i], wantTable[i]) {
 			t.Errorf("opt return incorrect table, got %+v, want %+v", newTable[i], wantTable[i])
 		}
@@ -490,7 +490,7 @@ func TestRemoveBaseboardInfo(t *testing.T) {
 				t.Fatalf("opt should pass but returned an error: %v", err)
 			}
 
-			for i := 0; i < len(newTables); i++ {
+			for i := range newTables {
 				// Using reflect.DeepEqual for a comprehensive comparison of the entire slice
 				if !reflect.DeepEqual(newTables[i], tc.wantTables[i]) {
 					t.Errorf("opt returned incorrect table, got %+v, want %+v", newTables[i], tc.wantTables[i])
@@ -629,7 +629,7 @@ func TestRemoveSystemSlotInfo(t *testing.T) {
 			if len(newTables) != len(tc.wantTables) {
 				t.Errorf("opt returned incorrect number of tables, got %d, want %d", len(newTables), len(tc.wantTables))
 			}
-			for i := 0; i < len(newTables); i++ {
+			for i := range newTables {
 				if !reflect.DeepEqual(newTables[i], tc.wantTables[i]) {
 					t.Errorf("opt returned incorrect table, got %+v, want %+v", newTables[i], tc.wantTables[i])
 				}
