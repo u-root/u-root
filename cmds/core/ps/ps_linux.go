@@ -141,7 +141,7 @@ func (p *Process) readStat(s string) error {
 	fields := strings.Split(s, " ")
 	// set struct fields from stat file data
 	v := reflect.ValueOf(&p.process).Elem()
-	for i := 0; i < len(fields); i++ {
+	for i := range fields {
 		fieldVal := v.Field(i)
 		fieldVal.Set(reflect.ValueOf(fields[i]))
 	}

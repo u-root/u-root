@@ -104,7 +104,7 @@ func transferSmbiosData() error {
 	}
 
 	seen := false
-	for j := 0; j < blobCount; j++ {
+	for j := range blobCount {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
 			return fmt.Errorf("failed to enumerate blob %d: %w", j, err)

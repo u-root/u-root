@@ -58,7 +58,7 @@ func readProgFS() (map[int]ProcNode, error) {
 		}
 
 		var fdnum string
-		for i := 0; i < len(fddir); i++ {
+		for i := range fddir {
 			fdnum = strconv.Itoa(i)
 
 			fdnumpath := path.Join(fdpath, fdnum)

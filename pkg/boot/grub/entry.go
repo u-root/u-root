@@ -54,7 +54,7 @@ func (env *EnvFile) WriteTo(w io.Writer) (int64, error) {
 	// Fill up the file with # until 1024 bytes to make the file size a
 	// multiple of the block size.
 	remainder := blockSize - length%blockSize
-	for i := 0; i < remainder; i++ {
+	for range remainder {
 		b.WriteByte('#')
 	}
 

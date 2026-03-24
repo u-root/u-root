@@ -66,7 +66,7 @@ func GetBooterFor(entry BootEntry, l ulog.Logger) (Booter, error) {
 func GetBootEntries(l ulog.Logger) []BootEntry {
 	var bootEntries []BootEntry
 
-	for idx := 0; idx < 9999; idx++ {
+	for idx := range 9999 {
 		key := fmt.Sprintf("Boot%04d", idx)
 		// try the RW entries first
 		value, err := Get(key, false)

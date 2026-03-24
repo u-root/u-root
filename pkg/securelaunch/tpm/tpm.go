@@ -52,7 +52,7 @@ func marshalPcrEvent(pcr uint32, h []byte, eventDesc []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	for i := uint32(0); i < count; i++ {
+	for range count {
 		if err := binary.Write(&buf, endianness, hashAlgo); err != nil {
 			return nil, err
 		}

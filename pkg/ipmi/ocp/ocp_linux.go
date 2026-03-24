@@ -79,7 +79,7 @@ var OENMap = map[string][3]uint8{
 }
 
 func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
-	for index := 0; index < len(info); index++ {
+	for index := range info {
 		for param := 1; param <= 2; param++ {
 			data, err := info[index].marshall(param)
 			if err != nil {
@@ -96,7 +96,7 @@ func SendOemIpmiProcessorInfo(i *ipmi.IPMI, info []ProcessorInfo) error {
 }
 
 func SendOemIpmiDimmInfo(i *ipmi.IPMI, info []DimmInfo) error {
-	for index := 0; index < len(info); index++ {
+	for index := range info {
 		for param := 1; param <= 6; param++ {
 			// If DIMM is not present, only send the information of DIMM location
 			if info[index].DIMMPresent != 0x01 && param >= 2 {
@@ -212,7 +212,7 @@ func GetOemIpmiProcessorInfo(si *smbios.Info) ([]ProcessorInfo, error) {
 
 	boardManufacturerID, ok := OENMap[t1.Manufacturer]
 
-	for index := 0; index < len(t4); index++ {
+	for index := range t4 {
 		if ok {
 			info[index].ManufacturerID = boardManufacturerID
 		}
@@ -285,7 +285,7 @@ func GetOemIpmiDimmInfo(si *smbios.Info) ([]DimmInfo, error) {
 
 	boardManufacturerID, ok := OENMap[t1.Manufacturer]
 
-	for index := 0; index < len(t17); index++ {
+	for index := range t17 {
 		if ok {
 			info[index].ManufacturerID = boardManufacturerID
 		}
@@ -344,7 +344,7 @@ func GetOemIpmiBootDriveInfo(si *smbios.Info) (*BootDriveInfo, error) {
 		info.ManufacturerID = boardManufacturerID
 	}
 
-	for index := 0; index < len(t9); index++ {
+	for index := range t9 {
 		if !strings.Contains(t9[index].SlotDesignation, bootDriveName) {
 			continue
 		}
