@@ -49,9 +49,6 @@ linters:
         text: empty-block
       - linters:
           - modernize
-        text: 'rangeint:'
-      - linters:
-          - modernize
         text: 'unsafefuncs:'
       - linters:
           - modernize
