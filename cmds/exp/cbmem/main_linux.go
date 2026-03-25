@@ -129,7 +129,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 			}
 			debug("\tFound Tag %s (%v)@%#08x Size %v", tagNames[rec.Tag], rec.Tag, j, rec.Size)
 			start := j
-			j += int64(reflect.TypeOf(r).Size())
+			j += int64(reflect.TypeFor[*offsetReader]().Size())
 			n := tagNames[rec.Tag]
 			switch rec.Tag {
 			case LB_TAG_BOARD_ID:
@@ -183,7 +183,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 			case LB_TAG_MEMORY:
 				debug("    Found memory map.\n")
 				cbmem.Memory = &memoryEntry{Record: rec}
-				nel := (int64(cbmem.Memory.Size) - (j - start)) / int64(reflect.TypeOf(memoryRange{}).Size())
+				nel := (int64(cbmem.Memory.Size) - (j - start)) / int64(reflect.TypeFor[memoryRange]().Size())
 				cbmem.Memory.Maps = make([]memoryRange, nel)
 				if err := readOne(r, cbmem.Memory.Maps, j); err != nil {
 					return nil, found, err
@@ -245,11 +245,11 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 					return nil, found, err
 				}
 
-				cbcons += int64(reflect.TypeOf(c.Size).Size())
+				cbcons += int64(reflect.TypeFor[uint32]().Size())
 				if err := readOne(cr, &c.Cursor, cbcons); err != nil {
 					return nil, found, err
 				}
-				cbcons += int64(reflect.TypeOf(c.Cursor).Size())
+				cbcons += int64(reflect.TypeFor[uint32]().Size())
 				debug("CSize is %#x, and Cursor is at %#x", c.CSize, c.Cursor)
 				// p.cur f8b4 p.si 1fff8 curs f8b4 size f8b4
 				sz := int(c.Size)
