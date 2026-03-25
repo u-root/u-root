@@ -57,7 +57,7 @@ func (s *InitScript) Marshal() (string, error) {
 	var sb strings.Builder
 	sb.WriteString(blockStartMarker + "\n")
 
-	typeOfScript := reflect.TypeOf(*s)
+	typeOfScript := reflect.TypeFor[InitScript]()
 	valueOfScript := reflect.ValueOf(*s)
 
 	for i := 0; i < typeOfScript.NumField(); i++ {
@@ -103,7 +103,7 @@ func (s *InitScript) Unmarshal(data io.Reader) error {
 	scanner := bufio.NewScanner(data)
 	inBlock := false
 
-	typeOfScript := reflect.TypeOf(*s)
+	typeOfScript := reflect.TypeFor[InitScript]()
 	valueOfScript := reflect.ValueOf(s).Elem()
 
 	var (
