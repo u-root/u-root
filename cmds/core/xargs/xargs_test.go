@@ -12,25 +12,32 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/xargs"
 )
 
+func TestTooSmall(t *testing.T) {
+	p := params{maxArgs: 0}
+	c := command(nil, nil, nil, p)
+	err := c.run()
+	if !errors.Is(err, errTooSmall) {
+		t.Errorf("expected %v, got %v", errTooSmall, err)
+	}
+}
+
 func TestCommandNotFound(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
-	cmd.SetIO(strings.NewReader("hello world"), &stdout, &stderr)
-	err := cmd.Run("-n", "1", "commandnotfound", "arg1")
+	stdin := strings.NewReader("hello world")
+	p := params{maxArgs: 1, trace: false}
+	c := command(stdin, nil, nil, p)
+	err := c.run("commandnotfound", "arg1")
 	if !errors.Is(err, exec.ErrNotFound) {
 		t.Errorf("expected %v, got %v", exec.ErrNotFound, err)
 	}
 }
 
 func TestEcho(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
-	cmd.SetIO(strings.NewReader("hello world"), &stdout, &stderr)
-	err := cmd.Run()
+	stdin := strings.NewReader("hello world")
+	stdout := &bytes.Buffer{}
+	c := command(stdin, stdout, nil, params{maxArgs: defaultMaxArgs})
+	err := c.run()
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -41,10 +48,11 @@ func TestEcho(t *testing.T) {
 }
 
 func TestEchoWithMaxArgs(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
-	cmd.SetIO(strings.NewReader("a b c d e f g"), &stdout, &stderr)
-	err := cmd.Run("-n", "3", "-t")
+	stdin := strings.NewReader("a b c d e f g")
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	c := command(stdin, stdout, stderr, params{maxArgs: 3, trace: true})
+	err := c.run()
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -57,20 +65,22 @@ func TestEchoWithMaxArgs(t *testing.T) {
 	}
 }
 
-func TestEchoPrompt(t *testing.T) {
-	var stdout, stderr bytes.Buffer
+func TestEchoPromt(t *testing.T) {
+	stdin := strings.NewReader("a b c")
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tty")
-	err := os.WriteFile(path, []byte("yes\nn\ny\n"), 0o644)
+	err := os.WriteFile(path, []byte("yes\nn\ny\n"), 0644)
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
 
-	cmd := xargs.New()
-	xargs.SetTTY(cmd, path)
-	cmd.SetIO(strings.NewReader("a b c"), &stdout, &stderr)
-	err = cmd.Run("-n", "1", "-p")
+	p := params{maxArgs: 1, prompt: true, trace: true}
+	c := command(stdin, stdout, stderr, p)
+	c.tty = path
+	err = c.run()
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -80,11 +90,24 @@ func TestEchoPrompt(t *testing.T) {
 	}
 }
 
+func TestDefaultParams(t *testing.T) {
+	p := parseParams()
+	if p.maxArgs != defaultMaxArgs {
+		t.Errorf("expected %d, got %d", defaultMaxArgs, p.maxArgs)
+	}
+	if p.trace {
+		t.Errorf("expected %t, got %t", false, p.trace)
+	}
+	if p.prompt {
+		t.Errorf("expected %t, got %t", false, p.prompt)
+	}
+}
+
 func TestNullDelimiter(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	cmd := xargs.New()
-	cmd.SetIO(strings.NewReader("hello\x00world"), &stdout, &stderr)
-	err := cmd.Run("-0")
+	stdin := strings.NewReader("hello\x00world")
+	stdout := &bytes.Buffer{}
+	c := command(stdin, stdout, nil, params{maxArgs: defaultMaxArgs, null: true})
+	err := c.run()
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
