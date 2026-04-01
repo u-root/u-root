@@ -91,14 +91,17 @@ func TestParseParams(t *testing.T) {
 }
 
 var tests = []struct {
-	err  error
-	p    params
-	name string
-	args []string
+	runErr     error
+	commandErr error
+	name       string
+	p          params
+	args       []string
+	fileArgs   []string
 }{
 	{
-		name: "create is true, no new files created",
-		args: []string{"a1", "a2"},
+		name:     "create is true, no new files created",
+		args:     []string{"touch", "-amc"},
+		fileArgs: []string{"a1", "a2"},
 		p: params{
 			access:       true,
 			modification: true,
@@ -107,8 +110,9 @@ var tests = []struct {
 		},
 	},
 	{
-		name: "create is false, files should be created",
-		args: []string{"a1", "a2"},
+		name:     "create is false, files should be created",
+		args:     []string{"touch", "-a", "-m"},
+		fileArgs: []string{"a1", "a2"},
 		p: params{
 			access:       true,
 			modification: true,
@@ -117,32 +121,51 @@ var tests = []struct {
 		},
 	},
 	{
-		name: "no such file or directory",
-		args: []string{"no/such/file/or/direcotry"},
+		name:     "no such file or directory",
+		args:     []string{"touch"},
+		fileArgs: []string{"no/such/file/or/direcotry"},
 		p: params{
 			create: false,
 			time:   time.Now(),
 		},
-		err: os.ErrNotExist,
+		runErr: os.ErrNotExist,
+	},
+	{
+		name: "no such file or directory",
+		args: []string{"touch"},
+		p: params{
+			create: false,
+			time:   time.Now(),
+		},
+		commandErr: errNoFiles,
 	},
 }
 
 func TestTouchEmptyDir(t *testing.T) {
 	for _, test := range tests {
 		temp := t.TempDir()
-		var args []string
-		for _, arg := range test.args {
-			args = append(args, temp+arg)
+		var fileArgs []string
+		for _, arg := range test.fileArgs {
+			fileArgs = append(fileArgs, temp+arg)
 		}
-		err := command(test.p, args...).run()
-		if !errors.Is(err, test.err) {
-			t.Fatalf("command() expected %v, got %v", test.err, err)
+
+		c, err := command(append(test.args, fileArgs...)...)
+		if !errors.Is(err, test.commandErr) {
+			t.Fatalf("command() expected %v, got %v", test.commandErr, err)
 		}
-		if test.err != nil {
+		if test.commandErr != nil {
 			continue
 		}
 
-		for _, arg := range args {
+		err = c.run()
+		if !errors.Is(err, test.runErr) {
+			t.Fatalf("command() expected %v, got %v", test.runErr, err)
+		}
+		if test.runErr != nil {
+			continue
+		}
+
+		for _, arg := range fileArgs {
 			_, err := os.Stat(arg)
 			if test.p.create {
 				if !os.IsNotExist(err) {

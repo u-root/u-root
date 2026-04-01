@@ -23,9 +23,12 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"time"
+
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
 type params struct {
@@ -40,15 +43,50 @@ type cmd struct {
 	args []string
 }
 
-func command(p params, args ...string) *cmd {
-	return &cmd{
-		args:   args,
-		params: p,
+var errNoFiles = errors.New("no files specified")
+
+func command(args ...string) (*cmd, error) {
+	var c cmd
+	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
+
+	var access bool
+	var modification bool
+	var create bool
+	var dateTime string
+
+	fs.BoolVar(&access, "a", false, "change only the access time")
+	fs.BoolVar(&modification, "m", false, "change only the modification time")
+	fs.BoolVar(&create, "c", false, "do not create any file if it does not exist")
+	fs.StringVar(&dateTime, "d", "", "use specified time instead of current time RFC3339")
+
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: touch [-amc] [-d datetime] file...\n\n")
+		fmt.Fprintf(fs.Output(), "touch changes file access and modification times.\n")
+		fmt.Fprintf(fs.Output(), "If a file does not exist, it will be created unless -c is specified.\n\n")
+		fmt.Fprintf(fs.Output(), "Options:\n")
+		fs.PrintDefaults()
 	}
+
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args[1:])); err != nil {
+		return nil, err
+	}
+
+	if len(fs.Args()) == 0 {
+		fs.Usage()
+		return nil, errNoFiles
+	}
+	c.args = fs.Args()
+
+	var err error
+	c.params, err = parseParams(dateTime, access, modification, create)
+	if err != nil {
+		return nil, err
+	}
+
+	return &c, nil
 }
 
 func parseParams(dateTime string, access, modification, create bool) (params, error) {
-	flag.Parse()
 	t := time.Now()
 	if dateTime != "" {
 		var err error
@@ -102,17 +140,11 @@ func (c *cmd) run() error {
 }
 
 func main() {
-	access := flag.Bool("a", false, "change only the access time")
-	modification := flag.Bool("m", false, "change only the modification time")
-	create := flag.Bool("c", false, "do not create any file if it does not exist")
-	dateTime := flag.String("d", "", "use specified time instead of current time RFC3339")
-	flag.Parse()
-	p, err := parseParams(*dateTime, *access, *modification, *create)
-	if err != nil || len(flag.Args()) == 0 {
-		flag.Usage()
-		os.Exit(1)
+	c, err := command(os.Args...)
+	if err != nil {
+		log.Fatalf("touch: %v", err)
 	}
-	if err := command(p, flag.Args()...).run(); err != nil {
+	if err := c.run(); err != nil {
 		log.Fatalf("touch: %v", err)
 	}
 }
