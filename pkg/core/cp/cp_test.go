@@ -16,7 +16,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var testdata = []byte("This is a test string")
+var (
+	testdata = []byte("This is a test string")
+)
 
 func TestCopySimple(t *testing.T) {
 	var err error
@@ -55,7 +57,7 @@ func TestCopySimple(t *testing.T) {
 			name:    "Success",
 			srcfile: srcfiles[0].Name(),
 			dstfile: dstfiles[0].Name(),
-			opt:     Options{},
+			opt:     Default,
 		},
 		{
 			name:    "SrcDstDirctoriesSuccess",
@@ -92,11 +94,22 @@ func TestCopySimple(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			err := Copy(tt.srcfile, tt.dstfile)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
+			}
+		})
+		//After every test with NoFollowSymlink we have to delete the created symlink
+		if strings.Contains(tt.dstfile, "symlink") {
+			os.Remove(tt.dstfile)
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.opt.Copy(tt.srcfile, tt.dstfile); !errors.Is(err, tt.wantErr) {
 				t.Errorf("%q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
 			}
 		})
-		// After every test with NoFollowSymlink we have to delete the created symlink
+		//After every test with NoFollowSymlink we have to delete the created symlink
 		if strings.Contains(tt.dstfile, "symlink") {
 			os.Remove(tt.dstfile)
 		}
@@ -106,7 +119,17 @@ func TestCopySimple(t *testing.T) {
 				t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
 			}
 		})
-		// After every test with NoFollowSymlink we have to delete the created symlink
+		//After every test with NoFollowSymlink we have to delete the created symlink
+		if strings.Contains(tt.dstfile, "symlink") {
+			os.Remove(tt.dstfile)
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			if err := CopyTree(tt.srcfile, tt.dstfile); !errors.Is(err, tt.wantErr) {
+				t.Errorf("Test %q failed. Want: %q, Got: %q", tt.name, tt.wantErr, err)
+			}
+		})
+		//After every test with NoFollowSymlink we have to delete the created symlink
 		if strings.Contains(tt.dstfile, "symlink") {
 			os.Remove(tt.dstfile)
 		}
