@@ -36,7 +36,6 @@ type flags struct {
 	interactive bool
 	verbose     bool
 	recursive   bool
-	r           bool
 	force       bool
 }
 
@@ -48,7 +47,7 @@ func rm(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 	fs.BoolVar(&f.interactive, "i", false, "Interactive mode.")
 	fs.BoolVar(&f.verbose, "v", false, "Verbose mode.")
 	fs.BoolVar(&f.recursive, "r", false, "equivalent to -R")
-	fs.BoolVar(&f.r, "R", false, "Recursive, remove hierarchies")
+	fs.BoolVar(&f.recursive, "R", false, "Recursive, remove hierarchies")
 	fs.BoolVar(&f.force, "f", false, "Force, ignore nonexistent files and never prompt")
 
 	fs.Usage = func() {
@@ -67,7 +66,7 @@ func rm(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 	}
 
 	rmf := os.Remove
-	if f.recursive || f.r {
+	if f.recursive {
 		rmf = os.RemoveAll
 	}
 
