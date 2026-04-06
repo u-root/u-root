@@ -19,78 +19,96 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 
-	"github.com/u-root/u-root/pkg/uroot/util"
+	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
 
-var (
-	interactive = flag.Bool("i", false, "Interactive mode.")
-	verbose     = flag.Bool("v", false, "Verbose mode.")
-	recursive   = flag.Bool("r", false, "equivalent to -R")
-	r           = flag.Bool("R", false, "Recursive, remove hierarchies")
-	force       = flag.Bool("f", false, "Force, ignore nonexistent files and never prompt")
-)
+var errUsage = errors.New("usage: rm [-Rrvif] file")
 
-const usage = "rm [-Rrvif] file..."
+type flags struct {
+	interactive bool
+	verbose     bool
+	recursive   bool
+	r           bool
+	force       bool
+}
 
-func rm(stdin io.Reader, files []string) error {
-	if len(files) < 1 {
-		return fmt.Errorf("%v", usage)
+func rm(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
+	var f flags
+	fs := flag.NewFlagSet("rm", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	fs.BoolVar(&f.interactive, "i", false, "Interactive mode.")
+	fs.BoolVar(&f.verbose, "v", false, "Verbose mode.")
+	fs.BoolVar(&f.recursive, "r", false, "equivalent to -R")
+	fs.BoolVar(&f.r, "R", false, "Recursive, remove hierarchies")
+	fs.BoolVar(&f.force, "f", false, "Force, ignore nonexistent files and never prompt")
+
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "%s...\n", errUsage)
+		fs.PrintDefaults()
 	}
-	f := os.Remove
-	if *recursive || *r {
-		f = os.RemoveAll
-	}
 
-	if *force {
-		*interactive = false
-	}
-
-	workingPath, err := os.Getwd()
-	if err != nil {
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
 		return err
+	}
+
+	files := fs.Args()
+
+	if len(files) < 1 {
+		return errUsage
+	}
+
+	rmf := os.Remove
+	if f.recursive || f.r {
+		rmf = os.RemoveAll
+	}
+
+	if f.force {
+		f.interactive = false
 	}
 
 	input := bufio.NewReader(stdin)
 	for _, file := range files {
-		if *interactive {
-			fmt.Printf("rm: remove '%v'? ", file)
+		if f.interactive {
+			fmt.Fprintf(stdout, "rm: remove '%v'? ", file)
 			answer, err := input.ReadString('\n')
-			if err != nil || strings.ToLower(answer)[0] != 'y' {
+			if err != nil || (answer[0] != 'y' && answer[0] != 'Y') {
 				continue
 			}
 		}
 
-		if err := f(file); err != nil {
-			if *force && os.IsNotExist(err) {
+		if err := rmf(file); err != nil {
+			if f.force && errors.Is(err, os.ErrNotExist) {
 				continue
 			}
 			return err
 		}
 
-		if *verbose {
+		if f.verbose {
 			toRemove := file
-			if !path.IsAbs(file) {
+			if !filepath.IsAbs(file) {
+				workingPath, err := os.Getwd()
+				if err != nil {
+					return err
+				}
 				toRemove = filepath.Join(workingPath, file)
 			}
-			fmt.Printf("removed '%v'\n", toRemove)
+			fmt.Fprintf(stdout, "removed '%v'\n", toRemove)
 		}
 	}
 	return nil
 }
 
 func main() {
-	flag.Usage = util.Usage(flag.Usage, usage)
-	flag.Parse()
-	if err := rm(os.Stdin, flag.Args()); err != nil {
+	if err := rm(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]...); err != nil {
 		log.Fatal(err)
 	}
 }
