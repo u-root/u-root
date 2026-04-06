@@ -5,9 +5,11 @@
 package main
 
 import (
-	"fmt"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -51,31 +53,45 @@ func TestMove(t *testing.T) {
 	d := setup(t)
 
 	for _, tt := range []struct {
-		want  error
+		err   error
 		name  string
+		args  []string
 		files []string
 	}{
 		{
 			name:  "Is a directory",
 			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1.txt")},
-			want:  fmt.Errorf("not a directory: %s", filepath.Join(d, "hi1.txt")),
+			args:  []string{"-u"},
+			err:   syscall.ENOTDIR,
 		},
 		{
 			name:  "Is not a directory",
 			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt"), "d"},
-			want:  fmt.Errorf("not a directory: %s", "d"),
+			args:  []string{"-u"},
+			err:   syscall.ENOTDIR,
 		},
 		{
 			name:  "mv logFatalf err",
 			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt")},
-			want:  fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+			args:  []string{"-u"},
+			err:   os.ErrNotExist,
+		},
+		{
+			name:  "no flags no error",
+			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1_new.txt")},
+		},
+		{
+			name:  "not enough args",
+			files: []string{filepath.Join(d, "hi1.txt")},
+			args:  []string{"-un"},
+			err:   errUsage,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := move(tt.files, true, false); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("move() = '%v', want: '%v'", got, tt.want)
-				}
+			tt.args = append(tt.args, tt.files...)
+			err := move(io.Discard, tt.args)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("move() = '%v', want: '%v'", err, tt.err)
 			}
 		})
 	}
@@ -86,7 +102,7 @@ func TestMv(t *testing.T) {
 	d := setup(t)
 
 	for _, tt := range []struct {
-		want      error
+		err       error
 		name      string
 		files     []string
 		update    bool
@@ -101,7 +117,7 @@ func TestMv(t *testing.T) {
 		{
 			name:   "len(files) > 2 && d does not exist",
 			files:  []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi2.txt"), "d"},
-			want:   fmt.Errorf("lstat %s: no such file or directory", filepath.Join("d", "hi1.txt")),
+			err:    os.ErrNotExist,
 			update: true,
 		},
 		{
@@ -111,12 +127,10 @@ func TestMv(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mv(tt.files, tt.update, tt.noClobber, tt.todir); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("mv() = '%v', want: '%v'", got, tt.want)
-				}
+			err := mv(tt.files, tt.update, tt.noClobber, tt.todir)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("mv() = '%v', want: '%v'", err, tt.err)
 			}
-
 		})
 	}
 }
@@ -125,7 +139,7 @@ func TestMoveFile(t *testing.T) {
 	d := setup(t)
 
 	var testTable = []struct {
-		want error
+		err  error
 		name string
 		src  string
 		dst  string
@@ -134,29 +148,28 @@ func TestMoveFile(t *testing.T) {
 			name: "first file in update path does not exist",
 			src:  filepath.Join(d, "hi3.txt"),
 			dst:  filepath.Join(d, "hi2.txt"),
-			want: fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+			err:  os.ErrNotExist,
 		},
 		{
 			name: "second file in update path does not exist",
 			src:  filepath.Join(d, "hi2.txt"),
 			dst:  filepath.Join(d, "hi3.txt"),
-			want: fmt.Errorf("lstat %s: no such file or directory", filepath.Join(d, "hi3.txt")),
+			err:  os.ErrNotExist,
 		},
 	}
 
 	for _, tt := range testTable {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := moveFile(tt.src, tt.dst, true, false); got != nil {
-				if got.Error() != tt.want.Error() {
-					t.Errorf("moveFile() = '%v', want: '%v'", got, tt.want)
-				}
+			err := moveFile(tt.src, tt.dst, true, false)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("moveFile() = '%v', want: '%v'", err, tt.err)
 			}
 		})
 	}
 
 	t.Run("test for noClobber", func(t *testing.T) {
 		if err := moveFile(testTable[0].src, testTable[0].dst, false, true); err != nil {
-			t.Errorf("Expected err: %v, got: %v", err, testTable[0].want)
+			t.Errorf("Expected err: %v, got: %v", err, testTable[0].err)
 		}
 	})
 }
