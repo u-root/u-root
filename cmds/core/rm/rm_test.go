@@ -6,10 +6,11 @@ package main
 
 import (
 	"bytes"
-	"log"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -57,88 +58,94 @@ func setup(t *testing.T) string {
 
 func TestRm(t *testing.T) {
 	for _, tt := range []struct {
-		name        string
-		file        string
-		interactive bool
-		iString     string
-		verbose     bool
-		recursive   bool
-		force       bool
-		want        string
+		name    string
+		flags   []string
+		files   []string
+		iString string
+		err     error
 	}{
 		{
 			name: "no args",
-			file: "",
-			want: usage,
+			err:  errUsage,
 		},
 		{
-			name: "rm one file",
-			file: "go.txt",
-			want: "",
+			name:  "rm one file",
+			files: []string{"go.txt"},
 		},
 		{
-			name:    "rm one file verbose",
-			file:    "go.txt",
-			verbose: true,
-			want:    "",
+			name:  "rm one file verbose",
+			files: []string{"go.txt"},
+			flags: []string{"-v"},
 		},
 		{
-			name: "fail to rm one file",
-			file: "go",
-			want: "no such file or directory",
+			name:  "fail to rm one file",
+			files: []string{"go"},
+			err:   os.ErrNotExist,
 		},
 		{
 			name:  "fail to rm one file forced to trigger continue",
-			file:  "go",
-			force: true,
-			want:  "",
+			files: []string{"go"},
+			flags: []string{"-f"},
 		},
 		{
-			name:        "rm one file interactive",
-			file:        "go",
-			interactive: true,
-			iString:     "y\n",
-			want:        "",
+			name:    "rm one file interactive (y)",
+			files:   []string{"go.txt"},
+			flags:   []string{"-i"},
+			iString: "y\n",
 		},
 		{
-			name:        "rm one file interactive continue triggered",
-			file:        "go",
-			interactive: true,
-			iString:     "\n",
-			want:        "",
+			name:    "rm one file interactive (Y)",
+			files:   []string{"go.txt"},
+			flags:   []string{"-i"},
+			iString: "Y\n",
 		},
 		{
-			name:      "rm dir recursivly",
-			file:      "hi",
-			recursive: true,
+			name:    "rm one file interactive continue triggered",
+			files:   []string{"go.txt"},
+			flags:   []string{"-i"},
+			iString: "\n",
 		},
 		{
-			name: "rm dir not recursivly",
-			file: "hi",
-			want: "directory not empty",
+			name:  "rm two files with verbose and force (unixflags)",
+			files: []string{"hi/one.txt", "hi/two.txt"},
+			flags: []string{"-vf"},
+		},
+		{
+			name:  "rm two files with verbose and force (goflags)",
+			files: []string{"hi/one.txt", "hi/two.txt"},
+			flags: []string{"-v", "-f"},
+		},
+		{
+			name:  "rm dir recursively",
+			files: []string{"hi"},
+			flags: []string{"-r"},
+		},
+		{
+			name:  "rm dir recursively second flag",
+			files: []string{"hi"},
+			flags: []string{"-R"},
+		},
+		{
+			name:  "rm dir not recursively",
+			files: []string{"hi"},
+			err:   syscall.ENOTEMPTY,
 		},
 	} {
 		d := setup(t)
 
 		t.Run(tt.name, func(t *testing.T) {
-			var file []string
-
-			*interactive = tt.interactive
-			*verbose = tt.verbose
-			*recursive = tt.recursive
-			*force = tt.force
-
 			buf := &bytes.Buffer{}
-			log.SetOutput(buf)
 			buf.WriteString(tt.iString)
 
-			if tt.file != "" {
-				file = []string{filepath.Join(d, tt.file)}
+			var args []string
+			args = append(args, tt.flags...)
+			for _, file := range tt.files {
+				args = append(args, filepath.Join(d, file))
 			}
-			if err := rm(buf, file); err != nil {
-				if !strings.Contains(err.Error(), tt.want) {
-					t.Errorf("rm() = %q, want to contain: %q", err.Error(), tt.want)
-				}
+
+			err := rm(buf, io.Discard, io.Discard, args...)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("expected %v, got %v", tt.err, err)
 			}
 		})
 	}
