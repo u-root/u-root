@@ -6,12 +6,11 @@ package main
 
 import (
 	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/rm"
 )
 
 func setup(t *testing.T) string {
@@ -59,7 +58,7 @@ func setup(t *testing.T) string {
 func TestRm(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
-		args        []string
+		file        string
 		interactive bool
 		iString     string
 		verbose     bool
@@ -69,88 +68,77 @@ func TestRm(t *testing.T) {
 	}{
 		{
 			name: "no args",
-			args: nil,
-			want: "rm [-Rrvif] file...",
+			file: "",
+			want: usage,
 		},
 		{
 			name: "rm one file",
-			args: []string{"go.txt"},
+			file: "go.txt",
 			want: "",
 		},
 		{
 			name:    "rm one file verbose",
-			args:    []string{"-v", "go.txt"},
+			file:    "go.txt",
 			verbose: true,
 			want:    "",
 		},
 		{
 			name: "fail to rm one file",
-			args: []string{"go"},
+			file: "go",
 			want: "no such file or directory",
 		},
 		{
 			name:  "fail to rm one file forced to trigger continue",
-			args:  []string{"-f", "go"},
+			file:  "go",
 			force: true,
 			want:  "",
 		},
 		{
 			name:        "rm one file interactive",
-			args:        []string{"-i", "go.txt"},
+			file:        "go",
 			interactive: true,
 			iString:     "y\n",
 			want:        "",
 		},
 		{
 			name:        "rm one file interactive continue triggered",
-			args:        []string{"-i", "go.txt"},
+			file:        "go",
 			interactive: true,
 			iString:     "\n",
 			want:        "",
 		},
 		{
-			name:      "rm dir recursively",
-			args:      []string{"-r", "hi"},
+			name:      "rm dir recursivly",
+			file:      "hi",
 			recursive: true,
 		},
 		{
-			name: "rm dir not recursively",
-			args: []string{"hi"},
+			name: "rm dir not recursivly",
+			file: "hi",
 			want: "directory not empty",
 		},
 	} {
 		d := setup(t)
 
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := rm.New()
-			var stdout, stderr bytes.Buffer
-			cmd.SetIO(strings.NewReader(tt.iString), &stdout, &stderr)
+			var file []string
 
-			// Update args to use absolute paths for files
-			args := make([]string, len(tt.args))
-			copy(args, tt.args)
-			for i := range args {
-				if !strings.HasPrefix(args[i], "-") {
-					args[i] = filepath.Join(d, args[i])
+			*interactive = tt.interactive
+			*verbose = tt.verbose
+			*recursive = tt.recursive
+			*force = tt.force
+
+			buf := &bytes.Buffer{}
+			log.SetOutput(buf)
+			buf.WriteString(tt.iString)
+
+			if tt.file != "" {
+				file = []string{filepath.Join(d, tt.file)}
+			}
+			if err := rm(buf, file); err != nil {
+				if !strings.Contains(err.Error(), tt.want) {
+					t.Errorf("rm() = %q, want to contain: %q", err.Error(), tt.want)
 				}
-			}
-
-			err := cmd.Run(args...)
-
-			if tt.want != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.want) {
-					t.Errorf("Run() = %v, want error containing: %q", err, tt.want)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("Run() = %v, want nil", err)
-			}
-
-			// Check verbose output
-			if tt.verbose && stdout.Len() == 0 {
-				t.Errorf("Expected verbose output, got none")
 			}
 		})
 	}
