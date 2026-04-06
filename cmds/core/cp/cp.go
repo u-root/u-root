@@ -21,6 +21,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -32,6 +33,8 @@ import (
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
+
+var errUsage = errors.New("usage: cp [-RrifvP] file[s] ... dest")
 
 type flags struct {
 	recursive        bool
@@ -100,11 +103,11 @@ func setupPostCallback(verbose bool, w io.Writer) func(src, dst string) {
 	}
 }
 
-// run evaluates the falgs and args and makes decisions for copyfiles
+// run evaluates the flags and args and makes decisions for copyfiles
 func run(args []string, w io.Writer, i *bufio.Reader) error {
 	var f flags
 
-	fs := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fs := flag.NewFlagSet("cp", flag.ContinueOnError)
 
 	fs.BoolVar(&f.recursive, "RECURSIVE", false, "copy file hierarchies")
 	fs.BoolVar(&f.recursive, "R", false, "copy file hierarchies (shorthand)")
@@ -129,11 +132,13 @@ func run(args []string, w io.Writer, i *bufio.Reader) error {
 		fs.PrintDefaults()
 	}
 
-	fs.Parse(unixflag.ArgsToGoArgs(args[1:]))
+	if err := fs.Parse(unixflag.ArgsToGoArgs(args)); err != nil {
+		return err
+	}
 
 	if fs.NArg() < 2 {
 		fs.Usage()
-		os.Exit(1)
+		return errUsage
 	}
 
 	todir := false
@@ -175,8 +180,11 @@ func run(args []string, w io.Writer, i *bufio.Reader) error {
 }
 
 func main() {
-	err := run(os.Args, os.Stderr, bufio.NewReader(os.Stdin))
+	err := run(os.Args[1:], os.Stderr, bufio.NewReader(os.Stdin))
 	if err != nil {
-		log.Fatalf("%q", err)
+		if errors.Is(err, errUsage) {
+			os.Exit(1)
+		}
+		log.Fatal(err)
 	}
 }
