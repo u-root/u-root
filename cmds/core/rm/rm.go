@@ -25,7 +25,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
 )
@@ -92,15 +91,7 @@ func rm(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 		}
 
 		if f.verbose {
-			toRemove := file
-			if !filepath.IsAbs(file) {
-				workingPath, err := os.Getwd()
-				if err != nil {
-					return err
-				}
-				toRemove = filepath.Join(workingPath, file)
-			}
-			fmt.Fprintf(stdout, "removed '%v'\n", toRemove)
+			fmt.Fprintf(stdout, "removed %q\n", file)
 		}
 	}
 	return nil
