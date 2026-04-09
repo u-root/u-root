@@ -586,6 +586,10 @@ func buildFrameBufferNode() (*dt.Node, error) {
 			return nil, ErrFBGetFscreenInfoFailed
 		}
 
+		if len(baseStr) < 2 || len(limitStr) < 2 {
+			return nil, ErrFBGetFscreenInfoFailed
+		}
+
 		baseTmp, _ := strconv.ParseUint(baseStr[2:], 16, 64)
 		limitTmp, _ := strconv.ParseUint(limitStr[2:], 16, 64)
 
