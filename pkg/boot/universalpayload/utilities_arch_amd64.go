@@ -82,6 +82,9 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	trampStack := addrOfStackTop()
 	trampHob := addrOfHobAddr()
 
+	if trampHob < trampStack+8 {
+		return nil
+	}
 	padLen := uint64(trampHob - trampStack - 8)
 
 	tramp := ptrToSlice(trampBegin, int(trampStack-trampBegin))
