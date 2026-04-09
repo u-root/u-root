@@ -74,7 +74,11 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	// trampoline entry point, boot environment which is constructed
 	// for UPL will be overwritten by trampoline code.
 	stackOffset := trampStack & 0xFFF
-	gapLen := stackOffset - (trampStack - trampBegin)
+	codeSize := trampStack - trampBegin
+	if stackOffset < codeSize {
+		return nil
+	}
+	gapLen := stackOffset - codeSize
 	buf = padWithLength(buf, uint64(gapLen))
 
 	appendUint64 := func(slice []uint8, value uint64) []uint8 {
