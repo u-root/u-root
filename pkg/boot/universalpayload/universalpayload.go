@@ -502,6 +502,7 @@ func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) e
 }
 
 func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr, error) {
+	componentsSize = 0
 	mmRanges := mem.Phys.RAM()
 
 	// Reserved 1MB additional space which is used to place Device Tree info, Handoff Blocks,

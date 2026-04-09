@@ -504,3 +504,21 @@ func expectErr(t *testing.T, err error, expectedErr error) {
 		}
 	}
 }
+
+func TestComponentsSizeReset(t *testing.T) {
+	// Artificially increase componentsSize
+	componentsSize = uint(sizeForComponents) - 1
+
+	// Check that checkComponentsSize fails if we add more than allowed
+	err := checkComponentsSize(2)
+	if err == nil {
+		t.Error("Expected error from checkComponentsSize, got nil")
+	}
+
+	// Now "mock" what Load does by resetting componentsSize
+	componentsSize = 0
+	err = checkComponentsSize(1)
+	if err != nil {
+		t.Errorf("Unexpected error after reset: %v", err)
+	}
+}
