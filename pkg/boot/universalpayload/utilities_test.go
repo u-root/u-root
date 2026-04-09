@@ -1754,3 +1754,54 @@ func TestUpdateResourceRanges(t *testing.T) {
 		})
 	}
 }
+
+func TestRelocatePEBounds(t *testing.T) {
+	// relocData for IMAGE_REL_BASED_DIR64 at offset 0
+	relocData := mockRelocData(0, IMAGE_REL_BASED_DIR64, 0)
+	delta := uint64(0x1000)
+
+	// data is only 4 bytes long, so reading 8 bytes at offset 0 should be caught
+	data := make([]byte, 4)
+
+	err := relocatePE(relocData, delta, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound, got %v", err)
+	}
+
+	// data is 8 bytes long, should pass
+	data = make([]byte, 8)
+	err = relocatePE(relocData, delta, data)
+	if err != nil {
+		t.Errorf("Unexpected error with 8 bytes data: %v", err)
+	}
+
+	// data is 7 bytes long, should fail (since DIR64 reads 8 bytes)
+	data = make([]byte, 7)
+	err = relocatePE(relocData, delta, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound with 7 bytes data, got %v", err)
+	}
+}
+
+func TestRelocateFdtDataBounds(t *testing.T) {
+	fdtLoad := &FdtLoad{
+		DataOffset: 10,
+		DataSize:   10,
+	}
+	// Total data is only 15 bytes, so DataOffset+DataSize=20 is out of bounds
+	data := make([]byte, 15)
+	err := relocateFdtData(0x1000, fdtLoad, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound for invalid sub-image range, got %v", err)
+	}
+
+	// DataSize 0, start > end case
+	fdtLoad = &FdtLoad{
+		DataOffset: 20,
+		DataSize:   0,
+	}
+	err = relocateFdtData(0x1000, fdtLoad, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound for DataOffset > len(data), got %v", err)
+	}
+}

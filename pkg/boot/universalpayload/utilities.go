@@ -441,7 +441,7 @@ func relocatePE(relocData []byte, delta uint64, data []byte) error {
 			if entryType == IMAGE_REL_BASED_DIR64 {
 				// Perform relocation
 				relocAddr := pageRVA + uint32(entryOffset)
-				if relocAddr >= uint32(len(data)) {
+				if uint64(relocAddr)+8 > uint64(len(data)) {
 					return ErrPeRelocOutOfBound
 				}
 				originalValue := binary.LittleEndian.Uint64(data[relocAddr:])
@@ -457,6 +457,10 @@ func relocateFdtData(dst uint64, fdtLoad *FdtLoad, data []byte) error {
 	// Get the region of universalpayload binary from FIT image
 	start := fdtLoad.DataOffset
 	end := fdtLoad.DataOffset + fdtLoad.DataSize
+
+	if uint64(end) > uint64(len(data)) || start > end {
+		return ErrPeRelocOutOfBound
+	}
 
 	reader := bytes.NewReader(data[start:end])
 
