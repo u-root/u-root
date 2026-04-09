@@ -61,7 +61,7 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 
 	buf = append(buf, tramp...)
 
-	buf = appendUint64(buf, addr+trampolineOffse)
+	buf = appendUint64(buf, addr+trampolineOffset)
 	buf = appendUint64(buf, addr+fdtDtbOffset)
 	buf = appendUint64(buf, entry)
 
