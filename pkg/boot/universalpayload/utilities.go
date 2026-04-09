@@ -1351,13 +1351,9 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 
 	dtHeader := dt.Header{
 		Magic:           dt.Magic,
-		TotalSize:       0x1000,
-		OffDtStruct:     uint32(unsafe.Sizeof(dt.Header{})),
-		OffMemRsvmap:    0x30,
 		Version:         currentVersion,
 		LastCompVersion: lastCompVersion,
 		BootCpuidPhys:   bootPhysicalCPUID,
-		// SizeDtStruct: 0x310,
 	}
 
 	dtRootNode := dt.NewNode("/", dt.WithChildren(dtNodes...))
@@ -1367,7 +1363,8 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 		RootNode: dtRootNode,
 	}
 
-	// Write the FDT to the provided io.Writer
+	// Write the FDT to the provided io.Writer.
+	// fdt.Write will calculate and populate TotalSize, Offsets, and Sizes in the header.
 	_, err = fdt.Write(buf)
 	if err != nil {
 		return fmt.Errorf("failed to write FDT: %w", err)

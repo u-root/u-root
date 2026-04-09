@@ -1805,3 +1805,28 @@ func TestRelocateFdtDataBounds(t *testing.T) {
 		t.Errorf("Expected ErrPeRelocOutOfBound for DataOffset > len(data), got %v", err)
 	}
 }
+
+func TestBuildDeviceTreeInfoDynamicSize(t *testing.T) {
+	// We want to see if the TotalSize in the header matches actual buffer length
+	var buf bytes.Buffer
+	mem := &kexec.Memory{} // empty memory map is fine for this test
+
+	oldPath := sysfsCPUInfoPath
+	defer func() { sysfsCPUInfoPath = oldPath }()
+	sysfsCPUInfoPath = mockCPUTempInfoFile(t, "address sizes : 39 bits physical, 48 bits virtual\n")
+
+	err := buildDeviceTreeInfo(&buf, mem, 0x1000, 0x2000)
+	if err != nil {
+		t.Fatalf("buildDeviceTreeInfo failed: %v", err)
+	}
+
+	data := buf.Bytes()
+	if len(data) < 8 {
+		t.Fatal("FDT too short")
+	}
+
+	totalSize := binary.BigEndian.Uint32(data[4:8])
+	if totalSize != uint32(len(data)) {
+		t.Errorf("FDT header TotalSize (%d) does not match actual length (%d)", totalSize, len(data))
+	}
+}
