@@ -4,6 +4,11 @@
 
 package main
 
+import (
+	"iter"
+	"maps"
+)
+
 type set map[string]struct{}
 
 func makeSet() set {
@@ -21,4 +26,8 @@ func (s set) has(value string) bool {
 
 func (s set) remove(value string) {
 	delete(s, value)
+}
+
+func (s set) all() iter.Seq[string] {
+	return maps.Keys(s)
 }
