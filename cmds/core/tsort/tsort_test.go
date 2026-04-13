@@ -24,7 +24,6 @@ import (
 var errDiskCrashed = errors.New("disk crashed")
 
 func TestTsort(t *testing.T) {
-	dir := t.TempDir()
 	tests := []struct {
 		name       string
 		args       []string
@@ -153,7 +152,7 @@ func TestTsort(t *testing.T) {
 		},
 		{
 			name:       "file: line: a b b c c d",
-			args:       []string{tempFile(t, dir, "a b b c c d")},
+			args:       []string{tempFile(t, "a b b c c d")},
 			wantStdout: "a\nb\nc\nd\n",
 		},
 	}
@@ -208,7 +207,7 @@ func TestTsort(t *testing.T) {
 		}
 	})
 
-	dagTests := []struct {
+	directedAcyclicGraphTests := []struct {
 		name string
 		g    string
 	}{
@@ -237,6 +236,12 @@ func TestTsort(t *testing.T) {
 			g:    "c d b c a b",
 		},
 		{
+			//    a
+			//   / \
+			//  b   c
+			//   \ /
+			//    d
+			// ...where edges are pointed downwards
 			name: "diamond: a b a c b d c d",
 			g:    "a b a c b d c d",
 		},
@@ -248,11 +253,12 @@ func TestTsort(t *testing.T) {
 			//       |\   /
 			//       | \ /
 			//       h  i
-			name: "dag: a d a e b e b f e h e i f i c g",
+			// ...where edges are pointed downwards
+			name: "directed acyclic graph: a d a e b e b f e h e i f i c g",
 			g:    "a d a e b e b f e h e i f i c g",
 		},
 	}
-	for _, tt := range dagTests {
+	for _, tt := range directedAcyclicGraphTests {
 		t.Run(fmt.Sprintf("stdin: %s", tt.name), func(t *testing.T) {
 			stdin := strings.NewReader(tt.g)
 			stdout := new(strings.Builder)
@@ -568,9 +574,9 @@ func BenchmarkTsortCyclicGraph(b *testing.B) {
 	}
 }
 
-func tempFile(t *testing.T, dir, contents string) (file string) {
-	n := filepath.Join(dir, contents)
-	if err := os.WriteFile(n, []byte(contents), 0o666); err != nil {
+func tempFile(t *testing.T, contents string) (file string) {
+	n := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(n, []byte(contents), 0o600); err != nil {
 		t.Fatalf("temp file not created: %v", err)
 	}
 	return n
