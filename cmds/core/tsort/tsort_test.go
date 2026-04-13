@@ -91,6 +91,11 @@ func TestTsort(t *testing.T) {
 			wantStdout: "a\nb\n",
 		},
 		{
+			name:       "stdin: duplicate edge: a b a b",
+			stdin:      strings.NewReader("a b a b"),
+			wantStdout: "a\nb\n",
+		},
+		{
 			name:    "stdin: odd data count: 1",
 			stdin:   strings.NewReader("a"),
 			wantErr: errOddDataCount,
