@@ -5,9 +5,8 @@
 package main
 
 import (
+	"slices"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func TestSet(t *testing.T) {
@@ -45,8 +44,11 @@ func TestSet(t *testing.T) {
 	if s.has("absent-value") {
 		t.Errorf(`set %#v: want to not have "absent-value", but did have it`, s)
 	}
-	if diff := cmp.Diff(s, setOf("a", "b", "c", "d", "e")); diff != "" {
-		t.Errorf("set mismatch (-s +expected):\n%s", diff)
+	if diff := orderInsensitiveDiff(
+		slices.Collect(s.all()),
+		[]string{"a", "b", "c", "d", "e"},
+	); diff != "" {
+		t.Errorf("set iterator mismatch (-got +want):\n%s", diff)
 	}
 
 	s.remove("a")
@@ -71,15 +73,10 @@ func TestSet(t *testing.T) {
 	if s.has("absent-value") {
 		t.Errorf(`set %#v: want to not have "absent-value", but did have it`, s)
 	}
-	if diff := cmp.Diff(s, setOf("b", "d")); diff != "" {
-		t.Errorf("set mismatch (-s +expected):\n%s", diff)
+	if diff := orderInsensitiveDiff(
+		slices.Collect(s.all()),
+		[]string{"b", "d"},
+	); diff != "" {
+		t.Errorf("set iterator mismatch (-got +want):\n%s", diff)
 	}
-}
-
-func setOf(values ...string) set {
-	s := makeSet()
-	for _, v := range values {
-		s.add(v)
-	}
-	return s
 }

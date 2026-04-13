@@ -284,6 +284,9 @@ func TestTsort(t *testing.T) {
 		})
 	}
 
+	// When cycles are detected, we make no guarantees about which order the nodes are returned,
+	// and we do not guarantee that every cycle is reported. This allows for more performance
+	// optimizations.
 	cycleTests := []struct {
 		name            string
 		g               string
@@ -293,20 +296,20 @@ func TestTsort(t *testing.T) {
 		{
 			name:            "stdin: cycle: a b b a",
 			g:               "a b b a",
-			wantStdoutAnyOf: abInAnyRotation(),
-			wantStderrAnyOf: cycleABInAnyRotation(),
+			wantStdoutAnyOf: abInAnyOrder(),
+			wantStderrAnyOf: cycleABInAnyOrder(),
 		},
 		{
 			name:            "stdin: cycle: b c c d d b",
 			g:               "b c c d d b",
-			wantStdoutAnyOf: bcdInAnyRotation(),
+			wantStdoutAnyOf: bcdInAnyOrder(),
 			wantStderrAnyOf: cycleBCDInAnyRotation(),
 		},
 		{
 			name:            "stdin: two cycles: a b b a c d d c",
 			g:               "a b b a c d d c",
 			wantStdoutAnyOf: abcdInAnyOrder(),
-			wantStderrAnyOf: cyclesABAndCDInAnyOrderAndRotation(),
+			wantStderrAnyOf: cyclesABOrCDInAnyOrderAndRotation(),
 		},
 		{
 			name:            "stdin: orphan node then cycle: d d a b b c c a",
@@ -324,13 +327,13 @@ func TestTsort(t *testing.T) {
 			name:            "stdin: two connected cycles: a b b a a c c a",
 			g:               "a b b a a c c a",
 			wantStdoutAnyOf: abcInAnyOrder(),
-			wantStderrAnyOf: cyclesABAndACInAnyOrderAndRotation(),
+			wantStderrAnyOf: cyclesABOrACInAnyOrderAndRotation(),
 		},
 		{
 			name:            "stdin: cycle with duplicate edges: a b a b b a",
 			g:               "a b a b b a",
-			wantStdoutAnyOf: abInAnyRotation(),
-			wantStderrAnyOf: cycleABInAnyRotation(),
+			wantStdoutAnyOf: abInAnyOrder(),
+			wantStderrAnyOf: cycleABInAnyOrder(),
 		},
 	}
 	for _, tt := range cycleTests {
@@ -587,7 +590,7 @@ func tempFile(t *testing.T, contents string) (file string) {
 	return n
 }
 
-func abInAnyRotation() []string {
+func abInAnyOrder() []string {
 	return []string{"a\nb\n", "b\na\n"}
 }
 
@@ -602,11 +605,14 @@ func abcInAnyOrder() []string {
 	}
 }
 
-func bcdInAnyRotation() []string {
+func bcdInAnyOrder() []string {
 	return []string{
 		"b\nc\nd\n",
+		"b\nd\nc\n",
+		"c\nb\nd\n",
 		"c\nd\nb\n",
 		"d\nb\nc\n",
+		"d\nc\nd\n",
 	}
 }
 
@@ -642,7 +648,7 @@ func abcdInAnyOrder() []string {
 	}
 }
 
-func cycleABInAnyRotation() []string {
+func cycleABInAnyOrder() []string {
 	return []string{
 		"tsort: cycle in data\ntsort: a\ntsort: b\n",
 		"tsort: cycle in data\ntsort: b\ntsort: a\n",
@@ -673,8 +679,12 @@ func cycleBEFInAnyRotation() []string {
 	}
 }
 
-func cyclesABAndCDInAnyOrderAndRotation() []string {
+func cyclesABOrCDInAnyOrderAndRotation() []string {
 	return []string{
+		"tsort: cycle in data\ntsort: a\ntsort: b\n",
+		"tsort: cycle in data\ntsort: b\ntsort: a\n",
+		"tsort: cycle in data\ntsort: c\ntsort: d\n",
+		"tsort: cycle in data\ntsort: d\ntsort: c\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: c\ntsort: d\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: d\ntsort: c\n",
 		"tsort: cycle in data\ntsort: b\ntsort: a\ntsort: cycle in data\ntsort: c\ntsort: d\n",
@@ -686,8 +696,12 @@ func cyclesABAndCDInAnyOrderAndRotation() []string {
 	}
 }
 
-func cyclesABAndACInAnyOrderAndRotation() []string {
+func cyclesABOrACInAnyOrderAndRotation() []string {
 	return []string{
+		"tsort: cycle in data\ntsort: a\ntsort: b\n",
+		"tsort: cycle in data\ntsort: b\ntsort: a\n",
+		"tsort: cycle in data\ntsort: a\ntsort: c\n",
+		"tsort: cycle in data\ntsort: c\ntsort: a\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: a\ntsort: c\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: c\ntsort: a\n",
 		"tsort: cycle in data\ntsort: b\ntsort: a\ntsort: cycle in data\ntsort: a\ntsort: c\n",
