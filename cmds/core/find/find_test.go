@@ -6,132 +6,134 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/find"
 )
 
-func prepareDirLayout(t *testing.T) string {
+func prepareDirLayout(t *testing.T) {
 	t.Helper()
 	tmpDir := t.TempDir()
-	_, err := os.Create(filepath.Join(tmpDir, "file1"))
+	err := os.Chdir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create(filepath.Join(tmpDir, "file2"))
+	_, err = os.Create("file1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.Mkdir(filepath.Join(tmpDir, "dir1"), os.ModePerm)
+	_, err = os.Create("file2")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create(filepath.Join(tmpDir, "dir1/file1"))
+	err = os.Mkdir("dir1", os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create(filepath.Join(tmpDir, "dir1/file2"))
+	_, err = os.Create("dir1/file1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.Mkdir(filepath.Join(tmpDir, "dir2"), os.ModePerm)
+	_, err = os.Create("dir1/file2")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create(filepath.Join(tmpDir, "dir2/file1"))
+	err = os.Mkdir("dir2", os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create(filepath.Join(tmpDir, "dir2/file3"))
+	_, err = os.Create("dir2/file1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return tmpDir
+	_, err = os.Create("dir2/file3")
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestFind(t *testing.T) {
-	tmpDir := prepareDirLayout(t)
+	prepareDirLayout(t)
 
-	tests := []struct {
+	var tests = []struct {
 		wantStdout string
 		wantErr    bool
 		args       []string
+		params     params
 	}{
 		{
-			wantStdout: filepath.Join(tmpDir, "file1") + "\n",
-			args:       []string{filepath.Join(tmpDir, "file1")},
+			wantStdout: "file1\n",
+			args:       []string{"file1"},
+			params:     params{perm: -1},
 		},
 		{
-			wantStdout: filepath.Join(tmpDir, "dir1") + "\n" + filepath.Join(tmpDir, "dir1/file1") + "\n" + filepath.Join(tmpDir, "dir1/file2") + "\n",
-			args:       []string{filepath.Join(tmpDir, "dir1")},
+			wantStdout: "dir1\ndir1/file1\ndir1/file2\n",
+			args:       []string{"dir1"},
+			params:     params{perm: -1},
 		},
 		{
-			wantStdout: filepath.Join(tmpDir, "dir1/file1") + "\n" + filepath.Join(tmpDir, "dir2/file1") + "\n" + filepath.Join(tmpDir, "file1") + "\n",
-			args:       []string{"-name", "file1", tmpDir},
+			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
+			args:       []string{"."},
+			params:     params{perm: -1, name: "file1"},
 		},
 		{
-			wantStdout: tmpDir + "\n" + filepath.Join(tmpDir, "dir1") + "\n" + filepath.Join(tmpDir, "dir2") + "\n",
-			args:       []string{"-type", "d", tmpDir},
+			wantStdout: ".\ndir1\ndir2\n",
+			args:       []string{"."},
+			params:     params{perm: -1, fileType: "d"},
 		},
 		{
-			wantStdout: tmpDir + "\n" + filepath.Join(tmpDir, "dir1") + "\n" + filepath.Join(tmpDir, "dir2") + "\n",
-			args:       []string{"-type", "directory", tmpDir},
+			wantStdout: ".\ndir1\ndir2\n",
+			args:       []string{"."},
+			params:     params{perm: -1, fileType: "directory"},
 		},
 		{
-			wantStdout: filepath.Join(tmpDir, "dir1/file1") + "\n" + filepath.Join(tmpDir, "dir1/file2") + "\n" + filepath.Join(tmpDir, "dir2/file1") + "\n" + filepath.Join(tmpDir, "dir2/file3") + "\n" + filepath.Join(tmpDir, "file1") + "\n" + filepath.Join(tmpDir, "file2") + "\n",
-			args:       []string{"-type", "f", tmpDir},
+			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
+			args:       []string{"."},
+			params:     params{perm: -1, fileType: "f"},
 		},
 		{
-			wantStdout: filepath.Join(tmpDir, "dir1/file1") + "\n" + filepath.Join(tmpDir, "dir1/file2") + "\n" + filepath.Join(tmpDir, "dir2/file1") + "\n" + filepath.Join(tmpDir, "dir2/file3") + "\n" + filepath.Join(tmpDir, "file1") + "\n" + filepath.Join(tmpDir, "file2") + "\n",
-			args:       []string{"-type", "file", tmpDir},
+			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
+			args:       []string{"."},
+			params:     params{perm: -1, fileType: "file"},
 		},
 		{
-			args:    []string{"-type", "notvalid", tmpDir},
+			args:    []string{"."},
+			params:  params{perm: -1, fileType: "notvalid"},
 			wantErr: true,
 		},
 		{
-			wantStdout: filepath.Join(tmpDir, "file1") + "\n",
-			args:       []string{"-mode", "420", filepath.Join(tmpDir, "file1")}, // 420 decimal = 644 octal
+			wantStdout: "file1\n",
+			args:       []string{"file1"},
+			params:     params{perm: 0644},
 		},
 	}
 
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
-			var stdout bytes.Buffer
-			var stderr bytes.Buffer
-			cmd := find.New()
-			cmd.SetIO(nil, &stdout, &stderr)
-			err := cmd.Run(tt.args...)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("want error got nil")
-				}
-				return
+	for _, tt := range tests {
+		var stdout bytes.Buffer
+		err := command(&stdout, nil, tt.params, tt.args).run()
+		if tt.wantErr {
+			if err == nil {
+				t.Fatal("want error got nil")
 			}
+			continue
+		} else {
 			if err != nil {
 				t.Fatalf("want nil got %v", err)
 			}
+		}
 
-			resStdout := stdout.String()
-			if resStdout != tt.wantStdout {
-				t.Errorf("args: %v\nwant\n %s, got\n %s", tt.args, tt.wantStdout, resStdout)
-			}
-		})
+		resStdout := stdout.String()
+		if resStdout != tt.wantStdout {
+			t.Errorf("want\n %s, got\n %s", tt.wantStdout, resStdout)
+		}
 	}
 }
 
 func TestFindLong(t *testing.T) {
-	tmpDir := prepareDirLayout(t)
+	prepareDirLayout(t)
 
 	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd := find.New()
-	cmd.SetIO(nil, &stdout, &stderr)
-	err := cmd.Run("-l", filepath.Join(tmpDir, "file1"))
+	err := command(&stdout, nil, params{perm: -1, long: true}, []string{"file1"}).run()
 	if err != nil {
 		t.Fatal(err)
 	}
