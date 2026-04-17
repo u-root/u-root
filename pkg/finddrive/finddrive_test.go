@@ -32,10 +32,10 @@ var (
 	}
 )
 
-func mockSysDir(t *testing.T) string {
+func mockSysDir(t *testing.T, devicesDir string) string {
 	sysDir := t.TempDir()
 
-	devicesPath := filepath.Join(sysDir, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
+	devicesPath := filepath.Join(sysDir, devicesDir)
 	err := os.MkdirAll(devicesPath, 0o777)
 	if err != nil {
 		t.Errorf("Error creating path %s: %v", devicesPath, err)
@@ -62,7 +62,7 @@ func mockSysDir(t *testing.T) string {
 }
 
 func TestFindSlotType(t *testing.T) {
-	sysDir := mockSysDir(t)
+	sysDir := mockSysDir(t, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
 	slots := []*smbios.SystemSlots{&nonMatchingSlot, &matchingSlot, &nonMatchingSlot, &matchingSlot, &nonMatchingSlot}
 
 	paths, err := findSlotType(sysDir, slots, matchingSlotType)
@@ -75,7 +75,7 @@ func TestFindSlotType(t *testing.T) {
 }
 
 func TestFindSlotTypeMissing(t *testing.T) {
-	sysDir := mockSysDir(t)
+	sysDir := mockSysDir(t, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
 	slots := []*smbios.SystemSlots{&nonMatchingSlot, &matchingSlot, &nonMatchingSlot, &matchingSlot, &nonMatchingSlot}
 
 	paths, err := findSlotType(sysDir, slots, missingSlotType)
@@ -88,7 +88,7 @@ func TestFindSlotTypeMissing(t *testing.T) {
 }
 
 func TestFindSlotTypeNoSlots(t *testing.T) {
-	sysDir := mockSysDir(t)
+	sysDir := mockSysDir(t, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
 	slots := []*smbios.SystemSlots{}
 
 	paths, err := findSlotType(sysDir, slots, matchingSlotType)
@@ -97,5 +97,18 @@ func TestFindSlotTypeNoSlots(t *testing.T) {
 	}
 	if len(paths) != 0 {
 		t.Errorf("findSlotType(%v, %v, %v) returned paths: %v, want: []", sysDir, slots, matchingSlotType, paths)
+	}
+}
+
+func TestFindSlotTypeNestedTopology(t *testing.T) {
+	sysDir := mockSysDir(t, "devices/pci0000:00/0000:00:01.0/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
+	slots := []*smbios.SystemSlots{&nonMatchingSlot, &matchingSlot, &nonMatchingSlot, &matchingSlot, &nonMatchingSlot}
+
+	paths, err := findSlotType(sysDir, slots, matchingSlotType)
+	if err != nil {
+		t.Errorf("findSlotType(%v, %v, %v) returned error: %v, want: nil", sysDir, slots, matchingSlotType, err)
+	}
+	if len(paths) != 2 || paths[0] != matchedSlotPath || paths[1] != matchedSlotPath {
+		t.Errorf("findSlotType(%v, %v, %v) returned paths: %v, want: %v", sysDir, slots, matchingSlotType, paths, []string{matchedSlotPath, matchedSlotPath})
 	}
 }
