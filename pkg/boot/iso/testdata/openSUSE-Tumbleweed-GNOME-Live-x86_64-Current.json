@@ -1,0 +1,38 @@
+[
+  {
+    "cmdline": "${extra_cmdline} ${isoboot} splash=silent quiet systemd.show_status=yes root=live:CDLABEL=openSUSE_Tumbleweed_GNOME_Live rd.live.image rd.live.overlay.persistent rd.live.overlay.cowfs=ext4 iso-scan/filename=/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current/boot/x86_64/loader/linux"
+    },
+    "name": "[openSUSE-Tumbleweed-GNOME-Live-x86_64-Current.iso] openSUSE Tumbleweed GNOME Live",
+    "rank": "0"
+  },
+  {
+    "cmdline": "${extra_cmdline} ${isoboot} splash=silent quiet systemd.show_status=yes ide=nodma apm=off noresume edd=off nomodeset 3 root=live:CDLABEL=openSUSE_Tumbleweed_GNOME_Live rd.live.image rd.live.overlay.persistent rd.live.overlay.cowfs=ext4 iso-scan/filename=/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current/boot/x86_64/loader/linux"
+    },
+    "name": "[openSUSE-Tumbleweed-GNOME-Live-x86_64-Current.iso] Failsafe -- openSUSE Tumbleweed GNOME Live",
+    "rank": "0"
+  },
+  {
+    "cmdline": "mediacheck=1 plymouth.enable=0 ${isoboot} splash=silent quiet systemd.show_status=yes root=live:CDLABEL=openSUSE_Tumbleweed_GNOME_Live rd.live.image rd.live.overlay.persistent rd.live.overlay.cowfs=ext4 iso-scan/filename=/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/openSUSE-Tumbleweed-GNOME-Live-x86_64-Current/boot/x86_64/loader/linux"
+    },
+    "name": "[openSUSE-Tumbleweed-GNOME-Live-x86_64-Current.iso] Mediacheck",
+    "rank": "0"
+  }
+]

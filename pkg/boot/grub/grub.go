@@ -559,6 +559,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 				Name:    c.curLabel,
 				Kernel:  k,
 				Cmdline: cmdlineQuote(kv[2:]),
+				Env:     c.variables,
 			}
 			c.linuxEntries[c.curEntry] = entry
 			c.linuxEntries[c.curLabel] = entry

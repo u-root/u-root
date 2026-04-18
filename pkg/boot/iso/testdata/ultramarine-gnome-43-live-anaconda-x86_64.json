@@ -1,0 +1,38 @@
+[
+  {
+    "cmdline": "root=live:CDLABEL=UM-Gn-Live-Anaconda rd.live.image enforcing=0 quiet rhgb iso-scan/filename=/ultramarine-gnome-43-live-anaconda-x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/ultramarine-gnome-43-live-anaconda-x86_64/boot/initramfs.img"
+    },
+    "kernel": {
+      "url": "file:///testdata/ultramarine-gnome-43-live-anaconda-x86_64/boot/vmlinuz"
+    },
+    "name": "[ultramarine-gnome-43-live-anaconda-x86_64.iso] Ultramarine GNOME 43",
+    "rank": "0"
+  },
+  {
+    "cmdline": "root=live:CDLABEL=UM-Gn-Live-Anaconda rd.live.image rd.live.check enforcing=0 quiet rhgb iso-scan/filename=/ultramarine-gnome-43-live-anaconda-x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/ultramarine-gnome-43-live-anaconda-x86_64/boot/initramfs.img"
+    },
+    "kernel": {
+      "url": "file:///testdata/ultramarine-gnome-43-live-anaconda-x86_64/boot/vmlinuz"
+    },
+    "name": "[ultramarine-gnome-43-live-anaconda-x86_64.iso] Ultramarine GNOME 43 (Check Image)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "root=live:CDLABEL=UM-Gn-Live-Anaconda rd.live.image enforcing=0 nomodeset quiet rhgb iso-scan/filename=/ultramarine-gnome-43-live-anaconda-x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/ultramarine-gnome-43-live-anaconda-x86_64/boot/initramfs.img"
+    },
+    "kernel": {
+      "url": "file:///testdata/ultramarine-gnome-43-live-anaconda-x86_64/boot/vmlinuz"
+    },
+    "name": "[ultramarine-gnome-43-live-anaconda-x86_64.iso] Ultramarine GNOME 43 (nomodeset)",
+    "rank": "0"
+  }
+]
