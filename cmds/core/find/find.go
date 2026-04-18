@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -26,7 +27,10 @@ import (
 	"github.com/u-root/u-root/pkg/find"
 )
 
-type params struct {
+var errNotValidType = errors.New("not a valid file type")
+var errUsage = errors.New("find [opts] starting-at-path")
+
+type flags struct {
 	fileType string
 	name     string
 	perm     int
@@ -38,25 +42,78 @@ type cmd struct {
 	stdout io.Writer
 	stderr io.Writer
 	args   []string
-	params params
+	flags
 }
 
-func command(stdout, stderr io.Writer, params params, args []string) *cmd {
+// reorderArgs reorders arguments so flags are moved to the front, which is the
+// way the "flag" package can parse them.
+func reorderArgs(args []string) []string {
+	var (
+		newArgs []string
+		i       int
+	)
+
+	for i < len(args) {
+		var (
+			arg          = args[i]
+			expectsValue = arg == "-name" || arg == "-type" || arg == "-mode"
+			hasNext      = i+1 < len(args)
+			isFlag       = strings.HasPrefix(arg, "-")
+		)
+
+		prepend := func(args ...string) {
+			newArgs = append(args, newArgs...)
+		}
+
+		switch {
+		case expectsValue && hasNext:
+			next := args[i+1]
+			prepend(arg, next)
+			i += 2
+		case isFlag:
+			prepend(arg)
+			i++
+		default:
+			newArgs = append(newArgs, arg)
+			i++
+		}
+	}
+
+	return newArgs
+}
+
+func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
+	var f flags
+
+	fs := flag.NewFlagSet("find", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+
+	fs.StringVar(&f.fileType, "type", "", "file type")
+	fs.StringVar(&f.name, "name", "", "glob for name")
+	fs.IntVar(&f.perm, "mode", -1, "permissions")
+	fs.BoolVar(&f.long, "l", false, "long listing")
+	fs.BoolVar(&f.debug, "d", false, "enable debugging in the find package")
+
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: find [opts] starting-at-path\n\n")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(reorderArgs(args)); err != nil {
+		return nil, err
+	}
+
+	if fs.NArg() != 1 {
+		fs.Usage()
+		return nil, errUsage
+	}
+
 	return &cmd{
 		stdout: stdout,
 		stderr: stderr,
-		args:   args,
-		params: params,
-	}
-}
-
-func init() {
-	defUsage := flag.Usage
-	flag.Usage = func() {
-		os.Args[0] = "find [opts] starting-at-path"
-		defUsage()
-		os.Exit(1)
-	}
+		args:   fs.Args(),
+		flags:  f,
+	}, nil
 }
 
 func (c *cmd) run() error {
@@ -72,37 +129,34 @@ func (c *cmd) run() error {
 		"b":         os.ModeDevice,
 	}
 
-	if len(c.args) != 1 {
-		flag.Usage()
-	}
 	root := c.args[0]
 
 	var mask, mode os.FileMode
-	if c.params.perm != -1 {
+	if c.perm != -1 {
 		mask = os.ModePerm
-		mode = os.FileMode(c.params.perm)
+		mode = os.FileMode(c.perm)
 	}
-	if c.params.fileType != "" {
-		intType, ok := fileTypes[c.params.fileType]
+	if c.fileType != "" {
+		intType, ok := fileTypes[c.fileType]
 		if !ok {
 			var keys []string
 			for key := range fileTypes {
 				keys = append(keys, key)
 			}
-			return fmt.Errorf("%v is not a valid file type\n valid types are %v", c.params.fileType, strings.Join(keys, ","))
+			return fmt.Errorf("%w: %v\n valid types are %v", errNotValidType, c.fileType, strings.Join(keys, ","))
 		}
 		mode |= intType
 		mask |= os.ModeType
 	}
 
-	debugLog := func(string, ...interface{}) {}
-	if c.params.debug {
+	debugLog := func(string, ...any) {}
+	if c.debug {
 		debugLog = log.Printf
 	}
 	names := find.Find(context.Background(),
 		find.WithRoot(root),
 		find.WithModeMatch(mode, mask),
-		find.WithFilenameMatch(c.params.name),
+		find.WithFilenameMatch(c.name),
 		find.WithDebugLog(debugLog),
 	)
 
@@ -111,7 +165,7 @@ func (c *cmd) run() error {
 			fmt.Fprintf(c.stderr, "%s: %v\n", l.Name, l.Err)
 			continue
 		}
-		if c.params.long {
+		if c.long {
 			fmt.Fprintf(c.stdout, "%s\n", l)
 			continue
 		}
@@ -122,14 +176,11 @@ func (c *cmd) run() error {
 }
 
 func main() {
-	perm := flag.Int("mode", -1, "permissions")
-	fileType := flag.String("type", "", "file type")
-	name := flag.String("name", "", "glob for name")
-	long := flag.Bool("l", false, "long listing")
-	debug := flag.Bool("d", false, "enable debugging in the find package")
-	flag.Parse()
-	p := params{perm: *perm, fileType: *fileType, name: *name, long: *long, debug: *debug}
-	if err := command(os.Stdout, os.Stderr, p, flag.Args()).run(); err != nil {
-		log.Fatalf("find: %v", err)
+	c, err := command(os.Stdout, os.Stderr, os.Args[1:])
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := c.run(); err != nil {
+		log.Fatal(err)
 	}
 }

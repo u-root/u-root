@@ -6,6 +6,8 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -57,69 +59,68 @@ func TestFind(t *testing.T) {
 
 	var tests = []struct {
 		wantStdout string
-		wantErr    bool
+		commandErr error
+		runErr     error
 		args       []string
-		params     params
 	}{
 		{
 			wantStdout: "file1\n",
 			args:       []string{"file1"},
-			params:     params{perm: -1},
 		},
 		{
 			wantStdout: "dir1\ndir1/file1\ndir1/file2\n",
 			args:       []string{"dir1"},
-			params:     params{perm: -1},
 		},
 		{
 			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
-			args:       []string{"."},
-			params:     params{perm: -1, name: "file1"},
+			args:       []string{"-name=file1", "."},
 		},
 		{
 			wantStdout: ".\ndir1\ndir2\n",
-			args:       []string{"."},
-			params:     params{perm: -1, fileType: "d"},
+			args:       []string{"-type=d", "."},
 		},
 		{
 			wantStdout: ".\ndir1\ndir2\n",
-			args:       []string{"."},
-			params:     params{perm: -1, fileType: "directory"},
+			args:       []string{"-type=directory", "."},
 		},
 		{
 			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
-			args:       []string{"."},
-			params:     params{perm: -1, fileType: "f"},
+			args:       []string{"-type=f", "."},
 		},
 		{
 			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
-			args:       []string{"."},
-			params:     params{perm: -1, fileType: "file"},
+			args:       []string{"-type=file", "."},
 		},
 		{
-			args:    []string{"."},
-			params:  params{perm: -1, fileType: "notvalid"},
-			wantErr: true,
+			args:   []string{"-type=notvalid", "."},
+			runErr: errNotValidType,
 		},
 		{
 			wantStdout: "file1\n",
-			args:       []string{"file1"},
-			params:     params{perm: 0644},
+			args:       []string{"-mode=0644", "file1"},
+		},
+		{
+			args:       []string{"-mode=0644"},
+			commandErr: errUsage,
 		},
 	}
 
 	for _, tt := range tests {
 		var stdout bytes.Buffer
-		err := command(&stdout, nil, tt.params, tt.args).run()
-		if tt.wantErr {
-			if err == nil {
-				t.Fatal("want error got nil")
-			}
+		c, err := command(&stdout, io.Discard, tt.args)
+		if !errors.Is(err, tt.commandErr) {
+			t.Fatalf("expected %v, got %v", tt.commandErr, err)
+		}
+		if err != nil {
 			continue
-		} else {
-			if err != nil {
-				t.Fatalf("want nil got %v", err)
-			}
+		}
+
+		err = c.run()
+		if !errors.Is(err, tt.runErr) {
+			t.Fatalf("expected %v, got %v", tt.runErr, err)
+		}
+		if err != nil {
+			continue
 		}
 
 		resStdout := stdout.String()
@@ -133,7 +134,12 @@ func TestFindLong(t *testing.T) {
 	prepareDirLayout(t)
 
 	var stdout bytes.Buffer
-	err := command(&stdout, nil, params{perm: -1, long: true}, []string{"file1"}).run()
+	c, err := command(&stdout, nil, []string{"-l", "file1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.run()
 	if err != nil {
 		t.Fatal(err)
 	}
