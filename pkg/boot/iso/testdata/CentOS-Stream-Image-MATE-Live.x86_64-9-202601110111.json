@@ -1,0 +1,38 @@
+[
+  {
+    "cmdline": "quiet rhgb root=live:CDLABEL=CentOS_AltImage rd.live.image rd.live.check iso-scan/filename=/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111/boot/x86_64/loader/linux"
+    },
+    "name": "[CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111.iso] Test this media \u0026 start CentOS-Stream-Image-MATE-Live",
+    "rank": "0"
+  },
+  {
+    "cmdline": "quiet rhgb root=live:CDLABEL=CentOS_AltImage rd.live.image iso-scan/filename=/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111/boot/x86_64/loader/linux"
+    },
+    "name": "[CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111.iso] Start CentOS-Stream-Image-MATE-Live",
+    "rank": "0"
+  },
+  {
+    "cmdline": "quiet rhgb root=live:CDLABEL=CentOS_AltImage rd.live.image nomodeset vga=791 iso-scan/filename=/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111/boot/x86_64/loader/linux"
+    },
+    "name": "[CentOS-Stream-Image-MATE-Live.x86_64-9-202601110111.iso] Start CentOS-Stream-Image-MATE-Live in basic graphics mode",
+    "rank": "0"
+  }
+]

@@ -1,0 +1,434 @@
+[
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf console=ttyS0,115200n8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf console=ttyS0,115200n8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf console=ttyS0,115200n8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf console=ttyS0,115200n8",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf copytoram",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf copytoram",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf copytoram",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf copytoram",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf nomodeset",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf debug",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf debug",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf debug",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf debug",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf systemd.mask=display-manager.service plymouth.enable=0",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf systemd.mask=display-manager.service plymouth.enable=0",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf systemd.mask=display-manager.service plymouth.enable=0",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf systemd.mask=display-manager.service plymouth.enable=0",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:1",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:1",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:1",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:1",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:2",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:2",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:2",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:2",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/qralkshi44a7hzr4izkzr9xhcv0z05gh-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:3",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/5nmmssjgab8agihnmam5x5qnnkmb3nc3-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:3",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer GNOME (Linux 6.19.11)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/cny8bb46fjy6l8mgk86pz9lbqwsrwd04-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop nohibernate splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:3",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/ixgaiq38casyvnnigxhiarqb3jsxkkv6-initrd-linux-6.12.80/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/v15spm1d1k3w1znzv6wy758lgir42nym-linux-6.12.80/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux LTS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "findiso=/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso init=/nix/store/7hqg953v1b8hppbjrs2qlqhff34vf7wx-nixos-system-nixos-25.11.8801.36a601196c4e/init boot.shell_on_fail root=LABEL=nixos-graphical-25.11-x86_64 elevator=noop splash loglevel=4 lsm=landlock,yama,bpf fbcon=rotate:3",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/g8zbjw6bhkkmzqxhwbvzd94jd0643466-initrd-linux-6.19.11/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux/boot/nix/store/hva6czv5fz63qkw1dahazmv6sr0n1kln-linux-6.19.11/bzImage"
+    },
+    "name": "[nixos-graphical-25.11.8801.36a601196c4e-x86_64-linux.iso] NixOS 25.11.8801.36a601196c4e Installer Plasma (Linux 6.19.11)",
+    "rank": "0"
+  }
+]

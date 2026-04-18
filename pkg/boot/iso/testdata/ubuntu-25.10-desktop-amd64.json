@@ -1,0 +1,26 @@
+[
+  {
+    "cmdline": "iso-scan/filename=/ubuntu-25.10-desktop-amd64.iso --- quiet splash",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/ubuntu-25.10-desktop-amd64/casper/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/ubuntu-25.10-desktop-amd64/casper/vmlinuz"
+    },
+    "name": "[ubuntu-25.10-desktop-amd64.iso] Try or Install Ubuntu",
+    "rank": "0"
+  },
+  {
+    "cmdline": "nomodeset iso-scan/filename=/ubuntu-25.10-desktop-amd64.iso --- quiet splash",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/ubuntu-25.10-desktop-amd64/casper/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/ubuntu-25.10-desktop-amd64/casper/vmlinuz"
+    },
+    "name": "[ubuntu-25.10-desktop-amd64.iso] Ubuntu (safe graphics)",
+    "rank": "0"
+  }
+]
