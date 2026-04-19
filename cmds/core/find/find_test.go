@@ -16,40 +16,31 @@ import (
 func prepareDirLayout(t *testing.T) {
 	t.Helper()
 	tmpDir := t.TempDir()
-	err := os.Chdir(tmpDir)
-	if err != nil {
+	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create("file1")
-	if err != nil {
+	if _, err := os.Create("file1"); err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create("file2")
-	if err != nil {
+	if _, err := os.Create("file2"); err != nil {
 		t.Fatal(err)
 	}
-	err = os.Mkdir("dir1", os.ModePerm)
-	if err != nil {
+	if err := os.Mkdir("dir1", os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create("dir1/file1")
-	if err != nil {
+	if _, err := os.Create("dir1/file1"); err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create("dir1/file2")
-	if err != nil {
+	if _, err := os.Create("dir1/file2"); err != nil {
 		t.Fatal(err)
 	}
-	err = os.Mkdir("dir2", os.ModePerm)
-	if err != nil {
+	if err := os.Mkdir("dir2", os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create("dir2/file1")
-	if err != nil {
+	if _, err := os.Create("dir2/file1"); err != nil {
 		t.Fatal(err)
 	}
-	_, err = os.Create("dir2/file3")
-	if err != nil {
+	if _, err := os.Create("dir2/file3"); err != nil {
 		t.Fatal(err)
 	}
 }
