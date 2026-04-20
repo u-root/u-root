@@ -1,4 +1,4 @@
-// Copyright 2012-2024 the u-root Authors. All rights reserved
+// Copyright 2012-2026 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -89,13 +89,11 @@ func run(
 	defer in.Close()
 
 	var buf strings.Builder
-	_, err = io.Copy(&buf, in)
-	if err != nil {
+	if _, err = io.Copy(&buf, in); err != nil {
 		return err
 	}
 
 	g := newGraph()
-
 	if err = parseInto(buf.String(), g); err != nil {
 		return err
 	}
@@ -160,40 +158,20 @@ func topologicalOrdering(
 	f func(node string),
 	cycles func(cycle []string),
 ) {
-	for {
-		// Kahn's algorithm
-		var result []string
-		roots := rootsOf(g)
-		nonRoots := nonRootsOf(g)
-		for !roots.isEmpty() {
-			next := roots.dequeue()
-			result = append(result, next)
-			for succ := range g.successors(next) {
-				nonRoots.removeOne(succ)
-				if !nonRoots.has(succ) {
-					roots.enqueue(succ)
-				}
+	// Variant of Kahn's algorithm that returns an ordering even for graphs
+	// with cycles.
+	roots := rootsOf(g)
+	for g.nodeCount() != 0 {
+		var next string
+		next, roots = dequeueBreakingCycleIfNeeded(roots, g, cycles)
+		f(next)
+		for succ := range g.successors(next) {
+			g.removeEdge(next, succ)
+			if g.inDegree(succ) == 0 {
+				roots.enqueue(succ)
 			}
 		}
-		if nonRoots.isEmpty() {
-			// No cycles left
-			for _, value := range result {
-				f(value)
-			}
-			break
-		}
-
-		// Break a cycle and try Kahn's algorithm again
-		nonRoots.forEachUnique(func(next string) bool {
-			cycle := cycleStartingAt(g, next)
-			if len(cycle) == 0 {
-				return true
-			}
-
-			g.removeEdge(cycle[len(cycle)-1], cycle[0])
-			cycles(cycle)
-			return false
-		})
+		g.removeNode(next)
 	}
 }
 
@@ -207,20 +185,37 @@ func rootsOf(g *graph) queue {
 	return result
 }
 
-func nonRootsOf(g *graph) multiset {
-	result := newMultiset()
-	for node := range g.nodeToData {
-		if g.inDegree(node) > 0 {
-			result.add(node, g.inDegree(node))
+func dequeueBreakingCycleIfNeeded(
+	roots queue,
+	g *graph,
+	cycles func(cycle []string),
+) (string, queue) {
+	for {
+		if next, ok := roots.dequeue(); ok {
+			return next, roots
+		}
+
+		// The graph still has at least one node left, but there are no more
+		// roots in the queue, so at least one cycle is present.
+		//
+		// Breaking a cycle has a chance of producing a new root in the graph,
+		// so this loop repeatedly finds and breaks cycles until a new root
+		// is found, which is immediately enqueued. This allows the greater
+		// topological ordering algorithm to continue.
+		cycle := findCycle(g)
+		start, end := cycle[0], cycle[len(cycle)-1]
+		g.removeEdge(end, start)
+		cycles(cycle)
+		if g.inDegree(start) == 0 {
+			roots.enqueue(start)
 		}
 	}
-	return result
 }
 
-func cycleStartingAt(g *graph, node string) []string {
-	stack := []string{node}
-	inStack := makeSet()
-	inStack.add(node)
+func findCycle(g *graph) []string {
+	var stack []string
+	visited := makeSet()
+
 	popStack := func() string {
 		var result string
 		result, stack = stack[len(stack)-1], stack[:len(stack)-1]
@@ -231,7 +226,7 @@ func cycleStartingAt(g *graph, node string) []string {
 	var dfs func() bool
 	dfs = func() bool {
 		for succ := range g.successors(top(stack)) {
-			if inStack.has(succ) {
+			if visited.has(succ) {
 				// cycle found
 				cycle = append(cycle, popStack())
 				for top(cycle) != succ {
@@ -242,17 +237,27 @@ func cycleStartingAt(g *graph, node string) []string {
 			}
 
 			stack = append(stack, succ)
-			inStack.add(succ)
+			visited.add(succ)
 			if dfs() {
 				return true
 			}
 		}
 
-		inStack.remove(popStack())
+		visited.remove(popStack())
 		return false
 	}
-	dfs()
-	return cycle
+
+	for node := range g.nodes() {
+		if !visited.has(node) {
+			stack = []string{node}
+			visited.add(node)
+			if dfs() {
+				return cycle
+			}
+		}
+	}
+
+	panic("unreachable")
 }
 
 func top(s []string) string {
