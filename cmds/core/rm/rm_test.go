@@ -6,12 +6,12 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"syscall"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/rm"
 )
 
 func setup(t *testing.T) string {
@@ -58,99 +58,94 @@ func setup(t *testing.T) string {
 
 func TestRm(t *testing.T) {
 	for _, tt := range []struct {
-		name        string
-		args        []string
-		interactive bool
-		iString     string
-		verbose     bool
-		recursive   bool
-		force       bool
-		want        string
+		name    string
+		flags   []string
+		files   []string
+		iString string
+		err     error
 	}{
 		{
 			name: "no args",
-			args: nil,
-			want: "rm [-Rrvif] file...",
+			err:  errUsage,
 		},
 		{
-			name: "rm one file",
-			args: []string{"go.txt"},
-			want: "",
+			name:  "rm one file",
+			files: []string{"go.txt"},
 		},
 		{
-			name:    "rm one file verbose",
-			args:    []string{"-v", "go.txt"},
-			verbose: true,
-			want:    "",
+			name:  "rm one file verbose",
+			files: []string{"go.txt"},
+			flags: []string{"-v"},
 		},
 		{
-			name: "fail to rm one file",
-			args: []string{"go"},
-			want: "no such file or directory",
+			name:  "fail to rm one file",
+			files: []string{"go"},
+			err:   os.ErrNotExist,
 		},
 		{
 			name:  "fail to rm one file forced to trigger continue",
-			args:  []string{"-f", "go"},
-			force: true,
-			want:  "",
+			files: []string{"go"},
+			flags: []string{"-f"},
 		},
 		{
-			name:        "rm one file interactive",
-			args:        []string{"-i", "go.txt"},
-			interactive: true,
-			iString:     "y\n",
-			want:        "",
+			name:    "rm one file interactive (y)",
+			files:   []string{"go.txt"},
+			flags:   []string{"-i"},
+			iString: "y\n",
 		},
 		{
-			name:        "rm one file interactive continue triggered",
-			args:        []string{"-i", "go.txt"},
-			interactive: true,
-			iString:     "\n",
-			want:        "",
+			name:    "rm one file interactive (Y)",
+			files:   []string{"go.txt"},
+			flags:   []string{"-i"},
+			iString: "Y\n",
 		},
 		{
-			name:      "rm dir recursively",
-			args:      []string{"-r", "hi"},
-			recursive: true,
+			name:    "rm one file interactive continue triggered",
+			files:   []string{"go.txt"},
+			flags:   []string{"-i"},
+			iString: "\n",
 		},
 		{
-			name: "rm dir not recursively",
-			args: []string{"hi"},
-			want: "directory not empty",
+			name:  "rm two files with verbose and force (unixflags)",
+			files: []string{"hi/one.txt", "hi/two.txt"},
+			flags: []string{"-vf"},
+		},
+		{
+			name:  "rm two files with verbose and force (goflags)",
+			files: []string{"hi/one.txt", "hi/two.txt"},
+			flags: []string{"-v", "-f"},
+		},
+		{
+			name:  "rm dir recursively",
+			files: []string{"hi"},
+			flags: []string{"-r"},
+		},
+		{
+			name:  "rm dir recursively second flag",
+			files: []string{"hi"},
+			flags: []string{"-R"},
+		},
+		{
+			name:  "rm dir not recursively",
+			files: []string{"hi"},
+			err:   syscall.ENOTEMPTY,
 		},
 	} {
 		d := setup(t)
 
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := rm.New()
-			var stdout, stderr bytes.Buffer
-			cmd.SetIO(strings.NewReader(tt.iString), &stdout, &stderr)
+			buf := &bytes.Buffer{}
+			buf.WriteString(tt.iString)
 
-			// Update args to use absolute paths for files
-			args := make([]string, len(tt.args))
-			copy(args, tt.args)
-			for i := range args {
-				if !strings.HasPrefix(args[i], "-") {
-					args[i] = filepath.Join(d, args[i])
-				}
+			var args []string
+			args = append(args, tt.flags...)
+			for _, file := range tt.files {
+				args = append(args, filepath.Join(d, file))
 			}
 
-			err := cmd.Run(args...)
-
-			if tt.want != "" {
-				if err == nil || !strings.Contains(err.Error(), tt.want) {
-					t.Errorf("Run() = %v, want error containing: %q", err, tt.want)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("Run() = %v, want nil", err)
-			}
-
-			// Check verbose output
-			if tt.verbose && stdout.Len() == 0 {
-				t.Errorf("Expected verbose output, got none")
+			err := rm(buf, io.Discard, io.Discard, args...)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("expected %v, got %v", tt.err, err)
 			}
 		})
 	}

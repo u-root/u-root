@@ -350,7 +350,7 @@ func deviceID() {
 			status[(info.DeviceRevision&0x80)])
 
 		fmt.Printf("%-26s:\n", "Additional Device Support")
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			if (info.AdtlDeviceSupport & (1 << i)) != 0 {
 				fmt.Printf("    %s\n", adtlDevSupport[i])
 			}

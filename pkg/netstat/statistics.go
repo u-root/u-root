@@ -168,7 +168,7 @@ type tcpExt struct {
 func (t *tcpExt) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*t)
+	typeVal := reflect.TypeFor[tcpExt]()
 	refVal := reflect.ValueOf(*t)
 	parseFromTags(typeVal, refVal, &s)
 
@@ -199,7 +199,7 @@ type ipExt struct {
 func (i *ipExt) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*i)
+	typeVal := reflect.TypeFor[ipExt]()
 	refVal := reflect.ValueOf(*i)
 	parseFromTags(typeVal, refVal, &s)
 
@@ -270,7 +270,7 @@ type mptcpext struct {
 func (m *mptcpext) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*m)
+	typeVal := reflect.TypeFor[mptcpext]()
 	refVal := reflect.ValueOf(*m)
 	parseFromTags(typeVal, refVal, &s)
 
@@ -324,7 +324,7 @@ type ip struct {
 func (i *ip) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*i)
+	typeVal := reflect.TypeFor[ip]()
 	refVal := reflect.ValueOf(*i)
 	parseFromTags(typeVal, refVal, &s)
 
@@ -396,7 +396,7 @@ type icmp struct {
 func (i *icmp) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*i)
+	typeVal := reflect.TypeFor[icmp]()
 	refVal := reflect.ValueOf(*i)
 
 	parseFromTags(typeVal, refVal, &s)
@@ -440,7 +440,7 @@ type tcp struct {
 func (t *tcp) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*t)
+	typeVal := reflect.TypeFor[tcp]()
 	refVal := reflect.ValueOf(*t)
 	parseFromTags(typeVal, refVal, &s)
 
@@ -462,7 +462,7 @@ type udp struct {
 func (u *udp) String() string {
 	var s strings.Builder
 
-	typeVal := reflect.TypeOf(*u)
+	typeVal := reflect.TypeFor[udp]()
 	refVal := reflect.ValueOf(*u)
 	parseFromTags(typeVal, refVal, &s)
 
@@ -474,7 +474,7 @@ func parseFromTags(t reflect.Type, v reflect.Value, w io.Writer) {
 	numFields := t.NumField()
 
 	fmt.Fprintf(w, "%s:\n", t.Name())
-	for j := 0; j < numFields; j++ {
+	for j := range numFields {
 		field := t.Field(j)
 		outputfmt := field.Tag.Get("text")
 		refFieldVal := v.Field(j).String()

@@ -11,8 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/u-root/u-root/pkg/core/shasum"
 )
 
 func TestSHASum(t *testing.T) {
@@ -128,26 +126,14 @@ func TestSHASum(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := shasum.New()
+			// Setting flags
+			algorithm = tt.algorithm
 			bufIn := &bytes.Buffer{}
 			if _, err := bufIn.WriteString("abcdef\n"); err != nil {
 				t.Errorf("failed to write string to bufIn: %v", err)
 			}
 			bufOut := &bytes.Buffer{}
-			bufErr := &bytes.Buffer{}
-			cmd.SetIO(bufIn, bufOut, bufErr)
-
-			// Build args with algorithm flag
-			var args []string
-			if tt.algorithm != 0 {
-				args = append(args, "-a", fmt.Sprintf("%d", tt.algorithm))
-			} else {
-				// For invalid algorithm tests, use an invalid value
-				args = append(args, "-a", "999")
-			}
-			args = append(args, tt.args...)
-
-			if got := cmd.Run(args...); got != nil {
+			if got := shasum(bufOut, bufIn, tt.args...); got != nil {
 				if tt.err != nil && errors.Is(got, tt.err) {
 					return
 				}

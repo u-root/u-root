@@ -34,7 +34,7 @@ func readTPM20Information(rwc io.ReadWriter) (TPMInfo, error) {
 	// for a maximum length of 16 octets of ASCII text. We iterate
 	// through the 4 indexes to get all 16 bytes & construct vendorInfo.
 	// See: TPM_PT_VENDOR_STRING_1 in TPM 2.0 Structures reference.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		caps, _, err := tpm2.GetCapability(rwc, tpm2.CapabilityTPMProperties, 1, uint32(tpm2.VendorString1)+uint32(i))
 		if err != nil {
 			return TPMInfo{}, fmt.Errorf("tpm2.GetCapability(PT_VENDOR_STRING_%d) failed: %w", i+1, err)

@@ -17,7 +17,7 @@ type fieldParser interface {
 
 var (
 	fieldTagKey              = "smbios" // Tag key for annotations.
-	fieldParserInterfaceType = reflect.TypeOf((*fieldParser)(nil)).Elem()
+	fieldParserInterfaceType = reflect.TypeFor[fieldParser]()
 )
 
 func parseStruct(t *Table, off int, complete bool, sp any) (int, error) {

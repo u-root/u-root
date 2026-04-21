@@ -117,7 +117,7 @@ func ReadHssFromFile(filePath string, minHssPerFile int) ([][]byte, error) {
 	}
 
 	var hssList [][]byte
-	for i := 0; i < hostSecretSeedCount; i++ {
+	for i := range hostSecretSeedCount {
 		start := i * hostSecretSeedStructSize
 		end := start + hostSecretSeedStructSize
 		hssKey := data[start:end]
@@ -193,7 +193,7 @@ func WriteHssToFile(warnings io.Writer, verboseDangerous bool, file *os.File, hs
 	// Count of successful writes
 	written := 0
 
-	for i := 0; i < len(hss); i++ {
+	for i := range hss {
 		hssKey := hss[i]
 
 		// Verify the checksums.

@@ -62,7 +62,7 @@ func getCPUIDInfo() []byte {
 	fmt.Fprintf(&w, "Interrupt thresholds in digital thermal sensor: %v\n", cpuid.ThermalSensorInterruptThresholds)
 
 	fmt.Fprintf(&w, "Features: ")
-	for i := uint64(0); i < 64; i++ {
+	for i := range uint64(64) {
 		if cpuid.HasFeature(1 << i) {
 			fmt.Fprintf(&w, "%s ", cpuid.FeatureNames[1<<i])
 		}
@@ -70,7 +70,7 @@ func getCPUIDInfo() []byte {
 	fmt.Fprintf(&w, "\n")
 
 	fmt.Fprintf(&w, "ExtendedFeatures: ")
-	for i := uint64(0); i < 64; i++ {
+	for i := range uint64(64) {
 		if cpuid.HasExtendedFeature(1 << i) {
 			fmt.Fprintf(&w, "%s ", cpuid.ExtendedFeatureNames[1<<i])
 		}
@@ -78,7 +78,7 @@ func getCPUIDInfo() []byte {
 	fmt.Fprintf(&w, "\n")
 
 	fmt.Fprintf(&w, "ExtraFeatures: ")
-	for i := uint64(0); i < 64; i++ {
+	for i := range uint64(64) {
 		if cpuid.HasExtraFeature(1 << i) {
 			fmt.Fprintf(&w, "%s ", cpuid.ExtraFeatureNames[1<<i])
 		}
@@ -86,7 +86,7 @@ func getCPUIDInfo() []byte {
 	fmt.Fprintf(&w, "\n")
 
 	fmt.Fprintf(&w, "ThermalAndPowerFeatures: ")
-	for i := uint32(0); i < 64; i++ {
+	for i := range uint32(64) {
 		if cpuid.HasThermalAndPowerFeature(1 << i) {
 			if name, found := cpuid.ThermalAndPowerFeatureNames[1<<i]; found {
 				fmt.Fprintf(&w, "%s ", name)

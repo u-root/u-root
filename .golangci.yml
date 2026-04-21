@@ -49,16 +49,7 @@ linters:
         text: empty-block
       - linters:
           - modernize
-        text: 'rangeint:'
-      - linters:
-          - modernize
         text: 'unsafefuncs:'
-      - linters:
-          - modernize
-        text: 'forvar:'
-      - linters:
-          - modernize
-        text: 'reflecttypefor:'
       - linters:
           - modernize
         text: 'stringscut:'

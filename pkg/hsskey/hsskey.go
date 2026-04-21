@@ -90,7 +90,7 @@ func getHssFromIpmi(warnings io.Writer, verboseDangerous bool) ([][]uint8, error
 	}
 
 	// Gather all HSS entries, expected to look like /skm/hss/0, /skm/hss-backup/3, etc.
-	for j := 0; j < blobCount; j++ {
+	for j := range blobCount {
 		id, err := h.BlobEnumerate(j)
 		if err != nil {
 			return nil, fmt.Errorf("failed to enumerate blob %d: %w", j, err)

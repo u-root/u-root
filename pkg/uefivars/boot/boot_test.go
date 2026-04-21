@@ -73,7 +73,7 @@ func TestMain(m *testing.M) {
 func TestReadBootVar(t *testing.T) {
 	var n uint16
 	var strs []string
-	for n = 0; n < 11; n++ {
+	for n = range 11 {
 		b, err := ReadBootVar(n)
 		if err != nil {
 			t.Error(err)
