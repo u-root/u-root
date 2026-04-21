@@ -83,7 +83,7 @@ func TestListName(t *testing.T) {
 		{
 			name:  "ls directory = true",
 			input: tmpDir,
-			want:  fmt.Sprintf("%s\n", "tmpDir"),
+			want:  fmt.Sprintf("%s\n", filepath.Base(tmpDir)),
 			flag: cmd{
 				directory: true,
 			},
@@ -99,6 +99,7 @@ func TestListName(t *testing.T) {
 		{
 			name:  "file does not exist",
 			input: "dir",
+			want:  "lstat dir: no such file or directory\n",
 			flag:  cmd{},
 		},
 	} {
@@ -114,10 +115,11 @@ func TestListName(t *testing.T) {
 				s = ls.LongStringer{Human: tt.flag.human, Name: s}
 			}
 			tt.flag.w = &buf
-			if err := tt.flag.listName(s, tt.input, tt.prefix); err != nil {
-				if buf.String() != tt.want {
-					t.Errorf("listName() = '%v', want: '%v'", buf.String(), tt.want)
-				}
+
+			// listName always return nil
+			_ = tt.flag.listName(s, tt.input, tt.prefix)
+			if buf.String() != tt.want {
+				t.Errorf("listName() = '%v', want: '%v'", buf.String(), tt.want)
 			}
 		})
 	}
