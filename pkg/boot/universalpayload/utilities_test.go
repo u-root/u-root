@@ -433,10 +433,6 @@ func mockGetSMBIOS3Base() (int64, int64, error) {
 }
 
 func TestConstructSMBIOS3Node(t *testing.T) {
-	// mock data
-	defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
-	getSMBIOSBase = mockGetSMBIOS3Base
-
 	tests := []struct {
 		name     string
 		wantNode *dt.Node
@@ -451,7 +447,8 @@ func TestConstructSMBIOS3Node(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			smbiosNode, err := constructSMBIOS3Node()
+			u := New(WithSMBIOSBase(mockGetSMBIOS3Base))
+			smbiosNode, err := u.constructSMBIOS3Node()
 			expectErr(t, err, tt.wantErr)
 			if smbiosNode != tt.wantNode {
 				t.Fatalf("Unexpected smbios Node: actual(%v) vs. expected(nil)", smbiosNode)
@@ -652,15 +649,13 @@ func TestFetchACPIMCFGData(t *testing.T) {
 }
 
 func TestRetrieveRootBridgeResources(t *testing.T) {
-	// Mock the kexecMemoryMapFromIOMem function to return a test memory map
-	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
-	kexecMemoryMapFromIOMem = func() (kexec.MemoryMap, error) {
+	u := New(WithKexecMemoryMapFromIOMem(func() (kexec.MemoryMap, error) {
 		return kexec.MemoryMap{
 			kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
 			kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
 			kexec.TypedRange{Range: kexec.Range{Start: 0x600000, Size: 0x200000}, Type: kexec.RangeACPI},
 		}, nil
-	}
+	}))
 
 	mcfgData := []MCFGBaseAddressAllocation{
 		{
@@ -1038,7 +1033,7 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 
 	var idx uint32
 	for _, item := range mcfgData {
-		rbNodes, err := createPCIRootBridgeNode(tmpDir, item)
+		rbNodes, err := u.createPCIRootBridgeNode(tmpDir, item)
 		if err != nil {
 			t.Fatalf("Failed to create RB node %v\n", err)
 		}
@@ -1811,11 +1806,10 @@ func TestBuildDeviceTreeInfoDynamicSize(t *testing.T) {
 	var buf bytes.Buffer
 	mem := &kexec.Memory{} // empty memory map is fine for this test
 
-	oldPath := sysfsCPUInfoPath
-	defer func() { sysfsCPUInfoPath = oldPath }()
-	sysfsCPUInfoPath = mockCPUTempInfoFile(t, "address sizes : 39 bits physical, 48 bits virtual\n")
+	u := New()
+	u.mockCPUTempInfoFile(t, "address sizes : 39 bits physical, 48 bits virtual\n")
 
-	err := buildDeviceTreeInfo(&buf, mem, 0x1000, 0x2000)
+	err := u.buildDeviceTreeInfo(&buf, mem, 0x1000, 0x2000)
 	if err != nil {
 		t.Fatalf("buildDeviceTreeInfo failed: %v", err)
 	}

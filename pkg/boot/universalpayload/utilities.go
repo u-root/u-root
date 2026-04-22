@@ -24,10 +24,7 @@ import (
 	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/dt"
-	"github.com/u-root/u-root/pkg/efivarfs"
 )
-
-var sysfsCPUInfoPath = "/proc/cpuinfo"
 
 // Properties to be fetched from device tree.
 const (
@@ -70,22 +67,6 @@ const (
 // offset of next component should be updated at once to ensure all offset
 // information are updated correctly.
 
-var (
-	uplImageOffset   uint64
-	rsdpTableOffset  uint64
-	tmpHobOffset     uint64
-	fdtDtbOffset     uint64
-	tmpStackOffset   uint64
-	trampolineOffset uint64
-)
-
-// componentsSize is used to check whether reversed size, which is defined in
-// const variable 'sizeForComponents', is enough for us to place all required
-// components.
-var (
-	componentsSize uint
-)
-
 const (
 	sizeForComponents int  = 0x100000
 	uplImageAlignment uint = 0x200000
@@ -96,13 +77,6 @@ const (
 	IMAGE_REL_BASED_ABSOLUTE = 0
 	IMAGE_REL_BASED_HIGHLOW  = 3
 	IMAGE_REL_BASED_DIR64    = 10
-)
-
-var (
-	sysfsFbPath      = "/dev/fb0"
-	sysfsDrmPath     = "/sys/class/drm"
-	efiVarsPath      = "/sys/firmware/efi/efivars"
-	uRootEFIVarMagic = "u-root-efivar-v1"
 )
 
 // Definitions for ioctl and framebuffer structures in Go
@@ -116,8 +90,6 @@ const (
 	lastCompVersion   = 0x10
 	bootPhysicalCPUID = 0x0
 )
-
-var pageSize = uint(os.Getpagesize())
 
 type FbBitfield struct {
 	Offset   uint32 // beginning of bitfield
@@ -201,20 +173,12 @@ type ResourceRegions struct {
 	EndBus     uint32
 }
 
-var (
-	ACPIMCFGSysFilePath = "/sys/firmware/acpi/tables/MCFG"
-)
-
 const (
 	ACPIMCFGPciSegInfoStructureSize     = 0xC
 	ACPIMCFGPciSegInfoDataLength        = 0xA
 	ACPIMCFGBaseAddressAllocationLenth  = 0x10
 	ACPIMCFGBaseAddressAllocationOffset = 0x2c
 	ACPIMCFGSignature                   = "MCFG"
-)
-
-var (
-	PCISearchPath = "/sys/devices/"
 )
 
 const (
@@ -294,20 +258,14 @@ func parseUint64ToUint32(val uint64) uint32 {
 // GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
 // get the expected load and entry point address, need to walk through
 // DTB to get value of properties 'load' and 'entry-start'.
-//
-// The simplified device tree layout is:
-//
-//	/{
-//	    images {
-//	        tianocore {
-//	            data-offset = <0x00001000>;
-//	            data-size = <0x00010000>;
-//	            entry-start = <0x00000000 0x00805ac3>;
-//	            load = <0x00000000 0x00800000>;
-//	        }
-//	    }
-//	 }
 func GetFdtInfo(name string) (*FdtLoad, error) {
+	return New().GetFdtInfo(name)
+}
+
+// GetFdtInfo Device Tree Blob resides at the start of FIT binary. In order to
+// get the expected load and entry point address, need to walk through
+// DTB to get value of properties 'load' and 'entry-start'.
+func (u *UPL) GetFdtInfo(name string) (*FdtLoad, error) {
 	return getFdtInfo(name, nil)
 }
 
@@ -548,9 +506,9 @@ func fetchResourceRange(filepath string) (string, string, error) {
 	return "", "", fmt.Errorf("no valid hex values found in the file")
 }
 
-func buildFrameBufferNode() (*dt.Node, error) {
+func (u *UPL) buildFrameBufferNode() (*dt.Node, error) {
 	// Open the framebuffer device
-	fb, err := os.Open(sysfsFbPath)
+	fb, err := os.Open(u.sysfsFbPath)
 	if err != nil {
 		return nil, ErrFBOpenFileFailed
 	}
@@ -621,10 +579,15 @@ func readHexValue(filePath string) (string, error) {
 
 // GetDisplayDeviceInfo retrieves information about the display device from sysfs
 func GetDisplayDeviceInfo() ([]map[string]string, error) {
+	return New().GetDisplayDeviceInfo()
+}
+
+// GetDisplayDeviceInfo retrieves information about the display device from sysfs
+func (u *UPL) GetDisplayDeviceInfo() ([]map[string]string, error) {
 	var devices []map[string]string
 
 	// List all devices in /sys/class/drm/
-	drmDevices, err := os.ReadDir(sysfsDrmPath)
+	drmDevices, err := os.ReadDir(u.sysfsDrmPath)
 	if err != nil {
 		return nil, ErrGfxOpenFileFailed
 	}
@@ -633,13 +596,13 @@ func GetDisplayDeviceInfo() ([]map[string]string, error) {
 		deviceName := dev.Name()
 
 		// There exsits device nodes like 'version', skip this kind of device nodes
-		info, _ := os.Stat(filepath.Join(sysfsDrmPath, deviceName))
+		info, _ := os.Stat(filepath.Join(u.sysfsDrmPath, deviceName))
 		if !(info.IsDir()) {
 			continue
 		}
 
 		// Skip any device that doesn't have a "device" folder (not a PCI device)
-		deviceDir := filepath.Join(sysfsDrmPath, deviceName, "device")
+		deviceDir := filepath.Join(u.sysfsDrmPath, deviceName, "device")
 		if _, err = os.Stat(deviceDir); os.IsNotExist(err) {
 			continue
 		}
@@ -688,9 +651,9 @@ func GetDisplayDeviceInfo() ([]map[string]string, error) {
 	return devices, nil
 }
 
-func buildGraphicNode() (*dt.Node, error) {
+func (u *UPL) buildGraphicNode() (*dt.Node, error) {
 	// Retrieve the display device information
-	devices, err := GetDisplayDeviceInfo()
+	devices, err := u.GetDisplayDeviceInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -730,15 +693,15 @@ func constructSerialPortNode() *dt.Node {
 	))
 }
 
-func constructOptionNode(loadAddr uint64) (*dt.Node, error) {
-	phyAddrSize, err := getPhysicalAddressSizes()
+func (u *UPL) constructOptionNode(loadAddr uint64) (*dt.Node, error) {
+	phyAddrSize, err := u.getPhysicalAddressSizes()
 	if err != nil {
 		return nil, err
 	}
 
 	return dt.NewNode("options", dt.WithChildren(
 		dt.NewNode("upl-images@", dt.WithProperty(
-			dt.PropertyU64("addr", loadAddr+uplImageOffset),
+			dt.PropertyU64("addr", loadAddr+u.uplImageOffset),
 		)),
 		dt.NewNode("upl-params", dt.WithProperty(
 			dt.PropertyU32("addr-width", uint32(phyAddrSize)),
@@ -746,39 +709,39 @@ func constructOptionNode(loadAddr uint64) (*dt.Node, error) {
 			dt.PropertyString("boot-mode", "normal"),
 		)),
 		dt.NewNode("upl-custom", dt.WithProperty(
-			dt.PropertyU64("hoblistptr", loadAddr+tmpHobOffset),
+			dt.PropertyU64("hoblistptr", loadAddr+u.tmpHobOffset),
 		)),
 	)), nil
 }
 
-func constructSMBIOS3Node() (*dt.Node, error) {
-	smbiosTableBase, size, err := getSMBIOSBase()
+func (u *UPL) constructSMBIOS3Node() (*dt.Node, error) {
+	smbiosTableBase, size, err := u.getSMBIOSBase()
 
 	// According to EDK2 UPL implementation, only SMBIOS3 is supported in FDT.
-	if (err != nil) || (size != getSMBIOS3HdrSize()) {
+	if (err != nil) || (size != u.getSMBIOS3HdrSize()) {
 		return nil, errors.Join(ErrSMBIOS3NotFound, err)
 	}
 
 	return dt.NewNode("smbios", dt.WithProperty(
 		dt.PropertyString("compatible", "smbios"),
-		dt.PropertyRegion("reg", uint64(smbiosTableBase), uint64(pageSize)),
+		dt.PropertyRegion("reg", uint64(smbiosTableBase), uint64(u.pageSize)),
 	)), nil
 }
 
-func constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
+func (u *UPL) constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	var rsvdNodes []*dt.Node
 
 	acpiChildNode := dt.NewNode("acpi", dt.WithProperty(
 		dt.PropertyString("compatible", "acpi"),
-		dt.PropertyRegion("reg", rsdpBase, uint64(pageSize)),
+		dt.PropertyRegion("reg", rsdpBase, uint64(u.pageSize)),
 	))
 
 	rsvdNodes = append(rsvdNodes, acpiChildNode)
 
-	if smbios3ChildNode, err := constructSMBIOS3Node(); err != nil {
+	if smbios3ChildNode, err := u.constructSMBIOS3Node(); err != nil {
 		// If we failed to retrieve SMBIOS3 information, prompt error
 		// message to indicate error message, and continue construct DTB.
-		warningMsg = append(warningMsg, err)
+		u.warningMsg = append(u.warningMsg, err)
 	} else {
 		rsvdNodes = append(rsvdNodes, smbios3ChildNode)
 	}
@@ -886,7 +849,7 @@ func updateResourceRanges(resourceRegion *ResourceRegions, resType string, base,
 }
 
 // processDeviceResources processes the resources of a device and updates the resource ranges
-func processDeviceResources(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
+func (u *UPL) processDeviceResources(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
 	resourcePath := filepath.Join(dirPath, "resource")
 	resources, err := retrieveDeviceResources(resourcePath, rsvdMem)
 	if err != nil {
@@ -911,7 +874,7 @@ func processDeviceResources(dirPath string, resourceRegion *ResourceRegions, rsv
 }
 
 // processSubdirectories processes all subdirectories of a given path
-func processSubdirectories(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
+func (u *UPL) processSubdirectories(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
 	subDirs, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil
@@ -936,12 +899,12 @@ func processSubdirectories(dirPath string, resourceRegion *ResourceRegions, rsvd
 		}
 
 		// Process resources from subdirectory
-		if err := processDeviceResources(filepath.Join(dirPath, subName), resourceRegion, rsvdMem); err != nil {
+		if err := u.processDeviceResources(filepath.Join(dirPath, subName), resourceRegion, rsvdMem); err != nil {
 			continue
 		}
 
 		// Recursively process the subdirectory
-		if err := processDir(filepath.Join(dirPath, subName), resourceRegion, rsvdMem); err != nil {
+		if err := u.processDir(filepath.Join(dirPath, subName), resourceRegion, rsvdMem); err != nil {
 			return err
 		}
 	}
@@ -949,7 +912,7 @@ func processSubdirectories(dirPath string, resourceRegion *ResourceRegions, rsvd
 }
 
 // processDir processes a single directory and its contents
-func processDir(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
+func (u *UPL) processDir(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.MemoryMap) error {
 	deviceName := filepath.Base(dirPath)
 	parts := strings.Split(deviceName, ":")
 
@@ -970,19 +933,19 @@ func processDir(dirPath string, resourceRegion *ResourceRegions, rsvdMem kexec.M
 	}
 
 	// Process resources from current directory
-	if err := processDeviceResources(dirPath, resourceRegion, rsvdMem); err != nil {
+	if err := u.processDeviceResources(dirPath, resourceRegion, rsvdMem); err != nil {
 		return err
 	}
 
 	// Process subdirectories
-	return processSubdirectories(dirPath, resourceRegion, rsvdMem)
+	return u.processSubdirectories(dirPath, resourceRegion, rsvdMem)
 }
 
-func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) ([]*ResourceRegions, error) {
+func (u *UPL) retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) ([]*ResourceRegions, error) {
 	domainIDHex := fmt.Sprintf("%04x", item.PCISegGrp)
 	var resourceRegions []*ResourceRegions
 
-	mm, err := kexecMemoryMapFromIOMem()
+	mm, err := u.kexecMemoryMapFromIOMem()
 	if err != nil {
 		return nil, ErrRsvdMemoryMapNotFound
 	}
@@ -1016,7 +979,7 @@ func retrieveRootBridgeResources(path string, item MCFGBaseAddressAllocation) ([
 				return err
 			}
 
-			return processDir(path, resourceRegion, rsvdMem)
+			return u.processDir(path, resourceRegion, rsvdMem)
 		}); err != nil {
 			return nil, err
 		}
@@ -1133,7 +1096,7 @@ func fetchACPIMCFGData(data []byte) ([]MCFGBaseAddressAllocation, error) {
 	return mcfgDataArray, nil
 }
 
-func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) ([]*dt.Node, error) {
+func (u *UPL) createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) ([]*dt.Node, error) {
 	high64 := func(val uint64) uint32 {
 		return uint32(val >> 32)
 	}
@@ -1142,7 +1105,7 @@ func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) ([]*dt
 		return uint32(val & 0x0000_0000_FFFF_FFFF)
 	}
 
-	resources, err := retrieveRootBridgeResources(path, item)
+	resources, err := u.retrieveRootBridgeResources(path, item)
 	if err != nil {
 		return nil, err
 	}
@@ -1195,10 +1158,10 @@ func createPCIRootBridgeNode(path string, item MCFGBaseAddressAllocation) ([]*dt
 	return nodes, nil
 }
 
-func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
+func (u *UPL) constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	var rbNodes []*dt.Node
 
-	fileData, err := os.ReadFile(ACPIMCFGSysFilePath)
+	fileData, err := os.ReadFile(u.ACPIMCFGSysFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -1219,8 +1182,8 @@ func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	 *                   \-00.1
 	 *      +-1c.5-[03-04]----00.0-[04]----00.0
 	 * In above case:
-	 *	bus 01 is connected to bus 00 via device 0000:00.1c.0 (bridge device)
-	 *	bus 03 and 04 are connected to bus 00 via device 0000:00.1c.5 (bridge device)
+	 *      bus 01 is connected to bus 00 via device 0000:00.1c.0 (bridge device)
+	 *      bus 03 and 04 are connected to bus 00 via device 0000:00.1c.5 (bridge device)
 	 *
 	 * Corresponding device node layout in /sys/devices/pci* is as follows:
 	 *  /sys/devices/pci0000:00/0000:00:1c.0/0000:01:00.0
@@ -1231,7 +1194,7 @@ func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	 * about MMIO64/MMIO32/IOPort, and the bus region information.
 	 */
 	for _, item := range mcfgData {
-		rbNode, err := createPCIRootBridgeNode(PCISearchPath, item)
+		rbNode, err := u.createPCIRootBridgeNode(u.PCISearchPath, item)
 		if err != nil {
 			return nil, err
 		}
@@ -1242,18 +1205,14 @@ func constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	return rbNodes, nil
 }
 
-var efiVarFSCreator = func(path string) (efivarfs.EFIVar, error) {
-	return efivarfs.NewPath(path)
-}
-
 // buildEFIVariableNodes creates device tree nodes for all EFI variables
 // found in /sys/firmware/efi/efivars. Each node contains the variable name,
 // GUID, attributes, and data.
-func buildEFIVariableNodes() ([]*dt.Node, error) {
+func (u *UPL) buildEFIVariableNodes() ([]*dt.Node, error) {
 	var efiVarNodes []*dt.Node
 
 	// Open the efivarfs directory
-	efiVarFS, err := efiVarFSCreator(efiVarsPath)
+	efiVarFS, err := u.efiVarFSCreator(u.efiVarsPath)
 	if err != nil {
 		// If efivarfs is not available, return empty list (not an error)
 		// This allows the code to continue even if EFI variables are not accessible
@@ -1282,7 +1241,7 @@ func buildEFIVariableNodes() ([]*dt.Node, error) {
 
 		// Create the node with properties
 		node := dt.NewNode(nodeName, dt.WithProperty(
-			dt.PropertyString("magic", uRootEFIVarMagic),
+			dt.PropertyString("magic", u.uRootEFIVarMagic),
 			dt.PropertyString("name", desc.Name),
 			dt.PropertyString("guid", desc.GUID.String()),
 			dt.PropertyU32("attributes", uint32(attrs)),
@@ -1298,12 +1257,12 @@ func buildEFIVariableNodes() ([]*dt.Node, error) {
 	return efiVarNodes, nil
 }
 
-func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
+func (u *UPL) buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdpBase uint64) error {
 	memNodes := buildDtMemoryNode(mem)
 
-	rsvdMemNode := constructReservedMemoryNode(rsdpBase)
+	rsvdMemNode := u.constructReservedMemoryNode(rsdpBase)
 
-	optionsNode, err := constructOptionNode(loadAddr)
+	optionsNode, err := u.constructOptionNode(loadAddr)
 	if err != nil {
 		// Break here if failed to construct option node since option node
 		// is required to boot UPL.
@@ -1316,37 +1275,37 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 	dtNodes = append(dtNodes, optionsNode)
 	dtNodes = append(dtNodes, serialPortNode)
 
-	if gmaNode, err := buildGraphicNode(); err != nil {
+	if gmaNode, err := u.buildGraphicNode(); err != nil {
 		// If we failed to retrieve Graphic configurations, prompt error
 		// message to indicate error message, and continue construct DTB.
-		warningMsg = append(warningMsg, err)
+		u.warningMsg = append(u.warningMsg, err)
 	} else {
 		dtNodes = append(dtNodes, gmaNode)
 	}
 
-	if fbNode, err := buildFrameBufferNode(); err != nil {
+	if fbNode, err := u.buildFrameBufferNode(); err != nil {
 		// If we failed to retrieve Frame Buffer configurations, prompt error
 		// message to indicate error message, and continue construct DTB.
-		warningMsg = append(warningMsg, err)
+		u.warningMsg = append(u.warningMsg, err)
 	} else {
 		dtNodes = append(dtNodes, fbNode)
 	}
 
-	if pciRbNodes, err := constructPCIRootBridgeNodes(); err != nil {
+	if pciRbNodes, err := u.constructPCIRootBridgeNodes(); err != nil {
 		// If we failed to construct PCI Root Bridge info, prompt error
 		// message to indicate error message, and continue construct DTB.
 		// In this case, allows UPL to scan PCI Bus itself.
-		warningMsg = append(warningMsg, err)
+		u.warningMsg = append(u.warningMsg, err)
 	} else {
 		if pciRbNodes != nil {
 			dtNodes = append(dtNodes, pciRbNodes...)
 		}
 	}
 
-	if efiVarNodes, err := buildEFIVariableNodes(); err != nil {
+	if efiVarNodes, err := u.buildEFIVariableNodes(); err != nil {
 		// If we failed to construct EFI variable nodes, prompt error
 		// message to indicate error message, and continue construct DTB.
-		warningMsg = append(warningMsg, err)
+		u.warningMsg = append(u.warningMsg, err)
 	} else {
 		if efiVarNodes != nil {
 			dtNodes = append(dtNodes, efiVarNodes...)
@@ -1377,14 +1336,14 @@ func buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uint64, rsdp
 	return nil
 }
 
-func mockCPUTempInfoFile(t *testing.T, content string) string {
+func (u *UPL) mockCPUTempInfoFile(t *testing.T, content string) string {
 	tmpDir := t.TempDir()
 	tempFile, err := os.CreateTemp(tmpDir, "cpuinfo")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 
-	sysfsCPUInfoPath = tempFile.Name()
+	u.sysfsCPUInfoPath = tempFile.Name()
 
 	if _, err := tempFile.WriteString(content); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
