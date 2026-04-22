@@ -71,10 +71,11 @@ address sizes	: 1000 bits physical, 48 bits virtual
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tempFile := mockCPUTempInfoFile(t, tt.cpuInfoContent)
+			u := New()
+			tempFile := u.mockCPUTempInfoFile(t, tt.cpuInfoContent)
 			defer os.Remove(tempFile)
 
-			physicalBits, err := getPhysicalAddressSizes()
+			physicalBits, err := u.getPhysicalAddressSizes()
 
 			if tt.expectedErr == nil {
 				// success validation
@@ -161,12 +162,13 @@ address sizes	: 1000 bits physical, 48 bits virtual
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tempFile := mockCPUTempInfoFile(t, tt.cpuInfoContent)
+			u := New()
+			tempFile := u.mockCPUTempInfoFile(t, tt.cpuInfoContent)
 			defer os.Remove(tempFile)
 
 			hobBuf := &bytes.Buffer{}
 			var hobLen uint64
-			err := appendEFICPUHOB(hobBuf, &hobLen)
+			err := u.appendEFICPUHOB(hobBuf, &hobLen)
 
 			expectErr(t, err, tt.expectedErr)
 			if err != nil { // already checked in expectedErr

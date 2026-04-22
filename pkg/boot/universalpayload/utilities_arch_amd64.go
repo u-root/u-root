@@ -17,25 +17,21 @@ import (
 	"strconv"
 	"strings"
 	"unsafe"
-
-	"github.com/u-root/u-root/pkg/acpi"
 )
 
 func addrOfStart() uintptr
 func addrOfStackTop() uintptr
 func addrOfHobAddr() uintptr
 
-var getAcpiRsdp = acpi.GetRSDP
-
 // Get Physical Address size from sysfs node /proc/cpuinfo.
 // Both Physical and Virtual Address size will be prompted as format:
 // "address sizes	: 39 bits physical, 48 bits virtual"
 // Use regular expression to fetch the integer of Physical Address
 // size before "bits physical" keyword
-func getPhysicalAddressSizes() (uint8, error) {
-	file, err := os.Open(sysfsCPUInfoPath)
+func (u *UPL) getPhysicalAddressSizes() (uint8, error) {
+	file, err := os.Open(u.sysfsCPUInfoPath)
 	if err != nil {
-		return 0, fmt.Errorf("failed to open %s: %w", sysfsCPUInfoPath, err)
+		return 0, fmt.Errorf("failed to open %s: %w", u.sysfsCPUInfoPath, err)
 	}
 	defer file.Close()
 
@@ -56,7 +52,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return 0, fmt.Errorf("%w: file: %s, err: %w", ErrCPUAddressRead, sysfsCPUInfoPath, err)
+		return 0, fmt.Errorf("%w: file: %s, err: %w", ErrCPUAddressRead, u.sysfsCPUInfoPath, err)
 	}
 
 	return 0, ErrCPUAddressNotFound
@@ -66,7 +62,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 // Due to lack of support to set value of General Purpose Registers in kexec,
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
-func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
+func (u *UPL) constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	ptrToSlice := func(ptr uintptr, size int) []byte {
 		var data []byte
 
@@ -103,10 +99,10 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	}
 
 	// Update temporary stack top
-	buf = appendUint64(buf, addr+trampolineOffset)
+	buf = appendUint64(buf, addr+u.trampolineOffset)
 	buf = padWithLength(buf, padLen)
 	// Update FDT DTB info address
-	buf = appendUint64(buf, addr+fdtDtbOffset)
+	buf = appendUint64(buf, addr+u.fdtDtbOffset)
 	buf = padWithLength(buf, padLen)
 	buf = appendUint64(buf, entry)
 
@@ -114,22 +110,22 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 }
 
 // Get the base address and data from RDSP table
-func archGetAcpiRsdpData() (uint64, []byte, error) {
-	rsdp, _ := getAcpiRsdp()
+func (u *UPL) archGetAcpiRsdpData() (uint64, []byte, error) {
+	rsdp, _ := u.getAcpiRsdp()
 	rsdpLen := rsdp.Len()
 
-	if rsdpLen > uint32(pageSize) {
+	if rsdpLen > uint32(u.pageSize) {
 		return 0, nil, ErrDTRsdpLenOverBound
 	}
 
 	return 0, rsdp.AllData(), nil
 }
 
-func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
+func (u *UPL) appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
 	return 0
 }
 
-func isMemReserved(memType string) bool {
+func (u *UPL) isMemReserved(memType string) bool {
 	if strings.HasPrefix(memType, "PCI MMCONFIG") || strings.HasPrefix(memType, "PCI ECAM") {
 		return true
 	}
