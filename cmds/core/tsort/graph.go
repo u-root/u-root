@@ -1,8 +1,13 @@
-// Copyright 2012-2024 the u-root Authors. All rights reserved
+// Copyright 2012-2026 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package main
+
+import (
+	"iter"
+	"maps"
+)
 
 func newGraph() *graph {
 	return &graph{
@@ -39,31 +44,54 @@ func (g *graph) putEdge(source, target string) {
 	}
 }
 
-func (g *graph) successors(node string) set {
-	n, ok := g.nodeToData[node]
+func (g *graph) nodeCount() int {
+	return len(g.nodeToData)
+}
+
+func (g *graph) nodes() iter.Seq[string] {
+	return maps.Keys(g.nodeToData)
+}
+
+func (g *graph) inDegree(node string) int {
+	data, ok := g.nodeToData[node]
+	if !ok {
+		return 0
+	}
+	return data.inDegree
+}
+
+func (g *graph) successors(node string) iter.Seq[string] {
+	data, ok := g.nodeToData[node]
 	if !ok {
 		panic("node is not in graph")
 	}
 
-	return n.successors
+	return data.successors.all()
+}
+
+func (g *graph) removeNode(node string) {
+	if _, ok := g.nodeToData[node]; !ok {
+		panic("node is not in graph")
+	}
+
+	// In a general-purpose graph type, the predecessors and successors of
+	// the given node would need to be amended too. But this type only tracks
+	// in-degrees and successors, so it would take O(N) time to find all of the
+	// predecessors and amend them. Therefore, this method "cheats" and only
+	// removes the given node, which is good enough for tsort.
+	delete(g.nodeToData, node)
 }
 
 func (g *graph) removeEdge(source, target string) {
-	if _, ok := g.nodeToData[source]; !ok {
+	sourceData, ok := g.nodeToData[source]
+	if !ok {
 		panic("source node is not in graph")
 	}
-	if _, ok := g.nodeToData[target]; !ok {
+	targetData, ok := g.nodeToData[target]
+	if !ok {
 		panic("target node is not in graph")
 	}
 
-	g.nodeToData[source].successors.remove(target)
-	g.nodeToData[target].inDegree--
-}
-
-func (g *graph) inDegree(node string) int {
-	n, ok := g.nodeToData[node]
-	if !ok {
-		return 0
-	}
-	return n.inDegree
+	sourceData.successors.remove(target)
+	targetData.inDegree--
 }

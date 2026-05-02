@@ -1,4 +1,4 @@
-// Copyright 2012-2024 the u-root Authors. All rights reserved
+// Copyright 2012-2026 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -22,7 +24,6 @@ import (
 var errDiskCrashed = errors.New("disk crashed")
 
 func TestTsort(t *testing.T) {
-	dir := t.TempDir()
 	tests := []struct {
 		name       string
 		args       []string
@@ -90,6 +91,11 @@ func TestTsort(t *testing.T) {
 			wantStdout: "a\nb\n",
 		},
 		{
+			name:       "stdin: duplicate edge: a b a b",
+			stdin:      strings.NewReader("a b a b"),
+			wantStdout: "a\nb\n",
+		},
+		{
 			name:    "stdin: odd data count: 1",
 			stdin:   strings.NewReader("a"),
 			wantErr: errOddDataCount,
@@ -146,12 +152,12 @@ func TestTsort(t *testing.T) {
 		},
 		{
 			name:    "stdin: error-returning stdin",
-			stdin:   &errorReturningReader{err: errDiskCrashed},
+			stdin:   iotest.ErrReader(errDiskCrashed),
 			wantErr: errDiskCrashed,
 		},
 		{
 			name:       "file: line: a b b c c d",
-			args:       []string{tempFile(t, dir, "a b b c c d")},
+			args:       []string{tempFile(t, "a b b c c d")},
 			wantStdout: "a\nb\nc\nd\n",
 		},
 	}
@@ -206,7 +212,7 @@ func TestTsort(t *testing.T) {
 		}
 	})
 
-	dagTests := []struct {
+	directedAcyclicGraphTests := []struct {
 		name string
 		g    string
 	}{
@@ -235,6 +241,12 @@ func TestTsort(t *testing.T) {
 			g:    "c d b c a b",
 		},
 		{
+			//    a
+			//   / \
+			//  b   c
+			//   \ /
+			//    d
+			// ...where edges are pointed downwards
 			name: "diamond: a b a c b d c d",
 			g:    "a b a c b d c d",
 		},
@@ -246,11 +258,12 @@ func TestTsort(t *testing.T) {
 			//       |\   /
 			//       | \ /
 			//       h  i
-			name: "dag: a d a e b e b f e h e i f i c g",
+			// ...where edges are pointed downwards
+			name: "directed acyclic graph: a d a e b e b f e h e i f i c g",
 			g:    "a d a e b e b f e h e i f i c g",
 		},
 	}
-	for _, tt := range dagTests {
+	for _, tt := range directedAcyclicGraphTests {
 		t.Run(fmt.Sprintf("stdin: %s", tt.name), func(t *testing.T) {
 			stdin := strings.NewReader(tt.g)
 			stdout := new(strings.Builder)
@@ -271,6 +284,9 @@ func TestTsort(t *testing.T) {
 		})
 	}
 
+	// When cycles are detected, we make no guarantees about which order the nodes are returned,
+	// and we do not guarantee that every cycle is reported. This allows for more performance
+	// optimizations.
 	cycleTests := []struct {
 		name            string
 		g               string
@@ -280,20 +296,20 @@ func TestTsort(t *testing.T) {
 		{
 			name:            "stdin: cycle: a b b a",
 			g:               "a b b a",
-			wantStdoutAnyOf: abInAnyRotation(),
-			wantStderrAnyOf: cycleABInAnyRotation(),
+			wantStdoutAnyOf: abInAnyOrder(),
+			wantStderrAnyOf: cycleABInAnyOrder(),
 		},
 		{
 			name:            "stdin: cycle: b c c d d b",
 			g:               "b c c d d b",
-			wantStdoutAnyOf: bcdInAnyRotation(),
+			wantStdoutAnyOf: bcdInAnyOrder(),
 			wantStderrAnyOf: cycleBCDInAnyRotation(),
 		},
 		{
 			name:            "stdin: two cycles: a b b a c d d c",
 			g:               "a b b a c d d c",
 			wantStdoutAnyOf: abcdInAnyOrder(),
-			wantStderrAnyOf: cyclesABAndCDInAnyOrderAndRotation(),
+			wantStderrAnyOf: cyclesABOrCDInAnyOrderAndRotation(),
 		},
 		{
 			name:            "stdin: orphan node then cycle: d d a b b c c a",
@@ -311,13 +327,13 @@ func TestTsort(t *testing.T) {
 			name:            "stdin: two connected cycles: a b b a a c c a",
 			g:               "a b b a a c c a",
 			wantStdoutAnyOf: abcInAnyOrder(),
-			wantStderrAnyOf: cyclesABAndACInAnyOrderAndRotation(),
+			wantStderrAnyOf: cyclesABOrACInAnyOrderAndRotation(),
 		},
 		{
 			name:            "stdin: cycle with duplicate edges: a b a b b a",
 			g:               "a b a b b a",
-			wantStdoutAnyOf: abInAnyRotation(),
-			wantStderrAnyOf: cycleABInAnyRotation(),
+			wantStdoutAnyOf: abInAnyOrder(),
+			wantStderrAnyOf: cycleABInAnyOrder(),
 		},
 	}
 	for _, tt := range cycleTests {
@@ -397,59 +413,184 @@ func TestTsort(t *testing.T) {
 	})
 }
 
-var acyclicGraph = func() string {
-	var result strings.Builder
-	rnd := rand.New(rand.NewSource(1))
-	n := 10_000
-	for range 100 * n {
-		x := rnd.Intn(n + 1)
-		y := rnd.Intn(n + 1)
-		_, _ = fmt.Fprintln(&result, min(x, y), max(x, y))
-	}
-	return result.String()
-}()
+var (
+	rnd = rand.New(rand.NewPCG(1, 1))
+)
 
-var cyclicGraph = func() string {
-	var result strings.Builder
-	rnd := rand.New(rand.NewSource(1))
-	n := 200
-	for range 100 * n {
-		x := rnd.Intn(n + 1)
-		y := rnd.Intn(n + 1)
-		_, _ = fmt.Fprintln(&result, x, y)
+func randomDirectedAcyclicGraph(nodeCount uint16, edgeCount uint) string {
+	totalPossibleEdges := uint(nodeCount) * (uint(nodeCount) - 1) / 2
+	if edgeCount > totalPossibleEdges {
+		panic(
+			"nodeCount " +
+				strconv.FormatUint(uint64(nodeCount), 10) +
+				", edgeCount " +
+				strconv.FormatUint(uint64(edgeCount), 10) +
+				": edgeCount must be less than nodeCount*(nodeCount-1)/2 to ensure a directed " +
+				"acyclic graph")
+	}
+
+	// filled with `false` by default
+	randomEdges := make([]bool, totalPossibleEdges)
+	for i := range edgeCount {
+		randomEdges[i] = true
+	}
+	rnd.Shuffle(len(randomEdges), func(i, j int) {
+		randomEdges[i], randomEdges[j] = randomEdges[j], randomEdges[i]
+	})
+
+	result := new(strings.Builder)
+	index := 0
+	for i := uint16(0); i < nodeCount-1; i++ {
+		for j := i + 1; j < nodeCount; j++ {
+			if randomEdges[index] {
+				_, _ = fmt.Fprintln(result, i, j)
+			}
+			index++
+		}
+	}
+
+	return result.String()
+}
+
+// For any directed acyclic graph, the maximum number of edges is equal to (n * (n - 1) / 2),
+// where n is the number of nodes in the graph.
+func maxEdgesForDirectedAcyclicGraph(nodeCount uint16) uint {
+	return uint(nodeCount) * (uint(nodeCount) - 1) / 2
+}
+
+func randomDirectedCyclicGraph(nodeRange uint) string {
+	result := new(strings.Builder)
+	// Produces a cyclic graph through a fixed RNG seed and sheer probability.
+	for range 100 * nodeRange {
+		x := rnd.UintN(nodeRange + 1)
+		y := rnd.UintN(nodeRange + 1)
+		_, _ = fmt.Fprintln(result, x, y)
 	}
 	return result.String()
-}()
+}
 
 func BenchmarkTsortAcyclicGraph(b *testing.B) {
 	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
-	for b.Loop() {
-		err := run(strings.NewReader(acyclicGraph), io.Discard, io.Discard)
-		if err != nil {
-			b.Fatalf("unexpected error: %v", err)
-		}
+	benchmarkCases := []struct {
+		name         string
+		acyclicGraph func() string
+	}{
+		{
+			name: "small sparse directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(10, maxEdgesForDirectedAcyclicGraph(10)/2)
+			},
+		},
+		{
+			name: "small edgeless directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(10, 0)
+			},
+		},
+		{
+			name: "small tournament directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(10, maxEdgesForDirectedAcyclicGraph(10))
+			},
+		},
+		{
+			name: "medium sparse directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(100, maxEdgesForDirectedAcyclicGraph(100)/2)
+			},
+		},
+		{
+			name: "medium edgeless directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(100, 0)
+			},
+		},
+		{
+			name: "medium tournament directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(100, maxEdgesForDirectedAcyclicGraph(100))
+			},
+		},
+		{
+			name: "large sparse directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(1_000, maxEdgesForDirectedAcyclicGraph(1_000)/2)
+			},
+		},
+		{
+			name: "large edgeless directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(1_000, 0)
+			},
+		},
+		{
+			name: "large tournament directed acyclic graph",
+			acyclicGraph: func() string {
+				return randomDirectedAcyclicGraph(1_000, maxEdgesForDirectedAcyclicGraph(1_000))
+			},
+		},
+	}
+	for _, bc := range benchmarkCases {
+		b.Run(bc.name, func(b *testing.B) {
+			g := bc.acyclicGraph()
+			for b.Loop() {
+				err := run(strings.NewReader(g), io.Discard, io.Discard)
+				if err != nil {
+					b.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
 	}
 }
 
 func BenchmarkTsortCyclicGraph(b *testing.B) {
 	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
-	for b.Loop() {
-		err := run(strings.NewReader(cyclicGraph), io.Discard, io.Discard)
-		if err != nil && !errors.Is(err, errNonFatal) {
-			b.Fatalf("unexpected error: %v", err)
-		}
+	benchmarkCases := []struct {
+		name        string
+		cyclicGraph func() string
+	}{
+		{
+			name: "small cyclic graph",
+			cyclicGraph: func() string {
+				return randomDirectedCyclicGraph(10)
+			},
+		},
+		{
+			name: "medium cyclic graph",
+			cyclicGraph: func() string {
+				return randomDirectedCyclicGraph(50)
+			},
+		},
+		{
+			name: "large cyclic graph",
+			cyclicGraph: func() string {
+				return randomDirectedCyclicGraph(100)
+			},
+		},
+	}
+
+	for _, bc := range benchmarkCases {
+		b.Run(bc.name, func(b *testing.B) {
+			g := bc.cyclicGraph()
+			for b.Loop() {
+				err := run(strings.NewReader(g), io.Discard, io.Discard)
+				if err != nil && !errors.Is(err, errNonFatal) {
+					b.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
 	}
 }
 
-func tempFile(t *testing.T, dir, contents string) (file string) {
-	n := filepath.Join(dir, contents)
-	if err := os.WriteFile(n, []byte(contents), 0o666); err != nil {
+func tempFile(t *testing.T, contents string) (file string) {
+	n := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(n, []byte(contents), 0o600); err != nil {
 		t.Fatalf("temp file not created: %v", err)
 	}
 	return n
 }
 
-func abInAnyRotation() []string {
+func abInAnyOrder() []string {
 	return []string{"a\nb\n", "b\na\n"}
 }
 
@@ -464,11 +605,14 @@ func abcInAnyOrder() []string {
 	}
 }
 
-func bcdInAnyRotation() []string {
+func bcdInAnyOrder() []string {
 	return []string{
 		"b\nc\nd\n",
+		"b\nd\nc\n",
+		"c\nb\nd\n",
 		"c\nd\nb\n",
 		"d\nb\nc\n",
+		"d\nc\nd\n",
 	}
 }
 
@@ -504,7 +648,7 @@ func abcdInAnyOrder() []string {
 	}
 }
 
-func cycleABInAnyRotation() []string {
+func cycleABInAnyOrder() []string {
 	return []string{
 		"tsort: cycle in data\ntsort: a\ntsort: b\n",
 		"tsort: cycle in data\ntsort: b\ntsort: a\n",
@@ -535,8 +679,12 @@ func cycleBEFInAnyRotation() []string {
 	}
 }
 
-func cyclesABAndCDInAnyOrderAndRotation() []string {
+func cyclesABOrCDInAnyOrderAndRotation() []string {
 	return []string{
+		"tsort: cycle in data\ntsort: a\ntsort: b\n",
+		"tsort: cycle in data\ntsort: b\ntsort: a\n",
+		"tsort: cycle in data\ntsort: c\ntsort: d\n",
+		"tsort: cycle in data\ntsort: d\ntsort: c\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: c\ntsort: d\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: d\ntsort: c\n",
 		"tsort: cycle in data\ntsort: b\ntsort: a\ntsort: cycle in data\ntsort: c\ntsort: d\n",
@@ -548,8 +696,12 @@ func cyclesABAndCDInAnyOrderAndRotation() []string {
 	}
 }
 
-func cyclesABAndACInAnyOrderAndRotation() []string {
+func cyclesABOrACInAnyOrderAndRotation() []string {
 	return []string{
+		"tsort: cycle in data\ntsort: a\ntsort: b\n",
+		"tsort: cycle in data\ntsort: b\ntsort: a\n",
+		"tsort: cycle in data\ntsort: a\ntsort: c\n",
+		"tsort: cycle in data\ntsort: c\ntsort: a\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: a\ntsort: c\n",
 		"tsort: cycle in data\ntsort: a\ntsort: b\ntsort: cycle in data\ntsort: c\ntsort: a\n",
 		"tsort: cycle in data\ntsort: b\ntsort: a\ntsort: cycle in data\ntsort: a\ntsort: c\n",
@@ -559,14 +711,6 @@ func cyclesABAndACInAnyOrderAndRotation() []string {
 		"tsort: cycle in data\ntsort: c\ntsort: a\ntsort: cycle in data\ntsort: a\ntsort: b\n",
 		"tsort: cycle in data\ntsort: c\ntsort: a\ntsort: cycle in data\ntsort: b\ntsort: a\n",
 	}
-}
-
-type errorReturningReader struct {
-	err error
-}
-
-func (e *errorReturningReader) Read(_ []byte) (n int, err error) {
-	return 0, e.err
 }
 
 func checkValidTopologicalOrdering(
