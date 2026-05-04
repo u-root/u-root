@@ -108,9 +108,14 @@ func (s *State) inputWaiting() bool {
 func (s *State) restartPrompt() {
 	next := make(chan nexter, 200)
 	go func() {
+		// Use a small buffer (Go enforces a minimum of 16 bytes) to limit
+		// read-ahead from os.Stdin. The shared s.r uses a large buffer and
+		// could silently consume data typed ahead for a child process,
+		// making that data inaccessible to the child.
+		r := bufio.NewReaderSize(os.Stdin, 1)
 		for {
 			var n nexter
-			n.r, _, n.err = s.r.ReadRune()
+			n.r, _, n.err = r.ReadRune()
 			next <- n
 			// Shut down nexter loop when an end condition has been reached
 			if n.err != nil || n.r == '\n' || n.r == '\r' || n.r == ctrlC || n.r == ctrlD {
@@ -124,7 +129,14 @@ func (s *State) restartPrompt() {
 
 func (s *State) stopPrompt() {
 	if s.terminalSupported {
-		s.origMode.ApplyMode()
+		// Restore the original mode with canonical settings ensured.
+		// In minimal environments (e.g., QEMU/u-root) the initial terminal
+		// settings may lack ICANON, ICRNL, or ISIG, which would prevent
+		// child processes from reading stdin normally.
+		mode := s.origMode
+		mode.Iflag |= icrnl
+		mode.Lflag |= icanon | isig
+		mode.ApplyMode()
 	}
 }
 
