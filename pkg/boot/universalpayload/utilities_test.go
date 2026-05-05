@@ -433,10 +433,6 @@ func mockGetSMBIOS3Base() (int64, int64, error) {
 }
 
 func TestConstructSMBIOS3Node(t *testing.T) {
-	// mock data
-	defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
-	getSMBIOSBase = mockGetSMBIOS3Base
-
 	tests := []struct {
 		name     string
 		wantNode *dt.Node
@@ -451,7 +447,8 @@ func TestConstructSMBIOS3Node(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			smbiosNode, err := constructSMBIOS3Node()
+			u := New(WithSMBIOSBase(mockGetSMBIOS3Base))
+			smbiosNode, err := u.constructSMBIOS3Node()
 			expectErr(t, err, tt.wantErr)
 			if smbiosNode != tt.wantNode {
 				t.Fatalf("Unexpected smbios Node: actual(%v) vs. expected(nil)", smbiosNode)
@@ -652,15 +649,13 @@ func TestFetchACPIMCFGData(t *testing.T) {
 }
 
 func TestRetrieveRootBridgeResources(t *testing.T) {
-	// Mock the kexecMemoryMapFromIOMem function to return a test memory map
-	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
-	kexecMemoryMapFromIOMem = func() (kexec.MemoryMap, error) {
+	u := New(WithKexecMemoryMapFromIOMem(func() (kexec.MemoryMap, error) {
 		return kexec.MemoryMap{
 			kexec.TypedRange{Range: kexec.Range{Start: 0x1000, Size: 0x400000}, Type: kexec.RangeRAM},
 			kexec.TypedRange{Range: kexec.Range{Start: 0x500000, Size: 0x100000}, Type: kexec.RangeReserved},
 			kexec.TypedRange{Range: kexec.Range{Start: 0x600000, Size: 0x200000}, Type: kexec.RangeACPI},
 		}, nil
-	}
+	}))
 
 	mcfgData := []MCFGBaseAddressAllocation{
 		{
@@ -1038,7 +1033,7 @@ func TestRetrieveRootBridgeResources(t *testing.T) {
 
 	var idx uint32
 	for _, item := range mcfgData {
-		rbNodes, err := createPCIRootBridgeNode(tmpDir, item)
+		rbNodes, err := u.createPCIRootBridgeNode(tmpDir, item)
 		if err != nil {
 			t.Fatalf("Failed to create RB node %v\n", err)
 		}
@@ -1752,5 +1747,80 @@ func TestUpdateResourceRanges(t *testing.T) {
 					resourceRegion.IOPortEnd, tt.expectedRegion.IOPortEnd, tt.description)
 			}
 		})
+	}
+}
+
+func TestRelocatePEBounds(t *testing.T) {
+	// relocData for IMAGE_REL_BASED_DIR64 at offset 0
+	relocData := mockRelocData(0, IMAGE_REL_BASED_DIR64, 0)
+	delta := uint64(0x1000)
+
+	// data is only 4 bytes long, so reading 8 bytes at offset 0 should be caught
+	data := make([]byte, 4)
+
+	err := relocatePE(relocData, delta, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound, got %v", err)
+	}
+
+	// data is 8 bytes long, should pass
+	data = make([]byte, 8)
+	err = relocatePE(relocData, delta, data)
+	if err != nil {
+		t.Errorf("Unexpected error with 8 bytes data: %v", err)
+	}
+
+	// data is 7 bytes long, should fail (since DIR64 reads 8 bytes)
+	data = make([]byte, 7)
+	err = relocatePE(relocData, delta, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound with 7 bytes data, got %v", err)
+	}
+}
+
+func TestRelocateFdtDataBounds(t *testing.T) {
+	fdtLoad := &FdtLoad{
+		DataOffset: 10,
+		DataSize:   10,
+	}
+	// Total data is only 15 bytes, so DataOffset+DataSize=20 is out of bounds
+	data := make([]byte, 15)
+	err := relocateFdtData(0x1000, fdtLoad, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound for invalid sub-image range, got %v", err)
+	}
+
+	// DataSize 0, start > end case
+	fdtLoad = &FdtLoad{
+		DataOffset: 20,
+		DataSize:   0,
+	}
+	err = relocateFdtData(0x1000, fdtLoad, data)
+	if err != ErrPeRelocOutOfBound {
+		t.Errorf("Expected ErrPeRelocOutOfBound for DataOffset > len(data), got %v", err)
+	}
+}
+
+func TestBuildDeviceTreeInfoDynamicSize(t *testing.T) {
+	// We want to see if the TotalSize in the header matches actual buffer length
+	var buf bytes.Buffer
+	mem := &kexec.Memory{} // empty memory map is fine for this test
+
+	u := New()
+	u.mockCPUTempInfoFile(t, "address sizes : 39 bits physical, 48 bits virtual\n")
+
+	err := u.buildDeviceTreeInfo(&buf, mem, 0x1000, 0x2000)
+	if err != nil {
+		t.Fatalf("buildDeviceTreeInfo failed: %v", err)
+	}
+
+	data := buf.Bytes()
+	if len(data) < 8 {
+		t.Fatal("FDT too short")
+	}
+
+	totalSize := binary.BigEndian.Uint32(data[4:8])
+	if totalSize != uint32(len(data)) {
+		t.Errorf("FDT header TotalSize (%d) does not match actual length (%d)", totalSize, len(data))
 	}
 }

@@ -168,7 +168,7 @@ type EFIMemoryMapHOB []EFIHOBResourceDescriptor
 // convertResourceType determines the EFI resource type based on the memory type string.
 // It returns EFIResourceMemoryReserved for reserved memory types, IOAPIC, and HPET regions.
 // All other types are treated as memory-mapped I/O.
-func convertResourceType(memType string) EFIResourceType {
+func (u *UPL) convertResourceType(memType string) EFIResourceType {
 	if memType == kexec.RangeReserved.String() {
 		return EFIResourceMemoryReserved
 	}
@@ -179,7 +179,7 @@ func convertResourceType(memType string) EFIResourceType {
 		return EFIResourceMemoryReserved
 	}
 
-	if isMemReserved(memType) {
+	if u.isMemReserved(memType) {
 		return EFIResourceMemoryReserved
 	}
 
@@ -201,7 +201,7 @@ func convertResourceType(memType string) EFIResourceType {
 }
 
 // Translate System Map with "System RAM" type to Resource code HOBs.
-func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
+func (u *UPL) hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 	var memMapHOB EFIMemoryMapHOB
 	var length uint64
 	var resourceType EFIResourceType
@@ -221,7 +221,7 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 			continue
 		}
 
-		resourceType = convertResourceType(memType)
+		resourceType = u.convertResourceType(memType)
 
 		memMapHOB = append(memMapHOB, EFIHOBResourceDescriptor{
 			Header: EFIHOBGenericHeader{
@@ -242,12 +242,12 @@ func hobFromMemMap(memMap kexec.MemoryMap) (EFIMemoryMapHOB, uint64) {
 		length += uint64(unsafe.Sizeof(EFIHOBResourceDescriptor{}))
 	}
 
-	length += appendAddonMemMap(&memMapHOB)
+	length += u.appendAddonMemMap(&memMapHOB)
 
 	return memMapHOB, length
 }
 
-func hobCreateEndHOB() EFIHOBGenericHeader {
+func (u *UPL) hobCreateEndHOB() EFIHOBGenericHeader {
 	return EFIHOBGenericHeader{
 		HOBType:   EFIHOBTypeEndOfHOBList,
 		HOBLength: EFIHOBLength(unsafe.Sizeof(EFIHOBGenericHeader{})),
@@ -259,7 +259,7 @@ func hobCreateEndHOB() EFIHOBGenericHeader {
 // Handoff info HOB should be created after all HOBs in HOB list
 // have been created, since length of HOB list should be provided
 // as input parameter.
-func hobCreateEFIHOBHandoffInfoTable(length uint64) EFIHOBHandoffInfoTable {
+func (u *UPL) hobCreateEFIHOBHandoffInfoTable(length uint64) EFIHOBHandoffInfoTable {
 	length += uint64(unsafe.Sizeof(EFIHOBHandoffInfoTable{}))
 
 	return EFIHOBHandoffInfoTable{
@@ -277,8 +277,8 @@ func hobCreateEFIHOBHandoffInfoTable(length uint64) EFIHOBHandoffInfoTable {
 	}
 }
 
-func hobCreateEFIHOBCPU() (*EFIHOBCPU, error) {
-	phyAddrSize, err := getPhysicalAddressSizes()
+func (u *UPL) hobCreateEFIHOBCPU() (*EFIHOBCPU, error) {
+	phyAddrSize, err := u.getPhysicalAddressSizes()
 	if err != nil {
 		return nil, err
 	}

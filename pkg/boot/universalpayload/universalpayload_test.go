@@ -27,9 +27,8 @@ func mockKexecMemoryMapFromIOMem() (kexec.MemoryMap, error) {
 	}, nil
 }
 
-func mockGetRSDP() (uint64, []byte, error) {
-	fakeRDSP := acpi.RSDP{}
-	return 0, fakeRDSP.AllData(), nil
+func mockGetRSDP() (*acpi.RSDP, error) {
+	return &acpi.RSDP{}, nil
 }
 
 func mockGetSMBIOSBase() (int64, int64, error) {
@@ -73,7 +72,7 @@ func (m *mockEFIVarFS) Set(desc efivarfs.VariableDescriptor, attrs efivarfs.Vari
 	return nil
 }
 
-func mockEFIVars(t *testing.T) {
+func mockEFIVars() Option {
 	mockFS := &mockEFIVarFS{
 		vars: make(map[efivarfs.VariableDescriptor]struct {
 			attrs efivarfs.VariableAttributes
@@ -90,47 +89,19 @@ func mockEFIVars(t *testing.T) {
 	mockFS.Set(efivarfs.VariableDescriptor{Name: "Timeout", GUID: g}, 0x07, []byte{0x05, 0x00})
 	mockFS.Set(efivarfs.VariableDescriptor{Name: "PlatformLang", GUID: g}, 0x07, []byte{'e', 'n', '-', 'U', 'S', 0x00})
 
-	efiVarFSCreator = func(path string) (efivarfs.EFIVar, error) {
+	return WithEFIVarFSCreator(func(path string) (efivarfs.EFIVar, error) {
 		return mockFS, nil
-	}
+	})
 }
 
 // Main test for constructing HOB list,
 // to make sure there are no issues with the overall process
 func TestLoadKexecMemWithHOBs(t *testing.T) {
-	// mock data
-	defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
-	getSMBIOSBase = mockGetSMBIOSBase
-
-	defer func(old func() (uint64, []byte, error)) { getAcpiRsdpData = old }(getAcpiRsdpData)
-	getAcpiRsdpData = mockGetRSDP
-
-	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
-	kexecMemoryMapFromIOMem = mockKexecMemoryMapFromIOMem
-
-	tempFile := mockCPUTempInfoFile(t, `
-processor	: 0
-vendor_id	: GenuineIntel
-cpu family	: 6
-model		: 142
-model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
-address sizes	: 39 bits physical, 48 bits virtual
-`)
-	defer os.Remove(tempFile)
-
-	// Mock system paths to ensure deterministic tests across environments
-	defer func(old func(string) (efivarfs.EFIVar, error)) { efiVarFSCreator = old }(efiVarFSCreator)
-	defer func(old string) { sysfsFbPath = old }(sysfsFbPath)
-	defer func(old string) { sysfsDrmPath = old }(sysfsDrmPath)
-	defer func(old string) { ACPIMCFGSysFilePath = old }(ACPIMCFGSysFilePath)
-	defer func(old string) { PCISearchPath = old }(PCISearchPath)
-
 	emptyDir := t.TempDir()
-	sysfsFbPath = filepath.Join(emptyDir, "fb0")
-	sysfsDrmPath = filepath.Join(emptyDir, "drm")
-	ACPIMCFGSysFilePath = filepath.Join(emptyDir, "MCFG")
-	PCISearchPath = filepath.Join(emptyDir, "pci")
-	// end of mock data
+	sysfsFbPath := filepath.Join(emptyDir, "fb0")
+	sysfsDrmPath := filepath.Join(emptyDir, "drm")
+	mcfgPath := filepath.Join(emptyDir, "MCFG")
+	pciPath := filepath.Join(emptyDir, "pci")
 
 	// Follow components layout which is defined in utilities.go to place corresponding components
 	// |------------------------| <-- Memory Region top
@@ -151,6 +122,7 @@ address sizes	: 39 bits physical, 48 bits virtual
 	fdtInfo := &FdtLoad{DataOffset: 0x100, DataSize: 0x5000, EntryStart: 0x1000, Load: 0x1800}
 	imgSize := fdtInfo.DataOffset + fdtInfo.DataSize
 	rsdpOff := (uintptr)(align.UpPage(imgSize))
+	pageSize := os.Getpagesize()
 	hobsOff := rsdpOff + uintptr(pageSize)
 	fdtOff := hobsOff + uintptr(pageSize)
 	stackOff := fdtOff + uintptr(pageSize)
@@ -158,7 +130,7 @@ address sizes	: 39 bits physical, 48 bits virtual
 
 	tests := []struct {
 		name            string
-		setupMock       func()
+		opts            []Option
 		fdtLoad         *FdtLoad
 		data            []byte
 		mem             kexec.Memory
@@ -168,10 +140,14 @@ address sizes	: 39 bits physical, 48 bits virtual
 	}{
 		{
 			name: "Valid case to relocate FIT image without EFI vars",
-			setupMock: func() {
-				efiVarFSCreator = func(path string) (efivarfs.EFIVar, error) {
+			opts: []Option{
+				WithSMBIOSBase(mockGetSMBIOSBase),
+				WithAcpiRsdp(mockGetRSDP),
+				WithKexecMemoryMapFromIOMem(mockKexecMemoryMapFromIOMem),
+				WithEFIVarFSCreator(func(path string) (efivarfs.EFIVar, error) {
 					return nil, os.ErrNotExist
-				}
+				}),
+				WithSysfsPaths("", sysfsFbPath, sysfsDrmPath, "", mcfgPath, pciPath),
 			},
 			fdtLoad: fdtInfo,
 			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
@@ -196,8 +172,12 @@ address sizes	: 39 bits physical, 48 bits virtual
 		},
 		{
 			name: "Valid case to relocate FIT image with mocked EFI vars",
-			setupMock: func() {
-				mockEFIVars(t)
+			opts: []Option{
+				WithSMBIOSBase(mockGetSMBIOSBase),
+				WithAcpiRsdp(mockGetRSDP),
+				WithKexecMemoryMapFromIOMem(mockKexecMemoryMapFromIOMem),
+				mockEFIVars(),
+				WithSysfsPaths("", sysfsFbPath, sysfsDrmPath, "", mcfgPath, pciPath),
 			},
 			fdtLoad: fdtInfo,
 			data: mockWritePeFileBinary(0x100, 0x5100, 0x1000, []*MockSection{
@@ -224,10 +204,18 @@ address sizes	: 39 bits physical, 48 bits virtual
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupMock != nil {
-				tt.setupMock()
-			}
-			addr, err := loadKexecMemWithHOBs(tt.fdtLoad, tt.data, &tt.mem)
+			u := New(tt.opts...)
+			tempFile := u.mockCPUTempInfoFile(t, `
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 142
+model name	: Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+address sizes	: 39 bits physical, 48 bits virtual
+`)
+			defer os.Remove(tempFile)
+
+			addr, err := u.loadKexecMemWithHOBs(tt.fdtLoad, tt.data, &tt.mem)
 			expectErr(t, err, tt.wantErr)
 			t.Logf("\nmem Segments:  %v\nwant Segments: %v", tt.mem.Segments.Phys(), tt.wantMemSegments)
 			if tt.wantAddr != addr {
@@ -249,11 +237,10 @@ address sizes	: 39 bits physical, 48 bits virtual
 }
 
 func TestAppendMemMapHOB(t *testing.T) {
-	defer func(old func() (kexec.MemoryMap, error)) { kexecMemoryMapFromIOMem = old }(kexecMemoryMapFromIOMem)
-	kexecMemoryMapFromIOMem = mockKexecMemoryMapFromIOMem
+	u := New(WithKexecMemoryMapFromIOMem(mockKexecMemoryMapFromIOMem))
 
 	var memMap kexec.MemoryMap
-	if ioMem, err := kexecMemoryMapFromIOMem(); err != nil {
+	if ioMem, err := u.kexecMemoryMapFromIOMem(); err != nil {
 		t.Fatal(err)
 	} else {
 		memMap = ioMem
@@ -261,7 +248,7 @@ func TestAppendMemMapHOB(t *testing.T) {
 
 	hobBuf := &bytes.Buffer{}
 	var hobLen uint64
-	if err := appendMemMapHOB(hobBuf, &hobLen, memMap); err != nil {
+	if err := u.appendMemMapHOB(hobBuf, &hobLen, memMap); err != nil {
 		t.Fatal(err)
 	}
 
@@ -283,9 +270,10 @@ func TestAppendMemMapHOB(t *testing.T) {
 }
 
 func TestAppendSerialPortHOB(t *testing.T) {
+	u := New()
 	hobBuf := &bytes.Buffer{}
 	var hobLen uint64
-	if err := appendSerialPortHOB(hobBuf, &hobLen); err != nil {
+	if err := u.appendSerialPortHOB(hobBuf, &hobLen); err != nil {
 		t.Fatal(err)
 	}
 
@@ -304,10 +292,11 @@ func TestAppendSerialPortHOB(t *testing.T) {
 }
 
 func TestAppendUniversalPayloadBase(t *testing.T) {
+	u := New()
 	hobBuf := &bytes.Buffer{}
 	var hobLen uint64
 	const fdtLoad = uint64(0x700000)
-	if err := appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad); err != nil {
+	if err := u.appendUniversalPayloadBase(hobBuf, &hobLen, fdtLoad); err != nil {
 		t.Fatal(err)
 	}
 	var uplBase UniversalPayloadBase
@@ -332,6 +321,7 @@ func TestAppendUniversalPayloadBase(t *testing.T) {
 
 func TestConstructHOBList(t *testing.T) {
 	const lenOfEFITable = uint64(unsafe.Sizeof(EFIHOBHandoffInfoTable{}))
+	u := New()
 
 	for _, tt := range []struct {
 		// mock data
@@ -374,7 +364,7 @@ func TestConstructHOBList(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := constructHOBList(tt.dst, tt.src, &tt.hobLen)
+			err := u.constructHOBList(tt.dst, tt.src, &tt.hobLen)
 
 			expectErr(t, err, tt.wantErr)
 			if err != nil { // already checked in expectedErr
@@ -452,12 +442,11 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func(old func() (int64, int64, error)) { getSMBIOSBase = old }(getSMBIOSBase)
-			getSMBIOSBase = mockGetSMBIOSBase
+			u := New(WithSMBIOSBase(mockGetSMBIOSBase))
 
 			hobBuf := &bytes.Buffer{}
 			var hobLen uint64
-			err := appendSmbiosTableHOB(hobBuf, &hobLen)
+			err := u.appendSmbiosTableHOB(hobBuf, &hobLen)
 
 			expectErr(t, err, tt.expectedErr)
 			if err != nil { // already checked in expectedErr
@@ -502,5 +491,24 @@ func expectErr(t *testing.T, err error, expectedErr error) {
 		if !errors.Is(err, expectedErr) {
 			t.Fatalf("Unxpected error %+v, want = %q", err, expectedErr)
 		}
+	}
+}
+
+func TestComponentsSizeReset(t *testing.T) {
+	u := New()
+	// Artificially increase componentsSize
+	u.componentsSize = uint(sizeForComponents) - 1
+
+	// Check that checkComponentsSize fails if we add more than allowed
+	err := u.checkComponentsSize(2)
+	if err == nil {
+		t.Error("Expected error from checkComponentsSize, got nil")
+	}
+
+	// Now "mock" what Load does by resetting componentsSize
+	u.componentsSize = 0
+	err = u.checkComponentsSize(1)
+	if err != nil {
+		t.Errorf("Unexpected error after reset: %v", err)
 	}
 }

@@ -6,22 +6,22 @@
 
 package universalpayload
 
-func getPhysicalAddressSizes() (uint8, error) {
+func (u *UPL) getPhysicalAddressSizes() (uint8, error) {
 	return 0, nil
 }
 
-func constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
+func (u *UPL) constructTrampoline(buf []uint8, hobAddr uint64, entry uint64) []uint8 {
 	return nil
 }
 
-func archGetAcpiRsdpData() (uint64, []byte, error) {
+func (u *UPL) archGetAcpiRsdpData() (uint64, []byte, error) {
 	return 0xDEADBEEF, nil, nil
 }
 
-func appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
+func (u *UPL) appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
 	return 0
 }
 
-func isMemReserved(memType string) bool {
+func (u *UPL) isMemReserved(memType string) bool {
 	return false
 }
