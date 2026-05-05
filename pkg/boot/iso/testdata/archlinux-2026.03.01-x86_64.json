@@ -1,0 +1,26 @@
+[
+  {
+    "cmdline": "archisobasedir=arch img_dev=UUID=1234-abcd img_loop=/archlinux-2026.03.01-x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/archlinux-2026.03.01-x86_64/arch/boot/x86_64/initramfs-linux.img"
+    },
+    "kernel": {
+      "url": "file:///testdata/archlinux-2026.03.01-x86_64/arch/boot/x86_64/vmlinuz-linux"
+    },
+    "name": "[archlinux-2026.03.01-x86_64.iso] Arch Linux install medium (x86_64, BIOS)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "archisobasedir=arch img_dev=UUID=1234-abcd img_loop=/archlinux-2026.03.01-x86_64.iso accessibility=on",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/archlinux-2026.03.01-x86_64/arch/boot/x86_64/initramfs-linux.img"
+    },
+    "kernel": {
+      "url": "file:///testdata/archlinux-2026.03.01-x86_64/arch/boot/x86_64/vmlinuz-linux"
+    },
+    "name": "[archlinux-2026.03.01-x86_64.iso] Arch Linux install medium with speakup screen reader (x86_64, BIOS)",
+    "rank": "0"
+  }
+]

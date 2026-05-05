@@ -1,0 +1,14 @@
+[
+  {
+    "cmdline": "boot=casper live-media-path=/casper_pop-os_24.04_amd64_generic_debug_481 hostname=pop-os username=pop-os noprompt quiet splash ${extra_kernel_parameters} --- iso-scan/filename=/pop-os_24.04_amd64_generic_23.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/pop-os_24.04_amd64_generic_23/casper_pop-os_24.04_amd64_generic_debug_481/initrd.gz"
+    },
+    "kernel": {
+      "url": "file:///testdata/pop-os_24.04_amd64_generic_23/casper_pop-os_24.04_amd64_generic_debug_481/vmlinuz.efi"
+    },
+    "name": "[pop-os_24.04_amd64_generic_23.iso] Try or Install Pop_OS",
+    "rank": "0"
+  }
+]
