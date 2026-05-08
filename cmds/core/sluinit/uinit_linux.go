@@ -100,7 +100,9 @@ func checkDebugFlag() {
 	flag.Parse()
 
 	if flag.NArg() > 1 {
-		log.Fatal("Incorrect number of arguments")
+		// Log with Printf instead of Fatal to prevent sluinit from exiting early and
+		// bypassing the securelaunch chain. Ignore extra positional args and continue.
+		log.Printf("Incorrect number of arguments")
 	}
 
 	if *slDebug {
