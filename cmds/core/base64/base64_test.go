@@ -24,9 +24,8 @@ func (failer) Write([]byte) (int, error) {
 
 func TestBase64(t *testing.T) {
 	tests := []struct {
-		in   []byte
-		out  []byte
-		args []string
+		in  []byte
+		out []byte
 	}{
 		{
 			in: []byte(`DESCRIPTION
@@ -55,8 +54,8 @@ func TestBase64(t *testing.T) {
 		for _, n := range [][]string{{nin}, {}} {
 			t.Run(fmt.Sprintf("run with file name %q", n), func(t *testing.T) {
 				var o bytes.Buffer
-				c := command(bytes.NewReader(tt.in), &o, io.Discard, tt.args...)
-				if err := c.run(); err != nil {
+				err := run(nil, &o, io.Discard, nin)
+				if err != nil {
 					t.Errorf("encode: got %v, want nil", err)
 					return
 				}
@@ -70,9 +69,8 @@ func TestBase64(t *testing.T) {
 			t.Run(fmt.Sprintf("run with file name %q", n), func(t *testing.T) {
 
 				var o bytes.Buffer
-				c := command(bytes.NewReader(tt.out), &o, io.Discard, tt.args...)
-				c.decode = true
-				if err := c.run(); err != nil {
+				err := run(nil, &o, io.Discard, "-d", nout)
+				if err != nil {
 					t.Errorf("decode: got %v, want nil", err)
 					return
 				}
@@ -85,25 +83,24 @@ func TestBase64(t *testing.T) {
 	// Try opening a file we know does not exist.
 	n := filepath.Join(d, "nosuchfile")
 	t.Run(fmt.Sprintf("bad file %q", n), func(t *testing.T) {
-		c := command(nil, nil, nil, n)
-		if err := c.run(); err == nil {
+		err := run(nil, nil, nil, n)
+		if err == nil {
 			t.Errorf("run(%q): nil != an error", n)
 		}
 	})
 
 	// Try with a bad length
 	t.Run("bad data", func(t *testing.T) {
-		c := command(bytes.NewReader([]byte{'t'}), io.Discard, io.Discard)
-		c.decode = true
-		if err := c.run(); err == nil {
+		err := run(bytes.NewReader([]byte{'t'}), io.Discard, io.Discard, "-d")
+		if err == nil {
 			t.Errorf(`run("-d"): nil != an error`)
 		}
 	})
 }
 
 func TestBadWriter(t *testing.T) {
-	c := command(bytes.NewReader([]byte("hi")), failer{}, io.Discard)
-	if err := c.run(); !errors.Is(err, os.ErrInvalid) {
+	err := run(bytes.NewReader([]byte("hi")), failer{}, io.Discard)
+	if !errors.Is(err, os.ErrInvalid) {
 		t.Errorf(`run(): got %v, want %v`, err, os.ErrInvalid)
 	}
 }
@@ -117,8 +114,8 @@ func TestBadUsage(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		c := command(nil, io.Discard, io.Discard, tt.args...)
-		if err := c.run(); !errors.Is(err, tt.err) {
+		err := run(nil, io.Discard, io.Discard, tt.args...)
+		if !errors.Is(err, tt.err) {
 			t.Errorf(`Run(%q): got %v, want %v`, tt.args, err, tt.err)
 		}
 	}
@@ -146,16 +143,14 @@ func TestDo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var encoded bytes.Buffer
-			c := command(strings.NewReader(tt.input), &encoded, io.Discard)
-
-			if err := c.run(); err != nil {
+			err := run(strings.NewReader(tt.input), &encoded, io.Discard)
+			if err != nil {
 				t.Fatalf("encoding: got %v, want nil", err)
 			}
 
 			var decoded bytes.Buffer
-			c = command(&encoded, &decoded, io.Discard)
-			c.decode = true
-			if err := c.run(); err != nil {
+			err = run(&encoded, &decoded, io.Discard, []string{"-d"}...)
+			if err != nil {
 				t.Fatalf("decoding: got %v, want nil", err)
 			}
 
