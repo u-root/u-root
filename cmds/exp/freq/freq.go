@@ -152,7 +152,7 @@ func main() {
 	chr := flag.Bool("c", false, "print character/rune")
 	flag.Parse()
 	p := params{*utf, *dec, *hex, *oct, *chr}
-	if err := command(os.Stdin, os.Stderr, os.Stdout, p, flag.Args()...).run(); err != nil {
+	if err := command(os.Stdin, os.Stdout, os.Stderr, p, flag.Args()...).run(); err != nil {
 		log.Fatal(err)
 	}
 }
