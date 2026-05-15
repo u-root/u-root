@@ -26,7 +26,7 @@ func TestSMBIOSBaseEFI(t *testing.T) {
 }
 
 func TestSMBIOSBaseLegacy(t *testing.T) {
-	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '_', 0, 0, 0, 0, 0}
+	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 136, '_', 'S', 'M', '_', 0, 0, 0, 0, 0}
 	systabPath = "testdata/systab_NOT_FOUND"
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = func(base int64, uintn memio.UintN) error {
@@ -62,7 +62,7 @@ func TestSMBIOSBaseNotFound(t *testing.T) {
 
 	_, _, err := SMBIOSBase()
 
-	want := "could not find _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
+	want := "could not find valid _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
 
 	if err.Error() != want {
 		t.Errorf("SMBIOSBase(): '%v', want %s", err, want)

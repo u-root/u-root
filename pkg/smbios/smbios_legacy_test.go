@@ -33,7 +33,7 @@ func TestSMBIOSLegacyNotFound(t *testing.T) {
 
 	_, _, err := SMBIOSBaseLegacy()
 
-	want := "could not find _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
+	want := "could not find valid _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
 	if err.Error() != want {
 		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", err, want)
 	}
@@ -54,7 +54,7 @@ func TestSMBIOSLegacyMemIoReadError(t *testing.T) {
 }
 
 func TestSMBIOSLegacySMBIOS(t *testing.T) {
-	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '_', 0, 0, 0, 0, 0}
+	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 136, '_', 'S', 'M', '_', 0, 0, 0, 0, 0}
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = mockMemioRead
 	base, size, err := SMBIOSBaseLegacy()
@@ -76,7 +76,7 @@ func TestSMBIOSLegacySMBIOS(t *testing.T) {
 }
 
 func TestSMBIOSLegacySMBIOS3(t *testing.T) {
-	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '3', '_', 0, 0, 0, 0, 0}
+	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 128, '_', 'S', 'M', '3', '_', 0, 0, 0, 0, 0}
 	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
 	memioRead = mockMemioRead
 	base, size, err := SMBIOSBaseLegacy()
@@ -94,6 +94,56 @@ func TestSMBIOSLegacySMBIOS3(t *testing.T) {
 
 	if size != wantSize {
 		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", size, wantSize)
+	}
+}
+
+func TestSMBIOSLegacySMBIOSReadHeaderError(t *testing.T) {
+	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '_', 0, 0, 0, 0, 0}
+	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
+	memioRead = func(base int64, uintn memio.UintN) error {
+		dat, ok := uintn.(*memio.ByteSlice)
+		if !ok {
+			return fmt.Errorf("not supported")
+		}
+		if dat.Size() == smbios2HeaderSize {
+			return fmt.Errorf("HEADER_READ_ERROR")
+		}
+		bufLen := len(tmpBuf)
+		for i := int64(0); i < dat.Size(); i++ {
+			(*dat)[i] = tmpBuf[(base+i)%int64(bufLen)]
+		}
+		return nil
+	}
+
+	_, _, err := SMBIOSBaseLegacy()
+	want := "could not find valid _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
+	if err == nil || err.Error() != want {
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", err, want)
+	}
+}
+
+func TestSMBIOSLegacySMBIOS3ReadHeaderError(t *testing.T) {
+	tmpBuf = []byte{0, '_', 'M', 'S', '_', 0, 0, '_', 'S', 'M', '3', '_', 0, 0, 0, 0, 0}
+	defer func(old func(base int64, uintn memio.UintN) error) { memioRead = old }(memioRead)
+	memioRead = func(base int64, uintn memio.UintN) error {
+		dat, ok := uintn.(*memio.ByteSlice)
+		if !ok {
+			return fmt.Errorf("not supported")
+		}
+		if dat.Size() == smbios3HeaderSize {
+			return fmt.Errorf("HEADER_READ_ERROR")
+		}
+		bufLen := len(tmpBuf)
+		for i := int64(0); i < dat.Size(); i++ {
+			(*dat)[i] = tmpBuf[(base+i)%int64(bufLen)]
+		}
+		return nil
+	}
+
+	_, _, err := SMBIOSBaseLegacy()
+	want := "could not find valid _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
+	if err == nil || err.Error() != want {
+		t.Errorf("SMBIOSBaseLegacy(): %v, want '%v'", err, want)
 	}
 }
 
