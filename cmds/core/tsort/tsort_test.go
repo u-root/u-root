@@ -8,11 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -417,17 +417,16 @@ var (
 	rnd = rand.New(rand.NewPCG(1, 1))
 )
 
-func randomDirectedAcyclicGraph(nodeCount uint16, edgeCount uint) string {
-	totalPossibleEdges := uint(nodeCount) * (uint(nodeCount) - 1) / 2
-	if edgeCount > totalPossibleEdges {
-		panic(
-			"nodeCount " +
-				strconv.FormatUint(uint64(nodeCount), 10) +
-				", edgeCount " +
-				strconv.FormatUint(uint64(edgeCount), 10) +
-				": edgeCount must be less than nodeCount*(nodeCount-1)/2 to ensure a directed " +
-				"acyclic graph")
+func randomDirectedAcyclicGraph(nodeCount uint16, edgeCountRatio float64) string {
+	if edgeCountRatio < 0.0 || edgeCountRatio > 1.0 {
+		panic(fmt.Sprintf(
+			"edgeCountRatio %v must be between 0.0 and 1.0",
+			edgeCountRatio,
+		))
 	}
+
+	totalPossibleEdges := maxEdgesForDirectedAcyclicGraph(nodeCount)
+	edgeCount := uint(math.Round(float64(totalPossibleEdges) * edgeCountRatio))
 
 	// filled with `false` by default
 	randomEdges := make([]bool, totalPossibleEdges)
@@ -439,6 +438,9 @@ func randomDirectedAcyclicGraph(nodeCount uint16, edgeCount uint) string {
 	})
 
 	result := new(strings.Builder)
+	for i := uint16(0); i < nodeCount; i++ {
+		_, _ = fmt.Fprintln(result, i, i)
+	}
 	index := 0
 	for i := uint16(0); i < nodeCount-1; i++ {
 		for j := i + 1; j < nodeCount; j++ {
@@ -458,12 +460,15 @@ func maxEdgesForDirectedAcyclicGraph(nodeCount uint16) uint {
 	return uint(nodeCount) * (uint(nodeCount) - 1) / 2
 }
 
-func randomDirectedCyclicGraph(nodeRange uint) string {
+func randomDirectedCyclicGraph(nodeCount uint) string {
 	result := new(strings.Builder)
 	// Produces a cyclic graph through a fixed RNG seed and sheer probability.
-	for range 100 * nodeRange {
-		x := rnd.UintN(nodeRange + 1)
-		y := rnd.UintN(nodeRange + 1)
+	for i := uint(0); i < nodeCount; i++ {
+		_, _ = fmt.Fprintln(result, i, i)
+	}
+	for range 100 * nodeCount {
+		x := rnd.UintN(nodeCount + 1)
+		y := rnd.UintN(nodeCount + 1)
 		_, _ = fmt.Fprintln(result, x, y)
 	}
 	return result.String()
@@ -473,66 +478,60 @@ func BenchmarkTsortAcyclicGraph(b *testing.B) {
 	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
 	benchmarkCases := []struct {
 		name         string
-		acyclicGraph func() string
+		acyclicGraph string
 	}{
 		{
-			name: "small sparse directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(10, maxEdgesForDirectedAcyclicGraph(10)/2)
-			},
+			name:         "small sparse directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(10, 0.1),
 		},
 		{
-			name: "small edgeless directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(10, 0)
-			},
+			name:         "small half-total-edges directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(10, 0.5),
 		},
 		{
-			name: "small tournament directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(10, maxEdgesForDirectedAcyclicGraph(10))
-			},
+			name:         "small edgeless directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(10, 0.0),
 		},
 		{
-			name: "medium sparse directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(100, maxEdgesForDirectedAcyclicGraph(100)/2)
-			},
+			name:         "small tournament directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(10, 1.0),
 		},
 		{
-			name: "medium edgeless directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(100, 0)
-			},
+			name:         "medium sparse directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(100, 0.1),
 		},
 		{
-			name: "medium tournament directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(100, maxEdgesForDirectedAcyclicGraph(100))
-			},
+			name:         "medium half-total-edges directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(100, 0.5),
 		},
 		{
-			name: "large sparse directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(1_000, maxEdgesForDirectedAcyclicGraph(1_000)/2)
-			},
+			name:         "medium edgeless directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(100, 0),
 		},
 		{
-			name: "large edgeless directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(1_000, 0)
-			},
+			name:         "medium tournament directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(100, 1.0),
 		},
 		{
-			name: "large tournament directed acyclic graph",
-			acyclicGraph: func() string {
-				return randomDirectedAcyclicGraph(1_000, maxEdgesForDirectedAcyclicGraph(1_000))
-			},
+			name:         "large sparse directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(1_000, 0.1),
+		},
+		{
+			name:         "large half-total-edges directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(1_000, 0.5),
+		},
+		{
+			name:         "large edgeless directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(1_000, 0.0),
+		},
+		{
+			name:         "large tournament directed acyclic graph",
+			acyclicGraph: randomDirectedAcyclicGraph(1_000, 1.0),
 		},
 	}
 	for _, bc := range benchmarkCases {
 		b.Run(bc.name, func(b *testing.B) {
-			g := bc.acyclicGraph()
+			g := bc.acyclicGraph
 			for b.Loop() {
 				err := run(strings.NewReader(g), io.Discard, io.Discard)
 				if err != nil {
@@ -547,31 +546,25 @@ func BenchmarkTsortCyclicGraph(b *testing.B) {
 	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
 	benchmarkCases := []struct {
 		name        string
-		cyclicGraph func() string
+		cyclicGraph string
 	}{
 		{
-			name: "small cyclic graph",
-			cyclicGraph: func() string {
-				return randomDirectedCyclicGraph(10)
-			},
+			name:        "small cyclic graph",
+			cyclicGraph: randomDirectedCyclicGraph(10),
 		},
 		{
-			name: "medium cyclic graph",
-			cyclicGraph: func() string {
-				return randomDirectedCyclicGraph(50)
-			},
+			name:        "medium cyclic graph",
+			cyclicGraph: randomDirectedCyclicGraph(50),
 		},
 		{
-			name: "large cyclic graph",
-			cyclicGraph: func() string {
-				return randomDirectedCyclicGraph(100)
-			},
+			name:        "large cyclic graph",
+			cyclicGraph: randomDirectedCyclicGraph(100),
 		},
 	}
 
 	for _, bc := range benchmarkCases {
 		b.Run(bc.name, func(b *testing.B) {
-			g := bc.cyclicGraph()
+			g := bc.cyclicGraph
 			for b.Loop() {
 				err := run(strings.NewReader(g), io.Discard, io.Discard)
 				if err != nil && !errors.Is(err, errNonFatal) {
@@ -580,6 +573,31 @@ func BenchmarkTsortCyclicGraph(b *testing.B) {
 			}
 		})
 	}
+}
+
+func BenchmarkStressTest(b *testing.B) {
+	b.Skipf("Fix testutils before re-enabling this, so we can skip in a vm")
+
+	// Stress test the implementation to make sure it can handle humongously
+	// deep graphs without crashing.
+	//
+	// WARNING: Consumes ~2GB of memory whilst running.
+	g := lineGraphFrom0To2000000()
+
+	for b.Loop() {
+		err := run(strings.NewReader(g), io.Discard, io.Discard)
+		if err != nil {
+			b.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
+func lineGraphFrom0To2000000() string {
+	result := new(strings.Builder)
+	for i := uint(0); i < 2_000_000; i++ {
+		_, _ = fmt.Fprintln(result, i, i+1)
+	}
+	return result.String()
 }
 
 func tempFile(t *testing.T, contents string) (file string) {
