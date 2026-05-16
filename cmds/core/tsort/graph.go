@@ -6,92 +6,77 @@ package main
 
 import (
 	"iter"
-	"maps"
+	"slices"
 )
+
+// nodeID is an efficient handle for a node that was added to a graph. nodeID
+// values are contiguous, in strictly increasing order and within the range of
+// [0..len(graph.nodeCount())].
+//
+// To get the original value associated with a nodeID, call
+// graph.valueFor(nodeID).
+type nodeID int32
 
 func newGraph() *graph {
 	return &graph{
-		nodeToData: make(map[string]*nodeData),
+		nodeToID:             make(map[string]nodeID),
+		idToNode:             make([]string, 0),
+		nodeIDToSuccessorIDs: make([][]nodeID, 0),
 	}
 }
 
 type graph struct {
-	nodeToData map[string]*nodeData
-}
-
-type nodeData struct {
-	inDegree   int
-	successors set
+	nodeToID             map[string]nodeID
+	idToNode             []string
+	nodeIDToSuccessorIDs [][]nodeID
 }
 
 func (g *graph) addNode(node string) {
-	if _, ok := g.nodeToData[node]; !ok {
-		g.nodeToData[node] = &nodeData{
-			inDegree:   0,
-			successors: makeSet(),
+	_ = g.addNodeInternal(node)
+}
+
+func (g *graph) addNodeInternal(node string) nodeID {
+	if id, ok := g.nodeToID[node]; ok {
+		return id
+	}
+
+	id := nodeID(len(g.idToNode))
+	g.nodeToID[node] = id
+	g.idToNode = append(g.idToNode, node)
+
+	g.nodeIDToSuccessorIDs = append(g.nodeIDToSuccessorIDs, nil)
+
+	return id
+}
+
+func (g *graph) putEdge(source, target string) {
+	sourceID := g.addNodeInternal(source)
+	targetID := g.addNodeInternal(target)
+
+	succs := g.nodeIDToSuccessorIDs[sourceID]
+	if !slices.Contains(succs, targetID) {
+		g.nodeIDToSuccessorIDs[sourceID] = append(succs, targetID)
+	}
+}
+
+func (g *graph) valueFor(id nodeID) string {
+	return g.idToNode[id]
+}
+
+func (g *graph) nodeCount() int {
+	return len(g.nodeIDToSuccessorIDs)
+}
+
+func (g *graph) nodeIDs() iter.Seq[nodeID] {
+	return func(yield func(nodeID) bool) {
+		for id := range len(g.idToNode) {
+			if !yield(nodeID(id)) {
+				return
+			}
 		}
 	}
 }
 
-func (g *graph) putEdge(source, target string) {
-	g.addNode(source)
-	g.addNode(target)
-
-	successors := g.nodeToData[source].successors
-	if !successors.has(target) {
-		successors.add(target)
-		g.nodeToData[target].inDegree++
-	}
-}
-
-func (g *graph) nodeCount() int {
-	return len(g.nodeToData)
-}
-
-func (g *graph) nodes() iter.Seq[string] {
-	return maps.Keys(g.nodeToData)
-}
-
-func (g *graph) inDegree(node string) int {
-	data, ok := g.nodeToData[node]
-	if !ok {
-		return 0
-	}
-	return data.inDegree
-}
-
-func (g *graph) successors(node string) iter.Seq[string] {
-	data, ok := g.nodeToData[node]
-	if !ok {
-		panic("node is not in graph")
-	}
-
-	return data.successors.all()
-}
-
-func (g *graph) removeNode(node string) {
-	if _, ok := g.nodeToData[node]; !ok {
-		panic("node is not in graph")
-	}
-
-	// In a general-purpose graph type, the predecessors and successors of
-	// the given node would need to be amended too. But this type only tracks
-	// in-degrees and successors, so it would take O(N) time to find all of the
-	// predecessors and amend them. Therefore, this method "cheats" and only
-	// removes the given node, which is good enough for tsort.
-	delete(g.nodeToData, node)
-}
-
-func (g *graph) removeEdge(source, target string) {
-	sourceData, ok := g.nodeToData[source]
-	if !ok {
-		panic("source node is not in graph")
-	}
-	targetData, ok := g.nodeToData[target]
-	if !ok {
-		panic("target node is not in graph")
-	}
-
-	sourceData.successors.remove(target)
-	targetData.inDegree--
+func (g *graph) successorIDs(id nodeID) []nodeID {
+	return g.nodeIDToSuccessorIDs[id]
 }
