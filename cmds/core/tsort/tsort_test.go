@@ -16,9 +16,6 @@ import (
 	"strings"
 	"testing"
 	"testing/iotest"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 var errDiskCrashed = errors.New("disk crashed")
@@ -169,13 +166,13 @@ func TestTsort(t *testing.T) {
 			gotErr := run(tt.stdin, stdout, stderr, tt.args...)
 
 			if !errors.Is(gotErr, tt.wantErr) {
-				t.Errorf(`run() gotErr = %q, want %q`, gotErr, tt.wantErr)
+				t.Errorf(`gotErr = %q, want %q`, gotErr, tt.wantErr)
 			}
 
 			gotStderr := stderr.String()
 			if gotStderr != tt.wantStderr {
 				t.Errorf(
-					"run() gotStderr = %q, want %q",
+					"gotStderr = %q, want %q",
 					gotStderr,
 					tt.wantStderr)
 			}
@@ -183,7 +180,7 @@ func TestTsort(t *testing.T) {
 			gotStdout := stdout.String()
 			if gotStdout != tt.wantStdout {
 				t.Errorf(
-					"run() gotStdout = %q, want %q",
+					"gotStdout = %q, want %q",
 					gotStdout,
 					tt.wantStdout)
 			}
@@ -198,17 +195,17 @@ func TestTsort(t *testing.T) {
 		gotErr := run(stdin, stdout, stderr, "non-existent-file")
 
 		if gotErr == nil || !strings.Contains(gotErr.Error(), "non-existent-file") {
-			t.Errorf(`run() gotErr = %q, want <nil>`, gotErr)
+			t.Errorf(`gotErr = %q, want <nil>`, gotErr)
 		}
 
 		gotStderr := stderr.String()
 		if len(gotStderr) > 0 {
-			t.Errorf(`run() gotStderr = %q, want empty string`, gotStderr)
+			t.Errorf(`gotStderr = %q, want empty string`, gotStderr)
 		}
 
 		gotStdout := stdout.String()
 		if len(gotStdout) > 0 {
-			t.Errorf("run() gotStdout = %q, want empty string", gotStdout)
+			t.Errorf("gotStdout = %q, want empty string", gotStdout)
 		}
 	})
 
@@ -246,21 +243,21 @@ func TestTsort(t *testing.T) {
 			//  b   c
 			//   \ /
 			//    d
-			// ...where edges are pointed downwards
+			// ...where edges are pointing downwards
 			name: "diamond: a b a c b d c d",
 			g:    "a b a c b d c d",
 		},
 		{
-			//    a     b      c
+			//    a     b      c  j
 			//   / \   / \     |
 			//  /   \ /   \    |
 			// d     e     f   g
 			//       |\   /
 			//       | \ /
 			//       h  i
-			// ...where edges are pointed downwards
-			name: "directed acyclic graph: a d a e b e b f e h e i f i c g",
-			g:    "a d a e b e b f e h e i f i c g",
+			// ...where edges are pointing downwards
+			name: "directed acyclic graph: a d a e b e b f e h e i f i c g j j",
+			g:    "a d a e b e b f e h e i f i c g j j",
 		},
 	}
 	for _, tt := range directedAcyclicGraphTests {
@@ -272,12 +269,11 @@ func TestTsort(t *testing.T) {
 			gotErr := run(stdin, stdout, stderr)
 
 			if gotErr != nil {
-				t.Errorf(`run() gotErr = %q, want <nil>`, gotErr)
+				t.Errorf(`gotErr = %q, want <nil>`, gotErr)
 			}
 
-			gotStderr := stderr.String()
-			if gotStderr != "" {
-				t.Errorf(`run() gotStderr = %q, want ""`, gotStderr)
+			if gotStderr := stderr.String(); gotStderr != "" {
+				t.Errorf(`gotStderr = %q, want ""`, gotStderr)
 			}
 
 			checkValidTopologicalOrdering(t, tt.g, stdout)
@@ -345,13 +341,13 @@ func TestTsort(t *testing.T) {
 			gotErr := run(stdin, stdout, stderr)
 
 			if !errors.Is(gotErr, errNonFatal) {
-				t.Errorf(`run() gotErr = %q, want %q`, gotErr, errNonFatal)
+				t.Errorf(`gotErr = %q, want %q`, gotErr, errNonFatal)
 			}
 
 			gotStderr := stderr.String()
 			if !slices.Contains(tt.wantStderrAnyOf, gotStderr) {
 				t.Errorf(
-					"run() gotStderr = %q, want any of %q",
+					"gotStderr = %q, want any of %q",
 					gotStderr,
 					tt.wantStderrAnyOf)
 			}
@@ -359,58 +355,78 @@ func TestTsort(t *testing.T) {
 			gotStdout := stdout.String()
 			if !slices.Contains(tt.wantStdoutAnyOf, gotStdout) {
 				t.Errorf(
-					"run() gotStdout = %q, want any of %q",
+					"gotStdout = %q, want any of %q",
 					gotStdout,
 					tt.wantStdoutAnyOf)
 			}
 		})
 	}
 
-	t.Run("stdin: diamond and cycle: a b a c b d c d b e e f f b", func(t *testing.T) {
-		stdin := strings.NewReader("a b a c b d c d b e e f f b")
-		stdout := new(strings.Builder)
-		stderr := new(strings.Builder)
+	directedGraphWithCycleTests := []struct {
+		name                     string
+		g                        string
+		wantStdoutToRespectEdges []edge
+		wantStderrAnyOf          []string
+	}{
+		{
+			//    a
+			//   / \
+			//  b   c
+			//  |\  |
+			//  | \ |
+			//  |   d
+			//  e
+			//  |
+			//  f--->b (cycle back)
+			// ...where vertical edges are pointing downwards
+			name:                     "stdin: diamond and cycle: a b a c b d c d b e e f f b",
+			g:                        "a b a c b d c d b e e f f b",
+			wantStdoutToRespectEdges: []edge{{"a", "b"}, {"a", "c"}, {"b", "d"}, {"c", "d"}},
+			wantStderrAnyOf:          cycleBEFInAnyRotation(),
+		},
+		{
+			//    a
+			//   / \
+			//  b   f
+			//  |
+			//  c--->a (cycle back)
+			//  |\
+			//  d e
+			// ...where vertical edges are pointing downwards
+			name:                     "stdin: directed graph with cycle: a b b c c a c d c e a f",
+			g:                        "a b b c c a c d c e a f",
+			wantStdoutToRespectEdges: []edge{{"a", "f"}, {"c", "d"}, {"c", "e"}},
+			wantStderrAnyOf:          cycleABCInAnyRotation(),
+		},
+	}
+	for _, tt := range directedGraphWithCycleTests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdin := strings.NewReader(tt.g)
+			stdout := new(strings.Builder)
+			stderr := new(strings.Builder)
 
-		gotErr := run(stdin, stdout, stderr)
+			gotErr := run(stdin, stdout, stderr)
 
-		if !errors.Is(gotErr, errNonFatal) {
-			t.Errorf(`run() gotErr = %q, want %q`, gotErr, errNonFatal)
-		}
-
-		gotStderr := stderr.String()
-		wantStderrAnyOf := cycleBEFInAnyRotation()
-		if !slices.Contains(wantStderrAnyOf, gotStderr) {
-			t.Errorf(
-				"run() gotStderr = %q, want any of %q",
-				gotStderr,
-				wantStderrAnyOf)
-		}
-
-		gotStdout := stdout.String()
-		fields := strings.Fields(gotStdout)
-		if len(fields) != 6 {
-			t.Errorf(
-				`topological ordering invalid: want 6 elements, got %d elements: %q`,
-				len(fields), gotStdout)
-		}
-		for _, e := range []edge{{"a", "b"}, {"a", "c"}, {"b", "d"}, {"c", "d"}} {
-			if slices.Index(fields, e.source) >= slices.Index(fields, e.target) {
-				t.Errorf(
-					`gotStdout %q: topological ordering invalid: %v is not before %v`,
-					gotStdout, e.source, e.target)
+			if !errors.Is(gotErr, errNonFatal) {
+				t.Errorf("gotErr = %q, want %q", gotErr, errNonFatal)
 			}
-		}
-		if !slices.Contains(fields, "e") {
-			t.Errorf(
-				`gotStdout %q: topological ordering invalid: did not contain "e"`,
-				gotStdout)
-		}
-		if !slices.Contains(fields, "f") {
-			t.Errorf(
-				`gotStdout %q: topological ordering invalid: did not contain "f"`,
-				gotStdout)
-		}
-	})
+
+			gotStderr := stderr.String()
+			if !slices.Contains(tt.wantStderrAnyOf, gotStderr) {
+				t.Errorf(
+					"gotStderr = %q, want any of %q",
+					gotStderr,
+					tt.wantStderrAnyOf)
+			}
+
+			checkValidSoftTopologicalOrdering(
+				t,
+				tt.g,
+				stdout,
+				tt.wantStdoutToRespectEdges,
+			)
+		})
+	}
 }
 
 var (
@@ -736,6 +752,15 @@ func checkValidTopologicalOrdering(
 	graph string,
 	topologicalOrdering fmt.Stringer,
 ) {
+	checkValidSoftTopologicalOrdering(t, graph, topologicalOrdering, edges(graph))
+}
+
+func checkValidSoftTopologicalOrdering(
+	t *testing.T,
+	graph string,
+	topologicalOrdering fmt.Stringer,
+	shouldRespectEdges []edge,
+) {
 	graphNodes := nodes(graph)
 	topoNodes := strings.Fields(topologicalOrdering.String())
 
@@ -749,9 +774,13 @@ func checkValidTopologicalOrdering(
 		t.Errorf("topological ordering has duplicates: %q", topoNodes)
 	}
 
-	for _, e := range edges(graph) {
-		if slices.Index(topoNodes, e.source) >=
-			slices.Index(topoNodes, e.target) {
+	positions := make(map[string]int, len(topoNodes))
+	for i, node := range topoNodes {
+		positions[node] = i
+	}
+
+	for _, e := range shouldRespectEdges {
+		if positions[e.source] >= positions[e.target] {
 			t.Errorf(
 				"topological ordering invalid: %q is not before %q",
 				e.source, e.target)
@@ -760,18 +789,8 @@ func checkValidTopologicalOrdering(
 }
 
 func nodes(graph string) []string {
-	fields := strings.Fields(graph)
-	s := makeSet()
-
-	var result []string
-	for _, value := range fields {
-		if !s.has(value) {
-			s.add(value)
-			result = append(result, value)
-		}
-	}
-
-	return result
+	result := slices.Sorted(strings.FieldsSeq(graph))
+	return slices.Compact(result)
 }
 
 type edge struct {
@@ -781,16 +800,16 @@ type edge struct {
 
 func edges(graph string) []edge {
 	var result []edge
-	nodes := strings.Fields(graph)
-	for i := 0; i < len(nodes); i += 2 {
-		result = append(result, edge{source: nodes[i], target: nodes[i+1]})
+	ns := strings.Fields(graph)
+	for i := 0; i < len(ns); i += 2 {
+		if ns[i] == ns[i+1] {
+			// skip self-loop edges like 'edge{"a", "a"}', because tsort
+			// treats them as single nodes rather than proper edges.
+			continue
+		}
+		result = append(result, edge{source: ns[i], target: ns[i+1]})
 	}
 	return result
-}
-
-func orderInsensitiveDiff(a []string, b []string) string {
-	return cmp.Diff(
-		a, b, cmpopts.SortSlices(func(x, y string) bool { return x < y }))
 }
 
 func hasDuplicates(values []string) bool {
