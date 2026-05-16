@@ -466,7 +466,6 @@ func randomDirectedAcyclicGraph(nodeCount uint16, edgeCountRatio float64) string
 			index++
 		}
 	}
-
 	return result.String()
 }
 
@@ -646,7 +645,7 @@ func bcdInAnyOrder() []string {
 		"c\nb\nd\n",
 		"c\nd\nb\n",
 		"d\nb\nc\n",
-		"d\nc\nd\n",
+		"d\nc\nb\n",
 	}
 }
 
