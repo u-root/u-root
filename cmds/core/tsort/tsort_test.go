@@ -454,7 +454,7 @@ func randomDirectedAcyclicGraph(nodeCount uint16, edgeCountRatio float64) string
 	})
 
 	result := new(strings.Builder)
-	for i := uint16(0); i < nodeCount; i++ {
+	for i := range nodeCount {
 		_, _ = fmt.Fprintln(result, i, i)
 	}
 	index := 0
@@ -478,7 +478,7 @@ func maxEdgesForDirectedAcyclicGraph(nodeCount uint16) uint {
 func randomDirectedCyclicGraph(nodeCount uint) string {
 	result := new(strings.Builder)
 	// Produces a cyclic graph through a fixed RNG seed and sheer probability.
-	for i := uint(0); i < nodeCount; i++ {
+	for i := range nodeCount {
 		_, _ = fmt.Fprintln(result, i, i)
 	}
 	for range 100 * nodeCount {
@@ -609,7 +609,7 @@ func BenchmarkStressTest(b *testing.B) {
 
 func lineGraphFrom0To2000000() string {
 	result := new(strings.Builder)
-	for i := uint(0); i < 2_000_000; i++ {
+	for i := range uint(2_000_000) {
 		_, _ = fmt.Fprintln(result, i, i+1)
 	}
 	return result.String()
@@ -812,12 +812,12 @@ func edges(graph string) []edge {
 }
 
 func hasDuplicates(values []string) bool {
-	s := makeSet()
+	s := make(map[string]struct{})
 	for _, value := range values {
-		if s.has(value) {
+		if _, ok := s[value]; ok {
 			return true
 		}
-		s.add(value)
+		s[value] = struct{}{}
 	}
 	return false
 }

@@ -5,11 +5,17 @@
 package main
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"cmp"
+
+	gocmp "github.com/google/go-cmp/cmp"
+	gocmpopts "github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func orderInsensitiveDiff(a []string, b []string) string {
-	return cmp.Diff(
-		a, b, cmpopts.SortSlices(func(x, y string) bool { return x < y }))
+func orderInsensitiveDiff[T cmp.Ordered](a []T, b []T) string {
+	return gocmp.Diff(
+		a,
+		b,
+		gocmpopts.SortSlices(func(x, y T) bool { return x < y }),
+		gocmpopts.EquateEmpty(),
+	)
 }
