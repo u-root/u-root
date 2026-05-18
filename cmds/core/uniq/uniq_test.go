@@ -10,6 +10,7 @@ import (
 	"log"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func TestUniq(t *testing.T) {
@@ -67,7 +68,7 @@ func TestUniq(t *testing.T) {
 			name:   "file 2 uniques == true",
 			args:   []string{"testdata/file2.txt"},
 			unique: true,
-			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n\n",
+			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n",
 		},
 		{
 			name:       "file 2 duplicates == true",
@@ -82,7 +83,37 @@ func TestUniq(t *testing.T) {
 			want:       "u-root\nuniq\nron\nteam\nbinaries\ntest\n\n",
 		},
 		{
-			name:   "no args given use stdin",
+			name:    "error reading from stdin 1",
+			args:    nil,
+			wantErr: iotest.ErrTimeout.Error(),
+			stdin:   iotest.ErrReader(iotest.ErrTimeout),
+		},
+		{
+			name:    "error reading from stdin 2",
+			args:    nil,
+			wantErr: iotest.ErrTimeout.Error(),
+			stdin:   io.MultiReader(strings.NewReader("go\n"), iotest.ErrReader(iotest.ErrTimeout)),
+		},
+		{
+			name:  "stdin empty input",
+			args:  nil,
+			want:  "",
+			stdin: strings.NewReader(""),
+		},
+		{
+			name:  "stdin one string",
+			args:  nil,
+			want:  "go\n",
+			stdin: strings.NewReader("go\n"),
+		},
+		{
+			name:  "stdin three identical strings",
+			args:  nil,
+			want:  "go\n",
+			stdin: strings.NewReader("go\ngo\ngo\n"),
+		},
+		{
+			name:   "stdin and unique",
 			args:   nil,
 			unique: true,
 			stdin:  strings.NewReader("go\nu-root\ngo\ngo\ngo\n"),
@@ -103,6 +134,9 @@ func TestUniq(t *testing.T) {
 					t.Errorf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
 				}
 			} else {
+				if len(tt.wantErr) > 0 {
+					t.Errorf("runUniq() = <nil>, want %q", tt.wantErr)
+				}
 				if buf.String() != tt.want {
 					t.Errorf("runUniq() = %q, want %q", buf.String(), tt.want)
 				}
