@@ -53,61 +53,62 @@ var (
 // var fnum = flag.Int("f", 0, "ignore num fields from beginning of line")
 // var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
 
-func uniq(r io.Reader, w io.Writer, unique, duplicates, count bool, equal func(a, b []byte) bool) {
-	br := bufio.NewReader(r)
+func shouldPrint(unique, duplicates bool, cnt int) bool {
+	if unique && cnt > 1 {
+		return false
+	}
+	if duplicates && cnt == 1 {
+		return false
+	}
+	return true
+}
 
-	var err error
-	var oline, line []byte
-	cnt := 1
-	isLast := false
-	for {
-		line, err = br.ReadBytes('\n')
-		line = bytes.TrimSuffix(line, []byte{'\n'})
-		if err == io.EOF {
-			isLast = true
-		} else if err != nil {
-			log.Printf("Can't read the %v line of %v file: %v", line, r, err)
-		}
-		if oline == nil {
-			oline = line
-			continue
-		}
-		if !equal(line, oline) {
-			if count {
-				fmt.Fprintf(w, "%d\t%s\n", cnt, oline)
-				goto skip
-			}
-			if cnt > 1 && unique {
-				goto skip
-			}
-			if cnt == 1 && duplicates {
-				goto skip
-			}
-			fmt.Fprintf(w, "%s\n", oline)
-		skip:
-			oline = line
-			cnt = 1
-		} else {
-			cnt++
-		}
-		if isLast {
-			break
-		}
-	}
-	if cnt == 1 && duplicates {
-		return
-	}
-	if len(line) == 0 && cnt == 1 {
-		return
-	}
+func printLine(w io.Writer, line []byte, count bool, cnt int) {
 	if count {
-		if len(line) == 0 {
-			cnt--
-		}
-		fmt.Fprintf(w, "%d\t%s\n", cnt, line)
-		return
+		_, _ = fmt.Fprintf(w, "%d\t%s\n", cnt, line)
+	} else {
+		_, _ = fmt.Fprintf(w, "%s\n", line)
 	}
-	fmt.Fprintf(w, "%s\n", line)
+}
+
+func uniq(r io.Reader, w io.Writer, unique, duplicates, count bool, equal func(a, b []byte) bool) error {
+	bs := bufio.NewScanner(r)
+
+	if !bs.Scan() {
+		return bs.Err()
+	}
+	prevLine := bytes.Clone(bs.Bytes())
+	cnt := 1
+
+	for bs.Scan() {
+		line := bytes.Clone(bs.Bytes())
+		if equal(line, prevLine) {
+			cnt++
+		} else {
+			if shouldPrint(unique, duplicates, cnt) {
+				printLine(w, prevLine, count, cnt)
+			}
+			cnt = 1
+			prevLine = line
+		}
+	}
+	if err := bs.Err(); err != nil {
+		return err
+	}
+
+	if shouldPrint(unique, duplicates, cnt) {
+		printLine(w, prevLine, count, cnt)
+	}
+	return nil
+}
+
+func runOnFile(fn string, stdout io.Writer, unique bool, duplicates bool, count bool, eq func(a []byte, b []byte) bool) error {
+	f, err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return uniq(f, stdout, unique, duplicates, count, eq)
 }
 
 func run(stdin io.Reader, stdout io.Writer, unique, duplicates, count, ignoreCase bool, args []string) error {
@@ -118,17 +119,13 @@ func run(stdin io.Reader, stdout io.Writer, unique, duplicates, count, ignoreCas
 		eq = bytes.Equal
 	}
 	if len(args) == 0 {
-		uniq(stdin, stdout, unique, duplicates, count, eq)
-		return nil
+		return uniq(stdin, stdout, unique, duplicates, count, eq)
 	}
 	for _, fn := range args {
-		f, err := os.Open(fn)
+		err := runOnFile(fn, stdout, unique, duplicates, count, eq)
 		if err != nil {
-			log.Printf("open %s: %v\n", fn, err)
 			return err
 		}
-		uniq(f, stdout, unique, duplicates, count, eq)
-		f.Close()
 	}
 	return nil
 }
