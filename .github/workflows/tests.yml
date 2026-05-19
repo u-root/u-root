@@ -46,7 +46,7 @@ jobs:
       GOARM: ${{ matrix.goarm }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup Go ${{ matrix.go-version }}
         uses: actions/setup-go@v5
         with:
