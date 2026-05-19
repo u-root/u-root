@@ -1,0 +1,38 @@
+[
+  {
+    "cmdline": "iso-scan/filename=/kubuntu-25.10-desktop-amd64.iso --- quiet splash",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/kubuntu-25.10-desktop-amd64/casper/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/kubuntu-25.10-desktop-amd64/casper/vmlinuz"
+    },
+    "name": "[kubuntu-25.10-desktop-amd64.iso] Try or Install Kubuntu",
+    "rank": "0"
+  },
+  {
+    "cmdline": "nomodeset iso-scan/filename=/kubuntu-25.10-desktop-amd64.iso --- quiet splash",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/kubuntu-25.10-desktop-amd64/casper/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/kubuntu-25.10-desktop-amd64/casper/vmlinuz"
+    },
+    "name": "[kubuntu-25.10-desktop-amd64.iso] Kubuntu (safe graphics)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "iso-scan/filename=/kubuntu-25.10-desktop-amd64.iso --- quiet splash oem-config/enable=true",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/kubuntu-25.10-desktop-amd64/casper/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/kubuntu-25.10-desktop-amd64/casper/vmlinuz"
+    },
+    "name": "[kubuntu-25.10-desktop-amd64.iso] OEM install (for manufacturers)",
+    "rank": "0"
+  }
+]

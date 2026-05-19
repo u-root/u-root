@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 
@@ -96,9 +95,10 @@ func mkdir(stdout, stderr io.Writer, args []string) error {
 		createMode |= os.ModeSetuid
 	}
 
+	var errs error
 	for _, name := range fs.Args() {
 		if err := fm(name, createMode); err != nil {
-			fmt.Fprintf(stderr, "%v: %v\n", name, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 		if f.verbose {
@@ -108,11 +108,12 @@ func mkdir(stdout, stderr io.Writer, args []string) error {
 			os.Chmod(name, createMode)
 		}
 	}
-	return nil
+	return errs
 }
 
 func main() {
 	if err := mkdir(os.Stdout, os.Stderr, os.Args[1:]); err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 }

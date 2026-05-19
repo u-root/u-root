@@ -31,6 +31,7 @@ type LinuxImage struct {
 	BootRank    int
 	LoadSyscall bool
 	DTB         io.ReaderAt
+	Env         map[string]string
 
 	// ReservedRanges are additional physical memory pieces that will be
 	// avoided when allocating kexec segments. Only used for LoadSyscall.

@@ -61,3 +61,28 @@ func TestHelloWorldNegative(t *testing.T) {
 		t.Errorf("Wait: %v", err)
 	}
 }
+
+// TestSluinitWithUnexpectedUinitArgs tests that sluinit does not fall into a kernel panic.
+func TestSluinitWithUnexpectedUinitArgs(t *testing.T) {
+	vm := qemu.StartT(t, "vm", qemu.ArchUseEnvv,
+		quimage.WithUimageT(t,
+			uimage.WithInit("init"),
+			uimage.WithUinit("sluinit"),
+			uimage.WithBusyboxCommands(
+				"github.com/u-root/u-root/cmds/core/sluinit",
+				"github.com/u-root/u-root/cmds/core/init",
+			),
+		),
+		qemu.WithAppendKernel("uroot.uinitargs=\"x y\""),
+		qemu.WithVMTimeout(time.Minute),
+		qcoverage.CollectKernelCoverage(t),
+	)
+
+	// Expect that it does NOT panic.
+	if _, err := vm.Console.ExpectString("Kernel panic"); err == nil {
+		t.Error(`unexpected kernel panic found`)
+	}
+
+	// Since no shell is configured, vm will fall into a reboot loop and eventually time out.
+	vm.Wait()
+}

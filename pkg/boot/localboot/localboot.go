@@ -13,6 +13,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot/bls"
 	"github.com/u-root/u-root/pkg/boot/esxi"
 	"github.com/u-root/u-root/pkg/boot/grub"
+	"github.com/u-root/u-root/pkg/boot/iso"
 	"github.com/u-root/u-root/pkg/boot/syslinux"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
@@ -47,6 +48,12 @@ func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mo
 		l.Printf("No syslinux configs found on %s: %v", device, err)
 	}
 	imgs = append(imgs, syslinuxImgs...)
+
+	isoImgs, err := iso.ParseISOFiles(l, mountDir, device, mountPool)
+	if err == nil {
+		l.Printf("Found %d bootable ISO configs on %s", len(isoImgs), device)
+	}
+	imgs = append(imgs, isoImgs...)
 
 	return imgs
 }
