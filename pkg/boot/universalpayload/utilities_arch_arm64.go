@@ -23,7 +23,7 @@ func addrOfStart() uintptr
 func addrOfStackTop() uintptr
 func addrOfHobAddr() uintptr
 
-func getPhysicalAddressSizes() (uint8, error) {
+func (u *UPL) getPhysicalAddressSizes() (uint8, error) {
 	// Return hardcode for arm64
 	// Please update to actual physical address size
 	physicalAddrSize := os.Getenv("UROOT_PHYS_ADDR_SIZE")
@@ -41,7 +41,7 @@ func getPhysicalAddressSizes() (uint8, error) {
 // Due to lack of support to set value of Registers in kexec,
 // bootloader parameter needs to be prepared in trampoline code.
 // Also stack is prepared in trampoline code snippet to ensure no data leak.
-func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
+func (u *UPL) constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	ptrToSlice := func(ptr uintptr, size int) []byte {
 		var data []byte
 
@@ -74,7 +74,11 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	// trampoline entry point, boot environment which is constructed
 	// for UPL will be overwritten by trampoline code.
 	stackOffset := trampStack & 0xFFF
-	gapLen := stackOffset - (trampStack - trampBegin)
+	codeSize := trampStack - trampBegin
+	if stackOffset < codeSize {
+		return nil
+	}
+	gapLen := stackOffset - codeSize
 	buf = padWithLength(buf, uint64(gapLen))
 
 	appendUint64 := func(slice []uint8, value uint64) []uint8 {
@@ -86,10 +90,10 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 	padLen := uint64(trampHob - trampStack - 8)
 
 	// Update temporary stack top
-	buf = appendUint64(buf, addr+trampolineOffset)
+	buf = appendUint64(buf, addr+u.trampolineOffset)
 	buf = padWithLength(buf, padLen)
 	// Update FDT DTB info address
-	buf = appendUint64(buf, addr+fdtDtbOffset)
+	buf = appendUint64(buf, addr+u.fdtDtbOffset)
 	buf = padWithLength(buf, padLen)
 	buf = appendUint64(buf, entry)
 
@@ -97,7 +101,7 @@ func constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint8 {
 }
 
 // Get the base address and data from RDSP table
-func archGetAcpiRsdpData() (uint64, []byte, error) {
+func (u *UPL) archGetAcpiRsdpData() (uint64, []byte, error) {
 	// Finds the RSDP in the EFI System Table.
 	file, err := os.Open("/sys/firmware/efi/systab")
 	if err != nil {
@@ -137,7 +141,7 @@ func archGetAcpiRsdpData() (uint64, []byte, error) {
 // Peripheral subsystems section from Arm BSA [4]. "
 // Due to limitation of memoryMapFromIOMem, memory region of UART device cannot
 // be parsed, we append memory region of UART device here.
-func appendUARTMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
+func (u *UPL) appendUARTMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
 	f, err := os.Open("/proc/iomem")
 	if err != nil {
 		return 0
@@ -194,10 +198,10 @@ func appendUARTMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
 	return 0
 }
 
-func appendAddonMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
-	return appendUARTMemMap(memMapHOB)
+func (u *UPL) appendAddonMemMap(memMapHOB *EFIMemoryMapHOB) uint64 {
+	return u.appendUARTMemMap(memMapHOB)
 }
 
-func isMemReserved(memType string) bool {
+func (u *UPL) isMemReserved(memType string) bool {
 	return false
 }
