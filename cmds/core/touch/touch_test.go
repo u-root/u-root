@@ -6,6 +6,7 @@ package main
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -90,63 +91,64 @@ func TestParseParams(t *testing.T) {
 	}
 }
 
-var tests = []struct {
-	runErr     error
-	commandErr error
-	name       string
-	p          params
-	args       []string
-	fileArgs   []string
-}{
-	{
-		name:     "create is true, no new files created",
-		args:     []string{"touch", "-amc"},
-		fileArgs: []string{"a1", "a2"},
-		p: params{
-			access:       true,
-			modification: true,
-			create:       true,
-			time:         time.Now(),
-		},
-	},
-	{
-		name:     "create is false, files should be created",
-		args:     []string{"touch", "-a", "-m"},
-		fileArgs: []string{"a1", "a2"},
-		p: params{
-			access:       true,
-			modification: true,
-			create:       false,
-			time:         time.Now(),
-		},
-	},
-	{
-		name:     "no such file or directory",
-		args:     []string{"touch"},
-		fileArgs: []string{"no/such/file/or/direcotry"},
-		p: params{
-			create: false,
-			time:   time.Now(),
-		},
-		runErr: os.ErrNotExist,
-	},
-	{
-		name: "no such file or directory",
-		args: []string{"touch"},
-		p: params{
-			create: false,
-			time:   time.Now(),
-		},
-		commandErr: errNoFiles,
-	},
-}
-
 func TestTouchEmptyDir(t *testing.T) {
+	ts := "2021-01-01T00:00:00Z"
+	datetimeArg, _ := time.Parse(time.RFC3339, ts)
+
+	var tests = []struct {
+		runErr     error
+		commandErr error
+		name       string
+		p          params
+		args       []string
+		fileArgs   []string
+	}{
+		{
+			name:     "create is true, no new files created",
+			args:     []string{"touch", "-amc", "-d", ts},
+			fileArgs: []string{"a1", "a2"},
+			p: params{
+				access:       true,
+				modification: true,
+				create:       true,
+				time:         datetimeArg,
+			},
+		},
+		{
+			name:     "create is false, files should be created",
+			args:     []string{"touch", "-a", "-m", "-d", ts},
+			fileArgs: []string{"a1", "a2"},
+			p: params{
+				access:       true,
+				modification: true,
+				create:       false,
+				time:         datetimeArg,
+			},
+		},
+		{
+			name:     "no such file or directory",
+			args:     []string{"touch"},
+			fileArgs: []string{"no/such/file/or/direcotry"},
+			p: params{
+				create: false,
+			},
+			runErr: os.ErrNotExist,
+		},
+		{
+			name: "no such file or directory",
+			args: []string{"touch"},
+			p: params{
+				create: false,
+			},
+			commandErr: errNoFiles,
+		},
+	}
+
 	for _, test := range tests {
 		temp := t.TempDir()
 		var fileArgs []string
 		for _, arg := range test.fileArgs {
-			fileArgs = append(fileArgs, temp+arg)
+			fileArgs = append(fileArgs, filepath.Join(temp, arg))
 		}
 
 		c, err := command(append(test.args, fileArgs...)...)
