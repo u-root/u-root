@@ -14,6 +14,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/liner"
@@ -42,6 +43,21 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 		input.SetCompleter(autocompleteLiner(parser))
 		input.SetTabCompletionStyle(liner.TabPrints)
 	}
+
+	// The following code is used to intercept SIGINT signals.
+	// Calling signal.Ignore wouldn't work as child processes inherit this trait.
+	// We only want to catch SIGINTs that are propagated from a child,
+	// the child itself should get the signal as per usual.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	defer func() {
+		signal.Stop(ch)
+		close(ch)
+	}()
+	go func(ch chan os.Signal) {
+		for range ch {
+		}
+	}(ch)
 
 	var runErr error
 	for {

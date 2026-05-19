@@ -35,6 +35,7 @@ func TestMkdir(t *testing.T) {
 			flags:    []string{"-m", "755"},
 			args:     []string{filepath.Join(d, "stub0")},
 			wantMode: "drwxr-xr-x",
+			err:      os.ErrExist,
 		},
 		{
 			name:     "Create 1 directory verbose",
