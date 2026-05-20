@@ -5,6 +5,7 @@
 package hsskey
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
@@ -104,27 +105,40 @@ func getHssEepromPaths(basePatterns []string, busDevicePattern string) ([]string
 // Each HSS key is 64 bytes long and has a checksum for validation.
 func ReadHssFromFile(filePath string, minHssPerFile int) ([][]byte, error) {
 	minValidLen := hostSecretSeedStructSize * minHssPerFile
-	data, err := os.ReadFile(filePath)
+
+	f, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %w", err)
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	// Limit reading to max bytes we care about (256) + 1 extra byte to detect if it's larger.
+	maxLen := hostSecretSeedCount * hostSecretSeedStructSize
+	limitReader := io.LimitReader(f, int64(maxLen+1))
+	data, err := io.ReadAll(limitReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	if len(data) < minValidLen {
-		return nil, fmt.Errorf("file size %d is less than expected", len(data))
+		return nil, fmt.Errorf("file size %d is less than minimum required %d", len(data), minValidLen)
 	}
-	if len(data) > minValidLen {
+	if minHssPerFile > 0 && len(data) > minValidLen {
 		log.Printf("Expecting %d bytes but got more %d bytes", minValidLen, len(data))
 	}
 
+	b := bytes.NewReader(data)
 	var hssList [][]byte
 	for i := range hostSecretSeedCount {
-		start := i * hostSecretSeedStructSize
-		end := start + hostSecretSeedStructSize
-		hssKey := data[start:end]
+		hssKey := make([]byte, hostSecretSeedStructSize)
+		n, err := b.Read(hssKey)
+		if err == io.EOF || n < hostSecretSeedStructSize {
+			break
+		}
 
 		// Verify the checksums.
 		if !validateChecksum(hssKey) {
-			log.Printf("Checksum validation failed for HSS key at offset %d", start)
+			log.Printf("Checksum validation failed for HSS key at offset %d", i*hostSecretSeedStructSize)
 			continue
 		}
 		hssList = append(hssList, hssKey[:hostSecretSeedLen])
