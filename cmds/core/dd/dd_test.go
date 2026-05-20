@@ -523,6 +523,34 @@ func TestFiles(t *testing.T) {
 	}
 }
 
+func TestFilesSameInputOutputNotrunc(t *testing.T) {
+	tmpDir := t.TempDir()
+	dataFile := filepath.Join(tmpDir, "dataFile")
+	if err := os.WriteFile(dataFile, []byte("abbbbbbbbbb"), 0o666); err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{
+		"if=" + dataFile,
+		"of=" + dataFile,
+		"conv=notrunc",
+		"seek=1",
+		"bs=1",
+		"count=10",
+	}
+	if err := run(&bytes.Buffer{}, &ws{Writer: io.Discard}, &ws{Writer: io.Discard}, "dd", args); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := os.ReadFile(dataFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []byte("aaaaaaaaaaa"); !reflect.DeepEqual(want, got) {
+		t.Errorf("run(if=of conv=notrunc seek=1 bs=1 count=10) = %q; want %q", got, want)
+	}
+}
+
 type testBS struct {
 	name string
 	dat  *bytes.Buffer
