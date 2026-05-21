@@ -99,11 +99,7 @@ func checkDebugFlag() {
 
 	flag.Parse()
 
-	if flag.NArg() > 1 {
-		log.Fatal("Incorrect number of arguments")
-	}
-
-	if *slDebug {
+	if slDebug != nil && *slDebug {
 		slaunch.Debug = log.Printf
 		slaunch.Debug("debug flag is set. Logging Enabled.")
 	}

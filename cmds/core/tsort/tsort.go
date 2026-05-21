@@ -1,4 +1,4 @@
-// Copyright 2012-2024 the u-root Authors. All rights reserved
+// Copyright 2012-2026 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -58,13 +58,12 @@
 package main
 
 import (
+	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"slices"
-	"strings"
 )
 
 var (
@@ -78,69 +77,57 @@ func run(
 	stderr io.Writer,
 	args ...string,
 ) error {
+	out := bufio.NewWriter(stdout)
+	defer out.Flush()
+	werr := bufio.NewWriter(stderr)
+	defer werr.Flush()
+
 	var err error
 	in := io.NopCloser(stdin)
 	if len(args) >= 1 {
-		in, err = os.Open(args[0])
-		if err != nil {
+		if in, err = os.Open(args[0]); err != nil {
 			return err
 		}
 	}
 	defer in.Close()
 
-	var buf strings.Builder
-	_, err = io.Copy(&buf, in)
-	if err != nil {
-		return err
-	}
-
 	g := newGraph()
-
-	if err = parseInto(buf.String(), g); err != nil {
+	if err = parseInto(in, g); err != nil {
 		return err
 	}
 
 	topologicalOrdering(
 		g,
-		func(node string) {
-			fmt.Fprintf(stdout, "%v\n", node)
+		func(node nodeID) {
+			_, _ = out.WriteString(g.valueFor(node))
+			_ = out.WriteByte('\n')
 		},
-		func(cycle []string) {
-			fmt.Fprintf(stderr, "tsort: %v\n", "cycle in data")
+		func(cycle []nodeID) {
+			_, _ = werr.WriteString("tsort: cycle in data\n")
 			for _, node := range cycle {
-				fmt.Fprintf(stderr, "tsort: %v\n", node)
+				_, _ = werr.WriteString("tsort: ")
+				_, _ = werr.WriteString(g.valueFor(node))
+				_ = werr.WriteByte('\n')
 			}
 			err = errNonFatal
 		})
 	return err
 }
 
-func parseInto(buf string, g *graph) error {
-	fields := strings.Fields(buf)
-	var i int
-	var odd bool
+func parseInto(in io.Reader, g *graph) error {
+	scanner := bufio.NewScanner(in)
+	scanner.Split(bufio.ScanWords)
 
-	next := func() (string, bool) {
-		if i == len(fields) {
-			return "", false
-		}
-		odd = !odd
-		result := fields[i]
-		i++
-		return result, true
-	}
-
-	for {
-		a, ok := next()
-		if !ok {
-			break
+	for scanner.Scan() {
+		a := scanner.Text()
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				return err
+			}
+			return errOddDataCount
 		}
 
-		b, ok := next()
-		if !ok {
-			break
-		}
-
+		b := scanner.Text()
 		if a == b {
 			g.addNode(a)
 		} else {
@@ -148,115 +135,66 @@ func parseInto(buf string, g *graph) error {
 		}
 	}
 
-	if odd {
-		return errOddDataCount
-	}
-
-	return nil
+	return scanner.Err()
 }
 
 func topologicalOrdering(
 	g *graph,
-	f func(node string),
-	cycles func(cycle []string),
+	f func(node nodeID),
+	cycles func(cycle []nodeID),
 ) {
-	for {
-		// Kahn's algorithm
-		var result []string
-		roots := rootsOf(g)
-		nonRoots := nonRootsOf(g)
-		for !roots.isEmpty() {
-			next := roots.dequeue()
-			result = append(result, next)
-			for succ := range g.successors(next) {
-				nonRoots.removeOne(succ)
-				if !nonRoots.has(succ) {
-					roots.enqueue(succ)
-				}
-			}
-		}
-		if nonRoots.isEmpty() {
-			// No cycles left
-			for _, value := range result {
-				f(value)
-			}
-			break
-		}
+	// A topological ordering algorithm based on the depth-first search
+	// algorithm in "Introduction to Algorithms" by Cormen et al.
+	//
+	// Unlike normal topological ordering, it returns an ordering even for
+	// cyclic graphs by reporting any cycles found and pressing on as if the
+	// cycles never existed.
 
-		// Break a cycle and try Kahn's algorithm again
-		nonRoots.forEachUnique(func(next string) bool {
-			cycle := cycleStartingAt(g, next)
-			if len(cycle) == 0 {
-				return true
-			}
+	type visitState int8
+	const (
+		notVisited visitState = iota
+		partiallyVisited
+		fullyVisited
+	)
 
-			g.removeEdge(cycle[len(cycle)-1], cycle[0])
-			cycles(cycle)
-			return false
-		})
-	}
-}
+	var path []nodeID
+	result := make([]nodeID, 0, g.nodeCount())
+	nodeToVisitState := make([]visitState, g.nodeCount())
 
-func rootsOf(g *graph) queue {
-	result := queue{}
-	for node := range g.nodeToData {
-		if g.inDegree(node) == 0 {
-			result.enqueue(node)
-		}
-	}
-	return result
-}
+	var doTopologicalOrdering func(node nodeID)
+	doTopologicalOrdering = func(node nodeID) {
+		nodeToVisitState[node] = partiallyVisited
+		path = append(path, node)
 
-func nonRootsOf(g *graph) multiset {
-	result := newMultiset()
-	for node := range g.nodeToData {
-		if g.inDegree(node) > 0 {
-			result.add(node, g.inDegree(node))
-		}
-	}
-	return result
-}
-
-func cycleStartingAt(g *graph, node string) []string {
-	stack := []string{node}
-	inStack := makeSet()
-	inStack.add(node)
-	popStack := func() string {
-		var result string
-		result, stack = stack[len(stack)-1], stack[:len(stack)-1]
-		return result
-	}
-
-	var cycle []string
-	var dfs func() bool
-	dfs = func() bool {
-		for succ := range g.successors(top(stack)) {
-			if inStack.has(succ) {
-				// cycle found
-				cycle = append(cycle, popStack())
-				for top(cycle) != succ {
-					cycle = append(cycle, popStack())
-				}
-				slices.Reverse(cycle)
-				return true
-			}
-
-			stack = append(stack, succ)
-			inStack.add(succ)
-			if dfs() {
-				return true
+		for _, succ := range g.successorIDs(node) {
+			switch nodeToVisitState[succ] {
+			case notVisited:
+				doTopologicalOrdering(succ)
+			case partiallyVisited:
+				// Cycle detected
+				idx := slices.Index(path, succ)
+				cycle := path[idx:]
+				cycles(cycle)
+			case fullyVisited:
+				continue
 			}
 		}
 
-		inStack.remove(popStack())
-		return false
-	}
-	dfs()
-	return cycle
-}
+		path = path[:len(path)-1]
+		nodeToVisitState[node] = fullyVisited
 
-func top(s []string) string {
-	return s[len(s)-1]
+		result = append(result, node)
+	}
+
+	for node := range g.nodeIDs() {
+		if nodeToVisitState[node] != fullyVisited {
+			doTopologicalOrdering(node)
+		}
+	}
+
+	for _, node := range slices.Backward(result) {
+		f(node)
+	}
 }
 
 func main() {

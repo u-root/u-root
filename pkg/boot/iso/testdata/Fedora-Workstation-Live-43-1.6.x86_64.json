@@ -1,0 +1,38 @@
+[
+  {
+    "cmdline": "quiet rhgb root=live:CDLABEL=Fedora-WS-Live-43 rd.live.image rd.live.check iso-scan/filename=/Fedora-Workstation-Live-43-1.6.x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/Fedora-Workstation-Live-43-1.6.x86_64/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/Fedora-Workstation-Live-43-1.6.x86_64/boot/x86_64/loader/linux"
+    },
+    "name": "[Fedora-Workstation-Live-43-1.6.x86_64.iso] Test this media \u0026 start Fedora-Workstation-Live",
+    "rank": "0"
+  },
+  {
+    "cmdline": "quiet rhgb root=live:CDLABEL=Fedora-WS-Live-43 rd.live.image iso-scan/filename=/Fedora-Workstation-Live-43-1.6.x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/Fedora-Workstation-Live-43-1.6.x86_64/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/Fedora-Workstation-Live-43-1.6.x86_64/boot/x86_64/loader/linux"
+    },
+    "name": "[Fedora-Workstation-Live-43-1.6.x86_64.iso] Start Fedora-Workstation-Live",
+    "rank": "0"
+  },
+  {
+    "cmdline": "quiet rhgb root=live:CDLABEL=Fedora-WS-Live-43 rd.live.image nomodeset vga=791 iso-scan/filename=/Fedora-Workstation-Live-43-1.6.x86_64.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/Fedora-Workstation-Live-43-1.6.x86_64/boot/x86_64/loader/initrd"
+    },
+    "kernel": {
+      "url": "file:///testdata/Fedora-Workstation-Live-43-1.6.x86_64/boot/x86_64/loader/linux"
+    },
+    "name": "[Fedora-Workstation-Live-43-1.6.x86_64.iso] Start Fedora-Workstation-Live in basic graphics mode",
+    "rank": "0"
+  }
+]

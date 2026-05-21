@@ -1,0 +1,26 @@
+[
+  {
+    "cmdline": "boot=live components quiet splash findiso=/debian-live-13.4.0-amd64-gnome.iso",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/debian-live-13.4.0-amd64-gnome/live/initrd.img-6.12.73+deb13-amd64"
+    },
+    "kernel": {
+      "url": "file:///testdata/debian-live-13.4.0-amd64-gnome/live/vmlinuz-6.12.73+deb13-amd64"
+    },
+    "name": "[debian-live-13.4.0-amd64-gnome.iso] Live system (amd64)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "boot=live components findiso=/debian-live-13.4.0-amd64-gnome.iso verify-checksums",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/debian-live-13.4.0-amd64-gnome/live/initrd.img-6.12.73+deb13-amd64"
+    },
+    "kernel": {
+      "url": "file:///testdata/debian-live-13.4.0-amd64-gnome/live/vmlinuz-6.12.73+deb13-amd64"
+    },
+    "name": "[debian-live-13.4.0-amd64-gnome.iso] Verify integrity of the boot medium",
+    "rank": "0"
+  }
+]

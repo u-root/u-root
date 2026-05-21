@@ -32,8 +32,10 @@ func findBlockDevFromSmbios(sysPath string, s smbios.SystemSlots) ([]string, err
 	// and the lower 3 bits to store the function number
 	dev := (s.DeviceFunctionNumber & 0b11111000) >> 3
 	fn := s.DeviceFunctionNumber & 0b111
-	domainBusStr := fmt.Sprintf("%04x:%02x", s.SegmentGroupNumber, s.BusNumber)
-	slotBDFPrefix := filepath.Join(sysPath, fmt.Sprintf("devices/pci%s/%s:%02x.%x/", domainBusStr, domainBusStr, dev, fn))
+	// On nested PCIe topologies, the root bus name (e.g. pci000a:a0) might not match
+	// the slot bus number (e.g. a1). Instead of assuming a prefix, we look for the
+	// unique BDF segment in the device's real sysfs path.
+	bdfSegment := fmt.Sprintf("/%04x:%02x:%02x.%x/", s.SegmentGroupNumber, s.BusNumber, dev, fn)
 
 	blockPath := filepath.Join(sysPath, "block/")
 	dirEntries, err := os.ReadDir(blockPath)
@@ -47,7 +49,7 @@ func findBlockDevFromSmbios(sysPath string, s smbios.SystemSlots) ([]string, err
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(realPath, slotBDFPrefix) {
+		if strings.Contains(realPath, bdfSegment) {
 			devPaths = append(devPaths, filepath.Join("/dev", dirEntry.Name()))
 		}
 	}

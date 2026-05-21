@@ -41,15 +41,6 @@ type params struct {
 
 var errBadUsage = errors.New("usage: base64 [-d] [file]")
 
-func command(stdin io.Reader, stdout, stderr io.Writer, args ...string) *cmd {
-	return &cmd{
-		stdin:  stdin,
-		stdout: stdout,
-		stderr: stderr,
-		args:   args,
-	}
-}
-
 func decodeone(stdin io.Reader, stdout io.Writer) error {
 	r := base64.NewDecoder(base64.StdEncoding, stdin)
 	if _, err := io.Copy(stdout, r); err != nil {
@@ -76,7 +67,20 @@ func encodeone(stdin io.Reader, stdout io.Writer) error {
 	return nil
 }
 
-func (c *cmd) run() error {
+func run(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
+	c := cmd{
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
+	}
+
+	f := flag.NewFlagSet("base64", flag.ExitOnError)
+	f.BoolVar(&c.decode, "d", false, "decode or encode the file")
+
+	// ignore error as flag.ExitOnError to not to print it twice
+	_ = f.Parse(unixflag.ArgsToGoArgs(args))
+	c.args = f.Args()
+
 	switch {
 	case len(c.args) > 1:
 		return fmt.Errorf("only 0 or 1 arg allowed:%w", errBadUsage)
@@ -97,11 +101,7 @@ func (c *cmd) run() error {
 }
 
 func main() {
-	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-	c := command(os.Stdin, os.Stdout, os.Stderr, f.Args()...)
-	f.BoolVar(&c.decode, "d", false, "decode or encode the file")
-	f.Parse(unixflag.OSArgsToGoArgs())
-	if err := c.run(); err != nil {
+	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]...); err != nil {
 		log.Fatalf("%s: %v", os.Args[0], err)
 	}
 }

@@ -69,7 +69,7 @@ func run(stdin io.Reader, stdout io.Writer, lines int, args []string) error {
 
 func main() {
 	flag.Parse()
-	if err := run(os.Stdin, os.Stderr, *lines, flag.Args()); err != nil {
+	if err := run(os.Stdin, os.Stdout, *lines, flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }

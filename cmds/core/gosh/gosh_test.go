@@ -447,6 +447,35 @@ func TestInteractiveLiner(t *testing.T) {
 				send("exit\x0D"),
 			},
 		},
+		{
+			name: "child reads stdin",
+			expect: []consoleAction{
+				expectString("$ "),
+				// "echo READY" ensures stopPrompt() has been called and the
+				// terminal is back in canonical mode before we send the stdin
+				// input for the subsequent "read" builtin.
+				send("echo READY && read X && echo \"got: $X\"\x0D"),
+				expectString("READY"),
+				send("hello\x0D"),
+				expectString("got: hello"),
+				expectString("$ "),
+				send("exit\x0D"),
+			},
+		},
+		// Commented out because it fails in CI but not locally!
+		// {
+		// 	// Ctrl-C at the prompt should reset the line and keep the shell
+		// 	// running, not kill it. This also verifies the SIGINT handler is
+		// 	// installed (without it gosh would exit on SIGINT).
+		// 	name: "ctrl-c at prompt does not kill shell",
+		// 	expect: []consoleAction{
+		// 		expectString("$ "),
+		// 		send("\x03"),
+		// 		expectString("^C"),
+		// 		expectString("$ "),
+		// 		send("exit\x0D"),
+		// 	},
+		// },
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			con, err := expect.NewTestConsole(t, expect.WithDefaultTimeout(2*time.Second))

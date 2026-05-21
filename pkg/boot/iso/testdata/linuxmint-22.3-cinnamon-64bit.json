@@ -1,0 +1,38 @@
+[
+  {
+    "cmdline": "boot=casper uuid=6e72f523-dc09-4880-8910-93ffa64401c5 username=mint hostname=mint iso-scan/filename=/linuxmint-22.3-cinnamon-64bit.iso quiet splash --",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/linuxmint-22.3-cinnamon-64bit/casper/initrd.lz"
+    },
+    "kernel": {
+      "url": "file:///testdata/linuxmint-22.3-cinnamon-64bit/casper/vmlinuz"
+    },
+    "name": "[linuxmint-22.3-cinnamon-64bit.iso] Start Linux Mint 22.3 Cinnamon 64-bit",
+    "rank": "0"
+  },
+  {
+    "cmdline": "boot=casper uuid=6e72f523-dc09-4880-8910-93ffa64401c5 username=mint hostname=mint iso-scan/filename=/linuxmint-22.3-cinnamon-64bit.iso noapic noacpi nosplash irqpoll nomodeset --",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/linuxmint-22.3-cinnamon-64bit/casper/initrd.lz"
+    },
+    "kernel": {
+      "url": "file:///testdata/linuxmint-22.3-cinnamon-64bit/casper/vmlinuz"
+    },
+    "name": "[linuxmint-22.3-cinnamon-64bit.iso] Start Linux Mint 22.3 Cinnamon 64-bit (compatibility mode)",
+    "rank": "0"
+  },
+  {
+    "cmdline": "oem-config/enable=true only-ubiquity boot=casper uuid=6e72f523-dc09-4880-8910-93ffa64401c5 username=mint hostname=mint iso-scan/filename=/linuxmint-22.3-cinnamon-64bit.iso quiet splash --",
+    "image_type": "linux",
+    "initrd": {
+      "url": "file:///testdata/linuxmint-22.3-cinnamon-64bit/casper/initrd.lz"
+    },
+    "kernel": {
+      "url": "file:///testdata/linuxmint-22.3-cinnamon-64bit/casper/vmlinuz"
+    },
+    "name": "[linuxmint-22.3-cinnamon-64bit.iso] OEM install (for manufacturers)",
+    "rank": "0"
+  }
+]
