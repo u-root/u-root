@@ -97,26 +97,24 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 				default:
 					// FileSize of non-zero means it is the first and possibly
 					// only instance of this file.
-					if rec.FileSize != 0 {
-						break
+					if rec.FileSize == 0 {
+						// If the file is not in []inums it is a true zero-length file,
+						// not a hard link to a file already seen.
+						// (pedantic mode: on Unix all files are hard links;
+						// so what this comment really means is "file with more than one
+						// hard link).
+						ino, ok := inums[rec.Ino]
+						if ok {
+							err := os.Link(ino, rec.Name)
+							debug("Hard linking %s to %s", ino, rec.Name)
+							if err != nil {
+								return err
+							}
+							continue
+						}
 					}
-					// If the file is not in []inums it is a true zero-length file,
-					// not a hard link to a file already seen.
-					// (pedantic mode: on Unix all files are hard links;
-					// so what this comment really means is "file with more than one
-					// hard link).
-					ino, ok := inums[rec.Ino]
-					if !ok {
-						break
-					}
-					err := os.Link(ino, rec.Name)
-					debug("Hard linking %s to %s", ino, rec.Name)
-					if err != nil {
-						return err
-					}
-					continue
+					inums[rec.Ino] = rec.Name
 				}
-				inums[rec.Ino] = rec.Name
 			}
 			debug("Creating file %s", rec.Name)
 			if err := cpio.CreateFile(rec); err != nil {
