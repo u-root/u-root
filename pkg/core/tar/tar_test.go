@@ -7,6 +7,8 @@ package tar
 import (
 	"bytes"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -95,6 +97,31 @@ func TestTarWithAbsolutePaths(t *testing.T) {
 	// Skip this test as it's not working correctly with absolute paths
 	// This would need more investigation into how tarutil handles absolute paths
 	t.Skip("Skipping test with absolute paths")
+}
+
+func TestCreateWithWorkingDirKeepsRelativeArchiveNames(t *testing.T) {
+	tmpDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmpDir, "file"), []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	tar := New().(*Tar)
+	tar.SetWorkingDir(tmpDir)
+	if err := tar.Run("-cf", "file.tar", "file"); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	tar = New().(*Tar)
+	tar.SetWorkingDir(tmpDir)
+	tar.SetIO(nil, &stdout, nil)
+	if err := tar.Run("-tf", "file.tar"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := strings.TrimSpace(stdout.String()); got != "file" {
+		t.Errorf(`Tar("-tf", "file.tar") = %q; want "file"`, got)
+	}
 }
 
 func TestValidateErrors(t *testing.T) {
