@@ -432,6 +432,7 @@ func TestFiles(t *testing.T) {
 		flags    []string
 		inFile   []byte
 		outFile  []byte
+		sameFile bool
 		expected []byte
 	}{
 		{
@@ -473,6 +474,13 @@ func TestFiles(t *testing.T) {
 			expected: []byte("1234e"),
 		},
 		{
+			name:     "no truncate with same input and output",
+			flags:    []string{"conv=notrunc", "seek=1", "bs=1", "count=10"},
+			inFile:   []byte("abbbbbbbbbb"),
+			sameFile: true,
+			expected: []byte("aaaaaaaaaaa"),
+		},
+		{
 			// Fully testing the file is synchronous would require something more.
 			name:     "sync",
 			flags:    []string{"oflag=sync"},
@@ -504,15 +512,19 @@ func TestFiles(t *testing.T) {
 			if err := os.WriteFile(inFile, tt.inFile, 0o666); err != nil {
 				t.Error(err)
 			}
-			if err := os.WriteFile(outFile, tt.outFile, 0o666); err != nil {
-				t.Error(err)
+			if tt.sameFile {
+				outFile = inFile
+			} else {
+				if err := os.WriteFile(outFile, tt.outFile, 0o666); err != nil {
+					t.Error(err)
+				}
 			}
 
 			args := append(tt.flags, "if="+inFile, "of="+outFile)
 			if err := run(&bytes.Buffer{}, &ws{Writer: io.Discard}, &ws{Writer: io.Discard}, tt.name, args); err != nil {
 				t.Error(err)
 			}
-			got, err := os.ReadFile(filepath.Join(tmpDir, "outFile"))
+			got, err := os.ReadFile(outFile)
 			if err != nil {
 				t.Error(err)
 			}
@@ -520,34 +532,6 @@ func TestFiles(t *testing.T) {
 				t.Errorf("expected %q, got %q", tt.expected, got)
 			}
 		})
-	}
-}
-
-func TestFilesSameInputOutputNotrunc(t *testing.T) {
-	tmpDir := t.TempDir()
-	dataFile := filepath.Join(tmpDir, "dataFile")
-	if err := os.WriteFile(dataFile, []byte("abbbbbbbbbb"), 0o666); err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{
-		"if=" + dataFile,
-		"of=" + dataFile,
-		"conv=notrunc",
-		"seek=1",
-		"bs=1",
-		"count=10",
-	}
-	if err := run(&bytes.Buffer{}, &ws{Writer: io.Discard}, &ws{Writer: io.Discard}, "dd", args); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := os.ReadFile(dataFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want := []byte("aaaaaaaaaaa"); !reflect.DeepEqual(want, got) {
-		t.Errorf("run(if=of conv=notrunc seek=1 bs=1 count=10) = %q; want %q", got, want)
 	}
 }
 
