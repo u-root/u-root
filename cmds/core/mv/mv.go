@@ -50,10 +50,12 @@ func moveFile(source string, dest string, update bool, noClobber bool) error {
 		}
 
 		destInfo, err := os.Lstat(dest)
+		if errors.Is(err, os.ErrNotExist) {
+			return os.Rename(source, dest)
+		}
 		if err != nil {
 			return err
 		}
-
 		// Check if the destination already exists and was touched later than the source
 		if destInfo.ModTime().After(sourceInfo.ModTime()) {
 			// Source is older and we don't want to "downgrade"
