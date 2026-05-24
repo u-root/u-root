@@ -29,6 +29,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -120,9 +121,6 @@ func (c *cmd) run() error {
 	if c.outputPath == "" {
 		c.outputPath = defaultOutputPath(parsedURL.Path)
 	}
-	if c.outputPath == "-" {
-		c.outputPath = "/dev/stdout"
-	}
 
 	schemes := curl.Schemes{
 		"tftp": curl.DefaultTFTPClient,
@@ -136,6 +134,11 @@ func (c *cmd) run() error {
 	reader, err := schemes.FetchWithoutCache(context.Background(), parsedURL)
 	if err != nil {
 		return fmt.Errorf("failed to download %v: %w", c.url, err)
+	}
+
+	if c.outputPath == "-" {
+		_, err := io.Copy(os.Stdout, reader)
+		return err
 	}
 
 	if err := uio.ReadIntoFile(reader, c.outputPath); err != nil {
