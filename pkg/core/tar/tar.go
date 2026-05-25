@@ -117,9 +117,7 @@ func (t *Tar) execute(args []string) error {
 	if t.verbose {
 		opts.Filters = []tarutil.Filter{tarutil.VerboseFilter}
 	}
-	if t.WorkingDir != "" {
-		opts.ChangeDirectory = t.WorkingDir
-	}
+	opts.ChangeDirectory = t.WorkingDir
 
 	// Resolve file path relative to working directory
 	filePath := t.ResolvePath(t.file)
