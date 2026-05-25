@@ -143,9 +143,7 @@ func (t *Tar) execute(args []string) error {
 		}
 		defer f.Close()
 
-		// Resolve extract directory path
-		extractDir := t.ResolvePath(args[0])
-		if err := tarutil.ExtractDir(f, extractDir, opts); err != nil {
+		if err := tarutil.ExtractDir(f, args[0], opts); err != nil {
 			return err
 		}
 	case t.list:
