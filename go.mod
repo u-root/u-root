@@ -77,7 +77,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/hugelgupf/p9 v0.3.0 // indirect
+	github.com/hugelgupf/p9 v0.4.1 // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect

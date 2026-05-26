@@ -209,10 +209,10 @@ type fidRef struct {
 	// fidRef. Holding either of these locks is sufficient to examine
 	// parent safely.
 	//
-	// The parent will be nil for root fidRefs, and non-nil otherwise. The
-	// method maybeParent can be used to return a cyclical reference, and
-	// isRoot should be used to check for root over looking at parent
-	// directly.
+	// The parent will be nil for root fidRefs and pending xattrwalk/create
+	// fidRefs, and non-nil otherwise. The method maybeParent can be used
+	// to return a cyclical reference, and hasParent should be used to
+	// check for root over looking at parent directly.
 	parent *fidRef
 }
 
@@ -274,8 +274,8 @@ func (f *fidRef) isDeleted() bool {
 	return atomic.LoadUint32(&f.pathNode.deleted) != 0
 }
 
-// isRoot indicates whether this is a root fid.
-func (f *fidRef) isRoot() bool {
+// hasParent indicates whether this is a root fid.
+func (f *fidRef) hasParent() bool {
 	return f.parent == nil
 }
 
@@ -505,7 +505,11 @@ func (cs *connState) handleRequest() bool {
 
 	// Ensure that another goroutine is available to receive from cs.t.
 	if atomic.LoadInt32(&cs.recvIdle) == 0 {
-		go cs.handleRequests() // S/R-SAFE: Irrelevant.
+		cs.pendingWg.Add(1)
+		go func() {
+			defer cs.pendingWg.Done()
+			cs.handleRequests() // S/R-SAFE: Irrelevant.
+		}()
 	}
 	cs.recvMu.Unlock()
 
