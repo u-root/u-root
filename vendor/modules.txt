@@ -208,8 +208,8 @@ github.com/hashicorp/golang-lru/v2/simplelru
 # github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
 ## explicit; go 1.14
 github.com/hugelgupf/go-shlex
-# github.com/hugelgupf/p9 v0.3.0
-## explicit; go 1.20
+# github.com/hugelgupf/p9 v0.4.1
+## explicit; go 1.21
 github.com/hugelgupf/p9/fsimpl/templatefs
 github.com/hugelgupf/p9/fsimpl/xattr
 github.com/hugelgupf/p9/internal
