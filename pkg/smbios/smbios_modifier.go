@@ -6,6 +6,7 @@ package smbios
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"slices"
 )
@@ -256,6 +257,125 @@ func RemoveSystemSlotInfo(slotDesignation string) OverrideOpt {
 				continue
 			}
 			result = append(result, t)
+		}
+		return result, nil
+	}
+}
+
+// ReplaceRedfishHostInterface overrides Type 42 SMBIOS tables in system memory with dynamic Redfish details.
+func ReplaceUsbRedfishHostInterface(cfg *RedfishHostInterfaceConfig) OverrideOpt {
+	return func(tables []*Table) ([]*Table, error) {
+		var result []*Table
+		for _, t := range tables {
+			if t.Type != TableTypeManagementControllerHostInterface {
+				result = append(result, t)
+				continue
+			}
+			mc, err := ParseManagementControllerHostInterface(t)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse Type 42: %w", err)
+			}
+
+			if cfg.InterfaceType != 0 {
+				mc.InterfaceType = cfg.InterfaceType
+			}
+			if cfg.USBDeviceType != 0 {
+				mc.DeviceType = cfg.USBDeviceType
+			}
+			if cfg.VendorID != 0 {
+				mc.VendorID = cfg.VendorID
+			}
+			if cfg.ProductID != 0 {
+				mc.ProductID = cfg.ProductID
+			}
+			if cfg.UsbLength != 0 {
+				mc.UsbLength = cfg.UsbLength
+			}
+			if cfg.UsbDescriptorType != 0 {
+				mc.UsbDescriptorType = cfg.UsbDescriptorType
+			}
+			if cfg.SerialNumber != "" {
+				mc.SerialNumber = cfg.SerialNumber
+			}
+
+			if len(cfg.ServiceUUID) == 16 {
+				mc.ServiceUUID = cfg.ServiceUUID
+			}
+			if cfg.HostIPAssignmentType != 0 {
+				mc.HostIPAssignmentType = cfg.HostIPAssignmentType
+			}
+			if len(cfg.HostIP) > 0 {
+				if ip4 := cfg.HostIP.To4(); ip4 != nil {
+					mc.HostIPAddressFormat = 1 // IPv4
+					mc.HostIPAddress = [16]byte{}
+					copy(mc.HostIPAddress[:4], ip4)
+					// Set Host IPv4 subnet mask. Default to /24 if not provided
+					if len(cfg.HostMask) > 0 {
+						mc.HostIPMask = [16]byte{}
+						copy(mc.HostIPMask[:4], cfg.HostMask)
+					} else {
+						mc.HostIPMask = [16]byte{}
+						copy(mc.HostIPMask[:4], net.CIDRMask(24, 32))
+					}
+				} else {
+					mc.HostIPAddressFormat = 2 // IPv6
+					mc.HostIPAddress = [16]byte{}
+					copy(mc.HostIPAddress[:], cfg.HostIP.To16())
+					// Set Host IPv6 subnet mask. Default to /64 if not provided
+					if len(cfg.HostMask) > 0 {
+						mc.HostIPMask = [16]byte{}
+						copy(mc.HostIPMask[:], cfg.HostMask)
+					} else {
+						mc.HostIPMask = [16]byte{}
+						copy(mc.HostIPMask[:], net.CIDRMask(64, 128))
+					}
+				}
+			}
+			if cfg.BmcIPDiscoveryType != 0 {
+				mc.BmcIPDiscoveryType = cfg.BmcIPDiscoveryType
+			}
+			if len(cfg.BmcIP) > 0 {
+				if ip4 := cfg.BmcIP.To4(); ip4 != nil {
+					mc.BmcIPAddressFormat = 1 // IPv4
+					mc.BmcIPAddress = [16]byte{}
+					copy(mc.BmcIPAddress[:4], ip4)
+					// Set BMC IPv4 subnet mask. Default to /24 if not provided
+					if len(cfg.BmcMask) > 0 {
+						mc.BmcIPMask = [16]byte{}
+						copy(mc.BmcIPMask[:4], cfg.BmcMask)
+					} else {
+						mc.BmcIPMask = [16]byte{}
+						copy(mc.BmcIPMask[:4], net.CIDRMask(24, 32))
+					}
+				} else {
+					mc.BmcIPAddressFormat = 2 // IPv6
+					mc.BmcIPAddress = [16]byte{}
+					copy(mc.BmcIPAddress[:], cfg.BmcIP.To16())
+					// Set BMC IPv6 subnet mask. Default to /64 if not provided
+					if len(cfg.BmcMask) > 0 {
+						mc.BmcIPMask = [16]byte{}
+						copy(mc.BmcIPMask[:], cfg.BmcMask)
+					} else {
+						mc.BmcIPMask = [16]byte{}
+						copy(mc.BmcIPMask[:], net.CIDRMask(64, 128))
+					}
+				}
+			}
+			if cfg.RedfishPort != 0 {
+				mc.RedfishPort = cfg.RedfishPort
+			}
+			if cfg.VlanID != 0 {
+				mc.VlanID = cfg.VlanID
+			}
+			if cfg.Hostname != "" {
+				mc.Hostname = cfg.Hostname
+			}
+
+			mct, err := mc.toTable()
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, mct)
 		}
 		return result, nil
 	}
