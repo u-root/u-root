@@ -6,6 +6,7 @@ package smbios
 
 import (
 	"io"
+	"net"
 	"os"
 	"reflect"
 	"testing"
@@ -635,5 +636,114 @@ func TestRemoveSystemSlotInfo(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestReplaceUsbRedfishHostInterface(t *testing.T) {
+	headerAndInterfaceBytes := []byte{
+		42, 108, 0x01, 0x00, // Type=42, Length=108, Handle=0x0001
+		0x40,       // InterfaceType Network Host
+		8,          // InterfaceTypeSpecificDataLength
+		2,          // DeviceType USB
+		0x12, 0x34, // VendorID
+		0x01, 0x00, // ProductID
+		2, // UsbLength
+		3, // UsbDescriptorType
+		1, // SerialNumber string index 1
+	}
+
+	uuidVal := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff}
+	hostIP := net.ParseIP("fe80::211:32ff:fe54:8801").To16()
+	hostMask := net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::").To16())
+	bmcIP := net.ParseIP("fe80::1").To16()
+	bmcMask := net.IPMask(net.ParseIP("ffff:ffff:ffff:ffff::").To16())
+
+	protoData := []byte{}
+	protoData = append(protoData, uuidVal...)
+	protoData = append(protoData, 1) // HostIPAssignmentType Static
+	protoData = append(protoData, 2) // HostIPAddressFormat IPv6
+	protoData = append(protoData, hostIP...)
+	protoData = append(protoData, hostMask...)
+	protoData = append(protoData, 1) // BmcIPDiscoveryType Static
+	protoData = append(protoData, 2) // BmcIPAddressFormat IPv6
+	protoData = append(protoData, bmcIP...)
+	protoData = append(protoData, bmcMask...)
+	protoData = append(protoData, 0xB6, 0x27) // RedfishPort 10166
+	protoData = append(protoData, 0, 0, 0, 0) // VlanID 0
+	protoData = append(protoData, 2)          // Hostname string index 2
+
+	payload := []byte{}
+	payload = append(payload, 1)  // ProtocolCount 1
+	payload = append(payload, 4)  // ProtocolIdentifier Redfish
+	payload = append(payload, 91) // ProtocolLength 91 (includes 1-byte Hostname index)
+	payload = append(payload, protoData...)
+
+	rawTableData := append([]byte(nil), headerAndInterfaceBytes...)
+	rawTableData = append(rawTableData, payload...)
+
+	strings := []string{"SerialNumber123", "bmc-hostname"}
+
+	tObj := &Table{
+		Header: Header{
+			Type:   42,
+			Length: uint8(len(rawTableData)),
+			Handle: 0x0001,
+		},
+		data:    rawTableData,
+		strings: strings,
+	}
+
+	var uuid UUID
+	copy(uuid[:], uuidVal)
+
+	opt := ReplaceUsbRedfishHostInterface(&RedfishHostInterfaceConfig{
+		ServiceUUID:          uuid,
+		HostIP:               net.ParseIP("192.168.1.2"),
+		HostMask:             net.CIDRMask(24, 32),
+		BmcIP:                net.ParseIP("192.168.1.1"),
+		BmcMask:              net.CIDRMask(24, 32),
+		RedfishPort:          8080,
+		VlanID:               10,
+		VendorID:             0xABCD,
+		ProductID:            0x1234,
+		SerialNumber:         "NewSerialNumber",
+		Hostname:             "new-hostname",
+		InterfaceType:        0x40,
+		USBDeviceType:        2,
+		UsbLength:            2,
+		UsbDescriptorType:    3,
+		HostIPAssignmentType: uint8(IPAssignmentTypeStatic),
+		BmcIPDiscoveryType:   uint8(BmcIPDiscoveryTypeStatic),
+	})
+
+	tables := []*Table{tObj}
+	modifiedTables, err := opt(tables)
+	if err != nil {
+		t.Fatalf("Modifier failed: %v", err)
+	}
+
+	mc, err := ParseManagementControllerHostInterface(modifiedTables[0])
+	if err != nil {
+		t.Fatalf("Failed to parse modified table: %v", err)
+	}
+
+	if mc.VendorID != 0xABCD || mc.ProductID != 0x1234 {
+		t.Errorf("Expected modified Vendor/Product IDs")
+	}
+
+	if mc.SerialNumber != "NewSerialNumber" || mc.Hostname != "new-hostname" {
+		t.Errorf("Expected modified strings")
+	}
+
+	if mc.HostIPAddressFormat != 1 || mc.BmcIPAddressFormat != 1 {
+		t.Errorf("Expected modified IPv4 formats (1)")
+	}
+
+	if !net.IP(mc.HostIPAddress[:4]).Equal(net.ParseIP("192.168.1.2")) {
+		t.Errorf("Expected modified Host IP")
+	}
+
+	if mc.RedfishPort != 8080 || mc.VlanID != 10 {
+		t.Errorf("Expected modified Port and VlanID")
 	}
 }

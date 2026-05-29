@@ -182,7 +182,7 @@ func (t *tremove) handle(cs *connState) message {
 	// Tunlinkat. All p9 clients will use Tunlinkat.
 	err := ref.safelyGlobal(func() error {
 		// Is this a root? Can't remove that.
-		if ref.isRoot() {
+		if ref.hasParent() {
 			return linux.EINVAL
 		}
 
@@ -627,7 +627,7 @@ func (t *trename) handle(cs *connState) message {
 
 	if err := ref.safelyGlobal(func() (err error) {
 		// Don't allow a root rename.
-		if ref.isRoot() {
+		if ref.hasParent() {
 			return linux.EINVAL
 		}
 
@@ -997,7 +997,6 @@ func (t *txattrwalk) handle(cs *connState) message {
 				buf:  buf,
 			},
 			pathNode: ref.pathNode,
-			parent:   ref.parent,
 		}
 		cs.InsertFID(t.newFID, newRef)
 		return nil
@@ -1204,7 +1203,7 @@ func doWalk(cs *connState, ref *fidRef, names []string, getattr bool) (qids []QI
 				mode:     ref.mode,
 				pathNode: ref.pathNode,
 			}
-			if !ref.isRoot() {
+			if !ref.hasParent() {
 				if !newRef.isDeleted() {
 					// Add only if a non-root node; the same node.
 					ref.parent.pathNode.addChild(newRef, ref.parent.pathNode.nameFor(ref))
