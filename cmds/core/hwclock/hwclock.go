@@ -10,7 +10,7 @@
 //
 // Description:
 //
-//	It prints the current hwclock time in UTC if called without any flags.
+//	It prints the current hwclock time in local time if called without any flags.
 //	It sets the hwclock to the system clock in UTC if called with -w.
 //
 // Options:
@@ -51,5 +51,5 @@ func main() {
 	}
 
 	// Print local time. Match the format of util-linux' hwclock.
-	fmt.Println(t.Local().Format("Mon 2 Jan 2006 15:04:05 AM MST"))
+	fmt.Println(t.Local().Format(time.RFC1123))
 }
