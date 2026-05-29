@@ -49,7 +49,6 @@ type flags struct {
 	d      bool
 	u      bool
 	q      bool
-	v      bool
 	prefix string
 	suffix string
 	dir    string
@@ -92,8 +91,8 @@ func (f *flags) register(fs *flag.FlagSet) {
 	fs.BoolVar(&f.u, "dry-run", false, "Do everything save the actual create")
 	fs.BoolVar(&f.u, "u", false, "Do everything save the actual create (shorthand)")
 
-	fs.BoolVar(&f.v, "quiet", false, "Quiet: show no errors")
-	fs.BoolVar(&f.v, "q", false, "Quiet: show no errors (shorthand)")
+	fs.BoolVar(&f.q, "quiet", false, "Quiet: show no errors")
+	fs.BoolVar(&f.q, "q", false, "Quiet: show no errors (shorthand)")
 
 	fs.StringVar(&f.prefix, "prefix", "", "add a prefix")
 	fs.StringVar(&f.prefix, "s", "", "add a prefix (shorthand, 's' is for compatibility with GNU mktemp")
@@ -108,22 +107,7 @@ func (f *flags) register(fs *flag.FlagSet) {
 func command(stdout io.Writer, args []string) *cmd {
 	var c cmd
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
-	fs.BoolVar(&c.flags.d, "directory", false, "Make a directory")
-	fs.BoolVar(&c.flags.d, "d", false, "Make a directory (shorthand)")
-
-	fs.BoolVar(&c.flags.u, "dry-run", false, "Do everything save the actual create")
-	fs.BoolVar(&c.flags.u, "u", false, "Do everything save the actual create (shorthand)")
-
-	fs.BoolVar(&c.flags.v, "quiet", false, "Quiet: show no errors")
-	fs.BoolVar(&c.flags.v, "q", false, "Quiet: show no errors (shorthand)")
-
-	fs.StringVar(&c.flags.prefix, "prefix", "", "add a prefix")
-	fs.StringVar(&c.flags.prefix, "s", "", "add a prefix (shorthand, 's' is for compatibility with GNU mktemp")
-
-	fs.StringVar(&c.flags.suffix, "suffix", "", "add a suffix to the prefix (rather than the end of the mktemp file)")
-
-	fs.StringVar(&c.flags.dir, "tmpdir", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp")
-	fs.StringVar(&c.flags.dir, "p", "", "Tmp directory to use. If this is not set, TMPDIR is used, else /tmp (shorthand)")
+	c.flags.register(fs)
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "Usage: mktemp [options] [template]\n")
