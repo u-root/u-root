@@ -12,6 +12,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -226,12 +227,33 @@ func TestStdout(t *testing.T) {
 	srv := httptest.NewServer(handler{})
 	defer srv.Close()
 
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout := os.Stdout
+	os.Stdout = w
+	t.Cleanup(func() {
+		os.Stdout = oldStdout
+		r.Close()
+		w.Close()
+	})
+
 	c, err := command([]string{"wget", "-O", "-", fmt.Sprintf("%s/200", srv.URL)}...)
 	if err != nil {
 		t.Errorf("expected nil got %v", err)
 	}
-	err = c.run()
-	if err != nil {
+	if err := c.run(); err != nil {
 		t.Errorf("expected nil got %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	got, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != content {
+		t.Errorf("stdout = %q; want %q", string(got), content)
 	}
 }

@@ -74,11 +74,10 @@ func TestMove(t *testing.T) {
 			name:  "mv logFatalf err",
 			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi3.txt")},
 			args:  []string{"-u"},
-			err:   os.ErrNotExist,
 		},
 		{
 			name:  "no flags no error",
-			files: []string{filepath.Join(d, "hi1.txt"), filepath.Join(d, "hi1_new.txt")},
+			files: []string{filepath.Join(d, "hi3.txt"), filepath.Join(d, "hi1_new.txt")},
 		},
 		{
 			name:  "not enough args",
@@ -151,10 +150,9 @@ func TestMoveFile(t *testing.T) {
 			err:  os.ErrNotExist,
 		},
 		{
-			name: "second file in update path does not exist",
+			name: "second file in update path does not exist, -u should work",
 			src:  filepath.Join(d, "hi2.txt"),
 			dst:  filepath.Join(d, "hi3.txt"),
-			err:  os.ErrNotExist,
 		},
 	}
 
