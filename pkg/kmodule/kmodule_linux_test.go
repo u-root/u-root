@@ -124,6 +124,49 @@ func TestInvalidCircularLoad(t *testing.T) {
 	}
 }
 
+func TestDependentParameterLoad(t *testing.T) {
+	m := depMap{
+		"/lib/modules/6.6.6-generic/kernel/drivers/hid/hid-generic.ko":   &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko": &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko":                &dependency{},
+		"/lib/modules/6.6.6-generic/kernel/tests/depmod.ko": &dependency{
+			deps: []string{"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/hid-generic.ko",
+			},
+		},
+		"/lib/modules/6.6.6-generic/kernel/tests/depmod2.ko": &dependency{
+			deps: []string{"/lib/modules/6.6.6-generic/kernel/crypto/ccm.ko",
+				"/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko",
+			},
+		},
+	}
+
+	prober := Prober{
+		deps: m,
+		opts: ProbeOpts{DryRunCB: func(path string) {}},
+	}
+	prober.PrepareProbe("usbhid", "safe_usb=no")
+	prober.PrepareProbe("hid-generic", "allow_mice=yes")
+	prober.PrepareProbe("depmod", "mod=dep")
+
+	prober.FinishProbe("depmod")
+
+	if m["/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko"].params != "safe_usb=no" {
+		t.Fatalf("Failed to set params: %s should be %s", m["/lib/modules/6.6.6-generic/kernel/drivers/hid/usbhid/usbhid.ko"].params, "safe_usb=no")
+	}
+
+	err := prober.Probe("usbhid", "safe_usb=no")
+	if err != nil {
+		t.Fatalf("Second probe with same params should be successful")
+	}
+
+	err = prober.Probe("usbhid", "safe_usb=yes")
+	if err == nil {
+		t.Fatalf("Second probe with different params should error")
+	}
+}
+
 // Helper function to generate compression test data for TestCompression.
 // Generates a map with the name of the file as key and the compressed data as value.
 // The data is compressed using xz, gzip, and zstd.
