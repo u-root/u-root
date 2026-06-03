@@ -67,16 +67,21 @@ func (c *cmd) mktemp() (string, error) {
 	}
 
 	if c.flags.d {
-		d, err := os.MkdirTemp(c.flags.dir, c.flags.prefix)
-		return d, err
+		return os.MkdirTemp(c.flags.dir, c.flags.prefix)
 	}
 	f, err := os.CreateTemp(c.flags.dir, c.flags.prefix)
-	return f.Name(), err
+	if err != nil {
+		return "", err
+	}
+	return f.Name(), nil
 }
 
 func (c *cmd) run() error {
 	fileName, err := c.mktemp()
-	if err != nil && !c.flags.q {
+	if err != nil {
+		if c.flags.q {
+			return nil
+		}
 		return err
 	}
 

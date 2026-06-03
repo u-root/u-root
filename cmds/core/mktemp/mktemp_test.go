@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"os"
 	"path/filepath"
@@ -47,6 +48,15 @@ func TestMkTemp(t *testing.T) {
 			out:     "",
 			err:     nil,
 		},
+		{
+			cmdline: []string{"mktemp", "-p", "/notexists"},
+			out:     "",
+			err:     os.ErrNotExist,
+		},
+		{
+			cmdline: []string{"mktemp", "-q", "-p", "/notexists"},
+			out:     "",
+		},
 	}
 
 	// Table-driven testing
@@ -54,7 +64,7 @@ func TestMkTemp(t *testing.T) {
 		var stdout bytes.Buffer
 		cmd := command(&stdout, tt.cmdline)
 		err := cmd.run()
-		if err != tt.err {
+		if !errors.Is(err, tt.err) {
 			t.Errorf("expected %v, got %v", tt.err, err)
 		}
 

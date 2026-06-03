@@ -65,7 +65,7 @@ func TestEchoWithMaxArgs(t *testing.T) {
 	}
 }
 
-func TestEchoPromt(t *testing.T) {
+func TestEchoInteractive(t *testing.T) {
 	stdin := strings.NewReader("a b c")
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
@@ -87,6 +87,32 @@ func TestEchoPromt(t *testing.T) {
 
 	if stdout.String() != "a\nc\n" {
 		t.Errorf("expected 'a\nc\n' got %q", stdout.String())
+	}
+}
+
+func TestEchoInteractiveControlD(t *testing.T) {
+	stdin := strings.NewReader("a b c")
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tty")
+	// small array to simulate ^D
+	err := os.WriteFile(path, []byte("y\n"), 0644)
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+
+	p := params{maxArgs: 1, prompt: true, trace: true}
+	c := command(stdin, stdout, stderr, p)
+	c.tty = path
+	err = c.run()
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+
+	if stdout.String() != "a\n" {
+		t.Errorf("expected 'a\n' got %q", stdout.String())
 	}
 }
 
