@@ -147,7 +147,10 @@ func (c *cmd) run(args ...string) error {
 			fmt.Fprintf(c.stderr, "%s\n", strings.Join(args, " "))
 		}
 
-		if c.prompt && ttyScanner.Scan() {
+		if c.prompt {
+			if !ttyScanner.Scan() {
+				break
+			}
 			input := ttyScanner.Text()
 			if !strings.HasPrefix(input, "y") && !strings.HasPrefix(input, "Y") {
 				args = args[:argsLen]
