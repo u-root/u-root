@@ -217,24 +217,13 @@ func TestDirectoryHardLink(t *testing.T) {
 	}
 }
 
-func TestExtractZeroLengthFileSharingDirInode(t *testing.T) {
+func extractNewcRecords(t *testing.T, records ...cpio.Record) string {
+	t.Helper()
+
 	archive := &bytes.Buffer{}
 	w := cpio.Newc.Writer(archive)
 
-	uid := uint64(os.Getuid())
-	gid := uint64(os.Getgid())
-
-	dir := cpio.Directory("dir", 0o755)
-	dir.Ino = 1
-	dir.UID = uid
-	dir.GID = gid
-
-	file := cpio.StaticFile("file", "", 0o644)
-	file.Ino = dir.Ino
-	file.UID = uid
-	file.GID = gid
-
-	for _, rec := range []cpio.Record{dir, file} {
+	for _, rec := range records {
 		if err := w.WriteRecord(rec); err != nil {
 			t.Fatal(err)
 		}
@@ -260,7 +249,11 @@ func TestExtractZeroLengthFileSharingDirInode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chdir(wd)
+	t.Cleanup(func() {
+		if err := os.Chdir(wd); err != nil {
+			t.Errorf("could not restore working directory: %v", err)
+		}
+	})
 
 	extractDir := filepath.Join(tmpDir, "extract")
 	if err := os.Mkdir(extractDir, 0o755); err != nil {
@@ -274,10 +267,53 @@ func TestExtractZeroLengthFileSharingDirInode(t *testing.T) {
 	if err := run([]string{"i"}, archiveFile, stdout, false, "newc"); err != nil {
 		t.Fatalf(`run(["i"]) = %v; want nil`, err)
 	}
-	if info, err := os.Stat("dir"); err != nil || !info.IsDir() {
+
+	return extractDir
+}
+
+func TestExtractZeroLengthFileSharingDirInode(t *testing.T) {
+	uid := uint64(os.Getuid())
+	gid := uint64(os.Getgid())
+
+	dir := cpio.Directory("dir", 0o755)
+	dir.Ino = 1
+	dir.UID = uid
+	dir.GID = gid
+
+	file := cpio.StaticFile("file", "", 0o644)
+	file.Ino = dir.Ino
+	file.UID = uid
+	file.GID = gid
+
+	extractDir := extractNewcRecords(t, dir, file)
+	if info, err := os.Stat(filepath.Join(extractDir, "dir")); err != nil || !info.IsDir() {
 		t.Fatalf(`Stat("dir") = %v, %v; want directory`, info, err)
 	}
-	if info, err := os.Stat("file"); err != nil || info.IsDir() || info.Size() != 0 {
+	if info, err := os.Stat(filepath.Join(extractDir, "file")); err != nil || info.IsDir() || info.Size() != 0 {
 		t.Fatalf(`Stat("file") = %v, %v; want zero-length file`, info, err)
+	}
+}
+
+func TestExtractNonEmptyFileSharingDirInode(t *testing.T) {
+	uid := uint64(os.Getuid())
+	gid := uint64(os.Getgid())
+
+	dir := cpio.Directory("dir", 0o755)
+	dir.Ino = 2
+	dir.UID = uid
+	dir.GID = gid
+
+	file := cpio.StaticFile("file", "contents", 0o644)
+	file.Ino = dir.Ino
+	file.UID = uid
+	file.GID = gid
+
+	extractDir := extractNewcRecords(t, dir, file)
+	if info, err := os.Stat(filepath.Join(extractDir, "dir")); err != nil || !info.IsDir() {
+		t.Fatalf(`Stat("dir") = %v, %v; want directory`, info, err)
+	}
+	got, err := os.ReadFile(filepath.Join(extractDir, "file"))
+	if err != nil || string(got) != "contents" {
+		t.Fatalf(`ReadFile("file") = %q, %v; want "contents", nil`, got, err)
 	}
 }
