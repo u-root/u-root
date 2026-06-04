@@ -30,6 +30,7 @@ var (
 	useSSH      = flag.Bool("ssh", false, "Use ssh for transport")
 	privateKey  = flag.String("private_key", "id_rsa", "Path to your private key")
 	fastTimeout = flag.Bool("fast_timeout", false, "Quickly timeout server connections")
+	cache       = flag.String("cache", "none", "Cache mode")
 )
 
 // Run does the mount and blocks if necessary.  Cancel the context to unblock
@@ -57,7 +58,7 @@ func run(ctx context.Context) error {
 		}
 	}()
 	// If we blocked for ssh, err will be non-nil.
-	return ssh9p.Mount9P(ctx, ready, c, onto, ssh9p.WithSSHClient(cfg), ssh9p.WithUnixFlags(unix.MS_NOSUID|unix.MS_NODEV), ssh9p.WithFastTCPTimeout(*fastTimeout))
+	return ssh9p.Mount9P(ctx, ready, c, onto, ssh9p.WithSSHClient(cfg), ssh9p.WithUnixFlags(unix.MS_NOSUID|unix.MS_NODEV), ssh9p.WithFastTCPTimeout(*fastTimeout), ssh9p.WithCache(*cache))
 }
 
 func main() {
