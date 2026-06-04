@@ -369,6 +369,7 @@ func ReplaceUsbRedfishHostInterface(cfg *RedfishHostInterfaceConfig) OverrideOpt
 			}
 			if cfg.Hostname != "" {
 				mc.Hostname = cfg.Hostname
+				mc.ProtocolLength = uint8(90 + 1 + len(cfg.Hostname))
 			}
 
 			mct, err := mc.toTable()
