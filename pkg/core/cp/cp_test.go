@@ -135,3 +135,31 @@ func TestCopySimple(t *testing.T) {
 		}
 	}
 }
+
+func TestRunMultipleSourcesWithWorkingDirDestination(t *testing.T) {
+	workingDir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(workingDir, "out"), 0755); err != nil {
+		t.Fatalf(`Mkdir("out") = %v, want nil`, err)
+	}
+	for _, name := range []string{"file1", "file2"} {
+		if err := os.WriteFile(filepath.Join(workingDir, name), []byte(name), 0644); err != nil {
+			t.Fatalf(`WriteFile(%q) = %v, want nil`, name, err)
+		}
+	}
+
+	cmd := New()
+	cmd.SetWorkingDir(workingDir)
+	if err := cmd.Run("file1", "file2", "out"); err != nil {
+		t.Fatalf(`Run("file1", "file2", "out") = %v, want nil`, err)
+	}
+
+	for _, name := range []string{"file1", "file2"} {
+		got, err := os.ReadFile(filepath.Join(workingDir, "out", name))
+		if err != nil {
+			t.Fatalf(`ReadFile("out/%s") = %v, want nil`, name, err)
+		}
+		if string(got) != name {
+			t.Errorf(`ReadFile("out/%s") = %q, want %q`, name, string(got), name)
+		}
+	}
+}

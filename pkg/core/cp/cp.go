@@ -284,7 +284,7 @@ func (c *command) RunContext(ctx context.Context, args ...string) error {
 	todir := false
 	from, to := fs.Args()[:fs.NArg()-1], fs.Args()[fs.NArg()-1]
 
-	toStat, err := os.Stat(to)
+	toStat, err := os.Stat(c.ResolvePath(to))
 	if err == nil {
 		todir = toStat.IsDir()
 	}
