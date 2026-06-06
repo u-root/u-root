@@ -22,12 +22,14 @@
 //	–c:      Prefix a repetition count and a tab to each output line.
 //	         Implies –u and –d.
 //	-i:      Case insensitive comparison of lines.
+package main
+
+// TODO: implement these flags:
 //	–f num:  The first num fields together with any blanks before each are
 //	         ignored. A field is defined as a string of non–space, non–tab
 //	         characters separated by tabs and spaces from its neighbors.
-//	-cn num: The first num characters are ignored. Fields are skipped before
+//	-s num: The first num characters are ignored. Fields are skipped before
 //	         characters.
-package main
 
 // TODO(aam): -num and +num are not implemented. they're easy to do, just not exactly the
 // way that the plan9 uniq does them as we want to avoid polluting the flag parsing libs with
@@ -54,10 +56,7 @@ var (
 // var cnum = flag.Int("cn", 0, "ignore num characters from beginning of line")
 
 func shouldPrint(unique, duplicates bool, cnt int) bool {
-	if unique && cnt > 1 {
-		return false
-	}
-	if duplicates && cnt == 1 {
+	if unique && cnt > 1 || duplicates && cnt == 1 {
 		return false
 	}
 	return true
@@ -102,30 +101,23 @@ func uniq(r io.Reader, w io.Writer, unique, duplicates, count bool, equal func(a
 	return nil
 }
 
-func runOnFile(fn string, stdout io.Writer, unique bool, duplicates bool, count bool, eq func(a []byte, b []byte) bool) error {
-	f, err := os.Open(fn)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	return uniq(f, stdout, unique, duplicates, count, eq)
-}
-
 func run(stdin io.Reader, stdout io.Writer, unique, duplicates, count, ignoreCase bool, args []string) error {
-	var eq func(a, b []byte) bool
+	eq := bytes.Equal
 	if ignoreCase {
 		eq = bytes.EqualFold
-	} else {
-		eq = bytes.Equal
 	}
 	if len(args) == 0 {
 		return uniq(stdin, stdout, unique, duplicates, count, eq)
 	}
 	for _, fn := range args {
-		err := runOnFile(fn, stdout, unique, duplicates, count, eq)
+		f, err := os.Open(fn)
 		if err != nil {
 			return err
 		}
+		if err := uniq(f, stdout, unique, duplicates, count, eq); err != nil {
+			return err
+		}
+		_ = f.Close()
 	}
 	return nil
 }

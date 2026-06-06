@@ -6,9 +6,12 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
+	"os"
 	"strings"
+	"syscall"
 	"testing"
 	"testing/iotest"
 )
@@ -22,13 +25,17 @@ func TestUniq(t *testing.T) {
 		count      bool
 		ignoreCase bool
 		want       string
-		wantErr    string
+		wantErr    error
 		stdin      io.Reader
 	}{
 		{
-			name:    "file 1 with wrong file",
-			args:    []string{"filedoesnotexist"},
-			wantErr: "open filedoesnotexist: no such file or directory",
+			name: "file 1 with wrong file",
+			args: []string{"filedoesnotexist"},
+			wantErr: &os.PathError{
+				Op:   "open",
+				Path: "filedoesnotexist",
+				Err:  syscall.Errno(2),
+			},
 		},
 		{
 			name: "file 1 without any flag",
@@ -85,13 +92,13 @@ func TestUniq(t *testing.T) {
 		{
 			name:    "error reading from stdin 1",
 			args:    nil,
-			wantErr: iotest.ErrTimeout.Error(),
+			wantErr: iotest.ErrTimeout,
 			stdin:   iotest.ErrReader(iotest.ErrTimeout),
 		},
 		{
 			name:    "error reading from stdin 2",
 			args:    nil,
-			wantErr: iotest.ErrTimeout.Error(),
+			wantErr: iotest.ErrTimeout,
 			stdin:   io.MultiReader(strings.NewReader("go\n"), iotest.ErrReader(iotest.ErrTimeout)),
 		},
 		{
@@ -130,12 +137,24 @@ func TestUniq(t *testing.T) {
 		log.SetOutput(buf)
 		t.Run(tt.name, func(t *testing.T) {
 			if got := run(tt.stdin, buf, tt.unique, tt.duplicates, tt.count, tt.ignoreCase, tt.args); got != nil {
-				if got.Error() != tt.wantErr {
-					t.Errorf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
+				var gotPathErr *os.PathError
+				var wantPathErr *os.PathError
+				if errors.As(got, &gotPathErr) && errors.As(tt.wantErr, &wantPathErr) {
+					if gotPathErr.Op != wantPathErr.Op {
+						t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
+					}
+					if gotPathErr.Path != wantPathErr.Path {
+						t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
+					}
+					if !errors.Is(gotPathErr.Err, wantPathErr.Err) {
+						t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
+					}
+				} else if !errors.Is(got, tt.wantErr) {
+					t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
 				}
 			} else {
-				if len(tt.wantErr) > 0 {
-					t.Errorf("runUniq() = <nil>, want %q", tt.wantErr)
+				if tt.wantErr != nil {
+					t.Fatalf("runUniq() = <nil>, want %q", tt.wantErr)
 				}
 				if buf.String() != tt.want {
 					t.Errorf("runUniq() = %q, want %q", buf.String(), tt.want)
