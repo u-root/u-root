@@ -11,7 +11,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"syscall"
 	"testing"
 	"testing/iotest"
 )
@@ -29,13 +28,9 @@ func TestUniq(t *testing.T) {
 		stdin      io.Reader
 	}{
 		{
-			name: "file 1 with wrong file",
-			args: []string{"filedoesnotexist"},
-			wantErr: &os.PathError{
-				Op:   "open",
-				Path: "filedoesnotexist",
-				Err:  syscall.Errno(2),
-			},
+			name:    "file 1 with wrong file",
+			args:    []string{"filedoesnotexist"},
+			wantErr: os.ErrNotExist,
 		},
 		{
 			name: "file 1 without any flag",
@@ -137,19 +132,7 @@ func TestUniq(t *testing.T) {
 		log.SetOutput(buf)
 		t.Run(tt.name, func(t *testing.T) {
 			if got := run(tt.stdin, buf, tt.unique, tt.duplicates, tt.count, tt.ignoreCase, tt.args); got != nil {
-				var gotPathErr *os.PathError
-				var wantPathErr *os.PathError
-				if errors.As(got, &gotPathErr) && errors.As(tt.wantErr, &wantPathErr) {
-					if gotPathErr.Op != wantPathErr.Op {
-						t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
-					}
-					if gotPathErr.Path != wantPathErr.Path {
-						t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
-					}
-					if !errors.Is(gotPathErr.Err, wantPathErr.Err) {
-						t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
-					}
-				} else if !errors.Is(got, tt.wantErr) {
+				if !errors.Is(got, tt.wantErr) {
 					t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
 				}
 			} else {
