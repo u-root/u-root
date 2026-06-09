@@ -112,12 +112,15 @@ func ReadHssFromFile(filePath string, minHssPerFile int) ([][]byte, error) {
 	if len(data) < minValidLen {
 		return nil, fmt.Errorf("file size %d is less than expected", len(data))
 	}
-	if len(data) > minValidLen {
+	if minHssPerFile > 0 && len(data) > minValidLen {
 		log.Printf("Expecting %d bytes but got more %d bytes", minValidLen, len(data))
 	}
 
 	var hssList [][]byte
 	for i := range hostSecretSeedCount {
+		if (i+1)*hostSecretSeedStructSize > len(data) {
+			break
+		}
 		start := i * hostSecretSeedStructSize
 		end := start + hostSecretSeedStructSize
 		hssKey := data[start:end]
