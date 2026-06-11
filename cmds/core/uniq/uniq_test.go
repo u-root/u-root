@@ -6,10 +6,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func TestUniq(t *testing.T) {
@@ -21,13 +24,13 @@ func TestUniq(t *testing.T) {
 		count      bool
 		ignoreCase bool
 		want       string
-		wantErr    string
+		wantErr    error
 		stdin      io.Reader
 	}{
 		{
 			name:    "file 1 with wrong file",
 			args:    []string{"filedoesnotexist"},
-			wantErr: "open filedoesnotexist: no such file or directory",
+			wantErr: os.ErrNotExist,
 		},
 		{
 			name: "file 1 without any flag",
@@ -67,7 +70,7 @@ func TestUniq(t *testing.T) {
 			name:   "file 2 uniques == true",
 			args:   []string{"testdata/file2.txt"},
 			unique: true,
-			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n\n",
+			want:   "u-root\nuniq\nteam\nbinaries\ntest\nTest\n",
 		},
 		{
 			name:       "file 2 duplicates == true",
@@ -82,7 +85,37 @@ func TestUniq(t *testing.T) {
 			want:       "u-root\nuniq\nron\nteam\nbinaries\ntest\n\n",
 		},
 		{
-			name:   "no args given use stdin",
+			name:    "error reading from stdin 1",
+			args:    nil,
+			wantErr: iotest.ErrTimeout,
+			stdin:   iotest.ErrReader(iotest.ErrTimeout),
+		},
+		{
+			name:    "error reading from stdin 2",
+			args:    nil,
+			wantErr: iotest.ErrTimeout,
+			stdin:   io.MultiReader(strings.NewReader("go\n"), iotest.ErrReader(iotest.ErrTimeout)),
+		},
+		{
+			name:  "stdin empty input",
+			args:  nil,
+			want:  "",
+			stdin: strings.NewReader(""),
+		},
+		{
+			name:  "stdin one string",
+			args:  nil,
+			want:  "go\n",
+			stdin: strings.NewReader("go\n"),
+		},
+		{
+			name:  "stdin three identical strings",
+			args:  nil,
+			want:  "go\n",
+			stdin: strings.NewReader("go\ngo\ngo\n"),
+		},
+		{
+			name:   "stdin and unique",
 			args:   nil,
 			unique: true,
 			stdin:  strings.NewReader("go\nu-root\ngo\ngo\ngo\n"),
@@ -99,10 +132,13 @@ func TestUniq(t *testing.T) {
 		log.SetOutput(buf)
 		t.Run(tt.name, func(t *testing.T) {
 			if got := run(tt.stdin, buf, tt.unique, tt.duplicates, tt.count, tt.ignoreCase, tt.args); got != nil {
-				if got.Error() != tt.wantErr {
-					t.Errorf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
+				if !errors.Is(got, tt.wantErr) {
+					t.Fatalf("runUniq() = %q, want %q", got.Error(), tt.wantErr)
 				}
 			} else {
+				if tt.wantErr != nil {
+					t.Fatalf("runUniq() = <nil>, want %q", tt.wantErr)
+				}
 				if buf.String() != tt.want {
 					t.Errorf("runUniq() = %q, want %q", buf.String(), tt.want)
 				}
