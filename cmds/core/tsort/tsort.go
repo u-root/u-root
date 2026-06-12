@@ -77,11 +77,6 @@ func run(
 	stderr io.Writer,
 	args ...string,
 ) error {
-	out := bufio.NewWriter(stdout)
-	defer out.Flush()
-	werr := bufio.NewWriter(stderr)
-	defer werr.Flush()
-
 	var err error
 	in := io.NopCloser(stdin)
 	if len(args) >= 1 {
@@ -99,15 +94,15 @@ func run(
 	topologicalOrdering(
 		g,
 		func(node nodeID) {
-			_, _ = out.WriteString(g.valueFor(node))
-			_ = out.WriteByte('\n')
+			_, _ = io.WriteString(stdout, g.valueFor(node))
+			_, _ = io.WriteString(stdout, "\n")
 		},
 		func(cycle []nodeID) {
-			_, _ = werr.WriteString("tsort: cycle in data\n")
+			_, _ = io.WriteString(stderr, "tsort: cycle in data\n")
 			for _, node := range cycle {
-				_, _ = werr.WriteString("tsort: ")
-				_, _ = werr.WriteString(g.valueFor(node))
-				_ = werr.WriteByte('\n')
+				_, _ = io.WriteString(stderr, "tsort: ")
+				_, _ = io.WriteString(stderr, g.valueFor(node))
+				_, _ = io.WriteString(stderr, "\n")
 			}
 			err = errNonFatal
 		})
