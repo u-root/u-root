@@ -72,12 +72,7 @@ var (
 	errOddDataCount = errors.New("odd data count")
 )
 
-func run(
-	stdin io.Reader,
-	stdout io.Writer,
-	stderr io.Writer,
-	args ...string,
-) error {
+func run(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 	var err error
 	in := io.NopCloser(stdin)
 	if len(args) >= 1 {
