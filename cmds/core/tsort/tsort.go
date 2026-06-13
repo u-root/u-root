@@ -60,6 +60,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -94,15 +95,12 @@ func run(
 	topologicalOrdering(
 		g,
 		func(node nodeID) {
-			_, _ = io.WriteString(stdout, g.valueFor(node))
-			_, _ = io.WriteString(stdout, "\n")
+			_, _ = fmt.Fprintln(stdout, g.valueFor(node))
 		},
 		func(cycle []nodeID) {
-			_, _ = io.WriteString(stderr, "tsort: cycle in data\n")
+			_, _ = fmt.Fprintln(stderr, "tsort: cycle in data")
 			for _, node := range cycle {
-				_, _ = io.WriteString(stderr, "tsort: ")
-				_, _ = io.WriteString(stderr, g.valueFor(node))
-				_, _ = io.WriteString(stderr, "\n")
+				_, _ = fmt.Fprintln(stderr, "tsort:", g.valueFor(node))
 			}
 			err = errNonFatal
 		})
