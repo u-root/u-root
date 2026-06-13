@@ -117,6 +117,7 @@ func (t *Tar) execute(args []string) error {
 	if t.verbose {
 		opts.Filters = []tarutil.Filter{tarutil.VerboseFilter}
 	}
+	opts.ChangeDirectory = t.WorkingDir
 
 	// Resolve file path relative to working directory
 	filePath := t.ResolvePath(t.file)
@@ -128,13 +129,7 @@ func (t *Tar) execute(args []string) error {
 			return err
 		}
 
-		// Resolve all input paths relative to working directory
-		resolvedArgs := make([]string, len(args))
-		for i, arg := range args {
-			resolvedArgs[i] = t.ResolvePath(arg)
-		}
-
-		if err := tarutil.CreateTar(f, resolvedArgs, opts); err != nil {
+		if err := tarutil.CreateTar(f, args, opts); err != nil {
 			f.Close()
 			return err
 		}
@@ -148,9 +143,7 @@ func (t *Tar) execute(args []string) error {
 		}
 		defer f.Close()
 
-		// Resolve extract directory path
-		extractDir := t.ResolvePath(args[0])
-		if err := tarutil.ExtractDir(f, extractDir, opts); err != nil {
+		if err := tarutil.ExtractDir(f, args[0], opts); err != nil {
 			return err
 		}
 	case t.list:
