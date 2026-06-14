@@ -6,7 +6,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 )
@@ -27,11 +29,11 @@ func TestFiles(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		want       string
-		wantStderr string
-		args       []string
-		p          params
+		name string
+		want string
+		err  error
+		args []string
+		p    params
 	}{
 		{
 			name: "count in 2 files",
@@ -39,15 +41,15 @@ func TestFiles(t *testing.T) {
 			want: "3 6 36 " + f1.Name() + "\n0 0 0 " + f2.Name() + "\n3 6 36 total\n",
 		},
 		{
-			name:       "file does not exist",
-			args:       []string{"filedoesnotexist"},
-			wantStderr: "wc: filedoesnotexist: open filedoesnotexist: no such file or directory\n",
+			name: "file does not exist",
+			args: []string{"filedoesnotexist"},
+			err:  os.ErrNotExist,
 		},
 		{
-			name:       "both files do not exist but total printed",
-			args:       []string{"filedoesnotexist1", "filedoesnotexist2"},
-			wantStderr: "wc: filedoesnotexist1: open filedoesnotexist1: no such file or directory\n" + "wc: filedoesnotexist2: open filedoesnotexist2: no such file or directory\n",
-			want:       "0 0 0 total\n",
+			name: "both files do not exist but total printed",
+			args: []string{"filedoesnotexist1", "filedoesnotexist2"},
+			err:  os.ErrNotExist,
+			want: "0 0 0 total\n",
 		},
 		{
 			name: "file1 no flag",
@@ -94,15 +96,13 @@ func TestFiles(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			stdout := &bytes.Buffer{}
-			stderr := &bytes.Buffer{}
-			if err := command(nil, stdout, stderr, test.p, test.args).run(); err != nil {
-				t.Fatal(err)
+			stderr := io.Discard
+			err := command(nil, stdout, stderr, test.p, test.args).run()
+			if !errors.Is(err, test.err) {
+				t.Fatalf("expected %v, got %v", test.err, err)
 			}
 			if stdout.String() != test.want {
 				t.Errorf("wc stdout = %q, want: %q", stdout.String(), test.want)
-			}
-			if stderr.String() != test.wantStderr {
-				t.Errorf("wc stderr = %q, want: %q", stderr.String(), test.wantStderr)
 			}
 		})
 	}
