@@ -25,11 +25,11 @@
   "dependencies": {
     "@11ty/eleventy": "^2.0.1",
     "@11ty/eleventy-img": "^3.1.8",
-    "@cagov/11ty-build-system": "^1.0.1",
+    "@cagov/11ty-build-system": "^1.1.0",
     "clean-css": "^5.3.3",
     "dotenv": "^16.3.1",
     "eleventy-plugin-svg-sprite": "^2.4.2",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.1",
     "esbuild-plugin-glob": "^2.2.3",
     "gorko": "^0.9.1",
     "gsap": "^3.12.5",
