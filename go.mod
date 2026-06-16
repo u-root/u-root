@@ -41,13 +41,13 @@ require (
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.45.0
-	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
-	golang.org/x/net v0.47.0
-	golang.org/x/sys v0.41.0
-	golang.org/x/term v0.37.0
-	golang.org/x/text v0.31.0
-	golang.org/x/tools v0.38.0
+	golang.org/x/crypto v0.50.0
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
+	golang.org/x/net v0.53.0
+	golang.org/x/sys v0.43.0
+	golang.org/x/term v0.42.0
+	golang.org/x/text v0.36.0
+	golang.org/x/tools v0.44.0
 	gopkg.in/yaml.v2 v2.4.0
 	mvdan.cc/sh/v3 v3.11.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
@@ -69,12 +69,12 @@ require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
-	github.com/cyphar/filepath-securejoin v0.2.5 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/docker/cli v29.2.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-git/go-billy/v5 v5.5.1-0.20240514075308-8f1b719cb6a2 // indirect
+	github.com/go-git/go-billy/v5 v5.9.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
@@ -122,8 +122,8 @@ require (
 	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/sync v0.18.0
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
