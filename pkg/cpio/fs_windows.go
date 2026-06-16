@@ -92,7 +92,7 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 
 	switch m {
 	case os.FileMode(0):
-		nf, err := os.Create(f.Name)
+		nf, err := os.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, toFileMode(f).Perm())
 		if err != nil {
 			return err
 		}
