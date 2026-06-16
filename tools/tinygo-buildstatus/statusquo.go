@@ -177,7 +177,7 @@ var (
 		// "pxeserver",
 		"readelf",
 		"readpe",
-		// "run",
+		"run",
 		"rush",
 		"serial",
 		"smbios_transfer",
