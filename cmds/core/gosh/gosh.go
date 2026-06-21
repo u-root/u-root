@@ -47,7 +47,16 @@ func main() {
 var errNotImplemented = errors.New("fancy interactive interpreter not implemented")
 
 func run(stdin io.Reader, stdout, stderr io.Writer, command string, args ...string) error {
-	runner, err := interp.New(interp.StdIO(stdin, stdout, stderr))
+	runner, err := interp.New(
+		interp.StdIO(stdin, stdout, stderr),
+		interp.CallHandler(func(ctx context.Context, args []string) ([]string, error) {
+			if len(args) > 0 && args[0] == "kill" {
+				args[0] = "/bbin/kill"
+				return args, nil
+			}
+			return args, nil
+		}),
+	)
 	if err != nil {
 		return err
 	}

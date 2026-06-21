@@ -9,11 +9,11 @@
 package pattern
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 	"regexp"
-	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Mode can be used to supply a number of options to the package's functions.
@@ -29,15 +29,37 @@ func (e SyntaxError) Error() string { return e.msg }
 
 func (e SyntaxError) Unwrap() error { return e.err }
 
-const (
-	Shortest     Mode = 1 << iota // prefer the shortest match.
-	Filenames                     // "*" and "?" don't match slashes; only "**" does
-	Braces                        // support "{a,b}" and "{1..4}"
-	EntireString                  // match the entire string using ^$ delimiters
-	NoGlobCase                    // Do case-insensitive match (that is, use (?i) in the regexp)
-)
+// NegExtGlobGroup represents the byte offset range of a single !(expr) group
+// within a pattern string. Start is the offset of '!', End is one past ')'.
+type NegExtGlobGroup struct {
+	Start, End int
+}
 
-var numRange = regexp.MustCompile(`^([+-]?\d+)\.\.([+-]?\d+)}`)
+// NegExtGlobError is returned by [Regexp] when an extglob negation operator
+// !(pattern-list) is encountered, as Go's [regexp] package does not support
+// negative lookahead. Callers can handle this by negating the result of
+// matching the inner pattern.
+type NegExtGlobError struct {
+	Groups []NegExtGlobGroup
+}
+
+func (e *NegExtGlobError) Error() string {
+	return "extglob !(...) is not supported in this scenario"
+}
+
+// TODO(v4): flip NoGlobStar to be opt-in via GlobStar, matching bash
+// TODO(v4): flip EntireString to be opt-out via PartialMatch, as EntireString causes subtle bugs when forgotten
+// TODO(v4): rename NoGlobCase to CaseInsensitive for readability
+
+const (
+	Shortest          Mode = 1 << iota // prefer the shortest match.
+	Filenames                          // "*" and "?" don't match slashes; only "**" does; only makes sense with EntireString too
+	EntireString                       // match the entire string using ^$ delimiters
+	NoGlobCase                         // do case-insensitive match (that is, use (?i) in the regexp); shopt "nocaseglob"
+	NoGlobStar                         // do not support "**"; negated shopt "globstar"
+	GlobLeadingDot                     // let wildcards match leading dots in filenames; shopt "dotglob"
+	ExtendedOperators                  // support extended pattern matching operators; shopt "extglob" for pathname expansion
+)
 
 // Regexp turns a shell pattern into a regular expression that can be used with
 // [regexp.Compile]. It will return an error if the input pattern was incorrect.
@@ -49,230 +71,280 @@ var numRange = regexp.MustCompile(`^([+-]?\d+)\.\.([+-]?\d+)}`)
 // paths if Windows is supported, as the path separator on that platform is the
 // same character as the escaping character for shell patterns.
 func Regexp(pat string, mode Mode) (string, error) {
-	needsEscaping := false
-noopLoop:
-	for _, r := range pat {
-		switch r {
-		// including those that need escaping since they are
-		// regular expression metacharacters
-		case '*', '?', '[', '\\', '.', '+', '(', ')', '|',
-			']', '{', '}', '^', '$':
-			needsEscaping = true
-			break noopLoop
+	// If there are no special pattern matching or regular expression characters,
+	// and we don't need to insert extras for the modes affecting non-special characters,
+	// we can directly return the input string as a short-cut.
+	if mode&(EntireString|NoGlobCase) == 0 {
+		needsEscaping := false
+	noopLoop:
+		for _, r := range pat {
+			switch r {
+			// including those that need escaping since they are
+			// regular expression metacharacters
+			case '*', '?', '[', '\\', '.', '+', '(', ')', '|',
+				']', '{', '}', '^', '$':
+				needsEscaping = true
+				break noopLoop
+			}
+		}
+		if !needsEscaping {
+			return pat, nil
 		}
 	}
-	if !needsEscaping && mode&EntireString == 0 { // short-cut without a string copy
-		return pat, nil
-	}
-	closingBraces := []int{}
-	var buf bytes.Buffer
+	var sb strings.Builder
 	// Enable matching `\n` with the `.` metacharacter as globs match `\n`
-	buf.WriteString("(?s)")
-	dotMeta := false
+	sb.WriteString(`(?s`)
 	if mode&NoGlobCase != 0 {
-		buf.WriteString("(?i)")
+		sb.WriteString(`i`)
 	}
+	if mode&Shortest != 0 {
+		sb.WriteString(`U`)
+	}
+	sb.WriteString(`)`)
 	if mode&EntireString != 0 {
-		buf.WriteString("^")
+		sb.WriteString(`^`)
 	}
-writeLoop:
-	for i := 0; i < len(pat); i++ {
-		switch c := pat[i]; c {
-		case '*':
-			if mode&Filenames != 0 {
-				if i++; i < len(pat) && pat[i] == '*' {
-					if i++; i < len(pat) && pat[i] == '/' {
-						buf.WriteString("(.*/|)")
-						dotMeta = true
-					} else {
-						buf.WriteString(".*")
-						dotMeta = true
-						i--
-					}
-				} else {
-					buf.WriteString("[^/]*")
-					i--
-				}
-			} else {
-				buf.WriteString(".*")
-				dotMeta = true
+	sl := stringLexer{s: pat}
+	var negGroups []NegExtGlobGroup
+	for {
+		if err := regexpNext(&sb, &sl, mode); err == io.EOF {
+			break
+		} else if err != nil {
+			negErr, ok := err.(*NegExtGlobError)
+			if !ok {
+				return "", err
 			}
-			if mode&Shortest != 0 {
-				buf.WriteByte('?')
-			}
-		case '?':
-			if mode&Filenames != 0 {
-				buf.WriteString("[^/]")
-			} else {
-				buf.WriteByte('.')
-				dotMeta = true
-			}
-		case '\\':
-			if i++; i >= len(pat) {
-				return "", &SyntaxError{msg: `\ at end of pattern`}
-			}
-			buf.WriteString(regexp.QuoteMeta(string(pat[i])))
-		case '[':
-			name, err := charClass(pat[i:])
-			if err != nil {
-				return "", &SyntaxError{msg: "charClass invalid", err: err}
-			}
-			if name != "" {
-				buf.WriteString(name)
-				i += len(name) - 1
-				break
-			}
-			if mode&Filenames != 0 {
-				for _, c := range pat[i:] {
-					if c == ']' {
-						break
-					} else if c == '/' {
-						buf.WriteString("\\[")
-						continue writeLoop
-					}
-				}
-			}
-			buf.WriteByte(c)
-			if i++; i >= len(pat) {
-				return "", &SyntaxError{msg: "[ was not matched with a closing ]"}
-			}
-			switch c = pat[i]; c {
-			case '!', '^':
-				buf.WriteByte('^')
-				if i++; i >= len(pat) {
-					return "", &SyntaxError{msg: "[ was not matched with a closing ]"}
-				}
-			}
-			if c = pat[i]; c == ']' {
-				buf.WriteByte(']')
-				if i++; i >= len(pat) {
-					return "", &SyntaxError{msg: "[ was not matched with a closing ]"}
-				}
-			}
-			rangeStart := byte(0)
-		loopBracket:
-			for ; i < len(pat); i++ {
-				c = pat[i]
-				buf.WriteByte(c)
-				switch c {
-				case '\\':
-					if i++; i < len(pat) {
-						buf.WriteByte(pat[i])
-					}
-					continue
-				case ']':
-					break loopBracket
-				}
-				if rangeStart != 0 && rangeStart > c {
-					return "", &SyntaxError{msg: fmt.Sprintf("invalid range: %c-%c", rangeStart, c)}
-				}
-				if c == '-' {
-					rangeStart = pat[i-1]
-				} else {
-					rangeStart = 0
-				}
-			}
-			if i >= len(pat) {
-				return "", &SyntaxError{msg: "[ was not matched with a closing ]"}
-			}
-		case '{':
-			if mode&Braces == 0 {
-				buf.WriteString(regexp.QuoteMeta(string(c)))
-				break
-			}
-			innerLevel := 1
-			commas := false
-		peekBrace:
-			for j := i + 1; j < len(pat); j++ {
-				switch c := pat[j]; c {
-				case '{':
-					innerLevel++
-				case ',':
-					commas = true
-				case '\\':
-					j++
-				case '}':
-					if innerLevel--; innerLevel > 0 {
-						continue
-					}
-					if !commas {
-						break peekBrace
-					}
-					closingBraces = append(closingBraces, j)
-					buf.WriteString("(?:")
-					continue writeLoop
-				}
-			}
-			if match := numRange.FindStringSubmatch(pat[i+1:]); len(match) == 3 {
-				start, err1 := strconv.Atoi(match[1])
-				end, err2 := strconv.Atoi(match[2])
-				if err1 != nil || err2 != nil || start > end {
-					return "", &SyntaxError{msg: fmt.Sprintf("invalid range: %q", match[0])}
-				}
-				// TODO: can we do better here?
-				buf.WriteString("(?:")
-				for n := start; n <= end; n++ {
-					if n > start {
-						buf.WriteByte('|')
-					}
-					fmt.Fprintf(&buf, "%d", n)
-				}
-				buf.WriteByte(')')
-				i += len(match[0])
-				break
-			}
-			buf.WriteString(regexp.QuoteMeta(string(c)))
-		case ',':
-			if len(closingBraces) == 0 {
-				buf.WriteString(regexp.QuoteMeta(string(c)))
-			} else {
-				buf.WriteByte('|')
-			}
-		case '}':
-			if len(closingBraces) > 0 && closingBraces[len(closingBraces)-1] == i {
-				buf.WriteByte(')')
-				closingBraces = closingBraces[:len(closingBraces)-1]
-			} else {
-				buf.WriteString(regexp.QuoteMeta(string(c)))
-			}
-		default:
-			if c > 128 {
-				buf.WriteByte(c)
-			} else {
-				buf.WriteString(regexp.QuoteMeta(string(c)))
-			}
+			negGroups = append(negGroups, negErr.Groups...)
 		}
 	}
+	if len(negGroups) > 0 {
+		return "", &NegExtGlobError{Groups: negGroups}
+	}
 	if mode&EntireString != 0 {
-		buf.WriteString("$")
+		sb.WriteString(`$`)
 	}
-	// No `.` metacharacters were used, so don't return the (?s) flag.
-	if !dotMeta {
-		return string(buf.Bytes()[4:]), nil
+	return sb.String(), nil
+}
+
+// stringLexer helps us tokenize a pattern string.
+// Note that we can use the null byte '\x00' to signal "no character" as shell strings cannot contain null bytes.
+type stringLexer struct {
+	s string
+	i int
+}
+
+func (sl *stringLexer) next() rune {
+	if sl.i >= len(sl.s) {
+		return '\x00'
 	}
-	return buf.String(), nil
+	c, size := utf8.DecodeRuneInString(sl.s[sl.i:])
+	sl.i += size
+	return c
+}
+
+func (sl *stringLexer) last() rune {
+	if sl.i < 2 {
+		return '\x00'
+	}
+	c, _ := utf8.DecodeLastRuneInString(sl.s[:sl.i-1])
+	return c
+}
+
+func (sl *stringLexer) peekNext() rune {
+	if sl.i >= len(sl.s) {
+		return '\x00'
+	}
+	c, _ := utf8.DecodeRuneInString(sl.s[sl.i:])
+	return c
+}
+
+func (sl *stringLexer) peekRest() string {
+	return sl.s[sl.i:]
+}
+
+func regexpNext(sb *strings.Builder, sl *stringLexer, mode Mode) error {
+	c := sl.next()
+	if mode&ExtendedOperators != 0 {
+		// Handle extended pattern matching operators separately,
+		// given that they can be one of many two-character prefixes.
+		// Note that we recurse into the same function in a loop,
+		// as each of the patterns in the list separated by '|' is a regular pattern.
+		switch op := c; op {
+		case '!', '?', '*', '+', '@':
+			if sl.peekNext() != '(' {
+				break
+			}
+			start := sl.i - 1       // position of the operator
+			sb.WriteRune(sl.next()) // (
+		nestedLoop:
+			for {
+				switch sl.peekNext() {
+				case ')':
+					break nestedLoop
+				case '|':
+					// extended operators support a list of "or" separated expressions
+					sb.WriteRune(sl.next())
+					continue
+				}
+				if err := regexpNext(sb, sl, mode); err == io.EOF {
+					break
+				} else if err != nil {
+					return err
+				}
+			}
+			sb.WriteRune(sl.next()) // )
+			if op == '!' {
+				return &NegExtGlobError{Groups: []NegExtGlobGroup{{Start: start, End: sl.i}}}
+			}
+			if op != '@' {
+				// @( is [syntax.GlobOne] for matching once; no suffix needed
+				sb.WriteRune(op)
+			}
+			return nil
+		}
+	}
+	switch c {
+	case '\x00':
+		return io.EOF
+	case '*':
+		if mode&Filenames == 0 {
+			// * - matches anything when not in filename mode
+			sb.WriteString(`.*`)
+			break
+		}
+		// "**" only acts as globstar if it is alone as a path element.
+		singleBefore := sl.i == 1 || sl.last() == '/'
+		if sl.peekNext() == '*' {
+			sl.i++
+			singleAfter := sl.i == len(sl.s) || sl.peekNext() == '/'
+			if mode&NoGlobStar == 0 && singleBefore && singleAfter {
+				// ** - match any number of slashes or "*" path elements
+				slashSuffix := sl.peekNext() == '/'
+				if slashSuffix {
+					// **/ - like "**" but requiring a trailing slash when matching
+					sl.i++
+					// wrap the expression to ensure that any match has a slash suffix
+					sb.WriteString(`(`)
+				}
+				if mode&GlobLeadingDot == 0 {
+					sb.WriteString(`(/|[^/.][^/]*)*`)
+				} else {
+					// with GlobLeadingDot (dotglob), match anything at all
+					sb.WriteString(`.*`)
+				}
+				if slashSuffix {
+					sb.WriteString(`/)?`)
+				}
+				break
+			}
+			// foo**, **bar, or NoGlobStar - behaves like "*" below
+		}
+		// * - matches anything except slashes and leading dots
+		if singleBefore && mode&GlobLeadingDot == 0 {
+			sb.WriteString(`([^/.][^/]*)?`)
+		} else {
+			// with GlobLeadingDot (dotglob), match anything except slashes
+			sb.WriteString(`[^/]*`)
+		}
+	case '?':
+		if mode&Filenames != 0 {
+			sb.WriteString(`[^/]`)
+		} else {
+			sb.WriteByte('.')
+		}
+	case '\\':
+		c = sl.next()
+		if c == '\x00' {
+			return &SyntaxError{msg: `\ at end of pattern`}
+		}
+		sb.WriteString(regexp.QuoteMeta(string(c)))
+	case '[':
+		// TODO: surely char classes can be mixed with others, e.g. [[:foo:]xyz]
+		if name, err := charClass(sl.peekRest()); err != nil {
+			return &SyntaxError{msg: "charClass invalid", err: err}
+		} else if name != "" {
+			sb.WriteByte('[')
+			sb.WriteString(name)
+			sl.i += len(name)
+			break
+		}
+		if mode&Filenames != 0 {
+			for i, c := range sl.peekRest() {
+				if i > 0 && c == ']' {
+					break
+				} else if c == '/' {
+					sb.WriteString(`\[`)
+					return nil
+				}
+			}
+		}
+		sb.WriteRune(c)
+		if c = sl.next(); c == '\x00' {
+			return &SyntaxError{msg: "[ was not matched with a closing ]"}
+		}
+		switch c {
+		case '!', '^':
+			sb.WriteByte('^')
+			if c = sl.next(); c == '\x00' {
+				return &SyntaxError{msg: "[ was not matched with a closing ]"}
+			}
+		}
+		if c == ']' {
+			sb.WriteByte(']')
+			if c = sl.next(); c == '\x00' {
+				return &SyntaxError{msg: "[ was not matched with a closing ]"}
+			}
+		}
+		for {
+			sb.WriteRune(c)
+			switch c {
+			case '\x00':
+				return &SyntaxError{msg: "[ was not matched with a closing ]"}
+			case '\\':
+				if c = sl.next(); c != '0' {
+					sb.WriteRune(c)
+				}
+			case '-':
+				start := sl.last()
+				end := sl.peekNext()
+				// TODO: what about overlapping ranges, like: [a--z]
+				if end != ']' && start > end {
+					return &SyntaxError{msg: fmt.Sprintf("invalid range: %c-%c", start, end)}
+				}
+			case ']':
+				return nil
+			}
+			c = sl.next()
+		}
+	default:
+		if c > utf8.RuneSelf {
+			sb.WriteRune(c)
+		} else {
+			sb.WriteString(regexp.QuoteMeta(string(c)))
+		}
+	}
+	return nil
 }
 
 func charClass(s string) (string, error) {
-	if strings.HasPrefix(s, "[[.") || strings.HasPrefix(s, "[[=") {
+	if strings.HasPrefix(s, "[.") || strings.HasPrefix(s, "[=") {
 		return "", fmt.Errorf("collating features not available")
 	}
-	if !strings.HasPrefix(s, "[[:") {
+	name, ok := strings.CutPrefix(s, "[:")
+	if !ok {
 		return "", nil
 	}
-	name := s[3:]
-	end := strings.Index(name, ":]]")
-	if end < 0 {
+	name, _, ok = strings.Cut(name, ":]]")
+	if !ok {
 		return "", fmt.Errorf("[[: was not matched with a closing :]]")
 	}
-	name = name[:end]
 	switch name {
 	case "alnum", "alpha", "ascii", "blank", "cntrl", "digit", "graph",
 		"lower", "print", "punct", "space", "upper", "word", "xdigit":
 	default:
 		return "", fmt.Errorf("invalid character class: %q", name)
 	}
-	return s[:len(name)+6], nil
+	return s[:len(name)+5], nil
 }
 
 // HasMeta returns whether a string contains any unescaped pattern
@@ -285,6 +357,8 @@ func charClass(s string) (string, error) {
 // This can be useful to avoid extra work, like [Regexp]. Note that this
 // function cannot be used to avoid [QuoteMeta], as backslashes are quoted by
 // that function but ignored here.
+//
+// The [Mode] parameter is unused, and will be removed in v4.
 func HasMeta(pat string, mode Mode) bool {
 	for i := 0; i < len(pat); i++ {
 		switch pat[i] {
@@ -292,10 +366,6 @@ func HasMeta(pat string, mode Mode) bool {
 			i++
 		case '*', '?', '[':
 			return true
-		case '{':
-			if mode&Braces != 0 {
-				return true
-			}
 		}
 	}
 	return false
@@ -305,16 +375,13 @@ func HasMeta(pat string, mode Mode) bool {
 // given text. The returned string is a pattern that matches the literal text.
 //
 // For example, QuoteMeta(`foo*bar?`) returns `foo\*bar\?`.
+//
+// The [Mode] parameter is unused, and will be removed in v4.
 func QuoteMeta(pat string, mode Mode) string {
 	needsEscaping := false
 loop:
 	for _, r := range pat {
 		switch r {
-		case '{':
-			if mode&Braces == 0 {
-				continue
-			}
-			fallthrough
 		case '*', '?', '[', '\\':
 			needsEscaping = true
 			break loop
@@ -328,10 +395,6 @@ loop:
 		switch r {
 		case '*', '?', '[', '\\':
 			sb.WriteByte('\\')
-		case '{':
-			if mode&Braces != 0 {
-				sb.WriteByte('\\')
-			}
 		}
 		sb.WriteRune(r)
 	}

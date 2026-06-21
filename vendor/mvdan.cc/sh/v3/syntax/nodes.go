@@ -219,6 +219,7 @@ type Stmt struct {
 	Negated    bool // ! stmt
 	Background bool // stmt &
 	Coprocess  bool // mksh's |&
+	Disown     bool // zsh's &| or &!
 
 	Redirs []*Redirect // stmt >a <b
 }
@@ -227,8 +228,8 @@ func (s *Stmt) Pos() Pos { return s.Position }
 func (s *Stmt) End() Pos {
 	if s.Semicolon.IsValid() {
 		end := posAddCol(s.Semicolon, 1) // ';' or '&'
-		if s.Coprocess {
-			end = posAddCol(end, 1) // '|&'
+		if s.Coprocess || s.Disown {
+			end = posAddCol(end, 1) // '|&' or '&|' or '&!'
 		}
 		return end
 	}
@@ -488,9 +489,15 @@ func (b *BinaryCmd) End() Pos { return b.Y.End() }
 type FuncDecl struct {
 	Position Pos
 	RsrvWord bool // non-posix "function f" style
-	Parens   bool // with () parentheses, only meaningful with RsrvWord=true
-	Name     *Lit
-	Body     *Stmt
+	Parens   bool // with () parentheses, can only be false when RsrvWord==true
+
+	// Only one of these is set at a time.
+	// Neither is set when declaring an anonymous func with [LangZsh].
+	// TODO(v4): join these, even if it's mildly annoying to non-Zsh users.
+	Name  *Lit
+	Names []*Lit // When declaring many func names with [LangZsh].
+
+	Body *Stmt
 }
 
 func (f *FuncDecl) Pos() Pos { return f.Position }
@@ -506,12 +513,12 @@ type Word struct {
 func (w *Word) Pos() Pos { return w.Parts[0].Pos() }
 func (w *Word) End() Pos { return w.Parts[len(w.Parts)-1].End() }
 
-// Lit returns the word as a literal value, if the word consists of [*Lit] nodes
-// only. An empty string is returned otherwise. Words with multiple literals,
-// which can appear in some edge cases, are handled properly.
+// Lit returns the word as a string when it is a simple literal,
+// made up of [*Lit] word parts only.
+// An empty string is returned otherwise.
 //
-// For example, the word "foo" will return "foo", but the word "foo${bar}" will
-// return "".
+// For example, the word "foo" will return "foo",
+// but the word "foo${bar}" will return "".
 func (w *Word) Lit() string {
 	// In the usual case, we'll have either a single part that's a literal,
 	// or one of the parts being a non-literal. Using strings.Join instead
@@ -599,23 +606,66 @@ func (c *CmdSubst) End() Pos { return posAddCol(c.Right, 1) }
 type ParamExp struct {
 	Dollar, Rbrace Pos
 
-	Short  bool // $a instead of ${a}
+	// TODO(v4): replace Short for !Rbrace.IsValid()
+
+	Short bool // $a instead of ${a}
+
+	Flags *Lit // ${(flags)a} with [LangZsh]
+
+	// Only one of these is set at a time.
+	// TODO(v4): perhaps use an Operator token here,
+	// given how we've grown the number of booleans
+	// TODO(v4): rename Excl to reflect its purpose
 	Excl   bool // ${!a}
 	Length bool // ${#a}
-	Width  bool // ${%a}
-	Param  *Lit
-	Index  ArithmExpr       // ${a[i]}, ${a["k"]}
-	Slice  *Slice           // ${a:x:y}
-	Repl   *Replace         // ${a/x/y}
-	Names  ParNamesOperator // ${!prefix*} or ${!prefix@}
-	Exp    *Expansion       // ${a:-b}, ${a#b}, etc
+	Width  bool // mksh's ${%a}
+	IsSet  bool // ${+a} with [LangZsh]
+
+	// Only one of these is set at a time,
+	// or neither with [LangZsh] when the name is omitted.
+	// TODO(v4): consider joining Param and NestedParam into a single field,
+	// even if that would be mildly annoying to non-Zsh users.
+	Param *Lit
+	// A nested parameter expression in the form of [*ParamExp] or [*CmdSubst],
+	// or either of those in a [*DblQuoted]. Only possible with [LangZsh].
+	NestedParam WordPart
+
+	// TODO(v4): rename Index to Subscript, which better matches bash and zsh terminology
+
+	Index ArithmExpr // ${a[i]}, ${a["k"]}, or a ${a[i,j]} slice with [LangZsh]
+
+	// Only one of these is set at a time.
+	// TODO(v4): consider joining these in a single "expansion" field/type,
+	// because it should be impossible for multiple to be set at once,
+	// and a flat structure like this takes up more space.
+	Modifiers []*Lit           // ${a:h2} with [LangZsh]
+	Slice     *Slice           // ${a:x:y}
+	Repl      *Replace         // ${a/x/y}
+	Names     ParNamesOperator // ${!prefix*} or ${!prefix@}
+	Exp       *Expansion       // ${a:-b}, ${a#b}, etc
 }
 
-func (p *ParamExp) Pos() Pos { return p.Dollar }
+// simple returns true if the parameter expansion is of the form $name or ${name},
+// only expanding a name without any further logic.
+func (p *ParamExp) simple() bool {
+	return p.Param != nil && p.Flags == nil &&
+		!p.Excl && !p.Length && !p.Width && !p.IsSet &&
+		p.NestedParam == nil && p.Index == nil &&
+		len(p.Modifiers) == 0 && p.Slice == nil &&
+		p.Repl == nil && p.Names == 0 && p.Exp == nil
+}
+
+func (p *ParamExp) Pos() Pos {
+	if p.Dollar.IsValid() {
+		return p.Dollar
+	}
+	return p.Param.Pos()
+}
 func (p *ParamExp) End() Pos {
 	if !p.Short {
 		return posAddCol(p.Rbrace, 1)
 	}
+	// In short mode, we can only end in either an index or a simple name.
 	if p.Index != nil {
 		return posAddCol(p.Index.End(), 1)
 	}
@@ -623,12 +673,15 @@ func (p *ParamExp) End() Pos {
 }
 
 func (p *ParamExp) nakedIndex() bool {
-	return p.Short && p.Index != nil
+	// A naked index is arr[x] inside arithmetic, without a leading '$'.
+	// In that case Dollar is unset, unlike $arr[x] where it holds the '$' position.
+	return p.Short && p.Index != nil && !p.Dollar.IsValid()
 }
 
 // Slice represents a character slicing expression inside a [ParamExp].
 //
 // This node will only appear with [LangBash] and [LangMirBSDKorn].
+// [LangZsh] uses a [BinaryArithm] with [Comma] in [ParamExp.Index] instead.
 type Slice struct {
 	Offset, Length ArithmExpr
 }
@@ -678,7 +731,7 @@ func (a *ArithmCmd) End() Pos { return posAddCol(a.Right, 2) }
 
 // ArithmExpr represents all nodes that form arithmetic expressions.
 //
-// These are [*BinaryArithm], [*UnaryArithm], [*ParenArithm], and [*Word].
+// These are [*BinaryArithm], [*UnaryArithm], [*ParenArithm], [*FlagsArithm], and [*Word].
 type ArithmExpr interface {
 	Node
 	arithmExprNode()
@@ -687,6 +740,7 @@ type ArithmExpr interface {
 func (*BinaryArithm) arithmExprNode() {}
 func (*UnaryArithm) arithmExprNode()  {}
 func (*ParenArithm) arithmExprNode()  {}
+func (*FlagsArithm) arithmExprNode()  {}
 func (*Word) arithmExprNode()         {}
 
 // BinaryArithm represents a binary arithmetic expression.
@@ -741,6 +795,23 @@ type ParenArithm struct {
 
 func (p *ParenArithm) Pos() Pos { return p.Lparen }
 func (p *ParenArithm) End() Pos { return posAddCol(p.Rparen, 1) }
+
+// FlagsArithm represents zsh subscript flags attached to an arithmetic expression,
+// such as ${array[(flags)expr]}.
+//
+// This node will only appear with [LangZsh].
+type FlagsArithm struct {
+	Flags *Lit
+	X     ArithmExpr
+}
+
+func (z *FlagsArithm) Pos() Pos { return posAddCol(z.Flags.Pos(), -1) }
+func (z *FlagsArithm) End() Pos {
+	if z.X != nil {
+		return z.X.End()
+	}
+	return posAddCol(z.Flags.End(), 1) // closing paren
+}
 
 // CaseClause represents a case (switch) clause.
 type CaseClause struct {
@@ -889,8 +960,13 @@ func (a *ArrayElem) End() Pos {
 	return posAddCol(a.Index.Pos(), 1)
 }
 
+// TODO(v4): the expand package has to stringify ExtGlob again,
+// and we don't gain much from a WordPart node anyway;
+// make these opaque literals like we did for zsh glob qualifiers.
+
 // ExtGlob represents a Bash extended globbing expression. Note that these are
-// parsed independently of whether shopt has been called or not.
+// parsed independently of whether or not `shopt -s extglob` has been used,
+// as the parser runs statically and independently of any interpreter.
 //
 // This node will only appear with [LangBash] and [LangMirBSDKorn].
 type ExtGlob struct {

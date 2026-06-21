@@ -49,7 +49,7 @@ require (
 	golang.org/x/text v0.36.0
 	golang.org/x/tools v0.44.0
 	gopkg.in/yaml.v2 v2.4.0
-	mvdan.cc/sh/v3 v3.11.0
+	mvdan.cc/sh/v3 v3.13.1
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
 

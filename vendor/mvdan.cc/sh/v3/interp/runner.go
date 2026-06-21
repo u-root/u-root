@@ -10,18 +10,20 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"iter"
 	"math"
-	"math/rand"
+	mathrand "math/rand/v2"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/internal"
 	"mvdan.cc/sh/v3/pattern"
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -61,11 +63,15 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 				f.Close()
 				return err
 			}
-			r2 := r.Subshell()
+			r2 := r.subshell(false)
 			r2.stdout = w
 			r2.stmts(ctx, cs.Stmts)
+			r2.exit.exiting = false // subshells don't exit the parent shell
 			r.lastExpandExit = r2.exit
-			return r2.err
+			if r2.exit.fatalExit {
+				return r2.exit.err // surface fatal errors immediately
+			}
+			return nil
 		},
 		ProcSubst: func(ps *syntax.ProcSubst) (string, error) {
 			if runtime.GOOS == "windows" {
@@ -75,10 +81,6 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 				return os.DevNull, nil
 			}
 
-			if r.rand == nil {
-				r.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-			}
-
 			// We can't atomically create a random unused temporary FIFO.
 			// Similar to [os.CreateTemp],
 			// keep trying new random paths until one does not exist.
@@ -86,7 +88,7 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 			var path string
 			try := 0
 			for {
-				path = filepath.Join(r.tempDir, fifoNamePrefix+strconv.FormatUint(r.rand.Uint64(), 16))
+				path = filepath.Join(r.tempDir, fifoNamePrefix+strconv.FormatUint(mathrand.Uint64(), 16))
 				err := mkfifo(path, 0o666)
 				if err == nil {
 					break
@@ -99,13 +101,20 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 				}
 			}
 
-			r2 := r.Subshell()
+			r2 := r.subshell(true)
 			stdout := r.origStdout
 			// TODO: note that `man bash` mentions that `wait` only waits for the last
-			// process substitution; the logic here would mean we wait for all of them.
-			r.bgShells.Add(1)
+			// process substitution as long as it is $!; the logic here would mean we wait for all of them.
+			bg := bgProc{
+				done: make(chan struct{}),
+				exit: new(exitStatus),
+			}
+			r.bgProcs = append(r.bgProcs, bg)
 			go func() {
-				defer r.bgShells.Done()
+				defer func() {
+					*bg.exit = r2.exit
+					close(bg.done)
+				}()
 				switch ps.Op {
 				case syntax.CmdIn:
 					f, err := os.OpenFile(path, os.O_WRONLY, 0)
@@ -120,7 +129,7 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 						}
 						os.Remove(path)
 					}()
-				default: // syntax.CmdOut
+				case syntax.CmdOut:
 					f, err := os.OpenFile(path, os.O_RDONLY, 0)
 					if err != nil {
 						r.errf("cannot open fifo for stdin: %v\n", err)
@@ -133,8 +142,12 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 						f.Close()
 						os.Remove(path)
 					}()
+				default:
+					// Should only happen if we forgot a case above.
+					panic(fmt.Sprintf("unexpected process substitution operator: %q", ps.Op))
 				}
 				r2.stmts(ctx, ps.Stmts)
+				r2.exit.exiting = false // subshells don't exit the parent shell
 			}()
 			return path, nil
 		},
@@ -145,7 +158,7 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 // catShortcutArg checks if a statement is of the form "$(<file)". The redirect
 // word is returned if there's a match, and nil otherwise.
 func catShortcutArg(stmt *syntax.Stmt) *syntax.Word {
-	if stmt.Cmd != nil || stmt.Negated || stmt.Background || stmt.Coprocess {
+	if stmt.Cmd != nil || stmt.Negated || stmt.Background || stmt.Coprocess || stmt.Disown {
 		return nil
 	}
 	if len(stmt.Redirs) != 1 {
@@ -163,32 +176,33 @@ func (r *Runner) updateExpandOpts() {
 		r.ecfg.ReadDir2 = nil
 	} else {
 		r.ecfg.ReadDir2 = func(s string) ([]fs.DirEntry, error) {
-			return r.readDirHandler(r.handlerCtx(context.Background()), s)
+			return r.readDirHandler(r.handlerCtx(r.ectx, handlerKindReadDir, todoPos), s)
 		}
 	}
 	r.ecfg.GlobStar = r.opts[optGlobStar]
+	r.ecfg.DotGlob = r.opts[optDotGlob]
 	r.ecfg.NoCaseGlob = r.opts[optNoCaseGlob]
 	r.ecfg.NullGlob = r.opts[optNullGlob]
 	r.ecfg.NoUnset = r.opts[optNoUnset]
+	r.ecfg.ExtGlob = r.opts[optExtGlob]
 }
 
 func (r *Runner) expandErr(err error) {
-	if err != nil {
-		errMsg := err.Error()
-		fmt.Fprintln(r.stderr, errMsg)
-		switch {
-		case errors.As(err, &expand.UnsetParameterError{}):
-		case errMsg == "invalid indirect expansion":
-			// TODO: These errors are treated as fatal by bash.
-			// Make the error type reflect that.
-		case strings.HasSuffix(errMsg, "not supported"):
-			// TODO: This "has suffix" is a temporary measure until the expand
-			// package supports all syntax nodes like extended globbing.
-		default:
-			return // other cases do not exit
-		}
-		r.exitShell(context.TODO(), 1)
+	if err == nil {
+		return
 	}
+	errMsg := err.Error()
+	fmt.Fprintln(r.stderr, errMsg)
+	switch {
+	case errors.As(err, &expand.UnsetParameterError{}):
+	case errMsg == "invalid indirect expansion":
+		// TODO: These errors are treated as fatal by bash.
+		// Make the error type reflect that.
+	default:
+		return // other cases do not exit
+	}
+	r.exit.code = 1
+	r.exit.exiting = true
 }
 
 func (r *Runner) arithm(expr syntax.ArithmExpr) int {
@@ -241,10 +255,15 @@ func (e expandEnv) Each(fn func(name string, vr expand.Variable) bool) {
 	e.r.writeEnv.Each(fn)
 }
 
-func (r *Runner) handlerCtx(ctx context.Context) context.Context {
+var todoPos syntax.Pos // for handlerCtx callers where we don't yet have a position
+
+func (r *Runner) handlerCtx(ctx context.Context, kind handlerKind, pos syntax.Pos) context.Context {
 	hc := HandlerContext{
+		runner: r,
+		kind:   kind,
 		Env:    &overlayEnviron{parent: r.writeEnv},
 		Dir:    r.Dir,
+		Pos:    pos,
 		Stdout: r.stdout,
 		Stderr: r.stderr,
 	}
@@ -252,12 +271,6 @@ func (r *Runner) handlerCtx(ctx context.Context) context.Context {
 		hc.Stdin = r.stdin
 	}
 	return context.WithValue(ctx, handlerCtxKey{}, hc)
-}
-
-func (r *Runner) setErr(err error) {
-	if r.err == nil {
-		r.err = err
-	}
 }
 
 func (r *Runner) out(s string) {
@@ -273,11 +286,12 @@ func (r *Runner) errf(format string, a ...any) {
 }
 
 func (r *Runner) stop(ctx context.Context) bool {
-	if r.err != nil || r.Exited() {
+	// Some traps trigger on exit, so we do want those to run.
+	if !r.handlingTrap && (r.exit.returning || r.exit.exiting) {
 		return true
 	}
 	if err := ctx.Err(); err != nil {
-		r.err = err
+		r.exit.fatal(err)
 		return true
 	}
 	if r.opts[optNoExec] {
@@ -290,15 +304,22 @@ func (r *Runner) stmt(ctx context.Context, st *syntax.Stmt) {
 	if r.stop(ctx) {
 		return
 	}
-	r.exit = 0
-	if st.Background {
-		r2 := r.Subshell()
+	r.exit = exitStatus{}
+	if st.Background || st.Disown {
+		r2 := r.subshell(true)
 		st2 := *st
 		st2.Background = false
-		r.bgShells.Add(1)
+		st2.Disown = false
+		bg := bgProc{
+			done: make(chan struct{}),
+			exit: new(exitStatus),
+		}
+		r.bgProcs = append(r.bgProcs, bg)
 		go func() {
 			r2.Run(ctx, &st2)
-			r.bgShells.Done()
+			r2.exit.exiting = false // subshells don't exit the parent shell
+			*bg.exit = r2.exit
+			close(bg.done)
 		}()
 	} else {
 		r.stmtSync(ctx, st)
@@ -311,29 +332,33 @@ func (r *Runner) stmtSync(ctx context.Context, st *syntax.Stmt) {
 	for _, rd := range st.Redirs {
 		cls, err := r.redir(ctx, rd)
 		if err != nil {
-			r.exit = 1
+			r.exit.code = 1
 			break
 		}
 		if cls != nil {
 			defer cls.Close()
 		}
 	}
-	if r.exit == 0 && st.Cmd != nil {
+	if r.exit.ok() && st.Cmd != nil {
 		r.cmd(ctx, st.Cmd)
 	}
 	if st.Negated {
-		r.exit = oneIf(r.exit == 0)
-	} else if _, ok := st.Cmd.(*syntax.CallExpr); !ok {
-	} else if r.exit != 0 && !r.noErrExit && r.opts[optErrExit] {
-		// If the "errexit" option is set and a simple command failed,
-		// exit the shell. Exceptions:
+		if r.exit.ok() {
+			r.exit.code = 1
+		} else {
+			r.exit.clear()
+		}
+	} else if b, ok := st.Cmd.(*syntax.BinaryCmd); ok && (b.Op == syntax.AndStmt || b.Op == syntax.OrStmt) {
+	} else if !r.exit.ok() && !r.noErrExit {
+		r.trapCallback(ctx, r.callbackErr, "error")
+		// If the "errexit" option is set and a command failed, exit the shell. Exceptions:
 		//
 		//   conditions (if <cond>, while <cond>, etc)
-		//   part of && or || lists
-		//   preceded by !
-		r.exitShell(ctx, r.exit)
-	} else if r.exit != 0 && !r.noErrExit {
-		r.trapCallback(ctx, r.callbackErr, "error")
+		//   part of && or || lists; excluded via "else" above
+		//   preceded by !; excluded via "else" above
+		if r.opts[optErrExit] {
+			r.exit.exiting = true
+		}
 	}
 	if !r.keepRedirs {
 		r.stdin, r.stdout, r.stderr = oldIn, oldOut, oldErr
@@ -352,33 +377,42 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 	case *syntax.Block:
 		r.stmts(ctx, cm.Stmts)
 	case *syntax.Subshell:
-		r2 := r.Subshell()
+		r2 := r.subshell(false)
 		r2.stmts(ctx, cm.Stmts)
+		r2.exit.exiting = false // subshells don't exit the parent shell
 		r.exit = r2.exit
-		r.setErr(r2.err)
 	case *syntax.CallExpr:
 		// Use a new slice, to not modify the slice in the alias map.
-		var args []*syntax.Word
-		left := cm.Args
-		for len(left) > 0 && r.opts[optExpandAliases] {
-			als, ok := r.alias[left[0].Lit()]
+		args := cm.Args
+		for i := 0; i < len(args); {
+			if !r.opts[optExpandAliases] {
+				break
+			}
+			als, ok := r.alias[args[i].Lit()]
 			if !ok {
 				break
 			}
-			args = append(args, als.args...)
-			left = left[1:]
+			args = slices.Replace(args, i, i+1, als.args...)
 			if !als.blank {
 				break
 			}
+			i += len(als.args)
 		}
-		args = append(args, left...)
-		r.lastExpandExit = 0
+		r.lastExpandExit = exitStatus{}
 		fields := r.fields(args...)
 		if len(fields) == 0 {
 			for _, as := range cm.Assigns {
-				prev := r.lookupVar(as.Name.Value)
-				vr := r.assignVal(prev, as, "")
-				r.setVarWithIndex(prev, as.Name.Value, as.Index, vr)
+				name := as.Name.Value
+
+				prev := r.lookupVar(name)
+				// Here we have a naked "foo=bar", so if we inherited a local var from a parent
+				// function we want to signal that we are modifying the parent var rather than
+				// creating a new local var via "local foo=bar".
+				// TODO: there is likely a better way to do this.
+				prev.Local = false
+
+				name, vr := r.assignVal(name, prev, as, "")
+				r.setVarWithIndex(prev, name, as.Index, vr)
 
 				if !tracingEnabled {
 					continue
@@ -394,14 +428,14 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 					if err != nil { // should never happen
 						panic(err)
 					}
-					trace.stringf("%s=%s", as.Name.Value, val)
+					trace.stringf("%s=%s", name, val)
 				}
 				trace.newLineFlush()
 			}
 			// If interpreting the last expansion like $(foo) failed,
 			// and the expansion and assignments otherwise succeeded,
 			// we need to surface that last exit code.
-			if r.exit == 0 {
+			if r.exit.ok() {
 				r.exit = r.lastExpandExit
 			}
 			break
@@ -416,8 +450,12 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		for _, as := range cm.Assigns {
 			name := as.Name.Value
 			prev := r.lookupVar(name)
+			// Resolve any nameref so we can restore the original final value later on.
+			if n, v := prev.Resolve(r.writeEnv); n != "" {
+				name, prev = n, v
+			}
 
-			vr := r.assignVal(prev, as, "")
+			name, vr := r.assignVal(name, prev, as, "")
 			// Inline command vars are always exported.
 			vr.Exported = true
 
@@ -440,16 +478,16 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 			r.noErrExit = true
 			r.stmt(ctx, cm.X)
 			r.noErrExit = oldNoErrExit
-			if (r.exit == 0) == (cm.Op == syntax.AndStmt) {
+			if r.exit.ok() == (cm.Op == syntax.AndStmt) {
 				r.stmt(ctx, cm.Y)
 			}
 		case syntax.Pipe, syntax.PipeAll:
 			pr, pw, err := os.Pipe()
 			if err != nil {
-				r.setErr(err)
+				r.exit.fatal(err) // not being able to create a pipe is rare but critical
 				return
 			}
-			r2 := r.Subshell()
+			r2 := r.subshell(true)
 			r2.stdout = pw
 			if cm.Op == syntax.PipeAll {
 				r2.stderr = pw
@@ -458,20 +496,20 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 			}
 			r.stdin = pr
 			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
+			wg.Go(func() {
 				r2.stmt(ctx, cm.X)
+				r2.exit.exiting = false // subshells don't exit the parent shell
 				pw.Close()
-				wg.Done()
-			}()
+			})
 			r.stmt(ctx, cm.Y)
 			pr.Close()
 			wg.Wait()
-			if r.opts[optPipeFail] && r2.exit != 0 && r.exit == 0 {
+			if r.opts[optPipeFail] && !r2.exit.ok() && r.exit.ok() {
 				r.exit = r2.exit
-				r.shellExited = r2.shellExited
 			}
-			r.setErr(r2.err)
+			if r2.exit.fatalExit {
+				r.exit.fatal(r2.exit.err) // surface fatal errors immediately
+			}
 		}
 	case *syntax.IfClause:
 		oldNoErrExit := r.noErrExit
@@ -479,11 +517,11 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		r.stmts(ctx, cm.Cond)
 		r.noErrExit = oldNoErrExit
 
-		if r.exit == 0 {
+		if r.exit.ok() {
 			r.stmts(ctx, cm.Then)
 			break
 		}
-		r.exit = 0
+		r.exit.clear()
 		if cm.Else != nil {
 			r.cmd(ctx, cm.Else)
 		}
@@ -494,8 +532,8 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 			r.stmts(ctx, cm.Cond)
 			r.noErrExit = oldNoErrExit
 
-			stop := (r.exit == 0) == cm.Until
-			r.exit = 0
+			stop := r.exit.ok() == cm.Until
+			r.exit.clear()
 			if stop || r.loopStmtsBroken(ctx, cm.Do) {
 				break
 			}
@@ -526,7 +564,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 
 					line, err := r.readLine(ctx, true)
 					if err != nil {
-						r.exit = 1
+						r.exit.code = 1
 						return nil
 					}
 					return line
@@ -573,7 +611,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 				r.arithm(y.Init)
 			}
 			for y.Cond == nil || r.arithm(y.Cond) != 0 {
-				if r.exit != 0 || r.loopStmtsBroken(ctx, cm.Do) {
+				if !r.exit.ok() || r.loopStmtsBroken(ctx, cm.Do) {
 					break
 				}
 				if y.Post != nil {
@@ -584,7 +622,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 	case *syntax.FuncDecl:
 		r.setFunc(cm.Name.Value, cm.Body)
 	case *syntax.ArithmCmd:
-		r.exit = oneIf(r.arithm(cm.X) == 0)
+		r.exit.oneIf(r.arithm(cm.X) == 0)
 	case *syntax.LetClause:
 		var val int
 		for _, expr := range cm.Exprs {
@@ -609,7 +647,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		}
 
 		trace.newLineFlush()
-		r.exit = oneIf(val == 0)
+		r.exit.oneIf(val == 0)
 	case *syntax.CaseClause:
 		trace.string("case ")
 		trace.expr(cm.Word)
@@ -626,14 +664,15 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 			}
 		}
 	case *syntax.TestClause:
-		if r.bashTest(ctx, cm.X, false) == "" && r.exit == 0 {
+		if r.bashTest(ctx, cm.X, false) == "" && r.exit.ok() {
 			// to preserve exit status code 2 for regex errors, etc
-			r.exit = 1
+			r.exit.code = 1
 		}
 	case *syntax.DeclClause:
 		local, global := false, false
 		var modes []string
 		valType := ""
+		declQuery := "" // "-f" or "-p" for query mode
 		switch cm.Variant.Value {
 		case "declare":
 			// When used in a function, "declare" acts as "local"
@@ -642,7 +681,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		case "local":
 			if !r.inFunc {
 				r.errf("local: can only be used in a function\n")
-				r.exit = 1
+				r.exit.code = 1
 				return
 			}
 			local = true
@@ -653,54 +692,108 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		case "nameref":
 			valType = "-n"
 		}
-		for _, as := range cm.Args {
-			for _, as := range r.flattenAssign(as) {
-				name := as.Name.Value
-				if strings.HasPrefix(name, "-") {
-					switch name {
-					case "-x", "-r":
-						modes = append(modes, name)
-					case "-a", "-A", "-n":
-						valType = name
-					case "-g":
-						global = true
-					default:
-						r.errf("declare: invalid option %q\n", name)
-						r.exit = 2
-						return
-					}
-					continue
-				}
-				if !syntax.ValidName(name) {
-					r.errf("declare: invalid name %q\n", name)
-					r.exit = 1
+	assignLoop:
+		for as := range r.flattenAssigns(cm.Args) {
+			fp := flagParser{remaining: []string{as.Name.Value}}
+			for fp.more() {
+				switch flag := fp.flag(); flag {
+				case "-x", "-r":
+					modes = append(modes, flag)
+				case "-a", "-A", "-n":
+					valType = flag
+				case "-g":
+					global = true
+				case "-f", "-p":
+					declQuery = flag
+				default:
+					r.errf("declare: invalid option %q\n", flag)
+					r.exit.code = 2
 					return
 				}
-				vr := r.lookupVar(as.Name.Value)
-				if as.Naked {
-					if valType == "-A" {
-						vr.Kind = expand.Associative
-					} else {
-						vr.Kind = expand.KeepValue
-					}
-				} else {
-					vr = r.assignVal(vr, as, valType)
-				}
-				if global {
-					vr.Local = false
-				} else if local {
-					vr.Local = true
-				}
-				for _, mode := range modes {
-					switch mode {
-					case "-x":
-						vr.Exported = true
-					case "-r":
-						vr.ReadOnly = true
-					}
-				}
-				r.setVar(name, vr)
+				continue assignLoop
 			}
+			name := as.Name.Value
+			if !syntax.ValidName(name) {
+				r.errf("declare: invalid name %q\n", name)
+				r.exit.code = 1
+				return
+			}
+			if declQuery == "-f" {
+				// declare -f name: print function definition.
+				// Bash silently returns exit 1 for missing functions.
+				if body := r.Funcs[name]; body != nil {
+					r.outf("%s()\n", name)
+					printer := syntax.NewPrinter()
+					var buf bytes.Buffer
+					printer.Print(&buf, body)
+					r.outf("%s\n", buf.String())
+				} else {
+					r.exit.code = 1
+				}
+				continue
+			}
+			if declQuery == "-p" {
+				// declare -p name: print variable with attributes.
+				vr := r.lookupVar(name)
+				if !vr.Declared() {
+					r.errf("declare: %s: not found\n", name)
+					r.exit.code = 1
+					continue
+				}
+				flags := vr.Flags()
+				if flags == "" {
+					flags = "-"
+				}
+				switch vr.Kind {
+				case expand.Indexed:
+					r.outf("declare -%s %s=(", flags, name)
+					for i, v := range vr.List {
+						if i > 0 {
+							r.out(" ")
+						}
+						r.outf("[%d]=%q", i, v)
+					}
+					r.out(")\n")
+				case expand.Associative:
+					r.outf("declare -%s %s=(", flags, name)
+					first := true
+					for k, v := range vr.Map {
+						if !first {
+							r.out(" ")
+						}
+						r.outf("[%s]=%q", k, v)
+						first = false
+					}
+					r.out(")\n")
+				default:
+					r.outf("declare -%s %s=%q\n", flags, name, vr.Str)
+				}
+				continue
+			}
+			vr := r.lookupVar(name)
+			if as.Naked {
+				if valType == "-A" {
+					vr.Kind = expand.Associative
+				} else {
+					vr.Kind = expand.KeepValue
+				}
+			} else {
+				name, vr = r.assignVal(name, vr, as, valType)
+			}
+			if global {
+				vr.Local = false
+			} else if local {
+				vr.Local = true
+			}
+			for _, mode := range modes {
+				switch mode {
+				case "-x":
+					vr.Exported = true
+				case "-r":
+					vr.ReadOnly = true
+				}
+			}
+			r.setVar(name, vr)
 		}
 	case *syntax.TimeClause:
 		start := time.Now()
@@ -719,7 +812,9 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 		r.outf(format, "user", elapsedString(0, cm.PosixFormat))
 		r.outf(format, "sys", elapsedString(0, cm.PosixFormat))
 	default:
-		panic(fmt.Sprintf("unhandled command node: %T", cm))
+		// Should only happen if we forgot a case above.
+		r.errf("unhandled command node: %T\n", cm)
+		r.exit.code = 1
 	}
 }
 
@@ -740,54 +835,48 @@ func (r *Runner) trapCallback(ctx context.Context, callback, name string) {
 		// ignore errors in the callback
 		return
 	}
+	oldExit := r.exit
 	r.stmts(ctx, file.Stmts)
+	r.exit = oldExit // traps on EXIT or ERR should not modify the result
 
 	r.handlingTrap = false
 }
 
-// exitShell exits the current shell session with the given status code.
-func (r *Runner) exitShell(ctx context.Context, status int) {
-	if status != 0 {
-		r.trapCallback(ctx, r.callbackErr, "error")
-	}
-	r.trapCallback(ctx, r.callbackExit, "exit")
-
-	r.shellExited = true
-	// Restore the original exit status. We ignore the callbacks.
-	r.exit = status
-}
-
-func (r *Runner) flattenAssign(as *syntax.Assign) []*syntax.Assign {
-	// Convert "declare $x" into "declare value".
-	// Don't use syntax.Parser here, as we only want the basic
-	// splitting by '='.
-	if as.Name != nil {
-		return []*syntax.Assign{as} // nothing to do
-	}
-	var asgns []*syntax.Assign
-	for _, field := range r.fields(as.Value) {
-		as := &syntax.Assign{}
-		parts := strings.SplitN(field, "=", 2)
-		as.Name = &syntax.Lit{Value: parts[0]}
-		if len(parts) == 1 {
-			as.Naked = true
-		} else {
-			as.Value = &syntax.Word{Parts: []syntax.WordPart{
-				&syntax.Lit{Value: parts[1]},
-			}}
+func (r *Runner) flattenAssigns(args []*syntax.Assign) iter.Seq[*syntax.Assign] {
+	return func(yield func(*syntax.Assign) bool) {
+		for _, as := range args {
+			// Convert "declare $x" into "declare value".
+			// Don't use syntax.Parser here, as we only want the basic
+			// splitting by '='.
+			if as.Name != nil {
+				if !yield(as) {
+					return
+				}
+				continue
+			}
+			for _, field := range r.fields(as.Value) {
+				as := &syntax.Assign{}
+				name, val, ok := strings.Cut(field, "=")
+				as.Name = &syntax.Lit{Value: name}
+				if !ok {
+					as.Naked = true
+				} else {
+					as.Value = &syntax.Word{Parts: []syntax.WordPart{
+						&syntax.Lit{Value: val},
+					}}
+				}
+				if !yield(as) {
+					return
+				}
+			}
 		}
-		asgns = append(asgns, as)
 	}
-	return asgns
 }
 
 func match(pat, name string) bool {
-	expr, err := pattern.Regexp(pat, pattern.EntireString)
-	if err != nil {
-		return false
-	}
-	rx := regexp.MustCompile(expr)
-	return rx.MatchString(name)
+	matcher, err := internal.ExtendedPatternMatcher(pat, pattern.EntireString|pattern.ExtendedOperators)
+	_ = err // TODO: report these errors
+	return matcher != nil && matcher(name)
 }
 
 func elapsedString(d time.Duration, posix bool) string {
@@ -837,11 +926,13 @@ func (r *Runner) hdocReader(rd *syntax.Redirect) (*os.File, error) {
 			cur = append(cur, wp)
 			continue
 		}
-		for i, part := range strings.Split(lit.Value, "\n") {
-			if i > 0 {
+		first := true
+		for part := range strings.SplitSeq(lit.Value, "\n") {
+			if !first {
 				flushLine()
 				cur = cur[:0]
 			}
+			first = false
 			part = strings.TrimLeft(part, "\t")
 			cur = append(cur, &syntax.Lit{Value: part})
 		}
@@ -875,7 +966,7 @@ func (r *Runner) redir(ctx context.Context, rd *syntax.Redirect) (io.Closer, err
 		case "2":
 			orig = &r.stderr
 		default:
-			panic(fmt.Sprintf("unsupported redirect fd: %v", rd.N.Value))
+			return nil, fmt.Errorf("unsupported redirect fd: %v", rd.N.Value)
 		}
 	}
 	arg := r.literal(rd.Word)
@@ -903,7 +994,7 @@ func (r *Runner) redir(ctx context.Context, rd *syntax.Redirect) (io.Closer, err
 		case "-":
 			*orig = io.Discard // closing the output writer
 		default:
-			panic(fmt.Sprintf("unhandled %v arg: %q", rd.Op, arg))
+			return nil, fmt.Errorf("unhandled %v arg: %q", rd.Op, arg)
 		}
 		return nil, nil
 	case syntax.RdrIn, syntax.RdrOut, syntax.AppOut,
@@ -914,11 +1005,11 @@ func (r *Runner) redir(ctx context.Context, rd *syntax.Redirect) (io.Closer, err
 		case "-":
 			r.stdin = nil // closing the input file
 		default:
-			panic(fmt.Sprintf("unhandled %v arg: %q", rd.Op, arg))
+			return nil, fmt.Errorf("unhandled %v arg: %q", rd.Op, arg)
 		}
 		return nil, nil
 	default:
-		panic(fmt.Sprintf("unhandled redirect op: %v", rd.Op))
+		return nil, fmt.Errorf("unhandled redirect op: %v", rd.Op)
 	}
 	mode := os.O_RDONLY
 	switch rd.Op {
@@ -944,7 +1035,7 @@ func (r *Runner) redir(ctx context.Context, rd *syntax.Redirect) (io.Closer, err
 		r.stdout = f
 		r.stderr = f
 	default:
-		panic(fmt.Sprintf("unhandled redirect op: %v", rd.Op))
+		return nil, fmt.Errorf("unhandled redirect op: %v", rd.Op)
 	}
 	return f, nil
 }
@@ -967,20 +1058,16 @@ func (r *Runner) loopStmtsBroken(ctx context.Context, stmts []*syntax.Stmt) bool
 	return false
 }
 
-type returnStatus uint8
-
-func (s returnStatus) Error() string { return fmt.Sprintf("return status %d", s) }
-
 func (r *Runner) call(ctx context.Context, pos syntax.Pos, args []string) {
 	if r.stop(ctx) {
 		return
 	}
 	if r.callHandler != nil {
 		var err error
-		args, err = r.callHandler(r.handlerCtx(ctx), args)
+		args, err = r.callHandler(r.handlerCtx(ctx, handlerKindCall, pos), args)
 		if err != nil {
 			// handler's custom fatal error
-			r.setErr(err)
+			r.exit.fatal(err)
 			return
 		}
 	}
@@ -1003,31 +1090,18 @@ func (r *Runner) call(ctx context.Context, pos syntax.Pos, args []string) {
 
 		r.Params = oldParams
 		r.inFunc = oldInFunc
-		if code, ok := r.err.(returnStatus); ok {
-			r.err = nil
-			r.exit = int(code)
-		}
+		r.exit.returning = false
 		return
 	}
-	if isBuiltin(name) {
-		r.exit = r.builtinCode(ctx, pos, name, args[1:])
+	if IsBuiltin(name) {
+		r.exit = r.builtin(ctx, pos, name, args[1:])
 		return
 	}
-	r.exec(ctx, args)
+	r.exec(ctx, pos, args)
 }
 
-func (r *Runner) exec(ctx context.Context, args []string) {
-	err := r.execHandler(r.handlerCtx(ctx), args)
-	if status, ok := IsExitStatus(err); ok {
-		r.exit = int(status)
-		return
-	}
-	if err != nil {
-		// handler's custom fatal error
-		r.setErr(err)
-		return
-	}
-	r.exit = 0
+func (r *Runner) exec(ctx context.Context, pos syntax.Pos, args []string) {
+	r.exit.fromHandlerError(r.execHandler(r.handlerCtx(ctx, handlerKindExec, pos), args))
 }
 
 func (r *Runner) open(ctx context.Context, path string, flags int, mode os.FileMode, print bool) (io.ReadWriteCloser, error) {
@@ -1044,7 +1118,7 @@ func (r *Runner) open(ctx context.Context, path string, flags int, mode os.FileM
 		return os.OpenFile(path, flags, mode)
 	}
 
-	f, err := r.openHandler(r.handlerCtx(ctx), path, flags, mode)
+	f, err := r.openHandler(r.handlerCtx(ctx, handlerKindOpen, todoPos), path, flags, mode)
 	// TODO: support wrapped PathError returned from openHandler.
 	switch err.(type) {
 	case nil:
@@ -1054,7 +1128,7 @@ func (r *Runner) open(ctx context.Context, path string, flags int, mode os.FileM
 			r.errf("%v\n", err)
 		}
 	default: // handler's custom fatal error
-		r.setErr(err)
+		r.exit.fatal(err)
 	}
 	return nil, err
 }

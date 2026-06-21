@@ -598,10 +598,11 @@ gopkg.in/yaml.v3
 # howett.net/plist v1.0.0
 ## explicit; go 1.12
 howett.net/plist
-# mvdan.cc/sh/v3 v3.11.0
-## explicit; go 1.23
+# mvdan.cc/sh/v3 v3.13.1
+## explicit; go 1.25.0
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/fileutil
+mvdan.cc/sh/v3/internal
 mvdan.cc/sh/v3/interp
 mvdan.cc/sh/v3/pattern
 mvdan.cc/sh/v3/shell

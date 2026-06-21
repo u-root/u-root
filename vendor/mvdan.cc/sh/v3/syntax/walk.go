@@ -79,7 +79,8 @@ func Walk(node Node, f func(Node) bool) {
 		Walk(node.X, f)
 		Walk(node.Y, f)
 	case *FuncDecl:
-		Walk(node.Name, f)
+		walkNilable(node.Name, f)
+		walkList(node.Names, f)
 		Walk(node.Body, f)
 	case *Word:
 		walkList(node.Parts, f)
@@ -91,8 +92,14 @@ func Walk(node Node, f func(Node) bool) {
 		walkList(node.Stmts, f)
 		walkComments(node.Last, f)
 	case *ParamExp:
-		Walk(node.Param, f)
+		walkNilable(node.Flags, f)
+		walkNilable(node.Param, f)
+		walkNilable(node.NestedParam, f)
 		walkNilable(node.Index, f)
+		if node.Slice != nil {
+			walkNilable(node.Slice.Offset, f)
+			walkNilable(node.Slice.Length, f)
+		}
 		if node.Repl != nil {
 			walkNilable(node.Repl.Orig, f)
 			walkNilable(node.Repl.With, f)
@@ -116,6 +123,11 @@ func Walk(node Node, f func(Node) bool) {
 		Walk(node.X, f)
 	case *ParenArithm:
 		Walk(node.X, f)
+	case *FlagsArithm:
+		Walk(node.Flags, f)
+		if node.X != nil {
+			Walk(node.X, f)
+		}
 	case *ParenTest:
 		Walk(node.X, f)
 	case *CaseClause:
@@ -234,7 +246,7 @@ func (p *debugPrinter) print(x reflect.Value) {
 			return
 		}
 		p.print(x.Elem())
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if x.IsNil() {
 			p.printf("nil")
 			return

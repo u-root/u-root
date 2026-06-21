@@ -57,7 +57,7 @@ func (p *testParser) classicTest(fval string, pastAndOr bool) syntax.TestExpr {
 	opStr := p.val
 	op := testBinaryOp(p.val)
 	if op == illegalTok {
-		p.errf("not a valid test operator: %s", p.val)
+		p.errf("not a valid test operator: %#q", p.val)
 	}
 	b := &syntax.BinaryTest{
 		Op: op,
@@ -91,7 +91,7 @@ func (p *testParser) testExprBase(fval string) syntax.TestExpr {
 		p.next()
 		pe.X = p.classicTest(op.String(), false)
 		if p.val != ")" {
-			p.errf("reached %s without matching ( with )", p.val)
+			p.errf("reached %s without matching '(' with ')'", p.val)
 		}
 		p.next()
 		return pe

@@ -54,7 +54,7 @@ type WriteEnviron interface {
 	Set(name string, vr Variable) error
 }
 
-//go:generate stringer -type=ValueKind
+//go:generate go tool stringer -type=ValueKind
 
 // ValueKind describes which kind of value the variable holds.
 // While most unset variables will have an [Unknown] kind, an unset variable may
@@ -79,12 +79,16 @@ const (
 
 	// Deprecated: use [Unknown], as tracking whether or not a variable is set
 	// is now done via [Variable.Set].
+	// Otherwise it was impossible to describe an unset variable with a known kind
+	// such as `declare -A foo`.
 	Unset = Unknown
 )
 
 // Variable describes a shell variable, which can have a number of attributes
 // and a value.
 type Variable struct {
+	// Set is true when the variable has been set to a value,
+	// which may be empty.
 	Set bool
 
 	Local    bool
@@ -110,6 +114,27 @@ func (v Variable) IsSet() bool {
 // and `declare -a foo` is an indexed array but not set to a value.
 func (v Variable) Declared() bool {
 	return v.Set || v.Local || v.Exported || v.ReadOnly || v.Kind != Unknown
+}
+
+// Flags returns the variable's attribute flags in the order used by bash's
+// declare builtin and ${var@a}: type (a/A/n), readonly (r), exported (x).
+func (v Variable) Flags() string {
+	var flags []byte
+	switch v.Kind {
+	case Indexed:
+		flags = append(flags, 'a')
+	case Associative:
+		flags = append(flags, 'A')
+	case NameRef:
+		flags = append(flags, 'n')
+	}
+	if v.ReadOnly {
+		flags = append(flags, 'r')
+	}
+	if v.Exported {
+		flags = append(flags, 'x')
+	}
+	return string(flags)
 }
 
 // String returns the variable's value as a string. In general, this only makes
@@ -175,23 +200,14 @@ func (f funcEnviron) Each(func(name string, vr Variable) bool) {}
 // On Windows, where environment variable names are case-insensitive, the
 // resulting variable names will all be uppercase.
 func ListEnviron(pairs ...string) Environ {
-	return listEnvironWithUpper(runtime.GOOS == "windows", pairs...)
+	return listEnviron_(runtime.GOOS == "windows", pairs...)
 }
 
-// listEnvironWithUpper implements [ListEnviron], but letting the tests specify
+// listEnviron_ implements [ListEnviron], but letting the tests specify
 // whether to uppercase all names or not.
-func listEnvironWithUpper(upper bool, pairs ...string) Environ {
+func listEnviron_(caseInsensitive bool, pairs ...string) Environ {
 	list := slices.Clone(pairs)
-	if upper {
-		// Uppercase before sorting, so that we can remove duplicates
-		// without the need for linear search nor a map.
-		for i, s := range list {
-			if sep := strings.IndexByte(s, '='); sep > 0 {
-				list[i] = strings.ToUpper(s[:sep]) + s[sep:]
-			}
-		}
-	}
-
+	env := listEnviron{caseInsensitive: caseInsensitive}
 	slices.SortStableFunc(list, func(a, b string) int {
 		isep := strings.IndexByte(a, '=')
 		jsep := strings.IndexByte(b, '=')
@@ -205,20 +221,18 @@ func listEnvironWithUpper(upper bool, pairs ...string) Environ {
 		} else {
 			jsep += 1
 		}
-		return strings.Compare(a[:isep], b[:jsep])
+		return env.compare(a[:isep], b[:jsep])
 	})
 
 	last := ""
 	for i := 0; i < len(list); {
-		s := list[i]
-		sep := strings.IndexByte(s, '=')
-		if sep <= 0 {
+		name, _, ok := strings.Cut(list[i], "=")
+		if name == "" || !ok {
 			// invalid element; remove it
 			list = slices.Delete(list, i, i+1)
 			continue
 		}
-		name := s[:sep]
-		if last == name {
+		if env.compare(last, name) == 0 {
 			// duplicate; the last one wins
 			list = slices.Delete(list, i-1, i)
 			continue
@@ -226,42 +240,55 @@ func listEnvironWithUpper(upper bool, pairs ...string) Environ {
 		last = name
 		i++
 	}
-	return listEnviron(list)
+	env.pairs = list
+	return env
 }
 
 // listEnviron is a sorted list of "name=value" strings.
-type listEnviron []string
+type listEnviron struct {
+	caseInsensitive bool
+	pairs           []string
+}
+
+func (l listEnviron) compare(a, b string) int {
+	if l.caseInsensitive {
+		// This is not particularly efficient, but it does the job.
+		// If we had a cmp-compatible version of [strings.EqualFold], we'd use it.
+		a = strings.ToUpper(a)
+		b = strings.ToUpper(b)
+	}
+	return strings.Compare(a, b)
+}
 
 func (l listEnviron) Get(name string) Variable {
 	eqpos := len(name)
 	endpos := len(name) + 1
-	i, ok := slices.BinarySearchFunc(l, name, func(l, name string) int {
-		if len(l) < endpos {
+	i, ok := slices.BinarySearchFunc(l.pairs, name, func(pair, name string) int {
+		if len(pair) < endpos {
 			// Too short; see if we are before or after the name.
-			return strings.Compare(l, name)
+			return l.compare(pair, name)
 		}
 		// Compare the name prefix, then the equal character.
-		c := strings.Compare(l[:eqpos], name)
-		eq := l[eqpos]
+		c := l.compare(pair[:eqpos], name)
+		eq := pair[eqpos]
 		if c == 0 {
 			return cmp.Compare(eq, '=')
 		}
 		return c
 	})
 	if ok {
-		return Variable{Set: true, Exported: true, Kind: String, Str: l[i][endpos:]}
+		return Variable{Set: true, Exported: true, Kind: String, Str: l.pairs[i][endpos:]}
 	}
 	return Variable{}
 }
 
 func (l listEnviron) Each(fn func(name string, vr Variable) bool) {
-	for _, pair := range l {
-		i := strings.IndexByte(pair, '=')
-		if i < 0 {
+	for _, pair := range l.pairs {
+		name, value, ok := strings.Cut(pair, "=")
+		if !ok {
 			// should never happen; see listEnvironWithUpper
 			panic("expand.listEnviron: did not expect malformed name-value pair: " + pair)
 		}
-		name, value := pair[:i], pair[i+1:]
 		if !fn(name, Variable{Set: true, Exported: true, Kind: String, Str: value}) {
 			return
 		}

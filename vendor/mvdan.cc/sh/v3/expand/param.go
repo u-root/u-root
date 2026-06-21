@@ -24,6 +24,8 @@ func nodeLit(node syntax.Node) string {
 	return ""
 }
 
+// UnsetParameterError is returned when a parameter expansion encounters an
+// unset variable and [Config.NoUnset] has been set.
 type UnsetParameterError struct {
 	Node    *syntax.ParamExp
 	Message string
@@ -71,7 +73,9 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 		vr = cfg.Env.Get(name)
 	}
 	orig := vr
-	_, vr = vr.Resolve(cfg.Env)
+	if n, v := vr.Resolve(cfg.Env); n != "" {
+		name, vr = n, v
+	}
 	if cfg.NoUnset && !vr.IsSet() && !overridingUnset(pe) {
 		return "", UnsetParameterError{
 			Node:    pe,
@@ -113,24 +117,7 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 		case Indexed:
 			indexAllElements = true
 			callVarInd = false
-			elems = vr.List
-			slicePos := func(n int) int {
-				if n < 0 {
-					n = len(elems) + n
-					if n < 0 {
-						n = len(elems)
-					}
-				} else if n > len(elems) {
-					n = len(elems)
-				}
-				return n
-			}
-			if pe.Slice != nil && pe.Slice.Offset != nil {
-				elems = elems[slicePos(sliceOffset):]
-			}
-			if pe.Slice != nil && pe.Slice.Length != nil {
-				elems = elems[:slicePos(sliceLen)]
-			}
+			elems = cfg.sliceElems(pe, vr.List, name == "@" || name == "*")
 			str = strings.Join(elems, " ")
 		}
 	}
@@ -179,6 +166,10 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 		}
 		slices.Sort(strs)
 		str = strings.Join(strs, " ")
+	case pe.Width:
+		return "", fmt.Errorf("unsupported")
+	case pe.IsSet:
+		return "", fmt.Errorf("unsupported")
 	case pe.Slice != nil:
 		if callVarInd {
 			slicePos := func(n int) int {
@@ -328,8 +319,24 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 					rns = append(rns, rn)
 				}
 				str = string(rns)
-			case "P", "A", "a":
-				panic(fmt.Sprintf("unhandled @%s param expansion", arg))
+			case "a":
+				// ${var@a} returns variable attribute flags.
+				// We use orig (before nameref resolve) for the attributes.
+				str = orig.Flags()
+			case "A":
+				// ${var@A} returns a declare statement that recreates the variable.
+				flags := orig.Flags()
+				quoted, err := syntax.Quote(str, syntax.LangBash)
+				if err != nil {
+					return "", err
+				}
+				if flags == "" {
+					str = fmt.Sprintf("%s=%s", name, quoted)
+				} else {
+					str = fmt.Sprintf("declare -%s %s=%s", flags, name, quoted)
+				}
+			case "P":
+				// TODO: implement prompt expansion (\u, \h, \w, etc.).
 			default:
 				panic(fmt.Sprintf("unexpected @%s param expansion", arg))
 			}
