@@ -437,8 +437,8 @@ github.com/u-root/cpu/vm
 # github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 ## explicit; go 1.22.0
 github.com/u-root/cpuid
-# github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
-## explicit; go 1.20
+# github.com/u-root/gobusybox/src v0.3.0
+## explicit; go 1.25.0
 github.com/u-root/gobusybox/src/pkg/bb
 github.com/u-root/gobusybox/src/pkg/bb/bbinternal
 github.com/u-root/gobusybox/src/pkg/bb/findpkg
@@ -447,8 +447,8 @@ github.com/u-root/gobusybox/src/pkg/uflag
 # github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 ## explicit; go 1.13
 github.com/u-root/iscsinl
-# github.com/u-root/mkuimage v0.0.0-20250905073043-9a40452f5d3b
-## explicit; go 1.21
+# github.com/u-root/mkuimage v0.1.0
+## explicit; go 1.25.0
 github.com/u-root/mkuimage/cpio
 github.com/u-root/mkuimage/cpio/internal/upath
 github.com/u-root/mkuimage/fileflag
