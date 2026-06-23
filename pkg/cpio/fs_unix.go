@@ -9,14 +9,12 @@ package cpio
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/u-root/u-root/pkg/ls"
-	"github.com/u-root/u-root/pkg/upath"
 	"github.com/u-root/uio/uio"
 	"golang.org/x/sys/unix"
 )
@@ -42,17 +40,17 @@ var modeMap = map[uint64]os.FileMode{
 // Set ALL the mode bits, in case we need to do SUID, etc. If we could not
 // set the owner, we won't even try this operation of course, so we won't
 // have SUID incorrectly set for the wrong user.
-func setModes(r Record) error {
-	if err := os.Chmod(r.Name, toFileMode(r)&os.ModePerm); err != nil {
+func setModes(root *os.Root, r Record) error {
+	if err := root.Chmod(r.Name, toFileMode(r)&os.ModePerm); err != nil {
 		return err
 	}
-	/*if err := os.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
+	/*if err := root.Chtimes(r.Name, time.Time{}, time.Unix(int64(r.MTime), 0)); err != nil {
 		return err
 	}*/
-	if err := os.Chown(r.Name, int(r.UID), int(r.GID)); err != nil {
+	if err := root.Chown(r.Name, int(r.UID), int(r.GID)); err != nil {
 		return err
 	}
-	if err := os.Chmod(r.Name, toFileMode(r)); err != nil {
+	if err := root.Chmod(r.Name, toFileMode(r)); err != nil {
 		return err
 	}
 	return nil
@@ -109,21 +107,32 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		return err
 	}
 
-	f.Name, err = upath.SafeFilepathJoin(rootDir, f.Name)
-	if err != nil {
-		// The behavior is to skip files which are unsafe due to
-		// zipslip, but continue extracting everything else.
-		log.Printf("Warning: Skipping file %q due to: %v", f.Name, err)
-		return nil
+	if err := os.MkdirAll(rootDir, 0o755); err != nil {
+		return err
 	}
-	dir := filepath.Dir(f.Name)
-	// The problem: many cpio archives do not specify the directories and
-	// hence the permissions. They just specify the whole path.  In order
-	// to create files in these directories, we have to make them at least
-	// mode 755.
-	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("CreateFileInRoot %q: %w", f.Name, err)
+	// os.Root confines every path operation below to rootDir. It follows the
+	// symlinks already unpacked from earlier records but refuses any component
+	// that resolves outside the root, so record "x" -> "/etc" followed by
+	// "x/passwd" can no longer land in /etc. A lexical join (the old
+	// SafeFilepathJoin) could not catch that: the escaping symlink only exists
+	// on disk, not in the name.
+	root, err := os.OpenRoot(rootDir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	// Many cpio archives do not include the directory records, so create the
+	// missing parents at mode 0755. Stat first so an existing symlink that
+	// stays within the root keeps working.
+	if dir := filepath.Dir(f.Name); dir != "." {
+		if _, err := root.Stat(dir); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+			if err := root.MkdirAll(dir, 0o755); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -136,10 +145,10 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		if err != nil {
 			return err
 		}
-		return os.Symlink(string(content), f.Name)
+		return root.Symlink(string(content), f.Name)
 
 	case os.FileMode(0):
-		nf, err := os.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, toFileMode(f).Perm())
+		nf, err := root.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, toFileMode(f).Perm())
 		if err != nil {
 			return err
 		}
@@ -149,17 +158,19 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		}
 
 	case os.ModeDir:
-		if err := os.MkdirAll(f.Name, toFileMode(f)); err != nil {
+		if err := root.MkdirAll(f.Name, toFileMode(f)); err != nil {
 			return err
 		}
 
 	case os.ModeDevice:
-		if err := mknod(f.Name, perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
+		// os.Root has no mknod; the parent was confirmed inside rootDir
+		// above, so the node cannot be created through an escaping symlink.
+		if err := mknod(filepath.Join(rootDir, f.Name), perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
 	case os.ModeCharDevice:
-		if err := mknod(f.Name, perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
+		if err := mknod(filepath.Join(rootDir, f.Name), perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
@@ -167,7 +178,7 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		return fmt.Errorf("%v: Unknown type %#o", f.Name, m)
 	}
 
-	if err := setModes(f); err != nil && forcePriv {
+	if err := setModes(root, f); err != nil && forcePriv {
 		return err
 	}
 	return nil
