@@ -5,3 +5,8 @@
 
 .bb/
 bb/
+
+# add these back in, since the ! above explicitly unignored them...
+*.swp
+*.swo
+.*.swp
