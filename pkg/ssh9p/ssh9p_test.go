@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hugelgupf/p9/fsimpl/localfs"
 	"github.com/hugelgupf/p9/p9"
-	"github.com/u-root/cpu/client"
 	"github.com/u-root/u-root/pkg/sshstream"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"
@@ -131,7 +131,7 @@ func TestFDFor9PTransportMount(t *testing.T) {
 
 func TestServerServe(t *testing.T) {
 	tmpDir := t.TempDir()
-	attacher := client.NewCPU9P(tmpDir)
+	attacher := localfs.Attacher(tmpDir)
 	p9s := p9.NewServer(attacher)
 	s := NewServer(p9s)
 
@@ -188,7 +188,7 @@ func TestServerServeSSH(t *testing.T) {
 		t.Fatalf("NewClientConfig failed: %v", err)
 	}
 
-	attacher := client.NewCPU9P(tmpDir)
+	attacher := localfs.Attacher(tmpDir)
 	p9s := p9.NewServer(attacher)
 	s := NewServer(p9s, WithSSHServer(serverCfg))
 
