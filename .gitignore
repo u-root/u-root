@@ -9,6 +9,7 @@ bazel-*
 /bbsh
 /bb
 /u-root
+/ufs
 !vendor/github.com/u-root
 integration/serial/
 integration/coverage/
