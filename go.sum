@@ -323,8 +323,8 @@ github.com/u-root/gobusybox/src v0.3.0 h1:ng9rBEdYBVbrJvpuqszL3s+GZ48cRQOkzXqo3Y
 github.com/u-root/gobusybox/src v0.3.0/go.mod h1:OMAhTvyRLgyoDrKKcTVx2f6p5oK2pddEZVVxT4m54fA=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eVd21MOEatnh2pfAAwZaEPSIEEsjctQ=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
-github.com/u-root/mkuimage v0.1.0 h1:qcxDLFoYnm7tmwikCzalX6Z+kwBJ29zV5Hqmyiqk65M=
-github.com/u-root/mkuimage v0.1.0/go.mod h1:7DauRwdoPtYvNNHR2hGAqB8zkxyBSG3PmwwPzrXwOZc=
+github.com/u-root/mkuimage v0.2.0 h1:/W0mzYXNCqOBfESM22zbEaib7iPtEDigSYfv7Mq7a/Q=
+github.com/u-root/mkuimage v0.2.0/go.mod h1:7DauRwdoPtYvNNHR2hGAqB8zkxyBSG3PmwwPzrXwOZc=
 github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 h1:pyC9PaHYZFgEKFdlp3G8RaCKgVpHZnecvArXvPXcFkM=
 github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701/go.mod h1:P3a5rG4X7tI17Nn3aOIAYr5HbIMukwXG0urG0WuL8OA=
 github.com/ulikunitz/xz v0.5.15 h1:9DNdB5s+SgV3bQ2ApL10xRc35ck0DuIX/isZvIk+ubY=

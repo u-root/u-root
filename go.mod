@@ -61,7 +61,7 @@ require (
 	github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 	github.com/u-root/gobusybox/src v0.3.0
-	github.com/u-root/mkuimage v0.1.0
+	github.com/u-root/mkuimage v0.2.0
 	go.bug.st/serial v1.6.2
 )
 
