@@ -60,8 +60,8 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
-	github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7
-	github.com/u-root/mkuimage v0.0.0-20250905073043-9a40452f5d3b
+	github.com/u-root/gobusybox/src v0.3.0
+	github.com/u-root/mkuimage v0.2.0
 	go.bug.st/serial v1.6.2
 )
 
@@ -85,7 +85,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rasky/go-xdr v0.0.0-20170124162913-1a41d1a06c93 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/u-root/u-root/pkg/uroot v0.0.0-00010101000000-000000000000 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/willscott/go-nfs v0.0.0-20240424173852-04b947a7e58a // indirect
 	github.com/willscott/go-nfs-client v0.0.0-20240104095149-b44639837b00 // indirect
@@ -143,3 +143,6 @@ retract (
 	// Published v1 too early (before migrating to go modules)
 	[v1.0.0, v1.0.1]
 )
+
+// For github.com/hugelgupf/p9/fsimpl/localfs
+replace github.com/u-root/u-root/pkg/uroot => ./

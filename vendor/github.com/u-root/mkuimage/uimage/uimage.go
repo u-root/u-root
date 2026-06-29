@@ -790,7 +790,7 @@ func ParseExtraFiles(l *llog.Logger, archive *initramfs.Files, extraFiles []stri
 			if filepath.IsAbs(dst) {
 				dst, err = filepath.Rel("/", dst)
 				if err != nil {
-					return fmt.Errorf("cannot make path relative to /: %v: %v", dst, err)
+					return fmt.Errorf("cannot make path relative to /: %v: %w", dst, err)
 				}
 			}
 		}
@@ -819,22 +819,22 @@ func ParseExtraFiles(l *llog.Logger, archive *initramfs.Files, extraFiles []stri
 					return nil //nolint:nilerr
 				}
 				if err = f.Close(); err != nil {
-					l.Warnf("Closing ELF file %q: %v", name, err)
+					l.Warnf("Closing ELF file %q: %w", name, err)
 				}
 				// Pull dependencies in the case of binaries. If `path` is not
 				// a binary, `libs` will just be empty.
 				libs, err := ldd.FList(name)
 				if err != nil {
-					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %v", name, err)
+					return fmt.Errorf("WARNING: couldn't add ldd dependencies for %q: %w", name, err)
 				}
 				for _, lib := range libs {
 					if err := archive.AddFileNoFollow(lib, lib[1:]); err != nil {
-						l.Warnf("WARNING: couldn't add ldd dependencies for %q: %v", lib, err)
+						l.Warnf("WARNING: couldn't add ldd dependencies for %q: %w", lib, err)
 					}
 				}
 				return nil
 			}); err != nil {
-				l.Warnf("Getting dependencies for %q: %v", src, err)
+				l.Warnf("Getting dependencies for %q: %w", src, err)
 			}
 		}
 	}
