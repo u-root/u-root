@@ -20,13 +20,6 @@ import (
 	"github.com/u-root/u-root/pkg/ulog"
 )
 
-// Sort the image in descending order by rank
-type byRank []boot.OSImage
-
-func (a byRank) Less(i, j int) bool { return a[i].Rank() > a[j].Rank() }
-func (a byRank) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byRank) Len() int           { return len(a) }
-
 // parse treats device as a block device with a file system.
 func parse(l ulog.Logger, device *block.BlockDev, devices block.BlockDevices, mountDir string, mountPool *mount.Pool) []boot.OSImage {
 	imgs, err := bls.ScanBLSEntries(l, mountDir, nil, "")
@@ -105,6 +98,8 @@ func Localboot(l ulog.Logger, blockDevs block.BlockDevices, mp *mount.Pool) ([]b
 		}
 	}
 
-	sort.Sort(byRank(images))
+	// Sort the image in descending order by rank
+	// images may come from different sources and if they have the same rank better not change it
+	sort.SliceStable(images, func(i, j int) bool { return images[i].Rank() > images[j].Rank() })
 	return images, nil
 }
