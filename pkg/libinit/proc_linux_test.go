@@ -5,7 +5,6 @@
 package libinit
 
 import (
-	"errors"
 	"os"
 	"os/exec"
 	"reflect"
@@ -85,80 +84,58 @@ func TestWithCloneFlags(t *testing.T) {
 }
 
 func TestWithMultiTTY(t *testing.T) {
+	// openFn is part of the modifier signature but is no longer consulted by
+	// WithMultiTTY: TTY names are stashed in the command environment and the
+	// devices are opened later, in RunCommands. A stub keeps the call valid.
+	stubOpen := func([]string) ([]*os.File, error) { return nil, nil }
+
 	tests := []struct {
-		name      string
-		mtty      bool
-		openFn    func([]string) ([]*os.File, error)
-		ttyNames  []string
-		expectErr bool
+		name     string
+		mtty     bool
+		ttyNames []string
+		wantEnv  []string
 	}{
 		{
-			name: "MultiTTY enabled with no writers",
-			mtty: true,
-			openFn: func([]string) ([]*os.File, error) {
-				return []*os.File{}, nil
-			},
-			ttyNames:  nil,
-			expectErr: false,
+			name:     "MultiTTY enabled with no TTY names",
+			mtty:     true,
+			ttyNames: nil,
+			wantEnv:  nil,
 		},
 		{
-			name: "MultiTTY enabled with single writer",
-			mtty: true,
-			openFn: func([]string) ([]*os.File, error) {
-				return []*os.File{os.NewFile(0, "tty1")}, nil
-			},
-			ttyNames:  []string{"tty1"},
-			expectErr: false,
+			name:     "MultiTTY enabled with single TTY",
+			mtty:     true,
+			ttyNames: []string{"tty1"},
+			wantEnv:  []string{"tty0=/dev/tty1"},
 		},
 		{
-			name: "MultiTTY enabled with multiple writers",
-			mtty: true,
-			openFn: func([]string) ([]*os.File, error) {
-				return []*os.File{os.NewFile(0, "tty1"), os.NewFile(0, "tty2")}, nil
-			},
-			ttyNames:  []string{"tty1", "tty2"},
-			expectErr: false,
+			name:     "MultiTTY enabled with multiple TTYs",
+			mtty:     true,
+			ttyNames: []string{"tty1", "tty2"},
+			wantEnv:  []string{"tty0=/dev/tty1", "tty1=/dev/tty2"},
 		},
 		{
-			name: "MultiTTY enabled with openFn returning error",
-			mtty: true,
-			openFn: func([]string) ([]*os.File, error) {
-				return nil, errors.New("failed to open TTY devices")
-			},
-			ttyNames:  []string{"tty1"},
-			expectErr: true,
-		},
-		{
-			name: "MultiTTY disabled",
-			mtty: false,
-			openFn: func([]string) ([]*os.File, error) {
-				return []*os.File{os.NewFile(0, "tty1")}, nil
-			},
-			ttyNames:  []string{"tty1"},
-			expectErr: false,
+			name:     "MultiTTY disabled",
+			mtty:     false,
+			ttyNames: []string{"tty1"},
+			wantEnv:  nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := exec.Command("echo", "test")
-			modifier := WithMultiTTY(tt.mtty, tt.openFn, tt.ttyNames)
+			cmd.Env = nil
+			modifier := WithMultiTTY(tt.mtty, stubOpen, tt.ttyNames)
 			modifier(cmd)
 
-			if tt.mtty {
-				if tt.expectErr {
-					if cmd.Stdout != nil || cmd.Stderr != nil {
-						t.Errorf("expected fallback to default stdout and stderr, got %v and %v", cmd.Stdout, cmd.Stderr)
-					}
-				} else {
-					if cmd.Stdout == nil || cmd.Stderr == nil {
-						t.Errorf("expected stdout and stderr to be set, got %v and %v", cmd.Stdout, cmd.Stderr)
-					}
-				}
-			} else {
-				if cmd.Stdout != nil || cmd.Stderr != nil {
-					t.Errorf("expected no writers to be set, got %v and %v", cmd.Stdout, cmd.Stderr)
-				}
+			if !reflect.DeepEqual(cmd.Env, tt.wantEnv) {
+				t.Errorf("cmd.Env = %v, want %v", cmd.Env, tt.wantEnv)
+			}
+
+			// WithMultiTTY must not touch the command's I/O streams; the PTY
+			// multiplexing wiring happens later, in RunCommands.
+			if cmd.Stdout != nil || cmd.Stderr != nil || cmd.Stdin != nil {
+				t.Errorf("expected I/O streams to be untouched, got stdin=%v stdout=%v stderr=%v", cmd.Stdin, cmd.Stdout, cmd.Stderr)
 			}
 		})
 	}
