@@ -11,6 +11,7 @@
 //	-mode integer-arg: match against mode, e.g. -mode 0755
 //	-type: match against a file type, e.g. -type f will match files
 //	-name: glob to match against file
+//	-regex: regular expression to match against path
 //	-l: long listing. It's not very good, yet, but it's useful enough.
 package main
 
@@ -22,17 +23,23 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/find"
 )
 
-var errNotValidType = errors.New("not a valid file type")
-var errUsage = errors.New("find [opts] starting-at-path")
+var (
+	errNotValidType = errors.New("not a valid file type")
+	errInvalidRegex = errors.New("invalid regex")
+	errUsage        = errors.New("find [opts] starting-at-path")
+)
 
 type flags struct {
 	fileType string
 	name     string
+	regex    string
 	perm     int
 	long     bool
 	debug    bool
@@ -56,7 +63,7 @@ func reorderArgs(args []string) []string {
 	for i < len(args) {
 		var (
 			arg          = args[i]
-			expectsValue = arg == "-name" || arg == "-type" || arg == "-mode"
+			expectsValue = arg == "-name" || arg == "-regex" || arg == "-type" || arg == "-mode"
 			hasNext      = i+1 < len(args)
 			isFlag       = strings.HasPrefix(arg, "-")
 		)
@@ -90,6 +97,7 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 
 	fs.StringVar(&f.fileType, "type", "", "file type")
 	fs.StringVar(&f.name, "name", "", "glob for name")
+	fs.StringVar(&f.regex, "regex", "", "regular expression for path")
 	fs.IntVar(&f.perm, "mode", -1, "permissions")
 	fs.BoolVar(&f.long, "l", false, "long listing")
 	fs.BoolVar(&f.debug, "d", false, "enable debugging in the find package")
@@ -107,6 +115,11 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 		fs.Usage()
 		return nil, errUsage
 	}
+	if f.regex != "" {
+		if _, err := regexp.Compile(f.regex); err != nil {
+			return nil, fmt.Errorf("%w: %w", errInvalidRegex, err)
+		}
+	}
 
 	return &cmd{
 		stdout: stdout,
@@ -114,6 +127,22 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 		args:   fs.Args(),
 		flags:  f,
 	}, nil
+}
+
+func findMatch(name, regex string) find.Set {
+	if regex == "" {
+		return find.WithFilenameMatch(name)
+	}
+	if name == "" {
+		return find.WithRegexPathMatch(regex)
+	}
+	return find.WithPathMatch(regex, func(pattern, path string) (bool, error) {
+		matched, err := regexp.MatchString(pattern, path)
+		if err != nil || !matched {
+			return matched, err
+		}
+		return filepath.Match(name, filepath.Base(path))
+	})
 }
 
 func (c *cmd) run() error {
@@ -153,10 +182,11 @@ func (c *cmd) run() error {
 	if c.debug {
 		debugLog = log.Printf
 	}
+
 	names := find.Find(context.Background(),
 		find.WithRoot(root),
 		find.WithModeMatch(mode, mask),
-		find.WithFilenameMatch(c.name),
+		findMatch(c.name, c.regex),
 		find.WithDebugLog(debugLog),
 	)
 
