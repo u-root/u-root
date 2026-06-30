@@ -22,22 +22,22 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 )
 
-const eUsage = "Usage: kill -l | kill [<-s | --signal | -> <signame|signum>] pid [pid...]"
-
-func usage(w io.Writer) {
-	fmt.Fprintf(w, "%s\n", eUsage)
-}
+var (
+	errUsage         = errors.New("usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]")
+	errCannotKill    = errors.New("some processes could not be killed")
+	errInvalidSignal = errors.New("invalid signal")
+)
 
 func killProcess(w io.Writer, args ...string) error {
 	if len(args) < 2 {
-		usage(w)
-		return nil
+		return errUsage
 	}
 	op := args[1]
 	pids := args[2:]
@@ -57,8 +57,7 @@ func killProcess(w io.Writer, args ...string) error {
 
 	if op[0:2] == "-l" {
 		if len(args) > 2 {
-			usage(w)
-			return nil
+			return errUsage
 		}
 		fmt.Fprintf(w, "%s\n", siglist())
 		return nil
@@ -70,8 +69,7 @@ func killProcess(w io.Writer, args ...string) error {
 
 	if op == "-s" || op == "--signal" {
 		if len(args) < 3 {
-			usage(w)
-			return nil
+			return errUsage
 		}
 		op = args[2]
 		pids = args[3:]
@@ -81,15 +79,14 @@ func killProcess(w io.Writer, args ...string) error {
 
 	s, ok := signums[op]
 	if !ok {
-		return fmt.Errorf("%v is not a valid signal", op)
+		return fmt.Errorf("%v: %w", op, errInvalidSignal)
 	}
 
 	if len(pids) < 1 {
-		usage(w)
-		return nil
+		return errUsage
 	}
 	if err := kill(s, pids...); err != nil {
-		return fmt.Errorf("some processes could not be killed: %w", err)
+		return fmt.Errorf("%w: %w", errCannotKill, err)
 	}
 	return nil
 }

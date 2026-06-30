@@ -72,7 +72,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to set terminal to raw mode: %v\n", err)
 	}
-	defer term.Restore(int(os.Stdin.Fd()), state)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -110,11 +109,11 @@ func main() {
 	buf := make([]byte, 1024)
 	for {
 		n, err := os.Stdin.Read(buf)
-		if err != nil {
-			continue
-		}
 		if err == io.EOF {
 			c <- os.Interrupt
+		}
+		if err != nil {
+			continue
 		}
 
 		for i := range n {

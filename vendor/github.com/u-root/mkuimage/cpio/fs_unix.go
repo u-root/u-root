@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !plan9 && !windows
-// +build !plan9,!windows
 
 package cpio
 
@@ -119,7 +118,7 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 	// mode 755.
 	if _, err := os.Stat(dir); os.IsNotExist(err) && len(dir) > 0 {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("CreateFileInRoot %q: %v", f.Name, err)
+			return fmt.Errorf("CreateFileInRoot %q: %w", f.Name, err)
 		}
 	}
 

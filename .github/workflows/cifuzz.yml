@@ -6,13 +6,13 @@ jobs:
     steps:
     - name: Build Fuzzers
       id: build
-      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
+      uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@d4211241e7d532546cdf8d904f439af1179a74cc # master
       with:
         oss-fuzz-project-name: 'u-root'
         dry-run: false
         language: go
     - name: Run Fuzzers
-      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
+      uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@d4211241e7d532546cdf8d904f439af1179a74cc # master
       with:
         oss-fuzz-project-name: 'u-root'
         fuzz-seconds: 300
@@ -20,7 +20,7 @@ jobs:
         report-unreproducible-crashes: false
         language: go
     - name: Upload Crash
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       if: failure() && steps.build.outcome == 'success'
       with:
         name: artifacts
