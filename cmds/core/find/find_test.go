@@ -14,14 +14,15 @@ import (
 )
 
 // create creates a file with a standard mode.
-// Do not use create; it is sensitive to umask and
+// Do not use os.Create alone; it is sensitive to umask and
 // can fail at times.
 func create(name string) error {
-	f, err := os.OpenFile(name, os.O_CREATE, 0644)
-	if err == nil {
-		f.Close()
+	f, err := os.Create(name)
+	if err != nil {
+		return err
 	}
-	return err
+	f.Close()
+	return os.Chmod(name, 0644)
 }
 
 func prepareDirLayout(t *testing.T) {
@@ -94,8 +95,28 @@ func TestFind(t *testing.T) {
 			args:       []string{"-type=file", "."},
 		},
 		{
-			args:   []string{"-type=notvalid", "."},
-			runErr: errNotValidType,
+			wantStdout: "dir1/file1\ndir2/file1\n",
+			args:       []string{"-regex=dir[12]/file1", "."},
+		},
+		{
+			wantStdout: "dir1/file2\n",
+			args:       []string{"-regex=dir1/file2", "."},
+		},
+		{
+			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
+			args:       []string{"-regex=file1", "."},
+		},
+		{
+			wantStdout: "dir1/file1\ndir2/file1\n",
+			args:       []string{"-name=file1", "-regex=dir[12]/file1", "."},
+		},
+		{
+			args:       []string{"-regex=[", "."},
+			commandErr: errInvalidRegex,
+		},
+		{
+			args:       []string{"-type=notvalid", "."},
+			commandErr: errNotValidType,
 		},
 		{
 			wantStdout: "file1\n",
@@ -107,19 +128,27 @@ func TestFind(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	failed := []int{}
+	for i, tt := range tests {
 		var stdout bytes.Buffer
+		t.Logf("%d:%v", i, tt)
 		c, err := command(&stdout, io.Discard, tt.args)
+		t.Logf("%v, %v", c, err)
 		if !errors.Is(err, tt.commandErr) {
-			t.Fatalf("expected %v, got %v", tt.commandErr, err)
+			failed = append(failed, i)
+			t.Errorf("expected %v, got %v", tt.commandErr, err)
+			continue
 		}
 		if err != nil {
 			continue
 		}
 
+		t.Logf("Now run test %d", i)
 		err = c.run()
 		if !errors.Is(err, tt.runErr) {
-			t.Fatalf("expected %v, got %v", tt.runErr, err)
+			failed = append(failed, i)
+			t.Errorf("expected %v, got %v", tt.runErr, err)
+			continue
 		}
 		if err != nil {
 			continue
@@ -128,7 +157,11 @@ func TestFind(t *testing.T) {
 		resStdout := stdout.String()
 		if resStdout != tt.wantStdout {
 			t.Errorf("want\n %s, got\n %s", tt.wantStdout, resStdout)
+			failed = append(failed, i)
 		}
+	}
+	if len(failed) > 0 {
+		t.Logf("failing tests: %v", failed)
 	}
 }
 

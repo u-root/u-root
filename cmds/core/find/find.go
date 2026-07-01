@@ -10,7 +10,8 @@
 //	-d: enable debugging in the find package
 //	-mode integer-arg: match against mode, e.g. -mode 0755
 //	-type: match against a file type, e.g. -type f will match files
-//	-name: glob to match against file
+//	-name: glob to match against file name
+//	-regex: regular expression to match against file name
 //	-l: long listing. It's not very good, yet, but it's useful enough.
 package main
 
@@ -22,27 +23,33 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/find"
 )
 
-var errNotValidType = errors.New("not a valid file type")
-var errUsage = errors.New("find [opts] starting-at-path")
+var (
+	errNotValidType = errors.New("not a valid file type")
+	errInvalidRegex = errors.New("invalid regex")
+	errUsage        = errors.New("find [opts] starting-at-path")
+)
 
 type flags struct {
 	fileType string
 	name     string
+	regex    string
 	perm     int
 	long     bool
 	debug    bool
 }
 
 type cmd struct {
+	flags
 	stdout io.Writer
 	stderr io.Writer
 	args   []string
-	flags
+	opts   []find.Set
 }
 
 // reorderArgs reorders arguments so flags are moved to the front, which is the
@@ -56,7 +63,7 @@ func reorderArgs(args []string) []string {
 	for i < len(args) {
 		var (
 			arg          = args[i]
-			expectsValue = arg == "-name" || arg == "-type" || arg == "-mode"
+			expectsValue = arg == "-name" || arg == "-regex" || arg == "-type" || arg == "-mode"
 			hasNext      = i+1 < len(args)
 			isFlag       = strings.HasPrefix(arg, "-")
 		)
@@ -90,6 +97,7 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 
 	fs.StringVar(&f.fileType, "type", "", "file type")
 	fs.StringVar(&f.name, "name", "", "glob for name")
+	fs.StringVar(&f.regex, "regex", "", "regex for name")
 	fs.IntVar(&f.perm, "mode", -1, "permissions")
 	fs.BoolVar(&f.long, "l", false, "long listing")
 	fs.BoolVar(&f.debug, "d", false, "enable debugging in the find package")
@@ -108,15 +116,13 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 		return nil, errUsage
 	}
 
-	return &cmd{
+	c := &cmd{
 		stdout: stdout,
 		stderr: stderr,
 		args:   fs.Args(),
 		flags:  f,
-	}, nil
-}
+	}
 
-func (c *cmd) run() error {
 	fileTypes := map[string]os.FileMode{
 		"f":         0,
 		"file":      0,
@@ -143,22 +149,37 @@ func (c *cmd) run() error {
 			for key := range fileTypes {
 				keys = append(keys, key)
 			}
-			return fmt.Errorf("%w: %v\n valid types are %v", errNotValidType, c.fileType, strings.Join(keys, ","))
+			return nil, fmt.Errorf("%w: %v\n valid types are %v", errNotValidType, c.fileType, strings.Join(keys, ","))
 		}
 		mode |= intType
 		mask |= os.ModeType
 	}
 
-	debugLog := func(string, ...any) {}
-	if c.debug {
-		debugLog = log.Printf
-	}
-	names := find.Find(context.Background(),
+	c.opts = []find.Set{
 		find.WithRoot(root),
 		find.WithModeMatch(mode, mask),
-		find.WithFilenameMatch(c.name),
-		find.WithDebugLog(debugLog),
-	)
+	}
+	if c.debug {
+		c.opts = append(c.opts, find.WithDebugLog(log.Printf))
+	}
+	if len(c.name) > 0 {
+		c.opts = append(c.opts, find.WithFilenameMatch(c.name))
+	}
+	if len(c.regex) > 0 {
+		re, err := regexp.Compile(c.regex)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%w:%w", c.regex, errInvalidRegex, err)
+		}
+		c.opts = append(c.opts, find.WithPathMatch(c.regex, func(_ string, path string) (bool, error) {
+			return re.MatchString(path), nil
+		}))
+	}
+
+	return c, nil
+}
+
+func (c *cmd) run() error {
+	names := find.Find(context.Background(), c.opts...)
 
 	for l := range names {
 		if l.Err != nil {
