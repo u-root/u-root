@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build amd64 && !tinygo
+
 #include "textflag.h"
 
 TEXT trampoline_start(SB),NOSPLIT,$0

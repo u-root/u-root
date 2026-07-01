@@ -8,6 +8,7 @@ package fbpt
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -145,6 +146,13 @@ func FindAllFBPTRecords(FBPTAddr uint64) (int, []MeasurementRecord, EfiAcpi6_5Fp
 		return 0, nil, basicBootRecord, err
 	}
 
+	// tablelength is attacker-controlled firmware data; a value below the
+	// 8 byte FBPT header underflows the unsigned loop bound and walks past
+	// the table.
+	if tablelength < efiAcpi5_0FbptHeaderSize {
+		return 0, nil, basicBootRecord, fmt.Errorf("FBPT length %d smaller than FBPT header size %d", tablelength, efiAcpi5_0FbptHeaderSize)
+	}
+
 	// iterate through FBPT table
 	measurementRecords := make([]MeasurementRecord, maxNumberOfFBPTPerfRecords)
 	var index int
@@ -169,6 +177,9 @@ func FindAllFBPTRecords(FBPTAddr uint64) (int, []MeasurementRecord, EfiAcpi6_5Fp
 				return index, nil, basicBootRecord, err
 			}
 		} else {
+			if HeaderInfo.Length < efiAcpi5_0FpdtPerformanceRecordHeaderSize {
+				return index, nil, basicBootRecord, fmt.Errorf("FPDT record length %d smaller than record header size %d", HeaderInfo.Length, efiAcpi5_0FpdtPerformanceRecordHeaderSize)
+			}
 			if _, err := f.Seek(int64(HeaderInfo.Length-efiAcpi5_0FpdtPerformanceRecordHeaderSize), io.SeekCurrent); err != nil {
 				return index, nil, basicBootRecord, err
 			}
@@ -199,6 +210,13 @@ func readFirmwarePerformanceDataTableDynamicRecord(mem io.ReadSeeker, recordLeng
 	var GUID [16]byte
 	if _, err := io.ReadFull(mem, GUID[:]); err != nil {
 		return measurementRecord, err
+	}
+
+	// recordLength is the full record size including the 4 byte header plus
+	// the 30 fixed bytes read above; anything smaller underflows the unsigned
+	// subtraction and reads adjacent memory into the description.
+	if recordLength < 34 {
+		return measurementRecord, fmt.Errorf("FPDT dynamic record length %d smaller than fixed record size 34", recordLength)
 	}
 
 	String := make([]byte, recordLength-34)
