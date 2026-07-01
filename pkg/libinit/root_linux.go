@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cp"
@@ -407,20 +408,20 @@ func GetModulesFromCmdline(m *InitModuleLoader) ([]string, error) {
 // OpenTTYDevices opens the TTY devices with the given names in /dev.
 // It uses a best-effort approach, returning the devices that could be opened.
 // If no devices could be opened, it returns an error.
-func OpenTTYDevices(names []string) ([]io.Writer, error) {
+func OpenTTYDevices(names []string) ([]*os.File, error) {
 	return openTTYDevices("/dev", names)
 }
 
-func openTTYDevices(prefix string, names []string) ([]io.Writer, error) {
+func openTTYDevices(prefix string, names []string) ([]*os.File, error) {
 	var err error
-	devs := make([]io.Writer, 0, len(names))
+	devs := make([]*os.File, 0, len(names))
 
 	if len(names) == 0 {
 		return devs, nil
 	}
 
 	for _, name := range names {
-		d, e := os.OpenFile(filepath.Join(prefix, name), os.O_RDWR, 0)
+		d, e := os.OpenFile(filepath.Join(prefix, name), unix.O_RDWR|unix.O_NONBLOCK, 0o620)
 		if e != nil {
 			ulog.KernelLog.Printf("open TTY: %v", e)
 			err = errors.Join(err, e)
@@ -434,4 +435,93 @@ func openTTYDevices(prefix string, names []string) ([]io.Writer, error) {
 	}
 
 	return devs, nil
+}
+
+// RedirectOutputToConsoles sets up output multiplexing for all console
+// devices specified in the kernel cmdline. This ensures early messages
+// (banner, logs) appear on all consoles.
+//
+// This uses a simple approach: stdout/stderr are redirected to a MultiWriter
+// that writes to all consoles. stdin is left unchanged (reads from primary
+// console only). This avoids the complexity of PTY multiplexing which can
+// interfere with interactive programs.
+func RedirectOutputToConsoles() {
+	consoles := cmdline.Consoles()
+	if len(consoles) <= 1 {
+		// Only one or no console, nothing to do
+		return
+	}
+
+	// Open all TTYs for output
+	var ttys []*os.File
+	for _, name := range consoles {
+		ttyPath := "/dev/" + name
+		tty, err := os.OpenFile(ttyPath, os.O_RDWR, 0)
+		if err != nil {
+			ulog.KernelLog.Printf("Error opening TTY %v: %v", ttyPath, err)
+			continue
+		}
+		ttys = append(ttys, tty)
+	}
+
+	if len(ttys) <= 1 {
+		// Failed to open multiple consoles
+		for _, tty := range ttys {
+			tty.Close()
+		}
+		return
+	}
+
+	// Create MultiWriter for output to all consoles
+	writers := make([]io.Writer, len(ttys))
+	for i, tty := range ttys {
+		writers[i] = tty
+	}
+	multiWriter := io.MultiWriter(writers...)
+
+	// Create a pipe for stdout redirection
+	// We use a pipe so that writes to os.Stdout go through our multiplexer
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		ulog.KernelLog.Printf("Error creating stdout pipe: %v", err)
+		return
+	}
+
+	// Create a pipe for stderr redirection
+	stderrR, stderrW, err := os.Pipe()
+	if err != nil {
+		ulog.KernelLog.Printf("Error creating stderr pipe: %v", err)
+		stdoutR.Close()
+		stdoutW.Close()
+		return
+	}
+
+	// Redirect stdout and stderr to the pipes
+	if err := unix.Dup2(int(stdoutW.Fd()), syscall.Stdout); err != nil {
+		ulog.KernelLog.Printf("Failed to dup2 stdout: %v", err)
+		return
+	}
+	if err := unix.Dup2(int(stderrW.Fd()), syscall.Stderr); err != nil {
+		ulog.KernelLog.Printf("Failed to dup2 stderr: %v", err)
+		return
+	}
+
+	// Update Go's os.Stdout/Stderr to point to the new FDs
+	os.Stdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
+	os.Stderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
+	log.SetOutput(os.Stderr)
+
+	// Close write ends after dup2 (the FDs are duplicated)
+	stdoutW.Close()
+	stderrW.Close()
+
+	// Copy stdout pipe to all TTYs
+	go io.Copy(multiWriter, stdoutR)
+
+	// Copy stderr pipe to all TTYs
+	go io.Copy(multiWriter, stderrR)
+
+	// Note: stdin is intentionally left unchanged - it reads from the
+	// primary console only. This keeps things simple and avoids the
+	// complexity of input multiplexing which can break interactive programs.
 }
