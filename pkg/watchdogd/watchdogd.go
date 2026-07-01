@@ -187,21 +187,21 @@ func (d *Daemon) ArmWatchdog() rune {
 	}
 	if d.CurrentOpts.Timeout != timeoutIgnore {
 		if err := wd.SetTimeout(d.CurrentOpts.Timeout); err != nil {
-			d.CurrentWd.Close()
+			wd.Close()
 			log.Printf("Failed to set timeout: %v", err)
 			return OpResultError
 		}
 	}
 	if d.CurrentOpts.PreTimeout != timeoutIgnore {
 		if err := wd.SetPreTimeout(d.CurrentOpts.PreTimeout); err != nil {
-			d.CurrentWd.Close()
+			wd.Close()
 			log.Printf("Failed to set pretimeout: %v", err)
 			return OpResultError
 		}
 	}
 	d.CurrentWd = wd
 	log.Printf("Watchdog armed")
-	return OpResultOk
+	return d.StartPetting()
 }
 
 // disarmWatchdog disarm the watchdog if already armed.
@@ -210,10 +210,14 @@ func (d *Daemon) DisarmWatchdog() rune {
 		log.Printf("No armed Watchdog")
 		return OpResultOk
 	}
+	if r := d.StopPetting(); r != OpResultOk {
+		log.Printf("Failed to stop petting: %v", r)
+	}
 	if err := d.CurrentWd.MagicClose(); err != nil {
 		log.Printf("Failed to disarm watchdog: %v", err)
 		return OpResultError
 	}
+	d.CurrentWd = nil
 	log.Println("Watchdog disarming request went through (Watchdog will not be disabled if CONFIG_WATCHDOG_NOWAYOUT is enabled).")
 	return OpResultOk
 }
@@ -238,12 +242,12 @@ func (d *Daemon) DoPetting() error {
 // startPetting starts Watchdog petting in a new goroutine.
 func (d *Daemon) StartPetting() rune {
 	if d.PettingOn {
-		log.Printf("Petting ongoing")
-		return OpResultError
+		log.Printf("Petting already ongoing")
+		return OpResultOk
 	}
 
+	d.PettingOn = true
 	go func() {
-		d.PettingOn = true
 		defer func() { d.PettingOn = false }()
 		for {
 			select {
