@@ -21,6 +21,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -47,7 +48,9 @@ var errNoFiles = errors.New("no files specified")
 
 func command(args ...string) (*cmd, error) {
 	var c cmd
+	var b bytes.Buffer
 	fs := flag.NewFlagSet(args[0], flag.ExitOnError)
+	fs.SetOutput(&b)
 
 	var access bool
 	var modification bool
@@ -73,7 +76,7 @@ func command(args ...string) (*cmd, error) {
 
 	if len(fs.Args()) == 0 {
 		fs.Usage()
-		return nil, errNoFiles
+		return nil, fmt.Errorf("%s:%w", b.String(), errNoFiles)
 	}
 	c.args = fs.Args()
 
