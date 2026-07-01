@@ -35,8 +35,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/hugelgupf/p9/fsimpl/localfs"
 	"github.com/hugelgupf/p9/p9"
-	"github.com/u-root/cpu/client"
 	"github.com/u-root/u-root/pkg/p9dev"
 	"github.com/u-root/u-root/pkg/ssh9p"
 	"github.com/u-root/u-root/pkg/sshstream"
@@ -70,7 +70,7 @@ func run(ctx context.Context) error {
 	defer l.Close()
 
 	var attacher p9.Attacher
-	attacher = client.NewCPU9P(*root)
+	attacher = localfs.Attacher(*root)
 	if *noDevMap {
 		attacher = p9dev.New(attacher)
 	}

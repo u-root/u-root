@@ -746,4 +746,8 @@ func TestReplaceUsbRedfishHostInterface(t *testing.T) {
 	if mc.RedfishPort != 8080 || mc.VlanID != 10 {
 		t.Errorf("Expected modified Port and VlanID")
 	}
+
+	if mc.ProtocolLength != 103 {
+		t.Errorf("Expected ProtocolLength to be 103, got %d", mc.ProtocolLength)
+	}
 }

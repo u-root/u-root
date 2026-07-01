@@ -7,6 +7,7 @@
 package fbpt
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/acpi"
@@ -31,5 +32,30 @@ func TestFBPT(t *testing.T) {
 
 	if _, _, _, err = FindAllFBPTRecords(FBPTAddr); err != nil {
 		t.Fatalf("Unable to read FBPT records: %v", err)
+	}
+}
+
+// TestDynamicRecordLengthUnderflow checks that a dynamic string record whose
+// declared length is below the 34 byte fixed size is rejected instead of
+// underflowing recordLength-34 and reading adjacent memory into Description.
+func TestDynamicRecordLengthUnderflow(t *testing.T) {
+	// 30 fixed bytes followed by bytes standing in for adjacent memory.
+	buf := make([]byte, 30+300)
+	for i := 30; i < len(buf); i++ {
+		buf[i] = 0xAA
+	}
+
+	if _, err := readFirmwarePerformanceDataTableDynamicRecord(bytes.NewReader(buf), 30); err == nil {
+		t.Fatal("expected error for record length 30, got nil")
+	}
+
+	want := "uroot!"
+	good := append(append([]byte{}, buf[:30]...), []byte(want)...)
+	rec, err := readFirmwarePerformanceDataTableDynamicRecord(bytes.NewReader(good), 40)
+	if err != nil {
+		t.Fatalf("unexpected error for valid record: %v", err)
+	}
+	if rec.Description != want {
+		t.Fatalf("Description = %q, want %q", rec.Description, want)
 	}
 }
