@@ -67,6 +67,26 @@ func TestFind(t *testing.T) {
 			args:       []string{"-name=file1", "."},
 		},
 		{
+			wantStdout: "dir1/file1\ndir2/file1\n",
+			args:       []string{"-regex=dir[12]/file1", "."},
+		},
+		{
+			wantStdout: "dir1/file2\n",
+			args:       []string{"-regex=dir1/file2", "."},
+		},
+		{
+			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
+			args:       []string{"-regex=file1", "."},
+		},
+		{
+			wantStdout: "dir1/file1\ndir2/file1\n",
+			args:       []string{"-name=file1", "-regex=dir[12]/file1", "."},
+		},
+		{
+			args:       []string{"-regex=[", "."},
+			commandErr: errInvalidRegex,
+		},
+		{
 			wantStdout: ".\ndir1\ndir2\n",
 			args:       []string{"-type=d", "."},
 		},
