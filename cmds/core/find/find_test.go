@@ -13,34 +13,45 @@ import (
 	"testing"
 )
 
+// create creates a file with a standard mode.
+// Do not use create; it is sensitive to umask and
+// can fail at times.
+func create(name string) error {
+	f, err := os.OpenFile(name, os.O_CREATE, 0644)
+	if err == nil {
+		f.Close()
+	}
+	return err
+}
+
 func prepareDirLayout(t *testing.T) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("file1"); err != nil {
+	if err := create("file1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("file2"); err != nil {
+	if err := create("file2"); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir("dir1", os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("dir1/file1"); err != nil {
+	if err := create("dir1/file1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("dir1/file2"); err != nil {
+	if err := create("dir1/file2"); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir("dir2", os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("dir2/file1"); err != nil {
+	if err := create("dir2/file1"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("dir2/file3"); err != nil {
+	if err := create("dir2/file3"); err != nil {
 		t.Fatal(err)
 	}
 }
