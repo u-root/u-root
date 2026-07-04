@@ -2,32 +2,31 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo
+
 package smbios
 
 import (
 	"fmt"
 	"net"
-	"os"
 	"slices"
+
+	"github.com/u-root/u-root/pkg/memio"
 )
 
 // Modifier modifies the SMBIOS data
 type Modifier struct {
 	Info
-	memFile   *os.File
+	memIO     *memio.MMap
 	entryAddr int64
 	tableAddr int64
 }
 
-func getMemFile() (*os.File, error) {
-	memFile, err := os.OpenFile("/dev/mem", os.O_RDWR, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open /dev/mem: %w", err)
-	}
-	return memFile, nil
+func getMemIO() (*memio.MMap, error) {
+	return memio.NewMMap("/dev/mem")
 }
 
-func getEntries(smbiosBase func() (int64, int64, error), memFile *os.File) (*Entry32, *Entry64, int64, error) {
+func getEntries(smbiosBase func() (int64, int64, error), memIO *memio.MMap) (*Entry32, *Entry64, int64, error) {
 	var err error
 	var entryAddr, sz int64
 	entryAddr, sz, err = smbiosBase()
@@ -35,7 +34,9 @@ func getEntries(smbiosBase func() (int64, int64, error), memFile *os.File) (*Ent
 		return nil, nil, 0, fmt.Errorf("failed to find SMBIOS base: %w", err)
 	}
 	entryData := make([]byte, sz)
-	if _, err := memFile.ReadAt(entryData, entryAddr); err != nil {
+
+	var entryBS memio.ByteSlice = entryData
+	if err := memIO.ReadAt(entryAddr, &entryBS); err != nil {
 		return nil, nil, 0, fmt.Errorf("failed to read entryData at address: 0x%x, error:%w", entryAddr, err)
 	}
 
@@ -389,10 +390,22 @@ func (m *Modifier) Modify(opts ...OverrideOpt) error {
 		return fmt.Errorf("failed to marshal info: %w", err)
 	}
 
-	if _, err := m.memFile.WriteAt(entry, m.entryAddr); err != nil {
+	// Grow mock/regular files if the new table size exceeds current file boundaries
+	if fi, err := m.memIO.Stat(); err == nil && fi.Mode().IsRegular() {
+		maxAddr := m.tableAddr + int64(len(tables))
+		if fi.Size() < maxAddr {
+			if err := m.memIO.Truncate(maxAddr); err != nil {
+				return fmt.Errorf("failed to grow test file: %w", err)
+			}
+		}
+	}
+
+	var entryBS memio.ByteSlice = entry
+	var tablesBS memio.ByteSlice = tables
+	if err := m.memIO.WriteAt(m.entryAddr, &entryBS); err != nil {
 		return fmt.Errorf("failed to write entry data at address: 0x%x, error:%w", m.entryAddr, err)
 	}
-	if _, err = m.memFile.WriteAt(tables, m.tableAddr); err != nil {
+	if err := m.memIO.WriteAt(m.tableAddr, &tablesBS); err != nil {
 		return fmt.Errorf("failed to write table data at address: 0x%x, error:%w", m.tableAddr, err)
 	}
 	return nil
@@ -400,22 +413,22 @@ func (m *Modifier) Modify(opts ...OverrideOpt) error {
 
 // CloseMemFile closes Modifier memory file
 func (m *Modifier) CloseMemFile() error {
-	return m.memFile.Close()
+	return m.memIO.Close()
 }
 
 // NewModifier returns a Modifier and initialize all necessary fields
 func NewModifier() (*Modifier, error) {
-	return newModifier(getMemFile, SMBIOSBase)
+	return newModifier(getMemIO, SMBIOSBase)
 }
 
-func newModifier(getMemFile func() (*os.File, error), smbiosBase func() (int64, int64, error)) (*Modifier, error) {
+func newModifier(getMemIO func() (*memio.MMap, error), smbiosBase func() (int64, int64, error)) (*Modifier, error) {
 	var err error
 	m := &Modifier{}
-	m.memFile, err = getMemFile()
+	m.memIO, err = getMemIO()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mem file: %w", err)
 	}
-	m.Entry32, m.Entry64, m.entryAddr, err = getEntries(smbiosBase, m.memFile)
+	m.Entry32, m.Entry64, m.entryAddr, err = getEntries(smbiosBase, m.memIO)
 	if err != nil {
 		return nil, err
 	}
@@ -437,7 +450,8 @@ func newModifier(getMemFile func() (*os.File, error), smbiosBase func() (int64, 
 			return nil, fmt.Errorf("failed to marshal Entry64: %w", err)
 		}
 	}
-	if _, err := m.memFile.ReadAt(tableData, m.tableAddr); err != nil {
+	var tableBS memio.ByteSlice = tableData
+	if err := m.memIO.ReadAt(m.tableAddr, &tableBS); err != nil {
 		return nil, fmt.Errorf("failed to ReadAt table from address: 0x%x, error:%w", m.tableAddr, err)
 	}
 
