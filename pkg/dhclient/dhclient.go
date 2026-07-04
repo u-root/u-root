@@ -105,6 +105,19 @@ func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 
 // WriteDNSSettings writes the given nameservers, search list, and domain to the resolv.conf at the specified path.
 func WriteDNSSettings(ns []net.IP, sl []string, domain, resolvConfPath string) error {
+	// domain and the search labels come straight from DHCP options 15 and
+	// 119, which are raw byte strings under the server's control. A line
+	// break in either one would be written verbatim and inject extra
+	// resolv.conf directives, so refuse it before touching the file.
+	if strings.ContainsAny(domain, "\r\n") {
+		return fmt.Errorf("invalid domain name %q: contains a line break", domain)
+	}
+	for _, s := range sl {
+		if strings.ContainsAny(s, "\r\n") {
+			return fmt.Errorf("invalid search domain %q: contains a line break", s)
+		}
+	}
+
 	rc := &bytes.Buffer{}
 	if domain != "" {
 		rc.WriteString(fmt.Sprintf("domain %s\n", domain))
