@@ -30,19 +30,19 @@ import (
 	"github.com/u-root/u-root/pkg/vfile"
 )
 
+// algs maps the digest names accepted in a signature node's algo property to
+// their crypto.Hash. MD4, MD5, SHA1 and RIPEMD160 are deliberately absent: they
+// offer at most 80-bit collision resistance (fully broken for the MD family and
+// SHA1), so a signature over such a digest can be lifted onto a colliding image.
 var algs = map[string]crypto.Hash{
-	"MD4":       crypto.MD4,
-	"MD5":       crypto.MD5,
-	"SHA1":      crypto.SHA1,
-	"SHA224":    crypto.SHA224,
-	"SHA256":    crypto.SHA256,
-	"SHA384":    crypto.SHA384,
-	"SHA512":    crypto.SHA512,
-	"RIPEMD160": crypto.RIPEMD160,
-	"SHA3_224":  crypto.SHA3_224,
-	"SHA3_256":  crypto.SHA3_256,
-	"SHA3_384":  crypto.SHA3_384,
-	"SHA3_512":  crypto.SHA3_512,
+	"SHA224":   crypto.SHA224,
+	"SHA256":   crypto.SHA256,
+	"SHA384":   crypto.SHA384,
+	"SHA512":   crypto.SHA512,
+	"SHA3_224": crypto.SHA3_224,
+	"SHA3_256": crypto.SHA3_256,
+	"SHA3_384": crypto.SHA3_384,
+	"SHA3_512": crypto.SHA3_512,
 }
 
 // Signature defines an extendable interface for verifying images using
@@ -121,7 +121,7 @@ func (s RSASignature) String() string {
 }
 
 // parseHash cleans and maps the first detected hash string into a crypto.Hash.
-// Expected format: "sha256,rsa4096" or "sha1"
+// Expected format: "sha256,rsa4096" or "sha512"
 func parseHash(algo string) (crypto.Hash, error) {
 	cleaned := strings.TrimFunc(algo, func(r rune) bool {
 		return !unicode.IsGraphic(r)
