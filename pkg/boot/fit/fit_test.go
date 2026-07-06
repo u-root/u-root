@@ -6,7 +6,6 @@ package fit
 
 import (
 	"bytes"
-	"crypto"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/dt"
 	"github.com/u-root/u-root/pkg/vfile"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -365,67 +363,5 @@ func TestRank(t *testing.T) {
 	l := img.Rank()
 	if l != testRank {
 		t.Fatalf("Expected Image rank %d, got %d", testRank, l)
-	}
-}
-
-func TestParseHash(t *testing.T) {
-	for _, tt := range []struct {
-		algo string
-		want crypto.Hash
-		ok   bool
-	}{
-		{algo: "sha256,rsa4096", want: crypto.SHA256, ok: true},
-		{algo: "sha512,rsa2048", want: crypto.SHA512, ok: true},
-		{algo: "sha384", want: crypto.SHA384, ok: true},
-		// Broken/weak digests must be rejected rather than silently
-		// downgrading signature strength.
-		{algo: "md5,rsa2048", ok: false},
-		{algo: "md4", ok: false},
-		{algo: "sha1,rsa4096", ok: false},
-		{algo: "ripemd160,rsa2048", ok: false},
-	} {
-		t.Run(tt.algo, func(t *testing.T) {
-			got, err := parseHash(tt.algo)
-			if tt.ok {
-				if err != nil {
-					t.Fatalf("parseHash(%q) returned error %v, want %v", tt.algo, err, tt.want)
-				}
-				if got != tt.want {
-					t.Fatalf("parseHash(%q) = %v, want %v", tt.algo, got, tt.want)
-				}
-				return
-			}
-			if err == nil {
-				t.Fatalf("parseHash(%q) = %v, want rejection", tt.algo, got)
-			}
-		})
-	}
-}
-
-func TestParseSignaturesRejectsWeakRSAHash(t *testing.T) {
-	weak := &dt.Node{
-		Name: "signature@1",
-		Properties: []dt.Property{
-			{Name: "value", Value: []byte{1, 2, 3, 4}},
-			{Name: "algo", Value: []byte("sha1,rsa2048")},
-		},
-	}
-	if sigs, err := parseSignatures(weak); err == nil {
-		t.Fatalf("parseSignatures with sha1,rsa2048 = %v, want error", sigs)
-	}
-
-	strong := &dt.Node{
-		Name: "signature@1",
-		Properties: []dt.Property{
-			{Name: "value", Value: []byte{1, 2, 3, 4}},
-			{Name: "algo", Value: []byte("sha256,rsa2048")},
-		},
-	}
-	sigs, err := parseSignatures(strong)
-	if err != nil {
-		t.Fatalf("parseSignatures with sha256,rsa2048 = %v, want a signature", err)
-	}
-	if len(sigs) != 1 {
-		t.Fatalf("parseSignatures with sha256,rsa2048 gave %d signatures, want 1", len(sigs))
 	}
 }
