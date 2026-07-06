@@ -611,6 +611,6 @@ roadmap can be found [here](roadmap.md).
 
 ## Website
 
-The sources of [u-root.org](https://u-root.org) are inside the `docs/` directory and
-are deployed to the gh-pages branch. The CNAME file is currently not part of the CI
-which deploys to the branch which shall be evaluated if this makes futures deployments easier.
+The sources of [u-root.org](https://u-root.org) are inside the `docs/` directory
+and are deployed to the `gh-pages` branch via the CI workflow defined in
+[`.github/workflows/homepage.yml`](.github/workflows/homepage.yml).
