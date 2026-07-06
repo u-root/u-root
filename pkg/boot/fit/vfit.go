@@ -30,10 +30,7 @@ import (
 	"github.com/u-root/u-root/pkg/vfile"
 )
 
-// algs maps the digest names accepted in a signature node's algo property to
-// their crypto.Hash. MD4, MD5, SHA1 and RIPEMD160 are deliberately absent: they
-// offer at most 80-bit collision resistance (fully broken for the MD family and
-// SHA1), so a signature over such a digest can be lifted onto a colliding image.
+// algs must only contain currently secure hash functions.
 var algs = map[string]crypto.Hash{
 	"SHA224":   crypto.SHA224,
 	"SHA256":   crypto.SHA256,
