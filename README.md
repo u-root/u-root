@@ -609,8 +609,11 @@ very welcome. In this case it is not even required to build an initramfs, just
 enter the `cmds/` directory and start coding. A list of commands that are on the
 roadmap can be found [here](roadmap.md).
 
+## Documentation
+
+Additional documentation resides in the [`docs/`] directory.
+
 ## Website
 
-The sources of [u-root.org](https://u-root.org) are inside the `docs/` directory and
-are deployed to the gh-pages branch. The CNAME file is currently not part of the CI
-which deploys to the branch which shall be evaluated if this makes futures deployments easier.
+The sources of [u-root.org](https://u-root.org) are in the [u-root-website
+repository](https://github.com/u-root/u-root-website).
