@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -16,44 +17,38 @@ import (
 // create creates a file with a standard mode.
 // Do not use os.Create alone; it is sensitive to umask and
 // can fail at times.
-func create(name string) error {
+func create(t *testing.T, name string) {
+	t.Helper()
 	f, err := os.Create(name)
 	if err != nil {
-		return err
+		t.Fatalf("creating test file: %v", err)
 	}
-	f.Close()
-	return os.Chmod(name, 0644)
+	if err := f.Close(); err != nil {
+		t.Fatalf("closing test file: %v", err)
+	}
+	if err := os.Chmod(name, 0644); err != nil {
+		t.Fatalf("setting test file mode: %v", err)
+	}
 }
 
 func prepareDirLayout(t *testing.T) {
 	t.Helper()
-	tmpDir := t.TempDir()
-	if err := os.Chdir(tmpDir); err != nil {
+	d := t.TempDir()
+	// this Chdir applies to the entire test, including
+	// the caller. If you remove it, you will need to rewrite
+	// the mkdir/create calls below, as well as all args in the
+	// test.
+	if err := os.Chdir(d); err != nil {
 		t.Fatal(err)
 	}
-	if err := create("file1"); err != nil {
-		t.Fatal(err)
+	for _, n := range []string{"1", "2"} {
+		if err := os.Mkdir(n, os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := create("file2"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir("dir1", os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("dir1/file1"); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("dir1/file2"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir("dir2", os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("dir2/file1"); err != nil {
-		t.Fatal(err)
-	}
-	if err := create("dir2/file3"); err != nil {
-		t.Fatal(err)
+
+	for _, n := range []string{"file1", "file2", filepath.Join("1", "file1"), filepath.Join("1", "file2"), filepath.Join("2", "file1"), filepath.Join("2", "file3")} {
+		create(t, n)
 	}
 }
 
@@ -71,44 +66,44 @@ func TestFind(t *testing.T) {
 			args:       []string{"file1"},
 		},
 		{
-			wantStdout: "dir1\ndir1/file1\ndir1/file2\n",
-			args:       []string{"dir1"},
+			wantStdout: "1\n1/file1\n1/file2\n",
+			args:       []string{"1"},
 		},
 		{
-			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
+			wantStdout: "1/file1\n2/file1\nfile1\n",
 			args:       []string{"-name=file1", "."},
 		},
 		{
-			wantStdout: ".\ndir1\ndir2\n",
+			wantStdout: ".\n1\n2\n",
 			args:       []string{"-type=d", "."},
 		},
 		{
-			wantStdout: ".\ndir1\ndir2\n",
+			wantStdout: ".\n1\n2\n",
 			args:       []string{"-type=directory", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
+			wantStdout: "1/file1\n1/file2\n2/file1\n2/file3\nfile1\nfile2\n",
 			args:       []string{"-type=f", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
+			wantStdout: "1/file1\n1/file2\n2/file1\n2/file3\nfile1\nfile2\n",
 			args:       []string{"-type=file", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir2/file1\n",
-			args:       []string{"-regex=dir[12]/file1", "."},
+			wantStdout: "1/file1\n2/file1\n",
+			args:       []string{"-regex=[12]/file1", "."},
 		},
 		{
-			wantStdout: "dir1/file2\n",
-			args:       []string{"-regex=dir1/file2", "."},
+			wantStdout: "1/file2\n",
+			args:       []string{"-regex=1/file2", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
+			wantStdout: "1/file1\n2/file1\nfile1\n",
 			args:       []string{"-regex=file1", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir2/file1\n",
-			args:       []string{"-name=file1", "-regex=dir[12]/file1", "."},
+			wantStdout: "1/file1\n2/file1\n",
+			args:       []string{"-name=file1", "-regex=[12]/file1", "."},
 		},
 		{
 			args:       []string{"-regex=[", "."},
