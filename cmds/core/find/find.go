@@ -23,7 +23,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/find"
@@ -31,7 +30,6 @@ import (
 
 var (
 	errNotValidType = errors.New("not a valid file type")
-	errInvalidRegex = errors.New("invalid regex")
 	errUsage        = errors.New("find [opts] starting-at-path")
 )
 
@@ -159,20 +157,21 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 		find.WithRoot(root),
 		find.WithModeMatch(mode, mask),
 	}
+
 	if c.debug {
 		c.opts = append(c.opts, find.WithDebugLog(log.Printf))
 	}
+
 	if len(c.name) > 0 {
 		c.opts = append(c.opts, find.WithFilenameMatch(c.name))
 	}
+
 	if len(c.regex) > 0 {
-		re, err := regexp.Compile(c.regex)
+		o, err := find.WithCompiledRegexPathMatch(c.regex)
 		if err != nil {
-			return nil, fmt.Errorf("%s:%w:%w", c.regex, errInvalidRegex, err)
+			return nil, err
 		}
-		c.opts = append(c.opts, find.WithPathMatch(c.regex, func(_ string, path string) (bool, error) {
-			return re.MatchString(path), nil
-		}))
+		c.opts = append(c.opts, o)
 	}
 
 	return c, nil
