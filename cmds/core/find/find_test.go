@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/find"
 )
 
 // create creates a file with a standard mode.
@@ -107,7 +109,7 @@ func TestFind(t *testing.T) {
 		},
 		{
 			args:       []string{"-regex=[", "."},
-			commandErr: errInvalidRegex,
+			commandErr: find.ErrInvalidRegexp,
 		},
 		{
 			args:       []string{"-type=notvalid", "."},
