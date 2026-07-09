@@ -9,6 +9,7 @@ package find
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 
 	"github.com/u-root/u-root/pkg/ls"
 )
+
+var ErrInvalidRegexp = errors.New("invalid regular expression")
 
 // File is a found file.
 type File struct {
@@ -91,10 +94,25 @@ func WithBasenameMatch(pattern string, match func(pattern string, name string) (
 // WithRegexPathMatch sets up a path filter using regex.
 //
 // The file path passed to regexp.Match will be relative to the finder's root.
+// This design compiles the regex for every file.
+// It also has no good way to handle a bad pattern.
+// We have to leave it here for backwards compatibility.
 func WithRegexPathMatch(pattern string) Set {
 	return WithPathMatch(pattern, func(pattern, path string) (bool, error) {
 		return regexp.Match(pattern, []byte(path))
 	})
+}
+
+// WithCompiledRegexPathMatch sets up a path filter using a compiled regex.
+// It will return an error if the pattern can not be compiled.
+func WithCompiledRegexPathMatch(pattern string) (Set, error) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("%s:%w:%w", pattern, ErrInvalidRegexp, err)
+	}
+	return WithPathMatch(pattern, func(_ string, path string) (bool, error) {
+		return re.MatchString(path), nil
+	}), nil
 }
 
 // WithFilenameMatch uses filepath.Match's shell file name matching to filter

@@ -5,10 +5,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![CodeQL](https://github.com/u-root/u-root/workflows/CodeQL/badge.svg)](https://github.com/u-root/u-root/actions?query=workflow%3ACodeQL)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
-[![Slack](https://slack.osfw.dev/badge.svg)](https://slack.osfw.dev)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/main/LICENSE)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8160/badge)](https://www.bestpractices.dev/projects/8160)
 
+Community: see [CONTRIBUTING.md](CONTRIBUTING.md#communication)
 
 # Description
 
