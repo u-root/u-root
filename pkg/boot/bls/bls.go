@@ -237,10 +237,10 @@ func parseLinuxImage(vals map[string]string, fsRoot string, variables map[string
 	}
 
 	var name []string
-	if title, ok := vals["title"]; ok && len(title) > 0 {
+	if title, ok := vals["title"]; ok {
 		name = append(name, title)
 	}
-	if version, ok := vals["version"]; ok && len(version) > 0 {
+	if version, ok := vals["version"]; ok {
 		name = append(name, version)
 	}
 	// If both title and version were empty, so will this.

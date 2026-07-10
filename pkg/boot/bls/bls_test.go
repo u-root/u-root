@@ -38,7 +38,7 @@ func DISABLEDTestGenerateConfigs(t *testing.T) {
 	for _, test := range tests {
 		configPath := strings.TrimSuffix(test, ".json")
 		t.Run(configPath, func(t *testing.T) {
-			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil, "")
+			imgs, err := ScanBLSEntries(ulogtest.Logger{TB: t}, configPath, nil, "")
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -89,7 +89,7 @@ func TestScanBLSEntries(t *testing.T) {
 				t.Errorf("Failed to read test json '%v':%v", test, err)
 			}
 
-			imgs, err := ScanBLSEntries(ulogtest.Logger{t}, configPath, nil, "")
+			imgs, err := ScanBLSEntries(ulogtest.Logger{TB: t}, configPath, nil, "")
 			if err != nil {
 				t.Fatalf("Failed to parse %s: %v", test, err)
 			}
@@ -131,4 +131,46 @@ func TestSetBLSRank(t *testing.T) {
 	}
 
 	os.Setenv("BLS_BOOT_RANK", originRank)
+}
+
+func TestParseConf(t *testing.T) {
+	m, err := parseConf("testdata/typeone/fedora.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if m["title"] != "Fedora 19 (Rawhide)" {
+		t.Errorf("expected title 'Fedora 19 (Rawhide)', got %v", m["title"])
+	}
+	if m["sort-key"] != "fedora" {
+		t.Errorf("expected sort-key 'fedora', got %v", m["sort-key"])
+	}
+	if m["machine-id"] != "6a9857a393724b7a981ebb5b8495b9ea" {
+		t.Errorf("expected machine-id '6a9857a393724b7a981ebb5b8495b9ea', got %v", m["sort-key"])
+	}
+	if m["version"] != "3.8.0-2.fc19.x86_64" {
+		t.Errorf("expected version '3.8.0-2.fc19.x86_64', got %v", m["version"])
+	}
+	if m["options"] != "root=UUID=6d3376e4-fc93-4509-95ec-a21d68011da2 quiet" {
+		t.Errorf("expected options 'root=UUID=6d3376e4-fc93-4509-95ec-a21d68011da2 quiet', got %v", m["options"])
+	}
+	if m["architecture"] != "x64" {
+		t.Errorf("expected architecture 'fedora', got %v", m["architecture"])
+	}
+	if m["linux"] != "/6a9857a393724b7a981ebb5b8495b9ea/3.8.0-2.fc19.x86_64/linux" {
+		t.Errorf("expected linux '/6a9857a393724b7a981ebb5b8495b9ea/3.8.0-2.fc19.x86_64/linux', got %v", m["linux"])
+	}
+	if m["initrd"] != "/6a9857a393724b7a981ebb5b8495b9ea/3.8.0-2.fc19.x86_64/initrd" {
+		t.Errorf("expected initrd '/6a9857a393724b7a981ebb5b8495b9ea/3.8.0-2.fc19.x86_64/initrd', got %v", m["initrd"])
+	}
+	// TODO: extra entry may appear multiple times
+	if m["extra"] != "/6a9857a393724b7a981ebb5b8495b9ea/3.8.0-2.fc19.x86_64/somedata.cred" {
+		t.Errorf("expected extra '6a9857a393724b7a981ebb5b8495b9ea/3.8.0-2.fc19.x86_64/somedata.cred', got %v", m["extra"])
+	}
+	if _, ok := m["key-without-value1"]; ok {
+		t.Errorf("key-without-value should not be in map")
+	}
+	if _, ok := m["key-without-value2"]; ok {
+		t.Errorf("key-without-value should not be in map")
+	}
 }

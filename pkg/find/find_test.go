@@ -10,9 +10,17 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"syscall"
 	"testing"
 )
+
+func optCompiledRegex(t *testing.T, pattern string) Set {
+	t.Helper()
+	s, err := WithCompiledRegexPathMatch(pattern)
+	if err != nil {
+		t.Fatalf("re %q: %v", pattern, err)
+	}
+	return s
+}
 
 func TestSimple(t *testing.T) {
 	type tests struct {
@@ -20,6 +28,8 @@ func TestSimple(t *testing.T) {
 		opts  Set
 		names []string
 	}
+
+	d := t.TempDir()
 
 	testCases := []tests{
 		{
@@ -60,19 +70,28 @@ func TestSimple(t *testing.T) {
 			opts:  WithFilenameMatch("*file"),
 			names: []string{"/root/xyz/file"},
 		},
+		{
+			name:  "regexp match anchored at end",
+			opts:  optCompiledRegex(t, `.*/root/xyz/.*$`),
+			names: []string{"/root/xyz/0777", "/root/xyz/file"},
+		},
+		{
+			name:  "anchored at head and end",
+			opts:  optCompiledRegex(t, "^"+filepath.Join(d, ".*7$")),
+			names: []string{"/root/xyz/0777"},
+		},
 	}
-	d := t.TempDir()
 
-	// Make sure files are actually created with the permissions we ask for.
-	syscall.Umask(0)
 	if err := os.MkdirAll(filepath.Join(d, "root/xyz"), 0o775); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(d, "root/xyz/file"), nil, 0o664); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(d, "root/xyz/0777"), nil, 0o444); err != nil {
-		t.Fatal(err)
+
+	mode := os.FileMode(0o444)
+	for _, n := range testCases[0].names[3:] {
+		if err := os.WriteFile(filepath.Join(d, n), nil, mode); err != nil {
+			t.Fatal(err)
+		}
+		mode = os.FileMode(0o400)
 	}
 
 	for _, tc := range testCases {
@@ -95,5 +114,16 @@ func TestSimple(t *testing.T) {
 				t.Errorf("Find output: got %v, want %v", names, tc.names)
 			}
 		})
+	}
+}
+
+func TestCompiledRegexpFail(t *testing.T) {
+	badre := `[a-z(`
+	f, err := WithCompiledRegexPathMatch(badre)
+	if err == nil {
+		t.Errorf("%q: got nil, want err", badre)
+	}
+	if f != nil {
+		t.Errorf("%q: got %v, want nil", badre, f)
 	}
 }
