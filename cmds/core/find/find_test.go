@@ -92,20 +92,20 @@ func TestFind(t *testing.T) {
 			args:       []string{"-type=file", "."},
 		},
 		{
-			wantStdout: "1/file1\n2/file1\n",
-			args:       []string{"-regex=[12]/file1", "."},
+			wantStdout: "1/file1\n1/file2\n2/file1\nfile1\nfile2\n",
+			args:       []string{"-regex=file[12]", "."},
 		},
 		{
-			wantStdout: "1/file2\n",
-			args:       []string{"-regex=1/file2", "."},
+			wantStdout: "1/file2\nfile2\n",
+			args:       []string{"-regex=file2", "."},
 		},
 		{
 			wantStdout: "1/file1\n2/file1\nfile1\n",
 			args:       []string{"-regex=file1", "."},
 		},
 		{
-			wantStdout: "1/file1\n2/file1\n",
-			args:       []string{"-name=file1", "-regex=[12]/file1", "."},
+			wantStdout: "1/file1\n2/file1\nfile1\n",
+			args:       []string{"-name=file1", "-regex=file[12]", "."},
 		},
 		{
 			args:       []string{"-regex=[", "."},
@@ -140,7 +140,7 @@ func TestFind(t *testing.T) {
 			continue
 		}
 
-		t.Logf("Now run test %d", i)
+		t.Logf("Now run test %d:%v", i, tt)
 		err = c.run()
 		if !errors.Is(err, tt.runErr) {
 			failed = append(failed, i)
