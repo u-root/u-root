@@ -11,9 +11,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/u-root/u-root/pkg/ls"
 )
@@ -24,9 +24,7 @@ var ErrInvalidRegexp = errors.New("invalid regular expression")
 type File struct {
 	// Name is the path relative to the root specified in WithRoot.
 	Name string
-
-	os.FileInfo
-	Err error
+	Err  error
 }
 
 // String implements a fmt.Stringer for File.
@@ -37,108 +35,58 @@ func (f *File) String() string {
 		Human: true,
 		Name:  ls.NameStringer{},
 	}
-	rec := ls.FromOSFileInfo(f.Name, f.FileInfo)
+
+	// If the stat fails, show that it failed.
+	fi, err := os.Stat(f.Name)
+	if err != nil {
+		return fmt.Sprintf("%s: %v", f.Name, err)
+	}
+	rec := ls.FromOSFileInfo(f.Name, fi)
 	rec.Name = f.Name
 	return s.FileString(rec)
 }
 
-type finder struct {
-	root string
+// A Matcher returns true if the string/fs.DirEntry match some criteria.
+// It will return an error if it had an error of some type.
+type Matcher func(string, fs.DirEntry) (bool, error)
 
-	// Pattern is used with Match.
-	pattern string
-
-	// Match is a pattern matching function.
-	match      func(pattern string, name string) (bool, error)
-	mode       os.FileMode
-	modeMask   os.FileMode
-	debug      func(string, ...any)
-	files      chan *File
-	sendErrors bool
+// Finder controls show files are walked.
+type Finder struct {
+	root         string
+	matchers     []Matcher
+	files        chan *File
+	debug        func(string, ...any)
+	ignoreErrors bool
 }
 
-type Set func(*finder)
+func New() *Finder {
+	return &Finder{
+		debug: func(string, ...any) {},
+		files: make(chan *File, 128),
+	}
+}
+
+type Set func(*Finder)
 
 // WithRoot sets a root path for the file finder. Only descendants of the root
 // will be returned on the channel.
 func WithRoot(rootPath string) Set {
-	return func(f *finder) {
+	return func(f *Finder) {
 		f.root = rootPath
 	}
 }
 
 // WithoutError filters out files with errors from being sent on the channel.
 func WithoutError() Set {
-	return func(f *finder) {
-		f.sendErrors = false
-	}
-}
-
-// WithPathMatch sets up a file path filter.
-//
-// The file path passed to match will be relative to the finder's root.
-func WithPathMatch(pattern string, match func(pattern string, path string) (bool, error)) Set {
-	return func(f *finder) {
-		f.pattern = pattern
-		f.match = match
-	}
-}
-
-// WithBasenameMatch sets up a file base name filter.
-func WithBasenameMatch(pattern string, match func(pattern string, name string) (bool, error)) Set {
-	return WithPathMatch(pattern, func(patt string, path string) (bool, error) {
-		return match(pattern, filepath.Base(path))
-	})
-}
-
-// WithRegexPathMatch sets up a path filter using regex.
-//
-// The file path passed to regexp.Match will be relative to the finder's root.
-// This design compiles the regex for every file.
-// It also has no good way to handle a bad pattern.
-// We have to leave it here for backwards compatibility.
-func WithRegexPathMatch(pattern string) Set {
-	return WithPathMatch(pattern, func(pattern, path string) (bool, error) {
-		return regexp.Match(pattern, []byte(path))
-	})
-}
-
-// WithCompiledRegexPathMatch sets up a path filter using a compiled regex.
-// It will return an error if the pattern can not be compiled.
-func WithCompiledRegexPathMatch(pattern string) (Set, error) {
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, fmt.Errorf("%s:%w:%w", pattern, ErrInvalidRegexp, err)
-	}
-	return WithPathMatch(pattern, func(_ string, path string) (bool, error) {
-		return re.MatchString(path), nil
-	}), nil
-}
-
-// WithFilenameMatch uses filepath.Match's shell file name matching to filter
-// file base names.
-func WithFilenameMatch(pattern string) Set {
-	return WithBasenameMatch(pattern, filepath.Match)
-}
-
-// WithModeMatch ensures only files with fileMode & modeMask == mode are returned.
-func WithModeMatch(mode, modeMask os.FileMode) Set {
-	return func(f *finder) {
-		f.mode = mode
-		f.modeMask = modeMask
-	}
-}
-
-// WithDebugLog logs messages to l.
-func WithDebugLog(l func(string, ...any)) Set {
-	return func(f *finder) {
-		f.debug = l
+	return func(f *Finder) {
+		f.ignoreErrors = true
 	}
 }
 
 // Find finds files according to the settings and matchers given.
-//
-// e.g.
+// It can be called with no opts, but requires a context.
+// e.g. names := Find(context.Background())
+// or
 //
 //	names := Find(ctx,
 //	  WithRoot("/boot"),
@@ -146,13 +94,12 @@ func WithDebugLog(l func(string, ...any)) Set {
 //	  WithDebugLog(log.Printf),
 //	)
 func Find(ctx context.Context, opt ...Set) <-chan *File {
-	f := &finder{
-		root:       "/",
-		debug:      func(string, ...any) {},
-		files:      make(chan *File, 128),
-		match:      filepath.Match,
-		sendErrors: true,
-	}
+	f := New()
+	return RunFind(ctx, f, opt...)
+}
+
+// RunFind runs a Finder
+func RunFind(ctx context.Context, f *Finder, opt ...Set) <-chan *File {
 
 	for _, o := range opt {
 		if o != nil {
@@ -160,51 +107,54 @@ func Find(ctx context.Context, opt ...Set) <-chan *File {
 		}
 	}
 
-	go func(f *finder) {
-		_ = filepath.Walk(f.root, func(n string, fi os.FileInfo, err error) error {
-			if err != nil && !f.sendErrors {
+	go func(f *Finder) {
+		_ = filepath.WalkDir(f.root, func(n string, de fs.DirEntry, err error) error {
+			f.debug("walk to %v, de %v, err %v", f, de, err)
+			if err != nil && f.ignoreErrors {
 				// Don't send file on channel if user doesn't want them.
 				return nil
 			}
 
 			file := &File{
-				Name:     n,
-				FileInfo: fi,
-				Err:      err,
+				Name: n,
+				Err:  err,
 			}
+
 			if err == nil {
 				// If it matches, then push its name into the result channel,
 				// and keep looking.
-				f.debug("check pattern %q against name %q", f.pattern, n)
-				if f.pattern != "" {
-					m, err := f.match(f.pattern, n)
+				f.debug("check name %q", n)
+				var ok bool
+				var err error
+				for _, m := range f.matchers {
+					ok, err = m(n, de)
 					if err != nil {
 						f.debug("%s: err on matching: %v", n, err)
 						return nil
 					}
-					if !m {
-						f.debug("%s: name does not match %q", n, f.pattern)
+					if !ok {
+						f.debug("%q:", n)
 						return nil
 					}
-				}
-				m := fi.Mode()
-				f.debug("%s: file mode %v / want mode %s with mask %s", n, m, f.mode, f.modeMask)
-				if masked := m & f.modeMask; masked != f.mode {
-					f.debug("%s: mode %s (masked %s) does not match expected mode %s", n, m, masked, f.mode)
-					return nil
+
 				}
 				f.debug("Found: %s", n)
 			}
+			f.debug("pushing file")
 			select {
 			case <-ctx.Done():
+				f.debug("ctx says done")
 				return fmt.Errorf("should never be returned to user: stop walking")
 
 			case f.files <- file:
+				f.debug("pushed file")
 				return nil
 			}
 		})
+		f.debug("Done, close chan")
 		close(f.files)
 	}(f)
 
+	f.debug("return from Find")
 	return f.files
 }
