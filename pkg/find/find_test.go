@@ -80,6 +80,11 @@ func TestSimple(t *testing.T) {
 			opts:  optCompiledRegex(t, "^"+filepath.Join(d, ".*7$")),
 			names: []string{"/root/xyz/0777"},
 		},
+		{
+			name:  "anchored at head and end",
+			opts:  optCompiledRegex(t, "^"+filepath.Join(d, ".*$")),
+			names: []string{"/root/xyz/file"},
+		},
 	}
 
 	if err := os.MkdirAll(filepath.Join(d, "root/xyz"), 0o775); err != nil {
@@ -108,7 +113,7 @@ func TestSimple(t *testing.T) {
 			}
 
 			if len(names) != len(tc.names) {
-				t.Errorf("Find output: got %d bytes, want %d bytes", len(names), len(tc.names))
+				t.Errorf("Find output: got %d files, want %d files", len(names), len(tc.names))
 			}
 			if !reflect.DeepEqual(names, tc.names) {
 				t.Errorf("Find output: got %v, want %v", names, tc.names)
