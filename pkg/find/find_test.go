@@ -10,9 +10,17 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"syscall"
 	"testing"
 )
+
+func optCompiledRegex(t *testing.T, pattern string) Set {
+	t.Helper()
+	s, err := WithCompiledRegexPathMatch(pattern)
+	if err != nil {
+		t.Fatalf("re %q: %v", pattern, err)
+	}
+	return s
+}
 
 func TestSimple(t *testing.T) {
 	type tests struct {
@@ -20,6 +28,8 @@ func TestSimple(t *testing.T) {
 		opts  Set
 		names []string
 	}
+
+	d := t.TempDir()
 
 	testCases := []tests{
 		{
@@ -60,25 +70,42 @@ func TestSimple(t *testing.T) {
 			opts:  WithFilenameMatch("*file"),
 			names: []string{"/root/xyz/file"},
 		},
+		{
+			name:  "regexp match anchored at end",
+			opts:  optCompiledRegex(t, ".*e$"),
+			names: []string{"/root/xyz/file"},
+		},
+		{
+			name:  "anchored at head",
+			opts:  optCompiledRegex(t, "^0.*7"),
+			names: []string{"/root/xyz/0777"},
+		},
+		{
+			name:  "anchored at head and end",
+			opts:  optCompiledRegex(t, "^f.*e$"),
+			names: []string{"/root/xyz/file"},
+		},
 	}
-	d := t.TempDir()
 
-	// Make sure files are actually created with the permissions we ask for.
-	syscall.Umask(0)
 	if err := os.MkdirAll(filepath.Join(d, "root/xyz"), 0o775); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(d, "root/xyz/file"), nil, 0o664); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(d, "root/xyz/0777"), nil, 0o444); err != nil {
-		t.Fatal(err)
+
+	mode := os.FileMode(0o444)
+	for _, n := range testCases[0].names[3:] {
+		if err := os.WriteFile(filepath.Join(d, n), nil, mode); err != nil {
+			t.Fatal(err)
+		}
+		mode = os.FileMode(0o400)
 	}
 
 	for _, tc := range testCases {
+		t.Logf("%s:%v", tc.name, tc)
 		t.Run(tc.name, func(t *testing.T) {
+			f := New()
+			f.debug = t.Logf
 			ctx := context.Background()
-			files := Find(ctx, WithRoot(d), tc.opts)
+			files := RunFind(ctx, f, WithRoot(d), tc.opts)
 
 			var names []string
 			for o := range files {
@@ -89,11 +116,22 @@ func TestSimple(t *testing.T) {
 			}
 
 			if len(names) != len(tc.names) {
-				t.Errorf("Find output: got %d bytes, want %d bytes", len(names), len(tc.names))
+				t.Errorf("Find output: got %d files, want %d files", len(names), len(tc.names))
 			}
 			if !reflect.DeepEqual(names, tc.names) {
 				t.Errorf("Find output: got %v, want %v", names, tc.names)
 			}
 		})
+	}
+}
+
+func TestCompiledRegexpFail(t *testing.T) {
+	badre := `[a-z(`
+	f, err := WithCompiledRegexPathMatch(badre)
+	if err == nil {
+		t.Errorf("%q: got nil, want err", badre)
+	}
+	if f != nil {
+		t.Errorf("%q: got %v, want nil", badre, f)
 	}
 }

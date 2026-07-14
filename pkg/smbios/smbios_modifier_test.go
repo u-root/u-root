@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build !tinygo
+
 package smbios
 
 import (
@@ -12,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/u-root/u-root/pkg/memio"
 )
 
 const (
@@ -110,11 +113,12 @@ func mockEntry32(t *testing.T, maxSize uint16, tableLength uint16, tableAddr uin
 func newMock64Modifier(t *testing.T) *Modifier {
 	t.Helper()
 	memFile := makeMemFile(t, defaultMock64Memory(t))
+	memFile.Close()
 
-	getMemFileMock := func() (*os.File, error) { return memFile, nil }
+	getMemIOMock := func() (*memio.MMap, error) { return memio.NewMMap(fakeMemFile) }
 	smbiosBaseMock := func() (int64, int64, error) { return 0, 24, nil }
 
-	m, err := newModifier(getMemFileMock, smbiosBaseMock)
+	m, err := newModifier(getMemIOMock, smbiosBaseMock)
 	if err != nil {
 		t.Fatalf("Failed to initialize modifier: %v", err)
 	}
@@ -212,7 +216,7 @@ func TestModifySystemInfo(t *testing.T) {
 				t.Fatalf("ModifySystemInfo should pass but returned error: %v", err)
 			}
 
-			got, err := readFileFromStart(mod.memFile, int64(len(tt.want)))
+			got, err := readFileFromStart(mod.memIO.File, int64(len(tt.want)))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -251,11 +255,16 @@ func TestGetEntries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := makeMemFile(t, tt.memFileData)
+			f.Close()
+			memIO, err := memio.NewMMap(fakeMemFile)
+			if err != nil {
+				t.Fatalf("Failed to open memio: %v", err)
+			}
 			m := &Modifier{
-				memFile: f,
+				memIO: memIO,
 			}
 			defer m.CloseMemFile()
-			e32, e64, _, err := getEntries(tt.smbiosBase, f)
+			e32, e64, _, err := getEntries(tt.smbiosBase, memIO)
 			if err != nil {
 				t.Fatalf("getEntries should pass but return error: %v", err)
 			}

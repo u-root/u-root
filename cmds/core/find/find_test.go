@@ -9,39 +9,48 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/find"
 )
+
+// create creates a file with a standard mode.
+// Do not use os.Create alone; it is sensitive to umask and
+// can fail at times.
+func create(t *testing.T, name string) {
+	t.Helper()
+	f, err := os.Create(name)
+	if err != nil {
+		t.Fatalf("creating test file: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("closing test file: %v", err)
+	}
+	if err := os.Chmod(name, 0644); err != nil {
+		t.Fatalf("setting test file mode: %v", err)
+	}
+}
 
 func prepareDirLayout(t *testing.T) {
 	t.Helper()
-	tmpDir := t.TempDir()
-	if err := os.Chdir(tmpDir); err != nil {
+	d := t.TempDir()
+	// this Chdir applies to the entire test, including
+	// the caller. If you remove it, you will need to rewrite
+	// the mkdir/create calls below, as well as all args in the
+	// test.
+	if err := os.Chdir(d); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Create("file1"); err != nil {
-		t.Fatal(err)
+	for _, n := range []string{"1", "2"} {
+		if err := os.Mkdir(n, os.ModePerm); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if _, err := os.Create("file2"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir("dir1", os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Create("dir1/file1"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Create("dir1/file2"); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir("dir2", os.ModePerm); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Create("dir2/file1"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Create("dir2/file3"); err != nil {
-		t.Fatal(err)
+
+	for _, n := range []string{"file1", "file2", filepath.Join("1", "file1"), filepath.Join("1", "file2"), filepath.Join("2", "file1"), filepath.Join("2", "file3")} {
+		create(t, n)
 	}
 }
 
@@ -59,32 +68,52 @@ func TestFind(t *testing.T) {
 			args:       []string{"file1"},
 		},
 		{
-			wantStdout: "dir1\ndir1/file1\ndir1/file2\n",
-			args:       []string{"dir1"},
+			wantStdout: "1\n1/file1\n1/file2\n",
+			args:       []string{"1"},
 		},
 		{
-			wantStdout: "dir1/file1\ndir2/file1\nfile1\n",
+			wantStdout: "1/file1\n2/file1\nfile1\n",
 			args:       []string{"-name=file1", "."},
 		},
 		{
-			wantStdout: ".\ndir1\ndir2\n",
+			wantStdout: ".\n1\n2\n",
 			args:       []string{"-type=d", "."},
 		},
 		{
-			wantStdout: ".\ndir1\ndir2\n",
+			wantStdout: ".\n1\n2\n",
 			args:       []string{"-type=directory", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
+			wantStdout: "1/file1\n1/file2\n2/file1\n2/file3\nfile1\nfile2\n",
 			args:       []string{"-type=f", "."},
 		},
 		{
-			wantStdout: "dir1/file1\ndir1/file2\ndir2/file1\ndir2/file3\nfile1\nfile2\n",
+			wantStdout: "1/file1\n1/file2\n2/file1\n2/file3\nfile1\nfile2\n",
 			args:       []string{"-type=file", "."},
 		},
 		{
-			args:   []string{"-type=notvalid", "."},
-			runErr: errNotValidType,
+			wantStdout: "1/file1\n1/file2\n2/file1\nfile1\nfile2\n",
+			args:       []string{"-regex=file[12]", "."},
+		},
+		{
+			wantStdout: "1/file2\nfile2\n",
+			args:       []string{"-regex=file2", "."},
+		},
+		{
+			wantStdout: "1/file1\n2/file1\nfile1\n",
+			args:       []string{"-regex=file1", "."},
+		},
+		{
+			wantStdout: "1/file1\n2/file1\nfile1\n",
+			args:       []string{"-name=file1", "-regex=file[12]", "."},
+		},
+		{
+			args:       []string{"-regex=[", "."},
+			commandErr: find.ErrInvalidRegexp,
+		},
+		{
+			args:       []string{"-type=notvalid", "."},
+			commandErr: errNotValidType,
 		},
 		{
 			wantStdout: "file1\n",
@@ -96,19 +125,27 @@ func TestFind(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	failed := []int{}
+	for i, tt := range tests {
 		var stdout bytes.Buffer
+		t.Logf("%d:%v", i, tt)
 		c, err := command(&stdout, io.Discard, tt.args)
+		t.Logf("%v, %v", c, err)
 		if !errors.Is(err, tt.commandErr) {
-			t.Fatalf("expected %v, got %v", tt.commandErr, err)
+			failed = append(failed, i)
+			t.Errorf("expected %v, got %v", tt.commandErr, err)
+			continue
 		}
 		if err != nil {
 			continue
 		}
 
+		t.Logf("Now run test %d:%v", i, tt)
 		err = c.run()
 		if !errors.Is(err, tt.runErr) {
-			t.Fatalf("expected %v, got %v", tt.runErr, err)
+			failed = append(failed, i)
+			t.Errorf("expected %v, got %v", tt.runErr, err)
+			continue
 		}
 		if err != nil {
 			continue
@@ -117,7 +154,11 @@ func TestFind(t *testing.T) {
 		resStdout := stdout.String()
 		if resStdout != tt.wantStdout {
 			t.Errorf("want\n %s, got\n %s", tt.wantStdout, resStdout)
+			failed = append(failed, i)
 		}
+	}
+	if len(failed) > 0 {
+		t.Logf("failing tests: %v", failed)
 	}
 }
 
