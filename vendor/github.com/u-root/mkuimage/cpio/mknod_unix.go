@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !freebsd && !plan9 && !windows
-// +build !freebsd,!plan9,!windows
 
 package cpio
 

@@ -18,9 +18,11 @@ import (
 	"unsafe"
 
 	guid "github.com/google/uuid"
+	"github.com/u-root/u-root/pkg/acpi"
 	"github.com/u-root/u-root/pkg/align"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/efivarfs"
 	"github.com/u-root/u-root/pkg/smbios"
 )
 
@@ -44,13 +46,6 @@ const (
 const (
 	UniversalPayloadSmbiosTableGUID     = "260d0a59-e506-204d-8a82-59ea1b34982d"
 	UniversalPayloadSmbiosTableRevision = 1
-)
-
-var (
-	kexecMemoryMapFromIOMem = kexec.MemoryMapFromIOMem
-	getSMBIOSBase           = smbios.SMBIOSBase
-	getSMBIOS3HdrSize       = smbios.SMBIOS3HeaderSize
-	getAcpiRsdpData         = archGetAcpiRsdpData
 )
 
 type UniversalPayloadGenericHeader struct {
@@ -114,13 +109,136 @@ var (
 	ErrComponentsSizeOverflow          = errors.New("reserved components size overflow")
 )
 
-var (
-	debug      = func(string, ...any) {}
-	warningMsg []error
-)
+// UPL represents a Universal Payload loader instance.
+type UPL struct {
+	// Configuration
+	sysfsCPUInfoPath    string
+	sysfsFbPath         string
+	sysfsDrmPath        string
+	efiVarsPath         string
+	uRootEFIVarMagic    string
+	ACPIMCFGSysFilePath string
+	PCISearchPath       string
+	pageSize            uint
+
+	// Mockable functions
+	kexecMemoryMapFromIOMem func() (kexec.MemoryMap, error)
+	efiVarFSCreator         func(string) (efivarfs.EFIVar, error)
+	getSMBIOSBase           func() (int64, int64, error)
+	getSMBIOS3HdrSize       func() int64
+	getAcpiRsdp             func() (*acpi.RSDP, error)
+	debug                   func(string, ...any)
+
+	// State
+	uplImageOffset   uint64
+	rsdpTableOffset  uint64
+	tmpHobOffset     uint64
+	fdtDtbOffset     uint64
+	tmpStackOffset   uint64
+	trampolineOffset uint64
+	componentsSize   uint
+	warningMsg       []error
+}
+
+// New creates a new UPL instance with default values.
+func New(opts ...Option) *UPL {
+	u := &UPL{
+		sysfsCPUInfoPath:    "/proc/cpuinfo",
+		sysfsFbPath:         "/dev/fb0",
+		sysfsDrmPath:        "/sys/class/drm",
+		efiVarsPath:         "/sys/firmware/efi/efivars",
+		uRootEFIVarMagic:    "u-root-efivar-v1",
+		ACPIMCFGSysFilePath: "/sys/firmware/acpi/tables/MCFG",
+		PCISearchPath:       "/sys/devices/",
+		pageSize:            uint(os.Getpagesize()),
+
+		kexecMemoryMapFromIOMem: kexec.MemoryMapFromIOMem,
+		efiVarFSCreator: func(path string) (efivarfs.EFIVar, error) {
+			return efivarfs.NewPath(path)
+		},
+		getSMBIOSBase:     smbios.SMBIOSBase,
+		getSMBIOS3HdrSize: smbios.SMBIOS3HeaderSize,
+		getAcpiRsdp:       acpi.GetRSDP,
+		debug:             func(string, ...any) {},
+	}
+
+	for _, opt := range opts {
+		opt(u)
+	}
+	return u
+}
+
+// Option is a functional option for UPL.
+type Option func(*UPL)
+
+// WithDebug sets the debug function for UPL.
+func WithDebug(debug func(string, ...any)) Option {
+	return func(u *UPL) {
+		u.debug = debug
+	}
+}
+
+// WithKexecMemoryMapFromIOMem sets the function to get the kexec memory map from IOMem.
+func WithKexecMemoryMapFromIOMem(f func() (kexec.MemoryMap, error)) Option {
+	return func(u *UPL) {
+		u.kexecMemoryMapFromIOMem = f
+	}
+}
+
+// WithSMBIOSBase sets the function to get the SMBIOS base address.
+func WithSMBIOSBase(f func() (int64, int64, error)) Option {
+	return func(u *UPL) {
+		u.getSMBIOSBase = f
+	}
+}
+
+// WithSMBIOS3HdrSize sets the function to get the SMBIOS3 header size.
+func WithSMBIOS3HdrSize(f func() int64) Option {
+	return func(u *UPL) {
+		u.getSMBIOS3HdrSize = f
+	}
+}
+
+// WithAcpiRsdp sets the function to get the ACPI RSDP.
+func WithAcpiRsdp(f func() (*acpi.RSDP, error)) Option {
+	return func(u *UPL) {
+		u.getAcpiRsdp = f
+	}
+}
+
+// WithEFIVarFSCreator sets the function to create an EFIVar file system.
+func WithEFIVarFSCreator(f func(string) (efivarfs.EFIVar, error)) Option {
+	return func(u *UPL) {
+		u.efiVarFSCreator = f
+	}
+}
+
+// WithSysfsPaths sets various sysfs paths for UPL.
+func WithSysfsPaths(cpuInfo, fb, drm, efiVars, mcfg, pci string) Option {
+	return func(u *UPL) {
+		if cpuInfo != "" {
+			u.sysfsCPUInfoPath = cpuInfo
+		}
+		if fb != "" {
+			u.sysfsFbPath = fb
+		}
+		if drm != "" {
+			u.sysfsDrmPath = drm
+		}
+		if efiVars != "" {
+			u.efiVarsPath = efiVars
+		}
+		if mcfg != "" {
+			u.ACPIMCFGSysFilePath = mcfg
+		}
+		if pci != "" {
+			u.PCISearchPath = pci
+		}
+	}
+}
 
 // Create GUID HOB with specified GUID string
-func constructGUIDHOB(name string) (*EFIHOBGUIDType, error) {
+func (u *UPL) constructGUIDHOB(name string) (*EFIHOBGUIDType, error) {
 	length := uint16(unsafe.Sizeof(EFIHOBGUIDType{}) + guidToLength[name])
 
 	id, err := guid.Parse(name)
@@ -163,8 +281,8 @@ func constructUniversalPayloadBase(addr uint64) *UniversalPayloadBase {
 }
 
 // Construct UniversalPayloadSmbiosTable HOB
-func constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
-	smbiosTableBase, _, err := getSMBIOSBase()
+func (u *UPL) constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
+	smbiosTableBase, _, err := u.getSMBIOSBase()
 	if err != nil {
 		return nil, errors.Join(ErrFailToGetSmbiosTable, err)
 	}
@@ -179,9 +297,9 @@ func constructSmbiosTable() (*UniversalPayloadSmbiosTable, error) {
 }
 
 // Construct system memory resource HOB
-func appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64, memMap kexec.MemoryMap) error {
+func (u *UPL) appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64, memMap kexec.MemoryMap) error {
 	prev := buf.Len()
-	memHOB, length := hobFromMemMap(memMap)
+	memHOB, length := u.hobFromMemMap(memMap)
 	if err := binary.Write(buf, binary.LittleEndian, memHOB); err != nil {
 		return errors.Join(ErrWriteHOBBufMemoryMap, err)
 	}
@@ -196,9 +314,9 @@ func appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64, memMap kexec.MemoryMap) 
 }
 
 // Construct serial port HOB
-func appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
+func (u *UPL) appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	serialPortInfo := constructSerialPortHOB()
-	serialGUIDHOB, err := constructGUIDHOB(UniversalPayloadSerialPortInfoGUID)
+	serialGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadSerialPortInfoGUID)
 	if err != nil {
 		return err
 	}
@@ -209,7 +327,6 @@ func appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	if err := binary.Write(buf, binary.LittleEndian, serialGUIDHOB); err != nil {
 		return errors.Join(ErrWriteHOBBufSerialPort, err)
 	}
-
 	if err := binary.Write(buf, binary.LittleEndian, serialPortInfo); err != nil {
 		return errors.Join(ErrWriteHOBBufSerialPort, err)
 	}
@@ -223,9 +340,9 @@ func appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	return nil
 }
 
-func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, loadAddr uint64) error {
+func (u *UPL) appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, loadAddr uint64) error {
 	uplBase := constructUniversalPayloadBase(loadAddr)
-	uplBaseGUIDHOB, err := constructGUIDHOB(UniversalPayloadBaseGUID)
+	uplBaseGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadBaseGUID)
 	if err != nil {
 		return err
 	}
@@ -250,14 +367,14 @@ func appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, loadAddr uint
 	return nil
 }
 
-func appendSmbiosTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
+func (u *UPL) appendSmbiosTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	// Construct SMBIOS HOB
-	smbiosTable, err := constructSmbiosTable()
+	smbiosTable, err := u.constructSmbiosTable()
 	if err != nil {
 		return err
 	}
 
-	smbiosTableGUIDHOB, err := constructGUIDHOB(UniversalPayloadSmbiosTableGUID)
+	smbiosTableGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadSmbiosTableGUID)
 	if err != nil {
 		return err
 	}
@@ -282,8 +399,8 @@ func appendSmbiosTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	return nil
 }
 
-func appendEFICPUHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	cpuHOB, err := hobCreateEFIHOBCPU()
+func (u *UPL) appendEFICPUHOB(buf *bytes.Buffer, hobLen *uint64) error {
+	cpuHOB, err := u.hobCreateEFIHOBCPU()
 	if err != nil {
 		return err
 	}
@@ -303,8 +420,8 @@ func appendEFICPUHOB(buf *bytes.Buffer, hobLen *uint64) error {
 	return nil
 }
 
-func constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) error {
-	handoffHOB := hobCreateEFIHOBHandoffInfoTable(*hobLen)
+func (u *UPL) constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) error {
+	handoffHOB := u.hobCreateEFIHOBHandoffInfoTable(*hobLen)
 	if err := binary.Write(dst, binary.LittleEndian, handoffHOB); err != nil {
 		return errors.Join(ErrWriteHOBBufList, err)
 	}
@@ -313,7 +430,7 @@ func constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 		return errors.Join(ErrWriteHOBBufList, err)
 	}
 
-	hobEndHeader := hobCreateEndHOB()
+	hobEndHeader := u.hobCreateEndHOB()
 	prev := dst.Len()
 	length := uint64(unsafe.Sizeof(EFIHOBGenericHeader{}))
 
@@ -330,46 +447,46 @@ func constructHOBList(dst *bytes.Buffer, src *bytes.Buffer, hobLen *uint64) erro
 	return nil
 }
 
-func checkComponentsSize(appendSize uint) error {
-	componentsSize = componentsSize + appendSize
+func (u *UPL) checkComponentsSize(appendSize uint) error {
+	u.componentsSize = u.componentsSize + appendSize
 
-	debug("Current components size:%X vs. reserved size:%X\n", componentsSize, sizeForComponents)
-	if componentsSize > uint(sizeForComponents) {
+	u.debug("Current components size:%X vs. reserved size:%X\n", u.componentsSize, sizeForComponents)
+	if u.componentsSize > uint(sizeForComponents) {
 		return fmt.Errorf("components size check failure:%w", ErrComponentsSizeOverflow)
 	}
 
 	return nil
 }
 
-func prepareBootEnv(loadAddr uint64, entry uint64, mem *kexec.Memory) error {
-	stackSize := pageSize
+func (u *UPL) prepareBootEnv(loadAddr uint64, entry uint64, mem *kexec.Memory) error {
+	stackSize := u.pageSize
 	stackBuffer := make([]byte, stackSize)
 
 	// Check whether reserved components size is overflowed.
-	if err := checkComponentsSize(stackSize); err != nil {
+	if err := u.checkComponentsSize(stackSize); err != nil {
 		return err
 	}
 	s := kexec.NewSegment(stackBuffer, kexec.Range{
-		Start: uintptr(loadAddr + tmpStackOffset),
+		Start: uintptr(loadAddr + u.tmpStackOffset),
 		Size:  stackSize,
 	})
 	mem.Segments.Insert(s)
 
 	// Next step, trampoline code will be placed.
-	trampolineOffset = tmpStackOffset + uint64(stackSize)
+	u.trampolineOffset = u.tmpStackOffset + uint64(stackSize)
 
 	var trampoline []uint8
-	trampoline = constructTrampoline(trampoline, loadAddr, entry)
+	trampoline = u.constructTrampoline(trampoline, loadAddr, entry)
 
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.LittleEndian, trampoline)
 
 	// Check whether reserved components size is overflowed.
-	if err := checkComponentsSize(uint(buf.Len())); err != nil {
+	if err := u.checkComponentsSize(uint(buf.Len())); err != nil {
 		return err
 	}
 	s = kexec.NewSegment(buf.Bytes(), kexec.Range{
-		Start: uintptr(loadAddr + trampolineOffset),
+		Start: uintptr(loadAddr + u.trampolineOffset),
 		Size:  uint(buf.Len()),
 	})
 
@@ -378,34 +495,34 @@ func prepareBootEnv(loadAddr uint64, entry uint64, mem *kexec.Memory) error {
 	return nil
 }
 
-func prepareHob(buf *bytes.Buffer, length *uint64, loadAddr uint64, mem *kexec.Memory) error {
-	if err := appendMemMapHOB(buf, length, mem.Phys); err != nil {
+func (u *UPL) prepareHob(buf *bytes.Buffer, length *uint64, loadAddr uint64, mem *kexec.Memory) error {
+	if err := u.appendMemMapHOB(buf, length, mem.Phys); err != nil {
 		return err
 	}
 
-	if err := appendSerialPortHOB(buf, length); err != nil {
+	if err := u.appendSerialPortHOB(buf, length); err != nil {
 		return err
 	}
 
-	if err := appendUniversalPayloadBase(buf, length, loadAddr); err != nil {
+	if err := u.appendUniversalPayloadBase(buf, length, loadAddr); err != nil {
 		return err
 	}
 
-	if err := appendSmbiosTableHOB(buf, length); err != nil {
+	if err := u.appendSmbiosTableHOB(buf, length); err != nil {
 		return err
 	}
 
-	if err := appendEFICPUHOB(buf, length); err != nil {
+	if err := u.appendEFICPUHOB(buf, length); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Memory) error {
-	rsdpBase, rsdpData, err := getAcpiRsdpData()
+func (u *UPL) prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Memory) error {
+	rsdpBase, rsdpData, err := u.archGetAcpiRsdpData()
 	if err != nil {
-		debug("universalpayload: failed to get RSDP table data (%v)\n", err)
+		u.debug("universalpayload: failed to get RSDP table data (%v)\n", err)
 		return err
 	}
 
@@ -414,77 +531,77 @@ func prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem *kexec.Me
 	// specified address, otherwise, we will use rsdpBase directly.
 	if rsdpBase == 0 {
 		// Check whether reserved components size is overflowed.
-		if err := checkComponentsSize(align.UpPage(uint(len(rsdpData)))); err != nil {
+		if err := u.checkComponentsSize(align.UpPage(uint(len(rsdpData)))); err != nil {
 			return err
 		}
 		s := kexec.NewSegment(rsdpData, kexec.Range{
-			Start: uintptr(loadAddr + rsdpTableOffset),
+			Start: uintptr(loadAddr + u.rsdpTableOffset),
 			Size:  uint(len(rsdpData)),
 		})
 
 		mem.Segments.Insert(s)
 
-		rsdpBase = loadAddr + rsdpTableOffset
+		rsdpBase = loadAddr + u.rsdpTableOffset
 	}
 
 	// Next step, Handoff Blocks will be placed
-	tmpHobOffset = rsdpTableOffset + uint64(align.UpPage(uint64(len(rsdpData))))
+	u.tmpHobOffset = u.rsdpTableOffset + uint64(align.UpPage(uint64(len(rsdpData))))
 
 	hobBuf := &bytes.Buffer{}
 	hobListBuf := &bytes.Buffer{}
 	var hobLen uint64
 
-	if err := prepareHob(hobBuf, &hobLen, fdtLoad.Load, mem); err != nil {
-		debug("universalpayload: failed to construct HoBs (%v)\n", err)
+	if err := u.prepareHob(hobBuf, &hobLen, fdtLoad.Load, mem); err != nil {
+		u.debug("universalpayload: failed to construct HoBs (%v)\n", err)
 		return err
 	}
 
-	if err := constructHOBList(hobListBuf, hobBuf, &hobLen); err != nil {
-		debug("universalpayload: failed to construct HoBList (%v)\n", err)
+	if err := u.constructHOBList(hobListBuf, hobBuf, &hobLen); err != nil {
+		u.debug("universalpayload: failed to construct HoBList (%v)\n", err)
 		return err
 	}
 
 	// Check whether reserved components size is overflowed.
-	if err := checkComponentsSize(align.UpPage(uint(hobListBuf.Len()))); err != nil {
+	if err := u.checkComponentsSize(align.UpPage(uint(hobListBuf.Len()))); err != nil {
 		return err
 	}
 	s := kexec.NewSegment(hobListBuf.Bytes(), kexec.Range{
-		Start: uintptr(loadAddr + tmpHobOffset),
+		Start: uintptr(loadAddr + u.tmpHobOffset),
 		Size:  uint(hobListBuf.Len()),
 	})
 
 	mem.Segments.Insert(s)
 
 	// Next step, FDT DTB info will be placed
-	fdtDtbOffset = tmpHobOffset + uint64(align.UpPage(uint64(hobListBuf.Len())))
+	u.fdtDtbOffset = u.tmpHobOffset + uint64(align.UpPage(uint64(hobListBuf.Len())))
 
 	dtBuf := &bytes.Buffer{}
 
-	err = buildDeviceTreeInfo(dtBuf, mem, loadAddr, rsdpBase)
+	err = u.buildDeviceTreeInfo(dtBuf, mem, loadAddr, rsdpBase)
 	if err != nil {
-		debug("universalpayload: failed to build FDT (%v)\n", err)
+		u.debug("universalpayload: failed to build FDT (%v)\n", err)
 		return err
 	}
 
 	// Check whether reserved components size is overflowed.
-	if err := checkComponentsSize(align.UpPage(uint(dtBuf.Len()))); err != nil {
+	if err := u.checkComponentsSize(align.UpPage(uint(dtBuf.Len()))); err != nil {
 		return err
 	}
 	s = kexec.NewSegment(dtBuf.Bytes(), kexec.Range{
-		Start: uintptr(loadAddr + fdtDtbOffset),
+		Start: uintptr(loadAddr + u.fdtDtbOffset),
 		Size:  uint(dtBuf.Len()),
 	})
 	mem.Segments.Insert(s)
 
 	// Next step, temporary stack for trampoline code will be placed
-	tmpStackOffset = fdtDtbOffset + uint64(align.UpPage(uint64(dtBuf.Len())))
+	u.tmpStackOffset = u.fdtDtbOffset + uint64(align.UpPage(uint64(dtBuf.Len())))
 
 	return nil
 }
 
-func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) error {
-	if err := relocateFdtData(addr+uplImageOffset, fdt, data); err != nil {
-		debug("universalpayload: failed to relocate FIT image (%v)\n", err)
+func (u *UPL) prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) error {
+	if err := relocateFdtData(addr+u.uplImageOffset, fdt, data); err != nil {
+		u.debug("universalpayload: failed to relocate FIT image (%v)\n", err)
 		return err
 	}
 
@@ -496,12 +613,13 @@ func prepareFdtData(fdt *FdtLoad, data []byte, addr uint64, mem *kexec.Memory) e
 	mem.Segments.Insert(s)
 
 	// Next step, ACPI RSDP table content will be placed
-	rsdpTableOffset = uplImageOffset + uint64(align.UpPage(uint64(len(data))))
+	u.rsdpTableOffset = u.uplImageOffset + uint64(align.UpPage(uint64(len(data))))
 
 	return nil
 }
 
-func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr, error) {
+func (u *UPL) loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr, error) {
+	u.componentsSize = 0
 	mmRanges := mem.Phys.RAM()
 
 	// Reserved 1MB additional space which is used to place Device Tree info, Handoff Blocks,
@@ -529,57 +647,59 @@ func loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory) (uintptr
 	//
 	kernelRange, err := mmRanges.FindSpace(uint(rangeLen), kexec.WithAlignment(uplImageAlignment))
 	if err != nil {
-		debug("universalpayload: failed to find 2MB aligned space (%v)\n", err)
+		u.debug("universalpayload: failed to find 2MB aligned space (%v)\n", err)
 		return 0, err
 	}
 
 	loadAddr := uint64(kernelRange.Start)
 
-	if err = prepareFdtData(fdt, data, loadAddr, mem); err != nil {
-		debug("universalpayload: failed to prepare FDT data (%v)\n", err)
+	if err = u.prepareFdtData(fdt, data, loadAddr, mem); err != nil {
+		u.debug("universalpayload: failed to prepare FDT data (%v)\n", err)
 		return 0, err
 	}
 
-	if err = prepareBootloaderParameter(fdt, loadAddr, mem); err != nil {
-		debug("universalpayload: failed to prepare boot parameters (%v)\n", err)
+	if err = u.prepareBootloaderParameter(fdt, loadAddr, mem); err != nil {
+		u.debug("universalpayload: failed to prepare boot parameters (%v)\n", err)
 		return 0, err
 	}
 
-	if err = prepareBootEnv(loadAddr, fdt.EntryStart, mem); err != nil {
+	if err = u.prepareBootEnv(loadAddr, fdt.EntryStart, mem); err != nil {
 		return 0, err
 	}
 
-	return (uintptr)(loadAddr + uint64(trampolineOffset)), nil
+	return (uintptr)(loadAddr + uint64(u.trampolineOffset)), nil
 }
 
+// Load loads the Universal Payload image from the specified file.
 func Load(name string, dbg func(string, ...any)) (error, error) {
-	if dbg != nil {
-		debug = dbg
-	}
+	return New(WithDebug(dbg)).Load(name)
+}
 
-	debug("universalpayload: Try to get FDT information from:%s\n", name)
-	fdtLoad, err := GetFdtInfo(name)
+// Load loads the Universal Payload image from the specified file.
+func (u *UPL) Load(name string) (error, error) {
+	u.debug("universalpayload: Try to get FDT information from:%s\n", name)
+	fdtLoad, err := u.GetFdtInfo(name)
 	if err != nil {
-		debug("universalpayload: Failed to get FDT information (%v)\n", err)
-		return err, errors.Join(warningMsg...)
+		u.debug("universalpayload: Failed to get FDT information (%v)\n", err)
+		return err, errors.Join(u.warningMsg...)
 	}
 
-	debug("universalpayload: Try to fetch file content\n")
+	u.debug("universalpayload: Try to fetch file content\n")
 	data, err := os.ReadFile(name)
 	if err != nil {
-		debug("universalpayload: Failed to fetch file content (%v)\n", err)
-		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err), errors.Join(warningMsg...)
+		u.debug("universalpayload: Failed to fetch file content (%v)\n", err)
+		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err), errors.Join(u.warningMsg...)
 	}
 
 	// Prepare memory.
 	memmap, err := kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
-		debug("universalpayload: Failed to get Memory map from SysfsMemmap\n")
-		debug("universalpayload: Try to get Memory Map from IOMem\n")
-		memmap, err = kexecMemoryMapFromIOMem()
+		u.debug("universalpayload: Failed to get Memory map from SysfsMemmap\n")
+		u.debug("universalpayload: Try to get Memory Map from IOMem\n")
+		memmap, err = u.kexecMemoryMapFromIOMem()
 		if err != nil {
-			debug("universalpayload: Failed to get Memory Map from IOMem\n")
-			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(warningMsg...)
+			u.debug("universalpayload: Failed to get Memory Map from IOMem\n")
+			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(u.warningMsg...)
 		}
 	}
 
@@ -588,22 +708,22 @@ func Load(name string, dbg func(string, ...any)) (error, error) {
 	}
 
 	// Prepare boot environment, including HoB, stack, bootloader parameter.
-	debug("universalpayload: Try to prepare required stuffs\n")
-	entry, err := loadKexecMemWithHOBs(fdtLoad, data, &mem)
+	u.debug("universalpayload: Try to prepare required stuffs\n")
+	entry, err := u.loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
-		debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
-		return err, errors.Join(warningMsg...)
+		u.debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
+		return err, errors.Join(u.warningMsg...)
 	}
 
-	debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
+	u.debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
 	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
-		debug("universalpayload: Failed to load segments with error (%v)\n", err)
-		return errors.Join(ErrKexecLoadFailed, err), errors.Join(warningMsg...)
+		u.debug("universalpayload: Failed to load segments with error (%v)\n", err)
+		return errors.Join(ErrKexecLoadFailed, err), errors.Join(u.warningMsg...)
 	}
 
-	debug("universalpayload: boot trampoline code at:%x\n", entry)
+	u.debug("universalpayload: boot trampoline code at:%x\n", entry)
 
-	return nil, errors.Join(warningMsg...)
+	return nil, errors.Join(u.warningMsg...)
 }
 
 func Exec() error {

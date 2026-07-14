@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build freebsd || linux
-// +build freebsd linux
 
 package ldd
 
@@ -18,7 +17,7 @@ import (
 
 func parseinterp(input string) ([]string, error) {
 	var names []string
-	for _, p := range strings.Split(input, "\n") {
+	for p := range strings.SplitSeq(input, "\n") {
 		f := strings.Fields(p)
 		if len(f) < 3 {
 			continue
@@ -49,7 +48,7 @@ func runinterp(interp, file string) ([]string, error) {
 	o, err := exec.Command(interp, "--list", file).Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("%s: %s", err, ee.Stderr)
+			return nil, fmt.Errorf("%w: %s", err, ee.Stderr)
 		}
 		return nil, err
 	}

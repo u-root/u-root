@@ -17,7 +17,7 @@
 //	-l: long form
 //	-Q: quoted
 //	-R: equivalent to findutil's find
-//	-s: sort by size
+//	-S: sort by size
 //
 // Bugs:
 //

@@ -56,7 +56,7 @@ func (af *Files) addFile(src string, dest string, follow bool) error {
 	if path.IsAbs(dest) {
 		r, err := filepath.Rel("/", dest)
 		if err != nil {
-			return fmt.Errorf("%q is an absolute path and can't make it relative to /: %v", dest, err)
+			return fmt.Errorf("%q is an absolute path and can't make it relative to /: %w", dest, err)
 		}
 		log.Printf("Warning: You used an absolute path %q and it was adjusted to %q", dest, r)
 		dest = r

@@ -49,6 +49,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -104,10 +105,12 @@ func (c *cmd) run() error {
 		return nil
 	}
 
+	var errs error
+
 	for _, v := range c.args {
 		f, err := os.Open(v)
 		if err != nil {
-			fmt.Fprintf(c.stderr, "wc: %s: %v\n", v, err)
+			errs = errors.Join(errs, err)
 			continue
 		}
 		res := c.count(f, v)
@@ -121,7 +124,7 @@ func (c *cmd) run() error {
 	if len(c.args) > 1 {
 		c.report(totals, "total")
 	}
-	return nil
+	return errs
 }
 
 type cnt struct {

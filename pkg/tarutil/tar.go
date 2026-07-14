@@ -215,7 +215,7 @@ func createFileInRoot(hdr *tar.Header, r io.Reader, rootDir string) error {
 		return fmt.Errorf("symlinks not yet supported: %q", path)
 
 	case os.FileMode(0):
-		f, err := os.Create(path)
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode().Perm())
 		if err != nil {
 			return err
 		}

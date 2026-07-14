@@ -7,13 +7,10 @@
 package main
 
 import (
-	"bytes"
 	"os"
 	"syscall"
 	"testing"
 	"time"
-
-	"github.com/u-root/u-root/pkg/core/touch"
 )
 
 func TestAccess(t *testing.T) {
@@ -28,12 +25,12 @@ func TestAccess(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	cmd := touch.New()
-	var stdout, stderr bytes.Buffer
-	var stdin bytes.Buffer
-	cmd.SetIO(&stdin, &stdout, &stderr)
+	cmd, err := command("-a", "-d", "2023-01-01T00:00:00Z", f.Name())
+	if err != nil {
+		t.Fatalf("command: got %v, want nil", err)
+	}
 
-	err = cmd.Run("-a", "-d", "2023-01-01T00:00:00Z", f.Name())
+	err = cmd.run()
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

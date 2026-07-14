@@ -103,6 +103,7 @@ type mountOpts struct {
 	unixFlags      int
 	msize          int
 	fastTCPTimeout bool
+	cache          string
 	cfg            *ssh.ClientConfig
 }
 
@@ -137,6 +138,14 @@ func WithFastTCPTimeout(enable bool) MountOpt {
 func WithSSHClient(cfg *ssh.ClientConfig) MountOpt {
 	return func(m *mountOpts) {
 		m.cfg = cfg
+	}
+}
+
+// WithCache sets the cache option.  See
+// https://docs.kernel.org/filesystems/9p.html for valid values.
+func WithCache(cache string) MountOpt {
+	return func(m *mountOpts) {
+		m.cache = cache
 	}
 }
 
@@ -223,6 +232,7 @@ func Mount9P(ctx context.Context, mntReady chan<- bool, c net.Conn, mountPoint s
 
 	m := &mountOpts{
 		msize: 64 * 1024,
+		cache: "none",
 	}
 	for _, opt := range opts {
 		opt(m)
@@ -266,7 +276,7 @@ func Mount9P(ctx context.Context, mntReady chan<- bool, c net.Conn, mountPoint s
 	// We can close the FD after we give it to the kernel.  (internal dup).
 	defer tfd.Close()
 
-	mntstr := fmt.Sprintf("version=9p2000.L,noxattr,trans=fd,rfdno=%d,wfdno=%d,debug=0,msize=%d", tfd.Fd(), tfd.Fd(), m.msize)
+	mntstr := fmt.Sprintf("version=9p2000.L,noxattr,cache=%s,trans=fd,rfdno=%d,wfdno=%d,debug=0,msize=%d", m.cache, tfd.Fd(), tfd.Fd(), m.msize)
 	if err := unix.Mount("ssh9p", mountPoint, "9p", uintptr(m.unixFlags), mntstr); err != nil {
 		return fmt.Errorf("9P mount: %w", err)
 	}

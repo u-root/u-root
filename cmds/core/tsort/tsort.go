@@ -60,6 +60,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -71,17 +72,7 @@ var (
 	errOddDataCount = errors.New("odd data count")
 )
 
-func run(
-	stdin io.Reader,
-	stdout io.Writer,
-	stderr io.Writer,
-	args ...string,
-) error {
-	out := bufio.NewWriter(stdout)
-	defer out.Flush()
-	werr := bufio.NewWriter(stderr)
-	defer werr.Flush()
-
+func run(stdin io.Reader, stdout, stderr io.Writer, args ...string) error {
 	var err error
 	in := io.NopCloser(stdin)
 	if len(args) >= 1 {
@@ -99,15 +90,12 @@ func run(
 	topologicalOrdering(
 		g,
 		func(node nodeID) {
-			_, _ = out.WriteString(g.valueFor(node))
-			_ = out.WriteByte('\n')
+			_, _ = fmt.Fprintln(stdout, g.valueFor(node))
 		},
 		func(cycle []nodeID) {
-			_, _ = werr.WriteString("tsort: cycle in data\n")
+			_, _ = fmt.Fprintln(stderr, "tsort: cycle in data")
 			for _, node := range cycle {
-				_, _ = werr.WriteString("tsort: ")
-				_, _ = werr.WriteString(g.valueFor(node))
-				_ = werr.WriteByte('\n')
+				_, _ = fmt.Fprintln(stderr, "tsort:", g.valueFor(node))
 			}
 			err = errNonFatal
 		})
