@@ -20,7 +20,7 @@ func WithBasenameMatch(pattern string) Set {
 	}
 }
 
-// WithRegexPathMatch sets up a path filter using regex.
+// WithRegexPathMatch sets up a basename filter using regex.
 //
 // This design compiles the regex for every file.
 // It also has no good way to handle a bad pattern.
@@ -33,7 +33,7 @@ func WithRegexPathMatch(pattern string) Set {
 	}
 }
 
-// WithCompiledRegexPathMatch sets up a path filter using a compiled regex.
+// WithCompiledRegexPathMatch sets up a basename filter using a compiled regex.
 // It will return an error if the pattern can not be compiled.
 func WithCompiledRegexPathMatch(pattern string) (Set, error) {
 	re, err := regexp.Compile(pattern)
@@ -91,4 +91,3 @@ func WithDebugLog(l func(string, ...any)) Set {
 		f.debug = l
 	}
 }
-
