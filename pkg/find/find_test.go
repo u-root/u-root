@@ -72,13 +72,18 @@ func TestSimple(t *testing.T) {
 		},
 		{
 			name:  "regexp match anchored at end",
-			opts:  optCompiledRegex(t, `.*/root/xyz/.*$`),
-			names: []string{"/root/xyz/0777", "/root/xyz/file"},
+			opts:  optCompiledRegex(t, ".*e$"),
+			names: []string{"/root/xyz/file"},
+		},
+		{
+			name:  "anchored at head",
+			opts:  optCompiledRegex(t, "^0.*7"),
+			names: []string{"/root/xyz/0777"},
 		},
 		{
 			name:  "anchored at head and end",
-			opts:  optCompiledRegex(t, "^"+filepath.Join(d, ".*7$")),
-			names: []string{"/root/xyz/0777"},
+			opts:  optCompiledRegex(t, "^f.*e$"),
+			names: []string{"/root/xyz/file"},
 		},
 	}
 
@@ -95,9 +100,12 @@ func TestSimple(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		t.Logf("%s:%v", tc.name, tc)
 		t.Run(tc.name, func(t *testing.T) {
+			f := New()
+			f.debug = t.Logf
 			ctx := context.Background()
-			files := Find(ctx, WithRoot(d), tc.opts)
+			files := RunFind(ctx, f, WithRoot(d), tc.opts)
 
 			var names []string
 			for o := range files {
@@ -108,7 +116,7 @@ func TestSimple(t *testing.T) {
 			}
 
 			if len(names) != len(tc.names) {
-				t.Errorf("Find output: got %d bytes, want %d bytes", len(names), len(tc.names))
+				t.Errorf("Find output: got %d files, want %d files", len(names), len(tc.names))
 			}
 			if !reflect.DeepEqual(names, tc.names) {
 				t.Errorf("Find output: got %v, want %v", names, tc.names)

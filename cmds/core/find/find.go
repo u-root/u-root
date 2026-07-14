@@ -135,10 +135,16 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 
 	root := c.args[0]
 
+	c.opts = []find.Set{
+		find.WithRoot(root),
+	}
+
 	var mask, mode os.FileMode
+	var modemaskmatch bool
 	if c.perm != -1 {
 		mask = os.ModePerm
 		mode = os.FileMode(c.perm)
+		modemaskmatch = true
 	}
 	if c.fileType != "" {
 		intType, ok := fileTypes[c.fileType]
@@ -151,11 +157,11 @@ func command(stdout, stderr io.Writer, args []string) (*cmd, error) {
 		}
 		mode |= intType
 		mask |= os.ModeType
+		modemaskmatch = true
 	}
 
-	c.opts = []find.Set{
-		find.WithRoot(root),
-		find.WithModeMatch(mode, mask),
+	if modemaskmatch {
+		c.opts = append(c.opts, find.WithModeMatch(mode, mask))
 	}
 
 	if c.debug {
