@@ -36,11 +36,19 @@ func (f *File) String() string {
 		Name:  ls.NameStringer{},
 	}
 
+	// If the walk already captured an error, show that.
+	// This avoids an unneeded stat, which will also
+	// take an error.
+	if f.Err != nil {
+		return fmt.Sprintf("%s: %v", f.Name, f.Err)
+	}
+
 	// If the stat fails, show that it failed.
-	fi, err := os.Stat(f.Name)
+	fi, err := os.Lstat(f.Name)
 	if err != nil {
 		return fmt.Sprintf("%s: %v", f.Name, err)
 	}
+
 	rec := ls.FromOSFileInfo(f.Name, fi)
 	rec.Name = f.Name
 	return s.FileString(rec)
