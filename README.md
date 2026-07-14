@@ -611,6 +611,7 @@ roadmap can be found [here](roadmap.md).
 
 ## Website
 
-The sources of [u-root.org](https://u-root.org) are inside the `docs/` directory
-and are deployed to the `gh-pages` branch via the CI workflow defined in
+The sources of [u-root.org](https://u-root.org) are inside the
+[`website/` directory](./website/) and are deployed to the `gh-pages` branch via
+the CI workflow defined in
 [`.github/workflows/homepage.yml`](.github/workflows/homepage.yml).
