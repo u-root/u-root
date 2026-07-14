@@ -18,9 +18,11 @@ func checkFileInfo(t *testing.T, ent *dirEnt, newFileInfo os.FileInfo) {
 
 	newStatT := newFileInfo.Sys().(*syscall.Stat_t)
 	statT := ent.FileInfo.Sys().(*syscall.Stat_t)
+	// Directory sizes are filesystem-specific and are not portable archive content.
+	sizeMatches := ent.FileInfo.IsDir() || ent.FileInfo.Size() == newFileInfo.Size()
 	t.Logf("Entry %v statT %v old ino %d new Ino %d", ent, newFileInfo, statT.Ino, newStatT.Ino)
 	if ent.FileInfo.Name() != newFileInfo.Name() ||
-		ent.FileInfo.Size() != newFileInfo.Size() ||
+		!sizeMatches ||
 		ent.FileInfo.Mode() != newFileInfo.Mode() ||
 		ent.FileInfo.IsDir() != newFileInfo.IsDir() ||
 		statT.Mode != newStatT.Mode ||
