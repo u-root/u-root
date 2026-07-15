@@ -170,7 +170,9 @@ address sizes	: 1000 bits physical, 48 bits virtual
 			var hobLen uint64
 			err := u.appendEFICPUHOB(hobBuf, &hobLen)
 
-			expectErr(t, err, tt.expectedErr)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Fatalf("appendEFICPUHOB() error = %v, want %v", err, tt.expectedErr)
+			}
 			if err != nil { // already checked in expectedErr
 				return
 			}

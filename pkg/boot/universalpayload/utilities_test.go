@@ -343,7 +343,9 @@ func TestRelocateFdtData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := relocateFdtData(tt.dst, tt.fdtLoad, tt.data)
-			expectErr(t, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("relocateFdtData() error = %v, want %v", err, tt.wantErr)
+			}
 			if tt.wantFdtLoad != nil && !reflect.DeepEqual(tt.fdtLoad, tt.wantFdtLoad) {
 				t.Fatalf("Unexpected relocated FdtLoad: %v, want: %v", *tt.fdtLoad, *tt.wantFdtLoad)
 			}
@@ -419,7 +421,9 @@ func TestRelocatePE(t *testing.T) {
 
 			err := relocatePE(tt.relocData, tt.delta, dataCopy)
 
-			expectErr(t, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("relocatePE() error = %v, want %v", err, tt.wantErr)
+			}
 
 			if tt.wantErr == nil && !bytes.Equal(dataCopy, tt.expected) {
 				t.Errorf("expected data %v, got %v", tt.expected, dataCopy)
@@ -449,7 +453,9 @@ func TestConstructSMBIOS3Node(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			u := New(WithSMBIOSBase(mockGetSMBIOS3Base))
 			smbiosNode, err := u.constructSMBIOS3Node()
-			expectErr(t, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("constructSMBIOS3Node() error = %v, want %v", err, tt.wantErr)
+			}
 			if smbiosNode != tt.wantNode {
 				t.Fatalf("Unexpected smbios Node: actual(%v) vs. expected(nil)", smbiosNode)
 			}
@@ -531,7 +537,9 @@ func TestFetchACPIMCFGDataNegative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mcfgData, err := fetchACPIMCFGData(tt.data)
-			expectErr(t, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("fetchACPIMCFGData() error = %v, want %v", err, tt.wantErr)
+			}
 			if mcfgData != nil {
 				t.Fatalf("Invalid return value with %s, expected(nil)", tt.name)
 			}
@@ -1751,53 +1759,71 @@ func TestUpdateResourceRanges(t *testing.T) {
 }
 
 func TestRelocatePEBounds(t *testing.T) {
-	// relocData for IMAGE_REL_BASED_DIR64 at offset 0
 	relocData := mockRelocData(0, IMAGE_REL_BASED_DIR64, 0)
 	delta := uint64(0x1000)
 
-	// data is only 4 bytes long, so reading 8 bytes at offset 0 should be caught
-	data := make([]byte, 4)
-
-	err := relocatePE(relocData, delta, data)
-	if err != ErrPeRelocOutOfBound {
-		t.Errorf("Expected ErrPeRelocOutOfBound, got %v", err)
+	tests := []struct {
+		name string
+		data []byte
+		err  error
+	}{
+		{
+			name: "data buffer 4 bytes (too short for 8-byte DIR64 relocation)",
+			data: make([]byte, 4),
+			err:  ErrPeRelocOutOfBound,
+		},
+		{
+			name: "data buffer 8 bytes (exact size for 8-byte DIR64 relocation)",
+			data: make([]byte, 8),
+			err:  nil,
+		},
+		{
+			name: "data buffer 7 bytes (insufficient for 8-byte DIR64 relocation)",
+			data: make([]byte, 7),
+			err:  ErrPeRelocOutOfBound,
+		},
 	}
 
-	// data is 8 bytes long, should pass
-	data = make([]byte, 8)
-	err = relocatePE(relocData, delta, data)
-	if err != nil {
-		t.Errorf("Unexpected error with 8 bytes data: %v", err)
-	}
-
-	// data is 7 bytes long, should fail (since DIR64 reads 8 bytes)
-	data = make([]byte, 7)
-	err = relocatePE(relocData, delta, data)
-	if err != ErrPeRelocOutOfBound {
-		t.Errorf("Expected ErrPeRelocOutOfBound with 7 bytes data, got %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := relocatePE(relocData, delta, tt.data)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("relocatePE() = %v, want %v", err, tt.err)
+			}
+		})
 	}
 }
 
 func TestRelocateFdtDataBounds(t *testing.T) {
-	fdtLoad := &FdtLoad{
-		DataOffset: 10,
-		DataSize:   10,
-	}
-	// Total data is only 15 bytes, so DataOffset+DataSize=20 is out of bounds
 	data := make([]byte, 15)
-	err := relocateFdtData(0x1000, fdtLoad, data)
-	if err != ErrPeRelocOutOfBound {
-		t.Errorf("Expected ErrPeRelocOutOfBound for invalid sub-image range, got %v", err)
+
+	tests := []struct {
+		name    string
+		fdtLoad *FdtLoad
+	}{
+		{
+			name: "sub-image range exceeds data buffer length",
+			fdtLoad: &FdtLoad{
+				DataOffset: 10,
+				DataSize:   10,
+			},
+		},
+		{
+			name: "DataOffset exceeds data length with zero DataSize",
+			fdtLoad: &FdtLoad{
+				DataOffset: 20,
+				DataSize:   0,
+			},
+		},
 	}
 
-	// DataSize 0, start > end case
-	fdtLoad = &FdtLoad{
-		DataOffset: 20,
-		DataSize:   0,
-	}
-	err = relocateFdtData(0x1000, fdtLoad, data)
-	if err != ErrPeRelocOutOfBound {
-		t.Errorf("Expected ErrPeRelocOutOfBound for DataOffset > len(data), got %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := relocateFdtData(0x1000, tt.fdtLoad, data)
+			if !errors.Is(err, ErrPeRelocOutOfBound) {
+				t.Errorf("relocateFdtData() error = %v, want = %v", err, ErrPeRelocOutOfBound)
+			}
+		})
 	}
 }
 

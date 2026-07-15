@@ -230,7 +230,9 @@ address sizes	: 39 bits physical, 48 bits virtual
 			}
 
 			addr, err := u.loadKexecMemWithHOBs(tt.fdtLoad, tt.data, &tt.mem)
-			expectErr(t, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("loadKexecMemWithHOBs() error = %v, want %v", err, tt.wantErr)
+			}
 			t.Logf("\nmem Segments:  %v\nwant Segments: %v", tt.mem.Segments.Phys(), wantMemSegments)
 			if wantAddr != addr {
 				t.Fatalf("Unexpected target addr: %x, want: %x", addr, wantAddr)
@@ -380,7 +382,9 @@ func TestConstructHOBList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := u.constructHOBList(tt.dst, tt.src, &tt.hobLen)
 
-			expectErr(t, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("constructHOBList() error = %v, want %v", err, tt.wantErr)
+			}
 			if err != nil { // already checked in expectedErr
 				return
 			}
@@ -462,7 +466,9 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 			var hobLen uint64
 			err := u.appendSmbiosTableHOB(hobBuf, &hobLen)
 
-			expectErr(t, err, tt.expectedErr)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Fatalf("appendSmbiosTableHOB() error = %v, want %v", err, tt.expectedErr)
+			}
 			if err != nil { // already checked in expectedErr
 				return
 			}
@@ -490,21 +496,6 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 				t.Fatalf("Unexpected smbiosTable = %v, want = %v", smbiosTable, *tt.expectedUplSmbiosTable)
 			}
 		})
-	}
-}
-
-func expectErr(t *testing.T, err error, expectedErr error) {
-	if expectedErr == nil {
-		if err != nil {
-			t.Fatalf("Unexpected error: %+v", err)
-		}
-	} else {
-		if err == nil {
-			t.Fatalf("Expected error %q, got nil", expectedErr)
-		}
-		if !errors.Is(err, expectedErr) {
-			t.Fatalf("Unxpected error %+v, want = %q", err, expectedErr)
-		}
 	}
 }
 
