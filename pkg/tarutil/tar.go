@@ -167,6 +167,7 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 				if err != nil {
 					return err
 				}
+				defer f.Close()
 
 				var r io.Reader = f
 				if hdr.Size == 0 {
@@ -175,10 +176,8 @@ func CreateTar(tarFile io.Writer, files []string, opts *Opts) error {
 					// buffer to determine size.
 					b := &bytes.Buffer{}
 					if _, err := io.Copy(b, f); err != nil {
-						f.Close()
 						return err
 					}
-					f.Close()
 					hdr.Size = int64(b.Len())
 					r = b
 				}
