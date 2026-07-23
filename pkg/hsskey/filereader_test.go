@@ -379,6 +379,12 @@ func TestReadHssFromFile(t *testing.T) {
 			expectedData: nil,
 			expectErr:    true,
 		},
+		{
+			name:         "File is huge (should only read necessary part)",
+			fileData:     [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2, make([]byte, 1024*1024)},
+			expectedData: [][]byte{validHssBlock1[:32], validHssBlock1[:32], validHssBlock2[:32], validHssBlock2[:32]},
+			expectErr:    false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -620,6 +626,63 @@ func TestWriteHssToTempFile(t *testing.T) {
 
 			if !reflect.DeepEqual(gotFileContent, wantFileContent) {
 				t.Fatalf("WriteHssToFile(%v, %v) =\ngot: %v\nwant: %v", tempFilePath, tt.writeData, gotFileContent, wantFileContent)
+			}
+		})
+	}
+}
+
+func TestReadHssFromFile_MinHssZero(t *testing.T) {
+	validHssBlock1 := createDummyHssData()
+
+	tests := []struct {
+		name         string
+		fileData     [][]byte
+		expectedData [][]byte
+		expectErr    bool
+	}{
+		{
+			name:         "Empty file",
+			fileData:     nil,
+			expectedData: nil,
+			expectErr:    false,
+		},
+		{
+			name:         "One valid block",
+			fileData:     [][]byte{validHssBlock1},
+			expectedData: [][]byte{validHssBlock1[:32]},
+			expectErr:    false,
+		},
+		{
+			name:         "Partial block (too short for one struct)",
+			fileData:     [][]byte{validHssBlock1[:10]},
+			expectedData: nil,
+			expectErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tempFile, err := os.CreateTemp("", "testData")
+			if err != nil {
+				t.Fatalf("Failed to create temporary file: %v", err)
+			}
+			defer os.Remove(tempFile.Name())
+
+			var fileContent []byte
+			for _, bytes := range tt.fileData {
+				fileContent = append(fileContent, bytes...)
+			}
+			if err := os.WriteFile(tempFile.Name(), fileContent, 0o644); err != nil {
+				t.Fatalf("Failed to write test file: %v", err)
+			}
+
+			hssList, err := ReadHssFromFile(tempFile.Name(), 0)
+			if err != nil {
+				if !tt.expectErr {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+			} else if !reflect.DeepEqual(hssList, tt.expectedData) {
+				t.Fatalf("ReadHssFromFile(%v, 0) = %v, want %v", tempFile.Name(), hssList, tt.expectedData)
 			}
 		})
 	}
