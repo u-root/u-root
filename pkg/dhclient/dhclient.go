@@ -103,7 +103,8 @@ func IfUp(ifname string, linkUpTimeout time.Duration) (netlink.Link, error) {
 	return nil, fmt.Errorf("link %q still down after %v seconds", ifname, linkUpTimeout.Seconds())
 }
 
-// WriteDNSSettings writes the given nameservers, search list, and domain to the resolv.conf at the specified path.
+// WriteDNSSettings appends the given nameservers, search list, and domain to
+// the resolv.conf at the specified path, preserving existing settings.
 func WriteDNSSettings(ns []net.IP, sl []string, domain, resolvConfPath string) error {
 	rc := &bytes.Buffer{}
 	if domain != "" {
@@ -117,7 +118,16 @@ func WriteDNSSettings(ns []net.IP, sl []string, domain, resolvConfPath string) e
 		rc.WriteString(strings.Join(sl, " "))
 		rc.WriteString("\n")
 	}
-	return os.WriteFile(resolvConfPath, rc.Bytes(), 0o644)
+	f, err := os.OpenFile(resolvConfPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	_, writeErr := f.Write(rc.Bytes())
+	closeErr := f.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	return closeErr
 }
 
 // Lease is a network configuration obtained by DHCP.
