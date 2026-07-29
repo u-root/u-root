@@ -78,6 +78,23 @@ func (e errReaderAt) ReadAt(p []byte, off int64) (int, error) {
 	return 0, e.err
 }
 
+type errorAfterReaderAt struct {
+	data      []byte
+	errOffset int
+	err       error
+}
+
+func (e *errorAfterReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	if off >= int64(e.errOffset) {
+		return 0, e.err
+	}
+	n := copy(p, e.data[off:])
+	if off+int64(n) >= int64(e.errOffset) {
+		return n, nil
+	}
+	return n, nil
+}
+
 func TestExtract(t *testing.T) {
 	t.Parallel()
 
@@ -113,6 +130,47 @@ func TestExtract(t *testing.T) {
 		Size:        uint32(zstdPayload.Len()) / 2,
 	}
 	zstdImageBroken := newTestImage(t, zstdImageBrokenHeader, zstdPayload.Bytes())
+
+	// Construct a multi-frame zstd image to test read errors during streaming decompression (io.ReadAll)
+	var frame1 bytes.Buffer
+	w1, err := zstd.NewWriter(&frame1)
+	if err != nil {
+		t.Fatalf("failed to create zstd writer for frame 1: %v", err)
+	}
+	if _, err := w1.Write([]byte("hello ")); err != nil {
+		t.Fatalf("failed to write to frame 1: %v", err)
+	}
+	if err := w1.Close(); err != nil {
+		t.Fatalf("failed to close frame 1: %v", err)
+	}
+
+	var frame2 bytes.Buffer
+	w2, err := zstd.NewWriter(&frame2)
+	if err != nil {
+		t.Fatalf("failed to create zstd writer for frame 2: %v", err)
+	}
+	if _, err := w2.Write([]byte("world")); err != nil {
+		t.Fatalf("failed to write to frame 2: %v", err)
+	}
+	if err := w2.Close(); err != nil {
+		t.Fatalf("failed to close frame 2: %v", err)
+	}
+
+	multiFramePayload := append(frame1.Bytes(), frame2.Bytes()...)
+	multiFrameHeader := Header{
+		Magic:       magic,
+		Type:        typeZImage,
+		Compression: [4]byte{0x7a, 0x73, 0x74, 0x64}, // zstd
+		Offset:      uint32(headerSize),
+		Size:        uint32(len(multiFramePayload)),
+	}
+	multiFrameImage := newTestImage(t, multiFrameHeader, multiFramePayload)
+
+	// Construct a corrupted zstd image where the header is valid but the payload is corrupted
+	zstdImageCorrupt := make([]byte, len(zstdImage))
+	copy(zstdImageCorrupt, zstdImage)
+	// Corrupt the very last byte of the payload
+	zstdImageCorrupt[len(zstdImageCorrupt)-1] ^= 0xff
 
 	peImageWithBadOffset := newTestPEImage(t, ".linux", zstdImage, 128)
 	binary.LittleEndian.PutUint32(peImageWithBadOffset[0x3c:0x3c+4], 1000)
@@ -157,6 +215,11 @@ func TestExtract(t *testing.T) {
 			wantErr: io.ErrUnexpectedEOF,
 		},
 		{
+			name:    "zstd block corruption during decompression",
+			input:   bytes.NewReader(zstdImageCorrupt),
+			wantErr: errors.New("CRC check failed"),
+		},
+		{
 			name:  "PE image with .linux section",
 			input: bytes.NewReader(newTestPEImage(t, ".linux", zstdImage, 128)),
 			want:  testPayload,
@@ -182,9 +245,38 @@ func TestExtract(t *testing.T) {
 			wantErr: ErrNotZImage,
 		},
 		{
+			name:    "PE image truncated before PE offset",
+			input:   bytes.NewReader(newTestPEImage(t, ".linux", zstdImage, 128)[:60]),
+			wantErr: ErrNotZImage,
+		},
+		{
+			name:    "PE image truncated before PE signature",
+			input:   bytes.NewReader(newTestPEImage(t, ".linux", zstdImage, 128)[:66]),
+			wantErr: ErrNotZImage,
+		},
+		{
+			name:    "PE image truncated before number of sections",
+			input:   bytes.NewReader(newTestPEImage(t, ".linux", zstdImage, 128)[:71]),
+			wantErr: ErrNotZImage,
+		},
+		{
+			name:    "PE image truncated before optional header size",
+			input:   bytes.NewReader(newTestPEImage(t, ".linux", zstdImage, 128)[:85]),
+			wantErr: ErrNotZImage,
+		},
+		{
 			name:    "simulated read error in readAt",
 			input:   errReaderAt{err: fmt.Errorf("read error")},
 			wantErr: fmt.Errorf("read error"),
+		},
+		{
+			name: "zstd read error during streaming decompression",
+			input: &errorAfterReaderAt{
+				data:      multiFrameImage,
+				errOffset: int(multiFrameHeader.Offset) + len(frame1.Bytes()),
+				err:       fmt.Errorf("decompression stream read error"),
+			},
+			wantErr: fmt.Errorf("decompression stream read error"),
 		},
 	}
 
@@ -208,3 +300,49 @@ func TestExtract(t *testing.T) {
 		})
 	}
 }
+
+// TestHeaderCompressionBoundsCheck serves as an explicit anchor point to ensure compliance
+// with current and future Go specifications regarding array and slice access behaviors.
+// While testing basic language mechanics may feel like a bit of an overkill or testing more
+// than strictly needed, running these tests is exceptionally cheap and, even if marginally,
+// contributes to the long-term robustness and stability of the project.
+func TestHeaderCompressionBoundsCheck(t *testing.T) {
+	// Verify that copying to header.Compression[:] from buf[24:28] is valid for 28 bytes.
+	t.Run("size 28", func(t *testing.T) {
+		buf := make([]byte, 28)
+		copy(buf[24:28], []byte("zstd"))
+
+		var header Header
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Expected no panic, but recovered: %v", r)
+			}
+		}()
+
+		copy(header.Compression[:], buf[24:28])
+		if string(header.Compression[:]) != "zstd" {
+			t.Errorf("Expected Compression to be 'zstd', got %q", string(header.Compression[:]))
+		}
+	})
+
+	// Verify that slicing buf[24:28] panics for an array/slice size of 27.
+	t.Run("size 27", func(t *testing.T) {
+		buf := make([]byte, 27)
+
+		var header Header
+		var panicked bool
+
+		defer func() {
+			if r := recover(); r != nil {
+				panicked = true
+			}
+			if !panicked {
+				t.Errorf("Expected copy(header.Compression[:], buf[24:28]) with buf of size 27 to panic, but it did not")
+			}
+		}()
+
+		// This line should panic because buf[24:28] goes out of bounds on a slice of size 27.
+		copy(header.Compression[:], buf[24:28])
+	})
+}
+
