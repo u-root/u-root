@@ -74,7 +74,7 @@ type errReaderAt struct {
 	err error
 }
 
-func (e errReaderAt) ReadAt(p []byte, off int64) (int, error) {
+func (e errReaderAt) ReadAt([]byte, int64) (int, error) {
 	return 0, e.err
 }
 
@@ -345,4 +345,3 @@ func TestHeaderCompressionBoundsCheck(t *testing.T) {
 		copy(header.Compression[:], buf[24:28])
 	})
 }
-
