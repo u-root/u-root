@@ -61,9 +61,6 @@ func getBoardTypeHandles(tables []*Table, boardType BoardType) ([]uint16, error)
 	return handles, nil
 }
 
-// OverrideOpt is a function return overridden tables given another tables the marshaler
-type OverrideOpt func(t []*Table) ([]*Table, error)
-
 // ReplaceSystemInfo returns override options of the SystemInfo table with the given values
 func ReplaceSystemInfo(manufacturer, productName, version, serialNumber, sku, family *string, uuid *UUID, wakeupType *WakeupType) OverrideOpt {
 	return func(tables []*Table) ([]*Table, error) {

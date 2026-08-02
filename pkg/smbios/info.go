@@ -208,6 +208,9 @@ func (i *Info) GetTPMDevices() ([]*TPMDevice, error) {
 	return res, nil
 }
 
+// OverrideOpt is a function return overridden tables given another tables the marshaler
+type OverrideOpt func(t []*Table) ([]*Table, error)
+
 // Marshal gets the raw bytes from Info
 func (i *Info) Marshal(opts ...OverrideOpt) ([]byte, []byte, error) {
 	var err error
