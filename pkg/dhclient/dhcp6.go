@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
@@ -78,9 +77,7 @@ func (p *Packet6) Configure() error {
 	}
 
 	if err := netlink.AddrReplace(p.iface, dst); err != nil {
-		if os.IsExist(err) {
-			return fmt.Errorf("add/replace %s to %v: %w", dst, p.iface, err)
-		}
+		return fmt.Errorf("add/replace %s to %v: %w", dst, p.iface, err)
 	}
 
 	if ips := p.DNS(); ips != nil {
