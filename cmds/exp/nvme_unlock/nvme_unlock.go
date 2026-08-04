@@ -74,7 +74,7 @@ func getSysfsInfo(index string, field string) (string, error) {
 
 func run(disk string, verbose bool, verboseNoSanitize bool, noRereadPartitions bool, lock bool) error {
 	if disk == "" {
-		disks, err := finddrive.FindSlotType(finddrive.M2MKeySlotType)
+		disks, err := finddrive.FindBootDrives()
 		if err != nil {
 			return fmt.Errorf("error finding boot disk: %w", err)
 		}

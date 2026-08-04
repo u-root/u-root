@@ -30,6 +30,24 @@ var (
 	nonMatchingSlot = smbios.SystemSlots{
 		SlotType: nonMatchingSlotType,
 	}
+	matchingDesignationSlot = smbios.SystemSlots{
+		SlotDesignation:      "BOOT_DISK",
+		SegmentGroupNumber:   0x0A5A,
+		BusNumber:            0x44,
+		DeviceFunctionNumber: 0x96,
+	}
+	nonMatchingDesignationSlot = smbios.SystemSlots{
+		SlotDesignation:      "DATA",
+		SegmentGroupNumber:   0x0A5A,
+		BusNumber:            0x44,
+		DeviceFunctionNumber: 0x96,
+	}
+	m2Slot = smbios.SystemSlots{
+		SlotType:             M2MKeySlotType,
+		SegmentGroupNumber:   0x0A5A,
+		BusNumber:            0x44,
+		DeviceFunctionNumber: 0x96,
+	}
 )
 
 func mockSysDir(t *testing.T, devicesDir string) string {
@@ -110,5 +128,51 @@ func TestFindSlotTypeNestedTopology(t *testing.T) {
 	}
 	if len(paths) != 2 || paths[0] != matchedSlotPath || paths[1] != matchedSlotPath {
 		t.Errorf("findSlotType(%v, %v, %v) returned paths: %v, want: %v", sysDir, slots, matchingSlotType, paths, []string{matchedSlotPath, matchedSlotPath})
+	}
+}
+
+func TestFindSlotDesignation(t *testing.T) {
+	sysDir := mockSysDir(t, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
+	slots := []*smbios.SystemSlots{&nonMatchingDesignationSlot, &matchingDesignationSlot, &nonMatchingDesignationSlot}
+
+	paths, err := findSlotDesignation(sysDir, slots, "BOOT")
+	if err != nil {
+		t.Errorf("findSlotDesignation() = _, %v; want _, nil", err)
+	}
+	if len(paths) != 1 || paths[0] != matchedSlotPath {
+		t.Errorf("findSlotDesignation() = %v; want [%q]", paths, matchedSlotPath)
+	}
+}
+
+func TestFindBootDrives(t *testing.T) {
+	sysDir := mockSysDir(t, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
+	slots := []*smbios.SystemSlots{&nonMatchingDesignationSlot, &m2Slot}
+
+	paths, err := findBootDrives(sysDir, slots)
+	if err != nil {
+		t.Errorf("findBootDrives() = _, %v; want _, nil", err)
+	}
+	if len(paths) != 1 || paths[0] != matchedSlotPath {
+		t.Errorf("findBootDrives() = %v; want [%q]", paths, matchedSlotPath)
+	}
+}
+
+func TestFindBootDrivesFallback(t *testing.T) {
+	sysDir := mockSysDir(t, "devices/pci0a5a:44/0a5a:44:12.6/0a5a:00:00.0/nvme/nvme0/")
+	slots := []*smbios.SystemSlots{&nonMatchingSlot, &matchingDesignationSlot}
+
+	paths, err := findBootDrives(sysDir, slots)
+	if err != nil {
+		t.Errorf("findBootDrives() = _, %v; want _, nil", err)
+	}
+	if len(paths) != 1 || paths[0] != matchedSlotPath {
+		t.Errorf("findBootDrives() = %v; want [%q]", paths, matchedSlotPath)
+	}
+}
+
+func TestFindSlotDesignationInvalidRegex(t *testing.T) {
+	_, err := findSlotDesignation("", nil, "[invalid")
+	if err == nil {
+		t.Errorf("findSlotDesignation() with invalid regex wanted error, got nil")
 	}
 }
