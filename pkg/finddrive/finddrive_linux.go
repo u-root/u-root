@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/smbios"
@@ -56,10 +57,10 @@ func findBlockDevFromSmbios(sysPath string, s smbios.SystemSlots) ([]string, err
 	return devPaths, nil
 }
 
-func findSlotType(sysPath string, slots []*smbios.SystemSlots, slotType uint8) ([]string, error) {
+func findDrive(sysPath string, slots []*smbios.SystemSlots, predicate func(*smbios.SystemSlots) bool) ([]string, error) {
 	var paths []string
 	for _, s := range slots {
-		if s.SlotType == slotType {
+		if predicate(s) {
 			newPaths, err := findBlockDevFromSmbios(sysPath, *s)
 			if err == nil {
 				paths = append(paths, newPaths...)
@@ -68,6 +69,30 @@ func findSlotType(sysPath string, slots []*smbios.SystemSlots, slotType uint8) (
 	}
 
 	return paths, nil
+}
+
+func findSlotType(sysPath string, slots []*smbios.SystemSlots, slotType uint8) ([]string, error) {
+	return findDrive(sysPath, slots, func(s *smbios.SystemSlots) bool {
+		return s.SlotType == slotType
+	})
+}
+
+func findSlotDesignation(sysPath string, slots []*smbios.SystemSlots, designationRegex string) ([]string, error) {
+	r, err := regexp.Compile(designationRegex)
+	if err != nil {
+		return nil, err
+	}
+	return findDrive(sysPath, slots, func(s *smbios.SystemSlots) bool {
+		return r.MatchString(s.SlotDesignation)
+	})
+}
+
+func findBootDrives(sysPath string, slots []*smbios.SystemSlots) ([]string, error) {
+	drives, err := findSlotType(sysPath, slots, M2MKeySlotType)
+	if err == nil && len(drives) > 0 {
+		return drives, nil
+	}
+	return findSlotDesignation(sysPath, slots, "(?i)boot")
 }
 
 // FindSlotType searches the SMBIOS table for drives inserted in a slot with the specified type
@@ -82,4 +107,20 @@ func FindSlotType(slotType uint8) ([]string, error) {
 	}
 
 	return findSlotType("/sys", slots, slotType)
+}
+
+// FindBootDrives attempts to find the boot drives.
+// It first tries to find drives in M.2 M-key slots.
+// If that fails or returns no drives, it falls back to finding drives using SMBIOS slot designation matching "(?i)boot".
+func FindBootDrives() ([]string, error) {
+	smbiosTables, err := smbios.FromSysfs()
+	if err != nil {
+		return nil, err
+	}
+	slots, err := smbiosTables.GetSystemSlots()
+	if err != nil {
+		return nil, err
+	}
+
+	return findBootDrives("/sys", slots)
 }
