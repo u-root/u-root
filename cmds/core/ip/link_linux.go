@@ -400,7 +400,7 @@ func (cmd *cmd) linkAdd() error {
 		return cmd.handle.LinkAdd(&netlink.Gretap{LinkAttrs: attrs})
 	case "ipip":
 		return cmd.handle.LinkAdd(&netlink.Iptun{LinkAttrs: attrs})
-	case "ip6tln":
+	case "ip6tnl":
 		return cmd.handle.LinkAdd(&netlink.Ip6tnl{LinkAttrs: attrs})
 	case "sit":
 		return cmd.handle.LinkAdd(&netlink.Sittun{LinkAttrs: attrs})
