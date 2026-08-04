@@ -67,7 +67,7 @@ type cmd struct {
 func command(stdin io.Writer, p params) (*cmd, error) {
 	netname, address := "ip4:icmp", "0.0.0.0"
 	if p.net6 {
-		netname, address = "ip6:ipv6-icmp", "::1"
+		netname, address = "ip6:ipv6-icmp", "::"
 	}
 	conn, err := icmp.ListenPacket(netname, address)
 	if err != nil {
