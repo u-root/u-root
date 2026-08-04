@@ -35,8 +35,8 @@ Where: NAME := STRING
 )
 
 var (
-	filterMap      = map[string][]string{"gre": {"gre", "ip6gre"}, "ip6gre": {"ip6gre"}, "ipip": {"ipip", "ip6tln"}, "ip6tln": {"ip6tln"}, "vti": {"vti", "vti6"}, "vti6": {"vti6"}, "sit": {"sit"}}
-	allTunnelTypes = []string{"gre", "ipip", "ip6tln", "ip6gre", "vti", "vti6", "sit"}
+	filterMap      = map[string][]string{"gre": {"gre", "ip6gre"}, "ip6gre": {"ip6gre"}, "ipip": {"ipip", "ip6tnl"}, "ip6tnl": {"ip6tnl"}, "vti": {"vti", "vti6"}, "vti6": {"vti6"}, "sit": {"sit"}}
+	allTunnelTypes = []string{"gre", "ipip", "ip6tnl", "ip6gre", "vti", "vti6", "sit"}
 )
 
 func (cmd *cmd) tunnel() error {
@@ -100,9 +100,9 @@ func (cmd *cmd) parseTunnel() (*options, error) {
 	for cmd.tokenRemains() {
 		switch cmd.nextToken("name", "mode", "remote", "local", "ttl", "tos", "ikey", "okey", "dev") {
 		case "mode":
-			token := cmd.nextToken("gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit")
+			token := cmd.nextToken("gre", "ip6gre", "ipip", "ip6tnl", "vti", "vti6", "sit")
 			switch token {
-			case "gre", "ip6gre", "ipip", "ip6tln", "vti", "vti6", "sit":
+			case "gre", "ip6gre", "ipip", "ip6tnl", "vti", "vti6", "sit":
 				options.mode = token
 				options.modes = append(options.modes, filterMap[token]...)
 			default:
@@ -289,7 +289,7 @@ func (cmd *cmd) printTunnels(tunnels []netlink.Link) error {
 		case *netlink.Ip6tnl:
 			tunnel.Remote = v.Remote.String()
 			tunnel.Local = v.Local.String()
-			tunnel.Mode = "ip6tln"
+			tunnel.Mode = "ip6tnl"
 			tunnel.TTL = fmt.Sprintf("%d", v.Ttl)
 			tunnel.TOS = v.Tos
 		case *netlink.Vti:
@@ -493,7 +493,7 @@ func normalizeOptsForAddingTunnel(op *options) error {
 			op.name = "gre0"
 		case "ipip":
 			op.name = "tuln0"
-		case "ip6tln":
+		case "ip6tnl":
 			op.name = "ip6tnl0"
 		case "vti", "vti6":
 			op.name = "ip_vti0"
@@ -551,7 +551,7 @@ func (cmd *cmd) tunnelAdd(op *options) error {
 			Ttl:    uint8(op.ttl),
 			Tos:    uint8(op.tos),
 		}
-	case "ip6tln":
+	case "ip6tnl":
 		link = &netlink.Ip6tnl{
 			LinkAttrs: netlink.LinkAttrs{
 				Name: op.name,

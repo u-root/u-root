@@ -767,10 +767,10 @@ func TestNormalizeOptsForAddingTunnel(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "ip6tln",
-			op:   &options{mode: "ip6tln", name: "", iKey: 123, oKey: 456, ttl: 64, tos: 16},
+			name: "ip6tnl",
+			op:   &options{mode: "ip6tnl", name: "", iKey: 123, oKey: 456, ttl: 64, tos: 16},
 			expected: &options{
-				mode: "ip6tln",
+				mode: "ip6tnl",
 				name: "ip6tnl0",
 				iKey: 123,
 				oKey: 456,
@@ -852,7 +852,7 @@ func TestPrintTunnels(t *testing.T) {
 				},
 			},
 			json: false,
-			want: "ipv60: ip6tln/ip remote ::2 local ::1 ttl 64\n",
+			want: "ipv60: ip6tnl/ip remote ::2 local ::1 ttl 64\n",
 		},
 		{
 			name: "Single VTI tunnel",
