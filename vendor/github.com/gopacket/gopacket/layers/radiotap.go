@@ -49,7 +49,16 @@ const (
 	RadioTapPresentMCS
 	RadioTapPresentAMPDUStatus
 	RadioTapPresentVHT
-	RadioTapPresentEXT RadioTapPresent = 1 << 31
+	RadioTapPresentTimestamp
+	RadioTapPresentHE
+	RadioTapPresentHEMU
+	RadioTapPresentHEUOtherUser
+	RadioTapPresentZeroLengthPSDU
+	RadioTapPresentLSIG
+	RadioTapPresentTLVFields
+	RadioTapPresentRadioTapNamespace
+	RadioTapPresentVendorNamespace
+	RadioTapPresentEXT
 )
 
 func (r RadioTapPresent) TSFT() bool {
@@ -114,6 +123,33 @@ func (r RadioTapPresent) AMPDUStatus() bool {
 }
 func (r RadioTapPresent) VHT() bool {
 	return r&RadioTapPresentVHT != 0
+}
+func (r RadioTapPresent) Timestamp() bool {
+	return r&RadioTapPresentTimestamp != 0
+}
+func (r RadioTapPresent) HE() bool {
+	return r&RadioTapPresentHE != 0
+}
+func (r RadioTapPresent) HEMU() bool {
+	return r&RadioTapPresentHEMU != 0
+}
+func (r RadioTapPresent) HEUOtherUser() bool {
+	return r&RadioTapPresentHEUOtherUser != 0
+}
+func (r RadioTapPresent) ZeroLengthPSDU() bool {
+	return r&RadioTapPresentZeroLengthPSDU != 0
+}
+func (r RadioTapPresent) LSIG() bool {
+	return r&RadioTapPresentLSIG != 0
+}
+func (r RadioTapPresent) TLVFields() bool {
+	return r&RadioTapPresentTLVFields != 0
+}
+func (r RadioTapPresent) RadioTapNamespace() bool {
+	return r&RadioTapPresentRadioTapNamespace != 0
+}
+func (r RadioTapPresent) VendorNamespace() bool {
+	return r&RadioTapPresentVendorNamespace != 0
 }
 func (r RadioTapPresent) EXT() bool {
 	return r&RadioTapPresentEXT != 0
@@ -282,12 +318,12 @@ const (
 	RadioTapRxFlagsBadPlcp RadioTapRxFlags = 0x0002
 )
 
-func (self RadioTapRxFlags) BadPlcp() bool {
-	return self&RadioTapRxFlagsBadPlcp != 0
+func (f RadioTapRxFlags) BadPlcp() bool {
+	return f&RadioTapRxFlagsBadPlcp != 0
 }
 
-func (self RadioTapRxFlags) String() string {
-	if self.BadPlcp() {
+func (f RadioTapRxFlags) String() string {
+	if f.BadPlcp() {
 		return "BADPLCP"
 	}
 	return ""
@@ -302,23 +338,23 @@ const (
 	RadioTapTxFlagsNoACK
 )
 
-func (self RadioTapTxFlags) Fail() bool  { return self&RadioTapTxFlagsFail != 0 }
-func (self RadioTapTxFlags) CTS() bool   { return self&RadioTapTxFlagsCTS != 0 }
-func (self RadioTapTxFlags) RTS() bool   { return self&RadioTapTxFlagsRTS != 0 }
-func (self RadioTapTxFlags) NoACK() bool { return self&RadioTapTxFlagsNoACK != 0 }
+func (f RadioTapTxFlags) Fail() bool  { return f&RadioTapTxFlagsFail != 0 }
+func (f RadioTapTxFlags) CTS() bool   { return f&RadioTapTxFlagsCTS != 0 }
+func (f RadioTapTxFlags) RTS() bool   { return f&RadioTapTxFlagsRTS != 0 }
+func (f RadioTapTxFlags) NoACK() bool { return f&RadioTapTxFlagsNoACK != 0 }
 
-func (self RadioTapTxFlags) String() string {
+func (f RadioTapTxFlags) String() string {
 	var tokens []string
-	if self.Fail() {
+	if f.Fail() {
 		tokens = append(tokens, "Fail")
 	}
-	if self.CTS() {
+	if f.CTS() {
 		tokens = append(tokens, "CTS")
 	}
-	if self.RTS() {
+	if f.RTS() {
 		tokens = append(tokens, "RTS")
 	}
-	if self.NoACK() {
+	if f.NoACK() {
 		tokens = append(tokens, "NoACK")
 	}
 	return strings.Join(tokens, ",")
@@ -330,11 +366,11 @@ type RadioTapMCS struct {
 	MCS   uint8
 }
 
-func (self RadioTapMCS) String() string {
+func (mcs RadioTapMCS) String() string {
 	var tokens []string
-	if self.Known.Bandwidth() {
+	if mcs.Known.Bandwidth() {
 		token := "?"
-		switch self.Flags.Bandwidth() {
+		switch mcs.Flags.Bandwidth() {
 		case 0:
 			token = "20"
 		case 1:
@@ -346,39 +382,39 @@ func (self RadioTapMCS) String() string {
 		}
 		tokens = append(tokens, token)
 	}
-	if self.Known.MCSIndex() {
-		tokens = append(tokens, fmt.Sprintf("MCSIndex#%d", self.MCS))
+	if mcs.Known.MCSIndex() {
+		tokens = append(tokens, fmt.Sprintf("MCSIndex#%d", mcs.MCS))
 	}
-	if self.Known.GuardInterval() {
-		if self.Flags.ShortGI() {
-			tokens = append(tokens, fmt.Sprintf("shortGI"))
+	if mcs.Known.GuardInterval() {
+		if mcs.Flags.ShortGI() {
+			tokens = append(tokens, "shortGI")
 		} else {
-			tokens = append(tokens, fmt.Sprintf("longGI"))
+			tokens = append(tokens, "longGI")
 		}
 	}
-	if self.Known.HTFormat() {
-		if self.Flags.Greenfield() {
-			tokens = append(tokens, fmt.Sprintf("HT-greenfield"))
+	if mcs.Known.HTFormat() {
+		if mcs.Flags.Greenfield() {
+			tokens = append(tokens, "HT-greenfield")
 		} else {
-			tokens = append(tokens, fmt.Sprintf("HT-mixed"))
+			tokens = append(tokens, "HT-mixed")
 		}
 	}
-	if self.Known.FECType() {
-		if self.Flags.FECLDPC() {
-			tokens = append(tokens, fmt.Sprintf("LDPC"))
+	if mcs.Known.FECType() {
+		if mcs.Flags.FECLDPC() {
+			tokens = append(tokens, "LDPC")
 		} else {
-			tokens = append(tokens, fmt.Sprintf("BCC"))
+			tokens = append(tokens, "BCC")
 		}
 	}
-	if self.Known.STBC() {
-		tokens = append(tokens, fmt.Sprintf("STBC#%d", self.Flags.STBC()))
+	if mcs.Known.STBC() {
+		tokens = append(tokens, fmt.Sprintf("STBC#%d", mcs.Flags.STBC()))
 	}
-	if self.Known.NESS() {
+	if mcs.Known.NESS() {
 		num := 0
-		if self.Known.NESS1() {
+		if mcs.Known.NESS1() {
 			num |= 0x02
 		}
-		if self.Flags.NESS0() {
+		if mcs.Flags.NESS0() {
 			num |= 0x01
 		}
 		tokens = append(tokens, fmt.Sprintf("num-of-ESS#%d", num))
@@ -399,14 +435,14 @@ const (
 	RadioTapMCSKnownNESS1
 )
 
-func (self RadioTapMCSKnown) Bandwidth() bool     { return self&RadioTapMCSKnownBandwidth != 0 }
-func (self RadioTapMCSKnown) MCSIndex() bool      { return self&RadioTapMCSKnownMCSIndex != 0 }
-func (self RadioTapMCSKnown) GuardInterval() bool { return self&RadioTapMCSKnownGuardInterval != 0 }
-func (self RadioTapMCSKnown) HTFormat() bool      { return self&RadioTapMCSKnownHTFormat != 0 }
-func (self RadioTapMCSKnown) FECType() bool       { return self&RadioTapMCSKnownFECType != 0 }
-func (self RadioTapMCSKnown) STBC() bool          { return self&RadioTapMCSKnownSTBC != 0 }
-func (self RadioTapMCSKnown) NESS() bool          { return self&RadioTapMCSKnownNESS != 0 }
-func (self RadioTapMCSKnown) NESS1() bool         { return self&RadioTapMCSKnownNESS1 != 0 }
+func (known RadioTapMCSKnown) Bandwidth() bool     { return known&RadioTapMCSKnownBandwidth != 0 }
+func (known RadioTapMCSKnown) MCSIndex() bool      { return known&RadioTapMCSKnownMCSIndex != 0 }
+func (known RadioTapMCSKnown) GuardInterval() bool { return known&RadioTapMCSKnownGuardInterval != 0 }
+func (known RadioTapMCSKnown) HTFormat() bool      { return known&RadioTapMCSKnownHTFormat != 0 }
+func (known RadioTapMCSKnown) FECType() bool       { return known&RadioTapMCSKnownFECType != 0 }
+func (known RadioTapMCSKnown) STBC() bool          { return known&RadioTapMCSKnownSTBC != 0 }
+func (known RadioTapMCSKnown) NESS() bool          { return known&RadioTapMCSKnownNESS != 0 }
+func (known RadioTapMCSKnown) NESS1() bool         { return known&RadioTapMCSKnownNESS1 != 0 }
 
 type RadioTapMCSFlags uint8
 
@@ -419,16 +455,16 @@ const (
 	RadioTapMCSFlagsNESS0                          = 0x80
 )
 
-func (self RadioTapMCSFlags) Bandwidth() int {
-	return int(self & RadioTapMCSFlagsBandwidthMask)
+func (flags RadioTapMCSFlags) Bandwidth() int {
+	return int(flags & RadioTapMCSFlagsBandwidthMask)
 }
-func (self RadioTapMCSFlags) ShortGI() bool    { return self&RadioTapMCSFlagsShortGI != 0 }
-func (self RadioTapMCSFlags) Greenfield() bool { return self&RadioTapMCSFlagsGreenfield != 0 }
-func (self RadioTapMCSFlags) FECLDPC() bool    { return self&RadioTapMCSFlagsFECLDPC != 0 }
-func (self RadioTapMCSFlags) STBC() int {
-	return int(self&RadioTapMCSFlagsSTBCMask) >> 5
+func (flags RadioTapMCSFlags) ShortGI() bool    { return flags&RadioTapMCSFlagsShortGI != 0 }
+func (flags RadioTapMCSFlags) Greenfield() bool { return flags&RadioTapMCSFlagsGreenfield != 0 }
+func (flags RadioTapMCSFlags) FECLDPC() bool    { return flags&RadioTapMCSFlagsFECLDPC != 0 }
+func (flags RadioTapMCSFlags) STBC() int {
+	return int(flags&RadioTapMCSFlagsSTBCMask) >> 5
 }
-func (self RadioTapMCSFlags) NESS0() bool { return self&RadioTapMCSFlagsNESS0 != 0 }
+func (flags RadioTapMCSFlags) NESS0() bool { return flags&RadioTapMCSFlagsNESS0 != 0 }
 
 type RadioTapAMPDUStatus struct {
 	Reference uint32
@@ -436,21 +472,21 @@ type RadioTapAMPDUStatus struct {
 	CRC       uint8
 }
 
-func (self RadioTapAMPDUStatus) String() string {
+func (status RadioTapAMPDUStatus) String() string {
 	tokens := []string{
-		fmt.Sprintf("ref#%x", self.Reference),
+		fmt.Sprintf("ref#%x", status.Reference),
 	}
-	if self.Flags.ReportZerolen() && self.Flags.IsZerolen() {
-		tokens = append(tokens, fmt.Sprintf("zero-length"))
+	if status.Flags.ReportZerolen() && status.Flags.IsZerolen() {
+		tokens = append(tokens, "zero-length")
 	}
-	if self.Flags.LastKnown() && self.Flags.IsLast() {
+	if status.Flags.LastKnown() && status.Flags.IsLast() {
 		tokens = append(tokens, "last")
 	}
-	if self.Flags.DelimCRCErr() {
+	if status.Flags.DelimCRCErr() {
 		tokens = append(tokens, "delimiter CRC error")
 	}
-	if self.Flags.DelimCRCKnown() {
-		tokens = append(tokens, fmt.Sprintf("delimiter-CRC=%02x", self.CRC))
+	if status.Flags.DelimCRCKnown() {
+		tokens = append(tokens, fmt.Sprintf("delimiter-CRC=%02x", status.CRC))
 	}
 	return strings.Join(tokens, ",")
 }
@@ -466,15 +502,15 @@ const (
 	RadioTapAMPDUDelimCRCKnown
 )
 
-func (self RadioTapAMPDUStatusFlags) ReportZerolen() bool {
-	return self&RadioTapAMPDUStatusFlagsReportZerolen != 0
+func (flags RadioTapAMPDUStatusFlags) ReportZerolen() bool {
+	return flags&RadioTapAMPDUStatusFlagsReportZerolen != 0
 }
-func (self RadioTapAMPDUStatusFlags) IsZerolen() bool   { return self&RadioTapAMPDUIsZerolen != 0 }
-func (self RadioTapAMPDUStatusFlags) LastKnown() bool   { return self&RadioTapAMPDULastKnown != 0 }
-func (self RadioTapAMPDUStatusFlags) IsLast() bool      { return self&RadioTapAMPDUIsLast != 0 }
-func (self RadioTapAMPDUStatusFlags) DelimCRCErr() bool { return self&RadioTapAMPDUDelimCRCErr != 0 }
-func (self RadioTapAMPDUStatusFlags) DelimCRCKnown() bool {
-	return self&RadioTapAMPDUDelimCRCKnown != 0
+func (flags RadioTapAMPDUStatusFlags) IsZerolen() bool   { return flags&RadioTapAMPDUIsZerolen != 0 }
+func (flags RadioTapAMPDUStatusFlags) LastKnown() bool   { return flags&RadioTapAMPDULastKnown != 0 }
+func (flags RadioTapAMPDUStatusFlags) IsLast() bool      { return flags&RadioTapAMPDUIsLast != 0 }
+func (flags RadioTapAMPDUStatusFlags) DelimCRCErr() bool { return flags&RadioTapAMPDUDelimCRCErr != 0 }
+func (flags RadioTapAMPDUStatusFlags) DelimCRCKnown() bool {
+	return flags&RadioTapAMPDUDelimCRCKnown != 0
 }
 
 type RadioTapVHT struct {
@@ -487,53 +523,53 @@ type RadioTapVHT struct {
 	PartialAID uint16
 }
 
-func (self RadioTapVHT) String() string {
+func (vht RadioTapVHT) String() string {
 	var tokens []string
-	if self.Known.STBC() {
-		if self.Flags.STBC() {
+	if vht.Known.STBC() {
+		if vht.Flags.STBC() {
 			tokens = append(tokens, "STBC")
 		} else {
 			tokens = append(tokens, "no STBC")
 		}
 	}
-	if self.Known.TXOPPSNotAllowed() {
-		if self.Flags.TXOPPSNotAllowed() {
+	if vht.Known.TXOPPSNotAllowed() {
+		if vht.Flags.TXOPPSNotAllowed() {
 			tokens = append(tokens, "TXOP doze not allowed")
 		} else {
 			tokens = append(tokens, "TXOP doze allowed")
 		}
 	}
-	if self.Known.GI() {
-		if self.Flags.SGI() {
+	if vht.Known.GI() {
+		if vht.Flags.SGI() {
 			tokens = append(tokens, "short GI")
 		} else {
 			tokens = append(tokens, "long GI")
 		}
 	}
-	if self.Known.SGINSYMDisambiguation() {
-		if self.Flags.SGINSYMMod() {
+	if vht.Known.SGINSYMDisambiguation() {
+		if vht.Flags.SGINSYMMod() {
 			tokens = append(tokens, "NSYM mod 10=9")
 		} else {
 			tokens = append(tokens, "NSYM mod 10!=9 or no short GI")
 		}
 	}
-	if self.Known.LDPCExtraOFDMSymbol() {
-		if self.Flags.LDPCExtraOFDMSymbol() {
+	if vht.Known.LDPCExtraOFDMSymbol() {
+		if vht.Flags.LDPCExtraOFDMSymbol() {
 			tokens = append(tokens, "LDPC extra OFDM symbols")
 		} else {
 			tokens = append(tokens, "no LDPC extra OFDM symbols")
 		}
 	}
-	if self.Known.Beamformed() {
-		if self.Flags.Beamformed() {
+	if vht.Known.Beamformed() {
+		if vht.Flags.Beamformed() {
 			tokens = append(tokens, "beamformed")
 		} else {
 			tokens = append(tokens, "no beamformed")
 		}
 	}
-	if self.Known.Bandwidth() {
+	if vht.Known.Bandwidth() {
 		token := "?"
-		switch self.Bandwidth & 0x1f {
+		switch vht.Bandwidth & 0x1f {
 		case 0:
 			token = "20"
 		case 1:
@@ -589,10 +625,10 @@ func (self RadioTapVHT) String() string {
 		}
 		tokens = append(tokens, token)
 	}
-	for i, MCSNSS := range self.MCSNSS {
+	for i, MCSNSS := range vht.MCSNSS {
 		if MCSNSS.Present() {
 			fec := "?"
-			switch self.Coding & (1 << uint8(i)) {
+			switch vht.Coding & (1 << uint8(i)) {
 			case 0:
 				fec = "BCC"
 			case 1:
@@ -601,13 +637,13 @@ func (self RadioTapVHT) String() string {
 			tokens = append(tokens, fmt.Sprintf("user%d(%s,%s)", i, MCSNSS.String(), fec))
 		}
 	}
-	if self.Known.GroupId() {
+	if vht.Known.GroupId() {
 		tokens = append(tokens,
-			fmt.Sprintf("group=%d", self.GroupId))
+			fmt.Sprintf("group=%d", vht.GroupId))
 	}
-	if self.Known.PartialAID() {
+	if vht.Known.PartialAID() {
 		tokens = append(tokens,
-			fmt.Sprintf("partial-AID=%d", self.PartialAID))
+			fmt.Sprintf("partial-AID=%d", vht.PartialAID))
 	}
 	return strings.Join(tokens, ",")
 }
@@ -674,21 +710,576 @@ func (self RadioTapVHTMCSNSS) String() string {
 	return fmt.Sprintf("NSS#%dMCS#%d", uint32(self&0xf), uint32(self>>4))
 }
 
+type RadiotapHE struct {
+	Data1 RadiotapHEData1
+	Data2 RadiotapHEData2
+	Data3 RadiotapHEData3
+	Data4 RadiotapHEData4
+	Data5 RadiotapHEData5
+	Data6 RadiotapHEData6
+}
+
+func (self RadiotapHE) String() string {
+	var tokens []string
+	tokens = append(tokens, fmt.Sprintf("HE PPDU Format: %v", self.Data1.HE_PPDUFormat()))
+	if self.Data1.BSSColorKnown() {
+		tokens = append(tokens, fmt.Sprintf("BSS Color: %d", self.Data3.BSSColor()))
+	}
+	if self.Data1.BeamChangeKnown() {
+		if self.Data3.BeamChange() {
+			tokens = append(tokens, "Beam Change")
+		} else {
+			tokens = append(tokens, "No Beam Change")
+		}
+	}
+	if self.Data1.ULDLKnown() {
+		if self.Data3.ULDL() {
+			tokens = append(tokens, "UL")
+		} else {
+			tokens = append(tokens, "DL")
+		}
+	}
+	if self.Data1.DataMCSKnown() {
+		tokens = append(tokens, fmt.Sprintf("Data MCS: %d", self.Data3.DataMCS()))
+	}
+	if self.Data1.DataDCMKnown() {
+		if self.Data3.DataDCM() {
+			tokens = append(tokens, "Data DCM applied")
+		} else {
+			tokens = append(tokens, "Data DCM not applied")
+		}
+	}
+	if self.Data1.CodingKnown() {
+		tokens = append(tokens, fmt.Sprintf("Coding: %v", self.Data3.Coding()))
+	}
+	if self.Data1.LDPCExtraSymbolSegmentKnown() {
+		if self.Data3.LDPCExtraSymbolSegment() {
+			tokens = append(tokens, "LDPC Extra Symbol Segment")
+		} else {
+			tokens = append(tokens, "No LDPC Extra Symbol Segment")
+		}
+	}
+	if self.Data1.STBCKnown() {
+		if self.Data3.STBC() {
+			tokens = append(tokens, "STBC")
+		} else {
+			tokens = append(tokens, "No STBC")
+		}
+	}
+	switch self.Data1.HE_PPDUFormat() {
+	case RadiotapHePpduFormatHE_SU:
+	case RadiotapHePpduFormatHE_EXT_SU:
+		if self.Data1.SpatialReuseKnown() {
+			tokens = append(tokens, fmt.Sprintf("Spatial Reuse: %d", self.Data4&0x000f))
+		}
+	case RadiotapHePpduFormatHE_TRIG:
+		if self.Data1.SpatialReuse1Known() {
+			tokens = append(tokens, fmt.Sprintf("Spatial Reuse 1: %d", self.Data4&0x000f))
+		}
+		if self.Data1.SpatialReuse2Known() {
+			tokens = append(tokens, fmt.Sprintf("Spatial Reuse 2: %d", self.Data4&0x00f0>>4))
+		}
+		if self.Data1.SpatialReuse3Known() {
+			tokens = append(tokens, fmt.Sprintf("Spatial Reuse 3: %d", self.Data4&0x0f00>>8))
+		}
+		if self.Data1.SpatialReuse4Known() {
+			tokens = append(tokens, fmt.Sprintf("Spatial Reuse 4: %d", self.Data4&0xf000>>12))
+		}
+	case RadiotapHePpduFormatHE_MU:
+		if self.Data1.SpatialReuseKnown() {
+			tokens = append(tokens, fmt.Sprintf("Spatial Reuse: %d", self.Data4&0x000f))
+		}
+		if self.Data1.StaIDKnown() {
+			tokens = append(tokens, fmt.Sprintf("STA ID: %d", self.Data4&0x7ff0>>4))
+		}
+	}
+	if self.Data1.DataBWRUAllocationKnown() {
+		tokens = append(tokens, fmt.Sprintf("Data BW/RU Allocation: %s", self.Data5.DataBandwidth()))
+	}
+	if self.Data2.GIKnown() {
+		tokens = append(tokens, fmt.Sprintf("GI: %v", self.Data5.Gi()))
+	}
+	if self.Data2.NumLTFKnown() {
+		tokens = append(tokens, fmt.Sprintf("LTF Symbol size: %s", self.Data5.LTFSize()))
+		tokens = append(tokens, fmt.Sprintf("Number of LTF symbols: %s", self.Data5.NumLTFSymbols()))
+	}
+	if self.Data2.PreFECPaddingFactorKnown() {
+		tokens = append(tokens, fmt.Sprintf("Pre-FEC Padding Factor: %d", self.Data5.PreFECPaddingFactor()))
+	}
+	if self.Data2.TxBFKnown() {
+		if self.Data5.TxBF() {
+			tokens = append(tokens, "TxBF")
+		} else {
+			tokens = append(tokens, "No TxBF")
+		}
+	}
+	if self.Data2.PEDisambiguityKnown() {
+		if self.Data5.PEDisambiguity() {
+			tokens = append(tokens, "PE Disambiguity")
+		} else {
+			tokens = append(tokens, "No PE Disambiguity")
+		}
+	}
+	nSts := self.Data6.NSTS()
+	if nSts > 0 {
+		tokens = append(tokens, fmt.Sprintf("NSTS: %d", self.Data6.NSTS()))
+	} else {
+		tokens = append(tokens, "NSTS: unknown")
+	}
+	if self.Data1.DopplerKnown() {
+		if self.Data6.Doppler() {
+			tokens = append(tokens, "Doppler")
+		} else {
+			tokens = append(tokens, "No Doppler")
+		}
+	}
+	if self.Data2.TXOPKnown() {
+		tokens = append(tokens, fmt.Sprintf("TXOP: %d", self.Data6.TXOP()))
+	}
+	if self.Data2.MidamblePeriodicityKnown() {
+		tokens = append(tokens, fmt.Sprintf("Midamble Periodicity: %v", self.Data6.MidamblePeriodicity()))
+	}
+	return strings.Join(tokens, ",")
+}
+
+type RadiotapHEData1 uint16
+
+const (
+	RadiotapHEData1_HE_PPDUFormatMask          RadiotapHEData1 = 0x0003
+	RadiotapHEData1BSSColorKnown               RadiotapHEData1 = 0x0004
+	RadiotapHEData1BeamChangeKnown             RadiotapHEData1 = 0x0008
+	RadiotapHEData1ULDLKnown                   RadiotapHEData1 = 0x0010
+	RadiotapHEData1DataMCSKnown                RadiotapHEData1 = 0x0020
+	RadiotapHEData1DataDCMKnown                RadiotapHEData1 = 0x0040
+	RadiotapHEData1CodingKnown                 RadiotapHEData1 = 0x0080
+	RadiotapHEData1LDPCExtraSymbolSegmentKnown RadiotapHEData1 = 0x0100
+	RadiotapHEData1STBCKnown                   RadiotapHEData1 = 0x0200
+	RadiotapHEData1SpatialReuseKnown           RadiotapHEData1 = 0x0400
+	RadiotapHEData1SpatialReuse1Known          RadiotapHEData1 = 0x0400
+	RadiotapHEData1SpatialReuse2Known          RadiotapHEData1 = 0x0800
+	RadiotapHEData1StaIDKnown                  RadiotapHEData1 = 0x8000
+	RadiotapHEData1SpatialReuse3Known          RadiotapHEData1 = 0x1000
+	RadiotapHEData1SpatialReuse4Known          RadiotapHEData1 = 0x2000
+	RadiotapHEData1DataBWRUAllocationKnown     RadiotapHEData1 = 0x4000
+	RadiotapHEData1DopplerKnown                RadiotapHEData1 = 0x8000
+)
+
+func (self RadiotapHEData1) HE_PPDUFormat() RadiotapHePpduFormat {
+	return RadiotapHePpduFormat(self & 0x0003)
+}
+
+func (self RadiotapHEData1) BSSColorKnown() bool {
+	return self&RadiotapHEData1BSSColorKnown != 0
+}
+
+func (self RadiotapHEData1) BeamChangeKnown() bool {
+	return self&RadiotapHEData1BeamChangeKnown != 0
+}
+
+func (self RadiotapHEData1) ULDLKnown() bool {
+	return self&RadiotapHEData1ULDLKnown != 0
+}
+
+func (self RadiotapHEData1) DataMCSKnown() bool {
+	return self&RadiotapHEData1DataMCSKnown != 0
+}
+
+func (self RadiotapHEData1) DataDCMKnown() bool {
+	return self&RadiotapHEData1DataDCMKnown != 0
+}
+
+func (self RadiotapHEData1) CodingKnown() bool {
+	return self&RadiotapHEData1CodingKnown != 0
+}
+
+func (self RadiotapHEData1) LDPCExtraSymbolSegmentKnown() bool {
+	return self&RadiotapHEData1LDPCExtraSymbolSegmentKnown != 0
+}
+
+func (self RadiotapHEData1) STBCKnown() bool {
+	return self&RadiotapHEData1STBCKnown != 0
+}
+
+func (self RadiotapHEData1) SpatialReuseKnown() bool {
+	return self&RadiotapHEData1SpatialReuseKnown != 0
+}
+
+func (self RadiotapHEData1) SpatialReuse1Known() bool {
+	return self&RadiotapHEData1SpatialReuse1Known != 0
+}
+
+func (self RadiotapHEData1) SpatialReuse2Known() bool {
+	return self&RadiotapHEData1SpatialReuse2Known != 0
+}
+
+func (self RadiotapHEData1) StaIDKnown() bool {
+	return self&RadiotapHEData1StaIDKnown != 0
+}
+
+func (self RadiotapHEData1) SpatialReuse3Known() bool {
+	return self&RadiotapHEData1SpatialReuse3Known != 0
+}
+
+func (self RadiotapHEData1) SpatialReuse4Known() bool {
+	return self&RadiotapHEData1SpatialReuse4Known != 0
+}
+
+func (self RadiotapHEData1) DataBWRUAllocationKnown() bool {
+	return self&RadiotapHEData1DataBWRUAllocationKnown != 0
+}
+
+func (self RadiotapHEData1) DopplerKnown() bool {
+	return self&RadiotapHEData1DopplerKnown != 0
+}
+
+type RadiotapHePpduFormat uint8
+
+const (
+	RadiotapHePpduFormatHE_SU RadiotapHePpduFormat = iota
+	RadiotapHePpduFormatHE_EXT_SU
+	RadiotapHePpduFormatHE_MU
+	RadiotapHePpduFormatHE_TRIG
+)
+
+func (self RadiotapHePpduFormat) String() string {
+	switch self {
+	case RadiotapHePpduFormatHE_SU:
+		return "HE SU"
+	case RadiotapHePpduFormatHE_EXT_SU:
+		return "HE EXT SU"
+	case RadiotapHePpduFormatHE_MU:
+		return "HE MU"
+	case RadiotapHePpduFormatHE_TRIG:
+		return "HE TRIG"
+	}
+	return fmt.Sprintf("HE Unknown(%d)", self)
+}
+
+type RadiotapHEData2 uint16
+
+const (
+	RadiotapHEData2PriSec80MHzKnown         RadiotapHEData2 = 0x0001
+	RadiotapHEData2GIKnown                  RadiotapHEData2 = 0x0002
+	RadiotapHEData2NumLTFKnown              RadiotapHEData2 = 0x0004
+	RadiotapHEData2PreFECPaddingFactorKnown RadiotapHEData2 = 0x0008
+	RadiotapHEData2TxBFKnown                RadiotapHEData2 = 0x0010
+	RadiotapHEData2PEDisambiguityKnown      RadiotapHEData2 = 0x0020
+	RadiotapHEData2TXOPKnown                RadiotapHEData2 = 0x0040
+	RadiotapHEData2MidamblePeriodicityKnown RadiotapHEData2 = 0x0080
+	RadiotapHEData2RUAllocationOffset       RadiotapHEData2 = 0x3f00
+	RadiotapHEData2RUAllocationOffsetKnown  RadiotapHEData2 = 0x4000
+	RadiotapHEData2PriSec80MHz              RadiotapHEData2 = 0x8000
+)
+
+func (self RadiotapHEData2) PriSec80MHzKnown() bool {
+	return self&RadiotapHEData2PriSec80MHzKnown != 0
+}
+
+func (self RadiotapHEData2) GIKnown() bool {
+	return self&RadiotapHEData2GIKnown != 0
+}
+
+func (self RadiotapHEData2) NumLTFKnown() bool {
+	return self&RadiotapHEData2NumLTFKnown != 0
+}
+
+func (self RadiotapHEData2) PreFECPaddingFactorKnown() bool {
+	return self&RadiotapHEData2PreFECPaddingFactorKnown != 0
+}
+
+func (self RadiotapHEData2) TxBFKnown() bool {
+	return self&RadiotapHEData2TxBFKnown != 0
+}
+
+func (self RadiotapHEData2) PEDisambiguityKnown() bool {
+	return self&RadiotapHEData2PEDisambiguityKnown != 0
+}
+
+func (self RadiotapHEData2) TXOPKnown() bool {
+	return self&RadiotapHEData2TXOPKnown != 0
+}
+
+func (self RadiotapHEData2) MidamblePeriodicityKnown() bool {
+	return self&RadiotapHEData2MidamblePeriodicityKnown != 0
+}
+
+func (self RadiotapHEData2) RUAllocationOffset() int {
+	return int(self&RadiotapHEData2RUAllocationOffset) >> 8
+}
+
+func (self RadiotapHEData2) RUAllocationOffsetKnown() bool {
+	return self&RadiotapHEData2RUAllocationOffsetKnown != 0
+}
+
+func (self RadiotapHEData2) PriSec80MHz() bool {
+	return self&RadiotapHEData2PriSec80MHz != 0
+}
+
+type RadiotapHEPriSec80MHz bool
+
+type RadiotapHEData3 uint16
+
+const (
+	RadiotapHEData3BSSColorMask           RadiotapHEData3 = 0x003F
+	RadiotapHEData3BeamChange             RadiotapHEData3 = 0x0040
+	RadiotapHEData3ULDL                   RadiotapHEData3 = 0x0080
+	RadiotapHEData3DataMCSMask            RadiotapHEData3 = 0x0F00
+	RadiotapHEData3DataDCM                RadiotapHEData3 = 0x1000
+	RadiotapHEData3Coding                 RadiotapHEData3 = 0x2000
+	RadiotapHEData3LDPCEXtraSymbolSegment RadiotapHEData3 = 0x4000
+	RadiotapHEData3STBC                   RadiotapHEData3 = 0x8000
+)
+
+func (self RadiotapHEData3) BSSColor() int {
+	return int(self & RadiotapHEData3BSSColorMask)
+}
+
+func (self RadiotapHEData3) BeamChange() bool {
+	return self&RadiotapHEData3BeamChange != 0
+}
+
+func (self RadiotapHEData3) ULDL() bool {
+	return self&RadiotapHEData3ULDL != 0
+}
+
+func (self RadiotapHEData3) DataMCS() uint8 {
+	return uint8((self & RadiotapHEData3DataMCSMask) >> 8)
+}
+
+func (self RadiotapHEData3) DataDCM() bool {
+	return self&RadiotapHEData3DataDCM != 0
+}
+
+func (self RadiotapHEData3) Coding() RadiotapHECoding {
+	return self&RadiotapHEData3Coding != 0
+}
+
+func (self RadiotapHEData3) LDPCExtraSymbolSegment() bool {
+	return self&RadiotapHEData3LDPCEXtraSymbolSegment != 0
+}
+
+func (self RadiotapHEData3) STBC() bool {
+	return self&RadiotapHEData3STBC != 0
+}
+
+type RadiotapHECoding bool
+
+const (
+	RadiotapHECodingBCC  RadiotapHECoding = false
+	RadiotapHECodingLDPC RadiotapHECoding = true
+)
+
+type RadiotapHEData4 uint16
+
+type RadiotapHEData5 uint16
+
+const (
+	RadiotapHEData5DataBandwidthMask   RadiotapHEData5 = 0x000F
+	RadiotapHEData5GI                  RadiotapHEData5 = 0x0030
+	RadiotapHEData5LTFSize             RadiotapHEData5 = 0x00C0
+	RadiotapHEData5NumLTFSymbols       RadiotapHEData5 = 0x0700
+	RadiotapHEData5PreFECPaddingFactor RadiotapHEData5 = 0x3000
+	RadiotapHEData5TxBF                RadiotapHEData5 = 0x4000
+	RadiotapHEData5PEDisambiguity      RadiotapHEData5 = 0x8000
+)
+
+type DataBandwidth uint8
+
+const (
+	DataBandwidth20 DataBandwidth = iota
+	DataBandwidth40
+	DataBandwidth80
+	DataBandwidth160
+	DataBandwidth26ToneRU
+	DataBandwidth52ToneRU
+	DataBandwidth106ToneRU
+	DataBandwidth242ToneRU
+	DataBandwidth484ToneRU
+	DataBandwidth996ToneRU
+	DataBandwidth2x996ToneRU
+)
+
+func (db DataBandwidth) String() string {
+	switch db {
+	case DataBandwidth20:
+		return "20"
+	case DataBandwidth40:
+		return "40"
+	case DataBandwidth80:
+		return "80"
+	case DataBandwidth160:
+		return "160/80+80"
+	case DataBandwidth26ToneRU:
+		return "26-tone RU"
+	case DataBandwidth52ToneRU:
+		return "52-tone RU"
+	case DataBandwidth106ToneRU:
+		return "106-tone RU"
+	case DataBandwidth242ToneRU:
+		return "242-tone RU"
+	case DataBandwidth484ToneRU:
+		return "484-tone RU"
+	case DataBandwidth996ToneRU:
+		return "996-tone RU"
+	case DataBandwidth2x996ToneRU:
+		return "2x996-tone RU"
+	default:
+		return "Unknown"
+	}
+}
+
+func (self RadiotapHEData5) DataBandwidth() DataBandwidth {
+	return DataBandwidth(self & RadiotapHEData5DataBandwidthMask)
+}
+
+func (self RadiotapHEData5) Gi() Gi {
+	return Gi((self & RadiotapHEData5GI) >> 4)
+}
+
+func (self RadiotapHEData5) LTFSize() LTF {
+	return LTF((self & RadiotapHEData5LTFSize) >> 6)
+}
+
+func (self RadiotapHEData5) NumLTFSymbols() NLTF {
+	return NLTF((self & RadiotapHEData5NumLTFSymbols) >> 8)
+}
+
+func (self RadiotapHEData5) PreFECPaddingFactor() uint8 {
+	return uint8((self & RadiotapHEData5PreFECPaddingFactor) >> 12)
+}
+
+func (self RadiotapHEData5) TxBF() bool {
+	return self&RadiotapHEData5TxBF != 0
+}
+
+func (self RadiotapHEData5) PEDisambiguity() bool {
+	return self&RadiotapHEData5PEDisambiguity != 0
+}
+
+type Gi uint8
+
+const (
+	Gi_0_8us Gi = iota
+	Gi_1_6us
+	Gi_3_2us
+	Gi_reserved
+)
+
+func (gi Gi) String() string {
+	switch gi {
+	case Gi_0_8us:
+		return "0.8us"
+	case Gi_1_6us:
+		return "1.6us"
+	case Gi_3_2us:
+		return "3.2us"
+	default:
+		return "Reserved"
+	}
+}
+
+type LTF uint8
+
+const (
+	LTF_unknown LTF = iota
+	LTF_1x
+	LTF_2x
+	LTF_4x
+)
+
+func (ltf LTF) String() string {
+	switch ltf {
+	case LTF_unknown:
+		return "Unknown"
+	case LTF_1x:
+		return "1x"
+	case LTF_2x:
+		return "2x"
+	case LTF_4x:
+		return "4x"
+	default:
+		return "Unknown"
+	}
+}
+
+type NLTF uint8
+
+const (
+	NLTF_1x NLTF = iota
+	NLTF_2x
+	NLTF_4x
+	NLTF_6x
+	NLTF_8x
+	NLTF_reserved
+)
+
+func (nltf NLTF) String() string {
+	switch nltf {
+	case NLTF_1x:
+		return "1x"
+	case NLTF_2x:
+		return "2x"
+	case NLTF_4x:
+		return "4x"
+	case NLTF_6x:
+		return "6x"
+	case NLTF_8x:
+		return "8x"
+	default:
+		return "Reserved"
+	}
+}
+
+type MidamblePeriodicity uint8
+
+const (
+	MidamblePeriodicity_10 MidamblePeriodicity = iota
+	MidamblePeriodicity_20
+)
+
+func (mp MidamblePeriodicity) String() string {
+	switch mp {
+	case MidamblePeriodicity_10:
+		return "10"
+	case MidamblePeriodicity_20:
+		return "20"
+	default:
+		return "Unknown"
+	}
+}
+
+type RadiotapHEData6 uint16
+
+const (
+	RadiotapHEData6NSTS             RadiotapHEData6 = 0x000F
+	RadiotapHEData6Doppler          RadiotapHEData6 = 0x0010
+	RadiotapHEData6TXOP             RadiotapHEData6 = 0x7F00
+	RadiotapHEData6MidamblePeriodic RadiotapHEData6 = 0x8000
+)
+
+func (self RadiotapHEData6) NSTS() int {
+	return int(self & RadiotapHEData6NSTS)
+}
+
+func (self RadiotapHEData6) Doppler() bool {
+	return self&RadiotapHEData6Doppler != 0
+}
+
+func (self RadiotapHEData6) TXOP() int {
+	return int((self & RadiotapHEData6TXOP) >> 8)
+}
+
+func (self RadiotapHEData6) MidamblePeriodicity() MidamblePeriodicity {
+	return MidamblePeriodicity((self & RadiotapHEData6MidamblePeriodic) >> 15)
+}
+
 func decodeRadioTap(data []byte, p gopacket.PacketBuilder) error {
 	d := &RadioTap{}
 	// TODO: Should we set LinkLayer here? And implement LinkFlow
 	return decodingLayerDecoder(d, data, p)
 }
 
-type RadioTap struct {
-	BaseLayer
-
-	// Version 0. Only increases for drastic changes, introduction of compatible new fields does not count.
-	Version uint8
-	// Length of the whole header in bytes, including it_version, it_pad, it_len, and data fields.
-	Length uint16
-	// Present is a bitmap telling which fields are present. Set bit 31 (0x80000000) to extend the bitmap by another 32 bits. Additional extensions are made by setting bit 31.
-	Present RadioTapPresent
+type RadioTapNamespace struct {
 	// TSFT: value in microseconds of the MAC's 64-bit 802.11 Time Synchronization Function timer when the first bit of the MPDU arrived at the MAC. For received frames, only.
 	TSFT  uint64
 	Flags RadioTapFlags
@@ -725,150 +1316,90 @@ type RadioTap struct {
 	MCS         RadioTapMCS
 	AMPDUStatus RadioTapAMPDUStatus
 	VHT         RadioTapVHT
+	HE          RadiotapHE
+}
+
+type VendorNamespace struct {
+	OUI          []uint8 // The vendor's Organizationally Unique Identifier
+	SubNamespace uint8   // Selector to determine which vendor-specific namespace the fields represent
+	SkipLength   uint16  // Amount of data present for this vendor namespace (does not include the header size of the vendor namespace field itself)
+	Contents     []uint8 // The custom data for the vendor namespace. This library does not yet attempt to parse specific vendor fields.
+}
+
+type RadioTap struct {
+	BaseLayer
+
+	// Version 0. Only increases for drastic changes, introduction of compatible new fields does not count.
+	Version uint8
+	// Length of the whole header in bytes, including it_version, it_pad, it_len, and data fields.
+	Length uint16
+	// Present is a bitmap telling which fields are present. Set bit 31 (0x80000000) to extend the bitmap by another 32 bits. Additional extensions are made by setting bit 31.
+	Present []RadioTapPresent
+	// Multiple segments of the defined RadioTap fields can be present, if the extension bit and RadioTap namespace bit are both set.
+	RadioTapValues []RadioTapNamespace
+	// Multiple segments of fields defined by the hardware vendor of the packet sending hardware can be included, if the extension bit and vendor namespace bit are both set.
+	VendorValues []VendorNamespace
 }
 
 func (m *RadioTap) LayerType() gopacket.LayerType { return LayerTypeRadioTap }
 
 func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
-	if len(data) < 8 {
+	dataLen := uint16(len(data))
+	if dataLen < 8 {
 		df.SetTruncated()
 		return errors.New("RadioTap too small")
 	}
 	m.Version = uint8(data[0])
 	m.Length = binary.LittleEndian.Uint16(data[2:4])
-	m.Present = RadioTapPresent(binary.LittleEndian.Uint32(data[4:8]))
 
+	// Truncate the length to avoid panics, might be smaller due to corruption or loss
+	if m.Length > dataLen {
+		m.Length = dataLen
+	}
+
+	// at least one present field will always be included, but we parse out the rest as well
 	offset := uint16(4)
-
-	for (binary.LittleEndian.Uint32(data[offset:offset+4]) & 0x80000000) != 0 {
+	m.Present = []RadioTapPresent{RadioTapPresent(binary.LittleEndian.Uint32(data[offset : offset+4]))}
+	for (m.Present[len(m.Present)-1] & RadioTapPresentEXT) != 0 {
 		// This parser only handles standard radiotap namespace,
 		// and expects all fields are packed in the first it_present.
 		// Extended bitmap will be just ignored.
 		offset += 4
+		m.Present = append(m.Present, RadioTapPresent(binary.LittleEndian.Uint32(data[offset:offset+4])))
 	}
-	offset += 4 // skip the bitmap
+	offset += 4 // move past the previous present bitmap
 
-	if m.Present.TSFT() {
-		offset += align(offset, 8)
-		m.TSFT = binary.LittleEndian.Uint64(data[offset : offset+8])
-		offset += 8
-	}
-	if m.Present.Flags() {
-		m.Flags = RadioTapFlags(data[offset])
-		offset++
-	}
-	if m.Present.Rate() {
-		m.Rate = RadioTapRate(data[offset])
-		offset++
-	}
-	if m.Present.Channel() {
-		offset += align(offset, 2)
-		m.ChannelFrequency = RadioTapChannelFrequency(binary.LittleEndian.Uint16(data[offset : offset+2]))
-		offset += 2
-		m.ChannelFlags = RadioTapChannelFlags(binary.LittleEndian.Uint16(data[offset : offset+2]))
-		offset += 2
-	}
-	if m.Present.FHSS() {
-		m.FHSS = binary.LittleEndian.Uint16(data[offset : offset+2])
-		offset += 2
-	}
-	if m.Present.DBMAntennaSignal() {
-		m.DBMAntennaSignal = int8(data[offset])
-		offset++
-	}
-	if m.Present.DBMAntennaNoise() {
-		m.DBMAntennaNoise = int8(data[offset])
-		offset++
-	}
-	if m.Present.LockQuality() {
-		offset += align(offset, 2)
-		m.LockQuality = binary.LittleEndian.Uint16(data[offset : offset+2])
-		offset += 2
-	}
-	if m.Present.TxAttenuation() {
-		offset += align(offset, 2)
-		m.TxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
-		offset += 2
-	}
-	if m.Present.DBTxAttenuation() {
-		offset += align(offset, 2)
-		m.DBTxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
-		offset += 2
-	}
-	if m.Present.DBMTxPower() {
-		m.DBMTxPower = int8(data[offset])
-		offset++
-	}
-	if m.Present.Antenna() {
-		m.Antenna = uint8(data[offset])
-		offset++
-	}
-	if m.Present.DBAntennaSignal() {
-		m.DBAntennaSignal = uint8(data[offset])
-		offset++
-	}
-	if m.Present.DBAntennaNoise() {
-		m.DBAntennaNoise = uint8(data[offset])
-		offset++
-	}
-	if m.Present.RxFlags() {
-		offset += align(offset, 2)
-		m.RxFlags = RadioTapRxFlags(binary.LittleEndian.Uint16(data[offset:]))
-		offset += 2
-	}
-	if m.Present.TxFlags() {
-		offset += align(offset, 2)
-		m.TxFlags = RadioTapTxFlags(binary.LittleEndian.Uint16(data[offset:]))
-		offset += 2
-	}
-	if m.Present.RtsRetries() {
-		m.RtsRetries = uint8(data[offset])
-		offset++
-	}
-	if m.Present.DataRetries() {
-		m.DataRetries = uint8(data[offset])
-		offset++
-	}
-	if m.Present.MCS() {
-		m.MCS = RadioTapMCS{
-			RadioTapMCSKnown(data[offset]),
-			RadioTapMCSFlags(data[offset+1]),
-			uint8(data[offset+2]),
+	// now we extract a namespace for each Present bitmap, the first is always a radio tap namespace
+	radioTapNamespace := true
+	vendorNamespace := false
+	for _, present := range m.Present {
+		if radioTapNamespace {
+			rValues, newOffset := RadioTapNamespace{}.decodeRadioTapNamespace(data, offset, present)
+			m.RadioTapValues = append(m.RadioTapValues, rValues)
+			offset = newOffset
+		} else if vendorNamespace {
+			vValues, newOffset := VendorNamespace{}.decodeVendorNamespace(data, offset, present)
+			m.VendorValues = append(m.VendorValues, vValues)
+			offset = newOffset
+		} else {
+			// TODO: this library does not yet handle fields defined on bits higher than 31, just break for now
+			break
 		}
-		offset += 3
-	}
-	if m.Present.AMPDUStatus() {
-		offset += align(offset, 4)
-		m.AMPDUStatus = RadioTapAMPDUStatus{
-			Reference: binary.LittleEndian.Uint32(data[offset:]),
-			Flags:     RadioTapAMPDUStatusFlags(binary.LittleEndian.Uint16(data[offset+4:])),
-			CRC:       uint8(data[offset+6]),
+
+		// Also break for now on present that doesn't extend, even if there's more present beyond it
+		if !present.EXT() {
+			break
 		}
-		offset += 8
-	}
-	if m.Present.VHT() {
-		offset += align(offset, 2)
-		m.VHT = RadioTapVHT{
-			Known:     RadioTapVHTKnown(binary.LittleEndian.Uint16(data[offset:])),
-			Flags:     RadioTapVHTFlags(data[offset+2]),
-			Bandwidth: uint8(data[offset+3]),
-			MCSNSS: [4]RadioTapVHTMCSNSS{
-				RadioTapVHTMCSNSS(data[offset+4]),
-				RadioTapVHTMCSNSS(data[offset+5]),
-				RadioTapVHTMCSNSS(data[offset+6]),
-				RadioTapVHTMCSNSS(data[offset+7]),
-			},
-			Coding:     uint8(data[offset+8]),
-			GroupId:    uint8(data[offset+9]),
-			PartialAID: binary.LittleEndian.Uint16(data[offset+10:]),
-		}
-		offset += 12
+
+		// determine what the next namespace to add will be
+		radioTapNamespace = present.RadioTapNamespace()
+		vendorNamespace = present.VendorNamespace()
 	}
 
 	payload := data[m.Length:]
 
 	// Remove non standard padding used by some Wi-Fi drivers
-	if m.Flags.Datapad() &&
+	if m.RadioTapValues[0].Flags.Datapad() &&
 		payload[0]&0xC == 0x8 { //&& // Data frame
 		headlen := 24
 		if payload[0]&0x8C == 0x88 { // QoS
@@ -882,7 +1413,7 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 		}
 	}
 
-	if !m.Flags.FCS() {
+	if !m.RadioTapValues[0].Flags.FCS() {
 		// Dot11.DecodeFromBytes() expects FCS present and performs a hard chop on the checksum
 		// If a user is handing in subslices or packets from a buffered stream, the capacity of the slice
 		// may extend beyond the len, rather than expecting callers to enforce cap==len on every packet
@@ -902,39 +1433,233 @@ func (m *RadioTap) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 	return nil
 }
 
+func (m RadioTapNamespace) decodeRadioTapNamespace(data []byte, offset uint16, present RadioTapPresent) (RadioTapNamespace, uint16) {
+	if present.TSFT() {
+		offset += align(offset, 8)
+		m.TSFT = binary.LittleEndian.Uint64(data[offset : offset+8])
+		offset += 8
+	}
+	if present.Flags() {
+		m.Flags = RadioTapFlags(data[offset])
+		offset++
+	}
+	if present.Rate() {
+		m.Rate = RadioTapRate(data[offset])
+		offset++
+	}
+	if present.Channel() {
+		offset += align(offset, 2)
+		m.ChannelFrequency = RadioTapChannelFrequency(binary.LittleEndian.Uint16(data[offset : offset+2]))
+		offset += 2
+		m.ChannelFlags = RadioTapChannelFlags(binary.LittleEndian.Uint16(data[offset : offset+2]))
+		offset += 2
+	}
+	if present.FHSS() {
+		m.FHSS = binary.LittleEndian.Uint16(data[offset : offset+2])
+		offset += 2
+	}
+	if present.DBMAntennaSignal() {
+		m.DBMAntennaSignal = int8(data[offset])
+		offset++
+	}
+	if present.DBMAntennaNoise() {
+		m.DBMAntennaNoise = int8(data[offset])
+		offset++
+	}
+	if present.LockQuality() {
+		offset += align(offset, 2)
+		m.LockQuality = binary.LittleEndian.Uint16(data[offset : offset+2])
+		offset += 2
+	}
+	if present.TxAttenuation() {
+		offset += align(offset, 2)
+		m.TxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
+		offset += 2
+	}
+	if present.DBTxAttenuation() {
+		offset += align(offset, 2)
+		m.DBTxAttenuation = binary.LittleEndian.Uint16(data[offset : offset+2])
+		offset += 2
+	}
+	if present.DBMTxPower() {
+		m.DBMTxPower = int8(data[offset])
+		offset++
+	}
+	if present.Antenna() {
+		m.Antenna = uint8(data[offset])
+		offset++
+	}
+	if present.DBAntennaSignal() {
+		m.DBAntennaSignal = uint8(data[offset])
+		offset++
+	}
+	if present.DBAntennaNoise() {
+		m.DBAntennaNoise = uint8(data[offset])
+		offset++
+	}
+	if present.RxFlags() {
+		offset += align(offset, 2)
+		m.RxFlags = RadioTapRxFlags(binary.LittleEndian.Uint16(data[offset:]))
+		offset += 2
+	}
+	if present.TxFlags() {
+		offset += align(offset, 2)
+		m.TxFlags = RadioTapTxFlags(binary.LittleEndian.Uint16(data[offset:]))
+		offset += 2
+	}
+	if present.RtsRetries() {
+		m.RtsRetries = uint8(data[offset])
+		offset++
+	}
+	if present.DataRetries() {
+		m.DataRetries = uint8(data[offset])
+		offset++
+	}
+	if present.MCS() {
+		m.MCS = RadioTapMCS{
+			RadioTapMCSKnown(data[offset]),
+			RadioTapMCSFlags(data[offset+1]),
+			uint8(data[offset+2]),
+		}
+		offset += 3
+	}
+	if present.AMPDUStatus() {
+		offset += align(offset, 4)
+		m.AMPDUStatus = RadioTapAMPDUStatus{
+			Reference: binary.LittleEndian.Uint32(data[offset:]),
+			Flags:     RadioTapAMPDUStatusFlags(binary.LittleEndian.Uint16(data[offset+4:])),
+			CRC:       uint8(data[offset+6]),
+		}
+		offset += 8
+	}
+	if present.VHT() {
+		offset += align(offset, 2)
+		m.VHT = RadioTapVHT{
+			Known:     RadioTapVHTKnown(binary.LittleEndian.Uint16(data[offset:])),
+			Flags:     RadioTapVHTFlags(data[offset+2]),
+			Bandwidth: uint8(data[offset+3]),
+			MCSNSS: [4]RadioTapVHTMCSNSS{
+				RadioTapVHTMCSNSS(data[offset+4]),
+				RadioTapVHTMCSNSS(data[offset+5]),
+				RadioTapVHTMCSNSS(data[offset+6]),
+				RadioTapVHTMCSNSS(data[offset+7]),
+			},
+			Coding:     uint8(data[offset+8]),
+			GroupId:    uint8(data[offset+9]),
+			PartialAID: binary.LittleEndian.Uint16(data[offset+10:]),
+		}
+		offset += 12
+	}
+	if present.Timestamp() {
+		offset += align(offset, 8)
+		offset += 12
+	}
+	if present.HE() {
+		offset += align(offset, 2)
+		m.HE = RadiotapHE{
+			Data1: RadiotapHEData1(binary.LittleEndian.Uint16(data[offset:])),
+			Data2: RadiotapHEData2(binary.LittleEndian.Uint16(data[offset+2:])),
+			Data3: RadiotapHEData3(binary.LittleEndian.Uint16(data[offset+4:])),
+			Data4: RadiotapHEData4(binary.LittleEndian.Uint16(data[offset+6:])),
+			Data5: RadiotapHEData5(binary.LittleEndian.Uint16(data[offset+8:])),
+			Data6: RadiotapHEData6(binary.LittleEndian.Uint16(data[offset+10:])),
+		}
+		offset += 12
+	}
+
+	return m, offset
+}
+
+func (v VendorNamespace) decodeVendorNamespace(data []byte, offset uint16, present RadioTapPresent) (VendorNamespace, uint16) {
+	offset += align(offset, 2)
+
+	v.OUI = data[offset : offset+3]
+	offset += 4
+
+	v.SubNamespace = data[offset]
+	offset += 2
+
+	v.SkipLength = binary.LittleEndian.Uint16(data[offset:])
+	offset += 2
+
+	v.Contents = data[offset : offset+v.SkipLength]
+	offset += v.SkipLength
+
+	return v, offset
+}
+
 func (m RadioTap) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	buf := make([]byte, 1024)
 
 	buf[0] = m.Version
 	buf[1] = 0
 
-	binary.LittleEndian.PutUint32(buf[4:8], uint32(m.Present))
+	// save length encoding for the end when it's easier to know how long everything is
 
+	// encode full present bitmap
 	offset := uint16(4)
-
-	for (binary.LittleEndian.Uint32(buf[offset:offset+4]) & 0x80000000) != 0 {
+	for _, present := range m.Present {
+		binary.LittleEndian.PutUint32(buf[offset:offset+4], uint32(present))
 		offset += 4
 	}
 
-	offset += 4
+	// encode namespace values, alternating according to the namespace bits in the present bitmap
+	// first namespace will always be a radio tap namespace
+	radioTapNamespace := true
+	vendorNamespace := false
+	radioTapNamespaceIndex := 0
+	vendorNamespaceIndex := 0
+	for _, present := range m.Present {
+		if radioTapNamespace {
+			offset = m.RadioTapValues[radioTapNamespaceIndex].serializeTo(buf, offset, present)
+			radioTapNamespaceIndex += 1
+		} else if vendorNamespace {
+			offset = m.VendorValues[vendorNamespaceIndex].serializeTo(buf, offset, present)
+			vendorNamespaceIndex += 1
+		} else {
+			// TODO: this library does not yet handle fields defined on bits higher than 31, just break for now
+			break
+		}
 
-	if m.Present.TSFT() {
+		radioTapNamespace = present.RadioTapNamespace()
+		vendorNamespace = present.VendorNamespace()
+	}
+
+	packetBuf, err := b.PrependBytes(int(offset))
+
+	if err != nil {
+		return err
+	}
+
+	if opts.FixLengths {
+		m.Length = offset
+	}
+
+	binary.LittleEndian.PutUint16(buf[2:4], m.Length)
+
+	copy(packetBuf, buf)
+
+	return nil
+}
+
+func (m RadioTapNamespace) serializeTo(buf []byte, offset uint16, present RadioTapPresent) uint16 {
+	if present.TSFT() {
 		offset += align(offset, 8)
 		binary.LittleEndian.PutUint64(buf[offset:offset+8], m.TSFT)
 		offset += 8
 	}
 
-	if m.Present.Flags() {
+	if present.Flags() {
 		buf[offset] = uint8(m.Flags)
 		offset++
 	}
 
-	if m.Present.Rate() {
+	if present.Rate() {
 		buf[offset] = uint8(m.Rate)
 		offset++
 	}
 
-	if m.Present.Channel() {
+	if present.Channel() {
 		offset += align(offset, 2)
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], uint16(m.ChannelFrequency))
 		offset += 2
@@ -942,82 +1667,82 @@ func (m RadioTap) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 		offset += 2
 	}
 
-	if m.Present.FHSS() {
+	if present.FHSS() {
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], m.FHSS)
 		offset += 2
 	}
 
-	if m.Present.DBMAntennaSignal() {
+	if present.DBMAntennaSignal() {
 		buf[offset] = byte(m.DBMAntennaSignal)
 		offset++
 	}
 
-	if m.Present.DBMAntennaNoise() {
+	if present.DBMAntennaNoise() {
 		buf[offset] = byte(m.DBMAntennaNoise)
 		offset++
 	}
 
-	if m.Present.LockQuality() {
+	if present.LockQuality() {
 		offset += align(offset, 2)
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], m.LockQuality)
 		offset += 2
 	}
 
-	if m.Present.TxAttenuation() {
+	if present.TxAttenuation() {
 		offset += align(offset, 2)
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], m.TxAttenuation)
 		offset += 2
 	}
 
-	if m.Present.DBTxAttenuation() {
+	if present.DBTxAttenuation() {
 		offset += align(offset, 2)
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], m.DBTxAttenuation)
 		offset += 2
 	}
 
-	if m.Present.DBMTxPower() {
+	if present.DBMTxPower() {
 		buf[offset] = byte(m.DBMTxPower)
 		offset++
 	}
 
-	if m.Present.Antenna() {
+	if present.Antenna() {
 		buf[offset] = uint8(m.Antenna)
 		offset++
 	}
 
-	if m.Present.DBAntennaSignal() {
+	if present.DBAntennaSignal() {
 		buf[offset] = uint8(m.DBAntennaSignal)
 		offset++
 	}
 
-	if m.Present.DBAntennaNoise() {
+	if present.DBAntennaNoise() {
 		buf[offset] = uint8(m.DBAntennaNoise)
 		offset++
 	}
 
-	if m.Present.RxFlags() {
+	if present.RxFlags() {
 		offset += align(offset, 2)
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], uint16(m.RxFlags))
 		offset += 2
 	}
 
-	if m.Present.TxFlags() {
+	if present.TxFlags() {
 		offset += align(offset, 2)
 		binary.LittleEndian.PutUint16(buf[offset:offset+2], uint16(m.TxFlags))
 		offset += 2
 	}
 
-	if m.Present.RtsRetries() {
+	if present.RtsRetries() {
 		buf[offset] = m.RtsRetries
 		offset++
 	}
 
-	if m.Present.DataRetries() {
+	if present.DataRetries() {
 		buf[offset] = m.DataRetries
 		offset++
 	}
 
-	if m.Present.MCS() {
+	if present.MCS() {
 		buf[offset] = uint8(m.MCS.Known)
 		buf[offset+1] = uint8(m.MCS.Flags)
 		buf[offset+2] = uint8(m.MCS.MCS)
@@ -1025,7 +1750,7 @@ func (m RadioTap) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 		offset += 3
 	}
 
-	if m.Present.AMPDUStatus() {
+	if present.AMPDUStatus() {
 		offset += align(offset, 4)
 
 		binary.LittleEndian.PutUint32(buf[offset:offset+4], m.AMPDUStatus.Reference)
@@ -1036,7 +1761,7 @@ func (m RadioTap) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 		offset += 8
 	}
 
-	if m.Present.VHT() {
+	if present.VHT() {
 		offset += align(offset, 2)
 
 		binary.LittleEndian.PutUint16(buf[offset:], uint16(m.VHT.Known))
@@ -1055,21 +1780,39 @@ func (m RadioTap) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 		offset += 12
 	}
 
-	packetBuf, err := b.PrependBytes(int(offset))
-
-	if err != nil {
-		return err
+	if present.Timestamp() {
+		offset += align(offset, 8)
+		offset += 12
 	}
 
-	if opts.FixLengths {
-		m.Length = offset
+	if present.HE() {
+		offset += align(offset, 2)
+
+		binary.LittleEndian.PutUint16(buf[offset:], uint16(m.HE.Data1))
+		binary.LittleEndian.PutUint16(buf[offset+2:], uint16(m.HE.Data2))
+		binary.LittleEndian.PutUint16(buf[offset+4:], uint16(m.HE.Data3))
+		binary.LittleEndian.PutUint16(buf[offset+6:], uint16(m.HE.Data4))
+		binary.LittleEndian.PutUint16(buf[offset+8:], uint16(m.HE.Data5))
+		binary.LittleEndian.PutUint16(buf[offset+10:], uint16(m.HE.Data6))
+		offset += 12
 	}
 
-	binary.LittleEndian.PutUint16(buf[2:4], m.Length)
+	return offset
+}
 
-	copy(packetBuf, buf)
+func (v VendorNamespace) serializeTo(buf []byte, offset uint16, present RadioTapPresent) uint16 {
+	offset += align(offset, 2)
 
-	return nil
+	copy(buf[offset:], v.OUI[0:3])
+	offset += 4
+	buf[offset] = v.SubNamespace
+	offset += 2
+	binary.LittleEndian.PutUint16(buf[offset:], v.SkipLength)
+	offset += 2
+	copy(buf[offset:], v.Contents)
+	offset += v.SkipLength
+
+	return offset
 }
 
 func (m *RadioTap) CanDecode() gopacket.LayerClass    { return LayerTypeRadioTap }
