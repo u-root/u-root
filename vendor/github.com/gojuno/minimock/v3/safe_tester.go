@@ -15,6 +15,7 @@ func newSafeTester(t Tester) *safeTester {
 func (st *safeTester) Error(args ...interface{}) {
 	st.m.Lock()
 	defer st.m.Unlock()
+	st.Tester.Helper()
 
 	st.Tester.Error(args...)
 }
@@ -23,6 +24,7 @@ func (st *safeTester) Error(args ...interface{}) {
 func (st *safeTester) Errorf(format string, args ...interface{}) {
 	st.m.Lock()
 	defer st.m.Unlock()
+	st.Tester.Helper()
 
 	st.Tester.Errorf(format, args...)
 }
@@ -31,6 +33,7 @@ func (st *safeTester) Errorf(format string, args ...interface{}) {
 func (st *safeTester) Fatal(args ...interface{}) {
 	st.m.Lock()
 	defer st.m.Unlock()
+	st.Tester.Helper()
 
 	st.Tester.Fatal(args...)
 }
@@ -39,14 +42,7 @@ func (st *safeTester) Fatal(args ...interface{}) {
 func (st *safeTester) Fatalf(format string, args ...interface{}) {
 	st.m.Lock()
 	defer st.m.Unlock()
+	st.Tester.Helper()
 
 	st.Tester.Fatalf(format, args...)
-}
-
-// FailNow implements Tester
-func (st *safeTester) FailNow() {
-	st.m.Lock()
-	defer st.m.Unlock()
-
-	st.Tester.FailNow()
 }
