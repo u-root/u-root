@@ -32,6 +32,9 @@ var destTests = []destTest{
 	{"foo@example.org", "foo", "example.org", "22"},
 	{"ssh://192.168.0.2:23", "", "192.168.0.2", "23"},
 	{"ssh://x@example.org", "x", "example.org", "22"},
+	{"foo@[2001:db8::1]", "foo", "2001:db8::1", "22"},
+	{"foo@[2001:db8::1]:2222", "foo", "2001:db8::1", "2222"},
+	{"ssh://foo@[fe80::1%eth0]", "foo", "fe80::1%eth0", "22"},
 }
 
 func TestParseDest(t *testing.T) {
