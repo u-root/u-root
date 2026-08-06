@@ -226,7 +226,7 @@ func parseDest(input string) (user, host, port string, err error) {
 		err = nil
 		host = input
 		if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-			host = host[1 : len(host)-1]
+			host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
 		}
 		port = "22"
 	}
