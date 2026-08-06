@@ -563,6 +563,28 @@ type IPv6Routing struct {
 // LayerType returns LayerTypeIPv6Routing.
 func (i *IPv6Routing) LayerType() gopacket.LayerType { return LayerTypeIPv6Routing }
 
+// SerializeTo implementation according to gopacket.SerializableLayer
+func (i *IPv6Routing) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	const ipv6HeaderBaseLen = 8
+	totalLen := ipv6HeaderBaseLen + len(i.SourceRoutingIPs)*net.IPv6len
+	hdrExtLen := (totalLen - ipv6HeaderBaseLen) / ipv6HeaderBaseLen
+
+	bytes, err := b.PrependBytes(totalLen)
+	if err != nil {
+		return err
+	}
+	bytes[0] = byte(i.ipv6ExtensionBase.NextHeader)
+	bytes[1] = byte(hdrExtLen)
+	bytes[2] = i.RoutingType
+	bytes[3] = i.SegmentsLeft
+	copy(bytes[4:8], i.Reserved)
+	for i, ip := range i.SourceRoutingIPs {
+		offset := 8 + i*16
+		copy(bytes[offset:offset+16], ip.To16())
+	}
+	return nil
+}
+
 func decodeIPv6Routing(data []byte, p gopacket.PacketBuilder) error {
 	base, err := decodeIPv6ExtensionBase(data, p)
 	if err != nil {
@@ -601,6 +623,23 @@ type IPv6Fragment struct {
 	Reserved2      uint8
 	MoreFragments  bool
 	Identification uint32
+}
+
+func (i *IPv6Fragment) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+	data, err := b.PrependBytes(8)
+	if err != nil {
+		return err
+	}
+
+	data[0] = uint8(i.NextHeader)
+	data[1] = i.Reserved1
+	binary.BigEndian.PutUint16(data[2:4], i.FragmentOffset<<3)
+	data[3] = data[3] | ((i.Reserved2 << 1) & 0x6)
+	if i.MoreFragments {
+		data[3] = data[3] | 0x1
+	}
+	binary.BigEndian.PutUint32(data[4:8], i.Identification)
+	return nil
 }
 
 // LayerType returns LayerTypeIPv6Fragment.
