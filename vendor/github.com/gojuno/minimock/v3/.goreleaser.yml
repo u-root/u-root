@@ -1,27 +1,22 @@
 project_name: minimock
-before:
-  hooks:
-    - make all
 builds:
 - 
   main: ./cmd/minimock/
   binary: minimock
   env:
     - CGO_ENABLED=0
+    - GO386=softfloat
   goos:
     - darwin
     - linux
     - windows
 
   ldflags:
-    - -X main.version={{.Version}} -X main.commit={{.FullCommit}} -X main.buildDate={{.Date}}
-archive:
-  replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
+    - -X main.version={{.Tag}} -X main.commit={{.FullCommit}} -X main.buildDate={{.Date}}
+
+env_files:
+  github_token: .gh_token
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:
