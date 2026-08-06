@@ -27,3 +27,8 @@ _testmain.go
 /cmd/minimock/minimock
 /minimock
 /dist
+/bin
+/.gh_token
+
+.idea
+.vscode
