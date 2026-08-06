@@ -2,7 +2,6 @@
 
 [![Build Status](https://circleci.com/gh/u-root/u-root/tree/main.png?style=shield)](https://circleci.com/gh/u-root/u-root/tree/main)
 [![codecov](https://codecov.io/gh/u-root/u-root/branch/main/graph/badge.svg?token=1qjHT02oCB)](https://codecov.io/gh/u-root/u-root)
-[![Go Report Card](https://goreportcard.com/badge/github.com/u-root/u-root)](https://goreportcard.com/report/github.com/u-root/u-root)
 [![CodeQL](https://github.com/u-root/u-root/workflows/CodeQL/badge.svg)](https://github.com/u-root/u-root/actions?query=workflow%3ACodeQL)
 [![GoDoc](https://godoc.org/github.com/u-root/u-root?status.svg)](https://godoc.org/github.com/u-root/u-root)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://github.com/u-root/u-root/blob/main/LICENSE)
