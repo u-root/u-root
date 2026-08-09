@@ -225,6 +225,9 @@ func parseDest(input string) (user, host, port string, err error) {
 	if host, port, err = net.SplitHostPort(input); err != nil {
 		err = nil
 		host = input
+		if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+			host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+		}
 		port = "22"
 	}
 	if host == "" {
