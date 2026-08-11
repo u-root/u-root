@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -290,13 +291,14 @@ func longestCommonPrefix(strs []string) string {
 func (s *State) circularTabs(items []string) func(tabDirection) (string, error) {
 	item := -1
 	return func(direction tabDirection) (string, error) {
-		if direction == tabForward {
+		switch direction {
+		case tabForward:
 			if item < len(items)-1 {
 				item++
 			} else {
 				item = 0
 			}
-		} else if direction == tabReverse {
+		case tabReverse:
 			if item > 0 {
 				item--
 			} else {
@@ -558,9 +560,10 @@ func (s *State) addToKillRing(text []rune, mode int) {
 			s.killRing = ring.New(1)
 			s.killRing.Value = []rune{}
 		}
-		if mode == 1 { // Append to last entry
+		switch mode {
+		case 1: // Append to last entry
 			killLine = append(s.killRing.Value.([]rune), killLine...)
-		} else if mode == 2 { // Prepend to last entry
+		case 2: // Prepend to last entry
 			killLine = append(killLine, s.killRing.Value.([]rune)...)
 		}
 	}
@@ -970,18 +973,12 @@ mainLoop:
 				}
 				// Remove whitespace to the right
 				var buf []rune // Store the deleted chars in a buffer
-				for {
-					if pos == len(line) || !unicode.IsSpace(line[pos]) {
-						break
-					}
+				for pos != len(line) && unicode.IsSpace(line[pos]) {
 					buf = append(buf, line[pos])
 					line = append(line[:pos], line[pos+1:]...)
 				}
 				// Remove non-whitespace to the right
-				for {
-					if pos == len(line) || unicode.IsSpace(line[pos]) {
-						break
-					}
+				for pos != len(line) && !unicode.IsSpace(line[pos]) {
 					buf = append(buf, line[pos])
 					line = append(line[:pos], line[pos+1:]...)
 				}
@@ -1124,27 +1121,21 @@ func (s *State) eraseWord(pos int, line []rune, killAction int) (int, []rune, in
 	}
 	// Remove whitespace to the left
 	var buf []rune // Store the deleted chars in a buffer
-	for {
-		if pos == 0 || !unicode.IsSpace(line[pos-1]) {
-			break
-		}
+	for pos != 0 && unicode.IsSpace(line[pos-1]) {
 		buf = append(buf, line[pos-1])
 		line = append(line[:pos-1], line[pos:]...)
 		pos--
 	}
 	// Remove non-whitespace to the left
-	for {
-		if pos == 0 || unicode.IsSpace(line[pos-1]) {
-			break
-		}
+	for pos != 0 && !unicode.IsSpace(line[pos-1]) {
 		buf = append(buf, line[pos-1])
 		line = append(line[:pos-1], line[pos:]...)
 		pos--
 	}
 	// Invert the buffer and save the result on the killRing
 	var newBuf []rune
-	for i := len(buf) - 1; i >= 0; i-- {
-		newBuf = append(newBuf, buf[i])
+	for _, b := range slices.Backward(buf) {
+		newBuf = append(newBuf, b)
 	}
 	if killAction > 0 {
 		s.addToKillRing(newBuf, 2) // Add in prepend mode
