@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ghcr.io/tinygo-org/tinygo-dev:sha-3869f76887feef6c444308e7e1531b7cac1bbd10
+    container: ghcr.io/tinygo-org/tinygo-dev:sha-7a9c649268ffffad8bcfad105178de56b45ce039
     steps:
       - name: Install actions dependencies into tinygo container (Debain)
         run: |
