@@ -2,11 +2,13 @@ package pcap
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -19,13 +21,13 @@ import (
 )
 
 const (
-	//defaultFrameSize = 4096
+	// defaultFrameSize = 4096
 	defaultFrameSize = 65632 //nolint:unused
-	//defaultBlockNumbers = 128
+	// defaultBlockNumbers = 128
 	defaultBlockNumbers = 32
-	//defaultBlockSize = defaultFrameSize * defaultBlockNumbers
+	// defaultBlockSize = defaultFrameSize * defaultBlockNumbers
 	defaultBlockSize = 131072 //nolint:unused
-	//defaultFramesPerBlock = defaultBlockSize / defaultFrameSize
+	// defaultFramesPerBlock = defaultBlockSize / defaultFrameSize
 	defaultFramesPerBlock = 32
 	EthHlen               = 0x10
 	// defaultSyscalls default setting for using syscalls
@@ -33,6 +35,9 @@ const (
 	offsetToBlockStatus = 4 + 4
 
 	tpacketAuxdataSize = 20
+	ethernetVLANOffset = 12
+	vlanTagLength      = 4
+	etherTypeVLAN      = 0x8100
 )
 
 var (
@@ -51,6 +56,12 @@ type blockHeader struct {
 type captured struct {
 	data []byte
 	ci   gopacket.CaptureInfo
+}
+
+type vlanMetadata struct {
+	status uint32
+	tci    uint16
+	tpid   uint16
 }
 
 // Handle states
@@ -79,8 +90,8 @@ const pollIntervalMs = 60 * 1000 // 1 minute
 type Handle struct {
 	// this must be first for atomic to behave nicely
 	state           uint32
+	closed          sync.Once
 	syscalls        bool
-	promiscuous     bool
 	index           int
 	iface           string
 	snaplen         int32
@@ -120,9 +131,9 @@ func (h *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 
 	// if there already was one in the cache, return it
 	if len(h.cache) > 0 {
-		cap := h.cache[0]
+		capturedPacket := h.cache[0]
 		h.cache = h.cache[1:]
-		return cap.data, cap.ci, nil
+		return capturedPacket.data, capturedPacket.ci, nil
 	}
 	// there was not, so read a new one
 	caps, err := h.readPacketDataMmap()
@@ -136,20 +147,35 @@ func (h *Handle) ReadPacketData() (data []byte, ci gopacket.CaptureInfo, err err
 		return caps[0].data, caps[0].ci, nil
 	}
 	h.cache = caps
-	cap := h.cache[0]
+	capturedPacket := h.cache[0]
 	h.cache = h.cache[1:]
-	return cap.data, cap.ci, nil
+	return capturedPacket.data, capturedPacket.ci, nil
 }
 
-func writeVLANTag(data []byte, tci, tpid uint16) ([]byte, []byte) {
-	buf := make([]byte, 4)
-	if tpid == 0 || binary.BigEndian.Uint16(data[12:14]) != 0x8100 {
-		tpid = binary.BigEndian.Uint16(data[12:14])
-		binary.BigEndian.PutUint16(data[12:14], 0x8100) // set ethernet frame type to VLAN
+func restoreVLANTag(
+	data []byte,
+	ci gopacket.CaptureInfo,
+	metadata vlanMetadata,
+) ([]byte, gopacket.CaptureInfo) {
+	vlanPresent := metadata.tci != 0 || metadata.status&syscall.TP_STATUS_VLAN_VALID != 0
+	if !vlanPresent || len(data) < ethernetVLANOffset {
+		return data, ci
 	}
-	binary.BigEndian.PutUint16(buf[:2], tci)
-	binary.BigEndian.PutUint16(buf[2:], tpid)
-	return data, buf
+
+	tpid := metadata.tpid
+	if tpid == 0 && metadata.status&syscall.TP_STATUS_VLAN_TPID_VALID == 0 {
+		tpid = etherTypeVLAN
+	}
+
+	tagged := make([]byte, len(data)+vlanTagLength)
+	copy(tagged, data[:ethernetVLANOffset])
+	binary.BigEndian.PutUint16(tagged[ethernetVLANOffset:], tpid)
+	binary.BigEndian.PutUint16(tagged[ethernetVLANOffset+2:], metadata.tci)
+	copy(tagged[ethernetVLANOffset+vlanTagLength:], data[ethernetVLANOffset:])
+
+	ci.CaptureLength += vlanTagLength
+	ci.Length += vlanTagLength
+	return tagged, ci
 }
 
 func (h *Handle) readPacketDataSyscall() (data []byte, ci gopacket.CaptureInfo, err error) {
@@ -166,26 +192,36 @@ func (h *Handle) readPacketDataSyscall() (data []byte, ci gopacket.CaptureInfo, 
 		return nil, ci, fmt.Errorf("error reading socket control messages: %w", err)
 	}
 	for _, cmsg := range cmsgs {
-		if cmsg.Header.Level == syscall.SOL_PACKET && cmsg.Header.Type == syscall.PACKET_AUXDATA && cmsg.Header.Len >= tpacketAuxdataSize {
-			auxData.Vlan_tci = binary.BigEndian.Uint16(cmsg.Data[len(cmsg.Data)-5 : len(cmsg.Data)-3])
-			auxData.Vlan_tpid = binary.BigEndian.Uint16(cmsg.Data[len(cmsg.Data)-3:])
-			break
+		isAuxData := cmsg.Header.Level == syscall.SOL_PACKET &&
+			cmsg.Header.Type == syscall.PACKET_AUXDATA
+		if !isAuxData || len(cmsg.Data) < tpacketAuxdataSize {
+			continue
 		}
+		if err := binary.Read(
+			bytes.NewReader(cmsg.Data[:tpacketAuxdataSize]),
+			h.endian,
+			&auxData,
+		); err != nil {
+			return nil, ci, fmt.Errorf("decode packet auxiliary data: %w", err)
+		}
+		break
 	}
-	if auxData.Vlan_tci != 0 {
-		var aux []byte
-		b, aux = writeVLANTag(b, auxData.Vlan_tci, auxData.Vlan_tpid)
-		b = append(append(b[:14], aux...), b[14:]...)
-		n = n + 4
-	}
-	// TODO: add CaptureInfo, specifically:
-	//    capture timestamp
-	//    original packet length
 	ci = gopacket.CaptureInfo{
+		Timestamp:      time.Now(),
 		CaptureLength:  n,
+		Length:         n,
 		InterfaceIndex: h.index,
 	}
-	return b, ci, nil
+	data, ci = restoreVLANTag(
+		b[:n],
+		ci,
+		vlanMetadata{
+			status: auxData.Status,
+			tci:    auxData.Vlan_tci,
+			tpid:   auxData.Vlan_tpid,
+		},
+	)
+	return data, ci, nil
 }
 
 func (h *Handle) readPacketDataMmap() ([]captured, error) {
@@ -216,7 +252,7 @@ func (h *Handle) readPacketDataMmap() ([]captured, error) {
 		// Just repeat Poll when we get timeout, do not even log anything.
 		for err == nil && val == 0 {
 			if !atomic.CompareAndSwapUint32(&h.state, reading, polling) {
-				// the state is cancelling
+				// the state is canceling
 				logger.Debugf("polling was canceled for ring %p", h.ring)
 				return nil, io.EOF
 			}
@@ -225,7 +261,7 @@ func (h *Handle) readPacketDataMmap() ([]captured, error) {
 			// does not seem to always do the job.
 			val, err = syscall.Poll(h.pollfd, pollIntervalMs)
 			if !atomic.CompareAndSwapUint32(&h.state, polling, reading) {
-				// the state is cancelling
+				// the state is canceling
 				logger.Debugf("polling was canceled for ring %p", h.ring)
 				return nil, io.EOF
 			}
@@ -238,7 +274,7 @@ func (h *Handle) readPacketDataMmap() ([]captured, error) {
 			continue
 		case err != nil:
 			logger.Errorf("error polling socket: %v", err)
-			return nil, fmt.Errorf("error polling socket: %v", err)
+			return nil, fmt.Errorf("error polling socket: %w", err)
 		case val < 0:
 			logger.Error("negative return value from polling socket")
 			return nil, errors.New("negative return value from polling socket")
@@ -250,7 +286,7 @@ func (h *Handle) readPacketDataMmap() ([]captured, error) {
 			sockOptVal, err := syscall.GetsockoptInt(h.fd, syscall.SOL_SOCKET, syscall.SO_ERROR)
 			if err != nil {
 				logger.Errorf("could not get sockopt to check poll error; sockopt error: %v", err)
-				return nil, fmt.Errorf("could not get sockopt to check poll error; sockopt error: %v", err)
+				return nil, fmt.Errorf("could not get sockopt to check poll error; sockopt error: %w", err)
 			}
 			if sockOptVal == int(syscall.ENETDOWN) {
 				logger.Errorf("interface %s is down, marking handle as gone and returning", h.iface)
@@ -278,12 +314,12 @@ func (h *Handle) processMmapPackets(blockBase, flagIndex int) ([]captured, error
 	// read the header
 	logger.Debugf("reading block header into b slice from position %d to position %d", blockBase, blockBase+h.blockSize)
 	b := h.ring[blockBase : blockBase+h.blockSize]
-	buf := bytes.NewBuffer(b[:])
+	buf := bytes.NewBuffer(b)
 	bHdr := blockHeader{}
 	logger.Debugf("binary parsing block header of size %d", buf.Len())
 	if err := binary.Read(buf, h.endian, &bHdr); err != nil {
 		logger.Errorf("error reading block header: %v", err)
-		return nil, fmt.Errorf("error reading block header: %v", err)
+		return nil, fmt.Errorf("error reading block header: %w", err)
 	}
 	logger.Debugf("block header %#v", bHdr)
 	// now we need to get the packets themselves
@@ -298,9 +334,8 @@ func (h *Handle) processMmapPackets(blockBase, flagIndex int) ([]captured, error
 		buf := bytes.NewBuffer(b[:alignedTpacketHdrSize])
 		logger.Debugf("binary parsing packet header of size %d", buf.Len())
 		if err := binary.Read(buf, h.endian, &hdr); err != nil {
-			msg := fmt.Sprintf("error reading tpacket3 header on byte %d: %v", i, err)
-			logger.Errorf(msg)
-			return nil, fmt.Errorf(msg)
+			logger.Errorf("error reading tpacket3 header on byte %d: %v", i, err)
+			return nil, fmt.Errorf("error reading tpacket3 header on byte %d: %w", i, err)
 		}
 		logger.Debugf("tpacket3 header %#v", hdr)
 		nextOffset = hdr.Next_offset
@@ -313,7 +348,7 @@ func (h *Handle) processMmapPackets(blockBase, flagIndex int) ([]captured, error
 		sall, err := parseSocketAddrLinkLayer(b[alignedTpacketHdrSize:alignedTpacketAllHdrSize], h.endian)
 		if err != nil {
 			logger.Errorf("error parsing sockaddr_ll: %v", err)
-			return nil, fmt.Errorf("error parsing sockaddr_ll for packet %d: %v", i, err)
+			return nil, fmt.Errorf("error parsing sockaddr_ll for packet %d: %w", i, err)
 		}
 
 		ci := gopacket.CaptureInfo{
@@ -332,11 +367,15 @@ func (h *Handle) processMmapPackets(blockBase, flagIndex int) ([]captured, error
 		//   packetSource.NoCopy = true
 		data := make([]byte, hdr.Snaplen)
 		copy(data, b[hdr.Mac:uint32(hdr.Mac)+hdr.Snaplen])
-		if hdr.Hv1.Vlan_tci != 0 {
-			var vlanTag []byte
-			data, vlanTag = writeVLANTag(data, uint16(hdr.Hv1.Vlan_tci), uint16(hdr.Hv1.Vlan_tpid))
-			data = append(data[:14], append(vlanTag, data[14:]...)...)
-		}
+		data, ci = restoreVLANTag(
+			data,
+			ci,
+			vlanMetadata{
+				status: hdr.Status,
+				tci:    uint16(hdr.Hv1.Vlan_tci),
+				tpid:   hdr.Hv1.Vlan_tpid,
+			},
+		)
 		packets[i] = captured{
 			ci:   ci,
 			data: data,
@@ -356,60 +395,67 @@ func (h *Handle) processMmapPackets(blockBase, flagIndex int) ([]captured, error
 }
 
 // Close close sockets and release resources
+// Close is idempotent, and uses sync.Once to ensure it only runs once.
 func (h *Handle) Close() {
-	logger := log.WithFields(log.Fields{
-		"iface": h.iface,
+	h.closed.Do(func() {
+		logger := log.WithFields(log.Fields{
+			"iface": h.iface,
+		})
+		// Wait for reader to finish before unmapping memory with the ring buffer.
+		closeAttempts := 0
+		for !atomic.CompareAndSwapUint32(&h.state, open, closed) {
+			closeAttempts += 1
+			if closeAttempts >= 1000 {
+				// Stopping before we become an infinite loop
+				logger.Tracef("Swapping on Stop tried for %d times, giving up now", closeAttempts)
+				break
+			}
+			state := atomic.LoadUint32(&h.state)
+			if state == canceled || state == gone {
+				atomic.StoreUint32(&h.state, closed)
+				break
+			}
+			if atomic.CompareAndSwapUint32(&h.state, reading, canceling) {
+				logger.Debugf("canceling ongoing packet read")
+			}
+			if atomic.CompareAndSwapUint32(&h.state, polling, canceling) {
+				// When polling is interrupted it is safe to go ahead and unmap the ring buffer.
+				// Reader will eventually detect canceled polling and will exit without accessing
+				// the buffer anymore.
+				logger.Debugf("canceling ongoing socket polling; not waiting for poll to return")
+				break
+			}
+		}
+		if h.ring != nil {
+			if err := syscall.Munmap(h.ring); err != nil {
+				logger.Errorf("error unmapping mmap at %p ; nothing to do", h.ring)
+			}
+		}
+		// close the socket
+		if err := syscall.Close(h.fd); err != nil {
+			logger.Errorf("error closing file descriptor %d ; nothing to do", h.fd)
+		}
 	})
-	// Wait for reader to finish before unmapping memory with the ring buffer.
-	closeAttempts := 0
-	for !atomic.CompareAndSwapUint32(&h.state, open, closed) {
-		closeAttempts += 1
-		if closeAttempts >= 1000 {
-			// Stopping before we become an infinite loop
-			logger.Tracef("Swapping on Stop tried for %d times, giving up now", closeAttempts)
-			break
-		}
-		state := atomic.LoadUint32(&h.state)
-		if state == canceled || state == gone {
-			atomic.StoreUint32(&h.state, closed)
-			break
-		}
-		if atomic.CompareAndSwapUint32(&h.state, reading, canceling) {
-			logger.Debugf("cancelling ongoig packet read")
-		}
-		if atomic.CompareAndSwapUint32(&h.state, polling, canceling) {
-			// When polling is interrupted it is safe to go ahead and unmap the ring buffer.
-			// Reader will eventually detect canceled polling and will exit without accessing
-			// the buffer anymore.
-			logger.Debugf("cancelling ongoing socket polling; not waiting for poll to return")
-			break
-		}
-	}
-	if h.ring != nil {
-		if err := syscall.Munmap(h.ring); err != nil {
-			logger.Errorf("error unmapping mmap at %p ; nothing to do", h.ring)
-		}
-	}
-	// close the socket
-	if err := syscall.Close(h.fd); err != nil {
-		logger.Errorf("error closing file descriptor %d ; nothing to do", h.fd)
-	}
 }
 
 // set a classic BPF filter on the listener. filter must be compliant with
 // tcpdump syntax.
 func (h *Handle) setFilter() error {
+	if len(h.filter) == 0 {
+		return errors.New("cannot install empty BPF filter")
+	}
 
 	/*
 	 * Try to install the kernel filter.
 	 */
 	prog := syscall.SockFprog{
-		Len:    uint16(len(h.filter)),
+		Len: uint16(len(h.filter)),
+		// #nosec G103 -- SO_ATTACH_FILTER synchronously copies this non-empty Go-owned slice.
 		Filter: (*syscall.SockFilter)(unsafe.Pointer(&h.filter[0])),
 	}
 
 	if err := syscall.SetsockoptSockFprog(h.fd, syscall.SOL_SOCKET, syscall.SO_ATTACH_FILTER, &prog); err != nil {
-		return fmt.Errorf("unable to set filter: %v", err)
+		return fmt.Errorf("unable to set filter: %w", err)
 	}
 	return nil
 }
@@ -418,7 +464,7 @@ func tpacketAlign(base int32) int32 {
 	return (base + syscall.TPACKET_ALIGNMENT - 1) &^ (syscall.TPACKET_ALIGNMENT - 1)
 }
 
-func openLive(iface string, snaplen int32, promiscuous bool, timeout time.Duration, syscalls bool) (handle *Handle, _ error) {
+func openLive(ctx context.Context, iface string, snaplen int32, promiscuous bool, timeout time.Duration, syscalls bool) (handle *Handle, _ error) {
 	logger := log.WithFields(log.Fields{
 		"iface":       iface,
 		"snaplen":     snaplen,
@@ -442,8 +488,7 @@ func openLive(iface string, snaplen int32, promiscuous bool, timeout time.Durati
 	h.endian = endianness
 
 	// because syscall package does not provide this
-	rall := syscall.RawSockaddrLinklayer{}
-	packetRALLSize = int32(unsafe.Sizeof(rall))
+	packetRALLSize = int32(unsafe.Sizeof(syscall.RawSockaddrLinklayer{}))
 	alignedTpacketHdrSize = tpacketAlign(syscall.SizeofTpacket3Hdr)
 	alignedTpacketRALLSize = tpacketAlign(packetRALLSize)
 	alignedTpacketAllHdrSize = alignedTpacketHdrSize + alignedTpacketRALLSize
@@ -452,24 +497,25 @@ func openLive(iface string, snaplen int32, promiscuous bool, timeout time.Durati
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, int(htons(syscall.ETH_P_ALL)))
 	if err != nil {
 		logger.Errorf("failed opening raw socket: %v", err)
-		return nil, fmt.Errorf("failed opening raw socket: %v", err)
+		return nil, fmt.Errorf("failed opening raw socket: %w", err)
 	}
 	h.fd = fd
 	h.pollfd = []syscall.PollFd{{
 		Fd:     int32(h.fd),
-		Events: syscall.POLLIN | syscall.POLLERR | syscall.POLLNVAL}}
+		Events: syscall.POLLIN | syscall.POLLERR | syscall.POLLNVAL,
+	}}
 	if err := syscall.SetNonblock(fd, false); err != nil {
-		return nil, fmt.Errorf("failed to set socket as blocking: %v", err)
+		return nil, fmt.Errorf("failed to set socket as blocking: %w", err)
 	}
 	if err = syscall.SetsockoptInt(fd, syscall.SOL_PACKET, syscall.PACKET_AUXDATA, 1); err != nil {
-		return nil, fmt.Errorf("failed to set packet auxilary data: %w", err)
+		return nil, fmt.Errorf("failed to set packet auxiliary data: %w", err)
 	}
 	if iface != "" {
 		// get our interface
 		in, err := net.InterfaceByName(iface)
 		if err != nil {
 			logger.Errorf("unknown interface %s: %v", iface, err)
-			return nil, fmt.Errorf("unknown interface %s: %v", iface, err)
+			return nil, fmt.Errorf("unknown interface %s: %w", iface, err)
 		}
 		// check the interface is up
 		if in.Flags&net.FlagUp != net.FlagUp {
@@ -485,24 +531,23 @@ func openLive(iface string, snaplen int32, promiscuous bool, timeout time.Durati
 		}
 		// bind to it
 		if err = syscall.Bind(fd, &sa); err != nil {
-			return nil, fmt.Errorf("failed to bind")
+			return nil, fmt.Errorf("failed to bind: %w", err)
 		}
 		if promiscuous {
-			h.promiscuous = true
 			mreq := syscall.PacketMreq{
 				Ifindex: int32(in.Index),
 				Type:    syscall.PACKET_MR_PROMISC,
 			}
 			if err = syscall.SetsockoptPacketMreq(fd, syscall.SOL_PACKET, syscall.PACKET_ADD_MEMBERSHIP, &mreq); err != nil {
 				logger.Errorf("failed to set promiscuous for %s: %v", iface, err)
-				return nil, fmt.Errorf("failed to set promiscuous for %s: %v", iface, err)
+				return nil, fmt.Errorf("failed to set promiscuous for %s: %w", iface, err)
 			}
 		}
 	}
 	if !syscalls {
 		if err = syscall.SetsockoptInt(fd, syscall.SOL_PACKET, syscall.PACKET_VERSION, syscall.TPACKET_V3); err != nil {
 			logger.Errorf("failed to set TPACKET_V3: %v", err)
-			return nil, fmt.Errorf("failed to set TPACKET_V3: %v", err)
+			return nil, fmt.Errorf("failed to set TPACKET_V3: %w", err)
 		}
 		// set up the ring
 		var (
@@ -511,11 +556,8 @@ func openLive(iface string, snaplen int32, promiscuous bool, timeout time.Durati
 			blockSize           = uint32(pageSize)
 			blockNumbers uint32 = defaultBlockNumbers
 		)
-		for {
-			if blockSize > frameSize {
-				break
-			}
-			blockSize = blockSize << 1
+		for blockSize <= frameSize {
+			blockSize <<= 1
 		}
 		// we use the default - for now
 
@@ -531,13 +573,13 @@ func openLive(iface string, snaplen int32, promiscuous bool, timeout time.Durati
 		logger.Debugf("creating mmap buffer with tpreq %#v", tpreq)
 		if err = syscall.SetsockoptTpacketReq3(fd, syscall.SOL_PACKET, syscall.PACKET_RX_RING, &tpreq); err != nil {
 			logger.Errorf("failed to set tpacket req: %v", err)
-			return nil, fmt.Errorf("failed to set tpacket req: %v", err)
+			return nil, fmt.Errorf("failed to set tpacket req: %w", err)
 		}
 		totalSize := int(tpreq.Block_size * tpreq.Block_nr)
 		data, err := syscall.Mmap(fd, 0, totalSize, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 		if err != nil {
 			logger.Errorf("error mmapping: %v", err)
-			return nil, fmt.Errorf("error mmapping: %v", err)
+			return nil, fmt.Errorf("error mmapping: %w", err)
 		}
 		logger.Infof("mmap buffer created at %p with size %d", data, len(data))
 		h.framesPerBuffer = framesPerBuffer
@@ -569,4 +611,10 @@ func parseSocketAddrLinkLayer(b []byte, endian binary.ByteOrder) (*syscall.RawSo
 		Addr:     addr,
 	}
 	return &sall, nil
+}
+
+// LinkType return the link type, compliant with pcap-linktype(7) and http://www.tcpdump.org/linktypes.html.
+// For now, we just support Ethernet; some day we may support more
+func (h *Handle) LinkType() uint32 {
+	return LinkTypeEthernet
 }

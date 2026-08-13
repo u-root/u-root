@@ -21,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/gopacket/gopacket"
-	pcap "github.com/packetcap/go-pcap"
+	pcap "github.com/huatuo-ai/go-pcap"
 
 	"github.com/gopacket/gopacket/layers"
 	"github.com/u-root/u-root/pkg/uroot/unixflag"
@@ -130,14 +130,17 @@ func parseFlags(args []string, out io.Writer) (cmd, error) {
 		}
 	}
 
-	return cmd{Opts: opts, Out: out, usage: fs.Usage}, nil
+	return cmd{Opts: opts, Out: out, usage: fs.Usage, openLive: pcap.OpenLive}, nil
 }
+
+type openLiveFunc func(device string, snaplen int32, promisc bool, timeout time.Duration) (*pcap.Handle, error)
 
 type cmd struct {
 	Out  io.Writer
 	Opts flags
 
-	usage func()
+	usage    func()
+	openLive openLiveFunc
 }
 
 func (cmd *cmd) run() error {
@@ -160,19 +163,10 @@ func (cmd *cmd) run() error {
 		return fmt.Errorf("no device specified")
 	}
 
-	sigChan := make(chan os.Signal, 1)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		<-sigChan
-		cancel()
-	}()
-
-	if src, err = pcap.OpenLive(cmd.Opts.Device, int32(cmd.Opts.SnapshotLength), !cmd.Opts.NoPromisc, 0, false); err != nil {
+	if src, err = cmd.openLive(cmd.Opts.Device, int32(cmd.Opts.SnapshotLength), !cmd.Opts.NoPromisc, 0); err != nil {
 		if strings.Contains(err.Error(), "operation not permitted") {
 			return fmt.Errorf("you don't have permission to capture on that/these device(s)")
 		}

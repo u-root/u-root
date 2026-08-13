@@ -206,6 +206,10 @@ github.com/gopacket/gopacket/layers
 github.com/hashicorp/golang-lru/v2
 github.com/hashicorp/golang-lru/v2/internal
 github.com/hashicorp/golang-lru/v2/simplelru
+# github.com/huatuo-ai/go-pcap v0.0.0-20260813084857-6e768c1f2834
+## explicit; go 1.23.0
+github.com/huatuo-ai/go-pcap
+github.com/huatuo-ai/go-pcap/filter
 # github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
 ## explicit; go 1.14
 github.com/hugelgupf/go-shlex
@@ -375,10 +379,6 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 ## explicit; go 1.14
 github.com/orangecms/go-framebuffer/framebuffer
-# github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
-## explicit; go 1.20
-github.com/packetcap/go-pcap
-github.com/packetcap/go-pcap/filter
 # github.com/pierrec/lz4/v4 v4.1.22
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4

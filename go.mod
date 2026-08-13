@@ -18,6 +18,7 @@ require (
 	github.com/google/go-tpm v0.9.2-0.20240919181259-d96ccf715685
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.2.0
+	github.com/huatuo-ai/go-pcap v0.0.0-20260813084857-6e768c1f2834
 	github.com/hugelgupf/vmtest v0.0.0-20240307030256-5d9f3d34a58d
 	github.com/insomniacslk/dhcp v0.0.0-20260719225207-c76316d4aa82
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
@@ -28,7 +29,6 @@ require (
 	github.com/mdlayher/vsock v1.2.1
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
-	github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
 	github.com/pierrec/lz4/v4 v4.1.22
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
