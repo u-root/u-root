@@ -12,8 +12,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -95,7 +95,7 @@ func TestRead(t *testing.T) {
 				t.Errorf("Unable to read from sectionReader: %v", err)
 			}
 
-			if !reflect.DeepEqual(buffer, tt.expected) {
+			if !bytes.Equal(buffer, tt.expected) {
 				t.Errorf("Got: %v - Want: %v", buffer, tt.expected)
 			}
 		})
@@ -270,7 +270,7 @@ func TestConvertArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotArgs := convertArgs(tt.args)
 
-			if !reflect.DeepEqual(gotArgs, tt.expectedArgs) {
+			if !slices.Equal(gotArgs, tt.expectedArgs) {
 				t.Errorf("Args not equal. Got %v, want %v", gotArgs, tt.expectedArgs)
 			}
 		})
@@ -528,7 +528,7 @@ func TestFiles(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if !reflect.DeepEqual(tt.expected, got) {
+			if !bytes.Equal(tt.expected, got) {
 				t.Errorf("expected %q, got %q", tt.expected, got)
 			}
 		})
