@@ -10,6 +10,7 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -165,7 +166,7 @@ func TestParseLinkShow(t *testing.T) {
 			if gotName != tt.wantName {
 				t.Errorf("parseLinkShow() gotName = %v, want %v", gotName, tt.wantName)
 			}
-			if !reflect.DeepEqual(gotTypes, tt.wantTypes) {
+			if !slices.Equal(gotTypes, tt.wantTypes) {
 				t.Errorf("parseLinkShow() gotTypes = %v, want %v", gotTypes, tt.wantTypes)
 			}
 		})

@@ -10,6 +10,7 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -404,7 +405,7 @@ func TestFilterNeighsByAddr(t *testing.T) {
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Test %s failed: expected neighbors %v, got %v", tt.name, tt.expected, result)
 			}
-			if !reflect.DeepEqual(linkNames, tt.expectedLinkNames) {
+			if !slices.Equal(linkNames, tt.expectedLinkNames) {
 				t.Errorf("Test %s failed: expected link names %v, got %v", tt.name, tt.linkNames, tt.expectedLinkNames)
 			}
 		})
