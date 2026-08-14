@@ -6,7 +6,7 @@
 package main
 
 import (
-	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/vishvananda/netlink"
@@ -201,7 +201,7 @@ func TestParseAddrShow(t *testing.T) {
 			if gotName != tt.wantName {
 				t.Errorf("parseAddrShow() gotName = %v, want %v", gotName, tt.wantName)
 			}
-			if !reflect.DeepEqual(gotTypes, tt.wantTypes) {
+			if !slices.Equal(gotTypes, tt.wantTypes) {
 				t.Errorf("parseAddrShow() gotTypes = %v, want %v", gotTypes, tt.wantTypes)
 			}
 		})
