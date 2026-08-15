@@ -14,7 +14,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -775,7 +775,7 @@ func TestScanWithCustomEOL(t *testing.T) {
 				t.Errorf("Scanner encountered an error: %v", err)
 			}
 
-			if !reflect.DeepEqual(got, tt.expected) {
+			if !slices.Equal(got, tt.expected) {
 				t.Errorf("Got %v, want %v", got, tt.expected)
 			}
 		})
