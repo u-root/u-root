@@ -196,7 +196,7 @@ func TestOOB(t *testing.T) {
 	for _, tt := range testTableOOB {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.in.OOB(tt.methodin)
-			if !reflect.DeepEqual(got, tt.exp) {
+			if got != tt.exp {
 				t.Errorf("Expected value: %v, got: %v", tt.exp, got)
 			}
 		})
@@ -224,7 +224,7 @@ func TestGetMust(t *testing.T) {
 	for _, tt := range testTableGetMust {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.in.GetMust(tt.methodin1, tt.methodin2)
-			if !reflect.DeepEqual(got, tt.exp) {
+			if got != tt.exp {
 				t.Errorf("Expected value: %v, got: %v", tt.exp, got)
 			}
 		})
@@ -268,7 +268,7 @@ func TestGet(t *testing.T) {
 						(vx.Kind() == reflect.Slice || vx.Kind() == reflect.Map) &&
 						(vx.Len() == 0 && vy.Len() == 0)
 				}, alwaysEqual)
-				if !cmp.Equal(got, tt.exp1, opt) || !reflect.DeepEqual(err.Error(), tt.exp2.Error()) {
+				if !cmp.Equal(got, tt.exp1, opt) || err.Error() != tt.exp2.Error() {
 					t.Errorf("Expected values: %v, %v, got: %v, %v", tt.exp1, tt.exp2, got, err)
 				}
 			}
@@ -302,7 +302,7 @@ func TestCopy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.in.Copy(tt.methodin)
 			if err != nil {
-				if !reflect.DeepEqual(err.Error(), tt.exp.Error()) {
+				if err.Error() != tt.exp.Error() {
 					t.Errorf("Expected value: %v, got: %v", tt.exp, err)
 				}
 			}
@@ -342,7 +342,7 @@ func TestPasteInsert(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.in.Paste(tt.methodin)
 			if err != nil {
-				if !reflect.DeepEqual(err.Error(), tt.exp.Error()) {
+				if err.Error() != tt.exp.Error() {
 					t.Errorf("Expected value: %v, got: %v", tt.exp, err)
 				}
 			}
@@ -376,7 +376,7 @@ func TestDelete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.in.Delete(tt.methodin)
 			if err != nil {
-				if !reflect.DeepEqual(err.Error(), tt.exp.Error()) {
+				if err.Error() != tt.exp.Error() {
 					t.Errorf("Expected value: %v, got: %v", tt.exp, err)
 				}
 			}
@@ -507,7 +507,7 @@ func TestGetMark(t *testing.T) {
 					t.Errorf("Expected value: %v, got: %v", tt.err, err)
 				}
 			} else {
-				if reflect.DeepEqual(got, tt.in.marks[0]) {
+				if got == tt.in.marks[0] {
 					t.Errorf("Expected value: %v, got: %v", tt.exp, got)
 				}
 			}
