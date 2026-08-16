@@ -1,8 +1,8 @@
-// Copyright 2017 the u-root Authors. All rights reserved
+// Copyright 2026 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !plan9 && !windows && !tamago && !linux && !openbsd && !js
+//go:build js && !tinygo
 
 package ls
 
@@ -30,34 +30,30 @@ type FileInfo struct {
 	ATime         time.Time
 	MTime         time.Time
 	CTime         time.Time
-	BirthTime     time.Time
 	SymlinkTarget string
 	Dev           uint64
 	Ino           uint64
 	NLink         uint64
 }
 
-// FromOSFileInfo converts os.FileInfo to an ls.FileInfo.
+// FromOSFileInfo converts os.FileInfo to an ls.FileInfo (js/wasm
+// variant; js syscall.Stat_t carries whole-second + nsec fields).
 func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 	var link string
 
-	// A filesystem with a bug will result
-	// in sys not being the right type.
-	// This turns out to be surprisingly messy to test.
 	uID, gID, rdev := uint32(math.MaxUint32), uint32(math.MaxUint32), uint64(math.MaxUint64)
-	var aTime, cTime, birthTime time.Time
+	var aTime, cTime time.Time
 	var dev, ino, nLink uint64
 	var blkSize, blocks int64
 	if s, ok := fi.Sys().(*syscall.Stat_t); ok {
-		uID, gID, rdev = s.Uid, s.Gid, uint64(s.Rdev)
-		aTime = time.Unix(int64(s.Atimespec.Sec), int64(s.Atimespec.Nsec))
-		cTime = time.Unix(int64(s.Ctimespec.Sec), int64(s.Ctimespec.Nsec))
-		birthTime = time.Unix(int64(s.Birthtimespec.Sec), int64(s.Birthtimespec.Nsec))
+		uID, gID, rdev = uint32(s.Uid), uint32(s.Gid), uint64(s.Rdev)
+		aTime = time.Unix(s.Atime, s.AtimeNsec)
+		cTime = time.Unix(s.Ctime, s.CtimeNsec)
 		dev = uint64(s.Dev)
 		ino = s.Ino
 		nLink = uint64(s.Nlink)
 		blkSize = int64(s.Blksize)
-		blocks = int64(blocks)
+		blocks = int64(s.Blocks)
 	}
 
 	if fi.Mode()&os.ModeType == os.ModeSymlink {
@@ -80,7 +76,6 @@ func FromOSFileInfo(path string, fi os.FileInfo) FileInfo {
 		MTime:         fi.ModTime(),
 		ATime:         aTime,
 		CTime:         cTime,
-		BirthTime:     birthTime,
 		SymlinkTarget: link,
 		Dev:           dev,
 		Ino:           ino,
