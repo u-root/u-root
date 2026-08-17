@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/internal/xsocket"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/unix"
 )
@@ -77,7 +78,7 @@ func MakeRawUDPPacket(payload []byte, serverAddr, clientAddr net.UDPAddr) ([]byt
 
 // makeRawSocket creates a socket that can be passed to unix.Sendto.
 func makeRawSocket(ifname string) (int, error) {
-	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_RAW, unix.IPPROTO_RAW)
+	fd, err := xsocket.CloexecSocket(unix.AF_INET, unix.SOCK_RAW, unix.IPPROTO_RAW)
 	if err != nil {
 		return fd, err
 	}
@@ -123,7 +124,7 @@ func htons(v uint16) uint16 {
 }
 
 func makeListeningSocketWithCustomPort(ifname string, port int) (int, error) {
-	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_DGRAM, int(htons(unix.ETH_P_IP)))
+	fd, err := xsocket.CloexecSocket(unix.AF_PACKET, unix.SOCK_DGRAM, int(htons(unix.ETH_P_IP)))
 	if err != nil {
 		return fd, err
 	}
