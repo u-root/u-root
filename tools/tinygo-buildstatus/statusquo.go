@@ -151,7 +151,10 @@ var (
 		"ed",
 		"efivarfs",
 		"esxiboot",
-		"fbnetboot",
+		// fbnetboot uses the deprecated client4, which reaches
+		// dhcpv4.NewDiscoveryForInterface (excluded by the tinygo tag since #564),
+		// so it no longer builds under TinyGo. Tracked in insomniacslk/dhcp#595.
+		// "fbnetboot",
 		"fbsplash",
 		"fdtdump",
 		"field",
