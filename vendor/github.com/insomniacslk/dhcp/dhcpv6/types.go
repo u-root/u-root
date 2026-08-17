@@ -40,6 +40,22 @@ const (
 	_                             MessageType = 19
 	MessageTypeDHCPv4Query        MessageType = 20
 	MessageTypeDHCPv4Response     MessageType = 21
+	_                             MessageType = 22
+	_                             MessageType = 23
+	_                             MessageType = 24
+	_                             MessageType = 25
+	_                             MessageType = 26
+	_                             MessageType = 27
+	_                             MessageType = 28
+	_                             MessageType = 29
+	_                             MessageType = 30
+	_                             MessageType = 31
+	_                             MessageType = 32
+	_                             MessageType = 33
+	_                             MessageType = 34
+	_                             MessageType = 35
+	MessageTypeAddrRegInform      MessageType = 36
+	MessageTypeAddrRegReply       MessageType = 37
 )
 
 // String prints the message type name.
@@ -72,6 +88,8 @@ var messageTypeToStringMap = map[MessageType]string{
 	MessageTypeLeaseQueryData:     "LEASEQUERY-DATA",
 	MessageTypeDHCPv4Query:        "DHCPv4-QUERY",
 	MessageTypeDHCPv4Response:     "DHCPv4-RESPONSE",
+	MessageTypeAddrRegInform:      "ADDR-REG-INFORM",
+	MessageTypeAddrRegReply:       "ADDR-REG-REPLY",
 }
 
 // OptionCode is a single byte representing the code for a given Option.
@@ -230,6 +248,11 @@ const (
 	_                                             OptionCode = 141
 	_                                             OptionCode = 142
 	OptionIPv6AddressANDSF                        OptionCode = 143
+	OptionV6DNR                                   OptionCode = 144
+	_                                             OptionCode = 145
+	_                                             OptionCode = 146
+	_                                             OptionCode = 147
+	OptionAddrRegEnable                           OptionCode = 148
 )
 
 // optionCodeToString maps DHCPv6 OptionCodes to human-readable strings.
@@ -370,4 +393,6 @@ var optionCodeToString = map[OptionCode]string{
 	OptionV6SZTPRedirect:                          "IPv6 Secure Zerotouch Provisioning Redirect",
 	OptionS46BindIPv6Prefix:                       "Softwire46 Source Binding Prefix Hint",
 	OptionIPv6AddressANDSF:                        "IPv6 Access Network Discovery and Selection Function Address",
+	OptionV6DNR:                                   "Encrypted DNS",
+	OptionAddrRegEnable:                           "Address Registration",
 }

@@ -3,6 +3,8 @@ package dhcpv6
 import (
 	"fmt"
 	"net"
+
+	"github.com/insomniacslk/dhcp/iana"
 )
 
 // InterfaceAddresses is used to fetch addresses of an interface with given name
@@ -101,4 +103,33 @@ func ExtractMAC(packet DHCPv6) (net.HardwareAddr, error) {
 		}
 	}
 	return nil, fmt.Errorf("failed to extract MAC")
+}
+
+// GetDUIDLL generates a DUID-LL based on the MAC address of the first
+// available, up, non-loopback network interface. This provides a stable,
+// predictable DUID for the server.
+func GetDUIDLL() (*DUIDLL, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range ifaces {
+		// Skip loopback and down interfaces
+		if iface.Flags&net.FlagLoopback != 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		// Skip interfaces without a MAC address
+		if len(iface.HardwareAddr) == 0 {
+			continue
+		}
+
+		// Found a suitable interface
+		return &DUIDLL{
+			HWType:        iana.HWTypeEthernet,
+			LinkLayerAddr: iface.HardwareAddr,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("no suitable network interface found to generate a DUID")
 }

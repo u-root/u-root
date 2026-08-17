@@ -37,7 +37,7 @@
 //
 //	func main() {
 //		laddr := net.UDPAddr{
-//			IP:   net.ParseIP("127.0.0.1"),
+//			IP:   net.ParseIP("0.0.0.0"),
 //			Port: 67,
 //		}
 //		server, err := server4.NewServer("eth0", &laddr, handler)

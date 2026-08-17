@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package server4
@@ -9,6 +10,7 @@ import (
 	"os"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/internal/xsocket"
 	"golang.org/x/sys/unix"
 )
 
@@ -17,7 +19,7 @@ import (
 //
 // The interface must already be configured.
 func NewIPv4UDPConn(iface string, addr *net.UDPAddr) (*net.UDPConn, error) {
-	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
+	fd, err := xsocket.CloexecSocket(unix.AF_INET, unix.SOCK_DGRAM, unix.IPPROTO_UDP)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get a UDP socket: %v", err)
 	}
