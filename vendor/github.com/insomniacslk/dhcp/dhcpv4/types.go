@@ -238,6 +238,8 @@ const (
 	OptionGeoConfCivic                optionCode = 99
 	OptionIEEE10031TZString           optionCode = 100
 	OptionReferenceToTZDatabase       optionCode = 101
+	// Option 108 returned in RFC 8925
+	OptionIPv6OnlyPreferred optionCode = 108
 	// Options 102-111 returned in RFC 3679
 	OptionNetInfoParentServerAddress optionCode = 112
 	OptionNetInfoParentServerTag     optionCode = 113
@@ -279,7 +281,9 @@ const (
 	OptionQueryEndTime      optionCode = 155
 	OptionDHCPState         optionCode = 156
 	OptionDataSource        optionCode = 157
-	// Options 158-174 returned in RFC 3679
+	// Options 158-161 returned in RFC 3679
+	OptionV4DNR optionCode = 162
+	// Options 163-174 returned in RFC 3679
 	OptionEtherboot                        optionCode = 175
 	OptionIPTelephone                      optionCode = 176
 	OptionEtherbootPacketCableAndCableHome optionCode = 177
@@ -401,6 +405,8 @@ var optionCodeToString = map[OptionCode]string{
 	OptionGeoConfCivic:                "GEOCONF_CIVIC",
 	OptionIEEE10031TZString:           "IEEE 1003.1 TZ String",
 	OptionReferenceToTZDatabase:       "Reference to the TZ Database",
+	// Option 108 returned in RFC 8925
+	OptionIPv6OnlyPreferred: "IPv6-Only Preferred",
 	// Options 102-111 returned in RFC 3679
 	OptionNetInfoParentServerAddress: "NetInfo Parent Server Address",
 	OptionNetInfoParentServerTag:     "NetInfo Parent Server Tag",
@@ -442,7 +448,9 @@ var optionCodeToString = map[OptionCode]string{
 	OptionQueryEndTime:      "Query End Time",
 	OptionDHCPState:         "DHCP Staet",
 	OptionDataSource:        "Data Source",
-	// Options 158-174 returned in RFC 3679
+	// Options 158-161 returned in RFC 3679
+	OptionV4DNR: "Encrypted DNS",
+	// Options 163-174 returned in RFC 3679
 	OptionEtherboot:                        "Etherboot",
 	OptionIPTelephone:                      "IP Telephone",
 	OptionEtherbootPacketCableAndCableHome: "Etherboot / PacketCable and CableHome",

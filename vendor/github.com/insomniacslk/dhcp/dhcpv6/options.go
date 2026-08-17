@@ -82,6 +82,8 @@ func ParseOption(code OptionCode, optData []byte) (Option, error) {
 		opt = &OptIAPD{}
 	case OptionIAPrefix:
 		opt = &OptIAPrefix{}
+	case OptionSNTPServerList:
+		opt = &optSNTP{}
 	case OptionInformationRefreshTime:
 		opt = &optInformationRefreshTime{}
 	case OptionRemoteID:
