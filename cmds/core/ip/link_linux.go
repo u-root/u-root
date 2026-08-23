@@ -992,7 +992,7 @@ func (cmd *cmd) printLinkJSON(links []linkData) error {
 					family = "inet6"
 				}
 
-				ip := strings.Split(addr.IPNet.String(), "/")[0]
+				ip, _, _ := strings.Cut(addr.IPNet.String(), "/")
 				prefixlen := strings.Split(addr.IPNet.String(), "/")[1]
 
 				addrInfo := AddrJSON{
