@@ -111,8 +111,11 @@ func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 			}
 		}
 
-		// If we have TTYs from kernel cmdline, use PTY multiplexing like the shell tool
-		if len(ttyNames) > 0 {
+		// If we have multiple TTYs from kernel cmdline, use PTY multiplexing like the shell tool.
+		// With zero or one console there is nothing to multiplex; routing I/O
+		// through a PTY anyway adds relay overhead and shutdown races that can
+		// lose short-lived command output.
+		if len(ttyNames) > 1 {
 			debug("Setting up multi-TTY with %v", ttyNames)
 
 			// Open and configure all TTYs
@@ -135,8 +138,11 @@ func RunCommands(debug func(string, ...any), commands ...*exec.Cmd) int {
 				ttys = append(ttys, tty)
 			}
 
-			if len(ttys) == 0 {
-				debug("No TTYs could be opened, falling back to default")
+			if len(ttys) <= 1 {
+				debug("Not enough TTYs could be opened, falling back to default")
+				for _, tty := range ttys {
+					tty.Close()
+				}
 				cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 			} else {
 				// Create PTY for the command
