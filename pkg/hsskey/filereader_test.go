@@ -6,6 +6,7 @@ package hsskey
 
 import (
 	"encoding/binary"
+	"errors"
 	"hash/crc32"
 	"io"
 	"math/rand"
@@ -347,37 +348,43 @@ func TestReadHssFromFile(t *testing.T) {
 		name         string
 		fileData     [][]byte
 		expectedData [][]byte
-		expectErr    bool
+		err          error
 	}{
 		{
 			name:         "Four valid hss blocks",
 			fileData:     [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2},
 			expectedData: [][]byte{validHssBlock1[:32], validHssBlock1[:32], validHssBlock2[:32], validHssBlock2[:32]},
-			expectErr:    false,
+			err:          nil,
 		},
 		{
 			name:         "Two valid and two invalid",
 			fileData:     [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2, invalidChecksumHssBlock2},
 			expectedData: [][]byte{validHssBlock1[:32], validHssBlock2[:32]},
-			expectErr:    false,
+			err:          nil,
 		},
 		{
 			name:         "Mix invalid block",
 			fileData:     [][]byte{make([]byte, 5), validHssBlock1, validHssBlock1, validHssBlock1, validHssBlock1},
 			expectedData: nil,
-			expectErr:    true,
+			err:          nil,
 		},
 		{
 			name:         "File length is longer than 4 blocks",
 			fileData:     [][]byte{validHssBlock1, invalidChecksumHssBlock1, validHssBlock2, validHssBlock2, validHssBlock2},
 			expectedData: [][]byte{validHssBlock1[:32], validHssBlock2[:32], validHssBlock2[:32]},
-			expectErr:    false,
+			err:          nil,
 		},
 		{
 			name:         "File too short",
 			fileData:     [][]byte{validHssBlock1},
 			expectedData: nil,
-			expectErr:    true,
+			err:          os.ErrInvalid,
+		},
+		{
+			name:         "File is huge (should only read necessary part)",
+			fileData:     [][]byte{validHssBlock1, validHssBlock1, validHssBlock2, validHssBlock2, make([]byte, 1024*1024)},
+			expectedData: [][]byte{validHssBlock1[:32], validHssBlock1[:32], validHssBlock2[:32], validHssBlock2[:32]},
+			err:          nil,
 		},
 	}
 
@@ -399,11 +406,10 @@ func TestReadHssFromFile(t *testing.T) {
 			}
 
 			hssList, err := ReadHssFromFile(tempFile.Name(), hostSecretSeedCount)
-			if err != nil {
-				if !tt.expectErr {
-					t.Fatalf("Unexpected error: %v", err)
-				}
-			} else if !reflect.DeepEqual(hssList, tt.expectedData) {
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("ReadHssFromFile(%v) error = %v, want %v", tempFile.Name(), err, tt.err)
+			}
+			if !reflect.DeepEqual(hssList, tt.expectedData) {
 				t.Fatalf("ReadHssFromFile(%v) = %v, want %v", tempFile.Name(), hssList, tt.expectedData)
 			}
 		})
@@ -620,6 +626,62 @@ func TestWriteHssToTempFile(t *testing.T) {
 
 			if !reflect.DeepEqual(gotFileContent, wantFileContent) {
 				t.Fatalf("WriteHssToFile(%v, %v) =\ngot: %v\nwant: %v", tempFilePath, tt.writeData, gotFileContent, wantFileContent)
+			}
+		})
+	}
+}
+
+func TestReadHssFromFile_MinHssZero(t *testing.T) {
+	validHssBlock1 := createDummyHssData()
+
+	tests := []struct {
+		name         string
+		fileData     [][]byte
+		expectedData [][]byte
+		err          error
+	}{
+		{
+			name:         "Empty file",
+			fileData:     nil,
+			expectedData: nil,
+			err:          nil,
+		},
+		{
+			name:         "One valid block",
+			fileData:     [][]byte{validHssBlock1},
+			expectedData: [][]byte{validHssBlock1[:32]},
+			err:          nil,
+		},
+		{
+			name:         "Partial block (too short for one struct)",
+			fileData:     [][]byte{validHssBlock1[:10]},
+			expectedData: nil,
+			err:          nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tempFile, err := os.CreateTemp("", "testData")
+			if err != nil {
+				t.Fatalf("Failed to create temporary file: %v", err)
+			}
+			defer os.Remove(tempFile.Name())
+
+			var fileContent []byte
+			for _, bytes := range tt.fileData {
+				fileContent = append(fileContent, bytes...)
+			}
+			if err := os.WriteFile(tempFile.Name(), fileContent, 0o644); err != nil {
+				t.Fatalf("Failed to write test file: %v", err)
+			}
+
+			hssList, err := ReadHssFromFile(tempFile.Name(), 0)
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("ReadHssFromFile(%v, 0) error = %v, want %v", tempFile.Name(), err, tt.err)
+			}
+			if !reflect.DeepEqual(hssList, tt.expectedData) {
+				t.Fatalf("ReadHssFromFile(%v, 0) = %v, want %v", tempFile.Name(), hssList, tt.expectedData)
 			}
 		})
 	}
