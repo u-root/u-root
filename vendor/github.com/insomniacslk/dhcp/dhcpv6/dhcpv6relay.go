@@ -69,6 +69,18 @@ func (ro RelayOptions) ClientLinkLayerAddress() (iana.HWType, net.HardwareAddr) 
 	return 0, nil
 }
 
+// RelayPort returns the optRelayPort of this relay message.
+func (ro RelayOptions) RelayPort() *optRelayPort {
+	opt := ro.Options.GetOne(OptionRelayPort)
+	if opt == nil {
+		return nil
+	}
+	if relayPort, ok := opt.(*optRelayPort); ok {
+		return relayPort
+	}
+	return nil
+}
+
 // RelayMessage is a DHCPv6 relay agent message as defined by RFC 3315 Section
 // 7.
 type RelayMessage struct {

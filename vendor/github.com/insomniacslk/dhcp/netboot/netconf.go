@@ -122,12 +122,8 @@ func GetNetConfFromPacketv4(d *dhcpv4.DHCPv4) (*NetConf, error) {
 		netconf.DNSSearchList = dnsSearchList.Labels
 	}
 
-	// get default gateway
-	routersList := d.Router()
-	if len(routersList) == 0 {
-		return nil, errors.New("no routers specified in the corresponding option")
-	}
-	netconf.Routers = routersList
+	// get default gateway (empty is perfectly fine)
+	netconf.Routers = d.Router()
 
 	// get NTP servers
 	netconf.NTPServers = d.NTPServers()
@@ -177,7 +173,6 @@ func IfUp(ifname string, timeout time.Duration) (_ *net.Interface, err error) {
 	}
 
 	return nil, fmt.Errorf("timed out while waiting for %s to come up", ifname)
-
 }
 
 // ConfigureInterface configures a network interface with the configuration held by a
