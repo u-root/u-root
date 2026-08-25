@@ -14,6 +14,7 @@ package acpi
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -60,6 +61,7 @@ type (
 
 // Debug enables various debug prints. External code can set it to, e.g., log.Printf
 var Debug = func(string, ...any) {}
+var errNotFound = errors.New("not found")
 
 // gencsum generates a uint8 checksum of a []uint8
 func gencsum(b []uint8) uint8 {
@@ -81,7 +83,7 @@ func getaddr(b []byte, addr64, addr32 int64) (int64, error) {
 	if err := binary.Read(io.NewSectionReader(bytes.NewReader(b), addr32, 4), binary.LittleEndian, &a32); err == nil {
 		return int64(a32), nil
 	}
-	return -1, fmt.Errorf("no 64-bit address at %d, no 32-bit address at %d, in %d-byte slice", addr64, addr32, len(b))
+	return -1, fmt.Errorf("%w: no 64-bit address at %d, no 32-bit address at %d, in %d-byte slice", errNotFound, addr64, addr32, len(b))
 }
 
 // Method accepts a method name and returns a TableMethod if one exists, or error othewise.
