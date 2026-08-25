@@ -6,7 +6,7 @@ package pxe
 
 import (
 	"net"
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -51,7 +51,7 @@ func TestProbeFiles(t *testing.T) {
 		},
 	} {
 		got := probeFiles(tt.mac, tt.ip)
-		if !reflect.DeepEqual(got, tt.files) {
+		if !slices.Equal(got, tt.files) {
 			t.Errorf("probeFiles(%s, %s) = %v, want %v", tt.mac, tt.ip, got, tt.files)
 		}
 	}

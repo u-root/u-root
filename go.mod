@@ -17,7 +17,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-tpm v0.9.2-0.20240919181259-d96ccf715685
 	github.com/google/uuid v1.6.0
-	github.com/gopacket/gopacket v1.2.0
+	github.com/gopacket/gopacket v1.6.1
 	github.com/hugelgupf/vmtest v0.0.0-20240307030256-5d9f3d34a58d
 	github.com/insomniacslk/dhcp v0.0.0-20260719225207-c76316d4aa82
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2

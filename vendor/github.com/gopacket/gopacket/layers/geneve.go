@@ -50,6 +50,9 @@ type GeneveOption struct {
 	Data   []byte
 }
 
+// ensure Geneve implements DecodingLayer.
+var _ gopacket.DecodingLayer = (*Geneve)(nil)
+
 // LayerType returns LayerTypeGeneve
 func (gn *Geneve) LayerType() gopacket.LayerType { return LayerTypeGeneve }
 
@@ -83,6 +86,7 @@ func (gn *Geneve) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error
 
 	gn.Version = data[0] >> 7
 	gn.OptionsLength = (data[0] & 0x3f) * 4
+	gn.Options = gn.Options[:0]
 
 	gn.OAMPacket = data[1]&0x80 > 0
 	gn.CriticalOption = data[1]&0x40 > 0
@@ -191,4 +195,9 @@ func (gn *Geneve) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Serializ
 	}
 
 	return nil
+}
+
+// CanDecode implements DecodingLayer.
+func (gn *Geneve) CanDecode() gopacket.LayerClass {
+	return LayerTypeGeneve
 }

@@ -40,6 +40,7 @@ const (
 	EthernetTypeCiscoDiscovery              EthernetType = 0x2000
 	EthernetTypeNortelDiscovery             EthernetType = 0x01a2
 	EthernetTypeTransparentEthernetBridging EthernetType = 0x6558
+	EthernetTypeMerakiDiscoveryProtocol     EthernetType = 0x712
 	EthernetTypeDot1Q                       EthernetType = 0x8100
 	EthernetTypePPP                         EthernetType = 0x880b
 	EthernetTypePPPoEDiscovery              EthernetType = 0x8863
@@ -47,10 +48,11 @@ const (
 	EthernetTypeMPLSUnicast                 EthernetType = 0x8847
 	EthernetTypeMPLSMulticast               EthernetType = 0x8848
 	EthernetTypeEAPOL                       EthernetType = 0x888e
-	EthernetTypeERSPAN                      EthernetType = 0x88be
 	EthernetTypeQinQ                        EthernetType = 0x88a8
+	EthernetTypeERSPAN                      EthernetType = 0x88be
 	EthernetTypeLinkLayerDiscovery          EthernetType = 0x88cc
 	EthernetTypeEthernetCTP                 EthernetType = 0x9000
+	EthernetTypeRaw                         EthernetType = 0xFFFF // Special case for raw IP
 )
 
 // IPProtocol is an enumeration of IP protocol values, and acts as a decoder
@@ -307,6 +309,7 @@ func initActualTypeData() {
 	// Here we link up all enumerations with their respective names and decoders.
 	EthernetTypeMetadata[EthernetTypeLLC] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeLLC), Name: "LLC", LayerType: LayerTypeLLC}
 	EthernetTypeMetadata[EthernetTypeIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4", LayerType: LayerTypeIPv4}
+	EthernetTypeMetadata[EthernetTypeRaw] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "Raw", LayerType: LayerTypeIPv4}
 	EthernetTypeMetadata[EthernetTypeIPv6] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv6), Name: "IPv6", LayerType: LayerTypeIPv6}
 	EthernetTypeMetadata[EthernetTypeARP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeARP), Name: "ARP", LayerType: LayerTypeARP}
 	EthernetTypeMetadata[EthernetTypeDot1Q] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot1Q), Name: "Dot1Q", LayerType: LayerTypeDot1Q}
@@ -323,6 +326,7 @@ func initActualTypeData() {
 	EthernetTypeMetadata[EthernetTypeQinQ] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeDot1Q), Name: "Dot1Q", LayerType: LayerTypeDot1Q}
 	EthernetTypeMetadata[EthernetTypeTransparentEthernetBridging] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeEthernet), Name: "TransparentEthernetBridging", LayerType: LayerTypeEthernet}
 	EthernetTypeMetadata[EthernetTypeERSPAN] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeERSPANII), Name: "ERSPAN Type II", LayerType: LayerTypeERSPANII}
+	EthernetTypeMetadata[EthernetTypeMerakiDiscoveryProtocol] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeMDP), Name: "MDP", LayerType: LayerTypeMDP}
 
 	IPProtocolMetadata[IPProtocolIPv4] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeIPv4), Name: "IPv4", LayerType: LayerTypeIPv4}
 	IPProtocolMetadata[IPProtocolTCP] = EnumMetadata{DecodeWith: gopacket.DecodeFunc(decodeTCP), Name: "TCP", LayerType: LayerTypeTCP}
