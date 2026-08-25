@@ -1,3 +1,17 @@
+// Copyright 2026 The HuaTuo Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package filter
 
 import (
@@ -11,6 +25,7 @@ type ExpressionToken int
 const (
 	eof rune = 0
 )
+
 const (
 	tokenAnd ExpressionToken = iota
 	tokenOr
@@ -35,6 +50,7 @@ const (
 	tokenPort
 	tokenPortRange
 	tokenEther
+	tokenMulticast
 )
 
 var lexerTokens = map[string]ExpressionToken{
@@ -55,6 +71,7 @@ var lexerTokens = map[string]ExpressionToken{
 	"ip6":       tokenIP6,
 	"tcp":       tokenTCP,
 	"udp":       tokenUDP,
+	"multicast": tokenMulticast,
 }
 
 type buffer struct {
@@ -62,7 +79,6 @@ type buffer struct {
 	word  string
 }
 type Expression struct {
-	raw    string
 	lexer  expressionLexer
 	buffer buffer
 }
@@ -76,7 +92,6 @@ func NewExpression(s string) *Expression {
 		return nil
 	}
 	e := &Expression{
-		raw: s,
 		lexer: expressionLexer{
 			reader: bufio.NewReader(strings.NewReader(s)),
 		},
@@ -193,27 +208,75 @@ func (e *Expression) Compile() Filter {
 	// create a root element, which should be a composite. If it ends up having
 	// just one member, we will return just that at the end.
 	var combo composite
+	// ops records the joiner between adjacent operands in lexical order, so the
+	// tree can be rebuilt with correct precedence (and binds tighter than or)
+	// instead of collapsing every same-level term into a single combo.and.
+	var ops []bool
+	var pendingOp bool
 
 	for {
 		var fe Element
 		if fe = e.Next(); fe == nil {
 			break
 		}
-		switch fe.Type() {
-		case Primitive:
-			p := fe.(primitive)
-			setPrimitiveDefaults(&p, combo.LastPrimitive())
-			combo.filters = append(combo.filters, p)
-		case Composite:
-			c := fe.(composite)
-			combo.filters = append(combo.filters, c)
-		case Joiner:
+		if j, ok := fe.(*and); ok {
 			// it is not a primitive, so it is a joiner
-			isAnd := fe.(*and)
-			combo.and = bool(*isAnd)
+			pendingOp = bool(*j)
+			continue
+		}
+		// record the joiner connecting this operand to the previous one
+		if len(combo.filters) > 0 {
+			ops = append(ops, pendingOp)
+		}
+		switch v := fe.(type) {
+		case primitive:
+			p := v
+			setPrimitiveDefaults(&p, combo.LastPrimitive())
+			if p.negator {
+				combo.filters = append(combo.filters, negated{inner: p})
+			} else {
+				combo.filters = append(combo.filters, p)
+			}
+		case negated:
+			combo.filters = append(combo.filters, v)
+		case composite:
+			combo.filters = append(combo.filters, v)
 		}
 	}
-	return combo.Distill()
+	return foldByPrecedence(combo.filters, ops).Distill()
+}
+
+// foldByPrecedence assembles operands into a precedence-correct tree where
+// "and" binds tighter than "or". ops[i] is the joiner between filters[i] and
+// filters[i+1] (true = and, false = or): maximal and-runs become and
+// composites, which are then joined by or.
+func foldByPrecedence(filters Filters, ops []bool) Filter {
+	if len(filters) == 0 {
+		return composite{}
+	}
+	var orGroups Filters
+	andRun := Filters{filters[0]}
+	for i, op := range ops {
+		if op {
+			andRun = append(andRun, filters[i+1])
+			continue
+		}
+		orGroups = append(orGroups, andGroup(andRun))
+		andRun = Filters{filters[i+1]}
+	}
+	orGroups = append(orGroups, andGroup(andRun))
+	if len(orGroups) == 1 {
+		return orGroups[0]
+	}
+	return composite{filters: orGroups, and: false}
+}
+
+// andGroup wraps a maximal and-run; a single operand needs no composite.
+func andGroup(run Filters) Filter {
+	if len(run) == 1 {
+		return run[0]
+	}
+	return composite{filters: run, and: true}
 }
 
 func (e *Expression) scan() (ExpressionToken, string) {
@@ -308,7 +371,11 @@ tokens:
 			return &j
 		case tokenLeft:
 			// start a new sub-element
-			return e.tokenBrace()
+			sub := e.tokenBrace()
+			if p.negator {
+				return negated{inner: sub}
+			}
+			return sub
 		case tokenRight:
 			// end a sub-element
 			return p
@@ -316,9 +383,7 @@ tokens:
 			p.negator = true
 			continue tokens
 		case tokenGateway:
-			// this really needs to use the composite of two primitives
-			p.protocol = filterProtocolEther
-			p.kind = filterKindHost
+			p.kind = filterKindGateway
 			continue tokens
 		case tokenProto:
 			// the next word is the sub-protocol
@@ -392,9 +457,9 @@ func setPrimitiveDefaults(p, lastPrimitive *primitive) {
 		p.subProtocol = lastPrimitive.subProtocol
 	}
 	// special cases
-	//if (p.subProtocol == filterSubProtocolUDP || p.subProtocol == filterSubProtocolTCP || p.subProtocol == filterSubProtocolIcmp) && p.protocol == filterProtocolUnset {
-	//p.protocol = filterProtocolIP
-	//}
+	// if (p.subProtocol == filterSubProtocolUDP || p.subProtocol == filterSubProtocolTCP || p.subProtocol == filterSubProtocolIcmp) && p.protocol == filterProtocolUnset {
+	// p.protocol = filterProtocolIP
+	// }
 
 	if p.kind == filterKindUnset && p.direction != filterDirectionUnset && (p.protocol == filterProtocolEther || p.protocol == filterProtocolIP || p.protocol == filterProtocolIP6 || p.protocol == filterProtocolArp || p.protocol == filterProtocolRarp) {
 		p.kind = filterKindHost

@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+	pcap "github.com/huatuo-ai/go-pcap"
 )
 
 func TestParseFlags(t *testing.T) {
@@ -86,11 +88,51 @@ func TestParseFlags(t *testing.T) {
 			}
 
 			if !tt.expectedErr {
-				if diff := cmp.Diff(tt.expectedCmd, cmd, cmpopts.IgnoreFields(cmd, "Out", "usage")); diff != "" {
+				if cmd.openLive == nil {
+					t.Error("parseFlags() did not initialize openLive")
+				}
+				if diff := cmp.Diff(tt.expectedCmd, cmd, cmpopts.IgnoreFields(cmd, "Out", "usage", "openLive")); diff != "" {
 					t.Errorf("parseFlags() mismatch (-want +got):\n%s", diff)
 				}
 			}
 		})
+	}
+}
+
+func TestRun(t *testing.T) {
+	wantErr := errors.New("open live failed")
+	var calls int
+	cmd := &cmd{
+		Out: &bytes.Buffer{},
+		Opts: flags{
+			Device:         "eth0",
+			SnapshotLength: 128,
+			NoPromisc:      true,
+		},
+		openLive: func(device string, snaplen int32, promisc bool, timeout time.Duration) (*pcap.Handle, error) {
+			calls++
+			if device != "eth0" {
+				t.Errorf("openLive() device = %q, want eth0", device)
+			}
+			if snaplen != 128 {
+				t.Errorf("openLive() snaplen = %d, want 128", snaplen)
+			}
+			if promisc {
+				t.Error("openLive() promisc = true, want false")
+			}
+			if timeout != 0 {
+				t.Errorf("openLive() timeout = %v, want 0", timeout)
+			}
+
+			return nil, wantErr
+		},
+	}
+
+	if err := cmd.run(); !errors.Is(err, wantErr) {
+		t.Errorf("run() error = %v, want %v", err, wantErr)
+	}
+	if calls != 1 {
+		t.Errorf("openLive() calls = %d, want 1", calls)
 	}
 }
 

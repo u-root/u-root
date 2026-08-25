@@ -1,0 +1,103 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - dupword
+    - errcheck
+    - errname
+    - errorlint
+    - fatcontext
+    - gocheckcompilerdirectives
+    - gocritic
+    - gosec
+    - govet
+    - inamedparam
+    - ineffassign
+    - loggercheck
+    - misspell
+    - musttag
+    - nakedret
+    - nolintlint
+    - staticcheck
+    - unconvert
+    - unused
+    - usestdlibvars
+    - whitespace
+  settings:
+    unused:
+      field-writes-are-uses: false
+      local-variables-are-used: false
+    misspell:
+      locale: US
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      disabled-checks:
+        - commentedOutCode
+        - deferInLoop
+        - evalOrder
+        - exitAfterDefer
+        - exposedSyncMutex
+        - ifElseChain
+        - importShadow
+        - sloppyReassign
+        - unnamedResult
+        - whyNoLint
+        - filepathJoin
+    nolintlint:
+      allow-unused: true
+    dupword:
+      ignore:
+        - long
+    gosec:
+      excludes:
+        - G107
+        - G115
+        - G201
+        - G204
+        - G401
+        - G501
+  exclusions:
+    generated: lax
+    paths:
+      - vendor$
+    rules:
+      - path: '(.+)\.go$'
+        text: '^(var|field) `_.*` is unused$'
+      - linters:
+          - revive
+        text: if-return
+      - linters:
+          - revive
+        text: empty-block
+      - linters:
+          - revive
+        text: superfluous-else
+      - linters:
+          - revive
+        text: unused-parameter
+      - linters:
+          - revive
+        text: unreachable-code
+      - linters:
+          - revive
+        text: redefines-builtin-id
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: true
+      module-path: github.com/huatuo-ai/go-pcap
+  exclusions:
+    paths:
+      - vendor$
