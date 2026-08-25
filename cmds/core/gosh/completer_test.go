@@ -8,7 +8,7 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/knz/bubbline/editline"
@@ -244,7 +244,7 @@ func TestAutocomplete(t *testing.T) {
 				defer os.Chdir(pwd)
 			}
 			got := autocompleteLiner(parser)(tt.input)
-			if !reflect.DeepEqual(got, tt.want) {
+			if !slices.Equal(got, tt.want) {
 				t.Errorf("autocomplete %q = %#v, want %#v", tt.input, got, tt.want)
 			}
 		})

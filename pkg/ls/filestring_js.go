@@ -1,8 +1,8 @@
-// Copyright 2025 the u-root Authors. All rights reserved
+// Copyright 2026 the u-root Authors. All rights reserved
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !windows && !plan9 && !js
+//go:build js
 
 package ls
 
@@ -13,10 +13,11 @@ import (
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
-	"golang.org/x/sys/unix"
 )
 
-// FileString implements Stringer.FileString.
+// FileString implements Stringer.FileString (js/wasm variant: no
+// golang.org/x/sys and no user database — uid/gid print numerically,
+// device major/minor use the Linux encoding).
 func (ls LongStringer) FileString(fi FileInfo) string {
 	// Golang's FileMode.String() is almost sufficient, except we would
 	// rather use b and c for devices.
@@ -36,12 +37,15 @@ func (ls LongStringer) FileString(fi FileInfo) string {
 		size = strconv.FormatInt(fi.Size, 10)
 	}
 
+	major := (fi.Rdev >> 8) & 0xfff
+	minor := (fi.Rdev & 0xff) | ((fi.Rdev >> 12) & 0xfff00)
+
 	s := fmt.Sprintf(pattern,
 		replacer.Replace(fi.Mode.String()),
-		lookupUserName(fi.UID),
-		lookupGroupName(fi.GID),
-		unix.Major(fi.Rdev),
-		unix.Minor(fi.Rdev),
+		strconv.FormatUint(uint64(fi.UID), 10),
+		strconv.FormatUint(uint64(fi.GID), 10),
+		major,
+		minor,
 		size,
 		fi.MTime.Format("Jan _2 15:04"),
 		ls.Name.FileString(fi))

@@ -236,8 +236,8 @@ github.com/hugelgupf/vmtest/vminit/gouinit
 github.com/hugelgupf/vmtest/vminit/shelluinit
 github.com/hugelgupf/vmtest/vminit/shutdownafter
 github.com/hugelgupf/vmtest/vminit/vmmount
-# github.com/insomniacslk/dhcp v0.0.0-20231206064809-8c70d406f6d2
-## explicit; go 1.20
+# github.com/insomniacslk/dhcp v0.0.0-20260719225207-c76316d4aa82
+## explicit; go 1.23.0
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/client4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
@@ -248,6 +248,7 @@ github.com/insomniacslk/dhcp/dhcpv6/nclient6
 github.com/insomniacslk/dhcp/dhcpv6/server6
 github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
+github.com/insomniacslk/dhcp/internal/xsocket
 github.com/insomniacslk/dhcp/netboot
 github.com/insomniacslk/dhcp/rfc1035label
 # github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2

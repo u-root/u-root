@@ -16,7 +16,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -387,7 +387,7 @@ func IsEqualTree(o cp.Options, src, dst string) error {
 			return err
 		}
 		// os.ReadDir guarantees these are sorted.
-		if !reflect.DeepEqual(srcEntries, dstEntries) {
+		if !slices.Equal(srcEntries, dstEntries) {
 			return fmt.Errorf("directory contents did not match:\n%q had %v\n%q had %v", src, srcEntries, dst, dstEntries)
 		}
 		for _, basename := range srcEntries {

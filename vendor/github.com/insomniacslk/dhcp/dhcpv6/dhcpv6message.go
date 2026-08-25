@@ -354,6 +354,18 @@ func (mo MessageOptions) NTPServers() []net.IP {
 	return addrs
 }
 
+// SNTP returns the SNTP Servers option as defined by RFC 4075.
+func (mo MessageOptions) SNTP() []net.IP {
+	opt := mo.Options.GetOne(OptionSNTPServerList)
+	if opt == nil {
+		return nil
+	}
+	if sntp, ok := opt.(*optSNTP); ok {
+		return sntp.SNTPServers
+	}
+	return nil
+}
+
 // Message represents a DHCPv6 Message as defined by RFC 3315 Section 6.
 type Message struct {
 	MessageType   MessageType

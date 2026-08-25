@@ -52,6 +52,3 @@ func GetRSDPEFI() (*RSDP, error) {
 	}
 	return nil, fmt.Errorf("invalid /sys/firmware/efi/systab file")
 }
-
-// You can change the getters if you wish for testing.
-var rsdpgetters = []func() (*RSDP, error){GetRSDPEBDA, GetRSDPMem, GetRSDPEFI}
