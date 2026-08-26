@@ -459,7 +459,7 @@ github.com/u-root/mkuimage/uimage/initramfs
 github.com/u-root/mkuimage/uimage/mkuimage
 github.com/u-root/mkuimage/uimage/templates
 # github.com/u-root/u-root/pkg/uroot v0.0.0-00010101000000-000000000000 => ./
-## explicit; go 1.25.7
+## explicit; go 1.26.6
 # github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701
 ## explicit; go 1.21
 github.com/u-root/uio/cp
