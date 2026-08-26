@@ -490,7 +490,7 @@ func Equal(a, b []byte) error {
 	if err := bb.UnmarshalBinary(b); err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(ba.Header, bb.Header) {
+	if ba.Header != bb.Header {
 		return fmt.Errorf("headers do not match: %s", ba.Header.Diff(&bb.Header))
 	}
 	// this is overkill, I can't see any way it can happen.
@@ -501,10 +501,10 @@ func Equal(a, b []byte) error {
 		return fmt.Errorf("boot code lengths differ: %d vs %d bytes", len(ba.KernelCode), len(bb.KernelCode))
 	}
 
-	if !reflect.DeepEqual(ba.BootCode, bb.BootCode) {
+	if !bytes.Equal(ba.BootCode, bb.BootCode) {
 		return fmt.Errorf("boot code does not match")
 	}
-	if !reflect.DeepEqual(ba.KernelCode, bb.KernelCode) {
+	if !bytes.Equal(ba.KernelCode, bb.KernelCode) {
 		return fmt.Errorf("kernels do not match")
 	}
 	return nil
