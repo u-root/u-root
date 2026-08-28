@@ -144,16 +144,16 @@ func TestFileInfo(t *testing.T) {
 				t.Errorf("%q failed by filemode. Got: %q, Want: %q", tt.name, tt.filemode, fi.Mode.String())
 			}
 			if fi.Rdev != tt.rdev {
-				t.Errorf("%q failed by Rdev. Got: %q, Want: %q", tt.name, tt.rdev, fi.Rdev)
+				t.Errorf("%q failed by Rdev. Got: %d, Want: %d", tt.name, tt.rdev, fi.Rdev)
 			}
 			if fi.UID != tt.uid {
-				t.Errorf("%q failed by UID. Got: %q, Want: %q", tt.name, tt.uid, fi.UID)
+				t.Errorf("%q failed by UID. Got: %d, Want: %d", tt.name, tt.uid, fi.UID)
 			}
 			if fi.GID != tt.gid {
-				t.Errorf("%q failed by GID. Got: %q, Want: %q", tt.name, tt.gid, fi.GID)
+				t.Errorf("%q failed by GID. Got: %d, Want: %d", tt.name, tt.gid, fi.GID)
 			}
 			if fi.Size != tt.size {
-				t.Errorf("%q failed by Size. Got: %q, Want: %q", tt.name, tt.size, fi.Size)
+				t.Errorf("%q failed by Size. Got: %d, Want: %d", tt.name, tt.size, fi.Size)
 			}
 
 			if dt := tt.mTime.Sub(fi.MTime); dt < -tDelta || dt > tDelta {
