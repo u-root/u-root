@@ -233,7 +233,7 @@ func TestRenderProto(t *testing.T) {
 			tt := tt
 			ret := trafficctl.RenderProto(tt.input)
 			if ret != tt.proto {
-				t.Errorf("RenderProto(%q) = %s, not %s", tt.input, ret, tt.proto)
+				t.Errorf("RenderProto(%d) = %s, not %s", tt.input, ret, tt.proto)
 			}
 		})
 	}
