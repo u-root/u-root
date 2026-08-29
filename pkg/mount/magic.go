@@ -216,7 +216,7 @@ func FSFromBlock(n string) (fs string, flags uintptr, err error) {
 			return m.name, m.flags, nil
 		}
 	}
-	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", n, magics)
+	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %v", n, magics)
 }
 
 func FromStatFS(path string) (fs string, flags uintptr, err error) {
@@ -236,7 +236,7 @@ func FromStatFS(path string) (fs string, flags uintptr, err error) {
 			return m.name, m.flags, nil
 		}
 	}
-	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %q", path, magics)
+	return "", 0, fmt.Errorf("no suitable filesystem for %q, from magics %v", path, magics)
 }
 
 // IsTmpRamfs tells if the file path given is under a tmpfs or ramfs.
