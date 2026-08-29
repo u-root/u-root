@@ -183,7 +183,7 @@ func (c *Cmd) AddActions(actions ...string) error {
 			return fmt.Errorf("%q of actions %v: unknown action, not one of %q", f[0], f, allActions)
 		}
 		if check := findEvent(events, f[0]); check != nil {
-			return fmt.Errorf("%q of actions %v: repeat action, already %q", f[0], f, check)
+			return fmt.Errorf("%q of actions %v: repeat action, already %v", f[0], f, check)
 		}
 		var value int
 		if len(f[2]) > 0 {
