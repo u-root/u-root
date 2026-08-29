@@ -46,7 +46,7 @@ func TestCacheSizeBytes2Or1(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			size := cacheSizeBytes2Or1(tt.size1, tt.size2)
 			if size != tt.want {
-				t.Errorf("%q failed. Got: %q, Want: %q", tt.name, size, tt.want)
+				t.Errorf("%q failed. Got: %d, Want: %d", tt.name, size, tt.want)
 			}
 		})
 	}
