@@ -80,19 +80,19 @@ func TestGetDeviceIDQemu(t *testing.T) {
 		t.Errorf("i.GetDeviceID() = %q", err)
 	}
 	if id.DeviceID != 0x20 {
-		t.Errorf("DeviceID: %q, want: %q", id.DeviceID, 0x1)
+		t.Errorf("DeviceID: %d, want: %d", id.DeviceID, 0x20)
 	}
 	if id.DeviceRevision != 0x0 {
-		t.Errorf("DeviceRevision: %q, want: %q", id.DeviceRevision, 0x0)
+		t.Errorf("DeviceRevision: %d, want: %d", id.DeviceRevision, 0x0)
 	}
 	if id.FwRev1 != 0x0 {
-		t.Errorf("FwRev1: %q, want: %q", id.FwRev1, 0x0)
+		t.Errorf("FwRev1: %d, want: %d", id.FwRev1, 0x0)
 	}
 	if id.FwRev2 != 0x0 {
-		t.Errorf("FwRev2: %q, want: %q", id.FwRev2, 0x0)
+		t.Errorf("FwRev2: %d, want: %d", id.FwRev2, 0x0)
 	}
 	if id.IpmiVersion != 0x2 {
-		t.Errorf("IpmiVersion: %q, want: %q", id.IpmiVersion, 0x2)
+		t.Errorf("IpmiVersion: %d, want: %d", id.IpmiVersion, 0x2)
 	}
 	/*
 		This field is differs on every call, I can't figure out why
@@ -141,16 +141,16 @@ func TestGetSELInfoQemu(t *testing.T) {
 		t.Errorf("i.GetSELInfo() = %v", err)
 	}
 	if info.Version != 0x51 {
-		t.Errorf("Version = %q, want %q", info.Version, 0x51)
+		t.Errorf("Version = %d, want %d", info.Version, 0x51)
 	}
 	if info.Entries != 0x0 {
-		t.Errorf("Version = %q, want %q", info.Entries, 0x0)
+		t.Errorf("Entries = %d, want %d", info.Entries, 0x0)
 	}
 	if info.FreeSpace != 0x800 {
-		t.Errorf("Version = %q, want %q", info.FreeSpace, 0x800)
+		t.Errorf("FreeSpace = %d, want %d", info.FreeSpace, 0x800)
 	}
 	if info.OpSupport != 0x2 {
-		t.Errorf("Version = %q, want %q", info.Version, 0x2)
+		t.Errorf("OpSupport = %d, want %d", info.OpSupport, 0x2)
 	}
 }
 

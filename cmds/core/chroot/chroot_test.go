@@ -121,11 +121,11 @@ func TestGroupsSet(t *testing.T) {
 					t.Errorf("group.Set() = %q, want: %q", err.Error(), tt.want)
 				}
 			} else if len(groups.groups) != len(tt.expected) {
-				t.Errorf("len(groups.groups) = %q, want: %q", len(groups.groups), len(tt.expected))
+				t.Errorf("len(groups.groups) = %d, want: %d", len(groups.groups), len(tt.expected))
 			} else {
 				for index, group := range groups.groups {
 					if tt.expected[index] != group {
-						t.Errorf("expected[index] = %q, want: %q", tt.expected[index], group)
+						t.Errorf("expected[index] = %d, want: %d", tt.expected[index], group)
 					}
 				}
 			}
@@ -138,7 +138,7 @@ func TestGroupsSpecGet(t *testing.T) {
 	want := groups
 	got := groups.Get()
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Get() = %q, want: %q", got, want)
+		t.Errorf("Get() = %v, want: %v", got, want)
 	}
 }
 
