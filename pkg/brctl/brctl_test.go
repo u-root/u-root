@@ -363,7 +363,7 @@ func TestSetfd(t *testing.T) {
 	}
 
 	if fd != TEST_FD_JIFFIES_STR {
-		t.Fatalf("br_get_val(%q, \"forward_delay\") = %q, want %q", BRCTL_TEST_BR_0, fd, 100)
+		t.Fatalf("br_get_val(%q, \"forward_delay\") = %q, want %d", BRCTL_TEST_BR_0, fd, 100)
 	}
 }
 

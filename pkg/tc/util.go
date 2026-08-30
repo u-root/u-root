@@ -39,7 +39,7 @@ func getDevice(dev string) (net.Interface, error) {
 	}
 
 	if !found {
-		return ret, fmt.Errorf("available devices: %q, but '%s': %w", devs, dev, ErrNoDevice)
+		return ret, fmt.Errorf("available devices: %v, but %q: %w", devs, dev, ErrNoDevice)
 	}
 
 	return ret, nil

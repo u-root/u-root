@@ -216,7 +216,7 @@ func TestAddrValue(t *testing.T) {
 			got, err := buffer.AddrValue(tt.input)
 			if err != nil {
 				if err != tt.err {
-					t.Errorf("ResolveAddrs() = %q, want: %q", err.Error(), tt.want)
+					t.Errorf("ResolveAddrs() = %q, want: %d", err.Error(), tt.want)
 				}
 			} else {
 				if got != tt.want {

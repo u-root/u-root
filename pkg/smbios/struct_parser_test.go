@@ -179,11 +179,11 @@ func TestParseStructWithTPMDevice(t *testing.T) {
 				}
 
 				if TPMDev.FirmwareVersion1 != tt.want.FirmwareVersion1 {
-					t.Errorf("parseStruct().FirmwareVersion1 = %q, want %q", TPMDev.FirmwareVersion1, tt.want.FirmwareVersion1)
+					t.Errorf("parseStruct().FirmwareVersion1 = %d, want %d", TPMDev.FirmwareVersion1, tt.want.FirmwareVersion1)
 				}
 
 				if TPMDev.FirmwareVersion2 != tt.want.FirmwareVersion2 {
-					t.Errorf("parseStruct().FirmwareVersion2 = %q, want %q", TPMDev.FirmwareVersion2, tt.want.FirmwareVersion2)
+					t.Errorf("parseStruct().FirmwareVersion2 = %d, want %d", TPMDev.FirmwareVersion2, tt.want.FirmwareVersion2)
 				}
 
 				if TPMDev.Description != tt.want.Description {
@@ -195,7 +195,7 @@ func TestParseStructWithTPMDevice(t *testing.T) {
 				}
 
 				if TPMDev.OEMDefined != tt.want.OEMDefined {
-					t.Errorf("parseStruct().OEMDefined = %q, want %q", TPMDev.OEMDefined, tt.want.OEMDefined)
+					t.Errorf("parseStruct().OEMDefined = %d, want %d", TPMDev.OEMDefined, tt.want.OEMDefined)
 				}
 			}
 		})
