@@ -6,7 +6,6 @@ package image
 
 import (
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -37,7 +36,7 @@ func TestParseFromBytes(t *testing.T) {
 	if err != nil {
 		t.Errorf("ParseFromBytes(imgBytes) returned error %v, want no error", err)
 	}
-	if !reflect.DeepEqual(wantImage.Header, got.Header) {
+	if wantImage.Header != got.Header {
 		t.Errorf("got %+v, want %+v", got.Header, wantImage.Header)
 	}
 }
