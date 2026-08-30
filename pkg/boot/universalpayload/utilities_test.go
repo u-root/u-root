@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"unsafe"
@@ -648,7 +649,7 @@ func TestFetchACPIMCFGData(t *testing.T) {
 			if mcfgData, err := fetchACPIMCFGData(tt.data); err != nil {
 				t.Fatalf("Unexpected error:%v", err)
 			} else {
-				if !reflect.DeepEqual(mcfgData, tt.mcfgData) {
+				if !slices.Equal(mcfgData, tt.mcfgData) {
 					t.Errorf("got %+v, want %+v", mcfgData, tt.mcfgData)
 				}
 			}
