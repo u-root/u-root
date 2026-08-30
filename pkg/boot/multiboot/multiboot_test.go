@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"reflect"
 	"testing"
 )
 
@@ -106,11 +105,11 @@ func TestParseHeader(t *testing.T) {
 				return
 			}
 			if test.size-test.offset > mandatorySize {
-				if !reflect.DeepEqual(*got, want) {
+				if *got != want {
 					t.Errorf("parseHeader() got %+v, want %+v", *got, want)
 				}
 			} else {
-				if !reflect.DeepEqual(got.mandatory, want.mandatory) {
+				if got.mandatory != want.mandatory {
 					t.Errorf("parseHeader() got %+v, want %+v", got.mandatory, want.mandatory)
 				}
 			}

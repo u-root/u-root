@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -47,7 +48,7 @@ func TestAvailableRAM(t *testing.T) {
 	}
 
 	got := mem.AvailableRAM()
-	if !reflect.DeepEqual(got, want) {
+	if !slices.Equal(got, want) {
 		t.Errorf("AvailableRAM() got %+v, want %+v", got, want)
 	}
 }
@@ -306,7 +307,7 @@ func TestFindSpaceIn(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceIn(tt.size, tt.limit)
-			if !reflect.DeepEqual(got, tt.want) {
+			if got != tt.want {
 				t.Errorf("%s.FindSpaceIn(%#x, limit = %s) = %#x, want %#x", tt.rs, tt.size, tt.limit, got, tt.want)
 			}
 			if !errors.Is(err, tt.err) {
@@ -512,7 +513,7 @@ func TestFindSpace(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpace(tt.size, tt.opts...)
-			if !reflect.DeepEqual(got, tt.want) {
+			if got != tt.want {
 				t.Errorf("%s.FindSpace(%#x) = %#x, want %#x", tt.rs, tt.size, got, tt.want)
 			}
 			if !errors.Is(err, tt.err) {
@@ -595,7 +596,7 @@ func TestFindSpaceAbove(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("test_%d_%s", i, tt.name), func(t *testing.T) {
 			got, err := tt.rs.FindSpaceAbove(tt.size, tt.min)
-			if !reflect.DeepEqual(got, tt.want) {
+			if got != tt.want {
 				t.Errorf("%s.FindSpaceAbove(%#x, min=%#x) = %#x, want %#x", tt.rs, tt.size, tt.min, got, tt.want)
 			}
 			if !errors.Is(err, tt.err) {
@@ -634,7 +635,7 @@ func TestSort(t *testing.T) {
 		var deepCopy Ranges
 		deepCopy = append(deepCopy, tt.in...)
 		tt.in.Sort()
-		if !reflect.DeepEqual(tt.in, tt.want) {
+		if !slices.Equal(tt.in, tt.want) {
 			t.Errorf("%v.Sort() = %v, want\n%v", deepCopy, tt.in, tt.want)
 		}
 	}
@@ -752,7 +753,7 @@ func TestMinusRange(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
-			if got := tt.r.Minus(tt.r2); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.r.Minus(tt.r2); !slices.Equal(got, tt.want) {
 				t.Errorf("%s minus %s = %v, want %v", tt.r, tt.r2, got, tt.want)
 			}
 		})
@@ -941,7 +942,7 @@ func TestRanges(t *testing.T) {
 		},
 	} {
 		got := tt.conv(tt.start, tt.end)
-		if !reflect.DeepEqual(got, tt.want) {
+		if got != tt.want {
 			t.Errorf("Range(%#x, %#x) = %v, want %v", tt.start, tt.end, got, tt.want)
 		}
 	}
@@ -985,7 +986,7 @@ func TestAlign(t *testing.T) {
 		},
 	} {
 		got := tt.r.Align(tt.alignSize)
-		if !reflect.DeepEqual(got, tt.want) {
+		if got != tt.want {
 			t.Errorf("%v.Align(%#x) = %v, want %v", tt.r, tt.alignSize, got, tt.want)
 		}
 	}
@@ -1014,7 +1015,7 @@ func TestAlignPage(t *testing.T) {
 		},
 	} {
 		got := tt.r.AlignPage()
-		if !reflect.DeepEqual(got, tt.want) {
+		if got != tt.want {
 			t.Errorf("%v.AlignPage() = %v, want %v", tt.r, got, tt.want)
 		}
 	}

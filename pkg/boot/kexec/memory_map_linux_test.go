@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -249,7 +249,7 @@ func TestMemoryMapFromSysfsMemmap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MemoryMapFromSysfsMemmap() error: %v", err)
 	}
-	if !reflect.DeepEqual(phys, want) {
+	if !slices.Equal(phys, want) {
 		t.Errorf("MemoryMapFromSysfsMemmap() got %v, want %v", phys, want)
 	}
 }
@@ -270,7 +270,7 @@ func TestToUEFIPayloadMemoryMap(t *testing.T) {
 		{Start: 400, End: 449, Type: UEFIPayloadTypeRAM},
 	}
 	uefiMM := mm.ToUEFIPayloadMemoryMap()
-	if !reflect.DeepEqual(uefiMM, want) {
+	if !slices.Equal(uefiMM, want) {
 		t.Errorf("ToUEFIPayloadMemoryMap() got %v, want %v", uefiMM, want)
 	}
 }
@@ -331,7 +331,7 @@ func TestMemoryMapInsert(t *testing.T) {
 			mm := tt.mm
 			tt.mm.Insert(tt.r)
 
-			if !reflect.DeepEqual(tt.mm, tt.want) {
+			if !slices.Equal(tt.mm, tt.want) {
 				t.Errorf("\n%v.Insert(%s) =\n%v, want\n%v", mm, tt.r, tt.mm, tt.want)
 			}
 		})
@@ -367,7 +367,7 @@ func TestMemoryMapFromIOMem(t *testing.T) {
 		TypedRange{Range: RangeFromInterval(0x17350000, 0x17377fff+1), Type: RangeReserved},
 		TypedRange{Range: RangeFromInterval(0x17378000, 0x1effffff+1), Type: RangeRAM},
 	}
-	if !reflect.DeepEqual(mm, want) {
+	if !slices.Equal(mm, want) {
 		t.Errorf("Not equal, got %v", mm)
 	}
 
@@ -382,7 +382,7 @@ func TestMemoryMapFromIOMem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if want := MemoryMap(nil); !reflect.DeepEqual(mm2, want) {
+	if want := MemoryMap(nil); !slices.Equal(mm2, want) {
 		t.Errorf("Memory maps not equal, got %v, want %v", mm2, want)
 	}
 }
@@ -409,7 +409,7 @@ func TestMemoryMapFromMemblock(t *testing.T) {
 		TypedRange{Range: RangeFromInterval(0x4013800000, 0x40e0000000), Type: RangeRAM},
 		TypedRange{Range: RangeFromInterval(0x4400000000, 0x44e0000000), Type: RangeRAM},
 	}
-	if !reflect.DeepEqual(mm, want) {
+	if !slices.Equal(mm, want) {
 		t.Errorf("Not equal, got %v", mm)
 	}
 
@@ -429,7 +429,7 @@ func TestMemoryMapFromMemblock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if want := MemoryMap(nil); !reflect.DeepEqual(mm2, want) {
+	if want := MemoryMap(nil); !slices.Equal(mm2, want) {
 		t.Errorf("Memory maps not equal, got %v, want %v", mm2, want)
 	}
 }
@@ -457,7 +457,7 @@ func TestMemoryMapMerge(t *testing.T) {
 	}
 
 	mm.mergeAdjacent()
-	if !reflect.DeepEqual(mm, want) {
+	if !slices.Equal(mm, want) {
 		t.Errorf("Merge() got %v, want %v", mm, want)
 	}
 }
