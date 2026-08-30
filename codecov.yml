@@ -10,6 +10,9 @@ component_management:
     statuses:
       - type: project
         target: auto
+        # `target: auto` with no threshold fails on any drop at all, including
+        # run-to-run noise on diffs that touch no covered lines.
+        threshold: 1%
       - type: patch
   individual_components:
     - component_id: nonexp
