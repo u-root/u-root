@@ -7,7 +7,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"os"
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -131,7 +131,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -182,7 +182,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "example.com" {
 					return errors.New("ServerName should be set to \"example.com\"")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -233,7 +233,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -286,7 +286,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "example.com" {
 					return errors.New("ServerName should be set to \"example.com\"")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -357,7 +357,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -412,7 +412,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "example.com" {
 					return errors.New("ServerName should be set to \"example.com\"")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -499,7 +499,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -554,7 +554,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "example.com" {
 					return errors.New("ServerName should be set to \"example.com\"")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -609,7 +609,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -666,7 +666,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "example.com" {
 					return errors.New("ServerName should be set to \"example.com\"")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -745,7 +745,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -804,7 +804,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "example.com" {
 					return errors.New("ServerName should be set to \"example.com\"")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
@@ -905,7 +905,7 @@ func TestGenerateTLSConfigurationExtended(t *testing.T) {
 				if cfg.ServerName != "" {
 					return errors.New("ServerName should be clear")
 				}
-				if !reflect.DeepEqual(cfg.NextProtos, []string{"http/1.1", "h2"}) {
+				if !slices.Equal(cfg.NextProtos, []string{"http/1.1", "h2"}) {
 					return errors.New("NextProtos should be set to [\"http/1.1\", \"h2\"]")
 				}
 				return nil
