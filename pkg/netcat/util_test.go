@@ -7,7 +7,6 @@ package netcat
 import (
 	"bytes"
 	"io"
-	"reflect"
 	"sync"
 	"testing"
 )
@@ -74,7 +73,7 @@ func TestEOLReader(t *testing.T) {
 				t.Errorf("Expected count does not match actual count. Expected: %d, Got: %d", tc.expectedCount, n)
 			}
 
-			if !reflect.DeepEqual(result.String(), tc.expected) {
+			if result.String() != tc.expected {
 				t.Errorf("Expected result does not match actual result. Expected: %q, Got: %q", tc.expected, result.String())
 			}
 		})
