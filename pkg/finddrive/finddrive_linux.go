@@ -19,6 +19,8 @@ import (
 const (
 	// M2MKeySlotType is the SMBIOS slot type code for M.2 M-key
 	M2MKeySlotType = 0x17
+	// BootSlotDesignationRegex is the SMBIOS slot designation pattern for boot drives.
+	BootSlotDesignationRegex = "(?i)boot"
 )
 
 // Devices connected to a slot with domain number AAAA, bus number BB, device number CC, and
@@ -92,7 +94,7 @@ func findBootDrives(sysPath string, slots []*smbios.SystemSlots) ([]string, erro
 	if err == nil && len(drives) > 0 {
 		return drives, nil
 	}
-	return findSlotDesignation(sysPath, slots, "(?i)boot")
+	return findSlotDesignation(sysPath, slots, BootSlotDesignationRegex)
 }
 
 // FindSlotType searches the SMBIOS table for drives inserted in a slot with the specified type
@@ -111,7 +113,8 @@ func FindSlotType(slotType uint8) ([]string, error) {
 
 // FindBootDrives attempts to find the boot drives.
 // It first tries to find drives in M.2 M-key slots.
-// If that fails or returns no drives, it falls back to finding drives using SMBIOS slot designation matching "(?i)boot".
+// If that fails or returns no drives, it falls back to finding drives
+// using SMBIOS slot designation matching BootSlotDesignationRegex.
 func FindBootDrives() ([]string, error) {
 	smbiosTables, err := smbios.FromSysfs()
 	if err != nil {
