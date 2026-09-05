@@ -8,6 +8,7 @@ package main
 import (
 	"flag"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -245,7 +246,7 @@ func TestHackLoadFlagValue(t *testing.T) {
 
 	for _, test := range tests {
 		result := hackLoadFlagValue(test.input)
-		if !reflect.DeepEqual(result, test.output) {
+		if !slices.Equal(result, test.output) {
 			t.Errorf("\nInput:    %v\nExpected: %v\nGot:      %v", test.input, test.output, result)
 		}
 	}
