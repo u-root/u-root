@@ -36,6 +36,16 @@ var (
 func main() {
 	flag.Parse()
 
+	// These are needed for the multi tty autodetection to work properly
+	// so they must be done before any important prints.
+	libinit.SetEnv()
+	libinit.CreateRootfs()
+
+	// Redirect early output to all consoles if we have multiple consoles configured
+	if !*test {
+		libinit.RedirectOutputToConsoles()
+	}
+
 	log.Printf("Welcome to u-root!")
 	fmt.Println(`                              _`)
 	fmt.Println(`   _   _      _ __ ___   ___ | |_`)
@@ -55,8 +65,6 @@ func main() {
 	// are still accessible through kernel logs buffers (on most kernels).
 	quiet()
 
-	libinit.SetEnv()
-	libinit.CreateRootfs()
 	libinit.NetInit()
 
 	// osInitGo wraps all the kernel-specific (i.e. non-portable) stuff.

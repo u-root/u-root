@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/termios"
@@ -62,10 +63,17 @@ func New() (*Pty, error) {
 	return &Pty{Ptm: ptm, Pts: pts, Sname: sname, Kid: -1, TTY: tty, Restorer: restorer}, nil
 }
 
+func ioctl(f *os.File, cmd, ptr uintptr) error {
+	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), cmd, ptr)
+	if e != 0 {
+		return e
+	}
+	return nil
+}
+
 func ptsname(f *os.File) (string, error) {
 	var n uintptr
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n)))
-	if err != 0 {
+	if err := ioctl(f, syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n))); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("/dev/pts/%d", n), nil
@@ -87,4 +95,34 @@ func sysLinux(p *Pty) {
 
 func init() {
 	sys = sysLinux
+}
+
+// Copied from another pty pkg
+// TODO: Merge into New function
+func NewPTMS() (*os.File, *os.File, error) {
+	p, err := os.OpenFile("/dev/ptmx", os.O_RDWR, 0)
+	if err != nil {
+		time.Sleep(1 * time.Second)
+		return nil, nil, err
+	}
+
+	// unlock
+	var u int32
+	// use TIOCSPTLCK with a pointer to zero to clear the lock.
+	err = ioctl(p, syscall.TIOCSPTLCK, uintptr(unsafe.Pointer(&u))) //nolint:gosec // Expected unsafe pointer for Syscall call.
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sname, err := ptsname(p)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	t, err := os.OpenFile(sname, os.O_RDWR|syscall.O_NOCTTY|syscall.O_NONBLOCK, 0o620) //nolint:gosec // Expected Open from a variable.
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return p, t, nil
 }
