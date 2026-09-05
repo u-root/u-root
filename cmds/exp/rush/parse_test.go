@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -24,7 +24,7 @@ func compare(got, want []*Command) error {
 		if len(g.Args) != len(w.Args) {
 			return fmt.Errorf("%q: Got %d Args, want %d Args", g, len(g.Args), len(w.Args))
 		}
-		if !reflect.DeepEqual(g.Args, w.Args) {
+		if !slices.Equal(g.Args, w.Args) {
 			return fmt.Errorf("%q: got %q commands, want %q commands", g, g.Args, w.Args)
 		}
 		if g.Link != w.Link {
