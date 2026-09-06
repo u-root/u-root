@@ -426,7 +426,7 @@ func (p *Property) AsStringList() ([]string, error) {
 	}
 	value := p.Value
 	strs := []string{}
-	for len(p.Value) > 0 {
+	for len(value) > 0 {
 		nextNull := bytes.IndexByte(value, 0) // cannot be -1
 		var str []byte
 		str, value = value[:nextNull], value[nextNull+1:]

@@ -7,6 +7,7 @@ package dt
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -416,6 +417,18 @@ func TestUpdateProperty(t *testing.T) {
 	}
 	if !reflect.DeepEqual(node, want2) {
 		t.Errorf("after updating %s got %+v, want %+v", "kaslr-seed", node, want2)
+	}
+}
+
+func TestAsStringList(t *testing.T) {
+	p := &Property{Name: "dns", Value: []byte("a\x00b\x00c\x00")}
+	got, err := p.AsStringList()
+	if err != nil {
+		t.Fatalf("p.AsStringList() returned error: %v", err)
+	}
+	want := []string{"a", "b", "c"}
+	if !slices.Equal(got, want) {
+		t.Errorf("p.AsStringList() = %q, want %q", got, want)
 	}
 }
 
