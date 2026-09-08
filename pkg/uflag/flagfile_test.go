@@ -5,7 +5,7 @@
 package uflag
 
 import (
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -24,8 +24,7 @@ func TestArgvs(t *testing.T) {
 		},
 	} {
 		got := FileToArgv(ArgvToFile(tt.argv))
-		// Accept nil for []string{} by checking len == 0.
-		if !(len(tt.argv) == 0 && len(got) == 0) && !reflect.DeepEqual(got, tt.argv) {
+		if !slices.Equal(got, tt.argv) {
 			t.Errorf("FileToArgv(ArgvToFile(%#v)) = %#v, wanted original value back", tt.argv, got)
 		}
 	}
