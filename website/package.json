@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@11ty/eleventy": "^2.0.1",
-    "@11ty/eleventy-img": "^3.1.8",
+    "@11ty/eleventy-img": "^7.0.0",
     "@cagov/11ty-build-system": "^1.0.1",
     "clean-css": "^5.3.3",
     "dotenv": "^16.3.1",
