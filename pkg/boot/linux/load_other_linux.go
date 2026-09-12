@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !amd64 && !arm64
+//go:build !amd64 && !arm64 && !riscv64
 
 package linux
 
@@ -14,7 +14,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// KexecLoad is not implemented for platforms other than amd64 and arm64.
+// KexecLoad is not implemented for platforms other than amd64, arm64 and
+// riscv64.
 func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservations kexec.Ranges) error {
 	return unix.ENOSYS
 }

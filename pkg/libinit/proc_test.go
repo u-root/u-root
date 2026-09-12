@@ -7,7 +7,7 @@ package libinit
 import (
 	"bytes"
 	"os/exec"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -40,7 +40,7 @@ func TestWithArguments(t *testing.T) {
 			cmd := &exec.Cmd{}
 			modifier := WithArguments(tt.args...)
 			modifier(cmd)
-			if !reflect.DeepEqual(cmd.Args, tt.want) {
+			if !slices.Equal(cmd.Args, tt.want) {
 				t.Errorf("got %v, want %v", cmd.Args, tt.want)
 			}
 		})

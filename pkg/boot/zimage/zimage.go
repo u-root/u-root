@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"os"
 )
 
 // Magic values used in the zImage header and table.
@@ -125,14 +126,18 @@ func (z *ZImage) GetEntry(t Tag) (*TableEntry, error) {
 }
 
 // GetKernelSizes returns two kernel sizes relevant for kexec.
+//
+// The entry has grown over time: it held two words when this was written, and
+// Linux has since appended TEXT_OFFSET and MALLOC_SIZE to it. Only the first
+// two are read here, and any that follow are ignored, so that a kernel built
+// with a longer entry still parses.
 func (z *ZImage) GetKernelSizes() (piggySizeAddr uint32, kernelBSSSize uint32, err error) {
 	e, err := z.GetEntry(TagKernelSize)
 	if err != nil {
 		return 0, 0, err
 	}
-	if len(e.Data) != 2 {
-		return 0, 0, fmt.Errorf("zImage tag %#08x has incorrect size %d, expected 2",
-			TagKernelSize, len(e.Data))
+	if len(e.Data) < 2 {
+		return 0, 0, fmt.Errorf("zImage tag %#08x has size %d, expected at least 2: %w", TagKernelSize, len(e.Data), os.ErrInvalid)
 	}
 	return e.Data[0], e.Data[1], nil
 }

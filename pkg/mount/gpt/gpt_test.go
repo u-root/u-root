@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"io"
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -84,7 +83,7 @@ func TestGPTTable(t *testing.T) {
 			continue
 		}
 
-		if !reflect.DeepEqual(header, g.Header) {
+		if header != g.Header {
 			t.Errorf("Check GUID equality from\n%v to\n%v: got false, want true", header, g.Header)
 			continue
 		}

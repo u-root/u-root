@@ -6,7 +6,7 @@ package shlex
 
 import (
 	"fmt"
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -64,7 +64,7 @@ func TestArgv(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("Test [%02d] %s", i, tt.desc), func(t *testing.T) {
 			got := Argv(tt.in)
-			if !reflect.DeepEqual(got, tt.want) {
+			if !slices.Equal(got, tt.want) {
 				t.Errorf("Argv = %#v, want %#v", got, tt.want)
 			}
 		})

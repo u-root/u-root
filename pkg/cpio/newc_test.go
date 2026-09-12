@@ -577,7 +577,7 @@ func TestReproducible(t *testing.T) {
 		t.Errorf("Could not write record %q: %v", rec[0].Name, err)
 	}
 
-	if reflect.DeepEqual(b1.Bytes()[:], b2.Bytes()[:]) {
+	if bytes.Equal(b1.Bytes()[:], b2.Bytes()[:]) {
 		t.Error("Reproducible: compared as same, wanted different")
 	}
 
@@ -604,7 +604,7 @@ func TestReproducible(t *testing.T) {
 	if len(b1.Bytes()) != len(b2.Bytes()) {
 		t.Fatalf("Reproducible \n%v,\n%v: len is different, wanted same", b1.Bytes()[:], b2.Bytes()[:])
 	}
-	if !reflect.DeepEqual(b1.Bytes()[:], b2.Bytes()[:]) {
+	if !bytes.Equal(b1.Bytes()[:], b2.Bytes()[:]) {
 		t.Error("Reproducible: compared different, wanted same")
 		for i := range b1.Bytes() {
 			a := b1.Bytes()[i]

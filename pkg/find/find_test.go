@@ -8,7 +8,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -118,7 +118,7 @@ func TestSimple(t *testing.T) {
 			if len(names) != len(tc.names) {
 				t.Errorf("Find output: got %d files, want %d files", len(names), len(tc.names))
 			}
-			if !reflect.DeepEqual(names, tc.names) {
+			if !slices.Equal(names, tc.names) {
 				t.Errorf("Find output: got %v, want %v", names, tc.names)
 			}
 		})

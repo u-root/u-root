@@ -6,7 +6,7 @@ package mount
 
 import (
 	"fmt"
-	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -16,7 +16,7 @@ func TestGetFileSystems(t *testing.T) {
 	if err != nil {
 		t.Errorf("InternalGetFilesystems failed with error %v", err)
 	}
-	if !reflect.DeepEqual(fstypes, expected) {
+	if !slices.Equal(fstypes, expected) {
 		t.Errorf("Expected '%q', but resulted with '%q'", expected, fstypes)
 	}
 }

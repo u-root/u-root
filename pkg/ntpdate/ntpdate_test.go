@@ -7,7 +7,7 @@ package ntpdate
 import (
 	"bufio"
 	"errors"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -163,8 +163,8 @@ func TestSetTime(t *testing.T) {
 		if m.getTimeCalls != 1 || m.setSystemTimeCalls != 1 {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls = %d, %d, want 1, 1`, m.getTimeCalls, m.setSystemTimeCalls)
 		}
-		if match := reflect.DeepEqual([]string{"foo", "bar", "s1", "s2"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"foo", "bar", "s1", "s2"}, %v) = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"foo", "bar", "s1", "s2"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"foo", "bar", "s1", "s2"}, %v) = %t, want true`, m.getTimeArg, match)
 		}
 		if m.setSystemTimeArg != ts || m.setRTCTimeCalls != 0 {
 			t.Errorf(`m.setSystemTimeArg, m.setRTCTimeCalls = %v, %d, want %v, 0`, m.setSystemTimeArg, m.setRTCTimeCalls, ts)
@@ -185,8 +185,8 @@ func TestSetTime(t *testing.T) {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls = %d, %d, %d, want 1, 1, 1`,
 				m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls)
 		}
-		if match := reflect.DeepEqual([]string{"s1", "s2"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"s1", "s2"}, %v) = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"s1", "s2"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"s1", "s2"}, %v) = %t, want true`, m.getTimeArg, match)
 		}
 		if m.setSystemTimeArg != ts || m.setRTCTimeArg != ts {
 			t.Errorf(`m.setSystemTimeArg, m.setRTCTimeArg = %v, %v, want %v, %v`, m.setSystemTimeArg, m.setRTCTimeArg, ts, ts)
@@ -206,8 +206,8 @@ func TestSetTime(t *testing.T) {
 		if m.getTimeCalls != 1 || m.setSystemTimeCalls != 1 {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls = %d, %d, want 1, 1`, m.getTimeCalls, m.setSystemTimeCalls)
 		}
-		if match := reflect.DeepEqual([]string{"foo", "bar"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"foo", "bar"}, %v) = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"foo", "bar"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"foo", "bar"}, %v) = %t, want true`, m.getTimeArg, match)
 		}
 		if m.setSystemTimeArg != ts || m.setRTCTimeCalls != 0 {
 			t.Errorf(`m.setSystemTimeArg, m.setRTCTimeCalls = %v, %d, want %v, 0`, m.setSystemTimeArg, m.setRTCTimeCalls, ts)
@@ -228,8 +228,8 @@ func TestSetTime(t *testing.T) {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls = %d, %d, %d, want 1, 1, 1`,
 				m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls)
 		}
-		if match := reflect.DeepEqual([]string{"HALP"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"HALP"}, %v) = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"HALP"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"HALP"}, %v) = %t, want true`, m.getTimeArg, match)
 		}
 		if m.setSystemTimeArg != ts || m.setRTCTimeArg != ts {
 			t.Errorf(`m.setSystemTimeArg, m.setRTCTimeArg = %v, %v, want %v, %v`, m.setSystemTimeArg, m.setRTCTimeArg, ts, ts)
@@ -247,8 +247,8 @@ func TestSetTime(t *testing.T) {
 		if match := strings.Contains(err.Error(), "ASPLODE"); !match {
 			t.Errorf(`strings.Contains(%q, "ASPLODE") = %t, want true`, err.Error(), match)
 		}
-		if match := reflect.DeepEqual([]string{"foo", "bar"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"foo", "bar"}, %v)  = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"foo", "bar"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"foo", "bar"}, %v)  = %t, want true`, m.getTimeArg, match)
 		}
 		if m.getTimeCalls != 1 || m.setSystemTimeCalls != 0 || m.setRTCTimeCalls != 0 {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls = %d, %d, %d, want 1, 0, 0`,
@@ -270,8 +270,8 @@ func TestSetTime(t *testing.T) {
 		if match := strings.Contains(err.Error(), "ASPLODE"); !match {
 			t.Errorf(`strings.Contains(%q, "ASPLODE") = %t, want true`, err.Error(), match)
 		}
-		if match := reflect.DeepEqual([]string{"foo", "bar"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"foo", "bar"}, %v)  = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"foo", "bar"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"foo", "bar"}, %v)  = %t, want true`, m.getTimeArg, match)
 		}
 		if m.getTimeCalls != 1 || m.setSystemTimeCalls != 1 || m.setRTCTimeCalls != 0 {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls = %d, %d, %d, want 1, 1, 0`,
@@ -303,8 +303,8 @@ func TestSetTime(t *testing.T) {
 			t.Errorf(`m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls = %d, %d, %d, want 1, 1, 1`,
 				m.getTimeCalls, m.setSystemTimeCalls, m.setRTCTimeCalls)
 		}
-		if match := reflect.DeepEqual([]string{"foo", "bar"}, m.getTimeArg); !match {
-			t.Errorf(`reflect.DeepEqual([]string{"foo", "bar"}, %v)  = %t, want true`, m.getTimeArg, match)
+		if match := slices.Equal([]string{"foo", "bar"}, m.getTimeArg); !match {
+			t.Errorf(`slices.Equal([]string{"foo", "bar"}, %v)  = %t, want true`, m.getTimeArg, match)
 		}
 		if m.setSystemTimeArg != ts || m.setRTCTimeArg != ts {
 			t.Errorf(`m.setSystemTimeArg, m.setRTCTimeArg = %v, %v, want %v, %v`, m.setSystemTimeArg, m.setRTCTimeArg, ts, ts)

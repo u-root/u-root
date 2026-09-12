@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -26,7 +26,7 @@ func checkArgs(t minimock.Tester, args arg, mod Modifier) error {
 	if args.call != call.syscall {
 		return fmt.Errorf("call number are not equal")
 	}
-	if !reflect.DeepEqual(args.args, call.args) {
+	if !slices.Equal(args.args, call.args) {
 		return fmt.Errorf("args are not equal")
 	}
 	if args.flag != call.flag {

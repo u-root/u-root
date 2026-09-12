@@ -6,7 +6,6 @@ package main
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 
 	"go.bug.st/serial"
@@ -69,7 +68,7 @@ func TestParseParams(t *testing.T) {
 		}
 
 		if err == nil {
-			if !reflect.DeepEqual(p, test.wantParams) {
+			if p != test.wantParams {
 				t.Errorf("want: %+v, got: %+v", test.wantParams, p)
 			}
 		}

@@ -6,8 +6,9 @@ package cmdline
 
 import (
 	"io"
+	"maps"
 	"os"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -82,7 +83,7 @@ func TestParseToMap(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := parseToMap(tt.input)
-			if !reflect.DeepEqual(got, tt.want) {
+			if !maps.Equal(got, tt.want) {
 				t.Errorf("parseToMap(%s) = \n%#v, want \n%#v", tt.input, got, tt.want)
 			}
 		})
@@ -217,8 +218,8 @@ func TestConsoles(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := CmdLine{Raw: tt.cmdLine}
 			got := c.Consoles()
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Consoles() = %v, want %v", got, tt.want)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("Consoles() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}

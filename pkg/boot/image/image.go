@@ -22,8 +22,10 @@ const (
 var (
 	kernelImageSize = uint64(math.Pow(2, 24)) // 16MB, a guess value similar to that used in kexec-tools.
 
-	errBadMagic      = errors.New("bad header magic")
-	errBadEndianness = errors.New("invalid Image endianness, expected little")
+	// ErrBadMagic is returned when the header magic does not match.
+	ErrBadMagic = errors.New("bad header magic")
+	// ErrBadEndianness is returned for a big endian kernel Image.
+	ErrBadEndianness = errors.New("invalid Image endianness, expected little")
 )
 
 // Arm64Header is header for Arm64 Image.
@@ -55,7 +57,7 @@ func ParseFromBytes(data []byte) (*Image, error) {
 	}
 
 	if img.Header.Magic != Magic {
-		return img, errBadMagic
+		return img, ErrBadMagic
 	}
 
 	if img.Header.ImageSize == 0 {
@@ -69,7 +71,7 @@ func ParseFromBytes(data []byte) (*Image, error) {
 	// NOTE(10000TB): For now assumes and support little endian arm.
 	// Error out if Image is not little endian.
 	if int(img.Header.Flags&0x1) != 0 {
-		return img, errBadEndianness
+		return img, ErrBadEndianness
 	}
 
 	img.Data = data

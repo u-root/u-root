@@ -514,7 +514,7 @@ func TestModules(t *testing.T) {
 	e := Env{
 		GBBPath: []string{filepath.Join(dir, "mod1"), filepath.Join(dir, "mod2")},
 	}
-	if got := GlobPaths(&ulogtest.Logger{TB: t}, e, `cmd/cmd*`, "cmd/foo3", "-cmd/cmd2"); !reflect.DeepEqual(got, wantG) {
+	if got := GlobPaths(&ulogtest.Logger{TB: t}, e, `cmd/cmd*`, "cmd/foo3", "-cmd/cmd2"); !slices.Equal(got, wantG) {
 		t.Errorf("GlobPaths = %v, want %v", got, wantG)
 	}
 }

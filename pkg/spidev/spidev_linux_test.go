@@ -8,8 +8,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"os"
-	"reflect"
 	"runtime"
+	"slices"
 	"testing"
 	"unsafe"
 
@@ -444,7 +444,7 @@ func TestTransfer(t *testing.T) {
 			if !errors.Is(gotErr, tt.wantErr) {
 				t.Errorf("Got Transfer err %q; want %q", gotErr, tt.wantErr)
 			}
-			if !reflect.DeepEqual(m.transfers, tt.wantTransfers) {
+			if !slices.Equal(m.transfers, tt.wantTransfers) {
 				t.Errorf("Got Transfers %#v; want %#v", m.transfers, tt.wantTransfers)
 			}
 		})

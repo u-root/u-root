@@ -5,6 +5,7 @@
 package hsskey
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"hash/crc32"
@@ -536,7 +537,7 @@ func TestWriteHssToFile(t *testing.T) {
 				t.Fatalf("Failed to read test file: %v", err)
 			}
 
-			if !reflect.DeepEqual(gotFileContent, wantFileContent) {
+			if !bytes.Equal(gotFileContent, wantFileContent) {
 				t.Fatalf("WriteHssToFile(%v, %v) =\ngot: %v\nwant: %v", tempFile.Name(), tt.writeData, gotFileContent, wantFileContent)
 			}
 		})
@@ -624,7 +625,7 @@ func TestWriteHssToTempFile(t *testing.T) {
 				t.Fatalf("Failed to read test file: %v", err)
 			}
 
-			if !reflect.DeepEqual(gotFileContent, wantFileContent) {
+			if !bytes.Equal(gotFileContent, wantFileContent) {
 				t.Fatalf("WriteHssToFile(%v, %v) =\ngot: %v\nwant: %v", tempFilePath, tt.writeData, gotFileContent, wantFileContent)
 			}
 		})

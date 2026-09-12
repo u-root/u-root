@@ -7,7 +7,6 @@ package gzip
 import (
 	"errors"
 	"flag"
-	"reflect"
 	"runtime"
 	"testing"
 
@@ -164,7 +163,7 @@ func TestOptionsParseArgs(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(*o, tt.wantOption) {
+			if *o != tt.wantOption {
 				t.Errorf("Options.ParseArgs() = \n%+v, want \n%+v", *o, tt.wantOption)
 			}
 		})
