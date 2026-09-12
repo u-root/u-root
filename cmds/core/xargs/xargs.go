@@ -119,6 +119,9 @@ func (c *cmd) run(args ...string) error {
 			sp := strings.Fields(scanner.Text())
 			xArgs = append(xArgs, sp...)
 		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
 	}
 
 	argsLen := len(args)
