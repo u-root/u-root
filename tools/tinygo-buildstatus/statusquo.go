@@ -88,6 +88,7 @@ var (
 		"rdmsr",
 		"readlink",
 		"realpath",
+		"reboot",
 		"rm",
 		"rmmod",
 		"rsdp",
