@@ -99,7 +99,7 @@ var (
 		"sleep",
 		// "sluinit",
 		"sort",
-		// "sshd",
+		"sshd",
 		"strace",
 		"strings",
 		"stty",
