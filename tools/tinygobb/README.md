@@ -128,6 +128,7 @@ The necessary additions to tinygo will be tracked in
  - [cmds/core/pwd](../../cmds/core/pwd)
  - [cmds/core/readlink](../../cmds/core/readlink)
  - [cmds/core/realpath](../../cmds/core/realpath)
+ - [cmds/core/reboot](../../cmds/core/reboot)
  - [cmds/core/rm](../../cmds/core/rm)
  - [cmds/core/rmmod](../../cmds/core/rmmod) tags: noasm
  - [cmds/core/rsdp](../../cmds/core/rsdp)
