@@ -18,8 +18,11 @@ import (
 
 // TTYIO contains state needed for controlling ttys.
 // On many systems, but not all, this is just an os.File
+// We export it because we can not possibly anticipate
+// all the functions that may be available for a file;
+// for example, unix.Ioctl has changed dramatically in 15 years.
 type TTYIO struct {
-	f *os.File
+	*os.File
 }
 
 // Winsize embeds unix.Winsize.
@@ -38,7 +41,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TTYIO{f: f}, nil
+	return &TTYIO{File: f}, nil
 }
 
 // NewTTYS returns a new TTYIO.
@@ -47,7 +50,7 @@ func NewTTYS(port string) (*TTYIO, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TTYIO{f: f}, nil
+	return &TTYIO{File: f}, nil
 }
 
 // GetTermios returns a filled-in Termios, from an fd.
@@ -61,7 +64,7 @@ func GetTermios(fd uintptr) (*Termios, error) {
 
 // Get terms a Termios from a TTYIO.
 func (t *TTYIO) Get() (*Termios, error) {
-	return GetTermios(t.f.Fd())
+	return GetTermios(t.Fd())
 }
 
 // SetTermios sets tty parameters for an fd from a Termios.
@@ -71,7 +74,7 @@ func SetTermios(fd uintptr, ti *Termios) error {
 
 // Set sets tty parameters for a TTYIO from a Termios.
 func (t *TTYIO) Set(ti *Termios) error {
-	return SetTermios(t.f.Fd(), ti)
+	return SetTermios(t.Fd(), ti)
 }
 
 // GetWinSize gets window size from an fd.
@@ -82,7 +85,7 @@ func GetWinSize(fd uintptr) (*Winsize, error) {
 
 // GetWinSize gets window size from a TTYIO.
 func (t *TTYIO) GetWinSize() (*Winsize, error) {
-	return GetWinSize(t.f.Fd())
+	return GetWinSize(t.Fd())
 }
 
 // SetWinSize sets window size for an fd from a Winsize.
@@ -92,18 +95,18 @@ func SetWinSize(fd uintptr, w *Winsize) error {
 
 // SetWinSize sets window size for a TTYIO from a Winsize.
 func (t *TTYIO) SetWinSize(w *Winsize) error {
-	return SetWinSize(t.f.Fd(), w)
+	return SetWinSize(t.Fd(), w)
 }
 
 // Ctty sets the control tty into a Cmd, from a TTYIO.
 func (t *TTYIO) Ctty(c *exec.Cmd) {
-	c.Stdin, c.Stdout, c.Stderr = t.f, t.f, t.f
+	c.Stdin, c.Stdout, c.Stderr = t.File, t.File, t.File
 	if c.SysProcAttr == nil {
 		c.SysProcAttr = &syscall.SysProcAttr{}
 	}
 	c.SysProcAttr.Setctty = true
 	c.SysProcAttr.Setsid = true
-	c.SysProcAttr.Ctty = int(t.f.Fd())
+	c.SysProcAttr.Ctty = int(t.Fd())
 }
 
 // MakeRaw modifies Termio state so, if it used for an fd or tty, it will set it to raw mode.
