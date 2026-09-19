@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// N.B.: While these functions are only used on Plan 9,
-// they can be tested on any system: they are just doing
-// file IO. Until we have Plan 9 VMs to test, we can test
-// them in Linux.
 package termios
 
 import (
@@ -15,6 +11,11 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+// N.B.: While these functions are only used on Plan 9,
+// they can be tested on any system: they are just doing
+// file IO. Until we have Plan 9 VMs to test, we can test
+// them in Linux.
 
 func consctl(root string, fd uintptr) (string, error) {
 	data, err := os.ReadFile(filepath.Join(root, "fd", fmt.Sprintf("%dctl", fd)))
