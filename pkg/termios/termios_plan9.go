@@ -33,7 +33,7 @@ type Winsize struct {
 
 // TTYIO is a wrapper that only allows Read and Write.
 type TTYIO struct {
-	f *os.File
+	*os.File
 }
 
 // New creates a new TTYIO using /dev/cons
@@ -47,7 +47,7 @@ func NewWithDev(device string) (*TTYIO, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TTYIO{f: f}, nil
+	return &TTYIO{File: f}, nil
 }
 
 // NewTTYS returns a new TTYIO.
@@ -56,7 +56,7 @@ func NewTTYS(port string) (*TTYIO, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TTYIO{f: f}, nil
+	return &TTYIO{File: f}, nil
 }
 
 // GetTermios returns a filled-in Termios, from an fd.
@@ -74,7 +74,7 @@ func GetTermios(fd uintptr) (*Termios, error) {
 
 // Get a Termios from a TTYIO.
 func (t *TTYIO) Get() (*Termios, error) {
-	return GetTermios(t.f.Fd())
+	return GetTermios(t.Fd())
 }
 
 // SetTermios sets tty parameters for an fd from a Termios.
@@ -105,7 +105,7 @@ func GetWinSize(_ uintptr) (*Winsize, error) {
 
 // GetWinSize gets window size from a TTYIO.
 func (t *TTYIO) GetWinSize() (*Winsize, error) {
-	return GetWinSize(t.f.Fd())
+	return GetWinSize(t.Fd())
 }
 
 // SetWinSize sets window size for an fd from a Winsize.
@@ -115,7 +115,7 @@ func SetWinSize(_ uintptr, _ *Winsize) error {
 
 // SetWinSize sets window size for a TTYIO from a Winsize.
 func (t *TTYIO) SetWinSize(w *Winsize) error {
-	return SetWinSize(t.f.Fd(), w)
+	return SetWinSize(t.Fd(), w)
 }
 
 // MakeRaw modifies Termio state so, if it used for an fd or tty, it will set it to raw mode.

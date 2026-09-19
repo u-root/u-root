@@ -13,21 +13,19 @@
 // tty.Set(restorer)
 package termios
 
-type (
-	// TTY is an os-independent version of the combined info in termios and window size structs.
-	// It is used to get/set info to the termios functions as well as marshal/unmarshal data
-	// in JSON format for dump and loading.
-	TTY struct {
-		Ispeed int
-		Ospeed int
-		Row    int
-		Col    int
+// TTY is an os-independent version of the combined info in termios and window size structs.
+// It is used to get/set info to the termios functions as well as marshal/unmarshal data
+// in JSON format for dump and loading.
+type TTY struct {
+	Ispeed int
+	Ospeed int
+	Row    int
+	Col    int
 
-		CC map[string]uint8
+	CC map[string]uint8
 
-		Opts map[string]bool
-	}
-)
+	Opts map[string]bool
+}
 
 // Raw sets the tty into raw mode.
 func (t *TTYIO) Raw() (*Termios, error) {
@@ -69,9 +67,9 @@ func (t *TTYIO) Serial(baud int) (*Termios, error) {
 }
 
 func (t *TTYIO) Read(b []byte) (int, error) {
-	return t.f.Read(b)
+	return t.File.Read(b)
 }
 
 func (t *TTYIO) Write(b []byte) (int, error) {
-	return t.f.Write(b)
+	return t.File.Write(b)
 }
