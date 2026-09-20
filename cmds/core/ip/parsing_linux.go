@@ -124,7 +124,7 @@ func (cmd *cmd) parseIPNet() (*net.IPNet, error) {
 }
 
 func (cmd *cmd) parseAddressorCIDR() (net.IP, *net.IPNet, error) {
-	addrStr := cmd.nextToken("PREFIX")
+	addrStr := cmd.nextToken("CIDR or IP")
 
 	// Check if it's a CIDR notation
 	if strings.Contains(addrStr, "/") {
@@ -140,7 +140,19 @@ func (cmd *cmd) parseAddressorCIDR() (net.IP, *net.IPNet, error) {
 	if ip == nil {
 		return nil, nil, fmt.Errorf("failed to parse address: %s", addrStr)
 	}
-	return ip, nil, nil
+
+	// In some cases, netlink wants an IPNet, even if it's a simple address.
+	// This is a good place to put one together.
+	// It is surprising that after all these years, IP parsing is still clumsy.
+	mask := net.CIDRMask(128, 128)
+	if ip.To4() != nil {
+		mask = net.CIDRMask(32, 32)
+	}
+
+	return ip, &net.IPNet{
+		IP:   ip,
+		Mask: mask,
+	}, nil
 }
 
 func (cmd *cmd) parseHardwareAddress() (net.HardwareAddr, error) {
