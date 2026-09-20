@@ -181,7 +181,7 @@ func TestParseAddressorCIDR(t *testing.T) {
 			name:      "Valid IPv4",
 			cmd:       cmd{Args: []string{"cmd", "192.168.1.1"}},
 			wantIP:    net.ParseIP("192.168.1.1"),
-			wantIPNet: nil,
+			wantIPNet: mustParseCIDR("192.168.1.1/32"),
 			wantErr:   false,
 		},
 		{
@@ -238,7 +238,10 @@ func TestParseAddressorCIDR(t *testing.T) {
 			if !gotIP.Equal(tt.wantIP) {
 				t.Errorf("parseAddressorCIDR() gotIP = %v, want %v", gotIP, tt.wantIP)
 			}
-			if !reflect.DeepEqual(gotIPNet, tt.wantIPNet) {
+			if tt.wantIPNet == nil {
+				return
+			}
+			if !gotIPNet.IP.Equal(tt.wantIPNet.IP) || !bytes.Equal(gotIPNet.Mask, tt.wantIPNet.Mask) {
 				t.Errorf("parseAddressorCIDR() gotIPNet = %v, want %v", gotIPNet, tt.wantIPNet)
 			}
 		})

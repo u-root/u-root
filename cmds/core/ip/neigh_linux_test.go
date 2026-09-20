@@ -153,6 +153,7 @@ func TestParseNeighShowFlush(t *testing.T) {
 				Out:    new(bytes.Buffer),
 			},
 			wantAddr:     net.ParseIP("192.6.6.6"),
+			wantSubNet:   &net.IPNet{IP: net.ParseIP("192.6.6.6"), Mask: net.CIDRMask(32, 32)},
 			wantLinkName: "lo",
 			wantProxy:    true,
 			wantNud:      netlink.NUD_NONE,

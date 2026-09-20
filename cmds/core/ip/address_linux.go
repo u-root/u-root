@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/vishvananda/netlink"
@@ -98,11 +99,27 @@ func (cmd *cmd) address() error {
 func (cmd *cmd) parseAddrAddReplace() (netlink.Link, *netlink.Addr, error) {
 	tokenAddr := cmd.nextToken("CIDR format address")
 	addr, err := netlink.ParseAddr(tokenAddr)
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	iface, err := cmd.parseDeviceName(true)
+	var havePeer bool
+	switch cmd.nextToken("dev", "peer") {
+	case "peer":
+		havePeer = true
+		peerIP, peer, err := cmd.parseAddressorCIDR()
+		if err != nil {
+			return nil, nil, fmt.Errorf("parsing peer: %w", err)
+		}
+		addr.Peer = peer
+		peer.IP = peerIP
+	case "dev":
+	default:
+		return nil, nil, fmt.Errorf("ip addr add CIDR: expected dev or peer keyword:%w", os.ErrInvalid)
+	}
+
+	iface, err := cmd.parseDeviceName(havePeer)
 	if err != nil {
 		return nil, nil, err
 	}
