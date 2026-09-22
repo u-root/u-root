@@ -28,11 +28,11 @@ func (u *UPL) getPhysicalAddressSizes() (uint8, error) {
 	// Please update to actual physical address size
 	physicalAddrSize := os.Getenv("UROOT_PHYS_ADDR_SIZE")
 	if physicalAddrSize != "" {
-		if num, err := strconv.ParseUint(physicalAddrSize, 10, 8); err == nil {
-			return uint8(num), nil
-		} else {
-			return 0, fmt.Errorf("Malformed UROOT_PHYS_ADDR_SIZE value \"%s\": %v\n", physicalAddrSize, err)
+		num, err := strconv.ParseUint(physicalAddrSize, 10, 8)
+		if err != nil {
+			return 0, fmt.Errorf("malformed UROOT_PHYS_ADDR_SIZE value \"%s\": %w\n", physicalAddrSize, err)
 		}
+		return uint8(num), nil
 	}
 	return 48, nil
 }
@@ -61,8 +61,8 @@ func (u *UPL) constructTrampoline(buf []uint8, addr uint64, entry uint64) []uint
 
 	buf = append(buf, tramp...)
 
-	padWithLength := func(slice []uint8, len uint64) []uint8 {
-		tmpBytes := make([]uint8, len)
+	padWithLength := func(slice []uint8, l uint64) []uint8 {
+		tmpBytes := make([]uint8, l)
 		return append(slice, tmpBytes...)
 	}
 
