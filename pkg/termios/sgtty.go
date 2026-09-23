@@ -98,7 +98,8 @@ func (t *TTY) STTY(fd int) (*TTY, error) {
 func (t *TTY) String() string {
 	var s strings.Builder
 	s.WriteString(fmt.Sprintf("speed:%v ", t.Ispeed))
-	s.WriteString(fmt.Sprintf("rows:%d cols:%d", t.Row, t.Col))
+	s.WriteString(fmt.Sprintf("rows:%d cols:%d ", t.Row, t.Col))
+	s.WriteString(fmt.Sprintf("min:%d time:%d", t.Min, t.Time))
 
 	var intopts []string
 	for n, c := range t.CC {
@@ -153,6 +154,14 @@ func (t *TTY) SetOpts(opts []string) error {
 		case "speed":
 			// 32 may sound crazy but ... baud can be REALLY large
 			t.Ispeed, err = intarg(opts[i:], 32)
+			i++
+			continue
+		case "min":
+			t.Min, err = intarg(opts[i:], 8)
+			i++
+			continue
+		case "time":
+			t.Time, err = intarg(opts[i:], 8)
 			i++
 			continue
 		}

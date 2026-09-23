@@ -98,7 +98,7 @@ var (
 		"tostop": false
 	}
 }`
-	s = `speed:0 rows:72 cols:238 eof:0x04 eol2:0xff eol:0xff erase:0x7f intr:0x03 kill:0x15 lnext:0x16 min:0x00 quit:0x1c start:0x11 stop:0x13 susp:0x1a time:0x03 werase:0x17 brkint cread echo echoctl echoe echok echoke icanon icrnl iexten ignpar imaxbel isig iutf8 ixon onlcr opost pendin ~clocal ~cstopb ~echonl ~echoprt ~flusho ~hupcl ~ignbrk ~igncr ~inlcr ~inpck ~istrip ~iuclc ~ixany ~ixoff ~noflsh ~ocrnl ~ofdel ~ofill ~olcuc ~onlret ~onocr ~parenb ~parmrk ~parodd ~tostop ~xcase`
+	s = `speed:0 rows:72 cols:238 eof:0x04 eol2:0xff eol:0xff erase:0x7f intr:0x03 kill:0x15 lnext:0x16 min:0x00 quit:0x1c start:0x11 stop:0x13 susp:0x1a time:0x03 werase:0x17 brkint cread echo echoctl echoe echok echoke icanon icrnl iexten ignpar imaxbel isig iutf8 ixon onlcr opost pendin ~clocal ~cstopb ~echonl ~echoprt ~flusho ~hupcl ~ignbrk ~igncr ~inlcr ~inpck ~istrip ~iuclc ~ixany ~ixoff ~noflsh ~ocrnl ~ofdel ~ofill ~olcuc ~onlret ~onocr ~parenb ~parmrk ~parodd ~tostop ~xcase min:0 time:0`
 )
 
 func TestNew(t *testing.T) {
@@ -168,16 +168,30 @@ func TestString(t *testing.T) {
 	}
 
 	if g.String() != s {
-		t.Errorf("GTTY: want '%v', got '%v'", s, g.String())
-		as := strings.Split(s, " ")
-		ag := strings.Split(g.String(), " ")
-		if len(as) != len(ag) {
-			t.Fatalf("Wrong # elements in gtty: want %d, got %d", len(as), len(ag))
+		var mismatch int
+		got, want := map[string]struct{}{}, map[string]struct{}{}
+		for _, v := range strings.Split(g.String(), " ") {
+			got[v] = struct{}{}
 		}
-		for i := range as {
-			t.Errorf("want %s got %s Same %v", as[i], ag[i], as[i] == ag[i])
+		for _, v := range strings.Split(s, " ") {
+			want[v] = struct{}{}
 		}
 
+		// What is in got that is not in want?
+		for k := range got {
+			if _, ok := want[k]; !ok {
+				mismatch++
+				t.Errorf("got %s, want nothing", k)
+			}
+		}
+		// what is in want that is not in got?
+		for k := range want {
+			if _, ok := got[k]; !ok {
+				t.Errorf("got nothing, want %s", k)
+				mismatch++
+			}
+		}
+		t.Fatalf("%d items mismatch", mismatch)
 	}
 }
 

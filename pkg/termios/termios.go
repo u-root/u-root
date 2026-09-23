@@ -22,6 +22,8 @@ type (
 		Ospeed int
 		Row    int
 		Col    int
+		Min    int
+		Time   int
 
 		CC map[string]uint8
 
