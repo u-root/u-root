@@ -30,7 +30,7 @@ func (u *UPL) getPhysicalAddressSizes() (uint8, error) {
 	if physicalAddrSize != "" {
 		num, err := strconv.ParseUint(physicalAddrSize, 10, 8)
 		if err != nil {
-			return 0, fmt.Errorf("malformed UROOT_PHYS_ADDR_SIZE value \"%s\": %w\n", physicalAddrSize, err)
+			return 0, fmt.Errorf("malformed UROOT_PHYS_ADDR_SIZE value %q: %w", physicalAddrSize, err)
 		}
 		return uint8(num), nil
 	}
