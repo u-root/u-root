@@ -56,6 +56,13 @@ func GetTermios(fd uintptr) (*Termios, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// On Linux, Ispeed and Ospeed are legacy and ignored.
+	// The kernel uses Cflag CBAUD bits to determine baud rate.
+	if speed, ok := bother2baud[t.Cflag&CBAUD]; ok {
+		t.Ispeed, t.Ospeed = uint32(speed), uint32(speed)
+	}
+
 	return &Termios{Termios: *t}, nil
 }
 
@@ -121,43 +128,15 @@ func MakeRaw(term *Termios) *Termios {
 	return &raw
 }
 
-// MakeRawFile is similar to MakeRaw but operates on os.MakeRawFile
-// TODO: Potentially merge into MakeRaw?
-func MakeRawFile(r *os.File) error {
-	termios, err := unix.IoctlGetTermios(int(r.Fd()), unix.TCGETS)
-	if err != nil {
-		return err
-	}
-
-	termios.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
-	termios.Oflag &^= unix.OPOST
-	termios.Lflag &^= unix.ECHO | unix.ECHONL | unix.ICANON | unix.ISIG | unix.IEXTEN
-	termios.Cflag &^= unix.CSIZE | unix.PARENB
-	termios.Cflag |= unix.CS8
-	termios.Cc[unix.VMIN] = 1
-	termios.Cc[unix.VTIME] = 0
-
-	if err = unix.IoctlSetTermios(int(r.Fd()), unix.TCSETS, termios); err != nil {
-		return err
-	}
-	if err = syscall.SetNonblock(int(r.Fd()), true); err != nil {
-		return err
-	}
-	return nil
-}
-
 // MakeSerialBaud updates the Termios to set the baudrate
 func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 	t := *term
-	rate, ok := baud2unixB[baud]
+	r, ok := baud2unixB[baud]
 	if !ok {
-		return nil, fmt.Errorf("%d: Unrecognized baud rate", baud)
+		return nil, fmt.Errorf("baud rate %d: %w", baud, os.ErrInvalid)
 	}
-
 	t.Cflag &^= unix.CBAUD
-	t.Cflag |= rate
-	t.Ispeed = rate
-	t.Ospeed = rate
+	t.Cflag |= r
 
 	return &t, nil
 }

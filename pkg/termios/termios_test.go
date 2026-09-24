@@ -191,7 +191,13 @@ func TestString(t *testing.T) {
 				mismatch++
 			}
 		}
-		t.Fatalf("%d items mismatch", mismatch)
+
+		// The strings might have elements in different order,
+		// but still have the same pieces. We do not consider
+		// slightly different output a failure.
+		if mismatch > 0 {
+			t.Fatalf("%d items mismatch", mismatch)
+		}
 	}
 }
 

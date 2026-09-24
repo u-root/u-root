@@ -19,18 +19,19 @@ import (
 // GTTY returns the TTY struct for a given fd. It is like a New in
 // many packages but the name GTTY is a tradition.
 func GTTY(fd int) (*TTY, error) {
-	term, err := unix.IoctlGetTermios(fd, gets)
+	term, err := GetTermios(uintptr(fd))
 	if err != nil {
 		return nil, err
 	}
-	w, err := unix.IoctlGetWinsize(fd, getWinSize)
+	w, err := GetWinSize(uintptr(fd))
 	if err != nil {
 		return nil, err
 	}
 
 	t := TTY{Opts: make(map[string]bool), CC: make(map[string]uint8)}
+	uti := &term.Termios
 	for n, b := range boolFields {
-		val := uint32(reflect.ValueOf(term).Elem().Field(b.word).Uint()) & b.mask
+		val := uint32(reflect.ValueOf(uti).Elem().Field(b.word).Uint()) & b.mask
 		t.Opts[n] = val != 0
 	}
 
