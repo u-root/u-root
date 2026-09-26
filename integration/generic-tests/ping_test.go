@@ -35,7 +35,8 @@ func TestPing(t *testing.T) {
 		),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
-			qemu.ArbitraryArgs("-nic", "socket,listen=:1236"),
+			qemu.ArbitraryArgs("-netdev", "socket,id=net0,listen=:1236"),
+			qemu.ArbitraryArgs("-device", "e1000,netdev=net0"),
 		),
 	)
 	t.Cleanup(func() {
@@ -72,7 +73,8 @@ func TestPing(t *testing.T) {
 		),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(time.Minute),
-			qemu.ArbitraryArgs("-nic", "socket,connect=127.0.0.1:1236"),
+			qemu.ArbitraryArgs("-netdev", "socket,id=net0,connect=127.0.0.1:1236"),
+			qemu.ArbitraryArgs("-device", "e1000,netdev=net0"),
 		),
 	)
 	if _, err := clientVM.Console.ExpectString("TESTS PASSED MARKER"); err != nil {
