@@ -24,6 +24,8 @@ import (
 // This is possible because the generic initramfs ensures that we mount the
 // testdata directory containing the initramfs and kernel used in the VM.
 func TestMountKexec(t *testing.T) {
+	// Not riscv64: kexec_file_load only accepts an Image there since
+	// Linux 6.16, and the vmtest riscv64 kernel is 6.6.
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
 
 	script := `
@@ -69,7 +71,7 @@ func TestMountKexec(t *testing.T) {
 // TestMountKexecLoad is same as TestMountKexec except it test calling
 // kexec_load syscall than file load.
 func TestMountKexecLoad(t *testing.T) {
-	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64, qemu.ArchRiscv64)
 
 	gzipP, err := exec.LookPath("gzip")
 	if err != nil {
@@ -78,8 +80,9 @@ func TestMountKexecLoad(t *testing.T) {
 
 	script := `
 		CMDLINE=$(cat /proc/cmdline)
-		SUFFIX=${CMDLINE:(-7)}
-		echo SAW $SUFFIX
+		# Not a suffix check: some kernels (e.g. vmtest's riscv64) have
+		# CONFIG_CMDLINE_EXTEND, which appends the built-in cmdline.
+		case "$CMDLINE" in *" KEXEC=Y"*) echo SAW KEXEC=Y ;; esac
 		kexec -l -d -i /mount/9p/initramfs/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
 		sync
 		kexec -e
@@ -120,7 +123,7 @@ func TestMountKexecLoad(t *testing.T) {
 
 // TestMountKexecLoadOnly test kexec loads without a kexec reboot.
 func TestMountKexecLoadOnly(t *testing.T) {
-	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64)
+	qemu.SkipIfNotArch(t, qemu.ArchAMD64, qemu.ArchArm64, qemu.ArchRiscv64)
 
 	gzipP, err := exec.LookPath("gzip")
 	if err != nil {
