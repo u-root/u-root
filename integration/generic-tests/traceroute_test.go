@@ -237,7 +237,8 @@ func TestTraceroute(t *testing.T) {
 		),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(3*time.Minute),
-			qemu.ArbitraryArgs("-nic", "socket,listen=:"+qemuSocketPortAB),
+			qemu.ArbitraryArgs("-netdev", "socket,id=net0,listen=:"+qemuSocketPortAB),
+			qemu.ArbitraryArgs("-device", "e1000,netdev=net0"),
 		),
 	)
 
@@ -254,8 +255,10 @@ func TestTraceroute(t *testing.T) {
 		),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(3*time.Minute),
-			qemu.ArbitraryArgs("-nic", "socket,connect="+qemuSocketHost+":"+qemuSocketPortAB),
-			qemu.ArbitraryArgs("-nic", "socket,listen=:"+qemuSocketPortBC),
+			qemu.ArbitraryArgs("-netdev", "socket,id=net0,connect="+qemuSocketHost+":"+qemuSocketPortAB),
+			qemu.ArbitraryArgs("-device", "e1000,netdev=net0"),
+			qemu.ArbitraryArgs("-netdev", "socket,id=net1,listen=:"+qemuSocketPortBC),
+			qemu.ArbitraryArgs("-device", "e1000,netdev=net1"),
 			// NAT to the outside world
 			qemu.ArbitraryArgs("-netdev", "user,id=net2"),
 			qemu.ArbitraryArgs("-device", "e1000,netdev=net2"),
@@ -277,7 +280,8 @@ func TestTraceroute(t *testing.T) {
 		),
 		scriptvm.WithQEMUFn(
 			qemu.WithVMTimeout(3*time.Minute),
-			qemu.ArbitraryArgs("-nic", "socket,connect="+qemuSocketHost+":"+qemuSocketPortBC),
+			qemu.ArbitraryArgs("-netdev", "socket,id=net0,connect="+qemuSocketHost+":"+qemuSocketPortBC),
+			qemu.ArbitraryArgs("-device", "e1000,netdev=net0"),
 		),
 	)
 
