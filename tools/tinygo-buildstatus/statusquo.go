@@ -210,6 +210,7 @@ var (
 	// There are good reasons to ignore some packages, e.g. they are guaranteed
 	// not to build for a certain OS, e.g. bind only works for p9 builds.
 	Ignore = map[string][]string{
-		"bind": {"linux", "freebsd", "darwin", "windows"},
+		"bind":     {"linux", "freebsd", "darwin", "windows"},
+		"slattach": {"linux", "freebsd", "darwin", "windows"},
 	}
 )
