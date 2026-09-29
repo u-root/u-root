@@ -6,8 +6,10 @@ package dt
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -233,5 +235,38 @@ func TestWalk(t *testing.T) {
 	v := []byte{0x84, 0, 0, 0x5}
 	if !bytes.Equal(b, v) {
 		t.Fatalf("Checking value of psci/migrate: got %q, want %q", b, v)
+	}
+}
+
+func TestReadFDTBounds(t *testing.T) {
+	dtb, err := os.ReadFile("testdata/fdt.dtb")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The root node's first property follows its begin token and empty name.
+	prop := binary.BigEndian.Uint32(dtb[8:12]) + 8
+	if token := binary.BigEndian.Uint32(dtb[prop:]); token != uint32(tokenProp) {
+		t.Fatalf("token at %#x = %#x, want property", prop, token)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		offset uint32
+		value  uint32
+	}{
+		{"total size beyond input", 4, uint32(len(dtb)) + 1},
+		{"strings block beyond total size", 32, math.MaxUint32},
+		{"struct block beyond total size", 36, math.MaxUint32},
+		{"property beyond struct block", prop + 4, math.MaxUint32},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.Clone(dtb)
+			binary.BigEndian.PutUint32(b[tt.offset:], tt.value)
+
+			if _, err := ReadFDT(bytes.NewReader(b)); err == nil || !strings.Contains(err.Error(), "exceeds") {
+				t.Errorf("ReadFDT() = %v, want a size bound error", err)
+			}
+		})
 	}
 }
