@@ -127,7 +127,6 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 		return nil, fmt.Errorf("%d: Unrecognized baud rate", baud)
 	}
 
-	//	t.Cflag &^= unix.CBAUD
 	t.Cflag |= toTermiosCflag(rate)
 	t.Ispeed = rate
 	t.Ospeed = rate
@@ -145,7 +144,7 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 func MakeSerialDefault(term *Termios) *Termios {
 	t := *term
 	/* Clear all except baud, stop bit and parity settings */
-	t.Cflag &= /*unix.CBAUD | */ unix.CSTOPB | unix.PARENB | unix.PARODD
+	t.Cflag &= unix.CSTOPB | unix.PARENB | unix.PARODD
 	/* Set: 8 bits; ignore Carrier Detect; enable receive */
 	t.Cflag |= unix.CS8 | unix.CLOCAL | unix.CREAD
 	t.Iflag = unix.ICRNL
