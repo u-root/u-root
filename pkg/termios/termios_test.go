@@ -271,6 +271,15 @@ func TestSet(t *testing.T) {
 	}
 }
 
+func TestMakeSerialBaudZero(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux-specific baud rate")
+	}
+	if _, err := MakeSerialBaud(&Termios{}, 0); err != nil {
+		t.Fatalf("MakeSerialBaud(0): got %v, want nil", err)
+	}
+}
+
 // This test tries to prevent people from breaking other operating systems.
 //
 // Compare:

@@ -13,6 +13,7 @@ import (
 
 // baud2unixB convert a baudrate to the corresponding unix const.
 var baud2unixB = map[int]uint32{
+	0:       unix.B0,
 	50:      unix.B50,
 	75:      unix.B75,
 	110:     unix.B110,
