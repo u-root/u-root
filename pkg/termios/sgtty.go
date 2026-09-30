@@ -19,7 +19,8 @@ import (
 // GTTY returns the TTY struct for a given fd. It is like a New in
 // many packages but the name GTTY is a tradition.
 func GTTY(fd int) (*TTY, error) {
-	term, err := unix.IoctlGetTermios(fd, gets)
+	term, err := GetTermios(uintptr(fd))
+
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +31,8 @@ func GTTY(fd int) (*TTY, error) {
 
 	t := TTY{Opts: make(map[string]bool), CC: make(map[string]uint8)}
 	for n, b := range boolFields {
-		val := uint32(reflect.ValueOf(term).Elem().Field(b.word).Uint()) & b.mask
+		tm := &term.Termios
+		val := uint32(reflect.ValueOf(tm).Elem().Field(b.word).Uint()) & b.mask
 		t.Opts[n] = val != 0
 	}
 
@@ -54,20 +56,21 @@ func GTTY(fd int) (*TTY, error) {
 // and an error. It does not change the original TTY struct.
 func (t *TTY) STTY(fd int) (*TTY, error) {
 	// Get a unix.Termios which we can partially fill in.
-	term, err := unix.IoctlGetTermios(fd, gets)
+	term, err := GetTermios(uintptr(fd))
 	if err != nil {
 		return nil, err
 	}
 
 	for n, b := range boolFields {
 		set := t.Opts[n]
-		i := reflect.ValueOf(term).Elem().Field(b.word).Uint()
+		tm := &term.Termios
+		i := reflect.ValueOf(tm).Elem().Field(b.word).Uint()
 		if set {
 			i |= uint64(b.mask)
 		} else {
 			i &= ^uint64(b.mask)
 		}
-		reflect.ValueOf(term).Elem().Field(b.word).SetUint(i)
+		reflect.ValueOf(tm).Elem().Field(b.word).SetUint(i)
 	}
 
 	for n, c := range cc {
@@ -77,7 +80,7 @@ func (t *TTY) STTY(fd int) (*TTY, error) {
 	term.Ispeed = speed(t.Ispeed)
 	term.Ospeed = speed(t.Ospeed)
 
-	if err := unix.IoctlSetTermios(fd, sets, term); err != nil {
+	if err := SetTermios(uintptr(fd), term); err != nil {
 		return nil, err
 	}
 
