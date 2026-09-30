@@ -69,7 +69,13 @@ func (t *TTYIO) Get() (*Termios, error) {
 
 // SetTermios sets tty parameters for an fd from a Termios.
 func SetTermios(fd uintptr, ti *Termios) error {
-	return unix.IoctlSetTermios(int(fd), unix.TCSETS, &ti.Termios)
+	baud, ok := baud2unixB[int(ti.Ispeed)]
+	if !ok {
+		return fmt.Errorf("%d: Unrecognized baud rate", baud)
+	}
+	ti.Termios.Cflag &= ^uint32(unix.CBAUD)
+	ti.Termios.Cflag |= baud
+	return unix.IoctlSetTermios(int(fd), sets, &ti.Termios)
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
