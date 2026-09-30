@@ -50,7 +50,7 @@ func NewTTYS(port string) (*TTYIO, error) {
 
 // GetTermios returns a filled-in Termios, from an fd.
 func GetTermios(fd uintptr) (*Termios, error) {
-	t, err := unix.IoctlGetTermios(int(fd), unix.TIOCGETA)
+	t, err := unix.IoctlGetTermios(int(fd), gets)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (t *TTYIO) Get() (*Termios, error) {
 
 // SetTermios sets tty parameters for an fd from a Termios.
 func SetTermios(fd uintptr, ti *Termios) error {
-	return unix.IoctlSetTermios(int(fd), unix.TIOCSETA, &ti.Termios)
+	return unix.IoctlSetTermios(int(fd), sets, &ti.Termios)
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
@@ -74,7 +74,7 @@ func (t *TTYIO) Set(ti *Termios) error {
 
 // GetWinSize gets window size from an fd.
 func GetWinSize(fd uintptr) (*Winsize, error) {
-	w, err := unix.IoctlGetWinsize(int(fd), unix.TIOCGWINSZ)
+	w, err := unix.IoctlGetWinsize(int(fd), getWinSize)
 	return &Winsize{Winsize: *w}, err
 }
 
@@ -85,7 +85,7 @@ func (t *TTYIO) GetWinSize() (*Winsize, error) {
 
 // SetWinSize sets window size for an fd from a Winsize.
 func SetWinSize(fd uintptr, w *Winsize) error {
-	return unix.IoctlSetWinsize(int(fd), unix.TIOCSWINSZ, &w.Winsize)
+	return unix.IoctlSetWinsize(int(fd), setWinSize, &w.Winsize)
 }
 
 // SetWinSize sets window size for a TTYIO from a Winsize.
