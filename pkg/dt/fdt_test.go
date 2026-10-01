@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func TestLoadFDT(t *testing.T) {
@@ -236,6 +237,41 @@ func TestWalk(t *testing.T) {
 	v := []byte{0x84, 0, 0, 0x5}
 	if !bytes.Equal(b, v) {
 		t.Fatalf("Checking value of psci/migrate: got %q, want %q", b, v)
+	}
+}
+
+func TestReadStringsBlock(t *testing.T) {
+	strs := []byte("compatible\x00model\x00")
+	size := uint32(len(strs))
+	for _, tt := range []struct {
+		name    string
+		data    []byte
+		size    uint32
+		wantErr error
+	}{
+		{"short reads", strs, size, nil},
+		{"truncated block", strs[:len(strs)-1], size, io.ErrUnexpectedEOF},
+		{"empty input", nil, size, io.EOF},
+		{"empty block", nil, 0, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := bytes.NewReader(append([]byte{0xff}, tt.data...))
+			reader := struct {
+				io.Reader
+				io.Seeker
+			}{
+				Reader: iotest.OneByteReader(r),
+				Seeker: r,
+			}
+			fdt := &FDT{Header: Header{OffDtStrings: 1, SizeDtStrings: tt.size}}
+			got, err := fdt.readStringsBlock(reader)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("readStringsBlock() = %v, want %v", err, tt.wantErr)
+			}
+			if tt.wantErr == nil && !bytes.Equal(got, tt.data) {
+				t.Errorf("readStringsBlock() = %q, want %q", got, tt.data)
+			}
+		})
 	}
 }
 

@@ -190,7 +190,7 @@ func (fdt *FDT) readStringsBlock(f io.ReadSeeker) (strs []byte, err error) {
 		return
 	}
 	strs = make([]byte, fdt.Header.SizeDtStrings)
-	_, err = f.Read(strs)
+	_, err = io.ReadFull(f, strs)
 	return
 }
 
