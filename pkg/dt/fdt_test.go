@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -251,21 +252,55 @@ func TestReadFDTBounds(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name   string
-		offset uint32
-		value  uint32
+		name         string
+		offset       uint32
+		value        uint32
+		wantContains string
+		wantErr      error
 	}{
-		{"total size beyond input", 4, uint32(len(dtb)) + 1},
-		{"strings block beyond total size", 32, math.MaxUint32},
-		{"struct block beyond total size", 36, math.MaxUint32},
-		{"property beyond struct block", prop + 4, math.MaxUint32},
+		{"valid input", 4, uint32(len(dtb)), "", nil},
+		{"zero total size", 4, 0, "smaller than header", nil},
+		{"total size smaller than header", 4, uint32(binary.Size(Header{})) - 1, "smaller than header", nil},
+		{"total size beyond input", 4, uint32(len(dtb)) + 1, "", io.EOF},
+		{"total size beyond limit", 4, MaxTotalSize + 1, "too large", nil},
+		{"strings block beyond total size", 32, math.MaxUint32, "exceeds", nil},
+		{"struct block beyond total size", 36, math.MaxUint32, "exceeds", nil},
+		{"property beyond struct block", prop + 4, math.MaxUint32, "exceeds", nil},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			b := bytes.Clone(dtb)
 			binary.BigEndian.PutUint32(b[tt.offset:], tt.value)
 
-			if _, err := ReadFDT(bytes.NewReader(b)); err == nil || !strings.Contains(err.Error(), "exceeds") {
-				t.Errorf("ReadFDT() = %v, want a size bound error", err)
+			for _, reader := range []struct {
+				name string
+				read FDTReader
+			}{
+				{"bytes reader", func() (*FDT, error) {
+					return ReadFDT(bytes.NewReader(b))
+				}},
+				{"bounded section reader", func() (*FDT, error) {
+					return ReadFDT(io.NewSectionReader(bytes.NewReader(b), 0, int64(len(b))))
+				}},
+				{"oversized section reader", func() (*FDT, error) {
+					return ReadFDT(io.NewSectionReader(bytes.NewReader(b), 0, math.MaxInt64))
+				}},
+				{"reader at", WithReaderAt(bytes.NewReader(b))},
+			} {
+				t.Run(reader.name, func(t *testing.T) {
+					_, err := reader.read()
+					switch {
+					case tt.wantErr != nil:
+						if !errors.Is(err, tt.wantErr) {
+							t.Errorf("ReadFDT() = %v, want %v", err, tt.wantErr)
+						}
+					case tt.wantContains != "":
+						if err == nil || !strings.Contains(err.Error(), tt.wantContains) {
+							t.Errorf("ReadFDT() = %v, want error containing %q", err, tt.wantContains)
+						}
+					case err != nil:
+						t.Errorf("ReadFDT() = %v, want nil", err)
+					}
+				})
 			}
 		})
 	}

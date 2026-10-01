@@ -118,12 +118,16 @@ func (fdt *FDT) readHeader(f io.ReadSeeker) error {
 	if h.TotalSize > MaxTotalSize {
 		return fmt.Errorf("FDT too large, %d > %d", h.TotalSize, MaxTotalSize)
 	}
-	size, err := f.Seek(0, io.SeekEnd)
-	if err != nil {
+	if size := uint32(binary.Size(h)); h.TotalSize < size {
+		return fmt.Errorf("FDT total size smaller than header, %#x < %#x", h.TotalSize, size)
+	}
+
+	if _, err := f.Seek(int64(h.TotalSize)-1, io.SeekStart); err != nil {
 		return err
 	}
-	if int64(h.TotalSize) > size {
-		return fmt.Errorf("FDT total size exceeds input, %#x > %#x", h.TotalSize, size)
+	var last [1]byte
+	if _, err := io.ReadFull(f, last[:]); err != nil {
+		return fmt.Errorf("cannot read last declared FDT byte at %#x: %w", h.TotalSize-1, err)
 	}
 	return nil
 }
