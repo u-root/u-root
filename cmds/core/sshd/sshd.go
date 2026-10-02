@@ -11,10 +11,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 
+	"github.com/mdlayher/vsock"
 	"github.com/pkg/sftp"
 	"github.com/u-root/u-root/pkg/pty"
 	"golang.org/x/crypto/ssh"
@@ -42,6 +45,7 @@ var (
 	debug   = flag.Bool("d", false, "Enable debug prints")
 	keys    = flag.String("keys", "authorized_keys", "Path to the authorized_keys file")
 	privkey = flag.String("privatekey", "id_rsa", "Path of private key")
+	network = flag.String("net", "tcp", "network to listen on")
 	ip      = flag.String("ip", "0.0.0.0", "ip address to listen on")
 	port    = flag.String("port", "2022", "port to listen on")
 	dprintf = func(string, ...any) {}
@@ -214,6 +218,7 @@ func session(chans <-chan ssh.NewChannel) {
 type params struct {
 	keys    string
 	privkey string
+	net     string
 	ip      string
 	port    string
 	debug   bool
@@ -224,9 +229,26 @@ func parseParams() params {
 		debug:   *debug,
 		keys:    *keys,
 		privkey: *privkey,
+		net:     *network,
 		ip:      *ip,
 		port:    *port,
 	}
+}
+
+func listen(network, ip, port string) (net.Listener, error) {
+	switch network {
+	case "vsock":
+		p, err := strconv.ParseUint(port, 0, 32)
+		if err != nil {
+			return nil, err
+		}
+		return vsock.ListenContextID(math.MaxUint32, uint32(p), nil)
+	case "unix", "unixgram", "unixpacket":
+		return net.Listen(network, port)
+	case "":
+		network = "tcp"
+	}
+	return net.Listen(network, net.JoinHostPort(ip, port))
 }
 
 type cmd struct {
@@ -293,7 +315,7 @@ func (c *cmd) run() error {
 
 	// Once a ServerConfig has been configured, connections can be
 	// accepted.
-	listener, err := net.Listen("tcp", net.JoinHostPort(c.ip, c.port))
+	listener, err := listen(c.net, c.ip, c.port)
 	if err != nil {
 		return err
 	}
