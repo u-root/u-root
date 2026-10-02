@@ -118,6 +118,17 @@ func (fdt *FDT) readHeader(f io.ReadSeeker) error {
 	if h.TotalSize > MaxTotalSize {
 		return fmt.Errorf("FDT too large, %d > %d", h.TotalSize, MaxTotalSize)
 	}
+	if size := uint32(binary.Size(h)); h.TotalSize < size {
+		return fmt.Errorf("FDT total size smaller than header, %#x < %#x", h.TotalSize, size)
+	}
+
+	if _, err := f.Seek(int64(h.TotalSize)-1, io.SeekStart); err != nil {
+		return err
+	}
+	var last [1]byte
+	if _, err := io.ReadFull(f, last[:]); err != nil {
+		return fmt.Errorf("cannot read last declared FDT byte at %#x: %w", h.TotalSize-1, err)
+	}
 	return nil
 }
 
@@ -159,7 +170,17 @@ func (fdt *FDT) checkLayout() error {
 			"struct block must not overlap memory reservation block, %#x < %#x",
 			fdt.Header.OffDtStruct, memRscEnd)
 	}
-	// TODO: there are more checks which should be done
+	for _, block := range []struct {
+		name         string
+		offset, size uint32
+	}{
+		{"struct", fdt.Header.OffDtStruct, fdt.Header.SizeDtStruct},
+		{"strings", fdt.Header.OffDtStrings, fdt.Header.SizeDtStrings},
+	} {
+		if uint64(block.offset)+uint64(block.size) > uint64(fdt.Header.TotalSize) {
+			return fmt.Errorf("%s block exceeds total size, %#x + %#x > %#x", block.name, block.offset, block.size, fdt.Header.TotalSize)
+		}
+	}
 	return nil
 }
 
@@ -168,7 +189,7 @@ func (fdt *FDT) readStringsBlock(f io.ReadSeeker) (strs []byte, err error) {
 		return
 	}
 	strs = make([]byte, fdt.Header.SizeDtStrings)
-	_, err = f.Read(strs)
+	_, err = io.ReadFull(f, strs)
 	return
 }
 
@@ -254,6 +275,9 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 				return fmt.Errorf(
 					"property name does not having terminating null at %#x",
 					pHeader.Nameoff)
+			}
+			if remaining := fdt.Header.SizeDtStruct - uint32(r.N); pHeader.Len > remaining {
+				return fmt.Errorf("property length exceeds struct block, %#x > %#x", pHeader.Len, remaining)
 			}
 			p := Property{
 				Name:  string(strs[pHeader.Nameoff : pHeader.Nameoff+uint32(null)]),
