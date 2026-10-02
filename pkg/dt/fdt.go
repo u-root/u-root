@@ -178,8 +178,7 @@ func (fdt *FDT) checkLayout() error {
 		{"strings", fdt.Header.OffDtStrings, fdt.Header.SizeDtStrings},
 	} {
 		if uint64(block.offset)+uint64(block.size) > uint64(fdt.Header.TotalSize) {
-			return fmt.Errorf("%s block exceeds total size, %#x + %#x > %#x",
-				block.name, block.offset, block.size, fdt.Header.TotalSize)
+			return fmt.Errorf("%s block exceeds total size, %#x + %#x > %#x", block.name, block.offset, block.size, fdt.Header.TotalSize)
 		}
 	}
 	return nil
@@ -278,8 +277,7 @@ func (fdt *FDT) readStructBlock(f io.ReadSeeker, strs []byte) error {
 					pHeader.Nameoff)
 			}
 			if remaining := fdt.Header.SizeDtStruct - uint32(r.N); pHeader.Len > remaining {
-				return fmt.Errorf("property length exceeds struct block, %#x > %#x",
-					pHeader.Len, remaining)
+				return fmt.Errorf("property length exceeds struct block, %#x > %#x", pHeader.Len, remaining)
 			}
 			p := Property{
 				Name:  string(strs[pHeader.Nameoff : pHeader.Nameoff+uint32(null)]),
