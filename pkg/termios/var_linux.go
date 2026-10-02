@@ -13,6 +13,7 @@ import (
 
 // baud2unixB convert a baudrate to the corresponding unix const.
 var baud2unixB = map[int]uint32{
+	0:       0,
 	50:      unix.B50,
 	75:      unix.B75,
 	110:     unix.B110,
@@ -43,6 +44,41 @@ var baud2unixB = map[int]uint32{
 	3000000: unix.B3000000,
 	3500000: unix.B3500000,
 	4000000: unix.B4000000,
+}
+
+// baud2unixB convert a Baud to the corresponding integer baud
+var unixB2baud = map[int]uint32{
+	0:             0,
+	unix.B50:      50,
+	unix.B75:      75,
+	unix.B110:     110,
+	unix.B134:     134,
+	unix.B150:     150,
+	unix.B200:     200,
+	unix.B300:     300,
+	unix.B600:     600,
+	unix.B1200:    1200,
+	unix.B1800:    1800,
+	unix.B2400:    2400,
+	unix.B4800:    4800,
+	unix.B9600:    9600,
+	unix.B19200:   19200,
+	unix.B38400:   38400,
+	unix.B57600:   57600,
+	unix.B115200:  115200,
+	unix.B230400:  230400,
+	unix.B460800:  460800,
+	unix.B500000:  500000,
+	unix.B576000:  576000,
+	unix.B921600:  921600,
+	unix.B1000000: 1000000,
+	unix.B1152000: 1152000,
+	unix.B1500000: 1500000,
+	unix.B2000000: 2000000,
+	unix.B2500000: 2500000,
+	unix.B3000000: 3000000,
+	unix.B3500000: 3500000,
+	unix.B4000000: 4000000,
 }
 
 // init adds constants that are linux-specific

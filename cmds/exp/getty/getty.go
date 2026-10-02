@@ -47,7 +47,7 @@ func main() {
 	}
 
 	port := flag.Arg(0)
-	baud, err := strconv.Atoi(flag.Arg(1))
+	baud, err := strconv.ParseInt(flag.Arg(1), 0, 32)
 	if err != nil {
 		baud = 0
 	}
@@ -60,7 +60,7 @@ func main() {
 		log.Fatalf("Unable to open port %s: %v", port, err)
 	}
 
-	if _, err := ttyS.Serial(baud); err != nil {
+	if _, err := ttyS.Serial(int(baud)); err != nil {
 		log.Printf("Unable to configure port %s and set baudrate %d: %v", port, baud, err)
 	}
 
