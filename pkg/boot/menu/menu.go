@@ -313,11 +313,20 @@ func (StartShell) Load() error {
 	return nil
 }
 
-// Exec implements Entry.Exec by running /bin/defaultsh.
+// Exec implements Entry.Exec by replacing the current process with
+// /bin/defaultsh, so that nothing the boot command holds open (e.g. loop
+// devices) outlives it.
+//
+// Only the path, arguments and environment of the command built with Mod are
+// used; SysProcAttr settings do not apply, since no new process is started.
 func (s StartShell) Exec() error {
 	// Reset signal handler for SIGINT to enable user interrupts again
 	signal.Reset(syscall.SIGINT)
-	return libinit.Command("/bin/defaultsh", s.Mod...).Run()
+	cmd := libinit.Command("/bin/defaultsh", s.Mod...)
+	if cmd.Err != nil {
+		return cmd.Err
+	}
+	return unix.Exec(cmd.Path, cmd.Args, cmd.Environ())
 }
 
 // IsDefault indicates that this should not be run as a default action.
