@@ -175,22 +175,21 @@ func run(args []string) error {
 		return fmt.Errorf("usage: kexec [fs] kernelname OR kexec -e")
 	}
 
-	if err, warningMsg := universalpayload.Load(opts.kernelpath, linux.Debug); err != nil {
-		if errors.Is(err, universalpayload.ErrFailToReadFdtFile) {
-			// Not a universal payload at all, which is the common
-			// case. Only mention it when debugging.
-			linux.Debug("%s is not a universal payload (%v), loading it as a kernel", opts.kernelpath, err)
-		} else {
-			log.Printf("Failed to load universalpayload (%v), try legacy kernel..", err)
-		}
-	} else {
+	err, warningMsg := universalpayload.Load(opts.kernelpath, linux.Debug)
+	switch {
+	case errors.Is(err, universalpayload.ErrFailToReadFdtFile):
+		// Not a universal payload at all, which is the common case.
+		// Only mention it when debugging.
+		linux.Debug("%s is not a universal payload (%v), loading it as a kernel", opts.kernelpath, err)
+	case err != nil:
+		return fmt.Errorf("failed to load universal payload: %w", err)
+	default:
 		// universalpayload package suppresses warning message, we print messages here.
 		if warningMsg != nil {
 			log.Printf("Warning messages from universalpayload:\n%v\n", warningMsg)
 		}
-
 		if err := universalpayload.Exec(); err != nil {
-			log.Printf("Failed to execute universalpayload (%v), try legacy kernel..", err)
+			return fmt.Errorf("failed to execute universal payload: %w", err)
 		}
 	}
 
@@ -288,7 +287,7 @@ func loadError(err error, image boot.OSImage) error {
 		return err
 	}
 	if errors.Is(err, syscall.ENOSYS) || errors.Is(err, syscall.ENOEXEC) {
-		return fmt.Errorf("%w; try --loadsyscall to use kexec_load instead", err)
+		return fmt.Errorf("kexec_file_load failed, try --loadsyscall to use kexec_load instead: %w", err)
 	}
 	return err
 }
