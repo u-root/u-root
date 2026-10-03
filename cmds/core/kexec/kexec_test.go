@@ -6,10 +6,16 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"reflect"
 	"slices"
+	"strings"
+	"syscall"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/boot"
 )
 
 func TestParseCmdline(t *testing.T) {
@@ -249,5 +255,35 @@ func TestHackLoadFlagValue(t *testing.T) {
 		if !slices.Equal(result, test.output) {
 			t.Errorf("\nInput:    %v\nExpected: %v\nGot:      %v", test.input, test.output, result)
 		}
+	}
+}
+
+func TestLoadError(t *testing.T) {
+	const hint = "try --loadsyscall"
+	enosys := fmt.Errorf("SYS_kexec_file_load is not supported on arm: %w", syscall.ENOSYS)
+	enoexec := fmt.Errorf("SYS_kexec_file_load(3, 0, , 4) = %w", syscall.ENOEXEC)
+	other := errors.New("some other failure")
+
+	for _, tt := range []struct {
+		name     string
+		err      error
+		image    boot.OSImage
+		wantHint bool
+	}{
+		{name: "file_load ENOSYS", err: enosys, image: &boot.LinuxImage{}, wantHint: true},
+		{name: "file_load ENOEXEC", err: enoexec, image: &boot.LinuxImage{}, wantHint: true},
+		{name: "file_load other error", err: other, image: &boot.LinuxImage{}},
+		{name: "already kexec_load", err: enosys, image: &boot.LinuxImage{LoadSyscall: true}},
+		{name: "multiboot", err: enosys, image: &boot.MultibootImage{}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := loadError(tt.err, tt.image)
+			if !errors.Is(got, tt.err) {
+				t.Errorf("loadError() = %v, does not wrap %v", got, tt.err)
+			}
+			if gotHint := strings.Contains(got.Error(), hint); gotHint != tt.wantHint {
+				t.Errorf("loadError() = %q, contains %q = %t, want %t", got, hint, gotHint, tt.wantHint)
+			}
+		})
 	}
 }
