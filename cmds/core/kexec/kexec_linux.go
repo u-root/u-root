@@ -14,13 +14,13 @@
 // Options:
 //      --append string        Append to the kernel command line. Implies --reuse-cmdline
 //  -c, --cmdline string       Set the kernel command line
-//  -d, --debug                Print debug info (default true)
+//  -d, --debug                Print debug info
 //  -e, --exec                 Execute a currently loaded kernel
 //  -x, --extra string         Add one or more files to the initrd
 //      --initramfs string     Use file as the kernel's initial ramdisk
 //  -i, --initrd string        Use file as the kernel's initial ramdisk
 //  -l, --load                 Load the new kernel into the current kernel
-//  -L, --loadsyscall          Use the kexec load syscall (not file_load) (default true)
+//  -L, --loadsyscall          Use the kexec load syscall (not file_load)
 //      --module stringArray   Load multiboot module with command line args (e.g --module="mod arg1")
 //  -p, --purgatory string     pick a purgatory, use '-p xyz' to get a list (default "default")
 //      --reuse-cmdline        Use the kernel command line from running system
@@ -28,12 +28,14 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -174,7 +176,13 @@ func run(args []string) error {
 	}
 
 	if err, warningMsg := universalpayload.Load(opts.kernelpath, linux.Debug); err != nil {
-		log.Printf("Failed to load universalpayload (%v), try legacy kernel..", err)
+		if errors.Is(err, universalpayload.ErrFailToReadFdtFile) {
+			// Not a universal payload at all, which is the common
+			// case. Only mention it when debugging.
+			linux.Debug("%s is not a universal payload (%v), loading it as a kernel", opts.kernelpath, err)
+		} else {
+			log.Printf("Failed to load universalpayload (%v), try legacy kernel..", err)
+		}
 	} else {
 		// universalpayload package suppresses warning message, we print messages here.
 		if warningMsg != nil {
@@ -257,7 +265,7 @@ func run(args []string) error {
 			}
 		}
 		if err := image.Load(boot.WithVerbose(opts.debug)); err != nil {
-			return err
+			return loadError(err, image)
 		}
 	}
 
@@ -268,4 +276,19 @@ func run(args []string) error {
 	}
 
 	return nil
+}
+
+// loadError adds a hint to err when kexec_file_load could not load a Linux
+// kernel, either because the kernel does not implement it (ENOSYS) or because
+// it does not accept this image format (ENOEXEC). kexec_load often still works
+// in both cases.
+func loadError(err error, image boot.OSImage) error {
+	li, ok := image.(*boot.LinuxImage)
+	if !ok || li.LoadSyscall {
+		return err
+	}
+	if errors.Is(err, syscall.ENOSYS) || errors.Is(err, syscall.ENOEXEC) {
+		return fmt.Errorf("%w; try --loadsyscall to use kexec_load instead", err)
+	}
+	return err
 }
