@@ -82,7 +82,7 @@ func TestMountKexecLoad(t *testing.T) {
 		CMDLINE=$(cat /proc/cmdline)
 		# Not a suffix check: some kernels (e.g. vmtest's riscv64) have
 		# CONFIG_CMDLINE_EXTEND, which appends the built-in cmdline.
-		case "$CMDLINE" in *" KEXEC=Y"*) echo SAW KEXEC=Y ;; esac
+		case " $CMDLINE " in *" KEXEC=Y "*) echo SAW KEXEC=Y ;; esac
 		kexec -l -d -i /mount/9p/initramfs/initramfs.cpio --loadsyscall -c "${CMDLINE} KEXEC=Y" /kernel
 		sync
 		kexec -e
