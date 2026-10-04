@@ -38,12 +38,10 @@ func (c *cmd) run() (int, error) {
 	})
 
 	if err := cmd.Wait(); err != nil {
-		errno := 1
-		var e *exec.ExitError
-		if errors.As(err, &e) {
-			errno = e.ExitCode()
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
+			return ee.ExitCode(), err
 		}
-		return errno, err
+		return 1, err
 	}
 
 	return 0, nil
