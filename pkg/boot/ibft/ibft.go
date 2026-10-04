@@ -162,14 +162,14 @@ const (
 	// source.
 	OriginWellKnown Origin = 2
 
-	// OriginDHCP means the IP addrss prefix was provided by DHCP settings.
+	// OriginDHCP means the IP address prefix was provided by DHCP settings.
 	OriginDHCP Origin = 3
 
 	// OriginRA means the IP address prefix was obtained through a router
 	// advertisement (RA).
 	OriginRA Origin = 4
 
-	// OriginUnchanged menas the IP address prefix should be unchanged.
+	// OriginUnchanged means the IP address prefix should be unchanged.
 	// This value is used when setting the properties for a unicast IP
 	// interface when the value for the IP prefix origin should be left
 	// unchanged.

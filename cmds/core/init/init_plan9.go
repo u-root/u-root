@@ -16,7 +16,7 @@ func quiet() {
 }
 
 func osInitGo() *initCmds {
-	// TOOD: get kernel command line.
+	// TODO: get kernel command line.
 	uinitArgs := libinit.WithArguments()
 
 	// namespace setup will have done bind mounts into /bin, so name things only once.

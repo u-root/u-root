@@ -82,7 +82,7 @@ const (
 	LOOP
 	// NO_CS determines whether to disable chip select (1=no chip select).
 	NO_CS
-	// READY determins ready mode bit.
+	// READY determines ready mode bit.
 	READY
 	// TX_DUAL determines whether to transmit in dual mode.
 	TX_DUAL

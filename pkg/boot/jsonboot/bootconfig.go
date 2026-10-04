@@ -41,7 +41,7 @@ func (bc *BootConfig) IsValid() bool {
 	return (bc.Kernel != "" && bc.Multiboot == "") || (bc.Kernel == "" && bc.Multiboot != "")
 }
 
-// ID retrurns an identifyer composed of bc's name and crc32 hash of bc.
+// ID retrurns an identifier composed of bc's name and crc32 hash of bc.
 // The ID is suitable to be used as part of a filepath.
 func (bc *BootConfig) ID() string {
 	id := strings.Title(strings.ToLower(bc.Name))

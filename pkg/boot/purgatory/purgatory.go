@@ -11,11 +11,11 @@ package purgatory
 //
 // We currently short circuit by generating purgatory executable
 // via non-go toolchain. See generation logic from genpurg.go and
-// finall generated golang purgatories code in asm.go
+// final generated golang purgatories code in asm.go
 //
 // See doc.go for more reading.
 type Purgatory struct {
-	// Name is a human readable alis to this purgatory executable.
+	// Name is a human readable alias to this purgatory executable.
 	Name string
 	// Hexdump is a hexdump of the executabl.
 	Hexdump string

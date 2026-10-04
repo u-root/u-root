@@ -44,7 +44,7 @@ func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error
 		// source, but only returns numbers if the crng has been
 		// initialized.
 		//
-		// This is preferrable to /dev/urandom, as /dev/urandom will
+		// This is preferable to /dev/urandom, as /dev/urandom will
 		// make up fake random numbers until the crng has been
 		// initialized.
 		n, err := unix.Getrandom(b, unix.GRND_NONBLOCK)

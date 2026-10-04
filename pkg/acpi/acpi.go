@@ -86,7 +86,7 @@ func getaddr(b []byte, addr64, addr32 int64) (int64, error) {
 	return -1, fmt.Errorf("%w: no 64-bit address at %d, no 32-bit address at %d, in %d-byte slice", errNotFound, addr64, addr32, len(b))
 }
 
-// Method accepts a method name and returns a TableMethod if one exists, or error othewise.
+// Method accepts a method name and returns a TableMethod if one exists, or error otherwise.
 func Method(n string) (TableMethod, error) {
 	f, ok := Methods[n]
 	if !ok {

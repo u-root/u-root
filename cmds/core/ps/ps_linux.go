@@ -136,7 +136,7 @@ type process struct {
 }
 
 // Parse all content of stat to a Process Struct
-// by gived the pid (linux)
+// by given the pid (linux)
 func (p *Process) readStat(s string) error {
 	fields := strings.Split(s, " ")
 	// set struct fields from stat file data

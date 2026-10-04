@@ -47,7 +47,7 @@ where:
 * "method" is required, and can be either "dhcpv6", "dhcpv4" or "slaac"
 * "mac" is required, and it is the MAC address of the interface that will try
   to boot from the network. It has the "aa:bb:cc:dd:ee:ff" format
-* "override_url" is optional, unles "method" is "slaac", and it is the URL from
+* "override_url" is optional, unless "method" is "slaac", and it is the URL from
   which the booter will try to download the network boot program
 
 

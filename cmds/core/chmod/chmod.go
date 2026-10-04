@@ -8,7 +8,7 @@
 //
 //	chmod MODE FILE...
 //
-// Desription:
+// Description:
 //
 //	MODE is a three character octal value or a string like a=rwx
 package main

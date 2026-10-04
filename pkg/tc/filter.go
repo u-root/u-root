@@ -266,7 +266,7 @@ func (t *Trafficctl) GetFilter(stdout io.Writer, fArgs *FArgs) error {
 	return ErrNotImplemented
 }
 
-// Origianlly from tc:
+// Originally from tc:
 // Usage: tc filter [ add | del | change | replace | show ] [ dev STRING ]
 //        tc filter [ add | del | change | replace | show ] [ block BLOCK_INDEX ]
 //        tc filter get dev STRING parent CLASSID protocol PROTO handle FILTERID pref PRIO FILTER_TYPE

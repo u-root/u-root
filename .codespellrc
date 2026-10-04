@@ -1,0 +1,15 @@
+# codespell configuration, used by .github/workflows/codespell.yml and by
+# running `codespell` locally from the repo root.
+#
+# skip: vendored, generated, binary, and test-fixture paths that are not
+# first-party prose. pkg/pci/pciids.go is a device-name data table that
+# mirrors the upstream PCI ID database, so those names must not be "fixed".
+#
+# ignore-words-list: domain terms, protocol/flag tokens, and pre-existing
+# identifiers that are not typos (or are too risky to rename in this change).
+# All entries are lowercase, as codespell lowercases tokens before matching.
+#
+# This list is intentionally conservative and can be tightened over time.
+[codespell]
+skip = ./.git,./vendor,*.cast,*.svg,*.signature,go.sum,go.mod,./website/package-lock.json,*/testdata/*,*/testdata_new/*,./pkg/pci/pciids.go
+ignore-words-list = additionals,afile,als,anull,atleast,buildin,caf,conenct,cros,delt,direcotry,dout,erally,errro,extention,failer,fo,formated,halp,iif,implementor,initator,lenth,mergable,nin,oen,parms,pendin,respone,shs,somemore,te,tha,unparseable,unziped,wont,writen

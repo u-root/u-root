@@ -172,7 +172,7 @@ func TestGetFdtInfo(t *testing.T) {
 					t.Fatalf("Expected error %q, got nil", tt.err)
 				}
 				if !errors.Is(err, tt.err) {
-					t.Errorf("Unxpected error %q, want = %q", err.Error(), tt.err)
+					t.Errorf("Unexpected error %q, want = %q", err.Error(), tt.err)
 				}
 			} else if err != nil {
 				t.Fatal(err)
@@ -238,7 +238,7 @@ func TestAlignHOBLength(t *testing.T) {
 					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
 				}
 				if !errors.Is(err, tt.expectedErr) {
-					t.Errorf("Unxpected error %+v, want = %q", err, tt.expectedErr)
+					t.Errorf("Unexpected error %+v, want = %q", err, tt.expectedErr)
 				}
 			}
 		})

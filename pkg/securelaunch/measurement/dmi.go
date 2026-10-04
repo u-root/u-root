@@ -118,7 +118,7 @@ func (s *DmiCollector) Collect() error {
 
 	slaunch.Debug("DMI Collector: len(labels)=%d", len(labels))
 
-	// lables would be []{BIOS, Chassis, Processor}
+	// labels would be []{BIOS, Chassis, Processor}
 	typeFilter, err := parseTypeFilter(labels)
 	if err != nil {
 		return fmt.Errorf("invalid --type: %w", err)

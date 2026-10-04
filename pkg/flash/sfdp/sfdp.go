@@ -147,7 +147,7 @@ type ParameterHeader struct {
 	Pointer uint32
 }
 
-// ID returns the ID for the table. Ths size of the ID depends on the SFDP
+// ID returns the ID for the table. The size of the ID depends on the SFDP
 // version.
 func (p ParameterHeader) ID(sfdpMajorRev, sfdpMinorRev uint8) uint16 {
 	id := uint16(p.IDLSB)

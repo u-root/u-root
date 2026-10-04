@@ -15,7 +15,7 @@ import (
 )
 
 // TestFPDT verifies that all data within ACPI FBPT
-// is not corrupted by verifiying its checksum.
+// is not corrupted by verifying its checksum.
 func TestFPDTChecksum(t *testing.T) {
 	var acpiFPDT acpi.Table
 	var err error
