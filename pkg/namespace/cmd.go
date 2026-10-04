@@ -52,7 +52,7 @@ func (c cmd) valid() error {
 			return errors.New("usage: . path")
 		}
 	default:
-		return fmt.Errorf("%d is not implmented", c.syscall)
+		return fmt.Errorf("%d is not implemented", c.syscall)
 	}
 	return nil
 }
@@ -120,7 +120,7 @@ func (c cmd) Modify(ns Namespace, b *Builder) error {
 		b.dir = nb.dir // if the new file has changed the directory we'd like to know
 		return nil
 	default:
-		return fmt.Errorf("%s not implmented", c.syscall)
+		return fmt.Errorf("%s not implemented", c.syscall)
 	}
 }
 

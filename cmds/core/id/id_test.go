@@ -207,7 +207,7 @@ func TestUsers(t *testing.T) {
 		f := "testdata/does-not-exist"
 		u, e := NewUsers(f)
 		if e == nil {
-			t.Errorf("NewUser on non-existant file should return an error")
+			t.Errorf("NewUser on non-existent file should return an error")
 		}
 		if u == nil {
 			t.Errorf("NewUser should return a valid Users object, even on error")

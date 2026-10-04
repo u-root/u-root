@@ -97,7 +97,7 @@ func relLink(target, linkName string) (string, error) {
 }
 
 // inferLinkname infers the linkName if don't passed ("")
-// otherwhise preserves the linkName
+// otherwise preserves the linkName
 // e.g.:
 // $ ln -s -v /usr/bin/cp
 // cp -> /usr/bin/cp

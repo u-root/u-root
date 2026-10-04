@@ -49,7 +49,7 @@ type info struct {
 	MmapLength uint32
 	MmapAddr   uint32
 
-	// Following fields except BootLoaderName are not suppoted yet,
+	// Following fields except BootLoaderName are not supported yet,
 	// the values are always set to zeros.
 
 	DriversLength uint32

@@ -209,7 +209,7 @@ func (t *TPM) ResetLockValue(ownerPW string) (bool, error) {
 // NVReadValue reads a value from a given NVRAM index
 // Type and byte order for TPM1.2 interface:
 // (offset uint32)
-// Type and byte oder for TPM2.0 interface:
+// Type and byte order for TPM2.0 interface:
 // (authhandle uint32)
 func (t *TPM) NVReadValue(index uint32, ownerPassword string, size, offhandle uint32) ([]byte, error) {
 	switch t.Version {

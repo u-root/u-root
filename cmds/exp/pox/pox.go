@@ -27,7 +27,7 @@
 //	f FILE: file name (default /tmp/pox.tcz)
 //	r: Runs the first non-flag argument to pox.  Remaining arguments will
 //	       be passed to the program.  Use '--' before any flag-like arguments
-//	       to prevent pox from interpretting the flags.
+//	       to prevent pox from interpreting the flags.
 //	s: Create a self-extracting elf. This implies -z.
 //	z: Use zip and unzip instead of a loopback mounted squashfs. Be sure
 //	       to use -z for both creation and running, or not at all.

@@ -46,7 +46,7 @@ var _ OSImage = &LinuxImage{}
 
 var errNilKernel = errors.New("kernel image is empty, nothing to execute")
 
-// named is satisifed by *os.File.
+// named is satisfied by *os.File.
 type named interface {
 	Name() string
 }
@@ -133,7 +133,7 @@ func isTmpfsReadOnlyFile(f *os.File) bool {
 // something we can't guarantee here - unless we make a copy of the file
 // and dump it somewhere.
 func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
-	// If source is a regular file in tmpfs, simply re-use that than copy.
+	// If source is a regular file in tmpfs, simply reuse that than copy.
 	//
 	// The assumption (bad?) is original local file was opened as a type
 	// conforming to os.File. We then can derive file descriptor, and the

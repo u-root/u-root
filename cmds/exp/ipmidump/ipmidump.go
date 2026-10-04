@@ -141,12 +141,12 @@ func chassisInfo() {
 		if status.FrontPanelButton != 0 {
 			fmt.Println("Front Panel Button")
 			fmt.Println("Standby Button Disable    :", allow[itob(data&0x80)])
-			fmt.Println("Diagnostic Buttton Disable:", allow[itob(data&0x40)])
+			fmt.Println("Diagnostic Button Disable:", allow[itob(data&0x40)])
 			fmt.Println("Reset Button Disable      :", allow[itob(data&0x20)])
 			fmt.Println("Power-off Button Disable  :", allow[itob(data&0x10)])
 
 			fmt.Println("Standby Button            :", state[itob(data&0x08)])
-			fmt.Println("Diagnostic Buttton        :", state[itob(data&0x04)])
+			fmt.Println("Diagnostic Button        :", state[itob(data&0x04)])
 			fmt.Println("Reset Button              :", state[itob(data&0x02)])
 			fmt.Println("Power-off Button          :", state[itob(data&0x01)])
 		} else {

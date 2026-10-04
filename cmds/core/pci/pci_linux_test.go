@@ -202,7 +202,7 @@ func TestRegisters(t *testing.T) {
 			cmds: []string{"0.w=10"},
 		},
 		{
-			name: "writing failes because config file does not exist",
+			name: "writing fails because config file does not exist",
 			devices: []*pci.PCI{
 				{
 					Config: []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77},

@@ -190,7 +190,7 @@ type LBEntry struct {
 	MACAddrs []MACEntry
 }
 
-// LBRAMEntry is a defintion of RAM (is this even used?)
+// LBRAMEntry is a definition of RAM (is this even used?)
 type LBRAMEntry struct {
 	Record
 	RAMCode uint32

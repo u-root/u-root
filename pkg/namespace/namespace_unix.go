@@ -4,7 +4,7 @@
 
 //go:build !plan9
 
-// This file is inserted here so the lack of these variables/implmenetations doesn't break
+// This file is inserted here so the lack of these variables/implementations doesn't break
 // IDEs and tooling on other platforms.
 
 package namespace

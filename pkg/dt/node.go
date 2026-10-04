@@ -70,7 +70,7 @@ func WithProperty(p ...Property) NodeOptioner {
 	}
 }
 
-// WithChildren adds childen to the node.
+// WithChildren adds children to the node.
 func WithChildren(c ...*Node) NodeOptioner {
 	return func(n *Node) {
 		n.Children = append(n.Children, c...)
@@ -109,7 +109,7 @@ func (n *Node) LookupChildByName(name string) (*Node, bool) {
 	return nil, false
 }
 
-// Walk calls f on a Node and alls its descendents.
+// Walk calls f on a Node and calls its descendents.
 func (n *Node) Walk(f func(*Node) error) error {
 	if err := f(n); err != nil {
 		return err

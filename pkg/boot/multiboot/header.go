@@ -111,7 +111,7 @@ func parseHeader(r io.Reader) (*header, error) {
 				return nil, ErrFlagsNotSupported
 			}
 			if hdr.Flags&flagHeaderMultibootVideoMode != 0 {
-				log.Print("VideoMode flag is not supproted yet, trying to load anyway")
+				log.Print("VideoMode flag is not supported yet, trying to load anyway")
 			}
 			return &hdr, nil
 		}

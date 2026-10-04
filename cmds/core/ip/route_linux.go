@@ -254,7 +254,7 @@ LOOP:
 	// "dev" or "via" must be present otherwise the loop above would not have exited. So there will be at least one
 	// NexthopInfo item in the route.MultiPath slice. The NexthopInfo will be populated with the information from
 	// the "dev" or "via" token in the loop below.
-	// Furhter NexthopInfo items will be appended if "nexthop" token is found in the loop below.
+	// Further NexthopInfo items will be appended if "nexthop" token is found in the loop below.
 
 	nextHopIdx := -1
 

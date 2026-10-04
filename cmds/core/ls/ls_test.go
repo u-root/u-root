@@ -20,7 +20,7 @@ import (
 
 // Test listName func
 func TestListName(t *testing.T) {
-	// Create some directorys.
+	// Create some directories.
 	tmpDir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(tmpDir, "d1"), 0777); err != nil {
 		t.Fatalf("err in os.Mkdir: %v", err)

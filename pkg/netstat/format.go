@@ -20,7 +20,7 @@ type FmtFlags struct {
 	NumUsers  bool // dont resolve user id to usernames - applies to ip and unix socks
 	ProgNames bool // Adds fields PID/Program name for sockets (for ip and unix sockets)
 	Timer     bool // Adds field timer for sockets (not unix socket)
-	Symbolic  bool // Rounting table/cache -> no ip to name conversion, same as -n
+	Symbolic  bool // Routing table/cache -> no ip to name conversion, same as -n
 }
 
 type Output struct {
