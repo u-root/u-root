@@ -681,6 +681,9 @@ func Load(name string, dbg func(string, ...any)) (*UPL, error) {
 //
 // Problems that do not stop the load are collected and returned by Warnings.
 func (u *UPL) Load(name string) error {
+	// Warnings describe this load only.
+	u.warningMsg = nil
+
 	u.debug("universalpayload: Try to get FDT information from:%s\n", name)
 	fdtLoad, err := u.GetFdtInfo(name)
 	if err != nil {
