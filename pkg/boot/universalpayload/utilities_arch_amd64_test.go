@@ -91,7 +91,7 @@ address sizes	: 1000 bits physical, 48 bits virtual
 					t.Fatalf("Expected error %q, got nil", tt.expectedErr)
 				}
 				if !errors.Is(err, tt.expectedErr) {
-					t.Errorf("Unxpected error %+v, want = %q", err, tt.expectedErr)
+					t.Errorf("Unexpected error %+v, want = %q", err, tt.expectedErr)
 				}
 			}
 		})

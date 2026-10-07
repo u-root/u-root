@@ -91,7 +91,7 @@ func runInteractiveSimple(runner *interp.Runner, stdin io.Reader, stdout io.Writ
 
 	var runErr error
 	// The following code is used to intercept SIGINT signals.
-	// Calling signal.Ignore wouldn't work as child prcesses inherit this trait.
+	// Calling signal.Ignore wouldn't work as child processes inherit this trait.
 	// We only want to catch SIGINTs that are propagated from a child,
 	// the child itself should get the signal as per usual.
 	ch := make(chan os.Signal, 1)

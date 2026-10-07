@@ -15,12 +15,12 @@
 //	read mount information from /proc/mounts and
 //	statfs syscall and display summary information for all
 //	mount points that have a non-zero block count.
-//	Users can choose to see the diplay in KB or MB.
+//	Users can choose to see the display in KB or MB.
 //
 // Options
 //
 //	-k: display values in KB (default)
-//	-m: dispaly values in MB
+//	-m: display values in MB
 package main
 
 import (

@@ -595,7 +595,7 @@ func (u *UPL) GetDisplayDeviceInfo() ([]map[string]string, error) {
 	for _, dev := range drmDevices {
 		deviceName := dev.Name()
 
-		// There exsits device nodes like 'version', skip this kind of device nodes
+		// There exists device nodes like 'version', skip this kind of device nodes
 		info, _ := os.Stat(filepath.Join(u.sysfsDrmPath, deviceName))
 		if !(info.IsDir()) {
 			continue
@@ -1031,7 +1031,7 @@ func retrieveDeviceResources(resourcePath string, mm kexec.MemoryMap) ([]Resourc
 				// Special case to adapt TianoCore EDK2 logic:
 				// Base address of memory region with attribute of '64bit' or '64bit pref'
 				// should be higher than 32bit, however, some platforms provide 64-bit MMIO
-				// with all zero in high 32 bits, it triggers assertation in EDK2 since this
+				// with all zero in high 32 bits, it triggers assertion in EDK2 since this
 				// base address is actual a 32-bit address. To resolve this issue, convert
 				// attribute from 64bit to 32bit, and merge it with other 32bit memory regions.
 				if (attrInt&PCIMMIO64Attr == PCIMMIO64Attr) && (base64>>32 == 0) {
@@ -1189,7 +1189,7 @@ func (u *UPL) constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	 *  /sys/devices/pci0000:00/0000:00:1c.0/0000:01:00.0
 	 *  /sys/devices/pci0000:00/0000:00:1c.5/0000:03:00.0/0000:04:00.0
 	 *
-	 * In this case, we need to recrusively process the subdirectory of
+	 * In this case, we need to recursively process the subdirectory of
 	 * /sys/devices/pci0000:00 to retrieve the resource region information
 	 * about MMIO64/MMIO32/IOPort, and the bus region information.
 	 */

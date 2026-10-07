@@ -37,7 +37,7 @@
 //		put file1, file2, file3..., remote-directory
 //			- puts the files in the remote-directory on the host.
 //		rexmt <int>
-//			- Sets the per-packet retransmission attemts to <int>. Default: 10.
+//			- Sets the per-packet retransmission attempts to <int>. Default: 10.
 //		status
 //			- Prints the program/client configuration
 //		timeout <int>

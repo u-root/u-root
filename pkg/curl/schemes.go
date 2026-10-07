@@ -69,7 +69,7 @@ type FileScheme interface {
 	// Fetch returns a reader that gives the contents of `u`.
 	//
 	// It may do so by fetching `u` and placing it in a buffer, or by
-	// returning an io.ReaderAt that fetchs the file.
+	// returning an io.ReaderAt that fetches the file.
 	Fetch(ctx context.Context, u *url.URL) (io.ReaderAt, error)
 	FetchWithoutCache(ctx context.Context, u *url.URL) (io.Reader, error)
 }
@@ -128,7 +128,7 @@ func (s Schemes) Register(scheme string, fs FileScheme) {
 	s[scheme] = fs
 }
 
-// Fetch fetchs a file via DefaultSchemes.
+// Fetch fetches a file via DefaultSchemes.
 func Fetch(ctx context.Context, u *url.URL) (FileWithCache, error) {
 	return DefaultSchemes.Fetch(ctx, u)
 }
@@ -172,7 +172,7 @@ func (f file) String() string {
 	return f.url.String()
 }
 
-// Fetch fetchs the file with the given `u`. `u.Scheme` is used to
+// Fetch fetches the file with the given `u`. `u.Scheme` is used to
 // select the FileScheme via `s`.
 //
 // If `s` does not contain a FileScheme for `u.Scheme`, ErrNoSuchScheme is
@@ -210,7 +210,7 @@ func LazyFetchWithoutCache(u *url.URL) (FileWithoutCache, error) {
 	return DefaultSchemes.LazyFetchWithoutCache(u)
 }
 
-// LazyFetchWithoutCache fetches gien url in same way as LazyFetch, except that it does not cache.
+// LazyFetchWithoutCache fetches given url in same way as LazyFetch, except that it does not cache.
 func (s Schemes) LazyFetchWithoutCache(u *url.URL) (FileWithoutCache, error) {
 	fg, ok := s[u.Scheme]
 	if !ok {

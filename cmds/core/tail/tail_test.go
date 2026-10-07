@@ -166,7 +166,7 @@ func TestTailFollow(t *testing.T) {
 		t.Fatalf("can't open temp file: %v", err)
 	}
 
-	// wait a bit before writting to file
+	// wait a bit before writing to file
 	time.Sleep(300 * time.Millisecond)
 
 	firstLine := []byte("hello\n")

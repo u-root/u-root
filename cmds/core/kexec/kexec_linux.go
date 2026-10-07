@@ -103,7 +103,7 @@ func (o *options) parseCmdline(args []string, f *flag.FlagSet) {
 
 	f.Var((*unixflag.StringArray)(&o.modules), "module", `Load multiboot module with command line args (e.g --module="mod arg1")`)
 
-	// This is broken out as it is almost never to be used. But it is valueable, nonetheless.
+	// This is broken out as it is almost never to be used. But it is valuable, nonetheless.
 	f.StringVar(&o.purgatory, "purgatory", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list")
 	f.StringVar(&o.purgatory, "p", "default", "picks a purgatory only if loading a Linux kernel with kexec_load, use '-p xyz' to get a list (shorthand)")
 

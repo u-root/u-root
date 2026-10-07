@@ -56,7 +56,7 @@ NonExistingTable Error: could not find table 0x999
 NonExistingDword Error: could not find dword 0x999 in table 0x0
 `
 
-// TestPrettyPrint prints the SFDP to a beatiful string.
+// TestPrettyPrint prints the SFDP to a beautiful string.
 func TestPrettyPrint(t *testing.T) {
 	for _, tt := range []struct {
 		name        string

@@ -20,7 +20,7 @@ type File struct {
 }
 
 // Compression and Decompression functions used by the File.Process method.
-// Bare metal support can be enabled, for example, witht the `tinygo` build tag.
+// Bare metal support can be enabled, for example, with the `tinygo` build tag.
 // Setting these build tags will result in the use of pure go libraries for compression/decompression.
 func Compress(r io.Reader, w io.Writer, level int, blocksize int, processes int) error {
 	return compress(r, w, level, blocksize, processes)
@@ -102,7 +102,7 @@ func (f *File) CheckOutputStdout() error {
 	return nil
 }
 
-// Cleanup removes input file. Overrided with keep option. Skipped if
+// Cleanup removes input file. Overridden with keep option. Skipped if
 // stdout or test option is true.
 func (f *File) Cleanup() error {
 	if !f.Options.Keep && !f.Options.Stdout && !f.Options.Test {

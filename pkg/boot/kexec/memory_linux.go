@@ -649,7 +649,7 @@ func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
 }
 
 // AddKexecSegmentExplicit adds d to a new kexec segment, but allows asking
-// for extra space, secifying alignment size, and setting text_offset.
+// for extra space, specifying alignment size, and setting text_offset.
 func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes uint) (Range, error) {
 	r, err := m.AvailableRAM().FindSpace(offset+sz, WithAlignment(alignSizeBytes))
 	if err != nil {

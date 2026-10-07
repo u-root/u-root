@@ -37,7 +37,7 @@ func DrawOnBufAt(
 	}
 }
 
-// FbInit initializes a frambuffer by querying ioctls and returns the width and
+// FbInit initializes a framebuffer by querying ioctls and returns the width and
 // height in pixels, the stride, and the bytes per pixel
 func FbInit() (int, int, int, int, error) {
 	fbo, err := framebuffer.Init(fbdev)

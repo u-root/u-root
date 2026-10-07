@@ -268,7 +268,7 @@ func run(reader *os.File, writer io.Writer, follow bool, numLines int, followDur
 		err    error
 	)
 
-	// TODO: add support for parsing + (from beggining of the file)
+	// TODO: add support for parsing + (from beginning of the file)
 	// negative sign is the same as none
 	if numLines < 0 {
 		numLines = -1 * numLines
