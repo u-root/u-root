@@ -12,4 +12,4 @@
 # This list is intentionally conservative and can be tightened over time.
 [codespell]
 skip = ./.git,./vendor,*.cast,*.svg,*.signature,go.sum,go.mod,./website/package-lock.json,*/testdata/*,*/testdata_new/*,./pkg/pci/pciids.go
-ignore-words-list = additionals,afile,als,anull,atleast,buildin,caf,conenct,cros,delt,direcotry,dout,erally,errro,extention,failer,fo,formated,halp,iif,implementor,initator,lenth,mergable,nin,oen,parms,pendin,respone,shs,somemore,te,tha,unparseable,unziped,wont,writen
+ignore-words-list = additionals,afile,als,anull,atleast,caf,cros,delt,dout,erally,errro,extention,failer,fo,formated,halp,iif,implementor,initator,mergable,nin,oen,parms,pendin,shs,somemore,te,tha,unparseable,unziped,wont,writen

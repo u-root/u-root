@@ -1,5 +1,5 @@
 #!/bin/bash
-# this wrapper calls $1 instead of the buildin for echo while running $2
+# this wrapper calls $1 instead of the builtin for echo while running $2
 echocmd=$1
 enable -n echo
 mkdir testdata/bin

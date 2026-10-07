@@ -310,7 +310,7 @@ func TestSplitArgs(t *testing.T) {
 		},
 		{
 			name:       "noIP/connect/with_args",
-			cmdline:    []string{"-m", "ascii", "-c", "conenct", "127.0.0.1", "69"},
+			cmdline:    []string{"-m", "ascii", "-c", "connect", "127.0.0.1", "69"},
 			args:       []string{"127.0.0.1", "69"},
 			expCmdArgs: []string{"127.0.0.1", "69"},
 			expHost:    []string{},
