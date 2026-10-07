@@ -128,7 +128,7 @@ func TestTouchEmptyDir(t *testing.T) {
 		{
 			name:     "no such file or directory",
 			args:     []string{"touch"},
-			fileArgs: []string{"no/such/file/or/direcotry"},
+			fileArgs: []string{"no/such/file/or/directory"},
 			p: params{
 				create: false,
 			},

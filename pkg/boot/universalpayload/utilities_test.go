@@ -484,7 +484,7 @@ func TestFetchACPIMCFGDataNegative(t *testing.T) {
 				0x01, 0x00, 0x00, 0x00, // CreatorRevision
 				0x00, 0x00, 0x00, 0x00, // Reserved
 			},
-			wantErr: ErrMcfgDataLenthTooShort,
+			wantErr: ErrMcfgDataLengthTooShort,
 		},
 		{
 			name: "MCFG Data magic mismatch",
