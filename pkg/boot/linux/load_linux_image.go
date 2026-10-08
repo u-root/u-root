@@ -13,6 +13,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"runtime/debug"
 
 	"github.com/u-root/u-root/pkg/boot/image"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -39,7 +40,27 @@ const (
 
 var errNoChosenNode = fmt.Errorf("no /chosen node in device tree")
 
-// sanitizeFDT cleanups boot param properties from chosen node of the given FDT.
+// loaderProperty in /chosen tells the kernel and user space, such as a
+// distribution installer choosing a bootloader, that LinuxBoot booted it, as
+// u-boot,version does for U-Boot.
+const loaderProperty = "linuxboot,version"
+
+// loaderVersion returns the value of loaderProperty: u-root and, if the build
+// records it, its version.
+func loaderVersion() string {
+	v := "u-root"
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, m := range append([]*debug.Module{&bi.Main}, bi.Deps...) {
+			if m.Path == "github.com/u-root/u-root" && m.Version != "" && m.Version != "(devel)" {
+				return v + " " + m.Version
+			}
+		}
+	}
+	return v
+}
+
+// sanitizeFDT cleanups boot param properties from chosen node of the given FDT,
+// and marks the device tree as passed by LinuxBoot.
 func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	// Clear old entries in case we've already been through kexec to get
 	// to this instance of runtime.
@@ -50,6 +71,7 @@ func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	for _, property := range []string{"linux,elfcorehdr", "linux,usable-memory-range", "kaslr-seed", "rng-seed", "linux,initrd-start", "linux,initrd-end"} {
 		chosen.RemoveProperty(property)
 	}
+	chosen.UpdateProperty(loaderProperty, append([]byte(loaderVersion()), 0))
 
 	return chosen, nil
 }

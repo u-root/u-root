@@ -109,6 +109,11 @@ func trampoline(kernelEntry, dtbBase uint64) []byte {
 	return t
 }
 
+// loaderProp is the property that marks device trees passed by LinuxBoot.
+func loaderProp() dt.Property {
+	return dt.PropertyString(loaderProperty, loaderVersion())
+}
+
 // withoutSeeds leaves the KASLR and RNG seeds out of device trees, so that
 // tests can compare them byte for byte.
 func withoutSeeds(t *testing.T) {
@@ -178,6 +183,26 @@ func TestKexecLoadImageSeeds(t *testing.T) {
 	}
 }
 
+func TestKexecLoadImageLoaderProperty(t *testing.T) {
+	fdt := &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+		dt.NewNode("chosen", dt.WithProperty(
+			dt.PropertyString(loaderProperty, "an older loader"),
+		)),
+		dt.NewNode("memory", dt.WithProperty(
+			dt.PropertyString("device_type", "memory"),
+			dt.PropertyRegion("reg", 0x40000000, 0x10000000),
+		)),
+	))}
+	img, err := kexecLoadImage(openFile(t, "../image/testdata/Image"), nil, "", fdtReader(t, fdt), nil)
+	if err != nil {
+		t.Fatalf("kexecLoadImage() = %v", err)
+	}
+	want := append([]byte(loaderVersion()), 0)
+	if got, ok := chosenProperty(t, img.segments, loaderProperty); !ok || !bytes.Equal(got, want) {
+		t.Errorf("%s = %q, %v, want %q", loaderProperty, got, ok, want)
+	}
+}
+
 func TestKexecLoadImage(t *testing.T) {
 	Debug = t.Logf
 	withoutSeeds(t)
@@ -216,7 +241,7 @@ func TestKexecLoadImage(t *testing.T) {
 			}),
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen"),
+					dt.NewNode("chosen", dt.WithProperty(loaderProp())),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
@@ -245,6 +270,7 @@ func TestKexecLoadImage(t *testing.T) {
 				kexec.NewSegment([]byte("ramfs"), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
 					dt.NewNode("chosen", dt.WithProperty(
+						loaderProp(),
 						dt.PropertyU64("linux,initrd-start", 0x100000),
 						// TODO: should this actually be 0x100005?
 						dt.PropertyU64("linux,initrd-end", 0x101000),
@@ -277,7 +303,7 @@ func TestKexecLoadImage(t *testing.T) {
 			}),
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen"),
+					dt.NewNode("chosen", dt.WithProperty(loaderProp())),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
@@ -432,7 +458,7 @@ func TestKexecLoadImage(t *testing.T) {
 			},
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen"),
+					dt.NewNode("chosen", dt.WithProperty(loaderProp())),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
