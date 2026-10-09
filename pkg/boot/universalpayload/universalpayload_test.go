@@ -517,3 +517,25 @@ func TestComponentsSizeReset(t *testing.T) {
 		t.Errorf("Unexpected error after reset: %v", err)
 	}
 }
+
+func TestWarnings(t *testing.T) {
+	u := New()
+	if w := u.Warnings(); w != nil {
+		t.Errorf("Warnings() = %v, want nil before any warning", w)
+	}
+
+	errA, errB := errors.New("a"), errors.New("b")
+	u.warningMsg = append(u.warningMsg, errA, errB)
+	w := u.Warnings()
+	if !errors.Is(w, errA) || !errors.Is(w, errB) {
+		t.Errorf("Warnings() = %v, want it to wrap %v and %v", w, errA, errB)
+	}
+
+	// A new load starts with no warnings, even on a reused UPL.
+	if err := u.Load(filepath.Join(t.TempDir(), "missing")); err == nil {
+		t.Fatalf("Load of a missing file succeeded")
+	}
+	if w := u.Warnings(); w != nil {
+		t.Errorf("Warnings() after a new Load = %v, want nil", w)
+	}
+}
