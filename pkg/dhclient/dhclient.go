@@ -217,7 +217,7 @@ func lease4(ctx context.Context, iface netlink.Link, c Config) (Lease, error) {
 	}
 	defer client.Close()
 
-	// Prepend modifiers with default options, so they can be overriden.
+	// Prepend modifiers with default options, so they can be overridden.
 	reqmods := append(
 		[]dhcpv4.Modifier{
 			dhcpv4.WithOption(dhcpv4.OptClassIdentifier("PXE UROOT")),
@@ -321,7 +321,7 @@ func lease6(ctx context.Context, iface netlink.Link, c Config, linkUpTimeout tim
 	}
 	defer client.Close()
 
-	// Prepend modifiers with default options, so they can be overriden.
+	// Prepend modifiers with default options, so they can be overridden.
 	reqmods := append(
 		[]dhcpv6.Modifier{
 			dhcpv6.WithNetboot,
@@ -374,7 +374,7 @@ type Result struct {
 	// If Lease is set, Err is nil.
 	Lease Lease
 
-	// Err is an error that occured during the DHCP attempt.
+	// Err is an error that occurred during the DHCP attempt.
 	Err error
 }
 

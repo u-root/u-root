@@ -19,7 +19,7 @@ type syzcall byte
 // File are a collection of namespace modifiers
 type File []Modifier
 
-// Namespace is a plan9 namespace. It implmenets the
+// Namespace is a plan9 namespace. It implements the
 // http://man.cat-v.org/plan_9/2/bind calls.
 //
 // Bind and mount modify the file name space of the current
@@ -45,7 +45,7 @@ type Namespace interface {
 	Import(host, remotepath, mountpoint string, flag mountflag) error
 }
 
-// Modifier repesents an individual command that can be applied
+// Modifier represents an individual command that can be applied
 // to a plan9 name space which will modify the name space of the process or process group.
 type Modifier interface {
 	// Modify modifies the namespace
@@ -98,7 +98,7 @@ type OpenFunc func(path string) (io.Reader, error)
 // Builder helps building plan9 name spaces. Builder keeps track of directory changes
 // when another name space file is included, another builder will be created for it's
 // modifications, and it's final working directory will be set to be the parents working
-// directroy after it's modifications are complete.
+// directory after it's modifications are complete.
 type Builder struct {
 	dir  string
 	file File

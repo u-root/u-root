@@ -88,7 +88,7 @@ var ErrNotTerminalOutput = errors.New("standard output is not a terminal")
 var ErrInvalidPrompt = errors.New("invalid prompt")
 
 // ErrInternal is returned when liner experiences an error that it cannot
-// handle. For example, if the number of colums becomes zero during an
+// handle. For example, if the number of columns becomes zero during an
 // active call to Prompt
 var ErrInternal = errors.New("liner: internal error")
 

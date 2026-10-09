@@ -129,7 +129,7 @@ func (c CPUs) String() string {
 			// Continuous set of size 1.
 			s = append(s, fmt.Sprintf("%d", c[i]))
 		} else {
-			// Multiple CPUs in continous set.
+			// Multiple CPUs in continuous set.
 			s = append(s, fmt.Sprintf("%d-%d", c[i], c[j]))
 		}
 

@@ -414,7 +414,7 @@ func TestNetcatDatagram(t *testing.T) {
 		# wait a bit for the server to come up
 		sleep 3
 
-		# Produce three lines of output, sleeping 1 second aftrer each, for two
+		# Produce three lines of output, sleeping 1 second after each, for two
 		# purposes: (a) each netcat client below should read each line separately,
 		# and send it to the corresponding netcat server in a separate datagram, (b)
 		# we should give enough time to the server for responding to each datagram.

@@ -96,7 +96,7 @@ func parseMutiHeader(r io.Reader) (*esxBootInfoHeader, error) {
 				return hdr, ErrFlagsNotSupported
 			}*/
 			if hdr.Flags&ESXBOOTINFO_FLAG_VIDEO != 0 {
-				log.Print("VideoMode flag is not supproted yet, trying to load anyway")
+				log.Print("VideoMode flag is not supported yet, trying to load anyway")
 			}
 			return &hdr, nil
 		}

@@ -88,7 +88,7 @@ func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservat
 
 	var relocatableKernel bool
 	if bzimg.Header.Protocolversion < 0x0205 {
-		return fmt.Errorf("bzImage boot protocol earlier thatn 2.05 is not supported currently: %v", bzimg.Header.Protocolversion)
+		return fmt.Errorf("bzImage boot protocol earlier than 2.05 is not supported currently: %v", bzimg.Header.Protocolversion)
 	}
 	relocatableKernel = bzimg.Header.RelocatableKernel != 0
 	// Only protected mode is currently supported.

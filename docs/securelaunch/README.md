@@ -112,4 +112,4 @@ MWAAB8-Sunz-tRrp-E67t-sbal-xfYk-x9f6PZ:/zyd/cpuid.txt
 ```
 
 SPECIAL NOTE: There is no need to prefix devices with /dev, so sda is sufficient.
-Infact, if you enter a path as "/dev/sda", it will not be parsed by sluinit.
+In fact, if you enter a path as "/dev/sda", it will not be parsed by sluinit.

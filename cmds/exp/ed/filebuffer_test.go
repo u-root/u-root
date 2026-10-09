@@ -15,7 +15,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// Test all functions with func() int signatur
+// Test all functions with func() int signature
 var testTableInt = []struct {
 	name   string
 	in     *FileBuffer
@@ -97,7 +97,7 @@ func TestDirty(t *testing.T) {
 	}
 }
 
-// Test all functions with func() signatur
+// Test all functions with func() signature
 var testTable = []struct {
 	name   string
 	in     *FileBuffer

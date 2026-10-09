@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package pty provides basic pty support.
-// It implments much of exec.Command
+// It implements much of exec.Command
 // but the Start() function starts two goroutines that relay the
 // data for Stdin, Stdout, and Stdout such that proper kernel pty
 // processing is done. We did not simply embed an exec.Command

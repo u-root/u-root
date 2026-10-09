@@ -27,7 +27,7 @@ type Entry64 struct {
 // UnmarshalBinary unmarshals the SMBIOS 64-Bit entry point structure from binary data.
 func (e *Entry64) UnmarshalBinary(data []byte) error {
 	if len(data) < 0x18 {
-		return fmt.Errorf("invalid entry point stucture length %d", len(data))
+		return fmt.Errorf("invalid entry point structure length %d", len(data))
 	}
 	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, e); err != nil {
 		return err
