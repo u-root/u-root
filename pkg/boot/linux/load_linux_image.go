@@ -6,12 +6,14 @@ package linux
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"runtime/debug"
 
 	"github.com/u-root/u-root/pkg/boot/image"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -38,7 +40,27 @@ const (
 
 var errNoChosenNode = fmt.Errorf("no /chosen node in device tree")
 
-// sanitizeFDT cleanups boot param properties from chosen node of the given FDT.
+// loaderProperty in /chosen tells the kernel and user space, such as a
+// distribution installer choosing a bootloader, that LinuxBoot booted it, as
+// u-boot,version does for U-Boot.
+const loaderProperty = "linuxboot,version"
+
+// loaderVersion returns the value of loaderProperty: u-root and, if the build
+// records it, its version.
+func loaderVersion() string {
+	v := "u-root"
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, m := range append([]*debug.Module{&bi.Main}, bi.Deps...) {
+			if m.Path == "github.com/u-root/u-root" && m.Version != "" && m.Version != "(devel)" {
+				return v + " " + m.Version
+			}
+		}
+	}
+	return v
+}
+
+// sanitizeFDT cleanups boot param properties from chosen node of the given FDT,
+// and marks the device tree as passed by LinuxBoot.
 func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	// Clear old entries in case we've already been through kexec to get
 	// to this instance of runtime.
@@ -49,8 +71,39 @@ func sanitizeFDT(fdt *dt.FDT) (*dt.Node, error) {
 	for _, property := range []string{"linux,elfcorehdr", "linux,usable-memory-range", "kaslr-seed", "rng-seed", "linux,initrd-start", "linux,initrd-end"} {
 		chosen.RemoveProperty(property)
 	}
+	chosen.UpdateProperty(loaderProperty, append([]byte(loaderVersion()), 0))
 
 	return chosen, nil
+}
+
+// Sizes of the seeds that Linux's kexec_file_load passes to arm64 kernels.
+const (
+	kaslrSeedSize = 8
+	rngSeedSize   = 128
+)
+
+// seedSource provides the seeds. Tests that compare device trees byte for
+// byte set it to nil, which leaves the seeds out.
+var seedSource io.Reader = rand.Reader
+
+// addSeeds gives the kernel a fresh KASLR seed and a seed for its random
+// number generator, as kexec_file_load does. Without a KASLR seed, arm64
+// kernels on CPUs that lack RNDR boot without KASLR.
+func addSeeds(chosen *dt.Node) error {
+	if seedSource == nil {
+		return nil
+	}
+	seed := make([]byte, kaslrSeedSize)
+	if _, err := io.ReadFull(seedSource, seed); err != nil {
+		return fmt.Errorf("reading KASLR seed: %w", err)
+	}
+	chosen.UpdateProperty("kaslr-seed", seed)
+	seed = make([]byte, rngSeedSize)
+	if _, err := io.ReadFull(seedSource, seed); err != nil {
+		return fmt.Errorf("reading RNG seed: %w", err)
+	}
+	chosen.UpdateProperty("rng-seed", seed)
+	return nil
 }
 
 var ErrMemmapEmpty = errors.New("memory map is empty or contains no information about system RAM")
@@ -137,6 +190,9 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		return nil, fmt.Errorf("sanitizeFDT(%v) = %w", fdt, err)
 	}
 	Debug("FDT after sanitization: %s", fdt)
+	if err := addSeeds(chosen); err != nil {
+		return nil, err
+	}
 
 	if ramfs != nil {
 		ramfsBuf, cleanup, err := getFile(ramfs)
