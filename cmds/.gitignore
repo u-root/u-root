@@ -3,5 +3,29 @@
 !*.*
 !*/
 
+# !*.* above un-ignores every name with a '.', which also overrides the
+# top-level .gitignore. Re-apply the top-level patterns that it affects.
+*.o
+*.a
+*.so
+*.[568vq]
+[568vq].out
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+_testmain.go
+*.exe
+*.swp
+go.cpio
+initramfs.cpio
+*.patch
+.gdb_history
+*.env
+*.venv
+.*.swp
+.vscode/
+
 .bb/
 bb/
