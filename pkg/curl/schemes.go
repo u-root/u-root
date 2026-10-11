@@ -477,8 +477,7 @@ func RetryConnectErrors(u *url.URL, err error) bool {
 // errors, which does not include network configuration errors. The latter are
 // relevant for users of DHCP, for example.
 func RetryTemporaryNetworkErrors(u *url.URL, err error) bool {
-	var nerr net.Error
-	if errors.As(err, &nerr) {
+	if nerr, ok := errors.AsType[net.Error](err); ok {
 		return nerr.Temporary()
 	}
 	return false
