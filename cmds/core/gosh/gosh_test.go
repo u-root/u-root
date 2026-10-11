@@ -30,8 +30,23 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	echoSc := filepath.Join(t.TempDir(), "b.sh")
+	dir := t.TempDir()
+	echoSc := filepath.Join(dir, "b.sh")
 	_ = os.WriteFile(echoSc, []byte("echo foo"), 0o777)
+	argsSc := filepath.Join(dir, "args.sh")
+	// $0 is the script path. $1..$n, $#, and "$@" come from arguments after it.
+	argsScript := `printf '0=%s\n' "$0"
+printf '#=%s\n' "$#"
+printf '1=%s\n' "$1"
+printf '2=%s\n' "$2"
+printf '3=%s\n' "$3"
+printf '@='
+for arg in "$@"; do printf ' [%s]' "$arg"; done
+printf '\n'
+`
+	if err := os.WriteFile(argsSc, []byte(argsScript), 0o777); err != nil {
+		t.Fatal(err)
+	}
 
 	for _, tt := range []struct {
 		name    string
@@ -52,6 +67,21 @@ func TestRun(t *testing.T) {
 			name:    "cmd",
 			command: "echo foo",
 			wantOut: "foo\n",
+		},
+		{
+			name:    "script positional parameters",
+			args:    []string{argsSc, "a", "b", "c"},
+			wantOut: fmt.Sprintf("0=%s\n#=3\n1=a\n2=b\n3=c\n@= [a] [b] [c]\n", argsSc),
+		},
+		{
+			name:    "script arguments starting with dash",
+			args:    []string{argsSc, "-x", "--foo"},
+			wantOut: fmt.Sprintf("0=%s\n#=2\n1=-x\n2=--foo\n3=\n@= [-x] [--foo]\n", argsSc),
+		},
+		{
+			name:    "script without extra arguments",
+			args:    []string{argsSc},
+			wantOut: fmt.Sprintf("0=%s\n#=0\n1=\n2=\n3=\n@=\n", argsSc),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
