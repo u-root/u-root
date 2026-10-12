@@ -6,7 +6,6 @@ package linux
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -82,24 +81,17 @@ const (
 	rngSeedSize   = 128
 )
 
-// seedSource provides the seeds. Tests that compare device trees byte for
-// byte set it to nil, which leaves the seeds out.
-var seedSource io.Reader = rand.Reader
-
 // addSeeds gives the kernel a fresh KASLR seed and a seed for its random
 // number generator, as kexec_file_load does. Without a KASLR seed, arm64
 // kernels on CPUs that lack RNDR boot without KASLR.
-func addSeeds(chosen *dt.Node) error {
-	if seedSource == nil {
-		return nil
-	}
+func addSeeds(rng io.Reader, chosen *dt.Node) error {
 	seed := make([]byte, kaslrSeedSize)
-	if _, err := io.ReadFull(seedSource, seed); err != nil {
+	if _, err := io.ReadFull(rng, seed); err != nil {
 		return fmt.Errorf("reading KASLR seed: %w", err)
 	}
 	chosen.UpdateProperty("kaslr-seed", seed)
 	seed = make([]byte, rngSeedSize)
-	if _, err := io.ReadFull(seedSource, seed); err != nil {
+	if _, err := io.ReadFull(rng, seed); err != nil {
 		return fmt.Errorf("reading RNG seed: %w", err)
 	}
 	chosen.UpdateProperty("rng-seed", seed)
@@ -108,7 +100,7 @@ func addSeeds(chosen *dt.Node) error {
 
 var ErrMemmapEmpty = errors.New("memory map is empty or contains no information about system RAM")
 
-func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservedRanges kexec.Ranges) (*kimage, error) {
+func kexecLoadImage(rng io.Reader, kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservedRanges kexec.Ranges) (*kimage, error) {
 	var fdt *dt.FDT
 	var err error
 	// We want to fail when a user-supplied FDT is not parseable, not
@@ -136,7 +128,7 @@ func kexecLoadImage(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, res
 	for _, r := range reservedRanges {
 		mm.Insert(kexec.TypedRange{Range: r, Type: kexec.RangeReserved})
 	}
-	return kexecLoadImageMM(mm, kernel, ramfs, fdt, cmdline)
+	return kexecLoadImageMM(rng, mm, kernel, ramfs, fdt, cmdline)
 }
 
 var (
@@ -146,7 +138,7 @@ var (
 	errTrampolineSegmentFailed = errors.New("failed to add trampolineSegment")
 )
 
-func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, cmdline string) (*kimage, error) {
+func kexecLoadImageMM(rng io.Reader, mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, cmdline string) (*kimage, error) {
 	kmem := &kexec.Memory{
 		Phys: mm,
 	}
@@ -190,7 +182,7 @@ func kexecLoadImageMM(mm kexec.MemoryMap, kernel, ramfs *os.File, fdt *dt.FDT, c
 		return nil, fmt.Errorf("sanitizeFDT(%v) = %w", fdt, err)
 	}
 	Debug("FDT after sanitization: %s", fdt)
-	if err := addSeeds(chosen); err != nil {
+	if err := addSeeds(rng, chosen); err != nil {
 		return nil, err
 	}
 
