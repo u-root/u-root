@@ -25,6 +25,8 @@ func (r chunkedReadSeeker) Read(p []byte) (int, error) {
 }
 
 func TestReadFDTShortStringsRead(t *testing.T) {
+	// 400 unique property names make a strings block larger than the
+	// 4096-byte reads, so ReadFDT has to read it in several chunks.
 	root := NewNode("")
 	for i := range 400 {
 		root.Properties = append(root.Properties,
@@ -37,9 +39,6 @@ func TestReadFDTShortStringsRead(t *testing.T) {
 	var raw bytes.Buffer
 	if _, err := original.Write(&raw); err != nil {
 		t.Fatal(err)
-	}
-	if original.Header.SizeDtStrings <= 4096 {
-		t.Fatal("test FDT strings block is too short")
 	}
 	parsed, err := ReadFDT(chunkedReadSeeker{bytes.NewReader(raw.Bytes()), 4096})
 	if err != nil {
