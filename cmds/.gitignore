@@ -8,6 +8,8 @@
 *.o
 *.a
 *.so
+*~
+bazel-*
 *.[568vq]
 [568vq].out
 *.cgo1.go
@@ -17,6 +19,7 @@ _cgo_gotypes.go
 _cgo_export.*
 _testmain.go
 *.exe
+tinycorelinux*
 *.swp
 go.cpio
 initramfs.cpio
