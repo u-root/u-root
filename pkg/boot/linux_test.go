@@ -294,3 +294,31 @@ func TestLoadLinuxImage(t *testing.T) {
 		})
 	}
 }
+
+func TestCopyToFileNameShowsSource(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	vmlinuz := setupTestFile(t, filepath.Join(t.TempDir(), "vmlinuz"), "testkernel")
+	vmlinuz.Close()
+	for _, tt := range []struct {
+		name string
+		src  io.ReaderAt
+		want string
+	}{
+		{"lazy file", uio.NewLazyFile(vmlinuz.Name()), "kexec-image-vmlinuz-"},
+		{"url", uio.NewLazyOpenerAt("http://host/a/Image?x=1", func() (io.ReaderAt, error) {
+			return strings.NewReader("testkernel"), nil
+		}), "kexec-image-Imagex1-"},
+		{"reader", strings.NewReader("testkernel"), "kexec-image-strings.Reader-"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := CopyToFileIfNotRegular(tt.src, false)
+			if err != nil {
+				t.Skipf("CopyToFileIfNotRegular: %v", err)
+			}
+			defer f.Close()
+			if got := filepath.Base(f.Name()); !strings.HasPrefix(got, tt.want) {
+				t.Errorf("copy name = %q, want prefix %q", got, tt.want)
+			}
+		})
+	}
+}
