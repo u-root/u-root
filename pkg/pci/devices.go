@@ -104,6 +104,14 @@ func (d Devices) SetVendorDeviceName(ids []Vendor) {
 	}
 }
 
+// SetVendorDeviceNum sets Device and Vendor names
+// to their numeric values.
+func (d Devices) SetVendorDeviceNum() {
+	for _, p := range d {
+		p.VendorName, p.DeviceName = fmt.Sprintf("%04x", p.Vendor), fmt.Sprintf("%04x", p.Device)
+	}
+}
+
 // ReadConfig reads the config info for all the devices.
 func (d Devices) ReadConfig() error {
 	for _, p := range d {
