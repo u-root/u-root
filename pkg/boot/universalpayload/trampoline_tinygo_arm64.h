@@ -36,10 +36,10 @@ void trampoline_startU()
     // trampoline[48 - 55] : Entry point of FIT image
 
 	__asm__ __volatile__ (
-        "ldr x4, [pc, #0x30]\n\t"
-        "ldr x0, [pc, #0x24]\n\t"
+        "ldr x4, #0x30\n\t"
+        "ldr x0, #0x24\n\t"
         "mov x1, xzr\n\t"
-        "ldr x2, [pc, #0x14]\n\t"
+        "ldr x2, #0x14\n\t"
         "mov sp, x2\n\t"
         "mov x2, xzr\n\t"
         "mov x3, xzr\n\t"
