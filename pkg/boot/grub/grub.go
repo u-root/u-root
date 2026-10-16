@@ -157,6 +157,7 @@ func findkeywordGrubEnv(file string, fsRoot string, key string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("[grubenv]:%w", err)
 	}
+	defer relNamesFile.Close()
 	grubenv, err := uio.ReadAll(relNamesFile)
 	if err != nil {
 		return "", fmt.Errorf("[grubenv]:%w", err)
@@ -338,6 +339,7 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 
 	config, err := uio.ReadAll(r)
 	if err != nil {
