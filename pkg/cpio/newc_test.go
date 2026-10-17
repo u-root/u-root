@@ -639,7 +639,7 @@ func FuzzReadWriteNewc(f *testing.F) {
 	log.SetFlags(0)
 
 	f.Fuzz(func(t *testing.T, cpio []byte) {
-		// Unneccessary big inputs will only slow down the fuzzing
+		// Unnecessary big inputs will only slow down the fuzzing
 		if len(cpio) > 64 {
 			return
 		}

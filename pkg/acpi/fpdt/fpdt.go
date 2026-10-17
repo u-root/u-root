@@ -23,7 +23,7 @@ const (
 func ReadACPIFPDTTable() (acpi.Table, error) {
 	var AcpiFPDT acpi.Table
 
-	// Get ACPI tables via the acpi packege
+	// Get ACPI tables via the acpi package
 	_, tables, err := acpi.GetTable()
 	if err != nil {
 		return AcpiFPDT, err

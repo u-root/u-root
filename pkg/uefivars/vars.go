@@ -22,7 +22,7 @@ import (
 
 // http://kurtqiao.github.io/uefi/2015/01/13/uefi-boot-manager.html
 
-// EfiVarDir is the older kernel sysfs /sys/firmware/efi/vars directory, which can be overridden for testing. Each variable is represented by a directory. Superceded by efivarfs (see below)
+// EfiVarDir is the older kernel sysfs /sys/firmware/efi/vars directory, which can be overridden for testing. Each variable is represented by a directory. Superseded by efivarfs (see below)
 var EfiVarDir = "/sys/firmware/efi/vars"
 
 // EFIVarfsDir is the kernel efivarfs /sys/firmware/efi/efivars directory, which can be overridden for testing. Each variable is represented by a file.

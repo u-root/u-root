@@ -59,6 +59,12 @@ func GetTermios(fd uintptr) (*Termios, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// The 5 bit field covered by unix.CBAUD is not completely defined.
+	unixBaud := int(t.Cflag & unix.CBAUD)
+	if r, ok := unixB2baud[unixBaud]; ok {
+		t.Ispeed, t.Ospeed = r, r
+	}
 	return &Termios{Termios: *t}, nil
 }
 
@@ -69,7 +75,13 @@ func (t *TTYIO) Get() (*Termios, error) {
 
 // SetTermios sets tty parameters for an fd from a Termios.
 func SetTermios(fd uintptr, ti *Termios) error {
-	return unix.IoctlSetTermios(int(fd), unix.TCSETS, &ti.Termios)
+	baud, ok := baud2unixB[int(ti.Ispeed)]
+	if !ok {
+		return fmt.Errorf("%d: Unrecognized baud rate", baud)
+	}
+	ti.Termios.Cflag &= ^uint32(unix.CBAUD)
+	ti.Termios.Cflag |= baud
+	return unix.IoctlSetTermios(int(fd), sets, &ti.Termios)
 }
 
 // Set sets tty parameters for a TTYIO from a Termios.
@@ -159,8 +171,8 @@ func MakeSerialBaud(term *Termios, baud int) (*Termios, error) {
 
 	t.Cflag &^= unix.CBAUD
 	t.Cflag |= rate
-	t.Ispeed = rate
-	t.Ospeed = rate
+	t.Ispeed = uint32(baud)
+	t.Ospeed = uint32(baud)
 
 	return &t, nil
 }

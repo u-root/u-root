@@ -148,13 +148,13 @@ func WriteRecords(w RecordWriter, files []Record) error {
 // The cpio creation process for Linux uses find, and will create a
 // record for each directory in a/b/c/d
 //
-// But when code programatically generates a cpio for the Linux kernel,
+// But when code programmatically generates a cpio for the Linux kernel,
 // the cpio is not generated via find, and Linux will not create
 // intermediate directories. The result, seen in practice, is that a path,
 // such as a/b/c/d, when unpacked by the linux kernel, will be ignored if
 // a/b/c does not exist!
 //
-// Again, this function is very rarely needed, save when we programatically generate
+// Again, this function is very rarely needed, save when we programmatically generate
 // an initramfs for Linux.
 // This code only works with a deduplicating writer. Further, it will not accept a
 // Record if the full pathname of that Record already exists. This is arguably

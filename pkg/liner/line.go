@@ -197,7 +197,7 @@ func (s *State) refreshMultiLine(prompt []rune, buf []rune, pos int) error {
 	// }
 
 	// it looks like Multiline mode always assume that a cursor need an extra column,
-	// and always emit a newline if we are at the screen end, so no worarounds needed there
+	// and always emit a newline if we are at the screen end, so no workarounds needed there
 
 	totalRows := (totalColumns + s.columns - 1) / s.columns
 	maxRows := s.maxRows
@@ -733,7 +733,7 @@ mainLoop:
 					s.doBeep()
 				} else {
 					if killAction > 0 {
-						s.addToKillRing(line[pos:], 1) // Add in apend mode
+						s.addToKillRing(line[pos:], 1) // Add in append mode
 					} else {
 						s.addToKillRing(line[pos:], 0) // Add in normal mode
 					}

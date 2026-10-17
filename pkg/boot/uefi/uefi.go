@@ -97,7 +97,7 @@ func checkFVAndGetEntryPoint(name string) (uintptr, error) {
 	return uintptr(secEntry) + uintptr(op64.AddressOfEntryPoint), nil
 }
 
-// New loads the file and return FVImage stucture if entry image is found
+// New loads the file and return FVImage structure if entry image is found
 func New(n string) (*FVImage, error) {
 	entry, err := checkFVAndGetEntryPoint(n)
 	if err != nil {
@@ -109,7 +109,7 @@ func New(n string) (*FVImage, error) {
 // Reserved 64kb for passing params
 const uefiPayloadConfigSize = 0x10000
 
-// Load loads fimware volume payload and boot the the payload
+// Load loads firmware volume payload and boot the the payload
 func (fv *FVImage) Load(verbose bool) error {
 	// Install payload
 	dat, err := os.ReadFile(fv.name)

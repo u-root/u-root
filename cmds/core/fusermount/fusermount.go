@@ -87,7 +87,7 @@ func MountPointOK(mpt string) error {
 	if r != mpt {
 		return fmt.Errorf("resolved path %q and mountpoint %q are not the same", r, mpt)
 	}
-	// I'm not sure why fusermount wants to open the mountpoint, so let's mot for now.
+	// I'm not sure why fusermount wants to open the mountpoint, so let's not for now.
 	// And, for now, directories only? We don't see a current need to mount
 	// FUSE on any other type of file.
 	if err := os.Chdir(mpt); err != nil {

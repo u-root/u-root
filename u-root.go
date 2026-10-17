@@ -26,7 +26,7 @@ var errEmptyFilesArg = errors.New("empty argument to -files")
 // checkArgs checks for common mistakes that cause confusion.
 //  1. -files as the last argument
 //  2. -files followed by any switch, indicating a shell expansion problem
-//     This is usually caused by Makfiles structured as follows
+//     This is usually caused by Makefiles structured as follows
 //     u-root -files `which ethtool` -files `which bash`
 //     if ethtool is not installed, the expansion yields
 //     u-root -files -files `which bash`

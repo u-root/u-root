@@ -45,7 +45,7 @@ func (p *Packet4) Link() netlink.Link {
 	return p.iface
 }
 
-// GatherDNSSettings gets the DNS related infromation from a dhcp packet
+// GatherDNSSettings gets the DNS related information from a dhcp packet
 // including, nameservers, domain, and search options
 func (p *Packet4) GatherDNSSettings() (ns []net.IP, sl []string, dom string) {
 	if nameservers := p.P.DNS(); nameservers != nil {

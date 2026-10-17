@@ -304,7 +304,7 @@ func (t *tracer) runLoop() error {
 		// tracing, we'll be messing up other stuff in this program
 		// waiting on those.
 		//
-		// To actually encapsulate this library in a packge, we could
+		// To actually encapsulate this library in a package, we could
 		// do one of two things:
 		//
 		//   1) fork from the parent in order to be able to trace

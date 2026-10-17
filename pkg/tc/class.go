@@ -195,7 +195,7 @@ func (t *Trafficctl) ReplaceClass(stdout io.Writer, args *Args) error {
 	return ErrNotImplemented
 }
 
-// Origianlly from tc:
+// Originally from tc:
 // Usage: tc class [ add | del | change | replace | show ] dev STRING
 //        [ classid CLASSID ] [ root | parent CLASSID ]
 //        [ [ QDISC_KIND ] [ help | OPTIONS ] ]

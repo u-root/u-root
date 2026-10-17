@@ -149,7 +149,7 @@ func TestCpio(t *testing.T) {
 	tempExtractDir := t.TempDir()
 
 	out := &bytes.Buffer{}
-	// Change directory back afterwards to not interfer with the subsequent tests
+	// Change directory back afterwards to not interfere with the subsequent tests
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Could not get current working directory: %v", err)
@@ -196,7 +196,7 @@ func TestDirectoryHardLink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Change directory back afterwards to not interfer with the subsequent tests
+	// Change directory back afterwards to not interfere with the subsequent tests
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Could not get current working directory: %v", err)

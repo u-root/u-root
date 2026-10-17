@@ -25,6 +25,8 @@ func TestArgsToGoArgs(t *testing.T) {
 		{name: "-long --short etc", args: []string{"-long", "--short", "etc"}, out: []string{"-l", "-o", "-n", "-g", "-short", "etc"}},
 		{name: "-long --short etc -long ", args: []string{"-long", "--short", "etc", "-long"}, out: []string{"-l", "-o", "-n", "-g", "-short", "etc", "-long"}},
 		{name: "-aux", args: []string{"-aux"}, out: []string{"-a", "-u", "-x"}},
+		{name: "-q -- modname", args: []string{"-q", "--", "modname", "-opt"}, out: []string{"-q", "--", "modname", "-opt"}},
+		{name: "single dash", args: []string{"-l", "-", "-x"}, out: []string{"-l", "-", "-x"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			out := unixflag.ArgsToGoArgs(tt.args)

@@ -208,7 +208,7 @@ func getMountCacheData(key string, flags uintptr) (string, error) {
 		if err := mount.Unmount(cachedMountPath, true, false); err != nil {
 			return "", fmt.Errorf("failed to unmount %q: %w", cachedMountPath, err)
 		}
-		Debug("mountCache: unmount successfull. lets delete entry in map")
+		Debug("mountCache: unmount successful. lets delete entry in map")
 		deleteEntryMountCache(key)
 		return "", fmt.Errorf("device was already mounted: mount again")
 	}
@@ -268,7 +268,7 @@ func GetMountedFilePath(inputVal string, flags uintptr) (string, error) {
 	return fPath, nil
 }
 
-// UnmountAll unmounts all mounted devices from the file heirarchy.
+// UnmountAll unmounts all mounted devices from the file hierarchy.
 func UnmountAll() error {
 	Debug("UnmountAll: %d devices need to be unmounted", len(mountCache.m))
 	for key, mountCacheData := range mountCache.m {

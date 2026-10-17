@@ -40,7 +40,7 @@ const (
 	tokenEnd       token = 0x9
 )
 
-// FDT contains the parsed contents of a Flattend Device Tree (.dtb).
+// FDT contains the parsed contents of a Flattened Device Tree (.dtb).
 //
 // The format is relatively simple and defined in chapter 5 of the Devicetree
 // Specification Release 0.2.
@@ -168,7 +168,7 @@ func (fdt *FDT) readStringsBlock(f io.ReadSeeker) (strs []byte, err error) {
 		return
 	}
 	strs = make([]byte, fdt.Header.SizeDtStrings)
-	_, err = f.Read(strs)
+	_, err = io.ReadFull(f, strs)
 	return
 }
 

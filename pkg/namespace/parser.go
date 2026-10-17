@@ -57,7 +57,7 @@ func Parse(r io.Reader) (File, error) {
 func ParseFlags(args []string) (mountflag, []string) {
 	flag := REPL
 	for i, arg := range args {
-		// these args are passed trough strings.Fields which doesn't return empty strings
+		// these args are passed through strings.Fields which doesn't return empty strings
 		// so this is ok.
 		if arg[0] == '-' {
 			args = append(args[:i], args[i+1:]...)

@@ -27,7 +27,7 @@ func TestComm(t *testing.T) {
 		want  string
 	}{
 		{
-			name: "only one arguement",
+			name: "only one argument",
 			args: []string{"onearg"},
 			err:  ErrUsage,
 		},

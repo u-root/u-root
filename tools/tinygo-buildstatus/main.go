@@ -185,7 +185,7 @@ func (cmd *cmd) run() error {
 		return err
 	}
 
-	// enqueue the build jobs adn ignore packages if pre-defined for target OS
+	// enqueue the build jobs and ignore packages if pre-defined for target OS
 	ignorePk := false
 	for _, goPkg := range cmd.cmdPaths {
 		if oses, ok := Ignore[filepath.Base(goPkg)]; ok {

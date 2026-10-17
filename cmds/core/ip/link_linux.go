@@ -207,7 +207,7 @@ func (cmd *cmd) setLinkHardwareAddress(iface netlink.Link) error {
 
 	err = cmd.handle.LinkSetHardwareAddr(iface, hwAddr)
 	if err != nil {
-		return fmt.Errorf("%v cant set mac addr %v: %w", iface.Attrs().Name, hwAddr, err)
+		return fmt.Errorf("%v cannot set mac addr %v: %w", iface.Attrs().Name, hwAddr, err)
 	}
 
 	return nil
@@ -557,7 +557,7 @@ type linkData struct {
 }
 
 // getLinkDevices performs system I/O  to enumerate a list of link devices that match the given filters.
-// If no error occurs, at least one linke device was found and the returned linkData objects have a non-nil attrs field.
+// If no error occurs, at least one link device was found and the returned linkData objects have a non-nil attrs field.
 // The addresses field is only populated if withAddresses is true.
 func (cmd *cmd) getLinkDevices(withAddresses bool, filter ...linkfilter) ([]linkData, error) {
 	links, err := netlink.LinkList()

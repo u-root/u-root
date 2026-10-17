@@ -8,7 +8,7 @@
 //
 //	comm [-123h] FILE1 FILE2
 //
-// Descrption:
+// Description:
 //
 //	Comm reads file1 and file2, which are in lexicographical order, and
 //	produces a three column output: lines only in file1; lines only in

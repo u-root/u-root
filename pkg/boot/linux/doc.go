@@ -74,7 +74,7 @@
 // might corrupt memory. Finally, nobody cares about booting 16-bit kernels any
 // more -- even memtest86 runs as a Linux binary. Hence: we can always get
 // space in the low 1MiB for the purgatory, and in fact we can assume that
-// memory is available at 0x3000. The low 640K must alway be there. That means
+// memory is available at 0x3000. The low 640K must always be there. That means
 // we can link the purgatory to run at a fixed place -- since most kexec users
 // load it at a fixed place anyway.
 //

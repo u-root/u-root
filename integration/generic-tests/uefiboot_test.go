@@ -17,7 +17,7 @@ import (
 	"github.com/u-root/mkuimage/uimage"
 )
 
-// TestUefiboot tests uefiboot commmands to boot to uefishell.
+// TestUefiboot tests uefiboot commands to boot to uefishell.
 func TestUEFIBoot(t *testing.T) {
 	qemu.SkipIfNotArch(t, qemu.ArchAMD64)
 

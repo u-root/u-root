@@ -16,7 +16,7 @@ import (
 // SGDisk is the Linux SCSI Generic interface to SCSI/SATA devices.
 // Control is achieved by ioctls on an fd.
 // SG is extremely low level, requiring the assembly of Command and Data Blocks,
-// and occasionaly the disassembly of Status Blocks.
+// and occasionally the disassembly of Status Blocks.
 //
 // SG can operate with any version of SCSI or ATA, starting from ATA1 to the present.
 // ATA packets became "16-bits wide and 64-bit aware in ATA6 standard in 2003.

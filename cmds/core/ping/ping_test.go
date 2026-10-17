@@ -30,7 +30,7 @@ func (tc *testConn) ReadFrom(b []byte) (int, net.Addr, error) {
 
 	body := m.Body.(*icmp.Echo)
 
-	respone := icmp.Message{
+	response := icmp.Message{
 		Type: ipv4.ICMPTypeEchoReply,
 		Code: 0,
 		Body: &icmp.Echo{
@@ -40,7 +40,7 @@ func (tc *testConn) ReadFrom(b []byte) (int, net.Addr, error) {
 		},
 	}
 
-	resp, err := respone.Marshal(nil)
+	resp, err := response.Marshal(nil)
 	if err != nil {
 		return 0, nil, err
 	}

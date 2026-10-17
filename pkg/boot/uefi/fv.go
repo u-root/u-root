@@ -58,7 +58,7 @@ const (
 // UnmarshalBinary unmarshals the FiwmreareVolumeHeader from binary data.
 func (e *EFIFirmwareVolumeHeader) UnmarshalBinary(data []byte) error {
 	if len(data) < 0x38 {
-		return fmt.Errorf("invalid entry point stucture length %d", len(data))
+		return fmt.Errorf("invalid entry point structure length %d", len(data))
 	}
 	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, e); err != nil {
 		return err
@@ -72,7 +72,7 @@ func (e *EFIFirmwareVolumeHeader) UnmarshalBinary(data []byte) error {
 // UnmarshalBinary unmarshals the EFIFFSFileHeader from binary data.
 func (e *EFIFFSFileHeader) UnmarshalBinary(data []byte) error {
 	if len(data) < EFIFFSFileHeaderSize {
-		return fmt.Errorf("invalid entry point stucture length %d", len(data))
+		return fmt.Errorf("invalid entry point structure length %d", len(data))
 	}
 	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, e); err != nil {
 		return err

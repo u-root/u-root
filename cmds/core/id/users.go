@@ -42,7 +42,7 @@ func (u *Users) GetUser(uid int) (string, error) {
 	if v, ok := u.uidToUser[uid]; ok {
 		return v, nil
 	}
-	return "", fmt.Errorf("unkown uid: %d", uid)
+	return "", fmt.Errorf("unknown uid: %d", uid)
 }
 
 // NewUsers is a factory for Users.  file is the file to read the database from.

@@ -12,7 +12,7 @@
 //
 // Options '-F' and '-O' control the input and output separators,
 // respectively. The NUL character can be used as an output separator if
-// the '-0' is given. The '-e' and '-E' characters contol whether empty
+// the '-0' is given. The '-e' and '-E' characters control whether empty
 // fields are collapsed in the input; '-e' unconditionally preserves such
 // fields, '-E' discards them. If neither is specified, a heuristic is
 // applied to guess: if the input specifier is more than one character in
@@ -55,10 +55,10 @@ func init() {
 		defUsage()
 	}
 	flag.BoolVar(&flags.nuloutsep, "0", false, "use the NUL character ('\\0') as output separator")
-	flag.BoolVar(&flags.preserveEmpty, "e", false, "preseve empty input fields")
+	flag.BoolVar(&flags.preserveEmpty, "e", false, "preserve empty input fields")
 	flag.BoolVar(&flags.discardEmpty, "E", false, "discard empty input fields")
 	flag.StringVar(&flags.insep, "F", "[ \t\v\r]+", "Input separator characters (regular expression)")
-	flag.StringVar(&flags.outsep, "O", " ", "Output separater (string)")
+	flag.StringVar(&flags.outsep, "O", " ", "Output separator (string)")
 }
 
 func main() {

@@ -5,7 +5,7 @@ The EDK2/CloudHV firmware image must be placed at a /dev/sda1 with a xfs file sy
 ## Introduction
 Ever wanted to start a system with Open Source, non-UEFI firmware (coreboo+Linuxboot/u-root) and still be able to boot UEFI/EDK2? Look no further.
 VMBoot allows to execute EDK2 in a VM started from Linuxboot/u-root.
-Why you ask? Because noone wants to implement UEFI-compliance in u-root and lose their sanity.
+Why you ask? Because no one wants to implement UEFI-compliance in u-root and lose their sanity.
 
 Booting EDK2 in the VM technically allows booting into UEFI-compliant or UEFI-required operating systems without relying on UEFI as host system firmware.
 (Though gokvm is not able to do so yet!)
