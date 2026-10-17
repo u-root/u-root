@@ -108,6 +108,14 @@ func TestFind(t *testing.T) {
 			args:       []string{"-name=file1", "-regex=file[12]", "."},
 		},
 		{
+			wantStdout: "1/file1\n2/file1\nfile1\n",
+			args:       []string{".", "-name", "file1", "-regex", ".*"},
+		},
+		{
+			wantStdout: "1/file1\n2/file1\nfile1\n",
+			args:       []string{".", "-regex", ".*", "-name", "file1"},
+		},
+		{
 			args:       []string{"-regex=[", "."},
 			commandErr: find.ErrInvalidRegexp,
 		},
