@@ -54,6 +54,11 @@ func TestRun(t *testing.T) {
 		err  error
 	}{
 		{
+			name: "setting both -j and -n",
+			args: []string{"-j", "-n"},
+			err:  os.ErrInvalid,
+		},
+		{
 			name: "readJSON true, without error",
 			args: []string{"-J", "testdata/testfile1.json"},
 		},
