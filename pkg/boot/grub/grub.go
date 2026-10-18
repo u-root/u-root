@@ -121,7 +121,15 @@ func ParseLocalConfig(ctx context.Context, diskDir string, devices block.BlockDe
 		if curl.IsURLError(err) {
 			continue
 		}
-		return c, err
+		if err != nil {
+			return nil, err
+		}
+		// EFI vendor configs may be stubs that source the actual menu. The
+		// parser does not implement source, so try boot/grub/grub.cfg instead.
+		if len(c) == 0 {
+			continue
+		}
+		return c, nil
 	}
 	return nil, fmt.Errorf("no valid grub config found")
 }
