@@ -35,6 +35,7 @@ import (
 var (
 	errUsage            = errors.New("usage: gpgv key sig content")
 	errUnknownSignature = errors.New("unknown signature")
+	errNotDetachedSig   = errors.New("signature is not a binary or text document signature")
 	errExpectedPacket   = errors.New("expected first packet to be PublicKey")
 )
 
@@ -62,6 +63,13 @@ func verifyDetachedSignature(key *packet.PublicKey, contentf, sigf io.Reader) er
 	sig, ok := p.(*packet.Signature)
 	if !ok {
 		return errUnknownSignature
+	}
+
+	// Only document signatures sign the content. Any other class, e.g. the
+	// key's own user ID certification, would otherwise verify against a
+	// file holding the key and user ID it covers.
+	if sig.SigType != packet.SigTypeBinary && sig.SigType != packet.SigTypeText {
+		return fmt.Errorf("%w: class %#x", errNotDetachedSig, sig.SigType)
 	}
 
 	h := sig.Hash.New()
