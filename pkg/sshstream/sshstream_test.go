@@ -170,3 +170,20 @@ func TestSSHStreamRejection(t *testing.T) {
 		t.Fatal("Client should have failed to connect with unauthorized key")
 	}
 }
+
+func TestNewServerConfigOptions(t *testing.T) {
+	tmpDir := t.TempDir()
+	privPath, pubPath := generateTestKeys(t, tmpDir)
+
+	pub, err := os.ReadFile(pubPath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if err := os.WriteFile(pubPath, append([]byte(`from="10.0.0.1" `), pub...), 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	if _, err := NewServerConfig(pubPath, privPath); err == nil {
+		t.Fatal("NewServerConfig accepted an authorized_keys entry with options it does not enforce")
+	}
+}

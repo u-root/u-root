@@ -275,9 +275,15 @@ func (c *cmd) run() error {
 
 	authorizedKeysMap := map[string]bool{}
 	for len(authorizedKeysBytes) > 0 {
-		pubKey, _, _, rest, err := ssh.ParseAuthorizedKey(authorizedKeysBytes)
+		pubKey, _, options, rest, err := ssh.ParseAuthorizedKey(authorizedKeysBytes)
 		if err != nil {
 			return err
+		}
+		// None of the authorized_keys options (from=, command=,
+		// restrict, ...) are enforced, so refuse the key rather than
+		// grant it more than it was given.
+		if len(options) > 0 {
+			return fmt.Errorf("authorized_keys options are not supported: %q", options)
 		}
 
 		authorizedKeysMap[string(pubKey.Marshal())] = true
