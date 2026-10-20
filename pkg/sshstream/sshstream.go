@@ -149,9 +149,15 @@ func NewServerConfig(authorizedKeys, hostKey string) (*ssh.ServerConfig, error) 
 	}
 	authKeys := map[string]bool{}
 	for len(authBytes) > 0 {
-		k, _, _, rest, err := ssh.ParseAuthorizedKey(authBytes)
+		k, _, options, rest, err := ssh.ParseAuthorizedKey(authBytes)
 		if err != nil {
 			return nil, fmt.Errorf("authkey parse: %w", err)
+		}
+		// None of the authorized_keys options (from=, command=,
+		// restrict, ...) are enforced, so refuse the key rather than
+		// grant it more than it was given.
+		if len(options) > 0 {
+			return nil, fmt.Errorf("authkey parse: options are not supported: %q", options)
 		}
 
 		authKeys[string(k.Marshal())] = true
