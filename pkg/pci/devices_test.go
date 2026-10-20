@@ -142,6 +142,49 @@ func TestSetVendorDeviceName(t *testing.T) {
 	}
 }
 
+func TestSetVendorDeviceNum(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		devices        Devices
+		VendorNameWant string
+		DeviceNameWant string
+	}{
+		{
+			name: "Lookup Using ID 80ee Device cafe",
+			devices: Devices{
+				&PCI{
+					Vendor: 0x80ee,
+					Device: 0xcafe,
+				},
+			},
+			VendorNameWant: "80ee",
+			DeviceNameWant: "cafe",
+		},
+		{
+			name: "Lookup Using ID 1055 Device e420",
+			devices: Devices{
+				&PCI{
+					Vendor: 0x1055,
+					Device: 0xe420,
+				},
+			},
+			VendorNameWant: "1055",
+			DeviceNameWant: "e420",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.devices.SetVendorDeviceNum()
+			VendorNameGot, DeviceNameGot := tt.devices[0].VendorName, tt.devices[0].DeviceName
+			if VendorNameGot != tt.VendorNameWant {
+				t.Errorf("Vendor mismatch, got: %q, want: %q\n", VendorNameGot, tt.VendorNameWant)
+			}
+			if DeviceNameGot != tt.DeviceNameWant {
+				t.Errorf("Device mismatch, got: %q, want: %q\n", DeviceNameGot, tt.DeviceNameWant)
+			}
+		})
+	}
+}
+
 func TestReadConfig(t *testing.T) {
 	configBytes := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}
 	dir := t.TempDir()
