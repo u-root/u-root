@@ -22,7 +22,7 @@ require (
 	github.com/insomniacslk/dhcp v0.0.0-20260719225207-c76316d4aa82
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/kevinburke/ssh_config v1.2.0
-	github.com/klauspost/compress v1.18.0
+	github.com/klauspost/compress v1.18.7
 	github.com/klauspost/pgzip v1.2.6
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/mdlayher/vsock v1.2.1
