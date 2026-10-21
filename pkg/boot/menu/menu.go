@@ -44,7 +44,7 @@ type Entry interface {
 
 	// Exec transfers execution to another process or kernel.
 	//
-	// Exec either returns an error or does not return at all.
+	// Exec returns if the process exits or the transfer fails.
 	Exec() error
 
 	// IsDefault indicates that this action should be run by default if the
@@ -317,7 +317,14 @@ func (StartShell) Load() error {
 func (s StartShell) Exec() error {
 	// Reset signal handler for SIGINT to enable user interrupts again
 	signal.Reset(syscall.SIGINT)
-	return libinit.Command("/bin/defaultsh", s.Mod...).Run()
+	err := libinit.Command("/bin/defaultsh", s.Mod...).Run()
+
+	// The shell ran in its own session and took the controlling terminal.
+	// Take it back so that the menu can be shown again.
+	if err := unix.IoctlSetInt(int(os.Stdin.Fd()), unix.TIOCSCTTY, 1); err != nil {
+		log.Printf("Failed to take back the controlling terminal: %v", err)
+	}
+	return err
 }
 
 // IsDefault indicates that this should not be run as a default action.
