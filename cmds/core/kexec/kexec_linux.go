@@ -175,7 +175,7 @@ func run(args []string) error {
 		return fmt.Errorf("usage: kexec [fs] kernelname OR kexec -e")
 	}
 
-	err, warningMsg := universalpayload.Load(opts.kernelpath, linux.Debug)
+	upl, err := universalpayload.Load(opts.kernelpath, linux.Debug)
 	switch {
 	case errors.Is(err, universalpayload.ErrFailToReadFdtFile):
 		// Not a universal payload at all, which is the common case.
@@ -185,8 +185,8 @@ func run(args []string) error {
 		return fmt.Errorf("failed to load universal payload: %w", err)
 	default:
 		// universalpayload package suppresses warning message, we print messages here.
-		if warningMsg != nil {
-			log.Printf("Warning messages from universalpayload:\n%v\n", warningMsg)
+		if w := upl.Warnings(); w != nil {
+			log.Printf("Warning messages from universalpayload:\n%v\n", w)
 		}
 		if err := universalpayload.Exec(); err != nil {
 			return fmt.Errorf("failed to execute universal payload: %w", err)

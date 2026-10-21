@@ -670,25 +670,32 @@ func (u *UPL) loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory)
 	return (uintptr)(loadAddr + uint64(u.trampolineOffset)), nil
 }
 
-// Load loads the Universal Payload image from the specified file.
-func Load(name string, dbg func(string, ...any)) (error, error) {
-	return New(WithDebug(dbg)).Load(name)
+// Load loads the Universal Payload image from the specified file. The
+// returned UPL is never nil, so its Warnings can be read even if Load fails.
+func Load(name string, dbg func(string, ...any)) (*UPL, error) {
+	u := New(WithDebug(dbg))
+	return u, u.Load(name)
 }
 
 // Load loads the Universal Payload image from the specified file.
-func (u *UPL) Load(name string) (error, error) {
+//
+// Problems that do not stop the load are collected and returned by Warnings.
+func (u *UPL) Load(name string) error {
+	// Warnings describe this load only.
+	u.warningMsg = nil
+
 	u.debug("universalpayload: Try to get FDT information from:%s\n", name)
 	fdtLoad, err := u.GetFdtInfo(name)
 	if err != nil {
 		u.debug("universalpayload: Failed to get FDT information (%v)\n", err)
-		return err, errors.Join(u.warningMsg...)
+		return err
 	}
 
 	u.debug("universalpayload: Try to fetch file content\n")
 	data, err := os.ReadFile(name)
 	if err != nil {
 		u.debug("universalpayload: Failed to fetch file content (%v)\n", err)
-		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err), errors.Join(u.warningMsg...)
+		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
 	}
 
 	// Prepare memory.
@@ -699,7 +706,7 @@ func (u *UPL) Load(name string) (error, error) {
 		memmap, err = u.kexecMemoryMapFromIOMem()
 		if err != nil {
 			u.debug("universalpayload: Failed to get Memory Map from IOMem\n")
-			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(u.warningMsg...)
+			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err)
 		}
 	}
 
@@ -712,18 +719,23 @@ func (u *UPL) Load(name string) (error, error) {
 	entry, err := u.loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
 		u.debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
-		return err, errors.Join(u.warningMsg...)
+		return err
 	}
 
 	u.debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
 	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
 		u.debug("universalpayload: Failed to load segments with error (%v)\n", err)
-		return errors.Join(ErrKexecLoadFailed, err), errors.Join(u.warningMsg...)
+		return errors.Join(ErrKexecLoadFailed, err)
 	}
 
 	u.debug("universalpayload: boot trampoline code at:%x\n", entry)
 
-	return nil, errors.Join(u.warningMsg...)
+	return nil
+}
+
+// Warnings returns the problems Load ran into that did not stop it, or nil.
+func (u *UPL) Warnings() error {
+	return errors.Join(u.warningMsg...)
 }
 
 func Exec() error {
