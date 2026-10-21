@@ -40,6 +40,13 @@ jobs:
             vmarch: 'arm64'
             pattern: 'integration/generic-tests/universalpayload_arm64_test.go'
 
+          # riscv64 only runs the kexec tests for now; the rest of
+          # generic-tests needs networking features the riscv64 vmtest
+          # kernel does not have.
+          - go-version: '1.26.x'
+            vmarch: 'riscv64'
+            pattern: 'integration/generic-tests/kexec_test.go'
+
     env:
       GO_VERSION: ${{ matrix.go-version }}
       VMTEST_ARCH: ${{ matrix.vmarch }}
