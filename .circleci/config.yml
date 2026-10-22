@@ -9,22 +9,12 @@ templates:
     environment:
       - UROOT_SOURCE: /home/circleci/go/src/github.com/u-root/u-root
       - CGO_ENABLED: 0
-      # x7 all timeouts for QEMU VM tests since they run without KVM.
       - UROOT_QEMU_TIMEOUT_X: 7
 
   beefy-template:
     &beefy-template
     <<: *golang-template
     resource_class: large
-
-workflows:
-  version: 2
-  build_and_test:
-    jobs:
-      - race
-      - compile_cmds
-      - check_templates
-      - check_licenses
 
 jobs:
   race:
@@ -57,8 +47,7 @@ jobs:
       - checkout
       - run:
           name: Check licenses
-          command: go run tools/checklicenses/checklicenses.go -c
-            tools/checklicenses/config.json
+          command: go run tools/checklicenses/checklicenses.go -c tools/checklicenses/config.json
 
   check_templates:
     <<: *golang-template
@@ -76,3 +65,28 @@ jobs:
             $goruncmd world
             $goruncmd all core
             GOOS=plan9 $goruncmd -defaultsh=/bbin/rush plan9
+
+  # Aggregator job that sends the expected 'build_and_test' status check to GitHub
+  build_and_test:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: All tests completed
+          command: echo "All required tests passed."
+
+workflows:
+  version: 2
+  full_build_and_test:
+    jobs:
+      - race
+      - compile_cmds
+      - check_templates
+      - check_licenses
+      - build_and_test:
+          requires:
+            - race
+            - compile_cmds
+            - check_templates
+            - check_licenses
+

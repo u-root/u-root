@@ -176,7 +176,7 @@ type ResourceRegions struct {
 const (
 	ACPIMCFGPciSegInfoStructureSize     = 0xC
 	ACPIMCFGPciSegInfoDataLength        = 0xA
-	ACPIMCFGBaseAddressAllocationLenth  = 0x10
+	ACPIMCFGBaseAddressAllocationLength = 0x10
 	ACPIMCFGBaseAddressAllocationOffset = 0x2c
 	ACPIMCFGSignature                   = "MCFG"
 )
@@ -240,7 +240,7 @@ var (
 	ErrCPUAddressConvert           = errors.New("failed to convert physical bits size")
 	ErrCPUAddressRead              = errors.New("failed to read 'address sizes'")
 	ErrCPUAddressNotFound          = errors.New("'address sizes' information not found")
-	ErrMcfgDataLenthTooShort       = errors.New("acpi mcfg data lenth too short")
+	ErrMcfgDataLengthTooShort      = errors.New("acpi mcfg data length too short")
 	ErrMcfgSignatureMismatch       = errors.New("acpi mcfg signature mismatch")
 	ErrMcfgBaseAddrAllocCorrupt    = errors.New("acpi mcfg base address allocation data corrupt")
 	ErrMcfgBaseAddrAllocDecode     = errors.New("failed to decode mcfg base address allocation structure")
@@ -595,7 +595,7 @@ func (u *UPL) GetDisplayDeviceInfo() ([]map[string]string, error) {
 	for _, dev := range drmDevices {
 		deviceName := dev.Name()
 
-		// There exsits device nodes like 'version', skip this kind of device nodes
+		// There exists device nodes like 'version', skip this kind of device nodes
 		info, _ := os.Stat(filepath.Join(u.sysfsDrmPath, deviceName))
 		if !(info.IsDir()) {
 			continue
@@ -787,7 +787,7 @@ func skipReservedRange(mm kexec.MemoryMap, base uintptr, attr uint64) bool {
 	// 2. Firmware or BIOS reserved above memory region as "Reserved" type.
 	for _, m := range mm {
 		// It safe to convert base from uint64 to uintptr, since uintptr covers
-		// 64-bits as described in buildin.go:
+		// 64-bits as described in builtin.go:
 		// uintptr is an integer type that is large enough to hold the bit pattern of
 		// any pointer.
 		if m.Range.Contains(base) {
@@ -1031,7 +1031,7 @@ func retrieveDeviceResources(resourcePath string, mm kexec.MemoryMap) ([]Resourc
 				// Special case to adapt TianoCore EDK2 logic:
 				// Base address of memory region with attribute of '64bit' or '64bit pref'
 				// should be higher than 32bit, however, some platforms provide 64-bit MMIO
-				// with all zero in high 32 bits, it triggers assertation in EDK2 since this
+				// with all zero in high 32 bits, it triggers assertion in EDK2 since this
 				// base address is actual a 32-bit address. To resolve this issue, convert
 				// attribute from 64bit to 32bit, and merge it with other 32bit memory regions.
 				if (attrInt&PCIMMIO64Attr == PCIMMIO64Attr) && (base64>>32 == 0) {
@@ -1066,7 +1066,7 @@ func fetchACPIMCFGData(data []byte) ([]MCFGBaseAddressAllocation, error) {
 
 	// Check if the data is long enough to contain data from offset 0x2c.
 	if len(data) <= ACPIMCFGBaseAddressAllocationOffset {
-		return nil, ErrMcfgDataLenthTooShort
+		return nil, ErrMcfgDataLengthTooShort
 	}
 
 	// Check if the magic word is "MCFG".
@@ -1077,12 +1077,12 @@ func fetchACPIMCFGData(data []byte) ([]MCFGBaseAddressAllocation, error) {
 	segInfoContent := data[ACPIMCFGBaseAddressAllocationOffset:]
 
 	// Check whether content in Base Address Allocation Structure is valid
-	if len(segInfoContent)%ACPIMCFGBaseAddressAllocationLenth != 0 {
+	if len(segInfoContent)%ACPIMCFGBaseAddressAllocationLength != 0 {
 		return nil, ErrMcfgBaseAddrAllocCorrupt
 	}
 
-	for i := 0; i < len(segInfoContent); i += ACPIMCFGBaseAddressAllocationLenth {
-		mcfgDataBytes := segInfoContent[i : i+ACPIMCFGBaseAddressAllocationLenth]
+	for i := 0; i < len(segInfoContent); i += ACPIMCFGBaseAddressAllocationLength {
+		mcfgDataBytes := segInfoContent[i : i+ACPIMCFGBaseAddressAllocationLength]
 		mcfgData := MCFGBaseAddressAllocation{}
 		reader := bytes.NewReader(mcfgDataBytes)
 
@@ -1189,7 +1189,7 @@ func (u *UPL) constructPCIRootBridgeNodes() ([]*dt.Node, error) {
 	 *  /sys/devices/pci0000:00/0000:00:1c.0/0000:01:00.0
 	 *  /sys/devices/pci0000:00/0000:00:1c.5/0000:03:00.0/0000:04:00.0
 	 *
-	 * In this case, we need to recrusively process the subdirectory of
+	 * In this case, we need to recursively process the subdirectory of
 	 * /sys/devices/pci0000:00 to retrieve the resource region information
 	 * about MMIO64/MMIO32/IOPort, and the bus region information.
 	 */

@@ -35,7 +35,7 @@ var (
 	}
 )
 
-// Limits rekursive search of grub files. It is the maximum directory depth
+// Limits recursive search of grub files. It is the maximum directory depth
 // that is searched through. Since on efi partitions grub files reside usually
 // at /boot/efi/EFI/distro/ , 4 might be a good choice.
 const searchDepth = 4

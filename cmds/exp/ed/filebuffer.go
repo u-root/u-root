@@ -22,7 +22,7 @@ type FileBuffer struct {
 	file      []int    // sequence of buffer lines
 	lastFile  []int    // used for undo capability
 	tmpFile   []int    // used for undo capability
-	dirty     bool     // tracks if the file has been modifed
+	dirty     bool     // tracks if the file has been modified
 	lastDirty bool     // used for undo capability
 	tmpDirty  bool     // used for undo capability
 	mod       bool     // mod is like dirty, but can be reset for transactions
@@ -32,7 +32,7 @@ type FileBuffer struct {
 	marks     map[byte]int
 }
 
-// NewFileBuffer creats a new FileBuffer object
+// NewFileBuffer creates a new FileBuffer object
 func NewFileBuffer(in []string) *FileBuffer {
 	f := &FileBuffer{
 		buffer: in,

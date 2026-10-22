@@ -53,7 +53,7 @@ func TestFindSecurityCorePEEntryNotFound(t *testing.T) {
 func TestFFSHeaderUnmarshalBinaryFailForSize(t *testing.T) {
 	var fh EFIFFSFileHeader
 	err := fh.UnmarshalBinary([]byte{0x0})
-	want := "invalid entry point stucture length 1"
+	want := "invalid entry point structure length 1"
 	if err.Error() != want {
 		t.Fatalf("Should be '%s', but get '%v'", want, err)
 	}
@@ -62,7 +62,7 @@ func TestFFSHeaderUnmarshalBinaryFailForSize(t *testing.T) {
 func TestUnmarshalBinaryFailForSize(t *testing.T) {
 	var fvh EFIFirmwareVolumeHeader
 	err := fvh.UnmarshalBinary([]byte{0x0})
-	want := "invalid entry point stucture length 1"
+	want := "invalid entry point structure length 1"
 	if err.Error() != want {
 		t.Fatalf("Should be '%s', but get '%v'", want, err)
 	}

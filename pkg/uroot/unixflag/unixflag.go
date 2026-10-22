@@ -10,14 +10,18 @@ import (
 )
 
 // ArgsToGoArgs converts a Unix-style argument list such that:
-// all -- switches before the first non-switch argument are converted to - switches
-// all - switches are split into a set of single switches with a -
-// first non- args stops the process.
-// so, e.g., ps -aux turns into ps -a -u -x
-// ls -al --somelongthing becomes ls -a -l -somelongthing
+// all -- switches before the first non-switch argument are converted to -
+// switches, all - switches are split into a set of single switches with a -,
+// and the first non-switch arg (or "-" or "--") stops the process.
+// For example, ps -aux turns into ps -a -u -x, and
+// ls -al --somelongthing becomes ls -a -l -somelongthing.
 func ArgsToGoArgs(args []string) []string {
 	var out []string
 	for i, f := range args {
+		if f == "--" || f == "-" {
+			out = append(out, args[i:]...)
+			break
+		}
 		if strings.HasPrefix(f, "--") {
 			out = append(out, f[1:])
 			continue

@@ -187,7 +187,7 @@ func (f *FileBuffer) ResolveAddr(cmd string) (line, cmdOffset int, e error) {
 	return
 }
 
-// ResolveAddrs resolves all addrs at the begining of a line
+// ResolveAddrs resolves all addrs at the beginning of a line
 // - makes no attempt to verify that the resulting addrs are valid
 // - will always return at least one addr as long as there isn't an error
 // - if an error is reached, return value behavior is undefined

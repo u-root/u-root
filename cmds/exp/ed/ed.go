@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This `ed` is intended to be a feature-complete mimick of [GNU Ed](https://www.gnu.org/software/ed//).  It is a close enough mimick that the [GNU Ed Man Page](https://www.gnu.org/software/ed/manual/ed_manual.html) should be a reliable source of documentation.  Divergence from the man page is generally considered a bug (unless it's an added feature).
+// This `ed` is intended to be a feature-complete mimic of [GNU Ed](https://www.gnu.org/software/ed//).  It is a close enough mimic that the [GNU Ed Man Page](https://www.gnu.org/software/ed/manual/ed_manual.html) should be a reliable source of documentation.  Divergence from the man page is generally considered a bug (unless it's an added feature).
 //
 // There are a few known differences:
 //
@@ -13,7 +13,7 @@
 //
 // The following has been implemented:
 // - Full line address parsing (including RE and markings)
-// - Implmented commands: !, #, =, E, H, P, Q, W, a, c, d, e, f, h, i, j, k, l, m, n, p, q, r, s, t, u, w, x, y, z
+// - Implemented commands: !, #, =, E, H, P, Q, W, a, c, d, e, f, h, i, j, k, l, m, n, p, q, r, s, t, u, w, x, y, z
 //
 // The following has *not* yet been implemented, but will be eventually:
 // - Unimplemented commands: g, G, v, V

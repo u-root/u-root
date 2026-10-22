@@ -43,7 +43,7 @@ func internalGetFilesystems(file string) (fstypes []string, err error) {
 		return nil, fmt.Errorf("failed to read supported file systems: %w", err)
 	}
 	for line := range strings.SplitSeq(string(bytes), "\n") {
-		// len(fields)==1, 2 possibilites for fs: "nodev" fs and
+		// len(fields)==1, 2 possibilities for fs: "nodev" fs and
 		// fs's. "nodev" fs cannot be mounted through devices.
 		// len(fields)==1 prevents this from occurring.
 		if fields := strings.Fields(line); len(fields) == 1 {

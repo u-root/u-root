@@ -255,7 +255,7 @@ func TestRun(t *testing.T) {
 				t.Error(err)
 			}
 			if !match {
-				t.Errorf("%q faile. Format of Got: %q, Want: %q", tt.name, outString, tt.expExp)
+				t.Errorf("%q failed. Format of Got: %q, Want: %q", tt.name, outString, tt.expExp)
 			}
 		})
 	}

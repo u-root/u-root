@@ -77,7 +77,7 @@ func TestParseParams(t *testing.T) {
 func TestRun(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	p := params{kernel: true, node: true, release: true, version: true, machine: true}
-	// it's possbile to test handleFlags() directly, but unix.Utsname is
+	// it's possible to test handleFlags() directly, but unix.Utsname is
 	// platform dependent
 	err := run(stdout, p)
 	if err != nil || stdout.String() == "" {

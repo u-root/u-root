@@ -25,7 +25,7 @@ var (
 	kernel     = flag.String("k", "", "Kernel image node name.")
 	initramfs  = flag.String("i", "", "InitRAMFS node name -- default none")
 	ringPath   = flag.String("r", "", "Path to PGP keyring. Enforces signature if non-empty path")
-	rsdpLookup = flag.Bool("rsdp", false, "Derrive RSDP table pointer from environment")
+	rsdpLookup = flag.Bool("rsdp", false, "Derive RSDP table pointer from environment")
 )
 
 var v = func(string, ...any) {}

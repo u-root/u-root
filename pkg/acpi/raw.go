@@ -28,7 +28,7 @@ type Raw struct {
 
 var _ = Table(&Raw{})
 
-// NewRaw returns a new Raw []Table fron a given byte slice.
+// NewRaw returns a new Raw []Table from a given byte slice.
 func NewRaw(b []byte) ([]Table, error) {
 	var tab []Table
 	for len(b) != 0 {

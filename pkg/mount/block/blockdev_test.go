@@ -453,7 +453,7 @@ func TestComposePartName(t *testing.T) {
 			want:    "nvme0n1p10",
 		},
 		{
-			name:    "parent device name ends with a number, more than 9 devices ans partitions",
+			name:    "parent device name ends with a number, more than 9 devices and partitions",
 			devName: "nvme0n10",
 			partNo:  10,
 			want:    "nvme0n10p10",

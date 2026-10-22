@@ -10,6 +10,8 @@ import (
 	"errors"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,11 +29,82 @@ func TestParseParmams(t *testing.T) {
 	if params.privkey != "id_rsa" {
 		t.Errorf("expected default privatekey to be id_rsa, got %q", params.privkey)
 	}
+	if params.net != "tcp" {
+		t.Errorf("expected default net to be tcp, got %q", params.net)
+	}
 	if params.ip != "0.0.0.0" {
 		t.Errorf("expected default ip to be 0.0.0.0, got %q", params.ip)
 	}
 	if params.port != "2022" {
 		t.Errorf("expected default port to be 2022, got %q", params.port)
+	}
+}
+
+func TestListen(t *testing.T) {
+	sockPath := filepath.Join(t.TempDir(), "sshd.sock")
+
+	for _, tc := range []struct {
+		name     string
+		network  string
+		ip       string
+		port     string
+		wantNet  string
+		wantAddr string
+		wantErr  bool
+	}{
+		{
+			name:    "tcp listener",
+			network: "tcp",
+			ip:      "127.0.0.1",
+			port:    "0",
+			wantNet: "tcp",
+		},
+		{
+			name:    "empty network defaults to tcp",
+			network: "",
+			ip:      "127.0.0.1",
+			port:    "0",
+			wantNet: "tcp",
+		},
+		{
+			name:     "unix socket listener",
+			network:  "unix",
+			ip:       "ignored",
+			port:     sockPath,
+			wantNet:  "unix",
+			wantAddr: sockPath,
+		},
+		{
+			name:    "vsock invalid non-numeric port",
+			network: "vsock",
+			port:    "not-a-port",
+			wantErr: true,
+		},
+		{
+			name:    "vsock port exceeding 32 bits",
+			network: "vsock",
+			port:    "4294967296",
+			wantErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ln, err := listen(tc.network, tc.ip, tc.port)
+			if ln != nil {
+				defer ln.Close()
+			}
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("listen(%q, %q, %q) err = %v, wantErr %v", tc.network, tc.ip, tc.port, err, tc.wantErr)
+			}
+			if tc.wantErr {
+				return
+			}
+			if got := ln.Addr().Network(); got != tc.wantNet {
+				t.Errorf("listener network = %q, want %q", got, tc.wantNet)
+			}
+			if tc.wantAddr != "" && ln.Addr().String() != tc.wantAddr {
+				t.Errorf("listener address = %q, want %q", ln.Addr().String(), tc.wantAddr)
+			}
+		})
 	}
 }
 
@@ -61,6 +134,28 @@ func TestConfigErrors(t *testing.T) {
 		err = cmd.run()
 		if err == nil {
 			t.Errorf("expected ssh: no key found, got nil")
+		}
+	})
+	t.Run("authorized_keys entry has options", func(t *testing.T) {
+		pub, err := os.ReadFile("./testdata/id_rsa.pub")
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys := filepath.Join(t.TempDir(), "authorized_keys")
+		if err := os.WriteFile(keys, append([]byte(`from="10.0.0.1",command="true" `), pub...), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := command(params{
+			privkey: "./testdata/id_rsa",
+			keys:    keys,
+			ip:      "host",
+			port:    "port",
+		})
+
+		err = cmd.run()
+		if err == nil || !strings.Contains(err.Error(), "options are not supported") {
+			t.Errorf("expected authorized_keys options are not supported, got %v", err)
 		}
 	})
 	t.Run("private key file does not exist", func(t *testing.T) {

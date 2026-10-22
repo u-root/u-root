@@ -149,7 +149,7 @@ func cmdInput(ctx *Context) (e error) {
 	scan := bufio.NewScanner(os.Stdin)
 	nbuf := []string{}
 	if len(ctx.cmd[ctx.cmdOffset+1:]) != 0 && ctx.cmd[ctx.cmdOffset] != 'c' {
-		return fmt.Errorf("%c only takes a single line addres", ctx.cmd[ctx.cmdOffset])
+		return fmt.Errorf("%c only takes a single line address", ctx.cmd[ctx.cmdOffset])
 	}
 	for scan.Scan() {
 		line := scan.Text()

@@ -28,7 +28,7 @@
 // This name changing complicates the picture a bit,
 // so we maintain a list of vendor names for a given part, with
 // the first name in the list being the current name. This will allow
-// us to accomodate scripts that might have the wrong vendor name.
+// us to accommodate scripts that might have the wrong vendor name.
 // As time goes by, and bankruptcies accumulate, this first name
 // can change.
 //

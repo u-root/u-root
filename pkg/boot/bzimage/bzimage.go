@@ -449,7 +449,7 @@ func compress(b []byte, dictOps string) ([]byte, error) {
 
 	// Append the original, uncompressed size of the payload.
 	// HEAR YE, HEAR YE: The uncompressed size of the payload is appended to the payload because
-	// the Linux boot process expects that the last 4 bytes of teh payload will contain the
+	// the Linux boot process expects that the last 4 bytes of the payload will contain the
 	// uncompressed size. This appending is only required if the compression format does not
 	// already satisfy this requirement. If this function is changed to use GZIP compression in
 	// the future then this code is not required. This code is required for compression formats

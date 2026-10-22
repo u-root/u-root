@@ -73,7 +73,7 @@ the future.  The abstract form should be:
 More detailed explanation of your changes: Why and how.
 Wrap it to 72 characters.
 See [here] (http://chris.beams.io/posts/git-commit/)
-for some more good advices.
+for some more good advice.
 
 Signed-off-by: <contributor@foo.com>
 ```

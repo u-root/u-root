@@ -120,7 +120,7 @@ func parseCBtable(f *os.File, address int64, sz int) (*CBmem, bool, error) {
 		/* Keep reference to lbtable. */
 		size = int(lbh.TableSz)
 		j := addr
-		debug("Process %d entires", lbh.TableEntries)
+		debug("Process %d entries", lbh.TableEntries)
 		for j < addr+int64(lbh.TableSz) {
 			var rec Record
 			debug("\tcoreboot table entry 0x%02x\n", rec.Tag)

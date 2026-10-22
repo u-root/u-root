@@ -1,6 +1,6 @@
 module.exports = {
   /**
-   * Returns back some attributes based on wether the
+   * Returns back some attributes based on whether the
    * link is active or a parent of an active item
    *
    * @param {String} itemUrl The link in question

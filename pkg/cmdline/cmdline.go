@@ -206,7 +206,7 @@ func (c *CmdLine) FlagsForModule(name string) string {
 		canonicalFlag := strings.Replace(flag, "-", "_", -1)
 		if !flagsAdded[canonicalFlag] && strings.HasPrefix(canonicalFlag, prefix) {
 			flagsAdded[canonicalFlag] = true
-			// They are passed to insmod space seperated as flag=val
+			// They are passed to insmod space separated as flag=val
 			ret.WriteString(strings.TrimPrefix(canonicalFlag, prefix) + "=" + val + " ")
 		}
 	}

@@ -155,6 +155,10 @@ func registers(d pci.Devices, cmds ...string) error {
 }
 
 func (c *cmd) run() error {
+	if c.numbers && c.dumpJSON {
+		return fmt.Errorf("can not set both c.numbers and c.dumpJSON:%w", os.ErrInvalid)
+	}
+
 	var dumpSize int
 	switch c.hexdump {
 	case 4:
@@ -180,16 +184,17 @@ func (c *cmd) run() error {
 		if err := json.Unmarshal(b, &d); err != nil {
 			return fmt.Errorf("%w:%w", err, errBadJSON)
 		}
-
+		d.SetVendorDeviceName(pci.IDs)
 	} else {
 		if d, err = r.Read(); err != nil {
 			return err
 		}
 	}
 
-	if !c.numbers || c.dumpJSON {
-		d.SetVendorDeviceName(pci.IDs)
+	if c.numbers {
+		d.SetVendorDeviceNum()
 	}
+
 	if len(c.args) > 0 {
 		if err := registers(d, c.args...); err != nil {
 			return err

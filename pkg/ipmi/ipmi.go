@@ -211,7 +211,7 @@ func (i *IPMI) SetSystemFWVersion(version string) error {
 	data.paramSelector = _SYSTEM_FW_VERSION
 	data.setSelector = 0
 	for length > index {
-		if data.setSelector == 0 { // the fisrt block of string data
+		if data.setSelector == 0 { // the first block of string data
 			data.strData[0] = _ASCII
 			data.strData[1] = byte(length)
 			strcpyPadded(data.strData[2:], version)

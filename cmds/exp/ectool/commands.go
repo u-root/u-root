@@ -456,7 +456,7 @@ type ecLpcHostArgs struct {
  * If EC gets a command and this flag is not set, this is an old-style command.
  * Command version is 0 and params from host are at ecLpcAddrOldParam with
  * unknown length.  EC must respond with an old-style response (that is
- * withouth setting ecHostArgsFlagToHost).
+ * without setting ecHostArgsFlagToHost).
  */
 const ecHostArgsFlagFromHost = 0x01
 
@@ -807,7 +807,7 @@ type ecResponseGetCmdVersions struct {
 }
 
 /*
- * Check EC communcations status (busy). This is needed on i2c/spi but not
+ * Check EC communications status (busy). This is needed on i2c/spi but not
  * on lpc since it has its own out-of-band busy indicator.
  *
  * lpc must read the status from the command register. Attempting this on

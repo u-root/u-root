@@ -44,7 +44,7 @@ bzimage diff <image> <image>
 	Compare headers of two kernel images.
 bzimage extract <file> <elf-file>
 	extract parts of the kernel into separate files with self-
-	explainatory extensions .boot, .head, .kern, .tail, .ramfs
+	explanatory extensions .boot, .head, .kern, .tail, .ramfs
 bzimage dump <file>
     Dumps header.
 bzimage initramfs <input-bzimage> <new-initramfs> <output-bzimage>

@@ -255,7 +255,7 @@ func (d *Daemon) Disarm() error {
 	return (*os.Process)(d).Signal(unix.SIGUSR1)
 }
 
-// Arm sends a signal to the watchdog deamon to arm.
+// Arm sends a signal to the watchdog daemon to arm.
 func (d *Daemon) Arm() error {
 	return (*os.Process)(d).Signal(unix.SIGUSR2)
 }

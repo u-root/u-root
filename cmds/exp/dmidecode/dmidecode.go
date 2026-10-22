@@ -40,7 +40,7 @@ type dmiDecodeError struct {
 	code int
 }
 
-// parseTypeFilter parses the --type argument(s) and returns a set of types taht should be included.
+// parseTypeFilter parses the --type argument(s) and returns a set of types that should be included.
 func parseTypeFilter(typeStrings []string) (map[smbios.TableType]bool, error) {
 	types := map[smbios.TableType]bool{}
 	for _, ts := range typeStrings {

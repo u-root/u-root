@@ -21,7 +21,7 @@ type Table struct {
 }
 
 var (
-	// ErrTableNotFound is retuned if table with specified type is not found.
+	// ErrTableNotFound is returned if table with specified type is not found.
 	ErrTableNotFound = errors.New("table not found")
 
 	// ErrUnsupportedTableType is returned by ParseTypedTable if this table type is not supported and cannot be parsed.

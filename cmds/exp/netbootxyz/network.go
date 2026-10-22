@@ -165,7 +165,7 @@ func configureDHCPNetwork() error {
 		}
 		log.Printf("dhcp response error: %v", result.Err)
 	}
-	return errors.New("no valid DHCP configuration recieved")
+	return errors.New("no valid DHCP configuration received")
 }
 
 func findNetworkInterface(ifName string) (netlink.Link, error) {

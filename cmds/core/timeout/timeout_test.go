@@ -92,9 +92,8 @@ func TestBashExit(t *testing.T) {
 	}
 
 	var errno int
-	var e *exec.ExitError
-	if errors.As(err, &e) {
-		errno = e.ExitCode()
+	if ee, ok := errors.AsType[*exec.ExitError](err); ok {
+		errno = ee.ExitCode()
 	} else {
 		t.Fatalf(`Running "bash", "-c", "exit 20": got %T, want *exec.ExitError`, err)
 	}

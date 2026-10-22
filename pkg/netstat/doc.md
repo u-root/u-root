@@ -8,7 +8,7 @@ Main capabilities (x marks implemented)
 - [x] Print interface information(s) (flags: -i, -I=)
 - [x] Print network statistics (flags: -s, -s4, -s6)
 
-Formating flags (For socket IPv4/IPv6)
+Formatting flags (For socket IPv4/IPv6)
 - [x] `--wide` (don't truncate IP addresses)
 - [x] `--extend`(display other/more information)
 - [x] `--programs` (display PID/Program name for sockets)
@@ -19,7 +19,7 @@ Formating flags (For socket IPv4/IPv6)
 - [ ] `--numeric-port` (don't resolve port names)
 - [x] `--listening` (display listening server sockets)
 
-Formating flags (For socket UNIX)
+Formatting flags (For socket UNIX)
 - [x] `--listening` (display listening server sockets)
 
 Formattig flags (For route printing)
@@ -77,7 +77,7 @@ Hence this functionality is not implemented.
 
 ### IPv6
 For IPv6, the provision of route cache has changed over time. Since kernel
-verison 4.2 only routes with a PMTU exception are marked as RTF_CACHE.
+version 4.2 only routes with a PMTU exception are marked as RTF_CACHE.
 The printing of these routes is implemented.
 >Starting from [Linux 4.2 commit 45e4fd26683c](https:git.kernel.org/pub/scm/linux/kernel/git/davem/net-next.git/commit/?id=45e4fd26683c9a5f88600d91b08a484f7f09226a), only a PMTU exception would create a cache entry.
 >A router doesn’t have to handle these exceptions, so only hosts would get cache entries.
@@ -94,5 +94,5 @@ The printing of these routes is implemented.
 ## Some general thoughts
 The net-tools tool collection goes way back until beginning of 1998 and has a lot legacy/compatibility code in it.
 Parts of old code is functional, but does not follow guidelines for code quality or readability, hence understanding the code
-is quite a challange.
+is quite a challenge.
 

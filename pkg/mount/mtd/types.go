@@ -10,7 +10,7 @@ package mtd
 // called after a sequence of QueueWrite commands.  Close should
 // return an error if there are queued write commands. To erase a
 // device, one calls chip Blank(), QueueWrite(), and SyncWrite(). The
-// operators are deined for the Flasher, not the Chipper, since
+// operators are defined for the Flasher, not the Chipper, since
 // flashing can involve driver-level operations such as unlocking
 // protection bits on a bridge that are more than just a chip
 // operation.

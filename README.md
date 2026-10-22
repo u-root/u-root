@@ -220,7 +220,7 @@ Use `-skip-ldd` to not automatically include ldd dependencies for binary files. 
 
 ## Init and Uinit
 
-u-root has a very simple (exchangable) init system controlled by the `-initcmd`
+u-root has a very simple (exchangeable) init system controlled by the `-initcmd`
 and `-uinitcmd` command-line flags.
 
 *   `-initcmd` determines what `/init` is symlinked to. `-initcmd` may be a
