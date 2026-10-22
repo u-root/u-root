@@ -98,7 +98,7 @@ func GeneratED25519Key(password []byte, privateKeyFilePath string, publicKeyFile
 	}
 
 	var privateKey []byte
-	if len(password) < 1 {
+	if len(password) > 0 {
 		encrypted, err := x509.EncryptPEMBlock(rand.Reader, privBlock.Type, privBlock.Bytes, password, PEMCipher)
 		if err != nil {
 			return err
