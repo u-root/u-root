@@ -34,7 +34,11 @@ func ParseInfo(entryData, tableData []byte) (*Info, error) {
 	}
 	for len(tableData) > 0 {
 		t, remainder, err := ParseTable(tableData)
-		if err != nil && err != errEndOfTable {
+		if err == errEndOfTable {
+			info.Tables = append(info.Tables, t)
+			break
+		}
+		if err != nil {
 			return nil, err
 		}
 		info.Tables = append(info.Tables, t)
