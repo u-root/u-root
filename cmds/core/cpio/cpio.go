@@ -109,7 +109,7 @@ func run(args []string, stdin *os.File, stdout io.Writer, d bool, format string)
 					if !ok {
 						break
 					}
-					err := os.Link(ino, rec.Name)
+					err := linkInRoot(".", ino, rec.Name)
 					debug("Hard linking %s to %s", ino, rec.Name)
 					if err != nil {
 						return err
