@@ -183,9 +183,15 @@ func (c *cmd) run(args ...string) error {
 
 	for _, name := range fileList {
 		if c.recursive {
-			err := filepath.Walk(name, func(path string, _ os.FileInfo, err error) error {
+			err := filepath.Walk(name, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					return err
+				}
+				// Like GNU chmod, ignore symlinks found during the
+				// traversal: os.Chmod follows them, so a link inside
+				// the tree would change a file outside it.
+				if path != name && info.Mode()&os.ModeSymlink != 0 {
+					return nil
 				}
 				err = changeMode(path, mode, octval, mask)
 				return err
