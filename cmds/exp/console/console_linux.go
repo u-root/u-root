@@ -8,30 +8,39 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 )
 
 func console(serial string) (io.Reader, io.Writer, error) {
-	in, out := io.Reader(os.Stdin), io.Writer(os.Stdout)
-
+	_, err16 := strconv.ParseUint(serial, 0, 16)
+	// for all systems we have interest in, a 16-bit port address means we are in
+	// /dev/port space.
 	// This switch is kind of hokey, true, but it's also quite convenient for users.
+	// All they have to do to pick a devices is set an address or a name.
 	switch {
 	// A raw IO port for serial console
-	case []byte(serial)[0] == '0':
+	case []byte(serial)[0] == '0' && err16 == nil:
 		u, err := openUART(serial)
 		if err != nil {
 			return nil, nil, fmt.Errorf("console exits: sorry, can't get a uart: %w", err)
 		}
-		in, out = u, u
+		return u, u, nil
+	case []byte(serial)[0] == '0':
+		u, err := openMemUART(serial)
+		if err != nil {
+			return nil, nil, fmt.Errorf("console exits: sorry, can't get a uart: %w", err)
+		}
+		return u, u, nil
 	case serial == "i8042":
 		u, err := openi8042()
 		if err != nil {
 			return nil, nil, fmt.Errorf("console exits: sorry, can't get an i8042: %w", err)
 		}
-		in, out = u, os.Stdout
+		return u, os.Stdout, nil
 	case serial == "stdio":
 	default:
 		return nil, nil, fmt.Errorf("console must be one of stdio, i8042, or an IO port with a leading 0 (e.g. 0x3f8)")
 	}
 
-	return in, out, nil
+	return io.Reader(os.Stdin), io.Writer(os.Stdout), nil
 }
