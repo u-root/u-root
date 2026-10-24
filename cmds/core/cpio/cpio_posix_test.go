@@ -75,6 +75,16 @@ func TestHardLinkEscape(t *testing.T) {
 			},
 			notVictim: "extract/leak",
 		},
+		{
+			// A link whose new name escapes through an unpacked symlink.
+			name: "symlink",
+			records: []cpio.Record{
+				{ReaderAt: strings.NewReader(".."), Info: cpio.Info{Name: "escape", Mode: cpio.S_IFLNK | 0o777, FileSize: 2}},
+				{ReaderAt: strings.NewReader("evil"), Info: cpio.Info{Name: "payload", Ino: 1, Mode: cpio.S_IFREG | 0o644, FileSize: 4}},
+				{ReaderAt: strings.NewReader(""), Info: cpio.Info{Name: "escape/escaped", Ino: 1, Mode: cpio.S_IFREG | 0o644}},
+			},
+			mustNotExist: "escaped",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			parent := t.TempDir()
