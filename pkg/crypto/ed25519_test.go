@@ -143,7 +143,7 @@ func TestGenerateKeys(t *testing.T) {
 	}
 
 	if !isEncryptedKeyFile(t, privateKeyPath) {
-		t.Errorf(`GeneratED25519Key(password, ...) wrote an unencrypted private key`)
+		t.Errorf(`GeneratED25519Key(%q, ...) wrote an unencrypted private key, want an encrypted key`, password)
 	}
 
 	privateKey, err := LoadPrivateKeyFromFile(privateKeyPath, password)
@@ -155,7 +155,7 @@ func TestGenerateKeys(t *testing.T) {
 		t.Fatalf(`LoadPublicKeyFromFile(publicKeyPath) = _, %v, want nil`, err)
 	}
 	if got := ed25519.PrivateKey(privateKey).Public(); !bytes.Equal(got.(ed25519.PublicKey), publicKey) {
-		t.Errorf(`public half of the loaded private key = %x, want %x`, got, publicKey)
+		t.Errorf(`LoadPrivateKeyFromFile(privateKeyPath, password).Public() = %x, want %x`, got, publicKey)
 	}
 }
 
@@ -167,6 +167,6 @@ func TestGenerateUnprotectedKeys(t *testing.T) {
 	}
 
 	if isEncryptedKeyFile(t, privateKeyPath) {
-		t.Errorf(`GeneratED25519Key(nil, ...) wrote an encrypted private key`)
+		t.Errorf(`GeneratED25519Key(nil, ...) wrote an encrypted private key, want an unencrypted key`)
 	}
 }
