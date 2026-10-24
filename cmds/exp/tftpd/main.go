@@ -55,6 +55,12 @@ func isValidPath(rootDir, path string) (string, error) {
 	realPath, err := filepath.EvalSymlinks(targetPath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// A dangling symlink also ends up here. Creating the
+			// file would follow it to wherever it points.
+			if _, err := os.Lstat(targetPath); err == nil {
+				return "", errInvalidPath
+			}
+
 			// For non-existent paths (e.g., for file creation),
 			// we need to check the parent directory
 			parentDir := filepath.Dir(targetPath)
