@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -183,14 +184,14 @@ func (c *cmd) run(args ...string) error {
 
 	for _, name := range fileList {
 		if c.recursive {
-			err := filepath.Walk(name, func(path string, info os.FileInfo, err error) error {
+			err := filepath.WalkDir(name, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
 					return err
 				}
-				// Like GNU chmod, ignore symlinks found during the
-				// traversal: os.Chmod follows them, so a link inside
-				// the tree would change a file outside it.
-				if path != name && info.Mode()&os.ModeSymlink != 0 {
+				// WalkDir doesn't descend into symlinks but still reports
+				// them, and os.Chmod follows them. Like GNU chmod, skip
+				// any met during the traversal.
+				if path != name && d.Type()&fs.ModeSymlink != 0 {
 					return nil
 				}
 				err = changeMode(path, mode, octval, mask)
