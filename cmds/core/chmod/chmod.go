@@ -191,7 +191,7 @@ func (c *cmd) run(args ...string) error {
 				// WalkDir doesn't descend into symlinks but still reports
 				// them, and os.Chmod follows them. Like GNU chmod, skip
 				// any met during the traversal.
-				if path != name && d.Type()&fs.ModeSymlink != 0 {
+				if path != name && d.Type()&fs.ModeSymlink == fs.ModeSymlink {
 					return nil
 				}
 				err = changeMode(path, mode, octval, mask)
