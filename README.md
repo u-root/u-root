@@ -480,6 +480,29 @@ and other config files to make the transition to LinuxBoot easier.
     them. Supports (basic) GRUB, (basic) syslinux, (non-EFI) BootLoaderSpec, and
     ESXi configurations.
 
+### UEFI boot with CrabEFI (amd64)
+
+Bundle a [CrabEFI](https://github.com/ArthurHeymans/CrabEFI) coreboot payload
+at `/boot/crabefi.elf` to add **UEFI (CrabEFI)** to the regular `boot` menu:
+
+```shell
+u-root -uinitcmd=boot -skip-ldd \
+    -files /path/to/crabefi.elf:boot/crabefi.elf \
+    ./cmds/core/init ./cmds/core/gosh ./cmds/boot/boot
+```
+
+The entry follows the discovered Linux entries. `boot -crabefi=/other/payload`
+overrides its path; `boot -crabefi=''` disables it. The payload is loaded
+natively in Go, with the same load, filesystem cleanup, and execution flow
+as other boot images. No helper executable or kexec-tools is needed.
+CrabEFI then discovers EFI boot managers, including Windows Boot Manager,
+using its own drivers.
+
+The first kernel must expose the firmware memory map, ACPI, DMI sysfs tables,
+`/dev/mem`, and a physical 32-bit framebuffer such as coreboot simplefb.
+The handoff does not authenticate or measure the LinuxBoot stages, preserve
+TPM event logs, or provide persistent firmware-variable storage.
+
 More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the
 [LinuxBoot book](https://book.linuxboot.org) chapter about
