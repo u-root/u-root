@@ -14,6 +14,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"math"
 	"net"
@@ -195,14 +196,14 @@ func (s *dserver6) dhcpHandler(conn net.PacketConn, peer net.Addr, m dhcpv6.DHCP
 	log.Printf("DHCPv6 request successfully handled, reply: %v", reply.Summary())
 }
 
-// tftpFileServer serves TFTP read requests from root. Names are opened through
-// os.Root, so ".." elements and symlinks cannot reach files outside of it.
+// tftpFileServer serves TFTP read requests from fsys. Given an os.Root's FS,
+// ".." elements and symlinks cannot reach files outside of the root.
 type tftpFileServer struct {
-	root *os.Root
+	fsys fs.FS
 }
 
 func (s *tftpFileServer) ServeTFTP(w tftp.ReadRequest) {
-	f, err := s.root.Open(strings.TrimLeft(w.Name(), "/"))
+	f, err := s.fsys.Open(strings.TrimLeft(w.Name(), "/"))
 	if err != nil {
 		log.Println(err)
 		w.WriteError(tftp.ErrCodeFileNotFound, fmt.Sprintf("File %q does not exist", w.Name()))
@@ -247,13 +248,17 @@ func main() {
 			}
 
 			log.Println("starting file server")
-			server.ReadHandler(&tftpFileServer{root: root})
+			server.ReadHandler(&tftpFileServer{fsys: root.FS()})
 			log.Fatal(server.ListenAndServe())
 		})
 	}
 	if len(*httpDir) != 0 {
+		root, err := os.OpenRoot(*httpDir)
+		if err != nil {
+			log.Fatalf("Could not open HTTP directory: %v", err)
+		}
 		wg.Go(func() {
-			http.Handle("/", http.FileServer(http.Dir(*httpDir)))
+			http.Handle("/", http.FileServerFS(root.FS()))
 			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *httpPort), nil))
 		})
 	}
