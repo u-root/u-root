@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/ibft"
+	"github.com/u-root/u-root/pkg/boot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/boot/kexec"
-	"github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/uio/uio"
 )
