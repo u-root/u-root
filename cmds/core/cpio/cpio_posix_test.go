@@ -115,14 +115,9 @@ func TestHardLinkEscape(t *testing.T) {
 			}
 			defer f.Close()
 
-			wd, err := os.Getwd()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.Chdir(wd)
-			if err := os.Chdir(extractDir); err != nil {
-				t.Fatal(err)
-			}
+			// run extracts into the working directory. t.Chdir restores it
+			// afterwards and fails the test if it is ever made parallel.
+			t.Chdir(extractDir)
 
 			if err := run([]string{"i"}, f, &bytes.Buffer{}, false, "newc"); err == nil {
 				t.Errorf("run(i) = nil, want error for escaping hard link")
