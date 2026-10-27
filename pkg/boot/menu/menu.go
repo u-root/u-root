@@ -8,10 +8,12 @@ package menu
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -44,12 +46,18 @@ type Entry interface {
 
 	// Exec transfers execution to another process or kernel.
 	//
-	// Exec either returns an error or does not return at all.
+	// Exec returns if the process exits or the transfer fails.
 	Exec() error
 
 	// IsDefault indicates that this action should be run by default if the
 	// user didn't make an entry choice.
 	IsDefault() bool
+}
+
+// ReturnsToMenu is implemented by entries whose Exec returns when they are
+// done, such as a shell. When Exec returns nil, the menu is shown again.
+type ReturnsToMenu interface {
+	ReturnsToMenu()
 }
 
 // ExtendedLabel calls Entry.String(), but falls back to Entry.Label(). Shortly
@@ -317,11 +325,28 @@ func (StartShell) Load() error {
 func (s StartShell) Exec() error {
 	// Reset signal handler for SIGINT to enable user interrupts again
 	signal.Reset(syscall.SIGINT)
-	return libinit.Command("/bin/defaultsh", s.Mod...).Run()
+	err := libinit.Command("/bin/defaultsh", s.Mod...).Run()
+
+	// The exit status of the shell is that of the last command the user
+	// ran, so it is not a failure.
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		err = nil
+	}
+
+	// The shell ran in its own session and took the controlling terminal.
+	// Take it back so that the menu can be shown again.
+	if err := unix.IoctlSetInt(int(os.Stdin.Fd()), unix.TIOCSCTTY, 1); err != nil {
+		log.Printf("Failed to take back the controlling terminal: %v", err)
+	}
+	return err
 }
 
 // IsDefault indicates that this should not be run as a default action.
 func (StartShell) IsDefault() bool { return false }
+
+// ReturnsToMenu shows the menu again after the shell exits.
+func (StartShell) ReturnsToMenu() {}
 
 // Reboot is a menu.Entry that reboots the machine.
 type Reboot struct{}
