@@ -109,6 +109,124 @@ func trampoline(kernelEntry, dtbBase uint64) []byte {
 	return t
 }
 
+// loaderProp is the property that marks device trees passed by LinuxBoot.
+func loaderProp() dt.Property {
+	return dt.PropertyString(loaderProperty, loaderVersion())
+}
+
+// fixedRand is a source of randomness that returns the same byte forever,
+// so that every load gets the same seeds and tests can compare device trees
+// byte for byte.
+type fixedRand byte
+
+func (r fixedRand) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = byte(r)
+	}
+	return len(p), nil
+}
+
+const testRand = fixedRand(0x5a)
+
+// The seeds that loading adds to /chosen when it reads them from testRand.
+func kaslrSeedProp() dt.Property {
+	return dt.Property{Name: "kaslr-seed", Value: bytes.Repeat([]byte{byte(testRand)}, kaslrSeedSize)}
+}
+
+func rngSeedProp() dt.Property {
+	return dt.Property{Name: "rng-seed", Value: bytes.Repeat([]byte{byte(testRand)}, rngSeedSize)}
+}
+
+// chosenProps returns the properties that loading adds to /chosen, followed
+// by props.
+func chosenProps(props ...dt.Property) []dt.Property {
+	return append([]dt.Property{loaderProp(), kaslrSeedProp(), rngSeedProp()}, props...)
+}
+
+// chosenProperty returns a property of /chosen in the device tree segment.
+func chosenProperty(t *testing.T, segs kexec.Segments, name string) ([]byte, bool) {
+	t.Helper()
+	for _, seg := range segs {
+		if !bytes.HasPrefix(seg.Buf, []byte{0xd0, 0x0d, 0xfe, 0xed}) {
+			continue
+		}
+		fdt, err := dt.ReadFDT(bytes.NewReader(seg.Buf))
+		if err != nil {
+			t.Fatalf("reading device tree segment: %v", err)
+		}
+		chosen, ok := fdt.NodeByName("chosen")
+		if !ok {
+			t.Fatal("no /chosen node in the device tree segment")
+		}
+		p, ok := chosen.LookProperty(name)
+		if !ok {
+			return nil, false
+		}
+		return p.Value, true
+	}
+	t.Fatal("no device tree segment")
+	return nil, false
+}
+
+func TestKexecLoadImageSeeds(t *testing.T) {
+	want := make([]byte, kaslrSeedSize+rngSeedSize)
+	for i := range want {
+		want[i] = byte(i + 1)
+	}
+	fdt := &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+		dt.NewNode("chosen"),
+		dt.NewNode("memory", dt.WithProperty(
+			dt.PropertyString("device_type", "memory"),
+			dt.PropertyRegion("reg", 0x40000000, 0x10000000),
+		)),
+	))}
+	img, err := kexecLoadImage(bytes.NewReader(want), openFile(t, "../image/testdata/Image"), nil, "", fdtReader(t, fdt), nil)
+	if err != nil {
+		t.Fatalf("kexecLoadImage() = %v", err)
+	}
+	if got, _ := chosenProperty(t, img.segments, "kaslr-seed"); !bytes.Equal(got, want[:kaslrSeedSize]) {
+		t.Errorf("kaslr-seed = %x, want %x", got, want[:kaslrSeedSize])
+	}
+	if got, _ := chosenProperty(t, img.segments, "rng-seed"); !bytes.Equal(got, want[kaslrSeedSize:]) {
+		t.Errorf("rng-seed = %x, want %x", got, want[kaslrSeedSize:])
+	}
+}
+
+func TestKexecLoadImageSeedsError(t *testing.T) {
+	fdt := &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+		dt.NewNode("chosen"),
+		dt.NewNode("memory", dt.WithProperty(
+			dt.PropertyString("device_type", "memory"),
+			dt.PropertyRegion("reg", 0x40000000, 0x10000000),
+		)),
+	))}
+	// An empty source of randomness returns io.EOF right away.
+	_, err := kexecLoadImage(bytes.NewReader(nil), openFile(t, "../image/testdata/Image"), nil, "", fdtReader(t, fdt), nil)
+	if !errors.Is(err, io.EOF) {
+		t.Errorf("kexecLoadImage() = %v, want %v", err, io.EOF)
+	}
+}
+
+func TestKexecLoadImageLoaderProperty(t *testing.T) {
+	fdt := &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
+		dt.NewNode("chosen", dt.WithProperty(
+			dt.PropertyString(loaderProperty, "an older loader"),
+		)),
+		dt.NewNode("memory", dt.WithProperty(
+			dt.PropertyString("device_type", "memory"),
+			dt.PropertyRegion("reg", 0x40000000, 0x10000000),
+		)),
+	))}
+	img, err := kexecLoadImage(testRand, openFile(t, "../image/testdata/Image"), nil, "", fdtReader(t, fdt), nil)
+	if err != nil {
+		t.Fatalf("kexecLoadImage() = %v", err)
+	}
+	want := append([]byte(loaderVersion()), 0)
+	if got, ok := chosenProperty(t, img.segments, loaderProperty); !ok || !bytes.Equal(got, want) {
+		t.Errorf("%s = %q, %v, want %q", loaderProperty, got, ok, want)
+	}
+}
+
 func TestKexecLoadImage(t *testing.T) {
 	Debug = t.Logf
 
@@ -146,7 +264,8 @@ func TestKexecLoadImage(t *testing.T) {
 			}),
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen"),
+					// Removing bootargs moves the last property into its place.
+					dt.NewNode("chosen", dt.WithProperty(rngSeedProp(), loaderProp(), kaslrSeedProp())),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
@@ -174,12 +293,12 @@ func TestKexecLoadImage(t *testing.T) {
 			segments: kexec.Segments{
 				kexec.NewSegment([]byte("ramfs"), kexec.Range{Start: 0x100000, Size: 0x1000}),
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen", dt.WithProperty(
+					dt.NewNode("chosen", dt.WithProperty(chosenProps(
 						dt.PropertyU64("linux,initrd-start", 0x100000),
 						// TODO: should this actually be 0x100005?
 						dt.PropertyU64("linux,initrd-end", 0x101000),
 						dt.PropertyString("bootargs", "foobar"),
-					)),
+					)...)),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
@@ -207,7 +326,7 @@ func TestKexecLoadImage(t *testing.T) {
 			}),
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen"),
+					dt.NewNode("chosen", dt.WithProperty(chosenProps()...)),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
@@ -362,7 +481,7 @@ func TestKexecLoadImage(t *testing.T) {
 			},
 			segments: kexec.Segments{
 				kexec.NewSegment(fdtBytes(t, &dt.FDT{RootNode: dt.NewNode("/", dt.WithChildren(
-					dt.NewNode("chosen"),
+					dt.NewNode("chosen", dt.WithProperty(chosenProps()...)),
 					dt.NewNode("test memory", dt.WithProperty(
 						dt.PropertyString("device_type", "memory"),
 						dt.PropertyRegion("reg", 0x100000, 0xf00000),
@@ -374,7 +493,7 @@ func TestKexecLoadImage(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kexecLoadImage(tt.kernel, tt.ramfs, tt.cmdline, tt.fdt, tt.reservations)
+			got, err := kexecLoadImage(testRand, tt.kernel, tt.ramfs, tt.cmdline, tt.fdt, tt.reservations)
 			for _, wantErr := range tt.errs {
 				if !errors.Is(err, wantErr) {
 					t.Errorf("kexecLoad Arm Image = %v, want %v", err, wantErr)

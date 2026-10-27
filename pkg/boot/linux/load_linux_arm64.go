@@ -5,6 +5,7 @@
 package linux
 
 import (
+	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +19,7 @@ import (
 // for kexec segment allocation. They are not transmitted to the next kernel to
 // be considered reserved.
 func KexecLoad(kernel, ramfs *os.File, cmdline string, dtb io.ReaderAt, reservedRanges kexec.Ranges) error {
-	img, err := kexecLoadImage(kernel, ramfs, cmdline, dtb, reservedRanges)
+	img, err := kexecLoadImage(rand.Reader, kernel, ramfs, cmdline, dtb, reservedRanges)
 	if err != nil {
 		return err
 	}
