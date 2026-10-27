@@ -140,6 +140,30 @@ func (mm *MemoryMap) Insert(r TypedRange) {
 	*mm = newMap
 }
 
+// regRegions decodes a reg property using the #address-cells and #size-cells
+// of parent. If parent does not set them, reg is read as a single <u64x2>,
+// which is what this package has always assumed.
+func regRegions(parent *dt.Node, reg *dt.Property) ([]dt.Region, error) {
+	ac, aok := parent.LookProperty("#address-cells")
+	sc, sok := parent.LookProperty("#size-cells")
+	if !aok || !sok {
+		r, err := reg.AsRegion()
+		if err != nil {
+			return nil, err
+		}
+		return []dt.Region{*r}, nil
+	}
+	addressCells, err := ac.AsU32()
+	if err != nil {
+		return nil, err
+	}
+	sizeCells, err := sc.AsU32()
+	if err != nil {
+		return nil, err
+	}
+	return reg.AsRegions(addressCells, sizeCells)
+}
+
 // MemoryMapFromFDT reads firmware provided memory map from an FDT.
 func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 	var mm MemoryMap
@@ -154,14 +178,18 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 		}
 		p, found = n.LookProperty("reg")
 		if found {
-			r, err := p.AsRegion()
+			// Memory nodes are children of the root node, so the root's
+			// cell sizes apply.
+			regions, err := regRegions(fdt.RootNode, p)
 			if err != nil {
 				return err
 			}
-			mm = append(mm, TypedRange{
-				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
-				Type:  RangeRAM,
-			})
+			for _, r := range regions {
+				mm = append(mm, TypedRange{
+					Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
+					Type:  RangeRAM,
+				})
+			}
 		}
 		return nil
 	}
@@ -170,26 +198,33 @@ func MemoryMapFromFDT(fdt *dt.FDT) (MemoryMap, error) {
 		return nil, err
 	}
 
-	reserveMemory := func(n *dt.Node) error {
+	reserveMemory := func(parent, n *dt.Node) error {
 		p, found := n.LookProperty("reg")
 		if found {
-			r, err := p.AsRegion()
+			regions, err := regRegions(parent, p)
 			if err != nil {
 				return err
 			}
-
-			mm.Insert(TypedRange{
-				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
-				Type:  RangeReserved,
-			})
+			for _, r := range regions {
+				mm.Insert(TypedRange{
+					Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
+					Type:  RangeReserved,
+				})
+			}
 		}
 		return nil
 	}
 	resv, found := fdt.NodeByName("reserved-memory")
 	if found {
-		err := resv.Walk(reserveMemory)
-		if err != nil {
+		// The reserved-memory node itself is addressed by the root's cells,
+		// its children by the cells it declares.
+		if err := reserveMemory(fdt.RootNode, resv); err != nil {
 			return nil, err
+		}
+		for _, c := range resv.Children {
+			if err := reserveMemory(resv, c); err != nil {
+				return nil, err
+			}
 		}
 	}
 
