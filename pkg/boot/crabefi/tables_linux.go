@@ -15,11 +15,33 @@ import (
 )
 
 const (
-	arenaSize         = 1 << 20
-	handoffOffset     = 0x4000
+	// Keep the handoff away from the payload's usual 1 MiB load address.
+	// This is a placement policy, not a coreboot ABI requirement.
+	arenaMin         = 128 << 20
+	arenaSize        = 1 << 20
+	trampolineOffset = 0x1000
+	handoffOffset    = 0x4000 // leaves two pages for the temporary stack
+
+	// Offsets relative to the coreboot table, not the start of the arena.
 	smbiosEntryOffset = 0x1000
 	smbiosDataOffset  = 0x1100
 	pageSize          = 4096
+
+	// CrabEFI's coreboot table parser uses a fixed-capacity memory map.
+	maxMemoryRegions = 64
+
+	// coreboot/src/commonlib/include/commonlib/coreboot_tables.h and
+	// coreboot/src/commonlib/bsd/include/commonlib/bsd/cbmem_id.h.
+	tagMemory      = 0x01
+	tagFramebuffer = 0x12
+	tagCBMEMEntry  = 0x31
+	tagRSDP        = 0x43
+	cbmemIDSMBIOS  = 0x534d4254 // "SMBT"
+
+	memoryRAM      = 1
+	memoryReserved = 2
+	memoryACPI     = 3
+	memoryNVS      = 4
 )
 
 // These structures are serialized with encoding/binary, without Go padding.
@@ -48,6 +70,7 @@ type framebufferInfo struct {
 	Red, Green, Blue, Reserved colorChannel
 }
 
+// checksum is coreboot's little-endian Internet checksum (ipchksum).
 func checksum(data []byte) uint16 {
 	var sum uint32
 	for i, b := range data {
@@ -106,14 +129,14 @@ func makeHandoff(memory kexec.MemoryMap, base, rsdp uint64, fb framebufferInfo, 
 	}
 	var ranges []memoryRange
 	for _, r := range memory {
-		kind := uint32(2)
+		kind := uint32(memoryReserved)
 		switch r.Type {
 		case kexec.RangeRAM:
-			kind = 1
+			kind = memoryRAM
 		case kexec.RangeACPI:
-			kind = 3
+			kind = memoryACPI
 		case kexec.RangeNVS:
-			kind = 4
+			kind = memoryNVS
 		}
 		ranges = append(ranges, memoryRange{uint64(r.Start), uint64(r.Size), kind})
 	}
@@ -122,8 +145,8 @@ func makeHandoff(memory kexec.MemoryMap, base, rsdp uint64, fb framebufferInfo, 
 		tag  uint32
 		data any
 	}{
-		{1, ranges}, {0x43, rsdp}, {0x12, fb},
-		{0x31, cbmemEntry{base + smbiosEntryOffset, uint32(smbiosDataOffset + len(data) - smbiosEntryOffset), 0x534d4254}},
+		{tagMemory, ranges}, {tagRSDP, rsdp}, {tagFramebuffer, fb},
+		{tagCBMEMEntry, cbmemEntry{base + smbiosEntryOffset, uint32(smbiosDataOffset + len(data) - smbiosEntryOffset), cbmemIDSMBIOS}},
 	} {
 		body, err := binary.Append(nil, binary.LittleEndian, record.data)
 		if err != nil {

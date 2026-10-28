@@ -501,7 +501,9 @@ using its own drivers.
 The first kernel must expose the firmware memory map, ACPI, DMI sysfs tables,
 `/dev/mem`, and a physical 32-bit framebuffer such as coreboot simplefb.
 The handoff does not authenticate or measure the LinuxBoot stages, preserve
-TPM event logs, or provide persistent firmware-variable storage.
+TPM event logs, or provide persistent firmware-variable storage. See the
+[loader documentation](pkg/boot/crabefi/README.md) for a pinned payload build,
+kernel requirements, entry ABI, and validation limits.
 
 More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the

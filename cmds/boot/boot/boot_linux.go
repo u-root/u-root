@@ -83,7 +83,7 @@ func appendCrabEFI(images []boot.OSImage, payload string) ([]boot.OSImage, error
 		return images, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("stat CrabEFI payload %q: %w", payload, err)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("CrabEFI payload %q is not a regular file", payload)

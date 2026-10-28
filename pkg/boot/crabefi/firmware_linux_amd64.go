@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -49,15 +50,21 @@ func preserved(memory kexec.MemoryMap, address uint64, size uint64) bool {
 }
 
 func validateRSDP(data []byte) error {
-	var table rsdpTable
-	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, &table); err != nil {
+	var legacy rsdpV1
+	if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, &legacy); err != nil {
 		return err
 	}
-	if table.Legacy.Signature != [8]byte{'R', 'S', 'D', ' ', 'P', 'T', 'R', ' '} || byteSum(data[:binary.Size(table.Legacy)]) != 0 {
+	if legacy.Signature != [8]byte{'R', 'S', 'D', ' ', 'P', 'T', 'R', ' '} || byteSum(data[:binary.Size(legacy)]) != 0 {
 		return fmt.Errorf("invalid RSDP signature or checksum")
 	}
-	if table.Legacy.Revision >= 2 && (int(table.Length) != len(data) || byteSum(data) != 0) {
-		return fmt.Errorf("invalid extended RSDP")
+	if legacy.Revision >= 2 {
+		var table rsdpTable
+		if err := binary.Read(bytes.NewReader(data), binary.LittleEndian, &table); err != nil {
+			return err
+		}
+		if int(table.Length) != len(data) || byteSum(data) != 0 {
+			return fmt.Errorf("invalid extended RSDP")
+		}
 	}
 	return nil
 }
@@ -79,11 +86,14 @@ func rsdpFromLog(log string) (uint64, error) {
 }
 
 func readRSDP(memory kexec.MemoryMap) (uint64, []byte, error) {
-	if rsdp, err := acpi.GetRSDPEFI(); err == nil {
+	// Reuse the ACPI package's EFI and legacy discovery methods first.
+	if rsdp, err := acpi.GetRSDP(); err == nil {
 		return uint64(rsdp.RSDPAddr()), rsdp.AllData(), nil
 	}
-	// READ_ALL does not consume or clear Linux's kernel log.
-	size, err := unix.Klogctl(10, nil)
+	// Coreboot may place the RSDP outside the legacy scan area without EFI
+	// sysfs. The kernel log is a fallback, and must still contain its ACPI
+	// discovery message. READ_ALL does not consume or clear that log.
+	size, err := unix.Klogctl(unix.SYSLOG_ACTION_SIZE_BUFFER, nil)
 	if err != nil {
 		return 0, nil, fmt.Errorf("kernel log unavailable: %w", err)
 	}
@@ -91,7 +101,7 @@ func readRSDP(memory kexec.MemoryMap) (uint64, []byte, error) {
 		return 0, nil, fmt.Errorf("empty kernel log")
 	}
 	log := make([]byte, size)
-	n, err := unix.Klogctl(3, log)
+	n, err := unix.Klogctl(unix.SYSLOG_ACTION_READ_ALL, log)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -99,19 +109,31 @@ func readRSDP(memory kexec.MemoryMap) (uint64, []byte, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	data := make([]byte, binary.Size(rsdpTable{}))
-	if !preserved(memory, address, uint64(len(data))) {
-		return 0, nil, fmt.Errorf("RSDP is not in preserved firmware memory")
-	}
 	mem, err := os.Open("/dev/mem")
 	if err != nil {
 		return 0, nil, err
 	}
 	defer mem.Close()
-	if _, err := io.ReadFull(io.NewSectionReader(mem, int64(address), int64(len(data))), data); err != nil {
-		return 0, nil, err
+	data, err := readRSDPAt(mem, memory, address)
+	return address, data, err
+}
+
+// readRSDPAt checks the physical extent before converting to ReaderAt's signed
+// offset. In particular, a kernel-log address must not wrap into a negative
+// /dev/mem offset, even if a firmware memory range happens to contain it.
+func readRSDPAt(mem io.ReaderAt, memory kexec.MemoryMap, address uint64) ([]byte, error) {
+	size := binary.Size(rsdpTable{})
+	if address > math.MaxInt64-uint64(size) {
+		return nil, fmt.Errorf("RSDP address %#x exceeds int64 read extent", address)
 	}
-	return address, data, nil
+	if !preserved(memory, address, uint64(size)) {
+		return nil, fmt.Errorf("RSDP is not in preserved firmware memory")
+	}
+	data := make([]byte, size)
+	if _, err := mem.ReadAt(data, int64(address)); err != nil {
+		return nil, fmt.Errorf("read RSDP at %#x: %w", address, err)
+	}
+	return data, nil
 }
 
 func framebufferRecord(fb *framebuffer.Framebuffer) (framebufferInfo, error) {
@@ -119,6 +141,7 @@ func framebufferRecord(fb *framebuffer.Framebuffer) (framebufferInfo, error) {
 	if fixed.Type != 0 || fixed.Visual != 2 || v.Bits_per_pixel != 32 ||
 		v.Xoffset != 0 || v.Yoffset != 0 || v.Grayscale != 0 || v.Nonstd != 0 ||
 		v.Xres == 0 || v.Yres == 0 || fixed.Smem_start == 0 || fixed.Line_length%4 != 0 ||
+		// CrabEFI's x86 entry identity-maps only the first 64 GiB.
 		fixed.Smem_start >= 64<<30 || uint64(fixed.Smem_len) > (64<<30)-fixed.Smem_start ||
 		uint64(v.Xres)*4 > uint64(fixed.Line_length) ||
 		uint64(fixed.Line_length)*uint64(v.Yres) > uint64(fixed.Smem_len) {
@@ -149,13 +172,10 @@ func framebufferRecord(fb *framebuffer.Framebuffer) (framebufferInfo, error) {
 
 func readFirmware() (firmwareInfo, error) {
 	var f firmwareInfo
-	memory, err := kexec.MemoryMapFromSysfsMemmap()
+	var err error
+	f.memory, err = kexec.MemoryMapFromSysfsMemmap()
 	if err != nil {
-		return f, err
-	}
-	f.memory, err = normalizeMemoryMap(memory)
-	if err != nil {
-		return f, err
+		return f, fmt.Errorf("firmware memory map: %w", err)
 	}
 	var data []byte
 	f.rsdp, data, err = readRSDP(f.memory)
@@ -170,7 +190,7 @@ func readFirmware() (firmwareInfo, error) {
 	}
 	fb, err := framebuffer.Init("/dev/fb0")
 	if err != nil {
-		return f, err
+		return f, fmt.Errorf("open framebuffer: %w", err)
 	}
 	defer fb.Close()
 	f.framebuffer, err = framebufferRecord(fb)
@@ -184,8 +204,11 @@ func readFirmware() (firmwareInfo, error) {
 	}
 	f.smbiosEntry, err = os.ReadFile("/sys/firmware/dmi/tables/smbios_entry_point")
 	if err != nil {
-		return f, err
+		return f, fmt.Errorf("read SMBIOS entry: %w", err)
 	}
 	f.smbiosData, err = os.ReadFile("/sys/firmware/dmi/tables/DMI")
-	return f, err
+	if err != nil {
+		return f, fmt.Errorf("read SMBIOS data: %w", err)
+	}
+	return f, nil
 }

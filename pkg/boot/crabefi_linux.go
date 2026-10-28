@@ -22,6 +22,7 @@ type CrabEFIImage struct {
 
 var _ OSImage = &CrabEFIImage{}
 
+// Label returns the configured name or the default firmware menu label.
 func (ci *CrabEFIImage) Label() string {
 	if ci.Name != "" {
 		return ci.Name
@@ -29,9 +30,12 @@ func (ci *CrabEFIImage) Label() string {
 	return "UEFI (CrabEFI)"
 }
 
+// String describes the payload without reading it.
 func (ci *CrabEFIImage) String() string {
 	return fmt.Sprintf("CrabEFI(payload=%s)", stringer(ci.Payload))
 }
+
+// Rank returns the boot menu priority.
 func (ci *CrabEFIImage) Rank() int { return ci.BootRank }
 
 // Edit does nothing: this is firmware, not a Linux command line.
@@ -51,5 +55,8 @@ func (ci *CrabEFIImage) Load(opts ...LoadOption) error {
 	if !options.callKexecLoad {
 		return nil
 	}
-	return kexec.Load(entry, segments, 0)
+	if err := kexec.Load(entry, segments, 0); err != nil {
+		return fmt.Errorf("load CrabEFI: %w", err)
+	}
+	return nil
 }

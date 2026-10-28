@@ -37,6 +37,25 @@ func TestCrabEFIMenuOption(t *testing.T) {
 	if err != nil || len(images) != 2 {
 		t.Fatalf("appendCrabEFI(disabled) = %v, %v", images, err)
 	}
+	images, err = appendCrabEFI(nil, payload)
+	if err != nil || len(images) != 1 {
+		t.Fatalf("appendCrabEFI(no Linux images) = %v, %v; want one firmware image", images, err)
+	}
+	ci, ok := images[0].(*boot.CrabEFIImage)
+	if !ok {
+		t.Fatalf("appendCrabEFI() returned %T; want *boot.CrabEFIImage", images[0])
+	}
+	data := make([]byte, len("payload"))
+	if _, err := ci.Payload.ReadAt(data, 0); err != nil || string(data) != "payload" {
+		t.Errorf("CrabEFI payload ReadAt() = %q, %v; want payload, nil", data, err)
+	}
+}
+
+func TestCrabEFIDisabled(t *testing.T) {
+	images, err := appendCrabEFI(nil, "")
+	if err != nil || len(images) != 0 {
+		t.Errorf("appendCrabEFI(disabled, no images) = %v, %v; want no images, nil", images, err)
+	}
 }
 
 func TestCrabEFIInvalidPath(t *testing.T) {

@@ -10,7 +10,12 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
+	"errors"
+	"fmt"
+	"math"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/orangecms/go-framebuffer/framebuffer"
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -25,11 +30,17 @@ func testPayload(t *testing.T, change func(*elf.Header64, *elf.Prog64)) []byte {
 	if change != nil {
 		change(&h, &p)
 	}
+	return testPayloadWithProgs(t, h, []elf.Prog64{p})
+}
+
+func testPayloadWithProgs(t *testing.T, h elf.Header64, progs []elf.Prog64) []byte {
+	t.Helper()
+	h.Phnum = uint16(len(progs))
 	var out bytes.Buffer
 	if err := binary.Write(&out, binary.LittleEndian, h); err != nil {
 		t.Fatal(err)
 	}
-	if err := binary.Write(&out, binary.LittleEndian, p); err != nil {
+	if err := binary.Write(&out, binary.LittleEndian, progs); err != nil {
 		t.Fatal(err)
 	}
 	data := make([]byte, 4100)
@@ -74,8 +85,8 @@ func TestPrepareLoad(t *testing.T) {
 		if err != nil {
 			t.Fatalf("prepareLoad(SMBIOS %d) = %v", version, err)
 		}
-		if !segments.PhysContains(entry) {
-			t.Fatalf("prepareLoad entry %#x is outside segments", entry)
+		if entry != arenaMin+trampolineOffset || len(segments) != 2 {
+			t.Fatalf("prepareLoad() = entry %#x, %d segments; want trampoline in arena and two segments", entry, len(segments))
 		}
 		var stage []byte
 		for _, s := range segments {
@@ -159,6 +170,14 @@ func TestRejectInvalidPayload(t *testing.T) {
 		"file exceeds memory": func(h *elf.Header64, p *elf.Prog64) { p.Filesz = 8193 },
 		"crosses 4GiB":        func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 0xfffff000; p.Vaddr = p.Paddr },
 		"not identity mapped": func(h *elf.Header64, p *elf.Prog64) { p.Vaddr += 4096 },
+		"empty segment":       func(h *elf.Header64, p *elf.Prog64) { p.Memsz = 0 },
+		"above 4GiB":          func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 1 << 32; p.Vaddr = p.Paddr },
+		"unaligned segment":   func(h *elf.Header64, p *elf.Prog64) { p.Paddr++; p.Vaddr = p.Paddr },
+		"non-executable":      func(h *elf.Header64, p *elf.Prog64) { p.Flags = uint32(elf.PF_R) },
+		"no load segments":    func(h *elf.Header64, p *elf.Prog64) { p.Type = uint32(elf.PT_NOTE) },
+		"not in RAM":          func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 0xf0000; p.Vaddr = p.Paddr },
+		"offset above int64":  func(h *elf.Header64, p *elf.Prog64) { p.Off = 1 << 63 },
+		"read crosses int64":  func(h *elf.Header64, p *elf.Prog64) { p.Off = math.MaxInt64 - 1 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, _, err := prepareLoad(bytes.NewReader(testPayload(t, change)), testFirmware(t, 3)); err == nil {
@@ -170,6 +189,117 @@ func TestRejectInvalidPayload(t *testing.T) {
 		if _, _, err := prepareLoad(bytes.NewReader(testPayload(t, nil)[:n]), testFirmware(t, 3)); err == nil {
 			t.Errorf("prepareLoad(truncated at %d) succeeded", n)
 		}
+	}
+}
+
+func TestNormalizeMemoryMap(t *testing.T) {
+	for name, memory := range map[string]kexec.MemoryMap{
+		"empty":             nil,
+		"zero size":         {{Range: kexec.Range{Start: 4096}, Type: kexec.RangeRAM}},
+		"wraparound":        {{Range: kexec.Range{Start: math.MaxUint64 - 4095, Size: 8192}, Type: kexec.RangeRAM}},
+		"rounding overflow": {{Range: kexec.Range{Start: math.MaxUint64 - 4095, Size: 4094}, Type: kexec.RangeReserved}},
+		"no full RAM page":  {{Range: kexec.Range{Start: 1, Size: 4094}, Type: kexec.RangeRAM}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := normalizeMemoryMap(memory); err == nil {
+				t.Fatalf("normalizeMemoryMap(%v) = nil; want error", memory)
+			}
+		})
+	}
+	memory := kexec.MemoryMap{
+		{Range: kexec.Range{Start: 0xf001, Size: 30}, Type: kexec.RangeReserved},
+		{Range: kexec.Range{Start: 0x1001, Size: 0x3ffe}, Type: kexec.RangeRAM},
+	}
+	want := kexec.MemoryMap{
+		{Range: kexec.Range{Start: 0x2000, Size: 0x2000}, Type: kexec.RangeRAM},
+		{Range: kexec.Range{Start: 0xf000, Size: 0x1000}, Type: kexec.RangeReserved},
+	}
+	got, err := normalizeMemoryMap(memory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("normalizeMemoryMap() mismatch (-want +got):\n%s", diff)
+	}
+	if memory[0].Start != 0xf001 {
+		t.Error("normalizeMemoryMap() modified its input")
+	}
+}
+
+func TestHandoffAllocation(t *testing.T) {
+	for _, base := range []uintptr{arenaMin, 0xfff00000} {
+		t.Run(fmt.Sprintf("%#x", base), func(t *testing.T) {
+			f := testFirmware(t, 3)
+			f.memory = append(f.memory[:1],
+				kexec.TypedRange{Range: kexec.Range{Start: 0x100000, Size: 8192}, Type: kexec.RangeRAM},
+				kexec.TypedRange{Range: kexec.Range{Start: base, Size: arenaSize}, Type: kexec.RangeRAM})
+			entry, segments, err := prepareLoad(bytes.NewReader(testPayload(t, nil)), f)
+			if err != nil || entry != base+trampolineOffset {
+				t.Fatalf("prepareLoad() = %#x, %v; want %#x, nil", entry, err, base+trampolineOffset)
+			}
+			if _, err := kexec.AlignAndMerge(segments); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	f := testFirmware(t, 3)
+	f.memory[1].Size = 8192
+	if _, _, err := prepareLoad(bytes.NewReader(testPayload(t, nil)), f); !errors.Is(err, kexec.ErrNotEnoughSpace) {
+		t.Errorf("prepareLoad(no arena) = %v; want ErrNotEnoughSpace", err)
+	}
+
+	f = testFirmware(t, 3)
+	payload := testPayload(t, func(h *elf.Header64, p *elf.Prog64) {
+		h.Entry, p.Paddr, p.Vaddr = arenaMin, arenaMin, arenaMin
+	})
+	entry, _, err := prepareLoad(bytes.NewReader(payload), f)
+	if err != nil || entry != arenaMin+arenaSize+trampolineOffset {
+		t.Errorf("prepareLoad(occupied arena) = %#x, %v; want next arena", entry, err)
+	}
+
+	for i := range maxMemoryRegions {
+		f.memory = append(f.memory, kexec.TypedRange{
+			Range: kexec.Range{Start: 0x30000000 + uintptr(i)*8192, Size: 4096}, Type: kexec.RangeReserved,
+		})
+	}
+	if _, _, err := prepareLoad(bytes.NewReader(testPayload(t, nil)), f); err == nil {
+		t.Error("prepareLoad(too many memory regions) = nil; want error")
+	}
+}
+
+func TestELFSegmentValidation(t *testing.T) {
+	var h elf.Header64
+	var p elf.Prog64
+	r := bytes.NewReader(testPayload(t, nil))
+	if err := binary.Read(r, binary.LittleEndian, &h); err != nil {
+		t.Fatal(err)
+	}
+	if err := binary.Read(r, binary.LittleEndian, &p); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := prepareLoad(bytes.NewReader(testPayloadWithProgs(t, h, []elf.Prog64{p, p})), testFirmware(t, 3)); err == nil {
+		t.Error("prepareLoad(overlapping segments) = nil; want error")
+	}
+	var progs []elf.Prog64
+	for i := range 16 {
+		q := p
+		q.Paddr += uint64(i) * 8192
+		q.Vaddr = q.Paddr
+		progs = append(progs, q)
+	}
+	if _, _, err := prepareLoad(bytes.NewReader(testPayloadWithProgs(t, h, progs)), testFirmware(t, 3)); err == nil {
+		t.Error("prepareLoad(too many segments) = nil; want error")
+	}
+	f := testFirmware(t, 3)
+	f.memory[1].Size = 8191
+	if _, _, err := prepareLoad(bytes.NewReader(testPayload(t, nil)), f); err == nil {
+		t.Error("prepareLoad(segment crosses RAM boundary) = nil; want error")
+	}
+}
+
+func TestPrepareLoadNil(t *testing.T) {
+	if _, _, err := PrepareLoad(nil); err == nil {
+		t.Error("PrepareLoad(nil) = nil; want error")
 	}
 }
 
