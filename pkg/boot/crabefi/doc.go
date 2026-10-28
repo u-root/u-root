@@ -10,8 +10,9 @@
 // Only version 1 of CrabEFI's 64-bit entry ABI is supported. The payload must
 // be an identity-linked, little-endian ELF64 executable with a PT_NOTE owned
 // by "CrabEFI\x00", type 1, and a four-byte little-endian version number of 1.
-// The old ELF64 payload with a 32-bit entry has no such note and is rejected.
-// There is no 32-bit fallback or use of the multiboot trampoline.
+// CrabEFI's default coreboot build has a 32-bit entry and is not suitable for
+// this loader. Build the payload with --features entry64 or ./crabefi build
+// --entry64. There is no 32-bit fallback or use of the multiboot trampoline.
 //
 // Linux's x86-64 kexec hands over in long mode with identity-mapped segments.
 // A small entry stub passes the physical coreboot table pointer in RDI and

@@ -16,8 +16,8 @@ import (
 	"github.com/u-root/u-root/pkg/align"
 )
 
-// validateEntryABI requires CrabEFI's version-1 64-bit entry contract. The old
-// 32-bit coreboot payload is also ELF64, so the ELF class alone is insufficient.
+// validateEntryABI requires CrabEFI's version-1 64-bit entry contract. The
+// default 32-bit coreboot build is also ELF64, so the class alone is insufficient.
 // Use program headers: the note must survive stripping section/symbol tables.
 func validateEntryABI(file *elf.File) error {
 	for _, p := range file.Progs {
@@ -67,5 +67,5 @@ func validateEntryABI(file *elf.File) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("missing CrabEFI 64-bit entry ABI note; rebuild the payload")
+	return fmt.Errorf("missing CrabEFI 64-bit entry ABI note; build the payload with --features entry64 or ./crabefi build --entry64")
 }

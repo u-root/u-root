@@ -1,6 +1,6 @@
 # CrabEFI from LinuxBoot
 
-This loader starts CrabEFI's **64-bit-only amd64 payload**, not a PE/COFF EFI
+This loader starts CrabEFI's **opt-in `entry64` amd64 payload**, not a PE/COFF EFI
 application. It needs Linux and the standard Go toolchain; TinyGo and other
 architectures return an unsupported-platform error.
 
@@ -10,24 +10,34 @@ The loader requires version 1 of CrabEFI's 64-bit entry ABI, identified by a
 `CrabEFI` ELF note in a `PT_NOTE` program header. It passes the coreboot table
 pointer in RDI and jumps to the ELF entry without leaving long mode. CrabEFI
 owns its page tables, GDT and stack. There is **no 32-bit fallback**, Multiboot
-adapter, external launcher or kexec-tools dependency. Old ELF64 payloads with
-a 32-bit entry are intentionally rejected; rebuild the payload and u-root
-together. See [doc.go](doc.go) for the exact contract.
+adapter, external launcher or kexec-tools dependency in this loader. CrabEFI's
+**default build keeps its 32-bit coreboot entry**, which remains supported for
+unmodified coreboot but is not suitable for u-root. See [doc.go](doc.go) for the
+64-bit caller contract.
 
-The coordinated CrabEFI revision is
-`e9a6da4ee8feb5497729a238a4e8a40537c4b9cb` (`x86-entry64`), or a later revision
-retaining that entry ABI. From that CrabEFI checkout, build with:
+Use CrabEFI revision `8d2261fbc3a3f83d1c31fcd0807e1173fd6d98fe` from
+[CrabEFI#222](https://github.com/ArthurHeymans/CrabEFI/pull/222), or a later
+revision supporting both entries. Explicitly select its `entry64` feature:
 
 ```sh
-cargo build -p crabefi-coreboot --release --target x86_64-unknown-none
+./crabefi build --arch x86-64 --entry64
 ```
 
-Alternatively, `./crabefi build --arch x86-64` also rebuilds and audits its
-Runtime Services image. Bundle the resulting ELF as `/boot/crabefi.elf`:
+This rebuilds/audits Runtime Services and writes
+`target/entry64/x86_64-unknown-none/release/crabefi`, separately from the default
+coreboot payload. Alternatively, use the checked-in runtime bundle with Cargo:
+
+```sh
+cargo build -p crabefi-coreboot --release --target x86_64-unknown-none --features entry64
+```
+
+Direct Cargo builds write the usual `target/x86_64-unknown-none/release/crabefi`
+path; do not confuse that explicitly flagged output with a default coreboot
+build. Bundle the wrapper's entry64 ELF as `/boot/crabefi.elf`:
 
 ```sh
 u-root -uinitcmd='boot -v' -skip-ldd \
-    -files /path/to/CrabEFI/target/x86_64-unknown-none/release/crabefi:boot/crabefi.elf \
+    -files /path/to/CrabEFI/target/entry64/x86_64-unknown-none/release/crabefi:boot/crabefi.elf \
     ./cmds/core/init ./cmds/core/gosh ./cmds/boot/boot
 ```
 
@@ -61,7 +71,7 @@ the loader does not invent replacement ACPI or SMBIOS tables.
 
 ## Validation and limits
 
-Host tests cover ELF ABI-note validation (including rejection of old payloads),
+Host tests cover ELF ABI-note validation (including rejection of default coreboot builds),
 full-width entry operands, payload and handoff placement above 4 GiB, firmware
 memory validation, coreboot table layout, SMBIOS relocation, signed read bounds,
 framebuffer formats, and menu integration:

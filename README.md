@@ -484,7 +484,8 @@ and other config files to make the transition to LinuxBoot easier.
 
 Bundle a [CrabEFI](https://github.com/ArthurHeymans/CrabEFI) payload supporting
 its version-1 **64-bit entry ABI** at `/boot/crabefi.elf` to add **UEFI (CrabEFI)**
-to the regular `boot` menu. Older payloads with a 32-bit entry are rejected:
+to the regular `boot` menu. Build it with `./crabefi build --entry64` or Cargo's
+`--features entry64`; the default 32-bit-entry build is for coreboot, not u-root:
 
 ```shell
 u-root -uinitcmd=boot -skip-ldd \

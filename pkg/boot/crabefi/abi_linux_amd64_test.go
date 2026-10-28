@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"debug/elf"
 	"encoding/binary"
+	"strings"
 	"testing"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
@@ -21,7 +22,7 @@ const testABINote = "\x08\x00\x00\x00\x04\x00\x00\x00\x01\x00\x00\x00CrabEFI\x00
 func TestEntryABI(t *testing.T) {
 	for name, change := range map[string]func([]byte){
 		"version 1":               func([]byte) {},
-		"legacy payload":          func(b []byte) { clear(b[2048 : 2048+len(testABINote)]) },
+		"default coreboot build":  func(b []byte) { clear(b[2048 : 2048+len(testABINote)]) },
 		"unknown version":         func(b []byte) { b[2048+20] = 2 },
 		"invalid descriptor size": func(b []byte) { b[2048+4] = 8 },
 		"wrong owner":             func(b []byte) { b[2048+12] = 'X' },
@@ -43,12 +44,13 @@ func TestEntryABI(t *testing.T) {
 	}
 }
 
-func TestRejectOldEntryABI(t *testing.T) {
+func TestRejectCorebootEntryABI(t *testing.T) {
 	payload := testPayload(t, nil)
-	// Remove the PT_NOTE program header, as in the old ELF64/.code32 payload.
+	// The default coreboot ELF64/.code32 payload has no entry64 note.
 	binary.LittleEndian.PutUint16(payload[56:], 1)
-	if _, _, err := prepareLoad(bytes.NewReader(payload), testFirmware(t, 3)); err == nil {
-		t.Error("prepareLoad(old ELF64 entry ABI) = nil; want error")
+	_, _, err := prepareLoad(bytes.NewReader(payload), testFirmware(t, 3))
+	if err == nil || !strings.Contains(err.Error(), "--features entry64") {
+		t.Errorf("prepareLoad(default coreboot entry ABI) = %v; want entry64 build hint", err)
 	}
 }
 
