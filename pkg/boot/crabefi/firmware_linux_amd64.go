@@ -122,6 +122,9 @@ func readRSDP(memory kexec.MemoryMap) (uint64, []byte, error) {
 // offset. In particular, a kernel-log address must not wrap into a negative
 // /dev/mem offset, even if a firmware memory range happens to contain it.
 func readRSDPAt(mem io.ReaderAt, memory kexec.MemoryMap, address uint64) ([]byte, error) {
+	if address > math.MaxInt64 {
+		return nil, fmt.Errorf("RSDP address %#x exceeds int64 offset", address)
+	}
 	size := binary.Size(rsdpTable{})
 	if address > math.MaxInt64-uint64(size) {
 		return nil, fmt.Errorf("RSDP address %#x exceeds int64 read extent", address)

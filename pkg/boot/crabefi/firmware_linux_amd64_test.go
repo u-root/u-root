@@ -12,6 +12,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/orangecms/go-framebuffer/framebuffer"
@@ -45,6 +46,16 @@ func TestReadRSDPAt(t *testing.T) {
 	memory[0].Start = 1 << 63
 	if _, err := readRSDPAt(bytes.NewReader(data), memory, 1<<63); err == nil {
 		t.Error("readRSDPAt(high preserved address) = nil; want error")
+	}
+}
+
+func TestReadRSDPAtSignedOffsetOverflow(t *testing.T) {
+	for _, address := range []uint64{math.MaxInt64 + 1, math.MaxUint64} {
+		// A nil reader ensures an invalid signed offset is rejected before
+		// any physical-memory I/O is attempted.
+		if _, err := readRSDPAt(nil, nil, address); err == nil || !strings.Contains(err.Error(), "exceeds int64 offset") {
+			t.Errorf("readRSDPAt(%#x) = %v; want signed-offset error", address, err)
+		}
 	}
 }
 
