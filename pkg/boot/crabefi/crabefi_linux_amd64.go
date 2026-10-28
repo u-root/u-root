@@ -15,7 +15,6 @@ import (
 	"sort"
 
 	"github.com/u-root/u-root/pkg/align"
-	"github.com/u-root/u-root/pkg/boot/internal/trampoline"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"golang.org/x/sys/unix"
 )
@@ -92,6 +91,9 @@ func prepareLoad(payload io.ReaderAt, firmware firmwareInfo) (uintptr, kexec.Seg
 	if file.Class != elf.ELFCLASS64 || file.Data != elf.ELFDATA2LSB || file.Type != elf.ET_EXEC || file.Machine != elf.EM_X86_64 {
 		return 0, nil, fmt.Errorf("expected executable little-endian x86-64 coreboot ELF")
 	}
+	if err := validateEntryABI(file); err != nil {
+		return 0, nil, err
+	}
 	mem := kexec.Memory{Phys: memory}
 	entryValid := false
 	var loaded kexec.Ranges
@@ -99,9 +101,9 @@ func prepareLoad(payload io.ReaderAt, firmware firmwareInfo) (uintptr, kexec.Seg
 		if p.Type != elf.PT_LOAD {
 			continue
 		}
-		// The ELF entry executes in 32-bit protected mode, despite ELFCLASS64.
+		// CrabEFI replaces the caller's identity map with its own 64-GiB map.
 		// kexec rounds segment extents to pages, so validate those pages too.
-		if p.Memsz == 0 || p.Paddr >= 1<<32 || p.Memsz > (1<<32)-p.Paddr || p.Filesz > p.Memsz || p.Vaddr != p.Paddr || !align.IsAligned(p.Paddr, uint64(pageSize)) {
+		if p.Memsz == 0 || p.Paddr >= mappedMemorySize || p.Memsz > mappedMemorySize-p.Paddr || p.Filesz > p.Memsz || p.Vaddr != p.Paddr || !align.IsAligned(p.Paddr, uint64(pageSize)) {
 			return 0, nil, fmt.Errorf("unsupported ELF load segment")
 		}
 		if p.Off > math.MaxInt64 || p.Filesz > math.MaxInt64-p.Off {
@@ -124,7 +126,7 @@ func prepareLoad(payload io.ReaderAt, firmware firmwareInfo) (uintptr, kexec.Seg
 	if !entryValid {
 		return 0, nil, fmt.Errorf("ELF entry is not in executable file data")
 	}
-	// One additional kexec segment holds the adapter, trampoline and tables.
+	// One additional kexec segment holds the entry code and firmware tables.
 	if len(loaded) >= unix.KEXEC_SEGMENT_MAX {
 		return 0, nil, fmt.Errorf("too many ELF load segments")
 	}
@@ -132,10 +134,10 @@ func prepareLoad(payload io.ReaderAt, firmware firmwareInfo) (uintptr, kexec.Seg
 		return 0, nil, err
 	}
 	arena, err := mem.AvailableRAM().FindSpace(arenaSize,
-		kexec.WithinRange(kexec.RangeFromInterval(arenaMin, 1<<32)),
+		kexec.WithinRange(kexec.RangeFromInterval(arenaMin, mappedMemorySize)),
 		kexec.WithAlignment(arenaSize))
 	if err != nil {
-		return 0, nil, fmt.Errorf("allocate CrabEFI handoff below 4 GiB: %w", err)
+		return 0, nil, fmt.Errorf("allocate CrabEFI handoff below 64 GiB: %w", err)
 	}
 	mem.Phys.Insert(kexec.TypedRange{Range: arena, Type: kexec.RangeReserved})
 	if len(mem.Phys) > maxMemoryRegions {
@@ -146,33 +148,20 @@ func prepareLoad(payload io.ReaderAt, firmware firmwareInfo) (uintptr, kexec.Seg
 	if err != nil {
 		return 0, nil, err
 	}
-	// CrabEFI's ELF entry is .code32 and takes a coreboot table pointer at
-	// [esp+4]. It constructs its own page tables before entering long mode.
-	// Do not jump to this entry in 64-bit mode, or to its internal long-mode
-	// label, which depends on that initialization (see doc.go).
-	// The shared trampoline puts the handoff in EBX; adapt it to cdecl.
-	adapter := []byte{
-		0xfa, 0xfc, // cli; cld
-		0x89, 0xdc, // mov esp, ebx
-		0x53,       // push ebx
-		0x6a, 0x00, // push 0 (return address)
-		0xb8, // mov eax, imm32
-	}
-	adapter = binary.LittleEndian.AppendUint32(adapter, uint32(file.Entry))
-	adapter = append(adapter, 0xff, 0xe0) // jmp eax
-	code, err := trampoline.Setup("", 0, uintptr(handoffBase), arena.Start)
-	if err != nil {
-		return 0, nil, err
-	}
-	if len(code) > pageSize {
-		return 0, nil, fmt.Errorf("trampoline exceeds reserved page")
-	}
-	// Keep the trampoline below 4 GiB too, and reserve all handoff storage
-	// in one segment. The stack grows down from handoffBase, above the code.
+	// Linux's x86-64 kexec enters with paging enabled and identity-mapped
+	// segments. Pass the full-width table pointer in RDI without changing
+	// CPU mode, GDT or stack; CrabEFI owns its startup state from this point.
 	stage := make([]byte, handoffOffset+len(tables))
-	copy(stage, adapter)
-	copy(stage[trampolineOffset:], code)
+	copy(stage, entryCode(file.Entry, handoffBase))
 	copy(stage[handoffOffset:], tables)
 	mem.Segments.Insert(kexec.NewSegment(stage, arena))
-	return arena.Start + trampolineOffset, mem.Segments, nil
+	return arena.Start, mem.Segments, nil
+}
+
+func entryCode(entry, handoff uint64) []byte {
+	code := []byte{0xfa, 0xfc, 0x48, 0xbf} // cli; cld; movabs rdi, imm64
+	code = binary.LittleEndian.AppendUint64(code, handoff)
+	code = append(code, 0x48, 0xb8) // movabs rax, imm64
+	code = binary.LittleEndian.AppendUint64(code, entry)
+	return append(code, 0xff, 0xe0) // jmp rax
 }

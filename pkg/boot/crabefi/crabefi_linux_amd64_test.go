@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/orangecms/go-framebuffer/framebuffer"
 	"github.com/u-root/u-root/pkg/boot/kexec"
 	"github.com/u-root/u-root/pkg/smbios"
@@ -35,6 +34,9 @@ func testPayload(t *testing.T, change func(*elf.Header64, *elf.Prog64)) []byte {
 
 func testPayloadWithProgs(t *testing.T, h elf.Header64, progs []elf.Prog64) []byte {
 	t.Helper()
+	progs = append(append([]elf.Prog64(nil), progs...), elf.Prog64{
+		Type: uint32(elf.PT_NOTE), Off: 2048, Filesz: uint64(len(testABINote)), Align: 4,
+	})
 	h.Phnum = uint16(len(progs))
 	var out bytes.Buffer
 	if err := binary.Write(&out, binary.LittleEndian, h); err != nil {
@@ -45,6 +47,7 @@ func testPayloadWithProgs(t *testing.T, h elf.Header64, progs []elf.Prog64) []by
 	}
 	data := make([]byte, 4100)
 	copy(data, out.Bytes())
+	copy(data[2048:], testABINote)
 	copy(data[4096:], []byte{0xfa, 0xf4, 0xeb, 0xfd})
 	return data
 }
@@ -85,8 +88,8 @@ func TestPrepareLoad(t *testing.T) {
 		if err != nil {
 			t.Fatalf("prepareLoad(SMBIOS %d) = %v", version, err)
 		}
-		if entry != arenaMin+trampolineOffset || len(segments) != 2 {
-			t.Fatalf("prepareLoad() = entry %#x, %d segments; want trampoline in arena and two segments", entry, len(segments))
+		if entry != arenaMin || len(segments) != 2 {
+			t.Fatalf("prepareLoad() = entry %#x, %d segments; want entry code in arena and two segments", entry, len(segments))
 		}
 		var stage []byte
 		for _, s := range segments {
@@ -98,8 +101,8 @@ func TestPrepareLoad(t *testing.T) {
 					t.Fatalf("arena size = %#x; want %#x", s.Phys.Size, arenaSize)
 				}
 				stage = s.Buf[handoffOffset:]
-				if binary.LittleEndian.Uint32(s.Buf[8:]) != 0x100000 {
-					t.Errorf("adapter target is not the ELF entry")
+				if binary.LittleEndian.Uint64(s.Buf[4:12]) != uint64(arenaMin+handoffOffset) || binary.LittleEndian.Uint64(s.Buf[14:22]) != 0x100000 {
+					t.Errorf("entry code does not pass the full-width handoff and ELF entry")
 				}
 			}
 		}
@@ -153,7 +156,7 @@ func TestPrepareLoad(t *testing.T) {
 		} else {
 			address = uint64(e32.StructTableAddr)
 		}
-		if address != 0x8004000+smbiosDataOffset || !bytes.Equal(stage[smbiosDataOffset:], f.smbiosData) {
+		if address != arenaMin+handoffOffset+smbiosDataOffset || !bytes.Equal(stage[smbiosDataOffset:], f.smbiosData) {
 			t.Errorf("relocated SMBIOS address/data = %#x/%x", address, stage[smbiosDataOffset:])
 		}
 		if _, err := kexec.AlignAndMerge(segments); err != nil {
@@ -164,20 +167,20 @@ func TestPrepareLoad(t *testing.T) {
 
 func TestRejectInvalidPayload(t *testing.T) {
 	for name, change := range map[string]func(*elf.Header64, *elf.Prog64){
-		"wrong architecture":  func(h *elf.Header64, p *elf.Prog64) { h.Machine = uint16(elf.EM_AARCH64) },
-		"PIE":                 func(h *elf.Header64, p *elf.Prog64) { h.Type = uint16(elf.ET_DYN) },
-		"entry in BSS":        func(h *elf.Header64, p *elf.Prog64) { h.Entry += 4 },
-		"file exceeds memory": func(h *elf.Header64, p *elf.Prog64) { p.Filesz = 8193 },
-		"crosses 4GiB":        func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 0xfffff000; p.Vaddr = p.Paddr },
-		"not identity mapped": func(h *elf.Header64, p *elf.Prog64) { p.Vaddr += 4096 },
-		"empty segment":       func(h *elf.Header64, p *elf.Prog64) { p.Memsz = 0 },
-		"above 4GiB":          func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 1 << 32; p.Vaddr = p.Paddr },
-		"unaligned segment":   func(h *elf.Header64, p *elf.Prog64) { p.Paddr++; p.Vaddr = p.Paddr },
-		"non-executable":      func(h *elf.Header64, p *elf.Prog64) { p.Flags = uint32(elf.PF_R) },
-		"no load segments":    func(h *elf.Header64, p *elf.Prog64) { p.Type = uint32(elf.PT_NOTE) },
-		"not in RAM":          func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 0xf0000; p.Vaddr = p.Paddr },
-		"offset above int64":  func(h *elf.Header64, p *elf.Prog64) { p.Off = 1 << 63 },
-		"read crosses int64":  func(h *elf.Header64, p *elf.Prog64) { p.Off = math.MaxInt64 - 1 },
+		"wrong architecture":   func(h *elf.Header64, p *elf.Prog64) { h.Machine = uint16(elf.EM_AARCH64) },
+		"PIE":                  func(h *elf.Header64, p *elf.Prog64) { h.Type = uint16(elf.ET_DYN) },
+		"entry in BSS":         func(h *elf.Header64, p *elf.Prog64) { h.Entry += 4 },
+		"file exceeds memory":  func(h *elf.Header64, p *elf.Prog64) { p.Filesz = 8193 },
+		"crosses identity map": func(h *elf.Header64, p *elf.Prog64) { p.Paddr = mappedMemorySize - pageSize; p.Vaddr = p.Paddr },
+		"not identity mapped":  func(h *elf.Header64, p *elf.Prog64) { p.Vaddr += 4096 },
+		"empty segment":        func(h *elf.Header64, p *elf.Prog64) { p.Memsz = 0 },
+		"outside identity map": func(h *elf.Header64, p *elf.Prog64) { p.Paddr = mappedMemorySize; p.Vaddr = p.Paddr },
+		"unaligned segment":    func(h *elf.Header64, p *elf.Prog64) { p.Paddr++; p.Vaddr = p.Paddr },
+		"non-executable":       func(h *elf.Header64, p *elf.Prog64) { p.Flags = uint32(elf.PF_R) },
+		"no load segments":     func(h *elf.Header64, p *elf.Prog64) { p.Type = uint32(elf.PT_NOTE) },
+		"not in RAM":           func(h *elf.Header64, p *elf.Prog64) { p.Paddr = 0xf0000; p.Vaddr = p.Paddr },
+		"offset above int64":   func(h *elf.Header64, p *elf.Prog64) { p.Off = 1 << 63 },
+		"read crosses int64":   func(h *elf.Header64, p *elf.Prog64) { p.Off = math.MaxInt64 - 1 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, _, err := prepareLoad(bytes.NewReader(testPayload(t, change)), testFirmware(t, 3)); err == nil {
@@ -227,15 +230,15 @@ func TestNormalizeMemoryMap(t *testing.T) {
 }
 
 func TestHandoffAllocation(t *testing.T) {
-	for _, base := range []uintptr{arenaMin, 0xfff00000} {
+	for _, base := range []uintptr{arenaMin, 0xfff00000, mappedMemorySize - arenaSize} {
 		t.Run(fmt.Sprintf("%#x", base), func(t *testing.T) {
 			f := testFirmware(t, 3)
 			f.memory = append(f.memory[:1],
 				kexec.TypedRange{Range: kexec.Range{Start: 0x100000, Size: 8192}, Type: kexec.RangeRAM},
 				kexec.TypedRange{Range: kexec.Range{Start: base, Size: arenaSize}, Type: kexec.RangeRAM})
 			entry, segments, err := prepareLoad(bytes.NewReader(testPayload(t, nil)), f)
-			if err != nil || entry != base+trampolineOffset {
-				t.Fatalf("prepareLoad() = %#x, %v; want %#x, nil", entry, err, base+trampolineOffset)
+			if err != nil || entry != base {
+				t.Fatalf("prepareLoad() = %#x, %v; want %#x, nil", entry, err, base)
 			}
 			if _, err := kexec.AlignAndMerge(segments); err != nil {
 				t.Fatal(err)
@@ -253,7 +256,7 @@ func TestHandoffAllocation(t *testing.T) {
 		h.Entry, p.Paddr, p.Vaddr = arenaMin, arenaMin, arenaMin
 	})
 	entry, _, err := prepareLoad(bytes.NewReader(payload), f)
-	if err != nil || entry != arenaMin+arenaSize+trampolineOffset {
+	if err != nil || entry != arenaMin+arenaSize {
 		t.Errorf("prepareLoad(occupied arena) = %#x, %v; want next arena", entry, err)
 	}
 

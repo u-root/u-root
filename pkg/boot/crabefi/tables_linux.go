@@ -19,8 +19,8 @@ const (
 	// This is a placement policy, not a coreboot ABI requirement.
 	arenaMin         = 128 << 20
 	arenaSize        = 1 << 20
-	trampolineOffset = 0x1000
-	handoffOffset    = 0x4000 // leaves two pages for the temporary stack
+	handoffOffset    = 0x1000   // one page of entry code; no caller stack needed
+	mappedMemorySize = 64 << 30 // CrabEFI's initial identity map
 
 	// Offsets relative to the coreboot table, not the start of the arena.
 	smbiosEntryOffset = 0x1000

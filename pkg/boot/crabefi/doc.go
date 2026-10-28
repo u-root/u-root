@@ -2,31 +2,30 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package crabefi loads the x86-64 CrabEFI coreboot payload from Linux.
+// Package crabefi loads the x86-64 CrabEFI payload from Linux.
 // It is supported on amd64 Linux with the standard Go toolchain.
 //
 // # Entry ABI
 //
-// The payload is a little-endian, identity-linked ELF64 executable, but its
-// ELF entry point executes in 32-bit protected mode. CrabEFI's _start reads
-// the coreboot table pointer from [esp+4], builds identity page tables, and
-// enters long mode itself. ELFCLASS64 describes the file, not the CPU mode
-// required at its entry. The internal long_mode_start label is not an
-// independent boot ABI: it depends on the page tables, GDT and registers set
-// up by _start. See CrabEFI's crabefi-coreboot/src/arch/x86_64/entry.rs and
-// crabefi-coreboot/x86_64-coreboot.ld.
+// Only version 1 of CrabEFI's 64-bit entry ABI is supported. The payload must
+// be an identity-linked, little-endian ELF64 executable with a PT_NOTE owned
+// by "CrabEFI\x00", type 1, and a four-byte little-endian version number of 1.
+// The old ELF64 payload with a 32-bit entry has no such note and is rejected.
+// There is no 32-bit fallback or use of the multiboot trampoline.
 //
-// PrepareLoad reuses u-root's multiboot trampoline to leave long mode, then
-// adapts its EBX argument to coreboot's cdecl stack argument. Payload segments
-// and the handoff arena must therefore fit below 4 GiB. The arena contains
-// an entry adapter, one trampoline page, two temporary stack pages, and
-// coreboot tables with relocated SMBIOS data. It is reserved in the memory
-// map passed to CrabEFI; no original CBMEM area is reused or advertised.
+// Linux's x86-64 kexec hands over in long mode with identity-mapped segments.
+// A small entry stub passes the physical coreboot table pointer in RDI and
+// jumps to the ELF entry, using full-width addresses throughout. CrabEFI
+// installs its own GDT, stack and page tables without leaving long mode.
+// Four- and five-level paging are supported; payload and handoff storage must
+// fit within CrabEFI's initial 64-GiB identity map. SMBIOS 2 still requires its
+// relocated table below 4 GiB, as required by that table format, not the entry ABI.
 //
 // Coreboot structures follow commonlib/coreboot_tables.h and
-// commonlib/bsd/cbmem_id.h. The 64-memory-region limit and 64-GiB framebuffer
-// mapping limit are CrabEFI implementation constraints, not coreboot ABI
-// requirements. This loader does not implement a generic coreboot payload ABI.
+// commonlib/bsd/cbmem_id.h. The 64-memory-region limit is a CrabEFI parser
+// constraint, not a coreboot ABI requirement. The arena contains the entry
+// code, coreboot tables and relocated SMBIOS data. It is reserved in the
+// memory map passed to CrabEFI; no original CBMEM area is advertised.
 //
 // # Firmware and security
 //

@@ -482,8 +482,9 @@ and other config files to make the transition to LinuxBoot easier.
 
 ### UEFI boot with CrabEFI (amd64)
 
-Bundle a [CrabEFI](https://github.com/ArthurHeymans/CrabEFI) coreboot payload
-at `/boot/crabefi.elf` to add **UEFI (CrabEFI)** to the regular `boot` menu:
+Bundle a [CrabEFI](https://github.com/ArthurHeymans/CrabEFI) payload supporting
+its version-1 **64-bit entry ABI** at `/boot/crabefi.elf` to add **UEFI (CrabEFI)**
+to the regular `boot` menu. Older payloads with a 32-bit entry are rejected:
 
 ```shell
 u-root -uinitcmd=boot -skip-ldd \
@@ -502,8 +503,8 @@ The first kernel must expose the firmware memory map, ACPI, DMI sysfs tables,
 `/dev/mem`, and a physical 32-bit framebuffer such as coreboot simplefb.
 The handoff does not authenticate or measure the LinuxBoot stages, preserve
 TPM event logs, or provide persistent firmware-variable storage. See the
-[loader documentation](pkg/boot/crabefi/README.md) for a pinned payload build,
-kernel requirements, entry ABI, and validation limits.
+[loader documentation](pkg/boot/crabefi/README.md) for payload build instructions,
+kernel requirements, entry ABI, and validation results.
 
 More detailed information about the build process for a full LinuxBoot firmware
 image using u-root/systemboot and coreboot can be found in the
