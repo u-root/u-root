@@ -21,22 +21,18 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-//go:build linux || darwin || openbsd || freebsd || netbsd
+//go:build linux || darwin || openbsd || freebsd || netbsd || solaris
 
 package liner
 
-import (
-	"syscall"
-	"unsafe"
-)
+import "golang.org/x/sys/unix"
 
 // getColumns gets the width. It will set 80 if the call fails.
 func (s *State) getColumns() {
-	var ws winSize
-	ok, _, _ := syscall.Syscall(syscall.SYS_IOCTL, uintptr(syscall.Stdout), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws)))
-	if int(ok) < 0 || int(ws.col) == 0 {
+	ws, err := unix.IoctlGetWinsize(unix.Stdout, unix.TIOCGWINSZ)
+	if err != nil || ws.Col == 0 {
 		s.columns = 80
 		return
 	}
-	s.columns = int(ws.col)
+	s.columns = int(ws.Col)
 }
