@@ -16,6 +16,8 @@ import (
 	"strings"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
 	// To build the dependencies of this package with TinyGo, we need to include
 	// the cpuid package, since tinygo does not support the asm code in the
 	// cpuid package. The cpuid package will use the tinygo bridge to get the
@@ -25,27 +27,9 @@ import (
 )
 
 const (
-	cmd = "tcz [options] package-names"
-	/*
-	 * IOCTL commands --- we will commandeer 0x4C ('L')
-	 */
-	LOOP_SET_CAPACITY = 0x4C07
-	LOOP_CHANGE_FD    = 0x4C06
-	LOOP_GET_STATUS64 = 0x4C05
-	LOOP_SET_STATUS64 = 0x4C04
-	LOOP_GET_STATUS   = 0x4C03
-	LOOP_SET_STATUS   = 0x4C02
-	LOOP_CLR_FD       = 0x4C01
-	LOOP_SET_FD       = 0x4C00
-	LO_NAME_SIZE      = 64
-	LO_KEY_SIZE       = 32
-	/* /dev/loop-control interface */
-	LOOP_CTL_ADD      = 0x4C80
-	LOOP_CTL_REMOVE   = 0x4C81
-	LOOP_CTL_GET_FREE = 0x4C82
-	SYS_ioctl         = 16
-	dirMode           = 0o755
-	tinyCoreRoot      = "/TinyCorePackages/tcloop"
+	cmd          = "tcz [options] package-names"
+	dirMode      = 0o755
+	tinyCoreRoot = "/TinyCorePackages/tcloop"
 )
 
 // http://distro.ibiblio.org/tinycorelinux/5.x/x86_64/tcz/
@@ -74,12 +58,12 @@ func findloop() (name string, err error) {
 		log.Fatalf("/dev/loop-control: %v", err)
 	}
 	defer syscall.Close(cfd)
-	a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(cfd), LOOP_CTL_GET_FREE, 0)
-	if errno != 0 {
+	n, err := unix.IoctlRetInt(cfd, unix.LOOP_CTL_GET_FREE)
+	if err != nil {
 		log.Fatalf("ioctl: %v\n", err)
 	}
-	debug("a %v b %v err %v\n", a, b, err)
-	name = fmt.Sprintf("/dev/loop%d", a)
+	debug("n %v err %v\n", n, err)
+	name = fmt.Sprintf("/dev/loop%d", n)
 	return name, nil
 }
 
@@ -265,9 +249,8 @@ func setupPackages(tczName string, deps map[string]bool) error {
 		}
 		debug("ffd %v lfd %v\n", ffd, lfd)
 
-		a, b, errno := syscall.Syscall(SYS_ioctl, uintptr(lfd), LOOP_SET_FD, uintptr(ffd))
-		if errno != 0 {
-			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v, %v, %v\n", pkgpath, loopname, a, b, errno)
+		if err := unix.IoctlSetInt(lfd, unix.LOOP_SET_FD, ffd); err != nil {
+			l.Fatalf("loop set fd ioctl: pkgpath :%v:, loop :%v:, %v\n", pkgpath, loopname, err)
 		}
 
 		/* now mount it. The convention is the mount is in /tinyCoreRoot/packagename */
