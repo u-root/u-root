@@ -23,11 +23,13 @@
 //	–L: Print the line number of the first differing byte.
 //	–s: Print nothing for differing files, but set the exit status.
 //
-// What is an error, what goes on stderr, and what goes on stdout in cmp
-// is fairly ad-hoc, but go something like this:
+// Exit status, as POSIX specifies it: 0 if the files are the same, 1 if they
+// differ (including one being a prefix of the other), 2 for any trouble.
+// What goes where:
 // invocation error: unparseable integer: error return from cmp()
-// IO error, file too small: output on stderr, error return from cmp()
-// Files are different: print difference info on stdout, no error return
+// IO error: output on stderr, error return from cmp()
+// Files are different: difference info on stdout (none with -s), ErrDiffer
+// One file is a prefix of the other: "cmp: EOF on FILE" on stderr, ErrDiffer
 // Files are same: no output, no error
 package main
 
@@ -120,6 +122,7 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 	}
 
 	lineno, charno := int64(1), int64(1)
+	differ := false
 
 	for {
 		var b [2]byte
@@ -128,31 +131,42 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 
 		if err1 != nil || err2 != nil {
 			if err1 == io.EOF && err2 == io.EOF {
+				if differ {
+					return ErrDiffer
+				}
 				return nil
 			}
-			if err1 != nil {
-				fmt.Fprintf(stderr, "%s:%v", args[0], err1)
-				return err1
+			for i, err := range []error{err1, err2} {
+				if err != nil && err != io.EOF {
+					fmt.Fprintf(stderr, "%s:%v", args[i], err)
+					return err
+				}
 			}
-			if err2 != nil {
-				fmt.Fprintf(stderr, "%s:%v", args[1], err2)
-				return err2
+			// One file is a prefix of the other: a difference, not trouble.
+			short := args[0]
+			if err2 == io.EOF {
+				short = args[1]
 			}
+			if !silent {
+				fmt.Fprintf(stderr, "cmp: EOF on %s\n", short)
+			}
+			return ErrDiffer
 		}
 
 		b1, b2 := b[0], b[1]
 		if b1 != b2 {
+			differ = true
 			if silent {
-				return nil
+				return ErrDiffer
 			}
 			if line {
-				fmt.Fprintf(stdout, "%s %s: char %d line %d", args[0], args[1], charno, lineno)
+				fmt.Fprintf(stdout, "%s %s: char %d line %d\n", args[0], args[1], charno, lineno)
 				return ErrDiffer
 			}
 			if long {
 				fmt.Fprintf(stdout, "%8d %#.2o %#.2o\n", charno, b1, b2)
 			} else {
-				fmt.Fprintf(stdout, "%s %s: char %d", args[0], args[1], charno)
+				fmt.Fprintf(stdout, "%s %s: char %d\n", args[0], args[1], charno)
 				return ErrDiffer
 			}
 		}
@@ -163,10 +177,18 @@ func cmp(stdout, stderr io.Writer, long, line, silent bool, args ...string) erro
 	}
 }
 
-// cmp is defined to fail with exit code 2
+// exitCode is the exit status for cmp's result: 0 same, 1 different, 2 trouble.
+func exitCode(err error) int {
+	switch {
+	case err == nil:
+		return 0
+	case errors.Is(err, ErrDiffer):
+		return 1
+	}
+	return 2
+}
+
 func main() {
 	flag.Parse()
-	if err := cmp(os.Stdout, os.Stderr, *long, *line, *silent, flag.Args()...); err != nil {
-		os.Exit(2)
-	}
+	os.Exit(exitCode(cmp(os.Stdout, os.Stderr, *long, *line, *silent, flag.Args()...)))
 }
