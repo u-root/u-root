@@ -429,7 +429,7 @@ func (c *parser) append(ctx context.Context, config string) error {
 			fs.BoolVar(searchFile, "f", false, "")
 			setVar := fs.String("set", "root", "")
 			// Ignored flags
-			fs.String("no-floppy", "", "ignored")
+			fs.Bool("no-floppy", false, "ignored")
 			fs.String("hint", "", "ignored")
 			// Everything that begins with "hint" is ignored.
 			// This was slightly cleaner with pflag, but, at the same time,
@@ -440,7 +440,11 @@ func (c *parser) append(ctx context.Context, config string) error {
 			// about an extra loop iterator.
 			for i := range kv {
 				if strings.HasPrefix(kv[i], "--hint") {
+					_, value, hasValue := strings.Cut(kv[i], "=")
 					kv[i] = "--hint"
+					if hasValue {
+						kv[i] += "=" + value
+					}
 				}
 			}
 
