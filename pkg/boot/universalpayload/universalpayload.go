@@ -368,10 +368,13 @@ func (u *UPL) appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load
 }
 
 func (u *UPL) appendSmbiosTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	// Construct SMBIOS HOB
+	// SMBIOS is optional handoff data. Firmware such as RISC-V UEFI often
+	// publishes no table; omit the HOB and continue loading.
 	smbiosTable, err := u.constructSmbiosTable()
 	if err != nil {
-		return err
+		u.warningMsg = append(u.warningMsg, err)
+		u.debug("universalpayload: skip SMBIOS HOB: %v\n", err)
+		return nil
 	}
 
 	smbiosTableGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadSmbiosTableGUID)
