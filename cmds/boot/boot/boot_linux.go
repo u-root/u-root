@@ -25,7 +25,8 @@
 //	The code is looking for boot/grub/grub.cfg file as to identify the
 //	boot option.
 //	The first bootable device found in the block device tree is the one used
-//	Windows is not supported (that is a work in progress)
+//	An optional CrabEFI payload adds a UEFI firmware boot option, including
+//	support for Windows Boot Manager on amd64.
 //
 // Example:
 //
@@ -33,8 +34,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
@@ -45,12 +49,16 @@ import (
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/uio"
 )
 
+const defaultCrabEFI = "/boot/crabefi.elf"
+
 var (
-	verbose = flag.Bool("v", false, "Print debug messages")
-	noLoad  = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
-	noExec  = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
+	verbose        = flag.Bool("v", false, "Print debug messages")
+	noLoad         = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
+	noExec         = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
+	crabefiPayload = flag.String("crabefi", defaultCrabEFI, "CrabEFI payload for the UEFI boot option (empty disables)")
 
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
@@ -64,6 +72,23 @@ var (
 func cmdlineModifier(li *boot.LinuxImage) {
 	f := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
 	li.Cmdline = f.Update(cmdline.NewCmdLine(), li.Cmdline)
+}
+
+func appendCrabEFI(images []boot.OSImage, payload string) ([]boot.OSImage, error) {
+	if payload == "" {
+		return images, nil
+	}
+	info, err := os.Stat(payload)
+	if payload == defaultCrabEFI && errors.Is(err, os.ErrNotExist) {
+		return images, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("stat CrabEFI payload %q: %w", payload, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("CrabEFI payload %q is not a regular file", payload)
+	}
+	return append(images, &boot.CrabEFIImage{Payload: uio.NewLazyFile(payload)}), nil
 }
 
 func main() {
@@ -96,6 +121,10 @@ func main() {
 	}
 	mountPool := &mount.Pool{}
 	images, err := localboot.Localboot(l, blockDevs, mountPool)
+	if err != nil {
+		log.Fatal(err)
+	}
+	images, err = appendCrabEFI(images, *crabefiPayload)
 	if err != nil {
 		log.Fatal(err)
 	}
