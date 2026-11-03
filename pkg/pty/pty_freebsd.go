@@ -12,12 +12,13 @@
 package pty
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"syscall"
 	"unsafe"
 
 	"github.com/u-root/u-root/pkg/termios"
+	"golang.org/x/sys/unix"
 )
 
 // New returns a new Pty.
@@ -63,12 +64,11 @@ func New() (*Pty, error) {
 }
 
 func ptsname(f *os.File) (string, error) {
-	var n uintptr
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n)))
-	if err != 0 {
+	n, err := unix.IoctlGetInt(int(f.Fd()), unix.TIOCGPTN)
+	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dev/pts/%d", n), nil
+	return "/dev/pts/" + strconv.Itoa(n), nil
 }
 
 func ptsunlock(f *os.File) error {
