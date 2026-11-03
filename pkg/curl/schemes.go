@@ -44,6 +44,7 @@ var ErrStatusNotOk = errors.New("not status 200")
 // File is a reference to a file fetched through this library.
 type File interface {
 	fmt.Stringer
+	io.Closer
 	// URL is the file's original URL.
 	URL() *url.URL
 }
@@ -155,6 +156,14 @@ func (f cacheFile) String() string {
 	return f.url.String()
 }
 
+// Close implements io.Closer.Close.
+func (f cacheFile) Close() error {
+	if c, ok := f.ReaderAt.(io.Closer); ok {
+		return c.Close()
+	}
+	return nil
+}
+
 // file is an io.Reader with a nice Stringer.
 type file struct {
 	io.Reader
@@ -170,6 +179,14 @@ func (f file) URL() *url.URL {
 // String implements fmt.Stringer.
 func (f file) String() string {
 	return f.url.String()
+}
+
+// Close implements io.Closer.Close.
+func (f file) Close() error {
+	if c, ok := f.Reader.(io.Closer); ok {
+		return c.Close()
+	}
+	return nil
 }
 
 // Fetch fetches the file with the given `u`. `u.Scheme` is used to
