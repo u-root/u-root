@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,7 +44,7 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test\n",
 			file2:  "hello\nthiz is a text",
 			err:    ErrDiffer,
-			stdout: fmt.Sprintf("%s %s: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10),
+			stdout: fmt.Sprintf("%s %s: char %d\n", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10),
 		},
 		{
 			name:   "cmp two files without flags, with wrong first offset",
@@ -59,7 +58,7 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test\n",
 			file2:  "hello\nthiz is a text",
 			err:    ErrDiffer,
-			stdout: fmt.Sprintf("%s %s: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 1),
+			stdout: fmt.Sprintf("%s %s: char %d\n", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 1),
 		},
 		{
 			name:   "cmp two files without flags, with both offsets correct",
@@ -67,7 +66,7 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test\n",
 			file2:  "hello\nthiz is a text",
 			err:    ErrDiffer,
-			stdout: fmt.Sprintf("%s %s: char %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 6),
+			stdout: fmt.Sprintf("%s %s: char %d\n", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 6),
 		},
 		{
 			name:   "cmp two files without flags, with both offset set but first not valid",
@@ -92,7 +91,7 @@ func TestCmp(t *testing.T) {
 			file2:  "hello\nthiz is a text",
 			line:   true,
 			err:    ErrDiffer,
-			stdout: fmt.Sprintf("%s %s: char %d line %d", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10, 2),
+			stdout: fmt.Sprintf("%s %s: char %d line %d\n", filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2"), 10, 2),
 		},
 		{
 			name:   "cmp two files, flag silent = true",
@@ -100,6 +99,7 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test\n",
 			file2:  "hello\nthiz is a text",
 			silent: true,
+			err:    ErrDiffer,
 		},
 		{
 			name:   "cmp two files, flag long = true",
@@ -107,6 +107,7 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test",
 			file2:  "hello\nthiz is a text",
 			long:   true,
+			err:    ErrDiffer,
 			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0o163, 0o172, 19, 0o163, 0o170),
 		},
 		{
@@ -115,9 +116,9 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a tes",
 			file2:  "hello\nthiz is a text",
 			long:   true,
-			err:    io.EOF,
+			err:    ErrDiffer,
 			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0o163, 0o172, 19, 0o163, 0o170),
-			stderr: fmt.Sprintf("%s:%v", filepath.Join(tmpdir, "file1"), io.EOF),
+			stderr: fmt.Sprintf("cmp: EOF on %s\n", filepath.Join(tmpdir, "file1")),
 		},
 		{
 			name:   "cmp two files, flag long = true, second file ends first",
@@ -125,9 +126,31 @@ func TestCmp(t *testing.T) {
 			file1:  "hello\nthis is a test",
 			file2:  "hello\nthiz is a tex",
 			long:   true,
-			err:    io.EOF,
+			err:    ErrDiffer,
 			stdout: fmt.Sprintf("%8d %#.2o %#.2o\n%8d %#.2o %#.2o\n", 10, 0o163, 0o172, 19, 0o163, 0o170),
-			stderr: fmt.Sprintf("%s:%v", filepath.Join(tmpdir, "file2"), io.EOF),
+			stderr: fmt.Sprintf("cmp: EOF on %s\n", filepath.Join(tmpdir, "file2")),
+		},
+		{
+			name:  "cmp two identical files",
+			args:  []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1: "hello\nthis is a test\n",
+			file2: "hello\nthis is a test\n",
+		},
+		{
+			name:   "cmp two files, first file is a prefix of the second",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\n",
+			file2:  "hello\nthis is a test\n",
+			err:    ErrDiffer,
+			stderr: fmt.Sprintf("cmp: EOF on %s\n", filepath.Join(tmpdir, "file1")),
+		},
+		{
+			name:   "cmp two files, flag silent = true, second file is a prefix of the first",
+			args:   []string{filepath.Join(tmpdir, "file1"), filepath.Join(tmpdir, "file2")},
+			file1:  "hello\nthis is a test\n",
+			file2:  "hello\n",
+			silent: true,
+			err:    ErrDiffer,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,5 +175,22 @@ func TestCmp(t *testing.T) {
 				t.Errorf("cmp():stderr:got %s, want %s", stderr.String(), tt.stderr)
 			}
 		})
+	}
+}
+
+func TestExitCode(t *testing.T) {
+	for _, tt := range []struct {
+		err  error
+		want int
+	}{
+		{nil, 0},
+		{ErrDiffer, 1},
+		{ErrArgCount, 2},
+		{ErrBadOffset, 2},
+		{os.ErrNotExist, 2},
+	} {
+		if got := exitCode(tt.err); got != tt.want {
+			t.Errorf("exitCode(%v) = %d; want %d", tt.err, got, tt.want)
+		}
 	}
 }
