@@ -5,6 +5,7 @@
 package kexec
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -202,6 +203,125 @@ func TestMemoryMapFromFDT(t *testing.T) {
 			mm, err := MemoryMapFromFDT(tc.fdt)
 			if err != tc.wantErr {
 				t.Errorf("MemoryMapFromFDT returned error %v, want error %v", err, tc.wantErr)
+			}
+			checkMemoryMap(t, mm, tc.wantMap)
+		})
+	}
+}
+
+// TestMemoryMapFromFDTCells covers device trees that declare #address-cells
+// and #size-cells, such as 32-bit arm ones whose reg entries are one cell
+// each. The values are kept below 4 GiB so this also builds where uintptr is
+// 32 bits wide.
+func TestMemoryMapFromFDTCells(t *testing.T) {
+	cells := func(address, size uint32) []dt.Property {
+		return []dt.Property{
+			dt.PropertyU32("#address-cells", address),
+			dt.PropertyU32("#size-cells", size),
+		}
+	}
+	memory := func(reg ...uint32) *dt.Node {
+		return &dt.Node{
+			Name: "memory",
+			Properties: []dt.Property{
+				dt.PropertyString("device_type", "memory"),
+				dt.PropertyU32Array("reg", reg),
+			},
+		}
+	}
+
+	for _, tc := range []struct {
+		name    string
+		fdt     *dt.FDT
+		wantMap MemoryMap
+		wantErr error
+	}{
+		{
+			// Layout of a BeagleBone Black: 512 MiB at 0x80000000 and a
+			// reserved-memory child carving 16 MiB out of it.
+			name: "one cell each, with reserved-memory",
+			fdt: &dt.FDT{RootNode: &dt.Node{
+				Name:       "/",
+				Properties: cells(1, 1),
+				Children: []*dt.Node{
+					memory(0x80000000, 0x20000000),
+					{
+						Name:       "reserved-memory",
+						Properties: cells(1, 1),
+						Children: []*dt.Node{{
+							Name:       "cma",
+							Properties: []dt.Property{dt.PropertyU32Array("reg", []uint32{0x9e800000, 0x01000000})},
+						}},
+					},
+				},
+			}},
+			wantMap: MemoryMap{
+				TypedRange{Range{Start: 0x80000000, Size: 0x1e800000}, RangeRAM},
+				TypedRange{Range{Start: 0x9e800000, Size: 0x01000000}, RangeReserved},
+				TypedRange{Range{Start: 0x9f800000, Size: 0x00800000}, RangeRAM},
+			},
+		},
+		{
+			// Children of reserved-memory use its cells, not the root's.
+			name: "reserved-memory cells differ from the root's",
+			fdt: &dt.FDT{RootNode: &dt.Node{
+				Name:       "/",
+				Properties: cells(2, 2),
+				Children: []*dt.Node{
+					memory(0, 0x80000000, 0, 0x20000000),
+					{
+						Name:       "reserved-memory",
+						Properties: cells(1, 1),
+						Children: []*dt.Node{{
+							Name:       "cma",
+							Properties: []dt.Property{dt.PropertyU32Array("reg", []uint32{0x9e800000, 0x01000000})},
+						}},
+					},
+				},
+			}},
+			wantMap: MemoryMap{
+				TypedRange{Range{Start: 0x80000000, Size: 0x1e800000}, RangeRAM},
+				TypedRange{Range{Start: 0x9e800000, Size: 0x01000000}, RangeReserved},
+				TypedRange{Range{Start: 0x9f800000, Size: 0x00800000}, RangeRAM},
+			},
+		},
+		{
+			name: "several entries in one reg",
+			fdt: &dt.FDT{RootNode: &dt.Node{
+				Name:       "/",
+				Properties: cells(1, 1),
+				Children:   []*dt.Node{memory(0x80000000, 0x10000000, 0xc0000000, 0x10000000)},
+			}},
+			wantMap: MemoryMap{
+				TypedRange{Range{Start: 0x80000000, Size: 0x10000000}, RangeRAM},
+				TypedRange{Range{Start: 0xc0000000, Size: 0x10000000}, RangeRAM},
+			},
+		},
+		{
+			name: "two address cells, one size cell",
+			fdt: &dt.FDT{RootNode: &dt.Node{
+				Name:       "/",
+				Properties: cells(2, 1),
+				Children:   []*dt.Node{memory(0, 0x40000000, 0x10000000)},
+			}},
+			wantMap: MemoryMap{
+				TypedRange{Range{Start: 0x40000000, Size: 0x10000000}, RangeRAM},
+			},
+		},
+		{
+			name: "reg does not match the declared cells",
+			fdt: &dt.FDT{RootNode: &dt.Node{
+				Name:       "/",
+				Properties: cells(1, 1),
+				Children:   []*dt.Node{memory(0, 0x80000000, 0, 0x20000000, 0)},
+			}},
+			wantErr: dt.ErrPropertyRegionInvalid,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mm, err := MemoryMapFromFDT(tc.fdt)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("MemoryMapFromFDT returned error %v, want %v", err, tc.wantErr)
 			}
 			checkMemoryMap(t, mm, tc.wantMap)
 		})
