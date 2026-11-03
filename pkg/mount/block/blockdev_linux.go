@@ -463,7 +463,7 @@ func (b BlockDevices) FilterNames(names ...string) BlockDevices {
 func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
 	partitions := make(BlockDevices, 0)
 	for _, device := range b {
-		if device.FsUUID == fsuuid {
+		if strings.EqualFold(device.FsUUID, fsuuid) {
 			partitions = append(partitions, device)
 		}
 	}
