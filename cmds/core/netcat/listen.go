@@ -437,7 +437,7 @@ func parseRemoteAddr(socketType netcat.SocketType, remoteAddr string) []string {
 			log.Printf("failed to resolve host address: %v", err)
 		}
 
-		return append(addresses, names...)
+		return append(addresses, confirmedNames(host, names, net.LookupHost)...)
 	case netcat.SOCKET_TYPE_NONE:
 		log.Printf("socket type not set, using remote address as is")
 	case netcat.SOCKET_TYPE_SCTP, netcat.SOCKET_TYPE_VSOCK, netcat.SOCKET_TYPE_UDP_VSOCK:
@@ -446,4 +446,30 @@ func parseRemoteAddr(socketType netcat.SocketType, remoteAddr string) []string {
 	}
 
 	return addresses
+}
+
+// confirmedNames returns the names from a reverse lookup of host that resolve
+// back to host. The PTR record is controlled by whoever owns the peer's address
+// block, so a name that does not forward-resolve to the peer must not be used
+// for access control.
+func confirmedNames(host string, names []string, lookupHost func(string) ([]string, error)) []string {
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return nil
+	}
+
+	var confirmed []string
+	for _, name := range names {
+		addrs, err := lookupHost(name)
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			if ip.Equal(net.ParseIP(addr)) {
+				confirmed = append(confirmed, name)
+				break
+			}
+		}
+	}
+	return confirmed
 }

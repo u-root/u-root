@@ -829,3 +829,69 @@ func isSubset(t *testing.T, gotAddress, wantAddress []string) bool {
 
 	return true
 }
+
+func TestConfirmedNames(t *testing.T) {
+	zone := map[string][]string{
+		"trusted.example.com.": {"192.0.2.10"},
+		"self.example.net.":    {"2001:db8::7", "203.0.113.7"},
+	}
+	lookupHost := func(name string) ([]string, error) {
+		if addrs, ok := zone[name]; ok {
+			return addrs, nil
+		}
+		return nil, errors.New("no such host")
+	}
+
+	tests := []struct {
+		name  string
+		host  string
+		names []string
+		want  []string
+	}{
+		{
+			// The attacker sets the PTR of 203.0.113.7 to a name it does not own.
+			name:  "spoofed PTR",
+			host:  "203.0.113.7",
+			names: []string{"trusted.example.com."},
+		},
+		{
+			name:  "unresolvable PTR",
+			host:  "203.0.113.7",
+			names: []string{"nowhere.example.org."},
+		},
+		{
+			name:  "forward confirmed",
+			host:  "203.0.113.7",
+			names: []string{"trusted.example.com.", "self.example.net."},
+			want:  []string{"self.example.net."},
+		},
+		{
+			name:  "forward confirmed IPv6",
+			host:  "2001:db8::7",
+			names: []string{"self.example.net."},
+			want:  []string{"self.example.net."},
+		},
+		{
+			name:  "not an IP",
+			host:  "/tmp/socket",
+			names: []string{"self.example.net."},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := confirmedNames(tt.host, tt.names, lookupHost)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("confirmedNames(%q, %q) = %q, want %q", tt.host, tt.names, got, tt.want)
+			}
+
+			ac := netcat.AccessControlOptions{
+				SetAllowed:     true,
+				ConnectionList: map[string]bool{"trusted.example.com.": true},
+			}
+			if ac.IsAllowed(append([]string{tt.host}, got...)) {
+				t.Errorf("IsAllowed(%q) = true, want false", append([]string{tt.host}, got...))
+			}
+		})
+	}
+}
