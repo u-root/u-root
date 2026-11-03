@@ -304,3 +304,40 @@ func TestMultipleFiles(t *testing.T) {
 		t.Errorf("expected stderr to be 'chmod filenotexists: no such file or directory', got %q", stderr.String())
 	}
 }
+
+func TestRecursiveSkipsSymlinks(t *testing.T) {
+	tmp := t.TempDir()
+	outside := filepath.Join(tmp, "outside")
+	if err := os.WriteFile(outside, nil, 0o600); err != nil {
+		t.Fatalf("Failed to create %q: %v", outside, err)
+	}
+
+	dir := filepath.Join(tmp, "dir")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatalf("Failed to create %q: %v", dir, err)
+	}
+	link := filepath.Join(dir, "link")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatalf("Failed to create symlink %q -> %q: %v", link, outside, err)
+	}
+
+	if err := command(io.Discard, true, "").run("0777", dir); err != nil {
+		t.Fatalf("chmod(true, %q) = %v, want nil", dir, err)
+	}
+
+	fi, err := os.Stat(outside)
+	if err != nil {
+		t.Fatalf("failed to stat %q: %v", outside, err)
+	}
+	if fi.Mode() != 0o600 {
+		t.Errorf("chmod --recursive followed symlink %q: %q mode = %o, want %o", link, outside, fi.Mode(), 0o600)
+	}
+
+	fi, err = os.Stat(dir)
+	if err != nil {
+		t.Fatalf("failed to stat %q: %v", dir, err)
+	}
+	if fi.Mode().Perm() != 0o777 {
+		t.Errorf("chmod(%q) = mode = %o, want %o", dir, fi.Mode().Perm(), 0o777)
+	}
+}
