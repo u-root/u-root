@@ -9,6 +9,8 @@ package universalpayload
 import (
 	"encoding/binary"
 	"testing"
+
+	"github.com/u-root/u-root/pkg/dt"
 )
 
 func TestConstructTrampolineRISCV(t *testing.T) {
@@ -94,6 +96,32 @@ func pcRelTargets(t *testing.T, code []byte) []int {
 		pc += 8
 	}
 	return targets
+}
+
+func TestSerialPortFromFDT(t *testing.T) {
+	fdt := &dt.FDT{
+		RootNode: dt.NewNode("/", dt.WithChildren(
+			dt.NewNode("serial@10000000", dt.WithProperty(
+				dt.PropertyString("compatible", "ns16550a"),
+				dt.PropertyU32Array("reg", []uint32{0, 0x10000000, 0, 0x100}),
+				dt.PropertyU32("current-speed", 57600),
+				dt.PropertyU32("reg-shift", 2),
+			)),
+			dt.NewNode("serial@10001000", dt.WithProperty(
+				dt.PropertyString("compatible", "ns16550a"),
+				dt.PropertyString("status", "disabled"),
+				dt.PropertyU32Array("reg", []uint32{0, 0x10001000, 0, 0x100}),
+			)),
+		)),
+	}
+
+	useMmio, stride, baud, base, ok := serialPortFromFDT(fdt)
+	if !ok {
+		t.Fatal("serialPortFromFDT() ok = false")
+	}
+	if useMmio != 1 || stride != 4 || baud != 57600 || base != 0x10000000 {
+		t.Fatalf("serial = mmio %d stride %d baud %d base %#x", useMmio, stride, baud, base)
+	}
 }
 
 func TestPhysicalAddressSizeRISCV(t *testing.T) {

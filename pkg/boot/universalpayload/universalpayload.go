@@ -256,16 +256,17 @@ func (u *UPL) constructGUIDHOB(name string) (*EFIHOBGUIDType, error) {
 }
 
 // Construct Serial Port HOB
-func constructSerialPortHOB() *UniversalPayloadSerialPortInfo {
+func (u *UPL) constructSerialPortHOB() *UniversalPayloadSerialPortInfo {
+	useMmio, stride, baud, base := u.serialPortConfig()
 	return &UniversalPayloadSerialPortInfo{
 		Header: UniversalPayloadGenericHeader{
 			Revision: UniversalPayloadSerialPortInfoRevision,
 			Length:   uint16(unsafe.Sizeof(UniversalPayloadSerialPortInfo{})),
 		},
-		UseMmio:        0,
-		RegisterStride: UniversalPayloadSerialPortRegisterStride,
-		BaudRate:       UniversalPayloadSerialPortBaudRate,
-		RegisterBase:   UniversalPayloadSerialPortRegisterBase,
+		UseMmio:        useMmio,
+		RegisterStride: stride,
+		BaudRate:       baud,
+		RegisterBase:   EFIPhysicalAddress(base),
 	}
 }
 
@@ -315,7 +316,7 @@ func (u *UPL) appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64, memMap kexec.Me
 
 // Construct serial port HOB
 func (u *UPL) appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	serialPortInfo := constructSerialPortHOB()
+	serialPortInfo := u.constructSerialPortHOB()
 	serialGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadSerialPortInfoGUID)
 	if err != nil {
 		return err

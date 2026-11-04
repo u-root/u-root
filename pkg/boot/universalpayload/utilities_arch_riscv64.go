@@ -13,7 +13,13 @@ import (
 	"reflect"
 	"strconv"
 	"unsafe"
+
+	"github.com/u-root/u-root/pkg/dt"
 )
+
+// QEMU's virt machine places a 16550 at this MMIO address. Used when the
+// running system's device tree does not name a UART.
+const qemuVirtSerialBase = 0x10000000
 
 func addrOfStart() uintptr
 func addrOfStackTop() uintptr
@@ -92,6 +98,109 @@ func (u *UPL) archGetAcpiRsdpData() (uint64, []byte, error) {
 		}
 	}
 	return 0, nil, nil
+}
+
+// discoverPlatformSerial reads the UART from the firmware device tree.
+// The generic handoff describes an ISA port at 0x3f8. RISC-V has no port
+// I/O, and EDK2 polls that address until the transmitter looks empty, so
+// the payload never leaves its serial loop.
+func discoverPlatformSerial() (useMmio uint8, stride uint8, baud uint32, base uint64, ok bool) {
+	if fdt, err := dt.ReadFile("/sys/firmware/fdt"); err == nil {
+		if mmio, stride, baud, base, ok := serialPortFromFDT(fdt); ok {
+			return mmio, stride, baud, base, true
+		}
+	}
+	return 1, UniversalPayloadSerialPortRegisterStride, UniversalPayloadSerialPortBaudRate, qemuVirtSerialBase, true
+}
+
+func serialPortFromFDT(fdt *dt.FDT) (useMmio uint8, stride uint8, baud uint32, base uint64, ok bool) {
+	if fdt == nil || fdt.RootNode == nil {
+		return 0, 0, 0, 0, false
+	}
+	node, found := fdt.RootNode.Find(func(n *dt.Node) bool {
+		if serialDisabled(n) || !serialCompatible(n) {
+			return false
+		}
+		_, ok := uartBase(n)
+		return ok
+	})
+	if !found {
+		return 0, 0, 0, 0, false
+	}
+	base, _ = uartBase(node)
+	return 1, serialStride(node), serialBaud(node), base, true
+}
+
+func serialDisabled(n *dt.Node) bool {
+	prop, ok := n.LookProperty("status")
+	if !ok {
+		return false
+	}
+	status, err := prop.AsString()
+	return err == nil && status == "disabled"
+}
+
+func serialCompatible(n *dt.Node) bool {
+	prop, ok := n.LookProperty("compatible")
+	if !ok {
+		return false
+	}
+	list, err := prop.AsStringList()
+	if err != nil {
+		return false
+	}
+	for _, compatible := range list {
+		switch compatible {
+		case "ns16550a", "ns16550", "snps,dw-apb-uart", "sifive,uart0":
+			return true
+		}
+	}
+	return false
+}
+
+func uartBase(n *dt.Node) (uint64, bool) {
+	prop, ok := n.LookProperty("reg")
+	if !ok || len(prop.Value) < 4 || len(prop.Value)%4 != 0 {
+		return 0, false
+	}
+	cells := make([]uint32, len(prop.Value)/4)
+	for i := range cells {
+		cells[i] = binary.BigEndian.Uint32(prop.Value[i*4 : (i+1)*4])
+	}
+	switch len(cells) {
+	case 4:
+		// #address-cells = 2, #size-cells = 2.
+		return uint64(cells[0])<<32 | uint64(cells[1]), true
+	case 2:
+		// One address cell and one size cell.
+		return uint64(cells[0]), cells[0] != 0
+	default:
+		return uint64(cells[0]), cells[0] != 0
+	}
+}
+
+func serialStride(n *dt.Node) uint8 {
+	prop, ok := n.LookProperty("reg-shift")
+	if !ok {
+		return UniversalPayloadSerialPortRegisterStride
+	}
+	shift, err := prop.AsU32()
+	if err != nil || shift >= 8 {
+		return UniversalPayloadSerialPortRegisterStride
+	}
+	return 1 << shift
+}
+
+func serialBaud(n *dt.Node) uint32 {
+	prop, ok := n.LookProperty("current-speed")
+	if !ok {
+		return UniversalPayloadSerialPortBaudRate
+	}
+	baud, err := prop.AsU32()
+	if err != nil || baud == 0 {
+		return UniversalPayloadSerialPortBaudRate
+	}
+	return baud
 }
 
 func (u *UPL) appendAddonMemMap(_ *EFIMemoryMapHOB) uint64 {
