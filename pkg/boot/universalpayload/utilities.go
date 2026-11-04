@@ -731,12 +731,14 @@ func (u *UPL) constructSMBIOS3Node() (*dt.Node, error) {
 func (u *UPL) constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	var rsvdNodes []*dt.Node
 
-	acpiChildNode := dt.NewNode("acpi", dt.WithProperty(
-		dt.PropertyString("compatible", "acpi"),
-		dt.PropertyRegion("reg", rsdpBase, uint64(u.pageSize)),
-	))
-
-	rsvdNodes = append(rsvdNodes, acpiChildNode)
+	// rsdpBase is zero when the firmware has no ACPI root. Omit the node
+	// rather than publishing address 0.
+	if rsdpBase != 0 {
+		rsvdNodes = append(rsvdNodes, dt.NewNode("acpi", dt.WithProperty(
+			dt.PropertyString("compatible", "acpi"),
+			dt.PropertyRegion("reg", rsdpBase, uint64(u.pageSize)),
+		)))
+	}
 
 	if smbios3ChildNode, err := u.constructSMBIOS3Node(); err != nil {
 		// If we failed to retrieve SMBIOS3 information, prompt error
