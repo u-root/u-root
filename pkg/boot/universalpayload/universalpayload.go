@@ -532,7 +532,10 @@ func (u *UPL) prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem 
 	// rsdpBase indicates whether we need to copy RSDP table data to specified
 	// location. If rsdpBase equals to zero, then we need to copy data to
 	// specified address, otherwise, we will use rsdpBase directly.
-	if rsdpBase == 0 {
+	// An empty result means the firmware published no ACPI table. Leave
+	// rsdpBase at zero so the handoff omits ACPI instead of loading a
+	// zero-length segment.
+	if rsdpBase == 0 && len(rsdpData) > 0 {
 		// Check whether reserved components size is overflowed.
 		if err := u.checkComponentsSize(align.UpPage(uint(len(rsdpData)))); err != nil {
 			return err
