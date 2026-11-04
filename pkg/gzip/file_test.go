@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -311,6 +312,52 @@ func TestFileProcess(t *testing.T) {
 	f.Options.Decompress = true
 	if err := f.Process(); err != nil {
 		t.Errorf("File.Process() decompression error = %v", err)
+	}
+}
+
+func TestFileProcessKeepsMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no Unix permission bits on windows")
+	}
+	plain := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(plain, []byte("hunter2"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// An existing, wider output, as overwritten by -f.
+	if err := os.WriteFile(plain+".gz", nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	f := File{
+		Path: plain,
+		Options: &Options{
+			Blocksize: 128,
+			Level:     -1,
+			Processes: 1,
+			Suffix:    ".gz",
+			Force:     true,
+		},
+	}
+	if err := f.Process(); err != nil {
+		t.Fatalf("File.Process() compression error = %v", err)
+	}
+	if err := os.Remove(plain); err != nil {
+		t.Fatal(err)
+	}
+	f.Path = plain + ".gz"
+	f.Options.Decompress = true
+	if err := f.Process(); err != nil {
+		t.Fatalf("File.Process() decompression error = %v", err)
+	}
+
+	for _, p := range []string{plain + ".gz", plain} {
+		fi, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := fi.Mode().Perm(); got != 0o600 {
+			t.Errorf("File.Process() mode of %q = %#o; want %#o", p, got, 0o600)
+		}
 	}
 }
 
