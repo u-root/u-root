@@ -137,3 +137,38 @@ func TestCreateFileInRootMode(t *testing.T) {
 		t.Errorf("create mode = %#o, want 0o600", got)
 	}
 }
+
+func TestCreateFileInRootOverwrite(t *testing.T) {
+	root := t.TempDir()
+
+	// Overwriting a symlink with a regular file (and vice versa) must
+	// replace the entry at that path rather than failing with EEXIST or
+	// writing through the symlink.
+	recs := []Record{
+		Symlink("uinit", "nonexistent_target"),
+		StaticFile("uinit", "uinit binary", 0o755),
+		Symlink("link", "first_target"),
+		Symlink("link", "second_target"),
+	}
+	for _, r := range recs {
+		if err := CreateFileInRoot(r, root, false); err != nil {
+			t.Fatalf("CreateFileInRoot(%q): %v", r.Name, err)
+		}
+	}
+
+	b, err := os.ReadFile(filepath.Join(root, "uinit"))
+	if err != nil {
+		t.Fatalf("ReadFile(uinit): %v", err)
+	}
+	if string(b) != "uinit binary" {
+		t.Errorf("uinit = %q, want %q", b, "uinit binary")
+	}
+
+	gotTarget, err := os.Readlink(filepath.Join(root, "link"))
+	if err != nil {
+		t.Fatalf("Readlink(link): %v", err)
+	}
+	if gotTarget != "second_target" {
+		t.Errorf("link target = %q, want %q", gotTarget, "second_target")
+	}
+}

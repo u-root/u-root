@@ -49,11 +49,17 @@ func ArchiveFromReader(r RecordReader) (*Archive, error) {
 
 // WriteRecord implements RecordWriter and adds a record to the archive.
 //
-// WriteRecord uses Normalize to deduplicate paths.
+// WriteRecord uses Normalize to deduplicate paths. If a record with the same
+// normalized path already exists in the archive, it is overwritten in place.
 func (a *Archive) WriteRecord(r Record) error {
+	if r.Name == Trailer {
+		return nil
+	}
 	r.Name = Normalize(r.Name)
+	if _, ok := a.Files[r.Name]; !ok {
+		a.Order = append(a.Order, r.Name)
+	}
 	a.Files[r.Name] = r
-	a.Order = append(a.Order, r.Name)
 	return nil
 }
 
