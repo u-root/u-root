@@ -21,6 +21,9 @@ import (
 // running system's device tree does not name a UART.
 const qemuVirtSerialBase = 0x10000000
 
+// firmwareFDTPath is the firmware device tree. Tests point it at a fixture.
+var firmwareFDTPath = "/sys/firmware/fdt"
+
 func addrOfStart() uintptr
 func addrOfStackTop() uintptr
 func addrOfHobAddr() uintptr
@@ -105,7 +108,7 @@ func (u *UPL) archGetAcpiRsdpData() (uint64, []byte, error) {
 // I/O, and EDK2 polls that address until the transmitter looks empty, so
 // the payload never leaves its serial loop.
 func discoverPlatformSerial() (useMmio uint8, stride uint8, baud uint32, base uint64, ok bool) {
-	if fdt, err := dt.ReadFile("/sys/firmware/fdt"); err == nil {
+	if fdt, err := dt.ReadFile(firmwareFDTPath); err == nil {
 		if mmio, stride, baud, base, ok := serialPortFromFDT(fdt); ok {
 			return mmio, stride, baud, base, true
 		}
