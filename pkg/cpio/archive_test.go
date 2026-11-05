@@ -6,6 +6,7 @@ package cpio
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -49,6 +50,43 @@ func TestArchiveMethods(t *testing.T) {
 	}
 	if !strings.Contains(s, "bin/r2") {
 		t.Errorf("missing 'bin/r2' from ar2.String()")
+	}
+}
+
+func TestArchiveLastWriteWins(t *testing.T) {
+	ar := InMemArchive()
+
+	r1 := StaticFile("/bin/app", "old", 0o644)
+	dir1 := Directory("etc", 0o755)
+	child := StaticFile("etc/conf", "v1", 0o644)
+	dir2 := Directory("/etc", 0o700)
+	r2 := StaticFile("bin/app", "new-content", 0o755)
+
+	for _, rec := range []Record{r1, dir1, child, dir2, r2} {
+		if err := ar.WriteRecord(rec); err != nil {
+			t.Fatalf("WriteRecord(%q): %v", rec.Name, err)
+		}
+	}
+
+	wantOrder := []string{"bin/app", "etc", "etc/conf"}
+	if !slices.Equal(ar.Order, wantOrder) {
+		t.Errorf("ar.Order = %v, want %v", ar.Order, wantOrder)
+	}
+
+	gotDir, ok := ar.Get("etc")
+	if !ok {
+		t.Fatalf("missing 'etc' directory")
+	}
+	if gotDir.Mode != (S_IFDIR | 0o700) {
+		t.Errorf("etc mode = %#o, want %#o", gotDir.Mode, S_IFDIR|0o700)
+	}
+
+	gotApp, ok := ar.Get("bin/app")
+	if !ok {
+		t.Fatalf("missing 'bin/app'")
+	}
+	if !Equal(gotApp, r2) {
+		t.Errorf("bin/app = %v, want %v", gotApp, r2)
 	}
 }
 

@@ -145,9 +145,11 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 		if err != nil {
 			return err
 		}
+		_ = root.Remove(f.Name)
 		return root.Symlink(string(content), f.Name)
 
 	case os.FileMode(0):
+		_ = root.Remove(f.Name)
 		nf, err := root.OpenFile(f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, toFileMode(f).Perm())
 		if err != nil {
 			return err
@@ -165,11 +167,13 @@ func CreateFileInRoot(f Record, rootDir string, forcePriv bool) error {
 	case os.ModeDevice:
 		// os.Root has no mknod; the parent was confirmed inside rootDir
 		// above, so the node cannot be created through an escaping symlink.
+		_ = root.Remove(f.Name)
 		if err := mknod(filepath.Join(rootDir, f.Name), perm(f)|syscall.S_IFBLK, dev(f)); err != nil && forcePriv {
 			return err
 		}
 
 	case os.ModeCharDevice:
+		_ = root.Remove(f.Name)
 		if err := mknod(filepath.Join(rootDir, f.Name), perm(f)|syscall.S_IFCHR, dev(f)); err != nil && forcePriv {
 			return err
 		}
