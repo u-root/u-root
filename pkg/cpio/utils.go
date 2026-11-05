@@ -94,11 +94,9 @@ func (r EOFReader) ReadRecord() (Record, error) {
 	return rec, nil
 }
 
-// DedupWriter is a RecordWriter that does not write more than one record with
-// the same path.
-//
-// There seems to be no harm done in stripping duplicate names when the record
-// is written, and lots of harm done if we don't do it.
+// DedupWriter is a RecordWriter that does not write more than one directory
+// record with the same path. Non-directory records are written to the stream so
+// that later records overwrite earlier records on unpack.
 type DedupWriter struct {
 	rw RecordWriter
 
@@ -116,12 +114,12 @@ func NewDedupWriter(rw RecordWriter) RecordWriter {
 
 // WriteRecord implements RecordWriter.
 //
-// If rec.Name was already seen once before, it will not be written again and
-// WriteRecord returns nil.
+// If rec is a directory and rec.Name was already written before, it is not
+// written again.
 func (dw *DedupWriter) WriteRecord(rec Record) error {
 	rec.Name = Normalize(rec.Name)
 
-	if _, ok := dw.alreadyWritten[rec.Name]; ok {
+	if _, ok := dw.alreadyWritten[rec.Name]; ok && rec.Info.Mode&S_IFMT == S_IFDIR {
 		return nil
 	}
 	dw.alreadyWritten[rec.Name] = struct{}{}
