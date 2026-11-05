@@ -56,7 +56,7 @@ func (u *MemUART) io(b []byte, bit uint8, f func([]byte) error) (int, error) {
 		}
 		if !rdy {
 			// This is mmio, and we don't want to eat the machine alive
-			// by banging these regisers continuously.
+			// by banging these registers continuously.
 			time.Sleep(1 * time.Millisecond)
 			continue
 		}
