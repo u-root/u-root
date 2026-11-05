@@ -6,13 +6,15 @@
 
 #include "textflag.h"
 
-// Linux machine_kexec enters this snippet of code with the MMU off,
-// register a0 set to the boot hart id, and register a1 set to
-// whichever kexec segment looked like an FDT first.
+// Linux machine_kexec enters this code with the MMU off, a0 set to the boot
+// hart id, and a1 set to whichever kexec segment looked like an FDT first.
+// The FIT image itself starts with an FDT header, so that a1 is not the
+// handoff tree. EDK2's RISC-V FIT entry reads the handoff FDT from a1 and
+// needs a valid stack.
 //
-// Each address is materialized with AUIPC+ADDI, which is PC-relative.
-// Register a0 is left unchanged. Copying these instructions together
-// with the data slots, keeps the references valid wherever kexec
+// Each address is materialized with AUIPC+ADDI, which is PC-relative. a0 is
+// left unchanged. Copying these instructions together with the data slots,
+// at the same relative distances, keeps the references valid wherever kexec
 // places the stub.
 TEXT trampoline_start(SB),NOSPLIT,$0
 	PCALIGN $2048

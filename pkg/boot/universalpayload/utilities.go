@@ -680,10 +680,14 @@ func (u *UPL) buildGraphicNode() (*dt.Node, error) {
 	)), nil
 }
 
+// platformSerial is the architecture UART lookup. Tests replace it to cover
+// both the ISA fallback and the MMIO handoff without a live firmware FDT.
+var platformSerial = discoverPlatformSerial
+
 // serialPortConfig is the console handed to the payload.
 // Cell 0 of the FDT reg property is 1 for port I/O and 0 for MMIO.
 func (u *UPL) serialPortConfig() (useMmio uint8, stride uint8, baud uint32, base uint64) {
-	if mmio, stride, baud, base, ok := discoverPlatformSerial(); ok {
+	if mmio, stride, baud, base, ok := platformSerial(); ok {
 		u.debug("universalpayload: serial port mmio=%d stride=%d baud=%d base=%#x\n", mmio, stride, baud, base)
 		return mmio, stride, baud, base
 	}
