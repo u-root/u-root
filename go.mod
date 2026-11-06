@@ -54,7 +54,7 @@ require (
 )
 
 require (
-	github.com/hugelgupf/p9 v0.5.0
+	github.com/hugelgupf/p9 v0.5.1
 	github.com/jaypipes/ghw v0.12.0
 	github.com/pkg/sftp v1.13.9
 	github.com/sirupsen/logrus v1.9.3
