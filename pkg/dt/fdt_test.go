@@ -6,14 +6,18 @@ package dt
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func TestLoadFDT(t *testing.T) {
@@ -233,5 +237,107 @@ func TestWalk(t *testing.T) {
 	v := []byte{0x84, 0, 0, 0x5}
 	if !bytes.Equal(b, v) {
 		t.Fatalf("Checking value of psci/migrate: got %q, want %q", b, v)
+	}
+}
+
+func TestReadStringsBlock(t *testing.T) {
+	strs := []byte("compatible\x00model\x00")
+	size := uint32(len(strs))
+	for _, tt := range []struct {
+		name    string
+		data    []byte
+		size    uint32
+		wantErr error
+	}{
+		{"short reads", strs, size, nil},
+		{"truncated block", strs[:len(strs)-1], size, io.ErrUnexpectedEOF},
+		{"empty input", nil, size, io.EOF},
+		{"empty block", nil, 0, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := bytes.NewReader(append([]byte{0xff}, tt.data...))
+			reader := struct {
+				io.Reader
+				io.Seeker
+			}{
+				Reader: iotest.OneByteReader(r),
+				Seeker: r,
+			}
+			fdt := &FDT{Header: Header{OffDtStrings: 1, SizeDtStrings: tt.size}}
+			got, err := fdt.readStringsBlock(reader)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("readStringsBlock() = %v, want %v", err, tt.wantErr)
+			}
+			if tt.wantErr == nil && !bytes.Equal(got, tt.data) {
+				t.Errorf("readStringsBlock() = %q, want %q", got, tt.data)
+			}
+		})
+	}
+}
+
+func TestReadFDTBounds(t *testing.T) {
+	dtb, err := os.ReadFile("testdata/fdt.dtb")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The root node's first property follows its begin token and empty name.
+	prop := binary.BigEndian.Uint32(dtb[8:12]) + 8
+	if token := binary.BigEndian.Uint32(dtb[prop:]); token != uint32(tokenProp) {
+		t.Fatalf("token at %#x = %#x, want property", prop, token)
+	}
+
+	for _, tt := range []struct {
+		name         string
+		offset       uint32
+		value        uint32
+		wantContains string
+		wantErr      error
+	}{
+		{"valid input", 4, uint32(len(dtb)), "", nil},
+		{"zero total size", 4, 0, "smaller than header", nil},
+		{"total size smaller than header", 4, uint32(binary.Size(Header{})) - 1, "smaller than header", nil},
+		{"total size beyond input", 4, uint32(len(dtb)) + 1, "", io.EOF},
+		{"total size beyond limit", 4, MaxTotalSize + 1, "too large", nil},
+		{"strings block beyond total size", 32, math.MaxUint32, "exceeds", nil},
+		{"struct block beyond total size", 36, math.MaxUint32, "exceeds", nil},
+		{"property beyond struct block", prop + 4, math.MaxUint32, "exceeds", nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bytes.Clone(dtb)
+			binary.BigEndian.PutUint32(b[tt.offset:], tt.value)
+
+			for _, reader := range []struct {
+				name string
+				read FDTReader
+			}{
+				{"bytes reader", func() (*FDT, error) {
+					return ReadFDT(bytes.NewReader(b))
+				}},
+				{"bounded section reader", func() (*FDT, error) {
+					return ReadFDT(io.NewSectionReader(bytes.NewReader(b), 0, int64(len(b))))
+				}},
+				{"oversized section reader", func() (*FDT, error) {
+					return ReadFDT(io.NewSectionReader(bytes.NewReader(b), 0, math.MaxInt64))
+				}},
+				{"reader at", WithReaderAt(bytes.NewReader(b))},
+			} {
+				t.Run(reader.name, func(t *testing.T) {
+					_, err := reader.read()
+					switch {
+					case tt.wantErr != nil:
+						if !errors.Is(err, tt.wantErr) {
+							t.Errorf("ReadFDT() = %v, want %v", err, tt.wantErr)
+						}
+					case tt.wantContains != "":
+						if err == nil || !strings.Contains(err.Error(), tt.wantContains) {
+							t.Errorf("ReadFDT() = %v, want error containing %q", err, tt.wantContains)
+						}
+					case err != nil:
+						t.Errorf("ReadFDT() = %v, want nil", err)
+					}
+				})
+			}
+		})
 	}
 }
