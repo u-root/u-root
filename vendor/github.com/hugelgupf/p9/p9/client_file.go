@@ -139,6 +139,20 @@ func (c *clientFile) xattrWalkRead(attr string) ([]byte, error) {
 	if rxattrwalk.Size == 0 {
 		return []byte{}, nil
 	}
+
+	// Size is a uint64 taken straight off the wire and is the only thing
+	// deciding this allocation, so a server that reports a huge attribute
+	// makes the client try to allocate it. Nothing else bounds it: Size
+	// describes the attribute rather than the message carrying it, so the
+	// transport's own length check never sees it.
+	//
+	// The server refuses to serve an attribute larger than maximumLength
+	// (see txattrwalk.handle), so a conforming peer never reports one, and
+	// EINVAL is what that server answers in the same case.
+	if rxattrwalk.Size > uint64(maximumLength) {
+		return nil, linux.EINVAL
+	}
+
 	buf := make([]byte, rxattrwalk.Size)
 	n, err := xattrFile.ReadAt(buf, 0)
 	if err != nil && !errors.Is(err, io.EOF) {
