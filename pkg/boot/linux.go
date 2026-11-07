@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 
@@ -122,6 +123,28 @@ func isTmpfsReadOnlyFile(f *os.File) bool {
 	return false
 }
 
+// tempPattern returns an os.CreateTemp pattern for a copy of src. The base
+// name of the source is included so that the name of the copy, and therefore
+// every log message that prints it, shows where the contents came from,
+// e.g. kexec-image-vmlinuz-123456.
+func tempPattern(prefix string, src any) string {
+	base := path.Base(stringer(src))
+	base = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
+			return r
+		}
+		return -1
+	}, base)
+	if len(base) > 64 {
+		base = base[:64]
+	}
+	if base == "" || base == "." {
+		return prefix + "-"
+	}
+	return prefix + "-" + base + "-"
+}
+
 // CopyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
 // necessary. It skips copying when source file is a regular file under
 // tmpfs or ramfs, and it is not opened for writing.
@@ -173,7 +196,7 @@ func CopyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 		rdr = progress(rdr)
 	}
 
-	f, err := os.CreateTemp("", "kexec-image")
+	f, err := os.CreateTemp("", tempPattern("kexec-image", r))
 	if err != nil {
 		return nil, err
 	}
