@@ -123,3 +123,44 @@ func TestSuffixGlyphs(t *testing.T) {
 		}
 	}
 }
+
+// Glyphs a terminal draws as one character out of several runes. An accent is
+// the case the tests above already cover; these are the rest of them.
+var multiRuneGlyphs = []struct {
+	name string
+	s    string
+}{
+	{"family", "\U0001F468‍\U0001F469‍\U0001F467‍\U0001F466"},
+	{"rainbow flag", "\U0001F3F3️‍\U0001F308"},
+	{"thumb with a skin tone", "\U0001F44D\U0001F3FD"},
+	{"flag", "\U0001F1EF\U0001F1F5"},
+}
+
+// Moving over one glyph must move over all of it. Stopping partway leaves the
+// cursor inside the character, and the runes either side of it then get
+// edited separately.
+func TestGlyphMovementKeepsGlyphsWhole(t *testing.T) {
+	for _, g := range multiRuneGlyphs {
+		s := []rune(g.s)
+		if out := getPrefixGlyphs(s, 1); len(out) != len(s) {
+			t.Errorf("%s: prefix of one glyph took %d of its %d runes",
+				g.name, len(out), len(s))
+		}
+		if out := getSuffixGlyphs(s, 1); len(out) != len(s) {
+			t.Errorf("%s: suffix of one glyph took %d of its %d runes",
+				g.name, len(out), len(s))
+		}
+
+		// One glyph of "a<glyph>b" is the "a" at the front and the "b" at the
+		// back, never a piece of the glyph between them.
+		padded := append(append([]rune("a"), s...), 'b')
+		if out := getPrefixGlyphs(padded, 1); len(out) != 1 {
+			t.Errorf("%s: prefix of one glyph of %q took %d runes, wanted 1",
+				g.name, string(padded), len(out))
+		}
+		if out := getSuffixGlyphs(padded, 1); len(out) != 1 {
+			t.Errorf("%s: suffix of one glyph of %q took %d runes, wanted 1",
+				g.name, string(padded), len(out))
+		}
+	}
+}
