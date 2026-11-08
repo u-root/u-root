@@ -35,6 +35,7 @@ require (
 	github.com/pkg/sftp v1.13.9
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
+	github.com/rivo/uniseg v0.4.4
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.7
@@ -94,7 +95,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rasky/go-xdr v0.0.0-20170124162913-1a41d1a06c93 // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/willscott/go-nfs v0.0.0-20240424173852-04b947a7e58a // indirect
