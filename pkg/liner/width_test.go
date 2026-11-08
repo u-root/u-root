@@ -130,8 +130,8 @@ var multiRuneGlyphs = []struct {
 	name string
 	s    string
 }{
-	{"family", "\U0001F468‍\U0001F469‍\U0001F467‍\U0001F466"},
-	{"rainbow flag", "\U0001F3F3️‍\U0001F308"},
+	{"family", "\U0001F468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466"},
+	{"rainbow flag", "\U0001F3F3\ufe0f\u200d\U0001F308"},
 	{"thumb with a skin tone", "\U0001F44D\U0001F3FD"},
 	{"flag", "\U0001F1EF\U0001F1F5"},
 }
