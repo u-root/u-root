@@ -12,13 +12,13 @@
 package pty
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/u-root/u-root/pkg/termios"
+	"golang.org/x/sys/unix"
 )
 
 // New returns a new Pty.
@@ -63,30 +63,17 @@ func New() (*Pty, error) {
 	return &Pty{Ptm: ptm, Pts: pts, Sname: sname, Kid: -1, TTY: tty, Restorer: restorer}, nil
 }
 
-func ioctl(f *os.File, cmd, ptr uintptr) error {
-	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), cmd, ptr)
-	if e != 0 {
-		return e
-	}
-	return nil
-}
-
 func ptsname(f *os.File) (string, error) {
-	var n uintptr
-	if err := ioctl(f, syscall.TIOCGPTN, uintptr(unsafe.Pointer(&n))); err != nil {
+	n, err := unix.IoctlGetInt(int(f.Fd()), unix.TIOCGPTN)
+	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("/dev/pts/%d", n), nil
+	return "/dev/pts/" + strconv.Itoa(n), nil
 }
 
 func ptsunlock(f *os.File) error {
-	var u uintptr
 	// use TIOCSPTLCK with a zero valued arg to clear the slave pty lock
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCSPTLCK, uintptr(unsafe.Pointer(&u)))
-	if err != 0 {
-		return err
-	}
-	return nil
+	return unix.IoctlSetPointerInt(int(f.Fd()), unix.TIOCSPTLCK, 0)
 }
 
 func sysLinux(p *Pty) {
@@ -107,10 +94,8 @@ func NewPTMS() (*os.File, *os.File, error) {
 	}
 
 	// unlock
-	var u int32
-	// use TIOCSPTLCK with a pointer to zero to clear the lock.
-	err = ioctl(p, syscall.TIOCSPTLCK, uintptr(unsafe.Pointer(&u))) //nolint:gosec // Expected unsafe pointer for Syscall call.
-	if err != nil {
+	// use TIOCSPTLCK with a zero valued arg to clear the lock.
+	if err := unix.IoctlSetPointerInt(int(p.Fd()), unix.TIOCSPTLCK, 0); err != nil {
 		return nil, nil, err
 	}
 

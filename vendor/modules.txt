@@ -209,8 +209,8 @@ github.com/hashicorp/golang-lru/v2/simplelru
 # github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa
 ## explicit; go 1.14
 github.com/hugelgupf/go-shlex
-# github.com/hugelgupf/p9 v0.4.1
-## explicit; go 1.21
+# github.com/hugelgupf/p9 v0.5.1
+## explicit; go 1.26.0
 github.com/hugelgupf/p9/fsimpl/localfs
 github.com/hugelgupf/p9/fsimpl/templatefs
 github.com/hugelgupf/p9/fsimpl/xattr
@@ -458,8 +458,6 @@ github.com/u-root/mkuimage/uimage/builder
 github.com/u-root/mkuimage/uimage/initramfs
 github.com/u-root/mkuimage/uimage/mkuimage
 github.com/u-root/mkuimage/uimage/templates
-# github.com/u-root/u-root/pkg/uroot v0.0.0-00010101000000-000000000000 => ./
-## explicit; go 1.26.6
 # github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701
 ## explicit; go 1.21
 github.com/u-root/uio/cp
@@ -504,7 +502,7 @@ go.bug.st/serial/unixutils
 # golang.org/x/arch v0.2.0
 ## explicit; go 1.17
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.56.0
+# golang.org/x/crypto v0.58.0
 ## explicit; go 1.26.0
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -523,13 +521,13 @@ golang.org/x/crypto/ssh/knownhosts
 ## explicit; go 1.25.0
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
-# golang.org/x/mod v0.38.0
-## explicit; go 1.25.0
+# golang.org/x/mod v0.42.0
+## explicit; go 1.26.0
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.57.0
-## explicit; go 1.25.0
+# golang.org/x/net v0.61.0
+## explicit; go 1.26.0
 golang.org/x/net/bpf
 golang.org/x/net/icmp
 golang.org/x/net/internal/iana
@@ -538,20 +536,20 @@ golang.org/x/net/internal/socks
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
-# golang.org/x/sync v0.22.0
-## explicit; go 1.25.0
+# golang.org/x/sync v0.24.0
+## explicit; go 1.26.0
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.47.0
-## explicit; go 1.25.0
+# golang.org/x/sys v0.49.0
+## explicit; go 1.26.0
 golang.org/x/sys/cpu
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.45.0
-## explicit; go 1.25.0
+# golang.org/x/term v0.47.0
+## explicit; go 1.26.0
 golang.org/x/term
-# golang.org/x/text v0.41.0
-## explicit; go 1.25.0
+# golang.org/x/text v0.43.0
+## explicit; go 1.26.0
 golang.org/x/text/feature/plural
 golang.org/x/text/internal
 golang.org/x/text/internal/catmsg
@@ -566,17 +564,15 @@ golang.org/x/text/message
 golang.org/x/text/message/catalog
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.48.0
-## explicit; go 1.25.0
+# golang.org/x/tools v0.52.0
+## explicit; go 1.26.0
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/ast/edge
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
-golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/imports
-golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
@@ -586,10 +582,10 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/modindex
+golang.org/x/tools/internal/moremaps
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/pkgbits
 golang.org/x/tools/internal/stdlib
-golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
 # gopkg.in/yaml.v2 v2.4.0
@@ -613,4 +609,3 @@ mvdan.cc/sh/v3/syntax
 ## explicit
 pack.ag/tftp
 pack.ag/tftp/netascii
-# github.com/u-root/u-root/pkg/uroot => ./

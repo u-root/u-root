@@ -499,6 +499,24 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 	}
 }
 
+func TestAppendSmbiosTableHOBMissing(t *testing.T) {
+	u := New(WithSMBIOSBase(func() (int64, int64, error) {
+		return 0, 0, errors.New("no smbios")
+	}))
+
+	hobBuf := &bytes.Buffer{}
+	var hobLen uint64
+	if err := u.appendSmbiosTableHOB(hobBuf, &hobLen); err != nil {
+		t.Fatalf("appendSmbiosTableHOB() = %v, want nil", err)
+	}
+	if hobBuf.Len() != 0 || hobLen != 0 {
+		t.Fatalf("SMBIOS HOB len %d hobLen %d, want empty", hobBuf.Len(), hobLen)
+	}
+	if !errors.Is(errors.Join(u.warningMsg...), ErrFailToGetSmbiosTable) {
+		t.Fatalf("warnings = %v, want %v", u.warningMsg, ErrFailToGetSmbiosTable)
+	}
+}
+
 func TestComponentsSizeReset(t *testing.T) {
 	u := New()
 	// Artificially increase componentsSize

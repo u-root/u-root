@@ -41,20 +41,20 @@ require (
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.56.0
+	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
-	golang.org/x/net v0.57.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
-	golang.org/x/text v0.41.0
-	golang.org/x/tools v0.48.0
+	golang.org/x/net v0.61.0
+	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
+	golang.org/x/text v0.43.0
+	golang.org/x/tools v0.52.0
 	gopkg.in/yaml.v2 v2.4.0
 	mvdan.cc/sh/v3 v3.11.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
 
 require (
-	github.com/hugelgupf/p9 v0.4.1
+	github.com/hugelgupf/p9 v0.5.1
 	github.com/jaypipes/ghw v0.12.0
 	github.com/pkg/sftp v1.13.9
 	github.com/sirupsen/logrus v1.9.3
@@ -85,7 +85,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rasky/go-xdr v0.0.0-20170124162913-1a41d1a06c93 // indirect
-	github.com/u-root/u-root/pkg/uroot v0.0.0-00010101000000-000000000000 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/willscott/go-nfs v0.0.0-20240424173852-04b947a7e58a // indirect
 	github.com/willscott/go-nfs-client v0.0.0-20240104095149-b44639837b00 // indirect
@@ -122,8 +121,8 @@ require (
 	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/mod v0.38.0 // indirect
-	golang.org/x/sync v0.22.0
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/sync v0.24.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
@@ -143,6 +142,3 @@ retract (
 	// Published v1 too early (before migrating to go modules)
 	[v1.0.0, v1.0.1]
 )
-
-// For github.com/hugelgupf/p9/fsimpl/localfs
-replace github.com/u-root/u-root/pkg/uroot => ./
