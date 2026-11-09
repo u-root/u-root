@@ -321,11 +321,12 @@ func TestFileProcessKeepsMode(t *testing.T) {
 	}
 	plain := filepath.Join(t.TempDir(), "secret")
 	if err := os.WriteFile(plain, []byte("hunter2"), 0o600); err != nil {
-		t.Fatal(err)
+		t.Fatalf("create %q with mode 0600: got %v, want nil", plain, err)
 	}
-	// An existing, wider output, as overwritten by -f.
+	// An existing 0644 output, more permissive than the 0600 input, which
+	// -f overwrites.
 	if err := os.WriteFile(plain+".gz", nil, 0o644); err != nil {
-		t.Fatal(err)
+		t.Fatalf("create %q with mode 0644: got %v, want nil", plain+".gz", err)
 	}
 
 	f := File{
@@ -339,24 +340,24 @@ func TestFileProcessKeepsMode(t *testing.T) {
 		},
 	}
 	if err := f.Process(); err != nil {
-		t.Fatalf("File.Process() compression error = %v", err)
+		t.Fatalf("compressing %q: got %v, want nil", plain, err)
 	}
 	if err := os.Remove(plain); err != nil {
-		t.Fatal(err)
+		t.Fatalf("remove %q: got %v, want nil", plain, err)
 	}
 	f.Path = plain + ".gz"
 	f.Options.Decompress = true
 	if err := f.Process(); err != nil {
-		t.Fatalf("File.Process() decompression error = %v", err)
+		t.Fatalf("decompressing %q: got %v, want nil", f.Path, err)
 	}
 
 	for _, p := range []string{plain + ".gz", plain} {
 		fi, err := os.Stat(p)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("stat %q: got %v, want nil", p, err)
 		}
 		if got := fi.Mode().Perm(); got != 0o600 {
-			t.Errorf("File.Process() mode of %q = %#o; want %#o", p, got, 0o600)
+			t.Errorf("mode of %q: got %#o, want %#o", p, got, 0o600)
 		}
 	}
 }
