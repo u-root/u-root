@@ -140,17 +140,17 @@ func (f *File) Process() error {
 		if fi, err = i.Stat(); err != nil {
 			return err
 		}
-		// Like gzip(1), give the output the input's permissions. Set them
-		// before writing: OpenFile's mode is masked by the umask and is
-		// not applied to an existing output that -f overwrites.
+		// Give the output file the input file's permissions.
 		perm := fi.Mode().Perm()
-		if o, err = os.OpenFile(f.outputPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm); err != nil {
+		var out *os.File
+		if out, err = os.OpenFile(f.outputPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm); err != nil {
 			return err
 		}
-		if err = os.Chmod(f.outputPath(), perm); err != nil {
-			o.Close()
+		if err = out.Chmod(perm); err != nil {
+			out.Close()
 			return err
 		}
+		o = out
 	}
 
 	if f.Options.Verbose && !f.Options.Quiet {
