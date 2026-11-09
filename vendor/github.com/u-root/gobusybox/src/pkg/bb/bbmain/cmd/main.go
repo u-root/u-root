@@ -20,8 +20,8 @@ import (
 	// dependency management for this main file is... hard.
 )
 
-// AbsSymlink returns an absolute path for the link from a file to a target.
-func AbsSymlink(originalFile, target string) string {
+// absSymlink returns an absolute path for the link from a file to a target.
+func absSymlink(originalFile, target string) string {
 	if !filepath.IsAbs(originalFile) {
 		var err error
 		originalFile, err = filepath.Abs(originalFile)
@@ -41,16 +41,16 @@ func AbsSymlink(originalFile, target string) string {
 	return target
 }
 
-// IsTargetSymlink returns true if a target of a symlink is also a symlink.
-func IsTargetSymlink(originalFile, target string) bool {
-	s, err := os.Lstat(AbsSymlink(originalFile, target))
+// isTargetSymlink returns true if a target of a symlink is also a symlink.
+func isTargetSymlink(originalFile, target string) bool {
+	s, err := os.Lstat(absSymlink(originalFile, target))
 	if err != nil {
 		return false
 	}
 	return (s.Mode() & os.ModeSymlink) == os.ModeSymlink
 }
 
-// ResolveUntilLastSymlink resolves until the last symlink.
+// resolveUntilLastSymlink resolves until the last symlink.
 //
 // This is needed when we have a chain of symlinks and want the last
 // symlink, not the file pointed to (which is why we don't use
@@ -61,10 +61,10 @@ func IsTargetSymlink(originalFile, target string) bool {
 // /foo/bar -> ../baz/foo
 // /baz/foo -> bla
 //
-// ResolveUntilLastSymlink(/foo/bar) returns /baz/foo.
-func ResolveUntilLastSymlink(p string) string {
-	for target, err := os.Readlink(p); err == nil && IsTargetSymlink(p, target); target, err = os.Readlink(p) {
-		p = AbsSymlink(p, target)
+// resolveUntilLastSymlink(/foo/bar) returns /baz/foo.
+func resolveUntilLastSymlink(p string) string {
+	for target, err := os.Readlink(p); err == nil && isTargetSymlink(p, target); target, err = os.Readlink(p) {
+		p = absSymlink(p, target)
 	}
 	return p
 }
@@ -128,7 +128,7 @@ func run() {
 }
 
 func main() {
-	os.Args[0] = ResolveUntilLastSymlink(os.Args[0])
+	os.Args[0] = resolveUntilLastSymlink(os.Args[0])
 
 	run()
 }
