@@ -350,7 +350,5 @@ func (c *cmd) run() error {
 
 func main() {
 	flag.Parse()
-	if err := command(parseParams()).run(); err != nil {
-		log.Fatal(err)
-	}
+	log.Fatal(command(parseParams()).run())
 }

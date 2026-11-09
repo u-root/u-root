@@ -274,8 +274,8 @@ github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667 h1:eUBtVqVC9WnmTXVX65vk
 github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667/go.mod h1:SwKrzXTgbgbFoY33L3Z/uOFb0NyloZohfhbdowVF2Zc=
 github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c h1:U/KbW3EQw/kHZqkzydesQ7KMIybd55uMFoF39GQEsjo=
 github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c/go.mod h1:LnxcvBqTx9ehtEbNgAP+rtKYohCaeJ2Lzmo/FSchi30=
-github.com/u-root/gobusybox/src v0.3.0 h1:ng9rBEdYBVbrJvpuqszL3s+GZ48cRQOkzXqo3YKR4XM=
-github.com/u-root/gobusybox/src v0.3.0/go.mod h1:OMAhTvyRLgyoDrKKcTVx2f6p5oK2pddEZVVxT4m54fA=
+github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e h1:kWSRr94BMf0AZ4T1wGTllBIfFopw3tnrmTkE+QpXYEs=
+github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e/go.mod h1:8fUH6dYpI0ESts31766/gNm3nEue7ev7YIe0fNVlTuc=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eVd21MOEatnh2pfAAwZaEPSIEEsjctQ=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
 github.com/u-root/mkuimage v0.2.0 h1:/W0mzYXNCqOBfESM22zbEaib7iPtEDigSYfv7Mq7a/Q=
