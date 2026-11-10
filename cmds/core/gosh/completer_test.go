@@ -43,14 +43,14 @@ func TestAutocomplete(t *testing.T) {
 			name:  "cwd",
 			input: "./c",
 			want: []string{
-				"./completer.go", "./completer_bubbline.go", "./completer_bubbline_test.go", "./completer_common.go", "./completer_liner.go", "./completer_nobuild.go", "./completer_test.go",
+				"./completer_common.go", "./completer_liner.go", "./completer_nobuild.go", "./completer_test.go",
 			},
 		},
 		{
 			name:  "path",
 			input: "../gosh/c",
 			want: []string{
-				"../gosh/completer.go", "../gosh/completer_bubbline.go", "../gosh/completer_bubbline_test.go", "../gosh/completer_common.go", "../gosh/completer_liner.go", "../gosh/completer_nobuild.go", "../gosh/completer_test.go"},
+				"../gosh/completer_common.go", "../gosh/completer_liner.go", "../gosh/completer_nobuild.go", "../gosh/completer_test.go"},
 		},
 		{
 			name:  "directory",
