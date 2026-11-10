@@ -499,6 +499,24 @@ func TestAppendSmbiosTableHOB(t *testing.T) {
 	}
 }
 
+func TestAppendSmbiosTableHOBMissing(t *testing.T) {
+	u := New(WithSMBIOSBase(func() (int64, int64, error) {
+		return 0, 0, errors.New("no smbios")
+	}))
+
+	hobBuf := &bytes.Buffer{}
+	var hobLen uint64
+	if err := u.appendSmbiosTableHOB(hobBuf, &hobLen); err != nil {
+		t.Fatalf("appendSmbiosTableHOB() = %v, want nil", err)
+	}
+	if hobBuf.Len() != 0 || hobLen != 0 {
+		t.Fatalf("SMBIOS HOB len %d hobLen %d, want empty", hobBuf.Len(), hobLen)
+	}
+	if !errors.Is(errors.Join(u.warningMsg...), ErrFailToGetSmbiosTable) {
+		t.Fatalf("warnings = %v, want %v", u.warningMsg, ErrFailToGetSmbiosTable)
+	}
+}
+
 func TestComponentsSizeReset(t *testing.T) {
 	u := New()
 	// Artificially increase componentsSize
@@ -515,5 +533,27 @@ func TestComponentsSizeReset(t *testing.T) {
 	err = u.checkComponentsSize(1)
 	if err != nil {
 		t.Errorf("Unexpected error after reset: %v", err)
+	}
+}
+
+func TestWarnings(t *testing.T) {
+	u := New()
+	if w := u.Warnings(); w != nil {
+		t.Errorf("Warnings() = %v, want nil before any warning", w)
+	}
+
+	errA, errB := errors.New("a"), errors.New("b")
+	u.warningMsg = append(u.warningMsg, errA, errB)
+	w := u.Warnings()
+	if !errors.Is(w, errA) || !errors.Is(w, errB) {
+		t.Errorf("Warnings() = %v, want it to wrap %v and %v", w, errA, errB)
+	}
+
+	// A new load starts with no warnings, even on a reused UPL.
+	if err := u.Load(filepath.Join(t.TempDir(), "missing")); err == nil {
+		t.Fatalf("Load of a missing file succeeded")
+	}
+	if w := u.Warnings(); w != nil {
+		t.Errorf("Warnings() after a new Load = %v, want nil", w)
 	}
 }

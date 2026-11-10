@@ -7,11 +7,13 @@ package golang
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -76,19 +78,67 @@ func (c Environ) compilerCmd(gocmd string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-// If go-compiler specified, return its absolute-path, otherwise return 'nil'.
+// compilerAbs does nothing and returns nil if c.Compiler.Path is not set.
+// Otherwise, c.Compiler.Path is set to the absolute path of the compiler
+// found by exec.LookPath.
+//
+// LookPath alone is not enough. It only promises an absolute result for a
+// bare name it resolved against PATH; a path containing a slash is tried
+// directly and returned verbatim, so "./tinygo" comes back relative with no
+// error. compilerCmd runs the compiler with cmd.Dir set, which would resolve
+// such a path against the build directory rather than the one the user named
+// it in, so make it absolute here.
 func (c *Environ) compilerAbs() error {
-	if c.Compiler.Path != "" {
-		fname, err := exec.LookPath(string(c.Compiler.Path))
-		if err == nil {
-			fname, err = filepath.Abs(fname)
-		}
-		if err != nil {
-			return fmt.Errorf("build: %v", err)
-		}
-		c.Compiler.Path = fname
+	if len(c.Compiler.Path) == 0 {
+		return nil
 	}
+
+	fname, err := exec.LookPath(c.Compiler.Path)
+	if err != nil {
+		return fmt.Errorf("go-compiler: %w", err)
+	}
+
+	fname, err = filepath.Abs(fname)
+	if err != nil {
+		return fmt.Errorf("go-compiler: %w", err)
+	}
+
+	c.Compiler.Path = fname
 	return nil
+}
+
+var (
+	// ErrNoVersionString reports output that held no version line at all.
+	ErrNoVersionString = errors.New("no compiler version string in output")
+
+	// ErrVersionSyntax reports a version line that was found but could not
+	// be parsed into an identifier and a version.
+	ErrVersionSyntax = errors.New("unrecognized compiler version string")
+)
+
+// versionLine extracts the version line from `go version` output.
+//
+// The compiler may print progress to the same stream before the version
+// itself, e.g. "go: downloading go1.22.4 (linux/amd64)" when GOTOOLCHAIN
+// selects a toolchain that is not installed yet. The version is always the
+// last non-empty line.
+func versionLine(out string) (string, error) {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	for _, raw := range slices.Backward(lines) {
+		if line := strings.TrimSpace(raw); line != "" {
+			return line, nil
+		}
+	}
+	return "", ErrNoVersionString
+}
+
+// versionSyntaxError reports a compiler version line that was found but could
+// not be parsed into an identifier and a version.
+//
+// It wraps ErrVersionSyntax so callers can tell malformed version output from
+// output that held no version line at all (ErrNoVersionString).
+func versionSyntaxError(v string) error {
+	return fmt.Errorf("go-compiler version %q: %w", v, ErrVersionSyntax)
 }
 
 // Runs compilerCmd("version") and parse/caches output to c.Compiler.
@@ -97,20 +147,21 @@ func (c *Environ) CompilerInit() error {
 		return nil
 	}
 
-	c.compilerAbs()
+	if err := c.compilerAbs(); err != nil {
+		return err
+	}
 
 	cmd := c.compilerCmd("version")
 	vb, err := cmd.CombinedOutput()
 	if err != nil {
 		return err
 	}
-	v := string(vb)
-
-	efmt := "go-compiler 'version' output unrecognized: %v"
-	s := strings.Fields(v)
-	if len(s) < 1 {
-		return fmt.Errorf(efmt, v)
+	v, err := versionLine(string(vb))
+	if err != nil {
+		return err
 	}
+
+	s := strings.Fields(v)
 
 	compiler := c.Compiler
 	compiler.VersionOutput = strings.TrimSpace(v)
@@ -122,7 +173,7 @@ func (c *Environ) CompilerInit() error {
 
 	case CompilerGo:
 		if len(s) < 3 {
-			return fmt.Errorf(efmt, v)
+			return versionSyntaxError(v)
 		}
 		compiler.Version = s[2]
 		compiler.VersionGo = s[2]
@@ -130,7 +181,7 @@ func (c *Environ) CompilerInit() error {
 	case CompilerTinygo:
 		// e.g. "tinygo version 0.33.0 darwin/arm64 (using go version go1.22.2 and LLVM version 18.1.2)"
 		if len(s) < 8 {
-			return fmt.Errorf(efmt, v)
+			return versionSyntaxError(v)
 		}
 		compiler.Version = s[2]
 		compiler.VersionGo = s[7]
@@ -161,7 +212,7 @@ func (c *Environ) CompilerInit() error {
 		}
 
 	case CompilerUnkown:
-		return fmt.Errorf(efmt, v)
+		return versionSyntaxError(v)
 	}
 	c.Compiler = compiler
 	return nil
@@ -189,7 +240,7 @@ func (c Environ) build(dirPath string, binaryPath string, pattern []string, opts
 		args = append(args, "-mod", string(c.Mod))
 	}
 	if c.InstallSuffix != "" {
-		args = append(args, "-installsuffix", c.Context.InstallSuffix)
+		args = append(args, "-installsuffix", c.InstallSuffix)
 	}
 
 	switch c.Compiler.Type {

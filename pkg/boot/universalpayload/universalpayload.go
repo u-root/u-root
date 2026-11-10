@@ -256,16 +256,17 @@ func (u *UPL) constructGUIDHOB(name string) (*EFIHOBGUIDType, error) {
 }
 
 // Construct Serial Port HOB
-func constructSerialPortHOB() *UniversalPayloadSerialPortInfo {
+func (u *UPL) constructSerialPortHOB() *UniversalPayloadSerialPortInfo {
+	useMmio, stride, baud, base := u.serialPortConfig()
 	return &UniversalPayloadSerialPortInfo{
 		Header: UniversalPayloadGenericHeader{
 			Revision: UniversalPayloadSerialPortInfoRevision,
 			Length:   uint16(unsafe.Sizeof(UniversalPayloadSerialPortInfo{})),
 		},
-		UseMmio:        0,
-		RegisterStride: UniversalPayloadSerialPortRegisterStride,
-		BaudRate:       UniversalPayloadSerialPortBaudRate,
-		RegisterBase:   UniversalPayloadSerialPortRegisterBase,
+		UseMmio:        useMmio,
+		RegisterStride: stride,
+		BaudRate:       baud,
+		RegisterBase:   EFIPhysicalAddress(base),
 	}
 }
 
@@ -315,7 +316,7 @@ func (u *UPL) appendMemMapHOB(buf *bytes.Buffer, hobLen *uint64, memMap kexec.Me
 
 // Construct serial port HOB
 func (u *UPL) appendSerialPortHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	serialPortInfo := constructSerialPortHOB()
+	serialPortInfo := u.constructSerialPortHOB()
 	serialGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadSerialPortInfoGUID)
 	if err != nil {
 		return err
@@ -368,10 +369,13 @@ func (u *UPL) appendUniversalPayloadBase(buf *bytes.Buffer, hobLen *uint64, load
 }
 
 func (u *UPL) appendSmbiosTableHOB(buf *bytes.Buffer, hobLen *uint64) error {
-	// Construct SMBIOS HOB
+	// SMBIOS is optional handoff data. Firmware such as RISC-V UEFI often
+	// publishes no table; omit the HOB and continue loading.
 	smbiosTable, err := u.constructSmbiosTable()
 	if err != nil {
-		return err
+		u.warningMsg = append(u.warningMsg, err)
+		u.debug("universalpayload: skip SMBIOS HOB: %v\n", err)
+		return nil
 	}
 
 	smbiosTableGUIDHOB, err := u.constructGUIDHOB(UniversalPayloadSmbiosTableGUID)
@@ -529,7 +533,10 @@ func (u *UPL) prepareBootloaderParameter(fdtLoad *FdtLoad, loadAddr uint64, mem 
 	// rsdpBase indicates whether we need to copy RSDP table data to specified
 	// location. If rsdpBase equals to zero, then we need to copy data to
 	// specified address, otherwise, we will use rsdpBase directly.
-	if rsdpBase == 0 {
+	// An empty result means the firmware published no ACPI table. Leave
+	// rsdpBase at zero so the handoff omits ACPI instead of loading a
+	// zero-length segment.
+	if rsdpBase == 0 && len(rsdpData) > 0 {
 		// Check whether reserved components size is overflowed.
 		if err := u.checkComponentsSize(align.UpPage(uint(len(rsdpData)))); err != nil {
 			return err
@@ -670,25 +677,32 @@ func (u *UPL) loadKexecMemWithHOBs(fdt *FdtLoad, data []byte, mem *kexec.Memory)
 	return (uintptr)(loadAddr + uint64(u.trampolineOffset)), nil
 }
 
-// Load loads the Universal Payload image from the specified file.
-func Load(name string, dbg func(string, ...any)) (error, error) {
-	return New(WithDebug(dbg)).Load(name)
+// Load loads the Universal Payload image from the specified file. The
+// returned UPL is never nil, so its Warnings can be read even if Load fails.
+func Load(name string, dbg func(string, ...any)) (*UPL, error) {
+	u := New(WithDebug(dbg))
+	return u, u.Load(name)
 }
 
 // Load loads the Universal Payload image from the specified file.
-func (u *UPL) Load(name string) (error, error) {
+//
+// Problems that do not stop the load are collected and returned by Warnings.
+func (u *UPL) Load(name string) error {
+	// Warnings describe this load only.
+	u.warningMsg = nil
+
 	u.debug("universalpayload: Try to get FDT information from:%s\n", name)
 	fdtLoad, err := u.GetFdtInfo(name)
 	if err != nil {
 		u.debug("universalpayload: Failed to get FDT information (%v)\n", err)
-		return err, errors.Join(u.warningMsg...)
+		return err
 	}
 
 	u.debug("universalpayload: Try to fetch file content\n")
 	data, err := os.ReadFile(name)
 	if err != nil {
 		u.debug("universalpayload: Failed to fetch file content (%v)\n", err)
-		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err), errors.Join(u.warningMsg...)
+		return fmt.Errorf("%w: file: %s, err: %w", ErrFailToReadFdtFile, name, err)
 	}
 
 	// Prepare memory.
@@ -699,7 +713,7 @@ func (u *UPL) Load(name string) (error, error) {
 		memmap, err = u.kexecMemoryMapFromIOMem()
 		if err != nil {
 			u.debug("universalpayload: Failed to get Memory Map from IOMem\n")
-			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err), errors.Join(u.warningMsg...)
+			return fmt.Errorf("%w: err: %w", ErrMemMapIoMemExecuteFailed, err)
 		}
 	}
 
@@ -712,18 +726,23 @@ func (u *UPL) Load(name string) (error, error) {
 	entry, err := u.loadKexecMemWithHOBs(fdtLoad, data, &mem)
 	if err != nil {
 		u.debug("universalpayload: Failed to prepare parameters with error (%v)\n", err)
-		return err, errors.Join(u.warningMsg...)
+		return err
 	}
 
 	u.debug("universalpayload: Entry:%x, Segments:%v\n", entry, mem.Segments)
 	if err := kexec.Load(entry, mem.Segments, 0); err != nil {
 		u.debug("universalpayload: Failed to load segments with error (%v)\n", err)
-		return errors.Join(ErrKexecLoadFailed, err), errors.Join(u.warningMsg...)
+		return errors.Join(ErrKexecLoadFailed, err)
 	}
 
 	u.debug("universalpayload: boot trampoline code at:%x\n", entry)
 
-	return nil, errors.Join(u.warningMsg...)
+	return nil
+}
+
+// Warnings returns the problems Load ran into that did not stop it, or nil.
+func (u *UPL) Warnings() error {
+	return errors.Join(u.warningMsg...)
 }
 
 func Exec() error {

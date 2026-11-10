@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -59,6 +60,28 @@ func newPackages(l ulog.Logger, genv *golang.Environ, env Env, patterns ...strin
 	if err != nil {
 		return nil, fmt.Errorf("failed to load package %v: %v", paths, err)
 	}
+	// The cheap lookup in step 1 sees only the named commands' own
+	// modules. A dependency module that declares a newer go directive is
+	// invisible to it, and addPkg below is not the backstop it looks
+	// like: measured on a go1.26-built loader against a command in a
+	// go1.21 module importing a module declaring go 1.27, go/packages
+	// records both the refusal and its advice on the *dependency*, and
+	// leaves the root command with IllTyped set and no errors at all. So
+	// the load above succeeds, addPkg reads an empty p.Errors, and an
+	// ill-typed package reaches the rewrite.
+	//
+	// Walking the whole graph is what makes the directive visible. A
+	// package outside any module, which is to say the standard library,
+	// has no directive and is skipped.
+	var graph []*packages.Package
+	packages.Visit(importPkgs, func(p *packages.Package) bool {
+		graph = append(graph, p)
+		return true
+	}, nil)
+	if err := checkToolchainVersion(progName(), goToolchainVersion(), graph); err != nil {
+		return nil, err
+	}
+
 	var pkgs []*packages.Package
 	for _, p := range importPkgs {
 		pkgs, err = addPkg(pkgs, p)
@@ -187,25 +210,142 @@ func excludePaths(paths []string, exclusions []string) []string {
 	return result
 }
 
-// Just looking up the stuff that doesn't take forever to parse.
-func lookupPkgNameAndFiles(env *golang.Environ, patterns ...string) ([]*packages.Package, error) {
-	return env.Lookup(packages.NeedName|packages.NeedFiles, patterns...)
+// goToolchainVersion reports the Go version this program was built with.
+//
+// It is a variable because the lookup path cannot otherwise be tested: the
+// toolchain running the tests is, by construction, at least as new as every
+// module in this repository, so no fixture can be too new for it.
+var goToolchainVersion = runtime.Version
+
+// errToolchainTooOld is returned when a command's module declares a newer Go
+// language version than the toolchain that built this program.
+//
+// It is short because it is a prefix: the wrapped message below says which
+// program, which module and what to do, and bb.BuildBusybox prefixes the
+// whole thing again with "finding packages failed".
+var errToolchainTooOld = errors.New("toolchain is too old")
+
+// progName names the running program, for a message that has to read
+// correctly from both makebb and gomodbb, which share this loader, and from
+// anything else embedding it under another name.
+func progName() string {
+	if len(os.Args) == 0 || os.Args[0] == "" {
+		return "this program"
+	}
+	return filepath.Base(os.Args[0])
 }
 
-func couldBeGlob(s string) bool {
-	return strings.ContainsAny(s, "*?[") || strings.Contains(s, `\\`)
+// checkToolchainVersion reports an error if any of pkgs belongs to a module
+// whose go directive names a newer Go language version than toolchain.
+//
+// This program type-checks commands in-process, with the go/types linked into
+// it rather than the go binary on PATH, and go/types refuses source declaring
+// a language version newer than the toolchain that built the tool. Left to
+// itself the refusal reads
+//
+//	cmd/containerd/main.go:17:1: package requires newer Go version go1.27
+//	(application built with go1.26)
+//
+// which names the user's file and calls the too-old program "the
+// application", so every part of it points at the source being built rather
+// than at the tool reading it. See
+// https://github.com/u-root/gobusybox/issues/170.
+//
+// prog and toolchain are parameters, the latter being a version as
+// runtime.Version reports it, so that the decision can be exercised without
+// building this package with another toolchain.
+//
+// Versions are compared as language versions, because that is what go/types
+// compares: go/types truncates both sides with go/version.Lang. Measured, a
+// tool built with go1.26.6 type-checks a module declaring go 1.26.9 without
+// complaint, so comparing the full versions here would refuse a build that
+// works.
+//
+// A toolchain or go directive that go/version cannot parse is ignored rather
+// than guessed at -- a development toolchain reports a version of neither
+// shape, and a package outside any module has no directive at all. The
+// type-check error at addPkg stays the backstop for those.
+//
+// It is called twice, because the set it has to judge is known twice over and
+// the cheap answer is worth having first. filterGoPaths calls it on the
+// commands that survive exclusion, before the type-checking load; newPackages
+// calls it again on the whole import graph, which is the only place a
+// dependency module's directive is visible. Both pass the same prog and
+// toolchain, so the message does not depend on which one fired.
+func checkToolchainVersion(prog, toolchain string, pkgs []*packages.Package) error {
+	toolLang := golang.MajorMinorGoVersion(toolchain, "")
+	if toolLang == "" {
+		return nil
+	}
+
+	var modPath, modLang string
+	for _, p := range pkgs {
+		if p.Module == nil {
+			continue
+		}
+		lang := golang.MajorMinorGoVersion(p.Module.GoVersion, "")
+		// A go directive that is absent or unparseable truncates to
+		// "", which CompareGoVersions sorts below every valid
+		// version, so it is skipped here rather than guessed at.
+		if golang.CompareGoVersions(lang, toolLang) <= 0 {
+			continue
+		}
+		// Report the highest requirement, because rebuilding to
+		// satisfy it satisfies every other. Ties go to the lowest
+		// module path, so the message does not depend on the order
+		// the packages happened to load in.
+		if c := golang.CompareGoVersions(lang, modLang); c > 0 || (c == 0 && p.Module.Path < modPath) {
+			modPath, modLang = p.Module.Path, lang
+		}
+	}
+	if modLang == "" {
+		return nil
+	}
+	return fmt.Errorf("%w: %s was built with go%s, but module %s requires go%s -- %s type-checks your source in-process, so rebuild %s with go%s or newer",
+		errToolchainTooOld, prog, toolLang, modPath, modLang, prog, prog, modLang)
+}
+
+// Just looking up the stuff that doesn't take forever to parse.
+//
+// NeedModule is not free information for its own sake: it carries the go
+// directive that checkToolchainVersion compares against this program's own
+// toolchain, before the type-checking load reaches a version it cannot read.
+func lookupPkgNameAndFiles(env *golang.Environ, patterns ...string) ([]*packages.Package, error) {
+	return env.Lookup(packages.NeedName|packages.NeedFiles|packages.NeedModule, patterns...)
+}
+
+// globMeta is every character path.Match gives a meaning to, and nothing
+// else: '*' and '?' are wildcards, '[' opens a character class, and '\'
+// escapes whatever follows it.
+//
+// The backslash is spelled "\\" in this interpreted string literal, which is
+// one character. A raw literal `\\` is two, and path.Match escapes with one,
+// so testing for a raw `\\` is the mistake this constant replaces.
+const globMeta = "*?[\\"
+
+// IsGlob reports whether a pattern is a path.Match pattern rather than a
+// literal package path.
+//
+// A pattern holding none of globMeta selects exactly itself and can be looked
+// up as written. One holding any of them cannot: it has to be widened to a
+// path the go command understands and narrowed again with path.Match.
+//
+// gomodbb resolves the same patterns through `go get` rather than through the
+// build, and asks this, so that a glob selects the same commands either way.
+func IsGlob(s string) bool {
+	return strings.ContainsAny(s, globMeta)
 }
 
 // lookupPkgsWithGlob resolves globs in Go package paths to a realized list of
 // Go command paths. It may return a list that contains errors.
 //
-// Precondition: couldBeGlob(pattern) is true
+// Precondition: IsGlob(pattern) is true
 func lookupPkgsWithGlob(env *golang.Environ, pattern string) ([]*packages.Package, error) {
 	elems := strings.Split(pattern, "/")
 
 	globIndex := 0
 	for i, e := range elems {
-		if couldBeGlob(e) {
+		if IsGlob(e) {
 			globIndex = i
 			break
 		}
@@ -231,9 +371,13 @@ func lookupPkgsWithGlob(env *golang.Environ, pattern string) ([]*packages.Packag
 }
 
 // lookupCompilablePkgsWithGlob resolves Go package path globs to a realized
-// list of Go command paths. It filters out packages that have no files
+// list of Go commands. It filters out packages that have no files
 // matching our build constraints and other errors.
-func lookupCompilablePkgsWithGlob(l ulog.Logger, env *golang.Environ, patterns ...string) ([]string, error) {
+//
+// It returns packages rather than paths because its caller has to decide
+// something about the set that survives exclusion, and a path cannot carry
+// the module a package came from.
+func lookupCompilablePkgsWithGlob(l ulog.Logger, env *golang.Environ, patterns ...string) ([]*packages.Package, error) {
 	var pkgs []*packages.Package
 	// Batching saves time. Patterns with globs cannot be batched.
 	//
@@ -242,7 +386,7 @@ func lookupCompilablePkgsWithGlob(l ulog.Logger, env *golang.Environ, patterns .
 	// path.Match-ing on the results. So no batching of globs.
 	var batchedPatterns []string
 	for _, pattern := range patterns {
-		if couldBeGlob(pattern) {
+		if IsGlob(pattern) {
 			ps, err := lookupPkgsWithGlob(env, pattern)
 			if err != nil {
 				return nil, err
@@ -260,15 +404,7 @@ func lookupCompilablePkgsWithGlob(l ulog.Logger, env *golang.Environ, patterns .
 		pkgs = append(pkgs, ps...)
 	}
 
-	eligiblePkgs, err := checkEligibility(l, pkgs)
-	if err != nil {
-		return nil, err
-	}
-	var paths []string
-	for _, p := range eligiblePkgs {
-		paths = append(paths, p.PkgPath)
-	}
-	return paths, nil
+	return checkEligibility(l, pkgs)
 }
 
 func filterGoPaths(l ulog.Logger, env *golang.Environ, gopathIncludes, gopathExcludes []string) ([]string, error) {
@@ -281,7 +417,40 @@ func filterGoPaths(l ulog.Logger, env *golang.Environ, gopathIncludes, gopathExc
 	if err != nil {
 		return nil, err
 	}
-	return excludePaths(goInc, goExc), nil
+
+	incPaths := make([]string, 0, len(goInc))
+	byPath := make(map[string]*packages.Package, len(goInc))
+	for _, p := range goInc {
+		incPaths = append(incPaths, p.PkgPath)
+		byPath[p.PkgPath] = p
+	}
+	excPaths := make([]string, 0, len(goExc))
+	for _, p := range goExc {
+		excPaths = append(excPaths, p.PkgPath)
+	}
+	paths := excludePaths(incPaths, excPaths)
+
+	// Here rather than inside the lookup above, because this is the first
+	// point at which the commands that will actually be built are known.
+	// The lookup runs twice, once for the includes and once for the
+	// exclusions, and neither run can tell a command that is about to be
+	// built from one the user named in order to exclude it -- so checking
+	// there refuses a build over a module the user has just taken out of
+	// it. checkEligibility has also run by now, so a library or a
+	// build-constraint-excluded package swept up by a `...` pattern is
+	// gone too; none of the three is compiled, so none of them can be
+	// refused for its module's go directive.
+	//
+	// This is still before the type-checking load, which is both the
+	// expensive step and the one whose failure names the wrong program.
+	kept := make([]*packages.Package, 0, len(paths))
+	for _, pkgPath := range paths {
+		kept = append(kept, byPath[pkgPath])
+	}
+	if err := checkToolchainVersion(progName(), goToolchainVersion(), kept); err != nil {
+		return nil, err
+	}
+	return paths, nil
 }
 
 var errNoMatch = fmt.Errorf("no Go commands match the given patterns")

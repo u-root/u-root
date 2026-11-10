@@ -22,12 +22,14 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: '1.26'
+          go-version: '1.27'
           cache: false
       - name: golangci-lint
         uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
-          version: v2.11.3
+          # v2.11.3 cannot read Go 1.27 export data: "export data version 4
+          # is greater than maximum supported version 2".
+          version: v2.15.0
           args: --timeout=5m
         env:
           GOOS: linux
