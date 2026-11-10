@@ -27,12 +27,6 @@ github.com/StackExchange/wmi
 # github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 ## explicit; go 1.13
 github.com/anmitsu/go-shlex
-# github.com/atotto/clipboard v0.1.4
-## explicit
-github.com/atotto/clipboard
-# github.com/aymanbagabas/go-osc52/v2 v2.0.1
-## explicit; go 1.16
-github.com/aymanbagabas/go-osc52/v2
 # github.com/beevik/ntp v0.3.0
 ## explicit
 github.com/beevik/ntp
@@ -53,23 +47,6 @@ github.com/bobuhiro11/gokvm/vmm
 # github.com/cenkalti/backoff/v4 v4.1.3
 ## explicit; go 1.13
 github.com/cenkalti/backoff/v4
-# github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb
-## explicit; go 1.13
-github.com/charmbracelet/bubbles/cursor
-github.com/charmbracelet/bubbles/help
-github.com/charmbracelet/bubbles/key
-github.com/charmbracelet/bubbles/list
-github.com/charmbracelet/bubbles/paginator
-github.com/charmbracelet/bubbles/runeutil
-github.com/charmbracelet/bubbles/spinner
-github.com/charmbracelet/bubbles/textinput
-github.com/charmbracelet/bubbles/viewport
-# github.com/charmbracelet/bubbletea v0.24.1
-## explicit; go 1.17
-github.com/charmbracelet/bubbletea
-# github.com/charmbracelet/lipgloss v0.7.1
-## explicit; go 1.17
-github.com/charmbracelet/lipgloss
 # github.com/cloudflare/circl v1.6.3
 ## explicit; go 1.22.0
 github.com/cloudflare/circl/dh/x25519
@@ -84,9 +61,6 @@ github.com/cloudflare/circl/math/mlsbset
 github.com/cloudflare/circl/sign
 github.com/cloudflare/circl/sign/ed25519
 github.com/cloudflare/circl/sign/ed448
-# github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5
-## explicit; go 1.13
-github.com/containerd/console
 # github.com/containerd/stargz-snapshotter/estargz v0.16.3
 ## explicit; go 1.22.0
 github.com/containerd/stargz-snapshotter/estargz
@@ -307,26 +281,9 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/klauspost/pgzip v1.2.6
 ## explicit
 github.com/klauspost/pgzip
-# github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
-## explicit; go 1.13
-github.com/knz/bubbline
-github.com/knz/bubbline/complete
-github.com/knz/bubbline/computil
-github.com/knz/bubbline/editline
-github.com/knz/bubbline/editline/internal/textarea
-github.com/knz/bubbline/history
 # github.com/kr/fs v0.1.0
 ## explicit
 github.com/kr/fs
-# github.com/lucasb-eyer/go-colorful v1.2.0
-## explicit; go 1.12
-github.com/lucasb-eyer/go-colorful
-# github.com/mattn/go-isatty v0.0.20
-## explicit; go 1.15
-github.com/mattn/go-isatty
-# github.com/mattn/go-localereader v0.0.1
-## explicit
-github.com/mattn/go-localereader
 # github.com/mattn/go-runewidth v0.0.14
 ## explicit; go 1.9
 github.com/mattn/go-runewidth
@@ -346,22 +303,6 @@ github.com/mdlayher/vsock
 # github.com/mitchellh/go-homedir v1.1.0
 ## explicit
 github.com/mitchellh/go-homedir
-# github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
-## explicit; go 1.17
-github.com/muesli/ansi
-github.com/muesli/ansi/compressor
-# github.com/muesli/cancelreader v0.2.2
-## explicit; go 1.17
-github.com/muesli/cancelreader
-# github.com/muesli/reflow v0.3.0
-## explicit; go 1.13
-github.com/muesli/reflow/ansi
-github.com/muesli/reflow/truncate
-github.com/muesli/reflow/wordwrap
-github.com/muesli/reflow/wrap
-# github.com/muesli/termenv v0.15.1
-## explicit; go 1.17
-github.com/muesli/termenv
 # github.com/nanmu42/limitio v1.0.0
 ## explicit; go 1.16
 github.com/nanmu42/limitio
@@ -412,9 +353,6 @@ github.com/rivo/uniseg
 # github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 ## explicit
 github.com/safchain/ethtool
-# github.com/sahilm/fuzzy v0.1.0
-## explicit
-github.com/sahilm/fuzzy
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
