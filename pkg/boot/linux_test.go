@@ -294,3 +294,46 @@ func TestLoadLinuxImage(t *testing.T) {
 		})
 	}
 }
+
+func TestCopyToFileNameShowsSource(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	vmlinuz := setupTestFile(t, filepath.Join(t.TempDir(), "vmlinuz"), "testkernel")
+	vmlinuz.Close()
+
+	// A local regular file may be returned as-is (tmpfs read-only path), in
+	// which case its basename already names the source. Otherwise a temp copy
+	// is created with the source basename in the pattern.
+	t.Run("lazy file", func(t *testing.T) {
+		f, err := CopyToFileIfNotRegular(uio.NewLazyFile(vmlinuz.Name()), false)
+		if err != nil {
+			t.Skipf("CopyToFileIfNotRegular: %v", err)
+		}
+		defer f.Close()
+		got := filepath.Base(f.Name())
+		if got != "vmlinuz" && !strings.HasPrefix(got, "kexec-image-vmlinuz-") {
+			t.Errorf("copy name = %q, want vmlinuz or prefix kexec-image-vmlinuz-", got)
+		}
+	})
+
+	for _, tt := range []struct {
+		name string
+		src  io.ReaderAt
+		want string
+	}{
+		{"url", uio.NewLazyOpenerAt("http://host/a/Image?x=1", func() (io.ReaderAt, error) {
+			return strings.NewReader("testkernel"), nil
+		}), "kexec-image-Imagex1-"},
+		{"reader", strings.NewReader("testkernel"), "kexec-image-strings.Reader-"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := CopyToFileIfNotRegular(tt.src, false)
+			if err != nil {
+				t.Skipf("CopyToFileIfNotRegular: %v", err)
+			}
+			defer f.Close()
+			if got := filepath.Base(f.Name()); !strings.HasPrefix(got, tt.want) {
+				t.Errorf("copy name = %q, want prefix %q", got, tt.want)
+			}
+		})
+	}
+}
