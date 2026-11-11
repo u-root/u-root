@@ -2,20 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Command mkuinitramfs builds a u-root initramfs from the Go module cache,
-// without a source checkout.
-//
-//	mkuinitramfs -o initramfs.cpio github.com/u-root/u-root/cmds/core/...@v0.16.0
-//
-// It writes a module whose only purpose is to require what the patterns name,
-// which is what turns a package pattern into the module that provides it.
-// That module stands in for the checkout: it holds no source, only the go.mod
-// and go.sum recording what the patterns resolved to, which is enough for the
-// go command to list the packages and build them. The source stays in the
-// module cache.
-//
-// The archive is assembled with u-root's own pkg/cpio rather than a copy of
-// it, so the fixes that land there reach this tool.
 package main
 
 import (
