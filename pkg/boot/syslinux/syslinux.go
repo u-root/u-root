@@ -272,6 +272,7 @@ func (c *parser) appendFile(ctx context.Context, url string) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	config, err := uio.ReadAll(r)
 	if err != nil {
 		return err
