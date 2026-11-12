@@ -6,10 +6,12 @@ on:
       - '.circleci/images/kernel-arm/*'
       - '.circleci/images/kernel-arm64/*'
       - '.circleci/images/kernel-amd64/*'
+      - '.circleci/images/kernel-riscv64/*'
       - '.circleci/images/multiboot-test-kernel-amd64/*'
       - '.circleci/images/uefipayload-amd64/*'
       - '.circleci/images/ovmf-amd64/*'
       - '.circleci/images/ovmf-arm64/*'
+      - '.circleci/images/ovmf-riscv64/*'
       - '.circleci/images/upl-fit-amd64/*'
       - '.circleci/images/upl-fit-arm64/*'
       - '.github/workflows/test-images.yml'
@@ -19,9 +21,11 @@ on:
       - '.circleci/images/kernel-arm/*'
       - '.circleci/images/kernel-arm64/*'
       - '.circleci/images/kernel-amd64/*'
+      - '.circleci/images/kernel-riscv64/*'
       - '.circleci/images/multiboot-test-kernel-amd64/*'
       - '.circleci/images/uefipayload-amd64/*'
       - '.circleci/images/ovmf-amd64/*'
+      - '.circleci/images/ovmf-riscv64/*'
       - '.circleci/images/ovmf-arm64/*'
       - '.circleci/images/upl-fit-amd64/*'
       - '.circleci/images/upl-fit-arm64/*'
@@ -45,7 +49,7 @@ jobs:
 
     strategy:
       matrix:
-        image: ['kernel-amd64', 'kernel-arm', 'kernel-arm64', 'uefipayload-amd64', 'multiboot-test-kernel-amd64', 'ovmf-amd64', 'ovmf-arm64', 'upl-fit-amd64', 'upl-fit-arm64']
+        image: ['kernel-amd64', 'kernel-arm', 'kernel-arm64', 'kernel-riscv64', 'uefipayload-amd64', 'multiboot-test-kernel-amd64', 'ovmf-amd64', 'ovmf-arm64', 'ovmf-riscv64', 'upl-fit-amd64', 'upl-fit-arm64']
 
     steps:
       - name: Checkout repository
