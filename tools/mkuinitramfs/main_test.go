@@ -6,10 +6,15 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"flag"
+	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -32,9 +37,31 @@ func TestParsePatternSplitsOnTheLastAt(t *testing.T) {
 		{"gopkg.in/yaml.v2@v2.4.0", "gopkg.in/yaml.v2", "v2.4.0"},
 		{"  example.com/m@latest  ", "example.com/m", "latest"},
 	} {
-		got := parsePattern(tt.in)
+		got, err := parsePattern(tt.in)
+		if err != nil {
+			t.Errorf("parsePattern(%q): %v", tt.in, err)
+			continue
+		}
 		if got.path != tt.path || got.query != tt.query {
 			t.Errorf("parsePattern(%q) = {%q, %q}, want {%q, %q}", tt.in, got.path, got.query, tt.path, tt.query)
+		}
+	}
+}
+
+// A pattern that is not a package path has to be refused here, because go get
+// and go list would read a leading "-" as a flag of their own.
+func TestParsePatternRefusesWhatIsNotAPackagePath(t *testing.T) {
+	for _, in := range []string{
+		"",
+		"   ",
+		// An empty query: `go get pkg@` is not what anyone means.
+		"example.com/m@",
+		// A flag, which go get would act on rather than reject.
+		"-tags=foo",
+		"--",
+	} {
+		if got, err := parsePattern(in); err == nil {
+			t.Errorf("parsePattern(%q) = %+v, want an error", in, got)
 		}
 	}
 }
@@ -42,11 +69,17 @@ func TestParsePatternSplitsOnTheLastAt(t *testing.T) {
 // fetchSpec puts the pattern back together for `go get`, and must not leave a
 // bare "@" when no version was asked for.
 func TestFetchSpecOmitsAnEmptyQuery(t *testing.T) {
-	if got := parsePattern("example.com/m").fetchSpec(); got != "example.com/m" {
-		t.Errorf("fetchSpec with no query = %q, want %q", got, "example.com/m")
-	}
-	if got := parsePattern("example.com/m@v1.2.3").fetchSpec(); got != "example.com/m@v1.2.3" {
-		t.Errorf("fetchSpec with a query = %q, want %q", got, "example.com/m@v1.2.3")
+	for _, tt := range []struct{ in, want string }{
+		{"example.com/m", "example.com/m"},
+		{"example.com/m@v1.2.3", "example.com/m@v1.2.3"},
+	} {
+		p, err := parsePattern(tt.in)
+		if err != nil {
+			t.Fatalf("parsePattern(%q): %v", tt.in, err)
+		}
+		if got := p.fetchSpec(); got != tt.want {
+			t.Errorf("fetchSpec(%q) = %q, want %q", tt.in, got, tt.want)
+		}
 	}
 }
 
@@ -170,8 +203,15 @@ func TestSkeletonCarriesTheExpectedDeviceNodes(t *testing.T) {
 	}
 }
 
-// goCmd must keep the fetch on the module proxy. GOPRIVATE and GONOPROXY both
-// name paths that bypass it and both are read from the caller's environment.
+// goCmd must keep the fetch on the module proxy, without disturbing the
+// caller's idea of which of its modules are private.
+//
+// GONOPROXY=none is what sends every module through the proxy. GOPRIVATE has
+// to survive, because it is the default for GONOSUMDB as well: clearing it
+// sends a private module path to sum.golang.org, which leaks the name and
+// then fails the fetch with a 404. That split is what `go help private`
+// documents, and `go env GONOSUMDB` reports GOPRIVATE's value when GONOSUMDB
+// is unset.
 func TestGoCmdKeepsTheFetchOnTheProxy(t *testing.T) {
 	t.Setenv("GOPRIVATE", "example.com/*")
 	t.Setenv("GONOPROXY", "example.com/*")
@@ -183,14 +223,172 @@ func TestGoCmdKeepsTheFetchOnTheProxy(t *testing.T) {
 			last[k] = v
 		}
 	}
-	for _, k := range []string{"GOPRIVATE", "GONOPROXY"} {
-		if last[k] != "" {
-			t.Errorf("%s = %q, want it cleared", k, last[k])
+	for k, want := range map[string]string{
+		"GONOPROXY": "none",
+		"GOVCS":     "*:off",
+		"GOPRIVATE": "example.com/*",
+	} {
+		if last[k] != want {
+			t.Errorf("%s = %q, want %q", k, last[k], want)
 		}
 	}
-	if last["GOVCS"] != "*:off" {
-		t.Errorf("GOVCS = %q, want %q", last["GOVCS"], "*:off")
+}
+
+// A failed `go list` has to say why it failed.
+//
+// Output puts the diagnosis in ExitError.Stderr, and %w prints none of it, so
+// wrapping the error alone reports a bare "exit status 1" for every cause
+// there is.
+func TestCommandsReportsWhatGoListSaid(t *testing.T) {
+	dir := t.TempDir()
+	// A go.mod the go command cannot parse: module-level, so -e does not
+	// tolerate it the way it tolerates an unbuildable package.
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module \x00bad\ngo 1.27\n"), 0o644); err != nil {
+		t.Fatal(err)
 	}
+	_, err := commands(dir, []pattern{{path: "all"}})
+	if err == nil {
+		t.Fatal("commands on an unparseable go.mod succeeded, want an error")
+	}
+	if !strings.Contains(err.Error(), "go.mod") {
+		t.Errorf("error = %q, want it to carry what go list wrote to stderr", err)
+	}
+}
+
+// The archive must name every parent directory before whatever sits in it,
+// and must not name "." at all.
+//
+// Linux will not create intermediate directories for an initramfs, so a
+// record whose parent never appears is silently dropped. The usual answer is
+// cpio.WriteRecordsAndDirs, which fills parents in -- but it fills them at
+// 0o777, and the parent of a top-level name such as "init" is ".", so every
+// archive would open by chmodding the root it unpacks into, taking it from
+// the kernel's 0o1777 to 0o777 and losing the sticky bit. The skeleton
+// carries every parent instead, which is what lets the write be a plain
+// WriteRecords; this test is what keeps that true.
+func TestArchiveCarriesEveryParentAndNeverTheRoot(t *testing.T) {
+	recs := readBackArchive(t, testOpts(), []string{"example.com/cmd/init", "example.com/cmd/gosh"})
+
+	dirs := map[string]bool{}
+	for _, r := range recs {
+		if r.Name == "." {
+			t.Errorf("archive names %q, at mode 0%o: nothing may chmod the root", r.Name, r.Mode&0o7777)
+			continue
+		}
+		if parent := path.Dir(r.Name); parent != "." && !dirs[parent] {
+			t.Errorf("%q appears before its parent %q", r.Name, parent)
+		}
+		if r.Mode&cpio.S_IFMT == cpio.S_IFDIR {
+			dirs[r.Name] = true
+		}
+	}
+}
+
+// /bbin/bb must be 0755 whatever the host's umask is.
+//
+// GetRecord takes the mode from the file the linker wrote, so it arrives as
+// 0777 &^ umask, and MakeReproducible normalizes everything about a record
+// except its Mode. A umask of 0o027 would ship a busybox no ordinary user in
+// the guest can execute, and two hosts would build different archives from
+// identical input.
+func TestTheBusyboxIsExecutableWhateverTheHostUmaskIs(t *testing.T) {
+	old := syscall.Umask(0o027)
+	defer syscall.Umask(old)
+
+	dir := t.TempDir()
+	bbPath := filepath.Join(dir, "bb")
+	f, err := os.OpenFile(bbPath, os.O_CREATE|os.O_WRONLY, 0o777)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("a busybox"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(bbPath); err != nil {
+		t.Fatal(err)
+	} else if fi.Mode().Perm() == 0o755 {
+		t.Fatalf("the umask did not take: %v is already the wanted mode", fi.Mode())
+	}
+
+	recs, err := testOpts().archive(bbPath, []string{"example.com/cmd/init", "example.com/cmd/gosh"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpio.MakeAllReproducible(recs)
+	for _, r := range recs {
+		if r.Name == "bbin/bb" {
+			if want := uint64(cpio.S_IFREG | 0o755); r.Mode != want {
+				t.Errorf("bbin/bb mode = 0%o, want 0%o", r.Mode, want)
+			}
+			return
+		}
+	}
+	t.Error("no bbin/bb record in the archive")
+}
+
+// A write that fails must not leave a truncated archive looking like output.
+func TestAFailedWriteLeavesNoArchive(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "initramfs.cpio")
+	// A record claiming more content than its reader holds fails mid-write,
+	// after the file has been created and partly written.
+	recs := []cpio.Record{
+		cpio.Directory("bbin", 0o755),
+		{
+			ReaderAt: strings.NewReader("short"),
+			Info:     cpio.Info{Name: "bbin/bb", Mode: cpio.S_IFREG | 0o755, FileSize: 1 << 20},
+		},
+	}
+	if _, err := writeArchive(out, recs); err == nil {
+		t.Fatal("writeArchive succeeded on a short record, want an error")
+	}
+	if _, err := os.Stat(out); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("os.Stat(%q) = %v, want the truncated archive to have been removed", out, err)
+	}
+}
+
+// readBackArchive writes the archive the way run does and reads every record
+// out of the result, so a test sees what a guest would.
+func readBackArchive(t *testing.T, o *opts, cmds []string) []cpio.Record {
+	t.Helper()
+	dir := t.TempDir()
+	bbPath := filepath.Join(dir, "bb")
+	if err := os.WriteFile(bbPath, []byte("a busybox"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	recs, err := o.archive(bbPath, cmds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpio.MakeAllReproducible(recs)
+
+	out := filepath.Join(dir, "initramfs.cpio")
+	if _, err := writeArchive(out, recs); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	rr, err := cpio.Newc.NewFileReader(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []cpio.Record
+	for {
+		r, err := rr.ReadRecord()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, r)
+	}
+	return got
 }
 
 // The settings every go command has to agree on live in the process
@@ -306,4 +504,42 @@ func TestNameserverFlagReachesResolvConf(t *testing.T) {
 		return
 	}
 	t.Error("the skeleton has no etc/resolv.conf")
+}
+
+// An empty -nameserver means no resolv.conf at all. Writing "nameserver \n"
+// instead gives the guest a file naming a nameserver called "", which is
+// worse than having no file: a resolver reads it and fails rather than
+// falling back.
+func TestAnEmptyNameserverWritesNoResolvConf(t *testing.T) {
+	o, err := parseArgs([]string{"mkuinitramfs", "-nameserver=", "example.com/m/cmd"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range o.skeleton() {
+		if r.Name == "etc/resolv.conf" {
+			t.Error("an empty -nameserver still wrote etc/resolv.conf")
+		}
+	}
+}
+
+// Asking for help is not a failure.
+//
+// The FlagSet has already printed the usage by the time Parse returns
+// flag.ErrHelp, so there is nothing left to report; main must exit 0 rather
+// than log "flag: help requested" and exit 1.
+func TestHelpIsNotAnError(t *testing.T) {
+	for _, flagName := range []string{"-h", "-help"} {
+		var buf bytes.Buffer
+		err := run(log.New(&buf, "", 0), []string{"mkuinitramfs", flagName})
+		if !errors.Is(err, flag.ErrHelp) {
+			t.Errorf("run(%s) = %v, want flag.ErrHelp so main can exit 0", flagName, err)
+		}
+	}
+}
+
+// parseArgs must not index an argument list that has nothing in it.
+func TestParseArgsRefusesAnEmptyArgumentList(t *testing.T) {
+	if _, err := parseArgs(nil); err == nil {
+		t.Error("parseArgs(nil) = nil, want an error rather than a panic")
+	}
 }
