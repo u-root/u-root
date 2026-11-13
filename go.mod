@@ -42,7 +42,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14
 	github.com/u-root/cpu v0.2.0
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
-	github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e
+	github.com/u-root/gobusybox/src v0.6.0
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
 	github.com/u-root/mkuimage v0.2.0
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701
