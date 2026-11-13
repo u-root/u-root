@@ -24,7 +24,7 @@ require (
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/jaypipes/ghw v0.12.0
 	github.com/kevinburke/ssh_config v1.2.0
-	github.com/klauspost/compress v1.18.0
+	github.com/klauspost/compress v1.18.7
 	github.com/klauspost/pgzip v1.2.6
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mdlayher/vsock v1.2.1
