@@ -116,8 +116,8 @@ github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff h1:eK9dwGbaOkNQ44
 github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff/go.mod h1:tS4qtlcKqtt3tCIHUflVSqeP3CLH5Qtv2szX9X2SyhU=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
-github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
-github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
+github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=
+github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 github.com/klauspost/pgzip v1.2.6 h1:8RXeL5crjEUFnR2/Sn6GJNWtSQ3Dk8pq4CL3jvdDyjU=
 github.com/klauspost/pgzip v1.2.6/go.mod h1:Ch1tH69qFZu15pkjo5kYi6mth2Zzwzt50oCQKQE9RUs=
 github.com/kr/fs v0.1.0 h1:Jskdu9ieNAYnjxsi0LbQp1ulIKZV1LAFgK1tWhpZgl8=
@@ -211,12 +211,12 @@ github.com/tklauser/go-sysconf v0.3.14 h1:g5vzr9iPFFz24v2KZXs/pvpvh8/V9Fw6vQK5ZZ
 github.com/tklauser/go-sysconf v0.3.14/go.mod h1:1ym4lWMLUOhuBOPGtRcJm7tEGX4SCYNEEEtghGG/8uY=
 github.com/tklauser/numcpus v0.8.0 h1:Mx4Wwe/FjZLeQsK/6kt2EOepwwSl7SmJrK5bV/dXYgY=
 github.com/tklauser/numcpus v0.8.0/go.mod h1:ZJZlAY+dmR4eut8epnzf0u/VwodKmryxR8txiloSqBE=
-github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667 h1:eUBtVqVC9WnmTXVX65vklgwSDzWKFKqDyDGGbe41wf0=
-github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667/go.mod h1:SwKrzXTgbgbFoY33L3Z/uOFb0NyloZohfhbdowVF2Zc=
+github.com/u-root/cpu v0.2.0 h1:ajG+1PBH3y0COYGEizb72oVyoUpP0krQ1Lm16ST6d88=
+github.com/u-root/cpu v0.2.0/go.mod h1:PA+hdb1//shXg+zR8wc3H1/tRRt3+YuB6WLtFg+0gvo=
 github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c h1:U/KbW3EQw/kHZqkzydesQ7KMIybd55uMFoF39GQEsjo=
 github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c/go.mod h1:LnxcvBqTx9ehtEbNgAP+rtKYohCaeJ2Lzmo/FSchi30=
-github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e h1:kWSRr94BMf0AZ4T1wGTllBIfFopw3tnrmTkE+QpXYEs=
-github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e/go.mod h1:8fUH6dYpI0ESts31766/gNm3nEue7ev7YIe0fNVlTuc=
+github.com/u-root/gobusybox/src v0.6.0 h1:OPfC46S6jHh3wnJONkLj/l/ZYY5fW9yg7jxAFRHXlPI=
+github.com/u-root/gobusybox/src v0.6.0/go.mod h1:8fUH6dYpI0ESts31766/gNm3nEue7ev7YIe0fNVlTuc=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a h1:A0sK7WEodak7eVd21MOEatnh2pfAAwZaEPSIEEsjctQ=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
 github.com/u-root/mkuimage v0.2.0 h1:/W0mzYXNCqOBfESM22zbEaib7iPtEDigSYfv7Mq7a/Q=

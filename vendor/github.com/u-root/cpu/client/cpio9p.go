@@ -20,6 +20,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"syscall"
 
 	"github.com/hugelgupf/p9/fsimpl/templatefs"
@@ -31,9 +33,10 @@ import (
 type CPIO9P struct {
 	p9.DefaultWalkGetAttr
 
-	rr   cpio.RecordReader
-	m    map[string]uint64
-	recs []cpio.Record
+	rr       cpio.RecordReader
+	m        map[string]uint64
+	children map[uint64][]uint64
+	recs     []cpio.Record
 }
 
 // CPIO9PFID defines a FID.
@@ -78,18 +81,76 @@ func NewCPIO9PReaderAt(r io.ReaderAt) (*CPIO9P, error) {
 	}
 
 	m := map[string]uint64{}
-	for i, r := range recs {
-		v("put %s in %d", r.Info.Name, i)
-		m[r.Info.Name] = uint64(i)
+	for i := range recs {
+		name := cpio.Normalize(recs[i].Info.Name)
+		if name == "" {
+			name = "."
+		}
+		recs[i].Info.Name = name
+		recs[i].Name = name
+		v("put %s in %d", name, i)
+		m[name] = uint64(i)
 	}
 
-	return &CPIO9P{rr: rr, recs: recs, m: m}, nil
+	if _, ok := m["."]; !ok {
+		idx := uint64(len(recs))
+		recs = append(recs, cpio.Record{
+			Info: cpio.Info{
+				Name: ".",
+				Mode: cpio.S_IFDIR | 0o755,
+			},
+		})
+		m["."] = idx
+	}
+
+	origLen := len(recs)
+	for _, r := range recs[:origLen] {
+		name := r.Info.Name
+		if name == "." {
+			continue
+		}
+		var missing []string
+		for dir := filepath.Dir(name); dir != "." && dir != ""; dir = filepath.Dir(dir) {
+			if _, ok := m[dir]; ok {
+				break
+			}
+			missing = append(missing, dir)
+		}
+		slices.Reverse(missing)
+		for _, dir := range missing {
+			idx := uint64(len(recs))
+			recs = append(recs, cpio.Record{
+				Info: cpio.Info{
+					Name: dir,
+					Mode: cpio.S_IFDIR | 0o755,
+				},
+			})
+			m[dir] = idx
+		}
+	}
+
+	children := map[uint64][]uint64{}
+	for i, r := range recs {
+		name := r.Info.Name
+		if m[name] != uint64(i) || name == "." {
+			continue
+		}
+		parent := filepath.Dir(name)
+		parentIdx := m[parent]
+		children[parentIdx] = append(children[parentIdx], uint64(i))
+	}
+
+	return &CPIO9P{rr: rr, recs: recs, m: m, children: children}, nil
 }
 
 // Attach implements p9.Attacher.Attach.
 // Only works for root.
 func (s *CPIO9P) Attach() (p9.File, error) {
-	return &CPIO9PFID{fs: s, path: 0}, nil
+	idx, ok := s.m["."]
+	if !ok {
+		return nil, os.ErrNotExist
+	}
+	return &CPIO9PFID{fs: s, path: idx}, nil
 }
 
 var (
@@ -98,7 +159,7 @@ var (
 )
 
 func (l *CPIO9PFID) rec() (*cpio.Record, error) {
-	if int(l.path) > len(l.fs.recs) {
+	if int(l.path) >= len(l.fs.recs) {
 		return nil, os.ErrNotExist
 	}
 	v("cpio:rec for %v is %v", l, l.fs.recs[l.path])
@@ -161,12 +222,13 @@ func (l *CPIO9PFID) Walk(names []string) ([]p9.QID, p9.File, error) {
 	// If you start with the QID for r, you will be adding '.', which is
 	// likely not what you want. the first step is to do the lookup of the
 	// first name component.
-	var fullpath string
-	if r.Name != "." {
-		fullpath = r.Name
-	}
+	fullpath := r.Name
 	for _, name := range names {
-		fullpath = filepath.Join(fullpath, name)
+		clean := strings.TrimPrefix(filepath.Clean("/"+filepath.Join(fullpath, name)), "/")
+		if clean == "" {
+			clean = "."
+		}
+		fullpath = clean
 		ix, ok := l.fs.m[fullpath]
 		verbose("cpio:Walk %q get %v, %v", fullpath, ix, ok)
 		if !ok {
@@ -246,60 +308,34 @@ func (l *CPIO9PFID) Link(target p9.File, newname string) error {
 
 func (l *CPIO9PFID) readdir() ([]uint64, error) {
 	verbose("cpio:readdir at %d", l.path)
-	r, err := l.rec()
-	if err != nil {
+	if _, err := l.rec(); err != nil {
 		return nil, err
 	}
-	dn := r.Info.Name
-	verbose("cpio:readdir starts from %v %v", l, r)
-	// while the name is a prefix of the records we are scanning,
-	// append the record.
-	// This can not be returned as a range as we do not want
-	// contents of all subdirs.
-	var list []uint64
-	for i, r := range l.fs.recs[l.path+1:] {
-		// filepath.Rel fails, we're done here.
-		b, err := filepath.Rel(dn, r.Name)
-		if err != nil {
-			verbose("cpio:r.Name %q: DONE", r.Name)
-			break
-		}
-		dir, _ := filepath.Split(b)
-		if len(dir) > 0 {
-			continue
-		}
-		verbose("cpio:readdir: %v", i)
-		list = append(list, uint64(i)+l.path+1)
-	}
-	return list, nil
+	return l.fs.children[l.path], nil
 }
 
 // Readdir implements p9.File.Readdir.
 // This is a bit of a mess in cpio, but the good news is that
 // files will be in some sort of order ...
 func (l *CPIO9PFID) Readdir(offset uint64, count uint32) (p9.Dirents, error) {
-	qid, _, err := l.info()
-	if err != nil {
+	if _, _, err := l.info(); err != nil {
 		return nil, err
 	}
 	list, err := l.readdir()
 	if err != nil {
 		return nil, err
 	}
-	if offset > uint64(len(list)) {
+	entries := append([]uint64{l.path}, list...)
+	if offset >= uint64(len(entries)) {
 		return nil, io.EOF
 	}
-	verbose("cpio:readdir list %v", list)
+	verbose("cpio:readdir list %v", entries)
 	var dirents p9.Dirents
-	dirents = append(dirents, p9.Dirent{
-		QID:    qid,
-		Type:   qid.Type,
-		Name:   ".",
-		Offset: l.path,
-	})
-	verbose("cpio:add path %d '.'", l.path)
-	//log.Printf("cpio:readdir %q returns %d entries start at offset %d", l.path, len(fi), offset)
-	for _, i := range list[offset:] {
+	for off, i := range entries[offset:] {
+		if uint32(len(dirents)) >= count {
+			break
+		}
+		idx := int(offset) + off
 		entry := CPIO9PFID{path: i, fs: l.fs}
 		qid, _, err := entry.info()
 		if err != nil {
@@ -309,12 +345,16 @@ func (l *CPIO9PFID) Readdir(offset uint64, count uint32) (p9.Dirents, error) {
 		if err != nil {
 			continue
 		}
-		verbose("cpio:add path %d %q", i, filepath.Base(r.Info.Name))
+		name := filepath.Base(r.Info.Name)
+		if idx == 0 {
+			name = "."
+		}
+		verbose("cpio:add path %d %q", i, name)
 		dirents = append(dirents, p9.Dirent{
 			QID:    qid,
 			Type:   qid.Type,
-			Name:   filepath.Base(r.Info.Name),
-			Offset: i,
+			Name:   name,
+			Offset: uint64(idx + 1),
 		})
 	}
 
