@@ -13,6 +13,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/u-root/cpu/client"
@@ -51,14 +53,78 @@ type Image struct {
 	Cmd       []string
 	Env       []string
 	dir       string
+	sock      string
 	GOOS      string
 	GOARCH    string
 	Opts      []string
 }
 
 func (i *Image) String() string {
-	return fmt.Sprintf("Image for %s:%s(%s): Cmd %s, Env %s", i.GOOS, i.GOARCH, i.Opts, i.Cmd, i.Env)
+	return fmt.Sprintf("Image for %s:%s(%s) at %s: Cmd %s, Env %s", i.GOOS, i.GOARCH, i.Opts, i.endpoint(), i.Cmd, i.Env)
 }
+
+// endpoint names where cpud can be reached on the host.
+func (i *Image) endpoint() string {
+	if i.sock != "" {
+		return i.sock
+	}
+	return client.DefaultPort
+}
+
+// Socket is the host unix socket forwarded to cpud, or "" when the default
+// port is forwarded instead.
+func (i *Image) Socket() string {
+	return i.sock
+}
+
+// An Option configures an Image as New creates it.
+type Option func(*Image) error
+
+// WithSocket forwards a host unix socket to cpud rather than the default
+// host port.
+//
+// There is deliberately no option for a different port. A port is a global
+// name, so picking a free one is a race: nothing stops another process taking
+// it between the look and the bind, and the failure that follows is a
+// confusing one. A socket path is a name the caller already owns, so
+// concurrent VMs cannot collide and nothing has to be reserved. qemu creates
+// the socket; the directory must exist.
+//
+// The path must be absolute. qemu refuses a relative one outright -- "unix
+// socket path must be absolute" -- and CommandContext runs it with Dir set to
+// the VM's directory, so a relative path would not mean the same thing to
+// qemu as it does to the dial here. Refusing it names the rule instead.
+//
+// unix(7) caps sun_path, so the path must fit in maxSockPath bytes. A
+// directory from os.MkdirTemp with a short prefix leaves room.
+func WithSocket(path string) Option {
+	return func(i *Image) error {
+		if path == "" {
+			return fmt.Errorf("socket path is empty: %w", os.ErrInvalid)
+		}
+		if !filepath.IsAbs(path) {
+			return fmt.Errorf("socket path %q is relative, and qemu requires an absolute one: %w", path, os.ErrInvalid)
+		}
+		if strings.ContainsRune(path, 0) {
+			return fmt.Errorf("socket path %q contains a NUL: %w", path, os.ErrInvalid)
+		}
+		if len(path) > maxSockPath {
+			return fmt.Errorf("socket path %q is %d bytes, over the %d unix(7) allows: %w", path, len(path), maxSockPath, os.ErrInvalid)
+		}
+		i.sock = path
+		return nil
+	}
+}
+
+// maxSockPath is the longest usable unix socket path: sun_path less the
+// terminator.
+//
+// Taken from the structure rather than written down, because it is not the
+// same everywhere -- 107 on Linux, 103 on Darwin and FreeBSD, which this
+// package also builds for. A hardcoded 107 would pass a path macOS cannot
+// bind, and macOS $TMPDIR is long enough to reach that on its own. len of an
+// array is a constant expression, so this is still a compile-time constant.
+const maxSockPath = len(syscall.RawSockaddrUnix{}.Path) - 1
 
 var images = map[string]Image{
 	"linux_amd64":   {Kernel: kernel_linux_amd64, InitRAMFS: linux_amd64, Cmd: []string{"qemu-system-x86_64", "-m", "4G"}},
@@ -70,10 +136,26 @@ var images = map[string]Image{
 // New creates an Image, using the kernel and arch to select the Image.
 // It will return an error if there is a problem uncompressing
 // the kernel and initramfs.
-func New(goos, arch string) (*Image, error) {
+func New(goos, arch string, opts ...Option) (*Image, error) {
+	i := &Image{}
+	for _, o := range opts {
+		if err := o(i); err != nil {
+			return nil, err
+		}
+	}
+
+	fwd := fmt.Sprintf("hostfwd=tcp::%s-:%s", client.DefaultPort, client.DefaultPort)
+	if i.sock != "" {
+		// -netdev is a keyval list: it splits on "," and reads ",," as a
+		// literal comma. Only the qemu argument is escaped; i.sock stays
+		// as the caller gave it, because that is what Socket reports and
+		// what net.Dial is handed.
+		fwd = fmt.Sprintf("hostfwd=unix:%s-:%s", strings.ReplaceAll(i.sock, ",", ",,"), client.DefaultPort)
+	}
+
 	common := []string{
 		"-nographic",
-		"-netdev", "user,id=net0,ipv4=on,hostfwd=tcp::17010-:17010",
+		"-netdev", "user,id=net0,ipv4=on," + fwd,
 		// required for mac. No idea why. Should work on linux. If not, we'll need a bit
 		// more logic.
 		"-device", "e1000-82545em,netdev=net0,id=net0,mac=52:54:00:c9:18:27",
@@ -97,9 +179,9 @@ func New(goos, arch string) (*Image, error) {
 		return nil, err
 	}
 
-	i, err := io.ReadAll(r)
+	ramfs, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("unzipped %d bytes: %w", len(i), err)
+		return nil, fmt.Errorf("unzipped %d bytes: %w", len(ramfs), err)
 	}
 
 	if r, err = gzip.NewReader(bufio.NewReader(bytes.NewBuffer(im.Kernel))); err != nil {
@@ -110,7 +192,11 @@ func New(goos, arch string) (*Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unzipped %d bytes: %w", len(k), err)
 	}
-	return &Image{Kernel: k, InitRAMFS: i, Cmd: append(im.Cmd, common...), Env: append(env, im.Env...), GOOS: goos, GOARCH: arch, Opts: im.Opts}, nil
+
+	i.Kernel, i.InitRAMFS = k, ramfs
+	i.Cmd, i.Env = append(im.Cmd, common...), append(env, im.Env...)
+	i.GOOS, i.GOARCH, i.Opts = goos, arch, im.Opts
+	return i, nil
 }
 
 // Uroot builds a uroot cpio into the a directory.
@@ -189,12 +275,46 @@ func (*Image) StartVM(c *exec.Cmd) error {
 // The returned client.Cmd can be called with CombinedOutput, to make
 // it easier to scan output from a command for error messages.
 func (i *Image) CPUCommand(arg string, args ...string) (*client.Cmd, error) {
+	cpu, err := i.cpuCmd(arg, args...)
+	if err != nil {
+		return nil, err
+	}
+	if err := cpu.Dial(); err != nil {
+		return nil, err
+	}
+	cpu.Env = append(cpu.Env, "PATH=/bbin", "PWD=/", "SHELL=/bbin/x")
+	return cpu, nil
+}
+
+// cpuCmd builds the client command and points it at this Image's endpoint.
+//
+// Split from CPUCommand, which dials, so that a test can check where the dial
+// would be made without needing a VM to dial to.
+func (i *Image) cpuCmd(arg string, args ...string) (*client.Cmd, error) {
+	// Always "127.0.0.1" here, never the socket path, because Command runs
+	// the name it is given through GetHostUser before any option applies.
+	// That cuts on "@", so a socket under a directory such as
+	// "workspace@2" would lose everything before it, and it then asks
+	// ssh_config for a HostName, where a wildcard rule matches a path --
+	// "*" matches "/" -- and rewrites it to a host. Either way the dial
+	// would be made against something other than the socket.
 	cpu := client.Command("127.0.0.1", append([]string{arg}, args...)...)
 	cpu.Env = os.Environ()
 
+	// A unix socket is named by its path and has no port; a TCP forward is
+	// reached on the loopback address. Set after Command, so the path is
+	// never a candidate for the rewrites above.
+	network := "tcp"
+	if i.sock != "" {
+		cpu.Host, cpu.HostName, network = i.sock, i.sock, "unix"
+	}
+
 	if err := cpu.SetOptions(
 		client.WithDisablePrivateKey(true),
-		client.WithPort("17010"),
+		client.WithNetwork(network),
+		// The port is ignored on a unix socket, which is named by its
+		// path.
+		client.WithPort(client.DefaultPort),
 		client.WithRoot(i.dir),
 		client.WithNameSpace("/"),
 		client.With9P(true),
@@ -202,10 +322,5 @@ func (i *Image) CPUCommand(arg string, args ...string) (*client.Cmd, error) {
 	); err != nil {
 		return nil, err
 	}
-
-	if err := cpu.Dial(); err != nil {
-		return nil, err
-	}
-	cpu.Env = append(cpu.Env, "PATH=/bbin", "PWD=/", "SHELL=/bbin/x")
 	return cpu, nil
 }

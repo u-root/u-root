@@ -24,7 +24,7 @@ require (
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/jaypipes/ghw v0.12.0
 	github.com/kevinburke/ssh_config v1.2.0
-	github.com/klauspost/compress v1.18.0
+	github.com/klauspost/compress v1.18.7
 	github.com/klauspost/pgzip v1.2.6
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mdlayher/vsock v1.2.1
@@ -40,7 +40,7 @@ require (
 	github.com/spf13/pflag v1.0.7
 	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/go-sysconf v0.3.14
-	github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667
+	github.com/u-root/cpu v0.2.0
 	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
 	github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
