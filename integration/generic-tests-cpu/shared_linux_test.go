@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,7 +28,7 @@ import (
 // Each VM is reached over its own unix socket, so the VMs run concurrently and
 // tests can call t.Parallel. A socket path is a name this test owns, where a
 // port is global and reserving one races with every other process. cpud still
-// listens on cpuPort inside the guest; only the host side moves.
+// listens on the usual port inside the guest; only the host side moves.
 // readyTimeout bounds the wait for cpud to answer. A guest of the host's own
 // architecture answers in about 6s. An emulated one is far slower: the guest
 // spends most of that time in init's DHCPv6 solicit, which is a fixed number
@@ -40,9 +39,6 @@ func readyTimeout(arch string) time.Duration {
 	}
 	return 10 * time.Minute
 }
-
-// cpuPort is where cpud listens inside the guest, which never changes.
-const cpuPort = client.DefaultPort
 
 var images struct {
 	sync.Mutex
@@ -107,11 +103,12 @@ func imageFor(t *testing.T, arch string) string {
 	return p
 }
 
-// guest is a booted VM running cpud, reachable on its own host port.
+// guest is a booted VM running cpud, reachable on its own host socket.
 type guest struct {
-	dir  string // the host directory the guest sees at /tmp/cpu
-	sock string // the host socket cpud is reached on
-	arch string
+	image *vm.Image // knows where to dial, and dials it
+	dir   string    // the host directory the guest sees at /tmp/cpu
+	sock  string    // the host socket cpud is reached on
+	arch  string
 }
 
 // bootGuest boots a VM for arch from the shared image and waits for cpud to
@@ -124,15 +121,11 @@ func bootGuest(t *testing.T, arch string) *guest {
 	}
 	image := imageFor(t, arch)
 
-	i, err := vm.New("linux", arch)
-	if err != nil {
-		t.Fatalf("vm.New(linux, %s): %v", arch, err)
-	}
-
 	// Reach this guest over a socket of its own rather than the shared port,
 	// so guests can run at once. A path is a name this test owns, where a
 	// port is global and picking a free one races with every other process.
-	// unix(7) caps the path near 108 bytes, so keep the directory short.
+	// unix(7) caps the path, and WithSocket refuses one that is too long
+	// rather than leaving qemu to fail later, so keep the directory short.
 	sockDir, err := os.MkdirTemp("", "s")
 	if err != nil {
 		t.Fatalf("socket directory: %v", err)
@@ -140,11 +133,9 @@ func bootGuest(t *testing.T, arch string) *guest {
 	t.Cleanup(func() { os.RemoveAll(sockDir) })
 	sock := filepath.Join(sockDir, "c")
 
-	// Rewriting Cmd is a stopgap for u-root/cpu#333, which adds
-	// vm.WithSocket; use that option once it is vendored.
-	from := "hostfwd=tcp::" + cpuPort + "-:" + cpuPort
-	for n, a := range i.Cmd {
-		i.Cmd[n] = strings.Replace(a, from, "hostfwd=unix:"+sock+"-:"+cpuPort, 1)
+	i, err := vm.New("linux", arch, vm.WithSocket(sock))
+	if err != nil {
+		t.Fatalf("vm.New(linux, %s, WithSocket(%s)): %v", arch, sock, err)
 	}
 
 	d := t.TempDir()
@@ -162,7 +153,7 @@ func bootGuest(t *testing.T, arch string) *guest {
 		}
 	})
 
-	g := &guest{sock: sock, dir: d, arch: arch}
+	g := &guest{image: i, sock: sock, dir: d, arch: arch}
 	g.waitReady(t)
 	return g
 }
@@ -198,21 +189,16 @@ func (g *guest) Run(name string, args ...string) ([]byte, error) {
 }
 
 func (g *guest) run(name string, args ...string) ([]byte, error) {
-	cpu := client.Command(g.sock, append([]string{name}, args...)...)
-	cpu.Env = os.Environ()
-	if err := cpu.SetOptions(
-		client.WithDisablePrivateKey(true),
-		client.WithNetwork("unix"),
-		client.WithRoot(g.dir),
-		client.WithNameSpace("/"),
-		client.With9P(true),
-		client.WithTimeout("5s"),
-	); err != nil {
+	// CPUCommand rather than a hand-rolled client.Command: the Image knows
+	// its own endpoint, and it knows not to pass a socket path to
+	// client.Command, which would cut it at any "@" and then run it through
+	// ssh_config, where a wildcard Host rule matches a path.
+	cpu, err := g.image.CPUCommand(name, args...)
+	if err != nil {
 		return nil, err
 	}
-	if err := cpu.Dial(); err != nil {
-		return nil, err
-	}
-	cpu.Env = append(cpu.Env, "PATH=/bbin", "PWD=/", "SHELL=/bbin/x")
+	// Close restores the terminal and shuts the session down. Running the
+	// compiled test binary from a tty leaves stdin in raw mode without it.
+	defer cpu.Close()
 	return cpu.CombinedOutput()
 }
