@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/u-root/gobusybox/src/pkg/bb/findpkg"
 	"github.com/u-root/u-root/pkg/cpio"
 )
 
@@ -217,7 +218,7 @@ func TestGoCmdKeepsTheFetchOnTheProxy(t *testing.T) {
 	t.Setenv("GONOPROXY", "example.com/*")
 
 	last := map[string]string{}
-	for _, kv := range goCmd(t.TempDir(), "list").Env {
+	for _, kv := range goCmd(buildEnv(t.TempDir()), "list").Env {
 		if k, v, ok := strings.Cut(kv, "="); ok {
 			// exec uses the last value for a repeated key.
 			last[k] = v
@@ -246,7 +247,7 @@ func TestCommandsReportsWhatGoListSaid(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module \x00bad\ngo 1.27\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := commands(dir, []pattern{{path: "all"}})
+	_, err := commands(buildEnv(dir), []pattern{{path: "all"}})
 	if err == nil {
 		t.Fatal("commands on an unparseable go.mod succeeded, want an error")
 	}
@@ -391,30 +392,152 @@ func readBackArchive(t *testing.T, o *opts, cmds []string) []cpio.Record {
 	return got
 }
 
-// The settings every go command has to agree on live in the process
-// environment, not on the commands this file builds.
+// The settings every phase has to agree on live on one Environ, not on this
+// process.
 //
-// gobusybox runs its own lookups and compiles with append(os.Environ(), ...),
-// so anything set only on the commands here would not reach them. UROOT_SOURCE
-// would then make findpkg build a local checkout; a stray GOWORK would pick a
-// workspace over the fetched module; and CGO_ENABLED would let discovery list
+// gobusybox runs its own lookups and compiles with append(os.Environ(),
+// env.Env()...), so an Environ reaches the half this file does not run, which
+// is what makes one shared value possible at all. A stray GOWORK would pick a
+// workspace over the fetched module, and CGO_ENABLED would let discovery list
 // a cgo-only command the build then skips, leaving a symlink to nothing.
-func TestFixEnvironmentCoversEveryGoCommand(t *testing.T) {
-	t.Setenv("UROOT_SOURCE", "/somewhere/with/a/checkout")
+func TestOneEnvironCarriesWhatEveryPhaseMustAgreeOn(t *testing.T) {
 	t.Setenv("GOWORK", "/somewhere/go.work")
 	t.Setenv("CGO_ENABLED", "1")
+	t.Setenv("GO111MODULE", "off")
 
-	if err := fixEnvironment(); err != nil {
-		t.Fatalf("fixEnvironment: %v", err)
+	last := map[string]string{}
+	for _, kv := range buildEnv(t.TempDir()).Env() {
+		if k, v, ok := strings.Cut(kv, "="); ok {
+			last[k] = v
+		}
 	}
 	for k, want := range map[string]string{
-		"UROOT_SOURCE": "",
-		"GOWORK":       "off",
-		"CGO_ENABLED":  "0",
+		"GOWORK":      "off",
+		"CGO_ENABLED": "0",
+		"GO111MODULE": "on",
 	} {
-		if got := os.Getenv(k); got != want {
-			t.Errorf("%s = %q, want %q", k, got, want)
+		if last[k] != want {
+			t.Errorf("Env() has %s=%q, want %q", k, last[k], want)
 		}
+	}
+}
+
+// Every phase must run the same go binary.
+//
+// Environ runs $GOROOT/bin/go, and GOROOT is baked in when this binary is
+// built, so installing with GOTOOLCHAIN=go1.N -- which doc.go recommends,
+// because the command type-checks in process -- makes that the toolchain's
+// own go. exec.Command("go") would fetch and list with whatever is on PATH,
+// which is the older one the install was meant to avoid.
+func TestEveryPhaseRunsTheSameGo(t *testing.T) {
+	// A decoy first on PATH, so this cannot pass merely because the go on
+	// PATH happens to be the same one. It usually is, which is what hides
+	// the divergence until someone installs with GOTOOLCHAIN set.
+	decoyDir := t.TempDir()
+	decoy := filepath.Join(decoyDir, "go")
+	if err := os.WriteFile(decoy, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", decoyDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	env := buildEnv(t.TempDir())
+	if env.GOROOT == "" {
+		t.Fatal("GOROOT is empty, so there is no toolchain to prefer")
+	}
+	want := filepath.Join(env.GOROOT, "bin", "go")
+	got := goCmd(env, "list").Path
+	if got == decoy {
+		t.Errorf("go command = %q, the first go on PATH, want the toolchain's %q", got, want)
+	} else if got != want {
+		t.Errorf("go command = %q, want %q", got, want)
+	}
+}
+
+// The package lookup finds go through PATH, so the toolchain has to be first
+// on it.
+//
+// Everything this file runs goes through the Environ and so through
+// $GOROOT/bin/go. gobusybox's lookup is go/packages underneath, which runs
+// exec.Command("go"), and exec resolves a bare name against this process's
+// PATH rather than the environment it passes to the child -- so an Environ
+// cannot reach it. Measured over a whole build with a logging go first on
+// PATH: 8 invocations took it before this, 5 with the Environ alone, and 0
+// with this as well.
+//
+// Prepended, not replacing: Environ.Env() replaces PATH outright for its own
+// children, and doing that to this process would take /usr/bin away from
+// everything else.
+func TestTheToolchainGoesFirstOnPath(t *testing.T) {
+	t.Setenv("PATH", "/somewhere/else")
+
+	env := buildEnv(t.TempDir())
+	if env.GOROOT == "" {
+		t.Fatal("GOROOT is empty, so there is no toolchain to prefer")
+	}
+	if err := preferOwnToolchain(env); err != nil {
+		t.Fatalf("preferOwnToolchain: %v", err)
+	}
+	want := filepath.Join(env.GOROOT, "bin")
+	got := os.Getenv("PATH")
+	first, rest, _ := strings.Cut(got, string(os.PathListSeparator))
+	if first != want {
+		t.Errorf("PATH starts with %q, want %q", first, want)
+	}
+	if rest != "/somewhere/else" {
+		t.Errorf("PATH keeps %q, want the caller's %q", rest, "/somewhere/else")
+	}
+}
+
+// UROOT_SOURCE is defused by the lookup environment rather than by unsetting
+// it, which is why nothing sets it any more.
+//
+// findpkg reads it in DefaultEnv and nowhere else, and run passes an empty
+// findpkg.Env, so the variable is never consulted. Were it consulted, a
+// u-root package path would turn into a file system lookup and a local
+// checkout would be built instead of the named version.
+func TestUROOTSOURCEIsReadOnlyByTheDefaultLookupEnv(t *testing.T) {
+	t.Setenv("UROOT_SOURCE", "/somewhere/with/a/checkout")
+	if got := (&findpkg.Env{}).URootSource; got != "" {
+		t.Errorf("the empty findpkg.Env has URootSource %q, want it empty", got)
+	}
+	if got := findpkg.DefaultEnv().URootSource; got == "" {
+		t.Error("findpkg.DefaultEnv no longer reads UROOT_SOURCE, so run's empty Env may no longer be what defuses it")
+	}
+}
+
+// GOFLAGS reaches these commands, and a -mod in it breaks them.
+//
+// The compile is covered: gobusybox appends -mod to the go build arguments
+// and an argument beats GOFLAGS. go get does not accept a -mod argument at
+// all, so the environment is the only place to take it out. Everything else
+// in GOFLAGS stays, because -tags decides which files a package is built
+// from, and so which packages are commands: dropping it here would let the
+// listing and the compile disagree about what is being built.
+func TestOnlyTheModFlagIsTakenOutOfGoflags(t *testing.T) {
+	for _, tt := range []struct{ in, want string }{
+		{"", ""},
+		{"-mod=vendor", ""},
+		{"--mod=vendor", ""},
+		{"-tags=foo", "-tags=foo"},
+		{"-tags=foo -mod=vendor -x", "-tags=foo -x"},
+		{"-mod=readonly -tags=a,b", "-tags=a,b"},
+		// Not a -mod setting, and must survive.
+		{"-modfile=x.mod", "-modfile=x.mod"},
+	} {
+		if got := withoutModFlag(tt.in); got != tt.want {
+			t.Errorf("withoutModFlag(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+
+	t.Setenv("GOFLAGS", "-mod=vendor -tags=keepme")
+	last := map[string]string{}
+	for _, kv := range goCmd(buildEnv(t.TempDir()), "list").Env {
+		if k, v, ok := strings.Cut(kv, "="); ok {
+			last[k] = v
+		}
+	}
+	if got := last["GOFLAGS"]; got != "-tags=keepme" {
+		t.Errorf("GOFLAGS on the command = %q, want %q", got, "-tags=keepme")
 	}
 }
 

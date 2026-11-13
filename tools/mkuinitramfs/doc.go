@@ -30,6 +30,12 @@
 // the command. Setting it when running the command has no effect on this,
 // because by then the type-checker is already compiled in.
 //
+// The toolchain chosen here is the one the command then uses for everything:
+// fetching, listing and compiling all run the go that sits beside the
+// type-checker, rather than whatever go is on PATH. So the command needs no
+// go on PATH at all, and there is no second toolchain to disagree with the
+// one this line picks.
+//
 // # Arguments
 //
 // Each argument is a package pattern, optionally followed by @ and a version

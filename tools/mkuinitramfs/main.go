@@ -115,6 +115,44 @@ func (p pattern) fetchSpec() string {
 	return p.path + "@" + p.query
 }
 
+// buildEnv is the one Go environment every phase of a build shares.
+//
+// Fetching, listing and compiling must agree about which go they are using
+// and what it is looking at, and the way to make them agree is to give them
+// one Environ rather than to set variables on this process. gobusybox builds
+// both its lookups and its compile as append(os.Environ(), env.Env()...), so
+// what is set here reaches the half this file does not run.
+//
+// Using it is also what stops the two halves running different go commands.
+// Environ runs $GOROOT/bin/go, and GOROOT is baked into this binary when it
+// is built, so a mkuinitramfs installed the way doc.go recommends --
+// GOTOOLCHAIN=go1.N go install -- has a GOROOT naming that toolchain.
+// exec.Command("go") would instead fetch and list with whatever go is on
+// PATH, which is the older one the install was meant to get away from.
+//
+//   - GOWORK: a go.work above the temporary directory would otherwise decide
+//     the build list for a module that is not one of its members.
+//   - CGO_ENABLED: the busybox is built without cgo, so discovery has to run
+//     without it too, or a cgo-only command is listed, never built, and left
+//     as an archive symlink pointing at nothing.
+//   - GO111MODULE: the fetching module is a module, and GO111MODULE=off in
+//     the caller's environment otherwise fails the fetch outright with
+//     "modules disabled by GO111MODULE=off".
+//   - Mod: gobusybox passes this to the compile as a -mod argument, where it
+//     beats anything in GOFLAGS. goCmd does the same job by other means.
+//
+// UROOT_SOURCE needs nothing here: it is read only by findpkg.DefaultEnv,
+// and run passes an empty findpkg.Env instead.
+func buildEnv(modDir string) *golang.Environ {
+	return golang.Default(
+		golang.WithWorkingDir(modDir),
+		golang.DisableCGO(),
+		golang.WithGOWORK("off"),
+		golang.WithGO111MODULE("on"),
+		golang.WithMod(golang.ModOnly),
+	)
+}
+
 // goCmd returns a go command to run against the fetching module.
 //
 // Source comes from the module proxy, never from a version control tool.
@@ -130,45 +168,77 @@ func (p pattern) fetchSpec() string {
 // GONOPROXY alone is the split `go help private` documents.
 //
 // exec uses the last value for a repeated key, so these override the caller's.
-func goCmd(dir, gocmd string, args ...string) *exec.Cmd {
-	cmd := exec.Command("go", append([]string{gocmd}, args...)...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
+func goCmd(env *golang.Environ, gocmd string, args ...string) *exec.Cmd {
+	cmd := env.GoCmd(gocmd, args...)
+	cmd.Env = append(cmd.Env,
 		"GONOPROXY=none",
 		"GOVCS=*:off",
+		"GOFLAGS="+withoutModFlag(os.Getenv("GOFLAGS")),
 	)
 	return cmd
 }
 
-// fixEnvironment sets, for this process, what every go command has to agree
-// on. gobusybox runs its own lookups and compiles with
-// append(os.Environ(), ...), so anything set only on the commands here would
-// not reach them, and the two halves could disagree about which source they
-// are looking at.
+// preferOwnToolchain puts this binary's own Go toolchain first on PATH.
 //
-//   - GOWORK: a go.work above the temporary directory would otherwise decide
-//     the build list for a module that is not one of its members.
-//   - UROOT_SOURCE: findpkg rewrites a u-root package path into a file system
-//     lookup when it is set, which would quietly build a local checkout.
-//   - CGO_ENABLED: the busybox is built without cgo, so discovery has to run
-//     without it too, or a cgo-only command is listed, never built, and left
-//     as an archive symlink pointing at nothing.
-func fixEnvironment() error {
-	for k, v := range map[string]string{
-		"GOWORK":       "off",
-		"UROOT_SOURCE": "",
-		"CGO_ENABLED":  "0",
-	} {
-		if err := os.Setenv(k, v); err != nil {
-			return fmt.Errorf("setting %s: %w", k, err)
-		}
+// Everything this file runs goes through the Environ and so through
+// $GOROOT/bin/go already. gobusybox's package lookup does not: it is
+// go/packages underneath, which runs exec.Command("go"), and exec resolves a
+// bare name against the PATH of *this* process rather than the one it is
+// about to pass to the child. No Environ can reach that, so the only way to
+// make the lookup agree with the fetch, the listing and the compile is to
+// make the toolchain's go the first one found.
+//
+// Prepended rather than replacing PATH: Environ.Env() replaces it outright
+// for its own children, which leaves them without /usr/bin, and nothing here
+// wants to do that to this process.
+//
+// It also makes the command work when the caller has no go at all, which an
+// installed binary often does -- $GOPATH/bin is on PATH far more often than a
+// Go toolchain is.
+func preferOwnToolchain(env *golang.Environ) error {
+	if env.GOROOT == "" {
+		return nil
+	}
+	bin := filepath.Join(env.GOROOT, "bin")
+	if path := os.Getenv("PATH"); path != "" {
+		bin += string(os.PathListSeparator) + path
+	}
+	if err := os.Setenv("PATH", bin); err != nil {
+		return fmt.Errorf("putting %s first on PATH: %w", bin, err)
 	}
 	return nil
 }
 
+// withoutModFlag returns goflags with any -mod setting removed.
+//
+// The compile is already immune to one: gobusybox appends -mod to the go
+// build arguments, and an argument beats GOFLAGS. These commands have no such
+// cover, and go get does not accept a -mod argument at all, so the
+// environment is the only place to take it out. Left in, GOFLAGS=-mod=vendor
+// fails the listing with "inconsistent vendoring" over a vendor directory the
+// fetching module was never going to have.
+//
+// Only -mod is dropped. The rest of GOFLAGS stays, because -tags decides
+// which files a package is built from and so which packages are commands at
+// all: stripping it here would let the listing and the compile disagree about
+// what is being built.
+//
+// Splitting on spaces is how the go command itself reads GOFLAGS; it has no
+// quoting.
+func withoutModFlag(goflags string) string {
+	var keep []string
+	for f := range strings.FieldsSeq(goflags) {
+		if strings.HasPrefix(f, "-mod=") || strings.HasPrefix(f, "--mod=") {
+			continue
+		}
+		keep = append(keep, f)
+	}
+	return strings.Join(keep, " ")
+}
+
 // fetch writes a module requiring everything the patterns name, leaving the
 // source in the module cache and the chosen versions in its go.mod.
-func fetch(l *log.Logger, modDir string, patterns []pattern) error {
+func fetch(l *log.Logger, env *golang.Environ, modDir string, patterns []pattern) error {
 	gomod := fmt.Sprintf("module %s\n", synthModulePath)
 	if err := os.WriteFile(filepath.Join(modDir, "go.mod"), []byte(gomod), 0o644); err != nil {
 		return fmt.Errorf("writing go.mod: %w", err)
@@ -182,7 +252,7 @@ func fetch(l *log.Logger, modDir string, patterns []pattern) error {
 	// One invocation rather than one per pattern, so the go command
 	// resolves all of them against a single build list.
 	l.Printf("Fetching %s", strings.Join(specs, " "))
-	if out, err := goCmd(modDir, "get", specs...).CombinedOutput(); err != nil {
+	if out, err := goCmd(env, "get", specs...).CombinedOutput(); err != nil {
 		return fmt.Errorf("`go get %s`: %w: %s", strings.Join(specs, " "), err, out)
 	}
 	return nil
@@ -193,11 +263,11 @@ func fetch(l *log.Logger, modDir string, patterns []pattern) error {
 // -e keeps a pattern that matches some unbuildable package from failing the
 // whole listing, matching the build, which skips what it cannot build rather
 // than refusing to build anything.
-func commands(modDir string, patterns []pattern) ([]string, error) {
+func commands(env *golang.Environ, patterns []pattern) ([]string, error) {
 	var out []string
 	seen := map[string]bool{}
 	for _, p := range patterns {
-		cmd := goCmd(modDir, "list", "-e", "-f", `{{if eq .Name "main"}}{{.ImportPath}}{{end}}`, p.path)
+		cmd := goCmd(env, "list", "-e", "-f", `{{if eq .Name "main"}}{{.ImportPath}}{{end}}`, p.path)
 		b, err := cmd.Output()
 		if err != nil {
 			// Output puts the diagnosis in ExitError.Stderr, which %w
@@ -341,10 +411,6 @@ func run(l *log.Logger, args []string) error {
 		return err
 	}
 
-	if err := fixEnvironment(); err != nil {
-		return err
-	}
-
 	out, err := filepath.Abs(o.output)
 	if err != nil {
 		return err
@@ -362,19 +428,24 @@ func run(l *log.Logger, args []string) error {
 	}
 	defer o.cleanup(l, genDir)
 
-	if err := fetch(l, modDir, o.patterns); err != nil {
+	// One environment for the fetch, the listing and the compile, so that
+	// all three agree about which go is running and what it is looking at.
+	env := buildEnv(modDir)
+	if err := preferOwnToolchain(env); err != nil {
+		return err
+	}
+
+	if err := fetch(l, env, modDir, o.patterns); err != nil {
 		return fmt.Errorf("fetching source: %w", err)
 	}
 
-	cmds, err := commands(modDir, o.patterns)
+	cmds, err := commands(env, o.patterns)
 	if err != nil {
 		return fmt.Errorf("listing commands: %w", err)
 	}
 	l.Printf("Building %d command(s) into one binary", len(cmds))
 
 	bbPath := filepath.Join(genDir, "bb")
-	env := golang.Default(golang.WithWorkingDir(modDir))
-	env.Context.CgoEnabled = false
 	if err := bb.BuildBusybox(l, &bb.Opts{
 		Env: env,
 		// Empty rather than DefaultEnv, so UROOT_SOURCE in the caller's
