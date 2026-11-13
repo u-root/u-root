@@ -103,6 +103,42 @@ func TestWriteRecordsAndDirs(t *testing.T) {
 	}
 }
 
+func TestDedupWriterLastWriteWins(t *testing.T) {
+	var b bytes.Buffer
+	w := Newc.Writer(&b)
+
+	recs := []Record{
+		Directory("dir", 0o755),
+		StaticFile("dir/file", "first", 0o644),
+		StaticFile("other", "keep", 0o644),
+		Directory("dir", 0o700),
+		StaticFile("/dir/file", "second", 0o755),
+	}
+	if err := WriteRecords(w, recs); err != nil {
+		t.Fatalf("WriteRecords: %v", err)
+	}
+	if err := WriteTrailer(w); err != nil {
+		t.Fatalf("WriteTrailer: %v", err)
+	}
+
+	ar, err := ArchiveFromReader(Newc.Reader(bytes.NewReader(b.Bytes())))
+	if err != nil {
+		t.Fatalf("ArchiveFromReader: %v", err)
+	}
+	got, err := ReadAllRecords(ar.Reader())
+	if err != nil {
+		t.Fatalf("ReadAllRecords: %v", err)
+	}
+	want := []Record{
+		Directory("dir", 0o755),
+		StaticFile("dir/file", "second", 0o755),
+		StaticFile("other", "keep", 0o644),
+	}
+	if !AllEqual(got, want) {
+		t.Errorf("ReadAllRecords = %v, want %v", got, want)
+	}
+}
+
 func TestEqualAll(t *testing.T) {
 	tests := []struct {
 		r        []Record
