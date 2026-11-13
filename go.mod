@@ -1,6 +1,6 @@
 module github.com/u-root/u-root
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
@@ -18,55 +18,56 @@ require (
 	github.com/google/go-tpm v0.9.2-0.20240919181259-d96ccf715685
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.6.1
+	github.com/hugelgupf/p9 v0.5.1
 	github.com/hugelgupf/vmtest v0.0.0-20240307030256-5d9f3d34a58d
 	github.com/insomniacslk/dhcp v0.0.0-20260719225207-c76316d4aa82
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
+	github.com/jaypipes/ghw v0.12.0
 	github.com/kevinburke/ssh_config v1.2.0
 	github.com/klauspost/compress v1.18.7
 	github.com/klauspost/pgzip v1.2.6
-	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
+	github.com/mattn/go-runewidth v0.0.14
 	github.com/mdlayher/vsock v1.2.1
 	github.com/nanmu42/limitio v1.0.0
 	github.com/orangecms/go-framebuffer v0.0.0-20200613202404-a0700d90c330
 	github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5
 	github.com/pierrec/lz4/v4 v4.1.22
+	github.com/pkg/sftp v1.13.9
 	github.com/rck/unit v0.0.3
 	github.com/rekby/gpt v0.0.0-20200219180433-a930afbc6edc
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.7
+	github.com/therootcompany/xz v1.0.1
 	github.com/tklauser/go-sysconf v0.3.14
+	github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667
+	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
+	github.com/u-root/gobusybox/src v0.3.1-0.20261109001158-68ad5b68de8e
 	github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a
+	github.com/u-root/mkuimage v0.2.0
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701
 	github.com/ulikunitz/xz v0.5.15
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4
 	github.com/vtolstov/go-ioctl v0.0.0-20151206205506-6be9cced4810
-	golang.org/x/crypto v0.56.0
+	go.bug.st/serial v1.6.2
+	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
-	golang.org/x/net v0.57.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
-	golang.org/x/text v0.41.0
-	golang.org/x/tools v0.48.0
+	golang.org/x/net v0.61.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/term v0.47.0
+	golang.org/x/text v0.43.0
+	golang.org/x/tools v0.52.0
 	gopkg.in/yaml.v2 v2.4.0
 	mvdan.cc/sh/v3 v3.11.0
 	pack.ag/tftp v1.0.1-0.20181129014014-07909dfbde3c
 )
 
 require (
-	github.com/hugelgupf/p9 v0.4.1
-	github.com/jaypipes/ghw v0.12.0
-	github.com/pkg/sftp v1.13.9
-	github.com/sirupsen/logrus v1.9.3
-	github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667
-	github.com/u-root/cpuid v0.0.1-0.20250320140348-cc5fe81d966c
-	github.com/u-root/gobusybox/src v0.3.0
-	github.com/u-root/mkuimage v0.2.0
-	go.bug.st/serial v1.6.2
-)
-
-require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
+	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
@@ -78,53 +79,30 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa // indirect
 	github.com/jaypipes/pcidb v1.0.0 // indirect
+	github.com/josharian/native v1.1.0 // indirect
+	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
+	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/packet v1.1.2 // indirect
+	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rasky/go-xdr v0.0.0-20170124162913-1a41d1a06c93 // indirect
-	github.com/u-root/u-root/pkg/uroot v0.0.0-00010101000000-000000000000 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/willscott/go-nfs v0.0.0-20240424173852-04b947a7e58a // indirect
 	github.com/willscott/go-nfs-client v0.0.0-20240104095149-b44639837b00 // indirect
-	howett.net/plist v1.0.0 // indirect
-)
-
-require (
-	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
-	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
-	github.com/charmbracelet/bubbletea v0.24.1 // indirect
-	github.com/charmbracelet/lipgloss v0.7.1 // indirect
-	github.com/cloudflare/circl v1.6.3 // indirect
-	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
-	github.com/hugelgupf/go-shlex v0.0.0-20200702092117-c80c9d0918fa // indirect
-	github.com/josharian/native v1.1.0 // indirect
-	github.com/jsimonetti/rtnetlink v1.3.5 // indirect
-	github.com/kaey/framebuffer v0.0.0-20140402104929-7b385489a1ff // indirect
-	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.14
-	github.com/mdlayher/netlink v1.7.2 // indirect
-	github.com/mdlayher/packet v1.1.2 // indirect
-	github.com/mdlayher/socket v0.5.1 // indirect
-	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
-	github.com/muesli/cancelreader v0.2.2 // indirect
-	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
-	github.com/sahilm/fuzzy v0.1.0 // indirect
-	github.com/therootcompany/xz v1.0.1
-	github.com/tklauser/numcpus v0.8.0 // indirect
 	golang.org/x/arch v0.2.0 // indirect
-	golang.org/x/mod v0.38.0 // indirect
-	golang.org/x/sync v0.22.0
+	golang.org/x/mod v0.42.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	howett.net/plist v1.0.0 // indirect
 )
 
 retract (
@@ -143,6 +121,3 @@ retract (
 	// Published v1 too early (before migrating to go modules)
 	[v1.0.0, v1.0.1]
 )
-
-// For github.com/hugelgupf/p9/fsimpl/localfs
-replace github.com/u-root/u-root/pkg/uroot => ./

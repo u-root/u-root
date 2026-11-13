@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-	"unsafe"
 
 	"github.com/rekby/gpt"
 	"github.com/u-root/u-root/pkg/mount"
@@ -160,15 +159,6 @@ func (b *BlockDev) KernelBlockSize() (int, error) {
 	return unix.IoctlGetInt(int(f.Fd()), unix.BLKBSZGET)
 }
 
-func ioctlGetUint64(fd int, req uint) (uint64, error) {
-	var value uint64
-	_, _, err := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(req), uintptr(unsafe.Pointer(&value)))
-	if err != 0 {
-		return 0, err
-	}
-	return value, nil
-}
-
 // Size returns the size in bytes.
 func (b *BlockDev) Size() (uint64, error) {
 	f, err := os.Open(b.DevicePath())
@@ -177,7 +167,7 @@ func (b *BlockDev) Size() (uint64, error) {
 	}
 	defer f.Close()
 
-	sz, err := ioctlGetUint64(int(f.Fd()), unix.BLKGETSIZE64)
+	sz, err := unix.IoctlGetUint64(int(f.Fd()), unix.BLKGETSIZE64)
 	if err != nil {
 		return 0, &os.PathError{
 			Op:   "get size",
@@ -463,7 +453,7 @@ func (b BlockDevices) FilterNames(names ...string) BlockDevices {
 func (b BlockDevices) FilterFSUUID(fsuuid string) BlockDevices {
 	partitions := make(BlockDevices, 0)
 	for _, device := range b {
-		if device.FsUUID == fsuuid {
+		if strings.EqualFold(device.FsUUID, fsuuid) {
 			partitions = append(partitions, device)
 		}
 	}

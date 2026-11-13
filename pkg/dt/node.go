@@ -394,6 +394,37 @@ func (p *Property) AsRegion() (*Region, error) {
 	return &Region{Start: start, Size: size}, nil
 }
 
+// AsRegions converts a reg-style property to Regions, where each entry is
+// addressCells cells of address followed by sizeCells cells of size, as given
+// by the #address-cells and #size-cells of the node's parent. Each cell is
+// 32 bits; 1 or 2 cells are supported for both, which covers 32- and 64-bit
+// platforms.
+func (p *Property) AsRegions(addressCells, sizeCells uint32) ([]Region, error) {
+	if addressCells < 1 || addressCells > 2 || sizeCells < 1 || sizeCells > 2 {
+		return nil, fmt.Errorf("property %q: unsupported #address-cells %d / #size-cells %d: %w", p.Name, addressCells, sizeCells, ErrPropertyRegionInvalid)
+	}
+	entry := int(addressCells+sizeCells) * 4
+	if len(p.Value) == 0 || len(p.Value)%entry != 0 {
+		return nil, fmt.Errorf("property %q: %d bytes is not a multiple of %d: %w", p.Name, len(p.Value), entry, ErrPropertyRegionInvalid)
+	}
+	var regions []Region
+	for b := p.Value; len(b) > 0; b = b[entry:] {
+		regions = append(regions, Region{
+			Start: readCells(b, addressCells),
+			Size:  readCells(b[addressCells*4:], sizeCells),
+		})
+	}
+	return regions, nil
+}
+
+func readCells(b []byte, n uint32) uint64 {
+	var v uint64
+	for i := range n {
+		v = v<<32 | uint64(binary.BigEndian.Uint32(b[i*4:]))
+	}
+	return v
+}
+
 // AsString converts the property to the Go string type. The trailing null
 // character is stripped.
 func (p *Property) AsString() (string, error) {

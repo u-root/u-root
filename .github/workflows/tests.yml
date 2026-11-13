@@ -16,34 +16,34 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.26.x' ]
+        go-version: ['1.27.x' ]
         vmarch: [ 'amd64', 'arm', 'arm64' ]
         pattern: [ 'integration/generic-tests/...', 'integration/gotests/...' ]
         include:
           # Only run these with VM arch amd64 for now.
-          - go-version: '1.26.x'
+          - go-version: '1.27.x'
             vmarch: 'amd64'
             pattern: 'cmds/...'
 
-          - go-version: '1.26.x'
+          - go-version: '1.27.x'
             vmarch: 'amd64'
             pattern: 'pkg/...'
             extra-arg: '-coverpkg=./pkg/...'
 
           # Root dir tests
-          - go-version: '1.26.x'
+          - go-version: '1.27.x'
             vmarch: 'amd64'
             pattern: '.'
 
           # Only run UPL ARM64 test with VM arch arm64 for now.
-          - go-version: '1.26.x'
+          - go-version: '1.27.x'
             vmarch: 'arm64'
             pattern: 'integration/generic-tests/universalpayload_arm64_test.go'
 
           # riscv64 only runs the kexec tests for now; the rest of
           # generic-tests needs networking features the riscv64 vmtest
           # kernel does not have.
-          - go-version: '1.26.x'
+          - go-version: '1.27.x'
             vmarch: 'riscv64'
             pattern: 'integration/generic-tests/kexec_test.go'
 
@@ -82,3 +82,33 @@ jobs:
           fail_ci_if_error: true
           verbose: true
           env_vars: GO_VERSION,VMTEST_ARCH
+
+  # utilities_arch_riscv64_test.go is //go:build riscv64, so the amd64
+  # pkg/... job never compiles it. Cross-compile the package tests and
+  # run them under qemu-user so Codecov records those lines.
+  upl-riscv64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.27.x'
+      - name: Install QEMU user emulator
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+      - name: Test universalpayload on riscv64
+        run: |
+          CGO_ENABLED=0 GOARCH=riscv64 go test -c -o upl.riscv64.test \
+            -covermode=atomic \
+            ./pkg/boot/universalpayload/
+          qemu-riscv64-static ./upl.riscv64.test \
+            -test.v -test.timeout=10m \
+            -test.coverprofile=coverage.txt
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        env:
+          CODECOV_TOKEN: '0ecf29bb-15fb-46f2-8c7d-0fb610d79f71'
+        with:
+          files: coverage.txt
+          flags: pkg/boot/universalpayload-riscv64
+          fail_ci_if_error: true
+          verbose: true

@@ -16,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -57,13 +56,8 @@ func ptsname(f *os.File) (string, error) {
 }
 
 func ptsunlock(f *os.File) error {
-	var u uintptr
 	// use TIOCSPTLCK with a zero valued arg to clear the pty lock
-	_, _, err := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGPTN, uintptr(unsafe.Pointer(&u)))
-	if err != 0 {
-		return err
-	}
-	return nil
+	return unix.IoctlSetPointerInt(int(f.Fd()), unix.TIOCSPTLCK, 0)
 }
 
 type cgroupname string

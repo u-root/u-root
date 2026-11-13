@@ -11,7 +11,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -55,9 +54,8 @@ func tty() {
 func foreground() {
 	// Place process group in foreground.
 	if ttypgrp != 0 {
-		_, _, errno := unix.RawSyscall(unix.SYS_IOCTL, ttyf.Fd(), uintptr(unix.TIOCSPGRP), uintptr(unsafe.Pointer(&ttypgrp)))
-		if errno != 0 {
-			log.Printf("rush pid %v: Can't set foreground to %v: %v", os.Getpid(), ttypgrp, errno)
+		if err := unix.IoctlSetPointerInt(int(ttyf.Fd()), unix.TIOCSPGRP, ttypgrp); err != nil {
+			log.Printf("rush pid %v: Can't set foreground to %v: %v", os.Getpid(), ttypgrp, err)
 		}
 	}
 }
