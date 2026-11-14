@@ -4,7 +4,7 @@
 // Mount9p mounts a 9P server with the transport=fd method, optionally using SSH
 // for the transport.
 //
-//	mount9p -ssh -private_key ~/.ssh/id_rsa /path/to/mount [::1]:1234
+//	mount9p -ssh -private_key ~/.ssh/id_rsa -host_key server_key.pub /path/to/mount [::1]:1234
 
 //go:build linux
 
@@ -12,6 +12,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -29,6 +30,7 @@ var (
 	addr        string // Address:port to dial.
 	useSSH      = flag.Bool("ssh", false, "Use ssh for transport")
 	privateKey  = flag.String("private_key", "id_rsa", "Path to your private key")
+	hostKey     = flag.String("host_key", "", "Path to the server's public host key(s), required with -ssh")
 	fastTimeout = flag.Bool("fast_timeout", false, "Quickly timeout server connections")
 	cache       = flag.String("cache", "none", "Cache mode")
 )
@@ -38,7 +40,14 @@ var (
 func run(ctx context.Context) error {
 	var cfg *ssh.ClientConfig
 	if *useSSH {
-		ncfg, err := sshstream.NewClientConfig(*privateKey, ssh.InsecureIgnoreHostKey())
+		if *hostKey == "" {
+			return errors.New("-ssh requires -host_key")
+		}
+		hkcb, err := sshstream.NewHostKeyCallback(*hostKey)
+		if err != nil {
+			return err
+		}
+		ncfg, err := sshstream.NewClientConfig(*privateKey, hkcb)
 		if err != nil {
 			return err
 		}
