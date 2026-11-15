@@ -6,6 +6,7 @@ package vfile
 
 import (
 	"bytes"
+	"crypto/rsa"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -315,13 +316,13 @@ func TestReadSignedImage(t *testing.T) {
 			desc:       "Correct read key0",
 			path:       "testdata/key0",
 			wantError:  false,
-			wantKeyCnt: 2,
+			wantKeyCnt: 1,
 		},
 		{
 			desc:       "Correct read key1",
 			path:       "testdata/key1",
 			wantError:  false,
-			wantKeyCnt: 2,
+			wantKeyCnt: 1,
 		},
 		{
 			desc:       "Read nonRSA key",
@@ -333,7 +334,7 @@ func TestReadSignedImage(t *testing.T) {
 			desc:       "Multikey ring",
 			path:       "testdata/keyring0+1+dsa",
 			wantError:  false,
-			wantKeyCnt: 4,
+			wantKeyCnt: 2,
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
@@ -356,6 +357,43 @@ func TestReadSignedImage(t *testing.T) {
 				t.Errorf("GetRSAKeysFromRing(%s) returned %d keys, want %d", tt.path, gotCnt, tt.wantKeyCnt)
 			}
 		})
+	}
+}
+
+func TestGetRSAKeysFromRingSigningKeysOnly(t *testing.T) {
+	config := &packet.Config{RSABits: 2048}
+	e, err := openpgp.NewEntity("uroot", "", "uroot@uroot", config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// NewEntity adds an encryption-only subkey; add a signing subkey and
+	// a second one that is then revoked.
+	for range 2 {
+		if err := e.AddSigningSubkey(config); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := e.RevokeSubkey(&e.Subkeys[2], packet.KeyCompromised, "", config); err != nil {
+		t.Fatal(err)
+	}
+
+	keys, err := GetRSAKeysFromRing(openpgp.EntityList{e})
+	if err != nil {
+		t.Fatalf("GetRSAKeysFromRing = %v, want nil", err)
+	}
+	want := []*rsa.PublicKey{
+		e.PrimaryKey.PublicKey.(*rsa.PublicKey),
+		e.Subkeys[1].PublicKey.PublicKey.(*rsa.PublicKey),
+	}
+	if !reflect.DeepEqual(keys, want) {
+		t.Errorf("GetRSAKeysFromRing returned %d keys, want the primary key and the unrevoked signing subkey", len(keys))
+	}
+
+	if err := e.RevokeKey(packet.KeyCompromised, "", config); err != nil {
+		t.Fatal(err)
+	}
+	if keys, err := GetRSAKeysFromRing(openpgp.EntityList{e}); err == nil {
+		t.Errorf("GetRSAKeysFromRing(revoked key) = %d keys, want error", len(keys))
 	}
 }
 
