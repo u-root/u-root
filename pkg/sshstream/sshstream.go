@@ -141,6 +141,31 @@ func NewClientConfig(privateKey string, hkcb ssh.HostKeyCallback) (*ssh.ClientCo
 	return cfg, nil
 }
 
+// NewHostKeyCallback returns an ssh.HostKeyCallback that accepts only the
+// host keys listed in hostKeys, a file in authorized_keys format such as the
+// server's .pub file.
+func NewHostKeyCallback(hostKeys string) (ssh.HostKeyCallback, error) {
+	keyBytes, err := os.ReadFile(hostKeys)
+	if err != nil {
+		return nil, fmt.Errorf("host key read: %w", err)
+	}
+	keys := map[string]bool{}
+	for len(keyBytes) > 0 {
+		k, _, _, rest, err := ssh.ParseAuthorizedKey(keyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("host key parse: %w", err)
+		}
+		keys[string(k.Marshal())] = true
+		keyBytes = rest
+	}
+	return func(hostname string, _ net.Addr, k ssh.PublicKey) error {
+		if keys[string(k.Marshal())] {
+			return nil
+		}
+		return fmt.Errorf("host key %s for %q is not in %s", ssh.FingerprintSHA256(k), hostname, hostKeys)
+	}, nil
+}
+
 // NewServerConfig is a helper to make an ssh.ServerConfig.
 func NewServerConfig(authorizedKeys, hostKey string) (*ssh.ServerConfig, error) {
 	authBytes, err := os.ReadFile(authorizedKeys)

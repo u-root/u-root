@@ -187,3 +187,64 @@ func TestNewServerConfigOptions(t *testing.T) {
 		t.Fatal("NewServerConfig accepted an authorized_keys entry with options it does not enforce")
 	}
 }
+
+func TestHostKeyCallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	privPath, pubPath := generateTestKeys(t, tmpDir)
+	serverCfg, err := NewServerConfig(pubPath, privPath)
+	if err != nil {
+		t.Fatalf("NewServerConfig failed: %v", err)
+	}
+	_, otherPub := generateTestKeys(t, t.TempDir())
+
+	for _, tt := range []struct {
+		name    string
+		hostKey string
+		wantErr bool
+	}{
+		{name: "server key", hostKey: pubPath},
+		{name: "other key", hostKey: otherPub, wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hkcb, err := NewHostKeyCallback(tt.hostKey)
+			if err != nil {
+				t.Fatalf("NewHostKeyCallback failed: %v", err)
+			}
+			clientCfg, err := NewClientConfig(privPath, hkcb)
+			if err != nil {
+				t.Fatalf("NewClientConfig failed: %v", err)
+			}
+
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatalf("Listen failed: %v", err)
+			}
+			defer listener.Close()
+
+			go func() {
+				serverConn, err := listener.Accept()
+				if err != nil {
+					return
+				}
+				defer serverConn.Close()
+				if s, err := NewServer(serverConn, serverCfg); err == nil {
+					s.Close()
+				}
+			}()
+
+			clientConn, err := net.Dial("tcp", listener.Addr().String())
+			if err != nil {
+				t.Fatalf("Dial failed: %v", err)
+			}
+			defer clientConn.Close()
+
+			s, err := NewClient(clientConn, clientCfg)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("NewClient with host key %s: err = %v, wantErr %v", tt.name, err, tt.wantErr)
+			}
+			if err == nil {
+				s.Close()
+			}
+		})
+	}
+}
