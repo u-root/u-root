@@ -13,7 +13,9 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pin to ubuntu-24.04 because runvmtest uses dagger v0.9.4, whose
+    # legacy iptables CNI setup fails on ubuntu-26.04 (Linux 7.0).
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         go-version: ['1.27.x' ]
@@ -87,7 +89,7 @@ jobs:
   # pkg/... job never compiles it. Cross-compile the package tests and
   # run them under qemu-user so Codecov records those lines.
   upl-riscv64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Setup Go
@@ -95,13 +97,13 @@ jobs:
         with:
           go-version: '1.27.x'
       - name: Install QEMU user emulator
-        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+        run: sudo apt-get update && sudo apt-get install -y qemu-user
       - name: Test universalpayload on riscv64
         run: |
           CGO_ENABLED=0 GOARCH=riscv64 go test -c -o upl.riscv64.test \
             -covermode=atomic \
             ./pkg/boot/universalpayload/
-          qemu-riscv64-static ./upl.riscv64.test \
+          qemu-riscv64 ./upl.riscv64.test \
             -test.v -test.timeout=10m \
             -test.coverprofile=coverage.txt
       - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
