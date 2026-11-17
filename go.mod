@@ -56,6 +56,7 @@ require (
 require (
 	github.com/hugelgupf/p9 v0.4.1
 	github.com/jaypipes/ghw v0.12.0
+	github.com/pin/tftp/v3 v3.2.0
 	github.com/pkg/sftp v1.13.9
 	github.com/sirupsen/logrus v1.9.3
 	github.com/u-root/cpu v0.0.0-20251022203118-05ede1535667

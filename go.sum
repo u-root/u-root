@@ -228,6 +228,8 @@ github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5 h1:p4VuaitqUAqSZ
 github.com/packetcap/go-pcap v0.0.0-20240528124601-8c87ecf5dbc5/go.mod h1:zIAoVKeWP0mz4zXY50UYQt6NLg2uwKRswMDcGEqOms4=
 github.com/pierrec/lz4/v4 v4.1.22 h1:cKFw6uJDK+/gfw5BcDL0JL5aBsAFdsIT18eRtLj7VIU=
 github.com/pierrec/lz4/v4 v4.1.22/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
+github.com/pin/tftp/v3 v3.2.0 h1:q6K5G6T0TA7e3wDJsB/7VpD3iaWwVEJD/nEuh3q9Sk0=
+github.com/pin/tftp/v3 v3.2.0/go.mod h1:qc5ySXB5aOS1H6ULneqB4g5nshqV1CgeV/l/M6rEDms=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/sftp v1.13.9 h1:4NGkvGudBL7GteO3m6qnaQ4pC0Kvf0onSVc9gR3EWBw=

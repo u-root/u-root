@@ -386,6 +386,10 @@ github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
+# github.com/pin/tftp/v3 v3.2.0
+## explicit; go 1.23.0
+github.com/pin/tftp/v3
+github.com/pin/tftp/v3/netascii
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors

@@ -6,7 +6,7 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"io"
 	"net"
 	"net/http"
@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"pack.ag/tftp"
+	"github.com/pin/tftp/v3"
 )
 
 func TestTFTPFileServer(t *testing.T) {
@@ -44,15 +44,11 @@ func TestTFTPFileServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := tftp.NewServer("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	server.ReadHandler(&tftpFileServer{fsys: root.FS()})
+	server := tftp.NewServer(tftpReadHandler(root.FS()), nil)
 	go server.Serve(conn)
-	defer server.Close()
+	defer server.Shutdown()
 
-	client, err := tftp.NewClient()
+	client, err := tftp.NewClient(conn.LocalAddr().String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,19 +63,19 @@ func TestTFTPFileServer(t *testing.T) {
 		{name: "link"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := client.Get(fmt.Sprintf("tftp://%s/%s", conn.LocalAddr(), tt.name))
-			var got []byte
+			var got bytes.Buffer
+			wt, err := client.Receive(tt.name, "octet")
 			if err == nil {
-				got, err = io.ReadAll(resp)
+				_, err = wt.WriteTo(&got)
 			}
 			if tt.want == "" {
 				if err == nil {
-					t.Fatalf("Get(%q) = %q, want error", tt.name, got)
+					t.Fatalf("Receive(%q) = %q, want error", tt.name, got.String())
 				}
 				return
 			}
-			if err != nil || string(got) != tt.want {
-				t.Fatalf("Get(%q) = %q, %v, want %q, nil", tt.name, got, err, tt.want)
+			if err != nil || got.String() != tt.want {
+				t.Fatalf("Receive(%q) = %q, %v, want %q, nil", tt.name, got.String(), err, tt.want)
 			}
 		})
 	}

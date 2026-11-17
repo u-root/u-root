@@ -29,7 +29,7 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv4/server4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/insomniacslk/dhcp/dhcpv6/server6"
-	"pack.ag/tftp"
+	"github.com/pin/tftp/v3"
 
 	// To build the dependencies of this package with TinyGo, we need to include
 	// the cpuid package, since tinygo does not support the asm code in the
@@ -196,26 +196,23 @@ func (s *dserver6) dhcpHandler(conn net.PacketConn, peer net.Addr, m dhcpv6.DHCP
 	log.Printf("DHCPv6 request successfully handled, reply: %v", reply.Summary())
 }
 
-// tftpFileServer serves TFTP read requests from fsys. Given an os.Root's FS,
-// ".." elements and symlinks cannot reach files outside of the root.
-type tftpFileServer struct {
-	fsys fs.FS
-}
+// tftpReadHandler returns a TFTP read handler serving files from fsys. Given
+// an os.Root's FS, ".." elements and symlinks cannot reach files outside of
+// the root.
+func tftpReadHandler(fsys fs.FS) func(string, io.ReaderFrom) error {
+	return func(name string, rf io.ReaderFrom) error {
+		f, err := fsys.Open(strings.TrimLeft(name, "/"))
+		if err != nil {
+			log.Println(err)
+			return fmt.Errorf("file %q does not exist", name)
+		}
+		defer f.Close()
 
-func (s *tftpFileServer) ServeTFTP(w tftp.ReadRequest) {
-	f, err := s.fsys.Open(strings.TrimLeft(w.Name(), "/"))
-	if err != nil {
-		log.Println(err)
-		w.WriteError(tftp.ErrCodeFileNotFound, fmt.Sprintf("File %q does not exist", w.Name()))
-		return
-	}
-	defer f.Close()
-
-	if fi, err := f.Stat(); err == nil {
-		w.WriteSize(fi.Size())
-	}
-	if _, err := io.Copy(w, f); err != nil {
-		log.Println(err)
+		_, err = rf.ReadFrom(f)
+		if err != nil {
+			log.Println(err)
+		}
+		return err
 	}
 }
 
@@ -242,14 +239,10 @@ func main() {
 			log.Fatalf("Could not open TFTP directory: %v", err)
 		}
 		wg.Go(func() {
-			server, err := tftp.NewServer(fmt.Sprintf(":%d", *tftpPort))
-			if err != nil {
-				log.Fatalf("Could not start TFTP server: %v", err)
-			}
+			server := tftp.NewServer(tftpReadHandler(root.FS()), nil)
 
 			log.Println("starting file server")
-			server.ReadHandler(&tftpFileServer{fsys: root.FS()})
-			log.Fatal(server.ListenAndServe())
+			log.Fatal(server.ListenAndServe(fmt.Sprintf(":%d", *tftpPort)))
 		})
 	}
 	if len(*httpDir) != 0 {

@@ -7,14 +7,12 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"pack.ag/tftp"
+	"github.com/pin/tftp/v3"
 )
 
 func TestHandlersStayInRoot(t *testing.T) {
@@ -41,21 +39,13 @@ func TestHandlersStayInRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := tftp.NewServer("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	server.ReadHandler(&FileReadHandler{Root: dir})
-	server.WriteHandler(&FileWriteHandler{Root: dir})
+	server := tftp.NewServer((&FileReadHandler{Root: dir}).ServeTFTP, (&FileWriteHandler{Root: dir}).ReceiveTFTP)
 	go server.Serve(conn)
-	defer server.Close()
+	defer server.Shutdown()
 
-	client, err := tftp.NewClient()
+	client, err := tftp.NewClient(conn.LocalAddr().String())
 	if err != nil {
 		t.Fatal(err)
-	}
-	url := func(name string) string {
-		return fmt.Sprintf("tftp://%s/%s", conn.LocalAddr(), name)
 	}
 
 	for _, tt := range []struct {
@@ -68,19 +58,19 @@ func TestHandlersStayInRoot(t *testing.T) {
 		{name: "link"},
 	} {
 		t.Run("read "+tt.name, func(t *testing.T) {
-			resp, err := client.Get(url(tt.name))
-			var got []byte
+			var got bytes.Buffer
+			wt, err := client.Receive(tt.name, "octet")
 			if err == nil {
-				got, err = io.ReadAll(resp)
+				_, err = wt.WriteTo(&got)
 			}
 			if tt.want == "" {
 				if err == nil {
-					t.Fatalf("Get(%q) = %q, want error", tt.name, got)
+					t.Fatalf("Receive(%q) = %q, want error", tt.name, got.String())
 				}
 				return
 			}
-			if err != nil || string(got) != tt.want {
-				t.Fatalf("Get(%q) = %q, %v, want %q, nil", tt.name, got, err, tt.want)
+			if err != nil || got.String() != tt.want {
+				t.Fatalf("Receive(%q) = %q, %v, want %q, nil", tt.name, got.String(), err, tt.want)
 			}
 		})
 	}
@@ -96,16 +86,19 @@ func TestHandlersStayInRoot(t *testing.T) {
 		{name: "dangling", path: filepath.Join(base, "planted"), wantErr: true},
 	} {
 		t.Run("write "+tt.name, func(t *testing.T) {
-			err := client.Put(url(tt.name), bytes.NewReader(data), int64(len(data)))
+			rf, err := client.Send(tt.name, "octet")
+			if err == nil {
+				_, err = rf.ReadFrom(bytes.NewReader(data))
+			}
 			got, rerr := os.ReadFile(tt.path)
 			if tt.wantErr {
 				if err == nil || rerr == nil {
-					t.Fatalf("Put(%q) = %v, %s: %q, %v; want error and no file", tt.name, err, tt.path, got, rerr)
+					t.Fatalf("Send(%q) = %v, %s: %q, %v; want error and no file", tt.name, err, tt.path, got, rerr)
 				}
 				return
 			}
 			if err != nil || rerr != nil || !bytes.Equal(got, data) {
-				t.Fatalf("Put(%q) = %v, %s: %q, %v; want nil, %q", tt.name, err, tt.path, got, rerr, data)
+				t.Fatalf("Send(%q) = %v, %s: %q, %v; want nil, %q", tt.name, err, tt.path, got, rerr, data)
 			}
 		})
 	}

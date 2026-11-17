@@ -12,7 +12,7 @@
 // Description:
 //
 //	tftpd runs a simple TFTP server that can handle both read and write requests.
-//	It uses the same TFTP library as the client (pack.ag/tftp).
+//	It uses the github.com/pin/tftp library.
 //
 // Options:
 //
@@ -31,7 +31,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"pack.ag/tftp"
+	"github.com/pin/tftp/v3"
 )
 
 var (
@@ -40,7 +40,11 @@ var (
 	verbose = flag.Bool("v", false, "Enable verbose logging")
 )
 
-var errInvalidPath = errors.New("invalid path")
+var (
+	errInvalidPath     = errors.New("invalid path")
+	errAccessViolation = errors.New("access violation")
+	errFileNotFound    = errors.New("file not found")
+)
 
 // isValidPath checks if the provided path is valid and secure
 // using the approach recommended in https://go.dev/blog/osroot
@@ -109,15 +113,13 @@ func isValidPath(rootDir, path string) (string, error) {
 	return realPath, nil
 }
 
-// FileReadHandler implements tftp.ReadHandler to serve files from a directory
+// FileReadHandler serves TFTP read requests from a directory
 type FileReadHandler struct {
 	Root string
 }
 
 // ServeTFTP handles TFTP read requests by serving files from the root directory
-func (h *FileReadHandler) ServeTFTP(w tftp.ReadRequest) {
-	requestedPath := w.Name()
-
+func (h *FileReadHandler) ServeTFTP(requestedPath string, rf io.ReaderFrom) error {
 	if *verbose {
 		log.Printf("Received read request for %s", requestedPath)
 	}
@@ -126,43 +128,38 @@ func (h *FileReadHandler) ServeTFTP(w tftp.ReadRequest) {
 	realPath, err := isValidPath(h.Root, requestedPath)
 	if err != nil {
 		if errors.Is(err, errInvalidPath) {
-			w.WriteError(tftp.ErrCodeAccessViolation, "Access violation")
+			return errAccessViolation
 		} else if os.IsNotExist(err) {
-			w.WriteError(tftp.ErrCodeFileNotFound, "File not found")
-		} else {
-			w.WriteError(tftp.ErrCodeNotDefined, "Cannot access file")
+			return errFileNotFound
 		}
-		return
+		return errors.New("cannot access file")
 	}
 
 	file, err := os.Open(realPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			w.WriteError(tftp.ErrCodeFileNotFound, "File not found")
+			return errFileNotFound
 		} else if os.IsPermission(err) {
-			w.WriteError(tftp.ErrCodeAccessViolation, "Permission denied")
-		} else {
-			w.WriteError(tftp.ErrCodeNotDefined, "Cannot open file")
+			return errors.New("permission denied")
 		}
-		return
+		return errors.New("cannot open file")
 	}
 	defer file.Close()
 
-	_, err = io.Copy(w, file)
+	_, err = rf.ReadFrom(file)
 	if err != nil {
 		log.Printf("Error sending file: %v", err)
 	}
+	return err
 }
 
-// FileWriteHandler implements tftp.WriteHandler to write files to a directory
+// FileWriteHandler stores files received by TFTP write requests in a directory
 type FileWriteHandler struct {
 	Root string
 }
 
 // ReceiveTFTP handles TFTP write requests by storing files in the root directory
-func (h *FileWriteHandler) ReceiveTFTP(w tftp.WriteRequest) {
-	requestedPath := w.Name()
-
+func (h *FileWriteHandler) ReceiveTFTP(requestedPath string, wt io.WriterTo) error {
 	if *verbose {
 		log.Printf("Received write request for %s", requestedPath)
 	}
@@ -171,36 +168,31 @@ func (h *FileWriteHandler) ReceiveTFTP(w tftp.WriteRequest) {
 	realPath, err := isValidPath(h.Root, requestedPath)
 	if err != nil {
 		if errors.Is(err, errInvalidPath) {
-			w.WriteError(tftp.ErrCodeAccessViolation, "Access violation")
-		} else if !os.IsNotExist(err) { // IsNotExist is expected for new files
-			w.WriteError(tftp.ErrCodeNotDefined, "Cannot access path")
+			return errAccessViolation
 		}
-		return
+		return errors.New("cannot access path")
 	}
 
 	// Create directory if it doesn't exist
 	err = os.MkdirAll(filepath.Dir(realPath), 0o755)
 	if err != nil {
-		w.WriteError(tftp.ErrCodeAccessViolation, "Cannot create directory")
-		return
+		return errors.New("cannot create directory")
 	}
 
 	file, err := os.Create(realPath)
 	if err != nil {
 		if os.IsPermission(err) {
-			w.WriteError(tftp.ErrCodeAccessViolation, "Permission denied")
-		} else {
-			w.WriteError(tftp.ErrCodeNotDefined, "Cannot create file")
+			return errors.New("permission denied")
 		}
-		return
+		return errors.New("cannot create file")
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, w)
+	_, err = wt.WriteTo(file)
 	if err != nil {
 		log.Printf("Error receiving file: %v", err)
-		// Unfortunately, we can't report errors to the client after the transfer has started
 	}
+	return err
 }
 
 func main() {
@@ -213,18 +205,13 @@ func main() {
 	}
 
 	// Create the server
-	addr := fmt.Sprintf(":%d", *port)
-	server, err := tftp.NewServer(addr)
-	if err != nil {
-		log.Fatalf("Failed to create TFTP server: %v", err)
-	}
-
-	// Register handlers
-	server.ReadHandler(&FileReadHandler{Root: absRoot})
-	server.WriteHandler(&FileWriteHandler{Root: absRoot})
+	server := tftp.NewServer(
+		(&FileReadHandler{Root: absRoot}).ServeTFTP,
+		(&FileWriteHandler{Root: absRoot}).ReceiveTFTP,
+	)
 
 	log.Printf("TFTP server listening on port %d, serving files from %s", *port, absRoot)
-	err = server.ListenAndServe()
+	err = server.ListenAndServe(fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
