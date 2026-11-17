@@ -13,7 +13,6 @@ package cmdline
 import (
 	"io"
 	"strings"
-	"unicode"
 
 	"github.com/u-root/u-root/pkg/shlex"
 )
@@ -54,7 +53,7 @@ func dequote(line string) string {
 	quotationMarks := `"'`
 
 	var quote byte
-	if strings.ContainsAny(string(line[0]), quotationMarks) {
+	if len(line) > 1 && strings.ContainsAny(string(line[0]), quotationMarks) {
 		quote = line[0]
 		line = line[1 : len(line)-1]
 	}
@@ -88,24 +87,46 @@ func dequote(line string) string {
 	return string(newLine)
 }
 
-func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
-	lastQuote := rune(0)
-	quotedFieldsCheck := func(c rune) bool {
-		switch {
-		case c == lastQuote:
-			lastQuote = rune(0)
-			return false
-		case lastQuote != rune(0):
-			return false
-		case unicode.In(c, unicode.Quotation_Mark):
-			lastQuote = c
-			return false
-		default:
-			return unicode.IsSpace(c)
+// isKernelSpace reports whether the kernel's isspace() (lib/ctype.c) is true
+// for c.
+func isKernelSpace(c byte) bool {
+	switch c {
+	case ' ', '\t', '\n', '\v', '\f', '\r', 0xa0:
+		return true
+	}
+	return false
+}
+
+// splitParams splits input into parameters the way the kernel's next_arg
+// (lib/cmdline.c) does: only '"' quotes, and only outside quotes does a
+// kernel space end a parameter.
+func splitParams(input string) []string {
+	var params []string
+	inQuote := false
+	start := -1
+	for i := 0; i < len(input); i++ {
+		c := input[i]
+		if c == '"' {
+			inQuote = !inQuote
+		} else if !inQuote && isKernelSpace(c) {
+			if start >= 0 {
+				params = append(params, input[start:i])
+				start = -1
+			}
+			continue
+		}
+		if start < 0 {
+			start = i
 		}
 	}
+	if start >= 0 {
+		params = append(params, input[start:])
+	}
+	return params
+}
 
-	for _, flag := range strings.FieldsFunc(string(input), quotedFieldsCheck) {
+func doParse(input string, handler func(flag, key, canonicalKey, value, trimmedValue string)) {
+	for _, flag := range splitParams(input) {
 		// kernel variables must allow '-' and '_' to be equivalent in variable
 		// names. We will replace dashes with underscores for processing.
 

@@ -45,3 +45,38 @@ func TestUpdateFilter(t *testing.T) {
 		t.Errorf("Update(%q) = %q, want %q", cl, got, want)
 	}
 }
+
+// The kernel's next_arg only treats '"' as a quote and splits on isspace(),
+// which includes 0xa0. removeFilter must find the same parameters.
+func TestRemoveFilterKernelQuoting(t *testing.T) {
+	for _, tt := range []struct {
+		cl   string
+		want string
+	}{
+		{
+			cl:   `quiet a=' init=/bin/sh '`,
+			want: `quiet a=' '`,
+		},
+		{
+			cl:   `quiet a=“ init=/bin/sh ”`,
+			want: `quiet a=“ ”`,
+		},
+		{
+			cl:   `quiet a=' init=/bin/sh`,
+			want: `quiet a='`,
+		},
+		{
+			cl:   "quiet a=x\xa0init=/bin/sh",
+			want: `quiet a=x`,
+		},
+		{
+			cl:   `quiet a="x init=/bin/sh" init=/sbin/init`,
+			want: `quiet a="x init=/bin/sh"`,
+		},
+	} {
+		got := removeFilter(tt.cl, []string{"init"})
+		if got != tt.want {
+			t.Errorf("removeFilter(%q, [init]) = %q, want %q", tt.cl, got, tt.want)
+		}
+	}
+}
