@@ -5,6 +5,9 @@
 package crypto
 
 import (
+	"bytes"
+	"crypto/x509"
+	"encoding/pem"
 	"os"
 	"path"
 	"testing"
@@ -118,16 +121,53 @@ func TestBadSignature(t *testing.T) {
 	}
 }
 
+func isEncryptedKeyFile(t *testing.T, privateKeyPath string) bool {
+	t.Helper()
+	b, err := os.ReadFile(privateKeyPath)
+	if err != nil {
+		t.Fatalf(`os.ReadFile(%q) = _, %v, want nil`, privateKeyPath, err)
+	}
+	block, _ := pem.Decode(b)
+	if block == nil {
+		t.Fatalf(`pem.Decode(%q) = nil, want a PEM block`, privateKeyPath)
+	}
+	return x509.IsEncryptedPEMBlock(block)
+}
+
 func TestGenerateKeys(t *testing.T) {
 	tmpdir := t.TempDir()
-	if err := GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")); err != nil {
-		t.Errorf(`GeneratED25519Key(password, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")) = %v, want nil`, err)
+	privateKeyPath := path.Join(tmpdir, "private_key.pem")
+	publicKeyPath := path.Join(tmpdir, "public_key.pem")
+	if err := GeneratED25519Key(password, privateKeyPath, publicKeyPath); err != nil {
+		t.Fatalf(`GeneratED25519Key(%q, %q, %q) = %v, want nil`, password, privateKeyPath, publicKeyPath, err)
+	}
+
+	if !isEncryptedKeyFile(t, privateKeyPath) {
+		t.Errorf(`GeneratED25519Key(%q, %q, %q) wrote an unencrypted private key, want an encrypted key`, password, privateKeyPath, publicKeyPath)
+	}
+
+	privateKey, err := LoadPrivateKeyFromFile(privateKeyPath, password)
+	if err != nil {
+		t.Fatalf(`LoadPrivateKeyFromFile(%q, %q) = _, %v, want nil`, privateKeyPath, password, err)
+	}
+	publicKey, err := LoadPublicKeyFromFile(publicKeyPath)
+	if err != nil {
+		t.Fatalf(`LoadPublicKeyFromFile(%q) = _, %v, want nil`, publicKeyPath, err)
+	}
+	if got := ed25519.PrivateKey(privateKey).Public(); !bytes.Equal(got.(ed25519.PublicKey), publicKey) {
+		t.Errorf(`LoadPrivateKeyFromFile(%q, %q).Public() = %x, want %x`, privateKeyPath, password, got, publicKey)
 	}
 }
 
 func TestGenerateUnprotectedKeys(t *testing.T) {
 	tmpdir := t.TempDir()
-	if err := GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")); err != nil {
-		t.Errorf(`GeneratED25519Key(nil, path.Join(tmpdir, "private_key.pem"), path.Join(tmpdir, "public_key.pem")) = %v, want nil`, err)
+	privateKeyPath := path.Join(tmpdir, "private_key.pem")
+	publicKeyPath := path.Join(tmpdir, "public_key.pem")
+	if err := GeneratED25519Key(nil, privateKeyPath, publicKeyPath); err != nil {
+		t.Fatalf(`GeneratED25519Key(nil, %q, %q) = %v, want nil`, privateKeyPath, publicKeyPath, err)
+	}
+
+	if isEncryptedKeyFile(t, privateKeyPath) {
+		t.Errorf(`GeneratED25519Key(nil, %q, %q) wrote an encrypted private key, want an unencrypted key`, privateKeyPath, publicKeyPath)
 	}
 }
