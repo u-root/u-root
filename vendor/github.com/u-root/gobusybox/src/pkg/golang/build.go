@@ -35,6 +35,13 @@ type Environ struct {
 	Mod         ModBehavior
 	GBBDEBUG    bool
 
+	// GOWORK is the value of the GOWORK environment variable.
+	//
+	// It is only emitted when non-empty. "off" disables Go workspace
+	// mode, which is necessary when building a generated module that may
+	// happen to live underneath a directory containing a go.work.
+	GOWORK string
+
 	Compiler Compiler
 }
 
@@ -45,6 +52,7 @@ func (c *Environ) Copy(opts ...Opt) *Environ {
 		GO111MODULE: c.GO111MODULE,
 		Mod:         c.Mod,
 		GBBDEBUG:    c.GBBDEBUG,
+		GOWORK:      c.GOWORK,
 		Compiler:    c.Compiler,
 	}
 	e.Apply(opts...)
@@ -149,6 +157,15 @@ func WithMod(mod ModBehavior) Opt {
 	}
 }
 
+// WithGOWORK is an option that overrides GOWORK.
+//
+// Use WithGOWORK("off") to disable Go workspace mode.
+func WithGOWORK(gowork string) Opt {
+	return func(c *Environ) {
+		c.GOWORK = gowork
+	}
+}
+
 // WithWorkingDir sets the working directory for calls to `go`.
 func WithWorkingDir(wd string) Opt {
 	return func(c *Environ) {
@@ -190,8 +207,8 @@ func (c *Environ) Lookup(mode packages.LoadMode, patterns ...string) ([]*package
 		Env:  append(os.Environ(), c.Env()...),
 		Dir:  c.Dir,
 	}
-	if len(c.Context.BuildTags) > 0 {
-		tags := fmt.Sprintf("-tags=%s", strings.Join(c.Context.BuildTags, ","))
+	if len(c.BuildTags) > 0 {
+		tags := fmt.Sprintf("-tags=%s", strings.Join(c.BuildTags, ","))
 		cfg.BuildFlags = []string{tags}
 	}
 	if c.GO111MODULE != "off" && len(c.Mod) > 0 {
@@ -217,6 +234,9 @@ func (c Environ) envCommon() []string {
 	}
 	env = append(env, fmt.Sprintf("CGO_ENABLED=%d", cgo))
 	env = append(env, fmt.Sprintf("GO111MODULE=%s", c.GO111MODULE))
+	if c.GOWORK != "" {
+		env = append(env, fmt.Sprintf("GOWORK=%s", c.GOWORK))
+	}
 
 	if c.GOROOT != "" {
 		env = append(env, fmt.Sprintf("GOROOT=%s", c.GOROOT))

@@ -53,5 +53,15 @@ linters:
       - linters:
           - modernize
         text: 'stringscut:'
+      # Go 1.27 lets a promoted field be set in the outer composite literal.
+      # 223 sites, so adopt it as its own change rather than with a bump.
+      - linters:
+          - modernize
+        text: 'embedlit:'
+      # pkg/curl/schemes.go explains this one: errors.AsType has to wait for
+      # the OSS-Fuzz builder image CIFuzz uses to update its Go toolchain.
+      - linters:
+          - modernize
+        text: 'errorsastype:'
     paths:
       - pkg/uroot/test

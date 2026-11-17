@@ -680,16 +680,32 @@ func (u *UPL) buildGraphicNode() (*dt.Node, error) {
 	)), nil
 }
 
-func constructSerialPortNode() *dt.Node {
-	// Serial port settings
-	var isIOPort uint32 = 0x1
-	var baudRate uint32 = UniversalPayloadSerialPortBaudRate
-	var regBase uint32 = UniversalPayloadSerialPortRegisterBase
+// platformSerial is the architecture UART lookup. Tests replace it to cover
+// both the ISA fallback and the MMIO handoff without a live firmware FDT.
+var platformSerial = discoverPlatformSerial
 
+// serialPortConfig is the console handed to the payload.
+// Cell 0 of the FDT reg property is 1 for port I/O and 0 for MMIO.
+func (u *UPL) serialPortConfig() (useMmio uint8, stride uint8, baud uint32, base uint64) {
+	if mmio, stride, baud, base, ok := platformSerial(); ok {
+		u.debug("universalpayload: serial port mmio=%d stride=%d baud=%d base=%#x\n", mmio, stride, baud, base)
+		return mmio, stride, baud, base
+	}
+	return 0, UniversalPayloadSerialPortRegisterStride, UniversalPayloadSerialPortBaudRate, UniversalPayloadSerialPortRegisterBase
+}
+
+func (u *UPL) constructSerialPortNode() *dt.Node {
+	useMmio, _, baud, base := u.serialPortConfig()
+	access := uint32(1)
+	compatible := "isa"
+	if useMmio != 0 {
+		access = 0
+		compatible = "ns16550a"
+	}
 	return dt.NewNode("serial@", dt.WithProperty(
-		dt.PropertyString("compatible", "isa"),
-		dt.PropertyU32("current-speed", baudRate),
-		dt.PropertyU32Array("reg", []uint32{isIOPort, regBase}),
+		dt.PropertyString("compatible", compatible),
+		dt.PropertyU32("current-speed", baud),
+		dt.PropertyU32Array("reg", []uint32{access, uint32(base)}),
 	))
 }
 
@@ -731,12 +747,14 @@ func (u *UPL) constructSMBIOS3Node() (*dt.Node, error) {
 func (u *UPL) constructReservedMemoryNode(rsdpBase uint64) *dt.Node {
 	var rsvdNodes []*dt.Node
 
-	acpiChildNode := dt.NewNode("acpi", dt.WithProperty(
-		dt.PropertyString("compatible", "acpi"),
-		dt.PropertyRegion("reg", rsdpBase, uint64(u.pageSize)),
-	))
-
-	rsvdNodes = append(rsvdNodes, acpiChildNode)
+	// rsdpBase is zero when the firmware has no ACPI root. Omit the node
+	// rather than publishing address 0.
+	if rsdpBase != 0 {
+		rsvdNodes = append(rsvdNodes, dt.NewNode("acpi", dt.WithProperty(
+			dt.PropertyString("compatible", "acpi"),
+			dt.PropertyRegion("reg", rsdpBase, uint64(u.pageSize)),
+		)))
+	}
 
 	if smbios3ChildNode, err := u.constructSMBIOS3Node(); err != nil {
 		// If we failed to retrieve SMBIOS3 information, prompt error
@@ -1269,7 +1287,7 @@ func (u *UPL) buildDeviceTreeInfo(buf io.Writer, mem *kexec.Memory, loadAddr uin
 		return err
 	}
 
-	serialPortNode := constructSerialPortNode()
+	serialPortNode := u.constructSerialPortNode()
 
 	dtNodes := append(memNodes, rsvdMemNode)
 	dtNodes = append(dtNodes, optionsNode)
