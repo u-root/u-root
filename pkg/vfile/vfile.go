@@ -74,7 +74,17 @@ func GetKeyRing(keyPath string) (openpgp.KeyRing, error) {
 	return ring, nil
 }
 
-// GetRSAKeysFromRing iterates a PGP Keyring and extracts all rsa.PublicKey.
+// canSign reports whether a key whose self or binding signature is sig may be
+// used to make signatures. Keys without key flags are accepted, as in
+// openpgp.EntityList.KeysByIdUsage.
+func canSign(sig *packet.Signature) bool {
+	return sig == nil || !sig.FlagsValid || sig.FlagSign
+}
+
+// GetRSAKeysFromRing iterates a PGP Keyring and extracts all rsa.PublicKey
+// that may be used to make signatures. Revoked keys and keys whose flags do
+// not allow signing (e.g. encryption subkeys) are skipped, matching what
+// openpgp.CheckDetachedSignature accepts.
 // An error is returned iff the keyring is not found or no RSA public keys were
 // found on it.
 func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
@@ -83,10 +93,15 @@ func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("failed to assert KeyRing as EntityList to read RSA keys")
 	}
 
+	now := time.Now()
 	var rsaKeys []*rsa.PublicKey
 	for _, entity := range el {
+		id := entity.PrimaryIdentity()
+		if entity.Revoked(now) || (id != nil && id.Revoked(now)) {
+			continue
+		}
 		// Extract Primary Key
-		if entity.PrimaryKey != nil {
+		if entity.PrimaryKey != nil && (id == nil || canSign(id.SelfSignature)) {
 			pk := (packet.PublicKey)(*entity.PrimaryKey)
 			if rsaKey, ok := pk.PublicKey.(*rsa.PublicKey); ok {
 				rsaKeys = append(rsaKeys, rsaKey)
@@ -94,6 +109,9 @@ func GetRSAKeysFromRing(ring openpgp.KeyRing) ([]*rsa.PublicKey, error) {
 		}
 		// Extract any subkeys
 		for _, subkey := range entity.Subkeys {
+			if subkey.Revoked(now) || !canSign(subkey.Sig) {
+				continue
+			}
 			pk := (packet.PublicKey)(*subkey.PublicKey)
 			if rsaKey, ok := pk.PublicKey.(*rsa.PublicKey); ok {
 				rsaKeys = append(rsaKeys, rsaKey)

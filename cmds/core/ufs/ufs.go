@@ -21,7 +21,8 @@
 //		-authorized_keys ~/.ssh/authorized_keys \
 //		-hostkey ~/.ssh/id_rsa
 //
-// You'll need to use the mount9p client to connect to the ssh-enabled server.
+// You'll need to use the mount9p client to connect to the ssh-enabled server,
+// passing it the public half of -hostkey (e.g. ~/.ssh/id_rsa.pub) with -host_key.
 
 //go:build linux
 
