@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// console implements a basic console. It establishes a pair of files
-// to read from, the default being a UART at 0x3f8, but an alternative
-// being just stdin and stdout. It will also set up a root file system
-// using util.Rootfs, although this can be disabled as well.
-// Console uses a Go version of fork_pty to start up a shell, default
-// sh. Console runs until the shell exits and then exits itself.
 package main
 
 import (

@@ -477,3 +477,89 @@ func TestAsRegion(t *testing.T) {
 		})
 	}
 }
+
+func TestAsRegions(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		value        []byte
+		addressCells uint32
+		sizeCells    uint32
+		want         []Region
+		wantErr      error
+	}{
+		{
+			// /memory on a BeagleBone Black: <0x80000000 0x20000000>.
+			name:         "one address cell, one size cell",
+			value:        []byte{0x80, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00},
+			addressCells: 1,
+			sizeCells:    1,
+			want:         []Region{{Start: 0x80000000, Size: 0x20000000}},
+		},
+		{
+			name: "two entries",
+			value: []byte{
+				0x80, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00,
+				0xc0, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+			},
+			addressCells: 1,
+			sizeCells:    1,
+			want: []Region{
+				{Start: 0x80000000, Size: 0x10000000},
+				{Start: 0xc0000000, Size: 0x08000000},
+			},
+		},
+		{
+			name:         "two address cells, one size cell",
+			value:        []byte{0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00},
+			addressCells: 2,
+			sizeCells:    1,
+			want:         []Region{{Start: 0x100000000, Size: 0x40000000}},
+		},
+		{
+			name:         "two address cells, two size cells",
+			value:        []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f},
+			addressCells: 2,
+			sizeCells:    2,
+			want:         []Region{{Start: 0x0001020304050607, Size: 0x08090a0b0c0d0e0f}},
+		},
+		{
+			name:         "length not a multiple of the entry size",
+			value:        []byte{0x80, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			addressCells: 1,
+			sizeCells:    1,
+			wantErr:      ErrPropertyRegionInvalid,
+		},
+		{
+			name:         "empty",
+			value:        []byte{},
+			addressCells: 1,
+			sizeCells:    1,
+			wantErr:      ErrPropertyRegionInvalid,
+		},
+		{
+			name:         "zero size cells",
+			value:        []byte{0x80, 0x00, 0x00, 0x00},
+			addressCells: 1,
+			sizeCells:    0,
+			wantErr:      ErrPropertyRegionInvalid,
+		},
+		{
+			name:         "three address cells",
+			value:        make([]byte, 16),
+			addressCells: 3,
+			sizeCells:    1,
+			wantErr:      ErrPropertyRegionInvalid,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &Property{Name: "reg", Value: tc.value}
+			got, err := p.AsRegions(tc.addressCells, tc.sizeCells)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("AsRegions(%d, %d) returned error %v, want %v", tc.addressCells, tc.sizeCells, err, tc.wantErr)
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("AsRegions(%d, %d) = %#x, want %#x", tc.addressCells, tc.sizeCells, got, tc.want)
+			}
+		})
+	}
+}

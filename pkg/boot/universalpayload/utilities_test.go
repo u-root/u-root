@@ -1851,3 +1851,104 @@ func TestBuildDeviceTreeInfoDynamicSize(t *testing.T) {
 		t.Errorf("FDT header TotalSize (%d) does not match actual length (%d)", totalSize, len(data))
 	}
 }
+
+func withPlatformSerial(t *testing.T, f func() (uint8, uint8, uint32, uint64, bool)) {
+	t.Helper()
+	prev := platformSerial
+	platformSerial = f
+	t.Cleanup(func() { platformSerial = prev })
+}
+
+func TestSerialPortConfigFallback(t *testing.T) {
+	withPlatformSerial(t, func() (uint8, uint8, uint32, uint64, bool) {
+		return 0, 0, 0, 0, false
+	})
+	u := New()
+	mmio, stride, baud, base := u.serialPortConfig()
+	if mmio != 0 || stride != UniversalPayloadSerialPortRegisterStride || baud != UniversalPayloadSerialPortBaudRate || base != UniversalPayloadSerialPortRegisterBase {
+		t.Fatalf("fallback = mmio %d stride %d baud %d base %#x", mmio, stride, baud, base)
+	}
+
+	node := u.constructSerialPortNode()
+	compatible, ok := node.LookProperty("compatible")
+	if !ok {
+		t.Fatal("serial node has no compatible")
+	}
+	list, err := compatible.AsStringList()
+	if err != nil || len(list) != 1 || list[0] != "isa" {
+		t.Fatalf("compatible = %v (%v), want isa", list, err)
+	}
+	reg, ok := node.LookProperty("reg")
+	if !ok {
+		t.Fatal("serial node has no reg")
+	}
+	wantReg := dt.PropertyU32Array("reg", []uint32{1, UniversalPayloadSerialPortRegisterBase})
+	if !bytes.Equal(reg.Value, wantReg.Value) {
+		t.Fatalf("reg = %v, want %v", reg.Value, wantReg.Value)
+	}
+
+	hob := u.constructSerialPortHOB()
+	if hob.UseMmio != 0 || hob.RegisterStride != UniversalPayloadSerialPortRegisterStride || hob.BaudRate != UniversalPayloadSerialPortBaudRate || hob.RegisterBase != UniversalPayloadSerialPortRegisterBase {
+		t.Fatalf("hob = mmio %d stride %d baud %d base %#x", hob.UseMmio, hob.RegisterStride, hob.BaudRate, hob.RegisterBase)
+	}
+}
+
+func TestSerialPortConfigMMIO(t *testing.T) {
+	withPlatformSerial(t, func() (uint8, uint8, uint32, uint64, bool) {
+		return 1, 4, 57600, 0x10000000, true
+	})
+	var logged bool
+	u := New(WithDebug(func(string, ...any) { logged = true }))
+	mmio, stride, baud, base := u.serialPortConfig()
+	if !logged || mmio != 1 || stride != 4 || baud != 57600 || base != 0x10000000 {
+		t.Fatalf("mmio = logged %v mmio %d stride %d baud %d base %#x", logged, mmio, stride, baud, base)
+	}
+
+	node := u.constructSerialPortNode()
+	compatible, ok := node.LookProperty("compatible")
+	if !ok {
+		t.Fatal("serial node has no compatible")
+	}
+	list, err := compatible.AsStringList()
+	if err != nil || len(list) != 1 || list[0] != "ns16550a" {
+		t.Fatalf("compatible = %v (%v), want ns16550a", list, err)
+	}
+	reg, ok := node.LookProperty("reg")
+	if !ok {
+		t.Fatal("serial node has no reg")
+	}
+	wantReg := dt.PropertyU32Array("reg", []uint32{0, 0x10000000})
+	if !bytes.Equal(reg.Value, wantReg.Value) {
+		t.Fatalf("reg = %v, want %v", reg.Value, wantReg.Value)
+	}
+
+	hob := u.constructSerialPortHOB()
+	if hob.UseMmio != 1 || hob.RegisterStride != 4 || hob.BaudRate != 57600 || hob.RegisterBase != 0x10000000 {
+		t.Fatalf("hob = mmio %d stride %d baud %d base %#x", hob.UseMmio, hob.RegisterStride, hob.BaudRate, hob.RegisterBase)
+	}
+}
+
+func TestConstructReservedMemoryNodeACPI(t *testing.T) {
+	u := New(WithSMBIOSBase(func() (int64, int64, error) {
+		return 0, 0, errors.New("no smbios")
+	}))
+
+	node := u.constructReservedMemoryNode(0)
+	if _, ok := node.LookupChildByName("acpi"); ok {
+		t.Fatal("acpi child present when rsdp base is 0")
+	}
+
+	node = u.constructReservedMemoryNode(0x2000)
+	acpiNode, ok := node.LookupChildByName("acpi")
+	if !ok {
+		t.Fatal("acpi child missing when rsdp base is set")
+	}
+	reg, ok := acpiNode.LookProperty("reg")
+	if !ok {
+		t.Fatal("acpi node has no reg")
+	}
+	want := dt.PropertyRegion("reg", 0x2000, uint64(u.pageSize))
+	if !bytes.Equal(reg.Value, want.Value) {
+		t.Fatalf("acpi reg = %v, want %v", reg.Value, want.Value)
+	}
+}

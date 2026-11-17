@@ -136,9 +136,21 @@ func (f *File) Process() error {
 	} else if f.Options.Stdout {
 		o = os.Stdout
 	} else {
-		if o, err = os.Create(f.outputPath()); err != nil {
+		var fi os.FileInfo
+		if fi, err = i.Stat(); err != nil {
 			return err
 		}
+		// Give the output file the input file's permissions.
+		perm := fi.Mode().Perm()
+		var out *os.File
+		if out, err = os.OpenFile(f.outputPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm); err != nil {
+			return err
+		}
+		if err = out.Chmod(perm); err != nil {
+			out.Close()
+			return err
+		}
+		o = out
 	}
 
 	if f.Options.Verbose && !f.Options.Quiet {

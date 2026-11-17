@@ -477,6 +477,8 @@ func RetryConnectErrors(u *url.URL, err error) bool {
 // errors, which does not include network configuration errors. The latter are
 // relevant for users of DHCP, for example.
 func RetryTemporaryNetworkErrors(u *url.URL, err error) bool {
+	// Keep errors.As instead of errors.AsType (Go 1.26+) until the OSS-Fuzz
+	// u-root builder image used by CIFuzz updates its Go toolchain.
 	var nerr net.Error
 	if errors.As(err, &nerr) {
 		return nerr.Temporary()

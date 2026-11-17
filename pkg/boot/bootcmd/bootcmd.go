@@ -7,6 +7,8 @@
 package bootcmd
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -19,7 +21,9 @@ import (
 //
 // mountPool is unmounted before kexecing. noLoad prints the list of entries
 // and exits. If noLoad is false, a boot menu is shown to the user. The
-// user-chosen boot entry will be kexec'd unless noExec is true.
+// user-chosen boot entry will be kexec'd unless noExec is true. If the entry
+// is a menu.ReturnsToMenu, such as the shell, the menu is shown again when it
+// returns.
 func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec bool) {
 	if noLoad {
 		log.Print("Not loading menu or kernel. Options:")
@@ -30,26 +34,38 @@ func ShowMenuAndBoot(entries []menu.Entry, mountPool *mount.Pool, noLoad, noExec
 		os.Exit(0)
 	}
 
-	loadedEntry := menu.ShowMenuAndLoad(true, entries...)
+	if err := showMenuAndBoot(menu.ShowMenuAndLoad, entries, mountPool, noExec); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	// Clean up.
-	if mountPool != nil {
-		if err := mountPool.UnmountAll(mount.MNT_DETACH); err != nil {
-			log.Printf("Failed in UnmountAll: %v", err)
+func showMenuAndBoot(load func(bool, ...menu.Entry) menu.Entry, entries []menu.Entry, mountPool *mount.Pool, noExec bool) error {
+	for {
+		loadedEntry := load(true, entries...)
+		_, returns := loadedEntry.(menu.ReturnsToMenu)
+
+		// Keep the file systems the other entries are loaded from if
+		// the menu is shown again.
+		if !returns && mountPool != nil {
+			if err := mountPool.UnmountAll(mount.MNT_DETACH); err != nil {
+				log.Printf("Failed in UnmountAll: %v", err)
+			}
+			mountPool = nil
+		}
+		if loadedEntry == nil {
+			return errors.New("nothing to boot")
+		}
+		if noExec {
+			log.Printf("Chosen menu entry: %s", loadedEntry)
+			return nil
+		}
+		// If kexec fails, something is seriously wrong. Exit, so that
+		// the machine is reset.
+		if err := loadedEntry.Exec(); err != nil {
+			return fmt.Errorf("failed to exec %s: %w", loadedEntry, err)
+		}
+		if !returns {
+			return errors.New("kexec should have returned an error or not returned at all")
 		}
 	}
-	if loadedEntry == nil {
-		log.Fatalf("Nothing to boot.")
-	}
-	if noExec {
-		log.Printf("Chosen menu entry: %s", loadedEntry)
-		os.Exit(0)
-	}
-	// Exec should either return an error or not return at all.
-	if err := loadedEntry.Exec(); err != nil {
-		log.Fatalf("Failed to exec %s: %v", loadedEntry, err)
-	}
-
-	// Kexec should either return an error or not return.
-	log.Fatalf("Kexec should have returned an error or not returned at all.")
 }

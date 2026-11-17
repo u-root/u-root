@@ -64,11 +64,6 @@ func (s *State) emitNewLine() {
 	fmt.Print("\n")
 }
 
-type winSize struct {
-	row, col       uint16
-	xpixel, ypixel uint16
-}
-
 func (s *State) checkOutput() {
 	// xterm is known to support CHA
 	if strings.Contains(strings.ToLower(os.Getenv("TERM")), "xterm") {

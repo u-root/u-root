@@ -82,7 +82,10 @@ const (
 // After this call, only messages with a level value lower than the one
 // specified will be printed to console by the kernel.
 func (k *KLog) SetConsoleLogLevel(level KLogLevel) error {
-	if _, _, err := unix.Syscall(unix.SYS_SYSLOG, unix.SYSLOG_ACTION_CONSOLE_LEVEL, 0, uintptr(level)); err != 0 {
+	// The syslog(2) "len" argument carries the console level for this
+	// action; Klogctl passes len(buf) as that argument, so size buf
+	// accordingly rather than actually writing into it.
+	if _, err := unix.Klogctl(unix.SYSLOG_ACTION_CONSOLE_LEVEL, make([]byte, level)); err != nil {
 		return fmt.Errorf("could not set syslog level to %d: %w", level, err)
 	}
 	return nil

@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,6 +134,28 @@ func TestConfigErrors(t *testing.T) {
 		err = cmd.run()
 		if err == nil {
 			t.Errorf("expected ssh: no key found, got nil")
+		}
+	})
+	t.Run("authorized_keys entry has options", func(t *testing.T) {
+		pub, err := os.ReadFile("./testdata/id_rsa.pub")
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys := filepath.Join(t.TempDir(), "authorized_keys")
+		if err := os.WriteFile(keys, append([]byte(`from="10.0.0.1",command="true" `), pub...), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := command(params{
+			privkey: "./testdata/id_rsa",
+			keys:    keys,
+			ip:      "host",
+			port:    "port",
+		})
+
+		err = cmd.run()
+		if err == nil || !strings.Contains(err.Error(), "options are not supported") {
+			t.Errorf("expected authorized_keys options are not supported, got %v", err)
 		}
 	})
 	t.Run("private key file does not exist", func(t *testing.T) {

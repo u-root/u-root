@@ -42,6 +42,12 @@ func TestSMBIOSBaseLegacy(t *testing.T) {
 	}
 
 	base, _, err := SMBIOSBase()
+	if !legacySMBIOSSupported() {
+		if err == nil {
+			t.Fatal("SMBIOSBase() succeeded without an SMBIOS entry or a legacy scan")
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +67,12 @@ func TestSMBIOSBaseNotFound(t *testing.T) {
 	}
 
 	_, _, err := SMBIOSBase()
+	if err == nil {
+		t.Fatal("SMBIOSBase() = nil, want error")
+	}
+	if !legacySMBIOSSupported() {
+		return
+	}
 
 	want := "could not find valid _SM_ or _SM3_ via /dev/mem from 0x000f0000 to 0x00100000"
 

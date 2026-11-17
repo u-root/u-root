@@ -143,7 +143,9 @@ var (
 		"cbmem",
 		"console",
 		"crc",
-		"cmd2pkg",
+		// TinyGo's internal/abi has no MapType or MapGroupSlots, which Go
+		// 1.27's internal/runtime/maps needs. Restore when TinyGo has it.
+		// "cmd2pkg",
 		"disk_unlock",
 		"dmidecode",
 		"dumpebda",
@@ -182,7 +184,9 @@ var (
 		// "pxeserver",
 		"readelf",
 		"readpe",
-		"run",
+		// TinyGo's internal/abi has no MapType or MapGroupSlots, which Go
+		// 1.27's internal/runtime/maps needs. Restore when TinyGo has it.
+		// "run",
 		"rush",
 		"serial",
 		"smbios_transfer",

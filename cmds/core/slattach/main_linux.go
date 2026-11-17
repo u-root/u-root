@@ -20,7 +20,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -30,7 +29,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"unsafe"
 
 	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/sys/unix"
@@ -52,8 +50,6 @@ func run(stdin io.Reader, stdout, stderr io.Writer, args []string) error {
 		return fmt.Errorf("usage: %v ttyX", os.Args[0])
 	}
 
-	disc := SLIP
-
 	dev := f.Arg(0)
 	tty, err := termios.NewTTYS(dev)
 	if err != nil {
@@ -70,22 +66,23 @@ func run(stdin io.Reader, stdout, stderr io.Writer, args []string) error {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	fd := int(tty.Fd())
-	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.TIOCSETD), uintptr(unsafe.Pointer(&disc))); errno != 0 {
-		return fmt.Errorf("set disc: %w", errno)
+	if err := unix.IoctlSetInt(fd, unix.TIOCSETD, SLIP); err != nil {
+		return fmt.Errorf("set disc: %w", err)
 	}
 
 	defer func() {
-		disc = UNIX
-		_, _, _ = unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.TIOCSETD), uintptr(unsafe.Pointer(&disc)))
+		_ = unix.IoctlSetInt(fd, unix.TIOCSETD, UNIX)
 	}()
 
-	var ifname [16]byte
-	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), uintptr(unix.SIOCGIFNAME), uintptr(unsafe.Pointer(&ifname[0]))); errno != 0 {
-		return fmt.Errorf("attached %v (SLIP), but failed to query interface name: %w", tty, errno)
+	ifr, err := unix.NewIfreq("")
+	if err != nil {
+		return err
+	}
+	if err := unix.IoctlIfreq(fd, unix.SIOCGIFNAME, ifr); err != nil {
+		return fmt.Errorf("attached %v (SLIP), but failed to query interface name: %w", tty, err)
 	}
 
-	n := bytes.TrimRight(ifname[:], "\x00")
-	fmt.Fprintf(stderr, "Attached %s to network interface %s\n", dev, n)
+	fmt.Fprintf(stderr, "Attached %s to network interface %s\n", dev, ifr.Name())
 
 	for _, c := range f.Args()[1:] {
 		args := strings.Fields(c)
