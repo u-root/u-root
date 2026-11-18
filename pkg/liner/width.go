@@ -24,20 +24,24 @@
 package liner
 
 import (
-	"unicode"
-
 	"github.com/mattn/go-runewidth"
+	"github.com/rivo/uniseg"
 )
 
-// These character classes are mostly zero width (when combined).
-// A few might not be, depending on the user's font. Fixing this
-// is non-trivial, given that some terminals don't support
-// ANSI DSR/CPR
-var zeroWidth = []*unicode.RangeTable{
-	unicode.Mn,
-	unicode.Me,
-	unicode.Cc,
-	unicode.Cf,
+// glyphs splits s into the sequences of runes a terminal draws as one
+// character each, by the extended grapheme cluster rules of UAX #29.
+//
+// A glyph is often one rune and need not be. A letter followed by a combining
+// accent is one, and so are the emoji built out of several runes: a flag is a
+// pair of regional indicators, a thumb carries its skin tone in a second rune,
+// and a family is four people joined by zero-width joiners.
+func glyphs(s []rune) [][]rune {
+	var out [][]rune
+	g := uniseg.NewGraphemes(string(s))
+	for g.Next() {
+		out = append(out, []rune(g.Str()))
+	}
+	return out
 }
 
 // countGlyphs considers zero-width characters to be zero glyphs wide,
@@ -80,34 +84,19 @@ func countMultiLineGlyphs(s []rune, columns int, start int) int {
 }
 
 func getPrefixGlyphs(s []rune, num int) []rune {
+	g := glyphs(s)
 	p := 0
-	for n := 0; n < num && p < len(s); p++ {
-		// speed up the common case
-		if s[p] < 127 {
-			n++
-			continue
-		}
-		if !unicode.IsOneOf(zeroWidth, s[p]) {
-			n++
-		}
-	}
-	for p < len(s) && unicode.IsOneOf(zeroWidth, s[p]) {
-		p++
+	for n := 0; n < num && n < len(g); n++ {
+		p += len(g[n])
 	}
 	return s[:p]
 }
 
 func getSuffixGlyphs(s []rune, num int) []rune {
+	g := glyphs(s)
 	p := len(s)
-	for n := 0; n < num && p > 0; p-- {
-		// speed up the common case
-		if s[p-1] < 127 {
-			n++
-			continue
-		}
-		if !unicode.IsOneOf(zeroWidth, s[p-1]) {
-			n++
-		}
+	for n := 0; n < num && n < len(g); n++ {
+		p -= len(g[len(g)-1-n])
 	}
 	return s[p:]
 }
