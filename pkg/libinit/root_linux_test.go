@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/u-root/u-root/pkg/cmdline"
+	"golang.org/x/sys/unix"
 )
 
 func TestLoadModule(t *testing.T) {
@@ -184,6 +185,269 @@ func TestOpenTTYDevices(t *testing.T) {
 			}
 			if len(writers) != tt.numWriter {
 				t.Errorf("got %d writers, want %d", len(writers), tt.numWriter)
+			}
+		})
+	}
+}
+
+func TestSelectCgroupMode(t *testing.T) {
+	const (
+		bothFS = "nodev\tsysfs\nnodev\tcgroup\nnodev\tcgroup2\n\text4\n"
+		v2Only = "nodev\tsysfs\nnodev\tcgroup2\n\text4\n"
+		v1Only = "nodev\tsysfs\nnodev\tcgroup\n\text4\n"
+		noCgFS = "nodev\tsysfs\n\text4\n\tcgroup2\nnodev\tcgroup2\textra\n"
+	)
+
+	tests := []struct {
+		name      string
+		initFlags string
+		procFS    string
+		want      cgroupMode
+	}{
+		{
+			name:   "auto prefers v2 when both present",
+			procFS: bothFS,
+			want:   cgroupV2,
+		},
+		{
+			name:   "auto selects v2 when only cgroup2 present",
+			procFS: v2Only,
+			want:   cgroupV2,
+		},
+		{
+			name:   "auto falls back to v1 on pre-v2 kernel",
+			procFS: v1Only,
+			want:   cgroupV1,
+		},
+		{
+			name:   "auto skips when cgroups disabled in kernel",
+			procFS: noCgFS,
+			want:   cgroupNone,
+		},
+		{
+			name: "auto tries v2 when /proc/filesystems unreadable",
+			want: cgroupV2,
+		},
+		{
+			name:      "explicit cgroups=v2",
+			initFlags: "cgroups=v2",
+			procFS:    v1Only,
+			want:      cgroupV2,
+		},
+		{
+			name:      "explicit cgroups=v1",
+			initFlags: "cgroups=v1",
+			procFS:    bothFS,
+			want:      cgroupV1,
+		},
+		{
+			name:      "explicit cgroups=none",
+			initFlags: "cgroups=none",
+			procFS:    bothFS,
+			want:      cgroupNone,
+		},
+		{
+			name:      "systemd skips cgroups",
+			initFlags: "systemd",
+			procFS:    bothFS,
+			want:      cgroupNone,
+		},
+		{
+			name:      "systemd takes precedence over cgroups=v2",
+			initFlags: "systemd cgroups=v2",
+			procFS:    bothFS,
+			want:      cgroupNone,
+		},
+		{
+			name:      "systemd=false honors cgroups=v1",
+			initFlags: "systemd=false cgroups=v1",
+			procFS:    bothFS,
+			want:      cgroupV1,
+		},
+		{
+			name:      "unknown cgroups value falls back to auto",
+			initFlags: "cgroups=bogus",
+			procFS:    v1Only,
+			want:      cgroupV1,
+		},
+		{
+			name:      "bare cgroups flag falls back to auto",
+			initFlags: "cgroups",
+			procFS:    noCgFS,
+			want:      cgroupNone,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			procFSPath := filepath.Join(t.TempDir(), "filesystems")
+			if tt.procFS != "" {
+				if err := os.WriteFile(procFSPath, []byte(tt.procFS), 0o444); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cl := &cmdline.CmdLine{
+				AsMap: map[string]string{"uroot.initflags": tt.initFlags},
+			}
+			if got := selectCgroupMode(cl.GetInitFlagMap(), procFSPath); got != tt.want {
+				t.Errorf("selectCgroupMode(%q) = %v, want %v", tt.initFlags, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMountCgroup2(t *testing.T) {
+	tests := []struct {
+		name     string
+		failWith map[string]error
+		wantOpts []string
+		wantErr  error
+	}{
+		{
+			name:     "modern kernel accepts full options",
+			wantOpts: []string{"nsdelegate,memory_recursiveprot"},
+		},
+		{
+			name: "falls back to nsdelegate on EINVAL",
+			failWith: map[string]error{
+				"nsdelegate,memory_recursiveprot": unix.EINVAL,
+			},
+			wantOpts: []string{"nsdelegate,memory_recursiveprot", "nsdelegate"},
+		},
+		{
+			name: "falls back to empty opts on EINVAL",
+			failWith: map[string]error{
+				"nsdelegate,memory_recursiveprot": unix.EINVAL,
+				"nsdelegate":                      unix.EINVAL,
+			},
+			wantOpts: []string{"nsdelegate,memory_recursiveprot", "nsdelegate", ""},
+		},
+		{
+			name: "returns EINVAL when all attempts return EINVAL",
+			failWith: map[string]error{
+				"nsdelegate,memory_recursiveprot": unix.EINVAL,
+				"nsdelegate":                      unix.EINVAL,
+				"":                                unix.EINVAL,
+			},
+			wantOpts: []string{"nsdelegate,memory_recursiveprot", "nsdelegate", ""},
+			wantErr:  unix.EINVAL,
+		},
+		{
+			name: "does not retry non-EINVAL error",
+			failWith: map[string]error{
+				"nsdelegate,memory_recursiveprot": unix.EPERM,
+			},
+			wantOpts: []string{"nsdelegate,memory_recursiveprot"},
+			wantErr:  unix.EPERM,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotOpts []string
+			err := mountCgroup2("/sys/fs/cgroup", func(source, target, fstype string, flags uintptr, data string) error {
+				if source != "cgroup2" || target != "/sys/fs/cgroup" || fstype != "cgroup2" {
+					t.Errorf("mount(%q, %q, %q), want (cgroup2, /sys/fs/cgroup, cgroup2)", source, target, fstype)
+				}
+				if flags != cgroup2MountFlags {
+					t.Errorf("flags = %#x, want %#x", flags, cgroup2MountFlags)
+				}
+				gotOpts = append(gotOpts, data)
+				return tt.failWith[data]
+			})
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("err = %v, want %v", err, tt.wantErr)
+			}
+			if diff := cmp.Diff(tt.wantOpts, gotOpts); diff != "" {
+				t.Errorf("mount opts mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestIsMountPoint(t *testing.T) {
+	if isMountPoint(filepath.Join(t.TempDir(), "nonexistent")) {
+		t.Error("isMountPoint(nonexistent) = true, want false")
+	}
+	if isMountPoint(t.TempDir()) {
+		t.Error("isMountPoint(t.TempDir()) = true, want false")
+	}
+
+	var st unix.Statfs_t
+	if err := unix.Statfs("/proc", &st); err == nil && int64(st.Type) == unix.PROC_SUPER_MAGIC {
+		for _, p := range []string{"/proc", "/proc/"} {
+			if !isMountPoint(p) {
+				t.Errorf("isMountPoint(%q) = false, want true", p)
+			}
+		}
+	}
+}
+
+func TestSetupCgroups(t *testing.T) {
+	unmounted := t.TempDir()
+
+	tests := []struct {
+		name      string
+		mode      cgroupMode
+		target    string
+		mountErr  error
+		skipMount bool
+		wantV2    int
+		wantV1    int
+	}{
+		{
+			name:   "v2 mounts on existing unmounted dir",
+			mode:   cgroupV2,
+			target: unmounted,
+			wantV2: 1,
+		},
+		{
+			name:     "v2 mount failure is optional",
+			mode:     cgroupV2,
+			target:   unmounted,
+			mountErr: unix.EPERM,
+			wantV2:   1,
+		},
+		{
+			name:   "v1 calls mountV1",
+			mode:   cgroupV1,
+			target: unmounted,
+			wantV1: 1,
+		},
+		{
+			name:   "none skips all",
+			mode:   cgroupNone,
+			target: unmounted,
+		},
+		{
+			name:      "already mounted skips v2",
+			mode:      cgroupV2,
+			target:    cgroupMountPoint,
+			skipMount: true,
+		},
+		{
+			name:      "already mounted skips v1",
+			mode:      cgroupV1,
+			target:    cgroupMountPoint,
+			skipMount: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.skipMount && !isMountPoint(tt.target) {
+				t.Skipf("%s is not a mount point", tt.target)
+			}
+			var v2Calls, v1Calls int
+			setupCgroups(tt.mode, tt.target, func(_, target, fstype string, _ uintptr, _ string) error {
+				v2Calls++
+				if target != tt.target || fstype != "cgroup2" {
+					t.Errorf("unexpected mount(%q, %q)", target, fstype)
+				}
+				return tt.mountErr
+			}, func() { v1Calls++ })
+			if v2Calls != tt.wantV2 || v1Calls != tt.wantV1 {
+				t.Errorf("v2Calls=%d v1Calls=%d, want %d, %d", v2Calls, v1Calls, tt.wantV2, tt.wantV1)
 			}
 		})
 	}
