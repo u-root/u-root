@@ -81,8 +81,12 @@ func (f *File) CheckPath() error {
 // stdout is a device. Also checks if output path already exists. Allow
 // override via force option.
 func (f *File) CheckOutputPath() error {
-	_, err := os.Stat(f.outputPath())
+	// Lstat, so that a symlink at the output path counts as existing.
+	_, err := os.Lstat(f.outputPath())
 	if !os.IsNotExist(err) && !f.Options.Stdout && !f.Options.Test && !f.Options.Force {
+		if err == nil {
+			err = fmt.Errorf("%q: %w, use -f to overwrite", f.outputPath(), os.ErrExist)
+		}
 		return err
 	} else if os.IsPermission(err) {
 		return err
@@ -142,8 +146,18 @@ func (f *File) Process() error {
 		}
 		// Give the output file the input file's permissions.
 		perm := fi.Mode().Perm()
+		// Create the output instead of opening whatever is at its path,
+		// so a symlink there is never followed. With -f, replace an
+		// existing file or symlink first, as gzip does.
+		if f.Options.Force {
+			if ofi, err := os.Lstat(f.outputPath()); err == nil && !ofi.IsDir() {
+				if err := os.Remove(f.outputPath()); err != nil {
+					return err
+				}
+			}
+		}
 		var out *os.File
-		if out, err = os.OpenFile(f.outputPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm); err != nil {
+		if out, err = os.OpenFile(f.outputPath(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm); err != nil {
 			return err
 		}
 		if err = out.Chmod(perm); err != nil {
