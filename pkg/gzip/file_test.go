@@ -307,6 +307,11 @@ func TestFileProcess(t *testing.T) {
 	if err := f.Process(); err != nil {
 		t.Errorf("File.Process() compression error = %v", err)
 	}
+	// As gzip does, remove the input so the decompressed file can take
+	// its place.
+	if err := f.Cleanup(); err != nil {
+		t.Fatalf("File.Cleanup() = %v, want nil", err)
+	}
 
 	f.Path = f.Path + f.Options.Suffix
 	f.Options.Decompress = true
@@ -359,6 +364,80 @@ func TestFileProcessKeepsMode(t *testing.T) {
 		if got := fi.Mode().Perm(); got != 0o600 {
 			t.Errorf("mode of %q: got %#o, want %#o", p, got, 0o600)
 		}
+	}
+}
+
+func TestFileCheckOutputPathExists(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs privileges on windows")
+	}
+	dir := t.TempDir()
+	in := filepath.Join(dir, "x")
+	if err := os.WriteFile(in, []byte("x"), 0o644); err != nil {
+		t.Fatalf("create %q: got %v, want nil", in, err)
+	}
+	f := &File{Path: in, Options: &Options{Suffix: ".gz"}}
+
+	if err := f.CheckOutputPath(); err != nil {
+		t.Errorf("File.CheckOutputPath() with no output = %v, want nil", err)
+	}
+	if err := os.WriteFile(in+".gz", nil, 0o644); err != nil {
+		t.Fatalf("create %q: got %v, want nil", in+".gz", err)
+	}
+	if err := f.CheckOutputPath(); !errors.Is(err, os.ErrExist) {
+		t.Errorf("File.CheckOutputPath() with existing output = %v, want %v", err, os.ErrExist)
+	}
+	// A symlink at the output path exists even if it dangles.
+	if err := os.Remove(in + ".gz"); err != nil {
+		t.Fatalf("remove %q: got %v, want nil", in+".gz", err)
+	}
+	if err := os.Symlink(filepath.Join(dir, "missing"), in+".gz"); err != nil {
+		t.Fatalf("symlink %q: got %v, want nil", in+".gz", err)
+	}
+	if err := f.CheckOutputPath(); !errors.Is(err, os.ErrExist) {
+		t.Errorf("File.CheckOutputPath() with dangling symlink output = %v, want %v", err, os.ErrExist)
+	}
+	f.Options.Force = true
+	if err := f.CheckOutputPath(); err != nil {
+		t.Errorf("File.CheckOutputPath() with existing output and Force = %v, want nil", err)
+	}
+}
+
+func TestFileProcessDoesNotFollowSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symlinks needs privileges on windows")
+	}
+	in := filepath.Join(t.TempDir(), "x")
+	if err := os.WriteFile(in, []byte("x"), 0o644); err != nil {
+		t.Fatalf("create %q: got %v, want nil", in, err)
+	}
+	target := filepath.Join(t.TempDir(), "target")
+	if err := os.Symlink(target, in+".gz"); err != nil {
+		t.Fatalf("symlink %q: got %v, want nil", in+".gz", err)
+	}
+
+	f := File{
+		Path: in,
+		Options: &Options{
+			Blocksize: 128,
+			Level:     -1,
+			Processes: 1,
+			Suffix:    ".gz",
+		},
+	}
+	if err := f.Process(); !errors.Is(err, os.ErrExist) {
+		t.Errorf("File.Process() with symlink output = %v, want %v", err, os.ErrExist)
+	}
+	// -f replaces the symlink itself.
+	f.Options.Force = true
+	if err := f.Process(); err != nil {
+		t.Fatalf("File.Process() with symlink output and Force = %v, want nil", err)
+	}
+	if _, err := os.Lstat(target); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("os.Lstat(%q) = %v, want %v", target, err, os.ErrNotExist)
+	}
+	if fi, err := os.Lstat(in + ".gz"); err != nil || !fi.Mode().IsRegular() {
+		t.Errorf("os.Lstat(%q) = %v, %v, want a regular file", in+".gz", fi, err)
 	}
 }
 
