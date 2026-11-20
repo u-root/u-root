@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -60,56 +62,123 @@ func ptsunlock(f *os.File) error {
 	return unix.IoctlSetPointerInt(int(f.Fd()), unix.TIOCSPTLCK, 0)
 }
 
-type cgroupname string
-
-func (c cgroupname) apply(s string, f func(s string)) {
-	// range of strings.Split("",",") is 1.
-	// not exactly what we might expect.
-	if s == "" {
-		return
+// setupCgroup creates a per-container cgroup under cgpath and attaches pid.
+// When cgpath is a cgroup v2 directory (identified by cgroup.controllers), it
+// attaches pid to pflask.<pid>/cgroup.procs and, unless groups is ".", enables
+// the comma-separated controllers in cgroup.subtree_control. Otherwise it
+// falls back to cgroup v1 (<cgpath>/<controller>/pflask.<pid>/tasks).
+func setupCgroup(cgpath, groups string, pid int, mkdir func(string, os.FileMode) error) error {
+	if strings.TrimSpace(cgpath) == "" {
+		return errors.New("empty cgroup path")
 	}
-	for g := range strings.SplitSeq(s, ",") {
-		p := filepath.Join(g)
-		f(p)
+	if _, err := os.Stat(cgpath); err != nil {
+		return err
 	}
-}
-
-func (c cgroupname) Validate(s string) {
-	c.apply(s, func(s string) {
-		if st, err := os.Stat(filepath.Join(string(c), s)); err != nil {
-			log.Fatalf("%v", err)
-		} else if !st.IsDir() {
-			log.Fatalf("%s: not a directory", s)
-		}
-	})
-}
-
-func (c cgroupname) Create(s, name string) {
-	if err := os.MkdirAll(filepath.Join(string(c), s, name), 0o755); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (c cgroupname) Attach(s, name string, pid int) {
-	t := filepath.Join(string(c), s, name, "tasks")
-	b := fmt.Appendf(nil, "%v", pid)
-	if err := os.WriteFile(t, b, 0o600); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (c cgroupname) Destroy(s, n string) {
-	if err := os.RemoveAll(filepath.Join(string(c), s, n)); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func (c cgroupname) Do(groups string, pid int) {
 	cgn := fmt.Sprintf("pflask.%d", pid)
-	c.apply(groups, func(s string) {
-		c.Create(s, cgn)
-		c.Attach(s, cgn, pid)
-	})
+	data, err := os.ReadFile(filepath.Join(cgpath, "cgroup.controllers"))
+	if errors.Is(err, os.ErrNotExist) {
+		return setupCgroupV1(cgpath, groups, cgn, pid, mkdir)
+	}
+	if err != nil {
+		return err
+	}
+
+	var scFile *os.File
+	var enable []string
+	if groups != "." {
+		scPath := filepath.Join(cgpath, "cgroup.subtree_control")
+		scData, err := os.ReadFile(scPath)
+		if err != nil {
+			return err
+		}
+		available := strings.Fields(string(data))
+		enabled := strings.Fields(string(scData))
+		for g := range strings.SplitSeq(groups, ",") {
+			if !slices.Contains(available, g) {
+				return fmt.Errorf("cgroup v2 controller %q not available in %s (have %v)", g, cgpath, available)
+			}
+			tok := "+" + g
+			if !slices.Contains(enabled, g) && !slices.Contains(enable, tok) {
+				enable = append(enable, tok)
+			}
+		}
+		if len(enable) > 0 {
+			// Open cgroup.subtree_control before attachPID so EACCES/EROFS
+			// fails without leaving a pflask.<pid> directory behind.
+			scFile, err = os.OpenFile(scPath, os.O_WRONLY, 0)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Attach pid before writing cgroup.subtree_control so a populated
+	// non-root cgpath fails with EBUSY instead of flipping to
+	// "domain threaded" for threaded controllers.
+	if err := attachPID(filepath.Join(cgpath, cgn), "cgroup.procs", pid, mkdir); err != nil {
+		if scFile != nil {
+			_ = scFile.Close()
+		}
+		return err
+	}
+	if scFile != nil {
+		_, werr := scFile.WriteString(strings.Join(enable, " "))
+		cerr := scFile.Close()
+		if werr != nil {
+			return werr
+		}
+		return cerr
+	}
+	return nil
+}
+
+func setupCgroupV1(cgpath, groups, cgn string, pid int, mkdir func(string, os.FileMode) error) error {
+	for g := range strings.SplitSeq(groups, ",") {
+		if filepath.Clean(g) == "." || !filepath.IsLocal(g) {
+			return fmt.Errorf("invalid cgroup v1 controller %q", g)
+		}
+		st, err := os.Stat(filepath.Join(cgpath, g, "tasks"))
+		if err != nil {
+			return err
+		}
+		if !st.Mode().IsRegular() {
+			return fmt.Errorf("cgroup v1 controller %q not mounted", g)
+		}
+	}
+	for g := range strings.SplitSeq(groups, ",") {
+		if err := attachPID(filepath.Join(cgpath, g, cgn), "tasks", pid, mkdir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func attachPID(dir, file string, pid int, mkdir func(string, os.FileMode) error) error {
+	err := mkdir(dir, 0o755)
+	created := err == nil
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	if err := writeExisting(filepath.Join(dir, file), strconv.Itoa(pid)); err != nil {
+		if created {
+			_ = os.Remove(dir)
+		}
+		return err
+	}
+	return nil
+}
+
+func writeExisting(path, val string) error {
+	f, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	_, werr := f.WriteString(val)
+	cerr := f.Close()
+	if werr != nil {
+		return werr
+	}
+	return cerr
 }
 
 type mount struct {
@@ -268,8 +337,8 @@ func makeSymlinks(base string) {
 }
 
 var (
-	cgpath  = flag.String("cgpath", "/sys/fs/cgroup", "set the cgroups")
-	cgroup  = flag.String("cgroup", "", "set the cgroups")
+	cgpath  = flag.String("cgpath", "/sys/fs/cgroup", "cgroup mount path")
+	cgroup  = flag.String("cgroup", "", "comma-separated cgroup controllers (or . for v2 grouping only)")
 	chroot  = flag.String("chroot", "", "where to chroot to")
 	chdir   = flag.String("chdir", "/", "where to chrdir to in the chroot")
 	keepenv = flag.Bool("keepenv", false, "Keep the environment")
@@ -486,8 +555,9 @@ func main() {
 	// set up the containers, then resume the process.
 	// Its children will get the containers as it clones.
 
-	cg := cgroupname(*cgpath)
-	cg.Do(*cgroup, kid)
+	if err := setupCgroup(*cgpath, *cgroup, kid, os.Mkdir); err != nil {
+		log.Fatal(err)
+	}
 
 	// sometimes the detach fails. Looks like a race condition: we're
 	// sending the detach before the child has hit the TRACE_ME point.

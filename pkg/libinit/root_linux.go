@@ -21,6 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/cp"
 	"github.com/u-root/u-root/pkg/kmodule"
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/ulog"
 	"golang.org/x/sys/unix"
 )
@@ -154,8 +155,10 @@ var (
 		Mount{Source: "/tmp/etc", Target: "/etc", FSType: "tmpfs", Flags: unix.MS_BIND},
 	}
 
-	// cgroups are optional for most u-root users, especially
-	// LinuxBoot/NERF. Some users use u-root for container stuff.
+	// CgroupsNamespace holds legacy cgroup v1 mounts. CreateRootfs mounts
+	// cgroup v2 by default when supported by the kernel and only uses
+	// CgroupsNamespace when uroot.initflags="cgroups=v1" is set or on
+	// kernels that support cgroup v1 without cgroup2.
 	CgroupsNamespace = []Creator{
 		Mount{Source: "cgroup", Target: "/sys/fs/cgroup", FSType: "tmpfs"},
 		Dir{Name: "/sys/fs/cgroup/memory", Mode: 0o555},
@@ -224,6 +227,87 @@ func SetEnv() {
 	}
 }
 
+const (
+	cgroupMountPoint  = "/sys/fs/cgroup"
+	cgroup2MountFlags = unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOEXEC
+)
+
+type cgroupMode string
+
+const (
+	cgroupNone cgroupMode = "none"
+	cgroupV1   cgroupMode = "v1"
+	cgroupV2   cgroupMode = "v2"
+)
+
+type mountFunc func(source, target, fstype string, flags uintptr, data string) error
+
+func selectCgroupMode(initFlags map[string]string, procFSPath string) cgroupMode {
+	// systemd gets upset when it discovers something has already set up
+	// cgroups.
+	if enabled, err := strconv.ParseBool(initFlags["systemd"]); err == nil && enabled {
+		return cgroupNone
+	}
+
+	if mode, ok := initFlags["cgroups"]; ok {
+		switch cgroupMode(mode) {
+		case cgroupNone, cgroupV1, cgroupV2:
+			return cgroupMode(mode)
+		default:
+			ulog.KernelLog.Printf("u-root init [optional]: unknown cgroups=%q in uroot.initflags (want v2, v1, or none); auto-detecting", mode)
+		}
+	}
+
+	data, err := os.ReadFile(procFSPath)
+	if err != nil {
+		return cgroupV2
+	}
+	mode := cgroupNone
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if fields := strings.Fields(line); len(fields) == 2 && fields[0] == "nodev" {
+			switch fields[1] {
+			case "cgroup2":
+				return cgroupV2
+			case "cgroup":
+				mode = cgroupV1
+			}
+		}
+	}
+	return mode
+}
+
+func isMountPoint(path string) bool {
+	path = filepath.Clean(path)
+	same, err := mount.SameFilesystem(path, filepath.Dir(path))
+	return err == nil && !same
+}
+
+func mountCgroup2(target string, mountFn mountFunc) error {
+	// Ordered from most-featured (Linux >= 5.7) to minimal (Linux >= 4.5).
+	var err error
+	for _, opts := range []string{"nsdelegate,memory_recursiveprot", "nsdelegate", ""} {
+		err = mountFn("cgroup2", target, "cgroup2", cgroup2MountFlags, opts)
+		if !errors.Is(err, unix.EINVAL) {
+			return err
+		}
+	}
+	return err
+}
+
+func setupCgroups(mode cgroupMode, target string, mountFn mountFunc, mountV1 func()) {
+	if mode == cgroupNone || isMountPoint(target) {
+		return
+	}
+	switch mode {
+	case cgroupV2:
+		if err := mountCgroup2(target, mountFn); err != nil {
+			ulog.KernelLog.Printf("u-root init [optional]: warning mounting cgroup2 on %q: %v", target, err)
+		}
+	case cgroupV1:
+		mountV1()
+	}
+}
+
 // CreateRootfs creates the default u-root file system.
 func CreateRootfs() {
 	// Mount devtmpfs, then open /dev/kmsg with Reinit.
@@ -232,14 +316,13 @@ func CreateRootfs() {
 
 	Create(Namespace, false)
 
-	// systemd gets upset when it discovers something has already setup cgroups
-	// We have to do this after the base namespace is created, so we have /proc
-	initFlags := cmdline.GetInitFlagMap()
-	systemd, present := initFlags["systemd"]
-	systemdEnabled, boolErr := strconv.ParseBool(systemd)
-	if !present || boolErr != nil || !systemdEnabled {
+	// Set up cgroups after the base namespace so /proc and /sys are
+	// mounted. Leave cgroup.subtree_control untouched so controllers stay
+	// available to downstream managers (or custom v1 mounts in uinit).
+	mode := selectCgroupMode(cmdline.GetInitFlagMap(), "/proc/filesystems")
+	setupCgroups(mode, cgroupMountPoint, unix.Mount, func() {
 		Create(CgroupsNamespace, true)
-	}
+	})
 }
 
 // InitModuleLoader wraps the resources we need for early module loading
