@@ -322,3 +322,13 @@ func TestCrossCompile(t *testing.T) {
 		})
 	}
 }
+
+// NewWinsize exists so a caller can build a window size without knowing whether
+// this platform's Winsize embeds unix.Winsize or spells its fields out. The two
+// values a session actually asks for are the first two.
+func TestNewWinsize(t *testing.T) {
+	ws := NewWinsize(41, 93, 7, 11)
+	if ws.Row != 41 || ws.Col != 93 || ws.Xpixel != 7 || ws.Ypixel != 11 {
+		t.Errorf("NewWinsize(41,93,7,11) = %+v", ws)
+	}
+}
