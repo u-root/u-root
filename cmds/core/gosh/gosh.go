@@ -47,7 +47,14 @@ func main() {
 var errNotImplemented = errors.New("fancy interactive interpreter not implemented")
 
 func run(stdin io.Reader, stdout, stderr io.Writer, command string, args ...string) error {
-	runner, err := interp.New(interp.StdIO(stdin, stdout, stderr))
+	opts := []interp.RunnerOption{interp.StdIO(stdin, stdout, stderr)}
+	if command == "" && len(args) > 1 {
+		// Arguments after the script name become its positional parameters.
+		// The leading "--" keeps arguments such as "-x" from being parsed as
+		// shell options.
+		opts = append(opts, interp.Params(append([]string{"--"}, args[1:]...)...))
+	}
+	runner, err := interp.New(opts...)
 	if err != nil {
 		return err
 	}
