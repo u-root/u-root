@@ -9,6 +9,7 @@ bazel-*
 /bbsh
 /bb
 /u-root
+/mkuinitramfs
 !vendor/github.com/u-root
 integration/serial/
 integration/coverage/
