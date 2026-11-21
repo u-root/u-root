@@ -79,3 +79,27 @@ func TestFindkeywordGrubEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestParseURLStaysInRoot(t *testing.T) {
+	const root = "file:///mnt/sda1"
+
+	for _, tt := range []struct {
+		surl string
+		want string
+	}{
+		{surl: "../etc/shadow", want: "file:///mnt/sda1/etc/shadow"},
+		{surl: "/../etc/shadow", want: "file:///mnt/sda1/etc/shadow"},
+		{surl: "boot/../vmlinuz", want: "file:///mnt/sda1/vmlinuz"},
+		{surl: "/boot/vmlinuz", want: "file:///mnt/sda1/boot/vmlinuz"},
+	} {
+		t.Run(tt.surl, func(t *testing.T) {
+			got, err := parseURL(tt.surl, root)
+			if err != nil {
+				t.Fatalf("parseURL(%q, %q) = _, %v; want _, nil", tt.surl, root, err)
+			}
+			if got.String() != tt.want {
+				t.Errorf("parseURL(%q, %q) = %q; want %q", tt.surl, root, got, tt.want)
+			}
+		})
+	}
+}

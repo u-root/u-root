@@ -152,11 +152,15 @@ func parseConf(entryPath string) (map[string]string, error) {
 // for Type #1 entries", but that's bullshit. Relative file names are indeed in
 // the $BOOT/loader/ directory, but absolute path names are in $BOOT, as
 // evidenced by the entries that kernel-install installs on Fedora 32.
+//
+// fsRoot is the top of what the boot loader can see, so ".." elements in value
+// must not climb above it. Rooting the name at "/" before joining drops the
+// ones that would, the way they resolve on the partition itself.
 func filePath(fsRoot, value string) string {
 	if !filepath.IsAbs(value) {
-		return filepath.Join(fsRoot, "loader", value)
+		value = filepath.Join("loader", value)
 	}
-	return filepath.Join(fsRoot, value)
+	return filepath.Join(fsRoot, filepath.Join("/", value))
 }
 
 func getGrubvalue(variables map[string]string, key string) (string, error) {

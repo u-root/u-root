@@ -306,7 +306,11 @@ func parseURL(surl string, root string) (*url.URL, error) {
 		if len(u.Host) == 0 {
 			// If this is not there, it was likely just a path.
 			u.Host = ru.Host
-			u.Path = filepath.Join(ru.Path, filepath.Clean(u.Path))
+			// root is the top of what grub can see, so ".."
+			// elements must not climb above it. Rooting the name
+			// at "/" before joining drops the ones that would,
+			// the way they resolve on the partition itself.
+			u.Path = filepath.Join(ru.Path, filepath.Join("/", u.Path))
 		}
 	}
 	return u, nil

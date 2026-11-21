@@ -160,6 +160,24 @@ func TestParse(t *testing.T) {
 				bootstate: bootInvalid,
 			},
 		},
+		{
+			file: "testdata/escaping_paths.cfg",
+			want: options{
+				title:  "VMware ESXi",
+				kernel: "testdata/b.b00",
+				args:   "../b.b00 zee",
+				modules: []module{
+					{
+						path:    "testdata/k.b00",
+						cmdline: "../k.b00",
+					},
+					{
+						path:    "testdata/m.m00",
+						cmdline: "subdir/../../m.m00",
+					},
+				},
+			},
+		},
 	} {
 		got, err := parse(tt.file)
 		if err != nil {

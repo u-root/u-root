@@ -230,7 +230,12 @@ func parseURL(name string, rootdir *url.URL, wd string) (*url.URL, error) {
 			if path.IsAbs(name) {
 				u.Path = path.Join(rootdir.Path, path.Clean(u.Path))
 			} else {
-				u.Path = path.Join(rootdir.Path, wd, path.Clean(u.Path))
+				// rootdir is the top of what syslinux can
+				// see, so ".." elements must not climb above
+				// it. Rooting the name at "/" before joining
+				// drops the ones that would, the way they
+				// resolve on the partition itself.
+				u.Path = path.Join(rootdir.Path, path.Join("/", wd, u.Path))
 			}
 		}
 	}

@@ -174,3 +174,23 @@ func TestParseConf(t *testing.T) {
 		t.Errorf("key-without-value should not be in map")
 	}
 }
+
+func TestFilePathStaysInRoot(t *testing.T) {
+	const fsRoot = "/mnt/sda1"
+
+	for _, tt := range []struct {
+		value string
+		want  string
+	}{
+		{value: "../../etc/shadow", want: "/mnt/sda1/etc/shadow"},
+		{value: "/../etc/shadow", want: "/mnt/sda1/etc/shadow"},
+		{value: "vmlinuz", want: "/mnt/sda1/loader/vmlinuz"},
+		{value: "/vmlinuz", want: "/mnt/sda1/vmlinuz"},
+	} {
+		t.Run(tt.value, func(t *testing.T) {
+			if got := filePath(fsRoot, tt.value); got != tt.want {
+				t.Errorf("filePath(%q, %q) = %q; want %q", fsRoot, tt.value, got, tt.want)
+			}
+		})
+	}
+}

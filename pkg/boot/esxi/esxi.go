@@ -314,6 +314,14 @@ const (
 	uuidSize  = 32
 )
 
+// bankPath resolves a file name from boot.cfg inside dir, the boot bank. dir
+// is the top of what the boot loader can see, so ".." elements in name must
+// not climb above it. Rooting the name at "/" before joining drops the ones
+// that would, the way they resolve on the boot bank itself.
+func bankPath(dir, name string) string {
+	return filepath.Join(dir, filepath.Join("/", name))
+}
+
 func parse(configFile string) (options, error) {
 	dir := filepath.Dir(configFile)
 
@@ -354,7 +362,7 @@ func parse(configFile string) (options, error) {
 			opt.title = val
 
 		case "kernel":
-			opt.kernel = filepath.Join(dir, val)
+			opt.kernel = bankPath(dir, val)
 
 			// The kernel cmdline is expected to have the filename
 			// first, as in cmdlines[0] here:
@@ -409,7 +417,7 @@ func parse(configFile string) (options, error) {
 				if len(tok) > 0 {
 					entry := strings.Fields(tok)
 					opt.modules = append(opt.modules, module{
-						path:    filepath.Join(dir, entry[0]),
+						path:    bankPath(dir, entry[0]),
 						cmdline: tok,
 					})
 				}
