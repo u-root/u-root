@@ -93,6 +93,20 @@ func MountPointOK(mpt string) error {
 	if err := os.Chdir(mpt); err != nil {
 		return err
 	}
+	// As in fusermount(1), a non-root user may only mount on a directory
+	// they can write to, and must own it if it is sticky.
+	if uid := unix.Getuid(); uid != 0 {
+		var st unix.Stat_t
+		if err := unix.Stat(".", &st); err != nil {
+			return err
+		}
+		if st.Mode&unix.S_ISVTX != 0 && int(st.Uid) != uid {
+			return fmt.Errorf("mountpoint %q not owned by user", mpt)
+		}
+		if err := unix.Access(".", unix.W_OK); err != nil {
+			return fmt.Errorf("user has no write access to mountpoint %q: %w", mpt, err)
+		}
+	}
 
 	return nil
 }
@@ -126,7 +140,7 @@ func doMount(fd int) error {
 	//		return 0;
 	// Yeah. You get EINVAL if any one of these is not set.
 	// Docs? what? Docs?
-	return unix.Mount("nodev", ".", "fuse", flags, fmt.Sprintf("rootmode=%o,user_id=0,group_id=0,fd=%d", unix.S_IFDIR, fd))
+	return unix.Mount("nodev", ".", "fuse", flags, fmt.Sprintf("rootmode=%o,user_id=%d,group_id=%d,fd=%d", unix.S_IFDIR, unix.Getuid(), unix.Getgid(), fd))
 }
 
 // returnResult returns the result from earlier operations.
