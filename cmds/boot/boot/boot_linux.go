@@ -25,7 +25,8 @@
 //	The code is looking for boot/grub/grub.cfg file as to identify the
 //	boot option.
 //	The first bootable device found in the block device tree is the one used
-//	Windows is not supported (that is a work in progress)
+//	An optional CrabEFI payload adds a UEFI firmware boot option, including
+//	support for Windows Boot Manager on amd64.
 //
 // Example:
 //
@@ -33,24 +34,32 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/bootcmd"
+	"github.com/u-root/u-root/pkg/boot/crabefi"
 	"github.com/u-root/u-root/pkg/boot/localboot"
 	"github.com/u-root/u-root/pkg/boot/menu"
 	"github.com/u-root/u-root/pkg/cmdline"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"github.com/u-root/u-root/pkg/ulog"
+	"github.com/u-root/uio/uio"
 )
 
+const defaultCrabEFI = "/boot/crabefi.elf"
+
 var (
-	verbose = flag.Bool("v", false, "Print debug messages")
-	noLoad  = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
-	noExec  = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
+	verbose        = flag.Bool("v", false, "Print debug messages")
+	noLoad         = flag.Bool("no-load", false, "print chosen boot configuration, but do not load + exec it")
+	noExec         = flag.Bool("no-exec", false, "load boot configuration, but do not exec it")
+	crabefiPayload = flag.String("crabefi", defaultCrabEFI, "CrabEFI payload for the UEFI boot option (empty disables)")
 
 	removeCmdlineItem = flag.String("remove", "console", "comma separated list of kernel params value to remove from parsed kernel configuration (default to console)")
 	reuseCmdlineItem  = flag.String("reuse", "console", "comma separated list of kernel params value to reuse from current kernel (default to console)")
@@ -64,6 +73,28 @@ var (
 func cmdlineModifier(li *boot.LinuxImage) {
 	f := cmdline.NewUpdateFilter(*appendCmdline, strings.Split(*removeCmdlineItem, ","), strings.Split(*reuseCmdlineItem, ","))
 	li.Cmdline = f.Update(cmdline.NewCmdLine(), li.Cmdline)
+}
+
+// appendCrabEFI adds a CrabEFI firmware entry for payload. On error, images
+// are returned unchanged so the remaining entries stay bootable.
+func appendCrabEFI(images []boot.OSImage, payload string, supported bool) ([]boot.OSImage, error) {
+	if payload == "" {
+		return images, nil
+	}
+	info, err := os.Stat(payload)
+	if payload == defaultCrabEFI && errors.Is(err, os.ErrNotExist) {
+		return images, nil
+	}
+	if err != nil {
+		return images, fmt.Errorf("stat CrabEFI payload %q: %w", payload, err)
+	}
+	if !info.Mode().IsRegular() {
+		return images, fmt.Errorf("CrabEFI payload %q is not a regular file", payload)
+	}
+	if !supported {
+		return images, fmt.Errorf("CrabEFI boot requires amd64 Linux and the standard Go toolchain")
+	}
+	return append(images, &boot.CrabEFIImage{Payload: uio.NewLazyFile(payload)}), nil
 }
 
 func main() {
@@ -98,6 +129,10 @@ func main() {
 	images, err := localboot.Localboot(l, blockDevs, mountPool)
 	if err != nil {
 		log.Fatal(err)
+	}
+	images, err = appendCrabEFI(images, *crabefiPayload, crabefi.Supported)
+	if err != nil {
+		log.Printf("Skipping UEFI (CrabEFI) entry: %v", err)
 	}
 	// Make changes to the kernel command line based on our cmdline.
 	boot.ApplyLinuxModifiers(images, cmdlineModifier)
