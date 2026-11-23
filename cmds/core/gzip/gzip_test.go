@@ -6,7 +6,9 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -36,5 +38,47 @@ func TestGZIPSmoke(t *testing.T) {
 
 	if !bytes.Equal(content, wantContent) {
 		t.Errorf("os.ReadFile(%v) = %v, want %v", filePath, string(content), string(wantContent))
+	}
+}
+
+func TestGZIPExistingOutput(t *testing.T) {
+	dir := t.TempDir()
+	in := filepath.Join(dir, "file.txt")
+	if err := os.WriteFile(in, []byte("content"), 0o644); err != nil {
+		t.Fatalf("os.WriteFile(%v) = %v, want nil", in, err)
+	}
+	if err := run([]string{in}); err != nil {
+		t.Fatalf("run(%v) = %v, want nil", []string{in}, err)
+	}
+
+	// Someone else's symlink where the decompressed file would go.
+	target := filepath.Join(t.TempDir(), "target")
+	if err := os.Symlink(target, in); err != nil {
+		t.Fatalf("os.Symlink(%v, %v) = %v, want nil", target, in, err)
+	}
+	args := []string{"-d", in + ".gz"}
+	if err := run(args); err != nil {
+		t.Fatalf("run(%v) = %v, want nil", args, err)
+	}
+	if _, err := os.Lstat(target); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("after run(%v): os.Lstat(%v) = %v, want %v", args, target, err, os.ErrNotExist)
+	}
+	if _, err := os.Stat(in + ".gz"); err != nil {
+		t.Errorf("after run(%v): os.Stat(%v) = %v, want nil", args, in+".gz", err)
+	}
+
+	// If the output can't be created even with -f, the input stays.
+	if err := os.Remove(in); err != nil {
+		t.Fatalf("os.Remove(%v) = %v, want nil", in, err)
+	}
+	if err := os.Mkdir(in, 0o755); err != nil {
+		t.Fatalf("os.Mkdir(%v) = %v, want nil", in, err)
+	}
+	args = []string{"-d", "-f", in + ".gz"}
+	if err := run(args); err != nil {
+		t.Fatalf("run(%v) = %v, want nil", args, err)
+	}
+	if _, err := os.Stat(in + ".gz"); err != nil {
+		t.Errorf("after run(%v): os.Stat(%v) = %v, want nil", args, in+".gz", err)
 	}
 }

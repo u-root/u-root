@@ -83,6 +83,29 @@ func TestArgs(t *testing.T) {
 	}
 }
 
+func TestMountPointOKNeedsWriteAccess(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root may mount on any directory")
+	}
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ro := filepath.Join(dir, "ro")
+	if err := os.Mkdir(ro, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	// MountPointOK changes into the mountpoint.
+	t.Chdir(dir)
+
+	if err := MountPointOK(ro); err == nil {
+		t.Errorf("MountPointOK(%q) = nil, want error for a directory the user cannot write", ro)
+	}
+	if err := MountPointOK(dir); err != nil {
+		t.Errorf("MountPointOK(%q) = %v, want nil", dir, err)
+	}
+}
+
 func TestMount(t *testing.T) {
 	guest.SkipIfNotInVM(t)
 

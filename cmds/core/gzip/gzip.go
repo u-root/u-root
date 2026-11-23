@@ -68,6 +68,8 @@ func run(args []string) error {
 			if !opts.Quiet {
 				fmt.Fprintf(os.Stderr, "%s\n", err)
 			}
+			// Don't remove the input if processing it failed.
+			continue
 		}
 
 		if err := f.Cleanup(); err != nil {
