@@ -749,3 +749,49 @@ func FuzzParseSyslinuxConfig(f *testing.F) {
 		ParseLocalConfig(context.Background(), dirPath)
 	})
 }
+
+func TestParseURLStaysInRootDir(t *testing.T) {
+	rootdir := mustParseURL("file:///mnt/sda1")
+
+	for _, tt := range []struct {
+		name string
+		wd   string
+		want string
+	}{
+		{
+			name: "../../../etc/shadow",
+			wd:   "boot/isolinux",
+			want: "file:///mnt/sda1/etc/shadow",
+		},
+		{
+			name: "../../etc/shadow",
+			wd:   "isolinux",
+			want: "file:///mnt/sda1/etc/shadow",
+		},
+		{
+			name: "../vmlinuz",
+			wd:   "boot/isolinux",
+			want: "file:///mnt/sda1/boot/vmlinuz",
+		},
+		{
+			name: "vmlinuz",
+			wd:   "boot/isolinux",
+			want: "file:///mnt/sda1/boot/isolinux/vmlinuz",
+		},
+		{
+			name: "/boot/vmlinuz",
+			wd:   "boot/isolinux",
+			want: "file:///mnt/sda1/boot/vmlinuz",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseURL(tt.name, rootdir, tt.wd)
+			if err != nil {
+				t.Fatalf("parseURL(%q, %q, %q) = _, %v; want _, nil", tt.name, rootdir, tt.wd, err)
+			}
+			if got.String() != tt.want {
+				t.Errorf("parseURL(%q, %q, %q) = %q; want %q", tt.name, rootdir, tt.wd, got, tt.want)
+			}
+		})
+	}
+}
