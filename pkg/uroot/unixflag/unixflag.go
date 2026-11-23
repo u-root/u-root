@@ -15,6 +15,8 @@ import (
 // and the first non-switch arg (or "-" or "--") stops the process.
 // For example, ps -aux turns into ps -a -u -x, and
 // ls -al --somelongthing becomes ls -a -l -somelongthing.
+// A value given with = belongs to the last switch: -d=/dev/sda is kept as
+// -d=/dev/sda, and -ab=c becomes -a -b=c.
 func ArgsToGoArgs(args []string) []string {
 	var out []string
 	for i, f := range args {
@@ -27,9 +29,17 @@ func ArgsToGoArgs(args []string) []string {
 			continue
 		}
 		if strings.HasPrefix(f, "-") {
-			fs := strings.SplitSeq(f[1:], "")
+			switches, value, hasValue := strings.Cut(f[1:], "=")
+			if switches == "" {
+				out = append(out, f)
+				continue
+			}
+			fs := strings.SplitSeq(switches, "")
 			for ff := range fs {
 				out = append(out, "-"+ff)
+			}
+			if hasValue {
+				out[len(out)-1] += "=" + value
 			}
 			continue
 		}

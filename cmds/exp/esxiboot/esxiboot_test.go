@@ -46,6 +46,14 @@ func TestCommand(t *testing.T) {
 			},
 		},
 		{
+			name: "Test with shorthand device flag and value after =",
+			args: []string{"esxiboot", "-d=/dev/sda", "--append=vmkBootVerbose=TRUE debugLogToSerial=1"},
+			wantCmd: &cmd{
+				diskDev:       "/dev/sda",
+				appendCmdline: []string{"vmkBootVerbose=TRUE debugLogToSerial=1"},
+			},
+		},
+		{
 			name: "Test with dry-run flag",
 			args: []string{"esxiboot", "--device", "/dev/sda", "--dry-run"},
 			wantCmd: &cmd{
