@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -28,14 +27,15 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 	input := liner.NewLiner()
 	defer input.Close()
 
-	f, err := os.OpenFile(HistFile, os.O_RDWR|os.O_CREATE, 0600)
-	if err == nil {
-		input.ReadHistory(f)
-	} else if f, err = os.Open(HistFile); err != nil {
-		log.Printf("Failed to open or create history file: %v", err)
-	}
-	if f != nil {
+	// The history file is created fresh for every session, so it is owned by
+	// us and mode 0600, and two shells cannot collide on the same name.
+	var hist io.Writer = io.Discard
+	if f, err := os.CreateTemp("", "gosh.history"); err != nil {
+		fmt.Fprintf(stderr, "no history file: %v\n", err)
+	} else {
 		defer f.Close()
+		fmt.Fprintf(stderr, "history is in %v\n", f.Name())
+		hist = f
 	}
 
 	input.SetCtrlCAborts(true)
@@ -94,9 +94,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 
 		if line != "" {
 			input.AppendHistory(line)
-			if f != nil {
-				input.WriteHistory(f)
-			}
+			fmt.Fprintln(hist, line)
 		}
 		if err := parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {
 			if parser.Incomplete() {
