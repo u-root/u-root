@@ -29,12 +29,13 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 
 	// The history file is created fresh for every session, so it is owned by
 	// us and mode 0600, and two shells cannot collide on the same name.
-	hist, err := os.CreateTemp("", "gosh.history")
-	if err != nil {
+	var hist io.Writer = io.Discard
+	if f, err := os.CreateTemp("", "gosh.history"); err != nil {
 		fmt.Fprintf(stderr, "no history file: %v\n", err)
 	} else {
-		defer hist.Close()
-		fmt.Fprintf(stderr, "history is in %v\n", hist.Name())
+		defer f.Close()
+		fmt.Fprintf(stderr, "history is in %v\n", f.Name())
+		hist = f
 	}
 
 	input.SetCtrlCAborts(true)
@@ -93,9 +94,7 @@ func runInteractive(runner *interp.Runner, parser *syntax.Parser, stdout, stderr
 
 		if line != "" {
 			input.AppendHistory(line)
-			if hist != nil {
-				fmt.Fprintln(hist, line)
-			}
+			fmt.Fprintln(hist, line)
 		}
 		if err := parser.Stmts(strings.NewReader(line), func(stmt *syntax.Stmt) bool {
 			if parser.Incomplete() {
