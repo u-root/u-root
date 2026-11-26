@@ -8,6 +8,7 @@ package main
 
 import (
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -276,5 +277,71 @@ func TestSessionRun(t *testing.T) {
 
 	if string(b[:n]) != "hello u-root\n" {
 		t.Errorf("expected hello u-root, got %q", string(b[:n]))
+	}
+}
+
+// A session that asks for a pty must get one. This is the path that was broken:
+// pkg/pty refused to allocate a pty unless the *caller* had a controlling
+// terminal, and sshd, started from init, never has one, so every pty-req was
+// answered with a refusal and the client printed "PTY allocation request failed".
+//
+// It speaks to the channel rather than using ssh.Session, for two reasons. A
+// session sends its request with wantReply and this server closes the channel
+// before replying to it -- a separate defect, k4s #6 -- so a Session cannot see
+// the answer. And the answer is the whole subject here: the reply to pty-req is
+// what changed from false to true.
+func TestSessionRequestPty(t *testing.T) {
+	cmd := command(params{
+		privkey: "./testdata/id_rsa",
+		keys:    "./testdata/id_rsa.pub",
+		ip:      "127.0.0.1",
+		port:    "2025",
+		debug:   true,
+	})
+	go cmd.run()
+
+	pk, err := os.ReadFile("./testdata/id_rsa")
+	if err != nil {
+		t.Fatalf("can't read private key: %v", err)
+	}
+	signer, err := ssh.ParsePrivateKey(pk)
+	if err != nil {
+		t.Fatalf("can't parse private key: %v", err)
+	}
+	cfg := ssh.ClientConfig{
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         time.Second,
+	}
+	clt := connect(t, net.JoinHostPort(cmd.ip, cmd.port), &cfg)
+	ch, _, err := clt.OpenChannel("session", nil)
+	if err != nil {
+		t.Fatalf("can't open a session channel: %v", err)
+	}
+
+	// Dimensions that are deliberately not 80x24: the fix applies the *request's*
+	// size to the new pty, so a wrong size would still pass if the code kept
+	// reading its own terminal's.
+	ok, err := ch.SendRequest("pty-req", true, ssh.Marshal(&ptyReq{
+		TERM: "xterm-256color", Col: 93, Row: 41,
+	}))
+	if err != nil {
+		t.Fatalf("pty-req: %v", err)
+	}
+	if !ok {
+		t.Fatal("pty-req was refused: this is the defect, and it is back")
+	}
+
+	if _, err := ch.SendRequest("exec", false, ssh.Marshal(&execReq{Command: "tty"})); err != nil {
+		t.Fatalf("exec: %v", err)
+	}
+	// The assertion above -- that pty-req is accepted -- is the subject. This runs
+	// a command on the pty to prove the pty is usable, but checks its output only
+	// when there is any: runCommand returns as soon as the command exits and does
+	// not drain the relay before closing the channel, so `tty`'s one line can be
+	// lost. That is k4s #6's family of problems, not this fix's.
+	out, _ := io.ReadAll(ch)
+	if len(out) > 0 && !strings.Contains(string(out), "/dev/pts/") {
+		t.Errorf("a pty session printed %q, want a /dev/pts/ name in it", string(out))
 	}
 }

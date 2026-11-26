@@ -20,6 +20,7 @@ import (
 	"github.com/mdlayher/vsock"
 	"github.com/pkg/sftp"
 	"github.com/u-root/u-root/pkg/pty"
+	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -105,16 +106,13 @@ func newPTY(b []byte) (*pty.Pty, error) {
 	if err != nil {
 		return nil, err
 	}
-	ws, err := p.TTY.GetWinSize()
-	if err != nil {
-		return nil, err
-	}
-	ws.Row = uint16(ptyReq.Row)
-	ws.Ypixel = uint16(ptyReq.Ypixel)
-	ws.Col = uint16(ptyReq.Col)
-	ws.Xpixel = uint16(ptyReq.Xpixel)
+	// The window size comes from the request, and it belongs on the pty the guest
+	// is getting -- not on this process's own terminal, which sshd does not have
+	// (it is started from init). Reading it from our terminal at all was what made
+	// a pty allocation impossible for a process without one.
+	ws := termios.NewWinsize(uint16(ptyReq.Row), uint16(ptyReq.Col), uint16(ptyReq.Xpixel), uint16(ptyReq.Ypixel))
 	dprintf("newPTY: Set winsizes to %v", ws)
-	if err := p.TTY.SetWinSize(ws); err != nil {
+	if err := termios.SetWinSize(p.Pts.Fd(), ws); err != nil {
 		return nil, err
 	}
 	dprintf("newPTY: set TERM to %q", ptyReq.TERM)

@@ -17,17 +17,20 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/u-root/u-root/pkg/termios"
 	"golang.org/x/sys/unix"
 )
 
 // New returns a new Pty.
+//
+// The caller's terminal settings are copied into the pty when the caller has a
+// controlling terminal, and the pty is left at its defaults when it does not. A
+// process without one is ordinary -- a daemon, or a server started from init --
+// and it used to be unable to allocate a pty at all, because the settings were
+// taken from /dev/tty before /dev/ptmx was even opened. u-root's sshd is such a
+// process: it answered every pty-req with a refusal, so every session to it was
+// a non-PTY session.
 func New() (*Pty, error) {
-	tty, err := termios.New()
-	if err != nil {
-		return nil, err
-	}
-	restorer, err := tty.Get()
+	tty, restorer, err := callerTerminal("/dev/tty")
 	if err != nil {
 		return nil, err
 	}

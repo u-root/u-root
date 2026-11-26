@@ -47,21 +47,27 @@ func (p *Pty) Command(cmd string, args ...string) {
 // window size and other variables as needed. It does not
 // block.
 func (p *Pty) Start() error {
-	tty, err := termios.New()
+	// A process without a controlling terminal has no settings to lend the pty
+	// and nothing to restore afterwards; it can still run a command on one. See
+	// callerTerminal.
+	tty, _, err := callerTerminal("/dev/tty")
 	if err != nil {
 		return err
 	}
-
-	if p.WS, err = tty.GetWinSize(); err != nil {
-		return err
-	}
-
-	if p.Restorer, err = tty.Raw(); err != nil {
-		return err
+	if tty != nil {
+		defer tty.Close()
+		if p.WS, err = tty.GetWinSize(); err != nil {
+			return err
+		}
+		if p.Restorer, err = tty.Raw(); err != nil {
+			return err
+		}
 	}
 
 	if err := p.C.Start(); err != nil {
-		tty.Set(p.Restorer)
+		if tty != nil {
+			tty.Set(p.Restorer)
+		}
 		return err
 	}
 	p.Kid = p.C.Process.Pid
@@ -69,8 +75,10 @@ func (p *Pty) Start() error {
 	// We make a good faith effort to set the
 	// WinSize of the Pts, but it's not a deal breaker
 	// if we can't do it.
-	if err := termios.SetWinSize(p.Pts.Fd(), p.WS); err != nil {
-		fmt.Fprintf(p.C.Stderr, "SetWinSize of Pts: %v", err)
+	if p.WS != nil {
+		if err := termios.SetWinSize(p.Pts.Fd(), p.WS); err != nil {
+			fmt.Fprintf(p.C.Stderr, "SetWinSize of Pts: %v", err)
+		}
 	}
 
 	return nil
@@ -83,28 +91,34 @@ func (p *Pty) Run() error {
 		return err
 	}
 
-	go io.Copy(p.TTY, p.Ptm)
+	// With no controlling terminal there is nothing to relay the pty to, so the
+	// command's output is left on Ptm for the caller to read.
+	if p.TTY != nil {
+		go io.Copy(p.TTY, p.Ptm)
 
-	// The 1 byte for IO may seem weird, but ptys are for human interaction
-	// and, let's face it, we don't all type fast.
-	go func() {
-		var data [1]byte
-		for {
-			if _, err := p.TTY.Read(data[:]); err != nil {
-				return
+		// The 1 byte for IO may seem weird, but ptys are for human interaction
+		// and, let's face it, we don't all type fast.
+		go func() {
+			var data [1]byte
+			for {
+				if _, err := p.TTY.Read(data[:]); err != nil {
+					return
+				}
+				// Log the error but it may be transient.
+				if _, err := p.Ptm.Write(data[:]); err != nil {
+					fmt.Fprintf(p.C.Stderr, "Error writing input to ptm: %v: give up\n", err)
+				}
 			}
-			// Log the error but it may be transient.
-			if _, err := p.Ptm.Write(data[:]); err != nil {
-				fmt.Fprintf(p.C.Stderr, "Error writing input to ptm: %v: give up\n", err)
-			}
-		}
-	}()
+		}()
+	}
 	return p.Wait()
 }
 
 // Wait waits for a previously started command to finish, and restores the
 // tty mode when it is done.
 func (p *Pty) Wait() error {
-	defer p.TTY.Set(p.Restorer)
+	if p.TTY != nil && p.Restorer != nil {
+		defer p.TTY.Set(p.Restorer)
+	}
 	return p.C.Wait()
 }
