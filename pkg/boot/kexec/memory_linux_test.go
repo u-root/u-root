@@ -337,6 +337,25 @@ func TestFindSpace(t *testing.T) {
 			want: Range{Start: 0xFF0, Size: 0x10},
 		},
 		{
+			name: "aligned start beyond a short range",
+			rs: Ranges{
+				Range{Start: 0x1001, Size: 0x7f000},
+				Range{Start: 0x200000, Size: 0x200000},
+			},
+			size: 0x100000,
+			opts: []FindOptioner{WithAlignment(0x100000)},
+			want: Range{Start: 0x200000, Size: 0x100000},
+		},
+		{
+			name: "aligned start beyond the limit",
+			rs: Ranges{
+				Range{Start: 0x0, Size: 0x400000},
+			},
+			size: 0x1000,
+			opts: []FindOptioner{WithinRange(RangeFromInterval(0x1001, 0x2000)), WithAlignment(0x100000)},
+			err:  ErrNotEnoughSpace,
+		},
+		{
 			name: "no ranges",
 			rs:   Ranges{},
 			size: 0x10,

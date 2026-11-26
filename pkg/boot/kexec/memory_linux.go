@@ -229,18 +229,32 @@ func (rs Ranges) FindSpace(sz uint, opts ...FindOptioner) (Range, error) {
 	for _, opt := range opts {
 		opt(o)
 	}
-	if o.startAlign != 0 && !align.IsAligned(o.limit.Start, uintptr(o.startAlign)) {
-		o.limit = o.limit.WithStart(align.Up(o.limit.Start, uintptr(o.startAlign)))
+	var ok bool
+	if o.limit, ok = o.limit.alignStart(o.startAlign); !ok {
+		return Range{}, fmt.Errorf("%w: %#x bytes", ErrNotEnoughSpace, sz)
 	}
 	for _, r := range rs {
-		if o.startAlign != 0 && !align.IsAligned(r.Start, uintptr(o.startAlign)) {
-			r = r.WithStart(align.Up(r.Start, uintptr(o.startAlign)))
+		if r, ok = r.alignStart(o.startAlign); !ok {
+			continue
 		}
 		if overlap := r.Intersect(o.limit); overlap != nil && overlap.Size >= o.size {
 			return Range{Start: overlap.Start, Size: o.size}, nil
 		}
 	}
 	return Range{}, fmt.Errorf("%w: %#x bytes", ErrNotEnoughSpace, sz)
+}
+
+// alignStart moves r's start up to a multiple of alignSize, returning false
+// if no aligned point remains in r.
+func (r Range) alignStart(alignSize uint) (Range, bool) {
+	if alignSize == 0 || align.IsAligned(r.Start, uintptr(alignSize)) {
+		return r, true
+	}
+	start := align.Up(r.Start, uintptr(alignSize))
+	if start < r.Start || start >= r.End() {
+		return Range{}, false
+	}
+	return RangeFromInterval(start, r.End()), true
 }
 
 // Sort sorts ranges by their start point.
